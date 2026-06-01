@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en" data-concept="atlas">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta http-equiv="Cache-Control" content="no-store"/>
+  <meta http-equiv="Pragma" content="no-cache"/>
+  <meta http-equiv="Expires" content="0"/>
+  <title>Photos By Elie | Main Page Concepts</title>
+  <meta name="description" content="Homepage design candidates for Photos By Elie."/>
+  <link rel="icon" type="image/png" sizes="512x512" href="../../assets/byelie-logo.png"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,750&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./main-page-concepts.css?v=9"/>
+</head>
+<body>
+  <a class="skip-link" href="#concept-stage">Skip to concepts</a>
+  <header class="concept-toolbar" aria-label="Prototype navigation">
+    <a class="concept-brand" href="../../index.html" aria-label="Back to current Photos By Elie home">
+      <img src="../../assets/byelie-logo.png" alt="By Elie logo"/>
+      <span>
+        <strong>Photos By Elie</strong>
+        <small>Main page side project</small>
+      </span>
+    </a>
+    <nav class="concept-switcher" aria-label="Candidate homepage options">
+      <button type="button" data-concept-target="atlas" aria-pressed="true">01 Atlas</button>
+      <button type="button" data-concept-target="darkroom" aria-pressed="false">02 Darkroom</button>
+      <button type="button" data-concept-target="desk" aria-pressed="false">03 Desk</button>
+      <button type="button" data-concept-target="best-mix" aria-pressed="false">04 Best Mix</button>
+    </nav>
+    <a class="current-home-link" href="../../index.html">Current home</a>
+  </header>
+
+  <main id="concept-stage">
+    <section class="concept-page concept-atlas is-active" id="atlas" aria-labelledby="atlas-title">
+      <div class="atlas-hero">
+        <div class="atlas-copy">
+          <p class="eyebrow">Candidate 01 / Editorial Atlas</p>
+          <h1 id="atlas-title">Photos By Elie</h1>
+          <p class="lede">Travel the archive by place, light, and mood. This brighter first screen puts destination photography, country routes, and fast browsing above the fold.</p>
+          <div class="action-row">
+            <a class="button button-primary" href="../../gallery.html?gallery=spain">Explore Spain</a>
+            <a class="button button-secondary" href="../../gallery.html">All collections</a>
+          </div>
+          <div class="atlas-metrics" aria-label="Archive highlights">
+            <span><strong>8</strong> collections</span>
+            <span><strong>2</strong> recent stories</span>
+            <span><strong>1</strong> private client door</span>
+          </div>
+        </div>
+
+        <div class="atlas-board" aria-label="Featured destination gallery tiles">
+          <a class="atlas-tile atlas-large" href="../../gallery.html?gallery=spain">
+            <img src="../../assets/apple-photos/2026/2026-nerja-caves/photos/img-3507-d549fabda3_1800.jpg" alt="Nerja cave formations in Spain"/>
+            <span>Spain</span>
+          </a>
+          <a class="atlas-tile" href="../../gallery.html?gallery=france">
+            <img src="../../socials/Pinterest/2026-05-14/images/03-dome-ceiling.jpg" alt="Paris dome ceiling photographed from below"/>
+            <span>France</span>
+          </a>
+          <a class="atlas-tile" href="../../gallery.html?gallery=italy">
+            <img src="../../assets/apple-photos/2026/2026-malaga-museo-ruso/photos/d5h-2915-9bcf240917_1800.jpg" alt="Museum interior detail"/>
+            <span>Italy</span>
+          </a>
+          <a class="atlas-tile atlas-tall" href="../../gallery.html?gallery=ai">
+            <img src="../../socials/Pinterest/2026-05-15/valencia-aquarium/images-square/01-img-1567-8286aafbcb-square.jpg" alt="Valencia aquarium architecture"/>
+            <span>AI / Experiments</span>
+          </a>
+        </div>
+      </div>
+
+      <div class="atlas-route-strip" aria-label="Quick collection links">
+        <a href="../../gallery.html?gallery=france">France</a>
+        <a href="../../gallery.html?gallery=usa">USA</a>
+        <a href="../../gallery.html?gallery=spain">Spain</a>
+        <a href="../../gallery.html?gallery=mexico">Mexico</a>
+        <a href="../../gallery.html?gallery=portugal">Portugal</a>
+        <a href="../../gallery.html?gallery=slovakia">Slovakia</a>
+      </div>
+
+      <section class="atlas-feature-band" aria-labelledby="atlas-feature-title">
+        <div>
+          <p class="eyebrow">Fresh story</p>
+          <h2 id="atlas-feature-title">Valencia aquarium architecture</h2>
+        </div>
+        <a class="story-card" href="../../campaign.html?c=pinterest-valencia-aquarium-2026-05-16">
+          <img src="../../socials/Pinterest/2026-05-15/valencia-aquarium/images-square/04-img-1564-1f9e3891b9-square.jpg" alt="Blue structural detail at Valencia aquarium"/>
+          <span>Open Pinterest feature</span>
+        </a>
+        <a class="story-card" href="../../campaign.html?c=pinterest-invalides-2026-05-14">
+          <img src="../../socials/Pinterest/2026-05-14/images/04-napoleon-tomb.jpg" alt="Napoleon tomb interior detail"/>
+          <span>Paris: Invalides</span>
+        </a>
+      </section>
+    </section>
+
+    <section class="concept-page concept-darkroom" id="darkroom" aria-labelledby="darkroom-title" hidden>
+      <div class="darkroom-stage" data-parallax-stage>
+        <img class="darkroom-bg" data-depth="10" src="../../socials/Pinterest/2026-05-14/images/05-dome-wide.jpg" alt="Wide photograph of Les Invalides dome interior"/>
+        <div class="darkroom-scrim"></div>
+        <div class="darkroom-copy" data-depth="-6">
+          <p class="eyebrow">Candidate 02 / Darkroom Flow</p>
+          <h1 id="darkroom-title">Photos By Elie</h1>
+          <p class="lede">A cinematic archive with gallery motion built in. The first screen acts like a live contact sheet without burying navigation.</p>
+          <div class="action-row">
+            <a class="button button-primary" href="../../gallery.html">Enter gallery</a>
+            <a class="button button-ghost" href="../../real-estate.html?logout=1&client=elie">Client login</a>
+          </div>
+        </div>
+        <div class="darkroom-panel" data-depth="7" aria-label="Featured collection">
+          <span>Featured route</span>
+          <strong>Paris interiors</strong>
+          <a href="../../campaign.html?c=pinterest-invalides-2026-05-14">Open story</a>
+        </div>
+      </div>
+
+      <div class="film-rail" aria-label="Moving featured photo rail">
+        <div class="film-track">
+          <a href="../../gallery.html?gallery=spain"><img src="../../assets/video-trial/cordoba/photos/img-1402-063c26a57d_1800.jpg" alt="Cordoba architecture"/></a>
+          <a href="../../gallery.html?gallery=spain"><img src="../../assets/apple-photos/2026/2026-nerja-caves/photos/img-3490-d9069dd22f_1800.jpg" alt="Cave walkway in Nerja"/></a>
+          <a href="../../gallery.html?gallery=france"><img src="../../socials/Pinterest/2026-05-14/images/01-nave.jpg" alt="Nave interior in Paris"/></a>
+          <a href="../../gallery.html?gallery=spain"><img src="../../assets/apple-photos/2026/2026-malaga-museo-ruso/photos/d5h-2933-cc55952650_1800.jpg" alt="Colorful art wall"/></a>
+          <a href="../../gallery.html?gallery=spain"><img src="../../assets/video-trial/cordoba/photos/img-1413-b9b2bdde95_1800.jpg" alt="Cordoba courtyard detail"/></a>
+          <a href="../../gallery.html?gallery=ai"><img src="../../socials/Pinterest/2026-05-15/valencia-aquarium/images-square/10-img-1558-97860683e7-square.jpg" alt="Valencia aquarium facade"/></a>
+          <a href="../../gallery.html?gallery=spain"><img src="../../assets/video-trial/cordoba/photos/img-1402-063c26a57d_1800.jpg" alt="Cordoba architecture duplicate"/></a>
+          <a href="../../gallery.html?gallery=spain"><img src="../../assets/apple-photos/2026/2026-nerja-caves/photos/img-3490-d9069dd22f_1800.jpg" alt="Cave walkway in Nerja duplicate"/></a>
+          <a href="../../gallery.html?gallery=france"><img src="../../socials/Pinterest/2026-05-14/images/01-nave.jpg" alt="Nave interior in Paris duplicate"/></a>
+          <a href="../../gallery.html?gallery=spain"><img src="../../assets/apple-photos/2026/2026-malaga-museo-ruso/photos/d5h-2933-cc55952650_1800.jpg" alt="Colorful art wall duplicate"/></a>
+        </div>
+      </div>
+
+      <section class="darkroom-actions" aria-label="Main routes">
+        <a href="../../gallery.html?gallery=france"><strong>France</strong><span>Dome, city, museum</span></a>
+        <a href="../../gallery.html?gallery=spain"><strong>Spain</strong><span>Caves, coast, architecture</span></a>
+        <a href="../../gallery.html?gallery=ai"><strong>AI Images</strong><span>Generated work</span></a>
+      </section>
+    </section>
+
+    <section class="concept-page concept-desk" id="desk" aria-labelledby="desk-title" hidden>
+      <div class="desk-hero">
+        <div class="desk-copy">
+          <p class="eyebrow">Candidate 03 / Collector Desk</p>
+          <h1 id="desk-title">Photos By Elie</h1>
+          <p class="lede">A warmer home for choosing, saving, and sending photos. This version turns the homepage into a practical browsing desk with search and client action upfront.</p>
+          <form class="desk-search" action="../../gallery.html" aria-label="Photo search">
+            <input name="q" type="search" placeholder="Search title, place, mood"/>
+            <button type="submit">Search</button>
+          </form>
+          <div class="action-row">
+            <a class="button button-primary" href="../../liked.html">Saved photos</a>
+            <a class="button button-secondary" href="../../real-estate.html?logout=1&client=elie">Client login</a>
+          </div>
+        </div>
+
+        <div class="desk-board" aria-label="Pinned archive selections">
+          <a class="desk-photo desk-photo-a" href="../../gallery.html?gallery=spain">
+            <img src="../../assets/apple-photos/2026/2026-nerja-caves/photos/img-3515-d3d2a1acf3_1800.jpg" alt="Nerja cave column detail"/>
+            <span>Nerja / Earth light</span>
+          </a>
+          <a class="desk-photo desk-photo-b" href="../../gallery.html?gallery=france">
+            <img src="../../socials/Pinterest/2026-05-14/images/02-dome-monument.jpg" alt="Monument under the Invalides dome"/>
+            <span>Paris / Monumental</span>
+          </a>
+          <a class="desk-photo desk-photo-c" href="../../gallery.html?gallery=spain">
+            <img src="../../assets/video-trial/cordoba/photos/img-1414-ab1ca0b8d4_1800.jpg" alt="Cordoba interior texture"/>
+            <span>Cordoba / Pattern</span>
+          </a>
+          <div class="desk-note">
+            <strong>Next browse</strong>
+            <span>Start with country, then narrow by mood.</span>
+          </div>
+        </div>
+      </div>
+
+      <section class="desk-routes" aria-label="Homepage actions">
+        <a href="../../gallery.html"><span>Browse</span><strong>All photos</strong></a>
+        <a href="../../basket.html"><span>Prepare</span><strong>Basket</strong></a>
+        <a href="../../campaign.html?c=pinterest-valencia-aquarium-2026-05-16"><span>Read</span><strong>Latest feature</strong></a>
+        <a href="../../order.html"><span>Send</span><strong>Order flow</strong></a>
+      </section>
+    </section>
+  </main>
+
+  <script src="./main-page-concepts.js?v=9"></script>
+</body>
+</html>

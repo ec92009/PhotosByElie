@@ -8,6 +8,15 @@ if (window.photosByElieHidden?.enabled) {
 }
 await window.photosByElieHiddenBlacklistReady;
 window.photosByElieProductSettings?.applyPriceOverrides?.();
+const formatMoney = (value) => {
+  const amount = Number(value) || 0;
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: amount % 1 ? 2 : 0,
+    maximumFractionDigits: 2,
+  }).format(amount);
+};
 const params = new URLSearchParams(window.location.search);
 const photoId = params.get("id") || "france-1";
 const collections = window.photosByElieData || {};
@@ -82,19 +91,6 @@ const productLabel = (option) => {
     "jpg-1mp": "product.jpg_1",
   };
   return t(keyById[option?.id] || "", {}) || window.photosByElieProductLabel?.(option) || option?.label || "";
-};
-const productDetail = (option) => {
-  if (option?.detail) return option.detail;
-  const detailKeyById = {
-    "jpg-6mp": "product.jpg_6_detail",
-    "jpg-3mp": "product.jpg_3_detail",
-    "jpg-1mp": "product.jpg_1_detail",
-  };
-  if (detailKeyById[option?.id]) return t(detailKeyById[option.id]);
-  if (option?.type === "print") return t("product.print_detail");
-  const source = window.photosByElieOriginalSize?.(photo) || "";
-  if (source) return t("product.original", { source });
-  return t("product.full_detail");
 };
 const frameLabel = (frame) => ({
   none: t("product.no_frame"),
@@ -175,7 +171,8 @@ const renderDetailShortcutHint = () => {
       `${detailShortcutKey("X")} block`,
       `${detailShortcutKey("U")} undo`,
       `${detailShortcutKey("T")} title`,
-      `${detailShortcutKey("K")} keywords`
+      `${detailShortcutKey("K")} keywords`,
+      `${detailShortcutKey("R")} review`
     ]
     : [];
   detailShortcutHint.innerHTML = [
@@ -277,6 +274,16 @@ const navigateAfterHide = () => {
   return true;
 };
 
+const navigateAwayFromBlockedPhoto = () => {
+  if (navigateAfterHide()) return true;
+  const fallbackPhoto = collection.photos
+    .slice(photoIndex + 1)
+    .concat(collection.photos.slice(0, photoIndex))
+    .find((item) => item.id !== photo.id);
+  window.location.replace(versionedHref(fallbackPhoto ? `./photo.html?id=${fallbackPhoto.id}` : galleryHrefForKey(collectionKey)));
+  return true;
+};
+
 const frameOptions = () => window.photosByElieFrameOptions || [];
 const defaultFrame = () => frameOptions()[0] || { id: "none", label: "No frame", price: 0 };
 const frameFor = (frameId) => frameOptions().find((frame) => frame.id === frameId) || defaultFrame();
@@ -311,7 +318,7 @@ const updateTotal = () => {
   const totalTarget = document.querySelector("[data-selection-total]");
   if (!totalTarget) return;
   const total = selectedOptions().reduce((sum, option) => sum + (window.photosByElieOptionTotal?.(option) || option.price), 0);
-  totalTarget.textContent = `$${total}`;
+  totalTarget.textContent = formatMoney(total);
 };
 
 const basketItemForPhoto = () => basketStore.read().find((item) => item.photoId === photo.id);
@@ -332,9 +339,6 @@ if (!photo) {
   preview.classList.add(collection.accent);
   preview.querySelector("[data-photo-preview-title]").textContent = t("detail.no_published");
   if (status) status.textContent = t("detail.rebuilding");
-} else {
-if (localModerationEnabled && !visibleCollectionPhotos().some((item) => item.id === photo.id) && navigateAfterHide()) {
-  // The currently requested photo is locally suppressed, so move to the next visible one immediately.
 } else {
 document.title = `Photos By Elie | ${photo.title}`;
 setCollectionNav();
@@ -381,8 +385,14 @@ const writeGalleryReturnState = () => {
 };
 const backLink = document.querySelector("[data-back-link]");
 backLink.setAttribute("href", versionedHref(detailBackHref()));
-backLink.dataset.i18n = detailBackLabelKey();
-backLink.textContent = t(detailBackLabelKey());
+backLink.dataset.i18nAriaLabel = detailBackLabelKey();
+backLink.setAttribute("aria-label", t(detailBackLabelKey()));
+if (backLink.classList.contains("header-back-button")) {
+  delete backLink.dataset.i18n;
+} else {
+  backLink.dataset.i18n = detailBackLabelKey();
+  backLink.textContent = t(detailBackLabelKey());
+}
 
 let previousPhotoHref = "";
 let nextPhotoHref = "";
@@ -392,6 +402,7 @@ const navigateToPhotoHref = (href) => {
 
 const ensureDetailBottomActions = () => {
   const detailMain = document.querySelector(".detail-main");
+  if (document.querySelector(".header-back-button[data-back-link]")) return;
   if (!detailMain || document.querySelector("[data-detail-bottom-actions]")) return;
   const bottomActions = document.createElement("nav");
   bottomActions.className = "panel mobile-bottom-actions detail-bottom-actions";
@@ -433,6 +444,12 @@ document.querySelectorAll("[data-back-link], [data-bottom-back-link]").forEach((
 });
 
 const metadataRoot = document.querySelector("[data-photo-metadata]");
+const metadataToggle = document.querySelector("[data-photo-info-toggle]");
+metadataToggle?.addEventListener("click", () => {
+  const expanded = metadataToggle.getAttribute("aria-expanded") !== "true";
+  metadataToggle.setAttribute("aria-expanded", String(expanded));
+  if (metadataRoot) metadataRoot.hidden = !expanded;
+});
 const renderMetadataRows = () => {
   const hiddenLabels = new Set(["preview file", "software", "color profile"]);
   const metadata = Array.isArray(photo.metadata)
@@ -444,7 +461,11 @@ const renderMetadataRows = () => {
     ...(!hasDurationRow && videoDurationLabel ? [{ label: "Duration", value: videoDurationLabel }] : []),
     ...metadata,
   ].filter((item) => item.label && item.value);
-  metadataRoot.hidden = rows.length === 0;
+  metadataRoot.hidden = true;
+  if (metadataToggle) {
+    metadataToggle.hidden = rows.length === 0;
+    metadataToggle.setAttribute("aria-expanded", "false");
+  }
   metadataRoot.replaceChildren(...rows.map((item) => {
     const row = document.createElement("div");
     const label = document.createElement("dt");
@@ -465,62 +486,6 @@ const syncTitleUi = () => {
   if (titleTarget) titleTarget.textContent = photo.title;
   if (previewTitleTarget) previewTitleTarget.textContent = photo.title;
   document.querySelector("[data-photo-preview] img")?.setAttribute("alt", photo.title);
-};
-
-const ensureOwnerMetadataEditor = () => {
-  if (!localModerationEnabled || document.querySelector("[data-owner-metadata-editor]")) return;
-  const editor = document.createElement("form");
-  editor.className = "owner-metadata-editor";
-  editor.dataset.ownerMetadataEditor = "";
-  editor.innerHTML = `
-    <label>
-      <span>Title</span>
-      <input type="text" value="" data-owner-title/>
-    </label>
-    <label>
-      <span>Keywords</span>
-      <textarea rows="3" data-owner-keywords></textarea>
-    </label>
-    <button class="btn secondary" type="submit">Save metadata</button>
-  `;
-  const titleInput = editor.querySelector("[data-owner-title]");
-  const keywordInput = editor.querySelector("[data-owner-keywords]");
-  titleInput.value = photo.title || "";
-  keywordInput.value = metadataValue(photo, "Keywords");
-  const exitMetadataEditState = () => {
-    if (document.activeElement === titleInput || document.activeElement === keywordInput) {
-      document.activeElement.blur();
-    }
-  };
-  [titleInput, keywordInput].forEach((input) => {
-    input.addEventListener("keydown", (event) => {
-      if (event.key !== "Enter" || event.metaKey || event.ctrlKey || event.altKey) return;
-      event.preventDefault();
-      editor.requestSubmit();
-    });
-  });
-  editor.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const button = editor.querySelector("button");
-    button.disabled = true;
-    try {
-      const title = titleInput.value.trim();
-      const keywords = uniqueKeywords(splitKeywordText(keywordInput.value)).join(", ");
-      await hiddenActions.updatePhotoMetadata?.(photo.id, { title, keywords });
-      photo.title = title;
-      setMetadataValue(photo, "Metadata title", title);
-      setMetadataValue(photo, "Keywords", keywords);
-      syncTitleUi();
-      renderMetadataRows();
-      status.textContent = "";
-    } catch (error) {
-      status.textContent = error?.message || "Could not save metadata.";
-    } finally {
-      exitMetadataEditState();
-      button.disabled = false;
-    }
-  });
-  metadataRoot.before(editor);
 };
 
 const openOwnerMetadataModal = (field) => {
@@ -596,10 +561,6 @@ const openOwnerMetadataModal = (field) => {
     setMetadataValue(photo, "Keywords", keywordValue);
     syncTitleUi();
     renderMetadataRows();
-    const inlineTitleInput = document.querySelector("[data-owner-title]");
-    const inlineKeywordInput = document.querySelector("[data-owner-keywords]");
-    if (inlineTitleInput) inlineTitleInput.value = titleValue;
-    if (inlineKeywordInput) inlineKeywordInput.value = keywordValue;
     status.textContent = "Saving metadata...";
     try {
       await hiddenActions.updatePhotoMetadata?.(photo.id, { title: titleValue, keywords: keywordValue });
@@ -610,10 +571,6 @@ const openOwnerMetadataModal = (field) => {
       setMetadataValue(photo, "Keywords", previousKeywords);
       syncTitleUi();
       renderMetadataRows();
-      const inlineTitleInput = document.querySelector("[data-owner-title]");
-      const inlineKeywordInput = document.querySelector("[data-owner-keywords]");
-      if (inlineTitleInput) inlineTitleInput.value = previousTitle;
-      if (inlineKeywordInput) inlineKeywordInput.value = previousKeywords;
       status.textContent = error?.message || "Could not save metadata.";
     }
   });
@@ -625,18 +582,36 @@ const openOwnerMetadataModal = (field) => {
 };
 
 renderMetadataRows();
-ensureOwnerMetadataEditor();
 
 const preview = document.querySelector("[data-photo-preview]");
 const detailLayout = document.querySelector(".detail-layout");
 const isVideo = window.photosByElieIsVideo?.(photo) === true;
 let fullscreenPreview = null;
-const syncLandscapePreviewSize = () => {
-  if (!detailLayout?.classList.contains("is-landscape")) return;
+const syncDetailPreviewSize = () => {
+  if (!detailLayout || !preview) return;
   const ratio = Number(preview.style.getPropertyValue("--detail-ratio")) || 1.5;
   const maxWidth = detailLayout.clientWidth;
-  const maxHeight = Math.max(320, window.innerHeight - 240);
-  preview.style.setProperty("--detail-landscape-width", `${Math.min(maxWidth, maxHeight * ratio)}px`);
+  const previewTop = Math.max(0, preview.getBoundingClientRect().top);
+  const maxHeight = Math.max(280, window.innerHeight - previewTop - 24);
+  const fittedWidth = Math.min(maxWidth, maxHeight * ratio);
+  if (detailLayout.classList.contains("is-landscape")) {
+    preview.style.setProperty("--detail-landscape-width", `${fittedWidth}px`);
+    preview.style.removeProperty("--detail-portrait-width");
+    return;
+  }
+  if (detailLayout.classList.contains("is-portrait")) {
+    preview.style.setProperty("--detail-portrait-width", `${fittedWidth}px`);
+    preview.style.removeProperty("--detail-landscape-width");
+  }
+};
+const applyPreviewAspectRatio = (width, height) => {
+  if (!width || !height) return;
+  preview.style.setProperty("--detail-aspect", `${width} / ${height}`);
+  preview.style.setProperty("--detail-ratio", width / height);
+  detailLayout?.classList.toggle("is-landscape", width >= height);
+  detailLayout?.classList.toggle("is-portrait", width < height);
+  syncDetailPreviewSize();
+  window.requestAnimationFrame(syncDetailPreviewSize);
 };
 preview.classList.add(collection.accent, photo.className);
 const detailImageSrc = window.photosByElieMediaUrl?.(photo, "detail") || "";
@@ -650,23 +625,18 @@ if (detailImageSrc && isVideo) {
   video.preload = "metadata";
   const dimensions = window.photosByEliePreviewDimensions?.(photo);
   if (dimensions?.width && dimensions?.height) {
-    preview.style.setProperty("--detail-aspect", `${dimensions.width} / ${dimensions.height}`);
-    preview.style.setProperty("--detail-ratio", dimensions.width / dimensions.height);
-    detailLayout?.classList.toggle("is-landscape", dimensions.width >= dimensions.height);
-    detailLayout?.classList.toggle("is-portrait", dimensions.width < dimensions.height);
-    syncLandscapePreviewSize();
+    applyPreviewAspectRatio(dimensions.width, dimensions.height);
   }
+  const setVideoPreviewAspectRatio = () => applyPreviewAspectRatio(video.videoWidth, video.videoHeight);
+  video.addEventListener("loadedmetadata", setVideoPreviewAspectRatio);
+  if (video.readyState >= 1) setVideoPreviewAspectRatio();
   preview.prepend(video);
 } else if (detailImageSrc) {
   preview.classList.add("has-image");
   const img = document.createElement("img");
   const setPreviewAspectRatio = () => {
     if (!img.naturalWidth || !img.naturalHeight) return;
-    preview.style.setProperty("--detail-aspect", `${img.naturalWidth} / ${img.naturalHeight}`);
-    preview.style.setProperty("--detail-ratio", img.naturalWidth / img.naturalHeight);
-    detailLayout?.classList.toggle("is-landscape", img.naturalWidth >= img.naturalHeight);
-    detailLayout?.classList.toggle("is-portrait", img.naturalWidth < img.naturalHeight);
-    syncLandscapePreviewSize();
+    applyPreviewAspectRatio(img.naturalWidth, img.naturalHeight);
   };
   img.src = detailImageSrc;
   img.alt = photo.title;
@@ -674,7 +644,7 @@ if (detailImageSrc && isVideo) {
   if (img.complete) setPreviewAspectRatio();
   preview.prepend(img);
 }
-window.addEventListener("resize", syncLandscapePreviewSize);
+window.addEventListener("resize", syncDetailPreviewSize);
 const previewTitleTarget = preview.querySelector("[data-photo-preview-title]");
 previewTitleTarget?.removeAttribute("data-i18n");
 if (previewTitleTarget) previewTitleTarget.textContent = photo.title;
@@ -810,20 +780,39 @@ if (localModerationEnabled) {
       event.preventDefault();
       return;
     }
+    if (key === "r") {
+      event.preventDefault();
+      try {
+        if (!hiddenActions.queueTitleKeywordReview) {
+          throw new Error("Refresh Owner mode to load title/keyword review queueing.");
+        }
+        const result = await hiddenActions.queueTitleKeywordReview(photo.id);
+        status.textContent = result?.already_pending
+          ? `${photo.title} is already in title/keyword review.`
+          : `${photo.title} sent to title/keyword review.`;
+      } catch (error) {
+        status.textContent = error?.message || "Could not send photo to title/keyword review.";
+      }
+      return;
+    }
     if (key === "x" || key === "b" || key === "h") {
+      event.preventDefault();
       if (hiddenActions.has(photo.id)) {
         status.textContent = `${photo.title} is already in the Waste Basket.`;
+        hiddenActions.mark(photo.id);
+        navigateAwayFromBlockedPhoto();
         return;
       }
       try {
         await hiddenActions.mark(photo.id);
-        navigateAfterHide();
+        navigateAwayFromBlockedPhoto();
       } catch (error) {
         status.textContent = error?.message || "Could not move photo to Waste Basket.";
       }
       return;
     }
     if (key !== "u") return;
+    event.preventDefault();
     let undoneId = null;
     try {
       undoneId = await hiddenActions.undo(photo.id);
@@ -834,10 +823,6 @@ if (localModerationEnabled) {
     status.textContent = undoneId
       ? `${photo.title} moved back from Waste Basket.`
       : "No basketed photo to undo.";
-  });
-
-  window.addEventListener("photosbyelie:hiddenchange", () => {
-    navigateAfterHide();
   });
 }
 
@@ -868,7 +853,7 @@ const printConfigMarkup = (option) => {
         ${frameOptions().map((frame) => `
           <label>
             <input type="radio" name="frame-${option.id}" data-print-frame="${option.id}" value="${frame.id}" ${frame.id === selectedFrameId ? "checked" : ""}/>
-            <span>${frameLabel(frame)}${framePriceFor(frame, option) ? ` +$${framePriceFor(frame, option)}` : ""}</span>
+            <span>${frameLabel(frame)}${framePriceFor(frame, option) ? ` +${formatMoney(framePriceFor(frame, option))}` : ""}</span>
           </label>
         `).join("")}
       </fieldset>
@@ -882,9 +867,8 @@ document.querySelector("[data-resolution-list]").innerHTML = availableResolution
       <input type="checkbox" data-resolution value="${option.id}" ${selectedIds.has(option.id) ? "checked" : ""}/>
       <span>
         <strong>${productLabel(option)}</strong>
-        <small>${productDetail(option)}</small>
       </span>
-      <b>$${option.price}</b>
+      <b>${formatMoney(option.price)}</b>
     </label>
     ${printConfigMarkup(option)}
   </div>
@@ -945,6 +929,5 @@ document.querySelectorAll("[data-print-frame]").forEach((input) => {
 });
 
 updateTotal();
-}
 }
 })());

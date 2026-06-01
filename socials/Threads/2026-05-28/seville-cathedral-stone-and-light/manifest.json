@@ -1,0 +1,100 @@
+{
+  "date": "2026-05-28",
+  "platform": "Threads",
+  "status": "prepared_authenticated_confirmed_not_published",
+  "account": "ec92009 via Instagram login",
+  "post_type": "short_image_thread",
+  "title": "Seville Cathedral Stone and Light",
+  "destination_url": "https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-seville-cathedral-stone-and-light-2026-05-28",
+  "campaign_id": "instagram-seville-cathedral-stone-and-light-2026-05-28",
+  "caption": "Four Seville Cathedral frames: stone height, chapel glow, and quiet architectural rhythm from Photos By Elie. Browse the set: https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-seville-cathedral-stone-and-light-2026-05-28\n\n#PhotosByElie #SevilleCathedral #SpainTravel",
+  "recommended_upload_set": "images",
+  "available_count": 4,
+  "notes": [
+    "Threads variant is derived from the Instagram Seville set.",
+    "Keep the post tight at 4 images.",
+    "Remove any automatic link preview if it shows generic/off-theme metadata.",
+    "Built-in Browser reached Threads @ec92009 without login prompts. Not published because image attachment/link-preview review and final Post require manual file-picker/action-time confirmation.",
+    "GitHub Pages deployment succeeded and all three new campaign JSON URLs returned HTTP 200 with v89.10 cache busting.",
+    "No local API OAuth token files were present for Meta, Pinterest, or Threads, so API publishing was unavailable without new OAuth."
+  ],
+  "items": [
+    {
+      "order": 1,
+      "id": "20240307-143445-00194-7c53cb988c",
+      "media_id": "20240307-143445-00194-7c53cb988c",
+      "title": "Seville Cathedral",
+      "collection": "spain",
+      "location": "Spain",
+      "captured_at": "2024-03-07T14:34:45",
+      "width": 1800,
+      "height": 1200,
+      "image": "images/01-20240307-143445-00194-7c53cb988c-seville-cathedral.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240307-143445-00194-7c53cb988c_1800.jpg",
+      "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240307-143445-00194-7c53cb988c_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20240307-143445-00194-7c53cb988c",
+      "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20240307-143445-00194-7c53cb988c",
+      "local_staged_path": "socials/Threads/2026-05-28/seville-cathedral-stone-and-light/images/01-20240307-143445-00194-7c53cb988c-seville-cathedral.jpg"
+    },
+    {
+      "order": 2,
+      "id": "20240307-144104-00198-33e6b76326",
+      "media_id": "20240307-144104-00198-33e6b76326",
+      "title": "Seville Cathedral",
+      "collection": "spain",
+      "location": "Spain",
+      "captured_at": "2024-03-07T14:41:04",
+      "width": 1200,
+      "height": 1800,
+      "image": "images/02-20240307-144104-00198-33e6b76326-seville-cathedral.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240307-144104-00198-33e6b76326_1800.jpg",
+      "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240307-144104-00198-33e6b76326_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20240307-144104-00198-33e6b76326",
+      "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20240307-144104-00198-33e6b76326",
+      "local_staged_path": "socials/Threads/2026-05-28/seville-cathedral-stone-and-light/images/02-20240307-144104-00198-33e6b76326-seville-cathedral.jpg"
+    },
+    {
+      "order": 3,
+      "id": "20240307-144113-00201-1470369a47",
+      "media_id": "20240307-144113-00201-1470369a47",
+      "title": "Seville Cathedral",
+      "collection": "spain",
+      "location": "Spain",
+      "captured_at": "2024-03-07T14:41:13",
+      "width": 1200,
+      "height": 1800,
+      "image": "images/03-20240307-144113-00201-1470369a47-seville-cathedral.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240307-144113-00201-1470369a47_1800.jpg",
+      "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240307-144113-00201-1470369a47_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20240307-144113-00201-1470369a47",
+      "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20240307-144113-00201-1470369a47",
+      "local_staged_path": "socials/Threads/2026-05-28/seville-cathedral-stone-and-light/images/03-20240307-144113-00201-1470369a47-seville-cathedral.jpg"
+    },
+    {
+      "order": 4,
+      "id": "20240307-144118-00203-3e8a805cc4",
+      "media_id": "20240307-144118-00203-3e8a805cc4",
+      "title": "Seville Cathedral",
+      "collection": "spain",
+      "location": "Spain",
+      "captured_at": "2024-03-07T14:41:18",
+      "width": 1200,
+      "height": 1800,
+      "image": "images/04-20240307-144118-00203-3e8a805cc4-seville-cathedral.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240307-144118-00203-3e8a805cc4_1800.jpg",
+      "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240307-144118-00203-3e8a805cc4_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20240307-144118-00203-3e8a805cc4",
+      "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20240307-144118-00203-3e8a805cc4",
+      "local_staged_path": "socials/Threads/2026-05-28/seville-cathedral-stone-and-light/images/04-20240307-144118-00203-3e8a805cc4-seville-cathedral.jpg"
+    }
+  ],
+  "link_preview_note": "Remove any automatic link preview if it shows generic or off-theme campaign metadata before posting.",
+  "browser_check": {
+    "checked_at": "2026-05-28T03:11:08Z",
+    "result": "Built-in Browser reached Threads @ec92009 without login prompts. Not published because image attachment/link-preview review and final Post require manual file-picker/action-time confirmation."
+  },
+  "deployment_check": {
+    "checked_at": "2026-05-28T03:11:08Z",
+    "result": "GitHub Pages deployment succeeded and all three new campaign JSON URLs returned HTTP 200 with v89.10 cache busting."
+  }
+}

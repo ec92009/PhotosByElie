@@ -3,36 +3,44 @@
   const defaultFitModeKey = "photosbyelie-gallery-fit-mode";
 
   const maxDensityColumns = () => (window.matchMedia("(max-width:760px)").matches ? 3 : 10);
-  const defaultDensityColumns = () => {
-    if (window.matchMedia("(min-width:1520px)").matches) return 8;
-    if (window.matchMedia("(min-width:1120px)").matches) return 6;
-    if (window.matchMedia("(min-width:860px)").matches) return 4;
-    if (window.matchMedia("(min-width:640px)").matches) return 3;
-    return 2;
-  };
+  const defaultDensityColumns = () => 3;
 
   const createMasonryController = ({
     root,
     getPhotos = () => [],
     densityKey = defaultDensityKey,
     fitModeKey = defaultFitModeKey,
+    defaultDensity = defaultDensityColumns(),
+    defaultFitMode = "fill",
+    ignoreSavedLayout = false,
     dimensionsFor = (photo) => window.photosByEliePreviewDimensions?.(photo),
     isPanorama = (photo) => window.photosByEliePhotoIsPanorama?.(photo),
   } = {}) => {
     let pendingLayout = 0;
-    let fitMode = localStorage.getItem(fitModeKey) === "fill" ? "fill" : "fit";
+    const params = new URLSearchParams(window.location.search);
+    const initialDensity = Number(params.get("columns") || params.get("grid"));
+    let densityOverride = Number.isFinite(initialDensity) && initialDensity > 0 ? initialDensity : null;
+    const requestedFit = String(params.get("fit") || params.get("view") || "").toLowerCase();
+    const savedFitMode = ignoreSavedLayout ? "" : localStorage.getItem(fitModeKey);
+    let fitMode = requestedFit === "fit" || requestedFit === "fill"
+      ? requestedFit
+      : savedFitMode === "fit" || savedFitMode === "fill"
+        ? savedFitMode
+        : defaultFitMode === "fit" ? "fit" : "fill";
 
     const clampDensityColumns = (columns) => {
       const numericColumns = Number(columns);
       return Math.min(
-        Math.max(Number.isFinite(numericColumns) ? numericColumns : defaultDensityColumns(), 1),
+        Math.max(Number.isFinite(numericColumns) ? numericColumns : defaultDensity, 1),
         maxDensityColumns()
       );
     };
 
     const preferredDensityColumns = () => {
-      const savedValue = Number(localStorage.getItem(densityKey));
-      return clampDensityColumns(Number.isInteger(savedValue) ? savedValue : defaultDensityColumns());
+      if (densityOverride !== null) return clampDensityColumns(densityOverride);
+      const savedDensity = localStorage.getItem(densityKey);
+      const savedValue = savedDensity === null ? NaN : Number(savedDensity);
+      return clampDensityColumns(!ignoreSavedLayout && Number.isInteger(savedValue) ? savedValue : defaultDensity);
     };
 
     const cancelPreviewLayout = () => {
@@ -62,7 +70,7 @@
       const aspectRatio = dimensions?.width && dimensions?.height ? dimensions.width / dimensions.height : 1;
       const cardWidth = (metrics.columnWidth * spanColumns) + (metrics.columnGap * Math.max(0, spanColumns - 1));
       const imageHeight = cardWidth / Math.max(.2, aspectRatio);
-      const cardHeight = imageHeight + 4 + captionHeight + 2;
+      const cardHeight = imageHeight + 2 + captionHeight + 2;
       return Math.max(1, Math.ceil((cardHeight + metrics.rowGap) / metrics.spanUnit));
     };
 
@@ -78,6 +86,7 @@
     };
 
     const setDensityColumns = (columns) => {
+      densityOverride = null;
       const nextColumns = clampDensityColumns(columns);
       localStorage.setItem(densityKey, String(nextColumns));
       return nextColumns;
@@ -98,7 +107,8 @@
     };
 
     const syncFromStorage = () => {
-      fitMode = localStorage.getItem(fitModeKey) === "fill" ? "fill" : "fit";
+      if (ignoreSavedLayout) return;
+      fitMode = localStorage.getItem(fitModeKey) === "fit" ? "fit" : "fill";
     };
 
     const applyPreviewLayout = (photos = getPhotos()) => {

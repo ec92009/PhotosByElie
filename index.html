@@ -9,9 +9,9 @@
   <meta property="og:title" content="Photos By Elie"/>
   <meta property="og:description" content="Selected Saturn Lightroom archive build with country galleries, AI-generated work, and owner-only classification tools."/>
   <meta property="og:type" content="website"/>
-  <meta property="og:image" content="./assets/byelie-logo.png"/>
+  <meta property="og:image" content="./assets/branding/photosbyelie-camera-tripod-logo-512.png"/>
   <meta name="twitter:card" content="summary"/>
-  <link rel="icon" type="image/png" sizes="512x512" href="./assets/byelie-logo.png"/>
+  <link rel="icon" type="image/png" sizes="512x512" href="./assets/branding/photosbyelie-camera-tripod-logo-512.png"/>
   <script>
     (() => {
       try {
@@ -20,23 +20,22 @@
       } catch {}
     })();
   </script>
-  <link rel="stylesheet" href="./shared.css?v=93.0"/>
-  <link rel="stylesheet" href="./styles.css?v=93.0"/>
-  <link rel="stylesheet" href="./photos.css?v=93.0"/>
+  <link rel="stylesheet" href="./shared.css?v=93.1"/>
+  <link rel="stylesheet" href="./styles.css?v=93.1"/>
+  <link rel="stylesheet" href="./photos.css?v=93.1"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
-<body>
+<body class="best-mix-current-home">
   <a class="skip-link" href="#main-content" data-i18n="a11y.skip">Skip to content</a>
   <header class="topbar shell">
-    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE</div>
+    <div class="brand"><img class="site-logo" src="./assets/branding/photosbyelie-camera-tripod-logo-512.png" alt="Photos By Elie camera logo"/>PHOTOS BY ELIE</div>
     <nav class="version-switch" aria-label="Site navigation" data-i18n-aria-label="a11y.site_nav">
-      <a href="https://ec92009.github.io/byElie/">By Elie</a> <span>|</span>
       <a class="is-active" href="./" data-i18n="nav.photos">Photos</a> <span>|</span>
-      <a href="./real-estate.html?logout=1">Client login</a>
+      <a href="./real-estate.html?logout=1&client=elie">Client login</a>
     </nav>
-    <span class="site-version-badge">v93.0</span>
+    <span class="site-version-badge">v93.1</span>
     <div class="header-controls">
       <button class="language-toggle" type="button" data-language-toggle>English</button>
       <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light" data-i18n="theme.night">Night</span><span class="mode-dark" data-i18n="theme.day">Day</span></button>
@@ -48,25 +47,50 @@
       <div>
         <h1 id="page-title">Photos By Elie</h1>
         <div class="cta">
-          <a class="btn primary" href="#collections" data-i18n="home.view_collections">View collections</a>
-          <a class="btn secondary" href="./real-estate.html?logout=1">Client login</a>
+          <button class="btn primary" type="button" aria-controls="collections" aria-expanded="true" data-best-mix-section-trigger="collections">Collections</button>
+          <a class="btn secondary" href="./gallery.html?gallery=selection&fit=fill&columns=3" data-i18n="gallery.make_selection">Search</a>
+          <button class="btn secondary" type="button" aria-controls="featured" aria-expanded="false" data-best-mix-section-trigger="featured">Featured</button>
         </div>
       </div>
       <div class="photo-stack" data-home-stack aria-label="Featured collections"></div>
     </section>
 
-    <section class="panel featured-campaigns" aria-labelledby="featured-campaigns-title">
+    <section class="panel featured-campaigns is-best-mix-section-collapsed" id="featured" data-best-mix-section="featured" aria-labelledby="featured-campaigns-title">
       <div class="featured-campaigns-head">
         <div>
-          <p class="eyebrow">Featured on Pinterest</p>
-          <h2 id="featured-campaigns-title">Recent Pinterest features</h2>
+          <p class="eyebrow">Pinned collections</p>
+          <h2 id="featured-campaigns-title">Social features ready to browse</h2>
         </div>
-        <a class="btn secondary" href="https://www.pinterest.com/photosbyelie/" target="_blank" rel="noreferrer">View Pinterest</a>
       </div>
-      <div class="featured-campaign-grid">
+      <div class="featured-campaign-grid" data-featured-campaign-grid>
+        <a class="featured-campaign-card" href="./campaign.html?c=pinterest-sintra-palaces-green-hills-2026-05-26">
+          <img src="https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180518-1522-00564-8ed80527e5_900.jpg" alt="Sintra palace detail and green hills"/>
+          <span>
+            <em class="featured-campaign-platform">Pinterest</em>
+            <strong>Sintra Palaces and Green Hills</strong>
+            <small>5-photo Portugal carousel with palace details, tilework, and hilltop views</small>
+          </span>
+        </a>
+        <a class="featured-campaign-card" href="./campaign.html?c=instagram-estepa-chocolate-museum-2026-05-26">
+          <img src="https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240308-130209-00248-7a9d4241bb_900.jpg" alt="Estepa chocolate museum display detail"/>
+          <span>
+            <em class="featured-campaign-platform">Instagram / Threads</em>
+            <strong>Estepa Chocolate Museum Details</strong>
+            <small>Small museum textures from Spain, selected for Instagram and Threads</small>
+          </span>
+        </a>
+        <a class="featured-campaign-card" href="./campaign.html?c=facebook-rueil-malmaison-2026-05-26">
+          <img src="https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6236-5c34056e1e_900.jpg" alt="Musee de la Malmaison interior room"/>
+          <span>
+            <em class="featured-campaign-platform">Facebook</em>
+            <strong>Rueil-Malmaison Museum Rooms</strong>
+            <small>Quiet interiors, chandeliers, and period details from Musee de la Malmaison</small>
+          </span>
+        </a>
         <a class="featured-campaign-card" href="./campaign.html?c=pinterest-valencia-aquarium-2026-05-16">
           <img src="./socials/Pinterest/2026-05-15/valencia-aquarium/images-square/01-img-1567-8286aafbcb-square.jpg" alt="Valencia Aquarium Architecture"/>
           <span>
+            <em class="featured-campaign-platform">Pinterest</em>
             <strong>Valencia Aquarium Architecture</strong>
             <small>5-photo Pinterest carousel from Spain's City of Arts and Sciences</small>
           </span>
@@ -74,6 +98,7 @@
         <a class="featured-campaign-card" href="./campaign.html?c=pinterest-invalides-2026-05-14">
           <img src="https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20220506-154558-03388-a887904b4b_900.jpg" alt="Eglise des Invalides, Paris"/>
           <span>
+            <em class="featured-campaign-platform">Facebook / Pinterest</em>
             <strong>Eglise des Invalides, Paris</strong>
             <small>10 photos from the shoot, plus nearby Paris finds</small>
           </span>
@@ -81,79 +106,7 @@
       </div>
     </section>
 
-    <section class="panel home-discovery-panel" id="discover" data-home-discovery aria-labelledby="discover-title">
-      <div class="home-discovery-head">
-        <h2 id="discover-title" data-i18n="home.discover">Find photos</h2>
-        <p class="gallery-status" data-home-discovery-status aria-live="polite" data-i18n="home.loading_catalog">Loading catalog...</p>
-      </div>
-      <form class="gallery-filter-bar home-discovery-controls" data-home-discovery-form aria-label="Photo search and filters" data-i18n-aria-label="a11y.gallery_filters">
-        <label class="gallery-search-label"><span data-i18n="gallery.search">Search</span><input type="search" data-home-search data-i18n-placeholder="gallery.search_placeholder" placeholder="Title or keyword"/></label>
-        <label><span data-i18n="home.collection_filter">Collection</span><select data-home-filter="collection">
-          <option value="all" data-i18n="gallery.all">All</option>
-        </select></label>
-        <label><span data-i18n="gallery.date_from">Date from</span><input type="date" data-home-filter="dateFrom"/></label>
-        <label><span data-i18n="gallery.date_to">Date to</span><input type="date" data-home-filter="dateTo"/></label>
-        <label><span data-i18n="gallery.media">Media</span><select data-home-filter="mediaType">
-          <option value="all" data-i18n="gallery.all_media">All media</option>
-          <option value="photo" data-i18n="gallery.photos">Photos</option>
-          <option value="video" data-i18n="gallery.videos">Videos</option>
-        </select></label>
-        <label><span data-i18n="gallery.origin">Origin</span><select data-home-filter="origin">
-          <option value="all" data-i18n="gallery.all">All</option>
-          <option value="camera" data-i18n="origin.camera">Camera photo</option>
-          <option value="ai" data-i18n="origin.ai">AI image</option>
-        </select></label>
-        <label><span data-i18n="gallery.orientation">Orientation</span><select data-home-filter="orientation">
-          <option value="all" data-i18n="gallery.all">All</option>
-          <option value="pano" data-i18n="gallery.pano">Pano</option>
-          <option value="landscape" data-i18n="gallery.landscape">Landscape</option>
-          <option value="portrait" data-i18n="gallery.portrait">Portrait</option>
-          <option value="square" data-i18n="gallery.square">Square</option>
-        </select></label>
-        <label><span data-i18n="gallery.min_size">Min size</span><select data-home-filter="minSize">
-          <option value="all" data-i18n="gallery.any_size">Any size</option>
-          <option value="1" data-i18n="gallery.size_1mp">1 MP+</option>
-          <option value="3" data-i18n="gallery.size_3mp">3 MP+</option>
-          <option value="6" data-i18n="gallery.size_6mp">6 MP+</option>
-          <option value="10" data-i18n="gallery.size_10mp">10 MP+</option>
-          <option value="20" data-i18n="gallery.size_20mp">20 MP+</option>
-        </select></label>
-        <label><span data-i18n="gallery.color_mood">Color mood</span><select data-home-filter="mood">
-          <option value="all" data-i18n="gallery.all">All</option>
-          <option value="warm" data-i18n="gallery.warm">Warm</option>
-          <option value="cool" data-i18n="gallery.cool">Cool</option>
-          <option value="neutral" data-i18n="gallery.neutral">Neutral</option>
-          <option value="vivid" data-i18n="gallery.vivid">Vivid</option>
-        </select></label>
-        <label><span data-i18n="gallery.subject">Subject</span><select data-home-filter="subject">
-          <option value="all" data-i18n="gallery.all">All</option>
-          <option value="architecture" data-i18n="gallery.architecture">Architecture</option>
-          <option value="water" data-i18n="gallery.water">Water/coast</option>
-          <option value="art" data-i18n="gallery.art">Art/museum</option>
-          <option value="people" data-i18n="gallery.people">People</option>
-          <option value="nature" data-i18n="gallery.nature">Nature</option>
-          <option value="city" data-i18n="gallery.city">City/travel</option>
-        </select></label>
-        <label class="gallery-sort-label"><span data-i18n="gallery.sort">Sort</span><select data-home-filter="sort">
-          <option value="newest" data-i18n="gallery.newest">Newest first</option>
-          <option value="oldest" data-i18n="gallery.oldest">Oldest first</option>
-          <option value="collection" data-i18n="gallery.collection_order">Collection order</option>
-          <option value="title" data-i18n="gallery.title">Title</option>
-          <option value="megapixels-desc" data-i18n="gallery.largest_mp">Largest MP</option>
-          <option value="megapixels-asc" data-i18n="gallery.smallest_mp">Smallest MP</option>
-          <option value="price-desc" data-i18n="gallery.highest_price">Highest price</option>
-          <option value="price-asc" data-i18n="gallery.lowest_price">Lowest price</option>
-        </select></label>
-        <button class="btn secondary gallery-filter-clear" type="button" data-home-clear-filters data-i18n="gallery.clear">Clear</button>
-      </form>
-      <div class="home-discovery-results mock-gallery" data-home-discovery-results aria-label="Search results" data-i18n-aria-label="home.results" hidden></div>
-      <div class="gallery-pagination-controls">
-        <button class="btn secondary home-discovery-more gallery-more-button" type="button" data-home-discovery-more data-i18n="home.show_more" hidden>Show more</button>
-        <button class="btn secondary home-discovery-more gallery-more-button" type="button" data-home-discovery-show-all data-i18n="home.show_all" hidden>Show all</button>
-      </div>
-    </section>
-
-    <section class="panel carousel photo-carousel-panel" id="collections" aria-label="Photo collections carousel">
+    <section class="panel carousel photo-carousel-panel" id="collections" data-best-mix-section="collections" aria-label="Photo collections carousel">
       <div class="carousel-head photo-head">
         <div>
           <h2 data-i18n="home.collections">Collections</h2>
@@ -161,28 +114,28 @@
       </div>
       <div class="carousel-wrap" data-offers-wrap tabindex="0">
         <div class="carousel-track" data-offers-track>
-          <article class="card carousel-item photo-collection-card" data-offer-item data-gallery-key="france" data-href="./gallery.html?gallery=france">
+          <article class="card carousel-item photo-collection-card" data-offer-item data-gallery-key="france" data-href="./gallery.html?gallery=france&fit=fill&columns=3">
             <div class="photo-art france" aria-hidden="true"><span class="hand-label" data-i18n="collection.france">France</span></div>
           </article>
-          <article class="card carousel-item photo-collection-card" data-offer-item data-gallery-key="usa" data-href="./gallery.html?gallery=usa">
+          <article class="card carousel-item photo-collection-card" data-offer-item data-gallery-key="usa" data-href="./gallery.html?gallery=usa&fit=fill&columns=3">
             <div class="photo-art usa" aria-hidden="true"><span class="hand-label" data-i18n="collection.usa">USA</span></div>
           </article>
-          <article class="card carousel-item photo-collection-card" data-offer-item data-gallery-key="spain" data-href="./gallery.html?gallery=spain">
+          <article class="card carousel-item photo-collection-card" data-offer-item data-gallery-key="spain" data-href="./gallery.html?gallery=spain&fit=fill&columns=3">
             <div class="photo-art spain" aria-hidden="true"><span class="hand-label" data-i18n="collection.spain">Spain</span></div>
           </article>
-          <article class="card carousel-item photo-collection-card" data-offer-item data-gallery-key="mexico" data-href="./gallery.html?gallery=mexico">
+          <article class="card carousel-item photo-collection-card" data-offer-item data-gallery-key="mexico" data-href="./gallery.html?gallery=mexico&fit=fill&columns=3">
             <div class="photo-art mexico" aria-hidden="true"><span class="hand-label" data-i18n="collection.mexico">Mexico</span></div>
           </article>
-          <article class="card carousel-item photo-collection-card" data-offer-item data-gallery-key="italy" data-href="./gallery.html?gallery=italy">
+          <article class="card carousel-item photo-collection-card" data-offer-item data-gallery-key="italy" data-href="./gallery.html?gallery=italy&fit=fill&columns=3">
             <div class="photo-art italy" aria-hidden="true"><span class="hand-label" data-i18n="collection.italy">Italy</span></div>
           </article>
-          <article class="card carousel-item photo-collection-card" data-offer-item data-gallery-key="ai" data-href="./gallery.html?gallery=ai">
+          <article class="card carousel-item photo-collection-card" data-offer-item data-gallery-key="ai" data-href="./gallery.html?gallery=ai&fit=fill&columns=3">
             <div class="photo-art ai" aria-hidden="true"><span class="hand-label" data-i18n="collection.ai">AI Images</span></div>
           </article>
-          <article class="card carousel-item photo-collection-card" data-offer-item data-gallery-key="portugal" data-href="./gallery.html?gallery=portugal">
+          <article class="card carousel-item photo-collection-card" data-offer-item data-gallery-key="portugal" data-href="./gallery.html?gallery=portugal&fit=fill&columns=3">
             <div class="photo-art portugal" aria-hidden="true"><span class="hand-label" data-i18n="collection.portugal">Portugal</span></div>
           </article>
-          <article class="card carousel-item photo-collection-card" data-offer-item data-gallery-key="slovakia" data-href="./gallery.html?gallery=slovakia">
+          <article class="card carousel-item photo-collection-card" data-offer-item data-gallery-key="slovakia" data-href="./gallery.html?gallery=slovakia&fit=fill&columns=3">
             <div class="photo-art slovakia" aria-hidden="true"><span class="hand-label" data-i18n="collection.slovakia">Slovakia</span></div>
           </article>
         </div>
@@ -288,7 +241,8 @@
       <p class="footer-note">© 2026 Photos By Elie</p>
       <nav class="footer-nav" aria-label="Footer navigation" data-i18n-aria-label="a11y.footer_nav">
         <a href="https://ec92009.github.io/byElie/">By Elie</a>
-        <a href="#collections" data-i18n="nav.collections">Collections</a>
+        <a href="#collections" data-i18n="nav.collections" data-best-mix-section-trigger="collections">Collections</a>
+        <a href="./support.html" data-i18n="nav.support">Support and license</a>
         <span class="footer-owner-tools" data-owner-tools hidden>
           <a href="./owner.html" data-i18n="nav.owner">Owner</a>
         </span>
@@ -653,15 +607,15 @@
 
   })();
   </script>
-  <script src="./media-config.js?v=93.0"></script>
-  <script src="./photos.js?v=93.0"></script>
-  <script src="./owner-auth.js?v=93.0"></script>
-  <script src="./site-version.js?v=93.0"></script>
-  <script src="./home-data.js?v=93.0"></script>
-  <script src="./hidden-actions.js?v=93.0"></script>
-  <script src="./owner-tools.js?v=93.0"></script>
-  <script src="./home-gallery-randomizer.js?v=93.0"></script>
-  <script src="./home-catalog-loader.js?v=93.0"></script>
-  <script src="./home-discovery.js?v=93.0"></script>
+  <script src="./media-config.js?v=92.24"></script>
+  <script src="./photos.js?v=93.1"></script>
+  <script src="./owner-auth.js?v=92.24"></script>
+  <script src="./site-version.js?v=92.24"></script>
+  <script src="./home-data.js?v=92.24"></script>
+  <script src="./hidden-actions.js?v=92.24"></script>
+  <script src="./owner-tools.js?v=92.24"></script>
+  <script src="./home-gallery-randomizer.js?v=92.24"></script>
+  <script src="./home-best-mix.js?v=92.24"></script>
+  <script src="./home-featured-campaigns.js?v=92.24"></script>
 </body>
 </html>

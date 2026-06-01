@@ -7,10 +7,12 @@ import random
 import re
 import subprocess
 from collections import defaultdict
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from media_keys import DEFAULT_PUBLIC_PREFIX, public_preview_key, public_preview_key_for_reference
 from media_policy import media_source_policy, public_preview_allowed, source_file_entries
+from import_eligibility import row_import_eligible
+from owner_state_db import connect as owner_db_connect, keyword_blacklist_terms as owner_keyword_blacklist_terms
 
 LABELS = {
     "france": ("01", "France", "france-gallery", "Saturn Lightroom archive selections prepared from the Camera source."),
@@ -29,6 +31,13 @@ PUBLIC_ORDER = [slug for slug in ORDER if slug != "unknown"]
 OWNER_ORDER = ["unknown"]
 COUNTRY_ASSIGNMENT_TARGETS = {"france", "usa", "spain", "mexico", "italy", "portugal", "slovakia"}
 AI_SOURCE_MODE_HINTS = {"ai", "leonardo"}
+EXPORT_COUNTRY_HINTS = {
+    "florence": ("italy", "Italy"),
+    "firenze": ("italy", "Italy"),
+    "pisa": ("italy", "Italy"),
+    "san gimignano": ("italy", "Italy"),
+    "tuscany": ("italy", "Italy"),
+}
 DEFAULT_REGULAR_CAP = None
 DEFAULT_SELECTION_MODE = "random"
 DIVERSITY_BUCKET_MINUTES = 10
@@ -280,6 +289,7 @@ def photo_object_data(
         "className": f"p{(index % 5) + 1}",
         "title": title_from_row(row),
         "caption": caption_from_row(row, gallery_title),
+        "captionColor": str(row.get("caption_color") or row.get("captionColor") or "").strip().upper(),
         "full": full_label,
         "megapixels": (row.get("dimensions") or {}).get("megapixels") or 0,
         "sourceOrigin": source_origin,
@@ -307,6 +317,7 @@ def photo_object_lines(
         f"        className: {js(photo['className'])},",
         f"        title: {js(photo['title'])},",
         f"        caption: {js(photo['caption'])},",
+        f"        captionColor: {js(photo['captionColor'])},",
         f"        full: {js(photo['full'])},",
         f"        megapixels: {json.dumps(photo['megapixels'])},",
         f"        sourceOrigin: {js(photo['sourceOrigin'])},",
@@ -506,13 +517,9 @@ def load_json(path: Path, fallback: object) -> object:
 
 
 def load_keyword_blacklist(path: Path | None) -> set[str]:
-    if not path:
-        return set()
-    payload = load_json(path.expanduser(), {})
-    keywords = payload.get("keywords") if isinstance(payload, dict) else None
-    if not isinstance(keywords, list):
-        return set()
-    return {str(keyword).strip().casefold() for keyword in keywords if str(keyword).strip()}
+    del path
+    repo_root = Path(__file__).resolve().parents[1]
+    return {keyword.casefold() for keyword in owner_keyword_blacklist_terms(repo_root)}
 
 
 def blacklist_ids_from_payload(payload: dict) -> set[str]:
@@ -560,6 +567,101 @@ def discarded_ids_from_current_state(repo_root: Path) -> set[str]:
     return discarded_ids
 
 
+def normalize_source_path_value(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    if not text:
+        return None
+    try:
+        return Path(text).expanduser().resolve(strict=False).as_posix()
+    except OSError:
+        return Path(text).expanduser().as_posix()
+
+
+def source_path_values_from_object(value: object) -> set[str]:
+    paths: set[str] = set()
+    if isinstance(value, dict):
+        for key in ("source_path_hint", "sourcePath", "source_path", "sourceFile", "path"):
+            normalized = normalize_source_path_value(value.get(key))
+            if normalized:
+                paths.add(normalized)
+        for key in ("source_paths", "sourcePaths", "sourceFiles", "source_files"):
+            paths.update(source_path_values_from_object(value.get(key)))
+        source_file = value.get("source_file")
+        if isinstance(source_file, dict):
+            paths.update(source_path_values_from_object(source_file))
+    elif isinstance(value, list):
+        for item in value:
+            paths.update(source_path_values_from_object(item))
+    elif isinstance(value, str):
+        normalized = normalize_source_path_value(value)
+        if normalized:
+            paths.add(normalized)
+    return paths
+
+
+def discarded_source_paths_from_payload(payload: object) -> set[str]:
+    return source_path_values_from_object(payload)
+
+
+def discarded_source_paths_from_current_state(repo_root: Path, discarded_ids: set[str]) -> set[str]:
+    paths: set[str] = set()
+    for relative_path in (DISCARDED_TOMBSTONE_PATH, DISCARDED_MEDIA_MANIFEST_PATH):
+        paths.update(discarded_source_paths_from_payload(load_json(repo_root / relative_path, {})))
+    tmp_root = repo_root / "tmp"
+    if discarded_ids and tmp_root.exists():
+        for manifest_path in tmp_root.glob("**/manifest.json"):
+            payload = load_json(manifest_path, {})
+            rows = payload.get("photos") if isinstance(payload, dict) else None
+            if not isinstance(rows, list):
+                continue
+            for row in rows:
+                if isinstance(row, dict) and str(row.get("id") or "") in discarded_ids:
+                    paths.update(source_path_values_from_object(row))
+    return paths
+
+
+def source_path_suffixes(paths: set[str]) -> set[str]:
+    suffixes = set()
+    for value in paths:
+        text = PurePosixPath(value).as_posix().strip("/")
+        if "/" in text:
+            suffixes.add(text)
+    return suffixes
+
+
+def row_source_path_is_blocked(row: dict, blocked_paths: set[str], blocked_suffixes: set[str]) -> bool:
+    for value in source_path_values_from_object(row):
+        if value in blocked_paths:
+            return True
+        candidate = PurePosixPath(value).as_posix().strip("/")
+        for suffix in blocked_suffixes:
+            if candidate == suffix or candidate.endswith(f"/{suffix}"):
+                return True
+    return False
+
+
+def apply_export_country_hints(row: dict) -> dict:
+    gallery_country = row.get("gallery_country") or {}
+    slug = gallery_country.get("slug") if isinstance(gallery_country, dict) else str(gallery_country or "")
+    if slug and slug != "unknown":
+        return row
+    haystack_values = [
+        str(row.get("relative_path") or row.get("relativePath") or ""),
+        *source_path_values_from_object(row),
+    ]
+    haystack = " ".join(haystack_values).casefold()
+    if "leonardo" in haystack:
+        return row
+    for hint, (target_slug, label) in EXPORT_COUNTRY_HINTS.items():
+        if hint in haystack:
+            row = dict(row)
+            row["gallery_country"] = {"slug": target_slug, "label": label, "source": "path_hint"}
+            return row
+    return row
+
+
 def expo_state_from_payload(payload: dict) -> dict[str, list[str]]:
     value = payload.get("expo_state")
     if not isinstance(value, dict):
@@ -595,17 +697,16 @@ def country_assignments_from_payload(payload: dict) -> dict[str, str]:
 
 
 def country_assignments_from_owner_index(repo_root: Path) -> dict[str, str]:
-    payload = load_json(repo_root / "assets/owner-actions/country-assignments.json", {})
-    photos = payload.get("photos") if isinstance(payload, dict) else {}
-    if not isinstance(photos, dict):
-        return {}
+    conn = owner_db_connect(repo_root)
     assignments: dict[str, str] = {}
-    for photo_id, record in photos.items():
-        if not isinstance(photo_id, str) or not isinstance(record, dict):
-            continue
-        slug = record.get("gallery_key")
-        if slug in COUNTRY_ASSIGNMENT_TARGETS:
-            assignments[photo_id] = slug
+    try:
+        rows = conn.execute("SELECT media_id, country_slug FROM country_assignments").fetchall()
+        for row in rows:
+            slug = row["country_slug"]
+            if slug in COUNTRY_ASSIGNMENT_TARGETS:
+                assignments[row["media_id"]] = slug
+    finally:
+        conn.close()
     return assignments
 
 
@@ -720,16 +821,24 @@ def write_photos_data(
     reserve_only_ids: set[str] | None = None,
     country_assignments: dict[str, str] | None = None,
     keyword_blacklist: set[str] | None = None,
+    blacklist_source_paths: set[str] | None = None,
 ) -> Path:
     groups: dict[str, list[tuple[dict, str]]] = defaultdict(list)
     country_assignments = country_assignments or {}
     keyword_blacklist = keyword_blacklist or set()
+    blacklist_source_paths = blacklist_source_paths or set()
+    blacklist_source_suffixes = source_path_suffixes(blacklist_source_paths)
     uploaded_public_keys = load_uploaded_public_keys(repo_root)
     for path, mode in existing_manifest_specs(repo_root):
         for row in json.loads(path.read_text())["photos"]:
+            if row_source_path_is_blocked(row, blacklist_source_paths, blacklist_source_suffixes):
+                continue
+            if not row_import_eligible(row)[0]:
+                continue
             if not derivative_files_available(repo_root, row, mode, uploaded_public_keys):
                 continue
             row = apply_country_assignment(row, country_assignments.get(row.get("id")))
+            row = apply_export_country_hints(row)
             row = sanitize_keyword_metadata(row, keyword_blacklist)
             gallery_country = row.get("gallery_country") or {}
             slug = gallery_country.get("slug") if isinstance(gallery_country, dict) else str(gallery_country)
@@ -832,6 +941,10 @@ def write_photos_data(
         'window.photosByEliePriceTiers = window.photosByEliePriceTiers || {};',
         'window.photosByElieFrameOptions = window.photosByElieFrameOptions || [];',
         'window.photosByElieShippingHandlingPrices = window.photosByElieShippingHandlingPrices || {};',
+        'window.photosByEliePodAutomation = window.photosByEliePodAutomation || {};',
+        'window.photosByEliePodSuppliers = window.photosByEliePodSuppliers || [];',
+        'window.photosByEliePodQualityTiers = window.photosByEliePodQualityTiers || [];',
+        'window.photosByEliePodOptions = window.photosByEliePodOptions || [];',
         "",
         'window.photosByEliePricingTier = (photo) => window.photosByEliePhotoOrigin(photo) === "ai" ? "ai" : "original";',
         'window.photosByEliePricingTierLabel = (photo) => window.photosByEliePriceTiers?.[window.photosByEliePricingTier(photo)]?.label || "Camera photo";',
@@ -982,6 +1095,7 @@ if __name__ == "__main__":
         | discarded_ids_from_current_state(repo_root)
         | blacklist_ids_from_payload(review_payload)
     )
+    hidden_source_paths = discarded_source_paths_from_current_state(repo_root, hidden_ids)
     country_assignments = country_assignments_from_owner_index(repo_root)
     country_assignments.update(country_assignments_from_payload(review_payload))
     keyword_blacklist = load_keyword_blacklist(repo_root / args.keyword_blacklist)
@@ -997,5 +1111,6 @@ if __name__ == "__main__":
         reserve_only_ids=reserve_only_ids_from_payload(review_payload),
         country_assignments=country_assignments,
         keyword_blacklist=keyword_blacklist,
+        blacklist_source_paths=hidden_source_paths,
     )
     print(result)

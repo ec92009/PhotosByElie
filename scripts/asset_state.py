@@ -172,8 +172,9 @@ def media_type_for_photo(photo: dict) -> str:
 
 def media_object_for_photo(photo: dict) -> dict:
     public_allowed = public_preview_allowed(photo)
-    return {
-        "type": media_type_for_photo(photo),
+    media_type = media_type_for_photo(photo)
+    media = {
+        "type": media_type,
         "sourcePolicy": media_source_policy(photo),
         "publicPreview": {
             "allowed": public_allowed,
@@ -181,6 +182,15 @@ def media_object_for_photo(photo: dict) -> dict:
             "detailKey": public_media_key(photo, photo.get("imageSrc"), "detail") if public_allowed else "",
         },
     }
+    if media_type == "video":
+        existing_video = (photo.get("media") or {}).get("video") or {}
+        video = copy_photo(existing_video) if isinstance(existing_video, dict) else {}
+        duration = video.get("duration") or photo.get("duration")
+        if duration:
+            video["duration"] = duration
+        if video:
+            media["video"] = video
+    return media
 
 
 def photo_with_media(photo: dict) -> dict:
@@ -473,6 +483,10 @@ def helper_lines() -> list[str]:
         "window.photosByEliePriceTiers = window.photosByEliePriceTiers || {};",
         "window.photosByElieFrameOptions = window.photosByElieFrameOptions || [];",
         "window.photosByElieShippingHandlingPrices = window.photosByElieShippingHandlingPrices || {};",
+        "window.photosByEliePodAutomation = window.photosByEliePodAutomation || {};",
+        "window.photosByEliePodSuppliers = window.photosByEliePodSuppliers || [];",
+        "window.photosByEliePodQualityTiers = window.photosByEliePodQualityTiers || [];",
+        "window.photosByEliePodOptions = window.photosByEliePodOptions || [];",
         "",
         "window.photosByEliePreviewMegapixels = (photo) => {",
         '  const preview = (photo?.metadata || []).find((item) => item.label === "Preview file")?.value || "";',
@@ -641,8 +655,45 @@ def write_hidden_data_from_site(repo_root: Path, hidden_groups: dict[str, list[d
 
 
 def source_mode_for(photo: dict, slug: str) -> str:
-    src = clean_site_src(photo.get("_originalGallerySrc") or photo.get("gallerySrc"))
-    return "ai" if slug == "ai" else "reserve"
+    for value in [
+        photo.get("source_mode"),
+        photo.get("sourceMode"),
+        (photo.get("ownerState") or {}).get("source_mode"),
+        (photo.get("ownerState") or {}).get("sourceMode"),
+    ]:
+        if value:
+            return str(value)
+    source_text = " ".join(
+        str(item or "")
+        for item in [
+            (photo.get("sourceFiles") or [{}])[0].get("path"),
+            photo.get("sourceOrigin"),
+            photo.get("pricingTier"),
+        ]
+    ).lower()
+    if slug == "ai" or "leonardo" in source_text:
+        return "ai"
+    if "apple" in source_text:
+        return "apple-photo-albums"
+    if source_text.startswith("re/") or "/re/" in source_text:
+        return "real-estate"
+    return "ai" if slug == "ai" else "import-cache"
+
+
+def _existing_expo_manifest(repo_root: Path) -> tuple[dict, dict[str, dict]]:
+    path = repo_root / EXPO_MANIFEST_PATH
+    if not path.exists():
+        return {}, {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}, {}
+    rows = {
+        str(row.get("id")): row
+        for row in payload.get("photos") or []
+        if isinstance(row, dict) and row.get("id")
+    }
+    return payload, rows
 
 
 def write_regular_manifest_from_site(
@@ -654,37 +705,57 @@ def write_regular_manifest_from_site(
     selection_mode: str = "review-snapshot",
 ) -> None:
     regular_rows = [(slug, photo) for slug in ORDER for photo in regular_groups.get(slug, [])]
+    existing_payload, existing_rows = _existing_expo_manifest(repo_root)
+    count_keys = [
+        slug for slug in (existing_payload.get("reserve_counts") or {}).keys()
+        if slug in ORDER
+    ] or ORDER
+
+    def gallery_country_for(photo_id: str, slug: str) -> dict:
+        existing = copy_photo((existing_rows.get(photo_id) or {}).get("gallery_country") or {})
+        if existing.get("slug") == slug:
+            existing["label"] = existing.get("label") or LABELS[slug][1]
+            existing["source"] = existing.get("source") or ("owner" if slug == "unknown" else "review-snapshot")
+            return existing
+        return {
+            "slug": slug,
+            "label": LABELS[slug][1],
+            "source": "owner" if slug == "unknown" else "review-snapshot",
+        }
+
+    def source_mode_for_row(photo_id: str, photo: dict, slug: str) -> str:
+        existing = (existing_rows.get(photo_id) or {}).get("source_mode")
+        return str(existing or source_mode_for(photo, slug))
+
+    def manifest_row(slug: str, photo: dict) -> dict:
+        photo_id = photo["id"]
+        return {
+            "id": photo_id,
+            "relative_path": (photo.get("sourceFiles") or [{}])[0].get("path"),
+            "gallery_country": gallery_country_for(photo_id, slug),
+            "source_mode": source_mode_for_row(photo_id, photo, slug),
+            "derivatives": {
+                "gallery": public_preview_key(DEFAULT_PUBLIC_PREFIX, photo_id, "gallery", media_type_for_photo(photo)),
+                "detail": public_preview_key(DEFAULT_PUBLIC_PREFIX, photo_id, "detail", media_type_for_photo(photo)),
+            },
+        }
+
     payload = {
         "schema_version": 1,
         "state": "expo",
         "expo_cap": regular_cap,
         "publish_scope": "all-eligible" if regular_cap is None or regular_cap <= 0 else "capped",
-        "selection_mode": selection_mode,
-        "seed": None,
+        "selection_mode": existing_payload.get("selection_mode") or selection_mode,
+        "seed": existing_payload.get("seed"),
         "photos_count": len(regular_rows),
-        "reserve_counts": {slug: len(reserve_groups.get(slug, [])) for slug in ORDER},
-        "hidden_counts": {slug: 0 for slug in ORDER},
-        "photos": [
-            {
-                "id": photo["id"],
-                "relative_path": (photo.get("sourceFiles") or [{}])[0].get("path"),
-                "gallery_country": {
-                    "slug": slug,
-                    "label": LABELS[slug][1],
-                    "source": "owner" if slug == "unknown" else "review-snapshot",
-                },
-                "source_mode": source_mode_for(photo, slug),
-                "derivatives": {
-                    "gallery": public_preview_key(DEFAULT_PUBLIC_PREFIX, photo["id"], "gallery", media_type_for_photo(photo)),
-                    "detail": public_preview_key(DEFAULT_PUBLIC_PREFIX, photo["id"], "detail", media_type_for_photo(photo)),
-                },
-            }
-            for slug, photo in regular_rows
-        ],
+        "reserve_counts": {slug: len(reserve_groups.get(slug, [])) for slug in count_keys},
+        "hidden_counts": {slug: 0 for slug in count_keys},
+        "photos": [manifest_row(slug, photo) for slug, photo in regular_rows],
     }
-    for slug, photos in regular_groups.items():
-        hidden_in_slug = hidden_ids.intersection({photo["id"] for photo in photos})
-        payload["hidden_counts"][slug] = len(hidden_in_slug)
+    for photo_id in hidden_ids:
+        slug = ((existing_rows.get(photo_id) or {}).get("gallery_country") or {}).get("slug")
+        if slug in payload["hidden_counts"]:
+            payload["hidden_counts"][slug] += 1
     output = repo_root / EXPO_MANIFEST_PATH
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

@@ -3,7 +3,15 @@
   const main = document.querySelector("main.shell");
   if (!basketStore || !main || document.body.matches("[data-basket-page]")) return;
 
-  const formatMoney = (value) => `$${value}`;
+  const formatMoney = (value) => {
+    const amount = Number(value) || 0;
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      minimumFractionDigits: amount % 1 ? 2 : 0,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  };
   const t = (key, replacements = {}) => window.photosByElieI18n?.t?.(key, replacements) || key;
   const productLabel = (option) => {
     if (option?.type === "print") return window.photosByElieProductLabel?.(option) || option?.label || t("product.print");

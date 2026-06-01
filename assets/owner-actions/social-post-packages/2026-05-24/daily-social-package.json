@@ -1,0 +1,221 @@
+{
+  "format": "photosbyelie-daily-social-post-package",
+  "schema_version": 1,
+  "generated_at": "2026-05-24T07:03:13Z",
+  "date": "2026-05-24",
+  "source": {
+    "catalog": "assets/catalog/photosbyelie.sqlite",
+    "public_media_base_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev",
+    "site_base_url": "https://ec92009.github.io/PhotosByElie/"
+  },
+  "publishing_status": {
+    "facebook": "prepared_only_authenticated_composer_signals_but_public_post_needs_action_time_confirmation_and_page_target_check",
+    "instagram": "prepared_only_browser_probe_did_not_reach_reliable_loaded_state",
+    "pinterest": "prepared_only_business_hub_composer_signals_but_public_pin_needs_action_time_confirmation_and_board_check"
+  },
+  "packages": [
+    {
+      "platform": "facebook",
+      "theme": "Pisa Marble and Evening Light",
+      "destination_url": "https://ec92009.github.io/PhotosByElie/gallery.html?gallery=italy",
+      "caption": "Pisa in soft evening light: the Leaning Tower, marble facades, and quiet details around the Piazza dei Miracoli. Browse the Italy gallery on Photos By Elie: https://ec92009.github.io/PhotosByElie/gallery.html?gallery=italy",
+      "campaign_note": "Recommended future campaign: facebook-pisa-evening-2026-05-24. Not created in this run to avoid unreviewed public-site/version changes.",
+      "manual_steps": [
+        "Open the verified Photos By Elie Facebook Page composer.",
+        "Upload the listed public preview images in package order.",
+        "Paste the caption and publish only after confirming the post target is the Page."
+      ],
+      "media": [
+        {
+          "media_id": "img-1197-0132d88761",
+          "title": "Leaning Tower of Pisa",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1197-0132d88761_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=img-1197-0132d88761",
+          "local_source_path_used": null
+        },
+        {
+          "media_id": "img-1198-bb563d6235",
+          "title": "Historic Architecture in Pisa",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1198-bb563d6235_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=img-1198-bb563d6235",
+          "local_source_path_used": null
+        },
+        {
+          "media_id": "img-1199-0ebd1a5044",
+          "title": "Historic Architecture in Pisa",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1199-0ebd1a5044_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=img-1199-0ebd1a5044",
+          "local_source_path_used": null
+        },
+        {
+          "media_id": "img-1204-1d710fba81",
+          "title": "Pisa, Italy",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1204-1d710fba81_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=img-1204-1d710fba81",
+          "local_source_path_used": null
+        },
+        {
+          "media_id": "img-1205-4ca5e788f0",
+          "title": "Pisa",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1205-4ca5e788f0_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=img-1205-4ca5e788f0",
+          "local_source_path_used": null
+        },
+        {
+          "media_id": "img-1207-5079ff3336",
+          "title": "Leaning Tower of Pisa",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1207-5079ff3336_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=img-1207-5079ff3336",
+          "local_source_path_used": null
+        },
+        {
+          "media_id": "img-1208-d059e156dc",
+          "title": "Leaning Tower of Pisa",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1208-d059e156dc_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=img-1208-d059e156dc",
+          "local_source_path_used": null
+        },
+        {
+          "media_id": "img-1212-96505e7356",
+          "title": "Leaning Tower of Pisa",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1212-96505e7356_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=img-1212-96505e7356",
+          "local_source_path_used": null
+        }
+      ]
+    },
+    {
+      "platform": "instagram",
+      "theme": "Bilbao Guggenheim Geometry",
+      "destination_url": "https://ec92009.github.io/PhotosByElie/gallery.html?gallery=spain",
+      "caption": "Bilbao Guggenheim lines: titanium curves, glass, and afternoon geometry from the Spain archive. More Spain work is on Photos By Elie: https://ec92009.github.io/PhotosByElie/gallery.html?gallery=spain\n\n#PhotosByElie #Bilbao #Guggenheim #SpainTravel #ArchitecturePhotography #MuseumArchitecture #TravelPhotography",
+      "campaign_note": "Recommended future campaign: instagram-bilbao-guggenheim-2026-05-24.",
+      "manual_steps": [
+        "Use Instagram Create > Post and confirm the final Photos By Elie posting account before selecting files.",
+        "Upload the listed public preview images as a carousel.",
+        "Paste the caption; keep the gallery URL as text, or update the profile link/story sticker before posting."
+      ],
+      "media": [
+        {
+          "media_id": "20180515-1457-00387-71859141e6",
+          "title": "Bilbao Guggenheim Museum",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180515-1457-00387-71859141e6_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180515-1457-00387-71859141e6",
+          "local_source_path_used": null
+        },
+        {
+          "media_id": "20180515-1459-00389-24cb4ee83e",
+          "title": "Bilbao Guggenheim Museum",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180515-1459-00389-24cb4ee83e_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180515-1459-00389-24cb4ee83e",
+          "local_source_path_used": null
+        },
+        {
+          "media_id": "20180515-1508-00392-1-63dcf93248",
+          "title": "Bilbao Guggenheim Museum",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180515-1508-00392-1-63dcf93248_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180515-1508-00392-1-63dcf93248",
+          "local_source_path_used": null
+        },
+        {
+          "media_id": "20180515-1508-00393-06cf65e0d9",
+          "title": "Bilbao Guggenheim Museum",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180515-1508-00393-06cf65e0d9_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180515-1508-00393-06cf65e0d9",
+          "local_source_path_used": null
+        },
+        {
+          "media_id": "20180515-1509-00394-1c47ab8c12",
+          "title": "Bilbao Guggenheim Museum",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180515-1509-00394-1c47ab8c12_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180515-1509-00394-1c47ab8c12",
+          "local_source_path_used": null
+        },
+        {
+          "media_id": "20180515-1509-00395-990efe55c7",
+          "title": "Bilbao Guggenheim Museum",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180515-1509-00395-990efe55c7_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180515-1509-00395-990efe55c7",
+          "local_source_path_used": null
+        },
+        {
+          "media_id": "20180515-1510-00397-3fdd5ba3db",
+          "title": "Bilbao Guggenheim Museum",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180515-1510-00397-3fdd5ba3db_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180515-1510-00397-3fdd5ba3db",
+          "local_source_path_used": null
+        },
+        {
+          "media_id": "20180515-1510-00399-b36b36b527",
+          "title": "Bilbao Guggenheim Museum",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180515-1510-00399-b36b36b527_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180515-1510-00399-b36b36b527",
+          "local_source_path_used": null
+        },
+        {
+          "media_id": "20180515-1511-00401-b01a5f2047",
+          "title": "Bilbao Guggenheim Museum",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180515-1511-00401-b01a5f2047_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180515-1511-00401-b01a5f2047",
+          "local_source_path_used": null
+        }
+      ]
+    },
+    {
+      "platform": "pinterest",
+      "theme": "California Coast and Sunset",
+      "title": "California Coast and Sunset",
+      "destination_url": "https://ec92009.github.io/PhotosByElie/gallery.html?gallery=usa",
+      "caption": "Del Mar, Solana Beach, and Ocean Beach in one coastal set: low sun, water, pier lines, and Pacific color. Browse more on Photos By Elie: https://ec92009.github.io/PhotosByElie/gallery.html?gallery=usa",
+      "campaign_note": "Recommended future campaign: pinterest-california-coast-2026-05-24. Not created during this run to avoid unreviewed public-site/version changes. Pinterest accepts only 5 photos at a time, so this package is capped at 5 images.",
+      "manual_steps": [
+        "Open Pinterest @photosbyelie > Create > Pin or carousel-capable post flow.",
+        "Upload the listed public preview images; set the destination to the USA gallery URL.",
+        "Paste the title/caption and save to a California, USA, or coast/travel photography board."
+      ],
+      "media": [
+        {
+          "media_id": "20180130-1807-00056-ce796ea795",
+          "title": "Del Mar Dog Beach at Sunset",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180130-1807-00056-ce796ea795_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180130-1807-00056-ce796ea795",
+          "local_source_path_used": null
+        },
+        {
+          "media_id": "20180130-1809-00057-5d56be5106",
+          "title": "Del Mar Dog Beach at Sunset",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180130-1809-00057-5d56be5106_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180130-1809-00057-5d56be5106",
+          "local_source_path_used": null
+        },
+        {
+          "media_id": "20180130-1810-00058-16dcf3e4ea",
+          "title": "Del Mar Dog Beach at Sunset",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180130-1810-00058-16dcf3e4ea_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180130-1810-00058-16dcf3e4ea",
+          "local_source_path_used": null
+        },
+        {
+          "media_id": "20180304-1733-00110-843be79aa4",
+          "title": "Solana Beach Sunset",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180304-1733-00110-843be79aa4_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180304-1733-00110-843be79aa4",
+          "local_source_path_used": null
+        },
+        {
+          "media_id": "20180414-152504-00097-9494439789",
+          "title": "Ocean Beach Pier and Waves",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180414-152504-00097-9494439789_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180414-152504-00097-9494439789",
+          "local_source_path_used": null
+        }
+      ]
+    }
+  ],
+  "validation": {
+    "public_r2_http_200_count": 22,
+    "private_or_owner_sources_used": false,
+    "repeated_2026_05_23_theme": false,
+    "pinterest_image_cap": "5 images maximum; current package uses 5"
+  }
+}

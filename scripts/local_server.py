@@ -4,13 +4,17 @@
 from __future__ import annotations
 
 import argparse
+import copy
 from datetime import datetime, timezone
+import hashlib
 import os
 import ipaddress
 import json
 import mimetypes
 import re
+import signal
 import shutil
+import sqlite3
 import subprocess
 import sys
 import threading
@@ -19,7 +23,8 @@ import uuid
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, quote, unquote, urlparse
+from urllib.request import Request, urlopen
 
 
 PHOTO_ACTION_PATH = "/__photosbyelie/photo-action"
@@ -27,11 +32,18 @@ PHOTO_ACTION_PROGRESS_PATH = "/__photosbyelie/photo-action-progress"
 R2_PROGRESS_PATH = "/__photosbyelie/r2-progress"
 R2_COVERAGE_PATH = "/__photosbyelie/r2-coverage"
 R2_FIX_PATH = "/__photosbyelie/r2-fix"
+R2_FILL_GAPS_PATH = "/__photosbyelie/r2-fill-gaps"
+R2_SKIP_PHASE_PATH = "/__photosbyelie/r2-skip-phase"
+SELECT_IMPORT_FOLDER_PATH = "/__photosbyelie/select-import-folder"
+IMPORT_SOURCES_PATH = "/__photosbyelie/import-sources"
+IMPORT_SOURCE_THUMB_PATH = "/__photosbyelie/import-source-thumb"
 REAL_ESTATE_OWNER_PATH = "/__photosbyelie/real-estate-owner"
 REAL_ESTATE_IMPORT_PROGRESS_PATH = "/__photosbyelie/real-estate-import-progress"
 OWNER_SESSION_PATH = "/__photosbyelie/owner-session"
 OWNER_LOGIN_PATH = "/__photosbyelie/owner-login"
 OWNER_LOGOUT_PATH = "/__photosbyelie/owner-logout"
+TITLE_KEYWORD_REVIEW_QUEUE_PATH = "/__photosbyelie/title-keyword-review-queue"
+PUBLIC_MEDIA_PROXY_PATH = "/__photosbyelie/public-media/"
 MAX_BODY_BYTES = 5 * 1024 * 1024
 LOCAL_CLIENTS = {"127.0.0.1", "::1", "localhost"}
 DERIVATIVES = (("gallery", "gallerySrc"), ("detail", "imageSrc"))
@@ -42,13 +54,15 @@ KEYWORD_BLACKLIST_PATH = OWNER_ACTION_ROOT / "keyword-blacklist.json"
 COUNTRY_ASSIGNMENT_LOG = OWNER_ACTION_ROOT / "country-assignments.jsonl"
 COUNTRY_ASSIGNMENT_INDEX = OWNER_ACTION_ROOT / "country-assignments.json"
 TITLE_KEYWORD_REVIEW_ROOT = OWNER_ACTION_ROOT / "title-keyword-review-queue"
-TITLE_KEYWORD_PROPOSED_STATE = TITLE_KEYWORD_REVIEW_ROOT / "proposed-state.json"
 REAL_ESTATE_CLIENTS_PATH = OWNER_ACTION_ROOT / "real-estate-clients.local.json"
 REAL_ESTATE_IMPORT_ROOT = Path("tmp/real-estate-import")
 REAL_ESTATE_PUBLIC_ROOT = Path("assets/real-estate")
 REAL_ESTATE_SOURCE_ROOT = Path("/Volumes/Saturn/Pictures/RE")
 REAL_ESTATE_MEDIA_EXTENSIONS = {".jpg", ".jpeg", ".mov", ".mp4", ".m4v"}
+IMPORT_SOURCE_THUMB_ROOT = Path(".review-logs/import-source-thumbs")
+IMPORT_SOURCE_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tif", ".tiff", ".heic", ".heif", ".webp"}
 PUBLIC_SITE_BASE_URL = "https://ec92009.github.io/PhotosByElie/"
+PUBLIC_MEDIA_BASE_URL = "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev"
 TITLE_KEYWORD_REVIEW_FLAG = "Title_Keywords_Reviewed"
 TITLE_KEYWORD_PROPOSED_FLAG = "Title_Keywords_Proposed"
 TITLE_KEYWORD_REJECTED_FLAG = "Title_Keywords_Rejected"
@@ -56,8 +70,84 @@ TITLE_KEYWORD_PARKED_FLAG = "Title_Keywords_Parked"
 ACTION_PROGRESS: dict[str, dict] = {}
 REAL_ESTATE_IMPORT_PROGRESS: dict[str, dict] = {}
 REAL_ESTATE_IMPORT_PROGRESS_LOCK = threading.Lock()
+OWNER_ACTION_LOCK = threading.Lock()
 R2_BACKGROUND_TASKS: dict[str, dict] = {}
 R2_BACKGROUND_LOCK = threading.Lock()
+R2_SWEEP_SKIPPABLE_PHASES = {
+    "discard-start",
+    "selected-folder",
+    "camera",
+    "apple-photo-albums",
+    "leonardo",
+    "eligibility",
+    "real-estate",
+    "gap-fill",
+    "private",
+    "discard-final",
+    "test",
+    "validate",
+}
+IMPORT_SOURCE_SETTINGS_KEY = "import_source_roots"
+REAL_ESTATE_IMPORT_SOURCE_SETTINGS_KEY = "real_estate_import_source_roots"
+IMPORT_SOURCE_HISTORY_LIMIT = 40
+IMPORT_SOURCE_ROOTS = {
+    "camera": Path("/Volumes/Saturn/Pictures/LR/Camera"),
+    "apple-photo-albums": Path("/Volumes/Saturn/Pictures/LR/Apple Photo Albums"),
+    "leonardo": Path("/Volumes/Saturn/Pictures/LR/_All Leonardo"),
+}
+R2_MAINTENANCE_TASKS = {
+    "banned-cleanup": {
+        "label": "Banned-photo cleanup",
+        "phases": [
+            (
+                "discard-start",
+                "Double-check banned R2 cleanup",
+                [
+                    "node",
+                    "scripts/delete_discarded_r2_media.mjs",
+                    "--delete",
+                    "--discarded-tombstone",
+                    "assets/discarded/discarded-photo-ids.json",
+                    "--request-timeout-ms",
+                    "180000",
+                    "--retries",
+                    "4",
+                ],
+            ),
+        ],
+    },
+    "final-cleanup": {
+        "label": "Final banned-photo cleanup",
+        "phases": [
+            (
+                "discard-final",
+                "Final banned R2 cleanup double-check",
+                [
+                    "node",
+                    "scripts/delete_discarded_r2_media.mjs",
+                    "--delete",
+                    "--discarded-tombstone",
+                    "assets/discarded/discarded-photo-ids.json",
+                    "--request-timeout-ms",
+                    "180000",
+                    "--retries",
+                    "4",
+                ],
+            ),
+        ],
+    },
+    "storage": {
+        "label": "Storage estimate",
+        "phases": [("storage", "Refresh storage estimate", ["node", "scripts/write_storage_estimate.mjs"])],
+    },
+    "validate": {
+        "label": "Catalog validation",
+        "phases": [
+            ("test", "Run tests", ["npm", "test"]),
+            ("validate", "Validate publish", ["npm", "run", "validate"]),
+        ],
+    },
+}
 
 SCRIPT_ROOT = Path(__file__).resolve().parent
 if str(SCRIPT_ROOT) not in sys.path:
@@ -79,7 +169,8 @@ from asset_state import (  # noqa: E402
     write_regular_manifest_from_site,
     write_reserve_data_from_site,
 )
-from media_keys import legacy_private_master_key, private_master_key, private_render_key  # noqa: E402
+from media_keys import legacy_private_master_key, private_master_key, private_render_key, public_preview_key  # noqa: E402
+from import_eligibility import import_select_for_source_root  # noqa: E402
 from media_policy import private_master_allowed, public_preview_allowed  # noqa: E402
 from sync_r2_media import (  # noqa: E402
     DEFAULT_PRIVATE_BUCKET,
@@ -94,8 +185,12 @@ from sync_r2_media import (  # noqa: E402
     wrangler_delete,
     wrangler_put,
 )
+from owner_state_db import backfill_r2_object_metadata, connect as owner_db_connect, upsert_r2_object_state  # noqa: E402
+from owner_state_db import keyword_blacklist_terms as keyword_blacklist_terms_db  # noqa: E402
 from owner_state_db import record_country_assignments as record_country_assignments_db  # noqa: E402
 from owner_state_db import record_keyword_blacklist as record_keyword_blacklist_db  # noqa: E402
+from owner_state_db import clear_title_keyword_review_blocks as clear_title_keyword_review_blocks_db  # noqa: E402
+from owner_state_db import queue_title_keyword_review_photo as queue_title_keyword_review_photo_db  # noqa: E402
 from owner_state_db import record_title_keyword_review_decisions as record_title_keyword_review_decisions_db  # noqa: E402
 
 
@@ -108,17 +203,29 @@ SOURCE_ROOT_CANDIDATES = [
     Path("/Volumes/Saturn/Pictures/LR/Camera"),
     Path("/Volumes/Saturn/Pictures/LR/Apple Photo Albums"),
     Path("/Volumes/Saturn/Pictures/LR/_All Leonardo"),
+    Path("/Volumes/Saturn/Pictures/Phone Exports"),
     Path("/Volumes/Saturn/Pictures/LR"),
     Path("/Volumes/Saturn"),
     Path.home() / "Pictures/LR/Camera",
     Path.home() / "Pictures/LR/Apple Photo Albums",
     Path.home() / "Pictures/LR/_All Leonardo",
 ]
+RECURSIVE_SOURCE_ROOT_CANDIDATES = [
+    Path("/Volumes/Saturn/Pictures/Phone Exports"),
+    Path("/Volumes/Saturn-1/Pictures/Phone Exports"),
+    Path.home() / "Pictures/Phone Exports",
+]
 HIDDEN_BLACKLIST_PATH = HIDDEN_ASSET_ROOT / "hidden-blacklist.json"
 HIDDEN_BLACKLIST_R2_KEY = "hidden-blacklist.json"
 DISCARDED_TOMBSTONE_PATH = Path("assets/discarded/discarded-photo-ids.json")
 DISCARDED_MEDIA_MANIFEST_PATH = Path("assets/discarded-media-manifest.json")
 PRIVATE_RENDER_PRODUCTS = ("jpg-6mp", "jpg-3mp", "jpg-1mp")
+LOCAL_TOOL_DIRS = (
+    Path("/opt/homebrew/bin"),
+    Path("/usr/local/bin"),
+    Path("/opt/homebrew/sbin"),
+    Path("/usr/local/sbin"),
+)
 
 
 class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
@@ -130,8 +237,14 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
 
     def do_GET(self) -> None:
         path = self.path.split("?", 1)[0]
+        if path.startswith(PUBLIC_MEDIA_PROXY_PATH):
+            self._handle_public_media_proxy(path)
+            return
         if path == OWNER_SESSION_PATH:
             self._handle_owner_session()
+            return
+        if path == TITLE_KEYWORD_REVIEW_QUEUE_PATH:
+            self._handle_title_keyword_review_queue()
             return
         if path == PHOTO_ACTION_PROGRESS_PATH:
             self._handle_photo_action_progress()
@@ -141,6 +254,12 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             return
         if path == R2_COVERAGE_PATH:
             self._handle_r2_coverage()
+            return
+        if path == IMPORT_SOURCES_PATH:
+            self._handle_import_sources()
+            return
+        if path == IMPORT_SOURCE_THUMB_PATH:
+            self._handle_import_source_thumb()
             return
         if path == REAL_ESTATE_OWNER_PATH:
             self._handle_real_estate_owner()
@@ -160,6 +279,15 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             return
         if path == R2_FIX_PATH:
             self._handle_r2_fix()
+            return
+        if path == R2_FILL_GAPS_PATH:
+            self._handle_r2_fill_gaps()
+            return
+        if path == R2_SKIP_PHASE_PATH:
+            self._handle_r2_skip_phase()
+            return
+        if path == SELECT_IMPORT_FOLDER_PATH:
+            self._handle_select_import_folder()
             return
         if path == PHOTO_ACTION_PATH:
             self._handle_photo_action()
@@ -183,9 +311,13 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             return
         try:
             payload = self._read_json_body()
-            result = apply_photo_action(Path.cwd(), payload)
+            with OWNER_ACTION_LOCK:
+                result = apply_photo_action(Path.cwd(), payload)
         except ValueError as error:
             self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
+            return
+        except (sqlite3.Error, subprocess.CalledProcessError) as error:
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
             return
         except OSError as error:
             self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
@@ -211,14 +343,167 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         if not self._is_loopback_request():
             self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
             return
-        self._send_json(HTTPStatus.OK, {"ok": True, "coverage": _r2_coverage_summary(Path.cwd())})
+        self._send_json(HTTPStatus.OK, {"ok": True, "coverage": _r2_coverage_summary(Path.cwd(), resolve_sources=False)})
+
+    def _handle_import_sources(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            query = parse_qs(urlparse(self.path).query)
+            kind = (query.get("kind") or [""])[0].strip().lower()
+            sources = (
+                _real_estate_import_source_history(Path.cwd())
+                if kind in {"real-estate", "real_estate", "re"}
+                else _import_source_history(Path.cwd())
+            )
+        except sqlite3.Error as error:
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
+            return
+        self._send_json(HTTPStatus.OK, {"ok": True, "sources": sources})
+
+    def _handle_import_source_thumb(self) -> None:
+        if not self._is_loopback_request():
+            self.send_error(HTTPStatus.FORBIDDEN, "localhost-only endpoint")
+            return
+        query = parse_qs(urlparse(self.path).query)
+        phase = (query.get("phase") or [""])[0]
+        relative = (query.get("path") or [""])[0]
+        source_hint = (query.get("source") or [""])[0]
+        try:
+            source = _resolve_import_source_thumbnail(phase, relative, source_hint)
+            thumb = _import_source_thumbnail_path(source)
+        except ValueError as error:
+            message = str(error)
+            status = HTTPStatus.UNSUPPORTED_MEDIA_TYPE if "not a still image" in message else HTTPStatus.BAD_REQUEST
+            self.send_error(status, message)
+            return
+        except (OSError, FileNotFoundError) as error:
+            self.send_error(HTTPStatus.NOT_FOUND, str(error))
+            return
+        body = thumb.read_bytes()
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", "image/jpeg")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "private, max-age=3600")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _handle_public_media_proxy(self, path: str) -> None:
+        if not self._is_loopback_request():
+            self.send_error(HTTPStatus.FORBIDDEN, "localhost-only endpoint")
+            return
+        key = unquote(path[len(PUBLIC_MEDIA_PROXY_PATH):]).lstrip("/")
+        if not key or "\\" in key or ".." in key.split("/"):
+            self.send_error(HTTPStatus.BAD_REQUEST, "invalid media key")
+            return
+        safe_key = "/".join(quote(part, safe="") for part in key.split("/") if part)
+        upstream = f"{PUBLIC_MEDIA_BASE_URL}/{safe_key}"
+        try:
+            request = Request(upstream, headers={"User-Agent": "PhotosByElieLocal/1.0"})
+            with urlopen(request, timeout=20) as response:
+                body = response.read()
+                content_type = response.headers.get_content_type() or mimetypes.guess_type(key)[0] or "application/octet-stream"
+        except OSError as error:
+            self.send_error(HTTPStatus.BAD_GATEWAY, str(error))
+            return
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "private, max-age=3600")
+        self.end_headers()
+        self.wfile.write(body)
 
     def _handle_r2_fix(self) -> None:
         if not self._is_loopback_request():
             self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
             return
-        task = _start_cloud_media_sweep(Path.cwd())
+        try:
+            payload = self._read_optional_json_body()
+            maintenance_key = _normalize_r2_maintenance_task(payload.get("maintenanceTask"))
+            skip_phases = _normalize_r2_sweep_skip_phases(payload.get("skipPhases"))
+            source_root = _normalize_import_source_root(payload.get("sourceRoot"))
+            source_select = _normalize_import_select(payload.get("sourceSelect"))
+        except ValueError as error:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
+            return
+        if source_root and _is_real_estate_import_source(source_root):
+            self._send_json(
+                HTTPStatus.BAD_REQUEST,
+                {"ok": False, "error": "Use the Real Estate tab for real-estate source folders."},
+            )
+            return
+        if maintenance_key:
+            task = _start_r2_maintenance_task(Path.cwd(), maintenance_key)
+        else:
+            task = _start_cloud_media_sweep(Path.cwd(), skip_phases, source_root=source_root, source_select=source_select)
+            if source_root and task.get("sourceRoot") == str(source_root):
+                _remember_import_source_root(Path.cwd(), source_root)
         self._send_json(HTTPStatus.OK, {"ok": True, "task": task})
+
+    def _handle_select_import_folder(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            folder = _select_import_folder()
+        except OSError as error:
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
+            return
+        if not folder:
+            self._send_json(HTTPStatus.OK, {"ok": True, "cancelled": True})
+            return
+        self._send_json(HTTPStatus.OK, {"ok": True, "path": str(folder), "name": folder.name or str(folder)})
+
+    def _handle_r2_fill_gaps(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            payload = self._read_optional_json_body()
+            limit = int(payload.get("limit") or 0)
+        except (TypeError, ValueError) as error:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
+            return
+        task = _start_r2_gap_fill(Path.cwd(), max(0, limit))
+        self._send_json(HTTPStatus.OK, {"ok": True, "task": task})
+
+    def _handle_r2_skip_phase(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        repo_root = Path.cwd()
+        try:
+            payload = self._read_json_body()
+            requested_phase = str(payload.get("phaseKey") or "").strip()
+            requested_skips = _normalize_r2_sweep_skip_phases(payload.get("skipPhases") or requested_phase)
+            skip_phases = _merge_r2_sweep_skip_phases(
+                _read_cloud_media_sweep_skip_phases(repo_root),
+                requested_skips,
+            )
+            _write_cloud_media_sweep_skip_phases(repo_root, skip_phases)
+            current_phase = _read_cloud_media_sweep_current_phase(repo_root)
+            interrupted = False
+            if requested_phase and requested_phase == current_phase:
+                interrupted = _terminate_process_tree(_read_cloud_media_sweep_current_child_pid(repo_root))
+                current_phase = _wait_for_cloud_media_sweep_phase_change(repo_root, current_phase)
+                skip_phases = _read_cloud_media_sweep_skip_phases(repo_root)
+            with R2_BACKGROUND_LOCK:
+                for task in R2_BACKGROUND_TASKS.values():
+                    if task.get("kind") == "cloud-media-sweep" and task.get("state") in {"queued", "running"}:
+                        task["skipPhases"] = skip_phases
+                        task["currentPhaseKey"] = current_phase
+                        task["currentChildPid"] = _read_cloud_media_sweep_current_child_pid(repo_root)
+                        task["updated_at"] = datetime.now(timezone.utc).isoformat()
+        except ValueError as error:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
+            return
+        self._send_json(HTTPStatus.OK, {
+            "ok": True,
+            "skipPhases": skip_phases,
+            "currentPhaseKey": current_phase,
+            "interrupted": interrupted,
+        })
 
     def _handle_real_estate_owner(self) -> None:
         if not self._is_loopback_request():
@@ -250,6 +535,17 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
             return
         self._send_json(HTTPStatus.OK, self._owner_session_payload())
+
+    def _handle_title_keyword_review_queue(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            payload = title_keyword_review_queue_payload(Path.cwd())
+        except (OSError, sqlite3.Error, ValueError) as error:
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
+            return
+        self._send_json(HTTPStatus.OK, payload)
 
     def _handle_owner_login(self) -> None:
         if not self._is_loopback_request():
@@ -319,6 +615,12 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             raise ValueError("request body must be a JSON object")
         return payload
 
+    def _read_optional_json_body(self) -> dict:
+        raw_length = self.headers.get("Content-Length")
+        if not raw_length or raw_length == "0":
+            return {}
+        return self._read_json_body()
+
     def _send_json(self, status: HTTPStatus, payload: dict, extra_headers: dict[str, str] | None = None) -> None:
         body = json.dumps(payload, indent=2).encode("utf-8")
         self.send_response(status)
@@ -337,6 +639,7 @@ def main() -> int:
     parser.add_argument("--bind", default="127.0.0.1", help="Address to bind. Defaults to 127.0.0.1.")
     parser.add_argument("--allow-lan-owner", action="store_true", help="Allow owner helper endpoints from private LAN clients.")
     args = parser.parse_args()
+    _bootstrap_local_tool_path()
 
     server = ThreadingHTTPServer((args.bind, args.port), PhotosByElieLocalHandler)
     server.allow_lan_owner = args.allow_lan_owner
@@ -354,6 +657,14 @@ def main() -> int:
     finally:
         server.server_close()
     return 0
+
+
+def _bootstrap_local_tool_path() -> None:
+    path_parts = os.environ.get("PATH", "").split(os.pathsep)
+    for tool_dir in reversed(LOCAL_TOOL_DIRS):
+        if tool_dir.is_dir() and str(tool_dir) not in path_parts:
+            path_parts.insert(0, str(tool_dir))
+    os.environ["PATH"] = os.pathsep.join(part for part in path_parts if part)
 
 
 def _is_private_lan_address(value: str) -> bool:
@@ -447,6 +758,56 @@ def _photo_asset_paths(photo: dict) -> dict[str, str]:
     }
 
 
+def _source_paths_from_manifest_rows(repo_root: Path, photo_id: str) -> list[str]:
+    paths: list[str] = []
+    seen: set[str] = set()
+    tmp_root = repo_root / "tmp"
+    if not tmp_root.exists():
+        return paths
+    for manifest_path in tmp_root.glob("**/manifest.json"):
+        payload = _read_json_file(manifest_path, {})
+        rows = payload.get("photos") if isinstance(payload, dict) else None
+        if not isinstance(rows, list):
+            continue
+        for row in rows:
+            if not isinstance(row, dict) or str(row.get("id") or "") != photo_id:
+                continue
+            for key in ("source_path_hint", "sourcePath", "source_path", "sourceFile"):
+                value = str(row.get(key) or "").strip()
+                if value and value not in seen:
+                    seen.add(value)
+                    paths.append(value)
+    return paths
+
+
+def _photo_source_paths(repo_root: Path, photo: dict) -> list[str]:
+    paths: list[str] = []
+    seen: set[str] = set()
+
+    def add(value: object) -> None:
+        text = str(value or "").strip()
+        if not text or text in seen:
+            return
+        seen.add(text)
+        paths.append(text)
+
+    for source in photo.get("sourceFiles") or []:
+        if not isinstance(source, dict):
+            continue
+        raw_path = str(source.get("path") or "").strip()
+        if raw_path:
+            for candidate in _source_candidates(repo_root, raw_path):
+                if candidate.exists():
+                    add(candidate.resolve())
+                    break
+            add(raw_path)
+    photo_id = str(photo.get("id") or "").strip()
+    if photo_id:
+        for path in _source_paths_from_manifest_rows(repo_root, photo_id):
+            add(path)
+    return paths
+
+
 def _existing_preview_rel(repo_root: Path, photo_id: str, derivative: str, preferred_slug: str) -> tuple[str, str, str] | None:
     suffix = "900" if derivative == "gallery" else "1800"
     slugs = [preferred_slug] + [slug for slug in ORDER if slug != preferred_slug]
@@ -538,21 +899,10 @@ def _normalized_keyword_blacklist(value: object) -> list[str]:
 
 def _save_keyword_blacklist(repo_root: Path, payload: dict) -> dict:
     path = repo_root / KEYWORD_BLACKLIST_PATH
-    existing = _read_json_file(path, {})
-    if not isinstance(existing, dict):
-        existing = {}
-    current = _normalized_keyword_blacklist(existing.get("keywords") or [])
+    current = _normalized_keyword_blacklist(keyword_blacklist_terms_db(repo_root))
     incoming = _normalized_keyword_blacklist(payload.get("keywords") or [])
     mode = str(payload.get("mode") or "replace").strip().casefold()
     keywords = _normalized_keyword_blacklist(current + incoming) if mode == "append" else incoming
-    next_payload = {
-        **existing,
-        "format": "photosbyelie-keyword-blacklist",
-        "schema_version": 1,
-        "updated_at": datetime.now(timezone.utc).date().isoformat(),
-        "keywords": keywords,
-    }
-    _write_json_file(path, next_payload)
     db_result = record_keyword_blacklist_db(repo_root, keywords)
     return {
         "ok": True,
@@ -565,11 +915,7 @@ def _save_keyword_blacklist(repo_root: Path, payload: dict) -> dict:
 
 
 def _keyword_blacklist_set(repo_root: Path) -> set[str]:
-    path = repo_root / KEYWORD_BLACKLIST_PATH
-    payload = _read_json_file(path, {})
-    if not isinstance(payload, dict):
-        return set()
-    return {keyword.casefold() for keyword in _normalized_keyword_blacklist(payload.get("keywords") or [])}
+    return {keyword.casefold() for keyword in keyword_blacklist_terms_db(repo_root)}
 
 
 def _review_keywords(repo_root: Path, value: object) -> list[str]:
@@ -579,6 +925,506 @@ def _review_keywords(repo_root: Path, value: object) -> list[str]:
         for keyword in _unique_keywords(_split_keyword_text(value))
         if keyword.casefold() not in blacklist
     ]
+
+
+def _review_photo_id(item: dict) -> str:
+    return str(item.get("photo_id") or item.get("photoId") or "").strip()
+
+
+def _pending_title_keyword_batches(conn) -> list[dict]:
+    rows = conn.execute(
+        """
+        SELECT COALESCE(latest_proposed_batch_id, '') AS batch_id,
+               COUNT(*) AS pending_count,
+               MIN(latest_proposed_at) AS first_proposed_at,
+               MAX(latest_proposed_at) AS last_proposed_at
+        FROM title_keyword_queue
+        WHERE review_state = 'proposed'
+        GROUP BY COALESCE(latest_proposed_batch_id, '')
+        HAVING batch_id <> ''
+        ORDER BY last_proposed_at DESC, batch_id DESC
+        """
+    ).fetchall()
+    return [
+        {
+            "batch_id": str(row["batch_id"] or ""),
+            "pending_count": int(row["pending_count"] or 0),
+            "first_proposed_at": row["first_proposed_at"] or "",
+            "last_proposed_at": row["last_proposed_at"] or "",
+        }
+        for row in rows
+    ]
+
+
+def _clear_stale_title_keyword_review_rows(repo_root: Path, conn) -> dict:
+    rows = conn.execute(
+        """
+        SELECT media_id, latest_proposed_batch_id
+        FROM title_keyword_queue
+        WHERE review_state = 'proposed'
+        """
+    ).fetchall()
+    media_ids = [str(row["media_id"] or "") for row in rows if str(row["media_id"] or "")]
+    if not media_ids:
+        return {"blocked": 0, "not_found": 0}
+    catalog_ids = set(_catalog_rows_by_media_id(repo_root, media_ids))
+    discarded_ids = _discarded_photo_ids(repo_root)
+    hidden_payload = _read_json_file(repo_root / HIDDEN_BLACKLIST_PATH, {})
+    hidden_ids = set()
+    if isinstance(hidden_payload, dict) and isinstance(hidden_payload.get("photo_ids"), list):
+        hidden_ids = {str(photo_id) for photo_id in hidden_payload["photo_ids"] if photo_id}
+    by_batch: dict[str, dict[str, list[dict]]] = {}
+    for row in rows:
+        media_id = str(row["media_id"] or "").strip()
+        if not media_id:
+            continue
+        is_hidden = media_id in hidden_ids
+        is_discarded = media_id in discarded_ids
+        is_missing = media_id not in catalog_ids
+        if not is_hidden and not is_discarded and not is_missing:
+            continue
+        batch_id = str(row["latest_proposed_batch_id"] or "stale-title-keyword-review").strip()
+        bucket = by_batch.setdefault(batch_id, {"blocked": [], "not_found": []})
+        item = {"photo_id": media_id, "batch_id": batch_id}
+        if is_hidden or is_discarded:
+            bucket["blocked"].append({**item, "blocked": True})
+        else:
+            bucket["not_found"].append(item)
+    decided_at = datetime.now(timezone.utc).isoformat()
+    blocked_count = 0
+    not_found_count = 0
+    for batch_id, grouped in by_batch.items():
+        result = record_title_keyword_review_decisions_db(
+            repo_root,
+            batch_id,
+            [],
+            [],
+            grouped["blocked"],
+            grouped["not_found"],
+            decided_at=decided_at,
+            conn=conn,
+        )
+        blocked_count += int(result.get("blocked") or 0)
+        not_found_count += int(result.get("not_found") or 0)
+    return {"blocked": blocked_count, "not_found": not_found_count}
+
+
+def _pending_title_keyword_rows(conn, batch_id: str) -> list[dict]:
+    rows = conn.execute(
+        """
+        SELECT q.media_id, q.latest_proposed_batch_id AS batch_id,
+               q.latest_attempt, q.latest_proposed_at, q.rejected_count,
+               q.owner_comment, p.previous_title, p.previous_keywords,
+               p.proposed_title, p.proposed_keywords, p.proposal_status,
+               p.confidence, p.needs_owner_context, p.proposal_reason,
+               p.removed_blacklisted, p.keyword_target, p.keyword_target_met,
+               p.generator_model, p.generator_model_level, p.generator_model_maxed,
+               p.model_ladder
+        FROM title_keyword_queue AS q
+        JOIN title_keyword_proposals AS p
+          ON p.media_id = q.media_id
+         AND p.attempt = q.latest_attempt
+        WHERE q.review_state = 'proposed'
+          AND q.latest_proposed_batch_id = ?
+        ORDER BY q.latest_proposed_at DESC, q.media_id
+        """,
+        (batch_id,),
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def _capture_sort_value(item: dict) -> str:
+    capture = item.get("capture") if isinstance(item.get("capture"), dict) else {}
+    return str(capture.get("sort") or capture.get("date") or capture.get("raw") or "")
+
+
+def _title_keyword_payload_from_batch_file(repo_root: Path, batch_id: str, pending_rows: list[dict], pending_batches: list[dict]) -> dict | None:
+    batch_path = repo_root / TITLE_KEYWORD_REVIEW_ROOT / f"batch-{batch_id}.json"
+    payload = _read_json_file(batch_path, {})
+    if not isinstance(payload, dict):
+        return None
+    photos = payload.get("photos")
+    if not isinstance(photos, list):
+        return None
+    pending_ids = {str(row.get("media_id") or "") for row in pending_rows}
+    visible_photos = []
+    for item in photos:
+        if not isinstance(item, dict) or _review_photo_id(item) not in pending_ids:
+            continue
+        photo = copy.deepcopy(item)
+        photo["batch_id"] = batch_id
+        photo["proposal_batch_id"] = batch_id
+        visible_photos.append(photo)
+    if not visible_photos:
+        return None
+
+    next_payload = dict(payload)
+    next_payload["ok"] = True
+    next_payload["queue_source"] = "owner-sqlite-helper"
+    next_payload["source_of_truth"] = OWNER_ACTION_ROOT.joinpath("Owner.sqlite").as_posix()
+    next_payload["pending_batches"] = pending_batches
+    next_payload["photos"] = visible_photos
+    next_payload["proposal_files"] = {
+        **(payload.get("proposal_files") if isinstance(payload.get("proposal_files"), dict) else {}),
+        "batch": batch_path.relative_to(repo_root).as_posix(),
+    }
+    selection = dict(payload.get("selection") if isinstance(payload.get("selection"), dict) else {})
+    selection["visible_pending_count"] = len(visible_photos)
+    selection["sqlite_pending_count"] = len(pending_rows)
+    next_payload["selection"] = selection
+    sort_values = [value for value in (_capture_sort_value(item) for item in visible_photos) if value]
+    if sort_values:
+        range_info = dict(payload.get("range") if isinstance(payload.get("range"), dict) else {})
+        range_info["newest"] = max(sort_values)
+        range_info["oldest"] = min(sort_values)
+        next_payload["range"] = range_info
+    return next_payload
+
+
+def _catalog_keyword_lookup(catalog_conn: sqlite3.Connection) -> dict[int, str]:
+    return {
+        int(row["keyword_id"]): str(row["keyword"])
+        for row in catalog_conn.execute("SELECT keyword_id, keyword FROM keyword_terms")
+    }
+
+
+def _catalog_keywords(keyword_ids: object, keyword_lookup: dict[int, str]) -> list[str]:
+    keywords = []
+    for item in str(keyword_ids or "").split(","):
+        try:
+            keyword_id = int(item.strip())
+        except ValueError:
+            continue
+        keyword = keyword_lookup.get(keyword_id)
+        if keyword:
+            keywords.append(keyword)
+    return keywords
+
+
+def _catalog_rows_by_media_id(repo_root: Path, media_ids: list[str]) -> dict[str, dict]:
+    if not media_ids:
+        return {}
+    catalog_path = repo_root / "assets/catalog/photosbyelie.sqlite"
+    if not catalog_path.exists():
+        return {}
+    catalog_conn = sqlite3.connect(catalog_path)
+    catalog_conn.row_factory = sqlite3.Row
+    try:
+        keyword_lookup = _catalog_keyword_lookup(catalog_conn)
+        placeholders = ",".join("?" for _ in media_ids)
+        rows = catalog_conn.execute(
+            f"""
+            SELECT m.media_id, m.title, m.keyword_ids, m.captured_at,
+                   c.slug AS gallery_key, c.title AS gallery_label,
+                   sf.filename, folder.source_folder
+            FROM media_items AS m
+            JOIN collections AS c USING(collection_id)
+            JOIN source_files AS sf USING(source_file_id)
+            LEFT JOIN source_folders AS folder
+              ON folder.source_folder_id = sf.source_folder_id
+            WHERE m.media_id IN ({placeholders})
+            """,
+            media_ids,
+        ).fetchall()
+        return {
+            str(row["media_id"]): {
+                **dict(row),
+                "keywords": _catalog_keywords(row["keyword_ids"], keyword_lookup),
+            }
+            for row in rows
+        }
+    finally:
+        catalog_conn.close()
+
+
+def _catalog_photo_for_hidden(repo_root: Path, media_id: str) -> tuple[str, dict] | None:
+    media_id = str(media_id or "").strip()
+    if not media_id:
+        return None
+    catalog_path = repo_root / "assets/catalog/photosbyelie.sqlite"
+    if not catalog_path.exists():
+        return None
+    catalog_conn = sqlite3.connect(catalog_path)
+    catalog_conn.row_factory = sqlite3.Row
+    try:
+        keyword_lookup = _catalog_keyword_lookup(catalog_conn)
+        row = catalog_conn.execute(
+            """
+            SELECT m.media_id, m.title, m.keyword_ids, m.captured_at,
+                   m.exposure, m.focal_length, m.location,
+                   c.slug AS gallery_key, c.title AS gallery_label,
+                   mt.code AS media_type, sf.filename, folder.source_folder,
+                   fmt.extension AS source_extension,
+                   full_asset.width AS full_width, full_asset.height AS full_height,
+                   full_asset.bytes AS full_bytes,
+                   full_asset.duration_seconds AS full_duration_seconds
+            FROM media_items AS m
+            JOIN collections AS c USING(collection_id)
+            JOIN media_types AS mt USING(media_type_id)
+            JOIN source_files AS sf USING(source_file_id)
+            LEFT JOIN source_folders AS folder
+              ON folder.source_folder_id = sf.source_folder_id
+            LEFT JOIN formats AS fmt
+              ON fmt.format_id = sf.format_id
+            LEFT JOIN asset_types AS full_type
+              ON full_type.code = 'full'
+            LEFT JOIN media_assets AS full_asset
+              ON full_asset.media_id = m.media_id
+             AND full_asset.asset_type_id = full_type.asset_type_id
+            WHERE m.media_id = ?
+            """,
+            (media_id,),
+        ).fetchone()
+        if not row:
+            return None
+        slug = str(row["gallery_key"] or "").strip()
+        if slug not in ORDER:
+            slug = "unknown"
+        title = str(row["title"] or media_id).strip() or media_id
+        source_folder = str(row["source_folder"] or "").strip("/")
+        filename = str(row["filename"] or "").strip()
+        source_path = "/".join(part for part in [source_folder, filename] if part)
+        extension = str(row["source_extension"] or Path(filename).suffix.lstrip(".") or "").upper()
+        if extension == "JPEG":
+            extension = "JPG"
+        if extension == "TIFF":
+            extension = "TIF"
+        media_type = str(row["media_type"] or "photo").strip().lower() or "photo"
+        full_width = int(row["full_width"] or 0)
+        full_height = int(row["full_height"] or 0)
+        megapixels = round((full_width * full_height / 1_000_000) * 10) / 10 if full_width and full_height else 0
+        keywords = _catalog_keywords(row["keyword_ids"], keyword_lookup)
+        captured_at = str(row["captured_at"] or "")
+        location = str(row["location"] or "")
+        gallery_label = str(row["gallery_label"] or slug or "Gallery")
+        metadata = [
+            {"label": "Metadata title", "value": title},
+            {"label": "Keywords", "value": ", ".join(keywords)},
+        ]
+        if captured_at:
+            metadata.append({"label": "Captured", "value": captured_at.replace("T", " ")})
+        if filename:
+            metadata.append({"label": "Original file", "value": filename})
+        if full_width and full_height:
+            metadata.append({"label": "Original size", "value": f"{extension or 'Source'} / {full_width} x {full_height} / {megapixels} MP"})
+        if location:
+            metadata.append({"label": "Location", "value": location})
+        public_preview = {
+            "allowed": True,
+            "galleryKey": public_preview_key(DEFAULT_PUBLIC_PREFIX, media_id, "gallery", media_type),
+            "detailKey": public_preview_key(DEFAULT_PUBLIC_PREFIX, media_id, "detail", media_type),
+        }
+        photo = {
+            "id": media_id,
+            "title": title,
+            "caption": " / ".join(part for part in [gallery_label, location, captured_at[:10]] if part),
+            "full": f"{extension or 'Source'} master",
+            "megapixels": megapixels,
+            "gallerySrc": "",
+            "imageSrc": "",
+            "metadata": metadata,
+            "media": {
+                "type": media_type,
+                "sourcePolicy": "developed-master",
+                "publicPreview": public_preview,
+            },
+            "sourceFiles": [
+                {
+                    "path": source_path,
+                    "type": extension or "SOURCE",
+                    "bytes": int(row["full_bytes"] or 0),
+                }
+            ] if source_path else [],
+            "keywords": keywords,
+        }
+        if media_type == "video":
+            duration = float(row["full_duration_seconds"] or 0)
+            if duration:
+                photo["duration"] = duration
+                photo["media"]["video"] = {"duration": duration}
+        return slug, photo
+    finally:
+        catalog_conn.close()
+
+
+def _json_text_list(value: object) -> list:
+    if not value:
+        return []
+    try:
+        parsed = json.loads(str(value))
+    except json.JSONDecodeError:
+        return []
+    return parsed if isinstance(parsed, list) else []
+
+
+def _title_keyword_payload_from_sqlite(repo_root: Path, batch_id: str, pending_rows: list[dict], pending_batches: list[dict]) -> dict:
+    catalog_rows = _catalog_rows_by_media_id(repo_root, [str(row["media_id"]) for row in pending_rows])
+    photos = []
+    capture_values = []
+    for row in pending_rows:
+        media_id = str(row.get("media_id") or "")
+        catalog = catalog_rows.get(media_id, {})
+        gallery_key = str(catalog.get("gallery_key") or "")
+        gallery_label = str(catalog.get("gallery_label") or gallery_key or "Photo")
+        captured_at = str(catalog.get("captured_at") or "")
+        if captured_at:
+            capture_values.append(captured_at)
+        current_keywords = _split_keyword_text(row.get("previous_keywords")) or catalog.get("keywords") or []
+        proposed_keywords = _split_keyword_text(row.get("proposed_keywords"))
+        source_folder = str(catalog.get("source_folder") or "").strip("/")
+        filename = str(catalog.get("filename") or "").strip()
+        source_path = "/".join(part for part in [source_folder, filename] if part)
+        model_ladder = _json_text_list(row.get("model_ladder"))
+        photos.append({
+            "photo_id": media_id,
+            "batch_id": batch_id,
+            "proposal_batch_id": batch_id,
+            "gallery": {"key": gallery_key, "label": gallery_label},
+            "capture": {
+                "raw": captured_at,
+                "date": captured_at[:10] if captured_at else "",
+                "sort": captured_at,
+            },
+            "thumbs": {
+                "gallery_key": f"expo/{media_id}_900.jpg",
+                "detail_key": f"expo/{media_id}_1800.jpg",
+            },
+            "source": {
+                "file": {
+                    "path": source_path,
+                    "type": Path(filename).suffix.lstrip(".").upper(),
+                },
+            },
+            "state": {
+                "tags": [TITLE_KEYWORD_PROPOSED_FLAG],
+                "rework_requested": int(row.get("latest_attempt") or 1) > 1,
+                "rework_comment": str(row.get("owner_comment") or ""),
+                "proposal_attempt": int(row.get("latest_attempt") or 1),
+                "requested_generator": {
+                    "model": row.get("generator_model") or "",
+                    "model_level": row.get("generator_model_level"),
+                    "model_maxed": bool(row.get("generator_model_maxed")),
+                    "model_ladder": model_ladder,
+                },
+            },
+            "current": {
+                "title": str(row.get("previous_title") or catalog.get("title") or media_id),
+                "keywords_raw": ", ".join(current_keywords),
+                "keywords": current_keywords,
+            },
+            "proposed": {
+                "title": str(row.get("proposed_title") or row.get("previous_title") or catalog.get("title") or media_id),
+                "keywords": proposed_keywords,
+                "status": str(row.get("proposal_status") or ""),
+                "confidence": row.get("confidence"),
+                "reason": str(row.get("proposal_reason") or ""),
+                "generator": {
+                    "model": row.get("generator_model") or "",
+                    "model_level": row.get("generator_model_level"),
+                    "model_maxed": bool(row.get("generator_model_maxed")),
+                    "model_ladder": model_ladder,
+                },
+            },
+            "changes": {
+                "removed_blacklisted": _json_text_list(row.get("removed_blacklisted")),
+                "keyword_target": row.get("keyword_target"),
+                "keyword_target_met": bool(row.get("keyword_target_met")),
+            },
+        })
+    return {
+        "ok": True,
+        "format": "photosbyelie-title-keyword-review-queue",
+        "schema_version": 1,
+        "queue_source": "owner-sqlite-helper",
+        "source_of_truth": OWNER_ACTION_ROOT.joinpath("Owner.sqlite").as_posix(),
+        "batch_id": batch_id,
+        "pending_batches": pending_batches,
+        "selection": {
+            "total_count": len(photos),
+            "visible_pending_count": len(photos),
+            "sqlite_pending_count": len(pending_rows),
+        },
+        "range": {
+            "newest": max(capture_values) if capture_values else "",
+            "oldest": min(capture_values) if capture_values else "",
+        },
+        "photos": photos,
+    }
+
+
+def title_keyword_review_queue_payload(repo_root: Path) -> dict:
+    conn = owner_db_connect(repo_root)
+    try:
+        stale_cleanup = _clear_stale_title_keyword_review_rows(repo_root, conn)
+        pending_batches = _pending_title_keyword_batches(conn)
+        all_photos = []
+        all_pending_rows = []
+        for batch in pending_batches:
+            batch_id = batch["batch_id"]
+            pending_rows = _pending_title_keyword_rows(conn, batch_id)
+            all_pending_rows.extend(pending_rows)
+            payload = _title_keyword_payload_from_batch_file(repo_root, batch_id, pending_rows, pending_batches)
+            if payload:
+                payload_photos = payload.get("photos") or []
+                all_photos.extend(payload_photos)
+                covered_ids = {_review_photo_id(item) for item in payload_photos if isinstance(item, dict)}
+                missing_rows = [row for row in pending_rows if str(row.get("media_id") or "") not in covered_ids]
+                if missing_rows:
+                    fallback_payload = _title_keyword_payload_from_sqlite(repo_root, batch_id, missing_rows, pending_batches)
+                    all_photos.extend(fallback_payload.get("photos") or [])
+                continue
+            if pending_rows:
+                payload = _title_keyword_payload_from_sqlite(repo_root, batch_id, pending_rows, pending_batches)
+                all_photos.extend(payload.get("photos") or [])
+        if all_photos:
+            sort_values = [value for value in (_capture_sort_value(item) for item in all_photos) if value]
+            batch_ids = [batch["batch_id"] for batch in pending_batches if batch.get("pending_count")]
+            return {
+                "ok": True,
+                "format": "photosbyelie-title-keyword-review-queue",
+                "schema_version": 1,
+                "queue_source": "owner-sqlite-helper",
+                "source_of_truth": OWNER_ACTION_ROOT.joinpath("Owner.sqlite").as_posix(),
+                "review_scope": "all-pending",
+                "batch_id": "all-pending",
+                "batch_ids": batch_ids,
+                "pending_batches": pending_batches,
+                "proposal_files": {
+                    "queue": TITLE_KEYWORD_REVIEW_QUEUE_PATH,
+                },
+                "selection": {
+                    "total_count": len(all_photos),
+                    "visible_pending_count": len(all_photos),
+                    "sqlite_pending_count": len(all_pending_rows),
+                    "batch_count": len(batch_ids),
+                    "stale_blocked_count": stale_cleanup.get("blocked", 0),
+                    "stale_not_found_count": stale_cleanup.get("not_found", 0),
+                },
+                "range": {
+                    "newest": max(sort_values) if sort_values else "",
+                    "oldest": min(sort_values) if sort_values else "",
+                },
+                "photos": all_photos,
+            }
+        return {
+            "ok": True,
+            "format": "photosbyelie-title-keyword-review-queue",
+            "schema_version": 1,
+            "queue_source": "owner-sqlite-helper",
+            "source_of_truth": OWNER_ACTION_ROOT.joinpath("Owner.sqlite").as_posix(),
+            "batch_id": "",
+            "pending_batches": [],
+            "selection": {
+                "total_count": 0,
+                "visible_pending_count": 0,
+                "sqlite_pending_count": 0,
+                "stale_blocked_count": stale_cleanup.get("blocked", 0),
+                "stale_not_found_count": stale_cleanup.get("not_found", 0),
+            },
+            "photos": [],
+        }
+    finally:
+        conn.close()
 
 
 def _merge_title_keyword_review_record(repo_root: Path, batch_id: str, payload_out: dict) -> tuple[Path, dict]:
@@ -630,13 +1476,17 @@ def _merge_title_keyword_review_record(repo_root: Path, batch_id: str, payload_o
         existing_not_found = []
     if not isinstance(payload_not_found, list):
         payload_not_found = []
-    not_found = list(dict.fromkeys(
-        [
-            str(item).strip()
-            for item in (existing_not_found + payload_not_found)
-            if str(item).strip()
-        ]
-    ))
+    not_found_by_id = {}
+    for item in existing_not_found + payload_not_found:
+        if isinstance(item, dict):
+            photo_id = str(item.get("photo_id") or "").strip()
+            if photo_id:
+                not_found_by_id[photo_id] = item
+            continue
+        photo_id = str(item or "").strip()
+        if photo_id:
+            not_found_by_id[photo_id] = photo_id
+    not_found = list(not_found_by_id.values())
     merged = {
         **existing,
         **payload_out,
@@ -648,6 +1498,48 @@ def _merge_title_keyword_review_record(repo_root: Path, batch_id: str, payload_o
     }
     _write_json_file(approvals_path, merged)
     return approvals_path, merged
+
+
+def _clear_title_keyword_review_block_record(
+    repo_root: Path,
+    batch_id: str,
+    photo_ids: list[str],
+    decided_at: str,
+) -> dict:
+    normalized_ids = {str(photo_id or "").strip() for photo_id in photo_ids}
+    normalized_ids.discard("")
+    approvals_path = repo_root / TITLE_KEYWORD_REVIEW_ROOT / f"approvals-{batch_id}.json"
+    existing = _read_json_file(approvals_path, {})
+    if not normalized_ids or not isinstance(existing, dict):
+        return {"path": approvals_path.relative_to(repo_root).as_posix(), "removed_count": 0, "wrote": False}
+    blocked = existing.get("blocked", [])
+    if not isinstance(blocked, list):
+        blocked = []
+    remaining = []
+    removed_count = 0
+    for item in blocked:
+        if not isinstance(item, dict):
+            remaining.append(item)
+            continue
+        photo_id = str(item.get("photo_id") or "").strip()
+        if photo_id in normalized_ids:
+            removed_count += 1
+            continue
+        remaining.append(item)
+    if not removed_count:
+        return {"path": approvals_path.relative_to(repo_root).as_posix(), "removed_count": 0, "wrote": False}
+    updated = {
+        **existing,
+        "batch_id": batch_id,
+        "blocked": remaining,
+        "updated_at": decided_at,
+    }
+    _write_json_file(approvals_path, updated)
+    return {
+        "path": approvals_path.relative_to(repo_root).as_posix(),
+        "removed_count": removed_count,
+        "wrote": True,
+    }
 
 
 def _record_country_assignments(repo_root: Path, target_slug: str, moved: list[dict], skipped: list[dict]) -> dict:
@@ -755,6 +1647,7 @@ def _hidden_public_delete_items(repo_root: Path, hidden_groups: dict[str, list[d
 
 
 def _waste_basket_discard_entries(hidden_groups: dict[str, list[dict]]) -> list[dict]:
+    repo_root = Path.cwd()
     entries: list[dict] = []
     for slug, photos in hidden_groups.items():
         for photo in photos:
@@ -771,6 +1664,7 @@ def _waste_basket_discard_entries(hidden_groups: dict[str, list[dict]]) -> list[
                     "from_slug": slug,
                     "source_slug": original_slug,
                     "asset_paths": _photo_asset_paths(photo),
+                    "source_paths": _photo_source_paths(repo_root, photo),
                     "public_preview_keys": _hidden_public_preview_keys(photo, original_slug),
                     "private_keys": _discarded_private_keys(photo),
                 }
@@ -814,6 +1708,11 @@ def _read_discarded_tombstone(repo_root: Path) -> dict:
         "version": 1,
         "updated_at": payload.get("updated_at"),
         "photo_ids": sorted(photo_ids),
+        "source_paths": sorted({
+            path
+            for path in payload.get("source_paths") or []
+            if isinstance(path, str) and path
+        }),
         "public_preview_keys": sorted({
             key
             for key in payload.get("public_preview_keys") or []
@@ -891,6 +1790,7 @@ def _write_discarded_tombstones(repo_root: Path, discarded_photos: list[dict] | 
         if isinstance(photo, dict) and photo.get("id")
     }
     photo_ids = set(payload.get("photo_ids") or [])
+    source_paths = set(payload.get("source_paths") or [])
     public_preview_keys = set(payload.get("public_preview_keys") or [])
     private_keys = set(payload.get("private_keys") or [])
     for discarded_photo in discarded_photos or []:
@@ -899,9 +1799,11 @@ def _write_discarded_tombstones(repo_root: Path, discarded_photos: list[dict] | 
             continue
         photos_by_id[photo_id] = discarded_photo
         photo_ids.add(photo_id)
+        source_paths.update(discarded_photo.get("source_paths") or [])
         public_preview_keys.update(discarded_photo.get("public_preview_keys") or [])
         private_keys.update(discarded_photo.get("private_keys") or [])
     payload["photo_ids"] = sorted(photo_id for photo_id in photo_ids if isinstance(photo_id, str) and photo_id)
+    payload["source_paths"] = sorted(path for path in source_paths if isinstance(path, str) and path)
     payload["public_preview_keys"] = sorted(key for key in public_preview_keys if isinstance(key, str) and key)
     payload["private_keys"] = sorted(key for key in private_keys if isinstance(key, str) and key)
     payload["updated_at"] = datetime.now(timezone.utc).isoformat()
@@ -914,8 +1816,25 @@ def _write_discarded_tombstone(repo_root: Path, discarded_photo: dict | None = N
     return _write_discarded_tombstones(repo_root, [discarded_photo] if discarded_photo else [])
 
 
+def _groups_without_photo_ids(groups: dict[str, list[dict]], photo_ids: set[str]) -> dict[str, list[dict]]:
+    if not photo_ids:
+        return groups
+    return {
+        slug: [
+            photo
+            for photo in photos
+            if str(photo.get("id") or "") not in photo_ids
+        ]
+        for slug, photos in groups.items()
+    }
+
+
 def _write_state(repo_root: Path, expo_groups: dict[str, list[dict]], reserve_groups: dict[str, list[dict]], hidden_groups: dict[str, list[dict]]) -> dict:
     _repair_hidden_references(repo_root, hidden_groups, expo_groups, reserve_groups)
+    discarded_ids = _discarded_photo_ids(repo_root)
+    expo_groups = _groups_without_photo_ids(expo_groups, discarded_ids)
+    reserve_groups = _groups_without_photo_ids(reserve_groups, discarded_ids)
+    hidden_groups = _groups_without_photo_ids(hidden_groups, discarded_ids)
     hidden_ids = {photo.get("id") for photos in hidden_groups.values() for photo in photos if photo.get("id")}
     write_photos_data_from_site(repo_root, expo_groups, reserve_groups)
     write_reserve_data_from_site(repo_root, reserve_groups)
@@ -989,146 +1908,160 @@ def _unique_keywords(values: list[str]) -> list[str]:
     return unique
 
 
-def _title_keyword_default_proposal_state() -> dict:
-    return {
-        "format": "photosbyelie-title-keyword-proposal-state",
-        "schema_version": 1,
-        "updated_at": datetime.now(timezone.utc).isoformat(),
-        "state_flag": TITLE_KEYWORD_PROPOSED_FLAG,
-        "review_flag": TITLE_KEYWORD_REVIEW_FLAG,
-        "parked_flag": TITLE_KEYWORD_PARKED_FLAG,
-        "photo_count": 0,
-        "photo_ids": [],
-        "photos": [],
-        "batches": [],
-    }
+REJECTED_PROPOSAL_COMMENT_MARKER = "Rejected proposal:"
 
 
-def _title_keyword_proposal_state_path(repo_root: Path) -> Path:
-    return repo_root / TITLE_KEYWORD_PROPOSED_STATE
+def _strip_rejected_proposal_comment_context(value: object) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    marker = f"\n\n{REJECTED_PROPOSAL_COMMENT_MARKER}".casefold()
+    index = text.casefold().find(marker)
+    return (text[:index] if index >= 0 else text).strip()
 
 
-def _load_title_keyword_proposal_state(repo_root: Path) -> dict:
-    payload = _read_json_file(_title_keyword_proposal_state_path(repo_root), {})
-    if not isinstance(payload, dict):
-        payload = {}
-    state = _title_keyword_default_proposal_state()
-    state.update(payload)
-    photos = []
-    seen = set()
-    for item in state.get("photos") or []:
-        if not isinstance(item, dict):
-            continue
-        photo_id = str(item.get("photo_id") or item.get("photoId") or "").strip()
-        if not photo_id or photo_id in seen:
-            continue
-        item["photo_id"] = photo_id
-        photos.append(item)
-        seen.add(photo_id)
-    for photo_id in state.get("photo_ids") or []:
-        clean_id = str(photo_id or "").strip()
-        if clean_id and clean_id not in seen:
-            photos.append({
-                "photo_id": clean_id,
-                "state_tags": [TITLE_KEYWORD_PROPOSED_FLAG],
-                "review_state": "proposed",
-                "rework_priority": False,
-                "rejected_count": 0,
-                "rejection_comment": "",
-                "proposal_files": [],
-            })
-            seen.add(clean_id)
-    state["photos"] = photos
-    state["photo_ids"] = sorted(seen)
-    state["photo_count"] = len(seen)
-    return state
-
-
-def _write_title_keyword_proposal_state(repo_root: Path, state: dict) -> None:
-    photos = []
-    seen = set()
-    for item in state.get("photos") or []:
-        if not isinstance(item, dict):
-            continue
-        photo_id = str(item.get("photo_id") or "").strip()
-        if not photo_id or photo_id in seen:
-            continue
-        raw_tags = [str(tag) for tag in item.get("state_tags") or []]
-        is_parked = (
-            item.get("review_state") == "parked"
-            or item.get("parked") is True
-            or TITLE_KEYWORD_PARKED_FLAG in raw_tags
-        )
-        if is_parked:
-            tags = _unique_keywords(
-                [tag for tag in raw_tags if tag not in {TITLE_KEYWORD_PROPOSED_FLAG, TITLE_KEYWORD_REJECTED_FLAG}]
-                + [TITLE_KEYWORD_PARKED_FLAG]
-            )
-            item["review_state"] = "parked"
-            item["rework_priority"] = False
-        else:
-            tags = _unique_keywords([tag for tag in raw_tags if tag != TITLE_KEYWORD_PARKED_FLAG] + [TITLE_KEYWORD_PROPOSED_FLAG])
-        item["photo_id"] = photo_id
-        item["state_tags"] = tags
-        item["proposal_files"] = _unique_keywords([str(value) for value in item.get("proposal_files") or []])
-        photos.append(item)
-        seen.add(photo_id)
-    photos.sort(key=lambda item: item["photo_id"])
-    state["format"] = "photosbyelie-title-keyword-proposal-state"
-    state["schema_version"] = 1
-    state["updated_at"] = datetime.now(timezone.utc).isoformat()
-    state["state_flag"] = TITLE_KEYWORD_PROPOSED_FLAG
-    state["review_flag"] = TITLE_KEYWORD_REVIEW_FLAG
-    state["parked_flag"] = TITLE_KEYWORD_PARKED_FLAG
-    state["photo_count"] = len(photos)
-    state["photo_ids"] = [item["photo_id"] for item in photos]
-    state["photos"] = photos
-    _write_json_file(_title_keyword_proposal_state_path(repo_root), state)
+def _rejection_comment_with_proposal_context(comment: object, title: object, keywords: object) -> str:
+    owner_comment = _strip_rejected_proposal_comment_context(comment)
+    if not owner_comment:
+        return ""
+    clean_title = str(title or "").strip()
+    clean_keywords = _unique_keywords(_split_keyword_text(keywords))
+    if not clean_title and not clean_keywords:
+        return owner_comment
+    return "\n".join([
+        owner_comment,
+        "",
+        REJECTED_PROPOSAL_COMMENT_MARKER,
+        f"Title: {clean_title or '(blank)'}",
+        f"Keywords: {', '.join(clean_keywords) if clean_keywords else '(none)'}",
+    ])
 
 
 def _record_title_keyword_rejections(repo_root: Path, batch_id: str, rejections: list[dict]) -> dict:
     if not rejections:
         return {"path": "", "rejected": []}
-    state = _load_title_keyword_proposal_state(repo_root)
-    photos_by_id = {str(item.get("photo_id")): item for item in state.get("photos") or [] if item.get("photo_id")}
-    now = datetime.now(timezone.utc).isoformat()
     rejected = []
     for item in rejections:
         photo_id = str(item.get("photo_id") or "").strip()
         if not photo_id:
             continue
-        entry = photos_by_id.get(photo_id) or {
-            "photo_id": photo_id,
-            "state_tags": [TITLE_KEYWORD_PROPOSED_FLAG],
-            "review_state": "proposed",
-            "rework_priority": False,
-            "rejected_count": 0,
-            "rejection_comment": "",
-            "proposal_files": [],
-        }
-        entry["state_tags"] = _unique_keywords(
-            [
-                tag
-                for tag in [*(entry.get("state_tags") or []), TITLE_KEYWORD_PROPOSED_FLAG, TITLE_KEYWORD_REJECTED_FLAG]
-                if tag != TITLE_KEYWORD_PARKED_FLAG
-            ]
-        )
-        entry["review_state"] = "rejected"
-        entry["rework_priority"] = True
-        entry["parked"] = False
-        entry["rejected_count"] = int(entry.get("rejected_count") or 0) + 1
-        entry["latest_rejected_batch_id"] = batch_id
-        entry["latest_rejected_at"] = now
-        entry["rejection_comment"] = str(item.get("comment") or "").strip()
-        entry["latest_rejected_title"] = str(item.get("title") or "").strip()
-        entry["latest_rejected_keywords"] = _unique_keywords(_split_keyword_text(item.get("keywords")))
-        photos_by_id[photo_id] = entry
         rejected.append(photo_id)
-    state["photos"] = list(photos_by_id.values())
-    _write_title_keyword_proposal_state(repo_root, state)
     return {
-        "path": TITLE_KEYWORD_PROPOSED_STATE.as_posix(),
+        "path": "",
         "rejected": rejected,
+        "role": "owner-sqlite",
+    }
+
+
+def _review_item_batch_id(item: dict, fallback_batch_id: str) -> str:
+    return str(item.get("batch_id") or item.get("proposal_batch_id") or fallback_batch_id or "").strip()
+
+
+def _group_review_items_by_batch(items: list[dict], fallback_batch_id: str) -> dict[str, list[dict]]:
+    groups: dict[str, list[dict]] = {}
+    for item in items:
+        batch_id = _review_item_batch_id(item, fallback_batch_id)
+        if not batch_id:
+            continue
+        grouped_item = {**item, "batch_id": batch_id}
+        groups.setdefault(batch_id, []).append(grouped_item)
+    return groups
+
+
+def _review_batch_ids_for_items(*groups: dict[str, list[dict]]) -> list[str]:
+    batch_ids = []
+    seen = set()
+    for group in groups:
+        for batch_id, items in group.items():
+            if batch_id in seen or not items:
+                continue
+            seen.add(batch_id)
+            batch_ids.append(batch_id)
+    return batch_ids
+
+
+def _review_record_not_found(not_found: list[str], approvals: list[dict], fallback_batch_id: str) -> list[dict]:
+    batch_by_id = {
+        str(item.get("photo_id") or "").strip(): _review_item_batch_id(item, fallback_batch_id)
+        for item in approvals
+        if str(item.get("photo_id") or "").strip()
+    }
+    records = []
+    for media_id in not_found:
+        media_id = str(media_id or "").strip()
+        if not media_id:
+            continue
+        records.append({"photo_id": media_id, "batch_id": batch_by_id.get(media_id, fallback_batch_id)})
+    return records
+
+
+def _save_title_keyword_review_records(
+    repo_root: Path,
+    *,
+    fallback_batch_id: str,
+    approvals: list[dict],
+    rejections: list[dict],
+    blocked: list[dict],
+    not_found: list[dict],
+    review_flag: str,
+    applied_at: str,
+    decided_at: str,
+) -> dict:
+    approval_groups = _group_review_items_by_batch(approvals, fallback_batch_id)
+    rejection_groups = _group_review_items_by_batch(rejections, fallback_batch_id)
+    blocked_groups = _group_review_items_by_batch(blocked, fallback_batch_id)
+    not_found_groups = _group_review_items_by_batch(not_found, fallback_batch_id)
+    paths = []
+    db_path = ""
+    approved_count = 0
+    rejected_count = 0
+    blocked_count = 0
+    not_found_count = 0
+    for batch_id in _review_batch_ids_for_items(approval_groups, rejection_groups, blocked_groups, not_found_groups):
+        batch_approvals = approval_groups.get(batch_id, [])
+        batch_rejections = rejection_groups.get(batch_id, [])
+        batch_blocked = blocked_groups.get(batch_id, [])
+        batch_not_found = not_found_groups.get(batch_id, [])
+        payload_out = {
+            "format": "photosbyelie-title-keyword-review-approvals",
+            "schema_version": 1,
+            "updated_at": decided_at,
+            "batch_id": batch_id,
+            "review_flag": review_flag,
+            "proposal_state_flag": TITLE_KEYWORD_PROPOSED_FLAG,
+            "rejection_flag": TITLE_KEYWORD_REJECTED_FLAG,
+            "approvals": batch_approvals,
+            "rejections": batch_rejections,
+            "blocked": batch_blocked,
+            "not_found": batch_not_found,
+        }
+        if batch_approvals and applied_at:
+            payload_out["applied_at"] = applied_at
+        approvals_path, _merged_record = _merge_title_keyword_review_record(repo_root, batch_id, payload_out)
+        db_result = record_title_keyword_review_decisions_db(
+            repo_root,
+            batch_id,
+            batch_approvals,
+            batch_rejections,
+            batch_blocked,
+            batch_not_found,
+            applied_at=applied_at if batch_approvals else "",
+            decided_at=decided_at,
+        )
+        paths.append(approvals_path.relative_to(repo_root).as_posix())
+        db_path = db_result.get("db") or db_path
+        approved_count += int(db_result.get("accepted") or 0)
+        rejected_count += int(db_result.get("rejected") or 0)
+        blocked_count += int(db_result.get("blocked") or 0)
+        not_found_count += int(db_result.get("not_found") or 0)
+    return {
+        "db": db_path,
+        "paths": paths,
+        "path": paths[0] if paths else "",
+        "approved_count": approved_count,
+        "rejected_count": rejected_count,
+        "blocked_count": blocked_count,
+        "not_found_count": not_found_count,
     }
 
 
@@ -1318,29 +2251,6 @@ def _asset_keywords(path: Path) -> list[str]:
     return _unique_keywords(_split_keyword_text(row.get("Keywords")) + _split_keyword_text(row.get("Subject")))
 
 
-def _source_paths(repo_root: Path, photo: dict) -> list[Path]:
-    paths = []
-    for source in photo.get("sourceFiles") or []:
-        raw_path = source.get("path")
-        if not raw_path:
-            continue
-        rel = Path(str(raw_path))
-        candidates = []
-        if rel.is_absolute():
-            candidates.append(rel)
-        else:
-            candidates.append(repo_root / rel)
-            candidates.extend(root / rel for root in SOURCE_ROOT_CANDIDATES)
-        for candidate in candidates:
-            try:
-                resolved = candidate.resolve()
-            except OSError:
-                resolved = candidate
-            if candidate.exists() and resolved not in paths:
-                paths.append(resolved)
-    return paths
-
-
 def _append_unique_path(paths: list[Path], path: Path) -> None:
     try:
         resolved = path.resolve()
@@ -1348,6 +2258,81 @@ def _append_unique_path(paths: list[Path], path: Path) -> None:
         resolved = path
     if resolved not in paths:
         paths.append(resolved)
+
+
+def _is_allowed_source_path(path: Path) -> bool:
+    return "apple photo albums with faces" not in {part.lower() for part in path.parts}
+
+
+def _source_path_variants(candidate: Path) -> list[Path]:
+    variants: list[Path] = []
+    suffixes = {candidate.suffix}
+    if candidate.suffix:
+        suffixes.add(candidate.suffix.lower())
+        suffixes.add(candidate.suffix.upper())
+    if candidate.suffix.lower() in {".jpg", ".jpeg", ".jpe"}:
+        suffixes.update({".jpg", ".jpeg", ".JPG", ".JPEG"})
+    for suffix in suffixes:
+        _append_unique_path(variants, candidate.with_suffix(suffix))
+    return variants
+
+
+def _source_candidates(repo_root: Path, source_path: str) -> list[Path]:
+    raw = Path(source_path)
+    bases = [raw] if raw.is_absolute() else [repo_root / raw, *(root / raw for root in SOURCE_ROOT_CANDIDATES)]
+    if not raw.is_absolute() and raw.name:
+        bases.extend(root / raw.name for root in SOURCE_ROOT_CANDIDATES)
+    candidates: list[Path] = []
+    for base in bases:
+        for variant in _source_path_variants(base):
+            if _is_allowed_source_path(variant):
+                _append_unique_path(candidates, variant)
+    return candidates
+
+
+def _find_source_by_basename(root: Path, names: set[str]) -> Path | None:
+    if not root.exists() or not _is_allowed_source_path(root):
+        return None
+    try:
+        entries = list(root.iterdir())
+    except OSError:
+        return None
+    for entry in entries:
+        if not _is_allowed_source_path(entry):
+            continue
+        try:
+            if entry.is_file() and entry.name.lower() in names:
+                return entry
+        except OSError:
+            continue
+    for entry in entries:
+        try:
+            if entry.is_dir():
+                found = _find_source_by_basename(entry, names)
+                if found:
+                    return found
+        except OSError:
+            continue
+    return None
+
+
+def _source_paths(repo_root: Path, photo: dict) -> list[Path]:
+    paths = []
+    for source in photo.get("sourceFiles") or []:
+        raw_path = source.get("path")
+        if not raw_path:
+            continue
+        for candidate in _source_candidates(repo_root, str(raw_path)):
+            if candidate.exists():
+                _append_unique_path(paths, candidate)
+        if not paths:
+            names = {variant.name.lower() for variant in _source_path_variants(Path(str(raw_path)))}
+            for root in RECURSIVE_SOURCE_ROOT_CANDIDATES:
+                found = _find_source_by_basename(root, names)
+                if found:
+                    _append_unique_path(paths, found)
+                    break
+    return paths
 
 
 def _site_asset_paths(repo_root: Path, rel: str) -> list[Path]:
@@ -1431,6 +2416,8 @@ def _update_r2_task(task_id: str, **updates: object) -> None:
 def _run_r2_task(task_id: str, items: list[UploadItem], operation: str) -> None:
     _update_r2_task(task_id, state="running", started_at=datetime.now(timezone.utc).isoformat())
     for item in items:
+        if operation == "delete":
+            _record_r2_item_lifecycle(item, "marked_for_delete", "owner-r2-delete")
         try:
             if operation == "delete":
                 _processed_item, ok, output = wrangler_delete(item, retries=2)
@@ -1447,6 +2434,9 @@ def _run_r2_task(task_id: str, items: list[UploadItem], operation: str) -> None:
             if ok:
                 if operation == "upload" and item.path.exists():
                     task["bytes_done"] = int(task.get("bytes_done") or 0) + item.path.stat().st_size
+                    _record_r2_item_lifecycle(item, "current", "owner-r2-upload")
+                elif operation == "delete":
+                    _record_r2_item_lifecycle(item, "deleted_confirmed", "owner-r2-delete")
             else:
                 task["failed"] = int(task.get("failed") or 0) + 1
                 errors = list(task.get("errors") or [])
@@ -1509,7 +2499,199 @@ def _start_r2_delete_task(photo_id: str, items: list[UploadItem], kind: str = "h
     return _start_r2_task(photo_id, items, kind, "delete")
 
 
+def _active_r2_work_task() -> dict | None:
+    active_states = {"queued", "running"}
+    with R2_BACKGROUND_LOCK:
+        return next(
+            (
+                dict(task)
+                for task in R2_BACKGROUND_TASKS.values()
+                if task.get("operation") in {"repair", "gap-fill", "maintenance"}
+                and task.get("state") in active_states
+            ),
+            None,
+        )
+
+
+def _maintenance_phase_scope(maintenance_key: str) -> list[str]:
+    task = R2_MAINTENANCE_TASKS[maintenance_key]
+    return [phase_key for phase_key, _label, _command in task["phases"]]
+
+
+def _run_r2_maintenance_task(task_id: str, repo_root: Path, maintenance_key: str, log_path: Path) -> None:
+    definition = R2_MAINTENANCE_TASKS[maintenance_key]
+    phases = definition["phases"]
+    started_at = datetime.now(timezone.utc).isoformat()
+    first_phase = phases[0][0] if phases else ""
+    _update_r2_task(task_id, state="running", started_at=started_at, currentPhaseKey=first_phase)
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    completed = 0
+    return_code = 0
+    errors: list[str] = []
+    with log_path.open("ab") as log:
+        for phase_key, phase_label, command in phases:
+            _update_r2_task(task_id, currentPhaseKey=phase_key)
+            log.write(f"SWEEP_PHASE {phase_key} {phase_label}\n".encode("utf-8"))
+            log.flush()
+            process = subprocess.run(command, cwd=repo_root, stdout=log, stderr=subprocess.STDOUT)
+            return_code = process.returncode
+            if process.returncode != 0:
+                errors.append(f"{phase_label} exited {process.returncode}")
+                break
+            completed += 1
+            log.write(f"SWEEP_DONE {phase_key}\n".encode("utf-8"))
+            log.flush()
+            _update_r2_task(task_id, completed=completed)
+    failed = return_code != 0
+    completed_at = datetime.now(timezone.utc).isoformat()
+    with R2_BACKGROUND_LOCK:
+        task = R2_BACKGROUND_TASKS.get(task_id)
+        if not task:
+            return
+        task["completed"] = completed
+        task["state"] = "failed" if failed else "done"
+        task["failed"] = 1 if failed else 0
+        task["return_code"] = return_code
+        task["errors"] = errors
+        task["completed_at"] = completed_at
+        task["updated_at"] = completed_at
+
+
+def _start_r2_maintenance_task(repo_root: Path, maintenance_key: str) -> dict:
+    external = _external_cloud_media_sweep_task(repo_root)
+    if external:
+        return external
+    existing = _active_r2_work_task()
+    if existing:
+        return existing
+    definition = R2_MAINTENANCE_TASKS[maintenance_key]
+    phase_scope = _maintenance_phase_scope(maintenance_key)
+    task_id = uuid.uuid4().hex
+    queued_at = datetime.now(timezone.utc).isoformat()
+    log_path = repo_root / ".review-logs" / f"owner-r2-maintenance-{maintenance_key}-{task_id}.log"
+    commands = [" ".join(command) for _phase_key, _label, command in definition["phases"]]
+    task = {
+        "id": task_id,
+        "kind": f"r2-maintenance-{maintenance_key}",
+        "operation": "maintenance",
+        "maintenanceKey": maintenance_key,
+        "label": definition["label"],
+        "photo_id": "catalog",
+        "state": "queued",
+        "queued_at": queued_at,
+        "started_at": None,
+        "completed_at": None,
+        "updated_at": queued_at,
+        "total": len(phase_scope),
+        "completed": 0,
+        "failed": 0,
+        "bytes_total": 0,
+        "bytes_done": 0,
+        "currentPhaseKey": phase_scope[0] if phase_scope else "",
+        "phaseScopeKeys": phase_scope,
+        "items": [{"command": command, "log": str(log_path)} for command in commands],
+        "errors": [],
+        "log": str(log_path),
+    }
+    with R2_BACKGROUND_LOCK:
+        R2_BACKGROUND_TASKS[task_id] = task
+    worker = threading.Thread(target=_run_r2_maintenance_task, args=(task_id, repo_root, maintenance_key, log_path), daemon=True)
+    worker.start()
+    return dict(task)
+
+
+def _record_r2_item_lifecycle(item: UploadItem, lifecycle_state: str, source: str) -> None:
+    try:
+        conn = owner_db_connect(Path.cwd())
+        try:
+            upsert_r2_object_state(
+                conn,
+                bucket=item.bucket,
+                object_key=item.key,
+                lifecycle_state=lifecycle_state,
+                source=source,
+                bytes_value=item.path.stat().st_size if lifecycle_state == "current" and item.path.exists() else None,
+            )
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception:
+        return
+
+
+def _import_source_allowed_roots() -> list[Path]:
+    roots = [root for root in IMPORT_SOURCE_ROOTS.values()]
+    roots.extend(SOURCE_ROOT_CANDIDATES)
+    try:
+        roots.extend(Path(entry["path"]) for entry in _read_import_source_setting(Path.cwd()) if entry.get("path"))
+    except sqlite3.Error:
+        pass
+    manifest = _read_json_file(Path.cwd() / "tmp/import-cache/manifest.json", {})
+    if isinstance(manifest, dict) and manifest.get("source_root_hint"):
+        roots.append(Path(str(manifest["source_root_hint"])))
+    with R2_BACKGROUND_LOCK:
+        for task in R2_BACKGROUND_TASKS.values():
+            source_root = task.get("sourceRoot")
+            if source_root:
+                roots.append(Path(str(source_root)))
+    return roots
+
+
+def _resolve_import_source_thumbnail(phase: str, relative: str, source_hint: str) -> Path:
+    if source_hint:
+        source = Path(source_hint).expanduser().resolve()
+        allowed = False
+        for root in _import_source_allowed_roots():
+            try:
+                root_resolved = root.resolve()
+            except OSError:
+                continue
+            if source == root_resolved or root_resolved in source.parents:
+                allowed = True
+                break
+        if not allowed:
+            raise ValueError("source path is outside known import roots")
+    else:
+        root = IMPORT_SOURCE_ROOTS.get(phase)
+        if not root or not relative:
+            raise ValueError("missing import source thumbnail parameters")
+        relative_path = Path(relative)
+        if relative_path.is_absolute() or ".." in relative_path.parts:
+            raise ValueError("unsafe source path")
+        root_resolved = root.resolve()
+        source = (root_resolved / relative_path).resolve()
+        if source != root_resolved and root_resolved not in source.parents:
+            raise ValueError("unsafe source path")
+    if not source.exists() or not source.is_file():
+        raise FileNotFoundError(str(source))
+    if source.suffix.lower() not in IMPORT_SOURCE_IMAGE_EXTENSIONS:
+        raise ValueError("source is not a still image")
+    return source
+
+
+def _import_source_thumbnail_path(source: Path) -> Path:
+    stat = source.stat()
+    token = hashlib.sha256(f"{source}:{stat.st_size}:{stat.st_mtime_ns}".encode("utf-8")).hexdigest()
+    thumb = IMPORT_SOURCE_THUMB_ROOT / f"{token}.jpg"
+    if thumb.exists():
+        return thumb
+    thumb.parent.mkdir(parents=True, exist_ok=True)
+    tmp = thumb.with_suffix(".tmp.jpg")
+    result = subprocess.run(
+        ["sips", "-s", "format", "jpeg", "-s", "formatOptions", "82", "-Z", "96", str(source), "--out", str(tmp)],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0 or not tmp.exists():
+        tmp.unlink(missing_ok=True)
+        raise OSError((result.stderr or result.stdout or "thumbnail render failed").strip())
+    tmp.replace(thumb)
+    return thumb
+
+
 def _r2_task_snapshot() -> list[dict]:
+    repo_root = Path.cwd()
     cutoff = time.time() - 60 * 60
     active_states = {"queued", "running"}
     with R2_BACKGROUND_LOCK:
@@ -1523,25 +2705,31 @@ def _r2_task_snapshot() -> list[dict]:
         for task_id in stale:
             R2_BACKGROUND_TASKS.pop(task_id, None)
         tasks = [dict(task) for task in R2_BACKGROUND_TASKS.values()]
+    tasks = [
+        _hydrate_cloud_media_sweep_task(repo_root, task)
+        if task.get("kind") == "cloud-media-sweep" and task.get("state") in active_states
+        else task
+        for task in tasks
+    ]
     has_active_sweep = any(
         task.get("kind") == "cloud-media-sweep" and task.get("state") in active_states
         for task in tasks
     )
     if not has_active_sweep:
-        external = _external_cloud_media_sweep_task(Path.cwd())
+        external = _external_cloud_media_sweep_task(repo_root)
         if external:
             tasks.append(external)
     return sorted(
         tasks,
         key=lambda task: (
             0 if task.get("state") in active_states else 1,
-            str(task.get("queued_at") or ""),
+            -_iso_to_timestamp(str(task.get("updated_at") or task.get("queued_at") or "")),
         ),
     )
 
 
 def _live_cloud_media_sweep_pid(repo_root: Path) -> int | None:
-    pid_path = repo_root / ".review-logs" / "cloud-media-sweep.lock" / "pid"
+    pid_path = _cloud_media_sweep_lock_dir(repo_root) / "pid"
     try:
         pid = int(pid_path.read_text(encoding="utf-8").strip())
     except (OSError, ValueError):
@@ -1551,6 +2739,418 @@ def _live_cloud_media_sweep_pid(repo_root: Path) -> int | None:
     except OSError:
         return None
     return pid
+
+
+def _cloud_media_sweep_lock_dir(repo_root: Path) -> Path:
+    return repo_root / ".review-logs" / "cloud-media-sweep.lock"
+
+
+def _cloud_media_sweep_skip_path(repo_root: Path) -> Path:
+    return _cloud_media_sweep_lock_dir(repo_root) / "skip-phases"
+
+
+def _cloud_media_sweep_current_phase_path(repo_root: Path) -> Path:
+    return _cloud_media_sweep_lock_dir(repo_root) / "current-phase"
+
+
+def _cloud_media_sweep_current_child_path(repo_root: Path) -> Path:
+    return _cloud_media_sweep_lock_dir(repo_root) / "current-child-pid"
+
+
+def _normalize_r2_sweep_skip_phases(value: object) -> list[str]:
+    if value is None:
+        return []
+    values: list[object]
+    if isinstance(value, str):
+        values = re.split(r"[\s,]+", value)
+    elif isinstance(value, list):
+        values = value
+    else:
+        raise ValueError("skipPhases must be a string or list")
+    result: list[str] = []
+    seen: set[str] = set()
+    for raw in values:
+        key = str(raw or "").strip()
+        if not key:
+            continue
+        if key not in R2_SWEEP_SKIPPABLE_PHASES:
+            raise ValueError(f"unsupported R2 sweep phase: {key}")
+        if key in seen:
+            continue
+        seen.add(key)
+        result.append(key)
+    return result
+
+
+def _normalize_import_source_root(value: object) -> Path | None:
+    if value is None:
+        return None
+    source = str(value or "").strip()
+    if not source:
+        return None
+    path = Path(source).expanduser().resolve()
+    if not path.is_dir():
+        raise ValueError(f"import source folder not found: {path}")
+    return path
+
+
+def _normalize_import_select(value: object) -> str:
+    mode = str(value or "auto").strip().lower()
+    if mode not in {"auto", "all", "lightroom", "green"}:
+        raise ValueError("sourceSelect must be auto, all, green, or lightroom")
+    return mode
+
+
+def _normalize_r2_maintenance_task(value: object) -> str:
+    key = str(value or "").strip()
+    if not key:
+        return ""
+    if key not in R2_MAINTENANCE_TASKS:
+        raise ValueError(f"unsupported R2 maintenance task: {key}")
+    return key
+
+
+def _import_source_label(path: Path) -> str:
+    name = path.name or str(path)
+    parent = path.parent.name
+    return f"{name} ({parent})" if parent else name
+
+
+def _import_source_entry(path: Path, *, last_used_at: str = "", use_count: int = 0, discovered: bool = False) -> dict:
+    try:
+        resolved = path.expanduser().resolve()
+    except OSError:
+        resolved = path.expanduser()
+    return {
+        "path": str(resolved),
+        "label": _import_source_label(resolved),
+        "lastUsedAt": str(last_used_at or ""),
+        "useCount": max(0, int(use_count or 0)),
+        "exists": resolved.is_dir(),
+        "discovered": bool(discovered),
+    }
+
+
+def _path_is_relative_to(path: Path, root: Path) -> bool:
+    try:
+        resolved_path = path.expanduser().resolve()
+        resolved_root = root.expanduser().resolve()
+    except OSError:
+        resolved_path = path.expanduser()
+        resolved_root = root.expanduser()
+    return resolved_path == resolved_root or resolved_root in resolved_path.parents
+
+
+def _is_real_estate_import_source(path: Path) -> bool:
+    return _path_is_relative_to(path, REAL_ESTATE_SOURCE_ROOT)
+
+
+def _read_import_source_setting(repo_root: Path, setting_key: str = IMPORT_SOURCE_SETTINGS_KEY) -> list[dict]:
+    conn = owner_db_connect(repo_root)
+    try:
+        row = conn.execute(
+            "SELECT setting_value FROM owner_settings WHERE setting_key = ?",
+            (setting_key,),
+        ).fetchone()
+    finally:
+        conn.close()
+    if not row:
+        return []
+    try:
+        payload = json.loads(row["setting_value"] or "[]")
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(payload, list):
+        return []
+    entries: list[dict] = []
+    for item in payload:
+        if isinstance(item, str):
+            path = item
+            last_used_at = ""
+            use_count = 0
+        elif isinstance(item, dict):
+            path = str(item.get("path") or "")
+            last_used_at = str(item.get("lastUsedAt") or "")
+            use_count = int(item.get("useCount") or 0)
+        else:
+            continue
+        path = path.strip()
+        if not path:
+            continue
+        if setting_key == IMPORT_SOURCE_SETTINGS_KEY and not last_used_at and use_count <= 0:
+            continue
+        entries.append(_import_source_entry(Path(path), last_used_at=last_used_at, use_count=use_count))
+    return entries
+
+
+def _write_import_source_setting(repo_root: Path, entries: list[dict], setting_key: str = IMPORT_SOURCE_SETTINGS_KEY) -> None:
+    now = datetime.now(timezone.utc).isoformat()
+    payload = [
+        {
+            "path": entry["path"],
+            "label": entry.get("label") or _import_source_label(Path(entry["path"])),
+            "lastUsedAt": entry.get("lastUsedAt") or "",
+            "useCount": int(entry.get("useCount") or 0),
+            "rememberedBy": "owner",
+        }
+        for entry in entries[:IMPORT_SOURCE_HISTORY_LIMIT]
+        if entry.get("path")
+    ]
+    conn = owner_db_connect(repo_root)
+    try:
+        conn.execute(
+            """
+            INSERT INTO owner_settings (setting_key, setting_value, updated_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT(setting_key) DO UPDATE SET
+              setting_value = excluded.setting_value,
+              updated_at = excluded.updated_at
+            """,
+            (setting_key, json.dumps(payload, ensure_ascii=True), now),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def _discover_import_sources_from_logs(repo_root: Path) -> list[dict]:
+    log_root = repo_root / ".review-logs"
+    try:
+        logs = sorted(log_root.glob("owner-r2-fix-*.log"), key=lambda path: path.stat().st_mtime, reverse=True)[:25]
+    except OSError:
+        return []
+    entries: dict[str, dict] = {}
+    for log_path in logs:
+        try:
+            lines = log_path.read_text(encoding="utf-8", errors="replace").splitlines()
+        except OSError:
+            continue
+        for line in lines:
+            if "PBE_IMPORT_PHOTO " not in line or '"sourcePath"' not in line:
+                continue
+            _, _, raw_payload = line.partition("PBE_IMPORT_PHOTO ")
+            try:
+                payload = json.loads(raw_payload)
+            except json.JSONDecodeError:
+                continue
+            source_path = str(payload.get("sourcePath") or "").strip()
+            if not source_path:
+                continue
+            parent = Path(source_path).expanduser().parent
+            if not str(parent):
+                continue
+            entry = _import_source_entry(parent, discovered=True)
+            entries.setdefault(entry["path"], entry)
+    return list(entries.values())
+
+
+def _import_source_history(repo_root: Path) -> list[dict]:
+    merged: dict[str, dict] = {}
+    for entry in _read_import_source_setting(repo_root):
+        if _is_real_estate_import_source(Path(entry["path"])):
+            continue
+        existing = merged.get(entry["path"], {})
+        merged[entry["path"]] = {**existing, **entry, "discovered": False}
+    entries = list(merged.values())
+    recent = sorted(
+        (entry for entry in entries if entry.get("lastUsedAt")),
+        key=lambda entry: str(entry.get("lastUsedAt") or ""),
+        reverse=True,
+    )
+    discovered = sorted(
+        (entry for entry in entries if not entry.get("lastUsedAt")),
+        key=lambda entry: str(entry.get("label") or entry.get("path") or "").casefold(),
+    )
+    return [*recent, *discovered][:IMPORT_SOURCE_HISTORY_LIMIT]
+
+
+def _remember_import_source_root(repo_root: Path, source_root: Path) -> None:
+    entry = _import_source_entry(source_root, last_used_at=datetime.now(timezone.utc).isoformat(), use_count=1)
+    entries = [item for item in _read_import_source_setting(repo_root) if item.get("path") != entry["path"]]
+    previous = next((item for item in _read_import_source_setting(repo_root) if item.get("path") == entry["path"]), None)
+    if previous:
+        entry["useCount"] = int(previous.get("useCount") or 0) + 1
+    _write_import_source_setting(repo_root, [entry, *entries])
+
+
+def _real_estate_import_source_history(repo_root: Path) -> list[dict]:
+    merged: dict[str, dict] = {}
+    try:
+        saved_sources = _read_import_source_setting(repo_root, REAL_ESTATE_IMPORT_SOURCE_SETTINGS_KEY)
+    except sqlite3.Error:
+        saved_sources = []
+    for entry in saved_sources:
+        merged[entry["path"]] = entry
+    try:
+        state = _read_real_estate_client_payload(repo_root)
+    except Exception:
+        state = {}
+    for client in state.get("clients") or []:
+        if not isinstance(client, dict):
+            continue
+        source_root = str(client.get("sourceRoot") or "").strip()
+        if not source_root:
+            continue
+        path = Path(source_root)
+        entry = _import_source_entry(path, discovered=True)
+        client_name = str(client.get("customer") or client.get("id") or "").strip()
+        if client_name:
+            entry["label"] = f"{client_name}: {entry['label']}"
+        existing = merged.get(entry["path"], {})
+        merged[entry["path"]] = {**entry, **existing, "discovered": bool(existing.get("discovered") or entry.get("discovered"))}
+    entries = list(merged.values())
+    recent = sorted(
+        (entry for entry in entries if entry.get("lastUsedAt")),
+        key=lambda entry: str(entry.get("lastUsedAt") or ""),
+        reverse=True,
+    )
+    discovered = sorted(
+        (entry for entry in entries if not entry.get("lastUsedAt")),
+        key=lambda entry: str(entry.get("label") or entry.get("path") or "").casefold(),
+    )
+    return [*recent, *discovered][:IMPORT_SOURCE_HISTORY_LIMIT]
+
+
+def _remember_real_estate_import_source_root(repo_root: Path, source_root: Path) -> None:
+    entry = _import_source_entry(source_root, last_used_at=datetime.now(timezone.utc).isoformat(), use_count=1)
+    entries = [item for item in _real_estate_import_source_history(repo_root) if item.get("path") != entry["path"]]
+    previous = next((
+        item
+        for item in _read_import_source_setting(repo_root, REAL_ESTATE_IMPORT_SOURCE_SETTINGS_KEY)
+        if item.get("path") == entry["path"]
+    ), None)
+    if previous:
+        entry["useCount"] = int(previous.get("useCount") or 0) + 1
+    _write_import_source_setting(repo_root, [entry, *entries], REAL_ESTATE_IMPORT_SOURCE_SETTINGS_KEY)
+
+
+def _select_import_folder() -> Path | None:
+    osascript = shutil.which("osascript")
+    if not osascript:
+        raise OSError("macOS folder selection is unavailable: osascript was not found")
+    result = subprocess.run(
+        [
+            osascript,
+            "-e",
+            'POSIX path of (choose folder with prompt "Select the Photos By Elie import folder")',
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        message = (result.stderr or result.stdout or "").strip()
+        if "User canceled" in message or "-128" in message:
+            return None
+        raise OSError(message or f"folder selection failed with exit code {result.returncode}")
+    selected = result.stdout.strip()
+    if not selected:
+        return None
+    path = Path(selected).expanduser().resolve()
+    if not path.is_dir():
+        raise OSError(f"selected import folder is not readable: {path}")
+    return path
+
+
+def _read_cloud_media_sweep_skip_phases(repo_root: Path) -> list[str]:
+    try:
+        lines = _cloud_media_sweep_skip_path(repo_root).read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return []
+    try:
+        return _normalize_r2_sweep_skip_phases(lines)
+    except ValueError:
+        return []
+
+
+def _write_cloud_media_sweep_skip_phases(repo_root: Path, skip_phases: list[str]) -> None:
+    path = _cloud_media_sweep_skip_path(repo_root)
+    if not path.parent.exists():
+        return
+    path.write_text("".join(f"{phase}\n" for phase in skip_phases), encoding="utf-8")
+
+
+def _merge_r2_sweep_skip_phases(*phase_lists: list[str]) -> list[str]:
+    merged: list[str] = []
+    seen: set[str] = set()
+    for phases in phase_lists:
+        for phase in phases:
+            if phase in seen:
+                continue
+            seen.add(phase)
+            merged.append(phase)
+    return merged
+
+
+def _read_cloud_media_sweep_current_phase(repo_root: Path) -> str:
+    try:
+        phase_key = _cloud_media_sweep_current_phase_path(repo_root).read_text(encoding="utf-8").strip()
+    except OSError:
+        return ""
+    return phase_key if phase_key in R2_SWEEP_SKIPPABLE_PHASES else ""
+
+
+def _read_cloud_media_sweep_current_child_pid(repo_root: Path) -> int | None:
+    try:
+        return int(_cloud_media_sweep_current_child_path(repo_root).read_text(encoding="utf-8").strip())
+    except (OSError, ValueError):
+        return None
+
+
+def _child_pids(pid: int) -> list[int]:
+    result = subprocess.run(["pgrep", "-P", str(pid)], text=True, capture_output=True, check=False)
+    children: list[int] = []
+    for line in result.stdout.splitlines():
+        try:
+            children.append(int(line.strip()))
+        except ValueError:
+            continue
+    return children
+
+
+def _terminate_process_tree(pid: int | None) -> bool:
+    if not pid:
+        return False
+    terminated = False
+    for child in _child_pids(pid):
+        terminated = _terminate_process_tree(child) or terminated
+    try:
+        os.kill(pid, signal.SIGTERM)
+    except OSError:
+        return terminated
+    terminated = True
+    time.sleep(0.5)
+    try:
+        os.kill(pid, signal.SIGKILL)
+    except OSError:
+        pass
+    return terminated
+
+
+def _wait_for_cloud_media_sweep_phase_change(repo_root: Path, previous_phase: str) -> str:
+    deadline = time.time() + 3
+    current_phase = previous_phase
+    while time.time() < deadline:
+        current_phase = _read_cloud_media_sweep_current_phase(repo_root)
+        if current_phase != previous_phase:
+            return current_phase
+        if not current_phase:
+            return ""
+        time.sleep(0.2)
+    return current_phase
+
+
+def _hydrate_cloud_media_sweep_task(repo_root: Path, task: dict) -> dict:
+    hydrated = dict(task)
+    live_pid = _live_cloud_media_sweep_pid(repo_root)
+    current_phase = _read_cloud_media_sweep_current_phase(repo_root)
+    if live_pid is not None:
+        hydrated["external_pid"] = live_pid
+    hydrated["skipPhases"] = _read_cloud_media_sweep_skip_phases(repo_root)
+    hydrated["currentPhaseKey"] = current_phase
+    hydrated["currentChildPid"] = _read_cloud_media_sweep_current_child_pid(repo_root)
+    hydrated["updated_at"] = datetime.now(timezone.utc).isoformat()
+    return hydrated
 
 
 def _latest_cloud_media_sweep_log(repo_root: Path) -> Path | None:
@@ -1568,7 +3168,7 @@ def _external_cloud_media_sweep_task(repo_root: Path) -> dict | None:
     pid = _live_cloud_media_sweep_pid(repo_root)
     if pid is None:
         return None
-    started_path = repo_root / ".review-logs" / "cloud-media-sweep.lock" / "started_at"
+    started_path = _cloud_media_sweep_lock_dir(repo_root) / "started_at"
     try:
         started_at = started_path.read_text(encoding="utf-8").strip()
     except OSError:
@@ -1591,6 +3191,9 @@ def _external_cloud_media_sweep_task(repo_root: Path) -> dict | None:
         "bytes_total": 0,
         "bytes_done": 0,
         "external_pid": pid,
+        "skipPhases": _read_cloud_media_sweep_skip_phases(repo_root),
+        "currentPhaseKey": _read_cloud_media_sweep_current_phase(repo_root),
+        "currentChildPid": _read_cloud_media_sweep_current_child_pid(repo_root),
         "items": [{"command": "existing lock-guarded cloud media sweep", "log": str(log_path) if log_path else ""}],
         "errors": [],
     }
@@ -1625,30 +3228,103 @@ def _coverage_row(
     }
 
 
+def _owner_db_current_r2_keys(repo_root: Path) -> set[str]:
+    try:
+        conn = owner_db_connect(repo_root)
+        try:
+            backfill_r2_object_metadata(conn)
+            conn.commit()
+            return {
+                f"{row['bucket']}/{row['object_key']}"
+                for row in conn.execute(
+                    "SELECT bucket, object_key FROM r2_objects WHERE lifecycle_state = 'current'"
+                )
+                if row["bucket"] and row["object_key"]
+            }
+        finally:
+            conn.close()
+    except Exception:
+        return set()
+
+
+def _r2_key_known_current(current_keys: set[str], bucket: str, key: object) -> bool:
+    clean_key = str(key or "").strip()
+    return bool(clean_key and f"{bucket}/{clean_key}" in current_keys)
+
+
+def _apply_owner_db_r2_coverage(
+    record: dict,
+    photo_id: str,
+    private_bucket: str,
+    public_bucket: str,
+    current_keys: set[str],
+) -> set[str]:
+    trusted: set[str] = set()
+    master = record.get("privateMaster") if isinstance(record.get("privateMaster"), dict) else {}
+    master_key = master.get("expectedKey") or master.get("key")
+    if master.get("present") is not True and _r2_key_known_current(current_keys, private_bucket, master_key):
+        master["present"] = True
+        master["key"] = str(master_key)
+        master["trustedBy"] = "owner-db"
+        record["privateMaster"] = master
+        trusted.add("master")
+
+    renders = record.get("privateRenders") if isinstance(record.get("privateRenders"), dict) else {}
+    for product_id, render in renders.items():
+        if not isinstance(render, dict):
+            continue
+        render_key = render.get("expectedKey") or render.get("key")
+        if render.get("present") is not True and _r2_key_known_current(current_keys, private_bucket, render_key):
+            render["present"] = True
+            render["key"] = str(render_key)
+            render["trustedBy"] = "owner-db"
+            trusted.add(f"render:{product_id}")
+
+    previews = record.get("publicPreviews") if isinstance(record.get("publicPreviews"), dict) else {}
+    media_type = str(record.get("mediaType") or "photo")
+    gallery_key = public_preview_key(DEFAULT_PUBLIC_PREFIX, photo_id, "gallery", media_type)
+    detail_key = public_preview_key(DEFAULT_PUBLIC_PREFIX, photo_id, "detail", media_type)
+    if previews.get("present") is not True and all(
+        _r2_key_known_current(current_keys, public_bucket, key)
+        for key in (gallery_key, detail_key)
+    ):
+        previews["present"] = True
+        previews["galleryKey"] = gallery_key
+        previews["detailKey"] = detail_key
+        previews["trustedBy"] = "owner-db"
+        record["publicPreviews"] = previews
+        trusted.add("public-previews")
+    return trusted
+
+
 def _resolve_source_path(repo_root: Path, source_path: str) -> str:
     if not source_path:
         return ""
-    candidates = []
-    raw = Path(source_path)
-    if raw.is_absolute():
-        candidates.append(raw)
-    else:
-        candidates.append(repo_root / raw)
-        candidates.extend(root / raw for root in SOURCE_ROOT_CANDIDATES)
-    for candidate in candidates:
+    for candidate in _source_candidates(repo_root, source_path):
         try:
             if candidate.is_file():
                 return str(candidate)
         except OSError:
             continue
+    names = {variant.name.lower() for variant in _source_path_variants(Path(source_path))}
+    for root in RECURSIVE_SOURCE_ROOT_CANDIDATES:
+        found = _find_source_by_basename(root, names)
+        if found and found.is_file():
+            return str(found)
     return ""
 
 
-def _private_delivery_missing_details(repo_root: Path, active_records: list[tuple[str, dict]], limit: int = 50) -> list[dict]:
+def _private_delivery_missing_details(
+    repo_root: Path,
+    active_records: list[tuple[str, dict]],
+    limit: int = 50,
+    resolve_sources: bool = True,
+) -> list[dict]:
     missing: list[dict] = []
     for photo_id, record in active_records:
         source_path = str(record.get("sourcePath") or "")
-        source_file = _resolve_source_path(repo_root, source_path)
+        source_file = _resolve_source_path(repo_root, source_path) if resolve_sources else ""
+        source_repair_state = "source_missing" if resolve_sources else "source_not_checked"
         master = record.get("privateMaster") if isinstance(record.get("privateMaster"), dict) else {}
         if master.get("present") is not True:
             missing.append({
@@ -1659,31 +3335,91 @@ def _private_delivery_missing_details(repo_root: Path, active_records: list[tupl
                 "objectKey": master.get("key") or master.get("expectedKey") or "",
                 "sourcePath": source_path,
                 "sourceFile": source_file,
-                "repair": "upload_source_master" if source_file else "source_missing",
+                "repair": "upload_source_master" if source_file else source_repair_state,
             })
         renders = record.get("privateRenders") if isinstance(record.get("privateRenders"), dict) else {}
-        for product_id, label in (("jpg-6mp", "JPG 6 MP"), ("jpg-3mp", "JPG 3 MP"), ("jpg-1mp", "JPG 1 MP")):
-            render = renders.get(product_id) if isinstance(renders.get(product_id), dict) else {}
-            if render.get("present") is True:
-                continue
-            missing.append({
-                "photoId": photo_id,
-                "kind": "render",
-                "productId": product_id,
-                "productLabel": label,
-                "objectKey": render.get("key") or render.get("expectedKey") or "",
-                "sourcePath": source_path,
-                "sourceFile": source_file,
-                "repair": "render_from_source" if source_file else "source_missing",
-            })
-            if len(missing) >= limit:
-                return missing
-        if len(missing) >= limit:
+        if renders:
+            for product_id, label in (("jpg-6mp", "JPG 6 MP"), ("jpg-3mp", "JPG 3 MP"), ("jpg-1mp", "JPG 1 MP")):
+                render = renders.get(product_id) if isinstance(renders.get(product_id), dict) else {}
+                if render.get("present") is True:
+                    continue
+                missing.append({
+                    "photoId": photo_id,
+                    "kind": "render",
+                    "productId": product_id,
+                    "productLabel": label,
+                    "objectKey": render.get("key") or render.get("expectedKey") or "",
+                    "sourcePath": source_path,
+                    "sourceFile": source_file,
+                    "repair": "render_from_source" if source_file else source_repair_state,
+                })
+                if limit > 0 and len(missing) >= limit:
+                    return missing
+        if limit > 0 and len(missing) >= limit:
             return missing
     return missing
 
 
-def _r2_coverage_summary(repo_root: Path) -> dict:
+def _missing_import_photo_details(
+    repo_root: Path,
+    active_records: list[tuple[str, dict]],
+    limit: int = 80,
+    resolve_sources: bool = True,
+) -> list[dict]:
+    missing: list[dict] = []
+    for photo_id, record in active_records:
+        master = record.get("privateMaster") if isinstance(record.get("privateMaster"), dict) else {}
+        renders = record.get("privateRenders") if isinstance(record.get("privateRenders"), dict) else {}
+        previews = record.get("publicPreviews") if isinstance(record.get("publicPreviews"), dict) else {}
+        master_missing = master.get("present") is not True
+        render_missing = any(
+            isinstance(render, dict) and render.get("present") is not True
+            for render in renders.values()
+        )
+        previews_missing = previews.get("present") is not True
+        if not master_missing and not render_missing and not previews_missing:
+            continue
+        source_path = str(record.get("sourcePath") or "")
+        source_file = _resolve_source_path(repo_root, source_path) if resolve_sources else ""
+        media_type = str(record.get("mediaType") or "")
+        missing.append({
+            "photoId": photo_id,
+            "relativePath": source_path,
+            "sourceFile": source_file,
+            "collectionKey": str(record.get("collectionKey") or ""),
+            "mediaType": media_type,
+            "steps": {
+                "master_uploaded": {"status": "pending" if master_missing else "done", "total": 1, "completed": 0 if master_missing else 1},
+                "triplets_created": {
+                    "status": "pending" if render_missing else ("skipped" if not renders else "done"),
+                    "total": len(renders),
+                    "completed": sum(1 for render in renders.values() if isinstance(render, dict) and render.get("present") is True),
+                },
+                "triplets_uploaded": {
+                    "status": "pending" if render_missing else ("skipped" if not renders else "done"),
+                    "total": len(renders),
+                    "completed": sum(1 for render in renders.values() if isinstance(render, dict) and render.get("present") is True),
+                },
+                "previews_created": {"status": "pending" if previews_missing else "done", "total": 2, "completed": 0 if previews_missing else 2},
+                "previews_uploaded": {"status": "pending" if previews_missing else "done", "total": 2, "completed": 0 if previews_missing else 2},
+            },
+            "missing": {
+                "master": master_missing,
+                "renders": render_missing,
+                "previews": previews_missing,
+            },
+        })
+        if limit > 0 and len(missing) >= limit:
+            break
+    return missing
+
+
+def _r2_coverage_summary(
+    repo_root: Path,
+    resolve_sources: bool = True,
+    private_missing_limit: int = 50,
+    import_missing_limit: int = 80,
+) -> dict:
     private_manifest = _read_json_file(repo_root / "assets/private-delivery-manifest.json", {})
     sidecar = _read_json_file(repo_root / "assets/media-sidecar.json", {})
     hidden_blacklist = _read_json_file(repo_root / "assets/hidden/hidden-blacklist.json", {})
@@ -1710,16 +3446,35 @@ def _r2_coverage_summary(repo_root: Path) -> dict:
     )
     private_bucket = str(private_manifest.get("privateBucket") or "photosbyelie-private") if isinstance(private_manifest, dict) else "photosbyelie-private"
     public_bucket = "photosbyelie-public"
+    owner_current_r2_keys = _owner_db_current_r2_keys(repo_root)
     record_items = [(str(photo_id), record) for photo_id, record in records.items() if isinstance(record, dict)]
+    trusted_by_owner_db: dict[str, list[str]] = {}
+    if owner_current_r2_keys:
+        for photo_id, record in record_items:
+            trusted = _apply_owner_db_r2_coverage(record, photo_id, private_bucket, public_bucket, owner_current_r2_keys)
+            if trusted:
+                trusted_by_owner_db[photo_id] = sorted(trusted)
     active_records = [(photo_id, record) for photo_id, record in record_items if photo_id not in excluded_photo_ids]
     blocked_records = [(photo_id, record) for photo_id, record in record_items if photo_id in excluded_photo_ids]
     active_expected = len(active_records) or expected
     blocked_excluded = len(blocked_records)
+    active_render_records = [
+        (photo_id, record)
+        for photo_id, record in active_records
+        if isinstance(record.get("privateRenders"), dict) and record.get("privateRenders")
+    ]
+    blocked_render_records = [
+        (photo_id, record)
+        for photo_id, record in blocked_records
+        if isinstance(record.get("privateRenders"), dict) and record.get("privateRenders")
+    ]
+    render_expected = len(active_render_records) or active_expected
+    blocked_render_excluded = len(blocked_render_records)
 
     master_present_for_catalog = sum(1 for _photo_id, record in active_records if record.get("privateMaster", {}).get("present") is True)
     master_present = int(private_manifest.get("privateMasterPhotoIds") or master_present_for_catalog) if isinstance(private_manifest, dict) else master_present_for_catalog
     render_present = {
-        product: sum(1 for _photo_id, record in active_records if record.get("privateRenders", {}).get(product, {}).get("present") is True)
+        product: sum(1 for _photo_id, record in active_render_records if record.get("privateRenders", {}).get(product, {}).get("present") is True)
         for product in ("jpg-6mp", "jpg-3mp", "jpg-1mp")
     }
     blocked_present = {
@@ -1738,14 +3493,25 @@ def _r2_coverage_summary(repo_root: Path) -> dict:
 
     rows = [
         _coverage_row("Private masters", master_present_for_catalog, active_expected, private_bucket, "masters", blocked_excluded, blocked_present["master"]),
-        _coverage_row("Private JPG 6 MP", render_present["jpg-6mp"], active_expected, private_bucket, "renders/jpg-6mp", blocked_excluded, blocked_present["jpg-6mp"]),
-        _coverage_row("Private JPG 3 MP", render_present["jpg-3mp"], active_expected, private_bucket, "renders/jpg-3mp", blocked_excluded, blocked_present["jpg-3mp"]),
-        _coverage_row("Private JPG 1 MP", render_present["jpg-1mp"], active_expected, private_bucket, "renders/jpg-1mp", blocked_excluded, blocked_present["jpg-1mp"]),
+        _coverage_row("Private JPG 6 MP", render_present["jpg-6mp"], render_expected, private_bucket, "renders/jpg-6mp", blocked_render_excluded, blocked_present["jpg-6mp"]),
+        _coverage_row("Private JPG 3 MP", render_present["jpg-3mp"], render_expected, private_bucket, "renders/jpg-3mp", blocked_render_excluded, blocked_present["jpg-3mp"]),
+        _coverage_row("Private JPG 1 MP", render_present["jpg-1mp"], render_expected, private_bucket, "renders/jpg-1mp", blocked_render_excluded, blocked_present["jpg-1mp"]),
         _coverage_row("Preview low 900px", min(public_present, gallery_expected), gallery_expected, public_bucket, "expo/*_900.jpg", blocked_excluded, blocked_present["public"]),
         _coverage_row("Preview high 1800px", min(public_present, detail_expected), detail_expected, public_bucket, "expo/*_1800.jpg", blocked_excluded, blocked_present["public"]),
     ]
     missing_rows = [row for row in rows if not row["ok"]]
-    missing_private_delivery = _private_delivery_missing_details(repo_root, active_records)
+    missing_private_delivery = _private_delivery_missing_details(
+        repo_root,
+        active_records,
+        limit=private_missing_limit,
+        resolve_sources=resolve_sources,
+    )
+    missing_import_photos = _missing_import_photo_details(
+        repo_root,
+        active_records,
+        limit=import_missing_limit,
+        resolve_sources=resolve_sources,
+    )
     if missing_rows:
         recommendation = "Missing coverage. Run the lock-guarded cloud media sweep."
     else:
@@ -1756,9 +3522,12 @@ def _r2_coverage_summary(repo_root: Path) -> dict:
         "activeCatalogPhotos": active_expected,
         "blockedCatalogPhotos": blocked_excluded,
         "discardedCatalogPhotos": len([photo_id for photo_id, _record in record_items if photo_id in discarded_photo_ids]),
+        "ownerDbCurrentObjects": len(owner_current_r2_keys),
+        "ownerDbTrustedPhotos": len(trusted_by_owner_db),
         "sidecarPhotos": len(photos),
         "rows": rows,
         "missingPrivateDelivery": missing_private_delivery,
+        "missingImportPhotos": missing_import_photos,
         "ok": not missing_rows,
         "recommendation": recommendation,
         "fixAvailable": True,
@@ -1767,13 +3536,43 @@ def _r2_coverage_summary(repo_root: Path) -> dict:
     }
 
 
-def _run_cloud_media_sweep_task(task_id: str, repo_root: Path, log_path: Path) -> None:
-    _update_r2_task(task_id, state="running", started_at=datetime.now(timezone.utc).isoformat())
+def _cloud_media_sweep_command(source_root: Path | None, source_select: str, skip_phases: list[str]) -> list[str]:
+    command = ["zsh", "scripts/run_cloud_media_sweep.zsh", "--push"]
+    if source_root:
+        command.extend(["--source-root", str(source_root), "--source-select", source_select])
+    for phase_key in skip_phases:
+        command.extend(["--skip-phase", phase_key])
+    return command
+
+
+def _effective_import_select(source_root: Path | None, source_select: str) -> str:
+    if source_select != "auto":
+        return source_select
+    if not source_root:
+        return "auto"
+    return import_select_for_source_root(source_root)
+
+
+def _run_cloud_media_sweep_task(
+    task_id: str,
+    repo_root: Path,
+    log_path: Path,
+    skip_phases: list[str],
+    source_root: Path | None,
+    source_select: str,
+) -> None:
+    current_phase = "selected-folder" if source_root else None
+    _update_r2_task(
+        task_id,
+        state="running",
+        started_at=datetime.now(timezone.utc).isoformat(),
+        **({"currentPhaseKey": current_phase} if current_phase else {}),
+    )
     log_path.parent.mkdir(parents=True, exist_ok=True)
-    command = ["zsh", "-lc", "./scripts/run_cloud_media_sweep.zsh --push"]
+    command = _cloud_media_sweep_command(source_root, source_select, skip_phases)
     with log_path.open("ab") as log:
         process = subprocess.run(command, cwd=repo_root, stdout=log, stderr=subprocess.STDOUT)
-    coverage = _r2_coverage_summary(repo_root)
+    coverage = _r2_coverage_summary(repo_root, resolve_sources=False, private_missing_limit=0, import_missing_limit=0)
     coverage_ok = bool(coverage.get("ok"))
     errors = []
     failed = process.returncode != 0 or not coverage_ok
@@ -1797,25 +3596,24 @@ def _run_cloud_media_sweep_task(task_id: str, repo_root: Path, log_path: Path) -
         task["updated_at"] = task["completed_at"]
 
 
-def _start_cloud_media_sweep(repo_root: Path) -> dict:
+def _start_cloud_media_sweep(
+    repo_root: Path,
+    skip_phases: list[str] | None = None,
+    *,
+    source_root: Path | None = None,
+    source_select: str = "all",
+) -> dict:
     external = _external_cloud_media_sweep_task(repo_root)
     if external:
         return external
-    active_states = {"queued", "running"}
-    with R2_BACKGROUND_LOCK:
-        existing = next(
-            (
-                dict(task)
-                for task in R2_BACKGROUND_TASKS.values()
-                if task.get("kind") == "cloud-media-sweep" and task.get("state") in active_states
-            ),
-            None,
-        )
+    skip_phases = list(skip_phases or [])
+    existing = _active_r2_work_task()
     if existing:
         return existing
     task_id = uuid.uuid4().hex
     queued_at = datetime.now(timezone.utc).isoformat()
     log_path = repo_root / ".review-logs" / f"owner-r2-fix-{task_id}.log"
+    command = _cloud_media_sweep_command(source_root, source_select, skip_phases)
     task = {
         "id": task_id,
         "kind": "cloud-media-sweep",
@@ -1831,13 +3629,100 @@ def _start_cloud_media_sweep(repo_root: Path) -> dict:
         "failed": 0,
         "bytes_total": 0,
         "bytes_done": 0,
-        "items": [{"command": "zsh -lc './scripts/run_cloud_media_sweep.zsh --push'", "log": str(log_path)}],
+        "skipPhases": skip_phases,
+        "sourceRoot": str(source_root) if source_root else "",
+        "sourceSelect": _effective_import_select(source_root, source_select),
+        "currentPhaseKey": "selected-folder" if source_root else None,
+        "phaseScopeKeys": (
+            ["prepare", "import-cache", "selected-folder", "catalog", "eligibility", "worker", "sidecar", "gap-fill", "storage", "test", "validate", "commit"]
+            if source_root
+            else ["prepare", "discard-start", "import-cache", "camera", "apple-photo-albums", "leonardo", "catalog", "eligibility", "worker", "sidecar", "gap-fill", "discard-final", "storage", "test", "validate", "commit"]
+        ),
+        "items": [{"command": " ".join(command), "log": str(log_path)}],
         "errors": [],
         "log": str(log_path),
     }
     with R2_BACKGROUND_LOCK:
         R2_BACKGROUND_TASKS[task_id] = task
-    worker = threading.Thread(target=_run_cloud_media_sweep_task, args=(task_id, repo_root, log_path), daemon=True)
+    worker = threading.Thread(
+        target=_run_cloud_media_sweep_task,
+        args=(task_id, repo_root, log_path, skip_phases, source_root, source_select),
+        daemon=True,
+    )
+    worker.start()
+    return dict(task)
+
+
+def _run_r2_gap_fill_task(task_id: str, repo_root: Path, log_path: Path, limit: int) -> None:
+    _update_r2_task(task_id, state="running", started_at=datetime.now(timezone.utc).isoformat(), currentPhaseKey="gap-fill")
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    command = ["python3", "scripts/fill_r2_coverage_gaps.py"]
+    if limit:
+        command.extend(["--limit", str(limit)])
+    with log_path.open("ab") as log:
+        process = subprocess.run(command, cwd=repo_root, stdout=log, stderr=subprocess.STDOUT)
+    coverage = _r2_coverage_summary(repo_root, resolve_sources=False, private_missing_limit=0, import_missing_limit=0)
+    coverage_ok = bool(coverage.get("ok"))
+    errors = []
+    failed = process.returncode != 0 or not coverage_ok
+    if process.returncode != 0:
+        errors.append(f"gap fill exited {process.returncode}")
+    if not coverage_ok:
+        rows = coverage.get("rows") if isinstance(coverage, dict) else []
+        missing = max((int(row.get("missing") or 0) for row in rows if isinstance(row, dict)), default=0)
+        errors.append(f"coverage still missing {missing:,} catalog photos")
+    with R2_BACKGROUND_LOCK:
+        task = R2_BACKGROUND_TASKS.get(task_id)
+        if not task:
+            return
+        task["completed"] = int(task.get("total") or 1)
+        task["state"] = "failed" if failed else "done"
+        task["failed"] = 1 if failed else 0
+        task["return_code"] = process.returncode
+        task["coverage_ok"] = coverage_ok
+        task["errors"] = errors
+        task["completed_at"] = datetime.now(timezone.utc).isoformat()
+        task["updated_at"] = task["completed_at"]
+
+
+def _start_r2_gap_fill(repo_root: Path, limit: int = 0) -> dict:
+    existing = _active_r2_work_task()
+    if existing:
+        return existing
+    coverage = _r2_coverage_summary(repo_root, resolve_sources=False, private_missing_limit=0, import_missing_limit=0)
+    missing_photos = coverage.get("missingImportPhotos") if isinstance(coverage, dict) else []
+    total = len(missing_photos) if isinstance(missing_photos, list) else 0
+    if limit:
+        total = min(total, limit)
+    task_id = uuid.uuid4().hex
+    queued_at = datetime.now(timezone.utc).isoformat()
+    log_path = repo_root / ".review-logs" / f"owner-r2-gap-fill-{task_id}.log"
+    command = ["python3", "scripts/fill_r2_coverage_gaps.py"]
+    if limit:
+        command.extend(["--limit", str(limit)])
+    task = {
+        "id": task_id,
+        "kind": "r2-gap-fill",
+        "operation": "gap-fill",
+        "photo_id": "catalog",
+        "state": "queued",
+        "queued_at": queued_at,
+        "started_at": None,
+        "completed_at": None,
+        "updated_at": queued_at,
+        "total": total,
+        "completed": 0,
+        "failed": 0,
+        "bytes_total": 0,
+        "bytes_done": 0,
+        "currentPhaseKey": "gap-fill",
+        "items": [{"command": " ".join(command), "log": str(log_path)}],
+        "errors": [],
+        "log": str(log_path),
+    }
+    with R2_BACKGROUND_LOCK:
+        R2_BACKGROUND_TASKS[task_id] = task
+    worker = threading.Thread(target=_run_r2_gap_fill_task, args=(task_id, repo_root, log_path, limit), daemon=True)
     worker.start()
     return dict(task)
 
@@ -2279,6 +4164,7 @@ def _normalize_real_estate_client(incoming: dict, existing: dict | None = None, 
         )
     )
     properties = _normalize_album_list(properties_source)
+    source_root = str(incoming.get("sourceRoot") or existing.get("sourceRoot") or convention["sourceRoot"]).strip()
     return {
         **existing,
         "id": client_id,
@@ -2287,7 +4173,7 @@ def _normalize_real_estate_client(incoming: dict, existing: dict | None = None, 
         "username": convention["username"],
         "accessCode": access_code,
         "accessCodeSalt": str(existing.get("accessCodeSalt") or incoming.get("accessCodeSalt") or uuid.uuid4().hex),
-        "sourceRoot": convention["sourceRoot"],
+        "sourceRoot": source_root or convention["sourceRoot"],
         "outputSlug": convention["outputSlug"],
         "publicSlug": convention["publicSlug"],
         "galleryKey": convention["galleryKey"],
@@ -2345,6 +4231,30 @@ def _real_estate_client_for_action(repo_root: Path, payload: dict) -> tuple[dict
     if not client:
         raise ValueError("real-estate client was not found")
     return state, client
+
+
+def _discover_real_estate_client_properties(repo_root: Path, payload: dict) -> dict:
+    state, client = _real_estate_client_for_action(repo_root, payload)
+    source_root = Path(str(client.get("sourceRoot") or "")).expanduser()
+    if not source_root.is_dir():
+        raise ValueError(f"source root not found: {source_root}")
+    discovered = _real_estate_discovered_properties(str(source_root))
+    if not discovered:
+        available_text = ", ".join(_real_estate_child_directories(str(source_root))) or "none"
+        raise ValueError(
+            f"No property folders with supported media were found under {source_root}. "
+            f"Available folders: {available_text}."
+        )
+    client["properties"] = discovered
+    client["albums"] = discovered
+    _persist_real_estate_client_update(repo_root, state, client)
+    return {
+        "ok": True,
+        "action": "discover-properties",
+        "client": _safe_real_estate_client(repo_root, client),
+        "clients": [_safe_real_estate_client(repo_root, item) for item in state["clients"]],
+        "properties": discovered,
+    }
 
 
 def _run_real_estate_command(repo_root: Path, command: list[str], env: dict[str, str] | None = None) -> dict:
@@ -2563,6 +4473,9 @@ def _persist_real_estate_client_update(repo_root: Path, state: dict, client: dic
 
 def _import_real_estate_client(repo_root: Path, payload: dict) -> dict:
     state, client = _real_estate_client_for_action(repo_root, payload)
+    source_root_override = _normalize_import_source_root(payload.get("sourceRoot"))
+    if source_root_override:
+        client["sourceRoot"] = str(source_root_override)
     source_root = Path(str(client.get("sourceRoot") or "")).expanduser()
     if not source_root.is_dir():
         raise ValueError(f"source root not found: {source_root}")
@@ -2593,6 +4506,7 @@ def _import_real_estate_client(repo_root: Path, payload: dict) -> dict:
         client=str(client.get("customer") or ""),
         total=total_media,
         completed=0,
+        sourceRoot=str(source_root),
         skippedProperties=missing_properties,
         properties=import_properties,
     )
@@ -2633,6 +4547,7 @@ def _import_real_estate_client(repo_root: Path, payload: dict) -> dict:
         raise OSError(result["output"] or "real-estate import failed")
     client["lastImportedAt"] = datetime.now(timezone.utc).isoformat()
     _persist_real_estate_client_update(repo_root, state, client)
+    _remember_real_estate_import_source_root(repo_root, source_root)
     import_progress = _real_estate_import_progress(operation_id) or {
         "total": total_media,
         "completed": total_media,
@@ -2741,6 +4656,8 @@ def apply_real_estate_owner_action(repo_root: Path, payload: dict) -> dict:
         return _save_real_estate_client(repo_root, payload.get("client") if isinstance(payload.get("client"), dict) else payload)
     if action == "delete-client":
         return _delete_real_estate_client(repo_root, payload)
+    if action == "discover-properties":
+        return _discover_real_estate_client_properties(repo_root, payload)
     if action == "import-client":
         return _import_real_estate_client(repo_root, payload)
     if action == "publish-client":
@@ -2761,6 +4678,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
     photo_id = payload.get("photo_id")
     if action not in {
         "hide",
+        "hide-many",
         "undo-hide",
         "promote-hidden",
         "return-to-reserve",
@@ -2769,15 +4687,18 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         "sync-country-keywords",
         "remove-collection-keyword",
         "update-photo-metadata",
+        "queue-title-keyword-review",
         "apply-title-keyword-review-approvals",
         "publish-hidden-blacklist",
         "wipe-hidden-r2",
         "save-title-keyword-review-approvals",
+        "clear-title-keyword-review-block",
         "save-keyword-blacklist",
     }:
         raise ValueError("unsupported photo action")
     if action not in {
         "assign-country",
+        "hide-many",
         "sync-country-keywords",
         "remove-collection-keyword",
         "publish-hidden-blacklist",
@@ -2792,6 +4713,10 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         if target_slug not in COUNTRY_ASSIGNMENT_TARGETS:
             raise ValueError("gallery_key must be a country slug")
         photo_ids = _normalized_photo_ids(payload.get("photo_ids") or photo_id)
+        if not photo_ids:
+            raise ValueError("photo_ids must include at least one photo id")
+    if action == "hide-many":
+        photo_ids = _normalized_photo_ids(payload.get("photo_ids"))
         if not photo_ids:
             raise ValueError("photo_ids must include at least one photo id")
 
@@ -2823,6 +4748,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             normalized.append(
                 {
                     "photo_id": current_photo_id,
+                    "batch_id": _review_item_batch_id(item, batch_id),
                     "approved": True,
                     "title": title,
                     "keywords": _review_keywords(repo_root, item.get("keywords")),
@@ -2835,13 +4761,20 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             current_photo_id = str(item.get("photo_id") or "").strip()
             if not current_photo_id or item.get("rejected") is not True:
                 continue
+            rejected_title = str(item.get("title") or "").strip()
+            rejected_keywords = _review_keywords(repo_root, item.get("keywords"))
             normalized_rejections.append(
                 {
                     "photo_id": current_photo_id,
+                    "batch_id": _review_item_batch_id(item, batch_id),
                     "rejected": True,
-                    "title": str(item.get("title") or "").strip(),
-                    "keywords": _review_keywords(repo_root, item.get("keywords")),
-                    "comment": str(item.get("comment") or "").strip(),
+                    "title": rejected_title,
+                    "keywords": rejected_keywords,
+                    "comment": _rejection_comment_with_proposal_context(
+                        item.get("comment"),
+                        rejected_title,
+                        rejected_keywords,
+                    ),
                 }
             )
         rejected_ids = {item["photo_id"] for item in normalized_rejections}
@@ -2850,13 +4783,14 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         normalized_blocked = []
         for item in blocked:
             if not isinstance(item, dict):
-                continue
+                raise ValueError("blocked items must be JSON objects")
             current_photo_id = str(item.get("photo_id") or "").strip()
             if not current_photo_id or item.get("blocked") is not True:
                 continue
             normalized_blocked.append(
                 {
                     "photo_id": current_photo_id,
+                    "batch_id": _review_item_batch_id(item, batch_id),
                     "blocked": True,
                     "blocked_at": now,
                 }
@@ -2878,47 +4812,32 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
                 hidden_groups,
                 normalized,
             )
-            site_state, worker_catalog = _write_catalog_state(repo_root, expo_groups, reserve_groups, hidden_groups)
-        rejection_state = _record_title_keyword_rejections(repo_root, batch_id, normalized_rejections)
-        payload_out = {
-            "format": "photosbyelie-title-keyword-review-approvals",
-            "schema_version": 1,
-            "updated_at": now,
-            "batch_id": batch_id,
-            "review_flag": review_flag,
-            "proposal_state_flag": TITLE_KEYWORD_PROPOSED_FLAG,
-            "rejection_flag": TITLE_KEYWORD_REJECTED_FLAG,
-            "approvals": normalized,
-            "rejections": normalized_rejections,
-            "blocked": normalized_blocked,
-            "proposal_state_path": rejection_state.get("path") or TITLE_KEYWORD_PROPOSED_STATE.as_posix(),
-            "not_found": not_found,
-        }
-        if normalized:
-            payload_out["applied_at"] = now
-        approvals_path, merged_record = _merge_title_keyword_review_record(repo_root, batch_id, payload_out)
-        db_result = record_title_keyword_review_decisions_db(
+            if metadata_changed:
+                site_state, worker_catalog = _write_catalog_state(repo_root, expo_groups, reserve_groups, hidden_groups)
+        not_found_records = _review_record_not_found(not_found, normalized, batch_id)
+        save_result = _save_title_keyword_review_records(
             repo_root,
-            batch_id,
-            normalized,
-            normalized_rejections,
-            normalized_blocked,
-            not_found,
-            applied_at=payload_out.get("applied_at", ""),
+            fallback_batch_id=batch_id,
+            approvals=normalized,
+            rejections=normalized_rejections,
+            blocked=normalized_blocked,
+            not_found=not_found_records,
+            review_flag=review_flag,
+            applied_at=now if normalized else "",
             decided_at=now,
         )
         return {
             "ok": True,
             "action": action,
             "batch_id": batch_id,
-            "path": approvals_path.relative_to(repo_root).as_posix(),
-            "db": db_result.get("db"),
-            "approved_count": len(merged_record.get("approvals", [])),
-            "rejected_count": len(merged_record.get("rejections", [])),
-            "blocked_count": len(merged_record.get("blocked", [])),
+            "path": save_result.get("path", ""),
+            "paths": save_result.get("paths", []),
+            "db": save_result.get("db", ""),
+            "approved_count": save_result.get("approved_count", 0),
+            "rejected_count": save_result.get("rejected_count", 0),
+            "blocked_count": save_result.get("blocked_count", 0),
             "applied_count": len({item["id"] for item in updated}),
             "metadata_changed": metadata_changed,
-            "proposal_state_path": rejection_state.get("path") or TITLE_KEYWORD_PROPOSED_STATE.as_posix(),
             "not_found": not_found,
             "updated": updated,
             "review_flag": review_flag,
@@ -2930,6 +4849,41 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
 
     if action == "save-keyword-blacklist":
         return _save_keyword_blacklist(repo_root, payload)
+
+    if action == "queue-title-keyword-review":
+        queue_result = queue_title_keyword_review_photo_db(repo_root, photo_id)
+        return {
+            "ok": True,
+            "action": action,
+            **queue_result,
+            "review_url": "./owner-review.html?view=title-keywords",
+        }
+
+    if action == "clear-title-keyword-review-block":
+        batch_id = str(payload.get("batch_id") or "").strip()
+        if not batch_id:
+            raise ValueError("batch_id must be a non-empty string")
+        now = datetime.now(timezone.utc).isoformat()
+        db_result = clear_title_keyword_review_blocks_db(
+            repo_root,
+            batch_id,
+            [photo_id],
+            decided_at=now,
+        )
+        record_result = _clear_title_keyword_review_block_record(repo_root, batch_id, [photo_id], now)
+        return {
+            "ok": True,
+            "action": action,
+            "photo_id": photo_id,
+            "batch_id": batch_id,
+            "db": db_result.get("db", ""),
+            "unblocked_count": db_result.get("unblocked", 0),
+            "missing_count": db_result.get("missing", 0),
+            "skipped_count": db_result.get("skipped", 0),
+            "decisions_deleted": db_result.get("decisions_deleted", 0),
+            "path": record_result.get("path", ""),
+            "record_removed_count": record_result.get("removed_count", 0),
+        }
 
     ensure_state_folders(repo_root / HIDDEN_ASSET_ROOT)
     (repo_root / DISCARDED_TOMBSTONE_PATH).parent.mkdir(parents=True, exist_ok=True)
@@ -3007,6 +4961,63 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             "site": site_state,
         }
 
+    if action == "hide-many":
+        photo_ids = _normalized_photo_ids(payload.get("photo_ids"))
+        hidden_at = datetime.now(timezone.utc).isoformat()
+        moved = []
+        already_hidden = []
+        not_found = []
+        for current_photo_id in photo_ids:
+            found = _find_photo(expo_groups, current_photo_id)
+            source_state = "expo"
+            if not found:
+                found = _find_photo(reserve_groups, current_photo_id)
+                source_state = "reserve"
+            if not found:
+                hidden_hit = next(
+                    ((slug, photo) for slug, photos in hidden_groups.items() for photo in photos if photo.get("id") == current_photo_id),
+                    None,
+                )
+                if hidden_hit:
+                    already_hidden.append(current_photo_id)
+                    continue
+                fallback = _catalog_photo_for_hidden(repo_root, current_photo_id)
+                if not fallback:
+                    not_found.append(current_photo_id)
+                    continue
+                source_slug, source_photo = fallback
+                source_state = "expo"
+            else:
+                source_slug, source_photo = found
+            hidden_photo = _hidden_review_photo(source_photo, source_slug, source_state, hidden_at)
+            _remove_existing(hidden_groups, current_photo_id)
+            hidden_groups[source_slug].append(hidden_photo)
+            moved.append(
+                {
+                    "photo_id": current_photo_id,
+                    "from": source_state,
+                    "from_slug": source_slug,
+                    "to": "hidden",
+                    "to_slug": source_slug,
+                    "mode": "blacklist",
+                }
+            )
+        site_state, worker_catalog = _write_catalog_state(repo_root, expo_groups, reserve_groups, hidden_groups)
+        r2_task = _start_r2_upload_task("hidden-blacklist", [_hidden_blacklist_upload_item(repo_root)], "hidden-blacklist-upload")
+        hidden_ids = [item["photo_id"] for item in moved] + already_hidden
+        return {
+            "ok": True,
+            "action": action,
+            "photo_ids": photo_ids,
+            "hidden_ids": hidden_ids,
+            "already_hidden": already_hidden,
+            "not_found": not_found,
+            "moved": moved,
+            "r2_blacklist_task": r2_task,
+            "worker_catalog": worker_catalog,
+            "site": site_state,
+        }
+
     if action == "update-photo-metadata":
         title = str(payload.get("title") or "").strip()
         if not title:
@@ -3075,6 +5086,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             normalized.append(
                 {
                     "photo_id": current_photo_id,
+                    "batch_id": _review_item_batch_id(item, batch_id),
                     "approved": True,
                     "title": title,
                     "keywords": keywords,
@@ -3087,13 +5099,20 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             current_photo_id = str(item.get("photo_id") or "").strip()
             if not current_photo_id or item.get("rejected") is not True:
                 continue
+            rejected_title = str(item.get("title") or "").strip()
+            rejected_keywords = _review_keywords(repo_root, item.get("keywords"))
             normalized_rejections.append(
                 {
                     "photo_id": current_photo_id,
+                    "batch_id": _review_item_batch_id(item, batch_id),
                     "rejected": True,
-                    "title": str(item.get("title") or "").strip(),
-                    "keywords": _review_keywords(repo_root, item.get("keywords")),
-                    "comment": str(item.get("comment") or "").strip(),
+                    "title": rejected_title,
+                    "keywords": rejected_keywords,
+                    "comment": _rejection_comment_with_proposal_context(
+                        item.get("comment"),
+                        rejected_title,
+                        rejected_keywords,
+                    ),
                 }
             )
         rejected_ids = {item["photo_id"] for item in normalized_rejections}
@@ -3109,22 +5128,19 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             normalized,
         )
 
-        rejection_state = _record_title_keyword_rejections(repo_root, batch_id, normalized_rejections)
-        payload_out = {
-            "format": "photosbyelie-title-keyword-review-approvals",
-            "schema_version": 1,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "batch_id": batch_id,
-            "applied_at": datetime.now(timezone.utc).isoformat(),
-            "review_flag": review_flag,
-            "proposal_state_flag": TITLE_KEYWORD_PROPOSED_FLAG,
-            "rejection_flag": TITLE_KEYWORD_REJECTED_FLAG,
-            "approvals": normalized,
-            "rejections": normalized_rejections,
-            "proposal_state_path": rejection_state.get("path") or TITLE_KEYWORD_PROPOSED_STATE.as_posix(),
-            "not_found": not_found,
-        }
-        approvals_path, merged_record = _merge_title_keyword_review_record(repo_root, batch_id, payload_out)
+        decided_at = datetime.now(timezone.utc).isoformat()
+        not_found_records = _review_record_not_found(not_found, normalized, batch_id)
+        save_result = _save_title_keyword_review_records(
+            repo_root,
+            fallback_batch_id=batch_id,
+            approvals=normalized,
+            rejections=normalized_rejections,
+            blocked=[],
+            not_found=not_found_records,
+            review_flag=review_flag,
+            applied_at=decided_at if normalized else "",
+            decided_at=decided_at,
+        )
         site_state = {}
         worker_catalog = {}
         if normalized:
@@ -3133,13 +5149,14 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             "ok": True,
             "action": action,
             "batch_id": batch_id,
-            "path": approvals_path.relative_to(repo_root).as_posix(),
-            "approved_count": len(merged_record.get("approvals", [])),
-            "rejected_count": len(merged_record.get("rejections", [])),
-            "blocked_count": len(merged_record.get("blocked", [])),
+            "path": save_result.get("path", ""),
+            "paths": save_result.get("paths", []),
+            "db": save_result.get("db", ""),
+            "approved_count": save_result.get("approved_count", 0),
+            "rejected_count": save_result.get("rejected_count", 0),
+            "blocked_count": save_result.get("blocked_count", 0),
             "applied_count": len({item["id"] for item in updated}),
             "metadata_changed": metadata_changed,
-            "proposal_state_path": rejection_state.get("path") or TITLE_KEYWORD_PROPOSED_STATE.as_posix(),
             "not_found": not_found,
             "updated": updated,
             "review_flag": review_flag,
@@ -3247,6 +5264,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             "from_slug": source_slug,
             "source_slug": original_slug,
             "asset_paths": source_assets,
+            "source_paths": _photo_source_paths(repo_root, source_photo),
             "public_preview_keys": public_preview_keys,
             "private_keys": private_keys,
         }
@@ -3286,8 +5304,13 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
                     "r2_blacklist_task": r2_task,
                     "site": site_state,
                 }
-            raise ValueError(f"photo not found in Expo or Reserve: {photo_id}")
-        source_slug, source_photo = found
+            fallback = _catalog_photo_for_hidden(repo_root, photo_id)
+            if not fallback:
+                raise ValueError(f"photo not found in Expo, Reserve, or SQLite catalog: {photo_id}")
+            source_slug, source_photo = fallback
+            source_state = "expo"
+        else:
+            source_slug, source_photo = found
         hidden_photo = _hidden_review_photo(source_photo, source_slug, source_state, datetime.now(timezone.utc).isoformat())
         _remove_existing(hidden_groups, photo_id)
         hidden_groups[source_slug].append(hidden_photo)
@@ -3306,7 +5329,18 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
     else:
         found = _find_and_remove(hidden_groups, photo_id)
         if not found:
-            raise ValueError(f"photo not found in Hidden: {photo_id}")
+            site_state, worker_catalog = _write_catalog_state(repo_root, expo_groups, reserve_groups, hidden_groups)
+            r2_task = _start_r2_upload_task("hidden-blacklist", [_hidden_blacklist_upload_item(repo_root)], "hidden-blacklist-upload")
+            return {
+                "ok": True,
+                "action": action,
+                "photo_id": photo_id,
+                "message": "already put back",
+                "moved": {"from": "hidden", "to": "expo", "mode": "blacklist", "already_put_back": True},
+                "r2_blacklist_task": r2_task,
+                "worker_catalog": worker_catalog,
+                "site": site_state,
+            }
         hidden_slug, hidden_photo = found
         _source_state, target_slug = _hidden_provenance(hidden_photo, "expo", hidden_slug)
         if not _find_photo(expo_groups, photo_id):

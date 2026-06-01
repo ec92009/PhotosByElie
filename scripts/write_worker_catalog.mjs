@@ -18,6 +18,10 @@ const lines = [
   `export const resolutions = ${JSON.stringify(catalogWindow.photosByElieResolutions || [], null, 2)};`,
   `export const frameOptions = ${JSON.stringify(catalogWindow.photosByElieFrameOptions || [], null, 2)};`,
   `export const videoPriceTiers = ${JSON.stringify(catalogWindow.photosByElieVideoPriceTiers || {}, null, 2)};`,
+  `export const podAutomation = ${JSON.stringify(catalogWindow.photosByEliePodAutomation || {}, null, 2)};`,
+  `export const podSuppliers = ${JSON.stringify(catalogWindow.photosByEliePodSuppliers || [], null, 2)};`,
+  `export const podQualityTiers = ${JSON.stringify(catalogWindow.photosByEliePodQualityTiers || [], null, 2)};`,
+  `export const podOptions = ${JSON.stringify(catalogWindow.photosByEliePodOptions || [], null, 2)};`,
   "",
 ];
 

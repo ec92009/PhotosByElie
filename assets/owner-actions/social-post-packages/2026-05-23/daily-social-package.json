@@ -1,0 +1,337 @@
+{
+  "format": "photosbyelie-daily-social-post-package",
+  "schema_version": 1,
+  "date": "2026-05-23",
+  "generated_at": "2026-05-23T07:05:25.133Z",
+  "source_of_truth": [
+    "assets/catalog/photosbyelie.sqlite public catalog",
+    "media-config.js public R2 base URL",
+    "existing tracked campaign manifests and social package history"
+  ],
+  "safeguards": [
+    "No private masters used",
+    "No unwatermarked private renders used",
+    "No buyer downloads used",
+    "No ignored Owner review JSON used",
+    "No secrets stored or printed"
+  ],
+  "publishing_status": {
+    "facebook": "Prepared only. Browser has Facebook session signals, but saved Page URL resolved to content unavailable, so Page target is blocked/ambiguous.",
+    "instagram": "Prepared only. Browser is authenticated to @ec92009; posting from browser would require final public-post confirmation and possibly account switching.",
+    "pinterest": "Prepared only. Browser is authenticated to @photosbyelie; posting from browser would require final public-post confirmation."
+  },
+  "packages": [
+    {
+      "platform": "facebook",
+      "account": "Photos By Elie Facebook Page; browser session exists, exact Page target unresolved in this run",
+      "theme": "Paris Interior Light",
+      "collection": "france",
+      "destination": "https://ec92009.github.io/PhotosByElie/gallery.html?gallery=france",
+      "campaign_status": "No active campaign for this exact Opera Garnier/Galeries Lafayette set. Recommended future campaign: facebook-paris-interior-light-2026-05-23.",
+      "caption": "Paris interior light: domes, gilded detail, and quiet architectural rhythm from Opera Garnier and Galeries Lafayette. Browse the France gallery on Photos By Elie: https://ec92009.github.io/PhotosByElie/gallery.html?gallery=france",
+      "manual_steps": [
+        "Open the verified Photos By Elie Facebook Page composer, not a personal profile.",
+        "Upload the 8 listed public preview images in the package order.",
+        "Paste the caption and destination URL, then publish after confirming the Page target."
+      ],
+      "media": [
+        {
+          "order": 1,
+          "media_id": "20220505-153639-03083-3ded4343e5",
+          "title": "Coupole des Galeries Lafayette",
+          "collection": "france",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20220505-153639-03083-3ded4343e5_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20220505-153639-03083-3ded4343e5",
+          "local_source_path_used": null,
+          "usage_note": "Selected from public R2 detail preview; no private master, buyer render, or Owner-only file used."
+        },
+        {
+          "order": 2,
+          "media_id": "20220505-135707-03028-e58f913a2d",
+          "title": "Ile De France, Opera Garnier",
+          "collection": "france",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20220505-135707-03028-e58f913a2d_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20220505-135707-03028-e58f913a2d",
+          "local_source_path_used": null,
+          "usage_note": "Selected from public R2 detail preview; no private master, buyer render, or Owner-only file used."
+        },
+        {
+          "order": 3,
+          "media_id": "20220505-135231-03007-a5d4711305",
+          "title": "Opera Garnier",
+          "collection": "france",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20220505-135231-03007-a5d4711305_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20220505-135231-03007-a5d4711305",
+          "local_source_path_used": null,
+          "usage_note": "Selected from public R2 detail preview; no private master, buyer render, or Owner-only file used."
+        },
+        {
+          "order": 4,
+          "media_id": "20220505-135205-02993-c098de9740",
+          "title": "Ile De France, Opera Garnier",
+          "collection": "france",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20220505-135205-02993-c098de9740_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20220505-135205-02993-c098de9740",
+          "local_source_path_used": null,
+          "usage_note": "Selected from public R2 detail preview; no private master, buyer render, or Owner-only file used."
+        },
+        {
+          "order": 5,
+          "media_id": "20220505-135009-02982-38775df02a",
+          "title": "Ile De France, Opera Garnier",
+          "collection": "france",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20220505-135009-02982-38775df02a_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20220505-135009-02982-38775df02a",
+          "local_source_path_used": null,
+          "usage_note": "Selected from public R2 detail preview; no private master, buyer render, or Owner-only file used."
+        },
+        {
+          "order": 6,
+          "media_id": "20180524-1746-00941-72deedae61",
+          "title": "Galeries Lafayette on Rue Bayard in Toulouse",
+          "collection": "france",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180524-1746-00941-72deedae61_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180524-1746-00941-72deedae61",
+          "local_source_path_used": null,
+          "usage_note": "Selected from public R2 detail preview; no private master, buyer render, or Owner-only file used."
+        },
+        {
+          "order": 7,
+          "media_id": "20180524-1746-00940-636b34659d",
+          "title": "Galeries Lafayette on Rue Bayard in Toulouse",
+          "collection": "france",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180524-1746-00940-636b34659d_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180524-1746-00940-636b34659d",
+          "local_source_path_used": null,
+          "usage_note": "Selected from public R2 detail preview; no private master, buyer render, or Owner-only file used."
+        },
+        {
+          "order": 8,
+          "media_id": "20120829-0319-20179-6dd023c02f",
+          "title": "Galeries Lafayette, Paris, France",
+          "collection": "france",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20120829-0319-20179-6dd023c02f_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20120829-0319-20179-6dd023c02f",
+          "local_source_path_used": null,
+          "usage_note": "Selected from public R2 detail preview; no private master, buyer render, or Owner-only file used."
+        }
+      ],
+      "image_count": 8
+    },
+    {
+      "platform": "instagram",
+      "account": "@ec92009 browser session; dedicated Photos By Elie Instagram account still not verified in repo notes",
+      "theme": "Malaga Museo Ruso Geometry",
+      "collection": "spain",
+      "destination": "https://ec92009.github.io/PhotosByElie/gallery.html?gallery=spain",
+      "campaign_status": "No active campaign for the Malaga Museo Ruso set. Gallery URL is the conservative first-party destination for now.",
+      "caption": "Clean gallery lines and quiet museum light from Malaga's Museo Ruso. More Spain work is on Photos By Elie: https://ec92009.github.io/PhotosByElie/gallery.html?gallery=spain\n\n#PhotosByElie #Malaga #MuseoRuso #SpainTravel #MuseumPhotography #TravelPhotography #ArchitectureDetails",
+      "manual_steps": [
+        "Use Instagram Create > Post from the currently authenticated @ec92009 session, or switch to the final Photos By Elie account first.",
+        "Upload the 9 listed public preview images as a carousel.",
+        "Paste the caption; keep the gallery URL as text or update the profile link before posting."
+      ],
+      "media": [
+        {
+          "order": 1,
+          "media_id": "d5h-2939-68cb5ce5b2",
+          "title": "Museo Ruso, Malaga",
+          "collection": "spain",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2939-68cb5ce5b2_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=d5h-2939-68cb5ce5b2",
+          "local_source_path_used": null,
+          "usage_note": "Selected from public R2 detail preview; no private master, buyer render, or Owner-only file used."
+        },
+        {
+          "order": 2,
+          "media_id": "d5h-2938-cc0cb9487b",
+          "title": "Museo Ruso, Malaga",
+          "collection": "spain",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2938-cc0cb9487b_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=d5h-2938-cc0cb9487b",
+          "local_source_path_used": null,
+          "usage_note": "Selected from public R2 detail preview; no private master, buyer render, or Owner-only file used."
+        },
+        {
+          "order": 3,
+          "media_id": "d5h-2937-dade9e30bf",
+          "title": "Museo Ruso, Malaga",
+          "collection": "spain",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2937-dade9e30bf_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=d5h-2937-dade9e30bf",
+          "local_source_path_used": null,
+          "usage_note": "Selected from public R2 detail preview; no private master, buyer render, or Owner-only file used."
+        },
+        {
+          "order": 4,
+          "media_id": "d5h-2933-5320e9f76b",
+          "title": "Museo Ruso, Malaga",
+          "collection": "spain",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2933-5320e9f76b_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=d5h-2933-5320e9f76b",
+          "local_source_path_used": null,
+          "usage_note": "Selected from public R2 detail preview; no private master, buyer render, or Owner-only file used."
+        },
+        {
+          "order": 5,
+          "media_id": "d5h-2924-7782398889",
+          "title": "Museo Ruso, Malaga",
+          "collection": "spain",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2924-7782398889_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=d5h-2924-7782398889",
+          "local_source_path_used": null,
+          "usage_note": "Selected from public R2 detail preview; no private master, buyer render, or Owner-only file used."
+        },
+        {
+          "order": 6,
+          "media_id": "d5h-2923-5cdb3a529c",
+          "title": "Museo Ruso, Malaga",
+          "collection": "spain",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2923-5cdb3a529c_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=d5h-2923-5cdb3a529c",
+          "local_source_path_used": null,
+          "usage_note": "Selected from public R2 detail preview; no private master, buyer render, or Owner-only file used."
+        },
+        {
+          "order": 7,
+          "media_id": "d5h-2922-7182f55a97",
+          "title": "Museo Ruso, Malaga",
+          "collection": "spain",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2922-7182f55a97_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=d5h-2922-7182f55a97",
+          "local_source_path_used": null,
+          "usage_note": "Selected from public R2 detail preview; no private master, buyer render, or Owner-only file used."
+        },
+        {
+          "order": 8,
+          "media_id": "d5h-2921-3d36843cce",
+          "title": "Museo Ruso, Malaga",
+          "collection": "spain",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2921-3d36843cce_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=d5h-2921-3d36843cce",
+          "local_source_path_used": null,
+          "usage_note": "Selected from public R2 detail preview; no private master, buyer render, or Owner-only file used."
+        },
+        {
+          "order": 9,
+          "media_id": "d5h-2920-d22069f714",
+          "title": "Museo Ruso, Malaga",
+          "collection": "spain",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2920-d22069f714_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=d5h-2920-d22069f714",
+          "local_source_path_used": null,
+          "usage_note": "Selected from public R2 detail preview; no private master, buyer render, or Owner-only file used."
+        }
+      ],
+      "image_count": 9
+    },
+    {
+      "platform": "pinterest",
+      "account": "@photosbyelie browser session",
+      "theme": "Lisbon Stone and Ruins",
+      "collection": "portugal",
+      "destination": "https://ec92009.github.io/PhotosByElie/gallery.html?gallery=portugal",
+      "campaign_status": "A dedicated Lisbon/Carmo campaign page would materially help Pinterest. Recommended future campaign: pinterest-lisbon-carmo-2026-05-23 using the listed public catalog IDs; not created during this run to avoid unreviewed public-site/version changes.",
+      "title": "Lisbon Stone and Ruins",
+      "caption": "Carmo Convent, Santa Justa Lift, and Lisbon's layered stone textures, gathered from the Portugal archive. Browse more on Photos By Elie: https://ec92009.github.io/PhotosByElie/gallery.html?gallery=portugal",
+      "manual_steps": [
+        "Open Pinterest @photosbyelie > Create > Pin or carousel-capable post flow.",
+        "Use the 9 listed public preview images; set destination to the Portugal gallery URL until a Lisbon campaign page is published.",
+        "Paste the title/caption and save to a Portugal or Lisbon travel photography board."
+      ],
+      "media": [
+        {
+          "order": 1,
+          "media_id": "20220519-150855-04494-23ca28ef26",
+          "title": "Carmo Convent Ruins, Lisbon",
+          "collection": "portugal",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20220519-150855-04494-23ca28ef26_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20220519-150855-04494-23ca28ef26",
+          "local_source_path_used": null,
+          "usage_note": "Selected from public R2 detail preview; no private master, buyer render, or Owner-only file used."
+        },
+        {
+          "order": 2,
+          "media_id": "20220519-150528-04477-0e4b4e9c19",
+          "title": "Carmo Convent and Santa Justa Lift in Lisbon",
+          "collection": "portugal",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20220519-150528-04477-0e4b4e9c19_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20220519-150528-04477-0e4b4e9c19",
+          "local_source_path_used": null,
+          "usage_note": "Selected from public R2 detail preview; no private master, buyer render, or Owner-only file used."
+        },
+        {
+          "order": 3,
+          "media_id": "20220519-150002-04473-673b0d617b",
+          "title": "Carmo Convent, Lisbon",
+          "collection": "portugal",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20220519-150002-04473-673b0d617b_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20220519-150002-04473-673b0d617b",
+          "local_source_path_used": null,
+          "usage_note": "Selected from public R2 detail preview; no private master, buyer render, or Owner-only file used."
+        },
+        {
+          "order": 4,
+          "media_id": "20220519-145733-04458-46544e9a62",
+          "title": "Ruins of Carmo Convent in Lisbon",
+          "collection": "portugal",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20220519-145733-04458-46544e9a62_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20220519-145733-04458-46544e9a62",
+          "local_source_path_used": null,
+          "usage_note": "Selected from public R2 detail preview; no private master, buyer render, or Owner-only file used."
+        },
+        {
+          "order": 5,
+          "media_id": "20220519-145241-04418-3f31ab4dce",
+          "title": "Carmo Convent and Santa Justa Lift, Lisbon",
+          "collection": "portugal",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20220519-145241-04418-3f31ab4dce_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20220519-145241-04418-3f31ab4dce",
+          "local_source_path_used": null,
+          "usage_note": "Selected from public R2 detail preview; no private master, buyer render, or Owner-only file used."
+        },
+        {
+          "order": 6,
+          "media_id": "20220519-145011-04398-926891f8aa",
+          "title": "Carmo Convent and Santa Justa Lift in Lisbon",
+          "collection": "portugal",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20220519-145011-04398-926891f8aa_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20220519-145011-04398-926891f8aa",
+          "local_source_path_used": null,
+          "usage_note": "Selected from public R2 detail preview; no private master, buyer render, or Owner-only file used."
+        },
+        {
+          "order": 7,
+          "media_id": "20220519-144910-04396-092ac31b87",
+          "title": "Carmo Convent, Santa Justa Lift",
+          "collection": "portugal",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20220519-144910-04396-092ac31b87_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20220519-144910-04396-092ac31b87",
+          "local_source_path_used": null,
+          "usage_note": "Selected from public R2 detail preview; no private master, buyer render, or Owner-only file used."
+        },
+        {
+          "order": 8,
+          "media_id": "20220519-144849-04394-d3e2b2fff3",
+          "title": "Carmo Convent, Santa Justa Lift",
+          "collection": "portugal",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20220519-144849-04394-d3e2b2fff3_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20220519-144849-04394-d3e2b2fff3",
+          "local_source_path_used": null,
+          "usage_note": "Selected from public R2 detail preview; no private master, buyer render, or Owner-only file used."
+        },
+        {
+          "order": 9,
+          "media_id": "20220519-144628-04390-10c96e02d3",
+          "title": "Carmo Convent, Santa Justa Lift",
+          "collection": "portugal",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20220519-144628-04390-10c96e02d3_1800.jpg",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20220519-144628-04390-10c96e02d3",
+          "local_source_path_used": null,
+          "usage_note": "Selected from public R2 detail preview; no private master, buyer render, or Owner-only file used."
+        }
+      ],
+      "image_count": 9
+    }
+  ]
+}

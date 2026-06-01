@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Disallow: /owner.html
+Disallow: /owner-review.html
+Disallow: /order.html
+Disallow: /basket.html
+Disallow: /liked.html
+Disallow: /real-estate.html
+Disallow: /experiments/
+Disallow: /socials/
+
+Sitemap: https://ec92009.github.io/PhotosByElie/sitemap.xml

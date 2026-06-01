@@ -1,0 +1,59 @@
+{
+  "date": "2026-05-25",
+  "platform": "Pinterest",
+  "status": "artifact_set_ready",
+  "account": "@photosbyelie",
+  "post_type": "pin_or_carousel",
+  "title": "Northern Portugal Green Horizons",
+  "destination_url": "https://ec92009.github.io/PhotosByElie/gallery.html?gallery=portugal",
+  "caption": "Green hills, fields, vineyards, and quiet village edges from northern Portugal. Browse more Portugal photographs on Photos By Elie: https://ec92009.github.io/PhotosByElie/gallery.html?gallery=portugal",
+  "recommended_upload_set": "images",
+  "available_count": 5,
+  "notes": [
+    "Images are downloaded public watermarked R2 previews staged for browser upload.",
+    "Pinterest accepts only 5 photos at a time; this package is exactly 5 images.",
+    "Confirm the destination board and URL before publishing."
+  ],
+  "items": [
+    {
+      "order": 1,
+      "id": "20180516-1159-00454-f6c81b2b52",
+      "title": "20180516 1159 00454",
+      "image": "images/01-20180516-1159-00454-f6c81b2b52-20180516-1159-00454.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180516-1159-00454-f6c81b2b52_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180516-1159-00454-f6c81b2b52"
+    },
+    {
+      "order": 2,
+      "id": "20180516-1203-00457-2ae6ab48d7",
+      "title": "20180516 1203 00457",
+      "image": "images/02-20180516-1203-00457-2ae6ab48d7-20180516-1203-00457.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180516-1203-00457-2ae6ab48d7_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180516-1203-00457-2ae6ab48d7"
+    },
+    {
+      "order": 3,
+      "id": "20180516-1204-00458-38aa91047d",
+      "title": "20180516 1204 00458",
+      "image": "images/03-20180516-1204-00458-38aa91047d-20180516-1204-00458.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180516-1204-00458-38aa91047d_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180516-1204-00458-38aa91047d"
+    },
+    {
+      "order": 4,
+      "id": "20180516-1446-00463-8954f923ce",
+      "title": "20180516 1446 00463",
+      "image": "images/04-20180516-1446-00463-8954f923ce-20180516-1446-00463.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180516-1446-00463-8954f923ce_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180516-1446-00463-8954f923ce"
+    },
+    {
+      "order": 5,
+      "id": "20180516-1750-00466-4c85ba0f03",
+      "title": "20180516 1750 00466",
+      "image": "images/05-20180516-1750-00466-4c85ba0f03-20180516-1750-00466.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180516-1750-00466-4c85ba0f03_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180516-1750-00466-4c85ba0f03"
+    }
+  ]
+}

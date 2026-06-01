@@ -28,28 +28,6 @@ const runtimeParser = `(() => {
     for (let index = 0; index < response.length; index += 1) bytes[index] = response.charCodeAt(index) & 0xff;
     return bytes;
   };
-  const readBinaryAsync = async (relativePath) => {
-    const script = document.currentScript;
-    const scriptUrl = script?.src ? new URL(script.src, window.location.href) : null;
-    const version = scriptUrl?.searchParams.get("v") || document.querySelector(".brand")?.textContent?.match(/v([0-9.]+)/)?.[1] || "";
-    const url = new URL(relativePath, scriptUrl || window.location.href);
-    if (version) url.searchParams.set("v", version);
-    const response = await fetch(url.href, { cache: "default" });
-    if (!response.ok) throw new Error(\`Could not load \${relativePath}: HTTP \${response.status}\`);
-    return new Uint8Array(await response.arrayBuffer());
-  };
-  const brotliDecompress = async (bytes) => {
-    const sqliteHeader = [83, 81, 76, 105, 116, 101, 32, 102, 111, 114, 109, 97, 116, 32, 51, 0];
-    if (sqliteHeader.every((value, index) => bytes[index] === value)) return bytes;
-    if (typeof DecompressionStream !== "function") throw new Error("Brotli decompression is not supported.");
-    let stream;
-    try {
-      stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("brotli"));
-    } catch {
-      throw new Error("Brotli decompression is not supported.");
-    }
-    return new Uint8Array(await new Response(stream).arrayBuffer());
-  };
   const readJson = (relativePath, fallback = {}) => {
     try {
       const script = document.currentScript;
@@ -93,6 +71,10 @@ const runtimeParser = `(() => {
     window.photosByElieFrameOptions = (catalog.frameOptions || catalog.frames || []).map((frame) => ({ ...frame }));
     window.photosByElieShippingHandlingPrices = { ...(catalog.shippingHandlingPrices || {}) };
     window.photosByElieVideoPriceTiers = normalizeVideoPriceTiers(catalog.videoPriceTiers || {});
+    window.photosByEliePodAutomation = { ...(catalog.podAutomation || {}) };
+    window.photosByEliePodSuppliers = (catalog.podSuppliers || []).map((supplier) => ({ ...supplier }));
+    window.photosByEliePodQualityTiers = (catalog.podQualityTiers || []).map((tier) => ({ ...tier }));
+    window.photosByEliePodOptions = (catalog.podOptions || []).map((option) => ({ ...option }));
   };
 
   const finishCatalogLoad = (source, data, owner, productCatalog) => {
@@ -111,15 +93,6 @@ const runtimeParser = `(() => {
   window.photosByElieCatalogReady = (async () => {
     if (window.photosByElieCatalogSqlite?.decodeCatalog) {
       try {
-        const compressed = await readBinaryAsync("./assets/catalog/photosbyelie.sqlite.br");
-        const bundle = window.photosByElieCatalogSqlite.decodeCatalog(await brotliDecompress(compressed));
-        return finishCatalogLoad("sqlite-br", bundle.data, bundle.owner, bundle.productCatalog);
-      } catch (error) {
-        if (!String(error?.message || "").includes("Brotli decompression is not supported")) {
-          console.warn(error?.message || "Brotli SQLite catalog load failed; trying plain SQLite.");
-        }
-      }
-      try {
         const bundle = window.photosByElieCatalogSqlite.decodeCatalog(readBinary("./assets/catalog/photosbyelie.sqlite"));
         return finishCatalogLoad("sqlite", bundle.data, bundle.owner, bundle.productCatalog);
       } catch (error) {
@@ -135,7 +108,7 @@ const writeBootstrap = () => {
   fs.writeFileSync(
     dataPath,
     [
-      "// Generated bootstrap: attempts Brotli-compressed SQLite, then falls back to plain SQLite.",
+      "// Generated bootstrap: loads the plain SQLite catalog.",
       runtimeParser,
       tail.trimEnd(),
       "",
@@ -143,6 +116,23 @@ const writeBootstrap = () => {
   );
 };
 
-writeBootstrap();
-childProcess.execFileSync("python3", ["scripts/build_public_catalog_db.py", "--quiet"], { cwd: repoRoot, stdio: "inherit" });
+const hasFullGeneratedCatalog = () => {
+  if (!fs.existsSync(dataPath)) return false;
+  const source = fs.readFileSync(dataPath, "utf8");
+  return source.includes("window.photosByElieData = {") && !source.startsWith("// Generated bootstrap:");
+};
+
+const buildSqlite = (source = "auto") => {
+  const args = ["scripts/build_public_catalog_db.py", "--quiet"];
+  if (source === "photos-data") args.push("--source", "photos-data");
+  childProcess.execFileSync("python3", args, { cwd: repoRoot, stdio: "inherit" });
+};
+
+if (hasFullGeneratedCatalog()) {
+  buildSqlite("photos-data");
+  writeBootstrap();
+} else {
+  buildSqlite();
+  writeBootstrap();
+}
 console.log("Wrote assets/catalog/photosbyelie.sqlite");

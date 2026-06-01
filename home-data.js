@@ -4,12 +4,12 @@ window.photosByElieHomeData = {
     "title": "France",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "france-gallery",
-    "count": 289,
+    "count": 315,
     "href": "./gallery.html?gallery=france",
     "photos": [
       {
-        "id": "20220506-160631-03403-51426edaac",
-        "title": "Les Invalides, Paris",
+        "id": "img-6236-bc42218145",
+        "title": "IMG 6236",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -17,14 +17,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20220506-160631-03403-51426edaac_900.jpg",
-            "detailKey": "expo/20220506-160631-03403-51426edaac_1800.jpg"
+            "galleryKey": "expo/img-6236-bc42218145_900.jpg",
+            "detailKey": "expo/img-6236-bc42218145_1800.jpg"
           }
         }
       },
       {
-        "id": "20220506-154558-03388-a887904b4b",
-        "title": "Eglise des Invalides, Paris",
+        "id": "img-6236-5c34056e1e",
+        "title": "IMG 6236",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -32,14 +32,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20220506-154558-03388-a887904b4b_900.jpg",
-            "detailKey": "expo/20220506-154558-03388-a887904b4b_1800.jpg"
+            "galleryKey": "expo/img-6236-5c34056e1e_900.jpg",
+            "detailKey": "expo/img-6236-5c34056e1e_1800.jpg"
           }
         }
       },
       {
-        "id": "20220506-151024-03375-3e4d581417",
-        "title": "20220506 151024 03375",
+        "id": "img-6235-b7ffbc497f",
+        "title": "IMG 6235",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -47,14 +47,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20220506-151024-03375-3e4d581417_900.jpg",
-            "detailKey": "expo/20220506-151024-03375-3e4d581417_1800.jpg"
+            "galleryKey": "expo/img-6235-b7ffbc497f_900.jpg",
+            "detailKey": "expo/img-6235-b7ffbc497f_1800.jpg"
           }
         }
       },
       {
-        "id": "20220506-145942-03357-6183b42671",
-        "title": "20220506 145942 03357",
+        "id": "img-6235-1d89dce3af",
+        "title": "IMG 6235",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -62,8 +62,8 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20220506-145942-03357-6183b42671_900.jpg",
-            "detailKey": "expo/20220506-145942-03357-6183b42671_1800.jpg"
+            "galleryKey": "expo/img-6235-1d89dce3af_900.jpg",
+            "detailKey": "expo/img-6235-1d89dce3af_1800.jpg"
           }
         }
       }
@@ -74,7 +74,7 @@ window.photosByElieHomeData = {
     "title": "USA",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "usa-gallery",
-    "count": 151,
+    "count": 159,
     "href": "./gallery.html?gallery=usa",
     "photos": [
       {
@@ -144,12 +144,12 @@ window.photosByElieHomeData = {
     "title": "Spain",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "spain-gallery",
-    "count": 237,
+    "count": 1024,
     "href": "./gallery.html?gallery=spain",
     "photos": [
       {
-        "id": "d5h-2946-c744a8409c",
-        "title": "D5H 2946",
+        "id": "d5h-2938-cc0cb9487b",
+        "title": "D5H 2938",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -157,14 +157,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/d5h-2946-c744a8409c_900.jpg",
-            "detailKey": "expo/d5h-2946-c744a8409c_1800.jpg"
+            "galleryKey": "expo/d5h-2938-cc0cb9487b_900.jpg",
+            "detailKey": "expo/d5h-2938-cc0cb9487b_1800.jpg"
           }
         }
       },
       {
-        "id": "d5h-2945-864593e516",
-        "title": "D5H 2945",
+        "id": "d5h-2933-5320e9f76b",
+        "title": "D5H 2933",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -172,14 +172,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/d5h-2945-864593e516_900.jpg",
-            "detailKey": "expo/d5h-2945-864593e516_1800.jpg"
+            "galleryKey": "expo/d5h-2933-5320e9f76b_900.jpg",
+            "detailKey": "expo/d5h-2933-5320e9f76b_1800.jpg"
           }
         }
       },
       {
-        "id": "d5h-2944-68e4f5655f",
-        "title": "D5H 2944",
+        "id": "d5h-2924-7782398889",
+        "title": "D5H 2924",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -187,14 +187,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/d5h-2944-68e4f5655f_900.jpg",
-            "detailKey": "expo/d5h-2944-68e4f5655f_1800.jpg"
+            "galleryKey": "expo/d5h-2924-7782398889_900.jpg",
+            "detailKey": "expo/d5h-2924-7782398889_1800.jpg"
           }
         }
       },
       {
-        "id": "d5h-2943-cb7846f993",
-        "title": "D5H 2943",
+        "id": "d5h-2923-5cdb3a529c",
+        "title": "D5H 2923",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -202,8 +202,8 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/d5h-2943-cb7846f993_900.jpg",
-            "detailKey": "expo/d5h-2943-cb7846f993_1800.jpg"
+            "galleryKey": "expo/d5h-2923-5cdb3a529c_900.jpg",
+            "detailKey": "expo/d5h-2923-5cdb3a529c_1800.jpg"
           }
         }
       }
@@ -219,7 +219,7 @@ window.photosByElieHomeData = {
     "photos": [
       {
         "id": "20191207-1718-19516-5bc74a12ce",
-        "title": "20191207 1718 19516",
+        "title": "Puerto Vallarta, Mexico, view from the Icon Towers",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -234,7 +234,7 @@ window.photosByElieHomeData = {
       },
       {
         "id": "20191206-0605-17192-85701a04f9",
-        "title": "20191206 0605 17192",
+        "title": "Puerto Vallarta, Mexico, view from the Icon Towers",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -254,7 +254,7 @@ window.photosByElieHomeData = {
     "title": "AI",
     "description": "Leonardo archive selections prepared from the Saturn Lightroom AI source.",
     "accent": "ai-gallery",
-    "count": 4920,
+    "count": 4921,
     "href": "./gallery.html?gallery=ai",
     "photos": [
       {
@@ -269,6 +269,24 @@ window.photosByElieHomeData = {
             "allowed": true,
             "galleryKey": "expo/bronze-statue-of-a-horse-remington-style-2-upscale-a742f72b-50ba-4c69-9e70-368d269d8e6c-edit-b35b742f11_900.jpg",
             "detailKey": "expo/bronze-statue-of-a-horse-remington-style-2-upscale-a742f72b-50ba-4c69-9e70-368d269d8e6c-edit-b35b742f11_1800.jpg"
+          }
+        }
+      },
+      {
+        "id": "beyrouth-630240f1ea",
+        "title": "Beyrouth",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "media": {
+          "type": "video",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/beyrouth-630240f1ea_900.jpg",
+            "detailKey": "expo/beyrouth-630240f1ea_short_5s_720p.mp4"
+          },
+          "video": {
+            "duration": 43
           }
         }
       },
@@ -301,21 +319,6 @@ window.photosByElieHomeData = {
             "detailKey": "expo/a-japanese-fishing-village-at-sunset-cut-paper-style-1-upscale-9ffd39ce-7231-45fa-a49b-e7fc73cef2b7-jpgx2-f710d988d1_1800.jpg"
           }
         }
-      },
-      {
-        "id": "pandora-the-first-woman-created-by-the-gods-who-was-given-7-upscale-9bfda99c-8ea7-4937-a60f-eb11cb5bc95d-jpgx2-d1a1a13cea",
-        "title": "Pandora - The first woman created by the gods, who was given a box containing all the evils of the world, prominent in t",
-        "gallerySrc": "",
-        "imageSrc": "",
-        "media": {
-          "type": "photo",
-          "sourcePolicy": "developed-master",
-          "publicPreview": {
-            "allowed": true,
-            "galleryKey": "expo/pandora-the-first-woman-created-by-the-gods-who-was-given-7-upscale-9bfda99c-8ea7-4937-a60f-eb11cb5bc95d-jpgx2-d1a1a13cea_900.jpg",
-            "detailKey": "expo/pandora-the-first-woman-created-by-the-gods-who-was-given-7-upscale-9bfda99c-8ea7-4937-a60f-eb11cb5bc95d-jpgx2-d1a1a13cea_1800.jpg"
-          }
-        }
       }
     ]
   },
@@ -324,7 +327,7 @@ window.photosByElieHomeData = {
     "title": "Italy",
     "description": "Saturn and Apple Photos archive selections prepared from Italian sources.",
     "accent": "italy-gallery",
-    "count": 24,
+    "count": 33,
     "href": "./gallery.html?gallery=italy",
     "photos": [
       {
@@ -358,8 +361,8 @@ window.photosByElieHomeData = {
         }
       },
       {
-        "id": "img-1217-fba9ecc01d",
-        "title": "IMG 1217",
+        "id": "img-1213-7276413ecc",
+        "title": "IMG 1213",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -367,14 +370,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/img-1217-fba9ecc01d_900.jpg",
-            "detailKey": "expo/img-1217-fba9ecc01d_1800.jpg"
+            "galleryKey": "expo/img-1213-7276413ecc_900.jpg",
+            "detailKey": "expo/img-1213-7276413ecc_1800.jpg"
           }
         }
       },
       {
-        "id": "img-1216-601dd6c052",
-        "title": "IMG 1216",
+        "id": "img-1212-96505e7356",
+        "title": "IMG 1212",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -382,8 +385,8 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/img-1216-601dd6c052_900.jpg",
-            "detailKey": "expo/img-1216-601dd6c052_1800.jpg"
+            "galleryKey": "expo/img-1212-96505e7356_900.jpg",
+            "detailKey": "expo/img-1212-96505e7356_1800.jpg"
           }
         }
       }

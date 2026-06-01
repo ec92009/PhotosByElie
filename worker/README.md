@@ -17,7 +17,7 @@ browser basket -> Worker availability check -> Stripe Checkout -> signed paid we
 - Stripe Checkout Session creation.
 - Stripe webhook verification from the raw request body and `Stripe-Signature` header.
 - Order status transitions.
-- Per-file delivery metadata, local mock ZIP generation, and signed-link-style download tokens.
+- Per-file delivery metadata, local mock ZIP generation, signed-link-style download tokens, token expiry, and download event counts.
 - Real Estate originals sessions that mint private download tokens for browser-built ZIPs.
 
 Stripe owns only the payment track. The browser proposes a basket, but the Worker recalculates price and availability before creating the checkout session.
@@ -34,6 +34,8 @@ All routes also work under `/api`, for example `/api/checkout/guest`.
 | `POST /stripe-webhook` | Stripe/mocked Stripe says checkout completed | Verifies payment facts, prepares delivery, marks order `ready` |
 | `POST /mock-stripe/pay` | Local mock payment helper | Simulates a paid Stripe event for a Checkout Session |
 | `POST /real-estate/originals/session` | Real Estate client requests selected originals | Validates the client password, checks private R2 originals, and returns per-file private download tokens |
+| `POST /real-estate/deliverables` | Real Estate client saves a PDF/video product | Validates the client password and stores the small product manifest in private R2 |
+| `POST /real-estate/deliverables/list` | Real Estate client opens the product shelf | Validates the client password and lists saved PDF/video manifests from private R2 |
 | `GET /orders/:orderId?email=...` | Buyer checks delivery state | Returns order status when email matches |
 | `GET /download/:token` | Buyer clicks download | Streams the private delivery file or returns a mock signed R2 URL in mock mode |
 
@@ -48,7 +50,7 @@ All routes also work under `/api`, for example `/api/checkout/guest`.
 - `PRIVATE_MEDIA` reads private developed masters from R2.
 - `DELIVERY_MEDIA` serves private buyer downloads. It can point at the same private R2 bucket for the mock phase.
 
-The public static site points checkout and Real Estate originals delivery to the deployed Worker through `window.photosByElieMediaConfig.checkoutWorkerBaseUrl` and points public preview media directly to the public R2 media base through `window.photosByElieMediaConfig.publicBaseUrl`. Use `?workerBase=https://...` for alternate cloud Workers, `?workerBase=http://localhost:8787` while testing locally, and `?mediaBase=https://...` for alternate public media bases. The R2 delivery adapter validates selected private files before creating Stripe Checkout, passes full-resolution masters through unchanged from `masters/<photo-id>.<format>`, and reads JPG 6 MP, 3 MP, and 1 MP products from flat private R2 keys like `renders/<photo-id>_6mp.jpg`. During the migration window it can still fall back to the old nested master/render keys. Real Estate originals use keys under `real-estate/<gallery-key>/masters/<album-slug>/<photo-id>.jpg`. Those generated JPG buyer files are unwatermarked, generated/uploaded by the media pipeline on the machine with developed masters, and reused by later per-file downloads. Public cloud delivery intentionally avoids assembling one large ZIP in the Worker; each purchased file or Real Estate original gets its own download token and repeat downloads are allowed.
+The public static site points checkout, Real Estate originals delivery, and Real Estate product shelf sync to the deployed Worker through `window.photosByElieMediaConfig.checkoutWorkerBaseUrl` and points public preview media directly to the public R2 media base through `window.photosByElieMediaConfig.publicBaseUrl`. Use `?workerBase=https://...` for alternate cloud Workers, `?workerBase=http://localhost:8787` while testing locally, and `?mediaBase=https://...` for alternate public media bases. The R2 delivery adapter validates selected private files before creating Stripe Checkout, passes full-resolution masters through unchanged from `masters/<photo-id>.<format>`, and reads JPG 6 MP, 3 MP, and 1 MP products from flat private R2 keys like `renders/<photo-id>_6mp.jpg`. During the migration window it can still fall back to the old nested master/render keys. Real Estate originals use keys under `real-estate/<gallery-key>/masters/<album-slug>/<photo-id>.jpg`, and client-created PDF/video shelf manifests use `real-estate/<gallery-key>/deliverables/<product-id>.json`. Those generated JPG buyer files are unwatermarked, generated/uploaded by the media pipeline on the machine with developed masters, and reused by later per-file downloads. Public cloud delivery intentionally avoids assembling one large ZIP in the Worker; each purchased file or Real Estate original gets its own download token, repeat downloads are allowed up to the configured limit, and successful downloads are appended to the order event history.
 
 The current checkout Worker is live at:
 
@@ -56,20 +58,37 @@ The current checkout Worker is live at:
 https://photosbyelie-checkout-mock.ec92009.workers.dev
 ```
 
+Stripe sandbox checkout has been manually proven against this Worker, including successful payment, declined card, 3D Secure/authentication-required payment, verified webhook delivery, order recovery, per-file downloads, and download-all behavior.
+
+Live Stripe dashboard state as of 2026-05-22:
+
+- Account: `acct_1TWCksPuO9o6fOp6`.
+- Successful-payment customer receipts are enabled; refund emails remain off.
+- Branding is saved with `assets/branding/photosbyelie-camera-tripod-logo-512.png`, `assets/branding/photosbyelie-camera-tripod-wordmark.png`, brand color `#5B341E`, and accent color `#D86A3E`.
+- Webhook destination `we_1TZmoVPuO9o6fOp6JkBENiyV` posts `checkout.session.completed` to `https://photosbyelie-checkout-mock.ec92009.workers.dev/stripe-webhook` on Stripe API version `2026-04-22.dahlia`.
+- Live Cloudflare secrets `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are installed outside git. Do not commit or document the secret values.
+- Live proof succeeded with order `PBE-20260522-BA062E956C`: `$8.00` paid, `$7.47` incoming after Stripe fees, order status `ready`, and a private R2 JPEG download of `401,035` bytes.
+
 Real Stripe is selected automatically when `STRIPE_SECRET_KEY` is present. Required Stripe configuration:
 
 - `STRIPE_SECRET_KEY`: test or live secret key used to create Checkout Sessions.
 - `STRIPE_WEBHOOK_SECRET`: endpoint secret for `/stripe-webhook`; required for real Stripe webhook verification.
 - `STRIPE_API_VERSION`: optional pinned Stripe API version.
+- `CHECKOUT_SESSION_TTL_DAYS`: optional KV retention for Checkout Session lookup entries; default is 90.
+- `DOWNLOAD_TOKEN_TTL_DAYS`: optional buyer download-token availability window; default is 30.
+- `DOWNLOAD_TOKEN_MAX_DOWNLOADS`: optional successful-download limit per token; default is 100.
+- `STRIPE_STATEMENT_DESCRIPTOR_SUFFIX`: optional card statement descriptor suffix for Checkout PaymentIntents; default is `DOWNLOAD`, producing `PHOTOSELIE* DOWNLOAD` with the current shortened descriptor prefix. The Stripe Dashboard still owns the business descriptor prefix, logo, color, support details, and public receipt branding.
 
 Without `STRIPE_SECRET_KEY`, the Worker stays in mock mode and `/mock-stripe/pay` remains available. With real Stripe enabled, `/mock-stripe/pay` is disabled.
 
-Live payment is blocked until test mode proves the full flow:
+Live payment proof checklist completed on 2026-05-22:
 
-- Successful card payment reaches `checkout.session.completed`.
-- 3D Secure/authentication-required payment returns to the order page cleanly.
-- Declined card does not mark the order paid.
-- A verified webhook records private R2 delivery files and exposes per-file download tokens.
+- Worker `/health` reports real Stripe and fixed `usd`.
+- A successful live card payment reaches `checkout.session.completed`.
+- The live webhook returns `200 OK`.
+- Successful-payment receipts are enabled and the Stripe receipt is available from the payment record.
+- The order page recovers by order ID and email.
+- Private R2 per-file downloads and download-all work.
 - Stripe receipts remain payment records only; PhotosByElie delivery links stay in the Worker/order flow.
 
 Stripe's standard successful test Visa is `4242 4242 4242 4242` with any future expiry and any 3-digit CVC. Use Stripe's current test-card list for 3D Secure and decline scenarios.

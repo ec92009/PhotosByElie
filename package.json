@@ -1,14 +1,21 @@
 {
   "name": "photosbyelie",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Static Photos By Elie gallery with Stripe-capable Worker fulfillment.",
   "type": "commonjs",
   "scripts": {
-    "test": "node --test worker/checkout-worker.test.mjs",
+    "test": "node --test worker/checkout-worker.test.mjs scripts/generate_title_keyword_review_queue.test.mjs",
     "validate": "node scripts/validate_publish.js --external-media",
+    "campaigns:index": "node scripts/build_campaign_index.mjs",
     "social:packages": "node scripts/generate_social_post_packages.mjs",
-    "social:pinterest-downloads": "node scripts/build_pinterest_download_kit.mjs"
+    "social:pinterest-downloads": "node scripts/build_pinterest_download_kit.mjs",
+    "social:pinterest-api": "node scripts/pinterest_api_publish.mjs",
+    "social:pinterest-oauth": "node scripts/pinterest_oauth.mjs",
+    "social:meta-api": "node scripts/meta_api_publish.mjs",
+    "social:meta-oauth": "node scripts/meta_oauth.mjs",
+    "social:threads-api": "node scripts/threads_api_publish.mjs",
+    "social:threads-oauth": "node scripts/threads_oauth.mjs"
   },
   "dependencies": {
     "jpeg-js": "^0.4.4"

@@ -18,7 +18,10 @@ const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (char) => 
   "'": "&#39;",
 }[char]));
 
-const galleryHrefForKey = (key) => window.photosByElieVersionedHref?.(`./gallery.html?gallery=${encodeURIComponent(key)}`) || `./gallery.html?gallery=${encodeURIComponent(key)}`;
+const galleryHrefForKey = (key) => {
+  const href = `./gallery.html?gallery=${encodeURIComponent(key)}&fit=fill&columns=3`;
+  return window.photosByElieVersionedHref?.(href) || href;
+};
 const collectionTitleForKey = (key, collection) => (
   window.photosByElieI18n?.t?.(`collection.${key}`)
   || collection?.title
@@ -64,8 +67,9 @@ const applyRepresentativePhoto = (element, photo) => {
 const buildHeroStack = () => {
   const root = document.querySelector("[data-home-stack]");
   if (!root) return;
+  if (root.dataset.homeStackBuilt === "true" && root.children.length) return;
   const data = homeData();
-  root.innerHTML = homeCollections.map((key) => {
+  const markup = homeCollections.map((key) => {
     const collection = data[key];
     if (!collection) return "";
     const photo = randomPhotoForCollection(collection);
@@ -77,6 +81,9 @@ const buildHeroStack = () => {
     const photoId = escapeHtml(photo?.id || "");
     return `<a class="photo-print ${key} ${hasPhoto}" href="${href}" data-home-stack-card data-photo-id="${photoId}" aria-label="${title} gallery"${style}><span class="hand-label">${title}</span></a>`;
   }).join("");
+  if (!markup.trim()) return;
+  root.innerHTML = markup;
+  root.dataset.homeStackBuilt = "true";
 };
 
 const applyCarouselPhotos = () => {
@@ -96,7 +103,7 @@ const refreshSamples = () => {
 };
 
 window.photosByElieHomeRandomizer = { refreshSamples };
-window.addEventListener("photosbyelie:carouselturn", refreshSamples);
+window.addEventListener("photosbyelie:carouselturn", applyCarouselPhotos);
 window.addEventListener("photosbyelie:catalogloaded", refreshSamples);
 window.addEventListener("photosbyelie:hiddenblacklistchange", refreshSamples);
 window.addEventListener("photosbyelie:hiddenchange", refreshSamples);

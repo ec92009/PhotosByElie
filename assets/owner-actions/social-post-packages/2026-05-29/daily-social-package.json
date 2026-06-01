@@ -1,0 +1,803 @@
+{
+  "date": "2026-05-29",
+  "generated_at": "2026-05-29T03:06:07Z",
+  "source_policy": "Prepared from public SQLite catalog rows and public R2 watermarked previews only. No private masters, buyer downloads, Owner-only metadata, ignored Owner review JSON, or secrets were used.",
+  "status": {
+    "facebook": "published",
+    "instagram": "published",
+    "pinterest": "prepared_authenticated_confirmed_not_published",
+    "threads": "prepared_live_campaign_checked_not_published"
+  },
+  "packages": [
+    {
+      "date": "2026-05-29",
+      "platform": "Facebook",
+      "status": "published",
+      "account": "Photos By Elie Facebook Page",
+      "post_type": "multi_photo",
+      "title": "Bilbao Guggenheim Titanium and River",
+      "destination_url": "https://ec92009.github.io/PhotosByElie/campaign.html?c=facebook-bilbao-guggenheim-titanium-river-2026-05-29",
+      "campaign_id": "facebook-bilbao-guggenheim-titanium-river-2026-05-29",
+      "caption": "Bilbao in titanium, river light, and museum color: Guggenheim curves, glass interiors, and city-edge geometry selected as a focused Photos By Elie wall-art set. Browse the edit: https://ec92009.github.io/PhotosByElie/campaign.html?c=facebook-bilbao-guggenheim-titanium-river-2026-05-29",
+      "recommended_upload_set": "images",
+      "available_count": 8,
+      "notes": [
+        "Images are public watermarked R2 previews staged for browser upload and published through the Meta Pages API.",
+        "Published to Photos By Elie Facebook Page via Meta Pages API at 2026-05-29T15:09:45Z; post ID 1146747141854670_122102167911334672.",
+        "Graph verification returned 8 photo attachments and permalink https://www.facebook.com/122102168061334672/posts/122102167911334672.",
+        "GitHub Pages deployment succeeded; all three new campaign JSON URLs returned HTTP 200 with v90.1 cache busting. Campaign commit pushed: f0a4fd9a."
+      ],
+      "items": [
+        {
+          "order": 1,
+          "id": "20180515-1509-00394-1c47ab8c12",
+          "media_id": "20180515-1509-00394-1c47ab8c12",
+          "title": "20180515 1509 00394",
+          "collection": "spain",
+          "location": "Bilbo, Euskadi, Spain",
+          "captured_at": "2018-05-15T15:09:21",
+          "width": 1800,
+          "height": 985,
+          "image": "images/01-20180515-1509-00394-1c47ab8c12-bilbao-guggenheim-titanium-and-river.jpg",
+          "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180515-1509-00394-1c47ab8c12_1800.jpg",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180515-1509-00394-1c47ab8c12_1800.jpg",
+          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180515-1509-00394-1c47ab8c12",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180515-1509-00394-1c47ab8c12",
+          "local_staged_path": "socials/Facebook/2026-05-29/bilbao-guggenheim-titanium-river/images/01-20180515-1509-00394-1c47ab8c12-bilbao-guggenheim-titanium-and-river.jpg"
+        },
+        {
+          "order": 2,
+          "id": "20180515-1510-00397-3fdd5ba3db",
+          "media_id": "20180515-1510-00397-3fdd5ba3db",
+          "title": "20180515 1510 00397",
+          "collection": "spain",
+          "location": "Bilbo, Euskadi, Spain",
+          "captured_at": "2018-05-15T15:10:09",
+          "width": 1800,
+          "height": 1046,
+          "image": "images/02-20180515-1510-00397-3fdd5ba3db-bilbao-guggenheim-titanium-and-river.jpg",
+          "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180515-1510-00397-3fdd5ba3db_1800.jpg",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180515-1510-00397-3fdd5ba3db_1800.jpg",
+          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180515-1510-00397-3fdd5ba3db",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180515-1510-00397-3fdd5ba3db",
+          "local_staged_path": "socials/Facebook/2026-05-29/bilbao-guggenheim-titanium-river/images/02-20180515-1510-00397-3fdd5ba3db-bilbao-guggenheim-titanium-and-river.jpg"
+        },
+        {
+          "order": 3,
+          "id": "20180515-1510-00399-b36b36b527",
+          "media_id": "20180515-1510-00399-b36b36b527",
+          "title": "20180515 1510 00399",
+          "collection": "spain",
+          "location": "Bilbo, Euskadi, Spain",
+          "captured_at": "2018-05-15T15:10:43",
+          "width": 1747,
+          "height": 1800,
+          "image": "images/03-20180515-1510-00399-b36b36b527-bilbao-guggenheim-titanium-and-river.jpg",
+          "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180515-1510-00399-b36b36b527_1800.jpg",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180515-1510-00399-b36b36b527_1800.jpg",
+          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180515-1510-00399-b36b36b527",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180515-1510-00399-b36b36b527",
+          "local_staged_path": "socials/Facebook/2026-05-29/bilbao-guggenheim-titanium-river/images/03-20180515-1510-00399-b36b36b527-bilbao-guggenheim-titanium-and-river.jpg"
+        },
+        {
+          "order": 4,
+          "id": "20180515-1511-00400-2d2b644db6",
+          "media_id": "20180515-1511-00400-2d2b644db6",
+          "title": "20180515 1511 00400",
+          "collection": "spain",
+          "location": "Bilbo, Euskadi, Spain",
+          "captured_at": "2018-05-15T15:11:17",
+          "width": 1800,
+          "height": 1200,
+          "image": "images/04-20180515-1511-00400-2d2b644db6-bilbao-guggenheim-titanium-and-river.jpg",
+          "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180515-1511-00400-2d2b644db6_1800.jpg",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180515-1511-00400-2d2b644db6_1800.jpg",
+          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180515-1511-00400-2d2b644db6",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180515-1511-00400-2d2b644db6",
+          "local_staged_path": "socials/Facebook/2026-05-29/bilbao-guggenheim-titanium-river/images/04-20180515-1511-00400-2d2b644db6-bilbao-guggenheim-titanium-and-river.jpg"
+        },
+        {
+          "order": 5,
+          "id": "20180515-1511-00401-b01a5f2047",
+          "media_id": "20180515-1511-00401-b01a5f2047",
+          "title": "20180515 1511 00401",
+          "collection": "spain",
+          "location": "Bilbo, Euskadi, Spain",
+          "captured_at": "2018-05-15T15:11:37",
+          "width": 1800,
+          "height": 1756,
+          "image": "images/05-20180515-1511-00401-b01a5f2047-bilbao-guggenheim-titanium-and-river.jpg",
+          "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180515-1511-00401-b01a5f2047_1800.jpg",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180515-1511-00401-b01a5f2047_1800.jpg",
+          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180515-1511-00401-b01a5f2047",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180515-1511-00401-b01a5f2047",
+          "local_staged_path": "socials/Facebook/2026-05-29/bilbao-guggenheim-titanium-river/images/05-20180515-1511-00401-b01a5f2047-bilbao-guggenheim-titanium-and-river.jpg"
+        },
+        {
+          "order": 6,
+          "id": "20180515-1512-00403-ca2da18685",
+          "media_id": "20180515-1512-00403-ca2da18685",
+          "title": "20180515 1512 00403",
+          "collection": "spain",
+          "location": "Bilbo, Euskadi, Spain",
+          "captured_at": "2018-05-15T15:12:31",
+          "width": 1800,
+          "height": 1125,
+          "image": "images/06-20180515-1512-00403-ca2da18685-bilbao-guggenheim-titanium-and-river.jpg",
+          "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180515-1512-00403-ca2da18685_1800.jpg",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180515-1512-00403-ca2da18685_1800.jpg",
+          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180515-1512-00403-ca2da18685",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180515-1512-00403-ca2da18685",
+          "local_staged_path": "socials/Facebook/2026-05-29/bilbao-guggenheim-titanium-river/images/06-20180515-1512-00403-ca2da18685-bilbao-guggenheim-titanium-and-river.jpg"
+        },
+        {
+          "order": 7,
+          "id": "20180515-1521-00405-5ff5a830df",
+          "media_id": "20180515-1521-00405-5ff5a830df",
+          "title": "20180515 1521 00405",
+          "collection": "spain",
+          "location": "Bilbo, Euskadi, Spain",
+          "captured_at": "2018-05-15T15:21:03",
+          "width": 1200,
+          "height": 1800,
+          "image": "images/07-20180515-1521-00405-5ff5a830df-bilbao-guggenheim-titanium-and-river.jpg",
+          "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180515-1521-00405-5ff5a830df_1800.jpg",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180515-1521-00405-5ff5a830df_1800.jpg",
+          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180515-1521-00405-5ff5a830df",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180515-1521-00405-5ff5a830df",
+          "local_staged_path": "socials/Facebook/2026-05-29/bilbao-guggenheim-titanium-river/images/07-20180515-1521-00405-5ff5a830df-bilbao-guggenheim-titanium-and-river.jpg"
+        },
+        {
+          "order": 8,
+          "id": "20180515-1554-00418-1666851aba",
+          "media_id": "20180515-1554-00418-1666851aba",
+          "title": "20180515 1554 00418",
+          "collection": "spain",
+          "location": "Bilbo, Euskadi, Spain",
+          "captured_at": "2018-05-15T15:54:29",
+          "width": 1800,
+          "height": 1200,
+          "image": "images/08-20180515-1554-00418-1666851aba-bilbao-guggenheim-titanium-and-river.jpg",
+          "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180515-1554-00418-1666851aba_1800.jpg",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180515-1554-00418-1666851aba_1800.jpg",
+          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180515-1554-00418-1666851aba",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180515-1554-00418-1666851aba",
+          "local_staged_path": "socials/Facebook/2026-05-29/bilbao-guggenheim-titanium-river/images/08-20180515-1554-00418-1666851aba-bilbao-guggenheim-titanium-and-river.jpg"
+        }
+      ],
+      "browser_check": {
+        "checked_at": "2026-05-29T15:10:20Z",
+        "result": "Published via Meta Pages API and verified by Graph API. Permalink: https://www.facebook.com/122102168061334672/posts/122102167911334672"
+      },
+      "deployment_check": {
+        "checked_at": "2026-05-29T03:14:36Z",
+        "result": "GitHub Pages deployment succeeded; all three new campaign JSON URLs returned HTTP 200 with v90.1 cache busting. Campaign commit pushed: f0a4fd9a."
+      },
+      "published": {
+        "status": "published",
+        "platform": "facebook",
+        "account": "Photos By Elie Facebook Page",
+        "page_id": "1146747141854670",
+        "post_id": "1146747141854670_122102167911334672",
+        "published_at": "2026-05-29T15:09:45Z",
+        "permalink_url": "https://www.facebook.com/122102168061334672/posts/122102167911334672",
+        "image_count": 8,
+        "verified_at": "2026-05-29T15:10:20Z",
+        "verification": "Meta Graph returned the post permalink, message, and 8 photo attachments.",
+        "uploaded_photo_ids": [
+          "122102167491334672",
+          "122102167539334672",
+          "122102167581334672",
+          "122102167641334672",
+          "122102167707334672",
+          "122102167755334672",
+          "122102167803334672",
+          "122102167869334672"
+        ]
+      },
+      "api_publish": {
+        "status": "published",
+        "platform": "facebook",
+        "account": "Photos By Elie Facebook Page",
+        "page_id": "1146747141854670",
+        "post_id": "1146747141854670_122102167911334672",
+        "published_at": "2026-05-29T15:09:45Z",
+        "permalink_url": "https://www.facebook.com/122102168061334672/posts/122102167911334672",
+        "image_count": 8,
+        "verified_at": "2026-05-29T15:10:20Z",
+        "verification": "Meta Graph returned the post permalink, message, and 8 photo attachments.",
+        "uploaded_photo_ids": [
+          "122102167491334672",
+          "122102167539334672",
+          "122102167581334672",
+          "122102167641334672",
+          "122102167707334672",
+          "122102167755334672",
+          "122102167803334672",
+          "122102167869334672"
+        ]
+      }
+    },
+    {
+      "date": "2026-05-29",
+      "platform": "Instagram",
+      "status": "published",
+      "account": "ec92009",
+      "post_type": "carousel",
+      "title": "Cascais Atlantic Evening",
+      "destination_url": "https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-cascais-atlantic-evening-2026-05-29",
+      "campaign_id": "instagram-cascais-atlantic-evening-2026-05-29",
+      "caption": "Cascais at evening pace: marina water, patterned stone, Atlantic boats, and soft Portugal light. A compact Photos By Elie coastal set for calm rooms and travel-minded walls. Browse the edit: https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-cascais-atlantic-evening-2026-05-29\n\n#PhotosByElie #Cascais #PortugalTravel #TravelPhotography #WallArt #CoastalPhotography #AtlanticCoast",
+      "recommended_upload_set": "images",
+      "available_count": 8,
+      "notes": [
+        "Images are downloaded public watermarked R2 previews staged for browser upload.",
+        "Instagram feed captions do not make the URL clickable; keep it for copy/paste or use profile link/story sticker as available.",
+        "Built-in Browser navigation to Instagram @ec92009 did not complete reliably in the available browser session; no login/profile/composer state could be safely confirmed, so no Instagram upload/publish attempt was made.",
+        "GitHub Pages deployment succeeded; all three new campaign JSON URLs returned HTTP 200 with v90.1 cache busting. Campaign commit pushed: f0a4fd9a.",
+        "Instagram API token is saved outside the repo at ~/.config/photosbyelie/instagram-token.json; token prefix verified locally without printing the token.",
+        "First live API attempt with all 8 images failed before publishing because images 1-3 are panorama crops outside Instagram Graph aspect-ratio limits; final live post used images 4-8."
+      ],
+      "items": [
+        {
+          "order": 1,
+          "id": "20180517-2126-00483-f23ed1e1e2",
+          "media_id": "20180517-2126-00483-f23ed1e1e2",
+          "title": "20180517 2126 00483",
+          "collection": "portugal",
+          "location": "Cascais, Lisboa, Portugal",
+          "captured_at": "2018-05-17T21:26:59",
+          "width": 1800,
+          "height": 807,
+          "image": "images/01-20180517-2126-00483-f23ed1e1e2-cascais-atlantic-evening.jpg",
+          "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2126-00483-f23ed1e1e2_1800.jpg",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2126-00483-f23ed1e1e2_1800.jpg",
+          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180517-2126-00483-f23ed1e1e2",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180517-2126-00483-f23ed1e1e2",
+          "local_staged_path": "socials/Instagram/2026-05-29/cascais-atlantic-evening/images/01-20180517-2126-00483-f23ed1e1e2-cascais-atlantic-evening.jpg"
+        },
+        {
+          "order": 2,
+          "id": "20180517-2132-00488-18ec1fa871",
+          "media_id": "20180517-2132-00488-18ec1fa871",
+          "title": "20180517 2132 00488",
+          "collection": "portugal",
+          "location": "Cascais, Lisboa, Portugal",
+          "captured_at": "2018-05-17T21:32:46",
+          "width": 1800,
+          "height": 930,
+          "image": "images/02-20180517-2132-00488-18ec1fa871-cascais-atlantic-evening.jpg",
+          "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2132-00488-18ec1fa871_1800.jpg",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2132-00488-18ec1fa871_1800.jpg",
+          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180517-2132-00488-18ec1fa871",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180517-2132-00488-18ec1fa871",
+          "local_staged_path": "socials/Instagram/2026-05-29/cascais-atlantic-evening/images/02-20180517-2132-00488-18ec1fa871-cascais-atlantic-evening.jpg"
+        },
+        {
+          "order": 3,
+          "id": "20180517-2134-00489-a3c2036451",
+          "media_id": "20180517-2134-00489-a3c2036451",
+          "title": "20180517 2134 00489",
+          "collection": "portugal",
+          "location": "Cascais, Lisboa, Portugal",
+          "captured_at": "2018-05-17T21:34:15",
+          "width": 1800,
+          "height": 917,
+          "image": "images/03-20180517-2134-00489-a3c2036451-cascais-atlantic-evening.jpg",
+          "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2134-00489-a3c2036451_1800.jpg",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2134-00489-a3c2036451_1800.jpg",
+          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180517-2134-00489-a3c2036451",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180517-2134-00489-a3c2036451",
+          "local_staged_path": "socials/Instagram/2026-05-29/cascais-atlantic-evening/images/03-20180517-2134-00489-a3c2036451-cascais-atlantic-evening.jpg"
+        },
+        {
+          "order": 4,
+          "id": "20180517-2134-00490-dc7a915651",
+          "media_id": "20180517-2134-00490-dc7a915651",
+          "title": "20180517 2134 00490",
+          "collection": "portugal",
+          "location": "Cascais, Lisboa, Portugal",
+          "captured_at": "2018-05-17T21:34:49",
+          "width": 1746,
+          "height": 1800,
+          "image": "images/04-20180517-2134-00490-dc7a915651-cascais-atlantic-evening.jpg",
+          "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2134-00490-dc7a915651_1800.jpg",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2134-00490-dc7a915651_1800.jpg",
+          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180517-2134-00490-dc7a915651",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180517-2134-00490-dc7a915651",
+          "local_staged_path": "socials/Instagram/2026-05-29/cascais-atlantic-evening/images/04-20180517-2134-00490-dc7a915651-cascais-atlantic-evening.jpg"
+        },
+        {
+          "order": 5,
+          "id": "20180517-2135-00491-f90f6d821a",
+          "media_id": "20180517-2135-00491-f90f6d821a",
+          "title": "20180517 2135 00491",
+          "collection": "portugal",
+          "location": "Cascais, Lisboa, Portugal",
+          "captured_at": "2018-05-17T21:35:28",
+          "width": 1800,
+          "height": 1322,
+          "image": "images/05-20180517-2135-00491-f90f6d821a-cascais-atlantic-evening.jpg",
+          "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2135-00491-f90f6d821a_1800.jpg",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2135-00491-f90f6d821a_1800.jpg",
+          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180517-2135-00491-f90f6d821a",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180517-2135-00491-f90f6d821a",
+          "local_staged_path": "socials/Instagram/2026-05-29/cascais-atlantic-evening/images/05-20180517-2135-00491-f90f6d821a-cascais-atlantic-evening.jpg"
+        },
+        {
+          "order": 6,
+          "id": "20180517-2135-00492-564b88a104",
+          "media_id": "20180517-2135-00492-564b88a104",
+          "title": "20180517 2135 00492",
+          "collection": "portugal",
+          "location": "Cascais, Lisboa, Portugal",
+          "captured_at": "2018-05-17T21:35:45",
+          "width": 1800,
+          "height": 1200,
+          "image": "images/06-20180517-2135-00492-564b88a104-cascais-atlantic-evening.jpg",
+          "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2135-00492-564b88a104_1800.jpg",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2135-00492-564b88a104_1800.jpg",
+          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180517-2135-00492-564b88a104",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180517-2135-00492-564b88a104",
+          "local_staged_path": "socials/Instagram/2026-05-29/cascais-atlantic-evening/images/06-20180517-2135-00492-564b88a104-cascais-atlantic-evening.jpg"
+        },
+        {
+          "order": 7,
+          "id": "20180517-2138-00495-cd8355432a",
+          "media_id": "20180517-2138-00495-cd8355432a",
+          "title": "20180517 2138 00495",
+          "collection": "portugal",
+          "location": "Cascais, Lisboa, Portugal",
+          "captured_at": "2018-05-17T21:38:02",
+          "width": 1800,
+          "height": 1200,
+          "image": "images/07-20180517-2138-00495-cd8355432a-cascais-atlantic-evening.jpg",
+          "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2138-00495-cd8355432a_1800.jpg",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2138-00495-cd8355432a_1800.jpg",
+          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180517-2138-00495-cd8355432a",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180517-2138-00495-cd8355432a",
+          "local_staged_path": "socials/Instagram/2026-05-29/cascais-atlantic-evening/images/07-20180517-2138-00495-cd8355432a-cascais-atlantic-evening.jpg"
+        },
+        {
+          "order": 8,
+          "id": "20180517-2236-00501-42b08a2940",
+          "media_id": "20180517-2236-00501-42b08a2940",
+          "title": "20180517 2236 00501",
+          "collection": "portugal",
+          "location": "Cascais, Lisboa, Portugal",
+          "captured_at": "2018-05-17T22:36:23",
+          "width": 1800,
+          "height": 1200,
+          "image": "images/08-20180517-2236-00501-42b08a2940-cascais-atlantic-evening.jpg",
+          "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2236-00501-42b08a2940_1800.jpg",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2236-00501-42b08a2940_1800.jpg",
+          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180517-2236-00501-42b08a2940",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180517-2236-00501-42b08a2940",
+          "local_staged_path": "socials/Instagram/2026-05-29/cascais-atlantic-evening/images/08-20180517-2236-00501-42b08a2940-cascais-atlantic-evening.jpg"
+        }
+      ],
+      "browser_check": {
+        "checked_at": "2026-05-29T15:55:10Z",
+        "result": "Published via Instagram API and verified by Graph API. Permalink: https://www.instagram.com/p/DY7ad1KjBxX/"
+      },
+      "deployment_check": {
+        "checked_at": "2026-05-29T03:14:36Z",
+        "result": "GitHub Pages deployment succeeded; all three new campaign JSON URLs returned HTTP 200 with v90.1 cache busting. Campaign commit pushed: f0a4fd9a."
+      },
+      "published_url": "https://www.instagram.com/p/DY7ad1KjBxX/",
+      "image_count": 5,
+      "published": {
+        "status": "published",
+        "platform": "instagram",
+        "account": "ec92009",
+        "ig_user_id": "17841400866970070",
+        "post_id": "18176345059396594",
+        "carousel_container_id": "18591635326028900",
+        "published_at": "2026-05-29T15:54:52Z",
+        "permalink_url": "https://www.instagram.com/p/DY7ad1KjBxX/",
+        "image_count": 5,
+        "graph_base": "https://graph.instagram.com/v23.0",
+        "verified_at": "2026-05-29T15:55:10Z",
+        "verification": "Instagram Graph returned a CAROUSEL_ALBUM permalink, caption, username, timestamp, and 5 image children.",
+        "caption": "Cascais at evening pace, selected for Instagram: marina water, patterned stone, Atlantic boats, and soft Portugal light. A compact Photos By Elie coastal set for calm rooms and travel-minded walls. Browse the edit: https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-cascais-atlantic-evening-2026-05-29\n\n#PhotosByElie #Cascais #PortugalTravel #TravelPhotography #WallArt #CoastalPhotography #AtlanticCoast",
+        "published_media_ids": [
+          "20180517-2134-00490-dc7a915651",
+          "20180517-2135-00491-f90f6d821a",
+          "20180517-2135-00492-564b88a104",
+          "20180517-2138-00495-cd8355432a",
+          "20180517-2236-00501-42b08a2940"
+        ],
+        "created_container_ids": [
+          "18591635179028900",
+          "18591635191028900",
+          "18591635221028900",
+          "18591635245028900",
+          "18591635269028900"
+        ],
+        "child_media_ids": [
+          "18034322651799373",
+          "18079374968197277",
+          "18355298656209903",
+          "17941306515237449",
+          "18585473755039804"
+        ],
+        "notes": [
+          "Published via Instagram API with Instagram Login token stored outside the repo at ~/.config/photosbyelie/instagram-token.json.",
+          "API-published variant used images 4-8 because images 1-3 were panorama crops outside Instagram Graph aspect-ratio limits.",
+          "Publisher waits for media containers to finish processing before creating/publishing the carousel."
+        ]
+      },
+      "api_publish": {
+        "status": "published",
+        "platform": "instagram",
+        "account": "ec92009",
+        "ig_user_id": "17841400866970070",
+        "post_id": "18176345059396594",
+        "carousel_container_id": "18591635326028900",
+        "published_at": "2026-05-29T15:54:52Z",
+        "permalink_url": "https://www.instagram.com/p/DY7ad1KjBxX/",
+        "image_count": 5,
+        "graph_base": "https://graph.instagram.com/v23.0",
+        "verified_at": "2026-05-29T15:55:10Z",
+        "verification": "Instagram Graph returned a CAROUSEL_ALBUM permalink, caption, username, timestamp, and 5 image children.",
+        "caption": "Cascais at evening pace, selected for Instagram: marina water, patterned stone, Atlantic boats, and soft Portugal light. A compact Photos By Elie coastal set for calm rooms and travel-minded walls. Browse the edit: https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-cascais-atlantic-evening-2026-05-29\n\n#PhotosByElie #Cascais #PortugalTravel #TravelPhotography #WallArt #CoastalPhotography #AtlanticCoast",
+        "published_media_ids": [
+          "20180517-2134-00490-dc7a915651",
+          "20180517-2135-00491-f90f6d821a",
+          "20180517-2135-00492-564b88a104",
+          "20180517-2138-00495-cd8355432a",
+          "20180517-2236-00501-42b08a2940"
+        ],
+        "created_container_ids": [
+          "18591635179028900",
+          "18591635191028900",
+          "18591635221028900",
+          "18591635245028900",
+          "18591635269028900"
+        ],
+        "child_media_ids": [
+          "18034322651799373",
+          "18079374968197277",
+          "18355298656209903",
+          "17941306515237449",
+          "18585473755039804"
+        ],
+        "notes": [
+          "Published via Instagram API with Instagram Login token stored outside the repo at ~/.config/photosbyelie/instagram-token.json.",
+          "API-published variant used images 4-8 because images 1-3 were panorama crops outside Instagram Graph aspect-ratio limits.",
+          "Publisher waits for media containers to finish processing before creating/publishing the carousel."
+        ]
+      }
+    },
+    {
+      "date": "2026-05-29",
+      "platform": "Pinterest",
+      "status": "prepared_authenticated_confirmed_not_published",
+      "account": "@photosbyelie",
+      "post_type": "pin_builder_multi_image",
+      "title": "San Diego Aquarium Blue Reef",
+      "destination_url": "https://ec92009.github.io/PhotosByElie/campaign.html?c=pinterest-san-diego-aquarium-blue-reef-2026-05-29",
+      "campaign_id": "pinterest-san-diego-aquarium-blue-reef-2026-05-29",
+      "caption": "Blue reef light, coral texture, and calm aquarium color from Photos By Elie. Browse the focused California set: https://ec92009.github.io/PhotosByElie/campaign.html?c=pinterest-san-diego-aquarium-blue-reef-2026-05-29",
+      "recommended_upload_set": "images",
+      "available_count": 5,
+      "notes": [
+        "Images are downloaded public watermarked R2 previews staged for browser upload.",
+        "Pinterest package is capped at exactly 5 images for the current platform limit.",
+        "Built-in Browser reached Pinterest @photosbyelie without login prompts and opened Create Pin. Not published because the available browser API could not set files into the native upload control, and final board/upload confirmation remains action-time/manual.",
+        "GitHub Pages deployment succeeded; all three new campaign JSON URLs returned HTTP 200 with v90.1 cache busting. Campaign commit pushed: f0a4fd9a.",
+        "No local API OAuth token files were present at ~/.config/photosbyelie/meta-token.json, pinterest-token.json, or threads-token.json. API dry-runs succeeded, but live API publishing is unavailable without tokens."
+      ],
+      "items": [
+        {
+          "order": 1,
+          "id": "20180421-1301-13471-a2bc5324f5",
+          "media_id": "20180421-1301-13471-a2bc5324f5",
+          "title": "San Diego Aquarium",
+          "collection": "usa",
+          "location": "USA",
+          "captured_at": "2018-04-21T13:01:06",
+          "width": 1800,
+          "height": 1350,
+          "image": "images/01-20180421-1301-13471-a2bc5324f5-san-diego-aquarium-blue-reef.jpg",
+          "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180421-1301-13471-a2bc5324f5_1800.jpg",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180421-1301-13471-a2bc5324f5_1800.jpg",
+          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180421-1301-13471-a2bc5324f5",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180421-1301-13471-a2bc5324f5",
+          "local_staged_path": "socials/Pinterest/2026-05-29/san-diego-aquarium-blue-reef/images/01-20180421-1301-13471-a2bc5324f5-san-diego-aquarium-blue-reef.jpg"
+        },
+        {
+          "order": 2,
+          "id": "20180421-1301-13630-2e7556e274",
+          "media_id": "20180421-1301-13630-2e7556e274",
+          "title": "San Diego Aquarium",
+          "collection": "usa",
+          "location": "USA",
+          "captured_at": "2018-04-21T13:01:29",
+          "width": 1800,
+          "height": 1350,
+          "image": "images/02-20180421-1301-13630-2e7556e274-san-diego-aquarium-blue-reef.jpg",
+          "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180421-1301-13630-2e7556e274_1800.jpg",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180421-1301-13630-2e7556e274_1800.jpg",
+          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180421-1301-13630-2e7556e274",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180421-1301-13630-2e7556e274",
+          "local_staged_path": "socials/Pinterest/2026-05-29/san-diego-aquarium-blue-reef/images/02-20180421-1301-13630-2e7556e274-san-diego-aquarium-blue-reef.jpg"
+        },
+        {
+          "order": 3,
+          "id": "20180421-1302-13484-de314daaef",
+          "media_id": "20180421-1302-13484-de314daaef",
+          "title": "San Diego Aquarium",
+          "collection": "usa",
+          "location": "USA",
+          "captured_at": "2018-04-21T13:02:15",
+          "width": 1800,
+          "height": 1350,
+          "image": "images/03-20180421-1302-13484-de314daaef-san-diego-aquarium-blue-reef.jpg",
+          "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180421-1302-13484-de314daaef_1800.jpg",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180421-1302-13484-de314daaef_1800.jpg",
+          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180421-1302-13484-de314daaef",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180421-1302-13484-de314daaef",
+          "local_staged_path": "socials/Pinterest/2026-05-29/san-diego-aquarium-blue-reef/images/03-20180421-1302-13484-de314daaef-san-diego-aquarium-blue-reef.jpg"
+        },
+        {
+          "order": 4,
+          "id": "20180421-1302-13327-ede937ff43",
+          "media_id": "20180421-1302-13327-ede937ff43",
+          "title": "San Diego Aquarium",
+          "collection": "usa",
+          "location": "USA",
+          "captured_at": "2018-04-21T13:02:29",
+          "width": 1800,
+          "height": 1350,
+          "image": "images/04-20180421-1302-13327-ede937ff43-san-diego-aquarium-blue-reef.jpg",
+          "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180421-1302-13327-ede937ff43_1800.jpg",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180421-1302-13327-ede937ff43_1800.jpg",
+          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180421-1302-13327-ede937ff43",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180421-1302-13327-ede937ff43",
+          "local_staged_path": "socials/Pinterest/2026-05-29/san-diego-aquarium-blue-reef/images/04-20180421-1302-13327-ede937ff43-san-diego-aquarium-blue-reef.jpg"
+        },
+        {
+          "order": 5,
+          "id": "20180421-1303-12279-a30f818e53",
+          "media_id": "20180421-1303-12279-a30f818e53",
+          "title": "San Diego Aquarium",
+          "collection": "usa",
+          "location": "USA",
+          "captured_at": "2018-04-21T13:03:04",
+          "width": 1800,
+          "height": 1350,
+          "image": "images/05-20180421-1303-12279-a30f818e53-san-diego-aquarium-blue-reef.jpg",
+          "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180421-1303-12279-a30f818e53_1800.jpg",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180421-1303-12279-a30f818e53_1800.jpg",
+          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180421-1303-12279-a30f818e53",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180421-1303-12279-a30f818e53",
+          "local_staged_path": "socials/Pinterest/2026-05-29/san-diego-aquarium-blue-reef/images/05-20180421-1303-12279-a30f818e53-san-diego-aquarium-blue-reef.jpg"
+        }
+      ],
+      "pin_title": "San Diego Aquarium Blue Reef Wall Art",
+      "description": "Blue aquarium and reef photographs from San Diego, selected by Photos By Elie for luminous water, coral color, and calm wall-art browsing.",
+      "board_recommendation": "California and USA Photography",
+      "alt_text": "Five Photos By Elie photographs from a San Diego aquarium showing blue water, reef coral, and colorful tropical fish.",
+      "browser_check": {
+        "checked_at": "2026-05-29T03:14:36Z",
+        "result": "Built-in Browser reached Pinterest @photosbyelie without login prompts and opened Create Pin. Not published because the available browser API could not set files into the native upload control, and final board/upload confirmation remains action-time/manual."
+      },
+      "deployment_check": {
+        "checked_at": "2026-05-29T03:14:36Z",
+        "result": "GitHub Pages deployment succeeded; all three new campaign JSON URLs returned HTTP 200 with v90.1 cache busting. Campaign commit pushed: f0a4fd9a."
+      }
+    },
+    {
+      "date": "2026-05-29",
+      "platform": "Threads",
+      "status": "prepared_live_campaign_checked_not_published",
+      "account": "ec92009 via Instagram login",
+      "post_type": "multi_image_thread",
+      "title": "Cascais Atlantic Evening",
+      "destination_url": "https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-cascais-atlantic-evening-2026-05-29",
+      "campaign_id": "instagram-cascais-atlantic-evening-2026-05-29",
+      "caption": "Four Cascais frames: marina blue, Atlantic boats, patterned stone, and evening Portugal light from Photos By Elie. Browse the edit: https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-cascais-atlantic-evening-2026-05-29\n\n#PhotosByElie #Cascais #PortugalTravel",
+      "recommended_upload_set": "images",
+      "available_count": 4,
+      "notes": [
+        "Images are downloaded public watermarked R2 previews staged for browser upload.",
+        "Remove any automatic link preview if it shows generic or off-theme campaign metadata before posting.",
+        "Built-in Browser navigation to Threads @ec92009 did not complete reliably in the available browser session; no Threads composer/profile state could be safely confirmed, so no Threads upload/publish attempt was made.",
+        "GitHub Pages deployment succeeded; all three new campaign JSON URLs returned HTTP 200 with v90.1 cache busting. Campaign commit pushed: f0a4fd9a.",
+        "No local API OAuth token files were present at ~/.config/photosbyelie/meta-token.json, pinterest-token.json, or threads-token.json. API dry-runs succeeded, but live API publishing is unavailable without tokens."
+      ],
+      "items": [
+        {
+          "order": 1,
+          "id": "20180517-2126-00483-f23ed1e1e2",
+          "media_id": "20180517-2126-00483-f23ed1e1e2",
+          "title": "20180517 2126 00483",
+          "collection": "portugal",
+          "location": "Cascais, Lisboa, Portugal",
+          "captured_at": "2018-05-17T21:26:59",
+          "width": 1800,
+          "height": 807,
+          "image": "images/01-20180517-2126-00483-f23ed1e1e2-cascais-atlantic-evening.jpg",
+          "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2126-00483-f23ed1e1e2_1800.jpg",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2126-00483-f23ed1e1e2_1800.jpg",
+          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180517-2126-00483-f23ed1e1e2",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180517-2126-00483-f23ed1e1e2",
+          "local_staged_path": "socials/Threads/2026-05-29/cascais-atlantic-evening/images/01-20180517-2126-00483-f23ed1e1e2-cascais-atlantic-evening.jpg"
+        },
+        {
+          "order": 2,
+          "id": "20180517-2135-00491-f90f6d821a",
+          "media_id": "20180517-2135-00491-f90f6d821a",
+          "title": "20180517 2135 00491",
+          "collection": "portugal",
+          "location": "Cascais, Lisboa, Portugal",
+          "captured_at": "2018-05-17T21:35:28",
+          "width": 1800,
+          "height": 1322,
+          "image": "images/02-20180517-2135-00491-f90f6d821a-cascais-atlantic-evening.jpg",
+          "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2135-00491-f90f6d821a_1800.jpg",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2135-00491-f90f6d821a_1800.jpg",
+          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180517-2135-00491-f90f6d821a",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180517-2135-00491-f90f6d821a",
+          "local_staged_path": "socials/Threads/2026-05-29/cascais-atlantic-evening/images/02-20180517-2135-00491-f90f6d821a-cascais-atlantic-evening.jpg"
+        },
+        {
+          "order": 3,
+          "id": "20180517-2138-00495-cd8355432a",
+          "media_id": "20180517-2138-00495-cd8355432a",
+          "title": "20180517 2138 00495",
+          "collection": "portugal",
+          "location": "Cascais, Lisboa, Portugal",
+          "captured_at": "2018-05-17T21:38:02",
+          "width": 1800,
+          "height": 1200,
+          "image": "images/03-20180517-2138-00495-cd8355432a-cascais-atlantic-evening.jpg",
+          "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2138-00495-cd8355432a_1800.jpg",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2138-00495-cd8355432a_1800.jpg",
+          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180517-2138-00495-cd8355432a",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180517-2138-00495-cd8355432a",
+          "local_staged_path": "socials/Threads/2026-05-29/cascais-atlantic-evening/images/03-20180517-2138-00495-cd8355432a-cascais-atlantic-evening.jpg"
+        },
+        {
+          "order": 4,
+          "id": "20180517-2236-00501-42b08a2940",
+          "media_id": "20180517-2236-00501-42b08a2940",
+          "title": "20180517 2236 00501",
+          "collection": "portugal",
+          "location": "Cascais, Lisboa, Portugal",
+          "captured_at": "2018-05-17T22:36:23",
+          "width": 1800,
+          "height": 1200,
+          "image": "images/04-20180517-2236-00501-42b08a2940-cascais-atlantic-evening.jpg",
+          "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2236-00501-42b08a2940_1800.jpg",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2236-00501-42b08a2940_1800.jpg",
+          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180517-2236-00501-42b08a2940",
+          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180517-2236-00501-42b08a2940",
+          "local_staged_path": "socials/Threads/2026-05-29/cascais-atlantic-evening/images/04-20180517-2236-00501-42b08a2940-cascais-atlantic-evening.jpg"
+        }
+      ],
+      "link_preview_note": "Remove any automatic link preview if it shows generic or off-theme campaign metadata before posting.",
+      "browser_check": {
+        "checked_at": "2026-05-29T03:14:36Z",
+        "result": "Built-in Browser navigation to Threads @ec92009 did not complete reliably in the available browser session; no Threads composer/profile state could be safely confirmed, so no Threads upload/publish attempt was made."
+      },
+      "deployment_check": {
+        "checked_at": "2026-05-29T03:14:36Z",
+        "result": "GitHub Pages deployment succeeded; all three new campaign JSON URLs returned HTTP 200 with v90.1 cache busting. Campaign commit pushed: f0a4fd9a."
+      }
+    }
+  ],
+  "browser_checks": [
+    {
+      "platform": "Facebook",
+      "checked_at": "2026-05-29T03:14:36Z",
+      "result": "Built-in Browser is logged into Facebook, but https://www.facebook.com/PhotosByElie returned \"This content isn't available right now\"; the Photos By Elie Page target could not be confirmed, so no Facebook composer/publish attempt was made."
+    },
+    {
+      "platform": "Pinterest",
+      "checked_at": "2026-05-29T03:14:36Z",
+      "result": "Built-in Browser reached Pinterest @photosbyelie without login prompts and opened Create Pin. Not published because the available browser API could not set files into the native upload control, and final board/upload confirmation remains action-time/manual."
+    },
+    {
+      "platform": "Threads",
+      "checked_at": "2026-05-29T03:14:36Z",
+      "result": "Built-in Browser navigation to Threads @ec92009 did not complete reliably in the available browser session; no Threads composer/profile state could be safely confirmed, so no Threads upload/publish attempt was made."
+    },
+    {
+      "platform": "Instagram",
+      "checked_at": "2026-05-29T15:55:10Z",
+      "result": "Published via Instagram API and verified by Graph API. Permalink: https://www.instagram.com/p/DY7ad1KjBxX/"
+    }
+  ],
+  "deployment_check": {
+    "checked_at": "2026-05-29T03:14:36Z",
+    "status": "succeeded",
+    "result": "GitHub Pages deployment succeeded; all three new campaign JSON URLs returned HTTP 200 with v90.1 cache busting. Campaign commit pushed: f0a4fd9a.",
+    "commit": "f0a4fd9a"
+  },
+  "api_check": {
+    "checked_at": "2026-05-29T15:55:10Z",
+    "result": "Meta OAuth token is saved outside the repo at ~/.config/photosbyelie/meta-token.json for Facebook. Instagram API token is saved outside the repo at ~/.config/photosbyelie/instagram-token.json and was used for the Cascais API publish. Pinterest and Threads token files were still not present during this package run."
+  },
+  "published": {
+    "facebook": {
+      "status": "published",
+      "platform": "facebook",
+      "account": "Photos By Elie Facebook Page",
+      "page_id": "1146747141854670",
+      "post_id": "1146747141854670_122102167911334672",
+      "published_at": "2026-05-29T15:09:45Z",
+      "permalink_url": "https://www.facebook.com/122102168061334672/posts/122102167911334672",
+      "image_count": 8,
+      "verified_at": "2026-05-29T15:10:20Z",
+      "verification": "Meta Graph returned the post permalink, message, and 8 photo attachments.",
+      "personal_comment": {
+        "status": "published",
+        "account": "Elie Cohen",
+        "comment_id": "4458071704436052",
+        "published_at": "2026-05-29T15:17:00Z",
+        "text": "Bilbao en titane, lumière sur la rivière et couleurs du musée : courbes du Guggenheim, intérieurs de verre et géométrie urbaine, réunis dans une sélection Photos By Elie pensée pour l’art mural.\nParcourir la sélection : https://ec92009.github.io/PhotosByElie/campaign.html?c=facebook-bilbao-guggenheim-titanium-river-2026-05-29",
+        "verification": "Built-in Browser showed the comment live under the PBE Page post."
+      },
+      "uploaded_photo_ids": [
+        "122102167491334672",
+        "122102167539334672",
+        "122102167581334672",
+        "122102167641334672",
+        "122102167707334672",
+        "122102167755334672",
+        "122102167803334672",
+        "122102167869334672"
+      ]
+    },
+    "instagram": {
+      "status": "published",
+      "platform": "instagram",
+      "account": "ec92009",
+      "ig_user_id": "17841400866970070",
+      "post_id": "18176345059396594",
+      "carousel_container_id": "18591635326028900",
+      "published_at": "2026-05-29T15:54:52Z",
+      "permalink_url": "https://www.instagram.com/p/DY7ad1KjBxX/",
+      "image_count": 5,
+      "graph_base": "https://graph.instagram.com/v23.0",
+      "verified_at": "2026-05-29T15:55:10Z",
+      "verification": "Instagram Graph returned a CAROUSEL_ALBUM permalink, caption, username, timestamp, and 5 image children.",
+      "caption": "Cascais at evening pace, selected for Instagram: marina water, patterned stone, Atlantic boats, and soft Portugal light. A compact Photos By Elie coastal set for calm rooms and travel-minded walls. Browse the edit: https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-cascais-atlantic-evening-2026-05-29\n\n#PhotosByElie #Cascais #PortugalTravel #TravelPhotography #WallArt #CoastalPhotography #AtlanticCoast",
+      "published_media_ids": [
+        "20180517-2134-00490-dc7a915651",
+        "20180517-2135-00491-f90f6d821a",
+        "20180517-2135-00492-564b88a104",
+        "20180517-2138-00495-cd8355432a",
+        "20180517-2236-00501-42b08a2940"
+      ],
+      "created_container_ids": [
+        "18591635179028900",
+        "18591635191028900",
+        "18591635221028900",
+        "18591635245028900",
+        "18591635269028900"
+      ],
+      "child_media_ids": [
+        "18034322651799373",
+        "18079374968197277",
+        "18355298656209903",
+        "17941306515237449",
+        "18585473755039804"
+      ],
+      "notes": [
+        "Published via Instagram API with Instagram Login token stored outside the repo at ~/.config/photosbyelie/instagram-token.json.",
+        "API-published variant used images 4-8 because images 1-3 were panorama crops outside Instagram Graph aspect-ratio limits.",
+        "Publisher waits for media containers to finish processing before creating/publishing the carousel."
+      ]
+    }
+  },
+  "instagram_link_behavior": {
+    "status": "caption_url_not_clickable",
+    "affected_post": "https://www.instagram.com/p/DY7ad1KjBxX/",
+    "recommended_profile_url": "https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-cascais-atlantic-evening-2026-05-29",
+    "recommended_manual_caption": "Cascais at evening pace, selected for Instagram: marina water, patterned stone, Atlantic boats, and soft Portugal light. A compact Photos By Elie coastal set for calm rooms and travel-minded walls. Browse the edit from the profile link.\n\n#PhotosByElie #Cascais #PortugalTravel #TravelPhotography #WallArt #CoastalPhotography #AtlanticCoast",
+    "automation_fix": "Future generated Instagram captions should avoid raw campaign URLs and direct users to the profile link instead."
+  }
+}

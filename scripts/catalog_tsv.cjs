@@ -46,6 +46,10 @@ const loadProductCatalog = (repoRoot) => {
     frameOptions: (pricing.frames || pricing.frameOptions || []).map((frame) => ({ ...frame })),
     shippingHandlingPrices: { ...(pricing.shippingHandlingPrices || {}) },
     videoPriceTiers,
+    podAutomation: { ...(pricing.podAutomation || {}) },
+    podSuppliers: (pricing.podSuppliers || []).map((supplier) => ({ ...supplier })),
+    podQualityTiers: (pricing.podQualityTiers || []).map((tier) => ({ ...tier })),
+    podOptions: (pricing.podOptions || []).map((option) => ({ ...option })),
   };
 };
 
@@ -56,6 +60,19 @@ const applyProductCatalog = (targetWindow, productCatalog) => {
   targetWindow.photosByElieFrameOptions = (productCatalog.frameOptions || []).map((frame) => ({ ...frame }));
   targetWindow.photosByElieShippingHandlingPrices = { ...(productCatalog.shippingHandlingPrices || {}) };
   targetWindow.photosByElieVideoPriceTiers = { ...(productCatalog.videoPriceTiers || {}) };
+  targetWindow.photosByEliePodAutomation = { ...(productCatalog.podAutomation || {}) };
+  targetWindow.photosByEliePodSuppliers = (productCatalog.podSuppliers || []).map((supplier) => ({ ...supplier }));
+  targetWindow.photosByEliePodQualityTiers = (productCatalog.podQualityTiers || []).map((tier) => ({ ...tier }));
+  targetWindow.photosByEliePodOptions = (productCatalog.podOptions || []).map((option) => ({ ...option }));
+};
+
+const loadCatalogWindowFromPhotosData = (repoRoot) => {
+  const dataPath = path.join(repoRoot, "photos-data.js");
+  const sandbox = { window: {}, console, Intl };
+  applyProductCatalog(sandbox.window, loadProductCatalog(repoRoot));
+  vm.createContext(sandbox);
+  vm.runInContext(fs.readFileSync(dataPath, "utf8"), sandbox, { filename: dataPath });
+  return sandbox.window;
 };
 
 const helperTailFromPhotosData = (repoRoot) => {
@@ -85,12 +102,7 @@ const loadCatalogWindow = (repoRoot) => {
   const productCatalog = loadProductCatalog(repoRoot);
   const bundle = loadCatalogBundleFromSqlite(repoRoot);
   if (!bundle) {
-    const dataPath = path.join(repoRoot, "photos-data.js");
-    const sandbox = { window: {}, console, Intl };
-    applyProductCatalog(sandbox.window, productCatalog);
-    vm.createContext(sandbox);
-    vm.runInContext(fs.readFileSync(dataPath, "utf8"), sandbox, { filename: dataPath });
-    return sandbox.window;
+    return loadCatalogWindowFromPhotosData(repoRoot);
   }
   const sandbox = { window: { photosByElieData: bundle.data, photosByElieOwnerData: bundle.owner }, console, Intl };
   applyProductCatalog(sandbox.window, productCatalog);
@@ -103,6 +115,7 @@ module.exports = {
   PRODUCT_PRICING_JSON,
   helperTailFromPhotosData,
   loadCatalogBundleFromSqlite,
+  loadCatalogWindowFromPhotosData,
   loadCatalogWindow,
   loadProductCatalog,
 };

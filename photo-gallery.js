@@ -1,18 +1,33 @@
 ((async () => {
 await window.photosByElieCatalogReady;
 const galleryHrefForKey = (key) => `./gallery.html?gallery=${encodeURIComponent(key)}`;
+const selectionGalleryKey = "selection";
+const selectionGalleryAliases = new Set([selectionGalleryKey, "make-selection", "make-your-selection"]);
+const selectionGalleryCollections = ["france", "usa", "spain", "mexico", "ai", "italy", "portugal", "slovakia"];
+const isSelectionGalleryKey = (key) => selectionGalleryAliases.has(key);
 const galleryKeyFromPage = () => {
   const params = new URLSearchParams(window.location.search);
   const requested = params.get("gallery") || document.body.dataset.gallery || "";
   const normalized = requested.toLowerCase().replace(/[^a-z0-9_-]/g, "");
+  if (isSelectionGalleryKey(normalized)) return selectionGalleryKey;
   if (normalized && window.photosByElieData?.[normalized]) return normalized;
   const pageSlug = (window.location.pathname.split("/").pop() || "").replace(/\.html$/i, "");
   if (pageSlug && window.photosByElieData?.[pageSlug]) return pageSlug;
   return "france";
 };
+const selectionPhotos = () => selectionGalleryCollections
+  .flatMap((key) => window.photosByElieData?.[key]?.photos || []);
+const makeSelectionGallery = () => ({
+  number: "",
+  title: "Search",
+  description: "",
+  accent: "selection-gallery",
+  photos: selectionPhotos(),
+});
 const galleryKey = galleryKeyFromPage();
+const isSelectionGallery = galleryKey === selectionGalleryKey;
 document.body.dataset.gallery = galleryKey;
-let gallery = window.photosByElieData?.[galleryKey];
+let gallery = isSelectionGallery ? makeSelectionGallery() : window.photosByElieData?.[galleryKey];
 const galleryRoot = document.querySelector("[data-gallery-root]");
 const galleryStatus = document.querySelector("[data-gallery-status]");
 const hiddenActions = window.photosByElieHiddenActions;
@@ -34,6 +49,7 @@ let renderedGalleryPhotos = [];
 let visibleLimit = pageSize;
 let moreButton = null;
 let showAllButton = null;
+let showAllRenderToken = 0;
 const filterStateKey = `photosbyelie-gallery-filters-${galleryKey}`;
 const detailSequenceKey = "photosbyelie-detail-sequence";
 const galleryReturnStateKey = "photosbyelie-gallery-return-state";
@@ -52,6 +68,7 @@ const defaultFilterState = {
 };
 const persistedFilterKeys = ["orientation", "minSize", "mood", "subject", "mediaType", "dateFrom", "dateTo"];
 let filterBar = null;
+let filterToggle = null;
 
 const shortcutKey = (label) => `<kbd>${label}</kbd>`;
 const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({
@@ -64,6 +81,7 @@ const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (char) => 
 const renderSharedPhotoCard = (options) => window.photosByElieGalleryCard?.renderPhotoCard?.(options) || "";
 const t = (key, replacements = {}) => window.photosByElieI18n?.t?.(key, replacements) || key;
 const localizedCollectionTitle = () => {
+  if (isSelectionGallery) return t("gallery.make_selection");
   const key = `collection.${galleryKey}`;
   const translated = t(key);
   return translated && translated !== key ? translated : gallery?.title || "";
@@ -83,6 +101,7 @@ const ensureGalleryKeyboardHint = () => {
     `${shortcutKey("U")} undo`,
     `${shortcutKey("T")} title`,
     `${shortcutKey("K")} keywords`,
+    `${shortcutKey("R")} review`,
     `${shortcutKey("Arrows")} select`,
     `${shortcutKey("Enter")} detail`,
     `${shortcutKey("Double-click")} detail`
@@ -96,6 +115,7 @@ window.addEventListener("photosbyelie:inputmodechange", () => {
 });
 
 const readFilterState = () => {
+  if (isSelectionGallery) return { ...defaultFilterState };
   try {
     const savedState = JSON.parse(localStorage.getItem(filterStateKey) || "{}");
     const persistedState = Object.fromEntries(
@@ -129,6 +149,7 @@ try {
 }
 
 const writeFilterState = () => {
+  if (isSelectionGallery) return;
   const persistedState = Object.fromEntries(
     persistedFilterKeys.map((key) => [key, filterState[key] || defaultFilterState[key]])
   );
@@ -204,6 +225,15 @@ const setMetadataValue = (photo, label, value) => {
   photo.metadata.unshift({ label, value });
 };
 
+const showNativePicker = (control) => {
+  if (!(control instanceof HTMLInputElement) || typeof control.showPicker !== "function") return;
+  try {
+    control.showPicker();
+  } catch {
+    // Some browsers only allow showPicker during direct user activation.
+  }
+};
+
 const previewDimensions = (photo) => window.photosByEliePreviewDimensions?.(photo) || null;
 const galleryFilterKeys = ["query", "orientation", "mediaType", "minSize", "mood", "subject", "dateFrom", "dateTo"];
 const filterContext = () => ({
@@ -214,6 +244,14 @@ const activeFilterCount = () => photoFilter.activeFilterCount(filterState, galle
 const matchesFilterState = (photo) => photoFilter.matchesPhoto(photo, filterState, filterContext());
 const sortPhotos = (photos) => photoFilter.sortItems(photos, filterState, filterContext());
 const filteredVisiblePhotos = (photos = visiblePhotos()) => sortPhotos(photos.filter(matchesFilterState));
+
+const syncFilterToggle = () => {
+  if (!filterToggle || !filterBar) return;
+  const count = activeFilterCount();
+  const label = t("gallery.search");
+  filterToggle.textContent = count > 0 ? `${label} (${count})` : label;
+  filterToggle.setAttribute("aria-expanded", filterBar.classList.contains("is-open") ? "true" : "false");
+};
 
 const syncFilterControls = () => {
   if (!filterBar) return;
@@ -229,14 +267,24 @@ const syncFilterControls = () => {
   });
   const searchInput = filterBar.querySelector("[data-gallery-search]");
   if (searchInput) searchInput.value = filterState.query || "";
+  syncFilterToggle();
 };
 
 const ensureGalleryFilterControls = () => {
   if (filterBar || !gallery) return;
   const filterTarget = galleryActions || document.querySelector(".gallery-hero");
   if (!filterTarget) return;
+  filterToggle = document.createElement("button");
+  filterToggle.className = "btn secondary gallery-filter-toggle";
+  filterToggle.type = "button";
+  filterToggle.dataset.galleryFilterToggle = "";
+  filterToggle.setAttribute("aria-controls", "gallery-filter-bar");
+  filterToggle.setAttribute("aria-expanded", "false");
+  filterToggle.textContent = t("gallery.search");
   filterBar = document.createElement("form");
+  filterBar.id = "gallery-filter-bar";
   filterBar.className = "gallery-filter-bar";
+  if (isSelectionGallery) filterBar.classList.add("is-open", "is-selection-filter-open");
   filterBar.setAttribute("aria-label", t("a11y.gallery_filters"));
   filterBar.innerHTML = `
     <label class="gallery-search-label"><span data-i18n="gallery.search">Search</span><input type="search" data-gallery-search placeholder="${escapeHtml(t("gallery.search_placeholder"))}"/></label>
@@ -290,11 +338,33 @@ const ensureGalleryFilterControls = () => {
     </select></label>
     <button class="btn secondary gallery-filter-clear" type="button" data-clear-gallery-filters data-i18n="gallery.clear">Clear</button>
   `;
-  filterTarget.after(filterBar);
+  if (galleryActions && isSelectionGallery) {
+    galleryActions.after(filterBar);
+  } else if (galleryActions) {
+    galleryActions.append(filterToggle);
+    galleryActions.after(filterBar);
+  } else {
+    filterTarget.after(filterToggle);
+    filterToggle.after(filterBar);
+  }
   window.photosByElieI18n?.apply?.();
   syncFilterControls();
+  if (!isSelectionGallery) {
+    filterToggle.addEventListener("click", () => {
+      filterBar.classList.toggle("is-open");
+      syncFilterToggle();
+    });
+  }
   filterBar.addEventListener("submit", (event) => {
     event.preventDefault();
+  });
+  filterBar.querySelectorAll("input[type='date'][data-gallery-filter]").forEach((control) => {
+    control.addEventListener("pointerdown", () => showNativePicker(control));
+    control.addEventListener("click", () => showNativePicker(control));
+    control.addEventListener("keydown", (event) => {
+      if (!["Enter", " "].includes(event.key)) return;
+      showNativePicker(control);
+    });
   });
   filterBar.addEventListener("change", (event) => {
     const control = event.target;
@@ -311,6 +381,7 @@ const ensureGalleryFilterControls = () => {
   });
   filterBar.querySelector("[data-gallery-search]")?.addEventListener("input", (event) => {
     filterState = { ...filterState, query: event.target.value };
+    syncFilterToggle();
     visibleLimit = pageSize;
     selectedIndex = 0;
     renderGallery();
@@ -356,16 +427,33 @@ const ensureGalleryMoreButton = () => {
     };
   };
   moreButton.addEventListener("click", () => {
+    showAllRenderToken += 1;
     const restoreScroll = preserveScrollAfterRender();
     visibleLimit += pageSize;
     renderGallery({ scrollSelection: false });
     restoreScroll();
   });
   showAllButton.addEventListener("click", () => {
+    const token = showAllRenderToken + 1;
+    showAllRenderToken = token;
     const restoreScroll = preserveScrollAfterRender();
-    visibleLimit = filteredVisiblePhotos().length;
-    renderGallery({ scrollSelection: false });
-    restoreScroll();
+    const addNextChunk = () => {
+      if (token !== showAllRenderToken) return;
+      const total = filteredVisiblePhotos().length;
+      if (visibleLimit >= total) {
+        if (showAllButton) showAllButton.disabled = false;
+        return;
+      }
+      visibleLimit = Math.min(total, visibleLimit + pageSize);
+      renderGallery({ scrollSelection: false });
+      restoreScroll();
+      if (showAllButton) {
+        showAllButton.disabled = visibleLimit < total;
+        showAllButton.textContent = visibleLimit < total ? `Showing ${visibleLimit}/${total}` : t("home.show_all");
+      }
+      if (visibleLimit < total) window.setTimeout(addNextChunk, 0);
+    };
+    addNextChunk();
   });
 };
 
@@ -637,12 +725,11 @@ const toggleGalleryLike = (photo) => {
 
 const openOwnerMetadataModal = (photo, field) => {
   if (!localModerationEnabled || !photo) return;
-  const isKeywords = field === "keywords";
   const dialog = document.createElement("dialog");
   dialog.className = "owner-metadata-modal";
-  const title = isKeywords ? "Edit keywords" : "Edit title";
+  const title = "Edit title and keywords";
+  const currentTitle = photo.title || "";
   const currentKeywords = metadataValue(photo, "Keywords");
-  const value = isKeywords ? currentKeywords : (photo.title || "");
   const image = window.photosByElieMediaUrl?.(photo, "gallery") || "";
   dialog.innerHTML = `
     <form class="owner-metadata-modal-form" method="dialog">
@@ -653,11 +740,12 @@ const openOwnerMetadataModal = (photo, field) => {
         </figure>
       ` : ""}
       <label>
-        <span>${isKeywords ? "Keywords" : "Title"}</span>
-        ${isKeywords
-          ? `<textarea rows="4" data-owner-modal-field>${escapeHtml(value)}</textarea>`
-          : `<input type="text" value="${escapeHtml(value)}" data-owner-modal-field/>`
-        }
+        <span>Title</span>
+        <input type="text" value="${escapeHtml(currentTitle)}" data-owner-modal-title-field/>
+      </label>
+      <label>
+        <span>Keywords</span>
+        <textarea rows="4" data-owner-modal-keywords-field>${escapeHtml(currentKeywords)}</textarea>
       </label>
       <div class="owner-metadata-modal-actions">
         <button class="btn secondary" type="button" data-owner-modal-cancel>Cancel</button>
@@ -666,7 +754,8 @@ const openOwnerMetadataModal = (photo, field) => {
     </form>
   `;
   const form = dialog.querySelector("form");
-  const input = dialog.querySelector("[data-owner-modal-field]");
+  const titleInput = dialog.querySelector("[data-owner-modal-title-field]");
+  const keywordsInput = dialog.querySelector("[data-owner-modal-keywords-field]");
   const saveButton = dialog.querySelector("button[type='submit']");
   const closeWithoutSaving = () => {
     if (dialog.open) dialog.close("cancel");
@@ -690,20 +779,21 @@ const openOwnerMetadataModal = (photo, field) => {
     event.preventDefault();
     if (saveButton.disabled) return;
     saveButton.disabled = true;
-    const nextTitle = isKeywords ? (photo.title || "") : String(input.value || "").trim();
-    const nextKeywords = isKeywords
-      ? uniqueKeywords(splitKeywordText(input.value)).join(", ")
-      : currentKeywords;
+    const nextTitle = String(titleInput.value || "").trim();
+    const nextKeywordList = uniqueKeywords(splitKeywordText(keywordsInput.value));
+    const nextKeywords = nextKeywordList.join(", ");
     if (!nextTitle) {
       saveButton.disabled = false;
       setGalleryStatus("Title cannot be empty.");
-      input.focus();
+      titleInput.focus();
       return;
     }
     const previousTitle = photo.title || "";
     const previousKeywords = currentKeywords;
+    const previousKeywordList = Array.isArray(photo.keywords) ? [...photo.keywords] : splitKeywordText(previousKeywords);
     dialog.close("save");
     photo.title = nextTitle;
+    photo.keywords = nextKeywordList;
     setMetadataValue(photo, "Metadata title", nextTitle);
     setMetadataValue(photo, "Keywords", nextKeywords);
     const currentId = photo.id;
@@ -716,6 +806,7 @@ const openOwnerMetadataModal = (photo, field) => {
       setGalleryStatus(`${photo.title} metadata saved.`);
     } catch (error) {
       photo.title = previousTitle;
+      photo.keywords = previousKeywordList;
       setMetadataValue(photo, "Metadata title", previousTitle);
       setMetadataValue(photo, "Keywords", previousKeywords);
       renderGallery();
@@ -725,14 +816,24 @@ const openOwnerMetadataModal = (photo, field) => {
   dialog.addEventListener("close", () => dialog.remove());
   document.body.append(dialog);
   dialog.showModal();
-  input?.focus();
-  input?.select?.();
+  const initialField = field === "keywords" ? keywordsInput : titleInput;
+  initialField?.focus();
+  initialField?.select?.();
 };
 
 const renderGallery = ({ scrollSelection = true } = {}) => {
   const allPhotos = visiblePhotos();
   const photos = filteredVisiblePhotos(allPhotos);
   const likedIds = likedPhotoIds();
+  if (isSelectionGallery && !activeFilterCount()) {
+    writeDetailSequenceContext([]);
+    renderedGalleryPhotos = [];
+    galleryRoot.innerHTML = "";
+    if (moreButton) moreButton.hidden = true;
+    if (showAllButton) showAllButton.hidden = true;
+    setGalleryStatus("");
+    return;
+  }
   if (pendingGalleryReturnState?.visibleLimit === "all") {
     visibleLimit = photos.length;
   } else if (pendingGalleryReturnState?.visibleLimit) {
@@ -864,14 +965,14 @@ if (galleryRoot && gallery) {
   document.title = `Photos By Elie | ${localizedCollectionTitle()} ${t("nav.gallery")}`;
   const currentNav = document.querySelector("[data-nav-current]");
   if (currentNav) {
-    currentNav.dataset.i18n = `collection.${galleryKey}`;
+    currentNav.dataset.i18n = isSelectionGallery ? "gallery.make_selection" : `collection.${galleryKey}`;
     currentNav.textContent = localizedCollectionTitle();
     currentNav.setAttribute("href", versionedHref(galleryHrefForKey(galleryKey)));
   }
   if (document.querySelector("[data-gallery-number]")) document.querySelector("[data-gallery-number]").textContent = `Collection ${gallery.number}`;
   const titleRoot = document.querySelector("[data-gallery-title]");
   if (titleRoot) {
-    titleRoot.dataset.i18n = `collection.${galleryKey}`;
+    titleRoot.dataset.i18n = isSelectionGallery ? "gallery.make_selection" : `collection.${galleryKey}`;
     titleRoot.textContent = localizedCollectionTitle();
   }
   if (document.querySelector("[data-gallery-description]")) document.querySelector("[data-gallery-description]").textContent = gallery.description;
@@ -1031,6 +1132,23 @@ if (galleryRoot && gallery) {
         event.preventDefault();
         return;
       }
+      if (event.key.toLowerCase() === "r") {
+        const selected = photos[selectedIndex];
+        if (!selected) return;
+        try {
+          if (!hiddenActions.queueTitleKeywordReview) {
+            throw new Error("Refresh Owner mode to load title/keyword review queueing.");
+          }
+          const result = await hiddenActions.queueTitleKeywordReview(selected.id);
+          setGalleryStatus(result?.already_pending
+            ? `${selected.title} is already in title/keyword review.`
+            : `${selected.title} sent to title/keyword review.`);
+        } catch (error) {
+          setGalleryStatus(error?.message || "Could not send photo to title/keyword review.");
+        }
+        event.preventDefault();
+        return;
+      }
       if (event.key.toLowerCase() === "x" || event.key.toLowerCase() === "b" || event.key.toLowerCase() === "h") {
         const selected = photos[selectedIndex];
         if (!selected) return;
@@ -1090,7 +1208,7 @@ if (galleryRoot && gallery) {
     });
 
     window.addEventListener("photosbyelie:hiddenchange", () => {
-      gallery = window.photosByElieData?.[galleryKey];
+      gallery = isSelectionGallery ? makeSelectionGallery() : window.photosByElieData?.[galleryKey];
       renderGallery();
     });
 

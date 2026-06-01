@@ -1,0 +1,83 @@
+{
+  "date": "2026-05-25",
+  "platform": "Facebook",
+  "status": "artifact_set_ready",
+  "account": "Photos By Elie Facebook Page",
+  "post_type": "multi_photo_or_album",
+  "title": "Albi River and Brick Cathedral",
+  "destination_url": "https://ec92009.github.io/PhotosByElie/gallery.html?gallery=france",
+  "caption": "Albi in soft river light: brick facades, Tarn reflections, and the cathedral rising over the old town. Browse the France gallery on Photos By Elie: https://ec92009.github.io/PhotosByElie/gallery.html?gallery=france",
+  "recommended_upload_set": "images",
+  "available_count": 8,
+  "notes": [
+    "Images are downloaded public watermarked R2 previews staged for browser upload.",
+    "Use files in numeric order for the Facebook post or album.",
+    "Confirm the target is the Photos By Elie Page, not a personal profile."
+  ],
+  "items": [
+    {
+      "order": 1,
+      "id": "20180525-1419-00943-554228f741",
+      "title": "20180525 1419 00943",
+      "image": "images/01-20180525-1419-00943-554228f741-20180525-1419-00943.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180525-1419-00943-554228f741_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180525-1419-00943-554228f741"
+    },
+    {
+      "order": 2,
+      "id": "20180525-1439-00945-c37d4fa644",
+      "title": "Le Tarn à Albi",
+      "image": "images/02-20180525-1439-00945-c37d4fa644-le-tarn-albi.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180525-1439-00945-c37d4fa644_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180525-1439-00945-c37d4fa644"
+    },
+    {
+      "order": 3,
+      "id": "20180525-1440-00948-f9444792d1",
+      "title": "20180525 1440 00948",
+      "image": "images/03-20180525-1440-00948-f9444792d1-20180525-1440-00948.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180525-1440-00948-f9444792d1_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180525-1440-00948-f9444792d1"
+    },
+    {
+      "order": 4,
+      "id": "20180525-1440-00949-4323df4391",
+      "title": "20180525 1440 00949",
+      "image": "images/04-20180525-1440-00949-4323df4391-20180525-1440-00949.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180525-1440-00949-4323df4391_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180525-1440-00949-4323df4391"
+    },
+    {
+      "order": 5,
+      "id": "20180525-1441-00952-0be82ccc8d",
+      "title": "20180525 1441 00952",
+      "image": "images/05-20180525-1441-00952-0be82ccc8d-20180525-1441-00952.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180525-1441-00952-0be82ccc8d_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180525-1441-00952-0be82ccc8d"
+    },
+    {
+      "order": 6,
+      "id": "20180525-1442-00953-93073461ca",
+      "title": "20180525 1442 00953",
+      "image": "images/06-20180525-1442-00953-93073461ca-20180525-1442-00953.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180525-1442-00953-93073461ca_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180525-1442-00953-93073461ca"
+    },
+    {
+      "order": 7,
+      "id": "20180525-1443-00954-efcc015c68",
+      "title": "Le Tarn à Albi",
+      "image": "images/07-20180525-1443-00954-efcc015c68-le-tarn-albi.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180525-1443-00954-efcc015c68_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180525-1443-00954-efcc015c68"
+    },
+    {
+      "order": 8,
+      "id": "20180525-1443-00956-a9e61b8dde",
+      "title": "20180525 1443 00956",
+      "image": "images/08-20180525-1443-00956-a9e61b8dde-20180525-1443-00956.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180525-1443-00956-a9e61b8dde_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180525-1443-00956-a9e61b8dde"
+    }
+  ]
+}

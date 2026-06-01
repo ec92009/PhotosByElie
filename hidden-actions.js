@@ -23,9 +23,10 @@
     "sync-country-keywords": "Syncing country metadata into generated catalog files...",
     "remove-collection-keyword": "Removing collection keyword from catalog metadata...",
     "update-photo-metadata": "Saving title and keyword metadata...",
+    "queue-title-keyword-review": "Sending photo to title/keyword review...",
     "apply-title-keyword-review-approvals": "Saving title/keyword approvals and rejections...",
     "publish-hidden-blacklist": "Publishing master blacklist...",
-    "wipe-hidden-r2": "Purging banned-photo R2 copies...",
+    "wipe-hidden-r2": "Emptying waste basket",
     "save-title-keyword-review-approvals": "Saving title/keyword review decisions...",
   };
 
@@ -365,21 +366,27 @@
   const mark = async (photoId) => {
     if (!enabled || !photoId) return read();
     const current = read();
-    if (current.includes(photoId)) return current;
+    const queueHideAction = (options = {}) => {
+      enqueuePhotoAction("hide", photoId).then(() => {
+        pendingHiddenIds.delete(photoId);
+      }).catch((error) => {
+        pendingHiddenIds.delete(photoId);
+        const latest = read();
+        if (options.revertOnError && latest.includes(photoId)) write(latest.filter((item) => item !== photoId));
+        window.dispatchEvent(new CustomEvent("photosbyelie:owneractionerror", {
+          detail: { action: "hide", photoId, message: error?.message || "Could not move photo to Waste Basket." },
+        }));
+      });
+    };
+    if (current.includes(photoId)) {
+      queueHideAction();
+      return current;
+    }
     forgetReserveOnly([photoId]);
     pendingHiddenIds.add(photoId);
     const nextItems = write([...current, photoId]);
     writeHistory([...readHistory(), photoId]);
-    enqueuePhotoAction("hide", photoId).then(() => {
-      pendingHiddenIds.delete(photoId);
-    }).catch((error) => {
-      pendingHiddenIds.delete(photoId);
-      const latest = read();
-      if (latest.includes(photoId)) write(latest.filter((item) => item !== photoId));
-      window.dispatchEvent(new CustomEvent("photosbyelie:owneractionerror", {
-        detail: { action: "hide", photoId, message: error?.message || "Could not move photo to Waste Basket." },
-      }));
-    });
+    queueHideAction({ revertOnError: true });
     return nextItems;
   };
 
@@ -439,6 +446,11 @@
       title: updates.title,
       keywords: updates.keywords,
     });
+  };
+
+  const queueTitleKeywordReview = async (photoId) => {
+    if (!enabled || !photoId) return null;
+    return photoAction("queue-title-keyword-review", photoId);
   };
 
   const syncCountryKeywords = async () => {
@@ -514,6 +526,7 @@
     updateOwnerBusy,
     setCountryAssignment,
     setCountryAssignments,
+    queueTitleKeywordReview,
     syncFromPublishedBlacklist,
     syncCountryKeywords,
     undo,

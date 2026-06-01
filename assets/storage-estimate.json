@@ -1,35 +1,35 @@
 {
   "schema": "photosbyelie.storage-estimate.v1",
-  "updatedAt": "2026-05-17T19:27:53.542Z",
+  "updatedAt": "2026-05-24T22:08:05.087Z",
   "buckets": {
     "public": "photosbyelie-public",
     "private": "photosbyelie-private"
   },
   "catalog": {
-    "photos": 5841,
-    "sourceBytes": 96353283039
+    "photos": 6639,
+    "sourceBytes": 103081995412
   },
   "current": {
-    "publicPreviewObjects": 23158,
-    "publicPreviewBytes": 7005897462,
-    "privateMasterObjects": 11627,
-    "privateMasterBytes": 192016933113,
-    "privateRenderObjects": 34863,
-    "privateRenderBytes": 29414282201,
-    "totalBytes": 228437112776
+    "publicPreviewObjects": 25138,
+    "publicPreviewBytes": 7832453358,
+    "privateMasterObjects": 12833,
+    "privateMasterBytes": 201041552669,
+    "privateRenderObjects": 37935,
+    "privateRenderBytes": 32908806549,
+    "totalBytes": 241782812576
   },
   "blocked": {
-    "photoIds": 4359,
-    "publicPreviewObjects": 17438,
-    "publicPreviewBytesEstimate": 5275448655,
-    "privateMasterObjects": 28,
+    "photoIds": 4476,
+    "publicPreviewObjects": 22245,
+    "publicPreviewBytesEstimate": 6931057560,
+    "privateMasterObjects": 126,
     "privateMasterBytes": 0,
-    "privateRenderObjects": 0,
-    "privateRenderBytesEstimate": 0,
-    "totalBytesEstimate": 5275448655
+    "privateRenderObjects": 294,
+    "privateRenderBytesEstimate": 255046504,
+    "totalBytesEstimate": 7186104064
   },
   "noCleanup": {
-    "totalBytesEstimate": 233712561431
+    "totalBytesEstimate": 248968916640
   },
   "pricing": {
     "provider": "Cloudflare R2 Standard storage",
@@ -56,25 +56,25 @@
     ]
   },
   "cost": {
-    "currentMonthlyUsd": 3.4266,
-    "currentMonthlyUsdAfterFreeTier": 3.2766,
-    "noCleanupMonthlyUsdEstimate": 3.5057,
-    "noCleanupMonthlyUsdEstimateAfterFreeTier": 3.3557,
-    "avoidedMonthlyUsdEstimate": 0.0791
+    "currentMonthlyUsd": 3.6267,
+    "currentMonthlyUsdAfterFreeTier": 3.4767,
+    "noCleanupMonthlyUsdEstimate": 3.7345,
+    "noCleanupMonthlyUsdEstimateAfterFreeTier": 3.5845,
+    "avoidedMonthlyUsdEstimate": 0.1078
   },
   "billing": {
-    "generatedAt": "2026-05-17T19:27:53.507Z",
+    "generatedAt": "2026-05-24T22:08:05.070Z",
     "month": "May 2026",
     "nextMonth": "Jun 2026",
-    "elapsedMonthRatio": 0.54498,
+    "elapsedMonthRatio": 0.774375,
     "measuredStorageOnly": {
-      "consumedMonthToDateUsd": 1.7857,
-      "expectedThisMonthUsd": 3.2766,
-      "expectedNextMonthUsdAtCurrentRate": 3.2766
+      "consumedMonthToDateUsd": 2.6923,
+      "expectedThisMonthUsd": 3.4767,
+      "expectedNextMonthUsdAtCurrentRate": 3.4767
     },
     "withWorkersPaidBaseIfEnabled": {
-      "expectedThisMonthUsd": 8.2766,
-      "expectedNextMonthUsdAtCurrentRate": 8.2766
+      "expectedThisMonthUsd": 8.4767,
+      "expectedNextMonthUsdAtCurrentRate": 8.4767
     },
     "unmeasuredLineItems": [
       "R2 Class A/Class B operations",

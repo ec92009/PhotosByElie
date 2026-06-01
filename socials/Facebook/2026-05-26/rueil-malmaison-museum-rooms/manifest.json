@@ -1,0 +1,92 @@
+{
+  "date": "2026-05-26",
+  "platform": "Facebook",
+  "status": "artifact_set_ready",
+  "account": "Photos By Elie Facebook Page",
+  "post_type": "multi_photo_or_album",
+  "title": "Rueil-Malmaison Museum Rooms",
+  "destination_url": "https://ec92009.github.io/PhotosByElie/campaign.html?c=facebook-rueil-malmaison-2026-05-26",
+  "campaign_id": "facebook-rueil-malmaison-2026-05-26",
+  "caption": "Quiet rooms, polished floors, chandeliers, and period details from Musee de la Malmaison in Rueil-Malmaison. Browse the focused Photos By Elie set: https://ec92009.github.io/PhotosByElie/campaign.html?c=facebook-rueil-malmaison-2026-05-26",
+  "recommended_upload_set": "images",
+  "available_count": 8,
+  "notes": [
+    "Images are downloaded public watermarked R2 previews staged for browser upload.",
+    "Use files in numeric order for the carousel/post.",
+    "Confirm the final account/board/page target before publishing."
+  ],
+  "items": [
+    {
+      "order": 1,
+      "id": "img-6236-5c34056e1e",
+      "title": "Rueil Malmaison, Musee De La Malmaison",
+      "image": "images/01-img-6236-5c34056e1e-rueil-malmaison-musee-de-la-malmaison.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6236-5c34056e1e_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=img-6236-5c34056e1e",
+      "local_staged_path": "socials/Facebook/2026-05-26/rueil-malmaison-museum-rooms/images/01-img-6236-5c34056e1e-rueil-malmaison-musee-de-la-malmaison.jpg"
+    },
+    {
+      "order": 2,
+      "id": "img-6235-b7ffbc497f",
+      "title": "Rueil Malmaison, Musee De La Malmaison",
+      "image": "images/02-img-6235-b7ffbc497f-rueil-malmaison-musee-de-la-malmaison.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6235-b7ffbc497f_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=img-6235-b7ffbc497f",
+      "local_staged_path": "socials/Facebook/2026-05-26/rueil-malmaison-museum-rooms/images/02-img-6235-b7ffbc497f-rueil-malmaison-musee-de-la-malmaison.jpg"
+    },
+    {
+      "order": 3,
+      "id": "img-6234-07e82ae534",
+      "title": "Rueil Malmaison, Musee De La Malmaison",
+      "image": "images/03-img-6234-07e82ae534-rueil-malmaison-musee-de-la-malmaison.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6234-07e82ae534_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=img-6234-07e82ae534",
+      "local_staged_path": "socials/Facebook/2026-05-26/rueil-malmaison-museum-rooms/images/03-img-6234-07e82ae534-rueil-malmaison-musee-de-la-malmaison.jpg"
+    },
+    {
+      "order": 4,
+      "id": "img-6233-04aa884861",
+      "title": "Rueil Malmaison, Musee De La Malmaison",
+      "image": "images/04-img-6233-04aa884861-rueil-malmaison-musee-de-la-malmaison.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6233-04aa884861_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=img-6233-04aa884861",
+      "local_staged_path": "socials/Facebook/2026-05-26/rueil-malmaison-museum-rooms/images/04-img-6233-04aa884861-rueil-malmaison-musee-de-la-malmaison.jpg"
+    },
+    {
+      "order": 5,
+      "id": "img-6232-938119802e",
+      "title": "Rueil Malmaison, Musee De La Malmaison",
+      "image": "images/05-img-6232-938119802e-rueil-malmaison-musee-de-la-malmaison.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6232-938119802e_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=img-6232-938119802e",
+      "local_staged_path": "socials/Facebook/2026-05-26/rueil-malmaison-museum-rooms/images/05-img-6232-938119802e-rueil-malmaison-musee-de-la-malmaison.jpg"
+    },
+    {
+      "order": 6,
+      "id": "img-6230-1c5d28735e",
+      "title": "Rueil Malmaison, Musee De La Malmaison",
+      "image": "images/06-img-6230-1c5d28735e-rueil-malmaison-musee-de-la-malmaison.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6230-1c5d28735e_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=img-6230-1c5d28735e",
+      "local_staged_path": "socials/Facebook/2026-05-26/rueil-malmaison-museum-rooms/images/06-img-6230-1c5d28735e-rueil-malmaison-musee-de-la-malmaison.jpg"
+    },
+    {
+      "order": 7,
+      "id": "img-6229-38dd061aae",
+      "title": "Rueil Malmaison, Musee De La Malmaison",
+      "image": "images/07-img-6229-38dd061aae-rueil-malmaison-musee-de-la-malmaison.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6229-38dd061aae_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=img-6229-38dd061aae",
+      "local_staged_path": "socials/Facebook/2026-05-26/rueil-malmaison-museum-rooms/images/07-img-6229-38dd061aae-rueil-malmaison-musee-de-la-malmaison.jpg"
+    },
+    {
+      "order": 8,
+      "id": "img-6227-1934002918",
+      "title": "Rueil Malmaison, Musee De La Malmaison",
+      "image": "images/08-img-6227-1934002918-rueil-malmaison-musee-de-la-malmaison.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6227-1934002918_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=img-6227-1934002918",
+      "local_staged_path": "socials/Facebook/2026-05-26/rueil-malmaison-museum-rooms/images/08-img-6227-1934002918-rueil-malmaison-musee-de-la-malmaison.jpg"
+    }
+  ]
+}

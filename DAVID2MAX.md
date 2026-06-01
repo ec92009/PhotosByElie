@@ -16,6 +16,53 @@ David should append automation results here. Keep newest entries near the top, b
 - Notes:
 ```
 
+## 2026-05-19 PBE Weekly Social Caption Drafts
+
+- Machine: David (`David-5.local`)
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- Commit checked: `72020fcf`
+- Result: Drafted IG/FB/Reddit-safe captions for 5 public-catalog photos (no posting).
+- Changes made:
+  - Appended this caption batch (text-only) to `DAVID2MAX.md`.
+- Commit pushed: pending (will run `npm test` + `npm run validate` first, then commit+push if only this file changed).
+- Photo picks:
+  1. Photo id: `20220506-160631-03403-51426edaac`
+     - Collection: `France` (`france`)
+     - Title: `Les Invalides, Paris`
+     - Instagram: Quiet symmetry in Paris — gold dome, soft light, and a moment to breathe. #Paris #Architecture #TravelPhotography
+     - Facebook: Paris has a way of turning “just a building” into a whole mood. I loved the calm geometry and that warm glow on the dome at Les Invalides.
+     - Reddit prompt: What’s your favorite way to photograph big architecture without losing the human-scale feeling?
+     - Notes: No link; no sales language.
+  2. Photo id: `20220505-0400-00135-pano-f4e52ebf11`
+     - Collection: `France` (`france`)
+     - Title: `Chateau de Versailles, Galeries des Glaces`
+     - Instagram: Mirrors on mirrors at Versailles — light, reflection, and history all in one hallway. #Versailles #France #Pano
+     - Facebook: The Galerie des Glaces at Versailles is overwhelming in the best way — reflections everywhere, and every step feels like it carries a story. If you’ve been, what detail stuck with you most?
+     - Reddit prompt: When you shoot reflective interiors (mirrors/glass), what’s your go-to trick for controlling distractions and glare?
+     - Notes: No link; no sales language.
+  3. Photo id: `20220505-135231-03007-a5d4711305`
+     - Collection: `France` (`france`)
+     - Title: `Opera Garnier`
+     - Instagram: Opera Garnier: drama, detail, and that Parisian gold. #OperaGarnier #Paris #Details
+     - Facebook: I could stare at the details in the Opéra Garnier for hours — the layers of ornament, the light, the feeling of stepping into another era.
+     - Reddit prompt: Are you more drawn to photographing “grand scenes” or tight detail shots in historic buildings, and why?
+     - Notes: No link; no sales language.
+  4. Photo id: `20191207-1718-19516-5bc74a12ce`
+     - Collection: `Mexico` (`mexico`)
+     - Title: `Puerto Vallarta, Mexico, view from the Icon Towers`
+     - Instagram: Puerto Vallarta from above — sea breeze, city lines, and that endless blue. #PuertoVallarta #Mexico #CoastalViews
+     - Facebook: That feeling when the coastline opens up and the city meets the water — Puerto Vallarta was pure color and calm from this viewpoint.
+     - Reddit prompt: Coastal cities: do you prefer shooting them from ground level (street energy) or from above (patterns + scale)?
+     - Notes: No link; no sales language.
+  5. Photo id: `20190624-1826-16542-1eb5098247`
+     - Collection: `Slovakia` (`slovakia`)
+     - Title: `Bratislava, SK`
+     - Instagram: Bratislava — a small city with big charm, especially at golden hour. #Bratislava #Slovakia #CityLight
+     - Facebook: Bratislava surprised me — it’s compact, walkable, and full of little corners that feel cinematic when the light starts to drop.
+     - Reddit prompt: What’s an “underrated” city you’ve photographed (or want to), and what made it click for you?
+     - Notes: No link; no sales language.
+- Notes: Reddit prompts are written to be subreddit-agnostic and link-free by default; only add links if a specific subreddit’s rules explicitly allow them.
+
 ## 2026-05-17 David Instruction Poller Install
 
 - Machine: David (`David-5.local`)
@@ -937,3 +984,26 @@ Source: public catalog metadata (`assets/catalog/photosbyelie.sqlite`). Target b
    - Suggested platform: Instagram (feed)
    - Suggested caption: Bratislava — small city, big charm. 🇸🇰 #Bratislava #Slovakia #EuropeTravel #StreetPhotography
    - Why this one: Adds variety beyond the usual destinations; “underrated city” travel angle.
+
+---
+
+## 2026-05-19 — R2 master-chain maintenance (daily)
+
+- Repaired masters: 0
+- Repaired renders: 0
+- Pruned private render ghosts: 0
+- Pruned public preview ghosts: 36
+- Remaining missing public previews: 0
+- Failures: 0 (script exited 0; `npm test` + `npm run validate` OK)
+
+---
+
+## 2026-05-19 — Daily Health Check
+
+- Branch: `main`
+- Commit checked: `6415f1e8c30ba5b523e26ca9e01dc20f0346884d`
+- `git pull --ff-only`: PASS (`Already up to date.`)
+- `npm test`: PASS (18/18)
+- `npm run validate`: PASS (`Validation OK`)
+- Generated changes: none detected (`git status` clean)
+- Notes: All checks green; no action needed.

@@ -1,0 +1,976 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Photos By Elie | Slideshow Guitar</title>
+  <meta name="description" content="Country-tagged Pixabay guitar and regional music candidates for Photos By Elie real estate slideshows."/>
+  <meta property="og:title" content="Photos By Elie Slideshow Guitar"/>
+  <meta property="og:description" content="Eighty-one slideshow music cues for phone auditioning: Spain, Portugal, France, USA, and original Photos By Elie guitar pieces."/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:image" content="./assets/branding/photosbyelie-camera-tripod-logo-512.png"/>
+  <link rel="icon" type="image/png" sizes="512x512" href="./assets/branding/photosbyelie-camera-tripod-logo-512.png"/>
+  <script>
+    (() => {
+      try {
+        const saved = localStorage.getItem('byelie-theme');
+        if (saved === 'light' || saved === 'dark') document.documentElement.dataset.theme = saved;
+      } catch {}
+    })();
+  </script>
+  <link rel="stylesheet" href="./shared.css?v=93.1"/>
+  <link rel="stylesheet" href="./styles.css?v=93.1"/>
+  <link rel="stylesheet" href="./photos.css?v=93.1"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --music-panel: rgba(255, 255, 255, 0.82);
+      --music-head: rgba(69, 111, 100, 0.13);
+      --music-row-alt: rgba(17, 17, 17, 0.035);
+      --music-row-active: rgba(69, 111, 100, 0.16);
+      --music-accent: #456f64;
+      --music-accent-strong: #17201d;
+      --music-accent-ink: #ffffff;
+    }
+
+    html[data-theme="dark"] {
+      --music-panel: rgba(28, 28, 28, 0.72);
+      --music-head: rgba(201, 244, 255, 0.10);
+      --music-row-alt: rgba(255, 255, 255, 0.045);
+      --music-row-active: rgba(201, 244, 255, 0.14);
+      --music-accent: #c9f4ff;
+      --music-accent-strong: #ffffff;
+      --music-accent-ink: #0e0e0e;
+    }
+
+    .music-shell {
+      padding-bottom: 42px;
+    }
+
+    .music-hero {
+      display: grid;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .music-hero h1 {
+      margin: 0;
+      font-size: clamp(2rem, 6vw, 4.4rem);
+      letter-spacing: 0;
+      line-height: 0.98;
+    }
+
+    .music-hero .lead {
+      max-width: 760px;
+      margin: 0;
+    }
+
+    .music-status {
+      color: var(--muted);
+      font-size: 0.95rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .music-country-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .music-country-tab {
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.72);
+      color: var(--ink);
+      cursor: pointer;
+      font: inherit;
+      font-size: 0.9rem;
+      font-weight: 800;
+      padding: 7px 14px;
+    }
+
+    html[data-theme="dark"] .music-country-tab {
+      background: rgba(0, 0, 0, 0.22);
+    }
+
+    .music-country-tab.is-active {
+      border-color: var(--music-accent);
+      background: var(--music-accent);
+      color: var(--music-accent-ink);
+    }
+
+    .music-table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--music-panel);
+      box-shadow: var(--glass-panel-shadow);
+    }
+
+    .music-table {
+      width: 100%;
+      min-width: 760px;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    .music-table thead {
+      background: var(--music-head);
+    }
+
+    .music-table th,
+    .music-table td {
+      padding: 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    .music-table th {
+      color: var(--muted);
+      font-size: 0.78rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .music-table tbody tr:nth-child(even) {
+      background: var(--music-row-alt);
+    }
+
+    .music-table tbody tr.is-playing {
+      background: var(--music-row-active);
+    }
+
+    .music-table tbody tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .music-number {
+      width: 48px;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .music-piece {
+      width: 230px;
+    }
+
+    .music-piece strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 1rem;
+      line-height: 1.2;
+    }
+
+    .music-piece span {
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.35;
+    }
+
+    .music-stars-cell {
+      width: 156px;
+    }
+
+    .music-play-cell {
+      width: 68px;
+      text-align: center;
+    }
+
+    .music-seek-cell {
+      width: 260px;
+    }
+
+    .music-delete-cell {
+      width: 94px;
+    }
+
+    .music-play {
+      width: 42px;
+      height: 42px;
+      padding: 0;
+      border: 0;
+      border-radius: 50%;
+      background: var(--music-accent);
+      color: var(--music-accent-ink);
+      cursor: pointer;
+      display: inline-grid;
+      place-items: center;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.16);
+    }
+
+    .music-play:hover {
+      background: var(--music-accent-strong);
+      color: var(--music-accent-ink);
+    }
+
+    .music-icon {
+      width: 20px;
+      height: 20px;
+      display: block;
+    }
+
+    .music-table input[type="range"] {
+      width: 100%;
+      min-width: 0;
+      accent-color: var(--music-accent);
+    }
+
+    .music-stars {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .music-star {
+      width: 28px;
+      height: 32px;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 1.28rem;
+      line-height: 1;
+    }
+
+    .music-star.is-active {
+      color: #b97716;
+    }
+
+    .music-star:hover,
+    .music-star:focus-visible {
+      color: var(--music-accent);
+    }
+
+    .music-delete {
+      min-height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font: inherit;
+      font-size: 0.84rem;
+      font-weight: 800;
+      padding: 5px 12px;
+    }
+
+    .music-delete:hover,
+    .music-delete:focus-visible {
+      border-color: var(--music-accent);
+      color: var(--music-accent);
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (max-width: 720px) {
+      .music-shell {
+        padding-inline: 12px;
+      }
+
+      .music-hero.panel {
+        padding: 18px;
+      }
+
+      .music-country-tabs {
+        gap: 6px;
+      }
+
+      .music-country-tab {
+        flex: 1 1 calc(33.333% - 6px);
+        padding-inline: 8px;
+      }
+
+      .music-table {
+        min-width: 720px;
+      }
+
+      .music-seek-cell {
+        width: 200px;
+      }
+    }
+  </style>
+</head>
+<body data-fixed-header>
+  <a class="skip-link" href="#main-content" data-i18n="a11y.skip">Skip to content</a>
+  <header class="topbar shell">
+    <a class="header-back-button mobile-header-back" href="./real-estate.html?logout=1&client=elie" aria-label="Back to client login"><span aria-hidden="true">&lt;</span></a>
+    <div class="brand"><img class="site-logo" src="./assets/branding/photosbyelie-camera-tripod-logo-512.png" alt="Photos By Elie camera logo"/>PHOTOS BY ELIE</div>
+    <nav class="version-switch" aria-label="Site navigation" data-i18n-aria-label="a11y.site_nav">
+      <a href="./" data-i18n="nav.photos">Photos</a> <span>|</span>
+      <a href="./real-estate.html?logout=1&client=elie">Client login</a> <span>|</span>
+      <a class="is-active" href="./slideshow-music.html">Music</a>
+    </nav>
+    <span class="site-version-badge">v93.1</span>
+    <div class="header-controls">
+      <button class="language-toggle" type="button" data-language-toggle>English</button>
+      <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light" data-i18n="theme.night">Night</span><span class="mode-dark" data-i18n="theme.day">Day</span></button>
+    </div>
+  </header>
+
+  <main id="main-content" class="shell music-shell">
+    <section class="panel music-hero" aria-labelledby="music-title">
+      <p class="eyebrow">Real estate slideshow audio</p>
+      <h1 id="music-title">Classic Guitar Gallery</h1>
+      <p class="lead">Country-tagged Pixabay candidates for phone auditioning, followed by the original quiet guitar cues for property slide shows, social reels, and client previews.</p>
+      <p class="music-status" id="musicStatus">Loading Pixabay candidates...</p>
+      <div class="music-country-tabs" aria-label="Music country filter">
+        <button class="music-country-tab is-active" type="button" data-country-filter="Spain">Spain</button>
+        <button class="music-country-tab" type="button" data-country-filter="Portugal">Portugal</button>
+        <button class="music-country-tab" type="button" data-country-filter="France">France</button>
+        <button class="music-country-tab" type="button" data-country-filter="USA">USA</button>
+        <button class="music-country-tab" type="button" data-country-filter="Originals">Originals</button>
+        <button class="music-country-tab" type="button" data-country-filter="All">All</button>
+      </div>
+    </section>
+
+    <section class="music-table-wrap" aria-label="Slideshow guitar pieces">
+      <table class="music-table">
+        <thead>
+          <tr>
+            <th class="music-number">#</th>
+            <th class="music-piece">Piece</th>
+            <th class="music-stars-cell">Stars</th>
+            <th class="music-play-cell">Play</th>
+            <th class="music-seek-cell">Position</th>
+            <th class="music-delete-cell">Delete</th>
+          </tr>
+        </thead>
+        <tbody id="musicRows"></tbody>
+      </table>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="shell">
+      <p class="footer-note">© 2026 Photos By Elie</p>
+      <nav class="footer-nav" aria-label="Footer navigation" data-i18n-aria-label="a11y.footer_nav">
+        <a href="https://ec92009.github.io/byElie/">By Elie</a>
+        <a href="./" data-i18n="nav.photos">Photos</a>
+        <a href="./real-estate.html?logout=1&client=elie">Client login</a>
+        <a href="./support.html" data-i18n="nav.support">Support and license</a>
+      </nav>
+    </div>
+  </footer>
+
+  <script src="./media-config.js?v=92.24"></script>
+  <script src="./photos.js?v=93.1"></script>
+  <script src="./site-version.js?v=92.24"></script>
+  <script>
+    (() => {
+      const tracks = [
+        {
+          title: "Original Real Estate Cue",
+          mood: "Warm nylon arpeggios",
+          bpm: 76,
+          duration: 117.632,
+          src: "./assets/music/slideshow-guitar/real-estate-subdued-spanish-guitar-118s.mp3"
+        },
+        {
+          title: "Sunlit Courtyard",
+          mood: "Open, slow, settled",
+          bpm: 74,
+          duration: 115.135,
+          src: "./assets/music/slideshow-guitar/sunlit-courtyard-spanish-guitar-115s.mp3"
+        },
+        {
+          title: "Quiet Terrace",
+          mood: "Light and restrained",
+          bpm: 78,
+          duration: 104.615,
+          src: "./assets/music/slideshow-guitar/quiet-terrace-spanish-guitar-105s.mp3"
+        },
+        {
+          title: "White Walls Evening",
+          mood: "Soft twilight",
+          bpm: 72,
+          duration: 119.167,
+          src: "./assets/music/slideshow-guitar/white-walls-evening-guitar-119s.mp3"
+        },
+        {
+          title: "Market Street Morning",
+          mood: "Gentle motion",
+          bpm: 80,
+          duration: 108,
+          src: "./assets/music/slideshow-guitar/market-street-morning-guitar-108s.mp3"
+        },
+        {
+          title: "Valencia Patio",
+          mood: "Mediterranean and airy",
+          bpm: 76,
+          duration: 115.263,
+          src: "./assets/music/slideshow-guitar/valencia-patio-spanish-guitar-115s.mp3"
+        },
+        {
+          title: "Coastal Light",
+          mood: "Clean, understated lift",
+          bpm: 82,
+          duration: 99.512,
+          src: "./assets/music/slideshow-guitar/coastal-light-spanish-guitar-100s.mp3"
+        },
+        {
+          title: "Granada Window",
+          mood: "Hushed afternoon",
+          bpm: 70,
+          duration: 118.286,
+          src: "./assets/music/slideshow-guitar/granada-window-guitar-118s.mp3"
+        },
+        {
+          title: "Warm Entryway",
+          mood: "Welcoming and steady",
+          bpm: 79,
+          duration: 107.848,
+          src: "./assets/music/slideshow-guitar/warm-entryway-guitar-108s.mp3"
+        },
+        {
+          title: "Calm Stairwell",
+          mood: "Quiet structure",
+          bpm: 75,
+          duration: 112,
+          src: "./assets/music/slideshow-guitar/calm-stairwell-guitar-112s.mp3"
+        },
+        {
+          title: "After Sunset Courtyard",
+          mood: "Deeper, elegant close",
+          bpm: 73,
+          duration: 117.534,
+          src: "./assets/music/slideshow-guitar/after-sunset-courtyard-guitar-118s.mp3"
+        },
+        {
+          title: "Segovia Study in A Minor",
+          mood: "Arpeggio study, clear classical phrasing",
+          bpm: 72,
+          duration: 115,
+          src: "./assets/music/slideshow-guitar/segovia-study-a-minor-classic-guitar-115s.mp3"
+        },
+        {
+          title: "Andalusian Romance Tremolo",
+          mood: "Romance tremolo with restrained Spanish color",
+          bpm: 69,
+          duration: 114.783,
+          src: "./assets/music/slideshow-guitar/andalusian-romance-tremolo-classic-guitar-115s.mp3"
+        },
+        {
+          title: "Courtyard Waltz",
+          mood: "Three-quarter salon waltz, gentle lift",
+          bpm: 86,
+          duration: 98.372,
+          src: "./assets/music/slideshow-guitar/courtyard-waltz-classic-guitar-098s.mp3"
+        },
+        {
+          title: "Malaguena Lullaby",
+          mood: "Quiet 6/8 with soft Phrygian cadence",
+          bpm: 78,
+          duration: 115.385,
+          src: "./assets/music/slideshow-guitar/malaguena-lullaby-classic-guitar-115s.mp3"
+        },
+        {
+          title: "Tarrega Morning",
+          mood: "Lyrical major-key parlor miniature",
+          bpm: 74,
+          duration: 113.513,
+          src: "./assets/music/slideshow-guitar/tarrega-morning-classic-guitar-114s.mp3"
+        },
+        {
+          title: "Granados Salon",
+          mood: "Romantic minor voice-leading, fuller rolls",
+          bpm: 71,
+          duration: 114.93,
+          src: "./assets/music/slideshow-guitar/granados-salon-classic-guitar-115s.mp3"
+        },
+        {
+          title: "Alhambra Echo",
+          mood: "Soft tremolo study, spacious and reflective",
+          bpm: 66,
+          duration: 116.364,
+          src: "./assets/music/slideshow-guitar/alhambra-echo-classic-guitar-116s.mp3"
+        },
+        {
+          title: "Solea Quiet Steps",
+          mood: "Subdued flamenco-tinged pulse",
+          bpm: 76,
+          duration: 107.368,
+          src: "./assets/music/slideshow-guitar/solea-quiet-steps-classic-guitar-107s.mp3"
+        },
+        {
+          title: "Castilian Counterpoint",
+          mood: "Two-voice study with walking bass",
+          bpm: 70,
+          duration: 116.571,
+          src: "./assets/music/slideshow-guitar/castilian-counterpoint-classic-guitar-117s.mp3"
+        },
+        {
+          title: "Nocturne by the Tiles",
+          mood: "Slow nocturne, intimate final cadence",
+          bpm: 68,
+          duration: 118.235,
+          src: "./assets/music/slideshow-guitar/nocturne-by-the-tiles-classic-guitar-118s.mp3"
+        },
+        {
+          title: "Solar Rumba Duo",
+          mood: "Two-guitar Latin rumba, nylon rhythm and singing lead",
+          bpm: 96,
+          duration: 97,
+          src: "./assets/music/slideshow-guitar/solar-rumba-duo-two-guitars-095s.mp3"
+        },
+        {
+          title: "Desert Palm Conversation",
+          mood: "Nouveau flamenco-style duet with soft call and response",
+          bpm: 90,
+          duration: 103.333,
+          src: "./assets/music/slideshow-guitar/desert-palm-conversation-two-guitars-100s.mp3"
+        },
+        {
+          title: "Cypress Firelight",
+          mood: "Bright world-fusion guitar duet, brisk and polished",
+          bpm: 104,
+          duration: 89.692,
+          src: "./assets/music/slideshow-guitar/cypress-firelight-two-guitars-087s.mp3"
+        },
+        {
+          title: "Two Roads to Malaga",
+          mood: "Fast Spanish guitar dialogue with percussive strums",
+          bpm: 112,
+          duration: 83.429,
+          src: "./assets/music/slideshow-guitar/two-roads-to-malaga-two-guitars-082s.mp3"
+        },
+        {
+          title: "Nouveau Patio",
+          mood: "Relaxed two-guitar groove with warm melodic slides",
+          bpm: 88,
+          duration: 105.636,
+          src: "./assets/music/slideshow-guitar/nouveau-patio-two-guitars-103s.mp3"
+        },
+        {
+          title: "Strummed Horizon",
+          mood: "Latin-rock flavored nylon duet, steady slideshow pulse",
+          bpm: 100,
+          duration: 93.2,
+          src: "./assets/music/slideshow-guitar/strummed-horizon-two-guitars-091s.mp3"
+        },
+        {
+          title: "Midnight Mercado",
+          mood: "Darker guitar pair with Phrygian color and muted taps",
+          bpm: 94,
+          duration: 99.021,
+          src: "./assets/music/slideshow-guitar/midnight-mercado-two-guitars-096s.mp3"
+        },
+        {
+          title: "Copper Strings",
+          mood: "Up-tempo guitar duet with agile lead flourishes",
+          bpm: 116,
+          duration: 80.621,
+          src: "./assets/music/slideshow-guitar/copper-strings-two-guitars-079s.mp3"
+        },
+        {
+          title: "Blue Tile Groove",
+          mood: "Subdued but moving two-guitar patio groove",
+          bpm: 86,
+          duration: 108.047,
+          src: "./assets/music/slideshow-guitar/blue-tile-groove-two-guitars-106s.mp3"
+        },
+        {
+          title: "Southbound Duet",
+          mood: "Clean Latin/world-fusion closer for two guitars",
+          bpm: 108,
+          duration: 86.544,
+          src: "./assets/music/slideshow-guitar/southbound-duet-two-guitars-084s.mp3"
+        },
+        {
+          title: "Quiet Linden Study",
+          mood: "Single nylon guitar, plain major arpeggios",
+          bpm: 82,
+          duration: 113.02,
+          src: "./assets/music/slideshow-guitar/quiet-linden-study-single-guitar-113s.mp3"
+        },
+        {
+          title: "Warm Balcony Theme",
+          mood: "Soft single-guitar theme with settled bass",
+          bpm: 86,
+          duration: 107.847,
+          src: "./assets/music/slideshow-guitar/warm-balcony-theme-single-guitar-107s.mp3"
+        },
+        {
+          title: "Open House Aria",
+          mood: "Slow lyrical guitar line over consonant chords",
+          bpm: 88,
+          duration: 105.436,
+          src: "./assets/music/slideshow-guitar/open-house-aria-single-guitar-104s.mp3"
+        },
+        {
+          title: "Cedar Stairwell",
+          mood: "Very calm single-guitar picking at walking pace",
+          bpm: 80,
+          duration: 115.8,
+          src: "./assets/music/slideshow-guitar/cedar-stairwell-single-guitar-116s.mp3"
+        },
+        {
+          title: "Terrace in C",
+          mood: "Consonant parlor-guitar arpeggios",
+          bpm: 84,
+          duration: 110.371,
+          src: "./assets/music/slideshow-guitar/terrace-in-c-single-guitar-109s.mp3"
+        },
+        {
+          title: "Window Light Etude",
+          mood: "Clean single-guitar study, light and steady",
+          bpm: 90,
+          duration: 103.133,
+          src: "./assets/music/slideshow-guitar/window-light-etude-single-guitar-103s.mp3"
+        },
+        {
+          title: "Blue Hour Listing",
+          mood: "Subdued minor arpeggios without sharp edges",
+          bpm: 82,
+          duration: 113.02,
+          src: "./assets/music/slideshow-guitar/blue-hour-listing-single-guitar-112s.mp3"
+        },
+        {
+          title: "Ivory Courtyard",
+          mood: "Simple warm guitar, relaxed and consonant",
+          bpm: 86,
+          duration: 107.847,
+          src: "./assets/music/slideshow-guitar/ivory-courtyard-single-guitar-106s.mp3"
+        },
+        {
+          title: "Sunday Parlor",
+          mood: "Gentle single-guitar salon miniature",
+          bpm: 84,
+          duration: 110.371,
+          src: "./assets/music/slideshow-guitar/sunday-parlor-single-guitar-108s.mp3"
+        },
+        {
+          title: "Soft Key Return",
+          mood: "Quiet closing cue for one nylon guitar",
+          bpm: 90,
+          duration: 103.133,
+          src: "./assets/music/slideshow-guitar/soft-key-return-single-guitar-101s.mp3"
+        }
+      ].map((track) => ({
+        ...track,
+        country: "Originals",
+        collection: track.collection || "Photos By Elie original cue"
+      }));
+
+      const pageParams = new URLSearchParams(window.location.search);
+      const isLocalHost = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname);
+      const pixabayManifestKey = "assets/music/slideshow-guitar/pixabay/pixabay-guitar-candidates.json";
+      const ratingsStorageKey = "photosbyelie-slideshow-music-ratings-v89-19";
+      const deletedStorageKey = "photosbyelie-slideshow-music-deleted-v89-19";
+      const rowRoot = document.getElementById("musicRows");
+      const status = document.getElementById("musicStatus");
+      const countryFilterControls = [...document.querySelectorAll("[data-country-filter]")];
+      const players = [];
+      const ratings = new Map();
+      const deletedTrackIds = new Set();
+      let activeCountryFilter = "Spain";
+
+      const escapeHtml = (value) => String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+
+      const trackTempoLabel = (track) => {
+        const bpm = Number(track.bpm);
+        if (Number.isFinite(bpm) && bpm > 0) return `${bpm} bpm`;
+        return String(track.tempo || "free tempo");
+      };
+
+      const trackMetaLabel = (track) => [
+        track.country || "Originals",
+        trackTempoLabel(track),
+        track.author ? `by ${track.author}` : "",
+        track.source || "",
+        track.creditRequired ? "credit required" : "",
+        track.license || "",
+      ].filter(Boolean).join(" / ");
+
+      const trackId = (track) => String(track.id || track.src || track.title || "");
+
+      const normalizedWorkerBase = (value) => {
+        const raw = String(value || "").trim().replace(/\/+$/, "");
+        if (!raw) return "";
+        try {
+          const url = new URL(raw, window.location.href);
+          return /^https?:$/.test(url.protocol) ? url.href.replace(/\/+$/, "") : "";
+        } catch {
+          return "";
+        }
+      };
+
+      const workerBaseUrl = () => {
+        const override = normalizedWorkerBase(pageParams.get("workerBase"));
+        if (override) return override;
+        return normalizedWorkerBase(window.photosByElieMediaConfig?.checkoutWorkerBaseUrl || "");
+      };
+
+      const mediaKeyFor = (track) => String(track?.r2Key || track?.publicKey || track?.src || "")
+        .replace(/^\.\//, "")
+        .replace(/^\/+/, "");
+
+      const workerMediaUrl = (key) => {
+        const cleanKey = String(key || "").replace(/^\/+/, "");
+        const base = workerBaseUrl();
+        return cleanKey && base ? `${base}/media/${cleanKey.split("/").map(encodeURIComponent).join("/")}` : "";
+      };
+
+      const localMediaUrl = (key, fallback = "") => {
+        const cleanKey = String(key || "").replace(/^\/+/, "");
+        return cleanKey ? `./${cleanKey}` : fallback;
+      };
+
+      const musicMediaUrl = (track) => {
+        const key = mediaKeyFor(track);
+        if (isLocalHost) return localMediaUrl(key, track?.src || "");
+        return workerMediaUrl(key) || localMediaUrl(key, track?.src || "");
+      };
+
+      const pixabayManifestUrl = () => (
+        isLocalHost
+          ? `./${pixabayManifestKey}?v=92.24`
+          : `${workerMediaUrl(pixabayManifestKey)}?v=92.24`
+      );
+
+      const loadStoredState = () => {
+        try {
+          Object.entries(JSON.parse(localStorage.getItem(ratingsStorageKey) || "{}")).forEach(([id, value]) => {
+            const rating = Number(value);
+            if (Number.isFinite(rating) && rating >= 1 && rating <= 5) ratings.set(id, rating);
+          });
+        } catch {}
+        try {
+          JSON.parse(localStorage.getItem(deletedStorageKey) || "[]").forEach((id) => deletedTrackIds.add(String(id)));
+        } catch {}
+      };
+
+      const saveRatings = () => {
+        try {
+          localStorage.setItem(ratingsStorageKey, JSON.stringify(Object.fromEntries(ratings)));
+        } catch {}
+      };
+
+      const saveDeletedTracks = () => {
+        try {
+          localStorage.setItem(deletedStorageKey, JSON.stringify([...deletedTrackIds]));
+        } catch {}
+      };
+
+      const setRowRating = (row, rating) => {
+        row.querySelectorAll(".music-star").forEach((button) => {
+          const value = Number(button.dataset.rating);
+          button.classList.toggle("is-active", value <= rating);
+          button.setAttribute("aria-pressed", value <= rating ? "true" : "false");
+        });
+      };
+
+      const starsHtml = (track, rating) => (
+        `<div class="music-stars" role="group" aria-label="Rating for ${escapeHtml(track.title)}">` +
+        [1, 2, 3, 4, 5].map((value) => (
+          `<button class="music-star${value <= rating ? " is-active" : ""}" type="button" data-rating="${value}" aria-label="${value} star${value === 1 ? "" : "s"} for ${escapeHtml(track.title)}" aria-pressed="${value <= rating ? "true" : "false"}">★</button>`
+        )).join("") +
+        `</div>`
+      );
+
+      const normalizePixabayTrack = (track) => ({
+        ...track,
+        title: track.title || "Pixabay guitar candidate",
+        collection: "Pixabay audition candidate",
+        mood: track.mood || `Pixabay guitar candidate by ${track.author || "unknown author"}`,
+        bpm: 0,
+        tempo: track.tempo || "audition",
+        country: track.country || "Spain",
+        source: track.source || "Pixabay",
+        license: track.license || "Pixabay Content License",
+        licenseUrl: track.licenseUrl || "https://pixabay.com/service/license-summary/",
+        creditRequired: true,
+        creditText: track.creditText || `Music: "${track.title || "Pixabay guitar candidate"}" by ${track.author || "Pixabay contributor"} via Pixabay`,
+        src: musicMediaUrl(track),
+      });
+
+      const loadPixabayTracks = async () => {
+        const response = await fetch(pixabayManifestUrl(), { cache: "no-store" });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const manifest = await response.json();
+        const pixabayTracks = Array.isArray(manifest.tracks) ? manifest.tracks.map(normalizePixabayTrack) : [];
+        tracks.unshift(...pixabayTracks);
+        return pixabayTracks.length;
+      };
+
+      const filterMatchesTrack = (track) => (
+        activeCountryFilter === "All" || (track.country || "Originals") === activeCountryFilter
+      );
+
+      const activeFilterLabel = () => activeCountryFilter === "All" ? "" : `${activeCountryFilter} `;
+
+      const setCountryFilterButtons = () => {
+        countryFilterControls.forEach((button) => {
+          const active = button.dataset.countryFilter === activeCountryFilter;
+          button.classList.toggle("is-active", active);
+          button.setAttribute("aria-pressed", active ? "true" : "false");
+        });
+      };
+
+      const playIcon = () => (
+        `<svg class="music-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor"></path></svg>`
+      );
+
+      const pauseIcon = () => (
+        `<svg class="music-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z" fill="currentColor"></path></svg>`
+      );
+
+      const syncRow = (index) => {
+        const item = players[index];
+        if (!item) return;
+        const track = item.track;
+        const audio = item.audio;
+        const duration = Number.isFinite(audio.duration) ? audio.duration : track.duration;
+        const playing = !audio.paused && !audio.ended;
+        item.button.innerHTML = playing ? pauseIcon() : playIcon();
+        item.button.setAttribute("aria-label", `${playing ? "Pause" : "Play"} ${track.title}`);
+        item.row.classList.toggle("is-playing", playing);
+        if (duration > 0) {
+          item.seek.value = String(Math.round((audio.currentTime / duration) * Number(item.seek.max)));
+        }
+      };
+
+      const pauseOthers = (activeIndex) => {
+        players.forEach((item, index) => {
+          if (index !== activeIndex) {
+            item.audio.pause();
+            syncRow(index);
+          }
+        });
+      };
+
+      const visibleTracks = () => tracks.filter((track) => !deletedTrackIds.has(trackId(track)) && filterMatchesTrack(track));
+
+      const renderTracks = () => {
+        players.forEach((item) => item.audio.pause());
+        rowRoot.innerHTML = "";
+        players.splice(0, players.length);
+        setCountryFilterButtons();
+        const visible = visibleTracks();
+        visible.forEach((track, index) => {
+          const id = trackId(track);
+          const rating = Number(ratings.get(id)) || 0;
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td class="music-number">${String(index + 1).padStart(2, "0")}</td>
+            <td class="music-piece"><strong>${escapeHtml(track.title)}</strong><span>${escapeHtml(trackMetaLabel(track))}</span></td>
+            <td class="music-stars-cell">${starsHtml(track, rating)}</td>
+            <td class="music-play-cell"></td>
+            <td class="music-seek-cell"><label class="sr-only" for="seek-${index}">Position for ${escapeHtml(track.title)}</label><input id="seek-${index}" type="range" min="0" max="1000" value="0"></td>
+            <td class="music-delete-cell"><button class="music-delete" type="button">Delete</button></td>
+          `;
+
+          const audio = document.createElement("audio");
+          if (!isLocalHost) audio.crossOrigin = "anonymous";
+          audio.src = track.src;
+          audio.preload = "metadata";
+          audio.volume = 1;
+
+          const button = document.createElement("button");
+          button.className = "music-play";
+          button.type = "button";
+          button.setAttribute("aria-label", `Play ${track.title}`);
+          button.innerHTML = playIcon();
+          row.querySelector(".music-play-cell").append(button);
+
+          const seek = row.querySelector(`#seek-${index}`);
+          const deleteButton = row.querySelector(".music-delete");
+          const item = { audio, button, seek, row, track };
+          players.push(item);
+
+          const playItem = async () => {
+            pauseOthers(index);
+            if (audio.paused || audio.ended) await audio.play();
+            status.textContent = `Playing ${track.title}`;
+            syncRow(index);
+          };
+
+          button.addEventListener("click", async () => {
+            if (audio.paused || audio.ended) {
+              await playItem();
+            } else {
+              audio.pause();
+              status.textContent = "Paused";
+            }
+            syncRow(index);
+          });
+
+          seek.addEventListener("input", () => {
+            const duration = Number.isFinite(audio.duration) ? audio.duration : track.duration;
+            audio.currentTime = (Number(seek.value) / Number(seek.max)) * duration;
+            playItem().catch((error) => console.warn("Could not switch track from position", error));
+            syncRow(index);
+          });
+          row.querySelectorAll(".music-star").forEach((star) => {
+            star.addEventListener("click", () => {
+              const nextRating = Number(star.dataset.rating);
+              ratings.set(id, nextRating);
+              saveRatings();
+              setRowRating(row, nextRating);
+            });
+          });
+          deleteButton.addEventListener("click", () => {
+            audio.pause();
+            deletedTrackIds.add(id);
+            saveDeletedTracks();
+            status.textContent = `Deleted ${track.title}`;
+            renderTracks();
+          });
+
+          audio.addEventListener("loadedmetadata", () => syncRow(index));
+          audio.addEventListener("timeupdate", () => syncRow(index));
+          audio.addEventListener("play", () => {
+            pauseOthers(index);
+            status.textContent = `Playing ${track.title}`;
+            syncRow(index);
+          });
+          audio.addEventListener("pause", () => syncRow(index));
+          audio.addEventListener("ended", () => {
+            status.textContent = `Ready to audition ${visibleTracks().length} ${activeFilterLabel()}cues`;
+            syncRow(index);
+          });
+
+          rowRoot.append(row);
+        });
+        status.textContent = `Ready to audition ${visible.length} ${activeFilterLabel()}cues`;
+      };
+
+      countryFilterControls.forEach((button) => {
+        button.addEventListener("click", () => {
+          activeCountryFilter = button.dataset.countryFilter || "Spain";
+          renderTracks();
+        });
+      });
+
+      loadStoredState();
+      loadPixabayTracks()
+        .catch((error) => {
+          console.warn("Could not load Pixabay guitar manifest", error);
+          status.textContent = "Pixabay candidates could not be loaded; original cues are available";
+        })
+        .finally(renderTracks);
+    })();
+  </script>
+</body>
+</html>

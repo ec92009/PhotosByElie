@@ -1,5 +1,10 @@
 body .hero{
-  background:var(--bg);
+  background:var(--glass-panel-bg);
+  border:1px solid var(--glass-border);
+  box-shadow:var(--glass-panel-shadow);
+  backdrop-filter:blur(var(--glass-heavy-blur));
+  -webkit-backdrop-filter:blur(var(--glass-heavy-blur));
+  text-shadow:var(--glass-copy-shadow);
 }
 @keyframes hero-fade-up{
   from{opacity:0;transform:translateY(18px)}

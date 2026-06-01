@@ -1,4 +1,4 @@
-// Generated bootstrap: attempts Brotli-compressed SQLite, then falls back to plain SQLite.
+// Generated bootstrap: loads the plain SQLite catalog.
 (() => {
   const readBinary = (relativePath) => {
     const script = document.currentScript;
@@ -17,28 +17,6 @@
     const bytes = new Uint8Array(response.length);
     for (let index = 0; index < response.length; index += 1) bytes[index] = response.charCodeAt(index) & 0xff;
     return bytes;
-  };
-  const readBinaryAsync = async (relativePath) => {
-    const script = document.currentScript;
-    const scriptUrl = script?.src ? new URL(script.src, window.location.href) : null;
-    const version = scriptUrl?.searchParams.get("v") || document.querySelector(".brand")?.textContent?.match(/v([0-9.]+)/)?.[1] || "";
-    const url = new URL(relativePath, scriptUrl || window.location.href);
-    if (version) url.searchParams.set("v", version);
-    const response = await fetch(url.href, { cache: "default" });
-    if (!response.ok) throw new Error(`Could not load ${relativePath}: HTTP ${response.status}`);
-    return new Uint8Array(await response.arrayBuffer());
-  };
-  const brotliDecompress = async (bytes) => {
-    const sqliteHeader = [83, 81, 76, 105, 116, 101, 32, 102, 111, 114, 109, 97, 116, 32, 51, 0];
-    if (sqliteHeader.every((value, index) => bytes[index] === value)) return bytes;
-    if (typeof DecompressionStream !== "function") throw new Error("Brotli decompression is not supported.");
-    let stream;
-    try {
-      stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("brotli"));
-    } catch {
-      throw new Error("Brotli decompression is not supported.");
-    }
-    return new Uint8Array(await new Response(stream).arrayBuffer());
   };
   const readJson = (relativePath, fallback = {}) => {
     try {
@@ -83,11 +61,15 @@
     window.photosByElieFrameOptions = (catalog.frameOptions || catalog.frames || []).map((frame) => ({ ...frame }));
     window.photosByElieShippingHandlingPrices = { ...(catalog.shippingHandlingPrices || {}) };
     window.photosByElieVideoPriceTiers = normalizeVideoPriceTiers(catalog.videoPriceTiers || {});
+    window.photosByEliePodAutomation = { ...(catalog.podAutomation || {}) };
+    window.photosByEliePodSuppliers = (catalog.podSuppliers || []).map((supplier) => ({ ...supplier }));
+    window.photosByEliePodQualityTiers = (catalog.podQualityTiers || []).map((tier) => ({ ...tier }));
+    window.photosByEliePodOptions = (catalog.podOptions || []).map((option) => ({ ...option }));
   };
 
   const finishCatalogLoad = (source, data, owner, productCatalog) => {
-    const supplementalData = window.photosByElieData || {};
-    window.photosByElieData = { ...(data || {}), ...supplementalData };
+    const existingData = window.photosByElieData || {};
+    window.photosByElieData = { ...(data || {}), ...existingData };
     window.photosByElieOwnerData = owner || {};
     applyProductCatalog(productCatalog || readJson("./assets/catalog/product-pricing.json"));
     window.photosByElieCatalogSource = source;
@@ -100,15 +82,6 @@
   window.photosByElieOwnerData = window.photosByElieOwnerData || {};
   window.photosByElieCatalogReady = (async () => {
     if (window.photosByElieCatalogSqlite?.decodeCatalog) {
-      try {
-        const compressed = await readBinaryAsync("./assets/catalog/photosbyelie.sqlite.br");
-        const bundle = window.photosByElieCatalogSqlite.decodeCatalog(await brotliDecompress(compressed));
-        return finishCatalogLoad("sqlite-br", bundle.data, bundle.owner, bundle.productCatalog);
-      } catch (error) {
-        if (!String(error?.message || "").includes("Brotli decompression is not supported")) {
-          console.warn(error?.message || "Brotli SQLite catalog load failed; trying plain SQLite.");
-        }
-      }
       try {
         const bundle = window.photosByElieCatalogSqlite.decodeCatalog(readBinary("./assets/catalog/photosbyelie.sqlite"));
         return finishCatalogLoad("sqlite", bundle.data, bundle.owner, bundle.productCatalog);
@@ -159,10 +132,17 @@ window.photosByElieResolutions = window.photosByElieResolutions || [];
 window.photosByEliePriceTiers = window.photosByEliePriceTiers || {};
 window.photosByElieFrameOptions = window.photosByElieFrameOptions || [];
 window.photosByElieShippingHandlingPrices = window.photosByElieShippingHandlingPrices || {};
+window.photosByEliePodAutomation = window.photosByEliePodAutomation || {};
+window.photosByEliePodSuppliers = window.photosByEliePodSuppliers || [];
+window.photosByEliePodQualityTiers = window.photosByEliePodQualityTiers || [];
+window.photosByEliePodOptions = window.photosByEliePodOptions || [];
 
 window.photosByEliePricingTier = (photo) => window.photosByEliePhotoOrigin(photo) === "ai" ? "ai" : "original";
 window.photosByEliePricingTierLabel = (photo) => window.photosByEliePriceTiers?.[window.photosByEliePricingTier(photo)]?.label || "Camera photo";
 window.photosByElieOptionPrice = (photo, option) => Number(option?.prices?.[window.photosByEliePricingTier(photo)] ?? option?.price ?? 0);
+
+window.photosByElieMediaType = (photo) => String(photo?.media?.type || photo?.type || "photo").toLowerCase();
+window.photosByElieIsVideo = (photo) => window.photosByElieMediaType(photo) === "video";
 window.photosByElieVideoPriceTiers = window.photosByElieVideoPriceTiers || {};
 window.photosByElieVideoTier = (photo) => {
   const duration = Number(photo?.media?.video?.duration || photo?.duration || 0);
@@ -175,14 +155,7 @@ window.photosByElieVideoTier = (photo) => {
 window.photosByElieVideoDownloadOption = (photo) => {
   const tier = window.photosByElieVideoTier(photo);
   const priceTier = window.photosByElieVideoPriceTiers?.[tier] || { price: 20 };
-  return {
-    id: "video-original",
-    type: "video",
-    label: "Original video download",
-    detail: "Private original video file after purchase",
-    price: Number(priceTier.price) || 0,
-    priceKey: tier,
-  };
+  return { id: "video-original", type: "video", label: "Original video download", detail: "Private original video file after purchase", price: Number(priceTier.price) || 0, priceKey: tier };
 };
 
 window.photosByEliePreviewMegapixels = (photo) => {
@@ -213,6 +186,8 @@ window.photosByElieFormatLabel = (source) => {
   const checks = [
     { label: "JPG", pattern: /\b(JPG|JPEG)\b/i },
     { label: "TIFF", pattern: /\b(TIF|TIFF)\b/i },
+    { label: "MOV", pattern: /\b(MOV|QUICKTIME)\b/i },
+    { label: "MP4", pattern: /\b(MP4|M4V)\b/i },
     { label: "PSD", pattern: /\bPSD\b/i },
   ];
   const formats = checks.filter((item) => item.pattern.test(value)).map((item) => item.label);

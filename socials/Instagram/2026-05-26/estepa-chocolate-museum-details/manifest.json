@@ -1,0 +1,110 @@
+{
+  "date": "2026-05-26",
+  "platform": "Instagram",
+  "status": "artifact_set_ready",
+  "account": "Photos By Elie Instagram account to confirm at publish time",
+  "post_type": "carousel",
+  "title": "Estepa Chocolate Museum Details",
+  "destination_url": "https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-estepa-chocolate-museum-2026-05-26",
+  "campaign_id": "instagram-estepa-chocolate-museum-2026-05-26",
+  "caption": "Small museum details from Estepa, Spain: chocolate craft, warm display cases, and quiet travel textures from the Photos By Elie archive. Browse the focused set: https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-estepa-chocolate-museum-2026-05-26\n\n#PhotosByElie #Estepa #SpainTravel #MuseumDetails #TravelPhotography #FoodCulture #EditorialPhotography",
+  "recommended_upload_set": "images",
+  "available_count": 10,
+  "notes": [
+    "Images are downloaded public watermarked R2 previews staged for browser upload.",
+    "Use files in numeric order for the carousel/post.",
+    "Confirm the final account/board/page target before publishing."
+  ],
+  "items": [
+    {
+      "order": 1,
+      "id": "20240308-130209-00248-7a9d4241bb",
+      "title": "Estepa, Spain, Chocolate Museum",
+      "image": "images/01-20240308-130209-00248-7a9d4241bb-estepa-spain-chocolate-museum.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240308-130209-00248-7a9d4241bb_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20240308-130209-00248-7a9d4241bb",
+      "local_staged_path": "socials/Instagram/2026-05-26/estepa-chocolate-museum-details/images/01-20240308-130209-00248-7a9d4241bb-estepa-spain-chocolate-museum.jpg"
+    },
+    {
+      "order": 2,
+      "id": "20240308-130107-00246-354e9eabab",
+      "title": "Estepa, Spain, Chocolate Museum",
+      "image": "images/02-20240308-130107-00246-354e9eabab-estepa-spain-chocolate-museum.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240308-130107-00246-354e9eabab_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20240308-130107-00246-354e9eabab",
+      "local_staged_path": "socials/Instagram/2026-05-26/estepa-chocolate-museum-details/images/02-20240308-130107-00246-354e9eabab-estepa-spain-chocolate-museum.jpg"
+    },
+    {
+      "order": 3,
+      "id": "20240308-130054-00243-2795114325",
+      "title": "Estepa, Spain, Chocolate Museum",
+      "image": "images/03-20240308-130054-00243-2795114325-estepa-spain-chocolate-museum.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240308-130054-00243-2795114325_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20240308-130054-00243-2795114325",
+      "local_staged_path": "socials/Instagram/2026-05-26/estepa-chocolate-museum-details/images/03-20240308-130054-00243-2795114325-estepa-spain-chocolate-museum.jpg"
+    },
+    {
+      "order": 4,
+      "id": "20240308-130042-00241-6a52e8cd68",
+      "title": "Estepa, Spain, Chocolate Museum",
+      "image": "images/04-20240308-130042-00241-6a52e8cd68-estepa-spain-chocolate-museum.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240308-130042-00241-6a52e8cd68_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20240308-130042-00241-6a52e8cd68",
+      "local_staged_path": "socials/Instagram/2026-05-26/estepa-chocolate-museum-details/images/04-20240308-130042-00241-6a52e8cd68-estepa-spain-chocolate-museum.jpg"
+    },
+    {
+      "order": 5,
+      "id": "20240308-130032-00239-255ee56ac2",
+      "title": "Estepa, Spain, Chocolate Museum",
+      "image": "images/05-20240308-130032-00239-255ee56ac2-estepa-spain-chocolate-museum.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240308-130032-00239-255ee56ac2_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20240308-130032-00239-255ee56ac2",
+      "local_staged_path": "socials/Instagram/2026-05-26/estepa-chocolate-museum-details/images/05-20240308-130032-00239-255ee56ac2-estepa-spain-chocolate-museum.jpg"
+    },
+    {
+      "order": 6,
+      "id": "20240308-130027-00237-cc2130b489",
+      "title": "Estepa, Spain, Chocolate Museum",
+      "image": "images/06-20240308-130027-00237-cc2130b489-estepa-spain-chocolate-museum.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240308-130027-00237-cc2130b489_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20240308-130027-00237-cc2130b489",
+      "local_staged_path": "socials/Instagram/2026-05-26/estepa-chocolate-museum-details/images/06-20240308-130027-00237-cc2130b489-estepa-spain-chocolate-museum.jpg"
+    },
+    {
+      "order": 7,
+      "id": "20240308-130023-00235-e62f4b5abe",
+      "title": "Estepa, Spain, Chocolate Museum",
+      "image": "images/07-20240308-130023-00235-e62f4b5abe-estepa-spain-chocolate-museum.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240308-130023-00235-e62f4b5abe_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20240308-130023-00235-e62f4b5abe",
+      "local_staged_path": "socials/Instagram/2026-05-26/estepa-chocolate-museum-details/images/07-20240308-130023-00235-e62f4b5abe-estepa-spain-chocolate-museum.jpg"
+    },
+    {
+      "order": 8,
+      "id": "20240308-130010-00233-39a6397693",
+      "title": "Estepa, Spain, Chocolate Museum",
+      "image": "images/08-20240308-130010-00233-39a6397693-estepa-spain-chocolate-museum.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240308-130010-00233-39a6397693_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20240308-130010-00233-39a6397693",
+      "local_staged_path": "socials/Instagram/2026-05-26/estepa-chocolate-museum-details/images/08-20240308-130010-00233-39a6397693-estepa-spain-chocolate-museum.jpg"
+    },
+    {
+      "order": 9,
+      "id": "20240308-130010-00232-cfcf89fc5d",
+      "title": "Estepa, Spain, Chocolate Museum",
+      "image": "images/09-20240308-130010-00232-cfcf89fc5d-estepa-spain-chocolate-museum.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240308-130010-00232-cfcf89fc5d_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20240308-130010-00232-cfcf89fc5d",
+      "local_staged_path": "socials/Instagram/2026-05-26/estepa-chocolate-museum-details/images/09-20240308-130010-00232-cfcf89fc5d-estepa-spain-chocolate-museum.jpg"
+    },
+    {
+      "order": 10,
+      "id": "20240308-125949-00231-88ea6ffc2c",
+      "title": "Estepa, Spain, Chocolate Museum",
+      "image": "images/10-20240308-125949-00231-88ea6ffc2c-estepa-spain-chocolate-museum.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240308-125949-00231-88ea6ffc2c_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20240308-125949-00231-88ea6ffc2c",
+      "local_staged_path": "socials/Instagram/2026-05-26/estepa-chocolate-museum-details/images/10-20240308-125949-00231-88ea6ffc2c-estepa-spain-chocolate-museum.jpg"
+    }
+  ]
+}

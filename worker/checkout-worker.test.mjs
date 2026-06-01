@@ -8,6 +8,7 @@ import deployedWorker from "./deployed-worker.mjs";
 import { createLocalZipDelivery } from "./local-zip-delivery.mjs";
 import { createMemoryStore } from "./memory-store.mjs";
 import { createMockStripeClient } from "./mock-stripe.mjs";
+import { createRealEstateDeliverables } from "./real-estate-deliverables.mjs";
 import { createRealEstateOriginals } from "./real-estate-originals.mjs";
 import { createR2ZipDelivery } from "./r2-zip-delivery.mjs";
 import { createStripeClient, createStripeWebhookSignature } from "./stripe-client.mjs";
@@ -96,14 +97,19 @@ const createFakeR2 = (initial = {}) => {
         size: value.body.byteLength,
       };
     },
-    get: async (key) => {
+    get: async (key, options = {}) => {
       const value = values.get(key);
       if (!value) return null;
+      const range = options.range || null;
+      const start = Number.isInteger(range?.offset) ? Math.max(0, range.offset) : 0;
+      const end = Number.isInteger(range?.length) ? Math.min(value.body.byteLength, start + range.length) : value.body.byteLength;
+      const body = value.body.slice(start, end);
       return {
         httpMetadata: value.httpMetadata,
         customMetadata: value.customMetadata,
-        arrayBuffer: async () => value.body.buffer.slice(value.body.byteOffset, value.body.byteOffset + value.body.byteLength),
-        body: value.body,
+        size: value.body.byteLength,
+        arrayBuffer: async () => body.buffer.slice(body.byteOffset, body.byteOffset + body.byteLength),
+        body,
       };
     },
     put: async (key, body, options = {}) => {
@@ -113,6 +119,22 @@ const createFakeR2 = (initial = {}) => {
         httpMetadata: options.httpMetadata || {},
         customMetadata: options.customMetadata || {},
       });
+    },
+    delete: async (key) => {
+      values.delete(key);
+    },
+    list: async ({ prefix = "", limit = 1000 } = {}) => {
+      const objects = [...values.entries()]
+        .filter(([key]) => key.startsWith(prefix))
+        .sort(([left], [right]) => left.localeCompare(right))
+        .slice(0, limit)
+        .map(([key, value]) => ({
+          key,
+          size: value.body.byteLength,
+          httpMetadata: value.httpMetadata,
+          customMetadata: value.customMetadata,
+        }));
+      return { objects, truncated: false };
     },
     _debug: values,
   };
@@ -147,27 +169,74 @@ test("guest checkout creates a pending order and mock Stripe session", async () 
   assert.match(body.order.id, /^PBE-20260507-/);
   assert.equal(body.order.status, "pending_payment");
   assert.equal(body.order.currency, "usd");
-  assert.equal(body.order.amountExpected, 8100);
+  assert.equal(body.order.amountExpected, 6530);
   assert.equal(body.order.items[0].products.length, 2);
   assert.match(body.checkout.url, /^https:\/\/mock\.stripe\.local\/checkout\/cs_mock_/);
 });
 
-test("AI collection digital products use the AI price tier", async () => {
+test("guest checkout tops up orders below the Stripe minimum charge", async () => {
   const catalog = loadCatalog();
-  const { worker } = testWorker();
-  const photoId = firstDeliverablePhotoId(catalog, "ai");
+  const { worker, stripe } = testWorker();
+  const photoId = firstDeliverablePhotoId(catalog);
 
   const response = await worker.fetch(jsonRequest("https://worker.test/checkout/guest", {
     email: "buyer@example.com",
-    items: [{ photoId, options: [{ id: "full" }, { id: "jpg-1mp" }] }],
+    items: [{ photoId, options: [{ id: "jpg-1mp" }] }],
+  }));
+  assert.equal(response.status, 201);
+
+  const body = await response.json();
+  assert.equal(body.order.subtotalAmount, 10);
+  assert.equal(body.order.minimumChargeAdjustment, 40);
+  assert.equal(body.order.amountExpected, 50);
+  const session = stripe._debug.sessions.get(body.checkout.sessionId);
+  assert.equal(session.amount_total, 50);
+  assert.equal(session.line_items.length, 2);
+  assert.equal(session.line_items[1].photoId, "minimum-charge-adjustment");
+  assert.equal(session.line_items[1].unit_amount, 40);
+});
+
+test("AI collection digital products use the AI price tier", async () => {
+  const catalog = createCatalogIndex({
+    collections: {
+      ai: {
+        title: "AI",
+        photos: [{
+          id: "ai-gallery-test-image",
+          title: "AI gallery test image",
+          sourceOrigin: "ai",
+          megapixels: 12,
+          sourceFiles: [{ path: "ai-gallery-test.jpg", type: "JPG" }],
+          metadata: [{ label: "Original size", value: "JPEG / 4000 x 3000 / 12 MP" }],
+        }],
+      },
+    },
+    resolutions: [
+      { id: "full", type: "digital", label: "Full resolution", price: 65, prices: { original: 65, ai: 25 } },
+      { id: "jpg-1mp", type: "digital", label: "JPG 1 MP", price: 0.1, prices: { original: 0.1, ai: 0.1 }, minMegapixels: 1 },
+    ],
+  });
+  const randomUUID = deterministicIds();
+  const worker = createPhotosByElieWorker({
+    catalog,
+    store: createMemoryStore(),
+    stripe: createMockStripeClient({ randomUUID }),
+    now: () => new Date("2026-05-07T12:00:00.000Z"),
+    randomUUID,
+    ordersUrl: "https://photosbyelie.test/orders",
+  });
+
+  const response = await worker.fetch(jsonRequest("https://worker.test/checkout/guest", {
+    email: "buyer@example.com",
+    items: [{ photoId: "ai-gallery-test-image", options: [{ id: "full" }, { id: "jpg-1mp" }] }],
   }));
   assert.equal(response.status, 201);
 
   const body = await response.json();
   assert.equal(body.order.items[0].collection, "AI");
-  assert.equal(body.order.amountExpected, 2900);
+  assert.equal(body.order.amountExpected, 2510);
   assert.equal(body.order.items[0].products.find((item) => item.id === "full").amount, 2500);
-  assert.equal(body.order.items[0].products.find((item) => item.id === "jpg-1mp").amount, 400);
+  assert.equal(body.order.items[0].products.find((item) => item.id === "jpg-1mp").amount, 10);
 });
 
 test("sourceOrigin controls digital pricing independently of collection", async () => {
@@ -187,7 +256,7 @@ test("sourceOrigin controls digital pricing independently of collection", async 
     },
     resolutions: [
       { id: "full", type: "digital", label: "Full resolution", price: 65, prices: { original: 65, ai: 25 } },
-      { id: "jpg-1mp", type: "digital", label: "JPG 1 MP", price: 8, prices: { original: 8, ai: 4 }, minMegapixels: 1 },
+      { id: "jpg-1mp", type: "digital", label: "JPG 1 MP", price: 0.1, prices: { original: 0.1, ai: 0.1 }, minMegapixels: 1 },
     ],
   });
   const randomUUID = deterministicIds();
@@ -208,7 +277,7 @@ test("sourceOrigin controls digital pricing independently of collection", async 
 
   const body = await response.json();
   assert.equal(body.order.items[0].collection, "France");
-  assert.equal(body.order.amountExpected, 2900);
+  assert.equal(body.order.amountExpected, 2510);
 });
 
 test("video checkout uses the shared flat video price tier", async () => {
@@ -299,6 +368,8 @@ test("real Stripe client creates hosted Checkout Sessions with order metadata", 
   assert.equal(stripeRequest.params.get("mode"), "payment");
   assert.equal(stripeRequest.params.get("client_reference_id"), "PBE-20260508-TEST");
   assert.equal(stripeRequest.params.get("metadata[order_id]"), "PBE-20260508-TEST");
+  assert.equal(stripeRequest.params.get("payment_intent_data[receipt_email]"), "buyer@example.com");
+  assert.equal(stripeRequest.params.get("payment_intent_data[statement_descriptor_suffix]"), "DOWNLOAD");
   assert.equal(stripeRequest.params.get("payment_intent_data[metadata][order_id]"), "PBE-20260508-TEST");
   assert.equal(stripeRequest.params.get("line_items[0][price_data][unit_amount]"), "5500");
   assert.equal(stripeRequest.params.get("line_items[0][price_data][product_data][metadata][photo_id]"), "photo-1");
@@ -412,6 +483,62 @@ test("download endpoint returns a mock signed R2 URL and allows repeat downloads
   assert.equal(repeatedResponse.status, 200);
 });
 
+test("download endpoint enforces token expiry and download limits", async () => {
+  const catalog = loadCatalog();
+  const randomUUID = deterministicIds();
+  let currentNow = new Date("2026-05-07T12:00:00.000Z");
+  const worker = createPhotosByElieWorker({
+    catalog,
+    store: createMemoryStore(),
+    stripe: createMockStripeClient({ randomUUID }),
+    now: () => currentNow,
+    randomUUID,
+    downloadTokenTtlSeconds: 60,
+    downloadTokenMaxDownloads: 2,
+  });
+  const photoId = firstDeliverablePhotoId(catalog);
+  const checkoutResponse = await worker.fetch(jsonRequest("https://worker.test/checkout/guest", {
+    email: "buyer@example.com",
+    items: [{ photoId, options: [{ id: "jpg-1mp" }] }],
+  }));
+  const checkout = await checkoutResponse.json();
+  const payResponse = await worker.fetch(jsonRequest("https://worker.test/mock-stripe/pay", {
+    checkoutSessionId: checkout.checkout.sessionId,
+  }));
+  const paid = await payResponse.json();
+  const token = paid.order.delivery.downloadUrl.split("/").pop();
+
+  const firstDownloadResponse = await worker.fetch(new Request(`https://worker.test/download/${token}`));
+  assert.equal(firstDownloadResponse.status, 200);
+  const firstDownload = await firstDownloadResponse.json();
+  assert.equal(firstDownload.download.expiresAt, "2026-05-07T12:01:00.000Z");
+  assert.equal((await worker.fetch(new Request(`https://worker.test/download/${token}`))).status, 200);
+  const limitedResponse = await worker.fetch(new Request(`https://worker.test/download/${token}`));
+  assert.equal(limitedResponse.status, 429);
+
+  const expiringWorker = createPhotosByElieWorker({
+    catalog,
+    store: createMemoryStore(),
+    stripe: createMockStripeClient({ randomUUID }),
+    now: () => currentNow,
+    randomUUID,
+    downloadTokenTtlSeconds: 60,
+  });
+  const expiringCheckoutResponse = await expiringWorker.fetch(jsonRequest("https://worker.test/checkout/guest", {
+    email: "buyer@example.com",
+    items: [{ photoId, options: [{ id: "jpg-1mp" }] }],
+  }));
+  const expiringCheckout = await expiringCheckoutResponse.json();
+  const expiringPayResponse = await expiringWorker.fetch(jsonRequest("https://worker.test/mock-stripe/pay", {
+    checkoutSessionId: expiringCheckout.checkout.sessionId,
+  }));
+  const expiringPaid = await expiringPayResponse.json();
+  const expiringToken = expiringPaid.order.delivery.downloadUrl.split("/").pop();
+  currentNow = new Date("2026-05-07T12:01:01.000Z");
+  const expiredResponse = await expiringWorker.fetch(new Request(`https://worker.test/download/${expiringToken}`));
+  assert.equal(expiredResponse.status, 410);
+});
+
 test("local ZIP delivery creates a real ZIP from a developed source", async () => {
   const catalog = loadCatalog();
   const randomUUID = deterministicIds();
@@ -478,7 +605,7 @@ test("deployed Worker mock checkout writes and downloads private R2 files", asyn
     ORDERS_KV: createFakeKv(),
     PRIVATE_MEDIA: privateR2,
     DELIVERY_MEDIA: privateR2,
-    PUBLIC_SITE_URL: "https://ec92009.github.io/PhotosByElie",
+    PUBLIC_SITE_URL: "https://photos-by-elie.com",
   };
 
   const checkoutResponse = await deployedWorker.fetch(jsonRequest("https://worker.test/checkout/guest", {
@@ -626,6 +753,98 @@ test("real-estate originals endpoint rejects the wrong client password", async (
   assert.equal(body.error.code, "real_estate_auth_required");
 });
 
+test("real-estate deliverables endpoint saves and lists client products", async () => {
+  const randomUUID = deterministicIds();
+  const privateR2 = createFakeR2();
+  const worker = createPhotosByElieWorker({
+    catalog: loadCatalog(),
+    store: createMemoryStore(),
+    stripe: createMockStripeClient({ randomUUID }),
+    randomUUID,
+    realEstateDeliverables: createRealEstateDeliverables({
+      privateBucket: privateR2,
+      randomUUID,
+      now: () => new Date("2026-05-17T12:00:00.000Z"),
+      galleries: [{
+        key: "corine-real-estate",
+        username: "Corine",
+        accessCode: "LaConcha",
+      }],
+    }),
+  });
+  const deliverable = {
+    id: "local-pdf-20260517T120000Z",
+    type: "pdf",
+    title: "PDF: La Concha 1 Apt 8AB1",
+    createdAt: "2026-05-17T12:00:00.000Z",
+    filename: "corine-real-estate-la-concha-a4-20260517T120000Z.pdf",
+    bytes: 54321,
+    batch: {
+      batchId: "20260517T120000Z",
+      createdAt: "2026-05-17T12:00:00.000Z",
+      galleryKey: "corine-real-estate",
+      projects: [{
+        projectId: "re-2026-la-concha-1-apt-8ab1",
+        projectTitle: "La Concha 1 Apt 8AB1",
+        items: [{
+          photoId: "corine-re-2026-la-concha-1-apt-8ab1-d5h-3043",
+          title: "La Concha 1 Apt 8AB1 - 01",
+          sortIndex: 1,
+        }],
+      }],
+    },
+  };
+
+  const saveResponse = await worker.fetch(jsonRequest("https://worker.test/real-estate/deliverables", {
+    galleryKey: "corine-real-estate",
+    username: "Corine",
+    accessCode: "LaConcha",
+    deliverable,
+  }));
+  assert.equal(saveResponse.status, 201);
+  const saved = await saveResponse.json();
+  assert.equal(saved.deliverable.id, deliverable.id);
+  assert.equal(saved.deliverable.batch.batchId, deliverable.batch.batchId);
+
+  const listResponse = await worker.fetch(jsonRequest("https://worker.test/real-estate/deliverables/list", {
+    galleryKey: "corine-real-estate",
+    username: "Corine",
+    accessCode: "LaConcha",
+  }));
+  assert.equal(listResponse.status, 200);
+  const listed = await listResponse.json();
+  assert.equal(listed.count, 1);
+  assert.equal(listed.deliverables[0].id, deliverable.id);
+  assert.equal(listed.deliverables[0].filename, deliverable.filename);
+
+  const deleteResponse = await worker.fetch(jsonRequest("https://worker.test/real-estate/deliverables/delete", {
+    galleryKey: "corine-real-estate",
+    username: "Corine",
+    accessCode: "LaConcha",
+    id: deliverable.id,
+  }));
+  assert.equal(deleteResponse.status, 200);
+  const deleted = await deleteResponse.json();
+  assert.equal(deleted.id, deliverable.id);
+  assert.equal(deleted.deleted, true);
+
+  const afterDeleteResponse = await worker.fetch(jsonRequest("https://worker.test/real-estate/deliverables/list", {
+    galleryKey: "corine-real-estate",
+    username: "Corine",
+    accessCode: "LaConcha",
+  }));
+  assert.equal(afterDeleteResponse.status, 200);
+  const afterDelete = await afterDeleteResponse.json();
+  assert.equal(afterDelete.count, 0);
+
+  const wrongPassword = await worker.fetch(jsonRequest("https://worker.test/real-estate/deliverables/list", {
+    galleryKey: "corine-real-estate",
+    username: "Corine",
+    accessCode: "Wrong",
+  }));
+  assert.equal(wrongPassword.status, 403);
+});
+
 test("deployed Worker blocks checkout when private delivery files are missing", async () => {
   const catalog = loadCatalog();
   const photoId = firstDeliverablePhotoId(catalog);
@@ -633,7 +852,7 @@ test("deployed Worker blocks checkout when private delivery files are missing", 
     ORDERS_KV: createFakeKv(),
     PRIVATE_MEDIA: createFakeR2(),
     DELIVERY_MEDIA: createFakeR2(),
-    PUBLIC_SITE_URL: "https://ec92009.github.io/PhotosByElie",
+    PUBLIC_SITE_URL: "https://photos-by-elie.com",
   };
 
   const checkoutResponse = await deployedWorker.fetch(jsonRequest("https://worker.test/checkout/guest", {
@@ -823,12 +1042,40 @@ test("deployed Worker serves public R2 previews through the media route", async 
     PRIVATE_MEDIA: createFakeR2(),
     PUBLIC_MEDIA: publicR2,
     DELIVERY_MEDIA: createFakeR2(),
-    PUBLIC_SITE_URL: "https://ec92009.github.io/PhotosByElie",
+    PUBLIC_SITE_URL: "https://photos-by-elie.com",
   };
 
   const response = await deployedWorker.fetch(new Request("https://worker.test/media/expo/france/sample_900.jpg"), env);
   assert.equal(response.status, 200);
   assert.equal(response.headers.get("content-type"), "image/jpeg");
+  assert.equal(response.headers.get("accept-ranges"), "bytes");
   assert.equal(response.headers.get("cache-control"), "public, max-age=31536000, immutable");
   assert.equal(Buffer.from(await response.arrayBuffer()).toString("hex"), "ffd8ffd9");
+});
+
+test("deployed Worker serves public R2 media byte ranges", async () => {
+  const publicR2 = createFakeR2({
+    "assets/music/slideshow-guitar/pixabay/sample.mp3": {
+      body: new Uint8Array([0, 1, 2, 3, 4, 5]),
+      httpMetadata: { contentType: "audio/mpeg" },
+    },
+  });
+  const env = {
+    ORDERS_KV: createFakeKv(),
+    PRIVATE_MEDIA: createFakeR2(),
+    PUBLIC_MEDIA: publicR2,
+    DELIVERY_MEDIA: createFakeR2(),
+    PUBLIC_SITE_URL: "https://photos-by-elie.com",
+  };
+
+  const response = await deployedWorker.fetch(new Request("https://worker.test/media/assets/music/slideshow-guitar/pixabay/sample.mp3", {
+    headers: { range: "bytes=1-3" },
+  }), env);
+
+  assert.equal(response.status, 206);
+  assert.equal(response.headers.get("content-type"), "audio/mpeg");
+  assert.equal(response.headers.get("accept-ranges"), "bytes");
+  assert.equal(response.headers.get("content-length"), "3");
+  assert.equal(response.headers.get("content-range"), "bytes 1-3/6");
+  assert.equal(Buffer.from(await response.arrayBuffer()).toString("hex"), "010203");
 });

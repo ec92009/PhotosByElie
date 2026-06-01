@@ -18,6 +18,8 @@ from typing import Any
 
 from PIL import Image, ImageOps
 
+from update_caption_colors import caption_color
+
 
 RAW_EXTENSIONS = {".raw", ".dng", ".nef", ".cr2", ".cr3", ".arw", ".orf", ".raf", ".rw2"}
 IMAGE_EXTENSIONS = {".jpg", ".jpeg"}
@@ -28,6 +30,14 @@ DEFAULT_OUTPUT_ROOT = Path("tmp/real-estate-import")
 PDF_BATCH_SCHEMA = "photosbyelie.realEstatePdfBatch.v1"
 DEFAULT_R2_ROOT = "real-estate"
 ACCESS_CODE_HASH_ALGORITHM = "sha256-salt-v1"
+
+
+def load_slideshow_music_policy(repo_root: Path) -> dict[str, Any]:
+    path = repo_root / "assets" / "real-estate" / "slideshow-music.json"
+    try:
+        return json.loads(path.read_text())
+    except FileNotFoundError:
+        return {}
 
 
 def slugify(value: str) -> str:
@@ -195,6 +205,22 @@ def emit_progress(enabled: bool, event: str, **payload: Any) -> None:
         "PBE_IMPORT_PROGRESS " + json.dumps({"event": event, **payload}, sort_keys=True),
         flush=True,
     )
+
+
+def emit_import_event(enabled: bool, kind: str, **payload: Any) -> None:
+    if enabled:
+        print(f"PBE_IMPORT_{kind} {json.dumps(payload, sort_keys=True)}", flush=True)
+
+
+def real_estate_photo_identity(customer: str, album_name: str, source: Path) -> dict[str, str]:
+    album_slug = slugify(album_name)
+    photo_id = f"{slugify(customer)}-{album_slug}-{slugify(source.stem)}"
+    return {
+        "albumSlug": album_slug,
+        "photoId": photo_id,
+        "mediaType": "video" if is_video(source) else "photo",
+        "relativePath": f"{album_name}/{source.name}",
+    }
 
 
 def scan_album_files(album_dir: Path) -> list[Path]:
@@ -383,6 +409,44 @@ def build_manifest(
 
     total_media_count = sum(len(sources) for _album_index, _album_dir, sources in album_sources)
     completed_media_count = 0
+    emit_import_event(
+        progress_json,
+        "QUEUE_START",
+        seen=total_media_count,
+        inspected=total_media_count,
+        queued=total_media_count,
+        alreadySelected=0,
+        processed=0,
+        active=0,
+        queueDepth=total_media_count,
+    )
+    queued_index = 0
+    for _album_index, album_dir, sources in album_sources:
+        for source in sources:
+            queued_index += 1
+            identity = real_estate_photo_identity(customer, album_dir.name, source)
+            emit_import_event(
+                progress_json,
+                "PHOTO",
+                index=queued_index,
+                photoId=identity["photoId"],
+                relativePath=identity["relativePath"],
+                sourcePath=str(source),
+                country=slugify(customer),
+                mediaType=identity["mediaType"],
+                status="queued",
+            )
+    emit_import_event(
+        progress_json,
+        "SCAN_DONE",
+        seen=total_media_count,
+        inspected=total_media_count,
+        queued=total_media_count,
+        alreadySelected=0,
+        processed=0,
+        active=0,
+        queueDepth=total_media_count,
+    )
     emit_progress(
         progress_json,
         "start",
@@ -417,10 +481,54 @@ def build_manifest(
         for photo_index, source in enumerate(sources, start=1):
             source_bytes = source.stat().st_size
             total_source_bytes += source_bytes
-            file_slug = slugify(source.stem)
-            photo_id = f"{slugify(customer)}-{album_slug}-{file_slug}"
-            default_title = f"{album_title} - {photo_index:02d}"
-            media_type = "video" if is_video(source) else "photo"
+            identity = real_estate_photo_identity(customer, album_name, source)
+            photo_id = identity["photoId"]
+            default_title = f"{photo_index:02d}"
+            media_type = identity["mediaType"]
+            emit_import_event(
+                progress_json,
+                "QUEUE_PROGRESS",
+                seen=total_media_count,
+                inspected=total_media_count,
+                queued=total_media_count,
+                alreadySelected=0,
+                processed=completed_media_count,
+                active=1,
+                queueDepth=max(0, total_media_count - completed_media_count - 1),
+            )
+            emit_import_event(
+                progress_json,
+                "PHOTO",
+                index=completed_media_count + 1,
+                photoId=photo_id,
+                relativePath=identity["relativePath"],
+                sourcePath=str(source),
+                country=slugify(customer),
+                mediaType=media_type,
+                status="running",
+            )
+            emit_import_event(
+                progress_json,
+                "STEP",
+                photoId=photo_id,
+                relativePath=identity["relativePath"],
+                sourcePath=str(source),
+                mediaType=media_type,
+                step="triplets_created",
+                status="skipped",
+                reason="Real Estate lane does not create private JPG triplets",
+            )
+            emit_import_event(
+                progress_json,
+                "STEP",
+                photoId=photo_id,
+                relativePath=identity["relativePath"],
+                sourcePath=str(source),
+                mediaType=media_type,
+                step="triplets_uploaded",
+                status="skipped",
+                reason="Real Estate lane does not upload private JPG triplets",
+            )
             video_info = video_metadata(source) if media_type == "video" else {}
             video_still_percent = 10
             preview_900_path = output_dir / "previews" / album_slug / f"{photo_id}_900.jpg"
@@ -457,6 +565,18 @@ def build_manifest(
             rendered_preview_1800 += 1 if preview_1800_render["rendered"] else 0
             total_preview_900_bytes += int(preview_900_render["bytes"])
             total_preview_1800_bytes += int(preview_1800_render["bytes"])
+            title_color = caption_color(preview_900_path) or ""
+            emit_import_event(
+                progress_json,
+                "STEP",
+                photoId=photo_id,
+                relativePath=identity["relativePath"],
+                sourcePath=str(source),
+                mediaType=media_type,
+                step="previews_created",
+                total=2,
+                completed=2,
+            )
 
             preview_900_rel = output_relative(preview_900_path, output_dir)
             preview_1800_rel = output_relative(preview_1800_path, output_dir)
@@ -480,6 +600,7 @@ def build_manifest(
                 "title": default_title,
                 "editableTitle": default_title,
                 "caption": album_title,
+                "captionColor": title_color,
                 "className": "real-estate-photo" + (" real-estate-video" if media_type == "video" else ""),
                 "full": source.name,
                 "gallerySrc": preview_900_rel,
@@ -553,6 +674,17 @@ def build_manifest(
                 },
             })
             completed_media_count += 1
+            emit_import_event(
+                progress_json,
+                "QUEUE_PROGRESS",
+                seen=total_media_count,
+                inspected=total_media_count,
+                queued=total_media_count,
+                alreadySelected=0,
+                processed=completed_media_count,
+                active=0,
+                queueDepth=max(0, total_media_count - completed_media_count),
+            )
             emit_progress(
                 progress_json,
                 "media",
@@ -595,10 +727,12 @@ def build_manifest(
             "title": gallery_title,
             "description": "Private real-estate selection gallery for project PDF and slideshow assembly.",
             "accent": "spain",
+            "deliverables": [],
             "photos": photos,
         },
         "albums": album_entries,
         "photos": photos,
+        "deliverables": [],
         "cloudPdfWorkflow": {
             "titleField": "editableTitle",
             "selectionStoreKey": f"photosbyelie-real-estate-liked-{gallery_key}",
@@ -607,14 +741,15 @@ def build_manifest(
             "imageField": "cloudPdfSource.imageUrl",
             "cloudImageKeyField": "cloudPdfSource.publicKey",
             "mode": "one-output-per-project",
-            "assembly": "Cloud service receives selected media ids grouped by apartment project plus edited titles, then generates one PDF or slideshow per project on demand. Videos keep source duration in slideshow output and use the 10% still frame in PDFs.",
+            "assembly": "Cloud service receives selected media ids grouped by apartment project plus edited titles, then generates one PDF or slideshow per project on demand. Slideshows choose one single-guitar cue at random, keep generated music at 0 dB, mix source video audio 20 dB lower, and carry music credit metadata for an end-card only when a track requires it; videos keep source duration in slideshow output and use the 10% still frame in PDFs.",
+            "slideshowMusic": load_slideshow_music_policy(repo_root),
             "batchManifest": {
                 "schema": PDF_BATCH_SCHEMA,
                 "batchIdFormat": "YYYYMMDDTHHMMSSZ",
                 "storageKeyPattern": f"real-estate/pdf-batches/{gallery_key}/{{batchId}}.json",
                 "retrievalOrder": "createdAt desc",
                 "projectFields": ["projectId", "projectTitle", "sortIndex", "items"],
-                "itemFields": ["photoId", "title", "sortIndex", "mediaType", "durationSeconds", "pdfTreatment", "pdfStillPercent", "slideshowDurationPolicy", "slideshowDurationSeconds", "sourceVideoPrivateKey", "sourceDurationSeconds", "projectId", "projectTitle", "projectIds"],
+                "itemFields": ["photoId", "title", "sortIndex", "mediaType", "durationSeconds", "pdfTreatment", "pdfStillPercent", "slideshowDurationPolicy", "slideshowDurationSeconds", "sourceVideoPrivateKey", "sourceDurationSeconds", "projectId", "projectTitle", "projectIds", "transition", "effect", "outputTreatment"],
                 "resumeBehavior": "Loading a prior batch manifest seeds the selected media IDs and edited titles by project; generating PDFs or slideshow plans from that draft writes a new timestamped batch manifest with sourceBatchId set to the prior batchId.",
                 "template": pdf_batch_manifest_template(
                     customer=customer,

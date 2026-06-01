@@ -5,13 +5,70 @@
   const pageParams = new URLSearchParams(window.location.search);
   const isLocalHost = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname);
   const pageVersion = pageParams.get("v");
-  const defaultLocalContext = `./tmp/real-estate-import/corine/app-context.js${pageVersion ? `?v=${encodeURIComponent(pageVersion)}` : ""}`;
-  const defaultPublicContext = `./assets/real-estate/corine/app-context.js${pageVersion ? `?v=${encodeURIComponent(pageVersion)}` : ""}`;
+  const contextVersion = pageVersion ? `?v=${encodeURIComponent(pageVersion)}` : "";
+  const knownClientContexts = new Set(["corine", "elie"]);
+  const requestedClientContext = String(pageParams.get("client") || "elie").trim().toLowerCase();
+  const defaultClientContext = knownClientContexts.has(requestedClientContext) ? requestedClientContext : "elie";
+  const defaultLocalContext = `./tmp/real-estate-import/${defaultClientContext}/app-context.js${contextVersion}`;
+  const defaultPublicContext = `./assets/real-estate/${defaultClientContext}/app-context.js${contextVersion}`;
   const contextParam = pageParams.get("context");
   const contextUrl = contextParam || (isLocalHost ? defaultLocalContext : defaultPublicContext);
   const densityKey = "photosbyelie-real-estate-card-density";
   const pdfFormatKey = "photosbyelie-real-estate-pdf-format";
   const slideshowPhotoSecondsKey = "photosbyelie-real-estate-slideshow-photo-seconds";
+  const slideshowOrientationKey = "photosbyelie-real-estate-slideshow-orientation";
+  const slideshowMusicCountryKey = "photosbyelie-real-estate-slideshow-music-country";
+  const watermarkKey = "photosbyelie-real-estate-watermark";
+  const watermarkTextKey = "photosbyelie-real-estate-watermark-text";
+
+  const clearLogoutFromHistory = () => {
+    if (!pageParams.has("logout")) return;
+    pageParams.delete("logout");
+    if (!window.history?.replaceState) return;
+    try {
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete("logout");
+      window.history.replaceState(window.history.state, "", `${cleanUrl.pathname}${cleanUrl.search}${cleanUrl.hash}`);
+    } catch {
+      // The current session is valid even if a browser blocks history cleanup.
+    }
+  };
+
+  const wizardStepSlugs = ["shoots", "photos", "titles", "order", "output"];
+  const wizardStepSlugFor = (step) => wizardStepSlugs[normalizeWizardStep(step)] || "shoots";
+  const wizardStepFromSlug = (value) => {
+    const normalized = String(value || "").trim().toLowerCase();
+    const index = wizardStepSlugs.indexOf(normalized);
+    return index >= 0 ? index : null;
+  };
+  const requestedWizardStepFromUrl = () => {
+    const fromParam = wizardStepFromSlug(pageParams.get("step"));
+    if (fromParam !== null) return fromParam;
+    const fromHash = wizardStepFromSlug(String(window.location.hash || "").replace(/^#/, "").replace(/^real-estate-/, ""));
+    return fromHash;
+  };
+  const replaceWizardStepInUrl = (step) => {
+    if (!window.history?.replaceState) return;
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set("step", wizardStepSlugFor(step));
+      url.hash = step === 4 ? "real-estate-output-title" : "real-estate-wizard";
+      window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+    } catch {
+      // Browsers can block history writes in unusual embedded contexts.
+    }
+  };
+  const previewReturnUrl = () => {
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("logout");
+      url.searchParams.set("step", "output");
+      url.hash = "real-estate-output-title";
+      return `${url.pathname}${url.search}${url.hash}`;
+    } catch {
+      return `./real-estate.html${contextVersion}#real-estate-output-title`;
+    }
+  };
 
   const elements = {
     login: app.querySelector("[data-re-login]"),
@@ -24,8 +81,13 @@
     loginStatus: app.querySelector("[data-re-login-status]"),
     customer: app.querySelector("[data-re-customer]"),
     title: app.querySelector("[data-re-title]"),
+    activeProductLabel: app.querySelector("[data-re-active-product-label]"),
+    activeProductName: app.querySelector("[data-re-active-product-name]"),
     description: app.querySelector("[data-re-description]"),
+    deliverablesPanel: app.querySelector("[data-re-deliverables-panel]"),
+    deliverablesList: app.querySelector("[data-re-deliverables-list]"),
     total: app.querySelector("[data-re-total]"),
+    videoTotal: app.querySelector("[data-re-video-total]"),
     albumTotal: app.querySelector("[data-re-album-total]"),
     selectedTotal: app.querySelector("[data-re-selected-total]"),
     albums: app.querySelector("[data-re-albums]"),
@@ -37,6 +99,9 @@
     selectedOnly: app.querySelector("[data-re-selected-only]"),
     pdfFormat: app.querySelector("[data-re-pdf-format]"),
     slideshowPhotoSeconds: app.querySelector("[data-re-slideshow-photo-seconds]"),
+    slideshowMusicCountry: app.querySelector("[data-re-slideshow-music-country]"),
+    watermarkEnabled: app.querySelector("[data-re-watermark-enabled]"),
+    watermarkText: app.querySelector("[data-re-watermark-text]"),
     status: app.querySelector("[data-re-status]"),
     draftCount: app.querySelector("[data-re-draft-count]"),
     draftList: app.querySelector("[data-re-draft-list]"),
@@ -57,6 +122,16 @@
     originalsCode: document.querySelector("[data-re-originals-code]"),
     originalsStatus: document.querySelector("[data-re-originals-status]"),
     actionBar: document.querySelector("[data-re-action-bar]"),
+    wizard: app.querySelector("[data-re-wizard]"),
+    wizardStatus: app.querySelector("[data-re-wizard-status]"),
+    outputPanel: app.querySelector("[data-re-output-panel]"),
+    outputPdf: app.querySelector("[data-re-output-pdf]"),
+    outputVideo: app.querySelector("[data-re-output-video]"),
+    outputProgress: app.querySelector("[data-re-output-progress]"),
+    outputProgressTitle: app.querySelector("[data-re-output-progress-title]"),
+    outputProgressEta: app.querySelector("[data-re-output-progress-eta]"),
+    outputProgressBar: app.querySelector("[data-re-output-progress-bar]"),
+    outputProgressDetail: app.querySelector("[data-re-output-progress-detail]"),
   };
 
   const state = {
@@ -66,18 +141,38 @@
     photosById: new Map(),
     albums: [],
     album: "all",
+    shootFilters: [],
+    detailMode: false,
+    wizardStep: 0,
     query: "",
     mediaType: "all",
     sort: "album",
     density: localStorage.getItem(densityKey) || "balanced",
     pdfFormat: localStorage.getItem(pdfFormatKey) || "a4",
     slideshowPhotoSeconds: Number(localStorage.getItem(slideshowPhotoSecondsKey)) || 4,
+    slideshowOrientation: localStorage.getItem(slideshowOrientationKey) || "landscape",
+    slideshowMusicCountry: localStorage.getItem(slideshowMusicCountryKey) || "auto",
+    slideshowMusicTracks: [],
+    slideshowMusicManifestLoaded: false,
+    slideshowMusicManifestError: "",
+    watermarkEnabled: localStorage.getItem(watermarkKey) !== "off",
+    watermarkText: localStorage.getItem(watermarkTextKey) || "",
     selectedOnly: false,
     selectedOrder: [],
     selectedIds: new Set(),
     editedTitles: {},
     projectAssignments: {},
+    activeDeliverableId: "",
+    activeDeliverableName: "",
+    activeDeliverableNameEdited: false,
+    editingDeliverableNameId: "",
+    localDeliverables: [],
+    cloudDeliverables: [],
+    cloudDeliverablesBusy: false,
+    cloudDeliverablesLoaded: false,
+    cloudDeliverablesError: "",
     activePhotoId: "",
+    lastRangePhotoId: "",
     dragDraftId: "",
     pointerDraftId: "",
     pointerDraftStartX: 0,
@@ -85,6 +180,18 @@
     pointerDraftActive: false,
     unlocked: false,
     pdfBusy: false,
+    outputBusy: false,
+    outputBusyKind: "",
+    outputProgressStartedAt: 0,
+    outputProgressHideTimer: 0,
+    videoExportCache: null,
+    videoExportCacheKey: "",
+    videoExportPromise: null,
+    videoExportAbort: null,
+    videoExportStatus: "idle",
+    videoExportError: "",
+    videoExportTimer: 0,
+    videoExportToken: 0,
     originalsBusy: false,
     originalsCredentialRequest: null,
     username: "",
@@ -98,6 +205,27 @@
     "\"": "&quot;",
     "'": "&#39;",
   }[char]));
+
+  const replaceTokens = (text, replacements = {}) => Object.entries(replacements).reduce(
+    (value, [name, replacement]) => value.replaceAll(`{${name}}`, String(replacement ?? "")),
+    String(text || "")
+  );
+
+  const t = (keyName, replacements = {}, fallback = "") => {
+    const value = window.photosByElieI18n?.t?.(keyName, replacements);
+    if (value && value !== keyName) return value;
+    return replaceTokens(fallback || keyName, replacements);
+  };
+
+  const reIcon = (name) => {
+    const paths = {
+      edit: "M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm2 1.58.63-2.52 8.43-8.43 1.06 1.06-8.43 8.43L5 18.83zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z",
+      trash: "M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM8 9h8v10H8V9zm7.5-5-1-1h-5l-1 1H5v2h14V4h-3.5z",
+    };
+    const path = paths[name];
+    if (!path) return window.photosByElieMdIcon?.(name) || "";
+    return `<svg class="md-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="${path}"></path></svg>`;
+  };
 
   const safeUrl = (value) => {
     const raw = String(value || "");
@@ -134,6 +262,12 @@
     const configured = normalizedWorkerBase(window.photosByElieMediaConfig?.checkoutWorkerBaseUrl || "");
     if (configured) return configured;
     return isLocalHost ? "http://localhost:8787" : "";
+  };
+
+  const workerMediaUrl = (key) => {
+    const cleanKey = String(key || "").replace(/^\/+/, "");
+    const baseUrl = workerBaseUrl();
+    return cleanKey && baseUrl ? `${baseUrl}/media/${cleanKey.split("/").map(encodeURIComponent).join("/")}` : "";
   };
 
   const loadScript = (src) => new Promise((resolve, reject) => {
@@ -175,13 +309,44 @@
     } catch {}
   };
 
+  const readStorageFlag = (key) => {
+    try {
+      if (JSON.parse(localStorage.getItem(key) || "false")) return true;
+    } catch {}
+    try {
+      if (JSON.parse(sessionStorage.getItem(key) || "false")) return true;
+    } catch {}
+    try {
+      return document.cookie
+        .split(";")
+        .map((item) => item.trim())
+        .includes(`${encodeURIComponent(key)}=1`);
+    } catch {
+      return false;
+    }
+  };
+
+  const writeStorageFlag = (key) => {
+    try {
+      localStorage.setItem(key, "true");
+    } catch {}
+    try {
+      sessionStorage.setItem(key, "true");
+    } catch {}
+    try {
+      document.cookie = `${encodeURIComponent(key)}=1; max-age=31536000; path=/; SameSite=Lax`;
+    } catch {}
+  };
+
   const workflow = () => state.payload?.cloudPdfWorkflow || {};
   const selectionStoreKey = () => workflow().selectionStoreKey || `photosbyelie-real-estate-liked-${state.gallery?.key || "default"}`;
   const titleStoreKey = () => workflow().titleStoreKey || `photosbyelie-real-estate-titles-${state.gallery?.key || "default"}`;
   const projectStoreKey = () => workflow().projectStoreKey || `photosbyelie-real-estate-projects-${state.gallery?.key || "default"}`;
   const authStoreKey = () => `photosbyelie-real-estate-session-${state.gallery?.key || "default"}`;
   const credentialSessionKey = () => `photosbyelie-real-estate-credentials-${state.gallery?.key || "default"}`;
+  const helpDismissedGlobalKey = "photosbyelie-real-estate-help-dismissed";
   const helpDismissedKey = () => `photosbyelie-real-estate-help-dismissed-${state.gallery?.key || "default"}`;
+  const localDeliverablesStoreKey = () => `photosbyelie-real-estate-products-${state.gallery?.key || "default"}`;
 
   const readSessionCredentials = () => {
     try {
@@ -231,13 +396,18 @@
 
   const showHelp = ({ force = false } = {}) => {
     if (!elements.helpDialog || !state.unlocked) return;
-    const alreadyDismissed = readJson(helpDismissedKey(), false);
+    const alreadyDismissed = readStorageFlag(helpDismissedGlobalKey) || readStorageFlag(helpDismissedKey());
     if (!force && (alreadyDismissed || state.selectedOrder.length > 0)) return;
+    if (!force) {
+      writeStorageFlag(helpDismissedGlobalKey);
+      writeStorageFlag(helpDismissedKey());
+    }
     openDialog(elements.helpDialog);
   };
 
   const dismissHelp = () => {
-    writeJson(helpDismissedKey(), true);
+    writeStorageFlag(helpDismissedGlobalKey);
+    writeStorageFlag(helpDismissedKey());
     closeDialog(elements.helpDialog);
   };
 
@@ -333,9 +503,10 @@
     );
   };
 
-  const writeSession = (username = "") => writeJson(authStoreKey(), {
+  const writeSession = (username = "", accessCode = "") => writeJson(authStoreKey(), {
     galleryKey: state.gallery?.key || "",
     username,
+    accessCode,
     unlocked: true,
     unlockedAt: new Date().toISOString(),
   });
@@ -354,14 +525,18 @@
       elements.loginCodeIcon.innerHTML = window.photosByElieMdIcon?.(name) || fallbackIcon(name);
     }
     if (elements.loginCodeToggle) {
-      elements.loginCodeToggle.setAttribute("aria-label", showing ? "Hide password" : "Show password");
+      elements.loginCodeToggle.setAttribute("aria-label", showing
+        ? t("re.login.hide_password", {}, "Hide password")
+        : t("re.login.show_password", {}, "Show password"));
       elements.loginCodeToggle.setAttribute("aria-pressed", String(showing));
     }
   };
 
   const syncAuthUi = () => {
     app.classList.toggle("is-locked", !state.unlocked);
-    if (elements.actionBar) elements.actionBar.hidden = !state.unlocked;
+    app.classList.toggle("is-shelf-mode", state.unlocked && !state.detailMode);
+    app.classList.toggle("is-detail-mode", state.unlocked && state.detailMode);
+    if (elements.actionBar) elements.actionBar.hidden = !state.unlocked || !state.detailMode;
     if (elements.loginStatus && state.unlocked) elements.loginStatus.textContent = "";
     if (!state.unlocked && elements.loginCode) {
       elements.loginCode.value = "";
@@ -436,8 +611,18 @@
     return `${minutes}:${String(remainder).padStart(2, "0")}`;
   };
 
-  const titleFor = (photo) => state.editedTitles[photo?.id] || photo?.editableTitle || photo?.title || photo?.id || "";
   const albumTitleFor = (photo) => photo?.albumTitle || photo?.caption || photo?.album || "Property";
+  const stripPropertyTitlePrefix = (photo, title) => {
+    const albumTitle = String(albumTitleFor(photo) || "").trim();
+    const rawTitle = String(title || "").trim();
+    if (!albumTitle || !rawTitle) return rawTitle;
+    const prefix = `${albumTitle} - `;
+    return rawTitle.toLowerCase().startsWith(prefix.toLowerCase())
+      ? rawTitle.slice(prefix.length).trim()
+      : rawTitle;
+  };
+  const defaultTitleFor = (photo) => stripPropertyTitlePrefix(photo, photo?.editableTitle || photo?.title || photo?.id || "");
+  const titleFor = (photo) => stripPropertyTitlePrefix(photo, state.editedTitles[photo?.id] || defaultTitleFor(photo));
   const projectIdFor = (photo) => photo?.albumSlug || "project";
   const projectTitleFor = (photo) => albumTitleFor(photo);
   const projectOptions = () => state.albums.map((album, index) => ({
@@ -473,7 +658,193 @@
   };
   const paperFormatFor = (key = state.pdfFormat) => paperFormats[key] || paperFormats.a4;
   const pdfWatermarkText = "\u00a9 2026 Photos By Elie";
-  const slideshowTransition = "basic-carousel";
+  const densityOptions = new Set(["compact", "balanced", "large"]);
+  const slideshowOrientationOptions = new Set(["landscape", "portrait"]);
+  const slideshowMusicCountries = Object.freeze(["Spain", "Portugal", "France", "USA"]);
+  const slideshowMusicCountryOptions = new Set(["auto", ...slideshowMusicCountries]);
+  const normalizeDensity = (value) => densityOptions.has(value) ? value : "balanced";
+  const normalizeSlideshowOrientation = (value) => slideshowOrientationOptions.has(value) ? value : "landscape";
+  const normalizeSlideshowMusicCountry = (value) => {
+    const raw = String(value || "").trim();
+    return slideshowMusicCountryOptions.has(raw) ? raw : "auto";
+  };
+  const activeWatermarkText = () => state.watermarkEnabled ? (String(state.watermarkText || "").trim() || pdfWatermarkText) : "";
+  const slideshowTransition = "subtle-centered-ken-burns";
+  const slideshowMusicManifestUrl = `./assets/music/slideshow-guitar/pixabay/pixabay-guitar-candidates.json${contextVersion}`;
+  const slideshowMusicGainDb = 0;
+  const sourceVideoAudioGainDb = -20;
+  const sourceVideoAudioLinearGain = 10 ** (sourceVideoAudioGainDb / 20);
+  const slideshowVideoFps = 30;
+  const slideshowVideoMimeTypes = Object.freeze([
+    "video/mp4;codecs=h264,aac",
+    "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
+    "video/mp4",
+    "video/webm;codecs=vp9,opus",
+    "video/webm;codecs=vp8,opus",
+    "video/webm",
+  ]);
+  const trackPublicKey = (track) => (
+    String(track?.r2Key || track?.publicKey || track?.src || "")
+      .replace(/^\.\//, "")
+      .replace(/^\/+/, "")
+  );
+  const absoluteTrackUrl = (track) => {
+    if (!track?.src) return "";
+    try {
+      return new URL(track.src, window.location.href).href;
+    } catch {
+      return track.src;
+    }
+  };
+  const workerTrackUrl = (track) => workerMediaUrl(trackPublicKey(track));
+  const withAbsoluteTrackUrl = (track) => {
+    if (!track) return null;
+    const publicKey = trackPublicKey(track);
+    return {
+      ...track,
+      publicKey,
+      absoluteSrc: isLocalHost ? absoluteTrackUrl(track) : (workerTrackUrl(track) || absoluteTrackUrl(track)),
+    };
+  };
+  const textIncludesCountry = (text, country) => {
+    const normalized = String(text || "").toLowerCase();
+    if (!normalized) return false;
+    const aliases = {
+      Spain: ["spain", "spanish", "espagne", "espana", "españa", "madrid", "barcelona", "valencia", "andalusia", "andalucia"],
+      Portugal: ["portugal", "portuguese", "lisbon", "lisboa", "porto", "sintra"],
+      France: ["france", "french", "paris", "albi", "rueil", "malmaison"],
+      USA: ["usa", "u.s.a", "united states", "america", "american", "new york", "california"],
+    }[country] || [country.toLowerCase()];
+    return aliases.some((alias) => normalized.includes(alias));
+  };
+  const inferSlideshowMusicCountry = (photos = activeSelectedPhotos()) => {
+    const text = [
+      state.gallery?.key,
+      state.gallery?.title,
+      state.payload?.customer?.name,
+      ...projectGroupsFor(photos, true).flatMap((project) => [project.projectId, project.projectTitle]),
+      ...photos.flatMap((photo) => [photo?.albumSlug, photo?.albumTitle, photo?.album, photo?.caption, photo?.country, photo?.collection]),
+    ].filter(Boolean).join(" ");
+    return slideshowMusicCountries.find((country) => textIncludesCountry(text, country)) || "Spain";
+  };
+  const activeSlideshowMusicCountry = (photos = activeSelectedPhotos()) => (
+    state.slideshowMusicCountry === "auto" ? inferSlideshowMusicCountry(photos) : normalizeSlideshowMusicCountry(state.slideshowMusicCountry)
+  );
+  const chooseSlideshowMusicTrack = (photos = activeSelectedPhotos()) => {
+    const country = activeSlideshowMusicCountry(photos);
+    const countryTracks = state.slideshowMusicTracks.filter((track) => track.country === country);
+    const fallbackTracks = state.slideshowMusicTracks.filter((track) => track.country === "Spain");
+    const pool = countryTracks.length ? countryTracks : (fallbackTracks.length ? fallbackTracks : state.slideshowMusicTracks);
+    const track = pool[Math.floor(Math.random() * pool.length)] || null;
+    return withAbsoluteTrackUrl(track ? { ...track, selectedCountry: country } : null);
+  };
+  const slideshowMusicCreditFor = (track) => {
+    if (!track) return null;
+    const text = String(track.creditText || [
+      track.title ? `Music: ${track.title}` : "",
+      track.author ? `by ${track.author}` : "",
+      track.license ? `(${track.license})` : "",
+    ].filter(Boolean).join(" ")).trim();
+    if (!text) return null;
+    return {
+      text,
+      required: Boolean(track.creditRequired),
+      title: track.title || "",
+      author: track.author || "",
+      source: track.source || "",
+      sourceUrl: track.sourceUrl || "",
+      license: track.license || "",
+      licenseUrl: track.licenseUrl || "",
+    };
+  };
+  const slideshowMusicCreditsFor = (track) => ({
+    renderPolicy: "append-end-card-when-required",
+    durationSeconds: 4,
+    entries: [slideshowMusicCreditFor(track)].filter(Boolean),
+  });
+  const slideshowRequiredCreditsFor = (manifest) => {
+    const audioPolicy = manifest?.slideshowSettings?.audioPolicy || {};
+    const entries = Array.isArray(audioPolicy.musicCredits?.entries) ? audioPolicy.musicCredits.entries : [];
+    return entries.filter((entry) => entry?.required && String(entry.text || "").trim());
+  };
+  const slideshowCreditDurationMsFor = (credits = []) => credits.length
+    ? Math.max(3000, Math.min(7000, 2400 + (credits.length * 900)))
+    : 0;
+  const slideshowAudioPolicyFor = (musicTrack = null) => ({
+    selection: "random-from-country-pixabay-pool",
+    requestedCountry: state.slideshowMusicCountry,
+    resolvedCountry: musicTrack?.selectedCountry || musicTrack?.country || "",
+    musicGainDb: slideshowMusicGainDb,
+    sourceVideoAudioGainDb,
+    sourceVideoAudioLinearGain,
+    musicTrack: musicTrack ? { ...musicTrack, musicGainDb: slideshowMusicGainDb } : null,
+    musicPool: state.slideshowMusicTracks.map((track) => ({ ...track })),
+    musicCredits: slideshowMusicCreditsFor(musicTrack),
+  });
+  const slideshowSettingsFor = (musicTrack = null) => ({
+    mode: "one-slideshow-per-project",
+    photoDurationSeconds: state.slideshowPhotoSeconds,
+    videoDurationPolicy: "preserve-source-duration",
+    outputOrientation: normalizeSlideshowOrientation(state.slideshowOrientation),
+    outputAspectRatio: normalizeSlideshowOrientation(state.slideshowOrientation) === "portrait" ? "9:16" : "16:9",
+    fitMode: "contain-with-blurred-backdrop",
+    playback: "once-no-loop",
+    musicFadeOutPolicy: "fade-over-final-slide",
+    musicFadeOutSeconds: state.slideshowPhotoSeconds,
+    overlayOrder: "watermark-and-counter-before-ken-burns",
+    watermarkPolicy: "importer-style-repeating-preview-plus-bottom",
+    watermarkEnabled: Boolean(state.watermarkEnabled),
+    watermarkText: activeWatermarkText(),
+    transition: slideshowTransition,
+    effects: "subtle-centered-ken-burns",
+    audioPolicy: slideshowAudioPolicyFor(musicTrack),
+  });
+  const normalizeSlideshowMusicTrack = (track) => {
+    const src = String(track?.src || "").trim();
+    if (!src) return null;
+    return {
+      ...track,
+      bpm: Number(track?.bpm) || 0,
+      country: slideshowMusicCountries.includes(track?.country) ? track.country : "Spain",
+      source: track?.source || "Pixabay",
+      license: track?.license || "Pixabay Content License",
+      licenseUrl: track?.licenseUrl || "https://pixabay.com/service/license-summary/",
+      creditRequired: true,
+      creditText: track?.creditText || `Music: "${track?.title || "Pixabay music"}" by ${track?.author || "Pixabay contributor"} via Pixabay`,
+      r2Key: trackPublicKey(track),
+    };
+  };
+  const loadSlideshowMusicManifest = async () => {
+    try {
+      const response = await fetch(slideshowMusicManifestUrl, { cache: "no-store" });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const manifest = await response.json();
+      const tracks = Array.isArray(manifest?.tracks)
+        ? manifest.tracks.map(normalizeSlideshowMusicTrack).filter(Boolean)
+        : [];
+      if (!tracks.length) throw new Error("No slideshow music tracks found");
+      state.slideshowMusicTracks = tracks;
+      state.slideshowMusicManifestLoaded = true;
+      state.slideshowMusicManifestError = "";
+      syncSlideshowMusicCountryControls();
+      invalidateVideoExportCache({ schedule: state.unlocked });
+    } catch (error) {
+      state.slideshowMusicTracks = [];
+      state.slideshowMusicManifestLoaded = false;
+      state.slideshowMusicManifestError = error?.message || "Could not load slideshow music";
+      syncSlideshowMusicCountryControls();
+      console.warn("Could not load Real Estate slideshow music manifest", error);
+    }
+  };
+  const kenBurnsEffects = Object.freeze([
+    "center-breathe-in",
+    "center-breathe-out",
+    "center-drift-left",
+    "center-drift-right",
+    "center-drift-up",
+    "center-drift-down",
+  ]);
+  const randomKenBurnsEffect = () => kenBurnsEffects[Math.floor(Math.random() * kenBurnsEffects.length)] || "center-breathe-in";
   const photoSearchText = (photo) => [
     titleFor(photo),
     photo?.title,
@@ -500,13 +871,43 @@
   const persistTitles = () => writeJson(titleStoreKey(), state.editedTitles);
   const persistProjectAssignments = () => writeJson(projectStoreKey(), state.projectAssignments);
 
+  const albumForSlug = (slug) => state.albums.find((album) => album.slug === slug);
+  const shootTitleFor = (slug) => {
+    const album = albumForSlug(slug);
+    return album?.displayTitle || album?.title || slug || "Shoot";
+  };
+  const normalizeShootFilters = (filters = state.shootFilters) => {
+    const known = new Set(state.albums.map((album) => album.slug));
+    return [...new Set((Array.isArray(filters) ? filters : []).filter((slug) => known.has(slug)))];
+  };
+  const selectedShootIds = () => {
+    const normalized = normalizeShootFilters();
+    return normalized;
+  };
+  const selectedShootSet = () => new Set(selectedShootIds());
+  const primaryShootId = () => selectedShootIds()[0] || defaultAlbumSlug();
+  const selectedPropertyTitle = () => {
+    const shoots = selectedShootIds();
+    if (shoots.length === 1) return shootTitleFor(shoots[0]);
+    if (shoots.length > 1) return `${shoots.length} shoots`;
+    return "selected shoots";
+  };
+
+  const updateAutoActiveDeliverableName = () => {
+    if (!state.detailMode || state.activeDeliverableId || state.activeDeliverableNameEdited) return;
+    state.activeDeliverableName = nextGeneratedDeliverableName("selection", new Date().toISOString(), "", selectedPropertyTitle());
+    syncActiveProductName();
+  };
+
   const filteredPhotos = () => {
     const query = state.query.trim().toLowerCase();
     const selectedRank = new Map(state.selectedOrder.map((id, index) => [id, index]));
+    const selectedOnly = state.selectedOnly || state.wizardStep === 2;
+    const shootSet = selectedShootSet();
     const photos = state.photos.filter((photo) => {
-      if (state.album !== "all" && photo.albumSlug !== state.album) return false;
+      if (state.wizardStep === 1 && (!shootSet.size || !shootSet.has(photo.albumSlug))) return false;
       if (state.mediaType !== "all" && mediaTypeFor(photo) !== state.mediaType) return false;
-      if (state.selectedOnly && !state.selectedIds.has(photo.id)) return false;
+      if (selectedOnly && !isSelectedForActiveProject(photo)) return false;
       if (query && !photoSearchText(photo).includes(query)) return false;
       return true;
     });
@@ -529,30 +930,141 @@
       elements.actionStatus.title = message;
     }
   };
+  const formatEta = (seconds) => {
+    const value = Math.max(0, Math.round(Number(seconds) || 0));
+    if (!value) return "almost done";
+    if (value < 60) return `${value}s left`;
+    const minutes = Math.floor(value / 60);
+    const remainder = value % 60;
+    return `${minutes}m ${String(remainder).padStart(2, "0")}s left`;
+  };
   const formatBytes = (bytes) => {
     const value = Number(bytes) || 0;
     if (value >= 1024 * 1024) return `${(value / 1024 / 1024).toFixed(1)} MB`;
     if (value >= 1024) return `${Math.round(value / 1024)} KB`;
     return `${value} bytes`;
   };
+  const deliverableActionNote = "Open or download on phone or desktop, then save or share with your device tools.";
+  const outputProgressEta = (current, total) => {
+    if (!state.outputProgressStartedAt || !current || !total || current >= total) return "";
+    const elapsed = (Date.now() - state.outputProgressStartedAt) / 1000;
+    const secondsPerStep = elapsed / current;
+    return formatEta(secondsPerStep * (total - current));
+  };
+  const updateOutputProgress = ({ title = "", detail = "", current = 0, total = 0, done = false } = {}) => {
+    if (!elements.outputProgress) return;
+    if (state.outputProgressHideTimer) {
+      window.clearTimeout(state.outputProgressHideTimer);
+      state.outputProgressHideTimer = 0;
+    }
+    elements.outputProgress.hidden = false;
+    const safeTotal = Math.max(0, Number(total) || 0);
+    const safeCurrent = Math.min(safeTotal || Number(current) || 0, Math.max(0, Number(current) || 0));
+    if (elements.outputProgressTitle) elements.outputProgressTitle.textContent = title || (done
+      ? t("re.progress.done", {}, "Done")
+      : t("re.progress.working", {}, "Working..."));
+    if (elements.outputProgressDetail) elements.outputProgressDetail.textContent = detail || "";
+    if (elements.outputProgressEta) elements.outputProgressEta.textContent = done ? "" : outputProgressEta(safeCurrent, safeTotal);
+    if (elements.outputProgressBar) {
+      if (safeTotal > 0) {
+        elements.outputProgressBar.max = 100;
+        elements.outputProgressBar.value = done ? 100 : Math.round((safeCurrent / safeTotal) * 100);
+      } else {
+        elements.outputProgressBar.removeAttribute("value");
+      }
+    }
+  };
+  const startOutputProgress = ({ title = t("re.progress.working", {}, "Working..."), detail = "", total = 0, kind = "output" } = {}) => {
+    state.outputBusy = true;
+    state.outputBusyKind = kind;
+    state.outputProgressStartedAt = Date.now();
+    updateOutputProgress({ title, detail, current: 0, total });
+    setStatus(detail || title);
+    syncFileActionLabels();
+  };
+  const completeOutputProgress = (detail = t("re.progress.done", {}, "Done")) => {
+    updateOutputProgress({ title: t("re.progress.done", {}, "Done"), detail, current: 1, total: 1, done: true });
+    state.outputBusy = false;
+    state.outputBusyKind = "";
+    state.outputProgressStartedAt = 0;
+    syncFileActionLabels();
+    state.outputProgressHideTimer = window.setTimeout(() => {
+      if (elements.outputProgress) elements.outputProgress.hidden = true;
+      state.outputProgressHideTimer = 0;
+    }, 4500);
+  };
+  const failOutputProgress = (detail = "Output failed") => {
+    updateOutputProgress({ title: t("re.progress.needs_attention", {}, "Needs attention"), detail, current: 0, total: 1 });
+    state.outputBusy = false;
+    state.outputBusyKind = "";
+    state.outputProgressStartedAt = 0;
+    syncFileActionLabels();
+  };
 
   const syncFileActionLabels = () => {
+    const outputBusy = state.outputBusy || state.pdfBusy;
+    const kind = state.outputBusyKind;
+    const noActiveSelection = activeSelectedPhotos().length === 0;
+    document.querySelectorAll("[data-re-open-outputs]").forEach((button) => {
+      button.textContent = outputBusy && kind === "outputs-view"
+        ? t("re.progress.working", {}, "Working...")
+        : "Preview all outputs";
+      button.title = "View selected PDF and video outputs in the browser, useful on mobile";
+      button.disabled = outputBusy || noActiveSelection;
+    });
+    document.querySelectorAll("[data-re-download-outputs]").forEach((button) => {
+      button.textContent = outputBusy && kind === "outputs-download"
+        ? t("re.output.download_everything_busy", {}, "Preparing everything...")
+        : t("re.output.download_everything", {}, "Download everything");
+      button.title = "Download selected true PDF and video files on phone or desktop";
+      button.disabled = outputBusy || noActiveSelection;
+    });
+    document.querySelectorAll("[data-re-view-pdf]").forEach((button) => {
+      button.textContent = outputBusy && kind === "pdf-view" ? "Building PDF..." : t("re.output.preview_pdf", {}, "Preview PDF");
+      button.title = "Preview project PDFs in a mobile-safe browser page; selected videos appear as stills from 10% in";
+      button.disabled = outputBusy || noActiveSelection;
+    });
     document.querySelectorAll("[data-re-download-pdf]").forEach((button) => {
-      button.textContent = "Download project PDFs";
-      button.title = "Browser will save project PDFs to your Downloads folder; selected videos appear as stills from 10% in";
+      button.textContent = outputBusy && kind === "pdf-download" ? "Building PDF..." : t("re.output.download_pdf", {}, "Download PDF");
+      button.title = "Download project PDFs; selected videos appear as stills from 10% in";
+      button.disabled = outputBusy || noActiveSelection;
+    });
+    document.querySelectorAll("[data-re-view-slideshow]").forEach((button) => {
+      button.textContent = outputBusy && kind === "video-view" ? "Preparing video..." : t("re.output.preview_video", {}, "Preview video");
+      button.title = "View a browser slideshow/video output with country-matched Pixabay music";
+      button.disabled = outputBusy || noActiveSelection;
     });
     document.querySelectorAll("[data-re-download-slideshow]").forEach((button) => {
-      button.textContent = "Share slideshow plan";
-      button.title = "Share a cloud-video slideshow plan; selected videos keep their full duration";
+      const recordable = canRecordSlideshowVideo();
+      const videoPreparing = state.videoExportStatus === "building";
+      const videoError = state.videoExportStatus === "error";
+      button.textContent = outputBusy && kind === "video-download"
+        ? "Preparing video..."
+        : videoPreparing
+          ? "Preparing video..."
+          : videoError
+            ? "Retry video"
+            : t("re.output.download_video", {}, "Download video");
+      button.title = recordable
+        ? (state.videoExportStatus === "ready"
+          ? "Download the prepared real video file"
+          : "Download a real video file with country-matched Pixabay music and a final-slide fade")
+        : "This browser cannot record a real video file from the slideshow";
+      if (state.videoExportError && videoError) button.title = state.videoExportError;
+      button.disabled = outputBusy || noActiveSelection || !recordable;
     });
     document.querySelectorAll("[data-re-download-batch]").forEach((button) => {
-      button.textContent = "Share selection table";
-      button.title = "Open or share an HTML table that can be loaded back later";
+      button.textContent = outputBusy && kind === "selection" ? "Saving..." : t("re.action.save_selection", {}, "Save selection");
+      button.title = "Save the current selection to the cloud shelf; file sharing remains available as a fallback";
+      button.disabled = outputBusy || noActiveSelection;
     });
     document.querySelectorAll("[data-re-download-originals]").forEach((button) => {
-      button.textContent = state.originalsBusy ? "Building originals ZIP..." : "Share originals ZIP";
+      button.textContent = state.originalsBusy ? "Building originals ZIP..." : t("re.output.share_originals", {}, "Share originals ZIP");
       button.title = "Prepare a ZIP of selected original source media from private delivery storage";
-      button.disabled = state.originalsBusy;
+      button.disabled = state.originalsBusy || outputBusy || selectedPhotos().length === 0;
+    });
+    document.querySelectorAll("[data-re-view-deliverable], [data-re-download-deliverable], [data-re-edit-deliverable]").forEach((button) => {
+      button.disabled = outputBusy && !button.matches("[data-re-edit-deliverable]");
     });
     document.querySelectorAll("[data-re-load-batch]").forEach((button) => {
       button.textContent = "Load selection file...";
@@ -560,37 +1072,770 @@
     });
   };
 
+  const isActiveProjectPhoto = (photo) => {
+    if (!photo) return false;
+    if (!state.album || state.album === "all") return true;
+    return photo.albumSlug === state.album || assignedProjectIdsFor(photo).includes(state.album);
+  };
+
+  const explicitProjectIdsFor = (photoId) => (
+    Array.isArray(state.projectAssignments[photoId])
+      ? state.projectAssignments[photoId].filter(Boolean)
+      : []
+  );
+
+  const selectedProjectIdsFor = (photo) => {
+    if (!photo || !state.selectedIds.has(photo.id)) return [];
+    const explicit = explicitProjectIdsFor(photo.id);
+    return explicit.length ? explicit : [projectIdFor(photo)];
+  };
+
+  const isSelectedForActiveProject = (photo) => state.selectedIds.has(photo?.id);
+
+  const activeSelectedPhotos = () => selectedPhotos();
+
+  const defaultAlbumSlug = () => state.albums[0]?.slug || "all";
+
+  const hasPropertyPicker = () => state.albums.length > 1;
+
+  const firstWizardStep = () => 0;
+
+  const normalizeWizardStep = (step) => Math.max(firstWizardStep(), Math.min(4, Number(step) || firstWizardStep()));
+
+  const activeProjectId = () => primaryShootId();
+
   const renderHero = () => {
     const { gallery, payload, photos } = state;
     const albums = state.albums;
-    if (elements.loginCustomer) elements.loginCustomer.textContent = "Private client access";
-    if (elements.customer) elements.customer.textContent = payload?.customer?.name ? `${payload.customer.name} review` : "Client review";
-    if (elements.title) elements.title.textContent = gallery?.title || "Real estate selection";
-    if (elements.description) elements.description.textContent = gallery?.description || "Private media review workspace for project PDFs and slideshow delivery.";
-    if (elements.total) elements.total.textContent = String(photos.length);
-    if (elements.total?.previousElementSibling) elements.total.previousElementSibling.textContent = "Media";
+    const products = producedDeliverables();
+    const videoCount = photos.filter(isVideo).length;
+    const stillCount = Math.max(0, photos.length - videoCount);
+    if (elements.loginCustomer) elements.loginCustomer.textContent = t("re.login.eyebrow", {}, "Private client access");
+    if (elements.customer) elements.customer.textContent = payload?.customer?.name
+      ? t("re.hero.customer_review", { name: payload.customer.name }, `${payload.customer.name} review`)
+      : t("re.hero.client_review", {}, "Client review");
+    if (elements.title) elements.title.textContent = gallery?.title || t("re.hero.title", {}, "Real estate selection");
+    if (elements.description) elements.description.textContent = gallery?.description || t("re.hero.description", {}, "Private media review workspace for project PDFs and slideshow delivery.");
+    if (elements.total) elements.total.textContent = String(stillCount);
+    if (elements.total?.previousElementSibling) elements.total.previousElementSibling.textContent = t("re.stats.stills", {}, "Stills");
+    if (elements.videoTotal) elements.videoTotal.textContent = String(videoCount);
     if (elements.albumTotal) elements.albumTotal.textContent = String(albums.length);
+    if (elements.selectedTotal) elements.selectedTotal.textContent = String(products.length);
+    if (elements.selectedTotal?.previousElementSibling) elements.selectedTotal.previousElementSibling.textContent = t("re.stats.selections", {}, "Selections");
+    syncActiveProductName();
+    syncCreateProductButtons(products);
+    renderProducedDeliverables();
   };
 
-  const albumSelectedCount = (slug) => state.photos
-    .filter((photo) => photo.albumSlug === slug && state.selectedIds.has(photo.id))
+  const absoluteDeliverableUrl = (value) => {
+    const raw = String(value || "").trim();
+    if (!raw) return "";
+    try {
+      return new URL(raw, window.location.href).href;
+    } catch {
+      return raw;
+    }
+  };
+
+  const cloudCredentialSnapshot = () => {
+    const savedCredentials = readSessionCredentials();
+    const savedSession = readJson(authStoreKey(), {});
+    return {
+      username: String(
+        state.username
+        || savedCredentials.username
+        || savedSession.username
+        || state.payload?.customer?.username
+        || state.payload?.customer?.name
+        || ""
+      ),
+      accessCode: String(
+        state.accessCode
+        || savedCredentials.accessCode
+        || savedSession.accessCode
+        || ""
+      ),
+    };
+  };
+
+  const deliverableRowsFor = (rows, source) => (Array.isArray(rows) ? rows : []).map((row) => ({
+    ...(row && typeof row === "object" ? row : {}),
+    __deliverableSource: source,
+  }));
+
+  const rawDeliverables = () => [
+    ...deliverableRowsFor(state.cloudDeliverables, "cloud"),
+    ...deliverableRowsFor(state.localDeliverables, "local"),
+    ...deliverableRowsFor(state.payload?.deliverables, "payload"),
+    ...deliverableRowsFor(state.gallery?.deliverables, "gallery"),
+  ];
+
+  const normalizeDeliverable = (row, index) => {
+    const type = String(row?.type || row?.format || row?.kind || "file").toLowerCase();
+    const ready = !row?.status || ["ready", "complete", "completed", "published"].includes(String(row.status).toLowerCase());
+    const viewUrl = absoluteDeliverableUrl(row?.viewUrl || row?.watchUrl || row?.url || row?.href);
+    const downloadUrl = absoluteDeliverableUrl(row?.downloadUrl || row?.fileUrl || row?.url || row?.href);
+    const editUrl = absoluteDeliverableUrl(row?.editUrl || row?.batchUrl || row?.manifestUrl || row?.selectionUrl || row?.sourceBatchUrl);
+    return {
+      id: String(row?.id || row?.deliverableId || `${type}-${index + 1}`),
+      type,
+      label: type === "pdf" ? "PDF" : type === "selection" ? "Selection" : type === "video" || type === "mp4" ? "Video" : "File",
+      title: String(row?.title || row?.projectTitle || row?.name || `Deliverable ${index + 1}`),
+      createdAt: String(row?.createdAt || row?.generatedAt || row?.updatedAt || ""),
+      bytes: Number(row?.bytes || row?.size || 0) || 0,
+      status: ready ? "ready" : String(row?.status || "pending"),
+      viewUrl,
+      downloadUrl,
+      editUrl,
+      batch: row?.batch || row?.manifest || row?.selection || null,
+      filename: String(row?.filename || row?.fileName || ""),
+      source: String(row?.__deliverableSource || ""),
+      raw: row,
+    };
+  };
+
+  const hashString = (value) => {
+    let hash = 5381;
+    const text = String(value || "");
+    for (let index = 0; index < text.length; index += 1) {
+      hash = ((hash << 5) + hash) ^ text.charCodeAt(index);
+    }
+    return (hash >>> 0).toString(36);
+  };
+
+  const batchProductFingerprint = (batch) => {
+    const projectRows = Array.isArray(batch?.projects)
+      ? batch.projects.flatMap((project, projectIndex) => (
+        (Array.isArray(project?.items) ? project.items : []).map((item, itemIndex) => [
+          project?.projectId || "",
+          project?.projectTitle || "",
+          Number(project?.sortIndex) || projectIndex + 1,
+          item?.photoId || "",
+          Number(item?.sortIndex) || itemIndex + 1,
+          item?.title || "",
+        ].join(":"))
+      ))
+      : [];
+    const itemRows = projectRows.length
+      ? projectRows
+      : (Array.isArray(batch?.items) ? batch.items.map((item, itemIndex) => [
+        item?.projectId || "",
+        item?.projectTitle || "",
+        item?.photoId || "",
+        Number(item?.sortIndex) || itemIndex + 1,
+        item?.title || "",
+      ].join(":")) : []);
+    return itemRows.length ? itemRows.join("|") : String(batch?.batchId || "");
+  };
+
+  const deliverableProductGroupKey = (item) => {
+    if (item?.batch) return `batch:${state.gallery?.key || ""}:${batchProductFingerprint(item.batch)}`;
+    return `file:${item?.source || ""}:${item?.editUrl || item?.viewUrl || item?.downloadUrl || item?.id || ""}`;
+  };
+
+  const deliverableFormatCode = (type) => {
+    const normalized = String(type || "").toLowerCase();
+    if (normalized === "pdf") return "pdf";
+    if (normalized === "video" || normalized === "mp4" || normalized === "slideshow") return "video";
+    return "selection";
+  };
+
+  const deliverableFormatsLabel = (formats = []) => {
+    const ordered = ["pdf", "video", "selection"].filter((format) => formats.includes(format));
+    if (ordered.includes("pdf") && ordered.includes("video")) return "PDF + Video";
+    if (ordered.includes("pdf")) return "PDF";
+    if (ordered.includes("video")) return "Video";
+    return "PDF + Video";
+  };
+
+  const producedDeliverables = () => {
+    const seen = new Set();
+    const rows = rawDeliverables()
+      .map(normalizeDeliverable)
+      .filter((item) => item.title || item.viewUrl || item.downloadUrl || item.editUrl || item.batch)
+      .filter((item) => {
+        const key = item.id || `${item.type}:${item.createdAt}:${item.title}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    const groups = new Map();
+    rows.forEach((item) => {
+      const groupKey = deliverableProductGroupKey(item);
+      if (!groups.has(groupKey)) {
+        groups.set(groupKey, {
+          id: `product-${hashString(groupKey)}`,
+          key: groupKey,
+          rows: [],
+          formats: new Set(),
+          relatedIds: [],
+        });
+      }
+      const group = groups.get(groupKey);
+      group.rows.push(item);
+      group.formats.add(deliverableFormatCode(item.type));
+      group.relatedIds.push(item.id);
+    });
+    return [...groups.values()].map((group) => {
+      const rowsByPreference = [...group.rows].sort((a, b) => {
+        const aType = deliverableFormatCode(a.type) === "selection" ? 0 : 1;
+        const bType = deliverableFormatCode(b.type) === "selection" ? 0 : 1;
+        const aSource = a.source === "cloud" ? 0 : a.source === "local" ? 1 : 2;
+        const bSource = b.source === "cloud" ? 0 : b.source === "local" ? 1 : 2;
+        return aType - bType || aSource - bSource;
+      });
+      const primary = rowsByPreference[0] || group.rows[0];
+      const latest = [...group.rows].sort((a, b) => validDateFor(b.createdAt).getTime() - validDateFor(a.createdAt).getTime())[0] || primary;
+      const batchSource = rowsByPreference.find((item) => item.batch)?.batch || primary?.batch || null;
+      const formats = [...group.formats];
+      const source = group.rows.some((item) => item.source === "cloud")
+        ? "cloud"
+        : group.rows.some((item) => item.source === "local")
+          ? "local"
+          : (primary?.source || "");
+      return {
+        ...primary,
+        id: group.id,
+        type: "product",
+        label: deliverableFormatsLabel(formats),
+        title: String(rowsByPreference.find((item) => !needsGeneratedDeliverableName(item))?.title || primary?.title || "").trim(),
+        createdAt: latest?.createdAt || primary?.createdAt || "",
+        bytes: group.rows.reduce((sum, item) => sum + (Number(item.bytes) || 0), 0),
+        batch: batchSource,
+        source,
+        formats,
+        relatedIds: group.relatedIds.filter(Boolean),
+        records: group.rows,
+      };
+    });
+  };
+
+  const cloneBatch = (batch) => {
+    try {
+      return JSON.parse(JSON.stringify(batch));
+    } catch {
+      return batch;
+    }
+  };
+
+  const deliverableTypeCode = (type) => {
+    const normalized = String(type || "").toLowerCase();
+    if (normalized === "pdf") return "PDF";
+    if (normalized === "selection" || normalized === "product") return "SELECTION";
+    return "VIDEO";
+  };
+
+  const validDateFor = (value) => {
+    const date = value ? new Date(value) : new Date();
+    return Number.isNaN(date.getTime()) ? new Date() : date;
+  };
+
+  const dateCodeFor = (value) => {
+    const date = validDateFor(value);
+    return [
+      String(date.getFullYear()).slice(-2),
+      String(date.getMonth() + 1).padStart(2, "0"),
+      String(date.getDate()).padStart(2, "0"),
+    ].join("");
+  };
+
+  const deliverableProjectTitleFor = (item) => {
+    const batch = item?.batch || item;
+    const projectTitles = Array.isArray(batch?.projects)
+      ? batch.projects.map((project) => String(project?.projectTitle || "").trim()).filter(Boolean)
+      : [];
+    if (projectTitles.length === 1) return projectTitles[0];
+    if (projectTitles.length > 1) return "Multiple";
+    const itemProjectTitle = Array.isArray(batch?.items)
+      ? batch.items.map((row) => String(row?.projectTitle || "").trim()).find(Boolean)
+      : "";
+    return String(item?.projectTitle || batch?.projectTitle || itemProjectTitle || "").trim();
+  };
+
+  const deliverableProjectCodeFor = (item, fallback = "") => (
+    String(deliverableProjectTitleFor(item) || fallback || "Selection")
+      .trim()
+      .replace(/\s+/g, "-")
+      .replace(/[^A-Za-z0-9-]+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      || "Selection"
+  );
+  const escapeRegExp = (value) => String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const generatedDeliverableStemFor = (item, fallback = "") => (
+    `${deliverableProjectCodeFor(item, fallback)}-${dateCodeFor(item?.createdAt || item?.batch?.createdAt)}`
+  );
+  const generatedDeliverableSequencePatternFor = (stem) => (
+    new RegExp(`^${escapeRegExp(stem)}(?:-(?:PDF|VIDEO|SELECTION))?-(\\d+)$`, "i")
+  );
+
+  const isLegacyAutoDeliverableTitle = (title) => {
+    const value = String(title || "").trim();
+    return /^(PDF|Video):\s*/i.test(value)
+      || /^\d{6}-(PDF|VIDEO|SELECTION)-\d+$/i.test(value)
+      || /^[A-Za-z0-9-]+-\d{6}-(PDF|VIDEO|SELECTION)-\d+$/i.test(value)
+      || /^[A-Za-z0-9-]+-\d{6}-\d+$/i.test(value);
+  };
+
+  const needsGeneratedDeliverableName = (item) => {
+    const title = String(item?.title || "").trim();
+    return !title || isLegacyAutoDeliverableTitle(title);
+  };
+
+  const generatedDeliverableNamesFor = (items) => {
+    const names = new Map();
+    const groups = new Map();
+    items.forEach((item) => {
+      if (!item?.id || !needsGeneratedDeliverableName(item)) return;
+      const key = generatedDeliverableStemFor(item);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(item);
+    });
+    groups.forEach((group, stem) => {
+      const pattern = generatedDeliverableSequencePatternFor(stem);
+      const used = new Set(items
+        .filter((item) => !needsGeneratedDeliverableName(item))
+        .map((item) => String(item.title || "").trim().match(pattern)?.[1])
+        .filter(Boolean)
+        .map(Number));
+      let next = 1;
+      [...group].sort((a, b) => (
+        validDateFor(a.createdAt || a.batch?.createdAt).getTime() - validDateFor(b.createdAt || b.batch?.createdAt).getTime()
+        || String(a.id).localeCompare(String(b.id))
+      )).forEach((item) => {
+        while (used.has(next)) next += 1;
+        used.add(next);
+        names.set(item.id, `${generatedDeliverableStemFor(item)}-${next}`);
+      });
+    });
+    return names;
+  };
+
+  const displayDeliverableTitleFor = (item, generatedNames = new Map()) => (
+    needsGeneratedDeliverableName(item)
+      ? generatedNames.get(item.id) || `${generatedDeliverableStemFor(item)}-1`
+      : String(item?.title || "").trim()
+  );
+  const deliverableMediaSummaryFor = (item) => {
+    const batch = item?.batch || {};
+    const explicit = batch.mediaSummary || item?.mediaSummary || {};
+    const photos = Number(explicit.photos ?? explicit.photoCount);
+    const videos = Number(explicit.videos ?? explicit.videoCount);
+    if (Number.isFinite(photos) || Number.isFinite(videos)) {
+      return {
+        photos: Number.isFinite(photos) ? Math.max(0, photos) : 0,
+        videos: Number.isFinite(videos) ? Math.max(0, videos) : 0,
+      };
+    }
+    const rows = Array.isArray(batch.items) ? batch.items : [];
+    return rows.reduce((summary, row) => {
+      if (String(row?.mediaType || "").toLowerCase() === "video") summary.videos += 1;
+      else summary.photos += 1;
+      return summary;
+    }, { photos: 0, videos: 0 });
+  };
+  const pluralizeMediaCount = (count, singular, plural = `${singular}s`) => (
+    `${count} ${count === 1 ? singular : plural}`
+  );
+  const deliverableMediaSummaryLabelFor = (item) => {
+    const summary = deliverableMediaSummaryFor(item);
+    const parts = [];
+    if (summary.photos) parts.push(pluralizeMediaCount(summary.photos, "photo"));
+    if (summary.videos) parts.push(pluralizeMediaCount(summary.videos, "video"));
+    return parts.join(" + ");
+  };
+
+  const nextGeneratedDeliverableName = (type, createdAt, excludeId = "", projectTitle = "") => {
+    const existingItems = producedDeliverables().filter((item) => item.id !== excludeId);
+    const generatedNames = generatedDeliverableNamesFor(existingItems);
+    const stem = generatedDeliverableStemFor({ type, createdAt, projectTitle }, selectedPropertyTitle());
+    const pattern = generatedDeliverableSequencePatternFor(stem);
+    const used = new Set(existingItems
+      .map((item) => displayDeliverableTitleFor(item, generatedNames).match(pattern)?.[1])
+      .filter(Boolean)
+      .map(Number));
+    let next = 1;
+    while (used.has(next)) next += 1;
+    return `${stem}-${next}`;
+  };
+
+  const activeDeliverableName = () => {
+    if (!state.activeDeliverableId) return state.activeDeliverableName || nextGeneratedDeliverableName("selection", new Date().toISOString(), "", selectedPropertyTitle());
+    const items = producedDeliverables();
+    const item = items.find((deliverable) => deliverable.id === state.activeDeliverableId);
+    if (!item) return state.activeDeliverableName || t("re.selection.label", {}, "Selection");
+    const generatedNames = generatedDeliverableNamesFor(items);
+    return displayDeliverableTitleFor(item, generatedNames);
+  };
+
+  const syncActiveProductName = () => {
+    if (elements.activeProductLabel) elements.activeProductLabel.hidden = !state.detailMode;
+    if (elements.activeProductName && document.activeElement !== elements.activeProductName) {
+      elements.activeProductName.value = activeDeliverableName();
+    }
+  };
+
+  const syncCreateProductButtons = (products = producedDeliverables()) => {
+    document.querySelectorAll("[data-re-create-product]").forEach((button) => {
+      const shelfButton = button.matches("[data-re-shelf-create-product]");
+      button.hidden = shelfButton ? products.length === 0 : state.detailMode || products.length > 0;
+      button.textContent = products.length === 0
+        ? t("re.cta.first_selection", {}, "Create your first selection")
+        : t("re.cta.create_selection", {}, "+ Create new selection");
+    });
+  };
+
+  const credentialsForCloudDeliverables = async ({ promptIfMissing = false } = {}) => {
+    const credentials = cloudCredentialSnapshot();
+    if (!credentials.accessCode && promptIfMissing) {
+      credentials.accessCode = await promptOriginalsPassword("Enter the client password to sync products saved in the cloud.");
+    }
+    if (!credentials.username || !credentials.accessCode) return null;
+    writeSessionCredentials(credentials.username, credentials.accessCode);
+    if (state.unlocked) writeSession(credentials.username, credentials.accessCode);
+    return credentials;
+  };
+
+  const fetchCloudDeliverables = async ({ promptIfMissing = false, quiet = true } = {}) => {
+    const baseUrl = workerBaseUrl();
+    if (!state.unlocked || !state.gallery?.key || !baseUrl) return [];
+    const credentials = await credentialsForCloudDeliverables({ promptIfMissing });
+    if (!credentials) {
+      renderProducedDeliverables();
+      if (!quiet && promptIfMissing) setStatus("Cloud products need the client password to sync.");
+      return [];
+    }
+    state.cloudDeliverablesBusy = true;
+    state.cloudDeliverablesError = "";
+    renderProducedDeliverables();
+    try {
+      const response = await fetch(`${baseUrl}/real-estate/deliverables/list`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          galleryKey: state.gallery?.key || "",
+          username: credentials.username,
+          accessCode: credentials.accessCode,
+          limit: 50,
+        }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(body?.error?.message || "Cloud products could not be loaded.");
+      }
+      state.cloudDeliverables = Array.isArray(body.deliverables) ? body.deliverables : [];
+      state.cloudDeliverablesLoaded = true;
+      if (!quiet) {
+        setStatus(`Synced ${state.cloudDeliverables.length} saved product${state.cloudDeliverables.length === 1 ? "" : "s"} from the cloud`);
+      }
+      return state.cloudDeliverables;
+    } catch (error) {
+      state.cloudDeliverablesError = error?.message || "Cloud products could not be loaded.";
+      if (!quiet) setStatus(state.cloudDeliverablesError);
+      throw error;
+    } finally {
+      state.cloudDeliverablesBusy = false;
+      renderProducedDeliverables();
+    }
+  };
+
+  const saveCloudDeliverable = async (record) => {
+    const baseUrl = workerBaseUrl();
+    if (!record?.id || !state.gallery?.key || !baseUrl || !state.unlocked) return null;
+    const credentials = await credentialsForCloudDeliverables({ promptIfMissing: false });
+    if (!credentials) return null;
+    const response = await fetch(`${baseUrl}/real-estate/deliverables`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        galleryKey: state.gallery?.key || "",
+        username: credentials.username,
+        accessCode: credentials.accessCode,
+        deliverable: record,
+      }),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(body?.error?.message || "Cloud product could not be saved.");
+    }
+    const saved = body.deliverable || record;
+    const existing = Array.isArray(state.cloudDeliverables) ? state.cloudDeliverables : [];
+    state.cloudDeliverables = [saved, ...existing.filter((item) => item?.id !== saved.id)].slice(0, 50);
+    state.cloudDeliverablesLoaded = true;
+    state.cloudDeliverablesError = "";
+    renderProducedDeliverables();
+    return saved;
+  };
+
+  const relatedDeliverableIdsFor = (deliverableId) => {
+    const item = producedDeliverables().find((deliverable) => deliverable.id === deliverableId);
+    return new Set([deliverableId, ...(Array.isArray(item?.relatedIds) ? item.relatedIds : [])].filter(Boolean).map(String));
+  };
+
+  const removeLocalDeliverable = (deliverableId) => {
+    const ids = relatedDeliverableIdsFor(deliverableId);
+    const before = Array.isArray(state.localDeliverables) ? state.localDeliverables : [];
+    state.localDeliverables = before.filter((item) => !ids.has(String(item?.id || "")));
+    writeJson(localDeliverablesStoreKey(), state.localDeliverables);
+  };
+
+  const removeCloudDeliverableState = (deliverableId) => {
+    const ids = relatedDeliverableIdsFor(deliverableId);
+    const before = Array.isArray(state.cloudDeliverables) ? state.cloudDeliverables : [];
+    state.cloudDeliverables = before.filter((item) => !ids.has(String(item?.id || "")));
+  };
+
+  const deleteCloudDeliverable = async (deliverableId, { promptIfMissing = false } = {}) => {
+    const baseUrl = workerBaseUrl();
+    if (!state.gallery?.key || !baseUrl || !state.unlocked) {
+      if (promptIfMissing) throw new Error("Cloud products are unavailable.");
+      return null;
+    }
+    const credentials = await credentialsForCloudDeliverables({ promptIfMissing });
+    if (!credentials) {
+      if (promptIfMissing) throw new Error("Client password is needed to delete this cloud product.");
+      return null;
+    }
+    const response = await fetch(`${baseUrl}/real-estate/deliverables/delete`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        galleryKey: state.gallery?.key || "",
+        username: credentials.username,
+        accessCode: credentials.accessCode,
+        id: deliverableId,
+      }),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(body?.error?.message || "Cloud product could not be deleted.");
+    }
+    return body;
+  };
+
+  const deleteProducedDeliverable = async (deliverableId) => {
+    if (!requireUnlocked()) return;
+    const items = producedDeliverables();
+    const generatedNames = generatedDeliverableNamesFor(items);
+    const item = items.find((deliverable) => deliverable.id === deliverableId);
+    if (!item || !["cloud", "local"].includes(item.source)) return;
+    const title = displayDeliverableTitleFor(item, generatedNames);
+    const confirmed = window.confirm(`Delete ${title || "this product"} from saved products?`);
+    if (!confirmed) return;
+
+    setStatus(`Deleting ${title || "product"}...`);
+    const cloudRecordIds = (Array.isArray(item.records) ? item.records : [item])
+      .filter((record) => record?.source === "cloud")
+      .map((record) => String(record.id || ""))
+      .filter(Boolean);
+    if (cloudRecordIds.length) {
+      for (const cloudId of cloudRecordIds) {
+        await deleteCloudDeliverable(cloudId, { promptIfMissing: true });
+      }
+    } else {
+      (Array.isArray(item.relatedIds) ? item.relatedIds : [deliverableId]).forEach((relatedId) => {
+        deleteCloudDeliverable(relatedId, { promptIfMissing: false }).catch((error) => {
+          state.cloudDeliverablesError = error?.message || "Cloud product could not be deleted.";
+          renderProducedDeliverables();
+        });
+      });
+    }
+    removeLocalDeliverable(deliverableId);
+    removeCloudDeliverableState(deliverableId);
+    renderProducedDeliverables();
+    setStatus(`Deleted ${title || "product"} from saved products.`);
+  };
+
+  const productIdForRecord = (record) => {
+    const item = producedDeliverables().find((deliverable) => (
+      Array.isArray(deliverable.relatedIds) && deliverable.relatedIds.includes(record?.id)
+    ));
+    return item?.id || record?.id || "";
+  };
+
+  const saveLocalDeliverable = ({ type = "file", batch = null, filename = "", bytes = 0 } = {}) => {
+    if (!batch?.batchId) return null;
+    const normalizedType = String(type || "file").toLowerCase();
+    const id = `local-${normalizedType}-${batch.batchId}`;
+    const existing = Array.isArray(state.localDeliverables) ? state.localDeliverables : [];
+    const existingRecord = existing.find((item) => item?.id === id);
+    const createdAt = batch.createdAt || new Date().toISOString();
+    const projectTitle = deliverableProjectTitleFor({ batch }) || selectedPropertyTitle();
+    const record = {
+      id,
+      type: normalizedType,
+      title: String(existingRecord?.title || "").trim()
+        || (normalizedType === "selection" ? String(state.activeDeliverableName || "").trim() : "")
+        || nextGeneratedDeliverableName(normalizedType, createdAt, id, projectTitle),
+      createdAt,
+      status: "ready",
+      bytes: Number(bytes) || 0,
+      filename: String(filename || ""),
+      batch: cloneBatch(batch),
+    };
+    state.localDeliverables = [record, ...existing.filter((item) => item?.id !== record.id)].slice(0, 25);
+    const productId = productIdForRecord(record);
+    if (normalizedType === "selection" && !state.activeDeliverableId) {
+      state.activeDeliverableId = productId || record.id;
+      state.activeDeliverableName = record.title;
+    }
+    writeJson(localDeliverablesStoreKey(), state.localDeliverables);
+    renderProducedDeliverables();
+    syncActiveProductName();
+    saveCloudDeliverable(record).catch((error) => {
+      state.cloudDeliverablesError = error?.message || "Cloud product could not be saved.";
+      renderProducedDeliverables();
+    });
+    return record;
+  };
+
+  const saveSelectionBeforeOutput = (batch) => {
+    if (!batch?.batchId) return null;
+    const filename = `${state.gallery?.key || "real-estate"}-${batch.batchId}-selection.html`;
+    return saveLocalDeliverable({ type: "selection", batch, filename });
+  };
+
+  const renameProducedDeliverable = async (deliverableId, name) => {
+    if (!requireUnlocked()) return;
+    const items = producedDeliverables();
+    const generatedNames = generatedDeliverableNamesFor(items);
+    const item = items.find((deliverable) => deliverable.id === deliverableId);
+    if (!item || !["cloud", "local"].includes(item.source)) return;
+    const fallback = displayDeliverableTitleFor(item, generatedNames);
+    const title = String(name || "").trim() || fallback;
+    const ids = relatedDeliverableIdsFor(deliverableId);
+    const updateRecord = (record) => (
+      ids.has(String(record?.id || ""))
+        ? { ...record, title }
+        : record
+    );
+    state.localDeliverables = (Array.isArray(state.localDeliverables) ? state.localDeliverables : []).map(updateRecord);
+    state.cloudDeliverables = (Array.isArray(state.cloudDeliverables) ? state.cloudDeliverables : []).map(updateRecord);
+    writeJson(localDeliverablesStoreKey(), state.localDeliverables);
+    if (state.activeDeliverableId === deliverableId || ids.has(state.activeDeliverableId)) {
+      state.activeDeliverableId = deliverableId;
+      state.activeDeliverableName = title;
+      state.activeDeliverableNameEdited = true;
+    }
+    state.editingDeliverableNameId = "";
+    renderProducedDeliverables();
+    syncActiveProductName();
+    setStatus(`Renamed product to ${title}.`);
+    const updated = [...state.cloudDeliverables, ...state.localDeliverables]
+      .filter((record) => ids.has(String(record?.id || "")));
+    updated.forEach((record) => {
+      saveCloudDeliverable(record).catch((error) => {
+        state.cloudDeliverablesError = error?.message || "Cloud product name could not be saved.";
+        renderProducedDeliverables();
+      });
+    });
+  };
+
+  const beginDeliverableNameEdit = (deliverableId) => {
+    state.editingDeliverableNameId = String(deliverableId || "");
+    renderProducedDeliverables();
+    window.setTimeout(() => {
+      const input = elements.deliverablesList?.querySelector(`[data-re-rename-deliverable="${attributeSelectorValue(deliverableId)}"]`);
+      input?.focus();
+      input?.select?.();
+    }, 0);
+  };
+
+  const renameActiveProduct = async (name) => {
+    const title = String(name || "").trim() || activeDeliverableName();
+    state.activeDeliverableName = title;
+    state.activeDeliverableNameEdited = true;
+    if (state.activeDeliverableId) {
+      await renameProducedDeliverable(state.activeDeliverableId, title);
+    } else {
+      syncActiveProductName();
+    }
+  };
+
+  const renderProducedDeliverables = () => {
+    if (!elements.deliverablesPanel || !elements.deliverablesList) return;
+    const items = producedDeliverables();
+    if (elements.selectedTotal) elements.selectedTotal.textContent = String(items.length);
+    elements.deliverablesPanel.hidden = items.length === 0;
+    syncCreateProductButtons(items);
+    if (!items.length) {
+      elements.deliverablesList.innerHTML = "";
+      syncFileActionLabels();
+      return;
+    }
+    const generatedNames = generatedDeliverableNamesFor(items);
+    elements.deliverablesList.innerHTML = items.map((item) => {
+      const date = item.createdAt ? new Date(item.createdAt) : null;
+      const dateLabel = date && !Number.isNaN(date.getTime()) ? date.toLocaleString() : item.createdAt;
+      const displayTitle = displayDeliverableTitleFor(item, generatedNames);
+      const canRename = ["cloud", "local"].includes(item.source);
+      const mediaSummaryLabel = deliverableMediaSummaryLabelFor(item);
+      const meta = [
+        item.label,
+        mediaSummaryLabel,
+        item.status !== "ready" ? item.status : "",
+        dateLabel,
+        item.bytes ? formatBytes(item.bytes) : "",
+      ].filter(Boolean).join(" / ");
+      const canOpen = Boolean(item.editUrl || item.batch);
+      const editingName = state.editingDeliverableNameId === item.id;
+      const thumbnail = deliverableThumbnailFor(item);
+      return `
+        <article class="real-estate-deliverable ${canOpen ? "is-openable" : ""} ${editingName ? "is-renaming" : ""}" ${canOpen ? `data-re-open-deliverable="${escapeHtml(item.id)}" role="button" tabindex="0"` : ""}>
+          <button class="real-estate-deliverable-disclosure" type="button" ${canOpen ? `data-re-open-deliverable-button="${escapeHtml(item.id)}"` : "disabled"} aria-label="Open ${escapeHtml(displayTitle)}">
+            <span aria-hidden="true"></span>
+          </button>
+          ${thumbnail ? `<img class="real-estate-deliverable-thumb" src="${escapeHtml(thumbnail)}" alt=""/>` : `<span class="real-estate-deliverable-thumb is-empty" aria-hidden="true"></span>`}
+          <div class="real-estate-deliverable-copy">
+            ${canRename && editingName
+              ? `<input class="real-estate-deliverable-name" type="text" value="${escapeHtml(displayTitle)}" data-re-rename-deliverable="${escapeHtml(item.id)}" aria-label="Product name"/>`
+              : `<strong class="real-estate-deliverable-title">${escapeHtml(displayTitle)}</strong>`}
+            <span>${escapeHtml(meta || item.label)}</span>
+          </div>
+          ${canRename ? `
+            <div class="real-estate-deliverable-tools">
+              <button class="real-estate-deliverable-rename" type="button" data-re-edit-name="${escapeHtml(item.id)}" aria-label="Rename ${escapeHtml(displayTitle)}">${reIcon("edit")}</button>
+              <button class="real-estate-deliverable-delete" type="button" data-re-delete-deliverable="${escapeHtml(item.id)}" aria-label="Delete ${escapeHtml(displayTitle)}">${reIcon("trash")}</button>
+            </div>
+          ` : ""}
+        </article>
+      `;
+    }).join("");
+    syncFileActionLabels();
+  };
+
+  const albumSelectedCount = (slug) => selectedPhotos()
+    .filter((photo) => selectedProjectIdsFor(photo).includes(slug))
     .length;
+
+  const albumThumbnailFor = (slug) => {
+    const photo = state.photos.find((candidate) => candidate.albumSlug === slug);
+    return photo ? imageFor(photo) : "";
+  };
+
+  const deliverableThumbnailFor = (item) => {
+    const batch = item?.batch;
+    const photoId = Array.isArray(batch?.projects)
+      ? batch.projects.flatMap((project) => project.items || []).find((row) => row?.photoId)?.photoId
+      : Array.isArray(batch?.items)
+        ? batch.items.find((row) => row?.photoId)?.photoId
+        : "";
+    const photo = state.photosById.get(photoId);
+    return photo ? imageFor(photo) : "";
+  };
 
   const renderAlbums = () => {
     if (!elements.albums) return;
-    const allSelected = state.selectedOrder.length;
-    elements.albums.innerHTML = [
-      `<button class="real-estate-album-filter ${state.album === "all" ? "is-active" : ""}" type="button" data-album-filter="all" aria-pressed="${state.album === "all"}">
-        <span>All properties</span>
-        <small>${state.photos.length} media / ${allSelected} selected</small>
-      </button>`,
-      ...state.albums.map((album) => `
-        <button class="real-estate-album-filter ${state.album === album.slug ? "is-active" : ""}" type="button" data-album-filter="${escapeHtml(album.slug)}" aria-pressed="${state.album === album.slug}">
+    const selectedShoots = selectedShootSet();
+    elements.albums.innerHTML = state.albums.length ? state.albums.map((album) => `
+        <label class="real-estate-album-filter ${selectedShoots.has(album.slug) ? "is-active" : ""}" data-shoot-option="${escapeHtml(album.slug)}">
+          <input type="checkbox" data-shoot-filter="${escapeHtml(album.slug)}" ${selectedShoots.has(album.slug) ? "checked" : ""}/>
+          <img src="${escapeHtml(albumThumbnailFor(album.slug))}" alt=""/>
           <span>${escapeHtml(album.displayTitle || album.title)}</span>
-          <small>${Number(album.photoCount) || 0} media / ${albumSelectedCount(album.slug)} selected</small>
-        </button>
-      `),
-    ].join("");
+          <small>${Number(album.photoCount) || 0} shoot media / ${albumSelectedCount(album.slug)} selected</small>
+          <b>${selectedShoots.has(album.slug) ? "Included" : "Include shoot"}</b>
+        </label>
+      `).join("") : `<p class="real-estate-muted">No shoots are available yet.</p>`;
   };
 
   const renderGrid = () => {
@@ -598,22 +1843,24 @@
     const photos = filteredPhotos();
     elements.grid.dataset.density = state.density;
     elements.grid.innerHTML = photos.length ? photos.map((photo) => {
-      const selected = state.selectedIds.has(photo.id);
+      const selected = isSelectedForActiveProject(photo);
       const assignedProjects = new Set(assignedProjectIdsFor(photo));
       const video = isVideo(photo);
       const mediaLabel = mediaLabelFor(photo);
       const duration = formatDuration(durationSecondsFor(photo));
+      const originalProperty = selectedShootSet().has(photo.albumSlug) ? "" : albumTitleFor(photo);
       return `
         <article class="real-estate-photo-card ${selected ? "is-selected" : ""} ${video ? "is-video" : ""}" data-photo-id="${escapeHtml(photo.id)}">
           <div class="real-estate-photo-media-shell">
             <button class="real-estate-photo-media" type="button" data-open-photo="${escapeHtml(photo.id)}" aria-label="Open ${escapeHtml(titleFor(photo))}">
               <img loading="lazy" src="${escapeHtml(imageFor(photo))}" alt="${escapeHtml(titleFor(photo))}"/>
-              <span>${escapeHtml(albumTitleFor(photo))}</span>
+              <span>${escapeHtml(originalProperty ? `${originalProperty} / shared` : albumTitleFor(photo))}</span>
               ${video ? `<b class="real-estate-media-type-badge">${escapeHtml(duration ? `${mediaLabel} ${duration}` : mediaLabel)}</b>` : ""}
             </button>
-            <label class="real-estate-check real-estate-photo-select">
+            <label class="real-estate-check real-estate-photo-select" title="Selected">
               <input type="checkbox" data-select-photo="${escapeHtml(photo.id)}" aria-label="Select ${escapeHtml(titleFor(photo))}" ${selected ? "checked" : ""}/>
             </label>
+            <button class="real-estate-title-remove" type="button" data-remove-title-photo="${escapeHtml(photo.id)}" aria-label="Remove ${escapeHtml(titleFor(photo))} from ${escapeHtml(selectedPropertyTitle())}">&times;</button>
           </div>
           <div class="real-estate-photo-card-body">
             <label class="real-estate-title-field">
@@ -640,8 +1887,7 @@
   };
 
   const renderDraft = () => {
-    const selectedPhotos = state.selectedOrder.map((id) => state.photosById.get(id)).filter(Boolean);
-    if (elements.selectedTotal) elements.selectedTotal.textContent = String(selectedPhotos.length);
+    const selectedPhotos = activeSelectedPhotos();
     if (elements.actionBarSelected) elements.actionBarSelected.textContent = String(selectedPhotos.length);
     if (elements.draftCount) elements.draftCount.textContent = String(selectedPhotos.length);
     if (!elements.draftList) return;
@@ -650,47 +1896,303 @@
         <span class="real-estate-draft-handle" data-draft-drag-handle aria-hidden="true" title="Drag to reorder">
           <span aria-hidden="true"></span>
         </span>
+        <strong class="real-estate-draft-position">${index + 1}</strong>
         <img src="${escapeHtml(imageFor(photo))}" alt="" draggable="false"/>
         <div>
           <strong>${escapeHtml(titleFor(photo))}</strong>
-          <small>${escapeHtml([mediaLabelFor(photo), assignedProjectIdsFor(photo).map((projectId) => projectOptionFor(projectId, photo).projectTitle).join(" + ")].filter(Boolean).join(" / "))}</small>
+          <small>${escapeHtml([mediaLabelFor(photo), selectedProjectIdsFor(photo).map((projectId) => projectOptionFor(projectId, photo).projectTitle).join(" + ")].filter(Boolean).join(" / "))}</small>
         </div>
         <div class="real-estate-draft-actions">
           <button type="button" data-move-draft="${escapeHtml(photo.id)}" data-direction="-1" aria-label="Move ${escapeHtml(titleFor(photo))} up">&uarr;</button>
           <button type="button" data-move-draft="${escapeHtml(photo.id)}" data-direction="1" aria-label="Move ${escapeHtml(titleFor(photo))} down">&darr;</button>
           <button type="button" data-remove-draft="${escapeHtml(photo.id)}" aria-label="Remove ${escapeHtml(titleFor(photo))}">&times;</button>
         </div>
-        <span class="real-estate-draft-index">${index + 1}</span>
       </article>
-    `).join("") : `<p class="real-estate-muted">No selected media yet.</p>`;
+    `).join("") : `<p class="real-estate-muted">${escapeHtml(t("re.draft.empty", {}, "No selected media yet."))}</p>`;
+  };
+
+  const activeOutputSummary = () => state.albums
+    .map((album) => ({ title: album.displayTitle || album.title, count: albumSelectedCount(album.slug) }))
+    .filter((item) => item.count > 0)
+    .map((item) => `${item.title}: ${item.count}`)
+    .join(" / ");
+
+  const stepCopy = () => {
+    const selected = activeSelectedPhotos().length;
+    if (state.wizardStep === 0) return t("re.status.choose_shoots_step", {}, "Choose the shoots you want to pick from.");
+    if (state.wizardStep === 1) return t("re.status.click_media", { project: selectedPropertyTitle() }, `Click media from ${selectedPropertyTitle()} to select it. Shift-click selects a range.`);
+    if (state.wizardStep === 2) return selected
+      ? t("re.status.selected_titles", { count: selected }, `Only the ${selected} selected media items are shown. Change titles only where needed.`)
+      : t("re.status.select_before_titles", {}, "Select at least one photo or video before editing titles.");
+    if (state.wizardStep === 3) return selected
+      ? t("re.status.drag_selected", { count: selected }, `Drag the ${selected} selected media items into the order you want.`)
+      : t("re.status.select_before_order", {}, "Select at least one photo or video before ordering.");
+    return selected
+      ? t("re.status.ready_output", { summary: activeOutputSummary() || `${selected} selected media` }, `Ready for output: ${activeOutputSummary() || `${selected} selected media`}. Preview either format, or download the PDF or video file.`)
+      : t("re.status.select_before_output", {}, "Select at least one photo or video before creating outputs.");
+  };
+
+  const renderWizard = () => {
+    const selected = activeSelectedPhotos().length;
+    const shootCount = selectedShootIds().length;
+    const firstStep = firstWizardStep();
+    app.dataset.reStep = String(state.wizardStep);
+    document.body.dataset.realEstateStep = String(state.wizardStep);
+    if (elements.wizardStatus) elements.wizardStatus.textContent = stepCopy();
+    document.querySelectorAll("[data-re-step-jump]").forEach((button) => {
+      const parsed = Number(button.dataset.reStepJump);
+      const step = Number.isFinite(parsed) ? parsed : firstStep;
+      button.hidden = false;
+      button.classList.toggle("is-active", step === state.wizardStep);
+      button.setAttribute("aria-current", step === state.wizardStep ? "step" : "false");
+      button.disabled = (step === 1 && shootCount === 0) || (step >= 2 && selected === 0);
+    });
+    document.querySelectorAll("[data-re-step-back]").forEach((button) => {
+      button.disabled = state.wizardStep <= firstStep;
+      button.hidden = state.wizardStep <= firstStep;
+    });
+    document.querySelectorAll("[data-re-step-next]").forEach((button) => {
+      button.hidden = state.wizardStep >= 4;
+      button.disabled = (state.wizardStep === 0 && shootCount === 0) || (state.wizardStep >= 1 && state.wizardStep < 4 && selected === 0);
+      button.textContent = state.wizardStep === 0
+        ? t("re.action.pick_photos", {}, "Pick photos")
+        : (state.wizardStep === 3 ? t("re.action.choose_output", {}, "Choose output") : t("common.next", {}, "Next"));
+    });
+    document.querySelectorAll("[data-re-open-outputs], [data-re-download-outputs]").forEach((button) => {
+      button.hidden = state.wizardStep !== 4;
+      button.disabled = selected === 0;
+    });
+    document.querySelectorAll("[data-re-download-pdf], [data-re-download-slideshow]").forEach((button) => {
+      button.hidden = state.wizardStep !== 4;
+    });
+    document.querySelectorAll("[data-re-clear-selection]").forEach((button) => {
+      button.hidden = state.wizardStep === 0 || selected === 0;
+    });
+  };
+
+  const syncDensityControls = () => {
+    const normalized = normalizeDensity(state.density);
+    state.density = normalized;
+    if (elements.density) elements.density.value = normalized;
+    document.querySelectorAll("[data-re-density-quick]").forEach((control) => {
+      control.hidden = state.wizardStep !== 1 && state.wizardStep !== 2;
+    });
+    document.querySelectorAll("[data-re-density-choice]").forEach((button) => {
+      const active = button.dataset.reDensityChoice === normalized;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-pressed", active ? "true" : "false");
+    });
+  };
+
+  const setDensity = (value) => {
+    const normalized = normalizeDensity(value);
+    if (state.density === normalized) {
+      syncDensityControls();
+      return;
+    }
+    state.density = normalized;
+    localStorage.setItem(densityKey, normalized);
+    syncDensityControls();
+    renderGrid();
+  };
+
+  const syncSlideshowOrientationControls = () => {
+    const normalized = normalizeSlideshowOrientation(state.slideshowOrientation);
+    state.slideshowOrientation = normalized;
+    document.querySelectorAll("[data-re-slideshow-orientation]").forEach((button) => {
+      const active = button.dataset.reSlideshowOrientation === normalized;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-pressed", active ? "true" : "false");
+    });
+  };
+
+  const setSlideshowOrientation = (value) => {
+    const normalized = normalizeSlideshowOrientation(value);
+    const changed = state.slideshowOrientation !== normalized;
+    state.slideshowOrientation = normalized;
+    localStorage.setItem(slideshowOrientationKey, normalized);
+    syncSlideshowOrientationControls();
+    if (changed) invalidateVideoExportCache();
+  };
+
+  const syncSlideshowMusicCountryControls = () => {
+    const normalized = normalizeSlideshowMusicCountry(state.slideshowMusicCountry);
+    state.slideshowMusicCountry = normalized;
+    if (!elements.slideshowMusicCountry) return;
+    elements.slideshowMusicCountry.value = normalized;
+    const inferred = inferSlideshowMusicCountry();
+    const trackCount = state.slideshowMusicTracks.filter((track) => track.country === inferred).length;
+    const suffix = state.slideshowMusicManifestLoaded
+      ? `${inferred}${trackCount ? `, ${trackCount} tracks` : ""}`
+      : "loading";
+    elements.slideshowMusicCountry.title = normalized === "auto"
+      ? `Auto currently resolves to ${suffix}`
+      : `Use ${normalized} music for generated videos`;
+  };
+
+  const setSlideshowMusicCountry = (value) => {
+    const normalized = normalizeSlideshowMusicCountry(value);
+    const changed = state.slideshowMusicCountry !== normalized;
+    state.slideshowMusicCountry = normalized;
+    localStorage.setItem(slideshowMusicCountryKey, normalized);
+    syncSlideshowMusicCountryControls();
+    if (changed) invalidateVideoExportCache();
+  };
+
+  const syncWatermarkControls = () => {
+    if (elements.watermarkEnabled) elements.watermarkEnabled.checked = Boolean(state.watermarkEnabled);
+    if (elements.watermarkText) {
+      elements.watermarkText.value = String(state.watermarkText || "").trim() || pdfWatermarkText;
+      elements.watermarkText.disabled = !state.watermarkEnabled;
+    }
+  };
+
+  const setWatermarkEnabled = (enabled) => {
+    const changed = state.watermarkEnabled !== Boolean(enabled);
+    state.watermarkEnabled = Boolean(enabled);
+    localStorage.setItem(watermarkKey, state.watermarkEnabled ? "on" : "off");
+    syncWatermarkControls();
+    if (changed) invalidateVideoExportCache();
+  };
+
+  const setWatermarkText = (value) => {
+    const next = String(value || "");
+    const changed = state.watermarkText !== next;
+    state.watermarkText = next;
+    localStorage.setItem(watermarkTextKey, state.watermarkText);
+    syncWatermarkControls();
+    if (changed) invalidateVideoExportCache();
   };
 
   const render = () => {
+    state.density = normalizeDensity(state.density);
     document.body.dataset.realEstateDensity = state.density;
     if (elements.pdfFormat) elements.pdfFormat.value = paperFormatFor().key;
     if (elements.mediaType) elements.mediaType.value = state.mediaType;
     if (elements.slideshowPhotoSeconds) elements.slideshowPhotoSeconds.value = String(state.slideshowPhotoSeconds);
     syncAuthUi();
+    syncActiveProductName();
+    syncCreateProductButtons();
     renderAlbums();
     renderGrid();
     renderDraft();
+    renderWizard();
+    syncDensityControls();
+    syncSlideshowOrientationControls();
+    syncSlideshowMusicCountryControls();
+    syncWatermarkControls();
     syncFileActionLabels();
     window.photosByElieVersionInternalLinks?.(app);
   };
 
-  const setSelected = (photoId, selected) => {
-    if (!state.photosById.has(photoId)) return;
-    if (selected && !state.selectedIds.has(photoId)) state.selectedOrder.push(photoId);
-    if (!selected) state.selectedOrder = state.selectedOrder.filter((id) => id !== photoId);
-    persistSelection();
+  const attributeSelectorValue = (value) => String(value || "").replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
+
+  const syncVisibleSelectionState = (photoIds = []) => {
+    const ids = [...new Set(photoIds.filter(Boolean))];
+    ids.forEach((photoId) => {
+      const photo = state.photosById.get(photoId);
+      const card = elements.grid?.querySelector(`[data-photo-id="${attributeSelectorValue(photoId)}"]`);
+      if (!photo || !card) return;
+      const selected = isSelectedForActiveProject(photo);
+      card.classList.toggle("is-selected", selected);
+      const checkbox = card.querySelector("[data-select-photo]");
+      if (checkbox) checkbox.checked = selected;
+    });
+    renderDraft();
+    renderWizard();
+    syncFileActionLabels();
+  };
+
+  const selectionChangeNeedsFullRender = () => (
+    state.wizardStep !== 1
+    || state.selectedOnly
+    || state.sort === "selected"
+  );
+
+  const setWizardStep = (step) => {
+    flushTitleInputs();
+    const next = normalizeWizardStep(step);
+    if (next >= 1 && selectedShootIds().length === 0) {
+      setStatus("Choose at least one shoot before picking photos");
+      state.wizardStep = 0;
+    } else if (next >= 2 && activeSelectedPhotos().length === 0) {
+      setStatus("Select at least one photo or video before continuing");
+      state.wizardStep = 1;
+    } else {
+      state.wizardStep = next;
+    }
+    if (state.wizardStep === 2) {
+      state.selectedOnly = true;
+      if (elements.selectedOnly) elements.selectedOnly.checked = true;
+    }
+    if (state.wizardStep <= 1) {
+      state.selectedOnly = false;
+      if (elements.selectedOnly) elements.selectedOnly.checked = false;
+    }
     render();
+    replaceWizardStepInUrl(state.wizardStep);
+    document.getElementById("real-estate-wizard")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const projectListForSelectionChange = (photoId, photo) => {
+    const explicit = explicitProjectIdsFor(photoId);
+    return state.selectedIds.has(photoId) ? selectedProjectIdsFor(photo) : explicit;
+  };
+
+  const applySelectionForPhotoIds = (photoIds, selected) => {
+    photoIds.forEach((photoId) => {
+      if (!state.photosById.has(photoId)) return;
+      const photo = state.photosById.get(photoId);
+      const projectId = projectIdFor(photo);
+      const current = projectListForSelectionChange(photoId, photo);
+      if (selected && projectId) {
+        state.projectAssignments[photoId] = [...current, projectId]
+          .filter((id, index, items) => id && items.indexOf(id) === index);
+        if (!state.selectedOrder.includes(photoId)) state.selectedOrder.push(photoId);
+        return;
+      }
+      if (!selected && projectId) {
+        const nextProjects = current.filter((id) => id !== projectId);
+        if (nextProjects.length) {
+          state.projectAssignments[photoId] = nextProjects;
+        } else {
+          delete state.projectAssignments[photoId];
+          state.selectedOrder = state.selectedOrder.filter((id) => id !== photoId);
+        }
+      }
+    });
+    persistProjectAssignments();
+    persistSelection();
+    invalidateVideoExportCache();
+    if (selectionChangeNeedsFullRender()) {
+      render();
+    } else {
+      syncVisibleSelectionState(photoIds);
+    }
+  };
+
+  const setSelected = (photoId, selected) => {
+    applySelectionForPhotoIds([photoId], selected);
+  };
+
+  const setSelectedRange = (fromId, toId, selected) => {
+    const visible = filteredPhotos().map((photo) => photo.id);
+    const fromIndex = visible.indexOf(fromId);
+    const toIndex = visible.indexOf(toId);
+    if (fromIndex < 0 || toIndex < 0) {
+      setSelected(toId, selected);
+      return;
+    }
+    const [start, end] = fromIndex < toIndex ? [fromIndex, toIndex] : [toIndex, fromIndex];
+    applySelectionForPhotoIds(visible.slice(start, end + 1), selected);
   };
 
   const setTitle = (photoId, value) => {
     const photo = state.photosById.get(photoId);
     if (!photo) return;
+    const previousTitle = titleFor(photo);
     const clean = String(value || "").trim();
-    const fallback = photo.editableTitle || photo.title || photo.id;
+    const fallback = defaultTitleFor(photo);
     if (!clean || clean === fallback) {
       delete state.editedTitles[photoId];
     } else {
@@ -698,7 +2200,26 @@
     }
     persistTitles();
     renderDraft();
-    if (state.activePhotoId === photoId && elements.dialogTitle) elements.dialogTitle.textContent = titleFor(photo);
+    const nextTitle = titleFor(photo);
+    if (nextTitle !== previousTitle) invalidateVideoExportCache();
+    elements.grid?.querySelectorAll(`[data-title-photo="${attributeSelectorValue(photoId)}"]`).forEach((input) => {
+      if (input !== document.activeElement) input.value = nextTitle;
+    });
+    if (state.activePhotoId === photoId) {
+      if (elements.dialogTitle) elements.dialogTitle.textContent = nextTitle;
+      if (elements.dialogTitleInput && elements.dialogTitleInput !== document.activeElement) {
+        elements.dialogTitleInput.value = nextTitle;
+      }
+    }
+  };
+
+  const flushTitleInputs = () => {
+    elements.grid?.querySelectorAll("[data-title-photo]").forEach((input) => {
+      if (input?.dataset?.titlePhoto) setTitle(input.dataset.titlePhoto, input.value);
+    });
+    if (state.activePhotoId && elements.dialogTitleInput) {
+      setTitle(state.activePhotoId, elements.dialogTitleInput.value);
+    }
   };
 
   const setPhotoProject = (photoId, projectId, assigned) => {
@@ -712,6 +2233,7 @@
     if (!next.length) next = [projectIdFor(photo)];
     state.projectAssignments[photoId] = next;
     persistProjectAssignments();
+    invalidateVideoExportCache();
     render();
   };
 
@@ -721,10 +2243,15 @@
     photos: photos.filter((photo) => !isVideo(photo)).length,
     videos: photos.filter(isVideo).length,
   });
-  const projectGroupsFor = (photos) => {
+  const outputProjectIdsFor = (photo, activeOnly = false) => {
+    if (activeOnly) return selectedProjectIdsFor(photo);
+    return assignedProjectIdsFor(photo);
+  };
+
+  const projectGroupsFor = (photos, activeOnly = false) => {
     const groups = new Map();
     photos.forEach((photo) => {
-      assignedProjectIdsFor(photo).forEach((projectId) => {
+      outputProjectIdsFor(photo, activeOnly).forEach((projectId) => {
         const project = projectOptionFor(projectId, photo);
         if (!groups.has(projectId)) {
           groups.set(projectId, {
@@ -763,12 +2290,14 @@
     projectIds: project ? [project.projectId] : assignedProjectIdsFor(photo),
   }));
 
-  const buildBatchManifest = () => {
+  const buildBatchManifest = (photosOverride = selectedPhotos(), activeOnly = false) => {
+    flushTitleInputs();
     const template = workflow().batchManifest?.template || {};
     const batchId = timestampId();
-    const photos = selectedPhotos();
-    const projects = projectGroupsFor(photos);
+    const photos = photosOverride;
+    const projects = projectGroupsFor(photos, activeOnly);
     const mediaSummary = selectedMediaSummary(photos);
+    const watermarkText = activeWatermarkText();
     return {
       ...template,
       schema: template.schema || workflow().batchManifest?.schema || "photosbyelie.realEstatePdfBatch.v1",
@@ -788,16 +2317,14 @@
         fitMode: "contain",
         videoTreatment: "still-from-video",
         videoStillPercent: 10,
-        photoWatermark: pdfWatermarkText,
+        photoWatermark: watermarkText,
+        watermarkEnabled: Boolean(watermarkText),
         photoWatermarkPlacement: "bottom-center",
-        pageWatermark: pdfWatermarkText,
+        pageWatermark: watermarkText,
         pageWatermarkPlacement: "footer-center",
       },
       slideshowSettings: {
-        mode: "one-slideshow-per-project",
-        photoDurationSeconds: state.slideshowPhotoSeconds,
-        videoDurationPolicy: "preserve-source-duration",
-        transition: slideshowTransition,
+        ...slideshowSettingsFor(),
       },
       projects: projects.map((project) => ({
         projectId: project.projectId,
@@ -829,6 +2356,28 @@
       || Number(a.item?.sortIndex) - Number(b.item?.sortIndex)
       || String(a.projectTitle).localeCompare(String(b.projectTitle))
     ));
+  };
+
+  const slideshowImageKeysFor = (photo) => {
+    const preview = photo?.media?.publicPreview || {};
+    return [
+      preview.detailKey,
+      photo?.cloudPdfSource?.publicKey,
+      preview.galleryKey,
+    ].map((key) => String(key || "").replace(/^\/+/, ""))
+      .filter(Boolean)
+      .filter((key, index, keys) => keys.indexOf(key) === index);
+  };
+
+  const slideshowImageUrlsFor = (photo) => {
+    const directUrl = imageFor(photo, "detail");
+    const keys = slideshowImageKeysFor(photo);
+    const workerUrls = keys.map(workerMediaUrl).filter(Boolean);
+    const publicUrls = keys.map(publicMediaUrl).filter(Boolean);
+    const candidates = isLocalHost
+      ? [directUrl, ...workerUrls, ...publicUrls]
+      : [...workerUrls, directUrl, ...publicUrls];
+    return candidates.filter(Boolean).filter((url, index, urls) => urls.indexOf(url) === index);
   };
 
   const selectionPlainTextFor = (manifest) => {
@@ -863,7 +2412,6 @@
       .replace(/</g, "\\u003c")
       .replace(/\u2028/g, "\\u2028")
       .replace(/\u2029/g, "\\u2029");
-    const dateLabel = manifest.createdAt ? new Date(manifest.createdAt).toLocaleString() : "";
     return `<!doctype html>
 <html lang="en">
 <head>
@@ -930,42 +2478,80 @@
 `;
   };
 
-  const buildSlideshowManifest = () => {
-    const base = buildBatchManifest();
+  const buildSlideshowManifest = (photosOverride = selectedPhotos(), activeOnly = false, baseOverride = null) => {
+    const base = baseOverride ? cloneBatch(baseOverride) : buildBatchManifest(photosOverride, activeOnly);
+    const musicTrack = chooseSlideshowMusicTrack(photosOverride);
+    const effectsByPhotoId = new Map((base.items || []).map((item) => [item.photoId, randomKenBurnsEffect()]));
+    const slideshowOutputItem = (item) => ({
+      ...item,
+      outputTreatment: item.mediaType === "video" ? "source-video-full-duration" : "still-photo",
+      durationSeconds: item.mediaType === "video" ? item.durationSeconds : state.slideshowPhotoSeconds,
+      transition: slideshowTransition,
+      effect: effectsByPhotoId.get(item.photoId) || randomKenBurnsEffect(),
+    });
     return {
       ...base,
       schema: "photosbyelie.realEstateSlideshowBatch.v1",
       outputMode: "one-slideshow-per-project",
       pdfSettings: undefined,
-      slideshowSettings: {
-        mode: "one-slideshow-per-project",
-        photoDurationSeconds: state.slideshowPhotoSeconds,
-        videoDurationPolicy: "preserve-source-duration",
-        transition: slideshowTransition,
-      },
+      slideshowSettings: slideshowSettingsFor(musicTrack),
       projects: (base.projects || []).map((project) => ({
         ...project,
-        items: (project.items || []).map((item) => ({
-          ...item,
-          outputTreatment: item.mediaType === "video" ? "source-video-full-duration" : "still-photo",
-          durationSeconds: item.mediaType === "video" ? item.durationSeconds : state.slideshowPhotoSeconds,
-        })),
+        items: (project.items || []).map(slideshowOutputItem),
       })),
-      items: (base.items || []).map((item) => ({
-        ...item,
-        outputTreatment: item.mediaType === "video" ? "source-video-full-duration" : "still-photo",
-        durationSeconds: item.mediaType === "video" ? item.durationSeconds : state.slideshowPhotoSeconds,
-      })),
+      items: (base.items || []).map(slideshowOutputItem),
     };
   };
 
+  const slideshowSlidesFor = (manifest) => selectionRowsFor(manifest).map(({ projectTitle, item }) => {
+    const photo = state.photosById.get(item.photoId);
+    if (!photo) return null;
+    const video = item.mediaType === "video" || isVideo(photo);
+    const dimensions = pdfDimensionsFor(photo);
+    return {
+      projectTitle: projectTitle || item.projectTitle || "",
+      title: item.title || titleFor(photo),
+      mediaType: video ? "video" : "photo",
+      imageUrl: imageFor(photo, "detail"),
+      imageUrls: slideshowImageUrlsFor(photo),
+      videoUrl: video ? videoPreviewFor(photo) : "",
+      orientation: dimensions.height > dimensions.width ? "portrait" : "landscape",
+      aspectRatio: dimensions.width > 0 && dimensions.height > 0 ? dimensions.width / dimensions.height : 1,
+      durationMs: Math.max(1000, Number(video ? item.durationSeconds : item.slideshowDurationSeconds || state.slideshowPhotoSeconds) * 1000 || state.slideshowPhotoSeconds * 1000),
+      durationLabel: video ? (formatDuration(item.durationSeconds || durationSecondsFor(photo)) || "source duration") : `${item.slideshowDurationSeconds || state.slideshowPhotoSeconds}s`,
+      source: item.cloudSourceKey || item.publicStillKey || item.photoId || "",
+      effect: item.effect || randomKenBurnsEffect(),
+    };
+  }).filter(Boolean);
+
   const slideshowHtmlFor = (manifest) => {
-    const rows = selectionRowsFor(manifest);
+    const audioPolicy = manifest.slideshowSettings?.audioPolicy || {};
+    const musicTrack = audioPolicy.musicTrack || null;
+    const previewSourceVideoVolume = Number(audioPolicy.sourceVideoAudioLinearGain ?? sourceVideoAudioLinearGain);
+    const previewMusicGainDb = Number(audioPolicy.musicGainDb ?? slideshowMusicGainDb);
+    const outputOrientation = manifest.slideshowSettings?.outputOrientation === "portrait" ? "portrait" : "landscape";
+    const outputRatio = outputOrientation === "portrait" ? 9 / 16 : 16 / 9;
+    const slideshowWatermarkText = String(manifest.slideshowSettings?.watermarkText || "").trim();
+    const slides = slideshowSlidesFor(manifest);
+    const musicCredits = slideshowRequiredCreditsFor(manifest);
+    const creditDurationMs = slideshowCreditDurationMsFor(musicCredits);
+    const returnUrl = previewReturnUrl();
     const safeJson = JSON.stringify(manifest, null, 2)
       .replace(/</g, "\\u003c")
       .replace(/\u2028/g, "\\u2028")
       .replace(/\u2029/g, "\\u2029");
-    const dateLabel = manifest.createdAt ? new Date(manifest.createdAt).toLocaleString() : "";
+    const safeSlidesJson = JSON.stringify(slides)
+      .replace(/</g, "\\u003c")
+      .replace(/\u2028/g, "\\u2028")
+      .replace(/\u2029/g, "\\u2029");
+    const safeMusicJson = JSON.stringify(musicTrack)
+      .replace(/</g, "\\u003c")
+      .replace(/\u2028/g, "\\u2028")
+      .replace(/\u2029/g, "\\u2029");
+    const safeCreditsJson = JSON.stringify(musicCredits)
+      .replace(/</g, "\\u003c")
+      .replace(/\u2028/g, "\\u2028")
+      .replace(/\u2029/g, "\\u2029");
     return `<!doctype html>
 <html lang="en">
 <head>
@@ -973,58 +2559,351 @@
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Photos By Elie Slideshow ${escapeHtml(manifest.batchId || "")}</title>
   <style>
-    :root{color-scheme:light dark;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.4}
-    body{margin:0;background:Canvas;color:CanvasText}
-    main{max-width:980px;margin:0 auto;padding:24px 16px 40px}
-    h1{margin:0 0 6px;font-size:clamp(1.6rem,5vw,2.4rem)}
-    .meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:18px 0}
-    .meta div{border:1px solid color-mix(in srgb,CanvasText 18%,transparent);padding:10px}
-    .meta dt{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;opacity:.7}
-    .meta dd{margin:4px 0 0;font-weight:700}
-    table{width:100%;border-collapse:collapse;margin-top:18px;font-size:.95rem}
-    th,td{border:1px solid color-mix(in srgb,CanvasText 16%,transparent);padding:9px;text-align:left;vertical-align:top}
-    th{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em}
-    tbody tr:nth-child(even){background:color-mix(in srgb,CanvasText 4%,transparent)}
-    code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em}
-    .note{margin-top:20px;font-size:.9rem;opacity:.72}
+    :root{color-scheme:dark;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.4;background:#0d0d0d;color:#f7f7f7}
+    *{box-sizing:border-box}
+    body{margin:0;background:#0d0d0d;color:#f7f7f7}
+    main{min-height:100dvh;display:grid;grid-template-rows:minmax(0,1fr) auto;place-items:center stretch}
+    .stage{position:relative;display:grid;width:100vw;height:calc(100dvh - 70px);background:#050505;place-items:center;align-self:center;justify-self:center;overflow:hidden}
+    .frame{position:absolute;inset:0;display:grid;place-items:center;background:#050505;overflow:hidden}
+    .frame video{width:100%;height:100%;object-fit:contain;background:#050505}
+    .video-wrap{position:absolute;inset:0;display:grid;place-items:center;background:#050505}
+    .photo-slide{position:absolute;inset:0;display:grid;place-items:center;overflow:hidden;background:#050505}
+    .photo-slide img{display:block;background:transparent}
+    .slide-backdrop{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:blur(24px);opacity:.48;transform:scale(1.1)}
+    .photo-content{position:absolute;inset:0;z-index:1;display:flex;align-items:center;justify-content:center;overflow:visible;animation:kenBurns var(--slide-duration,4s) ease-in-out both;will-change:transform}
+    .photo-card{position:relative;z-index:1;display:block;overflow:hidden}
+    .slide-photo{position:absolute;inset:0;z-index:1;width:100%;height:100%;object-fit:cover}
+    .photo-watermark-sheet{position:absolute;inset:-32%;z-index:2;display:grid;grid-template-columns:repeat(4,max-content);align-content:center;justify-content:center;gap:clamp(90px,18vmin,260px) clamp(110px,22vmin,300px);pointer-events:none;transform:rotate(-28deg)}
+    .photo-watermark-sheet span{display:block;color:rgba(255,255,255,.168);font-size:clamp(1.35rem,4.2vmin,4.6rem);font-weight:900;letter-spacing:.02em;text-shadow:0 0 1px rgba(0,0,0,.13),0 1px 2px rgba(0,0,0,.13);text-transform:uppercase;white-space:nowrap}
+    .photo-watermark-sheet span:nth-child(4n+2),.photo-watermark-sheet span:nth-child(4n+4){transform:translateX(-48%)}
+    .photo-watermark-corner{position:absolute;right:clamp(14px,2.2vmin,38px);bottom:clamp(14px,2.2vmin,38px);z-index:3;color:rgba(255,255,255,.72);font-size:clamp(.85rem,2.2vmin,1.45rem);font-weight:900;text-shadow:0 1px 2px rgba(0,0,0,.48)}
+    .photo-title{position:absolute;left:0;right:0;bottom:0;z-index:4;padding:clamp(34px,7vmin,92px) clamp(14px,3vmin,34px) clamp(36px,6vmin,68px);background:linear-gradient(to top,rgba(0,0,0,.62),rgba(0,0,0,0));color:#fff;text-align:center;text-shadow:0 2px 10px rgba(0,0,0,.82);pointer-events:none}
+    .photo-title p{margin:0 auto .2em;font-size:clamp(.62rem,1.65vmin,1rem);font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.84)}
+    .photo-title h1{margin:0 auto;max-width:min(760px,82%);font-size:clamp(1.35rem,4.8vmin,4.2rem);line-height:.98}
+    .credits-card{position:absolute;inset:0;display:grid;place-items:center;padding:clamp(24px,7vw,90px);background:#050505;text-align:center}
+    .credits-card-inner{display:grid;gap:clamp(10px,2.4vmin,20px);max-width:min(820px,86vw)}
+    .credits-card p{margin:0;color:rgba(255,255,255,.72);font-size:clamp(.8rem,2vmin,1.1rem);font-weight:900;letter-spacing:.1em;text-transform:uppercase}
+    .credits-card strong{display:block;color:#fff;font-size:clamp(1.15rem,3.4vmin,2.4rem);line-height:1.08;text-shadow:0 2px 10px rgba(0,0,0,.72)}
+    .credits-card small{display:block;color:rgba(255,255,255,.64);font-size:clamp(.72rem,1.6vmin,1rem);font-weight:700;line-height:1.35}
+    @keyframes kenBurns{from{transform:scale(var(--start-scale,1.03)) translate(var(--start-x,0),var(--start-y,0))}to{transform:scale(var(--end-scale,1.1)) translate(var(--end-x,0),var(--end-y,0))}}
+    .slide-count{position:absolute;left:clamp(10px,2.4vw,22px);bottom:clamp(10px,2.4vw,22px);z-index:4;border-radius:4px;background:rgba(80,80,80,.78);color:#fff;padding:3px 7px;font-size:.78rem;font-weight:850;line-height:1;text-shadow:none}
+    .watermark{position:absolute;left:0;right:0;bottom:8px;text-align:center;color:rgba(255,255,255,.52);font-size:.76rem;font-weight:700;text-shadow:0 1px 6px #000}
+    .controls{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;border-top:1px solid rgba(255,255,255,.14);background:#171717;padding:14px}
+    button{min-height:42px;border:1px solid rgba(255,255,255,.2);border-radius:999px;background:#242424;color:#fff;padding:8px 18px;font:inherit;font-weight:800;cursor:pointer}
+    .close-preview{background:#f7f7f7;color:#111;border-color:#f7f7f7}
+    button:hover{background:#303030}
+    .close-preview:hover{background:#fff}
+    @media (max-width:700px){
+      main{display:grid;min-height:100dvh}
+      .photo-slide{padding:0}
+      .frame video{padding:0}
+      .photo-title{padding-top:clamp(28px,8vmin,72px);padding-bottom:clamp(34px,8vmin,56px)}
+      .photo-title h1{font-size:clamp(1.15rem,7vw,2.3rem)}
+      .photo-title p{font-size:.72rem}
+      .controls{position:sticky;bottom:0;z-index:5;padding:10px calc(10px + env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) calc(10px + env(safe-area-inset-left,0px))}
+      button{min-height:38px;padding:7px 14px}
+    }
   </style>
 </head>
-<body>
+<body class="video-${outputOrientation}">
   <main>
-    <h1>Photos By Elie slideshow plan</h1>
-    <p>${escapeHtml(manifest.customer || state.payload?.customer?.name || "Client")} project slideshow draft</p>
-    <dl class="meta">
-      <div><dt>Batch</dt><dd><code>${escapeHtml(manifest.batchId || "")}</code></dd></div>
-      <div><dt>Created</dt><dd>${escapeHtml(dateLabel)}</dd></div>
-      <div><dt>Photo duration</dt><dd>${escapeHtml(manifest.slideshowSettings?.photoDurationSeconds || state.slideshowPhotoSeconds)}s</dd></div>
-      <div><dt>Videos</dt><dd>Full source duration</dd></div>
-      <div><dt>Transition</dt><dd>Basic carousel</dd></div>
-    </dl>
-    <table>
-      <thead>
-        <tr>
-          <th>Project</th>
-          <th>Order</th>
-          <th>Type</th>
-          <th>Duration</th>
-          <th>Title</th>
-          <th>Source</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${rows.map(({ projectTitle, item }) => `
-        <tr>
-          <td>${escapeHtml(projectTitle || item.projectTitle || "")}</td>
-          <td>${escapeHtml(item.sortIndex || "")}</td>
-          <td>${escapeHtml(item.mediaType || "photo")}</td>
-          <td>${escapeHtml(item.mediaType === "video" ? `preserve source${formatDuration(item.durationSeconds) ? ` (${formatDuration(item.durationSeconds)})` : ""}` : `${item.durationSeconds || state.slideshowPhotoSeconds}s`)}</td>
-          <td>${escapeHtml(item.title || "")}</td>
-          <td><code>${escapeHtml(item.cloudSourceKey || item.publicStillKey || item.photoId || "")}</code></td>
-        </tr>`).join("")}
-      </tbody>
-    </table>
-    <p class="note">Cloud assembly should use the full source duration for videos, ${escapeHtml(state.slideshowPhotoSeconds)} seconds for still photos, and a basic carousel transition between items.</p>
+    <section class="stage" aria-label="Browser video preview">
+      <div class="frame" data-frame></div>
+      ${musicTrack?.absoluteSrc || musicTrack?.src ? `<audio data-music preload="auto" loop src="${escapeHtml(musicTrack.absoluteSrc || musicTrack.src)}"></audio>` : ""}
+      ${slideshowWatermarkText ? `<div class="watermark">${escapeHtml(slideshowWatermarkText)}</div>` : ""}
+    </section>
+    <div class="controls">
+      <button class="close-preview" type="button" data-close-preview>Close preview</button>
+      <button type="button" data-play>${musicTrack?.absoluteSrc || musicTrack?.src ? "Play with sound" : "Pause"}</button>
+    </div>
     <script type="application/json" data-re-selection-batch>${safeJson}</script>
+    <script>
+      const slides = ${safeSlidesJson};
+      const musicTrack = ${safeMusicJson};
+      const musicCredits = ${safeCreditsJson};
+      const creditDurationMs = ${Number(creditDurationMs)};
+      const watermarkText = ${JSON.stringify(slideshowWatermarkText)};
+      const videoRatio = ${Number(outputRatio).toFixed(6)};
+      const stage = document.querySelector(".stage");
+      const frame = document.querySelector("[data-frame]");
+      const music = document.querySelector("[data-music]");
+      const playButton = document.querySelector("[data-play]");
+      const closeButton = document.querySelector("[data-close-preview]");
+      const returnUrl = ${JSON.stringify(returnUrl)};
+      let index = 0;
+      let timer = 0;
+      let fadeFrame = 0;
+      let fadeInterval = 0;
+      let fadeDone = null;
+      let playing = true;
+      let showingCredits = false;
+      let soundBlocked = Boolean(music);
+      const sourceVideoVolume = Math.min(1, Math.max(0, ${Number(previewSourceVideoVolume).toFixed(4)}));
+      const musicVolume = Math.pow(10, Number(musicTrack?.musicGainDb ?? ${previewMusicGainDb}) / 20);
+      const attr = (value) => String(value || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      const effectStyle = (effect, durationMs) => {
+        const presets = {
+          "center-breathe-in": [1.0, 1.024, "0%", "0%", "0%", "0%"],
+          "center-breathe-out": [1.024, 1.0, "0%", "0%", "0%", "0%"],
+          "center-drift-left": [1.012, 1.024, "0%", "0%", "-0.35%", "0%"],
+          "center-drift-right": [1.012, 1.024, "0%", "0%", "0.35%", "0%"],
+          "center-drift-up": [1.012, 1.024, "0%", "0%", "0%", "-0.35%"],
+          "center-drift-down": [1.012, 1.024, "0%", "0%", "0%", "0.35%"],
+        };
+        const [startScale, endScale, startX, startY, endX, endY] = presets[effect] || presets["center-breathe-in"];
+        return "--slide-duration:" + durationMs + "ms;--start-scale:" + startScale + ";--end-scale:" + endScale + ";--start-x:" + startX + ";--start-y:" + startY + ";--end-x:" + endX + ";--end-y:" + endY;
+      };
+      const counterHtml = (counterText) => '<strong class="slide-count">' + attr(counterText) + '</strong>';
+      const photoCardStyle = (slide) => {
+        const rect = stage?.getBoundingClientRect?.();
+        const stageWidth = Math.max(1, rect?.width || window.innerWidth || 1);
+        const stageHeight = Math.max(1, rect?.height || window.innerHeight || 1);
+        const ratio = Math.max(0.05, Number(slide?.aspectRatio || 1));
+        let width = stageWidth;
+        let height = width / ratio;
+        if (height > stageHeight) {
+          height = stageHeight;
+          width = height * ratio;
+        }
+        return "width:" + Math.round(width) + "px;height:" + Math.round(height) + "px";
+      };
+      const watermarkSheetHtml = () => {
+        const text = String(watermarkText || "").trim().toUpperCase();
+        if (!text) return "";
+        return '<div class="photo-watermark-sheet" aria-hidden="true">' + Array.from({ length: 28 }, () => '<span>' + attr(text) + '</span>').join("") + '</div><b class="photo-watermark-corner" aria-hidden="true">PhotosByElie</b>';
+      };
+      const photoTitleHtml = (slide) => {
+        const projectTitle = String(slide.projectTitle || "").trim();
+        const titleText = String(slide.title || "Untitled").trim();
+        return '<div class="photo-title"><p>' + attr(projectTitle || slide.mediaType || "") + '</p><h1>' + attr(titleText) + '</h1></div>';
+      };
+      const photoSlideHtml = (slide, counterText) => {
+        const source = attr(slide.imageUrl);
+        const style = attr(effectStyle(slide.effect, Math.max(1000, slide.durationMs || 4000)));
+        const cardStyle = attr(photoCardStyle(slide));
+        const orientation = slide.orientation === "portrait" ? "portrait" : "landscape";
+        return '<div class="photo-slide is-' + orientation + '"><img class="slide-backdrop" aria-hidden="true" alt="" src="' + source + '"><div class="photo-content" style="' + style + '"><div class="photo-card" style="' + cardStyle + '"><img class="slide-photo" alt="" src="' + source + '">' + watermarkSheetHtml() + photoTitleHtml(slide) + counterHtml(counterText) + '</div></div></div>';
+      };
+      const creditsHtml = () => {
+        const entries = Array.isArray(musicCredits) ? musicCredits : [];
+        return '<div class="credits-card"><div class="credits-card-inner"><p>Music credit</p>' + entries.map((entry) => {
+          const text = attr(entry?.text || "");
+          const detail = [entry?.source, entry?.license].filter(Boolean).join(" / ");
+          return '<strong>' + text + '</strong>' + (detail ? '<small>' + attr(detail) + '</small>' : '');
+        }).join("") + '</div></div>';
+      };
+
+      const clearTimer = () => {
+        if (timer) window.clearTimeout(timer);
+        timer = 0;
+      };
+      const clearMusicFade = () => {
+        if (fadeFrame) window.cancelAnimationFrame(fadeFrame);
+        if (fadeInterval) window.clearInterval(fadeInterval);
+        fadeFrame = 0;
+        fadeInterval = 0;
+        fadeDone = null;
+      };
+      const clampVolume = (value) => Math.max(0, Math.min(1, Number(value) || 0));
+      const beginMusicFade = (durationMs, onDone = null) => {
+        if (!music) return;
+        clearMusicFade();
+        const startedAt = performance.now();
+        const fadeDuration = Math.max(300, Number(durationMs) || 300);
+        const startVolume = clampVolume(music.volume || musicVolume);
+        fadeDone = typeof onDone === "function" ? onDone : null;
+        const tick = () => {
+          const elapsed = performance.now() - startedAt;
+          const remaining = Math.max(0, 1 - (elapsed / fadeDuration));
+          music.volume = clampVolume(startVolume * remaining);
+          if (remaining > 0) {
+            if (!fadeFrame) fadeFrame = window.requestAnimationFrame(() => {
+              fadeFrame = 0;
+              tick();
+            });
+            return;
+          }
+          const done = fadeDone;
+          clearMusicFade();
+          music.volume = 0;
+          if (done) done();
+        };
+        fadeInterval = window.setInterval(tick, 80);
+        tick();
+      };
+      const applyStageSize = () => {
+        if (!stage) return;
+        const controls = document.querySelector(".controls");
+        const controlHeight = controls ? controls.getBoundingClientRect().height : 70;
+        const maxWidth = Math.max(1, window.innerWidth || document.documentElement.clientWidth || 1);
+        const maxHeight = Math.max(220, (window.innerHeight || document.documentElement.clientHeight || 1) - controlHeight);
+        let width = maxWidth;
+        let height = width / videoRatio;
+        if (height > maxHeight) {
+          height = maxHeight;
+          width = height * videoRatio;
+        }
+        stage.style.width = Math.round(width) + "px";
+        stage.style.height = Math.round(height) + "px";
+        const card = frame?.querySelector?.(".photo-card");
+        if (card && slides[index]) card.setAttribute("style", photoCardStyle(slides[index]));
+      };
+      window.addEventListener("resize", applyStageSize);
+      const syncPlayButton = () => {
+        if (!playButton) return;
+        playButton.textContent = soundBlocked ? "Play with sound" : (playing ? "Pause" : "Play");
+      };
+      const playMusic = async () => {
+        if (!music) {
+          soundBlocked = false;
+          syncPlayButton();
+          return true;
+        }
+        clearMusicFade();
+        music.volume = musicVolume;
+        try {
+          await music.play();
+          soundBlocked = false;
+          syncPlayButton();
+          return true;
+        } catch {
+          soundBlocked = true;
+          syncPlayButton();
+          return false;
+        }
+      };
+      const pauseMusic = () => {
+        clearMusicFade();
+        if (music) music.pause();
+      };
+      const stopMusicAtEnd = () => {
+        if (!music) return;
+        music.volume = 0;
+        music.pause();
+      };
+      const finishPlayback = () => {
+        playing = false;
+        stopMusicAtEnd();
+        syncPlayButton();
+      };
+      const syncMusicFade = (slide) => {
+        if (!music) return;
+        if (!playing || index !== slides.length - 1) {
+          clearMusicFade();
+          music.volume = musicVolume;
+          return;
+        }
+        const duration = Math.max(1000, Number(slide?.durationMs || ${Number(state.slideshowPhotoSeconds) * 1000}));
+        beginMusicFade(duration);
+      };
+      const render = () => {
+        clearTimer();
+        applyStageSize();
+        if (showingCredits) {
+          frame.innerHTML = creditsHtml();
+          if (playing) timer = window.setTimeout(finishPlayback, Math.max(1000, creditDurationMs || 3500));
+          return;
+        }
+        const slide = slides[index];
+        const counterText = (index + 1) + "/" + slides.length;
+        if (!slide) {
+          frame.innerHTML = "";
+          return;
+        }
+        if (playing) playMusic();
+        syncMusicFade(slide);
+        if (slide.mediaType === "video" && slide.videoUrl) {
+          frame.innerHTML = '<div class="video-wrap"><video controls playsinline poster="' + attr(slide.imageUrl) + '" src="' + attr(slide.videoUrl) + '"></video>' + counterHtml(counterText) + '</div>';
+          const video = frame.querySelector("video");
+          video.volume = sourceVideoVolume;
+          video.addEventListener("ended", () => playing && next());
+          video.addEventListener("error", () => {
+            frame.innerHTML = photoSlideHtml(slide, counterText);
+            if (playing) timer = window.setTimeout(next, Math.max(1000, slide.durationMs || 4000));
+          });
+          if (playing) video.play().catch(() => {});
+        } else {
+          frame.innerHTML = photoSlideHtml(slide, counterText);
+          if (playing) timer = window.setTimeout(next, Math.max(1000, slide.durationMs || 4000));
+        }
+      };
+      const next = () => {
+        if (!slides.length) {
+          index = 0;
+          render();
+          return;
+        }
+        if (index >= slides.length - 1) {
+          if (musicCredits.length && !showingCredits) {
+            showingCredits = true;
+            render();
+            return;
+          }
+          playing = false;
+          if (music && music.volume > 0.01) {
+            beginMusicFade(600, stopMusicAtEnd);
+          } else {
+            stopMusicAtEnd();
+          }
+          syncPlayButton();
+          return;
+        }
+        index += 1;
+        render();
+      };
+      playButton?.addEventListener("click", async () => {
+        if (soundBlocked) {
+          if (!playing && (index >= slides.length - 1 || showingCredits)) {
+            index = 0;
+            showingCredits = false;
+          }
+          playing = true;
+          await playMusic();
+          const video = frame.querySelector("video");
+          if (video) video.play().catch(() => {});
+          render();
+          return;
+        }
+        const replayFromEnd = !playing && (index >= slides.length - 1 || showingCredits);
+        playing = !playing;
+        if (playing && replayFromEnd) {
+          index = 0;
+          showingCredits = false;
+        }
+        syncPlayButton();
+        if (music && playing && index === 0) music.volume = musicVolume;
+        const video = frame.querySelector("video");
+        if (video) {
+          if (playing) {
+            playMusic();
+            video.play().catch(() => {});
+          } else {
+            pauseMusic();
+            video.pause();
+          }
+        } else if (playing) {
+          playMusic();
+        } else {
+          pauseMusic();
+        }
+        render();
+      });
+      closeButton?.addEventListener("click", () => {
+        try {
+          window.close();
+          window.setTimeout(() => {
+            if (!document.hidden) window.location.href = returnUrl;
+          }, 250);
+          if (window.opener && !window.opener.closed) {
+            window.close();
+            return;
+          }
+        } catch {}
+        window.location.href = returnUrl;
+      });
+      syncPlayButton();
+      render();
+    </script>
   </main>
 </body>
 </html>
@@ -1033,13 +2912,13 @@
 
   const copyBatch = async () => {
     if (!requireUnlocked()) return;
-    const manifest = buildBatchManifest();
+    const manifest = buildBatchManifest(activeSelectedPhotos(), true);
     const batch = selectionPlainTextFor(manifest);
     try {
       await navigator.clipboard.writeText(batch);
       setStatus(`Copied ${manifest.projects.length} project selection list${manifest.projects.length === 1 ? "" : "s"}`);
     } catch {
-      setStatus("Clipboard unavailable; use Share selection table");
+      setStatus("Clipboard unavailable; use Save selection");
     }
   };
 
@@ -1058,84 +2937,1060 @@
     return { filename, pickedLocation: false, bytes: Number(blob.size) || 0 };
   };
 
-  const shareOrOpenBlob = async ({ blob, filename, title, text, openFallback = true }) => {
-    const canCreateFile = typeof File === "function";
-    const file = canCreateFile ? new File([blob], filename, { type: blob.type || "text/html" }) : null;
-    if (file && navigator.share && navigator.canShare?.({ files: [file] })) {
-      try {
-        await navigator.share({
-          title,
-          text,
-          files: [file],
-        });
-        return { method: "share", filename, bytes: Number(blob.size) || 0 };
-      } catch (error) {
-        if (error?.name === "AbortError") throw error;
-      }
+  const reserveOutputWindow = (label) => {
+    const popup = window.open("about:blank", "_blank");
+    if (!popup) return null;
+    try {
+      popup.document.title = label || "Preparing output";
+      popup.document.body.style.margin = "0";
+      popup.document.body.style.fontFamily = "-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif";
+      popup.document.body.style.display = "grid";
+      popup.document.body.style.minHeight = "100vh";
+      popup.document.body.style.placeItems = "center";
+      popup.document.body.innerHTML = `<main style="padding:24px;text-align:center"><h1 style="margin:0 0 8px">${escapeHtml(label || "Preparing output")}</h1><p style="margin:0;color:#666">Photos By Elie is building the browser view.</p></main>`;
+    } catch {
+      // Some browsers restrict about:blank writes; the reserved tab can still be navigated.
     }
+    return popup;
+  };
 
-    if (openFallback) {
-      const url = URL.createObjectURL(blob);
-      const opened = window.open(url, "_blank", "noopener");
-      if (opened) {
-        window.setTimeout(() => URL.revokeObjectURL(url), 10 * 60 * 1000);
-        return { method: "open", filename, bytes: Number(blob.size) || 0 };
-      }
+  const showOutputWindowError = (reservedWindow, title, detail) => {
+    if (!reservedWindow || reservedWindow.closed) return;
+    try {
+      reservedWindow.document.open();
+      reservedWindow.document.write(`<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>${escapeHtml(title || "Output failed")}</title>
+  <style>
+    :root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f6f6f4;color:#151515}
+    body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f6f6f4}
+    main{width:min(680px,calc(100% - 32px));border:1px solid #d7d2ca;background:#fff;padding:22px}
+    h1{margin:0 0 10px;font-size:clamp(1.6rem,7vw,3rem);line-height:1}
+    p{margin:0;color:#555;font-size:1rem;line-height:1.45}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>${escapeHtml(title || "Needs attention")}</h1>
+    <p>${escapeHtml(detail || "The output could not be prepared. Return to the Photos By Elie page and try again.")}</p>
+  </main>
+</body>
+</html>`);
+      reservedWindow.document.close();
+    } catch {
+      // The status panel in the original page still carries the failure message.
+    }
+  };
+
+  const openBlobInBrowser = async (blob, filename, reservedWindow = null) => {
+    const url = URL.createObjectURL(blob);
+    if (reservedWindow && !reservedWindow.closed) {
+      reservedWindow.location.href = url;
+      window.setTimeout(() => URL.revokeObjectURL(url), 10 * 60 * 1000);
+      return { method: "open", filename, bytes: Number(blob.size) || 0 };
+    }
+    const opened = window.open(url, "_blank", "noopener");
+    if (opened) {
+      window.setTimeout(() => URL.revokeObjectURL(url), 10 * 60 * 1000);
+      return { method: "open", filename, bytes: Number(blob.size) || 0 };
+    }
+    try {
+      window.location.assign(url);
+      return { method: "open-current", filename, bytes: Number(blob.size) || 0 };
+    } catch {
       URL.revokeObjectURL(url);
     }
     return { method: "download", ...(await downloadBlob(blob, filename)) };
   };
 
+  const openHtmlInBrowser = async (html, filename, reservedWindow = null) => {
+    const writeWindow = (target) => {
+      try {
+        target.document.open();
+        target.document.write(html);
+        target.document.close();
+        target.document.title = filename || "Photos By Elie preview";
+        try {
+          target.opener = null;
+        } catch {}
+        return true;
+      } catch {
+        return false;
+      }
+    };
+    if (reservedWindow && !reservedWindow.closed && writeWindow(reservedWindow)) {
+      return { method: "open", filename, bytes: new Blob([html], { type: "text/html" }).size };
+    }
+    const opened = window.open("about:blank", "_blank");
+    if (opened && writeWindow(opened)) {
+      return { method: "open", filename, bytes: new Blob([html], { type: "text/html" }).size };
+    }
+    const blob = new Blob([html], { type: "text/html" });
+    return openBlobInBrowser(blob, filename, reservedWindow);
+  };
+
+  const fileForShare = (blob, filename) => (
+    typeof File === "function"
+      ? new File([blob], filename, { type: blob.type || "text/html" })
+      : null
+  );
+
+  const shouldUseNativeFileShare = () => {
+    const coarsePointer = window.matchMedia?.("(pointer: coarse)")?.matches === true;
+    const phoneWidth = window.matchMedia?.("(max-width: 900px)")?.matches === true;
+    const touchTablet = Number(navigator.maxTouchPoints || 0) > 1 && (window.innerWidth || 0) <= 1180;
+    return coarsePointer || phoneWidth || touchTablet;
+  };
+
+  const shareOrOpenBlob = async ({ blob, filename, title, text, openFallback = true, reservedWindow = null, allowNativeShare = true }) => {
+    const file = fileForShare(blob, filename);
+    if (allowNativeShare && file && navigator.share && navigator.canShare?.({ files: [file] })) {
+      try {
+        const sharePromise = navigator.share({
+          title,
+          text,
+          files: [file],
+        });
+        const settled = await Promise.race([
+          sharePromise.then(() => "complete"),
+          sharePromise.then(null, (error) => {
+            throw error;
+          }),
+          new Promise((resolve) => window.setTimeout(() => resolve("opened"), 500)),
+        ]);
+        if (settled === "opened") {
+          sharePromise.catch((error) => {
+            if (error?.name !== "AbortError") console.warn("Device share failed after opening", error);
+          });
+        }
+        if (reservedWindow && !reservedWindow.closed) reservedWindow.close();
+        return { method: settled === "opened" ? "share-opened" : "share", filename, bytes: Number(blob.size) || 0 };
+      } catch (error) {
+        if (error?.name === "AbortError") {
+          if (reservedWindow && !reservedWindow.closed) reservedWindow.close();
+          throw error;
+        }
+      }
+    }
+
+    if (openFallback) {
+      return openBlobInBrowser(blob, filename, reservedWindow);
+    }
+    return { method: "download", ...(await downloadBlob(blob, filename)) };
+  };
+
   const shareSelectionTable = async () => {
-    if (!requireUnlocked()) return;
-    const batch = buildBatchManifest();
-    const blob = new Blob([selectionHtmlFor(batch)], { type: "text/html" });
-    const filename = `${state.gallery?.key || "real-estate"}-${batch.batchId}-selection.html`;
+    if (!requireUnlocked() || state.outputBusy) return;
+    const batch = buildBatchManifest(activeSelectedPhotos(), true);
+    if (!batch.items?.length) {
+      setStatus("Select media before saving a selection");
+      return;
+    }
+    startOutputProgress({
+      title: "Saving selection",
+      detail: "Building the selection manifest...",
+      total: 2,
+      kind: "selection",
+    });
+    updateOutputProgress({
+      title: "Saving selection",
+      detail: "Formatting selected media...",
+      current: 1,
+      total: 2,
+    });
     try {
+      const blob = new Blob([selectionHtmlFor(batch)], { type: "text/html" });
+      const filename = `${state.gallery?.key || "real-estate"}-${batch.batchId}-selection.html`;
+      saveLocalDeliverable({ type: "selection", batch, filename, bytes: blob.size });
       const saved = await shareOrOpenBlob({
         blob,
         filename,
         title: "Photos By Elie selection",
         text: `${batch.customer || "Client"} selection table`,
       });
-      if (saved.method === "share") {
+      if (saved.method === "share" || saved.method === "share-opened") {
         setStatus(`Shared ${saved.filename} (${formatBytes(saved.bytes)})`);
       } else if (saved.method === "open") {
         setStatus(`Opened ${saved.filename}; use the browser share or save controls`);
       } else {
         setStatus(`Downloaded ${saved.filename} to Downloads (${formatBytes(saved.bytes)})`);
       }
+      completeOutputProgress(`Saved selection to the shelf: ${saved.filename} (${formatBytes(saved.bytes)})`);
     } catch (error) {
-      setStatus(error?.name === "AbortError" ? "Share canceled" : "Selection table could not be shared");
+      const message = error?.name === "AbortError" ? "Save canceled" : "Selection could not be saved";
+      setStatus(message);
+      failOutputProgress(message);
     }
   };
 
-  const shareSlideshowPlan = async () => {
-    if (!requireUnlocked()) return;
-    const selected = selectedPhotos();
-    if (!selected.length) {
-      setStatus("Select media before sharing a slideshow plan");
+  const supportedSlideshowVideoMimeTypes = () => {
+    if (typeof MediaRecorder === "undefined" || typeof MediaRecorder.isTypeSupported !== "function") return [];
+    return slideshowVideoMimeTypes.filter((mimeType) => MediaRecorder.isTypeSupported(mimeType));
+  };
+
+  const preferredSlideshowVideoMimeType = () => supportedSlideshowVideoMimeTypes()[0] || "";
+
+  const slideshowVideoExtensionFor = (mimeType = "") => (
+    String(mimeType).toLowerCase().includes("mp4") ? "mp4" : "webm"
+  );
+
+  const canRecordSlideshowVideo = () => {
+    if (typeof MediaRecorder === "undefined") return false;
+    const canvas = document.createElement("canvas");
+    return typeof canvas.captureStream === "function" && Boolean(preferredSlideshowVideoMimeType());
+  };
+
+  const slideshowVideoSizesFor = (manifest) => (
+    manifest?.slideshowSettings?.outputOrientation === "portrait"
+      ? [
+        { width: 576, height: 1024 },
+        { width: 540, height: 960 },
+        { width: 720, height: 1280 },
+      ]
+      : [{ width: 1280, height: 720 }]
+  );
+
+  const slideshowVideoSizeFor = (manifest) => slideshowVideoSizesFor(manifest)[0];
+
+  const videoExportAbortError = () => {
+    const error = new Error("Video export canceled");
+    error.name = "AbortError";
+    return error;
+  };
+
+  const throwIfVideoExportAborted = (signal) => {
+    if (signal?.aborted) throw videoExportAbortError();
+  };
+
+  const waitForVideoExportDelay = (ms) => new Promise((resolve) => window.setTimeout(resolve, Math.max(0, Number(ms) || 0)));
+
+  const waitForRecorderStop = async (recorder, stopped, signal, timeoutMs = 7000) => {
+    if (!stopped) return "missing";
+    let timeoutId = 0;
+    const timeout = new Promise((resolve) => {
+      timeoutId = window.setTimeout(() => resolve("timeout"), Math.max(1000, Number(timeoutMs) || 7000));
+    });
+    const abort = signal
+      ? new Promise((_, reject) => {
+        if (signal.aborted) {
+          reject(videoExportAbortError());
+          return;
+        }
+        signal.addEventListener("abort", () => reject(videoExportAbortError()), { once: true });
+      })
+      : null;
+    try {
+      return await Promise.race([stopped.then(() => "stopped"), timeout, ...(abort ? [abort] : [])]);
+    } finally {
+      if (timeoutId) window.clearTimeout(timeoutId);
+      if (recorder?.state !== "inactive") {
+        try { recorder.requestData?.(); } catch {}
+      }
+    }
+  };
+
+  const objectFitBox = (dimensions, box, fit = "contain") => {
+    const width = Math.max(1, Number(dimensions?.width) || 1);
+    const height = Math.max(1, Number(dimensions?.height) || 1);
+    const scale = fit === "cover"
+      ? Math.max(box.width / width, box.height / height)
+      : Math.min(box.width / width, box.height / height);
+    const targetWidth = width * scale;
+    const targetHeight = height * scale;
+    return {
+      x: box.x + ((box.width - targetWidth) / 2),
+      y: box.y + ((box.height - targetHeight) / 2),
+      width: targetWidth,
+      height: targetHeight,
+    };
+  };
+
+  const roundedRectPath = (context, x, y, width, height, radius) => {
+    const safeRadius = Math.min(radius, width / 2, height / 2);
+    context.beginPath();
+    context.moveTo(x + safeRadius, y);
+    context.lineTo(x + width - safeRadius, y);
+    context.quadraticCurveTo(x + width, y, x + width, y + safeRadius);
+    context.lineTo(x + width, y + height - safeRadius);
+    context.quadraticCurveTo(x + width, y + height, x + width - safeRadius, y + height);
+    context.lineTo(x + safeRadius, y + height);
+    context.quadraticCurveTo(x, y + height, x, y + height - safeRadius);
+    context.lineTo(x, y + safeRadius);
+    context.quadraticCurveTo(x, y, x + safeRadius, y);
+    context.closePath();
+  };
+
+  const fittedSlideshowText = (context, value, maxWidth) => {
+    const text = String(value || "");
+    if (context.measureText(text).width <= maxWidth) return text;
+    const ellipsis = "...";
+    let low = 0;
+    let high = text.length;
+    while (low < high) {
+      const mid = Math.ceil((low + high) / 2);
+      if (context.measureText(`${text.slice(0, mid)}${ellipsis}`).width <= maxWidth) low = mid;
+      else high = mid - 1;
+    }
+    return `${text.slice(0, low)}${ellipsis}`;
+  };
+
+  const loadSlideshowImageElement = (url, { crossOrigin = "anonymous" } = {}) => new Promise((resolve, reject) => {
+    const image = new Image();
+    if (crossOrigin) image.crossOrigin = crossOrigin;
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error(`Could not load slideshow image: ${url}`));
+    image.decoding = "async";
+    image.src = url;
+  });
+
+  const slideshowImageCandidates = (input) => {
+    const urls = (Array.isArray(input) ? input : [input]).map((url) => String(url || "")).filter(Boolean);
+    const candidates = [];
+    urls.forEach((url) => {
+      [url, url.replace(/_1800(\.[a-z0-9]+)([?#].*)?$/i, "_900$1$2")].forEach((candidate) => {
+        if (candidate && !candidates.includes(candidate)) candidates.push(candidate);
+      });
+    });
+    return candidates;
+  };
+
+  const loadSlideshowImageViaBlob = async (url) => {
+    const response = await fetch(url, { mode: "cors", cache: "force-cache" });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    try {
+      const image = await loadSlideshowImageElement(objectUrl, { crossOrigin: "" });
+      image._photosByElieObjectUrl = objectUrl;
+      return image;
+    } catch (error) {
+      URL.revokeObjectURL(objectUrl);
+      throw error;
+    }
+  };
+
+  const loadSlideshowImage = async (url) => {
+    let lastError = null;
+    for (const candidate of slideshowImageCandidates(url)) {
+      try {
+        return await loadSlideshowImageElement(candidate);
+      } catch (error) {
+        lastError = error;
+      }
+      try {
+        return await loadSlideshowImageViaBlob(candidate);
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    const label = Array.isArray(url) ? (url[0] || "configured slideshow image") : url;
+    throw new Error(`Could not load slideshow image: ${label}${lastError?.message ? ` (${lastError.message})` : ""}`);
+  };
+
+  const loadSlideshowVideo = (url, posterUrl = "") => new Promise((resolve, reject) => {
+    const video = document.createElement("video");
+    video.crossOrigin = "anonymous";
+    video.muted = true;
+    video.playsInline = true;
+    video.preload = "auto";
+    if (posterUrl) video.poster = posterUrl;
+    video.addEventListener("loadedmetadata", () => resolve(video), { once: true });
+    video.addEventListener("error", () => reject(new Error(`Could not load slideshow video: ${url}`)), { once: true });
+    video.src = url;
+    video.load();
+  });
+
+  const loadSlideshowMedia = async (slide) => {
+    if (slide.mediaType === "video" && slide.videoUrl) {
+      try {
+        const video = await loadSlideshowVideo(slide.videoUrl, slide.imageUrl);
+        return {
+          kind: "video",
+          element: video,
+          dimensions: {
+            width: video.videoWidth || 1280,
+            height: video.videoHeight || 720,
+          },
+        };
+      } catch {
+        // Use the still frame if the browser cannot decode the source clip for canvas recording.
+      }
+    }
+    const image = await loadSlideshowImage(slide.imageUrls?.length ? slide.imageUrls : slide.imageUrl);
+    return {
+      kind: "image",
+      element: image,
+      dimensions: {
+        width: image.naturalWidth || 1800,
+        height: image.naturalHeight || 1200,
+      },
+    };
+  };
+
+  const kenBurnsFrameTransform = (effect, progress, canvas) => {
+    const p = Math.max(0, Math.min(1, Number(progress) || 0));
+    const driftX = canvas.width * 0.018;
+    const driftY = canvas.height * 0.018;
+    if (effect === "center-breathe-out") return { scale: 1.024 - (0.024 * p), x: 0, y: 0 };
+    if (effect === "center-drift-left") return { scale: 1.012 + (0.012 * p), x: -driftX * p, y: 0 };
+    if (effect === "center-drift-right") return { scale: 1.012 + (0.012 * p), x: driftX * p, y: 0 };
+    if (effect === "center-drift-up") return { scale: 1.012 + (0.012 * p), x: 0, y: -driftY * p };
+    if (effect === "center-drift-down") return { scale: 1.012 + (0.012 * p), x: 0, y: driftY * p };
+    return { scale: 1 + (0.024 * p), x: 0, y: 0 };
+  };
+
+  const drawSlideshowMedia = (context, media, box, fit = "contain") => {
+    const rect = objectFitBox(media.dimensions, box, fit);
+    context.drawImage(media.element, rect.x, rect.y, rect.width, rect.height);
+    return rect;
+  };
+
+  const drawVideoWatermark = (context, text, box) => {
+    const watermarkText = String(text || "").trim();
+    if (!watermarkText || !box.width || !box.height) return;
+    const repeated = watermarkText.toUpperCase();
+    const fontSize = Math.max(22, Math.round(Math.min(box.width, box.height) / 18));
+    const stepX = Math.max(190, Math.round(fontSize * repeated.length * 0.78));
+    const stepY = Math.max(150, Math.round(fontSize * 3.4));
+
+    context.save();
+    context.beginPath();
+    context.rect(box.x, box.y, box.width, box.height);
+    context.clip();
+    context.translate(box.x + (box.width / 2), box.y + (box.height / 2));
+    context.rotate(-28 * Math.PI / 180);
+    context.font = `900 ${fontSize}px Arial, Helvetica, sans-serif`;
+    context.textAlign = "left";
+    context.textBaseline = "top";
+    context.lineWidth = Math.max(1, Math.round(fontSize / 14));
+    context.strokeStyle = "rgba(0,0,0,0.13)";
+    context.fillStyle = "rgba(255,255,255,0.168)";
+    for (let y = -box.height * 1.4; y < box.height * 1.4; y += stepY) {
+      const rowOffset = Math.round(y / stepY) % 2 === 0 ? 0 : -(stepX / 2);
+      for (let x = -box.width * 1.4 + rowOffset; x < box.width * 1.4; x += stepX) {
+        context.strokeText(repeated, x, y);
+        context.fillText(repeated, x, y);
+      }
+    }
+    context.restore();
+
+    context.save();
+    context.font = `900 ${Math.max(20, Math.round(Math.min(box.width, box.height) / 24))}px Arial, Helvetica, sans-serif`;
+    context.textAlign = "right";
+    context.textBaseline = "bottom";
+    context.lineWidth = 2;
+    context.strokeStyle = "rgba(0,0,0,0.48)";
+    context.fillStyle = "rgba(255,255,255,0.72)";
+    const margin = Math.max(18, Math.round(Math.min(box.width, box.height) / 36));
+    context.strokeText("PhotosByElie", box.x + box.width - margin, box.y + box.height - margin);
+    context.fillText("PhotosByElie", box.x + box.width - margin, box.y + box.height - margin);
+    context.restore();
+  };
+
+  const drawVideoTitle = (context, slide, box) => {
+    const title = String(slide.title || "Untitled").trim();
+    const projectTitle = String(slide.projectTitle || slide.mediaType || "").trim();
+    const gradientHeight = Math.max(120, Math.round(box.height * 0.25));
+    const gradient = context.createLinearGradient(0, box.y + box.height - gradientHeight, 0, box.y + box.height);
+    gradient.addColorStop(0, "rgba(0,0,0,0)");
+    gradient.addColorStop(1, "rgba(0,0,0,0.62)");
+    context.fillStyle = gradient;
+    context.fillRect(box.x, box.y + box.height - gradientHeight, box.width, gradientHeight);
+
+    const bottomPadding = Math.max(54, Math.round(Math.min(box.width, box.height) * 0.075));
+    const titleSize = Math.max(30, Math.min(72, Math.round(box.width * 0.07)));
+    const eyebrowSize = Math.max(15, Math.min(28, Math.round(titleSize * 0.36)));
+    const titleY = box.y + box.height - bottomPadding;
+    context.save();
+    context.textAlign = "center";
+    context.shadowColor = "rgba(0,0,0,0.82)";
+    context.shadowBlur = 10;
+    context.shadowOffsetY = 2;
+    context.fillStyle = "rgba(255,255,255,0.84)";
+    context.font = `900 ${eyebrowSize}px Arial, Helvetica, sans-serif`;
+    context.fillText(fittedSlideshowText(context, projectTitle.toUpperCase(), box.width * 0.78), box.x + (box.width / 2), titleY - titleSize - 8);
+    context.fillStyle = "#ffffff";
+    context.font = `900 ${titleSize}px Arial, Helvetica, sans-serif`;
+    context.fillText(fittedSlideshowText(context, title, box.width * 0.78), box.x + (box.width / 2), titleY);
+    context.restore();
+  };
+
+  const drawVideoCounter = (context, counterText, box) => {
+    const fontSize = Math.max(18, Math.round(Math.min(box.width, box.height) / 34));
+    const paddingX = Math.max(7, Math.round(fontSize * 0.4));
+    const paddingY = Math.max(4, Math.round(fontSize * 0.26));
+    const margin = Math.max(12, Math.round(Math.min(box.width, box.height) / 42));
+    context.save();
+    context.font = `850 ${fontSize}px Arial, Helvetica, sans-serif`;
+    context.textBaseline = "top";
+    context.textAlign = "left";
+    const metrics = context.measureText(counterText);
+    const width = metrics.width + (paddingX * 2);
+    const height = fontSize + (paddingY * 2);
+    const x = box.x + margin;
+    const y = box.y + box.height - margin - height;
+    roundedRectPath(context, x, y, width, height, Math.max(3, Math.round(fontSize / 5)));
+    context.fillStyle = "rgba(80,80,80,0.78)";
+    context.fill();
+    context.fillStyle = "#ffffff";
+    context.fillText(counterText, x + paddingX, y + paddingY);
+    context.restore();
+  };
+
+  const canvasTextLines = (context, text, maxWidth) => {
+    const words = String(text || "").split(/\s+/).filter(Boolean);
+    const lines = [];
+    let line = "";
+    words.forEach((word) => {
+      const nextLine = line ? `${line} ${word}` : word;
+      if (line && context.measureText(nextLine).width > maxWidth) {
+        lines.push(line);
+        line = word;
+      } else {
+        line = nextLine;
+      }
+    });
+    if (line) lines.push(line);
+    return lines.length ? lines : [""];
+  };
+
+  const drawRecordedCreditsFrame = (context, canvas, credits) => {
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.fillStyle = "#050505";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    const safeCredits = Array.isArray(credits) ? credits.filter((entry) => String(entry?.text || "").trim()) : [];
+    if (!safeCredits.length) return;
+
+    const maxWidth = canvas.width * 0.78;
+    const eyebrowSize = Math.max(22, Math.round(Math.min(canvas.width, canvas.height) / 34));
+    const titleSize = Math.max(34, Math.round(Math.min(canvas.width, canvas.height) / 20));
+    const detailSize = Math.max(20, Math.round(Math.min(canvas.width, canvas.height) / 42));
+    const titleLineHeight = titleSize * 1.14;
+    const detailLineHeight = detailSize * 1.32;
+
+    context.save();
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillStyle = "rgba(255,255,255,0.72)";
+    context.font = `900 ${eyebrowSize}px Arial, Helvetica, sans-serif`;
+    context.fillText("MUSIC CREDIT", canvas.width / 2, canvas.height * 0.28);
+
+    let y = canvas.height * 0.42;
+    safeCredits.forEach((entry) => {
+      context.fillStyle = "#ffffff";
+      context.font = `900 ${titleSize}px Arial, Helvetica, sans-serif`;
+      canvasTextLines(context, entry.text, maxWidth).forEach((line) => {
+        context.fillText(line, canvas.width / 2, y);
+        y += titleLineHeight;
+      });
+
+      const detail = [entry.source, entry.license].filter(Boolean).join(" / ");
+      if (detail) {
+        y += detailLineHeight * 0.2;
+        context.fillStyle = "rgba(255,255,255,0.64)";
+        context.font = `700 ${detailSize}px Arial, Helvetica, sans-serif`;
+        canvasTextLines(context, detail, maxWidth).forEach((line) => {
+          context.fillText(line, canvas.width / 2, y);
+          y += detailLineHeight;
+        });
+      }
+      y += titleLineHeight * 0.45;
+    });
+    context.restore();
+  };
+
+  const drawRecordedSlideFrame = (context, canvas, slide, media, progress, counterText, watermarkText) => {
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.fillStyle = "#050505";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+
+    context.save();
+    context.globalAlpha = 0.48;
+    context.filter = "blur(24px)";
+    drawSlideshowMedia(context, media, { x: 0, y: 0, width: canvas.width, height: canvas.height }, "cover");
+    context.restore();
+
+    const cardBox = objectFitBox(media.dimensions, { x: 0, y: 0, width: canvas.width, height: canvas.height }, "contain");
+    const transform = kenBurnsFrameTransform(slide.effect, progress, canvas);
+    context.save();
+    context.translate(canvas.width / 2 + transform.x, canvas.height / 2 + transform.y);
+    context.scale(transform.scale, transform.scale);
+    context.translate(-canvas.width / 2, -canvas.height / 2);
+    context.save();
+    context.beginPath();
+    context.rect(cardBox.x, cardBox.y, cardBox.width, cardBox.height);
+    context.clip();
+    drawSlideshowMedia(context, media, cardBox, "cover");
+    drawVideoWatermark(context, watermarkText, cardBox);
+    drawVideoTitle(context, slide, cardBox);
+    drawVideoCounter(context, counterText, cardBox);
+    context.restore();
+    context.restore();
+  };
+
+  const nextAnimationFrame = () => new Promise((resolve) => window.requestAnimationFrame(resolve));
+
+  const prepareSlideshowAudio = async (manifest, totalDurationSeconds) => {
+    const audioPolicy = manifest.slideshowSettings?.audioPolicy || {};
+    const musicTrack = audioPolicy.musicTrack || null;
+    const musicUrl = musicTrack?.absoluteSrc || absoluteTrackUrl(musicTrack);
+    if (!musicUrl) return null;
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) throw new Error("This browser cannot add music to a recorded video.");
+    const context = new AudioContextClass();
+    await context.resume?.();
+    if (context.state && context.state !== "running") {
+      await context.close?.();
+      throw new Error("Tap Download video once so this browser can add music to the video file.");
+    }
+    const destination = context.createMediaStreamDestination();
+    const response = await fetch(musicUrl, { mode: "cors" });
+    if (!response.ok) throw new Error(`Could not load slideshow music: HTTP ${response.status}`);
+    const buffer = await context.decodeAudioData(await response.arrayBuffer());
+    const source = context.createBufferSource();
+    const gain = context.createGain();
+    source.buffer = buffer;
+    source.loop = true;
+    source.connect(gain);
+    gain.connect(destination);
+    return {
+      stream: destination.stream,
+      start: () => {
+        const now = context.currentTime + 0.05;
+        const duration = Math.max(0.1, totalDurationSeconds);
+        const creditsDuration = slideshowCreditDurationMsFor(slideshowRequiredCreditsFor(manifest)) / 1000;
+        const musicEnd = Math.max(0.1, duration - creditsDuration);
+        const fadeDuration = Math.max(0.3, Math.min(duration, Number(manifest.slideshowSettings?.musicFadeOutSeconds || state.slideshowPhotoSeconds) || state.slideshowPhotoSeconds));
+        const fadeStart = Math.max(0, musicEnd - fadeDuration);
+        const volume = Math.max(0, Math.min(1, Math.pow(10, Number(musicTrack?.musicGainDb ?? slideshowMusicGainDb) / 20)));
+        gain.gain.setValueAtTime(volume, now);
+        gain.gain.setValueAtTime(volume, now + fadeStart);
+        gain.gain.linearRampToValueAtTime(0.0001, now + musicEnd);
+        if (duration > musicEnd + 0.01) gain.gain.setValueAtTime(0.0001, now + duration);
+        source.start(now);
+        source.stop(now + duration + 0.25);
+      },
+      stop: () => {
+        try { source.stop(); } catch {}
+        destination.stream.getTracks().forEach((track) => track.stop());
+        context.close?.();
+      },
+    };
+  };
+
+  const recordSlideshowVideoAttempt = async (manifest, slides, { size = slideshowVideoSizeFor(manifest), mimeType = preferredSlideshowVideoMimeType(), signal = null } = {}, onProgress = null) => {
+    throwIfVideoExportAborted(signal);
+    const canvas = document.createElement("canvas");
+    canvas.width = size.width;
+    canvas.height = size.height;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("This browser cannot render the slideshow video.");
+    const requiredCredits = slideshowRequiredCreditsFor(manifest);
+    const creditDurationMs = slideshowCreditDurationMsFor(requiredCredits);
+    const totalDurationSeconds = slides.reduce((sum, slide) => sum + (Math.max(1000, Number(slide.durationMs) || 0) / 1000), 0) + (creditDurationMs / 1000);
+    let canvasStream = null;
+    let audio = null;
+    let stream = null;
+    let recorder = null;
+    let stopped = null;
+    const chunks = [];
+    let recorderError = null;
+    let recorderStopTimedOut = false;
+
+    try {
+      canvasStream = canvas.captureStream(slideshowVideoFps);
+      audio = await prepareSlideshowAudio(manifest, totalDurationSeconds);
+      throwIfVideoExportAborted(signal);
+      stream = new MediaStream([
+        ...canvasStream.getVideoTracks(),
+        ...(audio?.stream?.getAudioTracks?.() || []),
+      ]);
+      recorder = new MediaRecorder(stream, { mimeType });
+      recorder.addEventListener("dataavailable", (event) => {
+        if (event.data?.size) chunks.push(event.data);
+      });
+      recorder.addEventListener("error", (event) => {
+        recorderError = event.error || new Error("The video recorder failed.");
+      });
+      stopped = new Promise((resolve) => recorder.addEventListener("stop", resolve, { once: true }));
+      recorder.start(1000);
+      audio?.start?.();
+      for (const [index, slide] of slides.entries()) {
+        throwIfVideoExportAborted(signal);
+        onProgress?.({ phase: "load", index, total: slides.length, slide });
+        const media = await loadSlideshowMedia(slide);
+        try {
+          if (media.kind === "video") {
+            try {
+              media.element.currentTime = 0;
+              await media.element.play();
+            } catch {
+              // Muted autoplay can still fail in some browsers; the poster frame will be recorded.
+            }
+          }
+          const duration = Math.max(1000, Number(slide.durationMs) || 4000);
+          const startedAt = performance.now();
+          let elapsed = 0;
+          while (elapsed < duration) {
+            throwIfVideoExportAborted(signal);
+            elapsed = performance.now() - startedAt;
+            const progress = Math.max(0, Math.min(1, elapsed / duration));
+            drawRecordedSlideFrame(context, canvas, slide, media, progress, `${index + 1}/${slides.length}`, String(manifest.slideshowSettings?.watermarkText || "").trim());
+            onProgress?.({ phase: "render", index, total: slides.length, progress, slide });
+            await nextAnimationFrame();
+          }
+        } finally {
+          if (media.element?._photosByElieObjectUrl) {
+            URL.revokeObjectURL(media.element._photosByElieObjectUrl);
+            media.element._photosByElieObjectUrl = "";
+          }
+          if (media.kind === "video") {
+            media.element.pause();
+            media.element.removeAttribute("src");
+            media.element.load();
+          }
+        }
+      }
+      if (requiredCredits.length) {
+        const duration = Math.max(1000, creditDurationMs || 3500);
+        const startedAt = performance.now();
+        let elapsed = 0;
+        while (elapsed < duration) {
+          throwIfVideoExportAborted(signal);
+          elapsed = performance.now() - startedAt;
+          drawRecordedCreditsFrame(context, canvas, requiredCredits);
+          onProgress?.({ phase: "credits", index: slides.length, total: slides.length + 1, progress: Math.max(0, Math.min(1, elapsed / duration)) });
+          await nextAnimationFrame();
+        }
+      }
+      onProgress?.({ phase: "finalize", index: slides.length, total: slides.length, progress: 1 });
+    } finally {
+      if (recorder && recorder.state !== "inactive") {
+        try { recorder.requestData?.(); } catch {}
+        await waitForVideoExportDelay(180);
+        try { recorder.stop(); } catch {}
+      }
+      const stopResult = await waitForRecorderStop(recorder, stopped, signal).catch((error) => {
+        if (error?.name === "AbortError") throw error;
+        return "error";
+      });
+      recorderStopTimedOut = stopResult === "timeout";
+      if (stream) stream.getTracks().forEach((track) => track.stop());
+      else canvasStream?.getTracks?.().forEach((track) => track.stop());
+      audio?.stop?.();
+    }
+    throwIfVideoExportAborted(signal);
+    if (recorderError) throw recorderError;
+    const finalMimeType = recorder.mimeType || mimeType;
+    const blob = new Blob(chunks, { type: finalMimeType });
+    if (!blob.size) throw new Error("The browser created an empty video file.");
+    if (recorderStopTimedOut) console.warn("Real Estate slideshow recorder stop timed out; using recorded chunks collected so far.");
+    return {
+      blob,
+      mimeType: finalMimeType,
+      extension: slideshowVideoExtensionFor(finalMimeType),
+      size,
+    };
+  };
+
+  const recordSlideshowVideoBlob = async (manifest, onProgress = null, { signal = null } = {}) => {
+    const mimeTypes = supportedSlideshowVideoMimeTypes();
+    if (!mimeTypes.length || !canRecordSlideshowVideo()) {
+      throw new Error("This browser cannot record a real video file from the slideshow. Try current Safari or Chrome on desktop.");
+    }
+    const slides = slideshowSlidesFor(manifest);
+    if (!slides.length) throw new Error("No slides are available for video export.");
+    const sizes = slideshowVideoSizesFor(manifest);
+    let lastError = null;
+    for (const size of sizes) {
+      for (const mimeType of mimeTypes) {
+        try {
+          onProgress?.({ phase: "attempt", size, mimeType, total: slides.length });
+          return await recordSlideshowVideoAttempt(manifest, slides, { size, mimeType, signal }, onProgress);
+        } catch (error) {
+          if (error?.name === "AbortError") throw error;
+          lastError = error;
+          console.warn("Real Estate slideshow recorder attempt failed", {
+            size,
+            mimeType,
+            message: error?.message || String(error),
+          });
+          onProgress?.({ phase: "retry", size, mimeType, error, total: slides.length });
+        }
+      }
+    }
+    const portrait = manifest?.slideshowSettings?.outputOrientation === "portrait";
+    const detail = lastError?.message ? `: ${lastError.message}` : ".";
+    throw new Error(`The browser could not finish the ${portrait ? "vertical " : ""}video file${detail}`);
+  };
+
+  const currentVideoExportKey = () => {
+    const photos = activeSelectedPhotos();
+    if (!photos.length) return "";
+    const projects = projectGroupsFor(photos, true).map((project) => ({
+      projectId: project.projectId,
+      projectTitle: project.projectTitle,
+      projectIndex: project.projectIndex,
+      items: project.photos.map((photo) => ({
+        id: photo.id,
+        title: titleFor(photo),
+        mediaType: mediaTypeFor(photo),
+        durationSeconds: isVideo(photo) ? durationSecondsFor(photo) : state.slideshowPhotoSeconds,
+        dimensions: pdfDimensionsFor(photo),
+        image: imageFor(photo, "detail"),
+        video: isVideo(photo) ? videoPreviewFor(photo) : "",
+      })),
+    }));
+    return JSON.stringify({
+      schema: "photosbyelie.realEstateVideoCache.v3",
+      galleryKey: state.gallery?.key || "",
+      photoDurationSeconds: state.slideshowPhotoSeconds,
+      outputOrientation: normalizeSlideshowOrientation(state.slideshowOrientation),
+      musicCountry: state.slideshowMusicCountry,
+      resolvedMusicCountry: activeSlideshowMusicCountry(photos),
+      musicManifestLoaded: state.slideshowMusicManifestLoaded,
+      musicTrackCount: state.slideshowMusicTracks.length,
+      watermarkText: activeWatermarkText(),
+      musicCreditPolicy: "append-end-card-when-required-v1",
+      projects,
+    });
+  };
+
+  const clearVideoExportTimer = () => {
+    if (!state.videoExportTimer) return;
+    window.clearTimeout(state.videoExportTimer);
+    state.videoExportTimer = 0;
+  };
+
+  const updateBackgroundVideoProgress = ({ detail = "", current = 0, total = 0, done = false } = {}) => {
+    if (state.outputBusy || state.pdfBusy || !elements.outputProgress) return;
+    if (!state.outputProgressStartedAt || current === 0) state.outputProgressStartedAt = Date.now();
+    updateOutputProgress({
+      title: done ? "Video ready" : "Preparing video in background",
+      detail,
+      current,
+      total,
+      done,
+    });
+    if (done) {
+      state.outputProgressStartedAt = 0;
+      if (state.outputProgressHideTimer) window.clearTimeout(state.outputProgressHideTimer);
+      state.outputProgressHideTimer = window.setTimeout(() => {
+        if (elements.outputProgress) elements.outputProgress.hidden = true;
+        state.outputProgressHideTimer = 0;
+      }, 4500);
+    }
+  };
+
+  const scheduleVideoExportSynthesis = (delay = 700) => {
+    clearVideoExportTimer();
+    if (!state.unlocked || !activeSelectedPhotos().length || !canRecordSlideshowVideo()) return;
+    state.videoExportTimer = window.setTimeout(() => {
+      state.videoExportTimer = 0;
+      ensureVideoExportReady({ background: true }).catch(() => {});
+    }, Math.max(0, Number(delay) || 0));
+  };
+
+  const invalidateVideoExportCache = ({ schedule = true } = {}) => {
+    clearVideoExportTimer();
+    state.videoExportToken += 1;
+    state.videoExportAbort?.abort?.();
+    state.videoExportAbort = null;
+    state.videoExportPromise = null;
+    state.videoExportCache = null;
+    state.videoExportCacheKey = "";
+    state.videoExportStatus = "idle";
+    state.videoExportError = "";
+    syncFileActionLabels();
+    if (schedule) scheduleVideoExportSynthesis();
+  };
+
+  const ensureVideoExportReady = async ({ background = false } = {}) => {
+    const key = currentVideoExportKey();
+    if (!key) throw new Error("Select media before preparing a video output.");
+    if (state.videoExportCache?.key === key) return state.videoExportCache;
+    if (state.videoExportPromise && state.videoExportCacheKey === key) return state.videoExportPromise;
+
+    state.videoExportToken += 1;
+    const token = state.videoExportToken;
+    const controller = new AbortController();
+    state.videoExportAbort?.abort?.();
+    state.videoExportAbort = controller;
+    state.videoExportCache = null;
+    state.videoExportCacheKey = key;
+    state.videoExportStatus = "building";
+    state.videoExportError = "";
+    syncFileActionLabels();
+
+    const promise = (async () => {
+      const selected = activeSelectedPhotos();
+      const batch = buildSlideshowManifest(selected, true);
+      const slides = slideshowSlidesFor(batch);
+      if (background) {
+        updateBackgroundVideoProgress({
+          detail: `Recording ${slides.length} slide${slides.length === 1 ? "" : "s"} for the video file...`,
+          current: 0,
+          total: Math.max(1, slides.length),
+        });
+      }
+      const recorded = await recordSlideshowVideoBlob(batch, ({ phase, index = 0, total = slides.length, slide, size }) => {
+        if (phase === "attempt" && background) {
+          updateBackgroundVideoProgress({
+            detail: `Starting ${size?.width || ""}x${size?.height || ""} video recording...`,
+            current: 0,
+            total: Math.max(1, total),
+          });
+          return;
+        }
+        if (phase === "finalize") {
+          const detail = "Finalizing video file...";
+          if (background) updateBackgroundVideoProgress({ detail, current: Math.max(1, total), total: Math.max(1, total) });
+          else {
+            updateOutputProgress({ title: "Preparing video file", detail, current: 2, total: 3 });
+            setStatus(detail);
+          }
+          return;
+        }
+        if (phase !== "load") return;
+        const detail = `Recording slide ${index + 1}/${total}: ${slide?.title || "Untitled"}`;
+        if (background) updateBackgroundVideoProgress({ detail, current: index + 1, total });
+        else {
+          updateOutputProgress({ title: "Preparing video file", detail, current: 2, total: 3 });
+          setStatus(detail);
+        }
+      }, { signal: controller.signal });
+      throwIfVideoExportAborted(controller.signal);
+      if (token !== state.videoExportToken || currentVideoExportKey() !== key) throw videoExportAbortError();
+      const filename = `${state.gallery?.key || "real-estate"}-${batch.batchId}-slideshow.${recorded.extension}`;
+      const cache = {
+        key,
+        batch,
+        blob: recorded.blob,
+        mimeType: recorded.mimeType,
+        extension: recorded.extension,
+        filename,
+        bytes: Number(recorded.blob?.size) || 0,
+        size: recorded.size,
+      };
+      state.videoExportCache = cache;
+      state.videoExportStatus = "ready";
+      state.videoExportError = "";
+      if (background) {
+        updateBackgroundVideoProgress({
+          detail: `Video ready: ${filename} (${formatBytes(cache.bytes)})`,
+          current: 1,
+          total: 1,
+          done: true,
+        });
+      }
+      syncFileActionLabels();
+      return cache;
+    })();
+
+    state.videoExportPromise = promise;
+    promise.catch((error) => {
+      if (error?.name === "AbortError" || token !== state.videoExportToken) return;
+      state.videoExportStatus = "error";
+      state.videoExportError = error?.message || "Video output could not be prepared";
+      if (background) {
+        updateBackgroundVideoProgress({
+          detail: state.videoExportError,
+          current: 0,
+          total: 1,
+        });
+      }
+      syncFileActionLabels();
+    }).finally(() => {
+      if (state.videoExportPromise === promise) state.videoExportPromise = null;
+      if (state.videoExportAbort === controller) state.videoExportAbort = null;
+      syncFileActionLabels();
+    });
+    return promise;
+  };
+
+  const shareSlideshowPlan = async ({ mode = "download", reservedWindow = null, recordProduct = true, progressKind = "", batchOverride = null } = {}) => {
+    if (!requireUnlocked() || state.outputBusy) return;
+    const selected = activeSelectedPhotos();
+    if (!selected.length && !batchOverride?.items?.length) {
+      setStatus(`Select media before ${mode === "view" ? "viewing" : "downloading"} a video output`);
       return;
     }
-    const batch = buildSlideshowManifest();
-    const blob = new Blob([slideshowHtmlFor(batch)], { type: "text/html" });
-    const filename = `${state.gallery?.key || "real-estate"}-${batch.batchId}-slideshow.html`;
+    const openInBrowser = mode === "view";
+    const title = openInBrowser ? "Preparing video view" : "Preparing video file";
+    const fallbackWindow = openInBrowser ? (reservedWindow || reserveOutputWindow("Building video preview")) : null;
+    startOutputProgress({
+      title,
+      detail: "Building slideshow manifest...",
+      total: 3,
+      kind: progressKind || (mode === "view" ? "video-view" : "video-download"),
+    });
     try {
-      const saved = await shareOrOpenBlob({
-        blob,
-        filename,
-        title: "Photos By Elie slideshow plan",
-        text: `${batch.customer || "Client"} slideshow plan`,
-      });
-      if (saved.method === "share") {
-        setStatus(`Shared ${saved.filename} (${formatBytes(saved.bytes)})`);
-      } else if (saved.method === "open") {
-        setStatus(`Opened ${saved.filename}; videos keep their full source duration`);
+      let batch = buildSlideshowManifest(selected, true, batchOverride);
+      updateOutputProgress({ title, detail: "Adding music and Ken Burns motion...", current: 1, total: 3 });
+      let saved = null;
+      if (recordProduct) saveSelectionBeforeOutput(batch);
+      if (openInBrowser) {
+        const filename = `${state.gallery?.key || "real-estate"}-${batch.batchId}-slideshow.html`;
+        const html = slideshowHtmlFor(batch);
+        updateOutputProgress({ title, detail: "Opening browser video view...", current: 2, total: 3 });
+        saved = await openHtmlInBrowser(html, filename, fallbackWindow);
+      } else {
+        let recorded = null;
+        let filename = "";
+        if (!batchOverride) {
+          updateOutputProgress({ title, detail: "Finishing the prepared video file...", current: 2, total: 3 });
+          const prepared = await ensureVideoExportReady({ background: false });
+          batch = prepared.batch;
+          recorded = prepared;
+          filename = prepared.filename;
+        } else {
+          const slides = slideshowSlidesFor(batch);
+          updateOutputProgress({ title, detail: `Recording real video file from ${slides.length} slide${slides.length === 1 ? "" : "s"}...`, current: 2, total: 3 });
+          recorded = await recordSlideshowVideoBlob(batch, ({ phase, index, total, slide }) => {
+            if (phase === "finalize") {
+              const detail = "Finalizing video file...";
+              updateOutputProgress({ title, detail, current: 2, total: 3 });
+              setStatus(detail);
+              return;
+            }
+            if (phase !== "load") return;
+            const detail = `Recording slide ${index + 1}/${total}: ${slide.title || "Untitled"}`;
+            updateOutputProgress({ title, detail, current: 2, total: 3 });
+            setStatus(detail);
+          });
+          filename = `${state.gallery?.key || "real-estate"}-${batch.batchId}-slideshow.${recorded.extension}`;
+        }
+        updateOutputProgress({ title, detail: "Sending video file to your device...", current: 3, total: 3 });
+        saved = await shareOrOpenBlob({
+          blob: recorded.blob,
+          filename,
+          title: "Photos By Elie video",
+          text: "Photos By Elie slideshow video file",
+          openFallback: false,
+          allowNativeShare: shouldUseNativeFileShare(),
+        });
+        if (recordProduct) saveLocalDeliverable({ type: "video", batch, filename: saved.filename, bytes: saved.bytes });
+      }
+      if (saved.method === "share" || saved.method === "share-opened") {
+        setStatus(`Saved/shared ${saved.filename} (${formatBytes(saved.bytes)})`);
+      } else if (saved.method === "open" || saved.method === "open-current") {
+        setStatus(`Viewing ${saved.filename}. ${deliverableActionNote}`);
       } else {
         setStatus(`Downloaded ${saved.filename} to Downloads (${formatBytes(saved.bytes)})`);
       }
+      completeOutputProgress(`Ready: ${saved.filename} (${formatBytes(saved.bytes)})`);
     } catch (error) {
-      setStatus(error?.name === "AbortError" ? "Share canceled" : "Slideshow plan could not be shared");
+      if (error?.name !== "AbortError") console.error("Real Estate video output failed", error);
+      const message = error?.name === "AbortError"
+        ? "Video output canceled"
+        : error?.message
+          ? `Video output could not be prepared: ${error.message}`
+          : "Video output could not be prepared";
+      setStatus(message);
+      failOutputProgress(message);
     }
   };
 
@@ -1350,19 +4205,28 @@
   };
 
   const shareOriginalsZip = async () => {
-    if (!requireUnlocked() || state.originalsBusy) return;
+    if (!requireUnlocked() || state.originalsBusy || state.outputBusy) return;
     const photos = selectedPhotos();
     if (!photos.length) {
       setStatus("Select media before preparing originals ZIP");
       return;
     }
     state.originalsBusy = true;
+    startOutputProgress({
+      title: "Preparing originals ZIP",
+      detail: "Requesting private original links...",
+      kind: "originals",
+    });
     syncFileActionLabels();
     try {
       let session = null;
       let passwordMessage = "";
       for (let attempt = 0; attempt < 2 && !session; attempt += 1) {
         setStatus(`Preparing private original links for ${photos.length} selected media item${photos.length === 1 ? "" : "s"}...`);
+        updateOutputProgress({
+          title: "Preparing originals ZIP",
+          detail: `Requesting private links for ${photos.length} selected media item${photos.length === 1 ? "" : "s"}...`,
+        });
         try {
           session = await requestOriginalsSession(photos, passwordMessage);
         } catch (error) {
@@ -1378,13 +4242,46 @@
       if (!session) throw new Error("Originals ZIP could not be prepared.");
       const files = originalZipFilesFor(session);
       const totalBytes = Number(session.totalBytes) || files.reduce((sum, file) => sum + (Number(file.bytes) || 0), 0);
+      const totalSteps = Math.max(2, (files.length * 3) + 2);
+      let currentStep = 1;
+      updateOutputProgress({
+        title: "Preparing originals ZIP",
+        detail: `Building ZIP from ${files.length} file${files.length === 1 ? "" : "s"}${totalBytes ? ` (${formatBytes(totalBytes)})` : ""}...`,
+        current: currentStep,
+        total: totalSteps,
+      });
       setStatus(`Building originals ZIP from ${files.length} file${files.length === 1 ? "" : "s"}${totalBytes ? ` (${formatBytes(totalBytes)})` : ""}...`);
       const blob = await buildStoredZipBlob(files, ({ index, file, phase }) => {
         const number = index + 1;
-        if (phase === "fetch") setStatus(`Fetching original ${number}/${files.length}: ${file.name}`);
-        if (phase === "zip") setStatus(`Adding original ${number}/${files.length} to ZIP: ${file.name}`);
+        if (phase === "fetch") {
+          currentStep += 1;
+          const detail = `Fetching original ${number}/${files.length}: ${file.name}`;
+          setStatus(detail);
+          updateOutputProgress({ title: "Preparing originals ZIP", detail, current: currentStep, total: totalSteps });
+        }
+        if (phase === "zip") {
+          currentStep += 1;
+          const detail = `Adding original ${number}/${files.length} to ZIP: ${file.name}`;
+          setStatus(detail);
+          updateOutputProgress({ title: "Preparing originals ZIP", detail, current: currentStep, total: totalSteps });
+        }
+        if (phase === "done") {
+          currentStep += 1;
+          updateOutputProgress({
+            title: "Preparing originals ZIP",
+            detail: `Finished original ${number}/${files.length}: ${file.name}`,
+            current: currentStep,
+            total: totalSteps,
+          });
+        }
       });
       const filename = session.zipFilename || `${state.gallery?.key || "real-estate"}-originals-${timestampId()}.zip`;
+      updateOutputProgress({
+        title: "Preparing originals ZIP",
+        detail: "Sending ZIP to your device...",
+        current: totalSteps - 1,
+        total: totalSteps,
+      });
       const saved = await shareOrOpenBlob({
         blob,
         filename,
@@ -1392,13 +4289,16 @@
         text: `${state.payload?.customer?.name || "Client"} selected original media`,
         openFallback: false,
       });
-      if (saved.method === "share") {
+      if (saved.method === "share" || saved.method === "share-opened") {
         setStatus(`Shared ${saved.filename} (${formatBytes(saved.bytes)})`);
       } else {
         setStatus(`Downloaded ${saved.filename} to Downloads (${formatBytes(saved.bytes)})`);
       }
+      completeOutputProgress(`Ready: ${saved.filename} (${formatBytes(saved.bytes)})`);
     } catch (error) {
-      setStatus(error?.name === "AbortError" ? "Originals ZIP canceled" : (error?.message || "Originals ZIP failed"));
+      const message = error?.name === "AbortError" ? "Originals ZIP canceled" : (error?.message || "Originals ZIP failed");
+      setStatus(message);
+      failOutputProgress(message);
     } finally {
       state.originalsBusy = false;
       syncFileActionLabels();
@@ -1415,18 +4315,68 @@
     return { width, height };
   };
 
-  const fetchPdfImages = async (photos) => {
+  const pdfPhotoFor = (entry) => entry?.photo || entry;
+  const pdfTitleFor = (entry) => entry?.title || titleFor(pdfPhotoFor(entry));
+
+  const pdfImageKeysFor = (photo) => {
+    const preview = photo?.media?.publicPreview || {};
+    return [
+      preview.detailKey,
+      photo?.cloudPdfSource?.publicKey,
+      preview.galleryKey,
+    ].map((key) => String(key || "").replace(/^\/+/, ""))
+      .filter(Boolean)
+      .filter((key, index, keys) => keys.indexOf(key) === index);
+  };
+
+  const pdfImageUrlsFor = (photo) => {
+    const directUrl = imageFor(photo, "detail");
+    const keys = pdfImageKeysFor(photo);
+    const workerUrls = keys.map(workerMediaUrl).filter(Boolean);
+    const publicUrls = keys.map(publicMediaUrl).filter(Boolean);
+    const candidates = isLocalHost
+      ? [directUrl, ...workerUrls, ...publicUrls]
+      : [...workerUrls, directUrl, ...publicUrls];
+    return candidates.filter(Boolean).filter((url, index, urls) => urls.indexOf(url) === index);
+  };
+
+  const fetchPdfImageBlob = async (photo, title, index, total) => {
+    const urls = pdfImageUrlsFor(photo);
+    let lastError = urls.length ? "" : "no image URL is configured";
+    for (const url of urls) {
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          lastError = `HTTP ${response.status}`;
+          continue;
+        }
+        const blob = await response.blob();
+        if (!blob || !blob.size) {
+          lastError = "empty image response";
+          continue;
+        }
+        return blob;
+      } catch (error) {
+        lastError = error?.message || "network request failed";
+      }
+    }
+    const label = title || titleFor(photo) || `image ${index + 1}`;
+    throw new Error(`Could not load PDF image ${index + 1}/${total}: ${label}${lastError ? ` (${lastError})` : ""}`);
+  };
+
+  const fetchPdfImages = async (photos, onProgress = null) => {
     const images = [];
-    for (const photo of photos) {
-      const imageUrl = imageFor(photo, "detail");
-      const response = await fetch(imageUrl);
-      if (!response.ok) throw new Error(`Could not load ${titleFor(photo)}`);
-      const blob = await response.blob();
+    for (const [index, entry] of photos.entries()) {
+      const photo = pdfPhotoFor(entry);
+      const title = pdfTitleFor(entry);
+      const blob = await fetchPdfImageBlob(photo, title, index, photos.length);
       images.push({
         blob,
         dimensions: pdfDimensionsFor(photo),
         photo,
+        title,
       });
+      onProgress?.({ index, total: photos.length, photo, title });
     }
     return images;
   };
@@ -1456,7 +4406,7 @@
     return pages;
   };
 
-  const imagePlacement = (dimensions, box) => {
+  const imagePlacement = (dimensions, box, { verticalAlign = "middle" } = {}) => {
     const scale = Math.min(box.width / dimensions.width, box.height / dimensions.height);
     const width = dimensions.width * scale;
     const height = dimensions.height * scale;
@@ -1464,7 +4414,7 @@
       width,
       height,
       x: box.x + ((box.width - width) / 2),
-      y: box.y + ((box.height - height) / 2),
+      y: verticalAlign === "top" ? box.y : box.y + ((box.height - height) / 2),
     };
   };
 
@@ -1508,18 +4458,76 @@
     context.fillText(text, x + (width / 2), y);
   };
 
-  const renderPdfPages = async (images) => {
+  const drawImporterStyleCanvasWatermark = (context, text, box) => {
+    const watermarkText = String(text || "").trim();
+    if (!watermarkText || !box?.width || !box?.height) return;
+    const fontSize = Math.max(18, Math.round(Math.max(box.width, box.height) / 45));
+    const repeatFontSize = Math.max(34, Math.round(fontSize * 2.35));
+    const repeatStroke = Math.max(2, Math.round(Math.max(1, fontSize / 14) * 2.2));
+    const repeatText = watermarkText.toUpperCase();
+
+    context.save();
+    context.beginPath();
+    context.rect(box.x, box.y, box.width, box.height);
+    context.clip();
+    context.font = `900 ${repeatFontSize}px Arial, Helvetica, sans-serif`;
+    context.textAlign = "left";
+    context.textBaseline = "top";
+    const metrics = context.measureText(repeatText);
+    const textWidth = Math.max(1, metrics.width);
+    const textHeight = repeatFontSize;
+    const tilePadding = Math.max(80, Math.round(Math.min(box.width, box.height) * 0.22));
+    const stepX = Math.max(220, Math.round((textWidth + tilePadding * 2) * 0.78));
+    const stepY = Math.max(180, Math.round((textHeight + tilePadding * 2) * 0.72));
+
+    context.translate(box.x + (box.width / 2), box.y + (box.height / 2));
+    context.rotate(-28 * Math.PI / 180);
+    context.translate(-(box.width / 2), -(box.height / 2));
+    context.lineWidth = repeatStroke;
+    context.strokeStyle = "rgba(0, 0, 0, 0.13)";
+    context.fillStyle = "rgba(255, 255, 255, 0.168)";
+    for (let y = -box.height; y < box.height * 2; y += stepY) {
+      const rowOffset = Math.round(y / stepY) % 2 === 0 ? 0 : -(stepX / 2);
+      for (let x = -box.width + rowOffset; x < box.width * 2; x += stepX) {
+        context.strokeText(repeatText, x, y);
+        context.fillText(repeatText, x, y);
+      }
+    }
+    context.restore();
+
+    context.save();
+    context.beginPath();
+    context.rect(box.x, box.y, box.width, box.height);
+    context.clip();
+    const cornerFontSize = Math.max(18, Math.round(Math.min(box.width, box.height) / 24));
+    const cornerStroke = Math.max(1, Math.round(Math.min(box.width, box.height) / 360));
+    const cornerMargin = Math.max(18, Math.round(Math.min(box.width, box.height) / 36));
+    context.font = `900 ${cornerFontSize}px Arial, Helvetica, sans-serif`;
+    context.textAlign = "right";
+    context.textBaseline = "bottom";
+    context.lineWidth = cornerStroke;
+    context.strokeStyle = "rgba(0, 0, 0, 0.48)";
+    context.fillStyle = "rgba(255, 255, 255, 0.72)";
+    context.strokeText("PhotosByElie", box.x + box.width - cornerMargin, box.y + box.height - cornerMargin);
+    context.fillText("PhotosByElie", box.x + box.width - cornerMargin, box.y + box.height - cornerMargin);
+    context.restore();
+  };
+
+  const renderPdfPages = async (images, onProgress = null) => {
     const pages = paginatePdfImages(images);
     const paper = paperFormatFor();
     const pageWidth = paper.width;
     const pageHeight = paper.height;
+    const watermarkText = activeWatermarkText();
     const margin = 30;
-    const titleArea = 28;
+    const captionArea = 30;
+    const captionGap = 7;
+    const footerArea = 18;
     const rowGap = 18;
     const scale = 2;
     const renderedPages = [];
 
-    for (const page of pages) {
+    for (const [pageIndex, page] of pages.entries()) {
       const canvas = document.createElement("canvas");
       canvas.width = Math.round(pageWidth * scale);
       canvas.height = Math.round(pageHeight * scale);
@@ -1529,9 +4537,10 @@
       context.fillStyle = "#ffffff";
       context.fillRect(0, 0, pageWidth, pageHeight);
 
+      const contentHeight = pageHeight - (margin * 2) - footerArea;
       const slotHeight = page.layout === "two-up-landscape"
-        ? ((pageHeight - (margin * 2) - rowGap) / 2)
-        : (pageHeight - (margin * 2));
+        ? ((contentHeight - rowGap) / 2)
+        : contentHeight;
       const slots = page.layout === "two-up-landscape"
         ? [
           { x: margin, y: margin, width: pageWidth - (margin * 2), height: slotHeight },
@@ -1549,48 +4558,57 @@
           };
           const imageBox = {
             x: slot.x,
-            y: slot.y + titleArea,
+            y: slot.y,
             width: slot.width,
-            height: Math.max(1, slot.height - titleArea),
+            height: Math.max(1, slot.height - captionArea),
           };
-          const placement = imagePlacement(naturalDimensions, imageBox);
+          const placement = imagePlacement(naturalDimensions, imageBox, { verticalAlign: "top" });
+          context.drawImage(loaded.image, placement.x, placement.y, placement.width, placement.height);
+          if (watermarkText) drawImporterStyleCanvasWatermark(context, watermarkText, placement);
+
           context.fillStyle = "#111111";
           context.font = "700 12px Arial, Helvetica, sans-serif";
-          context.textAlign = "left";
-          context.textBaseline = "middle";
-          context.fillText(
-            fittedCanvasText(context, titleFor(item.photo), slot.width),
-            slot.x,
-            slot.y + 13
-          );
-          context.drawImage(loaded.image, placement.x, placement.y, placement.width, placement.height);
-
-          const watermarkFontSize = Math.max(8, Math.min(12, placement.width / 48));
-          context.font = `700 ${watermarkFontSize}px Arial, Helvetica, sans-serif`;
           context.textAlign = "center";
-          context.textBaseline = "alphabetic";
-          const photoWatermark = fittedCanvasText(context, pdfWatermarkText, placement.width - 18);
-          const watermarkY = placement.y + placement.height - Math.max(8, watermarkFontSize * 0.8);
-          context.fillStyle = "rgba(0, 0, 0, 0.38)";
-          drawCenteredCanvasText(context, photoWatermark, placement.x + 1, watermarkY + 1, placement.width);
-          context.fillStyle = "rgba(255, 255, 255, 0.70)";
-          drawCenteredCanvasText(context, photoWatermark, placement.x, watermarkY, placement.width);
+          context.textBaseline = "top";
+          drawCenteredCanvasText(
+            context,
+            fittedCanvasText(context, item.title || titleFor(item.photo), slot.width),
+            slot.x,
+            placement.y + placement.height + captionGap,
+            slot.width
+          );
+
+          if (watermarkText) {
+            const watermarkFontSize = Math.max(8, Math.min(12, placement.width / 48));
+            context.font = `700 ${watermarkFontSize}px Arial, Helvetica, sans-serif`;
+            context.textAlign = "center";
+            context.textBaseline = "alphabetic";
+            const photoWatermark = fittedCanvasText(context, watermarkText, placement.width - 18);
+            const watermarkY = placement.y + placement.height - Math.max(8, watermarkFontSize * 0.8);
+            context.fillStyle = "rgba(0, 0, 0, 0.38)";
+            drawCenteredCanvasText(context, photoWatermark, placement.x + 1, watermarkY + 1, placement.width);
+            context.fillStyle = "rgba(255, 255, 255, 0.70)";
+            drawCenteredCanvasText(context, photoWatermark, placement.x, watermarkY, placement.width);
+          }
         } finally {
           loaded.cleanup();
         }
       }
 
-      context.font = "700 8px Arial, Helvetica, sans-serif";
-      context.textAlign = "center";
-      context.textBaseline = "alphabetic";
-      context.fillStyle = "rgba(0, 0, 0, 0.42)";
-      context.fillText(pdfWatermarkText, pageWidth / 2, pageHeight - 10);
+      if (watermarkText) {
+        context.font = "700 8px Arial, Helvetica, sans-serif";
+        context.textAlign = "center";
+        context.textBaseline = "alphabetic";
+        context.fillStyle = "rgba(0, 0, 0, 0.42)";
+        context.fillText(watermarkText, pageWidth / 2, pageHeight - 10);
+      }
 
       renderedPages.push({
         bytes: await canvasToJpegBytes(canvas),
         width: canvas.width,
         height: canvas.height,
       });
+      onProgress?.({ pageIndex, total: pages.length, page });
     }
 
     return {
@@ -1600,8 +4618,54 @@
     };
   };
 
-  const buildPdfBlob = async (images) => {
-    const rendered = await renderPdfPages(images);
+  const bytesToBase64 = (bytes) => {
+    const parts = [];
+    const chunkSize = 0x8000;
+    for (let index = 0; index < bytes.length; index += chunkSize) {
+      parts.push(String.fromCharCode(...bytes.subarray(index, index + chunkSize)));
+    }
+    return btoa(parts.join(""));
+  };
+
+  const pdfPreviewHtmlFor = ({ projectTitle = "", filename = "", rendered = null } = {}) => {
+    const pages = Array.isArray(rendered?.pages) ? rendered.pages : [];
+    const dateLabel = new Date().toLocaleString();
+    return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>${escapeHtml(projectTitle || "PDF preview")}</title>
+  <style>
+    :root{color-scheme:light;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#e8eaed;color:#111}
+    body{margin:0;background:#e8eaed;color:#111}
+    header{position:sticky;top:0;z-index:2;background:rgba(255,255,255,.96);border-bottom:1px solid rgba(0,0,0,.14);padding:12px 14px;box-shadow:0 8px 20px rgba(0,0,0,.08)}
+    h1{margin:0;font-size:clamp(1.1rem,5vw,1.6rem);line-height:1.1}
+    p{margin:4px 0 0;color:#444;font-size:.9rem;font-weight:650}
+    main{display:grid;gap:14px;width:min(100%,980px);margin:0 auto;padding:14px 10px 28px}
+    figure{margin:0;display:grid;gap:6px}
+    figcaption{color:#555;font-size:.78rem;font-weight:750;text-align:center}
+    img{display:block;width:100%;height:auto;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,.22)}
+    .empty{background:#fff;border:1px solid rgba(0,0,0,.14);padding:20px;text-align:center}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>${escapeHtml(projectTitle || "PDF preview")}</h1>
+    <p>${escapeHtml(filename)}${filename ? " / " : ""}${pages.length} page${pages.length === 1 ? "" : "s"} / ${escapeHtml(dateLabel)}</p>
+  </header>
+  <main>
+    ${pages.length ? pages.map((page, index) => `
+    <figure>
+      <img alt="PDF page ${index + 1}" src="data:image/jpeg;base64,${bytesToBase64(page.bytes)}"/>
+      <figcaption>Page ${index + 1} of ${pages.length}</figcaption>
+    </figure>`).join("") : '<div class="empty">No preview pages were rendered.</div>'}
+  </main>
+</body>
+</html>`;
+  };
+
+  const buildPdfBlobFromRendered = (rendered) => {
     const encoder = new TextEncoder();
     const objects = [];
     const setObject = (id, parts) => {
@@ -1666,69 +4730,237 @@
     return new Blob(chunks, { type: "application/pdf" });
   };
 
-  const downloadPdf = async () => {
-    if (!requireUnlocked() || state.pdfBusy) return;
-    const photos = selectedPhotos();
-    if (!photos.length) {
-      setStatus("Select media before downloading project PDFs");
+  const buildPdfBlob = async (images, onPageRendered = null) => {
+    const rendered = await renderPdfPages(images, onPageRendered);
+    return buildPdfBlobFromRendered(rendered);
+  };
+
+  const pdfProjectsForBatch = (batch) => {
+    const sourceProjects = Array.isArray(batch?.projects) && batch.projects.length
+      ? batch.projects
+      : [{
+        projectId: activeProjectId(),
+        projectTitle: selectedPropertyTitle(),
+        sortIndex: 1,
+        items: Array.isArray(batch?.items) ? batch.items : [],
+      }];
+    return sourceProjects.map((project, index) => ({
+      projectId: project.projectId || `project-${index + 1}`,
+      projectTitle: project.projectTitle || `Project ${index + 1}`,
+      projectIndex: Number(project.sortIndex) || index + 1,
+      photos: (Array.isArray(project.items) ? project.items : [])
+        .map((item) => {
+          const photo = state.photosById.get(item?.photoId);
+          return photo ? { photo, title: item?.title || titleFor(photo) } : null;
+        })
+        .filter(Boolean),
+    })).filter((project) => project.photos.length);
+  };
+
+  const downloadPdf = async ({
+    mode = "download",
+    reservedWindows = [],
+    recordProduct = true,
+    progressKind = "",
+    batchOverride = null,
+    projectsOverride = null,
+  } = {}) => {
+    if (!requireUnlocked() || state.pdfBusy || state.outputBusy) return;
+    const photos = batchOverride ? [] : activeSelectedPhotos();
+    const batch = batchOverride || buildBatchManifest(photos, true);
+    const projects = Array.isArray(projectsOverride) ? projectsOverride : pdfProjectsForBatch(batch);
+    const selectedCount = projects.reduce((sum, project) => sum + project.photos.length, 0);
+    if (!selectedCount) {
+      setStatus(`Select media before ${mode === "view" ? "viewing" : "downloading"} project PDFs`);
       return;
     }
-    const projects = projectGroupsFor(photos);
-    const batchId = timestampId();
+    const outputWindows = mode === "view" ? [...reservedWindows] : [];
+    while (mode === "view" && outputWindows.length < projects.length) outputWindows.push(reserveOutputWindow("Building PDF"));
+    const batchId = batch.batchId;
     const paper = paperFormatFor();
-    const summary = selectedMediaSummary(photos);
+    const shelfFilename = projects.length === 1
+      ? `${state.gallery?.key || "real-estate"}-${fileSlug(projects[0]?.projectTitle)}-${paper.key}-${batchId}.pdf`
+      : `${state.gallery?.key || "real-estate"}-${batchId}-project-pdfs.pdf`;
+    const summary = batchOverride?.mediaSummary || selectedMediaSummary(photos);
     const videoNote = summary.videos ? `; ${summary.videos} video${summary.videos === 1 ? "" : "s"} will use 10% stills` : "";
+    const plannedPages = projects.reduce((sum, project) => (
+      sum + paginatePdfImages(project.photos.map((entry) => {
+        const photo = pdfPhotoFor(entry);
+        return { dimensions: pdfDimensionsFor(photo), photo };
+      })).length
+    ), 0);
+    const totalSteps = Math.max(1, selectedCount + plannedPages + projects.length);
+    const progressTitle = mode === "view" ? "Preparing PDF preview" : "Preparing PDF download";
+    let progressStep = 0;
+    const updatePdfStep = (detail) => {
+      progressStep += 1;
+      updateOutputProgress({
+        title: progressTitle,
+        detail,
+        current: progressStep,
+        total: totalSteps,
+      });
+      setStatus(detail);
+    };
     state.pdfBusy = true;
-    setStatus(`Building ${projects.length} ${paper.label} project PDF${projects.length === 1 ? "" : "s"} from ${photos.length} selected media${videoNote}...`);
+    startOutputProgress({
+      title: progressTitle,
+      detail: `Building ${projects.length} ${paper.label} project PDF${projects.length === 1 ? "" : "s"} from ${selectedCount} selected media${videoNote}...`,
+      total: totalSteps,
+      kind: progressKind || (mode === "view" ? "pdf-view" : "pdf-download"),
+    });
+    if (recordProduct) saveSelectionBeforeOutput(batch);
+    if (recordProduct) saveLocalDeliverable({ type: "pdf", batch, filename: shelfFilename });
     let savedProjectCount = 0;
+    let totalSavedBytes = 0;
+    let lastFilename = "";
     try {
-      for (const project of projects) {
-        const blob = await buildPdfBlob(await fetchPdfImages(project.photos));
+      for (const [index, project] of projects.entries()) {
+        const images = await fetchPdfImages(project.photos, ({ index: imageIndex, total, photo, title }) => {
+          updatePdfStep(`Loaded image ${imageIndex + 1}/${total} for ${project.projectTitle}: ${title || titleFor(photo)}`);
+        });
+        const rendered = await renderPdfPages(images, ({ pageIndex, total }) => {
+          updatePdfStep(`Rendered PDF page ${pageIndex + 1}/${total} for ${project.projectTitle}`);
+        });
+        const blob = buildPdfBlobFromRendered(rendered);
         const filename = `${state.gallery?.key || "real-estate"}-${fileSlug(project.projectTitle)}-${paper.key}-${batchId}.pdf`;
-        const saved = await downloadBlob(blob, filename);
+        const previewFilename = filename.replace(/\.pdf$/i, "-preview.html");
+        const previewHtml = mode === "view"
+          ? pdfPreviewHtmlFor({ projectTitle: project.projectTitle, filename, rendered })
+          : "";
+        const saved = mode === "view"
+          ? await openHtmlInBrowser(previewHtml, previewFilename, outputWindows[index] || null)
+          : { method: "download", ...(await downloadBlob(blob, filename)) };
         savedProjectCount += 1;
-        setStatus(`Downloaded ${saved.filename} to Downloads (${formatBytes(saved.bytes)})`);
+        totalSavedBytes += Number(blob.size) || Number(saved.bytes) || 0;
+        lastFilename = filename;
+        const displayFilename = mode === "view" ? filename : (saved.filename || filename);
+        updatePdfStep(`${saved.method === "open" || saved.method === "open-current" ? "Opened preview for" : "Downloaded"} ${displayFilename}`);
+        if (saved.method === "open" || saved.method === "open-current") {
+          setStatus(`Viewing ${displayFilename}. ${deliverableActionNote}`);
+        } else {
+          setStatus(`Downloaded ${saved.filename} to Downloads (${formatBytes(saved.bytes)})`);
+        }
       }
-      setStatus(`Downloaded ${projects.length} ${paper.label} project PDF${projects.length === 1 ? "" : "s"} to Downloads with ${photos.length} media${videoNote}`);
+      if (recordProduct) {
+        saveLocalDeliverable({
+          type: "pdf",
+          batch,
+          filename: projects.length === 1 ? lastFilename : shelfFilename,
+          bytes: totalSavedBytes,
+        });
+      }
+      setStatus(`${mode === "view" ? "Viewing" : "Downloaded"} ${projects.length} ${paper.label} project PDF${projects.length === 1 ? "" : "s"} with ${selectedCount} media${videoNote}. ${deliverableActionNote}`);
+      completeOutputProgress(`${mode === "view" ? "Viewing" : "Downloaded"} ${projects.length} ${paper.label} project PDF${projects.length === 1 ? "" : "s"} (${formatBytes(totalSavedBytes)})`);
     } catch (error) {
+      let message = "";
       if (error?.name === "AbortError") {
-        setStatus(savedProjectCount
-          ? `Download canceled after ${savedProjectCount} project PDF${savedProjectCount === 1 ? "" : "s"}`
-          : "PDF download canceled");
+        message = savedProjectCount
+          ? `PDF output canceled after ${savedProjectCount} project PDF${savedProjectCount === 1 ? "" : "s"}`
+          : "PDF output canceled";
       } else {
-        setStatus(error?.message || "PDF download failed");
+        message = error?.message || "PDF output failed";
       }
+      if (mode === "view") outputWindows.forEach((popup) => showOutputWindowError(popup, "PDF needs attention", message));
+      setStatus(message);
+      failOutputProgress(message);
     } finally {
       state.pdfBusy = false;
+      syncFileActionLabels();
     }
   };
+
+  const outputSelectedOutputs = async (mode = "view") => {
+    if (!requireUnlocked()) return;
+    const selected = activeSelectedPhotos();
+    if (!selected.length) {
+      setStatus(`Select at least one photo or video before ${mode === "view" ? "viewing" : "downloading"} outputs`);
+      return;
+    }
+    const batch = buildBatchManifest(selected, true);
+    const selectionFilename = `${state.gallery?.key || "real-estate"}-${batch.batchId}-selection.html`;
+    saveLocalDeliverable({ type: "selection", batch, filename: selectionFilename });
+    const pdfWindow = mode === "view" ? reserveOutputWindow("Building PDF") : null;
+    const videoWindow = mode === "view" ? reserveOutputWindow("Building video preview") : null;
+    const progressKind = mode === "view" ? "outputs-view" : "outputs-download";
+    await downloadPdf({ mode, reservedWindows: pdfWindow ? [pdfWindow] : [], recordProduct: false, progressKind, batchOverride: batch });
+    await shareSlideshowPlan({ mode, reservedWindow: videoWindow, recordProduct: false, progressKind, batchOverride: batch });
+  };
+
+  const openSelectedOutputs = () => outputSelectedOutputs("view");
+  const downloadSelectedOutputs = () => outputSelectedOutputs("download");
 
   const selectVisible = () => {
     if (!requireUnlocked()) return;
     const visible = filteredPhotos().map((photo) => photo.id);
-    visible.forEach((id) => {
-      if (!state.selectedIds.has(id)) state.selectedOrder.push(id);
-    });
-    persistSelection();
-    render();
+    applySelectionForPhotoIds(visible, true);
   };
 
   const clearSelection = () => {
     if (!requireUnlocked()) return;
+    applySelectionForPhotoIds(activeSelectedPhotos().map((photo) => photo.id), false);
+  };
+
+  const returnToShelf = () => {
+    if (!requireUnlocked()) return;
+    flushTitleInputs();
+    state.detailMode = false;
+    state.activeDeliverableId = "";
+    state.activeDeliverableName = "";
+    state.activeDeliverableNameEdited = false;
+    state.editingDeliverableNameId = "";
+    state.selectedOnly = false;
+    if (elements.selectedOnly) elements.selectedOnly.checked = false;
+    render();
+    elements.deliverablesPanel?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setStatus("Back to the saved selection shelf.");
+  };
+
+  const startNewProduct = () => {
+    if (!requireUnlocked()) return;
+    state.detailMode = true;
+    state.activeDeliverableId = "";
+    state.album = defaultAlbumSlug();
+    state.shootFilters = state.album ? [state.album] : [];
+    state.activeDeliverableName = nextGeneratedDeliverableName("selection", new Date().toISOString(), "", selectedPropertyTitle());
+    state.activeDeliverableNameEdited = false;
+    state.editingDeliverableNameId = "";
     state.selectedOrder = [];
+    state.selectedIds = new Set();
+    state.projectAssignments = {};
+    state.selectedOnly = false;
     persistSelection();
+    persistProjectAssignments();
+    invalidateVideoExportCache({ schedule: false });
+    setWizardStep(firstWizardStep());
+    document.querySelector("#real-estate-wizard")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setStatus("Started a new selection. Choose media, edit titles, reorder, then view or download outputs.");
+  };
+
+  const activeSelectionIds = () => activeSelectedPhotos().map((photo) => photo.id);
+
+  const reorderActiveSelection = (nextActiveIds) => {
+    const activeSet = new Set(nextActiveIds);
+    const queue = [...nextActiveIds];
+    state.selectedOrder = state.selectedOrder.map((id) => (
+      activeSet.has(id) ? queue.shift() : id
+    ));
+    queue.forEach((id) => {
+      if (!state.selectedOrder.includes(id)) state.selectedOrder.push(id);
+    });
+    persistSelection();
+    invalidateVideoExportCache();
     render();
   };
 
   const moveDraftItem = (photoId, direction) => {
-    const index = state.selectedOrder.indexOf(photoId);
+    const activeIds = activeSelectionIds();
+    const index = activeIds.indexOf(photoId);
     const nextIndex = index + Number(direction);
-    if (index < 0 || nextIndex < 0 || nextIndex >= state.selectedOrder.length) return;
-    const next = [...state.selectedOrder];
+    if (index < 0 || nextIndex < 0 || nextIndex >= activeIds.length) return;
+    const next = [...activeIds];
     [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
-    state.selectedOrder = next;
-    persistSelection();
-    render();
+    reorderActiveSelection(next);
     setStatus(`Moved ${titleFor(state.photosById.get(photoId))} to position ${nextIndex + 1}`);
   };
 
@@ -1791,14 +5023,12 @@
   const moveDraftItemTo = (photoId, targetPhotoId, position) => {
     if (!photoId || !targetPhotoId || photoId === targetPhotoId) return;
     if (!state.selectedIds.has(photoId) || !state.selectedIds.has(targetPhotoId)) return;
-    const next = state.selectedOrder.filter((id) => id !== photoId);
+    const next = activeSelectionIds().filter((id) => id !== photoId);
     const targetIndex = next.indexOf(targetPhotoId);
     if (targetIndex < 0) return;
     next.splice(position === "after" ? targetIndex + 1 : targetIndex, 0, photoId);
-    state.selectedOrder = next;
-    persistSelection();
-    render();
-    setStatus(`Moved ${titleFor(state.photosById.get(photoId))} to position ${state.selectedOrder.indexOf(photoId) + 1}`);
+    reorderActiveSelection(next);
+    setStatus(`Moved ${titleFor(state.photosById.get(photoId))} to position ${next.indexOf(photoId) + 1}`);
   };
 
   const dialogPhotos = () => filteredPhotos();
@@ -1859,6 +5089,10 @@
     if (!file) return;
     const text = await file.text();
     const batch = parseBatchFileText(text);
+    applyBatchManifest(batch);
+  };
+
+  const applyBatchManifest = (batch, { statusPrefix = "Loaded", editMode = false } = {}) => {
     if (batch?.pdfSettings?.paperFormat) {
       state.pdfFormat = paperFormatFor(batch.pdfSettings.paperFormat).key;
       localStorage.setItem(pdfFormatKey, state.pdfFormat);
@@ -1894,11 +5128,102 @@
       ...state.projectAssignments,
       ...projectAssignments,
     };
+    const firstProjectId = items.find((item) => item.projectId && state.albums.some((album) => album.slug === item.projectId))?.projectId;
+    if (firstProjectId) state.album = firstProjectId;
+    const batchProjectIds = [...new Set(items.map((item) => item.projectId).filter((projectId) => state.albums.some((album) => album.slug === projectId)))];
+    state.shootFilters = normalizeShootFilters(batchProjectIds.length ? batchProjectIds : [state.album]);
     persistSelection();
     persistTitles();
     persistProjectAssignments();
+    invalidateVideoExportCache();
+    if (editMode) state.wizardStep = 4;
     render();
-    setStatus(`Loaded ${state.selectedOrder.length} selected media across ${projectGroupsFor(selectedPhotos()).length} projects`);
+    setStatus(`${statusPrefix} ${activeSelectedPhotos().length} selected media for ${selectedPropertyTitle()}${editMode ? "; output is ready to view or adjust" : ""}`);
+  };
+
+  const deliverableBatchFor = async (item) => {
+    if (item?.batch) return item.batch;
+    const response = await fetch(item.editUrl);
+    if (!response.ok) throw new Error(`Could not load product manifest (${response.status})`);
+    return parseBatchFileText(await response.text());
+  };
+
+  const editProducedDeliverable = async (deliverableId) => {
+    if (!requireUnlocked()) return;
+    const items = producedDeliverables();
+    const generatedNames = generatedDeliverableNamesFor(items);
+    const item = items.find((deliverable) => deliverable.id === deliverableId);
+    if (!item) return;
+    try {
+      setStatus(`Loading ${displayDeliverableTitleFor(item, generatedNames)} for editing...`);
+      state.detailMode = true;
+      state.activeDeliverableId = item.id;
+      state.activeDeliverableName = displayDeliverableTitleFor(item, generatedNames);
+      state.activeDeliverableNameEdited = !needsGeneratedDeliverableName(item);
+      state.editingDeliverableNameId = "";
+      const batch = await deliverableBatchFor(item);
+      applyBatchManifest(batch, { statusPrefix: "Editing", editMode: true });
+      document.querySelector("#real-estate-wizard")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch (error) {
+      setStatus(error?.message || "Could not load this product for editing");
+    }
+  };
+
+  const runProducedDeliverable = async (deliverableId, mode = "view") => {
+    if (!requireUnlocked() || state.outputBusy) return;
+    const item = producedDeliverables().find((deliverable) => deliverable.id === deliverableId);
+    if (!item) return;
+    try {
+      const batch = await deliverableBatchFor(item);
+      if (item.type === "pdf") {
+        const projects = pdfProjectsForBatch(batch);
+        await downloadPdf({
+          mode,
+          recordProduct: false,
+          progressKind: mode === "view" ? "pdf-view" : "pdf-download",
+          batchOverride: batch,
+          projectsOverride: projects,
+        });
+        return;
+      }
+      if (item.type === "selection") {
+        const title = mode === "view" ? "Opening selection view" : "Preparing selection download";
+        startOutputProgress({
+          title,
+          detail: "Loading saved selection...",
+          total: 2,
+          kind: "selection",
+        });
+        const html = selectionHtmlFor(batch);
+        const filename = `${state.gallery?.key || "real-estate"}-${batch.batchId || timestampId()}-selection.html`;
+        updateOutputProgress({
+          title,
+          detail: mode === "view" ? "Opening saved selection view..." : "Sending saved selection file to Downloads...",
+          current: 1,
+          total: 2,
+        });
+        const blob = new Blob([html], { type: "text/html" });
+        const saved = mode === "view"
+          ? await openHtmlInBrowser(html, filename, reserveOutputWindow("Opening selection"))
+          : { method: "download", ...(await downloadBlob(blob, filename)) };
+        if (saved.method === "open" || saved.method === "open-current") {
+          setStatus(`Viewing ${saved.filename}.`);
+        } else {
+          setStatus(`Downloaded ${saved.filename} to Downloads (${formatBytes(saved.bytes)})`);
+        }
+        completeOutputProgress(`Ready: ${saved.filename} (${formatBytes(saved.bytes)})`);
+        return;
+      }
+      await shareSlideshowPlan({
+        mode,
+        recordProduct: false,
+        progressKind: mode === "view" ? "video-view" : "video-download",
+        batchOverride: batch,
+      });
+    } catch (error) {
+      setStatus(error?.message || "Could not prepare this product");
+      failOutputProgress(error?.message || "Could not prepare this product");
+    }
   };
 
   const openBatchFile = async () => {
@@ -1945,17 +5270,28 @@
       }
       state.unlocked = true;
       writeSessionCredentials(elements.loginName?.value || "", elements.loginCode?.value || "");
-      writeSession(elements.loginName?.value || "");
+      writeSession(elements.loginName?.value || "", elements.loginCode?.value || "");
+      clearLogoutFromHistory();
       syncAuthUi();
       setStatus(`${state.photos.length} visible / ${state.photos.length} media`);
+      fetchCloudDeliverables({ quiet: true }).catch(() => {});
+      scheduleVideoExportSynthesis(1000);
       window.setTimeout(() => showHelp(), 120);
     });
 
-    elements.albums?.addEventListener("click", (event) => {
-      const button = event.target.closest("[data-album-filter]");
-      if (!button) return;
+    elements.albums?.addEventListener("change", (event) => {
+      const checkbox = event.target.closest("[data-shoot-filter]");
+      if (!checkbox) return;
       if (!requireUnlocked()) return;
-      state.album = button.dataset.albumFilter || "all";
+      const shoot = checkbox.dataset.shootFilter || "";
+      const next = new Set(selectedShootIds());
+      if (checkbox.checked) next.add(shoot);
+      else next.delete(shoot);
+      state.shootFilters = normalizeShootFilters([...next]);
+      state.album = primaryShootId();
+      updateAutoActiveDeliverableName();
+      state.selectedOnly = false;
+      if (elements.selectedOnly) elements.selectedOnly.checked = false;
       render();
     });
 
@@ -1973,9 +5309,7 @@
       renderGrid();
     });
     elements.density?.addEventListener("change", (event) => {
-      state.density = event.target.value;
-      localStorage.setItem(densityKey, state.density);
-      renderGrid();
+      setDensity(event.target.value);
     });
     elements.pdfFormat?.addEventListener("change", (event) => {
       state.pdfFormat = paperFormatFor(event.target.value).key;
@@ -1984,9 +5318,23 @@
     });
     elements.slideshowPhotoSeconds?.addEventListener("change", (event) => {
       const next = Math.max(1, Math.min(30, Math.round(Number(event.target.value) || 4)));
+      const changed = state.slideshowPhotoSeconds !== next;
       state.slideshowPhotoSeconds = next;
       localStorage.setItem(slideshowPhotoSecondsKey, String(next));
       event.target.value = String(next);
+      if (changed) invalidateVideoExportCache();
+    });
+    elements.slideshowMusicCountry?.addEventListener("change", (event) => {
+      setSlideshowMusicCountry(event.target.value);
+    });
+    elements.watermarkEnabled?.addEventListener("change", (event) => {
+      setWatermarkEnabled(event.target.checked);
+    });
+    elements.watermarkText?.addEventListener("change", (event) => {
+      setWatermarkText(event.target.value);
+    });
+    elements.watermarkText?.addEventListener("blur", (event) => {
+      setWatermarkText(event.target.value);
     });
     elements.selectedOnly?.addEventListener("change", (event) => {
       state.selectedOnly = event.target.checked;
@@ -1995,10 +5343,23 @@
 
     app.addEventListener("click", (event) => {
       const openButton = event.target.closest("[data-open-photo]");
-      if (openButton && requireUnlocked()) showPhoto(openButton.dataset.openPhoto);
+      if (openButton && requireUnlocked()) {
+        const photoId = openButton.dataset.openPhoto;
+        if (state.wizardStep === 1) {
+          const photo = state.photosById.get(photoId);
+          const selected = !isSelectedForActiveProject(photo);
+          if (event.shiftKey && state.lastRangePhotoId) {
+            setSelectedRange(state.lastRangePhotoId, photoId, selected);
+          } else {
+            setSelected(photoId, selected);
+          }
+          state.lastRangePhotoId = photoId;
+          return;
+        }
+        showPhoto(photoId);
+      }
 
       if (event.target.closest("[data-re-clear-filters]")) {
-        state.album = "all";
         state.query = "";
         state.mediaType = "all";
         state.sort = "album";
@@ -2014,7 +5375,14 @@
 
     elements.grid?.addEventListener("change", (event) => {
       const checkbox = event.target.closest("[data-select-photo]");
-      if (checkbox) setSelected(checkbox.dataset.selectPhoto, checkbox.checked);
+      if (checkbox) {
+        if (event.shiftKey && state.lastRangePhotoId) {
+          setSelectedRange(state.lastRangePhotoId, checkbox.dataset.selectPhoto, checkbox.checked);
+        } else {
+          setSelected(checkbox.dataset.selectPhoto, checkbox.checked);
+        }
+        state.lastRangePhotoId = checkbox.dataset.selectPhoto;
+      }
       const projectCheckbox = event.target.closest("[data-project-photo][data-project-id]");
       if (projectCheckbox) {
         setPhotoProject(
@@ -2027,6 +5395,12 @@
     elements.grid?.addEventListener("input", (event) => {
       const input = event.target.closest("[data-title-photo]");
       if (input) setTitle(input.dataset.titlePhoto, input.value);
+    });
+    elements.grid?.addEventListener("click", (event) => {
+      const removeButton = event.target.closest("[data-remove-title-photo]");
+      if (removeButton) {
+        setSelected(removeButton.dataset.removeTitlePhoto, false);
+      }
     });
 
     elements.draftList?.addEventListener("click", (event) => {
@@ -2110,17 +5484,124 @@
     });
     elements.draftList?.addEventListener("pointercancel", resetPointerDraftDrag);
 
+    document.querySelectorAll("[data-re-step-jump]").forEach((button) => button.addEventListener("click", () => {
+      setWizardStep(button.dataset.reStepJump);
+    }));
+    document.querySelectorAll("[data-re-step-back]").forEach((button) => button.addEventListener("click", () => {
+      setWizardStep(state.wizardStep - 1);
+    }));
+    document.querySelectorAll("[data-re-step-next]").forEach((button) => button.addEventListener("click", () => {
+      setWizardStep(state.wizardStep + 1);
+    }));
+    document.querySelectorAll("[data-re-density-choice]").forEach((button) => button.addEventListener("click", () => {
+      setDensity(button.dataset.reDensityChoice);
+    }));
+    document.querySelectorAll("[data-re-slideshow-orientation]").forEach((button) => button.addEventListener("click", () => {
+      setSlideshowOrientation(button.dataset.reSlideshowOrientation);
+    }));
+    document.addEventListener("click", (event) => {
+      const createProduct = event.target?.closest?.("[data-re-create-product]");
+      if (createProduct) {
+        event.preventDefault();
+        startNewProduct();
+        return;
+      }
+      const shelfBack = event.target?.closest?.("[data-re-shelf-back]");
+      if (!shelfBack) return;
+      event.preventDefault();
+      returnToShelf();
+    });
+    document.querySelectorAll("[data-re-open-outputs]").forEach((button) => button.addEventListener("click", () => {
+      openSelectedOutputs().catch(() => setStatus("Outputs could not be opened"));
+    }));
+    document.querySelectorAll("[data-re-download-outputs]").forEach((button) => button.addEventListener("click", () => {
+      downloadSelectedOutputs().catch(() => setStatus("Outputs could not be downloaded"));
+    }));
+    elements.activeProductName?.addEventListener("change", (event) => {
+      renameActiveProduct(event.target.value).catch(() => setStatus("Could not rename this selection"));
+    });
+    elements.activeProductName?.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter") return;
+      event.preventDefault();
+      event.target.blur();
+    });
     document.querySelectorAll("[data-re-copy-batch]").forEach((button) => button.addEventListener("click", copyBatch));
     document.querySelectorAll("[data-re-download-batch]").forEach((button) => button.addEventListener("click", () => {
-      shareSelectionTable().catch(() => setStatus("Selection table could not be shared"));
+      shareSelectionTable().catch(() => setStatus("Selection could not be saved"));
+    }));
+    document.querySelectorAll("[data-re-view-slideshow]").forEach((button) => button.addEventListener("click", () => {
+      shareSlideshowPlan({ mode: "view" }).catch(() => setStatus("Video output could not be viewed"));
     }));
     document.querySelectorAll("[data-re-download-slideshow]").forEach((button) => button.addEventListener("click", () => {
-      shareSlideshowPlan().catch(() => setStatus("Slideshow plan could not be shared"));
+      shareSlideshowPlan({ mode: "download" }).catch(() => setStatus("Video output could not be downloaded"));
     }));
     document.querySelectorAll("[data-re-download-originals]").forEach((button) => button.addEventListener("click", () => {
       shareOriginalsZip().catch(() => setStatus("Originals ZIP failed"));
     }));
-    document.querySelectorAll("[data-re-download-pdf]").forEach((button) => button.addEventListener("click", downloadPdf));
+    document.querySelectorAll("[data-re-view-pdf]").forEach((button) => button.addEventListener("click", () => downloadPdf({ mode: "view" })));
+    document.querySelectorAll("[data-re-download-pdf]").forEach((button) => button.addEventListener("click", () => downloadPdf({ mode: "download" })));
+    elements.deliverablesList?.addEventListener("click", (event) => {
+      const nameEditButton = event.target?.closest?.("[data-re-edit-name]");
+      if (nameEditButton) {
+        event.preventDefault();
+        event.stopPropagation();
+        beginDeliverableNameEdit(nameEditButton.getAttribute("data-re-edit-name") || "");
+        return;
+      }
+      const deleteButton = event.target?.closest?.("[data-re-delete-deliverable]");
+      if (deleteButton) {
+        event.preventDefault();
+        event.stopPropagation();
+        deleteProducedDeliverable(deleteButton.getAttribute("data-re-delete-deliverable") || "").catch((error) => setStatus(error?.message || "Could not delete this product"));
+        return;
+      }
+      if (event.target?.closest?.("[data-re-rename-deliverable]")) return;
+      const row = event.target?.closest?.("[data-re-open-deliverable]");
+      if (row) {
+        editProducedDeliverable(row.getAttribute("data-re-open-deliverable") || "").catch(() => setStatus("Could not edit this selection"));
+        return;
+      }
+      const button = event.target?.closest?.("[data-re-edit-deliverable], [data-re-view-deliverable], [data-re-download-deliverable], [data-re-delete-deliverable], [data-re-sync-deliverables]");
+      if (!button) return;
+      if (button.matches("[data-re-sync-deliverables]")) {
+        fetchCloudDeliverables({ promptIfMissing: true, quiet: false }).catch(() => {});
+        return;
+      }
+      if (button.matches("[data-re-edit-deliverable]")) {
+        editProducedDeliverable(button.getAttribute("data-re-edit-deliverable") || "").catch(() => setStatus("Could not edit this product"));
+        return;
+      }
+      if (button.matches("[data-re-delete-deliverable]")) {
+        deleteProducedDeliverable(button.getAttribute("data-re-delete-deliverable") || "").catch((error) => setStatus(error?.message || "Could not delete this product"));
+        return;
+      }
+      const mode = button.matches("[data-re-view-deliverable]") ? "view" : "download";
+      const id = button.getAttribute(mode === "view" ? "data-re-view-deliverable" : "data-re-download-deliverable") || "";
+      runProducedDeliverable(id, mode).catch(() => setStatus("Could not prepare this product"));
+    });
+    elements.deliverablesList?.addEventListener("change", (event) => {
+      const input = event.target?.closest?.("[data-re-rename-deliverable]");
+      if (!input) return;
+      renameProducedDeliverable(input.getAttribute("data-re-rename-deliverable") || "", input.value).catch(() => setStatus("Could not rename this product"));
+    });
+    elements.deliverablesList?.addEventListener("focusout", (event) => {
+      const input = event.target?.closest?.("[data-re-rename-deliverable]");
+      if (!input || state.editingDeliverableNameId !== input.getAttribute("data-re-rename-deliverable")) return;
+      renameProducedDeliverable(input.getAttribute("data-re-rename-deliverable") || "", input.value).catch(() => setStatus("Could not rename this product"));
+    });
+    elements.deliverablesList?.addEventListener("keydown", (event) => {
+      const input = event.target?.closest?.("[data-re-rename-deliverable]");
+      if (input) {
+        if (event.key !== "Enter") return;
+        event.preventDefault();
+        input.blur();
+        return;
+      }
+      const row = event.target?.closest?.("[data-re-open-deliverable]");
+      if (!row || (event.key !== "Enter" && event.key !== " ")) return;
+      event.preventDefault();
+      editProducedDeliverable(row.getAttribute("data-re-open-deliverable") || "").catch(() => setStatus("Could not edit this selection"));
+    });
     document.querySelectorAll("[data-re-load-batch]").forEach((button) => button.addEventListener("click", () => {
       openBatchFile().catch(() => setStatus("Selection file could not be loaded"));
     }));
@@ -2147,7 +5628,9 @@
       event.target.value = "";
     });
 
-    elements.dialogTitleInput?.addEventListener("input", (event) => setTitle(state.activePhotoId, event.target.value));
+    const syncDialogTitleInput = (event) => setTitle(state.activePhotoId, event.target.value);
+    elements.dialogTitleInput?.addEventListener("input", syncDialogTitleInput);
+    elements.dialogTitleInput?.addEventListener("change", syncDialogTitleInput);
     elements.dialogSelected?.addEventListener("change", (event) => setSelected(state.activePhotoId, event.target.checked));
     document.querySelector("[data-re-dialog-prev]")?.addEventListener("click", () => stepDialog(-1));
     document.querySelector("[data-re-dialog-next]")?.addEventListener("click", () => stepDialog(1));
@@ -2158,13 +5641,15 @@
       if (event.target === elements.helpDialog) dismissHelp();
     });
     elements.helpDialog?.addEventListener("close", () => {
-      writeJson(helpDismissedKey(), true);
+      writeStorageFlag(helpDismissedGlobalKey);
+      writeStorageFlag(helpDismissedKey());
     });
     document.addEventListener("keydown", (event) => {
       if (!elements.dialog?.open) return;
       if (event.key === "ArrowLeft") stepDialog(-1);
       if (event.key === "ArrowRight") stepDialog(1);
     });
+    window.addEventListener("photosbyelie:languagechange", () => render());
   };
 
   const initializeFromPayload = (payload) => {
@@ -2182,10 +5667,24 @@
         displayTitle: albumTitleFor(photo),
         photoCount: photos.filter((candidate) => candidate.albumSlug === photo.albumSlug).length,
       }])).values()];
+    if (!state.album || state.album === "all" || !state.albums.some((album) => album.slug === state.album)) {
+      state.album = defaultAlbumSlug();
+    }
+    state.shootFilters = normalizeShootFilters(state.shootFilters);
+    if (!state.shootFilters.length && state.album) state.shootFilters = [state.album];
+    state.wizardStep = firstWizardStep();
     state.selectedOrder = normalizeSelectedOrder(readJson(selectionStoreKey(), []));
     state.selectedIds = new Set(state.selectedOrder);
     state.editedTitles = readJson(titleStoreKey(), {});
     state.projectAssignments = readJson(projectStoreKey(), {});
+    const requestedStep = requestedWizardStepFromUrl();
+    if (requestedStep !== null) {
+      state.wizardStep = requestedStep >= 2 && activeSelectedPhotos().length === 0
+        ? Math.min(firstWizardStep(), 1)
+        : Math.max(firstWizardStep(), requestedStep);
+    }
+    const savedDeliverables = readJson(localDeliverablesStoreKey(), []);
+    state.localDeliverables = Array.isArray(savedDeliverables) ? savedDeliverables : [];
     if (pageParams.has("logout")) {
       localStorage.removeItem(authStoreKey());
       clearSessionCredentials();
@@ -2194,12 +5693,19 @@
     const savedCredentials = readSessionCredentials();
     const savedSession = readJson(authStoreKey(), {});
     state.username = savedCredentials.username || savedSession.username || state.payload?.customer?.username || state.payload?.customer?.name || "";
-    state.accessCode = savedCredentials.accessCode || "";
+    state.accessCode = savedCredentials.accessCode || savedSession.accessCode || "";
+    state.density = normalizeDensity(state.density);
     if (elements.density) elements.density.value = state.density;
     state.pdfFormat = paperFormatFor(state.pdfFormat).key;
     if (elements.pdfFormat) elements.pdfFormat.value = state.pdfFormat;
+    state.slideshowOrientation = normalizeSlideshowOrientation(state.slideshowOrientation);
+    state.slideshowMusicCountry = normalizeSlideshowMusicCountry(state.slideshowMusicCountry);
+    if (!String(state.watermarkText || "").trim()) state.watermarkText = pdfWatermarkText;
     renderHero();
     render();
+    loadSlideshowMusicManifest();
+    if (state.unlocked) fetchCloudDeliverables({ quiet: true }).catch(() => {});
+    if (state.unlocked) scheduleVideoExportSynthesis(1200);
   };
 
   const initialize = async () => {

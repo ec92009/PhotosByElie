@@ -1,4 +1,57 @@
 (async () => {
+  const ownerTabButtons = [...document.querySelectorAll("[data-owner-tab-button]")];
+  const ownerTabCards = [...document.querySelectorAll("[data-owner-tab]")];
+  const OWNER_TAB_STORAGE_KEY = "photosbyelie-owner-tab";
+
+  const ownerTabExists = (tab) => ownerTabButtons.some((button) => button.dataset.ownerTabButton === tab);
+
+  const storedOwnerTab = () => {
+    try {
+      const tab = localStorage.getItem(OWNER_TAB_STORAGE_KEY) || "";
+      return ownerTabExists(tab) ? tab : "";
+    } catch {
+      return "";
+    }
+  };
+
+  const ownerTabFromLocation = () => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get("tab") || params.get("ownerTab") || window.location.hash.replace(/^#/, "");
+    return ownerTabExists(tab) ? tab : "";
+  };
+
+  const setOwnerTab = (tab, options = {}) => {
+    if (!ownerTabButtons.length || !ownerTabCards.length) return;
+    const next = ownerTabExists(tab) ? tab : ownerTabButtons[0].dataset.ownerTabButton;
+    ownerTabButtons.forEach((button) => {
+      const active = button.dataset.ownerTabButton === next;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-pressed", active ? "true" : "false");
+    });
+    ownerTabCards.forEach((card) => {
+      if (card.dataset.ownerTab === next) {
+        delete card.dataset.ownerTabHidden;
+      } else {
+        card.dataset.ownerTabHidden = "true";
+      }
+    });
+    if (options.persist !== false) {
+      try {
+        localStorage.setItem(OWNER_TAB_STORAGE_KEY, next);
+      } catch {
+        // Local storage can be unavailable in embedded previews.
+      }
+    }
+  };
+
+  setOwnerTab(ownerTabFromLocation() || storedOwnerTab(), { persist: false });
+
+  ownerTabButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      setOwnerTab(button.dataset.ownerTabButton || "");
+    });
+  });
+
   await window.photosByElieCatalogReady;
   const ownerAuth = window.photosByElieOwnerAuth;
   const hiddenActions = window.photosByElieHiddenActions;
@@ -31,10 +84,14 @@
   const r2CoverageMissing = document.querySelector("[data-owner-r2-coverage-missing]");
   const r2CoverageNote = document.querySelector("[data-owner-r2-coverage-note]");
   const r2FixButton = document.querySelector("[data-owner-r2-fix]");
+  const importSourceSelect = document.querySelector("[data-owner-import-source-select]");
+  const r2FillGapsButtons = [...document.querySelectorAll("[data-owner-r2-fill-gaps]")];
+  const r2MaintenanceButtons = [...document.querySelectorAll("[data-owner-r2-maintenance]")];
   const r2Card = document.querySelector("[data-owner-r2-card]");
   const r2Summary = document.querySelector("[data-owner-r2-summary]");
   const r2Phases = document.querySelector("[data-owner-r2-phases]");
   const r2Counts = document.querySelector("[data-owner-r2-counts]");
+  const expandedSweepPhaseKeys = new Set();
   const priceListRoot = document.querySelector("[data-owner-price-list]");
   const costCard = document.querySelector("[data-owner-cost-card]");
   const costSummaryRoot = document.querySelector("[data-owner-cost-summary]");
@@ -51,6 +108,7 @@
   const keywordBlacklistForm = document.querySelector("[data-owner-keyword-blacklist-form]");
   const keywordBlacklistInput = document.querySelector("[data-owner-keyword-blacklist-input]");
   const keywordBlacklistStatus = document.querySelector("[data-owner-keyword-blacklist-status]");
+  const titleKeywordReviewLink = document.querySelector("[data-owner-title-keyword-review-link]");
   const realEstateCard = document.querySelector("[data-owner-real-estate-card]");
   const realEstateClientList = document.querySelector("[data-owner-re-client-list]");
   const realEstateForm = document.querySelector("[data-owner-re-form]");
@@ -61,24 +119,41 @@
   const realEstateAlbumCountRoot = document.querySelector("[data-owner-re-album-count]");
   const realEstateLocalLink = document.querySelector("[data-owner-re-local-link]");
   const realEstatePublicLink = document.querySelector("[data-owner-re-public-link]");
+  const realEstateImportSourceSelect = document.querySelector("[data-owner-re-import-source-select]");
   const realEstateComputed = Object.fromEntries(
     [...document.querySelectorAll("[data-owner-re-computed]")]
       .map((field) => [field.dataset.ownerReComputed, field])
   );
   const refreshButtons = [...document.querySelectorAll("[data-owner-refresh]")];
   const productSettings = window.photosByElieProductSettings;
+  const podStoreStateRoot = document.querySelector("[data-owner-pod-store-state]");
+  const podSuppliersRoot = document.querySelector("[data-owner-pod-suppliers]");
+  const podQualityTiersRoot = document.querySelector("[data-owner-pod-quality-tiers]");
+  const podOptionsRoot = document.querySelector("[data-owner-pod-options]");
+  const podSchemaRoot = document.querySelector("[data-owner-pod-schema]");
   let r2PollTimer = null;
   let r2RepairLogToken = "";
   let r2RepairActive = false;
+  let r2GapFillActive = false;
+  let r2MaintenanceActive = false;
+  let activeR2MaintenanceKey = "";
+  let importSourceOptions = [];
+  let realEstateImportSourceOptions = [];
   let r2CoverageOk = false;
   let r2RepairLogSummary = null;
   let r2RepairLogTaskId = "";
+  let r2PhaseRenderSnapshot = null;
   let wasteDeleteActive = false;
   let wasteCleanupActive = false;
   let lastWasteCoverageRefreshAt = 0;
+  let lastImportCoverageRefreshAt = 0;
   let latestR2ProgressTasks = [];
   let currentCostEstimate = null;
   let keywordBlacklistTerms = [];
+  let importSourceDialogOpen = false;
+  let realEstateImportSourceDialogOpen = false;
+  let lastImportSourceValue = "new";
+  let lastRealEstateImportSourceValue = "";
   let realEstateClients = [];
   let selectedRealEstateClientId = "";
   let realEstateBusy = false;
@@ -106,35 +181,97 @@
       });
   };
 
+  const PHOTO_IMPORT_PHASES = new Map([
+    ["selected-folder", "Selected folder"],
+    ["camera", "Camera"],
+    ["apple-photo-albums", "Apple Photos"],
+    ["leonardo", "AI"],
+    ["real-estate", "RE"],
+  ]);
+  const SELECTED_IMPORT_DASHBOARD_PHASE_KEYS = ["selected-folder"];
+  const FIXED_IMPORT_DASHBOARD_PHASE_KEYS = ["camera", "apple-photo-albums", "leonardo"];
+  const IMPORT_MATRIX_STEPS = [
+    ["master_uploaded", "Master"],
+    ["triplets_created", "Triplets made"],
+    ["triplets_uploaded", "Triplets up"],
+    ["previews_created", "Previews made"],
+    ["previews_uploaded", "Previews up"],
+  ];
+  const IMPORT_MATRIX_QUEUE_PREVIEW_LIMIT = 8;
+  const IMPORT_MATRIX_RECENT_DONE_LIMIT = 6;
   const SWEEP_PHASES = [
     ["prepare", "Prepare workspace"],
-    ["discard-start", "Delete banned R2 objects"],
+    ["discard-start", "Double-check banned R2 cleanup"],
+    ["import-cache", "Prepare import cache"],
+    ["selected-folder", "Import selected folder"],
     ["camera", "Import Camera sources"],
-    ["leonardo", "Import Leonardo sources"],
+    ["apple-photo-albums", "Import Apple Photos"],
+    ["leonardo", "Import AI sources"],
     ["catalog", "Export catalog"],
+    ["eligibility", "Force Camera eligibility"],
     ["worker", "Write worker catalog"],
     ["sidecar", "Write media sidecar"],
-    ["private", "Backfill private JPGs"],
-    ["discard-final", "Final banned R2 cleanup"],
+    ["gap-fill", "Fill in gaps"],
+    ["private", "Fill in gaps", { optional: true }],
+    ["discard-final", "Final banned R2 cleanup double-check"],
     ["storage", "Refresh storage estimate"],
     ["test", "Run tests"],
     ["validate", "Validate publish"],
     ["commit", "Commit and push"],
     ["coverage", "Recheck coverage"],
-  ].map(([key, label]) => ({ key, label }));
+  ].map(([key, label, options]) => ({ key, label, ...(options || {}) }));
+  const SWEEP_SKIPPABLE_KEYS = new Set([
+    "discard-start",
+    "selected-folder",
+    "camera",
+    "apple-photo-albums",
+    "leonardo",
+    "real-estate",
+    "gap-fill",
+    "private",
+    "discard-final",
+    "test",
+    "validate",
+  ]);
+  const SWEEP_PHASE_ALIASES = new Map([
+    ["catalog-blocked", "catalog"],
+  ]);
+  const R2_MAINTENANCE_LABELS = new Map([
+    ["banned-cleanup", "Banned cleanup"],
+    ["final-cleanup", "Final cleanup"],
+    ["storage", "Storage estimate"],
+    ["validate", "Validate publish"],
+  ]);
+  const normalizeSweepPhaseKey = (phaseKey = "") => (
+    SWEEP_PHASE_ALIASES.get(String(phaseKey || "")) || String(phaseKey || "")
+  );
+
+  const renderOwnerPreviewState = () => {
+    refreshCountsFromSource();
+    refreshBlockedSyncPanel();
+    renderPodCommerce();
+    loadCostEstimate();
+    loadKeywordBlacklist();
+    loadTitleKeywordReviewCount();
+    loadImportSources();
+    renderR2Coverage(null);
+  };
 
   const renderOwnerAvailability = (authState = ownerAuth?.state || {}, options = {}) => {
     if (!ownerAuth?.enabled) return;
     const available = authState.available === true;
-    if (controls) controls.hidden = !available;
+    if (controls) controls.hidden = false;
     if (locked) locked.hidden = available;
     if (available) {
       setStatus("Owner controls unlocked on localhost.");
       refreshCountsFromSource();
       refreshBlockedSyncPanel();
+      renderPodCommerce();
+      loadImportSources();
       loadR2Coverage();
       loadCostEstimate();
       loadKeywordBlacklist();
+      loadTitleKeywordReviewCount();
       loadRealEstateOwner();
       startR2Polling();
       if (options.scrollToControls && controls) {
@@ -143,8 +280,9 @@
         });
       }
     } else {
-      setText(locked, "Owner controls need the local helper server.");
-      setStatus("Owner controls need the local helper server.");
+      setText(locked, "Owner helper actions are offline. Read-only Owner dashboard is still available; use 127.0.0.1 or start scripts/local_server.py for actions.");
+      setStatus("Owner helper actions are offline; dashboard shown read-only.");
+      renderOwnerPreviewState();
     }
   };
 
@@ -247,7 +385,38 @@
   };
 
   const formatCount = (value) => Number(value || 0).toLocaleString();
+  const reviewPhotoLabel = (count) => `${formatCount(count)} ${Number(count) === 1 ? "photo" : "photos"}`;
+  const titleKeywordReviewPhotoId = (item) => String(item?.photo_id || item?.photoId || "").trim();
+  const savedTitleKeywordReviewIds = (payload) => {
+    const ids = new Set();
+    for (const key of ["approvals", "rejections", "blocked"]) {
+      for (const item of payload?.[key] || []) {
+        const photoId = titleKeywordReviewPhotoId(item);
+        if (photoId) ids.add(photoId);
+      }
+    }
+    return ids;
+  };
+  const staticTitleKeywordReviewCount = async (payload) => {
+    const photos = Array.isArray(payload?.photos) ? payload.photos : [];
+    const batchId = String(payload?.batch_id || payload?.batchId || "").trim();
+    if (!photos.length || !batchId) return 0;
+    const approvalsPath = `./assets/owner-actions/title-keyword-review-queue/approvals-${encodeURIComponent(batchId)}.json`;
+    const approvalsHref = window.photosByElieVersionedHref?.(approvalsPath) || approvalsPath;
+    const approvalsResponse = await fetch(approvalsHref, { cache: "no-store" }).catch(() => null);
+    const approvalRecord = approvalsResponse?.ok ? await approvalsResponse.json().catch(() => ({})) : {};
+    const savedIds = savedTitleKeywordReviewIds(approvalRecord);
+    return photos.filter((photo) => {
+      const photoId = titleKeywordReviewPhotoId(photo);
+      return photoId && !savedIds.has(photoId);
+    }).length;
+  };
   const numberFromLog = (value) => Number(String(value || "").replace(/,/g, "")) || 0;
+  const secondsSinceIso = (value) => {
+    const timestamp = Date.parse(value || "");
+    if (!Number.isFinite(timestamp)) return 0;
+    return Math.max(0, (Date.now() - timestamp) / 1000);
+  };
   const formatDuration = (seconds) => {
     const wholeSeconds = Math.max(0, Math.round(Number(seconds) || 0));
     const hours = Math.floor(wholeSeconds / 3600);
@@ -466,6 +635,214 @@
     });
   };
 
+  const podAutomation = () => window.photosByEliePodAutomation || window.photosByElieProductCatalog?.podAutomation || {};
+  const podSuppliers = () => window.photosByEliePodSuppliers || window.photosByElieProductCatalog?.podSuppliers || [];
+  const podQualityTiers = () => window.photosByEliePodQualityTiers || window.photosByElieProductCatalog?.podQualityTiers || [];
+  const podOptions = () => window.photosByEliePodOptions || window.photosByElieProductCatalog?.podOptions || [];
+  const podMoney = (currency, value) => {
+    if (value == null || value === "") return "quote";
+    const amount = Number(value);
+    if (!Number.isFinite(amount)) return "quote";
+    const code = String(currency || "USD").toUpperCase();
+    const symbol = code === "EUR" ? "€" : "$";
+    return `${symbol}${amount.toFixed(amount % 1 ? 2 : 0)}`;
+  };
+  const podYesNo = (value) => value ? "yes" : "no";
+  const renderPodCommerce = () => {
+    const automation = podAutomation();
+    const suppliers = podSuppliers();
+    const qualityTiers = podQualityTiers();
+    const options = podOptions();
+    const productMap = new Map((window.photosByElieResolutions || []).map((option) => [option.id, option]));
+    const frameMap = new Map((window.photosByElieFrameOptions || []).map((frame) => [frame.id, frame]));
+    const supplierMap = new Map(suppliers.map((supplier) => [supplier.id, supplier]));
+    const physicalEnabled = productSettings?.physicalProductsEnabled?.() === true;
+    const storeState = automation.storefrontEnabled === true
+      ? "POD storefront flag is on in the catalog; do not deploy until checkout fulfillment is connected."
+      : `Storefront flag is off. POD choices are visible only on localhost${physicalEnabled ? " with the local toggle enabled" : ""}.`;
+    setText(podStoreStateRoot, storeState);
+
+    if (podSuppliersRoot) {
+      if (!suppliers.length) {
+        setHtml(podSuppliersRoot, "<p class=\"owner-card-note\">No POD suppliers are configured.</p>");
+      } else {
+        setHtml(podSuppliersRoot, `
+          <table class="owner-price-table owner-pod-table">
+            <thead>
+              <tr>
+                <th scope="col">Supplier</th>
+                <th scope="col">Role</th>
+                <th scope="col">API</th>
+                <th scope="col">Regions</th>
+                <th scope="col">Automation</th>
+                <th scope="col">Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${suppliers.map((supplier) => `
+                <tr>
+                  <th scope="row">${escapeHtml(supplier.label || supplier.id)}</th>
+                  <td><span class="owner-pod-status">${escapeHtml(supplier.role || "")}</span><br>${escapeHtml(supplier.automationStatus || "")}</td>
+                  <td>
+                    <a href="${escapeHtml(supplier.apiDocsUrl || "#")}" target="_blank" rel="noreferrer">docs</a><br>
+                    <code>${escapeHtml(supplier.apiBaseUrl || "")}</code>
+                  </td>
+                  <td>${escapeHtml((supplier.fulfillmentRegions || []).join(", "))}</td>
+                  <td>
+                    <strong>Quote:</strong> ${escapeHtml(supplier.quoteSupport || "")}<br>
+                    <strong>Order:</strong> ${escapeHtml(supplier.orderSupport || "")}<br>
+                    <strong>Hooks:</strong> ${escapeHtml(supplier.webhookSupport || "")}
+                  </td>
+                  <td>${escapeHtml(supplier.notes || "")}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        `);
+      }
+    }
+
+    if (podQualityTiersRoot) {
+      if (!qualityTiers.length) {
+        setHtml(podQualityTiersRoot, "<p class=\"owner-card-note\">No POD quality tiers are configured.</p>");
+      } else {
+        setHtml(podQualityTiersRoot, `
+          <table class="owner-price-table owner-pod-table owner-pod-tiers-table">
+            <thead>
+              <tr>
+                <th scope="col">Tier</th>
+                <th scope="col">Supplier</th>
+                <th scope="col">Buyer position</th>
+                <th scope="col">Print/frame profile</th>
+                <th scope="col">Price stance</th>
+                <th scope="col">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${qualityTiers.map((tier) => {
+                const supplier = supplierMap.get(tier.supplierId) || { label: tier.supplierId };
+                return `
+                  <tr>
+                    <th scope="row">${escapeHtml(tier.label || tier.id)}</th>
+                    <td>
+                      ${escapeHtml(supplier.label || tier.supplierId)}<br>
+                      <small>${escapeHtml(supplier.role || "")}</small>
+                    </td>
+                    <td>
+                      ${escapeHtml(tier.buyerLabel || "")}<br>
+                      <small>${escapeHtml(tier.qualityPosition || "")}</small>
+                    </td>
+                    <td>
+                      <strong>Print:</strong> ${escapeHtml(tier.printProfile || "")}<br>
+                      <strong>Frame:</strong> ${escapeHtml(tier.frameProfile || "")}
+                    </td>
+                    <td>${escapeHtml(tier.pricePosition || "")}</td>
+                    <td>
+                      <span class="owner-pod-status">${escapeHtml(tier.automationStatus || "")}</span><br>
+                      <small>${escapeHtml(tier.notes || "")}</small>
+                    </td>
+                  </tr>
+                `;
+              }).join("")}
+            </tbody>
+          </table>
+        `);
+      }
+    }
+
+    if (podOptionsRoot) {
+      if (!options.length) {
+        setHtml(podOptionsRoot, "<p class=\"owner-card-note\">No POD supplier options are configured.</p>");
+      } else {
+        setHtml(podOptionsRoot, `
+          <table class="owner-price-table owner-pod-table owner-pod-options-table">
+            <thead>
+              <tr>
+                <th scope="col">Supplier</th>
+                <th scope="col">Market</th>
+                <th scope="col">Product</th>
+                <th scope="col">Frame</th>
+                <th scope="col">API IDs</th>
+                <th scope="col">Supplier cost</th>
+                <th scope="col">Automation</th>
+                <th scope="col">Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${options.map((option) => {
+                const product = productMap.get(option.productId) || { id: option.productId, label: option.productId };
+                const frame = frameMap.get(option.frameId) || { id: option.frameId, label: option.frameId };
+                const supplier = supplierMap.get(option.supplierId) || { label: option.supplierId };
+                const ids = [
+                  option.supplierProductId && `product ${option.supplierProductId}`,
+                  option.supplierVariantId && `variant ${option.supplierVariantId}`,
+                  option.supplierSku,
+                ].filter(Boolean).join(" / ");
+                return `
+                  <tr>
+                    <th scope="row">${escapeHtml(supplier.label || option.supplierId)}</th>
+                    <td>${escapeHtml(String(option.marketRegion || "").toUpperCase())}</td>
+                    <td>
+                      ${escapeHtml(productLabel(product))}<br>
+                      <small>${escapeHtml(option.supplierSize || product.detail || "")}</small>
+                    </td>
+                    <td>${escapeHtml(frame.label || option.frameId)}</td>
+                    <td><code>${escapeHtml(ids || "quote lookup")}</code></td>
+                    <td>
+                      Item ${escapeHtml(podMoney(option.currency, option.supplierItemCost))}<br>
+                      Ship ${escapeHtml(podMoney(option.currency, option.supplierShippingCost))}<br>
+                      Total ${escapeHtml(podMoney(option.currency, option.supplierTotalCost))}
+                    </td>
+                    <td>
+                      Quote ${escapeHtml(podYesNo(option.quoteSupported))}<br>
+                      Order ${escapeHtml(podYesNo(option.orderSupported))}<br>
+                      Account ${escapeHtml(podYesNo(option.requiresAccount))}
+                    </td>
+                    <td>${escapeHtml(option.notes || option.fulfillmentModel || "")}</td>
+                  </tr>
+                `;
+              }).join("")}
+            </tbody>
+          </table>
+        `);
+      }
+    }
+
+    if (podSchemaRoot) {
+      const printProducts = (window.photosByElieResolutions || []).filter((product) => product.type === "print").length;
+      const schemaRows = [
+        ["pod_settings", "setting_key, setting_value", "Storefront gate and supplier recommendation", Object.keys(automation).length],
+        ["pod_suppliers", "supplier_id", "API capability and supplier role", suppliers.length],
+        ["pod_quality_tiers", "quality_tier_id", "One-supplier routing for future buyer quality tiers", qualityTiers.length],
+        ["pod_options", "pod_option_id", "Supplier SKU/variant mappings and cost rows", options.length],
+        ["products", "product_id", "Customer-facing print sizes, still localhost-gated", printProducts],
+        ["frame_options", "frame_id", "Frame choices shared across suppliers", (window.photosByElieFrameOptions || []).length],
+      ];
+      setHtml(podSchemaRoot, `
+        <table class="owner-price-table owner-pod-table">
+          <thead>
+            <tr>
+              <th scope="col">Table</th>
+              <th scope="col">Key</th>
+              <th scope="col">Purpose</th>
+              <th scope="col">Rows</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${schemaRows.map(([table, key, purpose, count]) => `
+              <tr>
+                <th scope="row"><code>${escapeHtml(table)}</code></th>
+                <td><code>${escapeHtml(key)}</code></td>
+                <td>${escapeHtml(purpose)}</td>
+                <td>${escapeHtml(formatCount(count))}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      `);
+    }
+  };
+
   const renderCostEstimate = (estimate = null) => {
     if (!costCard || !costSummaryRoot || !costBreakdownRoot) return;
     currentCostEstimate = estimate;
@@ -647,6 +1024,32 @@
     }
   };
 
+  const loadTitleKeywordReviewCount = async () => {
+    if (!titleKeywordReviewLink) return;
+    titleKeywordReviewLink.textContent = "Review";
+    try {
+      const response = await fetch("/__photosbyelie/title-keyword-review-queue", { cache: "no-store" });
+      if (!response.ok) throw new Error(`Title/keyword queue ${response.status}`);
+      const payload = await response.json();
+      const count = Number(Array.isArray(payload?.photos) ? payload.photos.length : payload?.selection?.visible_pending_count ?? payload?.selection?.sqlite_pending_count ?? 0);
+      titleKeywordReviewLink.textContent = count > 0 ? `Review ${reviewPhotoLabel(count)}` : "Review";
+      titleKeywordReviewLink.setAttribute("aria-label", count > 0 ? `Review ${reviewPhotoLabel(count)} for title and keyword cleanup` : "Review title and keyword proposals");
+    } catch {
+      try {
+        const href = window.photosByElieVersionedHref?.("./assets/owner-actions/title-keyword-review-queue/latest.json") || "./assets/owner-actions/title-keyword-review-queue/latest.json";
+        const response = await fetch(href, { cache: "no-store" });
+        if (!response.ok) throw new Error(`Title/keyword queue view ${response.status}`);
+        const payload = await response.json();
+        const count = await staticTitleKeywordReviewCount(payload);
+        titleKeywordReviewLink.textContent = count > 0 ? `Review ${reviewPhotoLabel(count)}` : "Review";
+        titleKeywordReviewLink.setAttribute("aria-label", count > 0 ? `Review ${reviewPhotoLabel(count)} from the latest title and keyword batch` : "Review title and keyword proposals");
+      } catch {
+        titleKeywordReviewLink.textContent = "Review";
+        titleKeywordReviewLink.setAttribute("aria-label", "Review title and keyword proposals");
+      }
+    }
+  };
+
   const setRealEstateStatus = (message) => {
     if (realEstateStatus) realEstateStatus.textContent = message;
   };
@@ -654,7 +1057,7 @@
   const setRealEstateBusy = (busy) => {
     realEstateBusy = busy;
     if (realEstateCard) {
-      realEstateCard.querySelectorAll("button, input, textarea").forEach((control) => {
+      realEstateCard.querySelectorAll("button, input, textarea, select").forEach((control) => {
         if (control.dataset.ownerReAction === "new-client") {
           control.disabled = false;
           return;
@@ -679,13 +1082,44 @@
   };
 
   const updateRealEstateLinks = (client) => {
+    const versionHref = (href) => window.photosByElieVersionedHref?.(href) || href;
     if (realEstateLocalLink) {
-      realEstateLocalLink.href = client?.localContextExists ? client.localReviewUrl : "./real-estate.html?logout=1";
+      realEstateLocalLink.href = versionHref(client?.localContextExists ? client.localReviewUrl : "./real-estate.html?logout=1");
       realEstateLocalLink.toggleAttribute("aria-disabled", !client?.localContextExists);
     }
     if (realEstatePublicLink) {
-      realEstatePublicLink.href = client?.publicContextExists ? client.publicReviewUrl : "./real-estate.html?logout=1";
+      realEstatePublicLink.href = versionHref(client?.publicContextExists ? client.publicReviewUrl : "./real-estate.html?logout=1");
       realEstatePublicLink.toggleAttribute("aria-disabled", !client?.publicContextExists);
+    }
+  };
+
+  const realEstateClientLoginUrl = (client) => {
+    const raw = client?.localReviewUrl || "./real-estate.html?logout=1";
+    try {
+      const url = new URL(raw, window.location.href);
+      url.searchParams.delete("logout");
+      return window.photosByElieVersionedHref?.(`${url.pathname}${url.search}${url.hash}`) || `${url.pathname}${url.search}${url.hash}`;
+    } catch {
+      return window.photosByElieVersionedHref?.(raw.replace(/([?&])logout=1&?/, "$1").replace(/[?&]$/, "")) || raw;
+    }
+  };
+
+  const unlockRealEstateClientSession = (client) => {
+    const galleryKey = String(client?.galleryKey || realEstateConventionsFor(client).galleryKey || "").trim();
+    const username = String(client?.username || client?.customer || client?.email || "").trim();
+    const accessCode = String(client?.accessCode || "").trim();
+    if (!galleryKey || !username || !accessCode) return false;
+    try {
+      window.localStorage.setItem(`photosbyelie-real-estate-session-${galleryKey}`, JSON.stringify({
+        galleryKey,
+        username,
+        accessCode,
+        unlocked: true,
+        unlockedAt: new Date().toISOString(),
+      }));
+      return true;
+    } catch {
+      return false;
     }
   };
 
@@ -720,13 +1154,18 @@
     const selected = selectedRealEstateClient();
     updateRealEstateComputed(selected || blankRealEstateClient());
     updateRealEstateLinks(selected && !selected.isDraft ? selected : null);
+    renderRealEstateImportSourceOptions(realEstateImportSourceOptions);
     return selected;
   };
 
-  const realEstateConventionsFor = (clientName) => {
-    const name = String(clientName || "").trim();
+  const realEstateConventionsFor = (clientNameOrClient) => {
+    const client = typeof clientNameOrClient === "object" && clientNameOrClient
+      ? clientNameOrClient
+      : null;
+    const name = String(client ? client.customer : clientNameOrClient || "").trim();
+    const defaultSourceRoot = name ? `/Volumes/Saturn/Pictures/RE/${name}` : "/Volumes/Saturn/Pictures/RE/<Client>";
     return {
-      sourceRoot: name ? `/Volumes/Saturn/Pictures/RE/${name}` : "/Volumes/Saturn/Pictures/RE/<Client>",
+      sourceRoot: String(client?.sourceRoot || "").trim() || defaultSourceRoot,
       username: name || "<Client>",
       slug: name || "<Client>",
       galleryKey: name ? `${name}-gallery` : "<Client>-gallery",
@@ -737,10 +1176,7 @@
   };
 
   const updateRealEstateComputed = (clientNameOrClient) => {
-    const clientName = typeof clientNameOrClient === "string"
-      ? clientNameOrClient
-      : (clientNameOrClient?.customer || "");
-    const conventions = realEstateConventionsFor(clientName);
+    const conventions = realEstateConventionsFor(clientNameOrClient);
     Object.entries(conventions).forEach(([key, value]) => {
       if (realEstateComputed[key]) realEstateComputed[key].textContent = value;
     });
@@ -754,6 +1190,7 @@
     maxItems: 300,
     properties: [],
     effectiveProperties: [],
+    sourceRoot: "",
   });
 
   const fillRealEstateForm = (client) => {
@@ -761,6 +1198,7 @@
     selectedRealEstateClientId = client.id || "";
     updateRealEstateComputed(client);
     updateRealEstateLinks(client && !client.isDraft ? client : null);
+    renderRealEstateImportSourceOptions(realEstateImportSourceOptions);
   };
 
   const realEstateCellInput = (client, field, value, options = {}) => {
@@ -812,13 +1250,16 @@
       realEstateClientList.innerHTML = realEstateClients.length ? realEstateClients.map((client) => {
         const active = client.id === selected?.id;
         const properties = realEstatePropertiesFor(client);
+        const availableProperties = client.availableProperties || [];
         const missingProperties = client.missingProperties || [];
+        const discoveredText = availableProperties.length ? `${formatCount(availableProperties.length)} found` : "none found";
         const statusBits = client.isDraft
           ? ["draft", "not saved"]
           : [
               missingProperties.length
                 ? `skipping: ${missingProperties.join(", ")}`
                 : (client.sourceRootExists ? "source ok" : "source missing"),
+              `discovered: ${discoveredText}`,
               client.publicContextExists ? "published" : "not published",
             ];
         const rowLabel = client.customer || client.id || "new client";
@@ -835,6 +1276,7 @@
               <div class="owner-real-estate-row-actions">
                 <button class="owner-real-estate-icon-button" type="button" data-owner-re-row-action="edit" data-owner-re-client-id="${escapeHtml(client.id)}" aria-label="Edit ${escapeHtml(rowLabel)}" title="Edit client">${realEstateRowIcon("pen")}</button>
                 <button class="owner-real-estate-icon-button is-danger" type="button" data-owner-re-row-action="delete" data-owner-re-client-id="${escapeHtml(client.id)}" aria-label="Delete ${escapeHtml(rowLabel)}" title="Delete client">${realEstateRowIcon("trash")}</button>
+                <button class="owner-real-estate-login-button" type="button" data-owner-re-row-action="login" data-owner-re-client-id="${escapeHtml(client.id)}" aria-label="Open login for ${escapeHtml(rowLabel)}" title="Open client login"${client.localContextExists && !client.isDraft ? "" : " disabled"}>Login</button>
               </div>
             </td>
           </tr>
@@ -856,6 +1298,7 @@
         selectedRealEstateClientId = realEstateClients[0]?.id || "";
       }
       renderRealEstateClients();
+      loadRealEstateImportSources();
       const selected = selectedRealEstateClient();
       setRealEstateStatus(selected
         ? `${selected.customer}: ${formatCount(selected.stats?.photoCount || 0)} photos, ${selected.passwordSet ? "password set" : "password needed"}.`
@@ -873,6 +1316,7 @@
     accessCode: client?.accessCode || "",
     properties: realEstatePropertiesFor(client).join("\n"),
     maxItems: client?.maxItems || 300,
+    sourceRoot: client?.sourceRoot || "",
   });
 
   const updateRealEstateClientFromControl = (control) => {
@@ -905,16 +1349,17 @@
     return payload;
   };
 
-  const realEstateImportProgressMessage = (clientName, progress = {}) => {
+  const realEstateImportProgressMessage = (clientName, progress = {}, fallbackSourceRoot = "") => {
     const total = Number(progress.total || 0);
     const completed = Number(progress.completed || 0);
     const skipped = Array.isArray(progress.skippedProperties) ? progress.skippedProperties : [];
     const currentAlbum = progress.album ? ` (${progress.album})` : "";
     const skippedText = skipped.length ? ` Skipping missing: ${skipped.join(", ")}.` : "";
+    const sourceRoot = String(progress.sourceRoot || fallbackSourceRoot || `/Volumes/Saturn/Pictures/RE/${clientName}`).trim();
     if (total > 0) {
-      return `Importing ${clientName}: ${formatCount(completed)} / ${formatCount(total)} media${currentAlbum}.${skippedText}`;
+      return `Real Estate import from ${sourceRoot}: ${formatCount(completed)} / ${formatCount(total)} media${currentAlbum}.${skippedText}`;
     }
-    return `Importing ${clientName}: scanning available media.${skippedText}`;
+    return `Real Estate import from ${sourceRoot}: scanning available media.${skippedText}`;
   };
 
   const stopRealEstateImportProgress = () => {
@@ -924,7 +1369,7 @@
     }
   };
 
-  const startRealEstateImportProgress = (operationId, clientName) => {
+  const startRealEstateImportProgress = (operationId, clientName, sourceRoot = "") => {
     stopRealEstateImportProgress();
     if (!operationId) return;
     const refresh = async () => {
@@ -933,7 +1378,7 @@
         const payload = await response.json().catch(() => ({}));
         const progress = payload?.progress;
         if (!response.ok || !progress) return;
-        setRealEstateStatus(realEstateImportProgressMessage(clientName, progress));
+        setRealEstateStatus(realEstateImportProgressMessage(clientName, progress, sourceRoot));
         if (progress.state === "done" || progress.state === "failed") stopRealEstateImportProgress();
       } catch {
         // The import request itself will report any hard failure.
@@ -1030,6 +1475,26 @@
     }
   };
 
+  const openRealEstateClientLogin = (clientId) => {
+    const client = realEstateClients.find((item) => item.id === clientId);
+    if (!client || client.isDraft) {
+      setRealEstateStatus("Save this real estate client before opening login.");
+      return;
+    }
+    if (!client.localContextExists || !client.localReviewUrl) {
+      setRealEstateStatus(`${client.customer || "Client"} needs a local context before login can open. Press RE import or Publish context first.`);
+      return;
+    }
+    if (!unlockRealEstateClientSession(client)) {
+      setRealEstateStatus(`${client.customer || "Client"} needs a saved password before direct login can open.`);
+      return;
+    }
+    markRealEstateRowSelected(client.id);
+    renderRealEstateClients();
+    setRealEstateStatus(`Opening ${client.customer || client.id} review...`);
+    window.open(realEstateClientLoginUrl(client), "_blank", "noopener");
+  };
+
   const runRealEstateClientAction = async (action) => {
     if (realEstateBusy) return;
     if (action === "new-client") {
@@ -1046,16 +1511,24 @@
       return;
     }
     if (selected.isDraft) {
-      setRealEstateStatus("Finish the draft client before running imports, publishing, or uploads.");
+      setRealEstateStatus("Finish the draft client before running client actions.");
       return;
     }
     if (action === "upload-client") {
       const ok = window.confirm("Upload public previews and private masters for this real estate client?");
       if (!ok) return;
     }
+    let realEstateImportSource = null;
+    if (action === "import-client") {
+      realEstateImportSource = await realEstateImportSourceForRun(selected);
+      if (!realEstateImportSource?.path) return;
+    }
     setRealEstateBusy(true);
     const labels = {
-      "import-client": "Importing previews...",
+      "import-client": realEstateImportSource?.name
+        ? `Importing previews from ${realEstateImportSource.name}...`
+        : "Importing previews...",
+      "discover-properties": "Discovering property folders...",
       "publish-client": "Publishing context...",
       "upload-dry-run": "Checking upload inventory...",
       "upload-client": "Uploading masters and previews...",
@@ -1065,12 +1538,13 @@
     const operationId = action === "import-client"
       ? `re-import-${selected.id}-${Date.now()}-${Math.random().toString(16).slice(2)}`
       : "";
-    if (operationId) startRealEstateImportProgress(operationId, selected.customer || selected.id);
+    if (operationId) startRealEstateImportProgress(operationId, selected.customer || selected.id, realEstateImportSource?.path || "");
     try {
       const payload = await postRealEstateOwnerAction({
         action,
         id: selected.id,
         operationId,
+        ...(realEstateImportSource?.path ? { sourceRoot: realEstateImportSource.path } : {}),
       });
       if (payload.client) {
         const byId = new Map(realEstateClients.map((client) => [client.id, client]));
@@ -1091,13 +1565,15 @@
         const skipped = Array.isArray(importProgress?.skippedProperties) ? importProgress.skippedProperties : [];
         const doneLabels = {
           "import-client": importProgress
-            ? `${clientName} previews imported: ${formatCount(importProgress.completed || 0)} / ${formatCount(importProgress.total || 0)} media.${skipped.length ? ` Skipped missing: ${skipped.join(", ")}.` : ""}`
+            ? `${clientName} RE previews imported from ${realEstateImportSource?.name || "selected source"}: ${formatCount(importProgress.completed || 0)} / ${formatCount(importProgress.total || 0)} media.${skipped.length ? ` Skipped missing: ${skipped.join(", ")}.` : ""}`
             : `${clientName} previews imported.`,
+          "discover-properties": `${clientName} properties updated from ${formatCount(payload.properties?.length || 0)} discovered folders.`,
           "publish-client": `${clientName} context published.`,
           "upload-dry-run": `${clientName} upload dry run complete.`,
           "upload-client": `${clientName} upload complete.`,
         };
         setRealEstateStatus(doneLabels[action] || "Real estate action complete.");
+        if (action === "import-client") loadRealEstateImportSources();
       }
     } catch (error) {
       setRealEstateStatus(error?.message || "Real estate action failed.");
@@ -1216,12 +1692,285 @@
     return logName ? `/.review-logs/${encodeURIComponent(logName)}` : "";
   };
 
-  const syncR2FixButton = () => {
-    if (!r2FixButton) return;
-    r2FixButton.disabled = r2CoverageOk || r2RepairActive;
-    r2FixButton.textContent = r2RepairActive ? "Repair running" : "Fix it";
+  const r2GapPhotoCount = () => (
+    Array.isArray(window.photosByElieR2Coverage?.missingImportPhotos)
+      ? window.photosByElieR2Coverage.missingImportPhotos.length
+      : 0
+  );
+
+  const r2GapCounts = () => {
+    const photos = Array.isArray(window.photosByElieR2Coverage?.missingImportPhotos)
+      ? window.photosByElieR2Coverage.missingImportPhotos
+      : [];
+    return {
+      photos: photos.length,
+      masters: photos.filter((photo) => photo.steps?.master_uploaded?.status === "pending").length,
+      triplets: photos.filter((photo) => photo.steps?.triplets_uploaded?.status === "pending").length,
+      previews: photos.filter((photo) => photo.steps?.previews_uploaded?.status === "pending").length,
+    };
+  };
+
+  const r2GapStatusText = () => {
+    if (!window.photosByElieR2Coverage) return "Coverage is still loading.";
+    if (r2CoverageOk) return "Current catalog coverage is up to date; choose an import source before starting new files.";
+    const gaps = r2GapCounts();
+    if (gaps.photos) {
+      return `${formatCount(gaps.photos)} incomplete photos: ${formatCount(gaps.masters)} need masters, ${formatCount(gaps.triplets)} need private JPG triplets, ${formatCount(gaps.previews)} need public previews.`;
+    }
+    const missing = coverageRepairGapSummary();
+    return missing ? `Coverage still has gaps: ${missing}.` : "Coverage still has gaps.";
+  };
+
+  const folderNameFromPath = (path) => String(path || "").split(/[\\/]/).filter(Boolean).at(-1) || String(path || "");
+
+  const importSourceByPath = (path) => importSourceOptions.find((source) => source.path === path) || null;
+
+  const importSourceChoiceLabel = () => {
+    const value = importSourceSelect?.value || "new";
+    if (value === "all") return "All Expo source folders";
+    if (value === "new") return "New folder";
+    const source = importSourceByPath(value);
+    const optionLabel = importSourceSelect?.selectedOptions?.[0]?.textContent?.trim() || "";
+    return source?.label || optionLabel || folderNameFromPath(value) || value;
+  };
+
+  const selectImportSourceFolder = (folder = {}) => {
+    if (!importSourceSelect) return null;
+    const path = String(folder.path || "").trim();
+    if (!path) return null;
+    const label = String(folder.name || folder.label || "").trim() || folderNameFromPath(path) || path;
+    const existingOption = [...importSourceSelect.options].find((option) => option.value === path);
+    if (!existingOption) {
+      const option = document.createElement("option");
+      option.value = path;
+      option.textContent = label;
+      option.title = path;
+      const allOption = [...importSourceSelect.options].find((item) => item.value === "all");
+      importSourceSelect.insertBefore(option, allOption || null);
+    } else {
+      existingOption.textContent = existingOption.textContent || label;
+      existingOption.title = existingOption.title || path;
+    }
+    if (!importSourceByPath(path)) {
+      importSourceOptions = [
+        { path, label, exists: true, discovered: false },
+        ...importSourceOptions.filter((source) => source.path !== path),
+      ];
+    }
+    importSourceSelect.value = path;
+    lastImportSourceValue = path;
+    syncR2ActionButtons();
+    if (!latestR2ProgressTasks.some((task) => ["repair", "gap-fill", "maintenance"].includes(task?.operation))) {
+      renderImportDashboardIdle();
+    }
+    return { path, name: label };
+  };
+
+  const realEstateImportSourceByPath = (path) => (
+    realEstateImportSourceOptions.find((source) => source.path === path) || null
+  );
+
+  const currentRealEstateSourceRoot = (client = selectedRealEstateClient()) => {
+    if (!client || client.isDraft) return "";
+    return String(client.sourceRoot || realEstateConventionsFor(client).sourceRoot || "").trim();
+  };
+
+  const realEstateImportSourceLabel = (path) => {
+    const source = realEstateImportSourceByPath(path);
+    const optionLabel = realEstateImportSourceSelect?.selectedOptions?.[0]?.textContent?.trim() || "";
+    return source?.label || optionLabel || folderNameFromPath(path) || path;
+  };
+
+  const selectRealEstateImportSourceFolder = (folder = {}) => {
+    if (!realEstateImportSourceSelect) return null;
+    const path = String(folder.path || "").trim();
+    if (!path) return null;
+    const label = String(folder.name || folder.label || "").trim() || folderNameFromPath(path) || path;
+    const existingOption = [...realEstateImportSourceSelect.options].find((option) => option.value === path);
+    if (!existingOption) {
+      const option = document.createElement("option");
+      option.value = path;
+      option.textContent = label;
+      option.title = path;
+      const newOption = [...realEstateImportSourceSelect.options].find((item) => item.value === "new");
+      realEstateImportSourceSelect.insertBefore(option, newOption || null);
+    } else {
+      existingOption.textContent = existingOption.textContent || label;
+      existingOption.title = existingOption.title || path;
+    }
+    if (!realEstateImportSourceByPath(path)) {
+      realEstateImportSourceOptions = [
+        { path, label, exists: true, discovered: false },
+        ...realEstateImportSourceOptions.filter((source) => source.path !== path),
+      ];
+    }
+    realEstateImportSourceSelect.value = path;
+    lastRealEstateImportSourceValue = path;
+    return { path, name: label };
+  };
+
+  const renderRealEstateImportSourceOptions = (sources = []) => {
+    if (!realEstateImportSourceSelect) return;
+    const selected = selectedRealEstateClient();
+    const previous = realEstateImportSourceSelect.value || lastRealEstateImportSourceValue;
+    realEstateImportSourceOptions = sources
+      .map((source) => ({
+        path: String(source?.path || "").trim(),
+        label: String(source?.label || "").trim(),
+        exists: source?.exists !== false,
+        discovered: Boolean(source?.discovered),
+      }))
+      .filter((source) => source.path);
+    realEstateImportSourceSelect.textContent = "";
+    const addOption = (value, label, title = "") => {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = label;
+      if (title) option.title = title;
+      realEstateImportSourceSelect.append(option);
+    };
+    const clientSourceRoot = currentRealEstateSourceRoot(selected);
+    if (clientSourceRoot) {
+      addOption(clientSourceRoot, `Current: ${folderNameFromPath(clientSourceRoot)}`, clientSourceRoot);
+    }
+    realEstateImportSourceOptions.forEach((source) => {
+      if (source.path === clientSourceRoot) return;
+      const label = `${source.label || source.path}${source.exists ? "" : " (missing)"}`;
+      addOption(source.path, label, source.path);
+    });
+    addOption("new", "New...");
+    const values = new Set([...realEstateImportSourceSelect.options].map((option) => option.value));
+    const preferredPrevious = previous === "new" && clientSourceRoot ? "" : previous;
+    realEstateImportSourceSelect.value = values.has(preferredPrevious)
+      ? previous
+      : (clientSourceRoot || realEstateImportSourceOptions[0]?.path || "new");
+    lastRealEstateImportSourceValue = realEstateImportSourceSelect.value;
+    realEstateImportSourceSelect.disabled = realEstateBusy || !selected || selected.isDraft;
+  };
+
+  const loadRealEstateImportSources = async () => {
+    if (!realEstateImportSourceSelect) return;
+    try {
+      const response = await fetch("/__photosbyelie/import-sources?kind=real-estate", { cache: "no-store" });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Could not load real estate import sources.");
+      renderRealEstateImportSourceOptions(Array.isArray(payload.sources) ? payload.sources : []);
+    } catch {
+      renderRealEstateImportSourceOptions([]);
+    }
+  };
+
+  const realEstateImportSourceForRun = async (selected) => {
+    if (!realEstateImportSourceSelect) {
+      const path = currentRealEstateSourceRoot(selected);
+      return path ? { path, name: folderNameFromPath(path) || path } : null;
+    }
+    const choice = realEstateImportSourceSelect.value || "new";
+    if (choice === "new") {
+      if (realEstateImportSourceDialogOpen) return null;
+      realEstateImportSourceDialogOpen = true;
+      realEstateImportSourceSelect.disabled = true;
+      setRealEstateStatus("Choose the real estate source folder...");
+      try {
+        const selectedFolder = await chooseImportFolder();
+        if (!selectedFolder) {
+          renderRealEstateImportSourceOptions(realEstateImportSourceOptions);
+          setRealEstateStatus("Real Estate import folder selection cancelled.");
+          return null;
+        }
+        return selectRealEstateImportSourceFolder(selectedFolder);
+      } finally {
+        realEstateImportSourceDialogOpen = false;
+        renderRealEstateImportSourceOptions(realEstateImportSourceOptions);
+      }
+    }
+    return {
+      path: choice,
+      name: realEstateImportSourceLabel(choice),
+    };
+  };
+
+  const renderImportSourceOptions = (sources = []) => {
+    if (!importSourceSelect) return;
+    const previous = importSourceSelect.value;
+    importSourceOptions = sources
+      .map((source) => ({
+        path: String(source?.path || "").trim(),
+        label: String(source?.label || "").trim(),
+        exists: source?.exists !== false,
+        discovered: Boolean(source?.discovered),
+      }))
+      .filter((source) => source.path);
+    importSourceSelect.textContent = "";
+    const addOption = (value, label, title = "") => {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = label;
+      if (title) option.title = title;
+      importSourceSelect.append(option);
+    };
+    importSourceOptions.forEach((source) => {
+      const label = `${source.label || source.path}${source.exists ? "" : " (missing)"}`;
+      addOption(source.path, label, source.path);
+    });
+    addOption("all", "All");
+    addOption("new", "New...");
+    const values = new Set([...importSourceSelect.options].map((option) => option.value));
+    importSourceSelect.value = values.has(previous)
+      ? previous
+      : importSourceOptions[0]?.path || "all";
+    lastImportSourceValue = importSourceSelect.value;
+    syncR2ActionButtons();
+    if (!latestR2ProgressTasks.some((task) => ["repair", "gap-fill", "maintenance"].includes(task?.operation))) {
+      renderImportDashboardIdle();
+    }
+  };
+
+  const loadImportSources = async () => {
+    if (!importSourceSelect) return;
+    try {
+      const response = await fetch("/__photosbyelie/import-sources", { cache: "no-store" });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Could not load import sources.");
+      renderImportSourceOptions(Array.isArray(payload.sources) ? payload.sources : []);
+    } catch {
+      renderImportSourceOptions([]);
+    }
+  };
+
+  const syncR2ActionButtons = () => {
+    const busy = r2RepairActive || r2GapFillActive || r2MaintenanceActive;
+    if (r2FixButton) {
+      r2FixButton.disabled = busy;
+      r2FixButton.textContent = busy
+        ? "Task running"
+        : "Start Expo import";
+      r2FixButton.title = `Start Expo import from ${importSourceChoiceLabel()}`;
+    }
+    if (importSourceSelect) importSourceSelect.disabled = busy;
+    const gapCount = r2GapPhotoCount();
+    r2FillGapsButtons.forEach((button) => {
+      button.disabled = r2CoverageOk || busy || gapCount === 0;
+      button.textContent = r2GapFillActive ? "Filling gaps..." : "Fill in gaps";
+      button.title = gapCount
+        ? `Render and upload missing media for ${formatCount(gapCount)} incomplete photos`
+        : "No incomplete upload photos are listed";
+    });
+    r2MaintenanceButtons.forEach((button) => {
+      const key = button.dataset.ownerR2Maintenance || "";
+      if (!button.dataset.ownerDefaultLabel) {
+        button.dataset.ownerDefaultLabel = button.textContent || R2_MAINTENANCE_LABELS.get(key) || "Maintenance";
+      }
+      button.disabled = busy;
+      button.textContent = r2MaintenanceActive && activeR2MaintenanceKey === key
+        ? "Running..."
+        : button.dataset.ownerDefaultLabel;
+      button.title = busy
+        ? "Another import or maintenance task is running"
+        : `Start ${button.dataset.ownerDefaultLabel}`;
+    });
     if (r2CoverageNote && r2RepairActive) {
-      setText(r2CoverageNote, "Repair is running. Banned photos stay banned; this only removes their old R2 objects.");
+      setText(r2CoverageNote, "Background work is running. Banned photos stay banned; this only removes their old R2 objects.");
     }
   };
 
@@ -1231,43 +1980,227 @@
     const lastMatch = (pattern) => {
       for (let index = lines.length - 1; index >= 0; index -= 1) {
         const match = lines[index].match(pattern);
-        if (match) return { line: lines[index], match };
+        if (match) return { line: lines[index], match, index };
       }
       return null;
     };
-    const deleted = lastMatch(/^Done\. (?:Would delete|Deleted) ([0-9,]+) public and ([0-9,]+) private object references for ([0-9,]+) discarded photos\./);
+    const lastMatchAfter = (pattern, startIndex) => {
+      for (let index = lines.length - 1; index >= Math.max(0, startIndex); index -= 1) {
+        const match = lines[index].match(pattern);
+        if (match) return { line: lines[index], match, index };
+      }
+      return null;
+    };
+    const parsePayloadMatch = (row) => {
+      if (!row?.match?.[1]) return null;
+      try {
+        return JSON.parse(row.match[1]);
+      } catch {
+        return null;
+      }
+    };
+    const parsePayloadText = (value) => {
+      try {
+        return JSON.parse(value);
+      } catch {
+        return null;
+      }
+    };
+    const deleted = lastMatch(/^Done\. (?:Would check|Checked) ([0-9,]+) public and ([0-9,]+) private banned-photo R2 key checks for ([0-9,]+) discarded photos(?:; ([0-9,]+) already trusted from Owner DB)?\./)
+      || lastMatch(/^Done\. (?:Would delete|Deleted) ([0-9,]+) public and ([0-9,]+) private object references for ([0-9,]+) discarded photos\./);
     const deleteStart = lastMatch(/^DELETE_START\s+([0-9,]+)\s+([0-9,]+)\s+([0-9,]+)\s+([0-9,]+)/);
     const deleteProgress = lastMatch(/^DELETE_PROGRESS\s+([0-9,]+)\s+([0-9,]+)\s+([0-9,]+)\s+([0-9,]+)\s+([0-9,]+)/);
-    const scan = lastMatch(/^(?:Processing (?:final )?batch after scanning|Scanned) ([0-9,]+) files[;,] inspected ([0-9,]+), selected ([0-9,]+)/);
-    const started = lastMatch(/^START\s+([0-9,]+):\s+(\S+)\s+(\S+)\s+(.+)/);
-    const imported = lastMatch(/^([0-9,]+):\s+(\S+)\s+rendered\s+(\S+)\s+public\s+([0-9,]+)\s+private-renders\s+([0-9,]+)/);
+    const deleteContext = lastMatch(/^DELETE_CONTEXT\s+({.+})$/);
+    const deleteContextPayload = parsePayloadMatch(deleteContext);
+    const phaseMarker = lastMatch(/^SWEEP_PHASE\s+(\S+)\s+(.+)/);
+    const rawPhaseKey = phaseMarker?.match?.[1] || "";
+    const importPhaseKey = normalizeSweepPhaseKey(rawPhaseKey);
+    const lastImportPhaseKey = (() => {
+      for (let index = lines.length - 1; index >= 0; index -= 1) {
+        const key = normalizeSweepPhaseKey(lines[index].match(/^SWEEP_PHASE\s+(\S+)/)?.[1]);
+        if (PHOTO_IMPORT_PHASES.has(key)) return key;
+      }
+      return PHOTO_IMPORT_PHASES.has(importPhaseKey) ? importPhaseKey : "";
+    })();
+    const scopedImport = PHOTO_IMPORT_PHASES.has(importPhaseKey);
+    const importStartIndex = scopedImport ? phaseMarker.index + 1 : 0;
+    const scanPattern = /^(?:Processing (?:final )?batch after scanning|Scanned) ([0-9,]+) files[;,] inspected ([0-9,]+), selected ([0-9,]+)/;
+    const startedPattern = /^START\s+([0-9,]+):\s+(\S+)\s+(\S+)\s+(.+)/;
+    const importedPattern = /^([0-9,]+):\s+(\S+)\s+rendered\s+(\S+)\s+public\s+([0-9,]+)\s+private-renders\s+([0-9,]+)/;
+    const scan = scopedImport ? lastMatchAfter(scanPattern, importStartIndex) : (phaseMarker ? null : lastMatch(scanPattern));
+    const started = scopedImport ? lastMatchAfter(startedPattern, importStartIndex) : (phaseMarker ? null : lastMatch(startedPattern));
+    const imported = scopedImport ? lastMatchAfter(importedPattern, importStartIndex) : (phaseMarker ? null : lastMatch(importedPattern));
+    const realEstateClient = scopedImport ? lastMatchAfter(/^PBE_RE_CLIENT_START\s+({.+})$/, importStartIndex) : null;
+    const realEstateImport = scopedImport ? lastMatchAfter(/^PBE_IMPORT_PROGRESS\s+({.+})$/, importStartIndex) : null;
+    const realEstateUploadStart = scopedImport ? lastMatchAfter(/^PBE_RE_UPLOAD_START\s+({.+})$/, importStartIndex) : null;
+    const realEstateUpload = scopedImport ? lastMatchAfter(/^PBE_RE_UPLOAD_PROGRESS\s+({.+})$/, importStartIndex) : null;
+    const realEstateDone = lastMatch(/^PBE_RE_DONE\s+({.+})$/);
+    const realEstateClientPayload = parsePayloadMatch(realEstateClient);
+    const realEstateImportPayload = parsePayloadMatch(realEstateImport);
+    const realEstateUploadStartPayload = parsePayloadMatch(realEstateUploadStart);
+    const realEstateUploadPayload = parsePayloadMatch(realEstateUpload);
+    const realEstateDonePayload = parsePayloadMatch(realEstateDone);
+    const importScanProgress = scopedImport ? lastMatchAfter(/^PBE_IMPORT_SCAN_PROGRESS\s+({.+})$/, importStartIndex) : null;
+    const importScanDone = scopedImport ? lastMatchAfter(/^PBE_IMPORT_SCAN_DONE\s+({.+})$/, importStartIndex) : null;
+    const importQueueStart = scopedImport ? lastMatchAfter(/^PBE_IMPORT_QUEUE_START\s+({.*})$/, importStartIndex) : null;
+    const importQueueProgress = scopedImport ? lastMatchAfter(/^PBE_IMPORT_QUEUE_PROGRESS\s+({.+})$/, importStartIndex) : null;
+    const importScanProgressPayload = parsePayloadMatch(importScanProgress);
+    const importScanDonePayload = parsePayloadMatch(importScanDone);
+    const importQueueStartPayload = parsePayloadMatch(importQueueStart);
+    const importQueueProgressPayload = parsePayloadMatch(importQueueProgress);
+    const importPlan = lastMatch(/^PBE_IMPORT_PLAN\s+({.+})$/);
+    const importDone = lastMatch(/^PBE_IMPORT_DONE\s+({.+})$/);
+    const importPlanPayload = parsePayloadMatch(importPlan);
+    const importDonePayload = parsePayloadMatch(importDone);
     const upload = lastMatch(/^([0-9,]+):\s+(\S+)\s+(?:uploaded|would upload)\s+([0-9,]+)/);
     const processed = lastMatch(/^Done\. Processed ([0-9,]+) photos?\./);
     const manifest = lastMatch(/^Refreshed .*?: ([0-9,]+) complete private render triplets\./);
-    const error = lastMatch(/^(ERROR\b|.*\berror: ).*/i);
-    const phaseMarker = lastMatch(/^SWEEP_PHASE\s+(\S+)\s+(.+)/);
+    const rawError = lastMatch(/^(ERROR\b|.*\berror: ).*/i);
+    const importPhotoRows = [];
+    const importPhotoMap = new Map();
+    const ensureImportPhoto = (payload = {}) => {
+      const id = String(payload.photoId || payload.id || payload.relativePath || "").trim();
+      if (!id) return null;
+      if (!importPhotoMap.has(id)) {
+        const row = {
+          id,
+          index: importPhotoRows.length + 1,
+          relativePath: "",
+          sourcePath: "",
+          phaseKey: lastImportPhaseKey || importPhaseKey,
+          country: "",
+          mediaType: "",
+          status: "running",
+          steps: {},
+        };
+        importPhotoMap.set(id, row);
+        importPhotoRows.push(row);
+      }
+      const row = importPhotoMap.get(id);
+      if (payload.eventIndex !== undefined) row.lastEventIndex = Number(payload.eventIndex) || row.lastEventIndex || 0;
+      if (payload.index) row.index = Number(payload.index) || row.index;
+      if (payload.relativePath) row.relativePath = String(payload.relativePath);
+      if (payload.sourcePath) row.sourcePath = String(payload.sourcePath);
+      if (lastImportPhaseKey || importPhaseKey) row.phaseKey = lastImportPhaseKey || importPhaseKey;
+      if (payload.country) row.country = String(payload.country);
+      if (payload.mediaType) row.mediaType = String(payload.mediaType);
+      if (payload.status) {
+        row.status = String(payload.status);
+        if (row.status === "done") row.doneEventIndex = row.lastEventIndex || row.doneEventIndex || 0;
+      }
+      return row;
+    };
+    const importEventStart = scopedImport ? importStartIndex : 0;
+    for (let index = importEventStart; index < lines.length; index += 1) {
+      const event = lines[index].match(/^PBE_IMPORT_(PHOTO|STEP|PHOTO_DONE)\s+({.+})$/);
+      if (!event) continue;
+      const payload = parsePayloadText(event[2]);
+      if (!payload) continue;
+      const row = ensureImportPhoto(payload);
+      if (!row) continue;
+      row.lastEventIndex = index;
+      if (event[1] === "STEP") {
+        const step = String(payload.step || "");
+        if (step) {
+          row.steps[step] = {
+            status: String(payload.status || "done"),
+            completed: Number(payload.completed || 0),
+            total: Number(payload.total || 0),
+            reason: String(payload.reason || ""),
+          };
+        }
+      }
+      if (event[1] === "PHOTO_DONE") {
+        row.status = String(payload.status || "done");
+        row.doneEventIndex = index;
+      }
+    }
+    const activeImportCount = Number((importQueueProgressPayload || importQueueStartPayload || {}).active || 0);
+    if (activeImportCount > 0 && !importPhotoRows.some((row) => row.status === "running")) {
+      const activeRow = importPhotoRows.find((row) => row.status === "queued")
+        || importPhotoRows.find((row) => row.status !== "done" && row.status !== "error");
+      if (activeRow) {
+        activeRow.status = "running";
+        activeRow.inferredActive = true;
+      }
+    }
     const doneKeys = new Set(lines
-      .map((line) => line.match(/^SWEEP_DONE\s+(\S+)/)?.[1])
+      .map((line) => normalizeSweepPhaseKey(line.match(/^SWEEP_DONE\s+(\S+)/)?.[1]))
       .filter(Boolean));
+    const skippedKeys = new Set(lines
+      .map((line) => normalizeSweepPhaseKey(line.match(/^SWEEP_SKIP\s+(\S+)/)?.[1]))
+      .filter(Boolean));
+    const skipTerminatedError = rawError && skippedKeys.size && /\bSIGTERM\b|Signals\.SIGTERM/i.test(rawError.line);
+    const error = skipTerminatedError ? null : rawError;
     let phase = "Starting cloud media sweep";
-    if (deleteProgress || deleteStart) phase = "Deleting R2 objects for banned photos";
-    if (deleted) phase = "Deleted R2 objects for banned photos";
+    if (deleteProgress || deleteStart) phase = "Double-checking banned-photo R2 cleanup";
+    if (deleted) phase = "Banned-photo R2 cleanup double-check finished";
     if (scan) phase = "Scanning and importing Saturn sources";
     if (started) phase = "Rendering and uploading selected photo";
     if (imported) phase = "Rendering and uploading selected previews";
+    if (realEstateImportPayload) phase = "Importing Real Estate sources";
+    if (realEstateUploadStartPayload || realEstateUploadPayload) phase = "Uploading Real Estate media";
+    if (realEstateDonePayload) phase = "Real Estate sync finished";
+    if (importPlanPayload && importPhaseKey === "gap-fill") phase = "Filling upload coverage gaps";
+    if (importDonePayload && importPhaseKey === "gap-fill") phase = "Upload gap fill finished";
     if (upload) phase = "Creating and uploading missing private JPGs";
     if (processed) phase = "Private JPG backfill pass finished";
     if (manifest) phase = "Refreshing private delivery manifest";
     if (phaseMarker) phase = phaseMarker.match[2];
     if (error) phase = "Needs attention";
-    let phaseKey = phaseMarker?.match?.[1] || "";
+    let phaseKey = normalizeSweepPhaseKey(rawPhaseKey);
     if (!phaseKey) {
       if (upload || processed || manifest) phaseKey = "private";
+      else if (importPlanPayload || importDonePayload) phaseKey = "gap-fill";
+      else if (realEstateImportPayload || realEstateUploadStartPayload || realEstateUploadPayload || realEstateDonePayload) phaseKey = "real-estate";
       else if (scan || started || imported) phaseKey = "camera";
       else if (deleted || deleteProgress || deleteStart) phaseKey = "discard-start";
       else phaseKey = "prepare";
     }
-    return { latest, phase, phaseKey, doneKeys, deleted, deleteStart, deleteProgress, scan, started, imported, upload, processed, manifest, error };
+    return {
+      latest,
+      phase,
+      phaseKey,
+      rawPhaseKey,
+      lastImportPhaseKey,
+      doneKeys,
+      skippedKeys,
+      deleted,
+      deleteStart,
+      deleteProgress,
+      deleteContext,
+      deleteContextPayload,
+      scan,
+      started,
+      imported,
+      realEstateClient,
+      realEstateClientPayload,
+      realEstateImport,
+      realEstateImportPayload,
+      realEstateUploadStart,
+      realEstateUploadStartPayload,
+      realEstateUpload,
+      realEstateUploadPayload,
+      realEstateDone,
+      realEstateDonePayload,
+      importScanProgress,
+      importScanProgressPayload,
+      importScanDone,
+      importScanDonePayload,
+      importQueueStart,
+      importQueueStartPayload,
+      importQueueProgress,
+      importQueueProgressPayload,
+      importPlan,
+      importPlanPayload,
+      importDone,
+      importDonePayload,
+      importPhotoRows,
+      upload,
+      processed,
+      manifest,
+      error,
+    };
   };
 
   const privateBackfillProgress = (logSummary) => {
@@ -1299,6 +2232,26 @@
     return missing ? `${formatCount(missing)} missing` : "Still missing coverage";
   };
 
+  const coverageRepairGapSummary = () => {
+    const rows = Array.isArray(window.photosByElieR2Coverage?.rows)
+      ? window.photosByElieR2Coverage.rows
+      : [];
+    const missingFor = (matcher) => rows
+      .filter((row) => matcher(String(row.label || "").toLowerCase(), String(row.objectClass || "").toLowerCase()))
+      .map((row) => Number(row.missing || 0))
+      .filter((missing) => missing > 0);
+    const maxMissing = (values) => values.length ? Math.max(...values) : 0;
+    const publicPreviewPhotos = maxMissing(missingFor((label, objectClass) => label.includes("preview") || objectClass.includes("expo/")));
+    const privateMasters = maxMissing(missingFor((label, objectClass) => label.includes("private masters") || objectClass === "masters"));
+    const privateJpgSets = maxMissing(missingFor((label, objectClass) => label.includes("private jpg") || objectClass.startsWith("renders/")));
+    const parts = [
+      publicPreviewPhotos ? `${formatCount(publicPreviewPhotos)} public preview photos` : "",
+      privateMasters ? `${formatCount(privateMasters)} private masters` : "",
+      privateJpgSets ? `${formatCount(privateJpgSets)} private JPG sets` : "",
+    ].filter(Boolean);
+    return parts.join(", ");
+  };
+
   const deleteObjectProgress = (logSummary) => {
     const progress = logSummary?.deleteProgress;
     const started = logSummary?.deleteStart;
@@ -1317,9 +2270,12 @@
       ? ((total - completed) / completed) * elapsedSeconds
       : 0;
     const countdown = secondsLeft ? `${formatDuration(secondsLeft)} left` : (total && completed >= total ? "0s left" : "Calculating time left");
+    const ownerDbConfirmed = Number(logSummary?.deleteContextPayload?.ownerDbDeletedConfirmed || 0);
     const detail = total
-      ? `${formatCount(completed)} / ${formatCount(total)} objects, ${countdown}`
-      : "Finding banned R2 objects";
+      ? `Double-checking cleanup: ${formatCount(completed)} / ${formatCount(total)} R2 key checks, ${countdown}. Already purged; this pass only verifies leftovers are gone.`
+      : ownerDbConfirmed
+        ? `Owner DB already confirms ${formatCount(ownerDbConfirmed)} banned-photo R2 keys cleaned; no live checks needed.`
+        : "Finding historical banned-photo R2 keys to double-check";
     return {
       percent,
       detail,
@@ -1331,23 +2287,406 @@
       privateTotal,
       discardedPhotos,
       countdown,
+      ownerDbConfirmed,
     };
   };
 
-  const phaseProgress = (phase, logSummary, failed) => {
+  const sourceImportProgress = (logSummary, task = null) => {
+    const rows = Array.isArray(logSummary?.importPhotoRows) ? logSummary.importPhotoRows : [];
+    const succeededRows = rows.filter((row) => row.status === "done").length;
+    const failedRows = rows.filter((row) => row.status === "error").length;
+    const finishedRows = succeededRows + failedRows;
+    const runningRow = rows.find((row) => row.status !== "done" && row.status !== "error") || null;
+    const scanPayload = logSummary?.importScanDonePayload || logSummary?.importScanProgressPayload || {};
+    const queuePayload = logSummary?.importQueueProgressPayload || logSummary?.importQueueStartPayload || {};
+    const hasQueueEvents = Boolean(
+      logSummary?.importScanProgressPayload
+      || logSummary?.importScanDonePayload
+      || logSummary?.importQueueStartPayload
+      || logSummary?.importQueueProgressPayload
+    );
+    const selectedFromScan = numberFromLog(logSummary?.scan?.match?.[3]);
+    const queued = Number(scanPayload.queued ?? queuePayload.queued ?? 0);
+    const processed = Number(queuePayload.processed ?? scanPayload.processed ?? 0);
+    const succeeded = Math.max(succeededRows, Number(queuePayload.succeeded ?? scanPayload.succeeded ?? 0));
+    const failed = Math.max(failedRows, Number(queuePayload.failed ?? scanPayload.failed ?? 0));
+    const rawActiveItemCount = Math.max(0, Number(queuePayload.active ?? scanPayload.active ?? (runningRow ? 1 : 0)));
+    const rawQueueDepth = Math.max(0, Number(queuePayload.queueDepth ?? scanPayload.queueDepth ?? Math.max(0, queued - processed - rawActiveItemCount)));
+    const planQueueDepth = Number(queuePayload.planQueueDepth ?? scanPayload.planQueueDepth ?? 0);
+    const plannerActive = Number(queuePayload.plannerActive ?? scanPayload.plannerActive ?? 0);
+    const alreadySelected = Number(scanPayload.alreadySelected ?? queuePayload.alreadySelected ?? 0);
+    const workers = Math.max(1, Number(queuePayload.workers ?? scanPayload.workers ?? 1));
+    const scannedFiles = Number(scanPayload.seen ?? queuePayload.seen ?? numberFromLog(logSummary?.scan?.match?.[1]) ?? 0);
+    const inspectedFiles = Number(scanPayload.inspected ?? queuePayload.inspected ?? numberFromLog(logSummary?.scan?.match?.[2]) ?? 0);
+    const scanDone = Boolean(logSummary?.importScanDonePayload);
+    const selected = Math.max(queued, processed + rawQueueDepth + rawActiveItemCount, selectedFromScan, rows.length);
+    const completed = Math.max(rows.length ? finishedRows : 0, processed, numberFromLog(logSummary?.imported?.match?.[1]));
+    const activeItemCount = selected
+      ? Math.min(rawActiveItemCount, Math.max(0, selected - completed))
+      : rawActiveItemCount;
+    const queueDepth = selected
+      ? Math.max(0, selected - completed - activeItemCount)
+      : rawQueueDepth;
+    const startedIndex = rows.length
+      ? completed + (runningRow ? 1 : 0)
+      : numberFromLog(logSummary?.started?.match?.[1]);
+    const current = Math.max(completed + (activeItemCount ? 1 : 0), startedIndex);
+    const active = task?.state === "queued" || task?.state === "running";
+    const scanningForMore = Boolean(active && (hasQueueEvents ? !scanDone : selected && completed >= selected));
+    const scanDraining = Boolean(active && scanDone && (queueDepth > 0 || activeItemCount > 0));
+    const elapsedSeconds = secondsSinceIso(task?.started_at || task?.queued_at || "");
+    const secondsLeft = completed >= 5 && selected > completed && elapsedSeconds > 0
+      ? ((selected - completed) / completed) * elapsedSeconds
+      : 0;
+    const countdown = scanningForMore
+      ? (secondsLeft ? `${formatDuration(secondsLeft)} for the current queue` : "Scanner is still building the queue")
+      : secondsLeft
+      ? formatDuration(secondsLeft)
+      : (selected && completed >= selected ? "0s" : "Estimating");
+    const percent = selected
+      ? Math.max(current ? 1 : 0, Math.min(scanningForMore ? 96 : current >= selected ? 100 : 96, Math.round((current / selected) * 100)))
+      : (scanningForMore ? 18 : 25);
+    const photo = runningRow?.id || logSummary?.started?.match?.[2] || logSummary?.imported?.match?.[2] || "";
+    const remaining = Math.max(0, selected - completed);
+    return {
+      selected,
+      selectedFromScan,
+      found: rows.length,
+      queued,
+      queueDepth,
+      rawQueueDepth,
+      planQueueDepth,
+      plannerActive,
+      alreadySelected,
+      workers,
+      scannedFiles,
+      inspectedFiles,
+      completed,
+      processed,
+      processedThisRun: completed,
+      failedThisRun: failed,
+      attemptedThisRun: completed,
+      activeItemCount,
+      current,
+      startedIndex,
+      remaining,
+      percent,
+      countdown,
+      photo,
+      scanningForMore,
+      scanDone,
+      scanDraining,
+    };
+  };
+
+  const importSourceLabel = (phaseKey) => PHOTO_IMPORT_PHASES.get(phaseKey) || "Camera";
+
+  const sourceLaneAction = () => (
+    "Pipeline: scanner finds source files, planner checks metadata and trusted R2 coverage, render/upload workers only create missing boxes."
+  );
+
+  const sourceLaneDetailRows = (phaseKey, details = {}) => {
+    const rows = [["Source lane", importSourceLabel(phaseKey)]];
+    const add = (label, value) => {
+      const text = Array.isArray(value)
+        ? value.map((item) => String(item || "").trim()).filter(Boolean).join(" ")
+        : String(value || "").trim();
+      if (text) rows.push([label, text]);
+    };
+    add("Source group", details.sourceGroup);
+    add("Current file", details.currentFile);
+    add("Current photo", details.currentPhoto);
+    add("Scanner", details.scanner);
+    add("Planner", details.planner);
+    add("Worker pool", details.workerPool);
+    add("Queue", details.queue);
+    add("Progress bar counts", details.progressCounts);
+    add("Coverage gaps", details.coverageGaps);
+    add("Progress summary", details.progressSummary);
+    add("Finished this run", details.finishedSummary);
+    add("Upload progress", details.uploadProgress);
+    add("Time left estimate", details.timeLeft);
+    add("Notes", details.notes);
+    add("What happens", details.whatHappens || sourceLaneAction(phaseKey));
+    return rows;
+  };
+
+  const importQueueStatusText = (progress = {}) => {
+    const waiting = Math.max(0, Number(progress.queueDepth || 0));
+    const activeItems = Math.max(0, Number(progress.activeItemCount || 0));
+    const parts = [
+      waiting ? `${formatCount(waiting)} waiting` : "",
+      activeItems ? `${formatCount(activeItems)} active` : "",
+    ].filter(Boolean);
+    return parts.length ? parts.join(", ") : "no waiting photos";
+  };
+
+  const importStatsTimeLeft = (progress = {}) => {
+    const value = String(progress.countdown || "").trim();
+    if (!value || value === "Estimating") return "Estimating";
+    if (value === "Scanner is still building the queue") return "Building queue";
+    return value;
+  };
+
+  const importStatsRows = (progress = {}) => {
+    const eligiblePhotosFound = Number(progress.alreadySelected || 0) + Number(progress.selected || 0);
+    const photosFound = eligiblePhotosFound || Number(progress.scannedFiles || 0);
+    const waiting = Math.max(0, Number(progress.queueDepth || 0));
+    const activeItems = Math.max(0, Number(progress.activeItemCount || 0));
+    const processedThisRun = Math.max(0, Number(progress.processedThisRun ?? progress.completed ?? 0));
+    const attemptedThisRun = Math.max(0, Number(progress.attemptedThisRun ?? progress.completed ?? 0));
+    const failedThisRun = Math.max(0, Number(progress.failedThisRun || 0));
+    const succeededThisRun = Math.max(0, processedThisRun - failedThisRun);
+    const currentRunNote = [
+      succeededThisRun ? `${formatCount(succeededThisRun)} ok` : "",
+      failedThisRun ? `${formatCount(failedThisRun)} failed` : "",
+      activeItems ? `${formatCount(activeItems)} active` : "",
+      waiting ? `${formatCount(waiting)} waiting` : "",
+      !failedThisRun && !activeItems && !waiting ? "none waiting" : "",
+    ].filter(Boolean).join(" / ");
+    return [
+      {
+        label: "Photos found",
+        value: formatCount(photosFound),
+        note: eligiblePhotosFound ? (progress.scanDone ? "eligible" : "eligible so far") : progress.scanDone ? "scan complete" : "scanning",
+      },
+      {
+        label: "Processed before",
+        value: formatCount(Math.max(0, Number(progress.alreadySelected || 0))),
+        note: "already current",
+      },
+      {
+        label: "Processed this run",
+        value: formatCount(processedThisRun),
+        note: attemptedThisRun > processedThisRun && !failedThisRun
+          ? `${formatCount(attemptedThisRun)} checked`
+          : currentRunNote,
+      },
+      {
+        label: "Time left",
+        value: importStatsTimeLeft(progress),
+        note: progress.scanningForMore ? "current queue" : "estimate",
+      },
+    ];
+  };
+
+  const sourceImportProgressDetail = (progress, phaseKey = "camera") => {
+    const sourceLabel = importSourceLabel(phaseKey);
+    const gapSummary = coverageRepairGapSummary();
+    if (!progress.selected) {
+      const inspected = progress.inspectedFiles ? ` ${formatCount(progress.inspectedFiles)} source files inspected so far.` : "";
+      return `${sourceLabel} scanner is filling the import queue; processing starts as soon as a needed photo is found.${inspected}`;
+    }
+    const selected = formatCount(progress.selected);
+    const completed = formatCount(progress.completed);
+    const remaining = formatCount(progress.remaining);
+    const current = formatCount(Math.min(Math.max(progress.current, progress.completed), progress.selected));
+    const timeLeft = progress.countdown === "Estimating"
+      ? "time left estimate starts after a few renders complete"
+      : progress.scanningForMore
+      ? progress.countdown
+      : `rough time left ${progress.countdown}`;
+    if (progress.scanningForMore) {
+      const inspected = progress.inspectedFiles ? ` ${formatCount(progress.inspectedFiles)} source files inspected so far.` : "";
+      const queue = importQueueStatusText(progress);
+      const planner = progress.plannerActive || progress.planQueueDepth
+        ? ` Planner has ${formatCount(progress.planQueueDepth)} scan batches waiting.`
+        : "";
+      return `${sourceLabel} queue: ${completed} / ${selected} photos processed, ${queue}; scanner is still adding any newly discovered work.${inspected}${planner}`;
+    }
+    if (progress.scanDraining) {
+      return `${sourceLabel} scan is complete; draining the queue oldest-first: ${completed} / ${selected} photos processed, ${importQueueStatusText(progress)}; ${timeLeft}.`;
+    }
+    if (progress.completed >= progress.selected) {
+      return `${sourceLabel} queue finished: ${completed} / ${selected} photos processed for the current expected R2 keys; ${timeLeft}.`;
+    }
+    if (progress.startedIndex > progress.completed) {
+      return `${sourceLabel} queue: processing photo ${current} / ${selected}; uploads to the current expected R2 keys. ${completed} finished, ${remaining} left; ${timeLeft}.`;
+    }
+    return `${sourceLabel} queue: ${completed} / ${selected} photos processed; ${remaining} left; ${gapSummary || "checking R2"}.`;
+  };
+
+  const realEstateImportProgress = (logSummary, task = null) => {
+    const uploadPayload = logSummary?.realEstateUploadPayload || null;
+    const uploadStartPayload = logSummary?.realEstateUploadStartPayload || null;
+    const importPayload = logSummary?.realEstateImportPayload || null;
+    const clientPayload = logSummary?.realEstateClientPayload || null;
+    const payload = uploadPayload || uploadStartPayload || importPayload || {};
+    const total = Number(payload.total || clientPayload?.media || 0);
+    const completed = Number(payload.completed || 0);
+    const percent = total
+      ? Math.max(completed ? 1 : 0, Math.min(completed >= total ? 100 : 96, Math.round((completed / total) * 100)))
+      : 24;
+    const client = String(payload.client || clientPayload?.client || "client");
+    const elapsedSeconds = secondsSinceIso(task?.started_at || task?.queued_at || "");
+    const secondsLeft = completed >= 5 && total > completed && elapsedSeconds > 0
+      ? ((total - completed) / completed) * elapsedSeconds
+      : 0;
+    const countdown = secondsLeft ? `, rough time left ${formatDuration(secondsLeft)}` : "";
+    if (uploadPayload) {
+      const failed = Number(uploadPayload.failed || 0);
+      return {
+        percent,
+        detail: `RE upload: ${client} ${formatCount(completed)} / ${formatCount(total)} R2 files uploaded${failed ? `, ${formatCount(failed)} failed` : ""}${countdown}.`,
+        completed,
+        current: completed,
+        total,
+        countLabel: "R2 files uploaded",
+        client,
+        sourceGroup: client,
+        failed,
+        timeLeft: secondsLeft ? formatDuration(secondsLeft) : "",
+      };
+    }
+    if (uploadStartPayload) {
+      return {
+        percent,
+        detail: `RE upload: ${client} 0 / ${formatCount(total)} R2 files queued${countdown}.`,
+        completed: 0,
+        current: 0,
+        total,
+        countLabel: "R2 files queued",
+        client,
+        sourceGroup: client,
+        timeLeft: secondsLeft ? formatDuration(secondsLeft) : "",
+      };
+    }
+    if (importPayload) {
+      const album = String(importPayload.album || "");
+      const file = String(importPayload.file || "");
+      const current = [album, file].filter(Boolean).join(" / ");
+      return {
+        percent,
+        detail: `RE import: ${client} ${formatCount(completed)} / ${formatCount(total)} media checked${current ? `, ${current}` : ""}${countdown}.`,
+        completed,
+        current: completed,
+        total,
+        countLabel: "property media checked",
+        client,
+        sourceGroup: [client, album].filter(Boolean).join(" / "),
+        currentFile: file,
+        timeLeft: secondsLeft ? formatDuration(secondsLeft) : "",
+      };
+    }
+    return {
+      percent: 18,
+      detail: "RE sync running",
+      completed,
+      current: completed,
+      total,
+      countLabel: "property media checked",
+      client,
+      sourceGroup: client,
+    };
+  };
+
+  const sourceLaneHasQueueProgress = (logSummary = null) => Boolean(
+    logSummary?.importScanProgressPayload
+    || logSummary?.importScanDonePayload
+    || logSummary?.importQueueStartPayload
+    || logSummary?.importQueueProgressPayload
+    || logSummary?.scan
+    || logSummary?.started
+    || logSummary?.imported
+  );
+
+  const sourceLaneHasLogProgress = (phaseKey, logSummary = null) => (
+    phaseKey === "real-estate"
+      ? Boolean(
+        sourceLaneHasQueueProgress(logSummary)
+        || logSummary?.realEstateImportPayload
+        || logSummary?.realEstateUploadStartPayload
+        || logSummary?.realEstateUploadPayload
+      )
+      : sourceLaneHasQueueProgress(logSummary)
+  );
+
+  const sourceLaneProgress = (phaseKey, logSummary = null, task = null) => (
+    phaseKey === "real-estate" && !sourceLaneHasQueueProgress(logSummary)
+      ? realEstateImportProgress(logSummary, task)
+      : sourceImportProgress(logSummary, task)
+  );
+
+  const sourceLaneProgressDetail = (phaseKey, progress) => (
+    phaseKey === "real-estate" && progress.selected === undefined
+      ? progress.detail
+      : sourceImportProgressDetail(progress, phaseKey)
+  );
+
+  const sourceLaneProgressCountText = (phaseKey, progress = {}) => {
+    const sourceLabel = importSourceLabel(phaseKey);
+    if (phaseKey === "real-estate" && progress.selected === undefined) {
+      if (!progress.total) return `Waiting for ${sourceLabel} media totals.`;
+      const current = Math.min(Number(progress.current || progress.completed || 0), Number(progress.total || 0));
+      return `${progress.countLabel || "Items"}: ${formatCount(current)} / ${formatCount(progress.total)}.`;
+    }
+    if (!progress.selected) {
+      const inspected = progress.inspectedFiles ? ` ${formatCount(progress.inspectedFiles)} source files inspected so far.` : "";
+      return `${sourceLabel} scanner is filling the queue; no needed photos queued yet.${inspected}`;
+    }
+    if (progress.scanningForMore) {
+      const inspected = progress.inspectedFiles ? ` ${formatCount(progress.inspectedFiles)} source files inspected so far.` : "";
+      return `${sourceLabel} queue: ${formatCount(progress.completed)} / ${formatCount(progress.selected)} photos processed so far, ${importQueueStatusText(progress)}; scanner is still looking for more work.${inspected}`;
+    }
+    if (progress.scanDraining) {
+      return `${sourceLabel} scan complete; queue drain: ${formatCount(progress.completed)} / ${formatCount(progress.selected)} photos processed, ${importQueueStatusText(progress)}.`;
+    }
+    const current = Math.min(Math.max(Number(progress.current || 0), Number(progress.completed || 0)), Number(progress.selected || 0));
+    return `${sourceLabel} queue: ${formatCount(current)} / ${formatCount(progress.selected)} photos processed; ${formatCount(progress.completed)} finished.`;
+  };
+
+  const gapFillProgress = (logSummary, task = null) => {
+    const rows = Array.isArray(logSummary?.importPhotoRows) ? logSummary.importPhotoRows : [];
+    const planned = Number(logSummary?.importPlanPayload?.total || task?.total || rows.length || 0);
+    const total = Math.max(planned, rows.length);
+    const finishedRows = rows.filter((row) => row.status === "done" || row.status === "error").length;
+    const stepUnits = rows.reduce((sum, row) => {
+      if (row.status === "done" || row.status === "error") return sum + IMPORT_MATRIX_STEPS.length;
+      return sum + IMPORT_MATRIX_STEPS.reduce((stepSum, [stepKey]) => {
+        const step = row.steps?.[stepKey] || {};
+        if (step.status === "skipped" || step.status === "done") return stepSum + 1;
+        const stepTotal = Number(step.total || 0);
+        if (!stepTotal) return stepSum;
+        return stepSum + Math.min(1, Math.max(0, Number(step.completed || 0) / stepTotal));
+      }, 0);
+    }, 0);
+    const totalUnits = total * IMPORT_MATRIX_STEPS.length;
+    const percent = totalUnits
+      ? Math.max(stepUnits ? 1 : 0, Math.min(finishedRows >= total ? 100 : 99, Math.round((stepUnits / totalUnits) * 100)))
+      : 18;
+    const current = rows.find((row) => row.status !== "done" && row.status !== "error") || rows.at(-1) || null;
+    const donePayload = logSummary?.importDonePayload || {};
+    const failed = Number(donePayload.failed || rows.filter((row) => row.status === "error").length || 0);
+    const remaining = total ? Math.max(0, total - finishedRows) : 0;
+    const currentLabel = current?.id ? ` Current photo: ${current.id}.` : "";
+    const suffix = failed ? ` ${formatCount(failed)} failed.` : "";
+    return {
+      percent,
+      detail: total
+        ? `Filling upload gaps: ${formatCount(finishedRows)} / ${formatCount(total)} incomplete photos finished; ${formatCount(remaining)} left.${currentLabel}${suffix}`
+        : "Filling upload gaps: finding incomplete photos.",
+      finishedRows,
+      total,
+      failed,
+      remaining,
+    };
+  };
+
+  const phaseProgress = (phase, logSummary, failed, task = null) => {
     if (failed) return { percent: 100, detail: phase.key === "coverage" ? coverageMissingDetail() : "Needs attention" };
+    if (phase.key === "gap-fill") return gapFillProgress(logSummary, task);
     if ((phase.key === "discard-start" || phase.key === "discard-final") && (logSummary?.deleteProgress || logSummary?.deleteStart || logSummary?.deleted)) {
       if (logSummary?.deleted) {
-        return { percent: 100, detail: `${logSummary.deleted.match[1]} public, ${logSummary.deleted.match[2]} private` };
+        return { percent: 100, detail: `Double-check complete: ${logSummary.deleted.match[1]} public and ${logSummary.deleted.match[2]} private key checks` };
       }
       return deleteObjectProgress(logSummary);
     }
-    if (phase.key === "camera" && (logSummary?.scan || logSummary?.started || logSummary?.imported)) {
-      const selected = Number(logSummary?.scan?.match?.[3] || 0);
-      const current = Number(logSummary?.imported?.match?.[1] || logSummary?.started?.match?.[1] || 0);
-      const percent = selected ? Math.max(4, Math.min(96, Math.round((current / selected) * 100))) : 25;
-      const photo = logSummary?.started?.match?.[2] || logSummary?.imported?.match?.[2] || "";
-      return { percent, detail: selected ? `${current || 1} of ${selected}${photo ? `, ${photo}` : ""}` : "Scanning selected photos" };
+    if (PHOTO_IMPORT_PHASES.has(phase.key) && sourceLaneHasLogProgress(phase.key, logSummary)) {
+      const progress = sourceLaneProgress(phase.key, logSummary, task);
+      return {
+        percent: progress.percent,
+        detail: sourceLaneProgressDetail(phase.key, progress),
+      };
     }
     if (phase.key === "private" && logSummary?.upload) {
       return privateBackfillProgress(logSummary);
@@ -1357,46 +2696,308 @@
 
   const completedPhaseDetail = (phase, logSummary) => {
     if ((phase.key === "discard-start" || phase.key === "discard-final") && logSummary?.deleted) {
-      return `${logSummary.deleted.match[1]} public, ${logSummary.deleted.match[2]} private`;
+      return `${logSummary.deleted.match[1]} public and ${logSummary.deleted.match[2]} private key checks`;
     }
     if (phase.key === "coverage") return "Satisfied";
     return "Done";
   };
 
-  const renderSweepPhases = (task, logSummary = null) => {
+  const ownerCountRowsHtml = (rows, wideLabels = new Set()) => rows.map(([label, value]) => `
+    <div class="${wideLabels.has(label) ? "is-wide" : ""}">
+      <dt>${escapeHtml(label)}</dt>
+      <dd>${escapeHtml(value)}</dd>
+    </div>
+  `).join("");
+
+  const ownerImportStatsHtml = (rows = []) => {
+    if (!Array.isArray(rows) || !rows.length) return "";
+    return `
+      <dl class="owner-import-stats" aria-label="Import stats">
+        ${rows.map((row) => `
+          <div>
+            <dt>${escapeHtml(row.label)}</dt>
+            <dd>${escapeHtml(row.value)}</dd>
+            ${row.note ? `<span>${escapeHtml(row.note)}</span>` : ""}
+          </div>
+        `).join("")}
+      </dl>
+    `;
+  };
+
+  const importMatrixStepComplete = (step = {}) => {
+    if (step.status === "skipped") return false;
+    if (step.status === "done") return true;
+    const total = Number(step.total || 0);
+    return total > 0 && Number(step.completed || 0) >= total;
+  };
+
+  const importMatrixStepSettled = (step = {}) => (
+    step.status === "skipped" || importMatrixStepComplete(step)
+  );
+
+  const importMatrixRowComplete = (photo = {}) => {
+    if (photo.status === "error") return false;
+    if (photo.status === "done") return true;
+    return IMPORT_MATRIX_STEPS.every(([stepKey]) => importMatrixStepSettled(photo.steps?.[stepKey] || {}));
+  };
+
+  const importMatrixVisibleInfo = (photos = []) => {
+    const incompleteRows = photos.filter((photo) => !importMatrixRowComplete(photo));
+    const sortByQueueIndex = (left, right) => Number(left.index || 0) - Number(right.index || 0);
+    const runningRows = incompleteRows.filter((photo) => photo.status === "running").sort(sortByQueueIndex);
+    const errorRows = incompleteRows.filter((photo) => photo.status === "error").sort(sortByQueueIndex);
+    const queuedRows = incompleteRows
+      .filter((photo) => photo.status !== "running" && photo.status !== "error")
+      .sort(sortByQueueIndex);
+    const visibleQueuedRows = queuedRows.slice(0, IMPORT_MATRIX_QUEUE_PREVIEW_LIMIT);
+    const incompleteIds = new Set(incompleteRows.map((photo) => photo.id));
+    const recentDoneRows = photos
+      .filter((photo) => !incompleteIds.has(photo.id) && photo.status === "done")
+      .sort((left, right) => Number(right.doneEventIndex || right.lastEventIndex || 0) - Number(left.doneEventIndex || left.lastEventIndex || 0))
+      .slice(0, IMPORT_MATRIX_RECENT_DONE_LIMIT);
+
+    const visibleMap = new Map();
+    [...runningRows, ...visibleQueuedRows, ...recentDoneRows, ...errorRows].forEach((photo) => {
+      if (!visibleMap.has(photo.id)) visibleMap.set(photo.id, photo);
+    });
+    const rows = [...visibleMap.values()]
+      .sort((left, right) => {
+        const rank = (photo) => photo.status === "running" ? 0 : photo.status === "done" ? 2 : photo.status === "error" ? 3 : 1;
+        return rank(left) - rank(right)
+          || (rank(left) === 2
+            ? Number(right.doneEventIndex || right.lastEventIndex || 0) - Number(left.doneEventIndex || left.lastEventIndex || 0)
+            : Number(left.index || 0) - Number(right.index || 0));
+      });
+    return {
+      rows,
+      runningCount: runningRows.length,
+      queuedCount: queuedRows.length,
+      visibleQueuedCount: visibleQueuedRows.length,
+      hiddenQueuedCount: Math.max(0, queuedRows.length - visibleQueuedRows.length),
+      doneCount: recentDoneRows.length,
+      errorCount: errorRows.length,
+    };
+  };
+
+  const importMatrixVisibleRows = (photos = []) => {
+    const info = importMatrixVisibleInfo(photos);
+    return info.rows;
+  };
+
+  const importMatrixRowQueued = (photo = {}) => !["running", "done", "error"].includes(String(photo.status || ""));
+
+  const importMatrixStillImagePath = (photo = {}) => (
+    /\.(jpe?g|png|tiff?|heic|heif|webp)$/i.test(String(photo.sourcePath || photo.relativePath || ""))
+  );
+
+  const importMatrixThumbnailUrl = (photo = {}, phaseKey = "") => {
+    if (!importMatrixStillImagePath(photo)) return "";
+    const params = new URLSearchParams();
+    const lane = photo.phaseKey || phaseKey || "";
+    if (lane) params.set("phase", lane);
+    if (photo.sourcePath) params.set("source", photo.sourcePath);
+    else if (photo.relativePath && PHOTO_IMPORT_PHASES.has(lane)) params.set("path", photo.relativePath);
+    if (!params.has("source") && !params.has("path")) return "";
+    return `/__photosbyelie/import-source-thumb?${params.toString()}`;
+  };
+
+  const importMatrixThumbHtml = (photo = {}, phaseKey = "") => {
+    const url = importMatrixThumbnailUrl(photo, phaseKey);
+    const fallback = String(photo.mediaType || "").toLowerCase() === "video" ? "Video" : "";
+    if (!url) return `<span class="owner-import-thumb owner-import-thumb-empty">${escapeHtml(fallback)}</span>`;
+    return `
+      <span class="owner-import-thumb">
+        <img src="${escapeHtml(url)}" alt="" loading="eager" decoding="async" onerror="this.closest('.owner-import-thumb')?.classList.add('owner-import-thumb-empty');this.remove();">
+      </span>
+    `;
+  };
+
+  const importMatrixHtml = (photos = [], phaseKey = "") => {
+    if (!photos.length) return "";
+    const visibleInfo = importMatrixVisibleInfo(photos);
+    const visibleRows = visibleInfo.rows;
+    if (!visibleRows.length) return "";
+    return `
+      <div class="owner-import-matrix-wrap" aria-label="Per-photo import progress">
+        <div class="owner-import-photo-list">
+          ${visibleRows.map((photo) => `
+            <div class="owner-import-photo-row ${photo.status === "running" ? "is-running" : photo.status === "done" ? "is-done" : photo.status === "error" ? "is-error" : importMatrixRowQueued(photo) ? "is-next" : ""}">
+              ${importMatrixThumbHtml(photo, phaseKey)}
+              <span class="owner-import-photo-copy">
+                <strong>${escapeHtml(photo.id)}</strong>
+                <span>${escapeHtml(photo.relativePath || photo.country || "")}</span>
+              </span>
+            </div>
+          `).join("")}
+        </div>
+      </div>
+    `;
+  };
+
+  const phaseStatusLabel = (state) => {
+    if (state === "done") return "Done";
+    if (state === "running") return "Running";
+    if (state === "failed") return "Needs attention";
+    if (state === "skipped") return "Unfinished";
+    return "Waiting";
+  };
+
+  const activeR2RepairTask = () => latestR2ProgressTasks.find((task) =>
+    task?.operation === "repair" && (task.state === "queued" || task.state === "running")
+  ) || null;
+
+  const requestCurrentSweepPhaseSkip = async (phaseKey) => {
+    const response = await fetch("/__photosbyelie/r2-skip-phase", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phaseKey }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Could not skip this R2 phase.");
+    return payload;
+  };
+
+  const phaseListForTask = (task) => {
+    if (task?.operation === "gap-fill") return SWEEP_PHASES.filter((phase) => phase.key === "gap-fill");
+    if (task?.operation === "maintenance") {
+      const keys = Array.isArray(task?.phaseScopeKeys) ? task.phaseScopeKeys.map(normalizeSweepPhaseKey).filter(Boolean) : [];
+      return keys.length
+        ? keys.map((key) => SWEEP_PHASES.find((phase) => phase.key === key) || { key, label: key })
+        : SWEEP_PHASES.filter((phase) => phase.key === normalizeSweepPhaseKey(task?.currentPhaseKey || ""));
+    }
+    if (task?.operation === "imports-idle") {
+      return [];
+    }
+    const selectedFolderSweep = Boolean(String(task?.sourceRoot || "").trim())
+      || normalizeSweepPhaseKey(task?.currentPhaseKey || "") === "selected-folder";
+    return SWEEP_PHASES.filter((phase) => {
+      if (phase.key === "private" && task?.currentPhaseKey !== "private") return false;
+      if (selectedFolderSweep) return !FIXED_IMPORT_DASHBOARD_PHASE_KEYS.includes(phase.key);
+      return phase.key !== "selected-folder";
+    });
+  };
+
+  const phaseLabelForKey = (phaseKey, task = null) => (
+    phaseListForTask(task).find((phase) => phase.key === normalizeSweepPhaseKey(phaseKey))?.label
+    || SWEEP_PHASES.find((phase) => phase.key === normalizeSweepPhaseKey(phaseKey))?.label
+    || ""
+  );
+
+  const visiblePhaseList = (phaseList, task, activeKey, active, failed, complete, logSummary, detailRowsByPhase, matrixRowsByPhase) => {
+    if (task?.operation === "imports-idle") return [];
+    const doneKeys = logSummary?.doneKeys instanceof Set ? logSummary.doneKeys : new Set();
+    const logSkippedKeys = logSummary?.skippedKeys instanceof Set ? logSummary.skippedKeys : new Set();
+    const skippedKeys = new Set([
+      ...[...logSkippedKeys],
+      ...((Array.isArray(task?.skipPhases) ? task.skipPhases : []).map(normalizeSweepPhaseKey).filter(Boolean)),
+    ]);
+    const visibleKeys = new Set();
+    if (activeKey) visibleKeys.add(activeKey);
+    if (failed && activeKey) visibleKeys.add(activeKey);
+    [...doneKeys, ...skippedKeys].forEach((key) => key && visibleKeys.add(key));
+    if (detailRowsByPhase instanceof Map) [...detailRowsByPhase.keys()].forEach((key) => visibleKeys.add(normalizeSweepPhaseKey(key)));
+    if (matrixRowsByPhase instanceof Map) [...matrixRowsByPhase.keys()].forEach((key) => visibleKeys.add(normalizeSweepPhaseKey(key)));
+    if (task?.operation === "maintenance" && active) {
+      (Array.isArray(task.phaseScopeKeys) ? task.phaseScopeKeys : [])
+        .map(normalizeSweepPhaseKey)
+        .filter(Boolean)
+        .forEach((key) => visibleKeys.add(key));
+    }
+    if (complete && !visibleKeys.size && phaseList.length) visibleKeys.add(phaseList.at(-1).key);
+    const base = phaseList.filter((phase) => visibleKeys.has(phase.key));
+    const knownKeys = new Set(base.map((phase) => phase.key));
+    const extra = [...visibleKeys]
+      .filter((key) => key && !knownKeys.has(key))
+      .map((key) => ({ key, label: phaseLabelForKey(key, task) || key }));
+    return [...base, ...extra];
+  };
+
+  const renderSweepPhases = (task, logSummary = null, detailRowsByPhase = new Map(), matrixRowsByPhase = new Map(), statsRowsByPhase = new Map()) => {
     if (!r2Phases) return;
-    if (!task || task.operation !== "repair") {
+    if (!task || !["repair", "gap-fill", "maintenance", "imports-idle"].includes(task.operation)) {
+      r2PhaseRenderSnapshot = null;
       setHtml(r2Phases, "");
       return;
     }
+    const fullPhaseList = phaseListForTask(task);
     const active = task.state === "queued" || task.state === "running";
-    const coverageIncomplete = !active && task.state === "done" && r2CoverageOk === false;
+    const coverageIncomplete = task.operation === "repair" && !active && task.state === "done" && r2CoverageOk === false;
     const failed = Number(task.failed || 0) > 0 || task.state === "failed" || coverageIncomplete;
     const complete = !active && !failed && task.state === "done";
-    const activeKey = coverageIncomplete ? "coverage" : logSummary?.phaseKey || "prepare";
-    const activeIndex = Math.max(0, SWEEP_PHASES.findIndex((phase) => phase.key === activeKey));
+    const taskPhaseKey = normalizeSweepPhaseKey(task?.currentPhaseKey || "");
+    const logPhaseKey = normalizeSweepPhaseKey(logSummary?.phaseKey || "");
+    const activeKey = coverageIncomplete
+      ? "coverage"
+      : active
+      ? (taskPhaseKey || logPhaseKey || "prepare")
+      : (logPhaseKey || taskPhaseKey || "prepare");
+    const phaseList = visiblePhaseList(fullPhaseList, task, activeKey, active, failed, complete, logSummary, detailRowsByPhase, matrixRowsByPhase);
+    r2PhaseRenderSnapshot = { task, logSummary, detailRowsByPhase, matrixRowsByPhase, statsRowsByPhase };
+    if (!phaseList.length) {
+      setHtml(r2Phases, "");
+      return;
+    }
+    const activeIndex = Math.max(0, phaseList.findIndex((phase) => phase.key === activeKey));
     const doneKeys = logSummary?.doneKeys || new Set();
-    setHtml(r2Phases, SWEEP_PHASES.map((phase, index) => {
+    const skippedKeys = new Set([
+      ...([...((logSummary?.skippedKeys instanceof Set ? logSummary.skippedKeys : new Set()))]),
+      ...((Array.isArray(task?.skipPhases) ? task.skipPhases : []).map(normalizeSweepPhaseKey).filter(Boolean)),
+    ]);
+    const wideLabels = new Set(["Already done", "Cleanup record", "Current phase", "Current file", "Current photo", "Source group", "Owner DB trusted", "Worker pool", "Progress bar counts", "Progress summary", "Upload progress", "Photo rows", "Coverage gaps", "Needs attention", "Notes", "Safe skip", "Skip", "What happens", "Last photo", "Last synced", "Latest error", "Latest log"]);
+    const genericProgressDetails = new Set(["Waiting", "Running", "Done", "Satisfied", "Needs attention"]);
+    setHtml(r2Phases, phaseList.map((phase, index) => {
       const explicitDone = doneKeys.has(phase.key);
-      const inferredDone = (active || coverageIncomplete) && index < activeIndex;
+      const explicitSkipped = skippedKeys.has(phase.key);
       const isActive = phase.key === activeKey && active;
       const isFailed = phase.key === activeKey && failed;
-      const state = isFailed ? "failed" : (complete || explicitDone || inferredDone) ? "done" : isActive ? "running" : "pending";
+      const inferredDone = (active || coverageIncomplete) && index < activeIndex && (!phase.optional || explicitDone);
+      const completeDone = complete && (!phase.optional || explicitDone);
+      const isSkipped = explicitSkipped || (phase.optional && !explicitDone && !isActive && (complete || index < activeIndex));
+      const state = isFailed ? "failed" : isActive ? "running" : isSkipped ? "skipped" : completeDone || explicitDone || inferredDone ? "done" : "pending";
       const progress = state === "done"
         ? { percent: 100, detail: completedPhaseDetail(phase, logSummary) }
         : state === "running"
-          ? phaseProgress(phase, logSummary, false)
+          ? phaseProgress(phase, logSummary, false, task)
           : state === "failed"
-            ? phaseProgress(phase, logSummary, true)
-            : { percent: 0, detail: "Waiting" };
+            ? phaseProgress(phase, logSummary, true, task)
+            : { percent: 0, detail: state === "skipped" ? "Unfinished" : "Waiting" };
+      const phaseRows = detailRowsByPhase instanceof Map ? (detailRowsByPhase.get(phase.key) || []) : [];
+      const matrixRows = matrixRowsByPhase instanceof Map ? (matrixRowsByPhase.get(phase.key) || []) : [];
+      const statsRows = statsRowsByPhase instanceof Map ? (statsRowsByPhase.get(phase.key) || []) : [];
+      const hasProgressNote = Boolean(progress.detail && !genericProgressDetails.has(progress.detail));
+      const canExpand = (state === "done" || state === "failed" || state === "skipped") && (phaseRows.length || matrixRows.length || statsRows.length || hasProgressNote);
+      const showPhaseDetails = state === "running" || (canExpand && expandedSweepPhaseKeys.has(phase.key));
+      const statsHtml = showPhaseDetails && statsRows.length ? ownerImportStatsHtml(statsRows) : "";
+      const matrixHtml = showPhaseDetails && matrixRows.length ? importMatrixHtml(matrixRows, phase.key) : "";
+      const hasMatrix = Boolean(matrixHtml);
+      const detailHtml = showPhaseDetails && phaseRows.length
+        ? `<dl class="owner-counts owner-sweep-details">${ownerCountRowsHtml(phaseRows, wideLabels)}</dl>`
+        : "";
+      const progressNote = showPhaseDetails && hasProgressNote && !statsHtml
+        ? `<p class="owner-sweep-progress-note">${escapeHtml(progress.detail)}</p>`
+        : "";
+      const canSkipCurrent = state === "running" && SWEEP_SKIPPABLE_KEYS.has(phase.key);
+      const skipButton = canSkipCurrent
+        ? `<button class="owner-sweep-phase-skip" type="button" data-owner-sweep-skip="${escapeHtml(phase.key)}">Skip to next phase</button>`
+        : "";
+      const toggleAttrs = canExpand
+        ? ` data-owner-sweep-phase-toggle="${escapeHtml(phase.key)}" role="button" tabindex="0" aria-expanded="${showPhaseDetails ? "true" : "false"}" aria-label="${escapeHtml(`${phase.label}: ${showPhaseDetails ? "collapse" : "expand"} details`)}"`
+        : "";
       return `
-        <div class="owner-sweep-phase is-${state}">
+        <div class="owner-sweep-phase is-${state}${canExpand ? " can-expand" : ""}${showPhaseDetails ? " is-expanded" : ""}${hasMatrix ? " has-matrix" : ""}"${toggleAttrs}>
           <div class="owner-sweep-phase-copy">
             <strong>${escapeHtml(phase.label)}</strong>
-            <span>${escapeHtml(progress.detail)}</span>
+            <span>${escapeHtml(task.operation === "imports-idle" && state === "pending" ? "Idle" : phaseStatusLabel(state))}</span>
+            ${skipButton}
           </div>
-          <div class="owner-sweep-bar" aria-label="${escapeHtml(phase.label)} progress">
-            <span style="width:${progress.percent}%"></span>
+          <div class="owner-sweep-phase-progress">
+            <div class="owner-sweep-bar" aria-label="${escapeHtml(phase.label)} progress">
+              <span style="width:${progress.percent}%"></span>
+            </div>
+            ${progressNote}
+            ${statsHtml}
+            ${matrixHtml}
+            ${detailHtml}
           </div>
         </div>
       `;
@@ -1405,75 +3006,300 @@
 
   const renderR2RepairProgress = (latest, logSummary = null) => {
     const active = latest.state === "queued" || latest.state === "running";
-    const coverageIncomplete = !active && latest.state === "done" && r2CoverageOk === false;
+    const gapFill = latest.operation === "gap-fill";
+    const maintenance = latest.operation === "maintenance";
+    const coverageIncomplete = latest.operation === "repair" && !active && latest.state === "done" && r2CoverageOk === false;
     const failureCount = Number(latest.failed || 0);
     const failed = failureCount > 0 || latest.state === "failed" || coverageIncomplete;
-    renderSweepPhases(latest, logSummary);
+    const latestPhaseKey = normalizeSweepPhaseKey(latest.currentPhaseKey || "");
+    const logPhaseKey = normalizeSweepPhaseKey(logSummary?.phaseKey || "");
+    const activePhaseKey = coverageIncomplete
+      ? "coverage"
+      : active
+      ? (latestPhaseKey || logPhaseKey || "prepare")
+      : (logPhaseKey || latestPhaseKey || "prepare");
+    const activePhaseLabel = phaseLabelForKey(activePhaseKey, latest) || logSummary?.phase || "Current phase";
+    const logMatchesActivePhase = !active || !logSummary?.phaseKey || normalizeSweepPhaseKey(logSummary.phaseKey) === activePhaseKey;
+    const skippedPhaseKeys = new Set([
+      ...([...((logSummary?.skippedKeys instanceof Set ? logSummary.skippedKeys : new Set()))]),
+      ...((Array.isArray(latest?.skipPhases) ? latest.skipPhases : []).map(normalizeSweepPhaseKey).filter(Boolean)),
+    ]);
+    const skippedSourceLanes = [...skippedPhaseKeys].filter((key) => PHOTO_IMPORT_PHASES.has(key));
+    const catalogBlocked = !active && activePhaseKey === "catalog" && (
+      logSummary?.rawPhaseKey === "catalog-blocked"
+      || /Catalog export blocked/i.test(logSummary?.phase || "")
+      || /Catalog export blocked/i.test(logSummary?.latest || "")
+    );
     if (active) {
       if (latest.external_pid) {
-        setText(r2Summary, logSummary?.phase
-          ? `${logSummary.phase}. Existing sweep pid ${latest.external_pid}.`
+        setText(r2Summary, activePhaseLabel
+          ? `${activePhaseLabel}. Existing sweep pid ${latest.external_pid}.`
           : `Cloud media sweep is already running with pid ${latest.external_pid}.`);
       } else {
-        setText(r2Summary, logSummary?.phase
-          ? `${logSummary.phase}.`
+        setText(r2Summary, gapFill
+          ? `${activePhaseLabel}: completing the visible photo rows.`
+          : maintenance
+          ? `${activePhaseLabel}: ${latest.label || "maintenance"} is running.`
+          : activePhaseLabel
+          ? `${activePhaseLabel}.`
           : "Running the lock-guarded cloud media sweep.");
       }
     } else if (failed) {
-      setText(r2Summary, coverageIncomplete
+      setText(r2Summary, gapFill
+        ? "Fill in gaps stopped before all missing uploads completed."
+        : maintenance
+        ? `${latest.label || "Maintenance"} needs attention.`
+        : coverageIncomplete
         ? `R2 repair finished, but coverage is still missing (${coverageMissingDetail()}).`
+        : catalogBlocked
+        ? "Catalog export was blocked because source imports were skipped or interrupted."
         : logSummary?.phase === "Needs attention"
         ? "R2 coverage repair needs attention."
         : "R2 coverage repair stopped before completion.");
     } else {
-      setText(r2Summary, "Last R2 coverage repair finished.");
+      setText(r2Summary, gapFill
+        ? "Last upload gap fill finished."
+        : maintenance
+        ? `Last ${latest.label || "maintenance task"} finished.`
+        : "Last R2 coverage repair finished.");
     }
-    const rows = [];
+    const detailRowsByPhase = new Map();
+    const matrixRowsByPhase = new Map();
+    const statsRowsByPhase = new Map();
+    const addPhaseRow = (phaseKey, label, value) => {
+      if (!detailRowsByPhase.has(phaseKey)) detailRowsByPhase.set(phaseKey, []);
+      detailRowsByPhase.get(phaseKey).push([label, value]);
+    };
+    const setPhaseStats = (phaseKey, rows) => {
+      if (phaseKey && Array.isArray(rows) && rows.length) statsRowsByPhase.set(phaseKey, rows);
+    };
     let lastPhotoId = "";
-    if (latest.external_pid) rows.push(["Sweep PID", latest.external_pid]);
-    if (logSummary?.deleteStart || logSummary?.deleteProgress || logSummary?.deleted) {
+    if (active && latest.external_pid) addPhaseRow(activePhaseKey, "Sweep PID", latest.external_pid);
+    if (catalogBlocked) {
+      addPhaseRow("catalog", "Needs attention", "Catalog export was held back because one or more source import lanes were left unfinished.");
+      if (skippedSourceLanes.length) {
+        addPhaseRow("catalog", "Unfinished source lanes", skippedSourceLanes.map((key) => importSourceLabel(key)).join(", "));
+      }
+      addPhaseRow("catalog", "What happens", "Start Import refuses to publish a new catalog after skipped source lanes unless partial publishing is explicitly allowed.");
+    }
+    const matrixPhaseKey = PHOTO_IMPORT_PHASES.has(activePhaseKey)
+      ? activePhaseKey
+      : PHOTO_IMPORT_PHASES.has(logSummary?.lastImportPhaseKey)
+      ? logSummary.lastImportPhaseKey
+      : activePhaseKey === "gap-fill"
+      ? "gap-fill"
+      : "";
+    const shouldShowImportMatrix = Boolean(
+      matrixPhaseKey
+      && logSummary?.importPhotoRows?.length
+      && (logMatchesActivePhase || catalogBlocked || latest.state === "failed")
+    );
+    if (shouldShowImportMatrix) {
+      const visibleMatrixInfo = importMatrixVisibleInfo(logSummary.importPhotoRows);
+      const visibleMatrixRows = visibleMatrixInfo.rows;
+      const sourceProgress = PHOTO_IMPORT_PHASES.has(matrixPhaseKey)
+        ? sourceLaneProgress(matrixPhaseKey, logSummary, latest)
+        : null;
+      if (sourceProgress) setPhaseStats(matrixPhaseKey, importStatsRows(sourceProgress));
+      if (visibleMatrixRows.length) matrixRowsByPhase.set(matrixPhaseKey, logSummary.importPhotoRows);
+      addPhaseRow(
+        matrixPhaseKey,
+        "Photo rows",
+        visibleMatrixInfo.runningCount || visibleMatrixInfo.visibleQueuedCount
+          ? `${formatCount(visibleMatrixInfo.runningCount)} working, ${formatCount(visibleMatrixInfo.visibleQueuedCount)} next queued shown${visibleMatrixInfo.hiddenQueuedCount ? `, ${formatCount(visibleMatrixInfo.hiddenQueuedCount)} more queued hidden` : ""}${visibleMatrixInfo.doneCount ? `, ${formatCount(visibleMatrixInfo.doneCount)} just finished` : ""}`
+          : visibleMatrixInfo.doneCount
+          ? `${formatCount(visibleMatrixInfo.doneCount)} just finished`
+          : sourceProgress?.scanningForMore
+          ? `No active rows right now; scanning for more ${importSourceLabel(matrixPhaseKey)} work`
+          : "No active rows",
+      );
+    }
+    if (logMatchesActivePhase && activePhaseKey === "gap-fill") {
+      const progress = gapFillProgress(logSummary, latest);
+      addPhaseRow("gap-fill", "Progress summary", `${formatCount(progress.finishedRows)} / ${formatCount(progress.total)} incomplete photos finished`);
+      if (progress.failed) addPhaseRow("gap-fill", "Needs attention", `${formatCount(progress.failed)} photos failed`);
+      addPhaseRow("gap-fill", "What happens", "For each already-cataloged incomplete photo: restore the private master if needed, recreate private JPG triplets if needed, recreate public previews if needed, and upload only the missing files.");
+    }
+    if (logMatchesActivePhase && activePhaseKey === "private") {
+      const progress = privateBackfillProgress(logSummary);
+      addPhaseRow("private", "Progress bar counts", `${progress.detail} catalog photos with complete private delivery JPG triplets.`);
+      addPhaseRow("private", "What happens", "Builds missing private delivery JPGs in the 6MP, 3MP, and 1MP sizes, uploads them to private R2, and refreshes the private delivery manifest for checkout ZIPs.");
+      addPhaseRow("private", "Notes", "This is the legacy triplet-only backfill that was already running. Future background sweeps use Fill in gaps for lost masters, triplets, and previews.");
+      if (logSummary?.upload) addPhaseRow("private", "Last upload", `${logSummary.upload.match[2]} uploaded ${formatCount(Number(logSummary.upload.match[3] || 0))} private files`);
+    }
+    if (logMatchesActivePhase && (logSummary?.deleteStart || logSummary?.deleteProgress || logSummary?.deleted)) {
       const progress = deleteObjectProgress(logSummary);
-      if (progress.total) rows.push(["R2 objects", `${formatCount(progress.completed)} / ${formatCount(progress.total)}`]);
-      if (active && progress.countdown) rows.push(["Countdown", progress.countdown]);
+      const deletePhaseKey = logSummary?.phaseKey === "discard-final" ? "discard-final" : "discard-start";
+      if (progress.total) addPhaseRow(deletePhaseKey, "Progress summary", `${formatCount(progress.completed)} of ${formatCount(progress.total)} banned-photo R2 key checks complete`);
+      addPhaseRow(deletePhaseKey, "Already done", "Historical cleanup is recorded. This phase is a safe double-check for leftover R2 objects at old banned-photo keys.");
+      if (active && progress.countdown && progress.total > progress.completed) addPhaseRow(deletePhaseKey, "Time left estimate", progress.countdown);
       if (progress.publicTotal || progress.privateTotal) {
-        rows.push([
+        addPhaseRow(
+          deletePhaseKey,
           "Public/private",
           `${formatCount(progress.publicCompleted)} / ${formatCount(progress.publicTotal)} public, ${formatCount(progress.privateCompleted)} / ${formatCount(progress.privateTotal)} private`,
-        ]);
+        );
       }
-      if (progress.discardedPhotos) rows.push(["Banned photos", formatCount(progress.discardedPhotos)]);
+      if (progress.discardedPhotos) addPhaseRow(deletePhaseKey, "Banned photos", formatCount(progress.discardedPhotos));
+      if (logSummary?.deleteContextPayload) {
+        const currentDiscarded = Number(logSummary.deleteContextPayload.currentDiscardedPhotos || 0);
+        const historicalDiscarded = Number(logSummary.deleteContextPayload.historicalDiscardedPhotos || 0);
+        const ownerDbConfirmed = Number(logSummary.deleteContextPayload.ownerDbDeletedConfirmed || 0);
+        addPhaseRow(
+          deletePhaseKey,
+          "Cleanup record",
+          `${formatCount(historicalDiscarded)} historical IDs recorded${currentDiscarded ? `, ${formatCount(currentDiscarded)} current tombstones` : ""}`,
+        );
+        if (ownerDbConfirmed) addPhaseRow(deletePhaseKey, "Owner DB trusted", `${formatCount(ownerDbConfirmed)} key checks already confirmed deleted`);
+      }
     }
-    if (logSummary?.started && !logSummary?.upload) {
-      rows.push(["Current photo", logSummary.started.match[2]]);
-      rows.push(["Collection", logSummary.started.match[3]]);
+    const importPhaseKey = PHOTO_IMPORT_PHASES.has(activePhaseKey) ? activePhaseKey : "camera";
+    let sourceLaneDetails = null;
+    const mergeSourceLaneDetails = (details = {}) => {
+      sourceLaneDetails = { ...(sourceLaneDetails || {}), ...Object.fromEntries(
+        Object.entries(details).filter(([, value]) => {
+          if (Array.isArray(value)) return value.length > 0;
+          return value !== undefined && value !== null && String(value).trim() !== "";
+        }),
+      ) };
+    };
+    if (PHOTO_IMPORT_PHASES.has(activePhaseKey) && !logSummary?.upload) mergeSourceLaneDetails({});
+    if (logMatchesActivePhase && activePhaseKey === "real-estate") {
+      const clientPayload = logSummary?.realEstateClientPayload || {};
+      const importPayload = logSummary?.realEstateImportPayload || {};
+      const uploadStartPayload = logSummary?.realEstateUploadStartPayload || {};
+      const uploadPayload = logSummary?.realEstateUploadPayload || {};
+      const donePayload = logSummary?.realEstateDonePayload || {};
+      const progress = sourceLaneProgress(activePhaseKey, logSummary, latest);
+      const client = String(uploadPayload.client || uploadStartPayload.client || importPayload.client || clientPayload.client || "");
+      const sourceGroup = [client, importPayload.album].filter(Boolean).join(" / ");
+      const importTotal = Number(importPayload.total || clientPayload.media || 0);
+      const importCompleted = Number(importPayload.completed || 0);
+      const uploadTotal = Number(uploadPayload.total || uploadStartPayload.total || 0);
+      const uploadCompleted = Number(uploadPayload.completed || 0);
+      const failedUploads = Number(uploadPayload.failed || 0);
+      const notes = [
+        clientPayload.properties ? `${formatCount(Number(clientPayload.properties || 0))} properties available.` : "",
+        Array.isArray(clientPayload.missingProperties) && clientPayload.missingProperties.length
+          ? `Skipping missing properties: ${clientPayload.missingProperties.join(", ")}.`
+          : "",
+        donePayload.clients ? `${formatCount(Number(donePayload.clients || 0))} clients synced.` : "",
+      ];
+      mergeSourceLaneDetails({
+        sourceGroup: progress.sourceGroup || sourceGroup,
+        currentFile: progress.currentFile || importPayload.file,
+        progressCounts: sourceLaneProgressCountText(activePhaseKey, progress),
+        progressSummary: importTotal
+          ? `${formatCount(importCompleted)} / ${formatCount(importTotal)} property media checked`
+          : "",
+        finishedSummary: importTotal
+          ? `${formatCount(importCompleted)} synced, ${formatCount(Math.max(0, importTotal - importCompleted))} left`
+          : "",
+        uploadProgress: uploadTotal
+          ? `${formatCount(uploadCompleted)} / ${formatCount(uploadTotal)} R2 files uploaded${failedUploads ? `, ${formatCount(failedUploads)} failed` : ""}`
+          : "",
+        timeLeft: progress.timeLeft,
+        notes,
+      });
     }
-    if (logSummary?.imported && !logSummary?.upload) {
-      rows.push(["Rendered photos", logSummary.imported.match[1]]);
-      rows.push(["Last rendered", logSummary.imported.match[2]]);
-      rows.push(["Collection", logSummary.imported.match[3]]);
-      rows.push(["Private renders", logSummary.imported.match[5]]);
+    if (logMatchesActivePhase && logSummary?.started && !logSummary?.upload) {
+      const progress = PHOTO_IMPORT_PHASES.has(activePhaseKey)
+        ? sourceLaneProgress(activePhaseKey, logSummary, latest)
+        : null;
+      if (!progress?.selected || progress.completed < progress.selected) {
+        mergeSourceLaneDetails({
+          sourceGroup: logSummary.started.match[3],
+          currentFile: logSummary.started.match[4],
+        });
+      }
+    }
+    if (logMatchesActivePhase && sourceLaneHasQueueProgress(logSummary) && !logSummary?.upload) {
+      const progress = sourceLaneProgress(activePhaseKey, logSummary, latest);
+      if (PHOTO_IMPORT_PHASES.has(activePhaseKey)) setPhaseStats(activePhaseKey, importStatsRows(progress));
+      if (progress.selected) {
+        const gapSummary = coverageRepairGapSummary();
+        const scanner = progress.scanDone
+          ? `Scan complete: ${formatCount(progress.scannedFiles)} source files seen, ${formatCount(progress.inspectedFiles)} inspected.`
+          : `Scanning: ${formatCount(progress.scannedFiles)} source files seen, ${formatCount(progress.inspectedFiles)} inspected so far.`;
+        const planner = progress.plannerActive || progress.planQueueDepth
+          ? `Planning metadata and R2 coverage: ${formatCount(progress.planQueueDepth)} scan batches waiting${progress.plannerActive ? ", 1 active" : ""}.`
+          : "Planner is caught up.";
+        const queue = `${formatCount(progress.completed)} processed, ${importQueueStatusText(progress)}, ${formatCount(progress.selected)} queued so far.`;
+        mergeSourceLaneDetails({
+          coverageGaps: gapSummary,
+          currentPhoto: progress.completed < progress.selected ? progress.photo : "",
+          scanner,
+          planner,
+          workerPool: progress.workers > 1 ? `${formatCount(progress.workers)} parallel render/upload workers` : "",
+          queue,
+          notes: "Not found at the current expected R2 key; a file can still exist under an older or wrong-place key.",
+        });
+      } else {
+        mergeSourceLaneDetails({
+          currentPhoto: progress.completed < progress.selected ? progress.photo : "",
+          scanner: `Scanning: ${formatCount(progress.scannedFiles)} source files seen, ${formatCount(progress.inspectedFiles)} inspected so far.`,
+          planner: progress.plannerActive || progress.planQueueDepth
+            ? `Planning metadata and R2 coverage: ${formatCount(progress.planQueueDepth)} scan batches waiting${progress.plannerActive ? ", 1 active" : ""}.`
+            : "Planner is waiting for source batches.",
+          workerPool: progress.workers > 1 ? `${formatCount(progress.workers)} parallel render/upload workers` : "",
+          queue: "No needed photos queued yet.",
+        });
+      }
+      if (logSummary?.imported) {
+        mergeSourceLaneDetails({
+          uploadProgress: `${logSummary.imported.match[5]} private renders`,
+        });
+      }
+    }
+    if (sourceLaneDetails) {
+      sourceLaneDetailRows(importPhaseKey, sourceLaneDetails).forEach(([label, value]) => {
+        addPhaseRow(importPhaseKey, label, value);
+      });
     }
     if (logSummary?.upload) {
       lastPhotoId = logSummary.upload.match[2];
-      rows.push(["Last photo", lastPhotoId]);
-      rows.push(["Collection", collectionLabelForPhoto(lastPhotoId) || "unknown"]);
+      addPhaseRow("private", "Last photo", lastPhotoId);
+      addPhaseRow("private", "Collection", collectionLabelForPhoto(lastPhotoId) || "unknown");
     }
-    if (logSummary?.manifest) rows.push(["Render triplets", logSummary.manifest.match[1]]);
-    if (logSummary?.processed) rows.push(["Processed", logSummary.processed.match[1]]);
-    if (coverageIncomplete) rows.push(["Coverage", coverageMissingDetail()]);
-    if (Array.isArray(latest.errors) && latest.errors.length) rows.push(["Latest error", latest.errors.at(-1)]);
-    if (logSummary?.error && (!active || logSummary.error.line === logSummary.latest)) rows.push(["Latest error", logSummary.error.line]);
-    else if (logSummary?.latest && !active) rows.push(["Latest log", logSummary.latest]);
-    if (!active) rows.push(["Result", coverageIncomplete ? "coverage still missing" : failed ? `${failureCount || 1} failed` : "complete"]);
-    if (!rows.length) rows.push(["State", latest.state || "queued"]);
-    const wideLabels = new Set(["Current photo", "Last photo", "Last rendered", "Latest error", "Latest log"]);
-    setHtml(r2Counts, rows.map(([label, value]) => `
-      <div class="${wideLabels.has(label) ? "is-wide" : ""}">
-        <dt>${escapeHtml(label)}</dt>
-        <dd>${escapeHtml(value)}</dd>
-      </div>
-    `).join(""));
+    if (logSummary?.manifest) addPhaseRow("sidecar", "Render triplets", logSummary.manifest.match[1]);
+    if (logSummary?.processed) addPhaseRow(activePhaseKey, "Processed", logSummary.processed.match[1]);
+    if (coverageIncomplete) addPhaseRow("coverage", "Coverage", coverageMissingDetail());
+    if (Array.isArray(latest.errors) && latest.errors.length) addPhaseRow(activePhaseKey, "Latest error", latest.errors.at(-1));
+    if (logSummary?.error && (!active || logSummary.error.line === logSummary.latest)) addPhaseRow(activePhaseKey, "Latest error", logSummary.error.line);
+    else if (logSummary?.latest && !active) addPhaseRow(activePhaseKey, "Latest log", logSummary.latest);
+    if (active) {
+      const activeRows = detailRowsByPhase.get(activePhaseKey) || [];
+      const activeLabel = phaseLabelForKey(activePhaseKey, latest) || logSummary?.phase || "Current phase";
+      if (!activeRows.length) {
+        addPhaseRow(activePhaseKey, "Current phase", logSummary?.phase || activeLabel);
+      }
+      if (SWEEP_SKIPPABLE_KEYS.has(activePhaseKey)) {
+        addPhaseRow(activePhaseKey, "Safe skip", "Stops this phase command, keeps completed work, and lets the sweep continue with the next phase.");
+      } else {
+        addPhaseRow(activePhaseKey, "Skip", "Not shown for this short handoff phase.");
+      }
+    }
+    if (!active) addPhaseRow(activePhaseKey, "Result", coverageIncomplete ? "coverage still missing" : failed ? `${failureCount || 1} failed` : "complete");
+    if (!detailRowsByPhase.size) addPhaseRow(activePhaseKey, "State", latest.state || "queued");
+    renderSweepPhases(latest, logSummary, detailRowsByPhase, matrixRowsByPhase, statsRowsByPhase);
+    setHtml(r2Counts, "");
     renderR2PhotoPreview(lastPhotoId);
+  };
+
+  const toggleSweepPhaseDetails = (phaseKey) => {
+    if (!phaseKey || !r2PhaseRenderSnapshot) return;
+    if (expandedSweepPhaseKeys.has(phaseKey)) {
+      expandedSweepPhaseKeys.delete(phaseKey);
+    } else {
+      expandedSweepPhaseKeys.add(phaseKey);
+    }
+    renderSweepPhases(
+      r2PhaseRenderSnapshot.task,
+      r2PhaseRenderSnapshot.logSummary,
+      r2PhaseRenderSnapshot.detailRowsByPhase,
+      r2PhaseRenderSnapshot.matrixRowsByPhase,
+      r2PhaseRenderSnapshot.statsRowsByPhase,
+    );
   };
 
   const renderR2PhotoPreview = (photoId) => {
@@ -1512,8 +3338,29 @@
     else r2Counts.insertAdjacentHTML("afterend", html);
   };
 
+  const renderImportDashboardIdle = () => {
+    if (!r2Card || !r2Summary || !r2Counts) return;
+    if (r2Card.hidden) r2Card.hidden = false;
+    setText(r2Summary, r2CoverageOk
+        ? "No import job is running. Current catalog coverage is up to date."
+        : `No import job is running. Not up to date yet: ${r2GapStatusText()}`
+    );
+    const gaps = r2GapCounts();
+    const rows = [
+      ["State", "Idle"],
+      ["Coverage", window.photosByElieR2Coverage ? (r2CoverageOk ? "Up to date" : "Needs work") : "Loading"],
+      ["Source scan", "Not running"],
+      ["Incomplete photos", window.photosByElieR2Coverage ? formatCount(gaps.photos) : "Checking"],
+      ["Missing work", window.photosByElieR2Coverage ? r2GapStatusText() : "Checking R2 coverage"],
+      ["Expo source", importSourceChoiceLabel()],
+    ];
+    setHtml(r2Counts, ownerCountRowsHtml(rows, new Set(["Missing work", "Expo source"])));
+    renderSweepPhases(null);
+    renderR2PhotoPreview("");
+  };
+
   const loadR2RepairLog = async (task) => {
-    if (!task?.id || task.operation !== "repair") return;
+    if (!task?.id || !["repair", "gap-fill", "maintenance"].includes(task.operation)) return;
     const logUrl = logUrlForTask(task);
     if (!logUrl) return;
     const token = `${task.id}:${task.updated_at || ""}:${task.state || ""}`;
@@ -1525,8 +3372,19 @@
       if (r2RepairLogToken !== token) return;
       r2RepairLogTaskId = task.id;
       r2RepairLogSummary = summarizeR2RepairLog(text);
-      await loadR2Coverage();
       renderR2RepairProgress(task, r2RepairLogSummary);
+      const active = task.state === "queued" || task.state === "running";
+      const shouldRefreshCoverage = !active
+        || !window.photosByElieR2Coverage
+        || Date.now() - lastImportCoverageRefreshAt > 30000;
+      if (shouldRefreshCoverage) {
+        lastImportCoverageRefreshAt = Date.now();
+        withTimeout(loadR2Coverage(), 12000, "R2 coverage refresh")
+          .then(() => {
+            if (r2RepairLogToken === token) renderR2RepairProgress(task, r2RepairLogSummary);
+          })
+          .catch(() => {});
+      }
     } catch {
       renderR2RepairProgress(task);
     }
@@ -1628,15 +3486,20 @@
     renderWasteBasketProgress(tasks);
     if (currentCostEstimate) renderCostEstimate(currentCostEstimate);
     if (!r2Card || !r2Summary || !r2Counts) return;
-    const latest = tasks[0];
+    r2RepairActive = tasks.some((task) => task?.operation === "repair" && (task.state === "queued" || task.state === "running"));
+    r2GapFillActive = tasks.some((task) => task?.operation === "gap-fill" && (task.state === "queued" || task.state === "running"));
+    r2MaintenanceActive = tasks.some((task) => task?.operation === "maintenance" && (task.state === "queued" || task.state === "running"));
+    activeR2MaintenanceKey = tasks.find((task) => task?.operation === "maintenance" && (task.state === "queued" || task.state === "running"))?.maintenanceKey || "";
+    const latest = tasks.find((task) => task?.operation === "repair" || task?.operation === "gap-fill" || task?.operation === "maintenance");
     if (!latest) {
-      if (!r2Card.hidden) r2Card.hidden = true;
-      setHtml(r2Counts, "");
-      renderSweepPhases(null);
       r2RepairActive = false;
+      r2GapFillActive = false;
+      r2MaintenanceActive = false;
+      activeR2MaintenanceKey = "";
       r2RepairLogTaskId = "";
       r2RepairLogSummary = null;
-      syncR2FixButton();
+      renderImportDashboardIdle();
+      syncR2ActionButtons();
       return;
     }
     if (r2Card.hidden) r2Card.hidden = false;
@@ -1646,11 +3509,12 @@
     const active = latest.state === "queued" || latest.state === "running";
     const isDelete = latest.operation === "delete";
     const isRepair = latest.operation === "repair";
-    r2RepairActive = isRepair && active;
-    syncR2FixButton();
+    const isGapFill = latest.operation === "gap-fill";
+    const isMaintenance = latest.operation === "maintenance";
+    syncR2ActionButtons();
     const activeVerb = isRepair ? "Repairing" : isDelete ? "Deleting" : "Uploading";
     const noun = isRepair ? "repair" : isDelete ? "delete" : "upload";
-    if (isRepair) {
+    if (isRepair || isGapFill || isMaintenance) {
       renderR2RepairProgress(latest, latest.id === r2RepairLogTaskId ? r2RepairLogSummary : null);
       return;
     }
@@ -1669,18 +3533,14 @@
       ["Failed", failed],
       ["Uploaded", `${formatBytes(latest.bytes_done)} / ${formatBytes(latest.bytes_total)}`],
     ];
-    setHtml(r2Counts, rows.map(([label, value]) => `
-      <div>
-        <dt>${escapeHtml(label)}</dt>
-        <dd>${escapeHtml(value)}</dd>
-      </div>
-    `).join(""));
+    setHtml(r2Counts, ownerCountRowsHtml(rows));
   };
 
   const renderR2Coverage = (coverage = null) => {
     if (!r2CoverageCard || !r2CoverageSummary || !r2CoverageCounts || !r2CoverageNote) return;
     if (!coverage) {
       r2CoverageOk = false;
+      window.photosByElieR2Coverage = null;
       r2CoverageSummary.textContent = "R2 coverage is unavailable.";
       r2CoverageCounts.innerHTML = "";
       if (r2CoverageMissing) {
@@ -1689,6 +3549,10 @@
       }
       r2CoverageNote.textContent = "";
       if (r2FixButton) r2FixButton.disabled = true;
+      r2FillGapsButtons.forEach((button) => {
+        button.disabled = true;
+      });
+      renderImportDashboardIdle();
       return;
     }
     const activeCatalogPhotos = Number(coverage.activeCatalogPhotos || coverage.catalogPhotos || 0);
@@ -1717,34 +3581,57 @@
     const missingPrivateDelivery = Array.isArray(coverage.missingPrivateDelivery)
       ? coverage.missingPrivateDelivery
       : [];
+    const missingImportPhotos = Array.isArray(coverage.missingImportPhotos)
+      ? coverage.missingImportPhotos.map((item, index) => ({
+        id: String(item.photoId || item.id || ""),
+        index: index + 1,
+        relativePath: String(item.relativePath || item.sourceFile || ""),
+        sourcePath: String(item.sourcePath || ""),
+        phaseKey: "gap-fill",
+        country: String(item.collectionKey || ""),
+        mediaType: String(item.mediaType || ""),
+        status: "pending",
+        steps: item.steps || {},
+      }))
+      : [];
     if (r2CoverageMissing) {
-      r2CoverageMissing.hidden = missingPrivateDelivery.length === 0;
-      r2CoverageMissing.innerHTML = missingPrivateDelivery.length ? `
-        <h3>Missing private delivery files</h3>
-        <p>${escapeHtml(formatCount(missingPrivateDelivery.length))} shown. Fix it runs the Saturn-backed sweep, uploads missing masters when the source file exists, and rebuilds missing JPG triplets.</p>
-        <div class="owner-coverage-missing-list">
-          ${missingPrivateDelivery.slice(0, 12).map((item) => `
-            <div class="owner-coverage-missing-row">
-              <strong>${escapeHtml(item.photoId)}</strong>
-              <span>${escapeHtml(item.productLabel || item.productId || item.kind || "Delivery file")}</span>
-              <code>${escapeHtml(item.objectKey || "")}</code>
-              <small>${escapeHtml(item.sourceFile ? `Source found: ${item.sourceFile}` : `Source not found locally: ${item.sourcePath || "unknown"}`)}</small>
-            </div>
-          `).join("")}
-        </div>
-      ` : "";
+      r2CoverageMissing.hidden = missingPrivateDelivery.length === 0 && missingImportPhotos.length === 0;
+      const masterCount = missingImportPhotos.filter((photo) => photo.steps?.master_uploaded?.status === "pending").length;
+      const previewCount = missingImportPhotos.filter((photo) => photo.steps?.previews_uploaded?.status === "pending").length;
+      const tripletCount = missingImportPhotos.filter((photo) => photo.steps?.triplets_uploaded?.status === "pending").length;
+      r2CoverageMissing.innerHTML = missingImportPhotos.length ? `
+        <h3>Photos needing upload work</h3>
+        <p>${escapeHtml(`${formatCount(missingImportPhotos.length)} incomplete photos: ${formatCount(masterCount)} need masters, ${formatCount(tripletCount)} need private JPG triplets, ${formatCount(previewCount)} need public previews.`)}</p>
+        ${importMatrixHtml(missingImportPhotos, "gap-fill")}
+      ` : missingPrivateDelivery.length ? `
+          <h3>Missing private delivery files</h3>
+          <p>${escapeHtml(formatCount(missingPrivateDelivery.length))} shown. Start Import asks for a local source folder, uploads missing masters when the source file exists, and rebuilds missing photo JPG triplets.</p>
+          <div class="owner-coverage-missing-list">
+            ${missingPrivateDelivery.slice(0, 12).map((item) => `
+              <div class="owner-coverage-missing-row">
+                <strong>${escapeHtml(item.photoId)}</strong>
+                <span>${escapeHtml(item.productLabel || item.productId || item.kind || "Delivery file")}</span>
+                <code>${escapeHtml(item.objectKey || "")}</code>
+                <small>${escapeHtml(item.sourceFile ? `Source found: ${item.sourceFile}` : `Source not found locally: ${item.sourcePath || "unknown"}`)}</small>
+              </div>
+            `).join("")}
+          </div>
+        ` : "";
     }
     r2CoverageNote.textContent = coverage.ok
       ? basketCatalogPhotos
         ? "Active catalog coverage is satisfied; Waste Basket media is excluded from repair targets."
         : "Policy is satisfied for the current catalog."
-      : "Missing coverage. Fix it runs the sweep below and keeps manifests in sync.";
+      : "Missing coverage. Fill in gaps completes the listed upload work and opens Imports; the Imports tab can also run the full R2 sweep.";
     r2CoverageOk = coverage.ok;
     if (blockedPreviewCountRoot) blockedPreviewCountRoot.textContent = formatCount(blockedCloudMediaCountFromCoverage());
     if (latestR2ProgressTasks.length) renderWasteBasketProgress(latestR2ProgressTasks);
-    if (r2FixButton) {
-      r2FixButton.dataset.coverageOk = coverage.ok ? "true" : "false";
-      syncR2FixButton();
+    if (r2FixButton) r2FixButton.dataset.coverageOk = coverage.ok ? "true" : "false";
+    if (!latestR2ProgressTasks.some((task) => ["repair", "gap-fill", "maintenance"].includes(task?.operation))) {
+      renderImportDashboardIdle();
+    }
+    if (r2FixButton || r2FillGapsButtons.length) {
+      syncR2ActionButtons();
     }
   };
 
@@ -1772,7 +3659,8 @@
         lastWasteCoverageRefreshAt = Date.now();
         loadR2Coverage().then(refreshBlockedSyncPanel).then(() => renderWasteBasketProgress(tasks)).catch(() => {});
       }
-      if (tasks[0]?.operation === "repair") await loadR2RepairLog(tasks[0]);
+      const repairLikeTask = tasks.find((task) => ["repair", "gap-fill", "maintenance"].includes(task?.operation));
+      if (repairLikeTask) await loadR2RepairLog(repairLikeTask);
       return tasks;
     } catch {
       renderR2Progress([]);
@@ -1794,8 +3682,8 @@
         await withTimeout(loadR2Coverage(), 12000, "R2 coverage refresh");
         setStatus("R2 catalog coverage refreshed.");
       } else if (kind === "progress") {
-        await withTimeout(loadR2Progress(), 12000, "R2 progress refresh");
-        setStatus("R2 background work refreshed.");
+        await withTimeout(Promise.all([loadImportSources(), loadR2Progress()]), 12000, "Import dashboard refresh");
+        setStatus("Import dashboard refreshed.");
       } else if (kind === "cost") {
         await withTimeout(loadCostEstimate(), 12000, "Cloud cost refresh");
         setStatus("Cloud bill forecast refreshed.");
@@ -1816,7 +3704,7 @@
   const startR2Polling = () => {
     if (r2PollTimer || !hiddenActions?.enabled) return;
     loadR2Progress();
-    r2PollTimer = window.setInterval(loadR2Progress, 3000);
+    r2PollTimer = window.setInterval(loadR2Progress, 900);
   };
 
   if (!hiddenActions?.enabled) {
@@ -1829,11 +3717,12 @@
 
   if (controls) controls.hidden = true;
   renderPriceList();
+  renderPodCommerce();
   renderCostEstimate();
 
-  window.addEventListener("photosbyelie:ownerauthchange", (event) => {
-    renderOwnerAvailability(event.detail || ownerAuth?.state);
-  });
+    window.addEventListener("photosbyelie:ownerauthchange", (event) => {
+      renderOwnerAvailability(event.detail || ownerAuth?.state);
+    });
 
   ownerAuth?.refresh?.().then((state) => renderOwnerAvailability(state, { scrollToControls: true }));
 
@@ -1863,6 +3752,7 @@
       ? "Physical print and frame products are visible on localhost."
       : "Physical print and frame products are hidden; the site is digital-only."
     );
+    renderPodCommerce();
   });
 
   syncCountryKeywordsButton?.addEventListener("click", async () => {
@@ -1903,6 +3793,10 @@
       const clientId = rowAction.dataset.ownerReClientId || "";
       if (rowAction.dataset.ownerReRowAction === "delete") {
         deleteRealEstateClient(clientId);
+        return;
+      }
+      if (rowAction.dataset.ownerReRowAction === "login") {
+        openRealEstateClientLogin(clientId);
         return;
       }
       markRealEstateRowSelected(clientId);
@@ -1984,28 +3878,276 @@
     }
   });
 
+  const chooseImportFolder = async () => {
+    const response = await fetch("/__photosbyelie/select-import-folder", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Could not choose an import folder.");
+    if (payload.cancelled) return null;
+    const path = String(payload.path || "").trim();
+    if (!path) throw new Error("No import folder was selected.");
+    return {
+      path,
+      name: String(payload.name || "").trim() || path.split(/[\\/]/).filter(Boolean).at(-1) || path,
+    };
+  };
+
+  realEstateImportSourceSelect?.addEventListener("change", async () => {
+    const selected = selectedRealEstateClient();
+    const fallback = [...realEstateImportSourceSelect.options].some((option) => option.value === lastRealEstateImportSourceValue)
+      ? lastRealEstateImportSourceValue
+      : (currentRealEstateSourceRoot(selected) || realEstateImportSourceOptions[0]?.path || "new");
+    if ((realEstateImportSourceSelect.value || "new") !== "new") {
+      lastRealEstateImportSourceValue = realEstateImportSourceSelect.value;
+      setRealEstateStatus(`Selected RE import source: ${realEstateImportSourceLabel(realEstateImportSourceSelect.value)}. Press RE import when ready.`);
+      return;
+    }
+    if (realEstateImportSourceDialogOpen) return;
+    realEstateImportSourceDialogOpen = true;
+    realEstateImportSourceSelect.disabled = true;
+    setRealEstateStatus("Choose the real estate source folder...");
+    try {
+      const selectedFolder = await chooseImportFolder();
+      if (!selectedFolder) {
+        realEstateImportSourceSelect.value = fallback;
+        lastRealEstateImportSourceValue = fallback;
+        setRealEstateStatus("Real Estate import folder selection cancelled.");
+        return;
+      }
+      const source = selectRealEstateImportSourceFolder(selectedFolder);
+      setRealEstateStatus(`Selected RE import source: ${source?.name || selectedFolder.name}. Press RE import when ready.`);
+    } catch (error) {
+      realEstateImportSourceSelect.value = fallback;
+      lastRealEstateImportSourceValue = fallback;
+      setRealEstateStatus(error?.message || "Could not choose a real estate import folder.");
+    } finally {
+      realEstateImportSourceDialogOpen = false;
+      renderRealEstateImportSourceOptions(realEstateImportSourceOptions);
+    }
+  });
+
+  importSourceSelect?.addEventListener("change", async () => {
+    const choice = importSourceSelect.value || "new";
+    if (choice !== "new") {
+      lastImportSourceValue = choice;
+      syncR2ActionButtons();
+      if (!latestR2ProgressTasks.some((task) => ["repair", "gap-fill", "maintenance"].includes(task?.operation))) {
+        renderImportDashboardIdle();
+      }
+      return;
+    }
+    if (importSourceDialogOpen) return;
+    const fallback = [...importSourceSelect.options].some((option) => option.value === lastImportSourceValue)
+      ? lastImportSourceValue
+      : importSourceOptions[0]?.path || "all";
+    importSourceDialogOpen = true;
+    importSourceSelect.disabled = true;
+    setStatus("Choose the folder to import...");
+    try {
+      const selectedFolder = await chooseImportFolder();
+      if (!selectedFolder) {
+        importSourceSelect.value = fallback;
+        lastImportSourceValue = fallback;
+        setStatus("Import folder selection cancelled.");
+        return;
+      }
+      selectImportSourceFolder(selectedFolder);
+      setStatus(`Selected import folder: ${selectedFolder.name}. Press Start import when ready.`);
+    } catch (error) {
+      importSourceSelect.value = fallback;
+      lastImportSourceValue = fallback;
+      setStatus(error?.message || "Could not choose an import folder.");
+    } finally {
+      importSourceDialogOpen = false;
+      syncR2ActionButtons();
+    }
+  });
+
   r2FixButton?.addEventListener("click", async () => {
-    const authorized = await ownerAuth?.requireAuth?.("Start the local Photos By Elie server to repair R2 coverage.");
+    const authorized = await ownerAuth?.requireAuth?.("Start the local Photos By Elie server to scan an import folder.");
     if (ownerAuth?.enabled && !authorized) return;
-    const ok = window.confirm("Run the full lock-guarded cloud media sweep now? This may upload/render missing objects, delete R2 objects for banned photos while keeping their ban records, validate, commit, and push manifest changes.");
+    if (!window.photosByElieR2Coverage) {
+      setStatus("Loading current catalog coverage before starting imports...");
+      await loadR2Coverage();
+    }
+    const choice = importSourceSelect?.value || "new";
+    let selectedFolder = null;
+    if (choice === "new") {
+      setStatus("Choose the folder to import...");
+      try {
+        selectedFolder = await chooseImportFolder();
+      } catch (error) {
+        setStatus(error?.message || "Could not choose an import folder.");
+        return;
+      }
+      if (!selectedFolder) {
+        setStatus("Import cancelled before choosing a folder.");
+        return;
+      }
+    } else if (choice !== "all") {
+      const source = importSourceByPath(choice);
+      selectedFolder = {
+        path: choice,
+        name: source?.label || choice.split(/[\\/]/).filter(Boolean).at(-1) || choice,
+      };
+    }
+    const confirmText = selectedFolder
+      ? `Start the lock-guarded Expo import from "${selectedFolder.name}" now?\n\nThe sweep scans this selected gallery folder, imports developed photo/video files it needs, renders/uploads missing media, refreshes manifests, validates, commits, and pushes changes.`
+      : "Start the broad lock-guarded Expo import from all gallery source folders now?\n\nThis scans Camera, Apple Photos, and AI sources, then refreshes manifests, validates, commits, and pushes changes. Real Estate imports live in the Real Estate tab.";
+    const ok = window.confirm(confirmText);
     if (!ok) return;
     r2FixButton.disabled = true;
-    setStatus("Starting cloud media sweep repair...");
+    setStatus(selectedFolder ? `Starting Expo import from ${selectedFolder.name}...` : "Starting broad Expo import from all gallery source folders...");
     try {
-      const response = await fetch("/__photosbyelie/r2-fix", { method: "POST" });
+      const response = await fetch("/__photosbyelie/r2-fix", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(selectedFolder
+          ? {
+              sourceRoot: selectedFolder.path,
+              sourceSelect: "auto",
+            }
+          : {
+              sourceSelect: "auto",
+            }),
+      });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Could not start R2 repair.");
-      r2RepairActive = true;
-      syncR2FixButton();
-      setStatus("Cloud media sweep repair started.");
-      renderR2Progress([payload.task]);
+      if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Could not start imports.");
+      const task = payload.task || {};
+      r2RepairActive = task.operation === "repair";
+      syncR2ActionButtons();
+      setStatus(task.operation === "repair"
+        ? (selectedFolder ? `Expo import started from ${selectedFolder.name}.` : "Broad Expo import started.")
+        : "Another import or maintenance task is already running.");
+      setOwnerTab("imports");
+      loadImportSources();
+      renderR2Progress([task]);
       loadR2Progress();
     } catch (error) {
       r2RepairActive = false;
-      syncR2FixButton();
-      setStatus(error?.message || "Could not start R2 repair.");
+      syncR2ActionButtons();
+      setStatus(error?.message || "Could not start imports.");
       loadR2Coverage();
     }
+  });
+
+  const startR2GapFill = async (triggerButton = null) => {
+    const authorized = await ownerAuth?.requireAuth?.("Start the local Photos By Elie server to fill R2 upload gaps.");
+    if (ownerAuth?.enabled && !authorized) return;
+    const gapCount = r2GapPhotoCount();
+    if (!gapCount) {
+      setStatus("No upload gaps are listed right now.");
+      return;
+    }
+    const ok = window.confirm(`Fill upload gaps for ${formatCount(gapCount)} incomplete photos now? This uploads one photo at a time and updates the owner databases after each successful R2 object.`);
+    if (!ok) return;
+    if (triggerButton) triggerButton.disabled = true;
+    setStatus("Starting R2 upload gap fill...");
+    try {
+      const response = await fetch("/__photosbyelie/r2-fill-gaps", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Could not start R2 upload gap fill.");
+      const task = payload.task || {};
+      r2GapFillActive = task.operation === "gap-fill";
+      syncR2ActionButtons();
+      setStatus(task.operation === "gap-fill"
+        ? "R2 upload gap fill started."
+        : "Another import or maintenance task is already running.");
+      setOwnerTab("imports");
+      renderR2Progress([task]);
+      loadR2Progress();
+    } catch (error) {
+      r2GapFillActive = false;
+      syncR2ActionButtons();
+      setStatus(error?.message || "Could not start R2 upload gap fill.");
+      loadR2Coverage();
+    }
+  };
+
+  r2FillGapsButtons.forEach((button) => {
+    button.addEventListener("click", () => startR2GapFill(button));
+  });
+
+  const startR2MaintenanceTask = async (maintenanceKey, triggerButton = null) => {
+    const label = R2_MAINTENANCE_LABELS.get(maintenanceKey) || triggerButton?.textContent || "Maintenance";
+    const authorized = await ownerAuth?.requireAuth?.(`Start the local Photos By Elie server to run ${label}.`);
+    if (ownerAuth?.enabled && !authorized) return;
+    const ok = window.confirm(`Start ${label} now?`);
+    if (!ok) return;
+    if (triggerButton) triggerButton.disabled = true;
+    setStatus(`Starting ${label}...`);
+    try {
+      const response = await fetch("/__photosbyelie/r2-fix", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ maintenanceTask: maintenanceKey }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.ok) throw new Error(payload?.error || `Could not start ${label}.`);
+      const task = payload.task || {};
+      r2MaintenanceActive = task.operation === "maintenance";
+      activeR2MaintenanceKey = task.operation === "maintenance" ? maintenanceKey : "";
+      syncR2ActionButtons();
+      setStatus(task.operation === "maintenance"
+        ? `${label} started.`
+        : "Another import or maintenance task is already running.");
+      setOwnerTab("imports");
+      renderR2Progress([task]);
+      loadR2Progress();
+    } catch (error) {
+      r2MaintenanceActive = false;
+      activeR2MaintenanceKey = "";
+      syncR2ActionButtons();
+      setStatus(error?.message || `Could not start ${label}.`);
+    }
+  };
+
+  r2MaintenanceButtons.forEach((button) => {
+    button.addEventListener("click", () => startR2MaintenanceTask(button.dataset.ownerR2Maintenance || "", button));
+  });
+
+  importSourceSelect?.addEventListener("change", () => {
+    syncR2ActionButtons();
+    if (!latestR2ProgressTasks.some((task) => ["repair", "gap-fill", "maintenance"].includes(task?.operation))) {
+      renderImportDashboardIdle();
+    }
+  });
+
+  r2Phases?.addEventListener("click", async (event) => {
+    const skipButton = event.target instanceof Element ? event.target.closest("[data-owner-sweep-skip]") : null;
+    if (skipButton && r2Phases.contains(skipButton)) {
+      const phaseKey = skipButton.dataset.ownerSweepSkip || "";
+      if (!SWEEP_SKIPPABLE_KEYS.has(phaseKey)) return;
+      skipButton.disabled = true;
+      setStatus("Skipping current R2 phase...");
+      try {
+        await requestCurrentSweepPhaseSkip(phaseKey);
+        setStatus("Skip requested. The current command will stop and the sweep will continue with the next phase.");
+        loadR2Progress();
+      } catch (error) {
+        setStatus(error?.message || "Could not skip this R2 phase.");
+        skipButton.disabled = false;
+      }
+      return;
+    }
+    const row = event.target instanceof Element ? event.target.closest("[data-owner-sweep-phase-toggle]") : null;
+    if (!row || !r2Phases.contains(row)) return;
+    toggleSweepPhaseDetails(row.dataset.ownerSweepPhaseToggle || "");
+  });
+
+  r2Phases?.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    const row = event.target instanceof Element ? event.target.closest("[data-owner-sweep-phase-toggle]") : null;
+    if (!row || !r2Phases.contains(row)) return;
+    event.preventDefault();
+    toggleSweepPhaseDetails(row.dataset.ownerSweepPhaseToggle || "");
   });
 
   refreshButtons.forEach((button) => {
@@ -2030,9 +4172,11 @@
   if (ownerAuth?.state?.available) {
     refreshCountsFromSource();
     refreshBlockedSyncPanel();
+    loadImportSources();
     loadR2Coverage();
     loadCostEstimate();
     loadKeywordBlacklist();
+    loadTitleKeywordReviewCount();
     loadRealEstateOwner();
     startR2Polling();
   }

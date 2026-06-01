@@ -1,0 +1,99 @@
+{
+  "date": "2026-05-29",
+  "platform": "Threads",
+  "status": "prepared_live_campaign_checked_not_published",
+  "account": "ec92009 via Instagram login",
+  "post_type": "multi_image_thread",
+  "title": "Cascais Atlantic Evening",
+  "destination_url": "https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-cascais-atlantic-evening-2026-05-29",
+  "campaign_id": "instagram-cascais-atlantic-evening-2026-05-29",
+  "caption": "Four Cascais frames: marina blue, Atlantic boats, patterned stone, and evening Portugal light from Photos By Elie. Browse the edit: https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-cascais-atlantic-evening-2026-05-29\n\n#PhotosByElie #Cascais #PortugalTravel",
+  "recommended_upload_set": "images",
+  "available_count": 4,
+  "notes": [
+    "Images are downloaded public watermarked R2 previews staged for browser upload.",
+    "Remove any automatic link preview if it shows generic or off-theme campaign metadata before posting.",
+    "Built-in Browser navigation to Threads @ec92009 did not complete reliably in the available browser session; no Threads composer/profile state could be safely confirmed, so no Threads upload/publish attempt was made.",
+    "GitHub Pages deployment succeeded; all three new campaign JSON URLs returned HTTP 200 with v90.1 cache busting. Campaign commit pushed: f0a4fd9a.",
+    "No local API OAuth token files were present at ~/.config/photosbyelie/meta-token.json, pinterest-token.json, or threads-token.json. API dry-runs succeeded, but live API publishing is unavailable without tokens."
+  ],
+  "items": [
+    {
+      "order": 1,
+      "id": "20180517-2126-00483-f23ed1e1e2",
+      "media_id": "20180517-2126-00483-f23ed1e1e2",
+      "title": "20180517 2126 00483",
+      "collection": "portugal",
+      "location": "Cascais, Lisboa, Portugal",
+      "captured_at": "2018-05-17T21:26:59",
+      "width": 1800,
+      "height": 807,
+      "image": "images/01-20180517-2126-00483-f23ed1e1e2-cascais-atlantic-evening.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2126-00483-f23ed1e1e2_1800.jpg",
+      "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2126-00483-f23ed1e1e2_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180517-2126-00483-f23ed1e1e2",
+      "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180517-2126-00483-f23ed1e1e2",
+      "local_staged_path": "socials/Threads/2026-05-29/cascais-atlantic-evening/images/01-20180517-2126-00483-f23ed1e1e2-cascais-atlantic-evening.jpg"
+    },
+    {
+      "order": 2,
+      "id": "20180517-2135-00491-f90f6d821a",
+      "media_id": "20180517-2135-00491-f90f6d821a",
+      "title": "20180517 2135 00491",
+      "collection": "portugal",
+      "location": "Cascais, Lisboa, Portugal",
+      "captured_at": "2018-05-17T21:35:28",
+      "width": 1800,
+      "height": 1322,
+      "image": "images/02-20180517-2135-00491-f90f6d821a-cascais-atlantic-evening.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2135-00491-f90f6d821a_1800.jpg",
+      "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2135-00491-f90f6d821a_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180517-2135-00491-f90f6d821a",
+      "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180517-2135-00491-f90f6d821a",
+      "local_staged_path": "socials/Threads/2026-05-29/cascais-atlantic-evening/images/02-20180517-2135-00491-f90f6d821a-cascais-atlantic-evening.jpg"
+    },
+    {
+      "order": 3,
+      "id": "20180517-2138-00495-cd8355432a",
+      "media_id": "20180517-2138-00495-cd8355432a",
+      "title": "20180517 2138 00495",
+      "collection": "portugal",
+      "location": "Cascais, Lisboa, Portugal",
+      "captured_at": "2018-05-17T21:38:02",
+      "width": 1800,
+      "height": 1200,
+      "image": "images/03-20180517-2138-00495-cd8355432a-cascais-atlantic-evening.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2138-00495-cd8355432a_1800.jpg",
+      "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2138-00495-cd8355432a_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180517-2138-00495-cd8355432a",
+      "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180517-2138-00495-cd8355432a",
+      "local_staged_path": "socials/Threads/2026-05-29/cascais-atlantic-evening/images/03-20180517-2138-00495-cd8355432a-cascais-atlantic-evening.jpg"
+    },
+    {
+      "order": 4,
+      "id": "20180517-2236-00501-42b08a2940",
+      "media_id": "20180517-2236-00501-42b08a2940",
+      "title": "20180517 2236 00501",
+      "collection": "portugal",
+      "location": "Cascais, Lisboa, Portugal",
+      "captured_at": "2018-05-17T22:36:23",
+      "width": 1800,
+      "height": 1200,
+      "image": "images/04-20180517-2236-00501-42b08a2940-cascais-atlantic-evening.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2236-00501-42b08a2940_1800.jpg",
+      "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2236-00501-42b08a2940_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180517-2236-00501-42b08a2940",
+      "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180517-2236-00501-42b08a2940",
+      "local_staged_path": "socials/Threads/2026-05-29/cascais-atlantic-evening/images/04-20180517-2236-00501-42b08a2940-cascais-atlantic-evening.jpg"
+    }
+  ],
+  "link_preview_note": "Remove any automatic link preview if it shows generic or off-theme campaign metadata before posting.",
+  "browser_check": {
+    "checked_at": "2026-05-29T03:14:36Z",
+    "result": "Built-in Browser navigation to Threads @ec92009 did not complete reliably in the available browser session; no Threads composer/profile state could be safely confirmed, so no Threads upload/publish attempt was made."
+  },
+  "deployment_check": {
+    "checked_at": "2026-05-29T03:14:36Z",
+    "result": "GitHub Pages deployment succeeded; all three new campaign JSON URLs returned HTTP 200 with v90.1 cache busting. Campaign commit pushed: f0a4fd9a."
+  }
+}

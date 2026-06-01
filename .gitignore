@@ -5,6 +5,9 @@ __pycache__/
 *.pyc
 node_modules/
 tmp/
+output/
+facebook-built-in-*.md
+facebook-built-in-*.png
 .env.stripe-test.local
 
 # Local/generated photo workspaces.
@@ -29,6 +32,8 @@ assets/hidden/**
 assets/owner-actions/Owner.sqlite
 assets/owner-actions/Owner.sqlite-*
 assets/owner-actions/real-estate-clients.local.json
+assets/owner-actions/title-keyword-review-queue/*.json
+assets/owner-actions/title-keyword-review-queue/proposed-state.json
 
 # Local macOS helper bundle; regenerate helper apps instead of committing .app bundles.
 PhotosByElie Blacklist.app/

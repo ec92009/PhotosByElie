@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Photos By Elie | Basket</title>
   <meta name="description" content="Basket for selected Photos By Elie photo licenses."/>
-  <link rel="icon" type="image/png" sizes="512x512" href="./assets/byelie-logo.png"/>
+  <link rel="icon" type="image/png" sizes="512x512" href="./assets/branding/photosbyelie-camera-tripod-logo-512.png"/>
   <script>(()=>{try{const saved=localStorage.getItem('byelie-theme');if(saved==='light'||saved==='dark')document.documentElement.dataset.theme=saved}catch{}})();</script>
-  <link rel="stylesheet" href="./shared.css?v=93.0"/>
-  <link rel="stylesheet" href="./styles.css?v=93.0"/>
-  <link rel="stylesheet" href="./photos.css?v=93.0"/>
+  <link rel="stylesheet" href="./shared.css?v=93.1"/>
+  <link rel="stylesheet" href="./styles.css?v=93.1"/>
+  <link rel="stylesheet" href="./photos.css?v=93.1"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -17,14 +17,14 @@
 <body class="commerce-page" data-fixed-header>
   <a class="skip-link" href="#main-content" data-i18n="a11y.skip">Skip to content</a>
   <header class="topbar shell">
-    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE</div>
+    <a class="header-back-button" href="./" aria-label="Back to collections" data-i18n-aria-label="common.back_to_collections"><span aria-hidden="true">&lt;</span></a>
+    <div class="brand"><img class="site-logo" src="./assets/branding/photosbyelie-camera-tripod-logo-512.png" alt="Photos By Elie camera logo"/>PHOTOS BY ELIE</div>
     <nav class="version-switch" aria-label="Site navigation" data-i18n-aria-label="a11y.site_nav">
-      <a href="https://ec92009.github.io/byElie/">By Elie</a> <span>|</span>
       <a href="./" data-i18n="nav.photos">Photos</a> <span>|</span>
       <a class="is-active" href="./basket.html" data-i18n="nav.basket">Basket</a> <span>|</span>
       <a href="./liked.html" data-i18n="nav.liked">Liked</a>
     </nav>
-    <span class="site-version-badge">v93.0</span>
+    <span class="site-version-badge">v93.1</span>
     <div class="header-controls">
       <button class="language-toggle" type="button" data-language-toggle>English</button>
       <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light" data-i18n="theme.night">Night</span><span class="mode-dark" data-i18n="theme.day">Day</span></button>
@@ -37,7 +37,6 @@
     <section class="panel gallery-hero basket-hero">
       <h1 data-i18n="basket.title">Basket</h1>
       <div class="cta">
-        <a class="btn secondary" href="./" data-i18n="common.back_to_collections">Back to collections</a>
         <a class="btn secondary" href="./liked.html" data-i18n="nav.liked">Liked</a>
       </div>
     </section>
@@ -66,12 +65,23 @@
             </div>
           </div>
           <div class="mock-checkout-actions">
-            <button class="btn primary" type="button" data-checkout-guest data-i18n="basket.pay_guest">Pay as guest</button>
+            <button class="btn primary" type="button" data-checkout-guest data-i18n="basket.pay_guest">Buy Now</button>
             <button class="btn secondary" type="button" data-mock-pay data-i18n="basket.simulate_payment" hidden>Simulate Stripe payment</button>
           </div>
-          <p class="mock-checkout-note" data-i18n="basket.checkout_note">Checkout uses USD. Stripe opens automatically when the Worker is configured for live payments; local mock mode can still generate delivery ZIPs.</p>
+          <p class="mock-checkout-note" data-i18n="basket.checkout_note">Checkout uses USD. Stripe has a $0.50 minimum charge; orders below that include a top-up to the minimum.</p>
           <output class="mock-checkout-result" data-checkout-result hidden></output>
         </div>
+        <aside class="buyer-trust-panel" aria-labelledby="basket-trust-title">
+          <p class="eyebrow" data-i18n="trust.eyebrow">Buyer notes</p>
+          <h3 id="basket-trust-title" data-i18n="trust.checkout_title">Before you pay</h3>
+          <ul class="buyer-trust-list">
+            <li data-i18n="trust.stripe_payment">Stripe handles the card payment and receipt; PhotosByElie handles private file delivery.</li>
+            <li data-i18n="trust.recovery">Your order ID and checkout email recover downloads on the order page.</li>
+            <li data-i18n="trust.license_short">Personal print and web use is included; commercial, resale, and AI-training use needs written approval.</li>
+            <li data-i18n="trust.support_short">If delivery looks wrong, contact support with the order ID before repurchasing.</li>
+          </ul>
+          <a class="btn secondary" href="./support.html" data-i18n="nav.support">Support and license</a>
+        </aside>
       </div>
     </section>
   </main>
@@ -82,22 +92,23 @@
       <nav class="footer-nav" aria-label="Footer navigation" data-i18n-aria-label="a11y.footer_nav">
         <a href="https://ec92009.github.io/byElie/">By Elie</a>
         <a href="./#collections" data-i18n="nav.collections">Collections</a>
+        <a href="./support.html" data-i18n="nav.support">Support and license</a>
         <span class="footer-owner-tools" data-owner-tools hidden>
           <a href="./owner.html" data-i18n="nav.owner">Owner</a>
         </span>
       </nav>
     </div>
   </footer>
-  <script src="./media-config.js?v=93.0"></script>
-  <script src="./photos.js?v=93.0"></script>
-  <script src="./embedded-browser.js?v=93.0"></script>
-  <script src="./owner-auth.js?v=93.0"></script>
-  <script src="./owner-tools.js?v=93.0"></script>
-  <script src="./site-version.js?v=93.0"></script>
-  <script src="./catalog-sqlite.js?v=93.0"></script>
-  <script src="./photos-data.js?v=93.0"></script>
-  <script src="./basket-store.js?v=93.0"></script>
-  <script src="./liked-store.js?v=93.0"></script>
-  <script src="./basket.js?v=93.0"></script>
+  <script src="./media-config.js?v=92.24"></script>
+  <script src="./photos.js?v=93.1"></script>
+  <script src="./embedded-browser.js?v=92.24"></script>
+  <script src="./owner-auth.js?v=92.24"></script>
+  <script src="./owner-tools.js?v=92.24"></script>
+  <script src="./site-version.js?v=92.24"></script>
+  <script src="./catalog-sqlite.js?v=92.24"></script>
+  <script src="./photos-data.js?v=92.24"></script>
+  <script src="./basket-store.js?v=92.24"></script>
+  <script src="./liked-store.js?v=92.24"></script>
+  <script src="./basket.js?v=92.24"></script>
 </body>
 </html>

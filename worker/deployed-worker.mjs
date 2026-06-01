@@ -1,6 +1,7 @@
 import { createCatalogIndex, createPhotosByElieWorker } from "./checkout-worker.mjs";
 import { createKvStore } from "./kv-store.mjs";
 import { createMockStripeClient } from "./mock-stripe.mjs";
+import { createRealEstateDeliverables } from "./real-estate-deliverables.mjs";
 import { createRealEstateOriginals } from "./real-estate-originals.mjs";
 import { createR2ZipDelivery } from "./r2-zip-delivery.mjs";
 import { createStripeClient } from "./stripe-client.mjs";
@@ -12,6 +13,13 @@ const requiredBinding = (env, key) => {
   if (!env?.[key]) throw new Error(`Missing Worker binding: ${key}`);
   return env[key];
 };
+
+const positiveInt = (value, fallback) => {
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 ? Math.floor(number) : fallback;
+};
+
+const daysToSeconds = (value, fallbackDays) => positiveInt(value, fallbackDays) * 24 * 60 * 60;
 
 const cleanRealEstateGallery = (gallery = {}) => {
   const key = String(gallery.key || "").trim();
@@ -46,11 +54,38 @@ const realEstateGalleriesFor = (env = {}) => {
   return legacy?.username && legacy?.accessCode ? [legacy] : [];
 };
 
-const mediaHeaders = (object = null) => ({
+const mediaHeaders = (object = null, extraHeaders = {}) => ({
   "access-control-allow-origin": "*",
+  "accept-ranges": "bytes",
   "cache-control": "public, max-age=31536000, immutable",
   "content-type": object?.httpMetadata?.contentType || "image/jpeg",
+  ...extraHeaders,
 });
+
+const parseSingleByteRange = (rangeHeader, size) => {
+  const match = /^bytes=(\d*)-(\d*)$/.exec(String(rangeHeader || "").trim());
+  if (!match || !Number.isFinite(size) || size < 1) return null;
+
+  const [, startRaw, endRaw] = match;
+  if (!startRaw && !endRaw) return null;
+
+  if (!startRaw) {
+    const suffixLength = Number(endRaw);
+    if (!Number.isSafeInteger(suffixLength) || suffixLength < 1) return null;
+    const length = Math.min(suffixLength, size);
+    const start = size - length;
+    return { offset: start, length, start, end: size - 1 };
+  }
+
+  const start = Number(startRaw);
+  const requestedEnd = endRaw ? Number(endRaw) : size - 1;
+  if (!Number.isSafeInteger(start) || !Number.isSafeInteger(requestedEnd) || start >= size || requestedEnd < start) {
+    return null;
+  }
+
+  const end = Math.min(requestedEnd, size - 1);
+  return { offset: start, length: end - start + 1, start, end };
+};
 
 const publicMediaResponse = async (request, env) => {
   if (request.method !== "GET" && request.method !== "HEAD") {
@@ -69,7 +104,47 @@ const publicMediaResponse = async (request, env) => {
     });
   }
 
-  const object = await requiredBinding(env, "PUBLIC_MEDIA").get(key);
+  const bucket = requiredBinding(env, "PUBLIC_MEDIA");
+  const rangeHeader = request.headers.get("range");
+
+  if (rangeHeader) {
+    const metadata = typeof bucket.head === "function" ? await bucket.head(key) : await bucket.get(key);
+    if (!metadata) {
+      return new Response("Media not found", {
+        status: 404,
+        headers: { "access-control-allow-origin": "*" },
+      });
+    }
+
+    const size = Number(metadata.size);
+    const range = parseSingleByteRange(rangeHeader, size);
+    if (!range) {
+      return new Response("Requested range not satisfiable", {
+        status: 416,
+        headers: mediaHeaders(metadata, {
+          "content-range": Number.isFinite(size) ? `bytes */${size}` : "bytes */*",
+        }),
+      });
+    }
+
+    const object = request.method === "HEAD" ? metadata : await bucket.get(key, { range: { offset: range.offset, length: range.length } });
+    if (!object) {
+      return new Response("Media not found", {
+        status: 404,
+        headers: { "access-control-allow-origin": "*" },
+      });
+    }
+
+    return new Response(request.method === "HEAD" ? null : object.body, {
+      status: 206,
+      headers: mediaHeaders(object, {
+        "content-length": String(range.length),
+        "content-range": `bytes ${range.start}-${range.end}/${size}`,
+      }),
+    });
+  }
+
+  const object = await bucket.get(key);
   if (!object) {
     return new Response("Media not found", {
       status: 404,
@@ -89,12 +164,15 @@ export default {
       return publicMediaResponse(request, env);
     }
 
-    const publicSiteUrl = env.PUBLIC_SITE_URL || "https://ec92009.github.io/PhotosByElie";
+    const publicSiteUrl = env.PUBLIC_SITE_URL || "https://photos-by-elie.com";
+    const downloadTokenTtlSeconds = daysToSeconds(env.DOWNLOAD_TOKEN_TTL_DAYS, 30);
+    const downloadTokenMaxDownloads = positiveInt(env.DOWNLOAD_TOKEN_MAX_DOWNLOADS, 100);
     const realStripeEnabled = Boolean(env.STRIPE_SECRET_KEY);
     const stripe = realStripeEnabled
       ? createStripeClient({
         secretKey: env.STRIPE_SECRET_KEY,
         webhookSecret: env.STRIPE_WEBHOOK_SECRET,
+        statementDescriptorSuffix: env.STRIPE_STATEMENT_DESCRIPTOR_SUFFIX || "DOWNLOAD",
         apiVersion: env.STRIPE_API_VERSION,
       })
       : createMockStripeClient({
@@ -104,8 +182,11 @@ export default {
     const store = createKvStore({
       namespace: requiredBinding(env, "ORDERS_KV"),
       prefix: env.KV_PREFIX || "pbe",
+      checkoutSessionTtlSeconds: daysToSeconds(env.CHECKOUT_SESSION_TTL_DAYS, 90),
+      downloadTtlSeconds: downloadTokenTtlSeconds + (24 * 60 * 60),
     });
     const privateBucket = requiredBinding(env, "PRIVATE_MEDIA");
+    const realEstateGalleries = realEstateGalleriesFor(env);
     const worker = createPhotosByElieWorker({
       catalog,
       store,
@@ -117,12 +198,18 @@ export default {
       realEstateOriginals: createRealEstateOriginals({
         privateBucket,
         store,
-        galleries: realEstateGalleriesFor(env),
+        galleries: realEstateGalleries,
+      }),
+      realEstateDeliverables: createRealEstateDeliverables({
+        privateBucket,
+        galleries: realEstateGalleries,
       }),
       ordersUrl: `${publicSiteUrl}/order.html`,
       successUrl: `${publicSiteUrl}/order.html?id={ORDER_ID}&session_id={CHECKOUT_SESSION_ID}&checkout=success`,
       cancelUrl: `${publicSiteUrl}/basket.html?checkout=cancelled`,
       mockStripeEnabled: !realStripeEnabled && env.MOCK_STRIPE_ENABLED !== "false",
+      downloadTokenTtlSeconds,
+      downloadTokenMaxDownloads,
     });
     return worker.fetch(request);
   },

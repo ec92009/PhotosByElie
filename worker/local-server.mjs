@@ -36,6 +36,7 @@ const stripe = process.env.STRIPE_SECRET_KEY
   ? createStripeClient({
     secretKey: process.env.STRIPE_SECRET_KEY,
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+    statementDescriptorSuffix: process.env.STRIPE_STATEMENT_DESCRIPTOR_SUFFIX || "DOWNLOAD",
     apiVersion: process.env.STRIPE_API_VERSION,
   })
   : undefined;

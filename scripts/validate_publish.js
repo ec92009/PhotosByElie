@@ -156,6 +156,7 @@ const validate = () => {
   const seenPhotoIds = new Map();
   const seenPublicPreview = new Map();
   const resolutionIds = new Set();
+  const dynamicResolutionIds = new Set(["video-original"]);
   const discardedIds = loadDiscardedIds();
 
   resolutions.forEach((resolution) => {
@@ -295,7 +296,7 @@ const validate = () => {
         warnings.push(`${photo.id} has no available resolution options.`);
       }
       (available || []).forEach((option) => {
-        if (!option?.id || !resolutionIds.has(option.id)) {
+        if (!option?.id || (!resolutionIds.has(option.id) && !dynamicResolutionIds.has(option.id))) {
           errors.push(`${photo.id} exposes unknown resolution option: ${option?.id || "(missing id)"}`);
         }
         if (availableIds.has(option.id)) {

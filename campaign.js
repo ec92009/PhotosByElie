@@ -5,6 +5,8 @@
   const collections = window.photosByElieData || {};
   const campaignId = new URLSearchParams(window.location.search).get("c") || "pinterest-invalides-2026-05-14";
   const safeCampaignId = campaignId.replace(/[^a-z0-9-]/gi, "");
+  const scriptVersion = new URL(document.currentScript?.src || window.location.href, window.location.href).searchParams.get("v") || "";
+  const versionedHref = (href) => window.photosByElieVersionedHref?.(href) || href;
 
   const els = {
     title: $("[data-campaign-title]"),
@@ -44,7 +46,7 @@
 
   const photoIndex = new Map(allPhotos().map((entry) => [entry.photo.id, entry]));
 
-  const photoHref = (id) => `./photo.html?id=${encodeURIComponent(id)}&v=76.19`;
+  const photoHref = (id) => versionedHref(`./photo.html?id=${encodeURIComponent(id)}&fit=fill&columns=3`);
 
   const entriesForIds = (ids) => (ids || [])
     .map((id) => photoIndex.get(id))
@@ -76,6 +78,9 @@
       getPhotos,
       densityKey,
       fitModeKey,
+      defaultDensity: 3,
+      defaultFitMode: "fill",
+      ignoreSavedLayout: true,
     });
     layoutControllers.push(controller);
     return controller;
@@ -211,7 +216,7 @@
 
   const loadCampaign = async () => {
     syncEmbeddedBrowserWarning();
-    const response = await fetch(`./assets/campaigns/${safeCampaignId}.json?v=76.19`);
+    const response = await fetch(`./assets/campaigns/${safeCampaignId}.json${scriptVersion ? `?v=${encodeURIComponent(scriptVersion)}` : ""}`);
     if (!response.ok) throw new Error(`Could not load campaign ${safeCampaignId}`);
     const campaign = await response.json();
     document.title = `${campaign.title || "Photos By Elie"} | Photos By Elie`;

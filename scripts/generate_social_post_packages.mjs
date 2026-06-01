@@ -166,6 +166,10 @@ function captionStem(photo, item, collectionTitle) {
   return `${title} - ${place}${dateText}.`;
 }
 
+function instagramCaption(stem, tags) {
+  return `${stem}\n\nBrowse the edit from the profile link.\n\n${tags.join(" ")}`;
+}
+
 function platformPackages(photo, item, collectionKey, collectionTitle, mediaConfig) {
   const title = cleanTitle(photo.title || item.title);
   const url = photoUrl(photo.id);
@@ -179,8 +183,8 @@ function platformPackages(photo, item, collectionKey, collectionTitle, mediaConf
     instagram: {
       asset_format: item.suggestedFormat,
       post_type: isCarousel ? "carousel" : isStory ? "story_or_reel" : "feed",
-      caption: `${stem}\n\n${tags.join(" ")}`,
-      link_note: "Instagram feed captions do not support clickable links; use profile link, story link sticker, or first comment as appropriate.",
+      caption: instagramCaption(stem, tags),
+      link_note: "Instagram feed captions do not support clickable links; put the campaign URL in the profile website link before posting, or use a Story link sticker.",
       media_url: previewUrl,
       photo_url: url,
       crop_note: cropNote,

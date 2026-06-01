@@ -1,20 +1,21 @@
 {
   "date": "2026-06-01",
   "platform": "Threads",
-  "status": "prepared",
+  "status": "prepared_no_api_token_missing_token",
   "account": "ec92009 via Instagram login",
   "post_type": "four_image_thread",
   "title": "Madrid Royal Palace Stone and Courtyards",
-  "destination_url": "https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-madrid-royal-palace-stone-courtyards-2026-06-01",
+  "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-madrid-royal-palace-stone-courtyards-2026-06-01",
   "campaign_id": "instagram-madrid-royal-palace-stone-courtyards-2026-06-01",
-  "caption": "Four Madrid palace frames: stone, courtyard rhythm, and formal Spanish architectural light from Photos By Elie. Browse the edit: https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-madrid-royal-palace-stone-courtyards-2026-06-01\n\n#PhotosByElie #Madrid #SpainTravel",
+  "caption": "Four Madrid palace frames: stone, courtyard rhythm, and formal Spanish architectural light from Photos By Elie. Browse the edit: https://photos-by-elie.com/campaign.html?c=instagram-madrid-royal-palace-stone-courtyards-2026-06-01\n\n#PhotosByElie #Madrid #SpainTravel",
   "recommended_upload_set": "images",
   "available_count": 4,
   "link_preview_note": "Remove any automatic link preview if it shows generic or off-theme campaign metadata before posting.",
   "notes": [
     "Threads package uses a 4-image subset derived from the Instagram set.",
     "Images are public watermarked R2 previews staged for browser/manual posting or future Threads API publishing.",
-    "Threads dry run passed for 4 public HTTPS images, but no Threads user id/token is configured for live publish."
+    "Threads dry run passed for 4 public HTTPS images, but no Threads user id/token is configured for live publish.",
+    "No ~/.config/photosbyelie/threads-token.json was present; API publishing unavailable. Browser/manual posting remains required, with link preview removal if needed."
   ],
   "items": [
     {
@@ -30,8 +31,8 @@
       "image": "images/01-20180522-1333-00896-18f955bb6f-madrid-royal-palace-stone-courtyards.jpg",
       "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1333-00896-18f955bb6f_1800.jpg",
       "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1333-00896-18f955bb6f_1800.jpg",
-      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180522-1333-00896-18f955bb6f",
-      "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180522-1333-00896-18f955bb6f",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=20180522-1333-00896-18f955bb6f",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180522-1333-00896-18f955bb6f",
       "local_staged_path": "socials/Threads/2026-06-01/madrid-royal-palace-stone-courtyards/images/01-20180522-1333-00896-18f955bb6f-madrid-royal-palace-stone-courtyards.jpg"
     },
     {
@@ -47,8 +48,8 @@
       "image": "images/02-20180522-1326-00893-75d36d95eb-madrid-royal-palace-stone-courtyards.jpg",
       "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1326-00893-75d36d95eb_1800.jpg",
       "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1326-00893-75d36d95eb_1800.jpg",
-      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180522-1326-00893-75d36d95eb",
-      "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180522-1326-00893-75d36d95eb",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=20180522-1326-00893-75d36d95eb",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180522-1326-00893-75d36d95eb",
       "local_staged_path": "socials/Threads/2026-06-01/madrid-royal-palace-stone-courtyards/images/02-20180522-1326-00893-75d36d95eb-madrid-royal-palace-stone-courtyards.jpg"
     },
     {
@@ -64,8 +65,8 @@
       "image": "images/03-20180522-1322-00889-84c3a77b96-madrid-royal-palace-stone-courtyards.jpg",
       "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1322-00889-84c3a77b96_1800.jpg",
       "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1322-00889-84c3a77b96_1800.jpg",
-      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180522-1322-00889-84c3a77b96",
-      "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180522-1322-00889-84c3a77b96",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=20180522-1322-00889-84c3a77b96",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180522-1322-00889-84c3a77b96",
       "local_staged_path": "socials/Threads/2026-06-01/madrid-royal-palace-stone-courtyards/images/03-20180522-1322-00889-84c3a77b96-madrid-royal-palace-stone-courtyards.jpg"
     },
     {
@@ -81,8 +82,8 @@
       "image": "images/04-20180522-1304-00881-db5009c014-madrid-royal-palace-stone-courtyards.jpg",
       "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1304-00881-db5009c014_1800.jpg",
       "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1304-00881-db5009c014_1800.jpg",
-      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180522-1304-00881-db5009c014",
-      "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180522-1304-00881-db5009c014",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=20180522-1304-00881-db5009c014",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180522-1304-00881-db5009c014",
       "local_staged_path": "socials/Threads/2026-06-01/madrid-royal-palace-stone-courtyards/images/04-20180522-1304-00881-db5009c014-madrid-royal-palace-stone-courtyards.jpg"
     }
   ],

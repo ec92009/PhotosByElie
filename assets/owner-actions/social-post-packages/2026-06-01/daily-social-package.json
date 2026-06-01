@@ -3,28 +3,29 @@
   "generated_at": "2026-06-01T03:05:57Z",
   "source_policy": "Prepared from public SQLite catalog rows and public R2 watermarked previews only. No private masters, buyer downloads, Owner-only metadata, ignored Owner review JSON, or secrets were used.",
   "status": {
-    "facebook": "prepared",
-    "instagram": "prepared",
-    "threads": "prepared",
-    "pinterest": "prepared"
+    "facebook": "published",
+    "instagram": "published",
+    "threads": "prepared_no_api_token_missing_token",
+    "pinterest": "prepared_no_api_token_missing_token"
   },
   "packages": [
     {
       "date": "2026-06-01",
       "platform": "Facebook",
-      "status": "prepared",
-      "account": "Photos By Elie Facebook Page",
+      "status": "published",
+      "account": "Photos By Elie",
       "post_type": "multi_photo",
       "title": "Toulouse Cloisters and Brick Light",
-      "destination_url": "https://ec92009.github.io/PhotosByElie/campaign.html?c=facebook-toulouse-cloisters-brick-light-2026-06-01",
+      "destination_url": "https://photos-by-elie.com/campaign.html?c=facebook-toulouse-cloisters-brick-light-2026-06-01",
       "campaign_id": "facebook-toulouse-cloisters-brick-light-2026-06-01",
-      "caption": "Toulouse in measured stone and brick: cloister columns, historic arcades, and warm French city light selected as a Photos By Elie wall-art edit. Browse the set: https://ec92009.github.io/PhotosByElie/campaign.html?c=facebook-toulouse-cloisters-brick-light-2026-06-01",
+      "caption": "Toulouse in measured stone and brick: cloister columns, historic arcades, and warm French city light selected as a Photos By Elie wall-art edit. Browse the set: https://photos-by-elie.com/campaign.html?c=facebook-toulouse-cloisters-brick-light-2026-06-01",
       "recommended_upload_set": "images",
       "available_count": 8,
       "notes": [
         "Images are public watermarked R2 previews staged for browser upload and Meta Pages API publishing.",
         "Facebook package uses 8 images, including two wide arcade/city views suitable for a Page multi-photo post.",
-        "Facebook dry run passed for 8 public HTTPS images and Meta Pages multi-photo post plan."
+        "Facebook dry run passed for 8 public HTTPS images and Meta Pages multi-photo post plan.",
+        "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo attachments."
       ],
       "items": [
         {
@@ -40,8 +41,8 @@
           "image": "images/01-20111102-1226-07867-136188a2c1-toulouse-cloisters-brick-light.jpg",
           "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20111102-1226-07867-136188a2c1_1800.jpg",
           "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20111102-1226-07867-136188a2c1_1800.jpg",
-          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20111102-1226-07867-136188a2c1",
-          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20111102-1226-07867-136188a2c1",
+          "photo_url": "https://photos-by-elie.com/photo.html?id=20111102-1226-07867-136188a2c1",
+          "public_photo_url": "https://photos-by-elie.com/photo.html?id=20111102-1226-07867-136188a2c1",
           "local_staged_path": "socials/Facebook/2026-06-01/toulouse-cloisters-brick-light/images/01-20111102-1226-07867-136188a2c1-toulouse-cloisters-brick-light.jpg"
         },
         {
@@ -57,8 +58,8 @@
           "image": "images/02-20111102-1227-05325-ab56a019a3-toulouse-cloisters-brick-light.jpg",
           "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20111102-1227-05325-ab56a019a3_1800.jpg",
           "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20111102-1227-05325-ab56a019a3_1800.jpg",
-          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20111102-1227-05325-ab56a019a3",
-          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20111102-1227-05325-ab56a019a3",
+          "photo_url": "https://photos-by-elie.com/photo.html?id=20111102-1227-05325-ab56a019a3",
+          "public_photo_url": "https://photos-by-elie.com/photo.html?id=20111102-1227-05325-ab56a019a3",
           "local_staged_path": "socials/Facebook/2026-06-01/toulouse-cloisters-brick-light/images/02-20111102-1227-05325-ab56a019a3-toulouse-cloisters-brick-light.jpg"
         },
         {
@@ -74,8 +75,8 @@
           "image": "images/03-20111106-0808-27995-c4cfb5f5c1-toulouse-cloisters-brick-light.jpg",
           "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20111106-0808-27995-c4cfb5f5c1_1800.jpg",
           "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20111106-0808-27995-c4cfb5f5c1_1800.jpg",
-          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20111106-0808-27995-c4cfb5f5c1",
-          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20111106-0808-27995-c4cfb5f5c1",
+          "photo_url": "https://photos-by-elie.com/photo.html?id=20111106-0808-27995-c4cfb5f5c1",
+          "public_photo_url": "https://photos-by-elie.com/photo.html?id=20111106-0808-27995-c4cfb5f5c1",
           "local_staged_path": "socials/Facebook/2026-06-01/toulouse-cloisters-brick-light/images/03-20111106-0808-27995-c4cfb5f5c1-toulouse-cloisters-brick-light.jpg"
         },
         {
@@ -91,8 +92,8 @@
           "image": "images/04-20111106-0808-28027-8a497c25e6-toulouse-cloisters-brick-light.jpg",
           "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20111106-0808-28027-8a497c25e6_1800.jpg",
           "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20111106-0808-28027-8a497c25e6_1800.jpg",
-          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20111106-0808-28027-8a497c25e6",
-          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20111106-0808-28027-8a497c25e6",
+          "photo_url": "https://photos-by-elie.com/photo.html?id=20111106-0808-28027-8a497c25e6",
+          "public_photo_url": "https://photos-by-elie.com/photo.html?id=20111106-0808-28027-8a497c25e6",
           "local_staged_path": "socials/Facebook/2026-06-01/toulouse-cloisters-brick-light/images/04-20111106-0808-28027-8a497c25e6-toulouse-cloisters-brick-light.jpg"
         },
         {
@@ -108,8 +109,8 @@
           "image": "images/05-20160707-1531-17313-pano-59addf66f9-toulouse-cloisters-brick-light.jpg",
           "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20160707-1531-17313-pano-59addf66f9_1800.jpg",
           "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20160707-1531-17313-pano-59addf66f9_1800.jpg",
-          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20160707-1531-17313-pano-59addf66f9",
-          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20160707-1531-17313-pano-59addf66f9",
+          "photo_url": "https://photos-by-elie.com/photo.html?id=20160707-1531-17313-pano-59addf66f9",
+          "public_photo_url": "https://photos-by-elie.com/photo.html?id=20160707-1531-17313-pano-59addf66f9",
           "local_staged_path": "socials/Facebook/2026-06-01/toulouse-cloisters-brick-light/images/05-20160707-1531-17313-pano-59addf66f9-toulouse-cloisters-brick-light.jpg"
         },
         {
@@ -125,8 +126,8 @@
           "image": "images/06-20160709-1822-24599-pano-f6bb14796e-toulouse-cloisters-brick-light.jpg",
           "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20160709-1822-24599-pano-f6bb14796e_1800.jpg",
           "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20160709-1822-24599-pano-f6bb14796e_1800.jpg",
-          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20160709-1822-24599-pano-f6bb14796e",
-          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20160709-1822-24599-pano-f6bb14796e",
+          "photo_url": "https://photos-by-elie.com/photo.html?id=20160709-1822-24599-pano-f6bb14796e",
+          "public_photo_url": "https://photos-by-elie.com/photo.html?id=20160709-1822-24599-pano-f6bb14796e",
           "local_staged_path": "socials/Facebook/2026-06-01/toulouse-cloisters-brick-light/images/06-20160709-1822-24599-pano-f6bb14796e-toulouse-cloisters-brick-light.jpg"
         },
         {
@@ -142,8 +143,8 @@
           "image": "images/07-20180524-1746-00940-636b34659d-toulouse-cloisters-brick-light.jpg",
           "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180524-1746-00940-636b34659d_1800.jpg",
           "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180524-1746-00940-636b34659d_1800.jpg",
-          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180524-1746-00940-636b34659d",
-          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180524-1746-00940-636b34659d",
+          "photo_url": "https://photos-by-elie.com/photo.html?id=20180524-1746-00940-636b34659d",
+          "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180524-1746-00940-636b34659d",
           "local_staged_path": "socials/Facebook/2026-06-01/toulouse-cloisters-brick-light/images/07-20180524-1746-00940-636b34659d-toulouse-cloisters-brick-light.jpg"
         },
         {
@@ -159,21 +160,45 @@
           "image": "images/08-20180524-1746-00941-72deedae61-toulouse-cloisters-brick-light.jpg",
           "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180524-1746-00941-72deedae61_1800.jpg",
           "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180524-1746-00941-72deedae61_1800.jpg",
-          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180524-1746-00941-72deedae61",
-          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180524-1746-00941-72deedae61",
+          "photo_url": "https://photos-by-elie.com/photo.html?id=20180524-1746-00941-72deedae61",
+          "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180524-1746-00941-72deedae61",
           "local_staged_path": "socials/Facebook/2026-06-01/toulouse-cloisters-brick-light/images/08-20180524-1746-00941-72deedae61-toulouse-cloisters-brick-light.jpg"
         }
       ],
-      "local_package": "/Users/ecohen/Dev/photosByElie/socials/Facebook/2026-06-01/toulouse-cloisters-brick-light"
+      "local_package": "/Users/ecohen/Dev/photosByElie/socials/Facebook/2026-06-01/toulouse-cloisters-brick-light",
+      "published": {
+        "status": "published",
+        "platform": "facebook",
+        "account": "Photos By Elie",
+        "page_id": "1146747141854670",
+        "post_id": "1146747141854670_122102925093334672",
+        "published_at": "2026-06-01T03:11:28+0000",
+        "permalink_url": "https://www.facebook.com/122102168061334672/posts/122102925093334672",
+        "image_count": 8,
+        "verified_at": "2026-06-01T03:14:18Z",
+        "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo attachments."
+      },
+      "api_publish": {
+        "status": "published",
+        "platform": "facebook",
+        "account": "Photos By Elie",
+        "page_id": "1146747141854670",
+        "post_id": "1146747141854670_122102925093334672",
+        "published_at": "2026-06-01T03:11:28+0000",
+        "permalink_url": "https://www.facebook.com/122102168061334672/posts/122102925093334672",
+        "image_count": 8,
+        "verified_at": "2026-06-01T03:14:18Z",
+        "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo attachments."
+      }
     },
     {
       "date": "2026-06-01",
       "platform": "Instagram",
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "title": "Madrid Royal Palace Stone and Courtyards",
-      "destination_url": "https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-madrid-royal-palace-stone-courtyards-2026-06-01",
+      "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-madrid-royal-palace-stone-courtyards-2026-06-01",
       "campaign_id": "instagram-madrid-royal-palace-stone-courtyards-2026-06-01",
       "caption": "Madrid palace stonework, courtyard geometry, and carved facade detail, selected as a Photos By Elie wall-art carousel. Browse the edit from the profile link.\n\n#PhotosByElie #Madrid #SpainTravel #RoyalPalace #TravelPhotography #WallArt",
       "recommended_upload_set": "images",
@@ -182,7 +207,8 @@
         "Images are public watermarked R2 previews staged for Instagram Graph API publishing.",
         "All selected images are within the Instagram feed aspect-ratio guardrail.",
         "Caption uses profile-link wording because Instagram feed captions render raw URLs as plain text.",
-        "Instagram dry run passed for 8 public HTTPS images, resolved ig_user_id 17841400866970070, and produced no raw URL warning."
+        "Instagram dry run passed for 8 public HTTPS images, resolved ig_user_id 17841400866970070, and produced no raw URL warning.",
+        "Instagram Graph returned CAROUSEL_ALBUM, permalink, username, timestamp, and 8 child images. Caption has no raw URL."
       ],
       "items": [
         {
@@ -198,8 +224,8 @@
           "image": "images/01-20180522-1333-00896-18f955bb6f-madrid-royal-palace-stone-courtyards.jpg",
           "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1333-00896-18f955bb6f_1800.jpg",
           "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1333-00896-18f955bb6f_1800.jpg",
-          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180522-1333-00896-18f955bb6f",
-          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180522-1333-00896-18f955bb6f",
+          "photo_url": "https://photos-by-elie.com/photo.html?id=20180522-1333-00896-18f955bb6f",
+          "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180522-1333-00896-18f955bb6f",
           "local_staged_path": "socials/Instagram/2026-06-01/madrid-royal-palace-stone-courtyards/images/01-20180522-1333-00896-18f955bb6f-madrid-royal-palace-stone-courtyards.jpg"
         },
         {
@@ -215,8 +241,8 @@
           "image": "images/02-20180522-1326-00894-70f247c8bf-madrid-royal-palace-stone-courtyards.jpg",
           "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1326-00894-70f247c8bf_1800.jpg",
           "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1326-00894-70f247c8bf_1800.jpg",
-          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180522-1326-00894-70f247c8bf",
-          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180522-1326-00894-70f247c8bf",
+          "photo_url": "https://photos-by-elie.com/photo.html?id=20180522-1326-00894-70f247c8bf",
+          "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180522-1326-00894-70f247c8bf",
           "local_staged_path": "socials/Instagram/2026-06-01/madrid-royal-palace-stone-courtyards/images/02-20180522-1326-00894-70f247c8bf-madrid-royal-palace-stone-courtyards.jpg"
         },
         {
@@ -232,8 +258,8 @@
           "image": "images/03-20180522-1326-00893-75d36d95eb-madrid-royal-palace-stone-courtyards.jpg",
           "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1326-00893-75d36d95eb_1800.jpg",
           "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1326-00893-75d36d95eb_1800.jpg",
-          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180522-1326-00893-75d36d95eb",
-          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180522-1326-00893-75d36d95eb",
+          "photo_url": "https://photos-by-elie.com/photo.html?id=20180522-1326-00893-75d36d95eb",
+          "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180522-1326-00893-75d36d95eb",
           "local_staged_path": "socials/Instagram/2026-06-01/madrid-royal-palace-stone-courtyards/images/03-20180522-1326-00893-75d36d95eb-madrid-royal-palace-stone-courtyards.jpg"
         },
         {
@@ -249,8 +275,8 @@
           "image": "images/04-20180522-1325-00892-5b9c7eef8a-madrid-royal-palace-stone-courtyards.jpg",
           "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1325-00892-5b9c7eef8a_1800.jpg",
           "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1325-00892-5b9c7eef8a_1800.jpg",
-          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180522-1325-00892-5b9c7eef8a",
-          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180522-1325-00892-5b9c7eef8a",
+          "photo_url": "https://photos-by-elie.com/photo.html?id=20180522-1325-00892-5b9c7eef8a",
+          "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180522-1325-00892-5b9c7eef8a",
           "local_staged_path": "socials/Instagram/2026-06-01/madrid-royal-palace-stone-courtyards/images/04-20180522-1325-00892-5b9c7eef8a-madrid-royal-palace-stone-courtyards.jpg"
         },
         {
@@ -266,8 +292,8 @@
           "image": "images/05-20180522-1322-00889-84c3a77b96-madrid-royal-palace-stone-courtyards.jpg",
           "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1322-00889-84c3a77b96_1800.jpg",
           "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1322-00889-84c3a77b96_1800.jpg",
-          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180522-1322-00889-84c3a77b96",
-          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180522-1322-00889-84c3a77b96",
+          "photo_url": "https://photos-by-elie.com/photo.html?id=20180522-1322-00889-84c3a77b96",
+          "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180522-1322-00889-84c3a77b96",
           "local_staged_path": "socials/Instagram/2026-06-01/madrid-royal-palace-stone-courtyards/images/05-20180522-1322-00889-84c3a77b96-madrid-royal-palace-stone-courtyards.jpg"
         },
         {
@@ -283,8 +309,8 @@
           "image": "images/06-20180522-1322-00888-08ac194d19-madrid-royal-palace-stone-courtyards.jpg",
           "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1322-00888-08ac194d19_1800.jpg",
           "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1322-00888-08ac194d19_1800.jpg",
-          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180522-1322-00888-08ac194d19",
-          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180522-1322-00888-08ac194d19",
+          "photo_url": "https://photos-by-elie.com/photo.html?id=20180522-1322-00888-08ac194d19",
+          "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180522-1322-00888-08ac194d19",
           "local_staged_path": "socials/Instagram/2026-06-01/madrid-royal-palace-stone-courtyards/images/06-20180522-1322-00888-08ac194d19-madrid-royal-palace-stone-courtyards.jpg"
         },
         {
@@ -300,8 +326,8 @@
           "image": "images/07-20180522-1309-00886-84c424a432-madrid-royal-palace-stone-courtyards.jpg",
           "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1309-00886-84c424a432_1800.jpg",
           "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1309-00886-84c424a432_1800.jpg",
-          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180522-1309-00886-84c424a432",
-          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180522-1309-00886-84c424a432",
+          "photo_url": "https://photos-by-elie.com/photo.html?id=20180522-1309-00886-84c424a432",
+          "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180522-1309-00886-84c424a432",
           "local_staged_path": "socials/Instagram/2026-06-01/madrid-royal-palace-stone-courtyards/images/07-20180522-1309-00886-84c424a432-madrid-royal-palace-stone-courtyards.jpg"
         },
         {
@@ -317,30 +343,59 @@
           "image": "images/08-20180522-1304-00881-db5009c014-madrid-royal-palace-stone-courtyards.jpg",
           "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1304-00881-db5009c014_1800.jpg",
           "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1304-00881-db5009c014_1800.jpg",
-          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180522-1304-00881-db5009c014",
-          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180522-1304-00881-db5009c014",
+          "photo_url": "https://photos-by-elie.com/photo.html?id=20180522-1304-00881-db5009c014",
+          "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180522-1304-00881-db5009c014",
           "local_staged_path": "socials/Instagram/2026-06-01/madrid-royal-palace-stone-courtyards/images/08-20180522-1304-00881-db5009c014-madrid-royal-palace-stone-courtyards.jpg"
         }
       ],
-      "local_package": "/Users/ecohen/Dev/photosByElie/socials/Instagram/2026-06-01/madrid-royal-palace-stone-courtyards"
+      "local_package": "/Users/ecohen/Dev/photosByElie/socials/Instagram/2026-06-01/madrid-royal-palace-stone-courtyards",
+      "published": {
+        "status": "published",
+        "platform": "instagram",
+        "account": "ec92009",
+        "media_id": "17941806441229169",
+        "published_at": "2026-06-01T03:13:08+0000",
+        "permalink_url": "https://www.instagram.com/p/DZBxsOOjNvS/",
+        "username": "ec92009",
+        "media_type": "CAROUSEL_ALBUM",
+        "image_count": 8,
+        "child_count": 8,
+        "verified_at": "2026-06-01T03:14:18Z",
+        "verification": "Instagram Graph returned CAROUSEL_ALBUM, permalink, username, timestamp, and 8 child images. Caption has no raw URL."
+      },
+      "api_publish": {
+        "status": "published",
+        "platform": "instagram",
+        "account": "ec92009",
+        "media_id": "17941806441229169",
+        "published_at": "2026-06-01T03:13:08+0000",
+        "permalink_url": "https://www.instagram.com/p/DZBxsOOjNvS/",
+        "username": "ec92009",
+        "media_type": "CAROUSEL_ALBUM",
+        "image_count": 8,
+        "child_count": 8,
+        "verified_at": "2026-06-01T03:14:18Z",
+        "verification": "Instagram Graph returned CAROUSEL_ALBUM, permalink, username, timestamp, and 8 child images. Caption has no raw URL."
+      }
     },
     {
       "date": "2026-06-01",
       "platform": "Threads",
-      "status": "prepared",
+      "status": "prepared_no_api_token_missing_token",
       "account": "ec92009 via Instagram login",
       "post_type": "four_image_thread",
       "title": "Madrid Royal Palace Stone and Courtyards",
-      "destination_url": "https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-madrid-royal-palace-stone-courtyards-2026-06-01",
+      "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-madrid-royal-palace-stone-courtyards-2026-06-01",
       "campaign_id": "instagram-madrid-royal-palace-stone-courtyards-2026-06-01",
-      "caption": "Four Madrid palace frames: stone, courtyard rhythm, and formal Spanish architectural light from Photos By Elie. Browse the edit: https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-madrid-royal-palace-stone-courtyards-2026-06-01\n\n#PhotosByElie #Madrid #SpainTravel",
+      "caption": "Four Madrid palace frames: stone, courtyard rhythm, and formal Spanish architectural light from Photos By Elie. Browse the edit: https://photos-by-elie.com/campaign.html?c=instagram-madrid-royal-palace-stone-courtyards-2026-06-01\n\n#PhotosByElie #Madrid #SpainTravel",
       "recommended_upload_set": "images",
       "available_count": 4,
       "link_preview_note": "Remove any automatic link preview if it shows generic or off-theme campaign metadata before posting.",
       "notes": [
         "Threads package uses a 4-image subset derived from the Instagram set.",
         "Images are public watermarked R2 previews staged for browser/manual posting or future Threads API publishing.",
-        "Threads dry run passed for 4 public HTTPS images, but no Threads user id/token is configured for live publish."
+        "Threads dry run passed for 4 public HTTPS images, but no Threads user id/token is configured for live publish.",
+        "No ~/.config/photosbyelie/threads-token.json was present; API publishing unavailable. Browser/manual posting remains required, with link preview removal if needed."
       ],
       "items": [
         {
@@ -356,8 +411,8 @@
           "image": "images/01-20180522-1333-00896-18f955bb6f-madrid-royal-palace-stone-courtyards.jpg",
           "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1333-00896-18f955bb6f_1800.jpg",
           "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1333-00896-18f955bb6f_1800.jpg",
-          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180522-1333-00896-18f955bb6f",
-          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180522-1333-00896-18f955bb6f",
+          "photo_url": "https://photos-by-elie.com/photo.html?id=20180522-1333-00896-18f955bb6f",
+          "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180522-1333-00896-18f955bb6f",
           "local_staged_path": "socials/Threads/2026-06-01/madrid-royal-palace-stone-courtyards/images/01-20180522-1333-00896-18f955bb6f-madrid-royal-palace-stone-courtyards.jpg"
         },
         {
@@ -373,8 +428,8 @@
           "image": "images/02-20180522-1326-00893-75d36d95eb-madrid-royal-palace-stone-courtyards.jpg",
           "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1326-00893-75d36d95eb_1800.jpg",
           "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1326-00893-75d36d95eb_1800.jpg",
-          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180522-1326-00893-75d36d95eb",
-          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180522-1326-00893-75d36d95eb",
+          "photo_url": "https://photos-by-elie.com/photo.html?id=20180522-1326-00893-75d36d95eb",
+          "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180522-1326-00893-75d36d95eb",
           "local_staged_path": "socials/Threads/2026-06-01/madrid-royal-palace-stone-courtyards/images/02-20180522-1326-00893-75d36d95eb-madrid-royal-palace-stone-courtyards.jpg"
         },
         {
@@ -390,8 +445,8 @@
           "image": "images/03-20180522-1322-00889-84c3a77b96-madrid-royal-palace-stone-courtyards.jpg",
           "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1322-00889-84c3a77b96_1800.jpg",
           "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1322-00889-84c3a77b96_1800.jpg",
-          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180522-1322-00889-84c3a77b96",
-          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180522-1322-00889-84c3a77b96",
+          "photo_url": "https://photos-by-elie.com/photo.html?id=20180522-1322-00889-84c3a77b96",
+          "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180522-1322-00889-84c3a77b96",
           "local_staged_path": "socials/Threads/2026-06-01/madrid-royal-palace-stone-courtyards/images/03-20180522-1322-00889-84c3a77b96-madrid-royal-palace-stone-courtyards.jpg"
         },
         {
@@ -407,8 +462,8 @@
           "image": "images/04-20180522-1304-00881-db5009c014-madrid-royal-palace-stone-courtyards.jpg",
           "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1304-00881-db5009c014_1800.jpg",
           "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1304-00881-db5009c014_1800.jpg",
-          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180522-1304-00881-db5009c014",
-          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180522-1304-00881-db5009c014",
+          "photo_url": "https://photos-by-elie.com/photo.html?id=20180522-1304-00881-db5009c014",
+          "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180522-1304-00881-db5009c014",
           "local_staged_path": "socials/Threads/2026-06-01/madrid-royal-palace-stone-courtyards/images/04-20180522-1304-00881-db5009c014-madrid-royal-palace-stone-courtyards.jpg"
         }
       ],
@@ -417,13 +472,13 @@
     {
       "date": "2026-06-01",
       "platform": "Pinterest",
-      "status": "prepared",
+      "status": "prepared_no_api_token_missing_token",
       "account": "@photosbyelie",
       "post_type": "pin_builder_five_images",
       "title": "Belem River Stone Details",
-      "destination_url": "https://ec92009.github.io/PhotosByElie/campaign.html?c=pinterest-belem-river-stone-details-2026-06-01",
+      "destination_url": "https://photos-by-elie.com/campaign.html?c=pinterest-belem-river-stone-details-2026-06-01",
       "campaign_id": "pinterest-belem-river-stone-details-2026-06-01",
-      "caption": "Belem river light, pale Lisbon stone, and quiet architectural detail from Photos By Elie. Browse the focused wall-art set: https://ec92009.github.io/PhotosByElie/campaign.html?c=pinterest-belem-river-stone-details-2026-06-01",
+      "caption": "Belem river light, pale Lisbon stone, and quiet architectural detail from Photos By Elie. Browse the focused wall-art set: https://photos-by-elie.com/campaign.html?c=pinterest-belem-river-stone-details-2026-06-01",
       "recommended_upload_set": "images",
       "available_count": 5,
       "pin_title": "Belem Lisbon River Stone Wall Art",
@@ -434,7 +489,8 @@
       "notes": [
         "Pinterest package is capped at exactly 5 images for Pin Builder/API compatibility.",
         "Images are public watermarked R2 previews staged for manual Pin Builder upload or future API publishing.",
-        "Pinterest dry run passed with exactly 5 images for the Portugal Travel Photography board recommendation; no board id/token is configured for live publish."
+        "Pinterest dry run passed with exactly 5 images for the Portugal Travel Photography board recommendation; no board id/token is configured for live publish.",
+        "No ~/.config/photosbyelie/pinterest-token.json was present; API publishing unavailable. Manual Pin Builder upload remains required; confirm Portugal Travel Photography or another suitable board before posting."
       ],
       "items": [
         {
@@ -450,8 +506,8 @@
           "image": "images/01-20180520-1535-00715-795e204a97-belem-river-stone-details.jpg",
           "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180520-1535-00715-795e204a97_1800.jpg",
           "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180520-1535-00715-795e204a97_1800.jpg",
-          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180520-1535-00715-795e204a97",
-          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180520-1535-00715-795e204a97",
+          "photo_url": "https://photos-by-elie.com/photo.html?id=20180520-1535-00715-795e204a97",
+          "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180520-1535-00715-795e204a97",
           "local_staged_path": "socials/Pinterest/2026-06-01/belem-river-stone-details/images/01-20180520-1535-00715-795e204a97-belem-river-stone-details.jpg"
         },
         {
@@ -467,8 +523,8 @@
           "image": "images/02-20180520-1536-00716-eebddf7bbb-belem-river-stone-details.jpg",
           "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180520-1536-00716-eebddf7bbb_1800.jpg",
           "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180520-1536-00716-eebddf7bbb_1800.jpg",
-          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180520-1536-00716-eebddf7bbb",
-          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180520-1536-00716-eebddf7bbb",
+          "photo_url": "https://photos-by-elie.com/photo.html?id=20180520-1536-00716-eebddf7bbb",
+          "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180520-1536-00716-eebddf7bbb",
           "local_staged_path": "socials/Pinterest/2026-06-01/belem-river-stone-details/images/02-20180520-1536-00716-eebddf7bbb-belem-river-stone-details.jpg"
         },
         {
@@ -484,8 +540,8 @@
           "image": "images/03-20180520-1536-00717-f1d52929b5-belem-river-stone-details.jpg",
           "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180520-1536-00717-f1d52929b5_1800.jpg",
           "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180520-1536-00717-f1d52929b5_1800.jpg",
-          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180520-1536-00717-f1d52929b5",
-          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180520-1536-00717-f1d52929b5",
+          "photo_url": "https://photos-by-elie.com/photo.html?id=20180520-1536-00717-f1d52929b5",
+          "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180520-1536-00717-f1d52929b5",
           "local_staged_path": "socials/Pinterest/2026-06-01/belem-river-stone-details/images/03-20180520-1536-00717-f1d52929b5-belem-river-stone-details.jpg"
         },
         {
@@ -501,8 +557,8 @@
           "image": "images/04-20180520-1545-00719-e98749030b-belem-river-stone-details.jpg",
           "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180520-1545-00719-e98749030b_1800.jpg",
           "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180520-1545-00719-e98749030b_1800.jpg",
-          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180520-1545-00719-e98749030b",
-          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180520-1545-00719-e98749030b",
+          "photo_url": "https://photos-by-elie.com/photo.html?id=20180520-1545-00719-e98749030b",
+          "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180520-1545-00719-e98749030b",
           "local_staged_path": "socials/Pinterest/2026-06-01/belem-river-stone-details/images/04-20180520-1545-00719-e98749030b-belem-river-stone-details.jpg"
         },
         {
@@ -518,8 +574,8 @@
           "image": "images/05-20180520-1552-00720-23215109c7-belem-river-stone-details.jpg",
           "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180520-1552-00720-23215109c7_1800.jpg",
           "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180520-1552-00720-23215109c7_1800.jpg",
-          "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180520-1552-00720-23215109c7",
-          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180520-1552-00720-23215109c7",
+          "photo_url": "https://photos-by-elie.com/photo.html?id=20180520-1552-00720-23215109c7",
+          "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180520-1552-00720-23215109c7",
           "local_staged_path": "socials/Pinterest/2026-06-01/belem-river-stone-details/images/05-20180520-1552-00720-23215109c7-belem-river-stone-details.jpg"
         }
       ],
@@ -534,6 +590,16 @@
     "npm test passed.",
     "npm run validate failed on the pre-existing assets/media-sidecar.json photosCount mismatch: 6617; expected 6518.",
     "Local HTTP smoke passed: all three new campaign JSON URLs returned 200 and campaign.html served the v93.1 badge.",
-    "Built-in Browser local smoke was blocked by the Browser URL policy after the first localhost navigation; local HTTP checks were used instead."
-  ]
+    "Built-in Browser local smoke was blocked by the Browser URL policy after the first localhost navigation; local HTTP checks were used instead.",
+    "Facebook published via Meta Pages API: 8 images, post ID 1146747141854670_122102925093334672, permalink https://www.facebook.com/122102168061334672/posts/122102925093334672.",
+    "Instagram published via Instagram Graph API: 8-image CAROUSEL_ALBUM, media ID 17941806441229169, permalink https://www.instagram.com/p/DZBxsOOjNvS/.",
+    "Pinterest remains prepared only: ~/.config/photosbyelie/pinterest-token.json is missing; manual Pin Builder upload should use board Portugal Travel Photography.",
+    "Threads remains prepared only: ~/.config/photosbyelie/threads-token.json is missing; remove any off-theme link preview before manual/browser posting."
+  ],
+  "final_publishing_results": {
+    "facebook": "published",
+    "instagram": "published",
+    "threads": "prepared_no_api_token_missing_token",
+    "pinterest": "prepared_no_api_token_missing_token"
+  }
 }

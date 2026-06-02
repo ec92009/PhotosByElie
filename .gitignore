@@ -32,6 +32,7 @@ assets/hidden/**
 assets/owner-actions/Owner.sqlite
 assets/owner-actions/Owner.sqlite-*
 assets/owner-actions/real-estate-clients.local.json
+assets/owner-actions/etsy-listing-packages/
 assets/owner-actions/title-keyword-review-queue/*.json
 assets/owner-actions/title-keyword-review-queue/proposed-state.json
 

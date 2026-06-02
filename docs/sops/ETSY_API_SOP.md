@@ -52,3 +52,28 @@ It never prints either credential.
 - Start with draft listing creation or dry-run payload generation before live publishing.
 - Prefer finished wall-art candidates with clear place, atmosphere, visual quality, and material/size confidence.
 - Record listing IDs, URLs, image counts, destination URLs, and any Etsy-visible validation errors in local package notes.
+
+## Outlet Package Flow
+
+Use `etsy:outlet` to turn a first-party campaign into reviewable Etsy draft payloads without writing to Etsy:
+
+```sh
+npm run etsy:outlet -- --campaign facebook-evening-in-sevilla-street-light-2026-06-02
+```
+
+The package is written under ignored local notes at `assets/owner-actions/etsy-listing-packages/`.
+Each generated listing is one public catalog photo, using its watermarked public R2 preview plus the campaign URL as the first-party springboard.
+
+Draft creation is opt-in only. Before using it, confirm the Etsy taxonomy id, shipping profile id, readiness/processing profile id, final print size/material options, and owner approval:
+
+```sh
+source ~/.config/photosbyelie/etsy-env.sh
+npm run etsy:outlet -- --campaign <campaign-id> \
+  --taxonomy-id <id> \
+  --shipping-profile-id <id> \
+  --readiness-state-id <id> \
+  --create-drafts \
+  --confirm-create-drafts
+```
+
+The script does not publish active listings. It creates review packages by default and, when explicitly confirmed, creates Etsy drafts only.

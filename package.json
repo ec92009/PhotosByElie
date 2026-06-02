@@ -18,6 +18,7 @@
     "social:threads-oauth": "node scripts/threads_oauth.mjs",
     "etsy:api-check": "node scripts/etsy_api_check.mjs",
     "etsy:collect-keys": "bash scripts/etsy_collect_keys.sh",
+    "etsy:outlet": "node scripts/etsy_outlet.mjs",
     "etsy:oauth": "node scripts/etsy_oauth.mjs"
   },
   "dependencies": {

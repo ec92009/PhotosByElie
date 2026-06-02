@@ -1,6 +1,6 @@
 # Photos By Elie Backlog
 
-Last updated: 2026-05-29
+Last updated: 2026-06-02
 
 ## Current Facts
 
@@ -30,6 +30,7 @@ Last updated: 2026-05-29
 - Live Checkout card statement descriptor suffix is `DOWNLOAD`, producing `PHOTOSELIE* DOWNLOAD` with the current Stripe descriptor prefix.
 - Live Cloudflare secrets `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are installed outside git; secret values must never be committed or written into docs.
 - Live checkout proof succeeded with order `PBE-20260522-BA062E956C`: `$8.00` paid, `$7.47` incoming after Stripe fees, Worker order `ready`, and one private JPEG download verified.
+- Etsy API access is approved and proven. OAuth credentials/tokens are stored outside git, `/application/users/me` returned user `317360226` and shop `42422777`, and Etsy approved the shop rename to `PhotosByElieShop` on 2026-06-02. Public shop URL: `https://www.etsy.com/shop/PhotosByElieShop`. Current active Etsy listing count is `0`.
 - `v83.3` publishes the camera-tripod mark as the public favicon/topbar logo, adds buyer trust notes to basket/order, and adds `support.html` for payment, delivery, recovery, license, and support expectations.
 - `v83.4` promotes the first Facebook Page feature in the homepage Featured section alongside Pinterest features.
 - `v83.6` adds localhost-only POD supplier readiness, quality-tier routing, supplier option, and catalog schema preview panels in Owner Commerce while keeping public print checkout gated off.
@@ -129,7 +130,8 @@ Last updated: 2026-05-29
 
 6. **Bring Etsy listing publishing online.**
    - Etsy approved the `photosbyelie-listing-publisher` API integration on 2026-06-01.
-   - Store the Etsy keystring/shared secret outside git, run `npm run etsy:oauth -- --auth-url`, exchange the callback code, and prove access with `npm run etsy:api-check -- --me`.
+   - Etsy approved the shop-name change to `PhotosByElieShop` on 2026-06-02, and the API shop record now reports shop `42422777` at `https://www.etsy.com/shop/PhotosByElieShop` with `0` active listings.
+   - Keep the Etsy keystring/shared secret and OAuth tokens outside git; local OAuth and API smoke checks are already proven.
    - Build the first listing-publisher pass as dry-run/draft payload generation from public catalog data, campaign/gallery URLs, and watermarked public previews only.
 
 7. **Finish source re-export de-duplication and cleanup.**

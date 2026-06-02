@@ -144,66 +144,78 @@ window.photosByElieHomeData = {
     "title": "Spain",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "spain-gallery",
-    "count": 1024,
+    "count": 1353,
     "href": "./gallery.html?gallery=spain",
     "photos": [
       {
-        "id": "d5h-2938-cc0cb9487b",
-        "title": "D5H 2938",
+        "id": "img-4262-db4ac66ace",
+        "title": "IMG 4262",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
-          "type": "photo",
+          "type": "video",
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/d5h-2938-cc0cb9487b_900.jpg",
-            "detailKey": "expo/d5h-2938-cc0cb9487b_1800.jpg"
+            "galleryKey": "expo/img-4262-db4ac66ace_900.jpg",
+            "detailKey": "expo/img-4262-db4ac66ace_short_5s_720p.mp4"
+          },
+          "video": {
+            "duration": 10.28
           }
         }
       },
       {
-        "id": "d5h-2933-5320e9f76b",
-        "title": "D5H 2933",
+        "id": "img-4252-fb5affa055",
+        "title": "IMG 4252",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
-          "type": "photo",
+          "type": "video",
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/d5h-2933-5320e9f76b_900.jpg",
-            "detailKey": "expo/d5h-2933-5320e9f76b_1800.jpg"
+            "galleryKey": "expo/img-4252-fb5affa055_900.jpg",
+            "detailKey": "expo/img-4252-fb5affa055_short_5s_720p.mp4"
+          },
+          "video": {
+            "duration": 14.48
           }
         }
       },
       {
-        "id": "d5h-2924-7782398889",
-        "title": "D5H 2924",
+        "id": "img-4427-43836cc1a4",
+        "title": "IMG 4427",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
-          "type": "photo",
+          "type": "video",
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/d5h-2924-7782398889_900.jpg",
-            "detailKey": "expo/d5h-2924-7782398889_1800.jpg"
+            "galleryKey": "expo/img-4427-43836cc1a4_900.jpg",
+            "detailKey": "expo/img-4427-43836cc1a4_short_5s_720p.mp4"
+          },
+          "video": {
+            "duration": 71.0
           }
         }
       },
       {
-        "id": "d5h-2923-5cdb3a529c",
-        "title": "D5H 2923",
+        "id": "img-4426-cc6955784a",
+        "title": "IMG 4426",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
-          "type": "photo",
+          "type": "video",
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/d5h-2923-5cdb3a529c_900.jpg",
-            "detailKey": "expo/d5h-2923-5cdb3a529c_1800.jpg"
+            "galleryKey": "expo/img-4426-cc6955784a_900.jpg",
+            "detailKey": "expo/img-4426-cc6955784a_short_5s_720p.mp4"
+          },
+          "video": {
+            "duration": 32.0
           }
         }
       }
@@ -214,36 +226,78 @@ window.photosByElieHomeData = {
     "title": "Mexico",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "mexico-gallery",
-    "count": 2,
+    "count": 94,
     "href": "./gallery.html?gallery=mexico",
     "photos": [
       {
-        "id": "20191207-1718-19516-5bc74a12ce",
-        "title": "Puerto Vallarta, Mexico, view from the Icon Towers",
+        "id": "img-5004-4c99461c7b",
+        "title": "IMG 5004",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
-          "type": "photo",
+          "type": "video",
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20191207-1718-19516-5bc74a12ce_900.jpg",
-            "detailKey": "expo/20191207-1718-19516-5bc74a12ce_1800.jpg"
+            "galleryKey": "expo/img-5004-4c99461c7b_900.jpg",
+            "detailKey": "expo/img-5004-4c99461c7b_short_5s_720p.mp4"
+          },
+          "video": {
+            "duration": 10.34
           }
         }
       },
       {
-        "id": "20191206-0605-17192-85701a04f9",
-        "title": "Puerto Vallarta, Mexico, view from the Icon Towers",
+        "id": "img-5003-72983569b8",
+        "title": "IMG 5003",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
-          "type": "photo",
+          "type": "video",
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20191206-0605-17192-85701a04f9_900.jpg",
-            "detailKey": "expo/20191206-0605-17192-85701a04f9_1800.jpg"
+            "galleryKey": "expo/img-5003-72983569b8_900.jpg",
+            "detailKey": "expo/img-5003-72983569b8_short_5s_720p.mp4"
+          },
+          "video": {
+            "duration": 22.49
+          }
+        }
+      },
+      {
+        "id": "img-5002-43826fddb7",
+        "title": "IMG 5002",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "media": {
+          "type": "video",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-5002-43826fddb7_900.jpg",
+            "detailKey": "expo/img-5002-43826fddb7_short_5s_720p.mp4"
+          },
+          "video": {
+            "duration": 13.74
+          }
+        }
+      },
+      {
+        "id": "img-4997-44829b8b53",
+        "title": "IMG 4997",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "media": {
+          "type": "video",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-4997-44829b8b53_900.jpg",
+            "detailKey": "expo/img-4997-44829b8b53_short_5s_720p.mp4"
+          },
+          "video": {
+            "duration": 13.18
           }
         }
       }
@@ -327,7 +381,7 @@ window.photosByElieHomeData = {
     "title": "Italy",
     "description": "Saturn and Apple Photos archive selections prepared from Italian sources.",
     "accent": "italy-gallery",
-    "count": 33,
+    "count": 35,
     "href": "./gallery.html?gallery=italy",
     "photos": [
       {

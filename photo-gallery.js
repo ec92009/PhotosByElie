@@ -78,6 +78,29 @@ const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (char) => 
   "\"": "&quot;",
   "'": "&#39;"
 }[char]));
+
+const dateLocale = () => {
+  const language = window.photosByElieI18n?.language?.() || document.documentElement.lang || navigator.language || "en";
+  if (language === "es") return "es-ES";
+  if (language === "fr") return "fr-FR";
+  return "en-GB";
+};
+
+const formatGalleryDate = (value) => {
+  const normalized = photoFilter.dateFilterValue(value);
+  if (!normalized) return t("gallery.any_date");
+  const date = new Date(`${normalized}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return t("gallery.any_date");
+  const parts = new Intl.DateTimeFormat(dateLocale(), {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).formatToParts(date).reduce((result, part) => {
+    if (part.type !== "literal") result[part.type] = part.value;
+    return result;
+  }, {});
+  return [parts.day, parts.month, parts.year].filter(Boolean).join(" ");
+};
 const renderSharedPhotoCard = (options) => window.photosByElieGalleryCard?.renderPhotoCard?.(options) || "";
 const t = (key, replacements = {}) => window.photosByElieI18n?.t?.(key, replacements) || key;
 const localizedCollectionTitle = () => {
@@ -259,6 +282,9 @@ const syncFilterControls = () => {
     const key = control.dataset.galleryFilter;
     control.value = filterState[key] || (control instanceof HTMLSelectElement ? "all" : "");
   });
+  filterBar.querySelectorAll("[data-gallery-date-display]").forEach((display) => {
+    display.textContent = formatGalleryDate(filterState[display.dataset.galleryDateDisplay]);
+  });
   photoFilter.syncAdaptiveControls({
     root: filterBar,
     state: filterState,
@@ -288,8 +314,8 @@ const ensureGalleryFilterControls = () => {
   filterBar.setAttribute("aria-label", t("a11y.gallery_filters"));
   filterBar.innerHTML = `
     <label class="gallery-search-label"><span data-i18n="gallery.search">Search</span><input type="search" data-gallery-search placeholder="${escapeHtml(t("gallery.search_placeholder"))}"/></label>
-    <label><span data-i18n="gallery.date_from">Date from</span><input type="date" data-gallery-filter="dateFrom"/></label>
-    <label><span data-i18n="gallery.date_to">Date to</span><input type="date" data-gallery-filter="dateTo"/></label>
+    <label class="gallery-date-label"><span data-i18n="gallery.date_from">Date from</span><span class="gallery-date-control"><span class="gallery-date-display" data-gallery-date-display="dateFrom" aria-hidden="true"></span><input class="gallery-date-native" type="date" data-gallery-filter="dateFrom" aria-label="${escapeHtml(t("gallery.date_from"))}"/></span></label>
+    <label class="gallery-date-label"><span data-i18n="gallery.date_to">Date to</span><span class="gallery-date-control"><span class="gallery-date-display" data-gallery-date-display="dateTo" aria-hidden="true"></span><input class="gallery-date-native" type="date" data-gallery-filter="dateTo" aria-label="${escapeHtml(t("gallery.date_to"))}"/></span></label>
     <label><span data-i18n="gallery.media">Media</span><select data-gallery-filter="mediaType">
       <option value="all" data-i18n="gallery.all_media">All media</option>
       <option value="photo" data-i18n="gallery.photos">Photos</option>

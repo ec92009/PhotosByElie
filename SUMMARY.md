@@ -6,7 +6,7 @@ Date: 2026-06-02
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Branch: `main`
-- Current visible build: `v94.2`
+- Current visible build: `v94.5`
 - Local Owner page: use the Dock launcher or the active helper port near 8000; current working preview is `http://localhost:8000/owner.html?v=88.2`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
@@ -28,6 +28,7 @@ Date: 2026-06-02
 - Etsy approved the `photosbyelie-listing-publisher` API integration on 2026-06-01 at 20:54 UTC. The Etsy setup path now has a first-party callback page, local PKCE OAuth helper, redacted token-status/refresh support, and API smoke-check script. OAuth/API smoke checks are proven locally, and Etsy approved the shop rename to `PhotosByElieShop` on 2026-06-02. The API shop record reports shop `42422777`, URL `https://www.etsy.com/shop/PhotosByElieShop`, and `0` active listings. Etsy keystring, shared secret, and OAuth tokens must stay outside git under local environment/config only.
 - Live Stripe checkout proof is complete: order `PBE-20260522-BA062E956C` charged `$8.00`, Stripe showed `$7.47` incoming after fees, the Worker marked the order `ready`, and a private R2 JPEG download returned `401,035` bytes with a valid JPEG header.
 - `v83.3` publishes the camera-tripod mark as the public favicon/topbar logo, adds buyer trust notes to basket/order, and adds `support.html` for payment, delivery recovery, license, refund-expectation, and support notes.
+- `v94.5` restores the original public digital-download ladder after proof-flow testing: camera `$8 / $16 / $28 / $65` and AI `$4 / $8 / $14 / $25` for JPG 1 MP, JPG 3 MP, JPG 6 MP, and full resolution.
 - `v83.4` promotes the first Photos By Elie Facebook Page post in the homepage Featured section alongside Pinterest features.
 - `v83.6` adds localhost-only POD supplier readiness, quality-tier routing, supplier option, and schema preview panels in Owner Commerce; public print checkout remains gated off.
 - `v83.7` lets the Owner import flow choose a local source folder instead of depending only on fixed source anchors.

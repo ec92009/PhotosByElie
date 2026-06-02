@@ -24,7 +24,7 @@ for remote execution.
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Local owner preview: `python3 scripts/local_server.py 8000`
-- Current visible build: `v94.2`
+- Current visible build: `v94.5`
 - Social/Pinterest/Threads destinations should point to first-party campaign mini-collections or a fresh homepage latest-social shelf whenever practical, so buyers can browse related photos and escape embedded browsers before checkout/download. Broad gallery URLs remain acceptable fallbacks only when a campaign/homepage change is unnecessary or unsafe.
 - Etsy approved the `photosbyelie-listing-publisher` API integration by email on 2026-06-01 at 20:54 UTC. OAuth and API smoke checks are proven locally with credentials/tokens stored outside git. Etsy approved the shop rename to `PhotosByElieShop` on 2026-06-02; the API shop record reports shop `42422777`, public URL `https://www.etsy.com/shop/PhotosByElieShop`, and `0` active listings. The next Etsy step is draft/dry-run listing payload generation from public catalog data and watermarked public previews only.
 - Recent baseline commits include: `8193a5ee photosbyelie: record social browser checks`, `cc886957 photosbyelie: prepare 2026-05-27 social packages`, `2bae81d4 photosbyelie: simplify pinned collections shelf`, and the new `v88.2` Real Estate saved-selection shelf pass.
@@ -44,7 +44,7 @@ for remote execution.
 - Public buyer delivery uses per-file private R2 download tokens. Local mock delivery can still generate flat ZIPs for test convenience.
 - Uploaded masters, private render triplets, and public previews are treated as immutable after upload. Owner title/keyword/country edits update manifests/catalog SQLite/bootstrap files only; a future Lightroom-style XMP sidecar save should be an explicit Owner maintenance action.
 - Physical print/frame products are buyer-hidden by default. Owner can deliberately enable them on localhost for review, but digital checkout should be proven first.
-- Owner has local price editing. Published digital checkout defaults now use $0.10 for JPG 1 MP and $0.30 for JPG 3 MP, with the buyer Pay section and Worker adding a Stripe $0.50 minimum-charge top-up only when needed.
+- Owner has local price editing. Published digital checkout defaults now use the restored original ladder: camera JPG 1 MP `$8`, JPG 3 MP `$16`, JPG 6 MP `$28`, full resolution `$65`; AI JPG 1 MP `$4`, JPG 3 MP `$8`, JPG 6 MP `$14`, full resolution `$25`. The buyer Pay section and Worker still include Stripe minimum-charge protection, though current public prices are above that floor.
 - Camera vs AI is now a first-class catalog origin (`sourceOrigin`) used by public gallery filters, detail metadata, Owner active-catalog counts, and Worker checkout pricing. Do not rely only on the `ai` collection slug for AI-origin behavior.
 - Public pages use English/French/Spanish translation. Owner-only localhost pages remain English-only by design.
 - Waste Basket review now uses the shared gallery-card treatment and the same density/fit masonry behavior as public galleries.
@@ -60,6 +60,7 @@ for remote execution.
 - `v83.0` publishes Owner-approved title/keyword metadata into the buyer-facing SQLite catalog and Worker catalog, and refreshes the keyword blacklist compatibility export.
 - `v83.1` saves rejected title/keyword review comments with the rejected proposal title and keywords attached for the next AI rework rung.
 - `v83.2` lowers JPG 1 MP and 3 MP checkout tiers to $0.10 and $0.30, formats buyer pricing in cents, adds the Stripe $0.50 minimum-charge top-up, and adds a Dock launcher for localhost Owner.
+- `v94.5` restores the original public digital-download ladder after proof-flow testing: camera `$8 / $16 / $28 / $65` and AI `$4 / $8 / $14 / $25` for JPG 1 MP, JPG 3 MP, JPG 6 MP, and full resolution.
 - `v83.3` publishes the camera-tripod mark as the public favicon/topbar logo, adds buyer trust notes to basket/order, and adds `support.html` for payment, delivery recovery, license, and support expectations.
 - `v83.4` promotes the first Photos By Elie Facebook Page post alongside Pinterest features on the homepage.
 - `v83.6` adds localhost-only POD supplier readiness, quality-tier routing, supplier option, and catalog schema preview panels in Owner Commerce while keeping public print checkout gated off.

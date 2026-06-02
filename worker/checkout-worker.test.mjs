@@ -169,12 +169,12 @@ test("guest checkout creates a pending order and mock Stripe session", async () 
   assert.match(body.order.id, /^PBE-20260507-/);
   assert.equal(body.order.status, "pending_payment");
   assert.equal(body.order.currency, "usd");
-  assert.equal(body.order.amountExpected, 6530);
+  assert.equal(body.order.amountExpected, 8100);
   assert.equal(body.order.items[0].products.length, 2);
   assert.match(body.checkout.url, /^https:\/\/mock\.stripe\.local\/checkout\/cs_mock_/);
 });
 
-test("guest checkout tops up orders below the Stripe minimum charge", async () => {
+test("guest checkout uses restored 1 MP price without a minimum-charge top-up", async () => {
   const catalog = loadCatalog();
   const { worker, stripe } = testWorker();
   const photoId = firstDeliverablePhotoId(catalog);
@@ -186,14 +186,12 @@ test("guest checkout tops up orders below the Stripe minimum charge", async () =
   assert.equal(response.status, 201);
 
   const body = await response.json();
-  assert.equal(body.order.subtotalAmount, 10);
-  assert.equal(body.order.minimumChargeAdjustment, 40);
-  assert.equal(body.order.amountExpected, 50);
+  assert.equal(body.order.subtotalAmount, 800);
+  assert.equal(body.order.minimumChargeAdjustment, 0);
+  assert.equal(body.order.amountExpected, 800);
   const session = stripe._debug.sessions.get(body.checkout.sessionId);
-  assert.equal(session.amount_total, 50);
-  assert.equal(session.line_items.length, 2);
-  assert.equal(session.line_items[1].photoId, "minimum-charge-adjustment");
-  assert.equal(session.line_items[1].unit_amount, 40);
+  assert.equal(session.amount_total, 800);
+  assert.equal(session.line_items.length, 1);
 });
 
 test("AI collection digital products use the AI price tier", async () => {

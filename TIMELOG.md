@@ -172,8 +172,9 @@ Clock state: running
 | 2026-06-02 | 12:29 CEST | 13:13 CEST | 0:14 | Cleaned the git fast-forward blocker, preserved dirty state in stashes, restarted the local Owner server, and monitored the browser-started 2023 Expo import through successful commit; long import waiting excluded. |
 | 2026-06-02 | 22:23 CEST | 22:28 CEST | 0:05 | Checked latest Etsy email/API state and updated project notes after shop-name approval; secret values excluded. |
 | 2026-06-02 | 22:29 CEST | 22:38 CEST | 0:09 | Added and tested the Etsy outlet package generator, produced the Sevilla review package, and pushed the workflow update. |
+| 2026-06-02 | 23:18 CEST | 23:28 CEST | 0:10 | Restored original digital pricing on the public site, regenerated catalog/Worker artifacts, and validated checkout expectations. |
 
 ## Totals
 
-Active collaboration time used: 11:43
+Active collaboration time used: 11:53
 Remaining budget: not set

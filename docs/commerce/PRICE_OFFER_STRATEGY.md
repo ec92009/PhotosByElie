@@ -4,7 +4,7 @@ Last updated: 2026-05-22
 
 ## Status
 
-This is the launch strategy draft for owner approval. It does not change live prices by itself.
+This strategy was approved for restoring the original digital ladder on 2026-06-02. The main site now uses the original public digital-download prices again after the proof-flow cents pricing test.
 
 Current published prices are stored in `assets/catalog/product-pricing.json`, materialized into `assets/catalog/photosbyelie.sqlite`, exposed to the public basket by `photos-data.js`, and exported to the deployed Worker catalog through `worker/photos-catalog.generated.mjs`.
 
@@ -25,12 +25,12 @@ Default license language should stay conservative:
 
 ## Recommended Launch Prices
 
-These are the proposed public launch prices, not yet deployed.
+These are the restored public launch prices.
 
 | Product | Camera photo | AI image | Notes |
 | --- | ---: | ---: | --- |
-| JPG 1 MP | $3 | $2 | Small web/social download. Keeps Stripe fees from dominating a real sale. |
-| JPG 3 MP | $8 | $5 | Main casual buyer product for web, listing, and editorial use. |
+| JPG 1 MP | $8 | $4 | Small web/social download. Restored original public price. |
+| JPG 3 MP | $16 | $8 | Main casual buyer product for web, listing, and editorial use. Restored original public price. |
 | JPG 6 MP | $28 | $14 | Preserve the current premium camera tier; AI stays lower. |
 | Full resolution | $65 | $25 | Preserve current full-resolution values until market data says otherwise. |
 
@@ -42,7 +42,7 @@ Video:
 | Original video 1-3 min | $35 | Raise once video checkout gets real buyer interest. |
 | Original video 3+ min | $50 | Treat long clips as a premium/manual-support item. |
 
-The current `$0.10` and `$0.30` low tiers are useful for proof-of-flow testing and very small promotion experiments, but they should not be the default public launch posture unless the owner explicitly wants ultra-low-friction discovery pricing.
+The temporary `$0.10` and `$0.30` low tiers were useful for proof-of-flow testing and very small promotion experiments, but they are no longer the public launch posture.
 
 ## Local POD Preview
 
@@ -96,7 +96,7 @@ Keep support language buyer-friendly but operationally safe:
 
 ## Implementation Checklist
 
-When the owner approves the launch ladder:
+When changing the launch ladder again:
 
 1. Update `assets/catalog/product-pricing.json`.
 2. Regenerate public catalog artifacts and Worker catalog.
@@ -109,7 +109,7 @@ When the owner approves the launch ladder:
 
 ## Open Owner Decisions
 
-- Approve or revise the proposed `$3 / $8 / $28 / $65` camera ladder.
+- Monitor whether the restored `$8 / $16 / $28 / $65` camera ladder fits Etsy and direct-site buyer behavior.
 - Decide whether AI images should stay meaningfully cheaper than camera photos.
 - Decide whether full-resolution sales need an explicit commercial-use prompt before checkout.
 - Approve or revise the local POD starter sizes, quality-tier names, supplier route per tier, and margin before samples are ordered.

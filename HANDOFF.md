@@ -24,8 +24,9 @@ for remote execution.
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Local owner preview: `python3 scripts/local_server.py 8000`
-- Current visible build: `v90.13`
+- Current visible build: `v94.2`
 - Social/Pinterest/Threads destinations should point to first-party campaign mini-collections or a fresh homepage latest-social shelf whenever practical, so buyers can browse related photos and escape embedded browsers before checkout/download. Broad gallery URLs remain acceptable fallbacks only when a campaign/homepage change is unnecessary or unsafe.
+- Etsy approved the `photosbyelie-listing-publisher` API integration by email on 2026-06-01 at 20:54 UTC. The repo now has `etsy-callback.html`, `scripts/etsy_oauth.mjs`, `scripts/etsy_api_check.mjs`, and `docs/sops/ETSY_API_SOP.md`; the next step is storing the app keystring/shared secret outside git, running OAuth, and proving `/application/users/me` before building draft listing payloads.
 - Recent baseline commits include: `8193a5ee photosbyelie: record social browser checks`, `cc886957 photosbyelie: prepare 2026-05-27 social packages`, `2bae81d4 photosbyelie: simplify pinned collections shelf`, and the new `v88.2` Real Estate saved-selection shelf pass.
 - Current business direction: focus on turning the site into a selling machine. Payments, delivery trust, buyer offer clarity, pricing, curation, analytics, SEO, landing pages, and launch outreach now lead the backlog.
 - Public Expo catalog: `6,672` publishable media rows after the Pisa phone-export restore: AI/Leonardo `4,921`, France `315`, Italy `33`, Mexico `2`, Portugal `216`, Slovakia `2`, Spain `1,024`, USA `159`. Compared with the earlier `6,016`-row checkpoint at `736fe76b`, the catalog is `+656` rows overall; Italy was restored from `0` to `25` by adding Florence/Firenze, Pisa, San Gimignano, and Tuscany country hints, then the ten older `2024 Pisa/Pisa, 12 May 2025` phone-export rows were restored under their original IDs. Two recently blocked Italy rows are excluded from the active count.

@@ -15,7 +15,9 @@
     "social:meta-api": "node scripts/meta_api_publish.mjs",
     "social:meta-oauth": "node scripts/meta_oauth.mjs",
     "social:threads-api": "node scripts/threads_api_publish.mjs",
-    "social:threads-oauth": "node scripts/threads_oauth.mjs"
+    "social:threads-oauth": "node scripts/threads_oauth.mjs",
+    "etsy:api-check": "node scripts/etsy_api_check.mjs",
+    "etsy:oauth": "node scripts/etsy_oauth.mjs"
   },
   "dependencies": {
     "jpeg-js": "^0.4.4"

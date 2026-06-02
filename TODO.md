@@ -4,7 +4,7 @@ Last updated: 2026-05-29
 
 ## Current Facts
 
-- Current visible build: `v90.13`.
+- Current visible build: `v94.2`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`.
 - Local Owner page: use the Dock launcher or the active helper port near 8000, currently `http://localhost:8000/owner.html?v=90.13`.
 - Public slideshow music app: `https://ec92009.github.io/PhotosByElie/slideshow-music.html?v=90.13`.
@@ -91,7 +91,7 @@ Last updated: 2026-05-29
 - `v90.13` removes the property-name prefix from default Real Estate photo titles, strips older prefixed defaults in the viewer/output path, makes the Real Estate fixed header match the page panel opacity more closely, and limits the desktop bottom action bar to actions that apply to the current wizard step.
 - Price and offer strategy draft: `docs/commerce/PRICE_OFFER_STRATEGY.md`; no live price change has been made from that draft yet.
 - First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
-- Latest checkpoint is `v90.13`; this file remains the numbered backlog source of truth.
+- Latest checkpoint is `v94.2`; this file remains the numbered backlog source of truth.
 - New import/re-export rule requested by Owner: the durable import anchor should be the full source pathname plus the source modified date. If only the modified date changes for the same source path, the new render should overwrite the older stored forms instead of creating a duplicate media row.
 - Italy audit detail: the 25 first restored rows came from `2025 Florence`, `2025 San Gimignano`, and `2025 Pisa`. The 10 Italy rows from the older phone-export folder `Pisa, 12 May 2025` were restored in `v86.10` using their original `2024 Pisa/Pisa, 12 May 2025` relative paths and IDs. The broader same-path overwrite/de-dupe work remains open because arbitrary selected-root imports can still derive duplicate IDs.
 - Current source-path tombstone audit found `0` manifest dodgers and `0` current R2 dodgers from `4,699` discarded IDs and `301` recovered discarded source paths. Current Camera eligibility audit found `10` ineligible raw import-cache rows and `0` current R2 objects after cleanup.
@@ -127,55 +127,60 @@ Last updated: 2026-05-29
    - Keep Pinterest exactly five images; keep Facebook/Instagram at 5-10; derive Threads 3-4 image variants from Instagram when useful.
    - Record published URLs or explicit manual blockers in each package.
 
-6. **Finish source re-export de-duplication and cleanup.**
+6. **Bring Etsy listing publishing online.**
+   - Etsy approved the `photosbyelie-listing-publisher` API integration on 2026-06-01.
+   - Store the Etsy keystring/shared secret outside git, run `npm run etsy:oauth -- --auth-url`, exchange the callback code, and prove access with `npm run etsy:api-check -- --me`.
+   - Build the first listing-publisher pass as dry-run/draft payload generation from public catalog data, campaign/gallery URLs, and watermarked public previews only.
+
+7. **Finish source re-export de-duplication and cleanup.**
    - Use full source pathname plus modified date as the import anchor.
    - Same-path newer exports should overwrite previous generated masters, public previews, and private JPG triplets instead of creating duplicates.
    - Audit duplicate candidates and prepare a reversible cleanup before deleting anything.
 
-7. **Add import source history management.**
+8. **Add import source history management.**
    - Let Owner remove missing or stale remembered folders, pin favorites, and inspect last-used path/time before starting a run.
    - Include a one-time review of legacy entries saved before `v83.24`.
    - Keep `Owner.sqlite` authoritative; do not add another JSON state source.
 
-8. **Preflight import dependencies before photo work starts.**
+9. **Preflight import dependencies before photo work starts.**
    - Check Pillow, `exiftool`, `ffmpeg`/`ffprobe`, R2 upload configuration, and source readability before queuing photos.
    - Surface one actionable Owner status instead of per-photo failure storms.
 
-9. **Review buyer support, refund, and license wording.**
+10. **Review buyer support, refund, and license wording.**
    - Use `docs/commerce/PRICE_OFFER_STRATEGY.md` as the current policy draft.
    - Keep Stripe receipts as payment records and PhotosByElie order/support pages as delivery/recovery records.
 
-10. **Approve and deploy the real price and offer strategy.**
+11. **Approve and deploy the real price and offer strategy.**
    - Review the proposed camera and AI price ladders.
    - After approval, update pricing, regenerate catalog/Worker artifacts, bump the visible version, deploy the Worker, and run one low-value live proof purchase.
 
-11. **Curate the first sellable storefront.**
+12. **Curate the first sellable storefront.**
    - Apply strong title/keyword approvals, block unsellable rows, pick featured collections, and put the strongest commercial/travel/editorial sets first.
 
-12. **Add conversion analytics.**
+13. **Add conversion analytics.**
    - Track privacy-conscious browsing, basket, checkout, payment, and download events while excluding localhost Owner activity.
 
-13. **Improve public discovery and SEO.**
+14. **Improve public discovery and SEO.**
    - Add fuzzy search, richer metadata, Open Graph images, canonical URLs, structured data, and per-campaign/per-gallery metadata without Owner-only details.
 
-14. **Owner decision pass for the current title/keyword queue.**
+15. **Owner decision pass for the current title/keyword queue.**
    - Open `owner-review.html?view=title-keywords` locally and review the active proposed rows, starting with batch `2026-05-24-000237-818Z`.
    - Resolve rejected and parked rows before the next large generator pass.
 
-15. **Verify Owner-private artifact separation after deploy.**
+16. **Verify Owner-private artifact separation after deploy.**
    - Confirm GitHub Pages does not serve private Owner review JSON or secrets.
    - Keep `Owner.sqlite` as durable state and treat review JSON as compatibility/audit output.
 
-16. **Run the next title/keyword generator pass after review.**
+17. **Run the next title/keyword generator pass after review.**
    - Use the improved keyword floor, larger subprocess buffer, and batch-summary preservation.
    - Compare misses and context-needed counts against `2026-05-24-000237-818Z`.
 
-17. **Harden hidden/discarded lifecycle.**
+18. **Harden hidden/discarded lifecycle.**
    - Make H/X, undo, Waste Basket, discard, R2 public wipe, and catalog rebuilds share one durable state flow.
    - Avoid publishing partial hidden/discarded state.
 
-18. **Replace temporary `r2.dev` preview URLs with a custom media domain.**
+19. **Replace temporary `r2.dev` preview URLs with a custom media domain.**
    - Attach a media domain, update `media-config.js`, and retest public and Real Estate preview loading.
 
-19. **Keep repo and media cleanup deliberate.**
+20. **Keep repo and media cleanup deliberate.**
    - Do not use GitHub as a media vault. Keep root HTML while GitHub Pages serves from repo root.

@@ -1,12 +1,12 @@
 # Conversation Summary
 
-Date: 2026-05-27
+Date: 2026-06-02
 
 ## Current State
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Branch: `main`
-- Current visible build: `v93.2`
+- Current visible build: `v94.2`
 - Local Owner page: use the Dock launcher or the active helper port near 8000; current working preview is `http://localhost:8000/owner.html?v=88.2`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
@@ -25,6 +25,7 @@ Date: 2026-05-27
 - Live Checkout card statement descriptor suffix is `DOWNLOAD`, producing `PHOTOSELIE* DOWNLOAD` with the current Stripe descriptor prefix.
 - Live Stripe webhook destination is created for `checkout.session.completed`: destination ID `we_1TZmoVPuO9o6fOp6JkBENiyV`, display name `PhotosByElie Worker checkout`, endpoint `https://photosbyelie-checkout-mock.ec92009.workers.dev/stripe-webhook`, API version `2026-04-22.dahlia`.
 - Live Cloudflare secrets `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are installed outside git. Secret values are not committed or written into docs.
+- Etsy approved the `photosbyelie-listing-publisher` API integration on 2026-06-01 at 20:54 UTC. The Etsy setup path now has a first-party callback page, local PKCE OAuth helper, redacted token-status/refresh support, and API smoke-check script. Etsy keystring, shared secret, and OAuth tokens must stay outside git under local environment/config only.
 - Live Stripe checkout proof is complete: order `PBE-20260522-BA062E956C` charged `$8.00`, Stripe showed `$7.47` incoming after fees, the Worker marked the order `ready`, and a private R2 JPEG download returned `401,035` bytes with a valid JPEG header.
 - `v83.3` publishes the camera-tripod mark as the public favicon/topbar logo, adds buyer trust notes to basket/order, and adds `support.html` for payment, delivery recovery, license, refund-expectation, and support notes.
 - `v83.4` promotes the first Photos By Elie Facebook Page post in the homepage Featured section alongside Pinterest features.

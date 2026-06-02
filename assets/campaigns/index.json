@@ -1,17 +1,17 @@
 {
   "format": "photosbyelie-campaign-index",
   "schema_version": 1,
-  "generated_at": "2026-06-02T06:14:37.246Z",
-  "campaign_count": 29,
+  "generated_at": "2026-06-02T21:49:04.160Z",
+  "campaign_count": 30,
   "campaigns": [
     {
-      "id": "facebook-evening-in-sevilla-street-light-2026-06-02",
-      "source": "Facebook",
-      "title": "Evening in Sevilla Street Light",
+      "id": "etsy-sevilla-after-dusk-wall-art-2026-06-02",
+      "source": "Etsy",
+      "title": "Sevilla After Dusk Wall Art",
       "description": "A focused Photos By Elie set from Sevilla at dusk, selected for warm street light, facade color, tiled rhythm, and finished Spanish travel wall-art atmosphere.",
       "date": "2026-06-02",
-      "href": "./campaign.html?c=facebook-evening-in-sevilla-street-light-2026-06-02",
-      "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=facebook-evening-in-sevilla-street-light-2026-06-02",
+      "href": "./campaign.html?c=etsy-sevilla-after-dusk-wall-art-2026-06-02",
+      "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=etsy-sevilla-after-dusk-wall-art-2026-06-02",
       "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5332-d278e7abcc_900.jpg",
       "imageAlt": "IMG 5332",
       "previewImageUrls": [
@@ -26,7 +26,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780380865438
+      "mtimeMs": 1780436931972
     },
     {
       "id": "instagram-nerja-mediterranean-terraces-2026-06-02",
@@ -50,7 +50,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780380865438
+      "mtimeMs": 1780396524144
     },
     {
       "id": "pinterest-solana-beach-sunset-layers-2026-06-02",
@@ -71,7 +71,31 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780380865438
+      "mtimeMs": 1780396524144
+    },
+    {
+      "id": "facebook-evening-in-sevilla-street-light-2026-06-02",
+      "source": "Facebook",
+      "title": "Evening in Sevilla Street Light",
+      "description": "A focused Photos By Elie set from Sevilla at dusk, selected for warm street light, facade color, tiled rhythm, and finished Spanish travel wall-art atmosphere.",
+      "date": "2026-06-02",
+      "href": "./campaign.html?c=facebook-evening-in-sevilla-street-light-2026-06-02",
+      "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=facebook-evening-in-sevilla-street-light-2026-06-02",
+      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5332-d278e7abcc_900.jpg",
+      "imageAlt": "IMG 5332",
+      "previewImageUrls": [
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5332-d278e7abcc_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5327-d0205aa8c7_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5328-f741903c89_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5330-e00571a87d_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5331-5ba685f86b_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5333-7a4e3e9954_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5341-14ca369425_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5342-fcbde6047f_900.jpg"
+      ],
+      "primaryPhotoCount": 8,
+      "relatedPhotoCount": 6,
+      "mtimeMs": 1780396524143
     },
     {
       "id": "pinterest-belem-river-stone-details-2026-06-01",
@@ -92,7 +116,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780380764616
+      "mtimeMs": 1780283163496
     },
     {
       "id": "instagram-madrid-royal-palace-stone-courtyards-2026-06-01",
@@ -116,7 +140,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780380764614
+      "mtimeMs": 1780283162162
     },
     {
       "id": "facebook-toulouse-cloisters-brick-light-2026-06-01",
@@ -140,7 +164,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780380764608
+      "mtimeMs": 1780283160356
     },
     {
       "id": "pinterest-oceanside-pier-golden-hour-2026-05-31",
@@ -161,7 +185,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780380764619
+      "mtimeMs": 1780196964044
     },
     {
       "id": "instagram-colares-atlantic-cliffs-2026-05-31",
@@ -185,7 +209,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780380764612
+      "mtimeMs": 1780196964043
     },
     {
       "id": "facebook-paris-seine-notre-dame-light-2026-05-31",
@@ -209,7 +233,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780380764606
+      "mtimeMs": 1780196964042
     },
     {
       "id": "pinterest-pisa-marble-and-leaning-tower-2026-05-30",
@@ -230,7 +254,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780380764620
+      "mtimeMs": 1780139721081
     },
     {
       "id": "instagram-lisbon-monastery-stone-and-light-2026-05-30",
@@ -254,7 +278,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780380764613
+      "mtimeMs": 1780139721080
     },
     {
       "id": "facebook-madrid-printing-presses-and-pattern-2026-05-30",
@@ -278,52 +302,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780380764569
-    },
-    {
-      "id": "pinterest-san-diego-aquarium-blue-reef-2026-05-29",
-      "source": "Pinterest",
-      "title": "San Diego Aquarium Blue Reef",
-      "description": "A focused Photos By Elie set from the San Diego aquarium, selected for luminous blue water, coral color, layered reef texture, and quiet aquatic wall-art browsing.",
-      "date": "2026-05-29",
-      "href": "./campaign.html?c=pinterest-san-diego-aquarium-blue-reef-2026-05-29",
-      "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=pinterest-san-diego-aquarium-blue-reef-2026-05-29",
-      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180421-1301-13471-a2bc5324f5_900.jpg",
-      "imageAlt": "San Diego Aquarium",
-      "previewImageUrls": [
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180421-1301-13471-a2bc5324f5_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180421-1301-13630-2e7556e274_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180421-1302-13484-de314daaef_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180421-1302-13327-ede937ff43_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180421-1303-12279-a30f818e53_900.jpg"
-      ],
-      "primaryPhotoCount": 5,
-      "relatedPhotoCount": 6,
-      "mtimeMs": 1780380764621
-    },
-    {
-      "id": "instagram-cascais-atlantic-evening-2026-05-29",
-      "source": "Instagram",
-      "title": "Cascais Atlantic Evening",
-      "description": "A focused Photos By Elie set from Cascais, Portugal, built around blue-hour marina light, patterned pavement, Atlantic boats, evening buildings, and calm coastal atmosphere for travel and wall-art browsing.",
-      "date": "2026-05-29",
-      "href": "./campaign.html?c=instagram-cascais-atlantic-evening-2026-05-29",
-      "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-cascais-atlantic-evening-2026-05-29",
-      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2126-00483-f23ed1e1e2_900.jpg",
-      "imageAlt": "20180517 2126 00483",
-      "previewImageUrls": [
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2126-00483-f23ed1e1e2_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2132-00488-18ec1fa871_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2134-00489-a3c2036451_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2134-00490-dc7a915651_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2135-00491-f90f6d821a_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2135-00492-564b88a104_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2138-00495-cd8355432a_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2236-00501-42b08a2940_900.jpg"
-      ],
-      "primaryPhotoCount": 8,
-      "relatedPhotoCount": 6,
-      "mtimeMs": 1780380764610
+      "mtimeMs": 1780139721080
     },
     {
       "id": "facebook-bilbao-guggenheim-titanium-river-2026-05-29",
@@ -347,7 +326,52 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780380764564
+      "mtimeMs": 1780023967846
+    },
+    {
+      "id": "instagram-cascais-atlantic-evening-2026-05-29",
+      "source": "Instagram",
+      "title": "Cascais Atlantic Evening",
+      "description": "A focused Photos By Elie set from Cascais, Portugal, built around blue-hour marina light, patterned pavement, Atlantic boats, evening buildings, and calm coastal atmosphere for travel and wall-art browsing.",
+      "date": "2026-05-29",
+      "href": "./campaign.html?c=instagram-cascais-atlantic-evening-2026-05-29",
+      "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-cascais-atlantic-evening-2026-05-29",
+      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2126-00483-f23ed1e1e2_900.jpg",
+      "imageAlt": "20180517 2126 00483",
+      "previewImageUrls": [
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2126-00483-f23ed1e1e2_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2132-00488-18ec1fa871_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2134-00489-a3c2036451_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2134-00490-dc7a915651_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2135-00491-f90f6d821a_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2135-00492-564b88a104_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2138-00495-cd8355432a_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2236-00501-42b08a2940_900.jpg"
+      ],
+      "primaryPhotoCount": 8,
+      "relatedPhotoCount": 6,
+      "mtimeMs": 1780023967846
+    },
+    {
+      "id": "pinterest-san-diego-aquarium-blue-reef-2026-05-29",
+      "source": "Pinterest",
+      "title": "San Diego Aquarium Blue Reef",
+      "description": "A focused Photos By Elie set from the San Diego aquarium, selected for luminous blue water, coral color, layered reef texture, and quiet aquatic wall-art browsing.",
+      "date": "2026-05-29",
+      "href": "./campaign.html?c=pinterest-san-diego-aquarium-blue-reef-2026-05-29",
+      "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=pinterest-san-diego-aquarium-blue-reef-2026-05-29",
+      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180421-1301-13471-a2bc5324f5_900.jpg",
+      "imageAlt": "20180421 1301 13471",
+      "previewImageUrls": [
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180421-1301-13471-a2bc5324f5_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180421-1301-13630-2e7556e274_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180421-1302-13484-de314daaef_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180421-1302-13327-ede937ff43_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180421-1303-12279-a30f818e53_900.jpg"
+      ],
+      "primaryPhotoCount": 5,
+      "relatedPhotoCount": 6,
+      "mtimeMs": 1780023967846
     },
     {
       "id": "pinterest-la-jolla-coastal-reserve-2026-05-28",
@@ -368,7 +392,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1780380764618
+      "mtimeMs": 1779937525862
     },
     {
       "id": "instagram-seville-cathedral-stone-and-light-2026-05-28",
@@ -378,14 +402,21 @@
       "date": "2026-05-28",
       "href": "./campaign.html?c=instagram-seville-cathedral-stone-and-light-2026-05-28",
       "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-seville-cathedral-stone-and-light-2026-05-28",
-      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240307-144116-00202-458ddfb0f9_900.jpg",
-      "imageAlt": "Seville Cathedral Stone and Light",
+      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240307-143445-00194-7c53cb988c_900.jpg",
+      "imageAlt": "20240307 143445 00194",
       "previewImageUrls": [
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240307-144116-00202-458ddfb0f9_900.jpg"
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240307-143445-00194-7c53cb988c_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240307-144056-00196-2bb992f935_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240307-144104-00198-33e6b76326_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240307-144107-00199-5a9fcbe82c_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240307-144110-00200-c72445afa9_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240307-144113-00201-1470369a47_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240307-144116-00202-458ddfb0f9_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240307-144118-00203-3e8a805cc4_900.jpg"
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780380764616
+      "mtimeMs": 1779937525859
     },
     {
       "id": "facebook-granada-alhambra-courtyards-2026-05-28",
@@ -396,7 +427,7 @@
       "href": "./campaign.html?c=facebook-granada-alhambra-courtyards-2026-05-28",
       "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=facebook-granada-alhambra-courtyards-2026-05-28",
       "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240517-125943-00129-1c75000b82_900.jpg",
-      "imageAlt": "Granada, Alhambra",
+      "imageAlt": "20240517 125943 00129",
       "previewImageUrls": [
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240517-125943-00129-1c75000b82_900.jpg",
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240517-130520-00148-d77e807b02_900.jpg",
@@ -409,7 +440,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780380764567
+      "mtimeMs": 1779937525856
     },
     {
       "id": "pinterest-gibraltar-rock-and-bay-views-2026-05-27",
@@ -420,7 +451,7 @@
       "href": "./campaign.html?c=pinterest-gibraltar-rock-and-bay-views-2026-05-27",
       "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=pinterest-gibraltar-rock-and-bay-views-2026-05-27",
       "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5668-7d7e86442a_900.jpg",
-      "imageAlt": "Gibraltar",
+      "imageAlt": "IMG 5668",
       "previewImageUrls": [
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5668-7d7e86442a_900.jpg",
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5669-31d9551dd4_900.jpg",
@@ -430,7 +461,55 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780380764618
+      "mtimeMs": 1779893671825
+    },
+    {
+      "id": "instagram-setenil-rock-streets-2026-05-27",
+      "source": "Instagram",
+      "title": "Setenil Rock Streets",
+      "description": "A focused Setenil de las Bodegas set from Spain, built around whitewashed streets, rock overhangs, cliff shade, and compact architectural texture from the public Photos By Elie catalog.",
+      "date": "2026-05-27",
+      "href": "./campaign.html?c=instagram-setenil-rock-streets-2026-05-27",
+      "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-setenil-rock-streets-2026-05-27",
+      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240519-161832-00075-a3c45a1909_900.jpg",
+      "imageAlt": "20240519 161832 00075",
+      "previewImageUrls": [
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240519-161832-00075-a3c45a1909_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2750-21cef8efff_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240519-161834-00076-6d24bc00ed_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2751-dbf9291443_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240519-161836-00077-902556bbc5_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2752-b5f48d4ac7_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240519-161837-00078-3af7f99fbb_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2753-9619e716ed_900.jpg"
+      ],
+      "primaryPhotoCount": 10,
+      "relatedPhotoCount": 6,
+      "mtimeMs": 1779893671821
+    },
+    {
+      "id": "facebook-paris-arts-metiers-mechanical-details-2026-05-27",
+      "source": "Facebook",
+      "title": "Paris Arts et Metiers Mechanical Details",
+      "description": "A focused Photos By Elie set from Paris's Musee des Arts et Metiers, pairing mechanical forms, warm brass, museum stairways, and industrial craft detail for wall-art browsing.",
+      "date": "2026-05-27",
+      "href": "./campaign.html?c=facebook-paris-arts-metiers-mechanical-details-2026-05-27",
+      "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=facebook-paris-arts-metiers-mechanical-details-2026-05-27",
+      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6128-00560b1c58_900.jpg",
+      "imageAlt": "IMG 6128",
+      "previewImageUrls": [
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6128-00560b1c58_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6131-f86603f21c_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6132-fa5e3e6296_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6134-aeb1b0b248_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6135-a8190af791_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6138-a220ea6366_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6140-83d210a31b_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6142-e69ca026c7_900.jpg"
+      ],
+      "primaryPhotoCount": 8,
+      "relatedPhotoCount": 6,
+      "mtimeMs": 1779893671820
     },
     {
       "id": "pinterest-del-mar-sunset-tide-colors-2026-05-27",
@@ -451,7 +530,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780380764617
+      "mtimeMs": 1779865674263
     },
     {
       "id": "instagram-ronda-gorge-white-town-views-2026-05-27",
@@ -462,7 +541,7 @@
       "href": "./campaign.html?c=instagram-ronda-gorge-white-town-views-2026-05-27",
       "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-ronda-gorge-white-town-views-2026-05-27",
       "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2761-c86320d0bf_900.jpg",
-      "imageAlt": "Ronda",
+      "imageAlt": "D5H 2761",
       "previewImageUrls": [
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2761-c86320d0bf_900.jpg",
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2760-8ccdd9684c_900.jpg",
@@ -475,55 +554,7 @@
       ],
       "primaryPhotoCount": 9,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780380764615
-    },
-    {
-      "id": "instagram-setenil-rock-streets-2026-05-27",
-      "source": "Instagram",
-      "title": "Setenil Rock Streets",
-      "description": "A focused Setenil de las Bodegas set from Spain, built around whitewashed streets, rock overhangs, cliff shade, and compact architectural texture from the public Photos By Elie catalog.",
-      "date": "2026-05-27",
-      "href": "./campaign.html?c=instagram-setenil-rock-streets-2026-05-27",
-      "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-setenil-rock-streets-2026-05-27",
-      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240519-161832-00075-a3c45a1909_900.jpg",
-      "imageAlt": "Setenil De Las Bodegas",
-      "previewImageUrls": [
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240519-161832-00075-a3c45a1909_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2750-21cef8efff_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240519-161834-00076-6d24bc00ed_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2751-dbf9291443_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240519-161836-00077-902556bbc5_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2752-b5f48d4ac7_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240519-161837-00078-3af7f99fbb_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2753-9619e716ed_900.jpg"
-      ],
-      "primaryPhotoCount": 10,
-      "relatedPhotoCount": 6,
-      "mtimeMs": 1780380764615
-    },
-    {
-      "id": "facebook-paris-arts-metiers-mechanical-details-2026-05-27",
-      "source": "Facebook",
-      "title": "Paris Arts et Metiers Mechanical Details",
-      "description": "A focused Photos By Elie set from Paris's Musee des Arts et Metiers, pairing mechanical forms, warm brass, museum stairways, and industrial craft detail for wall-art browsing.",
-      "date": "2026-05-27",
-      "href": "./campaign.html?c=facebook-paris-arts-metiers-mechanical-details-2026-05-27",
-      "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=facebook-paris-arts-metiers-mechanical-details-2026-05-27",
-      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6128-00560b1c58_900.jpg",
-      "imageAlt": "Musée des Arts et Métiers, Paris",
-      "previewImageUrls": [
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6128-00560b1c58_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6131-f86603f21c_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6132-fa5e3e6296_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6134-aeb1b0b248_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6135-a8190af791_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6138-a220ea6366_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6140-83d210a31b_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6142-e69ca026c7_900.jpg"
-      ],
-      "primaryPhotoCount": 8,
-      "relatedPhotoCount": 6,
-      "mtimeMs": 1780380764605
+      "mtimeMs": 1779865674246
     },
     {
       "id": "facebook-albert-kahn-garden-paths-2026-05-27",
@@ -534,7 +565,7 @@
       "href": "./campaign.html?c=facebook-albert-kahn-garden-paths-2026-05-27",
       "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=facebook-albert-kahn-garden-paths-2026-05-27",
       "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6035-3a015ed040_900.jpg",
-      "imageAlt": "Boulogne Billancourt, Musee Albert Kahn",
+      "imageAlt": "IMG 6035",
       "previewImageUrls": [
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6035-3a015ed040_900.jpg",
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6034-db96c3ab96_900.jpg",
@@ -547,7 +578,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780380764562
+      "mtimeMs": 1779865674224
     },
     {
       "id": "pinterest-sintra-palaces-green-hills-2026-05-26",
@@ -568,7 +599,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780380764621
+      "mtimeMs": 1779779170016
     },
     {
       "id": "instagram-estepa-chocolate-museum-2026-05-26",
@@ -592,7 +623,7 @@
       ],
       "primaryPhotoCount": 10,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780380764612
+      "mtimeMs": 1779779169204
     },
     {
       "id": "facebook-rueil-malmaison-2026-05-26",
@@ -603,17 +634,20 @@
       "href": "./campaign.html?c=facebook-rueil-malmaison-2026-05-26",
       "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=facebook-rueil-malmaison-2026-05-26",
       "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6236-5c34056e1e_900.jpg",
-      "imageAlt": "Rueil Malmaison, Musee De La Malmaison",
+      "imageAlt": "IMG 6236",
       "previewImageUrls": [
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6236-5c34056e1e_900.jpg",
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6235-b7ffbc497f_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6234-07e82ae534_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6233-04aa884861_900.jpg",
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6232-938119802e_900.jpg",
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6230-1c5d28735e_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6229-38dd061aae_900.jpg"
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6229-38dd061aae_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6227-1934002918_900.jpg"
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780380764608
+      "mtimeMs": 1779779166835
     },
     {
       "id": "pinterest-valencia-aquarium-2026-05-16",
@@ -628,7 +662,7 @@
       "previewImageUrls": [],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 5,
-      "mtimeMs": 1780380764621
+      "mtimeMs": 1778884810526
     },
     {
       "id": "pinterest-invalides-2026-05-14",
@@ -652,7 +686,7 @@
       ],
       "primaryPhotoCount": 10,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780380764618
+      "mtimeMs": 1778884810524
     }
   ]
 }

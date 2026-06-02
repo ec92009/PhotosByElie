@@ -58,7 +58,7 @@ It never prints either credential.
 Use `etsy:outlet` to turn a first-party campaign into reviewable Etsy draft payloads without writing to Etsy. The default outlet product is the camera-photo `jpg-6mp` digital download at the active public Photos By Elie price.
 
 ```sh
-npm run etsy:outlet -- --campaign facebook-evening-in-sevilla-street-light-2026-06-02 --product jpg-6mp
+npm run etsy:outlet -- --campaign etsy-sevilla-after-dusk-wall-art-2026-06-02 --product jpg-6mp
 ```
 
 The package is written under ignored local notes at `assets/owner-actions/etsy-listing-packages/`.

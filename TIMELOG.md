@@ -175,8 +175,9 @@ Clock state: running
 | 2026-06-02 | 23:18 CEST | 23:28 CEST | 0:10 | Restored original digital pricing on the public site, regenerated catalog/Worker artifacts, and validated checkout expectations. |
 | 2026-06-02 | 23:34 CEST | 23:42 CEST | 0:08 | Made the Etsy outlet generator digital-first, updated docs, and validated draft-creation safety latches without writing to Etsy. |
 | 2026-06-02 | 23:43 CEST | 23:50 CEST | 0:07 | Added a clean Etsy-specific Sevilla campaign alias, regenerated the Etsy package without Facebook in the destination URL, and versioned the public site. |
+| 2026-06-02 | 23:51 CEST | 23:56 CEST | 0:05 | Created the eight Sevilla Etsy draft listings, uploaded one public watermarked listing image to each draft, and verified draft/image state through Etsy API. |
 
 ## Totals
 
-Active collaboration time used: 12:08
+Active collaboration time used: 12:13
 Remaining budget: not set

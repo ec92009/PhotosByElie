@@ -16,6 +16,7 @@ const API_BASE = process.env.ETSY_API_BASE || "https://api.etsy.com/v3";
 const CONFIG_DIR = path.join(os.homedir(), ".config", "photosbyelie");
 const DEFAULT_TOKEN_FILE = path.join(CONFIG_DIR, "etsy-token.json");
 const DEFAULT_SHOP_ID = "42422777";
+const DEFAULT_PRODUCT_ID = "jpg-6mp";
 
 const { loadCatalogWindow } = catalogTsv;
 
@@ -35,23 +36,24 @@ for (let index = 2; index < process.argv.length; index += 1) {
 
 function usage() {
   return `Usage:
-  node scripts/etsy_outlet.mjs --campaign <campaign-id>
-  node scripts/etsy_outlet.mjs --campaign <campaign-id> --limit 8 --price 65.00
+  node scripts/etsy_outlet.mjs --campaign <campaign-id> --product jpg-6mp
+  node scripts/etsy_outlet.mjs --campaign <campaign-id> --product jpg-3mp --limit 8
   node scripts/etsy_outlet.mjs --list-campaigns
 
 Draft creation is opt-in and requires complete Etsy shop setup ids:
   node scripts/etsy_outlet.mjs --campaign <campaign-id> \\
-    --taxonomy-id <id> --shipping-profile-id <id> --readiness-state-id <id> \\
+    --product jpg-6mp --taxonomy-id <id> \\
     --create-drafts --confirm-create-drafts
 
 Defaults:
   campaign: ${DEFAULT_CAMPAIGN_ID}
+  product:  ${DEFAULT_PRODUCT_ID} (digital download)
   output:   ${path.relative(REPO_ROOT, DEFAULT_OUTPUT_ROOT)}
 
 Guardrails:
   Uses public catalog rows, public R2 watermarked previews, and first-party URLs only.
   Does not read private masters, buyer downloads, Owner-only review JSON, or secrets.
-  Does not publish active Etsy listings.
+  Does not upload Etsy files/images or publish active Etsy listings.
 `;
 }
 
@@ -108,14 +110,16 @@ function loadMediaConfig() {
 }
 
 function loadCatalog() {
-  const collections = loadCatalogWindow(REPO_ROOT).photosByElieData || {};
+  const catalogWindow = loadCatalogWindow(REPO_ROOT);
+  const collections = catalogWindow.photosByElieData || {};
   const byId = new Map();
   for (const [collectionKey, collection] of Object.entries(collections)) {
     for (const photo of collection.photos || []) {
       byId.set(photo.id, { collectionKey, collection, photo });
     }
   }
-  return { byId, mediaConfig: loadMediaConfig() };
+  const products = Object.fromEntries((catalogWindow.photosByElieResolutions || []).map((product) => [product.id, product]));
+  return { byId, mediaConfig: loadMediaConfig(), products };
 }
 
 function publicMediaUrl(photo, mediaConfig, keyName = "detailKey") {
@@ -151,7 +155,7 @@ function sellerTitle(campaign, photo, index) {
   const base = cleanText(campaign.title || "Photos By Elie Wall Art");
   const existing = cleanText(photo.title || metadataValue(photo, "Metadata title"));
   const stem = existing && !genericPhotoTitle(existing) ? existing : base.replace(/^Evening in Sevilla/i, "Sevilla After Dusk");
-  return truncate(`${stem} Fine Art Photo Print - Spain Travel Photography Wall Art No. ${index + 1}`, 140);
+  return truncate(`${stem} Digital Photo Download - Spain Travel Wall Art No. ${index + 1}`, 140);
 }
 
 function etsyTag(value) {
@@ -175,7 +179,7 @@ function listingTags(campaign, photo, collectionTitle) {
   const tags = [];
   addTag(tags, "Photos By Elie");
   addTag(tags, "fine art photo");
-  addTag(tags, "photo print");
+  addTag(tags, "digital download");
   addTag(tags, "wall decor");
   addTag(tags, "travel print");
   addTag(tags, `${collectionTitle} wall art`);
@@ -206,13 +210,38 @@ function photoUrl(photoId) {
   return `${SITE_BASE_URL}photo.html?id=${encodeURIComponent(photoId)}`;
 }
 
-function listingDescription({ campaign, photo, collectionTitle, previewUrl, photoDestination }) {
+function priceForProduct(product, photo) {
+  const tier = String(photo.sourceOrigin || photo.pricingTier || "").toLowerCase() === "ai" ? "ai" : "original";
+  const prices = product?.prices || {};
+  const value = prices[tier] ?? product?.price ?? prices.original;
+  return {
+    price: Number(value),
+    price_string: Number(value).toFixed(2),
+    price_tier: tier,
+  };
+}
+
+function selectedProduct(catalog) {
+  const productId = String(args.get("product") || DEFAULT_PRODUCT_ID);
+  const product = catalog.products[productId];
+  if (!product) {
+    fail(`Unknown product ${productId}. Use one of: ${Object.keys(catalog.products).sort().join(", ")}`);
+  }
+  return product;
+}
+
+function listingTypeForProduct(product) {
+  return String(args.get("listing-type") || (product.type === "digital" ? "download" : "physical")).toLowerCase();
+}
+
+function listingDescription({ campaign, photo, collectionTitle, photoDestination, product, price }) {
   const captured = metadataValue(photo, "Captured").slice(0, 4);
   const capturedText = captured ? ` Captured ${captured}.` : "";
   return [
     `${campaign.description || `${campaign.title} by Photos By Elie.`}${capturedText}`,
     "",
-    "This draft listing is shaped for a made-to-order fine art photographic print by Elie Cohen, selected for wall-art use rather than casual browsing.",
+    `This digital download is a ${product.label} file by Elie Cohen, selected for wall-art and editorial-style use rather than casual browsing.`,
+    `Price: $${price.price_string}.`,
     "",
     "Browse the complete first-party edit:",
     destinationUrl(campaign),
@@ -224,18 +253,19 @@ function listingDescription({ campaign, photo, collectionTitle, previewUrl, phot
   ].join("\n");
 }
 
-function createRequestBody({ args, title, description, tags }) {
+function createRequestBody({ args, title, description, tags, listingType, price }) {
   const body = {
-    quantity: Number(args.get("quantity") || 10),
+    quantity: Number(args.get("quantity") || (listingType === "download" ? 999 : 10)),
     title,
     description,
-    price: String(args.get("price") || "65.00"),
+    price: String(args.get("price") || price.price_string),
     who_made: String(args.get("who-made") || "i_did"),
-    when_made: String(args.get("when-made") || "made_to_order"),
+    when_made: String(args.get("when-made") || (listingType === "download" ? "2020_2026" : "made_to_order")),
     is_supply: "false",
+    type: listingType,
     taxonomy_id: args.get("taxonomy-id") ? Number(args.get("taxonomy-id")) : null,
     tags,
-    materials: ["photographic print", "wall art"],
+    materials: listingType === "download" ? ["digital file", "photography"] : ["photographic print", "wall art"],
     should_auto_renew: true,
   };
   if (args.get("shipping-profile-id")) body.shipping_profile_id = Number(args.get("shipping-profile-id"));
@@ -264,6 +294,8 @@ function listCampaigns() {
 }
 
 function buildListings(campaign, catalog) {
+  const product = selectedProduct(catalog);
+  const listingType = listingTypeForProduct(product);
   const requestedIds = String(args.get("photo-ids") || "")
     .split(",")
     .map((item) => item.trim())
@@ -286,19 +318,31 @@ function buildListings(campaign, catalog) {
       const title = sellerTitle(campaign, photo, index);
       const photoDestination = photoUrl(photo.id);
       const tags = listingTags(campaign, photo, collection.title || record.collectionKey);
+      const price = priceForProduct(product, photo);
       const description = listingDescription({
         campaign,
         photo,
         collectionTitle: collection.title || record.collectionKey,
-        previewUrl,
         photoDestination,
+        product,
+        price,
       });
       return {
         media_id: photo.id,
         status: "ready_for_owner_review",
         title,
+        listing_type: listingType,
         collection: record.collectionKey,
         collection_title: collection.title || record.collectionKey,
+        product: {
+          id: product.id,
+          label: product.label,
+          type: product.type,
+          delivery_asset_type: product.deliveryAssetType || null,
+          price: price.price,
+          price_string: price.price_string,
+          price_tier: price.price_tier,
+        },
         first_party_url: destinationUrl(campaign),
         photo_url: photoDestination,
         public_preview_url: previewUrl,
@@ -307,7 +351,14 @@ function buildListings(campaign, catalog) {
         original_size: metadataValue(photo, "Original size"),
         source_origin: photo.sourceOrigin || "",
         tags,
-        etsy_request_body: createRequestBody({ args, title, description, tags }),
+        upload_status: {
+          listing_images: "needed_after_draft_creation",
+          digital_file: listingType === "download" ? "needed_after_draft_creation" : "not_applicable",
+          note: listingType === "download"
+            ? "Attach an approved buyer download file through Etsy uploadListingFile after draft creation."
+            : "Physical/POD listings need shipping, production partner, and fulfillment checks before publishing.",
+        },
+        etsy_request_body: createRequestBody({ args, title, description, tags, listingType, price }),
       };
     });
 }
@@ -348,8 +399,10 @@ async function createDrafts(payload) {
     fail("--confirm-create-drafts is required with --create-drafts.");
   }
   requiredCreateValue("taxonomy-id");
-  requiredCreateValue("shipping-profile-id");
-  requiredCreateValue("readiness-state-id");
+  if (payload.listing_type !== "download") {
+    requiredCreateValue("shipping-profile-id");
+    requiredCreateValue("readiness-state-id");
+  }
   const keystring = requiredCreateValue("etsy-keystring", env("ETSY_KEYSTRING"));
   const sharedSecret = requiredCreateValue("etsy-shared-secret", env("ETSY_SHARED_SECRET"));
   const shopId = requiredCreateValue("shop-id", env("ETSY_SHOP_ID") || DEFAULT_SHOP_ID);
@@ -412,16 +465,21 @@ function renderReadme(payload) {
     if (listing.photo_url) lines.push(`- Photo URL: ${listing.photo_url}`);
     if (listing.public_preview_url) lines.push(`- Public preview: ${listing.public_preview_url}`);
     if (listing.etsy_request_body?.price) lines.push(`- Draft price: ${listing.etsy_request_body.price}`);
+    if (listing.product?.label) lines.push(`- Product: \`${listing.product.id}\` (${listing.product.label})`);
+    if (listing.listing_type) lines.push(`- Etsy type: \`${listing.listing_type}\``);
     if (listing.etsy_request_body?.taxonomy_id == null) lines.push("- Etsy taxonomy: `needs owner/shop setup`");
+    if (listing.upload_status?.listing_images) lines.push(`- Listing images: \`${listing.upload_status.listing_images}\``);
+    if (listing.upload_status?.digital_file) lines.push(`- Digital file: \`${listing.upload_status.digital_file}\``);
     if (listing.tags?.length) lines.push(`- Tags: ${listing.tags.map((tag) => `\`${tag}\``).join(", ")}`);
     lines.push("");
   }
   lines.push("## Next Manual Checks");
   lines.push("");
-  lines.push("- Confirm Etsy taxonomy for fine art photo prints.");
-  lines.push("- Confirm shipping profile and readiness/processing profile.");
-  lines.push("- Confirm print size/material options and production path.");
-  lines.push("- Upload approved Etsy listing images before publishing.");
+  lines.push("- Confirm Etsy taxonomy for digital photography/wall-art downloads.");
+  lines.push("- Create draft listings only after owner approval.");
+  lines.push("- Upload approved Etsy listing images after draft creation.");
+  lines.push("- Upload approved buyer download files through Etsy after draft creation.");
+  lines.push("- Keep POD/physical print listings for a later product lane with production partner and shipping setup.");
   return `${lines.join("\n")}\n`;
 }
 
@@ -438,6 +496,8 @@ async function main() {
   const campaignId = String(args.get("campaign") || DEFAULT_CAMPAIGN_ID);
   const campaign = loadCampaign(campaignId);
   const catalog = loadCatalog();
+  const product = selectedProduct(catalog);
+  const listingType = listingTypeForProduct(product);
   const outputRoot = path.resolve(String(args.get("output-root") || DEFAULT_OUTPUT_ROOT));
   const packageDate = String(args.get("date") || campaignDate(campaign.id));
   const outputDir = path.join(outputRoot, packageDate, slugify(campaign.id));
@@ -448,6 +508,13 @@ async function main() {
     mode: "review_package_only",
     shop_id: String(args.get("shop-id") || env("ETSY_SHOP_ID") || DEFAULT_SHOP_ID),
     shop_url: "https://www.etsy.com/shop/PhotosByElieShop",
+    listing_type: listingType,
+    selected_product: {
+      id: product.id,
+      label: product.label,
+      type: product.type,
+      delivery_asset_type: product.deliveryAssetType || null,
+    },
     campaign_id: campaign.id,
     campaign_title: campaign.title || campaign.id,
     first_party_url: destinationUrl(campaign),
@@ -456,8 +523,9 @@ async function main() {
       "public catalog rows only",
       "public R2 watermarked previews only",
       "first-party Photos By Elie URLs only",
-      "no private masters, buyer downloads, Owner-only review JSON, or secrets",
+      "no private masters, unwatermarked private renders, buyer downloads, Owner-only review JSON, or secrets",
       "draft/review first; no active publish",
+      "digital files and Etsy listing images are uploaded only after owner approval",
     ],
     create_drafts_requested: Boolean(args.get("create-drafts")),
     listings: buildListings(campaign, catalog),

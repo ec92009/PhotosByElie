@@ -271,7 +271,7 @@ node scripts/validate_publish.js --summary
 
 `generate_social_post_packages.mjs` turns the latest weekly Social Asset Queue in `DAVID2MAX.md` into ready-to-review posting kits for Instagram, Facebook, and Pinterest. It writes JSON plus a readable Markdown brief under `assets/owner-actions/social-post-packages/<date>/` and leaves actual posting disabled until platform credentials, account permissions, board mapping, and token storage are configured.
 
-`etsy_outlet.mjs` turns a first-party campaign into an ignored local Etsy outlet package under `assets/owner-actions/etsy-listing-packages/<date>/<campaign>/`. It uses only public catalog rows, public R2 watermarked previews, and first-party campaign/photo URLs. By default it writes review payloads only; Etsy draft creation requires explicit `--create-drafts --confirm-create-drafts` plus taxonomy, shipping profile, and readiness profile ids.
+`etsy_outlet.mjs` turns a first-party campaign into an ignored local Etsy outlet package under `assets/owner-actions/etsy-listing-packages/<date>/<campaign>/`. It uses only public catalog rows, public R2 watermarked previews, and first-party campaign/photo URLs. By default it writes review payloads only for the `jpg-6mp` digital download lane; Etsy draft creation requires explicit `--create-drafts --confirm-create-drafts` plus a confirmed taxonomy id. Later POD or physical print lanes also require the appropriate shipping profile, readiness profile, production partner/material setup, and owner approval before draft creation.
 
 ```bash
 npm run social:packages

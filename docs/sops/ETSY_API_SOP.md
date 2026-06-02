@@ -55,25 +55,26 @@ It never prints either credential.
 
 ## Outlet Package Flow
 
-Use `etsy:outlet` to turn a first-party campaign into reviewable Etsy draft payloads without writing to Etsy:
+Use `etsy:outlet` to turn a first-party campaign into reviewable Etsy draft payloads without writing to Etsy. The default outlet product is the camera-photo `jpg-6mp` digital download at the active public Photos By Elie price.
 
 ```sh
-npm run etsy:outlet -- --campaign facebook-evening-in-sevilla-street-light-2026-06-02
+npm run etsy:outlet -- --campaign facebook-evening-in-sevilla-street-light-2026-06-02 --product jpg-6mp
 ```
 
 The package is written under ignored local notes at `assets/owner-actions/etsy-listing-packages/`.
-Each generated listing is one public catalog photo, using its watermarked public R2 preview plus the campaign URL as the first-party springboard.
+Each generated listing is one public catalog photo, using its watermarked public R2 preview plus the campaign URL as the first-party springboard. Listing images and buyer download files are not uploaded by this step; attach only owner-approved Etsy images and approved delivery files after a draft listing exists.
 
-Draft creation is opt-in only. Before using it, confirm the Etsy taxonomy id, shipping profile id, readiness/processing profile id, final print size/material options, and owner approval:
+Digital draft creation is opt-in only. Before using it, confirm the Etsy taxonomy id for digital photography/wall-art downloads and owner approval:
 
 ```sh
 source ~/.config/photosbyelie/etsy-env.sh
 npm run etsy:outlet -- --campaign <campaign-id> \
+  --product jpg-6mp \
   --taxonomy-id <id> \
-  --shipping-profile-id <id> \
-  --readiness-state-id <id> \
   --create-drafts \
   --confirm-create-drafts
 ```
+
+For later POD or physical print listings, switch to the relevant physical product lane and confirm the taxonomy id, shipping profile id, readiness/processing profile id, production partner/material options, and owner approval before creating drafts.
 
 The script does not publish active listings. It creates review packages by default and, when explicitly confirmed, creates Etsy drafts only.

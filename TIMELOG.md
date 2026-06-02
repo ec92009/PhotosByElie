@@ -168,8 +168,9 @@ Clock state: running
 | 2026-05-31 | 16:53 CEST | 16:56 CEST | 0:03 | Updated the live checkout Worker receipt recovery URL to the photos-by-elie.com domain and identified Stripe public details as the remaining receipt contact source. |
 | 2026-06-01 | 10:28 CEST | 10:30 CEST | 0:02 | Requested detail-page product prices low-to-high and checked PhotosByElie path casing; background implementation time excluded. |
 | 2026-06-02 | 08:44 CEST | 08:59 CEST | 0:15 | Advanced Etsy API setup after approval: added OAuth/callback/API smoke helpers, docs, versioned deploy, and live callback verification; deployment waiting excluded. |
+| 2026-06-02 | 09:09 CEST | 09:12 CEST | 0:03 | Added a local Etsy key collection helper and opened the manual developer-apps path; browser policy blocked direct navigation. |
 
 ## Totals
 
-Active collaboration time used: 11:12
+Active collaboration time used: 11:15
 Remaining budget: not set

@@ -19,25 +19,26 @@ Use this SOP for Photos By Elie Etsy API setup and listing-publisher work.
 
 1. In Etsy developer settings, add this redirect URI:
    `https://photos-by-elie.com/etsy-callback.html`
-2. Export the app keystring in the local shell, or inject it through a secret manager:
-   `export ETSY_KEYSTRING='...'`
-3. Generate the authorization URL:
+2. Collect the approved app keystring and shared secret locally:
+   `npm run etsy:collect-keys`
+3. Source the generated local env file:
+   `source ~/.config/photosbyelie/etsy-env.sh`
+4. Generate the authorization URL:
    `npm run etsy:oauth -- --auth-url`
-4. Open the returned URL, approve access, and copy the returned `code` from `etsy-callback.html`.
-5. Exchange the code locally:
+5. Open the returned URL, approve access, and copy the returned `code` from `etsy-callback.html`.
+6. Exchange the code locally:
    `npm run etsy:oauth -- --exchange-code '<code>'`
-6. Check redacted token status:
+7. Check redacted token status:
    `npm run etsy:oauth -- --token-status`
 
-The OAuth helper uses PKCE and saves the verifier/state outside the repo. It never prints tokens.
+The collection helper writes `~/.config/photosbyelie/etsy-env.sh` with `0600` permissions and prints only the first three characters of each value for verification. The OAuth helper uses PKCE and saves the verifier/state outside the repo. It never prints tokens.
 
 ## API Smoke Check
 
-Set both app credentials locally before live checks:
+Source the local env file before live checks:
 
 ```sh
-export ETSY_KEYSTRING='...'
-export ETSY_SHARED_SECRET='...'
+source ~/.config/photosbyelie/etsy-env.sh
 npm run etsy:api-check -- --me
 ```
 

@@ -1,7 +1,7 @@
 {
   "date": "2026-06-02",
   "platform": "Threads",
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009 via Instagram login",
   "post_type": "four_image_thread",
   "title": "Nerja Mediterranean Terraces",
@@ -14,7 +14,9 @@
   "notes": [
     "Threads package uses a 4-image subset derived from the Instagram set.",
     "Images are public watermarked R2 previews staged from public R2 URLs.",
-    "Threads API dry run passed for 4 public HTTPS images."
+    "Threads API dry run passed for 4 public HTTPS images.",
+    "Initial Threads publish attempt hit a child-container readiness race; the publisher now waits for child and carousel containers before publishing.",
+    "Published through Threads Graph API on retry and verified by API permalink lookup."
   ],
   "items": [
     {
@@ -86,5 +88,49 @@
       "local_staged_path": "socials/Threads/2026-06-02/nerja-mediterranean-terraces/images/04-img-5217-19271b7eda-nerja-mediterranean-terraces.jpg"
     }
   ],
-  "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260602-oWklgJ/socials/Threads/2026-06-02/nerja-mediterranean-terraces"
+  "local_package": "/Users/ecohen/Dev/PhotosByElie/socials/Threads/2026-06-02/nerja-mediterranean-terraces",
+  "published": {
+    "status": "published",
+    "published_at": "2026-06-02T06:22:01+0000",
+    "platform": "Threads",
+    "account": "ec92009",
+    "threads_user_id": "36227075590239114",
+    "published_id": "17875552236487035",
+    "shortcode": "DZEsGcyjCdW",
+    "url": "https://www.threads.com/@ec92009/post/DZEsGcyjCdW",
+    "media_type": "CAROUSEL_ALBUM",
+    "image_count": 4,
+    "api_graph_version": "v1.0",
+    "api_container_ids": [
+      "18084962561139106",
+      "18084962576139106",
+      "18084962591139106",
+      "18084962612139106"
+    ],
+    "carousel_container_id": "18084962633139106",
+    "verified_at": "2026-06-02T06:23:09.672Z",
+    "visible_verification": "Threads API returned permalink, shortcode, username ec92009, CAROUSEL_ALBUM, timestamp, and posted text."
+  },
+  "api_publish": {
+    "status": "published",
+    "published_at": "2026-06-02T06:22:01+0000",
+    "platform": "Threads",
+    "account": "ec92009",
+    "threads_user_id": "36227075590239114",
+    "published_id": "17875552236487035",
+    "shortcode": "DZEsGcyjCdW",
+    "url": "https://www.threads.com/@ec92009/post/DZEsGcyjCdW",
+    "media_type": "CAROUSEL_ALBUM",
+    "image_count": 4,
+    "api_graph_version": "v1.0",
+    "api_container_ids": [
+      "18084962561139106",
+      "18084962576139106",
+      "18084962591139106",
+      "18084962612139106"
+    ],
+    "carousel_container_id": "18084962633139106",
+    "verified_at": "2026-06-02T06:23:09.672Z",
+    "visible_verification": "Threads API returned permalink, shortcode, username ec92009, CAROUSEL_ALBUM, timestamp, and posted text."
+  }
 }

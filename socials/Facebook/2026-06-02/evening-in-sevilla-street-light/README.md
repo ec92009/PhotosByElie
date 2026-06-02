@@ -1,10 +1,16 @@
 # Facebook - Evening in Sevilla Street Light
 
-- Status: prepared
+- Status: published
 - Account: Photos By Elie
 - Destination: https://photos-by-elie.com/campaign.html?c=facebook-evening-in-sevilla-street-light-2026-06-02
-- Local package: /Users/ecohen/Dev/pbe-daily-social-20260602-oWklgJ/socials/Facebook/2026-06-02/evening-in-sevilla-street-light
+- Local package: /Users/ecohen/Dev/PhotosByElie/socials/Facebook/2026-06-02/evening-in-sevilla-street-light
 - Image count: 8
+
+## Published
+
+- URL: https://www.facebook.com/122102168061334672/posts/122103204705334672
+- Published at: 2026-06-02T06:18:12+0000
+- Verification: Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments.
 
 ## Caption
 
@@ -28,3 +34,4 @@ Sevilla after dusk: warm facades, tiled streets, and quiet Spanish evening color
 - Images are public watermarked R2 previews staged for browser upload and Meta Pages API publishing.
 - Facebook package uses 8 images from a non-recent Sevilla evening set, distinct from the prior Seville Cathedral package.
 - Facebook dry run passed for 8 public HTTPS images and Meta Pages multi-photo post plan.
+- Published through Meta Pages API and verified by Graph API.

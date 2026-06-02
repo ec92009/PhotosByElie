@@ -1,7 +1,7 @@
 {
   "date": "2026-06-02",
   "platform": "Instagram",
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "title": "Nerja Mediterranean Terraces",
@@ -14,7 +14,8 @@
     "Images are public watermarked R2 previews staged for Instagram Graph API publishing.",
     "All selected images are within the Instagram feed aspect-ratio guardrail.",
     "Caption uses profile-link wording because Instagram feed captions render raw URLs as plain text.",
-    "Instagram dry run passed for 8 public HTTPS images and produced no raw URL warning."
+    "Instagram dry run passed for 8 public HTTPS images and produced no raw URL warning.",
+    "Published through Instagram Graph API and verified by Graph API."
   ],
   "items": [
     {
@@ -154,5 +155,33 @@
       "local_staged_path": "socials/Instagram/2026-06-02/nerja-mediterranean-terraces/images/08-img-5217-19271b7eda-nerja-mediterranean-terraces.jpg"
     }
   ],
-  "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260602-oWklgJ/socials/Instagram/2026-06-02/nerja-mediterranean-terraces"
+  "local_package": "/Users/ecohen/Dev/PhotosByElie/socials/Instagram/2026-06-02/nerja-mediterranean-terraces",
+  "published": {
+    "status": "published",
+    "platform": "instagram",
+    "account": "ec92009",
+    "media_id": "18078097796241906",
+    "published_at": "2026-06-02T06:19:28+0000",
+    "permalink_url": "https://www.instagram.com/p/DZErzzCDNyb/",
+    "username": "ec92009",
+    "media_type": "CAROUSEL_ALBUM",
+    "image_count": 8,
+    "child_count": 8,
+    "verified_at": "2026-06-02T06:23:09.672Z",
+    "verification": "Instagram Graph returned CAROUSEL_ALBUM, permalink, username, timestamp, caption without raw URL, and 8 child images."
+  },
+  "api_publish": {
+    "status": "published",
+    "platform": "instagram",
+    "account": "ec92009",
+    "media_id": "18078097796241906",
+    "published_at": "2026-06-02T06:19:28+0000",
+    "permalink_url": "https://www.instagram.com/p/DZErzzCDNyb/",
+    "username": "ec92009",
+    "media_type": "CAROUSEL_ALBUM",
+    "image_count": 8,
+    "child_count": 8,
+    "verified_at": "2026-06-02T06:23:09.672Z",
+    "verification": "Instagram Graph returned CAROUSEL_ALBUM, permalink, username, timestamp, caption without raw URL, and 8 child images."
+  }
 }

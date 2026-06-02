@@ -1,10 +1,16 @@
 # Threads - Nerja Mediterranean Terraces
 
-- Status: prepared
+- Status: published
 - Account: ec92009 via Instagram login
 - Destination: https://photos-by-elie.com/campaign.html?c=instagram-nerja-mediterranean-terraces-2026-06-02
-- Local package: /Users/ecohen/Dev/pbe-daily-social-20260602-oWklgJ/socials/Threads/2026-06-02/nerja-mediterranean-terraces
+- Local package: /Users/ecohen/Dev/PhotosByElie/socials/Threads/2026-06-02/nerja-mediterranean-terraces
 - Image count: 4
+
+## Published
+
+- URL: https://www.threads.com/@ec92009/post/DZEsGcyjCdW
+- Published at: 2026-06-02T06:22:01+0000
+- Verification: Threads API returned permalink, shortcode, username ec92009, CAROUSEL_ALBUM, timestamp, and posted text.
 
 ## Caption
 
@@ -30,3 +36,5 @@ Four Nerja frames: white terraces, Mediterranean light, and quiet Andalusian geo
 - Threads package uses a 4-image subset derived from the Instagram set.
 - Images are public watermarked R2 previews staged from public R2 URLs.
 - Threads API dry run passed for 4 public HTTPS images.
+- Initial Threads publish attempt hit a child-container readiness race; the publisher now waits for child and carousel containers before publishing.
+- Published through Threads Graph API on retry and verified by API permalink lookup.

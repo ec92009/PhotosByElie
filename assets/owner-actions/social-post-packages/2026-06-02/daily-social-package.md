@@ -4,17 +4,19 @@ Prepared from public SQLite catalog rows and public R2 watermarked previews only
 
 ## Status
 
-- facebook: prepared
-- instagram: prepared
-- threads: prepared
+- facebook: published
+- instagram: published
+- threads: published
 - pinterest: prepared_no_api_token_missing_token
 
 ## Facebook - Evening in Sevilla Street Light
 
-- Status: prepared
+- Status: published
 - Destination: https://photos-by-elie.com/campaign.html?c=facebook-evening-in-sevilla-street-light-2026-06-02
-- Local package: /Users/ecohen/Dev/pbe-daily-social-20260602-oWklgJ/socials/Facebook/2026-06-02/evening-in-sevilla-street-light
+- Local package: /Users/ecohen/Dev/PhotosByElie/socials/Facebook/2026-06-02/evening-in-sevilla-street-light
 - Image count: 8
+- Published URL: https://www.facebook.com/122102168061334672/posts/122103204705334672
+- Published at: 2026-06-02T06:18:12+0000
 
 ### Caption
 
@@ -38,13 +40,16 @@ Sevilla after dusk: warm facades, tiled streets, and quiet Spanish evening color
 - Images are public watermarked R2 previews staged for browser upload and Meta Pages API publishing.
 - Facebook package uses 8 images from a non-recent Sevilla evening set, distinct from the prior Seville Cathedral package.
 - Facebook dry run passed for 8 public HTTPS images and Meta Pages multi-photo post plan.
+- Published through Meta Pages API and verified by Graph API.
 
 ## Instagram - Nerja Mediterranean Terraces
 
-- Status: prepared
+- Status: published
 - Destination: https://photos-by-elie.com/campaign.html?c=instagram-nerja-mediterranean-terraces-2026-06-02
-- Local package: /Users/ecohen/Dev/pbe-daily-social-20260602-oWklgJ/socials/Instagram/2026-06-02/nerja-mediterranean-terraces
+- Local package: /Users/ecohen/Dev/PhotosByElie/socials/Instagram/2026-06-02/nerja-mediterranean-terraces
 - Image count: 8
+- Published URL: https://www.instagram.com/p/DZErzzCDNyb/
+- Published at: 2026-06-02T06:19:28+0000
 
 ### Caption
 
@@ -71,13 +76,16 @@ Nerja in clean Mediterranean layers: white terraces, sea light, and calm Andalus
 - All selected images are within the Instagram feed aspect-ratio guardrail.
 - Caption uses profile-link wording because Instagram feed captions render raw URLs as plain text.
 - Instagram dry run passed for 8 public HTTPS images and produced no raw URL warning.
+- Published through Instagram Graph API and verified by Graph API.
 
 ## Threads - Nerja Mediterranean Terraces
 
-- Status: prepared
+- Status: published
 - Destination: https://photos-by-elie.com/campaign.html?c=instagram-nerja-mediterranean-terraces-2026-06-02
-- Local package: /Users/ecohen/Dev/pbe-daily-social-20260602-oWklgJ/socials/Threads/2026-06-02/nerja-mediterranean-terraces
+- Local package: /Users/ecohen/Dev/PhotosByElie/socials/Threads/2026-06-02/nerja-mediterranean-terraces
 - Image count: 4
+- Published URL: https://www.threads.com/@ec92009/post/DZEsGcyjCdW
+- Published at: 2026-06-02T06:22:01+0000
 
 ### Caption
 
@@ -99,12 +107,14 @@ Four Nerja frames: white terraces, Mediterranean light, and quiet Andalusian geo
 - Threads package uses a 4-image subset derived from the Instagram set.
 - Images are public watermarked R2 previews staged from public R2 URLs.
 - Threads API dry run passed for 4 public HTTPS images.
+- Initial Threads publish attempt hit a child-container readiness race; the publisher now waits for child and carousel containers before publishing.
+- Published through Threads Graph API on retry and verified by API permalink lookup.
 
 ## Pinterest - Solana Beach Sunset Layers
 
 - Status: prepared_no_api_token_missing_token
 - Destination: https://photos-by-elie.com/campaign.html?c=pinterest-solana-beach-sunset-layers-2026-06-02
-- Local package: /Users/ecohen/Dev/pbe-daily-social-20260602-oWklgJ/socials/Pinterest/2026-06-02/solana-beach-sunset-layers
+- Local package: /Users/ecohen/Dev/PhotosByElie/socials/Pinterest/2026-06-02/solana-beach-sunset-layers
 - Image count: 5
 
 ### Caption
@@ -133,13 +143,18 @@ Solana Beach sunset layers, Pacific color, and calm coastal silhouettes from Pho
 - Pinterest package is capped at exactly 5 images for Pin Builder/API compatibility.
 - Images are public watermarked R2 previews staged for manual Pin Builder upload or future API publishing.
 - Pinterest dry run passed with exactly 5 images for the California Travel Photography board recommendation; no board id/token is configured for live publish.
+- No ~/.config/photosbyelie/pinterest-token.json was present; API publishing unavailable. Manual Pin Builder upload remains required; confirm California Travel Photography or another suitable board before posting.
 
 ## Validation
 
 - Pinterest package has exactly 5 images.
 - Threads package has 4 images derived from the Instagram set.
 - Facebook and Instagram packages each have 5 to 10 public watermarked images.
-- Campaign manifests were prepared before publishing attempts.
+- Campaign manifests were prepared and deployed before publishing attempts.
+- Live custom-domain campaign manifests returned HTTP 200 and campaign.html showed v94.1.
+- Facebook, Instagram, Pinterest, and Threads dry runs passed before live publishing.
+- npm test passed after installing the clean-worktree dependency.
+- npm run validate still fails on pre-existing stale home-data.js collection counts and assets/media-sidecar.json photosCount mismatch.
 
 ## Blockers
 

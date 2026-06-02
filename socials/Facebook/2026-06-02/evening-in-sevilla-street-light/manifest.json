@@ -1,7 +1,7 @@
 {
   "date": "2026-06-02",
   "platform": "Facebook",
-  "status": "prepared",
+  "status": "published",
   "account": "Photos By Elie",
   "post_type": "multi_photo",
   "title": "Evening in Sevilla Street Light",
@@ -13,7 +13,8 @@
   "notes": [
     "Images are public watermarked R2 previews staged for browser upload and Meta Pages API publishing.",
     "Facebook package uses 8 images from a non-recent Sevilla evening set, distinct from the prior Seville Cathedral package.",
-    "Facebook dry run passed for 8 public HTTPS images and Meta Pages multi-photo post plan."
+    "Facebook dry run passed for 8 public HTTPS images and Meta Pages multi-photo post plan.",
+    "Published through Meta Pages API and verified by Graph API."
   ],
   "items": [
     {
@@ -153,5 +154,29 @@
       "local_staged_path": "socials/Facebook/2026-06-02/evening-in-sevilla-street-light/images/08-img-5342-fcbde6047f-evening-in-sevilla-street-light.jpg"
     }
   ],
-  "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260602-oWklgJ/socials/Facebook/2026-06-02/evening-in-sevilla-street-light"
+  "local_package": "/Users/ecohen/Dev/PhotosByElie/socials/Facebook/2026-06-02/evening-in-sevilla-street-light",
+  "published": {
+    "status": "published",
+    "platform": "facebook",
+    "account": "Photos By Elie",
+    "page_id": "1146747141854670",
+    "post_id": "1146747141854670_122103204705334672",
+    "published_at": "2026-06-02T06:18:12+0000",
+    "permalink_url": "https://www.facebook.com/122102168061334672/posts/122103204705334672",
+    "image_count": 8,
+    "verified_at": "2026-06-02T06:23:09.672Z",
+    "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
+  },
+  "api_publish": {
+    "status": "published",
+    "platform": "facebook",
+    "account": "Photos By Elie",
+    "page_id": "1146747141854670",
+    "post_id": "1146747141854670_122103204705334672",
+    "published_at": "2026-06-02T06:18:12+0000",
+    "permalink_url": "https://www.facebook.com/122102168061334672/posts/122103204705334672",
+    "image_count": 8,
+    "verified_at": "2026-06-02T06:23:09.672Z",
+    "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
+  }
 }

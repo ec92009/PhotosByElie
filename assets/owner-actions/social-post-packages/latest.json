@@ -3,16 +3,16 @@
   "generated_at": "2026-06-02T06:14:36.909Z",
   "source_policy": "Prepared from public SQLite catalog rows and public R2 watermarked previews only. No private masters, buyer downloads, Owner-only metadata, ignored Owner review JSON, or secrets were used.",
   "status": {
-    "facebook": "prepared",
-    "instagram": "prepared",
-    "threads": "prepared",
+    "facebook": "published",
+    "instagram": "published",
+    "threads": "published",
     "pinterest": "prepared_no_api_token_missing_token"
   },
   "packages": [
     {
       "date": "2026-06-02",
       "platform": "Facebook",
-      "status": "prepared",
+      "status": "published",
       "account": "Photos By Elie",
       "post_type": "multi_photo",
       "title": "Evening in Sevilla Street Light",
@@ -24,7 +24,8 @@
       "notes": [
         "Images are public watermarked R2 previews staged for browser upload and Meta Pages API publishing.",
         "Facebook package uses 8 images from a non-recent Sevilla evening set, distinct from the prior Seville Cathedral package.",
-        "Facebook dry run passed for 8 public HTTPS images and Meta Pages multi-photo post plan."
+        "Facebook dry run passed for 8 public HTTPS images and Meta Pages multi-photo post plan.",
+        "Published through Meta Pages API and verified by Graph API."
       ],
       "items": [
         {
@@ -164,12 +165,36 @@
           "local_staged_path": "socials/Facebook/2026-06-02/evening-in-sevilla-street-light/images/08-img-5342-fcbde6047f-evening-in-sevilla-street-light.jpg"
         }
       ],
-      "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260602-oWklgJ/socials/Facebook/2026-06-02/evening-in-sevilla-street-light"
+      "local_package": "/Users/ecohen/Dev/PhotosByElie/socials/Facebook/2026-06-02/evening-in-sevilla-street-light",
+      "published": {
+        "status": "published",
+        "platform": "facebook",
+        "account": "Photos By Elie",
+        "page_id": "1146747141854670",
+        "post_id": "1146747141854670_122103204705334672",
+        "published_at": "2026-06-02T06:18:12+0000",
+        "permalink_url": "https://www.facebook.com/122102168061334672/posts/122103204705334672",
+        "image_count": 8,
+        "verified_at": "2026-06-02T06:23:09.672Z",
+        "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
+      },
+      "api_publish": {
+        "status": "published",
+        "platform": "facebook",
+        "account": "Photos By Elie",
+        "page_id": "1146747141854670",
+        "post_id": "1146747141854670_122103204705334672",
+        "published_at": "2026-06-02T06:18:12+0000",
+        "permalink_url": "https://www.facebook.com/122102168061334672/posts/122103204705334672",
+        "image_count": 8,
+        "verified_at": "2026-06-02T06:23:09.672Z",
+        "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
+      }
     },
     {
       "date": "2026-06-02",
       "platform": "Instagram",
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "title": "Nerja Mediterranean Terraces",
@@ -182,7 +207,8 @@
         "Images are public watermarked R2 previews staged for Instagram Graph API publishing.",
         "All selected images are within the Instagram feed aspect-ratio guardrail.",
         "Caption uses profile-link wording because Instagram feed captions render raw URLs as plain text.",
-        "Instagram dry run passed for 8 public HTTPS images and produced no raw URL warning."
+        "Instagram dry run passed for 8 public HTTPS images and produced no raw URL warning.",
+        "Published through Instagram Graph API and verified by Graph API."
       ],
       "items": [
         {
@@ -322,12 +348,40 @@
           "local_staged_path": "socials/Instagram/2026-06-02/nerja-mediterranean-terraces/images/08-img-5217-19271b7eda-nerja-mediterranean-terraces.jpg"
         }
       ],
-      "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260602-oWklgJ/socials/Instagram/2026-06-02/nerja-mediterranean-terraces"
+      "local_package": "/Users/ecohen/Dev/PhotosByElie/socials/Instagram/2026-06-02/nerja-mediterranean-terraces",
+      "published": {
+        "status": "published",
+        "platform": "instagram",
+        "account": "ec92009",
+        "media_id": "18078097796241906",
+        "published_at": "2026-06-02T06:19:28+0000",
+        "permalink_url": "https://www.instagram.com/p/DZErzzCDNyb/",
+        "username": "ec92009",
+        "media_type": "CAROUSEL_ALBUM",
+        "image_count": 8,
+        "child_count": 8,
+        "verified_at": "2026-06-02T06:23:09.672Z",
+        "verification": "Instagram Graph returned CAROUSEL_ALBUM, permalink, username, timestamp, caption without raw URL, and 8 child images."
+      },
+      "api_publish": {
+        "status": "published",
+        "platform": "instagram",
+        "account": "ec92009",
+        "media_id": "18078097796241906",
+        "published_at": "2026-06-02T06:19:28+0000",
+        "permalink_url": "https://www.instagram.com/p/DZErzzCDNyb/",
+        "username": "ec92009",
+        "media_type": "CAROUSEL_ALBUM",
+        "image_count": 8,
+        "child_count": 8,
+        "verified_at": "2026-06-02T06:23:09.672Z",
+        "verification": "Instagram Graph returned CAROUSEL_ALBUM, permalink, username, timestamp, caption without raw URL, and 8 child images."
+      }
     },
     {
       "date": "2026-06-02",
       "platform": "Threads",
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009 via Instagram login",
       "post_type": "four_image_thread",
       "title": "Nerja Mediterranean Terraces",
@@ -340,7 +394,9 @@
       "notes": [
         "Threads package uses a 4-image subset derived from the Instagram set.",
         "Images are public watermarked R2 previews staged from public R2 URLs.",
-        "Threads API dry run passed for 4 public HTTPS images."
+        "Threads API dry run passed for 4 public HTTPS images.",
+        "Initial Threads publish attempt hit a child-container readiness race; the publisher now waits for child and carousel containers before publishing.",
+        "Published through Threads Graph API on retry and verified by API permalink lookup."
       ],
       "items": [
         {
@@ -412,7 +468,51 @@
           "local_staged_path": "socials/Threads/2026-06-02/nerja-mediterranean-terraces/images/04-img-5217-19271b7eda-nerja-mediterranean-terraces.jpg"
         }
       ],
-      "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260602-oWklgJ/socials/Threads/2026-06-02/nerja-mediterranean-terraces"
+      "local_package": "/Users/ecohen/Dev/PhotosByElie/socials/Threads/2026-06-02/nerja-mediterranean-terraces",
+      "published": {
+        "status": "published",
+        "published_at": "2026-06-02T06:22:01+0000",
+        "platform": "Threads",
+        "account": "ec92009",
+        "threads_user_id": "36227075590239114",
+        "published_id": "17875552236487035",
+        "shortcode": "DZEsGcyjCdW",
+        "url": "https://www.threads.com/@ec92009/post/DZEsGcyjCdW",
+        "media_type": "CAROUSEL_ALBUM",
+        "image_count": 4,
+        "api_graph_version": "v1.0",
+        "api_container_ids": [
+          "18084962561139106",
+          "18084962576139106",
+          "18084962591139106",
+          "18084962612139106"
+        ],
+        "carousel_container_id": "18084962633139106",
+        "verified_at": "2026-06-02T06:23:09.672Z",
+        "visible_verification": "Threads API returned permalink, shortcode, username ec92009, CAROUSEL_ALBUM, timestamp, and posted text."
+      },
+      "api_publish": {
+        "status": "published",
+        "published_at": "2026-06-02T06:22:01+0000",
+        "platform": "Threads",
+        "account": "ec92009",
+        "threads_user_id": "36227075590239114",
+        "published_id": "17875552236487035",
+        "shortcode": "DZEsGcyjCdW",
+        "url": "https://www.threads.com/@ec92009/post/DZEsGcyjCdW",
+        "media_type": "CAROUSEL_ALBUM",
+        "image_count": 4,
+        "api_graph_version": "v1.0",
+        "api_container_ids": [
+          "18084962561139106",
+          "18084962576139106",
+          "18084962591139106",
+          "18084962612139106"
+        ],
+        "carousel_container_id": "18084962633139106",
+        "verified_at": "2026-06-02T06:23:09.672Z",
+        "visible_verification": "Threads API returned permalink, shortcode, username ec92009, CAROUSEL_ALBUM, timestamp, and posted text."
+      }
     },
     {
       "date": "2026-06-02",
@@ -434,7 +534,8 @@
       "notes": [
         "Pinterest package is capped at exactly 5 images for Pin Builder/API compatibility.",
         "Images are public watermarked R2 previews staged for manual Pin Builder upload or future API publishing.",
-        "Pinterest dry run passed with exactly 5 images for the California Travel Photography board recommendation; no board id/token is configured for live publish."
+        "Pinterest dry run passed with exactly 5 images for the California Travel Photography board recommendation; no board id/token is configured for live publish.",
+        "No ~/.config/photosbyelie/pinterest-token.json was present; API publishing unavailable. Manual Pin Builder upload remains required; confirm California Travel Photography or another suitable board before posting."
       ],
       "items": [
         {
@@ -523,14 +624,18 @@
           "local_staged_path": "socials/Pinterest/2026-06-02/solana-beach-sunset-layers/images/05-20180304-1745-00116-f769538cfb-solana-beach-sunset-layers.jpg"
         }
       ],
-      "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260602-oWklgJ/socials/Pinterest/2026-06-02/solana-beach-sunset-layers"
+      "local_package": "/Users/ecohen/Dev/PhotosByElie/socials/Pinterest/2026-06-02/solana-beach-sunset-layers"
     }
   ],
   "validation_notes": [
     "Pinterest package has exactly 5 images.",
     "Threads package has 4 images derived from the Instagram set.",
     "Facebook and Instagram packages each have 5 to 10 public watermarked images.",
-    "Campaign manifests were prepared before publishing attempts."
+    "Campaign manifests were prepared and deployed before publishing attempts.",
+    "Live custom-domain campaign manifests returned HTTP 200 and campaign.html showed v94.1.",
+    "Facebook, Instagram, Pinterest, and Threads dry runs passed before live publishing.",
+    "npm test passed after installing the clean-worktree dependency.",
+    "npm run validate still fails on pre-existing stale home-data.js collection counts and assets/media-sidecar.json photosCount mismatch."
   ],
   "blockers": [
     "Pinterest remains prepared only because ~/.config/photosbyelie/pinterest-token.json is missing; manual Pin Builder upload should use board California Travel Photography."

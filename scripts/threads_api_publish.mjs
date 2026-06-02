@@ -9,6 +9,7 @@ const REPO_ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), 
 const GRAPH_VERSION = process.env.THREADS_GRAPH_VERSION || "v1.0";
 const GRAPH_BASE = process.env.THREADS_GRAPH_BASE || `https://graph.threads.net/${GRAPH_VERSION}`;
 const DEFAULT_TOKEN_FILE = path.join(os.homedir(), ".config", "photosbyelie", "threads-token.json");
+const DEFAULT_CONTAINER_WAIT_MS = Number(process.env.THREADS_CONTAINER_WAIT_MS || 180000);
 
 const args = new Map();
 for (let index = 2; index < process.argv.length; index += 1) {
@@ -47,6 +48,10 @@ function fail(message) {
   console.error("");
   console.error(usage());
   process.exit(1);
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function readJson(filePath) {
@@ -187,13 +192,39 @@ async function profile() {
 
 async function publishThreads(payload) {
   if (!payload.threads_user_id) fail("A Threads user id is required for --publish.");
+  const accessToken = token();
+  const waitForContainer = async (id, label) => {
+    const deadline = Date.now() + DEFAULT_CONTAINER_WAIT_MS;
+    let last = null;
+    while (Date.now() < deadline) {
+      const status = await graphFetch(`/${id}?fields=status`, {}, accessToken).catch((error) => {
+        const message = error?.message || String(error);
+        if (message.includes('"code":24') || message.includes('"error_subcode":4279009')) {
+          return null;
+        }
+        throw error;
+      });
+      if (!status) {
+        await sleep(5000);
+        continue;
+      }
+      last = status;
+      if (status.status === "FINISHED" || status.status === "PUBLISHED") return status;
+      if (status.status === "ERROR" || status.status === "EXPIRED") {
+        throw new Error(`Threads container ${label} ${id} failed: ${JSON.stringify(status)}`);
+      }
+      await sleep(5000);
+    }
+    throw new Error(`Threads container ${label} ${id} was not ready before timeout. Last status: ${JSON.stringify(last)}`);
+  };
   const created = [];
   for (const entry of payload.media_containers) {
-    const result = await graphPostForm(entry.endpoint, entry.body);
+    const result = await graphPostForm(entry.endpoint, entry.body, accessToken);
+    await waitForContainer(result.id, entry.source_item?.media_id || entry.source_item?.order || "media");
     created.push({ source_item: entry.source_item, response: result });
   }
   if (created.length === 1) {
-    const published = await graphPostForm(payload.publish.endpoint, { creation_id: created[0].response.id });
+    const published = await graphPostForm(payload.publish.endpoint, { creation_id: created[0].response.id }, accessToken);
     console.log(JSON.stringify({ status: "published", platform: "threads", created, published }, null, 2));
     return;
   }
@@ -201,8 +232,9 @@ async function publishThreads(payload) {
     media_type: "CAROUSEL",
     children: created.map((item) => item.response.id).join(","),
     text: caption(readJson(resolvedManifestPath())),
-  });
-  const published = await graphPostForm(payload.publish.publish_endpoint, { creation_id: carousel.id });
+  }, accessToken);
+  await waitForContainer(carousel.id, "carousel");
+  const published = await graphPostForm(payload.publish.publish_endpoint, { creation_id: carousel.id }, accessToken);
   console.log(JSON.stringify({ status: "published", platform: "threads", created, carousel, published }, null, 2));
 }
 

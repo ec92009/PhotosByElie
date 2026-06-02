@@ -3,7 +3,7 @@
 - Status: prepared_no_api_token_missing_token
 - Account: @photosbyelie
 - Destination: https://photos-by-elie.com/campaign.html?c=pinterest-solana-beach-sunset-layers-2026-06-02
-- Local package: /Users/ecohen/Dev/pbe-daily-social-20260602-oWklgJ/socials/Pinterest/2026-06-02/solana-beach-sunset-layers
+- Local package: /Users/ecohen/Dev/PhotosByElie/socials/Pinterest/2026-06-02/solana-beach-sunset-layers
 - Image count: 5
 
 ## Caption
@@ -32,3 +32,4 @@ Solana Beach sunset layers, Pacific color, and calm coastal silhouettes from Pho
 - Pinterest package is capped at exactly 5 images for Pin Builder/API compatibility.
 - Images are public watermarked R2 previews staged for manual Pin Builder upload or future API publishing.
 - Pinterest dry run passed with exactly 5 images for the California Travel Photography board recommendation; no board id/token is configured for live publish.
+- No ~/.config/photosbyelie/pinterest-token.json was present; API publishing unavailable. Manual Pin Builder upload remains required; confirm California Travel Photography or another suitable board before posting.

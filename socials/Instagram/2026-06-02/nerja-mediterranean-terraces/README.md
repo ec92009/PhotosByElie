@@ -1,10 +1,16 @@
 # Instagram - Nerja Mediterranean Terraces
 
-- Status: prepared
+- Status: published
 - Account: ec92009
 - Destination: https://photos-by-elie.com/campaign.html?c=instagram-nerja-mediterranean-terraces-2026-06-02
-- Local package: /Users/ecohen/Dev/pbe-daily-social-20260602-oWklgJ/socials/Instagram/2026-06-02/nerja-mediterranean-terraces
+- Local package: /Users/ecohen/Dev/PhotosByElie/socials/Instagram/2026-06-02/nerja-mediterranean-terraces
 - Image count: 8
+
+## Published
+
+- URL: https://www.instagram.com/p/DZErzzCDNyb/
+- Published at: 2026-06-02T06:19:28+0000
+- Verification: Instagram Graph returned CAROUSEL_ALBUM, permalink, username, timestamp, caption without raw URL, and 8 child images.
 
 ## Caption
 
@@ -31,3 +37,4 @@ Nerja in clean Mediterranean layers: white terraces, sea light, and calm Andalus
 - All selected images are within the Instagram feed aspect-ratio guardrail.
 - Caption uses profile-link wording because Instagram feed captions render raw URLs as plain text.
 - Instagram dry run passed for 8 public HTTPS images and produced no raw URL warning.
+- Published through Instagram Graph API and verified by Graph API.

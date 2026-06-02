@@ -58,6 +58,7 @@ let moreButton = null;
 let showAllButton = null;
 let deliveryManifest = null;
 let deliveryAvailabilityLoaded = false;
+let deliveryAvailabilityPromise = null;
 let discardedPhotoIds = new Set();
 
 const normalizedWorkerBase = (value) => String(value || "").replace(/\/+$/, "");
@@ -196,6 +197,12 @@ const loadDeliveryAvailability = async () => {
   }
 };
 
+const ensureDeliveryAvailabilityLoaded = async () => {
+  if (deliveryAvailabilityLoaded) return;
+  if (!deliveryAvailabilityPromise) deliveryAvailabilityPromise = loadDeliveryAvailability();
+  await deliveryAvailabilityPromise;
+};
+
 const deliveryRecordFor = (photoId) => deliveryManifest?.records?.[photoId] || null;
 
 const deliveryAvailabilityFor = (photoId, option) => {
@@ -241,6 +248,33 @@ const pruneUnavailableBasketSelections = (items) => {
     return basketStore.write(basketStore.read());
   }
   return nextItems;
+};
+
+const removeMissingDeliverySelections = (missing = []) => {
+  const missingByPhoto = new Map();
+  missing.forEach((entry) => {
+    if (!entry?.photoId || !entry?.productId) return;
+    const set = missingByPhoto.get(entry.photoId) || new Set();
+    set.add(entry.productId);
+    missingByPhoto.set(entry.photoId, set);
+  });
+  if (!missingByPhoto.size) return 0;
+  let removed = 0;
+  const nextItems = basketStore.read().map((item) => {
+    const missingProducts = missingByPhoto.get(item.photoId);
+    if (!missingProducts) return item;
+    const options = (item.options || []).filter((option) => {
+      const keep = !missingProducts.has(option.id);
+      if (!keep) removed += 1;
+      return keep;
+    });
+    return { ...item, options };
+  }).filter((item) => (item.options || []).length);
+  if (removed) {
+    basketStore.write(nextItems);
+    clearCheckoutState();
+  }
+  return removed;
 };
 
 const basketUsesWideRows = () => window.matchMedia?.("(min-width: 761px)")?.matches ?? true;
@@ -524,14 +558,25 @@ checkoutGuest?.addEventListener("click", async () => {
   checkoutGuest.disabled = true;
   try {
     const email = String(checkoutEmail?.value || "").trim();
-    const items = digitalCheckoutItems();
-    if (!items.length) {
-      setBasketStatus(t("basket.checkout_needs_asset"), { checkout: true });
-      return;
-    }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setBasketStatus(t("basket.enter_email"), { checkout: true });
       checkoutEmail?.focus();
+      return;
+    }
+    if (!deliveryAvailabilityLoaded) {
+      setBasketStatus(t("basket.checking_delivery"), { checkout: true });
+      await ensureDeliveryAvailabilityLoaded();
+    }
+    const beforeAvailabilityPrune = JSON.stringify(basketStore.read());
+    const prunedItems = pruneUnavailableBasketSelections(basketStore.write(basketStore.read()));
+    if (beforeAvailabilityPrune !== JSON.stringify(prunedItems)) {
+      renderBasket();
+      setBasketStatus(t("basket.unavailable_removed_review"), { checkout: true });
+      return;
+    }
+    const items = digitalCheckoutItems();
+    if (!items.length) {
+      setBasketStatus(t("basket.checkout_needs_asset"), { checkout: true });
       return;
     }
     setBasketStatus(t("basket.creating_checkout"), { checkout: true });
@@ -557,6 +602,12 @@ checkoutGuest?.addEventListener("click", async () => {
     }
     setBasketStatus(t("basket.mock_ready"));
   } catch (error) {
+    const removed = removeMissingDeliverySelections(error?.details?.missing || []);
+    if (removed) {
+      renderBasket();
+      setBasketStatus(t("basket.unavailable_removed_review"), { checkout: true });
+      return;
+    }
     setBasketStatus(error?.message || "Checkout could not start.", { checkout: true });
   } finally {
     checkoutGuest.disabled = false;
@@ -812,7 +863,7 @@ const renderBasket = () => {
 
 renderBasket();
 syncCheckoutControls();
-loadDeliveryAvailability();
+deliveryAvailabilityPromise = loadDeliveryAvailability();
 window.addEventListener("resize", syncBasketPreviewHeights);
 window.addEventListener("load", syncBasketPreviewHeights);
 window.addEventListener("photosbyelie:languagechange", () => {

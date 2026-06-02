@@ -1,9 +1,33 @@
 {
   "format": "photosbyelie-campaign-index",
   "schema_version": 1,
-  "generated_at": "2026-06-02T21:49:04.160Z",
-  "campaign_count": 30,
+  "generated_at": "2026-06-02T22:12:19.363Z",
+  "campaign_count": 31,
   "campaigns": [
+    {
+      "id": "etsy-nerja-mediterranean-wall-art-2026-06-03",
+      "source": "Etsy",
+      "title": "Nerja Mediterranean Wall Art",
+      "description": "A Photos By Elie set from Nerja, Spain, built around white terraces, Mediterranean light, coastal geometry, and polished travel wall-art browsing.",
+      "date": "2026-06-03",
+      "href": "./campaign.html?c=etsy-nerja-mediterranean-wall-art-2026-06-03",
+      "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=etsy-nerja-mediterranean-wall-art-2026-06-03",
+      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5204-6e1253b249_900.jpg",
+      "imageAlt": "IMG 5204",
+      "previewImageUrls": [
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5204-6e1253b249_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5199-00bef996a6_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5200-6fa844f776_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5202-df07481782_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5205-cda501d922_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5207-5a7d14316a_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5212-687a525613_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5217-19271b7eda_900.jpg"
+      ],
+      "primaryPhotoCount": 8,
+      "relatedPhotoCount": 6,
+      "mtimeMs": 1780438333648
+    },
     {
       "id": "etsy-sevilla-after-dusk-wall-art-2026-06-02",
       "source": "Etsy",

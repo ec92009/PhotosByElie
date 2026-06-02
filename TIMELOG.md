@@ -169,8 +169,9 @@ Clock state: running
 | 2026-06-01 | 10:28 CEST | 10:30 CEST | 0:02 | Requested detail-page product prices low-to-high and checked PhotosByElie path casing; background implementation time excluded. |
 | 2026-06-02 | 08:44 CEST | 08:59 CEST | 0:15 | Advanced Etsy API setup after approval: added OAuth/callback/API smoke helpers, docs, versioned deploy, and live callback verification; deployment waiting excluded. |
 | 2026-06-02 | 09:09 CEST | 09:12 CEST | 0:03 | Added a local Etsy key collection helper and opened the manual developer-apps path; browser policy blocked direct navigation. |
+| 2026-06-02 | 12:29 CEST | 13:13 CEST | 0:14 | Cleaned the git fast-forward blocker, preserved dirty state in stashes, restarted the local Owner server, and monitored the browser-started 2023 Expo import through successful commit; long import waiting excluded. |
 
 ## Totals
 
-Active collaboration time used: 11:15
+Active collaboration time used: 11:29
 Remaining budget: not set

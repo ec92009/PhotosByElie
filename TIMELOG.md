@@ -171,8 +171,9 @@ Clock state: running
 | 2026-06-02 | 09:09 CEST | 09:12 CEST | 0:03 | Added a local Etsy key collection helper and opened the manual developer-apps path; browser policy blocked direct navigation. |
 | 2026-06-02 | 12:29 CEST | 13:13 CEST | 0:14 | Cleaned the git fast-forward blocker, preserved dirty state in stashes, restarted the local Owner server, and monitored the browser-started 2023 Expo import through successful commit; long import waiting excluded. |
 | 2026-06-02 | 22:23 CEST | 22:28 CEST | 0:05 | Checked latest Etsy email/API state and updated project notes after shop-name approval; secret values excluded. |
+| 2026-06-02 | 22:29 CEST | 22:38 CEST | 0:09 | Added and tested the Etsy outlet package generator, produced the Sevilla review package, and pushed the workflow update. |
 
 ## Totals
 
-Active collaboration time used: 11:34
+Active collaboration time used: 11:43
 Remaining budget: not set

@@ -151,11 +151,12 @@ function genericPhotoTitle(title) {
   return /^(img|dsc|d5h|photo|image)?[\s_-]*\d{3,}|^\d{8}[\s_-]/i.test(cleanText(title));
 }
 
-function sellerTitle(campaign, photo, index) {
+function sellerTitle(campaign, photo, index, collectionTitle) {
   const base = cleanText(campaign.title || "Photos By Elie Wall Art");
   const existing = cleanText(photo.title || metadataValue(photo, "Metadata title"));
   const stem = existing && !genericPhotoTitle(existing) ? existing : base.replace(/^Evening in Sevilla/i, "Sevilla After Dusk");
-  return truncate(`${stem} Digital Photo Download - Spain Travel Wall Art No. ${index + 1}`, 140);
+  const place = cleanText(collectionTitle || "") || "Travel";
+  return truncate(`${stem} Digital Photo Download - ${place} Travel Wall Art No. ${index + 1}`, 140);
 }
 
 function etsyTag(value) {
@@ -315,7 +316,7 @@ function buildListings(campaign, catalog) {
       }
       const previewUrl = publicMediaUrl(photo, catalog.mediaConfig);
       const galleryPreviewUrl = publicMediaUrl(photo, catalog.mediaConfig, "galleryKey");
-      const title = sellerTitle(campaign, photo, index);
+      const title = sellerTitle(campaign, photo, index, collection.title || record.collectionKey);
       const photoDestination = photoUrl(photo.id);
       const tags = listingTags(campaign, photo, collection.title || record.collectionKey);
       const price = priceForProduct(product, photo);

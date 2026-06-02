@@ -178,8 +178,9 @@ Clock state: running
 | 2026-06-02 | 23:51 CEST | 23:56 CEST | 0:05 | Created the eight Sevilla Etsy draft listings, uploaded one public watermarked listing image to each draft, and verified draft/image state through Etsy API. |
 | 2026-06-02 | 23:57 CEST | 2026-06-03 00:00 CEST | 0:03 | Uploaded one private JPG 6 MP buyer file to each Sevilla Etsy draft, verified the digital file count through Etsy API, and removed temporary local copies. |
 | 2026-06-03 | 00:08 CEST | 00:12 CEST | 0:04 | Added a clean Etsy-specific Nerja campaign alias, generated the Nerja Etsy package, bumped the public site to v95.0, and validated before draft creation. |
+| 2026-06-03 | 00:13 CEST | 00:17 CEST | 0:04 | Completed Nerja Etsy draft image/file uploads, added the Solana Beach Etsy campaign alias, and made Etsy outlet titles collection-aware for non-Spain sets. |
 
 ## Totals
 
-Active collaboration time used: 12:20
+Active collaboration time used: 12:24
 Remaining budget: not set

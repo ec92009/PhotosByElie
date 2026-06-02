@@ -1,9 +1,30 @@
 {
   "format": "photosbyelie-campaign-index",
   "schema_version": 1,
-  "generated_at": "2026-06-02T22:12:19.363Z",
-  "campaign_count": 31,
+  "generated_at": "2026-06-02T22:17:13.450Z",
+  "campaign_count": 32,
   "campaigns": [
+    {
+      "id": "etsy-solana-beach-sunset-wall-art-2026-06-03",
+      "source": "Etsy",
+      "title": "Solana Beach Sunset Wall Art",
+      "description": "A five-image Photos By Elie set from Solana Beach, California, selected for sunset layers, Pacific color, coastal silhouettes, and calm wall-art browsing.",
+      "date": "2026-06-03",
+      "href": "./campaign.html?c=etsy-solana-beach-sunset-wall-art-2026-06-03",
+      "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=etsy-solana-beach-sunset-wall-art-2026-06-03",
+      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180304-1736-00113-a4774c8167_900.jpg",
+      "imageAlt": "Solana Beach Sunset",
+      "previewImageUrls": [
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180304-1736-00113-a4774c8167_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180304-1733-00110-843be79aa4_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180304-1733-00111-33314469b1_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180304-1741-00115-48e59a7d7a_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180304-1745-00116-f769538cfb_900.jpg"
+      ],
+      "primaryPhotoCount": 5,
+      "relatedPhotoCount": 6,
+      "mtimeMs": 1780438627253
+    },
     {
       "id": "etsy-nerja-mediterranean-wall-art-2026-06-03",
       "source": "Etsy",

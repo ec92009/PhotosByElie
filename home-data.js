@@ -161,7 +161,7 @@ window.photosByElieHomeData = {
             "detailKey": "expo/img-4427-43836cc1a4_short_5s_720p.mp4"
           },
           "video": {
-            "duration": 71.0
+            "duration": 71
           }
         }
       },
@@ -179,7 +179,7 @@ window.photosByElieHomeData = {
             "detailKey": "expo/img-4425-92588aab0a_short_5s_720p.mp4"
           },
           "video": {
-            "duration": 63.0
+            "duration": 63
           }
         }
       },
@@ -302,7 +302,7 @@ window.photosByElieHomeData = {
     "title": "AI",
     "description": "Leonardo archive selections prepared from the Saturn Lightroom AI source.",
     "accent": "ai-gallery",
-    "count": 4883,
+    "count": 4831,
     "href": "./gallery.html?gallery=ai",
     "photos": [
       {

@@ -4346,33 +4346,6 @@ body[data-gallery="selection"] .gallery-hero .cta:empty{
   flex:2 1 280px;
   max-width:420px;
 }
-.gallery-filter-bar .gallery-owner-super-search{
-  display:flex;
-  flex:0 0 auto;
-  min-width:138px;
-  max-width:none;
-  align-items:center;
-  align-self:end;
-  gap:8px;
-  min-height:var(--control-block-size);
-  padding:0 10px;
-  border:1px solid var(--line);
-  background:var(--bg);
-}
-.gallery-filter-bar .gallery-owner-super-search input{
-  width:18px;
-  height:18px;
-  min-height:18px;
-  flex:0 0 18px;
-  margin:0;
-  padding:0;
-}
-.gallery-filter-bar .gallery-owner-super-search span{
-  min-height:0;
-  align-items:center;
-  font-size:.72rem;
-  white-space:nowrap;
-}
 .gallery-filter-clear{
   flex:0 0 auto;
   height:var(--control-block-size);

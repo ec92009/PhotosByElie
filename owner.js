@@ -1627,7 +1627,7 @@
     if (blockedLocalCountRoot) blockedLocalCountRoot.textContent = formatCount(hiddenCount);
   };
 
-  const blockedCloudMediaCountFromCoverage = () => (window.photosByElieR2Coverage?.rows || [])
+  const blockedR2ArtifactCountFromCoverage = () => (window.photosByElieR2Coverage?.rows || [])
     .reduce((total, row) => total + Number(row.blockedPresent || 0), 0);
 
   const refreshBlockedSyncPanel = async () => {
@@ -1640,16 +1640,16 @@
       const completed = Number(activeEmptyTask.completed || 0);
       if (blockedPreviewCountRoot) blockedPreviewCountRoot.textContent = formatCount(Math.max(0, total - completed));
       if (blockedPreviewNoteRoot) {
-        blockedPreviewNoteRoot.textContent = "R2 purge is in progress: the undo queue is already cleared, ban tombstones are preserved, and R2 is deleting the remaining public previews, private masters, and private render files.";
+        blockedPreviewNoteRoot.textContent = "R2 purge is in progress: the undo queue is already cleared, tombstones are preserved, and R2 is deleting up to 6 artifacts per photo: 2 public previews, 1 private master, and 3 private JPG renders.";
       }
       return;
     }
-    const blockedCloudMedia = blockedCloudMediaCountFromCoverage();
-    if (blockedPreviewCountRoot) blockedPreviewCountRoot.textContent = formatCount(blockedCloudMedia);
+    const blockedR2Artifacts = blockedR2ArtifactCountFromCoverage();
+    if (blockedPreviewCountRoot) blockedPreviewCountRoot.textContent = formatCount(blockedR2Artifacts);
     if (blockedPreviewNoteRoot) {
-      blockedPreviewNoteRoot.textContent = blockedCloudMedia
-        ? `${formatCount(blockedCloudMedia)} cloud media copies are still present. Preview cleanup checks old public objects; In basket drops only when R2 purge clears the live undo queue and writes tombstones.`
-        : "Basketed photos no longer have cloud media copies in R2.";
+      blockedPreviewNoteRoot.textContent = blockedR2Artifacts
+        ? `${formatCount(blockedR2Artifacts)} R2 artifacts are still present. Each photo can have up to 6: 2 public previews, 1 private master, and 3 private JPG renders.`
+        : "Basketed photos no longer have R2 media artifacts.";
     }
   };
 
@@ -3476,7 +3476,7 @@
       const completed = Number(latestWasteTask.completed || 0);
       blockedPreviewCountRoot.textContent = formatCount(Math.max(0, total - completed));
       if (blockedPreviewNoteRoot) {
-        blockedPreviewNoteRoot.textContent = "R2 purge is in progress: the undo queue is already cleared, ban tombstones are preserved, and R2 is deleting the remaining public previews, private masters, and private render files.";
+        blockedPreviewNoteRoot.textContent = "R2 purge is in progress: the undo queue is already cleared, tombstones are preserved, and R2 is deleting up to 6 artifacts per photo: 2 public previews, 1 private master, and 3 private JPG renders.";
       }
     }
   };
@@ -3855,10 +3855,10 @@
 
   wipeHiddenR2Button?.addEventListener("click", async () => {
     if (wasteDeleteActive) {
-      setStatus("Waste Basket R2 purge is already running. Watch Cloud media left on the card.");
+      setStatus("Waste Basket R2 purge is already running. Watch R2 artifacts left on the card.");
       return;
     }
-    const ok = window.confirm("Purge R2 copies for every Waste Basket photo? This deletes public previews, private masters, and private render triplets. Ban/tombstone records stay, so these photos remain banned and do not return.");
+    const ok = window.confirm("Purge R2 media artifacts for every Waste Basket photo? This deletes up to 6 artifacts per photo: 2 public previews, 1 private master, and 3 private JPG renders. Ban/tombstone records stay, so these photos remain banned and do not return.");
     if (!ok) return;
     wipeHiddenR2Button.disabled = true;
     setStatus("Queueing banned-photo R2 purge...");

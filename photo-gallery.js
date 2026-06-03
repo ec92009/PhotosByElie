@@ -66,8 +66,7 @@ const defaultFilterState = {
   sort: "newest",
   mediaType: "all",
   dateFrom: "",
-  dateTo: "",
-  superSearch: false
+  dateTo: ""
 };
 const persistedFilterKeys = ["orientation", "minSize", "mood", "subject", "mediaType", "dateFrom", "dateTo"];
 let filterBar = null;
@@ -265,7 +264,7 @@ const showNativePicker = (control) => {
 const previewDimensions = (photo) => window.photosByEliePreviewDimensions?.(photo) || null;
 const galleryFilterKeys = ["query", "orientation", "mediaType", "minSize", "mood", "subject", "dateFrom", "dateTo"];
 const ownerSuperSearchText = (photo) => {
-  if (!localModerationEnabled || !filterState.superSearch) return "";
+  if (!localModerationEnabled) return "";
   return ownerSuperSearchIndex.get(photo?.id)?.text || "";
 };
 const filterContext = () => ({
@@ -283,7 +282,7 @@ const loadOwnerSuperSearchIndex = () => {
   if (ownerSuperSearchPromise) return ownerSuperSearchPromise;
   ownerSuperSearchPromise = fetch("./__photosbyelie/owner-super-search-index", { cache: "no-store" })
     .then((response) => {
-      if (!response.ok) throw new Error("Owner Super search is available only from the local Owner server.");
+      if (!response.ok) throw new Error("Owner expanded search is available only from the local Owner server.");
       return response.json();
     })
     .then((payload) => {
@@ -296,6 +295,17 @@ const loadOwnerSuperSearchIndex = () => {
       throw error;
     });
   return ownerSuperSearchPromise;
+};
+
+const startOwnerSuperSearch = () => {
+  if (!localModerationEnabled) return;
+  loadOwnerSuperSearchIndex()
+    .then(() => renderGallery({ scrollSelection: false }))
+    .catch((error) => {
+      if (String(filterState.query || "").trim()) {
+        setGalleryStatus(error?.message || "Could not load Owner expanded search.");
+      }
+    });
 };
 
 const syncFilterToggle = () => {
@@ -348,7 +358,6 @@ const ensureGalleryFilterControls = () => {
   filterBar.setAttribute("aria-label", t("a11y.gallery_filters"));
   filterBar.innerHTML = `
     <label class="gallery-search-label"><span data-i18n="gallery.search">Search</span><input type="search" data-gallery-search placeholder="${escapeHtml(t("gallery.search_placeholder"))}"/></label>
-    ${localModerationEnabled ? `<label class="gallery-owner-super-search"><input type="checkbox" data-gallery-filter="superSearch"/><span>Super search</span></label>` : ""}
     <label class="gallery-date-label"><span data-i18n="gallery.date_from">Date from</span><span class="gallery-date-control"><span class="gallery-date-display" data-gallery-date-display="dateFrom" aria-hidden="true"></span><input class="gallery-date-native" type="date" data-gallery-filter="dateFrom" aria-label="${escapeHtml(t("gallery.date_from"))}"/></span></label>
     <label class="gallery-date-label"><span data-i18n="gallery.date_to">Date to</span><span class="gallery-date-control"><span class="gallery-date-display" data-gallery-date-display="dateTo" aria-hidden="true"></span><input class="gallery-date-native" type="date" data-gallery-filter="dateTo" aria-label="${escapeHtml(t("gallery.date_to"))}"/></span></label>
     <label><span data-i18n="gallery.media">Media</span><select data-gallery-filter="mediaType">
@@ -441,12 +450,6 @@ const ensureGalleryFilterControls = () => {
     visibleLimit = pageSize;
     selectedIndex = 0;
     renderGallery();
-    if (control.dataset.galleryFilter === "superSearch" && value) {
-      setGalleryStatus("Loading Owner Super search...");
-      loadOwnerSuperSearchIndex()
-        .then(() => renderGallery())
-        .catch((error) => setGalleryStatus(error?.message || "Could not load Owner Super search."));
-    }
   });
   filterBar.querySelector("[data-gallery-search]")?.addEventListener("input", (event) => {
     filterState = { ...filterState, query: event.target.value };
@@ -1054,6 +1057,7 @@ if (galleryRoot && gallery) {
   ensureGalleryMoreButton();
   ensureGalleryKeyboardHint();
   renderGallery();
+  startOwnerSuperSearch();
 
   if (!viewControls) {
     viewControls = document.createElement("div");

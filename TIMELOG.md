@@ -188,8 +188,9 @@ Clock state: running
 | 2026-06-03 | 13:57 CEST | 13:58 CEST | 0:01 | Reported the AI gallery Show all scroll reset during long progressive rendering; background implementation/testing excluded. |
 | 2026-06-03 | 14:15 CEST | 14:16 CEST | 0:01 | Reported Owner In Basket versus Cloud files left still looked mismatched after purge; background investigation excluded. |
 | 2026-06-03 | 14:54 CEST | 14:55 CEST | 0:01 | Reported Ubatuba search missing applied title/keyword matches; background implementation/testing excluded. |
+| 2026-06-03 | 15:10 CEST | 15:11 CEST | 0:01 | Reported Ubatuba search still showed only 10 matches after the first metadata sync; background catalog repair/testing excluded. |
 
 ## Totals
 
-Active collaboration time used: 12:38
+Active collaboration time used: 12:39
 Remaining budget: not set

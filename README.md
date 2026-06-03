@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v96.4`
+- Current visible version: `v96.5`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -84,7 +84,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - The homepage includes a Featured social section. These campaigns are durable first-party landing pages for Facebook, Pinterest, Threads, and other social traffic, starting with `campaign.html?c=pinterest-invalides-2026-05-14`. The next social pass should add latest-social/homepage targets or focused campaign pages before broad gallery links are used in new posts.
 - `robots.txt` points crawlers at `sitemap.xml` and keeps owner, basket, order, real-estate, experiments, and raw social working pages out of search results.
 - Campaign pages reuse the same shared gallery masonry controller as regular collections, so Grid density plus Fit/Fill behavior stay consistent.
-- The full public catalog loads plain `assets/catalog/photosbyelie.sqlite` directly. Normal catalog rebuilds no longer generate or prefer Brotli-compressed SQLite; the retained `.sqlite.br` artifact is legacy-only. The SQLite catalog uses compact integer lookup ids for controlled vocabulary fields. Current active public catalog count is `6,672` media rows after the Pisa phone-export restore: AI/Leonardo `4,921`, France `315`, Italy `33`, Mexico `2`, Portugal `216`, Slovakia `2`, Spain `1,024`, USA `159`.
+- The full public catalog loads plain `assets/catalog/photosbyelie.sqlite` directly. Normal catalog rebuilds no longer generate or prefer Brotli-compressed SQLite; the retained `.sqlite.br` artifact is legacy-only. The SQLite catalog uses compact integer lookup ids for controlled vocabulary fields. Current active public catalog count is `6,993` media rows after the Ubatuba tombstone restore: AI/Leonardo `4,883`, France `315`, Italy `35`, Mexico `33`, Portugal `216`, Slovakia `2`, Spain `1,350`, USA `159`.
 - The homepage hides the decorative hero photo stack on narrow or short viewports so the collection carousel stays visible instead of competing for vertical space.
 - The homepage now has shared global discovery controls before Collections, including search, collection, camera/AI origin, media type, date from/to, orientation, adaptive size/duration, color mood, subject, and sort. Filtered results render 24 at a time with a full-match count and gallery-style hearts, keyboard selection, detail navigation, and localhost Owner shortcuts.
 - Gallery pages load the publishable Expo subset from the public SQLite catalog through the `photos-data.js` bootstrap; public GitHub Pages builds resolve preview media through `media-config.js` and each catalog row's `media.publicPreview` R2/CDN key instead of relying on committed media assets.

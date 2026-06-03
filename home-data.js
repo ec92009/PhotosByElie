@@ -9,7 +9,7 @@ window.photosByElieHomeData = {
     "photos": [
       {
         "id": "img-6236-bc42218145",
-        "title": "IMG 6236",
+        "title": "‎⁨Musée National Du Château De Malmaison⁩, ⁨Rueil-Malmaison⁩, ⁨Île-de-France⁩, ⁨France⁩",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -24,7 +24,7 @@ window.photosByElieHomeData = {
       },
       {
         "id": "img-6236-5c34056e1e",
-        "title": "IMG 6236",
+        "title": "Rueil Malmaison, Musee De La Malmaison",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -39,7 +39,7 @@ window.photosByElieHomeData = {
       },
       {
         "id": "img-6235-b7ffbc497f",
-        "title": "IMG 6235",
+        "title": "Rueil Malmaison, Musee De La Malmaison",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -54,7 +54,7 @@ window.photosByElieHomeData = {
       },
       {
         "id": "img-6235-1d89dce3af",
-        "title": "IMG 6235",
+        "title": "‎⁨Musée National Du Château De Malmaison⁩, ⁨Rueil-Malmaison⁩, ⁨Île-de-France⁩, ⁨France⁩",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -79,7 +79,7 @@ window.photosByElieHomeData = {
     "photos": [
       {
         "id": "20190723-1419-16523-3d4da421c4",
-        "title": "20190723 1419 16523",
+        "title": "El Capitan",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -94,7 +94,7 @@ window.photosByElieHomeData = {
       },
       {
         "id": "20181113-1748-16886-f468becf95",
-        "title": "20181113 1748 16886",
+        "title": "Encinitas Sunset",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -109,7 +109,7 @@ window.photosByElieHomeData = {
       },
       {
         "id": "20181113-1729-19714-e408f3becb",
-        "title": "20181113 1729 19714",
+        "title": "Del Mar Dog Beach",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -124,7 +124,7 @@ window.photosByElieHomeData = {
       },
       {
         "id": "20181020-1143-19559-d29e8bb4b8",
-        "title": "20181020 1143 19559",
+        "title": "Pacific Ocean Coast viewed from Del Mar",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -161,7 +161,7 @@ window.photosByElieHomeData = {
             "detailKey": "expo/img-4427-43836cc1a4_short_5s_720p.mp4"
           },
           "video": {
-            "duration": 71
+            "duration": 71.0
           }
         }
       },
@@ -179,7 +179,7 @@ window.photosByElieHomeData = {
             "detailKey": "expo/img-4425-92588aab0a_short_5s_720p.mp4"
           },
           "video": {
-            "duration": 63
+            "duration": 63.0
           }
         }
       },
@@ -302,12 +302,12 @@ window.photosByElieHomeData = {
     "title": "AI",
     "description": "Leonardo archive selections prepared from the Saturn Lightroom AI source.",
     "accent": "ai-gallery",
-    "count": 4874,
+    "count": 4883,
     "href": "./gallery.html?gallery=ai",
     "photos": [
       {
         "id": "bronze-statue-of-a-horse-remington-style-2-upscale-a742f72b-50ba-4c69-9e70-368d269d8e6c-edit-b35b742f11",
-        "title": "bronze statue of a horse, Remington style",
+        "title": "Bronze Horse Statue",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -340,7 +340,7 @@ window.photosByElieHomeData = {
       },
       {
         "id": "a-japanese-fishing-village-at-sunset-cut-paper-style-0-upscale-8559e581-2ffd-4ede-9e38-6d99444db9b3-jpgx2-fde7ed000e",
-        "title": "a Japanese fishing village at sunset, cut paper style",
+        "title": "Japanese Fishing Village at Sunset",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -355,7 +355,7 @@ window.photosByElieHomeData = {
       },
       {
         "id": "a-japanese-fishing-village-at-sunset-cut-paper-style-1-upscale-9ffd39ce-7231-45fa-a49b-e7fc73cef2b7-jpgx2-f710d988d1",
-        "title": "a Japanese fishing village at sunset, cut paper style",
+        "title": "Japanese Fishing Village at Sunset",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -380,7 +380,7 @@ window.photosByElieHomeData = {
     "photos": [
       {
         "id": "img-1219-570b09bebb",
-        "title": "IMG 1219",
+        "title": "Leaning Tower of Pisa",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -395,7 +395,7 @@ window.photosByElieHomeData = {
       },
       {
         "id": "img-1218-fe487846d6",
-        "title": "IMG 1218",
+        "title": "Leaning Tower of Pisa",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -410,7 +410,7 @@ window.photosByElieHomeData = {
       },
       {
         "id": "img-1213-7276413ecc",
-        "title": "IMG 1213",
+        "title": "Leaning Tower of Pisa",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -425,7 +425,7 @@ window.photosByElieHomeData = {
       },
       {
         "id": "img-1212-96505e7356",
-        "title": "IMG 1212",
+        "title": "Leaning Tower of Pisa",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -450,7 +450,7 @@ window.photosByElieHomeData = {
     "photos": [
       {
         "id": "20220802-130003-00136-pano-052608ca90",
-        "title": "20220802 130003 00136 Pano",
+        "title": "Bacalhoa Buddha Eden, Jardim Do Eden",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -465,7 +465,7 @@ window.photosByElieHomeData = {
       },
       {
         "id": "20220521-145332-04573-0742e2b77c",
-        "title": "20220521 145332 04573",
+        "title": "Castelo De Sao Jorge, Fortress",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -480,7 +480,7 @@ window.photosByElieHomeData = {
       },
       {
         "id": "20220521-145324-04568-1c242c532c",
-        "title": "20220521 145324 04568",
+        "title": "Castelo De Sao Jorge, Fortress",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -495,7 +495,7 @@ window.photosByElieHomeData = {
       },
       {
         "id": "20220521-144639-04546-3394e60cbe",
-        "title": "20220521 144639 04546",
+        "title": "Castelo De Sao Jorge, Fortress",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -520,7 +520,7 @@ window.photosByElieHomeData = {
     "photos": [
       {
         "id": "20190624-1827-16232-feef5b78f4",
-        "title": "20190624 1827 16232",
+        "title": "Bratislava, Slovakia",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {

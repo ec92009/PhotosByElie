@@ -39,6 +39,8 @@ const galleryActions = document.querySelector("[data-gallery-actions]");
 const versionedHref = (href) => window.photosByElieVersionedHref?.(href) || href;
 let selectedIndex = 0;
 const pageSize = 24;
+const showAllChunkSize = pageSize * 4;
+const showAllChunkDelayMs = 16;
 const densityKey = "photosbyelie-gallery-columns";
 const fitModeKey = "photosbyelie-gallery-fit-mode";
 let densityInput = null;
@@ -442,19 +444,23 @@ const ensureGalleryMoreButton = () => {
   showAllButton.hidden = true;
   controls.append(moreButton, showAllButton);
   galleryRoot.after(controls);
-  const preserveScrollAfterRender = () => {
+  const preserveScrollAfterRender = (token = showAllRenderToken) => {
     const left = window.scrollX || 0;
     const top = window.scrollY || 0;
     return () => {
       window.requestAnimationFrame(() => {
+        if (token !== showAllRenderToken) return;
         window.scrollTo({ left, top, behavior: "auto" });
-        window.requestAnimationFrame(() => window.scrollTo({ left, top, behavior: "auto" }));
+        window.requestAnimationFrame(() => {
+          if (token === showAllRenderToken) window.scrollTo({ left, top, behavior: "auto" });
+        });
       });
     };
   };
   moreButton.addEventListener("click", () => {
     showAllRenderToken += 1;
-    const restoreScroll = preserveScrollAfterRender();
+    if (showAllButton) showAllButton.disabled = false;
+    const restoreScroll = preserveScrollAfterRender(showAllRenderToken);
     visibleLimit += pageSize;
     renderGallery({ scrollSelection: false });
     restoreScroll();
@@ -462,7 +468,7 @@ const ensureGalleryMoreButton = () => {
   showAllButton.addEventListener("click", () => {
     const token = showAllRenderToken + 1;
     showAllRenderToken = token;
-    const restoreScroll = preserveScrollAfterRender();
+    showAllButton.blur();
     const addNextChunk = () => {
       if (token !== showAllRenderToken) return;
       const total = filteredVisiblePhotos().length;
@@ -470,14 +476,13 @@ const ensureGalleryMoreButton = () => {
         if (showAllButton) showAllButton.disabled = false;
         return;
       }
-      visibleLimit = Math.min(total, visibleLimit + pageSize);
+      visibleLimit = Math.min(total, visibleLimit + showAllChunkSize);
       renderGallery({ scrollSelection: false });
-      restoreScroll();
       if (showAllButton) {
         showAllButton.disabled = visibleLimit < total;
         showAllButton.textContent = visibleLimit < total ? `Showing ${visibleLimit}/${total}` : t("home.show_all");
       }
-      if (visibleLimit < total) window.setTimeout(addNextChunk, 0);
+      if (visibleLimit < total) window.setTimeout(addNextChunk, showAllChunkDelayMs);
     };
     addNextChunk();
   });

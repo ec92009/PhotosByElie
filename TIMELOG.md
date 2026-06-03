@@ -185,8 +185,9 @@ Clock state: running
 | 2026-06-03 | 12:11 CEST | 12:12 CEST | 0:01 | Checked Waste Basket R2 purge object count and key categories; background repo inspection excluded. |
 | 2026-06-03 | 12:14 CEST | 12:15 CEST | 0:01 | Clarified which Waste Basket R2 delete probes are expected current objects versus legacy/no-op checks. |
 | 2026-06-03 | 12:15 CEST | 12:16 CEST | 0:01 | Directed one-time legacy R2 cleanup and flat-key purge contract update; background cleanup/code work excluded. |
+| 2026-06-03 | 13:57 CEST | 13:58 CEST | 0:01 | Reported the AI gallery Show all scroll reset during long progressive rendering; background implementation/testing excluded. |
 
 ## Totals
 
-Active collaboration time used: 12:35
+Active collaboration time used: 12:36
 Remaining budget: not set

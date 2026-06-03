@@ -5,7 +5,7 @@
   "publish_scope": "all-eligible",
   "selection_mode": "newest",
   "seed": null,
-  "photos_count": 6941,
+  "photos_count": 6919,
   "reserve_counts": {
     "ai": 0,
     "france": 0,
@@ -20,8 +20,8 @@
   "hidden_counts": {
     "ai": 0,
     "france": 0,
-    "italy": 0,
-    "mexico": 0,
+    "italy": 3,
+    "mexico": 2,
     "portugal": 0,
     "slovakia": 0,
     "spain": 0,
@@ -42058,20 +42058,6 @@
       }
     },
     {
-      "id": "oceanside-jetty-at-sunset-ocean-beach-3-upscale-68ce2ad2-d42b-4dcf-95c3-b47d28f8b926-jpgx2-67372f97cc",
-      "relative_path": "2023/03/02/UPSCALE/Scaled/oceanside jetty at sunset, ocean, beach-3-UPSCALE_68ce2ad2-d42b-4dcf-95c3-b47d28f8b926.jpgx2.jpg",
-      "gallery_country": {
-        "slug": "ai",
-        "label": "AI",
-        "source": "forced"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/oceanside-jetty-at-sunset-ocean-beach-3-upscale-68ce2ad2-d42b-4dcf-95c3-b47d28f8b926-jpgx2-67372f97cc_900.jpg",
-        "detail": "expo/oceanside-jetty-at-sunset-ocean-beach-3-upscale-68ce2ad2-d42b-4dcf-95c3-b47d28f8b926-jpgx2-67372f97cc_1800.jpg"
-      }
-    },
-    {
       "id": "oceanside-jetty-at-sunset-ocean-beach-1-upscale-7464cecb-b29e-4e27-bc0d-7b669c9d16f2-jpgx2-2114c41a43",
       "relative_path": "2023/03/02/UPSCALE/Scaled/oceanside jetty at sunset, ocean, beach-1-UPSCALE_7464cecb-b29e-4e27-bc0d-7b669c9d16f2.jpgx2.jpg",
       "gallery_country": {
@@ -53972,62 +53958,6 @@
       }
     },
     {
-      "id": "hand-on-thigh-3-upscale-3fdc8a9b-7ccb-4c45-8abc-60d4da5c66ea-jpgx2-81b8ff937f",
-      "relative_path": "2023/03/13/UPSCALE/Scaled/Hand on thigh-3-UPSCALE_3fdc8a9b-7ccb-4c45-8abc-60d4da5c66ea.jpgx2.jpg",
-      "gallery_country": {
-        "slug": "ai",
-        "label": "AI",
-        "source": "forced"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/hand-on-thigh-3-upscale-3fdc8a9b-7ccb-4c45-8abc-60d4da5c66ea-jpgx2-81b8ff937f_900.jpg",
-        "detail": "expo/hand-on-thigh-3-upscale-3fdc8a9b-7ccb-4c45-8abc-60d4da5c66ea-jpgx2-81b8ff937f_1800.jpg"
-      }
-    },
-    {
-      "id": "hand-on-thigh-2-upscale-153dfbc9-b2a2-4c93-9381-30febde1ff53-jpgx2-0c9c35e4c5",
-      "relative_path": "2023/03/13/UPSCALE/Scaled/Hand on thigh-2-UPSCALE_153dfbc9-b2a2-4c93-9381-30febde1ff53.jpgx2.jpg",
-      "gallery_country": {
-        "slug": "ai",
-        "label": "AI",
-        "source": "forced"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/hand-on-thigh-2-upscale-153dfbc9-b2a2-4c93-9381-30febde1ff53-jpgx2-0c9c35e4c5_900.jpg",
-        "detail": "expo/hand-on-thigh-2-upscale-153dfbc9-b2a2-4c93-9381-30febde1ff53-jpgx2-0c9c35e4c5_1800.jpg"
-      }
-    },
-    {
-      "id": "hand-on-thigh-1-upscale-2fd66911-d4a9-41df-ba7d-5e0259ca7357-jpgx2-94aa3620fa",
-      "relative_path": "2023/03/13/UPSCALE/Scaled/Hand on thigh-1-UPSCALE_2fd66911-d4a9-41df-ba7d-5e0259ca7357.jpgx2.jpg",
-      "gallery_country": {
-        "slug": "ai",
-        "label": "AI",
-        "source": "forced"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/hand-on-thigh-1-upscale-2fd66911-d4a9-41df-ba7d-5e0259ca7357-jpgx2-94aa3620fa_900.jpg",
-        "detail": "expo/hand-on-thigh-1-upscale-2fd66911-d4a9-41df-ba7d-5e0259ca7357-jpgx2-94aa3620fa_1800.jpg"
-      }
-    },
-    {
-      "id": "hand-on-thigh-0-upscale-18ffd5c0-d356-4fc8-93d4-9148a53d1014-jpgx2-081eae176c",
-      "relative_path": "2023/03/13/UPSCALE/Scaled/Hand on thigh-0-UPSCALE_18ffd5c0-d356-4fc8-93d4-9148a53d1014.jpgx2.jpg",
-      "gallery_country": {
-        "slug": "ai",
-        "label": "AI",
-        "source": "forced"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/hand-on-thigh-0-upscale-18ffd5c0-d356-4fc8-93d4-9148a53d1014-jpgx2-081eae176c_900.jpg",
-        "detail": "expo/hand-on-thigh-0-upscale-18ffd5c0-d356-4fc8-93d4-9148a53d1014-jpgx2-081eae176c_1800.jpg"
-      }
-    },
-    {
       "id": "hand-drawn-flowers-on-colorful-background-vivid-3-upscale-d3ee2551-a72f-42b5-9cc0-9ea28be85bf9-jpgx2-9aac52f45e",
       "relative_path": "2023/05/02/UPSCALE/Scaled/hand drawn flowers on  colorful background vivid-3-UPSCALE_d3ee2551-a72f-42b5-9cc0-9ea28be85bf9.jpgx2.jpg",
       "gallery_country": {
@@ -55579,20 +55509,6 @@
       "derivatives": {
         "gallery": "expo/game-of-thrones-dragon-1-upscale-c58c8631-2a5f-4643-9342-fd512e352530-0afd31f0cf_900.jpg",
         "detail": "expo/game-of-thrones-dragon-1-upscale-c58c8631-2a5f-4643-9342-fd512e352530-0afd31f0cf_1800.jpg"
-      }
-    },
-    {
-      "id": "game-of-thrones-dragon-0-upscale-f964b529-d189-4fcf-a3ae-986ef4557f55-bb4e623cf6",
-      "relative_path": "2023/02/28/UPSCALE/Game of Thrones Dragon-0-UPSCALE_f964b529-d189-4fcf-a3ae-986ef4557f55.jpg",
-      "gallery_country": {
-        "slug": "ai",
-        "label": "AI",
-        "source": "forced"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/game-of-thrones-dragon-0-upscale-f964b529-d189-4fcf-a3ae-986ef4557f55-bb4e623cf6_900.jpg",
-        "detail": "expo/game-of-thrones-dragon-0-upscale-f964b529-d189-4fcf-a3ae-986ef4557f55-bb4e623cf6_1800.jpg"
       }
     },
     {
@@ -58410,48 +58326,6 @@
       }
     },
     {
-      "id": "envelope-and-pen-2-upscale-f7a895cf-79ce-4085-84ec-0897c239f768-jpgx2-1fb6ce85d6",
-      "relative_path": "2023/04/27/UPSCALE/Scaled/envelope and pen-2-UPSCALE_f7a895cf-79ce-4085-84ec-0897c239f768.jpgx2.jpg",
-      "gallery_country": {
-        "slug": "ai",
-        "label": "AI",
-        "source": "forced"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/envelope-and-pen-2-upscale-f7a895cf-79ce-4085-84ec-0897c239f768-jpgx2-1fb6ce85d6_900.jpg",
-        "detail": "expo/envelope-and-pen-2-upscale-f7a895cf-79ce-4085-84ec-0897c239f768-jpgx2-1fb6ce85d6_1800.jpg"
-      }
-    },
-    {
-      "id": "envelope-and-pen-1-upscale-f466453d-9ded-47fc-aff1-2fdbb17e3ce5-jpgx2-7ec00de7a2",
-      "relative_path": "2023/04/27/UPSCALE/Scaled/envelope and pen-1-UPSCALE_f466453d-9ded-47fc-aff1-2fdbb17e3ce5.jpgx2.jpg",
-      "gallery_country": {
-        "slug": "ai",
-        "label": "AI",
-        "source": "forced"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/envelope-and-pen-1-upscale-f466453d-9ded-47fc-aff1-2fdbb17e3ce5-jpgx2-7ec00de7a2_900.jpg",
-        "detail": "expo/envelope-and-pen-1-upscale-f466453d-9ded-47fc-aff1-2fdbb17e3ce5-jpgx2-7ec00de7a2_1800.jpg"
-      }
-    },
-    {
-      "id": "envelope-and-pen-0-upscale-397ee16c-3996-4834-887e-a4d8db294886-jpgx2-feff69ebfd",
-      "relative_path": "2023/04/27/UPSCALE/Scaled/envelope and pen-0-UPSCALE_397ee16c-3996-4834-887e-a4d8db294886.jpgx2.jpg",
-      "gallery_country": {
-        "slug": "ai",
-        "label": "AI",
-        "source": "forced"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/envelope-and-pen-0-upscale-397ee16c-3996-4834-887e-a4d8db294886-jpgx2-feff69ebfd_900.jpg",
-        "detail": "expo/envelope-and-pen-0-upscale-397ee16c-3996-4834-887e-a4d8db294886-jpgx2-feff69ebfd_1800.jpg"
-      }
-    },
-    {
       "id": "entrepreneurship-startup-business-innovation-small-busine-3-upscale-6cdebeb6-d706-4699-83f3-4d317a1215c3-jpgx2-a02d66f7b0",
       "relative_path": "2023/05/26/UPSCALE/Scaled/Entrepreneurship- startup, business innovation, small busine-3-UPSCALE_6cdebeb6-d706-4699-83f3-4d317a1215c3.jpgx2.jpg",
       "gallery_country": {
@@ -58984,20 +58858,6 @@
       }
     },
     {
-      "id": "empire-style-family-room-single-fireplace-aubusson-tapestr-0-upscale-3ac35a2c-4b34-45c8-868e-b2c991f0279a-jpgx2-155916c7a7",
-      "relative_path": "2023/03/07/UPSCALE/Scaled/Empire style family room, single fireplace, Aubusson tapestr-0-UPSCALE_3ac35a2c-4b34-45c8-868e-b2c991f0279a.jpgx2.jpg",
-      "gallery_country": {
-        "slug": "ai",
-        "label": "AI",
-        "source": "forced"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/empire-style-family-room-single-fireplace-aubusson-tapestr-0-upscale-3ac35a2c-4b34-45c8-868e-b2c991f0279a-jpgx2-155916c7a7_900.jpg",
-        "detail": "expo/empire-style-family-room-single-fireplace-aubusson-tapestr-0-upscale-3ac35a2c-4b34-45c8-868e-b2c991f0279a-jpgx2-155916c7a7_1800.jpg"
-      }
-    },
-    {
       "id": "empire-style-family-room-single-fireplace-aubusson-tapestr-0-upscale-2720e9bb-afd0-4d8f-bb52-b1430f922f4a-jpgx2-773a531da4",
       "relative_path": "2023/03/07/UPSCALE/Scaled/Empire style family room, single fireplace, Aubusson tapestr-0-UPSCALE_2720e9bb-afd0-4d8f-bb52-b1430f922f4a.jpgx2.jpg",
       "gallery_country": {
@@ -59404,20 +59264,6 @@
       }
     },
     {
-      "id": "eggcellent-easter-wishes-with-a-mix-of-typography-and-illust-0-upscale-632cad4e-ad29-49a8-b433-d68f953092b7-jpgx3-969f9b0def",
-      "relative_path": "2023/04/01/UPSCALE/Scaled/Eggcellent Easter Wishes with a mix of typography and illust-0-UPSCALE_632cad4e-ad29-49a8-b433-d68f953092b7.jpgx3.jpg",
-      "gallery_country": {
-        "slug": "ai",
-        "label": "AI",
-        "source": "forced"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/eggcellent-easter-wishes-with-a-mix-of-typography-and-illust-0-upscale-632cad4e-ad29-49a8-b433-d68f953092b7-jpgx3-969f9b0def_900.jpg",
-        "detail": "expo/eggcellent-easter-wishes-with-a-mix-of-typography-and-illust-0-upscale-632cad4e-ad29-49a8-b433-d68f953092b7-jpgx3-969f9b0def_1800.jpg"
-      }
-    },
-    {
       "id": "easter-greetings-from-our-family-to-yours-with-family-friend-3-upscale-e17b9df7-58f0-4a63-afca-e7be72b45d10-jpgx3-cce140f5d4",
       "relative_path": "2023/04/01/UPSCALE/Scaled/Easter Greetings from Our Family to Yours with family-friend-3-UPSCALE_e17b9df7-58f0-4a63-afca-e7be72b45d10.jpgx3.jpg",
       "gallery_country": {
@@ -59502,20 +59348,6 @@
       }
     },
     {
-      "id": "easter-eggstravaganza-with-bold-typography-and-colorful-east-1-upscale-372eb546-1aa7-417e-9c15-af8c67627ae2-jpgx3-89525ed0e7",
-      "relative_path": "2023/04/01/UPSCALE/Scaled/Easter Eggstravaganza with bold typography and colorful East-1-UPSCALE_372eb546-1aa7-417e-9c15-af8c67627ae2.jpgx3.jpg",
-      "gallery_country": {
-        "slug": "ai",
-        "label": "AI",
-        "source": "forced"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/easter-eggstravaganza-with-bold-typography-and-colorful-east-1-upscale-372eb546-1aa7-417e-9c15-af8c67627ae2-jpgx3-89525ed0e7_900.jpg",
-        "detail": "expo/easter-eggstravaganza-with-bold-typography-and-colorful-east-1-upscale-372eb546-1aa7-417e-9c15-af8c67627ae2-jpgx3-89525ed0e7_1800.jpg"
-      }
-    },
-    {
       "id": "easter-eggstravaganza-with-bold-typography-and-colorful-east-0-upscale-4a126564-09f1-4331-a0a1-70b75fcbb6fb-jpgx3-fccc89c171",
       "relative_path": "2023/04/01/UPSCALE/Scaled/Easter Eggstravaganza with bold typography and colorful East-0-UPSCALE_4a126564-09f1-4331-a0a1-70b75fcbb6fb.jpgx3.jpg",
       "gallery_country": {
@@ -59583,20 +59415,6 @@
       "derivatives": {
         "gallery": "expo/easter-brunch-delights-with-mouthwatering-images-of-easter-t-0-upscale-baa1c327-bc16-4799-8e93-50f66c477dac-jpgx3-ac53d2bb8c_900.jpg",
         "detail": "expo/easter-brunch-delights-with-mouthwatering-images-of-easter-t-0-upscale-baa1c327-bc16-4799-8e93-50f66c477dac-jpgx3-ac53d2bb8c_1800.jpg"
-      }
-    },
-    {
-      "id": "easter-blessings-with-a-religious-theme-and-imagery-such-as-3-upscale-9e5d02f4-6570-4516-a4ed-ea43735418b6-jpgx3-7cc84f4c07",
-      "relative_path": "2023/04/01/UPSCALE/Scaled/Easter Blessings with a religious theme and imagery, such as-3-UPSCALE_9e5d02f4-6570-4516-a4ed-ea43735418b6.jpgx3.jpg",
-      "gallery_country": {
-        "slug": "ai",
-        "label": "AI",
-        "source": "forced"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/easter-blessings-with-a-religious-theme-and-imagery-such-as-3-upscale-9e5d02f4-6570-4516-a4ed-ea43735418b6-jpgx3-7cc84f4c07_900.jpg",
-        "detail": "expo/easter-blessings-with-a-religious-theme-and-imagery-such-as-3-upscale-9e5d02f4-6570-4516-a4ed-ea43735418b6-jpgx3-7cc84f4c07_1800.jpg"
       }
     },
     {
@@ -63716,20 +63534,6 @@
       }
     },
     {
-      "id": "cocker-spaniel-and-tabby-cat-pastel-colors-0-upscale-3d34d04f-e7bd-4022-a310-2780aed04be9-jpgx2-90a3b41634",
-      "relative_path": "2023/04/04/UPSCALE/Scaled/cocker spaniel and tabby cat, pastel colors-0-UPSCALE_3d34d04f-e7bd-4022-a310-2780aed04be9.jpgx2.jpg",
-      "gallery_country": {
-        "slug": "ai",
-        "label": "AI",
-        "source": "forced"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/cocker-spaniel-and-tabby-cat-pastel-colors-0-upscale-3d34d04f-e7bd-4022-a310-2780aed04be9-jpgx2-90a3b41634_900.jpg",
-        "detail": "expo/cocker-spaniel-and-tabby-cat-pastel-colors-0-upscale-3d34d04f-e7bd-4022-a310-2780aed04be9-jpgx2-90a3b41634_1800.jpg"
-      }
-    },
-    {
       "id": "cloud-computing-cloud-storage-cloud-security-cloud-deploy-7-upscale-1c5f02a0-110c-4a75-9751-2c63ddb40277-jpgx2-6296161291",
       "relative_path": "2023/06/07/UPSCALE/Scaled/Cloud Computing- Cloud Storage, Cloud Security, Cloud Deploy-7-UPSCALE_1c5f02a0-110c-4a75-9751-2c63ddb40277.jpgx2.jpg",
       "gallery_country": {
@@ -63979,118 +63783,6 @@
       "derivatives": {
         "gallery": "expo/clementine-on-a-fruit-tray-in-the-foreground-abstract-back-0-upscale-377e4f86-f712-42d1-8b28-c13ebfedbf30-jpgx2-4d6e4ced7e_900.jpg",
         "detail": "expo/clementine-on-a-fruit-tray-in-the-foreground-abstract-back-0-upscale-377e4f86-f712-42d1-8b28-c13ebfedbf30-jpgx2-4d6e4ced7e_1800.jpg"
-      }
-    },
-    {
-      "id": "classing-vintage-cadillac-3-upscale-ffc09445-ed96-4e1a-9f15-11b200c33921-jpgx2-26b0311c31",
-      "relative_path": "2023/03/03/UPSCALE/Scaled/classing vintage Cadillac-3-UPSCALE_ffc09445-ed96-4e1a-9f15-11b200c33921.jpgx2.jpg",
-      "gallery_country": {
-        "slug": "ai",
-        "label": "AI",
-        "source": "forced"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/classing-vintage-cadillac-3-upscale-ffc09445-ed96-4e1a-9f15-11b200c33921-jpgx2-26b0311c31_900.jpg",
-        "detail": "expo/classing-vintage-cadillac-3-upscale-ffc09445-ed96-4e1a-9f15-11b200c33921-jpgx2-26b0311c31_1800.jpg"
-      }
-    },
-    {
-      "id": "classing-vintage-cadillac-3-upscale-e7fe0daf-84c4-4a2c-a80b-932836793176-jpgx2-f161b29609",
-      "relative_path": "2023/03/03/UPSCALE/Scaled/classing vintage Cadillac-3-UPSCALE_e7fe0daf-84c4-4a2c-a80b-932836793176.jpgx2.jpg",
-      "gallery_country": {
-        "slug": "ai",
-        "label": "AI",
-        "source": "forced"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/classing-vintage-cadillac-3-upscale-e7fe0daf-84c4-4a2c-a80b-932836793176-jpgx2-f161b29609_900.jpg",
-        "detail": "expo/classing-vintage-cadillac-3-upscale-e7fe0daf-84c4-4a2c-a80b-932836793176-jpgx2-f161b29609_1800.jpg"
-      }
-    },
-    {
-      "id": "classing-vintage-cadillac-2-upscale-595373e4-9b12-428b-9bac-6db71a9d60fc-jpgx2-60560b85c2",
-      "relative_path": "2023/03/03/UPSCALE/Scaled/classing vintage Cadillac-2-UPSCALE_595373e4-9b12-428b-9bac-6db71a9d60fc.jpgx2.jpg",
-      "gallery_country": {
-        "slug": "ai",
-        "label": "AI",
-        "source": "forced"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/classing-vintage-cadillac-2-upscale-595373e4-9b12-428b-9bac-6db71a9d60fc-jpgx2-60560b85c2_900.jpg",
-        "detail": "expo/classing-vintage-cadillac-2-upscale-595373e4-9b12-428b-9bac-6db71a9d60fc-jpgx2-60560b85c2_1800.jpg"
-      }
-    },
-    {
-      "id": "classing-vintage-cadillac-2-upscale-09cfb6cc-cf5b-4389-96e6-7161a3b94431-jpgx2-9ca7208168",
-      "relative_path": "2023/03/03/UPSCALE/Scaled/classing vintage Cadillac-2-UPSCALE_09cfb6cc-cf5b-4389-96e6-7161a3b94431.jpgx2.jpg",
-      "gallery_country": {
-        "slug": "ai",
-        "label": "AI",
-        "source": "forced"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/classing-vintage-cadillac-2-upscale-09cfb6cc-cf5b-4389-96e6-7161a3b94431-jpgx2-9ca7208168_900.jpg",
-        "detail": "expo/classing-vintage-cadillac-2-upscale-09cfb6cc-cf5b-4389-96e6-7161a3b94431-jpgx2-9ca7208168_1800.jpg"
-      }
-    },
-    {
-      "id": "classing-vintage-cadillac-1-upscale-df4702c6-4c71-407c-a479-ad5fbee117f5-jpgx2-5f74fa98bb",
-      "relative_path": "2023/03/03/UPSCALE/Scaled/classing vintage Cadillac-1-UPSCALE_df4702c6-4c71-407c-a479-ad5fbee117f5.jpgx2.jpg",
-      "gallery_country": {
-        "slug": "ai",
-        "label": "AI",
-        "source": "forced"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/classing-vintage-cadillac-1-upscale-df4702c6-4c71-407c-a479-ad5fbee117f5-jpgx2-5f74fa98bb_900.jpg",
-        "detail": "expo/classing-vintage-cadillac-1-upscale-df4702c6-4c71-407c-a479-ad5fbee117f5-jpgx2-5f74fa98bb_1800.jpg"
-      }
-    },
-    {
-      "id": "classing-vintage-cadillac-1-upscale-45d627e9-b7f2-4e1f-9257-a6ecb2b33e06-jpgx2-a7efec705a",
-      "relative_path": "2023/03/03/UPSCALE/Scaled/classing vintage Cadillac-1-UPSCALE_45d627e9-b7f2-4e1f-9257-a6ecb2b33e06.jpgx2.jpg",
-      "gallery_country": {
-        "slug": "ai",
-        "label": "AI",
-        "source": "forced"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/classing-vintage-cadillac-1-upscale-45d627e9-b7f2-4e1f-9257-a6ecb2b33e06-jpgx2-a7efec705a_900.jpg",
-        "detail": "expo/classing-vintage-cadillac-1-upscale-45d627e9-b7f2-4e1f-9257-a6ecb2b33e06-jpgx2-a7efec705a_1800.jpg"
-      }
-    },
-    {
-      "id": "classing-vintage-cadillac-0-upscale-1ff16a69-7e7e-458f-8ad1-5938f5c04fa2-jpgx2-3612bdeebb",
-      "relative_path": "2023/03/03/UPSCALE/Scaled/classing vintage Cadillac-0-UPSCALE_1ff16a69-7e7e-458f-8ad1-5938f5c04fa2.jpgx2.jpg",
-      "gallery_country": {
-        "slug": "ai",
-        "label": "AI",
-        "source": "forced"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/classing-vintage-cadillac-0-upscale-1ff16a69-7e7e-458f-8ad1-5938f5c04fa2-jpgx2-3612bdeebb_900.jpg",
-        "detail": "expo/classing-vintage-cadillac-0-upscale-1ff16a69-7e7e-458f-8ad1-5938f5c04fa2-jpgx2-3612bdeebb_1800.jpg"
-      }
-    },
-    {
-      "id": "classing-vintage-cadillac-0-upscale-11815378-8e73-48ec-bcfd-84ae2e703478-jpgx2-aa4eb6e223",
-      "relative_path": "2023/03/03/UPSCALE/Scaled/classing vintage Cadillac-0-UPSCALE_11815378-8e73-48ec-bcfd-84ae2e703478.jpgx2.jpg",
-      "gallery_country": {
-        "slug": "ai",
-        "label": "AI",
-        "source": "forced"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/classing-vintage-cadillac-0-upscale-11815378-8e73-48ec-bcfd-84ae2e703478-jpgx2-aa4eb6e223_900.jpg",
-        "detail": "expo/classing-vintage-cadillac-0-upscale-11815378-8e73-48ec-bcfd-84ae2e703478-jpgx2-aa4eb6e223_1800.jpg"
       }
     },
     {

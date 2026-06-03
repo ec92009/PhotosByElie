@@ -654,7 +654,7 @@ const syncDetailPreviewSize = () => {
   const maxHeight = Math.max(280, window.innerHeight - previewTop - 24);
   const fittedWidth = Math.min(maxWidth, maxHeight * ratio);
   if (detailLayout.classList.contains("is-landscape")) {
-    preview.style.setProperty("--detail-landscape-width", `${fittedWidth}px`);
+    preview.style.setProperty("--detail-landscape-width", "100%");
     preview.style.removeProperty("--detail-portrait-width");
     return;
   }

@@ -4812,13 +4812,14 @@ body.detail-fullscreen-active{
 }
 .detail-layout.is-landscape{
   grid-template-columns:minmax(0,1fr);
-  gap:clamp(14px,2.4vw,28px);
+  gap:0;
   align-items:start;
-  padding-block:clamp(16px,3dvh,34px);
+  padding:0;
+  overflow:hidden;
 }
 .detail-layout.is-landscape .detail-preview{
   width:min(100%,var(--detail-landscape-width,100%));
-  margin-inline:auto;
+  margin-inline:0;
 }
 .detail-layout.is-portrait .detail-preview{
   width:min(100%,var(--detail-portrait-width,100%));
@@ -4830,6 +4831,8 @@ body.detail-fullscreen-active{
   gap:clamp(14px,3vw,38px);
   align-items:start;
   width:100%;
+  box-sizing:border-box;
+  padding:clamp(18px,3vw,34px);
 }
 .detail-layout.is-landscape .detail-panel h1{
   max-width:none;

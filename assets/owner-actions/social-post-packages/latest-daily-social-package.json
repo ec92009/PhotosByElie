@@ -1,5 +1,13 @@
 {
   "date": "2026-06-03",
   "manifest": "assets/owner-actions/social-post-packages/2026-06-03/daily-social-package.json",
-  "generated_at": "2026-06-03T03:17:24.341Z"
+  "generated_at": "2026-06-03T03:17:24.341Z",
+  "updated_at": "2026-06-03T03:33:29.212Z",
+  "status": {
+    "facebook": "published",
+    "instagram": "published",
+    "threads": "published",
+    "pinterest": "prepared_no_api_token_missing_token",
+    "etsy": "drafts_created_media_verified"
+  }
 }

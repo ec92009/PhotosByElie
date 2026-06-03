@@ -1,7 +1,7 @@
 {
   "date": "2026-06-03",
   "platform": "Instagram",
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "title": "Tuscany Arno and Hill Light",
@@ -13,7 +13,8 @@
   "notes": [
     "Images are public watermarked R2 previews staged for Instagram Graph API publishing.",
     "All selected images are within the Instagram feed aspect-ratio guardrail.",
-    "Caption uses profile-link wording because Instagram feed captions render raw URLs as plain text."
+    "Caption uses profile-link wording because Instagram feed captions render raw URLs as plain text.",
+    "Published through API and verified by Graph/API readback."
   ],
   "items": [
     {
@@ -153,5 +154,33 @@
       "local_staged_path": "socials/Instagram/2026-06-03/tuscany-arno-and-hill-light/images/08-img-1184-adad54985d-tuscany-arno-and-hill-light.jpg"
     }
   ],
-  "local_package": "/Users/ecohen/Dev/photosByElie/socials/Instagram/2026-06-03/tuscany-arno-and-hill-light"
+  "local_package": "/Users/ecohen/Dev/photosByElie/socials/Instagram/2026-06-03/tuscany-arno-and-hill-light",
+  "published": {
+    "status": "published",
+    "platform": "instagram",
+    "account": "ec92009",
+    "media_id": "18317697052273730",
+    "published_at": "2026-06-03T03:23:27+0000",
+    "permalink_url": "https://www.instagram.com/p/DZG8dUXFJOX/",
+    "username": "ec92009",
+    "media_type": "CAROUSEL_ALBUM",
+    "image_count": 8,
+    "child_count": 8,
+    "verified_at": "2026-06-03T03:33:29.212Z",
+    "verification": "Instagram Graph returned CAROUSEL_ALBUM, permalink, username, timestamp, caption without raw URL, and 8 child images."
+  },
+  "api_publish": {
+    "status": "published",
+    "platform": "instagram",
+    "account": "ec92009",
+    "media_id": "18317697052273730",
+    "published_at": "2026-06-03T03:23:27+0000",
+    "permalink_url": "https://www.instagram.com/p/DZG8dUXFJOX/",
+    "username": "ec92009",
+    "media_type": "CAROUSEL_ALBUM",
+    "image_count": 8,
+    "child_count": 8,
+    "verified_at": "2026-06-03T03:33:29.212Z",
+    "verification": "Instagram Graph returned CAROUSEL_ALBUM, permalink, username, timestamp, caption without raw URL, and 8 child images."
+  }
 }

@@ -1,6 +1,6 @@
 # Instagram Package - Tuscany Arno and Hill Light
 
-Status: `prepared`
+Status: `published`
 Destination: https://photos-by-elie.com/campaign.html?c=instagram-tuscany-arno-and-hill-light-2026-06-03
 Images: 8
 
@@ -36,3 +36,20 @@ Tuscany in two movements: Arno reflections, hill towns, olive paths, and late sp
 - `img-1184-adad54985d` -> `socials/Instagram/2026-06-03/tuscany-arno-and-hill-light/images/08-img-1184-adad54985d-tuscany-arno-and-hill-light.jpg`
   Public: https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1184-adad54985d_1800.jpg
   Photo: https://photos-by-elie.com/photo.html?id=img-1184-adad54985d
+
+## Published
+
+{
+  "status": "published",
+  "platform": "instagram",
+  "account": "ec92009",
+  "media_id": "18317697052273730",
+  "published_at": "2026-06-03T03:23:27+0000",
+  "permalink_url": "https://www.instagram.com/p/DZG8dUXFJOX/",
+  "username": "ec92009",
+  "media_type": "CAROUSEL_ALBUM",
+  "image_count": 8,
+  "child_count": 8,
+  "verified_at": "2026-06-03T03:33:29.212Z",
+  "verification": "Instagram Graph returned CAROUSEL_ALBUM, permalink, username, timestamp, caption without raw URL, and 8 child images."
+}

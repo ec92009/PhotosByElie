@@ -3,17 +3,17 @@
   "generated_at": "2026-06-03T03:17:24.341Z",
   "source_policy": "Prepared from public SQLite catalog rows and public R2 watermarked previews only. No private masters, buyer downloads, Owner-only metadata, ignored Owner review JSON, or secrets were used.",
   "status": {
-    "facebook": "prepared",
-    "instagram": "prepared",
-    "threads": "prepared",
+    "facebook": "published",
+    "instagram": "published",
+    "threads": "published",
     "pinterest": "prepared_no_api_token_missing_token",
-    "etsy": "pending"
+    "etsy": "drafts_created_media_verified"
   },
   "packages": [
     {
       "date": "2026-06-03",
       "platform": "Facebook",
-      "status": "prepared",
+      "status": "published",
       "account": "Photos By Elie",
       "post_type": "multi_photo",
       "title": "Albi Tarn River and Brick Light",
@@ -164,12 +164,36 @@
           "local_staged_path": "socials/Facebook/2026-06-03/albi-tarn-river-brick-light/images/08-20180525-1443-00956-a9e61b8dde-albi-tarn-river-brick-light.jpg"
         }
       ],
-      "local_package": "/Users/ecohen/Dev/photosByElie/socials/Facebook/2026-06-03/albi-tarn-river-brick-light"
+      "local_package": "/Users/ecohen/Dev/photosByElie/socials/Facebook/2026-06-03/albi-tarn-river-brick-light",
+      "published": {
+        "status": "published",
+        "platform": "facebook",
+        "account": "Photos By Elie",
+        "page_id": "1146747141854670",
+        "post_id": "1146747141854670_122103396957334672",
+        "published_at": "2026-06-03T03:22:17+0000",
+        "permalink_url": "https://www.facebook.com/122102168061334672/posts/122103396957334672",
+        "image_count": 8,
+        "verified_at": "2026-06-03T03:33:29.212Z",
+        "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
+      },
+      "api_publish": {
+        "status": "published",
+        "platform": "facebook",
+        "account": "Photos By Elie",
+        "page_id": "1146747141854670",
+        "post_id": "1146747141854670_122103396957334672",
+        "published_at": "2026-06-03T03:22:17+0000",
+        "permalink_url": "https://www.facebook.com/122102168061334672/posts/122103396957334672",
+        "image_count": 8,
+        "verified_at": "2026-06-03T03:33:29.212Z",
+        "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
+      }
     },
     {
       "date": "2026-06-03",
       "platform": "Instagram",
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "title": "Tuscany Arno and Hill Light",
@@ -321,7 +345,35 @@
           "local_staged_path": "socials/Instagram/2026-06-03/tuscany-arno-and-hill-light/images/08-img-1184-adad54985d-tuscany-arno-and-hill-light.jpg"
         }
       ],
-      "local_package": "/Users/ecohen/Dev/photosByElie/socials/Instagram/2026-06-03/tuscany-arno-and-hill-light"
+      "local_package": "/Users/ecohen/Dev/photosByElie/socials/Instagram/2026-06-03/tuscany-arno-and-hill-light",
+      "published": {
+        "status": "published",
+        "platform": "instagram",
+        "account": "ec92009",
+        "media_id": "18317697052273730",
+        "published_at": "2026-06-03T03:23:27+0000",
+        "permalink_url": "https://www.instagram.com/p/DZG8dUXFJOX/",
+        "username": "ec92009",
+        "media_type": "CAROUSEL_ALBUM",
+        "image_count": 8,
+        "child_count": 8,
+        "verified_at": "2026-06-03T03:33:29.212Z",
+        "verification": "Instagram Graph returned CAROUSEL_ALBUM, permalink, username, timestamp, caption without raw URL, and 8 child images."
+      },
+      "api_publish": {
+        "status": "published",
+        "platform": "instagram",
+        "account": "ec92009",
+        "media_id": "18317697052273730",
+        "published_at": "2026-06-03T03:23:27+0000",
+        "permalink_url": "https://www.instagram.com/p/DZG8dUXFJOX/",
+        "username": "ec92009",
+        "media_type": "CAROUSEL_ALBUM",
+        "image_count": 8,
+        "child_count": 8,
+        "verified_at": "2026-06-03T03:33:29.212Z",
+        "verification": "Instagram Graph returned CAROUSEL_ALBUM, permalink, username, timestamp, caption without raw URL, and 8 child images."
+      }
     },
     {
       "date": "2026-06-03",
@@ -437,7 +489,7 @@
     {
       "date": "2026-06-03",
       "platform": "Threads",
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009 via Instagram login",
       "post_type": "four_image_thread",
       "title": "Tuscany Arno and Hill Light",
@@ -521,12 +573,113 @@
         }
       ],
       "local_package": "/Users/ecohen/Dev/photosByElie/socials/Threads/2026-06-03/tuscany-arno-and-hill-light",
-      "link_preview_note": "Remove any automatic link preview if it shows generic or off-theme campaign metadata before posting."
+      "link_preview_note": "Remove any automatic link preview if it shows generic or off-theme campaign metadata before posting.",
+      "published": {
+        "status": "published",
+        "published_at": "2026-06-03T03:24:05+0000",
+        "platform": "Threads",
+        "account": "ec92009",
+        "threads_user_id": "36227075590239114",
+        "published_id": "17888983059549706",
+        "shortcode": "DZG8irnlAWa",
+        "url": "https://www.threads.com/@ec92009/post/DZG8irnlAWa",
+        "media_type": "CAROUSEL_ALBUM",
+        "image_count": 4,
+        "api_graph_version": "v1.0",
+        "api_container_ids": [
+          "18085175000139106",
+          "18085175030139106",
+          "18085175051139106",
+          "18085175066139106"
+        ],
+        "carousel_container_id": "18085175102139106",
+        "verified_at": "2026-06-03T03:33:29.212Z",
+        "visible_verification": "Threads API returned permalink, shortcode, username ec92009, CAROUSEL_ALBUM, timestamp, and posted text."
+      },
+      "api_publish": {
+        "status": "published",
+        "published_at": "2026-06-03T03:24:05+0000",
+        "platform": "Threads",
+        "account": "ec92009",
+        "threads_user_id": "36227075590239114",
+        "published_id": "17888983059549706",
+        "shortcode": "DZG8irnlAWa",
+        "url": "https://www.threads.com/@ec92009/post/DZG8irnlAWa",
+        "media_type": "CAROUSEL_ALBUM",
+        "image_count": 4,
+        "api_graph_version": "v1.0",
+        "api_container_ids": [
+          "18085175000139106",
+          "18085175030139106",
+          "18085175051139106",
+          "18085175066139106"
+        ],
+        "carousel_container_id": "18085175102139106",
+        "verified_at": "2026-06-03T03:33:29.212Z",
+        "visible_verification": "Threads API returned permalink, shortcode, username ec92009, CAROUSEL_ALBUM, timestamp, and posted text."
+      }
     }
   ],
   "etsy_campaigns": [
     "etsy-albi-tarn-wall-art-2026-06-03",
     "etsy-tuscany-arno-hill-wall-art-2026-06-03",
     "etsy-paris-eiffel-night-wall-art-2026-06-03"
-  ]
+  ],
+  "etsy": {
+    "status": "drafts_created_media_verified",
+    "shop_id": "42422777",
+    "shop_url": "https://www.etsy.com/shop/PhotosByElieShop",
+    "product": "jpg-6mp",
+    "taxonomy_id": 2078,
+    "total_drafts": 21,
+    "verified_drafts": 21,
+    "packages": [
+      {
+        "campaign_id": "etsy-albi-tarn-wall-art-2026-06-03",
+        "path": "assets/owner-actions/etsy-listing-packages/2026-06-03/etsy-albi-tarn-wall-art-2026-06-03",
+        "listing_count": 8,
+        "draft_ids": [
+          "4515540347",
+          "4515540357",
+          "4515540363",
+          "4515537866",
+          "4515537870",
+          "4515537872",
+          "4515537878",
+          "4515540391"
+        ],
+        "media_verified": true
+      },
+      {
+        "campaign_id": "etsy-tuscany-arno-hill-wall-art-2026-06-03",
+        "path": "assets/owner-actions/etsy-listing-packages/2026-06-03/etsy-tuscany-arno-hill-wall-art-2026-06-03",
+        "listing_count": 8,
+        "draft_ids": [
+          "4515540399",
+          "4515537900",
+          "4515537906",
+          "4515537908",
+          "4515537914",
+          "4515540413",
+          "4515540425",
+          "4515540429"
+        ],
+        "media_verified": true
+      },
+      {
+        "campaign_id": "etsy-paris-eiffel-night-wall-art-2026-06-03",
+        "path": "assets/owner-actions/etsy-listing-packages/2026-06-03/etsy-paris-eiffel-night-wall-art-2026-06-03",
+        "listing_count": 5,
+        "draft_ids": [
+          "4515540445",
+          "4515540453",
+          "4515540463",
+          "4515540465",
+          "4515537962"
+        ],
+        "media_verified": true
+      }
+    ],
+    "note": "All Etsy listings remain drafts. No active Etsy listings were published automatically."
+  }
 }

@@ -1,6 +1,6 @@
 # Facebook Package - Albi Tarn River and Brick Light
 
-Status: `prepared`
+Status: `published`
 Destination: https://photos-by-elie.com/campaign.html?c=facebook-albi-tarn-river-brick-light-2026-06-03
 Images: 8
 
@@ -34,3 +34,18 @@ Albi in brick, river light, and Tarn-side atmosphere: a focused Photos By Elie w
 - `20180525-1443-00956-a9e61b8dde` -> `socials/Facebook/2026-06-03/albi-tarn-river-brick-light/images/08-20180525-1443-00956-a9e61b8dde-albi-tarn-river-brick-light.jpg`
   Public: https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180525-1443-00956-a9e61b8dde_1800.jpg
   Photo: https://photos-by-elie.com/photo.html?id=20180525-1443-00956-a9e61b8dde
+
+## Published
+
+{
+  "status": "published",
+  "platform": "facebook",
+  "account": "Photos By Elie",
+  "page_id": "1146747141854670",
+  "post_id": "1146747141854670_122103396957334672",
+  "published_at": "2026-06-03T03:22:17+0000",
+  "permalink_url": "https://www.facebook.com/122102168061334672/posts/122103396957334672",
+  "image_count": 8,
+  "verified_at": "2026-06-03T03:33:29.212Z",
+  "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
+}

@@ -1,7 +1,7 @@
 {
   "date": "2026-06-03",
   "platform": "Facebook",
-  "status": "prepared",
+  "status": "published",
   "account": "Photos By Elie",
   "post_type": "multi_photo",
   "title": "Albi Tarn River and Brick Light",
@@ -12,7 +12,8 @@
   "available_count": 8,
   "notes": [
     "Images are public watermarked R2 previews staged for browser upload and Meta Pages API publishing.",
-    "Facebook package uses 8 Albi/Tarn images, distinct from recent Spain, Portugal, California, and Paris social sets."
+    "Facebook package uses 8 Albi/Tarn images, distinct from recent Spain, Portugal, California, and Paris social sets.",
+    "Published through API and verified by Graph/API readback."
   ],
   "items": [
     {
@@ -152,5 +153,29 @@
       "local_staged_path": "socials/Facebook/2026-06-03/albi-tarn-river-brick-light/images/08-20180525-1443-00956-a9e61b8dde-albi-tarn-river-brick-light.jpg"
     }
   ],
-  "local_package": "/Users/ecohen/Dev/photosByElie/socials/Facebook/2026-06-03/albi-tarn-river-brick-light"
+  "local_package": "/Users/ecohen/Dev/photosByElie/socials/Facebook/2026-06-03/albi-tarn-river-brick-light",
+  "published": {
+    "status": "published",
+    "platform": "facebook",
+    "account": "Photos By Elie",
+    "page_id": "1146747141854670",
+    "post_id": "1146747141854670_122103396957334672",
+    "published_at": "2026-06-03T03:22:17+0000",
+    "permalink_url": "https://www.facebook.com/122102168061334672/posts/122103396957334672",
+    "image_count": 8,
+    "verified_at": "2026-06-03T03:33:29.212Z",
+    "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
+  },
+  "api_publish": {
+    "status": "published",
+    "platform": "facebook",
+    "account": "Photos By Elie",
+    "page_id": "1146747141854670",
+    "post_id": "1146747141854670_122103396957334672",
+    "published_at": "2026-06-03T03:22:17+0000",
+    "permalink_url": "https://www.facebook.com/122102168061334672/posts/122103396957334672",
+    "image_count": 8,
+    "verified_at": "2026-06-03T03:33:29.212Z",
+    "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
+  }
 }

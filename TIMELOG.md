@@ -181,8 +181,9 @@ Clock state: running
 | 2026-06-03 | 00:13 CEST | 00:17 CEST | 0:04 | Completed Nerja Etsy draft image/file uploads, added the Solana Beach Etsy campaign alias, and made Etsy outlet titles collection-aware for non-Spain sets. |
 | 2026-06-03 | 00:18 CEST | 00:23 CEST | 0:05 | Created Solana Etsy drafts, uploaded listing images and JPG 6 MP buyer files, verified draft asset counts, and updated automation memory. |
 | 2026-06-03 | 00:38 CEST | 00:40 CEST | 0:02 | Added the Etsy draft companion workflow, including Pinterest campaign photos, to the nightly automation prompt and memory. |
+| 2026-06-03 | 10:35 CEST | 10:36 CEST | 0:01 | Requested Owner review detail pages return to the originating review row. |
 
 ## Totals
 
-Active collaboration time used: 12:31
+Active collaboration time used: 12:32
 Remaining budget: not set

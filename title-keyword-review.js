@@ -11,6 +11,8 @@
   const helperQueueUrl = "/__photosbyelie/title-keyword-review-queue";
   const blacklistUrl = "./assets/owner-actions/keyword-blacklist.json";
   const approvalsEndpoint = "/__photosbyelie/photo-action";
+  const ownerReviewReturnStateKey = "photosbyelie-owner-review-return-state";
+  const ownerReviewReturnMaxAgeMs = 1000 * 60 * 60 * 2;
   const stateKeywordFlags = new Set([
     "title_keywords_reviewed",
     "title_keywords_proposed",
@@ -92,6 +94,53 @@
   };
 
   const versionedHref = (href) => window.photosByElieVersionedHref?.(href) || href;
+  const ownerReviewReturnHrefFor = (photoId) => {
+    const params = new URLSearchParams({ view: "title-keywords" });
+    if (photoId) params.set("returnPhoto", photoId);
+    return `./owner-review.html?${params.toString()}`;
+  };
+  const detailHrefForReviewPhoto = (photoId) => {
+    const params = new URLSearchParams({
+      id: photoId,
+      from: "owner-review",
+      returnView: "title-keywords",
+      returnPhoto: photoId,
+    });
+    return versionedHref(`./photo.html?${params.toString()}`);
+  };
+  const clearOwnerReviewReturnUrl = () => {
+    const current = new URL(window.location.href);
+    if (!current.searchParams.has("returnPhoto") && !current.searchParams.has("returnView")) return;
+    current.searchParams.delete("returnPhoto");
+    current.searchParams.delete("returnView");
+    window.history.replaceState(window.history.state, "", `${current.pathname}${current.search}${current.hash}`);
+  };
+  const readOwnerReviewReturnState = () => {
+    try {
+      const payload = JSON.parse(sessionStorage.getItem(ownerReviewReturnStateKey) || "null");
+      if (
+        payload?.source === "owner-review"
+        && payload.view === "title-keywords"
+        && Date.now() - Number(payload.createdAt || 0) < ownerReviewReturnMaxAgeMs
+      ) {
+        return payload;
+      }
+    } catch {}
+    return null;
+  };
+  const pendingOwnerReviewReturn = () => {
+    const query = new URLSearchParams(window.location.search);
+    const photoId = String(query.get("returnPhoto") || "").trim();
+    const payload = readOwnerReviewReturnState();
+    if (payload || photoId) {
+      return {
+        ...payload,
+        photoId: String(payload?.photoId || photoId || "").trim(),
+        scrollY: Number(payload?.scrollY),
+      };
+    }
+    return null;
+  };
 
   const loadJson = async (url) => {
     const response = await fetch(url, { cache: "no-store", credentials: "same-origin" });
@@ -465,7 +514,7 @@
       const proposedKeywords = proposedKeywordList.join(", ");
       const titleInputId = `review-title-${index}`;
       const keywordsInputId = `review-keywords-${index}`;
-      const href = versionedHref(`./photo.html?id=${encodeURIComponent(photoId)}`);
+      const href = detailHrefForReviewPhoto(photoId);
       const previewClasses = [
         "title-keyword-review-preview",
         thumb ? "has-image" : "is-missing-preview",
@@ -631,6 +680,49 @@
         inline: "nearest",
         behavior: prefersReducedMotion ? "auto" : "smooth",
       });
+    };
+    const writeOwnerReviewReturnState = (card) => {
+      const photoId = String(card?.dataset?.reviewPhotoId || "").trim();
+      if (!photoId) return;
+      try {
+        sessionStorage.setItem(ownerReviewReturnStateKey, JSON.stringify({
+          source: "owner-review",
+          view: "title-keywords",
+          photoId,
+          batchId: String(card?.dataset?.reviewBatchId || batchId || "").trim(),
+          href: ownerReviewReturnHrefFor(photoId),
+          scrollY: window.scrollY,
+          createdAt: Date.now(),
+        }));
+      } catch {
+        // The detail URL still carries enough context to return to the review page.
+      }
+    };
+    const openReviewDetail = (card) => {
+      const href = card?.getAttribute("data-review-detail-href") || "";
+      if (!href) return;
+      writeOwnerReviewReturnState(card);
+      window.location.assign(href);
+    };
+    const restorePendingOwnerReviewReturn = () => {
+      const pendingReturn = pendingOwnerReviewReturn();
+      if (!pendingReturn) return false;
+      try {
+        sessionStorage.removeItem(ownerReviewReturnStateKey);
+      } catch {}
+      clearOwnerReviewReturnUrl();
+      const targetCard = pendingReturn.photoId ? cardById.get(pendingReturn.photoId) : null;
+      if (targetCard) {
+        setActiveCard(targetCard);
+        window.requestAnimationFrame(() => scrollCardIntoReview(targetCard, "center"));
+        return true;
+      }
+      const scrollY = Number(pendingReturn.scrollY);
+      if (Number.isFinite(scrollY) && scrollY > 0) {
+        window.requestAnimationFrame(() => window.scrollTo({ top: scrollY, left: 0, behavior: "auto" }));
+        return true;
+      }
+      return false;
     };
     const moveActiveCard = (delta) => {
       const cards = [...cardById.values()];
@@ -1129,8 +1221,7 @@
       card.addEventListener("focusin", () => setActiveCard(card));
       card.addEventListener("dblclick", (event) => {
         if (isEditableEventTarget(event)) return;
-        const href = card.getAttribute("data-review-detail-href");
-        if (href) window.location.assign(href);
+        openReviewDetail(card);
       });
       const syncDecisionState = () => {
         const approved = Boolean(approve?.checked);
@@ -1298,6 +1389,7 @@
 
     const firstCard = cardById.values().next().value;
     if (firstCard) setActiveCard(firstCard);
+    restorePendingOwnerReviewReturn();
 
     window.addEventListener("keydown", (event) => {
       if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
@@ -1315,6 +1407,11 @@
       }
       if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
         moveActiveCard(-1);
+        event.preventDefault();
+        return;
+      }
+      if (event.key === "Enter") {
+        openReviewDetail(activeCard);
         event.preventDefault();
         return;
       }

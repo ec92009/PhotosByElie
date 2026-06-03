@@ -115,6 +115,8 @@ if (window.photosByElieIsPublicHidden?.(photo)) {
 }
 const detailSequenceKey = "photosbyelie-detail-sequence";
 const galleryReturnStateKey = "photosbyelie-gallery-return-state";
+const ownerReviewReturnStateKey = "photosbyelie-owner-review-return-state";
+const ownerReviewReturnMaxAgeMs = 1000 * 60 * 60 * 2;
 const metadataValue = (targetPhoto, label) => (
   (targetPhoto?.metadata || []).find((item) => item.label === label)?.value || ""
 );
@@ -364,9 +366,46 @@ const isHomeDetailSequence = () => {
   const payload = readGallerySequencePayload();
   return Boolean(payload?.source === "home" && payload.photoIds.includes(photo?.id));
 };
-const detailBackHref = () => (isHomeDetailSequence() ? "./#discover" : galleryHrefForKey(galleryReturnCollectionKey()));
-const detailBackLabelKey = () => (isHomeDetailSequence() ? "common.back_to_search" : "common.back_to_gallery");
+const ownerReviewReturnHrefFor = (view = "title-keywords", returnPhotoId = photo.id) => {
+  const returnParams = new URLSearchParams({ view: String(view || "title-keywords") });
+  if (returnPhotoId) returnParams.set("returnPhoto", returnPhotoId);
+  return `./owner-review.html?${returnParams.toString()}`;
+};
+const readOwnerReviewReturnPayload = () => {
+  try {
+    const payload = JSON.parse(sessionStorage.getItem(ownerReviewReturnStateKey) || "null");
+    if (
+      payload?.source === "owner-review"
+      && Date.now() - Number(payload.createdAt || 0) < ownerReviewReturnMaxAgeMs
+    ) {
+      return payload;
+    }
+  } catch {}
+  return null;
+};
+const ownerReviewReturnContext = (() => {
+  const fromOwnerReview = params.get("from") === "owner-review";
+  const stored = readOwnerReviewReturnPayload();
+  if (!fromOwnerReview && stored?.photoId !== photo.id) return null;
+  if (!fromOwnerReview && !stored) return null;
+  const view = params.get("returnView") || stored?.view || "title-keywords";
+  const returnPhotoId = params.get("returnPhoto") || stored?.photoId || photo.id;
+  return {
+    href: ownerReviewReturnHrefFor(view, returnPhotoId),
+    label: "Back to review",
+    photoId: returnPhotoId,
+    view,
+  };
+})();
+const detailBackContext = () => {
+  if (ownerReviewReturnContext) {
+    return { href: ownerReviewReturnContext.href, label: ownerReviewReturnContext.label };
+  }
+  const labelKey = isHomeDetailSequence() ? "common.back_to_search" : "common.back_to_gallery";
+  return { href: isHomeDetailSequence() ? "./#discover" : galleryHrefForKey(galleryReturnCollectionKey()), labelKey };
+};
 const writeGalleryReturnState = () => {
+  if (ownerReviewReturnContext) return;
   const payload = readGallerySequencePayload();
   if (payload?.source === "home") return;
   try {
@@ -384,18 +423,38 @@ const writeGalleryReturnState = () => {
   }
 };
 const backLink = document.querySelector("[data-back-link]");
-backLink.setAttribute("href", versionedHref(detailBackHref()));
-backLink.dataset.i18nAriaLabel = detailBackLabelKey();
-backLink.setAttribute("aria-label", t(detailBackLabelKey()));
+const backContext = detailBackContext();
+backLink.setAttribute("href", versionedHref(backContext.href));
+if (backContext.labelKey) {
+  backLink.dataset.i18nAriaLabel = backContext.labelKey;
+  backLink.setAttribute("aria-label", t(backContext.labelKey));
+} else {
+  delete backLink.dataset.i18nAriaLabel;
+  backLink.setAttribute("aria-label", backContext.label);
+}
 if (backLink.classList.contains("header-back-button")) {
   delete backLink.dataset.i18n;
 } else {
-  backLink.dataset.i18n = detailBackLabelKey();
-  backLink.textContent = t(detailBackLabelKey());
+  if (backContext.labelKey) {
+    backLink.dataset.i18n = backContext.labelKey;
+    backLink.textContent = t(backContext.labelKey);
+  } else {
+    delete backLink.dataset.i18n;
+    backLink.textContent = backContext.label;
+  }
 }
 
 let previousPhotoHref = "";
 let nextPhotoHref = "";
+const detailPhotoHref = (targetPhotoId) => {
+  const detailParams = new URLSearchParams({ id: targetPhotoId });
+  if (ownerReviewReturnContext) {
+    detailParams.set("from", "owner-review");
+    detailParams.set("returnView", ownerReviewReturnContext.view);
+    detailParams.set("returnPhoto", ownerReviewReturnContext.photoId);
+  }
+  return `./photo.html?${detailParams.toString()}`;
+};
 const navigateToPhotoHref = (href) => {
   if (href) window.location.assign(versionedHref(href));
 };
@@ -435,8 +494,8 @@ const detailIndex = detailPhotos.findIndex((item) => item.photo.id === photo.id)
 if (detailPhotos.length > 1 && detailIndex >= 0) {
   const previousEntry = detailPhotos[(detailIndex - 1 + detailPhotos.length) % detailPhotos.length];
   const nextEntry = detailPhotos[(detailIndex + 1) % detailPhotos.length];
-  previousPhotoHref = `./photo.html?id=${encodeURIComponent(previousEntry.photo.id)}`;
-  nextPhotoHref = `./photo.html?id=${encodeURIComponent(nextEntry.photo.id)}`;
+  previousPhotoHref = detailPhotoHref(previousEntry.photo.id);
+  nextPhotoHref = detailPhotoHref(nextEntry.photo.id);
 }
 syncDetailBottomActions();
 document.querySelectorAll("[data-back-link], [data-bottom-back-link]").forEach((link) => {

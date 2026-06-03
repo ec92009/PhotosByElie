@@ -1991,7 +1991,8 @@ window.photosByEliePhotoFilter = (() => {
     metadataValue(photo, 'Original size'),
     metadataValue(photo, 'Preview file'),
     Array.isArray(photo?.keywords) ? photo.keywords.join(' ') : photo?.keywords,
-    context.collectionTitle
+    context.collectionTitle,
+    typeof context.extraSearchText === 'function' ? context.extraSearchText(photo) : context.extraSearchText
   ].filter(Boolean).join(' ').toLowerCase();
   const moodTags = (photo, context = {}) => {
     const text = searchText(photo, context);

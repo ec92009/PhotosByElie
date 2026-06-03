@@ -43,6 +43,7 @@ OWNER_SESSION_PATH = "/__photosbyelie/owner-session"
 OWNER_LOGIN_PATH = "/__photosbyelie/owner-login"
 OWNER_LOGOUT_PATH = "/__photosbyelie/owner-logout"
 TITLE_KEYWORD_REVIEW_QUEUE_PATH = "/__photosbyelie/title-keyword-review-queue"
+OWNER_SUPER_SEARCH_PATH = "/__photosbyelie/owner-super-search-index"
 PUBLIC_MEDIA_PROXY_PATH = "/__photosbyelie/public-media/"
 MAX_BODY_BYTES = 5 * 1024 * 1024
 LOCAL_CLIENTS = {"127.0.0.1", "::1", "localhost"}
@@ -245,6 +246,9 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             return
         if path == TITLE_KEYWORD_REVIEW_QUEUE_PATH:
             self._handle_title_keyword_review_queue()
+            return
+        if path == OWNER_SUPER_SEARCH_PATH:
+            self._handle_owner_super_search_index()
             return
         if path == PHOTO_ACTION_PROGRESS_PATH:
             self._handle_photo_action_progress()
@@ -542,6 +546,17 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             return
         try:
             payload = title_keyword_review_queue_payload(Path.cwd())
+        except (OSError, sqlite3.Error, ValueError) as error:
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
+            return
+        self._send_json(HTTPStatus.OK, payload)
+
+    def _handle_owner_super_search_index(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            payload = owner_super_search_index(Path.cwd())
         except (OSError, sqlite3.Error, ValueError) as error:
             self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
             return
@@ -1425,6 +1440,91 @@ def title_keyword_review_queue_payload(repo_root: Path) -> dict:
         }
     finally:
         conn.close()
+
+
+def _search_index_text(values: list[object]) -> str:
+    parts: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        candidates = value if isinstance(value, list) else [value]
+        for candidate in candidates:
+            text = str(candidate or "").strip()
+            if not text:
+                continue
+            normalized = " ".join(text.casefold().split())
+            if not normalized or normalized in seen:
+                continue
+            parts.append(text)
+            seen.add(normalized)
+    return " ".join(parts)
+
+
+def owner_super_search_index(repo_root: Path) -> dict:
+    conn = owner_db_connect(repo_root)
+    try:
+        rows = conn.execute(
+            """
+            SELECT q.media_id, q.review_state, q.latest_attempt, q.owner_comment,
+                   p.previous_title, p.previous_keywords,
+                   p.proposed_title, p.proposed_keywords,
+                   p.proposal_status, p.proposal_reason,
+                   p.removed_blacklisted,
+                   d.decision_state, d.decided_title, d.decided_keywords
+            FROM title_keyword_queue AS q
+            LEFT JOIN title_keyword_proposals AS p
+              ON p.media_id = q.media_id
+             AND p.attempt = q.latest_attempt
+            LEFT JOIN title_keyword_decisions AS d
+              ON d.media_id = q.media_id
+             AND d.attempt = q.latest_attempt
+            ORDER BY q.updated_at DESC, q.media_id
+            """
+        ).fetchall()
+    finally:
+        conn.close()
+
+    catalog_rows = _catalog_rows_by_media_id(repo_root, [str(row["media_id"]) for row in rows])
+    records: dict[str, dict] = {}
+    for row in rows:
+        media_id = str(row["media_id"] or "")
+        if not media_id:
+            continue
+        catalog = catalog_rows.get(media_id, {})
+        text = _search_index_text([
+            media_id,
+            row["review_state"],
+            row["owner_comment"],
+            catalog.get("gallery_key"),
+            catalog.get("gallery_label"),
+            catalog.get("filename"),
+            catalog.get("source_folder"),
+            catalog.get("title"),
+            catalog.get("keywords") if isinstance(catalog.get("keywords"), list) else [],
+            row["previous_title"],
+            _split_keyword_text(row["previous_keywords"]),
+            row["proposed_title"],
+            _split_keyword_text(row["proposed_keywords"]),
+            row["proposal_status"],
+            row["proposal_reason"],
+            row["removed_blacklisted"],
+            row["decision_state"],
+            row["decided_title"],
+            _split_keyword_text(row["decided_keywords"]),
+        ])
+        records[media_id] = {
+            "text": text,
+            "reviewState": str(row["review_state"] or ""),
+            "decisionState": str(row["decision_state"] or ""),
+            "attempt": int(row["latest_attempt"] or 0),
+            "catalog": bool(catalog),
+        }
+    return {
+        "ok": True,
+        "format": "photosbyelie-owner-super-search-index",
+        "schema_version": 1,
+        "records": records,
+        "count": len(records),
+    }
 
 
 def _merge_title_keyword_review_record(repo_root: Path, batch_id: str, payload_out: dict) -> tuple[Path, dict]:

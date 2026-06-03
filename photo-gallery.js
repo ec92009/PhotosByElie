@@ -66,11 +66,14 @@ const defaultFilterState = {
   sort: "newest",
   mediaType: "all",
   dateFrom: "",
-  dateTo: ""
+  dateTo: "",
+  superSearch: false
 };
 const persistedFilterKeys = ["orientation", "minSize", "mood", "subject", "mediaType", "dateFrom", "dateTo"];
 let filterBar = null;
 let filterToggle = null;
+let ownerSuperSearchIndex = new Map();
+let ownerSuperSearchPromise = null;
 
 const shortcutKey = (label) => `<kbd>${label}</kbd>`;
 const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({
@@ -261,14 +264,39 @@ const showNativePicker = (control) => {
 
 const previewDimensions = (photo) => window.photosByEliePreviewDimensions?.(photo) || null;
 const galleryFilterKeys = ["query", "orientation", "mediaType", "minSize", "mood", "subject", "dateFrom", "dateTo"];
+const ownerSuperSearchText = (photo) => {
+  if (!localModerationEnabled || !filterState.superSearch) return "";
+  return ownerSuperSearchIndex.get(photo?.id)?.text || "";
+};
 const filterContext = () => ({
   collectionKey: galleryKey,
   collectionTitle: localizedCollectionTitle(),
+  extraSearchText: ownerSuperSearchText,
 });
 const activeFilterCount = () => photoFilter.activeFilterCount(filterState, galleryFilterKeys);
 const matchesFilterState = (photo) => photoFilter.matchesPhoto(photo, filterState, filterContext());
 const sortPhotos = (photos) => photoFilter.sortItems(photos, filterState, filterContext());
 const filteredVisiblePhotos = (photos = visiblePhotos()) => sortPhotos(photos.filter(matchesFilterState));
+
+const loadOwnerSuperSearchIndex = () => {
+  if (!localModerationEnabled) return Promise.resolve(ownerSuperSearchIndex);
+  if (ownerSuperSearchPromise) return ownerSuperSearchPromise;
+  ownerSuperSearchPromise = fetch("./__photosbyelie/owner-super-search-index", { cache: "no-store" })
+    .then((response) => {
+      if (!response.ok) throw new Error("Owner Super search is available only from the local Owner server.");
+      return response.json();
+    })
+    .then((payload) => {
+      const records = payload?.records && typeof payload.records === "object" ? payload.records : {};
+      ownerSuperSearchIndex = new Map(Object.entries(records));
+      return ownerSuperSearchIndex;
+    })
+    .catch((error) => {
+      ownerSuperSearchPromise = null;
+      throw error;
+    });
+  return ownerSuperSearchPromise;
+};
 
 const syncFilterToggle = () => {
   if (!filterToggle || !filterBar) return;
@@ -282,7 +310,11 @@ const syncFilterControls = () => {
   if (!filterBar) return;
   filterBar.querySelectorAll("[data-gallery-filter]").forEach((control) => {
     const key = control.dataset.galleryFilter;
-    control.value = filterState[key] || (control instanceof HTMLSelectElement ? "all" : "");
+    if (control instanceof HTMLInputElement && control.type === "checkbox") {
+      control.checked = Boolean(filterState[key]);
+    } else {
+      control.value = filterState[key] || (control instanceof HTMLSelectElement ? "all" : "");
+    }
   });
   filterBar.querySelectorAll("[data-gallery-date-display]").forEach((display) => {
     display.textContent = formatGalleryDate(filterState[display.dataset.galleryDateDisplay]);
@@ -316,6 +348,7 @@ const ensureGalleryFilterControls = () => {
   filterBar.setAttribute("aria-label", t("a11y.gallery_filters"));
   filterBar.innerHTML = `
     <label class="gallery-search-label"><span data-i18n="gallery.search">Search</span><input type="search" data-gallery-search placeholder="${escapeHtml(t("gallery.search_placeholder"))}"/></label>
+    ${localModerationEnabled ? `<label class="gallery-owner-super-search"><input type="checkbox" data-gallery-filter="superSearch"/><span>Super search</span></label>` : ""}
     <label class="gallery-date-label"><span data-i18n="gallery.date_from">Date from</span><span class="gallery-date-control"><span class="gallery-date-display" data-gallery-date-display="dateFrom" aria-hidden="true"></span><input class="gallery-date-native" type="date" data-gallery-filter="dateFrom" aria-label="${escapeHtml(t("gallery.date_from"))}"/></span></label>
     <label class="gallery-date-label"><span data-i18n="gallery.date_to">Date to</span><span class="gallery-date-control"><span class="gallery-date-display" data-gallery-date-display="dateTo" aria-hidden="true"></span><input class="gallery-date-native" type="date" data-gallery-filter="dateTo" aria-label="${escapeHtml(t("gallery.date_to"))}"/></span></label>
     <label><span data-i18n="gallery.media">Media</span><select data-gallery-filter="mediaType">
@@ -397,15 +430,23 @@ const ensureGalleryFilterControls = () => {
   filterBar.addEventListener("change", (event) => {
     const control = event.target;
     if (!(control instanceof HTMLSelectElement || control instanceof HTMLInputElement) || !control.dataset.galleryFilter) return;
-    const value = control instanceof HTMLInputElement && control.type === "date"
-      ? photoFilter.dateFilterValue(control.value)
-      : control.value;
+    const value = control instanceof HTMLInputElement && control.type === "checkbox"
+      ? control.checked
+      : control instanceof HTMLInputElement && control.type === "date"
+        ? photoFilter.dateFilterValue(control.value)
+        : control.value;
     filterState = { ...filterState, [control.dataset.galleryFilter]: value };
     syncFilterControls();
     writeFilterState();
     visibleLimit = pageSize;
     selectedIndex = 0;
     renderGallery();
+    if (control.dataset.galleryFilter === "superSearch" && value) {
+      setGalleryStatus("Loading Owner Super search...");
+      loadOwnerSuperSearchIndex()
+        .then(() => renderGallery())
+        .catch((error) => setGalleryStatus(error?.message || "Could not load Owner Super search."));
+    }
   });
   filterBar.querySelector("[data-gallery-search]")?.addEventListener("input", (event) => {
     filterState = { ...filterState, query: event.target.value };

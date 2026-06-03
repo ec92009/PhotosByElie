@@ -3248,6 +3248,50 @@ def _r2_key_known_current(current_keys: set[str], bucket: str, key: object) -> b
     return bool(clean_key and f"{bucket}/{clean_key}" in current_keys)
 
 
+def _r2_record_keys(payload: object) -> list[str]:
+    if not isinstance(payload, dict):
+        return []
+    keys: list[str] = []
+    for field in ("key", "expectedKey", "legacyKey", "galleryKey", "detailKey"):
+        value = payload.get(field)
+        if isinstance(value, str) and value.strip():
+            keys.append(value.strip())
+    for field in ("keys", "expectedKeys", "legacyKeys"):
+        values = payload.get(field)
+        if isinstance(values, list):
+            keys.extend(str(value).strip() for value in values if str(value or "").strip())
+    return sorted(set(keys))
+
+
+def _record_private_master_keys(record: dict) -> list[str]:
+    return _r2_record_keys(record.get("privateMaster"))
+
+
+def _record_private_render_keys(record: dict, product_id: str) -> list[str]:
+    renders = record.get("privateRenders") if isinstance(record.get("privateRenders"), dict) else {}
+    return _r2_record_keys(renders.get(product_id))
+
+
+def _record_public_preview_keys(photo_id: str, record: dict) -> list[str]:
+    media_type = str(record.get("mediaType") or "photo")
+    collection_key = str(record.get("collectionKey") or "").strip("/")
+    keys = [
+        public_preview_key(DEFAULT_PUBLIC_PREFIX, photo_id, "gallery", media_type),
+        public_preview_key(DEFAULT_PUBLIC_PREFIX, photo_id, "detail", media_type),
+    ]
+    if collection_key:
+        keys.append(f"{DEFAULT_PUBLIC_PREFIX}/{collection_key}/{photo_id}_900.jpg")
+        detail_suffix = "_short_5s_720p.mp4" if media_type.lower() == "video" else "_1800.jpg"
+        keys.append(f"{DEFAULT_PUBLIC_PREFIX}/{collection_key}/{photo_id}{detail_suffix}")
+    previews = record.get("publicPreviews") if isinstance(record.get("publicPreviews"), dict) else {}
+    keys.extend(_r2_record_keys(previews))
+    return sorted({key.strip("/") for key in keys if str(key or "").strip("/")})
+
+
+def _record_has_current_key(current_keys: set[str], bucket: str, keys: list[str]) -> bool:
+    return any(_r2_key_known_current(current_keys, bucket, key) for key in keys)
+
+
 def _apply_owner_db_r2_coverage(
     record: dict,
     photo_id: str,
@@ -3473,14 +3517,36 @@ def _r2_coverage_summary(
         product: sum(1 for _photo_id, record in active_render_records if record.get("privateRenders", {}).get(product, {}).get("present") is True)
         for product in ("jpg-6mp", "jpg-3mp", "jpg-1mp")
     }
-    blocked_present = {
-        "master": sum(1 for _photo_id, record in blocked_records if record.get("privateMaster", {}).get("present") is True),
-        "public": sum(1 for _photo_id, record in blocked_records if record.get("publicPreviews", {}).get("present") is True),
-        **{
-            product: sum(1 for _photo_id, record in blocked_records if record.get("privateRenders", {}).get(product, {}).get("present") is True)
-            for product in ("jpg-6mp", "jpg-3mp", "jpg-1mp")
-        },
-    }
+    if owner_current_r2_keys:
+        blocked_present = {
+            "master": sum(
+                1
+                for _photo_id, record in blocked_records
+                if _record_has_current_key(owner_current_r2_keys, private_bucket, _record_private_master_keys(record))
+            ),
+            "public": sum(
+                1
+                for photo_id, record in blocked_records
+                if _record_has_current_key(owner_current_r2_keys, public_bucket, _record_public_preview_keys(photo_id, record))
+            ),
+            **{
+                product: sum(
+                    1
+                    for _photo_id, record in blocked_records
+                    if _record_has_current_key(owner_current_r2_keys, private_bucket, _record_private_render_keys(record, product))
+                )
+                for product in ("jpg-6mp", "jpg-3mp", "jpg-1mp")
+            },
+        }
+    else:
+        blocked_present = {
+            "master": sum(1 for _photo_id, record in blocked_records if record.get("privateMaster", {}).get("present") is True),
+            "public": sum(1 for _photo_id, record in blocked_records if record.get("publicPreviews", {}).get("present") is True),
+            **{
+                product: sum(1 for _photo_id, record in blocked_records if record.get("privateRenders", {}).get(product, {}).get("present") is True)
+                for product in ("jpg-6mp", "jpg-3mp", "jpg-1mp")
+            },
+        }
     public_present = sum(1 for _photo_id, record in active_records if record.get("publicPreviews", {}).get("present") is True)
     sidecar_gallery_expected = sum(1 for photo in photos.values() if photo.get("publicPreview", {}).get("galleryKey"))
     sidecar_detail_expected = sum(1 for photo in photos.values() if photo.get("publicPreview", {}).get("detailKey"))

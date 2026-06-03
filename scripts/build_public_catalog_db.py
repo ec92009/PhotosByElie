@@ -14,6 +14,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+from owner_state_db import connect as owner_db_connect
 
 DEFAULT_OUTPUT = Path("assets/catalog/photosbyelie.sqlite")
 DEFAULT_PRODUCT_PRICING = Path("assets/catalog/product-pricing.json")
@@ -127,6 +128,72 @@ def split_keywords(value: Any) -> list[str]:
         seen.add(key)
         keywords.append(keyword)
     return keywords
+
+
+def set_metadata_value(photo: dict[str, Any], label: str, value: str) -> None:
+    metadata = [dict(item) for item in photo.get("metadata") or [] if isinstance(item, dict)]
+    target = label.casefold()
+    for item in metadata:
+        if str(item.get("label") or "").casefold() == target:
+            item["value"] = value
+            photo["metadata"] = metadata
+            return
+    metadata.insert(0, {"label": label, "value": value})
+    photo["metadata"] = metadata
+
+
+def load_applied_title_keyword_decisions(repo_root: Path) -> dict[str, dict[str, Any]]:
+    conn = owner_db_connect(repo_root)
+    try:
+        rows = conn.execute(
+            """
+            SELECT q.media_id, d.decided_title, d.decided_keywords
+            FROM title_keyword_queue AS q
+            JOIN title_keyword_decisions AS d
+              ON d.media_id = q.media_id
+             AND d.attempt = q.latest_attempt
+            WHERE q.review_state = 'applied'
+              AND d.decision_state = 'accepted'
+              AND COALESCE(d.applied_at, '') <> ''
+            """
+        ).fetchall()
+    finally:
+        conn.close()
+    decisions: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        media_id = str(row["media_id"] or "").strip()
+        if not media_id:
+            continue
+        decisions[media_id] = {
+            "title": str(row["decided_title"] or "").strip(),
+            "keywords": split_keywords(row["decided_keywords"]),
+        }
+    return decisions
+
+
+def apply_title_keyword_decisions(catalog: dict[str, Any], decisions: dict[str, dict[str, Any]]) -> int:
+    if not decisions:
+        return 0
+    applied = 0
+    for collection in catalog.values():
+        if not isinstance(collection, dict):
+            continue
+        for photo in collection.get("photos") or []:
+            if not isinstance(photo, dict):
+                continue
+            decision = decisions.get(str(photo.get("id") or ""))
+            if not decision:
+                continue
+            title = str(decision.get("title") or "").strip()
+            keywords = split_keywords(decision.get("keywords"))
+            if title:
+                photo["title"] = title
+            if keywords:
+                photo["keywords"] = keywords
+                set_metadata_value(photo, "Keywords", ", ".join(keywords))
+            if title or keywords:
+                applied += 1
+    return applied
 
 
 def photo_keywords(photo: dict[str, Any]) -> list[str]:
@@ -630,6 +697,7 @@ def ordered_collections(catalog: dict[str, Any]) -> list[tuple[str, dict[str, An
 
 def write_db(repo_root: Path, output: Path, source: str = "auto") -> dict[str, int]:
     catalog = load_catalog(repo_root, source=source)
+    applied_title_keywords = apply_title_keyword_decisions(catalog, load_applied_title_keyword_decisions(repo_root))
     pricing = load_product_pricing(repo_root)
     existing_video_durations = load_existing_video_durations(output)
     collection_entries = ordered_collections(catalog)
@@ -1117,6 +1185,7 @@ def write_db(repo_root: Path, output: Path, source: str = "auto") -> dict[str, i
                 "media_assets",
             ]
         }
+        counts["applied_title_keywords"] = applied_title_keywords
         conn.close()
         temp_path.replace(output)
         return counts

@@ -88,6 +88,9 @@ def js(value: object) -> str:
 
 
 def title_from_row(row: dict) -> str:
+    owner_title = str(row.get("owner_title") or "").strip()
+    if owner_title:
+        return owner_title
     raw = row.get("raw_metadata", {}) or {}
     for key in ("Title", "ObjectName"):
         value = raw.get(key)
@@ -131,6 +134,65 @@ def clean_keywords(values: object, keyword_blacklist: set[str]) -> list[str]:
         seen.add(normalized)
         keywords.append(keyword)
     return keywords
+
+
+def set_metadata_value(row: dict, label: str, value: str) -> dict:
+    row = dict(row)
+    metadata = [dict(item) for item in row.get("metadata") or [] if isinstance(item, dict)]
+    target = label.casefold()
+    for item in metadata:
+        if str(item.get("label") or "").casefold() == target:
+            item["value"] = value
+            row["metadata"] = metadata
+            return row
+    metadata.insert(0, {"label": label, "value": value})
+    row["metadata"] = metadata
+    return row
+
+
+def load_applied_title_keyword_decisions(repo_root: Path) -> dict[str, dict[str, object]]:
+    conn = owner_db_connect(repo_root)
+    try:
+        rows = conn.execute(
+            """
+            SELECT q.media_id, d.decided_title, d.decided_keywords
+            FROM title_keyword_queue AS q
+            JOIN title_keyword_decisions AS d
+              ON d.media_id = q.media_id
+             AND d.attempt = q.latest_attempt
+            WHERE q.review_state = 'applied'
+              AND d.decision_state = 'accepted'
+              AND COALESCE(d.applied_at, '') <> ''
+            """
+        ).fetchall()
+    finally:
+        conn.close()
+    decisions: dict[str, dict[str, object]] = {}
+    for row in rows:
+        media_id = str(row["media_id"] or "").strip()
+        if not media_id:
+            continue
+        decisions[media_id] = {
+            "title": str(row["decided_title"] or "").strip(),
+            "keywords": split_keyword_text(row["decided_keywords"]),
+        }
+    return decisions
+
+
+def apply_title_keyword_decision(row: dict, decision: dict[str, object] | None) -> dict:
+    if not decision:
+        return row
+    title = str(decision.get("title") or "").strip()
+    keywords = split_keyword_text(decision.get("keywords"))
+    if not title and not keywords:
+        return row
+    row = dict(row)
+    if title:
+        row["owner_title"] = title
+    if keywords:
+        row["keywords"] = keywords
+        row = set_metadata_value(row, "Keywords", ", ".join(keywords))
+    return row
 
 
 def normalize_metadata(row: dict, keyword_blacklist: set[str] | None = None) -> list[dict]:
@@ -822,11 +884,13 @@ def write_photos_data(
     country_assignments: dict[str, str] | None = None,
     keyword_blacklist: set[str] | None = None,
     blacklist_source_paths: set[str] | None = None,
+    title_keyword_decisions: dict[str, dict[str, object]] | None = None,
 ) -> Path:
     groups: dict[str, list[tuple[dict, str]]] = defaultdict(list)
     country_assignments = country_assignments or {}
     keyword_blacklist = keyword_blacklist or set()
     blacklist_source_paths = blacklist_source_paths or set()
+    title_keyword_decisions = title_keyword_decisions or {}
     blacklist_source_suffixes = source_path_suffixes(blacklist_source_paths)
     uploaded_public_keys = load_uploaded_public_keys(repo_root)
     for path, mode in existing_manifest_specs(repo_root):
@@ -839,6 +903,7 @@ def write_photos_data(
                 continue
             row = apply_country_assignment(row, country_assignments.get(row.get("id")))
             row = apply_export_country_hints(row)
+            row = apply_title_keyword_decision(row, title_keyword_decisions.get(str(row.get("id") or "")))
             row = sanitize_keyword_metadata(row, keyword_blacklist)
             gallery_country = row.get("gallery_country") or {}
             slug = gallery_country.get("slug") if isinstance(gallery_country, dict) else str(gallery_country)
@@ -1099,6 +1164,7 @@ if __name__ == "__main__":
     country_assignments = country_assignments_from_owner_index(repo_root)
     country_assignments.update(country_assignments_from_payload(review_payload))
     keyword_blacklist = load_keyword_blacklist(repo_root / args.keyword_blacklist)
+    title_keyword_decisions = load_applied_title_keyword_decisions(repo_root)
     result = write_photos_data(
         repo_root,
         regular_cap=args.regular_cap,
@@ -1112,5 +1178,6 @@ if __name__ == "__main__":
         country_assignments=country_assignments,
         keyword_blacklist=keyword_blacklist,
         blacklist_source_paths=hidden_source_paths,
+        title_keyword_decisions=title_keyword_decisions,
     )
     print(result)

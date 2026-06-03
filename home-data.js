@@ -302,7 +302,7 @@ window.photosByElieHomeData = {
     "title": "AI",
     "description": "Leonardo archive selections prepared from the Saturn Lightroom AI source.",
     "accent": "ai-gallery",
-    "count": 4897,
+    "count": 4874,
     "href": "./gallery.html?gallery=ai",
     "photos": [
       {

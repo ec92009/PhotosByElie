@@ -144,48 +144,12 @@ window.photosByElieHomeData = {
     "title": "Spain",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "spain-gallery",
-    "count": 1353,
+    "count": 1350,
     "href": "./gallery.html?gallery=spain",
     "photos": [
       {
-        "id": "img-4262-db4ac66ace",
-        "title": "IMG 4262",
-        "gallerySrc": "",
-        "imageSrc": "",
-        "media": {
-          "type": "video",
-          "sourcePolicy": "developed-master",
-          "publicPreview": {
-            "allowed": true,
-            "galleryKey": "expo/img-4262-db4ac66ace_900.jpg",
-            "detailKey": "expo/img-4262-db4ac66ace_short_5s_720p.mp4"
-          },
-          "video": {
-            "duration": 10.28
-          }
-        }
-      },
-      {
-        "id": "img-4252-fb5affa055",
-        "title": "IMG 4252",
-        "gallerySrc": "",
-        "imageSrc": "",
-        "media": {
-          "type": "video",
-          "sourcePolicy": "developed-master",
-          "publicPreview": {
-            "allowed": true,
-            "galleryKey": "expo/img-4252-fb5affa055_900.jpg",
-            "detailKey": "expo/img-4252-fb5affa055_short_5s_720p.mp4"
-          },
-          "video": {
-            "duration": 14.48
-          }
-        }
-      },
-      {
         "id": "img-4427-43836cc1a4",
-        "title": "IMG 4427",
+        "title": "Nerja",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -197,13 +161,13 @@ window.photosByElieHomeData = {
             "detailKey": "expo/img-4427-43836cc1a4_short_5s_720p.mp4"
           },
           "video": {
-            "duration": 71.0
+            "duration": 71
           }
         }
       },
       {
-        "id": "img-4426-cc6955784a",
-        "title": "IMG 4426",
+        "id": "img-4425-92588aab0a",
+        "title": "Nerja",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -211,11 +175,47 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/img-4426-cc6955784a_900.jpg",
-            "detailKey": "expo/img-4426-cc6955784a_short_5s_720p.mp4"
+            "galleryKey": "expo/img-4425-92588aab0a_900.jpg",
+            "detailKey": "expo/img-4425-92588aab0a_short_5s_720p.mp4"
           },
           "video": {
-            "duration": 32.0
+            "duration": 63
+          }
+        }
+      },
+      {
+        "id": "img-4424-6cfcf401e0",
+        "title": "Nerja",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "media": {
+          "type": "video",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-4424-6cfcf401e0_900.jpg",
+            "detailKey": "expo/img-4424-6cfcf401e0_short_5s_720p.mp4"
+          },
+          "video": {
+            "duration": 15.58
+          }
+        }
+      },
+      {
+        "id": "img-4423-508b02e157",
+        "title": "Nerja",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "media": {
+          "type": "video",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-4423-508b02e157_900.jpg",
+            "detailKey": "expo/img-4423-508b02e157_short_5s_720p.mp4"
+          },
+          "video": {
+            "duration": 13.28
           }
         }
       }
@@ -226,12 +226,12 @@ window.photosByElieHomeData = {
     "title": "Mexico",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "mexico-gallery",
-    "count": 94,
+    "count": 33,
     "href": "./gallery.html?gallery=mexico",
     "photos": [
       {
-        "id": "img-5004-4c99461c7b",
-        "title": "IMG 5004",
+        "id": "img-4964-22080d98fa",
+        "title": "Puerto Vallarta",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -239,17 +239,17 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/img-5004-4c99461c7b_900.jpg",
-            "detailKey": "expo/img-5004-4c99461c7b_short_5s_720p.mp4"
+            "galleryKey": "expo/img-4964-22080d98fa_900.jpg",
+            "detailKey": "expo/img-4964-22080d98fa_short_5s_720p.mp4"
           },
           "video": {
-            "duration": 10.34
+            "duration": 16.38
           }
         }
       },
       {
-        "id": "img-5003-72983569b8",
-        "title": "IMG 5003",
+        "id": "img-4963-a1ef671439",
+        "title": "Puerto Vallarta",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -257,47 +257,41 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/img-5003-72983569b8_900.jpg",
-            "detailKey": "expo/img-5003-72983569b8_short_5s_720p.mp4"
+            "galleryKey": "expo/img-4963-a1ef671439_900.jpg",
+            "detailKey": "expo/img-4963-a1ef671439_short_5s_720p.mp4"
           },
           "video": {
-            "duration": 22.49
+            "duration": 16.58
           }
         }
       },
       {
-        "id": "img-5002-43826fddb7",
-        "title": "IMG 5002",
+        "id": "img-5056-6870d872ab",
+        "title": "Puerto Vallarta",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
-          "type": "video",
+          "type": "photo",
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/img-5002-43826fddb7_900.jpg",
-            "detailKey": "expo/img-5002-43826fddb7_short_5s_720p.mp4"
-          },
-          "video": {
-            "duration": 13.74
+            "galleryKey": "expo/img-5056-6870d872ab_900.jpg",
+            "detailKey": "expo/img-5056-6870d872ab_1800.jpg"
           }
         }
       },
       {
-        "id": "img-4997-44829b8b53",
-        "title": "IMG 4997",
+        "id": "img-5054-26f2a16bb8",
+        "title": "Puerto Vallarta",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
-          "type": "video",
+          "type": "photo",
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/img-4997-44829b8b53_900.jpg",
-            "detailKey": "expo/img-4997-44829b8b53_short_5s_720p.mp4"
-          },
-          "video": {
-            "duration": 13.18
+            "galleryKey": "expo/img-5054-26f2a16bb8_900.jpg",
+            "detailKey": "expo/img-5054-26f2a16bb8_1800.jpg"
           }
         }
       }
@@ -308,7 +302,7 @@ window.photosByElieHomeData = {
     "title": "AI",
     "description": "Leonardo archive selections prepared from the Saturn Lightroom AI source.",
     "accent": "ai-gallery",
-    "count": 4921,
+    "count": 4897,
     "href": "./gallery.html?gallery=ai",
     "photos": [
       {

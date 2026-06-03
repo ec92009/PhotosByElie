@@ -169,7 +169,7 @@ from asset_state import (  # noqa: E402
     write_regular_manifest_from_site,
     write_reserve_data_from_site,
 )
-from media_keys import legacy_private_master_key, private_master_key, private_render_key, public_preview_key  # noqa: E402
+from media_keys import private_master_key, private_render_key, public_preview_key  # noqa: E402
 from import_eligibility import import_select_for_source_root  # noqa: E402
 from media_policy import private_master_allowed, public_preview_allowed  # noqa: E402
 from sync_r2_media import (  # noqa: E402
@@ -1566,19 +1566,19 @@ def _hidden_provenance(photo: dict, fallback_state: str, fallback_slug: str) -> 
     return state, slug
 
 
+def _photo_media_type(photo: dict) -> str:
+    return str((photo.get("media") or {}).get("type") or photo.get("type") or "photo").strip().lower() or "photo"
+
+
 def _hidden_public_preview_keys(photo: dict, slug: str) -> list[str]:
-    keys: list[str] = []
-    for source in (photo.get("gallerySrc"), photo.get("imageSrc")):
-        rel = clean_site_src(source)
-        parts = rel.split("/")
-        if len(parts) >= 4 and parts[0] == "assets" and parts[1] in {"expo", "reserve"}:
-            keys.append("/".join([DEFAULT_PUBLIC_PREFIX, *parts[2:]]))
-    _source_state, source_slug = _hidden_provenance(photo, "expo", slug)
-    if source_slug in ORDER and photo.get("id"):
-        keys.extend([
-            f"{DEFAULT_PUBLIC_PREFIX}/{source_slug}/{photo['id']}_900.jpg",
-            f"{DEFAULT_PUBLIC_PREFIX}/{source_slug}/{photo['id']}_1800.jpg",
-        ])
+    photo_id = str(photo.get("id") or "")
+    if not photo_id:
+        return []
+    media_type = _photo_media_type(photo)
+    keys = [
+        public_preview_key(DEFAULT_PUBLIC_PREFIX, photo_id, "gallery", media_type),
+        public_preview_key(DEFAULT_PUBLIC_PREFIX, photo_id, "detail", media_type),
+    ]
     unique = []
     seen = set()
     for key in keys:
@@ -1663,6 +1663,7 @@ def _waste_basket_discard_entries(hidden_groups: dict[str, list[dict]]) -> list[
                     "from_state": "hidden",
                     "from_slug": slug,
                     "source_slug": original_slug,
+                    "media_type": _photo_media_type(photo),
                     "asset_paths": _photo_asset_paths(photo),
                     "source_paths": _photo_source_paths(repo_root, photo),
                     "public_preview_keys": _hidden_public_preview_keys(photo, original_slug),
@@ -1735,15 +1736,12 @@ def _source_basename(source: dict) -> str:
     return Path(str(source.get("path") or "")).name
 
 
-def _safe_r2_source_name(value: str) -> str:
-    return re.sub(r"[^A-Za-z0-9._-]+", "-", value).strip("-") or "source"
-
-
 def _discarded_private_keys(photo: dict) -> list[str]:
     photo_id = str(photo.get("id") or "")
     if not photo_id:
         return []
     keys = []
+    media_type = _photo_media_type(photo)
     for source in photo.get("sourceFiles") or []:
         if not isinstance(source, dict):
             continue
@@ -1751,10 +1749,8 @@ def _discarded_private_keys(photo: dict) -> list[str]:
         if not source_name:
             continue
         keys.append(private_master_key(DEFAULT_PRIVATE_PREFIX, photo_id, source_name))
-        keys.append(legacy_private_master_key(DEFAULT_PRIVATE_PREFIX, photo_id, source_name))
-        safe_name = _safe_r2_source_name(source_name)
-        keys.extend(private_render_key(photo_id, product_id) for product_id in PRIVATE_RENDER_PRODUCTS)
-        keys.extend(f"renders/{photo_id}/{safe_name}-{product_id}.jpg" for product_id in PRIVATE_RENDER_PRODUCTS)
+        if media_type != "video":
+            keys.extend(private_render_key(photo_id, product_id) for product_id in PRIVATE_RENDER_PRODUCTS)
     return sorted(set(keys))
 
 
@@ -5263,6 +5259,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             "from_state": source_state,
             "from_slug": source_slug,
             "source_slug": original_slug,
+            "media_type": _photo_media_type(source_photo),
             "asset_paths": source_assets,
             "source_paths": _photo_source_paths(repo_root, source_photo),
             "public_preview_keys": public_preview_keys,

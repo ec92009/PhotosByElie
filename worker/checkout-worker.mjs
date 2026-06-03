@@ -46,8 +46,6 @@ const sourceExtension = (source) =>
 
 const privateMasterKeyFor = (photo, source) => `masters/${photo.id}.${sourceExtension(source)}`;
 
-const legacyPrivateMasterKeyFor = (photo, source) => `masters/${photo.id}/${basename(source.path)}`;
-
 const photoOriginFor = (photo, collectionKey) => {
   const origin = String(photo?.sourceOrigin || photo?.origin || "").toLowerCase();
   if (origin === "ai" || origin === "camera") return origin;
@@ -263,10 +261,6 @@ const normalizeOrderItems = (catalog, incomingItems = []) => {
         type: sourceType(source),
         path: source.path,
         privateMasterKey: privateMasterKeyFor(photo, source),
-        privateMasterKeys: [
-          privateMasterKeyFor(photo, source),
-          legacyPrivateMasterKeyFor(photo, source),
-        ].filter((key, index, keys) => key && keys.indexOf(key) === index),
         dimensions: originalDimensions(photo),
       },
       publicPreview: photo.media?.publicPreview || null,

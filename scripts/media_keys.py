@@ -28,14 +28,6 @@ def public_preview_key_for_reference(public_prefix: str, photo_id: str, referenc
     return public_preview_key(public_prefix, photo_id, "detail")
 
 
-def legacy_public_preview_key(public_prefix: str, reference: str | Path | None) -> str:
-    clean = str(reference or "").removeprefix("./")
-    parts = clean.split("/")
-    if len(parts) >= 4 and parts[0] == "assets" and parts[1] in {"expo", "reserve"}:
-        return prefixed_key(public_prefix, *parts[2:])
-    return clean
-
-
 def normalized_private_extension(value: str | Path | None) -> str:
     extension = str(value or "").strip().lower().removeprefix(".")
     if not extension:
@@ -52,10 +44,6 @@ def normalized_private_extension(value: str | Path | None) -> str:
 def private_master_key(private_prefix: str, media_id: str, source_path: str | Path) -> str:
     suffix = Path(str(source_path or "")).suffix
     return prefixed_key(private_prefix, f"{media_id}.{normalized_private_extension(suffix)}")
-
-
-def legacy_private_master_key(private_prefix: str, media_id: str, source_path: str | Path) -> str:
-    return prefixed_key(private_prefix, media_id, Path(str(source_path or "")).name)
 
 
 def private_render_key(media_id: str, product_id: str) -> str:

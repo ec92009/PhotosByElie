@@ -52,10 +52,6 @@ const repoRoot = path.resolve(new URL("..", import.meta.url).pathname);
 const fullPath = (value) => path.isAbsolute(value) ? value : path.join(repoRoot, value);
 const host = credentials.endpoint || `${credentials.accountId}.r2.cloudflarestorage.com`;
 
-const safeName = (value, fallback) => String(value || fallback)
-  .replace(/[^A-Za-z0-9._-]+/g, "-")
-  .replace(/^-+|-+$/g, "")
-  .slice(0, 160) || fallback;
 const basename = (value) => String(value || "").split(/[\\/]/).pop();
 const normalizedExtension = (value, fallback = "jpg") => {
   const extension = String(value || fallback).trim().toLowerCase().replace(/^\./, "");
@@ -260,11 +256,11 @@ const renderKeyFor = (photo, _source, productId) => {
   const match = String(productId || "").match(/^jpg-(\d+)mp$/);
   return match ? `renders/${photo.id}_${match[1]}mp.jpg` : "";
 };
-const legacyRenderKeyFor = (photo, source, productId) => (
-  `renders/${photo.id}/${safeName(basename(source.path), "source")}-${productId}.jpg`
-);
 const masterKeyFor = (photo, source) => `masters/${photo.id}.${normalizedExtension(source?.type || basename(source?.path).split(".").pop())}`;
-const legacyMasterKeyFor = (photo, source) => `masters/${photo.id}/${basename(source.path)}`;
+const isFlatMasterKey = (key) => {
+  const rest = String(key || "").slice("masters/".length);
+  return String(key || "").startsWith("masters/") && rest && !rest.includes("/");
+};
 const keyPhotoId = (key) => {
   const value = String(key || "");
   if (value.startsWith("masters/")) {
@@ -279,15 +275,7 @@ const keyPhotoId = (key) => {
 };
 const renderProductId = (key) => {
   const flat = String(key || "").match(/_(1|3|6)mp\.jpg$/i);
-  if (flat) return `jpg-${flat[1]}mp`;
-  const legacy = String(key || "").match(/-(jpg-[136]mp)\.jpg$/i);
-  return legacy ? legacy[1].toLowerCase() : "";
-};
-const preferTargetKey = (existing, candidate) => {
-  if (!existing) return candidate;
-  const existingFlat = !existing.slice(existing.indexOf("/") + 1).includes("/");
-  const candidateFlat = !candidate.slice(candidate.indexOf("/") + 1).includes("/");
-  return candidateFlat && !existingFlat ? candidate : existing;
+  return flat ? `jpg-${flat[1]}mp` : "";
 };
 const contentTypeFor = (filePath) => {
   const extension = path.extname(filePath).toLowerCase();
@@ -393,8 +381,9 @@ const hydrateInventoryFromOwnerDb = (inventory, hiddenIds, privateCurrentKeys) =
 const buildManifest = async (inventory, publicIdsPayload, publicCurrentKeys) => {
   const masterKeysById = new Map();
   for (const key of inventory.masterKeys || []) {
+    if (!isFlatMasterKey(key)) continue;
     const id = keyPhotoId(key);
-    if (id) masterKeysById.set(id, preferTargetKey(masterKeysById.get(id), key));
+    if (id) masterKeysById.set(id, key);
   }
   const renderProductsById = new Map();
   const renderKeysById = new Map();
@@ -406,7 +395,7 @@ const buildManifest = async (inventory, publicIdsPayload, publicCurrentKeys) => 
     if (!renderProductsById.has(id)) renderProductsById.set(id, new Set());
     if (!renderKeysById.has(id)) renderKeysById.set(id, {});
     renderProductsById.get(id).add(productId);
-    renderKeysById.get(id)[productId] = preferTargetKey(renderKeysById.get(id)?.[productId], key);
+    renderKeysById.get(id)[productId] = key;
   }
   const publicPreviewIds = new Set(publicIdsPayload.complete_pairs || []);
   const records = {};
@@ -427,7 +416,6 @@ const buildManifest = async (inventory, publicIdsPayload, publicCurrentKeys) => 
       mediaType: mediaTypeFor(photo),
       privateMaster: {
         expectedKey: masterKeyFor(photo, source),
-        legacyKey: legacyMasterKeyFor(photo, source),
         key: masterKeysById.get(photoId) || "",
         present: masterKeysById.has(photoId),
       },
@@ -435,7 +423,6 @@ const buildManifest = async (inventory, publicIdsPayload, publicCurrentKeys) => 
         productId,
         {
           expectedKey: renderKeyFor(photo, source, productId),
-          legacyKey: legacyRenderKeyFor(photo, source, productId),
           key: renderKeysById.get(photoId)?.[productId] || "",
           present: products.has(productId),
         },

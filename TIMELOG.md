@@ -182,8 +182,11 @@ Clock state: running
 | 2026-06-03 | 00:18 CEST | 00:23 CEST | 0:05 | Created Solana Etsy drafts, uploaded listing images and JPG 6 MP buyer files, verified draft asset counts, and updated automation memory. |
 | 2026-06-03 | 00:38 CEST | 00:40 CEST | 0:02 | Added the Etsy draft companion workflow, including Pinterest campaign photos, to the nightly automation prompt and memory. |
 | 2026-06-03 | 10:35 CEST | 10:36 CEST | 0:01 | Requested Owner review detail pages return to the originating review row. |
+| 2026-06-03 | 12:11 CEST | 12:12 CEST | 0:01 | Checked Waste Basket R2 purge object count and key categories; background repo inspection excluded. |
+| 2026-06-03 | 12:14 CEST | 12:15 CEST | 0:01 | Clarified which Waste Basket R2 delete probes are expected current objects versus legacy/no-op checks. |
+| 2026-06-03 | 12:15 CEST | 12:16 CEST | 0:01 | Directed one-time legacy R2 cleanup and flat-key purge contract update; background cleanup/code work excluded. |
 
 ## Totals
 
-Active collaboration time used: 12:32
+Active collaboration time used: 12:35
 Remaining budget: not set

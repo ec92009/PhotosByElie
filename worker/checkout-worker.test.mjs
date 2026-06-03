@@ -922,7 +922,7 @@ test("R2 ZIP delivery renders and privately caches JPG products", async () => {
   assert.equal(firstDelivery.files[1].downloadUrl.startsWith("/download/"), true);
 });
 
-test("R2 ZIP delivery falls back to legacy private masters during migration", async () => {
+test("R2 ZIP delivery does not fall back to legacy private masters", async () => {
   const photoId = "photo-legacy";
   const flatKey = `masters/${photoId}.jpg`;
   const legacyKey = `masters/${photoId}/source.jpg`;
@@ -939,7 +939,7 @@ test("R2 ZIP delivery falls back to legacy private masters during migration", as
     randomUUID: deterministicIds(),
   });
 
-  const result = await delivery.createDelivery({
+  await assert.rejects(() => delivery.createDelivery({
     id: "PBE-LEGACY",
     buyerEmail: "buyer@example.com",
     currency: "usd",
@@ -951,13 +951,10 @@ test("R2 ZIP delivery falls back to legacy private masters during migration", as
       source: {
         path: "source.jpg",
         privateMasterKey: flatKey,
-        privateMasterKeys: [flatKey, legacyKey],
       },
       products: [{ id: "full", label: "Full resolution" }],
     }],
-  });
-
-  assert.equal(result.files[0].objectKey, legacyKey);
+  }), (error) => error?.code === "missing_private_master" && error?.status === 409);
 });
 
 test("R2 ZIP delivery reuses cached JPG products without reading the private master", async () => {

@@ -367,4 +367,4 @@ await writeJson(reportPath, {
 
 console.log(`Done. Selected ${stats.selected}/${stats.candidates}. Copied ${stats.copied}; already copied ${stats.alreadyCopied}; missing old ${stats.missingOld}; failed ${stats.copyFailed}; deleted old ${stats.deletedOld}.`);
 if (!copy) console.log("Dry run only. Add --copy to copy objects server-side.");
-if (!deleteOld) console.log("Old keys retained. Add --delete-old only after runtime migration is complete.");
+if (!deleteOld) console.log("Old keys retained. --delete-old is historical only; use cleanup_legacy_r2_keys.mjs for retired key cleanup.");

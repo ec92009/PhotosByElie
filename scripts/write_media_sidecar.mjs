@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
-import { collections } from "../worker/photos-catalog.generated.mjs";
+import { createRequire } from "node:module";
 
 const repoRoot = path.resolve(new URL("..", import.meta.url).pathname);
+const require = createRequire(import.meta.url);
+const { loadCatalogWindow } = require("./catalog_tsv.cjs");
 const expoManifestPath = path.join(repoRoot, "assets", "expo-manifest.json");
 const outputPath = path.join(repoRoot, "assets", "media-sidecar.json");
 
@@ -16,10 +18,6 @@ const readJson = (filePath, fallback) => {
 };
 
 const basename = (value) => String(value || "").split(/[\\/]/).pop();
-const safeName = (value, fallback) => String(value || fallback)
-  .replace(/[^A-Za-z0-9._-]+/g, "-")
-  .replace(/^-+|-+$/g, "")
-  .slice(0, 120) || fallback;
 const normalizedExtension = (value, fallback = "jpg") => {
   const extension = String(value || fallback).trim().toLowerCase().replace(/^\./, "");
   if (["jpeg", "jpe"].includes(extension)) return "jpg";
@@ -34,33 +32,20 @@ const privateMasterKey = (photo) => {
   const extension = normalizedExtension(source.type || basename(source.path).split(".").pop());
   return photo.id && extension ? `masters/${photo.id}.${extension}` : "";
 };
-const legacyPrivateMasterKey = (photo) => {
-  const source = (photo.sourceFiles || [])[0] || {};
-  const name = basename(source.path);
-  return name ? `masters/${photo.id}/${name}` : "";
-};
 const privateRenderKeys = (photo) => {
   if (!photo.id) return {};
+  if (String(photo.media?.type || photo.media_type || photo.mediaType || "photo").toLowerCase() === "video") return {};
   return {
     "jpg-6mp": `renders/${photo.id}_6mp.jpg`,
     "jpg-3mp": `renders/${photo.id}_3mp.jpg`,
     "jpg-1mp": `renders/${photo.id}_1mp.jpg`,
   };
 };
-const legacyPrivateRenderKeys = (photo) => {
-  const source = (photo.sourceFiles || [])[0] || {};
-  const name = safeName(basename(source.path), "source");
-  if (!name) return {};
-  return {
-    "jpg-6mp": `renders/${photo.id}/${name}-jpg-6mp.jpg`,
-    "jpg-3mp": `renders/${photo.id}/${name}-jpg-3mp.jpg`,
-    "jpg-1mp": `renders/${photo.id}/${name}-jpg-1mp.jpg`,
-  };
-};
 
 const expoManifest = readJson(expoManifestPath, {});
 const sourceById = new Map((expoManifest.photos || []).map((row) => [row.id, row]));
 const photos = {};
+const collections = loadCatalogWindow(repoRoot).photosByElieData || {};
 
 Object.entries(collections).forEach(([collectionKey, collection]) => {
   (collection.photos || []).forEach((photo) => {
@@ -89,9 +74,7 @@ Object.entries(collections).forEach(([collectionKey, collection]) => {
       },
       privateDelivery: {
         masterKey: privateMasterKey(photo),
-        legacyMasterKey: legacyPrivateMasterKey(photo),
         renderKeys: privateRenderKeys(photo),
-        legacyRenderKeys: legacyPrivateRenderKeys(photo),
       },
     };
   });
@@ -99,11 +82,9 @@ Object.entries(collections).forEach(([collectionKey, collection]) => {
 
 const payload = {
   schema: "photosbyelie.media-sidecar.v1",
-  publicPreviewKeyScheme: "expo/<photo-id>_<900|1800>.jpg",
+  publicPreviewKeyScheme: "expo/<photo-id>_900.jpg and expo/<photo-id>_1800.jpg for photos or expo/<photo-id>_short_5s_720p.mp4 for videos",
   privateMasterKeyScheme: "masters/<photo-id>.<original-format>",
   privateRenderKeyScheme: "renders/<photo-id>_<1|3|6>mp.jpg",
-  legacyPrivateMasterKeyScheme: "masters/<photo-id>/<original-file>",
-  legacyPrivateRenderKeyScheme: "renders/<photo-id>/<original-file>-<product-id>.jpg",
   photosCount: Object.keys(photos).length,
   photos,
 };

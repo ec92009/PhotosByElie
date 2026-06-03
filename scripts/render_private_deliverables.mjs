@@ -245,7 +245,6 @@ for (const photoId of photoIds) {
   if (!source) throw new Error(`No developed source for ${photoId}`);
 
   const sourceKey = `masters/${photoId}.${normalizedExtension(source.type || basename(source.path).split(".").pop())}`;
-  const legacySourceKey = `masters/${photoId}/${basename(source.path)}`;
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "pbe-render-"));
   const downloadedSourcePath = path.join(tempDir, basename(source.path));
 
@@ -256,12 +255,7 @@ for (const photoId of photoIds) {
     console.log(`  source local ${localSourcePath}`);
   } else {
     console.log(`  source ${sourceKey}`);
-    try {
-      await getObject(bucket, sourceKey, downloadedSourcePath);
-    } catch (error) {
-      console.log(`  fallback source ${legacySourceKey}`);
-      await getObject(bucket, legacySourceKey, downloadedSourcePath);
-    }
+    await getObject(bucket, sourceKey, downloadedSourcePath);
   }
   const dimensions = await dimensionsFor(sourcePath);
 

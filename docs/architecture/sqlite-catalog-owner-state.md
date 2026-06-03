@@ -516,7 +516,7 @@ For video:
 - the detail page uses `short_5s_720p`, a 5-second watermarked 720p clip;
 - customer delivery is the `full` original only.
 
-Existing private render triplets are still sellable photo deliverables. Their current R2 keys use the older `renders/<media_id>/<original-file>-jpg-1mp.jpg`, `...-jpg-3mp.jpg`, and `...-jpg-6mp.jpg` shape. The SQLite-era target is the flatter `renders/<media_id>_1mp.jpg`, `renders/<media_id>_3mp.jpg`, and `renders/<media_id>_6mp.jpg` shape. Keep old keys until checkout, delivery, and migration audit confirm the new keys are live.
+Private render triplets remain sellable photo deliverables, but only under the flat SQLite-era keys: `renders/<media_id>_1mp.jpg`, `renders/<media_id>_3mp.jpg`, and `renders/<media_id>_6mp.jpg`. The older nested render paths are retired and should stay out of runtime checkout, delivery, sidecar generation, and routine purge code.
 
 ## Owner DB
 
@@ -567,27 +567,31 @@ blocked:             9
 
 `Owner.sqlite` owns title/keyword batches, queue state, proposals, decisions, country assignments, and keyword blacklist entries. The localhost helper writes decisions, country assignments, and blacklist changes into the DB, then exports only the JSON views that the current UI, handoff path, or audit trail still needs. `title-keyword-review-queue/proposed-state.json` is retired; the corresponding state lives in `title_keyword_queue`, `title_keyword_proposals`, and `title_keyword_decisions`.
 
-## R2 Migration Strategy
+## R2 Media Key Contract
 
-R2 has no native atomic rename. The safe move is:
+The PhotosByElie gallery storage migration to flat media keys is complete. Runtime checkout, delivery validation, Owner purge, and generated sidecars use only the active key families:
 
 ```text
-CopyObject old_key -> new_key
-HEAD/verify new_key
-record success
-delete old_key only after all code and manifests use the new convention
+photosbyelie-public/expo/<media_id>_900.jpg
+photosbyelie-public/expo/<media_id>_1800.jpg
+photosbyelie-public/expo/<media_id>_short_5s_720p.mp4
+photosbyelie-private/masters/<media_id>.<format extension>
+photosbyelie-private/renders/<media_id>_6mp.jpg
+photosbyelie-private/renders/<media_id>_3mp.jpg
+photosbyelie-private/renders/<media_id>_1mp.jpg
 ```
 
-Phase 1 should copy private masters from:
+Photo media uses the `_900`, `_1800`, master, and 6/3/1 MP render keys. Video media uses `_900`, `_short_5s_720p.mp4`, and the private master only; it should not generate private JPG render delete probes.
+
+The old migration shapes are retired:
 
 ```text
 masters/<media_id>/<original_file>
+renders/<media_id>/<original_file>-jpg-6mp.jpg
+renders/<media_id>/<original_file>-jpg-3mp.jpg
+renders/<media_id>/<original_file>-jpg-1mp.jpg
+expo/<collection>/<media_id>_900.jpg
+expo/<collection>/<media_id>_1800.jpg
 ```
 
-to:
-
-```text
-masters/<media_id>.<format extension>
-```
-
-and keep old keys temporarily. Public preview assets remain first-class at `expo/<media_id>_900.jpg` for photo/video gallery previews, `expo/<media_id>_1800.jpg` for photo detail previews, and `expo/<media_id>_short_5s_720p.mp4` for video detail previews. Private photo render triplets should be copied from the old nested keys to the flatter `renders/<media_id>_{1,3,6}mp.jpg` keys and kept in both places until the runtime no longer references the old keys.
+They may remain in historical manifests or `deleted_confirmed` Owner.sqlite rows for audit purposes only. If a future audit finds legacy-shaped keys in `current` or `marked_for_delete`, use `scripts/cleanup_legacy_r2_keys.mjs` to delete and mark them confirmed instead of putting those paths back into routine purge code.

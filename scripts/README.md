@@ -148,7 +148,7 @@ Public catalog export also applies the `Owner.sqlite` keyword blacklist to keywo
 
 Use `scripts/audit_import_eligibility.py` to report Camera rows that remain in the raw import-cache manifest but no longer satisfy the Green + 4-star policy. With `--write-delete-plan`, it writes a temporary R2 delete plan for the sweep wrapper's eligibility phase; that cleanup deliberately uses the R2 delete tool's `--no-history` mode so Camera eligibility cleanup does not become a permanent tombstone record.
 
-After changing the generated catalog, refresh the media sidecar so each flat public key keeps its original source and legacy country-prefixed provenance:
+After changing the generated catalog, refresh the media sidecar so each flat public key keeps its original source and historical country/gallery provenance:
 
 ```bash
 node scripts/write_media_sidecar.mjs
@@ -370,11 +370,11 @@ The approval apply path is manifest-only. It rewrites generated catalog/state fi
 - public watermarked photo previews go to `photosbyelie-public` under `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`
 - public watermarked video detail previews go to `photosbyelie-public` under `expo/<photo-id>_short_5s_720p.mp4`
 - local import-cache and current catalog previews share that same public prefix because Reserve disappears from the cloud model and country/gallery origin lives in metadata
-- private developed masters are moving to `photosbyelie-private` under `masters/<photo-id>.<original-format>`
+- private developed masters live in `photosbyelie-private` under `masters/<photo-id>.<original-format>`
 - private photo JPG deliverables remain sellable at 6 MP, 3 MP, and 1 MP; the target keys are `renders/<photo-id>_6mp.jpg`, `renders/<photo-id>_3mp.jpg`, and `renders/<photo-id>_1mp.jpg`
-- existing private JPG triplet deliverables under `renders/<photo-id>/<original-file>-jpg-6mp.jpg`, `...-jpg-3mp.jpg`, and `...-jpg-1mp.jpg` should be copied to the flatter target keys and kept until checkout/worker delivery no longer references the nested keys and a migration audit confirms the new keys are live
+- legacy private folders such as `masters/<photo-id>/<original-file>` and `renders/<photo-id>/<original-file>-jpg-6mp.jpg` are retired; checkout and routine purge paths no longer reference them
 - RAW/DNG/NEF sources and their embedded previews are skipped for both public and private uploads
-- IDs listed in owner discard tombstones are skipped for import/upload and should be deleted from public and private R2 by `delete_discarded_r2_media.mjs`; the tombstone stays tracked so Saturn scans do not resurrect discarded photos
+- IDs listed in owner discard tombstones are skipped for import/upload and should be deleted from the current public/private R2 key families by `delete_discarded_r2_media.mjs`; the tombstone stays tracked so Saturn scans do not resurrect discarded photos
 
 For the normal daily/manual sweep, prefer the lock-guarded wrapper:
 
@@ -382,7 +382,7 @@ For the normal daily/manual sweep, prefer the lock-guarded wrapper:
 zsh -lc './scripts/run_cloud_media_sweep.zsh --push'
 ```
 
-To migrate existing private masters and JPG render triplets toward the flat SQLite-era key convention, use the server-side copy/verify script. It is dry-run by default and writes its audit trail under `.review-logs/`:
+Historical migration helper: `migrate_r2_asset_keys.mjs` copied old nested private masters/render triplets to the flat SQLite-era key convention. The migration window is closed; use it only for archaeology against an old sidecar/report, not as part of normal operations:
 
 ```bash
 node scripts/migrate_r2_asset_keys.mjs --limit 10
@@ -408,7 +408,16 @@ renders/<photo-id>_3mp.jpg
 renders/<photo-id>_1mp.jpg
 ```
 
-using R2's S3-compatible `CopyObject`, then verifies the destination with `HEAD`. It keeps old keys unless `--delete-old` is explicitly supplied. Do not use `--delete-old` until checkout/Worker delivery and manifests no longer reference the old keys.
+using R2's S3-compatible `CopyObject`, then verifies the destination with `HEAD`. Normal checkout/Worker delivery no longer references those old keys.
+
+If Owner.sqlite ever records legacy-shaped R2 keys as `current` or `marked_for_delete`, clean them with the focused one-time/audit tool:
+
+```bash
+node scripts/cleanup_legacy_r2_keys.mjs
+node scripts/cleanup_legacy_r2_keys.mjs --delete --workers 8
+```
+
+The cleanup script reads the local R2 object ledger, deletes only old nested private keys and old `expo/<collection>/<photo-id>...` public preview keys, and writes successful deletes back as `deleted_confirmed`.
 
 The wrapper sources `~/.zshrc`, pulls latest `main`, deletes discarded media from R2, imports selected media, regenerates catalogs/sidecars, backfills missing private render triplets, validates, commits, and pushes. In automation mode it still imports the fixed Camera, Apple Photos, Leonardo, and configured Real Estate Saturn sources, with banned-photo R2 cleanup before and after the import pass. In Owner UI mode, Start Import opens a local folder chooser and passes that folder to the wrapper as `--source-root`, so only that selected folder is scanned and the banned-photo cleanup phases stay out of the import dashboard. It uses `.review-logs/cloud-media-sweep.lock`; a scheduled automation will exit if a manual sweep is still active.
 
@@ -485,7 +494,7 @@ For owner-discard cleanup:
 node scripts/delete_discarded_r2_media.mjs --delete
 ```
 
-That command double-checks matching public previews, private masters, and private JPG render objects in R2. It imports historical cleanup keys into ignored `assets/owner-actions/Owner.sqlite` as `deleted_confirmed`, marks newly targeted keys as `marked_for_delete`, records successful idempotent delete calls back as `deleted_confirmed`, and keeps `assets/discarded-media-manifest.json` as the durable do-not-resurrect compatibility record. Routine runs trust Owner.sqlite; use `--deep-inventory` to refresh `current` R2 object state when storage volume looks suspicious, or `--ignore-owner-db` for a deliberate full legacy-style cleanup pass.
+That command double-checks matching current public previews, private masters, and private JPG render objects in R2. It marks newly targeted keys as `marked_for_delete`, records successful idempotent delete calls back as `deleted_confirmed`, and keeps `assets/discarded-media-manifest.json` as the durable do-not-resurrect compatibility record. Routine runs trust Owner.sqlite; use `--deep-inventory` to refresh `current` R2 object state when storage volume looks suspicious. Legacy nested/private folders and country-prefixed public previews are retired; use `cleanup_legacy_r2_keys.mjs` only for an explicit one-time cleanup or audit of those old key families.
 
 For an already-published photo, render/upload just its private JPG deliverables:
 

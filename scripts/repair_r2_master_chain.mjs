@@ -57,10 +57,6 @@ const sha256 = (value) => crypto.createHash("sha256").update(value).digest("hex"
 const hmac = (key, value) => crypto.createHmac("sha256", key).update(value).digest();
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const basename = (value) => String(value || "").split(/[\\/]/).pop();
-const safeName = (value, fallback) => String(value || fallback)
-  .replace(/[^A-Za-z0-9._-]+/g, "-")
-  .replace(/^-+|-+$/g, "")
-  .slice(0, 160) || fallback;
 const sourceType = (source) => String(source?.type || basename(source?.path).split(".").pop() || "").toUpperCase();
 const normalizedExtension = (value, fallback = "jpg") => {
   const extension = String(value || fallback).trim().toLowerCase().replace(/^\./, "");
@@ -83,15 +79,12 @@ const keyPhotoId = (key) => {
 };
 const renderProductId = (key) => {
   const flat = String(key || "").match(/_(1|3|6)mp\.jpg$/i);
-  if (flat) return `jpg-${flat[1]}mp`;
-  const legacy = String(key || "").match(/-(jpg-[136]mp)\.jpg$/i);
-  return legacy ? legacy[1].toLowerCase() : "";
+  return flat ? `jpg-${flat[1]}mp` : "";
 };
-const preferTargetKey = (existing, candidate) => {
-  if (!existing) return candidate;
-  const existingFlat = !existing.slice(existing.indexOf("/") + 1).includes("/");
-  const candidateFlat = !candidate.slice(candidate.indexOf("/") + 1).includes("/");
-  return candidateFlat && !existingFlat ? candidate : existing;
+const isFlatMasterKey = (key) => {
+  const value = String(key || "");
+  const rest = value.slice("masters/".length);
+  return value.startsWith("masters/") && rest && !rest.includes("/");
 };
 const previewPhotoId = (key) => basename(key).replace(/_(900|1800)\.jpg$/i, "").replace(/_short_5s_720p\.mp4$/i, "");
 const decodeXml = (value) => String(value || "")
@@ -327,12 +320,10 @@ const contentTypeFor = (filePath) => {
 };
 
 const masterKeyFor = (photo, source) => `masters/${photo.id}.${normalizedExtension(source?.type || basename(source?.path).split(".").pop())}`;
-const legacyMasterKeyFor = (photo, source) => `masters/${photo.id}/${basename(source.path)}`;
 const renderKeyFor = (photo, _source, productId) => {
   const match = String(productId || "").match(/^jpg-(\d+)mp$/);
   return match ? `renders/${photo.id}_${match[1]}mp.jpg` : "";
 };
-const legacyRenderKeyFor = (photo, source, productId) => `renders/${photo.id}/${safeName(basename(source.path), "source")}-${productId}.jpg`;
 const publicPreviewKeysFor = (photo) => [
   photo.media?.publicPreview?.galleryKey || `expo/${photo.id}_900.jpg`,
   photo.media?.publicPreview?.detailKey || `expo/${photo.id}_1800.jpg`,
@@ -356,11 +347,12 @@ const [initialMasterKeys, initialRenderKeys, publicPreviewKeys] = await Promise.
 const masterKeys = new Set(initialMasterKeys);
 const renderKeys = new Set(initialRenderKeys);
 const publicKeys = new Set(publicPreviewKeys.filter((key) => /_(900|1800)\.jpg$/i.test(key) || /_short_5s_720p\.mp4$/i.test(key)));
-const masterIds = new Set([...masterKeys].map(keyPhotoId));
+const masterIds = new Set([...masterKeys].filter(isFlatMasterKey).map(keyPhotoId));
 const masterKeysById = new Map();
 for (const key of masterKeys) {
+  if (!isFlatMasterKey(key)) continue;
   const id = keyPhotoId(key);
-  if (id) masterKeysById.set(id, preferTargetKey(masterKeysById.get(id), key));
+  if (id) masterKeysById.set(id, key);
 }
 const repaired = { masters: [], renders: [] };
 const missing = { masters: [], renders: [], publicPreviews: [] };
@@ -475,7 +467,7 @@ for (const key of renderKeys) {
   if (!renderProductsById.has(id)) renderProductsById.set(id, new Set());
   if (!renderKeysById.has(id)) renderKeysById.set(id, {});
   renderProductsById.get(id).add(productId);
-  renderKeysById.get(id)[productId] = preferTargetKey(renderKeysById.get(id)?.[productId], key);
+  renderKeysById.get(id)[productId] = key;
 }
 
 const records = {};
@@ -495,7 +487,6 @@ for (const photo of catalog.values()) {
     mediaType: String(photo.media?.type || "photo"),
     privateMaster: {
       expectedKey: masterKey,
-      legacyKey: legacyMasterKeyFor(photo, photo.source),
       key: presentMasterKey || "",
       present: Boolean(presentMasterKey),
       targetPresent: masterKeys.has(masterKey),
@@ -504,7 +495,6 @@ for (const photo of catalog.values()) {
       const key = renderKeyFor(photo, photo.source, productId);
       return [productId, {
         expectedKey: key,
-        legacyKey: legacyRenderKeyFor(photo, photo.source, productId),
         key: renderKeysById.get(photo.id)?.[productId] || "",
         present: products.has(productId),
         targetPresent: renderKeys.has(key),

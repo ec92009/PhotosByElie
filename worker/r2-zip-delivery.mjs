@@ -8,35 +8,18 @@ const extensionFor = (path) => {
   return match ? match[1].toLowerCase() : "jpg";
 };
 
-const basename = (path) => String(path || "").split(/[\\/]/).pop();
-
-const photoBaseName = (item) => {
-  const sourceExt = extensionFor(item.source?.path);
-  const idStem = String(item.photoId || "").replace(/-[a-f0-9]{10}$/i, "");
-  return `${idStem || basename(item.source?.path).replace(/\.[A-Za-z0-9]+$/, "")}.${sourceExt}`;
-};
-
 const productSuffix = (productId) => {
   const match = String(productId || "").match(/^jpg-(\d+)mp$/);
   return match ? `${match[1]}mp` : safeName(productId, "product");
 };
 
-const renderedJpgKeys = (item, product) => {
-  const folder = safeName(item.photoId, "photo");
-  const productName = safeName(product.id, "product");
-  return Array.from(new Set([
-    `renders/${safeName(item.photoId, "photo")}_${productSuffix(product.id)}.jpg`,
-    `renders/${folder}/${safeName(basename(item.source.path), "source")}-${productName}.jpg`,
-    `renders/${folder}/${safeName(photoBaseName(item), "source")}-${productName}.jpg`,
-  ]));
-};
+const renderedJpgKeys = (item, product) => [
+  `renders/${safeName(item.photoId, "photo")}_${productSuffix(product.id)}.jpg`,
+];
 
 const isOriginalProduct = (product) => product?.id === "full" || product?.id === "video-original";
 
-const masterKeysFor = (item) => Array.from(new Set([
-  ...(Array.isArray(item.source?.privateMasterKeys) ? item.source.privateMasterKeys : []),
-  item.source?.privateMasterKey,
-].filter(Boolean)));
+const masterKeysFor = (item) => [item.source?.privateMasterKey].filter(Boolean);
 
 const objectBytes = (object, fallback = null) => {
   const size = Number(object?.size);
@@ -161,8 +144,8 @@ export const createR2ZipDelivery = ({
     const files = [];
 
     const getOrCreateRenderedJpg = async ({ item, product, readSourceBytes }) => {
-      const [renderKey, ...fallbackRenderKeys] = renderedJpgKeys(item, product);
-      for (const candidateRenderKey of [renderKey, ...fallbackRenderKeys]) {
+      const [renderKey] = renderedJpgKeys(item, product);
+      for (const candidateRenderKey of [renderKey]) {
         const cached = await deliveryBucket.get(candidateRenderKey);
         if (cached) {
           return {

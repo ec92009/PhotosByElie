@@ -23,8 +23,10 @@ const ownerDbPath = valueFor("--owner-db", "assets/owner-actions/Owner.sqlite");
 const privateInventoryPath = valueFor("--private-inventory", ".review-logs/r2-private-inventory.json");
 const publicPreviewIdsPath = valueFor("--public-preview-ids", ".review-logs/r2-public-preview-ids.json");
 const dryRun = !hasFlag("--delete");
-const ignoreOwnerDb = hasFlag("--ignore-owner-db");
-const deepInventory = hasFlag("--deep-inventory") || ignoreOwnerDb;
+if (hasFlag("--ignore-owner-db")) {
+  throw new Error("--ignore-owner-db is retired. Use --deep-inventory to refresh current R2 state, or cleanup_legacy_r2_keys.mjs for explicit legacy cleanup.");
+}
+const deepInventory = hasFlag("--deep-inventory");
 const useHistory = !hasFlag("--no-history");
 const requestTimeoutMs = Number(valueFor("--request-timeout-ms", "180000")) || 180000;
 const retries = Number(valueFor("--retries", "4")) || 0;
@@ -58,10 +60,7 @@ const writeJson = async (filePath, payload) => {
   await fs.writeFile(target, `${JSON.stringify(payload, null, 2)}\n`);
 };
 
-const ownerDbEnabled = () => !ignoreOwnerDb;
-
 const runOwnerDb = (args, options = {}) => {
-  if (!ownerDbEnabled()) return { ok: false, skipped: true };
   const result = spawnSync("python3", ["scripts/owner_state_db.py", "--db", ownerDbPath, ...args], {
     cwd: repoRoot,
     encoding: "utf8",
@@ -75,7 +74,6 @@ const runOwnerDb = (args, options = {}) => {
 };
 
 const readOwnerDbDeletedKeys = () => {
-  if (!ownerDbEnabled()) return new Set();
   runOwnerDb(["--import-discarded-r2-manifest"]);
   const db = fullPath(ownerDbPath);
   const query = "SELECT bucket || char(9) || object_key FROM r2_objects WHERE lifecycle_state = 'deleted_confirmed';";
@@ -92,7 +90,7 @@ const readOwnerDbDeletedKeys = () => {
 };
 
 const writeOwnerDbState = async (entries, state) => {
-  if (!ownerDbEnabled() || !entries.length) return;
+  if (!entries.length) return;
   const statePath = `.review-logs/r2-object-state-${state}-${Date.now()}-${Math.random().toString(16).slice(2)}.json`;
   await writeJson(statePath, { generatedAt: new Date().toISOString(), objects: entries });
   runOwnerDb(["--r2-state-file", statePath, "--r2-state", state]);
@@ -231,6 +229,12 @@ const discardedIds = new Set(currentDiscardedIds);
   .map((photo) => photo?.id)
   .filter((id) => typeof id === "string" && id)
   .forEach((id) => discardedIds.add(id));
+const mediaTypeById = new Map((Array.isArray(tombstone.photos) ? tombstone.photos : [])
+  .filter((photo) => photo?.id)
+  .map((photo) => [
+    photo.id,
+    String(photo.media_type || photo.mediaType || photo.media?.type || photo.type || "photo").toLowerCase(),
+  ]));
 if (!discardedIds.size) {
   await writeJson(outputPath, {
     schema: "photosbyelie.discarded-media-manifest.v1",
@@ -251,8 +255,9 @@ const publicKeys = new Set((Array.isArray(tombstone.public_preview_keys) ? tombs
   .forEach((key) => publicKeys.add(key));
 for (const id of discardedIds) {
   publicKeys.add(`expo/${id}_900.jpg`);
-  publicKeys.add(`expo/${id}_1800.jpg`);
-  publicKeys.add(`expo/${id}_short_5s_720p.mp4`);
+  publicKeys.add(mediaTypeById.get(id) === "video"
+    ? `expo/${id}_short_5s_720p.mp4`
+    : `expo/${id}_1800.jpg`);
 }
 const keyPhotoId = (key) => {
   const value = String(key || "");
@@ -321,7 +326,7 @@ console.log(`DELETE_CONTEXT ${JSON.stringify({
   currentDiscardedPhotos: currentDiscardedIds.size,
   historicalDiscardedPhotos: historicalDiscardedIds.size,
   ownerDbDeletedConfirmed: ownerDbConfirmedCount,
-  note: "This phase rechecks historical banned-photo R2 keys. S3 delete is idempotent, so a checked key usually means it was already gone.",
+  note: "This phase rechecks current flat banned-photo R2 keys. S3 delete is idempotent, so a checked key usually means it was already gone.",
 })}`);
 deleteProgressLine(deleteProgress);
 

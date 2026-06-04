@@ -3,17 +3,17 @@
   "generated_at": "2026-06-04T03:10:31.287Z",
   "source_policy": "Prepared from public SQLite/catalog rows and public R2 watermarked previews only. No private masters, buyer downloads, Owner-only metadata, ignored Owner review JSON, or secrets were used.",
   "status": {
-    "facebook": "prepared",
-    "instagram": "prepared",
-    "threads": "prepared",
-    "pinterest": "prepared",
-    "etsy": "pending_draft_creation"
+    "facebook": "published",
+    "instagram": "published",
+    "threads": "published",
+    "pinterest": "prepared_no_api_token_missing_token",
+    "etsy": "drafts_created_media_verified"
   },
   "packages": [
     {
       "date": "2026-06-04",
       "platform": "Facebook",
-      "status": "prepared",
+      "status": "published",
       "account": "Photos By Elie",
       "post_type": "multi_photo",
       "title": "Cordoba Mezquita Detail Light",
@@ -164,12 +164,36 @@
           "local_staged_path": "socials/Facebook/2026-06-04/cordoba-mezquita-detail-light/images/08-img-1402-4c2c98e288-cordoba-mezquita-detail-light.jpg"
         }
       ],
-      "local_package": "/Users/ecohen/Dev/photosByElie/socials/Facebook/2026-06-04/cordoba-mezquita-detail-light"
+      "local_package": "/Users/ecohen/Dev/photosByElie/socials/Facebook/2026-06-04/cordoba-mezquita-detail-light",
+      "published": {
+        "status": "published",
+        "platform": "facebook",
+        "account": "Photos By Elie",
+        "page_id": "1146747141854670",
+        "post_id": "1146747141854670_122103661119334672",
+        "published_at": "2026-06-04T03:15:53+0000",
+        "permalink_url": "https://www.facebook.com/122102168061334672/posts/122103661119334672",
+        "image_count": 8,
+        "verified_at": "2026-06-04T03:18:12.656Z",
+        "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
+      },
+      "api_publish": {
+        "status": "published",
+        "platform": "facebook",
+        "account": "Photos By Elie",
+        "page_id": "1146747141854670",
+        "post_id": "1146747141854670_122103661119334672",
+        "published_at": "2026-06-04T03:15:53+0000",
+        "permalink_url": "https://www.facebook.com/122102168061334672/posts/122103661119334672",
+        "image_count": 8,
+        "verified_at": "2026-06-04T03:18:12.656Z",
+        "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
+      }
     },
     {
       "date": "2026-06-04",
       "platform": "Instagram",
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "title": "Lisbon Carmo Ruins Light",
@@ -270,12 +294,38 @@
           "local_staged_path": "socials/Instagram/2026-06-04/lisbon-carmo-ruins-light/images/05-20220519-144910-04396-092ac31b87-lisbon-carmo-ruins-light.jpg"
         }
       ],
-      "local_package": "/Users/ecohen/Dev/photosByElie/socials/Instagram/2026-06-04/lisbon-carmo-ruins-light"
+      "local_package": "/Users/ecohen/Dev/photosByElie/socials/Instagram/2026-06-04/lisbon-carmo-ruins-light",
+      "published": {
+        "status": "published",
+        "platform": "instagram",
+        "account": "ec92009",
+        "media_id": "18004080146922929",
+        "permalink": "https://www.instagram.com/p/DZJge0HFM9q/",
+        "media_type": "CAROUSEL_ALBUM",
+        "published_at": "2026-06-04T03:16:36+0000",
+        "image_count": 5,
+        "child_count": 5,
+        "verified_at": "2026-06-04T03:18:12.656Z",
+        "verification": "Instagram Graph returned permalink, username, media type, caption, timestamp, and 5 carousel children."
+      },
+      "api_publish": {
+        "status": "published",
+        "platform": "instagram",
+        "account": "ec92009",
+        "media_id": "18004080146922929",
+        "permalink": "https://www.instagram.com/p/DZJge0HFM9q/",
+        "media_type": "CAROUSEL_ALBUM",
+        "published_at": "2026-06-04T03:16:36+0000",
+        "image_count": 5,
+        "child_count": 5,
+        "verified_at": "2026-06-04T03:18:12.656Z",
+        "verification": "Instagram Graph returned permalink, username, media type, caption, timestamp, and 5 carousel children."
+      }
     },
     {
       "date": "2026-06-04",
       "platform": "Threads",
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "title": "Lisbon Carmo Ruins Light",
@@ -359,12 +409,40 @@
         }
       ],
       "local_package": "/Users/ecohen/Dev/photosByElie/socials/Threads/2026-06-04/lisbon-carmo-ruins-light",
-      "link_preview_note": "Remove any automatic link preview if it shows generic or off-theme campaign metadata."
+      "link_preview_note": "Remove any automatic link preview if it shows generic or off-theme campaign metadata.",
+      "published": {
+        "status": "published",
+        "platform": "threads",
+        "account": "ec92009",
+        "post_id": "18343971532175853",
+        "url": "https://www.threads.com/@ec92009/post/DZJgjVCFC7Y",
+        "shortcode": "DZJgjVCFC7Y",
+        "media_type": "CAROUSEL_ALBUM",
+        "published_at": "2026-06-04T03:17:18+0000",
+        "image_count": 4,
+        "child_count": 4,
+        "verified_at": "2026-06-04T03:18:12.656Z",
+        "verification": "Threads Graph returned permalink, username, media type, timestamp, text, and 4 carousel children."
+      },
+      "api_publish": {
+        "status": "published",
+        "platform": "threads",
+        "account": "ec92009",
+        "post_id": "18343971532175853",
+        "url": "https://www.threads.com/@ec92009/post/DZJgjVCFC7Y",
+        "shortcode": "DZJgjVCFC7Y",
+        "media_type": "CAROUSEL_ALBUM",
+        "published_at": "2026-06-04T03:17:18+0000",
+        "image_count": 4,
+        "child_count": 4,
+        "verified_at": "2026-06-04T03:18:12.656Z",
+        "verification": "Threads Graph returned permalink, username, media type, timestamp, text, and 4 carousel children."
+      }
     },
     {
       "date": "2026-06-04",
       "platform": "Pinterest",
-      "status": "prepared",
+      "status": "prepared_no_api_token_missing_token",
       "account": "@photosbyelie",
       "board": "Paris and France Photography",
       "post_type": "carousel_pin_or_multi_image_pin",
@@ -380,7 +458,8 @@
       "notes": [
         "Images are downloaded public watermarked R2 previews staged for browser upload.",
         "Pinterest package is capped at exactly 5 images.",
-        "Confirm the final account/board/page target before publishing."
+        "Confirm the final account/board/page target before publishing.",
+        "Pinterest API token is missing at ~/.config/photosbyelie/pinterest-token.json; package remains ready for manual Pin Builder upload."
       ],
       "items": [
         {
@@ -471,5 +550,278 @@
       ],
       "local_package": "/Users/ecohen/Dev/photosByElie/socials/Pinterest/2026-06-04/paris-arts-metiers-machines"
     }
-  ]
+  ],
+  "etsy": {
+    "status": "drafts_created_media_verified",
+    "package_count": 3,
+    "listing_count": 18,
+    "all_draft": true,
+    "all_media_verified": true,
+    "packages": [
+      {
+        "campaign_id": "etsy-cordoba-mezquita-wall-art-2026-06-04",
+        "campaign_title": "Cordoba Mezquita Wall Art",
+        "first_party_url": "https://photos-by-elie.com/campaign.html?c=etsy-cordoba-mezquita-wall-art-2026-06-04",
+        "local_package": "/Users/ecohen/Dev/photosByElie/assets/owner-actions/etsy-listing-packages/2026-06-04/etsy-cordoba-mezquita-wall-art-2026-06-04",
+        "mode": "etsy_drafts_created_media_verified",
+        "shop_id": "42422777",
+        "shop_url": "https://www.etsy.com/shop/PhotosByElieShop",
+        "listing_type": "download",
+        "product": {
+          "id": "jpg-6mp",
+          "label": "JPG 6 MP",
+          "type": "digital",
+          "delivery_asset_type": "jpeg_6mp"
+        },
+        "listing_count": 8,
+        "verified_at": "2026-06-04T03:25:06.238Z",
+        "draft_ids": [
+          "4516158772",
+          "4516158784",
+          "4516162457",
+          "4516158792",
+          "4516162469",
+          "4516158802",
+          "4516158806",
+          "4516162477"
+        ],
+        "listings": [
+          {
+            "media_id": "img-1416-ce14e9f776",
+            "listing_id": "4516158772",
+            "state": "draft",
+            "listing_image_id": 8143539639,
+            "buyer_file_id": 1490949183634,
+            "image_count": 1,
+            "file_count": 1,
+            "verified_at": "2026-06-04T03:23:25.083Z"
+          },
+          {
+            "media_id": "img-1415-a0898b65fc",
+            "listing_id": "4516158784",
+            "state": "draft",
+            "listing_image_id": 8143544109,
+            "buyer_file_id": 1490949223414,
+            "image_count": 1,
+            "file_count": 1,
+            "verified_at": "2026-06-04T03:23:43.513Z"
+          },
+          {
+            "media_id": "img-1414-a8d42b2515",
+            "listing_id": "4516162457",
+            "state": "draft",
+            "listing_image_id": 8143544659,
+            "buyer_file_id": 1490949256076,
+            "image_count": 1,
+            "file_count": 1,
+            "verified_at": "2026-06-04T03:23:57.088Z"
+          },
+          {
+            "media_id": "img-1413-96ea2c869f",
+            "listing_id": "4516158792",
+            "state": "draft",
+            "listing_image_id": 8143545043,
+            "buyer_file_id": 1490949282622,
+            "image_count": 1,
+            "file_count": 1,
+            "verified_at": "2026-06-04T03:24:09.190Z"
+          },
+          {
+            "media_id": "img-1412-dde0e52bcb",
+            "listing_id": "4516162469",
+            "state": "draft",
+            "listing_image_id": 8143545457,
+            "buyer_file_id": 1490949318494,
+            "image_count": 1,
+            "file_count": 1,
+            "verified_at": "2026-06-04T03:24:25.992Z"
+          },
+          {
+            "media_id": "img-1408-94456ca4fc",
+            "listing_id": "4516158802",
+            "state": "draft",
+            "listing_image_id": 8095640438,
+            "buyer_file_id": 1490949352052,
+            "image_count": 1,
+            "file_count": 1,
+            "verified_at": "2026-06-04T03:24:39.326Z"
+          },
+          {
+            "media_id": "img-1404-b704ed7a17",
+            "listing_id": "4516158806",
+            "state": "draft",
+            "listing_image_id": 8095640998,
+            "buyer_file_id": 1490949382520,
+            "image_count": 1,
+            "file_count": 1,
+            "verified_at": "2026-06-04T03:24:53.134Z"
+          },
+          {
+            "media_id": "img-1402-4c2c98e288",
+            "listing_id": "4516162477",
+            "state": "draft",
+            "listing_image_id": 8095641534,
+            "buyer_file_id": 1490949411586,
+            "image_count": 1,
+            "file_count": 1,
+            "verified_at": "2026-06-04T03:25:06.237Z"
+          }
+        ]
+      },
+      {
+        "campaign_id": "etsy-lisbon-carmo-wall-art-2026-06-04",
+        "campaign_title": "Lisbon Carmo Wall Art",
+        "first_party_url": "https://photos-by-elie.com/campaign.html?c=etsy-lisbon-carmo-wall-art-2026-06-04",
+        "local_package": "/Users/ecohen/Dev/photosByElie/assets/owner-actions/etsy-listing-packages/2026-06-04/etsy-lisbon-carmo-wall-art-2026-06-04",
+        "mode": "etsy_drafts_created_media_verified",
+        "shop_id": "42422777",
+        "shop_url": "https://www.etsy.com/shop/PhotosByElieShop",
+        "listing_type": "download",
+        "product": {
+          "id": "jpg-6mp",
+          "label": "JPG 6 MP",
+          "type": "digital",
+          "delivery_asset_type": "jpeg_6mp"
+        },
+        "listing_count": 5,
+        "verified_at": "2026-06-04T03:26:02.740Z",
+        "draft_ids": [
+          "4516158816",
+          "4516158822",
+          "4516158826",
+          "4516158834",
+          "4516158838"
+        ],
+        "listings": [
+          {
+            "media_id": "20220519-150855-04494-23ca28ef26",
+            "listing_id": "4516158816",
+            "state": "draft",
+            "listing_image_id": 8095641914,
+            "buyer_file_id": 1490949437540,
+            "image_count": 1,
+            "file_count": 1,
+            "verified_at": "2026-06-04T03:25:17.087Z"
+          },
+          {
+            "media_id": "20220519-150002-04473-673b0d617b",
+            "listing_id": "4516158822",
+            "state": "draft",
+            "listing_image_id": 8143547697,
+            "buyer_file_id": 1492114460913,
+            "image_count": 1,
+            "file_count": 1,
+            "verified_at": "2026-06-04T03:25:28.438Z"
+          },
+          {
+            "media_id": "20220519-145733-04458-46544e9a62",
+            "listing_id": "4516158826",
+            "state": "draft",
+            "listing_image_id": 8143548023,
+            "buyer_file_id": 1492114484649,
+            "image_count": 1,
+            "file_count": 1,
+            "verified_at": "2026-06-04T03:25:39.217Z"
+          },
+          {
+            "media_id": "20220519-145011-04398-926891f8aa",
+            "listing_id": "4516158834",
+            "state": "draft",
+            "listing_image_id": 8095642940,
+            "buyer_file_id": 1490949512926,
+            "image_count": 1,
+            "file_count": 1,
+            "verified_at": "2026-06-04T03:25:49.880Z"
+          },
+          {
+            "media_id": "20220519-144910-04396-092ac31b87",
+            "listing_id": "4516158838",
+            "state": "draft",
+            "listing_image_id": 8143548761,
+            "buyer_file_id": 1490949541492,
+            "image_count": 1,
+            "file_count": 1,
+            "verified_at": "2026-06-04T03:26:02.740Z"
+          }
+        ]
+      },
+      {
+        "campaign_id": "etsy-paris-arts-metiers-wall-art-2026-06-04",
+        "campaign_title": "Paris Arts et Metiers Wall Art",
+        "first_party_url": "https://photos-by-elie.com/campaign.html?c=etsy-paris-arts-metiers-wall-art-2026-06-04",
+        "local_package": "/Users/ecohen/Dev/photosByElie/assets/owner-actions/etsy-listing-packages/2026-06-04/etsy-paris-arts-metiers-wall-art-2026-06-04",
+        "mode": "etsy_drafts_created_media_verified",
+        "shop_id": "42422777",
+        "shop_url": "https://www.etsy.com/shop/PhotosByElieShop",
+        "listing_type": "download",
+        "product": {
+          "id": "jpg-6mp",
+          "label": "JPG 6 MP",
+          "type": "digital",
+          "delivery_asset_type": "jpeg_6mp"
+        },
+        "listing_count": 5,
+        "verified_at": "2026-06-04T03:26:54.737Z",
+        "draft_ids": [
+          "4516162507",
+          "4516162519",
+          "4516158860",
+          "4516158864",
+          "4516162533"
+        ],
+        "listings": [
+          {
+            "media_id": "img-6174-8674aea1e3",
+            "listing_id": "4516162507",
+            "state": "draft",
+            "listing_image_id": 8095643804,
+            "buyer_file_id": 1492114562427,
+            "image_count": 1,
+            "file_count": 1,
+            "verified_at": "2026-06-04T03:26:13.595Z"
+          },
+          {
+            "media_id": "img-6159-41a8c3df55",
+            "listing_id": "4516162519",
+            "state": "draft",
+            "listing_image_id": 8143549591,
+            "buyer_file_id": 1492114587241,
+            "image_count": 1,
+            "file_count": 1,
+            "verified_at": "2026-06-04T03:26:23.717Z"
+          },
+          {
+            "media_id": "img-6141-eec90cefcc",
+            "listing_id": "4516158860",
+            "state": "draft",
+            "listing_image_id": 8095644560,
+            "buyer_file_id": 1490949616862,
+            "image_count": 1,
+            "file_count": 1,
+            "verified_at": "2026-06-04T03:26:33.839Z"
+          },
+          {
+            "media_id": "img-6139-e2745c4578",
+            "listing_id": "4516158864",
+            "state": "draft",
+            "listing_image_id": 8095644980,
+            "buyer_file_id": 1492114636695,
+            "image_count": 1,
+            "file_count": 1,
+            "verified_at": "2026-06-04T03:26:44.651Z"
+          },
+          {
+            "media_id": "img-6138-a220ea6366",
+            "listing_id": "4516162533",
+            "state": "draft",
+            "listing_image_id": 8095645416,
+            "buyer_file_id": 1490949666010,
+            "image_count": 1,
+            "file_count": 1,
+            "verified_at": "2026-06-04T03:26:54.737Z"
+          }
+        ]
+      }
+    ]
+  }
 }

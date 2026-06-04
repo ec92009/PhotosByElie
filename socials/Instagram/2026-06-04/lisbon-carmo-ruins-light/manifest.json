@@ -1,7 +1,7 @@
 {
   "date": "2026-06-04",
   "platform": "Instagram",
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "title": "Lisbon Carmo Ruins Light",
@@ -102,5 +102,31 @@
       "local_staged_path": "socials/Instagram/2026-06-04/lisbon-carmo-ruins-light/images/05-20220519-144910-04396-092ac31b87-lisbon-carmo-ruins-light.jpg"
     }
   ],
-  "local_package": "/Users/ecohen/Dev/photosByElie/socials/Instagram/2026-06-04/lisbon-carmo-ruins-light"
+  "local_package": "/Users/ecohen/Dev/photosByElie/socials/Instagram/2026-06-04/lisbon-carmo-ruins-light",
+  "published": {
+    "status": "published",
+    "platform": "instagram",
+    "account": "ec92009",
+    "media_id": "18004080146922929",
+    "permalink": "https://www.instagram.com/p/DZJge0HFM9q/",
+    "media_type": "CAROUSEL_ALBUM",
+    "published_at": "2026-06-04T03:16:36+0000",
+    "image_count": 5,
+    "child_count": 5,
+    "verified_at": "2026-06-04T03:18:12.656Z",
+    "verification": "Instagram Graph returned permalink, username, media type, caption, timestamp, and 5 carousel children."
+  },
+  "api_publish": {
+    "status": "published",
+    "platform": "instagram",
+    "account": "ec92009",
+    "media_id": "18004080146922929",
+    "permalink": "https://www.instagram.com/p/DZJge0HFM9q/",
+    "media_type": "CAROUSEL_ALBUM",
+    "published_at": "2026-06-04T03:16:36+0000",
+    "image_count": 5,
+    "child_count": 5,
+    "verified_at": "2026-06-04T03:18:12.656Z",
+    "verification": "Instagram Graph returned permalink, username, media type, caption, timestamp, and 5 carousel children."
+  }
 }

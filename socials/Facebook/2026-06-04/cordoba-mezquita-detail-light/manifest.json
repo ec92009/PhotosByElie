@@ -1,7 +1,7 @@
 {
   "date": "2026-06-04",
   "platform": "Facebook",
-  "status": "prepared",
+  "status": "published",
   "account": "Photos By Elie",
   "post_type": "multi_photo",
   "title": "Cordoba Mezquita Detail Light",
@@ -152,5 +152,29 @@
       "local_staged_path": "socials/Facebook/2026-06-04/cordoba-mezquita-detail-light/images/08-img-1402-4c2c98e288-cordoba-mezquita-detail-light.jpg"
     }
   ],
-  "local_package": "/Users/ecohen/Dev/photosByElie/socials/Facebook/2026-06-04/cordoba-mezquita-detail-light"
+  "local_package": "/Users/ecohen/Dev/photosByElie/socials/Facebook/2026-06-04/cordoba-mezquita-detail-light",
+  "published": {
+    "status": "published",
+    "platform": "facebook",
+    "account": "Photos By Elie",
+    "page_id": "1146747141854670",
+    "post_id": "1146747141854670_122103661119334672",
+    "published_at": "2026-06-04T03:15:53+0000",
+    "permalink_url": "https://www.facebook.com/122102168061334672/posts/122103661119334672",
+    "image_count": 8,
+    "verified_at": "2026-06-04T03:18:12.656Z",
+    "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
+  },
+  "api_publish": {
+    "status": "published",
+    "platform": "facebook",
+    "account": "Photos By Elie",
+    "page_id": "1146747141854670",
+    "post_id": "1146747141854670_122103661119334672",
+    "published_at": "2026-06-04T03:15:53+0000",
+    "permalink_url": "https://www.facebook.com/122102168061334672/posts/122103661119334672",
+    "image_count": 8,
+    "verified_at": "2026-06-04T03:18:12.656Z",
+    "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
+  }
 }

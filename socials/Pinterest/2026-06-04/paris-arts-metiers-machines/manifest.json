@@ -1,7 +1,7 @@
 {
   "date": "2026-06-04",
   "platform": "Pinterest",
-  "status": "prepared",
+  "status": "prepared_no_api_token_missing_token",
   "account": "@photosbyelie",
   "board": "Paris and France Photography",
   "post_type": "carousel_pin_or_multi_image_pin",
@@ -17,7 +17,8 @@
   "notes": [
     "Images are downloaded public watermarked R2 previews staged for browser upload.",
     "Pinterest package is capped at exactly 5 images.",
-    "Confirm the final account/board/page target before publishing."
+    "Confirm the final account/board/page target before publishing.",
+    "Pinterest API token is missing at ~/.config/photosbyelie/pinterest-token.json; package remains ready for manual Pin Builder upload."
   ],
   "items": [
     {

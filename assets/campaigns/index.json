@@ -1,9 +1,141 @@
 {
   "format": "photosbyelie-campaign-index",
   "schema_version": 1,
-  "generated_at": "2026-06-03T03:17:24.673Z",
-  "campaign_count": 38,
+  "generated_at": "2026-06-04T03:10:48.737Z",
+  "campaign_count": 44,
   "campaigns": [
+    {
+      "id": "pinterest-paris-arts-metiers-machines-2026-06-04",
+      "source": "Pinterest",
+      "title": "Paris Arts et Metiers Machines",
+      "description": "A focused Photos By Elie set from Musee des Arts et Metiers in Paris, selected for antique machines, brass forms, workshop textures, and quiet museum atmosphere.",
+      "date": "2026-06-04",
+      "href": "./campaign.html?c=pinterest-paris-arts-metiers-machines-2026-06-04",
+      "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=pinterest-paris-arts-metiers-machines-2026-06-04",
+      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6138-a220ea6366_900.jpg",
+      "imageAlt": "Musée des Arts et Métiers, Paris",
+      "previewImageUrls": [
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6138-a220ea6366_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6174-8674aea1e3_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6159-41a8c3df55_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6141-eec90cefcc_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6139-e2745c4578_900.jpg"
+      ],
+      "primaryPhotoCount": 5,
+      "relatedPhotoCount": 6,
+      "mtimeMs": 1780542624172
+    },
+    {
+      "id": "etsy-paris-arts-metiers-wall-art-2026-06-04",
+      "source": "Etsy",
+      "title": "Paris Arts et Metiers Wall Art",
+      "description": "A focused Photos By Elie set from Musee des Arts et Metiers in Paris, selected for antique machines, brass forms, workshop textures, and quiet museum atmosphere.",
+      "date": "2026-06-04",
+      "href": "./campaign.html?c=etsy-paris-arts-metiers-wall-art-2026-06-04",
+      "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=etsy-paris-arts-metiers-wall-art-2026-06-04",
+      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6138-a220ea6366_900.jpg",
+      "imageAlt": "Musée des Arts et Métiers, Paris",
+      "previewImageUrls": [
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6138-a220ea6366_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6174-8674aea1e3_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6159-41a8c3df55_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6141-eec90cefcc_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6139-e2745c4578_900.jpg"
+      ],
+      "primaryPhotoCount": 5,
+      "relatedPhotoCount": 6,
+      "mtimeMs": 1780542624172
+    },
+    {
+      "id": "etsy-lisbon-carmo-wall-art-2026-06-04",
+      "source": "Etsy",
+      "title": "Lisbon Carmo Wall Art",
+      "description": "A concise Photos By Elie edit from Lisbon's Carmo Convent ruins, selected for open Gothic arches, pale stone, elevated city light, and quiet Portugal wall-art atmosphere.",
+      "date": "2026-06-04",
+      "href": "./campaign.html?c=etsy-lisbon-carmo-wall-art-2026-06-04",
+      "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=etsy-lisbon-carmo-wall-art-2026-06-04",
+      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20220519-144910-04396-092ac31b87_900.jpg",
+      "imageAlt": "Carmo Convent, Santa Justa Lift",
+      "previewImageUrls": [
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20220519-144910-04396-092ac31b87_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20220519-150855-04494-23ca28ef26_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20220519-150002-04473-673b0d617b_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20220519-145733-04458-46544e9a62_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20220519-145011-04398-926891f8aa_900.jpg"
+      ],
+      "primaryPhotoCount": 5,
+      "relatedPhotoCount": 5,
+      "mtimeMs": 1780542616253
+    },
+    {
+      "id": "instagram-lisbon-carmo-ruins-light-2026-06-04",
+      "source": "Instagram",
+      "title": "Lisbon Carmo Ruins Light",
+      "description": "A concise Photos By Elie edit from Lisbon's Carmo Convent ruins, selected for open Gothic arches, pale stone, elevated city light, and quiet Portugal wall-art atmosphere.",
+      "date": "2026-06-04",
+      "href": "./campaign.html?c=instagram-lisbon-carmo-ruins-light-2026-06-04",
+      "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-lisbon-carmo-ruins-light-2026-06-04",
+      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20220519-144910-04396-092ac31b87_900.jpg",
+      "imageAlt": "Carmo Convent, Santa Justa Lift",
+      "previewImageUrls": [
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20220519-144910-04396-092ac31b87_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20220519-150855-04494-23ca28ef26_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20220519-150002-04473-673b0d617b_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20220519-145733-04458-46544e9a62_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20220519-145011-04398-926891f8aa_900.jpg"
+      ],
+      "primaryPhotoCount": 5,
+      "relatedPhotoCount": 5,
+      "mtimeMs": 1780542616252
+    },
+    {
+      "id": "etsy-cordoba-mezquita-wall-art-2026-06-04",
+      "source": "Etsy",
+      "title": "Cordoba Mezquita Wall Art",
+      "description": "A focused Photos By Elie set from Cordoba, Spain, selected for chapel light, gilded ornament, historic interior detail, and quiet Andalusian wall-art atmosphere.",
+      "date": "2026-06-04",
+      "href": "./campaign.html?c=etsy-cordoba-mezquita-wall-art-2026-06-04",
+      "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=etsy-cordoba-mezquita-wall-art-2026-06-04",
+      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1408-94456ca4fc_900.jpg",
+      "imageAlt": "Cordoba, La Mezquita",
+      "previewImageUrls": [
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1408-94456ca4fc_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1416-ce14e9f776_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1415-a0898b65fc_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1414-a8d42b2515_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1413-96ea2c869f_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1412-dde0e52bcb_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1404-b704ed7a17_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1402-4c2c98e288_900.jpg"
+      ],
+      "primaryPhotoCount": 8,
+      "relatedPhotoCount": 6,
+      "mtimeMs": 1780542607573
+    },
+    {
+      "id": "facebook-cordoba-mezquita-detail-light-2026-06-04",
+      "source": "Facebook",
+      "title": "Cordoba Mezquita Detail Light",
+      "description": "A focused Photos By Elie set from Cordoba, Spain, selected for chapel light, gilded ornament, historic interior detail, and quiet Andalusian wall-art atmosphere.",
+      "date": "2026-06-04",
+      "href": "./campaign.html?c=facebook-cordoba-mezquita-detail-light-2026-06-04",
+      "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=facebook-cordoba-mezquita-detail-light-2026-06-04",
+      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1408-94456ca4fc_900.jpg",
+      "imageAlt": "Cordoba, La Mezquita",
+      "previewImageUrls": [
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1408-94456ca4fc_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1416-ce14e9f776_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1415-a0898b65fc_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1414-a8d42b2515_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1413-96ea2c869f_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1412-dde0e52bcb_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1404-b704ed7a17_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1402-4c2c98e288_900.jpg"
+      ],
+      "primaryPhotoCount": 8,
+      "relatedPhotoCount": 6,
+      "mtimeMs": 1780542607572
+    },
     {
       "id": "etsy-paris-eiffel-night-wall-art-2026-06-03",
       "source": "Etsy",
@@ -13,7 +145,7 @@
       "href": "./campaign.html?c=etsy-paris-eiffel-night-wall-art-2026-06-03",
       "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=etsy-paris-eiffel-night-wall-art-2026-06-03",
       "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180509-2318-00262-6868c80bf7_900.jpg",
-      "imageAlt": "20180509 2318 00262",
+      "imageAlt": "Eiffel Tower at Night from the Trocadéro",
       "previewImageUrls": [
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180509-2318-00262-6868c80bf7_900.jpg",
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180509-2311-00255-7474968431_900.jpg",
@@ -58,7 +190,7 @@
       "href": "./campaign.html?c=etsy-albi-tarn-wall-art-2026-06-03",
       "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=etsy-albi-tarn-wall-art-2026-06-03",
       "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180525-1443-00956-a9e61b8dde_900.jpg",
-      "imageAlt": "20180525 1443 00956",
+      "imageAlt": "Albi in Occitanie",
       "previewImageUrls": [
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180525-1443-00956-a9e61b8dde_900.jpg",
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180525-1419-00943-554228f741_900.jpg",
@@ -82,7 +214,7 @@
       "href": "./campaign.html?c=pinterest-paris-eiffel-night-light-2026-06-03",
       "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=pinterest-paris-eiffel-night-light-2026-06-03",
       "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180509-2318-00262-6868c80bf7_900.jpg",
-      "imageAlt": "20180509 2318 00262",
+      "imageAlt": "Eiffel Tower at Night from the Trocadéro",
       "previewImageUrls": [
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180509-2318-00262-6868c80bf7_900.jpg",
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180509-2311-00255-7474968431_900.jpg",
@@ -103,7 +235,7 @@
       "href": "./campaign.html?c=facebook-albi-tarn-river-brick-light-2026-06-03",
       "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=facebook-albi-tarn-river-brick-light-2026-06-03",
       "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180525-1443-00956-a9e61b8dde_900.jpg",
-      "imageAlt": "20180525 1443 00956",
+      "imageAlt": "Albi in Occitanie",
       "previewImageUrls": [
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180525-1443-00956-a9e61b8dde_900.jpg",
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180525-1419-00943-554228f741_900.jpg",
@@ -172,7 +304,7 @@
       "href": "./campaign.html?c=etsy-nerja-mediterranean-wall-art-2026-06-03",
       "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=etsy-nerja-mediterranean-wall-art-2026-06-03",
       "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5204-6e1253b249_900.jpg",
-      "imageAlt": "IMG 5204",
+      "imageAlt": "Nerja",
       "previewImageUrls": [
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5204-6e1253b249_900.jpg",
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5199-00bef996a6_900.jpg",
@@ -196,7 +328,7 @@
       "href": "./campaign.html?c=etsy-sevilla-after-dusk-wall-art-2026-06-02",
       "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=etsy-sevilla-after-dusk-wall-art-2026-06-02",
       "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5332-d278e7abcc_900.jpg",
-      "imageAlt": "IMG 5332",
+      "imageAlt": "Evening in Sevilla",
       "previewImageUrls": [
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5332-d278e7abcc_900.jpg",
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5327-d0205aa8c7_900.jpg",
@@ -220,7 +352,7 @@
       "href": "./campaign.html?c=instagram-nerja-mediterranean-terraces-2026-06-02",
       "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-nerja-mediterranean-terraces-2026-06-02",
       "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5204-6e1253b249_900.jpg",
-      "imageAlt": "IMG 5204",
+      "imageAlt": "Nerja",
       "previewImageUrls": [
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5204-6e1253b249_900.jpg",
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5199-00bef996a6_900.jpg",
@@ -265,7 +397,7 @@
       "href": "./campaign.html?c=facebook-evening-in-sevilla-street-light-2026-06-02",
       "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=facebook-evening-in-sevilla-street-light-2026-06-02",
       "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5332-d278e7abcc_900.jpg",
-      "imageAlt": "IMG 5332",
+      "imageAlt": "Evening in Sevilla",
       "previewImageUrls": [
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5332-d278e7abcc_900.jpg",
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5327-d0205aa8c7_900.jpg",
@@ -289,7 +421,7 @@
       "href": "./campaign.html?c=pinterest-belem-river-stone-details-2026-06-01",
       "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=pinterest-belem-river-stone-details-2026-06-01",
       "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180520-1536-00716-eebddf7bbb_900.jpg",
-      "imageAlt": "20180520 1536 00716",
+      "imageAlt": "Belem, Lisbon",
       "previewImageUrls": [
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180520-1536-00716-eebddf7bbb_900.jpg",
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180520-1535-00715-795e204a97_900.jpg",
@@ -310,7 +442,7 @@
       "href": "./campaign.html?c=instagram-madrid-royal-palace-stone-courtyards-2026-06-01",
       "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-madrid-royal-palace-stone-courtyards-2026-06-01",
       "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1326-00893-75d36d95eb_900.jpg",
-      "imageAlt": "20180522 1326 00893",
+      "imageAlt": "Madrid Royal Palace",
       "previewImageUrls": [
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1326-00893-75d36d95eb_900.jpg",
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1333-00896-18f955bb6f_900.jpg",
@@ -358,7 +490,7 @@
       "href": "./campaign.html?c=pinterest-oceanside-pier-golden-hour-2026-05-31",
       "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=pinterest-oceanside-pier-golden-hour-2026-05-31",
       "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180505-1814-00238-2ad3a506a8_900.jpg",
-      "imageAlt": "20180505 1814 00238",
+      "imageAlt": "Seagull at beach",
       "previewImageUrls": [
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180505-1814-00238-2ad3a506a8_900.jpg",
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180505-1807-18428-ec308418ff_900.jpg",
@@ -379,7 +511,7 @@
       "href": "./campaign.html?c=instagram-colares-atlantic-cliffs-2026-05-31",
       "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-colares-atlantic-cliffs-2026-05-31",
       "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180520-1200-00686-c6eba24915_900.jpg",
-      "imageAlt": "20180520 1200 00686",
+      "imageAlt": "Cabo Da Roca, Lisbon",
       "previewImageUrls": [
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180520-1200-00686-c6eba24915_900.jpg",
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180520-1154-00684-fc9320d34c_900.jpg",
@@ -427,7 +559,7 @@
       "href": "./campaign.html?c=pinterest-pisa-marble-and-leaning-tower-2026-05-30",
       "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=pinterest-pisa-marble-and-leaning-tower-2026-05-30",
       "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1197-0132d88761_900.jpg",
-      "imageAlt": "IMG 1197",
+      "imageAlt": "Leaning Tower of Pisa",
       "previewImageUrls": [
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1197-0132d88761_900.jpg",
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1199-0ebd1a5044_900.jpg",
@@ -448,7 +580,7 @@
       "href": "./campaign.html?c=instagram-lisbon-monastery-stone-and-light-2026-05-30",
       "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-lisbon-monastery-stone-and-light-2026-05-30",
       "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180519-1317-00594-407fa2a7b2_900.jpg",
-      "imageAlt": "20180519 1317 00594",
+      "imageAlt": "Jeronimos Monastery, Lisbon",
       "previewImageUrls": [
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180519-1317-00594-407fa2a7b2_900.jpg",
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180519-1323-00609-8acf5ae002_900.jpg",
@@ -472,7 +604,7 @@
       "href": "./campaign.html?c=facebook-madrid-printing-presses-and-pattern-2026-05-30",
       "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=facebook-madrid-printing-presses-and-pattern-2026-05-30",
       "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1033-00799-03b029177d_900.jpg",
-      "imageAlt": "20180522 1033 00799",
+      "imageAlt": "Imprenta Municipal, Madrid",
       "previewImageUrls": [
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1033-00799-03b029177d_900.jpg",
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1033-00797-a563e73274_900.jpg",
@@ -496,7 +628,7 @@
       "href": "./campaign.html?c=facebook-bilbao-guggenheim-titanium-river-2026-05-29",
       "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=facebook-bilbao-guggenheim-titanium-river-2026-05-29",
       "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180515-1509-00394-1c47ab8c12_900.jpg",
-      "imageAlt": "20180515 1509 00394",
+      "imageAlt": "Bilbao Guggenheim Museum",
       "previewImageUrls": [
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180515-1509-00394-1c47ab8c12_900.jpg",
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180515-1510-00397-3fdd5ba3db_900.jpg",
@@ -520,7 +652,7 @@
       "href": "./campaign.html?c=instagram-cascais-atlantic-evening-2026-05-29",
       "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-cascais-atlantic-evening-2026-05-29",
       "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2126-00483-f23ed1e1e2_900.jpg",
-      "imageAlt": "20180517 2126 00483",
+      "imageAlt": "Beach, Cascais",
       "previewImageUrls": [
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2126-00483-f23ed1e1e2_900.jpg",
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2132-00488-18ec1fa871_900.jpg",
@@ -544,7 +676,7 @@
       "href": "./campaign.html?c=pinterest-san-diego-aquarium-blue-reef-2026-05-29",
       "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=pinterest-san-diego-aquarium-blue-reef-2026-05-29",
       "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180421-1301-13471-a2bc5324f5_900.jpg",
-      "imageAlt": "20180421 1301 13471",
+      "imageAlt": "San Diego Aquarium",
       "previewImageUrls": [
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180421-1301-13471-a2bc5324f5_900.jpg",
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180421-1301-13630-2e7556e274_900.jpg",
@@ -586,7 +718,7 @@
       "href": "./campaign.html?c=instagram-seville-cathedral-stone-and-light-2026-05-28",
       "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-seville-cathedral-stone-and-light-2026-05-28",
       "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240307-143445-00194-7c53cb988c_900.jpg",
-      "imageAlt": "20240307 143445 00194",
+      "imageAlt": "Seville Cathedral",
       "previewImageUrls": [
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240307-143445-00194-7c53cb988c_900.jpg",
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240307-144056-00196-2bb992f935_900.jpg",
@@ -610,7 +742,7 @@
       "href": "./campaign.html?c=facebook-granada-alhambra-courtyards-2026-05-28",
       "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=facebook-granada-alhambra-courtyards-2026-05-28",
       "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240517-125943-00129-1c75000b82_900.jpg",
-      "imageAlt": "20240517 125943 00129",
+      "imageAlt": "Granada, Alhambra",
       "previewImageUrls": [
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240517-125943-00129-1c75000b82_900.jpg",
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240517-130520-00148-d77e807b02_900.jpg",
@@ -634,7 +766,7 @@
       "href": "./campaign.html?c=pinterest-gibraltar-rock-and-bay-views-2026-05-27",
       "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=pinterest-gibraltar-rock-and-bay-views-2026-05-27",
       "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5668-7d7e86442a_900.jpg",
-      "imageAlt": "IMG 5668",
+      "imageAlt": "Gibraltar",
       "previewImageUrls": [
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5668-7d7e86442a_900.jpg",
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5669-31d9551dd4_900.jpg",
@@ -655,7 +787,7 @@
       "href": "./campaign.html?c=instagram-setenil-rock-streets-2026-05-27",
       "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-setenil-rock-streets-2026-05-27",
       "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240519-161832-00075-a3c45a1909_900.jpg",
-      "imageAlt": "20240519 161832 00075",
+      "imageAlt": "Setenil De Las Bodegas",
       "previewImageUrls": [
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240519-161832-00075-a3c45a1909_900.jpg",
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2750-21cef8efff_900.jpg",
@@ -679,7 +811,7 @@
       "href": "./campaign.html?c=facebook-paris-arts-metiers-mechanical-details-2026-05-27",
       "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=facebook-paris-arts-metiers-mechanical-details-2026-05-27",
       "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6128-00560b1c58_900.jpg",
-      "imageAlt": "IMG 6128",
+      "imageAlt": "Musée des Arts et Métiers, Paris",
       "previewImageUrls": [
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6128-00560b1c58_900.jpg",
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6131-f86603f21c_900.jpg",
@@ -724,7 +856,7 @@
       "href": "./campaign.html?c=instagram-ronda-gorge-white-town-views-2026-05-27",
       "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-ronda-gorge-white-town-views-2026-05-27",
       "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2761-c86320d0bf_900.jpg",
-      "imageAlt": "D5H 2761",
+      "imageAlt": "Ronda",
       "previewImageUrls": [
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2761-c86320d0bf_900.jpg",
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2760-8ccdd9684c_900.jpg",
@@ -748,7 +880,7 @@
       "href": "./campaign.html?c=facebook-albert-kahn-garden-paths-2026-05-27",
       "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=facebook-albert-kahn-garden-paths-2026-05-27",
       "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6035-3a015ed040_900.jpg",
-      "imageAlt": "IMG 6035",
+      "imageAlt": "Boulogne Billancourt, Musee Albert Kahn",
       "previewImageUrls": [
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6035-3a015ed040_900.jpg",
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6034-db96c3ab96_900.jpg",
@@ -772,7 +904,7 @@
       "href": "./campaign.html?c=pinterest-sintra-palaces-green-hills-2026-05-26",
       "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=pinterest-sintra-palaces-green-hills-2026-05-26",
       "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180518-1522-00564-8ed80527e5_900.jpg",
-      "imageAlt": "20180518 1522 00564",
+      "imageAlt": "Castelo Dos Mouros, Lisbon",
       "previewImageUrls": [
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180518-1522-00564-8ed80527e5_900.jpg",
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180518-1522-00563-6e60338108_900.jpg",
@@ -817,7 +949,7 @@
       "href": "./campaign.html?c=facebook-rueil-malmaison-2026-05-26",
       "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=facebook-rueil-malmaison-2026-05-26",
       "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6236-5c34056e1e_900.jpg",
-      "imageAlt": "IMG 6236",
+      "imageAlt": "Rueil Malmaison, Musee De La Malmaison",
       "previewImageUrls": [
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6236-5c34056e1e_900.jpg",
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6235-b7ffbc497f_900.jpg",

@@ -20,3 +20,15 @@ Remove any automatic link preview if it shows generic or off-theme campaign meta
 - 2. img-1149-ae6b096d6f | https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1149-ae6b096d6f_1800.jpg | socials/Threads/2026-06-05/florence-evening-walk/images/02-img-1149-ae6b096d6f-florence-evening-walk.jpg
 - 3. img-1150-3541f17aa7 | https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1150-3541f17aa7_1800.jpg | socials/Threads/2026-06-05/florence-evening-walk/images/03-img-1150-3541f17aa7-florence-evening-walk.jpg
 - 4. img-1151-9cde6756a2 | https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1151-9cde6756a2_1800.jpg | socials/Threads/2026-06-05/florence-evening-walk/images/04-img-1151-9cde6756a2-florence-evening-walk.jpg
+
+## Published
+
+- Status: published
+- Account: ec92009
+- Post ID: 18378974896205906
+- Permalink: https://www.threads.com/@ec92009/post/DZMFMQllN6A
+- Shortcode: DZMFMQllN6A
+- Published: 2026-06-05T03:15:57+0000
+- Image count: 4
+- Link preview note: API publish path did not expose a removable browser preview.
+- Verified: 2026-06-05T03:16:24.566Z

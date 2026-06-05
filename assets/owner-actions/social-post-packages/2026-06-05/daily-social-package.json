@@ -3,17 +3,17 @@
   "generated_at": "2026-06-05T03:10:12.876Z",
   "source_policy": "Prepared from public SQLite/catalog rows and public R2 watermarked previews only. No private masters, buyer downloads, Owner-only metadata, ignored Owner review JSON, or secrets were used in public posts.",
   "status": {
-    "facebook": "prepared",
-    "instagram": "prepared",
-    "threads": "prepared",
+    "facebook": "published",
+    "instagram": "published",
+    "threads": "published",
     "pinterest": "prepared_no_api_token_missing_token",
-    "etsy": "planned_pending_draft_creation"
+    "etsy": "drafts_created_media_verified"
   },
   "packages": [
     {
       "date": "2026-06-05",
       "platform": "Facebook",
-      "status": "prepared",
+      "status": "published",
       "account": "Photos By Elie",
       "post_type": "multi_photo",
       "title": "Puerto Vallarta Marina Light",
@@ -164,12 +164,36 @@
           "local_staged_path": "socials/Facebook/2026-06-05/puerto-vallarta-marina-light/images/08-img-5024-759afbb20c-puerto-vallarta-marina-light.jpg"
         }
       ],
-      "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260605-4zWMPq/socials/Facebook/2026-06-05/puerto-vallarta-marina-light"
+      "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260605-4zWMPq/socials/Facebook/2026-06-05/puerto-vallarta-marina-light",
+      "api_publish": {
+        "status": "published",
+        "platform": "facebook",
+        "account": "Photos By Elie",
+        "page_id": "1146747141854670",
+        "post_id": "1146747141854670_122103888075334672",
+        "published_at": "2026-06-05T03:14:12+0000",
+        "permalink_url": "https://www.facebook.com/122102168061334672/posts/122103888075334672",
+        "image_count": 8,
+        "verified_at": "2026-06-05T03:16:24.566Z",
+        "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
+      },
+      "published": {
+        "status": "published",
+        "platform": "facebook",
+        "account": "Photos By Elie",
+        "page_id": "1146747141854670",
+        "post_id": "1146747141854670_122103888075334672",
+        "published_at": "2026-06-05T03:14:12+0000",
+        "permalink_url": "https://www.facebook.com/122102168061334672/posts/122103888075334672",
+        "image_count": 8,
+        "verified_at": "2026-06-05T03:16:24.566Z",
+        "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
+      }
     },
     {
       "date": "2026-06-05",
       "platform": "Instagram",
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "title": "Florence Evening Walk",
@@ -287,12 +311,36 @@
           "local_staged_path": "socials/Instagram/2026-06-05/florence-evening-walk/images/06-img-1123-807c7c6a80-florence-evening-walk.jpg"
         }
       ],
-      "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260605-4zWMPq/socials/Instagram/2026-06-05/florence-evening-walk"
+      "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260605-4zWMPq/socials/Instagram/2026-06-05/florence-evening-walk",
+      "api_publish": {
+        "status": "published",
+        "platform": "instagram",
+        "account": "ec92009",
+        "media_id": "18068457560695334",
+        "permalink_url": "https://www.instagram.com/p/DZMFGxWFHmn/",
+        "media_type": "CAROUSEL_ALBUM",
+        "published_at": "2026-06-05T03:15:12+0000",
+        "image_count": 6,
+        "verified_at": "2026-06-05T03:16:24.566Z",
+        "verification": "Instagram Graph returned carousel permalink, username, media type, timestamp, and 6 child images. Caption has no raw URL."
+      },
+      "published": {
+        "status": "published",
+        "platform": "instagram",
+        "account": "ec92009",
+        "media_id": "18068457560695334",
+        "permalink_url": "https://www.instagram.com/p/DZMFGxWFHmn/",
+        "media_type": "CAROUSEL_ALBUM",
+        "published_at": "2026-06-05T03:15:12+0000",
+        "image_count": 6,
+        "verified_at": "2026-06-05T03:16:24.566Z",
+        "verification": "Instagram Graph returned carousel permalink, username, media type, timestamp, and 6 child images. Caption has no raw URL."
+      }
     },
     {
       "date": "2026-06-05",
       "platform": "Threads",
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "title": "Florence Evening Walk",
@@ -376,12 +424,38 @@
         }
       ],
       "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260605-4zWMPq/socials/Threads/2026-06-05/florence-evening-walk",
-      "link_preview_note": "Remove any automatic link preview if it shows generic or off-theme campaign metadata."
+      "link_preview_note": "Remove any automatic link preview if it shows generic or off-theme campaign metadata.",
+      "api_publish": {
+        "status": "published",
+        "platform": "threads",
+        "account": "ec92009",
+        "post_id": "18378974896205906",
+        "permalink_url": "https://www.threads.com/@ec92009/post/DZMFMQllN6A",
+        "shortcode": "DZMFMQllN6A",
+        "media_type": "CAROUSEL_ALBUM",
+        "published_at": "2026-06-05T03:15:57+0000",
+        "image_count": 4,
+        "verified_at": "2026-06-05T03:16:24.566Z",
+        "verification": "Threads Graph returned live permalink, shortcode, username, media type, and timestamp for the 4-image carousel."
+      },
+      "published": {
+        "status": "published",
+        "platform": "threads",
+        "account": "ec92009",
+        "post_id": "18378974896205906",
+        "permalink_url": "https://www.threads.com/@ec92009/post/DZMFMQllN6A",
+        "shortcode": "DZMFMQllN6A",
+        "media_type": "CAROUSEL_ALBUM",
+        "published_at": "2026-06-05T03:15:57+0000",
+        "image_count": 4,
+        "verified_at": "2026-06-05T03:16:24.566Z",
+        "verification": "Threads Graph returned live permalink, shortcode, username, media type, and timestamp for the 4-image carousel."
+      }
     },
     {
       "date": "2026-06-05",
       "platform": "Pinterest",
-      "status": "prepared",
+      "status": "prepared_no_api_token_missing_token",
       "account": "photosbyelie",
       "post_type": "multi_pin",
       "title": "Valencia Cathedral Stone Detail",
@@ -485,22 +559,266 @@
       "pin_title": "Valencia Cathedral Stone Detail Wall Art",
       "description": "Five Valencia Cathedral photographs selected for carved stone, warm Spanish architecture, and wall-art confidence. Browse the complete Photos By Elie edit.",
       "board_recommendation": "Spain Travel Photography",
-      "alt_text": "Valencia Cathedral stone facade details, Spain travel photography by Photos By Elie."
+      "alt_text": "Valencia Cathedral stone facade details, Spain travel photography by Photos By Elie.",
+      "manual_status": {
+        "status": "prepared_no_api_token_missing_token",
+        "reason": "No ~/.config/photosbyelie/pinterest-token.json token file is present; package is ready for manual Pin Builder upload.",
+        "board_recommendation": "Spain Travel Photography",
+        "image_count": 5
+      }
     }
   ],
   "etsy": {
-    "status": "planned_pending_draft_creation",
+    "status": "drafts_created_media_verified",
     "product": "jpg-6mp",
     "taxonomy_id": 2078,
-    "target_listing_count": 19,
-    "alias_campaign_ids": [
-      "etsy-puerto-vallarta-marina-wall-art-2026-06-05",
-      "etsy-florence-evening-wall-art-2026-06-05",
-      "etsy-valencia-cathedral-wall-art-2026-06-05"
+    "shop_id": "42422777",
+    "shop_url": "https://www.etsy.com/shop/PhotosByElieShop",
+    "created_draft_count": 19,
+    "active_listing_count": 0,
+    "packages": [
+      {
+        "campaign_id": "etsy-puerto-vallarta-marina-wall-art-2026-06-05",
+        "campaign_title": "Puerto Vallarta Marina Wall Art",
+        "first_party_url": "https://photos-by-elie.com/campaign.html?c=etsy-puerto-vallarta-marina-wall-art-2026-06-05",
+        "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260605-4zWMPq/assets/owner-actions/etsy-listing-packages/2026-06-05/etsy-puerto-vallarta-marina-wall-art-2026-06-05",
+        "mode": "etsy_drafts_created_media_verified",
+        "shop_id": "42422777",
+        "shop_url": "https://www.etsy.com/shop/PhotosByElieShop",
+        "listing_count": 8,
+        "draft_listing_count": 8,
+        "image_count_verified": 8,
+        "file_count_verified": 8,
+        "verified_at": "2026-06-05T03:20:40.108Z",
+        "drafts": [
+          {
+            "media_id": "img-5009-c1c087846c",
+            "listing_id": "4516731990",
+            "state": "draft",
+            "listing_image_id": 8099610078,
+            "buyer_file_id": 1492337335297,
+            "image_count": 1,
+            "file_count": 1,
+            "verified_at": "2026-06-05T03:19:39.166Z"
+          },
+          {
+            "media_id": "img-5011-3219c0b170",
+            "listing_id": "4516731998",
+            "state": "draft",
+            "listing_image_id": 8147517537,
+            "buyer_file_id": 1491173876016,
+            "image_count": 1,
+            "file_count": 1,
+            "verified_at": "2026-06-05T03:19:48.370Z"
+          },
+          {
+            "media_id": "img-5012-10e27fc3fc",
+            "listing_id": "4516732004",
+            "state": "draft",
+            "listing_image_id": 8147517863,
+            "buyer_file_id": 1492337366889,
+            "image_count": 1,
+            "file_count": 1,
+            "verified_at": "2026-06-05T03:19:57.198Z"
+          },
+          {
+            "media_id": "img-5013-562010adc7",
+            "listing_id": "4516732012",
+            "state": "draft",
+            "listing_image_id": 8099610960,
+            "buyer_file_id": 1491173906886,
+            "image_count": 1,
+            "file_count": 1,
+            "verified_at": "2026-06-05T03:20:04.588Z"
+          },
+          {
+            "media_id": "img-5014-b554105ec8",
+            "listing_id": "4516732020",
+            "state": "draft",
+            "listing_image_id": 8099611268,
+            "buyer_file_id": 1491173927650,
+            "image_count": 1,
+            "file_count": 1,
+            "verified_at": "2026-06-05T03:20:13.192Z"
+          },
+          {
+            "media_id": "img-5015-cead8c1e62",
+            "listing_id": "4516736559",
+            "state": "draft",
+            "listing_image_id": 8099611528,
+            "buyer_file_id": 1492337425625,
+            "image_count": 1,
+            "file_count": 1,
+            "verified_at": "2026-06-05T03:20:21.894Z"
+          },
+          {
+            "media_id": "img-5016-82aec97506",
+            "listing_id": "4516732032",
+            "state": "draft",
+            "listing_image_id": 8099611778,
+            "buyer_file_id": 1492337447955,
+            "image_count": 1,
+            "file_count": 1,
+            "verified_at": "2026-06-05T03:20:30.881Z"
+          },
+          {
+            "media_id": "img-5024-759afbb20c",
+            "listing_id": "4516736567",
+            "state": "draft",
+            "listing_image_id": 8147519247,
+            "buyer_file_id": 1491173992390,
+            "image_count": 1,
+            "file_count": 1,
+            "verified_at": "2026-06-05T03:20:40.108Z"
+          }
+        ]
+      },
+      {
+        "campaign_id": "etsy-florence-evening-wall-art-2026-06-05",
+        "campaign_title": "Florence Evening Wall Art",
+        "first_party_url": "https://photos-by-elie.com/campaign.html?c=etsy-florence-evening-wall-art-2026-06-05",
+        "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260605-4zWMPq/assets/owner-actions/etsy-listing-packages/2026-06-05/etsy-florence-evening-wall-art-2026-06-05",
+        "mode": "etsy_drafts_created_media_verified",
+        "shop_id": "42422777",
+        "shop_url": "https://www.etsy.com/shop/PhotosByElieShop",
+        "listing_count": 6,
+        "draft_listing_count": 6,
+        "image_count_verified": 6,
+        "file_count_verified": 6,
+        "verified_at": "2026-06-05T03:21:27.219Z",
+        "drafts": [
+          {
+            "media_id": "img-1140-5f0e42d7e3",
+            "listing_id": "4516736579",
+            "state": "draft",
+            "listing_image_id": 8147519531,
+            "buyer_file_id": 1492337482433,
+            "image_count": 1,
+            "file_count": 1,
+            "verified_at": "2026-06-05T03:20:47.298Z"
+          },
+          {
+            "media_id": "img-1141-e7e66ca045",
+            "listing_id": "4516736589",
+            "state": "draft",
+            "listing_image_id": 8099612610,
+            "buyer_file_id": 1492337495485,
+            "image_count": 1,
+            "file_count": 1,
+            "verified_at": "2026-06-05T03:20:54.316Z"
+          },
+          {
+            "media_id": "img-1149-ae6b096d6f",
+            "listing_id": "4516732042",
+            "state": "draft",
+            "listing_image_id": 8147520059,
+            "buyer_file_id": 1492337513253,
+            "image_count": 1,
+            "file_count": 1,
+            "verified_at": "2026-06-05T03:21:02.966Z"
+          },
+          {
+            "media_id": "img-1150-3541f17aa7",
+            "listing_id": "4516736599",
+            "state": "draft",
+            "listing_image_id": 8147520301,
+            "buyer_file_id": 1491174052540,
+            "image_count": 1,
+            "file_count": 1,
+            "verified_at": "2026-06-05T03:21:10.569Z"
+          },
+          {
+            "media_id": "img-1151-9cde6756a2",
+            "listing_id": "4516732052",
+            "state": "draft",
+            "listing_image_id": 8147520681,
+            "buyer_file_id": 1492337549597,
+            "image_count": 1,
+            "file_count": 1,
+            "verified_at": "2026-06-05T03:21:20.090Z"
+          },
+          {
+            "media_id": "img-1123-807c7c6a80",
+            "listing_id": "4516736623",
+            "state": "draft",
+            "listing_image_id": 8099613772,
+            "buyer_file_id": 1491174086382,
+            "image_count": 1,
+            "file_count": 1,
+            "verified_at": "2026-06-05T03:21:27.219Z"
+          }
+        ]
+      },
+      {
+        "campaign_id": "etsy-valencia-cathedral-wall-art-2026-06-05",
+        "campaign_title": "Valencia Cathedral Wall Art",
+        "first_party_url": "https://photos-by-elie.com/campaign.html?c=etsy-valencia-cathedral-wall-art-2026-06-05",
+        "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260605-4zWMPq/assets/owner-actions/etsy-listing-packages/2026-06-05/etsy-valencia-cathedral-wall-art-2026-06-05",
+        "mode": "etsy_drafts_created_media_verified",
+        "shop_id": "42422777",
+        "shop_url": "https://www.etsy.com/shop/PhotosByElieShop",
+        "listing_count": 5,
+        "draft_listing_count": 5,
+        "image_count_verified": 5,
+        "file_count_verified": 5,
+        "verified_at": "2026-06-05T03:22:13.205Z",
+        "drafts": [
+          {
+            "media_id": "img-1545-fbf260c171",
+            "listing_id": "4516736633",
+            "state": "draft",
+            "listing_image_id": 8147521257,
+            "buyer_file_id": 1491174102952,
+            "image_count": 1,
+            "file_count": 1,
+            "verified_at": "2026-06-05T03:21:36.722Z"
+          },
+          {
+            "media_id": "img-1546-7416feac97",
+            "listing_id": "4516736639",
+            "state": "draft",
+            "listing_image_id": 8099614334,
+            "buyer_file_id": 1492337597379,
+            "image_count": 1,
+            "file_count": 1,
+            "verified_at": "2026-06-05T03:21:45.991Z"
+          },
+          {
+            "media_id": "img-1547-d92a870c4f",
+            "listing_id": "4516732076",
+            "state": "draft",
+            "listing_image_id": 8147521785,
+            "buyer_file_id": 1491174136360,
+            "image_count": 1,
+            "file_count": 1,
+            "verified_at": "2026-06-05T03:21:54.961Z"
+          },
+          {
+            "media_id": "img-1548-bb4fc6c71a",
+            "listing_id": "4516736649",
+            "state": "draft",
+            "listing_image_id": 8147522067,
+            "buyer_file_id": 1491174152478,
+            "image_count": 1,
+            "file_count": 1,
+            "verified_at": "2026-06-05T03:22:04.039Z"
+          },
+          {
+            "media_id": "img-1549-471a28324d",
+            "listing_id": "4516732086",
+            "state": "draft",
+            "listing_image_id": 8147522339,
+            "buyer_file_id": 1491174169470,
+            "image_count": 1,
+            "file_count": 1,
+            "verified_at": "2026-06-05T03:22:13.205Z"
+          }
+        ]
+      }
     ],
     "notes": [
-      "Create draft listings only; never publish active Etsy listings automatically.",
-      "Attach one public watermarked listing image and one approved private JPG 6 MP buyer file to each draft."
+      "All Etsy listings remain drafts; none were published active.",
+      "Each draft has one public/watermarked listing image and one private JPG 6 MP buyer file attached and verified."
     ]
   }
 }

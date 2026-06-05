@@ -1,7 +1,7 @@
 {
   "date": "2026-06-05",
   "platform": "Facebook",
-  "status": "prepared",
+  "status": "published",
   "account": "Photos By Elie",
   "post_type": "multi_photo",
   "title": "Puerto Vallarta Marina Light",
@@ -152,5 +152,29 @@
       "local_staged_path": "socials/Facebook/2026-06-05/puerto-vallarta-marina-light/images/08-img-5024-759afbb20c-puerto-vallarta-marina-light.jpg"
     }
   ],
-  "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260605-4zWMPq/socials/Facebook/2026-06-05/puerto-vallarta-marina-light"
+  "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260605-4zWMPq/socials/Facebook/2026-06-05/puerto-vallarta-marina-light",
+  "api_publish": {
+    "status": "published",
+    "platform": "facebook",
+    "account": "Photos By Elie",
+    "page_id": "1146747141854670",
+    "post_id": "1146747141854670_122103888075334672",
+    "published_at": "2026-06-05T03:14:12+0000",
+    "permalink_url": "https://www.facebook.com/122102168061334672/posts/122103888075334672",
+    "image_count": 8,
+    "verified_at": "2026-06-05T03:16:24.566Z",
+    "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
+  },
+  "published": {
+    "status": "published",
+    "platform": "facebook",
+    "account": "Photos By Elie",
+    "page_id": "1146747141854670",
+    "post_id": "1146747141854670_122103888075334672",
+    "published_at": "2026-06-05T03:14:12+0000",
+    "permalink_url": "https://www.facebook.com/122102168061334672/posts/122103888075334672",
+    "image_count": 8,
+    "verified_at": "2026-06-05T03:16:24.566Z",
+    "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
+  }
 }

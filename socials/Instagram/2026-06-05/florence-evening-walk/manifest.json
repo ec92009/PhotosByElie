@@ -1,7 +1,7 @@
 {
   "date": "2026-06-05",
   "platform": "Instagram",
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "title": "Florence Evening Walk",
@@ -119,5 +119,29 @@
       "local_staged_path": "socials/Instagram/2026-06-05/florence-evening-walk/images/06-img-1123-807c7c6a80-florence-evening-walk.jpg"
     }
   ],
-  "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260605-4zWMPq/socials/Instagram/2026-06-05/florence-evening-walk"
+  "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260605-4zWMPq/socials/Instagram/2026-06-05/florence-evening-walk",
+  "api_publish": {
+    "status": "published",
+    "platform": "instagram",
+    "account": "ec92009",
+    "media_id": "18068457560695334",
+    "permalink_url": "https://www.instagram.com/p/DZMFGxWFHmn/",
+    "media_type": "CAROUSEL_ALBUM",
+    "published_at": "2026-06-05T03:15:12+0000",
+    "image_count": 6,
+    "verified_at": "2026-06-05T03:16:24.566Z",
+    "verification": "Instagram Graph returned carousel permalink, username, media type, timestamp, and 6 child images. Caption has no raw URL."
+  },
+  "published": {
+    "status": "published",
+    "platform": "instagram",
+    "account": "ec92009",
+    "media_id": "18068457560695334",
+    "permalink_url": "https://www.instagram.com/p/DZMFGxWFHmn/",
+    "media_type": "CAROUSEL_ALBUM",
+    "published_at": "2026-06-05T03:15:12+0000",
+    "image_count": 6,
+    "verified_at": "2026-06-05T03:16:24.566Z",
+    "verification": "Instagram Graph returned carousel permalink, username, media type, timestamp, and 6 child images. Caption has no raw URL."
+  }
 }

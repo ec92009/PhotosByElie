@@ -20,3 +20,13 @@ Puerto Vallarta in marina light, tropical color, and clean coastal lines: a Phot
 - 6. img-5015-cead8c1e62 | https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5015-cead8c1e62_1800.jpg | socials/Facebook/2026-06-05/puerto-vallarta-marina-light/images/06-img-5015-cead8c1e62-puerto-vallarta-marina-light.jpg
 - 7. img-5016-82aec97506 | https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5016-82aec97506_1800.jpg | socials/Facebook/2026-06-05/puerto-vallarta-marina-light/images/07-img-5016-82aec97506-puerto-vallarta-marina-light.jpg
 - 8. img-5024-759afbb20c | https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5024-759afbb20c_1800.jpg | socials/Facebook/2026-06-05/puerto-vallarta-marina-light/images/08-img-5024-759afbb20c-puerto-vallarta-marina-light.jpg
+
+## Published
+
+- Status: published
+- Page: Photos By Elie (1146747141854670)
+- Post ID: 1146747141854670_122103888075334672
+- Permalink: https://www.facebook.com/122102168061334672/posts/122103888075334672
+- Published: 2026-06-05T03:14:12+0000
+- Image count: 8
+- Verified: 2026-06-05T03:16:24.566Z

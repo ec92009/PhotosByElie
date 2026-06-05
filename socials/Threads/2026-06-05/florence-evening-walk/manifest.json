@@ -1,7 +1,7 @@
 {
   "date": "2026-06-05",
   "platform": "Threads",
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "title": "Florence Evening Walk",
@@ -85,5 +85,31 @@
     }
   ],
   "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260605-4zWMPq/socials/Threads/2026-06-05/florence-evening-walk",
-  "link_preview_note": "Remove any automatic link preview if it shows generic or off-theme campaign metadata."
+  "link_preview_note": "Remove any automatic link preview if it shows generic or off-theme campaign metadata.",
+  "api_publish": {
+    "status": "published",
+    "platform": "threads",
+    "account": "ec92009",
+    "post_id": "18378974896205906",
+    "permalink_url": "https://www.threads.com/@ec92009/post/DZMFMQllN6A",
+    "shortcode": "DZMFMQllN6A",
+    "media_type": "CAROUSEL_ALBUM",
+    "published_at": "2026-06-05T03:15:57+0000",
+    "image_count": 4,
+    "verified_at": "2026-06-05T03:16:24.566Z",
+    "verification": "Threads Graph returned live permalink, shortcode, username, media type, and timestamp for the 4-image carousel."
+  },
+  "published": {
+    "status": "published",
+    "platform": "threads",
+    "account": "ec92009",
+    "post_id": "18378974896205906",
+    "permalink_url": "https://www.threads.com/@ec92009/post/DZMFMQllN6A",
+    "shortcode": "DZMFMQllN6A",
+    "media_type": "CAROUSEL_ALBUM",
+    "published_at": "2026-06-05T03:15:57+0000",
+    "image_count": 4,
+    "verified_at": "2026-06-05T03:16:24.566Z",
+    "verification": "Threads Graph returned live permalink, shortcode, username, media type, and timestamp for the 4-image carousel."
+  }
 }

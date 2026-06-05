@@ -20,3 +20,14 @@ Florence after the day softens: warm streets, interior glow, and architectural t
 - 4. img-1150-3541f17aa7 | https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1150-3541f17aa7_1800.jpg | socials/Instagram/2026-06-05/florence-evening-walk/images/04-img-1150-3541f17aa7-florence-evening-walk.jpg
 - 5. img-1151-9cde6756a2 | https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1151-9cde6756a2_1800.jpg | socials/Instagram/2026-06-05/florence-evening-walk/images/05-img-1151-9cde6756a2-florence-evening-walk.jpg
 - 6. img-1123-807c7c6a80 | https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1123-807c7c6a80_1800.jpg | socials/Instagram/2026-06-05/florence-evening-walk/images/06-img-1123-807c7c6a80-florence-evening-walk.jpg
+
+## Published
+
+- Status: published
+- Account: ec92009
+- Media ID: 18068457560695334
+- Permalink: https://www.instagram.com/p/DZMFGxWFHmn/
+- Media type: CAROUSEL_ALBUM
+- Published: 2026-06-05T03:15:12+0000
+- Image count: 6
+- Verified: 2026-06-05T03:16:24.566Z

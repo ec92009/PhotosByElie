@@ -3,17 +3,17 @@
   "generated_at": "2026-06-06T03:08:37.406Z",
   "source_policy": "Prepared from public SQLite/catalog rows and public R2 watermarked previews only. No private masters, buyer downloads, Owner-only metadata, ignored Owner review JSON, or secrets were used in public posts.",
   "status": {
-    "facebook": "prepared",
-    "instagram": "prepared",
-    "threads": "prepared",
+    "facebook": "published",
+    "instagram": "published",
+    "threads": "published",
     "pinterest": "prepared_no_api_token_missing_token",
-    "etsy": "pending_draft_creation"
+    "etsy": "drafts_created_media_verified"
   },
   "packages": [
     {
       "date": "2026-06-06",
       "platform": "Facebook",
-      "status": "prepared",
+      "status": "published",
       "account": "Photos By Elie",
       "post_type": "multi_photo",
       "title": "Lisbon Ajuda Palace Interiors",
@@ -164,12 +164,36 @@
           "local_staged_path": "socials/Facebook/2026-06-06/lisbon-ajuda-palace-interiors/images/08-20180519-1655-00653-4947ca5855-lisbon-ajuda-palace-interiors.jpg"
         }
       ],
-      "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260606-v8xBdX/socials/Facebook/2026-06-06/lisbon-ajuda-palace-interiors"
+      "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260606-v8xBdX/socials/Facebook/2026-06-06/lisbon-ajuda-palace-interiors",
+      "api_publish": {
+        "status": "published",
+        "platform": "facebook",
+        "account": "Photos By Elie",
+        "page_id": "1146747141854670",
+        "post_id": "1146747141854670_122104075761334672",
+        "published_at": "2026-06-06T03:12:25+0000",
+        "permalink_url": "https://www.facebook.com/122102168061334672/posts/122104075761334672",
+        "image_count": 8,
+        "verified_at": "2026-06-06T03:14:45.391Z",
+        "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
+      },
+      "published": {
+        "status": "published",
+        "platform": "facebook",
+        "account": "Photos By Elie",
+        "page_id": "1146747141854670",
+        "post_id": "1146747141854670_122104075761334672",
+        "published_at": "2026-06-06T03:12:25+0000",
+        "permalink_url": "https://www.facebook.com/122102168061334672/posts/122104075761334672",
+        "image_count": 8,
+        "verified_at": "2026-06-06T03:14:45.391Z",
+        "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
+      }
     },
     {
       "date": "2026-06-06",
       "platform": "Instagram",
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "title": "Madrid Mercado San Miguel Light",
@@ -304,12 +328,36 @@
           "local_staged_path": "socials/Instagram/2026-06-06/madrid-mercado-san-miguel-light/images/07-20180522-1151-00835-e83ea8125d-madrid-mercado-san-miguel-light.jpg"
         }
       ],
-      "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260606-v8xBdX/socials/Instagram/2026-06-06/madrid-mercado-san-miguel-light"
+      "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260606-v8xBdX/socials/Instagram/2026-06-06/madrid-mercado-san-miguel-light",
+      "api_publish": {
+        "status": "published",
+        "platform": "instagram",
+        "account": "ec92009",
+        "media_id": "17985410400006891",
+        "permalink_url": "https://www.instagram.com/p/DZOpvx1CGFj/",
+        "media_type": "CAROUSEL_ALBUM",
+        "published_at": "2026-06-06T03:13:48+0000",
+        "image_count": 7,
+        "verified_at": "2026-06-06T03:14:45.391Z",
+        "verification": "Instagram Graph returned carousel permalink, username, media type, timestamp, and 7 child images. Caption has no raw URL."
+      },
+      "published": {
+        "status": "published",
+        "platform": "instagram",
+        "account": "ec92009",
+        "media_id": "17985410400006891",
+        "permalink_url": "https://www.instagram.com/p/DZOpvx1CGFj/",
+        "media_type": "CAROUSEL_ALBUM",
+        "published_at": "2026-06-06T03:13:48+0000",
+        "image_count": 7,
+        "verified_at": "2026-06-06T03:14:45.391Z",
+        "verification": "Instagram Graph returned carousel permalink, username, media type, timestamp, and 7 child images. Caption has no raw URL."
+      }
     },
     {
       "date": "2026-06-06",
       "platform": "Threads",
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "title": "Madrid Mercado San Miguel Light",
@@ -393,7 +441,33 @@
         }
       ],
       "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260606-v8xBdX/socials/Threads/2026-06-06/madrid-mercado-san-miguel-light",
-      "link_preview_note": "Remove automatic link preview if the preview does not show the Mercado San Miguel campaign."
+      "link_preview_note": "Remove automatic link preview if the preview does not show the Mercado San Miguel campaign.",
+      "api_publish": {
+        "status": "published",
+        "platform": "threads",
+        "account": "ec92009",
+        "threads_user_id": "36227075590239114",
+        "post_id": "17943166923208063",
+        "permalink_url": "https://www.threads.com/@ec92009/post/DZOps3jiKlF",
+        "media_type": "CAROUSEL_ALBUM",
+        "published_at": "2026-06-06T03:13:30+0000",
+        "image_count": 4,
+        "verified_at": "2026-06-06T03:14:45.391Z",
+        "verification": "Threads Graph returned permalink, username, media type, timestamp, and 4 child images."
+      },
+      "published": {
+        "status": "published",
+        "platform": "threads",
+        "account": "ec92009",
+        "threads_user_id": "36227075590239114",
+        "post_id": "17943166923208063",
+        "permalink_url": "https://www.threads.com/@ec92009/post/DZOps3jiKlF",
+        "media_type": "CAROUSEL_ALBUM",
+        "published_at": "2026-06-06T03:13:30+0000",
+        "image_count": 4,
+        "verified_at": "2026-06-06T03:14:45.391Z",
+        "verification": "Threads Graph returned permalink, username, media type, timestamp, and 4 child images."
+      }
     },
     {
       "date": "2026-06-06",
@@ -555,6 +629,236 @@
         "20220505-135205-02993-c098de9740",
         "20220505-135009-02982-38775df02a"
       ]
+    }
+  ],
+  "etsy_draft_packages": [
+    {
+      "package_id": "etsy-lisbon-ajuda-palace-wall-art-2026-06-06",
+      "campaign_id": "etsy-lisbon-ajuda-palace-wall-art-2026-06-06",
+      "campaign_title": "Lisbon Ajuda Palace Wall Art",
+      "first_party_url": "https://photos-by-elie.com/campaign.html?c=etsy-lisbon-ajuda-palace-wall-art-2026-06-06",
+      "shop_id": "42422777",
+      "shop_url": "https://www.etsy.com/shop/PhotosByElieShop",
+      "product": "jpg-6mp",
+      "listing_type": "download",
+      "status": "verified",
+      "verified_at": "2026-06-06T03:19:45.863Z",
+      "draft_count": 8,
+      "listings": [
+        {
+          "media_id": "20180519-1708-00668-b9f04a225b",
+          "listing_id": "4517265948",
+          "state": "draft",
+          "image_count": 1,
+          "file_count": 1,
+          "listing_image_id": "8151428889",
+          "listing_file_id": "1492550812647"
+        },
+        {
+          "media_id": "20180519-1706-00667-23eeddd82e",
+          "listing_id": "4517265954",
+          "state": "draft",
+          "image_count": 1,
+          "file_count": 1,
+          "listing_image_id": "8103526540",
+          "listing_file_id": "1492550823917"
+        },
+        {
+          "media_id": "20180519-1703-00666-f1710ab5ce",
+          "listing_id": "4517265958",
+          "state": "draft",
+          "image_count": 1,
+          "file_count": 1,
+          "listing_image_id": "8103526810",
+          "listing_file_id": "1491387054572"
+        },
+        {
+          "media_id": "20180519-1702-00665-f1962d80b9",
+          "listing_id": "4517270337",
+          "state": "draft",
+          "image_count": 1,
+          "file_count": 1,
+          "listing_image_id": "8151432269",
+          "listing_file_id": "1492550847237"
+        },
+        {
+          "media_id": "20180519-1701-00664-8038f40111",
+          "listing_id": "4517265966",
+          "state": "draft",
+          "image_count": 1,
+          "file_count": 1,
+          "listing_image_id": "8103527224",
+          "listing_file_id": "1492550859161"
+        },
+        {
+          "media_id": "20180519-1700-00661-bca21946c2",
+          "listing_id": "4517270351",
+          "state": "draft",
+          "image_count": 1,
+          "file_count": 1,
+          "listing_image_id": "8103527470",
+          "listing_file_id": "1492550869237"
+        },
+        {
+          "media_id": "20180519-1657-00656-87b3a02152",
+          "listing_id": "4517270355",
+          "state": "draft",
+          "image_count": 1,
+          "file_count": 1,
+          "listing_image_id": "8103527618",
+          "listing_file_id": "1492550878975"
+        },
+        {
+          "media_id": "20180519-1655-00653-4947ca5855",
+          "listing_id": "4517265972",
+          "state": "draft",
+          "image_count": 1,
+          "file_count": 1,
+          "listing_image_id": "8151433079",
+          "listing_file_id": "1492550889853"
+        }
+      ],
+      "local_package": "assets/owner-actions/etsy-listing-packages/2026-06-06/etsy-lisbon-ajuda-palace-wall-art-2026-06-06/"
+    },
+    {
+      "package_id": "etsy-madrid-mercado-san-miguel-wall-art-2026-06-06",
+      "campaign_id": "etsy-madrid-mercado-san-miguel-wall-art-2026-06-06",
+      "campaign_title": "Madrid Mercado San Miguel Wall Art",
+      "first_party_url": "https://photos-by-elie.com/campaign.html?c=etsy-madrid-mercado-san-miguel-wall-art-2026-06-06",
+      "shop_id": "42422777",
+      "shop_url": "https://www.etsy.com/shop/PhotosByElieShop",
+      "product": "jpg-6mp",
+      "listing_type": "download",
+      "status": "verified",
+      "verified_at": "2026-06-06T03:20:22.732Z",
+      "draft_count": 7,
+      "listings": [
+        {
+          "media_id": "20180522-1156-00849-97eb65fcd7",
+          "listing_id": "4517270363",
+          "state": "draft",
+          "image_count": 1,
+          "file_count": 1,
+          "listing_image_id": "8103527968",
+          "listing_file_id": "1491387117982"
+        },
+        {
+          "media_id": "20180522-1153-00845-dfbb904491",
+          "listing_id": "4517270367",
+          "state": "draft",
+          "image_count": 1,
+          "file_count": 1,
+          "listing_image_id": "8103528186",
+          "listing_file_id": "1491387127038"
+        },
+        {
+          "media_id": "20180522-1153-00844-55c8d57db1",
+          "listing_id": "4517270373",
+          "state": "draft",
+          "image_count": 1,
+          "file_count": 1,
+          "listing_image_id": "8151433645",
+          "listing_file_id": "1491387135270"
+        },
+        {
+          "media_id": "20180522-1152-00841-1290b7ad30",
+          "listing_id": "4517270383",
+          "state": "draft",
+          "image_count": 1,
+          "file_count": 1,
+          "listing_image_id": "8103528518",
+          "listing_file_id": "1491387148478"
+        },
+        {
+          "media_id": "20180522-1152-00839-0fd2439a9a",
+          "listing_id": "4517265980",
+          "state": "draft",
+          "image_count": 1,
+          "file_count": 1,
+          "listing_image_id": "8103528718",
+          "listing_file_id": "1492550941149"
+        },
+        {
+          "media_id": "20180522-1151-00837-3b90404c2a",
+          "listing_id": "4517265988",
+          "state": "draft",
+          "image_count": 1,
+          "file_count": 1,
+          "listing_image_id": "8103528888",
+          "listing_file_id": "1492550952467"
+        },
+        {
+          "media_id": "20180522-1151-00835-e83ea8125d",
+          "listing_id": "4517270393",
+          "state": "draft",
+          "image_count": 1,
+          "file_count": 1,
+          "listing_image_id": "8103529102",
+          "listing_file_id": "1492550964353"
+        }
+      ],
+      "local_package": "assets/owner-actions/etsy-listing-packages/2026-06-06/etsy-madrid-mercado-san-miguel-wall-art-2026-06-06/"
+    },
+    {
+      "package_id": "etsy-paris-opera-galeries-wall-art-2026-06-06",
+      "campaign_id": "etsy-paris-opera-galeries-wall-art-2026-06-06",
+      "campaign_title": "Paris Opera and Galeries Wall Art",
+      "first_party_url": "https://photos-by-elie.com/campaign.html?c=etsy-paris-opera-galeries-wall-art-2026-06-06",
+      "shop_id": "42422777",
+      "shop_url": "https://www.etsy.com/shop/PhotosByElieShop",
+      "product": "jpg-6mp",
+      "listing_type": "download",
+      "status": "verified",
+      "verified_at": "2026-06-06T03:20:50.866Z",
+      "draft_count": 5,
+      "listings": [
+        {
+          "media_id": "20220505-153639-03083-3ded4343e5",
+          "listing_id": "4517265996",
+          "state": "draft",
+          "image_count": 1,
+          "file_count": 1,
+          "listing_image_id": "8151434613",
+          "listing_file_id": "1492550977743"
+        },
+        {
+          "media_id": "20220505-135707-03028-e58f913a2d",
+          "listing_id": "4517266002",
+          "state": "draft",
+          "image_count": 1,
+          "file_count": 1,
+          "listing_image_id": "8103529472",
+          "listing_file_id": "1491387204722"
+        },
+        {
+          "media_id": "20220505-135231-03007-a5d4711305",
+          "listing_id": "4517270409",
+          "state": "draft",
+          "image_count": 1,
+          "file_count": 1,
+          "listing_image_id": "8103529698",
+          "listing_file_id": "1491387215666"
+        },
+        {
+          "media_id": "20220505-135205-02993-c098de9740",
+          "listing_id": "4517266008",
+          "state": "draft",
+          "image_count": 1,
+          "file_count": 1,
+          "listing_image_id": "8151435249",
+          "listing_file_id": "1491387227818"
+        },
+        {
+          "media_id": "20220505-135009-02982-38775df02a",
+          "listing_id": "4517266012",
+          "state": "draft",
+          "image_count": 1,
+          "file_count": 1,
+          "listing_image_id": "8151435493",
+          "listing_file_id": "1491387237914"
+        }
+      ],
+      "local_package": "assets/owner-actions/etsy-listing-packages/2026-06-06/etsy-paris-opera-galeries-wall-art-2026-06-06/"
     }
   ]
 }

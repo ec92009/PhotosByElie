@@ -18,3 +18,9 @@ Madrid market light, ironwork, and color from Mercado San Miguel. Browse the Pho
 - 20180522-1152-00841-1290b7ad30: https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1152-00841-1290b7ad30_1800.jpg -> socials/Threads/2026-06-06/madrid-mercado-san-miguel-light/images/04-20180522-1152-00841-1290b7ad30-madrid-mercado-san-miguel-light.jpg
 
 Link preview note: remove automatic link preview if the preview does not show the Mercado San Miguel campaign.
+
+## Published
+
+Status: published
+Permalink: https://www.threads.com/@ec92009/post/DZOps3jiKlF
+Verified: Threads Graph returned permalink, username, media type, timestamp, and 4 child images.

@@ -21,3 +21,9 @@ Mercado San Miguel in Madrid: glass, iron, food-hall color, and interior light s
 - 20180522-1152-00839-0fd2439a9a: https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1152-00839-0fd2439a9a_1800.jpg -> socials/Instagram/2026-06-06/madrid-mercado-san-miguel-light/images/05-20180522-1152-00839-0fd2439a9a-madrid-mercado-san-miguel-light.jpg
 - 20180522-1151-00837-3b90404c2a: https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1151-00837-3b90404c2a_1800.jpg -> socials/Instagram/2026-06-06/madrid-mercado-san-miguel-light/images/06-20180522-1151-00837-3b90404c2a-madrid-mercado-san-miguel-light.jpg
 - 20180522-1151-00835-e83ea8125d: https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1151-00835-e83ea8125d_1800.jpg -> socials/Instagram/2026-06-06/madrid-mercado-san-miguel-light/images/07-20180522-1151-00835-e83ea8125d-madrid-mercado-san-miguel-light.jpg
+
+## Published
+
+Status: published
+Permalink: https://www.instagram.com/p/DZOpvx1CGFj/
+Verified: Instagram Graph returned carousel permalink, username, media type, timestamp, and 7 child images. Caption has no raw URL.

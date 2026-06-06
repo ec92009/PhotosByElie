@@ -1,7 +1,7 @@
 {
   "date": "2026-06-06",
   "platform": "Instagram",
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "title": "Madrid Mercado San Miguel Light",
@@ -136,5 +136,29 @@
       "local_staged_path": "socials/Instagram/2026-06-06/madrid-mercado-san-miguel-light/images/07-20180522-1151-00835-e83ea8125d-madrid-mercado-san-miguel-light.jpg"
     }
   ],
-  "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260606-v8xBdX/socials/Instagram/2026-06-06/madrid-mercado-san-miguel-light"
+  "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260606-v8xBdX/socials/Instagram/2026-06-06/madrid-mercado-san-miguel-light",
+  "api_publish": {
+    "status": "published",
+    "platform": "instagram",
+    "account": "ec92009",
+    "media_id": "17985410400006891",
+    "permalink_url": "https://www.instagram.com/p/DZOpvx1CGFj/",
+    "media_type": "CAROUSEL_ALBUM",
+    "published_at": "2026-06-06T03:13:48+0000",
+    "image_count": 7,
+    "verified_at": "2026-06-06T03:14:45.391Z",
+    "verification": "Instagram Graph returned carousel permalink, username, media type, timestamp, and 7 child images. Caption has no raw URL."
+  },
+  "published": {
+    "status": "published",
+    "platform": "instagram",
+    "account": "ec92009",
+    "media_id": "17985410400006891",
+    "permalink_url": "https://www.instagram.com/p/DZOpvx1CGFj/",
+    "media_type": "CAROUSEL_ALBUM",
+    "published_at": "2026-06-06T03:13:48+0000",
+    "image_count": 7,
+    "verified_at": "2026-06-06T03:14:45.391Z",
+    "verification": "Instagram Graph returned carousel permalink, username, media type, timestamp, and 7 child images. Caption has no raw URL."
+  }
 }

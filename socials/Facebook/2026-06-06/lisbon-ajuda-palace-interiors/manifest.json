@@ -1,7 +1,7 @@
 {
   "date": "2026-06-06",
   "platform": "Facebook",
-  "status": "prepared",
+  "status": "published",
   "account": "Photos By Elie",
   "post_type": "multi_photo",
   "title": "Lisbon Ajuda Palace Interiors",
@@ -152,5 +152,29 @@
       "local_staged_path": "socials/Facebook/2026-06-06/lisbon-ajuda-palace-interiors/images/08-20180519-1655-00653-4947ca5855-lisbon-ajuda-palace-interiors.jpg"
     }
   ],
-  "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260606-v8xBdX/socials/Facebook/2026-06-06/lisbon-ajuda-palace-interiors"
+  "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260606-v8xBdX/socials/Facebook/2026-06-06/lisbon-ajuda-palace-interiors",
+  "api_publish": {
+    "status": "published",
+    "platform": "facebook",
+    "account": "Photos By Elie",
+    "page_id": "1146747141854670",
+    "post_id": "1146747141854670_122104075761334672",
+    "published_at": "2026-06-06T03:12:25+0000",
+    "permalink_url": "https://www.facebook.com/122102168061334672/posts/122104075761334672",
+    "image_count": 8,
+    "verified_at": "2026-06-06T03:14:45.391Z",
+    "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
+  },
+  "published": {
+    "status": "published",
+    "platform": "facebook",
+    "account": "Photos By Elie",
+    "page_id": "1146747141854670",
+    "post_id": "1146747141854670_122104075761334672",
+    "published_at": "2026-06-06T03:12:25+0000",
+    "permalink_url": "https://www.facebook.com/122102168061334672/posts/122104075761334672",
+    "image_count": 8,
+    "verified_at": "2026-06-06T03:14:45.391Z",
+    "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
+  }
 }

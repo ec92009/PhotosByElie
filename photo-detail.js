@@ -67,6 +67,7 @@ const basketStore = window.photosByElieBasket;
 const likedStore = window.photosByElieLiked;
 const hiddenActions = window.photosByElieHiddenActions;
 const localModerationEnabled = Boolean(hiddenActions?.enabled);
+const ownerDetailPurchaseHidden = localModerationEnabled;
 const versionedHref = (href) => window.photosByElieVersionedHref?.(href) || href;
 const galleryHrefForKey = (key) => `./gallery.html?gallery=${encodeURIComponent(key)}`;
 const t = (key, replacements = {}) => window.photosByElieI18n?.t?.(key, replacements) || key;
@@ -326,6 +327,16 @@ const updateTotal = () => {
 const basketItemForPhoto = () => basketStore.read().find((item) => item.photoId === photo.id);
 const status = document.querySelector("[data-basket-status]");
 const likeToggle = document.querySelector("[data-like-toggle]");
+if (ownerDetailPurchaseHidden) {
+  const purchasePanel = document.querySelector(".purchase-panel");
+  const detailPanel = document.querySelector(".detail-panel");
+  document.body.dataset.ownerDetailMode = "true";
+  if (status && detailPanel) {
+    status.classList.add("owner-detail-status");
+    detailPanel.append(status);
+  }
+  if (purchasePanel) purchasePanel.hidden = true;
+}
 
 if (!photo) {
   document.title = `Photos By Elie | ${collection.title}`;
@@ -885,108 +896,110 @@ if (localModerationEnabled) {
   });
 }
 
-const selectedIds = new Set((basketItemForPhoto()?.options || []).map((option) => option.id));
-const selectedOptionById = new Map((basketItemForPhoto()?.options || []).map((option) => [option.id, option]));
-const purchaseHeading = document.querySelector(".purchase-panel h2");
-if (isVideo && purchaseHeading) {
-  purchaseHeading.removeAttribute("data-i18n");
-  purchaseHeading.textContent = "Pick a video download";
-}
-const printConfigMarkup = (option) => {
-  if (option.type !== "print") return "";
-  const selected = selectedOptionById.get(option.id) || {};
-  const quantity = window.photosByElieOptionQuantity?.(selected) || 1;
-  const selectedFrameId = selected.frame?.id || "none";
-  return `
-    <div class="print-config">
-      <label class="print-quantity">
-        <span>${t("detail.count")}</span>
-        <span class="quantity-stepper">
-          <button type="button" data-print-step="${option.id}" data-step="-1" aria-label="${t("product.decrease_count", { label: productLabel(option) })}">-</button>
-          <input type="number" min="1" max="99" step="1" data-print-quantity="${option.id}" value="${quantity}"/>
-          <button type="button" data-print-step="${option.id}" data-step="1" aria-label="${t("product.increase_count", { label: productLabel(option) })}">+</button>
-        </span>
-      </label>
-      <fieldset class="frame-options">
-        <legend>${t("detail.frame")}</legend>
-        ${frameOptions().map((frame) => `
-          <label>
-            <input type="radio" name="frame-${option.id}" data-print-frame="${option.id}" value="${frame.id}" ${frame.id === selectedFrameId ? "checked" : ""}/>
-            <span>${frameLabel(frame)}${framePriceFor(frame, option) ? ` +${formatMoney(framePriceFor(frame, option))}` : ""}</span>
-          </label>
-        `).join("")}
-      </fieldset>
-    </div>
-  `;
-};
-
-document.querySelector("[data-resolution-list]").innerHTML = availableResolutions.map((option) => `
-  <div class="resolution-row product-row product-${option.type || "digital"}">
-    <label class="product-choice">
-      <input type="checkbox" data-resolution value="${option.id}" ${selectedIds.has(option.id) ? "checked" : ""}/>
-      <span>
-        <strong>${productLabel(option)}</strong>
-      </span>
-      <b>${formatMoney(option.price)}</b>
-    </label>
-    ${printConfigMarkup(option)}
-  </div>
-`).join("");
-
-const syncSelectionToBasket = () => {
-  const options = selectedOptions();
-  const existing = basketItemForPhoto();
-  basketStore.setPhotoOptions({
-    photoId: photo.id,
-    title: photo.title,
-    collection: collection.title,
-    options
-  });
-  updateTotal();
-  if (!options.length) {
-    status.textContent = existing ? t("detail.removed_basket", { title: photo.title }) : t("detail.no_selection");
-    return;
+if (!ownerDetailPurchaseHidden) {
+  const selectedIds = new Set((basketItemForPhoto()?.options || []).map((option) => option.id));
+  const selectedOptionById = new Map((basketItemForPhoto()?.options || []).map((option) => [option.id, option]));
+  const purchaseHeading = document.querySelector(".purchase-panel h2");
+  if (isVideo && purchaseHeading) {
+    purchaseHeading.removeAttribute("data-i18n");
+    purchaseHeading.textContent = "Pick a video download";
   }
-  status.textContent = t("detail.saved", { title: photo.title });
-};
+  const printConfigMarkup = (option) => {
+    if (option.type !== "print") return "";
+    const selected = selectedOptionById.get(option.id) || {};
+    const quantity = window.photosByElieOptionQuantity?.(selected) || 1;
+    const selectedFrameId = selected.frame?.id || "none";
+    return `
+      <div class="print-config">
+        <label class="print-quantity">
+          <span>${t("detail.count")}</span>
+          <span class="quantity-stepper">
+            <button type="button" data-print-step="${option.id}" data-step="-1" aria-label="${t("product.decrease_count", { label: productLabel(option) })}">-</button>
+            <input type="number" min="1" max="99" step="1" data-print-quantity="${option.id}" value="${quantity}"/>
+            <button type="button" data-print-step="${option.id}" data-step="1" aria-label="${t("product.increase_count", { label: productLabel(option) })}">+</button>
+          </span>
+        </label>
+        <fieldset class="frame-options">
+          <legend>${t("detail.frame")}</legend>
+          ${frameOptions().map((frame) => `
+            <label>
+              <input type="radio" name="frame-${option.id}" data-print-frame="${option.id}" value="${frame.id}" ${frame.id === selectedFrameId ? "checked" : ""}/>
+              <span>${frameLabel(frame)}${framePriceFor(frame, option) ? ` +${formatMoney(framePriceFor(frame, option))}` : ""}</span>
+            </label>
+          `).join("")}
+        </fieldset>
+      </div>
+    `;
+  };
 
-document.querySelectorAll("[data-resolution]").forEach((input) => {
-  input.addEventListener("change", () => {
-    syncSelectionToBasket();
-  });
-});
-const selectPrintProduct = (optionId) => {
-  const checkbox = document.querySelector(`[data-resolution][value="${optionId}"]`);
-  if (checkbox) checkbox.checked = true;
-};
-document.querySelectorAll("[data-print-step]").forEach((button) => {
-  button.addEventListener("click", () => {
-    const optionId = button.dataset.printStep;
-    const input = document.querySelector(`[data-print-quantity="${optionId}"]`);
-    if (!input) return;
-    const nextValue = Math.max(1, Math.min(99, (Number(input.value) || 1) + Number(button.dataset.step || 0)));
-    input.value = nextValue;
-    selectPrintProduct(optionId);
-    syncSelectionToBasket();
-  });
-});
-document.querySelectorAll("[data-print-quantity]").forEach((input) => {
-  input.addEventListener("change", () => {
-    selectPrintProduct(input.dataset.printQuantity);
-    syncSelectionToBasket();
-  });
-  input.addEventListener("input", () => {
-    selectPrintProduct(input.dataset.printQuantity);
-    syncSelectionToBasket();
-  });
-});
-document.querySelectorAll("[data-print-frame]").forEach((input) => {
-  input.addEventListener("change", () => {
-    selectPrintProduct(input.dataset.printFrame);
-    syncSelectionToBasket();
-  });
-});
+  document.querySelector("[data-resolution-list]").innerHTML = availableResolutions.map((option) => `
+    <div class="resolution-row product-row product-${option.type || "digital"}">
+      <label class="product-choice">
+        <input type="checkbox" data-resolution value="${option.id}" ${selectedIds.has(option.id) ? "checked" : ""}/>
+        <span>
+          <strong>${productLabel(option)}</strong>
+        </span>
+        <b>${formatMoney(option.price)}</b>
+      </label>
+      ${printConfigMarkup(option)}
+    </div>
+  `).join("");
 
-updateTotal();
+  const syncSelectionToBasket = () => {
+    const options = selectedOptions();
+    const existing = basketItemForPhoto();
+    basketStore.setPhotoOptions({
+      photoId: photo.id,
+      title: photo.title,
+      collection: collection.title,
+      options
+    });
+    updateTotal();
+    if (!options.length) {
+      status.textContent = existing ? t("detail.removed_basket", { title: photo.title }) : t("detail.no_selection");
+      return;
+    }
+    status.textContent = t("detail.saved", { title: photo.title });
+  };
+
+  document.querySelectorAll("[data-resolution]").forEach((input) => {
+    input.addEventListener("change", () => {
+      syncSelectionToBasket();
+    });
+  });
+  const selectPrintProduct = (optionId) => {
+    const checkbox = document.querySelector(`[data-resolution][value="${optionId}"]`);
+    if (checkbox) checkbox.checked = true;
+  };
+  document.querySelectorAll("[data-print-step]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const optionId = button.dataset.printStep;
+      const input = document.querySelector(`[data-print-quantity="${optionId}"]`);
+      if (!input) return;
+      const nextValue = Math.max(1, Math.min(99, (Number(input.value) || 1) + Number(button.dataset.step || 0)));
+      input.value = nextValue;
+      selectPrintProduct(optionId);
+      syncSelectionToBasket();
+    });
+  });
+  document.querySelectorAll("[data-print-quantity]").forEach((input) => {
+    input.addEventListener("change", () => {
+      selectPrintProduct(input.dataset.printQuantity);
+      syncSelectionToBasket();
+    });
+    input.addEventListener("input", () => {
+      selectPrintProduct(input.dataset.printQuantity);
+      syncSelectionToBasket();
+    });
+  });
+  document.querySelectorAll("[data-print-frame]").forEach((input) => {
+    input.addEventListener("change", () => {
+      selectPrintProduct(input.dataset.printFrame);
+      syncSelectionToBasket();
+    });
+  });
+
+  updateTotal();
+}
 }
 })());

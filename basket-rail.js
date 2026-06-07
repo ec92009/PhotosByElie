@@ -1,7 +1,9 @@
 (() => {
   const basketStore = window.photosByElieBasket;
   const main = document.querySelector("main.shell");
-  if (!basketStore || !main || document.body.matches("[data-basket-page]")) return;
+  const ownerDetailMode = main?.classList.contains("detail-main")
+    && window.photosByElieHiddenActions?.enabled;
+  if (!basketStore || !main || document.body.matches("[data-basket-page]") || ownerDetailMode) return;
 
   const formatMoney = (value) => {
     const amount = Number(value) || 0;

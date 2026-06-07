@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v96.8`
+- Current visible version: `v99.3`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -97,6 +97,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - Expo imports scan the gallery source anchors: Camera, Apple Photos album exports under `/Volumes/Saturn/Pictures/LR/Apple Photo Albums`, and Leonardo. They scan developed JPG/TIFF photo exports and MOV/MP4/M4V video exports, keep Camera photos at Lightroom green label/rating 4+, treat Apple Photos and AI folders as selected by folder membership plus tombstones, infer country/AI/Unknown buckets, and write watermarked photo `*_900.jpg`/`*_1800.jpg` pairs plus video `*_900.jpg`/`*_short_5s_720p.mp4` previews into `tmp/import-cache` before upload. RAW/DNG/NEF files are not public-site or cloud-storage inputs. Real Estate media uses the separate Real Estate tab import flow.
 - On localhost, `H` or `X` sends a live-gallery photo to the Waste Basket by adding it to the master blacklist, `U` undoes the most recent basket action, and `P` on the Waste Basket page puts a basketed photo back by removing it from the blacklist. Purging Waste Basket R2 copies deletes the media objects only and writes permanent tombstones; a banned photo stays banned. `D` is the stronger discard action: it removes the photo from active catalog state, writes `assets/discarded/discarded-photo-ids.json`, and queues R2 deletion for matching public previews, private masters, and private render JPGs.
 - On localhost gallery/detail pages, Owner can edit Title and Keywords; saves update the catalog metadata and generated Worker catalog used by checkout deliverables. Source-file embedded metadata is left alone because catalog manifests are the authoritative title/keyword source.
+- On localhost Owner detail pages, buyer resolution controls and Basket entry points are hidden so detail review stays focused on moderation shortcuts and metadata edits.
 - `v83.0` publishes the latest Owner-approved title/keyword catalog metadata into the buyer-facing SQLite catalog and Worker catalog while keeping public catalog scale unchanged at `6,019` rows.
 - `v83.1` saves rejected title/keyword review comments with the rejected proposal title and keywords attached for the next AI rework rung.
 - `v83.2` lowers the JPG 1 MP and 3 MP digital checkout tiers to $0.10 and $0.30, formats cents throughout buyer pricing UI, and adds a Stripe $0.50 minimum-charge top-up when needed.

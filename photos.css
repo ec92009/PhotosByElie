@@ -4914,6 +4914,9 @@ body.detail-fullscreen-active{
   background:var(--surface);
   border-top:1px solid var(--line);
 }
+.purchase-panel[hidden]{
+  display:none;
+}
 .resolution-list{
   display:grid;
   gap:10px;
@@ -4973,6 +4976,14 @@ body.detail-fullscreen-active{
   grid-column:2;
   margin:0;
   color:var(--muted);
+}
+.owner-detail-status{
+  grid-column:auto;
+  margin:10px 0 0;
+  font-weight:750;
+}
+.owner-detail-status:empty{
+  display:none;
 }
 .order-intent-panel{
   display:grid;

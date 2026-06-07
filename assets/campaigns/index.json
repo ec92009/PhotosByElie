@@ -1,9 +1,145 @@
 {
   "format": "photosbyelie-campaign-index",
   "schema_version": 1,
-  "generated_at": "2026-06-06T03:08:44.906Z",
-  "campaign_count": 56,
+  "generated_at": "2026-06-07T03:08:40.828Z",
+  "campaign_count": 62,
   "campaigns": [
+    {
+      "id": "pinterest-cadiz-fish-market-color-2026-06-07",
+      "source": "Pinterest",
+      "title": "Cadiz Fish Market Color",
+      "description": "A Cadiz market edit selected for seafood color, working-market texture, Andalusian atmosphere, and editorial travel wall-art confidence.",
+      "date": "2026-06-07",
+      "href": "./campaign.html?c=pinterest-cadiz-fish-market-color-2026-06-07",
+      "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=pinterest-cadiz-fish-market-color-2026-06-07",
+      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1331-b83b21c186_900.jpg",
+      "imageAlt": "Cadiz Fish Market",
+      "previewImageUrls": [
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1331-b83b21c186_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1332-395c477361_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1337-aca47b8150_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1342-3f7927b90a_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1347-e423d14782_900.jpg"
+      ],
+      "primaryPhotoCount": 5,
+      "relatedPhotoCount": 6,
+      "mtimeMs": 1780801715044
+    },
+    {
+      "id": "etsy-cadiz-fish-market-wall-art-2026-06-07",
+      "source": "Etsy",
+      "title": "Cadiz Fish Market Wall Art",
+      "description": "Five Photos By Elie Cadiz market photographs selected for seafood color, working-market texture, Andalusian atmosphere, and digital wall-art confidence.",
+      "date": "2026-06-07",
+      "href": "./campaign.html?c=etsy-cadiz-fish-market-wall-art-2026-06-07",
+      "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=etsy-cadiz-fish-market-wall-art-2026-06-07",
+      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1331-b83b21c186_900.jpg",
+      "imageAlt": "Cadiz Fish Market",
+      "previewImageUrls": [
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1331-b83b21c186_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1332-395c477361_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1337-aca47b8150_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1342-3f7927b90a_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1347-e423d14782_900.jpg"
+      ],
+      "primaryPhotoCount": 5,
+      "relatedPhotoCount": 6,
+      "mtimeMs": 1780801715044
+    },
+    {
+      "id": "instagram-malaga-museo-ruso-color-form-2026-06-07",
+      "source": "Instagram",
+      "title": "Malaga Museo Ruso Color and Form",
+      "description": "A Malaga museum edit selected for saturated color, clean geometry, graphic form, and modern Spain wall-art presence.",
+      "date": "2026-06-07",
+      "href": "./campaign.html?c=instagram-malaga-museo-ruso-color-form-2026-06-07",
+      "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-malaga-museo-ruso-color-form-2026-06-07",
+      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2903-4d39c0652d_900.jpg",
+      "imageAlt": "Museo Ruso, Malaga",
+      "previewImageUrls": [
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2903-4d39c0652d_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2904-e0d9300c72_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2905-d58855992a_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2906-c2c1af6c22_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2907-fb9bf81957_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2908-b30840b1cb_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2909-b8eed5920d_900.jpg"
+      ],
+      "primaryPhotoCount": 7,
+      "relatedPhotoCount": 6,
+      "mtimeMs": 1780801712329
+    },
+    {
+      "id": "etsy-malaga-museo-ruso-wall-art-2026-06-07",
+      "source": "Etsy",
+      "title": "Malaga Museo Ruso Wall Art",
+      "description": "Seven Photos By Elie Malaga Museo Ruso photographs selected for color, graphic form, museum calm, and digital wall-art confidence.",
+      "date": "2026-06-07",
+      "href": "./campaign.html?c=etsy-malaga-museo-ruso-wall-art-2026-06-07",
+      "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=etsy-malaga-museo-ruso-wall-art-2026-06-07",
+      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2903-4d39c0652d_900.jpg",
+      "imageAlt": "Museo Ruso, Malaga",
+      "previewImageUrls": [
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2903-4d39c0652d_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2904-e0d9300c72_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2905-d58855992a_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2906-c2c1af6c22_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2907-fb9bf81957_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2908-b30840b1cb_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2909-b8eed5920d_900.jpg"
+      ],
+      "primaryPhotoCount": 7,
+      "relatedPhotoCount": 6,
+      "mtimeMs": 1780801712329
+    },
+    {
+      "id": "etsy-sintra-castle-wall-art-2026-06-07",
+      "source": "Etsy",
+      "title": "Sintra Castle Wall Art",
+      "description": "Eight Photos By Elie Sintra castle photographs selected for stone texture, hillside atmosphere, Portugal travel mood, and digital wall-art confidence.",
+      "date": "2026-06-07",
+      "href": "./campaign.html?c=etsy-sintra-castle-wall-art-2026-06-07",
+      "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=etsy-sintra-castle-wall-art-2026-06-07",
+      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180518-1340-00504-13096677a9_900.jpg",
+      "imageAlt": "Castelo Dos Mouros, Lisbon",
+      "previewImageUrls": [
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180518-1340-00504-13096677a9_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180518-1342-00506-7a25cd91e6_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180518-1343-00508-fe5541c766_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180518-1343-00509-788722bc52_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180518-1359-00513-759c490e7d_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180518-1402-00514-7b4f60aad8_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180518-1405-00520-cc9e8a8faf_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180518-1408-00521-560ec85707_900.jpg"
+      ],
+      "primaryPhotoCount": 8,
+      "relatedPhotoCount": 6,
+      "mtimeMs": 1780801708804
+    },
+    {
+      "id": "facebook-sintra-castle-walls-and-hills-2026-06-07",
+      "source": "Facebook",
+      "title": "Sintra Castle Walls and Hills",
+      "description": "A focused Photos By Elie set from Sintra's Moorish Castle, selected for stone ramparts, green hills, Atlantic atmosphere, and quiet Portugal wall-art presence.",
+      "date": "2026-06-07",
+      "href": "./campaign.html?c=facebook-sintra-castle-walls-and-hills-2026-06-07",
+      "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=facebook-sintra-castle-walls-and-hills-2026-06-07",
+      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180518-1340-00504-13096677a9_900.jpg",
+      "imageAlt": "Castelo Dos Mouros, Lisbon",
+      "previewImageUrls": [
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180518-1340-00504-13096677a9_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180518-1342-00506-7a25cd91e6_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180518-1343-00508-fe5541c766_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180518-1343-00509-788722bc52_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180518-1359-00513-759c490e7d_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180518-1402-00514-7b4f60aad8_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180518-1405-00520-cc9e8a8faf_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180518-1408-00521-560ec85707_900.jpg"
+      ],
+      "primaryPhotoCount": 8,
+      "relatedPhotoCount": 6,
+      "mtimeMs": 1780801708804
+    },
     {
       "id": "pinterest-paris-opera-galeries-light-2026-06-06",
       "source": "Pinterest",
@@ -23,51 +159,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 5,
-      "mtimeMs": 1780715315884
-    },
-    {
-      "id": "etsy-paris-opera-galeries-wall-art-2026-06-06",
-      "source": "Etsy",
-      "title": "Paris Opera and Galeries Wall Art",
-      "description": "Five Photos By Elie Paris photographs selected for Opera Garnier ornament, Galeries Lafayette glass, interior light, and French travel wall-art confidence.",
-      "date": "2026-06-06",
-      "href": "./campaign.html?c=etsy-paris-opera-galeries-wall-art-2026-06-06",
-      "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=etsy-paris-opera-galeries-wall-art-2026-06-06",
-      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20220505-135231-03007-a5d4711305_900.jpg",
-      "imageAlt": "Opera Garnier",
-      "previewImageUrls": [
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20220505-135231-03007-a5d4711305_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20220505-153639-03083-3ded4343e5_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20220505-135707-03028-e58f913a2d_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20220505-135205-02993-c098de9740_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20220505-135009-02982-38775df02a_900.jpg"
-      ],
-      "primaryPhotoCount": 5,
-      "relatedPhotoCount": 5,
-      "mtimeMs": 1780715315884
-    },
-    {
-      "id": "etsy-madrid-mercado-san-miguel-wall-art-2026-06-06",
-      "source": "Etsy",
-      "title": "Madrid Mercado San Miguel Wall Art",
-      "description": "Seven Photos By Elie Mercado San Miguel photographs selected for Madrid market light, architectural lines, color, and travel wall-art confidence.",
-      "date": "2026-06-06",
-      "href": "./campaign.html?c=etsy-madrid-mercado-san-miguel-wall-art-2026-06-06",
-      "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=etsy-madrid-mercado-san-miguel-wall-art-2026-06-06",
-      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1153-00844-55c8d57db1_900.jpg",
-      "imageAlt": "Inside Mercado San Miguel, Madrid",
-      "previewImageUrls": [
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1153-00844-55c8d57db1_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1156-00849-97eb65fcd7_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1153-00845-dfbb904491_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1152-00841-1290b7ad30_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1152-00839-0fd2439a9a_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1151-00837-3b90404c2a_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1151-00835-e83ea8125d_900.jpg"
-      ],
-      "primaryPhotoCount": 7,
-      "relatedPhotoCount": 5,
-      "mtimeMs": 1780715312227
+      "mtimeMs": 1780801382194
     },
     {
       "id": "instagram-madrid-mercado-san-miguel-light-2026-06-06",
@@ -90,7 +182,7 @@
       ],
       "primaryPhotoCount": 7,
       "relatedPhotoCount": 5,
-      "mtimeMs": 1780715312226
+      "mtimeMs": 1780801382193
     },
     {
       "id": "facebook-lisbon-ajuda-palace-interiors-2026-06-06",
@@ -114,7 +206,28 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780715309181
+      "mtimeMs": 1780801382191
+    },
+    {
+      "id": "etsy-paris-opera-galeries-wall-art-2026-06-06",
+      "source": "Etsy",
+      "title": "Paris Opera and Galeries Wall Art",
+      "description": "Five Photos By Elie Paris photographs selected for Opera Garnier ornament, Galeries Lafayette glass, interior light, and French travel wall-art confidence.",
+      "date": "2026-06-06",
+      "href": "./campaign.html?c=etsy-paris-opera-galeries-wall-art-2026-06-06",
+      "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=etsy-paris-opera-galeries-wall-art-2026-06-06",
+      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20220505-135231-03007-a5d4711305_900.jpg",
+      "imageAlt": "Opera Garnier",
+      "previewImageUrls": [
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20220505-135231-03007-a5d4711305_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20220505-153639-03083-3ded4343e5_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20220505-135707-03028-e58f913a2d_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20220505-135205-02993-c098de9740_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20220505-135009-02982-38775df02a_900.jpg"
+      ],
+      "primaryPhotoCount": 5,
+      "relatedPhotoCount": 5,
+      "mtimeMs": 1780801382191
     },
     {
       "id": "etsy-lisbon-ajuda-palace-wall-art-2026-06-06",
@@ -138,7 +251,30 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780715309181
+      "mtimeMs": 1780801382190
+    },
+    {
+      "id": "etsy-madrid-mercado-san-miguel-wall-art-2026-06-06",
+      "source": "Etsy",
+      "title": "Madrid Mercado San Miguel Wall Art",
+      "description": "Seven Photos By Elie Mercado San Miguel photographs selected for Madrid market light, architectural lines, color, and travel wall-art confidence.",
+      "date": "2026-06-06",
+      "href": "./campaign.html?c=etsy-madrid-mercado-san-miguel-wall-art-2026-06-06",
+      "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=etsy-madrid-mercado-san-miguel-wall-art-2026-06-06",
+      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1153-00844-55c8d57db1_900.jpg",
+      "imageAlt": "Inside Mercado San Miguel, Madrid",
+      "previewImageUrls": [
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1153-00844-55c8d57db1_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1156-00849-97eb65fcd7_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1153-00845-dfbb904491_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1152-00841-1290b7ad30_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1152-00839-0fd2439a9a_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1151-00837-3b90404c2a_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1151-00835-e83ea8125d_900.jpg"
+      ],
+      "primaryPhotoCount": 7,
+      "relatedPhotoCount": 5,
+      "mtimeMs": 1780801382190
     },
     {
       "id": "pinterest-valencia-cathedral-stone-detail-2026-06-05",
@@ -159,7 +295,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 5,
-      "mtimeMs": 1780714982906
+      "mtimeMs": 1780801382195
     },
     {
       "id": "instagram-florence-evening-walk-2026-06-05",
@@ -181,7 +317,7 @@
       ],
       "primaryPhotoCount": 6,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982905
+      "mtimeMs": 1780801382192
     },
     {
       "id": "facebook-puerto-vallarta-marina-light-2026-06-05",
@@ -205,7 +341,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982904
+      "mtimeMs": 1780801382192
     },
     {
       "id": "etsy-puerto-vallarta-marina-wall-art-2026-06-05",
@@ -229,7 +365,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982903
+      "mtimeMs": 1780801382191
     },
     {
       "id": "etsy-valencia-cathedral-wall-art-2026-06-05",
@@ -250,7 +386,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 5,
-      "mtimeMs": 1780714982903
+      "mtimeMs": 1780801382191
     },
     {
       "id": "etsy-florence-evening-wall-art-2026-06-05",
@@ -272,7 +408,7 @@
       ],
       "primaryPhotoCount": 6,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982902
+      "mtimeMs": 1780801382190
     },
     {
       "id": "pinterest-paris-arts-metiers-machines-2026-06-04",
@@ -293,7 +429,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982906
+      "mtimeMs": 1780801382194
     },
     {
       "id": "instagram-lisbon-carmo-ruins-light-2026-06-04",
@@ -314,7 +450,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 5,
-      "mtimeMs": 1780714982905
+      "mtimeMs": 1780801382192
     },
     {
       "id": "facebook-cordoba-mezquita-detail-light-2026-06-04",
@@ -338,7 +474,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982903
+      "mtimeMs": 1780801382191
     },
     {
       "id": "etsy-cordoba-mezquita-wall-art-2026-06-04",
@@ -362,7 +498,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982902
+      "mtimeMs": 1780801382190
     },
     {
       "id": "etsy-lisbon-carmo-wall-art-2026-06-04",
@@ -383,7 +519,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 5,
-      "mtimeMs": 1780714982902
+      "mtimeMs": 1780801382190
     },
     {
       "id": "etsy-paris-arts-metiers-wall-art-2026-06-04",
@@ -404,7 +540,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982902
+      "mtimeMs": 1780801382190
     },
     {
       "id": "pinterest-paris-eiffel-night-light-2026-06-03",
@@ -425,7 +561,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982906
+      "mtimeMs": 1780801382194
     },
     {
       "id": "instagram-tuscany-arno-and-hill-light-2026-06-03",
@@ -449,7 +585,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982905
+      "mtimeMs": 1780801382193
     },
     {
       "id": "facebook-albi-tarn-river-brick-light-2026-06-03",
@@ -473,7 +609,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982903
+      "mtimeMs": 1780801382191
     },
     {
       "id": "etsy-paris-eiffel-night-wall-art-2026-06-03",
@@ -494,7 +630,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982903
+      "mtimeMs": 1780801382191
     },
     {
       "id": "etsy-solana-beach-sunset-wall-art-2026-06-03",
@@ -515,7 +651,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982903
+      "mtimeMs": 1780801382191
     },
     {
       "id": "etsy-tuscany-arno-hill-wall-art-2026-06-03",
@@ -539,31 +675,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982903
-    },
-    {
-      "id": "etsy-nerja-mediterranean-wall-art-2026-06-03",
-      "source": "Etsy",
-      "title": "Nerja Mediterranean Wall Art",
-      "description": "A Photos By Elie set from Nerja, Spain, built around white terraces, Mediterranean light, coastal geometry, and polished travel wall-art browsing.",
-      "date": "2026-06-03",
-      "href": "./campaign.html?c=etsy-nerja-mediterranean-wall-art-2026-06-03",
-      "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=etsy-nerja-mediterranean-wall-art-2026-06-03",
-      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5204-6e1253b249_900.jpg",
-      "imageAlt": "Nerja",
-      "previewImageUrls": [
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5204-6e1253b249_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5199-00bef996a6_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5200-6fa844f776_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5202-df07481782_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5205-cda501d922_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5207-5a7d14316a_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5212-687a525613_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5217-19271b7eda_900.jpg"
-      ],
-      "primaryPhotoCount": 8,
-      "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982902
+      "mtimeMs": 1780801382191
     },
     {
       "id": "etsy-albi-tarn-wall-art-2026-06-03",
@@ -587,7 +699,31 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982901
+      "mtimeMs": 1780801382190
+    },
+    {
+      "id": "etsy-nerja-mediterranean-wall-art-2026-06-03",
+      "source": "Etsy",
+      "title": "Nerja Mediterranean Wall Art",
+      "description": "A Photos By Elie set from Nerja, Spain, built around white terraces, Mediterranean light, coastal geometry, and polished travel wall-art browsing.",
+      "date": "2026-06-03",
+      "href": "./campaign.html?c=etsy-nerja-mediterranean-wall-art-2026-06-03",
+      "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=etsy-nerja-mediterranean-wall-art-2026-06-03",
+      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5204-6e1253b249_900.jpg",
+      "imageAlt": "Nerja",
+      "previewImageUrls": [
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5204-6e1253b249_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5199-00bef996a6_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5200-6fa844f776_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5202-df07481782_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5205-cda501d922_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5207-5a7d14316a_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5212-687a525613_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5217-19271b7eda_900.jpg"
+      ],
+      "primaryPhotoCount": 8,
+      "relatedPhotoCount": 6,
+      "mtimeMs": 1780801382190
     },
     {
       "id": "pinterest-solana-beach-sunset-layers-2026-06-02",
@@ -608,7 +744,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982906
+      "mtimeMs": 1780801382195
     },
     {
       "id": "instagram-nerja-mediterranean-terraces-2026-06-02",
@@ -632,7 +768,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982905
+      "mtimeMs": 1780801382193
     },
     {
       "id": "facebook-evening-in-sevilla-street-light-2026-06-02",
@@ -656,7 +792,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982903
+      "mtimeMs": 1780801382191
     },
     {
       "id": "etsy-sevilla-after-dusk-wall-art-2026-06-02",
@@ -680,7 +816,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982903
+      "mtimeMs": 1780801382191
     },
     {
       "id": "pinterest-belem-river-stone-details-2026-06-01",
@@ -701,7 +837,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982905
+      "mtimeMs": 1780801382194
     },
     {
       "id": "instagram-madrid-royal-palace-stone-courtyards-2026-06-01",
@@ -725,7 +861,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982905
+      "mtimeMs": 1780801382193
     },
     {
       "id": "facebook-toulouse-cloisters-brick-light-2026-06-01",
@@ -749,7 +885,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982904
+      "mtimeMs": 1780801382192
     },
     {
       "id": "pinterest-oceanside-pier-golden-hour-2026-05-31",
@@ -770,7 +906,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982906
+      "mtimeMs": 1780801382194
     },
     {
       "id": "instagram-colares-atlantic-cliffs-2026-05-31",
@@ -794,7 +930,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982904
+      "mtimeMs": 1780801382192
     },
     {
       "id": "facebook-paris-seine-notre-dame-light-2026-05-31",
@@ -818,7 +954,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982904
+      "mtimeMs": 1780801382192
     },
     {
       "id": "pinterest-pisa-marble-and-leaning-tower-2026-05-30",
@@ -839,7 +975,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982906
+      "mtimeMs": 1780801382195
     },
     {
       "id": "instagram-lisbon-monastery-stone-and-light-2026-05-30",
@@ -863,7 +999,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982905
+      "mtimeMs": 1780801382193
     },
     {
       "id": "facebook-madrid-printing-presses-and-pattern-2026-05-30",
@@ -887,7 +1023,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982904
+      "mtimeMs": 1780801382192
     },
     {
       "id": "pinterest-san-diego-aquarium-blue-reef-2026-05-29",
@@ -908,7 +1044,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982906
+      "mtimeMs": 1780801382195
     },
     {
       "id": "instagram-cascais-atlantic-evening-2026-05-29",
@@ -932,7 +1068,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982904
+      "mtimeMs": 1780801382192
     },
     {
       "id": "facebook-bilbao-guggenheim-titanium-river-2026-05-29",
@@ -956,7 +1092,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982903
+      "mtimeMs": 1780801382191
     },
     {
       "id": "pinterest-la-jolla-coastal-reserve-2026-05-28",
@@ -977,7 +1113,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1780714982906
+      "mtimeMs": 1780801382194
     },
     {
       "id": "instagram-seville-cathedral-stone-and-light-2026-05-28",
@@ -1001,7 +1137,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982905
+      "mtimeMs": 1780801382193
     },
     {
       "id": "facebook-granada-alhambra-courtyards-2026-05-28",
@@ -1025,28 +1161,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982903
-    },
-    {
-      "id": "pinterest-gibraltar-rock-and-bay-views-2026-05-27",
-      "source": "Pinterest",
-      "title": "Gibraltar Rock and Bay Views",
-      "description": "A five-photo Gibraltar springboard with bright rock views, Mediterranean coastal structure, and travel atmosphere from the public Photos By Elie catalog.",
-      "date": "2026-05-27",
-      "href": "./campaign.html?c=pinterest-gibraltar-rock-and-bay-views-2026-05-27",
-      "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=pinterest-gibraltar-rock-and-bay-views-2026-05-27",
-      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5668-7d7e86442a_900.jpg",
-      "imageAlt": "Gibraltar",
-      "previewImageUrls": [
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5668-7d7e86442a_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5669-31d9551dd4_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5687-46f0da658f_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5688-774fc51bff_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5689-7b0f2b33e9_900.jpg"
-      ],
-      "primaryPhotoCount": 5,
-      "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982906
+      "mtimeMs": 1780801382191
     },
     {
       "id": "pinterest-del-mar-sunset-tide-colors-2026-05-27",
@@ -1067,7 +1182,28 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982905
+      "mtimeMs": 1780801382194
+    },
+    {
+      "id": "pinterest-gibraltar-rock-and-bay-views-2026-05-27",
+      "source": "Pinterest",
+      "title": "Gibraltar Rock and Bay Views",
+      "description": "A five-photo Gibraltar springboard with bright rock views, Mediterranean coastal structure, and travel atmosphere from the public Photos By Elie catalog.",
+      "date": "2026-05-27",
+      "href": "./campaign.html?c=pinterest-gibraltar-rock-and-bay-views-2026-05-27",
+      "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=pinterest-gibraltar-rock-and-bay-views-2026-05-27",
+      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5668-7d7e86442a_900.jpg",
+      "imageAlt": "Gibraltar",
+      "previewImageUrls": [
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5668-7d7e86442a_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5669-31d9551dd4_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5687-46f0da658f_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5688-774fc51bff_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5689-7b0f2b33e9_900.jpg"
+      ],
+      "primaryPhotoCount": 5,
+      "relatedPhotoCount": 6,
+      "mtimeMs": 1780801382194
     },
     {
       "id": "instagram-ronda-gorge-white-town-views-2026-05-27",
@@ -1091,7 +1227,7 @@
       ],
       "primaryPhotoCount": 9,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982905
+      "mtimeMs": 1780801382193
     },
     {
       "id": "instagram-setenil-rock-streets-2026-05-27",
@@ -1115,7 +1251,7 @@
       ],
       "primaryPhotoCount": 10,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982905
+      "mtimeMs": 1780801382193
     },
     {
       "id": "facebook-paris-arts-metiers-mechanical-details-2026-05-27",
@@ -1139,7 +1275,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982904
+      "mtimeMs": 1780801382192
     },
     {
       "id": "facebook-albert-kahn-garden-paths-2026-05-27",
@@ -1163,7 +1299,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982903
+      "mtimeMs": 1780801382191
     },
     {
       "id": "pinterest-sintra-palaces-green-hills-2026-05-26",
@@ -1184,7 +1320,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982906
+      "mtimeMs": 1780801382195
     },
     {
       "id": "instagram-estepa-chocolate-museum-2026-05-26",
@@ -1208,7 +1344,7 @@
       ],
       "primaryPhotoCount": 10,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982905
+      "mtimeMs": 1780801382192
     },
     {
       "id": "facebook-rueil-malmaison-2026-05-26",
@@ -1232,7 +1368,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982904
+      "mtimeMs": 1780801382192
     },
     {
       "id": "pinterest-valencia-aquarium-2026-05-16",
@@ -1247,7 +1383,7 @@
       "previewImageUrls": [],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 5,
-      "mtimeMs": 1780714982906
+      "mtimeMs": 1780801382195
     },
     {
       "id": "pinterest-invalides-2026-05-14",
@@ -1271,7 +1407,7 @@
       ],
       "primaryPhotoCount": 10,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1780714982906
+      "mtimeMs": 1780801382194
     }
   ]
 }

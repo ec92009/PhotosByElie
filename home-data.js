@@ -4,9 +4,45 @@ window.photosByElieHomeData = {
     "title": "France",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "france-gallery",
-    "count": 315,
+    "count": 1929,
     "href": "./gallery.html?gallery=france",
     "photos": [
+      {
+        "id": "20221219-231418-00940-ae72c6f789",
+        "title": "20221219 231418 00940",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "media": {
+          "type": "video",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/20221219-231418-00940-ae72c6f789_900.jpg",
+            "detailKey": "expo/20221219-231418-00940-ae72c6f789_short_5s_720p.mp4"
+          },
+          "video": {
+            "duration": 5.14
+          }
+        }
+      },
+      {
+        "id": "20221215-171037-00802-ee8e80f97b",
+        "title": "20221215 171037 00802",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "media": {
+          "type": "video",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/20221215-171037-00802-ee8e80f97b_900.jpg",
+            "detailKey": "expo/20221215-171037-00802-ee8e80f97b_short_5s_720p.mp4"
+          },
+          "video": {
+            "duration": 3.27
+          }
+        }
+      },
       {
         "id": "img-6236-bc42218145",
         "title": "‎⁨Musée National Du Château De Malmaison⁩, ⁨Rueil-Malmaison⁩, ⁨Île-de-France⁩, ⁨France⁩",
@@ -36,36 +72,6 @@ window.photosByElieHomeData = {
             "detailKey": "expo/img-6236-5c34056e1e_1800.jpg"
           }
         }
-      },
-      {
-        "id": "img-6235-b7ffbc497f",
-        "title": "Rueil Malmaison, Musee De La Malmaison",
-        "gallerySrc": "",
-        "imageSrc": "",
-        "media": {
-          "type": "photo",
-          "sourcePolicy": "developed-master",
-          "publicPreview": {
-            "allowed": true,
-            "galleryKey": "expo/img-6235-b7ffbc497f_900.jpg",
-            "detailKey": "expo/img-6235-b7ffbc497f_1800.jpg"
-          }
-        }
-      },
-      {
-        "id": "img-6235-1d89dce3af",
-        "title": "‎⁨Musée National Du Château De Malmaison⁩, ⁨Rueil-Malmaison⁩, ⁨Île-de-France⁩, ⁨France⁩",
-        "gallerySrc": "",
-        "imageSrc": "",
-        "media": {
-          "type": "photo",
-          "sourcePolicy": "developed-master",
-          "publicPreview": {
-            "allowed": true,
-            "galleryKey": "expo/img-6235-1d89dce3af_900.jpg",
-            "detailKey": "expo/img-6235-1d89dce3af_1800.jpg"
-          }
-        }
       }
     ]
   },
@@ -74,7 +80,7 @@ window.photosByElieHomeData = {
     "title": "USA",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "usa-gallery",
-    "count": 159,
+    "count": 158,
     "href": "./gallery.html?gallery=usa",
     "photos": [
       {
@@ -144,7 +150,7 @@ window.photosByElieHomeData = {
     "title": "Spain",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "spain-gallery",
-    "count": 1350,
+    "count": 3277,
     "href": "./gallery.html?gallery=spain",
     "photos": [
       {
@@ -161,7 +167,7 @@ window.photosByElieHomeData = {
             "detailKey": "expo/img-4427-43836cc1a4_short_5s_720p.mp4"
           },
           "video": {
-            "duration": 71
+            "duration": 71.0
           }
         }
       },
@@ -179,7 +185,7 @@ window.photosByElieHomeData = {
             "detailKey": "expo/img-4425-92588aab0a_short_5s_720p.mp4"
           },
           "video": {
-            "duration": 63
+            "duration": 63.0
           }
         }
       },
@@ -226,7 +232,7 @@ window.photosByElieHomeData = {
     "title": "Mexico",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "mexico-gallery",
-    "count": 33,
+    "count": 31,
     "href": "./gallery.html?gallery=mexico",
     "photos": [
       {
@@ -302,7 +308,7 @@ window.photosByElieHomeData = {
     "title": "AI",
     "description": "Leonardo archive selections prepared from the Saturn Lightroom AI source.",
     "accent": "ai-gallery",
-    "count": 4809,
+    "count": 4758,
     "href": "./gallery.html?gallery=ai",
     "photos": [
       {
@@ -375,7 +381,7 @@ window.photosByElieHomeData = {
     "title": "Italy",
     "description": "Saturn and Apple Photos archive selections prepared from Italian sources.",
     "accent": "italy-gallery",
-    "count": 35,
+    "count": 28,
     "href": "./gallery.html?gallery=italy",
     "photos": [
       {
@@ -445,12 +451,12 @@ window.photosByElieHomeData = {
     "title": "Portugal",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "portugal-gallery",
-    "count": 216,
+    "count": 1494,
     "href": "./gallery.html?gallery=portugal",
     "photos": [
       {
-        "id": "20220802-130003-00136-pano-052608ca90",
-        "title": "Bacalhoa Buddha Eden, Jardim Do Eden",
+        "id": "20221114-153326-00613-3d594181b7",
+        "title": "20221114 153326 00613",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -458,14 +464,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20220802-130003-00136-pano-052608ca90_900.jpg",
-            "detailKey": "expo/20220802-130003-00136-pano-052608ca90_1800.jpg"
+            "galleryKey": "expo/20221114-153326-00613-3d594181b7_900.jpg",
+            "detailKey": "expo/20221114-153326-00613-3d594181b7_1800.jpg"
           }
         }
       },
       {
-        "id": "20220521-145332-04573-0742e2b77c",
-        "title": "Castelo De Sao Jorge, Fortress",
+        "id": "20221114-153326-00612-bd591b1345",
+        "title": "20221114 153326 00612",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -473,14 +479,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20220521-145332-04573-0742e2b77c_900.jpg",
-            "detailKey": "expo/20220521-145332-04573-0742e2b77c_1800.jpg"
+            "galleryKey": "expo/20221114-153326-00612-bd591b1345_900.jpg",
+            "detailKey": "expo/20221114-153326-00612-bd591b1345_1800.jpg"
           }
         }
       },
       {
-        "id": "20220521-145324-04568-1c242c532c",
-        "title": "Castelo De Sao Jorge, Fortress",
+        "id": "20221114-153325-00611-736ec3d7a8",
+        "title": "20221114 153325 00611",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -488,14 +494,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20220521-145324-04568-1c242c532c_900.jpg",
-            "detailKey": "expo/20220521-145324-04568-1c242c532c_1800.jpg"
+            "galleryKey": "expo/20221114-153325-00611-736ec3d7a8_900.jpg",
+            "detailKey": "expo/20221114-153325-00611-736ec3d7a8_1800.jpg"
           }
         }
       },
       {
-        "id": "20220521-144639-04546-3394e60cbe",
-        "title": "Castelo De Sao Jorge, Fortress",
+        "id": "20221114-153324-00610-6463da22b1",
+        "title": "20221114 153324 00610",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -503,8 +509,8 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20220521-144639-04546-3394e60cbe_900.jpg",
-            "detailKey": "expo/20220521-144639-04546-3394e60cbe_1800.jpg"
+            "galleryKey": "expo/20221114-153324-00610-6463da22b1_900.jpg",
+            "detailKey": "expo/20221114-153324-00610-6463da22b1_1800.jpg"
           }
         }
       }

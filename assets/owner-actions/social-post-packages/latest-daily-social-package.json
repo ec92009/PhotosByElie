@@ -3,17 +3,17 @@
   "generated_at": "2026-06-07T03:08:28.799757Z",
   "source_policy": "Prepared from public SQLite/catalog rows and public R2 watermarked previews only. No private masters, buyer downloads, Owner-only metadata, ignored Owner review JSON, or secrets were used in public posts.",
   "status": {
-    "facebook": "prepared",
-    "instagram": "prepared",
-    "threads": "prepared",
-    "pinterest": "prepared_pending_token_check",
-    "etsy": "pending_draft_creation"
+    "facebook": "published",
+    "instagram": "published",
+    "threads": "published",
+    "pinterest": "prepared_no_api_token_missing_token",
+    "etsy": "drafts_created_media_verified"
   },
   "packages": [
     {
       "date": "2026-06-07",
       "platform": "Facebook",
-      "status": "prepared",
+      "status": "published",
       "account": "Photos By Elie",
       "post_type": "multi_photo",
       "title": "Sintra Castle Walls and Hills",
@@ -164,12 +164,36 @@
           "local_staged_path": "socials/Facebook/2026-06-07/sintra-castle-walls-and-hills/images/08-20180518-1408-00521-560ec85707-sintra-castle-walls-and-hills.jpg"
         }
       ],
-      "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260607-/socials/Facebook/2026-06-07/sintra-castle-walls-and-hills"
+      "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260607-/socials/Facebook/2026-06-07/sintra-castle-walls-and-hills",
+      "api_publish": {
+        "status": "published",
+        "platform": "facebook",
+        "account": "Photos By Elie",
+        "page_id": "1146747141854670",
+        "post_id": "1146747141854670_122104285383334672",
+        "published_at": "2026-06-07T03:13:32+0000",
+        "permalink_url": "https://www.facebook.com/122102168061334672/posts/122104285383334672",
+        "image_count": 8,
+        "verified_at": "2026-06-07T03:15:43Z",
+        "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
+      },
+      "published": {
+        "status": "published",
+        "platform": "facebook",
+        "account": "Photos By Elie",
+        "page_id": "1146747141854670",
+        "post_id": "1146747141854670_122104285383334672",
+        "published_at": "2026-06-07T03:13:32+0000",
+        "permalink_url": "https://www.facebook.com/122102168061334672/posts/122104285383334672",
+        "image_count": 8,
+        "verified_at": "2026-06-07T03:15:43Z",
+        "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
+      }
     },
     {
       "date": "2026-06-07",
       "platform": "Instagram",
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "title": "Malaga Museo Ruso Color and Form",
@@ -304,12 +328,36 @@
           "local_staged_path": "socials/Instagram/2026-06-07/malaga-museo-ruso-color-and-form/images/07-d5h-2909-b8eed5920d-malaga-museo-ruso-color-and-form.jpg"
         }
       ],
-      "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260607-/socials/Instagram/2026-06-07/malaga-museo-ruso-color-and-form"
+      "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260607-/socials/Instagram/2026-06-07/malaga-museo-ruso-color-and-form",
+      "api_publish": {
+        "status": "published",
+        "platform": "instagram",
+        "account": "ec92009",
+        "media_id": "17892233496504414",
+        "permalink_url": "https://www.instagram.com/p/DZROl7XjI8T/",
+        "media_type": "CAROUSEL_ALBUM",
+        "published_at": "2026-06-07T03:14:12+0000",
+        "image_count": 7,
+        "verified_at": "2026-06-07T03:15:43Z",
+        "verification": "Instagram Graph returned carousel permalink, username, media type, timestamp, and 7 child images. Caption has no raw URL."
+      },
+      "published": {
+        "status": "published",
+        "platform": "instagram",
+        "account": "ec92009",
+        "media_id": "17892233496504414",
+        "permalink_url": "https://www.instagram.com/p/DZROl7XjI8T/",
+        "media_type": "CAROUSEL_ALBUM",
+        "published_at": "2026-06-07T03:14:12+0000",
+        "image_count": 7,
+        "verified_at": "2026-06-07T03:15:43Z",
+        "verification": "Instagram Graph returned carousel permalink, username, media type, timestamp, and 7 child images. Caption has no raw URL."
+      }
     },
     {
       "date": "2026-06-07",
       "platform": "Pinterest",
-      "status": "prepared",
+      "status": "prepared_no_api_token_missing_token",
       "account": "photosbyelie",
       "post_type": "multi_pin",
       "title": "Cadiz Fish Market Color",
@@ -415,7 +463,8 @@
       "board_recommendation": "Spain Travel Photography",
       "alt_text": "Cadiz fish market color and Andalusian travel photography by Photos By Elie.",
       "manual_status": {
-        "status": "prepared_pending_token_check",
+        "status": "prepared_no_api_token_missing_token",
+        "reason": "No ~/.config/photosbyelie/pinterest-token.json token file is present, and the built-in Browser profile was locked during this run; package is ready for manual Pin Builder upload.",
         "board_recommendation": "Spain Travel Photography",
         "image_count": 5
       }
@@ -423,7 +472,7 @@
     {
       "date": "2026-06-07",
       "platform": "Threads",
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "title": "Malaga Museo Ruso Color and Form",
@@ -507,24 +556,310 @@
         }
       ],
       "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260607-/socials/Threads/2026-06-07/malaga-museo-ruso-color-and-form",
-      "link_preview_note": "Remove automatic link preview if the preview does not show the Malaga Museo Ruso campaign."
+      "link_preview_note": "Remove automatic link preview if the preview does not show the Malaga Museo Ruso campaign.",
+      "api_publish": {
+        "status": "published",
+        "platform": "threads",
+        "account": "ec92009",
+        "threads_user_id": "36227075590239114",
+        "post_id": "18146079442501827",
+        "permalink_url": "https://www.threads.com/@ec92009/post/DZROiYCjMNy",
+        "media_type": "CAROUSEL_ALBUM",
+        "published_at": "2026-06-07T03:13:48+0000",
+        "image_count": 4,
+        "verified_at": "2026-06-07T03:15:43Z",
+        "verification": "Threads Graph returned permalink, username, media type, timestamp, and 4 child images."
+      },
+      "published": {
+        "status": "published",
+        "platform": "threads",
+        "account": "ec92009",
+        "threads_user_id": "36227075590239114",
+        "post_id": "18146079442501827",
+        "permalink_url": "https://www.threads.com/@ec92009/post/DZROiYCjMNy",
+        "media_type": "CAROUSEL_ALBUM",
+        "published_at": "2026-06-07T03:13:48+0000",
+        "image_count": 4,
+        "verified_at": "2026-06-07T03:15:43Z",
+        "verification": "Threads Graph returned permalink, username, media type, timestamp, and 4 child images."
+      }
     }
   ],
   "etsy_companion": {
-    "status": "pending_draft_creation",
-    "target_count": 20,
-    "campaign_ids": [
-      "etsy-sintra-castle-wall-art-2026-06-07",
-      "etsy-malaga-museo-ruso-wall-art-2026-06-07",
-      "etsy-cadiz-fish-market-wall-art-2026-06-07"
+    "status": "drafts_created_media_verified",
+    "shop_id": "42422777",
+    "shop_url": "https://www.etsy.com/shop/PhotosByElieShop",
+    "listing_type": "download",
+    "product": "jpg-6mp",
+    "price": "28.00",
+    "draft_count": 20,
+    "packages": [
+      {
+        "campaign_id": "etsy-cadiz-fish-market-wall-art-2026-06-07",
+        "campaign_title": "Cadiz Fish Market Wall Art",
+        "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260607-/assets/owner-actions/etsy-listing-packages/2026-06-07/etsy-cadiz-fish-market-wall-art-2026-06-07",
+        "status": "verified",
+        "draft_count": 5,
+        "listing_ids": [
+          4517755272,
+          4517755278,
+          4517755282,
+          4517758897,
+          4517755284
+        ],
+        "media": [
+          {
+            "media_id": "img-1331-b83b21c186",
+            "listing_id": 4517755272,
+            "state": "draft",
+            "listing_image_id": 8107049500,
+            "buyer_file_id": 1492751196627,
+            "image_count": 1,
+            "file_count": 1,
+            "buyer_render_key": "renders/img-1331-b83b21c186_6mp.jpg"
+          },
+          {
+            "media_id": "img-1332-395c477361",
+            "listing_id": 4517755278,
+            "state": "draft",
+            "listing_image_id": 8154955323,
+            "buyer_file_id": 1492751206311,
+            "image_count": 1,
+            "file_count": 1,
+            "buyer_render_key": "renders/img-1332-395c477361_6mp.jpg"
+          },
+          {
+            "media_id": "img-1337-aca47b8150",
+            "listing_id": 4517755282,
+            "state": "draft",
+            "listing_image_id": 8107049726,
+            "buyer_file_id": 1492751217689,
+            "image_count": 1,
+            "file_count": 1,
+            "buyer_render_key": "renders/img-1337-aca47b8150_6mp.jpg"
+          },
+          {
+            "media_id": "img-1342-3f7927b90a",
+            "listing_id": 4517758897,
+            "state": "draft",
+            "listing_image_id": 8107049866,
+            "buyer_file_id": 1491587739214,
+            "image_count": 1,
+            "file_count": 1,
+            "buyer_render_key": "renders/img-1342-3f7927b90a_6mp.jpg"
+          },
+          {
+            "media_id": "img-1347-e423d14782",
+            "listing_id": 4517755284,
+            "state": "draft",
+            "listing_image_id": 8154955753,
+            "buyer_file_id": 1492751237295,
+            "image_count": 1,
+            "file_count": 1,
+            "buyer_render_key": "renders/img-1347-e423d14782_6mp.jpg"
+          }
+        ]
+      },
+      {
+        "campaign_id": "etsy-malaga-museo-ruso-wall-art-2026-06-07",
+        "campaign_title": "Malaga Museo Ruso Wall Art",
+        "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260607-/assets/owner-actions/etsy-listing-packages/2026-06-07/etsy-malaga-museo-ruso-wall-art-2026-06-07",
+        "status": "verified",
+        "draft_count": 7,
+        "listing_ids": [
+          4517758857,
+          4517755248,
+          4517758863,
+          4517755252,
+          4517755256,
+          4517758877,
+          4517755264
+        ],
+        "media": [
+          {
+            "media_id": "d5h-2903-4d39c0652d",
+            "listing_id": 4517758857,
+            "state": "draft",
+            "listing_image_id": 8154954159,
+            "buyer_file_id": 1492751111537,
+            "image_count": 1,
+            "file_count": 1,
+            "buyer_render_key": "renders/d5h-2903-4d39c0652d_6mp.jpg"
+          },
+          {
+            "media_id": "d5h-2904-e0d9300c72",
+            "listing_id": 4517755248,
+            "state": "draft",
+            "listing_image_id": 8107048604,
+            "buyer_file_id": 1491587638902,
+            "image_count": 1,
+            "file_count": 1,
+            "buyer_render_key": "renders/d5h-2904-e0d9300c72_6mp.jpg"
+          },
+          {
+            "media_id": "d5h-2905-d58855992a",
+            "listing_id": 4517758863,
+            "state": "draft",
+            "listing_image_id": 8154954445,
+            "buyer_file_id": 1491587652654,
+            "image_count": 1,
+            "file_count": 1,
+            "buyer_render_key": "renders/d5h-2905-d58855992a_6mp.jpg"
+          },
+          {
+            "media_id": "d5h-2906-c2c1af6c22",
+            "listing_id": 4517755252,
+            "state": "draft",
+            "listing_image_id": 8154954605,
+            "buyer_file_id": 1491587664596,
+            "image_count": 1,
+            "file_count": 1,
+            "buyer_render_key": "renders/d5h-2906-c2c1af6c22_6mp.jpg"
+          },
+          {
+            "media_id": "d5h-2907-fb9bf81957",
+            "listing_id": 4517755256,
+            "state": "draft",
+            "listing_image_id": 8154954765,
+            "buyer_file_id": 1492751161745,
+            "image_count": 1,
+            "file_count": 1,
+            "buyer_render_key": "renders/d5h-2907-fb9bf81957_6mp.jpg"
+          },
+          {
+            "media_id": "d5h-2908-b30840b1cb",
+            "listing_id": 4517758877,
+            "state": "draft",
+            "listing_image_id": 8107049232,
+            "buyer_file_id": 1492751173185,
+            "image_count": 1,
+            "file_count": 1,
+            "buyer_render_key": "renders/d5h-2908-b30840b1cb_6mp.jpg"
+          },
+          {
+            "media_id": "d5h-2909-b8eed5920d",
+            "listing_id": 4517755264,
+            "state": "draft",
+            "listing_image_id": 8154955011,
+            "buyer_file_id": 1492751182925,
+            "image_count": 1,
+            "file_count": 1,
+            "buyer_render_key": "renders/d5h-2909-b8eed5920d_6mp.jpg"
+          }
+        ]
+      },
+      {
+        "campaign_id": "etsy-sintra-castle-wall-art-2026-06-07",
+        "campaign_title": "Sintra Castle Wall Art",
+        "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260607-/assets/owner-actions/etsy-listing-packages/2026-06-07/etsy-sintra-castle-wall-art-2026-06-07",
+        "status": "verified",
+        "draft_count": 8,
+        "listing_ids": [
+          4517758827,
+          4517755210,
+          4517755212,
+          4517755220,
+          4517755226,
+          4517758843,
+          4517755234,
+          4517755238
+        ],
+        "media": [
+          {
+            "media_id": "20180518-1340-00504-13096677a9",
+            "listing_id": 4517758827,
+            "state": "draft",
+            "listing_image_id": 8154952519,
+            "buyer_file_id": 1491587526278,
+            "image_count": 1,
+            "file_count": 1,
+            "buyer_render_key": "renders/20180518-1340-00504-13096677a9_6mp.jpg"
+          },
+          {
+            "media_id": "20180518-1342-00506-7a25cd91e6",
+            "listing_id": 4517755210,
+            "state": "draft",
+            "listing_image_id": 8154952867,
+            "buyer_file_id": 1491587539146,
+            "image_count": 1,
+            "file_count": 1,
+            "buyer_render_key": "renders/20180518-1342-00506-7a25cd91e6_6mp.jpg"
+          },
+          {
+            "media_id": "20180518-1343-00508-fe5541c766",
+            "listing_id": 4517755212,
+            "state": "draft",
+            "listing_image_id": 8107047188,
+            "buyer_file_id": 1492751036823,
+            "image_count": 1,
+            "file_count": 1,
+            "buyer_render_key": "renders/20180518-1343-00508-fe5541c766_6mp.jpg"
+          },
+          {
+            "media_id": "20180518-1343-00509-788722bc52",
+            "listing_id": 4517755220,
+            "state": "draft",
+            "listing_image_id": 8107047374,
+            "buyer_file_id": 1491587563162,
+            "image_count": 1,
+            "file_count": 1,
+            "buyer_render_key": "renders/20180518-1343-00509-788722bc52_6mp.jpg"
+          },
+          {
+            "media_id": "20180518-1359-00513-759c490e7d",
+            "listing_id": 4517755226,
+            "state": "draft",
+            "listing_image_id": 8107047524,
+            "buyer_file_id": 1491587575076,
+            "image_count": 1,
+            "file_count": 1,
+            "buyer_render_key": "renders/20180518-1359-00513-759c490e7d_6mp.jpg"
+          },
+          {
+            "media_id": "20180518-1402-00514-7b4f60aad8",
+            "listing_id": 4517758843,
+            "state": "draft",
+            "listing_image_id": 8154953569,
+            "buyer_file_id": 1491587584944,
+            "image_count": 1,
+            "file_count": 1,
+            "buyer_render_key": "renders/20180518-1402-00514-7b4f60aad8_6mp.jpg"
+          },
+          {
+            "media_id": "20180518-1405-00520-cc9e8a8faf",
+            "listing_id": 4517755234,
+            "state": "draft",
+            "listing_image_id": 8107047900,
+            "buyer_file_id": 1491587602458,
+            "image_count": 1,
+            "file_count": 1,
+            "buyer_render_key": "renders/20180518-1405-00520-cc9e8a8faf_6mp.jpg"
+          },
+          {
+            "media_id": "20180518-1408-00521-560ec85707",
+            "listing_id": 4517755238,
+            "state": "draft",
+            "listing_image_id": 8107048218,
+            "buyer_file_id": 1492751099533,
+            "image_count": 1,
+            "file_count": 1,
+            "buyer_render_key": "renders/20180518-1408-00521-560ec85707_6mp.jpg"
+          }
+        ]
+      }
     ],
-    "guardrails": [
-      "draft listings only",
-      "public watermarked listing image",
-      "private jpg-6mp buyer file",
-      "no automatic active publish"
-    ]
+    "verification": "Every created Etsy draft remains draft and has one public/watermarked listing image plus one private JPG 6 MP buyer file attached and verified."
   },
-  "validation": [],
+  "validation": [
+    "Package count checks passed: Facebook 8, Instagram 7, Pinterest exactly 5, Threads 4.",
+    "Instagram/Threads selected images are 3:2 and within the feed aspect-ratio guardrail.",
+    "Public R2 selected media URLs returned HTTP 200.",
+    "npm test passed after local npm install in the clean worktree; npm run validate passed; git diff --check passed.",
+    "Local browser smoke loaded the Sintra campaign at v99.1; local-only __photosbyelie/public-media 900px proxy 404s matched prior runs while direct public R2 URLs returned 200.",
+    "GitHub Pages deployment completed successfully and custom-domain VERSION/campaign manifests returned HTTP 200 before publishing.",
+    "Facebook, Instagram, and Threads Graph readback verified published IDs, permalinks, timestamps, and image counts.",
+    "Pinterest API token missing; package remains prepared for manual Pin Builder upload.",
+    "Etsy OAuth was refreshed; 20 draft listings were created and verified with image_count 1 and file_count 1 each."
+  ],
   "version": "v99.1"
 }

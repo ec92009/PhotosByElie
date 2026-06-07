@@ -17,3 +17,11 @@ Sintra's Moorish Castle in stone, hill light, and Atlantic air: a Photos By Elie
 - 06. `20180518-1402-00514-7b4f60aad8` - https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180518-1402-00514-7b4f60aad8_1800.jpg - `socials/Facebook/2026-06-07/sintra-castle-walls-and-hills/images/06-20180518-1402-00514-7b4f60aad8-sintra-castle-walls-and-hills.jpg`
 - 07. `20180518-1405-00520-cc9e8a8faf` - https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180518-1405-00520-cc9e8a8faf_1800.jpg - `socials/Facebook/2026-06-07/sintra-castle-walls-and-hills/images/07-20180518-1405-00520-cc9e8a8faf-sintra-castle-walls-and-hills.jpg`
 - 08. `20180518-1408-00521-560ec85707` - https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180518-1408-00521-560ec85707_1800.jpg - `socials/Facebook/2026-06-07/sintra-castle-walls-and-hills/images/08-20180518-1408-00521-560ec85707-sintra-castle-walls-and-hills.jpg`
+
+## Published
+
+- Status: `published`
+- URL: https://www.facebook.com/122102168061334672/posts/122104285383334672
+- Published at: `2026-06-07T03:13:32+0000`
+- Image count: `8`
+- Verification: Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments.

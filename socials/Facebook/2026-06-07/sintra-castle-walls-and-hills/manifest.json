@@ -1,7 +1,7 @@
 {
   "date": "2026-06-07",
   "platform": "Facebook",
-  "status": "prepared",
+  "status": "published",
   "account": "Photos By Elie",
   "post_type": "multi_photo",
   "title": "Sintra Castle Walls and Hills",
@@ -152,5 +152,29 @@
       "local_staged_path": "socials/Facebook/2026-06-07/sintra-castle-walls-and-hills/images/08-20180518-1408-00521-560ec85707-sintra-castle-walls-and-hills.jpg"
     }
   ],
-  "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260607-/socials/Facebook/2026-06-07/sintra-castle-walls-and-hills"
+  "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260607-/socials/Facebook/2026-06-07/sintra-castle-walls-and-hills",
+  "api_publish": {
+    "status": "published",
+    "platform": "facebook",
+    "account": "Photos By Elie",
+    "page_id": "1146747141854670",
+    "post_id": "1146747141854670_122104285383334672",
+    "published_at": "2026-06-07T03:13:32+0000",
+    "permalink_url": "https://www.facebook.com/122102168061334672/posts/122104285383334672",
+    "image_count": 8,
+    "verified_at": "2026-06-07T03:15:43Z",
+    "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
+  },
+  "published": {
+    "status": "published",
+    "platform": "facebook",
+    "account": "Photos By Elie",
+    "page_id": "1146747141854670",
+    "post_id": "1146747141854670_122104285383334672",
+    "published_at": "2026-06-07T03:13:32+0000",
+    "permalink_url": "https://www.facebook.com/122102168061334672/posts/122104285383334672",
+    "image_count": 8,
+    "verified_at": "2026-06-07T03:15:43Z",
+    "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
+  }
 }

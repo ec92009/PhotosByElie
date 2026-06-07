@@ -1,7 +1,7 @@
 {
   "date": "2026-06-07",
   "platform": "Instagram",
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "title": "Malaga Museo Ruso Color and Form",
@@ -136,5 +136,29 @@
       "local_staged_path": "socials/Instagram/2026-06-07/malaga-museo-ruso-color-and-form/images/07-d5h-2909-b8eed5920d-malaga-museo-ruso-color-and-form.jpg"
     }
   ],
-  "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260607-/socials/Instagram/2026-06-07/malaga-museo-ruso-color-and-form"
+  "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260607-/socials/Instagram/2026-06-07/malaga-museo-ruso-color-and-form",
+  "api_publish": {
+    "status": "published",
+    "platform": "instagram",
+    "account": "ec92009",
+    "media_id": "17892233496504414",
+    "permalink_url": "https://www.instagram.com/p/DZROl7XjI8T/",
+    "media_type": "CAROUSEL_ALBUM",
+    "published_at": "2026-06-07T03:14:12+0000",
+    "image_count": 7,
+    "verified_at": "2026-06-07T03:15:43Z",
+    "verification": "Instagram Graph returned carousel permalink, username, media type, timestamp, and 7 child images. Caption has no raw URL."
+  },
+  "published": {
+    "status": "published",
+    "platform": "instagram",
+    "account": "ec92009",
+    "media_id": "17892233496504414",
+    "permalink_url": "https://www.instagram.com/p/DZROl7XjI8T/",
+    "media_type": "CAROUSEL_ALBUM",
+    "published_at": "2026-06-07T03:14:12+0000",
+    "image_count": 7,
+    "verified_at": "2026-06-07T03:15:43Z",
+    "verification": "Instagram Graph returned carousel permalink, username, media type, timestamp, and 7 child images. Caption has no raw URL."
+  }
 }

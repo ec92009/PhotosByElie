@@ -1,7 +1,7 @@
 {
   "date": "2026-06-07",
   "platform": "Threads",
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "title": "Malaga Museo Ruso Color and Form",
@@ -85,5 +85,31 @@
     }
   ],
   "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260607-/socials/Threads/2026-06-07/malaga-museo-ruso-color-and-form",
-  "link_preview_note": "Remove automatic link preview if the preview does not show the Malaga Museo Ruso campaign."
+  "link_preview_note": "Remove automatic link preview if the preview does not show the Malaga Museo Ruso campaign.",
+  "api_publish": {
+    "status": "published",
+    "platform": "threads",
+    "account": "ec92009",
+    "threads_user_id": "36227075590239114",
+    "post_id": "18146079442501827",
+    "permalink_url": "https://www.threads.com/@ec92009/post/DZROiYCjMNy",
+    "media_type": "CAROUSEL_ALBUM",
+    "published_at": "2026-06-07T03:13:48+0000",
+    "image_count": 4,
+    "verified_at": "2026-06-07T03:15:43Z",
+    "verification": "Threads Graph returned permalink, username, media type, timestamp, and 4 child images."
+  },
+  "published": {
+    "status": "published",
+    "platform": "threads",
+    "account": "ec92009",
+    "threads_user_id": "36227075590239114",
+    "post_id": "18146079442501827",
+    "permalink_url": "https://www.threads.com/@ec92009/post/DZROiYCjMNy",
+    "media_type": "CAROUSEL_ALBUM",
+    "published_at": "2026-06-07T03:13:48+0000",
+    "image_count": 4,
+    "verified_at": "2026-06-07T03:15:43Z",
+    "verification": "Threads Graph returned permalink, username, media type, timestamp, and 4 child images."
+  }
 }

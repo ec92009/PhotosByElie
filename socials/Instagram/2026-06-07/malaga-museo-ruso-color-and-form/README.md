@@ -18,3 +18,11 @@ Malaga Museo Ruso color, geometry, and quiet gallery rhythm selected as a Photos
 - 05. `d5h-2907-fb9bf81957` - https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2907-fb9bf81957_1800.jpg - `socials/Instagram/2026-06-07/malaga-museo-ruso-color-and-form/images/05-d5h-2907-fb9bf81957-malaga-museo-ruso-color-and-form.jpg`
 - 06. `d5h-2908-b30840b1cb` - https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2908-b30840b1cb_1800.jpg - `socials/Instagram/2026-06-07/malaga-museo-ruso-color-and-form/images/06-d5h-2908-b30840b1cb-malaga-museo-ruso-color-and-form.jpg`
 - 07. `d5h-2909-b8eed5920d` - https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2909-b8eed5920d_1800.jpg - `socials/Instagram/2026-06-07/malaga-museo-ruso-color-and-form/images/07-d5h-2909-b8eed5920d-malaga-museo-ruso-color-and-form.jpg`
+
+## Published
+
+- Status: `published`
+- URL: https://www.instagram.com/p/DZROl7XjI8T/
+- Published at: `2026-06-07T03:14:12+0000`
+- Image count: `7`
+- Verification: Instagram Graph returned carousel permalink, username, media type, timestamp, and 7 child images. Caption has no raw URL.

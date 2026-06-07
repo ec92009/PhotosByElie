@@ -129,6 +129,7 @@ const ensureGalleryKeyboardHint = () => {
     `${shortcutKey("T")} title`,
     `${shortcutKey("K")} keywords`,
     `${shortcutKey("R")} review`,
+    `${shortcutKey("Z")} view`,
     `${shortcutKey("Arrows")} select`,
     `${shortcutKey("Enter")} detail`,
     `${shortcutKey("Double-click")} detail`
@@ -678,6 +679,7 @@ const galleryLayout = window.photosByElieGalleryLayout.createMasonryController({
   getPhotos: () => renderedGalleryPhotos,
   densityKey,
   fitModeKey,
+  allowCull: localModerationEnabled,
 });
 
 const maxDensityColumns = () => galleryLayout.maxDensityColumns();
@@ -733,7 +735,18 @@ const setGalleryFitMode = (mode) => {
   return fitMode;
 };
 
-const toggleGalleryFitMode = () => setGalleryFitMode(galleryLayout.fitMode() === "fill" ? "fit" : "fill");
+const galleryFitModeStatus = (mode) => {
+  if (mode === "cull") return "Cull view.";
+  return mode === "fill" ? "Fill view." : "Fit view.";
+};
+
+const toggleGalleryFitMode = () => {
+  const currentMode = galleryLayout.fitMode();
+  if (!localModerationEnabled) return setGalleryFitMode(currentMode === "fill" ? "fit" : "fill");
+  const modes = ["fill", "fit", "cull"];
+  const currentIndex = modes.indexOf(currentMode);
+  return setGalleryFitMode(modes[(Math.max(0, currentIndex) + 1) % modes.length]);
+};
 
 const positionGalleryViewControls = () => {
   window.photosByEliePositionGalleryViewControls?.(viewControls);
@@ -1156,7 +1169,7 @@ if (galleryRoot && gallery) {
     }
     if (event.key.toLowerCase() === "z") {
       const nextMode = toggleGalleryFitMode();
-      setGalleryStatus(nextMode === "fill" ? "Fill view." : "Fit view.");
+      setGalleryStatus(galleryFitModeStatus(nextMode));
       event.preventDefault();
     }
   });

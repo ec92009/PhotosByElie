@@ -28,10 +28,24 @@
     getPhotos: () => renderedPhotos,
     densityKey,
     fitModeKey,
+    allowCull: true,
   });
 
   const setStatus = (message) => {
     if (status) status.textContent = message;
+  };
+
+  const fitModeStatus = (mode) => {
+    if (mode === "cull") return "Cull view.";
+    return mode === "fill" ? "Fill view." : "Fit view.";
+  };
+
+  const cycleFitMode = () => {
+    const modes = ["fill", "fit", "cull"];
+    const currentIndex = modes.indexOf(galleryLayout.fitMode());
+    const nextMode = galleryLayout.setFitMode(modes[(Math.max(0, currentIndex) + 1) % modes.length]);
+    applyPreviewLayout();
+    return nextMode;
   };
 
   const escapeHtml = (value) => String(value)
@@ -334,6 +348,12 @@
       if (selected && selected.source !== "missing") {
         window.location.assign(versionedHref(`./photo.html?id=${encodeURIComponent(selected.id)}`));
       }
+      event.preventDefault();
+      return;
+    }
+    if (event.key.toLowerCase() === "z") {
+      const nextMode = cycleFitMode();
+      setStatus(fitModeStatus(nextMode));
       event.preventDefault();
       return;
     }

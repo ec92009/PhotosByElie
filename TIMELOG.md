@@ -192,8 +192,12 @@ Clock state: running
 | 2026-06-03 | 15:24 CEST | 15:25 CEST | 0:01 | Requested Owner-only Super search across title/keyword review metadata; background implementation/testing excluded. |
 | 2026-06-03 | 18:44 CEST | 18:46 CEST | 0:02 | Requested automatic Owner expanded search and clearer Waste Basket R2 artifact counts; background implementation/testing excluded. |
 | 2026-06-03 | 19:41 CEST | 19:42 CEST | 0:01 | Reported landscape detail photo side gutters; background layout fix/testing excluded. |
+| 2026-06-04 | 08:41 CEST | 08:43 CEST | 0:02 | Reviewed Real Estate credential design posture and added the Worker-side auth hardening item to the backlog. |
+| 2026-06-04 | 09:49 CEST | 09:50 CEST | 0:01 | Requested the PhotosByElie Owner Dock app launch the local helper and Owner page; background setup/testing excluded. |
+| 2026-06-06 | 21:44 CEST | 22:01 CEST | 0:13 | Cleared the Owner Expo fast-forward blocker, restarted the local helper as arm64, diagnosed the interrupted 2022-B import, and removed a stale sweep lock; import runtime excluded. |
+| 2026-06-07 | 11:36 CEST | 11:38 CEST | 0:02 | Chose the Owner-only `Z` Fill/Fit/Cull interaction for faster left-to-right culling; implementation/testing time excluded. |
 
 ## Totals
 
-Active collaboration time used: 12:43
+Active collaboration time used: 13:01
 Remaining budget: not set

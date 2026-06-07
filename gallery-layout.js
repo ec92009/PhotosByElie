@@ -13,6 +13,7 @@
     defaultDensity = defaultDensityColumns(),
     defaultFitMode = "fill",
     ignoreSavedLayout = false,
+    allowCull = false,
     dimensionsFor = (photo) => window.photosByEliePreviewDimensions?.(photo),
     isPanorama = (photo) => window.photosByEliePhotoIsPanorama?.(photo),
   } = {}) => {
@@ -20,13 +21,16 @@
     const params = new URLSearchParams(window.location.search);
     const initialDensity = Number(params.get("columns") || params.get("grid"));
     let densityOverride = Number.isFinite(initialDensity) && initialDensity > 0 ? initialDensity : null;
+    const normalizeFitMode = (mode, fallback = "fill") => {
+      const normalized = String(mode || "").toLowerCase();
+      if (normalized === "fit" || normalized === "fill" || (allowCull && normalized === "cull")) return normalized;
+      return fallback;
+    };
     const requestedFit = String(params.get("fit") || params.get("view") || "").toLowerCase();
     const savedFitMode = ignoreSavedLayout ? "" : localStorage.getItem(fitModeKey);
-    let fitMode = requestedFit === "fit" || requestedFit === "fill"
-      ? requestedFit
-      : savedFitMode === "fit" || savedFitMode === "fill"
-        ? savedFitMode
-        : defaultFitMode === "fit" ? "fit" : "fill";
+    const defaultMode = normalizeFitMode(defaultFitMode);
+    const savedMode = normalizeFitMode(savedFitMode, "");
+    let fitMode = normalizeFitMode(requestedFit, savedMode || defaultMode);
 
     const clampDensityColumns = (columns) => {
       const numericColumns = Number(columns);
@@ -96,19 +100,20 @@
       if (!root) return;
       root.dataset.imageFit = fitMode;
       buttons.forEach((button) => {
-        button.setAttribute("aria-pressed", button.dataset.galleryFitMode === fitMode ? "true" : "false");
+        const buttonMode = button.dataset.galleryFitMode || button.dataset.hiddenFitMode || "";
+        button.setAttribute("aria-pressed", buttonMode === fitMode ? "true" : "false");
       });
     };
 
     const setFitMode = (mode) => {
-      fitMode = mode === "fill" ? "fill" : "fit";
+      fitMode = normalizeFitMode(mode, "fit");
       localStorage.setItem(fitModeKey, fitMode);
       return fitMode;
     };
 
     const syncFromStorage = () => {
       if (ignoreSavedLayout) return;
-      fitMode = localStorage.getItem(fitModeKey) === "fit" ? "fit" : "fill";
+      fitMode = normalizeFitMode(localStorage.getItem(fitModeKey), defaultMode);
     };
 
     const applyPreviewLayout = (photos = getPhotos()) => {

@@ -31,6 +31,8 @@
         <span aria-hidden="true">|</span>
         <kbd>D</kbd> discard
         <span aria-hidden="true">|</span>
+        <kbd>Z</kbd> view
+        <span aria-hidden="true">|</span>
         <kbd>Arrows</kbd> select
         <span aria-hidden="true">|</span>
         <kbd>Enter</kbd> detail

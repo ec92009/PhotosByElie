@@ -4492,6 +4492,17 @@ body[data-gallery="selection"] .gallery-hero .cta:empty{
   height:100%;
   object-fit:cover;
 }
+.mock-gallery[data-image-fit="cull"] .mock-photo{
+  aspect-ratio:1;
+  background:color-mix(in srgb,var(--surface-2) 72%,var(--bg));
+}
+.mock-gallery[data-image-fit="cull"] .mock-photo img{
+  position:absolute;
+  inset:0;
+  height:100%;
+  object-fit:contain;
+  object-position:center;
+}
 .mock-photo:hover{
   transform:translateY(-2px);
   box-shadow:0 18px 38px rgba(0,0,0,.18);

@@ -659,6 +659,22 @@ const setGalleryStatus = (message) => {
   if (galleryStatus) galleryStatus.textContent = message;
 };
 
+const galleryCardForPhotoId = (photoId) => {
+  const id = String(photoId || "");
+  if (!id || !galleryRoot) return null;
+  return [...galleryRoot.querySelectorAll(".mock-photo[data-photo-id]")]
+    .find((card) => card.dataset.photoId === id) || null;
+};
+
+const setGalleryBlockedVisual = (photoId, state = "") => {
+  const card = galleryCardForPhotoId(photoId);
+  if (!card) return;
+  const blocking = state === "blocking";
+  const blocked = state === "blocked";
+  card.classList.toggle("is-review-blocking", blocking);
+  card.classList.toggle("is-review-blocked", blocked);
+};
+
 const nearestVisiblePhotoIndex = () => {
   const cards = [...(galleryRoot?.querySelectorAll("[data-photo-index]") || [])];
   if (!cards.length) return selectedIndex;
@@ -1017,6 +1033,8 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
       if (!photo) return;
       window.photosByElieShowMediaContextMenu?.(photo, event, {
         owner: localModerationEnabled,
+        previewItems: visibleSubset,
+        previewIndex: index,
         onOpenDetail: () => window.location.assign(versionedHref(card.dataset.photoHref || card.querySelector("[data-photo-link]")?.getAttribute("href"))),
       });
     });
@@ -1189,7 +1207,12 @@ if (galleryRoot && gallery) {
     if (event.key === " ") {
       const selected = selectedShortcutPhoto();
       if (!selected) return;
-      window.photosByElieOpenFinderPreview?.(selected, { owner: localModerationEnabled });
+      const photos = filteredVisiblePhotos();
+      window.photosByElieOpenFinderPreview?.(selected, {
+        owner: localModerationEnabled,
+        items: photos,
+        index: Math.max(0, photos.findIndex((item) => item.id === selected.id)),
+      });
       event.preventDefault();
       return;
     }
@@ -1283,11 +1306,15 @@ if (galleryRoot && gallery) {
         const selected = photos[selectedIndex];
         if (!selected) return;
         try {
+          setGalleryBlockedVisual(selected.id, "blocking");
+          setGalleryStatus(`${selected.title} moving to Waste Basket...`);
           await hiddenActions.mark(selected.id);
+          setGalleryBlockedVisual(selected.id, "blocked");
           selectedIndex = Math.min(selectedIndex, Math.max(0, photos.length - 2));
           renderGallery();
           setGalleryStatus(`${selected.title} moved to Waste Basket.`);
         } catch (error) {
+          setGalleryBlockedVisual(selected.id, "");
           setGalleryStatus(error?.message || "Could not move photo to Waste Basket.");
         }
         event.preventDefault();

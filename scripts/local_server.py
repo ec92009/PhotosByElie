@@ -49,6 +49,7 @@ PUBLIC_MEDIA_PROXY_PATH = "/__photosbyelie/public-media/"
 PRIVATE_MEDIA_PROXY_PATH = "/__photosbyelie/private-media/"
 SOURCE_PREVIEW_PATH = "/__photosbyelie/source-preview/"
 SOURCE_EDIT_PATH = "/__photosbyelie/source-edit"
+SOURCE_EDIT_APPS_PATH = "/__photosbyelie/source-edit-apps"
 MAX_BODY_BYTES = 5 * 1024 * 1024
 LOCAL_CLIENTS = {"127.0.0.1", "::1", "localhost"}
 DERIVATIVES = (("gallery", "gallerySrc"), ("detail", "imageSrc"))
@@ -79,6 +80,31 @@ IMPORT_SOURCE_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tif", ".tiff", ".he
 SOURCE_PREVIEW_BROWSER_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 SOURCE_PREVIEW_GENERATABLE_IMAGE_EXTENSIONS = {".heic", ".heif", ".tif", ".tiff", ".png", ".webp"}
 SOURCE_PREVIEW_BROWSER_VIDEO_EXTENSIONS = {".mp4", ".m4v", ".mov", ".webm"}
+SOURCE_EDIT_PHOTO_UTIS = {
+    "public.image",
+    "public.jpeg",
+    "public.jpeg-2000",
+    "public.jpeg-xl",
+    "public.png",
+    "public.tiff",
+    "public.heic",
+    "public.heif",
+    "public.camera-raw-image",
+    "com.adobe.photoshop-image",
+}
+SOURCE_EDIT_VIDEO_UTIS = {
+    "public.movie",
+    "public.video",
+    "public.audiovisual-content",
+    "public.mpeg",
+    "public.mpeg-4",
+    "public.mpeg-2-video",
+    "com.apple.quicktime-movie",
+    "com.apple.m4v-video",
+    "public.avi",
+    "public.dv-movie",
+}
+SOURCE_EDIT_APP_CACHE: dict[str, object] = {"expires_at": 0.0, "apps": []}
 PUBLIC_SITE_BASE_URL = "https://ec92009.github.io/PhotosByElie/"
 PUBLIC_MEDIA_BASE_URL = "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev"
 TITLE_KEYWORD_REVIEW_FLAG = "Title_Keywords_Reviewed"
@@ -258,6 +284,9 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         if path.startswith(SOURCE_PREVIEW_PATH):
             self._handle_source_preview(path)
             return
+        if path == SOURCE_EDIT_APPS_PATH:
+            self._handle_source_edit_apps()
+            return
         if path.startswith(PUBLIC_MEDIA_PROXY_PATH):
             self._handle_public_media_proxy(path)
             return
@@ -365,9 +394,12 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             payload = self._read_json_body()
             media_id = str(payload.get("media_id") or payload.get("mediaId") or "").strip()
             app = str(payload.get("app") or "").strip()
+            bundle_id = str(payload.get("bundle_id") or payload.get("bundleId") or "").strip()
             source = _source_original_for_media_id(Path.cwd(), media_id)
             command = ["open", str(source["path"])]
-            if app:
+            if bundle_id:
+                command = ["open", "-b", bundle_id, str(source["path"])]
+            elif app:
                 command = ["open", "-a", app, str(source["path"])]
             subprocess.run(command, check=True, capture_output=True, text=True)
         except ValueError as error:
@@ -385,6 +417,27 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             "media_id": media_id,
             "path": str(source["path"]),
             "app": app,
+            "bundle_id": bundle_id,
+        })
+
+    def _handle_source_edit_apps(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        query = parse_qs(urlparse(self.path).query)
+        media_id = str((query.get("media_id") or query.get("mediaId") or [""])[0]).strip()
+        requested_type = str((query.get("media_type") or query.get("kind") or [""])[0]).strip().lower()
+        try:
+            media_type = _source_edit_media_type(Path.cwd(), media_id, requested_type)
+            apps = _source_edit_apps_for_media_type(media_type)
+        except OSError as error:
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
+            return
+        self._send_json(HTTPStatus.OK, {
+            "ok": True,
+            "media_id": media_id,
+            "mediaType": media_type,
+            "apps": apps,
         })
 
     def _handle_photo_action_progress(self) -> None:
@@ -3208,6 +3261,160 @@ def _source_preview_for_media_id(repo_root: Path, media_id: str) -> dict:
         str(source),
         f"Source image format {suffix or '(unknown)'} is not browser-displayable and cannot be converted by this helper.",
     )
+
+
+def _source_edit_media_type(repo_root: Path, media_id: str, requested_type: str = "") -> str:
+    normalized = str(requested_type or "").strip().lower()
+    if normalized in {"photo", "image"}:
+        return "photo"
+    if normalized in {"video", "movie"}:
+        return "video"
+    clean_id = str(media_id or "").strip()
+    if clean_id:
+        try:
+            source = _source_original_for_media_id(repo_root, clean_id)
+            media_type = str(source.get("mediaType") or "").strip().lower()
+            if media_type == "video":
+                return "video"
+        except ValueError:
+            photo = _source_preview_photo_from_catalog(repo_root, clean_id)
+            media_type = str(photo.get("media", {}).get("type") if photo else "").strip().lower()
+            if media_type == "video":
+                return "video"
+    return "photo"
+
+
+def _source_edit_app_score(app: dict, media_type: str, matched_count: int) -> int:
+    text = f"{app.get('name', '')} {app.get('bundleId', '')} {app.get('path', '')}".casefold()
+    photo_order = [
+        "photomator",
+        "pixelmator",
+        "photoshop",
+        "lightroom",
+        "affinity photo",
+        "capture one",
+        "darkroom",
+        "gimp",
+        "preview",
+        "photos",
+    ]
+    video_order = [
+        "final cut",
+        "davinci resolve",
+        "premiere",
+        "imovie",
+        "quicktime player",
+        "vlc",
+        "screenflow",
+    ]
+    preferred = video_order if media_type == "video" else photo_order
+    score = matched_count * 20
+    for index, needle in enumerate(preferred):
+        if needle in text:
+            score += 1000 - index * 40
+            break
+    if "/applications/" in text:
+        score += 12
+    if "/system/applications/" in text:
+        score += 6
+    return score
+
+
+def _launch_services_app_records() -> list[dict]:
+    now = time.monotonic()
+    cached_apps = SOURCE_EDIT_APP_CACHE.get("apps")
+    if cached_apps and now < float(SOURCE_EDIT_APP_CACHE.get("expires_at") or 0):
+        return list(cached_apps)  # type: ignore[arg-type]
+    lsregister = Path("/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister")
+    if not lsregister.exists():
+        SOURCE_EDIT_APP_CACHE.update({"expires_at": now + 60, "apps": []})
+        return []
+    try:
+        output = subprocess.run(
+            [str(lsregister), "-dump"],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=12,
+        ).stdout
+    except (OSError, subprocess.SubprocessError):
+        SOURCE_EDIT_APP_CACHE.update({"expires_at": now + 60, "apps": []})
+        return []
+    apps: list[dict] = []
+    seen: set[tuple[str, str]] = set()
+    for block in output.split("\n--------------------------------------------------------------------------------\n"):
+        if "kLSBundleClassApplication" not in block or "\npath:" not in block:
+            continue
+        path_match = re.search(r"^path:\s+(.+?\.app)\s+\(", block, re.MULTILINE)
+        if not path_match:
+            continue
+        path = path_match.group(1).strip()
+        if not path.startswith(("/Applications/", "/System/Applications/", "/System/Library/CoreServices/")):
+            continue
+        display_match = re.search(r"^displayName:\s+(.+)$", block, re.MULTILINE)
+        name_match = re.search(r"^name:\s+(.+)$", block, re.MULTILINE)
+        bundle_match = re.search(r"^identifier:\s+(.+)$", block, re.MULTILINE)
+        claimed_match = re.search(r"^claimed UTIs:\s+(.+)$", block, re.MULTILINE)
+        name = (display_match or name_match).group(1).strip() if (display_match or name_match) else Path(path).stem
+        bundle_id = bundle_match.group(1).strip() if bundle_match else ""
+        claimed_uti_text = claimed_match.group(1).strip().lower() if claimed_match else ""
+        if not claimed_uti_text:
+            continue
+        hidden_text = f"{name} {bundle_id} {path}".casefold()
+        if any(skip in hidden_text for skip in (" helper", " setup", "installer", "uninstaller", "remote monitor", "control panels")):
+            continue
+        key = (bundle_id, path)
+        if key in seen:
+            continue
+        seen.add(key)
+        apps.append({
+            "name": name,
+            "bundleId": bundle_id,
+            "path": path,
+            "claimedUTIs": sorted(set(re.split(r"[\s,]+", claimed_uti_text)) - {""}),
+        })
+    SOURCE_EDIT_APP_CACHE.update({"expires_at": now + 300, "apps": apps})
+    return apps
+
+
+def _source_edit_apps_for_media_type(media_type: str) -> list[dict]:
+    normalized = "video" if str(media_type or "").lower() == "video" else "photo"
+    targets = SOURCE_EDIT_VIDEO_UTIS if normalized == "video" else SOURCE_EDIT_PHOTO_UTIS
+    matched: list[tuple[int, dict]] = []
+    for app in _launch_services_app_records():
+        claimed = {str(uti).strip().lower() for uti in app.get("claimedUTIs", [])}
+        overlap = claimed & targets
+        if not overlap:
+            continue
+        public_image_match = normalized == "photo" and "public.image" in claimed
+        public_video_match = normalized == "video" and (
+            "public.movie" in claimed
+            or "public.video" in claimed
+            or "public.audiovisual-content" in claimed
+        )
+        if public_image_match:
+            overlap.add("public.image")
+        if public_video_match:
+            overlap.add("public.movie")
+        score = _source_edit_app_score(app, normalized, len(overlap))
+        matched.append((score, {
+            "name": app["name"],
+            "bundleId": app.get("bundleId", ""),
+            "path": app["path"],
+            "matchedTypes": sorted(overlap),
+        }))
+    matched.sort(key=lambda item: (-item[0], item[1]["name"].casefold()))
+    deduped: list[dict] = []
+    seen_names: set[str] = set()
+    for _, app in matched:
+        name_key = str(app["name"]).casefold()
+        if name_key in seen_names:
+            continue
+        seen_names.add(name_key)
+        deduped.append(app)
+        if len(deduped) >= 14:
+            break
+    return deduped
 
 
 def _site_asset_paths(repo_root: Path, rel: str) -> list[Path]:

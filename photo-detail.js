@@ -572,10 +572,11 @@ const renderMetadataRows = () => {
     ...(!hasDurationRow && videoDurationLabel ? [{ label: "Duration", value: videoDurationLabel }] : []),
     ...metadata,
   ].filter((item) => item.label && item.value);
-  metadataRoot.hidden = true;
+  const hasRows = rows.length > 0;
+  metadataRoot.hidden = !hasRows;
   if (metadataToggle) {
-    metadataToggle.hidden = rows.length === 0;
-    metadataToggle.setAttribute("aria-expanded", "false");
+    metadataToggle.hidden = !hasRows;
+    metadataToggle.setAttribute("aria-expanded", String(hasRows));
   }
   metadataRoot.replaceChildren(...rows.map((item) => {
     const row = document.createElement("div");
@@ -759,9 +760,22 @@ const previewTitleTarget = preview.querySelector("[data-photo-preview-title]");
 previewTitleTarget?.removeAttribute("data-i18n");
 if (previewTitleTarget) previewTitleTarget.textContent = photo.title;
 
+const setDetailBlockedVisual = (state = "") => {
+  if (!preview) return;
+  const blocking = state === "blocking";
+  const blocked = state === "blocked";
+  preview.classList.toggle("is-review-blocking", blocking);
+  preview.classList.toggle("is-review-blocked", blocked);
+};
+
 const detailPreviewUsesOwnerSource = Boolean(localModerationEnabled || ownerReviewReturnContext || isOwnerReviewSyntheticCollection);
+const detailPreviewItems = detailPhotos.map((entry) => entry.photo).filter(Boolean);
 const openFullscreenPreview = () => {
-  window.photosByElieOpenFinderPreview?.(photo, { owner: detailPreviewUsesOwnerSource });
+  window.photosByElieOpenFinderPreview?.(photo, {
+    owner: detailPreviewUsesOwnerSource,
+    items: detailPreviewItems,
+    index: Math.max(0, detailPreviewItems.findIndex((item) => item.id === photo.id)),
+  });
 };
 
 preview.addEventListener("dblclick", (event) => {
@@ -773,6 +787,8 @@ preview.addEventListener("contextmenu", (event) => {
   if (event.target instanceof Element && event.target.closest(".like-toggle")) return;
   window.photosByElieShowMediaContextMenu?.(photo, event, {
     owner: detailPreviewUsesOwnerSource,
+    previewItems: detailPreviewItems,
+    previewIndex: Math.max(0, detailPreviewItems.findIndex((item) => item.id === photo.id)),
   });
 });
 window.addEventListener("keydown", (event) => {
@@ -896,14 +912,19 @@ if (localModerationEnabled) {
       event.preventDefault();
       if (hiddenActions.has(photo.id)) {
         status.textContent = `${photo.title} is already in the Waste Basket.`;
+        setDetailBlockedVisual("blocked");
         hiddenActions.mark(photo.id);
         navigateAwayFromBlockedPhoto();
         return;
       }
       try {
+        setDetailBlockedVisual("blocking");
+        status.textContent = `${photo.title} moving to Waste Basket...`;
         await hiddenActions.mark(photo.id);
+        setDetailBlockedVisual("blocked");
         navigateAwayFromBlockedPhoto();
       } catch (error) {
+        setDetailBlockedVisual("");
         status.textContent = error?.message || "Could not move photo to Waste Basket.";
       }
       return;

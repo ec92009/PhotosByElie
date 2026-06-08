@@ -1893,7 +1893,25 @@ window.photosByElieVideoDurationLabel = (photo) => (
   };
 
   window.photosByElieOpenFinderPreview = async (photo, options = {}) => {
-    const targetPhoto = photo || null;
+    const initialPhoto = photo || null;
+    const optionItems = Array.isArray(options.items)
+      ? options.items
+      : Array.isArray(options.photos)
+        ? options.photos
+        : Array.isArray(options.sequence)
+          ? options.sequence
+          : [];
+    const previewItems = optionItems
+      .map((item) => item?.photo || item)
+      .filter((item) => item?.id);
+    let currentIndex = Number.isInteger(options.index)
+      ? Math.max(0, Math.min(options.index, Math.max(0, previewItems.length - 1)))
+      : previewItems.findIndex((item) => item.id === initialPhoto?.id);
+    if (currentIndex < 0 && initialPhoto?.id) {
+      previewItems.unshift(initialPhoto);
+      currentIndex = 0;
+    }
+    const targetPhoto = previewItems[currentIndex] || initialPhoto;
     if (!targetPhoto?.id) return false;
     const owner = Boolean(options.owner);
     const isVideo = window.photosByElieIsVideo?.(targetPhoto) === true;
@@ -1910,12 +1928,29 @@ window.photosByElieVideoDurationLabel = (photo) => (
     existing?.remove();
 
     const modal = document.createElement("div");
-    modal.className = "detail-fullscreen-preview finder-media-preview";
+    modal.className = `detail-fullscreen-preview finder-media-preview has-info-panel${owner ? " is-owner-preview" : ""}`;
     modal.tabIndex = -1;
     modal.setAttribute("role", "dialog");
     modal.setAttribute("aria-modal", "true");
     modal.setAttribute("aria-label", `${isVideo ? "Video" : "Photo"} preview: ${title}`);
     modal.dataset.mediaType = isVideo ? "video" : "photo";
+    modal.innerHTML = `
+      <div class="finder-preview-stage" data-finder-preview-stage>
+        <div class="finder-preview-loading">Loading preview</div>
+      </div>
+      ${previewItems.length > 1 ? `
+        <button class="finder-preview-nav is-prev" type="button" data-finder-preview-prev aria-label="Previous preview">‹</button>
+        <button class="finder-preview-nav is-next" type="button" data-finder-preview-next aria-label="Next preview">›</button>
+      ` : ""}
+      <section class="finder-preview-info-panel" data-finder-preview-info>
+        <p class="eyebrow">${owner ? "Owner source preview" : "Preview"}</p>
+        <h2>${escapePreviewHtml(title)}</h2>
+      </section>
+    `;
+    const stage = modal.querySelector("[data-finder-preview-stage]");
+    const infoPanel = modal.querySelector("[data-finder-preview-info]");
+    const contextUrl = window.photosByElieMediaUrl(targetPhoto, "detail") || window.photosByElieMediaUrl(targetPhoto, "gallery") || "";
+    const contextPoster = isVideo ? (window.photosByElieVideoPosterUrl?.(targetPhoto) || window.photosByElieMediaUrl(targetPhoto, "gallery") || "") : "";
     document.body.classList.add("detail-fullscreen-active");
     document.body.append(modal);
 
@@ -1924,30 +1959,56 @@ window.photosByElieVideoDurationLabel = (photo) => (
       modal.remove();
       window.removeEventListener("keydown", onKeydown, true);
     };
-    const showError = ({ reason, attemptedSourceType = "", attemptedSourceLabel = sourceLabel } = {}) => {
-      modal.classList.add("has-preview-error");
-      modal.innerHTML = "";
-      const panel = document.createElement("section");
-      panel.className = "finder-preview-error-panel";
-      panel.innerHTML = `
-        <p class="eyebrow">${owner ? "Owner source preview failed" : "Preview failed"}</p>
+    const openAdjacent = (delta) => {
+      if (previewItems.length < 2) return false;
+      const nextIndex = (currentIndex + delta + previewItems.length) % previewItems.length;
+      const nextPhoto = previewItems[nextIndex];
+      if (!nextPhoto?.id) return false;
+      close();
+      window.photosByElieOpenFinderPreview?.(nextPhoto, {
+        ...options,
+        items: previewItems,
+        index: nextIndex,
+      });
+      return true;
+    };
+    const metadataRows = (extraRows = []) => [
+      ["Media id", targetPhoto.id],
+      ["Kind", isVideo ? "Video" : "Photo"],
+      ...extraRows,
+    ].filter(([, value]) => String(value ?? "").trim());
+    const renderInfo = ({ eyebrow = owner ? "Owner source preview" : "Preview", state = "", rows = [], note = "" } = {}) => {
+      if (!infoPanel) return;
+      infoPanel.classList.toggle("is-error", state === "error");
+      infoPanel.classList.toggle("is-warning", state === "warning");
+      infoPanel.innerHTML = `
+        <p class="eyebrow">${escapePreviewHtml(eyebrow)}</p>
         <h2>${escapePreviewHtml(title)}</h2>
         <dl>
-          <div><dt>Media id</dt><dd>${escapePreviewHtml(targetPhoto.id)}</dd></div>
-          <div><dt>Attempted source</dt><dd>${escapePreviewHtml(attemptedSourceType || (owner ? "source/full" : "public detail"))}</dd></div>
-          <div><dt>Path label</dt><dd>${escapePreviewHtml(attemptedSourceLabel || "unknown")}</dd></div>
-          <div><dt>Reason</dt><dd>${escapePreviewHtml(reason || "The browser could not load this preview.")}</dd></div>
+          ${metadataRows(rows).map(([label, value]) => `
+            <div><dt>${escapePreviewHtml(label)}</dt><dd>${escapePreviewHtml(value)}</dd></div>
+          `).join("")}
         </dl>
+        ${note ? `<p class="finder-preview-note">${escapePreviewHtml(note)}</p>` : ""}
       `;
-      modal.append(panel);
     };
     function onKeydown(event) {
+      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+        if (event.target instanceof HTMLElement && event.target.closest("video")) return;
+        if (openAdjacent(event.key === "ArrowRight" ? 1 : -1)) event.preventDefault();
+        return;
+      }
       if (event.key !== "Escape" && event.key !== " ") return;
       if (event.key === " " && event.target instanceof HTMLElement && event.target.closest("video")) return;
       event.preventDefault();
       close();
     }
-    const appendPhoto = (src, sourceType = "", attemptedSourceLabel = sourceLabel) => {
+    const showEmptyPreview = (message) => {
+      if (!stage) return;
+      stage.innerHTML = `<div class="finder-preview-empty">${escapePreviewHtml(message)}</div>`;
+    };
+    const appendPhoto = (src, { sourceType = "", attemptedSourceLabel = sourceLabel, context = false, onError = null } = {}) => {
+      if (!stage) return;
       const image = new Image();
       image.alt = title;
       image.decoding = "async";
@@ -1957,32 +2018,71 @@ window.photosByElieVideoDurationLabel = (photo) => (
         close();
       }, { passive: false });
       image.addEventListener("error", () => {
-        showError({
-          attemptedSourceType: sourceType,
-          attemptedSourceLabel,
-          reason: "The browser could not load or decode the image.",
-        });
+        if (typeof onError === "function") {
+          onError({
+            sourceType,
+            attemptedSourceLabel,
+            reason: "The browser could not load or decode the image.",
+          });
+        } else {
+          showEmptyPreview("Preview unavailable");
+        }
       }, { once: true });
-      modal.replaceChildren(image);
+      stage.replaceChildren(image);
+      stage.classList.toggle("is-context-preview", Boolean(context));
       image.src = src;
     };
-    const appendVideo = (src, poster = "", sourceType = "", attemptedSourceLabel = sourceLabel) => {
+    const appendVideo = (src, poster = "", { sourceType = "", attemptedSourceLabel = sourceLabel, context = false, onError = null } = {}) => {
+      if (!stage) return;
       const video = document.createElement("video");
       video.controls = true;
-      video.autoplay = true;
+      video.autoplay = !context;
       video.playsInline = true;
       video.preload = "metadata";
       if (poster) video.poster = poster;
       video.addEventListener("error", () => {
-        const error = video.error;
-        showError({
-          attemptedSourceType: sourceType,
-          attemptedSourceLabel,
-          reason: error?.message || "The browser could not load, decode, or play the video.",
-        });
+        const mediaError = video.error;
+        if (typeof onError === "function") {
+          onError({
+            sourceType,
+            attemptedSourceLabel,
+            reason: mediaError?.message || "The browser could not load, decode, or play the video.",
+          });
+        } else {
+          showEmptyPreview("Video preview unavailable");
+        }
       }, { once: true });
-      modal.replaceChildren(video);
+      stage.replaceChildren(video);
+      stage.classList.toggle("is-context-preview", Boolean(context));
       video.src = src;
+    };
+    const showContextPreview = (note = "") => {
+      if (!contextUrl) {
+        showEmptyPreview("No lower-resolution context preview is available");
+        return;
+      }
+      const label = note || (owner ? "Source preview unavailable; this is a lower-resolution context preview." : "");
+      if (isVideo) appendVideo(contextUrl, contextPoster, { sourceType: "public short MP4", attemptedSourceLabel: contextUrl, context: true });
+      else appendPhoto(contextUrl, { sourceType: "public _1800", attemptedSourceLabel: contextUrl, context: true });
+      if (label && stage) {
+        const badge = document.createElement("p");
+        badge.className = "finder-preview-context-label";
+        badge.textContent = label;
+        stage.append(badge);
+      }
+    };
+    const showOwnerFailure = ({ reason, attemptedSourceType = "", attemptedSourceLabel = sourceLabel } = {}) => {
+      showContextPreview("Source preview failed; shown media is not full/source.");
+      renderInfo({
+        eyebrow: "Owner source preview failed",
+        state: "error",
+        rows: [
+          ["Attempted source", attemptedSourceType || "source/full"],
+          ["Path label", attemptedSourceLabel || "unknown"],
+          ["Reason", reason || "The browser could not load this preview."],
+        ],
+        note: contextUrl ? "The media shown beside this panel is only a context preview." : "No fallback context preview was available.",
+      });
     };
 
     modal.addEventListener("click", (event) => {
@@ -1993,20 +2093,29 @@ window.photosByElieVideoDurationLabel = (photo) => (
       event.preventDefault();
       close();
     }, { passive: false });
+    modal.querySelector("[data-finder-preview-prev]")?.addEventListener("click", (event) => {
+      event.stopPropagation();
+      openAdjacent(-1);
+    });
+    modal.querySelector("[data-finder-preview-next]")?.addEventListener("click", (event) => {
+      event.stopPropagation();
+      openAdjacent(1);
+    });
     window.addEventListener("keydown", onKeydown, true);
     modal.focus({ preventScroll: true });
 
     if (owner) {
       const infoUrl = window.photosByElieSourcePreviewUrl(targetPhoto, "info");
+      renderInfo({ rows: [["Attempted source", "source/full"], ["Path label", sourceLabel], ["Status", "Loading"]] });
       if (!infoUrl) {
-        showError({ reason: "Owner source previews are only available from localhost." });
+        showOwnerFailure({ reason: "Owner source previews are only available from localhost." });
         return true;
       }
       try {
         const response = await fetch(infoUrl, { cache: "no-store", credentials: "same-origin" });
         const payload = await response.json().catch(() => null);
         if (!response.ok || !payload?.ok) {
-          showError({
+          showOwnerFailure({
             attemptedSourceType: payload?.sourceType || "source/full",
             attemptedSourceLabel: payload?.sourceLabel || sourceLabel,
             reason: payload?.error || `Source preview endpoint returned ${response.status}.`,
@@ -2014,36 +2123,86 @@ window.photosByElieVideoDurationLabel = (photo) => (
           return true;
         }
         const previewUrl = payload.previewUrl || window.photosByElieSourcePreviewUrl(targetPhoto);
+        renderInfo({
+          eyebrow: "Owner source preview",
+          rows: [
+            ["Source", payload.sourceType || "source/full"],
+            ["Path", payload.sourceLabel || sourceLabel],
+            ["Status", "Loaded from localhost source"],
+          ],
+        });
+        const handleSourceLoadError = ({ sourceType, attemptedSourceLabel, reason }) => {
+          showOwnerFailure({
+            attemptedSourceType: sourceType,
+            attemptedSourceLabel,
+            reason,
+          });
+        };
         if (payload.mediaType === "video") {
-          appendVideo(previewUrl, "", payload.sourceType, payload.sourceLabel);
+          appendVideo(previewUrl, "", {
+            sourceType: payload.sourceType,
+            attemptedSourceLabel: payload.sourceLabel,
+            onError: handleSourceLoadError,
+          });
         } else {
-          appendPhoto(previewUrl, payload.sourceType, payload.sourceLabel);
+          appendPhoto(previewUrl, {
+            sourceType: payload.sourceType,
+            attemptedSourceLabel: payload.sourceLabel,
+            onError: handleSourceLoadError,
+          });
         }
       } catch (error) {
-        showError({ reason: error?.message || "Could not contact the owner source preview endpoint." });
+        showOwnerFailure({ reason: error?.message || "Could not contact the owner source preview endpoint." });
       }
       return true;
     }
 
-    const publicUrl = window.photosByElieMediaUrl(targetPhoto, "detail");
-    if (!publicUrl) {
-      showError({ attemptedSourceType: "public detail", reason: "No public detail preview URL is available." });
+    if (!contextUrl) {
+      showEmptyPreview("Preview unavailable");
+      renderInfo({
+        eyebrow: "Preview failed",
+        state: "error",
+        rows: [["Attempted source", "public detail"], ["Reason", "No public detail preview URL is available."]],
+      });
       return true;
     }
-    if (isVideo) appendVideo(publicUrl, window.photosByElieVideoPosterUrl?.(targetPhoto) || "", "public short MP4", publicUrl);
-    else appendPhoto(publicUrl, "public _1800", publicUrl);
+    renderInfo({
+      rows: [
+        ["Source", isVideo ? "public short MP4" : "public _1800"],
+        ["Path", contextUrl],
+      ],
+    });
+    if (isVideo) appendVideo(contextUrl, contextPoster, { sourceType: "public short MP4", attemptedSourceLabel: contextUrl });
+    else appendPhoto(contextUrl, { sourceType: "public _1800", attemptedSourceLabel: contextUrl });
     return true;
+  };
+
+  window.photosByElieSourceEditApps = async (photo) => {
+    if (!isLocalhostMediaPage || !photo?.id) return [];
+    const mediaType = window.photosByElieIsVideo?.(photo) ? "video" : "photo";
+    const response = await fetch(`/__photosbyelie/source-edit-apps?media_id=${encodeURIComponent(photo.id)}&media_type=${encodeURIComponent(mediaType)}`, {
+      cache: "no-store",
+      credentials: "same-origin",
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok || !payload?.ok) {
+      throw new Error(payload?.error || `Could not load editor apps (${response.status}).`);
+    }
+    return Array.isArray(payload.apps) ? payload.apps : [];
   };
 
   window.photosByElieEditSourceWith = async (photo, app = "") => {
     if (!isLocalhostMediaPage || !photo?.id) {
       throw new Error("Source editing is only available from localhost.");
     }
+    const appPayload = app && typeof app === "object"
+      ? { app: String(app.name || ""), bundle_id: String(app.bundleId || "") }
+      : { app: String(app || "") };
     const response = await fetch("/__photosbyelie/source-edit", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "same-origin",
-      body: JSON.stringify({ media_id: photo.id, app }),
+      body: JSON.stringify({ media_id: photo.id, ...appPayload }),
     });
     const payload = await response.json().catch(() => null);
     if (!response.ok || !payload?.ok) {
@@ -2060,38 +2219,86 @@ window.photosByElieVideoDurationLabel = (photo) => (
     const menu = document.createElement("div");
     menu.className = "media-context-menu";
     menu.setAttribute("role", "menu");
-    const makeButton = (label, action) => {
+    let closed = false;
+    const close = () => {
+      if (closed) return;
+      closed = true;
+      document.removeEventListener("pointerdown", closeOnPointerDown, true);
+      document.removeEventListener("contextmenu", closeOnPointerDown, true);
+      document.removeEventListener("keydown", closeOnKey, true);
+      menu.remove();
+    };
+    const runAndClose = async (action) => {
+      close();
+      await action();
+    };
+    const makeButton = (label, action, { closeOnClick = true } = {}) => {
       const button = document.createElement("button");
       button.type = "button";
       button.textContent = label;
       button.setAttribute("role", "menuitem");
       button.addEventListener("click", async () => {
-        menu.remove();
-        await action();
+        if (closeOnClick) await runAndClose(action);
+        else await action(button);
       });
       menu.append(button);
+      return button;
     };
-    makeButton("Preview", () => window.photosByElieOpenFinderPreview?.(photo, { owner }));
+    makeButton("Preview", () => window.photosByElieOpenFinderPreview?.(photo, {
+      owner,
+      items: options.previewItems,
+      index: options.previewIndex,
+    }));
     if (owner) {
-      makeButton("Edit with...", async () => {
-        const storageKey = "photosbyelie-edit-source-app";
-        let previous = "";
+      const editPanel = document.createElement("div");
+      editPanel.className = "media-context-submenu";
+      editPanel.hidden = true;
+      menu.append(editPanel);
+      const openEditor = async (app) => {
         try {
-          previous = localStorage.getItem(storageKey) || "";
-        } catch {}
-        const app = window.prompt?.("Edit source with which app? Leave blank for the default app.", previous) ?? null;
-        if (app === null) return;
-        try {
-          const cleanApp = String(app || "").trim();
-          if (cleanApp) {
-            try { localStorage.setItem(storageKey, cleanApp); } catch {}
-          }
-          const result = await window.photosByElieEditSourceWith(photo, cleanApp);
+          const result = await window.photosByElieEditSourceWith(photo, app);
           window.dispatchEvent(new CustomEvent("photosbyelie:sourceedit", { detail: result }));
+          close();
         } catch (error) {
-          window.alert?.(error?.message || "Could not open source media.");
+          editPanel.innerHTML = `<p>${String(error?.message || "Could not open source media.")}</p>`;
         }
-      });
+      };
+      makeButton("Edit with...", async (button) => {
+        const expanded = button.getAttribute("aria-expanded") === "true";
+        button.setAttribute("aria-expanded", String(!expanded));
+        editPanel.hidden = expanded;
+        if (expanded || editPanel.dataset.loaded === "true") return;
+        editPanel.dataset.loaded = "true";
+        editPanel.innerHTML = "<p>Loading apps...</p>";
+        try {
+          const apps = await window.photosByElieSourceEditApps?.(photo);
+          editPanel.replaceChildren();
+          const defaultButton = document.createElement("button");
+          defaultButton.type = "button";
+          defaultButton.textContent = "Default app";
+          defaultButton.addEventListener("click", () => openEditor(""));
+          editPanel.append(defaultButton);
+          (apps || []).forEach((app) => {
+            const appButton = document.createElement("button");
+            appButton.type = "button";
+            appButton.textContent = app.name || app.bundleId || "Application";
+            appButton.title = app.path || app.bundleId || "";
+            appButton.addEventListener("click", () => openEditor(app));
+            editPanel.append(appButton);
+          });
+          const otherButton = document.createElement("button");
+          otherButton.type = "button";
+          otherButton.textContent = "Other...";
+          otherButton.addEventListener("click", () => {
+            const app = window.prompt?.("Application name or bundle id");
+            if (app === null) return;
+            openEditor(String(app || "").trim());
+          });
+          editPanel.append(otherButton);
+        } catch (error) {
+          editPanel.innerHTML = `<p>${String(error?.message || "Could not load editor apps.")}</p>`;
+        }
+      }, { closeOnClick: false });
     }
     if (typeof options.onOpenDetail === "function") {
       makeButton("Open detail", options.onOpenDetail);
@@ -2102,20 +2309,17 @@ window.photosByElieVideoDurationLabel = (photo) => (
     const top = Math.min(event.clientY, window.innerHeight - rect.height - 8);
     menu.style.left = `${Math.max(8, left)}px`;
     menu.style.top = `${Math.max(8, top)}px`;
-    let closed = false;
-    const close = () => {
-      if (closed) return;
-      closed = true;
-      document.removeEventListener("keydown", closeOnKey, true);
-      menu.remove();
-    };
+    function closeOnPointerDown(pointerEvent) {
+      if (pointerEvent.target instanceof Node && menu.contains(pointerEvent.target)) return;
+      close();
+    }
     const closeOnKey = (keyEvent) => {
       if (keyEvent.key !== "Escape") return;
       close();
     };
     window.setTimeout(() => {
-      document.addEventListener("click", close, { once: true, capture: true });
-      document.addEventListener("contextmenu", close, { once: true, capture: true });
+      document.addEventListener("pointerdown", closeOnPointerDown, true);
+      document.addEventListener("contextmenu", closeOnPointerDown, true);
       document.addEventListener("keydown", closeOnKey, true);
     }, 0);
     return true;

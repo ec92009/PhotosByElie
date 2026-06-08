@@ -212,8 +212,9 @@ Clock state: running
 | 2026-06-08 | 21:26 CEST | 21:28 CEST | 0:02 | Doubled selected-media outlines and halos across galleries, cull review rows, and related Owner selection cards. |
 | 2026-06-08 | 21:42 CEST | 21:43 CEST | 0:01 | Chose the local S3 batch-delete path for faster Waste Basket R2 purges while keeping Wrangler fallback. |
 | 2026-06-08 | 21:50 CEST | 21:51 CEST | 0:01 | Requested warmer brown selected-media frames and verified single gallery plus title-review multi-selection styling. |
+| 2026-06-08 | 21:57 CEST | 21:58 CEST | 0:01 | Moved Waste Basket purge local prep and coverage refreshes out of the blocking browser action. |
 
 ## Totals
 
-Active collaboration time used: 14:43
+Active collaboration time used: 14:44
 Remaining budget: not set

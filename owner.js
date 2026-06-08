@@ -3939,12 +3939,16 @@
     try {
       const result = await hiddenActions.wipeHiddenR2?.();
       renderCounts();
-      await refreshDiscardedCount();
-      await loadR2Coverage();
-      await refreshBlockedSyncPanel();
       if (result?.r2_delete_task) renderR2Progress([result.r2_delete_task]);
       loadR2Progress();
       setStatus(`R2 purge queued: ${formatCount(result?.moved_to_tombstones_count || 0)} live bans moved to permanent tombstones, ${formatCount(result?.discarded_count || 0)} total tombstones.`);
+      Promise.all([
+        refreshDiscardedCount(),
+        loadR2Coverage(),
+        refreshBlockedSyncPanel(),
+      ]).catch((error) => {
+        console.warn("Waste Basket refresh after purge queue failed", error);
+      });
     } catch (error) {
       setStatus(error?.message || "Could not queue banned-photo R2 purge.");
     } finally {

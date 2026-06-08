@@ -23,6 +23,7 @@ import uuid
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from typing import Callable
 from urllib.parse import parse_qs, quote, unquote, urlparse
 from urllib.request import Request, urlopen
 
@@ -959,18 +960,28 @@ def _photo_asset_paths(photo: dict) -> dict[str, str]:
 
 
 def _source_paths_from_manifest_rows(repo_root: Path, photo_id: str) -> list[str]:
-    paths: list[str] = []
-    seen: set[str] = set()
+    return _source_paths_from_manifest_rows_for_ids(repo_root, {photo_id}).get(photo_id, [])
+
+
+def _source_paths_from_manifest_rows_for_ids(repo_root: Path, photo_ids: set[str]) -> dict[str, list[str]]:
+    wanted_ids = {str(photo_id or "").strip() for photo_id in photo_ids if str(photo_id or "").strip()}
+    if not wanted_ids:
+        return {}
+    paths_by_id: dict[str, list[str]] = {photo_id: [] for photo_id in wanted_ids}
+    seen_by_id: dict[str, set[str]] = {photo_id: set() for photo_id in wanted_ids}
     tmp_root = repo_root / "tmp"
     if not tmp_root.exists():
-        return paths
+        return paths_by_id
     for manifest_path in tmp_root.glob("**/manifest.json"):
         payload = _read_json_file(manifest_path, {})
         rows = payload.get("photos") if isinstance(payload, dict) else None
         if not isinstance(rows, list):
             continue
         for row in rows:
-            if not isinstance(row, dict) or str(row.get("id") or "") != photo_id:
+            if not isinstance(row, dict):
+                continue
+            photo_id = str(row.get("id") or "").strip()
+            if photo_id not in wanted_ids:
                 continue
             for key in (
                 "source_path_hint",
@@ -981,13 +992,13 @@ def _source_paths_from_manifest_rows(repo_root: Path, photo_id: str) -> list[str
                 "source_file",
             ):
                 value = str(row.get(key) or "").strip()
-                if value and value not in seen:
-                    seen.add(value)
-                    paths.append(value)
-    return paths
+                if value and value not in seen_by_id[photo_id]:
+                    seen_by_id[photo_id].add(value)
+                    paths_by_id[photo_id].append(value)
+    return paths_by_id
 
 
-def _photo_source_paths(repo_root: Path, photo: dict) -> list[str]:
+def _photo_source_paths(repo_root: Path, photo: dict, manifest_source_paths: list[str] | None = None) -> list[str]:
     paths: list[str] = []
     seen: set[str] = set()
 
@@ -1009,7 +1020,10 @@ def _photo_source_paths(repo_root: Path, photo: dict) -> list[str]:
                     break
             add(raw_path)
     photo_id = str(photo.get("id") or "").strip()
-    if photo_id:
+    if manifest_source_paths is not None:
+        for path in manifest_source_paths:
+            add(path)
+    elif photo_id:
         for path in _source_paths_from_manifest_rows(repo_root, photo_id):
             add(path)
     return paths
@@ -2578,6 +2592,13 @@ def _hidden_public_delete_items(repo_root: Path, hidden_groups: dict[str, list[d
 def _waste_basket_discard_entries(hidden_groups: dict[str, list[dict]]) -> list[dict]:
     repo_root = Path.cwd()
     entries: list[dict] = []
+    photo_ids = {
+        str(photo.get("id") or "").strip()
+        for photos in hidden_groups.values()
+        for photo in photos
+        if str(photo.get("id") or "").strip()
+    }
+    manifest_source_paths = _source_paths_from_manifest_rows_for_ids(repo_root, photo_ids)
     for slug, photos in hidden_groups.items():
         for photo in photos:
             photo_id = str(photo.get("id") or "")
@@ -2594,7 +2615,7 @@ def _waste_basket_discard_entries(hidden_groups: dict[str, list[dict]]) -> list[
                     "source_slug": original_slug,
                     "media_type": _photo_media_type(photo),
                     "asset_paths": _photo_asset_paths(photo),
-                    "source_paths": _photo_source_paths(repo_root, photo),
+                    "source_paths": _photo_source_paths(repo_root, photo, manifest_source_paths.get(photo_id, [])),
                     "public_preview_keys": _hidden_public_preview_keys(photo, original_slug),
                     "private_keys": _discarded_private_keys(photo),
                 }
@@ -3799,10 +3820,21 @@ def _run_r2_s3_delete_task(task_id: str, items: list[UploadItem], s3_config: dic
     _finish_r2_task(task_id)
 
 
-def _run_r2_task(task_id: str, items: list[UploadItem], operation: str) -> None:
+def _run_r2_prepare(task_id: str, prepare: Callable[[], None] | None) -> None:
+    if not prepare:
+        return
+    try:
+        prepare()
+        _update_r2_task(task_id, local_prepared=True)
+    except Exception as error:  # noqa: BLE001 - keep R2 deletion moving even if local artifact refresh needs attention.
+        _update_r2_task(task_id, local_prepared=False, local_prepare_error=str(error))
+
+
+def _run_r2_task(task_id: str, items: list[UploadItem], operation: str, prepare: Callable[[], None] | None = None) -> None:
     s3_config = s3_config_from_env() if operation == "delete" else {}
     if operation == "delete" and s3_config_complete(s3_config):
         _update_r2_task(task_id, state="running", started_at=datetime.now(timezone.utc).isoformat())
+        _run_r2_prepare(task_id, prepare)
         _run_r2_s3_delete_task(task_id, items, s3_config)
         return
     _update_r2_task(
@@ -3811,6 +3843,7 @@ def _run_r2_task(task_id: str, items: list[UploadItem], operation: str) -> None:
         started_at=datetime.now(timezone.utc).isoformat(),
         backend="wrangler",
     )
+    _run_r2_prepare(task_id, prepare)
     for item in items:
         if operation == "delete":
             _record_r2_item_lifecycle(item, "marked_for_delete", "owner-r2-delete")
@@ -3828,7 +3861,13 @@ def _run_r2_task(task_id: str, items: list[UploadItem], operation: str) -> None:
     _finish_r2_task(task_id)
 
 
-def _start_r2_task(photo_id: str, items: list[UploadItem], kind: str, operation: str = "upload") -> dict | None:
+def _start_r2_task(
+    photo_id: str,
+    items: list[UploadItem],
+    kind: str,
+    operation: str = "upload",
+    prepare: Callable[[], None] | None = None,
+) -> dict | None:
     if not items:
         return None
     task_id = uuid.uuid4().hex
@@ -3853,10 +3892,12 @@ def _start_r2_task(photo_id: str, items: list[UploadItem], kind: str, operation:
             for item in items[:10]
         ],
         "errors": [],
+        "local_prepared": None,
+        "local_prepare_error": "",
     }
     with R2_BACKGROUND_LOCK:
         R2_BACKGROUND_TASKS[task_id] = task
-    worker = threading.Thread(target=_run_r2_task, args=(task_id, items, operation), daemon=True)
+    worker = threading.Thread(target=_run_r2_task, args=(task_id, items, operation, prepare), daemon=True)
     worker.start()
     return dict(task)
 
@@ -3865,8 +3906,13 @@ def _start_r2_upload_task(photo_id: str, items: list[UploadItem], kind: str = "m
     return _start_r2_task(photo_id, items, kind, "upload")
 
 
-def _start_r2_delete_task(photo_id: str, items: list[UploadItem], kind: str = "hidden-public-wipe") -> dict | None:
-    return _start_r2_task(photo_id, items, kind, "delete")
+def _start_r2_delete_task(
+    photo_id: str,
+    items: list[UploadItem],
+    kind: str = "hidden-public-wipe",
+    prepare: Callable[[], None] | None = None,
+) -> dict | None:
+    return _start_r2_task(photo_id, items, kind, "delete", prepare)
 
 
 def _active_r2_work_task() -> dict | None:
@@ -6440,13 +6486,20 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         discard_entries = _waste_basket_discard_entries(hidden_groups)
         hidden_count_before = sum(len(photos) for photos in hidden_groups.values())
         tombstone = _write_discarded_tombstones(repo_root, discard_entries)
+        delete_items = _waste_basket_delete_items(repo_root, hidden_groups)
+        cleared_hidden_groups = {slug: [] for slug in ORDER}
+
+        def prepare_waste_basket_media_wipe() -> None:
+            _write_state(repo_root, expo_groups, reserve_groups, cleared_hidden_groups)
+
         r2_task = _start_r2_delete_task(
             "waste-basket-cloud-media",
-            _waste_basket_delete_items(repo_root, hidden_groups),
+            delete_items,
             "waste-basket-media-wipe",
+            prepare=prepare_waste_basket_media_wipe,
         )
-        hidden_groups = {slug: [] for slug in ORDER}
-        site_state = _write_state(repo_root, expo_groups, reserve_groups, hidden_groups)
+        if r2_task is None:
+            threading.Thread(target=prepare_waste_basket_media_wipe, daemon=True).start()
         return {
             "ok": True,
             "action": action,
@@ -6456,7 +6509,6 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             "discarded_count": len(tombstone.get("photo_ids") or []),
             "hidden_ids": [],
             "r2_delete_task": r2_task,
-            "site": site_state,
         }
 
     if action == "hide-many":

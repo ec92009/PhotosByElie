@@ -161,6 +161,11 @@
   };
 
   const applyServerState = (result) => {
+    if (result?.action === "wipe-hidden-r2" && Array.isArray(result.hidden_ids)) {
+      window.photosByElieHiddenData = {};
+      const items = write(result.hidden_ids);
+      window.dispatchEvent(new CustomEvent("photosbyelie:hiddenchange", { detail: { items, result } }));
+    }
     if (!result?.site) return result;
     applyMetadataEditToSite(result.site, result.metadata);
     window.photosByElieData = result.site.data || {};

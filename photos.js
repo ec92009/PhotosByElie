@@ -1881,14 +1881,249 @@ window.photosByElieFormatVideoDuration = (seconds) => {
 window.photosByElieVideoDurationLabel = (photo) => (
   window.photosByElieFormatVideoDuration(window.photosByElieVideoDurationSeconds(photo))
 );
-window.photosByElieVideoPosterUrl = (photo) => (
-  photo?.media?.publicPreview?.posterUrl
-  || window.photosByElieMediaUrl(photo, "gallery")
-);
+  window.photosByElieVideoPosterUrl = (photo) => (
+    photo?.media?.publicPreview?.posterUrl
+    || window.photosByElieMediaUrl(photo, "gallery")
+  );
 
-window.photosByElieMetadataValue = (photo, label) => (
-  (photo?.metadata || []).find((item) => item.label === label)?.value || ''
-);
+  window.photosByElieSourcePreviewUrl = (photo, mode = "media") => {
+    if (!isLocalhostMediaPage || !photo?.id) return "";
+    const path = encodeURIComponent(String(photo.id));
+    return `/__photosbyelie/source-preview/${path}${mode === "info" ? "?info=1" : ""}`;
+  };
+
+  window.photosByElieOpenFinderPreview = async (photo, options = {}) => {
+    const targetPhoto = photo || null;
+    if (!targetPhoto?.id) return false;
+    const owner = Boolean(options.owner);
+    const isVideo = window.photosByElieIsVideo?.(targetPhoto) === true;
+    const title = String(targetPhoto.title || targetPhoto.id || "Preview");
+    const sourceLabel = String(targetPhoto?.sourceFiles?.[0]?.path || targetPhoto?.sourceFiles?.[0]?.label || targetPhoto.id || "unknown source");
+    const escapePreviewHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      "\"": "&quot;",
+      "'": "&#39;",
+    }[char] || char));
+    const existing = document.querySelector(".detail-fullscreen-preview");
+    existing?.remove();
+
+    const modal = document.createElement("div");
+    modal.className = "detail-fullscreen-preview finder-media-preview";
+    modal.tabIndex = -1;
+    modal.setAttribute("role", "dialog");
+    modal.setAttribute("aria-modal", "true");
+    modal.setAttribute("aria-label", `${isVideo ? "Video" : "Photo"} preview: ${title}`);
+    modal.dataset.mediaType = isVideo ? "video" : "photo";
+    document.body.classList.add("detail-fullscreen-active");
+    document.body.append(modal);
+
+    const close = () => {
+      document.body.classList.remove("detail-fullscreen-active");
+      modal.remove();
+      window.removeEventListener("keydown", onKeydown, true);
+    };
+    const showError = ({ reason, attemptedSourceType = "", attemptedSourceLabel = sourceLabel } = {}) => {
+      modal.classList.add("has-preview-error");
+      modal.innerHTML = "";
+      const panel = document.createElement("section");
+      panel.className = "finder-preview-error-panel";
+      panel.innerHTML = `
+        <p class="eyebrow">${owner ? "Owner source preview failed" : "Preview failed"}</p>
+        <h2>${escapePreviewHtml(title)}</h2>
+        <dl>
+          <div><dt>Media id</dt><dd>${escapePreviewHtml(targetPhoto.id)}</dd></div>
+          <div><dt>Attempted source</dt><dd>${escapePreviewHtml(attemptedSourceType || (owner ? "source/full" : "public detail"))}</dd></div>
+          <div><dt>Path label</dt><dd>${escapePreviewHtml(attemptedSourceLabel || "unknown")}</dd></div>
+          <div><dt>Reason</dt><dd>${escapePreviewHtml(reason || "The browser could not load this preview.")}</dd></div>
+        </dl>
+      `;
+      modal.append(panel);
+    };
+    function onKeydown(event) {
+      if (event.key !== "Escape" && event.key !== " ") return;
+      if (event.key === " " && event.target instanceof HTMLElement && event.target.closest("video")) return;
+      event.preventDefault();
+      close();
+    }
+    const appendPhoto = (src, sourceType = "", attemptedSourceLabel = sourceLabel) => {
+      const image = new Image();
+      image.alt = title;
+      image.decoding = "async";
+      image.addEventListener("click", close);
+      image.addEventListener("touchend", (event) => {
+        event.preventDefault();
+        close();
+      }, { passive: false });
+      image.addEventListener("error", () => {
+        showError({
+          attemptedSourceType: sourceType,
+          attemptedSourceLabel,
+          reason: "The browser could not load or decode the image.",
+        });
+      }, { once: true });
+      modal.replaceChildren(image);
+      image.src = src;
+    };
+    const appendVideo = (src, poster = "", sourceType = "", attemptedSourceLabel = sourceLabel) => {
+      const video = document.createElement("video");
+      video.controls = true;
+      video.autoplay = true;
+      video.playsInline = true;
+      video.preload = "metadata";
+      if (poster) video.poster = poster;
+      video.addEventListener("error", () => {
+        const error = video.error;
+        showError({
+          attemptedSourceType: sourceType,
+          attemptedSourceLabel,
+          reason: error?.message || "The browser could not load, decode, or play the video.",
+        });
+      }, { once: true });
+      modal.replaceChildren(video);
+      video.src = src;
+    };
+
+    modal.addEventListener("click", (event) => {
+      if (event.target === modal) close();
+    });
+    modal.addEventListener("touchend", (event) => {
+      if (event.target !== modal) return;
+      event.preventDefault();
+      close();
+    }, { passive: false });
+    window.addEventListener("keydown", onKeydown, true);
+    modal.focus({ preventScroll: true });
+
+    if (owner) {
+      const infoUrl = window.photosByElieSourcePreviewUrl(targetPhoto, "info");
+      if (!infoUrl) {
+        showError({ reason: "Owner source previews are only available from localhost." });
+        return true;
+      }
+      try {
+        const response = await fetch(infoUrl, { cache: "no-store", credentials: "same-origin" });
+        const payload = await response.json().catch(() => null);
+        if (!response.ok || !payload?.ok) {
+          showError({
+            attemptedSourceType: payload?.sourceType || "source/full",
+            attemptedSourceLabel: payload?.sourceLabel || sourceLabel,
+            reason: payload?.error || `Source preview endpoint returned ${response.status}.`,
+          });
+          return true;
+        }
+        const previewUrl = payload.previewUrl || window.photosByElieSourcePreviewUrl(targetPhoto);
+        if (payload.mediaType === "video") {
+          appendVideo(previewUrl, "", payload.sourceType, payload.sourceLabel);
+        } else {
+          appendPhoto(previewUrl, payload.sourceType, payload.sourceLabel);
+        }
+      } catch (error) {
+        showError({ reason: error?.message || "Could not contact the owner source preview endpoint." });
+      }
+      return true;
+    }
+
+    const publicUrl = window.photosByElieMediaUrl(targetPhoto, "detail");
+    if (!publicUrl) {
+      showError({ attemptedSourceType: "public detail", reason: "No public detail preview URL is available." });
+      return true;
+    }
+    if (isVideo) appendVideo(publicUrl, window.photosByElieVideoPosterUrl?.(targetPhoto) || "", "public short MP4", publicUrl);
+    else appendPhoto(publicUrl, "public _1800", publicUrl);
+    return true;
+  };
+
+  window.photosByElieEditSourceWith = async (photo, app = "") => {
+    if (!isLocalhostMediaPage || !photo?.id) {
+      throw new Error("Source editing is only available from localhost.");
+    }
+    const response = await fetch("/__photosbyelie/source-edit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({ media_id: photo.id, app }),
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok || !payload?.ok) {
+      throw new Error(payload?.error || `Could not open source media (${response.status}).`);
+    }
+    return payload;
+  };
+
+  window.photosByElieShowMediaContextMenu = (photo, event, options = {}) => {
+    if (!photo?.id || !(event instanceof MouseEvent)) return false;
+    const owner = Boolean(options.owner);
+    event.preventDefault();
+    document.querySelector(".media-context-menu")?.remove();
+    const menu = document.createElement("div");
+    menu.className = "media-context-menu";
+    menu.setAttribute("role", "menu");
+    const makeButton = (label, action) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = label;
+      button.setAttribute("role", "menuitem");
+      button.addEventListener("click", async () => {
+        menu.remove();
+        await action();
+      });
+      menu.append(button);
+    };
+    makeButton("Preview", () => window.photosByElieOpenFinderPreview?.(photo, { owner }));
+    if (owner) {
+      makeButton("Edit with...", async () => {
+        const storageKey = "photosbyelie-edit-source-app";
+        let previous = "";
+        try {
+          previous = localStorage.getItem(storageKey) || "";
+        } catch {}
+        const app = window.prompt?.("Edit source with which app? Leave blank for the default app.", previous) ?? null;
+        if (app === null) return;
+        try {
+          const cleanApp = String(app || "").trim();
+          if (cleanApp) {
+            try { localStorage.setItem(storageKey, cleanApp); } catch {}
+          }
+          const result = await window.photosByElieEditSourceWith(photo, cleanApp);
+          window.dispatchEvent(new CustomEvent("photosbyelie:sourceedit", { detail: result }));
+        } catch (error) {
+          window.alert?.(error?.message || "Could not open source media.");
+        }
+      });
+    }
+    if (typeof options.onOpenDetail === "function") {
+      makeButton("Open detail", options.onOpenDetail);
+    }
+    document.body.append(menu);
+    const rect = menu.getBoundingClientRect();
+    const left = Math.min(event.clientX, window.innerWidth - rect.width - 8);
+    const top = Math.min(event.clientY, window.innerHeight - rect.height - 8);
+    menu.style.left = `${Math.max(8, left)}px`;
+    menu.style.top = `${Math.max(8, top)}px`;
+    let closed = false;
+    const close = () => {
+      if (closed) return;
+      closed = true;
+      document.removeEventListener("keydown", closeOnKey, true);
+      menu.remove();
+    };
+    const closeOnKey = (keyEvent) => {
+      if (keyEvent.key !== "Escape") return;
+      close();
+    };
+    window.setTimeout(() => {
+      document.addEventListener("click", close, { once: true, capture: true });
+      document.addEventListener("contextmenu", close, { once: true, capture: true });
+      document.addEventListener("keydown", closeOnKey, true);
+    }, 0);
+    return true;
+  };
+
+  window.photosByElieMetadataValue = (photo, label) => (
+    (photo?.metadata || []).find((item) => item.label === label)?.value || ''
+  );
 
 window.photosByEliePreviewDimensions = (photo) => {
   const actual = photo?.previewDimensions || photo?.media?.publicPreview?.dimensions;

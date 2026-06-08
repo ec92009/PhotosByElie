@@ -409,9 +409,10 @@ const isHomeDetailSequence = () => {
   const payload = readGallerySequencePayload();
   return Boolean(payload?.source === "home" && payload.photoIds.includes(photo?.id));
 };
-const ownerReviewReturnHrefFor = (view = "title-keywords", returnPhotoId = photo.id) => {
+const ownerReviewReturnHrefFor = (view = "title-keywords", returnPhotoId = photo.id, mode = "") => {
   const returnParams = new URLSearchParams({ view: String(view || "title-keywords") });
   if (returnPhotoId) returnParams.set("returnPhoto", returnPhotoId);
+  if (mode) returnParams.set("mode", mode);
   const stored = readOwnerReviewReturnPayload();
   const scrollY = Number(stored?.scrollY);
   if (Number.isFinite(scrollY) && scrollY >= 0) returnParams.set("returnScroll", String(Math.round(scrollY)));
@@ -436,13 +437,15 @@ const ownerReviewReturnContext = (() => {
   if (!fromOwnerReview && !stored) return null;
   const view = params.get("returnView") || stored?.view || "title-keywords";
   const returnPhotoId = params.get("returnPhoto") || stored?.photoId || photo.id;
+  const mode = params.get("returnMode") || stored?.mode || stored?.returnMode || "";
   const scrollY = Number(params.get("returnScroll") || stored?.scrollY);
   return {
-    href: ownerReviewReturnHrefFor(view, returnPhotoId),
+    href: ownerReviewReturnHrefFor(view, returnPhotoId, mode),
     label: "Back to review",
     photoId: returnPhotoId,
     scrollY: Number.isFinite(scrollY) ? scrollY : null,
     view,
+    mode,
   };
 })();
 const detailBackContext = () => {
@@ -500,6 +503,7 @@ const detailPhotoHref = (targetPhotoId) => {
     detailParams.set("from", "owner-review");
     detailParams.set("returnView", ownerReviewReturnContext.view);
     detailParams.set("returnPhoto", ownerReviewReturnContext.photoId);
+    if (ownerReviewReturnContext.mode) detailParams.set("returnMode", ownerReviewReturnContext.mode);
   }
   return `./photo.html?${detailParams.toString()}`;
 };
@@ -693,7 +697,6 @@ renderMetadataRows();
 const preview = document.querySelector("[data-photo-preview]");
 const detailLayout = document.querySelector(".detail-layout");
 const isVideo = window.photosByElieIsVideo?.(photo) === true;
-let fullscreenPreview = null;
 const syncDetailPreviewSize = () => {
   if (!detailLayout || !preview) return;
   const ratio = Number(preview.style.getPropertyValue("--detail-ratio")) || 1.5;
@@ -756,49 +759,26 @@ const previewTitleTarget = preview.querySelector("[data-photo-preview-title]");
 previewTitleTarget?.removeAttribute("data-i18n");
 if (previewTitleTarget) previewTitleTarget.textContent = photo.title;
 
-const closeFullscreenPreview = () => {
-  fullscreenPreview?.remove();
-  fullscreenPreview = null;
-  document.body.classList.remove("detail-fullscreen-active");
-};
-
+const detailPreviewUsesOwnerSource = Boolean(localModerationEnabled || ownerReviewReturnContext || isOwnerReviewSyntheticCollection);
 const openFullscreenPreview = () => {
-  if (isVideo) return;
-  const fallbackImage = window.photosByElieMediaUrl?.(photo, "detail") || "";
-  const reviewImage = ownerReviewReturnContext ? (window.photosByEliePrivateMediaUrl?.(photo, "jpg-6mp") || "") : "";
-  const image = reviewImage || fallbackImage;
-  if (!image || fullscreenPreview) return;
-  fullscreenPreview = document.createElement("div");
-  fullscreenPreview.className = "detail-fullscreen-preview";
-  fullscreenPreview.setAttribute("role", "button");
-  fullscreenPreview.setAttribute("aria-label", t("detail.open_full_screen", { title: photo.title }));
-  fullscreenPreview.tabIndex = 0;
-  const fullscreenImage = document.createElement("img");
-  fullscreenImage.src = image;
-  fullscreenImage.alt = photo.title;
-  if (reviewImage && fallbackImage && fallbackImage !== reviewImage) {
-    fullscreenImage.dataset.reviewFullscreenSource = "jpg-6mp";
-    fullscreenImage.addEventListener("error", () => {
-      if (fullscreenImage.src === fallbackImage) return;
-      fullscreenImage.dataset.reviewFullscreenSource = "detail";
-      fullscreenImage.src = fallbackImage;
-    }, { once: true });
-  }
-  fullscreenPreview.append(fullscreenImage);
-  fullscreenPreview.addEventListener("click", closeFullscreenPreview);
-  fullscreenPreview.addEventListener("dblclick", closeFullscreenPreview);
-  fullscreenPreview.addEventListener("keydown", (event) => {
-    if (!["Escape", "Enter", " "].includes(event.key)) return;
-    closeFullscreenPreview();
-    event.preventDefault();
-  });
-  document.body.append(fullscreenPreview);
-  document.body.classList.add("detail-fullscreen-active");
-  fullscreenPreview.focus({ preventScroll: true });
+  window.photosByElieOpenFinderPreview?.(photo, { owner: detailPreviewUsesOwnerSource });
 };
 
 preview.addEventListener("dblclick", (event) => {
   if (event.target instanceof Element && event.target.closest(".like-toggle")) return;
+  openFullscreenPreview();
+  event.preventDefault();
+});
+preview.addEventListener("contextmenu", (event) => {
+  if (event.target instanceof Element && event.target.closest(".like-toggle")) return;
+  window.photosByElieShowMediaContextMenu?.(photo, event, {
+    owner: detailPreviewUsesOwnerSource,
+  });
+});
+window.addEventListener("keydown", (event) => {
+  if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
+  if (event.key !== " ") return;
+  if (event.target instanceof HTMLElement && event.target.closest("input, textarea, select, button, [contenteditable='true']")) return;
   openFullscreenPreview();
   event.preventDefault();
 });

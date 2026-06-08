@@ -14,6 +14,9 @@
   const ownerReviewReturnStateKey = "photosbyelie-owner-review-return-state";
   const ownerReviewDetailPhotoStateKey = "photosbyelie-owner-review-detail-photo";
   const ownerReviewReturnMaxAgeMs = 1000 * 60 * 60 * 2;
+  const titleReviewDensityKey = "photosbyelie-title-review-cull-density";
+  const titleReviewFitModeKey = "photosbyelie-title-review-cull-fit-mode";
+  const titleReviewModes = new Set(["cull", "edit"]);
   const stateKeywordFlags = new Set([
     "title_keywords_reviewed",
     "title_keywords_proposed",
@@ -95,20 +98,31 @@
   };
 
   const versionedHref = (href) => window.photosByElieVersionedHref?.(href) || href;
-  const ownerReviewReturnHrefFor = (photoId, scrollY = null) => {
+  const normalizedReviewMode = (value) => titleReviewModes.has(String(value || "").toLowerCase())
+    ? String(value || "").toLowerCase()
+    : "";
+  const initialReviewMode = () => normalizedReviewMode(new URLSearchParams(window.location.search).get("mode"))
+    || normalizedReviewMode(new URLSearchParams(window.location.search).get("returnMode"))
+    || "cull";
+  let reviewMode = initialReviewMode();
+  const ownerReviewReturnHrefFor = (photoId, scrollY = null, mode = reviewMode) => {
     const params = new URLSearchParams({ view: "title-keywords" });
     if (photoId) params.set("returnPhoto", photoId);
+    const cleanMode = normalizedReviewMode(mode);
+    if (cleanMode) params.set("mode", cleanMode);
     const savedScrollY = Number(scrollY);
     if (Number.isFinite(savedScrollY) && savedScrollY >= 0) params.set("returnScroll", String(Math.round(savedScrollY)));
     return `./owner-review.html?${params.toString()}`;
   };
-  const detailHrefForReviewPhoto = (photoId) => {
+  const detailHrefForReviewPhoto = (photoId, mode = reviewMode) => {
     const params = new URLSearchParams({
       id: photoId,
       from: "owner-review",
       returnView: "title-keywords",
       returnPhoto: photoId,
     });
+    const cleanMode = normalizedReviewMode(mode);
+    if (cleanMode) params.set("returnMode", cleanMode);
     return versionedHref(`./photo.html?${params.toString()}`);
   };
   const clearOwnerReviewReturnUrl = () => {
@@ -116,6 +130,8 @@
     if (!current.searchParams.has("returnPhoto") && !current.searchParams.has("returnView")) return;
     current.searchParams.delete("returnPhoto");
     current.searchParams.delete("returnView");
+    current.searchParams.delete("returnScroll");
+    current.searchParams.delete("returnMode");
     window.history.replaceState(window.history.state, "", `${current.pathname}${current.search}${current.hash}`);
   };
   const readOwnerReviewReturnState = () => {
@@ -135,12 +151,14 @@
     const query = new URLSearchParams(window.location.search);
     const photoId = String(query.get("returnPhoto") || "").trim();
     const queryScrollY = Number(query.get("returnScroll"));
+    const queryMode = normalizedReviewMode(query.get("mode") || query.get("returnMode"));
     const payload = readOwnerReviewReturnState();
     if (payload || photoId) {
       return {
         ...payload,
         photoId: String(payload?.photoId || photoId || "").trim(),
         scrollY: Number.isFinite(Number(payload?.scrollY)) ? Number(payload?.scrollY) : queryScrollY,
+        mode: normalizedReviewMode(payload?.mode || payload?.returnMode || queryMode),
       };
     }
     return null;
@@ -393,6 +411,7 @@
     return {
       source: "owner-review",
       view: "title-keywords",
+      mode: reviewMode,
       photoId,
       batchId: String(card?.dataset?.reviewBatchId || batchId || "").trim(),
       collectionKey: galleryKey,
@@ -527,7 +546,7 @@
     const newest = queue?.range?.newest || "";
     const oldest = queue?.range?.oldest || "";
     status.textContent = visiblePhotos.length
-      ? `${visiblePhotos.length} photos ready for review.`
+      ? `${visiblePhotos.length} media items ready for review.`
       : "All rows in this batch are already saved.";
 
     summaryRoot.hidden = false;
@@ -548,6 +567,26 @@
     `;
 
     root.replaceChildren();
+    const modebar = document.createElement("div");
+    modebar.className = "title-review-cull-toolbar";
+    modebar.innerHTML = `
+      <div class="title-review-mode-toggle" role="group" aria-label="Review mode">
+        <button type="button" data-title-review-mode="cull">Cull</button>
+        <button type="button" data-title-review-mode="edit">Edit</button>
+      </div>
+      <label class="gallery-density-control title-review-density-control">
+        <span>Grid</span>
+        <input type="range" min="2" max="14" step="1" value="7" data-title-review-density/>
+        <b data-title-review-density-value>7</b>
+      </label>
+      <div class="gallery-fit-control title-review-fit-control" role="group" aria-label="Image layout">
+        <button type="button" data-gallery-fit-mode="fit">Fit</button>
+        <button type="button" data-gallery-fit-mode="fill">Fill</button>
+        <button type="button" data-gallery-fit-mode="cull">Cull</button>
+      </div>
+      <p class="title-review-selection-status" data-title-review-selection-count>0 selected</p>
+    `;
+    root.append(modebar);
     const list = document.createElement("div");
     list.className = "title-keyword-review-list";
     root.append(list);
@@ -601,7 +640,7 @@
         isVideo ? "is-video" : "",
       ].filter(Boolean).join(" ");
       return `
-        <article class="title-keyword-review-row" data-review-photo-id="${escapeHtml(photoId)}" data-review-batch-id="${escapeHtml(photoBatchId)}" data-review-gallery-key="${escapeHtml(galleryKey)}" data-review-capture-time="${Number.isFinite(captureTime) ? String(captureTime) : ""}" data-review-detail-href="${escapeHtml(href)}" data-review-previous-reject-reason="${escapeHtml(previousRejectReason)}" tabindex="0">
+        <article class="title-keyword-review-row${isVideo ? " is-video" : ""}" data-review-photo-id="${escapeHtml(photoId)}" data-photo-index="${index}" data-review-batch-id="${escapeHtml(photoBatchId)}" data-review-gallery-key="${escapeHtml(galleryKey)}" data-review-capture-time="${Number.isFinite(captureTime) ? String(captureTime) : ""}" data-review-detail-href="${escapeHtml(href)}" data-review-previous-reject-reason="${escapeHtml(previousRejectReason)}" tabindex="0">
           <a class="${previewClasses}" href="${escapeHtml(href)}" aria-label="Open ${isVideo ? "video" : "photo"} ${escapeHtml(photoId)}">
             ${thumb ? `<img src="${escapeHtml(thumb)}" alt="${escapeHtml(title || photoId)}" loading="eager" decoding="async" fetchpriority="${fetchPriority}"/>` : `<span class="unknown-missing-preview">No preview</span>`}
             ${isVideo ? `<span class="title-keyword-review-video-badge" aria-hidden="true">${window.photosByElieMdIcon?.("play") || "▶"}</span>` : ""}
@@ -610,6 +649,11 @@
             <p class="eyebrow">${escapeHtml(galleryLabel || "Photo")}${capture ? ` / ${escapeHtml(capture)}` : ""}</p>
             <h2>${escapeHtml(title || photoId)}</h2>
             <p>${currentKeywordsHtml}</p>
+          </div>
+          <div class="title-keyword-review-cull-meta">
+            <p class="eyebrow">${isVideo ? "Video" : "Photo"} / ${escapeHtml(galleryLabel || "Review")}</p>
+            <h3>${escapeHtml(proposedTitle || title || photoId)}</h3>
+            <p>${escapeHtml(proposedKeywords || currentKeywords || "No keywords")}</p>
           </div>
           <form class="title-keyword-review-proposed" data-review-editor autocomplete="off">
               <div class="title-keyword-review-field">
@@ -740,17 +784,182 @@
     };
 
     let activeCard = null;
+    let focusedPhotoId = "";
+    let selectionAnchorId = "";
+    let selectedPhotoIds = new Set();
+    let lastBlockBatchPhotoIds = [];
+    const modeButtons = [...modebar.querySelectorAll("[data-title-review-mode]")];
+    const densityInput = modebar.querySelector("[data-title-review-density]");
+    const densityValue = modebar.querySelector("[data-title-review-density-value]");
+    const fitModeButtons = [...modebar.querySelectorAll("[data-gallery-fit-mode]")];
+    const selectionStatus = modebar.querySelector("[data-title-review-selection-count]");
+    const titleReviewLayout = window.photosByElieGalleryLayout?.createMasonryController?.({
+      root: list,
+      getPhotos: () => visiblePhotos,
+      densityKey: titleReviewDensityKey,
+      fitModeKey: titleReviewFitModeKey,
+      defaultDensity: 7,
+      defaultFitMode: "cull",
+      allowCull: true,
+      dimensionsFor: (item) => {
+        const dimensions = item?.thumbs?.dimensions || item?.media?.publicPreview?.dimensions || item?.dimensions;
+        return dimensions?.width && dimensions?.height
+          ? { width: Number(dimensions.width), height: Number(dimensions.height) }
+          : null;
+      },
+      isPanorama: (item) => {
+        const dimensions = item?.thumbs?.dimensions || item?.media?.publicPreview?.dimensions || item?.dimensions;
+        return Boolean(dimensions?.width && dimensions?.height && Number(dimensions.width) / Number(dimensions.height) >= 2.1);
+      },
+    });
     const editableSelector = "input, textarea, select, button, [contenteditable='true']";
     const isEditableEventTarget = (event) => {
       const target = event?.target;
       return target instanceof HTMLElement && Boolean(target.closest(editableSelector));
     };
-    const setActiveCard = (card) => {
-      if (!card || activeCard === card) return;
-      activeCard?.classList.remove("is-selected");
-      activeCard = card;
-      activeCard.classList.add("is-selected");
+    const reviewCards = () => [...cardById.values()];
+    const reviewCardId = (card) => String(card?.dataset?.reviewPhotoId || "").trim();
+    const updateDetailHrefsForMode = () => {
+      cardById.forEach((card, photoId) => {
+        const href = detailHrefForReviewPhoto(photoId, reviewMode);
+        card.dataset.reviewDetailHref = href;
+        const link = card.querySelector(".title-keyword-review-preview");
+        link?.setAttribute("href", href);
+      });
     };
+    const applyReviewLayout = () => {
+      titleReviewLayout?.applyDensityControls?.({ input: densityInput, value: densityValue });
+      titleReviewLayout?.applyFitMode?.(fitModeButtons);
+      titleReviewLayout?.applyPreviewLayout?.(visiblePhotos);
+    };
+    const selectionLabel = () => {
+      const count = selectedPhotoIds.size;
+      if (!count && focusedPhotoId) return `Focused ${focusedPhotoId}`;
+      return `${count} selected`;
+    };
+    const syncSelectionClasses = () => {
+      cardById.forEach((card, photoId) => {
+        const focused = photoId === focusedPhotoId;
+        const selected = selectedPhotoIds.has(photoId);
+        card.classList.toggle("is-selected", focused);
+        card.classList.toggle("is-focused", focused);
+        card.classList.toggle("is-multi-selected", selected);
+        card.setAttribute("aria-selected", selected ? "true" : "false");
+      });
+      if (selectionStatus) selectionStatus.textContent = selectionLabel();
+    };
+    const setSelectedIds = (ids, anchorId = selectionAnchorId) => {
+      selectedPhotoIds = new Set([...ids].map((id) => String(id || "").trim()).filter((id) => id && cardById.has(id)));
+      selectionAnchorId = anchorId && cardById.has(anchorId) ? anchorId : (selectedPhotoIds.values().next().value || focusedPhotoId);
+      syncSelectionClasses();
+    };
+    const setActiveCard = (card, { select = false, anchor = false } = {}) => {
+      if (!card || activeCard === card) return;
+      activeCard = card;
+      focusedPhotoId = reviewCardId(card);
+      if (anchor || !selectionAnchorId) selectionAnchorId = focusedPhotoId;
+      if (select) setSelectedIds([focusedPhotoId], focusedPhotoId);
+      syncSelectionClasses();
+    };
+    const selectedCardsForAction = () => [...selectedPhotoIds]
+      .map((photoId) => cardById.get(photoId))
+      .filter(Boolean);
+    const targetCardsForAction = () => {
+      const selectedCards = selectedCardsForAction();
+      if (reviewMode === "cull" && selectedCards.length) return selectedCards;
+      return activeCard ? [activeCard] : [];
+    };
+    const cardRange = (anchorId, targetId) => {
+      const cards = reviewCards();
+      const start = cards.findIndex((card) => reviewCardId(card) === anchorId);
+      const end = cards.findIndex((card) => reviewCardId(card) === targetId);
+      if (start < 0 || end < 0) return targetId ? [targetId] : [];
+      const [from, to] = start <= end ? [start, end] : [end, start];
+      return cards.slice(from, to + 1).map(reviewCardId);
+    };
+    const setRangeSelectionTo = (card) => {
+      const targetId = reviewCardId(card);
+      const anchorId = selectionAnchorId || focusedPhotoId || targetId;
+      activeCard = card;
+      focusedPhotoId = targetId;
+      setSelectedIds(cardRange(anchorId, targetId), anchorId);
+    };
+    const toggleCardSelection = (card) => {
+      const photoId = reviewCardId(card);
+      if (!photoId) return;
+      const next = new Set(selectedPhotoIds);
+      if (next.has(photoId)) next.delete(photoId);
+      else next.add(photoId);
+      activeCard = card;
+      focusedPhotoId = photoId;
+      setSelectedIds(next, selectionAnchorId || photoId);
+    };
+    const selectOnlyCard = (card) => {
+      activeCard = card;
+      focusedPhotoId = reviewCardId(card);
+      setSelectedIds([focusedPhotoId], focusedPhotoId);
+    };
+    const updateReviewModeUrl = () => {
+      const current = new URL(window.location.href);
+      current.searchParams.set("view", "title-keywords");
+      current.searchParams.set("mode", reviewMode);
+      window.history.replaceState(window.history.state, "", `${current.pathname}${current.search}${current.hash}`);
+    };
+    const setReviewMode = (mode, { preserveScroll = true } = {}) => {
+      const nextMode = normalizedReviewMode(mode) || "cull";
+      const scrollY = window.scrollY;
+      reviewMode = nextMode;
+      root.dataset.titleReviewMode = reviewMode;
+      list.dataset.reviewMode = reviewMode;
+      modeButtons.forEach((button) => {
+        button.setAttribute("aria-pressed", button.dataset.titleReviewMode === reviewMode ? "true" : "false");
+      });
+      updateDetailHrefsForMode();
+      updateReviewModeUrl();
+      applyReviewLayout();
+      syncSelectionClasses();
+      if (preserveScroll) {
+        window.requestAnimationFrame(() => window.scrollTo({ top: scrollY, left: 0, behavior: "auto" }));
+      }
+    };
+    const toggleReviewMode = () => setReviewMode(reviewMode === "cull" ? "edit" : "cull");
+    const stepReviewDensity = (direction) => {
+      if (!titleReviewLayout) return null;
+      const next = titleReviewLayout.setDensityColumns(titleReviewLayout.preferredDensityColumns() + direction);
+      applyReviewLayout();
+      return next;
+    };
+    const setReviewFitMode = (mode) => {
+      if (!titleReviewLayout) return mode;
+      const next = titleReviewLayout.setFitMode(mode);
+      applyReviewLayout();
+      return next;
+    };
+    const cycleReviewFitMode = () => {
+      const modes = ["fit", "fill", "cull"];
+      const current = titleReviewLayout?.fitMode?.() || "cull";
+      return setReviewFitMode(modes[(Math.max(0, modes.indexOf(current)) + 1) % modes.length]);
+    };
+    const photoForPreviewCard = (card) => {
+      const photoId = reviewCardId(card);
+      return reviewDetailPhotoPayload(reviewItemById.get(photoId), card, blacklist, batchId)?.photo || null;
+    };
+    const openPreviewForCard = (card) => {
+      const previewPhoto = photoForPreviewCard(card);
+      if (!previewPhoto) return;
+      window.photosByElieOpenFinderPreview?.(previewPhoto, { owner: true });
+    };
+    modeButtons.forEach((button) => {
+      button.addEventListener("click", () => setReviewMode(button.dataset.titleReviewMode || "cull"));
+    });
+    densityInput?.addEventListener("input", () => {
+      if (!titleReviewLayout) return;
+      titleReviewLayout.setDensityColumns(Number(densityInput.value));
+      applyReviewLayout();
+    });
+    fitModeButtons.forEach((button) => {
+      button.addEventListener("click", () => setReviewFitMode(button.dataset.galleryFitMode || "cull"));
+    });
     const scrollCardIntoReview = (card, block = "nearest") => {
       if (!card) return;
       const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches === true;
@@ -772,6 +981,7 @@
         sessionStorage.setItem(ownerReviewReturnStateKey, JSON.stringify({
           source: "owner-review",
           view: "title-keywords",
+          mode: reviewMode,
           photoId,
           batchId: String(card?.dataset?.reviewBatchId || batchId || "").trim(),
           href: ownerReviewReturnHrefFor(photoId, window.scrollY),
@@ -795,10 +1005,12 @@
         sessionStorage.removeItem(ownerReviewReturnStateKey);
       } catch {}
       clearOwnerReviewReturnUrl();
+      if (pendingReturn.mode) setReviewMode(pendingReturn.mode, { preserveScroll: false });
       const targetCard = pendingReturn.photoId ? cardById.get(pendingReturn.photoId) : null;
       const scrollY = Number(pendingReturn.scrollY);
       if (targetCard) {
-        setActiveCard(targetCard);
+        if (reviewMode === "cull") selectOnlyCard(targetCard);
+        else setActiveCard(targetCard);
         targetCard.focus?.({ preventScroll: true });
         window.requestAnimationFrame(() => {
           if (Number.isFinite(scrollY) && scrollY >= 0) {
@@ -1229,6 +1441,112 @@
       block.dispatchEvent(new Event("change", { bubbles: true }));
     };
 
+    const markCardsApproved = (cards, { advance = false } = {}) => {
+      cards.forEach((card) => {
+        card.dataset.reviewDecisionTouched = "1";
+        const approve = card.querySelector("[data-review-approve]");
+        const reject = card.querySelector("[data-review-reject]");
+        const block = card.querySelector("[data-review-block]");
+        const comment = card.querySelector("[data-review-reject-comment]");
+        if (approve) approve.checked = true;
+        if (reject) reject.checked = false;
+        if (block) block.checked = false;
+        if (comment) {
+          comment.readOnly = true;
+          comment.closest("label")?.classList.add("is-disabled");
+        }
+        setRejectReasonValue(card, "");
+        setRejectReasonsDisabled(card, true);
+        setRowStatus(card, "Saving...", "saving");
+      });
+      saveCardsDecisions(cards).then((result) => {
+        if (result && status) status.textContent = `${result.approvals || result.count || cards.length} approval${cards.length === 1 ? "" : "s"} applied.`;
+      }).catch((error) => {
+        const message = error?.message || "Could not save approval.";
+        cards.forEach((card) => setRowStatus(card, "Save failed", "error", message));
+        if (status) status.textContent = message;
+      });
+      if (advance && cards.length === 1) advanceAfterApprove(cards[0]);
+    };
+
+    const markCardsRejected = (cards) => {
+      const defaultReason = "incorrect";
+      const defaultNote = rejectReasonByValue.get(defaultReason)?.note || "this title is incorrect";
+      const note = window.prompt?.(`Reject ${cards.length} selected media item${cards.length === 1 ? "" : "s"} with note:`, defaultNote);
+      if (note === null) return;
+      const cleanNote = String(note || "").trim() || defaultNote;
+      const reasonValue = rejectReasonValueForComment(cleanNote) || "other";
+      cards.forEach((card) => {
+        card.dataset.reviewDecisionTouched = "1";
+        const approve = card.querySelector("[data-review-approve]");
+        const reject = card.querySelector("[data-review-reject]");
+        const block = card.querySelector("[data-review-block]");
+        const comment = card.querySelector("[data-review-reject-comment]");
+        if (approve) approve.checked = false;
+        if (reject) reject.checked = true;
+        if (block) block.checked = false;
+        setRejectReasonsDisabled(card, false);
+        setRejectReasonValue(card, reasonValue);
+        if (comment) {
+          comment.readOnly = false;
+          comment.value = cleanNote;
+          comment.closest("label")?.classList.remove("is-disabled");
+        }
+        setRowStatus(card, "Saving...", "saving");
+      });
+      saveCardsDecisions(cards).then((result) => {
+        if (result && status) status.textContent = `${result.rejections || cards.length} rejection${cards.length === 1 ? "" : "s"} saved.`;
+      }).catch((error) => {
+        const message = error?.message || "Could not save rejection.";
+        cards.forEach((card) => setRowStatus(card, "Save failed", "error", message));
+        if (status) status.textContent = message;
+      });
+    };
+
+    const markCardsBlocked = (cards) => {
+      lastBlockBatchPhotoIds = cards.map(reviewCardId).filter(Boolean);
+      cards.forEach((card) => {
+        card.dataset.reviewDecisionTouched = "1";
+        const approve = card.querySelector("[data-review-approve]");
+        const reject = card.querySelector("[data-review-reject]");
+        const block = card.querySelector("[data-review-block]");
+        const comment = card.querySelector("[data-review-reject-comment]");
+        if (approve) approve.checked = false;
+        if (reject) reject.checked = false;
+        if (block) block.checked = true;
+        if (comment) {
+          comment.readOnly = true;
+          comment.closest("label")?.classList.add("is-disabled");
+        }
+        setRejectReasonValue(card, "");
+        setRejectReasonsDisabled(card, true);
+        setRowStatus(card, "Blocking...", "saving");
+      });
+      saveCardsDecisions(cards).then((result) => {
+        if (result && status) status.textContent = `${result.blocked || cards.length} media item${cards.length === 1 ? "" : "s"} moved to Waste Basket. Press U to undo this block batch.`;
+      }).catch((error) => {
+        const message = error?.message || "Could not block media item.";
+        cards.forEach((card) => setRowStatus(card, "Block failed", "error", message));
+        if (status) status.textContent = message;
+      });
+    };
+
+    const undoLastBlockBatch = () => {
+      const targets = lastBlockBatchPhotoIds
+        .map((photoId) => ({ photoId, card: cardById.get(photoId) }))
+        .filter(({ card }) => Boolean(card));
+      if (!targets.length) {
+        if (status) status.textContent = "No title review block batch to undo.";
+        return;
+      }
+      Promise.all(targets.map(({ photoId, card }) => saveUnblockedTarget(photoId, card))).then(() => {
+        if (status) status.textContent = `Restored ${targets.length} media item${targets.length === 1 ? "" : "s"} from the Waste Basket.`;
+        lastBlockBatchPhotoIds = [];
+      }).catch((error) => {
+        if (status) status.textContent = error?.message || "Could not undo block batch.";
+      });
+    };
+
     const approveAll = () => {
       cardById.forEach((card, photoId) => {
         card.dataset.reviewDecisionTouched = "1";
@@ -1307,12 +1625,25 @@
       card.addEventListener("click", (event) => {
         const previewLink = event.target instanceof HTMLElement ? event.target.closest(".title-keyword-review-preview") : null;
         if (previewLink) event.preventDefault();
+        if (reviewMode === "cull" && !isEditableEventTarget(event)) {
+          if (event.shiftKey) setRangeSelectionTo(card);
+          else if (event.metaKey || event.ctrlKey) toggleCardSelection(card);
+          else selectOnlyCard(card);
+          return;
+        }
         setActiveCard(card);
       });
       card.addEventListener("focusin", () => setActiveCard(card));
       card.addEventListener("dblclick", (event) => {
         if (isEditableEventTarget(event)) return;
         openReviewDetail(card);
+      });
+      card.addEventListener("contextmenu", (event) => {
+        if (isEditableEventTarget(event)) return;
+        window.photosByElieShowMediaContextMenu?.(photoForPreviewCard(card), event, {
+          owner: true,
+          onOpenDetail: () => openReviewDetail(card),
+        });
       });
       const syncDecisionState = () => {
         const approved = Boolean(approve?.checked);
@@ -1479,25 +1810,51 @@
     });
 
     const firstCard = cardById.values().next().value;
-    if (firstCard) setActiveCard(firstCard);
+    if (firstCard) {
+      setActiveCard(firstCard);
+      if (reviewMode === "cull") selectOnlyCard(firstCard);
+    }
+    setReviewMode(reviewMode, { preserveScroll: false });
     restorePendingOwnerReviewReturn();
 
     window.addEventListener("keydown", (event) => {
       if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
       if (isEditableEventTarget(event) || !activeCard) return;
-      const photoId = activeCard.getAttribute("data-review-photo-id") || "";
       const key = event.key.toLowerCase();
-      const approve = activeCard.querySelector("[data-review-approve]");
-      const reject = activeCard.querySelector("[data-review-reject]");
-      const block = activeCard.querySelector("[data-review-block]");
-      const comment = activeCard.querySelector("[data-review-reject-comment]");
-      if (event.key === "ArrowDown" || event.key === "ArrowRight") {
-        moveActiveCard(1);
+      const cards = reviewCards();
+      const activeIndex = Math.max(0, cards.indexOf(activeCard));
+      const columns = Math.max(1, titleReviewLayout?.preferredDensityColumns?.() || 1);
+      const moveFocus = (delta) => {
+        const nextIndex = Math.max(0, Math.min(cards.length - 1, activeIndex + delta));
+        const nextCard = cards[nextIndex];
+        if (!nextCard) return;
+        if (event.shiftKey && reviewMode === "cull") setRangeSelectionTo(nextCard);
+        else if (reviewMode === "cull") selectOnlyCard(nextCard);
+        else setActiveCard(nextCard);
+        scrollCardIntoReview(nextCard);
+      };
+      if (event.key === "ArrowDown") {
+        moveFocus(reviewMode === "cull" ? columns : 1);
         event.preventDefault();
         return;
       }
-      if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
-        moveActiveCard(-1);
+      if (event.key === "ArrowRight") {
+        moveFocus(1);
+        event.preventDefault();
+        return;
+      }
+      if (event.key === "ArrowUp") {
+        moveFocus(reviewMode === "cull" ? -columns : -1);
+        event.preventDefault();
+        return;
+      }
+      if (event.key === "ArrowLeft") {
+        moveFocus(-1);
+        event.preventDefault();
+        return;
+      }
+      if (event.key === " ") {
+        openPreviewForCard(activeCard);
         event.preventDefault();
         return;
       }
@@ -1506,38 +1863,49 @@
         event.preventDefault();
         return;
       }
+      if (key === "e") {
+        toggleReviewMode();
+        event.preventDefault();
+        return;
+      }
+      if (event.key === "g" || event.key === "G") {
+        const next = stepReviewDensity(event.key === "G" ? 1 : -1);
+        if (status && next) status.textContent = `Cull grid ${next}.`;
+        event.preventDefault();
+        return;
+      }
+      if (key === "z") {
+        const nextMode = cycleReviewFitMode();
+        if (status && nextMode) status.textContent = `Cull layout ${nextMode}.`;
+        event.preventDefault();
+        return;
+      }
       if (key === "a") {
-        activeCard.dataset.reviewDecisionTouched = "1";
-        if (approve) approve.checked = true;
-        if (reject) reject.checked = false;
-        if (block) block.checked = false;
-        if (comment) {
-          comment.readOnly = true;
-          comment.closest("label")?.classList.add("is-disabled");
-        }
-        setRejectReasonsDisabled(activeCard, true);
-        scheduleRowSave(photoId, activeCard, 150);
-        advanceAfterApprove(activeCard);
+        markCardsApproved(targetCardsForAction(), { advance: reviewMode === "edit" });
         event.preventDefault();
         return;
       }
       if (key === "r") {
-        activeCard.dataset.reviewDecisionTouched = "1";
-        if (reject) {
-          reject.checked = true;
-          reject.dispatchEvent(new Event("change", { bubbles: true }));
-        }
+        markCardsRejected(targetCardsForAction());
         event.preventDefault();
         return;
       }
       if (key === "p") {
-        propagateDecision(photoId, activeCard);
+        propagateDecision(reviewCardId(activeCard), activeCard);
         event.preventDefault();
         return;
       }
-      if (key === "h" || key === "x") {
-        activeCard.dataset.reviewDecisionTouched = "1";
-        blockPhoto(photoId, activeCard);
+      if (key === "u") {
+        undoLastBlockBatch();
+        event.preventDefault();
+        return;
+      }
+      if (key === "h" || key === "x" || key === "b") {
+        if (reviewMode === "edit" && targetCardsForAction().length === 1) {
+          blockPhoto(reviewCardId(activeCard), activeCard);
+        } else {
+          markCardsBlocked(targetCardsForAction());
+        }
         event.preventDefault();
       }
     });

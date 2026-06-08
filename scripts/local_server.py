@@ -47,6 +47,8 @@ TITLE_KEYWORD_REVIEW_QUEUE_PATH = "/__photosbyelie/title-keyword-review-queue"
 OWNER_SUPER_SEARCH_PATH = "/__photosbyelie/owner-super-search-index"
 PUBLIC_MEDIA_PROXY_PATH = "/__photosbyelie/public-media/"
 PRIVATE_MEDIA_PROXY_PATH = "/__photosbyelie/private-media/"
+SOURCE_PREVIEW_PATH = "/__photosbyelie/source-preview/"
+SOURCE_EDIT_PATH = "/__photosbyelie/source-edit"
 MAX_BODY_BYTES = 5 * 1024 * 1024
 LOCAL_CLIENTS = {"127.0.0.1", "::1", "localhost"}
 DERIVATIVES = (("gallery", "gallerySrc"), ("detail", "imageSrc"))
@@ -72,7 +74,11 @@ REAL_ESTATE_PUBLIC_ROOT = Path("assets/real-estate")
 REAL_ESTATE_SOURCE_ROOT = Path("/Volumes/Saturn/Pictures/RE")
 REAL_ESTATE_MEDIA_EXTENSIONS = {".jpg", ".jpeg", ".mov", ".mp4", ".m4v"}
 IMPORT_SOURCE_THUMB_ROOT = Path(".review-logs/import-source-thumbs")
+SOURCE_PREVIEW_CACHE_ROOT = Path(".review-logs/source-previews")
 IMPORT_SOURCE_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tif", ".tiff", ".heic", ".heif", ".webp"}
+SOURCE_PREVIEW_BROWSER_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+SOURCE_PREVIEW_GENERATABLE_IMAGE_EXTENSIONS = {".heic", ".heif", ".tif", ".tiff", ".png", ".webp"}
+SOURCE_PREVIEW_BROWSER_VIDEO_EXTENSIONS = {".mp4", ".m4v", ".mov", ".webm"}
 PUBLIC_SITE_BASE_URL = "https://ec92009.github.io/PhotosByElie/"
 PUBLIC_MEDIA_BASE_URL = "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev"
 TITLE_KEYWORD_REVIEW_FLAG = "Title_Keywords_Reviewed"
@@ -249,6 +255,9 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
 
     def do_GET(self) -> None:
         path = self.path.split("?", 1)[0]
+        if path.startswith(SOURCE_PREVIEW_PATH):
+            self._handle_source_preview(path)
+            return
         if path.startswith(PUBLIC_MEDIA_PROXY_PATH):
             self._handle_public_media_proxy(path)
             return
@@ -313,6 +322,9 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         if path == PHOTO_ACTION_PATH:
             self._handle_photo_action()
             return
+        if path == SOURCE_EDIT_PATH:
+            self._handle_source_edit()
+            return
         if path == REAL_ESTATE_OWNER_PATH:
             self._handle_real_estate_owner()
             return
@@ -344,6 +356,36 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
             return
         self._send_json(HTTPStatus.OK, result)
+
+    def _handle_source_edit(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            payload = self._read_json_body()
+            media_id = str(payload.get("media_id") or payload.get("mediaId") or "").strip()
+            app = str(payload.get("app") or "").strip()
+            source = _source_original_for_media_id(Path.cwd(), media_id)
+            command = ["open", str(source["path"])]
+            if app:
+                command = ["open", "-a", app, str(source["path"])]
+            subprocess.run(command, check=True, capture_output=True, text=True)
+        except ValueError as error:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
+            return
+        except subprocess.CalledProcessError as error:
+            message = (error.stderr or error.stdout or str(error)).strip() or "Could not open source media."
+            self._send_json(HTTPStatus.BAD_GATEWAY, {"ok": False, "error": message})
+            return
+        except OSError as error:
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
+            return
+        self._send_json(HTTPStatus.OK, {
+            "ok": True,
+            "media_id": media_id,
+            "path": str(source["path"]),
+            "app": app,
+        })
 
     def _handle_photo_action_progress(self) -> None:
         if not self._is_loopback_request():
@@ -466,6 +508,42 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         self.send_header("Cache-Control", "private, max-age=3600")
         self.end_headers()
         self.wfile.write(body)
+
+    def _handle_source_preview(self, path: str) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        media_id = unquote(path[len(SOURCE_PREVIEW_PATH):]).strip("/")
+        query = parse_qs(urlparse(self.path).query)
+        info_only = "info" in query
+        result = _source_preview_for_media_id(Path.cwd(), media_id)
+        if not result.get("ok"):
+            status = HTTPStatus(int(result.get("status") or HTTPStatus.NOT_FOUND))
+            if info_only:
+                self._send_json(status, result)
+            else:
+                self.send_error(status, result.get("error") or "source preview unavailable")
+            return
+        if info_only:
+            self._send_json(HTTPStatus.OK, {
+                **{key: value for key, value in result.items() if key != "path"},
+                "previewUrl": f"{SOURCE_PREVIEW_PATH}{quote(media_id, safe='')}",
+            })
+            return
+        source_path = Path(result["path"])
+        try:
+            stat = source_path.stat()
+            file_obj = source_path.open("rb")
+        except OSError as error:
+            self.send_error(HTTPStatus.NOT_FOUND, str(error))
+            return
+        with file_obj:
+            self.send_response(HTTPStatus.OK)
+            self.send_header("Content-Type", result.get("contentType") or mimetypes.guess_type(source_path.name)[0] or "application/octet-stream")
+            self.send_header("Content-Length", str(stat.st_size))
+            self.send_header("Cache-Control", "private, max-age=3600")
+            self.end_headers()
+            shutil.copyfileobj(file_obj, self.wfile)
 
     def _handle_r2_fix(self) -> None:
         if not self._is_loopback_request():
@@ -2934,6 +3012,202 @@ def _source_paths(repo_root: Path, photo: dict) -> list[Path]:
                     _append_unique_path(paths, found)
                     break
     return paths
+
+
+def _source_preview_error(
+    status: HTTPStatus,
+    media_id: str,
+    media_type: str,
+    source_type: str,
+    source_label: str,
+    error: str,
+) -> dict:
+    return {
+        "ok": False,
+        "status": int(status),
+        "mediaId": media_id,
+        "mediaType": media_type or "photo",
+        "sourceType": source_type or "source/full",
+        "sourceLabel": source_label or media_id,
+        "error": error,
+    }
+
+
+def _source_preview_photo_from_catalog(repo_root: Path, media_id: str) -> dict | None:
+    found = _catalog_photo_for_hidden(repo_root, media_id)
+    if found:
+        return found[1]
+    row = _catalog_rows_by_media_id(repo_root, [media_id]).get(media_id)
+    if not row:
+        return None
+    source_folder = str(row.get("source_folder") or "").strip("/")
+    filename = str(row.get("filename") or "").strip()
+    source_path = "/".join(part for part in [source_folder, filename] if part)
+    extension = str(row.get("source_extension") or Path(filename).suffix.lstrip(".") or "").strip().lower()
+    if extension == "jpeg":
+        extension = "jpg"
+    if extension == "tiff":
+        extension = "tif"
+    media_type = str(row.get("media_type") or "").strip().lower()
+    if not media_type:
+        media_type = "video" if f".{extension}" in SOURCE_PREVIEW_BROWSER_VIDEO_EXTENSIONS else "photo"
+    return {
+        "id": media_id,
+        "title": str(row.get("title") or media_id).strip() or media_id,
+        "media": {"type": media_type},
+        "sourceFiles": [
+            {
+                "path": source_path,
+                "type": (extension or Path(filename).suffix.lstrip(".") or "source").upper(),
+                "bytes": int(row.get("full_bytes") or 0),
+            }
+        ] if source_path else [],
+    }
+
+
+def _source_preview_cache_path(source: Path) -> Path:
+    stat = source.stat()
+    digest = hashlib.sha256(
+        f"{source.resolve()}:{stat.st_size}:{stat.st_mtime_ns}".encode("utf-8")
+    ).hexdigest()[:20]
+    stem = re.sub(r"[^A-Za-z0-9._-]+", "-", source.stem).strip("-._") or "source"
+    return SOURCE_PREVIEW_CACHE_ROOT / f"{stem}-{digest}.jpg"
+
+
+def _source_original_for_media_id(repo_root: Path, media_id: str) -> dict:
+    clean_id = str(media_id or "").strip()
+    if not clean_id:
+        raise ValueError("missing media id")
+    photo = _source_preview_photo_from_catalog(repo_root, clean_id)
+    if not photo:
+        raise ValueError("No catalog or manifest source metadata was found for this media id.")
+    source_files = photo.get("sourceFiles") if isinstance(photo.get("sourceFiles"), list) else []
+    source_label = str(source_files[0].get("path") if source_files and isinstance(source_files[0], dict) else clean_id)
+    paths = _source_paths(repo_root, photo)
+    if not paths:
+        raise ValueError(f"No local source file could be resolved for {source_label}.")
+    source = paths[0]
+    if not source.exists():
+        raise ValueError(f"Resolved source file does not exist: {source}")
+    media_type = str(photo.get("media", {}).get("type") or photo.get("type") or "photo").strip().lower() or "photo"
+    return {
+        "mediaId": clean_id,
+        "mediaType": media_type,
+        "sourceLabel": source_label,
+        "path": source,
+    }
+
+
+def _generated_source_image_preview(repo_root: Path, source: Path) -> Path:
+    cache_path = repo_root / _source_preview_cache_path(source)
+    if cache_path.exists() and cache_path.stat().st_size > 0:
+        return cache_path
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = cache_path.with_suffix(f".{uuid.uuid4().hex}.tmp.jpg")
+    try:
+        subprocess.run(
+            ["sips", "-s", "format", "jpeg", str(source), "--out", str(tmp_path)],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        if not tmp_path.exists() or tmp_path.stat().st_size <= 0:
+            raise RuntimeError("sips did not produce a JPEG preview")
+        tmp_path.replace(cache_path)
+    finally:
+        if tmp_path.exists():
+            tmp_path.unlink(missing_ok=True)
+    return cache_path
+
+
+def _source_preview_for_media_id(repo_root: Path, media_id: str) -> dict:
+    clean_id = str(media_id or "").strip()
+    if not clean_id:
+        return _source_preview_error(HTTPStatus.BAD_REQUEST, clean_id, "photo", "source/full", "", "missing media id")
+    photo = _source_preview_photo_from_catalog(repo_root, clean_id)
+    if not photo:
+        return _source_preview_error(
+            HTTPStatus.NOT_FOUND,
+            clean_id,
+            "photo",
+            "source/full",
+            clean_id,
+            "No catalog or manifest source metadata was found for this media id.",
+        )
+    media_type = str(photo.get("media", {}).get("type") or photo.get("type") or "photo").strip().lower() or "photo"
+    source_files = photo.get("sourceFiles") if isinstance(photo.get("sourceFiles"), list) else []
+    source_label = str(source_files[0].get("path") if source_files and isinstance(source_files[0], dict) else clean_id)
+    source_type = str(source_files[0].get("type") if source_files and isinstance(source_files[0], dict) else "source/full")
+    paths = _source_paths(repo_root, photo)
+    if not paths:
+        return _source_preview_error(
+            HTTPStatus.NOT_FOUND,
+            clean_id,
+            media_type,
+            source_type,
+            source_label,
+            "No local source file could be resolved from catalog or manifest metadata.",
+        )
+    source = paths[0]
+    suffix = source.suffix.lower()
+    if media_type == "video":
+        if suffix not in SOURCE_PREVIEW_BROWSER_VIDEO_EXTENSIONS:
+            return _source_preview_error(
+                HTTPStatus.UNSUPPORTED_MEDIA_TYPE,
+                clean_id,
+                media_type,
+                source_type,
+                str(source),
+                f"Original video format {suffix or '(unknown)'} is not browser-displayable here.",
+            )
+        return {
+            "ok": True,
+            "mediaId": clean_id,
+            "mediaType": "video",
+            "sourceType": source_type or "source video",
+            "sourceLabel": str(source),
+            "path": str(source),
+            "contentType": mimetypes.guess_type(source.name)[0] or "video/mp4",
+        }
+    if suffix in SOURCE_PREVIEW_BROWSER_IMAGE_EXTENSIONS:
+        return {
+            "ok": True,
+            "mediaId": clean_id,
+            "mediaType": "photo",
+            "sourceType": source_type or "source image",
+            "sourceLabel": str(source),
+            "path": str(source),
+            "contentType": mimetypes.guess_type(source.name)[0] or "image/jpeg",
+        }
+    if suffix in SOURCE_PREVIEW_GENERATABLE_IMAGE_EXTENSIONS:
+        try:
+            generated = _generated_source_image_preview(repo_root, source)
+        except (OSError, RuntimeError, subprocess.CalledProcessError) as error:
+            return _source_preview_error(
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+                clean_id,
+                "photo",
+                source_type,
+                str(source),
+                f"Could not generate full-size JPEG source preview: {error}",
+            )
+        return {
+            "ok": True,
+            "mediaId": clean_id,
+            "mediaType": "photo",
+            "sourceType": f"{source_type or 'source image'} converted to full-size JPEG",
+            "sourceLabel": str(source),
+            "path": str(generated),
+            "contentType": "image/jpeg",
+        }
+    return _source_preview_error(
+        HTTPStatus.UNSUPPORTED_MEDIA_TYPE,
+        clean_id,
+        "photo",
+        source_type,
+        str(source),
+        f"Source image format {suffix or '(unknown)'} is not browser-displayable and cannot be converted by this helper.",
+    )
 
 
 def _site_asset_paths(repo_root: Path, rel: str) -> list[Path]:

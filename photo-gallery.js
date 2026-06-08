@@ -1010,6 +1010,17 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
       toggleGalleryLike(photo);
     });
   });
+  galleryRoot.querySelectorAll("[data-photo-index]").forEach((card) => {
+    card.addEventListener("contextmenu", (event) => {
+      const index = Number(card.dataset.photoIndex || 0);
+      const photo = visibleSubset[index];
+      if (!photo) return;
+      window.photosByElieShowMediaContextMenu?.(photo, event, {
+        owner: localModerationEnabled,
+        onOpenDetail: () => window.location.assign(versionedHref(card.dataset.photoHref || card.querySelector("[data-photo-link]")?.getAttribute("href"))),
+      });
+    });
+  });
   if (localModerationEnabled) {
     galleryRoot.querySelectorAll("[data-owner-title-edit]").forEach((caption) => {
       caption.addEventListener("click", (event) => {
@@ -1174,6 +1185,13 @@ if (galleryRoot && gallery) {
     if (target instanceof HTMLElement) {
       if (target.isContentEditable) return;
       if (["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(target.tagName)) return;
+    }
+    if (event.key === " ") {
+      const selected = selectedShortcutPhoto();
+      if (!selected) return;
+      window.photosByElieOpenFinderPreview?.(selected, { owner: localModerationEnabled });
+      event.preventDefault();
+      return;
     }
     if (event.key === "g" || event.key === "G") {
       const nextColumns = stepGalleryDensity(event.key === "G" ? 1 : -1);

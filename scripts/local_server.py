@@ -221,10 +221,15 @@ from sync_r2_media import (  # noqa: E402
     DEFAULT_PRIVATE_PREFIX,
     DEFAULT_PUBLIC_BUCKET,
     DEFAULT_PUBLIC_PREFIX,
+    DEFAULT_THROTTLE_FILE,
     UploadItem,
     hidden_photo_ids as r2_hidden_photo_ids,
+    item_batches_by_bucket,
     private_key as r2_private_key,
     public_key as r2_public_key,
+    s3_config_complete,
+    s3_config_from_env,
+    s3_delete_objects,
     upload_id as r2_upload_id,
     wrangler_delete,
     wrangler_put,
@@ -3725,8 +3730,87 @@ def _update_r2_task(task_id: str, **updates: object) -> None:
         task["updated_at"] = datetime.now(timezone.utc).isoformat()
 
 
+def _record_r2_task_item_result(
+    task_id: str,
+    item: UploadItem,
+    operation: str,
+    ok: bool,
+    output: str,
+    lifecycle_source: str,
+) -> bool:
+    with R2_BACKGROUND_LOCK:
+        task = R2_BACKGROUND_TASKS.get(task_id)
+        if not task:
+            return False
+        task["completed"] = int(task.get("completed") or 0) + 1
+        if ok:
+            if operation == "upload" and item.path.exists():
+                task["bytes_done"] = int(task.get("bytes_done") or 0) + item.path.stat().st_size
+                _record_r2_item_lifecycle(item, "current", lifecycle_source)
+            elif operation == "delete":
+                _record_r2_item_lifecycle(item, "deleted_confirmed", lifecycle_source)
+        else:
+            task["failed"] = int(task.get("failed") or 0) + 1
+            errors = list(task.get("errors") or [])
+            if len(errors) < 20:
+                errors.append({
+                    "bucket": item.bucket,
+                    "key": item.key,
+                    "path": str(item.path),
+                    "error": output,
+                })
+            task["errors"] = errors
+        task["updated_at"] = datetime.now(timezone.utc).isoformat()
+    return True
+
+
+def _finish_r2_task(task_id: str) -> None:
+    with R2_BACKGROUND_LOCK:
+        task = R2_BACKGROUND_TASKS.get(task_id)
+        if not task:
+            return
+        task["state"] = "failed" if int(task.get("failed") or 0) else "done"
+        task["completed_at"] = datetime.now(timezone.utc).isoformat()
+        task["updated_at"] = task["completed_at"]
+
+
+def _run_r2_s3_delete_task(task_id: str, items: list[UploadItem], s3_config: dict[str, str]) -> None:
+    _update_r2_task(task_id, backend="s3-batch")
+    for item in items:
+        _record_r2_item_lifecycle(item, "marked_for_delete", "owner-r2-delete-batch")
+    for batch in item_batches_by_bucket(items):
+        try:
+            results = s3_delete_objects(
+                batch,
+                retries=2,
+                throttle_file=DEFAULT_THROTTLE_FILE,
+                request_min_interval=0.75,
+                retry_max_delay=900,
+                account_id=s3_config["account_id"],
+                access_key_id=s3_config["access_key_id"],
+                secret_access_key=s3_config["secret_access_key"],
+                endpoint=s3_config.get("endpoint") or "",
+            )
+        except Exception as error:  # noqa: BLE001 - background progress should capture any delete failure.
+            results = [(item, False, str(error)) for item in batch]
+        for item, ok, output in results:
+            if not _record_r2_task_item_result(task_id, item, "delete", ok, output, "owner-r2-delete-batch"):
+                return
+    _finish_r2_task(task_id)
+
+
 def _run_r2_task(task_id: str, items: list[UploadItem], operation: str) -> None:
-    _update_r2_task(task_id, state="running", started_at=datetime.now(timezone.utc).isoformat())
+    s3_config = s3_config_from_env() if operation == "delete" else {}
+    if operation == "delete" and s3_config_complete(s3_config):
+        _update_r2_task(task_id, state="running", started_at=datetime.now(timezone.utc).isoformat())
+        _run_r2_s3_delete_task(task_id, items, s3_config)
+        return
+    _update_r2_task(
+        task_id,
+        state="running",
+        started_at=datetime.now(timezone.utc).isoformat(),
+        backend="wrangler",
+    )
     for item in items:
         if operation == "delete":
             _record_r2_item_lifecycle(item, "marked_for_delete", "owner-r2-delete")
@@ -3738,36 +3822,10 @@ def _run_r2_task(task_id: str, items: list[UploadItem], operation: str) -> None:
         except Exception as error:  # noqa: BLE001 - background progress should capture any upload failure.
             ok = False
             output = str(error)
-        with R2_BACKGROUND_LOCK:
-            task = R2_BACKGROUND_TASKS.get(task_id)
-            if not task:
-                return
-            task["completed"] = int(task.get("completed") or 0) + 1
-            if ok:
-                if operation == "upload" and item.path.exists():
-                    task["bytes_done"] = int(task.get("bytes_done") or 0) + item.path.stat().st_size
-                    _record_r2_item_lifecycle(item, "current", "owner-r2-upload")
-                elif operation == "delete":
-                    _record_r2_item_lifecycle(item, "deleted_confirmed", "owner-r2-delete")
-            else:
-                task["failed"] = int(task.get("failed") or 0) + 1
-                errors = list(task.get("errors") or [])
-                if len(errors) < 20:
-                    errors.append({
-                        "bucket": item.bucket,
-                        "key": item.key,
-                        "path": str(item.path),
-                        "error": output,
-                    })
-                task["errors"] = errors
-            task["updated_at"] = datetime.now(timezone.utc).isoformat()
-    with R2_BACKGROUND_LOCK:
-        task = R2_BACKGROUND_TASKS.get(task_id)
-        if not task:
+        lifecycle_source = "owner-r2-delete" if operation == "delete" else "owner-r2-upload"
+        if not _record_r2_task_item_result(task_id, item, operation, ok, output, lifecycle_source):
             return
-        task["state"] = "failed" if int(task.get("failed") or 0) else "done"
-        task["completed_at"] = datetime.now(timezone.utc).isoformat()
-        task["updated_at"] = task["completed_at"]
+    _finish_r2_task(task_id)
 
 
 def _start_r2_task(photo_id: str, items: list[UploadItem], kind: str, operation: str = "upload") -> dict | None:

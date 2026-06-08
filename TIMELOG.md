@@ -210,8 +210,9 @@ Clock state: running
 | 2026-06-08 | 20:31 CEST | 20:51 CEST | 0:20 | Fixed title-review X/H block resolution for manifest backlog rows and older title-review batch rows, verified no-write Waste Basket simulation, and confirmed Owner original preview source resolution. |
 | 2026-06-08 | 21:02 CEST | 21:25 CEST | 0:23 | Made title-review counts reflect the full review pool, merged duplicate backlog batches, added 48-at-a-time review paging, and fixed the Owner dashboard media review count. |
 | 2026-06-08 | 21:26 CEST | 21:28 CEST | 0:02 | Doubled selected-media outlines and halos across galleries, cull review rows, and related Owner selection cards. |
+| 2026-06-08 | 21:42 CEST | 21:43 CEST | 0:01 | Chose the local S3 batch-delete path for faster Waste Basket R2 purges while keeping Wrangler fallback. |
 
 ## Totals
 
-Active collaboration time used: 14:41
+Active collaboration time used: 14:42
 Remaining budget: not set

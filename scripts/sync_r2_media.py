@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import fcntl
 import hashlib
 import hmac
@@ -17,10 +18,12 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from xml.sax.saxutils import escape as xml_escape
 
 from media_keys import DEFAULT_PUBLIC_PREFIX, private_master_key, public_preview_key_for_reference
 from media_policy import private_master_allowed, public_preview_allowed
@@ -115,6 +118,19 @@ def first_env(*names: str) -> str:
         if value:
             return value
     return ""
+
+
+def s3_config_from_env() -> dict[str, str]:
+    return {
+        "account_id": first_env("R2_ACCOUNT_ID", "CLOUDFLARE_ACCOUNT_ID"),
+        "access_key_id": first_env("R2_ACCESS_KEY_ID", "AWS_ACCESS_KEY_ID"),
+        "secret_access_key": first_env("R2_SECRET_ACCESS_KEY", "AWS_SECRET_ACCESS_KEY"),
+        "endpoint": os.environ.get("R2_S3_ENDPOINT", ""),
+    }
+
+
+def s3_config_complete(config: dict[str, str]) -> bool:
+    return all(config.get(name) for name in ("account_id", "access_key_id", "secret_access_key"))
 
 
 def load_json(path: Path, fallback: Any) -> Any:
@@ -493,6 +509,25 @@ def quote_s3_path(path: str) -> str:
     return "/" + "/".join(urllib.parse.quote(part, safe="-_.~") for part in path.split("/"))
 
 
+def quote_s3_query_value(value: str) -> str:
+    return urllib.parse.quote(value, safe="-_.~")
+
+
+def canonical_s3_query(params: list[tuple[str, str]]) -> str:
+    return "&".join(
+        f"{quote_s3_query_value(name)}={quote_s3_query_value(value)}"
+        for name, value in sorted(params)
+    )
+
+
+def normalize_s3_host(endpoint: str, account_id: str) -> str:
+    host = endpoint or f"{account_id}.r2.cloudflarestorage.com"
+    parsed = urllib.parse.urlparse(host)
+    if parsed.scheme and parsed.netloc:
+        host = parsed.netloc
+    return host.strip().removeprefix("https://").removeprefix("http://").rstrip("/")
+
+
 def s3_signing_key(secret_key: str, datestamp: str) -> bytes:
     date_key = hmac.new(("AWS4" + secret_key).encode("utf-8"), datestamp.encode("utf-8"), hashlib.sha256).digest()
     region_key = hmac.new(date_key, S3_REGION.encode("utf-8"), hashlib.sha256).digest()
@@ -500,19 +535,24 @@ def s3_signing_key(secret_key: str, datestamp: str) -> bytes:
     return hmac.new(service_key, b"aws4_request", hashlib.sha256).digest()
 
 
-def s3_request(
+def s3_signed_request(
     method: str,
-    item: UploadItem,
+    path: str,
+    query_params: list[tuple[str, str]],
     body: bytes,
     account_id: str,
     access_key_id: str,
     secret_access_key: str,
     endpoint: str,
+    extra_headers: dict[str, str] | None = None,
     timeout: float = 120.0,
-) -> tuple[bool, str]:
-    host = endpoint or f"{account_id}.r2.cloudflarestorage.com"
-    object_path = item.bucket + "/" + item.key
-    url = f"https://{host}{quote_s3_path(object_path)}"
+) -> tuple[bool, int, str]:
+    host = normalize_s3_host(endpoint, account_id)
+    canonical_uri = quote_s3_path(path.strip("/"))
+    canonical_query = canonical_s3_query(query_params)
+    url = f"https://{host}{canonical_uri}"
+    if canonical_query:
+        url = f"{url}?{canonical_query}"
     payload_hash = hashlib.sha256(body).hexdigest()
     now = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
     datestamp = now[:8]
@@ -521,18 +561,16 @@ def s3_request(
         "x-amz-content-sha256": payload_hash,
         "x-amz-date": now,
     }
-    if method == "PUT":
-        headers["content-type"] = item.content_type
-        if item.cache_control:
-            headers["cache-control"] = item.cache_control
+    for name, value in (extra_headers or {}).items():
+        headers[name.lower()] = value
     signed_header_names = sorted(headers)
     canonical_headers = "".join(f"{name}:{headers[name].strip()}\n" for name in signed_header_names)
     signed_headers = ";".join(signed_header_names)
     canonical_request = "\n".join(
         [
             method,
-            quote_s3_path(object_path),
-            "",
+            canonical_uri,
+            canonical_query,
             canonical_headers,
             signed_headers,
             payload_hash,
@@ -556,17 +594,139 @@ def s3_request(
         f"Signature={signature}"
     )
     try:
-        request = urllib.request.Request(url, data=body if method == "PUT" else None, headers=request_headers, method=method)
+        request_body = body if body or method in {"POST", "PUT"} else None
+        request = urllib.request.Request(url, data=request_body, headers=request_headers, method=method)
         with urllib.request.urlopen(request, timeout=timeout) as response:
-            response_body = response.read(4096).decode("utf-8", errors="replace")
-            return 200 <= response.status < 300, f"{method} {item.bucket}/{item.key}: HTTP {response.status} {response_body}".strip()
+            response_body = response.read(65536).decode("utf-8", errors="replace")
+            return 200 <= response.status < 300, response.status, response_body
     except urllib.error.HTTPError as exc:
-        response_body = exc.read(4096).decode("utf-8", errors="replace")
-        return False, f"{method} {item.bucket}/{item.key}: HTTP {exc.code} {response_body}".strip()
+        response_body = exc.read(65536).decode("utf-8", errors="replace")
+        return False, exc.code, response_body
     except urllib.error.URLError as exc:
-        return False, f"{method} {item.bucket}/{item.key}: URL error {exc.reason}"
+        return False, 0, f"URL error {exc.reason}"
     except (OSError, UnicodeError) as exc:
-        return False, f"{method} {item.bucket}/{item.key}: OS error {exc}"
+        return False, 0, f"OS error {exc}"
+
+
+def s3_request(
+    method: str,
+    item: UploadItem,
+    body: bytes,
+    account_id: str,
+    access_key_id: str,
+    secret_access_key: str,
+    endpoint: str,
+    timeout: float = 120.0,
+) -> tuple[bool, str]:
+    headers: dict[str, str] = {}
+    if method == "PUT":
+        headers["content-type"] = item.content_type
+        if item.cache_control:
+            headers["cache-control"] = item.cache_control
+    ok, status, response_body = s3_signed_request(
+        method,
+        item.bucket + "/" + item.key,
+        [],
+        body,
+        account_id,
+        access_key_id,
+        secret_access_key,
+        endpoint,
+        headers,
+        timeout,
+    )
+    status_label = f"HTTP {status}" if status else "request failed"
+    return ok, f"{method} {item.bucket}/{item.key}: {status_label} {response_body}".strip()
+
+
+def s3_delete_objects_body(items: list[UploadItem]) -> bytes:
+    parts = ["<Delete>"]
+    for item in items:
+        parts.append(f"<Object><Key>{xml_escape(item.key)}</Key></Object>")
+    parts.append("<Quiet>true</Quiet></Delete>")
+    return "".join(parts).encode("utf-8")
+
+
+def s3_delete_error_map(response_body: str) -> dict[str, str]:
+    if not response_body.strip():
+        return {}
+    try:
+        root = ET.fromstring(response_body)
+    except ET.ParseError:
+        return {}
+    errors: dict[str, str] = {}
+    for error_node in root.iter():
+        if error_node.tag.rsplit("}", 1)[-1] != "Error":
+            continue
+        fields: dict[str, str] = {}
+        for child in list(error_node):
+            fields[child.tag.rsplit("}", 1)[-1]] = child.text or ""
+        key = fields.get("Key")
+        if key:
+            detail = " ".join(part for part in (fields.get("Code"), fields.get("Message")) if part)
+            errors[key] = detail or "DeleteObjects reported an item error"
+    return errors
+
+
+def s3_delete_objects(
+    items: list[UploadItem],
+    retries: int,
+    throttle_file: Path,
+    request_min_interval: float,
+    retry_max_delay: float,
+    account_id: str,
+    access_key_id: str,
+    secret_access_key: str,
+    endpoint: str,
+) -> list[tuple[UploadItem, bool, str]]:
+    if not items:
+        return []
+    buckets = {item.bucket for item in items}
+    if len(buckets) != 1:
+        raise ValueError("s3_delete_objects requires items from a single bucket")
+    bucket = items[0].bucket
+    body = s3_delete_objects_body(items)
+    body_md5 = base64.b64encode(hashlib.md5(body).digest()).decode("ascii")
+    headers = {
+        "content-md5": body_md5,
+        "content-type": "application/xml",
+    }
+    output = ""
+    for attempt in range(retries + 1):
+        throttle_wrangler_request(throttle_file, request_min_interval)
+        ok, status, response_body = s3_signed_request(
+            "POST",
+            bucket,
+            [("delete", "")],
+            body,
+            account_id,
+            access_key_id,
+            secret_access_key,
+            endpoint,
+            headers,
+        )
+        status_label = f"HTTP {status}" if status else "request failed"
+        output = f"POST {bucket}?delete: {status_label} {response_body}".strip()
+        if ok:
+            item_errors = s3_delete_error_map(response_body)
+            return [
+                (item, item.key not in item_errors, item_errors.get(item.key) or output)
+                for item in items
+            ]
+        if attempt < retries:
+            time.sleep(min(retry_max_delay, 4.0 * (attempt + 1)))
+    return [(item, False, output) for item in items]
+
+
+def item_batches_by_bucket(items: list[UploadItem], batch_size: int = 1000) -> list[list[UploadItem]]:
+    batches: list[list[UploadItem]] = []
+    by_bucket: dict[str, list[UploadItem]] = {}
+    for item in items:
+        by_bucket.setdefault(item.bucket, []).append(item)
+    for bucket_items in by_bucket.values():
+        for start in range(0, len(bucket_items), batch_size):
+            batches.append(bucket_items[start:start + batch_size])
+    return batches
 
 
 def s3_put(
@@ -703,28 +863,38 @@ def delete_items(
     lock = threading.Lock()
     started = time.monotonic()
     deleted_bytes = 0
+    if backend == "s3":
+        index = 0
+        for batch in item_batches_by_bucket(items):
+            results = s3_delete_objects(
+                batch,
+                retries,
+                throttle_file,
+                request_min_interval,
+                retry_max_delay,
+                s3_account_id,
+                s3_access_key_id,
+                s3_secret_access_key,
+                s3_endpoint,
+            )
+            for item, ok, output in results:
+                index += 1
+                if not ok:
+                    failed += 1
+                    print(f"FAILED DELETE {item.bucket}/{item.key}: {output}", file=sys.stderr)
+                else:
+                    deleted_bytes += item.path.stat().st_size if item.path.exists() else 0
+                    append_delete_state(state_file, item, lock)
+            if index % 25 == 0 or index == len(items):
+                elapsed = max(1, time.monotonic() - started)
+                mib = deleted_bytes / (1024 * 1024)
+                print(f"progress {index}/{len(items)} failed={failed} deleted={mib:.1f} MiB rate={mib / elapsed:.2f} MiB/s", flush=True)
+        return failed
     with ThreadPoolExecutor(max_workers=max(1, workers)) as executor:
-        if backend == "s3":
-            futures = [
-                executor.submit(
-                    s3_delete,
-                    item,
-                    retries,
-                    throttle_file,
-                    request_min_interval,
-                    retry_max_delay,
-                    s3_account_id,
-                    s3_access_key_id,
-                    s3_secret_access_key,
-                    s3_endpoint,
-                )
-                for item in items
-            ]
-        else:
-            futures = [
-                executor.submit(wrangler_delete, item, retries, throttle_file, request_min_interval, retry_max_delay)
-                for item in items
-            ]
+        futures = [
+            executor.submit(wrangler_delete, item, retries, throttle_file, request_min_interval, retry_max_delay)
+            for item in items
+        ]
         for index, future in enumerate(as_completed(futures), start=1):
             item, ok, output = future.result()
             if not ok:

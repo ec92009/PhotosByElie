@@ -529,6 +529,8 @@ python3 scripts/sync_r2_media.py \
 
 The S3 backend uses Python stdlib SigV4 signing and does not need Wrangler login state. Keep the same one-lane rule and start with a small `--limit 1` upload if credentials or bucket permissions were just created. Dry runs do not require credentials because they only build the local inventory.
 
+Deletes also use the S3 backend when those credentials are present. The local Owner helper's Waste Basket purge batches R2 object deletion with S3 `DeleteObjects` by bucket, falling back to the older per-object Wrangler delete path when S3 credentials are not available.
+
 The public bucket currently exposes baked-watermark previews through the `r2.dev` URL in `media-config.js` as `publicBaseUrl`, with CORS managed by `docs/r2-public-cors.json`. Public-facing localhost pages use that public media base by default so local testing pays the same network/cache cost as deployed visitors. Owner-only pages keep local staging behavior unless an explicit `?mediaBase=https://...` override is supplied. Use `?mediaBase=local` to force local preview files for a debugging session.
 
 ## Classified Unknown Public R2 Cleanup

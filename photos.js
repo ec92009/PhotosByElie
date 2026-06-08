@@ -2201,6 +2201,58 @@ window.photosByElieVideoDurationLabel = (photo) => (
     return payload;
   };
 
+  const normalizedPixelmatorEditStem = (value) => {
+    const name = String(value || "").split(/[\\/]/).pop() || "";
+    return name
+      .replace(/\.[^.]+$/, "")
+      .replace(/\.photosbyelie-edit$/i, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
+  };
+
+  const sourceEditMatchStems = (photo) => {
+    const stems = new Set();
+    const add = (value) => {
+      const stem = normalizedPixelmatorEditStem(value);
+      if (stem) stems.add(stem);
+    };
+    (photo?.sourceFiles || []).forEach((source) => {
+      add(source?.path);
+      add(source?.label);
+    });
+    (photo?.metadata || []).forEach((entry) => {
+      const label = String(entry?.label || "").trim().toLowerCase();
+      if (label === "original file" || label === "source file") add(entry?.value);
+    });
+    add(photo?.title);
+    add(photo?.id);
+    return stems;
+  };
+
+  window.photosByElieMatchingSourceEdit = (photo, editsPayload) => {
+    const stems = sourceEditMatchStems(photo);
+    const files = Array.isArray(editsPayload?.files) ? editsPayload.files : [];
+    return files.find((file) => stems.has(normalizedPixelmatorEditStem(file?.name || file?.path || ""))) || null;
+  };
+
+  window.photosByElieImportSourceEdit = async (photo, edit) => {
+    if (!isLocalhostMediaPage || !photo?.id || !edit?.name) {
+      throw new Error("A matching Pixelmator export is required before importing.");
+    }
+    const response = await fetch("/__photosbyelie/source-edit-import", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({ media_id: photo.id, edit_name: edit.name }),
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok || !payload?.ok) {
+      throw new Error(payload?.error || `Could not import edited version (${response.status}).`);
+    }
+    return payload;
+  };
+
   window.photosByElieEditSourceWith = async (photo) => {
     if (!isLocalhostMediaPage || !photo?.id) {
       throw new Error("Source editing is only available from localhost.");
@@ -2266,6 +2318,30 @@ window.photosByElieVideoDurationLabel = (photo) => (
             window.alert?.(String(error?.message || "Could not open source media in Pixelmator Pro."));
           }
         });
+        const importEditButton = makeButton("Import edited version", async () => {}, { closeOnClick: false });
+        importEditButton.hidden = true;
+        importEditButton.disabled = true;
+        importEditButton.addEventListener("click", async () => {
+          if (!importEditButton._pixelmatorEdit) return;
+          try {
+            const result = await window.photosByElieImportSourceEdit(photo, importEditButton._pixelmatorEdit);
+            close();
+            window.dispatchEvent(new CustomEvent("photosbyelie:sourceeditimport", { detail: result }));
+            window.alert?.(result.message || "Edited version imported.");
+          } catch (error) {
+            window.alert?.(String(error?.message || "Could not import edited version."));
+          }
+        });
+        window.photosByElieSourceEdits()
+          .then((edits) => {
+            if (closed) return;
+            const match = window.photosByElieMatchingSourceEdit(photo, edits);
+            if (!match) return;
+            importEditButton._pixelmatorEdit = match;
+            importEditButton.hidden = false;
+            importEditButton.disabled = false;
+          })
+          .catch(() => {});
       }
       makeButton("Show Pixelmator edits", async () => {
         try {

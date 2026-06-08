@@ -52,6 +52,7 @@ SOURCE_PREVIEW_PATH = "/__photosbyelie/source-preview/"
 SOURCE_EDIT_PATH = "/__photosbyelie/source-edit"
 SOURCE_EDIT_APPS_PATH = "/__photosbyelie/source-edit-apps"
 SOURCE_EDITS_PATH = "/__photosbyelie/source-edits"
+SOURCE_EDIT_IMPORT_PATH = "/__photosbyelie/source-edit-import"
 MAX_BODY_BYTES = 5 * 1024 * 1024
 LOCAL_CLIENTS = {"127.0.0.1", "::1", "localhost"}
 DERIVATIVES = (("gallery", "gallerySrc"), ("detail", "imageSrc"))
@@ -280,6 +281,8 @@ LOCAL_TOOL_DIRS = (
 PIXELMATOR_PRO_BUNDLE_ID = "com.pixelmatorteam.pixelmator.x"
 PIXELMATOR_PRO_NAME = "Pixelmator Pro"
 PIXELMATOR_EDIT_FOLDER = Path("pixelmator.pro.edits")
+PIXELMATOR_IMPORTED_EDIT_FOLDER = Path("pixelmator.pro.imported-edits")
+PIXELMATOR_EDIT_IMPORTS_PATH = OWNER_ACTION_ROOT / "pixelmator-edits.local.json"
 PIXELMATOR_EDIT_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tif", ".tiff", ".webp", ".heic"}
 
 
@@ -367,6 +370,9 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             return
         if path == SOURCE_EDIT_PATH:
             self._handle_source_edit()
+            return
+        if path == SOURCE_EDIT_IMPORT_PATH:
+            self._handle_source_edit_import()
             return
         if path == REAL_ESTATE_OWNER_PATH:
             self._handle_real_estate_owner()
@@ -474,6 +480,23 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             "count": len(files),
             "files": files,
         })
+
+    def _handle_source_edit_import(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            payload = self._read_json_body()
+            media_id = str(payload.get("media_id") or payload.get("mediaId") or "").strip()
+            edit_name = str(payload.get("edit_name") or payload.get("editName") or "").strip()
+            result = _import_pixelmator_edit(Path.cwd(), media_id, edit_name)
+        except ValueError as error:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
+            return
+        except OSError as error:
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
+            return
+        self._send_json(HTTPStatus.OK, result)
 
     def _handle_photo_action_progress(self) -> None:
         if not self._is_loopback_request():
@@ -3444,6 +3467,13 @@ def _safe_edit_stem(value: str) -> str:
     return stem or "pixelmator-edit"
 
 
+def _normalized_edit_stem(value: str) -> str:
+    stem = Path(str(value or "")).stem.lower().strip()
+    stem = re.sub(r"\.photosbyelie-edit$", "", stem)
+    stem = re.sub(r"\s+", " ", stem)
+    return stem
+
+
 def _pixelmator_edit_output_path(repo_root: Path, media_id: str, source: Path) -> Path:
     source_suffix = source.suffix.lower()
     if source_suffix not in {".jpg", ".jpeg", ".png", ".tif", ".tiff", ".webp", ".heic"}:
@@ -3472,6 +3502,123 @@ def _pixelmator_edit_files(repo_root: Path) -> list[dict]:
         })
     files.sort(key=lambda item: (int(item.get("modifiedMs") or 0), str(item.get("name") or "")), reverse=True)
     return files
+
+
+def _pixelmator_import_folder(repo_root: Path) -> Path:
+    folder = (repo_root / PIXELMATOR_IMPORTED_EDIT_FOLDER).resolve()
+    folder.mkdir(parents=True, exist_ok=True)
+    return folder
+
+
+def _pixelmator_imports_path(repo_root: Path) -> Path:
+    path = repo_root / PIXELMATOR_EDIT_IMPORTS_PATH
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def _pixelmator_source_match_stems(photo: dict, media_id: str) -> set[str]:
+    stems: set[str] = set()
+
+    def add(value: object) -> None:
+        text = str(value or "").strip()
+        if not text:
+            return
+        stem = _normalized_edit_stem(text)
+        if stem:
+            stems.add(stem)
+
+    for source in photo.get("sourceFiles") or []:
+        if isinstance(source, dict):
+            add(source.get("path"))
+            add(source.get("label"))
+    for metadata in photo.get("metadata") or []:
+        if isinstance(metadata, dict) and str(metadata.get("label") or "").strip().lower() in {"original file", "source file"}:
+            add(metadata.get("value"))
+    add(photo.get("title"))
+    add(media_id)
+    return stems
+
+
+def _matching_pixelmator_edit(repo_root: Path, media_id: str, edit_name: str = "") -> tuple[dict, dict]:
+    clean_id = str(media_id or "").strip()
+    if not clean_id:
+        raise ValueError("missing media id")
+    photo = _source_preview_photo_from_catalog(repo_root, clean_id)
+    if not photo:
+        raise ValueError("No catalog or manifest source metadata was found for this media id.")
+    stems = _pixelmator_source_match_stems(photo, clean_id)
+    if not stems:
+        raise ValueError("No source filename is available for this media item.")
+    files = _pixelmator_edit_files(repo_root)
+    if edit_name:
+        files = [file for file in files if str(file.get("name") or "") == edit_name]
+    for file in files:
+        if _normalized_edit_stem(str(file.get("name") or "")) in stems:
+            return photo, file
+    raise ValueError("No matching Pixelmator export was found for this media item.")
+
+
+def _read_pixelmator_imports(repo_root: Path) -> dict:
+    path = _pixelmator_imports_path(repo_root)
+    payload = _read_json_file(path, {})
+    return payload if isinstance(payload, dict) else {}
+
+
+def _write_pixelmator_imports(repo_root: Path, payload: dict) -> None:
+    path = _pixelmator_imports_path(repo_root)
+    tmp_path = path.with_suffix(f".{uuid.uuid4().hex}.tmp")
+    tmp_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    tmp_path.replace(path)
+
+
+def _import_pixelmator_edit(repo_root: Path, media_id: str, edit_name: str = "") -> dict:
+    clean_id = str(media_id or "").strip()
+    photo, edit = _matching_pixelmator_edit(repo_root, clean_id, edit_name)
+    edit_path = Path(str(edit.get("path") or "")).resolve()
+    edit_folder = _pixelmator_edit_folder(repo_root).resolve()
+    if not _path_is_relative_to(edit_path, edit_folder):
+        raise ValueError("Pixelmator export is outside the watched edit folder.")
+    if not edit_path.exists() or not edit_path.is_file():
+        raise ValueError("Pixelmator export no longer exists.")
+    imported_folder = _pixelmator_import_folder(repo_root)
+    safe_stem = _safe_edit_stem(Path(edit_path.name).stem)
+    imported_name = f"{clean_id}__{safe_stem}{edit_path.suffix.lower()}"
+    imported_path = imported_folder / imported_name
+    counter = 2
+    while imported_path.exists():
+        imported_path = imported_folder / f"{clean_id}__{safe_stem}-{counter}{edit_path.suffix.lower()}"
+        counter += 1
+    shutil.copy2(edit_path, imported_path)
+    imported_stat = imported_path.stat()
+    source_files = photo.get("sourceFiles") if isinstance(photo.get("sourceFiles"), list) else []
+    source_label = str(source_files[0].get("path") if source_files and isinstance(source_files[0], dict) else clean_id)
+    imported_at = datetime.now(timezone.utc).isoformat()
+    record = {
+        "media_id": clean_id,
+        "title": str(photo.get("title") or clean_id),
+        "source_path": source_label,
+        "edit_name": edit_path.name,
+        "edit_path": str(edit_path),
+        "imported_path": str(imported_path),
+        "bytes": imported_stat.st_size,
+        "imported_at": imported_at,
+    }
+    payload = _read_pixelmator_imports(repo_root)
+    imports = payload.get("imports") if isinstance(payload.get("imports"), list) else []
+    imports.append(record)
+    payload.update({
+        "updated_at": imported_at,
+        "imported_folder": str(imported_folder),
+        "imports": imports,
+    })
+    _write_pixelmator_imports(repo_root, payload)
+    return {
+        "ok": True,
+        "media_id": clean_id,
+        "edit": edit,
+        "imported": record,
+        "message": "Edited version imported locally. It is ready for the next catalog publish step.",
+    }
 
 
 def _generated_source_image_preview(repo_root: Path, source: Path) -> Path:

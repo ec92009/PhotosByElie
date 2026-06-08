@@ -28,10 +28,12 @@ assets/hidden/**
 .curation-logs/
 .review-logs/
 pixelmator.pro.edits/
+pixelmator.pro.imported-edits/
 
 # Local Owner workflow database.
 assets/owner-actions/Owner.sqlite
 assets/owner-actions/Owner.sqlite-*
+assets/owner-actions/pixelmator-edits.local.json
 assets/owner-actions/real-estate-clients.local.json
 assets/owner-actions/etsy-listing-packages/
 assets/owner-actions/title-keyword-review-queue/*.json

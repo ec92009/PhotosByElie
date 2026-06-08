@@ -2002,9 +2002,9 @@ html.is-owner-action-busy *{
   background:var(--surface);
 }
 .unknown-card.is-selected{
-  outline:3px solid color-mix(in srgb,var(--text) 82%,transparent);
+  outline:6px solid color-mix(in srgb,var(--text) 82%,transparent);
   outline-offset:2px;
-  box-shadow:0 0 0 4px color-mix(in srgb,var(--surface) 72%,transparent),0 18px 38px rgba(0,0,0,.18);
+  box-shadow:0 0 0 8px color-mix(in srgb,var(--surface) 72%,transparent),0 18px 38px rgba(0,0,0,.18);
 }
 .unknown-thumb{
   position:relative;
@@ -2357,14 +2357,14 @@ body[data-gallery="owner-title-keyword-review"] [data-title-keyword-review-root]
   padding:10px;
 }
 .title-keyword-review-row.is-selected{
-  outline:2px solid var(--text);
+  outline:4px solid var(--text);
   outline-offset:2px;
 }
 .title-keyword-review-row.is-multi-selected{
-  box-shadow:inset 0 0 0 3px color-mix(in srgb,var(--brand) 72%,var(--text) 28%);
+  box-shadow:inset 0 0 0 6px color-mix(in srgb,var(--brand) 72%,var(--text) 28%);
 }
 .title-keyword-review-row.is-focused{
-  outline:2px solid var(--text);
+  outline:4px solid var(--text);
   outline-offset:2px;
 }
 .title-keyword-review-row > *{
@@ -3544,7 +3544,7 @@ body[data-real-estate] main.shell{
 }
 .real-estate-photo-card.is-selected{
   border-color:color-mix(in srgb,var(--re-positive) 78%,var(--line));
-  box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--re-positive) 58%,transparent);
+  box-shadow:inset 0 0 0 4px color-mix(in srgb,var(--re-positive) 58%,transparent);
 }
 .real-estate-photo-media-shell{
   position:relative;
@@ -5049,9 +5049,9 @@ html[data-theme="light"] .mock-photo.has-image::after{
 .home-result-card.is-selected .mock-photo,
 html.is-local-owner .mock-photo-card.is-selected .mock-photo,
 html.is-local-owner .mock-photo.is-selected{
-  outline:3px solid color-mix(in srgb,var(--text) 82%,transparent);
+  outline:6px solid color-mix(in srgb,var(--text) 82%,transparent);
   outline-offset:2px;
-  box-shadow:0 0 0 4px color-mix(in srgb,var(--surface) 72%,transparent),0 18px 38px rgba(0,0,0,.18);
+  box-shadow:0 0 0 8px color-mix(in srgb,var(--surface) 72%,transparent),0 18px 38px rgba(0,0,0,.18);
 }
 .france-gallery .p1,.mock-photo.france-gallery.p1{--mock-scene:linear-gradient(135deg,#222 0 18%,#ede5d8 18% 44%,#8f3530 44% 57%,#314c3d 57% 100%)}
 .france-gallery .p2,.mock-photo.france-gallery.p2{--mock-scene:linear-gradient(145deg,#d8d4cb 0 28%,#272727 28% 36%,#b9926a 36% 60%,#f5eee2 60% 100%)}

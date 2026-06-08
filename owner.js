@@ -453,7 +453,7 @@
   };
 
   const formatCount = (value) => Number(value || 0).toLocaleString();
-  const reviewPhotoLabel = (count) => `${formatCount(count)} ${Number(count) === 1 ? "photo" : "photos"}`;
+  const reviewMediaLabel = (count) => `${formatCount(count)} ${Number(count) === 1 ? "media item" : "media items"}`;
   const titleKeywordReviewPhotoId = (item) => String(item?.photo_id || item?.photoId || "").trim();
   const savedTitleKeywordReviewIds = (payload) => {
     const ids = new Set();
@@ -1105,8 +1105,8 @@
         ?? payload?.selection?.sqlite_pending_count
         ?? (Array.isArray(payload?.photos) ? payload.photos.length : 0)
       );
-      titleKeywordReviewLink.textContent = count > 0 ? `Review ${reviewPhotoLabel(count)}` : "Review";
-      titleKeywordReviewLink.setAttribute("aria-label", count > 0 ? `Review ${reviewPhotoLabel(count)} for title and keyword cleanup` : "Review title and keyword proposals");
+      titleKeywordReviewLink.textContent = count > 0 ? `Review ${reviewMediaLabel(count)}` : "Review";
+      titleKeywordReviewLink.setAttribute("aria-label", count > 0 ? `Review ${reviewMediaLabel(count)} for title and keyword cleanup` : "Review title and keyword proposals");
     } catch {
       try {
         const href = window.photosByElieVersionedHref?.("./assets/owner-actions/title-keyword-review-queue/latest.json") || "./assets/owner-actions/title-keyword-review-queue/latest.json";
@@ -1114,8 +1114,8 @@
         if (!response.ok) throw new Error(`Title/keyword queue view ${response.status}`);
         const payload = await response.json();
         const count = await staticTitleKeywordReviewCount(payload);
-        titleKeywordReviewLink.textContent = count > 0 ? `Review ${reviewPhotoLabel(count)}` : "Review";
-        titleKeywordReviewLink.setAttribute("aria-label", count > 0 ? `Review ${reviewPhotoLabel(count)} from the latest title and keyword batch` : "Review title and keyword proposals");
+        titleKeywordReviewLink.textContent = count > 0 ? `Review ${reviewMediaLabel(count)}` : "Review";
+        titleKeywordReviewLink.setAttribute("aria-label", count > 0 ? `Review ${reviewMediaLabel(count)} from the latest title and keyword batch` : "Review title and keyword proposals");
       } catch {
         titleKeywordReviewLink.textContent = "Review";
         titleKeywordReviewLink.setAttribute("aria-label", "Review title and keyword proposals");

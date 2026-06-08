@@ -1370,6 +1370,32 @@ def _pending_title_keyword_batches(conn) -> list[dict]:
     ]
 
 
+def _merged_pending_title_keyword_batches(batches: list[dict]) -> list[dict]:
+    merged: dict[str, dict] = {}
+    order: list[str] = []
+    for batch in batches:
+        batch_id = str(batch.get("batch_id") or "").strip()
+        if not batch_id:
+            continue
+        if batch_id not in merged:
+            merged[batch_id] = {
+                "batch_id": batch_id,
+                "pending_count": 0,
+                "first_proposed_at": "",
+                "last_proposed_at": "",
+            }
+            order.append(batch_id)
+        target = merged[batch_id]
+        target["pending_count"] = int(target.get("pending_count") or 0) + int(batch.get("pending_count") or 0)
+        first = str(batch.get("first_proposed_at") or "")
+        last = str(batch.get("last_proposed_at") or "")
+        if first and (not target["first_proposed_at"] or first < target["first_proposed_at"]):
+            target["first_proposed_at"] = first
+        if last and (not target["last_proposed_at"] or last > target["last_proposed_at"]):
+            target["last_proposed_at"] = last
+    return [merged[batch_id] for batch_id in order]
+
+
 def _clear_stale_title_keyword_review_rows(repo_root: Path, conn) -> dict:
     rows = conn.execute(
         """
@@ -2104,13 +2130,13 @@ def _incomplete_title_keyword_backlog_photos(
     conn,
     excluded_ids: set[str],
     limit: int = TITLE_KEYWORD_REVIEW_BACKLOG_LIMIT,
-) -> list[dict]:
+) -> tuple[list[dict], int]:
     if limit <= 0:
-        return []
+        return [], 0
     payload = _read_json_file(repo_root / IMPORT_CACHE_MANIFEST_PATH, {})
     photos = payload.get("photos") if isinstance(payload, dict) else []
     if not isinstance(photos, list):
-        return []
+        return [], 0
     queue_states = {
         str(row["media_id"]): str(row["review_state"] or "")
         for row in conn.execute("SELECT media_id, review_state FROM title_keyword_queue")
@@ -2122,15 +2148,17 @@ def _incomplete_title_keyword_backlog_photos(
         if str(photo_id or "").strip()
     }
     blocked_ids = _discarded_photo_ids(repo_root) | hidden_ids
+    public_ids = set(_public_catalog_origin_by_id(repo_root))
+    r2_ready_ids = _current_public_preview_ready_ids(repo_root)
     candidates: list[dict] = []
     for row in photos:
         if not isinstance(row, dict):
             continue
         media_id = str(row.get("id") or "").strip()
-        if not media_id or media_id in excluded_ids or media_id in blocked_ids:
+        if not media_id or media_id in excluded_ids or media_id in blocked_ids or media_id in public_ids or media_id not in r2_ready_ids:
             continue
         review_state = queue_states.get(media_id, "")
-        if review_state in {"applied", "parked", "blocked", "rejected"}:
+        if review_state in {"applied", "approved", "parked", "blocked", "rejected"}:
             continue
         if not row_import_eligible(row)[0] or not public_preview_allowed(row):
             continue
@@ -2140,7 +2168,7 @@ def _incomplete_title_keyword_backlog_photos(
     return [
         _title_keyword_backlog_photo(_manifest_catalog_row(row), batch_id, queue_states.get(str(row.get("id") or ""), "incomplete") or "incomplete")
         for row in candidates[:limit]
-    ]
+    ], len(candidates)
 
 
 def title_keyword_review_queue_payload(repo_root: Path) -> dict:
@@ -2168,21 +2196,23 @@ def title_keyword_review_queue_payload(repo_root: Path) -> dict:
                 payload = _title_keyword_payload_from_sqlite(repo_root, batch_id, pending_rows, pending_batches)
                 all_photos.extend(payload.get("photos") or [])
         covered_ids = {_review_photo_id(item) for item in all_photos if isinstance(item, dict)}
-        backlog_photos = _incomplete_title_keyword_backlog_photos(repo_root, conn, covered_ids)
+        backlog_photos, backlog_total_count = _incomplete_title_keyword_backlog_photos(repo_root, conn, covered_ids)
         if backlog_photos:
             pending_batches = [
                 *pending_batches,
                 {
                     "batch_id": "incomplete-backlog",
-                    "pending_count": len(backlog_photos),
+                    "pending_count": backlog_total_count,
                     "first_proposed_at": "",
                     "last_proposed_at": "",
                 },
             ]
             all_photos.extend(backlog_photos)
+        pending_batches = _merged_pending_title_keyword_batches(pending_batches)
         if all_photos:
             sort_values = [value for value in (_capture_sort_value(item) for item in all_photos) if value]
             batch_ids = [batch["batch_id"] for batch in pending_batches if batch.get("pending_count")]
+            total_review_count = len(all_pending_rows) + backlog_total_count
             return {
                 "ok": True,
                 "format": "photosbyelie-title-keyword-review-queue",
@@ -2197,10 +2227,11 @@ def title_keyword_review_queue_payload(repo_root: Path) -> dict:
                     "queue": TITLE_KEYWORD_REVIEW_QUEUE_PATH,
                 },
                 "selection": {
-                    "total_count": len(all_photos),
+                    "total_count": total_review_count,
                     "visible_pending_count": len(all_photos),
                     "sqlite_pending_count": len(all_pending_rows),
-                    "incomplete_backlog_count": len(backlog_photos),
+                    "incomplete_backlog_count": backlog_total_count,
+                    "incomplete_backlog_loaded_count": len(backlog_photos),
                     "incomplete_backlog_limit": TITLE_KEYWORD_REVIEW_BACKLOG_LIMIT,
                     "batch_count": len(batch_ids),
                     "stale_blocked_count": stale_cleanup.get("blocked", 0),

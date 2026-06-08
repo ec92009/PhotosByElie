@@ -1099,7 +1099,12 @@
       const response = await fetch("/__photosbyelie/title-keyword-review-queue", { cache: "no-store" });
       if (!response.ok) throw new Error(`Title/keyword queue ${response.status}`);
       const payload = await response.json();
-      const count = Number(Array.isArray(payload?.photos) ? payload.photos.length : payload?.selection?.visible_pending_count ?? payload?.selection?.sqlite_pending_count ?? 0);
+      const count = Number(
+        payload?.selection?.total_count
+        ?? payload?.selection?.visible_pending_count
+        ?? payload?.selection?.sqlite_pending_count
+        ?? (Array.isArray(payload?.photos) ? payload.photos.length : 0)
+      );
       titleKeywordReviewLink.textContent = count > 0 ? `Review ${reviewPhotoLabel(count)}` : "Review";
       titleKeywordReviewLink.setAttribute("aria-label", count > 0 ? `Review ${reviewPhotoLabel(count)} for title and keyword cleanup` : "Review title and keyword proposals");
     } catch {

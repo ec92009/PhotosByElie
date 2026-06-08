@@ -2771,11 +2771,25 @@ body[data-gallery="owner-title-keyword-review"] [data-title-keyword-review-root]
 .title-keyword-review-bottom-actions{
   display:flex;
   justify-content:flex-end;
+  align-items:center;
   flex-wrap:wrap;
   gap:10px;
   margin-top:16px;
   padding-top:16px;
   border-top:1px solid var(--line);
+}
+.title-keyword-review-pagination{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-right:auto;
+}
+.title-keyword-review-pagination p{
+  margin:0 4px 0 0;
+  color:var(--muted);
+  font-size:.78rem;
+  font-weight:800;
 }
 @media (min-width:761px) and (max-width:1120px){
   body[data-gallery="owner-title-keyword-review"] [data-title-review-mode="cull"] .title-review-cull-shell{

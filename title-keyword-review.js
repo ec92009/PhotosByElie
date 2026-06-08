@@ -16,6 +16,9 @@
   const ownerReviewReturnMaxAgeMs = 1000 * 60 * 60 * 2;
   const titleReviewDensityKey = "photosbyelie-title-review-cull-density";
   const titleReviewFitModeKey = "photosbyelie-title-review-cull-fit-mode";
+  const titleReviewInitialRenderCount = 48;
+  const titleReviewShowMoreSmallCount = 24;
+  const titleReviewShowMoreLargeCount = 48;
   const titleReviewModes = new Set(["cull", "edit"]);
   const stateKeywordFlags = new Set([
     "title_keywords_reviewed",
@@ -54,6 +57,7 @@
       "'": "&#39;",
       "\"": "&quot;",
     }[char] || char));
+  const formatCount = (value) => Number(value || 0).toLocaleString();
 
   const uniqueKeywords = (items) => {
     const seen = new Set();
@@ -543,19 +547,38 @@
         return left.index - right.index;
       })
       .map(({ item }) => item);
+    const selection = queue?.selection && typeof queue.selection === "object" ? queue.selection : {};
+    const totalReviewCount = Math.max(Number(selection.total_count || 0), visiblePhotos.length);
+    const sqlitePendingCount = Number(selection.sqlite_pending_count || 0);
+    const backlogTotalCount = Number(selection.incomplete_backlog_count || 0);
+    const backlogLoadedCount = Number(selection.incomplete_backlog_loaded_count || 0) || Math.max(0, visiblePhotos.length - sqlitePendingCount);
+    const loadedReviewCount = visiblePhotos.length;
+    let shownReviewCount = Math.min(titleReviewInitialRenderCount, loadedReviewCount);
+    const currentVisiblePhotos = () => visiblePhotos.slice(0, shownReviewCount);
+    const queueStatusText = () => {
+      if (!loadedReviewCount) return "All rows in this batch are already saved.";
+      const loadedText = totalReviewCount > loadedReviewCount
+        ? ` Showing ${formatCount(shownReviewCount)} of ${formatCount(loadedReviewCount)} loaded; ${formatCount(totalReviewCount - loadedReviewCount)} more remain after this window.`
+        : ` Showing ${formatCount(shownReviewCount)} of ${formatCount(loadedReviewCount)}.`;
+      return `${formatCount(totalReviewCount)} media items need review.${loadedText}`;
+    };
     const newest = queue?.range?.newest || "";
     const oldest = queue?.range?.oldest || "";
     status.textContent = visiblePhotos.length
-      ? `${visiblePhotos.length} media items ready for review.`
+      ? queueStatusText()
       : "All rows in this batch are already saved.";
 
     summaryRoot.hidden = false;
     const summaryHeading = reviewScope === "all-pending"
-      ? `All pending proposals${pendingBatchCount ? ` (${pendingBatchCount} batches)` : ""}`
+      ? "All media needing review"
       : `Batch ${batchId}`;
+    const summaryCounts = reviewScope === "all-pending"
+      ? `<p class="gallery-status">Generated proposals: ${formatCount(sqlitePendingCount)} • Backlog needing review: ${formatCount(backlogTotalCount)} total, ${formatCount(backlogLoadedCount)} loaded • Queues: ${formatCount(pendingBatchCount)}</p>`
+      : "";
 
     summaryRoot.innerHTML = `
       <h2>${escapeHtml(summaryHeading)}</h2>
+      ${summaryCounts}
       <p class="gallery-status">Oldest: ${escapeHtml(oldest || "—")} • Newest: ${escapeHtml(newest || "—")}</p>
       <div class="cta title-keyword-review-actions">
         <button class="btn secondary" type="button" data-title-keyword-review-approve-all>Approve visible</button>
@@ -647,7 +670,7 @@
         isVideo ? "is-video" : "",
       ].filter(Boolean).join(" ");
       return `
-        <article class="title-keyword-review-row${isVideo ? " is-video" : ""}" data-review-photo-id="${escapeHtml(photoId)}" data-photo-index="${index}" data-review-batch-id="${escapeHtml(photoBatchId)}" data-review-gallery-key="${escapeHtml(galleryKey)}" data-review-capture-time="${Number.isFinite(captureTime) ? String(captureTime) : ""}" data-review-detail-href="${escapeHtml(href)}" data-review-previous-reject-reason="${escapeHtml(previousRejectReason)}" tabindex="0">
+        <article class="title-keyword-review-row${isVideo ? " is-video" : ""}" data-review-photo-id="${escapeHtml(photoId)}" data-photo-index="${index}" data-review-batch-id="${escapeHtml(photoBatchId)}" data-review-gallery-key="${escapeHtml(galleryKey)}" data-review-capture-time="${Number.isFinite(captureTime) ? String(captureTime) : ""}" data-review-detail-href="${escapeHtml(href)}" data-review-previous-reject-reason="${escapeHtml(previousRejectReason)}" tabindex="0"${index >= shownReviewCount ? " hidden" : ""}>
           <a class="${previewClasses}" href="${escapeHtml(href)}" aria-label="Open ${isVideo ? "video" : "photo"} ${escapeHtml(photoId)}">
             ${thumb ? `<img src="${escapeHtml(thumb)}" alt="${escapeHtml(title || photoId)}" loading="eager" decoding="async" fetchpriority="${fetchPriority}"/>` : `<span class="unknown-missing-preview">No preview</span>`}
             ${isVideo ? `<span class="title-keyword-review-video-badge" aria-hidden="true">${window.photosByElieMdIcon?.("play") || "▶"}</span>` : ""}
@@ -706,7 +729,7 @@
       `;
     }).join("");
 
-    scheduleThumbnailWarmup(visiblePhotos);
+    scheduleThumbnailWarmup(currentVisiblePhotos());
 
     list.querySelectorAll("[data-review-photo-id]").forEach((card) => {
       const photoId = card.getAttribute("data-review-photo-id") || "";
@@ -716,11 +739,45 @@
     const bottomActions = document.createElement("div");
     bottomActions.className = "title-keyword-review-bottom-actions";
     bottomActions.innerHTML = `
+      <div class="title-keyword-review-pagination">
+        <p data-title-keyword-review-page-status></p>
+        <button class="btn secondary" type="button" data-title-keyword-review-show-more="${titleReviewShowMoreSmallCount}">Show ${titleReviewShowMoreSmallCount} more</button>
+        <button class="btn secondary" type="button" data-title-keyword-review-show-more="${titleReviewShowMoreLargeCount}">Show ${titleReviewShowMoreLargeCount} more</button>
+      </div>
       <button class="btn secondary" type="button" data-title-keyword-review-approve-all>Approve visible</button>
       <button class="btn secondary" type="button" data-title-keyword-review-save>Apply selected</button>
       <button class="btn secondary" type="button" data-title-keyword-review-download>Export selected JSON</button>
     `;
     root.append(bottomActions);
+    const pageStatus = bottomActions.querySelector("[data-title-keyword-review-page-status]");
+    const showMoreButtons = [...bottomActions.querySelectorAll("[data-title-keyword-review-show-more]")];
+    const updateReviewSliceControls = () => {
+      cardById.forEach((card) => {
+        const index = Number(card.dataset.photoIndex || 0);
+        card.hidden = index >= shownReviewCount;
+      });
+      const atEndOfLoadedWindow = shownReviewCount >= loadedReviewCount;
+      showMoreButtons.forEach((button) => {
+        button.disabled = atEndOfLoadedWindow;
+      });
+      if (pageStatus) {
+        const extraText = totalReviewCount > loadedReviewCount
+          ? ` ${formatCount(totalReviewCount - loadedReviewCount)} more remain after this loaded window.`
+          : "";
+        pageStatus.textContent = `Showing ${formatCount(shownReviewCount)} of ${formatCount(loadedReviewCount)} loaded.${extraText}`;
+      }
+      status.textContent = queueStatusText();
+      setSelectedIds(selectedPhotoIds, selectionAnchorId);
+      applyReviewLayout();
+      scheduleThumbnailWarmup(currentVisiblePhotos());
+    };
+    showMoreButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const increment = Number(button.dataset.titleKeywordReviewShowMore || titleReviewShowMoreLargeCount);
+        shownReviewCount = Math.min(loadedReviewCount, shownReviewCount + Math.max(1, increment));
+        updateReviewSliceControls();
+      });
+    });
 
     const batchIdForCard = (card) => String(card?.dataset?.reviewBatchId || batchId || "").trim();
 
@@ -803,7 +860,7 @@
     const selectionStatus = modebar.querySelector("[data-title-review-selection-count]");
     const titleReviewLayout = window.photosByElieGalleryLayout?.createMasonryController?.({
       root: list,
-      getPhotos: () => visiblePhotos,
+      getPhotos: currentVisiblePhotos,
       densityKey: titleReviewDensityKey,
       fitModeKey: titleReviewFitModeKey,
       defaultDensity: 7,
@@ -825,7 +882,7 @@
       const target = event?.target;
       return target instanceof HTMLElement && Boolean(target.closest(editableSelector));
     };
-    const reviewCards = () => [...cardById.values()];
+    const reviewCards = () => [...cardById.values()].filter((card) => !card.hidden);
     const reviewCardId = (card) => String(card?.dataset?.reviewPhotoId || "").trim();
     const updateDetailHrefsForMode = () => {
       cardById.forEach((card, photoId) => {
@@ -838,7 +895,7 @@
     const applyReviewLayout = () => {
       titleReviewLayout?.applyDensityControls?.({ input: densityInput, value: densityValue });
       titleReviewLayout?.applyFitMode?.(fitModeButtons);
-      titleReviewLayout?.applyPreviewLayout?.(visiblePhotos);
+      titleReviewLayout?.applyPreviewLayout?.(currentVisiblePhotos());
     };
     const previewForCard = (card) => card?.querySelector?.(".title-keyword-review-preview") || null;
     const isCardSavedBlocked = (card) => card?.dataset?.reviewBlockSaved === "1";
@@ -926,8 +983,8 @@
       updateCullPreviewPanel();
     };
     const setSelectedIds = (ids, anchorId = selectionAnchorId) => {
-      selectedPhotoIds = new Set([...ids].map((id) => String(id || "").trim()).filter((id) => id && cardById.has(id)));
-      selectionAnchorId = anchorId && cardById.has(anchorId) ? anchorId : (selectedPhotoIds.values().next().value || focusedPhotoId);
+      selectedPhotoIds = new Set([...ids].map((id) => String(id || "").trim()).filter((id) => id && cardById.has(id) && !cardById.get(id).hidden));
+      selectionAnchorId = anchorId && cardById.has(anchorId) && !cardById.get(anchorId).hidden ? anchorId : (selectedPhotoIds.values().next().value || focusedPhotoId);
       syncSelectionClasses();
     };
     const setActiveCard = (card, { select = false, anchor = false } = {}) => {
@@ -1121,7 +1178,7 @@
       scrollCardIntoReview(nextCard);
     };
     const advanceAfterApprove = (card) => {
-      const cards = [...cardById.values()];
+      const cards = reviewCards();
       const currentIndex = cards.indexOf(card);
       if (currentIndex < 0 || currentIndex >= cards.length - 1) return;
       const nextCard = cards[currentIndex + 1];
@@ -1164,7 +1221,7 @@
 
     const removeReviewCard = (photoId, card) => {
       cardById.delete(photoId);
-      const nextCard = card.nextElementSibling || card.previousElementSibling;
+      const nextCard = reviewCards().find((candidate) => candidate !== card && !candidate.hidden) || null;
       card.remove();
       if (activeCard === card) {
         activeCard = null;
@@ -1703,7 +1760,8 @@
     };
 
     const approveAll = () => {
-      cardById.forEach((card, photoId) => {
+      const cards = reviewCards();
+      cards.forEach((card) => {
         if (isCardSavedBlocked(card)) {
           setCardBlockedVisual(card, "blocked");
           setRowStatus(card, "Blocked", "saved");
@@ -1725,12 +1783,12 @@
           comment.closest("label")?.classList.add("is-disabled");
         }
       });
-      if (status) status.textContent = `${cardById.size} visible photos selected for approval; saving as one batch.`;
-      saveCardsDecisions([...cardById.values()]).then((result) => {
+      if (status) status.textContent = `${cards.length} visible photos selected for approval; saving as one batch.`;
+      saveCardsDecisions(cards).then((result) => {
         if (result && status) status.textContent = `${result.count} visible approvals saved.`;
       }).catch((error) => {
         const message = error?.message || "Could not save visible approvals.";
-        cardById.forEach((card) => setRowStatus(card, "Save failed", "error", message));
+        cards.forEach((card) => setRowStatus(card, "Save failed", "error", message));
         if (status) status.textContent = message;
       });
     };
@@ -1746,7 +1804,7 @@
         "Approved rows update catalog metadata. Rejected rows are prioritized for a new proposal. Blocked rows move to the Waste Basket. JPG/source files, public previews, private masters, and render files will not be changed directly by title/keyword approval.",
       ) ?? true;
       if (!confirmed) return;
-      const result = await saveCardsDecisions([...cardById.values()]);
+      const result = await saveCardsDecisions(reviewCards());
       if (!result) return;
       const saveResult = result.result || result.blockedResult?.result || {};
       window.alert?.(
@@ -2000,6 +2058,7 @@
       if (reviewMode === "cull") selectOnlyCard(firstCard);
     }
     setReviewMode(reviewMode, { preserveScroll: false });
+    updateReviewSliceControls();
     restorePendingOwnerReviewReturn();
 
     window.addEventListener("keydown", (event) => {

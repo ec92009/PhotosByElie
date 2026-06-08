@@ -607,6 +607,7 @@
         <button type="button" data-gallery-fit-mode="fill">Fill</button>
         <button type="button" data-gallery-fit-mode="cull">Cull</button>
       </div>
+      <button class="btn secondary title-review-import-edits" type="button" data-title-review-import-edits>Import edits</button>
       <p class="title-review-selection-status" data-title-review-selection-count>0 selected</p>
     `;
     root.append(modebar);
@@ -857,6 +858,7 @@
     const densityInput = modebar.querySelector("[data-title-review-density]");
     const densityValue = modebar.querySelector("[data-title-review-density-value]");
     const fitModeButtons = [...modebar.querySelectorAll("[data-gallery-fit-mode]")];
+    const importEditsButton = modebar.querySelector("[data-title-review-import-edits]");
     const selectionStatus = modebar.querySelector("[data-title-review-selection-count]");
     const titleReviewLayout = window.photosByElieGalleryLayout?.createMasonryController?.({
       root: list,
@@ -1100,6 +1102,24 @@
     });
     fitModeButtons.forEach((button) => {
       button.addEventListener("click", () => setReviewFitMode(button.dataset.galleryFitMode || "cull"));
+    });
+    importEditsButton?.addEventListener("click", async () => {
+      const originalText = importEditsButton.textContent;
+      importEditsButton.disabled = true;
+      importEditsButton.textContent = "Importing...";
+      try {
+        const result = await window.photosByElieImportAllSourceEdits?.();
+        window.dispatchEvent(new CustomEvent("photosbyelie:sourceeditimportall", { detail: result }));
+        const skipped = Number(result?.skipped_count || 0);
+        const imported = Number(result?.imported_count || 0);
+        const suffix = skipped ? ` ${skipped} skipped.` : "";
+        window.alert?.(`Imported ${imported} edited version${imported === 1 ? "" : "s"}.${suffix}`);
+      } catch (error) {
+        window.alert?.(String(error?.message || "Could not import exported edits."));
+      } finally {
+        importEditsButton.disabled = false;
+        importEditsButton.textContent = originalText || "Import edits";
+      }
     });
     const scrollCardIntoReview = (card, block = "nearest") => {
       if (!card) return;

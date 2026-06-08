@@ -215,8 +215,9 @@ Clock state: running
 | 2026-06-08 | 21:57 CEST | 21:58 CEST | 0:01 | Moved Waste Basket purge local prep and coverage refreshes out of the blocking browser action. |
 | 2026-06-08 | 22:11 CEST | 22:13 CEST | 0:02 | Simplified Owner source edits to Pixelmator Pro and added the watched `pixelmator.pro.edits` folder contract. |
 | 2026-06-08 | 22:24 CEST | 22:28 CEST | 0:04 | Added matching Pixelmator export detection, local edited-version import recording, and context-menu verification. |
+| 2026-06-08 | 22:34 CEST | 22:38 CEST | 0:04 | Added the title-review toolbar bulk Pixelmator edit import action and verified imported/skipped behavior. |
 
 ## Totals
 
-Active collaboration time used: 14:50
+Active collaboration time used: 14:54
 Remaining budget: not set

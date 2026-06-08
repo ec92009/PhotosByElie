@@ -2253,6 +2253,23 @@ window.photosByElieVideoDurationLabel = (photo) => (
     return payload;
   };
 
+  window.photosByElieImportAllSourceEdits = async () => {
+    if (!isLocalhostMediaPage) {
+      throw new Error("Edited-version imports are only available from localhost.");
+    }
+    const response = await fetch("/__photosbyelie/source-edit-import-all", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: "{}",
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok || !payload?.ok) {
+      throw new Error(payload?.error || `Could not import exported edits (${response.status}).`);
+    }
+    return payload;
+  };
+
   window.photosByElieEditSourceWith = async (photo) => {
     if (!isLocalhostMediaPage || !photo?.id) {
       throw new Error("Source editing is only available from localhost.");

@@ -53,6 +53,7 @@ SOURCE_EDIT_PATH = "/__photosbyelie/source-edit"
 SOURCE_EDIT_APPS_PATH = "/__photosbyelie/source-edit-apps"
 SOURCE_EDITS_PATH = "/__photosbyelie/source-edits"
 SOURCE_EDIT_IMPORT_PATH = "/__photosbyelie/source-edit-import"
+SOURCE_EDIT_IMPORT_ALL_PATH = "/__photosbyelie/source-edit-import-all"
 MAX_BODY_BYTES = 5 * 1024 * 1024
 LOCAL_CLIENTS = {"127.0.0.1", "::1", "localhost"}
 DERIVATIVES = (("gallery", "gallerySrc"), ("detail", "imageSrc"))
@@ -374,6 +375,9 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         if path == SOURCE_EDIT_IMPORT_PATH:
             self._handle_source_edit_import()
             return
+        if path == SOURCE_EDIT_IMPORT_ALL_PATH:
+            self._handle_source_edit_import_all()
+            return
         if path == REAL_ESTATE_OWNER_PATH:
             self._handle_real_estate_owner()
             return
@@ -402,6 +406,17 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
             return
         except OSError as error:
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
+            return
+        self._send_json(HTTPStatus.OK, result)
+
+    def _handle_source_edit_import_all(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            result = _import_all_pixelmator_edits(Path.cwd())
+        except (OSError, sqlite3.Error, json.JSONDecodeError) as error:
             self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
             return
         self._send_json(HTTPStatus.OK, result)
@@ -3539,6 +3554,69 @@ def _pixelmator_source_match_stems(photo: dict, media_id: str) -> set[str]:
     return stems
 
 
+def _pixelmator_known_media_stem_index(repo_root: Path) -> dict[str, list[str]]:
+    index: dict[str, list[str]] = {}
+
+    def add(stem_source: object, media_id: object) -> None:
+        media_text = str(media_id or "").strip()
+        if not media_text:
+            return
+        stem = _normalized_edit_stem(str(stem_source or ""))
+        if not stem:
+            return
+        bucket = index.setdefault(stem, [])
+        if media_text not in bucket:
+            bucket.append(media_text)
+
+    catalog_path = repo_root / "assets/catalog/photosbyelie.sqlite"
+    if catalog_path.exists():
+        conn = sqlite3.connect(catalog_path)
+        conn.row_factory = sqlite3.Row
+        try:
+            rows = conn.execute(
+                """
+                SELECT m.media_id, m.title, sf.filename, folder.source_folder
+                FROM media_items AS m
+                JOIN source_files AS sf USING(source_file_id)
+                LEFT JOIN source_folders AS folder
+                  ON folder.source_folder_id = sf.source_folder_id
+                """
+            ).fetchall()
+            for row in rows:
+                media_id = row["media_id"]
+                source_folder = str(row["source_folder"] or "").strip("/")
+                filename = str(row["filename"] or "").strip()
+                source_path = "/".join(part for part in [source_folder, filename] if part)
+                add(filename, media_id)
+                add(source_path, media_id)
+                add(row["title"], media_id)
+                add(media_id, media_id)
+        finally:
+            conn.close()
+
+    payload = _read_json_file(repo_root / IMPORT_CACHE_MANIFEST_PATH, {})
+    photos = payload.get("photos") if isinstance(payload, dict) else []
+    if isinstance(photos, list):
+        for row in photos:
+            if not isinstance(row, dict):
+                continue
+            media_id = str(row.get("id") or "").strip()
+            if not media_id:
+                continue
+            catalog_row = _manifest_catalog_row(row)
+            source_folder = str(catalog_row.get("source_folder") or "").strip("/")
+            filename = str(catalog_row.get("filename") or "").strip()
+            source_path = "/".join(part for part in [source_folder, filename] if part)
+            add(filename, media_id)
+            add(source_path, media_id)
+            add(catalog_row.get("title"), media_id)
+            add(media_id, media_id)
+            for metadata in row.get("metadata") or []:
+                if isinstance(metadata, dict) and str(metadata.get("label") or "").strip().lower() in {"original file", "source file"}:
+                    add(metadata.get("value"), media_id)
+    return index
+
+
 def _matching_pixelmator_edit(repo_root: Path, media_id: str, edit_name: str = "") -> tuple[dict, dict]:
     clean_id = str(media_id or "").strip()
     if not clean_id:
@@ -3562,6 +3640,26 @@ def _read_pixelmator_imports(repo_root: Path) -> dict:
     path = _pixelmator_imports_path(repo_root)
     payload = _read_json_file(path, {})
     return payload if isinstance(payload, dict) else {}
+
+
+def _pixelmator_import_already_recorded(repo_root: Path, media_id: str, edit: dict) -> bool:
+    media_text = str(media_id or "").strip()
+    edit_path = str(edit.get("path") or "").strip()
+    edit_bytes = int(edit.get("bytes") or 0)
+    if not media_text or not edit_path:
+        return False
+    payload = _read_pixelmator_imports(repo_root)
+    imports = payload.get("imports") if isinstance(payload.get("imports"), list) else []
+    for record in imports:
+        if not isinstance(record, dict):
+            continue
+        if str(record.get("media_id") or "") != media_text:
+            continue
+        if str(record.get("edit_path") or "") != edit_path:
+            continue
+        if edit_bytes and int(record.get("edit_bytes") or record.get("bytes") or 0) == edit_bytes:
+            return True
+    return False
 
 
 def _write_pixelmator_imports(repo_root: Path, payload: dict) -> None:
@@ -3599,6 +3697,8 @@ def _import_pixelmator_edit(repo_root: Path, media_id: str, edit_name: str = "")
         "source_path": source_label,
         "edit_name": edit_path.name,
         "edit_path": str(edit_path),
+        "edit_bytes": int(edit.get("bytes") or edit_path.stat().st_size),
+        "edit_modified_ms": int(edit.get("modifiedMs") or 0),
         "imported_path": str(imported_path),
         "bytes": imported_stat.st_size,
         "imported_at": imported_at,
@@ -3618,6 +3718,41 @@ def _import_pixelmator_edit(repo_root: Path, media_id: str, edit_name: str = "")
         "edit": edit,
         "imported": record,
         "message": "Edited version imported locally. It is ready for the next catalog publish step.",
+    }
+
+
+def _import_all_pixelmator_edits(repo_root: Path) -> dict:
+    files = _pixelmator_edit_files(repo_root)
+    index = _pixelmator_known_media_stem_index(repo_root)
+    imported: list[dict] = []
+    skipped: list[dict] = []
+    for edit in files:
+        edit_name = str(edit.get("name") or "").strip()
+        stem = _normalized_edit_stem(edit_name)
+        media_ids = index.get(stem) or []
+        if not media_ids:
+            skipped.append({"edit_name": edit_name, "reason": "no matching media source"})
+            continue
+        if len(media_ids) > 1:
+            skipped.append({"edit_name": edit_name, "reason": "ambiguous media source", "media_ids": media_ids})
+            continue
+        media_id = media_ids[0]
+        if _pixelmator_import_already_recorded(repo_root, media_id, edit):
+            skipped.append({"edit_name": edit_name, "media_id": media_id, "reason": "already imported"})
+            continue
+        try:
+            result = _import_pixelmator_edit(repo_root, media_id, edit_name)
+            imported.append(result.get("imported") or {"media_id": media_id, "edit_name": edit_name})
+        except ValueError as error:
+            skipped.append({"edit_name": edit_name, "media_id": media_id, "reason": str(error)})
+    return {
+        "ok": True,
+        "count": len(files),
+        "imported_count": len(imported),
+        "skipped_count": len(skipped),
+        "imported": imported,
+        "skipped": skipped,
+        "message": f"Imported {len(imported)} Pixelmator edit{'s' if len(imported) != 1 else ''}; skipped {len(skipped)}.",
     }
 
 

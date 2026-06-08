@@ -25,6 +25,7 @@
   let densityValue = null;
   let fitModeButtons = [];
   let moreButton = null;
+  let moreDoubleButton = null;
   let showAllButton = null;
   const galleryLayout = window.photosByElieGalleryLayout.createMasonryController({
     root: galleryRoot,
@@ -154,15 +155,24 @@
     moreButton.type = "button";
     moreButton.textContent = seeMoreLabel(pageSize);
     moreButton.hidden = true;
+    moreDoubleButton = document.createElement("button");
+    moreDoubleButton.className = "btn secondary gallery-more-button";
+    moreDoubleButton.type = "button";
+    moreDoubleButton.textContent = seeMoreLabel(pageSize * 2);
+    moreDoubleButton.hidden = true;
     showAllButton = document.createElement("button");
     showAllButton.className = "btn secondary gallery-more-button";
     showAllButton.type = "button";
     showAllButton.textContent = seeAllLabel(pageSize);
     showAllButton.hidden = true;
-    controls.append(moreButton, showAllButton);
+    controls.append(moreButton, moreDoubleButton, showAllButton);
     galleryRoot.after(controls);
     moreButton.addEventListener("click", () => {
       visibleLimit = Math.min(allHiddenPhotos.length, visibleLimit + pageSize);
+      render({ scrollSelection: false });
+    });
+    moreDoubleButton.addEventListener("click", () => {
+      visibleLimit = Math.min(allHiddenPhotos.length, visibleLimit + pageSize * 2);
       render({ scrollSelection: false });
     });
     showAllButton.addEventListener("click", () => {
@@ -173,12 +183,14 @@
 
   const syncPagingControls = (photos) => {
     ensurePagingControls();
-    if (!moreButton || !showAllButton) return;
+    if (!moreButton || !moreDoubleButton || !showAllButton) return;
     const hasMore = photos.length > renderedPhotos.length;
     moreButton.hidden = !hasMore;
+    moreDoubleButton.hidden = !hasMore || photos.length - renderedPhotos.length <= pageSize;
     showAllButton.hidden = !hasMore;
     const remaining = Math.max(0, photos.length - renderedPhotos.length);
     moreButton.textContent = seeMoreLabel(Math.min(pageSize, remaining));
+    moreDoubleButton.textContent = seeMoreLabel(Math.min(pageSize * 2, remaining));
     showAllButton.textContent = seeAllLabel(remaining);
   };
 

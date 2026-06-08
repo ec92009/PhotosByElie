@@ -34,6 +34,7 @@ R2_COVERAGE_PATH = "/__photosbyelie/r2-coverage"
 R2_FIX_PATH = "/__photosbyelie/r2-fix"
 R2_FILL_GAPS_PATH = "/__photosbyelie/r2-fill-gaps"
 R2_SKIP_PHASE_PATH = "/__photosbyelie/r2-skip-phase"
+OWNER_VISIBILITY_SUMMARY_PATH = "/__photosbyelie/owner-visibility-summary"
 SELECT_IMPORT_FOLDER_PATH = "/__photosbyelie/select-import-folder"
 IMPORT_SOURCES_PATH = "/__photosbyelie/import-sources"
 IMPORT_SOURCE_THUMB_PATH = "/__photosbyelie/import-source-thumb"
@@ -272,6 +273,9 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         if path == R2_COVERAGE_PATH:
             self._handle_r2_coverage()
             return
+        if path == OWNER_VISIBILITY_SUMMARY_PATH:
+            self._handle_owner_visibility_summary()
+            return
         if path == IMPORT_SOURCES_PATH:
             self._handle_import_sources()
             return
@@ -361,6 +365,17 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
             return
         self._send_json(HTTPStatus.OK, {"ok": True, "coverage": _r2_coverage_summary(Path.cwd(), resolve_sources=False)})
+
+    def _handle_owner_visibility_summary(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            summary = owner_visibility_summary(Path.cwd())
+        except (OSError, sqlite3.Error, json.JSONDecodeError) as error:
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
+            return
+        self._send_json(HTTPStatus.OK, {"ok": True, "summary": summary})
 
     def _handle_import_sources(self) -> None:
         if not self._is_loopback_request():
@@ -923,6 +938,218 @@ def _read_json_file(path: Path, fallback: object) -> object:
         return json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError:
         return fallback
+
+
+def _sqlite_readonly_connect(path: Path) -> sqlite3.Connection:
+    uri = f"file:{quote(str(path.resolve()), safe='/')}?mode=ro"
+    conn = sqlite3.connect(uri, uri=True)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def _empty_origin_counts() -> dict[str, int]:
+    return {"camera": 0, "ai": 0, "unknown": 0}
+
+
+def _normalize_origin(value: object) -> str:
+    origin = str(value or "").strip().lower()
+    return origin if origin in {"camera", "ai"} else "unknown"
+
+
+def _count_origins(photo_ids: set[str], origin_by_id: dict[str, str]) -> dict[str, int]:
+    counts = _empty_origin_counts()
+    for photo_id in photo_ids:
+        counts[_normalize_origin(origin_by_id.get(photo_id))] += 1
+    counts["total"] = sum(counts.values())
+    return counts
+
+
+def _public_catalog_origin_by_id(repo_root: Path) -> dict[str, str]:
+    catalog_path = repo_root / "assets/catalog/photosbyelie.sqlite"
+    if not catalog_path.exists():
+        return {}
+    conn = _sqlite_readonly_connect(catalog_path)
+    try:
+        rows = conn.execute(
+            """
+            SELECT mi.media_id, COALESCE(so.code, '') AS origin
+            FROM media_items AS mi
+            LEFT JOIN source_origins AS so
+              ON so.source_origin_id = mi.source_origin_id
+            """
+        ).fetchall()
+    finally:
+        conn.close()
+    return {
+        str(row["media_id"]): _normalize_origin(row["origin"] or "camera")
+        for row in rows
+        if row["media_id"]
+    }
+
+
+def _origin_from_manifest_row(row: dict) -> str:
+    gallery_country = row.get("gallery_country") or {}
+    slug = gallery_country.get("slug") if isinstance(gallery_country, dict) else str(gallery_country or "")
+    source_mode = str(row.get("source_mode") or row.get("sourceMode") or "").strip().lower()
+    source_text_parts = [
+        row.get("relative_path"),
+        row.get("source_path_hint"),
+        row.get("sourceMode"),
+        row.get("source_mode"),
+    ]
+    source_file = row.get("source_file")
+    if isinstance(source_file, dict):
+        source_text_parts.extend(source_file.values())
+    elif source_file:
+        source_text_parts.append(source_file)
+    for source in row.get("sourceFiles") or []:
+        if isinstance(source, dict):
+            source_text_parts.extend(source.values())
+    source_text = " ".join(str(part or "") for part in source_text_parts).lower()
+    if slug == "ai" or source_mode in {"ai", "leonardo"} or "leonardo" in source_text:
+        return "ai"
+    return "camera"
+
+
+def _manifest_origin_by_id(repo_root: Path, existing: dict[str, str]) -> dict[str, str]:
+    origins = dict(existing)
+    for path in [repo_root / IMPORT_CACHE_MANIFEST_PATH, repo_root / "assets/private-delivery-manifest.json"]:
+        payload = _read_json_file(path, {})
+        if not isinstance(payload, dict):
+            continue
+        rows = payload.get("photos")
+        if isinstance(rows, list):
+            for row in rows:
+                if not isinstance(row, dict):
+                    continue
+                photo_id = str(row.get("id") or "").strip()
+                if photo_id and photo_id not in origins:
+                    origins[photo_id] = _origin_from_manifest_row(row)
+        records = payload.get("records")
+        if isinstance(records, dict):
+            for photo_id, record in records.items():
+                if not isinstance(record, dict):
+                    continue
+                clean_id = str(photo_id or record.get("id") or "").strip()
+                if clean_id and clean_id not in origins:
+                    origins[clean_id] = _origin_from_manifest_row(record)
+    return origins
+
+
+def _current_public_preview_ready_ids(repo_root: Path) -> set[str]:
+    owner_path = repo_root / OWNER_ACTION_ROOT / "Owner.sqlite"
+    if not owner_path.exists():
+        return set()
+    conn = _sqlite_readonly_connect(owner_path)
+    try:
+        rows = conn.execute(
+            """
+            SELECT photo_id,
+                   SUM(CASE WHEN object_kind = 'public-preview'
+                              AND object_key LIKE '%_900.%' THEN 1 ELSE 0 END) AS low_count,
+                   SUM(CASE WHEN object_kind = 'public-preview'
+                              AND object_key LIKE '%_1800.%' THEN 1 ELSE 0 END) AS high_count
+            FROM r2_objects
+            WHERE lifecycle_state = 'current'
+              AND object_kind = 'public-preview'
+              AND COALESCE(photo_id, '') <> ''
+            GROUP BY photo_id
+            """
+        ).fetchall()
+    finally:
+        conn.close()
+    return {
+        str(row["photo_id"])
+        for row in rows
+        if row["photo_id"] and int(row["low_count"] or 0) > 0 and int(row["high_count"] or 0) > 0
+    }
+
+
+def _title_keyword_state_by_id(repo_root: Path) -> dict[str, str]:
+    owner_path = repo_root / OWNER_ACTION_ROOT / "Owner.sqlite"
+    if not owner_path.exists():
+        return {}
+    conn = _sqlite_readonly_connect(owner_path)
+    try:
+        rows = conn.execute("SELECT media_id, review_state FROM title_keyword_queue").fetchall()
+    finally:
+        conn.close()
+    return {
+        str(row["media_id"]): str(row["review_state"] or "")
+        for row in rows
+        if row["media_id"]
+    }
+
+
+def _owner_hidden_or_discarded_ids(repo_root: Path) -> set[str]:
+    ids: set[str] = set()
+    for path in [repo_root / HIDDEN_BLACKLIST_PATH, repo_root / DISCARDED_TOMBSTONE_PATH]:
+        payload = _read_json_file(path, {})
+        if not isinstance(payload, dict):
+            continue
+        ids.update(str(photo_id) for photo_id in payload.get("photo_ids") or [] if photo_id)
+        ids.update(
+            str(photo.get("id"))
+            for photo in payload.get("photos") or []
+            if isinstance(photo, dict) and photo.get("id")
+        )
+    return ids
+
+
+def owner_visibility_summary(repo_root: Path) -> dict:
+    public_origin_by_id = _public_catalog_origin_by_id(repo_root)
+    origin_by_id = _manifest_origin_by_id(repo_root, public_origin_by_id)
+    public_ids = set(public_origin_by_id)
+    r2_ready_ids = _current_public_preview_ready_ids(repo_root)
+    review_state_by_id = _title_keyword_state_by_id(repo_root)
+    hidden_or_discarded_ids = _owner_hidden_or_discarded_ids(repo_root)
+    blocked_or_parked_ids = {
+        photo_id
+        for photo_id, state in review_state_by_id.items()
+        if state in {"blocked", "parked"}
+    } | hidden_or_discarded_ids
+    approved_ids = {photo_id for photo_id, state in review_state_by_id.items() if state == "approved"}
+    applied_ids = {photo_id for photo_id, state in review_state_by_id.items() if state == "applied"}
+    limbo_ids = r2_ready_ids - public_ids - blocked_or_parked_ids - approved_ids - applied_ids
+    approved_not_applied_ids = approved_ids - public_ids - blocked_or_parked_ids
+    applied_not_public_ids = applied_ids - public_ids - blocked_or_parked_ids
+    blocked_ready_ids = r2_ready_ids & blocked_or_parked_ids
+    state_counts: dict[str, int] = {}
+    for state in review_state_by_id.values():
+        state_counts[state] = state_counts.get(state, 0) + 1
+    return {
+        "generatedAt": datetime.now(timezone.utc).isoformat(),
+        "definitions": {
+            "publicApplied": "Rows exported to assets/catalog/photosbyelie.sqlite and visible to end users.",
+            "r2ReadyLimbo": "Photos with both public R2 preview objects present, but not public, approved, applied, parked, or blocked.",
+            "approvedNotApplied": "Owner-approved rows that have not yet been applied/exported to the public catalog.",
+        },
+        "publicApplied": {
+            "count": len(public_ids),
+            "byOrigin": _count_origins(public_ids, origin_by_id),
+        },
+        "r2Ready": {
+            "count": len(r2_ready_ids),
+            "byOrigin": _count_origins(r2_ready_ids, origin_by_id),
+        },
+        "r2ReadyLimbo": {
+            "count": len(limbo_ids),
+            "byOrigin": _count_origins(limbo_ids, origin_by_id),
+        },
+        "approvedNotApplied": {
+            "count": len(approved_not_applied_ids),
+            "byOrigin": _count_origins(approved_not_applied_ids, origin_by_id),
+        },
+        "appliedNotPublic": {
+            "count": len(applied_not_public_ids),
+            "byOrigin": _count_origins(applied_not_public_ids, origin_by_id),
+        },
+        "blockedOrParkedReady": {
+            "count": len(blocked_ready_ids),
+            "byOrigin": _count_origins(blocked_ready_ids, origin_by_id),
+        },
+        "reviewStateCounts": dict(sorted(state_counts.items())),
+    }
 
 
 def _write_json_file(path: Path, payload: object) -> None:

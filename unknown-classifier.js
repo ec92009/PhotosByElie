@@ -15,8 +15,11 @@
   const pageSize = 24;
   let visibleLimit = pageSize;
   let moreButton = null;
+  let moreDoubleButton = null;
   let showAllButton = null;
-  const t = (key) => window.photosByElieI18n?.t?.(key) || key;
+  const t = (key, replacements = {}) => window.photosByElieI18n?.t?.(key, replacements) || key;
+  const showMoreCountLabel = (count) => t("home.see_more_count", { count });
+  const showAllCountLabel = (count) => t("home.see_all_count", { count });
 
   const setStatus = (message) => {
     if (status) status.textContent = message;
@@ -321,20 +324,28 @@
     moreButton.className = "btn secondary gallery-more-button";
     moreButton.type = "button";
     moreButton.dataset.unknownMore = "";
-    moreButton.dataset.i18n = "home.show_more";
-    moreButton.textContent = t("home.show_more");
+    moreButton.textContent = showMoreCountLabel(pageSize);
     moreButton.hidden = true;
+    moreDoubleButton = document.createElement("button");
+    moreDoubleButton.className = "btn secondary gallery-more-button";
+    moreDoubleButton.type = "button";
+    moreDoubleButton.dataset.unknownMoreDouble = "";
+    moreDoubleButton.textContent = showMoreCountLabel(pageSize * 2);
+    moreDoubleButton.hidden = true;
     showAllButton = document.createElement("button");
     showAllButton.className = "btn secondary gallery-more-button";
     showAllButton.type = "button";
     showAllButton.dataset.unknownShowAll = "";
-    showAllButton.dataset.i18n = "home.show_all";
-    showAllButton.textContent = t("home.show_all");
+    showAllButton.textContent = showAllCountLabel(pageSize);
     showAllButton.hidden = true;
-    controls.append(moreButton, showAllButton);
+    controls.append(moreButton, moreDoubleButton, showAllButton);
     root.after(controls);
     moreButton.addEventListener("click", () => {
       visibleLimit += pageSize;
+      renderPreservingScroll();
+    });
+    moreDoubleButton.addEventListener("click", () => {
+      visibleLimit += pageSize * 2;
       renderPreservingScroll();
     });
     showAllButton.addEventListener("click", () => {
@@ -388,6 +399,7 @@
         </article>
       `;
       if (moreButton) moreButton.hidden = true;
+      if (moreDoubleButton) moreDoubleButton.hidden = true;
       if (showAllButton) showAllButton.hidden = true;
       setStatus("Unknown queue is empty.");
       return;
@@ -446,12 +458,19 @@
     }).join("");
     if (moreButton) {
       const hasMore = photos.length > visiblePhotos.length;
+      const remaining = Math.max(0, photos.length - visiblePhotos.length);
       moreButton.hidden = !hasMore;
-      moreButton.textContent = t("home.show_more");
+      moreButton.textContent = showMoreCountLabel(Math.min(pageSize, remaining));
+    }
+    if (moreDoubleButton) {
+      const remaining = Math.max(0, photos.length - visiblePhotos.length);
+      moreDoubleButton.hidden = remaining <= pageSize;
+      moreDoubleButton.textContent = showMoreCountLabel(Math.min(pageSize * 2, remaining));
     }
     if (showAllButton) {
-      showAllButton.hidden = photos.length <= visiblePhotos.length;
-      showAllButton.textContent = t("home.show_all");
+      const remaining = Math.max(0, photos.length - visiblePhotos.length);
+      showAllButton.hidden = remaining <= 0;
+      showAllButton.textContent = showAllCountLabel(remaining);
     }
 
     root.querySelectorAll("[data-photo-id]").forEach((card) => {

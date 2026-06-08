@@ -70,6 +70,17 @@
   const overviewBasketCountRoot = document.querySelector("[data-owner-overview-basket-count]");
   const overviewExpoCountRoot = document.querySelector("[data-owner-overview-expo-count]");
   const catalogPieRoot = document.querySelector("[data-owner-catalog-pie]");
+  const visibilityPublicCountRoot = document.querySelector("[data-owner-visibility-public-count]");
+  const visibilityLimboCountRoot = document.querySelector("[data-owner-visibility-limbo-count]");
+  const visibilityApprovedCountRoot = document.querySelector("[data-owner-visibility-approved-count]");
+  const visibilityAppliedHiddenCountRoot = document.querySelector("[data-owner-visibility-applied-hidden-count]");
+  const visibilityR2ReadyCountRoot = document.querySelector("[data-owner-visibility-r2-ready-count]");
+  const visibilityLimboCameraCountRoot = document.querySelector("[data-owner-visibility-limbo-camera-count]");
+  const visibilityLimboAiCountRoot = document.querySelector("[data-owner-visibility-limbo-ai-count]");
+  const visibilityLimboBarRoot = document.querySelector("[data-owner-visibility-limbo-bar]");
+  const visibilityLimboCameraBar = document.querySelector("[data-owner-visibility-limbo-camera-bar]");
+  const visibilityLimboAiBar = document.querySelector("[data-owner-visibility-limbo-ai-bar]");
+  const visibilityNoteRoot = document.querySelector("[data-owner-visibility-note]");
   const blockedLocalCountRoot = document.querySelector("[data-owner-blocked-local-count]");
   const blockedPreviewCountRoot = document.querySelector("[data-owner-blocked-preview-count]");
   const basketStateNoteRoot = document.querySelector("[data-owner-basket-state-note]");
@@ -332,6 +343,63 @@
       "aria-label",
       `Catalog split: ${formatCount(camera)} camera, ${formatCount(ai)} AI, ${formatCount(basket)} in basket, ${formatCount(analyzed)} analyzed.`
     );
+  };
+
+  const originCount = (bucket, origin) => Number(bucket?.byOrigin?.[origin] ?? 0) || 0;
+
+  const renderVisibilitySummary = (summary = null) => {
+    const publicApplied = summary?.publicApplied || {};
+    const limbo = summary?.r2ReadyLimbo || {};
+    const approved = summary?.approvedNotApplied || {};
+    const appliedHidden = summary?.appliedNotPublic || {};
+    const r2Ready = summary?.r2Ready || {};
+    const limboCamera = originCount(limbo, "camera");
+    const limboAi = originCount(limbo, "ai");
+    const limboUnknown = originCount(limbo, "unknown");
+    const limboTotal = Number(limbo.count ?? limbo.byOrigin?.total ?? (limboCamera + limboAi + limboUnknown)) || 0;
+    const cameraPercent = limboTotal ? (limboCamera / limboTotal) * 100 : 0;
+    const aiPercent = limboTotal ? (limboAi / limboTotal) * 100 : 0;
+    setText(visibilityPublicCountRoot, formatCount(Number(publicApplied.count || 0)));
+    setText(visibilityLimboCountRoot, formatCount(limboTotal));
+    setText(visibilityApprovedCountRoot, formatCount(Number(approved.count || 0)));
+    setText(visibilityAppliedHiddenCountRoot, formatCount(Number(appliedHidden.count || 0)));
+    setText(visibilityR2ReadyCountRoot, formatCount(Number(r2Ready.count || 0)));
+    setText(visibilityLimboCameraCountRoot, formatCount(limboCamera));
+    setText(visibilityLimboAiCountRoot, formatCount(limboAi));
+    if (visibilityLimboCameraBar) visibilityLimboCameraBar.style.width = `${cameraPercent}%`;
+    if (visibilityLimboAiBar) visibilityLimboAiBar.style.width = `${aiPercent}%`;
+    if (visibilityLimboBarRoot) {
+      visibilityLimboBarRoot.toggleAttribute("data-empty", limboTotal <= 0);
+      visibilityLimboBarRoot.setAttribute(
+        "aria-label",
+        `Limbo split: ${formatCount(limboCamera)} camera, ${formatCount(limboAi)} AI, ${formatCount(limboUnknown)} unknown.`
+      );
+    }
+    if (visibilityNoteRoot) {
+      const generatedAt = summary?.generatedAt ? new Date(summary.generatedAt) : null;
+      const stamp = generatedAt && !Number.isNaN(generatedAt.getTime())
+        ? ` Updated ${generatedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}.`
+        : "";
+      visibilityNoteRoot.textContent = summary
+        ? `Limbo excludes Waste Basket, parked, approved, and already-applied rows.${stamp}`
+        : "Visibility state requires the localhost Owner helper.";
+    }
+  };
+
+  const loadVisibilitySummary = async () => {
+    if (!visibilityNoteRoot) return null;
+    try {
+      const response = await fetch("/__photosbyelie/owner-visibility-summary", { cache: "no-store" });
+      if (!response.ok) throw new Error("Visibility state requires the localhost Owner helper.");
+      const payload = await response.json();
+      if (payload?.ok === false) throw new Error(payload.error || "Visibility summary failed");
+      renderVisibilitySummary(payload.summary || null);
+      return payload.summary || null;
+    } catch (error) {
+      renderVisibilitySummary(null);
+      visibilityNoteRoot.textContent = error?.message || "Visibility state requires the localhost Owner helper.";
+      return null;
+    }
   };
 
   window.addEventListener("photosbyelie:ownerbusychange", (event) => {
@@ -1685,6 +1753,7 @@
     }
     renderCounts();
     refreshDiscardedCount();
+    await loadVisibilitySummary();
   };
 
   const logUrlForTask = (task) => {
@@ -3673,7 +3742,7 @@
     try {
       if (kind === "counts") {
         await refreshCountsFromSource();
-        setStatus("Catalog mix refreshed.");
+        setStatus("Catalog and visibility refreshed.");
       } else if (kind === "blocked-sync") {
         await withTimeout(Promise.all([loadR2Coverage(), loadR2Progress()]), 12000, "Waste Basket refresh");
         await refreshBlockedSyncPanel();
@@ -4166,6 +4235,7 @@
     if (ownerAuth?.state?.available) {
       renderCounts();
       refreshDiscardedCount();
+      loadVisibilitySummary();
       refreshBlockedSyncPanel();
     }
   });

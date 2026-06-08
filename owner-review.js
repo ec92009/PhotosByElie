@@ -43,9 +43,9 @@
       scripts: ["hidden-store.js", "gallery-card.js", "hidden-page.js"],
     },
     unknown: {
-      title: "Unknown",
+      title: "Unassigned",
       eyebrow: "Owner queue",
-      nav: "Unknown",
+      nav: "Unassigned",
       bodyGallery: "unknown",
       statusAttr: "data-unknown-status",
       hintClass: "unknown-keyboard-hint",

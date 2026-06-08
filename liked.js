@@ -43,7 +43,10 @@ const bulkResolutionButtons = document.querySelectorAll("[data-liked-select-reso
 const pageSize = 24;
 let visibleLimit = pageSize;
 let moreButton = null;
+let moreDoubleButton = null;
 let showAllButton = null;
+const showMoreCountLabel = (count) => t("home.see_more_count", { count });
+const showAllCountLabel = (count) => t("home.see_all_count", { count });
 const productLabel = (option) => {
   if (option?.type === "print") return window.photosByElieProductLabel?.(option) || option?.label || t("product.print");
   const keyById = {
@@ -101,20 +104,28 @@ const ensureMoreButton = () => {
   moreButton.className = "btn secondary gallery-more-button";
   moreButton.type = "button";
   moreButton.dataset.likedMore = "";
-  moreButton.dataset.i18n = "home.show_more";
-  moreButton.textContent = t("home.show_more");
+  moreButton.textContent = showMoreCountLabel(pageSize);
   moreButton.hidden = true;
+  moreDoubleButton = document.createElement("button");
+  moreDoubleButton.className = "btn secondary gallery-more-button";
+  moreDoubleButton.type = "button";
+  moreDoubleButton.dataset.likedMoreDouble = "";
+  moreDoubleButton.textContent = showMoreCountLabel(pageSize * 2);
+  moreDoubleButton.hidden = true;
   showAllButton = document.createElement("button");
   showAllButton.className = "btn secondary gallery-more-button";
   showAllButton.type = "button";
   showAllButton.dataset.likedShowAll = "";
-  showAllButton.dataset.i18n = "home.show_all";
-  showAllButton.textContent = t("home.show_all");
+  showAllButton.textContent = showAllCountLabel(pageSize);
   showAllButton.hidden = true;
-  controls.append(moreButton, showAllButton);
+  controls.append(moreButton, moreDoubleButton, showAllButton);
   likedRoot.after(controls);
   moreButton.addEventListener("click", () => {
     visibleLimit += pageSize;
+    renderLiked();
+  });
+  moreDoubleButton.addEventListener("click", () => {
+    visibleLimit += pageSize * 2;
     renderLiked();
   });
   showAllButton.addEventListener("click", () => {
@@ -290,12 +301,19 @@ const renderLiked = () => {
   `}).join("");
   if (moreButton) {
     const hasMore = likedItems.length > visibleLikedItems.length;
+    const remaining = Math.max(0, likedItems.length - visibleLikedItems.length);
     moreButton.hidden = !hasMore;
-    moreButton.textContent = t("home.show_more");
+    moreButton.textContent = showMoreCountLabel(Math.min(pageSize, remaining));
+  }
+  if (moreDoubleButton) {
+    const remaining = Math.max(0, likedItems.length - visibleLikedItems.length);
+    moreDoubleButton.hidden = remaining <= pageSize;
+    moreDoubleButton.textContent = showMoreCountLabel(Math.min(pageSize * 2, remaining));
   }
   if (showAllButton) {
-    showAllButton.hidden = likedItems.length <= visibleLikedItems.length;
-    showAllButton.textContent = t("home.show_all");
+    const remaining = Math.max(0, likedItems.length - visibleLikedItems.length);
+    showAllButton.hidden = remaining <= 0;
+    showAllButton.textContent = showAllCountLabel(remaining);
   }
 
   document.querySelectorAll("[data-remove-liked]").forEach((button) => {

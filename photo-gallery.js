@@ -50,6 +50,7 @@ let viewControls = null;
 let renderedGalleryPhotos = [];
 let visibleLimit = pageSize;
 let moreButton = null;
+let moreDoubleButton = null;
 let showAllButton = null;
 let showAllRenderToken = 0;
 const filterStateKey = `photosbyelie-gallery-filters-${galleryKey}`;
@@ -481,13 +482,19 @@ const ensureGalleryMoreButton = () => {
   moreButton.dataset.galleryMore = "";
   moreButton.textContent = seeMoreLabel(pageSize);
   moreButton.hidden = true;
+  moreDoubleButton = document.createElement("button");
+  moreDoubleButton.className = "btn secondary gallery-more-button";
+  moreDoubleButton.type = "button";
+  moreDoubleButton.dataset.galleryMoreDouble = "";
+  moreDoubleButton.textContent = seeMoreLabel(pageSize * 2);
+  moreDoubleButton.hidden = true;
   showAllButton = document.createElement("button");
   showAllButton.className = "btn secondary gallery-more-button";
   showAllButton.type = "button";
   showAllButton.dataset.galleryShowAll = "";
   showAllButton.textContent = seeAllLabel(pageSize);
   showAllButton.hidden = true;
-  controls.append(moreButton, showAllButton);
+  controls.append(moreButton, moreDoubleButton, showAllButton);
   galleryRoot.after(controls);
   const preserveScrollAfterRender = (token = showAllRenderToken) => {
     const left = window.scrollX || 0;
@@ -507,6 +514,14 @@ const ensureGalleryMoreButton = () => {
     if (showAllButton) showAllButton.disabled = false;
     const restoreScroll = preserveScrollAfterRender(showAllRenderToken);
     visibleLimit += pageSize;
+    renderGallery({ scrollSelection: false });
+    restoreScroll();
+  });
+  moreDoubleButton.addEventListener("click", () => {
+    showAllRenderToken += 1;
+    if (showAllButton) showAllButton.disabled = false;
+    const restoreScroll = preserveScrollAfterRender(showAllRenderToken);
+    visibleLimit += pageSize * 2;
     renderGallery({ scrollSelection: false });
     restoreScroll();
   });
@@ -917,6 +932,7 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
     renderedGalleryPhotos = [];
     galleryRoot.innerHTML = "";
     if (moreButton) moreButton.hidden = true;
+    if (moreDoubleButton) moreDoubleButton.hidden = true;
     if (showAllButton) showAllButton.hidden = true;
     setGalleryStatus("");
     return;
@@ -952,6 +968,7 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
       renderGallery();
     });
     if (moreButton) moreButton.hidden = true;
+    if (moreDoubleButton) moreDoubleButton.hidden = true;
     if (showAllButton) showAllButton.hidden = true;
     setGalleryStatus(filteredOut
       ? t("gallery.adjust_filters")
@@ -1029,6 +1046,11 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
     const hasMore = remaining > 0;
     moreButton.hidden = !hasMore;
     moreButton.textContent = seeMoreLabel(Math.min(pageSize, remaining));
+  }
+  if (moreDoubleButton) {
+    const remaining = Math.max(0, photos.length - visibleSubset.length);
+    moreDoubleButton.hidden = remaining <= pageSize;
+    moreDoubleButton.textContent = seeMoreLabel(Math.min(pageSize * 2, remaining));
   }
   if (showAllButton) {
     const remaining = Math.max(0, photos.length - visibleSubset.length);

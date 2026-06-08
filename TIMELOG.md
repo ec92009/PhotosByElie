@@ -199,8 +199,12 @@ Clock state: running
 | 2026-06-07 | 20:28 CEST | 20:29 CEST | 0:01 | Requested Owner detail pages hide buyer resolution controls and Basket entry points; implementation/testing time excluded. |
 | 2026-06-08 | 09:43 CEST | 09:45 CEST | 0:02 | Requested title/keyword review detail fullscreen use 6 MP renders, exact review return position, count-aware gallery load labels, and confirmed the day-100 version; implementation/testing time excluded. |
 | 2026-06-08 | 11:20 CEST | 11:32 CEST | 0:12 | Implemented Release A applied-only public title/keyword visibility, Owner incomplete review backlog surfacing, artifact regeneration, and verification; background tool runtime excluded. |
+| 2026-06-08 | 11:35 CEST | 11:39 CEST | 0:04 | Inspected discarded/Waste Basket tombstone keying and source-path import guards. |
+| 2026-06-08 | 11:39 CEST | 11:41 CEST | 0:02 | Checked whether pre-upload source tombstones are already exposed through Owner import actions. |
+| 2026-06-08 | 12:36 CEST | 12:37 CEST | 0:01 | Preserved ignored Etsy package notes and removed obsolete temporary pbe worktrees from Dev. |
+| 2026-06-08 | 15:42 CEST | 16:09 CEST | 0:06 | Added count-aware gallery pagination labels, clarified Owner public-vs-limbo visibility counts, and verified the updated local review helper; background implementation/testing excluded. |
 
 ## Totals
 
-Active collaboration time used: 13:16
+Active collaboration time used: 13:29
 Remaining budget: not set

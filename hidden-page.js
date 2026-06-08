@@ -7,6 +7,9 @@
   const status = document.querySelector("[data-hidden-status]");
   const shortcutHint = document.querySelector("[data-hidden-shortcut-hint]");
   const versionedHref = (href) => window.photosByElieVersionedHref?.(href) || href;
+  const t = (key, replacements = {}) => window.photosByElieI18n?.t?.(key, replacements) || key;
+  const seeMoreLabel = (count) => t("home.see_more_count", { count });
+  const seeAllLabel = (count) => t("home.see_all_count", { count });
   const shouldShowKeyboardHints = () => window.photosByElieInputMode?.shouldShowKeyboardHints?.() ?? true;
   const densityKey = "photosbyelie-gallery-columns";
   const fitModeKey = "photosbyelie-gallery-fit-mode";
@@ -149,12 +152,12 @@
     moreButton = document.createElement("button");
     moreButton.className = "btn secondary gallery-more-button";
     moreButton.type = "button";
-    moreButton.textContent = "Show more";
+    moreButton.textContent = seeMoreLabel(pageSize);
     moreButton.hidden = true;
     showAllButton = document.createElement("button");
     showAllButton.className = "btn secondary gallery-more-button";
     showAllButton.type = "button";
-    showAllButton.textContent = "Show all";
+    showAllButton.textContent = seeAllLabel(pageSize);
     showAllButton.hidden = true;
     controls.append(moreButton, showAllButton);
     galleryRoot.after(controls);
@@ -174,9 +177,9 @@
     const hasMore = photos.length > renderedPhotos.length;
     moreButton.hidden = !hasMore;
     showAllButton.hidden = !hasMore;
-    const moreCount = Math.min(pageSize, Math.max(0, photos.length - renderedPhotos.length));
-    moreButton.textContent = `Show ${moreCount} more`;
-    showAllButton.textContent = "Show all";
+    const remaining = Math.max(0, photos.length - renderedPhotos.length);
+    moreButton.textContent = seeMoreLabel(Math.min(pageSize, remaining));
+    showAllButton.textContent = seeAllLabel(remaining);
   };
 
   const positionViewControls = () => {

@@ -197,8 +197,9 @@ Clock state: running
 | 2026-06-06 | 21:44 CEST | 22:01 CEST | 0:13 | Cleared the Owner Expo fast-forward blocker, restarted the local helper as arm64, diagnosed the interrupted 2022-B import, and removed a stale sweep lock; import runtime excluded. |
 | 2026-06-07 | 11:36 CEST | 11:38 CEST | 0:02 | Chose the Owner-only `Z` Fill/Fit/Cull interaction for faster left-to-right culling; implementation/testing time excluded. |
 | 2026-06-07 | 20:28 CEST | 20:29 CEST | 0:01 | Requested Owner detail pages hide buyer resolution controls and Basket entry points; implementation/testing time excluded. |
+| 2026-06-08 | 09:43 CEST | 09:45 CEST | 0:02 | Requested title/keyword review detail fullscreen use 6 MP renders, exact review return position, count-aware gallery load labels, and confirmed the day-100 version; implementation/testing time excluded. |
 
 ## Totals
 
-Active collaboration time used: 13:02
+Active collaboration time used: 13:04
 Remaining budget: not set

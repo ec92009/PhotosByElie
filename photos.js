@@ -50,6 +50,8 @@ const translations = {
     'home.no_matches': 'No photos match the current filters.',
     'home.show_more': 'Show more',
     'home.show_all': 'Show all',
+    'home.see_more_count': 'See {count} more',
+    'home.see_all_count': 'See all {count} more',
     'home.title_required': 'Title cannot be empty.',
     'home.saving_metadata': 'Saving metadata...',
     'home.metadata_saved': '{title} metadata saved.',
@@ -519,6 +521,8 @@ const translations = {
     'home.no_matches': 'Aucune photo ne correspond aux filtres.',
     'home.show_more': 'Voir plus',
     'home.show_all': 'Tout voir',
+    'home.see_more_count': 'Voir {count} de plus',
+    'home.see_all_count': 'Tout voir, {count} de plus',
     'home.title_required': 'Le titre ne peut pas etre vide.',
     'home.saving_metadata': 'Enregistrement des metadonnees...',
     'home.metadata_saved': 'Metadonnees de {title} enregistrees.',
@@ -988,6 +992,8 @@ const translations = {
     'home.no_matches': 'Ninguna foto coincide con los filtros.',
     'home.show_more': 'Ver mas',
     'home.show_all': 'Ver todo',
+    'home.see_more_count': 'Ver {count} mas',
+    'home.see_all_count': 'Ver todo, {count} mas',
     'home.title_required': 'El titulo no puede estar vacio.',
     'home.saving_metadata': 'Guardando metadatos...',
     'home.metadata_saved': 'Metadatos de {title} guardados.',
@@ -1829,6 +1835,14 @@ window.photosByElieMediaSampleUrl = (photo, size = 'gallery') => {
   const key = window.photosByElieMediaKey(photo, size);
   if (!key || !isLocalhostMediaPage) return window.photosByElieMediaUrl(photo, size);
   return `/__photosbyelie/public-media/${key.replace(/^\/+/, '').split('/').map(encodeURIComponent).join('/')}`;
+};
+
+window.photosByEliePrivateMediaUrl = (photo, productId = 'jpg-6mp') => {
+  if (!isLocalhostMediaPage || !photo?.id || window.photosByElieIsVideo?.(photo)) return '';
+  const renderKey = photo?.media?.privateDelivery?.renderKeys?.[productId]
+    || (productId === 'jpg-6mp' ? `renders/${photo.id}_6mp.jpg` : '');
+  if (!renderKey) return '';
+  return `/__photosbyelie/private-media/${renderKey.replace(/^\/+/, '').split('/').map(encodeURIComponent).join('/')}`;
 };
 
 window.photosByElieMediaType = (photo) => String(photo?.media?.type || photo?.type || "photo").toLowerCase();

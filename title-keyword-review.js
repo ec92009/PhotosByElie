@@ -94,9 +94,11 @@
   };
 
   const versionedHref = (href) => window.photosByElieVersionedHref?.(href) || href;
-  const ownerReviewReturnHrefFor = (photoId) => {
+  const ownerReviewReturnHrefFor = (photoId, scrollY = null) => {
     const params = new URLSearchParams({ view: "title-keywords" });
     if (photoId) params.set("returnPhoto", photoId);
+    const savedScrollY = Number(scrollY);
+    if (Number.isFinite(savedScrollY) && savedScrollY >= 0) params.set("returnScroll", String(Math.round(savedScrollY)));
     return `./owner-review.html?${params.toString()}`;
   };
   const detailHrefForReviewPhoto = (photoId) => {
@@ -131,12 +133,13 @@
   const pendingOwnerReviewReturn = () => {
     const query = new URLSearchParams(window.location.search);
     const photoId = String(query.get("returnPhoto") || "").trim();
+    const queryScrollY = Number(query.get("returnScroll"));
     const payload = readOwnerReviewReturnState();
     if (payload || photoId) {
       return {
         ...payload,
         photoId: String(payload?.photoId || photoId || "").trim(),
-        scrollY: Number(payload?.scrollY),
+        scrollY: Number.isFinite(Number(payload?.scrollY)) ? Number(payload?.scrollY) : queryScrollY,
       };
     }
     return null;
@@ -690,7 +693,7 @@
           view: "title-keywords",
           photoId,
           batchId: String(card?.dataset?.reviewBatchId || batchId || "").trim(),
-          href: ownerReviewReturnHrefFor(photoId),
+          href: ownerReviewReturnHrefFor(photoId, window.scrollY),
           scrollY: window.scrollY,
           createdAt: Date.now(),
         }));
@@ -712,12 +715,19 @@
       } catch {}
       clearOwnerReviewReturnUrl();
       const targetCard = pendingReturn.photoId ? cardById.get(pendingReturn.photoId) : null;
+      const scrollY = Number(pendingReturn.scrollY);
       if (targetCard) {
         setActiveCard(targetCard);
-        window.requestAnimationFrame(() => scrollCardIntoReview(targetCard, "center"));
+        targetCard.focus?.({ preventScroll: true });
+        window.requestAnimationFrame(() => {
+          if (Number.isFinite(scrollY) && scrollY >= 0) {
+            window.scrollTo({ top: scrollY, left: 0, behavior: "auto" });
+            return;
+          }
+          scrollCardIntoReview(targetCard, "center");
+        });
         return true;
       }
-      const scrollY = Number(pendingReturn.scrollY);
       if (Number.isFinite(scrollY) && scrollY > 0) {
         window.requestAnimationFrame(() => window.scrollTo({ top: scrollY, left: 0, behavior: "auto" }));
         return true;

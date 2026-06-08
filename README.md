@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v99.3`
+- Current visible version: `v100.0`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -87,6 +87,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - The full public catalog loads plain `assets/catalog/photosbyelie.sqlite` directly. Normal catalog rebuilds no longer generate or prefer Brotli-compressed SQLite; the retained `.sqlite.br` artifact is legacy-only. The SQLite catalog uses compact integer lookup ids for controlled vocabulary fields. Current active public catalog count is `6,919` media rows after the Waste Basket purge: AI/Leonardo `4,809`, France `315`, Italy `35`, Mexico `33`, Portugal `216`, Slovakia `2`, Spain `1,350`, USA `159`.
 - The homepage hides the decorative hero photo stack on narrow or short viewports so the collection carousel stays visible instead of competing for vertical space.
 - The homepage now has shared global discovery controls before Collections, including search, collection, camera/AI origin, media type, date from/to, orientation, adaptive size/duration, color mood, subject, and sort. Filtered results render 24 at a time with a full-match count and gallery-style hearts, keyboard selection, detail navigation, and localhost Owner shortcuts.
+- Gallery/home load controls show exact remaining counts, using labels such as `See 24 more`, `See 48 more`, and `See all N more` instead of generic "See More" text.
 - Gallery pages load the publishable Expo subset from the public SQLite catalog through the `photos-data.js` bootstrap; public GitHub Pages builds resolve preview media through `media-config.js` and each catalog row's `media.publicPreview` R2/CDN key instead of relying on committed media assets.
 - Localhost Owner gallery search automatically augments normal public-catalog matching with Owner title/keyword review metadata from `Owner.sqlite`, including original, proposed, decided, blocked, and applied review text. Public search remains catalog-only.
 - Public previews currently resolve directly through the public R2 `r2.dev` media endpoint backed by `photosbyelie-public`; move `publicBaseUrl` to a custom media domain when that is attached.
@@ -98,6 +99,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - On localhost, `H` or `X` sends a live-gallery photo to the Waste Basket by adding it to the master blacklist, `U` undoes the most recent basket action, and `P` on the Waste Basket page puts a basketed photo back by removing it from the blacklist. Purging Waste Basket R2 copies deletes the media objects only and writes permanent tombstones; a banned photo stays banned. `D` is the stronger discard action: it removes the photo from active catalog state, writes `assets/discarded/discarded-photo-ids.json`, and queues R2 deletion for matching public previews, private masters, and private render JPGs.
 - On localhost gallery/detail pages, Owner can edit Title and Keywords; saves update the catalog metadata and generated Worker catalog used by checkout deliverables. Source-file embedded metadata is left alone because catalog manifests are the authoritative title/keyword source.
 - On localhost Owner detail pages, buyer resolution controls and Basket entry points are hidden so detail review stays focused on moderation shortcuts and metadata edits.
+- When a localhost Owner title/keyword review row opens detail, double-clicking the detail preview requests the private JPG 6 MP render for full-screen inspection when available, and the back link restores the exact review scroll position.
 - `v83.0` publishes the latest Owner-approved title/keyword catalog metadata into the buyer-facing SQLite catalog and Worker catalog while keeping public catalog scale unchanged at `6,019` rows.
 - `v83.1` saves rejected title/keyword review comments with the rejected proposal title and keywords attached for the next AI rework rung.
 - `v83.2` lowers the JPG 1 MP and 3 MP digital checkout tiers to $0.10 and $0.30, formats cents throughout buyer pricing UI, and adds a Stripe $0.50 minimum-charge top-up when needed.

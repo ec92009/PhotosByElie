@@ -45,6 +45,7 @@ OWNER_LOGOUT_PATH = "/__photosbyelie/owner-logout"
 TITLE_KEYWORD_REVIEW_QUEUE_PATH = "/__photosbyelie/title-keyword-review-queue"
 OWNER_SUPER_SEARCH_PATH = "/__photosbyelie/owner-super-search-index"
 PUBLIC_MEDIA_PROXY_PATH = "/__photosbyelie/public-media/"
+PRIVATE_MEDIA_PROXY_PATH = "/__photosbyelie/private-media/"
 MAX_BODY_BYTES = 5 * 1024 * 1024
 LOCAL_CLIENTS = {"127.0.0.1", "::1", "localhost"}
 DERIVATIVES = (("gallery", "gallerySrc"), ("detail", "imageSrc"))
@@ -241,6 +242,9 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         if path.startswith(PUBLIC_MEDIA_PROXY_PATH):
             self._handle_public_media_proxy(path)
             return
+        if path.startswith(PRIVATE_MEDIA_PROXY_PATH):
+            self._handle_private_media_proxy(path)
+            return
         if path == OWNER_SESSION_PATH:
             self._handle_owner_session()
             return
@@ -413,6 +417,27 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             return
         self.send_response(HTTPStatus.OK)
         self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "private, max-age=3600")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _handle_private_media_proxy(self, path: str) -> None:
+        if not self._is_loopback_request():
+            self.send_error(HTTPStatus.FORBIDDEN, "localhost-only endpoint")
+            return
+        key = unquote(path[len(PRIVATE_MEDIA_PROXY_PATH):]).lstrip("/")
+        if not _is_safe_private_render_key(Path.cwd(), key):
+            self.send_error(HTTPStatus.NOT_FOUND, "private render unavailable")
+            return
+        try:
+            local_path = _cached_private_media_path(Path.cwd(), DEFAULT_PRIVATE_BUCKET, key)
+        except (OSError, RuntimeError, subprocess.SubprocessError) as error:
+            self.send_error(HTTPStatus.BAD_GATEWAY, str(error))
+            return
+        body = local_path.read_bytes()
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", mimetypes.guess_type(key)[0] or "image/jpeg")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "private, max-age=3600")
         self.end_headers()
@@ -3346,6 +3371,68 @@ def _owner_db_current_r2_keys(repo_root: Path) -> set[str]:
 def _r2_key_known_current(current_keys: set[str], bucket: str, key: object) -> bool:
     clean_key = str(key or "").strip()
     return bool(clean_key and f"{bucket}/{clean_key}" in current_keys)
+
+
+def _private_render_photo_id(key: str) -> str:
+    match = re.fullmatch(r"renders/([A-Za-z0-9._-]+)_6mp\.jpg", str(key or "").strip())
+    return match.group(1) if match else ""
+
+
+def _is_safe_private_render_key(repo_root: Path, key: str) -> bool:
+    clean_key = str(key or "").strip().lstrip("/")
+    photo_id = _private_render_photo_id(clean_key)
+    if not photo_id:
+        return False
+    manifest = _read_json_file(repo_root / "assets/private-delivery-manifest.json", {})
+    records = manifest.get("records") if isinstance(manifest, dict) else {}
+    record = records.get(photo_id) if isinstance(records, dict) else None
+    renders = record.get("privateRenders") if isinstance(record, dict) and isinstance(record.get("privateRenders"), dict) else {}
+    render = renders.get("jpg-6mp") if isinstance(renders, dict) else None
+    if not isinstance(render, dict):
+        return False
+    expected_keys = set(_r2_record_keys(render))
+    expected_keys.add(private_render_key(photo_id, "jpg-6mp"))
+    if clean_key not in expected_keys:
+        return False
+    private_bucket = str(manifest.get("privateBucket") or DEFAULT_PRIVATE_BUCKET) if isinstance(manifest, dict) else DEFAULT_PRIVATE_BUCKET
+    if render.get("present") is True or render.get("targetPresent") is True:
+        return True
+    return _r2_key_known_current(_owner_db_current_r2_keys(repo_root), private_bucket, clean_key)
+
+
+def _cached_private_media_path(repo_root: Path, bucket: str, key: str) -> Path:
+    cache_root = repo_root / ".review-logs" / "private-media-cache"
+    cache_root.mkdir(parents=True, exist_ok=True)
+    digest = hashlib.sha256(f"{bucket}/{key}".encode("utf-8")).hexdigest()[:16]
+    cache_path = cache_root / f"{digest}-{Path(key).name}"
+    if cache_path.exists() and cache_path.stat().st_size > 0:
+        return cache_path
+    tmp_path = cache_path.with_name(f"{cache_path.name}.{uuid.uuid4().hex}.tmp")
+    command = [
+        "npx",
+        "wrangler",
+        "r2",
+        "object",
+        "get",
+        f"{bucket}/{key}",
+        "--remote",
+        "--file",
+        str(tmp_path),
+    ]
+    try:
+        result = subprocess.run(command, cwd=repo_root, capture_output=True, text=True, timeout=90)
+    except Exception:
+        tmp_path.unlink(missing_ok=True)
+        raise
+    if result.returncode != 0:
+        tmp_path.unlink(missing_ok=True)
+        output = (result.stderr or result.stdout or "Could not fetch private media.").strip()
+        raise RuntimeError(output)
+    if not tmp_path.exists() or tmp_path.stat().st_size <= 0:
+        tmp_path.unlink(missing_ok=True)
+        raise RuntimeError("Fetched private media was empty.")
+    tmp_path.replace(cache_path)
+    return cache_path
 
 
 def _r2_record_keys(payload: object) -> list[str]:

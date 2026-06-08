@@ -380,6 +380,9 @@ const isHomeDetailSequence = () => {
 const ownerReviewReturnHrefFor = (view = "title-keywords", returnPhotoId = photo.id) => {
   const returnParams = new URLSearchParams({ view: String(view || "title-keywords") });
   if (returnPhotoId) returnParams.set("returnPhoto", returnPhotoId);
+  const stored = readOwnerReviewReturnPayload();
+  const scrollY = Number(stored?.scrollY);
+  if (Number.isFinite(scrollY) && scrollY >= 0) returnParams.set("returnScroll", String(Math.round(scrollY)));
   return `./owner-review.html?${returnParams.toString()}`;
 };
 const readOwnerReviewReturnPayload = () => {
@@ -401,10 +404,12 @@ const ownerReviewReturnContext = (() => {
   if (!fromOwnerReview && !stored) return null;
   const view = params.get("returnView") || stored?.view || "title-keywords";
   const returnPhotoId = params.get("returnPhoto") || stored?.photoId || photo.id;
+  const scrollY = Number(params.get("returnScroll") || stored?.scrollY);
   return {
     href: ownerReviewReturnHrefFor(view, returnPhotoId),
     label: "Back to review",
     photoId: returnPhotoId,
+    scrollY: Number.isFinite(scrollY) ? scrollY : null,
     view,
   };
 })();
@@ -727,7 +732,9 @@ const closeFullscreenPreview = () => {
 
 const openFullscreenPreview = () => {
   if (isVideo) return;
-  const image = window.photosByElieMediaUrl?.(photo, "detail") || "";
+  const fallbackImage = window.photosByElieMediaUrl?.(photo, "detail") || "";
+  const reviewImage = ownerReviewReturnContext ? (window.photosByEliePrivateMediaUrl?.(photo, "jpg-6mp") || "") : "";
+  const image = reviewImage || fallbackImage;
   if (!image || fullscreenPreview) return;
   fullscreenPreview = document.createElement("div");
   fullscreenPreview.className = "detail-fullscreen-preview";
@@ -737,6 +744,14 @@ const openFullscreenPreview = () => {
   const fullscreenImage = document.createElement("img");
   fullscreenImage.src = image;
   fullscreenImage.alt = photo.title;
+  if (reviewImage && fallbackImage && fallbackImage !== reviewImage) {
+    fullscreenImage.dataset.reviewFullscreenSource = "jpg-6mp";
+    fullscreenImage.addEventListener("error", () => {
+      if (fullscreenImage.src === fallbackImage) return;
+      fullscreenImage.dataset.reviewFullscreenSource = "detail";
+      fullscreenImage.src = fallbackImage;
+    }, { once: true });
+  }
   fullscreenPreview.append(fullscreenImage);
   fullscreenPreview.addEventListener("click", closeFullscreenPreview);
   fullscreenPreview.addEventListener("dblclick", closeFullscreenPreview);

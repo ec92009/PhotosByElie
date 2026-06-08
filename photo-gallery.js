@@ -107,6 +107,8 @@ const formatGalleryDate = (value) => {
 };
 const renderSharedPhotoCard = (options) => window.photosByElieGalleryCard?.renderPhotoCard?.(options) || "";
 const t = (key, replacements = {}) => window.photosByElieI18n?.t?.(key, replacements) || key;
+const seeMoreLabel = (count) => t("home.see_more_count", { count });
+const seeAllLabel = (count) => t("home.see_all_count", { count });
 const localizedCollectionTitle = () => {
   if (isSelectionGallery) return t("gallery.make_selection");
   const key = `collection.${galleryKey}`;
@@ -477,15 +479,13 @@ const ensureGalleryMoreButton = () => {
   moreButton.className = "btn secondary gallery-more-button";
   moreButton.type = "button";
   moreButton.dataset.galleryMore = "";
-  moreButton.dataset.i18n = "home.show_more";
-  moreButton.textContent = t("home.show_more");
+  moreButton.textContent = seeMoreLabel(pageSize);
   moreButton.hidden = true;
   showAllButton = document.createElement("button");
   showAllButton.className = "btn secondary gallery-more-button";
   showAllButton.type = "button";
   showAllButton.dataset.galleryShowAll = "";
-  showAllButton.dataset.i18n = "home.show_all";
-  showAllButton.textContent = t("home.show_all");
+  showAllButton.textContent = seeAllLabel(pageSize);
   showAllButton.hidden = true;
   controls.append(moreButton, showAllButton);
   galleryRoot.after(controls);
@@ -525,7 +525,6 @@ const ensureGalleryMoreButton = () => {
       renderGallery({ scrollSelection: false });
       if (showAllButton) {
         showAllButton.disabled = visibleLimit < total;
-        showAllButton.textContent = visibleLimit < total ? `Showing ${visibleLimit}/${total}` : t("home.show_all");
       }
       if (visibleLimit < total) window.setTimeout(addNextChunk, showAllChunkDelayMs);
     };
@@ -1026,13 +1025,15 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
   updateSelection({ scroll: scrollSelection && returnIndex < 0 });
   if (returnIndex >= 0) restorePendingGalleryReturn();
   if (moreButton) {
-    const hasMore = photos.length > visibleSubset.length;
+    const remaining = Math.max(0, photos.length - visibleSubset.length);
+    const hasMore = remaining > 0;
     moreButton.hidden = !hasMore;
-    moreButton.textContent = t("home.show_more");
+    moreButton.textContent = seeMoreLabel(Math.min(pageSize, remaining));
   }
   if (showAllButton) {
-    showAllButton.hidden = photos.length <= visibleSubset.length;
-    showAllButton.textContent = t("home.show_all");
+    const remaining = Math.max(0, photos.length - visibleSubset.length);
+    showAllButton.hidden = remaining <= 0;
+    showAllButton.textContent = seeAllLabel(remaining);
   }
   const paginated = photos.length > visibleSubset.length;
   const mediaNoun = photoFilter.statusNoun(filterState, t);

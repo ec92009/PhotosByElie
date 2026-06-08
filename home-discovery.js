@@ -29,6 +29,8 @@
     "'": "&#39;",
   }[char]));
   const t = (key, replacements = {}) => window.photosByElieI18n?.t?.(key, replacements) || key;
+  const seeMoreLabel = (count) => t("home.see_more_count", { count });
+  const seeAllLabel = (count) => t("home.see_all_count", { count });
   const versionedHref = (href) => window.photosByElieVersionedHref?.(href) || href;
   const metadataValue = (photo, label) => window.photosByElieMetadataValue?.(photo, label) || "";
   const hiddenActions = () => window.photosByElieHiddenActions;
@@ -420,9 +422,10 @@
     updateSelection({ scroll: false });
     const hasMore = latestMatches.length > visibleLimit;
     moreButton.hidden = !hasMore;
+    moreButton.textContent = seeMoreLabel(Math.min(pageSize, Math.max(0, latestMatches.length - visibleItems.length)));
     if (showAllButton) {
       showAllButton.hidden = !hasMore;
-      showAllButton.textContent = t("home.show_all");
+      showAllButton.textContent = seeAllLabel(Math.max(0, latestMatches.length - visibleItems.length));
     }
     setStatus("gallery.showing_filtered_items", {
       count: visibleItems.length,
@@ -625,7 +628,6 @@
       renderResults();
       if (showAllButton) {
         showAllButton.disabled = visibleLimit < latestMatches.length;
-        showAllButton.textContent = visibleLimit < latestMatches.length ? `Showing ${visibleLimit}/${latestMatches.length}` : t("home.show_all");
       }
       if (visibleLimit < latestMatches.length) window.setTimeout(addNextChunk, 0);
     };

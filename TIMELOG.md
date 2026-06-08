@@ -206,8 +206,9 @@ Clock state: running
 | 2026-06-08 | 16:52 CEST | 17:03 CEST | 0:08 | Implemented title/keyword review cull mode, media multi-select, source-only Finder preview for photos/videos, and local edit-with source hooks; background implementation/testing excluded. |
 | 2026-06-08 | 17:15 CEST | 17:17 CEST | 0:02 | Untracked the local Owner SQLite workflow database, verified it is ignored on disk, and identified the remaining unpushed history blob. |
 | 2026-06-08 | 20:00 CEST | 20:10 CEST | 0:10 | Restored the title-review cull side preview, added shared X/H blocked-slash feedback across galleries/detail/review, expanded owner Finder preview to full-viewport fit, and added preview arrow navigation. |
+| 2026-06-08 | 20:20 CEST | 20:27 CEST | 0:07 | Made title-review X/H blocking durable until U, reduced the block mark to a single outlined slash, and kept Owner Space preview source-only with visible original-source failures. |
 
 ## Totals
 
-Active collaboration time used: 13:49
+Active collaboration time used: 13:56
 Remaining budget: not set

@@ -3221,6 +3221,7 @@ def _source_preview_for_media_id(repo_root: Path, media_id: str) -> dict:
             "sourceLabel": str(source),
             "path": str(source),
             "contentType": mimetypes.guess_type(source.name)[0] or "video/mp4",
+            "isOriginal": True,
         }
     if suffix in SOURCE_PREVIEW_BROWSER_IMAGE_EXTENSIONS:
         return {
@@ -3231,6 +3232,7 @@ def _source_preview_for_media_id(repo_root: Path, media_id: str) -> dict:
             "sourceLabel": str(source),
             "path": str(source),
             "contentType": mimetypes.guess_type(source.name)[0] or "image/jpeg",
+            "isOriginal": True,
         }
     if suffix in SOURCE_PREVIEW_GENERATABLE_IMAGE_EXTENSIONS:
         try:
@@ -3252,6 +3254,7 @@ def _source_preview_for_media_id(repo_root: Path, media_id: str) -> dict:
             "sourceLabel": str(source),
             "path": str(generated),
             "contentType": "image/jpeg",
+            "isOriginal": False,
         }
     return _source_preview_error(
         HTTPStatus.UNSUPPORTED_MEDIA_TYPE,

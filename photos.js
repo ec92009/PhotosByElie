@@ -2072,16 +2072,17 @@ window.photosByElieVideoDurationLabel = (photo) => (
       }
     };
     const showOwnerFailure = ({ reason, attemptedSourceType = "", attemptedSourceLabel = sourceLabel } = {}) => {
-      showContextPreview("Source preview failed; shown media is not full/source.");
+      showEmptyPreview("Original source preview unavailable");
+      stage?.classList?.remove("is-context-preview");
       renderInfo({
-        eyebrow: "Owner source preview failed",
+        eyebrow: "Owner original preview failed",
         state: "error",
         rows: [
-          ["Attempted source", attemptedSourceType || "source/full"],
+          ["Attempted source", attemptedSourceType || "original/source"],
           ["Path label", attemptedSourceLabel || "unknown"],
           ["Reason", reason || "The browser could not load this preview."],
         ],
-        note: contextUrl ? "The media shown beside this panel is only a context preview." : "No fallback context preview was available.",
+        note: "Owner mode does not substitute public or lower-resolution previews.",
       });
     };
 
@@ -2106,7 +2107,7 @@ window.photosByElieVideoDurationLabel = (photo) => (
 
     if (owner) {
       const infoUrl = window.photosByElieSourcePreviewUrl(targetPhoto, "info");
-      renderInfo({ rows: [["Attempted source", "source/full"], ["Path label", sourceLabel], ["Status", "Loading"]] });
+      renderInfo({ rows: [["Attempted source", "original/source"], ["Path label", sourceLabel], ["Status", "Loading"]] });
       if (!infoUrl) {
         showOwnerFailure({ reason: "Owner source previews are only available from localhost." });
         return true;
@@ -2116,7 +2117,7 @@ window.photosByElieVideoDurationLabel = (photo) => (
         const payload = await response.json().catch(() => null);
         if (!response.ok || !payload?.ok) {
           showOwnerFailure({
-            attemptedSourceType: payload?.sourceType || "source/full",
+            attemptedSourceType: payload?.sourceType || "original/source",
             attemptedSourceLabel: payload?.sourceLabel || sourceLabel,
             reason: payload?.error || `Source preview endpoint returned ${response.status}.`,
           });
@@ -2124,11 +2125,11 @@ window.photosByElieVideoDurationLabel = (photo) => (
         }
         const previewUrl = payload.previewUrl || window.photosByElieSourcePreviewUrl(targetPhoto);
         renderInfo({
-          eyebrow: "Owner source preview",
+          eyebrow: "Owner original preview",
           rows: [
-            ["Source", payload.sourceType || "source/full"],
+            ["Source", payload.sourceType || "original/source"],
             ["Path", payload.sourceLabel || sourceLabel],
-            ["Status", "Loaded from localhost source"],
+            ["Status", payload.isOriginal === false ? "Loaded full-size source-derived preview" : "Loaded original from localhost source"],
           ],
         });
         const handleSourceLoadError = ({ sourceType, attemptedSourceLabel, reason }) => {

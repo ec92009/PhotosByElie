@@ -4871,9 +4871,9 @@ html[data-theme="light"] .mock-photo.has-image::after{
   z-index:28;
   pointer-events:none;
   background:linear-gradient(135deg,
-    transparent calc(50% - 11px),
-    rgba(63,153,255,.98) calc(50% - 11px) calc(50% + 11px),
-    transparent calc(50% + 11px));
+    transparent calc(50% - 5px),
+    rgba(37,128,255,.98) calc(50% - 5px) calc(50% + 5px),
+    transparent calc(50% + 5px));
   mix-blend-mode:normal;
   opacity:.98;
 }
@@ -4891,20 +4891,11 @@ html[data-theme="light"] .mock-photo.has-image::after{
   z-index:29;
   pointer-events:none;
   background:linear-gradient(135deg,
-    transparent calc(50% - 5px),
-    rgba(228,23,47,.98) calc(50% - 5px) calc(50% + 5px),
-    transparent calc(50% + 5px));
+    transparent calc(50% - 1.5px),
+    rgba(228,23,47,.98) calc(50% - 1.5px) calc(50% + 1.5px),
+    transparent calc(50% + 1.5px));
   mix-blend-mode:normal;
   opacity:.98;
-}
-.mock-photo.is-review-blocking::after,
-.detail-preview.is-review-blocking::after,
-.title-keyword-review-preview.is-review-blocking::after,
-.title-review-cull-panel-media.is-review-blocking::after{
-  background:repeating-linear-gradient(135deg,
-    transparent 0 14px,
-    rgba(228,23,47,.95) 14px 23px,
-    transparent 23px 34px);
 }
 .mock-photo-caption{
   display:block;
@@ -6255,9 +6246,9 @@ html[data-theme="light"] .detail-preview.has-image::after{
   z-index:28;
   pointer-events:none;
   background:linear-gradient(135deg,
-    transparent calc(50% - 11px),
-    rgba(63,153,255,.98) calc(50% - 11px) calc(50% + 11px),
-    transparent calc(50% + 11px));
+    transparent calc(50% - 5px),
+    rgba(37,128,255,.98) calc(50% - 5px) calc(50% + 5px),
+    transparent calc(50% + 5px));
   mix-blend-mode:normal;
   opacity:.98;
 }
@@ -6276,20 +6267,11 @@ html[data-theme="light"] .detail-preview.has-image::after{
   z-index:29;
   pointer-events:none;
   background:linear-gradient(135deg,
-    transparent calc(50% - 5px),
-    rgba(228,23,47,.98) calc(50% - 5px) calc(50% + 5px),
-    transparent calc(50% + 5px));
+    transparent calc(50% - 1.5px),
+    rgba(228,23,47,.98) calc(50% - 1.5px) calc(50% + 1.5px),
+    transparent calc(50% + 1.5px));
   mix-blend-mode:normal;
   opacity:.98;
-}
-.mock-photo.is-review-blocking::after,
-.detail-preview.is-review-blocking::after,
-.title-keyword-review-preview.is-review-blocking::after,
-.title-review-cull-panel-media.is-review-blocking::after{
-  background:repeating-linear-gradient(135deg,
-    transparent 0 14px,
-    rgba(228,23,47,.95) 14px 23px,
-    transparent 23px 34px);
 }
 .basket-thumb span{
   display:none;

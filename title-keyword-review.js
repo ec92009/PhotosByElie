@@ -841,6 +841,7 @@
       titleReviewLayout?.applyPreviewLayout?.(visiblePhotos);
     };
     const previewForCard = (card) => card?.querySelector?.(".title-keyword-review-preview") || null;
+    const isCardSavedBlocked = (card) => card?.dataset?.reviewBlockSaved === "1";
     const setCardBlockedVisual = (card, state = "") => {
       const preview = previewForCard(card);
       const blocking = state === "blocking";
@@ -873,7 +874,7 @@
       const rowState = String(card.querySelector("[data-review-row-status]")?.textContent || "Not saved").trim();
       const blockedState = card.classList.contains("is-review-blocking")
         ? "blocking"
-        : card.classList.contains("is-review-blocked") || card.dataset.reviewBlockSaved === "1"
+        : card.classList.contains("is-review-blocked") || isCardSavedBlocked(card)
           ? "blocked"
           : "";
       const mediaClass = [
@@ -1190,7 +1191,12 @@
         });
         return null;
       }
-      const hiddenIds = new Set((hideResult.hidden_ids || []).map((item) => String(item || "")));
+      const confirmedIds = [
+        ...(Array.isArray(hideResult.hidden_ids) ? hideResult.hidden_ids : []),
+        ...(Array.isArray(hideResult.already_hidden) ? hideResult.already_hidden : []),
+        ...(Array.isArray(hideResult.moved) ? hideResult.moved.map((item) => item?.photo_id) : []),
+      ];
+      const hiddenIds = new Set(confirmedIds.map((item) => String(item || "")).filter(Boolean));
       const notFound = new Set((hideResult.not_found || []).map((item) => String(item || "")));
       const savedTargets = targets.filter(({ photoId }) => hiddenIds.has(photoId));
       targets.forEach(({ card, photoId }) => {
@@ -1202,7 +1208,7 @@
         }
         setRowStatus(card, "Block failed", "error", "The helper did not confirm this photo moved to the Waste Basket.");
       });
-      if (!savedTargets.length) return { count: 0, result: null };
+      if (!savedTargets.length) return { count: 0, photoIds: [], result: null };
       let result = null;
       try {
         result = await postApprovalsPayload({
@@ -1233,7 +1239,7 @@
         }
         setRowStatus(card, "Blocked", "saved");
       });
-      return { count: savedTargets.length, result };
+      return { count: savedTargets.length, photoIds: savedTargets.map(({ photoId }) => photoId), result };
     };
 
     const isAlreadyUnhiddenError = (error) => /photo not found in Hidden/i.test(String(error?.message || ""));
@@ -1302,7 +1308,11 @@
       }
       if (decision.blocked) {
         const result = await saveBlockedTargets([{ card, decision, photoId }]);
-        if (result && status) status.textContent = `${photoId} blocked, moved to Waste Basket, and saved to this review record.`;
+        if (result?.count && status) {
+          status.textContent = `${photoId} blocked, moved to Waste Basket, and saved to this review record.`;
+        } else if (status) {
+          status.textContent = `${photoId} was not confirmed blocked.`;
+        }
         return;
       }
       setRowStatus(card, "Saving...", "saving");
@@ -1358,6 +1368,11 @@
           setRowStatus(card, "Not saved");
           return;
         }
+        if (decision.blocked && isCardSavedBlocked(card)) {
+          setCardBlockedVisual(card, "blocked");
+          setRowStatus(card, "Blocked", "saved");
+          return;
+        }
         if (decision.blocked) {
           blockedTargets.push({ card, decision, photoId: targetPhotoId });
           setCardBlockedVisual(card, "blocking");
@@ -1398,6 +1413,7 @@
         approvals: approvals.length,
         rejections: rejections.length,
         blocked: blockedResult?.count || 0,
+        blockedPhotoIds: blockedResult?.photoIds || [],
         result,
         blockedResult,
       };
@@ -1535,6 +1551,10 @@
     };
 
     const markCardsApproved = (cards, { advance = false } = {}) => {
+      const skipped = cards.filter(isCardSavedBlocked).length;
+      cards = cards.filter((card) => !isCardSavedBlocked(card));
+      if (skipped && status) status.textContent = `${skipped} blocked media item${skipped === 1 ? "" : "s"} kept blocked. Press U to unblock before approving.`;
+      if (!cards.length) return;
       cards.forEach((card) => {
         card.dataset.reviewDecisionTouched = "1";
         const approve = card.querySelector("[data-review-approve]");
@@ -1564,6 +1584,10 @@
     };
 
     const markCardsRejected = (cards) => {
+      const skipped = cards.filter(isCardSavedBlocked).length;
+      cards = cards.filter((card) => !isCardSavedBlocked(card));
+      if (skipped && status) status.textContent = `${skipped} blocked media item${skipped === 1 ? "" : "s"} kept blocked. Press U to unblock before rejecting.`;
+      if (!cards.length) return;
       const defaultReason = "incorrect";
       const defaultNote = rejectReasonByValue.get(defaultReason)?.note || "this title is incorrect";
       const note = window.prompt?.(`Reject ${cards.length} selected media item${cards.length === 1 ? "" : "s"} with note:`, defaultNote);
@@ -1599,7 +1623,13 @@
     };
 
     const markCardsBlocked = (cards) => {
-      lastBlockBatchPhotoIds = cards.map(reviewCardId).filter(Boolean);
+      const alreadyBlocked = cards.filter(isCardSavedBlocked).length;
+      cards = cards.filter((card) => !isCardSavedBlocked(card));
+      if (!cards.length) {
+        if (status) status.textContent = `${alreadyBlocked || 1} media item${alreadyBlocked === 1 ? "" : "s"} already blocked. Press U to unblock the last block batch.`;
+        return;
+      }
+      if (alreadyBlocked && status) status.textContent = `${alreadyBlocked} already-blocked media item${alreadyBlocked === 1 ? "" : "s"} left unchanged; blocking the rest.`;
       cards.forEach((card) => {
         card.dataset.reviewDecisionTouched = "1";
         const approve = card.querySelector("[data-review-approve]");
@@ -1619,7 +1649,14 @@
         setRowStatus(card, "Blocking...", "saving");
       });
       saveCardsDecisions(cards).then((result) => {
-        if (result && status) status.textContent = `${result.blocked || cards.length} media item${cards.length === 1 ? "" : "s"} moved to Waste Basket. Press U to undo this block batch.`;
+        const blockedIds = result?.blockedPhotoIds || [];
+        if (blockedIds.length) {
+          lastBlockBatchPhotoIds = blockedIds;
+          if (status) status.textContent = `${blockedIds.length} media item${blockedIds.length === 1 ? "" : "s"} moved to Waste Basket. Press U to undo this block batch.`;
+          return;
+        }
+        lastBlockBatchPhotoIds = [];
+        if (status) status.textContent = "No selected media item was confirmed blocked.";
       }).catch((error) => {
         const message = error?.message || "Could not block media item.";
         cards.forEach((card) => {
@@ -1648,6 +1685,11 @@
 
     const approveAll = () => {
       cardById.forEach((card, photoId) => {
+        if (isCardSavedBlocked(card)) {
+          setCardBlockedVisual(card, "blocked");
+          setRowStatus(card, "Blocked", "saved");
+          return;
+        }
         card.dataset.reviewDecisionTouched = "1";
         const checkbox = card.querySelector("[data-review-approve]");
         if (checkbox) checkbox.checked = true;
@@ -1691,7 +1733,7 @@
       window.alert?.(
         `Applied ${saveResult.applied_count || payload.approvals.length} approvals to catalog metadata files.\n` +
         `Saved ${result.rejections || payload.rejections.length} rejections for proposal rework.\n` +
-        `Moved ${result.blocked || payload.blocked.length} photos to the Waste Basket.\n` +
+        `Moved ${result.blocked || 0} photos to the Waste Basket.\n` +
         `Saved review record to ${saveResult.path || "assets/owner-actions/title-keyword-review-queue/"}.\n\n` +
         "Run validation and commit the metadata changes when ready.",
       );
@@ -1763,6 +1805,13 @@
       const resetRestoredDecisionState = () => {
         if (card.dataset.reviewDecisionTouched === "1") return;
         window.clearTimeout(rowSaveTimers.get(photoId));
+        if (isCardSavedBlocked(card)) {
+          if (block) block.checked = true;
+          setCardBlockedVisual(card, "blocked");
+          syncDecisionState();
+          setRowStatus(card, "Blocked", "saved");
+          return;
+        }
         if (approve) approve.checked = false;
         if (reject) reject.checked = false;
         if (block) block.checked = false;

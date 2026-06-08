@@ -967,7 +967,14 @@ def _source_paths_from_manifest_rows(repo_root: Path, photo_id: str) -> list[str
         for row in rows:
             if not isinstance(row, dict) or str(row.get("id") or "") != photo_id:
                 continue
-            for key in ("source_path_hint", "sourcePath", "source_path", "sourceFile"):
+            for key in (
+                "source_path_hint",
+                "metadata_path_hint",
+                "sourcePath",
+                "source_path",
+                "sourceFile",
+                "source_file",
+            ):
                 value = str(row.get(key) or "").strip()
                 if value and value not in seen:
                     seen.add(value)
@@ -1691,7 +1698,7 @@ def _catalog_photo_for_hidden(repo_root: Path, media_id: str) -> tuple[str, dict
             (media_id,),
         ).fetchone()
         if not row:
-            return None
+            return _manifest_photo_for_hidden(repo_root, media_id) or _review_batch_photo_for_hidden(repo_root, media_id)
         slug = str(row["gallery_key"] or "").strip()
         if slug not in ORDER:
             slug = "unknown"
@@ -1760,6 +1767,156 @@ def _catalog_photo_for_hidden(repo_root: Path, media_id: str) -> tuple[str, dict
         return slug, photo
     finally:
         catalog_conn.close()
+
+
+def _manifest_photo_for_hidden(repo_root: Path, media_id: str) -> tuple[str, dict] | None:
+    row = _manifest_rows_by_media_id(repo_root, [media_id]).get(media_id)
+    if not row:
+        return None
+    slug = str(row.get("gallery_key") or "").strip()
+    if slug not in ORDER:
+        slug = "unknown"
+    title = str(row.get("title") or media_id).strip() or media_id
+    source_folder = str(row.get("source_folder") or "").strip("/")
+    filename = str(row.get("filename") or "").strip()
+    source_path = "/".join(part for part in [source_folder, filename] if part)
+    extension = str(row.get("source_extension") or Path(filename).suffix.lstrip(".") or "").upper()
+    if extension == "JPEG":
+        extension = "JPG"
+    if extension == "TIFF":
+        extension = "TIF"
+    media_type = str(row.get("media_type") or "photo").strip().lower() or "photo"
+    full_width = int(row.get("full_width") or 0)
+    full_height = int(row.get("full_height") or 0)
+    megapixels = round((full_width * full_height / 1_000_000) * 10) / 10 if full_width and full_height else 0
+    keywords = row.get("keywords") if isinstance(row.get("keywords"), list) else []
+    captured_at = str(row.get("captured_at") or "")
+    location = str(row.get("location") or "")
+    gallery_label = str(row.get("gallery_label") or slug or "Gallery")
+    metadata = [
+        {"label": "Metadata title", "value": title},
+        {"label": "Keywords", "value": ", ".join(str(keyword) for keyword in keywords)},
+    ]
+    if captured_at:
+        metadata.append({"label": "Captured", "value": captured_at.replace("T", " ")})
+    if filename:
+        metadata.append({"label": "Original file", "value": filename})
+    if full_width and full_height:
+        metadata.append({"label": "Original size", "value": f"{extension or 'Source'} / {full_width} x {full_height} / {megapixels} MP"})
+    if location:
+        metadata.append({"label": "Location", "value": location})
+    public_preview = {
+        "allowed": True,
+        "galleryKey": public_preview_key(DEFAULT_PUBLIC_PREFIX, media_id, "gallery", media_type),
+        "detailKey": public_preview_key(DEFAULT_PUBLIC_PREFIX, media_id, "detail", media_type),
+    }
+    photo = {
+        "id": media_id,
+        "title": title,
+        "caption": " / ".join(part for part in [gallery_label, location, captured_at[:10]] if part),
+        "full": f"{extension or 'Source'} master",
+        "megapixels": megapixels,
+        "gallerySrc": "",
+        "imageSrc": "",
+        "metadata": metadata,
+        "media": {
+            "type": media_type,
+            "sourcePolicy": "import-manifest",
+            "publicPreview": public_preview,
+        },
+        "sourceFiles": [
+            {
+                "path": source_path,
+                "type": extension or "SOURCE",
+                "bytes": int(row.get("full_bytes") or 0),
+            }
+        ] if source_path else [],
+        "keywords": keywords,
+    }
+    if media_type == "video":
+        duration = float(row.get("full_duration_seconds") or 0)
+        if duration:
+            photo["duration"] = duration
+            photo["media"]["video"] = {"duration": duration}
+    return slug, photo
+
+
+def _review_batch_photo_for_hidden(repo_root: Path, media_id: str) -> tuple[str, dict] | None:
+    media_id = str(media_id or "").strip()
+    if not media_id:
+        return None
+    queue_root = repo_root / TITLE_KEYWORD_REVIEW_ROOT
+    if not queue_root.exists():
+        return None
+    paths = sorted(queue_root.glob("batch-*.json"), key=lambda path: path.stat().st_mtime, reverse=True)
+    for batch_path in paths:
+        payload = _read_json_file(batch_path, {})
+        photos = payload.get("photos") if isinstance(payload, dict) else []
+        if not isinstance(photos, list):
+            continue
+        for item in photos:
+            if not isinstance(item, dict) or _review_photo_id(item) != media_id:
+                continue
+            gallery = item.get("gallery") if isinstance(item.get("gallery"), dict) else {}
+            slug = str(gallery.get("key") or item.get("gallery_key") or "unknown").strip() or "unknown"
+            if slug not in ORDER:
+                slug = "unknown"
+            gallery_label = str(gallery.get("label") or item.get("gallery_label") or slug or "Gallery")
+            current = item.get("current") if isinstance(item.get("current"), dict) else {}
+            proposed = item.get("proposed") if isinstance(item.get("proposed"), dict) else {}
+            title = str(current.get("title") or proposed.get("title") or media_id).strip() or media_id
+            capture = item.get("capture") if isinstance(item.get("capture"), dict) else {}
+            captured_at = str(capture.get("raw") or capture.get("sort") or capture.get("date") or "")
+            keywords = current.get("keywords") if isinstance(current.get("keywords"), list) else _split_keyword_text(current.get("keywords_raw"))
+            source = item.get("source") if isinstance(item.get("source"), dict) else {}
+            source_file = source.get("file") if isinstance(source.get("file"), dict) else {}
+            source_path = str(source_file.get("path") or "").strip()
+            source_type = str(source_file.get("type") or Path(source_path).suffix.lstrip(".") or "SOURCE").strip().upper()
+            if source_type == "JPEG":
+                source_type = "JPG"
+            if source_type == "TIFF":
+                source_type = "TIF"
+            media = item.get("media") if isinstance(item.get("media"), dict) else {}
+            media_type = str(media.get("type") or source.get("media_type") or current.get("type") or "photo").strip().lower() or "photo"
+            if media_type not in {"photo", "video"} and source_type.lower() in {"mov", "mp4", "m4v"}:
+                media_type = "video"
+            metadata = [
+                {"label": "Metadata title", "value": title},
+                {"label": "Keywords", "value": ", ".join(str(keyword) for keyword in keywords)},
+            ]
+            if captured_at:
+                metadata.append({"label": "Captured", "value": captured_at.replace("T", " ")})
+            if source_path:
+                metadata.append({"label": "Original file", "value": Path(source_path).name})
+            public_preview = {
+                "allowed": True,
+                "galleryKey": public_preview_key(DEFAULT_PUBLIC_PREFIX, media_id, "gallery", media_type),
+                "detailKey": public_preview_key(DEFAULT_PUBLIC_PREFIX, media_id, "detail", media_type),
+            }
+            photo = {
+                "id": media_id,
+                "title": title,
+                "caption": " / ".join(part for part in [gallery_label, captured_at[:10]] if part),
+                "full": f"{source_type or 'Source'} master",
+                "gallerySrc": "",
+                "imageSrc": "",
+                "metadata": metadata,
+                "media": {
+                    "type": media_type,
+                    "sourcePolicy": "title-review-batch",
+                    "publicPreview": public_preview,
+                },
+                "sourceFiles": [
+                    {
+                        "path": source_path,
+                        "type": source_type or "SOURCE",
+                        "bytes": int(source_file.get("bytes") or 0),
+                    }
+                ] if source_path else [],
+                "keywords": keywords,
+            }
+            return slug, photo
+    return None
 
 
 def _json_text_list(value: object) -> list:
@@ -2998,12 +3155,19 @@ def _is_allowed_source_path(path: Path) -> bool:
 
 def _source_path_variants(candidate: Path) -> list[Path]:
     variants: list[Path] = []
-    suffixes = {candidate.suffix}
+    suffixes: list[str] = []
+
+    def add_suffix(value: str) -> None:
+        if value not in suffixes:
+            suffixes.append(value)
+
+    add_suffix(candidate.suffix)
     if candidate.suffix:
-        suffixes.add(candidate.suffix.lower())
-        suffixes.add(candidate.suffix.upper())
+        add_suffix(candidate.suffix.lower())
+        add_suffix(candidate.suffix.upper())
     if candidate.suffix.lower() in {".jpg", ".jpeg", ".jpe"}:
-        suffixes.update({".jpg", ".jpeg", ".JPG", ".JPEG"})
+        for suffix in (".jpg", ".jpeg", ".JPG", ".JPEG"):
+            add_suffix(suffix)
     for suffix in suffixes:
         _append_unique_path(variants, candidate.with_suffix(suffix))
     return variants
@@ -3012,6 +3176,11 @@ def _source_path_variants(candidate: Path) -> list[Path]:
 def _source_candidates(repo_root: Path, source_path: str) -> list[Path]:
     raw = Path(source_path)
     bases = [raw] if raw.is_absolute() else [repo_root / raw, *(root / raw for root in SOURCE_ROOT_CANDIDATES)]
+    if not raw.is_absolute() and raw.parts:
+        match = re.match(r"^(\d{4})(?:\D|$)", raw.parts[0])
+        if match:
+            year = match.group(1)
+            bases.extend(root / year / raw for root in SOURCE_ROOT_CANDIDATES)
     if not raw.is_absolute() and raw.name:
         bases.extend(root / raw.name for root in SOURCE_ROOT_CANDIDATES)
     candidates: list[Path] = []
@@ -3050,20 +3219,47 @@ def _find_source_by_basename(root: Path, names: set[str]) -> Path | None:
 
 def _source_paths(repo_root: Path, photo: dict) -> list[Path]:
     paths = []
+    raw_paths: list[str] = []
+    seen_raw: set[str] = set()
+
+    def add_raw_path(value: object) -> None:
+        text = str(value or "").strip()
+        if text and text not in seen_raw:
+            seen_raw.add(text)
+            raw_paths.append(text)
+
     for source in photo.get("sourceFiles") or []:
         raw_path = source.get("path")
         if not raw_path:
             continue
-        for candidate in _source_candidates(repo_root, str(raw_path)):
-            if candidate.exists():
-                _append_unique_path(paths, candidate)
-        if not paths:
-            names = {variant.name.lower() for variant in _source_path_variants(Path(str(raw_path)))}
-            for root in RECURSIVE_SOURCE_ROOT_CANDIDATES:
-                found = _find_source_by_basename(root, names)
-                if found:
-                    _append_unique_path(paths, found)
-                    break
+        add_raw_path(raw_path)
+    source_raw_count = len(raw_paths)
+
+    def append_existing_paths(values: list[str]) -> None:
+        for raw_path in values:
+            for candidate in _source_candidates(repo_root, raw_path):
+                if candidate.exists():
+                    _append_unique_path(paths, candidate)
+
+    append_existing_paths(raw_paths)
+    if paths:
+        return paths
+
+    photo_id = str(photo.get("id") or "").strip()
+    if photo_id:
+        for raw_path in _source_paths_from_manifest_rows(repo_root, photo_id):
+            add_raw_path(raw_path)
+    append_existing_paths(raw_paths[source_raw_count:])
+    if paths:
+        return paths
+
+    for raw_path in raw_paths:
+        names = {variant.name.lower() for variant in _source_path_variants(Path(raw_path))}
+        for root in RECURSIVE_SOURCE_ROOT_CANDIDATES:
+            found = _find_source_by_basename(root, names)
+            if found:
+                _append_unique_path(paths, found)
+                break
     return paths
 
 

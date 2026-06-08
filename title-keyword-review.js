@@ -842,6 +842,13 @@
     };
     const previewForCard = (card) => card?.querySelector?.(".title-keyword-review-preview") || null;
     const isCardSavedBlocked = (card) => card?.dataset?.reviewBlockSaved === "1";
+    const isCardBlockPending = (card) => card?.dataset?.reviewBlockPending === "1";
+    const isCardBlockedOrPending = (card) => isCardSavedBlocked(card) || isCardBlockPending(card);
+    const setCardBlockPending = (card, pending) => {
+      if (!card) return;
+      if (pending) card.dataset.reviewBlockPending = "1";
+      else delete card.dataset.reviewBlockPending;
+    };
     const setCardBlockedVisual = (card, state = "") => {
       const preview = previewForCard(card);
       const blocking = state === "blocking";
@@ -1169,6 +1176,8 @@
     const rowSaveTimers = new Map();
     const saveBlockedTargets = async (targets) => {
       targets.forEach(({ card }) => {
+        card.dataset.reviewDecisionTouched = "1";
+        setCardBlockPending(card, true);
         setCardBlockedVisual(card, "blocking");
         setRowStatus(card, "Blocking...", "saving");
       });
@@ -1179,6 +1188,7 @@
       } catch (error) {
         const message = error?.message || "Could not block photo.";
         targets.forEach(({ card }) => {
+          setCardBlockPending(card, false);
           setCardBlockedVisual(card, "");
           setRowStatus(card, "Block failed", "error", message);
         });
@@ -1186,6 +1196,7 @@
       }
       if (!hideResult) {
         targets.forEach(({ card }) => {
+          setCardBlockPending(card, false);
           setCardBlockedVisual(card, "");
           setRowStatus(card, "Auth required", "error");
         });
@@ -1201,6 +1212,7 @@
       const savedTargets = targets.filter(({ photoId }) => hiddenIds.has(photoId));
       targets.forEach(({ card, photoId }) => {
         if (hiddenIds.has(photoId)) return;
+        setCardBlockPending(card, false);
         setCardBlockedVisual(card, "");
         if (notFound.has(photoId)) {
           setRowStatus(card, "Not in catalog", "error", "Could not move this photo to the Waste Basket because the helper could not find it.");
@@ -1230,6 +1242,7 @@
       savedTargets.forEach(({ card }) => {
         const block = card.querySelector("[data-review-block]");
         card.classList.add("is-owner-actioned");
+        setCardBlockPending(card, false);
         card.dataset.reviewBlockSaved = "1";
         setCardBlockedVisual(card, "blocked");
         setBlockedControlsDisabled(card, true);
@@ -1288,6 +1301,7 @@
         return null;
       }
       card.classList.remove("is-owner-actioned");
+      setCardBlockPending(card, false);
       delete card.dataset.reviewBlockSaved;
       setCardBlockedVisual(card, "");
       setBlockedControlsDisabled(card, false);
@@ -1374,6 +1388,7 @@
           return;
         }
         if (decision.blocked) {
+          setCardBlockPending(card, true);
           blockedTargets.push({ card, decision, photoId: targetPhotoId });
           setCardBlockedVisual(card, "blocking");
           setRowStatus(card, "Blocking...", "saving");
@@ -1546,13 +1561,15 @@
     const blockPhoto = (photoId, card) => {
       const block = card.querySelector("[data-review-block]");
       if (!block) return;
+      card.dataset.reviewDecisionTouched = "1";
+      setCardBlockPending(card, true);
       block.checked = true;
       block.dispatchEvent(new Event("change", { bubbles: true }));
     };
 
     const markCardsApproved = (cards, { advance = false } = {}) => {
-      const skipped = cards.filter(isCardSavedBlocked).length;
-      cards = cards.filter((card) => !isCardSavedBlocked(card));
+      const skipped = cards.filter(isCardBlockedOrPending).length;
+      cards = cards.filter((card) => !isCardBlockedOrPending(card));
       if (skipped && status) status.textContent = `${skipped} blocked media item${skipped === 1 ? "" : "s"} kept blocked. Press U to unblock before approving.`;
       if (!cards.length) return;
       cards.forEach((card) => {
@@ -1584,8 +1601,8 @@
     };
 
     const markCardsRejected = (cards) => {
-      const skipped = cards.filter(isCardSavedBlocked).length;
-      cards = cards.filter((card) => !isCardSavedBlocked(card));
+      const skipped = cards.filter(isCardBlockedOrPending).length;
+      cards = cards.filter((card) => !isCardBlockedOrPending(card));
       if (skipped && status) status.textContent = `${skipped} blocked media item${skipped === 1 ? "" : "s"} kept blocked. Press U to unblock before rejecting.`;
       if (!cards.length) return;
       const defaultReason = "incorrect";
@@ -1623,8 +1640,8 @@
     };
 
     const markCardsBlocked = (cards) => {
-      const alreadyBlocked = cards.filter(isCardSavedBlocked).length;
-      cards = cards.filter((card) => !isCardSavedBlocked(card));
+      const alreadyBlocked = cards.filter(isCardBlockedOrPending).length;
+      cards = cards.filter((card) => !isCardBlockedOrPending(card));
       if (!cards.length) {
         if (status) status.textContent = `${alreadyBlocked || 1} media item${alreadyBlocked === 1 ? "" : "s"} already blocked. Press U to unblock the last block batch.`;
         return;
@@ -1632,6 +1649,7 @@
       if (alreadyBlocked && status) status.textContent = `${alreadyBlocked} already-blocked media item${alreadyBlocked === 1 ? "" : "s"} left unchanged; blocking the rest.`;
       cards.forEach((card) => {
         card.dataset.reviewDecisionTouched = "1";
+        setCardBlockPending(card, true);
         const approve = card.querySelector("[data-review-approve]");
         const reject = card.querySelector("[data-review-reject]");
         const block = card.querySelector("[data-review-block]");
@@ -1660,6 +1678,7 @@
       }).catch((error) => {
         const message = error?.message || "Could not block media item.";
         cards.forEach((card) => {
+          setCardBlockPending(card, false);
           setCardBlockedVisual(card, "");
           setRowStatus(card, "Block failed", "error", message);
         });
@@ -1805,6 +1824,13 @@
       const resetRestoredDecisionState = () => {
         if (card.dataset.reviewDecisionTouched === "1") return;
         window.clearTimeout(rowSaveTimers.get(photoId));
+        if (isCardBlockPending(card)) {
+          if (block) block.checked = true;
+          setCardBlockedVisual(card, "blocking");
+          syncDecisionState();
+          setRowStatus(card, "Blocking...", "saving");
+          return;
+        }
         if (isCardSavedBlocked(card)) {
           if (block) block.checked = true;
           setCardBlockedVisual(card, "blocked");
@@ -1894,6 +1920,7 @@
           return;
         }
         if (block.checked) {
+          setCardBlockPending(card, true);
           if (approve) approve.checked = false;
           if (reject) reject.checked = false;
           setCardBlockedVisual(card, "blocking");
@@ -1910,6 +1937,7 @@
             return;
           }
           syncDecisionState();
+          setCardBlockPending(card, false);
           setCardBlockedVisual(card, "");
           setRowStatus(card, "Not saved");
         }

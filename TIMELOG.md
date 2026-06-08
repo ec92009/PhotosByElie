@@ -207,8 +207,9 @@ Clock state: running
 | 2026-06-08 | 17:15 CEST | 17:17 CEST | 0:02 | Untracked the local Owner SQLite workflow database, verified it is ignored on disk, and identified the remaining unpushed history blob. |
 | 2026-06-08 | 20:00 CEST | 20:10 CEST | 0:10 | Restored the title-review cull side preview, added shared X/H blocked-slash feedback across galleries/detail/review, expanded owner Finder preview to full-viewport fit, and added preview arrow navigation. |
 | 2026-06-08 | 20:20 CEST | 20:27 CEST | 0:07 | Made title-review X/H blocking durable until U, reduced the block mark to a single outlined slash, and kept Owner Space preview source-only with visible original-source failures. |
+| 2026-06-08 | 20:31 CEST | 20:51 CEST | 0:20 | Fixed title-review X/H block resolution for manifest backlog rows and older title-review batch rows, verified no-write Waste Basket simulation, and confirmed Owner original preview source resolution. |
 
 ## Totals
 
-Active collaboration time used: 13:56
+Active collaboration time used: 14:16
 Remaining budget: not set

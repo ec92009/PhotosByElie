@@ -204,8 +204,9 @@ Clock state: running
 | 2026-06-08 | 12:36 CEST | 12:37 CEST | 0:01 | Preserved ignored Etsy package notes and removed obsolete temporary pbe worktrees from Dev. |
 | 2026-06-08 | 15:42 CEST | 16:09 CEST | 0:06 | Added count-aware gallery pagination labels, clarified Owner public-vs-limbo visibility counts, and verified the updated local review helper; background implementation/testing excluded. |
 | 2026-06-08 | 16:52 CEST | 17:03 CEST | 0:08 | Implemented title/keyword review cull mode, media multi-select, source-only Finder preview for photos/videos, and local edit-with source hooks; background implementation/testing excluded. |
+| 2026-06-08 | 17:15 CEST | 17:17 CEST | 0:02 | Untracked the local Owner SQLite workflow database, verified it is ignored on disk, and identified the remaining unpushed history blob. |
 
 ## Totals
 
-Active collaboration time used: 13:37
+Active collaboration time used: 13:39
 Remaining budget: not set

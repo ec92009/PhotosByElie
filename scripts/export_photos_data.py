@@ -464,6 +464,7 @@ def write_regular_manifest(
     payload = {
         "schema_version": 1,
         "state": "expo",
+        "title_keyword_visibility": "applied-only",
         "expo_cap": regular_cap,
         "publish_scope": "all-eligible" if regular_cap is None or regular_cap <= 0 else "capped",
         "selection_mode": selection_mode,
@@ -890,11 +891,16 @@ def write_photos_data(
     country_assignments = country_assignments or {}
     keyword_blacklist = keyword_blacklist or set()
     blacklist_source_paths = blacklist_source_paths or set()
-    title_keyword_decisions = title_keyword_decisions or {}
+    if title_keyword_decisions is None:
+        title_keyword_decisions = load_applied_title_keyword_decisions(repo_root)
+    applied_title_keyword_ids = set(title_keyword_decisions)
     blacklist_source_suffixes = source_path_suffixes(blacklist_source_paths)
     uploaded_public_keys = load_uploaded_public_keys(repo_root)
     for path, mode in existing_manifest_specs(repo_root):
         for row in json.loads(path.read_text())["photos"]:
+            row_id = str(row.get("id") or "").strip()
+            if not row_id or row_id not in applied_title_keyword_ids:
+                continue
             if row_source_path_is_blocked(row, blacklist_source_paths, blacklist_source_suffixes):
                 continue
             if not row_import_eligible(row)[0]:
@@ -903,7 +909,7 @@ def write_photos_data(
                 continue
             row = apply_country_assignment(row, country_assignments.get(row.get("id")))
             row = apply_export_country_hints(row)
-            row = apply_title_keyword_decision(row, title_keyword_decisions.get(str(row.get("id") or "")))
+            row = apply_title_keyword_decision(row, title_keyword_decisions.get(row_id))
             row = sanitize_keyword_metadata(row, keyword_blacklist)
             gallery_country = row.get("gallery_country") or {}
             slug = gallery_country.get("slug") if isinstance(gallery_country, dict) else str(gallery_country)

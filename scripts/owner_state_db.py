@@ -764,7 +764,16 @@ def _latest_attempt(conn: sqlite3.Connection, media_id: str, batch_id: str = "")
     return int(queue["latest_attempt"]) if queue else 1
 
 
-def _ensure_placeholder_proposal(conn: sqlite3.Connection, media_id: str, attempt: int, batch_id: str, proposed_at: str) -> None:
+def _ensure_placeholder_proposal(
+    conn: sqlite3.Connection,
+    media_id: str,
+    attempt: int,
+    batch_id: str,
+    proposed_at: str,
+    title: Any = "",
+    keywords: Any = "",
+    status: str = "compatibility-placeholder",
+) -> None:
     if batch_id and not conn.execute("SELECT 1 FROM title_keyword_batches WHERE batch_id = ?", (batch_id,)).fetchone():
         _upsert_batch(conn, {"batch_id": batch_id, "generated_at": proposed_at, "selection": {"total_count": 0}}, "placeholder")
     existing = conn.execute(
@@ -773,6 +782,9 @@ def _ensure_placeholder_proposal(conn: sqlite3.Connection, media_id: str, attemp
     ).fetchone()
     if existing:
         return
+    clean_title = str(title or "").strip()
+    clean_keywords = _keywords_text(_normalized_keywords(keywords))
+    has_review_context = bool(clean_title or clean_keywords)
     conn.execute(
         """
         INSERT INTO title_keyword_proposals
@@ -781,10 +793,25 @@ def _ensure_placeholder_proposal(conn: sqlite3.Connection, media_id: str, attemp
            proposal_reason, removed_blacklisted, keyword_target, keyword_target_met,
            generator_model, generator_model_level, generator_model_maxed, model_ladder,
            proposed_at)
-        VALUES (?, ?, ?, '', '', '', '', 'compatibility-placeholder', 'low', 1, '', '[]', NULL, NULL,
-                'legacy-json-import', NULL, 0, '[]', ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '[]', NULL, NULL,
+                ?, NULL, 0, ?, ?)
         """,
-        (media_id, attempt, batch_id, proposed_at),
+        (
+            media_id,
+            attempt,
+            batch_id,
+            clean_title,
+            clean_keywords,
+            clean_title,
+            clean_keywords,
+            status if has_review_context else "compatibility-placeholder",
+            "medium" if has_review_context else "low",
+            0 if has_review_context else 1,
+            "Created from Owner review decision context." if has_review_context else "",
+            "owner-review-decision" if has_review_context else "legacy-json-import",
+            json.dumps(["owner-review-decision"] if has_review_context else [], ensure_ascii=False),
+            proposed_at,
+        ),
     )
 
 
@@ -1560,7 +1587,16 @@ def record_title_keyword_review_decisions(
             if not media_id:
                 return
             attempt = _latest_attempt(conn, media_id, batch_id)
-            _ensure_placeholder_proposal(conn, media_id, attempt, batch_id, decided_at)
+            _ensure_placeholder_proposal(
+                conn,
+                media_id,
+                attempt,
+                batch_id,
+                decided_at,
+                title,
+                keywords,
+                f"owner-review-{state}",
+            )
             conn.execute(
                 """
                 INSERT INTO title_keyword_decisions

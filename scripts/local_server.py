@@ -56,6 +56,15 @@ KEYWORD_BLACKLIST_PATH = OWNER_ACTION_ROOT / "keyword-blacklist.json"
 COUNTRY_ASSIGNMENT_LOG = OWNER_ACTION_ROOT / "country-assignments.jsonl"
 COUNTRY_ASSIGNMENT_INDEX = OWNER_ACTION_ROOT / "country-assignments.json"
 TITLE_KEYWORD_REVIEW_ROOT = OWNER_ACTION_ROOT / "title-keyword-review-queue"
+IMPORT_CACHE_MANIFEST_PATH = Path("tmp/import-cache/manifest.json")
+TITLE_KEYWORD_REVIEW_BACKLOG_LIMIT = 500
+try:
+    TITLE_KEYWORD_REVIEW_BACKLOG_LIMIT = max(
+        0,
+        int(os.environ.get("PBE_TITLE_KEYWORD_REVIEW_BACKLOG_LIMIT", TITLE_KEYWORD_REVIEW_BACKLOG_LIMIT)),
+    )
+except (TypeError, ValueError):
+    TITLE_KEYWORD_REVIEW_BACKLOG_LIMIT = 500
 REAL_ESTATE_CLIENTS_PATH = OWNER_ACTION_ROOT / "real-estate-clients.local.json"
 REAL_ESTATE_IMPORT_ROOT = Path("tmp/real-estate-import")
 REAL_ESTATE_PUBLIC_ROOT = Path("assets/real-estate")
@@ -172,7 +181,7 @@ from asset_state import (  # noqa: E402
     write_reserve_data_from_site,
 )
 from media_keys import private_master_key, private_render_key, public_preview_key  # noqa: E402
-from import_eligibility import import_select_for_source_root  # noqa: E402
+from import_eligibility import import_select_for_source_root, row_import_eligible  # noqa: E402
 from media_policy import private_master_allowed, public_preview_allowed  # noqa: E402
 from sync_r2_media import (  # noqa: E402
     DEFAULT_PRIVATE_BUCKET,
@@ -979,7 +988,7 @@ def _pending_title_keyword_batches(conn) -> list[dict]:
                MIN(latest_proposed_at) AS first_proposed_at,
                MAX(latest_proposed_at) AS last_proposed_at
         FROM title_keyword_queue
-        WHERE review_state = 'proposed'
+        WHERE review_state IN ('proposed', 'approved')
         GROUP BY COALESCE(latest_proposed_batch_id, '')
         HAVING batch_id <> ''
         ORDER BY last_proposed_at DESC, batch_id DESC
@@ -1052,7 +1061,7 @@ def _clear_stale_title_keyword_review_rows(repo_root: Path, conn) -> dict:
 def _pending_title_keyword_rows(conn, batch_id: str) -> list[dict]:
     rows = conn.execute(
         """
-        SELECT q.media_id, q.latest_proposed_batch_id AS batch_id,
+        SELECT q.media_id, q.review_state, q.latest_proposed_batch_id AS batch_id,
                q.latest_attempt, q.latest_proposed_at, q.rejected_count,
                q.owner_comment, p.previous_title, p.previous_keywords,
                p.proposed_title, p.proposed_keywords, p.proposal_status,
@@ -1064,7 +1073,7 @@ def _pending_title_keyword_rows(conn, batch_id: str) -> list[dict]:
         JOIN title_keyword_proposals AS p
           ON p.media_id = q.media_id
          AND p.attempt = q.latest_attempt
-        WHERE q.review_state = 'proposed'
+        WHERE q.review_state IN ('proposed', 'approved')
           AND q.latest_proposed_batch_id = ?
         ORDER BY q.latest_proposed_at DESC, q.media_id
         """,
@@ -1141,40 +1150,148 @@ def _catalog_keywords(keyword_ids: object, keyword_lookup: dict[int, str]) -> li
     return keywords
 
 
+def _metadata_label_value(row: dict, label: str) -> str:
+    target = label.casefold()
+    for item in row.get("metadata") or []:
+        if isinstance(item, dict) and str(item.get("label") or "").casefold() == target:
+            return str(item.get("value") or "").strip()
+    return ""
+
+
+def _manifest_title(row: dict) -> str:
+    owner_title = str(row.get("owner_title") or "").strip()
+    if owner_title:
+        return owner_title
+    raw = row.get("raw_metadata") if isinstance(row.get("raw_metadata"), dict) else {}
+    for key in ("Title", "ObjectName"):
+        value = str(raw.get(key) or "").strip()
+        if value:
+            return value
+    metadata_title = _metadata_label_value(row, "Metadata title")
+    if metadata_title:
+        return metadata_title
+    stem = Path(str(row.get("relative_path") or row.get("id") or "")).stem
+    return re.sub(r"[_-]+", " ", stem).strip() or str(row.get("id") or "")
+
+
+def _manifest_keywords(row: dict) -> list[str]:
+    keywords = row.get("keywords")
+    if isinstance(keywords, list):
+        return _unique_keywords([str(keyword).strip() for keyword in keywords if str(keyword).strip()])
+    metadata_keywords = _metadata_label_value(row, "Keywords")
+    return _unique_keywords(_split_keyword_text(metadata_keywords))
+
+
+def _manifest_capture(row: dict) -> str:
+    capture = row.get("capture") if isinstance(row.get("capture"), dict) else {}
+    return str(capture.get("sort") or capture.get("datetime") or capture.get("raw") or _metadata_label_value(row, "Captured") or "")
+
+
+def _manifest_gallery(row: dict) -> tuple[str, str]:
+    gallery = row.get("gallery_country") if isinstance(row.get("gallery_country"), dict) else {}
+    slug = str(gallery.get("slug") or row.get("gallery_key") or "unknown").strip() or "unknown"
+    label = str(gallery.get("label") or COLLECTION_KEYWORD_TARGETS.get(slug) or slug or "Photo").strip()
+    return slug, label
+
+
+def _manifest_source_parts(row: dict) -> tuple[str, str, str]:
+    source_file = row.get("source_file") if isinstance(row.get("source_file"), dict) else {}
+    relative_path = str(row.get("relative_path") or source_file.get("path") or row.get("source_path_hint") or "").strip()
+    filename = str(source_file.get("name") or Path(relative_path).name or "").strip()
+    source_folder = str(Path(relative_path).parent if relative_path and Path(relative_path).parent.as_posix() != "." else "").strip()
+    extension = str(source_file.get("extension") or Path(filename).suffix.lstrip(".") or "").strip().lower()
+    if extension == "jpeg":
+        extension = "jpg"
+    elif extension == "tiff":
+        extension = "tif"
+    return source_folder, filename, extension
+
+
+def _manifest_catalog_row(row: dict) -> dict:
+    media_id = str(row.get("id") or "").strip()
+    slug, label = _manifest_gallery(row)
+    source_folder, filename, extension = _manifest_source_parts(row)
+    dimensions = row.get("dimensions") if isinstance(row.get("dimensions"), dict) else {}
+    source_file = row.get("source_file") if isinstance(row.get("source_file"), dict) else {}
+    return {
+        "media_id": media_id,
+        "title": _manifest_title(row) or media_id,
+        "keyword_ids": "",
+        "captured_at": _manifest_capture(row),
+        "gallery_key": slug,
+        "gallery_label": label,
+        "filename": filename,
+        "source_folder": source_folder,
+        "keywords": _manifest_keywords(row),
+        "media_type": str(row.get("media_type") or "photo").strip().lower() or "photo",
+        "source_extension": extension,
+        "full_width": int(dimensions.get("width") or 0),
+        "full_height": int(dimensions.get("height") or 0),
+        "full_bytes": int(source_file.get("bytes") or 0),
+        "full_duration_seconds": float((dimensions.get("duration_seconds") or dimensions.get("duration") or 0) or 0),
+        "location": str(row.get("location") or _metadata_label_value(row, "Location") or ""),
+    }
+
+
+def _manifest_rows_by_media_id(repo_root: Path, media_ids: list[str]) -> dict[str, dict]:
+    wanted = {str(media_id or "").strip() for media_id in media_ids if str(media_id or "").strip()}
+    if not wanted:
+        return {}
+    payload = _read_json_file(repo_root / IMPORT_CACHE_MANIFEST_PATH, {})
+    photos = payload.get("photos") if isinstance(payload, dict) else []
+    if not isinstance(photos, list):
+        return {}
+    rows: dict[str, dict] = {}
+    for row in photos:
+        if not isinstance(row, dict):
+            continue
+        media_id = str(row.get("id") or "").strip()
+        if media_id not in wanted:
+            continue
+        rows[media_id] = _manifest_catalog_row(row)
+        if len(rows) >= len(wanted):
+            break
+    return rows
+
+
 def _catalog_rows_by_media_id(repo_root: Path, media_ids: list[str]) -> dict[str, dict]:
-    if not media_ids:
+    clean_ids = [str(media_id or "").strip() for media_id in media_ids if str(media_id or "").strip()]
+    if not clean_ids:
         return {}
+    result: dict[str, dict] = {}
     catalog_path = repo_root / "assets/catalog/photosbyelie.sqlite"
-    if not catalog_path.exists():
-        return {}
-    catalog_conn = sqlite3.connect(catalog_path)
-    catalog_conn.row_factory = sqlite3.Row
-    try:
-        keyword_lookup = _catalog_keyword_lookup(catalog_conn)
-        placeholders = ",".join("?" for _ in media_ids)
-        rows = catalog_conn.execute(
-            f"""
-            SELECT m.media_id, m.title, m.keyword_ids, m.captured_at,
-                   c.slug AS gallery_key, c.title AS gallery_label,
-                   sf.filename, folder.source_folder
-            FROM media_items AS m
-            JOIN collections AS c USING(collection_id)
-            JOIN source_files AS sf USING(source_file_id)
-            LEFT JOIN source_folders AS folder
-              ON folder.source_folder_id = sf.source_folder_id
-            WHERE m.media_id IN ({placeholders})
-            """,
-            media_ids,
-        ).fetchall()
-        return {
-            str(row["media_id"]): {
-                **dict(row),
-                "keywords": _catalog_keywords(row["keyword_ids"], keyword_lookup),
-            }
-            for row in rows
-        }
-    finally:
-        catalog_conn.close()
+    if catalog_path.exists():
+        catalog_conn = sqlite3.connect(catalog_path)
+        catalog_conn.row_factory = sqlite3.Row
+        try:
+            keyword_lookup = _catalog_keyword_lookup(catalog_conn)
+            for index in range(0, len(clean_ids), 500):
+                chunk = clean_ids[index:index + 500]
+                placeholders = ",".join("?" for _ in chunk)
+                rows = catalog_conn.execute(
+                    f"""
+                    SELECT m.media_id, m.title, m.keyword_ids, m.captured_at,
+                           c.slug AS gallery_key, c.title AS gallery_label,
+                           sf.filename, folder.source_folder
+                    FROM media_items AS m
+                    JOIN collections AS c USING(collection_id)
+                    JOIN source_files AS sf USING(source_file_id)
+                    LEFT JOIN source_folders AS folder
+                      ON folder.source_folder_id = sf.source_folder_id
+                    WHERE m.media_id IN ({placeholders})
+                    """,
+                    chunk,
+                ).fetchall()
+                for row in rows:
+                    result[str(row["media_id"])] = {
+                        **dict(row),
+                        "keywords": _catalog_keywords(row["keyword_ids"], keyword_lookup),
+                    }
+        finally:
+            catalog_conn.close()
+    missing = [media_id for media_id in clean_ids if media_id not in result]
+    result.update(_manifest_rows_by_media_id(repo_root, missing))
+    return result
 
 
 def _catalog_photo_for_hidden(repo_root: Path, media_id: str) -> tuple[str, dict] | None:
@@ -1336,7 +1453,8 @@ def _title_keyword_payload_from_sqlite(repo_root: Path, batch_id: str, pending_r
                 },
             },
             "state": {
-                "tags": [TITLE_KEYWORD_PROPOSED_FLAG],
+                "tags": [TITLE_KEYWORD_REVIEW_FLAG] if str(row.get("review_state") or "") == "approved" else [TITLE_KEYWORD_PROPOSED_FLAG],
+                "review_state": str(row.get("review_state") or "proposed"),
                 "rework_requested": int(row.get("latest_attempt") or 1) > 1,
                 "rework_comment": str(row.get("owner_comment") or ""),
                 "proposal_attempt": int(row.get("latest_attempt") or 1),
@@ -1392,6 +1510,124 @@ def _title_keyword_payload_from_sqlite(repo_root: Path, batch_id: str, pending_r
     }
 
 
+def _title_keyword_backlog_photo(catalog: dict, batch_id: str, review_state: str = "incomplete") -> dict:
+    media_id = str(catalog.get("media_id") or "").strip()
+    gallery_key = str(catalog.get("gallery_key") or "")
+    gallery_label = str(catalog.get("gallery_label") or gallery_key or "Photo")
+    captured_at = str(catalog.get("captured_at") or "")
+    current_keywords = catalog.get("keywords") if isinstance(catalog.get("keywords"), list) else []
+    source_folder = str(catalog.get("source_folder") or "").strip("/")
+    filename = str(catalog.get("filename") or "").strip()
+    source_path = "/".join(part for part in [source_folder, filename] if part)
+    media_type = str(catalog.get("media_type") or "photo").strip().lower() or "photo"
+    title = str(catalog.get("title") or media_id).strip() or media_id
+    model_ladder = ["metadata-baseline-v1"]
+    return {
+        "photo_id": media_id,
+        "batch_id": batch_id,
+        "proposal_batch_id": batch_id,
+        "gallery": {"key": gallery_key, "label": gallery_label},
+        "capture": {
+            "raw": captured_at,
+            "date": captured_at[:10] if captured_at else "",
+            "sort": captured_at,
+        },
+        "thumbs": {
+            "gallery_key": public_preview_key(DEFAULT_PUBLIC_PREFIX, media_id, "gallery", media_type),
+            "detail_key": public_preview_key(DEFAULT_PUBLIC_PREFIX, media_id, "detail", media_type),
+        },
+        "source": {
+            "file": {
+                "path": source_path,
+                "type": str(catalog.get("source_extension") or Path(filename).suffix.lstrip(".")).upper(),
+            },
+            "media_type": media_type,
+        },
+        "media": {"type": media_type},
+        "state": {
+            "tags": [],
+            "review_state": review_state,
+            "rework_requested": False,
+            "rework_comment": "",
+            "proposal_attempt": 1,
+            "requested_generator": {
+                "model": "metadata-baseline-v1",
+                "model_level": 0,
+                "model_maxed": False,
+                "model_ladder": model_ladder,
+            },
+        },
+        "current": {
+            "title": title,
+            "keywords_raw": ", ".join(current_keywords),
+            "keywords": current_keywords,
+            "type": media_type,
+        },
+        "proposed": {
+            "title": title,
+            "keywords": current_keywords,
+            "status": "metadata_baseline",
+            "confidence": "medium",
+            "reason": "Current local metadata is incomplete because it is not yet applied for public visibility.",
+            "generator": {
+                "model": "metadata-baseline-v1",
+                "model_level": 0,
+                "model_maxed": False,
+                "model_ladder": model_ladder,
+            },
+        },
+        "changes": {
+            "removed_blacklisted": [],
+            "keyword_target": 10,
+            "keyword_target_met": len(current_keywords) >= 10,
+        },
+    }
+
+
+def _incomplete_title_keyword_backlog_photos(
+    repo_root: Path,
+    conn,
+    excluded_ids: set[str],
+    limit: int = TITLE_KEYWORD_REVIEW_BACKLOG_LIMIT,
+) -> list[dict]:
+    if limit <= 0:
+        return []
+    payload = _read_json_file(repo_root / IMPORT_CACHE_MANIFEST_PATH, {})
+    photos = payload.get("photos") if isinstance(payload, dict) else []
+    if not isinstance(photos, list):
+        return []
+    queue_states = {
+        str(row["media_id"]): str(row["review_state"] or "")
+        for row in conn.execute("SELECT media_id, review_state FROM title_keyword_queue")
+    }
+    hidden_payload = _read_json_file(repo_root / HIDDEN_BLACKLIST_PATH, {})
+    hidden_ids = {
+        str(photo_id)
+        for photo_id in (hidden_payload.get("photo_ids") if isinstance(hidden_payload, dict) else []) or []
+        if str(photo_id or "").strip()
+    }
+    blocked_ids = _discarded_photo_ids(repo_root) | hidden_ids
+    candidates: list[dict] = []
+    for row in photos:
+        if not isinstance(row, dict):
+            continue
+        media_id = str(row.get("id") or "").strip()
+        if not media_id or media_id in excluded_ids or media_id in blocked_ids:
+            continue
+        review_state = queue_states.get(media_id, "")
+        if review_state in {"applied", "parked", "blocked", "rejected"}:
+            continue
+        if not row_import_eligible(row)[0] or not public_preview_allowed(row):
+            continue
+        candidates.append(row)
+    candidates.sort(key=lambda row: (_manifest_capture(row), str(row.get("id") or "")), reverse=True)
+    batch_id = "incomplete-backlog"
+    return [
+        _title_keyword_backlog_photo(_manifest_catalog_row(row), batch_id, queue_states.get(str(row.get("id") or ""), "incomplete") or "incomplete")
+        for row in candidates[:limit]
+    ]
+
+
 def title_keyword_review_queue_payload(repo_root: Path) -> dict:
     conn = owner_db_connect(repo_root)
     try:
@@ -1416,6 +1652,19 @@ def title_keyword_review_queue_payload(repo_root: Path) -> dict:
             if pending_rows:
                 payload = _title_keyword_payload_from_sqlite(repo_root, batch_id, pending_rows, pending_batches)
                 all_photos.extend(payload.get("photos") or [])
+        covered_ids = {_review_photo_id(item) for item in all_photos if isinstance(item, dict)}
+        backlog_photos = _incomplete_title_keyword_backlog_photos(repo_root, conn, covered_ids)
+        if backlog_photos:
+            pending_batches = [
+                *pending_batches,
+                {
+                    "batch_id": "incomplete-backlog",
+                    "pending_count": len(backlog_photos),
+                    "first_proposed_at": "",
+                    "last_proposed_at": "",
+                },
+            ]
+            all_photos.extend(backlog_photos)
         if all_photos:
             sort_values = [value for value in (_capture_sort_value(item) for item in all_photos) if value]
             batch_ids = [batch["batch_id"] for batch in pending_batches if batch.get("pending_count")]
@@ -1436,6 +1685,8 @@ def title_keyword_review_queue_payload(repo_root: Path) -> dict:
                     "total_count": len(all_photos),
                     "visible_pending_count": len(all_photos),
                     "sqlite_pending_count": len(all_pending_rows),
+                    "incomplete_backlog_count": len(backlog_photos),
+                    "incomplete_backlog_limit": TITLE_KEYWORD_REVIEW_BACKLOG_LIMIT,
                     "batch_count": len(batch_ids),
                     "stale_blocked_count": stale_cleanup.get("blocked", 0),
                     "stale_not_found_count": stale_cleanup.get("not_found", 0),
@@ -1458,6 +1709,8 @@ def title_keyword_review_queue_payload(repo_root: Path) -> dict:
                 "total_count": 0,
                 "visible_pending_count": 0,
                 "sqlite_pending_count": 0,
+                "incomplete_backlog_count": 0,
+                "incomplete_backlog_limit": TITLE_KEYWORD_REVIEW_BACKLOG_LIMIT,
                 "stale_blocked_count": stale_cleanup.get("blocked", 0),
                 "stale_not_found_count": stale_cleanup.get("not_found", 0),
             },

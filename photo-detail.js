@@ -19,6 +19,23 @@ const formatMoney = (value) => {
 };
 const params = new URLSearchParams(window.location.search);
 const photoId = params.get("id") || "france-1";
+const ownerReviewDetailPhotoStateKey = "photosbyelie-owner-review-detail-photo";
+const ownerReviewDetailPhotoMaxAgeMs = 1000 * 60 * 60 * 2;
+const readOwnerReviewDetailPhotoPayload = () => {
+  if (params.get("from") !== "owner-review") return null;
+  try {
+    const payload = JSON.parse(sessionStorage.getItem(ownerReviewDetailPhotoStateKey) || "null");
+    if (
+      payload?.source === "owner-review"
+      && payload?.photo?.id === photoId
+      && Date.now() - Number(payload.createdAt || 0) < ownerReviewDetailPhotoMaxAgeMs
+    ) {
+      return payload;
+    }
+  } catch {}
+  return null;
+};
+const ownerReviewDetailPhotoPayload = readOwnerReviewDetailPhotoPayload();
 const collections = window.photosByElieData || {};
 const ownerCollections = window.photosByElieOwnerData || {};
 const reserveCollections = window.photosByElieReserveData || {};
@@ -45,10 +62,25 @@ const ownerCollectionEntry = Object.entries(ownerCollections).find(([, collectio
 const hiddenCollectionEntry = regularCollectionEntry || reserveCollectionEntry || ownerCollectionEntry ? null : Object.entries(hiddenCollections).find(([, collection]) =>
   collection.photos.some((photo) => photo.id === photoId)
 );
-const collectionEntry = regularCollectionEntry || reserveCollectionEntry || ownerCollectionEntry || hiddenCollectionEntry;
+const ownerReviewSyntheticCollectionEntry = (
+  !regularCollectionEntry
+  && !reserveCollectionEntry
+  && !ownerCollectionEntry
+  && !hiddenCollectionEntry
+  && ownerReviewDetailPhotoPayload?.photo?.id === photoId
+) ? [
+  String(ownerReviewDetailPhotoPayload.collectionKey || "owner-review"),
+  {
+    title: String(ownerReviewDetailPhotoPayload.collectionTitle || "Title / keywords review"),
+    accent: "owner-title-keyword-review",
+    photos: [ownerReviewDetailPhotoPayload.photo],
+  },
+] : null;
+const collectionEntry = regularCollectionEntry || reserveCollectionEntry || ownerCollectionEntry || hiddenCollectionEntry || ownerReviewSyntheticCollectionEntry;
 const isReserveCollection = Boolean(!regularCollectionEntry && reserveCollectionEntry);
 const isOwnerCollection = Boolean(!regularCollectionEntry && !reserveCollectionEntry && ownerCollectionEntry);
 const isHiddenCollection = Boolean(!regularCollectionEntry && !reserveCollectionEntry && !ownerCollectionEntry && hiddenCollectionEntry);
+const isOwnerReviewSyntheticCollection = Boolean(!regularCollectionEntry && !reserveCollectionEntry && !ownerCollectionEntry && !hiddenCollectionEntry && ownerReviewSyntheticCollectionEntry);
 const [collectionKey, collection] = collectionEntry || ["france", fallbackCollection];
 const photo = promotedPhoto || collection.photos.find((item) => item.id === photoId) || collection.photos[0] || null;
 const photoIndex = photo ? collection.photos.findIndex((item) => item.id === photo.id) : -1;
@@ -67,7 +99,7 @@ const basketStore = window.photosByElieBasket;
 const likedStore = window.photosByElieLiked;
 const hiddenActions = window.photosByElieHiddenActions;
 const localModerationEnabled = Boolean(hiddenActions?.enabled);
-const ownerDetailPurchaseHidden = localModerationEnabled;
+const ownerDetailPurchaseHidden = localModerationEnabled || isOwnerReviewSyntheticCollection;
 const versionedHref = (href) => window.photosByElieVersionedHref?.(href) || href;
 const galleryHrefForKey = (key) => `./gallery.html?gallery=${encodeURIComponent(key)}`;
 const t = (key, replacements = {}) => window.photosByElieI18n?.t?.(key, replacements) || key;
@@ -110,7 +142,7 @@ const photoOriginLabel = photo ? (() => {
 const videoDurationLabel = photo && window.photosByElieIsVideo?.(photo)
   ? window.photosByElieVideoDurationLabel?.(photo) || ""
   : "";
-if (window.photosByElieIsPublicHidden?.(photo)) {
+if (!isOwnerReviewSyntheticCollection && window.photosByElieIsPublicHidden?.(photo)) {
   window.location.replace(versionedHref(galleryHrefForKey(collectionKey)));
   return;
 }

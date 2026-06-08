@@ -697,7 +697,9 @@ def ordered_collections(catalog: dict[str, Any]) -> list[tuple[str, dict[str, An
 
 def write_db(repo_root: Path, output: Path, source: str = "auto") -> dict[str, int]:
     catalog = load_catalog(repo_root, source=source)
-    applied_title_keywords = apply_title_keyword_decisions(catalog, load_applied_title_keyword_decisions(repo_root))
+    title_keyword_decisions = load_applied_title_keyword_decisions(repo_root)
+    applied_title_keyword_ids = set(title_keyword_decisions)
+    applied_title_keywords = apply_title_keyword_decisions(catalog, title_keyword_decisions)
     pricing = load_product_pricing(repo_root)
     existing_video_durations = load_existing_video_durations(output)
     collection_entries = ordered_collections(catalog)
@@ -708,6 +710,8 @@ def write_db(repo_root: Path, output: Path, source: str = "auto") -> dict[str, i
         for sort_index, photo in enumerate(collection.get("photos") or []):
             if photo.get("id"):
                 photo_id = str(photo["id"])
+                if photo_id not in applied_title_keyword_ids:
+                    continue
                 if photo_id in seen_photo_ids:
                     duplicate_photo_ids.add(photo_id)
                 seen_photo_ids.add(photo_id)
@@ -1186,6 +1190,7 @@ def write_db(repo_root: Path, output: Path, source: str = "auto") -> dict[str, i
             ]
         }
         counts["applied_title_keywords"] = applied_title_keywords
+        counts["title_keyword_applied_ids"] = len(applied_title_keyword_ids)
         conn.close()
         temp_path.replace(output)
         return counts

@@ -128,6 +128,29 @@ const loadDiscardedIds = () => {
   return ids;
 };
 
+const loadAppliedTitleKeywordIds = () => {
+  const ownerDb = path.join(repoRoot, "assets", "owner-actions", "Owner.sqlite");
+  if (!fs.existsSync(ownerDb)) {
+    throw new Error("assets/owner-actions/Owner.sqlite is missing.");
+  }
+  const sql = `
+    SELECT q.media_id
+    FROM title_keyword_queue AS q
+    JOIN title_keyword_decisions AS d
+      ON d.media_id = q.media_id
+     AND d.attempt = q.latest_attempt
+    WHERE q.review_state = 'applied'
+      AND d.decision_state = 'accepted'
+      AND COALESCE(d.applied_at, '') <> '';
+  `;
+  const output = childProcess.execFileSync(
+    "sqlite3",
+    ["-cmd", ".timeout 10000", ownerDb, sql],
+    { cwd: repoRoot, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
+  );
+  return new Set(output.split(/\r?\n/).map((line) => line.trim()).filter(Boolean));
+};
+
 const cleanLocalReference = (reference) => String(reference || "")
   .replace(/[?#].*$/, "")
   .replace(/^\.\//, "");
@@ -158,6 +181,12 @@ const validate = () => {
   const resolutionIds = new Set();
   const dynamicResolutionIds = new Set(["video-original"]);
   const discardedIds = loadDiscardedIds();
+  let appliedTitleKeywordIds = new Set();
+  try {
+    appliedTitleKeywordIds = loadAppliedTitleKeywordIds();
+  } catch (error) {
+    errors.push(`Could not load applied title/keyword state: ${error.message}`);
+  }
 
   resolutions.forEach((resolution) => {
     if (!resolution?.id) errors.push("Resolution option is missing an id.");
@@ -199,6 +228,9 @@ const validate = () => {
       }
       if (discardedIds.has(photo.id)) {
         errors.push(`${photo.id} is discarded/tombstoned and must not be in the public catalog.`);
+      }
+      if (!appliedTitleKeywordIds.has(photo.id)) {
+        errors.push(`${photo.id} is not Owner-applied for public title/keyword visibility.`);
       }
       if (!photo.title) errors.push(`${photo.id} is missing a title.`);
       if (!externalMedia && !photo.gallerySrc) errors.push(`${photo.id} is missing gallerySrc.`);
@@ -368,6 +400,9 @@ const validate = () => {
     const photoId = String(photo?.id || "").trim();
     if (photoId && discardedIds.has(photoId)) {
       errors.push(`${photoId} is discarded/tombstoned and must not be in assets/expo-manifest.json.`);
+    }
+    if (photoId && !appliedTitleKeywordIds.has(photoId)) {
+      errors.push(`${photoId} is not Owner-applied and must not be in assets/expo-manifest.json.`);
     }
   });
 

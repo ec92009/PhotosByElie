@@ -12,6 +12,7 @@
   const blacklistUrl = "./assets/owner-actions/keyword-blacklist.json";
   const approvalsEndpoint = "/__photosbyelie/photo-action";
   const ownerReviewReturnStateKey = "photosbyelie-owner-review-return-state";
+  const ownerReviewDetailPhotoStateKey = "photosbyelie-owner-review-detail-photo";
   const ownerReviewReturnMaxAgeMs = 1000 * 60 * 60 * 2;
   const stateKeywordFlags = new Set([
     "title_keywords_reviewed",
@@ -322,6 +323,9 @@
     return publicMediaUrl(key);
   };
 
+  const reviewDetailKey = (item) => item?.thumbs?.detail_key || item?.thumbs?.detailKey || item?.thumbs?.gallery_key || item?.thumbs?.galleryKey || "";
+  const reviewDetailUrl = (item) => publicMediaUrl(reviewDetailKey(item)) || reviewThumbUrl(item);
+
   const videoExtensions = new Set(["mov", "mp4", "m4v", "webm"]);
   const looksLikeVideoValue = (value) => {
     const text = String(value || "").trim().toLowerCase();
@@ -352,6 +356,74 @@
       const match = String(value || "").toLowerCase().match(/\.([a-z0-9]+)(?:[?#].*)?$/);
       return match ? videoExtensions.has(match[1]) : false;
     });
+  };
+
+  const reviewDetailPhotoPayload = (item, card, blacklist, batchId) => {
+    const photoId = String(item?.photo_id || item?.photoId || card?.dataset?.reviewPhotoId || "").trim();
+    if (!photoId) return null;
+    const currentTitle = String(item?.current?.title || photoId).trim() || photoId;
+    const proposedTitle = String(card?.querySelector?.("[data-review-title]")?.value || item?.proposed?.title || currentTitle).trim() || currentTitle;
+    const currentKeywords = normalizeKeywords(
+      Array.isArray(item?.current?.keywords) ? item.current.keywords.join(", ") : item?.current?.keywords_raw || "",
+      blacklist,
+    );
+    const proposedKeywords = normalizeKeywords(
+      card?.querySelector?.("[data-review-keywords]")?.value
+        || (Array.isArray(item?.proposed?.keywords) ? item.proposed.keywords.join(", ") : ""),
+      blacklist,
+    );
+    const galleryKey = String(item?.gallery?.key || item?.gallery_key || card?.dataset?.reviewGalleryKey || "owner-review").trim() || "owner-review";
+    const galleryLabel = String(item?.gallery?.label || item?.gallery_label || galleryKey || "Owner review").trim();
+    const capture = String(item?.capture?.raw || item?.capture?.date || "").trim();
+    const sourceFile = item?.source?.file && typeof item.source.file === "object" ? item.source.file : {};
+    const sourcePath = String(sourceFile.path || item?.source?.path || "").trim();
+    const sourceType = String(sourceFile.type || item?.source?.type || "").trim().toUpperCase();
+    const isVideo = reviewItemIsVideo(item);
+    const galleryKeyValue = item?.thumbs?.gallery_key || item?.thumbs?.galleryKey || "";
+    const detailKeyValue = reviewDetailKey(item);
+    const metadata = [
+      { label: "Gallery", value: galleryLabel },
+      capture ? { label: "Captured", value: capture } : null,
+      { label: "Metadata title", value: proposedTitle },
+      { label: "Keywords", value: proposedKeywords.join(", ") || currentKeywords.join(", ") },
+      currentTitle !== proposedTitle ? { label: "Current title", value: currentTitle } : null,
+      currentKeywords.length ? { label: "Current keywords", value: currentKeywords.join(", ") } : null,
+      sourcePath ? { label: "Original file", value: sourcePath.split("/").pop() || sourcePath } : null,
+    ].filter(Boolean);
+    return {
+      source: "owner-review",
+      view: "title-keywords",
+      photoId,
+      batchId: String(card?.dataset?.reviewBatchId || batchId || "").trim(),
+      collectionKey: galleryKey,
+      collectionTitle: galleryLabel,
+      createdAt: Date.now(),
+      photo: {
+        id: photoId,
+        className: "p1",
+        title: proposedTitle,
+        caption: [galleryLabel, capture.slice(0, 10)].filter(Boolean).join(" / "),
+        full: sourceType ? `${sourceType} source` : "Owner review source",
+        megapixels: 0,
+        sourceOrigin: galleryKey === "ai" ? "ai" : "camera",
+        pricingTier: galleryKey === "ai" ? "ai" : "original",
+        gallerySrc: reviewThumbUrl(item),
+        imageSrc: reviewDetailUrl(item),
+        metadata,
+        media: {
+          type: isVideo ? "video" : "photo",
+          sourcePolicy: "owner-review",
+          publicPreview: {
+            allowed: true,
+            galleryKey: galleryKeyValue,
+            detailKey: detailKeyValue,
+            galleryUrl: reviewThumbUrl(item),
+            detailUrl: reviewDetailUrl(item),
+          },
+        },
+        sourceFiles: sourcePath ? [{ path: sourcePath, type: sourceType || "SOURCE" }] : [],
+      },
+    };
   };
 
   const savedReviewIds = (payload) => {
@@ -481,6 +553,11 @@
     root.append(list);
 
     const cardById = new Map();
+    const reviewItemById = new Map();
+    visiblePhotos.forEach((item) => {
+      const photoId = String(item?.photo_id || item?.photoId || "").trim();
+      if (photoId) reviewItemById.set(photoId, item);
+    });
 
     list.innerHTML = visiblePhotos.map((item, index) => {
       const photoId = String(item?.photo_id || item?.photoId || "");
@@ -688,6 +765,10 @@
       const photoId = String(card?.dataset?.reviewPhotoId || "").trim();
       if (!photoId) return;
       try {
+        const detailPayload = reviewDetailPhotoPayload(reviewItemById.get(photoId), card, blacklist, batchId);
+        if (detailPayload) {
+          sessionStorage.setItem(ownerReviewDetailPhotoStateKey, JSON.stringify(detailPayload));
+        }
         sessionStorage.setItem(ownerReviewReturnStateKey, JSON.stringify({
           source: "owner-review",
           view: "title-keywords",

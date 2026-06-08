@@ -2,8 +2,10 @@
   --preview-watermark:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='140' viewBox='0 0 260 140'%3E%3Cg transform='rotate(-24 130 70)'%3E%3Ctext x='130' y='72' text-anchor='middle' font-family='Arial, Helvetica, sans-serif' font-size='26' font-weight='800' fill='white' fill-opacity='.78' stroke='black' stroke-opacity='.62' stroke-width='4' paint-order='stroke'%3EPhotosByElie%3C/text%3E%3C/g%3E%3C/svg%3E");
   --selected-frame:#b78a54;
   --selected-frame-strong:color-mix(in srgb,var(--selected-frame) 88%,var(--text) 12%);
+  --selected-frame-ink:color-mix(in srgb,var(--selected-frame) 36%,#1f160d 64%);
   --selected-halo:color-mix(in srgb,var(--selected-frame) 30%,transparent);
   --selected-halo-soft:color-mix(in srgb,var(--selected-frame) 18%,transparent);
+  --selected-tint:color-mix(in srgb,var(--selected-frame) 16%,transparent);
 }
 .photo-hero,
 .photo-carousel-panel{
@@ -2000,6 +2002,7 @@ html.is-owner-action-busy *{
   gap:12px;
 }
 .unknown-card{
+  position:relative;
   display:grid;
   grid-template-rows:auto 1fr;
   border:1px solid var(--line);
@@ -2008,7 +2011,27 @@ html.is-owner-action-busy *{
 .unknown-card.is-selected{
   outline:6px solid var(--selected-frame);
   outline-offset:2px;
-  box-shadow:0 0 0 8px var(--selected-halo),0 18px 38px var(--selected-halo-soft);
+  box-shadow:inset 0 0 0 5px var(--selected-frame),0 0 0 8px var(--selected-halo),0 18px 38px var(--selected-halo-soft);
+}
+.unknown-card.is-selected::after,
+.real-estate-photo-card.is-selected::after{
+  content:"\2713";
+  position:absolute;
+  z-index:8;
+  top:8px;
+  left:8px;
+  display:grid;
+  place-items:center;
+  width:30px;
+  height:30px;
+  border:2px solid color-mix(in srgb,var(--selected-frame) 72%,white 28%);
+  border-radius:999px;
+  background:var(--selected-frame-ink);
+  color:#fffaf3;
+  font-size:1.05rem;
+  font-weight:900;
+  line-height:1;
+  box-shadow:0 8px 18px rgba(0,0,0,.26),0 0 0 4px var(--selected-halo);
 }
 .unknown-thumb{
   position:relative;
@@ -2352,6 +2375,7 @@ body[data-gallery="owner-title-keyword-review"] [data-title-keyword-review-root]
   display:none;
 }
 .title-keyword-review-row{
+  position:relative;
   display:grid;
   grid-template-columns:minmax(150px,220px) minmax(170px,.8fr) minmax(0,1.25fr) minmax(150px,210px);
   gap:14px;
@@ -2363,16 +2387,47 @@ body[data-gallery="owner-title-keyword-review"] [data-title-keyword-review-root]
 .title-keyword-review-row.is-selected{
   outline:4px solid var(--selected-frame);
   outline-offset:2px;
-  box-shadow:0 0 0 6px var(--selected-halo-soft);
+  background:color-mix(in srgb,var(--surface) 84%,var(--selected-frame) 16%);
+  box-shadow:inset 0 0 0 5px var(--selected-frame),0 0 0 6px var(--selected-halo-soft);
 }
 .title-keyword-review-row.is-multi-selected{
   outline:4px solid var(--selected-frame);
   outline-offset:2px;
-  box-shadow:inset 0 0 0 6px var(--selected-halo),0 0 0 6px var(--selected-halo-soft);
+  background:color-mix(in srgb,var(--surface) 82%,var(--selected-frame) 18%);
+  box-shadow:inset 0 0 0 5px var(--selected-frame),inset 0 0 0 999px var(--selected-tint),0 0 0 6px var(--selected-halo-soft);
 }
 .title-keyword-review-row.is-focused{
   outline:4px solid var(--selected-frame-strong);
   outline-offset:2px;
+}
+.title-keyword-review-row.is-selected::after,
+.title-keyword-review-row.is-multi-selected::after{
+  content:"\2713";
+  position:absolute;
+  z-index:9;
+  top:8px;
+  left:8px;
+  display:grid;
+  place-items:center;
+  width:30px;
+  height:30px;
+  border:2px solid color-mix(in srgb,var(--selected-frame) 72%,white 28%);
+  border-radius:999px;
+  background:var(--selected-frame-ink);
+  color:#fffaf3;
+  font-size:1.05rem;
+  font-weight:900;
+  line-height:1;
+  box-shadow:0 8px 18px rgba(0,0,0,.26),0 0 0 4px var(--selected-halo);
+}
+.title-keyword-review-list.has-multi-selection .title-keyword-review-row:not(.is-multi-selected){
+  opacity:.54;
+  filter:saturate(.68) contrast(.94);
+}
+.title-keyword-review-list.has-multi-selection .title-keyword-review-row:not(.is-multi-selected):hover,
+.title-keyword-review-list.has-multi-selection .title-keyword-review-row:not(.is-multi-selected).is-focused{
+  opacity:.82;
+  filter:saturate(.86) contrast(.98);
 }
 .title-keyword-review-row > *{
   min-width:0;
@@ -3543,6 +3598,7 @@ body[data-real-estate] main.shell{
   --re-card-min:330px;
 }
 .real-estate-photo-card{
+  position:relative;
   display:grid;
   grid-template-rows:auto 1fr;
   min-width:0;
@@ -3551,7 +3607,7 @@ body[data-real-estate] main.shell{
 }
 .real-estate-photo-card.is-selected{
   border-color:var(--selected-frame);
-  box-shadow:inset 0 0 0 4px var(--selected-frame),0 0 0 8px var(--selected-halo-soft);
+  box-shadow:inset 0 0 0 5px var(--selected-frame),inset 0 0 0 999px var(--selected-tint),0 0 0 8px var(--selected-halo-soft);
 }
 .real-estate-photo-media-shell{
   position:relative;
@@ -5058,7 +5114,31 @@ html.is-local-owner .mock-photo-card.is-selected .mock-photo,
 html.is-local-owner .mock-photo.is-selected{
   outline:6px solid var(--selected-frame);
   outline-offset:2px;
-  box-shadow:0 0 0 8px var(--selected-halo),0 18px 38px var(--selected-halo-soft);
+  box-shadow:inset 0 0 0 5px var(--selected-frame),inset 0 0 0 999px var(--selected-tint),0 0 0 8px var(--selected-halo),0 18px 38px var(--selected-halo-soft);
+}
+.home-result-card.is-selected .mock-photo::before,
+html.is-local-owner .mock-photo-card.is-selected .mock-photo::before,
+html.is-local-owner .mock-photo.is-selected::before{
+  content:"\2713";
+  position:absolute;
+  z-index:8;
+  top:8px;
+  left:8px;
+  display:grid;
+  place-items:center;
+  width:30px;
+  height:30px;
+  border:2px solid color-mix(in srgb,var(--selected-frame) 72%,white 28%);
+  border-radius:999px;
+  background:var(--selected-frame-ink);
+  color:#fffaf3;
+  font-size:1.05rem;
+  font-weight:900;
+  line-height:1;
+  pointer-events:none;
+  opacity:1;
+  mix-blend-mode:normal;
+  box-shadow:0 8px 18px rgba(0,0,0,.26),0 0 0 4px var(--selected-halo);
 }
 .france-gallery .p1,.mock-photo.france-gallery.p1{--mock-scene:linear-gradient(135deg,#222 0 18%,#ede5d8 18% 44%,#8f3530 44% 57%,#314c3d 57% 100%)}
 .france-gallery .p2,.mock-photo.france-gallery.p2{--mock-scene:linear-gradient(145deg,#d8d4cb 0 28%,#272727 28% 36%,#b9926a 36% 60%,#f5eee2 60% 100%)}

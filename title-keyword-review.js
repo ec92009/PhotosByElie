@@ -973,6 +973,7 @@
       return `${count} selected`;
     };
     const syncSelectionClasses = () => {
+      list.classList.toggle("has-multi-selection", selectedPhotoIds.size > 1);
       cardById.forEach((card, photoId) => {
         const focused = photoId === focusedPhotoId;
         const selected = selectedPhotoIds.has(photoId);

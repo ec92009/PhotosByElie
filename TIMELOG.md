@@ -216,8 +216,9 @@ Clock state: running
 | 2026-06-08 | 22:11 CEST | 22:13 CEST | 0:02 | Simplified Owner source edits to Pixelmator Pro and added the watched `pixelmator.pro.edits` folder contract. |
 | 2026-06-08 | 22:24 CEST | 22:28 CEST | 0:04 | Added matching Pixelmator export detection, local edited-version import recording, and context-menu verification. |
 | 2026-06-08 | 22:34 CEST | 22:38 CEST | 0:04 | Added the title-review toolbar bulk Pixelmator edit import action and verified imported/skipped behavior. |
+| 2026-06-09 | 01:20 CEST | 01:27 CEST | 0:07 | Added selected-item badges, stronger selected fills, and multi-select dimming across gallery and Owner review surfaces. |
 
 ## Totals
 
-Active collaboration time used: 14:54
+Active collaboration time used: 15:01
 Remaining budget: not set

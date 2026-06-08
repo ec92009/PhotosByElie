@@ -27,6 +27,7 @@ assets/hidden/**
 !assets/hidden/*/.gitkeep
 .curation-logs/
 .review-logs/
+pixelmator.pro.edits/
 
 # Local Owner workflow database.
 assets/owner-actions/Owner.sqlite

@@ -2180,34 +2180,40 @@ window.photosByElieVideoDurationLabel = (photo) => (
 
   window.photosByElieSourceEditApps = async (photo) => {
     if (!isLocalhostMediaPage || !photo?.id) return [];
-    const mediaType = window.photosByElieIsVideo?.(photo) ? "video" : "photo";
-    const response = await fetch(`/__photosbyelie/source-edit-apps?media_id=${encodeURIComponent(photo.id)}&media_type=${encodeURIComponent(mediaType)}`, {
+    if (window.photosByElieIsVideo?.(photo)) return [];
+    return [{
+      name: "Pixelmator Pro",
+      bundleId: "com.pixelmatorteam.pixelmator.x",
+      path: "/Applications/Pixelmator Pro.app",
+    }];
+  };
+
+  window.photosByElieSourceEdits = async () => {
+    if (!isLocalhostMediaPage) return { ok: false, files: [] };
+    const response = await fetch("/__photosbyelie/source-edits", {
       cache: "no-store",
       credentials: "same-origin",
     });
     const payload = await response.json().catch(() => null);
     if (!response.ok || !payload?.ok) {
-      throw new Error(payload?.error || `Could not load editor apps (${response.status}).`);
+      throw new Error(payload?.error || `Could not load Pixelmator edits (${response.status}).`);
     }
-    return Array.isArray(payload.apps) ? payload.apps : [];
+    return payload;
   };
 
-  window.photosByElieEditSourceWith = async (photo, app = "") => {
+  window.photosByElieEditSourceWith = async (photo) => {
     if (!isLocalhostMediaPage || !photo?.id) {
       throw new Error("Source editing is only available from localhost.");
     }
-    const appPayload = app && typeof app === "object"
-      ? { app: String(app.name || ""), bundle_id: String(app.bundleId || "") }
-      : { app: String(app || "") };
     const response = await fetch("/__photosbyelie/source-edit", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "same-origin",
-      body: JSON.stringify({ media_id: photo.id, ...appPayload }),
+      body: JSON.stringify({ media_id: photo.id }),
     });
     const payload = await response.json().catch(() => null);
     if (!response.ok || !payload?.ok) {
-      throw new Error(payload?.error || `Could not open source media (${response.status}).`);
+      throw new Error(payload?.error || `Could not open source media in Pixelmator Pro (${response.status}).`);
     }
     return payload;
   };
@@ -2251,55 +2257,26 @@ window.photosByElieVideoDurationLabel = (photo) => (
       index: options.previewIndex,
     }));
     if (owner) {
-      const editPanel = document.createElement("div");
-      editPanel.className = "media-context-submenu";
-      editPanel.hidden = true;
-      menu.append(editPanel);
-      const openEditor = async (app) => {
+      if (!window.photosByElieIsVideo?.(photo)) {
+        makeButton("Edit in Pixelmator Pro", async () => {
+          try {
+            const result = await window.photosByElieEditSourceWith(photo);
+            window.dispatchEvent(new CustomEvent("photosbyelie:sourceedit", { detail: result }));
+          } catch (error) {
+            window.alert?.(String(error?.message || "Could not open source media in Pixelmator Pro."));
+          }
+        });
+      }
+      makeButton("Show Pixelmator edits", async () => {
         try {
-          const result = await window.photosByElieEditSourceWith(photo, app);
-          window.dispatchEvent(new CustomEvent("photosbyelie:sourceedit", { detail: result }));
-          close();
+          const result = await window.photosByElieSourceEdits();
+          window.dispatchEvent(new CustomEvent("photosbyelie:sourceedits", { detail: result }));
+          const label = `${result.count || 0} file${Number(result.count || 0) === 1 ? "" : "s"} in ${result.folder || "pixelmator.pro.edits"}`;
+          window.alert?.(label);
         } catch (error) {
-          editPanel.innerHTML = `<p>${String(error?.message || "Could not open source media.")}</p>`;
+          window.alert?.(String(error?.message || "Could not load Pixelmator edits."));
         }
-      };
-      makeButton("Edit with...", async (button) => {
-        const expanded = button.getAttribute("aria-expanded") === "true";
-        button.setAttribute("aria-expanded", String(!expanded));
-        editPanel.hidden = expanded;
-        if (expanded || editPanel.dataset.loaded === "true") return;
-        editPanel.dataset.loaded = "true";
-        editPanel.innerHTML = "<p>Loading apps...</p>";
-        try {
-          const apps = await window.photosByElieSourceEditApps?.(photo);
-          editPanel.replaceChildren();
-          const defaultButton = document.createElement("button");
-          defaultButton.type = "button";
-          defaultButton.textContent = "Default app";
-          defaultButton.addEventListener("click", () => openEditor(""));
-          editPanel.append(defaultButton);
-          (apps || []).forEach((app) => {
-            const appButton = document.createElement("button");
-            appButton.type = "button";
-            appButton.textContent = app.name || app.bundleId || "Application";
-            appButton.title = app.path || app.bundleId || "";
-            appButton.addEventListener("click", () => openEditor(app));
-            editPanel.append(appButton);
-          });
-          const otherButton = document.createElement("button");
-          otherButton.type = "button";
-          otherButton.textContent = "Other...";
-          otherButton.addEventListener("click", () => {
-            const app = window.prompt?.("Application name or bundle id");
-            if (app === null) return;
-            openEditor(String(app || "").trim());
-          });
-          editPanel.append(otherButton);
-        } catch (error) {
-          editPanel.innerHTML = `<p>${String(error?.message || "Could not load editor apps.")}</p>`;
-        }
-      }, { closeOnClick: false });
+      });
     }
     if (typeof options.onOpenDetail === "function") {
       makeButton("Open detail", options.onOpenDetail);

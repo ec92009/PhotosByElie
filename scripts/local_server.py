@@ -51,6 +51,7 @@ PRIVATE_MEDIA_PROXY_PATH = "/__photosbyelie/private-media/"
 SOURCE_PREVIEW_PATH = "/__photosbyelie/source-preview/"
 SOURCE_EDIT_PATH = "/__photosbyelie/source-edit"
 SOURCE_EDIT_APPS_PATH = "/__photosbyelie/source-edit-apps"
+SOURCE_EDITS_PATH = "/__photosbyelie/source-edits"
 MAX_BODY_BYTES = 5 * 1024 * 1024
 LOCAL_CLIENTS = {"127.0.0.1", "::1", "localhost"}
 DERIVATIVES = (("gallery", "gallerySrc"), ("detail", "imageSrc"))
@@ -276,6 +277,10 @@ LOCAL_TOOL_DIRS = (
     Path("/opt/homebrew/sbin"),
     Path("/usr/local/sbin"),
 )
+PIXELMATOR_PRO_BUNDLE_ID = "com.pixelmatorteam.pixelmator.x"
+PIXELMATOR_PRO_NAME = "Pixelmator Pro"
+PIXELMATOR_EDIT_FOLDER = Path("pixelmator.pro.edits")
+PIXELMATOR_EDIT_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tif", ".tiff", ".webp", ".heic"}
 
 
 class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
@@ -292,6 +297,9 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             return
         if path == SOURCE_EDIT_APPS_PATH:
             self._handle_source_edit_apps()
+            return
+        if path == SOURCE_EDITS_PATH:
+            self._handle_source_edits()
             return
         if path.startswith(PUBLIC_MEDIA_PROXY_PATH):
             self._handle_public_media_proxy(path)
@@ -399,14 +407,10 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         try:
             payload = self._read_json_body()
             media_id = str(payload.get("media_id") or payload.get("mediaId") or "").strip()
-            app = str(payload.get("app") or "").strip()
-            bundle_id = str(payload.get("bundle_id") or payload.get("bundleId") or "").strip()
             source = _source_original_for_media_id(Path.cwd(), media_id)
-            command = ["open", str(source["path"])]
-            if bundle_id:
-                command = ["open", "-b", bundle_id, str(source["path"])]
-            elif app:
-                command = ["open", "-a", app, str(source["path"])]
+            edit_folder = _pixelmator_edit_folder(Path.cwd())
+            suggested_output = _pixelmator_edit_output_path(Path.cwd(), media_id, source["path"])
+            command = ["open", "-b", PIXELMATOR_PRO_BUNDLE_ID, str(source["path"])]
             subprocess.run(command, check=True, capture_output=True, text=True)
         except ValueError as error:
             self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
@@ -422,8 +426,11 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             "ok": True,
             "media_id": media_id,
             "path": str(source["path"]),
-            "app": app,
-            "bundle_id": bundle_id,
+            "editor": PIXELMATOR_PRO_NAME,
+            "bundle_id": PIXELMATOR_PRO_BUNDLE_ID,
+            "edit_folder": str(edit_folder),
+            "suggested_output_path": str(suggested_output),
+            "watch_url": SOURCE_EDITS_PATH,
         })
 
     def _handle_source_edit_apps(self) -> None:
@@ -435,15 +442,37 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         requested_type = str((query.get("media_type") or query.get("kind") or [""])[0]).strip().lower()
         try:
             media_type = _source_edit_media_type(Path.cwd(), media_id, requested_type)
-            apps = _source_edit_apps_for_media_type(media_type)
         except OSError as error:
             self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
             return
+        apps = [] if media_type == "video" else [{
+            "name": PIXELMATOR_PRO_NAME,
+            "bundleId": PIXELMATOR_PRO_BUNDLE_ID,
+            "path": "/Applications/Pixelmator Pro.app",
+            "matchedTypes": sorted(SOURCE_EDIT_PHOTO_UTIS),
+        }]
         self._send_json(HTTPStatus.OK, {
             "ok": True,
             "media_id": media_id,
             "mediaType": media_type,
             "apps": apps,
+        })
+
+    def _handle_source_edits(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            folder = _pixelmator_edit_folder(Path.cwd())
+            files = _pixelmator_edit_files(Path.cwd())
+        except OSError as error:
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
+            return
+        self._send_json(HTTPStatus.OK, {
+            "ok": True,
+            "folder": str(folder),
+            "count": len(files),
+            "files": files,
         })
 
     def _handle_photo_action_progress(self) -> None:
@@ -3402,6 +3431,47 @@ def _source_original_for_media_id(repo_root: Path, media_id: str) -> dict:
         "sourceLabel": source_label,
         "path": source,
     }
+
+
+def _pixelmator_edit_folder(repo_root: Path) -> Path:
+    folder = (repo_root / PIXELMATOR_EDIT_FOLDER).resolve()
+    folder.mkdir(parents=True, exist_ok=True)
+    return folder
+
+
+def _safe_edit_stem(value: str) -> str:
+    stem = re.sub(r"[^A-Za-z0-9._-]+", "-", value).strip("-._")
+    return stem or "pixelmator-edit"
+
+
+def _pixelmator_edit_output_path(repo_root: Path, media_id: str, source: Path) -> Path:
+    source_suffix = source.suffix.lower()
+    if source_suffix not in {".jpg", ".jpeg", ".png", ".tif", ".tiff", ".webp", ".heic"}:
+        source_suffix = ".jpeg"
+    stem = _safe_edit_stem(Path(source.name).stem or media_id)
+    return _pixelmator_edit_folder(repo_root) / f"{stem}.photosbyelie-edit{source_suffix}"
+
+
+def _pixelmator_edit_files(repo_root: Path) -> list[dict]:
+    folder = _pixelmator_edit_folder(repo_root)
+    files: list[dict] = []
+    for path in folder.iterdir():
+        if not path.is_file() or path.suffix.lower() not in PIXELMATOR_EDIT_EXTENSIONS:
+            continue
+        try:
+            stat = path.stat()
+        except OSError:
+            continue
+        files.append({
+            "name": path.name,
+            "path": str(path),
+            "folder": str(folder),
+            "bytes": stat.st_size,
+            "modified": datetime.fromtimestamp(stat.st_mtime, timezone.utc).isoformat(),
+            "modifiedMs": int(stat.st_mtime * 1000),
+        })
+    files.sort(key=lambda item: (int(item.get("modifiedMs") or 0), str(item.get("name") or "")), reverse=True)
+    return files
 
 
 def _generated_source_image_preview(repo_root: Path, source: Path) -> Path:

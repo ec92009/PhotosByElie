@@ -417608,11 +417608,11 @@ export const resolutions = [
     "detail": "Original source file at native resolution",
     "deliveryAssetType": "full",
     "prices": {
-      "original": 1.02,
+      "original": 1.03,
       "ai": 0.42
     },
     "sortOrder": 1,
-    "price": 1.02
+    "price": 1.03
   },
   {
     "id": "jpg-6mp",
@@ -417622,11 +417622,11 @@ export const resolutions = [
     "minMegapixels": 6,
     "deliveryAssetType": "jpeg_6mp",
     "prices": {
-      "original": 0.77,
+      "original": 0.78,
       "ai": 0.32
     },
     "sortOrder": 2,
-    "price": 0.77
+    "price": 0.78
   },
   {
     "id": "jpg-3mp",
@@ -417636,11 +417636,11 @@ export const resolutions = [
     "minMegapixels": 3,
     "deliveryAssetType": "jpeg_3mp",
     "prices": {
-      "original": 0.52,
+      "original": 0.53,
       "ai": 0.22
     },
     "sortOrder": 3,
-    "price": 0.52
+    "price": 0.53
   },
   {
     "id": "jpg-1mp",
@@ -417650,11 +417650,11 @@ export const resolutions = [
     "minMegapixels": 1,
     "deliveryAssetType": "jpeg_1mp",
     "prices": {
-      "original": 0.27,
+      "original": 0.28,
       "ai": 0.12
     },
     "sortOrder": 4,
-    "price": 0.27
+    "price": 0.28
   },
   {
     "id": "print-12x16",

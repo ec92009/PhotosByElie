@@ -66,6 +66,9 @@ const firstDeliverablePhotoId = (catalog, collectionKey = null) => {
 
 const sourcePathForPhoto = (catalog, photoId) => catalog.photos.get(photoId).photo.sourceFiles[0].path;
 
+const orderProductTotal = (orderItem) => (orderItem.products || [])
+  .reduce((sum, product) => sum + Number(product.amount || 0), 0);
+
 const createFakeKv = () => {
   const values = new Map();
   return {
@@ -215,8 +218,8 @@ test("guest checkout creates a pending order and mock Stripe session", async () 
   assert.match(body.order.id, /^PBE-20260507-/);
   assert.equal(body.order.status, "pending_payment");
   assert.equal(body.order.currency, "usd");
-  assert.equal(body.order.amountExpected, 8100);
   assert.equal(body.order.items[0].products.length, 2);
+  assert.equal(body.order.amountExpected, orderProductTotal(body.order.items[0]));
   assert.match(body.checkout.url, /^https:\/\/mock\.stripe\.local\/checkout\/cs_mock_/);
 });
 
@@ -486,7 +489,7 @@ test("mock Stripe payment moves the order to ready and records a delivery ZIP", 
   assert.equal(payResponse.status, 200);
   const paid = await payResponse.json();
   assert.equal(paid.order.status, "ready");
-  assert.equal(paid.order.amountPaid, 6500);
+  assert.equal(paid.order.amountPaid, checkout.order.amountExpected);
   assert.match(paid.order.delivery.zipKey, /^deliveries\/photosbyelie-order-PBE-20260507-/);
   assert.match(paid.order.delivery.downloadUrl, /^\/download\/dl_/);
 

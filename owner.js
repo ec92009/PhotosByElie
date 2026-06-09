@@ -191,6 +191,16 @@
     setText(pricePublishStatus, message);
   };
 
+  const summarizePricePublishFailure = (task = {}) => {
+    const failedStep = (Array.isArray(task.steps) ? task.steps : []).find((step) => step.state === "failed");
+    if (failedStep?.label) {
+      const code = Number.isFinite(Number(failedStep.returnCode)) ? ` (exit ${failedStep.returnCode})` : "";
+      return `${failedStep.label} failed${code}.`;
+    }
+    if (task.currentStep && task.currentStep !== "Failed") return `${task.currentStep} failed.`;
+    return "Price publish failed.";
+  };
+
   const renderPricePublishTask = (task = null) => {
     if (!pricePublishProgress) return;
     if (!task) {
@@ -212,7 +222,9 @@
         </div>
       `;
     }).join("");
-    const error = task.error ? `<p class="owner-card-note">${escapeHtml(task.error)}</p>` : "";
+    const error = task.state === "failed"
+      ? `<p class="owner-card-note">${escapeHtml(summarizePricePublishFailure(task))}</p>`
+      : "";
     setHtml(pricePublishProgress, `
       <div class="owner-sweep-phase is-${escapeHtml(state || "queued")}">
         <strong>${escapeHtml(state === "done" ? "Complete" : state === "failed" ? "Failed" : "Publishing")}</strong>
@@ -241,7 +253,7 @@
       return true;
     }
     if (task.state === "failed") {
-      const message = task.error || "Price publish failed.";
+      const message = summarizePricePublishFailure(task);
       setStatus(message);
       setPricePublishStatus(message);
       if (publishPricesButton) publishPricesButton.disabled = false;

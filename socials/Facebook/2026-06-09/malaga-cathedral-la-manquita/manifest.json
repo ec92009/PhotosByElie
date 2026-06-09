@@ -1,7 +1,7 @@
 {
   "date": "2026-06-09",
   "platform": "Facebook",
-  "status": "prepared",
+  "status": "published",
   "account": "Photos By Elie",
   "post_type": "multi_photo",
   "title": "Malaga Cathedral La Manquita",
@@ -152,5 +152,29 @@
       "local_staged_path": "socials/Facebook/2026-06-09/malaga-cathedral-la-manquita/images/08-20230114-174245-00326-37b2e4b71b-malaga-cathedral-la-manquita.jpg"
     }
   ],
-  "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260609-f5MOH0/socials/Facebook/2026-06-09/malaga-cathedral-la-manquita"
+  "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260609-f5MOH0/socials/Facebook/2026-06-09/malaga-cathedral-la-manquita",
+  "api_publish": {
+    "status": "published",
+    "platform": "facebook",
+    "account": "Photos By Elie",
+    "page_id": "1146747141854670",
+    "post_id": "1146747141854670_122104726785334672",
+    "published_at": "2026-06-09T03:08:34+0000",
+    "permalink_url": "https://www.facebook.com/122102168061334672/posts/122104726785334672",
+    "image_count": 8,
+    "verified_at": "2026-06-09T03:16:45Z",
+    "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
+  },
+  "published": {
+    "status": "published",
+    "platform": "facebook",
+    "account": "Photos By Elie",
+    "page_id": "1146747141854670",
+    "post_id": "1146747141854670_122104726785334672",
+    "published_at": "2026-06-09T03:08:34+0000",
+    "permalink_url": "https://www.facebook.com/122102168061334672/posts/122104726785334672",
+    "image_count": 8,
+    "verified_at": "2026-06-09T03:16:45Z",
+    "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
+  }
 }

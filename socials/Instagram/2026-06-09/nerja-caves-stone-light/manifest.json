@@ -1,7 +1,7 @@
 {
   "date": "2026-06-09",
   "platform": "Instagram",
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "title": "Nerja Caves Stone Light",
@@ -135,5 +135,29 @@
       "local_staged_path": "socials/Instagram/2026-06-09/nerja-caves-stone-light/images/07-img-3493-a95a5303d4-nerja-caves-stone-light.jpg"
     }
   ],
-  "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260609-f5MOH0/socials/Instagram/2026-06-09/nerja-caves-stone-light"
+  "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260609-f5MOH0/socials/Instagram/2026-06-09/nerja-caves-stone-light",
+  "api_publish": {
+    "status": "published",
+    "platform": "instagram",
+    "account": "ec92009",
+    "media_id": "17958416267962164",
+    "published_at": "2026-06-09T03:10:19+0000",
+    "permalink_url": "https://www.instagram.com/p/DZWXuwwCufS/",
+    "media_type": "CAROUSEL_ALBUM",
+    "image_count": 7,
+    "verified_at": "2026-06-09T03:16:45Z",
+    "verification": "Instagram Graph returned permalink, username ec92009, carousel media type, and 7 child images."
+  },
+  "published": {
+    "status": "published",
+    "platform": "instagram",
+    "account": "ec92009",
+    "media_id": "17958416267962164",
+    "published_at": "2026-06-09T03:10:19+0000",
+    "permalink_url": "https://www.instagram.com/p/DZWXuwwCufS/",
+    "media_type": "CAROUSEL_ALBUM",
+    "image_count": 7,
+    "verified_at": "2026-06-09T03:16:45Z",
+    "verification": "Instagram Graph returned permalink, username ec92009, carousel media type, and 7 child images."
+  }
 }

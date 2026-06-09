@@ -17,3 +17,11 @@ Malaga Cathedral's carved stone, columns, and evening warmth: a Photos By Elie w
 - 06. `20230114-174143-00227-9e19ded0ed` - https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20230114-174143-00227-9e19ded0ed_1800.jpg - `socials/Facebook/2026-06-09/malaga-cathedral-la-manquita/images/06-20230114-174143-00227-9e19ded0ed-malaga-cathedral-la-manquita.jpg`
 - 07. `20230114-174144-00228-f89d9b4282` - https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20230114-174144-00228-f89d9b4282_1800.jpg - `socials/Facebook/2026-06-09/malaga-cathedral-la-manquita/images/07-20230114-174144-00228-f89d9b4282-malaga-cathedral-la-manquita.jpg`
 - 08. `20230114-174245-00326-37b2e4b71b` - https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20230114-174245-00326-37b2e4b71b_1800.jpg - `socials/Facebook/2026-06-09/malaga-cathedral-la-manquita/images/08-20230114-174245-00326-37b2e4b71b-malaga-cathedral-la-manquita.jpg`
+
+## Published
+
+- Status: `published`
+- URL: https://www.facebook.com/122102168061334672/posts/122104726785334672
+- Published at: `2026-06-09T03:08:34+0000`
+- Image count: `8`
+- Verification: Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments.

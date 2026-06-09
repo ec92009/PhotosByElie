@@ -1,7 +1,7 @@
 {
   "date": "2026-06-09",
   "platform": "Threads",
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "title": "Nerja Caves Stone Light",
@@ -85,5 +85,29 @@
     }
   ],
   "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260609-f5MOH0/socials/Threads/2026-06-09/nerja-caves-stone-light",
-  "link_preview_note": "Remove any automatic link preview if it shows generic campaign metadata."
+  "link_preview_note": "Remove any automatic link preview if it shows generic campaign metadata.",
+  "api_publish": {
+    "status": "published",
+    "platform": "threads",
+    "account": "ec92009",
+    "post_id": "17886594957564857",
+    "published_at": "2026-06-09T03:11:13+0000",
+    "permalink_url": "https://www.threads.com/@ec92009/post/DZWX1lril3p",
+    "media_type": "CAROUSEL_ALBUM",
+    "image_count": 4,
+    "verified_at": "2026-06-09T03:16:45Z",
+    "verification": "Threads Graph returned permalink, username ec92009, carousel media type, and post text with campaign URL."
+  },
+  "published": {
+    "status": "published",
+    "platform": "threads",
+    "account": "ec92009",
+    "post_id": "17886594957564857",
+    "published_at": "2026-06-09T03:11:13+0000",
+    "permalink_url": "https://www.threads.com/@ec92009/post/DZWX1lril3p",
+    "media_type": "CAROUSEL_ALBUM",
+    "image_count": 4,
+    "verified_at": "2026-06-09T03:16:45Z",
+    "verification": "Threads Graph returned permalink, username ec92009, carousel media type, and post text with campaign URL."
+  }
 }

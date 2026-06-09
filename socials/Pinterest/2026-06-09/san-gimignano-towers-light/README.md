@@ -21,3 +21,10 @@ San Gimignano towers, Tuscan stone, and hill-town atmosphere, selected as a Phot
 - Description: Five San Gimignano photographs selected for tower silhouettes, Tuscan stone, quiet street texture, and Italy wall-art confidence. Browse the complete Photos By Elie edit.
 - Board: Italy Travel Photography
 - Alt text: San Gimignano tower and Tuscany hill-town travel photography by Photos By Elie.
+
+## Manual Publishing Status
+
+- Status: `prepared_no_api_token_browser_locked`
+- Reason: No ~/.config/photosbyelie/pinterest-token.json token file is present, and the Browser plugin reported the shared profile already in use; package is ready for manual Pin Builder upload.
+- Board recommendation: Italy Travel Photography
+- Image count: `5`

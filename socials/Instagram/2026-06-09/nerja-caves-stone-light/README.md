@@ -18,3 +18,11 @@ Nerja's cave chambers in stone, shadow, and quiet scale. Browse the edit from th
 - 05. `img-3491-fc9a4c3019` - https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-3491-fc9a4c3019_1800.jpg - `socials/Instagram/2026-06-09/nerja-caves-stone-light/images/05-img-3491-fc9a4c3019-nerja-caves-stone-light.jpg`
 - 06. `img-3492-3de5a405fa` - https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-3492-3de5a405fa_1800.jpg - `socials/Instagram/2026-06-09/nerja-caves-stone-light/images/06-img-3492-3de5a405fa-nerja-caves-stone-light.jpg`
 - 07. `img-3493-a95a5303d4` - https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-3493-a95a5303d4_1800.jpg - `socials/Instagram/2026-06-09/nerja-caves-stone-light/images/07-img-3493-a95a5303d4-nerja-caves-stone-light.jpg`
+
+## Published
+
+- Status: `published`
+- URL: https://www.instagram.com/p/DZWXuwwCufS/
+- Published at: `2026-06-09T03:10:19+0000`
+- Image count: `7`
+- Verification: Instagram Graph returned permalink, username ec92009, carousel media type, and 7 child images.

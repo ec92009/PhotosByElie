@@ -13,7 +13,7 @@
     {
       "date": "2026-06-09",
       "platform": "Facebook",
-      "status": "prepared",
+      "status": "published",
       "account": "Photos By Elie",
       "post_type": "multi_photo",
       "title": "Malaga Cathedral La Manquita",
@@ -164,12 +164,36 @@
           "local_staged_path": "socials/Facebook/2026-06-09/malaga-cathedral-la-manquita/images/08-20230114-174245-00326-37b2e4b71b-malaga-cathedral-la-manquita.jpg"
         }
       ],
-      "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260609-f5MOH0/socials/Facebook/2026-06-09/malaga-cathedral-la-manquita"
+      "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260609-f5MOH0/socials/Facebook/2026-06-09/malaga-cathedral-la-manquita",
+      "published": {
+        "status": "published",
+        "platform": "facebook",
+        "account": "Photos By Elie",
+        "page_id": "1146747141854670",
+        "post_id": "1146747141854670_122104726785334672",
+        "published_at": "2026-06-09T03:08:34+0000",
+        "permalink_url": "https://www.facebook.com/122102168061334672/posts/122104726785334672",
+        "image_count": 8,
+        "verified_at": "2026-06-09T03:16:45Z",
+        "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
+      },
+      "api_publish": {
+        "status": "published",
+        "platform": "facebook",
+        "account": "Photos By Elie",
+        "page_id": "1146747141854670",
+        "post_id": "1146747141854670_122104726785334672",
+        "published_at": "2026-06-09T03:08:34+0000",
+        "permalink_url": "https://www.facebook.com/122102168061334672/posts/122104726785334672",
+        "image_count": 8,
+        "verified_at": "2026-06-09T03:16:45Z",
+        "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
+      }
     },
     {
       "date": "2026-06-09",
       "platform": "Instagram",
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "title": "Nerja Caves Stone Light",
@@ -303,12 +327,36 @@
           "local_staged_path": "socials/Instagram/2026-06-09/nerja-caves-stone-light/images/07-img-3493-a95a5303d4-nerja-caves-stone-light.jpg"
         }
       ],
-      "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260609-f5MOH0/socials/Instagram/2026-06-09/nerja-caves-stone-light"
+      "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260609-f5MOH0/socials/Instagram/2026-06-09/nerja-caves-stone-light",
+      "published": {
+        "status": "published",
+        "platform": "instagram",
+        "account": "ec92009",
+        "media_id": "17958416267962164",
+        "published_at": "2026-06-09T03:10:19+0000",
+        "permalink_url": "https://www.instagram.com/p/DZWXuwwCufS/",
+        "media_type": "CAROUSEL_ALBUM",
+        "image_count": 7,
+        "verified_at": "2026-06-09T03:16:45Z",
+        "verification": "Instagram Graph returned permalink, username ec92009, carousel media type, and 7 child images."
+      },
+      "api_publish": {
+        "status": "published",
+        "platform": "instagram",
+        "account": "ec92009",
+        "media_id": "17958416267962164",
+        "published_at": "2026-06-09T03:10:19+0000",
+        "permalink_url": "https://www.instagram.com/p/DZWXuwwCufS/",
+        "media_type": "CAROUSEL_ALBUM",
+        "image_count": 7,
+        "verified_at": "2026-06-09T03:16:45Z",
+        "verification": "Instagram Graph returned permalink, username ec92009, carousel media type, and 7 child images."
+      }
     },
     {
       "date": "2026-06-09",
       "platform": "Pinterest",
-      "status": "prepared",
+      "status": "prepared_no_api_token_browser_locked",
       "account": "photosbyelie",
       "post_type": "multi_pin",
       "title": "San Gimignano Towers Light",
@@ -412,12 +460,18 @@
       "pin_title": "San Gimignano Towers Wall Art",
       "description": "Five San Gimignano photographs selected for tower silhouettes, Tuscan stone, quiet street texture, and Italy wall-art confidence. Browse the complete Photos By Elie edit.",
       "board_recommendation": "Italy Travel Photography",
-      "alt_text": "San Gimignano tower and Tuscany hill-town travel photography by Photos By Elie."
+      "alt_text": "San Gimignano tower and Tuscany hill-town travel photography by Photos By Elie.",
+      "manual_status": {
+        "status": "prepared_no_api_token_browser_locked",
+        "reason": "No ~/.config/photosbyelie/pinterest-token.json token file is present, and the Browser plugin reported the shared profile already in use; package is ready for manual Pin Builder upload.",
+        "board_recommendation": "Italy Travel Photography",
+        "image_count": 5
+      }
     },
     {
       "date": "2026-06-09",
       "platform": "Threads",
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "title": "Nerja Caves Stone Light",
@@ -501,7 +555,31 @@
         }
       ],
       "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260609-f5MOH0/socials/Threads/2026-06-09/nerja-caves-stone-light",
-      "link_preview_note": "Remove any automatic link preview if it shows generic campaign metadata."
+      "link_preview_note": "Remove any automatic link preview if it shows generic campaign metadata.",
+      "published": {
+        "status": "published",
+        "platform": "threads",
+        "account": "ec92009",
+        "post_id": "17886594957564857",
+        "published_at": "2026-06-09T03:11:13+0000",
+        "permalink_url": "https://www.threads.com/@ec92009/post/DZWX1lril3p",
+        "media_type": "CAROUSEL_ALBUM",
+        "image_count": 4,
+        "verified_at": "2026-06-09T03:16:45Z",
+        "verification": "Threads Graph returned permalink, username ec92009, carousel media type, and post text with campaign URL."
+      },
+      "api_publish": {
+        "status": "published",
+        "platform": "threads",
+        "account": "ec92009",
+        "post_id": "17886594957564857",
+        "published_at": "2026-06-09T03:11:13+0000",
+        "permalink_url": "https://www.threads.com/@ec92009/post/DZWX1lril3p",
+        "media_type": "CAROUSEL_ALBUM",
+        "image_count": 4,
+        "verified_at": "2026-06-09T03:16:45Z",
+        "verification": "Threads Graph returned permalink, username ec92009, carousel media type, and post text with campaign URL."
+      }
     }
   ],
   "campaigns": [
@@ -513,14 +591,106 @@
     "etsy-san-gimignano-wall-art-2026-06-09"
   ],
   "etsy_companion": {
-    "status": "pending_api_create",
-    "target_listing_count": 20,
-    "campaign_ids": [
-      "etsy-malaga-cathedral-wall-art-2026-06-09",
-      "etsy-nerja-caves-wall-art-2026-06-09",
-      "etsy-san-gimignano-wall-art-2026-06-09"
-    ]
+    "status": "drafts_created_media_verified",
+    "shop_id": "42422777",
+    "shop_url": "https://www.etsy.com/shop/PhotosByElieShop",
+    "created_at": "2026-06-09T03:16:45Z",
+    "total_draft_count": 20,
+    "campaigns": [
+      {
+        "campaign_id": "etsy-malaga-cathedral-wall-art-2026-06-09",
+        "package_path": "/Users/ecohen/Dev/pbe-daily-social-20260609-f5MOH0/assets/owner-actions/etsy-listing-packages/2026-06-09/etsy-malaga-cathedral-wall-art-2026-06-09",
+        "listing_count": 8,
+        "status": "drafts_created_media_verified",
+        "draft_ids": [
+          "4518754980",
+          "4518754635",
+          "4518754990",
+          "4518754643",
+          "4518754653",
+          "4518754663",
+          "4518755004",
+          "4518754673"
+        ],
+        "media_ids": [
+          "20230114-173939-00201-426652086d",
+          "20230114-173949-00324-1014a5d98e",
+          "20230114-174030-00325-5874bfd433",
+          "20230114-174044-00223-dc55d55ea9",
+          "20230114-174127-00226-4e7f85cce0",
+          "20230114-174143-00227-9e19ded0ed",
+          "20230114-174144-00228-f89d9b4282",
+          "20230114-174245-00326-37b2e4b71b"
+        ],
+        "image_count_verified": 8,
+        "file_count_verified": 8,
+        "state": "draft"
+      },
+      {
+        "campaign_id": "etsy-nerja-caves-wall-art-2026-06-09",
+        "package_path": "/Users/ecohen/Dev/pbe-daily-social-20260609-f5MOH0/assets/owner-actions/etsy-listing-packages/2026-06-09/etsy-nerja-caves-wall-art-2026-06-09",
+        "listing_count": 7,
+        "status": "drafts_created_media_verified",
+        "draft_ids": [
+          "4518754681",
+          "4518755014",
+          "4518755016",
+          "4518754697",
+          "4518755018",
+          "4518755032",
+          "4518754705"
+        ],
+        "media_ids": [
+          "img-3487-8368b14a77",
+          "img-3488-5bbe2e3810",
+          "img-3489-565f1f5291",
+          "img-3490-b4ddb84f72",
+          "img-3491-fc9a4c3019",
+          "img-3492-3de5a405fa",
+          "img-3493-a95a5303d4"
+        ],
+        "image_count_verified": 7,
+        "file_count_verified": 7,
+        "state": "draft"
+      },
+      {
+        "campaign_id": "etsy-san-gimignano-wall-art-2026-06-09",
+        "package_path": "/Users/ecohen/Dev/pbe-daily-social-20260609-f5MOH0/assets/owner-actions/etsy-listing-packages/2026-06-09/etsy-san-gimignano-wall-art-2026-06-09",
+        "listing_count": 5,
+        "status": "drafts_created_media_verified",
+        "draft_ids": [
+          "4518754717",
+          "4518755048",
+          "4518754719",
+          "4518755058",
+          "4518754723"
+        ],
+        "media_ids": [
+          "img-1177-ed6ca580f8",
+          "img-1179-73dc1ce59c",
+          "img-1180-fe3d9faa8d",
+          "img-1181-a12bca4639",
+          "img-1182-5aa2cfd683"
+        ],
+        "image_count_verified": 5,
+        "file_count_verified": 5,
+        "state": "draft"
+      }
+    ],
+    "verification": "Each Etsy draft readback returned state draft, one listing image, and one buyer download file. No active listings were published."
   },
-  "checks": [],
-  "blockers": []
+  "checks": [
+    "package count and Instagram/Threads ratio checks passed",
+    "public R2 HEAD checks passed",
+    "Facebook/Instagram/Threads dry runs passed",
+    "npm test passed",
+    "npm run validate passed with ignored Owner.sqlite copied into the clean worktree",
+    "git diff --check passed",
+    "custom-domain VERSION and campaign manifest probes passed before publishing",
+    "Meta/Instagram/Threads API readbacks verified published posts",
+    "Etsy API readbacks verified 20 draft listings with one image and one buyer file each"
+  ],
+  "blockers": [
+    "Pinterest not published: no pinterest-token.json and Browser plugin profile was already in use."
+  ]
 }

@@ -1,7 +1,7 @@
 {
   "date": "2026-06-09",
   "platform": "Pinterest",
-  "status": "prepared",
+  "status": "prepared_no_api_token_browser_locked",
   "account": "photosbyelie",
   "post_type": "multi_pin",
   "title": "San Gimignano Towers Light",
@@ -105,5 +105,11 @@
   "pin_title": "San Gimignano Towers Wall Art",
   "description": "Five San Gimignano photographs selected for tower silhouettes, Tuscan stone, quiet street texture, and Italy wall-art confidence. Browse the complete Photos By Elie edit.",
   "board_recommendation": "Italy Travel Photography",
-  "alt_text": "San Gimignano tower and Tuscany hill-town travel photography by Photos By Elie."
+  "alt_text": "San Gimignano tower and Tuscany hill-town travel photography by Photos By Elie.",
+  "manual_status": {
+    "status": "prepared_no_api_token_browser_locked",
+    "reason": "No ~/.config/photosbyelie/pinterest-token.json token file is present, and the Browser plugin reported the shared profile already in use; package is ready for manual Pin Builder upload.",
+    "board_recommendation": "Italy Travel Photography",
+    "image_count": 5
+  }
 }

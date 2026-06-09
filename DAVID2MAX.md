@@ -1007,3 +1007,73 @@ Source: public catalog metadata (`assets/catalog/photosbyelie.sqlite`). Target b
 - `npm run validate`: PASS (`Validation OK`)
 - Generated changes: none detected (`git status` clean)
 - Notes: All checks green; no action needed.
+
+---
+
+## 2026-06-09 15:05 CEST — Resend buyer-email handoff to Max
+
+Context: Elie is switching from David to laptop Max. Continue from the Resend setup/test flow.
+
+Done on PhotosByElie:
+- Pushed `c6c5e919 photosbyelie: add buyer delivery emails`.
+- Worker now supports optional Resend buyer delivery emails after paid orders become `ready`.
+- Email content includes the order recovery URL plus direct per-file download URLs.
+- Email send failure is recorded on `deliveryEmail.status = "failed"` and does not block paid delivery.
+- Version bumped to `v101.4`.
+- Tests passed: `npm test` 33/33.
+- Known validator issue remains pre-existing: `assets/media-sidecar.json photosCount is 5463; expected 5454`.
+
+Done on Webapps cheat sheet:
+- Pushed `301472f cheatsheet: add resend links`.
+- Added Resend dashboard/API keys/domains links to `/Users/ecohen/Dev/Webapps/cheatsheet/index.html`.
+- Updated Webapps hub cheat-sheet card to `v101.0`.
+- Also updated the local convenience copy `/Users/ecohen/Dev/URL_CHEAT_SHEET.html`; that file is not tracked by the PhotosByElie repo.
+
+Current Resend state:
+- Browser on David was opened to `https://resend.com/api-keys` and redirected to `https://resend.com/login`.
+- Elie needs to log in on Max.
+- No valid `RESEND_API_KEY` is installed locally or in Cloudflare yet.
+- `npx wrangler secret list` showed existing secrets only: `INTERNAL_RENDER_TOKEN`, `REAL_ESTATE_GALLERIES_JSON`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`.
+- A local test with an invalid/placeholder key reached Resend and failed with `401 API key is invalid`, which proves the local client path is wired.
+
+Next steps on Max:
+1. Open Resend API keys: `https://resend.com/api-keys`.
+2. Create a key named something like `PhotosByElie Worker Production`.
+3. Use sending access, scoped to `photos-by-elie.com` if Resend asks.
+4. Copy the key only into the terminal, not chat or files.
+5. Run the local sample email test to `ec92009@gmail.com`:
+
+```bash
+cd /Users/ecohen/Dev/PhotosByElie
+RESEND_API_KEY='paste_full_resend_key_here' node -e "
+import('./worker/resend-email-client.mjs').then(async ({ createResendEmailClient }) => {
+  const client = createResendEmailClient({
+    apiKey: process.env.RESEND_API_KEY,
+    from: 'Photos By Elie <orders@photos-by-elie.com>',
+    replyTo: 'orders@photos-by-elie.com'
+  });
+  const result = await client.send({
+    to: 'ec92009@gmail.com',
+    subject: 'Photos By Elie test delivery email',
+    text: 'Test email from the Photos By Elie Resend delivery path.',
+    html: '<p>Test email from the Photos By Elie Resend delivery path.</p>',
+    idempotencyKey: 'photosbyelie-test-' + Date.now()
+  });
+  console.log(result);
+});
+"
+```
+
+6. If Resend rejects the sender/domain, verify `photos-by-elie.com` under `https://resend.com/domains`.
+7. When the sample email works, install the key in Cloudflare:
+
+```bash
+cd /Users/ecohen/Dev/PhotosByElie
+npx wrangler secret put RESEND_API_KEY
+```
+
+8. Deploy the Worker, then test one paid checkout. Order should remain downloadable even if email delivery fails.
+
+Repo caveats:
+- PhotosByElie still has unrelated dirty files from prior local/owner workflows. Do not blindly stage them.
+- Webapps also has unrelated dirty AGENTS/task-tree files. The Resend cheat-sheet commit is already pushed.

@@ -55,6 +55,13 @@ The public static site points checkout, Real Estate originals delivery, and Real
 The current checkout Worker is live at:
 
 ```text
+https://download.photos-by-elie.com
+```
+
+The legacy workers.dev host remains enabled as a fallback while Stripe webhooks
+and cached clients transition:
+
+```text
 https://photosbyelie-checkout-mock.ec92009.workers.dev
 ```
 
@@ -65,7 +72,7 @@ Live Stripe dashboard state as of 2026-05-22:
 - Account: `acct_1TWCksPuO9o6fOp6`.
 - Successful-payment customer receipts are enabled; refund emails remain off.
 - Branding is saved with `assets/branding/photosbyelie-camera-tripod-logo-512.png`, `assets/branding/photosbyelie-camera-tripod-wordmark.png`, brand color `#5B341E`, and accent color `#D86A3E`.
-- Webhook destination `we_1TZmoVPuO9o6fOp6JkBENiyV` posts `checkout.session.completed` to `https://photosbyelie-checkout-mock.ec92009.workers.dev/stripe-webhook` on Stripe API version `2026-04-22.dahlia`.
+- Webhook destination `we_1TZmoVPuO9o6fOp6JkBENiyV` posts `checkout.session.completed` to `https://photosbyelie-checkout-mock.ec92009.workers.dev/stripe-webhook` on Stripe API version `2026-04-22.dahlia`; the first-party `https://download.photos-by-elie.com/stripe-webhook` endpoint is also live and can become the Stripe destination after a dashboard update.
 - Live Cloudflare secrets `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are installed outside git. Do not commit or document the secret values.
 - Live proof succeeded with order `PBE-20260522-BA062E956C`: `$8.00` paid, `$7.47` incoming after Stripe fees, order status `ready`, and a private R2 JPEG download of `401,035` bytes.
 
@@ -78,7 +85,7 @@ Real Stripe is selected automatically when `STRIPE_SECRET_KEY` is present. Requi
 - `DOWNLOAD_TOKEN_TTL_DAYS`: optional buyer download-token availability window; default is 30.
 - `DOWNLOAD_TOKEN_MAX_DOWNLOADS`: optional successful-download limit per token; default is 100.
 - `STRIPE_STATEMENT_DESCRIPTOR_SUFFIX`: optional card statement descriptor suffix for Checkout PaymentIntents; default is `DOWNLOAD`, producing `PHOTOSELIE* DOWNLOAD` with the current shortened descriptor prefix. The Stripe Dashboard still owns the business descriptor prefix, logo, color, support details, and public receipt branding.
-- `WORKER_PUBLIC_URL`: absolute public Worker base used when composing direct download links in buyer delivery emails.
+- `WORKER_PUBLIC_URL`: absolute public Worker base used when composing direct download links in buyer delivery emails. It should stay on the first-party `https://download.photos-by-elie.com` Worker custom domain so email links match the sending domain.
 - `ORDER_EMAIL_FROM`: sender used for buyer delivery emails, for example `Photos By Elie <orders@photos-by-elie.com>`.
 - `ORDER_EMAIL_REPLY_TO`: optional reply-to mailbox for buyer delivery emails.
 - `ORDER_EMAIL_INCLUDE_DIRECT_DOWNLOAD_LINKS`: optional flag; defaults to direct token links in the email when enabled.

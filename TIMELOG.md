@@ -235,8 +235,9 @@ Clock state: running
 | 2026-06-09 | 20:00 CEST | 20:01 CEST | 0:01 | Requested Spacebar previews stop closing on image click and keep left click/drag for pano panning; implementation/testing time excluded. |
 | 2026-06-09 | 20:01 CEST | 20:02 CEST | 0:01 | Proved live checkout delivery email: payment/download succeeded and Resend logged the buyer email as delivered. |
 | 2026-06-09 | 20:14 CEST | 20:15 CEST | 0:01 | Requested a distinctive homepage Panoramas card dimension; implementation/testing time excluded. |
+| 2026-06-09 | 20:15 CEST | 20:21 CEST | 0:06 | Added the ready-order spam-folder notice, deployed the first-party Worker download domain, and verified checkout/email health; DNS DMARC remained permission-blocked. |
 
 ## Totals
 
-Active collaboration time used: 15:28
+Active collaboration time used: 15:34
 Remaining budget: not set

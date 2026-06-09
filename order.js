@@ -307,6 +307,17 @@ const renderOrder = (order) => {
     hasActualDeliveryFiles
   );
   const readyFileCount = currentDeliveryFiles.filter((file) => file.ready).length;
+  const showEmailNotice = order.status === "ready";
+  const deliveryEmailWasSent = order.deliveryEmail?.status === "sent";
+  const deliveryEmailNotice = showEmailNotice ? `
+    <aside class="order-email-notice is-attention" aria-label="${escapeText(t("order.email_notice_title"))}">
+      <div>
+        <p class="eyebrow">${escapeText(deliveryEmailWasSent ? t("order.email_notice_title") : t("order.email_notice_fallback_title"))}</p>
+        <strong>${escapeText(order.buyerEmail || "")}</strong>
+      </div>
+      <p>${escapeText(deliveryEmailWasSent ? t("order.email_notice_body") : t("order.email_notice_fallback_body"))}</p>
+    </aside>
+  ` : "";
   const deliveryFilesMarkup = showDeliveryStack ? `
     <section class="order-file-downloads" aria-label="${escapeText(t("order.delivery_files"))}">
       <div class="order-file-downloads-header">
@@ -348,7 +359,7 @@ const renderOrder = (order) => {
       </ul>
     </article>
   `).join("");
-  itemsRoot.innerHTML = showDeliveryStack ? deliveryFilesMarkup : orderLinesMarkup;
+  itemsRoot.innerHTML = `${deliveryEmailNotice}${showDeliveryStack ? deliveryFilesMarkup : orderLinesMarkup}`;
 
   if (order.delivery?.downloadUrl && !hasActualDeliveryFiles) {
     currentZipPath = order.delivery.zipKey || "";

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import argparse
 import copy
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 import hashlib
 import os
 import ipaddress
@@ -58,6 +58,7 @@ PUBLISH_PRICES_PATH = "/__photosbyelie/publish-prices"
 PUBLISH_PRICES_PROGRESS_PATH = "/__photosbyelie/publish-prices-progress"
 MAX_BODY_BYTES = 5 * 1024 * 1024
 LOCAL_CLIENTS = {"127.0.0.1", "::1", "localhost"}
+VISIBLE_VERSION_EPOCH = date(2026, 2, 28)
 DERIVATIVES = (("gallery", "gallerySrc"), ("detail", "imageSrc"))
 COUNTRY_ASSIGNMENT_TARGETS = {"france", "usa", "spain", "mexico", "italy", "portugal", "slovakia"}
 OWNER_SESSION_COOKIE = "pbe_owner_session"
@@ -1098,11 +1099,16 @@ def _run_publish_command(repo_root: Path, command: list[str], steps: list[dict],
     return output
 
 
-def _next_visible_version(current: str) -> str:
+def _next_visible_version(current: str, today: date | None = None) -> str:
     match = re.fullmatch(r"(\d+)\.(\d+)", current.strip())
     if not match:
         raise ValueError(f"unsupported VERSION value: {current!r}")
-    return f"{match.group(1)}.{int(match.group(2)) + 1}"
+    current_day = int(match.group(1))
+    current_build = int(match.group(2))
+    expected_day = ((today or date.today()) - VISIBLE_VERSION_EPOCH).days
+    if current_day < expected_day:
+        return f"{expected_day}.0"
+    return f"{current_day}.{current_build + 1}"
 
 
 def _bump_visible_version(repo_root: Path) -> tuple[str, str, list[str]]:

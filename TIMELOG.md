@@ -236,8 +236,9 @@ Clock state: running
 | 2026-06-09 | 20:01 CEST | 20:02 CEST | 0:01 | Proved live checkout delivery email: payment/download succeeded and Resend logged the buyer email as delivered. |
 | 2026-06-09 | 20:14 CEST | 20:15 CEST | 0:01 | Requested a distinctive homepage Panoramas card dimension; implementation/testing time excluded. |
 | 2026-06-09 | 20:15 CEST | 20:21 CEST | 0:06 | Added the ready-order spam-folder notice, deployed the first-party Worker download domain, and verified checkout/email health; DNS DMARC remained permission-blocked. |
+| 2026-06-09 | 20:21 CEST | 20:23 CEST | 0:02 | Bumped the visible build to v101.10 so the public order page fetches the fresh Worker config instead of a cached v101.9 asset. |
 
 ## Totals
 
-Active collaboration time used: 15:34
+Active collaboration time used: 15:36
 Remaining budget: not set

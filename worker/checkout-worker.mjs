@@ -322,6 +322,7 @@ const publicOrder = (order) => ({
     provider: order.deliveryEmail.provider || null,
     messageId: order.deliveryEmail.messageId || null,
     directLinkCount: Number(order.deliveryEmail.directLinkCount || 0) || null,
+    resendCount: Number(order.deliveryEmail.resendCount || 0) || 0,
     orderUrl: order.deliveryEmail.orderUrl || null,
     sentAt: order.deliveryEmail.sentAt || null,
     failedAt: order.deliveryEmail.failedAt || null,
@@ -416,82 +417,110 @@ const deliveryDownloadRows = ({ order, downloadBaseUrl }) => {
     return order.delivery.files.map((file) => {
       const item = itemByPhotoId.get(file.photoId) || {};
       return {
+        photoId: file.photoId || "",
+        productId: file.productId || "",
         title: item.title || file.title || file.photoId || "Purchased file",
         productLabel: file.productLabel || file.productId || "Download",
         filename: file.name || `${file.photoId || "photosbyelie"}-${file.productId || "download"}`,
         url: absoluteUrl(downloadBaseUrl, file.downloadUrl),
         expiresAt: file.expiresAt || null,
+        isArchive: false,
       };
     });
   }
   if (order.delivery?.downloadUrl) {
     return [{
+      photoId: "",
+      productId: "",
       title: `Photos By Elie order ${order.id}`,
       productLabel: "Download ZIP",
       filename: order.delivery.zipKey?.split("/")?.pop?.() || `photosbyelie-order-${order.id}.zip`,
       url: absoluteUrl(downloadBaseUrl, order.delivery.downloadUrl),
       expiresAt: null,
+      isArchive: true,
     }];
   }
   return [];
 };
 
+const downloadRowKey = (photoId, productId) => `${photoId || ""}::${productId || ""}`;
+
 const purchasedProductRows = (order) => (order.items || []).flatMap((item) =>
   (item.products || []).map((product) => ({
+    photoId: item.photoId || "",
+    productId: product.id || "",
     title: item.title || item.photoId || "Photo",
     productLabel: product.label || product.id || "Download",
   }))
 );
+
+const purchasedDownloadRows = (order, downloadRows) => {
+  const directByProduct = new Map(downloadRows
+    .filter((row) => row.photoId && row.productId && row.url)
+    .map((row) => [downloadRowKey(row.photoId, row.productId), row]));
+  const archiveRow = downloadRows.find((row) => row.isArchive && row.url) || null;
+  return purchasedProductRows(order).map((row) => ({
+    ...row,
+    download: directByProduct.get(downloadRowKey(row.photoId, row.productId)) || archiveRow,
+  }));
+};
+
+const emailDownloadLine = (row) => {
+  const label = `${row.title} - ${row.productLabel}`;
+  if (!row.download?.url) return `- ${label}`;
+  const filename = row.download.filename ? ` (file: ${row.download.filename})` : "";
+  const archive = row.download.isArchive ? " (order ZIP)" : "";
+  const expiry = row.download.expiresAt ? ` (available until ${row.download.expiresAt})` : "";
+  return `- ${label}: ${row.download.url}${filename}${archive}${expiry}`;
+};
 
 const buildOrderReadyEmail = ({
   order,
   ordersUrl,
   downloadBaseUrl,
   includeDirectDownloadLinks = true,
+  idempotencyKey = `photosbyelie-order-ready-${order.id}`,
 }) => {
   const orderUrl = orderRecoveryUrl(order, ordersUrl);
-  const purchasedRows = purchasedProductRows(order);
   const downloadRows = includeDirectDownloadLinks ? deliveryDownloadRows({ order, downloadBaseUrl }) : [];
+  const purchasedRows = purchasedDownloadRows(order, downloadRows);
+  const linkedPurchaseCount = purchasedRows.filter((row) => row.download?.url).length;
   const textLines = [
     "Your Photos By Elie downloads are ready.",
     "",
     `Order: ${order.id}`,
-    `Download page: ${orderUrl}`,
     "",
-    "Purchased files:",
-    ...purchasedRows.map((row) => `- ${row.title} - ${row.productLabel}`),
-    ...(downloadRows.length ? [
-      "",
-      "Direct download links:",
-      ...downloadRows.map((row) => {
-        const expiry = row.expiresAt ? ` (available until ${row.expiresAt})` : "";
-        return `- ${row.filename}: ${row.url}${expiry}`;
-      }),
-    ] : []),
+    "Purchased downloads:",
+    ...purchasedRows.map(emailDownloadLine),
     "",
-    "If a direct link expires, use the download page above with your order email.",
+    `Download page (backup): ${orderUrl}`,
+    "If a direct link expires, use the download page with your order email.",
     "",
     "Thank you,",
     "Photos By Elie",
   ];
-  const downloadList = downloadRows.length
-    ? `<h2>Direct download links</h2><ul>${downloadRows.map((row) => `
+  const purchaseList = purchasedRows.length
+    ? `<ul>${purchasedRows.map((row) => {
+        const label = `${row.title} - ${row.productLabel}`;
+        return `
         <li>
-          <a href="${escapeHtml(row.url)}">${escapeHtml(row.filename)}</a>
-          <br><span>${escapeHtml(row.title)} - ${escapeHtml(row.productLabel)}</span>
-          ${row.expiresAt ? `<br><small>Available until ${escapeHtml(row.expiresAt)}</small>` : ""}
+          ${row.download?.url
+            ? `<a href="${escapeHtml(row.download.url)}">${escapeHtml(label)}</a>`
+            : `<span>${escapeHtml(label)}</span>`}
+          ${row.download?.filename ? `<br><small>File: ${escapeHtml(row.download.filename)}${row.download.isArchive ? " (order ZIP)" : ""}</small>` : ""}
+          ${row.download?.expiresAt ? `<br><small>Available until ${escapeHtml(row.download.expiresAt)}</small>` : ""}
         </li>
-      `).join("")}</ul>`
-    : "";
+      `;
+      }).join("")}</ul>`
+    : "<p>No purchased download rows were recorded for this order.</p>";
   const html = `
     <div style="font-family:Arial,sans-serif;line-height:1.5;color:#1f1b18">
       <h1>Your Photos By Elie downloads are ready</h1>
       <p>Order <strong>${escapeHtml(order.id)}</strong> is paid and ready.</p>
-      <p><a href="${escapeHtml(orderUrl)}">Open your download page</a></p>
-      <h2>Purchased files</h2>
-      <ul>${purchasedRows.map((row) => `<li>${escapeHtml(row.title)} - ${escapeHtml(row.productLabel)}</li>`).join("")}</ul>
-      ${downloadList}
-      <p>If a direct link expires, use the download page above with your order email.</p>
+      <h2>Purchased downloads</h2>
+      ${purchaseList}
+      <p>Backup: <a href="${escapeHtml(orderUrl)}">open the order download page</a>.</p>
+      <p>If a direct link expires, use the download page with your order email.</p>
       <p>Thank you,<br>Photos By Elie</p>
     </div>
   `;
@@ -500,10 +529,17 @@ const buildOrderReadyEmail = ({
     subject: `Your Photos By Elie downloads are ready - ${order.id}`,
     text: textLines.join("\n"),
     html,
-    idempotencyKey: `photosbyelie-order-ready-${order.id}`,
+    idempotencyKey,
     orderUrl,
-    directLinkCount: downloadRows.length,
+    directLinkCount: linkedPurchaseCount,
   };
+};
+
+const resendIdempotencyKey = (orderId, requestedAt) => {
+  const suffix = String(requestedAt || "")
+    .replace(/[^A-Za-z0-9_-]+/g, "")
+    .slice(0, 32);
+  return `photosbyelie-order-ready-${orderId}-resend-${suffix || "manual"}`;
 };
 
 const appendDownloadEvent = (order, record, downloadedAt) => {
@@ -569,16 +605,17 @@ export const createPhotosByElieWorker = ({
     };
   };
 
-  const maybeSendReadyEmail = async (order) => {
+  const maybeSendReadyEmail = async (order, { force = false, throwOnFailure = false } = {}) => {
     if (!emailClient || typeof emailClient.send !== "function") return order;
-    if (order.deliveryEmail?.status === "sent") return order;
+    if (!force && order.deliveryEmail?.status === "sent") return order;
+    const requestedAt = now().toISOString();
     const email = buildOrderReadyEmail({
       order,
       ordersUrl,
       downloadBaseUrl,
       includeDirectDownloadLinks,
+      idempotencyKey: force ? resendIdempotencyKey(order.id, requestedAt) : undefined,
     });
-    const requestedAt = now().toISOString();
     const sending = {
       ...order,
       deliveryEmail: {
@@ -603,6 +640,7 @@ export const createPhotosByElieWorker = ({
           directLinkCount: email.directLinkCount,
           orderUrl: email.orderUrl,
           sentAt,
+          resendCount: Number(order.deliveryEmail?.resendCount || 0) + (force ? 1 : 0),
         },
         updatedAt: sentAt,
       };
@@ -610,6 +648,25 @@ export const createPhotosByElieWorker = ({
       return sent;
     } catch (error) {
       const failedAt = now().toISOString();
+      if (throwOnFailure) {
+        const restored = {
+          ...order,
+          deliveryEmail: {
+            ...(order.deliveryEmail || {}),
+            lastResendFailedAt: failedAt,
+            lastResendError: {
+              code: error?.code || "delivery_email_failed",
+              message: error?.message || "Delivery email could not be sent.",
+            },
+          },
+          updatedAt: failedAt,
+        };
+        await store.putOrder(restored);
+        throw Object.assign(new Error(error?.message || "Delivery email could not be sent."), {
+          status: error?.status || 502,
+          code: error?.code || "delivery_email_failed",
+        });
+      }
       const failed = {
         ...sending,
         deliveryEmail: {
@@ -628,6 +685,27 @@ export const createPhotosByElieWorker = ({
       await store.putOrder(failed);
       return failed;
     }
+  };
+
+  const resendReadyEmail = async (request, orderId) => {
+    if (!emailClient || typeof emailClient.send !== "function") {
+      return errorJson(503, "delivery_email_unavailable", "Delivery email is not configured.");
+    }
+    const payload = await parseJson(request);
+    const email = String(payload.email || payload.buyerEmail || "").trim().toLowerCase();
+    if (!validEmail(email)) {
+      return errorJson(400, "invalid_email", "Resending a delivery email requires the checkout email.");
+    }
+    const order = await store.getOrder(orderId);
+    if (!order) return errorJson(404, "unknown_order", "Order was not found.");
+    if (email !== order.buyerEmail) {
+      return errorJson(403, "order_email_required", "Enter the email used at checkout to resend this order email.");
+    }
+    if (order.status !== "ready" || !order.delivery) {
+      return errorJson(409, "order_not_ready", "Delivery email can be resent only after the order files are ready.");
+    }
+    const sent = await maybeSendReadyEmail(order, { force: true, throwOnFailure: true });
+    return json({ order: publicOrder(sent), deliveryEmail: publicOrder(sent).deliveryEmail });
   };
 
   const createCheckout = async (request, checkoutMode) => {
@@ -990,6 +1068,8 @@ export const createPhotosByElieWorker = ({
       if (request.method === "POST" && path === "/real-estate/deliverables/delete") return await deleteRealEstateDeliverable(request);
       const orderSessionMatch = path.match(/^\/orders\/by-session\/([^/]+)$/);
       if (request.method === "GET" && orderSessionMatch) return await getOrderByCheckoutSession(request, decodeURIComponent(orderSessionMatch[1]));
+      const resendEmailMatch = path.match(/^\/orders\/([^/]+)\/resend-email$/);
+      if (request.method === "POST" && resendEmailMatch) return await resendReadyEmail(request, decodeURIComponent(resendEmailMatch[1]));
       const orderMatch = path.match(/^\/orders\/([^/]+)$/);
       if (request.method === "GET" && orderMatch) return await getOrder(request, decodeURIComponent(orderMatch[1]));
       const downloadMatch = path.match(/^\/download\/([^/]+)$/);

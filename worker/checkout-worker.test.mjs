@@ -542,7 +542,7 @@ test("mock Stripe payment moves the order to ready and records a delivery ZIP", 
   assert.equal(sessionLookup.order.status, "ready");
 });
 
-test("paid checkout sends one delivery email with order and download links", async () => {
+test("paid checkout sends per-purchased-item delivery email links", async () => {
   const catalog = loadCatalog();
   const randomUUID = deterministicIds();
   const now = () => new Date("2026-05-07T12:00:00.000Z");
@@ -563,7 +563,7 @@ test("paid checkout sends one delivery email with order and download links", asy
 
   const checkoutResponse = await worker.fetch(jsonRequest("https://worker.test/checkout/guest", {
     email: "buyer@example.com",
-    items: [{ photoId, options: [{ id: "full" }] }],
+    items: [{ photoId, options: [{ id: "full" }, { id: "jpg-3mp" }] }],
   }));
   assert.equal(checkoutResponse.status, 201);
   const checkout = await checkoutResponse.json();
@@ -575,19 +575,42 @@ test("paid checkout sends one delivery email with order and download links", asy
   const paid = await payResponse.json();
   assert.equal(paid.order.status, "ready");
   assert.equal(paid.order.deliveryEmail.status, "sent");
-  assert.equal(paid.order.deliveryEmail.directLinkCount, 1);
+  assert.equal(paid.order.deliveryEmail.directLinkCount, 2);
   assert.equal(emailClient.sent.length, 1);
-  assert.equal(emailClient.sent[0].to, "buyer@example.com");
-  assert.match(emailClient.sent[0].subject, /downloads are ready/);
-  assert.match(emailClient.sent[0].text, /https:\/\/photos-by-elie\.com\/order\.html\?id=PBE-20260507-/);
-  assert.match(emailClient.sent[0].text, /email=buyer%40example\.com/);
-  assert.match(emailClient.sent[0].text, /https:\/\/worker\.test\/download\/dl_test_full/);
+  const message = emailClient.sent[0];
+  assert.equal(message.to, "buyer@example.com");
+  assert.match(message.subject, /downloads are ready/);
+  assert.match(message.text, /Purchased downloads:\n- .+ - Full resolution: https:\/\/worker\.test\/download\/dl_test_full/);
+  assert.match(message.text, /- .+ - JPG 3 MP: https:\/\/worker\.test\/download\/dl_test_jpg-3mp/);
+  assert.match(message.text, /Download page \(backup\): https:\/\/photos-by-elie\.com\/order\.html\?id=PBE-20260507-/);
+  assert.match(message.text, /email=buyer%40example\.com/);
+  assert.ok(message.text.indexOf("Purchased downloads:") < message.text.indexOf("Download page (backup):"));
+  assert.match(message.html, /<a href="https:\/\/worker\.test\/download\/dl_test_full">[^<]+ - Full resolution<\/a>/);
+  assert.match(message.html, /<a href="https:\/\/worker\.test\/download\/dl_test_jpg-3mp">[^<]+ - JPG 3 MP<\/a>/);
 
   const retryResponse = await worker.fetch(jsonRequest("https://worker.test/mock-stripe/pay", {
     checkoutSessionId: checkout.checkout.sessionId,
   }));
   assert.equal(retryResponse.status, 200);
   assert.equal(emailClient.sent.length, 1);
+
+  const resendResponse = await worker.fetch(jsonRequest(`https://worker.test/orders/${paid.order.id}/resend-email`, {
+    email: "buyer@example.com",
+  }));
+  assert.equal(resendResponse.status, 200);
+  const resent = await resendResponse.json();
+  assert.equal(resent.deliveryEmail.status, "sent");
+  assert.equal(resent.deliveryEmail.resendCount, 1);
+  assert.equal(resent.deliveryEmail.directLinkCount, 2);
+  assert.equal(emailClient.sent.length, 2);
+  assert.match(emailClient.sent[1].idempotencyKey, /-resend-/);
+  assert.match(emailClient.sent[1].text, /- .+ - Full resolution: https:\/\/worker\.test\/download\/dl_test_full/);
+
+  const wrongEmailResponse = await worker.fetch(jsonRequest(`https://worker.test/orders/${paid.order.id}/resend-email`, {
+    email: "not-buyer@example.com",
+  }));
+  assert.equal(wrongEmailResponse.status, 403);
+  assert.equal(emailClient.sent.length, 2);
 });
 
 test("delivery email failure does not block paid delivery", async () => {

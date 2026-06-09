@@ -14,7 +14,7 @@ STRIPE_STATEMENT_DESCRIPTOR_SUFFIX = "DOWNLOAD"
 WORKER_PUBLIC_URL = "https://photosbyelie-checkout-mock.ec92009.workers.dev"
 ORDER_EMAIL_FROM = "Photos By Elie <orders@photos-by-elie.com>"
 ORDER_EMAIL_REPLY_TO = "orders@photos-by-elie.com"
-ORDER_EMAIL_INCLUDE_DIRECT_DOWNLOAD_LINKS = "false"
+ORDER_EMAIL_INCLUDE_DIRECT_DOWNLOAD_LINKS = "true"
 # Secret required to enable buyer delivery emails:
 #   npx wrangler secret put RESEND_API_KEY
 

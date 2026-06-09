@@ -24,6 +24,7 @@ let currentZipPath = "";
 let currentDownloadHref = "";
 let refreshTimer = null;
 let currentDeliveryFiles = [];
+let currentOrder = null;
 const t = (key, replacements = {}) => window.photosByElieI18n?.t?.(key, replacements) || key;
 
 const escapeText = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({
@@ -273,6 +274,7 @@ const scheduleOrderRefresh = (order) => {
 };
 
 const renderOrder = (order) => {
+  currentOrder = order;
   syncEmbeddedBrowserWarning();
   syncOrderSupportLinks(order);
   syncOrderLookup(false);
@@ -316,6 +318,9 @@ const renderOrder = (order) => {
         <strong>${escapeText(order.buyerEmail || "")}</strong>
       </div>
       <p>${escapeText(deliveryEmailWasSent ? t("order.email_notice_body") : t("order.email_notice_fallback_body"))}</p>
+      <div class="order-email-notice-actions">
+        <button class="btn secondary" type="button" data-resend-delivery-email>${escapeText(t("order.resend_email"))}</button>
+      </div>
     </aside>
   ` : "";
   const deliveryFilesMarkup = showDeliveryStack ? `
@@ -434,6 +439,28 @@ const downloadDeliveryFile = async (file, index) => {
   }
 };
 
+const resendDeliveryEmail = async (button) => {
+  const order = currentOrder;
+  if (!order?.id || !order?.buyerEmail) return;
+  button?.setAttribute("disabled", "");
+  status.textContent = t("order.resending_email");
+  try {
+    const response = await fetch(`${workerBaseUrl()}/orders/${encodeURIComponent(order.id)}/resend-email`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email: order.buyerEmail }),
+    });
+    const body = await response.json();
+    if (!response.ok) throw new Error(body?.error?.message || `Email resend failed with HTTP ${response.status}.`);
+    renderOrder(body.order);
+    status.textContent = t("order.email_resent");
+  } catch (error) {
+    status.textContent = t("order.email_resend_failed", { message: error.message });
+  } finally {
+    button?.removeAttribute("disabled");
+  }
+};
+
 const loadOrder = async () => {
   window.clearTimeout(refreshTimer);
   refreshTimer = null;
@@ -457,6 +484,7 @@ const loadOrder = async () => {
       setProgress("");
       currentZipPath = "";
       currentDownloadHref = "";
+      currentOrder = null;
       downloadZip.hidden = true;
       syncZipLocationField();
       status.textContent = t("order.could_not_load");
@@ -470,6 +498,7 @@ const loadOrder = async () => {
     setProgress("");
     currentZipPath = "";
     currentDownloadHref = "";
+    currentOrder = null;
     syncZipLocationField();
     return;
   }
@@ -494,6 +523,7 @@ const loadOrder = async () => {
     setProgress("");
     currentZipPath = "";
     currentDownloadHref = "";
+    currentOrder = null;
     downloadZip.hidden = true;
     syncZipLocationField();
     status.textContent = t("order.could_not_load");
@@ -521,6 +551,11 @@ copyBrowserLink?.addEventListener("click", async () => {
   status.textContent = copied ? t("browser_warning.copied") : t("browser_warning.copy_failed");
 });
 itemsRoot?.addEventListener("click", async (event) => {
+  const resendButton = event.target.closest("[data-resend-delivery-email]");
+  if (resendButton) {
+    await resendDeliveryEmail(resendButton);
+    return;
+  }
   const fileButton = event.target.closest("[data-download-file]");
   if (fileButton) {
     const index = Number(fileButton.dataset.downloadFile);

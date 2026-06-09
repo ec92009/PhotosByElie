@@ -6351,6 +6351,16 @@ body.detail-fullscreen-active{
   font-weight:800;
   line-height:1.35;
 }
+.order-email-notice-actions{
+  grid-column:1 / -1;
+  display:flex;
+  justify-content:flex-end;
+  min-width:0;
+}
+.order-email-notice-actions .btn:disabled{
+  cursor:progress;
+  opacity:.68;
+}
 .order-email-notice.is-attention{
   animation:order-email-glow 1.8s ease-in-out 3 alternate;
 }

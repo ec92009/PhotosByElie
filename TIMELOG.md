@@ -255,8 +255,9 @@ Clock state: running
 | 2026-06-10 | 00:59 CEST | 01:00 CEST | 0:01 | Added the recurring live media/product paid-line table recipe to the buyer support SOP. |
 | 2026-06-10 | 01:00 CEST | 01:09 CEST | 0:09 | Implemented on-demand Cloudflare Images buyer JPG renders, stopped routine triplet imports, deployed Worker v101.22, and validated; test/deploy wait excluded. |
 | 2026-06-10 | 01:12 CEST | 01:13 CEST | 0:01 | Reported public detail product checkboxes hidden while Owner tools were active; implementation/testing time excluded. |
+| 2026-06-10 | 01:23 CEST | 01:26 CEST | 0:03 | Requested self-contained delivery emails with per-item links plus a buyer resend control; implementation/test/deploy time excluded. |
 
 ## Totals
 
-Active collaboration time used: 16:22
+Active collaboration time used: 16:25
 Remaining budget: not set

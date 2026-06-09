@@ -464,7 +464,7 @@ const checkoutFetch = async (path, options = {}) => {
     if (error?.name === "AbortError") {
       throw new Error("Checkout is taking too long. Please try again; no payment has started yet.");
     }
-    throw error;
+    throw new Error("Checkout could not reach the payment server. Please refresh this page and try again; no payment has started yet.");
   }).finally(() => {
     window.clearTimeout(timeout);
   });

@@ -237,8 +237,9 @@ Clock state: running
 | 2026-06-09 | 20:14 CEST | 20:15 CEST | 0:01 | Requested a distinctive homepage Panoramas card dimension; implementation/testing time excluded. |
 | 2026-06-09 | 20:15 CEST | 20:21 CEST | 0:06 | Added the ready-order spam-folder notice, deployed the first-party Worker download domain, and verified checkout/email health; DNS DMARC remained permission-blocked. |
 | 2026-06-09 | 20:21 CEST | 20:23 CEST | 0:02 | Bumped the visible build to v101.10 so the public order page fetches the fresh Worker config instead of a cached v101.9 asset. |
+| 2026-06-09 | 20:41 CEST | 20:46 CEST | 0:05 | Hotfixed checkout after local DNS could not resolve the new download subdomain: restored the stable Worker checkout host, disabled direct email token links, and bumped the site to v101.11. |
 
 ## Totals
 
-Active collaboration time used: 15:36
+Active collaboration time used: 15:41
 Remaining budget: not set

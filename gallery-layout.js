@@ -2,7 +2,7 @@
   const defaultDensityKey = "photosbyelie-gallery-columns";
   const defaultFitModeKey = "photosbyelie-gallery-fit-mode";
 
-  const maxDensityColumns = () => (window.matchMedia("(max-width:760px)").matches ? 3 : 10);
+  const maxDensityColumns = () => (window.matchMedia("(max-width:760px)").matches ? 8 : 10);
   const defaultDensityColumns = () => 3;
 
   const createMasonryController = ({
@@ -89,10 +89,22 @@
       if (value) value.textContent = `${columns}`;
     };
 
+    const syncDensityUrl = (columns) => {
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("grid");
+        url.searchParams.set("columns", String(columns));
+        window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+      } catch {
+        // URL syncing is optional for static/file previews.
+      }
+    };
+
     const setDensityColumns = (columns) => {
       densityOverride = null;
       const nextColumns = clampDensityColumns(columns);
       localStorage.setItem(densityKey, String(nextColumns));
+      syncDensityUrl(nextColumns);
       return nextColumns;
     };
 

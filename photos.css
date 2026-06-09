@@ -4482,7 +4482,10 @@ html[data-theme="light"] body[data-gallery] .gallery-hero{
 }
 .gallery-density-control input{
   width:clamp(96px,12vw,160px);
+  min-height:28px;
   accent-color:var(--text);
+  cursor:pointer;
+  touch-action:pan-y;
 }
 .gallery-density-control b{
   min-width:1.3em;
@@ -4597,6 +4600,7 @@ body[data-fixed-header] .header-action-links{
     flex:1 1 auto;
     min-width:0;
     width:100%;
+    min-height:34px;
   }
   .topbar .gallery-density-control b,
   .gallery-view-controls.is-header-mounted .gallery-density-control b{

@@ -218,8 +218,10 @@ Clock state: running
 | 2026-06-08 | 22:34 CEST | 22:38 CEST | 0:04 | Added the title-review toolbar bulk Pixelmator edit import action and verified imported/skipped behavior. |
 | 2026-06-09 | 01:20 CEST | 01:27 CEST | 0:07 | Added selected-item badges, stronger selected fills, and multi-select dimming across gallery and Owner review surfaces. |
 | 2026-06-09 | 09:53 CEST | 09:54 CEST | 0:01 | Requested a sitewide Settings icon with language, Day/Night, transparency, and translucency controls; implementation/testing time excluded. |
+| 2026-06-09 | 10:51 CEST | 10:52 CEST | 0:01 | Started a LAN-accessible local preview server and reported the phone URL for Settings review. |
+| 2026-06-09 | 10:57 CEST | 10:58 CEST | 0:01 | Reported phone grid density stuck at 3 and requested a fix; implementation/testing time excluded. |
 
 ## Totals
 
-Active collaboration time used: 15:02
+Active collaboration time used: 15:04
 Remaining budget: not set

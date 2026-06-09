@@ -54,6 +54,7 @@ SOURCE_EDIT_APPS_PATH = "/__photosbyelie/source-edit-apps"
 SOURCE_EDITS_PATH = "/__photosbyelie/source-edits"
 SOURCE_EDIT_IMPORT_PATH = "/__photosbyelie/source-edit-import"
 SOURCE_EDIT_IMPORT_ALL_PATH = "/__photosbyelie/source-edit-import-all"
+PUBLISH_PRICES_PATH = "/__photosbyelie/publish-prices"
 MAX_BODY_BYTES = 5 * 1024 * 1024
 LOCAL_CLIENTS = {"127.0.0.1", "::1", "localhost"}
 DERIVATIVES = (("gallery", "gallerySrc"), ("detail", "imageSrc"))
@@ -378,6 +379,9 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         if path == SOURCE_EDIT_IMPORT_ALL_PATH:
             self._handle_source_edit_import_all()
             return
+        if path == PUBLISH_PRICES_PATH:
+            self._handle_publish_prices()
+            return
         if path == REAL_ESTATE_OWNER_PATH:
             self._handle_real_estate_owner()
             return
@@ -417,6 +421,21 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         try:
             result = _import_all_pixelmator_edits(Path.cwd())
         except (OSError, sqlite3.Error, json.JSONDecodeError) as error:
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
+            return
+        self._send_json(HTTPStatus.OK, result)
+
+    def _handle_publish_prices(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            payload = self._read_json_body()
+            result = _publish_owner_prices(Path.cwd(), payload)
+        except ValueError as error:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
+            return
+        except (OSError, subprocess.CalledProcessError, json.JSONDecodeError) as error:
             self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
             return
         self._send_json(HTTPStatus.OK, result)
@@ -899,6 +918,179 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             self.send_header(name, value)
         self.end_headers()
         self.wfile.write(body)
+
+
+def _clean_price_value(value: object) -> float:
+    try:
+        amount = float(value)
+    except (TypeError, ValueError) as error:
+        raise ValueError(f"invalid price value: {value!r}") from error
+    if amount < 0 or not amount < float("inf"):
+        raise ValueError(f"invalid price value: {value!r}")
+    return round(amount, 2)
+
+
+def _apply_owner_price_overrides(catalog: dict, overrides: dict) -> dict:
+    if not isinstance(overrides, dict):
+        raise ValueError("priceOverrides must be an object")
+    product_by_id = {
+        str(product.get("id")): product
+        for product in catalog.get("products", [])
+        if isinstance(product, dict) and product.get("id")
+    }
+    for product_id, value in (overrides.get("options") or {}).items():
+        product = product_by_id.get(str(product_id))
+        if not product:
+            continue
+        price = _clean_price_value(value)
+        product["price"] = price
+        if isinstance(product.get("prices"), dict) and "original" in product["prices"]:
+            product["prices"]["original"] = price
+    for product_id, prices in (overrides.get("optionPrices") or {}).items():
+        product = product_by_id.get(str(product_id))
+        if not product or not isinstance(prices, dict):
+            continue
+        product["prices"] = dict(product.get("prices") or {})
+        for tier_id, value in prices.items():
+            price = _clean_price_value(value)
+            product["prices"][str(tier_id)] = price
+            if tier_id == "original" and "price" in product:
+                product["price"] = price
+
+    frame_by_id = {
+        str(frame.get("id")): frame
+        for frame in catalog.get("frames", [])
+        if isinstance(frame, dict) and frame.get("id")
+    }
+    for frame_id, frame_override in (overrides.get("frames") or {}).items():
+        frame = frame_by_id.get(str(frame_id))
+        if not frame or not isinstance(frame_override, dict):
+            continue
+        if "price" in frame_override:
+            frame["price"] = _clean_price_value(frame_override.get("price"))
+        if isinstance(frame_override.get("prices"), dict):
+            frame["prices"] = dict(frame.get("prices") or {})
+            for product_id, value in frame_override["prices"].items():
+                frame["prices"][str(product_id)] = _clean_price_value(value)
+
+    if isinstance(overrides.get("shippingHandling"), dict):
+        catalog["shippingHandlingPrices"] = dict(catalog.get("shippingHandlingPrices") or {})
+        for product_id, value in overrides["shippingHandling"].items():
+            catalog["shippingHandlingPrices"][str(product_id)] = _clean_price_value(value)
+
+    if isinstance(overrides.get("videoPriceTiers"), dict):
+        tier_by_id = {
+            str(tier.get("id")): tier
+            for tier in catalog.get("videoPriceTiers", [])
+            if isinstance(tier, dict) and tier.get("id")
+        }
+        for tier_id, value in overrides["videoPriceTiers"].items():
+            tier = tier_by_id.get(str(tier_id))
+            if tier:
+                tier["price"] = _clean_price_value(value)
+    return catalog
+
+
+def _run_publish_command(repo_root: Path, command: list[str], steps: list[dict], label: str) -> str:
+    started = time.perf_counter()
+    process = subprocess.run(command, cwd=repo_root, capture_output=True, text=True)
+    output = "\n".join(part.strip() for part in [process.stdout, process.stderr] if part and part.strip())
+    steps.append({
+        "label": label,
+        "command": " ".join(command),
+        "returnCode": process.returncode,
+        "elapsedMs": round((time.perf_counter() - started) * 1000),
+        "output": output[-4000:],
+    })
+    if process.returncode != 0:
+        raise subprocess.CalledProcessError(process.returncode, command, output=process.stdout, stderr=process.stderr)
+    return output
+
+
+def _next_visible_version(current: str) -> str:
+    match = re.fullmatch(r"(\d+)\.(\d+)", current.strip())
+    if not match:
+        raise ValueError(f"unsupported VERSION value: {current!r}")
+    return f"{match.group(1)}.{int(match.group(2)) + 1}"
+
+
+def _bump_visible_version(repo_root: Path) -> tuple[str, str, list[str]]:
+    version_path = repo_root / "VERSION"
+    old_version = version_path.read_text(encoding="utf-8").strip()
+    new_version = _next_visible_version(old_version)
+    version_path.write_text(f"{new_version}\n", encoding="utf-8")
+    changed = ["VERSION"]
+
+    readme_path = repo_root / "README.md"
+    if readme_path.exists():
+        source = readme_path.read_text(encoding="utf-8")
+        updated = re.sub(r"Current visible version: `v[0-9.]+`", f"Current visible version: `v{new_version}`", source)
+        if updated != source:
+            readme_path.write_text(updated, encoding="utf-8")
+            changed.append("README.md")
+
+    for html_path in sorted(repo_root.glob("*.html")):
+        source = html_path.read_text(encoding="utf-8")
+        updated = re.sub(r"\?v=[0-9.]+", f"?v={new_version}", source)
+        updated = re.sub(r">v[0-9.]+<", f">v{new_version}<", updated)
+        if updated != source:
+            html_path.write_text(updated, encoding="utf-8")
+            changed.append(html_path.name)
+    return old_version, new_version, changed
+
+
+def _publish_owner_prices(repo_root: Path, payload: dict) -> dict:
+    overrides = payload.get("priceOverrides")
+    if not isinstance(overrides, dict):
+        raise ValueError("priceOverrides is required")
+    steps: list[dict] = []
+    pricing_path = repo_root / "assets/catalog/product-pricing.json"
+    catalog = json.loads(pricing_path.read_text(encoding="utf-8"))
+    catalog = _apply_owner_price_overrides(catalog, overrides)
+    pricing_path.write_text(json.dumps(catalog, indent=2) + "\n", encoding="utf-8")
+
+    _run_publish_command(repo_root, ["node", "scripts/write_catalog_tsv.cjs"], steps, "Rebuild public SQLite catalog")
+    _run_publish_command(repo_root, ["node", "scripts/write_worker_catalog.mjs"], steps, "Regenerate Worker catalog")
+    old_version, new_version, version_files = _bump_visible_version(repo_root)
+    steps.append({
+        "label": "Bump visible version",
+        "returnCode": 0,
+        "output": f"v{old_version} -> v{new_version}",
+    })
+
+    _run_publish_command(repo_root, ["node", "--check", "photos.js"], steps, "Check photos.js")
+    _run_publish_command(repo_root, ["node", "--check", "owner.js"], steps, "Check owner.js")
+    _run_publish_command(repo_root, ["node", "--check", "basket.js"], steps, "Check basket.js")
+    _run_publish_command(repo_root, ["node", "--test", "worker/checkout-worker.test.mjs", "worker/resend-email-client.test.mjs"], steps, "Run checkout/email tests")
+    _run_publish_command(repo_root, ["npm", "run", "validate"], steps, "Validate publish")
+    deploy_output = _run_publish_command(repo_root, ["npx", "wrangler", "deploy"], steps, "Deploy Worker")
+
+    html_files = [path.name for path in sorted(repo_root.glob("*.html"))]
+    stage_files = [
+        "README.md",
+        "VERSION",
+        *html_files,
+        "assets/catalog/photosbyelie.sqlite",
+        "assets/catalog/product-pricing.json",
+        "photos-data.js",
+        "worker/photos-catalog.generated.mjs",
+    ]
+    existing_stage_files = [name for name in stage_files if (repo_root / name).exists()]
+    _run_publish_command(repo_root, ["git", "add", "--", *existing_stage_files], steps, "Stage price publish files")
+    commit_message = str(payload.get("commitMessage") or "photosbyelie: publish owner price list").strip()
+    _run_publish_command(repo_root, ["git", "commit", "-m", commit_message], steps, "Commit price publish")
+    _run_publish_command(repo_root, ["git", "push"], steps, "Push price publish")
+
+    version_id_match = re.search(r"Current Version ID:\s*([0-9a-f-]+)", deploy_output)
+    return {
+        "ok": True,
+        "oldVersion": old_version,
+        "newVersion": new_version,
+        "versionFiles": version_files,
+        "stagedFiles": existing_stage_files,
+        "workerVersionId": version_id_match.group(1) if version_id_match else "",
+        "steps": steps,
+    }
 
 
 def main() -> int:

@@ -417650,11 +417650,11 @@ export const resolutions = [
     "minMegapixels": 1,
     "deliveryAssetType": "jpeg_1mp",
     "prices": {
-      "original": 8,
+      "original": 0.5,
       "ai": 4
     },
     "sortOrder": 4,
-    "price": 8
+    "price": 0.5
   },
   {
     "id": "print-12x16",

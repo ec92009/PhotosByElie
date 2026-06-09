@@ -220,7 +220,7 @@ test("guest checkout creates a pending order and mock Stripe session", async () 
   assert.match(body.checkout.url, /^https:\/\/mock\.stripe\.local\/checkout\/cs_mock_/);
 });
 
-test("guest checkout uses restored 1 MP price without a minimum-charge top-up", async () => {
+test("guest checkout uses current 1 MP price without a minimum-charge top-up", async () => {
   const catalog = loadCatalog();
   const { worker, stripe } = testWorker();
   const photoId = firstDeliverablePhotoId(catalog);
@@ -232,11 +232,11 @@ test("guest checkout uses restored 1 MP price without a minimum-charge top-up", 
   assert.equal(response.status, 201);
 
   const body = await response.json();
-  assert.equal(body.order.subtotalAmount, 800);
+  assert.equal(body.order.subtotalAmount, 50);
   assert.equal(body.order.minimumChargeAdjustment, 0);
-  assert.equal(body.order.amountExpected, 800);
+  assert.equal(body.order.amountExpected, 50);
   const session = stripe._debug.sessions.get(body.checkout.sessionId);
-  assert.equal(session.amount_total, 800);
+  assert.equal(session.amount_total, 50);
   assert.equal(session.line_items.length, 1);
 });
 
@@ -248,14 +248,14 @@ test("guest checkout rejects stale browser subtotal before Stripe session creati
   const response = await worker.fetch(jsonRequest("https://worker.test/checkout/guest", {
     email: "buyer@example.com",
     items: [{ photoId, options: [{ id: "jpg-1mp" }] }],
-    expectedSubtotalAmount: 200,
+    expectedSubtotalAmount: 800,
   }));
   assert.equal(response.status, 409);
 
   const body = await response.json();
   assert.equal(body.error.code, "checkout_total_mismatch");
-  assert.equal(body.error.details.browserSubtotalAmount, 200);
-  assert.equal(body.error.details.workerSubtotalAmount, 800);
+  assert.equal(body.error.details.browserSubtotalAmount, 800);
+  assert.equal(body.error.details.workerSubtotalAmount, 50);
   assert.equal(stripe._debug.sessions.size, 0);
 });
 

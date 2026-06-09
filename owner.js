@@ -104,6 +104,8 @@
   const r2Counts = document.querySelector("[data-owner-r2-counts]");
   const expandedSweepPhaseKeys = new Set();
   const priceListRoot = document.querySelector("[data-owner-price-list]");
+  const publishPricesButton = document.querySelector("[data-owner-publish-prices]");
+  const pricePublishStatus = document.querySelector("[data-owner-price-publish-status]");
   const costCard = document.querySelector("[data-owner-cost-card]");
   const costSummaryRoot = document.querySelector("[data-owner-cost-summary]");
   const costMtdRoot = document.querySelector("[data-owner-cost-mtd]");
@@ -181,6 +183,10 @@
 
   const setHtml = (element, value) => {
     if (element && element.innerHTML !== value) element.innerHTML = value;
+  };
+
+  const setPricePublishStatus = (message) => {
+    setText(pricePublishStatus, message);
   };
 
   const setRefreshBusy = (kind, busy) => {
@@ -601,7 +607,7 @@
     const priceInput = ({ kind, id, optionId = "", value, label }) => `
       <label class="owner-price-field">
         <span>${escapeHtml(label)}</span>
-        <input type="number" min="0" step="1" inputmode="decimal" value="${escapeHtml(value)}"
+        <input type="number" min="0" step="0.01" inputmode="decimal" value="${escapeHtml(value)}"
           data-owner-price-kind="${kind}" data-owner-price-id="${escapeHtml(id)}" data-owner-price-option="${escapeHtml(optionId)}"/>
       </label>
     `;
@@ -699,8 +705,37 @@
         }
         productSettings?.savePriceOverrides?.(overrides);
         setStatus("Price list saved locally.");
+        setPricePublishStatus("Saved locally. Press Publish prices to update checkout, deploy, commit, and push.");
       });
     });
+  };
+
+  const publishOwnerPrices = async () => {
+    if (!publishPricesButton) return;
+    publishPricesButton.disabled = true;
+    setStatus("Publishing prices...");
+    setPricePublishStatus("Publishing prices: rebuilding catalogs, deploying Worker, committing, and pushing.");
+    try {
+      const overrides = productSettings?.priceOverrides?.() || {};
+      const response = await fetch("/__photosbyelie/publish-prices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          priceOverrides: overrides,
+          commitMessage: "photosbyelie: publish owner price list",
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.ok) throw new Error(payload.error || `Publish prices ${response.status}`);
+      const workerVersion = payload.workerVersionId ? ` Worker ${payload.workerVersionId}.` : "";
+      setStatus(`Prices published as v${payload.newVersion}.`);
+      setPricePublishStatus(`Published v${payload.newVersion}.${workerVersion} GitHub Pages will update from the pushed commit.`);
+    } catch (error) {
+      setStatus(error?.message || "Could not publish prices.");
+      setPricePublishStatus(error?.message || "Could not publish prices.");
+    } finally {
+      publishPricesButton.disabled = false;
+    }
   };
 
   const podAutomation = () => window.photosByEliePodAutomation || window.photosByElieProductCatalog?.podAutomation || {};
@@ -3791,6 +3826,7 @@
 
   if (controls) controls.hidden = true;
   renderPriceList();
+  publishPricesButton?.addEventListener("click", publishOwnerPrices);
   renderPodCommerce();
   renderCostEstimate();
 

@@ -450,6 +450,11 @@ const digitalCheckoutItems = () => basketStore.read()
   }))
   .filter((item) => item.options.length);
 
+const basketDigitalSubtotalCents = () => centsFor(basketStore.read()
+  .flatMap((item) => item.options || [])
+  .filter((option) => option.type === "digital")
+  .reduce((sum, option) => sum + optionTotal(option), 0));
+
 const checkoutFetch = async (path, options = {}) => {
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), 25000);
@@ -582,7 +587,7 @@ checkoutGuest?.addEventListener("click", async () => {
     setBasketStatus(t("basket.creating_checkout"), { checkout: true });
     const body = await checkoutFetch("/checkout/guest", {
       method: "POST",
-      body: JSON.stringify({ email, items }),
+      body: JSON.stringify({ email, items, expectedSubtotalAmount: basketDigitalSubtotalCents() }),
     });
     setCheckoutState({
       email,

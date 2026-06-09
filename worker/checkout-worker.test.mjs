@@ -240,6 +240,25 @@ test("guest checkout uses restored 1 MP price without a minimum-charge top-up", 
   assert.equal(session.line_items.length, 1);
 });
 
+test("guest checkout rejects stale browser subtotal before Stripe session creation", async () => {
+  const catalog = loadCatalog();
+  const { worker, stripe } = testWorker();
+  const photoId = firstDeliverablePhotoId(catalog);
+
+  const response = await worker.fetch(jsonRequest("https://worker.test/checkout/guest", {
+    email: "buyer@example.com",
+    items: [{ photoId, options: [{ id: "jpg-1mp" }] }],
+    expectedSubtotalAmount: 200,
+  }));
+  assert.equal(response.status, 409);
+
+  const body = await response.json();
+  assert.equal(body.error.code, "checkout_total_mismatch");
+  assert.equal(body.error.details.browserSubtotalAmount, 200);
+  assert.equal(body.error.details.workerSubtotalAmount, 800);
+  assert.equal(stripe._debug.sessions.size, 0);
+});
+
 test("AI collection digital products use the AI price tier", async () => {
   const catalog = createCatalogIndex({
     collections: {

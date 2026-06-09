@@ -639,6 +639,13 @@ export const createPhotosByElieWorker = ({
 
     const items = normalizeOrderItems(catalog, payload.items || payload.basket || []);
     const subtotalAmount = items.reduce((sum, item) => sum + item.subtotal, 0);
+    const expectedSubtotalAmount = Number(payload.expectedSubtotalAmount);
+    if (Number.isFinite(expectedSubtotalAmount) && Math.round(expectedSubtotalAmount) !== subtotalAmount) {
+      return errorJson(409, "checkout_total_mismatch", "Basket prices changed before Stripe checkout. Refresh the basket and review the total before paying.", {
+        browserSubtotalAmount: Math.round(expectedSubtotalAmount),
+        workerSubtotalAmount: subtotalAmount,
+      });
+    }
     const minimumChargeAdjustment = minimumChargeAdjustmentFor(subtotalAmount);
     const amountExpected = subtotalAmount + minimumChargeAdjustment;
     const createdAt = now().toISOString();

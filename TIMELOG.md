@@ -245,8 +245,10 @@ Clock state: running
 | 2026-06-09 | 23:42 CEST | 23:43 CEST | 0:01 | Cleared stale failed price-publish progress from the Owner Commerce panel on reload and local edits. |
 | 2026-06-09 | 23:49 CEST | 23:55 CEST | 0:03 | Confirmed the v101.18 Owner price publish completed and prepared a v101.19 cleanup for stale progress and sub-minimum checkout tests. |
 | 2026-06-09 | 23:56 CEST | 2026-06-10 00:02 CEST | 0:03 | Fixed the Liked-to-Basket checkout handoff so checked liked assets persist when using Basket or the dollar checkout link. |
+| 2026-06-10 | 00:30 CEST | 00:31 CEST | 0:01 | Checked whether the checkout Worker can generate 6 MP buyer JPGs from private masters at sale time. |
+| 2026-06-10 | 00:31 CEST | 00:33 CEST | 0:02 | Aligned Liked and Basket behavior so hearts stay shortlist-only, checked products define Basket, and unavailable products are disabled before checkout. |
 
 ## Totals
 
-Active collaboration time used: 16:00
+Active collaboration time used: 16:03
 Remaining budget: not set

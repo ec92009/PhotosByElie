@@ -45,6 +45,10 @@ let visibleLimit = pageSize;
 let moreButton = null;
 let moreDoubleButton = null;
 let showAllButton = null;
+let deliveryManifest = null;
+let deliveryAvailabilityLoaded = false;
+let deliveryAvailabilityPromise = null;
+let discardedPhotoIds = new Set();
 const showMoreCountLabel = (count) => t("home.see_more_count", { count });
 const showAllCountLabel = (count) => t("home.see_all_count", { count });
 const productLabel = (option) => {
@@ -79,6 +83,68 @@ const availableOptionsForPhoto = (photo) => photo && window.photosByElieAvailabl
   ? window.photosByElieAvailableResolutions(photo, resolutionOptions)
   : resolutionOptions;
 
+const versionedFetchPath = (path) => window.photosByElieVersionedHref?.(path) || path;
+
+const loadDeliveryAvailability = async () => {
+  try {
+    const [deliveryResponse, discardedResponse] = await Promise.all([
+      fetch(versionedFetchPath("./assets/private-delivery-manifest.json"), { cache: "no-store" }),
+      fetch(versionedFetchPath("./assets/discarded/discarded-photo-ids.json"), { cache: "no-store" }),
+    ]);
+    deliveryManifest = deliveryResponse.ok ? await deliveryResponse.json() : null;
+    const discarded = discardedResponse.ok ? await discardedResponse.json() : {};
+    discardedPhotoIds = new Set([
+      ...(Array.isArray(discarded.photo_ids) ? discarded.photo_ids : []),
+      ...(Array.isArray(discarded.discardedPhotoIds) ? discarded.discardedPhotoIds : []),
+      ...(Array.isArray(discarded.photos) ? discarded.photos.map((photo) => photo?.id) : []),
+    ].filter(Boolean).map(String));
+  } catch {
+    deliveryManifest = null;
+    discardedPhotoIds = new Set();
+  } finally {
+    deliveryAvailabilityLoaded = true;
+    renderLiked();
+  }
+};
+
+const deliveryRecordFor = (photoId) => deliveryManifest?.records?.[photoId] || null;
+
+const deliveryAvailabilityFor = (photoId, option) => {
+  if (!option || option.type === "print") return { available: true, reason: "" };
+  if (discardedPhotoIds.has(String(photoId))) {
+    return { available: false, reason: "This photo is in the Waste Basket tombstones and is not for sale." };
+  }
+  if (!deliveryAvailabilityLoaded || !deliveryManifest) return { available: true, reason: "" };
+  const record = deliveryRecordFor(photoId);
+  if (!record) return { available: false, reason: "Private delivery coverage is not recorded for this photo." };
+  if (option.id === "full") {
+    return record.privateMaster?.present === true
+      ? { available: true, reason: "" }
+      : { available: false, reason: "Full resolution master is missing from private storage." };
+  }
+  if (option.id === "jpg-6mp" || option.id === "jpg-3mp" || option.id === "jpg-1mp") {
+    return record.privateRenders?.[option.id]?.present === true
+      ? { available: true, reason: "" }
+      : { available: false, reason: `${productLabel(option)} delivery file is missing from private storage.` };
+  }
+  return { available: true, reason: "" };
+};
+
+const pruneUnavailableBasketSelections = (items) => {
+  if (!deliveryAvailabilityLoaded) return items;
+  let changed = false;
+  const nextItems = items.map((item) => {
+    const options = (item.options || []).filter((option) => deliveryAvailabilityFor(item.photoId, option).available);
+    if (options.length !== (item.options || []).length) changed = true;
+    return { ...item, options };
+  }).filter((item) => (item.options || []).length);
+  if (changed) {
+    status.textContent = "Unavailable delivery choices were removed from the basket.";
+    return basketStore.write(nextItems);
+  }
+  return items;
+};
+
 const bulkOptionLabel = (resolutionId) => ({
   full: t("product.full"),
   "jpg-6mp": "6 MP",
@@ -89,7 +155,7 @@ const bulkOptionLabel = (resolutionId) => ({
 const bulkResolutionState = (likedItems, basketByPhoto, resolutionId) => likedItems.reduce((state, item) => {
   const { photo } = photoForLikedItem(item);
   const targetOption = availableOptionsForPhoto(photo).find((option) => option.id === resolutionId);
-  if (!targetOption) return state;
+  if (!targetOption || !deliveryAvailabilityFor(item.photoId, targetOption).available) return state;
   state.eligible += 1;
   const selectedIds = new Set((basketByPhoto.get(item.photoId)?.options || []).map((option) => option.id));
   if (selectedIds.has(resolutionId)) state.selected += 1;
@@ -104,6 +170,7 @@ const checkedLikedSelectionsFor = (itemIndex) => {
     .map((checkbox) => {
       const option = availableOptions.find((candidate) => candidate.id === checkbox.value);
       if (!option) return null;
+      if (!deliveryAvailabilityFor(item.photoId, option).available) return null;
       const selected = { id: option.id };
       if (option.type === "print") {
         selected.quantity = document.querySelector(`[data-liked-print-quantity="${itemIndex}"][data-option-id="${option.id}"]`)?.value || 1;
@@ -138,7 +205,7 @@ const flushVisibleLikedSelectionsToBasket = () => {
     .map((input) => Number(input.dataset.likedResolution))
     .filter((index) => Number.isInteger(index) && index >= 0));
   visibleIndexes.forEach((itemIndex) => {
-    syncLikedSelectionToBasket(itemIndex);
+    if (checkedLikedSelectionsFor(itemIndex).length) syncLikedSelectionToBasket(itemIndex);
   });
 };
 
@@ -200,7 +267,7 @@ const optionPayload = (optionIds, photoId) => {
     .map((item) => {
       const optionId = typeof item === "string" ? item : item.id;
       const option = availableOptions.find((candidate) => candidate.id === optionId);
-      return option ? { option, source: item } : null;
+      return option && deliveryAvailabilityFor(photoId, option).available ? { option, source: item } : null;
     })
     .filter(Boolean)
     .map(({ option, source }) => {
@@ -220,7 +287,7 @@ const toggleResolutionForAllLiked = (resolutionId) => {
     return;
   }
 
-  const basketByPhoto = new Map(basketStore.read().map((item) => [item.photoId, item]));
+  const basketByPhoto = new Map(pruneUnavailableBasketSelections(basketStore.read()).map((item) => [item.photoId, item]));
   const state = bulkResolutionState(likedItems, basketByPhoto, resolutionId);
   const shouldSelect = !(state.eligible > 0 && state.selected === state.eligible);
   let changedCount = 0;
@@ -228,7 +295,7 @@ const toggleResolutionForAllLiked = (resolutionId) => {
   likedItems.forEach((item) => {
     const { photo } = photoForLikedItem(item);
     const targetOption = availableOptionsForPhoto(photo).find((option) => option.id === resolutionId);
-    if (!targetOption) {
+    if (!targetOption || !deliveryAvailabilityFor(item.photoId, targetOption).available) {
       unavailableCount += 1;
       return;
     }
@@ -262,7 +329,7 @@ const toggleResolutionForAllLiked = (resolutionId) => {
 const renderLiked = () => {
   const likedItems = likedStore.write(likedStore.read());
   const visibleLikedItems = likedItems.slice(0, visibleLimit);
-  const basketItems = basketStore.read();
+  const basketItems = pruneUnavailableBasketSelections(basketStore.read());
   const basketByPhoto = new Map(basketItems.map((item) => [item.photoId, item]));
   const rowSelections = likedItems.map((item) => basketByPhoto.get(item.photoId)?.options || []);
   const total = rowSelections.flat().reduce((sum, option) => sum + optionTotal(option), 0);
@@ -327,16 +394,18 @@ const renderLiked = () => {
         <p class="eyebrow">${item.collection || "Collection"}</p>
         <h3>${item.title}</h3>
         <div class="basket-resolution-grid" aria-label="Resolution options for ${item.title}">
-          ${availableOptions.map((option) => `
-            <div class="basket-product-row">
+          ${availableOptions.map((option) => {
+            const availability = deliveryAvailabilityFor(item.photoId, option);
+            return `
+            <div class="basket-product-row ${availability.available ? "" : "is-unavailable"}">
             <label class="product-choice">
-              <input type="checkbox" data-liked-resolution="${index}" value="${option.id}" ${selectedIds.has(option.id) ? "checked" : ""}/>
-              <span><strong>${productLabel(option)}</strong>${resolutionDetail(option)}</span>
+              <input type="checkbox" data-liked-resolution="${index}" value="${option.id}" ${selectedIds.has(option.id) && availability.available ? "checked" : ""} ${availability.available ? "" : "disabled"}/>
+              <span><strong>${productLabel(option)}</strong>${resolutionDetail(option)}${availability.available ? "" : `<small class="basket-delivery-warning">${escapeText(availability.reason)}</small>`}</span>
               <b>${formatMoney(option.price)}</b>
             </label>
             ${printConfigMarkup(option)}
             </div>
-          `).join("")}
+          `}).join("")}
         </div>
       </div>
       <div class="basket-item-actions">
@@ -431,6 +500,7 @@ bulkResolutionButtons.forEach((button) => {
 });
 
 renderLiked();
+deliveryAvailabilityPromise = loadDeliveryAvailability();
 window.addEventListener("photosbyelie:languagechange", renderLiked);
 })().catch((error) => {
   const status = document.querySelector("[data-liked-status]");

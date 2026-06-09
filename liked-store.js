@@ -51,7 +51,14 @@
     return write([...read(), { photoId }]);
   };
 
-  const remove = (photoId) => write(read().filter((item) => item.photoId !== photoId));
+  const remove = (photoId) => {
+    const nextLiked = write(read().filter((item) => item.photoId !== photoId));
+    const basketStore = window.photosByElieBasket;
+    if (basketStore?.read && basketStore?.write) {
+      basketStore.write(basketStore.read().filter((item) => item.photoId !== photoId));
+    }
+    return nextLiked;
+  };
 
   const has = (photoId) => read().some((item) => item.photoId === photoId);
 

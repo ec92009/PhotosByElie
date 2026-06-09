@@ -3,6 +3,7 @@ const key = 'byelie-theme';
 const btn = document.querySelector('[data-theme-toggle]');
 const languageKey = 'byelie-language';
 const languageBtn = document.querySelector('[data-language-toggle]');
+const displaySettingsKey = 'photosbyelie-display-settings';
 const languages = [
   { code: 'en', label: 'English' },
   { code: 'fr', label: 'Français' },
@@ -37,6 +38,17 @@ const translations = {
     'nav.support': 'Support and license',
     'theme.night': 'Night',
     'theme.day': 'Day',
+    'settings.open': 'Settings',
+    'settings.title': 'Settings',
+    'settings.close': 'Close settings',
+    'settings.language': 'Language',
+    'settings.appearance': 'Appearance',
+    'settings.transparency': 'Transparency',
+    'settings.translucency': 'Translucency',
+    'settings.solid': 'Solid',
+    'settings.clear': 'Clear',
+    'settings.sharp': 'Sharp',
+    'settings.frosted': 'Frosted',
     'home.lead': 'A selected photo archive with country galleries, AI work kept separate, and fresh representative samples as the collection rail turns.',
     'home.view_collections': 'View collections',
     'home.collections': 'Collections',
@@ -508,6 +520,17 @@ const translations = {
     'nav.support': 'Support et licence',
     'theme.night': 'Nuit',
     'theme.day': 'Jour',
+    'settings.open': 'Reglages',
+    'settings.title': 'Reglages',
+    'settings.close': 'Fermer les reglages',
+    'settings.language': 'Langue',
+    'settings.appearance': 'Apparence',
+    'settings.transparency': 'Transparence',
+    'settings.translucency': 'Translucidite',
+    'settings.solid': 'Opaque',
+    'settings.clear': 'Clair',
+    'settings.sharp': 'Net',
+    'settings.frosted': 'Floute',
     'home.lead': 'Une archive photo choisie, avec galeries par pays, images IA a part, et nouveaux apercus representatifs au fil du rail des collections.',
     'home.view_collections': 'Voir les collections',
     'home.collections': 'Collections',
@@ -979,6 +1002,17 @@ const translations = {
     'nav.support': 'Soporte y licencia',
     'theme.night': 'Noche',
     'theme.day': 'Dia',
+    'settings.open': 'Ajustes',
+    'settings.title': 'Ajustes',
+    'settings.close': 'Cerrar ajustes',
+    'settings.language': 'Idioma',
+    'settings.appearance': 'Apariencia',
+    'settings.transparency': 'Transparencia',
+    'settings.translucency': 'Translucidez',
+    'settings.solid': 'Opaco',
+    'settings.clear': 'Claro',
+    'settings.sharp': 'Nitido',
+    'settings.frosted': 'Difuso',
     'home.lead': 'Un archivo fotografico seleccionado, con galerias por pais, obra IA separada y muestras representativas nuevas mientras gira el carril de colecciones.',
     'home.view_collections': 'Ver colecciones',
     'home.collections': 'Colecciones',
@@ -1452,6 +1486,164 @@ window.photosByElieI18n = {
   t: translate,
   language: () => root.dataset.language || 'en',
   apply: applyTranslations,
+};
+
+const displaySettingDefaults = {
+  transparency: 50,
+  translucency: 50,
+};
+const glassAlphaDefaults = {
+  dark: {
+    topbar: 0.56,
+    control: 0.62,
+    panel: 0.5,
+    card: 0.58,
+    cardHover: 0.68,
+    pill: 0.64,
+    field: 0.76,
+  },
+  light: {
+    topbar: 0.26,
+    control: 0.26,
+    panel: 0.26,
+    card: 0.26,
+    cardHover: 0.32,
+    pill: 0.272,
+    field: 0.72,
+  },
+};
+const realEstateGlassAlphaDefaults = {
+  topbar: 0.86,
+  control: 0.62,
+  panel: 0.97,
+  card: 0.98,
+  cardHover: 1,
+  pill: 0.64,
+  field: 0.76,
+};
+const glassBlurDefaults = (() => {
+  const parsed = (value, fallback) => {
+    const number = Number.parseFloat(String(value || ""));
+    return Number.isFinite(number) ? number : fallback;
+  };
+  try {
+    const computed = getComputedStyle(document.body || root);
+    return {
+      heavy: parsed(computed.getPropertyValue("--glass-heavy-blur"), 2.5),
+      light: parsed(computed.getPropertyValue("--glass-light-blur"), 2),
+    };
+  } catch {
+    return { heavy: 2.5, light: 2 };
+  }
+})();
+const clampDisplayValue = (value) => Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
+const normalizeDisplaySettings = (settings = {}) => ({
+  transparency: clampDisplayValue(settings.transparency ?? displaySettingDefaults.transparency),
+  translucency: clampDisplayValue(settings.translucency ?? displaySettingDefaults.translucency),
+});
+const readDisplaySettings = () => {
+  try {
+    return normalizeDisplaySettings(JSON.parse(localStorage.getItem(displaySettingsKey) || "{}"));
+  } catch {
+    return { ...displaySettingDefaults };
+  }
+};
+const saveDisplaySettings = (settings) => {
+  const normalized = normalizeDisplaySettings(settings);
+  try {
+    localStorage.setItem(displaySettingsKey, JSON.stringify(normalized));
+  } catch {
+    // Visual preferences are optional when storage is unavailable.
+  }
+  return normalized;
+};
+const alphaFromTransparency = (baseAlpha, transparency) => {
+  const base = Math.max(0.05, Math.min(1, Number(baseAlpha) || 0.5));
+  if (transparency <= 50) {
+    return base + ((1 - base) * ((50 - transparency) / 50) * 0.82);
+  }
+  return Math.max(0.045, base * (1 - (((transparency - 50) / 50) * 0.78)));
+};
+const blurFromTranslucency = (baseBlur, translucency) => {
+  const base = Math.max(0, Number(baseBlur) || 0);
+  if (base <= 0) return translucency <= 50 ? 0 : ((translucency - 50) / 50) * 6;
+  const scale = translucency <= 50
+    ? 0.15 + ((translucency / 50) * 0.85)
+    : 1 + (((translucency - 50) / 50) * 1.8);
+  return base * scale;
+};
+const formatCssNumber = (value) => {
+  const fixed = Number(value).toFixed(3).replace(/0+$/, "").replace(/\.$/, "");
+  return fixed.startsWith("0.") ? fixed.slice(1) : fixed;
+};
+const glassRgb = () => {
+  const computed = getComputedStyle(root);
+  return {
+    surface: (computed.getPropertyValue("--glass-surface-rgb") || "18 18 18").trim(),
+    control: (computed.getPropertyValue("--glass-control-rgb") || "24 24 24").trim(),
+  };
+};
+const setGlassVariable = (name, value) => {
+  root.style.setProperty(name, value);
+  document.body?.style?.setProperty(name, value);
+};
+const applyDisplaySettings = (settings = readDisplaySettings()) => {
+  const normalized = normalizeDisplaySettings(settings);
+  const theme = root.dataset.theme === "dark" ? "dark" : "light";
+  const alphaBase = document.body?.matches?.("[data-real-estate]")
+    ? realEstateGlassAlphaDefaults
+    : (glassAlphaDefaults[theme] || glassAlphaDefaults.light);
+  const rgb = glassRgb();
+  const alpha = Object.fromEntries(Object.entries(alphaBase)
+    .map(([name, value]) => [name, formatCssNumber(alphaFromTransparency(value, normalized.transparency))]));
+  const panelBg = `rgb(${rgb.surface} / ${alpha.panel})`;
+  const cardBg = `rgb(${rgb.surface} / ${alpha.card})`;
+  const cardHoverBg = `rgb(${rgb.surface} / ${alpha.cardHover})`;
+  const topbarBg = `rgb(${rgb.surface} / ${alpha.topbar})`;
+  const controlBg = `rgb(${rgb.control} / ${alpha.control})`;
+  const pillBg = `rgb(${rgb.control} / ${alpha.pill})`;
+  const fieldBg = `rgb(${rgb.control} / ${alpha.field})`;
+  setGlassVariable("--glass-topbar-alpha", alpha.topbar);
+  setGlassVariable("--glass-control-alpha", alpha.control);
+  setGlassVariable("--glass-panel-alpha", alpha.panel);
+  setGlassVariable("--glass-card-alpha", alpha.card);
+  setGlassVariable("--glass-card-hover-alpha", alpha.cardHover);
+  setGlassVariable("--glass-pill-alpha", alpha.pill);
+  setGlassVariable("--glass-field-alpha", alpha.field);
+  setGlassVariable("--glass-panel-bg", panelBg);
+  setGlassVariable("--glass-card-bg", cardBg);
+  setGlassVariable("--glass-card-hover-bg", cardHoverBg);
+  setGlassVariable("--glass-topbar-bg", topbarBg);
+  setGlassVariable("--glass-control-bg", controlBg);
+  setGlassVariable("--glass-pill-bg", pillBg);
+  setGlassVariable("--glass-field-bg", fieldBg);
+  setGlassVariable("--glass-re-panel-bg", panelBg);
+  setGlassVariable("--glass-re-card-bg", cardBg);
+  setGlassVariable("--glass-re-hero-bg", `linear-gradient(130deg,color-mix(in srgb,var(--re-accent, var(--text)) 9%,transparent),transparent 46%),${panelBg}`);
+  setGlassVariable("--glass-heavy-blur", `${formatCssNumber(blurFromTranslucency(glassBlurDefaults.heavy, normalized.translucency))}px`);
+  setGlassVariable("--glass-light-blur", `${formatCssNumber(blurFromTranslucency(glassBlurDefaults.light, normalized.translucency))}px`);
+  return normalized;
+};
+const updateDisplaySettingOutputs = (settings) => {
+  document.querySelectorAll("[data-display-setting-output]").forEach((output) => {
+    const name = output.dataset.displaySettingOutput;
+    if (!name) return;
+    output.textContent = `${normalizeDisplaySettings(settings)[name]}%`;
+  });
+};
+
+applyDisplaySettings();
+
+window.photosByElieDisplaySettings = {
+  read: readDisplaySettings,
+  save: (settings) => {
+    const saved = saveDisplaySettings(settings);
+    applyDisplaySettings(saved);
+    updateDisplaySettingOutputs(saved);
+    window.dispatchEvent(new CustomEvent("photosbyelie:displaysettingschange", { detail: saved }));
+    return saved;
+  },
+  apply: applyDisplaySettings,
 };
 
 const supportEmailAddress = 'orders@photos-by-elie.com';
@@ -2719,6 +2911,7 @@ window.photosByElieMdIcon = (name) => {
     shoppingBasket: 'M17.21 9l-4.38-6.56c-.19-.28-.51-.42-.83-.42s-.64.14-.83.43L6.79 9H2c-.55 0-1 .45-1 1 0 .09.01.18.04.27l2.54 9.27C3.81 20.39 4.59 21 5.5 21h13c.91 0 1.69-.61 1.93-1.46l2.54-9.27L23 10c0-.55-.45-1-1-1h-4.79zM9 9l3-4.4L15 9H9zm3 8c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z',
     photoCamera: 'M20 5h-3.17l-1.84-2H9.01L7.17 5H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-8 13c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-1.8c1.77 0 3.2-1.43 3.2-3.2S13.77 9.8 12 9.8 8.8 11.23 8.8 13s1.43 3.2 3.2 3.2z',
     autoAwesome: 'M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25L19 9zm-7.5.5L9 4 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5L17 12l-5.5-2.5zM19 15l-1.25 2.75L15 19l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25L19 15z',
+    settings: 'M19.43 12.98c.04-.32.07-.65.07-.98s-.02-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.37-.31-.6-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98L14.5 2.42C14.47 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.5.42L9.12 5.07c-.61.25-1.18.59-1.69.98l-2.49-1c-.23-.08-.48 0-.6.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.08.65-.08.98s.03.66.08.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.37.31.6.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.04.24.25.42.5.42h4c.25 0 .47-.18.5-.42l.38-2.65c.61-.25 1.18-.58 1.69-.98l2.49 1c.23.08.48 0 .6-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z',
     visibility: 'M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zm0 12.5c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z',
     visibilityOff: 'M12 6.5c3.79 0 7.17 2.13 8.82 5.5-.7 1.43-1.79 2.62-3.08 3.49L19.16 16.91C20.69 15.88 22 14.2 23 12c-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l1.65 1.65c.74-.23 1.52-.35 2.33-.35zM2.1 3.27.82 4.55l3.01 3.01C2.67 8.68 1.7 10.19 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l3.07 3.07 1.27-1.27L2.1 3.27zm7.53 7.53 1.55 1.55c-.11-.39-.02-.82.29-1.13.31-.31.74-.4 1.13-.29l-1.55-1.55c.31-.08.63-.12.95-.12 1.66 0 3 1.34 3 3 0 .32-.04.64-.12.95l1.54 1.54c.37-.68.58-1.45.58-2.29 0-2.76-2.24-5-5-5-.84 0-1.61.21-2.29.58zm2.37 6.2c-2.76 0-5-2.24-5-5 0-.84.21-1.61.58-2.29l1.54 1.54c-.08.31-.12.63-.12.95 0 1.66 1.34 3 3 3 .32 0 .64-.04.95-.12l1.54 1.54c-.68.37-1.45.58-2.29.58z'
   };
@@ -2780,7 +2973,103 @@ const ensureHeaderActionLinks = () => {
   controls.prepend(actions);
 };
 
+const ensureSiteSettings = () => {
+  const controls = document.querySelector('.header-controls');
+  if (!controls || controls.querySelector('[data-settings-toggle]')) return;
+  const settings = readDisplaySettings();
+  const settingsButton = document.createElement('button');
+  settingsButton.className = 'settings-toggle';
+  settingsButton.type = 'button';
+  settingsButton.dataset.settingsToggle = '';
+  settingsButton.setAttribute('aria-haspopup', 'dialog');
+  settingsButton.setAttribute('aria-expanded', 'false');
+  settingsButton.dataset.i18nAriaLabel = 'settings.open';
+  settingsButton.dataset.i18nTitle = 'settings.open';
+  settingsButton.innerHTML = window.photosByElieMdIcon('settings');
+
+  const modal = document.createElement('div');
+  modal.className = 'site-settings-modal';
+  modal.hidden = true;
+  modal.dataset.settingsModal = '';
+  modal.innerHTML = `
+    <section class="site-settings-dialog" role="dialog" aria-modal="true" aria-labelledby="site-settings-title">
+      <div class="site-settings-head">
+        <h2 id="site-settings-title" data-i18n="settings.title">${translate('settings.title')}</h2>
+        <button class="site-settings-close" type="button" data-settings-close data-i18n-aria-label="settings.close" data-i18n-title="settings.close" aria-label="${translate('settings.close')}" title="${translate('settings.close')}">x</button>
+      </div>
+      <div class="site-settings-section">
+        <p class="site-settings-section-title" data-i18n="settings.language">${translate('settings.language')}</p>
+        <div class="site-settings-slot" data-settings-language-slot></div>
+      </div>
+      <div class="site-settings-section">
+        <p class="site-settings-section-title" data-i18n="settings.appearance">${translate('settings.appearance')}</p>
+        <div class="site-settings-slot" data-settings-theme-slot></div>
+      </div>
+      <label class="site-settings-slider">
+        <span class="site-settings-slider-label">
+          <span class="site-settings-label-text" data-i18n="settings.transparency">${translate('settings.transparency')}</span>
+          <output class="site-settings-value" data-display-setting-output="transparency">${settings.transparency}%</output>
+        </span>
+        <input type="range" min="0" max="100" step="1" value="${settings.transparency}" data-display-setting="transparency">
+        <span class="site-settings-range-labels"><span data-i18n="settings.solid">${translate('settings.solid')}</span><span data-i18n="settings.clear">${translate('settings.clear')}</span></span>
+      </label>
+      <label class="site-settings-slider">
+        <span class="site-settings-slider-label">
+          <span class="site-settings-label-text" data-i18n="settings.translucency">${translate('settings.translucency')}</span>
+          <output class="site-settings-value" data-display-setting-output="translucency">${settings.translucency}%</output>
+        </span>
+        <input type="range" min="0" max="100" step="1" value="${settings.translucency}" data-display-setting="translucency">
+        <span class="site-settings-range-labels"><span data-i18n="settings.sharp">${translate('settings.sharp')}</span><span data-i18n="settings.frosted">${translate('settings.frosted')}</span></span>
+      </label>
+    </section>
+  `;
+  const languageSlot = modal.querySelector('[data-settings-language-slot]');
+  const themeSlot = modal.querySelector('[data-settings-theme-slot]');
+  if (languageBtn && languageSlot) languageSlot.append(languageBtn);
+  if (btn && themeSlot) themeSlot.append(btn);
+  document.body.append(modal);
+  controls.append(settingsButton);
+
+  const closeButton = modal.querySelector('[data-settings-close]');
+  const closeSettings = () => {
+    if (modal.hidden) return;
+    modal.hidden = true;
+    settingsButton.setAttribute('aria-expanded', 'false');
+    settingsButton.focus({ preventScroll: true });
+  };
+  const openSettings = () => {
+    modal.hidden = false;
+    settingsButton.setAttribute('aria-expanded', 'true');
+    updateDisplaySettingOutputs(readDisplaySettings());
+    closeButton?.focus({ preventScroll: true });
+  };
+  settingsButton.addEventListener('click', () => {
+    if (modal.hidden) openSettings();
+    else closeSettings();
+  });
+  closeButton?.addEventListener('click', closeSettings);
+  modal.addEventListener('click', (event) => {
+    if (event.target === modal) closeSettings();
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !modal.hidden) closeSettings();
+  });
+  modal.querySelectorAll('[data-display-setting]').forEach((input) => {
+    input.addEventListener('input', () => {
+      const current = readDisplaySettings();
+      const next = saveDisplaySettings({
+        ...current,
+        [input.dataset.displaySetting]: input.value,
+      });
+      applyDisplaySettings(next);
+      updateDisplaySettingOutputs(next);
+    });
+  });
+  applyTranslations();
+};
+
 ensureHeaderActionLinks();
+ensureSiteSettings();
 
 const syncFixedHeaderOffset = () => {
   if (!document.body?.matches?.("[data-gallery], [data-fixed-header]")) return;
@@ -2810,6 +3099,7 @@ document.querySelectorAll("[data-header-back-to-top]").forEach((button) => {
 btn?.addEventListener('click', () => {
   root.dataset.theme = root.dataset.theme === 'light' ? 'dark' : 'light';
   localStorage.setItem(key, root.dataset.theme);
+  applyDisplaySettings();
   applyTranslations();
 });
 

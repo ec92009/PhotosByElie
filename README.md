@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v100.0`
+- Current visible version: `v101.2`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -87,6 +87,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - The full public catalog loads plain `assets/catalog/photosbyelie.sqlite` directly. Normal catalog rebuilds no longer generate or prefer Brotli-compressed SQLite; the retained `.sqlite.br` artifact is legacy-only. The SQLite catalog uses compact integer lookup ids for controlled vocabulary fields. Current active public catalog count is `6,919` media rows after the Waste Basket purge: AI/Leonardo `4,809`, France `315`, Italy `35`, Mexico `33`, Portugal `216`, Slovakia `2`, Spain `1,350`, USA `159`.
 - The homepage hides the decorative hero photo stack on narrow or short viewports so the collection carousel stays visible instead of competing for vertical space.
 - The homepage now has shared global discovery controls before Collections, including search, collection, camera/AI origin, media type, date from/to, orientation, adaptive size/duration, color mood, subject, and sort. Filtered results render 24 at a time with a full-match count and gallery-style hearts, keyboard selection, detail navigation, and localhost Owner shortcuts.
+- Every page exposes a top-right Settings control that opens a modal for language, Day/Night mode, glass transparency, and glass translucency. The visual sliders persist in `localStorage` and update shared glass CSS variables across pages.
 - Gallery/home load controls show exact remaining counts, using labels such as `See 24 more`, `See 48 more`, and `See all N more` instead of generic "See More" text.
 - Gallery pages load the publishable Expo subset from the public SQLite catalog through the `photos-data.js` bootstrap; public GitHub Pages builds resolve preview media through `media-config.js` and each catalog row's `media.publicPreview` R2/CDN key instead of relying on committed media assets.
 - Localhost Owner gallery search automatically augments normal public-catalog matching with Owner title/keyword review metadata from `Owner.sqlite`, including original, proposed, decided, blocked, and applied review text. Public search remains catalog-only.

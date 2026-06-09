@@ -7267,13 +7267,14 @@ body[data-real-estate] .real-estate-wizard,
 body[data-real-estate] .real-estate-workbench,
 body[data-real-estate] .real-estate-output-panel,
 body[data-real-estate] .real-estate-action-bar{
-  background:color-mix(in srgb,var(--bg) 97%,transparent);
+  background:var(--glass-re-panel-bg,color-mix(in srgb,var(--bg) 97%,transparent));
   text-shadow:none;
 }
 body[data-real-estate] .real-estate-hero{
-  background:
+  background:var(--glass-re-hero-bg,
     linear-gradient(130deg,color-mix(in srgb,var(--re-accent) 9%,transparent),transparent 46%),
-    color-mix(in srgb,var(--bg) 97%,transparent);
+    color-mix(in srgb,var(--bg) 97%,transparent)
+  );
 }
 body[data-real-estate] .real-estate-deliverables,
 body[data-real-estate] .real-estate-login-card,
@@ -7286,7 +7287,7 @@ body[data-real-estate] .real-estate-empty-state,
 body[data-real-estate] .real-estate-deliverable,
 body[data-real-estate] .real-estate-lightbox,
 body[data-real-estate] .real-estate-help{
-  background:color-mix(in srgb,var(--surface) 98%,transparent);
+  background:var(--glass-re-card-bg,color-mix(in srgb,var(--surface) 98%,transparent));
   text-shadow:none;
 }
 body[data-real-estate] .real-estate-hero h1,

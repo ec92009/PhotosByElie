@@ -2353,15 +2353,6 @@ window.photosByElieVideoDurationLabel = (photo) => (
       const image = new Image();
       image.alt = title;
       image.decoding = "async";
-      image.addEventListener("click", () => {
-        if (isPanoramaPreview && modal.classList.contains("is-pano-scroll")) return;
-        close();
-      });
-      image.addEventListener("touchend", (event) => {
-        if (isPanoramaPreview && modal.classList.contains("is-pano-scroll")) return;
-        event.preventDefault();
-        close();
-      }, { passive: false });
       image.addEventListener("error", () => {
         if (typeof onError === "function") {
           onError({

@@ -230,8 +230,10 @@ Clock state: running
 | 2026-06-09 | 19:20 CEST | 19:22 CEST | 0:02 | Requested pano Spacebar preview metadata move below the image and mouse drag panning on preview/detail; implementation/testing time excluded. |
 | 2026-06-09 | 19:25 CEST | 19:26 CEST | 0:01 | Requested a safe Resend key installer script for the checkout delivery-email Worker secret. |
 | 2026-06-09 | 19:27 CEST | 19:32 CEST | 0:05 | Approved one-time pano public preview reprocessing with height-targeted 900/1800 renders and no upscaling; render/upload runtime excluded. |
+| 2026-06-09 | 19:33 CEST | 19:38 CEST | 0:02 | Installed the Resend Worker secret, deployed the checkout Worker email path, and started Resend domain verification; login handoff required. |
+| 2026-06-09 | 19:49 CEST | 19:51 CEST | 0:02 | Verified Resend sending DNS records and confirmed the Photos By Elie domain is ready to send delivery emails. |
 
 ## Totals
 
-Active collaboration time used: 15:21
+Active collaboration time used: 15:25
 Remaining budget: not set

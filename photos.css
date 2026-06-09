@@ -5263,7 +5263,7 @@ html.is-local-owner .mock-photo.is-selected::before{
   scroll-snap-align:center;
 }
 .detail-preview.is-panorama.is-pano-scroll{
-  cursor:ew-resize;
+  cursor:grab;
 }
 .detail-preview.is-panorama.is-pano-scroll.has-image img{
   flex:0 0 auto;
@@ -5338,6 +5338,13 @@ body.detail-fullscreen-active{
 .detail-fullscreen-preview.has-info-panel.is-owner-preview{
   grid-template-columns:minmax(0,1fr) minmax(260px,20vw);
 }
+.detail-fullscreen-preview.has-info-panel.is-panorama-preview:not(.is-owner-preview){
+  grid-template-columns:1fr;
+  grid-template-rows:minmax(260px,50vh) minmax(0,auto);
+  align-items:stretch;
+  place-items:stretch;
+  overflow:auto;
+}
 .finder-preview-stage{
   position:relative;
   display:grid;
@@ -5348,8 +5355,8 @@ body.detail-fullscreen-active{
 }
 .detail-fullscreen-preview.is-panorama-preview .finder-preview-stage{
   width:100%;
-  height:calc(100vh - clamp(16px,4vw,56px));
-  min-height:calc(100vh - clamp(16px,4vw,56px));
+  height:clamp(260px,50vh,620px);
+  min-height:clamp(260px,50vh,620px);
   overflow-x:auto;
   overflow-y:hidden;
   overscroll-behavior-x:contain;
@@ -5358,9 +5365,15 @@ body.detail-fullscreen-active{
 }
 .detail-fullscreen-preview.is-panorama-preview.is-pano-scroll .finder-preview-stage{
   place-items:center start;
-  cursor:ew-resize;
+  height:calc(100vh - clamp(16px,4vw,56px));
+  min-height:calc(100vh - clamp(16px,4vw,56px));
+  cursor:grab;
 }
 .detail-fullscreen-preview.is-owner-preview .finder-preview-stage{
+  min-height:calc(100vh - 16px);
+}
+.detail-fullscreen-preview.is-owner-preview.is-panorama-preview .finder-preview-stage{
+  height:calc(100vh - 16px);
   min-height:calc(100vh - 16px);
 }
 .finder-preview-stage.is-context-preview{
@@ -5418,10 +5431,10 @@ body.detail-fullscreen-active{
   max-height:80vh;
 }
 .detail-fullscreen-preview.is-panorama-preview img{
-  width:100%;
+  width:auto;
   max-width:100%;
-  height:100%;
-  max-height:calc(100vh - 56px);
+  height:auto;
+  max-height:clamp(260px,50vh,620px);
   object-fit:contain;
   scroll-snap-align:center;
 }
@@ -5435,6 +5448,10 @@ body.detail-fullscreen-active{
 .detail-fullscreen-preview.is-panorama-preview.has-info-panel:not(.is-owner-preview).is-pano-scroll img{
   height:calc(100vh - clamp(16px,4vw,56px));
   max-height:calc(100vh - clamp(16px,4vw,56px));
+}
+.detail-fullscreen-preview.has-info-panel.is-panorama-preview:not(.is-owner-preview) .finder-preview-info-panel{
+  width:100%;
+  max-height:36vh;
 }
 .detail-fullscreen-preview.is-owner-preview img,
 .detail-fullscreen-preview.is-owner-preview video{
@@ -5471,6 +5488,9 @@ body.detail-fullscreen-active{
 .finder-preview-nav.is-next{
   right:calc(max(260px,22vw) + 22px);
 }
+.detail-fullscreen-preview.is-panorama-preview .finder-preview-nav.is-next{
+  right:10px;
+}
 .detail-fullscreen-preview.is-owner-preview .finder-preview-nav.is-next{
   right:calc(max(260px,20vw) + 22px);
 }
@@ -5497,6 +5517,16 @@ body.detail-fullscreen-active{
   border-color:rgba(255,255,255,.72);
   background:rgba(0,0,0,.78);
   outline:0;
+}
+.detail-preview.is-panorama.is-pano-scroll.is-pan-draggable,
+.detail-fullscreen-preview.is-panorama-preview.is-pano-scroll .finder-preview-stage.is-pan-draggable{
+  cursor:grab;
+}
+.detail-preview.is-panorama.is-panning,
+.detail-fullscreen-preview.is-panorama-preview .finder-preview-stage.is-panning{
+  cursor:grabbing;
+  scroll-snap-type:none;
+  user-select:none;
 }
 .detail-fullscreen-preview::after{
   content:"";

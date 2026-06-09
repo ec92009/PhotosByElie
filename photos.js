@@ -2087,6 +2087,118 @@ window.photosByElieVideoDurationLabel = (photo) => (
     || window.photosByElieMediaUrl(photo, "gallery")
   );
 
+  const horizontalPanInstances = new WeakMap();
+  window.photosByElieEnableHorizontalPan = (scroller, options = {}) => {
+    if (!scroller) return null;
+    const existing = horizontalPanInstances.get(scroller);
+    if (existing) return existing;
+
+    const interactiveSelector = options.interactiveSelector || [
+      "a",
+      "button",
+      "input",
+      "select",
+      "textarea",
+      "label",
+      "video",
+      "[contenteditable='true']",
+      "[role='button']",
+    ].join(",");
+    let isDragging = false;
+    let pointerId = null;
+    let startX = 0;
+    let startScrollLeft = 0;
+    let moved = false;
+    let suppressClick = false;
+    const minDrag = 4;
+
+    const canScroll = () => scroller.scrollWidth > scroller.clientWidth + 2;
+    const refresh = () => {
+      scroller.classList.toggle("is-pan-draggable", canScroll());
+    };
+    const isInteractiveTarget = (target) => (
+      target instanceof Element
+      && Boolean(target.closest(interactiveSelector))
+    );
+    const stopDrag = () => {
+      if (!isDragging) return;
+      isDragging = false;
+      scroller.classList.remove("is-panning");
+      if (pointerId !== null) {
+        try {
+          scroller.releasePointerCapture?.(pointerId);
+        } catch {}
+      }
+      pointerId = null;
+      if (moved) {
+        suppressClick = true;
+        window.setTimeout(() => {
+          suppressClick = false;
+        }, 0);
+      }
+    };
+
+    const onPointerDown = (event) => {
+      refresh();
+      if (event.button !== 0 || !canScroll() || isInteractiveTarget(event.target)) return;
+      isDragging = true;
+      moved = false;
+      pointerId = event.pointerId;
+      startX = event.clientX;
+      startScrollLeft = scroller.scrollLeft;
+      scroller.classList.add("is-panning");
+      scroller.setPointerCapture?.(pointerId);
+      event.preventDefault();
+    };
+    const onPointerMove = (event) => {
+      if (!isDragging || event.pointerId !== pointerId) return;
+      const deltaX = event.clientX - startX;
+      if (Math.abs(deltaX) >= minDrag) moved = true;
+      scroller.scrollLeft = startScrollLeft - deltaX;
+      event.preventDefault();
+    };
+    const onClick = (event) => {
+      if (!suppressClick) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    };
+
+    scroller.addEventListener("pointerdown", onPointerDown);
+    scroller.addEventListener("pointermove", onPointerMove);
+    scroller.addEventListener("pointerup", stopDrag);
+    scroller.addEventListener("pointercancel", stopDrag);
+    scroller.addEventListener("lostpointercapture", stopDrag);
+    scroller.addEventListener("click", onClick, true);
+    scroller.addEventListener("scroll", refresh, { passive: true });
+    const resizeObserver = typeof ResizeObserver === "function" ? new ResizeObserver(refresh) : null;
+    resizeObserver?.observe(scroller);
+    window.addEventListener("resize", refresh);
+    window.requestAnimationFrame(refresh);
+
+    const api = {
+      refresh,
+      destroy: () => {
+        stopDrag();
+        resizeObserver?.disconnect();
+        window.removeEventListener("resize", refresh);
+        scroller.removeEventListener("pointerdown", onPointerDown);
+        scroller.removeEventListener("pointermove", onPointerMove);
+        scroller.removeEventListener("pointerup", stopDrag);
+        scroller.removeEventListener("pointercancel", stopDrag);
+        scroller.removeEventListener("lostpointercapture", stopDrag);
+        scroller.removeEventListener("click", onClick, true);
+        scroller.removeEventListener("scroll", refresh);
+        scroller.classList.remove("is-pan-draggable", "is-panning");
+        horizontalPanInstances.delete(scroller);
+      },
+    };
+    horizontalPanInstances.set(scroller, api);
+    return api;
+  };
+  window.photosByElieRefreshHorizontalPan = (scroller) => {
+    horizontalPanInstances.get(scroller)?.refresh?.();
+  };
+
   window.photosByElieSourcePreviewUrl = (photo, mode = "media") => {
     if (!isLocalhostMediaPage || !photo?.id) return "";
     const path = encodeURIComponent(String(photo.id));
@@ -2139,12 +2251,12 @@ window.photosByElieVideoDurationLabel = (photo) => (
     modal.innerHTML = `
       <div class="finder-preview-stage" data-finder-preview-stage>
         <div class="finder-preview-loading">Loading preview</div>
+        ${isPanoramaPreview ? `<button class="finder-preview-pano-toggle" type="button" data-finder-preview-pano-toggle aria-pressed="false">${translate("preview.full_height")}</button>` : ""}
       </div>
       ${previewItems.length > 1 ? `
         <button class="finder-preview-nav is-prev" type="button" data-finder-preview-prev aria-label="Previous preview">‹</button>
         <button class="finder-preview-nav is-next" type="button" data-finder-preview-next aria-label="Next preview">›</button>
       ` : ""}
-      ${isPanoramaPreview ? `<button class="finder-preview-pano-toggle" type="button" data-finder-preview-pano-toggle aria-pressed="false">${translate("preview.full_height")}</button>` : ""}
       <section class="finder-preview-info-panel" data-finder-preview-info>
         <p class="eyebrow">${owner ? "Owner source preview" : "Preview"}</p>
         <h2>${escapePreviewHtml(title)}</h2>
@@ -2157,9 +2269,13 @@ window.photosByElieVideoDurationLabel = (photo) => (
     const contextPoster = isVideo ? (window.photosByElieVideoPosterUrl?.(targetPhoto) || window.photosByElieMediaUrl(targetPhoto, "gallery") || "") : "";
     document.body.classList.add("detail-fullscreen-active");
     document.body.append(modal);
+    const panoPan = isPanoramaPreview
+      ? window.photosByElieEnableHorizontalPan?.(stage, { interactiveSelector: "a,button,input,select,textarea,label,video,[contenteditable='true'],[role='button']" })
+      : null;
 
     const close = () => {
       document.body.classList.remove("detail-fullscreen-active");
+      panoPan?.destroy?.();
       modal.remove();
       window.removeEventListener("keydown", onKeydown, true);
     };
@@ -2179,6 +2295,7 @@ window.photosByElieVideoDurationLabel = (photo) => (
     const centerPanoStage = () => {
       if (!stage || !modal.classList.contains("is-pano-scroll")) return;
       stage.scrollLeft = Math.max(0, (stage.scrollWidth - stage.clientWidth) / 2);
+      panoPan?.refresh?.();
     };
     const setPanoPreviewMode = (scrollMode) => {
       if (!panoToggle) return;
@@ -2188,6 +2305,7 @@ window.photosByElieVideoDurationLabel = (photo) => (
       panoToggle.setAttribute("aria-pressed", String(scrollMode));
       window.requestAnimationFrame(centerPanoStage);
       window.setTimeout(centerPanoStage, 80);
+      window.setTimeout(() => panoPan?.refresh?.(), 120);
     };
     const metadataRows = (extraRows = []) => [
       ["Media id", targetPhoto.id],
@@ -2224,6 +2342,12 @@ window.photosByElieVideoDurationLabel = (photo) => (
       if (!stage) return;
       stage.innerHTML = `<div class="finder-preview-empty">${escapePreviewHtml(message)}</div>`;
     };
+    const replaceStageMedia = (...nodes) => {
+      if (!stage) return;
+      stage.replaceChildren(...nodes.filter(Boolean));
+      if (panoToggle) stage.append(panoToggle);
+      panoPan?.refresh?.();
+    };
     const appendPhoto = (src, { sourceType = "", attemptedSourceLabel = sourceLabel, context = false, onError = null } = {}) => {
       if (!stage) return;
       const image = new Image();
@@ -2249,8 +2373,13 @@ window.photosByElieVideoDurationLabel = (photo) => (
           showEmptyPreview("Preview unavailable");
         }
       }, { once: true });
-      if (isPanoramaPreview) image.addEventListener("load", centerPanoStage, { once: true });
-      stage.replaceChildren(image);
+      if (isPanoramaPreview) {
+        image.addEventListener("load", () => {
+          centerPanoStage();
+          panoPan?.refresh?.();
+        }, { once: true });
+      }
+      replaceStageMedia(image);
       stage.classList.toggle("is-context-preview", Boolean(context));
       image.src = src;
     };
@@ -2274,7 +2403,7 @@ window.photosByElieVideoDurationLabel = (photo) => (
           showEmptyPreview("Video preview unavailable");
         }
       }, { once: true });
-      stage.replaceChildren(video);
+      replaceStageMedia(video);
       stage.classList.toggle("is-context-preview", Boolean(context));
       video.src = src;
     };

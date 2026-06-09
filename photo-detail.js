@@ -768,6 +768,9 @@ if (isPanorama) {
   const panoToggle = document.createElement("button");
   panoToggle.className = "pano-scroll-toggle";
   panoToggle.type = "button";
+  const panoPan = window.photosByElieEnableHorizontalPan?.(preview, {
+    interactiveSelector: "a,button,input,select,textarea,label,video,[contenteditable='true'],[role='button'],.like-toggle",
+  });
   const setPanoMode = (scrollMode) => {
     preview.classList.toggle("is-pano-scroll", scrollMode);
     panoToggle.textContent = t(scrollMode ? "preview.fit_width" : "preview.full_height");
@@ -775,9 +778,11 @@ if (isPanorama) {
     panoToggle.setAttribute("aria-pressed", String(scrollMode));
     const syncScroll = () => {
       preview.scrollLeft = scrollMode ? Math.max(0, (preview.scrollWidth - preview.clientWidth) / 2) : 0;
+      panoPan?.refresh?.();
     };
     window.requestAnimationFrame(syncScroll);
     window.setTimeout(syncScroll, 80);
+    window.setTimeout(() => panoPan?.refresh?.(), 120);
   };
   panoToggle.addEventListener("click", (event) => {
     event.stopPropagation();

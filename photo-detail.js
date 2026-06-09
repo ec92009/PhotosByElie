@@ -99,7 +99,7 @@ const basketStore = window.photosByElieBasket;
 const likedStore = window.photosByElieLiked;
 const hiddenActions = window.photosByElieHiddenActions;
 const localModerationEnabled = Boolean(hiddenActions?.enabled);
-const ownerDetailPurchaseHidden = localModerationEnabled || isOwnerReviewSyntheticCollection;
+const ownerDetailPurchaseHidden = isOwnerCollection || isHiddenCollection || isOwnerReviewSyntheticCollection;
 const versionedHref = (href) => window.photosByElieVersionedHref?.(href) || href;
 const galleryHrefForKey = (key) => `./gallery.html?gallery=${encodeURIComponent(key)}`;
 const t = (key, replacements = {}) => window.photosByElieI18n?.t?.(key, replacements) || key;

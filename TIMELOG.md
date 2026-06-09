@@ -254,8 +254,9 @@ Clock state: running
 | 2026-06-10 | 00:55 CEST | 00:56 CEST | 0:01 | Rebuilt live media/product stats with historical per-line paid amounts. |
 | 2026-06-10 | 00:59 CEST | 01:00 CEST | 0:01 | Added the recurring live media/product paid-line table recipe to the buyer support SOP. |
 | 2026-06-10 | 01:00 CEST | 01:09 CEST | 0:09 | Implemented on-demand Cloudflare Images buyer JPG renders, stopped routine triplet imports, deployed Worker v101.22, and validated; test/deploy wait excluded. |
+| 2026-06-10 | 01:12 CEST | 01:13 CEST | 0:01 | Reported public detail product checkboxes hidden while Owner tools were active; implementation/testing time excluded. |
 
 ## Totals
 
-Active collaboration time used: 16:21
+Active collaboration time used: 16:22
 Remaining budget: not set

@@ -106,6 +106,7 @@
   const priceListRoot = document.querySelector("[data-owner-price-list]");
   const publishPricesButton = document.querySelector("[data-owner-publish-prices]");
   const pricePublishStatus = document.querySelector("[data-owner-price-publish-status]");
+  const pricePublishProgress = document.querySelector("[data-owner-price-publish-progress]");
   const costCard = document.querySelector("[data-owner-cost-card]");
   const costSummaryRoot = document.querySelector("[data-owner-cost-summary]");
   const costMtdRoot = document.querySelector("[data-owner-cost-mtd]");
@@ -172,6 +173,7 @@
   let realEstateBusy = false;
   let realEstateProgressTimer = null;
   let realEstateDraftSerial = 0;
+  let pricePublishTimer = null;
 
   const setStatus = (message) => {
     if (status) status.textContent = message;
@@ -187,6 +189,88 @@
 
   const setPricePublishStatus = (message) => {
     setText(pricePublishStatus, message);
+  };
+
+  const renderPricePublishTask = (task = null) => {
+    if (!pricePublishProgress) return;
+    if (!task) {
+      pricePublishProgress.hidden = true;
+      setHtml(pricePublishProgress, "");
+      return;
+    }
+    const steps = Array.isArray(task.steps) ? task.steps : [];
+    const state = String(task.state || "");
+    const current = task.currentStep || (state === "done" ? "Done" : "Queued");
+    const rows = steps.map((step) => {
+      const stepState = step.state === "done" ? "done" : step.state === "failed" ? "failed" : "running";
+      const marker = stepState === "done" ? "Done" : stepState === "failed" ? "Failed" : "Running";
+      const elapsed = Number(step.elapsedMs) > 0 ? ` ${Math.round(Number(step.elapsedMs) / 1000)}s` : "";
+      return `
+        <div class="owner-sweep-phase is-${escapeHtml(stepState)}">
+          <strong>${escapeHtml(marker)}</strong>
+          <span>${escapeHtml(step.label || "Publish step")}${escapeHtml(elapsed)}</span>
+        </div>
+      `;
+    }).join("");
+    const error = task.error ? `<p class="owner-card-note">${escapeHtml(task.error)}</p>` : "";
+    setHtml(pricePublishProgress, `
+      <div class="owner-sweep-phase is-${escapeHtml(state || "queued")}">
+        <strong>${escapeHtml(state === "done" ? "Complete" : state === "failed" ? "Failed" : "Publishing")}</strong>
+        <span>${escapeHtml(current)}</span>
+      </div>
+      ${rows}
+      ${error}
+    `);
+    pricePublishProgress.hidden = false;
+  };
+
+  const stopPricePublishPolling = () => {
+    if (pricePublishTimer) window.clearInterval(pricePublishTimer);
+    pricePublishTimer = null;
+  };
+
+  const updatePricePublishFromTask = (task = null) => {
+    renderPricePublishTask(task);
+    if (!task) return false;
+    if (task.state === "done") {
+      const workerVersion = task.workerVersionId ? ` Worker ${task.workerVersionId}.` : "";
+      setStatus(`Prices published as v${task.newVersion}.`);
+      setPricePublishStatus(`Published v${task.newVersion}.${workerVersion} GitHub Pages will update from the pushed commit.`);
+      if (publishPricesButton) publishPricesButton.disabled = false;
+      stopPricePublishPolling();
+      return true;
+    }
+    if (task.state === "failed") {
+      const message = task.error || "Price publish failed.";
+      setStatus(message);
+      setPricePublishStatus(message);
+      if (publishPricesButton) publishPricesButton.disabled = false;
+      stopPricePublishPolling();
+      return true;
+    }
+    setPricePublishStatus(`Publishing prices: ${task.currentStep || "working"} (${task.completed || 0}/${task.total || "?"}).`);
+    return false;
+  };
+
+  const pollPricePublishTask = async (taskId) => {
+    const response = await fetch(`/__photosbyelie/publish-prices-progress?task_id=${encodeURIComponent(taskId)}`, { cache: "no-store" });
+    const payload = await response.json().catch(() => ({}));
+    if (response.status === 404) {
+      throw new Error("Price publish progress needs the local Owner helper restarted.");
+    }
+    if (!response.ok || !payload.ok) throw new Error(payload.error || `Publish progress ${response.status}`);
+    const task = (payload.tasks || [])[0] || null;
+    updatePricePublishFromTask(task);
+    return task;
+  };
+
+  const startPricePublishPolling = (taskId) => {
+    stopPricePublishPolling();
+    pricePublishTimer = window.setInterval(() => {
+      pollPricePublishTask(taskId).catch((error) => {
+        setPricePublishStatus(error?.message || "Could not load price publish progress.");
+      });
+    }, 1200);
   };
 
   const setRefreshBusy = (kind, busy) => {
@@ -714,7 +798,14 @@
     if (!publishPricesButton) return;
     publishPricesButton.disabled = true;
     setStatus("Publishing prices...");
-    setPricePublishStatus("Publishing prices: rebuilding catalogs, deploying Worker, committing, and pushing.");
+    setPricePublishStatus("Starting price publish...");
+    renderPricePublishTask({
+      state: "queued",
+      currentStep: "Contacting local Owner helper",
+      completed: 0,
+      total: 13,
+      steps: [],
+    });
     try {
       const overrides = productSettings?.priceOverrides?.() || {};
       const response = await fetch("/__photosbyelie/publish-prices", {
@@ -726,14 +817,27 @@
         }),
       });
       const payload = await response.json().catch(() => ({}));
+      if (response.status === 404) {
+        throw new Error("Price publish needs the local Owner helper restarted; this page is talking to a server without the publish endpoint.");
+      }
       if (!response.ok || !payload.ok) throw new Error(payload.error || `Publish prices ${response.status}`);
-      const workerVersion = payload.workerVersionId ? ` Worker ${payload.workerVersionId}.` : "";
-      setStatus(`Prices published as v${payload.newVersion}.`);
-      setPricePublishStatus(`Published v${payload.newVersion}.${workerVersion} GitHub Pages will update from the pushed commit.`);
+      const task = payload.task || null;
+      if (!task?.id) throw new Error("Price publish did not return a task id.");
+      updatePricePublishFromTask(task);
+      startPricePublishPolling(task.id);
+      await pollPricePublishTask(task.id);
     } catch (error) {
       setStatus(error?.message || "Could not publish prices.");
       setPricePublishStatus(error?.message || "Could not publish prices.");
-    } finally {
+      renderPricePublishTask({
+        state: "failed",
+        currentStep: "Could not start price publish",
+        error: error?.message || "Could not publish prices.",
+        completed: 0,
+        total: 13,
+        steps: [],
+      });
+      stopPricePublishPolling();
       publishPricesButton.disabled = false;
     }
   };

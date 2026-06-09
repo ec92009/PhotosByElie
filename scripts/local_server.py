@@ -55,6 +55,7 @@ SOURCE_EDITS_PATH = "/__photosbyelie/source-edits"
 SOURCE_EDIT_IMPORT_PATH = "/__photosbyelie/source-edit-import"
 SOURCE_EDIT_IMPORT_ALL_PATH = "/__photosbyelie/source-edit-import-all"
 PUBLISH_PRICES_PATH = "/__photosbyelie/publish-prices"
+PUBLISH_PRICES_PROGRESS_PATH = "/__photosbyelie/publish-prices-progress"
 MAX_BODY_BYTES = 5 * 1024 * 1024
 LOCAL_CLIENTS = {"127.0.0.1", "::1", "localhost"}
 DERIVATIVES = (("gallery", "gallerySrc"), ("detail", "imageSrc"))
@@ -122,6 +123,8 @@ REAL_ESTATE_IMPORT_PROGRESS_LOCK = threading.Lock()
 OWNER_ACTION_LOCK = threading.Lock()
 R2_BACKGROUND_TASKS: dict[str, dict] = {}
 R2_BACKGROUND_LOCK = threading.Lock()
+PRICE_PUBLISH_TASKS: dict[str, dict] = {}
+PRICE_PUBLISH_LOCK = threading.Lock()
 R2_SWEEP_SKIPPABLE_PHASES = {
     "discard-start",
     "selected-folder",
@@ -345,6 +348,9 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         if path == REAL_ESTATE_IMPORT_PROGRESS_PATH:
             self._handle_real_estate_import_progress()
             return
+        if path == PUBLISH_PRICES_PROGRESS_PATH:
+            self._handle_publish_prices_progress()
+            return
         super().do_GET()
 
     def do_POST(self) -> None:
@@ -431,14 +437,22 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             return
         try:
             payload = self._read_json_body()
-            result = _publish_owner_prices(Path.cwd(), payload)
+            task = _start_price_publish_task(Path.cwd(), payload)
         except ValueError as error:
             self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
             return
-        except (OSError, subprocess.CalledProcessError, json.JSONDecodeError) as error:
+        except OSError as error:
             self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
             return
-        self._send_json(HTTPStatus.OK, result)
+        self._send_json(HTTPStatus.OK, {"ok": True, "task": task})
+
+    def _handle_publish_prices_progress(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        query = parse_qs(urlparse(self.path).query)
+        task_id = (query.get("task_id") or query.get("taskId") or [""])[0]
+        self._send_json(HTTPStatus.OK, {"ok": True, "tasks": _price_publish_task_snapshot(task_id or None)})
 
     def _handle_source_edit(self) -> None:
         if not self._is_loopback_request():
@@ -930,6 +944,78 @@ def _clean_price_value(value: object) -> float:
     return round(amount, 2)
 
 
+def _price_publish_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _price_publish_task_snapshot(task_id: str | None = None) -> list[dict]:
+    with PRICE_PUBLISH_LOCK:
+        if task_id:
+            task = PRICE_PUBLISH_TASKS.get(task_id)
+            return [copy.deepcopy(task)] if task else []
+        return [copy.deepcopy(task) for task in PRICE_PUBLISH_TASKS.values()]
+
+
+def _active_price_publish_task() -> dict | None:
+    with PRICE_PUBLISH_LOCK:
+        for task in PRICE_PUBLISH_TASKS.values():
+            if task.get("state") in {"queued", "running"}:
+                return copy.deepcopy(task)
+    return None
+
+
+def _update_price_publish_task(task_id: str, **updates: object) -> dict | None:
+    with PRICE_PUBLISH_LOCK:
+        task = PRICE_PUBLISH_TASKS.get(task_id)
+        if not task:
+            return None
+        task.update(updates)
+        task["updated_at"] = _price_publish_now()
+        return copy.deepcopy(task)
+
+
+def _append_price_publish_step(task_id: str | None, label: str, command: list[str] | None = None) -> int:
+    if not task_id:
+        return -1
+    with PRICE_PUBLISH_LOCK:
+        task = PRICE_PUBLISH_TASKS.get(task_id)
+        if not task:
+            return -1
+        steps = task.setdefault("steps", [])
+        steps.append({
+            "label": label,
+            "command": " ".join(command or []),
+            "state": "running",
+            "returnCode": None,
+            "elapsedMs": None,
+            "output": "",
+        })
+        task["state"] = "running"
+        task["currentStep"] = label
+        task["completed"] = max(0, len(steps) - 1)
+        task["updated_at"] = _price_publish_now()
+        return len(steps) - 1
+
+
+def _finish_price_publish_step(task_id: str | None, index: int, state: str, return_code: int, elapsed_ms: int, output: str) -> None:
+    if not task_id or index < 0:
+        return
+    with PRICE_PUBLISH_LOCK:
+        task = PRICE_PUBLISH_TASKS.get(task_id)
+        if not task:
+            return
+        steps = task.setdefault("steps", [])
+        if index < len(steps):
+            steps[index].update({
+                "state": state,
+                "returnCode": return_code,
+                "elapsedMs": elapsed_ms,
+                "output": output[-4000:],
+            })
+        task["completed"] = len([step for step in steps if step.get("state") == "done"])
+        task["updated_at"] = _price_publish_now()
+
+
 def _apply_owner_price_overrides(catalog: dict, overrides: dict) -> dict:
     if not isinstance(overrides, dict):
         raise ValueError("priceOverrides must be an object")
@@ -991,17 +1077,22 @@ def _apply_owner_price_overrides(catalog: dict, overrides: dict) -> dict:
     return catalog
 
 
-def _run_publish_command(repo_root: Path, command: list[str], steps: list[dict], label: str) -> str:
+def _run_publish_command(repo_root: Path, command: list[str], steps: list[dict], label: str, task_id: str | None = None) -> str:
     started = time.perf_counter()
+    progress_index = _append_price_publish_step(task_id, label, command)
     process = subprocess.run(command, cwd=repo_root, capture_output=True, text=True)
     output = "\n".join(part.strip() for part in [process.stdout, process.stderr] if part and part.strip())
-    steps.append({
+    elapsed_ms = round((time.perf_counter() - started) * 1000)
+    step = {
         "label": label,
         "command": " ".join(command),
+        "state": "done" if process.returncode == 0 else "failed",
         "returnCode": process.returncode,
-        "elapsedMs": round((time.perf_counter() - started) * 1000),
+        "elapsedMs": elapsed_ms,
         "output": output[-4000:],
-    })
+    }
+    steps.append(step)
+    _finish_price_publish_step(task_id, progress_index, step["state"], process.returncode, elapsed_ms, output)
     if process.returncode != 0:
         raise subprocess.CalledProcessError(process.returncode, command, output=process.stdout, stderr=process.stderr)
     return output
@@ -1039,31 +1130,50 @@ def _bump_visible_version(repo_root: Path) -> tuple[str, str, list[str]]:
     return old_version, new_version, changed
 
 
-def _publish_owner_prices(repo_root: Path, payload: dict) -> dict:
+def _publish_owner_prices(repo_root: Path, payload: dict, task_id: str | None = None) -> dict:
     overrides = payload.get("priceOverrides")
     if not isinstance(overrides, dict):
         raise ValueError("priceOverrides is required")
     steps: list[dict] = []
     pricing_path = repo_root / "assets/catalog/product-pricing.json"
+    write_index = _append_price_publish_step(task_id, "Write canonical pricing")
+    started = time.perf_counter()
     catalog = json.loads(pricing_path.read_text(encoding="utf-8"))
     catalog = _apply_owner_price_overrides(catalog, overrides)
     pricing_path.write_text(json.dumps(catalog, indent=2) + "\n", encoding="utf-8")
+    elapsed_ms = round((time.perf_counter() - started) * 1000)
+    steps.append({
+        "label": "Write canonical pricing",
+        "command": "",
+        "state": "done",
+        "returnCode": 0,
+        "elapsedMs": elapsed_ms,
+        "output": str(pricing_path),
+    })
+    _finish_price_publish_step(task_id, write_index, "done", 0, elapsed_ms, str(pricing_path))
 
-    _run_publish_command(repo_root, ["node", "scripts/write_catalog_tsv.cjs"], steps, "Rebuild public SQLite catalog")
-    _run_publish_command(repo_root, ["node", "scripts/write_worker_catalog.mjs"], steps, "Regenerate Worker catalog")
+    _run_publish_command(repo_root, ["node", "scripts/write_catalog_tsv.cjs"], steps, "Rebuild public SQLite catalog", task_id)
+    _run_publish_command(repo_root, ["node", "scripts/write_worker_catalog.mjs"], steps, "Regenerate Worker catalog", task_id)
+    version_index = _append_price_publish_step(task_id, "Bump visible version")
+    started = time.perf_counter()
     old_version, new_version, version_files = _bump_visible_version(repo_root)
+    elapsed_ms = round((time.perf_counter() - started) * 1000)
     steps.append({
         "label": "Bump visible version",
+        "command": "",
+        "state": "done",
         "returnCode": 0,
+        "elapsedMs": elapsed_ms,
         "output": f"v{old_version} -> v{new_version}",
     })
+    _finish_price_publish_step(task_id, version_index, "done", 0, elapsed_ms, f"v{old_version} -> v{new_version}")
 
-    _run_publish_command(repo_root, ["node", "--check", "photos.js"], steps, "Check photos.js")
-    _run_publish_command(repo_root, ["node", "--check", "owner.js"], steps, "Check owner.js")
-    _run_publish_command(repo_root, ["node", "--check", "basket.js"], steps, "Check basket.js")
-    _run_publish_command(repo_root, ["node", "--test", "worker/checkout-worker.test.mjs", "worker/resend-email-client.test.mjs"], steps, "Run checkout/email tests")
-    _run_publish_command(repo_root, ["npm", "run", "validate"], steps, "Validate publish")
-    deploy_output = _run_publish_command(repo_root, ["npx", "wrangler", "deploy"], steps, "Deploy Worker")
+    _run_publish_command(repo_root, ["node", "--check", "photos.js"], steps, "Check photos.js", task_id)
+    _run_publish_command(repo_root, ["node", "--check", "owner.js"], steps, "Check owner.js", task_id)
+    _run_publish_command(repo_root, ["node", "--check", "basket.js"], steps, "Check basket.js", task_id)
+    _run_publish_command(repo_root, ["node", "--test", "worker/checkout-worker.test.mjs", "worker/resend-email-client.test.mjs"], steps, "Run checkout/email tests", task_id)
+    _run_publish_command(repo_root, ["npm", "run", "validate"], steps, "Validate publish", task_id)
+    deploy_output = _run_publish_command(repo_root, ["npx", "wrangler", "deploy"], steps, "Deploy Worker", task_id)
 
     html_files = [path.name for path in sorted(repo_root.glob("*.html"))]
     stage_files = [
@@ -1076,10 +1186,10 @@ def _publish_owner_prices(repo_root: Path, payload: dict) -> dict:
         "worker/photos-catalog.generated.mjs",
     ]
     existing_stage_files = [name for name in stage_files if (repo_root / name).exists()]
-    _run_publish_command(repo_root, ["git", "add", "--", *existing_stage_files], steps, "Stage price publish files")
+    _run_publish_command(repo_root, ["git", "add", "--", *existing_stage_files], steps, "Stage price publish files", task_id)
     commit_message = str(payload.get("commitMessage") or "photosbyelie: publish owner price list").strip()
-    _run_publish_command(repo_root, ["git", "commit", "-m", commit_message], steps, "Commit price publish")
-    _run_publish_command(repo_root, ["git", "push"], steps, "Push price publish")
+    _run_publish_command(repo_root, ["git", "commit", "-m", commit_message], steps, "Commit price publish", task_id)
+    _run_publish_command(repo_root, ["git", "push"], steps, "Push price publish", task_id)
 
     version_id_match = re.search(r"Current Version ID:\s*([0-9a-f-]+)", deploy_output)
     return {
@@ -1091,6 +1201,79 @@ def _publish_owner_prices(repo_root: Path, payload: dict) -> dict:
         "workerVersionId": version_id_match.group(1) if version_id_match else "",
         "steps": steps,
     }
+
+
+def _run_price_publish_task(task_id: str, repo_root: Path, payload: dict) -> None:
+    _update_price_publish_task(task_id, state="running", currentStep="Starting price publish")
+    try:
+        result = _publish_owner_prices(repo_root, payload, task_id)
+    except subprocess.CalledProcessError as error:
+        message = (error.stderr or error.output or str(error)).strip() or str(error)
+        _update_price_publish_task(
+            task_id,
+            state="failed",
+            failed=1,
+            error=message[-4000:],
+            currentStep="Failed",
+            completed_at=_price_publish_now(),
+        )
+    except (OSError, ValueError, json.JSONDecodeError) as error:
+        _update_price_publish_task(
+            task_id,
+            state="failed",
+            failed=1,
+            error=str(error),
+            currentStep="Failed",
+            completed_at=_price_publish_now(),
+        )
+    else:
+        _update_price_publish_task(
+            task_id,
+            state="done",
+            failed=0,
+            error="",
+            result=result,
+            currentStep="Done",
+            completed=len(result.get("steps") or []),
+            completed_at=_price_publish_now(),
+            oldVersion=result.get("oldVersion", ""),
+            newVersion=result.get("newVersion", ""),
+            workerVersionId=result.get("workerVersionId", ""),
+        )
+
+
+def _start_price_publish_task(repo_root: Path, payload: dict) -> dict:
+    if not isinstance(payload.get("priceOverrides"), dict):
+        raise ValueError("priceOverrides is required")
+    active = _active_price_publish_task()
+    if active:
+        return active
+    task_id = uuid.uuid4().hex
+    queued_at = _price_publish_now()
+    task = {
+        "id": task_id,
+        "kind": "price-publish",
+        "state": "queued",
+        "failed": 0,
+        "queued_at": queued_at,
+        "started_at": None,
+        "completed_at": None,
+        "updated_at": queued_at,
+        "currentStep": "Queued",
+        "total": 13,
+        "completed": 0,
+        "steps": [],
+        "error": "",
+        "result": None,
+        "oldVersion": "",
+        "newVersion": "",
+        "workerVersionId": "",
+    }
+    with PRICE_PUBLISH_LOCK:
+        PRICE_PUBLISH_TASKS[task_id] = task
+    worker = threading.Thread(target=_run_price_publish_task, args=(task_id, repo_root, payload), daemon=True)
+    worker.start()
+    return copy.deepcopy(task)
 
 
 def main() -> int:

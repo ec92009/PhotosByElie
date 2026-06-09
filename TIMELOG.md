@@ -240,6 +240,7 @@ Clock state: running
 | 2026-06-09 | 20:21 CEST | 20:23 CEST | 0:02 | Bumped the visible build to v101.10 so the public order page fetches the fresh Worker config instead of a cached v101.9 asset. |
 | 2026-06-09 | 20:41 CEST | 20:46 CEST | 0:05 | Hotfixed checkout after local DNS could not resolve the new download subdomain: restored the stable Worker checkout host, disabled direct email token links, and bumped the site to v101.11. |
 | 2026-06-09 | 20:46 CEST | 20:51 CEST | 0:05 | Added a checkout subtotal guard so stale basket prices cannot open a higher Stripe session, with a regression test and v101.12 cache-bust. |
+| 2026-06-09 | 23:13 CEST | 23:24 CEST | 0:04 | Clarified the Owner price-publish workflow and added progress feedback for the full publish button; implementation/runtime wait excluded. |
 
 ## Totals
 

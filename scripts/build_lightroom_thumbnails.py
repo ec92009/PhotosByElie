@@ -1148,6 +1148,13 @@ def write_watermark_overlay(output: Path, width: int, height: int, watermark: st
     overlay.save(output)
 
 
+def public_still_preview_target(width: int, height: int, max_px: int) -> tuple[str, int]:
+    if width > height * 2:
+        return "height", max(1, min(max_px, height))
+    largest = max(width, height)
+    return "max", max(1, min(max_px, largest) if largest else max_px)
+
+
 def render_derivative(
     source: Path,
     output: Path,
@@ -1164,16 +1171,19 @@ def render_derivative(
         temp_jpg = Path(temp_dir) / "base.jpg"
         temp_out = Path(temp_dir) / "watermarked.jpg"
         source_size = image_size(source)
-        source_max = max(source_size.get("width") or 0, source_size.get("height") or 0)
-        effective_max_px = min(max_px, source_max) if source_max else max_px
+        resize_mode, effective_px = public_still_preview_target(
+            int(source_size.get("width") or 0),
+            int(source_size.get("height") or 0),
+            max_px,
+        )
+        resize_args = ["--resampleHeight", str(effective_px)] if resize_mode == "height" else ["--resampleHeightWidthMax", str(effective_px)]
         subprocess.run(
             [
                 "sips",
                 "-s",
                 "format",
                 "jpeg",
-                "--resampleHeightWidthMax",
-                str(effective_max_px),
+                *resize_args,
                 str(source),
                 "--out",
                 str(temp_jpg),

@@ -280,6 +280,15 @@ def scale_to_max(width: int, height: int, max_dimension: int) -> tuple[int, int]
     return max(1, round(width * scale)), max(1, round(height * scale))
 
 
+def scale_public_still_preview(width: int, height: int, target: int) -> tuple[int, int]:
+    if width > height * 2:
+        target_height = min(target, height)
+        if target_height <= 0:
+            return width, height
+        return max(1, round(width * target_height / height)), target_height
+    return scale_to_max(width, height, target)
+
+
 def scale_to_megapixels(width: int, height: int, megapixels: float) -> tuple[int, int]:
     pixels = width * height
     target = megapixels * 1_000_000
@@ -1108,11 +1117,11 @@ def write_db(repo_root: Path, output: Path, source: str = "auto") -> dict[str, i
             source_bytes = source.get("bytes")
             full_bytes = int(source_bytes) if isinstance(source_bytes, int) or str(source_bytes).isdigit() else None
             asset_rows.append((photo_id, asset_type_id["full"], width, height, duration_seconds, full_bytes, format_id[fmt]))
-            gallery_width, gallery_height = scale_to_max(width, height, 900)
+            gallery_width, gallery_height = scale_public_still_preview(width, height, 900)
             asset_rows.append((photo_id, asset_type_id["still_900"], gallery_width, gallery_height, None, None, format_id["jpg"]))
             asset_codes_by_photo.setdefault(photo_id, set()).add("still_900")
             if media_type == "photo":
-                detail_width, detail_height = scale_to_max(width, height, 1800)
+                detail_width, detail_height = scale_public_still_preview(width, height, 1800)
                 asset_rows.append((photo_id, asset_type_id["still_1800"], detail_width, detail_height, None, None, format_id["jpg"]))
                 asset_codes_by_photo[photo_id].add("still_1800")
                 for code, target_mp in (("jpeg_1mp", 1), ("jpeg_3mp", 3), ("jpeg_6mp", 6)):

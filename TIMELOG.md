@@ -228,8 +228,10 @@ Clock state: running
 | 2026-06-09 | 17:56 CEST | 17:58 CEST | 0:02 | Requested a Panoramas collection while preserving country membership, plus pano detail and Space preview lateral-scroll behavior; implementation/testing time excluded. |
 | 2026-06-09 | 18:58 CEST | 19:00 CEST | 0:02 | Confirmed no Max-side changes and resumed from David's local catalog state; background validation and publish preparation excluded. |
 | 2026-06-09 | 19:20 CEST | 19:22 CEST | 0:02 | Requested pano Spacebar preview metadata move below the image and mouse drag panning on preview/detail; implementation/testing time excluded. |
+| 2026-06-09 | 19:25 CEST | 19:26 CEST | 0:01 | Requested a safe Resend key installer script for the checkout delivery-email Worker secret. |
+| 2026-06-09 | 19:27 CEST | 19:32 CEST | 0:05 | Approved one-time pano public preview reprocessing with height-targeted 900/1800 renders and no upscaling; render/upload runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 15:15
+Active collaboration time used: 15:21
 Remaining budget: not set

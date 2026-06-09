@@ -219,9 +219,9 @@ const deliveryAvailabilityFor = (photoId, option) => {
       : { available: false, reason: "Full resolution master is missing from private storage." };
   }
   if (option.id === "jpg-6mp" || option.id === "jpg-3mp" || option.id === "jpg-1mp") {
-    return record.privateRenders?.[option.id]?.present === true
+    return record.privateRenders?.[option.id]?.present === true || record.privateMaster?.present === true
       ? { available: true, reason: "" }
-      : { available: false, reason: `${productLabel(option)} delivery file is missing from private storage.` };
+      : { available: false, reason: `${productLabel(option)} needs a private master or cached delivery file.` };
   }
   return { available: true, reason: "" };
 };

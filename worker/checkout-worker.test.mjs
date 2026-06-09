@@ -211,6 +211,32 @@ const createTestJpeg = (width = 64, height = 48) => {
   return jpeg.encode({ data, width, height }, 90).data;
 };
 
+const createFakeImagesBinding = ({ output = createTestJpeg(32, 24), info = { width: 64, height: 48 } } = {}) => {
+  const calls = [];
+  return {
+    calls,
+    info: async () => info,
+    input: () => {
+      const call = { transforms: [], output: null };
+      calls.push(call);
+      return {
+        transform(options = {}) {
+          call.transforms.push(options);
+          return this;
+        },
+        output(options = {}) {
+          call.output = options;
+          return {
+            response: () => new Response(output, {
+              headers: { "content-type": "image/jpeg" },
+            }),
+          };
+        },
+      };
+    },
+  };
+};
+
 test("guest checkout creates a pending order and mock Stripe session", async () => {
   const catalog = loadCatalog();
   const { worker } = testWorker();
@@ -793,6 +819,50 @@ test("deployed Worker mock checkout writes and downloads private R2 files", asyn
   assert.equal(downloadResponse.headers.get("content-type"), "image/jpeg");
   const fileBytes = Buffer.from(await downloadResponse.arrayBuffer());
   assert.ok(fileBytes.includes(Buffer.from("private developed master bytes")));
+});
+
+test("deployed Worker renders missing JPG products with Cloudflare Images and caches them", async () => {
+  const catalog = loadCatalog();
+  const photoId = firstDeliverablePhotoId(catalog);
+  const privateKey = `masters/${photoId}.jpg`;
+  const renderedBytes = createTestJpeg(40, 30);
+  const privateR2 = createFakeR2({
+    [privateKey]: {
+      body: createTestJpeg(120, 80),
+      httpMetadata: { contentType: "image/jpeg" },
+    },
+  });
+  const images = createFakeImagesBinding({ output: renderedBytes });
+  const env = {
+    ORDERS_KV: createFakeKv(),
+    PRIVATE_MEDIA: privateR2,
+    DELIVERY_MEDIA: privateR2,
+    PUBLIC_SITE_URL: "https://photos-by-elie.com",
+    IMAGES: images,
+  };
+
+  const checkoutResponse = await deployedWorker.fetch(jsonRequest("https://worker.test/checkout/guest", {
+    email: "buyer@example.com",
+    items: [{ photoId, options: [{ id: "jpg-1mp" }] }],
+  }), env);
+  assert.equal(checkoutResponse.status, 201);
+  const checkout = await checkoutResponse.json();
+
+  const payResponse = await deployedWorker.fetch(jsonRequest("https://worker.test/mock-stripe/pay", {
+    checkoutSessionId: checkout.checkout.sessionId,
+  }), env);
+  assert.equal(payResponse.status, 200);
+  const paid = await payResponse.json();
+  const renderKey = `renders/${photoId}_1mp.jpg`;
+  assert.equal(paid.order.status, "ready");
+  assert.equal(paid.order.delivery.files[0].productId, "jpg-1mp");
+  assert.equal(paid.order.delivery.files[0].cacheHit, false);
+  assert.equal(privateR2._debug.has(renderKey), true);
+  assert.equal(privateR2._debug.get(renderKey).customMetadata.watermark, "none");
+  assert.equal(images.calls.length, 1);
+  assert.equal(images.calls[0].transforms[0].fit, "scale-down");
+  assert.equal(images.calls[0].output.format, "image/jpeg");
+  assert.equal(images.calls[0].output.quality, 90);
 });
 
 test("real-estate originals endpoint creates private download tokens", async () => {

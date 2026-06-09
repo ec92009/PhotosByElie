@@ -108,7 +108,7 @@ export const createR2ZipDelivery = ({
         }
         if (cachedRender) return;
 
-        const canRender = renderer && typeof renderer.canRender === "function" && renderer.canRender(product.id);
+        const canRender = renderer && typeof renderer.canRender === "function" && renderer.canRender(product.id, item, product);
         if (canRender) {
           const sourceObject = await firstObjectMetadata(privateBucket, masterKeysFor(item));
           if (!sourceObject) {
@@ -157,7 +157,7 @@ export const createR2ZipDelivery = ({
           };
         }
       }
-      const canRender = renderer && typeof renderer.canRender === "function" && renderer.canRender(product.id);
+      const canRender = renderer && typeof renderer.canRender === "function" && renderer.canRender(product.id, item, product);
       if (!canRender) {
         throw Object.assign(new Error(`Private render is missing: ${renderKey}. Generate and upload the unwatermarked ${product.id} deliverable before checkout can complete.`), {
           status: 409,

@@ -78,6 +78,184 @@ Worker status meanings:
 | `delivery_failed` | Payment likely succeeded but delivery failed. | Escalate; do not promise files until the delivery error is fixed. |
 | `unknown_order` | Worker has no order by that ID/email. | Search Stripe by session/email; ask customer for receipt if needed. |
 
+## Order Stats From Worker KV
+
+For store/product analytics, use the Cloudflare Worker KV namespace as the order ledger. The namespace id is in `wrangler.toml` under the `ORDERS_KV` binding. Order keys use the `KV_PREFIX` plus `orders`, currently `pbe:orders:<ORDER_ID>`.
+
+Prefer the Cloudflare REST API for full listings; `wrangler kv key list` can be misleading in token/remote-context edge cases. Required environment:
+
+```bash
+CLOUDFLARE_ACCOUNT_ID=<account-id>
+CLOUDFLARE_API_TOKEN=<api-token-with-kv-read>
+```
+
+Use this one-off Python pattern from the repo root to enumerate order records and aggregate products/media. Do not print buyer emails in summaries unless doing a specific support investigation.
+
+```bash
+python3 - <<'PY'
+import collections, json, os, urllib.parse, urllib.request
+
+account = os.environ["CLOUDFLARE_ACCOUNT_ID"]
+token = os.environ["CLOUDFLARE_API_TOKEN"]
+namespace = "0ea4d21c491246c986c2c0308bebc560"
+headers = {"Authorization": f"Bearer {token}"}
+
+def api_json(path):
+    request = urllib.request.Request(
+        f"https://api.cloudflare.com/client/v4/accounts/{account}{path}",
+        headers=headers,
+    )
+    with urllib.request.urlopen(request, timeout=30) as response:
+        return json.load(response)
+
+keys = []
+cursor = ""
+while True:
+    params = {"prefix": "pbe:orders:", "limit": "1000"}
+    if cursor:
+        params["cursor"] = cursor
+    payload = api_json(
+        f"/storage/kv/namespaces/{namespace}/keys?{urllib.parse.urlencode(params)}"
+    )
+    keys.extend(item["name"] for item in payload.get("result") or [])
+    cursor = (payload.get("result_info") or {}).get("cursor") or ""
+    if not cursor:
+        break
+
+orders = []
+for key in keys:
+    encoded = urllib.parse.quote(key, safe="")
+    orders.append(api_json(f"/storage/kv/namespaces/{namespace}/values/{encoded}"))
+
+def checkout_kind(order):
+    session = str(order.get("checkoutSessionId") or order.get("stripe", {}).get("checkoutSessionId") or "")
+    if session.startswith("cs_live_"):
+        return "live"
+    if session.startswith("cs_mock_"):
+        return "mock"
+    return "other"
+
+def paid_or_ready(order):
+    return order.get("status") == "ready" or int(order.get("amountPaid") or 0) > 0
+
+product_counts = collections.Counter()
+media_counts = {}
+for order in orders:
+    if checkout_kind(order) != "live" or not paid_or_ready(order):
+        continue
+    for item in order.get("items") or []:
+        record = media_counts.setdefault(item.get("photoId"), {
+            "title": item.get("title") or "",
+            "collection": item.get("collectionTitle") or item.get("collection") or "",
+            "orders": set(),
+            "products": collections.Counter(),
+        })
+        record["orders"].add(order.get("id"))
+        for product in item.get("products") or []:
+            product_id = product.get("id") or "unknown"
+            product_counts[product_id] += 1
+            record["products"][product_id] += 1
+
+print("Live paid/ready product counts:")
+print(dict(product_counts))
+print("Live paid/ready media counts:")
+for photo_id, record in sorted(media_counts.items(), key=lambda row: (-len(row[1]["orders"]), row[0])):
+    print(photo_id, len(record["orders"]), record["title"], record["collection"], dict(record["products"]))
+PY
+```
+
+Useful slices:
+
+- Live paid/ready demand: `checkout_kind(order) == "live"` and `paid_or_ready(order)`.
+- Live abandoned checkout demand: `checkout_kind(order) == "live"` and `order.status == "pending_payment"`.
+- All paid/ready test coverage: `paid_or_ready(order)` regardless of checkout kind. This includes mock and early non-Stripe test records, so label it as test coverage rather than sales.
+- Product-line counts answer "what products were selected." Distinct order counts per media ID answer "which photos/videos were bought or attempted how many times."
+
+When the owner asks for the recurring media/product table, include live Stripe attempts, group by media ID, omit buyer email, and show each selected product with the historical amount actually paid for that line. Use `$0.00` for pending/unpaid checkout attempts so abandoned demand remains visible without implying revenue.
+
+```bash
+python3 - <<'PY'
+import collections, json, os, urllib.parse, urllib.request
+
+account = os.environ["CLOUDFLARE_ACCOUNT_ID"]
+token = os.environ["CLOUDFLARE_API_TOKEN"]
+namespace = "0ea4d21c491246c986c2c0308bebc560"
+headers = {"Authorization": f"Bearer {token}"}
+
+def api_json(path):
+    request = urllib.request.Request(
+        f"https://api.cloudflare.com/client/v4/accounts/{account}{path}",
+        headers=headers,
+    )
+    with urllib.request.urlopen(request, timeout=30) as response:
+        return json.load(response)
+
+keys = []
+cursor = ""
+while True:
+    params = {"prefix": "pbe:orders:", "limit": "1000"}
+    if cursor:
+        params["cursor"] = cursor
+    payload = api_json(
+        f"/storage/kv/namespaces/{namespace}/keys?{urllib.parse.urlencode(params)}"
+    )
+    keys.extend(item["name"] for item in payload.get("result") or [])
+    cursor = (payload.get("result_info") or {}).get("cursor") or ""
+    if not cursor:
+        break
+
+def checkout_kind(order):
+    session = str(order.get("checkoutSessionId") or order.get("stripe", {}).get("checkoutSessionId") or "")
+    if session.startswith("cs_live_"):
+        return "live"
+    if session.startswith("cs_mock_"):
+        return "mock"
+    return "other"
+
+def paid_or_ready(order):
+    return order.get("status") == "ready" or int(order.get("amountPaid") or 0) > 0
+
+def money(cents):
+    return f"${cents / 100:.2f}"
+
+rows = {}
+for key in keys:
+    encoded = urllib.parse.quote(key, safe="")
+    order = api_json(f"/storage/kv/namespaces/{namespace}/values/{encoded}")
+    if checkout_kind(order) != "live":
+        continue
+    order_paid = paid_or_ready(order)
+    for item in order.get("items") or []:
+        photo_id = item.get("photoId") or "(missing)"
+        record = rows.setdefault(photo_id, {
+            "title": item.get("title") or "",
+            "lines": [],
+        })
+        for product in item.get("products") or []:
+            record["lines"].append({
+                "product": product.get("id") or "unknown",
+                "paidCents": int(product.get("amount") or 0) if order_paid else 0,
+            })
+
+print("| Photo/media ID | Title | Products and paid price |")
+print("| --- | --- | --- |")
+for photo_id, record in sorted(
+    rows.items(),
+    key=lambda row: (
+        -sum(1 for line in row[1]["lines"] if line["paidCents"] > 0),
+        -len(row[1]["lines"]),
+        row[0],
+    ),
+):
+    compact = collections.Counter((line["product"], line["paidCents"]) for line in record["lines"])
+    parts = []
+    for (product_id, cents), count in sorted(compact.items(), key=lambda row: (row[0][0], -row[0][1])):
+        suffix = f" x{count}" if count > 1 else ""
+        parts.append(f"`{product_id}` {money(cents)}{suffix}")
+    print(f"| `{photo_id}` | {record['title']} | {'; '.join(parts)} |")
+PY
+```
+
 ## Step 2: Check Stripe
 
 In Stripe Dashboard:

@@ -284,7 +284,6 @@ if [[ -n "$SELECTED_IMPORT_SOURCE_ROOT" ]]; then
     --output-root "$IMPORT_CACHE_ROOT" \
     --select "$(effective_selected_import_select)" \
     --r2-upload both \
-    --r2-private-renders \
     --hidden-blacklist assets/hidden/hidden-blacklist.json \
     --discarded-tombstone assets/discarded/discarded-photo-ids.json
   )
@@ -298,7 +297,6 @@ else
     --source-root /Volumes/Saturn/Pictures/LR/Camera \
     --output-root "$IMPORT_CACHE_ROOT" \
     --r2-upload both \
-    --r2-private-renders \
     --hidden-blacklist assets/hidden/hidden-blacklist.json \
     --discarded-tombstone assets/discarded/discarded-photo-ids.json
 
@@ -310,7 +308,6 @@ else
       --output-root "$IMPORT_CACHE_ROOT" \
       --select all \
       --r2-upload both \
-      --r2-private-renders \
       --hidden-blacklist assets/hidden/hidden-blacklist.json \
       --discarded-tombstone assets/discarded/discarded-photo-ids.json
   fi
@@ -322,7 +319,6 @@ else
     --select all \
     --force-country ai \
     --r2-upload both \
-    --r2-private-renders \
     --hidden-blacklist assets/hidden/hidden-blacklist.json \
     --discarded-tombstone assets/discarded/discarded-photo-ids.json
 fi

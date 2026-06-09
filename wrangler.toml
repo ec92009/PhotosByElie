@@ -18,6 +18,9 @@ ORDER_EMAIL_INCLUDE_DIRECT_DOWNLOAD_LINKS = "false"
 # Secret required to enable buyer delivery emails:
 #   npx wrangler secret put RESEND_API_KEY
 
+[images]
+binding = "IMAGES"
+
 [[routes]]
 pattern = "download.photos-by-elie.com"
 custom_domain = true

@@ -247,8 +247,15 @@ Clock state: running
 | 2026-06-09 | 23:56 CEST | 2026-06-10 00:02 CEST | 0:03 | Fixed the Liked-to-Basket checkout handoff so checked liked assets persist when using Basket or the dollar checkout link. |
 | 2026-06-10 | 00:30 CEST | 00:31 CEST | 0:01 | Checked whether the checkout Worker can generate 6 MP buyer JPGs from private masters at sale time. |
 | 2026-06-10 | 00:31 CEST | 00:33 CEST | 0:02 | Aligned Liked and Basket behavior so hearts stay shortlist-only, checked products define Basket, and unavailable products are disabled before checkout. |
+| 2026-06-10 | 00:33 CEST | 00:34 CEST | 0:01 | Compared import/render tools for Worker-side 6 MP buyer JPG generation options. |
+| 2026-06-10 | 00:44 CEST | 00:48 CEST | 0:04 | Queried Cloudflare Worker KV order records and summarized live test-purchase product mix. |
+| 2026-06-10 | 00:49 CEST | 00:50 CEST | 0:01 | Aggregated Worker KV orders by sold/requested media ID. |
+| 2026-06-10 | 00:51 CEST | 00:52 CEST | 0:01 | Documented the reusable Worker KV order-stat query recipe in the buyer support SOP. |
+| 2026-06-10 | 00:55 CEST | 00:56 CEST | 0:01 | Rebuilt live media/product stats with historical per-line paid amounts. |
+| 2026-06-10 | 00:59 CEST | 01:00 CEST | 0:01 | Added the recurring live media/product paid-line table recipe to the buyer support SOP. |
+| 2026-06-10 | 01:00 CEST | 01:09 CEST | 0:09 | Implemented on-demand Cloudflare Images buyer JPG renders, stopped routine triplet imports, deployed Worker v101.22, and validated; test/deploy wait excluded. |
 
 ## Totals
 
-Active collaboration time used: 16:03
+Active collaboration time used: 16:21
 Remaining budget: not set

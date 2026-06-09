@@ -1,4 +1,5 @@
 import { createCatalogIndex, createPhotosByElieWorker } from "./checkout-worker.mjs";
+import { createCloudflareImagesRenderer } from "./cloudflare-images-renderer.mjs";
 import { createKvStore } from "./kv-store.mjs";
 import { createMockStripeClient } from "./mock-stripe.mjs";
 import { createRealEstateDeliverables } from "./real-estate-deliverables.mjs";
@@ -209,6 +210,9 @@ export default {
       delivery: createR2ZipDelivery({
         privateBucket,
         deliveryBucket: env.DELIVERY_MEDIA || privateBucket,
+        renderer: createCloudflareImagesRenderer({
+          images: env.IMAGES,
+        }),
       }),
       realEstateOriginals: createRealEstateOriginals({
         privateBucket,

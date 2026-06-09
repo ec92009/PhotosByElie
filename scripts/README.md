@@ -473,7 +473,9 @@ Recommended private master resume command, after public previews finish:
 python3 scripts/sync_r2_media.py --scope private --upload --workers 2 --request-min-interval 1.5
 ```
 
-On David, which owns the developed masters, generate/upload private buyer JPG renders during import/private upload:
+Normal imports upload public previews and private developed masters only. Private buyer JPG render triplets are now an on-demand Worker cache: checkout can generate missing JPG 1 MP, 3 MP, and 6 MP files from the private master through Cloudflare Images and then store the result back under `renders/<photo-id>_<size>mp.jpg`.
+
+For an explicit cache-warming or fallback repair run on David, which owns the developed masters, generate/upload private buyer JPG renders during import/private upload:
 
 ```bash
 python3 scripts/build_lightroom_thumbnails.py \

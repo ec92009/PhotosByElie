@@ -81,6 +81,52 @@ const createFakeKv = () => {
   };
 };
 
+const createFakeEmailClient = ({ fail = false } = {}) => {
+  const sent = [];
+  return {
+    provider: "fake-email",
+    sent,
+    send: async (email) => {
+      sent.push(email);
+      if (fail) {
+        throw Object.assign(new Error("Email provider unavailable."), {
+          code: "fake_email_failed",
+        });
+      }
+      return {
+        provider: "fake-email",
+        messageId: `msg_${String(sent.length).padStart(3, "0")}`,
+        idempotencyKey: email.idempotencyKey,
+      };
+    },
+  };
+};
+
+const createPerFileTestDelivery = (now = () => new Date("2026-05-07T12:00:00.000Z")) => ({
+  validateOrder: async () => ({ ok: true }),
+  createDelivery: async (order) => ({
+    readyAt: now().toISOString(),
+    files: order.items.flatMap((item) => item.products.map((product) => {
+      const safeProduct = String(product.id).replace(/[^A-Za-z0-9_-]+/g, "-");
+      const token = `dl_test_${safeProduct}`;
+      return {
+        token,
+        photoId: item.photoId,
+        title: item.title,
+        productId: product.id,
+        productLabel: product.label,
+        bucket: "private",
+        objectKey: item.source.privateMasterKey,
+        name: `${item.photoId}-${safeProduct}.jpg`,
+        downloadUrl: `/download/${token}`,
+        bytes: 123,
+        contentType: "image/jpeg",
+      };
+    })),
+    items: [],
+  }),
+});
+
 const createFakeR2 = (initial = {}) => {
   const values = new Map(Object.entries(initial).map(([key, value]) => [key, {
     body: value.body instanceof Uint8Array ? value.body : new Uint8Array(value.body),
@@ -435,6 +481,92 @@ test("mock Stripe payment moves the order to ready and records a delivery ZIP", 
   const sessionLookup = await sessionLookupResponse.json();
   assert.equal(sessionLookup.order.id, paid.order.id);
   assert.equal(sessionLookup.order.status, "ready");
+});
+
+test("paid checkout sends one delivery email with order and download links", async () => {
+  const catalog = loadCatalog();
+  const randomUUID = deterministicIds();
+  const now = () => new Date("2026-05-07T12:00:00.000Z");
+  const stripe = createMockStripeClient({ randomUUID });
+  const emailClient = createFakeEmailClient();
+  const worker = createPhotosByElieWorker({
+    catalog,
+    store: createMemoryStore(),
+    stripe,
+    now,
+    randomUUID,
+    delivery: createPerFileTestDelivery(now),
+    ordersUrl: "https://photos-by-elie.com/order.html",
+    downloadBaseUrl: "https://worker.test",
+    emailClient,
+  });
+  const photoId = firstDeliverablePhotoId(catalog);
+
+  const checkoutResponse = await worker.fetch(jsonRequest("https://worker.test/checkout/guest", {
+    email: "buyer@example.com",
+    items: [{ photoId, options: [{ id: "full" }] }],
+  }));
+  assert.equal(checkoutResponse.status, 201);
+  const checkout = await checkoutResponse.json();
+
+  const payResponse = await worker.fetch(jsonRequest("https://worker.test/mock-stripe/pay", {
+    checkoutSessionId: checkout.checkout.sessionId,
+  }));
+  assert.equal(payResponse.status, 200);
+  const paid = await payResponse.json();
+  assert.equal(paid.order.status, "ready");
+  assert.equal(paid.order.deliveryEmail.status, "sent");
+  assert.equal(paid.order.deliveryEmail.directLinkCount, 1);
+  assert.equal(emailClient.sent.length, 1);
+  assert.equal(emailClient.sent[0].to, "buyer@example.com");
+  assert.match(emailClient.sent[0].subject, /downloads are ready/);
+  assert.match(emailClient.sent[0].text, /https:\/\/photos-by-elie\.com\/order\.html\?id=PBE-20260507-/);
+  assert.match(emailClient.sent[0].text, /email=buyer%40example\.com/);
+  assert.match(emailClient.sent[0].text, /https:\/\/worker\.test\/download\/dl_test_full/);
+
+  const retryResponse = await worker.fetch(jsonRequest("https://worker.test/mock-stripe/pay", {
+    checkoutSessionId: checkout.checkout.sessionId,
+  }));
+  assert.equal(retryResponse.status, 200);
+  assert.equal(emailClient.sent.length, 1);
+});
+
+test("delivery email failure does not block paid delivery", async () => {
+  const catalog = loadCatalog();
+  const randomUUID = deterministicIds();
+  const now = () => new Date("2026-05-07T12:00:00.000Z");
+  const stripe = createMockStripeClient({ randomUUID });
+  const emailClient = createFakeEmailClient({ fail: true });
+  const worker = createPhotosByElieWorker({
+    catalog,
+    store: createMemoryStore(),
+    stripe,
+    now,
+    randomUUID,
+    delivery: createPerFileTestDelivery(now),
+    ordersUrl: "https://photos-by-elie.com/order.html",
+    downloadBaseUrl: "https://worker.test",
+    emailClient,
+  });
+  const photoId = firstDeliverablePhotoId(catalog);
+
+  const checkoutResponse = await worker.fetch(jsonRequest("https://worker.test/checkout/guest", {
+    email: "buyer@example.com",
+    items: [{ photoId, options: [{ id: "full" }] }],
+  }));
+  assert.equal(checkoutResponse.status, 201);
+  const checkout = await checkoutResponse.json();
+
+  const payResponse = await worker.fetch(jsonRequest("https://worker.test/mock-stripe/pay", {
+    checkoutSessionId: checkout.checkout.sessionId,
+  }));
+  assert.equal(payResponse.status, 200);
+  const paid = await payResponse.json();
+  assert.equal(paid.order.status, "ready");
+  assert.equal(paid.order.delivery.files.length, 1);
+  assert.equal(paid.order.deliveryEmail.status, "failed");
+  assert.equal(paid.order.deliveryEmail.error.code, "fake_email_failed");
+  assert.equal(emailClient.sent.length, 1);
 });
 
 test("webhook rejects paid sessions whose amount does not match the order", async () => {

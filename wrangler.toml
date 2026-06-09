@@ -10,6 +10,12 @@ CHECKOUT_SESSION_TTL_DAYS = "90"
 DOWNLOAD_TOKEN_TTL_DAYS = "30"
 DOWNLOAD_TOKEN_MAX_DOWNLOADS = "100"
 STRIPE_STATEMENT_DESCRIPTOR_SUFFIX = "DOWNLOAD"
+WORKER_PUBLIC_URL = "https://photosbyelie-checkout-mock.ec92009.workers.dev"
+ORDER_EMAIL_FROM = "Photos By Elie <orders@photos-by-elie.com>"
+ORDER_EMAIL_REPLY_TO = "orders@photos-by-elie.com"
+ORDER_EMAIL_INCLUDE_DIRECT_DOWNLOAD_LINKS = "true"
+# Secret required to enable buyer delivery emails:
+#   npx wrangler secret put RESEND_API_KEY
 
 [[kv_namespaces]]
 binding = "ORDERS_KV"

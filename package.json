@@ -5,7 +5,7 @@
   "description": "Static Photos By Elie gallery with Stripe-capable Worker fulfillment.",
   "type": "commonjs",
   "scripts": {
-    "test": "node --test worker/checkout-worker.test.mjs scripts/generate_title_keyword_review_queue.test.mjs",
+    "test": "node --test worker/checkout-worker.test.mjs worker/resend-email-client.test.mjs scripts/generate_title_keyword_review_queue.test.mjs",
     "validate": "node scripts/validate_publish.js --external-media",
     "campaigns:index": "node scripts/build_campaign_index.mjs",
     "social:packages": "node scripts/generate_social_post_packages.mjs",

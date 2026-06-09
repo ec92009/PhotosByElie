@@ -4,6 +4,7 @@ import { createMockStripeClient } from "./mock-stripe.mjs";
 import { createRealEstateDeliverables } from "./real-estate-deliverables.mjs";
 import { createRealEstateOriginals } from "./real-estate-originals.mjs";
 import { createR2ZipDelivery } from "./r2-zip-delivery.mjs";
+import { createResendEmailClient } from "./resend-email-client.mjs";
 import { createStripeClient } from "./stripe-client.mjs";
 import { collections, frameOptions, resolutions, videoPriceTiers } from "./photos-catalog.generated.mjs";
 
@@ -20,6 +21,12 @@ const positiveInt = (value, fallback) => {
 };
 
 const daysToSeconds = (value, fallbackDays) => positiveInt(value, fallbackDays) * 24 * 60 * 60;
+
+const enabledFlag = (value, defaultValue = true) => {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (!normalized) return defaultValue;
+  return !["0", "false", "no", "off"].includes(normalized);
+};
 
 const cleanRealEstateGallery = (gallery = {}) => {
   const key = String(gallery.key || "").trim();
@@ -165,6 +172,7 @@ export default {
     }
 
     const publicSiteUrl = env.PUBLIC_SITE_URL || "https://photos-by-elie.com";
+    const workerPublicUrl = env.WORKER_PUBLIC_URL || url.origin;
     const downloadTokenTtlSeconds = daysToSeconds(env.DOWNLOAD_TOKEN_TTL_DAYS, 30);
     const downloadTokenMaxDownloads = positiveInt(env.DOWNLOAD_TOKEN_MAX_DOWNLOADS, 100);
     const realStripeEnabled = Boolean(env.STRIPE_SECRET_KEY);
@@ -187,6 +195,13 @@ export default {
     });
     const privateBucket = requiredBinding(env, "PRIVATE_MEDIA");
     const realEstateGalleries = realEstateGalleriesFor(env);
+    const emailClient = env.RESEND_API_KEY && env.ORDER_EMAIL_FROM
+      ? createResendEmailClient({
+        apiKey: env.RESEND_API_KEY,
+        from: env.ORDER_EMAIL_FROM,
+        replyTo: env.ORDER_EMAIL_REPLY_TO || "",
+      })
+      : null;
     const worker = createPhotosByElieWorker({
       catalog,
       store,
@@ -205,6 +220,9 @@ export default {
         galleries: realEstateGalleries,
       }),
       ordersUrl: `${publicSiteUrl}/order.html`,
+      downloadBaseUrl: workerPublicUrl,
+      emailClient,
+      includeDirectDownloadLinks: enabledFlag(env.ORDER_EMAIL_INCLUDE_DIRECT_DOWNLOAD_LINKS, true),
       successUrl: `${publicSiteUrl}/order.html?id={ORDER_ID}&session_id={CHECKOUT_SESSION_ID}&checkout=success`,
       cancelUrl: `${publicSiteUrl}/basket.html?checkout=cancelled`,
       mockStripeEnabled: !realStripeEnabled && env.MOCK_STRIPE_ENABLED !== "false",

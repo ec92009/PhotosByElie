@@ -78,6 +78,11 @@ Real Stripe is selected automatically when `STRIPE_SECRET_KEY` is present. Requi
 - `DOWNLOAD_TOKEN_TTL_DAYS`: optional buyer download-token availability window; default is 30.
 - `DOWNLOAD_TOKEN_MAX_DOWNLOADS`: optional successful-download limit per token; default is 100.
 - `STRIPE_STATEMENT_DESCRIPTOR_SUFFIX`: optional card statement descriptor suffix for Checkout PaymentIntents; default is `DOWNLOAD`, producing `PHOTOSELIE* DOWNLOAD` with the current shortened descriptor prefix. The Stripe Dashboard still owns the business descriptor prefix, logo, color, support details, and public receipt branding.
+- `WORKER_PUBLIC_URL`: absolute public Worker base used when composing direct download links in buyer delivery emails.
+- `ORDER_EMAIL_FROM`: sender used for buyer delivery emails, for example `Photos By Elie <orders@photos-by-elie.com>`.
+- `ORDER_EMAIL_REPLY_TO`: optional reply-to mailbox for buyer delivery emails.
+- `ORDER_EMAIL_INCLUDE_DIRECT_DOWNLOAD_LINKS`: optional flag; defaults to direct token links in the email when enabled.
+- `RESEND_API_KEY`: Cloudflare secret enabling Resend delivery emails after paid fulfillment. Install with `npx wrangler secret put RESEND_API_KEY` after the sending domain is authenticated in Resend.
 
 Without `STRIPE_SECRET_KEY`, the Worker stays in mock mode and `/mock-stripe/pay` remains available. With real Stripe enabled, `/mock-stripe/pay` is disabled.
 

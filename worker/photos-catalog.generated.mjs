@@ -417608,11 +417608,11 @@ export const resolutions = [
     "detail": "Original source file at native resolution",
     "deliveryAssetType": "full",
     "prices": {
-      "original": 3,
-      "ai": 0.6
+      "original": 1.02,
+      "ai": 0.42
     },
     "sortOrder": 1,
-    "price": 3
+    "price": 1.02
   },
   {
     "id": "jpg-6mp",
@@ -417622,11 +417622,11 @@ export const resolutions = [
     "minMegapixels": 6,
     "deliveryAssetType": "jpeg_6mp",
     "prices": {
-      "original": 2,
-      "ai": 0.4
+      "original": 0.77,
+      "ai": 0.32
     },
     "sortOrder": 2,
-    "price": 2
+    "price": 0.77
   },
   {
     "id": "jpg-3mp",
@@ -417636,11 +417636,11 @@ export const resolutions = [
     "minMegapixels": 3,
     "deliveryAssetType": "jpeg_3mp",
     "prices": {
-      "original": 1,
-      "ai": 0.2
+      "original": 0.52,
+      "ai": 0.22
     },
     "sortOrder": 3,
-    "price": 1
+    "price": 0.52
   },
   {
     "id": "jpg-1mp",
@@ -417650,11 +417650,11 @@ export const resolutions = [
     "minMegapixels": 1,
     "deliveryAssetType": "jpeg_1mp",
     "prices": {
-      "original": 0.5,
-      "ai": 0.1
+      "original": 0.27,
+      "ai": 0.12
     },
     "sortOrder": 4,
-    "price": 0.5
+    "price": 0.27
   },
   {
     "id": "print-12x16",
@@ -417666,7 +417666,7 @@ export const resolutions = [
     },
     "detail": "Wall print; manual crop review before POD order",
     "minMegapixels": 8,
-    "price": 48,
+    "price": 48.02,
     "sortOrder": 5
   },
   {
@@ -417679,7 +417679,7 @@ export const resolutions = [
     },
     "detail": "Large wall print; manual crop review before POD order",
     "minMegapixels": 12,
-    "price": 68,
+    "price": 68.02,
     "sortOrder": 6
   },
   {
@@ -417692,7 +417692,7 @@ export const resolutions = [
     },
     "detail": "Statement wall print; manual crop review before POD order",
     "minMegapixels": 16,
-    "price": 82,
+    "price": 82.02,
     "sortOrder": 7
   }
 ];
@@ -417706,33 +417706,33 @@ export const frameOptions = [
   {
     "id": "white",
     "label": "Plain white frame",
-    "price": 70,
+    "price": 0,
     "prices": {
-      "print-12x16": 70,
-      "print-16x20": 90,
-      "print-18x24": 105
+      "print-12x16": 70.02,
+      "print-16x20": 90.02,
+      "print-18x24": 105.02
     },
     "sortOrder": 2
   },
   {
     "id": "black",
     "label": "Plain black frame",
-    "price": 70,
+    "price": 0,
     "prices": {
-      "print-12x16": 70,
-      "print-16x20": 90,
-      "print-18x24": 105
+      "print-12x16": 70.02,
+      "print-16x20": 90.02,
+      "print-18x24": 105.02
     },
     "sortOrder": 3
   },
   {
     "id": "natural",
     "label": "Natural oak frame",
-    "price": 70,
+    "price": 0,
     "prices": {
-      "print-12x16": 70,
-      "print-16x20": 90,
-      "print-18x24": 105
+      "print-12x16": 70.02,
+      "print-16x20": 90.02,
+      "print-18x24": 105.02
     },
     "sortOrder": 4
   }
@@ -417740,31 +417740,31 @@ export const frameOptions = [
 export const videoPriceTiers = {
   "video_short": {
     "label": "Video under 10s",
-    "price": 1,
+    "price": 0.27,
     "minDurationSeconds": 0,
     "maxDurationSeconds": 10
   },
   "video_medium": {
     "label": "Video 10-30s",
-    "price": 2,
+    "price": 0.52,
     "minDurationSeconds": 10,
     "maxDurationSeconds": 30
   },
   "video_long": {
     "label": "Video 30-60s",
-    "price": 3,
+    "price": 0.77,
     "minDurationSeconds": 30,
     "maxDurationSeconds": 60
   },
   "video_extended": {
     "label": "Video 1-3 min",
-    "price": 4,
+    "price": 1.02,
     "minDurationSeconds": 60,
     "maxDurationSeconds": 180
   },
   "video_premium": {
     "label": "Video 3+ min",
-    "price": 5,
+    "price": 1.27,
     "minDurationSeconds": 180,
     "maxDurationSeconds": null
   }

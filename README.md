@@ -6,12 +6,12 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v101.4`
+- Current visible version: `v101.5`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
 
-- `index.html`: one-page photo hub with France, USA, Spain, Mexico, AI, Italy, Portugal, Slovakia, and Featured social/Pinterest entries
+- `index.html`: one-page photo hub with France, USA, Spain, Mexico, AI, Italy, Portugal, Slovakia, Panoramas, and Featured social/Pinterest entries
 - `campaign.html`: first-party social/Pinterest mini-collection landing page that keeps visitors on Photos By Elie instead of a single-photo dead end
 - `gallery.html`: shared gallery shell that reads the active collection from `?gallery=<slug>`
 - `owner-review.html`: shared localhost-only Owner review shell for Unknown classification, Waste Basket review, and Title/Keywords review

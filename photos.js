@@ -102,6 +102,7 @@ const translations = {
     'collection.italy': 'Italy',
     'collection.portugal': 'Portugal',
     'collection.slovakia': 'Slovakia',
+    'collection.panoramas': 'Panoramas',
     'collection.video-trial': 'Cordoba Video Trial',
     'common.back_to_collections': 'Back to collections',
     'common.back_to_gallery': 'Back to gallery',
@@ -111,6 +112,8 @@ const translations = {
     'common.refresh': 'Refresh',
     'common.photo': 'Photo',
     'common.photo_detail': 'Photo detail',
+    'preview.full_height': 'Full height',
+    'preview.fit_width': 'Fit width',
     'gallery.grid': 'Grid',
     'gallery.fit': 'Fit',
     'gallery.fill': 'Fill',
@@ -584,6 +587,7 @@ const translations = {
     'collection.italy': 'Italie',
     'collection.portugal': 'Portugal',
     'collection.slovakia': 'Slovaquie',
+    'collection.panoramas': 'Panoramas',
     'collection.video-trial': 'Essai video Cordoue',
     'common.back_to_collections': 'Retour aux collections',
     'common.back_to_gallery': 'Retour a la galerie',
@@ -593,6 +597,8 @@ const translations = {
     'common.refresh': 'Actualiser',
     'common.photo': 'Photo',
     'common.photo_detail': 'Detail de la photo',
+    'preview.full_height': 'Pleine hauteur',
+    'preview.fit_width': 'Ajuster largeur',
     'gallery.grid': 'Grille',
     'gallery.fit': 'Ajuster',
     'gallery.fill': 'Remplir',
@@ -1066,6 +1072,7 @@ const translations = {
     'collection.italy': 'Italia',
     'collection.portugal': 'Portugal',
     'collection.slovakia': 'Eslovaquia',
+    'collection.panoramas': 'Panoramas',
     'collection.video-trial': 'Prueba de video Cordoba',
     'common.back_to_collections': 'Volver a colecciones',
     'common.back_to_gallery': 'Volver a la galeria',
@@ -1075,6 +1082,8 @@ const translations = {
     'common.refresh': 'Actualizar',
     'common.photo': 'Foto',
     'common.photo_detail': 'Detalle de foto',
+    'preview.full_height': 'Altura maxima',
+    'preview.fit_width': 'Ajustar ancho',
     'gallery.grid': 'Cuadricula',
     'gallery.fit': 'Ajustar',
     'gallery.fill': 'Rellenar',
@@ -2107,6 +2116,7 @@ window.photosByElieVideoDurationLabel = (photo) => (
     if (!targetPhoto?.id) return false;
     const owner = Boolean(options.owner);
     const isVideo = window.photosByElieIsVideo?.(targetPhoto) === true;
+    const isPanoramaPreview = !isVideo && Boolean(window.photosByEliePhotoIsPanorama?.(targetPhoto));
     const title = String(targetPhoto.title || targetPhoto.id || "Preview");
     const sourceLabel = String(targetPhoto?.sourceFiles?.[0]?.path || targetPhoto?.sourceFiles?.[0]?.label || targetPhoto.id || "unknown source");
     const escapePreviewHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
@@ -2120,7 +2130,7 @@ window.photosByElieVideoDurationLabel = (photo) => (
     existing?.remove();
 
     const modal = document.createElement("div");
-    modal.className = `detail-fullscreen-preview finder-media-preview has-info-panel${owner ? " is-owner-preview" : ""}`;
+    modal.className = `detail-fullscreen-preview finder-media-preview has-info-panel${owner ? " is-owner-preview" : ""}${isPanoramaPreview ? " is-panorama-preview" : ""}`;
     modal.tabIndex = -1;
     modal.setAttribute("role", "dialog");
     modal.setAttribute("aria-modal", "true");
@@ -2134,6 +2144,7 @@ window.photosByElieVideoDurationLabel = (photo) => (
         <button class="finder-preview-nav is-prev" type="button" data-finder-preview-prev aria-label="Previous preview">‹</button>
         <button class="finder-preview-nav is-next" type="button" data-finder-preview-next aria-label="Next preview">›</button>
       ` : ""}
+      ${isPanoramaPreview ? `<button class="finder-preview-pano-toggle" type="button" data-finder-preview-pano-toggle aria-pressed="false">${translate("preview.full_height")}</button>` : ""}
       <section class="finder-preview-info-panel" data-finder-preview-info>
         <p class="eyebrow">${owner ? "Owner source preview" : "Preview"}</p>
         <h2>${escapePreviewHtml(title)}</h2>
@@ -2141,6 +2152,7 @@ window.photosByElieVideoDurationLabel = (photo) => (
     `;
     const stage = modal.querySelector("[data-finder-preview-stage]");
     const infoPanel = modal.querySelector("[data-finder-preview-info]");
+    const panoToggle = modal.querySelector("[data-finder-preview-pano-toggle]");
     const contextUrl = window.photosByElieMediaUrl(targetPhoto, "detail") || window.photosByElieMediaUrl(targetPhoto, "gallery") || "";
     const contextPoster = isVideo ? (window.photosByElieVideoPosterUrl?.(targetPhoto) || window.photosByElieMediaUrl(targetPhoto, "gallery") || "") : "";
     document.body.classList.add("detail-fullscreen-active");
@@ -2163,6 +2175,19 @@ window.photosByElieVideoDurationLabel = (photo) => (
         index: nextIndex,
       });
       return true;
+    };
+    const centerPanoStage = () => {
+      if (!stage || !modal.classList.contains("is-pano-scroll")) return;
+      stage.scrollLeft = Math.max(0, (stage.scrollWidth - stage.clientWidth) / 2);
+    };
+    const setPanoPreviewMode = (scrollMode) => {
+      if (!panoToggle) return;
+      modal.classList.toggle("is-pano-scroll", scrollMode);
+      panoToggle.textContent = translate(scrollMode ? "preview.fit_width" : "preview.full_height");
+      panoToggle.setAttribute("aria-label", translate(scrollMode ? "preview.fit_width" : "preview.full_height"));
+      panoToggle.setAttribute("aria-pressed", String(scrollMode));
+      window.requestAnimationFrame(centerPanoStage);
+      window.setTimeout(centerPanoStage, 80);
     };
     const metadataRows = (extraRows = []) => [
       ["Media id", targetPhoto.id],
@@ -2204,8 +2229,12 @@ window.photosByElieVideoDurationLabel = (photo) => (
       const image = new Image();
       image.alt = title;
       image.decoding = "async";
-      image.addEventListener("click", close);
+      image.addEventListener("click", () => {
+        if (isPanoramaPreview && modal.classList.contains("is-pano-scroll")) return;
+        close();
+      });
       image.addEventListener("touchend", (event) => {
+        if (isPanoramaPreview && modal.classList.contains("is-pano-scroll")) return;
         event.preventDefault();
         close();
       }, { passive: false });
@@ -2220,6 +2249,7 @@ window.photosByElieVideoDurationLabel = (photo) => (
           showEmptyPreview("Preview unavailable");
         }
       }, { once: true });
+      if (isPanoramaPreview) image.addEventListener("load", centerPanoStage, { once: true });
       stage.replaceChildren(image);
       stage.classList.toggle("is-context-preview", Boolean(context));
       image.src = src;
@@ -2294,6 +2324,11 @@ window.photosByElieVideoDurationLabel = (photo) => (
       event.stopPropagation();
       openAdjacent(1);
     });
+    panoToggle?.addEventListener("click", (event) => {
+      event.stopPropagation();
+      setPanoPreviewMode(!modal.classList.contains("is-pano-scroll"));
+    });
+    setPanoPreviewMode(false);
     window.addEventListener("keydown", onKeydown, true);
     modal.focus({ preventScroll: true });
 

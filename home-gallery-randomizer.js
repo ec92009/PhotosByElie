@@ -1,4 +1,4 @@
-const homeCollections = [
+const baseHomeCollections = [
   "france",
   "usa",
   "spain",
@@ -8,6 +8,8 @@ const homeCollections = [
   "portugal",
   "slovakia",
 ];
+const panoramaCollectionKey = "panoramas";
+const homeCollections = [...baseHomeCollections, panoramaCollectionKey];
 const homeData = () => window.photosByElieData || window.photosByElieHomeData || {};
 
 const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({
@@ -19,7 +21,8 @@ const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (char) => 
 }[char]));
 
 const galleryHrefForKey = (key) => {
-  const href = `./gallery.html?gallery=${encodeURIComponent(key)}&fit=fill&columns=3`;
+  const fitMode = key === panoramaCollectionKey ? "fit" : "fill";
+  const href = `./gallery.html?gallery=${encodeURIComponent(key)}&fit=${fitMode}&columns=3`;
   return window.photosByElieVersionedHref?.(href) || href;
 };
 const collectionTitleForKey = (key, collection) => (
@@ -36,6 +39,27 @@ const isBlockedPhoto = (photo) => {
     || window.photosByElieHiddenActions?.has?.(id)
   );
 };
+
+const panoramaCollectionForData = (data) => {
+  const seen = new Set();
+  const photos = baseHomeCollections
+    .flatMap((key) => data[key]?.photos || [])
+    .filter((photo) => {
+      if (!photo?.id || seen.has(photo.id) || window.photosByElieIsVideo?.(photo)) return false;
+      if (!window.photosByEliePhotoIsPanorama?.(photo)) return false;
+      seen.add(photo.id);
+      return true;
+    });
+  return {
+    title: "Panoramas",
+    accent: "panoramas-gallery",
+    photos,
+  };
+};
+
+const collectionForKey = (data, key) => (
+  key === panoramaCollectionKey ? panoramaCollectionForData(data) : data[key]
+);
 
 const randomPhotoForCollection = (collection) => {
   const publicPhotos = window.photosByElieFilterPublicHidden?.(collection?.photos || []) || (collection?.photos || []);
@@ -70,7 +94,7 @@ const buildHeroStack = () => {
   if (root.dataset.homeStackBuilt === "true" && root.children.length) return;
   const data = homeData();
   const markup = homeCollections.map((key) => {
-    const collection = data[key];
+    const collection = collectionForKey(data, key);
     if (!collection) return "";
     const photo = randomPhotoForCollection(collection);
     const image = representativeImageForPhoto(photo);
@@ -91,7 +115,7 @@ const applyCarouselPhotos = () => {
   document.querySelectorAll("[data-gallery-key]").forEach((card) => {
     const key = card.dataset.galleryKey;
     const art = card.querySelector(".photo-art");
-    const collection = data[key];
+    const collection = collectionForKey(data, key);
     const photo = randomPhotoForCollection(collection);
     applyRepresentativePhoto(art, photo);
   });

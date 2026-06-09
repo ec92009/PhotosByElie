@@ -698,8 +698,14 @@ renderMetadataRows();
 const preview = document.querySelector("[data-photo-preview]");
 const detailLayout = document.querySelector(".detail-layout");
 const isVideo = window.photosByElieIsVideo?.(photo) === true;
+const isPanorama = !isVideo && Boolean(window.photosByEliePhotoIsPanorama?.(photo));
 const syncDetailPreviewSize = () => {
   if (!detailLayout || !preview) return;
+  if (preview.classList.contains("is-panorama")) {
+    preview.style.setProperty("--detail-landscape-width", "100%");
+    preview.style.removeProperty("--detail-portrait-width");
+    return;
+  }
   const ratio = Number(preview.style.getPropertyValue("--detail-ratio")) || 1.5;
   const maxWidth = detailLayout.clientWidth;
   const previewTop = Math.max(0, preview.getBoundingClientRect().top);
@@ -721,10 +727,13 @@ const applyPreviewAspectRatio = (width, height) => {
   preview.style.setProperty("--detail-ratio", width / height);
   detailLayout?.classList.toggle("is-landscape", width >= height);
   detailLayout?.classList.toggle("is-portrait", width < height);
+  detailLayout?.classList.toggle("is-panorama", isPanorama);
   syncDetailPreviewSize();
   window.requestAnimationFrame(syncDetailPreviewSize);
 };
 preview.classList.add(collection.accent, photo.className);
+preview.classList.toggle("is-panorama", isPanorama);
+detailLayout?.classList.toggle("is-panorama", isPanorama);
 const detailImageSrc = window.photosByElieMediaUrl?.(photo, "detail") || "";
 if (detailImageSrc && isVideo) {
   preview.classList.add("has-image", "has-video");
@@ -755,6 +764,28 @@ if (detailImageSrc && isVideo) {
   if (img.complete) setPreviewAspectRatio();
   preview.prepend(img);
 }
+if (isPanorama) {
+  const panoToggle = document.createElement("button");
+  panoToggle.className = "pano-scroll-toggle";
+  panoToggle.type = "button";
+  const setPanoMode = (scrollMode) => {
+    preview.classList.toggle("is-pano-scroll", scrollMode);
+    panoToggle.textContent = t(scrollMode ? "preview.fit_width" : "preview.full_height");
+    panoToggle.setAttribute("aria-label", t(scrollMode ? "preview.fit_width" : "preview.full_height"));
+    panoToggle.setAttribute("aria-pressed", String(scrollMode));
+    const syncScroll = () => {
+      preview.scrollLeft = scrollMode ? Math.max(0, (preview.scrollWidth - preview.clientWidth) / 2) : 0;
+    };
+    window.requestAnimationFrame(syncScroll);
+    window.setTimeout(syncScroll, 80);
+  };
+  panoToggle.addEventListener("click", (event) => {
+    event.stopPropagation();
+    setPanoMode(!preview.classList.contains("is-pano-scroll"));
+  });
+  setPanoMode(false);
+  preview.append(panoToggle);
+}
 window.addEventListener("resize", syncDetailPreviewSize);
 const previewTitleTarget = preview.querySelector("[data-photo-preview-title]");
 previewTitleTarget?.removeAttribute("data-i18n");
@@ -780,11 +811,13 @@ const openFullscreenPreview = () => {
 
 preview.addEventListener("dblclick", (event) => {
   if (event.target instanceof Element && event.target.closest(".like-toggle")) return;
+  if (event.target instanceof Element && event.target.closest(".pano-scroll-toggle")) return;
   openFullscreenPreview();
   event.preventDefault();
 });
 preview.addEventListener("contextmenu", (event) => {
   if (event.target instanceof Element && event.target.closest(".like-toggle")) return;
+  if (event.target instanceof Element && event.target.closest(".pano-scroll-toggle")) return;
   window.photosByElieShowMediaContextMenu?.(photo, event, {
     owner: detailPreviewUsesOwnerSource,
     previewItems: detailPreviewItems,

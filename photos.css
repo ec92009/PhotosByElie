@@ -120,6 +120,7 @@
 .photo-print.ai{--photo-scene:radial-gradient(circle at 26% 28%,#f4f4f4 0 7%,transparent 8%),radial-gradient(circle at 78% 20%,#b9c7d8 0 12%,transparent 13%),linear-gradient(135deg,#191919 0 22%,#724e83 22% 42%,#2e6e70 42% 64%,#e0d8bd 64% 100%);left:40%;top:29%;transform:rotate(-8deg);z-index:6}
 .photo-print.portugal{--photo-scene:linear-gradient(125deg,#224c42 0 28%,#efe3c8 28% 48%,#a33f34 48% 66%,#d1a15b 66% 100%);left:67%;top:30%;transform:rotate(10deg);z-index:5}
 .photo-print.slovakia{--photo-scene:linear-gradient(125deg,#2f4768 0 28%,#f0efe8 28% 46%,#b23d3c 46% 64%,#d0b36b 64% 100%);left:22%;top:60%;transform:rotate(-5deg);z-index:4}
+.photo-print.panoramas{--photo-scene:linear-gradient(90deg,#192734 0 18%,#d9d1bd 18% 32%,#6f8f9a 32% 52%,#c58b54 52% 68%,#243a4c 68% 100%);left:58%;top:62%;transform:rotate(5deg);z-index:3}
 .photo-print.unknown{--photo-scene:linear-gradient(125deg,#353535 0 26%,#5b6672 26% 48%,#d6d0bf 48% 72%,#8d8f93 72% 100%);left:56%;top:58%;transform:rotate(7deg);z-index:3}
 .photo-carousel-panel{
   background:var(--surface);
@@ -338,6 +339,7 @@ html[data-theme="light"] .photo-art.has-photo::after{
 .photo-art.italy{--photo-scene:linear-gradient(125deg,#2f6c51 0 24%,#f4ecdd 24% 48%,#b23b32 48% 66%,#d4b46b 66% 100%)}
 .photo-art.portugal{--photo-scene:linear-gradient(125deg,#224c42 0 28%,#efe3c8 28% 48%,#a33f34 48% 66%,#d1a15b 66% 100%)}
 .photo-art.slovakia{--photo-scene:linear-gradient(125deg,#2f4768 0 28%,#f0efe8 28% 46%,#b23d3c 46% 64%,#d0b36b 64% 100%)}
+.photo-art.panoramas{--photo-scene:linear-gradient(90deg,#192734 0 18%,#d9d1bd 18% 32%,#6f8f9a 32% 52%,#c58b54 52% 68%,#243a4c 68% 100%)}
 .photo-art.unknown{--photo-scene:linear-gradient(125deg,#353535 0 26%,#5b6672 26% 48%,#d6d0bf 48% 72%,#8d8f93 72% 100%)}
 .photo-copy{
   align-self:center;
@@ -5236,6 +5238,66 @@ html.is-local-owner .mock-photo.is-selected::before{
   object-fit:contain;
   background:var(--bg);
 }
+.detail-preview.is-panorama{
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  height:clamp(240px,50vh,640px);
+  aspect-ratio:auto;
+  overflow-x:auto;
+  overflow-y:hidden;
+  overscroll-behavior-x:contain;
+  scrollbar-gutter:stable;
+  scroll-snap-type:x proximity;
+}
+.detail-preview.is-panorama [data-photo-preview-title]{
+  display:none;
+}
+.detail-preview.is-panorama.has-image img{
+  flex:0 0 100%;
+  width:100%;
+  min-width:100%;
+  height:100%;
+  max-height:100%;
+  object-fit:contain;
+  scroll-snap-align:center;
+}
+.detail-preview.is-panorama.is-pano-scroll{
+  cursor:ew-resize;
+}
+.detail-preview.is-panorama.is-pano-scroll.has-image img{
+  flex:0 0 auto;
+  width:auto;
+  min-width:0;
+  max-width:none;
+  height:100%;
+}
+.pano-scroll-toggle{
+  position:absolute;
+  left:14px;
+  bottom:14px;
+  z-index:6;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:36px;
+  border:1px solid color-mix(in srgb,var(--line) 74%,transparent);
+  border-radius:999px;
+  background:color-mix(in srgb,var(--bg) 84%,transparent);
+  color:var(--text);
+  padding:7px 12px;
+  font:inherit;
+  font-size:.78rem;
+  font-weight:850;
+  letter-spacing:.02em;
+  box-shadow:0 10px 24px rgba(0,0,0,.18);
+  backdrop-filter:blur(10px);
+  cursor:pointer;
+}
+.pano-scroll-toggle:focus-visible{
+  outline:3px solid color-mix(in srgb,var(--text) 48%,transparent);
+  outline-offset:3px;
+}
 .detail-preview.has-video video{
   display:block;
   width:100%;
@@ -5283,6 +5345,20 @@ body.detail-fullscreen-active{
   min-width:0;
   min-height:min(80vh,520px);
   cursor:zoom-out;
+}
+.detail-fullscreen-preview.is-panorama-preview .finder-preview-stage{
+  width:100%;
+  height:calc(100vh - clamp(16px,4vw,56px));
+  min-height:calc(100vh - clamp(16px,4vw,56px));
+  overflow-x:auto;
+  overflow-y:hidden;
+  overscroll-behavior-x:contain;
+  scrollbar-gutter:stable;
+  scroll-snap-type:x proximity;
+}
+.detail-fullscreen-preview.is-panorama-preview.is-pano-scroll .finder-preview-stage{
+  place-items:center start;
+  cursor:ew-resize;
 }
 .detail-fullscreen-preview.is-owner-preview .finder-preview-stage{
   min-height:calc(100vh - 16px);
@@ -5341,6 +5417,25 @@ body.detail-fullscreen-active{
   max-width:100%;
   max-height:80vh;
 }
+.detail-fullscreen-preview.is-panorama-preview img{
+  width:100%;
+  max-width:100%;
+  height:100%;
+  max-height:calc(100vh - 56px);
+  object-fit:contain;
+  scroll-snap-align:center;
+}
+.detail-fullscreen-preview.is-panorama-preview.is-pano-scroll img{
+  width:auto;
+  min-width:0;
+  max-width:none;
+  height:calc(100vh - 16px);
+  max-height:calc(100vh - 16px);
+}
+.detail-fullscreen-preview.is-panorama-preview.has-info-panel:not(.is-owner-preview).is-pano-scroll img{
+  height:calc(100vh - clamp(16px,4vw,56px));
+  max-height:calc(100vh - clamp(16px,4vw,56px));
+}
 .detail-fullscreen-preview.is-owner-preview img,
 .detail-fullscreen-preview.is-owner-preview video{
   max-width:100%;
@@ -5378,6 +5473,30 @@ body.detail-fullscreen-active{
 }
 .detail-fullscreen-preview.is-owner-preview .finder-preview-nav.is-next{
   right:calc(max(260px,20vw) + 22px);
+}
+.finder-preview-pano-toggle{
+  position:absolute;
+  left:clamp(12px,2vw,28px);
+  bottom:clamp(12px,2vw,28px);
+  z-index:6;
+  min-height:38px;
+  border:1px solid rgba(255,255,255,.34);
+  border-radius:999px;
+  background:rgba(0,0,0,.64);
+  color:#fff;
+  padding:8px 13px;
+  font:inherit;
+  font-size:.78rem;
+  font-weight:850;
+  letter-spacing:.02em;
+  box-shadow:0 12px 28px rgba(0,0,0,.34);
+  cursor:pointer;
+}
+.finder-preview-pano-toggle:hover,
+.finder-preview-pano-toggle:focus-visible{
+  border-color:rgba(255,255,255,.72);
+  background:rgba(0,0,0,.78);
+  outline:0;
 }
 .detail-fullscreen-preview::after{
   content:"";
@@ -5470,10 +5589,19 @@ body.detail-fullscreen-active{
   .detail-fullscreen-preview.is-owner-preview .finder-preview-stage{
     min-height:min(72vh,calc(100vh - 16px));
   }
+  .detail-fullscreen-preview.is-panorama-preview .finder-preview-stage{
+    height:72vh;
+    min-height:72vh;
+  }
   .detail-fullscreen-preview.has-info-panel img,
   .detail-fullscreen-preview.has-info-panel video,
   .detail-fullscreen-preview.is-owner-preview img,
   .detail-fullscreen-preview.is-owner-preview video{
+    max-height:72vh;
+  }
+  .detail-fullscreen-preview.is-panorama-preview.is-pano-scroll img,
+  .detail-fullscreen-preview.is-panorama-preview.has-info-panel:not(.is-owner-preview).is-pano-scroll img{
+    height:72vh;
     max-height:72vh;
   }
   .finder-preview-info-panel,

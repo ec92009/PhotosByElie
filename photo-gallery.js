@@ -3,20 +3,37 @@ await window.photosByElieCatalogReady;
 const galleryHrefForKey = (key) => `./gallery.html?gallery=${encodeURIComponent(key)}`;
 const selectionGalleryKey = "selection";
 const selectionGalleryAliases = new Set([selectionGalleryKey, "make-selection", "make-your-selection"]);
-const selectionGalleryCollections = ["france", "usa", "spain", "mexico", "ai", "italy", "portugal", "slovakia"];
+const panoramaGalleryKey = "panoramas";
+const panoramaGalleryAliases = new Set([panoramaGalleryKey, "pano", "panos", "panorama"]);
+const baseGalleryCollections = ["france", "usa", "spain", "mexico", "ai", "italy", "portugal", "slovakia"];
+const selectionGalleryCollections = baseGalleryCollections;
 const isSelectionGalleryKey = (key) => selectionGalleryAliases.has(key);
+const isPanoramaGalleryKey = (key) => panoramaGalleryAliases.has(key);
 const galleryKeyFromPage = () => {
   const params = new URLSearchParams(window.location.search);
   const requested = params.get("gallery") || document.body.dataset.gallery || "";
   const normalized = requested.toLowerCase().replace(/[^a-z0-9_-]/g, "");
   if (isSelectionGalleryKey(normalized)) return selectionGalleryKey;
+  if (isPanoramaGalleryKey(normalized)) return panoramaGalleryKey;
   if (normalized && window.photosByElieData?.[normalized]) return normalized;
   const pageSlug = (window.location.pathname.split("/").pop() || "").replace(/\.html$/i, "");
+  if (isPanoramaGalleryKey(pageSlug)) return panoramaGalleryKey;
   if (pageSlug && window.photosByElieData?.[pageSlug]) return pageSlug;
   return "france";
 };
 const selectionPhotos = () => selectionGalleryCollections
   .flatMap((key) => window.photosByElieData?.[key]?.photos || []);
+const panoramaPhotos = () => {
+  const seen = new Set();
+  return baseGalleryCollections
+    .flatMap((key) => window.photosByElieData?.[key]?.photos || [])
+    .filter((photo) => {
+      if (!photo?.id || seen.has(photo.id) || window.photosByElieIsVideo?.(photo)) return false;
+      if (!window.photosByEliePhotoIsPanorama?.(photo)) return false;
+      seen.add(photo.id);
+      return true;
+    });
+};
 const makeSelectionGallery = () => ({
   number: "",
   title: "Search",
@@ -24,10 +41,23 @@ const makeSelectionGallery = () => ({
   accent: "selection-gallery",
   photos: selectionPhotos(),
 });
+const makePanoramaGallery = () => ({
+  number: "",
+  title: "Panoramas",
+  description: "",
+  accent: "panoramas-gallery",
+  photos: panoramaPhotos(),
+});
+const galleryForKey = (key) => {
+  if (key === selectionGalleryKey) return makeSelectionGallery();
+  if (key === panoramaGalleryKey) return makePanoramaGallery();
+  return window.photosByElieData?.[key];
+};
 const galleryKey = galleryKeyFromPage();
 const isSelectionGallery = galleryKey === selectionGalleryKey;
+const isPanoramaGallery = galleryKey === panoramaGalleryKey;
 document.body.dataset.gallery = galleryKey;
-let gallery = isSelectionGallery ? makeSelectionGallery() : window.photosByElieData?.[galleryKey];
+let gallery = galleryForKey(galleryKey);
 const galleryRoot = document.querySelector("[data-gallery-root]");
 const galleryStatus = document.querySelector("[data-gallery-status]");
 const hiddenActions = window.photosByElieHiddenActions;
@@ -112,6 +142,7 @@ const seeMoreLabel = (count) => t("home.see_more_count", { count });
 const seeAllLabel = (count) => t("home.see_all_count", { count });
 const localizedCollectionTitle = () => {
   if (isSelectionGallery) return t("gallery.make_selection");
+  if (isPanoramaGallery) return t("collection.panoramas");
   const key = `collection.${galleryKey}`;
   const translated = t(key);
   return translated && translated !== key ? translated : gallery?.title || "";
@@ -709,6 +740,8 @@ const galleryLayout = window.photosByElieGalleryLayout.createMasonryController({
   getPhotos: () => renderedGalleryPhotos,
   densityKey,
   fitModeKey,
+  defaultFitMode: isPanoramaGallery ? "fit" : "fill",
+  ignoreSavedLayout: isPanoramaGallery,
   allowCull: localModerationEnabled,
 });
 
@@ -1365,7 +1398,7 @@ if (galleryRoot && gallery) {
     });
 
     window.addEventListener("photosbyelie:hiddenchange", () => {
-      gallery = isSelectionGallery ? makeSelectionGallery() : window.photosByElieData?.[galleryKey];
+      gallery = galleryForKey(galleryKey);
       renderGallery();
     });
 

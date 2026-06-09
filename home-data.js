@@ -4,7 +4,7 @@ window.photosByElieHomeData = {
     "title": "France",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "france-gallery",
-    "count": 289,
+    "count": 283,
     "href": "./gallery.html?gallery=france",
     "photos": [
       {
@@ -74,7 +74,7 @@ window.photosByElieHomeData = {
     "title": "USA",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "usa-gallery",
-    "count": 151,
+    "count": 150,
     "href": "./gallery.html?gallery=usa",
     "photos": [
       {
@@ -284,7 +284,7 @@ window.photosByElieHomeData = {
     "title": "AI",
     "description": "Leonardo archive selections prepared from the Saturn Lightroom AI source.",
     "accent": "ai-gallery",
-    "count": 3450,
+    "count": 3448,
     "href": "./gallery.html?gallery=ai",
     "photos": [
       {

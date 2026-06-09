@@ -1,12 +1,11 @@
 {
   "schema_version": 1,
   "state": "expo",
-  "title_keyword_visibility": "applied-only",
   "expo_cap": null,
   "publish_scope": "all-eligible",
   "selection_mode": "random",
   "seed": 959241642,
-  "photos_count": 5463,
+  "photos_count": 5454,
   "reserve_counts": {
     "ai": 0,
     "france": 0,
@@ -1821,20 +1820,6 @@
       }
     },
     {
-      "id": "img-6190-3f0047557b",
-      "relative_path": "2024 Rueil Malmaison, Musee de la Malmaison/IMG_6190.JPG",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "gps_hint"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-6190-3f0047557b_900.jpg",
-        "detail": "expo/img-6190-3f0047557b_1800.jpg"
-      }
-    },
-    {
       "id": "img-5989-bda06bc8e5",
       "relative_path": "2024 Boulogne Billancourt, Musee Albert Kahn/IMG_5989.JPG",
       "gallery_country": {
@@ -2115,20 +2100,6 @@
       }
     },
     {
-      "id": "img-6191-c79e2a13b3",
-      "relative_path": "2024 Rueil Malmaison, Musee de la Malmaison/IMG_6191.JPG",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "gps_hint"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-6191-c79e2a13b3_900.jpg",
-        "detail": "expo/img-6191-c79e2a13b3_1800.jpg"
-      }
-    },
-    {
       "id": "20220506-145248-03337-8deb7b57a5",
       "relative_path": "2022/JPG/05/06/20220506 145248 03337.jpg",
       "gallery_country": {
@@ -2252,20 +2223,6 @@
       "derivatives": {
         "gallery": "expo/img-6154-07c22b7aab_900.jpg",
         "detail": "expo/img-6154-07c22b7aab_short_5s_720p.mp4"
-      }
-    },
-    {
-      "id": "img-6234-07e82ae534",
-      "relative_path": "2024 Rueil Malmaison, Musee de la Malmaison/IMG_6234.JPG",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "gps_hint"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-6234-07e82ae534_900.jpg",
-        "detail": "expo/img-6234-07e82ae534_1800.jpg"
       }
     },
     {
@@ -2787,20 +2744,6 @@
       }
     },
     {
-      "id": "img-6232-938119802e",
-      "relative_path": "2024 Rueil Malmaison, Musee de la Malmaison/IMG_6232.JPG",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "gps_hint"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-6232-938119802e_900.jpg",
-        "detail": "expo/img-6232-938119802e_1800.jpg"
-      }
-    },
-    {
       "id": "20221219-170045-03489-d25e057396",
       "relative_path": "2022-B/Paris, 19 December 2022/20221219 170045 03489.jpeg",
       "gallery_country": {
@@ -2826,20 +2769,6 @@
       "derivatives": {
         "gallery": "expo/20180511-0222-00302-b10cba3d0d_900.jpg",
         "detail": "expo/20180511-0222-00302-b10cba3d0d_1800.jpg"
-      }
-    },
-    {
-      "id": "img-6200-a68496e915",
-      "relative_path": "2024 Rueil Malmaison, Musee de la Malmaison/IMG_6200.JPG",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "gps_hint"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-6200-a68496e915_900.jpg",
-        "detail": "expo/img-6200-a68496e915_1800.jpg"
       }
     },
     {
@@ -2924,20 +2853,6 @@
       "derivatives": {
         "gallery": "expo/20180511-0222-00314-244287b3ea_900.jpg",
         "detail": "expo/20180511-0222-00314-244287b3ea_1800.jpg"
-      }
-    },
-    {
-      "id": "img-6233-04aa884861",
-      "relative_path": "2024 Rueil Malmaison, Musee de la Malmaison/IMG_6233.JPG",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "gps_hint"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-6233-04aa884861_900.jpg",
-        "detail": "expo/img-6233-04aa884861_1800.jpg"
       }
     },
     {
@@ -4324,20 +4239,6 @@
       "derivatives": {
         "gallery": "expo/20171015-181941-00083-01e0b0cfd4_900.jpg",
         "detail": "expo/20171015-181941-00083-01e0b0cfd4_1800.jpg"
-      }
-    },
-    {
-      "id": "20190723-1419-16523-3d4da421c4",
-      "relative_path": "2015-2019/20190723 1419 16523.jpg",
-      "gallery_country": {
-        "slug": "usa",
-        "label": "USA",
-        "source": "owner"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20190723-1419-16523-3d4da421c4_900.jpg",
-        "detail": "expo/20190723-1419-16523-3d4da421c4_1800.jpg"
       }
     },
     {
@@ -71863,20 +71764,6 @@
       }
     },
     {
-      "id": "road-trips-adventure-car-rental-scenic-highways-landsca-3-upscale-a53230ac-7f97-4cf2-a656-cae239ff990d-jpgx2-d157face86",
-      "relative_path": "2023/05/29/UPSCALE/Scaled/Road Trips - Adventure, car rental, scenic highways, landsca-3-UPSCALE_a53230ac-7f97-4cf2-a656-cae239ff990d.jpgx2.jpg",
-      "gallery_country": {
-        "slug": "ai",
-        "label": "AI",
-        "source": "forced"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/road-trips-adventure-car-rental-scenic-highways-landsca-3-upscale-a53230ac-7f97-4cf2-a656-cae239ff990d-jpgx2-d157face86_900.jpg",
-        "detail": "expo/road-trips-adventure-car-rental-scenic-highways-landsca-3-upscale-a53230ac-7f97-4cf2-a656-cae239ff990d-jpgx2-d157face86_1800.jpg"
-      }
-    },
-    {
       "id": "city-breaks-skyscrapers-street-signs-public-transport-l-3-upscale-3e8f22ce-c187-46b2-a740-ac89d7be0853-jpgx2-a8ec1f95ed",
       "relative_path": "2023/05/29/UPSCALE/Scaled/City Breaks - Skyscrapers, street signs, public transport, l-3-UPSCALE_3e8f22ce-c187-46b2-a740-ac89d7be0853.jpgx2.jpg",
       "gallery_country": {
@@ -72084,20 +71971,6 @@
       "derivatives": {
         "gallery": "expo/luxury-escapes-resorts-mansions-spas-golf-courses-priv-0-upscale-433e67a8-0fef-4819-8904-ea484a6915ce-jpgx2-7521042940_900.jpg",
         "detail": "expo/luxury-escapes-resorts-mansions-spas-golf-courses-priv-0-upscale-433e67a8-0fef-4819-8904-ea484a6915ce-jpgx2-7521042940_1800.jpg"
-      }
-    },
-    {
-      "id": "road-trips-adventure-car-rental-scenic-highways-landsca-0-upscale-71717adf-3843-443f-8b3e-3d5579437713-jpgx2-5884fdc1ec",
-      "relative_path": "2023/05/29/UPSCALE/Scaled/Road Trips - Adventure, car rental, scenic highways, landsca-0-UPSCALE_71717adf-3843-443f-8b3e-3d5579437713.jpgx2.jpg",
-      "gallery_country": {
-        "slug": "ai",
-        "label": "AI",
-        "source": "forced"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/road-trips-adventure-car-rental-scenic-highways-landsca-0-upscale-71717adf-3843-443f-8b3e-3d5579437713-jpgx2-5884fdc1ec_900.jpg",
-        "detail": "expo/road-trips-adventure-car-rental-scenic-highways-landsca-0-upscale-71717adf-3843-443f-8b3e-3d5579437713-jpgx2-5884fdc1ec_1800.jpg"
       }
     },
     {

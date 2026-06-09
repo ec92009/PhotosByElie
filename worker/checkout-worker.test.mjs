@@ -69,6 +69,14 @@ const sourcePathForPhoto = (catalog, photoId) => catalog.photos.get(photoId).pho
 const orderProductTotal = (orderItem) => (orderItem.products || [])
   .reduce((sum, product) => sum + Number(product.amount || 0), 0);
 
+const catalogOptionCents = (catalog, photoId, optionId) => {
+  const entry = catalog.photos.get(photoId);
+  const option = catalog.options.get(optionId);
+  const origin = String(entry?.photo?.sourceOrigin || entry?.photo?.origin || "").toLowerCase();
+  const tier = origin === "ai" || entry?.collectionKey === "ai" ? "ai" : "original";
+  return Math.round((Number(option?.prices?.[tier] ?? option?.price ?? 0)) * 100);
+};
+
 const createFakeKv = () => {
   const values = new Map();
   return {
@@ -223,7 +231,7 @@ test("guest checkout creates a pending order and mock Stripe session", async () 
   assert.match(body.checkout.url, /^https:\/\/mock\.stripe\.local\/checkout\/cs_mock_/);
 });
 
-test("guest checkout uses current 1 MP price without a minimum-charge top-up", async () => {
+test("guest checkout uses current 1 MP price and applies the Stripe minimum when needed", async () => {
   const catalog = loadCatalog();
   const { worker, stripe } = testWorker();
   const photoId = firstDeliverablePhotoId(catalog);
@@ -235,12 +243,15 @@ test("guest checkout uses current 1 MP price without a minimum-charge top-up", a
   assert.equal(response.status, 201);
 
   const body = await response.json();
-  assert.equal(body.order.subtotalAmount, 50);
-  assert.equal(body.order.minimumChargeAdjustment, 0);
-  assert.equal(body.order.amountExpected, 50);
+  const oneMpAmount = catalogOptionCents(catalog, photoId, "jpg-1mp");
+  const expectedMinimumAdjustment = Math.max(0, 50 - oneMpAmount);
+  assert.equal(body.order.items[0].products[0].amount, oneMpAmount);
+  assert.equal(body.order.subtotalAmount, oneMpAmount);
+  assert.equal(body.order.minimumChargeAdjustment, expectedMinimumAdjustment);
+  assert.equal(body.order.amountExpected, oneMpAmount + expectedMinimumAdjustment);
   const session = stripe._debug.sessions.get(body.checkout.sessionId);
-  assert.equal(session.amount_total, 50);
-  assert.equal(session.line_items.length, 1);
+  assert.equal(session.amount_total, oneMpAmount + expectedMinimumAdjustment);
+  assert.equal(session.line_items.length, expectedMinimumAdjustment > 0 ? 2 : 1);
 });
 
 test("guest checkout rejects stale browser subtotal before Stripe session creation", async () => {
@@ -258,7 +269,7 @@ test("guest checkout rejects stale browser subtotal before Stripe session creati
   const body = await response.json();
   assert.equal(body.error.code, "checkout_total_mismatch");
   assert.equal(body.error.details.browserSubtotalAmount, 800);
-  assert.equal(body.error.details.workerSubtotalAmount, 50);
+  assert.equal(body.error.details.workerSubtotalAmount, catalogOptionCents(catalog, photoId, "jpg-1mp"));
   assert.equal(stripe._debug.sessions.size, 0);
 });
 

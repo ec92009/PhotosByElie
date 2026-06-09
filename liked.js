@@ -96,6 +96,52 @@ const bulkResolutionState = (likedItems, basketByPhoto, resolutionId) => likedIt
   return state;
 }, { eligible: 0, selected: 0 });
 
+const checkedLikedSelectionsFor = (itemIndex) => {
+  const item = likedStore.read()[itemIndex];
+  const { photo } = photoForLikedItem(item || {});
+  const availableOptions = availableOptionsForPhoto(photo);
+  return Array.from(document.querySelectorAll(`[data-liked-resolution="${itemIndex}"]:checked`))
+    .map((checkbox) => {
+      const option = availableOptions.find((candidate) => candidate.id === checkbox.value);
+      if (!option) return null;
+      const selected = { id: option.id };
+      if (option.type === "print") {
+        selected.quantity = document.querySelector(`[data-liked-print-quantity="${itemIndex}"][data-option-id="${option.id}"]`)?.value || 1;
+        selected.frameId = document.querySelector(`[data-liked-print-frame="${itemIndex}"][data-option-id="${option.id}"]:checked`)?.value || "none";
+      }
+      return selected;
+    })
+    .filter(Boolean);
+};
+
+const syncLikedSelectionToBasket = (itemIndex, { render = false } = {}) => {
+  const item = likedStore.read()[itemIndex];
+  if (!item) return [];
+  const selectedOptions = checkedLikedSelectionsFor(itemIndex);
+  basketStore.setPhotoOptions({
+    photoId: item.photoId,
+    title: item.title,
+    collection: item.collection,
+    options: optionPayload(selectedOptions, item.photoId),
+  });
+  if (render) {
+    status.textContent = selectedOptions.length
+        ? t("liked.added_to_basket", { title: item.title })
+        : t("liked.no_assets_selected", { title: item.title });
+    renderLiked();
+  }
+  return selectedOptions;
+};
+
+const flushVisibleLikedSelectionsToBasket = () => {
+  const visibleIndexes = new Set(Array.from(document.querySelectorAll("[data-liked-resolution]"))
+    .map((input) => Number(input.dataset.likedResolution))
+    .filter((index) => Number.isInteger(index) && index >= 0));
+  visibleIndexes.forEach((itemIndex) => {
+    syncLikedSelectionToBasket(itemIndex);
+  });
+};
+
 const ensureMoreButton = () => {
   if (moreButton || !likedRoot) return;
   const controls = document.createElement("div");
@@ -326,38 +372,8 @@ const renderLiked = () => {
     });
   });
 
-  const selectedOptionsFor = (itemIndex) => {
-    const item = likedStore.read()[itemIndex];
-    const { photo } = photoForLikedItem(item || {});
-    const availableOptions = availableOptionsForPhoto(photo);
-    return Array.from(document.querySelectorAll(`[data-liked-resolution="${itemIndex}"]:checked`))
-      .map((checkbox) => {
-        const option = availableOptions.find((candidate) => candidate.id === checkbox.value);
-        if (!option) return null;
-        const selected = { id: option.id };
-        if (option.type === "print") {
-          selected.quantity = document.querySelector(`[data-liked-print-quantity="${itemIndex}"][data-option-id="${option.id}"]`)?.value || 1;
-          selected.frameId = document.querySelector(`[data-liked-print-frame="${itemIndex}"][data-option-id="${option.id}"]:checked`)?.value || "none";
-        }
-        return selected;
-      })
-      .filter(Boolean);
-  };
-
   const syncItemOptions = (itemIndex) => {
-    const item = likedStore.read()[itemIndex];
-    if (!item) return;
-    const selectedOptions = selectedOptionsFor(itemIndex);
-    basketStore.setPhotoOptions({
-      photoId: item.photoId,
-      title: item.title,
-      collection: item.collection,
-      options: optionPayload(selectedOptions, item.photoId),
-    });
-    status.textContent = selectedOptions.length
-        ? t("liked.added_to_basket", { title: item.title })
-        : t("liked.no_assets_selected", { title: item.title });
-    renderLiked();
+    syncLikedSelectionToBasket(itemIndex, { render: true });
   };
 
   const selectPrintProduct = (itemIndex, optionId) => {
@@ -399,6 +415,12 @@ const renderLiked = () => {
       selectPrintProduct(itemIndex, input.dataset.optionId);
       syncItemOptions(itemIndex);
     });
+  });
+
+  document.querySelectorAll('a[href*="basket.html"], .header-buy-link').forEach((link) => {
+    if (link.dataset.likedBasketFlushBound) return;
+    link.dataset.likedBasketFlushBound = "true";
+    link.addEventListener("click", flushVisibleLikedSelectionsToBasket, { capture: true });
   });
 };
 

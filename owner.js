@@ -191,6 +191,13 @@
     setText(pricePublishStatus, message);
   };
 
+  const resetPricePublishStatus = () => {
+    stopPricePublishPolling();
+    renderPricePublishTask(null);
+    if (publishPricesButton) publishPricesButton.disabled = false;
+    setPricePublishStatus("Saved edits stay local until published.");
+  };
+
   const summarizePricePublishFailure = (task = {}) => {
     const failedStep = (Array.isArray(task.steps) ? task.steps : []).find((step) => step.state === "failed");
     if (failedStep?.label) {
@@ -801,6 +808,7 @@
         }
         productSettings?.savePriceOverrides?.(overrides);
         setStatus("Price list saved locally.");
+        renderPricePublishTask(null);
         setPricePublishStatus("Saved locally. Press Publish prices to update checkout, deploy, commit, and push.");
       });
     });
@@ -3942,6 +3950,7 @@
 
   if (controls) controls.hidden = true;
   renderPriceList();
+  resetPricePublishStatus();
   publishPricesButton?.addEventListener("click", publishOwnerPrices);
   renderPodCommerce();
   renderCostEstimate();

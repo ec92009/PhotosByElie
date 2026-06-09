@@ -242,8 +242,11 @@ Clock state: running
 | 2026-06-09 | 20:46 CEST | 20:51 CEST | 0:05 | Added a checkout subtotal guard so stale basket prices cannot open a higher Stripe session, with a regression test and v101.12 cache-bust. |
 | 2026-06-09 | 23:13 CEST | 23:24 CEST | 0:04 | Clarified the Owner price-publish workflow and added progress feedback for the full publish button; implementation/runtime wait excluded. |
 | 2026-06-09 | 23:31 CEST | 23:36 CEST | 0:03 | Fixed price-publish progress noise, made checkout tests follow current catalog prices, and completed the v101.15 low-price Worker deploy; deployment wait excluded. |
+| 2026-06-09 | 23:42 CEST | 23:43 CEST | 0:01 | Cleared stale failed price-publish progress from the Owner Commerce panel on reload and local edits. |
+| 2026-06-09 | 23:49 CEST | 23:55 CEST | 0:03 | Confirmed the v101.18 Owner price publish completed and prepared a v101.19 cleanup for stale progress and sub-minimum checkout tests. |
+| 2026-06-09 | 23:56 CEST | 2026-06-10 00:02 CEST | 0:03 | Fixed the Liked-to-Basket checkout handoff so checked liked assets persist when using Basket or the dollar checkout link. |
 
 ## Totals
 
-Active collaboration time used: 15:53
+Active collaboration time used: 16:00
 Remaining budget: not set

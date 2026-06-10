@@ -256,8 +256,10 @@ Clock state: running
 | 2026-06-10 | 01:00 CEST | 01:09 CEST | 0:09 | Implemented on-demand Cloudflare Images buyer JPG renders, stopped routine triplet imports, deployed Worker v101.22, and validated; test/deploy wait excluded. |
 | 2026-06-10 | 01:12 CEST | 01:13 CEST | 0:01 | Reported public detail product checkboxes hidden while Owner tools were active; implementation/testing time excluded. |
 | 2026-06-10 | 01:23 CEST | 01:26 CEST | 0:03 | Requested self-contained delivery emails with per-item links plus a buyer resend control; implementation/test/deploy time excluded. |
+| 2026-06-10 | 11:15 CEST | 11:16 CEST | 0:01 | Added back-burner planning for guarded checkout discount codes to reduce live payment rehearsal cost. |
+| 2026-06-10 | 11:43 CEST | 11:48 CEST | 0:02 | Reported Liked-page delivery manifest gaps for Ronda and Malaga; implementation/testing time excluded. |
 
 ## Totals
 
-Active collaboration time used: 16:25
+Active collaboration time used: 16:28
 Remaining budget: not set

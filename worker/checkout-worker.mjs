@@ -391,6 +391,31 @@ const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => 
   "'": "&#39;",
 }[char]));
 
+const humanDownloadEndDate = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return String(value);
+  return new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    timeZone: "UTC",
+  }).format(date);
+};
+
+const downloadAvailabilityLabel = (expiresAt, availableFrom) => {
+  const endDate = humanDownloadEndDate(expiresAt);
+  if (!endDate) return "";
+  const start = Date.parse(availableFrom || "");
+  const end = Date.parse(expiresAt || "");
+  const days = Number.isFinite(start) && Number.isFinite(end)
+    ? Math.max(1, Math.round((end - start) / (24 * 60 * 60 * 1000)))
+    : null;
+  return days
+    ? `Available for ${days} day${days === 1 ? "" : "s"} (ends ${endDate})`
+    : `Available until ${endDate}`;
+};
+
 const absoluteUrl = (baseUrl, path) => {
   try {
     return new URL(path, baseUrl).href;
@@ -420,6 +445,7 @@ const orderRecoveryUrl = (order, ordersUrl) => {
 };
 
 const deliveryDownloadRows = ({ order, downloadBaseUrl }) => {
+  const availableFrom = order.delivery?.readyAt || order.paidAt || order.updatedAt || order.createdAt || null;
   const itemByPhotoId = new Map((order.items || []).map((item) => [item.photoId, item]));
   if (order.delivery?.files?.length) {
     return order.delivery.files.map((file) => {
@@ -432,6 +458,7 @@ const deliveryDownloadRows = ({ order, downloadBaseUrl }) => {
         filename: file.name || `${file.photoId || "photosbyelie"}-${file.productId || "download"}`,
         url: absoluteUrl(downloadBaseUrl, file.downloadUrl),
         expiresAt: file.expiresAt || null,
+        availableFrom,
         isArchive: false,
       };
     });
@@ -478,7 +505,7 @@ const emailDownloadLine = (row) => {
   if (!row.download?.url) return `- ${label}`;
   const filename = row.download.filename ? ` (file: ${row.download.filename})` : "";
   const archive = row.download.isArchive ? " (order ZIP)" : "";
-  const expiry = row.download.expiresAt ? ` (available until ${row.download.expiresAt})` : "";
+  const expiry = row.download.expiresAt ? ` - ${downloadAvailabilityLabel(row.download.expiresAt, row.download.availableFrom)}` : "";
   return `- ${label}: ${row.download.url}${filename}${archive}${expiry}`;
 };
 
@@ -501,8 +528,8 @@ const buildOrderReadyEmail = ({
     "Purchased downloads:",
     ...purchasedRows.map(emailDownloadLine),
     "",
-    `Download page (backup): ${orderUrl}`,
-    "If a direct link expires, use the download page with your order email.",
+    `You can also use the order download page: ${orderUrl}`,
+    "This page keeps your order record. If a file link expires, use it with your order email to ask support for a fresh link.",
     "",
     "Thank you,",
     "Photos By Elie",
@@ -516,7 +543,7 @@ const buildOrderReadyEmail = ({
             ? `<a href="${escapeHtml(row.download.url)}">${escapeHtml(label)}</a>`
             : `<span>${escapeHtml(label)}</span>`}
           ${row.download?.filename ? `<br><small>File: ${escapeHtml(row.download.filename)}${row.download.isArchive ? " (order ZIP)" : ""}</small>` : ""}
-          ${row.download?.expiresAt ? `<br><small>Available until ${escapeHtml(row.download.expiresAt)}</small>` : ""}
+          ${row.download?.expiresAt ? `<br><small>${escapeHtml(downloadAvailabilityLabel(row.download.expiresAt, row.download.availableFrom))}</small>` : ""}
         </li>
       `;
       }).join("")}</ul>`
@@ -527,8 +554,8 @@ const buildOrderReadyEmail = ({
       <p>Order <strong>${escapeHtml(order.id)}</strong> is paid and ready.</p>
       <h2>Purchased downloads</h2>
       ${purchaseList}
-      <p>Backup: <a href="${escapeHtml(orderUrl)}">open the order download page</a>.</p>
-      <p>If a direct link expires, use the download page with your order email.</p>
+      <p>You can also use the <a href="${escapeHtml(orderUrl)}">order download page</a>.</p>
+      <p>This page keeps your order record. If a file link expires, use it with your order email to ask support for a fresh link.</p>
       <p>Thank you,<br>Photos By Elie</p>
     </div>
   `;

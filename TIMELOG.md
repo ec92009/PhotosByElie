@@ -259,8 +259,10 @@ Clock state: running
 | 2026-06-10 | 11:15 CEST | 11:16 CEST | 0:01 | Added back-burner planning for guarded checkout discount codes to reduce live payment rehearsal cost. |
 | 2026-06-10 | 11:43 CEST | 11:48 CEST | 0:02 | Reported Liked-page delivery manifest gaps for Ronda and Malaga; implementation/testing time excluded. |
 | 2026-06-10 | 12:05 CEST | 12:21 CEST | 0:02 | Reported backup email link opening the wrong order and requested cache-busting; implementation/deploy time excluded. |
+| 2026-06-10 | 12:30 CEST | 12:31 CEST | 0:01 | Resent the two recent Photos By Elie delivery emails after the cache-busted order recovery link fix. |
+| 2026-06-10 | 12:34 CEST | 12:41 CEST | 0:02 | Clarified buyer email download-window wording and renamed the fallback order link as an alternate order page; implementation/deploy wait excluded. |
 
 ## Totals
 
-Active collaboration time used: 16:30
+Active collaboration time used: 16:33
 Remaining budget: not set

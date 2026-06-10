@@ -582,17 +582,21 @@ test("paid checkout sends per-purchased-item delivery email links", async () => 
   assert.match(message.subject, /downloads are ready/);
   assert.match(message.text, /Purchased downloads:\n- .+ - Full resolution: https:\/\/worker\.test\/download\/dl_test_full/);
   assert.match(message.text, /- .+ - JPG 3 MP: https:\/\/worker\.test\/download\/dl_test_jpg-3mp/);
-  assert.match(message.text, /Download page \(backup\): https:\/\/photos-by-elie\.com\/order\.html\?id=PBE-20260507-/);
+  assert.match(message.text, /Available for 30 days \(ends June 6, 2026\)/);
+  assert.doesNotMatch(message.text, /Available until 2026-/);
+  assert.match(message.text, /You can also use the order download page: https:\/\/photos-by-elie\.com\/order\.html\?id=PBE-20260507-/);
   assert.match(message.text, /email=buyer%40example\.com/);
-  const backupUrl = new URL(message.orderUrl);
-  assert.equal(backupUrl.searchParams.get("id"), paid.order.id);
-  assert.equal(backupUrl.searchParams.get("email"), "buyer@example.com");
-  assert.equal(backupUrl.searchParams.get("lookup"), "order");
-  assert.match(backupUrl.searchParams.get("cb") || "", new RegExp(`^${paid.order.id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
-  assert.equal(backupUrl.searchParams.has("session_id"), false);
-  assert.ok(message.text.indexOf("Purchased downloads:") < message.text.indexOf("Download page (backup):"));
+  assert.match(message.text, /This page keeps your order record/i);
+  const orderUrl = new URL(message.orderUrl);
+  assert.equal(orderUrl.searchParams.get("id"), paid.order.id);
+  assert.equal(orderUrl.searchParams.get("email"), "buyer@example.com");
+  assert.equal(orderUrl.searchParams.get("lookup"), "order");
+  assert.match(orderUrl.searchParams.get("cb") || "", new RegExp(`^${paid.order.id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
+  assert.equal(orderUrl.searchParams.has("session_id"), false);
+  assert.ok(message.text.indexOf("Purchased downloads:") < message.text.indexOf("You can also use the order download page:"));
   assert.match(message.html, /<a href="https:\/\/worker\.test\/download\/dl_test_full">[^<]+ - Full resolution<\/a>/);
   assert.match(message.html, /<a href="https:\/\/worker\.test\/download\/dl_test_jpg-3mp">[^<]+ - JPG 3 MP<\/a>/);
+  assert.match(message.html, /Available for 30 days \(ends June 6, 2026\)/);
 
   const retryResponse = await worker.fetch(jsonRequest("https://worker.test/mock-stripe/pay", {
     checkoutSessionId: checkout.checkout.sessionId,

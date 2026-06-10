@@ -258,8 +258,9 @@ Clock state: running
 | 2026-06-10 | 01:23 CEST | 01:26 CEST | 0:03 | Requested self-contained delivery emails with per-item links plus a buyer resend control; implementation/test/deploy time excluded. |
 | 2026-06-10 | 11:15 CEST | 11:16 CEST | 0:01 | Added back-burner planning for guarded checkout discount codes to reduce live payment rehearsal cost. |
 | 2026-06-10 | 11:43 CEST | 11:48 CEST | 0:02 | Reported Liked-page delivery manifest gaps for Ronda and Malaga; implementation/testing time excluded. |
+| 2026-06-10 | 12:05 CEST | 12:21 CEST | 0:02 | Reported backup email link opening the wrong order and requested cache-busting; implementation/deploy time excluded. |
 
 ## Totals
 
-Active collaboration time used: 16:28
+Active collaboration time used: 16:30
 Remaining budget: not set

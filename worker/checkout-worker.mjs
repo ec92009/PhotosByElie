@@ -400,14 +400,22 @@ const absoluteUrl = (baseUrl, path) => {
 };
 
 const orderRecoveryUrl = (order, ordersUrl) => {
+  const cacheKey = [order.id, order.updatedAt || order.delivery?.preparedAt || order.deliveryEmail?.sentAt || ""]
+    .filter(Boolean)
+    .join("-")
+    .replace(/[^A-Za-z0-9_-]+/g, "");
   try {
     const url = new URL(ordersUrl);
+    url.searchParams.delete("session_id");
+    url.searchParams.delete("checkout");
     url.searchParams.set("id", order.id);
     url.searchParams.set("email", order.buyerEmail);
+    url.searchParams.set("lookup", "order");
+    url.searchParams.set("cb", cacheKey);
     return url.href;
   } catch {
     const joiner = String(ordersUrl || "").includes("?") ? "&" : "?";
-    return `${ordersUrl}${joiner}id=${encodeURIComponent(order.id)}&email=${encodeURIComponent(order.buyerEmail)}`;
+    return `${ordersUrl}${joiner}id=${encodeURIComponent(order.id)}&email=${encodeURIComponent(order.buyerEmail)}&lookup=order&cb=${encodeURIComponent(cacheKey)}`;
   }
 };
 

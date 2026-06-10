@@ -468,30 +468,30 @@ const loadOrder = async () => {
   const email = buyerEmail();
   const sessionId = checkoutSessionId();
   syncOrderSupportLinks();
-  if (sessionId) {
-    status.textContent = t("order.refreshing");
-    try {
-      const response = await fetch(`${workerBaseUrl()}/orders/by-session/${encodeURIComponent(sessionId)}`);
-      const body = await response.json();
-      if (!response.ok) throw new Error(body?.error?.message || `Order lookup failed with HTTP ${response.status}.`);
-      renderOrder(body.order);
-      status.textContent = t("order.refreshed");
-      return;
-    } catch (error) {
-      syncOrderLookup(true);
-      heading.textContent = t("order.unavailable");
-      message.textContent = error.message;
-      setProgress("");
-      currentZipPath = "";
-      currentDownloadHref = "";
-      currentOrder = null;
-      downloadZip.hidden = true;
-      syncZipLocationField();
-      status.textContent = t("order.could_not_load");
-      return;
-    }
-  }
   if (!id || !email) {
+    if (sessionId) {
+      status.textContent = t("order.refreshing");
+      try {
+        const response = await fetch(`${workerBaseUrl()}/orders/by-session/${encodeURIComponent(sessionId)}`);
+        const body = await response.json();
+        if (!response.ok) throw new Error(body?.error?.message || `Order lookup failed with HTTP ${response.status}.`);
+        renderOrder(body.order);
+        status.textContent = t("order.refreshed");
+        return;
+      } catch (error) {
+        syncOrderLookup(true);
+        heading.textContent = t("order.unavailable");
+        message.textContent = error.message;
+        setProgress("");
+        currentZipPath = "";
+        currentDownloadHref = "";
+        currentOrder = null;
+        downloadZip.hidden = true;
+        syncZipLocationField();
+        status.textContent = t("order.could_not_load");
+        return;
+      }
+    }
     syncOrderLookup(true);
     heading.textContent = t("order.details_needed");
     message.textContent = t("order.details_message");

@@ -584,6 +584,12 @@ test("paid checkout sends per-purchased-item delivery email links", async () => 
   assert.match(message.text, /- .+ - JPG 3 MP: https:\/\/worker\.test\/download\/dl_test_jpg-3mp/);
   assert.match(message.text, /Download page \(backup\): https:\/\/photos-by-elie\.com\/order\.html\?id=PBE-20260507-/);
   assert.match(message.text, /email=buyer%40example\.com/);
+  const backupUrl = new URL(message.orderUrl);
+  assert.equal(backupUrl.searchParams.get("id"), paid.order.id);
+  assert.equal(backupUrl.searchParams.get("email"), "buyer@example.com");
+  assert.equal(backupUrl.searchParams.get("lookup"), "order");
+  assert.match(backupUrl.searchParams.get("cb") || "", new RegExp(`^${paid.order.id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
+  assert.equal(backupUrl.searchParams.has("session_id"), false);
   assert.ok(message.text.indexOf("Purchased downloads:") < message.text.indexOf("Download page (backup):"));
   assert.match(message.html, /<a href="https:\/\/worker\.test\/download\/dl_test_full">[^<]+ - Full resolution<\/a>/);
   assert.match(message.html, /<a href="https:\/\/worker\.test\/download\/dl_test_jpg-3mp">[^<]+ - JPG 3 MP<\/a>/);

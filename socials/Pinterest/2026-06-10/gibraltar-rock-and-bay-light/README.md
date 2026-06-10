@@ -27,3 +27,9 @@ Gibraltar rock and bay views in clean Mediterranean light, curated as a five-ima
 
 - Pinterest dry run passed with exactly 5 images.
 - No board id/token mapping was resolved; manual Pin Builder should use Spain Travel Photography or a closer confirmed board.
+
+## Publishing Status
+
+- Status: `prepared_no_api_token_or_board_id`
+- Image count: `5`
+- Verification: Pinterest dry run passed with exactly 5 images, but no token/board id mapping is configured for live API publishing.

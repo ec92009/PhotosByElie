@@ -1,7 +1,7 @@
 {
   "date": "2026-06-10",
   "platform": "Instagram",
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "title": "Paris Montmartre Street Light",
@@ -157,5 +157,29 @@
     "status": "passed",
     "checked_at": "2026-06-10T03:07:39.447Z",
     "note": "Meta API dry run passed with public HTTPS images and expected post plan."
+  },
+  "published": {
+    "status": "published",
+    "platform": "instagram",
+    "account": "ec92009",
+    "media_id": "17921312160365105",
+    "published_at": "2026-06-10T03:11:07+0000",
+    "permalink_url": "https://www.instagram.com/p/DZY8noKiHv5/",
+    "media_type": "CAROUSEL_ALBUM",
+    "image_count": 8,
+    "verified_at": "2026-06-10T03:13:54.730Z",
+    "verification": "Instagram Graph returned permalink, username ec92009, CAROUSEL_ALBUM, caption, and 8 child images."
+  },
+  "api_publish": {
+    "status": "published",
+    "platform": "instagram",
+    "account": "ec92009",
+    "media_id": "17921312160365105",
+    "published_at": "2026-06-10T03:11:07+0000",
+    "permalink_url": "https://www.instagram.com/p/DZY8noKiHv5/",
+    "media_type": "CAROUSEL_ALBUM",
+    "image_count": 8,
+    "verified_at": "2026-06-10T03:13:54.730Z",
+    "verification": "Instagram Graph returned permalink, username ec92009, CAROUSEL_ALBUM, caption, and 8 child images."
   }
 }

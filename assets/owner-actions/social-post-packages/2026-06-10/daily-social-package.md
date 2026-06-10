@@ -118,3 +118,11 @@ Montmartre, edited down to street texture, soft facades, and Paris atmosphere. B
 - npm run validate passed.
 - Local browser campaign smoke passed for v102.3 titles and card counts.
 - Etsy review packages generated for 17 listings, but drafts were not created because current tooling cannot attach and verify one listing image plus one jpg-6mp buyer file per draft.
+
+## Publishing Results
+
+- Facebook: published, 8 images, https://www.facebook.com/122102168061334672/posts/122104900905334672
+- Instagram: published, 8 images, https://www.instagram.com/p/DZY8noKiHv5/
+- Threads: published, 4 images, https://www.threads.com/@ec92009/post/DZY8ulxiKNH
+- Pinterest: prepared only; no token/board id mapping configured.
+- Etsy: 17 review-package listings generated; drafts not created because current tooling cannot attach and verify one public image plus one jpg-6mp buyer file per draft.

@@ -1,7 +1,7 @@
 {
   "date": "2026-06-10",
   "platform": "Facebook",
-  "status": "prepared",
+  "status": "published",
   "account": "Photos By Elie",
   "post_type": "multi_photo",
   "title": "Seville Plaza de Espana Tiles and Arches",
@@ -157,5 +157,29 @@
     "status": "passed",
     "checked_at": "2026-06-10T03:07:39.446Z",
     "note": "Meta API dry run passed with public HTTPS images and expected post plan."
+  },
+  "published": {
+    "status": "published",
+    "platform": "facebook",
+    "account": "Photos By Elie",
+    "page_id": "1146747141854670",
+    "post_id": "1146747141854670_122104900905334672",
+    "published_at": "2026-06-10T03:10:02+0000",
+    "permalink_url": "https://www.facebook.com/122102168061334672/posts/122104900905334672",
+    "image_count": 8,
+    "verified_at": "2026-06-10T03:13:54.730Z",
+    "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
+  },
+  "api_publish": {
+    "status": "published",
+    "platform": "facebook",
+    "account": "Photos By Elie",
+    "page_id": "1146747141854670",
+    "post_id": "1146747141854670_122104900905334672",
+    "published_at": "2026-06-10T03:10:02+0000",
+    "permalink_url": "https://www.facebook.com/122102168061334672/posts/122104900905334672",
+    "image_count": 8,
+    "verified_at": "2026-06-10T03:13:54.730Z",
+    "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
   }
 }

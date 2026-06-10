@@ -22,3 +22,11 @@ Seville's Plaza de Espana in tile, brick, arches, and warm Andalusian light: a P
 
 - Meta Pages API dry run passed for 8 public HTTPS images.
 - Live publishing waits for committed/pushed campaign URL verification.
+
+## Published
+
+- Status: `published`
+- URL: https://www.facebook.com/122102168061334672/posts/122104900905334672
+- Published at: `2026-06-10T03:10:02+0000`
+- Image count: `8`
+- Verification: Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments.

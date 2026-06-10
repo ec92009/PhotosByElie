@@ -1,7 +1,7 @@
 {
   "date": "2026-06-10",
   "platform": "Threads",
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "title": "Paris Montmartre Street Light",
@@ -90,5 +90,31 @@
     "status": "passed",
     "checked_at": "2026-06-10T03:07:39.452Z",
     "note": "Threads dry run passed for 4 public HTTPS images; token exists but live publish waits for public campaign URL verification."
+  },
+  "published": {
+    "status": "published",
+    "platform": "threads",
+    "account": "ec92009",
+    "threads_user_id": "36227075590239114",
+    "media_id": "18017830427693274",
+    "published_at": "2026-06-10T03:12:05+0000",
+    "permalink_url": "https://www.threads.com/@ec92009/post/DZY8ulxiKNH",
+    "media_type": "CAROUSEL_ALBUM",
+    "image_count": 4,
+    "verified_at": "2026-06-10T03:13:54.730Z",
+    "verification": "Threads Graph returned permalink, username ec92009, CAROUSEL_ALBUM, text, and 4 child images."
+  },
+  "api_publish": {
+    "status": "published",
+    "platform": "threads",
+    "account": "ec92009",
+    "threads_user_id": "36227075590239114",
+    "media_id": "18017830427693274",
+    "published_at": "2026-06-10T03:12:05+0000",
+    "permalink_url": "https://www.threads.com/@ec92009/post/DZY8ulxiKNH",
+    "media_type": "CAROUSEL_ALBUM",
+    "image_count": 4,
+    "verified_at": "2026-06-10T03:13:54.730Z",
+    "verification": "Threads Graph returned permalink, username ec92009, CAROUSEL_ALBUM, text, and 4 child images."
   }
 }

@@ -1,7 +1,7 @@
 {
   "date": "2026-06-10",
   "platform": "Pinterest",
-  "status": "prepared",
+  "status": "prepared_no_api_token_or_board_id",
   "account": "photosbyelie",
   "post_type": "multi_image_pin",
   "title": "Gibraltar Rock and Bay Light",
@@ -110,5 +110,13 @@
     "status": "passed",
     "checked_at": "2026-06-10T03:07:39.451Z",
     "note": "Pinterest dry run passed with exactly 5 images; no board id/token mapping was resolved for live API publishing."
+  },
+  "publish_blocker": {
+    "status": "prepared_no_api_token_or_board_id",
+    "platform": "pinterest",
+    "account": "photosbyelie",
+    "image_count": 5,
+    "verified_at": "2026-06-10T03:13:54.730Z",
+    "verification": "Pinterest dry run passed with exactly 5 images, but no token/board id mapping is configured for live API publishing."
   }
 }

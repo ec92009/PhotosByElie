@@ -10,17 +10,17 @@
     "Gibraltar Rock and Bay Light"
   ],
   "platform_status": {
-    "facebook": "dry_run_passed_pending_public_url",
-    "instagram": "dry_run_passed_pending_public_url",
-    "pinterest": "prepared_no_board_id",
-    "threads": "dry_run_passed_pending_public_url",
+    "facebook": "published",
+    "instagram": "published",
+    "threads": "published",
+    "pinterest": "prepared_no_api_token_or_board_id",
     "etsy": "review_packages_only_attachment_tooling_blocked"
   },
   "platforms": [
     {
       "date": "2026-06-10",
       "platform": "Facebook",
-      "status": "prepared",
+      "status": "published",
       "account": "Photos By Elie",
       "post_type": "multi_photo",
       "title": "Seville Plaza de Espana Tiles and Arches",
@@ -171,12 +171,36 @@
           "local_staged_path": "socials/Facebook/2026-06-10/seville-plaza-espana-tiles-and-arches/images/08-img-1306-db5384a1f4-seville-plaza-espana-tiles-and-arches.jpg"
         }
       ],
-      "local_package": "/Users/ecohen/Dev/PhotosByElie/socials/Facebook/2026-06-10/seville-plaza-espana-tiles-and-arches"
+      "local_package": "/Users/ecohen/Dev/PhotosByElie/socials/Facebook/2026-06-10/seville-plaza-espana-tiles-and-arches",
+      "published": {
+        "status": "published",
+        "platform": "facebook",
+        "account": "Photos By Elie",
+        "page_id": "1146747141854670",
+        "post_id": "1146747141854670_122104900905334672",
+        "published_at": "2026-06-10T03:10:02+0000",
+        "permalink_url": "https://www.facebook.com/122102168061334672/posts/122104900905334672",
+        "image_count": 8,
+        "verified_at": "2026-06-10T03:13:54.730Z",
+        "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
+      },
+      "api_publish": {
+        "status": "published",
+        "platform": "facebook",
+        "account": "Photos By Elie",
+        "page_id": "1146747141854670",
+        "post_id": "1146747141854670_122104900905334672",
+        "published_at": "2026-06-10T03:10:02+0000",
+        "permalink_url": "https://www.facebook.com/122102168061334672/posts/122104900905334672",
+        "image_count": 8,
+        "verified_at": "2026-06-10T03:13:54.730Z",
+        "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
+      }
     },
     {
       "date": "2026-06-10",
       "platform": "Instagram",
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "title": "Paris Montmartre Street Light",
@@ -327,12 +351,36 @@
           "local_staged_path": "socials/Instagram/2026-06-10/paris-montmartre-street-light/images/08-20180510-1513-00295-e0037dbfe1-paris-montmartre-street-light.jpg"
         }
       ],
-      "local_package": "/Users/ecohen/Dev/PhotosByElie/socials/Instagram/2026-06-10/paris-montmartre-street-light"
+      "local_package": "/Users/ecohen/Dev/PhotosByElie/socials/Instagram/2026-06-10/paris-montmartre-street-light",
+      "published": {
+        "status": "published",
+        "platform": "instagram",
+        "account": "ec92009",
+        "media_id": "17921312160365105",
+        "published_at": "2026-06-10T03:11:07+0000",
+        "permalink_url": "https://www.instagram.com/p/DZY8noKiHv5/",
+        "media_type": "CAROUSEL_ALBUM",
+        "image_count": 8,
+        "verified_at": "2026-06-10T03:13:54.730Z",
+        "verification": "Instagram Graph returned permalink, username ec92009, CAROUSEL_ALBUM, caption, and 8 child images."
+      },
+      "api_publish": {
+        "status": "published",
+        "platform": "instagram",
+        "account": "ec92009",
+        "media_id": "17921312160365105",
+        "published_at": "2026-06-10T03:11:07+0000",
+        "permalink_url": "https://www.instagram.com/p/DZY8noKiHv5/",
+        "media_type": "CAROUSEL_ALBUM",
+        "image_count": 8,
+        "verified_at": "2026-06-10T03:13:54.730Z",
+        "verification": "Instagram Graph returned permalink, username ec92009, CAROUSEL_ALBUM, caption, and 8 child images."
+      }
     },
     {
       "date": "2026-06-10",
       "platform": "Pinterest",
-      "status": "prepared",
+      "status": "prepared_no_api_token_or_board_id",
       "account": "photosbyelie",
       "post_type": "multi_image_pin",
       "title": "Gibraltar Rock and Bay Light",
@@ -436,12 +484,20 @@
           "local_staged_path": "socials/Pinterest/2026-06-10/gibraltar-rock-and-bay-light/images/05-img-5690-7733fd1086-gibraltar-rock-and-bay-light.jpg"
         }
       ],
-      "local_package": "/Users/ecohen/Dev/PhotosByElie/socials/Pinterest/2026-06-10/gibraltar-rock-and-bay-light"
+      "local_package": "/Users/ecohen/Dev/PhotosByElie/socials/Pinterest/2026-06-10/gibraltar-rock-and-bay-light",
+      "publish_blocker": {
+        "status": "prepared_no_api_token_or_board_id",
+        "platform": "pinterest",
+        "account": "photosbyelie",
+        "image_count": 5,
+        "verified_at": "2026-06-10T03:13:54.730Z",
+        "verification": "Pinterest dry run passed with exactly 5 images, but no token/board id mapping is configured for live API publishing."
+      }
     },
     {
       "date": "2026-06-10",
       "platform": "Threads",
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "title": "Paris Montmartre Street Light",
@@ -525,7 +581,33 @@
         }
       ],
       "local_package": "/Users/ecohen/Dev/PhotosByElie/socials/Threads/2026-06-10/paris-montmartre-street-light",
-      "link_preview_instruction": "Remove automatic link preview before posting if it is off-theme."
+      "link_preview_instruction": "Remove automatic link preview before posting if it is off-theme.",
+      "published": {
+        "status": "published",
+        "platform": "threads",
+        "account": "ec92009",
+        "threads_user_id": "36227075590239114",
+        "media_id": "18017830427693274",
+        "published_at": "2026-06-10T03:12:05+0000",
+        "permalink_url": "https://www.threads.com/@ec92009/post/DZY8ulxiKNH",
+        "media_type": "CAROUSEL_ALBUM",
+        "image_count": 4,
+        "verified_at": "2026-06-10T03:13:54.730Z",
+        "verification": "Threads Graph returned permalink, username ec92009, CAROUSEL_ALBUM, text, and 4 child images."
+      },
+      "api_publish": {
+        "status": "published",
+        "platform": "threads",
+        "account": "ec92009",
+        "threads_user_id": "36227075590239114",
+        "media_id": "18017830427693274",
+        "published_at": "2026-06-10T03:12:05+0000",
+        "permalink_url": "https://www.threads.com/@ec92009/post/DZY8ulxiKNH",
+        "media_type": "CAROUSEL_ALBUM",
+        "image_count": 4,
+        "verified_at": "2026-06-10T03:13:54.730Z",
+        "verification": "Threads Graph returned permalink, username ec92009, CAROUSEL_ALBUM, text, and 4 child images."
+      }
     }
   ],
   "etsy": {
@@ -556,6 +638,11 @@
     "npm run validate passed",
     "platform package count check passed",
     "local browser campaign smoke passed for v102.3 titles and card counts",
-    "Etsy token refreshed, but draft creation skipped because current tooling cannot attach and verify one listing image plus one jpg-6mp buyer file per draft"
+    "Etsy token refreshed, but draft creation skipped because current tooling cannot attach and verify one listing image plus one jpg-6mp buyer file per draft",
+    "Live custom-domain campaign JSON returned HTTP 200 before API publishing",
+    "Facebook published and verified by Meta Graph with 8 attachments",
+    "Instagram published and verified by Instagram Graph with 8 carousel children",
+    "Threads published and verified by Threads Graph with 4 carousel children",
+    "Pinterest left prepared because no token/board id mapping is configured"
   ]
 }

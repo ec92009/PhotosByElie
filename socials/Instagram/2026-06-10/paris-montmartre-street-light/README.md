@@ -24,3 +24,11 @@ Montmartre in soft Paris light: facades, cafe corners, and street texture curate
 
 - Instagram Graph dry run passed for 8 public HTTPS images with profile-link caption wording.
 - Live publishing waits for committed/pushed campaign URL verification.
+
+## Published
+
+- Status: `published`
+- URL: https://www.instagram.com/p/DZY8noKiHv5/
+- Published at: `2026-06-10T03:11:07+0000`
+- Image count: `8`
+- Verification: Instagram Graph returned permalink, username ec92009, CAROUSEL_ALBUM, caption, and 8 child images.

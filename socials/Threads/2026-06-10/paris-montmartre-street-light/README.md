@@ -18,3 +18,11 @@ Montmartre, edited down to street texture, soft facades, and Paris atmosphere. B
 
 - Threads dry run passed for 4 public HTTPS images.
 - Remove an automatic link preview before posting if it shows off-theme/default metadata.
+
+## Published
+
+- Status: `published`
+- URL: https://www.threads.com/@ec92009/post/DZY8ulxiKNH
+- Published at: `2026-06-10T03:12:05+0000`
+- Image count: `4`
+- Verification: Threads Graph returned permalink, username ec92009, CAROUSEL_ALBUM, text, and 4 child images.

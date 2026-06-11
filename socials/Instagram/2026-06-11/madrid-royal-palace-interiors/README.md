@@ -1,6 +1,6 @@
 # Instagram - Madrid Royal Palace Interiors
 
-Status: prepared
+Status: published
 Destination: https://photos-by-elie.com/campaign.html?c=instagram-madrid-royal-palace-interiors-2026-06-11
 Image count: 8
 
@@ -19,3 +19,10 @@ Madrid Royal Palace interiors in measured light: gilded rooms, formal rhythm, an
 - img-1804-1a434e64c3 - https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1804-1a434e64c3_1800.jpg - `socials/Instagram/2026-06-11/madrid-royal-palace-interiors/images/06-img-1804-1a434e64c3-madrid-royal-palace-interiors.jpg`
 - img-1811-56a049eb64 - https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1811-56a049eb64_1800.jpg - `socials/Instagram/2026-06-11/madrid-royal-palace-interiors/images/07-img-1811-56a049eb64-madrid-royal-palace-interiors.jpg`
 - img-1815-ade5e9ee43 - https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1815-ade5e9ee43_1800.jpg - `socials/Instagram/2026-06-11/madrid-royal-palace-interiors/images/08-img-1815-ade5e9ee43-madrid-royal-palace-interiors.jpg`
+
+## Published
+
+- URL: https://www.instagram.com/p/DZbz9j6iMiB/
+- ID: 18082949108552068
+- Images: 8
+- Verified: Instagram Graph returned permalink, username, CAROUSEL_ALBUM, and 8 children.

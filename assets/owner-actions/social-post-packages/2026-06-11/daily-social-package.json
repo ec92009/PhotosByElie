@@ -10,9 +10,9 @@
     "Paris Carnavalet Museum Rooms"
   ],
   "platform_status": {
-    "facebook": "prepared",
-    "instagram": "prepared",
-    "threads": "prepared",
+    "facebook": "published",
+    "instagram": "published",
+    "threads": "published",
     "pinterest": "prepared_no_api_token_or_board_id",
     "etsy": "review_packages_only_attachment_tooling_blocked"
   },
@@ -20,7 +20,7 @@
     {
       "date": "2026-06-11",
       "platform": "Facebook",
-      "status": "prepared",
+      "status": "published",
       "account": "Photos By Elie",
       "post_type": "multi_photo",
       "title": "Ronda Gorge and White Town Light",
@@ -170,12 +170,36 @@
           "local_staged_path": "socials/Facebook/2026-06-11/ronda-gorge-white-town-light/images/08-d5h-2697-1209ca7c26-ronda-gorge-white-town-light.jpg"
         }
       ],
-      "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260611-rRUNIj/socials/Facebook/2026-06-11/ronda-gorge-white-town-light"
+      "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260611-rRUNIj/socials/Facebook/2026-06-11/ronda-gorge-white-town-light",
+      "published": {
+        "status": "published",
+        "platform": "facebook",
+        "account": "Photos By Elie",
+        "page_id": "1146747141854670",
+        "post_id": "1146747141854670_122105158893334672",
+        "published_at": "2026-06-11T05:51:39+0000",
+        "permalink_url": "https://www.facebook.com/122102168061334672/posts/122105158893334672",
+        "image_count": 8,
+        "verified_at": "2026-06-11T05:55:00Z",
+        "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
+      },
+      "api_publish": {
+        "status": "published",
+        "platform": "facebook",
+        "account": "Photos By Elie",
+        "page_id": "1146747141854670",
+        "post_id": "1146747141854670_122105158893334672",
+        "published_at": "2026-06-11T05:51:39+0000",
+        "permalink_url": "https://www.facebook.com/122102168061334672/posts/122105158893334672",
+        "image_count": 8,
+        "verified_at": "2026-06-11T05:55:00Z",
+        "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
+      }
     },
     {
       "date": "2026-06-11",
       "platform": "Instagram",
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "title": "Madrid Royal Palace Interiors",
@@ -327,12 +351,36 @@
           "local_staged_path": "socials/Instagram/2026-06-11/madrid-royal-palace-interiors/images/08-img-1815-ade5e9ee43-madrid-royal-palace-interiors.jpg"
         }
       ],
-      "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260611-rRUNIj/socials/Instagram/2026-06-11/madrid-royal-palace-interiors"
+      "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260611-rRUNIj/socials/Instagram/2026-06-11/madrid-royal-palace-interiors",
+      "published": {
+        "status": "published",
+        "platform": "instagram",
+        "account": "ec92009",
+        "media_id": "18082949108552068",
+        "published_at": "2026-06-11T05:53:12+0000",
+        "permalink_url": "https://www.instagram.com/p/DZbz9j6iMiB/",
+        "media_type": "CAROUSEL_ALBUM",
+        "image_count": 8,
+        "verified_at": "2026-06-11T05:55:00Z",
+        "verification": "Instagram Graph returned permalink, username, CAROUSEL_ALBUM, and 8 children."
+      },
+      "api_publish": {
+        "status": "published",
+        "platform": "instagram",
+        "account": "ec92009",
+        "media_id": "18082949108552068",
+        "published_at": "2026-06-11T05:53:12+0000",
+        "permalink_url": "https://www.instagram.com/p/DZbz9j6iMiB/",
+        "media_type": "CAROUSEL_ALBUM",
+        "image_count": 8,
+        "verified_at": "2026-06-11T05:55:00Z",
+        "verification": "Instagram Graph returned permalink, username, CAROUSEL_ALBUM, and 8 children."
+      }
     },
     {
       "date": "2026-06-11",
       "platform": "Threads",
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "title": "Madrid Royal Palace Interiors",
@@ -417,7 +465,31 @@
         }
       ],
       "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260611-rRUNIj/socials/Threads/2026-06-11/madrid-royal-palace-interiors",
-      "link_preview_note": "Remove automatic link preview before posting if it shows off-theme/default campaign metadata."
+      "link_preview_note": "Remove automatic link preview before posting if it shows off-theme/default campaign metadata.",
+      "published": {
+        "status": "published",
+        "platform": "threads",
+        "account": "ec92009",
+        "media_id": "18106440019839611",
+        "published_at": "2026-06-11T05:54:02+0000",
+        "permalink_url": "https://www.threads.com/@ec92009/post/DZb0D4hiJgr",
+        "media_type": "CAROUSEL_ALBUM",
+        "image_count": 4,
+        "verified_at": "2026-06-11T05:55:00Z",
+        "verification": "Threads Graph returned permalink, username, CAROUSEL_ALBUM, and 4 children."
+      },
+      "api_publish": {
+        "status": "published",
+        "platform": "threads",
+        "account": "ec92009",
+        "media_id": "18106440019839611",
+        "published_at": "2026-06-11T05:54:02+0000",
+        "permalink_url": "https://www.threads.com/@ec92009/post/DZb0D4hiJgr",
+        "media_type": "CAROUSEL_ALBUM",
+        "image_count": 4,
+        "verified_at": "2026-06-11T05:55:00Z",
+        "verification": "Threads Graph returned permalink, username, CAROUSEL_ALBUM, and 4 children."
+      }
     },
     {
       "date": "2026-06-11",
@@ -574,6 +646,11 @@
       "status": "blocked",
       "name": "Etsy draft creation",
       "note": "Skipped because current tooling cannot attach and verify listing image plus buyer download file per draft."
+    },
+    {
+      "status": "passed",
+      "name": "live publish readback",
+      "note": "Facebook, Instagram, and Threads API readbacks returned permalinks and expected child/subattachment counts."
     }
   ]
 }

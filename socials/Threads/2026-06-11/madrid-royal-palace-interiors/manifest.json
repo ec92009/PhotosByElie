@@ -1,7 +1,7 @@
 {
   "date": "2026-06-11",
   "platform": "Threads",
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "title": "Madrid Royal Palace Interiors",
@@ -91,5 +91,29 @@
     "status": "passed",
     "checked_at": "2026-06-11T05:50:00Z",
     "note": "API dry run passed with public HTTPS images and expected post plan."
+  },
+  "published": {
+    "status": "published",
+    "platform": "threads",
+    "account": "ec92009",
+    "media_id": "18106440019839611",
+    "published_at": "2026-06-11T05:54:02+0000",
+    "permalink_url": "https://www.threads.com/@ec92009/post/DZb0D4hiJgr",
+    "media_type": "CAROUSEL_ALBUM",
+    "image_count": 4,
+    "verified_at": "2026-06-11T05:55:00Z",
+    "verification": "Threads Graph returned permalink, username, CAROUSEL_ALBUM, and 4 children."
+  },
+  "api_publish": {
+    "status": "published",
+    "platform": "threads",
+    "account": "ec92009",
+    "media_id": "18106440019839611",
+    "published_at": "2026-06-11T05:54:02+0000",
+    "permalink_url": "https://www.threads.com/@ec92009/post/DZb0D4hiJgr",
+    "media_type": "CAROUSEL_ALBUM",
+    "image_count": 4,
+    "verified_at": "2026-06-11T05:55:00Z",
+    "verification": "Threads Graph returned permalink, username, CAROUSEL_ALBUM, and 4 children."
   }
 }

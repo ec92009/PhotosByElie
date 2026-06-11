@@ -1,7 +1,7 @@
 {
   "date": "2026-06-11",
   "platform": "Facebook",
-  "status": "prepared",
+  "status": "published",
   "account": "Photos By Elie",
   "post_type": "multi_photo",
   "title": "Ronda Gorge and White Town Light",
@@ -156,5 +156,29 @@
     "status": "passed",
     "checked_at": "2026-06-11T05:50:00Z",
     "note": "API dry run passed with public HTTPS images and expected post plan."
+  },
+  "published": {
+    "status": "published",
+    "platform": "facebook",
+    "account": "Photos By Elie",
+    "page_id": "1146747141854670",
+    "post_id": "1146747141854670_122105158893334672",
+    "published_at": "2026-06-11T05:51:39+0000",
+    "permalink_url": "https://www.facebook.com/122102168061334672/posts/122105158893334672",
+    "image_count": 8,
+    "verified_at": "2026-06-11T05:55:00Z",
+    "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
+  },
+  "api_publish": {
+    "status": "published",
+    "platform": "facebook",
+    "account": "Photos By Elie",
+    "page_id": "1146747141854670",
+    "post_id": "1146747141854670_122105158893334672",
+    "published_at": "2026-06-11T05:51:39+0000",
+    "permalink_url": "https://www.facebook.com/122102168061334672/posts/122105158893334672",
+    "image_count": 8,
+    "verified_at": "2026-06-11T05:55:00Z",
+    "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
   }
 }

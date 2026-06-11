@@ -1,6 +1,6 @@
 # Facebook - Ronda Gorge and White Town Light
 
-Status: prepared
+Status: published
 Destination: https://photos-by-elie.com/campaign.html?c=facebook-ronda-gorge-white-town-light-2026-06-11
 Image count: 8
 
@@ -17,3 +17,10 @@ Ronda in cliff light and white-town geometry: a Photos By Elie wall-art edit bui
 - d5h-2683-67d01abd63 - https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2683-67d01abd63_1800.jpg - `socials/Facebook/2026-06-11/ronda-gorge-white-town-light/images/06-d5h-2683-67d01abd63-ronda-gorge-white-town-light.jpg`
 - d5h-2686-bdb11cc741 - https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2686-bdb11cc741_1800.jpg - `socials/Facebook/2026-06-11/ronda-gorge-white-town-light/images/07-d5h-2686-bdb11cc741-ronda-gorge-white-town-light.jpg`
 - d5h-2697-1209ca7c26 - https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/d5h-2697-1209ca7c26_1800.jpg - `socials/Facebook/2026-06-11/ronda-gorge-white-town-light/images/08-d5h-2697-1209ca7c26-ronda-gorge-white-town-light.jpg`
+
+## Published
+
+- URL: https://www.facebook.com/122102168061334672/posts/122105158893334672
+- ID: 1146747141854670_122105158893334672
+- Images: 8
+- Verified: Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments.

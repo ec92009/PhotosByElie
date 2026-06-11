@@ -1,7 +1,7 @@
 {
   "date": "2026-06-11",
   "platform": "Instagram",
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "title": "Madrid Royal Palace Interiors",
@@ -158,5 +158,29 @@
     "status": "passed",
     "checked_at": "2026-06-11T05:50:00Z",
     "note": "API dry run passed with public HTTPS images and expected post plan."
+  },
+  "published": {
+    "status": "published",
+    "platform": "instagram",
+    "account": "ec92009",
+    "media_id": "18082949108552068",
+    "published_at": "2026-06-11T05:53:12+0000",
+    "permalink_url": "https://www.instagram.com/p/DZbz9j6iMiB/",
+    "media_type": "CAROUSEL_ALBUM",
+    "image_count": 8,
+    "verified_at": "2026-06-11T05:55:00Z",
+    "verification": "Instagram Graph returned permalink, username, CAROUSEL_ALBUM, and 8 children."
+  },
+  "api_publish": {
+    "status": "published",
+    "platform": "instagram",
+    "account": "ec92009",
+    "media_id": "18082949108552068",
+    "published_at": "2026-06-11T05:53:12+0000",
+    "permalink_url": "https://www.instagram.com/p/DZbz9j6iMiB/",
+    "media_type": "CAROUSEL_ALBUM",
+    "image_count": 8,
+    "verified_at": "2026-06-11T05:55:00Z",
+    "verification": "Instagram Graph returned permalink, username, CAROUSEL_ALBUM, and 8 children."
   }
 }

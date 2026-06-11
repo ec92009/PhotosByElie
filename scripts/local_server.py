@@ -2957,6 +2957,33 @@ def _hidden_provenance(photo: dict, fallback_state: str, fallback_slug: str) -> 
     return state, slug
 
 
+def _restore_hidden_photo_to_normal_group(
+    expo_groups: dict[str, list[dict]],
+    reserve_groups: dict[str, list[dict]],
+    hidden_photo: dict,
+    photo_id: str,
+    target_state: str,
+    target_slug: str,
+) -> bool:
+    target_groups = reserve_groups if target_state == "reserve" else expo_groups
+    target_slug = target_slug if target_slug in target_groups else "unknown"
+    if _find_photo(target_groups, photo_id):
+        return False
+    restored = copy_photo(hidden_photo)
+    for key in ("hiddenFromState", "hiddenFromSlug", "hiddenAt"):
+        restored.pop(key, None)
+    owner_state = restored.get("ownerState")
+    if isinstance(owner_state, dict):
+        for key in ("hiddenFromState", "hiddenFromSlug", "hiddenAt"):
+            owner_state.pop(key, None)
+        if not owner_state:
+            restored.pop("ownerState", None)
+    _remove_existing(expo_groups, photo_id)
+    _remove_existing(reserve_groups, photo_id)
+    target_groups.setdefault(target_slug, []).append(restored)
+    return True
+
+
 def _photo_media_type(photo: dict) -> str:
     return str((photo.get("media") or {}).get("type") or photo.get("type") or "photo").strip().lower() or "photo"
 
@@ -7608,7 +7635,22 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         target_state, target_slug = _hidden_provenance(hidden_photo, "expo", hidden_slug)
         if target_state == "expo" and not public_preview_allowed(hidden_photo):
             target_state = "reserve"
-        moved = {"from": "hidden", "from_slug": hidden_slug, "to": target_state, "to_slug": target_slug, "mode": "blacklist"}
+        restored = _restore_hidden_photo_to_normal_group(
+            expo_groups,
+            reserve_groups,
+            hidden_photo,
+            photo_id,
+            target_state,
+            target_slug,
+        )
+        moved = {
+            "from": "hidden",
+            "from_slug": hidden_slug,
+            "to": target_state,
+            "to_slug": target_slug,
+            "mode": "blacklist",
+            "restored": restored,
+        }
 
     else:
         found = _find_and_remove(hidden_groups, photo_id)

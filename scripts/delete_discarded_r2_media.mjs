@@ -73,6 +73,17 @@ const runOwnerDb = (args, options = {}) => {
   return { ok: true, stdout: result.stdout || "" };
 };
 
+const readOwnerLifecycle = () => {
+  const result = runOwnerDb(["--media-lifecycle-json"]);
+  if (!result.ok) return {};
+  try {
+    return JSON.parse(result.stdout || "{}");
+  } catch {
+    console.warn("Owner DB lifecycle snapshot skipped: invalid JSON");
+    return {};
+  }
+};
+
 const readOwnerDbDeletedKeys = () => {
   runOwnerDb(["--import-discarded-r2-manifest"]);
   const db = fullPath(ownerDbPath);
@@ -213,6 +224,7 @@ const deleteKeys = async (bucket, keys, progress, scope) => {
 
 const tombstone = await readJson(tombstonePath, {});
 const previousManifest = await readJson(outputPath, {});
+const ownerLifecycle = readOwnerLifecycle();
 const currentDiscardedIds = new Set((Array.isArray(tombstone.photo_ids) ? tombstone.photo_ids : [])
   .filter((id) => typeof id === "string" && id));
 (Array.isArray(tombstone.photos) ? tombstone.photos : [])
@@ -222,6 +234,11 @@ const currentDiscardedIds = new Set((Array.isArray(tombstone.photo_ids) ? tombst
 const historicalDiscardedIds = new Set((useHistory && Array.isArray(previousManifest.discardedPhotoIds) ? previousManifest.discardedPhotoIds : [])
   .filter((id) => typeof id === "string" && id));
 const discardedIds = new Set(currentDiscardedIds);
+if (Array.isArray(ownerLifecycle.discardedPhotoIds)) {
+  ownerLifecycle.discardedPhotoIds
+    .filter((id) => typeof id === "string" && id)
+    .forEach((id) => discardedIds.add(id));
+}
 (useHistory && Array.isArray(previousManifest.discardedPhotoIds) ? previousManifest.discardedPhotoIds : [])
   .filter((id) => typeof id === "string" && id)
   .forEach((id) => discardedIds.add(id));
@@ -229,6 +246,18 @@ const discardedIds = new Set(currentDiscardedIds);
   .map((photo) => photo?.id)
   .filter((id) => typeof id === "string" && id)
   .forEach((id) => discardedIds.add(id));
+const keyPhotoId = (key) => {
+  const value = String(key || "");
+  if (value.startsWith("masters/")) {
+    const rest = value.slice("masters/".length);
+    return rest.includes("/") ? rest.split("/")[0] : rest.replace(/\.[A-Za-z0-9]+$/, "");
+  }
+  if (value.startsWith("renders/")) {
+    const rest = value.slice("renders/".length);
+    return rest.includes("/") ? rest.split("/")[0] : rest.replace(/_(?:1|3|6)mp\.jpg$/i, "");
+  }
+  return value.split("/")[1]?.replace(/_(?:900|1800|short_5s_720p)\.[A-Za-z0-9]+$/i, "") || "";
+};
 const mediaTypeById = new Map((Array.isArray(tombstone.photos) ? tombstone.photos : [])
   .filter((photo) => photo?.id)
   .map((photo) => [
@@ -250,6 +279,12 @@ if (!discardedIds.size) {
 
 const publicKeys = new Set((Array.isArray(tombstone.public_preview_keys) ? tombstone.public_preview_keys : [])
   .filter((key) => typeof key === "string" && key));
+if (Array.isArray(ownerLifecycle.publicPreviewKeys)) {
+  ownerLifecycle.publicPreviewKeys
+    .filter((key) => typeof key === "string" && key)
+    .filter((key) => discardedIds.has(keyPhotoId(key)))
+    .forEach((key) => publicKeys.add(key));
+}
 (useHistory && Array.isArray(previousManifest.publicKeys) ? previousManifest.publicKeys : [])
   .filter((key) => typeof key === "string" && key)
   .forEach((key) => publicKeys.add(key));
@@ -259,19 +294,6 @@ for (const id of discardedIds) {
     ? `expo/${id}_short_5s_720p.mp4`
     : `expo/${id}_1800.jpg`);
 }
-const keyPhotoId = (key) => {
-  const value = String(key || "");
-  if (value.startsWith("masters/")) {
-    const rest = value.slice("masters/".length);
-    return rest.includes("/") ? rest.split("/")[0] : rest.replace(/\.[A-Za-z0-9]+$/, "");
-  }
-  if (value.startsWith("renders/")) {
-    const rest = value.slice("renders/".length);
-    return rest.includes("/") ? rest.split("/")[0] : rest.replace(/_(?:1|3|6)mp\.jpg$/i, "");
-  }
-  return value.split("/")[1] || "";
-};
-
 const [currentPublicKeys, masterKeys, renderKeys] = deepInventory
   ? await Promise.all([
       listPrefix(publicBucket, "expo/"),
@@ -290,6 +312,12 @@ const privateKeys = new Set([...masterKeys, ...renderKeys].filter((key) => disca
 (Array.isArray(tombstone.private_keys) ? tombstone.private_keys : [])
   .filter((key) => typeof key === "string" && key)
   .forEach((key) => privateKeys.add(key));
+if (Array.isArray(ownerLifecycle.privateKeys)) {
+  ownerLifecycle.privateKeys
+    .filter((key) => typeof key === "string" && key)
+    .filter((key) => discardedIds.has(keyPhotoId(key)))
+    .forEach((key) => privateKeys.add(key));
+}
 (useHistory && Array.isArray(previousManifest.privateKeys) ? previousManifest.privateKeys : [])
   .filter((key) => typeof key === "string" && key)
   .filter((key) => discardedIds.has(keyPhotoId(key)))

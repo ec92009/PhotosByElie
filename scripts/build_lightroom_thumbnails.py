@@ -36,7 +36,7 @@ from typing import Any
 from media_keys import DEFAULT_PUBLIC_PREFIX, private_master_key, private_render_key, public_preview_key, public_preview_key_for_reference
 from media_policy import DEVELOPED_IMAGE_EXTENSIONS, DEVELOPED_VIDEO_EXTENSIONS, RAW_IMAGE_EXTENSIONS
 from import_eligibility import green_selected, lightroom_selected, normalize_rating
-from owner_state_db import connect as owner_db_connect, keyword_blacklist_terms as owner_keyword_blacklist_terms, upsert_r2_object_state
+from owner_state_db import connect as owner_db_connect, keyword_blacklist_terms as owner_keyword_blacklist_terms, media_lifecycle_snapshot, upsert_r2_object_state
 from sync_r2_media import DEFAULT_THROTTLE_FILE, UploadItem, append_upload_state, first_env, s3_put, wrangler_command
 from update_caption_colors import caption_color
 
@@ -2568,15 +2568,18 @@ def main() -> int:
     args.output_root = args.output_root.expanduser()
     args.keyword_blacklist = args.keyword_blacklist.expanduser()
     args.keyword_blacklist_values = load_keyword_blacklist(args.keyword_blacklist)
+    lifecycle = media_lifecycle_snapshot(Path.cwd())
     args.discarded_photo_ids = (
         load_discarded_photo_ids(args.hidden_blacklist.expanduser())
         | load_discarded_photo_ids(args.discarded_tombstone.expanduser())
         | load_discarded_photo_ids(Path("assets/discarded-media-manifest.json"))
+        | set(lifecycle.get("blockedPhotoIds") or [])
     )
     args.discarded_source_paths = (
         load_discarded_source_paths(args.hidden_blacklist.expanduser())
         | load_discarded_source_paths(args.discarded_tombstone.expanduser())
         | load_discarded_source_paths(Path("assets/discarded-media-manifest.json"))
+        | set(lifecycle.get("blockedSourcePaths") or [])
         | load_historical_discarded_source_paths(args.discarded_photo_ids)
     )
     args.discarded_source_suffixes = discarded_source_suffixes(args.discarded_source_paths)

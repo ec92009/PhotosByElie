@@ -128,6 +128,21 @@ const loadDiscardedIds = () => {
   return ids;
 };
 
+const loadLifecycleBlockedIds = () => {
+  const ids = loadDiscardedIds();
+  const output = childProcess.execFileSync(
+    "python3",
+    ["scripts/owner_state_db.py", "--media-lifecycle-json"],
+    { cwd: repoRoot, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
+  );
+  const lifecycle = JSON.parse(output || "{}");
+  (Array.isArray(lifecycle.blockedPhotoIds) ? lifecycle.blockedPhotoIds : []).forEach((value) => {
+    const id = String(value || "").trim();
+    if (id) ids.add(id);
+  });
+  return ids;
+};
+
 const loadAppliedTitleKeywordIds = () => {
   const ownerDb = path.join(repoRoot, "assets", "owner-actions", "Owner.sqlite");
   if (!fs.existsSync(ownerDb)) {
@@ -180,8 +195,13 @@ const validate = () => {
   const seenPublicPreview = new Map();
   const resolutionIds = new Set();
   const dynamicResolutionIds = new Set(["video-original"]);
-  const discardedIds = loadDiscardedIds();
+  let lifecycleBlockedIds = loadDiscardedIds();
   let appliedTitleKeywordIds = new Set();
+  try {
+    lifecycleBlockedIds = loadLifecycleBlockedIds();
+  } catch (error) {
+    errors.push(`Could not load hidden/discarded lifecycle state: ${error.message}`);
+  }
   try {
     appliedTitleKeywordIds = loadAppliedTitleKeywordIds();
   } catch (error) {
@@ -226,8 +246,8 @@ const validate = () => {
       } else {
         seenPhotoIds.set(photo.id, collectionKey);
       }
-      if (discardedIds.has(photo.id)) {
-        errors.push(`${photo.id} is discarded/tombstoned and must not be in the public catalog.`);
+      if (lifecycleBlockedIds.has(photo.id)) {
+        errors.push(`${photo.id} is hidden/discarded and must not be in the public catalog.`);
       }
       if (!appliedTitleKeywordIds.has(photo.id)) {
         errors.push(`${photo.id} is not Owner-applied for public title/keyword visibility.`);
@@ -398,8 +418,8 @@ const validate = () => {
   const expoManifest = readJson(expoManifestPath, {});
   (Array.isArray(expoManifest.photos) ? expoManifest.photos : []).forEach((photo) => {
     const photoId = String(photo?.id || "").trim();
-    if (photoId && discardedIds.has(photoId)) {
-      errors.push(`${photoId} is discarded/tombstoned and must not be in assets/expo-manifest.json.`);
+    if (photoId && lifecycleBlockedIds.has(photoId)) {
+      errors.push(`${photoId} is hidden/discarded and must not be in assets/expo-manifest.json.`);
     }
     if (photoId && !appliedTitleKeywordIds.has(photoId)) {
       errors.push(`${photoId} is not Owner-applied and must not be in assets/expo-manifest.json.`);

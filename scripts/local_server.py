@@ -243,10 +243,13 @@ from sync_r2_media import (  # noqa: E402
     wrangler_delete,
     wrangler_put,
 )
-from owner_state_db import backfill_r2_object_metadata, connect as owner_db_connect, upsert_r2_object_state  # noqa: E402
+from owner_state_db import backfill_r2_object_metadata, connect as owner_db_connect, media_lifecycle_snapshot, upsert_r2_object_state  # noqa: E402
 from owner_state_db import keyword_blacklist_terms as keyword_blacklist_terms_db  # noqa: E402
 from owner_state_db import record_country_assignments as record_country_assignments_db  # noqa: E402
 from owner_state_db import record_keyword_blacklist as record_keyword_blacklist_db  # noqa: E402
+from owner_state_db import record_media_lifecycle_active as record_media_lifecycle_active_db  # noqa: E402
+from owner_state_db import record_media_lifecycle_discarded as record_media_lifecycle_discarded_db  # noqa: E402
+from owner_state_db import record_media_lifecycle_hidden as record_media_lifecycle_hidden_db  # noqa: E402
 from owner_state_db import clear_title_keyword_review_blocks as clear_title_keyword_review_blocks_db  # noqa: E402
 from owner_state_db import queue_title_keyword_review_photo as queue_title_keyword_review_photo_db  # noqa: E402
 from owner_state_db import record_title_keyword_review_decisions as record_title_keyword_review_decisions_db  # noqa: E402
@@ -1687,18 +1690,45 @@ def _title_keyword_state_by_id(repo_root: Path) -> dict[str, str]:
 
 
 def _owner_hidden_or_discarded_ids(repo_root: Path) -> set[str]:
-    ids: set[str] = set()
-    for path in [repo_root / HIDDEN_BLACKLIST_PATH, repo_root / DISCARDED_TOMBSTONE_PATH]:
-        payload = _read_json_file(path, {})
-        if not isinstance(payload, dict):
-            continue
-        ids.update(str(photo_id) for photo_id in payload.get("photo_ids") or [] if photo_id)
-        ids.update(
-            str(photo.get("id"))
-            for photo in payload.get("photos") or []
-            if isinstance(photo, dict) and photo.get("id")
-        )
-    return ids
+    return _lifecycle_blocked_ids(repo_root)
+
+
+def _lifecycle_snapshot(repo_root: Path) -> dict:
+    return media_lifecycle_snapshot(repo_root)
+
+
+def _lifecycle_hidden_ids(repo_root: Path) -> set[str]:
+    return set(_lifecycle_snapshot(repo_root).get("hiddenPhotoIds") or [])
+
+
+def _lifecycle_discarded_ids(repo_root: Path) -> set[str]:
+    return set(_lifecycle_snapshot(repo_root).get("discardedPhotoIds") or [])
+
+
+def _lifecycle_blocked_ids(repo_root: Path) -> set[str]:
+    return set(_lifecycle_snapshot(repo_root).get("blockedPhotoIds") or [])
+
+
+def _assert_no_lifecycle_blocked_public_rows(repo_root: Path) -> None:
+    blocked_ids = _lifecycle_blocked_ids(repo_root)
+    if not blocked_ids:
+        return
+    public_ids = set(_public_catalog_origin_by_id(repo_root))
+    manifest = _read_json_file(repo_root / EXPO_MANIFEST_PATH, {})
+    manifest_ids = {
+        str(photo.get("id") or "").strip()
+        for photo in (manifest.get("photos") if isinstance(manifest, dict) else []) or []
+        if isinstance(photo, dict) and str(photo.get("id") or "").strip()
+    }
+    public_leaks = sorted(blocked_ids & public_ids)
+    manifest_leaks = sorted(blocked_ids & manifest_ids)
+    if public_leaks or manifest_leaks:
+        parts = []
+        if public_leaks:
+            parts.append(f"public catalog: {', '.join(public_leaks[:20])}")
+        if manifest_leaks:
+            parts.append(f"expo manifest: {', '.join(manifest_leaks[:20])}")
+        raise ValueError("hidden/discarded media leaked into public artifacts (" + "; ".join(parts) + ")")
 
 
 def owner_visibility_summary(repo_root: Path) -> dict:
@@ -1875,11 +1905,9 @@ def _clear_stale_title_keyword_review_rows(repo_root: Path, conn) -> dict:
     if not media_ids:
         return {"blocked": 0, "not_found": 0}
     catalog_ids = set(_catalog_rows_by_media_id(repo_root, media_ids))
-    discarded_ids = _discarded_photo_ids(repo_root)
-    hidden_payload = _read_json_file(repo_root / HIDDEN_BLACKLIST_PATH, {})
-    hidden_ids = set()
-    if isinstance(hidden_payload, dict) and isinstance(hidden_payload.get("photo_ids"), list):
-        hidden_ids = {str(photo_id) for photo_id in hidden_payload["photo_ids"] if photo_id}
+    lifecycle = _lifecycle_snapshot(repo_root)
+    hidden_ids = set(lifecycle.get("hiddenPhotoIds") or [])
+    discarded_ids = set(lifecycle.get("discardedPhotoIds") or [])
     by_batch: dict[str, dict[str, list[dict]]] = {}
     for row in rows:
         media_id = str(row["media_id"] or "").strip()
@@ -2608,13 +2636,7 @@ def _incomplete_title_keyword_backlog_photos(
         str(row["media_id"]): str(row["review_state"] or "")
         for row in conn.execute("SELECT media_id, review_state FROM title_keyword_queue")
     }
-    hidden_payload = _read_json_file(repo_root / HIDDEN_BLACKLIST_PATH, {})
-    hidden_ids = {
-        str(photo_id)
-        for photo_id in (hidden_payload.get("photo_ids") if isinstance(hidden_payload, dict) else []) or []
-        if str(photo_id or "").strip()
-    }
-    blocked_ids = _discarded_photo_ids(repo_root) | hidden_ids
+    blocked_ids = _lifecycle_blocked_ids(repo_root)
     public_ids = set(_public_catalog_origin_by_id(repo_root))
     r2_ready_ids = _current_public_preview_ready_ids(repo_root)
     candidates: list[dict] = []
@@ -3008,27 +3030,39 @@ def _hidden_public_preview_keys(photo: dict, slug: str) -> list[str]:
     return unique
 
 
-def _hidden_blacklist_payload(hidden_groups: dict[str, list[dict]]) -> dict:
+def _hidden_blacklist_payload(repo_root: Path, hidden_groups: dict[str, list[dict]]) -> dict:
     photo_ids = []
     public_preview_keys = []
+    source_paths = []
+    manifest_source_paths = _source_paths_from_manifest_rows_for_ids(
+        repo_root,
+        {
+            str(photo.get("id") or "").strip()
+            for photos in hidden_groups.values()
+            for photo in photos
+            if str(photo.get("id") or "").strip()
+        },
+    )
     for slug, photos in hidden_groups.items():
         for photo in photos:
             photo_id = photo.get("id")
             if photo_id:
                 photo_ids.append(photo_id)
             public_preview_keys.extend(_hidden_public_preview_keys(photo, slug))
+            source_paths.extend(_photo_source_paths(repo_root, photo, manifest_source_paths.get(str(photo_id or ""), [])))
     return {
         "format": "photosbyelie-hidden-blacklist",
         "version": 1,
         "updated_at": datetime.now(timezone.utc).isoformat(),
         "photo_ids": sorted(set(photo_ids)),
+        "source_paths": sorted(set(source_paths)),
         "public_preview_keys": sorted(set(public_preview_keys)),
     }
 
 
 def _write_hidden_blacklist(repo_root: Path, hidden_groups: dict[str, list[dict]]) -> Path:
     path = repo_root / HIDDEN_BLACKLIST_PATH
-    _write_json_file(path, _hidden_blacklist_payload(hidden_groups))
+    _write_json_file(path, _hidden_blacklist_payload(repo_root, hidden_groups))
     return path
 
 
@@ -3237,6 +3271,41 @@ def _write_discarded_tombstone(repo_root: Path, discarded_photo: dict | None = N
     return _write_discarded_tombstones(repo_root, [discarded_photo] if discarded_photo else [])
 
 
+def _hidden_lifecycle_entry(
+    repo_root: Path,
+    photo: dict,
+    photo_id: str,
+    source_state: str,
+    source_slug: str,
+    hidden_at: str,
+    manifest_source_paths: list[str] | None = None,
+) -> dict:
+    return {
+        "id": photo_id,
+        "title": photo.get("title") or photo_id,
+        "hidden_at": hidden_at,
+        "from_state": source_state,
+        "from_slug": source_slug,
+        "source_slug": source_slug,
+        "media_type": _photo_media_type(photo),
+        "asset_paths": _photo_asset_paths(photo),
+        "source_paths": _photo_source_paths(repo_root, photo, manifest_source_paths),
+        "public_preview_keys": _hidden_public_preview_keys(photo, source_slug),
+    }
+
+
+def _record_hidden_lifecycle(repo_root: Path, entries: list[dict]) -> dict:
+    return record_media_lifecycle_hidden_db(repo_root, entries) if entries else {"hidden": 0}
+
+
+def _record_discarded_lifecycle(repo_root: Path, entries: list[dict]) -> dict:
+    return record_media_lifecycle_discarded_db(repo_root, entries) if entries else {"discarded": 0}
+
+
+def _record_active_lifecycle(repo_root: Path, photo_ids: list[str]) -> dict:
+    return record_media_lifecycle_active_db(repo_root, photo_ids) if photo_ids else {"active": 0}
+
+
 def _groups_without_photo_ids(groups: dict[str, list[dict]], photo_ids: set[str]) -> dict[str, list[dict]]:
     if not photo_ids:
         return groups
@@ -3252,12 +3321,16 @@ def _groups_without_photo_ids(groups: dict[str, list[dict]], photo_ids: set[str]
 
 def _write_state(repo_root: Path, expo_groups: dict[str, list[dict]], reserve_groups: dict[str, list[dict]], hidden_groups: dict[str, list[dict]]) -> dict:
     _repair_hidden_references(repo_root, hidden_groups, expo_groups, reserve_groups)
-    discarded_ids = _discarded_photo_ids(repo_root)
-    expo_groups = _groups_without_photo_ids(expo_groups, discarded_ids)
-    reserve_groups = _groups_without_photo_ids(reserve_groups, discarded_ids)
+    discarded_ids = _lifecycle_discarded_ids(repo_root)
+    hidden_ids = (
+        {photo.get("id") for photos in hidden_groups.values() for photo in photos if photo.get("id")}
+        | _lifecycle_hidden_ids(repo_root)
+    )
+    blocked_ids = discarded_ids | hidden_ids
+    expo_groups = _groups_without_photo_ids(expo_groups, blocked_ids)
+    reserve_groups = _groups_without_photo_ids(reserve_groups, blocked_ids)
     hidden_groups = _groups_without_photo_ids(hidden_groups, discarded_ids)
     hidden_ids = {photo.get("id") for photos in hidden_groups.values() for photo in photos if photo.get("id")}
-    write_photos_data_from_site(repo_root, expo_groups, reserve_groups)
     write_reserve_data_from_site(repo_root, reserve_groups)
     write_hidden_data_from_site(repo_root, hidden_groups)
     _write_hidden_blacklist(repo_root, hidden_groups)
@@ -3269,6 +3342,8 @@ def _write_state(repo_root: Path, expo_groups: dict[str, list[dict]], reserve_gr
         hidden_ids,
         "live-local-action",
     )
+    write_photos_data_from_site(repo_root, expo_groups, reserve_groups)
+    _assert_no_lifecycle_blocked_public_rows(repo_root)
     site = load_site_data(repo_root)
     return {
         "data": site.get("data", {}),
@@ -5704,15 +5779,9 @@ def _r2_coverage_summary(
 ) -> dict:
     private_manifest = _read_json_file(repo_root / "assets/private-delivery-manifest.json", {})
     sidecar = _read_json_file(repo_root / "assets/media-sidecar.json", {})
-    hidden_blacklist = _read_json_file(repo_root / "assets/hidden/hidden-blacklist.json", {})
-    discarded_tombstone = _read_json_file(repo_root / DISCARDED_TOMBSTONE_PATH, {})
-    hidden_photo_ids = set()
-    if isinstance(hidden_blacklist, dict) and isinstance(hidden_blacklist.get("photo_ids"), list):
-        hidden_photo_ids = {str(photo_id) for photo_id in hidden_blacklist["photo_ids"] if photo_id}
-    discarded_photo_ids = set()
-    if isinstance(discarded_tombstone, dict):
-        discarded_photo_ids.update(str(photo_id) for photo_id in discarded_tombstone.get("photo_ids") or [] if photo_id)
-        discarded_photo_ids.update(str(photo.get("id")) for photo in discarded_tombstone.get("photos") or [] if isinstance(photo, dict) and photo.get("id"))
+    lifecycle = _lifecycle_snapshot(repo_root)
+    hidden_photo_ids = set(lifecycle.get("hiddenPhotoIds") or [])
+    discarded_photo_ids = set(lifecycle.get("discardedPhotoIds") or [])
     excluded_photo_ids = hidden_photo_ids | discarded_photo_ids
     records = private_manifest.get("records") if isinstance(private_manifest, dict) else {}
     if not isinstance(records, dict):
@@ -7246,6 +7315,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         discard_entries = _waste_basket_discard_entries(hidden_groups)
         hidden_count_before = sum(len(photos) for photos in hidden_groups.values())
         tombstone = _write_discarded_tombstones(repo_root, discard_entries)
+        lifecycle_result = _record_discarded_lifecycle(repo_root, discard_entries)
         delete_items = _waste_basket_delete_items(repo_root, hidden_groups)
         cleared_hidden_groups = {slug: [] for slug in ORDER}
 
@@ -7267,6 +7337,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             "hidden_count_before": hidden_count_before,
             "moved_to_tombstones_count": len(discard_entries),
             "discarded_count": len(tombstone.get("photo_ids") or []),
+            "lifecycle": lifecycle_result,
             "hidden_ids": [],
             "r2_delete_task": r2_task,
         }
@@ -7275,8 +7346,10 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         photo_ids = _normalized_photo_ids(payload.get("photo_ids"))
         hidden_at = datetime.now(timezone.utc).isoformat()
         moved = []
+        lifecycle_entries = []
         already_hidden = []
         not_found = []
+        manifest_source_paths = _source_paths_from_manifest_rows_for_ids(repo_root, set(photo_ids))
         for current_photo_id in photo_ids:
             found = _find_photo(expo_groups, current_photo_id)
             source_state = "expo"
@@ -7300,8 +7373,21 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             else:
                 source_slug, source_photo = found
             hidden_photo = _hidden_review_photo(source_photo, source_slug, source_state, hidden_at)
+            _remove_existing(expo_groups, current_photo_id)
+            _remove_existing(reserve_groups, current_photo_id)
             _remove_existing(hidden_groups, current_photo_id)
             hidden_groups[source_slug].append(hidden_photo)
+            lifecycle_entries.append(
+                _hidden_lifecycle_entry(
+                    repo_root,
+                    source_photo,
+                    current_photo_id,
+                    source_state,
+                    source_slug,
+                    hidden_at,
+                    manifest_source_paths.get(current_photo_id, []),
+                )
+            )
             moved.append(
                 {
                     "photo_id": current_photo_id,
@@ -7312,6 +7398,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
                     "mode": "blacklist",
                 }
             )
+        lifecycle_result = _record_hidden_lifecycle(repo_root, lifecycle_entries)
         site_state, worker_catalog = _write_catalog_state(repo_root, expo_groups, reserve_groups, hidden_groups)
         r2_task = _start_r2_upload_task("hidden-blacklist", [_hidden_blacklist_upload_item(repo_root)], "hidden-blacklist-upload")
         hidden_ids = [item["photo_id"] for item in moved] + already_hidden
@@ -7323,6 +7410,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             "already_hidden": already_hidden,
             "not_found": not_found,
             "moved": moved,
+            "lifecycle": lifecycle_result,
             "r2_blacklist_task": r2_task,
             "worker_catalog": worker_catalog,
             "site": site_state,
@@ -7548,7 +7636,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         found = hidden_found or expo_found or reserve_found
         source_state = "hidden" if hidden_found else "expo" if expo_found else "reserve"
         if not found:
-            if photo_id in _discarded_photo_ids(repo_root):
+            if photo_id in _lifecycle_discarded_ids(repo_root):
                 site_state, worker_catalog = _write_catalog_state(repo_root, expo_groups, reserve_groups, hidden_groups)
                 tombstone = _write_discarded_tombstone(repo_root)
                 return {
@@ -7580,6 +7668,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             "private_keys": private_keys,
         }
         tombstone = _write_discarded_tombstone(repo_root, tombstone_entry)
+        lifecycle_result = _record_discarded_lifecycle(repo_root, [tombstone_entry])
         site_state, worker_catalog = _write_catalog_state(repo_root, expo_groups, reserve_groups, hidden_groups)
         r2_task = _start_r2_delete_task(photo_id, _discarded_delete_items(repo_root, source_photo, original_slug), "discarded-media-wipe")
         return {
@@ -7588,6 +7677,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             "photo_id": photo_id,
             "moved": {"from": source_state, "from_slug": source_slug, "to": "discarded", "to_slug": original_slug},
             "discarded_count": len(tombstone.get("photo_ids") or []),
+            "lifecycle": lifecycle_result,
             "r2_delete_task": r2_task,
             "worker_catalog": worker_catalog,
             "site": site_state,
@@ -7605,6 +7695,20 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
                 None,
             )
             if hidden_hit:
+                hidden_slug, hidden_photo = hidden_hit
+                lifecycle_result = _record_hidden_lifecycle(
+                    repo_root,
+                    [
+                        _hidden_lifecycle_entry(
+                            repo_root,
+                            hidden_photo,
+                            photo_id,
+                            str(hidden_photo.get("hiddenFromState") or "expo"),
+                            str(hidden_photo.get("hiddenFromSlug") or hidden_slug),
+                            str(hidden_photo.get("hiddenAt") or datetime.now(timezone.utc).isoformat()),
+                        )
+                    ],
+                )
                 site_state = _write_state(repo_root, expo_groups, reserve_groups, hidden_groups)
                 r2_task = _start_r2_upload_task("hidden-blacklist", [_hidden_blacklist_upload_item(repo_root)], "hidden-blacklist-upload")
                 return {
@@ -7612,6 +7716,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
                     "action": action,
                     "photo_id": photo_id,
                     "message": "already hidden",
+                    "lifecycle": lifecycle_result,
                     "r2_blacklist_task": r2_task,
                     "site": site_state,
                 }
@@ -7622,9 +7727,16 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             source_state = "expo"
         else:
             source_slug, source_photo = found
-        hidden_photo = _hidden_review_photo(source_photo, source_slug, source_state, datetime.now(timezone.utc).isoformat())
+        hidden_at = datetime.now(timezone.utc).isoformat()
+        hidden_photo = _hidden_review_photo(source_photo, source_slug, source_state, hidden_at)
+        _remove_existing(expo_groups, photo_id)
+        _remove_existing(reserve_groups, photo_id)
         _remove_existing(hidden_groups, photo_id)
         hidden_groups[source_slug].append(hidden_photo)
+        lifecycle_result = _record_hidden_lifecycle(
+            repo_root,
+            [_hidden_lifecycle_entry(repo_root, source_photo, photo_id, source_state, source_slug, hidden_at)],
+        )
         moved = {"from": source_state, "from_slug": source_slug, "to": "hidden", "to_slug": source_slug, "mode": "blacklist"}
 
     elif action == "undo-hide":
@@ -7651,10 +7763,12 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             "mode": "blacklist",
             "restored": restored,
         }
+        lifecycle_result = _record_active_lifecycle(repo_root, [photo_id])
 
     else:
         found = _find_and_remove(hidden_groups, photo_id)
         if not found:
+            lifecycle_result = _record_active_lifecycle(repo_root, [photo_id])
             site_state, worker_catalog = _write_catalog_state(repo_root, expo_groups, reserve_groups, hidden_groups)
             r2_task = _start_r2_upload_task("hidden-blacklist", [_hidden_blacklist_upload_item(repo_root)], "hidden-blacklist-upload")
             return {
@@ -7663,6 +7777,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
                 "photo_id": photo_id,
                 "message": "already put back",
                 "moved": {"from": "hidden", "to": "expo", "mode": "blacklist", "already_put_back": True},
+                "lifecycle": lifecycle_result,
                 "r2_blacklist_task": r2_task,
                 "worker_catalog": worker_catalog,
                 "site": site_state,
@@ -7676,6 +7791,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             _remove_existing(expo_groups, photo_id)
             expo_groups[target_slug].append(restored)
         moved = {"from": "hidden", "from_slug": hidden_slug, "to": "expo", "to_slug": target_slug, "mode": "blacklist"}
+        lifecycle_result = _record_active_lifecycle(repo_root, [photo_id])
 
     site_state, worker_catalog = _write_catalog_state(repo_root, expo_groups, reserve_groups, hidden_groups)
     r2_task = _start_r2_upload_task("hidden-blacklist", [_hidden_blacklist_upload_item(repo_root)], "hidden-blacklist-upload")
@@ -7684,6 +7800,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         "action": action,
         "photo_id": photo_id,
         "moved": moved,
+        "lifecycle": lifecycle_result,
         "r2_blacklist_task": r2_task,
         "worker_catalog": worker_catalog,
         "site": site_state,

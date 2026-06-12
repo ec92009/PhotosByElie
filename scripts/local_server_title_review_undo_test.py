@@ -17,6 +17,7 @@ def patched_server_state(state, fallback_photo):
         "_state_groups": local_server._state_groups,
         "_write_catalog_state": local_server._write_catalog_state,
         "_start_r2_upload_task": local_server._start_r2_upload_task,
+        "_start_r2_delete_task": local_server._start_r2_delete_task,
         "_catalog_photo_for_hidden": local_server._catalog_photo_for_hidden,
     }
 
@@ -41,6 +42,7 @@ def patched_server_state(state, fallback_photo):
     local_server._state_groups = state_groups
     local_server._write_catalog_state = write_catalog_state
     local_server._start_r2_upload_task = lambda *args, **kwargs: None
+    local_server._start_r2_delete_task = lambda *args, **kwargs: None
     local_server._catalog_photo_for_hidden = catalog_photo_for_hidden
     try:
         yield
@@ -136,6 +138,61 @@ class TitleReviewUndoTests(unittest.TestCase):
                     (photo_id,),
                 ).fetchone()
                 self.assertEqual(blocked_decisions["count"], 0)
+                lifecycle = conn.execute(
+                    "SELECT lifecycle_state FROM media_lifecycle WHERE media_id = ?",
+                    (photo_id,),
+                ).fetchone()
+                self.assertIsNotNone(lifecycle)
+                self.assertEqual(lifecycle["lifecycle_state"], "active")
+            finally:
+                conn.close()
+
+    def test_discard_records_durable_lifecycle_and_tombstone(self):
+        photo_id = "pbe-discard-lifecycle"
+        fallback_photo = {
+            "id": photo_id,
+            "title": "Discard Candidate",
+            "caption": "France",
+            "full": "JPG master",
+            "megapixels": 12,
+            "gallerySrc": "",
+            "imageSrc": "",
+            "metadata": [{"label": "Keywords", "value": "France, Travel"}],
+            "media": {"type": "photo", "publicPreview": {"allowed": True}},
+            "sourceFiles": [{"path": "Camera/discard.jpg", "type": "JPG"}],
+        }
+        state = {
+            "expo": {slug: [] for slug in local_server.ORDER},
+            "reserve": {slug: [] for slug in local_server.ORDER},
+            "hidden": {slug: [] for slug in local_server.ORDER},
+        }
+        state["expo"]["france"].append(copy.deepcopy(fallback_photo))
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            with patched_server_state(state, fallback_photo):
+                result = local_server.apply_photo_action(
+                    repo_root,
+                    {"action": "discard", "photo_id": photo_id},
+                )
+                self.assertEqual(result["moved"]["to"], "discarded")
+                self.assertEqual(state["expo"]["france"], [])
+
+            tombstone = local_server._read_json_file(
+                repo_root / local_server.DISCARDED_TOMBSTONE_PATH,
+                {},
+            )
+            self.assertIn(photo_id, tombstone.get("photo_ids") or [])
+            conn = sqlite3.connect(repo_root / "assets/owner-actions/Owner.sqlite")
+            conn.row_factory = sqlite3.Row
+            try:
+                lifecycle = conn.execute(
+                    "SELECT lifecycle_state, discarded_at FROM media_lifecycle WHERE media_id = ?",
+                    (photo_id,),
+                ).fetchone()
+                self.assertIsNotNone(lifecycle)
+                self.assertEqual(lifecycle["lifecycle_state"], "discarded")
+                self.assertTrue(lifecycle["discarded_at"])
             finally:
                 conn.close()
 

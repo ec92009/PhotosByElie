@@ -14,7 +14,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from owner_state_db import connect as owner_db_connect
+from owner_state_db import connect as owner_db_connect, media_lifecycle_snapshot
 
 DEFAULT_OUTPUT = Path("assets/catalog/photosbyelie.sqlite")
 DEFAULT_PRODUCT_PRICING = Path("assets/catalog/product-pricing.json")
@@ -709,6 +709,8 @@ def write_db(repo_root: Path, output: Path, source: str = "auto") -> dict[str, i
     title_keyword_decisions = load_applied_title_keyword_decisions(repo_root)
     applied_title_keyword_ids = set(title_keyword_decisions)
     applied_title_keywords = apply_title_keyword_decisions(catalog, title_keyword_decisions)
+    lifecycle = media_lifecycle_snapshot(repo_root)
+    blocked_lifecycle_ids = set(lifecycle.get("blockedPhotoIds") or [])
     pricing = load_product_pricing(repo_root)
     existing_video_durations = load_existing_video_durations(output)
     collection_entries = ordered_collections(catalog)
@@ -719,6 +721,8 @@ def write_db(repo_root: Path, output: Path, source: str = "auto") -> dict[str, i
         for sort_index, photo in enumerate(collection.get("photos") or []):
             if photo.get("id"):
                 photo_id = str(photo["id"])
+                if photo_id in blocked_lifecycle_ids:
+                    continue
                 if photo_id not in applied_title_keyword_ids:
                     continue
                 if photo_id in seen_photo_ids:
@@ -1200,6 +1204,7 @@ def write_db(repo_root: Path, output: Path, source: str = "auto") -> dict[str, i
         }
         counts["applied_title_keywords"] = applied_title_keywords
         counts["title_keyword_applied_ids"] = len(applied_title_keyword_ids)
+        counts["lifecycle_blocked_ids"] = len(blocked_lifecycle_ids)
         conn.close()
         temp_path.replace(output)
         return counts

@@ -27,6 +27,7 @@ from xml.sax.saxutils import escape as xml_escape
 
 from media_keys import DEFAULT_PUBLIC_PREFIX, private_master_key, public_preview_key_for_reference
 from media_policy import private_master_allowed, public_preview_allowed
+from owner_state_db import media_lifecycle_snapshot
 
 DEFAULT_PUBLIC_BUCKET = "photosbyelie-public"
 DEFAULT_PRIVATE_BUCKET = "photosbyelie-private"
@@ -161,9 +162,10 @@ def hidden_photo_ids(repo_root: Path) -> set[str]:
         values = payload.get("photo_ids") or payload.get("hidden_ids") or []
     elif isinstance(payload, list):
         values = payload
-    if not isinstance(values, list):
-        return set()
-    return {str(value) for value in values if isinstance(value, str) and value}
+    ids = {str(value) for value in values if isinstance(value, str) and value} if isinstance(values, list) else set()
+    lifecycle = media_lifecycle_snapshot(repo_root)
+    ids.update(str(value) for value in lifecycle.get("blockedPhotoIds") or [] if str(value or "").strip())
+    return ids
 
 
 def source_rows_by_id(repo_root: Path) -> tuple[dict[str, dict[str, Any]], list[dict[str, Any]], dict[str, Any]]:

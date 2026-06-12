@@ -19,6 +19,9 @@ KEYWORD_BLACKLIST_PATH = OWNER_ACTION_ROOT / "keyword-blacklist.json"
 COUNTRY_ASSIGNMENT_LOG = OWNER_ACTION_ROOT / "country-assignments.jsonl"
 COUNTRY_ASSIGNMENT_INDEX = OWNER_ACTION_ROOT / "country-assignments.json"
 TITLE_KEYWORD_REVIEW_ROOT = OWNER_ACTION_ROOT / "title-keyword-review-queue"
+HIDDEN_DATA_PATH = Path("assets/hidden/hidden-data.json")
+HIDDEN_BLACKLIST_PATH = Path("assets/hidden/hidden-blacklist.json")
+DISCARDED_TOMBSTONE_PATH = Path("assets/discarded/discarded-photo-ids.json")
 DISCARDED_MEDIA_MANIFEST_PATH = Path("assets/discarded-media-manifest.json")
 TITLE_KEYWORDS_PROPOSED_FLAG = "Title_Keywords_Proposed"
 TITLE_KEYWORDS_REJECTED_FLAG = "Title_Keywords_Rejected"
@@ -200,6 +203,24 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
           PRIMARY KEY (bucket, object_key)
         ) WITHOUT ROWID;
 
+        CREATE TABLE IF NOT EXISTS media_lifecycle (
+          media_id                 TEXT PRIMARY KEY CHECK (trim(media_id) <> ''),
+          lifecycle_state          TEXT NOT NULL CHECK (lifecycle_state IN ('active', 'hidden', 'discarded')),
+          previous_state           TEXT,
+          previous_slug            TEXT,
+          source_slug              TEXT,
+          title                    TEXT,
+          media_type               TEXT,
+          hidden_at                TEXT,
+          discarded_at             TEXT,
+          restored_at              TEXT,
+          source_paths_json        TEXT NOT NULL DEFAULT '[]',
+          public_preview_keys_json TEXT NOT NULL DEFAULT '[]',
+          private_keys_json        TEXT NOT NULL DEFAULT '[]',
+          tombstone_json           TEXT,
+          updated_at               TEXT
+        ) WITHOUT ROWID;
+
         CREATE INDEX IF NOT EXISTS idx_title_keyword_batches_generated_at ON title_keyword_batches(generated_at);
         CREATE INDEX IF NOT EXISTS idx_title_keyword_queue_state_priority ON title_keyword_queue(review_state, rework_priority, latest_proposed_at);
         CREATE INDEX IF NOT EXISTS idx_title_keyword_queue_latest_batch ON title_keyword_queue(latest_proposed_batch_id, review_state);
@@ -216,6 +237,7 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS idx_keyword_blacklist_updated_at ON keyword_blacklist(updated_at);
         CREATE INDEX IF NOT EXISTS idx_r2_objects_state_bucket ON r2_objects(lifecycle_state, bucket);
         CREATE INDEX IF NOT EXISTS idx_r2_objects_photo ON r2_objects(photo_id, lifecycle_state);
+        CREATE INDEX IF NOT EXISTS idx_media_lifecycle_state ON media_lifecycle(lifecycle_state, updated_at);
         """
     )
     for column, ddl in {
@@ -466,6 +488,467 @@ def keyword_blacklist_terms(repo_root: Path, db_path: Path | None = None, conn: 
     try:
         rows = conn.execute("SELECT keyword FROM keyword_blacklist ORDER BY keyword COLLATE NOCASE").fetchall()
         return [str(row["keyword"]) for row in rows]
+    finally:
+        if owns_conn:
+            conn.close()
+
+
+def _unique_texts(values: Iterable[Any]) -> list[str]:
+    seen: set[str] = set()
+    cleaned: list[str] = []
+    for value in values:
+        text = str(value or "").strip()
+        if not text or text in seen:
+            continue
+        cleaned.append(text)
+        seen.add(text)
+    return cleaned
+
+
+def _json_list(value: Any) -> list[str]:
+    if isinstance(value, list):
+        return _unique_texts(value)
+    if isinstance(value, str) and value.strip():
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError:
+            return []
+        return _json_list(parsed)
+    return []
+
+
+def _json_list_text(values: Iterable[Any]) -> str:
+    return json.dumps(_unique_texts(values), ensure_ascii=False, separators=(",", ":"))
+
+
+def _media_id_from_entry(entry: dict[str, Any] | str) -> str:
+    if isinstance(entry, dict):
+        return str(entry.get("media_id") or entry.get("photo_id") or entry.get("id") or "").strip()
+    return str(entry or "").strip()
+
+
+def _media_type_from_entry(entry: dict[str, Any]) -> str:
+    media = entry.get("media") if isinstance(entry.get("media"), dict) else {}
+    return str(
+        entry.get("media_type")
+        or entry.get("mediaType")
+        or media.get("type")
+        or entry.get("type")
+        or ""
+    ).strip().lower()
+
+
+def normalize_source_path_value(value: Any) -> str | None:
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    if not text:
+        return None
+    try:
+        return Path(text).expanduser().resolve(strict=False).as_posix()
+    except OSError:
+        return Path(text).expanduser().as_posix()
+
+
+def source_path_values_from_object(value: Any) -> set[str]:
+    paths: set[str] = set()
+    if isinstance(value, dict):
+        for key in ("source_path_hint", "sourcePath", "source_path", "sourceFile", "path"):
+            normalized = normalize_source_path_value(value.get(key))
+            if normalized:
+                paths.add(normalized)
+        for key in ("source_paths", "sourcePaths", "sourceFiles", "source_files"):
+            paths.update(source_path_values_from_object(value.get(key)))
+        source_file = value.get("source_file")
+        if isinstance(source_file, dict):
+            paths.update(source_path_values_from_object(source_file))
+    elif isinstance(value, list):
+        for item in value:
+            paths.update(source_path_values_from_object(item))
+    elif isinstance(value, str):
+        normalized = normalize_source_path_value(value)
+        if normalized:
+            paths.add(normalized)
+    return paths
+
+
+def _ids_from_payload(payload: Any) -> set[str]:
+    if not isinstance(payload, dict):
+        return set()
+    ids: set[str] = set()
+    for key in ("photo_ids", "hidden_ids", "discardedPhotoIds"):
+        values = payload.get(key)
+        if isinstance(values, list):
+            ids.update(str(value).strip() for value in values if str(value or "").strip())
+    photos = payload.get("photos")
+    if isinstance(photos, list):
+        for photo in photos:
+            if isinstance(photo, dict):
+                media_id = _media_id_from_entry(photo)
+            else:
+                media_id = str(photo or "").strip()
+            if media_id:
+                ids.add(media_id)
+    return ids
+
+
+def _keys_from_payload(payload: Any, *keys: str) -> set[str]:
+    if not isinstance(payload, dict):
+        return set()
+    values: set[str] = set()
+    for key in keys:
+        item = payload.get(key)
+        if isinstance(item, list):
+            values.update(str(value).strip() for value in item if str(value or "").strip())
+    return values
+
+
+def _photo_entries_by_id(payload: Any) -> dict[str, dict[str, Any]]:
+    if not isinstance(payload, dict) or not isinstance(payload.get("photos"), list):
+        return {}
+    entries: dict[str, dict[str, Any]] = {}
+    for photo in payload["photos"]:
+        if not isinstance(photo, dict):
+            continue
+        media_id = _media_id_from_entry(photo)
+        if media_id:
+            entries[media_id] = photo
+    return entries
+
+
+def _hidden_data_entries(repo_root: Path) -> dict[str, dict[str, Any]]:
+    payload = _read_json(repo_root / HIDDEN_DATA_PATH, {})
+    if not isinstance(payload, dict):
+        return {}
+    entries: dict[str, dict[str, Any]] = {}
+    for slug, collection in payload.items():
+        if not isinstance(collection, dict):
+            continue
+        for photo in collection.get("photos") or []:
+            if not isinstance(photo, dict):
+                continue
+            media_id = _media_id_from_entry(photo)
+            if not media_id:
+                continue
+            entries[media_id] = {**photo, "from_slug": slug}
+    return entries
+
+
+def _compat_lifecycle_sets(repo_root: Path) -> dict[str, set[str]]:
+    hidden_blacklist = _read_json(repo_root / HIDDEN_BLACKLIST_PATH, {})
+    hidden_data = _read_json(repo_root / HIDDEN_DATA_PATH, {})
+    discarded_tombstone = _read_json(repo_root / DISCARDED_TOMBSTONE_PATH, {})
+    discarded_manifest = _read_json(repo_root / DISCARDED_MEDIA_MANIFEST_PATH, {})
+
+    hidden_ids = _ids_from_payload(hidden_blacklist)
+    hidden_source_paths = source_path_values_from_object(hidden_blacklist)
+    if isinstance(hidden_data, dict):
+        for collection in hidden_data.values():
+            if not isinstance(collection, dict):
+                continue
+            for photo in collection.get("photos") or []:
+                if not isinstance(photo, dict):
+                    continue
+                media_id = _media_id_from_entry(photo)
+                if media_id:
+                    hidden_ids.add(media_id)
+                hidden_source_paths.update(source_path_values_from_object(photo))
+
+    discarded_ids = _ids_from_payload(discarded_tombstone) | _ids_from_payload(discarded_manifest)
+    discarded_source_paths = source_path_values_from_object(discarded_tombstone) | source_path_values_from_object(discarded_manifest)
+    public_preview_keys = (
+        _keys_from_payload(hidden_blacklist, "public_preview_keys", "publicKeys")
+        | _keys_from_payload(discarded_tombstone, "public_preview_keys", "publicKeys")
+        | _keys_from_payload(discarded_manifest, "public_preview_keys", "publicKeys")
+    )
+    private_keys = (
+        _keys_from_payload(hidden_blacklist, "private_keys", "privateKeys")
+        | _keys_from_payload(discarded_tombstone, "private_keys", "privateKeys")
+        | _keys_from_payload(discarded_manifest, "private_keys", "privateKeys")
+    )
+    return {
+        "hidden_ids": hidden_ids - discarded_ids,
+        "discarded_ids": discarded_ids,
+        "hidden_source_paths": hidden_source_paths,
+        "discarded_source_paths": discarded_source_paths,
+        "public_preview_keys": public_preview_keys,
+        "private_keys": private_keys,
+    }
+
+
+def _upsert_media_lifecycle(
+    conn: sqlite3.Connection,
+    entry: dict[str, Any],
+    lifecycle_state: str,
+    timestamp: str,
+) -> bool:
+    media_id = _media_id_from_entry(entry)
+    if not media_id:
+        return False
+    if lifecycle_state not in {"active", "hidden", "discarded"}:
+        raise ValueError(f"unsupported media lifecycle state: {lifecycle_state}")
+
+    existing = conn.execute("SELECT * FROM media_lifecycle WHERE media_id = ?", (media_id,)).fetchone()
+    source_paths = source_path_values_from_object(entry)
+    public_preview_keys = _unique_texts(entry.get("public_preview_keys") or entry.get("publicPreviewKeys") or [])
+    private_keys = _unique_texts(entry.get("private_keys") or entry.get("privateKeys") or [])
+    if existing:
+        source_paths.update(_json_list(existing["source_paths_json"]))
+        public_preview_keys = _unique_texts([*public_preview_keys, *_json_list(existing["public_preview_keys_json"])])
+        private_keys = _unique_texts([*private_keys, *_json_list(existing["private_keys_json"])])
+
+    hidden_at = str(entry.get("hidden_at") or entry.get("hiddenAt") or "").strip()
+    discarded_at = str(entry.get("discarded_at") or entry.get("discardedAt") or "").strip()
+    restored_at = str(entry.get("restored_at") or entry.get("restoredAt") or "").strip()
+    if lifecycle_state == "hidden":
+        hidden_at = hidden_at or timestamp
+    elif lifecycle_state == "discarded":
+        discarded_at = discarded_at or timestamp
+    elif lifecycle_state == "active":
+        restored_at = restored_at or timestamp
+
+    tombstone_json = ""
+    if lifecycle_state == "discarded":
+        tombstone_json = json.dumps(entry, ensure_ascii=False, separators=(",", ":"))
+    elif existing:
+        tombstone_json = str(existing["tombstone_json"] or "")
+
+    conn.execute(
+        """
+        INSERT INTO media_lifecycle (
+          media_id, lifecycle_state, previous_state, previous_slug, source_slug,
+          title, media_type, hidden_at, discarded_at, restored_at, source_paths_json,
+          public_preview_keys_json, private_keys_json, tombstone_json, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(media_id) DO UPDATE SET
+          lifecycle_state = excluded.lifecycle_state,
+          previous_state = COALESCE(NULLIF(excluded.previous_state, ''), media_lifecycle.previous_state),
+          previous_slug = COALESCE(NULLIF(excluded.previous_slug, ''), media_lifecycle.previous_slug),
+          source_slug = COALESCE(NULLIF(excluded.source_slug, ''), media_lifecycle.source_slug),
+          title = COALESCE(NULLIF(excluded.title, ''), media_lifecycle.title),
+          media_type = COALESCE(NULLIF(excluded.media_type, ''), media_lifecycle.media_type),
+          hidden_at = COALESCE(NULLIF(excluded.hidden_at, ''), media_lifecycle.hidden_at),
+          discarded_at = COALESCE(NULLIF(excluded.discarded_at, ''), media_lifecycle.discarded_at),
+          restored_at = COALESCE(NULLIF(excluded.restored_at, ''), media_lifecycle.restored_at),
+          source_paths_json = excluded.source_paths_json,
+          public_preview_keys_json = excluded.public_preview_keys_json,
+          private_keys_json = excluded.private_keys_json,
+          tombstone_json = COALESCE(NULLIF(excluded.tombstone_json, ''), media_lifecycle.tombstone_json),
+          updated_at = excluded.updated_at
+        """,
+        (
+            media_id,
+            lifecycle_state,
+            str(entry.get("from_state") or entry.get("previous_state") or entry.get("hiddenFromState") or "").strip(),
+            str(entry.get("from_slug") or entry.get("previous_slug") or entry.get("hiddenFromSlug") or "").strip(),
+            str(entry.get("source_slug") or entry.get("sourceSlug") or "").strip(),
+            str(entry.get("title") or "").strip(),
+            _media_type_from_entry(entry),
+            hidden_at,
+            discarded_at,
+            restored_at,
+            _json_list_text(sorted(source_paths)),
+            _json_list_text(public_preview_keys),
+            _json_list_text(private_keys),
+            tombstone_json,
+            timestamp,
+        ),
+    )
+    return True
+
+
+def sync_media_lifecycle_from_compat(
+    repo_root: Path,
+    conn: sqlite3.Connection | None = None,
+    *,
+    db_path: Path | None = None,
+) -> dict[str, Any]:
+    owns_conn = conn is None
+    conn = conn or connect(repo_root, db_path)
+    timestamp = now_iso()
+    try:
+        hidden_blacklist = _read_json(repo_root / HIDDEN_BLACKLIST_PATH, {})
+        hidden_entries = _hidden_data_entries(repo_root)
+        discarded_tombstone = _read_json(repo_root / DISCARDED_TOMBSTONE_PATH, {})
+        discarded_manifest = _read_json(repo_root / DISCARDED_MEDIA_MANIFEST_PATH, {})
+        discarded_entries = _photo_entries_by_id(discarded_tombstone)
+        discarded_ids = _ids_from_payload(discarded_tombstone) | _ids_from_payload(discarded_manifest)
+        hidden_ids = (_ids_from_payload(hidden_blacklist) | set(hidden_entries)) - discarded_ids
+
+        discarded_count = 0
+        for media_id in sorted(discarded_ids):
+            entry = discarded_entries.get(media_id, {"id": media_id})
+            if _upsert_media_lifecycle(conn, entry, "discarded", timestamp):
+                discarded_count += 1
+
+        hidden_count = 0
+        for media_id in sorted(hidden_ids):
+            existing = conn.execute("SELECT lifecycle_state FROM media_lifecycle WHERE media_id = ?", (media_id,)).fetchone()
+            if existing and existing["lifecycle_state"] == "active":
+                continue
+            entry = hidden_entries.get(media_id, {"id": media_id})
+            if _upsert_media_lifecycle(conn, entry, "hidden", timestamp):
+                hidden_count += 1
+
+        _set_setting(conn, "media_lifecycle_compat_json", "true")
+        conn.commit()
+        return {"db": (db_path or DEFAULT_DB).as_posix(), "hidden": hidden_count, "discarded": discarded_count}
+    finally:
+        if owns_conn:
+            conn.close()
+
+
+def record_media_lifecycle_entries(
+    repo_root: Path,
+    entries: Iterable[dict[str, Any]],
+    lifecycle_state: str,
+    db_path: Path | None = None,
+    conn: sqlite3.Connection | None = None,
+) -> dict[str, Any]:
+    owns_conn = conn is None
+    conn = conn or connect(repo_root, db_path)
+    timestamp = now_iso()
+    count = 0
+    try:
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            if _upsert_media_lifecycle(conn, entry, lifecycle_state, timestamp):
+                count += 1
+        _set_setting(conn, "media_lifecycle_sqlite", "true")
+        conn.commit()
+        return {"db": (db_path or DEFAULT_DB).as_posix(), lifecycle_state: count}
+    finally:
+        if owns_conn:
+            conn.close()
+
+
+def record_media_lifecycle_hidden(
+    repo_root: Path,
+    entries: Iterable[dict[str, Any]],
+    db_path: Path | None = None,
+    conn: sqlite3.Connection | None = None,
+) -> dict[str, Any]:
+    return record_media_lifecycle_entries(repo_root, entries, "hidden", db_path, conn)
+
+
+def record_media_lifecycle_discarded(
+    repo_root: Path,
+    entries: Iterable[dict[str, Any]],
+    db_path: Path | None = None,
+    conn: sqlite3.Connection | None = None,
+) -> dict[str, Any]:
+    return record_media_lifecycle_entries(repo_root, entries, "discarded", db_path, conn)
+
+
+def record_media_lifecycle_active(
+    repo_root: Path,
+    media_ids: Iterable[str],
+    db_path: Path | None = None,
+    conn: sqlite3.Connection | None = None,
+) -> dict[str, Any]:
+    owns_conn = conn is None
+    conn = conn or connect(repo_root, db_path)
+    timestamp = now_iso()
+    normalized = _unique_texts(media_ids)
+    restored = 0
+    skipped_discarded = 0
+    try:
+        for media_id in normalized:
+            existing = conn.execute("SELECT lifecycle_state FROM media_lifecycle WHERE media_id = ?", (media_id,)).fetchone()
+            if existing and existing["lifecycle_state"] == "discarded":
+                skipped_discarded += 1
+                continue
+            entry = {"id": media_id, "restored_at": timestamp}
+            if _upsert_media_lifecycle(conn, entry, "active", timestamp):
+                restored += 1
+        _set_setting(conn, "media_lifecycle_sqlite", "true")
+        conn.commit()
+        return {
+            "db": (db_path or DEFAULT_DB).as_posix(),
+            "active": restored,
+            "skipped_discarded": skipped_discarded,
+        }
+    finally:
+        if owns_conn:
+            conn.close()
+
+
+def media_lifecycle_snapshot(
+    repo_root: Path,
+    db_path: Path | None = None,
+    conn: sqlite3.Connection | None = None,
+    *,
+    sync_compat: bool = True,
+) -> dict[str, Any]:
+    owns_conn = conn is None
+    conn = conn or connect(repo_root, db_path)
+    try:
+        if sync_compat:
+            sync_media_lifecycle_from_compat(repo_root, conn=conn, db_path=db_path)
+        rows = conn.execute(
+            """
+            SELECT media_id, lifecycle_state, source_paths_json,
+                   public_preview_keys_json, private_keys_json, hidden_at,
+                   discarded_at, restored_at, updated_at
+            FROM media_lifecycle
+            ORDER BY lifecycle_state, media_id
+            """
+        ).fetchall()
+        compat = _compat_lifecycle_sets(repo_root)
+        hidden_ids = set(compat["hidden_ids"])
+        discarded_ids = set(compat["discarded_ids"])
+        hidden_source_paths = set(compat["hidden_source_paths"])
+        discarded_source_paths = set(compat["discarded_source_paths"])
+        public_preview_keys = set(compat["public_preview_keys"])
+        private_keys = set(compat["private_keys"])
+        active_ids: set[str] = set()
+        active_source_paths: set[str] = set()
+        states: list[dict[str, Any]] = []
+        for row in rows:
+            media_id = str(row["media_id"] or "")
+            state = str(row["lifecycle_state"] or "")
+            row_source_paths = set(_json_list(row["source_paths_json"]))
+            row_public_keys = set(_json_list(row["public_preview_keys_json"]))
+            row_private_keys = set(_json_list(row["private_keys_json"]))
+            if state == "hidden":
+                hidden_ids.add(media_id)
+                hidden_source_paths.update(row_source_paths)
+            elif state == "discarded":
+                discarded_ids.add(media_id)
+                discarded_source_paths.update(row_source_paths)
+            elif state == "active":
+                active_ids.add(media_id)
+                active_source_paths.update(row_source_paths)
+            public_preview_keys.update(row_public_keys)
+            private_keys.update(row_private_keys)
+            states.append({
+                "media_id": media_id,
+                "lifecycle_state": state,
+                "hidden_at": row["hidden_at"] or "",
+                "discarded_at": row["discarded_at"] or "",
+                "restored_at": row["restored_at"] or "",
+                "updated_at": row["updated_at"] or "",
+            })
+
+        hidden_ids -= discarded_ids | active_ids
+        hidden_source_paths -= active_source_paths
+        blocked_ids = hidden_ids | discarded_ids
+        blocked_source_paths = hidden_source_paths | discarded_source_paths
+        return {
+            "format": "photosbyelie-media-lifecycle",
+            "schema_version": 1,
+            "source_of_truth": (db_path or DEFAULT_DB).as_posix(),
+            "hiddenPhotoIds": sorted(hidden_ids),
+            "discardedPhotoIds": sorted(discarded_ids),
+            "blockedPhotoIds": sorted(blocked_ids),
+            "hiddenSourcePaths": sorted(hidden_source_paths),
+            "discardedSourcePaths": sorted(discarded_source_paths),
+            "blockedSourcePaths": sorted(blocked_source_paths),
+            "publicPreviewKeys": sorted(public_preview_keys),
+            "privateKeys": sorted(private_keys),
+            "states": states,
+        }
     finally:
         if owns_conn:
             conn.close()
@@ -1745,6 +2228,7 @@ def import_owner_actions(repo_root: Path, db_path: Path | None = None, *, force:
         import_keyword_blacklist(repo_root, conn, force=force)
         import_country_assignments(repo_root, conn, force=force)
         import_title_keyword_review(repo_root, conn, force=force)
+        sync_media_lifecycle_from_compat(repo_root, conn=conn, db_path=db_path)
         _set_setting(conn, "imported_from_owner_action_json", "true")
         conn.commit()
     finally:
@@ -2039,6 +2523,8 @@ def main() -> None:
     parser.add_argument("--import-keyword-blacklist", action="store_true")
     parser.add_argument("--export-keyword-blacklist", action="store_true")
     parser.add_argument("--import-discarded-r2-manifest", action="store_true")
+    parser.add_argument("--sync-media-lifecycle", action="store_true")
+    parser.add_argument("--media-lifecycle-json", action="store_true")
     parser.add_argument("--r2-state-file", type=Path)
     parser.add_argument("--r2-state", choices=("current", "marked_for_delete", "deleted_confirmed"))
     parser.add_argument("--backfill-r2-metadata", action="store_true")
@@ -2053,6 +2539,9 @@ def main() -> None:
     elif args.title_keyword_generator_state_json:
         print(json.dumps(title_keyword_generator_state(repo_root, args.db, park_retry_exhausted=park_retry_exhausted), ensure_ascii=False))
         return
+    elif args.media_lifecycle_json:
+        print(json.dumps(media_lifecycle_snapshot(repo_root, args.db), ensure_ascii=False))
+        return
     else:
         conn = connect(repo_root, args.db)
         try:
@@ -2066,6 +2555,8 @@ def main() -> None:
                 export_country_assignments(repo_root, conn)
             if args.import_title_keyword_review:
                 import_title_keyword_review(repo_root, conn, force=args.force)
+            if args.sync_media_lifecycle:
+                sync_media_lifecycle_from_compat(repo_root, conn=conn, db_path=args.db)
             if args.import_title_keyword_batch_file:
                 conn.close()
                 result = import_title_keyword_batch_file(repo_root, args.import_title_keyword_batch_file, args.db)
@@ -2125,7 +2616,7 @@ def main() -> None:
     else:
         conn = connect(repo_root, args.db)
         try:
-            tables = ["keyword_blacklist", "country_assignments", "title_keyword_batches", "title_keyword_queue", "title_keyword_proposals", "title_keyword_decisions", "r2_objects"]
+            tables = ["keyword_blacklist", "country_assignments", "title_keyword_batches", "title_keyword_queue", "title_keyword_proposals", "title_keyword_decisions", "r2_objects", "media_lifecycle"]
             print(", ".join(f"{table}={conn.execute(f'SELECT count(*) FROM {table}').fetchone()[0]}" for table in tables))
         finally:
             conn.close()

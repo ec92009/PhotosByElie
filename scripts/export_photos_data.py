@@ -12,7 +12,7 @@ from pathlib import Path, PurePosixPath
 from media_keys import DEFAULT_PUBLIC_PREFIX, public_preview_key, public_preview_key_for_reference
 from media_policy import media_source_policy, public_preview_allowed, source_file_entries
 from import_eligibility import row_import_eligible
-from owner_state_db import connect as owner_db_connect, keyword_blacklist_terms as owner_keyword_blacklist_terms
+from owner_state_db import connect as owner_db_connect, keyword_blacklist_terms as owner_keyword_blacklist_terms, media_lifecycle_snapshot
 
 LABELS = {
     "france": ("01", "France", "france-gallery", "Saturn Lightroom archive selections prepared from the Camera source."),
@@ -896,10 +896,13 @@ def write_photos_data(
     applied_title_keyword_ids = set(title_keyword_decisions)
     blacklist_source_suffixes = source_path_suffixes(blacklist_source_paths)
     uploaded_public_keys = load_uploaded_public_keys(repo_root)
+    blacklist_ids = blacklist_ids or set()
     for path, mode in existing_manifest_specs(repo_root):
         for row in json.loads(path.read_text())["photos"]:
             row_id = str(row.get("id") or "").strip()
             if not row_id or row_id not in applied_title_keyword_ids:
+                continue
+            if row_id in blacklist_ids:
                 continue
             if row_source_path_is_blocked(row, blacklist_source_paths, blacklist_source_suffixes):
                 continue
@@ -1161,12 +1164,17 @@ if __name__ == "__main__":
     args = parser.parse_args()
     repo_root = Path(__file__).resolve().parents[1]
     review_payload = load_blacklist_payload(args.review_snapshot)
+    lifecycle = media_lifecycle_snapshot(repo_root)
     hidden_ids = (
         hidden_ids_from_current_state(repo_root)
         | discarded_ids_from_current_state(repo_root)
+        | set(lifecycle.get("blockedPhotoIds") or [])
         | blacklist_ids_from_payload(review_payload)
     )
-    hidden_source_paths = discarded_source_paths_from_current_state(repo_root, hidden_ids)
+    hidden_source_paths = (
+        discarded_source_paths_from_current_state(repo_root, hidden_ids)
+        | set(lifecycle.get("blockedSourcePaths") or [])
+    )
     country_assignments = country_assignments_from_owner_index(repo_root)
     country_assignments.update(country_assignments_from_payload(review_payload))
     keyword_blacklist = load_keyword_blacklist(repo_root / args.keyword_blacklist)

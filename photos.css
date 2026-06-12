@@ -2351,6 +2351,7 @@ body[data-gallery="owner-title-keyword-review"] [data-title-keyword-review-root]
   backdrop-filter:blur(16px);
 }
 .title-review-mode-toggle,
+.title-review-count-control,
 .title-review-fit-control{
   display:flex;
   align-items:center;
@@ -2373,6 +2374,28 @@ body[data-gallery="owner-title-keyword-review"] [data-title-keyword-review-root]
   background:var(--text);
   border-color:var(--text);
   color:var(--surface);
+}
+.title-review-count-control{
+  min-height:34px;
+  border:1px solid var(--line);
+  background:var(--surface-2);
+  color:var(--text);
+  font-size:.78rem;
+  font-weight:850;
+  padding:5px 8px;
+}
+.title-review-count-control span{
+  color:var(--muted);
+}
+.title-review-count-control select{
+  min-height:24px;
+  border:0;
+  background:transparent;
+  color:var(--text);
+  font:inherit;
+  font-weight:850;
+  padding:0 20px 0 2px;
+  cursor:pointer;
 }
 .title-review-density-control{
   position:static;
@@ -7362,6 +7385,8 @@ html[data-theme="light"] .detail-preview.has-image::after{
 .gallery-density-control,
 .gallery-fit-control,
 .gallery-top-button,
+.title-review-count-control,
+.title-review-count-control select,
 .topbar .gallery-view-controls .gallery-density-control,
 .topbar .gallery-view-controls .gallery-fit-control,
 .topbar .gallery-view-controls .gallery-top-button,

@@ -53,9 +53,9 @@ if (typeof window !== "undefined") {
   const ownerReviewReturnMaxAgeMs = 1000 * 60 * 60 * 2;
   const titleReviewDensityKey = "photosbyelie-title-review-cull-density";
   const titleReviewFitModeKey = "photosbyelie-title-review-cull-fit-mode";
-  const titleReviewInitialRenderCount = 48;
-  const titleReviewShowMoreSmallCount = 24;
-  const titleReviewShowMoreLargeCount = 48;
+  const titleReviewVisibleCountKey = "photosbyelie-title-review-visible-count";
+  const titleReviewVisibleCountOptions = [24, 48, 96, 192, 384];
+  const titleReviewDefaultVisibleCount = 24;
   const titleReviewModes = new Set(["cull", "edit"]);
   const stateKeywordFlags = new Set([
     "title_keywords_reviewed",
@@ -142,6 +142,27 @@ if (typeof window !== "undefined") {
   const normalizedReviewMode = (value) => titleReviewModes.has(String(value || "").toLowerCase())
     ? String(value || "").toLowerCase()
     : "";
+  const normalizedTitleReviewVisibleCount = (value) => {
+    const count = Number(value);
+    return titleReviewVisibleCountOptions.includes(count) ? count : titleReviewDefaultVisibleCount;
+  };
+  const readTitleReviewVisibleCount = () => {
+    try {
+      return normalizedTitleReviewVisibleCount(sessionStorage.getItem(titleReviewVisibleCountKey));
+    } catch {
+      return titleReviewDefaultVisibleCount;
+    }
+  };
+  const writeTitleReviewVisibleCount = (count) => {
+    try {
+      sessionStorage.setItem(titleReviewVisibleCountKey, String(normalizedTitleReviewVisibleCount(count)));
+    } catch {
+      // Session storage can be unavailable in hardened browser contexts.
+    }
+  };
+  const titleReviewVisibleCountOptionsHtml = (selectedCount) => titleReviewVisibleCountOptions
+    .map((count) => `<option value="${count}"${count === selectedCount ? " selected" : ""}>${count}</option>`)
+    .join("");
   const initialReviewMode = () => normalizedReviewMode(new URLSearchParams(window.location.search).get("mode"))
     || normalizedReviewMode(new URLSearchParams(window.location.search).get("returnMode"))
     || "cull";
@@ -590,7 +611,8 @@ if (typeof window !== "undefined") {
     const backlogTotalCount = Number(selection.incomplete_backlog_count || 0);
     const backlogLoadedCount = Number(selection.incomplete_backlog_loaded_count || 0) || Math.max(0, visiblePhotos.length - sqlitePendingCount);
     const loadedReviewCount = visiblePhotos.length;
-    let shownReviewCount = Math.min(titleReviewInitialRenderCount, loadedReviewCount);
+    let selectedReviewCount = readTitleReviewVisibleCount();
+    let shownReviewCount = Math.min(selectedReviewCount, loadedReviewCount);
     const currentVisiblePhotos = () => visiblePhotos.slice(0, shownReviewCount);
     const queueStatusText = () => {
       if (!loadedReviewCount) return "All rows in this batch are already saved.";
@@ -634,6 +656,12 @@ if (typeof window !== "undefined") {
         <button type="button" data-title-review-mode="cull">Cull</button>
         <button type="button" data-title-review-mode="edit">Edit</button>
       </div>
+      <label class="title-review-count-control">
+        <span>Show</span>
+        <select data-title-review-count aria-label="Pictures to show">
+          ${titleReviewVisibleCountOptionsHtml(selectedReviewCount)}
+        </select>
+      </label>
       <label class="gallery-density-control title-review-density-control">
         <span>Grid</span>
         <input type="range" min="2" max="14" step="1" value="7" data-title-review-density/>
@@ -779,8 +807,6 @@ if (typeof window !== "undefined") {
     bottomActions.innerHTML = `
       <div class="title-keyword-review-pagination">
         <p data-title-keyword-review-page-status></p>
-        <button class="btn secondary" type="button" data-title-keyword-review-show-more="${titleReviewShowMoreSmallCount}">Show ${titleReviewShowMoreSmallCount} more</button>
-        <button class="btn secondary" type="button" data-title-keyword-review-show-more="${titleReviewShowMoreLargeCount}">Show ${titleReviewShowMoreLargeCount} more</button>
       </div>
       <button class="btn secondary" type="button" data-title-keyword-review-approve-all>Approve visible</button>
       <button class="btn secondary" type="button" data-title-keyword-review-save>Apply selected</button>
@@ -788,16 +814,19 @@ if (typeof window !== "undefined") {
     `;
     root.append(bottomActions);
     const pageStatus = bottomActions.querySelector("[data-title-keyword-review-page-status]");
-    const showMoreButtons = [...bottomActions.querySelectorAll("[data-title-keyword-review-show-more]")];
     const updateReviewSliceControls = () => {
+      shownReviewCount = Math.min(selectedReviewCount, loadedReviewCount);
       cardById.forEach((card) => {
         const index = Number(card.dataset.photoIndex || 0);
         card.hidden = index >= shownReviewCount;
       });
-      const atEndOfLoadedWindow = shownReviewCount >= loadedReviewCount;
-      showMoreButtons.forEach((button) => {
-        button.disabled = atEndOfLoadedWindow;
-      });
+      if (activeCard?.hidden) {
+        const nextCard = [...cardById.values()].find((card) => !card.hidden) || null;
+        activeCard = nextCard;
+        focusedPhotoId = reviewCardId(nextCard);
+        selectionAnchorId = focusedPhotoId;
+        selectedPhotoIds = reviewMode === "cull" && focusedPhotoId ? new Set([focusedPhotoId]) : new Set();
+      }
       if (pageStatus) {
         const extraText = totalReviewCount > loadedReviewCount
           ? ` ${formatCount(totalReviewCount - loadedReviewCount)} more remain after this loaded window.`
@@ -809,13 +838,6 @@ if (typeof window !== "undefined") {
       applyReviewLayout();
       scheduleThumbnailWarmup(currentVisiblePhotos());
     };
-    showMoreButtons.forEach((button) => {
-      button.addEventListener("click", () => {
-        const increment = Number(button.dataset.titleKeywordReviewShowMore || titleReviewShowMoreLargeCount);
-        shownReviewCount = Math.min(loadedReviewCount, shownReviewCount + Math.max(1, increment));
-        updateReviewSliceControls();
-      });
-    });
 
     const batchIdForCard = (card) => String(card?.dataset?.reviewBatchId || batchId || "").trim();
 
@@ -892,6 +914,7 @@ if (typeof window !== "undefined") {
     let selectedPhotoIds = new Set();
     let lastBlockBatchPhotoIds = [];
     const modeButtons = [...modebar.querySelectorAll("[data-title-review-mode]")];
+    const visibleCountSelect = modebar.querySelector("[data-title-review-count]");
     const densityInput = modebar.querySelector("[data-title-review-density]");
     const densityValue = modebar.querySelector("[data-title-review-density-value]");
     const fitModeButtons = [...modebar.querySelectorAll("[data-gallery-fit-mode]")];
@@ -1132,6 +1155,11 @@ if (typeof window !== "undefined") {
     };
     modeButtons.forEach((button) => {
       button.addEventListener("click", () => setReviewMode(button.dataset.titleReviewMode || "cull"));
+    });
+    visibleCountSelect?.addEventListener("change", () => {
+      selectedReviewCount = normalizedTitleReviewVisibleCount(visibleCountSelect.value);
+      writeTitleReviewVisibleCount(selectedReviewCount);
+      updateReviewSliceControls();
     });
     densityInput?.addEventListener("input", () => {
       if (!titleReviewLayout) return;

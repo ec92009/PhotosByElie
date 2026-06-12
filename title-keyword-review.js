@@ -1,4 +1,41 @@
+const titleKeywordReviewUndoHelpers = (() => {
+  const cleanIdList = (items = []) => {
+    const seen = new Set();
+    const ids = [];
+    for (const item of items || []) {
+      const value = String(item || "").trim();
+      if (!value || seen.has(value)) continue;
+      seen.add(value);
+      ids.push(value);
+    }
+    return ids;
+  };
+
+  const resolveTitleReviewUndoTargetIds = ({
+    lastBlockBatchPhotoIds = [],
+    selectedPhotoIds = [],
+    activePhotoId = "",
+    savedBlockedPhotoIds = [],
+  } = {}) => {
+    const savedBlocked = new Set(cleanIdList(savedBlockedPhotoIds));
+    const batchTargets = cleanIdList(lastBlockBatchPhotoIds).filter((photoId) => savedBlocked.has(photoId));
+    if (batchTargets.length) return batchTargets;
+    const selectedTargets = cleanIdList(selectedPhotoIds).filter((photoId) => savedBlocked.has(photoId));
+    if (selectedTargets.length) return selectedTargets;
+    const activeTarget = String(activePhotoId || "").trim();
+    return activeTarget && savedBlocked.has(activeTarget) ? [activeTarget] : [];
+  };
+
+  return { resolveTitleReviewUndoTargetIds };
+})();
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = titleKeywordReviewUndoHelpers;
+}
+
+if (typeof window !== "undefined") {
 (() => {
+  const { resolveTitleReviewUndoTargetIds } = titleKeywordReviewUndoHelpers;
   const localHosts = new Set(["localhost", "127.0.0.1", "::1"]);
   const enabled = localHosts.has(window.location.hostname);
 
@@ -1330,7 +1367,9 @@
         }
         setRowStatus(card, "Blocked", "saved");
       });
-      return { count: savedTargets.length, photoIds: savedTargets.map(({ photoId }) => photoId), result };
+      const savedPhotoIds = savedTargets.map(({ photoId }) => photoId);
+      lastBlockBatchPhotoIds = savedPhotoIds;
+      return { count: savedTargets.length, photoIds: savedPhotoIds, result };
     };
 
     const isAlreadyUnhiddenError = (error) => /photo not found in Hidden/i.test(String(error?.message || ""));
@@ -1765,11 +1804,21 @@
     };
 
     const undoLastBlockBatch = () => {
-      const targets = lastBlockBatchPhotoIds
+      const savedBlockedPhotoIds = [...cardById.values()]
+        .filter(isCardSavedBlocked)
+        .map(reviewCardId)
+        .filter(Boolean);
+      const targetPhotoIds = resolveTitleReviewUndoTargetIds({
+        lastBlockBatchPhotoIds,
+        selectedPhotoIds: [...selectedPhotoIds],
+        activePhotoId: reviewCardId(activeCard),
+        savedBlockedPhotoIds,
+      });
+      const targets = targetPhotoIds
         .map((photoId) => ({ photoId, card: cardById.get(photoId) }))
         .filter(({ card }) => Boolean(card));
       if (!targets.length) {
-        if (status) status.textContent = "No title review block batch to undo.";
+        if (status) status.textContent = "No blocked title review row to undo.";
         return;
       }
       Promise.all(targets.map(({ photoId, card }) => saveUnblockedTarget(photoId, card))).then(() => {
@@ -2218,3 +2267,4 @@
     });
   }
 })();
+}

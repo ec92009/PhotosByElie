@@ -134,9 +134,44 @@ curl -sS http://localhost:8787/checkout/guest \
 The response includes:
 
 - `order.id`, such as `PBE-20260507-...`
+- `order.originalSubtotalAmount`, in cents
+- `order.discountCode`, when a server-validated code was accepted
+- `order.discountAmount`, in cents
 - `order.amountExpected`, in cents
 - `checkout.url`, a Stripe Checkout URL
 - `checkout.sessionId`, used by the mock payment helper
+
+Product rows keep their catalog `amount`. When a server discount is accepted,
+`product.checkoutAmount` records that product line's prorated Checkout amount.
+
+## Guarded Discount Codes
+
+Live rehearsal discounts are validated only by the Worker. The browser may send
+`discountCode`, but it does not decide whether the code is valid or how much it
+discounts.
+
+Configure owner-only codes outside git with a Worker secret or environment
+variable:
+
+```bash
+npx wrangler secret put CHECKOUT_DISCOUNT_CODES_JSON
+```
+
+Expected JSON:
+
+```json
+[
+  {
+    "code": "OWNER-LIVE-REHEARSAL",
+    "type": "target_total",
+    "targetTotalAmount": 50,
+    "label": "Owner live rehearsal"
+  }
+]
+```
+
+Amounts are cents. The Worker caps every discount so the payable total cannot
+fall below Stripe's $0.50 minimum charge.
 
 ## Mock Payment Example
 

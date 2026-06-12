@@ -242,7 +242,11 @@ const translations = {
     'basket.order_id': 'Order ID',
     'basket.photos': 'Photos',
     'basket.assets': 'Assets',
+    'basket.original_subtotal': 'Original subtotal',
     'basket.draft_total': 'Draft total',
+    'basket.discount_code': 'Discount code',
+    'basket.discount': 'Discount',
+    'basket.discounted_subtotal': 'Discounted subtotal',
     'basket.minimum_charge': 'Stripe minimum',
     'basket.minimum_adjustment': 'Minimum top-up',
     'basket.payable_total': 'Payable total',
@@ -735,7 +739,11 @@ const translations = {
     'basket.order_id': 'Commande',
     'basket.photos': 'Photos',
     'basket.assets': 'Fichiers',
+    'basket.original_subtotal': 'Sous-total original',
     'basket.draft_total': 'Total brouillon',
+    'basket.discount_code': 'Code remise',
+    'basket.discount': 'Remise',
+    'basket.discounted_subtotal': 'Sous-total remise',
     'basket.minimum_charge': 'Minimum Stripe',
     'basket.minimum_adjustment': 'Complement minimum',
     'basket.payable_total': 'Total a payer',
@@ -1228,7 +1236,11 @@ const translations = {
     'basket.order_id': 'Pedido',
     'basket.photos': 'Fotos',
     'basket.assets': 'Archivos',
+    'basket.original_subtotal': 'Subtotal original',
     'basket.draft_total': 'Total borrador',
+    'basket.discount_code': 'Codigo descuento',
+    'basket.discount': 'Descuento',
+    'basket.discounted_subtotal': 'Subtotal con descuento',
     'basket.minimum_charge': 'Minimo Stripe',
     'basket.minimum_adjustment': 'Ajuste minimo',
     'basket.payable_total': 'Total a pagar',
@@ -1717,9 +1729,16 @@ const supportOrderDraft = () => {
   const sessionId = params.get('session_id') || checkoutState.checkoutSessionId || checkoutState.lastResponse?.checkout?.sessionId || '';
   const status = order.status || '';
   const currency = order.currency || 'usd';
-  const total = order.amountExpected ? supportMoneyFromCents(order.amountExpected, currency) : '';
-  const paid = order.amountPaid ? supportMoneyFromCents(order.amountPaid, currency) : '';
-  const hasOrderContext = Boolean(orderId || email || sessionId || status || total || paid);
+  const subtotalAmount = order.originalSubtotalAmount ?? order.subtotalAmount ?? params.get('subtotal_amount');
+  const discountCode = order.discountCode || params.get('discount_code') || '';
+  const discountAmount = order.discountAmount ?? params.get('discount_amount');
+  const amountExpected = order.amountExpected ?? params.get('amount_expected');
+  const amountPaid = order.amountPaid ?? params.get('amount_paid');
+  const subtotal = subtotalAmount ? supportMoneyFromCents(subtotalAmount, currency) : '';
+  const discount = discountCode || Number(discountAmount || 0) ? supportMoneyFromCents(discountAmount, currency) : '';
+  const total = amountExpected ? supportMoneyFromCents(amountExpected, currency) : '';
+  const paid = amountPaid ? supportMoneyFromCents(amountPaid, currency) : '';
+  const hasOrderContext = Boolean(orderId || email || sessionId || status || subtotal || discountCode || discount || total || paid);
   const subject = orderId
     ? `Photos By Elie download support - ${orderId}`
     : 'Photos By Elie download support';
@@ -1728,6 +1747,9 @@ const supportOrderDraft = () => {
     email ? `Checkout email: ${email}` : '',
     sessionId ? `Stripe Checkout session: ${sessionId}` : '',
     status ? `Status shown on site: ${status}` : '',
+    subtotal ? `Original subtotal: ${subtotal}` : '',
+    discountCode ? `Discount code: ${discountCode}` : '',
+    discount ? `Discount amount: -${discount}` : '',
     total ? `Expected total: ${total}` : '',
     paid ? `Paid total: ${paid}` : '',
   ].filter(Boolean);

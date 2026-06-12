@@ -88,6 +88,11 @@ const supportHrefFor = (order = {}) => {
   if (id) url.searchParams.set("id", id);
   if (email) url.searchParams.set("email", email);
   if (sessionId) url.searchParams.set("session_id", sessionId);
+  if (order.discountCode) url.searchParams.set("discount_code", order.discountCode);
+  if (order.discountAmount) url.searchParams.set("discount_amount", String(order.discountAmount));
+  if (order.originalSubtotalAmount || order.subtotalAmount) url.searchParams.set("subtotal_amount", String(order.originalSubtotalAmount || order.subtotalAmount));
+  if (order.amountExpected) url.searchParams.set("amount_expected", String(order.amountExpected));
+  if (order.amountPaid) url.searchParams.set("amount_paid", String(order.amountPaid));
   return url.href;
 };
 const syncOrderSupportLinks = (order = {}) => {
@@ -288,12 +293,17 @@ const renderOrder = (order) => {
   }
   message.textContent = copy.message;
   setProgress(order.status);
+  const originalSubtotalAmount = order.originalSubtotalAmount ?? order.subtotalAmount;
+  const hasDiscount = Boolean(order.discountCode || Number(order.discountAmount || 0));
 
   details.innerHTML = `
     <div><dt>${t("basket.order_id")}</dt><dd>${escapeText(order.id)}</dd></div>
     <div><dt>${t("order.status")}</dt><dd>${escapeText(order.status)}</dd></div>
     <div><dt>${t("order.email")}</dt><dd>${escapeText(order.buyerEmail)}</dd></div>
-    ${order.minimumChargeAdjustment ? `<div><dt>${t("basket.draft_total")}</dt><dd>${moneyFromCents(order.subtotalAmount, order.currency)}</dd></div>` : ""}
+    ${hasDiscount || order.minimumChargeAdjustment ? `<div><dt>${t("basket.original_subtotal")}</dt><dd>${moneyFromCents(originalSubtotalAmount, order.currency)}</dd></div>` : ""}
+    ${order.discountCode ? `<div><dt>${t("basket.discount_code")}</dt><dd>${escapeText(order.discountCode)}</dd></div>` : ""}
+    ${hasDiscount ? `<div><dt>${t("basket.discount")}</dt><dd>-${moneyFromCents(order.discountAmount, order.currency)}</dd></div>` : ""}
+    ${hasDiscount ? `<div><dt>${t("basket.discounted_subtotal")}</dt><dd>${moneyFromCents(order.discountedSubtotalAmount, order.currency)}</dd></div>` : ""}
     ${order.minimumChargeAdjustment ? `<div><dt>${t("basket.minimum_adjustment")}</dt><dd>+${moneyFromCents(order.minimumChargeAdjustment, order.currency)}</dd></div>` : ""}
     <div><dt>${t("order.total")}</dt><dd>${moneyFromCents(order.amountExpected, order.currency)}</dd></div>
     <div><dt>${t("order.paid")}</dt><dd>${moneyFromCents(order.amountPaid, order.currency)}</dd></div>

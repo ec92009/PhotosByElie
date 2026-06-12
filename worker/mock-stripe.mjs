@@ -16,14 +16,16 @@ export const createMockStripeClient = ({
     successUrl,
     cancelUrl,
     receiptDescription,
+    metadata = {},
   }) => {
     const id = stripeId("cs_mock", randomUUID);
     const paymentIntent = stripeId("pi_mock", randomUUID);
+    const sessionMetadata = { order_id: orderId, ...metadata };
     const session = {
       id,
       object: "checkout.session",
       client_reference_id: orderId,
-      metadata: { order_id: orderId },
+      metadata: sessionMetadata,
       mode: "payment",
       payment_status: "unpaid",
       amount_total: amountTotal,
@@ -35,7 +37,7 @@ export const createMockStripeClient = ({
       cancel_url: cancelUrl,
       payment_intent_data: {
         description: receiptDescription,
-        metadata: { order_id: orderId },
+        metadata: sessionMetadata,
       },
       url: `${checkoutBaseUrl}/${id}`,
     };

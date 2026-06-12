@@ -29,6 +29,29 @@ const enabledFlag = (value, defaultValue = true) => {
   return !["0", "false", "no", "off"].includes(normalized);
 };
 
+const checkoutDiscountCodesFor = (env = {}) => {
+  const rawJson = String(env.CHECKOUT_DISCOUNT_CODES_JSON || "").trim();
+  if (rawJson) {
+    try {
+      const parsed = JSON.parse(rawJson);
+      if (Array.isArray(parsed)) return parsed;
+      if (Array.isArray(parsed.codes)) return parsed.codes;
+      if (parsed && typeof parsed === "object") return parsed;
+    } catch {
+      // Invalid discount JSON should fail closed by returning no active codes.
+      return [];
+    }
+  }
+  const code = String(env.CHECKOUT_REHEARSAL_DISCOUNT_CODE || "").trim();
+  if (!code) return [];
+  return [{
+    code,
+    type: "target_total",
+    targetTotalAmount: positiveInt(env.CHECKOUT_REHEARSAL_TARGET_AMOUNT, 50),
+    label: "Owner live rehearsal",
+  }];
+};
+
 const cleanRealEstateGallery = (gallery = {}) => {
   const key = String(gallery.key || "").trim();
   if (!key) return null;
@@ -232,6 +255,7 @@ export default {
       mockStripeEnabled: !realStripeEnabled && env.MOCK_STRIPE_ENABLED !== "false",
       downloadTokenTtlSeconds,
       downloadTokenMaxDownloads,
+      discountCodes: checkoutDiscountCodesFor(env),
     });
     return worker.fetch(request);
   },

@@ -178,6 +178,11 @@ export const createLocalZipDelivery = ({
       `Order ID: ${order.id}`,
       `Status: ${order.status}`,
       `Buyer email: ${order.buyerEmail}`,
+      `Original subtotal: ${order.currency.toUpperCase()} ${(Number(order.originalSubtotalAmount ?? order.subtotalAmount ?? order.amountExpected) / 100).toFixed(2)}`,
+      ...(order.discountCode ? [
+        `Discount code: ${order.discountCode}`,
+        `Discount amount: ${order.currency.toUpperCase()} ${(Number(order.discountAmount || 0) / 100).toFixed(2)}`,
+      ] : []),
       `Amount paid: ${order.currency.toUpperCase()} ${(Number(order.amountPaid || order.amountExpected) / 100).toFixed(2)}`,
       "",
       ...rendered.flatMap((entry) => [

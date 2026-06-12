@@ -40,6 +40,7 @@ const orderSummary = document.querySelector("[data-order-summary]");
 const orderEmail = document.querySelector("[data-order-email]");
 const orderEmailDraft = document.querySelector("[data-order-email-draft]");
 const checkoutEmail = document.querySelector("[data-checkout-email]");
+const discountCodeInput = document.querySelector("[data-discount-code]");
 const checkoutGuest = document.querySelector("[data-checkout-guest]");
 const mockPay = document.querySelector("[data-mock-pay]");
 const checkoutResult = document.querySelector("[data-checkout-result]");
@@ -507,6 +508,8 @@ const renderCheckoutResult = (body, mode = "checkout") => {
     return;
   }
   const delivery = order.delivery;
+  const discountCode = order.discountCode || "";
+  const discountAmount = Number(order.discountAmount || 0);
   checkoutResult.hidden = false;
   const provider = body.checkout?.provider || "stripe";
   const mockMode = provider === "mock-stripe";
@@ -522,6 +525,7 @@ const renderCheckoutResult = (body, mode = "checkout") => {
   checkoutResult.innerHTML = `
     <strong>${title}</strong>
     <span>Order ${escapeText(order.id)} · ${escapeText(order.status)} · ${moneyFromCents(order.amountExpected, order.currency)}</span>
+    ${discountCode ? `<span>${escapeText(t("basket.discount_code"))}: ${escapeText(discountCode)} · -${moneyFromCents(discountAmount, order.currency)}</span>` : ""}
     ${checkoutAction}
     ${delivery?.downloadUrl ? `<a href="${escapeText(workerBaseUrl() + delivery.downloadUrl)}" target="_blank" rel="noreferrer">Open download token</a>` : ""}
     ${delivery?.zipKey ? `<code>${escapeText(delivery.zipKey)}</code>` : ""}
@@ -556,6 +560,7 @@ const syncCheckoutControls = () => {
   const provider = state.provider || state.lastResponse?.checkout?.provider || "stripe";
   if (mockPay) mockPay.hidden = !(isLocalPage() && state.checkoutSessionId && provider === "mock-stripe");
   if (checkoutEmail && state.email && !checkoutEmail.value) checkoutEmail.value = state.email;
+  if (discountCodeInput && state.discountCode && !discountCodeInput.value) discountCodeInput.value = state.discountCode;
   if (state.lastResponse) renderCheckoutResult(state.lastResponse, state.mode);
 };
 
@@ -568,6 +573,7 @@ checkoutGuest?.addEventListener("click", async () => {
       checkoutEmail?.focus();
       return;
     }
+    const discountCode = String(discountCodeInput?.value || "").trim();
     if (!deliveryAvailabilityLoaded) {
       setBasketStatus(t("basket.checking_delivery"), { checkout: true });
       await ensureDeliveryAvailabilityLoaded();
@@ -587,10 +593,16 @@ checkoutGuest?.addEventListener("click", async () => {
     setBasketStatus(t("basket.creating_checkout"), { checkout: true });
     const body = await checkoutFetch("/checkout/guest", {
       method: "POST",
-      body: JSON.stringify({ email, items, expectedSubtotalAmount: basketDigitalSubtotalCents() }),
+      body: JSON.stringify({
+        email,
+        items,
+        expectedSubtotalAmount: basketDigitalSubtotalCents(),
+        ...(discountCode ? { discountCode } : {}),
+      }),
     });
     setCheckoutState({
       email,
+      discountCode,
       orderId: body.order.id,
       checkoutSessionId: body.checkout.sessionId,
       provider: body.checkout.provider,
@@ -652,6 +664,10 @@ const simulateMockPayment = async () => {
 
 mockPay?.addEventListener("click", async () => {
   await simulateMockPayment();
+});
+
+discountCodeInput?.addEventListener("input", () => {
+  clearCheckoutState();
 });
 
 checkoutResult?.addEventListener("click", async (event) => {

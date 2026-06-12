@@ -15,6 +15,7 @@ Start by extracting these fields from the customer email. Copy exact values; do 
 | Stripe Checkout session | `cs_live_...` or `cs_test_...` | `cs_live_b1...` |
 | Site status | free text after `Status shown on site:` | `pending_payment` |
 | Expected/paid total | money amount | `$0.50` |
+| Discount details | code and amount | `OWNER-LIVE-REHEARSAL`, `$64.50` |
 | Selected files | photo title, photo ID, collection, product | `JPG 1 MP` |
 | Support/order URL | `support.html` or `order.html` URL | `https://photos-by-elie.com/order.html?...` |
 
@@ -59,6 +60,9 @@ Record:
 - `order.id`
 - `order.status`
 - `order.buyerEmail`
+- `order.originalSubtotalAmount`
+- `order.discountCode`
+- `order.discountAmount`
 - `order.amountExpected`
 - `order.amountPaid`
 - `order.items`
@@ -234,7 +238,7 @@ for key in keys:
         for product in item.get("products") or []:
             record["lines"].append({
                 "product": product.get("id") or "unknown",
-                "paidCents": int(product.get("amount") or 0) if order_paid else 0,
+                "paidCents": int(product.get("checkoutAmount", product.get("amount") or 0) or 0) if order_paid else 0,
             })
 
 print("| Photo/media ID | Title | Products and paid price |")
@@ -270,6 +274,7 @@ Confirm:
 - Checkout Session or PaymentIntent exists.
 - Payment status is `paid` / payment intent is `succeeded`.
 - Amount and currency match the Worker `amountExpected`.
+- For owner rehearsal purchases, Worker `originalSubtotalAmount`, `discountCode`, `discountAmount`, `amountExpected`, and Stripe amount/metadata agree.
 - Customer email matches or reasonably explains the support email.
 - Metadata or description links to the same PBE order ID.
 - Payment is not refunded, disputed, or failed.

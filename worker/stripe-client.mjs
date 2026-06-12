@@ -23,6 +23,13 @@ const appendLineItems = (params, lineItems = [], currency) => {
   });
 };
 
+const appendMetadata = (params, prefix, metadata = {}) => {
+  Object.entries(metadata || {}).forEach(([key, value]) => {
+    if (!key || value == null || value === "") return;
+    appendParam(params, `${prefix}[${key}]`, value);
+  });
+};
+
 const utf8Bytes = (value) => new TextEncoder().encode(String(value));
 
 const bytesToHex = (bytes) => Array.from(bytes)
@@ -101,18 +108,20 @@ export const createStripeClient = ({
     successUrl,
     cancelUrl,
     receiptDescription,
+    metadata = {},
   }) => {
+    const checkoutMetadata = { order_id: orderId, ...metadata };
     const params = new URLSearchParams();
     appendParam(params, "mode", "payment");
     appendParam(params, "client_reference_id", orderId);
     appendParam(params, "customer_email", buyerEmail);
     appendParam(params, "success_url", successUrl);
     appendParam(params, "cancel_url", cancelUrl);
-    appendParam(params, "metadata[order_id]", orderId);
+    appendMetadata(params, "metadata", checkoutMetadata);
     appendParam(params, "payment_intent_data[description]", receiptDescription);
     appendParam(params, "payment_intent_data[receipt_email]", buyerEmail);
     appendParam(params, "payment_intent_data[statement_descriptor_suffix]", statementDescriptorSuffix);
-    appendParam(params, "payment_intent_data[metadata][order_id]", orderId);
+    appendMetadata(params, "payment_intent_data[metadata]", checkoutMetadata);
     appendLineItems(params, lineItems, currency);
 
     const headers = {

@@ -102,6 +102,194 @@ const checkoutLineName = (title, label, maxLength = 180) => {
 const minimumChargeAdjustmentFor = (subtotalAmount) =>
   subtotalAmount > 0 && subtotalAmount < MINIMUM_CHARGE_AMOUNT ? MINIMUM_CHARGE_AMOUNT - subtotalAmount : 0;
 
+const normalizeDiscountCode = (value) => String(value || "")
+  .trim()
+  .toUpperCase()
+  .replace(/\s+/g, "");
+
+const integerCents = (value, fallback = 0) => {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.max(0, Math.round(number)) : fallback;
+};
+
+const normalizeEmailAllowlist = (emails) => {
+  if (!Array.isArray(emails)) return [];
+  return emails
+    .map((email) => String(email || "").trim().toLowerCase())
+    .filter(validEmail);
+};
+
+const normalizeDiscountDefinition = (definition) => {
+  if (typeof definition === "string") {
+    const code = normalizeDiscountCode(definition);
+    return code ? { code, type: "target_total", targetTotalAmount: MINIMUM_CHARGE_AMOUNT } : null;
+  }
+  if (!definition || typeof definition !== "object") return null;
+  const code = normalizeDiscountCode(definition.code || definition.discountCode || definition.promoCode);
+  if (!code) return null;
+  const type = String(definition.type || definition.kind || (
+    definition.percentOff != null ? "percent" : definition.amountOff != null ? "amount" : "target_total"
+  )).trim().toLowerCase();
+  return {
+    code,
+    type,
+    label: String(definition.label || definition.name || "").trim(),
+    percentOff: Number(definition.percentOff),
+    amountOff: integerCents(definition.amountOff ?? definition.amountOffAmount ?? definition.amountOffCents, 0),
+    targetTotalAmount: integerCents(
+      definition.targetTotalAmount ?? definition.targetAmount ?? definition.targetCents ?? definition.targetTotalCents,
+      MINIMUM_CHARGE_AMOUNT
+    ),
+    minPaidAmount: Math.max(
+      MINIMUM_CHARGE_AMOUNT,
+      integerCents(definition.minPaidAmount ?? definition.minimumPaidAmount ?? definition.minChargeAmount, MINIMUM_CHARGE_AMOUNT)
+    ),
+    startsAt: definition.startsAt || definition.validFrom || null,
+    expiresAt: definition.expiresAt || definition.validUntil || null,
+    allowedEmails: normalizeEmailAllowlist(definition.allowedEmails || definition.emails),
+    enabled: definition.enabled !== false,
+  };
+};
+
+const discountDefinitionList = (discountCodes) => {
+  if (!discountCodes) return [];
+  if (Array.isArray(discountCodes)) return discountCodes.map(normalizeDiscountDefinition).filter(Boolean);
+  if (typeof discountCodes === "object") {
+    return Object.entries(discountCodes).map(([code, definition]) => normalizeDiscountDefinition({
+      ...(typeof definition === "object" && definition ? definition : { targetTotalAmount: definition }),
+      code,
+    })).filter(Boolean);
+  }
+  return [];
+};
+
+const discountDefinitionsByCode = (discountCodes) => new Map(
+  discountDefinitionList(discountCodes).map((definition) => [definition.code, definition])
+);
+
+const isDateBeforeOrEqual = (value, date) => {
+  const timestamp = Date.parse(value || "");
+  return Number.isFinite(timestamp) && timestamp <= date.getTime();
+};
+
+const isDateAfter = (value, date) => {
+  const timestamp = Date.parse(value || "");
+  return Number.isFinite(timestamp) && timestamp > date.getTime();
+};
+
+const discountRawAmount = (definition, subtotalAmount) => {
+  if (definition.type === "percent" || definition.type === "percentage") {
+    const percent = Number.isFinite(definition.percentOff) ? Math.max(0, Math.min(100, definition.percentOff)) : 0;
+    return Math.floor(subtotalAmount * (percent / 100));
+  }
+  if (definition.type === "amount" || definition.type === "amount_off" || definition.type === "fixed") {
+    return definition.amountOff;
+  }
+  const targetTotalAmount = Math.max(definition.minPaidAmount, definition.targetTotalAmount);
+  return subtotalAmount - targetTotalAmount;
+};
+
+const validateCheckoutDiscount = ({
+  discountCode,
+  discountDefinitions,
+  buyerEmail,
+  subtotalAmount,
+  nowDate,
+}) => {
+  const code = normalizeDiscountCode(discountCode);
+  if (!code) {
+    return {
+      code: "",
+      label: "",
+      amount: 0,
+      discountedSubtotalAmount: subtotalAmount,
+    };
+  }
+  const definition = discountDefinitions.get(code);
+  if (!definition || !definition.enabled) {
+    throw Object.assign(new Error("Discount code is not valid for this checkout."), {
+      status: 403,
+      code: "invalid_discount_code",
+    });
+  }
+  if (definition.startsAt && isDateAfter(definition.startsAt, nowDate)) {
+    throw Object.assign(new Error("Discount code is not active yet."), {
+      status: 403,
+      code: "discount_code_inactive",
+    });
+  }
+  if (definition.expiresAt && isDateBeforeOrEqual(definition.expiresAt, nowDate)) {
+    throw Object.assign(new Error("Discount code has expired."), {
+      status: 403,
+      code: "discount_code_expired",
+    });
+  }
+  if (definition.allowedEmails.length && !definition.allowedEmails.includes(String(buyerEmail || "").toLowerCase())) {
+    throw Object.assign(new Error("Discount code is not valid for this checkout email."), {
+      status: 403,
+      code: "discount_code_email_mismatch",
+    });
+  }
+
+  const minPaidAmount = Math.max(MINIMUM_CHARGE_AMOUNT, definition.minPaidAmount);
+  const maxDiscountAmount = Math.max(0, subtotalAmount - minPaidAmount);
+  const amount = Math.max(0, Math.min(integerCents(discountRawAmount(definition, subtotalAmount), 0), maxDiscountAmount));
+  return {
+    code,
+    label: definition.label,
+    amount,
+    discountedSubtotalAmount: subtotalAmount - amount,
+  };
+};
+
+const allocateDiscountedLineItems = (lineItems, targetAmount) => {
+  const normalizedTarget = integerCents(targetAmount, 0);
+  const originalTotal = lineItems.reduce((sum, item) => sum + integerCents(item.amount ?? item.unit_amount, 0), 0);
+  if (!lineItems.length || originalTotal <= 0 || normalizedTarget <= 0) return [];
+  if (normalizedTarget >= originalTotal) {
+    return lineItems.map((item) => ({
+      ...item,
+      unit_amount: integerCents(item.unit_amount ?? item.amount, 0),
+      amount: integerCents(item.amount ?? item.unit_amount, 0),
+      originalAmount: integerCents(item.amount ?? item.unit_amount, 0),
+    }));
+  }
+  const allocations = lineItems.map((item, index) => {
+    const originalAmount = integerCents(item.amount ?? item.unit_amount, 0);
+    const exact = (originalAmount / originalTotal) * normalizedTarget;
+    const amount = Math.floor(exact);
+    return {
+      item,
+      index,
+      originalAmount,
+      amount,
+      remainder: exact - amount,
+    };
+  });
+  let remaining = normalizedTarget - allocations.reduce((sum, allocation) => sum + allocation.amount, 0);
+  allocations
+    .slice()
+    .sort((left, right) =>
+      (right.remainder - left.remainder)
+      || (right.originalAmount - left.originalAmount)
+      || (left.index - right.index)
+    )
+    .forEach((allocation) => {
+      if (remaining <= 0) return;
+      allocation.amount += 1;
+      remaining -= 1;
+    });
+  return allocations
+    .filter((allocation) => allocation.amount > 0)
+    .sort((left, right) => left.index - right.index)
+    .map((allocation) => ({
+      ...allocation.item,
+      unit_amount: allocation.amount,
+      amount: allocation.amount,
+      originalAmount: allocation.originalAmount,
+    }));
+};
+
 const originalSize = (photo) => {
   const fromMetadata = (photo?.metadata || []).find((item) => item.label === "Original size")?.value;
   return fromMetadata || (photo?.megapixels ? `${photo.megapixels} MP source` : "Source size unverified");
@@ -278,7 +466,12 @@ const publicOrder = (order) => ({
   checkoutMode: order.checkoutMode,
   buyerEmail: order.buyerEmail,
   currency: order.currency,
-  subtotalAmount: order.subtotalAmount ?? order.amountExpected,
+  originalSubtotalAmount: order.originalSubtotalAmount ?? order.subtotalAmount ?? order.amountExpected,
+  subtotalAmount: order.subtotalAmount ?? order.originalSubtotalAmount ?? order.amountExpected,
+  discountCode: order.discountCode || "",
+  discountLabel: order.discountLabel || "",
+  discountAmount: order.discountAmount || 0,
+  discountedSubtotalAmount: order.discountedSubtotalAmount ?? Math.max(0, Number(order.subtotalAmount ?? order.originalSubtotalAmount ?? 0) - Number(order.discountAmount || 0)),
   minimumChargeAdjustment: order.minimumChargeAdjustment || 0,
   amountExpected: order.amountExpected,
   amountPaid: order.amountPaid || 0,
@@ -292,6 +485,7 @@ const publicOrder = (order) => ({
       id: product.id,
       label: product.label,
       amount: product.amount,
+      checkoutAmount: product.checkoutAmount ?? product.amount,
     })),
     subtotal: item.subtotal,
   })),
@@ -627,10 +821,12 @@ export const createPhotosByElieWorker = ({
   includeDirectDownloadLinks = true,
   downloadTokenTtlSeconds = DEFAULT_DOWNLOAD_TOKEN_TTL_SECONDS,
   downloadTokenMaxDownloads = DEFAULT_DOWNLOAD_TOKEN_MAX_DOWNLOADS,
+  discountCodes = [],
 } = {}) => {
   if (!catalog) throw new Error("createPhotosByElieWorker requires a catalog index.");
   const deliveryClient = delivery || defaultDelivery({ now, randomUUID });
   const stripeProvider = stripe.provider || "stripe";
+  const discountDefinitions = discountDefinitionsByCode(discountCodes);
   const downloadPolicy = () => {
     const nowDate = now();
     const ttlSeconds = boundedPositiveInteger(downloadTokenTtlSeconds, DEFAULT_DOWNLOAD_TOKEN_TTL_SECONDS);
@@ -759,9 +955,17 @@ export const createPhotosByElieWorker = ({
         workerSubtotalAmount: subtotalAmount,
       });
     }
-    const minimumChargeAdjustment = minimumChargeAdjustmentFor(subtotalAmount);
-    const amountExpected = subtotalAmount + minimumChargeAdjustment;
     const createdAt = now().toISOString();
+    const nowDate = new Date(createdAt);
+    const discount = validateCheckoutDiscount({
+      discountCode: payload.discountCode || payload.couponCode || payload.promoCode || payload.promotionCode,
+      discountDefinitions,
+      buyerEmail,
+      subtotalAmount,
+      nowDate,
+    });
+    const minimumChargeAdjustment = minimumChargeAdjustmentFor(discount.discountedSubtotalAmount);
+    const amountExpected = discount.discountedSubtotalAmount + minimumChargeAdjustment;
     const orderId = createOrderId(now, randomUUID);
     if (typeof deliveryClient.validateOrder === "function") {
       await deliveryClient.validateOrder({
@@ -769,7 +973,12 @@ export const createPhotosByElieWorker = ({
         checkoutMode,
         buyerEmail,
         currency: ORDER_CURRENCY,
+        originalSubtotalAmount: subtotalAmount,
         subtotalAmount,
+        discountCode: discount.code,
+        discountLabel: discount.label,
+        discountAmount: discount.amount,
+        discountedSubtotalAmount: discount.discountedSubtotalAmount,
         minimumChargeAdjustment,
         amountExpected,
         amountPaid: 0,
@@ -782,14 +991,30 @@ export const createPhotosByElieWorker = ({
 
     const lineItems = items.flatMap((item) => item.products.map((product) => ({
       photoId: item.photoId,
+      productId: product.id,
       name: checkoutLineName(item.title, product.label),
       quantity: 1,
       unit_amount: product.unitAmount,
       amount: product.amount,
     })));
+    const checkoutLineItems = allocateDiscountedLineItems(lineItems, discount.discountedSubtotalAmount);
+    const checkoutAmountByProduct = new Map();
+    checkoutLineItems.forEach((lineItem) => {
+      if (!lineItem.photoId || !lineItem.productId) return;
+      const key = `${lineItem.photoId}::${lineItem.productId}`;
+      checkoutAmountByProduct.set(key, (checkoutAmountByProduct.get(key) || 0) + Number(lineItem.amount || 0));
+    });
+    const orderItems = items.map((item) => ({
+      ...item,
+      products: item.products.map((product) => ({
+        ...product,
+        checkoutAmount: checkoutAmountByProduct.get(`${item.photoId}::${product.id}`) ?? product.amount,
+      })),
+    }));
     if (minimumChargeAdjustment) {
-      lineItems.push({
+      checkoutLineItems.push({
         photoId: MINIMUM_CHARGE_PRODUCT_ID,
+        productId: MINIMUM_CHARGE_PRODUCT_ID,
         name: "Photos By Elie - Minimum checkout charge",
         quantity: 1,
         unit_amount: minimumChargeAdjustment,
@@ -802,10 +1027,17 @@ export const createPhotosByElieWorker = ({
       buyerEmail,
       amountTotal: amountExpected,
       currency: ORDER_CURRENCY,
-      lineItems,
+      lineItems: checkoutLineItems,
       successUrl: successUrl.replace("{ORDER_ID}", encodeURIComponent(orderId)),
       cancelUrl,
       receiptDescription,
+      metadata: {
+        original_subtotal_amount: subtotalAmount,
+        discount_code: discount.code,
+        discount_amount: discount.amount,
+        discounted_subtotal_amount: discount.discountedSubtotalAmount,
+        amount_expected: amountExpected,
+      },
     });
 
     const order = {
@@ -814,11 +1046,16 @@ export const createPhotosByElieWorker = ({
       checkoutMode,
       buyerEmail,
       currency: ORDER_CURRENCY,
+      originalSubtotalAmount: subtotalAmount,
       subtotalAmount,
+      discountCode: discount.code,
+      discountLabel: discount.label,
+      discountAmount: discount.amount,
+      discountedSubtotalAmount: discount.discountedSubtotalAmount,
       minimumChargeAdjustment,
       amountExpected,
       amountPaid: 0,
-      items,
+      items: orderItems,
       checkoutSessionId: checkoutSession.id,
       paymentIntentId: checkoutSession.payment_intent,
       receiptDescription,

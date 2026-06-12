@@ -17,6 +17,11 @@ ORDER_EMAIL_REPLY_TO = "orders@photos-by-elie.com"
 ORDER_EMAIL_INCLUDE_DIRECT_DOWNLOAD_LINKS = "true"
 # Secret required to enable buyer delivery emails:
 #   npx wrangler secret put RESEND_API_KEY
+# Optional owner-only live checkout rehearsal discount allowlist.
+# Store actual codes outside git, for example:
+#   npx wrangler secret put CHECKOUT_DISCOUNT_CODES_JSON
+# JSON shape:
+#   [{"code":"<owner-code>","type":"target_total","targetTotalAmount":50,"label":"Owner live rehearsal"}]
 
 [images]
 binding = "IMAGES"

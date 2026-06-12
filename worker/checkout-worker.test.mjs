@@ -280,6 +280,115 @@ test("guest checkout uses current 1 MP price and applies the Stripe minimum when
   assert.equal(session.line_items.length, expectedMinimumAdjustment > 0 ? 2 : 1);
 });
 
+test("guest checkout applies an allowlisted rehearsal discount server-side", async () => {
+  const catalog = loadCatalog();
+  const randomUUID = deterministicIds();
+  const stripe = createMockStripeClient({ randomUUID });
+  const store = createMemoryStore();
+  const worker = createPhotosByElieWorker({
+    catalog,
+    store,
+    stripe,
+    now: () => new Date("2026-05-07T12:00:00.000Z"),
+    randomUUID,
+    ordersUrl: "https://photosbyelie.test/orders",
+    discountCodes: [{
+      code: "owner-live-rehearsal",
+      type: "target_total",
+      targetTotalAmount: 50,
+      label: "Owner live rehearsal",
+    }],
+  });
+  const photoId = firstDeliverablePhotoId(catalog);
+
+  const response = await worker.fetch(jsonRequest("https://worker.test/checkout/guest", {
+    email: "buyer@example.com",
+    discountCode: " owner-live-rehearsal ",
+    items: [{ photoId, options: [{ id: "full" }, { id: "jpg-3mp" }] }],
+  }));
+  assert.equal(response.status, 201);
+
+  const body = await response.json();
+  const originalSubtotal = orderProductTotal(body.order.items[0]);
+  assert.equal(body.order.originalSubtotalAmount, originalSubtotal);
+  assert.equal(body.order.subtotalAmount, originalSubtotal);
+  assert.equal(body.order.discountCode, "OWNER-LIVE-REHEARSAL");
+  assert.equal(body.order.discountLabel, "Owner live rehearsal");
+  assert.equal(body.order.discountAmount, originalSubtotal - 50);
+  assert.equal(body.order.discountedSubtotalAmount, 50);
+  assert.equal(body.order.minimumChargeAdjustment, 0);
+  assert.equal(body.order.amountExpected, 50);
+  assert.equal(body.order.items[0].products.reduce((sum, product) => sum + Number(product.checkoutAmount || 0), 0), 50);
+
+  const storedOrder = await store.getOrder(body.order.id);
+  assert.equal(storedOrder.originalSubtotalAmount, originalSubtotal);
+  assert.equal(storedOrder.discountCode, "OWNER-LIVE-REHEARSAL");
+  assert.equal(storedOrder.discountAmount, originalSubtotal - 50);
+  assert.equal(storedOrder.amountExpected, 50);
+
+  const session = stripe._debug.sessions.get(body.checkout.sessionId);
+  assert.equal(session.amount_total, 50);
+  assert.equal(session.metadata.original_subtotal_amount, originalSubtotal);
+  assert.equal(session.metadata.discount_code, "OWNER-LIVE-REHEARSAL");
+  assert.equal(session.metadata.discount_amount, originalSubtotal - 50);
+  assert.equal(session.line_items.reduce((sum, item) => sum + Number(item.amount || 0), 0), 50);
+
+  const payResponse = await worker.fetch(jsonRequest("https://worker.test/mock-stripe/pay", {
+    checkoutSessionId: body.checkout.sessionId,
+  }));
+  assert.equal(payResponse.status, 200);
+  const paid = await payResponse.json();
+  assert.equal(paid.order.status, "ready");
+  assert.equal(paid.order.amountPaid, 50);
+  assert.equal(paid.order.discountCode, "OWNER-LIVE-REHEARSAL");
+});
+
+test("checkout discounts cannot reduce a live payment below the Stripe minimum", async () => {
+  const catalog = loadCatalog();
+  const randomUUID = deterministicIds();
+  const stripe = createMockStripeClient({ randomUUID });
+  const worker = createPhotosByElieWorker({
+    catalog,
+    stripe,
+    now: () => new Date("2026-05-07T12:00:00.000Z"),
+    randomUUID,
+    ordersUrl: "https://photosbyelie.test/orders",
+    discountCodes: [{ code: "FREE-PROOF", type: "percent", percentOff: 100 }],
+  });
+  const photoId = firstDeliverablePhotoId(catalog);
+
+  const response = await worker.fetch(jsonRequest("https://worker.test/checkout/guest", {
+    email: "buyer@example.com",
+    discountCode: "FREE-PROOF",
+    items: [{ photoId, options: [{ id: "full" }] }],
+  }));
+  assert.equal(response.status, 201);
+
+  const body = await response.json();
+  assert.equal(body.order.amountExpected, 50);
+  assert.equal(body.order.discountAmount, body.order.originalSubtotalAmount - 50);
+  const session = stripe._debug.sessions.get(body.checkout.sessionId);
+  assert.equal(session.amount_total, 50);
+  assert.equal(session.line_items.reduce((sum, item) => sum + Number(item.amount || 0), 0), 50);
+});
+
+test("guest checkout rejects unknown discount codes before creating a Stripe session", async () => {
+  const catalog = loadCatalog();
+  const { worker, stripe } = testWorker();
+  const photoId = firstDeliverablePhotoId(catalog);
+
+  const response = await worker.fetch(jsonRequest("https://worker.test/checkout/guest", {
+    email: "buyer@example.com",
+    discountCode: "NOT-A-CODE",
+    items: [{ photoId, options: [{ id: "jpg-1mp" }] }],
+  }));
+  assert.equal(response.status, 403);
+
+  const body = await response.json();
+  assert.equal(body.error.code, "invalid_discount_code");
+  assert.equal(stripe._debug.sessions.size, 0);
+});
+
 test("guest checkout rejects stale browser subtotal before Stripe session creation", async () => {
   const catalog = loadCatalog();
   const { worker, stripe } = testWorker();
@@ -460,6 +569,13 @@ test("real Stripe client creates hosted Checkout Sessions with order metadata", 
     successUrl: "https://photosbyelie.test/order.html?id=PBE-20260508-TEST",
     cancelUrl: "https://photosbyelie.test/basket.html",
     receiptDescription: "PhotosByElie order PBE-20260508-TEST.",
+    metadata: {
+      original_subtotal_amount: 6500,
+      discount_code: "OWNER-LIVE",
+      discount_amount: 1000,
+      discounted_subtotal_amount: 5500,
+      amount_expected: 5500,
+    },
   });
 
   assert.equal(session.id, "cs_test_123");
@@ -471,9 +587,15 @@ test("real Stripe client creates hosted Checkout Sessions with order metadata", 
   assert.equal(stripeRequest.params.get("mode"), "payment");
   assert.equal(stripeRequest.params.get("client_reference_id"), "PBE-20260508-TEST");
   assert.equal(stripeRequest.params.get("metadata[order_id]"), "PBE-20260508-TEST");
+  assert.equal(stripeRequest.params.get("metadata[discount_code]"), "OWNER-LIVE");
+  assert.equal(stripeRequest.params.get("metadata[discount_amount]"), "1000");
   assert.equal(stripeRequest.params.get("payment_intent_data[receipt_email]"), "buyer@example.com");
   assert.equal(stripeRequest.params.get("payment_intent_data[statement_descriptor_suffix]"), "DOWNLOAD");
   assert.equal(stripeRequest.params.get("payment_intent_data[metadata][order_id]"), "PBE-20260508-TEST");
+  assert.equal(stripeRequest.params.get("payment_intent_data[metadata][original_subtotal_amount]"), "6500");
+  assert.equal(stripeRequest.params.get("payment_intent_data[metadata][discount_code]"), "OWNER-LIVE");
+  assert.equal(stripeRequest.params.get("payment_intent_data[metadata][discount_amount]"), "1000");
+  assert.equal(stripeRequest.params.get("payment_intent_data[metadata][amount_expected]"), "5500");
   assert.equal(stripeRequest.params.get("line_items[0][price_data][unit_amount]"), "5500");
   assert.equal(stripeRequest.params.get("line_items[0][price_data][product_data][metadata][photo_id]"), "photo-1");
 });

@@ -125,4 +125,8 @@ Fuengirola after dark: moonlit Mediterranean water and quiet coastal color. Brow
 
 ## Publishing Results
 
-- Pending.
+- Facebook: published, 8 images, https://www.facebook.com/122102168061334672/posts/122105318505334672
+- Instagram: published, 7 images, https://www.instagram.com/p/DZeGVFhAiUd/
+- Threads: published, 4 images, https://www.threads.com/@ec92009/post/DZeGPV5iHLe
+- Pinterest: prepared only; no Pinterest token/board id mapping configured.
+- Etsy: 20 review-package listings generated; drafts not created because current tooling cannot attach and verify one public image plus one jpg-6mp buyer file per draft.

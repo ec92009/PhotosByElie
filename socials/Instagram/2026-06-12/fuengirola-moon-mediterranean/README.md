@@ -1,6 +1,6 @@
 # Instagram - Fuengirola Moon Over The Mediterranean
 
-Status: prepared
+Status: published
 Destination: https://photos-by-elie.com/campaign.html?c=instagram-fuengirola-moon-mediterranean-2026-06-12
 Image count: 7
 
@@ -18,3 +18,10 @@ Fuengirola after dark: moonlit Mediterranean water, coastal color, and quiet nig
 - img-2443-ad375ec1e2 - https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-2443-ad375ec1e2_1800.jpg - `socials/Instagram/2026-06-12/fuengirola-moon-mediterranean/images/05-img-2443-ad375ec1e2-fuengirola-moon-mediterranean.jpg`
 - img-2444-0853059960 - https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-2444-0853059960_1800.jpg - `socials/Instagram/2026-06-12/fuengirola-moon-mediterranean/images/06-img-2444-0853059960-fuengirola-moon-mediterranean.jpg`
 - img-2445-86fcda40d1 - https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-2445-86fcda40d1_1800.jpg - `socials/Instagram/2026-06-12/fuengirola-moon-mediterranean/images/07-img-2445-86fcda40d1-fuengirola-moon-mediterranean.jpg`
+
+## Published
+
+- URL: https://www.instagram.com/p/DZeGVFhAiUd/
+- ID: 18083787773149041
+- Images: 7
+- Verified: Instagram Graph returned permalink, username, CAROUSEL_ALBUM, and 7 children.

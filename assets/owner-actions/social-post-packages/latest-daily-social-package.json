@@ -10,9 +10,9 @@
     "Castelo dos Mouros Stone Paths"
   ],
   "platform_status": {
-    "facebook": "prepared",
-    "instagram": "prepared",
-    "threads": "prepared",
+    "facebook": "published",
+    "instagram": "published",
+    "threads": "published",
     "pinterest": "prepared_no_api_token_or_board_id",
     "etsy": "review_packages_only_attachment_tooling_blocked"
   },
@@ -20,7 +20,7 @@
     {
       "date": "2026-06-12",
       "platform": "Facebook",
-      "status": "prepared",
+      "status": "published",
       "account": "Photos By Elie",
       "post_type": "multi_photo",
       "title": "Alhaurin Sunset Hills",
@@ -171,16 +171,35 @@
         }
       ],
       "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260612-AZWJpO/socials/Facebook/2026-06-12/alhaurin-sunset-hills",
-      "dry_run": {
-        "status": "passed",
-        "checked_at": "2026-06-12T03:08:44.057Z",
-        "note": "API dry run passed with public HTTPS images and expected post plan."
+      "published": {
+        "status": "published",
+        "platform": "facebook",
+        "account": "Photos By Elie",
+        "page_id": "1146747141854670",
+        "post_id": "1146747141854670_122105318505334672",
+        "published_at": "2026-06-12T03:11:07+0000",
+        "permalink_url": "https://www.facebook.com/122102168061334672/posts/122105318505334672",
+        "image_count": 8,
+        "verified_at": "2026-06-12T03:13:21.095Z",
+        "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
+      },
+      "api_publish": {
+        "status": "published",
+        "platform": "facebook",
+        "account": "Photos By Elie",
+        "page_id": "1146747141854670",
+        "post_id": "1146747141854670_122105318505334672",
+        "published_at": "2026-06-12T03:11:07+0000",
+        "permalink_url": "https://www.facebook.com/122102168061334672/posts/122105318505334672",
+        "image_count": 8,
+        "verified_at": "2026-06-12T03:13:21.095Z",
+        "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
       }
     },
     {
       "date": "2026-06-12",
       "platform": "Instagram",
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "title": "Fuengirola Moon Over The Mediterranean",
@@ -316,10 +335,29 @@
         }
       ],
       "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260612-AZWJpO/socials/Instagram/2026-06-12/fuengirola-moon-mediterranean",
-      "dry_run": {
-        "status": "passed",
-        "checked_at": "2026-06-12T03:08:44.058Z",
-        "note": "API dry run passed with public HTTPS images and expected post plan."
+      "published": {
+        "status": "published",
+        "platform": "instagram",
+        "account": "ec92009",
+        "media_id": "18083787773149041",
+        "published_at": "2026-06-12T03:12:13+0000",
+        "permalink_url": "https://www.instagram.com/p/DZeGVFhAiUd/",
+        "media_type": "CAROUSEL_ALBUM",
+        "image_count": 7,
+        "verified_at": "2026-06-12T03:13:21.096Z",
+        "verification": "Instagram Graph returned permalink, username, CAROUSEL_ALBUM, and 7 children."
+      },
+      "api_publish": {
+        "status": "published",
+        "platform": "instagram",
+        "account": "ec92009",
+        "media_id": "18083787773149041",
+        "published_at": "2026-06-12T03:12:13+0000",
+        "permalink_url": "https://www.instagram.com/p/DZeGVFhAiUd/",
+        "media_type": "CAROUSEL_ALBUM",
+        "image_count": 7,
+        "verified_at": "2026-06-12T03:13:21.096Z",
+        "verification": "Instagram Graph returned permalink, username, CAROUSEL_ALBUM, and 7 children."
       }
     },
     {
@@ -438,7 +476,7 @@
     {
       "date": "2026-06-12",
       "platform": "Threads",
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "title": "Fuengirola Moon Over The Mediterranean",
@@ -524,10 +562,29 @@
       ],
       "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260612-AZWJpO/socials/Threads/2026-06-12/fuengirola-moon-mediterranean",
       "link_preview_note": "Remove automatic link preview before posting if it shows off-theme/default campaign metadata.",
-      "dry_run": {
-        "status": "passed",
-        "checked_at": "2026-06-12T03:08:44.058Z",
-        "note": "API dry run passed with public HTTPS images and expected post plan."
+      "published": {
+        "status": "published",
+        "platform": "threads",
+        "account": "ec92009",
+        "media_id": "18106040546057518",
+        "published_at": "2026-06-12T03:11:30+0000",
+        "permalink_url": "https://www.threads.com/@ec92009/post/DZeGPV5iHLe",
+        "media_type": "CAROUSEL_ALBUM",
+        "image_count": 4,
+        "verified_at": "2026-06-12T03:13:21.096Z",
+        "verification": "Threads Graph returned permalink, username, CAROUSEL_ALBUM, and 4 children."
+      },
+      "api_publish": {
+        "status": "published",
+        "platform": "threads",
+        "account": "ec92009",
+        "media_id": "18106040546057518",
+        "published_at": "2026-06-12T03:11:30+0000",
+        "permalink_url": "https://www.threads.com/@ec92009/post/DZeGPV5iHLe",
+        "media_type": "CAROUSEL_ALBUM",
+        "image_count": 4,
+        "verified_at": "2026-06-12T03:13:21.096Z",
+        "verification": "Threads Graph returned permalink, username, CAROUSEL_ALBUM, and 4 children."
       }
     }
   ],
@@ -564,5 +621,11 @@
     "local HTTP smoke passed on port 8766 for six new campaign manifests and v104.1 campaign shell",
     "in-app Browser localhost smoke was blocked with net::ERR_BLOCKED_BY_CLIENT"
   ],
-  "publishing_results": []
+  "publishing_results": [
+    "Facebook: published, 8 images, https://www.facebook.com/122102168061334672/posts/122105318505334672",
+    "Instagram: published, 7 images, https://www.instagram.com/p/DZeGVFhAiUd/",
+    "Threads: published, 4 images, https://www.threads.com/@ec92009/post/DZeGPV5iHLe",
+    "Pinterest: prepared only; no Pinterest token/board id mapping configured.",
+    "Etsy: 20 review-package listings generated; drafts not created because current tooling cannot attach and verify one public image plus one jpg-6mp buyer file per draft."
+  ]
 }

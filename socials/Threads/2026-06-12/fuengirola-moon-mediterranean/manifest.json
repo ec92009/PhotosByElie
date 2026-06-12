@@ -1,7 +1,7 @@
 {
   "date": "2026-06-12",
   "platform": "Threads",
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "title": "Fuengirola Moon Over The Mediterranean",
@@ -86,5 +86,29 @@
     }
   ],
   "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260612-AZWJpO/socials/Threads/2026-06-12/fuengirola-moon-mediterranean",
-  "link_preview_note": "Remove automatic link preview before posting if it shows off-theme/default campaign metadata."
+  "link_preview_note": "Remove automatic link preview before posting if it shows off-theme/default campaign metadata.",
+  "published": {
+    "status": "published",
+    "platform": "threads",
+    "account": "ec92009",
+    "media_id": "18106040546057518",
+    "published_at": "2026-06-12T03:11:30+0000",
+    "permalink_url": "https://www.threads.com/@ec92009/post/DZeGPV5iHLe",
+    "media_type": "CAROUSEL_ALBUM",
+    "image_count": 4,
+    "verified_at": "2026-06-12T03:13:21.096Z",
+    "verification": "Threads Graph returned permalink, username, CAROUSEL_ALBUM, and 4 children."
+  },
+  "api_publish": {
+    "status": "published",
+    "platform": "threads",
+    "account": "ec92009",
+    "media_id": "18106040546057518",
+    "published_at": "2026-06-12T03:11:30+0000",
+    "permalink_url": "https://www.threads.com/@ec92009/post/DZeGPV5iHLe",
+    "media_type": "CAROUSEL_ALBUM",
+    "image_count": 4,
+    "verified_at": "2026-06-12T03:13:21.096Z",
+    "verification": "Threads Graph returned permalink, username, CAROUSEL_ALBUM, and 4 children."
+  }
 }

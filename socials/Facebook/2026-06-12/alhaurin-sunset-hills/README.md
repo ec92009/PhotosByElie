@@ -1,6 +1,6 @@
 # Facebook - Alhaurin Sunset Hills
 
-Status: prepared
+Status: published
 Destination: https://photos-by-elie.com/campaign.html?c=facebook-alhaurin-sunset-hills-2026-06-12
 Image count: 8
 
@@ -17,3 +17,10 @@ Alhaurin de la Torre at sunset: warm Andalusian hills, layered sky, and Mediterr
 - img-1986-93cc12b8bc - https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1986-93cc12b8bc_1800.jpg - `socials/Facebook/2026-06-12/alhaurin-sunset-hills/images/06-img-1986-93cc12b8bc-alhaurin-sunset-hills.jpg`
 - img-1987-d233a4814d - https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1987-d233a4814d_1800.jpg - `socials/Facebook/2026-06-12/alhaurin-sunset-hills/images/07-img-1987-d233a4814d-alhaurin-sunset-hills.jpg`
 - img-1989-2a77a202cb - https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1989-2a77a202cb_1800.jpg - `socials/Facebook/2026-06-12/alhaurin-sunset-hills/images/08-img-1989-2a77a202cb-alhaurin-sunset-hills.jpg`
+
+## Published
+
+- URL: https://www.facebook.com/122102168061334672/posts/122105318505334672
+- ID: 1146747141854670_122105318505334672
+- Images: 8
+- Verified: Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments.

@@ -1,7 +1,7 @@
 {
   "date": "2026-06-12",
   "platform": "Instagram",
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "title": "Fuengirola Moon Over The Mediterranean",
@@ -136,5 +136,29 @@
       "local_staged_path": "socials/Instagram/2026-06-12/fuengirola-moon-mediterranean/images/07-img-2445-86fcda40d1-fuengirola-moon-mediterranean.jpg"
     }
   ],
-  "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260612-AZWJpO/socials/Instagram/2026-06-12/fuengirola-moon-mediterranean"
+  "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260612-AZWJpO/socials/Instagram/2026-06-12/fuengirola-moon-mediterranean",
+  "published": {
+    "status": "published",
+    "platform": "instagram",
+    "account": "ec92009",
+    "media_id": "18083787773149041",
+    "published_at": "2026-06-12T03:12:13+0000",
+    "permalink_url": "https://www.instagram.com/p/DZeGVFhAiUd/",
+    "media_type": "CAROUSEL_ALBUM",
+    "image_count": 7,
+    "verified_at": "2026-06-12T03:13:21.096Z",
+    "verification": "Instagram Graph returned permalink, username, CAROUSEL_ALBUM, and 7 children."
+  },
+  "api_publish": {
+    "status": "published",
+    "platform": "instagram",
+    "account": "ec92009",
+    "media_id": "18083787773149041",
+    "published_at": "2026-06-12T03:12:13+0000",
+    "permalink_url": "https://www.instagram.com/p/DZeGVFhAiUd/",
+    "media_type": "CAROUSEL_ALBUM",
+    "image_count": 7,
+    "verified_at": "2026-06-12T03:13:21.096Z",
+    "verification": "Instagram Graph returned permalink, username, CAROUSEL_ALBUM, and 7 children."
+  }
 }

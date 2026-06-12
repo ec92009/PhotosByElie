@@ -1,7 +1,7 @@
 {
   "date": "2026-06-12",
   "platform": "Facebook",
-  "status": "prepared",
+  "status": "published",
   "account": "Photos By Elie",
   "post_type": "multi_photo",
   "title": "Alhaurin Sunset Hills",
@@ -151,5 +151,29 @@
       "local_staged_path": "socials/Facebook/2026-06-12/alhaurin-sunset-hills/images/08-img-1989-2a77a202cb-alhaurin-sunset-hills.jpg"
     }
   ],
-  "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260612-AZWJpO/socials/Facebook/2026-06-12/alhaurin-sunset-hills"
+  "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260612-AZWJpO/socials/Facebook/2026-06-12/alhaurin-sunset-hills",
+  "published": {
+    "status": "published",
+    "platform": "facebook",
+    "account": "Photos By Elie",
+    "page_id": "1146747141854670",
+    "post_id": "1146747141854670_122105318505334672",
+    "published_at": "2026-06-12T03:11:07+0000",
+    "permalink_url": "https://www.facebook.com/122102168061334672/posts/122105318505334672",
+    "image_count": 8,
+    "verified_at": "2026-06-12T03:13:21.095Z",
+    "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
+  },
+  "api_publish": {
+    "status": "published",
+    "platform": "facebook",
+    "account": "Photos By Elie",
+    "page_id": "1146747141854670",
+    "post_id": "1146747141854670_122105318505334672",
+    "published_at": "2026-06-12T03:11:07+0000",
+    "permalink_url": "https://www.facebook.com/122102168061334672/posts/122105318505334672",
+    "image_count": 8,
+    "verified_at": "2026-06-12T03:13:21.095Z",
+    "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
+  }
 }

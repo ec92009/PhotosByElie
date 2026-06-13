@@ -3,7 +3,7 @@
 Build watermarked web previews from Lightroom-selected developed exports.
 
 The script is intentionally interrupt/resume friendly:
-- source files are tracked by their path relative to --source-root
+- source files are anchored by normalized full source path plus modified date
 - metadata checkpoints are appended to JSONL as each batch finishes
 - derivative files are written atomically and skipped when present
 - reruns can use a different --source-root, such as a local external drive
@@ -29,10 +29,18 @@ import sys
 import tempfile
 import threading
 import time
+from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any
 
+from import_source_anchor import (
+    import_anchor_for_path,
+    normalize_import_source_path,
+    photo_id_for_source_path,
+    row_freshness_key,
+    source_paths_from_row,
+)
 from media_keys import DEFAULT_PUBLIC_PREFIX, private_master_key, private_render_key, public_preview_key, public_preview_key_for_reference
 from media_policy import DEVELOPED_IMAGE_EXTENSIONS, DEVELOPED_VIDEO_EXTENSIONS, RAW_IMAGE_EXTENSIONS
 from import_eligibility import green_selected, lightroom_selected, normalize_rating
@@ -59,7 +67,7 @@ DEFAULT_VIDEO_PREVIEW_SECONDS = 5
 DEFAULT_VIDEO_POSTER_FRACTION = 0.10
 DEFAULT_VIDEO_PREVIEW_MAX = 720
 DEFAULT_BATCH_SIZE = 50
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 DEFAULT_PUBLIC_BUCKET = "photosbyelie-public"
 DEFAULT_PRIVATE_BUCKET = "photosbyelie-private"
 DEFAULT_PRIVATE_PREFIX = "masters"
@@ -642,11 +650,66 @@ def compact_metadata(meta: dict[str, Any]) -> dict[str, Any]:
 def source_file_facts(path: Path) -> dict[str, Any]:
     stat = path.stat()
     return {
+        "path": normalize_import_source_path(path),
         "name": path.name,
         "extension": path.suffix.lower().lstrip("."),
         "bytes": stat.st_size,
         "mtime": datetime.fromtimestamp(stat.st_mtime, timezone.utc).replace(microsecond=0).isoformat(),
+        "mtime_ns": stat.st_mtime_ns,
     }
+
+
+def manifest_source_indexes(rows: dict[str, dict[str, Any]]) -> tuple[dict[str, tuple[str, dict[str, Any]]], dict[str, list[str]]]:
+    canonical: dict[str, tuple[str, dict[str, Any]]] = {}
+    keys_by_path: dict[str, list[str]] = defaultdict(list)
+    for relative_path, row in rows.items():
+        if not isinstance(row, dict):
+            continue
+        for source_path in source_paths_from_row(row):
+            keys_by_path[source_path].append(relative_path)
+            previous = canonical.get(source_path)
+            if previous is None or row_freshness_key(row) > row_freshness_key(previous[1]):
+                canonical[source_path] = (relative_path, row)
+    return canonical, dict(keys_by_path)
+
+
+def manifest_match_for_source(
+    manifest: dict[str, dict[str, Any]],
+    source_index: dict[str, tuple[str, dict[str, Any]]],
+    relative_path: str,
+    source_path: Path,
+) -> tuple[str | None, dict[str, Any] | None]:
+    direct = manifest.get(relative_path)
+    normalized = normalize_import_source_path(source_path)
+    source_match = source_index.get(normalized or "")
+    direct_paths = source_paths_from_row(direct) if isinstance(direct, dict) else set()
+    if isinstance(direct, dict) and (not direct_paths or (normalized and normalized in direct_paths)):
+        matched_key = relative_path
+        matched_row = direct
+    elif source_match:
+        matched_key, matched_row = source_match
+    else:
+        matched_key, matched_row = None, None
+    return matched_key, matched_row if isinstance(matched_row, dict) else None
+
+
+def replacement_relative_paths(
+    keys_by_source_path: dict[str, list[str]],
+    relative_path: str,
+    source_path: Path,
+) -> list[str]:
+    del relative_path
+    normalized = normalize_import_source_path(source_path)
+    if not normalized:
+        return []
+    return sorted(keys_by_source_path.get(normalized, []))
+
+
+def photo_id_for_import(relative_path: str, source_path: Path, row: dict[str, Any] | None = None) -> str:
+    existing = str((row or {}).get("id") or "").strip()
+    if existing:
+        return existing
+    return photo_id_for_source_path(source_path)
 
 
 def list_value(value: Any) -> list[str]:
@@ -1915,7 +1978,14 @@ def load_manifest(path: Path) -> dict[str, dict[str, Any]]:
         rows = json.loads(path.read_text(encoding="utf-8")).get("photos", [])
     except json.JSONDecodeError:
         return {}
-    return {row["relative_path"]: row for row in rows if "relative_path" in row}
+    return {manifest_storage_key(row): row for row in rows if isinstance(row, dict)}
+
+
+def manifest_storage_key(row: dict[str, Any]) -> str:
+    for source_path in sorted(source_paths_from_row(row)):
+        if source_path:
+            return source_path
+    return str(row.get("relative_path") or row.get("id") or "")
 
 
 def manifest_years(rows: dict[str, dict[str, Any]]) -> list[int]:
@@ -2012,15 +2082,7 @@ def load_discarded_photo_ids(path: Path) -> set[str]:
 
 
 def normalize_source_path_value(value: Any) -> str | None:
-    if not isinstance(value, str):
-        return None
-    text = value.strip()
-    if not text:
-        return None
-    try:
-        return Path(text).expanduser().resolve(strict=False).as_posix()
-    except OSError:
-        return Path(text).expanduser().as_posix()
+    return normalize_import_source_path(value)
 
 
 def source_path_values_from_object(value: Any) -> set[str]:
@@ -2295,12 +2357,16 @@ def apply_import_result(
     gps_manifest: dict[str, dict[str, Any]],
     failures: dict[str, dict[str, Any]],
 ) -> None:
+    for relative_path in result.get("replaced_relative_paths") or []:
+        manifest.pop(relative_path, None)
+        gps_manifest.pop(relative_path, None)
+        failures.pop(relative_path, None)
     for relative_path in result.get("discarded") or []:
         manifest.pop(relative_path, None)
         gps_manifest.pop(relative_path, None)
         failures.pop(relative_path, None)
     for relative_path, row in (result.get("manifest") or {}).items():
-        manifest[relative_path] = row
+        manifest[manifest_storage_key(row)] = row
     for relative_path, row in (result.get("gps_manifest") or {}).items():
         gps_manifest[relative_path] = row
     for relative_path in result.get("clear_failures") or []:
@@ -2319,6 +2385,9 @@ def process_import_item(
     relative_path = item["relative_path"]
     source = item["source_path"]
     metadata_path = item["metadata_path"]
+    source_anchor = import_anchor_for_path(source)
+    photo_id = str(item.get("photo_id") or photo_id_for_source_path(source))
+    replaced_relative_paths = list(item.get("replace_relative_paths") or [])
     meta = item.get("metadata")
     if not isinstance(meta, dict):
         metadata_rows = run_exiftool([metadata_path])
@@ -2327,6 +2396,7 @@ def process_import_item(
         "relative_path": relative_path,
         "checkpoint": item["checkpoint"],
         "source_path_hint": str(source),
+        "source_anchor": source_anchor,
         "metadata_path_hint": str(metadata_path),
     }
     result: dict[str, Any] = {
@@ -2338,9 +2408,10 @@ def process_import_item(
         "failures": {},
         "discarded": [],
         "clear_failures": [],
+        "replaced_relative_paths": replaced_relative_paths,
     }
 
-    slug = slug_for(relative_path)
+    slug = photo_id
     if source_path_is_discarded(source, args):
         result["discarded"].append(relative_path)
         append_state(state_path, {**base_state, "status": "discarded", "reason": "discarded source path"})
@@ -2370,6 +2441,7 @@ def process_import_item(
             "relative_path": relative_path,
             "media_type": media_type,
             "source_path_hint": str(source),
+            "source_anchor": source_anchor,
             "metadata_path_hint": str(metadata_path),
             "source_checkpoint": item["checkpoint"],
             "gallery_country": gallery_country,
@@ -2516,12 +2588,13 @@ def select_batch(
             "relative_path": relative_path,
             "checkpoint": item["checkpoint"],
             "source_path_hint": str(source),
+            "source_anchor": import_anchor_for_path(source),
             "metadata_path_hint": str(metadata_path),
         }
         if not selected_by_args(meta, args):
             append_state(state_path, {**base_state, "status": "skipped"})
             continue
-        slug = slug_for(relative_path)
+        slug = str(item.get("photo_id") or photo_id_for_source_path(source))
         if slug in getattr(args, "discarded_photo_ids", set()) or source_path_is_discarded(source, args):
             if data_lock:
                 with data_lock:
@@ -2612,6 +2685,11 @@ def main() -> int:
             for rel, row in manifest.items()
             if all((args.output_root / path).exists() for path in row.get("derivatives", {}).values())
         }
+    manifest_source_index, manifest_keys_by_source_path = manifest_source_indexes(manifest)
+
+    def refresh_manifest_source_indexes() -> None:
+        nonlocal manifest_source_index, manifest_keys_by_source_path
+        manifest_source_index, manifest_keys_by_source_path = manifest_source_indexes(manifest)
 
     plan_queue: queue.Queue[list[dict[str, Any]] | None] = queue.Queue()
     work_queue: queue.Queue[dict[str, Any] | None] = queue.Queue()
@@ -2693,11 +2771,12 @@ def main() -> int:
             source_path = selected_item.get("source_path")
             if not isinstance(source_path, Path):
                 continue
-            photo_id = slug_for(relative_path)
+            photo_id = str(selected_item.get("photo_id") or photo_id_for_source_path(source_path))
             plan = artifact_plan_for_source(args, photo_id, source_path)
             if selected_item.get("source_changed"):
                 force_artifact_plan_reimport(plan)
             selected_item["artifact_plan"] = plan
+            selected_item["photo_id"] = photo_id
             queued_index = add_counter("queued")
             selected_item["queue_index"] = queued_index
             plan_row = {
@@ -2716,7 +2795,13 @@ def main() -> int:
             )
             emit_import_plan_steps(plan_row, plan)
             with data_lock:
-                manifest_has_row = relative_path in manifest
+                _matched_key, matched_row = manifest_match_for_source(
+                    manifest,
+                    manifest_source_index,
+                    relative_path,
+                    source_path,
+                )
+                manifest_has_row = matched_row is not None
             if plan.get("complete") and manifest_has_row:
                 emit_import_event("PHOTO_DONE", photoId=photo_id, relativePath=relative_path, status="done")
                 add_counter("processed")
@@ -2757,6 +2842,8 @@ def main() -> int:
                 sidecar = sidecar_for(source)
                 metadata_path = sidecar or source
                 stamp = checkpoint_key(source, sidecar)
+                source_anchor = import_anchor_for_path(source)
+                replace_relative_paths = replacement_relative_paths(manifest_keys_by_source_path, relative_path, source)
                 if source_path_is_discarded(source, args):
                     append_state(
                         state_path,
@@ -2764,6 +2851,7 @@ def main() -> int:
                             "relative_path": relative_path,
                             "checkpoint": stamp,
                             "source_path_hint": str(source),
+                            "source_anchor": source_anchor,
                             "metadata_path_hint": str(metadata_path),
                             "status": "discarded",
                             "reason": "discarded source path",
@@ -2771,8 +2859,13 @@ def main() -> int:
                     )
                     with data_lock:
                         manifest.pop(relative_path, None)
+                        for old_relative_path in replace_relative_paths:
+                            manifest.pop(old_relative_path, None)
+                            gps_manifest.pop(old_relative_path, None)
+                            failures.pop(old_relative_path, None)
                         gps_manifest.pop(relative_path, None)
                         failures.pop(relative_path, None)
+                        refresh_manifest_source_indexes()
                     continue
                 if source.stat().st_size == 0:
                     append_state(
@@ -2781,6 +2874,7 @@ def main() -> int:
                             "relative_path": relative_path,
                             "checkpoint": stamp,
                             "source_path_hint": str(source),
+                            "source_anchor": source_anchor,
                             "metadata_path_hint": str(metadata_path),
                             "status": "skipped",
                             "reason": "empty source file",
@@ -2789,9 +2883,15 @@ def main() -> int:
                     continue
                 prior = state.get(relative_path)
                 with data_lock:
-                    manifest_entry = manifest.get(relative_path)
-                    manifest_row = manifest_entry if isinstance(manifest_entry, dict) else None
-                    manifest_has_row = relative_path in manifest
+                    _manifest_key, manifest_row = manifest_match_for_source(
+                        manifest,
+                        manifest_source_index,
+                        relative_path,
+                        source,
+                    )
+                    manifest_has_row = manifest_row is not None
+                    replace_relative_paths = replacement_relative_paths(manifest_keys_by_source_path, relative_path, source)
+                photo_id = photo_id_for_import(relative_path, source, manifest_row)
                 prior_matches = should_skip_metadata(prior, stamp, args.force)
                 manifest_checkpoint = manifest_row.get("source_checkpoint") if manifest_row else None
                 manifest_matches = bool(manifest_checkpoint and manifest_checkpoint == stamp)
@@ -2805,7 +2905,7 @@ def main() -> int:
                     and not args.force
                 )
                 if not args.force and manifest_has_row and not source_changed:
-                    coverage_plan = artifact_plan_for_source(args, slug_for(relative_path), source)
+                    coverage_plan = artifact_plan_for_source(args, photo_id, source)
                     if coverage_plan.get("complete"):
                         add_counter("alreadySelected")
                         if args.limit and counter_snapshot()["alreadySelected"] >= args.limit:
@@ -2817,7 +2917,7 @@ def main() -> int:
                         continue
                     if prior_status in {"rendered", "selected"}:
                         if manifest_has_row:
-                            coverage_plan = artifact_plan_for_source(args, slug_for(relative_path), source)
+                            coverage_plan = artifact_plan_for_source(args, photo_id, source)
                             if args.dry_run or manifest_derivatives_exist(args.output_root, manifest_row) or coverage_plan.get("complete"):
                                 add_counter("alreadySelected")
                                 if args.limit and counter_snapshot()["alreadySelected"] >= args.limit:
@@ -2835,6 +2935,8 @@ def main() -> int:
                         "metadata_path": metadata_path,
                         "checkpoint": stamp,
                         "source_changed": source_changed,
+                        "photo_id": photo_id,
+                        "replace_relative_paths": replace_relative_paths,
                     }
                 )
                 if len(batch) >= args.batch_size:
@@ -2881,6 +2983,7 @@ def main() -> int:
             )
             with data_lock:
                 apply_import_result(result, manifest, gps_manifest, failures)
+                refresh_manifest_source_indexes()
                 write_import_outputs(
                     args,
                     manifest_path,

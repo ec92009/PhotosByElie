@@ -12,6 +12,7 @@ from pathlib import Path, PurePosixPath
 from media_keys import DEFAULT_PUBLIC_PREFIX, public_preview_key, public_preview_key_for_reference
 from media_policy import media_source_policy, public_preview_allowed, source_file_entries
 from import_eligibility import row_import_eligible
+from import_source_anchor import row_freshness_key, source_paths_from_row
 from owner_state_db import connect as owner_db_connect, keyword_blacklist_terms as owner_keyword_blacklist_terms, media_lifecycle_snapshot
 
 LABELS = {
@@ -725,6 +726,30 @@ def apply_export_country_hints(row: dict) -> dict:
     return row
 
 
+def dedupe_rows_by_source_anchor(rows: list[dict]) -> list[dict]:
+    keyed: dict[str, dict] = {}
+    output: list[dict] = []
+    for row in rows:
+        paths = sorted(source_paths_from_row(row))
+        if not paths:
+            output.append(row)
+            continue
+        key = paths[0]
+        previous = keyed.get(key)
+        if previous is None:
+            keyed[key] = row
+            output.append(row)
+            continue
+        if row_freshness_key(row) <= row_freshness_key(previous):
+            continue
+        keyed[key] = row
+        for index, existing in enumerate(output):
+            if existing is previous:
+                output[index] = row
+                break
+    return output
+
+
 def expo_state_from_payload(payload: dict) -> dict[str, list[str]]:
     value = payload.get("expo_state")
     if not isinstance(value, dict):
@@ -898,7 +923,8 @@ def write_photos_data(
     uploaded_public_keys = load_uploaded_public_keys(repo_root)
     blacklist_ids = blacklist_ids or set()
     for path, mode in existing_manifest_specs(repo_root):
-        for row in json.loads(path.read_text())["photos"]:
+        manifest_rows = [row for row in json.loads(path.read_text())["photos"] if isinstance(row, dict)]
+        for row in dedupe_rows_by_source_anchor(manifest_rows):
             row_id = str(row.get("id") or "").strip()
             if not row_id or row_id not in applied_title_keyword_ids:
                 continue

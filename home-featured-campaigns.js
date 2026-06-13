@@ -5,6 +5,8 @@
   const scriptUrl = new URL(document.currentScript?.src || window.location.href, window.location.href);
   const version = scriptUrl.searchParams.get("v") || document.querySelector(".site-version-badge")?.textContent?.replace(/^v/i, "") || "";
   const indexUrl = `./assets/campaigns/index.json${version ? `?v=${encodeURIComponent(version)}` : ""}`;
+  const latestSocialLimit = Number(grid.dataset.latestSocialLimit) || 12;
+  const socialSources = new Set(["facebook", "instagram", "pinterest", "threads"]);
   const versionedHref = (href) => window.photosByElieVersionedHref?.(href) || href;
   const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({
     "&": "&amp;",
@@ -21,6 +23,12 @@
     if (/pinterest/i.test(normalized)) return "Pinterest";
     return normalized || "Photos By Elie";
   };
+
+  const isSocialCampaign = (item) => socialSources.has(String(item.source || "").trim().toLowerCase());
+
+  const latestSocialCampaigns = (campaigns) => campaigns
+    .filter(isSocialCampaign)
+    .slice(0, latestSocialLimit);
 
   const summary = (item) => {
     const count = Number(item.primaryPhotoCount) || 0;
@@ -50,7 +58,7 @@
       return response.json();
     })
     .then((payload) => {
-      const campaigns = Array.isArray(payload.campaigns) ? payload.campaigns : [];
+      const campaigns = latestSocialCampaigns(Array.isArray(payload.campaigns) ? payload.campaigns : []);
       if (!campaigns.length) return;
       grid.innerHTML = campaigns.map(renderCampaign).join("");
       window.dispatchEvent(new CustomEvent("photosbyelie:featuredcampaignsrendered", { detail: { count: campaigns.length } }));

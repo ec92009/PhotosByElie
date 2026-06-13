@@ -9,7 +9,7 @@ import catalogTsv from "./catalog_tsv.cjs";
 const REPO_ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 const CAMPAIGN_DIR = path.join(REPO_ROOT, "assets", "campaigns");
 const OUTPUT_PATH = path.join(CAMPAIGN_DIR, "index.json");
-const SITE_BASE_URL = "https://ec92009.github.io/PhotosByElie/";
+const SITE_BASE_URL = "https://photos-by-elie.com/";
 const { loadCatalogWindow } = catalogTsv;
 
 function readJson(filePath) {

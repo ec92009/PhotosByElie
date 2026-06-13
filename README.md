@@ -65,7 +65,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `assets/branding/`: PhotosByElie brand assets used by Stripe and the public site favicon/topbar logo
 - `assets/music/slideshow-guitar/`: public MP3 cues used by the slideshow music mini-app, including `pixabay/` audition candidates with credit metadata and a `public-domain/` source manifest for CC0 Commons clips
 - `assets/`: publish metadata, tiny placeholders, and ignored localhost compatibility/Waste Basket working data
-- `assets/owner-actions/Owner.sqlite`: tracked durable Owner workflow database for review queues, decisions, blacklist, country assignment state, and trusted R2 object lifecycle state; WAL/SHM sidecars remain ignored/local
+- `assets/owner-actions/Owner.sqlite`: ignored durable local Owner workflow database for review queues, decisions, blacklist, country assignment state, and trusted R2 object lifecycle state; the DB and WAL/SHM sidecars remain out of deployable GitHub Pages assets
 - `assets/owner-actions/real-estate-clients.local.json`: ignored local Real Estate client credential and import settings file used by the Owner dashboard
 - Owner-action JSON files are compatibility views, handoff files, audit files, or local config. `Owner.sqlite` is the local Owner source of truth; `assets/catalog/photosbyelie.sqlite` is the active public catalog source of truth. Title/keyword review batch JSON is compatibility/audit output and must not be treated as public catalog truth.
 

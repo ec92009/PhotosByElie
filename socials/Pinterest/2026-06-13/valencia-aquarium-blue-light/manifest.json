@@ -1,0 +1,93 @@
+{
+  "date": "2026-06-13",
+  "platform": "Pinterest",
+  "status": "prepared_no_api_token_or_board_id",
+  "account": "photosbyelie",
+  "post_type": "pin_carousel",
+  "title": "Valencia Aquarium Blue Light",
+  "destination_url": "https://photos-by-elie.com/campaign.html?c=pinterest-valencia-aquarium-blue-light-2026-06-13",
+  "campaign_id": "pinterest-valencia-aquarium-blue-light-2026-06-13",
+  "caption": "Valencia Aquarium in blue light, water texture, and calm marine color: a five-image Photos By Elie wall-art edit. Browse the set: https://photos-by-elie.com/campaign.html?c=pinterest-valencia-aquarium-blue-light-2026-06-13",
+  "recommended_upload_set": "images",
+  "available_count": 5,
+  "notes": [
+    "Images are public watermarked R2 previews staged for upload/API publishing.",
+    "Pinterest package is capped at exactly 5 images."
+  ],
+  "pinterest_title": "Valencia Aquarium Blue Light Wall Art",
+  "pinterest_description": "Five Photos By Elie watermarked images from Valencia Aquarium, curated for blue light, marine texture, and modern wall-art color.",
+  "board_recommendation": "Spain Travel Photography",
+  "alt_text": "Valencia Aquarium blue-light travel photography from Photos By Elie.",
+  "items": [
+    {
+      "order": 1,
+      "id": "img-1558-54e7de1c27",
+      "media_id": "img-1558-54e7de1c27",
+      "title": "Aquarium, Valencia",
+      "collection": "spain",
+      "location": "Spain",
+      "image": "images/01-img-1558-54e7de1c27-valencia-aquarium-blue-light.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1558-54e7de1c27_1800.jpg",
+      "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1558-54e7de1c27_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=img-1558-54e7de1c27",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=img-1558-54e7de1c27",
+      "local_staged_path": "socials/Pinterest/2026-06-13/valencia-aquarium-blue-light/images/01-img-1558-54e7de1c27-valencia-aquarium-blue-light.jpg"
+    },
+    {
+      "order": 2,
+      "id": "img-1571-ef0911c97b",
+      "media_id": "img-1571-ef0911c97b",
+      "title": "Aquarium, Valencia",
+      "collection": "spain",
+      "location": "Spain",
+      "image": "images/02-img-1571-ef0911c97b-valencia-aquarium-blue-light.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1571-ef0911c97b_1800.jpg",
+      "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1571-ef0911c97b_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=img-1571-ef0911c97b",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=img-1571-ef0911c97b",
+      "local_staged_path": "socials/Pinterest/2026-06-13/valencia-aquarium-blue-light/images/02-img-1571-ef0911c97b-valencia-aquarium-blue-light.jpg"
+    },
+    {
+      "order": 3,
+      "id": "img-1561-1ddef65695",
+      "media_id": "img-1561-1ddef65695",
+      "title": "Aquarium, Valencia",
+      "collection": "spain",
+      "location": "Spain",
+      "image": "images/03-img-1561-1ddef65695-valencia-aquarium-blue-light.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1561-1ddef65695_1800.jpg",
+      "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1561-1ddef65695_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=img-1561-1ddef65695",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=img-1561-1ddef65695",
+      "local_staged_path": "socials/Pinterest/2026-06-13/valencia-aquarium-blue-light/images/03-img-1561-1ddef65695-valencia-aquarium-blue-light.jpg"
+    },
+    {
+      "order": 4,
+      "id": "img-1570-10897d2d40",
+      "media_id": "img-1570-10897d2d40",
+      "title": "Aquarium, Valencia",
+      "collection": "spain",
+      "location": "Spain",
+      "image": "images/04-img-1570-10897d2d40-valencia-aquarium-blue-light.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1570-10897d2d40_1800.jpg",
+      "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1570-10897d2d40_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=img-1570-10897d2d40",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=img-1570-10897d2d40",
+      "local_staged_path": "socials/Pinterest/2026-06-13/valencia-aquarium-blue-light/images/04-img-1570-10897d2d40-valencia-aquarium-blue-light.jpg"
+    },
+    {
+      "order": 5,
+      "id": "img-1559-4cca552aaf",
+      "media_id": "img-1559-4cca552aaf",
+      "title": "Aquarium, Valencia",
+      "collection": "spain",
+      "location": "Spain",
+      "image": "images/05-img-1559-4cca552aaf-valencia-aquarium-blue-light.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1559-4cca552aaf_1800.jpg",
+      "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1559-4cca552aaf_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=img-1559-4cca552aaf",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=img-1559-4cca552aaf",
+      "local_staged_path": "socials/Pinterest/2026-06-13/valencia-aquarium-blue-light/images/05-img-1559-4cca552aaf-valencia-aquarium-blue-light.jpg"
+    }
+  ]
+}

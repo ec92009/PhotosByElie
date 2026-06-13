@@ -1,7 +1,7 @@
 {
   "date": "2026-06-13",
   "platform": "Facebook",
-  "status": "prepared",
+  "status": "published",
   "account": "Photos By Elie",
   "post_type": "multi_photo",
   "title": "Malaga Auto Museum Chrome and Color",
@@ -126,5 +126,29 @@
       "public_photo_url": "https://photos-by-elie.com/photo.html?id=img-4370-d8d884400b",
       "local_staged_path": "socials/Facebook/2026-06-13/malaga-auto-museum-chrome-color/images/08-img-4370-d8d884400b-malaga-auto-museum-chrome-color.jpg"
     }
-  ]
+  ],
+  "published": {
+    "status": "published",
+    "platform": "facebook",
+    "account": "Photos By Elie",
+    "page_id": "1146747141854670",
+    "post_id": "1146747141854670_122105600283334672",
+    "published_at": "2026-06-13T03:08:59+0000",
+    "permalink_url": "https://www.facebook.com/122102168061334672/posts/122105600283334672",
+    "image_count": 8,
+    "verified_at": "2026-06-13T03:12:01.862Z",
+    "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
+  },
+  "api_publish": {
+    "status": "published",
+    "platform": "facebook",
+    "account": "Photos By Elie",
+    "page_id": "1146747141854670",
+    "post_id": "1146747141854670_122105600283334672",
+    "published_at": "2026-06-13T03:08:59+0000",
+    "permalink_url": "https://www.facebook.com/122102168061334672/posts/122105600283334672",
+    "image_count": 8,
+    "verified_at": "2026-06-13T03:12:01.862Z",
+    "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
+  }
 }

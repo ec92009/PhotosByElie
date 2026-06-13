@@ -10,9 +10,9 @@
     "Valencia Aquarium Blue Light"
   ],
   "platform_status": {
-    "facebook": "prepared",
-    "instagram": "prepared",
-    "threads": "prepared",
+    "facebook": "published",
+    "instagram": "published",
+    "threads": "published",
     "pinterest": "prepared_no_api_token_or_board_id",
     "etsy": "review_packages_only_attachment_tooling_blocked"
   },
@@ -20,7 +20,7 @@
     {
       "date": "2026-06-13",
       "platform": "Facebook",
-      "status": "prepared",
+      "status": "published",
       "account": "Photos By Elie",
       "post_type": "multi_photo",
       "title": "Malaga Auto Museum Chrome and Color",
@@ -146,12 +146,36 @@
           "local_staged_path": "socials/Facebook/2026-06-13/malaga-auto-museum-chrome-color/images/08-img-4370-d8d884400b-malaga-auto-museum-chrome-color.jpg"
         }
       ],
-      "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260613-Rd9KJi/socials/Facebook/2026-06-13/malaga-auto-museum-chrome-color"
+      "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260613-Rd9KJi/socials/Facebook/2026-06-13/malaga-auto-museum-chrome-color",
+      "published": {
+        "status": "published",
+        "platform": "facebook",
+        "account": "Photos By Elie",
+        "page_id": "1146747141854670",
+        "post_id": "1146747141854670_122105600283334672",
+        "published_at": "2026-06-13T03:08:59+0000",
+        "permalink_url": "https://www.facebook.com/122102168061334672/posts/122105600283334672",
+        "image_count": 8,
+        "verified_at": "2026-06-13T03:12:01.862Z",
+        "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
+      },
+      "api_publish": {
+        "status": "published",
+        "platform": "facebook",
+        "account": "Photos By Elie",
+        "page_id": "1146747141854670",
+        "post_id": "1146747141854670_122105600283334672",
+        "published_at": "2026-06-13T03:08:59+0000",
+        "permalink_url": "https://www.facebook.com/122102168061334672/posts/122105600283334672",
+        "image_count": 8,
+        "verified_at": "2026-06-13T03:12:01.862Z",
+        "verification": "Meta Graph returned the post permalink, message with custom-domain campaign URL, and 8 photo subattachments."
+      }
     },
     {
       "date": "2026-06-13",
       "platform": "Instagram",
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "title": "Cabo da Roca Atlantic Edge",
@@ -279,12 +303,36 @@
           "local_staged_path": "socials/Instagram/2026-06-13/cabo-da-roca-atlantic-edge/images/08-20180520-1212-00708-72230b82e6-cabo-da-roca-atlantic-edge.jpg"
         }
       ],
-      "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260613-Rd9KJi/socials/Instagram/2026-06-13/cabo-da-roca-atlantic-edge"
+      "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260613-Rd9KJi/socials/Instagram/2026-06-13/cabo-da-roca-atlantic-edge",
+      "published": {
+        "status": "published",
+        "platform": "instagram",
+        "account": "ec92009",
+        "media_id": "18106927228787974",
+        "published_at": "2026-06-13T03:10:12+0000",
+        "permalink_url": "https://www.instagram.com/p/DZgq5lciIGn/",
+        "media_type": "CAROUSEL_ALBUM",
+        "image_count": 8,
+        "verified_at": "2026-06-13T03:12:01.862Z",
+        "verification": "Instagram Graph returned the permalink, username, media type, timestamp, and 8 child images."
+      },
+      "api_publish": {
+        "status": "published",
+        "platform": "instagram",
+        "account": "ec92009",
+        "media_id": "18106927228787974",
+        "published_at": "2026-06-13T03:10:12+0000",
+        "permalink_url": "https://www.instagram.com/p/DZgq5lciIGn/",
+        "media_type": "CAROUSEL_ALBUM",
+        "image_count": 8,
+        "verified_at": "2026-06-13T03:12:01.862Z",
+        "verification": "Instagram Graph returned the permalink, username, media type, timestamp, and 8 child images."
+      }
     },
     {
       "date": "2026-06-13",
       "platform": "Threads",
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "title": "Cabo da Roca Atlantic Edge",
@@ -357,7 +405,31 @@
           "local_staged_path": "socials/Threads/2026-06-13/cabo-da-roca-atlantic-edge/images/04-20180520-1216-00713-83bd0a4ab5-cabo-da-roca-atlantic-edge.jpg"
         }
       ],
-      "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260613-Rd9KJi/socials/Threads/2026-06-13/cabo-da-roca-atlantic-edge"
+      "local_package": "/Users/ecohen/Dev/pbe-daily-social-20260613-Rd9KJi/socials/Threads/2026-06-13/cabo-da-roca-atlantic-edge",
+      "published": {
+        "status": "published",
+        "platform": "threads",
+        "account": "ec92009",
+        "media_id": "18099096982955584",
+        "published_at": "2026-06-13T03:10:57+0000",
+        "permalink_url": "https://www.threads.com/@ec92009/post/DZgq-4-gt28",
+        "media_type": "CAROUSEL_ALBUM",
+        "image_count": 4,
+        "verified_at": "2026-06-13T03:12:01.862Z",
+        "verification": "Threads Graph returned the permalink, username, media type, timestamp, and 4 child images."
+      },
+      "api_publish": {
+        "status": "published",
+        "platform": "threads",
+        "account": "ec92009",
+        "media_id": "18099096982955584",
+        "published_at": "2026-06-13T03:10:57+0000",
+        "permalink_url": "https://www.threads.com/@ec92009/post/DZgq-4-gt28",
+        "media_type": "CAROUSEL_ALBUM",
+        "image_count": 4,
+        "verified_at": "2026-06-13T03:12:01.862Z",
+        "verification": "Threads Graph returned the permalink, username, media type, timestamp, and 4 child images."
+      }
     },
     {
       "date": "2026-06-13",

@@ -1,7 +1,7 @@
 {
   "date": "2026-06-13",
   "platform": "Instagram",
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "title": "Cabo da Roca Atlantic Edge",
@@ -128,5 +128,29 @@
       "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180520-1212-00708-72230b82e6",
       "local_staged_path": "socials/Instagram/2026-06-13/cabo-da-roca-atlantic-edge/images/08-20180520-1212-00708-72230b82e6-cabo-da-roca-atlantic-edge.jpg"
     }
-  ]
+  ],
+  "published": {
+    "status": "published",
+    "platform": "instagram",
+    "account": "ec92009",
+    "media_id": "18106927228787974",
+    "published_at": "2026-06-13T03:10:12+0000",
+    "permalink_url": "https://www.instagram.com/p/DZgq5lciIGn/",
+    "media_type": "CAROUSEL_ALBUM",
+    "image_count": 8,
+    "verified_at": "2026-06-13T03:12:01.862Z",
+    "verification": "Instagram Graph returned the permalink, username, media type, timestamp, and 8 child images."
+  },
+  "api_publish": {
+    "status": "published",
+    "platform": "instagram",
+    "account": "ec92009",
+    "media_id": "18106927228787974",
+    "published_at": "2026-06-13T03:10:12+0000",
+    "permalink_url": "https://www.instagram.com/p/DZgq5lciIGn/",
+    "media_type": "CAROUSEL_ALBUM",
+    "image_count": 8,
+    "verified_at": "2026-06-13T03:12:01.862Z",
+    "verification": "Instagram Graph returned the permalink, username, media type, timestamp, and 8 child images."
+  }
 }

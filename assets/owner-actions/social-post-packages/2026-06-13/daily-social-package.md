@@ -5,9 +5,9 @@ Visible site version: v105.1
 
 ## Platform Status
 
-- Facebook: prepared
-- Instagram: prepared
-- Threads: prepared
+- Facebook: published
+- Instagram: published
+- Threads: published
 - Pinterest: prepared_no_api_token_or_board_id
 - Etsy: review_packages_only_attachment_tooling_blocked
 
@@ -108,3 +108,11 @@ Images:
 - etsy-malaga-auto-museum-wall-art-2026-06-13: 8 photos, https://photos-by-elie.com/campaign.html?c=etsy-malaga-auto-museum-wall-art-2026-06-13
 - etsy-cabo-da-roca-atlantic-wall-art-2026-06-13: 8 photos, https://photos-by-elie.com/campaign.html?c=etsy-cabo-da-roca-atlantic-wall-art-2026-06-13
 - etsy-valencia-aquarium-wall-art-2026-06-13: 5 photos, https://photos-by-elie.com/campaign.html?c=etsy-valencia-aquarium-wall-art-2026-06-13
+
+## Published Results
+
+- Facebook: https://www.facebook.com/122102168061334672/posts/122105600283334672 (8 images)
+- Instagram: https://www.instagram.com/p/DZgq5lciIGn/ (8 images)
+- Threads: https://www.threads.com/@ec92009/post/DZgq-4-gt28 (4 images)
+- Pinterest: prepared only; no Pinterest token/board id mapping configured.
+- Etsy: review packages only; current outlet tooling does not upload and verify listing images plus buyer files.

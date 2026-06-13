@@ -1,7 +1,7 @@
 {
   "date": "2026-06-13",
   "platform": "Threads",
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "title": "Cabo da Roca Atlantic Edge",
@@ -73,5 +73,29 @@
       "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180520-1216-00713-83bd0a4ab5",
       "local_staged_path": "socials/Threads/2026-06-13/cabo-da-roca-atlantic-edge/images/04-20180520-1216-00713-83bd0a4ab5-cabo-da-roca-atlantic-edge.jpg"
     }
-  ]
+  ],
+  "published": {
+    "status": "published",
+    "platform": "threads",
+    "account": "ec92009",
+    "media_id": "18099096982955584",
+    "published_at": "2026-06-13T03:10:57+0000",
+    "permalink_url": "https://www.threads.com/@ec92009/post/DZgq-4-gt28",
+    "media_type": "CAROUSEL_ALBUM",
+    "image_count": 4,
+    "verified_at": "2026-06-13T03:12:01.862Z",
+    "verification": "Threads Graph returned the permalink, username, media type, timestamp, and 4 child images."
+  },
+  "api_publish": {
+    "status": "published",
+    "platform": "threads",
+    "account": "ec92009",
+    "media_id": "18099096982955584",
+    "published_at": "2026-06-13T03:10:57+0000",
+    "permalink_url": "https://www.threads.com/@ec92009/post/DZgq-4-gt28",
+    "media_type": "CAROUSEL_ALBUM",
+    "image_count": 4,
+    "verified_at": "2026-06-13T03:12:01.862Z",
+    "verification": "Threads Graph returned the permalink, username, media type, timestamp, and 4 child images."
+  }
 }

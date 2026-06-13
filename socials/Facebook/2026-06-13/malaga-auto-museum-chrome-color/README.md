@@ -1,7 +1,7 @@
 # Facebook: Malaga Auto Museum Chrome and Color
 
 - Date: 2026-06-13
-- Status: prepared
+- Status: published
 - Account/Profile: Photos By Elie
 - Destination: https://photos-by-elie.com/campaign.html?c=facebook-malaga-auto-museum-chrome-color-2026-06-13
 - Local package: /Users/ecohen/Dev/pbe-daily-social-20260613-Rd9KJi/socials/Facebook/2026-06-13/malaga-auto-museum-chrome-color
@@ -23,3 +23,10 @@ Malaga Auto Museum in chrome, color, and polished design detail: a Photos By Eli
 | 6 | `img-4346-d1035de2c9` | https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-4346-d1035de2c9_1800.jpg | socials/Facebook/2026-06-13/malaga-auto-museum-chrome-color/images/06-img-4346-d1035de2c9-malaga-auto-museum-chrome-color.jpg |
 | 7 | `img-4359-653c923b02` | https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-4359-653c923b02_1800.jpg | socials/Facebook/2026-06-13/malaga-auto-museum-chrome-color/images/07-img-4359-653c923b02-malaga-auto-museum-chrome-color.jpg |
 | 8 | `img-4370-d8d884400b` | https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-4370-d8d884400b_1800.jpg | socials/Facebook/2026-06-13/malaga-auto-museum-chrome-color/images/08-img-4370-d8d884400b-malaga-auto-museum-chrome-color.jpg |
+
+## Published
+
+- URL: https://www.facebook.com/122102168061334672/posts/122105600283334672
+- Published at: 2026-06-13T03:08:59+0000
+- Verified at: 2026-06-13T03:12:01.862Z
+- Image count: 8

@@ -19,3 +19,14 @@ Images:
 | 2 | `20180516-1213-00460-50ceda44ef` | https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180516-1213-00460-50ceda44ef_1800.jpg | socials/Threads/2026-06-14/porto-countryside-green-light/images/02-20180516-1213-00460-50ceda44ef-porto-countryside-green-light.jpg |
 | 3 | `20180516-1159-00454-f6c81b2b52` | https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180516-1159-00454-f6c81b2b52_1800.jpg | socials/Threads/2026-06-14/porto-countryside-green-light/images/03-20180516-1159-00454-f6c81b2b52-porto-countryside-green-light.jpg |
 | 4 | `20180516-1213-00461-5ca874c74d` | https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180516-1213-00461-5ca874c74d_1800.jpg | socials/Threads/2026-06-14/porto-countryside-green-light/images/04-20180516-1213-00461-5ca874c74d-porto-countryside-green-light.jpg |
+
+## Published Result
+
+- Status: published
+- Published at: 2026-06-14T03:13:26+0000
+- Verified at: 2026-06-14T03:14:27Z
+- Media ID: 18106608235787008
+- Permalink: https://www.threads.com/@ec92009/post/DZjQEIRiE2B
+- Username: ec92009
+- Media type: CAROUSEL_ALBUM
+- Verified child count: 4

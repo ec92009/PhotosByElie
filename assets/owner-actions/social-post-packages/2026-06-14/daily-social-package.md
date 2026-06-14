@@ -5,9 +5,9 @@ Visible site version: v106.1
 
 ## Platform Status
 
-- Facebook: prepared
-- Instagram: prepared
-- Threads: prepared
+- Facebook: published
+- Instagram: published
+- Threads: published
 - Pinterest: prepared_no_api_token_or_board_id
 - Etsy: review_packages_only_attachment_tooling_blocked
 
@@ -109,8 +109,8 @@ Images:
 
 ## Published Results
 
-- Facebook: pending API publish
-- Instagram: pending API publish
-- Threads: pending API publish
+- Facebook: https://www.facebook.com/122102168061334672/posts/122105871729334672 (8 images)
+- Instagram: https://www.instagram.com/p/DZjP_DuDAWC/ (6 images)
+- Threads: https://www.threads.com/@ec92009/post/DZjQEIRiE2B (4 images)
 - Pinterest: prepared only; no Pinterest token/board id mapping configured.
-- Etsy: review packages only unless draft attachment verification tooling is available.
+- Etsy: review packages only; current outlet tooling does not upload and verify listing images plus buyer files.

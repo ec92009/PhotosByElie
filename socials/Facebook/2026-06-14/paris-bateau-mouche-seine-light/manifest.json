@@ -1,7 +1,7 @@
 {
   "date": "2026-06-14",
   "platform": "Facebook",
-  "status": "prepared",
+  "status": "published",
   "account": "Photos By Elie",
   "post_type": "multi_photo",
   "title": "Paris Bateau Mouche Seine Light",
@@ -126,5 +126,25 @@
       "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180511-0222-00302-b10cba3d0d",
       "local_staged_path": "socials/Facebook/2026-06-14/paris-bateau-mouche-seine-light/images/08-20180511-0222-00302-b10cba3d0d-paris-bateau-mouche-seine-light.jpg"
     }
-  ]
+  ],
+  "published": {
+    "status": "published",
+    "post_id": "1146747141854670_122105871729334672",
+    "permalink": "https://www.facebook.com/122102168061334672/posts/122105871729334672",
+    "published_at": "2026-06-14T03:11:22+0000",
+    "verified_at": "2026-06-14T03:14:27Z",
+    "account": "Photos By Elie",
+    "image_count": 8,
+    "platform_visible_confirmation": "Graph API readback returned permalink and 8 photo subattachments."
+  },
+  "verification": {
+    "status": "published",
+    "post_id": "1146747141854670_122105871729334672",
+    "permalink": "https://www.facebook.com/122102168061334672/posts/122105871729334672",
+    "published_at": "2026-06-14T03:11:22+0000",
+    "verified_at": "2026-06-14T03:14:27Z",
+    "account": "Photos By Elie",
+    "image_count": 8,
+    "platform_visible_confirmation": "Graph API readback returned permalink and 8 photo subattachments."
+  }
 }

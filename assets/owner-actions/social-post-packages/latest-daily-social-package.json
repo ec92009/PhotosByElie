@@ -10,9 +10,9 @@
     "Lisbon Ancient Art Museum Light"
   ],
   "platform_status": {
-    "facebook": "prepared",
-    "instagram": "prepared",
-    "threads": "prepared",
+    "facebook": "published",
+    "instagram": "published",
+    "threads": "published",
     "pinterest": "prepared_no_api_token_or_board_id",
     "etsy": "review_packages_only_attachment_tooling_blocked"
   },
@@ -20,7 +20,7 @@
     {
       "date": "2026-06-14",
       "platform": "Facebook",
-      "status": "prepared",
+      "status": "published",
       "account": "Photos By Elie",
       "post_type": "multi_photo",
       "title": "Paris Bateau Mouche Seine Light",
@@ -145,12 +145,32 @@
           "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180511-0222-00302-b10cba3d0d",
           "local_staged_path": "socials/Facebook/2026-06-14/paris-bateau-mouche-seine-light/images/08-20180511-0222-00302-b10cba3d0d-paris-bateau-mouche-seine-light.jpg"
         }
-      ]
+      ],
+      "published": {
+        "status": "published",
+        "post_id": "1146747141854670_122105871729334672",
+        "permalink": "https://www.facebook.com/122102168061334672/posts/122105871729334672",
+        "published_at": "2026-06-14T03:11:22+0000",
+        "verified_at": "2026-06-14T03:14:27Z",
+        "account": "Photos By Elie",
+        "image_count": 8,
+        "platform_visible_confirmation": "Graph API readback returned permalink and 8 photo subattachments."
+      },
+      "verification": {
+        "status": "published",
+        "post_id": "1146747141854670_122105871729334672",
+        "permalink": "https://www.facebook.com/122102168061334672/posts/122105871729334672",
+        "published_at": "2026-06-14T03:11:22+0000",
+        "verified_at": "2026-06-14T03:14:27Z",
+        "account": "Photos By Elie",
+        "image_count": 8,
+        "platform_visible_confirmation": "Graph API readback returned permalink and 8 photo subattachments."
+      }
     },
     {
       "date": "2026-06-14",
       "platform": "Instagram",
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "title": "Porto Countryside Green Light",
@@ -247,12 +267,38 @@
           "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180516-1200-00455-4c4be1568e",
           "local_staged_path": "socials/Instagram/2026-06-14/porto-countryside-green-light/images/06-20180516-1200-00455-4c4be1568e-porto-countryside-green-light.jpg"
         }
-      ]
+      ],
+      "published": {
+        "status": "published",
+        "media_id": "18080486738650287",
+        "permalink": "https://www.instagram.com/p/DZjP_DuDAWC/",
+        "published_at": "2026-06-14T03:12:41+0000",
+        "verified_at": "2026-06-14T03:14:27Z",
+        "account": "ec92009",
+        "username": "ec92009",
+        "media_type": "CAROUSEL_ALBUM",
+        "child_count": 6,
+        "image_count": 6,
+        "platform_visible_confirmation": "Instagram Graph readback returned permalink, CAROUSEL_ALBUM, and 6 children."
+      },
+      "verification": {
+        "status": "published",
+        "media_id": "18080486738650287",
+        "permalink": "https://www.instagram.com/p/DZjP_DuDAWC/",
+        "published_at": "2026-06-14T03:12:41+0000",
+        "verified_at": "2026-06-14T03:14:27Z",
+        "account": "ec92009",
+        "username": "ec92009",
+        "media_type": "CAROUSEL_ALBUM",
+        "child_count": 6,
+        "image_count": 6,
+        "platform_visible_confirmation": "Instagram Graph readback returned permalink, CAROUSEL_ALBUM, and 6 children."
+      }
     },
     {
       "date": "2026-06-14",
       "platform": "Threads",
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "title": "Porto Countryside Green Light",
@@ -322,7 +368,33 @@
           "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180516-1213-00461-5ca874c74d",
           "local_staged_path": "socials/Threads/2026-06-14/porto-countryside-green-light/images/04-20180516-1213-00461-5ca874c74d-porto-countryside-green-light.jpg"
         }
-      ]
+      ],
+      "published": {
+        "status": "published",
+        "media_id": "18106608235787008",
+        "permalink": "https://www.threads.com/@ec92009/post/DZjQEIRiE2B",
+        "published_at": "2026-06-14T03:13:26+0000",
+        "verified_at": "2026-06-14T03:14:27Z",
+        "account": "ec92009",
+        "username": "ec92009",
+        "media_type": "CAROUSEL_ALBUM",
+        "child_count": 4,
+        "image_count": 4,
+        "platform_visible_confirmation": "Threads Graph readback returned permalink, CAROUSEL_ALBUM, and 4 children."
+      },
+      "verification": {
+        "status": "published",
+        "media_id": "18106608235787008",
+        "permalink": "https://www.threads.com/@ec92009/post/DZjQEIRiE2B",
+        "published_at": "2026-06-14T03:13:26+0000",
+        "verified_at": "2026-06-14T03:14:27Z",
+        "account": "ec92009",
+        "username": "ec92009",
+        "media_type": "CAROUSEL_ALBUM",
+        "child_count": 4,
+        "image_count": 4,
+        "platform_visible_confirmation": "Threads Graph readback returned permalink, CAROUSEL_ALBUM, and 4 children."
+      }
     },
     {
       "date": "2026-06-14",
@@ -439,5 +511,21 @@
       "destination_url": "https://photos-by-elie.com/campaign.html?c=etsy-lisbon-ancient-art-wall-art-2026-06-14",
       "status": "review_package_pending"
     }
-  ]
+  ],
+  "published_results": {
+    "facebook": {
+      "url": "https://www.facebook.com/122102168061334672/posts/122105871729334672",
+      "image_count": 8
+    },
+    "instagram": {
+      "url": "https://www.instagram.com/p/DZjP_DuDAWC/",
+      "image_count": 6
+    },
+    "threads": {
+      "url": "https://www.threads.com/@ec92009/post/DZjQEIRiE2B",
+      "image_count": 4
+    },
+    "pinterest": "prepared only; no Pinterest token/board id mapping configured",
+    "etsy": "review packages only; current outlet tooling does not upload and verify listing images plus buyer files"
+  }
 }

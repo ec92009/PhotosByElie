@@ -1,7 +1,7 @@
 {
   "date": "2026-06-14",
   "platform": "Instagram",
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "title": "Porto Countryside Green Light",
@@ -98,5 +98,31 @@
       "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180516-1200-00455-4c4be1568e",
       "local_staged_path": "socials/Instagram/2026-06-14/porto-countryside-green-light/images/06-20180516-1200-00455-4c4be1568e-porto-countryside-green-light.jpg"
     }
-  ]
+  ],
+  "published": {
+    "status": "published",
+    "media_id": "18080486738650287",
+    "permalink": "https://www.instagram.com/p/DZjP_DuDAWC/",
+    "published_at": "2026-06-14T03:12:41+0000",
+    "verified_at": "2026-06-14T03:14:27Z",
+    "account": "ec92009",
+    "username": "ec92009",
+    "media_type": "CAROUSEL_ALBUM",
+    "child_count": 6,
+    "image_count": 6,
+    "platform_visible_confirmation": "Instagram Graph readback returned permalink, CAROUSEL_ALBUM, and 6 children."
+  },
+  "verification": {
+    "status": "published",
+    "media_id": "18080486738650287",
+    "permalink": "https://www.instagram.com/p/DZjP_DuDAWC/",
+    "published_at": "2026-06-14T03:12:41+0000",
+    "verified_at": "2026-06-14T03:14:27Z",
+    "account": "ec92009",
+    "username": "ec92009",
+    "media_type": "CAROUSEL_ALBUM",
+    "child_count": 6,
+    "image_count": 6,
+    "platform_visible_confirmation": "Instagram Graph readback returned permalink, CAROUSEL_ALBUM, and 6 children."
+  }
 }

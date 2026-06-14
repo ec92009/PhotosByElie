@@ -1,7 +1,7 @@
 {
   "date": "2026-06-14",
   "platform": "Threads",
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "title": "Porto Countryside Green Light",
@@ -71,5 +71,31 @@
       "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180516-1213-00461-5ca874c74d",
       "local_staged_path": "socials/Threads/2026-06-14/porto-countryside-green-light/images/04-20180516-1213-00461-5ca874c74d-porto-countryside-green-light.jpg"
     }
-  ]
+  ],
+  "published": {
+    "status": "published",
+    "media_id": "18106608235787008",
+    "permalink": "https://www.threads.com/@ec92009/post/DZjQEIRiE2B",
+    "published_at": "2026-06-14T03:13:26+0000",
+    "verified_at": "2026-06-14T03:14:27Z",
+    "account": "ec92009",
+    "username": "ec92009",
+    "media_type": "CAROUSEL_ALBUM",
+    "child_count": 4,
+    "image_count": 4,
+    "platform_visible_confirmation": "Threads Graph readback returned permalink, CAROUSEL_ALBUM, and 4 children."
+  },
+  "verification": {
+    "status": "published",
+    "media_id": "18106608235787008",
+    "permalink": "https://www.threads.com/@ec92009/post/DZjQEIRiE2B",
+    "published_at": "2026-06-14T03:13:26+0000",
+    "verified_at": "2026-06-14T03:14:27Z",
+    "account": "ec92009",
+    "username": "ec92009",
+    "media_type": "CAROUSEL_ALBUM",
+    "child_count": 4,
+    "image_count": 4,
+    "platform_visible_confirmation": "Threads Graph readback returned permalink, CAROUSEL_ALBUM, and 4 children."
+  }
 }

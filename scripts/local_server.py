@@ -1690,8 +1690,32 @@ def _title_keyword_state_by_id(repo_root: Path) -> dict[str, str]:
     }
 
 
-def _owner_hidden_or_discarded_ids(repo_root: Path) -> set[str]:
-    return _lifecycle_blocked_ids(repo_root)
+def _lifecycle_blocked_sets_readonly(repo_root: Path) -> dict[str, set[str]]:
+    owner_path = repo_root / OWNER_ACTION_ROOT / "Owner.sqlite"
+    empty = {"hiddenPhotoIds": set(), "discardedPhotoIds": set(), "blockedPhotoIds": set()}
+    if not owner_path.exists():
+        return empty
+    try:
+        conn = _sqlite_readonly_connect(owner_path)
+        try:
+            rows = conn.execute(
+                """
+                SELECT media_id, lifecycle_state
+                FROM media_lifecycle
+                WHERE lifecycle_state IN ('hidden', 'discarded')
+                """
+            ).fetchall()
+        finally:
+            conn.close()
+    except sqlite3.Error:
+        return empty
+    hidden_ids = {str(row["media_id"]) for row in rows if row["media_id"] and row["lifecycle_state"] == "hidden"}
+    discarded_ids = {str(row["media_id"]) for row in rows if row["media_id"] and row["lifecycle_state"] == "discarded"}
+    return {
+        "hiddenPhotoIds": hidden_ids,
+        "discardedPhotoIds": discarded_ids,
+        "blockedPhotoIds": hidden_ids | discarded_ids,
+    }
 
 
 def _lifecycle_snapshot(repo_root: Path) -> dict:
@@ -1738,7 +1762,7 @@ def owner_visibility_summary(repo_root: Path) -> dict:
     public_ids = set(public_origin_by_id)
     r2_ready_ids = _current_public_preview_ready_ids(repo_root)
     review_state_by_id = _title_keyword_state_by_id(repo_root)
-    hidden_or_discarded_ids = _owner_hidden_or_discarded_ids(repo_root)
+    hidden_or_discarded_ids = _lifecycle_blocked_sets_readonly(repo_root)["blockedPhotoIds"]
     blocked_or_parked_ids = {
         photo_id
         for photo_id, state in review_state_by_id.items()
@@ -1746,8 +1770,11 @@ def owner_visibility_summary(repo_root: Path) -> dict:
     } | hidden_or_discarded_ids
     approved_ids = {photo_id for photo_id, state in review_state_by_id.items() if state == "approved"}
     applied_ids = {photo_id for photo_id, state in review_state_by_id.items() if state == "applied"}
+    r2_public_ids = r2_ready_ids & public_ids
     limbo_ids = r2_ready_ids - public_ids - blocked_or_parked_ids - approved_ids - applied_ids
     approved_not_applied_ids = approved_ids - public_ids - blocked_or_parked_ids
+    r2_approved_not_applied_ids = r2_ready_ids & approved_not_applied_ids
+    approved_not_ready_ids = approved_not_applied_ids - r2_ready_ids
     applied_not_public_ids = applied_ids - public_ids - blocked_or_parked_ids
     blocked_ready_ids = r2_ready_ids & blocked_or_parked_ids
     state_counts: dict[str, int] = {}
@@ -1757,12 +1784,18 @@ def owner_visibility_summary(repo_root: Path) -> dict:
         "generatedAt": datetime.now(timezone.utc).isoformat(),
         "definitions": {
             "publicApplied": "Rows exported to assets/catalog/photosbyelie.sqlite and visible to end users.",
+            "r2ReadyPublic": "Rows with public R2 preview objects that are already visible in the public catalog.",
             "r2ReadyLimbo": "Photos with both public R2 preview objects present, but not public, approved, exported, parked, or blocked.",
-            "approvedNotApplied": "Owner-approved rows that have not yet been exported to the public catalog.",
+            "r2ReadyApprovedNotApplied": "Owner-approved rows with public R2 preview objects that have not yet been exported to the public catalog.",
+            "approvedNotApplied": "All Owner-approved rows that have not yet been exported to the public catalog.",
         },
         "publicApplied": {
             "count": len(public_ids),
             "byOrigin": _count_origins(public_ids, origin_by_id),
+        },
+        "r2ReadyPublic": {
+            "count": len(r2_public_ids),
+            "byOrigin": _count_origins(r2_public_ids, origin_by_id),
         },
         "r2Ready": {
             "count": len(r2_ready_ids),
@@ -1772,9 +1805,17 @@ def owner_visibility_summary(repo_root: Path) -> dict:
             "count": len(limbo_ids),
             "byOrigin": _count_origins(limbo_ids, origin_by_id),
         },
+        "r2ReadyApprovedNotApplied": {
+            "count": len(r2_approved_not_applied_ids),
+            "byOrigin": _count_origins(r2_approved_not_applied_ids, origin_by_id),
+        },
         "approvedNotApplied": {
             "count": len(approved_not_applied_ids),
             "byOrigin": _count_origins(approved_not_applied_ids, origin_by_id),
+        },
+        "approvedNotReady": {
+            "count": len(approved_not_ready_ids),
+            "byOrigin": _count_origins(approved_not_ready_ids, origin_by_id),
         },
         "appliedNotPublic": {
             "count": len(applied_not_public_ids),
@@ -5780,7 +5821,7 @@ def _r2_coverage_summary(
 ) -> dict:
     private_manifest = _read_json_file(repo_root / "assets/private-delivery-manifest.json", {})
     sidecar = _read_json_file(repo_root / "assets/media-sidecar.json", {})
-    lifecycle = _lifecycle_snapshot(repo_root)
+    lifecycle = _lifecycle_blocked_sets_readonly(repo_root)
     hidden_photo_ids = set(lifecycle.get("hiddenPhotoIds") or [])
     discarded_photo_ids = set(lifecycle.get("discardedPhotoIds") or [])
     excluded_photo_ids = hidden_photo_ids | discarded_photo_ids

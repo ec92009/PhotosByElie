@@ -7,9 +7,9 @@
   <meta name="description" content="Local owner controls for Photos By Elie."/>
   <link rel="icon" type="image/png" sizes="512x512" href="./assets/branding/photosbyelie-camera-tripod-logo-512.png"/>
   <script>(()=>{try{const saved=localStorage.getItem('byelie-theme');if(saved==='light'||saved==='dark')document.documentElement.dataset.theme=saved;localStorage.setItem('byelie-language','en');document.documentElement.lang='en';document.documentElement.dataset.language='en'}catch{}})();</script>
-  <link rel="stylesheet" href="./shared.css?v=106.2"/>
-  <link rel="stylesheet" href="./styles.css?v=106.2"/>
-  <link rel="stylesheet" href="./photos.css?v=106.2"/>
+  <link rel="stylesheet" href="./shared.css?v=106.3"/>
+  <link rel="stylesheet" href="./styles.css?v=106.3"/>
+  <link rel="stylesheet" href="./photos.css?v=106.3"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -23,7 +23,7 @@
       <a href="./">Photos</a> <span>|</span>
       <a class="is-active" href="./owner.html">Owner</a>
     </nav>
-    <span class="site-version-badge">v106.2</span>
+    <span class="site-version-badge">v106.3</span>
     <div class="header-controls">
       <button class="language-toggle" type="button" data-language-toggle data-owner-english-only title="Owner tools stay in English">English</button>
       <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light">Night</span><span class="mode-dark">Day</span></button>
@@ -228,40 +228,40 @@
           <div class="owner-card-titlebar">
             <div>
               <p class="eyebrow">Visibility</p>
-              <h2>Visibility gate</h2>
+              <h2>R2 visibility gate</h2>
             </div>
-            <button class="owner-refresh-button" type="button" data-owner-refresh="counts" aria-label="Refresh visibility gate" title="Refresh visibility gate"><span aria-hidden="true">↻</span></button>
+            <button class="owner-refresh-button" type="button" data-owner-refresh="counts" aria-label="Refresh R2 visibility gate" title="Refresh R2 visibility gate"><span aria-hidden="true">↻</span></button>
           </div>
-          <p>Photos on R2 stay out of the public catalog until title/keyword approval is exported.</p>
+          <p>This card only counts media with public R2 previews. Public catalog totals above include AI images outside this gate.</p>
           <dl class="owner-counts owner-visibility-counts">
             <div class="is-public">
-              <dt>Public approved</dt>
+              <dt>R2 public</dt>
               <dd data-owner-visibility-public-count>0</dd>
             </div>
             <div class="is-limbo">
-              <dt>In limbo</dt>
+              <dt>Needs review</dt>
               <dd data-owner-visibility-limbo-count>0</dd>
             </div>
             <div>
-              <dt>Approved, pending export</dt>
+              <dt>R2 approved, pending export</dt>
               <dd data-owner-visibility-approved-count>0</dd>
             </div>
             <div>
-              <dt>Approved export hidden</dt>
-              <dd data-owner-visibility-applied-hidden-count>0</dd>
+              <dt>Parked / Waste ready</dt>
+              <dd data-owner-visibility-blocked-ready-count>0</dd>
             </div>
           </dl>
-          <div class="owner-visibility-bar" data-owner-visibility-limbo-bar aria-label="Limbo split by origin">
+          <div class="owner-visibility-bar" data-owner-visibility-limbo-bar aria-label="Needs-review split by origin">
             <span class="is-camera" data-owner-visibility-limbo-camera-bar></span>
             <span class="is-ai" data-owner-visibility-limbo-ai-bar></span>
           </div>
           <dl class="owner-counts owner-visibility-origin-counts">
             <div class="is-camera">
-              <dt>Limbo camera</dt>
+              <dt>Needs review camera</dt>
               <dd data-owner-visibility-limbo-camera-count>0</dd>
             </div>
             <div class="is-ai">
-              <dt>Limbo AI</dt>
+              <dt>Needs review AI</dt>
               <dd data-owner-visibility-limbo-ai-count>0</dd>
             </div>
             <div>
@@ -443,15 +443,15 @@
     </div>
   </footer>
 
-  <script src="./media-config.js?v=106.2"></script>
-  <script src="./photos.js?v=106.2"></script>
-  <script src="./owner-auth.js?v=106.2"></script>
-  <script src="./owner-tools.js?v=106.2"></script>
-  <script src="./site-version.js?v=106.2"></script>
-  <script src="./catalog-sqlite.js?v=106.2"></script>
-  <script src="./photos-data.js?v=106.2"></script>
-  <script src="./hidden-actions.js?v=106.2"></script>
-  <script src="./reserve-store.js?v=106.2"></script>
-  <script src="./owner.js?v=106.2"></script>
+  <script src="./media-config.js?v=106.3"></script>
+  <script src="./photos.js?v=106.3"></script>
+  <script src="./owner-auth.js?v=106.3"></script>
+  <script src="./owner-tools.js?v=106.3"></script>
+  <script src="./site-version.js?v=106.3"></script>
+  <script src="./catalog-sqlite.js?v=106.3"></script>
+  <script src="./photos-data.js?v=106.3"></script>
+  <script src="./hidden-actions.js?v=106.3"></script>
+  <script src="./reserve-store.js?v=106.3"></script>
+  <script src="./owner.js?v=106.3"></script>
 </body>
 </html>

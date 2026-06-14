@@ -73,7 +73,7 @@
   const visibilityPublicCountRoot = document.querySelector("[data-owner-visibility-public-count]");
   const visibilityLimboCountRoot = document.querySelector("[data-owner-visibility-limbo-count]");
   const visibilityApprovedCountRoot = document.querySelector("[data-owner-visibility-approved-count]");
-  const visibilityAppliedHiddenCountRoot = document.querySelector("[data-owner-visibility-applied-hidden-count]");
+  const visibilityBlockedReadyCountRoot = document.querySelector("[data-owner-visibility-blocked-ready-count], [data-owner-visibility-applied-hidden-count]");
   const visibilityR2ReadyCountRoot = document.querySelector("[data-owner-visibility-r2-ready-count]");
   const visibilityLimboCameraCountRoot = document.querySelector("[data-owner-visibility-limbo-camera-count]");
   const visibilityLimboAiCountRoot = document.querySelector("[data-owner-visibility-limbo-ai-count]");
@@ -457,10 +457,11 @@
   const originCount = (bucket, origin) => Number(bucket?.byOrigin?.[origin] ?? 0) || 0;
 
   const renderVisibilitySummary = (summary = null) => {
-    const publicApplied = summary?.publicApplied || {};
+    const r2Public = summary?.r2ReadyPublic || summary?.publicApplied || {};
     const limbo = summary?.r2ReadyLimbo || {};
-    const approved = summary?.approvedNotApplied || {};
-    const appliedHidden = summary?.appliedNotPublic || {};
+    const approved = summary?.r2ReadyApprovedNotApplied || summary?.approvedNotApplied || {};
+    const blockedReady = summary?.blockedOrParkedReady || {};
+    const approvedNotReady = summary?.approvedNotReady || {};
     const r2Ready = summary?.r2Ready || {};
     const limboCamera = originCount(limbo, "camera");
     const limboAi = originCount(limbo, "ai");
@@ -468,10 +469,10 @@
     const limboTotal = Number(limbo.count ?? limbo.byOrigin?.total ?? (limboCamera + limboAi + limboUnknown)) || 0;
     const cameraPercent = limboTotal ? (limboCamera / limboTotal) * 100 : 0;
     const aiPercent = limboTotal ? (limboAi / limboTotal) * 100 : 0;
-    setText(visibilityPublicCountRoot, formatCount(Number(publicApplied.count || 0)));
+    setText(visibilityPublicCountRoot, formatCount(Number(r2Public.count || 0)));
     setText(visibilityLimboCountRoot, formatCount(limboTotal));
     setText(visibilityApprovedCountRoot, formatCount(Number(approved.count || 0)));
-    setText(visibilityAppliedHiddenCountRoot, formatCount(Number(appliedHidden.count || 0)));
+    setText(visibilityBlockedReadyCountRoot, formatCount(Number(blockedReady.count || 0)));
     setText(visibilityR2ReadyCountRoot, formatCount(Number(r2Ready.count || 0)));
     setText(visibilityLimboCameraCountRoot, formatCount(limboCamera));
     setText(visibilityLimboAiCountRoot, formatCount(limboAi));
@@ -481,7 +482,7 @@
       visibilityLimboBarRoot.toggleAttribute("data-empty", limboTotal <= 0);
       visibilityLimboBarRoot.setAttribute(
         "aria-label",
-        `Limbo split: ${formatCount(limboCamera)} camera, ${formatCount(limboAi)} AI, ${formatCount(limboUnknown)} unknown.`
+        `Needs-review split: ${formatCount(limboCamera)} camera, ${formatCount(limboAi)} AI, ${formatCount(limboUnknown)} unknown.`
       );
     }
     if (visibilityNoteRoot) {
@@ -489,8 +490,12 @@
       const stamp = generatedAt && !Number.isNaN(generatedAt.getTime())
         ? ` Updated ${generatedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}.`
         : "";
+      const approvedOutsideGate = Number(approvedNotReady.count || 0) || 0;
+      const outsideGateNote = approvedOutsideGate
+        ? ` ${formatCount(approvedOutsideGate)} approved ${approvedOutsideGate === 1 ? "row is" : "rows are"} outside this R2-ready gate.`
+        : "";
       visibilityNoteRoot.textContent = summary
-        ? `Limbo excludes Waste Basket, parked, approved, and already-exported rows.${stamp}`
+        ? `R2 gate partitions preview-ready media into public, needs review, approved pending export, and parked/Waste Basket.${outsideGateNote}${stamp}`
         : "Visibility state requires the localhost Owner helper.";
     }
   };

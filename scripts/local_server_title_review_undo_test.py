@@ -110,28 +110,57 @@ class TitleReviewUndoTests(unittest.TestCase):
         catalog_path.parent.mkdir(parents=True, exist_ok=True)
         conn = sqlite3.connect(catalog_path)
         try:
+            normalized_rows = []
+            for row in rows:
+                media_id, title, captured_at = row[:3]
+                origin = row[3] if len(row) > 3 else "camera"
+                normalized_rows.append((media_id, title, captured_at, origin))
             conn.executescript(
                 """
+                CREATE TABLE source_origins (
+                  source_origin_id INTEGER PRIMARY KEY,
+                  code TEXT NOT NULL UNIQUE
+                );
                 CREATE TABLE keyword_terms (keyword_id INTEGER PRIMARY KEY, keyword TEXT NOT NULL);
                 CREATE TABLE media_items (
                   media_id TEXT PRIMARY KEY,
                   title TEXT,
                   keyword_ids TEXT,
-                  captured_at TEXT
+                  captured_at TEXT,
+                  source_origin_id INTEGER
                 );
                 """
+            )
+            conn.executemany(
+                "INSERT INTO source_origins(source_origin_id, code) VALUES (?, ?)",
+                [(1, "camera"), (2, "ai")],
             )
             conn.executemany(
                 "INSERT INTO keyword_terms(keyword_id, keyword) VALUES (?, ?)",
                 [(1, "France"), (2, "Travel"), (3, "Architecture")],
             )
             conn.executemany(
-                "INSERT INTO media_items(media_id, title, keyword_ids, captured_at) VALUES (?, ?, ?, ?)",
-                [(media_id, title, "1,2,3", captured_at) for media_id, title, captured_at in rows],
+                """
+                INSERT INTO media_items(media_id, title, keyword_ids, captured_at, source_origin_id)
+                VALUES (?, ?, ?, ?, CASE WHEN ? = 'ai' THEN 2 ELSE 1 END)
+                """,
+                [(media_id, title, "1,2,3", captured_at, origin) for media_id, title, captured_at, origin in normalized_rows],
             )
             conn.commit()
         finally:
             conn.close()
+
+    def _seed_r2_preview_pair(self, conn, media_id):
+        conn.executemany(
+            """
+            INSERT INTO r2_objects(bucket, object_key, photo_id, object_kind, lifecycle_state, updated_at)
+            VALUES ('public-media', ?, ?, 'public-preview', 'current', '2026-06-14T08:00:00Z')
+            """,
+            [
+                (f"expo/{media_id}_900.jpg", media_id),
+                (f"expo/{media_id}_1800.jpg", media_id),
+            ],
+        )
 
     def _write_import_manifest(self, repo_root, media_ids):
         manifest_path = repo_root / local_server.IMPORT_CACHE_MANIFEST_PATH
@@ -174,6 +203,45 @@ class TitleReviewUndoTests(unittest.TestCase):
             self.assertEqual(counts["rejected"], 0)
             self.assertEqual(counts["approved"], 2)
             self.assertEqual(counts["accepted"], 0)
+
+    def test_owner_visibility_summary_partitions_r2_ready_gate(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            self._write_import_manifest(repo_root, ["limbo-r2", "approved-r2", "approved-not-ready", "blocked-r2"])
+            self._write_catalog_db(
+                repo_root,
+                [
+                    ("public-r2", "Public R2", "2026-06-14T08:00:00", "camera"),
+                    ("public-ai", "Public AI", "2026-06-14T08:01:00", "ai"),
+                ],
+            )
+            conn = owner_state_db.connect(repo_root)
+            try:
+                self._seed_title_keyword_row(conn, "approved-r2", "approved", applied_at="2026-06-14T08:01:00Z")
+                self._seed_title_keyword_row(conn, "approved-not-ready", "approved", applied_at="2026-06-14T08:02:00Z")
+                self._seed_title_keyword_row(conn, "blocked-r2", "blocked")
+                for media_id in ["public-r2", "limbo-r2", "approved-r2", "blocked-r2"]:
+                    self._seed_r2_preview_pair(conn, media_id)
+                conn.commit()
+            finally:
+                conn.close()
+
+            summary = local_server.owner_visibility_summary(repo_root)
+            self.assertEqual(summary["publicApplied"]["count"], 2)
+            self.assertEqual(summary["r2Ready"]["count"], 4)
+            self.assertEqual(summary["r2ReadyPublic"]["count"], 1)
+            self.assertEqual(summary["r2ReadyLimbo"]["count"], 1)
+            self.assertEqual(summary["r2ReadyApprovedNotApplied"]["count"], 1)
+            self.assertEqual(summary["approvedNotApplied"]["count"], 2)
+            self.assertEqual(summary["approvedNotReady"]["count"], 1)
+            self.assertEqual(summary["blockedOrParkedReady"]["count"], 1)
+            self.assertEqual(
+                summary["r2ReadyPublic"]["count"]
+                + summary["r2ReadyLimbo"]["count"]
+                + summary["r2ReadyApprovedNotApplied"]["count"]
+                + summary["blockedOrParkedReady"]["count"],
+                summary["r2Ready"]["count"],
+            )
 
     def test_batch_import_cannot_pull_approved_rows_back_into_review(self):
         with tempfile.TemporaryDirectory() as temp_dir:

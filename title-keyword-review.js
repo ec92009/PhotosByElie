@@ -1,4 +1,8 @@
 const titleKeywordReviewUndoHelpers = (() => {
+  const titleReviewContinuityBlockedFlag = "__titleReviewContinuityBlocked";
+  const titleReviewContinuitySchemaVersion = 1;
+  const titleReviewContinuityDefaultMaxAgeMs = 1000 * 60 * 60 * 12;
+
   const cleanIdList = (items = []) => {
     const seen = new Set();
     const ids = [];
@@ -9,6 +13,199 @@ const titleKeywordReviewUndoHelpers = (() => {
       ids.push(value);
     }
     return ids;
+  };
+
+  const reviewContinuityPhotoId = (item) => String(
+    item?.photo_id || item?.photoId || item?.id || "",
+  ).trim();
+
+  const cloneContinuityItem = (item) => {
+    if (!item || typeof item !== "object") return {};
+    try {
+      return JSON.parse(JSON.stringify(item));
+    } catch {
+      return { ...item };
+    }
+  };
+
+  const normalizedContinuityState = (state, now = Date.now(), maxAgeMs = titleReviewContinuityDefaultMaxAgeMs) => {
+    if (!state || typeof state !== "object") return null;
+    const updatedAt = Number(state.updatedAt || state.createdAt || 0);
+    if (Number.isFinite(updatedAt) && updatedAt > 0 && now - updatedAt > maxAgeMs) return null;
+    const blocked = {};
+    if (state.blocked && typeof state.blocked === "object" && !Array.isArray(state.blocked)) {
+      Object.entries(state.blocked).forEach(([key, value]) => {
+        const id = String(key || reviewContinuityPhotoId(value)).trim();
+        if (!id || !value || typeof value !== "object") return;
+        blocked[id] = cloneContinuityItem(value);
+      });
+    }
+    return {
+      schemaVersion: titleReviewContinuitySchemaVersion,
+      createdAt: Number(state.createdAt || now) || now,
+      updatedAt,
+      order: cleanIdList(state.order || []),
+      blocked,
+    };
+  };
+
+  const buildTitleReviewContinuityQueue = ({
+    currentItems = [],
+    savedState = null,
+    now = Date.now(),
+    maxAgeMs = titleReviewContinuityDefaultMaxAgeMs,
+    maxStoredItems = 1000,
+  } = {}) => {
+    const currentById = new Map();
+    const currentOrder = [];
+    for (const item of currentItems || []) {
+      const id = reviewContinuityPhotoId(item);
+      if (!id || currentById.has(id)) continue;
+      currentById.set(id, item);
+      currentOrder.push(id);
+    }
+
+    const state = normalizedContinuityState(savedState, now, maxAgeMs);
+    if (!state || (!state.order.length && !Object.keys(state.blocked).length)) {
+      const order = currentOrder.slice(0, maxStoredItems);
+      return {
+        items: currentOrder.map((id) => currentById.get(id)).filter(Boolean),
+        state: {
+          schemaVersion: titleReviewContinuitySchemaVersion,
+          createdAt: now,
+          updatedAt: now,
+          order,
+          blocked: {},
+        },
+      };
+    }
+
+    const storedOrder = state.order;
+    const storedOrderSet = new Set(storedOrder);
+    const blockedSnapshots = new Map(Object.entries(state.blocked));
+    const ordered = [];
+    const seen = new Set();
+    let retainedStoredCount = 0;
+
+    for (const id of storedOrder) {
+      if (seen.has(id)) continue;
+      const current = currentById.get(id);
+      if (current) {
+        ordered.push(current);
+        seen.add(id);
+        retainedStoredCount += 1;
+        continue;
+      }
+      const blockedSnapshot = blockedSnapshots.get(id);
+      if (blockedSnapshot) {
+        ordered.push({
+          ...cloneContinuityItem(blockedSnapshot),
+          [titleReviewContinuityBlockedFlag]: true,
+        });
+        seen.add(id);
+        retainedStoredCount += 1;
+      }
+    }
+
+    if (!retainedStoredCount && currentOrder.length && !blockedSnapshots.size) {
+      const order = currentOrder.slice(0, maxStoredItems);
+      return {
+        items: currentOrder.map((id) => currentById.get(id)).filter(Boolean),
+        state: {
+          schemaVersion: titleReviewContinuitySchemaVersion,
+          createdAt: now,
+          updatedAt: now,
+          order,
+          blocked: {},
+        },
+      };
+    }
+
+    for (const id of currentOrder) {
+      if (seen.has(id)) continue;
+      ordered.push(currentById.get(id));
+      seen.add(id);
+    }
+
+    const order = ordered.map(reviewContinuityPhotoId).filter(Boolean).slice(0, maxStoredItems);
+    const orderSet = new Set(order);
+    const blocked = {};
+    blockedSnapshots.forEach((snapshot, id) => {
+      if (orderSet.has(id) && !currentById.has(id)) blocked[id] = cloneContinuityItem(snapshot);
+    });
+
+    return {
+      items: ordered,
+      state: {
+        schemaVersion: titleReviewContinuitySchemaVersion,
+        createdAt: Number(state.createdAt || now) || now,
+        updatedAt: now,
+        order,
+        blocked,
+      },
+      appendedIds: currentOrder.filter((id) => !storedOrderSet.has(id)),
+    };
+  };
+
+  const continuityStateWithBlockedItems = ({
+    state = null,
+    items = [],
+    now = Date.now(),
+    maxStoredItems = 1000,
+  } = {}) => {
+    const base = normalizedContinuityState(state, now) || {
+      schemaVersion: titleReviewContinuitySchemaVersion,
+      createdAt: now,
+      updatedAt: now,
+      order: [],
+      blocked: {},
+    };
+    const order = cleanIdList([
+      ...base.order,
+      ...(items || []).map(reviewContinuityPhotoId),
+    ]).slice(0, maxStoredItems);
+    const blocked = { ...base.blocked };
+    for (const item of items || []) {
+      const id = reviewContinuityPhotoId(item);
+      if (!id) continue;
+      blocked[id] = {
+        ...cloneContinuityItem(item),
+        review_continuity_blocked_at: now,
+      };
+    }
+    return {
+      schemaVersion: titleReviewContinuitySchemaVersion,
+      createdAt: Number(base.createdAt || now) || now,
+      updatedAt: now,
+      order,
+      blocked,
+    };
+  };
+
+  const continuityStateWithoutBlockedItems = ({
+    state = null,
+    photoIds = [],
+    now = Date.now(),
+  } = {}) => {
+    const base = normalizedContinuityState(state, now) || {
+      schemaVersion: titleReviewContinuitySchemaVersion,
+      createdAt: now,
+      updatedAt: now,
+      order: [],
+      blocked: {},
+    };
+    const remove = new Set(cleanIdList(photoIds));
+    const blocked = { ...base.blocked };
+    remove.forEach((photoId) => {
+      delete blocked[photoId];
+    });
+    return {
+      schemaVersion: titleReviewContinuitySchemaVersion,
+      createdAt: Number(base.createdAt || now) || now,
+      updatedAt: now,
+      order: base.order,
+      blocked,
+    };
   };
 
   const resolveTitleReviewUndoTargetIds = ({
@@ -26,7 +223,14 @@ const titleKeywordReviewUndoHelpers = (() => {
     return activeTarget && savedBlocked.has(activeTarget) ? [activeTarget] : [];
   };
 
-  return { resolveTitleReviewUndoTargetIds };
+  return {
+    buildTitleReviewContinuityQueue,
+    continuityStateWithBlockedItems,
+    continuityStateWithoutBlockedItems,
+    resolveTitleReviewUndoTargetIds,
+    reviewContinuityPhotoId,
+    titleReviewContinuityBlockedFlag,
+  };
 })();
 
 if (typeof module !== "undefined" && module.exports) {
@@ -35,7 +239,14 @@ if (typeof module !== "undefined" && module.exports) {
 
 if (typeof window !== "undefined") {
 (() => {
-  const { resolveTitleReviewUndoTargetIds } = titleKeywordReviewUndoHelpers;
+  const {
+    buildTitleReviewContinuityQueue,
+    continuityStateWithBlockedItems,
+    continuityStateWithoutBlockedItems,
+    resolveTitleReviewUndoTargetIds,
+    reviewContinuityPhotoId,
+    titleReviewContinuityBlockedFlag,
+  } = titleKeywordReviewUndoHelpers;
   const localHosts = new Set(["localhost", "127.0.0.1", "::1"]);
   const enabled = localHosts.has(window.location.hostname);
 
@@ -54,6 +265,8 @@ if (typeof window !== "undefined") {
   const titleReviewDensityKey = "photosbyelie-title-review-cull-density";
   const titleReviewFitModeKey = "photosbyelie-title-review-cull-fit-mode";
   const titleReviewVisibleCountKey = "photosbyelie-title-review-visible-count";
+  const titleReviewContinuityQueueKey = "photosbyelie-title-review-continuity-queue";
+  const titleReviewContinuityMaxAgeMs = 1000 * 60 * 60 * 12;
   const titleReviewVisibleCountOptions = [24, 48, 96, 192, 384];
   const titleReviewDefaultVisibleCount = 24;
   const titleReviewModes = new Set(["cull", "edit"]);
@@ -253,6 +466,40 @@ if (typeof window !== "undefined") {
       queue: await loadJson(queueUrl),
       sourceHref: queueUrl,
     };
+  };
+
+  const readTitleReviewContinuityState = () => {
+    try {
+      return JSON.parse(sessionStorage.getItem(titleReviewContinuityQueueKey) || "null");
+    } catch {
+      return null;
+    }
+  };
+
+  const writeTitleReviewContinuityState = (state) => {
+    try {
+      sessionStorage.setItem(titleReviewContinuityQueueKey, JSON.stringify(state));
+    } catch {
+      // Continuity is a convenience layer; the SQLite queue remains authoritative.
+    }
+  };
+
+  const rememberTitleReviewBlockedItems = (items) => {
+    const nextState = continuityStateWithBlockedItems({
+      state: readTitleReviewContinuityState(),
+      items,
+      now: Date.now(),
+    });
+    writeTitleReviewContinuityState(nextState);
+  };
+
+  const forgetTitleReviewBlockedItems = (photoIds) => {
+    const nextState = continuityStateWithoutBlockedItems({
+      state: readTitleReviewContinuityState(),
+      photoIds,
+      now: Date.now(),
+    });
+    writeTitleReviewContinuityState(nextState);
   };
 
   const keywordBlacklistSet = (payload) => {
@@ -588,7 +835,7 @@ if (typeof window !== "undefined") {
     const captureTimeForPhoto = (item) => parseCaptureTime(
       item?.capture?.raw || item?.capture?.date || item?.capture?.sort || "",
     );
-    const visiblePhotos = photos
+    const sortedReviewPhotos = photos
       .map((item, index) => ({ item, index }))
       .filter(({ item }) => {
         const photoId = String(item?.photo_id || item?.photoId || "");
@@ -605,6 +852,14 @@ if (typeof window !== "undefined") {
         return left.index - right.index;
       })
       .map(({ item }) => item);
+    const continuity = buildTitleReviewContinuityQueue({
+      currentItems: sortedReviewPhotos,
+      savedState: readTitleReviewContinuityState(),
+      now: Date.now(),
+      maxAgeMs: titleReviewContinuityMaxAgeMs,
+    });
+    const visiblePhotos = continuity.items;
+    writeTitleReviewContinuityState(continuity.state);
     const selection = queue?.selection && typeof queue.selection === "object" ? queue.selection : {};
     const totalReviewCount = Math.max(Number(selection.total_count || 0), visiblePhotos.length);
     const sqlitePendingCount = Number(selection.sqlite_pending_count || 0);
@@ -697,6 +952,7 @@ if (typeof window !== "undefined") {
     list.innerHTML = visiblePhotos.map((item, index) => {
       const photoId = String(item?.photo_id || item?.photoId || "");
       const photoBatchId = String(item?.batch_id || item?.proposal_batch_id || batchId || "");
+      const isContinuityBlocked = item?.[titleReviewContinuityBlockedFlag] === true;
       const title = String(item?.current?.title || "");
       const capture = String(item?.capture?.raw || item?.capture?.date || "");
       const galleryLabel = String(item?.gallery?.label || item?.gallery_label || item?.gallery_key || "");
@@ -734,9 +990,10 @@ if (typeof window !== "undefined") {
         "title-keyword-review-preview",
         thumb ? "has-image" : "is-missing-preview",
         isVideo ? "is-video" : "",
+        isContinuityBlocked ? "is-review-blocked" : "",
       ].filter(Boolean).join(" ");
       return `
-        <article class="title-keyword-review-row${isVideo ? " is-video" : ""}" data-review-photo-id="${escapeHtml(photoId)}" data-photo-index="${index}" data-review-batch-id="${escapeHtml(photoBatchId)}" data-review-gallery-key="${escapeHtml(galleryKey)}" data-review-capture-time="${Number.isFinite(captureTime) ? String(captureTime) : ""}" data-review-detail-href="${escapeHtml(href)}" data-review-previous-reject-reason="${escapeHtml(previousRejectReason)}" tabindex="0"${index >= shownReviewCount ? " hidden" : ""}>
+        <article class="title-keyword-review-row${isVideo ? " is-video" : ""}${isContinuityBlocked ? " is-owner-actioned is-review-blocked" : ""}" data-review-photo-id="${escapeHtml(photoId)}" data-photo-index="${index}" data-review-batch-id="${escapeHtml(photoBatchId)}" data-review-gallery-key="${escapeHtml(galleryKey)}" data-review-capture-time="${Number.isFinite(captureTime) ? String(captureTime) : ""}" data-review-detail-href="${escapeHtml(href)}" data-review-previous-reject-reason="${escapeHtml(previousRejectReason)}"${isContinuityBlocked ? " data-review-block-saved=\"1\"" : ""} tabindex="0"${index >= shownReviewCount ? " hidden" : ""}>
           <a class="${previewClasses}" href="${escapeHtml(href)}" aria-label="Open ${isVideo ? "video" : "photo"} ${escapeHtml(photoId)}">
             ${thumb ? `<img src="${escapeHtml(thumb)}" alt="${escapeHtml(title || photoId)}" loading="eager" decoding="async" fetchpriority="${fetchPriority}"/>` : `<span class="unknown-missing-preview">No preview</span>`}
             ${isVideo ? `<span class="title-keyword-review-video-badge" aria-hidden="true">${window.photosByElieMdIcon?.("play") || "▶"}</span>` : ""}
@@ -774,7 +1031,7 @@ if (typeof window !== "undefined") {
               <span>Approve</span>
             </label>
             <label class="title-keyword-review-block-choice" title="Move this photo to the Waste Basket and record it as blocked (H/X)">
-              <input type="checkbox" data-review-block/>
+              <input type="checkbox" data-review-block${isContinuityBlocked ? " checked" : ""}/>
               <span>Block</span>
             </label>
             <input type="checkbox" data-review-reject hidden/>
@@ -786,7 +1043,7 @@ if (typeof window !== "undefined") {
               <span>Reject note</span>
               <textarea rows="2" data-review-reject-comment placeholder="What should change?">${escapeHtml(previousRejectComment)}</textarea>
             </label>
-            <p class="title-keyword-review-row-status" data-review-row-status>Not saved</p>
+            <p class="title-keyword-review-row-status" data-review-row-status${isContinuityBlocked ? " data-state=\"saved\"" : ""}>${isContinuityBlocked ? "Blocked" : "Not saved"}</p>
             <div class="title-keyword-review-row-tools">
               <button type="button" data-review-propagate title="Apply this row's approve/reject/block choice, including reject note, to current and following rows in the same two-hour shoot window">Propagate</button>
             </div>
@@ -1396,6 +1653,9 @@ if (typeof window !== "undefined") {
         setRowStatus(card, "Blocked", "saved");
       });
       const savedPhotoIds = savedTargets.map(({ photoId }) => photoId);
+      rememberTitleReviewBlockedItems(savedPhotoIds
+        .map((photoId) => reviewItemById.get(photoId) || { photo_id: photoId, batch_id: batchId })
+        .filter((item) => reviewContinuityPhotoId(item)));
       lastBlockBatchPhotoIds = savedPhotoIds;
       return { count: savedTargets.length, photoIds: savedPhotoIds, result };
     };
@@ -1454,6 +1714,7 @@ if (typeof window !== "undefined") {
         block.checked = false;
         block.disabled = false;
       }
+      forgetTitleReviewBlockedItems([photoId]);
       setRowStatus(card, "Unblocked", "saved", "Restored from the Waste Basket and reopened in the title/keyword review queue.");
       if (status) status.textContent = `${photoId} restored from the Waste Basket and reopened for review.`;
       return { result, restoreResult };
@@ -1935,9 +2196,10 @@ if (typeof window !== "undefined") {
       const propagate = card.querySelector("[data-review-propagate]");
       const block = card.querySelector("[data-review-block]");
       const previousRejectReason = card.dataset.reviewPreviousRejectReason || "";
+      const restoredBlocked = isCardSavedBlocked(card);
       if (approve) approve.checked = false;
       if (reject) reject.checked = false;
-      if (block) block.checked = false;
+      if (block) block.checked = restoredBlocked;
       setRejectReasonValue(card, previousRejectReason);
       card.addEventListener("click", (event) => {
         const previewLink = event.target instanceof HTMLElement ? event.target.closest(".title-keyword-review-preview") : null;
@@ -1990,10 +2252,13 @@ if (typeof window !== "undefined") {
         if (isCardSavedBlocked(card)) {
           if (block) block.checked = true;
           setCardBlockedVisual(card, "blocked");
+          setBlockedControlsDisabled(card, true);
+          if (block) block.disabled = false;
           syncDecisionState();
           setRowStatus(card, "Blocked", "saved");
           return;
         }
+        setBlockedControlsDisabled(card, false);
         if (approve) approve.checked = false;
         if (reject) reject.checked = false;
         if (block) block.checked = false;

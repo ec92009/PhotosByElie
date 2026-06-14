@@ -180,6 +180,16 @@ class TitleReviewUndoTests(unittest.TestCase):
         ]
         manifest_path.write_text(json.dumps({"photos": photos}), encoding="utf-8")
 
+    def _clear_title_keyword_applied_at(self, conn, media_id):
+        conn.execute(
+            "UPDATE title_keyword_queue SET applied_at = NULL WHERE media_id = ?",
+            (media_id,),
+        )
+        conn.execute(
+            "UPDATE title_keyword_decisions SET applied_at = NULL WHERE media_id = ?",
+            (media_id,),
+        )
+
     def test_review_queue_and_counts_exclude_approved_rows(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             repo_root = Path(temp_dir)
@@ -203,6 +213,122 @@ class TitleReviewUndoTests(unittest.TestCase):
             self.assertEqual(counts["rejected"], 0)
             self.assertEqual(counts["approved"], 2)
             self.assertEqual(counts["accepted"], 0)
+
+    def test_auto_apply_approved_rows_updates_catalog_state_and_applied_at(self):
+        photo_id = "approved-pending-auto"
+        photo = {
+            "id": photo_id,
+            "title": "Old Title",
+            "keywords": ["Old"],
+            "metadata": [{"label": "Keywords", "value": "Old"}],
+            "media": {"type": "photo", "publicPreview": {"allowed": True}},
+        }
+        state = {
+            "expo": {slug: [] for slug in local_server.ORDER},
+            "reserve": {slug: [] for slug in local_server.ORDER},
+            "hidden": {slug: [] for slug in local_server.ORDER},
+        }
+        state["expo"]["france"].append(copy.deepcopy(photo))
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            conn = owner_state_db.connect(repo_root)
+            try:
+                self._seed_title_keyword_row(conn, photo_id, "approved")
+                self._clear_title_keyword_applied_at(conn, photo_id)
+                conn.commit()
+            finally:
+                conn.close()
+
+            with patched_server_state(state, photo):
+                result = local_server.apply_photo_action(
+                    repo_root,
+                    {
+                        "action": "apply-approved-title-keyword-review-approvals",
+                        "reason": "unit-test",
+                    },
+                )
+
+            self.assertEqual(result["pending_count"], 1)
+            self.assertEqual(result["approved_count"], 1)
+            self.assertEqual(result["applied_count"], 1)
+            self.assertEqual(result["not_found"], [])
+            updated = state["expo"]["france"][0]
+            self.assertEqual(updated["title"], f"{photo_id} Title")
+            self.assertEqual(updated["keywords"], ["France", "Travel"])
+            flags = next(item for item in updated["metadata"] if item["label"] == "Flags")
+            self.assertIn(local_server.TITLE_KEYWORD_REVIEW_FLAG, flags["value"])
+
+            conn = sqlite3.connect(repo_root / "assets/owner-actions/Owner.sqlite")
+            conn.row_factory = sqlite3.Row
+            try:
+                row = conn.execute(
+                    """
+                    SELECT q.review_state, q.applied_at AS queue_applied_at,
+                           d.applied_at AS decision_applied_at
+                    FROM title_keyword_queue AS q
+                    JOIN title_keyword_decisions AS d
+                      ON d.media_id = q.media_id
+                     AND d.attempt = q.latest_attempt
+                    WHERE q.media_id = ?
+                    """,
+                    (photo_id,),
+                ).fetchone()
+                self.assertEqual(row["review_state"], "approved")
+                self.assertTrue(row["queue_applied_at"])
+                self.assertTrue(row["decision_applied_at"])
+            finally:
+                conn.close()
+
+    def test_auto_apply_failure_keeps_approved_rows_unapplied(self):
+        photo_id = "approved-missing-auto"
+        fallback_photo = {"id": "unused-fallback", "title": "Unused"}
+        state = {
+            "expo": {slug: [] for slug in local_server.ORDER},
+            "reserve": {slug: [] for slug in local_server.ORDER},
+            "hidden": {slug: [] for slug in local_server.ORDER},
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            conn = owner_state_db.connect(repo_root)
+            try:
+                self._seed_title_keyword_row(conn, photo_id, "approved")
+                self._clear_title_keyword_applied_at(conn, photo_id)
+                conn.commit()
+            finally:
+                conn.close()
+
+            with patched_server_state(state, fallback_photo):
+                with self.assertRaises(ValueError):
+                    local_server.apply_photo_action(
+                        repo_root,
+                        {
+                            "action": "apply-approved-title-keyword-review-approvals",
+                            "reason": "unit-test",
+                        },
+                    )
+
+            conn = sqlite3.connect(repo_root / "assets/owner-actions/Owner.sqlite")
+            conn.row_factory = sqlite3.Row
+            try:
+                row = conn.execute(
+                    """
+                    SELECT q.review_state, q.applied_at AS queue_applied_at,
+                           d.applied_at AS decision_applied_at
+                    FROM title_keyword_queue AS q
+                    JOIN title_keyword_decisions AS d
+                      ON d.media_id = q.media_id
+                     AND d.attempt = q.latest_attempt
+                    WHERE q.media_id = ?
+                    """,
+                    (photo_id,),
+                ).fetchone()
+                self.assertEqual(row["review_state"], "approved")
+                self.assertIsNone(row["queue_applied_at"])
+                self.assertIsNone(row["decision_applied_at"])
+            finally:
+                conn.close()
 
     def test_owner_visibility_summary_partitions_r2_ready_gate(self):
         with tempfile.TemporaryDirectory() as temp_dir:

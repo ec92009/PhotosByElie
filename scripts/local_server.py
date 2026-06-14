@@ -3533,6 +3533,191 @@ def _review_record_not_found(not_found: list[str], approvals: list[dict], fallba
     return records
 
 
+def _normalize_title_keyword_approvals(repo_root: Path, batch_id: str, approvals: object) -> list[dict]:
+    if not isinstance(approvals, list):
+        raise ValueError("approvals must be a JSON list")
+    normalized = []
+    for item in approvals:
+        if not isinstance(item, dict):
+            continue
+        current_photo_id = str(item.get("photo_id") or "").strip()
+        if not current_photo_id or item.get("approved") is not True:
+            continue
+        title = str(item.get("title") or "").strip()
+        if not title:
+            raise ValueError(f"approved title must be non-empty for {current_photo_id}")
+        normalized.append(
+            {
+                "photo_id": current_photo_id,
+                "batch_id": _review_item_batch_id(item, batch_id),
+                "approved": True,
+                "title": title,
+                "keywords": _review_keywords(repo_root, item.get("keywords")),
+            }
+        )
+    return normalized
+
+
+def _normalize_title_keyword_rejections(repo_root: Path, batch_id: str, rejections: object) -> list[dict]:
+    if not isinstance(rejections, list):
+        raise ValueError("rejections must be a JSON list")
+    normalized_rejections = []
+    for item in rejections:
+        if not isinstance(item, dict):
+            continue
+        current_photo_id = str(item.get("photo_id") or "").strip()
+        if not current_photo_id or item.get("rejected") is not True:
+            continue
+        rejected_title = str(item.get("title") or "").strip()
+        rejected_keywords = _review_keywords(repo_root, item.get("keywords"))
+        normalized_rejections.append(
+            {
+                "photo_id": current_photo_id,
+                "batch_id": _review_item_batch_id(item, batch_id),
+                "rejected": True,
+                "title": rejected_title,
+                "keywords": rejected_keywords,
+                "comment": _rejection_comment_with_proposal_context(
+                    item.get("comment"),
+                    rejected_title,
+                    rejected_keywords,
+                ),
+            }
+        )
+    return normalized_rejections
+
+
+def _pending_approved_title_keyword_approvals(repo_root: Path) -> list[dict]:
+    conn = owner_db_connect(repo_root)
+    try:
+        rows = conn.execute(
+            """
+            SELECT q.media_id, q.latest_proposed_batch_id AS batch_id,
+                   d.decided_title, d.decided_keywords
+            FROM title_keyword_queue AS q
+            JOIN title_keyword_decisions AS d
+              ON d.media_id = q.media_id
+             AND d.attempt = q.latest_attempt
+            WHERE q.review_state = 'approved'
+              AND d.decision_state = 'accepted'
+              AND COALESCE(d.applied_at, '') = ''
+            ORDER BY COALESCE(d.decided_at, q.reviewed_at, q.updated_at, ''), q.media_id
+            """
+        ).fetchall()
+    finally:
+        conn.close()
+    approvals = []
+    for row in rows:
+        media_id = str(row["media_id"] or "").strip()
+        if not media_id:
+            continue
+        title = str(row["decided_title"] or "").strip()
+        if not title:
+            raise ValueError(f"approved title must be non-empty for {media_id}")
+        approvals.append(
+            {
+                "photo_id": media_id,
+                "batch_id": str(row["batch_id"] or "approved-pending-auto-apply").strip() or "approved-pending-auto-apply",
+                "approved": True,
+                "title": title,
+                "keywords": _review_keywords(repo_root, row["decided_keywords"]),
+            }
+        )
+    return approvals
+
+
+def _apply_title_keyword_review_approval_payload(
+    repo_root: Path,
+    *,
+    action: str,
+    batch_id: str,
+    approvals: list[dict],
+    rejections: list[dict],
+    allow_empty: bool = False,
+    fail_on_not_found: bool = False,
+) -> dict:
+    rejected_ids = {item["photo_id"] for item in rejections}
+    normalized = [item for item in approvals if item["photo_id"] not in rejected_ids]
+    if not normalized and not rejections:
+        if allow_empty:
+            return {
+                "ok": True,
+                "action": action,
+                "batch_id": batch_id,
+                "path": "",
+                "paths": [],
+                "db": "",
+                "approved_count": 0,
+                "rejected_count": 0,
+                "blocked_count": 0,
+                "applied_count": 0,
+                "metadata_changed": 0,
+                "not_found": [],
+                "updated": [],
+                "review_flag": TITLE_KEYWORD_REVIEW_FLAG,
+                "proposal_state_flag": TITLE_KEYWORD_PROPOSED_FLAG,
+                "rejection_flag": TITLE_KEYWORD_REJECTED_FLAG,
+                "worker_catalog": {},
+                "site": {},
+            }
+        raise ValueError("approvals must include at least one approved or rejected photo")
+
+    ensure_state_folders(repo_root / HIDDEN_ASSET_ROOT)
+    (repo_root / DISCARDED_TOMBSTONE_PATH).parent.mkdir(parents=True, exist_ok=True)
+
+    expo_groups, reserve_groups, hidden_groups = _state_groups(repo_root)
+    _repair_hidden_references(repo_root, hidden_groups, expo_groups, reserve_groups)
+    updated, not_found, metadata_changed = _apply_title_keyword_approvals_to_groups(
+        expo_groups,
+        reserve_groups,
+        hidden_groups,
+        normalized,
+    )
+    if fail_on_not_found and not_found:
+        preview = ", ".join(not_found[:10])
+        suffix = "..." if len(not_found) > 10 else ""
+        raise ValueError(f"Could not auto-apply approved title/keyword rows because {len(not_found)} photo(s) were not found: {preview}{suffix}")
+
+    site_state = {}
+    worker_catalog = {}
+    if normalized:
+        site_state, worker_catalog = _write_catalog_state(repo_root, expo_groups, reserve_groups, hidden_groups)
+
+    decided_at = datetime.now(timezone.utc).isoformat()
+    not_found_records = _review_record_not_found(not_found, normalized, batch_id)
+    save_result = _save_title_keyword_review_records(
+        repo_root,
+        fallback_batch_id=batch_id,
+        approvals=normalized,
+        rejections=rejections,
+        blocked=[],
+        not_found=not_found_records,
+        review_flag=TITLE_KEYWORD_REVIEW_FLAG,
+        applied_at=decided_at if normalized else "",
+        decided_at=decided_at,
+    )
+    return {
+        "ok": True,
+        "action": action,
+        "batch_id": batch_id,
+        "path": save_result.get("path", ""),
+        "paths": save_result.get("paths", []),
+        "db": save_result.get("db", ""),
+        "approved_count": save_result.get("approved_count", 0),
+        "rejected_count": save_result.get("rejected_count", 0),
+        "blocked_count": save_result.get("blocked_count", 0),
+        "applied_count": len({item["id"] for item in updated}),
+        "metadata_changed": metadata_changed,
+        "not_found": not_found,
+        "updated": updated,
+        "review_flag": TITLE_KEYWORD_REVIEW_FLAG,
+        "proposal_state_flag": TITLE_KEYWORD_PROPOSED_FLAG,
+        "rejection_flag": TITLE_KEYWORD_REJECTED_FLAG,
+        "worker_catalog": worker_catalog,
+        "site": site_state,
+    }
+
+
 def _save_title_keyword_review_records(
     repo_root: Path,
     *,
@@ -7105,6 +7290,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         "queue-title-keyword-review",
         "queue-title-keyword-review-many",
         "apply-title-keyword-review-approvals",
+        "apply-approved-title-keyword-review-approvals",
         "publish-hidden-blacklist",
         "wipe-hidden-r2",
         "save-title-keyword-review-approvals",
@@ -7122,6 +7308,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         "wipe-hidden-r2",
         "save-title-keyword-review-approvals",
         "apply-title-keyword-review-approvals",
+        "apply-approved-title-keyword-review-approvals",
         "save-keyword-blacklist",
     } and (not isinstance(photo_id, str) or not photo_id):
         raise ValueError("photo_id must be a non-empty string")
@@ -7534,105 +7721,29 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         batch_id = str(payload.get("batch_id") or "").strip()
         if not batch_id:
             raise ValueError("batch_id must be a non-empty string")
-        approvals = payload.get("approvals")
-        if not isinstance(approvals, list):
-            raise ValueError("approvals must be a JSON list")
-        rejections = payload.get("rejections") or []
-        if not isinstance(rejections, list):
-            raise ValueError("rejections must be a JSON list")
-        normalized = []
-        for item in approvals:
-            if not isinstance(item, dict):
-                continue
-            current_photo_id = str(item.get("photo_id") or "").strip()
-            if not current_photo_id or item.get("approved") is not True:
-                continue
-            title = str(item.get("title") or "").strip()
-            if not title:
-                raise ValueError(f"approved title must be non-empty for {current_photo_id}")
-            keywords = _review_keywords(repo_root, item.get("keywords"))
-            normalized.append(
-                {
-                    "photo_id": current_photo_id,
-                    "batch_id": _review_item_batch_id(item, batch_id),
-                    "approved": True,
-                    "title": title,
-                    "keywords": keywords,
-                }
-            )
-        normalized_rejections = []
-        for item in rejections:
-            if not isinstance(item, dict):
-                continue
-            current_photo_id = str(item.get("photo_id") or "").strip()
-            if not current_photo_id or item.get("rejected") is not True:
-                continue
-            rejected_title = str(item.get("title") or "").strip()
-            rejected_keywords = _review_keywords(repo_root, item.get("keywords"))
-            normalized_rejections.append(
-                {
-                    "photo_id": current_photo_id,
-                    "batch_id": _review_item_batch_id(item, batch_id),
-                    "rejected": True,
-                    "title": rejected_title,
-                    "keywords": rejected_keywords,
-                    "comment": _rejection_comment_with_proposal_context(
-                        item.get("comment"),
-                        rejected_title,
-                        rejected_keywords,
-                    ),
-                }
-            )
-        rejected_ids = {item["photo_id"] for item in normalized_rejections}
-        normalized = [item for item in normalized if item["photo_id"] not in rejected_ids]
-        if not normalized and not normalized_rejections:
-            raise ValueError("approvals must include at least one approved or rejected photo")
-
-        review_flag = TITLE_KEYWORD_REVIEW_FLAG
-        updated, not_found, metadata_changed = _apply_title_keyword_approvals_to_groups(
-            expo_groups,
-            reserve_groups,
-            hidden_groups,
-            normalized,
-        )
-
-        decided_at = datetime.now(timezone.utc).isoformat()
-        not_found_records = _review_record_not_found(not_found, normalized, batch_id)
-        save_result = _save_title_keyword_review_records(
+        return _apply_title_keyword_review_approval_payload(
             repo_root,
-            fallback_batch_id=batch_id,
-            approvals=normalized,
-            rejections=normalized_rejections,
-            blocked=[],
-            not_found=not_found_records,
-            review_flag=review_flag,
-            applied_at=decided_at if normalized else "",
-            decided_at=decided_at,
+            action=action,
+            batch_id=batch_id,
+            approvals=_normalize_title_keyword_approvals(repo_root, batch_id, payload.get("approvals")),
+            rejections=_normalize_title_keyword_rejections(repo_root, batch_id, payload.get("rejections") or []),
         )
-        site_state = {}
-        worker_catalog = {}
-        if normalized:
-            site_state, worker_catalog = _write_catalog_state(repo_root, expo_groups, reserve_groups, hidden_groups)
-        return {
-            "ok": True,
-            "action": action,
-            "batch_id": batch_id,
-            "path": save_result.get("path", ""),
-            "paths": save_result.get("paths", []),
-            "db": save_result.get("db", ""),
-            "approved_count": save_result.get("approved_count", 0),
-            "rejected_count": save_result.get("rejected_count", 0),
-            "blocked_count": save_result.get("blocked_count", 0),
-            "applied_count": len({item["id"] for item in updated}),
-            "metadata_changed": metadata_changed,
-            "not_found": not_found,
-            "updated": updated,
-            "review_flag": review_flag,
-            "proposal_state_flag": TITLE_KEYWORD_PROPOSED_FLAG,
-            "rejection_flag": TITLE_KEYWORD_REJECTED_FLAG,
-            "worker_catalog": worker_catalog,
-            "site": site_state,
-        }
+
+    if action == "apply-approved-title-keyword-review-approvals":
+        batch_id = "approved-pending-auto-apply"
+        approvals = _pending_approved_title_keyword_approvals(repo_root)
+        result = _apply_title_keyword_review_approval_payload(
+            repo_root,
+            action=action,
+            batch_id=batch_id,
+            approvals=approvals,
+            rejections=[],
+            allow_empty=True,
+            fail_on_not_found=True,
+        )
+        result["pending_count"] = len(approvals)
+        result["auto_apply_reason"] = str(payload.get("reason") or "review-exit")
+        return result
 
     if action == "assign-country":
         moved = []

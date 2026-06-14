@@ -896,11 +896,10 @@ if (typeof window !== "undefined") {
       <p class="gallery-status">Oldest: ${escapeHtml(oldest || "—")} • Newest: ${escapeHtml(newest || "—")}</p>
       <div class="cta title-keyword-review-actions">
         <button class="btn secondary" type="button" data-title-keyword-review-approve-all>Approve visible</button>
-        <button class="btn secondary" type="button" data-title-keyword-review-save>Apply selected</button>
         <button class="btn secondary" type="button" data-title-keyword-review-download>Export selected JSON</button>
         <a class="btn secondary" href="${escapeHtml(queueHref)}" target="_blank" rel="noreferrer">Open proposal source</a>
       </div>
-      <p class="gallery-status">Rows autosave as soon as you approve, reject, block, or edit. Apply selected updates catalog metadata for checked approvals, queues checked rejections for rework, and moves checked blocks to the Waste Basket.</p>
+      <p class="gallery-status">Rows autosave as soon as you approve, reject, block, or edit. Approved rows update catalog metadata; rejected rows queue for rework; blocked rows move to the Waste Basket.</p>
     `;
 
     root.replaceChildren();
@@ -1066,7 +1065,6 @@ if (typeof window !== "undefined") {
         <p data-title-keyword-review-page-status></p>
       </div>
       <button class="btn secondary" type="button" data-title-keyword-review-approve-all>Approve visible</button>
-      <button class="btn secondary" type="button" data-title-keyword-review-save>Apply selected</button>
       <button class="btn secondary" type="button" data-title-keyword-review-download>Export selected JSON</button>
     `;
     root.append(bottomActions);
@@ -1480,7 +1478,7 @@ if (typeof window !== "undefined") {
       const href = card?.getAttribute("data-review-detail-href") || "";
       if (!href) return;
       writeOwnerReviewReturnState(card);
-      window.location.assign(href);
+      navigateAfterReviewExit(href, "open-detail");
     };
     const restorePendingOwnerReviewReturn = () => {
       const pendingReturn = pendingOwnerReviewReturn();
@@ -2152,29 +2150,6 @@ if (typeof window !== "undefined") {
       });
     };
 
-    const saveApprovals = async () => {
-      const payload = buildApprovalsPayload();
-      if (!payload.approvals.length && !payload.rejections.length && !payload.blocked.length) {
-        window.alert?.("Select at least one photo to approve, reject, or block.");
-        return;
-      }
-      const confirmed = window.confirm?.(
-        `Apply ${payload.approvals.length} approvals, save ${payload.rejections.length} rejections, and block ${payload.blocked.length} photos?\n\n` +
-        "Approved rows update catalog metadata. Rejected rows are prioritized for a new proposal. Blocked rows move to the Waste Basket. JPG/source files, public previews, private masters, and render files will not be changed directly by title/keyword approval.",
-      ) ?? true;
-      if (!confirmed) return;
-      const result = await saveCardsDecisions(reviewCards());
-      if (!result) return;
-      const saveResult = result.result || result.blockedResult?.result || {};
-      window.alert?.(
-        `Exported ${saveResult.applied_count || payload.approvals.length} approvals to catalog metadata files.\n` +
-        `Saved ${result.rejections || payload.rejections.length} rejections for proposal rework.\n` +
-        `Moved ${result.blocked || 0} photos to the Waste Basket.\n` +
-        `Saved review record to ${saveResult.path || "assets/owner-actions/title-keyword-review-queue/"}.\n\n` +
-        "Run validation and commit the metadata changes when ready.",
-      );
-    };
-
     const downloadApprovals = () => {
       const payload = buildApprovalsPayload();
       if (!payload.approvals.length && !payload.rejections.length && !payload.blocked.length) {
@@ -2183,6 +2158,76 @@ if (typeof window !== "undefined") {
       }
       downloadJson(`title-keyword-review-approvals-${batchId}.json`, payload);
     };
+
+    let reviewExitFinalizing = null;
+    let reviewExitCompleted = false;
+    const applyPendingApprovedRows = async (reason = "review-exit") => postApprovalsPayload({
+      action: "apply-approved-title-keyword-review-approvals",
+      reason,
+    });
+    const finalizeReviewBeforeExit = async (reason = "review-exit") => {
+      if (reviewExitFinalizing) return reviewExitFinalizing;
+      reviewExitFinalizing = (async () => {
+        if (status) status.textContent = "Saving review decisions before leaving...";
+        const saveResult = await saveCardsDecisions(reviewCards());
+        if (!saveResult) throw new Error("Owner authentication is required before leaving title/keyword review.");
+        if (status) status.textContent = "Applying approved title/keyword rows before leaving...";
+        const applyResult = await applyPendingApprovedRows(reason);
+        if (!applyResult) throw new Error("Owner authentication is required before applying approved title/keyword rows.");
+        const pending = Number(applyResult.pending_count || 0);
+        const applied = Number(applyResult.applied_count || applyResult.approved_count || 0);
+        if (status) {
+          status.textContent = pending
+            ? `Applied ${formatCount(applied || pending)} approved title/keyword row${(applied || pending) === 1 ? "" : "s"} before leaving.`
+            : "Review decisions are saved.";
+        }
+        reviewExitCompleted = true;
+        return { saveResult, applyResult };
+      })().finally(() => {
+        reviewExitFinalizing = null;
+      });
+      return reviewExitFinalizing;
+    };
+    const isSameReviewHashNavigation = (url) => (
+      url.origin === window.location.origin
+      && url.pathname === window.location.pathname
+      && url.search === window.location.search
+      && url.hash
+      && url.hash !== window.location.hash
+    );
+    const navigateAfterReviewExit = (href, reason = "review-exit") => {
+      finalizeReviewBeforeExit(reason)
+        .then(() => window.location.assign(href))
+        .catch((error) => {
+          const message = error?.message || "Could not apply approved title/keyword rows before leaving.";
+          if (status) status.textContent = message;
+          window.alert?.(message);
+        });
+    };
+    const sendPendingApprovedBeacon = () => {
+      if (reviewExitCompleted || !navigator.sendBeacon) return;
+      try {
+        const payload = JSON.stringify({
+          action: "apply-approved-title-keyword-review-approvals",
+          reason: "pagehide",
+        });
+        navigator.sendBeacon(approvalsEndpoint, new Blob([payload], { type: "application/json" }));
+      } catch {
+        // Normal click navigation waits for the full response; this is only a best-effort unload fallback.
+      }
+    };
+
+    document.addEventListener("click", (event) => {
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const target = event.target;
+      const anchor = target instanceof HTMLElement ? target.closest("a[href]") : null;
+      if (!anchor || anchor.target || anchor.hasAttribute("download")) return;
+      const url = new URL(anchor.href, window.location.href);
+      if (isSameReviewHashNavigation(url)) return;
+      event.preventDefault();
+      navigateAfterReviewExit(url.href, "link-exit");
+    });
+    window.addEventListener("pagehide", sendPendingApprovedBeacon);
 
     cardById.forEach((card, photoId) => {
       const approve = card.querySelector("[data-review-approve]");
@@ -2537,13 +2582,6 @@ if (typeof window !== "undefined") {
 
     document.querySelectorAll("[data-title-keyword-review-approve-all]").forEach((button) => {
       button.addEventListener("click", approveAll);
-    });
-    document.querySelectorAll("[data-title-keyword-review-save]").forEach((button) => {
-      button.addEventListener("click", () => {
-        saveApprovals().catch((error) => {
-          window.alert?.(error?.message || "Could not save approvals.");
-        });
-      });
     });
     document.querySelectorAll("[data-title-keyword-review-download]").forEach((button) => {
       button.addEventListener("click", downloadApprovals);

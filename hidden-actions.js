@@ -24,6 +24,7 @@
     "remove-collection-keyword": "Removing collection keyword from catalog metadata...",
     "update-photo-metadata": "Saving title and keyword metadata...",
     "queue-title-keyword-review": "Sending photo to title/keyword review...",
+    "queue-title-keyword-review-many": "Sending visible photos to title/keyword review...",
     "apply-title-keyword-review-approvals": "Saving title/keyword approvals and rejections...",
     "publish-hidden-blacklist": "Publishing master blacklist...",
     "wipe-hidden-r2": "Emptying waste basket",
@@ -453,9 +454,24 @@
     });
   };
 
-  const queueTitleKeywordReview = async (photoId) => {
+  const queueTitleKeywordReview = async (photoId, options = {}) => {
     if (!enabled || !photoId) return null;
-    return photoAction("queue-title-keyword-review", photoId);
+    return photoAction("queue-title-keyword-review", photoId, {
+      source: options.source,
+      requested_by: options.requestedBy || "owner",
+      context: options.context,
+    });
+  };
+
+  const queueTitleKeywordReviewMany = async (photoIds = [], options = {}) => {
+    const ids = normalize(photoIds);
+    if (!enabled || !ids.length) return null;
+    return photoAction("queue-title-keyword-review-many", ids[0], {
+      photo_ids: ids,
+      source: options.source,
+      requested_by: options.requestedBy || "owner",
+      context: options.context,
+    });
   };
 
   const syncCountryKeywords = async () => {
@@ -532,6 +548,7 @@
     setCountryAssignment,
     setCountryAssignments,
     queueTitleKeywordReview,
+    queueTitleKeywordReviewMany,
     syncFromPublishedBlacklist,
     syncCountryKeywords,
     undo,

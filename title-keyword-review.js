@@ -1492,12 +1492,12 @@ if (typeof window !== "undefined") {
         if (status) status.textContent = `${photoId} was marked blocked because it is not in the current catalog.`;
         return;
       }
-      const label = decision.rejection ? "Rejected and saved" : "Approved and applied";
+      const label = decision.rejection ? "Rejected and saved" : "Approved and exported";
       setRowStatus(card, label, "saved");
       if (status) {
         status.textContent = decision.rejection
           ? `${photoId} rejection saved to the review record.`
-          : `${photoId} approval applied to catalog metadata and saved to the review record.`;
+          : `${photoId} approval exported to catalog metadata and saved to the review record.`;
       }
     };
 
@@ -1564,7 +1564,7 @@ if (typeof window !== "undefined") {
             setRowStatus(card, "Not in catalog", "error", "Marked blocked in Owner state because the helper could not find this photo in the current catalog.");
             return;
           }
-          setRowStatus(card, decision.rejection ? "Rejected and saved" : "Approved and applied", "saved");
+          setRowStatus(card, decision.rejection ? "Rejected and saved" : "Approved and exported", "saved");
         });
       }
       const blockedResult = blockedTargets.length ? await saveBlockedTargets(blockedTargets) : null;
@@ -1736,7 +1736,7 @@ if (typeof window !== "undefined") {
         setRowStatus(card, "Saving...", "saving");
       });
       saveCardsDecisions(cards).then((result) => {
-        if (result && status) status.textContent = `${result.approvals || result.count || cards.length} approval${cards.length === 1 ? "" : "s"} applied.`;
+        if (result && status) status.textContent = `${result.approvals || result.count || cards.length} approval${cards.length === 1 ? "" : "s"} exported.`;
       }).catch((error) => {
         const message = error?.message || "Could not save approval.";
         cards.forEach((card) => setRowStatus(card, "Save failed", "error", message));
@@ -1906,7 +1906,7 @@ if (typeof window !== "undefined") {
       if (!result) return;
       const saveResult = result.result || result.blockedResult?.result || {};
       window.alert?.(
-        `Applied ${saveResult.applied_count || payload.approvals.length} approvals to catalog metadata files.\n` +
+        `Exported ${saveResult.applied_count || payload.approvals.length} approvals to catalog metadata files.\n` +
         `Saved ${result.rejections || payload.rejections.length} rejections for proposal rework.\n` +
         `Moved ${result.blocked || 0} photos to the Waste Basket.\n` +
         `Saved review record to ${saveResult.path || "assets/owner-actions/title-keyword-review-queue/"}.\n\n` +

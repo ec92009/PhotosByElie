@@ -34,6 +34,8 @@ TITLE_KEYWORD_STATE_FLAGS = {
     TITLE_KEYWORDS_PARKED_FLAG.casefold(),
     TITLE_KEYWORDS_REVIEWED_FLAG.casefold(),
 }
+TITLE_KEYWORD_APPROVED_STATES = {"approved", "applied"}
+TITLE_KEYWORD_ACTIVE_REVIEW_STATES = {"proposed", "rejected"}
 
 
 def now_iso() -> str:
@@ -144,6 +146,10 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
           rework_priority          INTEGER NOT NULL DEFAULT 0 CHECK (rework_priority IN (0, 1)),
           rejected_count           INTEGER NOT NULL DEFAULT 0 CHECK (rejected_count >= 0),
           owner_comment            TEXT,
+          review_requested_at      TEXT,
+          review_requested_by      TEXT,
+          review_request_source    TEXT,
+          review_request_context   TEXT,
           updated_at               TEXT,
           FOREIGN KEY (first_proposed_batch_id) REFERENCES title_keyword_batches(batch_id),
           FOREIGN KEY (latest_proposed_batch_id) REFERENCES title_keyword_batches(batch_id)
@@ -247,6 +253,15 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         "model_ladder": "ALTER TABLE title_keyword_proposals ADD COLUMN model_ladder TEXT",
     }.items():
         existing = {row["name"] for row in conn.execute("PRAGMA table_info(title_keyword_proposals)")}
+        if column not in existing:
+            conn.execute(ddl)
+    for column, ddl in {
+        "review_requested_at": "ALTER TABLE title_keyword_queue ADD COLUMN review_requested_at TEXT",
+        "review_requested_by": "ALTER TABLE title_keyword_queue ADD COLUMN review_requested_by TEXT",
+        "review_request_source": "ALTER TABLE title_keyword_queue ADD COLUMN review_request_source TEXT",
+        "review_request_context": "ALTER TABLE title_keyword_queue ADD COLUMN review_request_context TEXT",
+    }.items():
+        existing = {row["name"] for row in conn.execute("PRAGMA table_info(title_keyword_queue)")}
         if column not in existing:
             conn.execute(ddl)
     conn.execute(
@@ -1311,18 +1326,35 @@ def _upsert_queue(
     rework_priority: bool = False,
     rejected_count: int = 0,
     owner_comment: str = "",
+    review_requested_at: str = "",
+    review_requested_by: str = "",
+    review_request_source: str = "",
+    review_request_context: Any = None,
+    allow_approved_reentry: bool = False,
 ) -> None:
     existing = conn.execute("SELECT * FROM title_keyword_queue WHERE media_id = ?", (media_id,)).fetchone()
+    if (
+        existing
+        and str(existing["review_state"] or "") in TITLE_KEYWORD_APPROVED_STATES
+        and review_state in TITLE_KEYWORD_ACTIVE_REVIEW_STATES
+        and not allow_approved_reentry
+    ):
+        return
     first_batch = existing["first_proposed_batch_id"] if existing else batch_id
     first_at = existing["first_proposed_at"] if existing else proposed_at
+    if isinstance(review_request_context, (dict, list)):
+        review_request_context_text = json.dumps(review_request_context, ensure_ascii=False, sort_keys=True)
+    else:
+        review_request_context_text = str(review_request_context or "").strip()
     conn.execute(
         """
         INSERT INTO title_keyword_queue (
           media_id, review_state, latest_attempt, first_proposed_batch_id,
           latest_proposed_batch_id, first_proposed_at, latest_proposed_at,
           reviewed_at, applied_at, rework_priority, rejected_count,
-          owner_comment, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          owner_comment, review_requested_at, review_requested_by,
+          review_request_source, review_request_context, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(media_id) DO UPDATE SET
           review_state = CASE
             WHEN title_keyword_queue.review_state = 'parked' AND excluded.review_state = 'rejected' THEN 'parked'
@@ -1331,14 +1363,36 @@ def _upsert_queue(
           latest_attempt = max(title_keyword_queue.latest_attempt, excluded.latest_attempt),
           latest_proposed_batch_id = COALESCE(NULLIF(excluded.latest_proposed_batch_id, ''), title_keyword_queue.latest_proposed_batch_id),
           latest_proposed_at = COALESCE(NULLIF(excluded.latest_proposed_at, ''), title_keyword_queue.latest_proposed_at),
-          reviewed_at = COALESCE(NULLIF(excluded.reviewed_at, ''), title_keyword_queue.reviewed_at),
-          applied_at = COALESCE(NULLIF(excluded.applied_at, ''), title_keyword_queue.applied_at),
+          reviewed_at = CASE
+            WHEN excluded.review_state = 'proposed' THEN NULL
+            ELSE COALESCE(NULLIF(excluded.reviewed_at, ''), title_keyword_queue.reviewed_at)
+          END,
+          applied_at = CASE
+            WHEN excluded.review_state = 'proposed' THEN NULL
+            ELSE COALESCE(NULLIF(excluded.applied_at, ''), title_keyword_queue.applied_at)
+          END,
           rework_priority = CASE
             WHEN title_keyword_queue.review_state = 'parked' AND excluded.review_state = 'rejected' THEN 0
             ELSE excluded.rework_priority
           END,
           rejected_count = max(title_keyword_queue.rejected_count, excluded.rejected_count),
           owner_comment = COALESCE(NULLIF(excluded.owner_comment, ''), title_keyword_queue.owner_comment),
+          review_requested_at = CASE
+            WHEN NULLIF(excluded.review_requested_at, '') IS NOT NULL THEN excluded.review_requested_at
+            ELSE title_keyword_queue.review_requested_at
+          END,
+          review_requested_by = CASE
+            WHEN NULLIF(excluded.review_requested_by, '') IS NOT NULL THEN excluded.review_requested_by
+            ELSE title_keyword_queue.review_requested_by
+          END,
+          review_request_source = CASE
+            WHEN NULLIF(excluded.review_request_source, '') IS NOT NULL THEN excluded.review_request_source
+            ELSE title_keyword_queue.review_request_source
+          END,
+          review_request_context = CASE
+            WHEN NULLIF(excluded.review_request_context, '') IS NOT NULL THEN excluded.review_request_context
+            ELSE title_keyword_queue.review_request_context
+          END,
           updated_at = excluded.updated_at
         """,
         (
@@ -1354,6 +1408,10 @@ def _upsert_queue(
             1 if rework_priority else 0,
             max(0, int(rejected_count or 0)),
             owner_comment or "",
+            review_requested_at or "",
+            review_requested_by or "",
+            review_request_source or "",
+            review_request_context_text,
             now_iso(),
         ),
     )
@@ -1404,6 +1462,12 @@ def _import_batch(conn: sqlite3.Connection, payload: dict[str, Any], relative_pa
             continue
         media_id = str(item.get("photo_id") or item.get("photoId") or "").strip()
         if not media_id:
+            continue
+        existing_queue = conn.execute(
+            "SELECT review_state FROM title_keyword_queue WHERE media_id = ?",
+            (media_id,),
+        ).fetchone()
+        if existing_queue and str(existing_queue["review_state"] or "") in TITLE_KEYWORD_APPROVED_STATES:
             continue
         state = item.get("state") if isinstance(item.get("state"), dict) else {}
         attempt = int(state.get("proposal_attempt") or _latest_attempt(conn, media_id) or 1)
@@ -1599,7 +1663,15 @@ def _catalog_title_keyword_metadata(repo_root: Path, media_id: str) -> dict[str,
         catalog_conn.close()
 
 
-def queue_title_keyword_review_photo(repo_root: Path, media_id: str, db_path: Path | None = None) -> dict[str, Any]:
+def queue_title_keyword_review_photo(
+    repo_root: Path,
+    media_id: str,
+    db_path: Path | None = None,
+    *,
+    requested_by: str = "owner",
+    source: str = "owner-gallery-r",
+    context: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Queue a catalog photo for manual title/keyword review from Owner mode."""
     media_id = str(media_id or "").strip()
     if not media_id:
@@ -1608,6 +1680,15 @@ def queue_title_keyword_review_photo(repo_root: Path, media_id: str, db_path: Pa
     conn = connect(repo_root, db_path)
     proposed_at = now_iso()
     batch_id = f"manual-title-keyword-review-{proposed_at[:10]}"
+    requested_by = str(requested_by or "owner").strip() or "owner"
+    source = str(source or "owner-gallery-r").strip() or "owner-gallery-r"
+    context_payload = {
+        **(context if isinstance(context, dict) else {}),
+        "source": source,
+        "requested_by": requested_by,
+        "requested_at": proposed_at,
+    }
+    owner_note = f"Queued for Owner re-review from {source}."
     try:
         existing_queue = conn.execute(
             """
@@ -1631,6 +1712,8 @@ def queue_title_keyword_review_photo(repo_root: Path, media_id: str, db_path: Pa
                     "attempt": attempt,
                     "queued": False,
                     "already_pending": True,
+                    "review_request_source": source,
+                    "review_request_context": context_payload,
                     "title": catalog["title"],
                     "keywords": catalog["keywords"],
                 }
@@ -1712,14 +1795,14 @@ def queue_title_keyword_review_photo(repo_root: Path, media_id: str, db_path: Pa
                 "manual-owner-review",
                 "medium",
                 0,
-                "Queued from Owner mode with the R shortcut.",
+                owner_note,
                 json.dumps(removed_blacklisted, ensure_ascii=False),
                 None,
                 None,
-                "manual-owner-shortcut",
+                source,
                 None,
                 0,
-                json.dumps(["manual-owner-shortcut"], ensure_ascii=False),
+                json.dumps([source], ensure_ascii=False),
                 proposed_at,
             ),
         )
@@ -1732,7 +1815,12 @@ def queue_title_keyword_review_photo(repo_root: Path, media_id: str, db_path: Pa
             proposed_at=proposed_at,
             rework_priority=False,
             rejected_count=int(existing_queue["rejected_count"] or 0) if existing_queue else 0,
-            owner_comment="Queued from Owner mode.",
+            owner_comment=owner_note,
+            review_requested_at=proposed_at,
+            review_requested_by=requested_by,
+            review_request_source=source,
+            review_request_context=context_payload,
+            allow_approved_reentry=True,
         )
         conn.execute(
             """
@@ -1745,10 +1833,25 @@ def queue_title_keyword_review_photo(repo_root: Path, media_id: str, db_path: Pa
                 applied_at = NULL,
                 rework_priority = 0,
                 owner_comment = ?,
+                review_requested_at = ?,
+                review_requested_by = ?,
+                review_request_source = ?,
+                review_request_context = ?,
                 updated_at = ?
             WHERE media_id = ?
             """,
-            (attempt, batch_id, proposed_at, "Queued from Owner mode.", proposed_at, media_id),
+            (
+                attempt,
+                batch_id,
+                proposed_at,
+                owner_note,
+                proposed_at,
+                requested_by,
+                source,
+                json.dumps(context_payload, ensure_ascii=False, sort_keys=True),
+                proposed_at,
+                media_id,
+            ),
         )
         pending_count = int(conn.execute(
             """
@@ -1781,11 +1884,78 @@ def queue_title_keyword_review_photo(repo_root: Path, media_id: str, db_path: Pa
             "queued": True,
             "already_pending": False,
             "pending_count": pending_count,
+            "review_requested_at": proposed_at,
+            "review_requested_by": requested_by,
+            "review_request_source": source,
+            "review_request_context": context_payload,
             "title": catalog["title"],
             "keywords": review_keywords,
         }
     finally:
         conn.close()
+
+
+def queue_title_keyword_review_photos(
+    repo_root: Path,
+    media_ids: Iterable[str],
+    db_path: Path | None = None,
+    *,
+    requested_by: str = "owner",
+    source: str = "owner-gallery-review-all-visible",
+    context: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Queue multiple catalog photos for explicit Owner title/keyword re-review."""
+    normalized_ids: list[str] = []
+    seen: set[str] = set()
+    for media_id in media_ids:
+        clean_id = str(media_id or "").strip()
+        if not clean_id or clean_id in seen:
+            continue
+        seen.add(clean_id)
+        normalized_ids.append(clean_id)
+    if not normalized_ids:
+        raise ValueError("media_ids must include at least one photo id")
+    operation_id = str((context or {}).get("operation_id") or uuid.uuid4())
+    batch_context = {
+        **(context if isinstance(context, dict) else {}),
+        "operation_id": operation_id,
+        "affected_count": len(normalized_ids),
+    }
+    queued = 0
+    already_pending = 0
+    failed: list[dict[str, str]] = []
+    batch_ids: set[str] = set()
+    for media_id in normalized_ids:
+        try:
+            result = queue_title_keyword_review_photo(
+                repo_root,
+                media_id,
+                db_path,
+                requested_by=requested_by,
+                source=source,
+                context=batch_context,
+            )
+        except Exception as error:  # noqa: BLE001 - caller needs per-row failures in the local helper response.
+            failed.append({"photo_id": media_id, "error": str(error)})
+            continue
+        if result.get("queued"):
+            queued += 1
+        if result.get("already_pending"):
+            already_pending += 1
+        if result.get("batch_id"):
+            batch_ids.add(str(result["batch_id"]))
+    return {
+        "db": (db_path or DEFAULT_DB).as_posix(),
+        "requested_count": len(normalized_ids),
+        "queued_count": queued,
+        "already_pending_count": already_pending,
+        "failed_count": len(failed),
+        "failed": failed,
+        "batch_ids": sorted(batch_ids),
+        "operation_id": operation_id,
+        "review_request_source": source,
+        "review_request_context": batch_context,
+    }
 
 
 def repair_title_keyword_proposal_keywords(repo_root: Path, db_path: Path | None = None) -> dict[str, Any]:
@@ -1990,7 +2160,7 @@ def mark_title_keyword_reviewed_file(repo_root: Path, rows_file: Path, db_path: 
             _upsert_queue(
                 conn,
                 media_id=media_id,
-                review_state="applied",
+                review_state="approved",
                 latest_attempt=attempt,
                 batch_id=batch_id,
                 proposed_at=timestamp,
@@ -2102,7 +2272,7 @@ def record_title_keyword_review_decisions(
             elif state == "not_found":
                 queue_state = "blocked"
             else:
-                queue_state = "applied" if state == "accepted" and applied_at else ("approved" if state == "accepted" else state)
+                queue_state = "approved" if state == "accepted" else state
             _upsert_queue(
                 conn,
                 media_id=media_id,
@@ -2245,12 +2415,21 @@ def title_keyword_review_counts(repo_root: Path, db_path: Path | None = None) ->
             GROUP BY review_state, rework_priority
             """
         ).fetchall()
-        counts = {"accepted": 0, "submitted_unchecked": 0, "rejected": 0, "parked": 0, "blocked": 0}
+        counts = {
+            "accepted": 0,
+            "approved": 0,
+            "submitted_unchecked": 0,
+            "rejected": 0,
+            "parked": 0,
+            "blocked": 0,
+        }
         for row in rows:
             state = row["review_state"]
             count = int(row["count"])
-            if state in {"approved", "applied"}:
-                counts["accepted"] += count
+            if state in TITLE_KEYWORD_APPROVED_STATES:
+                counts["approved"] += count
+            elif state == "proposed" and row["rework_priority"]:
+                counts["rejected"] += count
             elif state == "proposed":
                 counts["submitted_unchecked"] += count
             elif state == "parked":
@@ -2312,6 +2491,10 @@ def title_keyword_generator_state(
                 "latest_proposal_keywords": _split_keyword_text(row["latest_proposal_keywords"] or ""),
                 "latest_proposal_status": row["latest_proposal_status"] or "",
                 "latest_proposal_reason": row["latest_proposal_reason"] or "",
+                "review_requested_at": row["review_requested_at"] or "",
+                "review_requested_by": row["review_requested_by"] or "",
+                "review_request_source": row["review_request_source"] or "",
+                "review_request_context": _read_json_text(row["review_request_context"] or "", {}),
                 "state_tags": _title_keyword_state_tags(str(row["review_state"] or ""), bool(row["rework_priority"])),
             })
         counts = title_keyword_review_counts(repo_root, db_path)
@@ -2608,7 +2791,8 @@ def main() -> None:
         counts = title_keyword_review_counts(repo_root, args.db)
         print(
             "Owner review counts: "
-            f"accepted {counts['accepted']} / "
+            f"active {counts['submitted_unchecked'] + counts['rejected']} / "
+            f"approved {counts['approved']} / "
             f"submitted-unchecked {counts['submitted_unchecked']} / "
             f"rejected {counts['rejected']} / "
             f"parked {counts['parked']}"

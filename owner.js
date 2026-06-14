@@ -490,7 +490,7 @@
         ? ` Updated ${generatedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}.`
         : "";
       visibilityNoteRoot.textContent = summary
-        ? `Limbo excludes Waste Basket, parked, approved, and already-applied rows.${stamp}`
+        ? `Limbo excludes Waste Basket, parked, approved, and already-exported rows.${stamp}`
         : "Visibility state requires the localhost Owner helper.";
     }
   };

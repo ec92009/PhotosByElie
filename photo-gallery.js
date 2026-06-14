@@ -102,6 +102,7 @@ const defaultFilterState = {
 const persistedFilterKeys = ["orientation", "minSize", "mood", "subject", "mediaType", "dateFrom", "dateTo"];
 let filterBar = null;
 let filterToggle = null;
+let reviewVisibleButton = null;
 let ownerSuperSearchIndex = new Map();
 let ownerSuperSearchPromise = null;
 
@@ -312,6 +313,99 @@ const matchesFilterState = (photo) => photoFilter.matchesPhoto(photo, filterStat
 const sortPhotos = (photos) => photoFilter.sortItems(photos, filterState, filterContext());
 const filteredVisiblePhotos = (photos = visiblePhotos()) => sortPhotos(photos.filter(matchesFilterState));
 
+const ownerReviewFilterContext = (visibleItems = renderedGalleryPhotos, filteredItems = filteredVisiblePhotos()) => ({
+  view: isSelectionGallery ? "search-gallery" : "gallery",
+  collection_key: galleryKey,
+  collection_title: localizedCollectionTitle(),
+  filter_state: { ...filterState },
+  active_filter_count: activeFilterCount(),
+  query: String(filterState.query || ""),
+  visible_count: visibleItems.length,
+  filtered_total_count: filteredItems.length,
+  visible_limit: visibleLimit >= filteredItems.length ? "all" : visibleLimit,
+  url: window.location.pathname + window.location.search,
+});
+
+const uniquePhotoIds = (photos = []) => {
+  const seen = new Set();
+  const ids = [];
+  for (const photo of photos) {
+    const photoId = String(photo?.id || "").trim();
+    if (!photoId || seen.has(photoId)) continue;
+    seen.add(photoId);
+    ids.push(photoId);
+  }
+  return ids;
+};
+
+const reviewQueueResultText = (result, requestedCount) => {
+  const queued = Number(result?.queued_count ?? (result?.queued ? 1 : 0)) || 0;
+  const already = Number(result?.already_pending_count ?? (result?.already_pending ? 1 : 0)) || 0;
+  const failed = Number(result?.failed_count || 0) || 0;
+  if (requestedCount === 1 && already) return "Already in title/keyword review.";
+  if (requestedCount === 1 && queued) return "Sent to title/keyword review.";
+  const parts = [`${queued.toLocaleString()} queued`];
+  if (already) parts.push(`${already.toLocaleString()} already pending`);
+  if (failed) parts.push(`${failed.toLocaleString()} failed`);
+  return `${parts.join("; ")} for title/keyword review.`;
+};
+
+const queuePhotoForTitleKeywordReview = async (photo, source = "owner-gallery-r") => {
+  if (!photo?.id) return null;
+  if (!hiddenActions?.queueTitleKeywordReview) {
+    throw new Error("Refresh Owner mode to load title/keyword review queueing.");
+  }
+  return hiddenActions.queueTitleKeywordReview(photo.id, {
+    source,
+    requestedBy: "owner",
+    context: {
+      ...ownerReviewFilterContext([photo]),
+      photo_id: photo.id,
+    },
+  });
+};
+
+const queueVisiblePhotosForTitleKeywordReview = async () => {
+  const visibleItems = [...renderedGalleryPhotos];
+  const ids = uniquePhotoIds(visibleItems);
+  if (!ids.length) {
+    setGalleryStatus("No visible photos to send to title/keyword review.");
+    return;
+  }
+  if (!hiddenActions?.queueTitleKeywordReviewMany) {
+    throw new Error("Refresh Owner mode to load batch title/keyword review queueing.");
+  }
+  const filteredItems = filteredVisiblePhotos();
+  const message = [
+    `Send ${ids.length.toLocaleString()} visible media ${ids.length === 1 ? "item" : "items"} to title/keyword review?`,
+    "",
+    `Current filtered result set: ${filteredItems.length.toLocaleString()} ${filteredItems.length === 1 ? "item" : "items"}.`,
+  ].join("\n");
+  if (!window.confirm(message)) {
+    setGalleryStatus("Review all visible canceled.");
+    return;
+  }
+  const result = await hiddenActions.queueTitleKeywordReviewMany(ids, {
+    source: "owner-gallery-review-all-visible",
+    requestedBy: "owner",
+    context: ownerReviewFilterContext(visibleItems, filteredItems),
+  });
+  setGalleryStatus(reviewQueueResultText(result, ids.length));
+};
+
+const syncReviewVisibleButton = (visibleItems = renderedGalleryPhotos, filteredTotal = null) => {
+  if (!reviewVisibleButton) return;
+  const count = uniquePhotoIds(visibleItems).length;
+  reviewVisibleButton.disabled = count <= 0;
+  reviewVisibleButton.textContent = count > 0
+    ? `Review all visible (${count.toLocaleString()})`
+    : "Review all visible";
+  const total = Number(filteredTotal ?? count) || 0;
+  reviewVisibleButton.title = count > 0
+    ? `Send ${count.toLocaleString()} visible of ${total.toLocaleString()} filtered media items to title/keyword review`
+    : "No visible media items to review";
+};
+
 const loadOwnerSuperSearchIndex = () => {
   if (!localModerationEnabled) return Promise.resolve(ownerSuperSearchIndex);
   if (ownerSuperSearchPromise) return ownerSuperSearchPromise;
@@ -442,6 +536,7 @@ const ensureGalleryFilterControls = () => {
       <option value="price-asc" data-i18n="gallery.lowest_price">Lowest price</option>
     </select></label>
     <button class="btn secondary gallery-filter-clear" type="button" data-clear-gallery-filters data-i18n="gallery.clear">Clear</button>
+    ${localModerationEnabled ? `<button class="btn secondary gallery-filter-review-visible" type="button" data-owner-review-visible disabled>Review all visible</button>` : ""}
   `;
   if (galleryActions && isSelectionGallery) {
     galleryActions.after(filterBar);
@@ -500,6 +595,14 @@ const ensureGalleryFilterControls = () => {
     visibleLimit = pageSize;
     selectedIndex = 0;
     renderGallery();
+  });
+  reviewVisibleButton = filterBar.querySelector("[data-owner-review-visible]");
+  reviewVisibleButton?.addEventListener("click", async () => {
+    try {
+      await queueVisiblePhotosForTitleKeywordReview();
+    } catch (error) {
+      setGalleryStatus(error?.message || "Could not send visible photos to title/keyword review.");
+    }
   });
 };
 
@@ -983,6 +1086,7 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
     if (moreButton) moreButton.hidden = true;
     if (moreDoubleButton) moreDoubleButton.hidden = true;
     if (showAllButton) showAllButton.hidden = true;
+    syncReviewVisibleButton([], 0);
     setGalleryStatus("");
     return;
   }
@@ -1019,6 +1123,7 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
     if (moreButton) moreButton.hidden = true;
     if (moreDoubleButton) moreDoubleButton.hidden = true;
     if (showAllButton) showAllButton.hidden = true;
+    syncReviewVisibleButton([], photos.length);
     setGalleryStatus(filteredOut
       ? t("gallery.adjust_filters")
       : "");
@@ -1119,6 +1224,7 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
     showAllButton.hidden = remaining <= 0;
     showAllButton.textContent = seeAllLabel(remaining);
   }
+  syncReviewVisibleButton(visibleSubset, photos.length);
   const paginated = photos.length > visibleSubset.length;
   const mediaNoun = photoFilter.statusNoun(filterState, t);
   const filterStatus = activeFilterCount() || paginated
@@ -1322,13 +1428,8 @@ if (galleryRoot && gallery) {
         const selected = photos[selectedIndex];
         if (!selected) return;
         try {
-          if (!hiddenActions.queueTitleKeywordReview) {
-            throw new Error("Refresh Owner mode to load title/keyword review queueing.");
-          }
-          const result = await hiddenActions.queueTitleKeywordReview(selected.id);
-          setGalleryStatus(result?.already_pending
-            ? `${selected.title} is already in title/keyword review.`
-            : `${selected.title} sent to title/keyword review.`);
+          const result = await queuePhotoForTitleKeywordReview(selected, "owner-gallery-r");
+          setGalleryStatus(`${selected.title}: ${reviewQueueResultText(result, 1)}`);
         } catch (error) {
           setGalleryStatus(error?.message || "Could not send photo to title/keyword review.");
         }

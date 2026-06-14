@@ -252,6 +252,7 @@ from owner_state_db import record_media_lifecycle_discarded as record_media_life
 from owner_state_db import record_media_lifecycle_hidden as record_media_lifecycle_hidden_db  # noqa: E402
 from owner_state_db import clear_title_keyword_review_blocks as clear_title_keyword_review_blocks_db  # noqa: E402
 from owner_state_db import queue_title_keyword_review_photo as queue_title_keyword_review_photo_db  # noqa: E402
+from owner_state_db import queue_title_keyword_review_photos as queue_title_keyword_review_photos_db  # noqa: E402
 from owner_state_db import record_title_keyword_review_decisions as record_title_keyword_review_decisions_db  # noqa: E402
 
 
@@ -1756,8 +1757,8 @@ def owner_visibility_summary(repo_root: Path) -> dict:
         "generatedAt": datetime.now(timezone.utc).isoformat(),
         "definitions": {
             "publicApplied": "Rows exported to assets/catalog/photosbyelie.sqlite and visible to end users.",
-            "r2ReadyLimbo": "Photos with both public R2 preview objects present, but not public, approved, applied, parked, or blocked.",
-            "approvedNotApplied": "Owner-approved rows that have not yet been applied/exported to the public catalog.",
+            "r2ReadyLimbo": "Photos with both public R2 preview objects present, but not public, approved, exported, parked, or blocked.",
+            "approvedNotApplied": "Owner-approved rows that have not yet been exported to the public catalog.",
         },
         "publicApplied": {
             "count": len(public_ids),
@@ -1850,7 +1851,7 @@ def _pending_title_keyword_batches(conn) -> list[dict]:
                MIN(latest_proposed_at) AS first_proposed_at,
                MAX(latest_proposed_at) AS last_proposed_at
         FROM title_keyword_queue
-        WHERE review_state IN ('proposed', 'approved')
+        WHERE review_state = 'proposed'
         GROUP BY COALESCE(latest_proposed_batch_id, '')
         HAVING batch_id <> ''
         ORDER BY last_proposed_at DESC, batch_id DESC
@@ -1959,7 +1960,7 @@ def _pending_title_keyword_rows(conn, batch_id: str) -> list[dict]:
         JOIN title_keyword_proposals AS p
           ON p.media_id = q.media_id
          AND p.attempt = q.latest_attempt
-        WHERE q.review_state IN ('proposed', 'approved')
+        WHERE q.review_state = 'proposed'
           AND q.latest_proposed_batch_id = ?
         ORDER BY q.latest_proposed_at DESC, q.media_id
         """,
@@ -2604,7 +2605,7 @@ def _title_keyword_backlog_photo(catalog: dict, batch_id: str, review_state: str
             "keywords": current_keywords,
             "status": "metadata_baseline",
             "confidence": "medium",
-            "reason": "Current local metadata is incomplete because it is not yet applied for public visibility.",
+            "reason": "Current local metadata is incomplete because it is not yet approved/exported for public visibility.",
             "generator": {
                 "model": "metadata-baseline-v1",
                 "model_level": 0,
@@ -7061,6 +7062,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         "remove-collection-keyword",
         "update-photo-metadata",
         "queue-title-keyword-review",
+        "queue-title-keyword-review-many",
         "apply-title-keyword-review-approvals",
         "publish-hidden-blacklist",
         "wipe-hidden-r2",
@@ -7072,6 +7074,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
     if action not in {
         "assign-country",
         "hide-many",
+        "queue-title-keyword-review-many",
         "sync-country-keywords",
         "remove-collection-keyword",
         "publish-hidden-blacklist",
@@ -7089,6 +7092,10 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         if not photo_ids:
             raise ValueError("photo_ids must include at least one photo id")
     if action == "hide-many":
+        photo_ids = _normalized_photo_ids(payload.get("photo_ids"))
+        if not photo_ids:
+            raise ValueError("photo_ids must include at least one photo id")
+    if action == "queue-title-keyword-review-many":
         photo_ids = _normalized_photo_ids(payload.get("photo_ids"))
         if not photo_ids:
             raise ValueError("photo_ids must include at least one photo id")
@@ -7224,7 +7231,29 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         return _save_keyword_blacklist(repo_root, payload)
 
     if action == "queue-title-keyword-review":
-        queue_result = queue_title_keyword_review_photo_db(repo_root, photo_id)
+        queue_result = queue_title_keyword_review_photo_db(
+            repo_root,
+            photo_id,
+            requested_by=str(payload.get("requested_by") or "owner"),
+            source=str(payload.get("source") or "owner-gallery-r"),
+            context=payload.get("context") if isinstance(payload.get("context"), dict) else {},
+        )
+        return {
+            "ok": True,
+            "action": action,
+            **queue_result,
+            "review_url": "./owner-review.html?view=title-keywords",
+        }
+
+    if action == "queue-title-keyword-review-many":
+        photo_ids = _normalized_photo_ids(payload.get("photo_ids"))
+        queue_result = queue_title_keyword_review_photos_db(
+            repo_root,
+            photo_ids,
+            requested_by=str(payload.get("requested_by") or "owner"),
+            source=str(payload.get("source") or "owner-gallery-review-all-visible"),
+            context=payload.get("context") if isinstance(payload.get("context"), dict) else {},
+        )
         return {
             "ok": True,
             "action": action,

@@ -1,4 +1,5 @@
 import copy
+import json
 import sqlite3
 import sys
 import tempfile
@@ -9,6 +10,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import local_server
+import owner_state_db
 
 
 @contextmanager
@@ -52,6 +54,300 @@ def patched_server_state(state, fallback_photo):
 
 
 class TitleReviewUndoTests(unittest.TestCase):
+    def _seed_title_keyword_row(self, conn, media_id, state="proposed", batch_id="batch-review-test", attempt=1, applied_at=""):
+        timestamp = "2026-06-14T08:00:00Z"
+        owner_state_db._upsert_batch(
+            conn,
+            {
+                "batch_id": batch_id,
+                "generated_at": timestamp,
+                "selection": {"total_count": 1, "ordinary_new_count": 1, "rework_count": 0},
+            },
+            "unit-test",
+        )
+        owner_state_db._ensure_placeholder_proposal(
+            conn,
+            media_id,
+            attempt,
+            batch_id,
+            timestamp,
+            f"{media_id} Title",
+            ["France", "Travel"],
+            "unit-test-proposal",
+        )
+        if state in {"approved", "applied"}:
+            conn.execute(
+                """
+                INSERT INTO title_keyword_decisions
+                  (media_id, attempt, decision_state, decided_title, decided_keywords, owner_comment, decided_at, applied_at)
+                VALUES (?, ?, 'accepted', ?, ?, 'accepted in unit test', ?, ?)
+                ON CONFLICT(media_id, attempt) DO UPDATE SET
+                  decision_state = excluded.decision_state,
+                  decided_title = excluded.decided_title,
+                  decided_keywords = excluded.decided_keywords,
+                  owner_comment = excluded.owner_comment,
+                  decided_at = excluded.decided_at,
+                  applied_at = excluded.applied_at
+                """,
+                (media_id, attempt, f"{media_id} Title", "France, Travel", timestamp, applied_at or timestamp),
+            )
+        owner_state_db._upsert_queue(
+            conn,
+            media_id=media_id,
+            review_state=state,
+            latest_attempt=attempt,
+            batch_id=batch_id,
+            proposed_at=timestamp,
+            reviewed_at=timestamp if state in {"approved", "applied"} else "",
+            applied_at=applied_at,
+            rework_priority=False,
+            rejected_count=0,
+            owner_comment="seeded for unit test",
+        )
+
+    def _write_catalog_db(self, repo_root, rows):
+        catalog_path = repo_root / "assets/catalog/photosbyelie.sqlite"
+        catalog_path.parent.mkdir(parents=True, exist_ok=True)
+        conn = sqlite3.connect(catalog_path)
+        try:
+            conn.executescript(
+                """
+                CREATE TABLE keyword_terms (keyword_id INTEGER PRIMARY KEY, keyword TEXT NOT NULL);
+                CREATE TABLE media_items (
+                  media_id TEXT PRIMARY KEY,
+                  title TEXT,
+                  keyword_ids TEXT,
+                  captured_at TEXT
+                );
+                """
+            )
+            conn.executemany(
+                "INSERT INTO keyword_terms(keyword_id, keyword) VALUES (?, ?)",
+                [(1, "France"), (2, "Travel"), (3, "Architecture")],
+            )
+            conn.executemany(
+                "INSERT INTO media_items(media_id, title, keyword_ids, captured_at) VALUES (?, ?, ?, ?)",
+                [(media_id, title, "1,2,3", captured_at) for media_id, title, captured_at in rows],
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+    def _write_import_manifest(self, repo_root, media_ids):
+        manifest_path = repo_root / local_server.IMPORT_CACHE_MANIFEST_PATH
+        manifest_path.parent.mkdir(parents=True, exist_ok=True)
+        photos = [
+            {
+                "id": media_id,
+                "owner_title": f"{media_id} Title",
+                "keywords": ["France", "Travel"],
+                "gallery_key": "france",
+                "capture": {"sort": "2026-06-14T08:00:00"},
+                "source_file": {"path": f"Camera/{media_id}.jpg", "name": f"{media_id}.jpg"},
+                "media_type": "photo",
+                "media": {"publicPreview": {"allowed": True}},
+            }
+            for media_id in media_ids
+        ]
+        manifest_path.write_text(json.dumps({"photos": photos}), encoding="utf-8")
+
+    def test_review_queue_and_counts_exclude_approved_rows(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            self._write_import_manifest(repo_root, ["pending-photo", "approved-photo", "applied-photo"])
+            conn = owner_state_db.connect(repo_root)
+            try:
+                self._seed_title_keyword_row(conn, "pending-photo", "proposed")
+                self._seed_title_keyword_row(conn, "approved-photo", "approved", applied_at="2026-06-14T08:01:00Z")
+                self._seed_title_keyword_row(conn, "applied-photo", "applied", applied_at="2026-06-14T08:02:00Z")
+                conn.commit()
+            finally:
+                conn.close()
+
+            payload = local_server.title_keyword_review_queue_payload(repo_root)
+            queued_ids = [item["photo_id"] for item in payload["photos"]]
+            self.assertEqual(queued_ids, ["pending-photo"])
+            self.assertEqual(payload["selection"]["sqlite_pending_count"], 1)
+
+            counts = owner_state_db.title_keyword_review_counts(repo_root)
+            self.assertEqual(counts["submitted_unchecked"], 1)
+            self.assertEqual(counts["rejected"], 0)
+            self.assertEqual(counts["approved"], 2)
+            self.assertEqual(counts["accepted"], 0)
+
+    def test_batch_import_cannot_pull_approved_rows_back_into_review(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            queue_root = repo_root / local_server.TITLE_KEYWORD_REVIEW_ROOT
+            queue_root.mkdir(parents=True)
+            batch_path = queue_root / "batch-regenerated.json"
+            batch_path.write_text(json.dumps({
+                "batch_id": "regenerated",
+                "generated_at": "2026-06-14T09:00:00Z",
+                "photos": [
+                    {
+                        "photo_id": "approved-photo",
+                        "state": {"proposal_attempt": 2},
+                        "current": {"title": "Approved Title", "keywords": ["France"]},
+                        "proposed": {"title": "Regenerated Title", "keywords": ["France", "Travel"]},
+                    }
+                ],
+            }), encoding="utf-8")
+            conn = owner_state_db.connect(repo_root)
+            try:
+                self._seed_title_keyword_row(conn, "approved-photo", "approved", applied_at="2026-06-14T08:01:00Z")
+                conn.commit()
+            finally:
+                conn.close()
+
+            owner_state_db.import_title_keyword_batch_file(repo_root, batch_path)
+
+            conn = sqlite3.connect(repo_root / "assets/owner-actions/Owner.sqlite")
+            conn.row_factory = sqlite3.Row
+            try:
+                queue = conn.execute(
+                    "SELECT review_state, latest_attempt, applied_at FROM title_keyword_queue WHERE media_id = ?",
+                    ("approved-photo",),
+                ).fetchone()
+                self.assertEqual(queue["review_state"], "approved")
+                self.assertEqual(queue["latest_attempt"], 1)
+                self.assertEqual(queue["applied_at"], "2026-06-14T08:01:00Z")
+                regenerated = conn.execute(
+                    "SELECT count(*) AS count FROM title_keyword_proposals WHERE media_id = ? AND batch_id = ?",
+                    ("approved-photo", "regenerated"),
+                ).fetchone()
+                self.assertEqual(regenerated["count"], 0)
+            finally:
+                conn.close()
+
+    def test_gallery_r_requeues_approved_photo_with_provenance_without_losing_acceptance(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            self._write_catalog_db(repo_root, [("approved-photo", "Approved Title", "2026-06-14T08:00:00")])
+            conn = owner_state_db.connect(repo_root)
+            try:
+                self._seed_title_keyword_row(conn, "approved-photo", "approved", applied_at="2026-06-14T08:01:00Z")
+                conn.commit()
+            finally:
+                conn.close()
+
+            result = owner_state_db.queue_title_keyword_review_photo(
+                repo_root,
+                "approved-photo",
+                source="owner-gallery-r",
+                context={"view": "gallery", "visible_count": 1, "filtered_total_count": 1},
+            )
+            self.assertTrue(result["queued"])
+
+            conn = sqlite3.connect(repo_root / "assets/owner-actions/Owner.sqlite")
+            conn.row_factory = sqlite3.Row
+            try:
+                queue = conn.execute(
+                    """
+                    SELECT review_state, latest_attempt, applied_at, review_request_source,
+                           review_request_context
+                    FROM title_keyword_queue
+                    WHERE media_id = ?
+                    """,
+                    ("approved-photo",),
+                ).fetchone()
+                self.assertEqual(queue["review_state"], "proposed")
+                self.assertEqual(queue["latest_attempt"], 2)
+                self.assertIsNone(queue["applied_at"])
+                self.assertEqual(queue["review_request_source"], "owner-gallery-r")
+                context = json.loads(queue["review_request_context"])
+                self.assertEqual(context["view"], "gallery")
+                self.assertEqual(context["visible_count"], 1)
+                accepted = conn.execute(
+                    """
+                    SELECT count(*) AS count
+                    FROM title_keyword_decisions
+                    WHERE media_id = ? AND decision_state = 'accepted' AND applied_at IS NOT NULL
+                    """,
+                    ("approved-photo",),
+                ).fetchone()
+                self.assertEqual(accepted["count"], 1)
+
+                owner_state_db.record_title_keyword_review_decisions(
+                    repo_root,
+                    result["batch_id"],
+                    [{"photo_id": "approved-photo", "title": "Approved Title", "keywords": ["Spain", "Travel"]}],
+                    [],
+                    [],
+                    [],
+                    applied_at="2026-06-14T08:10:00Z",
+                    decided_at="2026-06-14T08:10:00Z",
+                    conn=conn,
+                )
+                approved_again = conn.execute(
+                    """
+                    SELECT review_state, applied_at, review_request_source, review_request_context
+                    FROM title_keyword_queue
+                    WHERE media_id = ?
+                    """,
+                    ("approved-photo",),
+                ).fetchone()
+                self.assertEqual(approved_again["review_state"], "approved")
+                self.assertEqual(approved_again["applied_at"], "2026-06-14T08:10:00Z")
+                self.assertEqual(approved_again["review_request_source"], "owner-gallery-r")
+                approved_context = json.loads(approved_again["review_request_context"])
+                self.assertEqual(approved_context["view"], "gallery")
+            finally:
+                conn.close()
+
+    def test_review_all_visible_requeues_batch_with_filter_context_and_count(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            self._write_catalog_db(
+                repo_root,
+                [
+                    ("visible-approved-1", "Visible Approved One", "2026-06-14T08:00:00"),
+                    ("visible-approved-2", "Visible Approved Two", "2026-06-14T08:01:00"),
+                ],
+            )
+            conn = owner_state_db.connect(repo_root)
+            try:
+                self._seed_title_keyword_row(conn, "visible-approved-1", "approved", applied_at="2026-06-14T08:01:00Z")
+                self._seed_title_keyword_row(conn, "visible-approved-2", "approved", applied_at="2026-06-14T08:02:00Z")
+                conn.commit()
+            finally:
+                conn.close()
+
+            result = owner_state_db.queue_title_keyword_review_photos(
+                repo_root,
+                ["visible-approved-1", "visible-approved-2"],
+                source="owner-gallery-review-all-visible",
+                context={
+                    "view": "search-gallery",
+                    "query": "Visible",
+                    "visible_count": 2,
+                    "filtered_total_count": 2,
+                },
+            )
+            self.assertEqual(result["requested_count"], 2)
+            self.assertEqual(result["queued_count"], 2)
+            self.assertEqual(result["review_request_context"]["affected_count"], 2)
+
+            conn = sqlite3.connect(repo_root / "assets/owner-actions/Owner.sqlite")
+            conn.row_factory = sqlite3.Row
+            try:
+                rows = conn.execute(
+                    """
+                    SELECT media_id, review_state, review_request_source, review_request_context
+                    FROM title_keyword_queue
+                    ORDER BY media_id
+                    """
+                ).fetchall()
+                self.assertEqual([row["review_state"] for row in rows], ["proposed", "proposed"])
+                for row in rows:
+                    self.assertEqual(row["review_request_source"], "owner-gallery-review-all-visible")
+                    context = json.loads(row["review_request_context"])
+                    self.assertEqual(context["query"], "Visible")
+                    self.assertEqual(context["affected_count"], 2)
+                    self.assertTrue(context["operation_id"])
+            finally:
+                conn.close()
+
     def test_undo_restores_catalog_fallback_block_to_normal_review_state(self):
         photo_id = "pbe-title-undo-fallback"
         batch_id = "batch-title-undo-test"

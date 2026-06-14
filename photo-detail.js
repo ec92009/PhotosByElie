@@ -937,7 +937,16 @@ if (localModerationEnabled) {
         if (!hiddenActions.queueTitleKeywordReview) {
           throw new Error("Refresh Owner mode to load title/keyword review queueing.");
         }
-        const result = await hiddenActions.queueTitleKeywordReview(photo.id);
+        const result = await hiddenActions.queueTitleKeywordReview(photo.id, {
+          source: "owner-detail-r",
+          context: {
+            view: "detail",
+            collection_key: collectionKey,
+            collection_title: collection?.title || "",
+            photo_id: photo.id,
+            url: window.location.pathname + window.location.search,
+          },
+        });
         status.textContent = result?.already_pending
           ? `${photo.title} is already in title/keyword review.`
           : `${photo.title} sent to title/keyword review.`;

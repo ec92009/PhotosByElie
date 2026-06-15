@@ -61,6 +61,11 @@ let deliveryManifest = null;
 let deliveryAvailabilityLoaded = false;
 let deliveryAvailabilityPromise = null;
 let discardedPhotoIds = new Set();
+let recentPurchaseByKey = new Map();
+let recentPurchaseMeta = null;
+let recentPurchaseRequestKey = "";
+let recentPurchaseTimer = null;
+let recentPurchaseAbort = null;
 
 const normalizedWorkerBase = (value) => String(value || "").replace(/\/+$/, "");
 const isLocalPage = () => /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname);
@@ -103,6 +108,19 @@ const escapeText = (value) => String(value || "").replace(/[&<>"']/g, (char) => 
   "\"": "&quot;",
   "'": "&#39;"
 }[char]));
+
+const validCheckoutEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
+
+const dateLabel = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(date);
+};
 
 const ensureMoreButton = () => {
   if (moreButton || !basketRoot) return;
@@ -332,6 +350,8 @@ const syncOrderIntent = (items, assetCount, total, shippingHandlingTotal) => {
   if (!items.length) return;
   const minimumAdjustment = checkoutMinimumAdjustment(total);
   const payableTotal = total + minimumAdjustment;
+  const allowanceRows = coveredRecentPurchaseRows(items);
+  const allowanceDays = allowanceRows[0]?.allowanceDays || recentPurchaseMeta?.allowanceDays || 30;
 
   const collectionCounts = items.reduce((counts, item) => {
     const key = item.collection || "Collection";
@@ -355,6 +375,11 @@ const syncOrderIntent = (items, assetCount, total, shippingHandlingTotal) => {
     ${minimumAdjustment ? `<div><dt>${t("basket.minimum_adjustment")}</dt><dd>+${formatMoney(minimumAdjustment)}</dd></div>` : ""}
     <div><dt>${t("basket.payable_total")}</dt><dd>${formatMoney(payableTotal)}</dd></div>
     <div><dt>${t("basket.collections")}</dt><dd>${escapeText(collectionText)}</dd></div>
+    ${allowanceRows.length ? `<div class="order-summary-attention"><dt>${escapeText(t("basket.allowance_summary_label", { days: allowanceDays }))}</dt><dd>${escapeText(t("basket.allowance_summary", {
+      count: allowanceRows.length,
+      assetWord: t(allowanceRows.length === 1 ? "basket.asset_singular" : "basket.asset_plural"),
+      days: allowanceDays,
+    }))}<br><span>${escapeText(t("basket.allowance_summary_action"))}</span></dd></div>` : ""}
   `;
 
   const lines = [
@@ -455,6 +480,83 @@ const basketDigitalSubtotalCents = () => centsFor(basketStore.read()
   .flatMap((item) => item.options || [])
   .filter((option) => option.type === "digital")
   .reduce((sum, option) => sum + optionTotal(option), 0));
+
+const purchaseLookupKey = (photoId, productId) => `${photoId || ""}::${productId || ""}`;
+
+const recentPurchaseFor = (photoId, productId) => recentPurchaseByKey.get(purchaseLookupKey(photoId, productId)) || null;
+
+const coveredRecentPurchaseRows = (items) => items.flatMap((item) =>
+  (item.options || [])
+    .filter((option) => option.type === "digital")
+    .map((option) => recentPurchaseFor(item.photoId, option.id))
+    .filter((row) => row?.covered)
+);
+
+const recentPurchaseSelectionKey = (email, items) =>
+  `${String(email || "").trim().toLowerCase()}::${JSON.stringify(items)}`;
+
+const setRecentPurchaseRows = (rows = [], meta = {}) => {
+  recentPurchaseByKey = new Map(rows.map((row) => [purchaseLookupKey(row.photoId, row.productId), row]));
+  recentPurchaseMeta = meta || null;
+};
+
+const clearRecentPurchaseRows = (rerender = false) => {
+  const hadRows = recentPurchaseByKey.size > 0 || recentPurchaseMeta;
+  recentPurchaseByKey = new Map();
+  recentPurchaseMeta = null;
+  recentPurchaseRequestKey = "";
+  if (hadRows && rerender) renderBasket();
+};
+
+const checkRecentPurchases = async ({ force = false, rerender = true } = {}) => {
+  const email = String(checkoutEmail?.value || "").trim();
+  const items = digitalCheckoutItems();
+  if (!validCheckoutEmail(email) || !items.length) {
+    clearRecentPurchaseRows(rerender);
+    return { items: [], coveredCount: 0 };
+  }
+  const requestKey = recentPurchaseSelectionKey(email, items);
+  if (!force && requestKey === recentPurchaseRequestKey) {
+    const rows = [...recentPurchaseByKey.values()];
+    return { ...(recentPurchaseMeta || {}), items: rows, coveredCount: rows.filter((row) => row.covered).length };
+  }
+  recentPurchaseRequestKey = requestKey;
+  recentPurchaseAbort?.abort?.();
+  const controller = new AbortController();
+  recentPurchaseAbort = controller;
+  try {
+    const response = await fetch(`${workerBaseUrl()}/purchases/recent`, {
+      method: "POST",
+      signal: controller.signal,
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email, items }),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body?.error?.message || `Recent purchase check failed with HTTP ${response.status}.`);
+    if (requestKey !== recentPurchaseSelectionKey(String(checkoutEmail?.value || "").trim(), digitalCheckoutItems())) return body;
+    setRecentPurchaseRows(body.items || [], {
+      source: body.source,
+      sourceDetail: body.sourceDetail,
+      allowanceDays: body.allowanceDays,
+      checkedAt: body.checkedAt,
+      windowStartsAt: body.windowStartsAt,
+    });
+    if (rerender) renderBasket();
+    return body;
+  } catch (error) {
+    if (error?.name !== "AbortError") clearRecentPurchaseRows(rerender);
+    return null;
+  } finally {
+    if (recentPurchaseAbort === controller) recentPurchaseAbort = null;
+  }
+};
+
+const scheduleRecentPurchaseCheck = () => {
+  window.clearTimeout(recentPurchaseTimer);
+  recentPurchaseTimer = window.setTimeout(() => {
+    checkRecentPurchases().catch(() => {});
+  }, 350);
+};
 
 const checkoutFetch = async (path, options = {}) => {
   const controller = new AbortController();
@@ -568,7 +670,7 @@ checkoutGuest?.addEventListener("click", async () => {
   checkoutGuest.disabled = true;
   try {
     const email = String(checkoutEmail?.value || "").trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (!validCheckoutEmail(email)) {
       setBasketStatus(t("basket.enter_email"), { checkout: true });
       checkoutEmail?.focus();
       return;
@@ -588,6 +690,16 @@ checkoutGuest?.addEventListener("click", async () => {
     const items = digitalCheckoutItems();
     if (!items.length) {
       setBasketStatus(t("basket.checkout_needs_asset"), { checkout: true });
+      return;
+    }
+    const allowance = await checkRecentPurchases({ force: true, rerender: true });
+    const coveredCount = (allowance?.items || []).filter((item) => item.covered).length;
+    if (coveredCount) {
+      setBasketStatus(t("basket.allowance_review_checkout", {
+        count: coveredCount,
+        assetWord: t(coveredCount === 1 ? "basket.asset_singular" : "basket.asset_plural"),
+        days: allowance?.allowanceDays || recentPurchaseMeta?.allowanceDays || 30,
+      }), { checkout: true, title: t("basket.allowance_summary_label", { days: allowance?.allowanceDays || recentPurchaseMeta?.allowanceDays || 30 }) });
       return;
     }
     setBasketStatus(t("basket.creating_checkout"), { checkout: true });
@@ -668,6 +780,11 @@ mockPay?.addEventListener("click", async () => {
 
 discountCodeInput?.addEventListener("input", () => {
   clearCheckoutState();
+});
+
+checkoutEmail?.addEventListener("input", () => {
+  clearCheckoutState();
+  scheduleRecentPurchaseCheck();
 });
 
 checkoutResult?.addEventListener("click", async (event) => {
@@ -765,11 +882,20 @@ const renderBasket = () => {
         <div class="basket-resolution-grid" aria-label="Resolution options for ${item.title}">
           ${availableOptions.map((option) => {
             const availability = deliveryAvailabilityFor(item.photoId, option);
+            const recentPurchase = option.type === "digital" ? recentPurchaseFor(item.photoId, option.id) : null;
+            const allowanceDays = recentPurchase?.allowanceDays || recentPurchaseMeta?.allowanceDays || 30;
+            const allowanceNote = recentPurchase?.covered
+              ? `<small class="basket-allowance-note"><strong>${escapeText(t("basket.allowance_badge", { days: allowanceDays }))}</strong>${escapeText(t("basket.allowance_note", {
+                date: dateLabel(recentPurchase.purchasedAt),
+                until: dateLabel(recentPurchase.allowanceEndsAt),
+                days: allowanceDays,
+              }))}</small>`
+              : "";
             return `
-            <div class="basket-product-row ${availability.available ? "" : "is-unavailable"}">
+            <div class="basket-product-row ${availability.available ? "" : "is-unavailable"} ${recentPurchase?.covered ? "is-covered-by-allowance" : ""}">
             <label class="product-choice">
               <input type="checkbox" data-basket-resolution="${index}" value="${option.id}" ${selectedIds.has(option.id) ? "checked" : ""} ${availability.available ? "" : "disabled"}/>
-              <span><strong>${productLabel(option)}</strong>${resolutionDetail(option)}${availability.available ? "" : `<small class="basket-delivery-warning">${escapeText(availability.reason)}</small>`}</span>
+              <span><strong>${productLabel(option)}</strong>${resolutionDetail(option)}${availability.available ? "" : `<small class="basket-delivery-warning">${escapeText(availability.reason)}</small>`}${allowanceNote}</span>
               <b>${formatMoney(option.price)}</b>
             </label>
             ${printConfigMarkup(option)}
@@ -803,6 +929,7 @@ const renderBasket = () => {
     button.addEventListener("click", () => {
       basketStore.remove(Number(button.dataset.removeItem));
       clearCheckoutState();
+      scheduleRecentPurchaseCheck();
       status.textContent = t("basket.item_removed");
       renderBasket();
     });
@@ -834,6 +961,7 @@ const renderBasket = () => {
     const selectedOptions = selectedOptionsFor(itemIndex);
     basketStore.updateOptions(itemIndex, selectedOptions);
     clearCheckoutState();
+    scheduleRecentPurchaseCheck();
     status.textContent = selectedOptions.length
         ? t("basket.choices_updated", { title: item.title })
         : t("basket.no_assets_selected", { title: item.title });
@@ -884,6 +1012,7 @@ const renderBasket = () => {
 
 renderBasket();
 syncCheckoutControls();
+scheduleRecentPurchaseCheck();
 deliveryAvailabilityPromise = loadDeliveryAvailability();
 window.addEventListener("resize", syncBasketPreviewHeights);
 window.addEventListener("load", syncBasketPreviewHeights);

@@ -7,6 +7,9 @@ const MINIMUM_CHARGE_PRODUCT_ID = "minimum-charge-adjustment";
 const RAW_SOURCE_TYPES = new Set(["DNG", "NEF", "CR2", "CR3", "ARW", "RAF", "ORF", "RW2", "RAW", "PEF", "SRW", "RWL"]);
 const DEFAULT_DOWNLOAD_TOKEN_TTL_SECONDS = 60 * 60 * 24 * 30;
 const DEFAULT_DOWNLOAD_TOKEN_MAX_DOWNLOADS = 100;
+const PURCHASE_ALLOWANCE_SOURCE = "photosbyelie-worker-order-ledger";
+const PURCHASE_ALLOWANCE_SOURCE_DETAIL = "PhotosByElie checkout Worker order records in ORDERS_KV";
+const SECONDS_PER_DAY = 60 * 60 * 24;
 
 const json = (body, status = 200, headers = {}) => new Response(JSON.stringify(body, null, 2), {
   status,
@@ -566,6 +569,107 @@ const isExpiredAt = (value, nowDate) => {
   return Number.isFinite(timestamp) && timestamp <= nowDate.getTime();
 };
 
+const normalizeProductLookupItems = (incomingItems = []) => {
+  if (!Array.isArray(incomingItems)) return [];
+  const seen = new Set();
+  const rows = [];
+  incomingItems.forEach((item) => {
+    const photoId = String(item?.photoId || item?.id || "").trim();
+    if (!photoId) return;
+    const rawOptions = Array.isArray(item?.options)
+      ? item.options
+      : [item?.productId || item?.optionId || item?.product].filter(Boolean);
+    rawOptions.forEach((rawOption) => {
+      const productId = String(typeof rawOption === "string" ? rawOption : rawOption?.id || rawOption?.productId || "").trim();
+      if (!productId) return;
+      const key = downloadRowKey(photoId, productId);
+      if (seen.has(key)) return;
+      seen.add(key);
+      rows.push({ photoId, productId });
+    });
+  });
+  return rows;
+};
+
+const paidOrderTimestamp = (order) => {
+  if (!["ready", "preparing"].includes(order?.status)) return null;
+  if (Number(order?.amountPaid || 0) <= 0) return null;
+  const timestamp = Date.parse(order.paidAt || order.delivery?.readyAt || order.updatedAt || "");
+  return Number.isFinite(timestamp) ? timestamp : null;
+};
+
+const purchaseAllowanceCandidateRows = (order, buyerEmail) => {
+  if (String(order?.buyerEmail || "").trim().toLowerCase() !== buyerEmail) return [];
+  const purchasedAtMs = paidOrderTimestamp(order);
+  if (!Number.isFinite(purchasedAtMs)) return [];
+  return (order.items || []).flatMap((item) => (item.products || []).map((product) => ({
+    photoId: item.photoId || "",
+    productId: product.id || "",
+    productLabel: product.label || product.id || "Download",
+    title: item.title || item.photoId || "Photo",
+    purchasedAtMs,
+    purchasedAt: new Date(purchasedAtMs).toISOString(),
+  }))).filter((row) => row.photoId && row.productId);
+};
+
+const purchaseAllowanceBoundary = ({ purchasedAtMs, nowMs, windowMs }) => {
+  const ageMs = nowMs - purchasedAtMs;
+  if (ageMs < 0) return { covered: false, boundary: "future" };
+  if (ageMs === windowMs) return { covered: true, boundary: "exact" };
+  if (ageMs <= windowMs) return { covered: true, boundary: "within" };
+  return { covered: false, boundary: "expired" };
+};
+
+const purchaseAllowanceRows = ({
+  orders = [],
+  buyerEmail,
+  items,
+  nowDate,
+  allowanceSeconds,
+}) => {
+  const requestedItems = normalizeProductLookupItems(items);
+  const nowMs = nowDate.getTime();
+  const windowMs = boundedPositiveInteger(allowanceSeconds, DEFAULT_DOWNLOAD_TOKEN_TTL_SECONDS) * 1000;
+  const allowanceDays = Math.round(windowMs / (SECONDS_PER_DAY * 1000));
+  const windowStartsAt = new Date(nowMs - windowMs).toISOString();
+  const latestByProduct = new Map();
+  orders.forEach((order) => {
+    purchaseAllowanceCandidateRows(order, buyerEmail).forEach((row) => {
+      const key = downloadRowKey(row.photoId, row.productId);
+      const existing = latestByProduct.get(key);
+      if (!existing || row.purchasedAtMs > existing.purchasedAtMs) latestByProduct.set(key, row);
+    });
+  });
+  return requestedItems.map((item) => {
+    const match = latestByProduct.get(downloadRowKey(item.photoId, item.productId));
+    const base = {
+      ...item,
+      source: PURCHASE_ALLOWANCE_SOURCE,
+      sourceDetail: PURCHASE_ALLOWANCE_SOURCE_DETAIL,
+      allowanceDays,
+      checkedAt: nowDate.toISOString(),
+      windowStartsAt,
+      covered: false,
+      boundary: match ? "expired" : "not_purchased",
+      purchasedAt: null,
+      allowanceEndsAt: null,
+      title: match?.title || "",
+      productLabel: match?.productLabel || "",
+    };
+    if (!match) return base;
+    const boundary = purchaseAllowanceBoundary({ purchasedAtMs: match.purchasedAtMs, nowMs, windowMs });
+    return {
+      ...base,
+      covered: boundary.covered,
+      boundary: boundary.boundary,
+      purchasedAt: match.purchasedAt,
+      allowanceEndsAt: new Date(match.purchasedAtMs + windowMs).toISOString(),
+      title: match.title,
+      productLabel: match.productLabel,
+    };
+  });
+};
+
 const downloadLimitReached = (record) => {
   const limit = Number(record?.downloadLimit || 0);
   return Number.isFinite(limit) && limit > 0 && Number(record.downloadCount || 0) >= limit;
@@ -821,6 +925,7 @@ export const createPhotosByElieWorker = ({
   includeDirectDownloadLinks = true,
   downloadTokenTtlSeconds = DEFAULT_DOWNLOAD_TOKEN_TTL_SECONDS,
   downloadTokenMaxDownloads = DEFAULT_DOWNLOAD_TOKEN_MAX_DOWNLOADS,
+  purchaseAllowanceSeconds = downloadTokenTtlSeconds,
   discountCodes = [],
 } = {}) => {
   if (!catalog) throw new Error("createPhotosByElieWorker requires a catalog index.");
@@ -937,6 +1042,61 @@ export const createPhotosByElieWorker = ({
     }
     const sent = await maybeSendReadyEmail(order, { force: true, throwOnFailure: true });
     return json({ order: publicOrder(sent), deliveryEmail: publicOrder(sent).deliveryEmail });
+  };
+
+  const checkRecentPurchases = async (request) => {
+    const payload = await parseJson(request);
+    const buyerEmail = String(payload.email || payload.buyerEmail || "").trim().toLowerCase();
+    if (!validEmail(buyerEmail)) {
+      return errorJson(400, "invalid_email", "Recent purchase checks require the checkout email.");
+    }
+    const items = normalizeProductLookupItems(payload.items || payload.basket || []);
+    if (!items.length) {
+      const nowDate = now();
+      const allowanceSeconds = boundedPositiveInteger(purchaseAllowanceSeconds, DEFAULT_DOWNLOAD_TOKEN_TTL_SECONDS);
+      return json({
+        source: PURCHASE_ALLOWANCE_SOURCE,
+        sourceDetail: PURCHASE_ALLOWANCE_SOURCE_DETAIL,
+        allowanceDays: Math.round(allowanceSeconds / SECONDS_PER_DAY),
+        checkedAt: nowDate.toISOString(),
+        windowStartsAt: new Date(nowDate.getTime() - (allowanceSeconds * 1000)).toISOString(),
+        items: [],
+      });
+    }
+    if (typeof store.listOrders !== "function") {
+      return json({
+        source: PURCHASE_ALLOWANCE_SOURCE,
+        sourceDetail: `${PURCHASE_ALLOWANCE_SOURCE_DETAIL}; purchase lookup is unavailable because the current store cannot list order records.`,
+        allowanceDays: Math.round(boundedPositiveInteger(purchaseAllowanceSeconds, DEFAULT_DOWNLOAD_TOKEN_TTL_SECONDS) / SECONDS_PER_DAY),
+        checkedAt: now().toISOString(),
+        items: items.map((item) => ({
+          ...item,
+          covered: false,
+          boundary: "history_unavailable",
+          purchasedAt: null,
+          allowanceEndsAt: null,
+        })),
+      });
+    }
+    const nowDate = now();
+    const orders = await store.listOrders();
+    const rows = purchaseAllowanceRows({
+      orders,
+      buyerEmail,
+      items,
+      nowDate,
+      allowanceSeconds: purchaseAllowanceSeconds,
+    });
+    const allowanceSeconds = boundedPositiveInteger(purchaseAllowanceSeconds, DEFAULT_DOWNLOAD_TOKEN_TTL_SECONDS);
+    return json({
+      source: PURCHASE_ALLOWANCE_SOURCE,
+      sourceDetail: PURCHASE_ALLOWANCE_SOURCE_DETAIL,
+      allowanceDays: Math.round(allowanceSeconds / SECONDS_PER_DAY),
+      checkedAt: nowDate.toISOString(),
+      windowStartsAt: new Date(nowDate.getTime() - (allowanceSeconds * 1000)).toISOString(),
+      coveredCount: rows.filter((row) => row.covered).length,
+      items: rows,
+    });
   };
 
   const createCheckout = async (request, checkoutMode) => {
@@ -1332,6 +1492,7 @@ export const createPhotosByElieWorker = ({
       }
       if (request.method === "POST" && path === "/checkout/guest") return await createCheckout(request, "guest");
       if (request.method === "POST" && path === "/checkout/account") return await createCheckout(request, "account");
+      if (request.method === "POST" && path === "/purchases/recent") return await checkRecentPurchases(request);
       if (request.method === "POST" && path === "/stripe-webhook") return await stripeWebhook(request);
       if (request.method === "POST" && path === "/mock-stripe/pay") return await mockPay(request);
       if (request.method === "POST" && path === "/real-estate/originals/session") return await createRealEstateOriginalsSession(request);

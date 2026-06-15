@@ -31,6 +31,7 @@ All routes also work under `/api`, for example `/api/checkout/guest`.
 | `GET /health` | Runtime check | Returns Worker status and fixed currency |
 | `POST /checkout/guest` | Buyer chooses guest checkout | Validates selected private R2 files, then creates `pending_payment` order and Stripe Checkout URL |
 | `POST /checkout/account` | Buyer chooses account checkout | Same order flow, tagged as `account` |
+| `POST /purchases/recent` | Basket checks checkout email plus selected photo/product IDs | Scans paid Worker order records and reports whether each item is covered by the 30-day download allowance |
 | `POST /stripe-webhook` | Stripe/mocked Stripe says checkout completed | Verifies payment facts, prepares delivery, marks order `ready` |
 | `POST /mock-stripe/pay` | Local mock payment helper | Simulates a paid Stripe event for a Checkout Session |
 | `POST /real-estate/originals/session` | Real Estate client requests selected originals | Validates the client password, checks private R2 originals, and returns per-file private download tokens |
@@ -45,7 +46,7 @@ All routes also work under `/api`, for example `/api/checkout/guest`.
 
 `worker/deployed-worker.mjs` is the Cloudflare Worker entrypoint for public checkout. It uses durable Cloudflare bindings:
 
-- `ORDERS_KV` stores orders, Checkout Session indexes, and download tokens.
+- `ORDERS_KV` stores orders, Checkout Session indexes, and download tokens. Recent-purchase allowance checks use these Worker order records as the purchase/download history source.
 - `PUBLIC_MEDIA` can still serve public preview JPEGs from the `photosbyelie-public` R2 bucket under `/media/...`, but the public static site no longer uses that bridge for browsing previews.
 - `PRIVATE_MEDIA` reads private developed masters from R2.
 - `DELIVERY_MEDIA` serves private buyer downloads. It can point at the same private R2 bucket for the mock phase.

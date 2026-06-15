@@ -13,6 +13,8 @@ export const createMemoryStore = () => {
 
   const getOrder = async (orderId) => clone(orders.get(orderId));
 
+  const listOrders = async () => [...orders.values()].map(clone);
+
   const getOrderByCheckoutSessionId = async (checkoutSessionId) => {
     const orderId = checkoutSessionIndex.get(checkoutSessionId);
     return orderId ? getOrder(orderId) : null;
@@ -49,6 +51,7 @@ export const createMemoryStore = () => {
   return {
     putOrder,
     getOrder,
+    listOrders,
     getOrderByCheckoutSessionId,
     updateOrder,
     putDownload,

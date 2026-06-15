@@ -88,6 +88,19 @@ const createFakeKv = () => {
     put: async (key, value) => {
       values.set(key, String(value));
     },
+    list: async ({ prefix = "", limit = 1000, cursor = "" } = {}) => {
+      const keys = [...values.keys()]
+        .filter((key) => key.startsWith(prefix))
+        .sort((left, right) => left.localeCompare(right));
+      const start = cursor ? Math.max(0, Number(cursor) || 0) : 0;
+      const page = keys.slice(start, start + limit);
+      const next = start + page.length;
+      return {
+        keys: page.map((name) => ({ name })),
+        list_complete: next >= keys.length,
+        cursor: next < keys.length ? String(next) : undefined,
+      };
+    },
     _debug: values,
   };
 };
@@ -255,6 +268,101 @@ test("guest checkout creates a pending order and mock Stripe session", async () 
   assert.equal(body.order.items[0].products.length, 2);
   assert.equal(body.order.amountExpected, orderProductTotal(body.order.items[0]));
   assert.match(body.checkout.url, /^https:\/\/mock\.stripe\.local\/checkout\/cs_mock_/);
+});
+
+test("recent purchase lookup reports paid product coverage from Worker order records", async () => {
+  const catalog = loadCatalog();
+  let currentNow = new Date("2026-05-07T12:00:00.000Z");
+  const randomUUID = deterministicIds();
+  const worker = createPhotosByElieWorker({
+    catalog,
+    store: createMemoryStore(),
+    stripe: createMockStripeClient({ randomUUID }),
+    delivery: createPerFileTestDelivery(() => currentNow),
+    now: () => currentNow,
+    randomUUID,
+    ordersUrl: "https://photosbyelie.test/orders",
+  });
+  const photoId = firstDeliverablePhotoId(catalog);
+
+  const checkoutResponse = await worker.fetch(jsonRequest("https://worker.test/checkout/guest", {
+    email: "buyer@example.com",
+    items: [{ photoId, options: [{ id: "full" }, { id: "jpg-3mp" }] }],
+  }));
+  assert.equal(checkoutResponse.status, 201);
+  const checkout = await checkoutResponse.json();
+  const payResponse = await worker.fetch(jsonRequest("https://worker.test/mock-stripe/pay", {
+    checkoutSessionId: checkout.checkout.sessionId,
+  }));
+  assert.equal(payResponse.status, 200);
+
+  currentNow = new Date("2026-05-08T12:00:00.000Z");
+  const lookupResponse = await worker.fetch(jsonRequest("https://worker.test/purchases/recent", {
+    email: "BUYER@example.com",
+    items: [{ photoId, options: [{ id: "full" }, { id: "jpg-1mp" }] }],
+  }));
+  assert.equal(lookupResponse.status, 200);
+  const lookup = await lookupResponse.json();
+  assert.equal(lookup.source, "photosbyelie-worker-order-ledger");
+  assert.equal(lookup.allowanceDays, 30);
+  assert.equal(lookup.coveredCount, 1);
+
+  const full = lookup.items.find((item) => item.photoId === photoId && item.productId === "full");
+  assert.equal(full.covered, true);
+  assert.equal(full.boundary, "within");
+  assert.equal(full.purchasedAt, "2026-05-07T12:00:00.000Z");
+  assert.equal(full.allowanceEndsAt, "2026-06-06T12:00:00.000Z");
+  assert.equal(full.orderId, undefined);
+
+  const oneMp = lookup.items.find((item) => item.photoId === photoId && item.productId === "jpg-1mp");
+  assert.equal(oneMp.covered, false);
+  assert.equal(oneMp.boundary, "not_purchased");
+});
+
+test("recent purchase lookup treats the exact 30-day boundary as covered", async () => {
+  const catalog = loadCatalog();
+  let currentNow = new Date("2026-05-07T12:00:00.000Z");
+  const randomUUID = deterministicIds();
+  const worker = createPhotosByElieWorker({
+    catalog,
+    store: createMemoryStore(),
+    stripe: createMockStripeClient({ randomUUID }),
+    delivery: createPerFileTestDelivery(() => currentNow),
+    now: () => currentNow,
+    randomUUID,
+    ordersUrl: "https://photosbyelie.test/orders",
+  });
+  const photoId = firstDeliverablePhotoId(catalog);
+
+  const checkoutResponse = await worker.fetch(jsonRequest("https://worker.test/checkout/guest", {
+    email: "buyer@example.com",
+    items: [{ photoId, options: [{ id: "full" }] }],
+  }));
+  const checkout = await checkoutResponse.json();
+  await worker.fetch(jsonRequest("https://worker.test/mock-stripe/pay", {
+    checkoutSessionId: checkout.checkout.sessionId,
+  }));
+
+  currentNow = new Date("2026-06-06T12:00:00.000Z");
+  const exactResponse = await worker.fetch(jsonRequest("https://worker.test/purchases/recent", {
+    email: "buyer@example.com",
+    items: [{ photoId, options: [{ id: "full" }] }],
+  }));
+  assert.equal(exactResponse.status, 200);
+  const exact = await exactResponse.json();
+  assert.equal(exact.items[0].covered, true);
+  assert.equal(exact.items[0].boundary, "exact");
+  assert.equal(exact.items[0].allowanceEndsAt, "2026-06-06T12:00:00.000Z");
+
+  currentNow = new Date("2026-06-06T12:00:00.001Z");
+  const expiredResponse = await worker.fetch(jsonRequest("https://worker.test/purchases/recent", {
+    email: "buyer@example.com",
+    items: [{ photoId, options: [{ id: "full" }] }],
+  }));
+  assert.equal(expiredResponse.status, 200);
+  const expired = await expiredResponse.json();
+  assert.equal(expired.items[0].covered, false);
+  assert.equal(expired.items[0].boundary, "expired");
 });
 
 test("guest checkout uses current 1 MP price and applies the Stripe minimum when needed", async () => {

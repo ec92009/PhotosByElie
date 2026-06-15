@@ -35,6 +35,30 @@ export const createKvStore = ({
 
   const getOrder = async (orderId) => jsonGet(namespace, key("orders", orderId));
 
+  const listOrders = async () => {
+    if (typeof namespace.list !== "function") return [];
+    const orders = [];
+    let cursor = undefined;
+    do {
+      const page = await namespace.list({
+        prefix: key("orders", ""),
+        limit: 1000,
+        ...(cursor ? { cursor } : {}),
+      });
+      const entries = page?.keys || page?.objects || [];
+      await Promise.all(entries.map(async (entry) => {
+        const name = entry?.name || entry?.key;
+        if (!name) return;
+        const value = await jsonGet(namespace, name);
+        if (value) orders.push(value);
+      }));
+      cursor = page?.cursor || (page?.truncated ? page?.cursor : undefined);
+      if (page?.list_complete === true) cursor = undefined;
+      if (page?.truncated === false) cursor = undefined;
+    } while (cursor);
+    return orders.map(clone);
+  };
+
   const getOrderByCheckoutSessionId = async (checkoutSessionId) => {
     const orderId = await namespace.get(key("checkout", checkoutSessionId));
     return orderId ? getOrder(orderId) : null;
@@ -64,6 +88,7 @@ export const createKvStore = ({
   return {
     putOrder,
     getOrder,
+    listOrders,
     getOrderByCheckoutSessionId,
     updateOrder,
     putDownload,

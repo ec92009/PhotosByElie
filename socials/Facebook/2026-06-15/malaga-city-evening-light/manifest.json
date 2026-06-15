@@ -1,7 +1,7 @@
 {
   "date": "2026-06-15",
   "platform": "Facebook",
-  "status": "prepared",
+  "status": "published",
   "account": "Photos By Elie",
   "post_type": "multi_photo",
   "title": "Malaga City Evening Light",
@@ -142,5 +142,25 @@
       "public_photo_url": "https://photos-by-elie.com/photo.html?id=img-4259-6d1ec01ebd",
       "local_staged_path": "socials/Facebook/2026-06-15/malaga-city-evening-light/images/08-img-4259-6d1ec01ebd-malaga-city-evening-light.jpg"
     }
-  ]
+  ],
+  "published": {
+    "status": "published",
+    "post_id": "1146747141854670_122106141429334672",
+    "permalink": "https://www.facebook.com/122102168061334672/posts/122106141429334672",
+    "published_at": "2026-06-15T03:13:54+0000",
+    "verified_at": "2026-06-15T03:16:51Z",
+    "account": "Photos By Elie",
+    "image_count": 8,
+    "platform_visible_confirmation": "Graph API readback returned permalink and 8 photo subattachments."
+  },
+  "verification": {
+    "status": "published",
+    "post_id": "1146747141854670_122106141429334672",
+    "permalink": "https://www.facebook.com/122102168061334672/posts/122106141429334672",
+    "published_at": "2026-06-15T03:13:54+0000",
+    "verified_at": "2026-06-15T03:16:51Z",
+    "account": "Photos By Elie",
+    "image_count": 8,
+    "platform_visible_confirmation": "Graph API readback returned permalink and 8 photo subattachments."
+  }
 }

@@ -1,7 +1,7 @@
 # Facebook: Malaga City Evening Light
 
 - Date: 2026-06-15
-- Status: prepared
+- Status: published
 - Destination: https://photos-by-elie.com/campaign.html?c=facebook-malaga-city-evening-light-2026-06-15
 - Local package: /Users/ecohen/Dev/pbe-daily-social-20260615-ziiLRZ/socials/Facebook/2026-06-15/malaga-city-evening-light
 - Image count: 8
@@ -22,3 +22,13 @@ Images:
 | 6 | `img-4257-0689207b14` | https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-4257-0689207b14_1800.jpg | socials/Facebook/2026-06-15/malaga-city-evening-light/images/06-img-4257-0689207b14-malaga-city-evening-light.jpg |
 | 7 | `img-4258-6a34c5ffc7` | https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-4258-6a34c5ffc7_1800.jpg | socials/Facebook/2026-06-15/malaga-city-evening-light/images/07-img-4258-6a34c5ffc7-malaga-city-evening-light.jpg |
 | 8 | `img-4259-6d1ec01ebd` | https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-4259-6d1ec01ebd_1800.jpg | socials/Facebook/2026-06-15/malaga-city-evening-light/images/08-img-4259-6d1ec01ebd-malaga-city-evening-light.jpg |
+
+## Published Result
+
+- Status: published
+- Published at: 2026-06-15T03:13:54+0000
+- Verified at: 2026-06-15T03:16:51Z
+- Post ID: 1146747141854670_122106141429334672
+- Permalink: https://www.facebook.com/122102168061334672/posts/122106141429334672
+- Account: Photos By Elie
+- Verified image count: 8

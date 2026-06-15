@@ -1,7 +1,7 @@
 {
   "date": "2026-06-15",
   "platform": "Instagram",
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "title": "Setenil Rock Streets",
@@ -142,5 +142,31 @@
       "public_photo_url": "https://photos-by-elie.com/photo.html?id=20230806-153505-00171-2cc9e07bc6",
       "local_staged_path": "socials/Instagram/2026-06-15/setenil-rock-streets/images/08-20230806-153505-00171-2cc9e07bc6-setenil-rock-streets.jpg"
     }
-  ]
+  ],
+  "published": {
+    "status": "published",
+    "media_id": "17954880674983029",
+    "permalink": "https://www.instagram.com/p/DZl1HzaiGHv/",
+    "published_at": "2026-06-15T03:15:43+0000",
+    "verified_at": "2026-06-15T03:16:51Z",
+    "account": "ec92009",
+    "username": "ec92009",
+    "media_type": "CAROUSEL_ALBUM",
+    "child_count": 8,
+    "image_count": 8,
+    "platform_visible_confirmation": "Instagram Graph readback returned permalink, CAROUSEL_ALBUM, and 8 children."
+  },
+  "verification": {
+    "status": "published",
+    "media_id": "17954880674983029",
+    "permalink": "https://www.instagram.com/p/DZl1HzaiGHv/",
+    "published_at": "2026-06-15T03:15:43+0000",
+    "verified_at": "2026-06-15T03:16:51Z",
+    "account": "ec92009",
+    "username": "ec92009",
+    "media_type": "CAROUSEL_ALBUM",
+    "child_count": 8,
+    "image_count": 8,
+    "platform_visible_confirmation": "Instagram Graph readback returned permalink, CAROUSEL_ALBUM, and 8 children."
+  }
 }

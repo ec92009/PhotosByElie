@@ -47,3 +47,11 @@ Setenil in four frames: white streets, rock overhangs, and Andalusia texture fro
 - `etsy-malaga-city-wall-art-2026-06-15`
 - `etsy-setenil-rock-streets-wall-art-2026-06-15`
 - `etsy-la-jolla-heights-sunset-wall-art-2026-06-15`
+
+## Published Results
+
+- Facebook: published, https://www.facebook.com/122102168061334672/posts/122106141429334672, 8 images verified.
+- Instagram: published, https://www.instagram.com/p/DZl1HzaiGHv/, 8 children verified.
+- Threads: published, https://www.threads.com/@ec92009/post/DZl1B8aiIRf, 4 children verified.
+- Pinterest: prepared only; no Pinterest token/board mapping configured.
+- Etsy: review packages generated; draft creation blocked by image/file attachment verification gap.

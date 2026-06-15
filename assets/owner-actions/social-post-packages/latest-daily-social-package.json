@@ -2,7 +2,7 @@
   "date": "2026-06-15",
   "format": "photosbyelie-daily-social-package",
   "visible_version": "v107.2",
-  "status": "prepared",
+  "status": "published_partial",
   "themes": [
     "Malaga City Evening Light",
     "Setenil Rock Streets",
@@ -12,7 +12,7 @@
     {
       "date": "2026-06-15",
       "platform": "Facebook",
-      "status": "prepared",
+      "status": "published",
       "account": "Photos By Elie",
       "post_type": "multi_photo",
       "title": "Malaga City Evening Light",
@@ -153,12 +153,32 @@
           "public_photo_url": "https://photos-by-elie.com/photo.html?id=img-4259-6d1ec01ebd",
           "local_staged_path": "socials/Facebook/2026-06-15/malaga-city-evening-light/images/08-img-4259-6d1ec01ebd-malaga-city-evening-light.jpg"
         }
-      ]
+      ],
+      "published": {
+        "status": "published",
+        "post_id": "1146747141854670_122106141429334672",
+        "permalink": "https://www.facebook.com/122102168061334672/posts/122106141429334672",
+        "published_at": "2026-06-15T03:13:54+0000",
+        "verified_at": "2026-06-15T03:16:51Z",
+        "account": "Photos By Elie",
+        "image_count": 8,
+        "platform_visible_confirmation": "Graph API readback returned permalink and 8 photo subattachments."
+      },
+      "verification": {
+        "status": "published",
+        "post_id": "1146747141854670_122106141429334672",
+        "permalink": "https://www.facebook.com/122102168061334672/posts/122106141429334672",
+        "published_at": "2026-06-15T03:13:54+0000",
+        "verified_at": "2026-06-15T03:16:51Z",
+        "account": "Photos By Elie",
+        "image_count": 8,
+        "platform_visible_confirmation": "Graph API readback returned permalink and 8 photo subattachments."
+      }
     },
     {
       "date": "2026-06-15",
       "platform": "Instagram",
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "title": "Setenil Rock Streets",
@@ -299,7 +319,33 @@
           "public_photo_url": "https://photos-by-elie.com/photo.html?id=20230806-153505-00171-2cc9e07bc6",
           "local_staged_path": "socials/Instagram/2026-06-15/setenil-rock-streets/images/08-20230806-153505-00171-2cc9e07bc6-setenil-rock-streets.jpg"
         }
-      ]
+      ],
+      "published": {
+        "status": "published",
+        "media_id": "17954880674983029",
+        "permalink": "https://www.instagram.com/p/DZl1HzaiGHv/",
+        "published_at": "2026-06-15T03:15:43+0000",
+        "verified_at": "2026-06-15T03:16:51Z",
+        "account": "ec92009",
+        "username": "ec92009",
+        "media_type": "CAROUSEL_ALBUM",
+        "child_count": 8,
+        "image_count": 8,
+        "platform_visible_confirmation": "Instagram Graph readback returned permalink, CAROUSEL_ALBUM, and 8 children."
+      },
+      "verification": {
+        "status": "published",
+        "media_id": "17954880674983029",
+        "permalink": "https://www.instagram.com/p/DZl1HzaiGHv/",
+        "published_at": "2026-06-15T03:15:43+0000",
+        "verified_at": "2026-06-15T03:16:51Z",
+        "account": "ec92009",
+        "username": "ec92009",
+        "media_type": "CAROUSEL_ALBUM",
+        "child_count": 8,
+        "image_count": 8,
+        "platform_visible_confirmation": "Instagram Graph readback returned permalink, CAROUSEL_ALBUM, and 8 children."
+      }
     },
     {
       "date": "2026-06-15",
@@ -406,7 +452,7 @@
     {
       "date": "2026-06-15",
       "platform": "Threads",
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "title": "Setenil Rock Streets",
@@ -485,7 +531,33 @@
           "local_staged_path": "socials/Threads/2026-06-15/setenil-rock-streets/images/04-20230806-153503-00170-3441608fe6-setenil-rock-streets.jpg"
         }
       ],
-      "link_preview_note": "Remove any automatic link preview if it shows generic or off-theme campaign metadata before posting."
+      "link_preview_note": "Remove any automatic link preview if it shows generic or off-theme campaign metadata before posting.",
+      "published": {
+        "status": "published",
+        "media_id": "18102892492853115",
+        "permalink": "https://www.threads.com/@ec92009/post/DZl1B8aiIRf",
+        "published_at": "2026-06-15T03:14:56+0000",
+        "verified_at": "2026-06-15T03:16:51Z",
+        "account": "ec92009",
+        "username": "ec92009",
+        "media_type": "CAROUSEL_ALBUM",
+        "child_count": 4,
+        "image_count": 4,
+        "platform_visible_confirmation": "Threads Graph readback returned permalink, CAROUSEL_ALBUM, and 4 children."
+      },
+      "verification": {
+        "status": "published",
+        "media_id": "18102892492853115",
+        "permalink": "https://www.threads.com/@ec92009/post/DZl1B8aiIRf",
+        "published_at": "2026-06-15T03:14:56+0000",
+        "verified_at": "2026-06-15T03:16:51Z",
+        "account": "ec92009",
+        "username": "ec92009",
+        "media_type": "CAROUSEL_ALBUM",
+        "child_count": 4,
+        "image_count": 4,
+        "platform_visible_confirmation": "Threads Graph readback returned permalink, CAROUSEL_ALBUM, and 4 children."
+      }
     }
   ],
   "etsy_companion_campaigns": [
@@ -497,5 +569,47 @@
     "Facebook and Instagram are publishable by existing Meta API tokens after dry-run checks.",
     "Threads is publishable when the Threads token/profile check succeeds.",
     "Pinterest remains prepared-only unless a Pinterest token and board mapping are configured."
+  ],
+  "published_summary": {
+    "Facebook": {
+      "status": "published",
+      "post_id": "1146747141854670_122106141429334672",
+      "permalink": "https://www.facebook.com/122102168061334672/posts/122106141429334672",
+      "published_at": "2026-06-15T03:13:54+0000",
+      "verified_at": "2026-06-15T03:16:51Z",
+      "account": "Photos By Elie",
+      "image_count": 8,
+      "platform_visible_confirmation": "Graph API readback returned permalink and 8 photo subattachments."
+    },
+    "Instagram": {
+      "status": "published",
+      "media_id": "17954880674983029",
+      "permalink": "https://www.instagram.com/p/DZl1HzaiGHv/",
+      "published_at": "2026-06-15T03:15:43+0000",
+      "verified_at": "2026-06-15T03:16:51Z",
+      "account": "ec92009",
+      "username": "ec92009",
+      "media_type": "CAROUSEL_ALBUM",
+      "child_count": 8,
+      "image_count": 8,
+      "platform_visible_confirmation": "Instagram Graph readback returned permalink, CAROUSEL_ALBUM, and 8 children."
+    },
+    "Threads": {
+      "status": "published",
+      "media_id": "18102892492853115",
+      "permalink": "https://www.threads.com/@ec92009/post/DZl1B8aiIRf",
+      "published_at": "2026-06-15T03:14:56+0000",
+      "verified_at": "2026-06-15T03:16:51Z",
+      "account": "ec92009",
+      "username": "ec92009",
+      "media_type": "CAROUSEL_ALBUM",
+      "child_count": 4,
+      "image_count": 4,
+      "platform_visible_confirmation": "Threads Graph readback returned permalink, CAROUSEL_ALBUM, and 4 children."
+    }
+  },
+  "blockers": [
+    "Pinterest remains prepared only because no Pinterest token or board id mapping is configured.",
+    "Etsy review packages were generated, but Etsy drafts were not created because current tooling cannot attach and verify one public listing image plus one approved buyer download file per draft."
   ]
 }

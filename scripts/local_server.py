@@ -6982,8 +6982,9 @@ def _sanitize_real_estate_public_manifest(manifest: dict) -> dict:
     public_manifest["customer"] = {
         key: value
         for key, value in customer.items()
-        if key in {"name", "username", "email", "accessCodeAlgorithm", "accessCodeHash", "accessCodeSalt"}
+        if key in {"name", "username", "email"}
     }
+    public_manifest.pop("auth", None)
     public_manifest.pop("sourceRoot", None)
     public_manifest.pop("outputRoot", None)
 

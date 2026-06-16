@@ -24,6 +24,24 @@ const json = (body, status = 200, headers = {}) => new Response(JSON.stringify(b
 
 const errorJson = (status, code, message, details = undefined) => json({ error: { code, message, details } }, status);
 
+const credentialedCorsHeaders = (request, extraHeaders = {}) => {
+  const origin = request.headers.get("origin") || "*";
+  return {
+    "access-control-allow-origin": origin,
+    "access-control-allow-methods": "GET,POST,OPTIONS",
+    "access-control-allow-headers": "content-type,stripe-signature,x-mock-stripe-signature",
+    "access-control-allow-credentials": "true",
+    vary: "Origin",
+    ...extraHeaders,
+  };
+};
+
+const credentialedJson = (request, body, status = 200, headers = {}) =>
+  json(body, status, credentialedCorsHeaders(request, headers));
+
+const credentialedErrorJson = (request, status, code, message, details = undefined, headers = {}) =>
+  credentialedJson(request, { error: { code, message, details } }, status, headers);
+
 const parseJson = async (request) => {
   try {
     return await request.json();
@@ -919,6 +937,7 @@ export const createPhotosByElieWorker = ({
   cancelUrl = "https://photosbyelie.com/basket.html?checkout=cancelled",
   mockStripeEnabled = true,
   realEstateOriginals = null,
+  realEstateAuth = null,
   realEstateDeliverables = null,
   emailClient = null,
   downloadBaseUrl = ordersUrl,
@@ -1445,13 +1464,47 @@ export const createPhotosByElieWorker = ({
     return response;
   };
 
+  const requireRealEstateSession = async (request, payload) => {
+    if (!realEstateAuth || typeof realEstateAuth.requireSession !== "function") {
+      throw Object.assign(new Error("Real-estate client login is not configured."), {
+        status: 503,
+        code: "real_estate_auth_unavailable",
+      });
+    }
+    return realEstateAuth.requireSession(request, payload.galleryKey);
+  };
+
+  const loginRealEstate = async (request) => {
+    if (!realEstateAuth || typeof realEstateAuth.login !== "function") {
+      return credentialedErrorJson(request, 503, "real_estate_auth_unavailable", "Real-estate client login is not configured.");
+    }
+    const payload = await parseJson(request);
+    const { session, cookie } = await realEstateAuth.login(payload, request);
+    return credentialedJson(request, { session }, 200, { "set-cookie": cookie });
+  };
+
+  const getRealEstateSession = async (request) => {
+    if (!realEstateAuth || typeof realEstateAuth.requireSession !== "function") {
+      return credentialedErrorJson(request, 503, "real_estate_auth_unavailable", "Real-estate client login is not configured.");
+    }
+    const url = new URL(request.url);
+    const session = await realEstateAuth.requireSession(request, url.searchParams.get("galleryKey") || "");
+    return credentialedJson(request, { session: realEstateAuth.publicSessionFor(session) });
+  };
+
+  const logoutRealEstate = async (request) => {
+    const headers = realEstateAuth?.clearCookieFor ? { "set-cookie": realEstateAuth.clearCookieFor() } : {};
+    return credentialedJson(request, { ok: true }, 200, headers);
+  };
+
   const createRealEstateOriginalsSession = async (request) => {
     if (!realEstateOriginals || typeof realEstateOriginals.createSession !== "function") {
       return errorJson(503, "real_estate_originals_unavailable", "Real-estate originals delivery is not configured.");
     }
     const payload = await parseJson(request);
+    payload.realEstateSession = await requireRealEstateSession(request, payload);
     const originals = await realEstateOriginals.createSession(payload);
-    return json({ originals }, 201);
+    return credentialedJson(request, { originals }, 201);
   };
 
   const listRealEstateDeliverables = async (request) => {
@@ -1459,8 +1512,9 @@ export const createPhotosByElieWorker = ({
       return errorJson(503, "real_estate_deliverables_unavailable", "Real-estate cloud products are not configured.");
     }
     const payload = await parseJson(request);
+    payload.realEstateSession = await requireRealEstateSession(request, payload);
     const deliverables = await realEstateDeliverables.listDeliverables(payload);
-    return json(deliverables);
+    return credentialedJson(request, deliverables);
   };
 
   const putRealEstateDeliverable = async (request) => {
@@ -1468,8 +1522,9 @@ export const createPhotosByElieWorker = ({
       return errorJson(503, "real_estate_deliverables_unavailable", "Real-estate cloud products are not configured.");
     }
     const payload = await parseJson(request);
+    payload.realEstateSession = await requireRealEstateSession(request, payload);
     const deliverable = await realEstateDeliverables.putDeliverable(payload);
-    return json({ deliverable }, 201);
+    return credentialedJson(request, { deliverable }, 201);
   };
 
   const deleteRealEstateDeliverable = async (request) => {
@@ -1477,14 +1532,19 @@ export const createPhotosByElieWorker = ({
       return errorJson(503, "real_estate_deliverables_unavailable", "Real-estate cloud products are not configured.");
     }
     const payload = await parseJson(request);
+    payload.realEstateSession = await requireRealEstateSession(request, payload);
     const result = await realEstateDeliverables.deleteDeliverable(payload);
-    return json(result);
+    return credentialedJson(request, result);
   };
 
   const fetch = async (request) => {
-    if (request.method === "OPTIONS") return json({ ok: true });
     const url = new URL(request.url);
     const path = url.pathname.replace(/^\/api(?=\/)/, "");
+    if (request.method === "OPTIONS") {
+      return path.startsWith("/real-estate/")
+        ? credentialedJson(request, { ok: true })
+        : json({ ok: true });
+    }
 
     try {
       if (request.method === "GET" && path === "/health") {
@@ -1495,6 +1555,9 @@ export const createPhotosByElieWorker = ({
       if (request.method === "POST" && path === "/purchases/recent") return await checkRecentPurchases(request);
       if (request.method === "POST" && path === "/stripe-webhook") return await stripeWebhook(request);
       if (request.method === "POST" && path === "/mock-stripe/pay") return await mockPay(request);
+      if (request.method === "POST" && path === "/real-estate/login") return await loginRealEstate(request);
+      if (request.method === "GET" && path === "/real-estate/session") return await getRealEstateSession(request);
+      if (request.method === "POST" && path === "/real-estate/logout") return await logoutRealEstate(request);
       if (request.method === "POST" && path === "/real-estate/originals/session") return await createRealEstateOriginalsSession(request);
       if (request.method === "POST" && path === "/real-estate/deliverables/list") return await listRealEstateDeliverables(request);
       if (request.method === "POST" && path === "/real-estate/deliverables") return await putRealEstateDeliverable(request);
@@ -1508,7 +1571,9 @@ export const createPhotosByElieWorker = ({
       const downloadMatch = path.match(/^\/download\/([^/]+)$/);
       if (request.method === "GET" && downloadMatch) return await download(request, decodeURIComponent(downloadMatch[1]));
     } catch (error) {
-      return errorJson(error.status || 500, error.code || "worker_error", error.message, error.details);
+      return path.startsWith("/real-estate/")
+        ? credentialedErrorJson(request, error.status || 500, error.code || "worker_error", error.message, error.details)
+        : errorJson(error.status || 500, error.code || "worker_error", error.message, error.details);
     }
     return errorJson(404, "not_found", "Worker route was not found.");
   };

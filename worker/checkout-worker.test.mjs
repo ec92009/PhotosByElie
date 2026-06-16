@@ -8,6 +8,7 @@ import deployedWorker from "./deployed-worker.mjs";
 import { createLocalZipDelivery } from "./local-zip-delivery.mjs";
 import { createMemoryStore } from "./memory-store.mjs";
 import { createMockStripeClient } from "./mock-stripe.mjs";
+import { createRealEstateAuth } from "./real-estate-auth.mjs";
 import { createRealEstateDeliverables } from "./real-estate-deliverables.mjs";
 import { createRealEstateOriginals } from "./real-estate-originals.mjs";
 import { createR2ZipDelivery } from "./r2-zip-delivery.mjs";
@@ -36,6 +37,17 @@ const jsonRequest = (url, body, headers = {}) => new Request(url, {
   headers: { "content-type": "application/json", ...headers },
   body: JSON.stringify(body),
 });
+
+const realEstateSessionCookie = async (worker, galleryKey = "corine-real-estate") => {
+  const response = await worker.fetch(jsonRequest("https://worker.test/real-estate/login", {
+    galleryKey,
+    username: "Corine",
+    accessCode: "LaConcha",
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get("set-cookie") || "", /^pbe_re_session=/);
+  return (response.headers.get("set-cookie") || "").split(";")[0];
+};
 
 const testWorker = () => {
   const randomUUID = deterministicIds();
@@ -1146,6 +1158,12 @@ test("real-estate originals endpoint creates private download tokens", async () 
   });
   const randomUUID = deterministicIds();
   const store = createMemoryStore();
+  const galleries = [{
+    key: "corine-real-estate",
+    username: "Corine",
+    accessCode: "LaConcha",
+    privateMasterPrefix: "real-estate/corine-real-estate/masters",
+  }];
   const worker = createPhotosByElieWorker({
     catalog: loadCatalog(),
     store,
@@ -1162,19 +1180,19 @@ test("real-estate originals endpoint creates private download tokens", async () 
       store,
       randomUUID,
       now: () => new Date("2026-05-17T12:00:00.000Z"),
-      galleries: [{
-        key: "corine-real-estate",
-        username: "Corine",
-        accessCode: "LaConcha",
-        privateMasterPrefix: "real-estate/corine-real-estate/masters",
-      }],
+      galleries,
+    }),
+    realEstateAuth: createRealEstateAuth({
+      galleries,
+      sessionSecret: "test-real-estate-session-secret",
+      now: () => new Date("2026-05-17T12:00:00.000Z"),
     }),
   });
 
+  const cookie = await realEstateSessionCookie(worker);
   const sessionResponse = await worker.fetch(jsonRequest("https://worker.test/real-estate/originals/session", {
     galleryKey: "corine-real-estate",
     username: "Corine",
-    accessCode: "LaConcha",
     items: [
       {
         photoId,
@@ -1191,7 +1209,7 @@ test("real-estate originals endpoint creates private download tokens", async () 
         sortIndex: 2,
       },
     ],
-  }));
+  }, { cookie }));
   assert.equal(sessionResponse.status, 201);
   const session = await sessionResponse.json();
   assert.equal(session.originals.fileCount, 2);
@@ -1217,6 +1235,11 @@ test("real-estate originals endpoint creates private download tokens", async () 
 test("real-estate originals endpoint rejects the wrong client password", async () => {
   const randomUUID = deterministicIds();
   const store = createMemoryStore();
+  const galleries = [{
+    key: "corine-real-estate",
+    username: "Corine",
+    accessCode: "LaConcha",
+  }];
   const worker = createPhotosByElieWorker({
     catalog: loadCatalog(),
     store,
@@ -1226,23 +1249,18 @@ test("real-estate originals endpoint rejects the wrong client password", async (
       privateBucket: createFakeR2(),
       store,
       randomUUID,
-      galleries: [{
-        key: "corine-real-estate",
-        username: "Corine",
-        accessCode: "LaConcha",
-      }],
+      galleries,
+    }),
+    realEstateAuth: createRealEstateAuth({
+      galleries,
+      sessionSecret: "test-real-estate-session-secret",
     }),
   });
 
-  const response = await worker.fetch(jsonRequest("https://worker.test/real-estate/originals/session", {
+  const response = await worker.fetch(jsonRequest("https://worker.test/real-estate/login", {
     galleryKey: "corine-real-estate",
     username: "Corine",
     accessCode: "Wrong",
-    items: [{
-      photoId: "corine-re-2026-la-concha-1-apt-8ab1-d5h-3043",
-      albumSlug: "re-2026-la-concha-1-apt-8ab1",
-      sourceFile: "D5H_3043.JPG",
-    }],
   }));
   assert.equal(response.status, 403);
   const body = await response.json();
@@ -1252,6 +1270,11 @@ test("real-estate originals endpoint rejects the wrong client password", async (
 test("real-estate deliverables endpoint saves and lists client products", async () => {
   const randomUUID = deterministicIds();
   const privateR2 = createFakeR2();
+  const galleries = [{
+    key: "corine-real-estate",
+    username: "Corine",
+    accessCode: "LaConcha",
+  }];
   const worker = createPhotosByElieWorker({
     catalog: loadCatalog(),
     store: createMemoryStore(),
@@ -1261,11 +1284,12 @@ test("real-estate deliverables endpoint saves and lists client products", async 
       privateBucket: privateR2,
       randomUUID,
       now: () => new Date("2026-05-17T12:00:00.000Z"),
-      galleries: [{
-        key: "corine-real-estate",
-        username: "Corine",
-        accessCode: "LaConcha",
-      }],
+      galleries,
+    }),
+    realEstateAuth: createRealEstateAuth({
+      galleries,
+      sessionSecret: "test-real-estate-session-secret",
+      now: () => new Date("2026-05-17T12:00:00.000Z"),
     }),
   });
   const deliverable = {
@@ -1291,12 +1315,12 @@ test("real-estate deliverables endpoint saves and lists client products", async 
     },
   };
 
+  const cookie = await realEstateSessionCookie(worker);
   const saveResponse = await worker.fetch(jsonRequest("https://worker.test/real-estate/deliverables", {
     galleryKey: "corine-real-estate",
     username: "Corine",
-    accessCode: "LaConcha",
     deliverable,
-  }));
+  }, { cookie }));
   assert.equal(saveResponse.status, 201);
   const saved = await saveResponse.json();
   assert.equal(saved.deliverable.id, deliverable.id);
@@ -1305,8 +1329,7 @@ test("real-estate deliverables endpoint saves and lists client products", async 
   const listResponse = await worker.fetch(jsonRequest("https://worker.test/real-estate/deliverables/list", {
     galleryKey: "corine-real-estate",
     username: "Corine",
-    accessCode: "LaConcha",
-  }));
+  }, { cookie }));
   assert.equal(listResponse.status, 200);
   const listed = await listResponse.json();
   assert.equal(listed.count, 1);
@@ -1316,9 +1339,8 @@ test("real-estate deliverables endpoint saves and lists client products", async 
   const deleteResponse = await worker.fetch(jsonRequest("https://worker.test/real-estate/deliverables/delete", {
     galleryKey: "corine-real-estate",
     username: "Corine",
-    accessCode: "LaConcha",
     id: deliverable.id,
-  }));
+  }, { cookie }));
   assert.equal(deleteResponse.status, 200);
   const deleted = await deleteResponse.json();
   assert.equal(deleted.id, deliverable.id);
@@ -1327,8 +1349,7 @@ test("real-estate deliverables endpoint saves and lists client products", async 
   const afterDeleteResponse = await worker.fetch(jsonRequest("https://worker.test/real-estate/deliverables/list", {
     galleryKey: "corine-real-estate",
     username: "Corine",
-    accessCode: "LaConcha",
-  }));
+  }, { cookie }));
   assert.equal(afterDeleteResponse.status, 200);
   const afterDelete = await afterDeleteResponse.json();
   assert.equal(afterDelete.count, 0);
@@ -1338,7 +1359,7 @@ test("real-estate deliverables endpoint saves and lists client products", async 
     username: "Corine",
     accessCode: "Wrong",
   }));
-  assert.equal(wrongPassword.status, 403);
+  assert.equal(wrongPassword.status, 401);
 });
 
 test("deployed Worker blocks checkout when private delivery files are missing", async () => {

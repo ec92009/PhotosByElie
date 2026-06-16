@@ -1344,13 +1344,11 @@
   const unlockRealEstateClientSession = (client) => {
     const galleryKey = String(client?.galleryKey || realEstateConventionsFor(client).galleryKey || "").trim();
     const username = String(client?.username || client?.customer || client?.email || "").trim();
-    const accessCode = String(client?.accessCode || "").trim();
-    if (!galleryKey || !username || !accessCode) return false;
+    if (!galleryKey || !username) return false;
     try {
       window.localStorage.setItem(`photosbyelie-real-estate-session-${galleryKey}`, JSON.stringify({
         galleryKey,
         username,
-        accessCode,
         unlocked: true,
         unlockedAt: new Date().toISOString(),
       }));

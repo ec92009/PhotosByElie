@@ -109,9 +109,6 @@
     "titleStoreKey": "photosbyelie-real-estate-titles-Corine-gallery"
   },
   "customer": {
-    "accessCodeAlgorithm": "sha256-salt-v1",
-    "accessCodeHash": "f2b8fff8863324edeb924ec3ec1fa76f8d1e1de50b8fc363aa6713a6ff1baf72",
-    "accessCodeSalt": "corine-real-estate-2026-local",
     "email": "corine.bn2007@yahoo.fr",
     "name": "Corine",
     "username": "Corine"

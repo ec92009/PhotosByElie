@@ -18,7 +18,7 @@ browser basket -> Worker availability check -> Stripe Checkout -> signed paid we
 - Stripe webhook verification from the raw request body and `Stripe-Signature` header.
 - Order status transitions.
 - Per-file delivery metadata, local mock ZIP generation, signed-link-style download tokens, token expiry, and download event counts.
-- Real Estate originals sessions that mint private download tokens for browser-built ZIPs.
+- Real Estate client login, signed HttpOnly session cookies, originals sessions, and saved-product shelf sync.
 
 Stripe owns only the payment track. The browser proposes a basket, but the Worker recalculates price and availability before creating the checkout session.
 
@@ -34,9 +34,12 @@ All routes also work under `/api`, for example `/api/checkout/guest`.
 | `POST /purchases/recent` | Basket checks checkout email plus selected photo/product IDs | Scans paid Worker order records and reports whether each item is covered by the 30-day download allowance |
 | `POST /stripe-webhook` | Stripe/mocked Stripe says checkout completed | Verifies payment facts, prepares delivery, marks order `ready` |
 | `POST /mock-stripe/pay` | Local mock payment helper | Simulates a paid Stripe event for a Checkout Session |
-| `POST /real-estate/originals/session` | Real Estate client requests selected originals | Validates the client password, checks private R2 originals, and returns per-file private download tokens |
-| `POST /real-estate/deliverables` | Real Estate client saves a PDF/video product | Validates the client password and stores the small product manifest in private R2 |
-| `POST /real-estate/deliverables/list` | Real Estate client opens the product shelf | Validates the client password and lists saved PDF/video manifests from private R2 |
+| `POST /real-estate/login` | Real Estate client submits username/password | Verifies Worker-held credentials and issues a short-lived signed HttpOnly session cookie |
+| `GET /real-estate/session` | Real Estate client checks current auth | Validates the signed session cookie |
+| `POST /real-estate/logout` | Real Estate client logs out | Clears the signed session cookie |
+| `POST /real-estate/originals/session` | Real Estate client requests selected originals | Requires the signed session cookie, checks private R2 originals, and returns per-file private download tokens |
+| `POST /real-estate/deliverables` | Real Estate client saves a PDF/video product | Requires the signed session cookie and stores the small product manifest in private R2 |
+| `POST /real-estate/deliverables/list` | Real Estate client opens the product shelf | Requires the signed session cookie and lists saved PDF/video manifests from private R2 |
 | `GET /orders/:orderId?email=...` | Buyer checks delivery state | Returns order status when email matches |
 | `GET /download/:token` | Buyer clicks download | Streams the private delivery file or returns a mock signed R2 URL in mock mode |
 
@@ -52,7 +55,7 @@ All routes also work under `/api`, for example `/api/checkout/guest`.
 - `DELIVERY_MEDIA` serves private buyer downloads. It can point at the same private R2 bucket for the mock phase.
 - `IMAGES` binds Cloudflare Images so the Worker can render unwatermarked JPG 1 MP, 3 MP, and 6 MP buyer files from private masters on demand.
 
-The public static site points checkout, Real Estate originals delivery, and Real Estate product shelf sync to the deployed Worker through `window.photosByElieMediaConfig.checkoutWorkerBaseUrl` and points public preview media directly to the public R2 media base through `window.photosByElieMediaConfig.publicBaseUrl`. Use `?workerBase=https://...` for alternate cloud Workers, `?workerBase=http://localhost:8787` while testing locally, and `?mediaBase=https://...` for alternate public media bases. The R2 delivery adapter validates selected private files before creating Stripe Checkout, passes full-resolution masters through unchanged from `masters/<photo-id>.<format>`, and treats JPG 6 MP, 3 MP, and 1 MP products as cached render objects under flat private R2 keys like `renders/<photo-id>_6mp.jpg`. If a cached JPG render is missing but the private master exists, the deployed Worker uses Cloudflare Images to generate the unwatermarked JPG, writes it back to private R2, and then delivers it. On-demand render checkout is limited to JPG/JPEG, PNG, and WEBP masters; preexisting cached render files can still be delivered for any source format. The old nested master/render migration fallback is retired; missing flat keys no longer block supported JPG checkout when the private master is present. Real Estate originals use keys under `real-estate/<gallery-key>/masters/<album-slug>/<photo-id>.jpg`, and client-created PDF/video shelf manifests use `real-estate/<gallery-key>/deliverables/<product-id>.json`. Public cloud delivery intentionally avoids assembling one large ZIP in the Worker; each purchased file or Real Estate original gets its own download token, repeat downloads are allowed up to the configured limit, and successful downloads are appended to the order event history.
+The public static site points checkout, Real Estate login, originals delivery, and Real Estate product shelf sync to the deployed Worker through `window.photosByElieMediaConfig.checkoutWorkerBaseUrl` and points public preview media directly to the public R2 media base through `window.photosByElieMediaConfig.publicBaseUrl`. Use `?workerBase=https://...` for alternate cloud Workers, `?workerBase=http://localhost:8787` while testing locally, and `?mediaBase=https://...` for alternate public media bases. The R2 delivery adapter validates selected private files before creating Stripe Checkout, passes full-resolution masters through unchanged from `masters/<photo-id>.<format>`, and treats JPG 6 MP, 3 MP, and 1 MP products as cached render objects under flat private R2 keys like `renders/<photo-id>_6mp.jpg`. If a cached JPG render is missing but the private master exists, the deployed Worker uses Cloudflare Images to generate the unwatermarked JPG, writes it back to private R2, and then delivers it. On-demand render checkout is limited to JPG/JPEG, PNG, and WEBP masters; preexisting cached render files can still be delivered for any source format. The old nested master/render migration fallback is retired; missing flat keys no longer block supported JPG checkout when the private master is present. Real Estate originals use keys under `real-estate/<gallery-key>/masters/<album-slug>/<photo-id>.jpg`, and client-created PDF/video shelf manifests use `real-estate/<gallery-key>/deliverables/<product-id>.json`. Public cloud delivery intentionally avoids assembling one large ZIP in the Worker; each purchased file or Real Estate original gets its own download token, repeat downloads are allowed up to the configured limit, and successful downloads are appended to the order event history.
 
 The current checkout Worker is live at:
 
@@ -88,6 +91,9 @@ Real Stripe is selected automatically when `STRIPE_SECRET_KEY` is present. Requi
 - `DOWNLOAD_TOKEN_MAX_DOWNLOADS`: optional successful-download limit per token; default is 100.
 - `STRIPE_STATEMENT_DESCRIPTOR_SUFFIX`: optional card statement descriptor suffix for Checkout PaymentIntents; default is `DOWNLOAD`, producing `PHOTOSELIE* DOWNLOAD` with the current shortened descriptor prefix. The Stripe Dashboard still owns the business descriptor prefix, logo, color, support details, and public receipt branding.
 - `WORKER_PUBLIC_URL`: absolute public Worker base used when composing direct download links in buyer delivery emails if direct links are enabled.
+- `REAL_ESTATE_GALLERIES_JSON`: JSON array/object of Real Estate galleries with `key`, `username`/`email`, private prefixes, and either Worker-held `accessCode` or `accessCodeHash` plus `accessCodeSalt`.
+- `REAL_ESTATE_SESSION_SECRET`: required secret for signing short-lived Real Estate session cookies.
+- `REAL_ESTATE_SESSION_SECONDS`: optional Real Estate session TTL in seconds; default is 7200.
 - `ORDER_EMAIL_FROM`: sender used for buyer delivery emails, for example `Photos By Elie <orders@photos-by-elie.com>`.
 - `ORDER_EMAIL_REPLY_TO`: optional reply-to mailbox for buyer delivery emails.
 - `ORDER_EMAIL_INCLUDE_DIRECT_DOWNLOAD_LINKS`: optional flag; currently disabled in production so buyer emails send the first-party order recovery page without direct token links that can trip spam heuristics or depend on a newly propagated download subdomain.

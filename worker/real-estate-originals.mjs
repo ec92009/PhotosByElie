@@ -113,6 +113,8 @@ export const createRealEstateOriginals = ({
   };
 
   const authorize = (gallery, payload) => {
+    const session = payload.realEstateSession;
+    if (session?.galleryKey === gallery.key && normalizeCredential(session.username)) return;
     const expectedUsers = new Set([
       gallery.username,
       gallery.customer,

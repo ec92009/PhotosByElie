@@ -2,6 +2,7 @@ import { createCatalogIndex, createPhotosByElieWorker } from "./checkout-worker.
 import { createCloudflareImagesRenderer } from "./cloudflare-images-renderer.mjs";
 import { createKvStore } from "./kv-store.mjs";
 import { createMockStripeClient } from "./mock-stripe.mjs";
+import { createRealEstateAuth } from "./real-estate-auth.mjs";
 import { createRealEstateDeliverables } from "./real-estate-deliverables.mjs";
 import { createRealEstateOriginals } from "./real-estate-originals.mjs";
 import { createR2ZipDelivery } from "./r2-zip-delivery.mjs";
@@ -59,6 +60,8 @@ const cleanRealEstateGallery = (gallery = {}) => {
     key,
     username: String(gallery.username || gallery.customer || "").trim(),
     accessCode: String(gallery.accessCode || gallery.password || "").trim(),
+    accessCodeHash: String(gallery.accessCodeHash || "").trim().toLowerCase(),
+    accessCodeSalt: String(gallery.accessCodeSalt || "").trim(),
     privateMasterPrefix: String(gallery.privateMasterPrefix || `real-estate/${key}/masters`).replace(/^\/+|\/+$/g, ""),
     maxItems: Number(gallery.maxItems || 300) || 300,
   };
@@ -70,7 +73,7 @@ const realEstateGalleriesFor = (env = {}) => {
     try {
       const parsed = JSON.parse(rawJson);
       const source = Array.isArray(parsed) ? parsed : Array.isArray(parsed.galleries) ? parsed.galleries : [];
-      const galleries = source.map(cleanRealEstateGallery).filter((gallery) => gallery?.username && gallery?.accessCode);
+      const galleries = source.map(cleanRealEstateGallery).filter((gallery) => gallery?.username && (gallery?.accessCode || (gallery?.accessCodeHash && gallery?.accessCodeSalt)));
       if (galleries.length) return galleries;
     } catch {
       // Fall through to the legacy single-gallery environment variables.
@@ -82,7 +85,7 @@ const realEstateGalleriesFor = (env = {}) => {
     accessCode: env.REAL_ESTATE_CORINE_ACCESS_CODE || "",
     privateMasterPrefix: env.REAL_ESTATE_CORINE_PRIVATE_MASTER_PREFIX || "real-estate/corine-real-estate/masters",
   });
-  return legacy?.username && legacy?.accessCode ? [legacy] : [];
+  return legacy?.username && (legacy?.accessCode || (legacy?.accessCodeHash && legacy?.accessCodeSalt)) ? [legacy] : [];
 };
 
 const mediaHeaders = (object = null, extraHeaders = {}) => ({
@@ -242,6 +245,11 @@ export default {
         store,
         galleries: realEstateGalleries,
       }),
+      realEstateAuth: realEstateGalleries.length && env.REAL_ESTATE_SESSION_SECRET ? createRealEstateAuth({
+        galleries: realEstateGalleries,
+        sessionSecret: env.REAL_ESTATE_SESSION_SECRET,
+        sessionSeconds: positiveInt(env.REAL_ESTATE_SESSION_SECONDS, 2 * 60 * 60),
+      }) : null,
       realEstateDeliverables: createRealEstateDeliverables({
         privateBucket,
         galleries: realEstateGalleries,

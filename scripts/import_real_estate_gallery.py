@@ -703,17 +703,16 @@ def build_manifest(
     }
     if email:
         customer_payload["email"] = email
-    if credential_hash:
-        customer_payload.update({
-            "accessCodeHash": credential_hash,
-            "accessCodeSalt": access_code_salt,
-            "accessCodeAlgorithm": ACCESS_CODE_HASH_ALGORITHM,
-        })
 
     manifest = {
         "schema": "photosbyelie.realEstateImport.v1",
         "generatedAt": generated_at,
         "customer": customer_payload,
+        "auth": {
+            "accessCodeAlgorithm": ACCESS_CODE_HASH_ALGORITHM,
+            "accessCodeHash": credential_hash,
+            "accessCodeSalt": access_code_salt,
+        } if credential_hash else {},
         "sourceRoot": str(source_root),
         "outputRoot": repo_relative(output_dir, repo_root),
         "r2": {

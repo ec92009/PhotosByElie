@@ -116,9 +116,6 @@
     "titleStoreKey": "photosbyelie-real-estate-titles-Elie-gallery"
   },
   "customer": {
-    "accessCodeAlgorithm": "sha256-salt-v1",
-    "accessCodeHash": "4e11c5123ec153e82fe321f9c7d9f40e221c4c713cc513f2992d99ffa4901b50",
-    "accessCodeSalt": "05d40cdb9ca44eb6b51f7d255a3d5d25",
     "email": "ec92009@gmail.com",
     "name": "Elie",
     "username": "Elie"

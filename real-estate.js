@@ -359,11 +359,10 @@
 
   const writeSessionCredentials = (username, accessCode) => {
     state.username = String(username || "");
-    state.accessCode = String(accessCode || "");
+    state.accessCode = "";
     try {
       sessionStorage.setItem(credentialSessionKey(), JSON.stringify({
         username: state.username,
-        accessCode: state.accessCode,
       }));
     } catch {}
   };
@@ -458,42 +457,6 @@
     state.payload?.customer?.email,
     state.payload?.customer?.name,
   ].map(normalizeCredential).filter(Boolean));
-  const expectedAccessCode = () => normalizeCredential(
-    state.payload?.accessCode
-    || state.payload?.customer?.accessCode
-    || ""
-  );
-  const expectedAccessCodeHash = () => String(
-    state.payload?.accessCodeHash
-    || state.payload?.customer?.accessCodeHash
-    || ""
-  ).trim().toLowerCase();
-  const expectedAccessCodeSalt = () => String(
-    state.payload?.accessCodeSalt
-    || state.payload?.customer?.accessCodeSalt
-    || ""
-  ).trim();
-
-  const sha256Hex = async (value) => {
-    if (!window.crypto?.subtle || typeof TextEncoder !== "function") return "";
-    const bytes = new TextEncoder().encode(String(value || ""));
-    const digest = await window.crypto.subtle.digest("SHA-256", bytes);
-    return [...new Uint8Array(digest)]
-      .map((byte) => byte.toString(16).padStart(2, "0"))
-      .join("");
-  };
-
-  const credentialMatches = async (enteredUser, enteredCode) => {
-    if (!expectedLoginNames().has(enteredUser)) return false;
-    const expectedHash = expectedAccessCodeHash();
-    const salt = expectedAccessCodeSalt();
-    if (expectedHash && salt) {
-      const actualHash = await sha256Hex(`${salt}:${enteredCode}`);
-      return Boolean(actualHash) && actualHash === expectedHash;
-    }
-    return Boolean(expectedAccessCode()) && enteredCode === expectedAccessCode();
-  };
-
   const hasUnlockedSession = () => {
     const saved = readJson(authStoreKey(), {});
     return Boolean(
@@ -503,13 +466,55 @@
     );
   };
 
-  const writeSession = (username = "", accessCode = "") => writeJson(authStoreKey(), {
+  const writeSession = (username = "") => writeJson(authStoreKey(), {
     galleryKey: state.gallery?.key || "",
     username,
-    accessCode,
     unlocked: true,
     unlockedAt: new Date().toISOString(),
   });
+
+  const clearAuthState = () => {
+    try {
+      localStorage.removeItem(authStoreKey());
+    } catch {}
+    clearSessionCredentials();
+    state.unlocked = false;
+    state.accessCode = "";
+  };
+
+  const realEstateWorkerError = (response, body = {}) => {
+    const message = body?.error?.message || "Real Estate Worker request failed.";
+    const error = new Error(message);
+    error.status = response.status;
+    error.code = body?.error?.code || "real_estate_worker_error";
+    return error;
+  };
+
+  const handleAuthFailure = (error) => {
+    if (error?.status !== 401 && error?.code !== "real_estate_login_required") return false;
+    clearAuthState();
+    syncAuthUi();
+    if (elements.loginStatus) elements.loginStatus.textContent = "Your login expired. Please log in again.";
+    return true;
+  };
+
+  const loginWithWorker = async (username, accessCode) => {
+    const baseUrl = workerBaseUrl();
+    if (!baseUrl) throw new Error("Client login needs the Photos By Elie Worker.");
+    const response = await fetch(`${baseUrl}/real-estate/login`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        galleryKey: state.gallery?.key || "",
+        username,
+        accessCode,
+      }),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw realEstateWorkerError(response, body);
+    return body.session || {};
+  };
 
   const renderLoginCodeIcon = () => {
     const showing = elements.loginCode?.type === "text";
@@ -1149,12 +1154,6 @@
         || state.payload?.customer?.name
         || ""
       ),
-      accessCode: String(
-        state.accessCode
-        || savedCredentials.accessCode
-        || savedSession.accessCode
-        || ""
-      ),
     };
   };
 
@@ -1487,12 +1486,9 @@
 
   const credentialsForCloudDeliverables = async ({ promptIfMissing = false } = {}) => {
     const credentials = cloudCredentialSnapshot();
-    if (!credentials.accessCode && promptIfMissing) {
-      credentials.accessCode = await promptOriginalsPassword("Enter the client password to sync products saved in the cloud.");
-    }
-    if (!credentials.username || !credentials.accessCode) return null;
-    writeSessionCredentials(credentials.username, credentials.accessCode);
-    if (state.unlocked) writeSession(credentials.username, credentials.accessCode);
+    if (!credentials.username) return null;
+    writeSessionCredentials(credentials.username);
+    if (state.unlocked) writeSession(credentials.username);
     return credentials;
   };
 
@@ -1511,11 +1507,11 @@
     try {
       const response = await fetch(`${baseUrl}/real-estate/deliverables/list`, {
         method: "POST",
+        credentials: "include",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           galleryKey: state.gallery?.key || "",
           username: credentials.username,
-          accessCode: credentials.accessCode,
           limit: 50,
         }),
       });
@@ -1530,6 +1526,7 @@
       }
       return state.cloudDeliverables;
     } catch (error) {
+      if (handleAuthFailure(error)) return [];
       state.cloudDeliverablesError = error?.message || "Cloud products could not be loaded.";
       if (!quiet) setStatus(state.cloudDeliverablesError);
       throw error;
@@ -1546,17 +1543,17 @@
     if (!credentials) return null;
     const response = await fetch(`${baseUrl}/real-estate/deliverables`, {
       method: "POST",
+      credentials: "include",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         galleryKey: state.gallery?.key || "",
         username: credentials.username,
-        accessCode: credentials.accessCode,
         deliverable: record,
       }),
     });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) {
-      throw new Error(body?.error?.message || "Cloud product could not be saved.");
+      throw realEstateWorkerError(response, body);
     }
     const saved = body.deliverable || record;
     const existing = Array.isArray(state.cloudDeliverables) ? state.cloudDeliverables : [];
@@ -1593,22 +1590,22 @@
     }
     const credentials = await credentialsForCloudDeliverables({ promptIfMissing });
     if (!credentials) {
-      if (promptIfMissing) throw new Error("Client password is needed to delete this cloud product.");
+      if (promptIfMissing) throw new Error("Client login is needed to delete this cloud product.");
       return null;
     }
     const response = await fetch(`${baseUrl}/real-estate/deliverables/delete`, {
       method: "POST",
+      credentials: "include",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         galleryKey: state.gallery?.key || "",
         username: credentials.username,
-        accessCode: credentials.accessCode,
         id: deliverableId,
       }),
     });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) {
-      throw new Error(body?.error?.message || "Cloud product could not be deleted.");
+      throw realEstateWorkerError(response, body);
     }
     return body;
   };
@@ -4162,12 +4159,8 @@
   const credentialsForOriginals = async (message = "") => {
     const saved = readSessionCredentials();
     const username = state.username || saved.username || state.payload?.customer?.username || state.payload?.customer?.name || "";
-    let accessCode = state.accessCode || saved.accessCode || "";
-    if (!accessCode || message) {
-      accessCode = await promptOriginalsPassword(message);
-    }
-    writeSessionCredentials(username, accessCode);
-    return { username, accessCode };
+    writeSessionCredentials(username);
+    return { username };
   };
 
   const requestOriginalsSession = async (photos, passwordMessage = "") => {
@@ -4176,11 +4169,11 @@
     const credentials = await credentialsForOriginals(passwordMessage);
     const response = await fetch(`${baseUrl}/real-estate/originals/session`, {
       method: "POST",
+      credentials: "include",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         galleryKey: state.gallery?.key || "",
         username: credentials.username,
-        accessCode: credentials.accessCode,
         items: originalRequestItemsFor(photos),
       }),
     });
@@ -4188,6 +4181,7 @@
     if (!response.ok) {
       const message = body?.error?.message || "Originals ZIP could not be prepared.";
       const error = new Error(message);
+      error.status = response.status;
       error.code = body?.error?.code || "originals_session_failed";
       throw error;
     }
@@ -4219,26 +4213,12 @@
     });
     syncFileActionLabels();
     try {
-      let session = null;
-      let passwordMessage = "";
-      for (let attempt = 0; attempt < 2 && !session; attempt += 1) {
-        setStatus(`Preparing private original links for ${photos.length} selected media item${photos.length === 1 ? "" : "s"}...`);
-        updateOutputProgress({
-          title: "Preparing originals ZIP",
-          detail: `Requesting private links for ${photos.length} selected media item${photos.length === 1 ? "" : "s"}...`,
-        });
-        try {
-          session = await requestOriginalsSession(photos, passwordMessage);
-        } catch (error) {
-          if (error?.code === "real_estate_auth_required" && attempt === 0) {
-            clearSessionCredentials();
-            passwordMessage = "That password did not work. Enter the client password again.";
-            setStatus("Password did not work; enter the client password again to create the originals ZIP");
-            continue;
-          }
-          throw error;
-        }
-      }
+      setStatus(`Preparing private original links for ${photos.length} selected media item${photos.length === 1 ? "" : "s"}...`);
+      updateOutputProgress({
+        title: "Preparing originals ZIP",
+        detail: `Requesting private links for ${photos.length} selected media item${photos.length === 1 ? "" : "s"}...`,
+      });
+      const session = await requestOriginalsSession(photos);
       if (!session) throw new Error("Originals ZIP could not be prepared.");
       const files = originalZipFilesFor(session);
       const totalBytes = Number(session.totalBytes) || files.reduce((sum, file) => sum + (Number(file.bytes) || 0), 0);
@@ -4297,8 +4277,10 @@
       completeOutputProgress(`Ready: ${saved.filename} (${formatBytes(saved.bytes)})`);
     } catch (error) {
       const message = error?.name === "AbortError" ? "Originals ZIP canceled" : (error?.message || "Originals ZIP failed");
-      setStatus(message);
-      failOutputProgress(message);
+      if (!handleAuthFailure(error)) {
+        setStatus(message);
+        failOutputProgress(message);
+      }
     } finally {
       state.originalsBusy = false;
       syncFileActionLabels();
@@ -5264,13 +5246,16 @@
       event.preventDefault();
       const enteredUser = normalizeCredential(elements.loginName?.value);
       const enteredCode = normalizeCredential(elements.loginCode?.value);
-      if (!await credentialMatches(enteredUser, enteredCode)) {
-        if (elements.loginStatus) elements.loginStatus.textContent = "Credentials do not match this review.";
+      try {
+        await loginWithWorker(elements.loginName?.value || "", elements.loginCode?.value || "");
+      } catch (error) {
+        if (elements.loginStatus) elements.loginStatus.textContent = error?.message || "Credentials do not match this review.";
         return;
       }
       state.unlocked = true;
-      writeSessionCredentials(elements.loginName?.value || "", elements.loginCode?.value || "");
-      writeSession(elements.loginName?.value || "", elements.loginCode?.value || "");
+      if (elements.loginCode) elements.loginCode.value = "";
+      writeSessionCredentials(elements.loginName?.value || "");
+      writeSession(elements.loginName?.value || "");
       clearLogoutFromHistory();
       syncAuthUi();
       setStatus(`${state.photos.length} visible / ${state.photos.length} media`);
@@ -5617,9 +5602,14 @@
     });
     document.querySelectorAll("[data-re-clear-selection]").forEach((button) => button.addEventListener("click", clearSelection));
     document.querySelectorAll("[data-re-logout]").forEach((button) => button.addEventListener("click", () => {
-      localStorage.removeItem(authStoreKey());
-      clearSessionCredentials();
-      state.unlocked = false;
+      const baseUrl = workerBaseUrl();
+      if (baseUrl) {
+        fetch(`${baseUrl}/real-estate/logout`, {
+          method: "POST",
+          credentials: "include",
+        }).catch(() => {});
+      }
+      clearAuthState();
       syncAuthUi();
       window.scrollTo({ top: 0, behavior: "smooth" });
     }));
@@ -5686,14 +5676,13 @@
     const savedDeliverables = readJson(localDeliverablesStoreKey(), []);
     state.localDeliverables = Array.isArray(savedDeliverables) ? savedDeliverables : [];
     if (pageParams.has("logout")) {
-      localStorage.removeItem(authStoreKey());
-      clearSessionCredentials();
+      clearAuthState();
     }
     state.unlocked = hasUnlockedSession();
     const savedCredentials = readSessionCredentials();
     const savedSession = readJson(authStoreKey(), {});
     state.username = savedCredentials.username || savedSession.username || state.payload?.customer?.username || state.payload?.customer?.name || "";
-    state.accessCode = savedCredentials.accessCode || savedSession.accessCode || "";
+    state.accessCode = "";
     state.density = normalizeDensity(state.density);
     if (elements.density) elements.density.value = state.density;
     state.pdfFormat = paperFormatFor(state.pdfFormat).key;

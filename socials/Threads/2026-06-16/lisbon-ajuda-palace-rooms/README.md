@@ -1,7 +1,7 @@
 # Threads: Lisbon Ajuda Palace Rooms
 
 - Date: 2026-06-16
-- Status: prepared
+- Status: published
 - Destination: https://photos-by-elie.com/campaign.html?c=instagram-lisbon-ajuda-palace-rooms-2026-06-16
 - Local package: /Users/ecohen/Dev/pbe-daily-social-20260616-GAqyds/socials/Threads/2026-06-16/lisbon-ajuda-palace-rooms
 - Image count: 4
@@ -20,3 +20,14 @@ Images:
 | 4 | `20180519-1709-00670-4d47eae233` | https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180519-1709-00670-4d47eae233_1800.jpg | socials/Threads/2026-06-16/lisbon-ajuda-palace-rooms/images/04-20180519-1709-00670-4d47eae233-lisbon-ajuda-palace-rooms.jpg |
 
 Link preview: remove automatic preview before posting if it shows generic/off-theme metadata.
+
+## Published Result
+
+- Status: published
+- Published at: 2026-06-16T03:13:21+0000
+- Verified at: 2026-06-16T03:17:26.044Z
+- Media ID: 18105028868058055
+- Permalink: https://www.threads.com/@ec92009/post/DZoZpnLDOlU
+- Username: ec92009
+- Media type: CAROUSEL_ALBUM
+- Verified child count: 4

@@ -1,7 +1,7 @@
 # Facebook: Basque Country Bilbao Light
 
 - Date: 2026-06-16
-- Status: prepared
+- Status: published
 - Destination: https://photos-by-elie.com/campaign.html?c=facebook-basque-country-bilbao-light-2026-06-16
 - Local package: /Users/ecohen/Dev/pbe-daily-social-20260616-GAqyds/socials/Facebook/2026-06-16/basque-country-bilbao-light
 - Image count: 8
@@ -23,3 +23,13 @@ Images:
 | 7 | `20180523-1232-00922-a14269681d` | https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180523-1232-00922-a14269681d_1800.jpg | socials/Facebook/2026-06-16/basque-country-bilbao-light/images/07-20180523-1232-00922-a14269681d-basque-country-bilbao-light.jpg |
 | 8 | `20220509-210128-03604-d9c7d7c228` | https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20220509-210128-03604-d9c7d7c228_1800.jpg | socials/Facebook/2026-06-16/basque-country-bilbao-light/images/08-20220509-210128-03604-d9c7d7c228-basque-country-bilbao-light.jpg |
 
+
+## Published Result
+
+- Status: published
+- Published at: 2026-06-16T03:11:34+0000
+- Verified at: 2026-06-16T03:17:26.044Z
+- Post ID: 1146747141854670_122106374043334672
+- Permalink: https://www.facebook.com/122102168061334672/posts/122106374043334672
+- Account: Photos By Elie
+- Verified image count: 8

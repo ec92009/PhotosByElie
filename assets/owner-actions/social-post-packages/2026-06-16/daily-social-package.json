@@ -2,7 +2,7 @@
   "date": "2026-06-16",
   "format": "photosbyelie-daily-social-package",
   "visible_version": "v108.1",
-  "status": "prepared",
+  "status": "published_partial",
   "themes": [
     "Basque Country Bilbao Light",
     "Lisbon Ajuda Palace Rooms",
@@ -12,7 +12,7 @@
     {
       "date": "2026-06-16",
       "platform": "Facebook",
-      "status": "prepared",
+      "status": "published",
       "account": "Photos By Elie",
       "post_type": "multi_photo",
       "title": "Basque Country Bilbao Light",
@@ -153,74 +153,48 @@
           "image": "images/08-20220509-210128-03604-d9c7d7c228-basque-country-bilbao-light.jpg",
           "local_staged_path": "socials/Facebook/2026-06-16/basque-country-bilbao-light/images/08-20220509-210128-03604-d9c7d7c228-basque-country-bilbao-light.jpg"
         }
-      ]
+      ],
+      "published": {
+        "status": "published",
+        "post_id": "1146747141854670_122106374043334672",
+        "permalink": "https://www.facebook.com/122102168061334672/posts/122106374043334672",
+        "published_at": "2026-06-16T03:11:34+0000",
+        "verified_at": "2026-06-16T03:17:26.044Z",
+        "account": "Photos By Elie",
+        "image_count": 8,
+        "platform_visible_confirmation": "Graph API readback returned permalink and 8 photo subattachments."
+      },
+      "verification": {
+        "status": "published",
+        "post_id": "1146747141854670_122106374043334672",
+        "permalink": "https://www.facebook.com/122102168061334672/posts/122106374043334672",
+        "published_at": "2026-06-16T03:11:34+0000",
+        "verified_at": "2026-06-16T03:17:26.044Z",
+        "account": "Photos By Elie",
+        "image_count": 8,
+        "platform_visible_confirmation": "Graph API readback returned permalink and 8 photo subattachments."
+      }
     },
     {
       "date": "2026-06-16",
       "platform": "Instagram",
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "title": "Lisbon Ajuda Palace Rooms",
       "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-lisbon-ajuda-palace-rooms-2026-06-16",
       "campaign_id": "instagram-lisbon-ajuda-palace-rooms-2026-06-16",
-      "caption": "Lisbon's Ajuda Palace in eight frames: ornate rooms, quiet detail, and interior light shaped as a Photos By Elie wall-art edit. Browse the edit from the profile link.\n\n#PhotosByElie #TravelPhotography #Lisbon #PortugalTravel #WallArt #FineArtPhotography",
+      "caption": "Lisbon's Ajuda Palace in five frames: ornate rooms, quiet detail, and interior light shaped as a Photos By Elie wall-art edit. Browse the edit from the profile link.\n\n#PhotosByElie #TravelPhotography #Lisbon #PortugalTravel #WallArt #FineArtPhotography",
       "recommended_upload_set": "images",
-      "available_count": 8,
+      "available_count": 5,
       "notes": [
-        "Images are public watermarked R2 previews staged for upload/API publishing."
+        "Images are public watermarked R2 previews staged for upload/API publishing.",
+        "Retry package excludes three tall portrait previews rejected by Instagram Graph aspect-ratio validation.",
+        "Retry replaced 20180519-1713-00675-d22d0fadd7 after staged dimensions proved 2.4:1."
       ],
       "items": [
         {
           "order": 1,
-          "id": "20180519-1651-00652-7df7aaac7d",
-          "media_id": "20180519-1651-00652-7df7aaac7d",
-          "title": "Ajuda National Palace, Lisbon",
-          "collection": "portugal",
-          "location": "Portugal",
-          "width": 1425,
-          "height": 1800,
-          "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180519-1651-00652-7df7aaac7d_1800.jpg",
-          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180519-1651-00652-7df7aaac7d_1800.jpg",
-          "photo_url": "https://photos-by-elie.com/photo.html?id=20180519-1651-00652-7df7aaac7d",
-          "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180519-1651-00652-7df7aaac7d",
-          "image": "images/01-20180519-1651-00652-7df7aaac7d-lisbon-ajuda-palace-rooms.jpg",
-          "local_staged_path": "socials/Instagram/2026-06-16/lisbon-ajuda-palace-rooms/images/01-20180519-1651-00652-7df7aaac7d-lisbon-ajuda-palace-rooms.jpg"
-        },
-        {
-          "order": 2,
-          "id": "20180519-1641-00641-2ec3697723",
-          "media_id": "20180519-1641-00641-2ec3697723",
-          "title": "Ajuda National Palace, Lisbon",
-          "collection": "portugal",
-          "location": "Portugal",
-          "width": 1200,
-          "height": 1800,
-          "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180519-1641-00641-2ec3697723_1800.jpg",
-          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180519-1641-00641-2ec3697723_1800.jpg",
-          "photo_url": "https://photos-by-elie.com/photo.html?id=20180519-1641-00641-2ec3697723",
-          "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180519-1641-00641-2ec3697723",
-          "image": "images/02-20180519-1641-00641-2ec3697723-lisbon-ajuda-palace-rooms.jpg",
-          "local_staged_path": "socials/Instagram/2026-06-16/lisbon-ajuda-palace-rooms/images/02-20180519-1641-00641-2ec3697723-lisbon-ajuda-palace-rooms.jpg"
-        },
-        {
-          "order": 3,
-          "id": "20180519-1718-00680-87e901dfa6",
-          "media_id": "20180519-1718-00680-87e901dfa6",
-          "title": "Ajuda National Palace, Lisbon",
-          "collection": "portugal",
-          "location": "Portugal",
-          "width": 1200,
-          "height": 1800,
-          "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180519-1718-00680-87e901dfa6_1800.jpg",
-          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180519-1718-00680-87e901dfa6_1800.jpg",
-          "photo_url": "https://photos-by-elie.com/photo.html?id=20180519-1718-00680-87e901dfa6",
-          "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180519-1718-00680-87e901dfa6",
-          "image": "images/03-20180519-1718-00680-87e901dfa6-lisbon-ajuda-palace-rooms.jpg",
-          "local_staged_path": "socials/Instagram/2026-06-16/lisbon-ajuda-palace-rooms/images/03-20180519-1718-00680-87e901dfa6-lisbon-ajuda-palace-rooms.jpg"
-        },
-        {
-          "order": 4,
           "id": "20180519-1701-00664-8038f40111",
           "media_id": "20180519-1701-00664-8038f40111",
           "title": "Ajuda National Palace, Lisbon",
@@ -232,11 +206,11 @@
           "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180519-1701-00664-8038f40111_1800.jpg",
           "photo_url": "https://photos-by-elie.com/photo.html?id=20180519-1701-00664-8038f40111",
           "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180519-1701-00664-8038f40111",
-          "image": "images/04-20180519-1701-00664-8038f40111-lisbon-ajuda-palace-rooms.jpg",
-          "local_staged_path": "socials/Instagram/2026-06-16/lisbon-ajuda-palace-rooms/images/04-20180519-1701-00664-8038f40111-lisbon-ajuda-palace-rooms.jpg"
+          "image": "images/01-20180519-1701-00664-8038f40111-lisbon-ajuda-palace-rooms.jpg",
+          "local_staged_path": "socials/Instagram/2026-06-16/lisbon-ajuda-palace-rooms/images/01-20180519-1701-00664-8038f40111-lisbon-ajuda-palace-rooms.jpg"
         },
         {
-          "order": 5,
+          "order": 2,
           "id": "20180519-1634-00636-d2ec43a7f8",
           "media_id": "20180519-1634-00636-d2ec43a7f8",
           "title": "Ajuda National Palace, Lisbon",
@@ -248,11 +222,11 @@
           "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180519-1634-00636-d2ec43a7f8_1800.jpg",
           "photo_url": "https://photos-by-elie.com/photo.html?id=20180519-1634-00636-d2ec43a7f8",
           "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180519-1634-00636-d2ec43a7f8",
-          "image": "images/05-20180519-1634-00636-d2ec43a7f8-lisbon-ajuda-palace-rooms.jpg",
-          "local_staged_path": "socials/Instagram/2026-06-16/lisbon-ajuda-palace-rooms/images/05-20180519-1634-00636-d2ec43a7f8-lisbon-ajuda-palace-rooms.jpg"
+          "image": "images/02-20180519-1634-00636-d2ec43a7f8-lisbon-ajuda-palace-rooms.jpg",
+          "local_staged_path": "socials/Instagram/2026-06-16/lisbon-ajuda-palace-rooms/images/02-20180519-1634-00636-d2ec43a7f8-lisbon-ajuda-palace-rooms.jpg"
         },
         {
-          "order": 6,
+          "order": 3,
           "id": "20180519-1651-00651-2e9add6ac1",
           "media_id": "20180519-1651-00651-2e9add6ac1",
           "title": "Ajuda National Palace, Lisbon",
@@ -264,11 +238,11 @@
           "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180519-1651-00651-2e9add6ac1_1800.jpg",
           "photo_url": "https://photos-by-elie.com/photo.html?id=20180519-1651-00651-2e9add6ac1",
           "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180519-1651-00651-2e9add6ac1",
-          "image": "images/06-20180519-1651-00651-2e9add6ac1-lisbon-ajuda-palace-rooms.jpg",
-          "local_staged_path": "socials/Instagram/2026-06-16/lisbon-ajuda-palace-rooms/images/06-20180519-1651-00651-2e9add6ac1-lisbon-ajuda-palace-rooms.jpg"
+          "image": "images/03-20180519-1651-00651-2e9add6ac1-lisbon-ajuda-palace-rooms.jpg",
+          "local_staged_path": "socials/Instagram/2026-06-16/lisbon-ajuda-palace-rooms/images/03-20180519-1651-00651-2e9add6ac1-lisbon-ajuda-palace-rooms.jpg"
         },
         {
-          "order": 7,
+          "order": 4,
           "id": "20180519-1709-00670-4d47eae233",
           "media_id": "20180519-1709-00670-4d47eae233",
           "title": "Ajuda National Palace, Lisbon",
@@ -280,26 +254,52 @@
           "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180519-1709-00670-4d47eae233_1800.jpg",
           "photo_url": "https://photos-by-elie.com/photo.html?id=20180519-1709-00670-4d47eae233",
           "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180519-1709-00670-4d47eae233",
-          "image": "images/07-20180519-1709-00670-4d47eae233-lisbon-ajuda-palace-rooms.jpg",
-          "local_staged_path": "socials/Instagram/2026-06-16/lisbon-ajuda-palace-rooms/images/07-20180519-1709-00670-4d47eae233-lisbon-ajuda-palace-rooms.jpg"
+          "image": "images/04-20180519-1709-00670-4d47eae233-lisbon-ajuda-palace-rooms.jpg",
+          "local_staged_path": "socials/Instagram/2026-06-16/lisbon-ajuda-palace-rooms/images/04-20180519-1709-00670-4d47eae233-lisbon-ajuda-palace-rooms.jpg"
         },
         {
-          "order": 8,
-          "id": "20180519-1713-00675-d22d0fadd7",
-          "media_id": "20180519-1713-00675-d22d0fadd7",
+          "order": 5,
+          "id": "20180519-1640-00640-621d63bf96",
+          "media_id": "20180519-1640-00640-621d63bf96",
           "title": "Ajuda National Palace, Lisbon",
           "collection": "portugal",
           "location": "Portugal",
           "width": 1800,
-          "height": 1200,
-          "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180519-1713-00675-d22d0fadd7_1800.jpg",
-          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180519-1713-00675-d22d0fadd7_1800.jpg",
-          "photo_url": "https://photos-by-elie.com/photo.html?id=20180519-1713-00675-d22d0fadd7",
-          "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180519-1713-00675-d22d0fadd7",
-          "image": "images/08-20180519-1713-00675-d22d0fadd7-lisbon-ajuda-palace-rooms.jpg",
-          "local_staged_path": "socials/Instagram/2026-06-16/lisbon-ajuda-palace-rooms/images/08-20180519-1713-00675-d22d0fadd7-lisbon-ajuda-palace-rooms.jpg"
+          "height": 1275,
+          "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180519-1640-00640-621d63bf96_1800.jpg",
+          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180519-1640-00640-621d63bf96_1800.jpg",
+          "photo_url": "https://photos-by-elie.com/photo.html?id=20180519-1640-00640-621d63bf96",
+          "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180519-1640-00640-621d63bf96",
+          "image": "images/05-20180519-1640-00640-621d63bf96-lisbon-ajuda-palace-rooms.jpg",
+          "local_staged_path": "socials/Instagram/2026-06-16/lisbon-ajuda-palace-rooms/images/05-20180519-1640-00640-621d63bf96-lisbon-ajuda-palace-rooms.jpg"
         }
-      ]
+      ],
+      "published": {
+        "status": "published",
+        "media_id": "17968786896078125",
+        "permalink": "https://www.instagram.com/p/DZoZ_QKjPJ2/",
+        "published_at": "2026-06-16T03:16:19+0000",
+        "verified_at": "2026-06-16T03:17:26.044Z",
+        "account": "ec92009",
+        "username": "ec92009",
+        "media_type": "CAROUSEL_ALBUM",
+        "child_count": 5,
+        "image_count": 5,
+        "platform_visible_confirmation": "Instagram Graph readback returned permalink, CAROUSEL_ALBUM, and 5 children. Initial 8-image attempt rejected tall/wide aspect ratios; package was restaged to five feed-safe images."
+      },
+      "verification": {
+        "status": "published",
+        "media_id": "17968786896078125",
+        "permalink": "https://www.instagram.com/p/DZoZ_QKjPJ2/",
+        "published_at": "2026-06-16T03:16:19+0000",
+        "verified_at": "2026-06-16T03:17:26.044Z",
+        "account": "ec92009",
+        "username": "ec92009",
+        "media_type": "CAROUSEL_ALBUM",
+        "child_count": 5,
+        "image_count": 5,
+        "platform_visible_confirmation": "Instagram Graph readback returned permalink, CAROUSEL_ALBUM, and 5 children. Initial 8-image attempt rejected tall/wide aspect ratios; package was restaged to five feed-safe images."
+      }
     },
     {
       "date": "2026-06-16",
@@ -314,7 +314,8 @@
       "recommended_upload_set": "images",
       "available_count": 5,
       "notes": [
-        "Pinterest package is intentionally capped at exactly 5 images."
+        "Pinterest package is intentionally capped at exactly 5 images.",
+        "Pinterest remains prepared only because no Pinterest token/board id mapping is configured."
       ],
       "items": [
         {
@@ -406,7 +407,7 @@
     {
       "date": "2026-06-16",
       "platform": "Threads",
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "title": "Lisbon Ajuda Palace Rooms",
@@ -485,7 +486,33 @@
           "local_staged_path": "socials/Threads/2026-06-16/lisbon-ajuda-palace-rooms/images/04-20180519-1709-00670-4d47eae233-lisbon-ajuda-palace-rooms.jpg"
         }
       ],
-      "link_preview_note": "Remove any automatic link preview if it shows generic or off-theme campaign metadata before posting."
+      "link_preview_note": "Remove any automatic link preview if it shows generic or off-theme campaign metadata before posting.",
+      "published": {
+        "status": "published",
+        "media_id": "18105028868058055",
+        "permalink": "https://www.threads.com/@ec92009/post/DZoZpnLDOlU",
+        "published_at": "2026-06-16T03:13:21+0000",
+        "verified_at": "2026-06-16T03:17:26.044Z",
+        "account": "ec92009",
+        "username": "ec92009",
+        "media_type": "CAROUSEL_ALBUM",
+        "child_count": 4,
+        "image_count": 4,
+        "platform_visible_confirmation": "Threads Graph readback returned permalink, CAROUSEL_ALBUM, and 4 children."
+      },
+      "verification": {
+        "status": "published",
+        "media_id": "18105028868058055",
+        "permalink": "https://www.threads.com/@ec92009/post/DZoZpnLDOlU",
+        "published_at": "2026-06-16T03:13:21+0000",
+        "verified_at": "2026-06-16T03:17:26.044Z",
+        "account": "ec92009",
+        "username": "ec92009",
+        "media_type": "CAROUSEL_ALBUM",
+        "child_count": 4,
+        "image_count": 4,
+        "platform_visible_confirmation": "Threads Graph readback returned permalink, CAROUSEL_ALBUM, and 4 children."
+      }
     }
   ],
   "etsy_companion_campaigns": [
@@ -496,6 +523,9 @@
   "notes": [
     "Prepared from public catalog rows, public R2 watermarked previews, and first-party campaign URLs only.",
     "Pinterest is capped to exactly 5 images.",
-    "Instagram/Threads exclude the unsafe 3.35:1 Ajuda Palace panorama."
+    "Instagram/Threads exclude the unsafe 3.35:1 Ajuda Palace panorama.",
+    "Instagram was restaged to five feed-safe Ajuda Palace images after Graph rejected tall portrait previews.",
+    "Published Facebook via Meta Pages API, Instagram via Instagram Graph API after restaging to five safe images, and Threads via Threads Graph API.",
+    "Etsy OAuth refreshed and API identity verified, but draft creation was skipped because current tooling cannot attach and verify both listing image and buyer download file."
   ]
 }

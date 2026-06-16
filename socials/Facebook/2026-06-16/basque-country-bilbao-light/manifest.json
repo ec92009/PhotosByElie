@@ -1,7 +1,7 @@
 {
   "date": "2026-06-16",
   "platform": "Facebook",
-  "status": "prepared",
+  "status": "published",
   "account": "Photos By Elie",
   "post_type": "multi_photo",
   "title": "Basque Country Bilbao Light",
@@ -142,5 +142,25 @@
       "image": "images/08-20220509-210128-03604-d9c7d7c228-basque-country-bilbao-light.jpg",
       "local_staged_path": "socials/Facebook/2026-06-16/basque-country-bilbao-light/images/08-20220509-210128-03604-d9c7d7c228-basque-country-bilbao-light.jpg"
     }
-  ]
+  ],
+  "published": {
+    "status": "published",
+    "post_id": "1146747141854670_122106374043334672",
+    "permalink": "https://www.facebook.com/122102168061334672/posts/122106374043334672",
+    "published_at": "2026-06-16T03:11:34+0000",
+    "verified_at": "2026-06-16T03:17:26.044Z",
+    "account": "Photos By Elie",
+    "image_count": 8,
+    "platform_visible_confirmation": "Graph API readback returned permalink and 8 photo subattachments."
+  },
+  "verification": {
+    "status": "published",
+    "post_id": "1146747141854670_122106374043334672",
+    "permalink": "https://www.facebook.com/122102168061334672/posts/122106374043334672",
+    "published_at": "2026-06-16T03:11:34+0000",
+    "verified_at": "2026-06-16T03:17:26.044Z",
+    "account": "Photos By Elie",
+    "image_count": 8,
+    "platform_visible_confirmation": "Graph API readback returned permalink and 8 photo subattachments."
+  }
 }

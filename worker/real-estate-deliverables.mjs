@@ -5,6 +5,12 @@ const normalizeKeyPrefix = (value) => String(value || "")
   .replace(/^\/+|\/+$/g, "")
   .replace(/\/+/g, "/");
 
+const escapeHtml = (value) => String(value ?? "")
+  .replace(/&/g, "&amp;")
+  .replace(/</g, "&lt;")
+  .replace(/>/g, "&gt;")
+  .replace(/"/g, "&quot;");
+
 const safeKeySegment = (value, label) => {
   const segment = String(value || "").trim();
   if (!/^[a-z0-9][a-z0-9-]*$/i.test(segment)) {
@@ -91,12 +97,131 @@ const defaultGalleries = [{
 export const createRealEstateDeliverables = ({
   privateBucket,
   galleries = defaultGalleries,
+  emailClient = null,
+  publicSiteUrl = "",
   now = () => new Date(),
   randomUUID = () => crypto.randomUUID(),
 } = {}) => {
   if (!privateBucket) throw new Error("createRealEstateDeliverables requires a privateBucket R2 binding.");
 
   const galleriesByKey = galleryMapFor(galleries);
+
+  const workspaceUrlFor = (gallery) => {
+    const base = String(publicSiteUrl || "").replace(/\/+$/, "");
+    const path = `/real-estate.html?client=${encodeURIComponent(gallery.key)}`;
+    return base ? `${base}${path}` : path;
+  };
+
+  const propertyContextFor = (gallery, record) => {
+    const explicit = String(record?.batch?.projects?.[0]?.projectTitle || record?.propertyTitle || gallery.propertyTitle || gallery.property || "").trim();
+    if (explicit) return explicit;
+    return String(record?.title || gallery.key || "Real Estate project").replace(/^(PDF|Video|File):\s*/i, "").trim();
+  };
+
+  const emailDecisionFor = (record) => {
+    const type = String(record?.type || "").toLowerCase();
+    const status = String(record?.status || "").toLowerCase();
+    if (type === "selection") {
+      return {
+        status: "not_sent",
+        decision: "shelf_only",
+        reason: "saved_selection_is_resumable_from_real_estate_shelf",
+        decidedAt: now().toISOString(),
+      };
+    }
+    if ((type === "pdf" || type === "video") && status === "ready") {
+      return null;
+    }
+    if (record?.assemblyJob) {
+      return {
+        status: "not_sent",
+        decision: "email_when_ready_asset_available",
+        reason: "pending_cloud_assembly_is_tracked_on_real_estate_shelf",
+        decidedAt: now().toISOString(),
+      };
+    }
+    return {
+      status: "not_sent",
+      decision: "shelf_only",
+      reason: "client_can_review_status_on_real_estate_shelf",
+      decidedAt: now().toISOString(),
+    };
+  };
+
+  const sendReadyDeliverableEmail = async (gallery, record) => {
+    const requestedAt = now().toISOString();
+    const decision = emailDecisionFor(record);
+    if (decision) return decision;
+    const to = String(gallery.email || record?.clientEmail || "").trim();
+    if (!emailClient || typeof emailClient.send !== "function") {
+      return {
+        status: "not_configured",
+        decision: "send_ready_deliverable_notice",
+        requestedAt,
+        reason: "email_client_unavailable",
+      };
+    }
+    if (!to) {
+      return {
+        status: "not_sent",
+        decision: "send_ready_deliverable_notice",
+        requestedAt,
+        reason: "client_email_unavailable",
+      };
+    }
+    const client = String(gallery.customer || gallery.username || "Real Estate client").trim();
+    const property = propertyContextFor(gallery, record);
+    const typeLabel = record.type === "pdf" ? "PDF" : "video";
+    const shelfUrl = workspaceUrlFor(gallery);
+    const text = [
+      `Hello ${client},`,
+      "",
+      `Your Photos By Elie ${typeLabel} for ${property} is ready.`,
+      "",
+      `Open your Real Estate shelf to view or download it: ${shelfUrl}`,
+      "",
+      "Sign in with your client password if asked. If the link is unavailable, reply with this product id so support can check it:",
+      record.id,
+    ].join("\n");
+    const html = [
+      `<p>Hello ${escapeHtml(client)},</p>`,
+      `<p>Your Photos By Elie ${escapeHtml(typeLabel)} for <strong>${escapeHtml(property)}</strong> is ready.</p>`,
+      `<p><a href="${escapeHtml(shelfUrl)}">Open your Real Estate shelf</a> to view or download it.</p>`,
+      `<p>Sign in with your client password if asked. If the link is unavailable, reply with this product id so support can check it: <strong>${escapeHtml(record.id)}</strong></p>`,
+    ].join("");
+    const idempotencyKey = `photosbyelie-real-estate-deliverable-${record.id}`;
+    try {
+      const result = await emailClient.send({
+        to,
+        subject: `Photos By Elie ${typeLabel} ready - ${property}`,
+        text,
+        html,
+        idempotencyKey,
+      });
+      return {
+        status: "sent",
+        decision: "send_ready_deliverable_notice",
+        provider: result.provider || emailClient.provider || "email",
+        messageId: result.messageId || null,
+        idempotencyKey: result.idempotencyKey || idempotencyKey,
+        shelfUrl,
+        sentAt: now().toISOString(),
+      };
+    } catch (error) {
+      return {
+        status: "failed",
+        decision: "send_ready_deliverable_notice",
+        provider: emailClient.provider || "email",
+        idempotencyKey,
+        shelfUrl,
+        failedAt: now().toISOString(),
+        error: {
+          code: error?.code || "delivery_email_failed",
+          message: error?.message || "Delivery email could not be sent.",
+        },
+      };
+    }
+  };
 
   const galleryFor = (payload = {}) => {
     const galleryKey = String(payload.galleryKey || "").trim();
@@ -228,7 +353,11 @@ export const createRealEstateDeliverables = ({
     const gallery = galleryFor(payload);
     authorize(gallery, payload);
     const record = normalizeRecord(gallery, payload.deliverable || {});
-    const text = JSON.stringify(record, null, 2);
+    const recordWithEmail = {
+      ...record,
+      deliveryEmail: await sendReadyDeliverableEmail(gallery, record),
+    };
+    const text = JSON.stringify(recordWithEmail, null, 2);
     if (text.length > 1_000_000) {
       throw Object.assign(new Error("Real-estate product manifest is too large to save."), {
         status: 413,
@@ -239,11 +368,11 @@ export const createRealEstateDeliverables = ({
       httpMetadata: { contentType: "application/json; charset=utf-8" },
       customMetadata: {
         galleryKey: gallery.key,
-        deliverableId: record.id,
-        type: record.type,
+        deliverableId: recordWithEmail.id,
+        type: recordWithEmail.type,
       },
     });
-    return publicRecordFor(record);
+    return publicRecordFor(recordWithEmail);
   };
 
   const submitAssemblyJob = async (payload = {}) => {
@@ -275,7 +404,7 @@ export const createRealEstateDeliverables = ({
     const records = formats.map((format) => {
       const recordId = safeRecordId(`${jobId}-${format}`);
       const filename = String(payload.filename || `${gallery.key}-${batchId}-${format === "pdf" ? "project-pdfs.pdf" : "slideshow.mp4"}`);
-      return publicRecordFor({
+      const record = {
         id: recordId,
         type: format,
         title,
@@ -297,6 +426,7 @@ export const createRealEstateDeliverables = ({
           id: jobId,
           status: "pending",
           submittedAt: createdAt,
+          deliveryEmailDecision: "email_when_ready_asset_available",
           inputManifestSchema: batch.schema || "",
           inputManifestBatchId: batchId,
           inputManifestStorage: "embedded-in-deliverable-record",
@@ -307,6 +437,10 @@ export const createRealEstateDeliverables = ({
           failureReason: "",
         },
         batch,
+      };
+      return publicRecordFor({
+        ...record,
+        deliveryEmail: emailDecisionFor(record),
       });
     });
 

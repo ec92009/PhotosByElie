@@ -63,6 +63,9 @@ const cleanRealEstateGallery = (gallery = {}) => {
     accessCodeHash: String(gallery.accessCodeHash || "").trim().toLowerCase(),
     accessCodeSalt: String(gallery.accessCodeSalt || "").trim(),
     privateMasterPrefix: String(gallery.privateMasterPrefix || `real-estate/${key}/masters`).replace(/^\/+|\/+$/g, ""),
+    email: String(gallery.email || gallery.clientEmail || "").trim(),
+    customer: String(gallery.customer || gallery.username || "").trim(),
+    propertyTitle: String(gallery.propertyTitle || gallery.property || "").trim(),
     maxItems: Number(gallery.maxItems || 300) || 300,
   };
 };
@@ -244,6 +247,8 @@ export default {
         privateBucket,
         store,
         galleries: realEstateGalleries,
+        emailClient,
+        downloadBaseUrl: workerPublicUrl,
       }),
       realEstateAuth: realEstateGalleries.length && env.REAL_ESTATE_SESSION_SECRET ? createRealEstateAuth({
         galleries: realEstateGalleries,
@@ -253,6 +258,8 @@ export default {
       realEstateDeliverables: createRealEstateDeliverables({
         privateBucket,
         galleries: realEstateGalleries,
+        emailClient,
+        publicSiteUrl,
       }),
       ordersUrl: `${publicSiteUrl}/order.html`,
       downloadBaseUrl: workerPublicUrl,

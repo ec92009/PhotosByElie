@@ -10,6 +10,12 @@ const normalizeKeyPrefix = (value) => String(value || "")
   .replace(/^\/+|\/+$/g, "")
   .replace(/\/+/g, "/");
 
+const escapeHtml = (value) => String(value ?? "")
+  .replace(/&/g, "&amp;")
+  .replace(/</g, "&lt;")
+  .replace(/>/g, "&gt;")
+  .replace(/"/g, "&quot;");
+
 const safeKeySegment = (value, label) => {
   const segment = String(value || "").trim();
   if (!/^[a-z0-9][a-z0-9-]*$/i.test(segment)) {
@@ -93,6 +99,8 @@ export const createRealEstateOriginals = ({
   privateBucket,
   store,
   galleries = defaultGalleries,
+  emailClient = null,
+  downloadBaseUrl = "",
   now = () => new Date(),
   randomUUID = () => crypto.randomUUID(),
 } = {}) => {
@@ -100,6 +108,98 @@ export const createRealEstateOriginals = ({
   if (!store || typeof store.putDownload !== "function") throw new Error("createRealEstateOriginals requires a download store.");
 
   const galleriesByKey = galleryMapFor(galleries);
+
+  const absoluteUrl = (path) => {
+    const value = String(path || "");
+    if (/^https?:\/\//i.test(value)) return value;
+    const base = String(downloadBaseUrl || "").replace(/\/+$/, "");
+    return base ? `${base}${value.startsWith("/") ? "" : "/"}${value}` : value;
+  };
+
+  const propertyContextFor = (gallery, payload, files) => {
+    const explicit = String(payload.propertyTitle || payload.property || gallery.propertyTitle || gallery.property || "").trim();
+    if (explicit) return explicit;
+    const firstTitle = String(payload.items?.[0]?.title || files?.[0]?.name || "").trim();
+    return firstTitle.replace(/\s+-\s+.*$/, "").replace(/-\d{2,3}-.+$/, "").trim() || gallery.key;
+  };
+
+  const sendOriginalsEmail = async ({ gallery, payload, session, files }) => {
+    const requestedAt = now().toISOString();
+    const to = String(payload.email || payload.clientEmail || gallery.email || "").trim();
+    if (!emailClient || typeof emailClient.send !== "function") {
+      return {
+        status: "not_configured",
+        decision: "send_originals_links",
+        requestedAt,
+        reason: "email_client_unavailable",
+      };
+    }
+    if (!to) {
+      return {
+        status: "not_sent",
+        decision: "send_originals_links",
+        requestedAt,
+        reason: "client_email_unavailable",
+      };
+    }
+    const client = String(gallery.customer || gallery.username || payload.username || "Real Estate client").trim();
+    const property = propertyContextFor(gallery, payload, files);
+    const links = files.map((file) => ({
+      ...file,
+      href: absoluteUrl(file.downloadUrl),
+    }));
+    const textLines = [
+      `Hello ${client},`,
+      "",
+      `Your Photos By Elie original files for ${property} are ready.`,
+      "",
+      "Download links:",
+      ...links.map((file) => `- ${file.name}: ${file.href}`),
+      "",
+      "These links open the selected original files directly. If a link is unavailable, reply with this session id so support can check it:",
+      session.sessionId,
+    ];
+    const html = [
+      `<p>Hello ${escapeHtml(client)},</p>`,
+      `<p>Your Photos By Elie original files for <strong>${escapeHtml(property)}</strong> are ready.</p>`,
+      "<ul>",
+      ...links.map((file) => `<li><a href="${escapeHtml(file.href)}">${escapeHtml(file.name)}</a></li>`),
+      "</ul>",
+      `<p>These links open the selected original files directly. If a link is unavailable, reply with this session id so support can check it: <strong>${escapeHtml(session.sessionId)}</strong></p>`,
+    ].join("");
+    const idempotencyKey = `photosbyelie-real-estate-originals-${session.sessionId}`;
+    try {
+      const result = await emailClient.send({
+        to,
+        subject: `Photos By Elie originals ready - ${property}`,
+        text: textLines.join("\n"),
+        html,
+        idempotencyKey,
+      });
+      return {
+        status: "sent",
+        decision: "send_originals_links",
+        provider: result.provider || emailClient.provider || "email",
+        messageId: result.messageId || null,
+        idempotencyKey: result.idempotencyKey || idempotencyKey,
+        directLinkCount: links.length,
+        sentAt: now().toISOString(),
+      };
+    } catch (error) {
+      return {
+        status: "failed",
+        decision: "send_originals_links",
+        provider: emailClient.provider || "email",
+        idempotencyKey,
+        directLinkCount: links.length,
+        failedAt: now().toISOString(),
+        error: {
+          code: error?.code || "delivery_email_failed",
+          message: error?.message || "Delivery email could not be sent.",
+        },
+      };
+    }
+  };
 
   const originalKeyFor = (gallery, item) => {
     const albumSlug = safeKeySegment(item.albumSlug, "albumSlug");
@@ -216,7 +316,7 @@ export const createRealEstateOriginals = ({
       };
     }));
 
-    return {
+    const session = {
       galleryKey,
       sessionId,
       createdAt,
@@ -225,6 +325,27 @@ export const createRealEstateOriginals = ({
       zipFilename: `${safeName(galleryKey, "real-estate")}-originals-${createdAt.replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z")}.zip`,
       files,
     };
+    const deliveryEmail = await sendOriginalsEmail({ gallery, payload, session, files });
+    const withEmail = { ...session, deliveryEmail };
+    if (typeof store.putOrder === "function") {
+      await store.putOrder({
+        id: sessionId,
+        type: "real_estate_originals",
+        status: "ready",
+        galleryKey,
+        client: String(gallery.customer || gallery.username || payload.username || "").trim(),
+        property: propertyContextFor(gallery, payload, files),
+        createdAt,
+        updatedAt: deliveryEmail.sentAt || deliveryEmail.failedAt || deliveryEmail.requestedAt || createdAt,
+        delivery: {
+          files,
+          fileCount: files.length,
+          totalBytes: withEmail.totalBytes,
+        },
+        deliveryEmail,
+      });
+    }
+    return withEmail;
   };
 
   return { createSession };

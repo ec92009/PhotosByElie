@@ -1158,9 +1158,12 @@ test("real-estate originals endpoint creates private download tokens", async () 
   });
   const randomUUID = deterministicIds();
   const store = createMemoryStore();
+  const emailClient = createFakeEmailClient({ fail: true });
   const galleries = [{
     key: "corine-real-estate",
     username: "Corine",
+    email: "corine@example.com",
+    propertyTitle: "La Concha 1 Apt 8AB1",
     accessCode: "LaConcha",
     privateMasterPrefix: "real-estate/corine-real-estate/masters",
   }];
@@ -1181,6 +1184,8 @@ test("real-estate originals endpoint creates private download tokens", async () 
       randomUUID,
       now: () => new Date("2026-05-17T12:00:00.000Z"),
       galleries,
+      emailClient,
+      downloadBaseUrl: "https://worker.test",
     }),
     realEstateAuth: createRealEstateAuth({
       galleries,
@@ -1216,6 +1221,13 @@ test("real-estate originals endpoint creates private download tokens", async () 
   assert.equal(session.originals.files[0].photoId, photoId);
   assert.equal(session.originals.files[1].photoId, videoId);
   assert.match(session.originals.files[0].downloadUrl, /^\/download\/re_/);
+  assert.equal(session.originals.deliveryEmail.status, "failed");
+  assert.equal(session.originals.deliveryEmail.error.code, "fake_email_failed");
+  assert.equal(emailClient.sent.length, 1);
+  assert.match(emailClient.sent[0].text, /Hello Corine/);
+  assert.match(emailClient.sent[0].text, /La Concha 1 Apt 8AB1/);
+  assert.match(emailClient.sent[0].text, /https:\/\/worker\.test\/download\/re_/);
+  assert.doesNotMatch(emailClient.sent[0].text, /backup/i);
 
   const token = session.originals.files[0].downloadUrl.split("/").pop();
   const downloadResponse = await worker.fetch(new Request(`https://worker.test/download/${token}`));
@@ -1230,6 +1242,10 @@ test("real-estate originals endpoint creates private download tokens", async () 
   assert.equal(videoResponse.headers.get("content-type"), "video/mp4");
   const videoBytes = Buffer.from(await videoResponse.arrayBuffer());
   assert.ok(videoBytes.includes(Buffer.from("real estate video bytes")));
+
+  const supportRecord = await store.getOrder(session.originals.sessionId);
+  assert.equal(supportRecord.deliveryEmail.status, "failed");
+  assert.equal(supportRecord.delivery.files.length, 2);
 });
 
 test("real-estate originals endpoint rejects the wrong client password", async () => {
@@ -1362,6 +1378,79 @@ test("real-estate deliverables endpoint saves and lists client products", async 
   assert.equal(wrongPassword.status, 401);
 });
 
+test("real-estate saved PDF and video email failures do not block saved products", async () => {
+  const randomUUID = deterministicIds();
+  const privateR2 = createFakeR2();
+  const emailClient = createFakeEmailClient({ fail: true });
+  const galleries = [{
+    key: "corine-real-estate",
+    username: "Corine",
+    customer: "Corine",
+    email: "corine@example.com",
+    accessCode: "LaConcha",
+  }];
+  const worker = createPhotosByElieWorker({
+    catalog: loadCatalog(),
+    store: createMemoryStore(),
+    stripe: createMockStripeClient({ randomUUID }),
+    randomUUID,
+    realEstateDeliverables: createRealEstateDeliverables({
+      privateBucket: privateR2,
+      randomUUID,
+      now: () => new Date("2026-06-10T12:00:00.000Z"),
+      galleries,
+      emailClient,
+      publicSiteUrl: "https://photos-by-elie.com",
+    }),
+    realEstateAuth: createRealEstateAuth({
+      galleries,
+      sessionSecret: "test-real-estate-session-secret",
+      now: () => new Date("2026-06-10T12:00:00.000Z"),
+    }),
+  });
+  const cookie = await realEstateSessionCookie(worker);
+  const batch = {
+    batchId: "20260610T120000Z",
+    galleryKey: "corine-real-estate",
+    projects: [{ projectTitle: "La Concha 1 Apt 8AB1", items: [] }],
+  };
+
+  for (const type of ["pdf", "video"]) {
+    const saveResponse = await worker.fetch(jsonRequest("https://worker.test/real-estate/deliverables", {
+      galleryKey: "corine-real-estate",
+      username: "Corine",
+      deliverable: {
+        id: `ready-${type}-20260610`,
+        type,
+        title: type === "pdf" ? "PDF: La Concha 1 Apt 8AB1" : "Video: La Concha 1 Apt 8AB1",
+        status: "ready",
+        filename: type === "pdf" ? "la-concha.pdf" : "la-concha.mp4",
+        batch,
+      },
+    }, { cookie }));
+    assert.equal(saveResponse.status, 201);
+    const saved = await saveResponse.json();
+    assert.equal(saved.deliverable.status, "ready");
+    assert.equal(saved.deliverable.deliveryEmail.status, "failed");
+    assert.equal(saved.deliverable.deliveryEmail.error.code, "fake_email_failed");
+  }
+
+  assert.equal(emailClient.sent.length, 2);
+  assert.match(emailClient.sent[0].text, /Hello Corine/);
+  assert.match(emailClient.sent[0].text, /La Concha 1 Apt 8AB1/);
+  assert.match(emailClient.sent[0].text, /Real Estate shelf/);
+  assert.doesNotMatch(emailClient.sent[0].text, /backup/i);
+
+  const listResponse = await worker.fetch(jsonRequest("https://worker.test/real-estate/deliverables/list", {
+    galleryKey: "corine-real-estate",
+    username: "Corine",
+  }, { cookie }));
+  assert.equal(listResponse.status, 200);
+  const listed = await listResponse.json();
+  assert.equal(listed.count, 2);
+  assert.equal(listed.deliverables.filter((record) => record.deliveryEmail?.status === "failed").length, 2);
+});
+
 test("real-estate cloud assembly jobs persist status and serve completed assets", async () => {
   const randomUUID = deterministicIds();
   const privateR2 = createFakeR2();
@@ -1424,6 +1513,8 @@ test("real-estate cloud assembly jobs persist status and serve completed assets"
   const queued = await jobResponse.json();
   assert.equal(queued.deliverables.length, 2);
   assert.equal(queued.deliverables[0].status, "pending");
+  assert.equal(queued.deliverables[0].deliveryEmail.decision, "email_when_ready_asset_available");
+  assert.equal(queued.deliverables[0].deliveryEmail.status, "not_sent");
   assert.equal(queued.deliverables[1].assemblyJob.sourceVideoAudioPolicy, "duck-under-generated-guitar-bed");
   assert.equal(queued.deliverables[1].assemblyJob.sourceVideoAudioGainDb, -20);
 

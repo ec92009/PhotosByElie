@@ -2904,11 +2904,50 @@ window.photosByEliePhotoFilter = (() => {
     const suffix = edge === 'end' ? 'T23:59:59.999' : 'T00:00:00.000';
     return Date.parse(`${normalized}${suffix}`) || 0;
   };
-  const searchTerms = (state = {}) => String(state.query || '')
+  const normalizeSearchValue = (value) => String(value || '')
     .trim()
     .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+  const searchTerms = (state = {}) => normalizeSearchValue(state.query)
     .split(/\s+/)
     .filter(Boolean);
+  const searchTokens = (value) => normalizeSearchValue(value)
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
+  const editDistanceWithin = (left, right, maxDistance) => {
+    if (!left || !right) return false;
+    if (Math.abs(left.length - right.length) > maxDistance) return false;
+    const previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+    for (let i = 1; i <= left.length; i += 1) {
+      let best = i;
+      const current = [i];
+      for (let j = 1; j <= right.length; j += 1) {
+        const cost = left[i - 1] === right[j - 1] ? 0 : 1;
+        const value = Math.min(
+          previous[j] + 1,
+          current[j - 1] + 1,
+          previous[j - 1] + cost
+        );
+        current[j] = value;
+        if (value < best) best = value;
+      }
+      if (best > maxDistance) return false;
+      previous.splice(0, previous.length, ...current);
+    }
+    return previous[right.length] <= maxDistance;
+  };
+  const fuzzyTermMatches = (term, text, tokens = searchTokens(text)) => {
+    if (!term) return true;
+    if (text.includes(term)) return true;
+    if (term.length < 3) return false;
+    const maxDistance = term.length >= 7 ? 2 : 1;
+    return tokens.some((token) => (
+      token.startsWith(term)
+      || (token.length >= 4 && term.startsWith(token) && term.length - token.length <= 2)
+      || (token.length <= 24 && editDistanceWithin(term, token, maxDistance))
+    ));
+  };
   const searchText = (photo, context = {}) => [
     photo?.title,
     photo?.caption,
@@ -2922,9 +2961,17 @@ window.photosByEliePhotoFilter = (() => {
     Array.isArray(photo?.keywords) ? photo.keywords.join(' ') : photo?.keywords,
     context.collectionTitle,
     typeof context.extraSearchText === 'function' ? context.extraSearchText(photo) : context.extraSearchText
-  ].filter(Boolean).join(' ').toLowerCase();
+  ].filter(Boolean).join(' ');
+  const normalizedSearchText = (photo, context = {}) => normalizeSearchValue(searchText(photo, context));
+  const matchesSearchTerms = (photo, state = {}, context = {}) => {
+    const terms = searchTerms(state);
+    if (!terms.length) return true;
+    const text = normalizedSearchText(photo, context);
+    const tokens = searchTokens(text);
+    return terms.every((term) => fuzzyTermMatches(term, text, tokens));
+  };
   const moodTags = (photo, context = {}) => {
-    const text = searchText(photo, context);
+    const text = normalizedSearchText(photo, context);
     const tags = new Set();
     if (/(sunset|sunrise|gold|yellow|orange|red|beach|desert|summer|warm)/.test(text)) tags.add('warm');
     if (/(ocean|sea|river|water|blue|snow|winter|harbor|harbour|atlantic|seine|cool)/.test(text)) tags.add('cool');
@@ -2933,7 +2980,7 @@ window.photosByEliePhotoFilter = (() => {
     return tags.size ? tags : new Set(['neutral']);
   };
   const subjectTags = (photo, context = {}) => {
-    const text = searchText(photo, context);
+    const text = normalizedSearchText(photo, context);
     const tags = new Set();
     if (/(architecture|church|castle|chateau|fortress|palace|monastery|building|interior|invalides|versailles)/.test(text)) tags.add('architecture');
     if (/(ocean|sea|river|water|beach|harbor|harbour|coast|atlantic|seine|boat|bateau)/.test(text)) tags.add('water');
@@ -2949,8 +2996,7 @@ window.photosByEliePhotoFilter = (() => {
   };
   const matchesPhoto = (photo, state = {}, context = {}) => {
     const filterState = normalizeState(state);
-    const terms = searchTerms(filterState);
-    if (terms.length && !terms.every((term) => searchText(photo, context).includes(term))) return false;
+    if (!matchesSearchTerms(photo, filterState, context)) return false;
     if (filterState.collection !== 'all' && context.collectionKey !== filterState.collection) return false;
     if (filterState.origin !== 'all' && photoOrigin(photo, context.collectionKey) !== filterState.origin) return false;
     if (filterState.orientation !== 'all' && window.photosByEliePhotoOrientation(photo) !== filterState.orientation) return false;
@@ -3106,6 +3152,8 @@ window.photosByEliePhotoFilter = (() => {
     matchesPhoto,
     mediaType,
     photoOrigin,
+    matchesSearchTerms,
+    normalizeSearchValue,
     searchText,
     searchTerms,
     sortItems,
@@ -3115,6 +3163,139 @@ window.photosByEliePhotoFilter = (() => {
 })();
 
 window.photosByElieCssUrlValue = (url) => `url("${String(url || "").replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/[\n\r]/g, "")}")`;
+
+window.photosByElieSeo = (() => {
+  const siteOrigin = "https://photos-by-elie.com";
+  const siteName = "Photos By Elie";
+  const defaultImage = `${siteOrigin}/assets/branding/photosbyelie-camera-tripod-logo-1024.png`;
+  const cleanPublicText = (value, fallback = "") => {
+    const text = String(value || fallback || "")
+      .replace(/\blocalhost\b/gi, "")
+      .replace(/\bowner(?:-only)?\b/gi, "")
+      .replace(/\bclassification tools?\b/gi, "curated galleries")
+      .replace(/\bSaturn Lightroom archive\b/gi, "travel photo archive")
+      .replace(/\s+/g, " ")
+      .trim();
+    return text || fallback || siteName;
+  };
+  const absoluteUrl = (href = "./") => {
+    try {
+      const url = new URL(href, siteOrigin);
+      if (url.pathname.endsWith("/index.html")) url.pathname = url.pathname.replace(/index\.html$/, "");
+      url.searchParams.delete("v");
+      return url.toString();
+    } catch {
+      return siteOrigin + "/";
+    }
+  };
+  const currentPublicUrl = () => absoluteUrl(`${window.location.pathname || "/"}${window.location.search || ""}`);
+  const pageUrl = (path, params = {}) => {
+    const url = new URL(path || "/", siteOrigin);
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== "") url.searchParams.set(key, value);
+    });
+    return url.toString();
+  };
+  const setMeta = (selector, attribute, value) => {
+    const content = cleanPublicText(value);
+    let element = document.head.querySelector(selector);
+    if (!element) {
+      element = document.createElement("meta");
+      const match = selector.match(/meta\[(name|property)="([^"]+)"\]/);
+      if (match) element.setAttribute(match[1], match[2]);
+      document.head.append(element);
+    }
+    element.setAttribute(attribute || "content", content);
+  };
+  const setLink = (rel, href) => {
+    let element = document.head.querySelector(`link[rel="${rel}"]`);
+    if (!element) {
+      element = document.createElement("link");
+      element.rel = rel;
+      document.head.append(element);
+    }
+    element.href = absoluteUrl(href);
+  };
+  const setJsonLd = (id, payload) => {
+    if (!payload) return;
+    let element = document.getElementById(id);
+    if (!element) {
+      element = document.createElement("script");
+      element.type = "application/ld+json";
+      element.id = id;
+      document.head.append(element);
+    }
+    element.textContent = JSON.stringify(payload).replace(/</g, "\\u003c");
+  };
+  const applyPageMeta = ({
+    title = siteName,
+    description = "Browse curated travel photography, wall-art edits, and digital photo downloads by Photos By Elie.",
+    url = currentPublicUrl(),
+    image = defaultImage,
+    imageAlt = siteName,
+    type = "website",
+    jsonLd = null,
+  } = {}) => {
+    const safeTitle = cleanPublicText(title, siteName);
+    const safeDescription = cleanPublicText(description);
+    const canonical = absoluteUrl(url);
+    const absoluteImage = absoluteUrl(image || defaultImage);
+    if (document.title !== safeTitle) document.title = safeTitle;
+    setMeta('meta[name="description"]', "content", safeDescription);
+    setMeta('meta[property="og:site_name"]', "content", siteName);
+    setMeta('meta[property="og:title"]', "content", safeTitle);
+    setMeta('meta[property="og:description"]', "content", safeDescription);
+    setMeta('meta[property="og:type"]', "content", type);
+    setMeta('meta[property="og:url"]', "content", canonical);
+    setMeta('meta[property="og:image"]', "content", absoluteImage);
+    setMeta('meta[property="og:image:alt"]', "content", imageAlt || safeTitle);
+    setMeta('meta[name="twitter:card"]', "content", "summary_large_image");
+    setMeta('meta[name="twitter:title"]', "content", safeTitle);
+    setMeta('meta[name="twitter:description"]', "content", safeDescription);
+    setMeta('meta[name="twitter:image"]', "content", absoluteImage);
+    setLink("canonical", canonical);
+    if (jsonLd) setJsonLd("photosbyelie-page-jsonld", jsonLd);
+  };
+  const collectionPageJsonLd = ({ name, description, url, image, photos = [] }) => ({
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: cleanPublicText(name),
+    description: cleanPublicText(description),
+    url: absoluteUrl(url),
+    image: absoluteUrl(image || defaultImage),
+    isPartOf: { "@type": "WebSite", name: siteName, url: siteOrigin + "/" },
+    mainEntity: {
+      "@type": "ImageGallery",
+      name: cleanPublicText(name),
+      image: photos.slice(0, 12).map((photo) => absoluteUrl(photo.image || photo.url || defaultImage)),
+    },
+  });
+  const imageObjectJsonLd = ({ name, description, url, image, collectionName, keywords = [] }) => ({
+    "@context": "https://schema.org",
+    "@type": "ImageObject",
+    name: cleanPublicText(name),
+    description: cleanPublicText(description || `${name} by ${siteName}`),
+    url: absoluteUrl(url),
+    contentUrl: absoluteUrl(image || defaultImage),
+    thumbnailUrl: absoluteUrl(image || defaultImage),
+    creator: { "@type": "Person", name: "Elie Cohen" },
+    creditText: siteName,
+    isPartOf: collectionName ? { "@type": "ImageGallery", name: cleanPublicText(collectionName) } : undefined,
+    keywords: keywords.filter(Boolean).slice(0, 24).join(", "),
+  });
+  return {
+    absoluteUrl,
+    applyPageMeta,
+    cleanPublicText,
+    collectionPageJsonLd,
+    currentPublicUrl,
+    defaultImage,
+    imageObjectJsonLd,
+    pageUrl,
+    siteName,
+    siteOrigin,
+  };
+})();
 
 window.photosByElieMdIcon = (name) => {
   const paths = {

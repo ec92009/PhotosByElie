@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v105.2`
+- Current visible version: `v108.4`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -166,6 +166,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - `v90.11` adds per-client Login buttons to the Owner Real Estate client table, opening the matching local review login instead of relying on whichever Real Estate tab is already open.
 - `v90.12` makes those Owner row Login buttons seed the localhost client session and open directly inside the matching Real Estate review.
 - `v90.13` removes the property-name prefix from default Real Estate photo titles, strips the old prefix at runtime so video/PDF titles do not repeat the property name, raises the Real Estate fixed-header opacity to match the page panels, and makes the desktop bottom action bar show only step-relevant actions.
+- `v108.4` improves public discovery with fuzzy gallery/campaign search, canonical URLs, richer public metadata, social preview images, and structured data for the homepage, galleries, campaigns, and photo detail pages while keeping Owner workflow details out of public page metadata.
 - `v108.3` moves Real Estate PDF/video production actions onto Worker-backed cloud assembly jobs: saved selection manifests become job input, shelf rows persist pending/ready/needs-attention status and failure reasons, completed records expose view/download URLs, and video jobs carry the source-audio ducking policy under the generated guitar bed.
 - `v94.2` adds the Etsy OAuth callback page plus local Etsy OAuth/API smoke-check helpers after Etsy approved the `photosbyelie-listing-publisher` integration. Etsy app credentials and OAuth tokens stay outside git under local environment/config only. Etsy approved the shop rename to `PhotosByElieShop` on 2026-06-02; the public shop URL is `https://www.etsy.com/shop/PhotosByElieShop`.
 - `v94.5` restores the original public digital-download ladder after proof-flow testing: camera JPG 1 MP `$8`, JPG 3 MP `$16`, JPG 6 MP `$28`, full resolution `$65`; AI JPG 1 MP `$4`, JPG 3 MP `$8`, JPG 6 MP `$14`, full resolution `$25`.

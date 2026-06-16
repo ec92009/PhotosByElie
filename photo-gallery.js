@@ -178,15 +178,17 @@ window.addEventListener("photosbyelie:inputmodechange", () => {
 });
 
 const readFilterState = () => {
-  if (isSelectionGallery) return { ...defaultFilterState };
+  const params = new URLSearchParams(window.location.search);
+  const urlQuery = params.get("q") || params.get("search") || "";
+  if (isSelectionGallery) return { ...defaultFilterState, query: urlQuery };
   try {
     const savedState = JSON.parse(localStorage.getItem(filterStateKey) || "{}");
     const persistedState = Object.fromEntries(
       persistedFilterKeys.map((key) => [key, savedState[key] || defaultFilterState[key]])
     );
-    return { ...defaultFilterState, ...persistedState };
+    return { ...defaultFilterState, ...persistedState, query: urlQuery };
   } catch {
-    return { ...defaultFilterState };
+    return { ...defaultFilterState, query: urlQuery };
   }
 };
 
@@ -1242,6 +1244,27 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
 
 if (galleryRoot && gallery) {
   document.title = `Photos By Elie | ${localizedCollectionTitle()} ${t("nav.gallery")}`;
+  const seoPhotos = (gallery.photos || []).slice(0, 12).map((photo) => ({
+    image: window.photosByElieMediaUrl?.(photo, "gallery") || window.photosByElieMediaUrl?.(photo, "detail") || "",
+  }));
+  const seoImage = seoPhotos.find((item) => item.image)?.image || window.photosByElieSeo?.defaultImage;
+  const seoDescription = isSelectionGallery
+    ? "Search the Photos By Elie public archive by title, place, subject, mood, size, orientation, and media type."
+    : gallery.description || `Browse ${localizedCollectionTitle()} travel photography and digital wall-art downloads by Photos By Elie.`;
+  window.photosByElieSeo?.applyPageMeta({
+    title: `Photos By Elie | ${localizedCollectionTitle()} Gallery`,
+    description: seoDescription,
+    url: window.photosByElieSeo.pageUrl("/gallery.html", { gallery: galleryKey }),
+    image: seoImage,
+    imageAlt: `${localizedCollectionTitle()} photo gallery`,
+    jsonLd: window.photosByElieSeo.collectionPageJsonLd({
+      name: `${localizedCollectionTitle()} Gallery`,
+      description: seoDescription,
+      url: window.photosByElieSeo.pageUrl("/gallery.html", { gallery: galleryKey }),
+      image: seoImage,
+      photos: seoPhotos,
+    }),
+  });
   const currentNav = document.querySelector("[data-nav-current]");
   if (currentNav) {
     currentNav.dataset.i18n = isSelectionGallery ? "gallery.make_selection" : `collection.${galleryKey}`;

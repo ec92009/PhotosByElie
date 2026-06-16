@@ -386,6 +386,33 @@ if (!photo) {
   if (status) status.textContent = t("detail.rebuilding");
 } else {
 document.title = `Photos By Elie | ${photo.title}`;
+const publicDetailUrl = window.photosByElieSeo?.pageUrl?.("/photo.html", { id: photo.id });
+const publicImage = window.photosByElieMediaUrl?.(photo, "detail") || window.photosByElieMediaUrl?.(photo, "gallery") || window.photosByElieSeo?.defaultImage;
+if (!ownerDetailPurchaseHidden && !isHiddenCollection && !isOwnerCollection && !isOwnerReviewSyntheticCollection) {
+  const publicKeywords = uniqueKeywords([
+    ...splitKeywordText(metadataValue(photo, "Keywords")),
+    ...(Array.isArray(photo.keywords) ? photo.keywords : []),
+    localizedCollectionTitle(),
+  ]);
+  const publicDescription = metadataValue(photo, "Description")
+    || `${photo.title} from the ${localizedCollectionTitle()} gallery by Photos By Elie.`;
+  window.photosByElieSeo?.applyPageMeta({
+    title: `Photos By Elie | ${photo.title}`,
+    description: publicDescription,
+    url: publicDetailUrl,
+    image: publicImage,
+    imageAlt: photo.title,
+    type: "article",
+    jsonLd: window.photosByElieSeo.imageObjectJsonLd({
+      name: photo.title,
+      description: publicDescription,
+      url: publicDetailUrl,
+      image: publicImage,
+      collectionName: localizedCollectionTitle(),
+      keywords: publicKeywords,
+    }),
+  });
+}
 setCollectionNav();
 const titleTarget = document.querySelector("[data-photo-title]");
 titleTarget?.removeAttribute("data-i18n");

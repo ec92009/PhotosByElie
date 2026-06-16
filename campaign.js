@@ -180,15 +180,8 @@
       : `<a class="mock-photo" href="${photoHref(entry.photo.id)}"><span>${title}</span></a>`;
   };
 
-  const searchableText = (entry) => [
-    entry.photo.title,
-    entry.collectionKey,
-    ...(entry.photo.keywords || []),
-    ...(entry.photo.metadata || []).map((item) => `${item.label} ${item.value}`),
-  ].filter(Boolean).join(" ").toLowerCase();
-
   const renderSearch = (query) => {
-    const terms = String(query || "").toLowerCase().split(/\s+/).filter(Boolean);
+    const terms = window.photosByEliePhotoFilter?.searchTerms?.({ query }) || String(query || "").toLowerCase().split(/\s+/).filter(Boolean);
     if (!terms.length) {
       els.searchResults.hidden = true;
       els.searchResults.innerHTML = "";
@@ -196,7 +189,9 @@
       return;
     }
     const matches = allPhotos()
-      .filter((entry) => terms.every((term) => searchableText(entry).includes(term)))
+      .filter((entry) => window.photosByEliePhotoFilter?.matchesSearchTerms
+        ? window.photosByEliePhotoFilter.matchesSearchTerms(entry.photo, { query }, { collectionKey: entry.collectionKey })
+        : terms.every((term) => String(entry.photo.title || "").toLowerCase().includes(term)))
       .slice(0, 24);
     searchEntries = matches;
     els.searchResults.hidden = matches.length === 0;
@@ -228,7 +223,24 @@
     if (els.searchInput && campaign.searchPlaceholder) els.searchInput.placeholder = campaign.searchPlaceholder;
     primaryEntries = entriesForIds(campaign.primaryPhotoIds || []);
     relatedEntries = entriesForIds(campaign.relatedPhotoIds || []);
-    renderHero(photoIndex.get(campaign.heroPhotoId || campaign.primaryPhotoIds?.[0]));
+    const heroEntry = photoIndex.get(campaign.heroPhotoId || campaign.primaryPhotoIds?.[0]);
+    const heroImage = campaign.imageUrl || (heroEntry && (window.photosByElieMediaUrl?.(heroEntry.photo, "detail") || window.photosByElieMediaUrl?.(heroEntry.photo, "gallery"))) || window.photosByElieSeo?.defaultImage;
+    const campaignUrl = window.photosByElieSeo?.pageUrl?.("/campaign.html", { c: safeCampaignId });
+    window.photosByElieSeo?.applyPageMeta({
+      title: `${campaign.title || "Photos By Elie Collection"} | Photos By Elie`,
+      description: campaign.description || "Browse a focused Photos By Elie travel photo collection.",
+      url: campaignUrl,
+      image: heroImage,
+      imageAlt: campaign.imageAlt || campaign.title || "Photos By Elie collection",
+      jsonLd: window.photosByElieSeo.collectionPageJsonLd({
+        name: campaign.title || "Photos By Elie Collection",
+        description: campaign.description || "Browse a focused Photos By Elie travel photo collection.",
+        url: campaignUrl,
+        image: heroImage,
+        photos: [heroImage, ...(campaign.previewImageUrls || [])].map((image) => ({ image })),
+      }),
+    });
+    renderHero(heroEntry);
     renderEntries(els.primary, primaryEntries);
     renderEntries(els.related, relatedEntries);
     ensureCampaignViewControls();

@@ -3216,6 +3216,12 @@ body[data-real-estate] main.shell{
   background:var(--bg);
   padding:12px;
 }
+.real-estate-deliverable[data-re-status="pending"]{
+  border-color:color-mix(in srgb,var(--accent) 38%,var(--line));
+}
+.real-estate-deliverable[data-re-status="needs-attention"]{
+  border-color:color-mix(in srgb,#b94343 58%,var(--line));
+}
 .real-estate-deliverable-thumb{
   display:block;
   width:64px;
@@ -3257,6 +3263,18 @@ body[data-real-estate] main.shell{
   align-items:center;
   justify-content:flex-end;
   gap:8px;
+}
+.real-estate-deliverable-output{
+  min-height:34px;
+  border:1px solid var(--line);
+  background:var(--surface);
+  color:var(--text);
+  padding:0 10px;
+  font-size:.78rem;
+  font-weight:850;
+}
+.real-estate-deliverable-output:disabled{
+  opacity:.45;
 }
 .real-estate-deliverable-rename .md-icon,
 .real-estate-deliverable-delete .md-icon{
@@ -3314,6 +3332,14 @@ body[data-real-estate] main.shell{
   color:var(--muted);
   font-size:.8rem;
   font-weight:760;
+}
+.real-estate-deliverable-reason{
+  display:block;
+  margin-top:3px;
+  color:#b94343;
+  font-size:.78rem;
+  font-style:normal;
+  font-weight:780;
 }
 .real-estate-deliverable-actions{
   display:flex;

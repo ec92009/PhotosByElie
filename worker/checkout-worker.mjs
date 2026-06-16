@@ -1527,6 +1527,34 @@ export const createPhotosByElieWorker = ({
     return credentialedJson(request, { deliverable }, 201);
   };
 
+  const submitRealEstateAssemblyJob = async (request) => {
+    if (!realEstateDeliverables || typeof realEstateDeliverables.submitAssemblyJob !== "function") {
+      return errorJson(503, "real_estate_deliverables_unavailable", "Real-estate cloud assembly is not configured.");
+    }
+    const payload = await parseJson(request);
+    payload.realEstateSession = await requireRealEstateSession(request, payload);
+    const result = await realEstateDeliverables.submitAssemblyJob(payload);
+    return credentialedJson(request, result, 202);
+  };
+
+  const getRealEstateDeliverableAsset = async (request, id, action) => {
+    if (!realEstateDeliverables || typeof realEstateDeliverables.getDeliverableAsset !== "function") {
+      return errorJson(503, "real_estate_deliverables_unavailable", "Real-estate cloud products are not configured.");
+    }
+    const url = new URL(request.url);
+    const payload = {
+      galleryKey: url.searchParams.get("galleryKey") || "",
+      id,
+      action,
+    };
+    payload.realEstateSession = await requireRealEstateSession(request, payload);
+    payload.galleryKey = payload.realEstateSession.galleryKey;
+    const asset = await realEstateDeliverables.getDeliverableAsset(payload);
+    return new Response(action === "head" ? null : asset.object.body, {
+      headers: credentialedCorsHeaders(request, asset.headers),
+    });
+  };
+
   const deleteRealEstateDeliverable = async (request) => {
     if (!realEstateDeliverables || typeof realEstateDeliverables.deleteDeliverable !== "function") {
       return errorJson(503, "real_estate_deliverables_unavailable", "Real-estate cloud products are not configured.");
@@ -1560,8 +1588,17 @@ export const createPhotosByElieWorker = ({
       if (request.method === "POST" && path === "/real-estate/logout") return await logoutRealEstate(request);
       if (request.method === "POST" && path === "/real-estate/originals/session") return await createRealEstateOriginalsSession(request);
       if (request.method === "POST" && path === "/real-estate/deliverables/list") return await listRealEstateDeliverables(request);
+      if (request.method === "POST" && path === "/real-estate/deliverables/jobs") return await submitRealEstateAssemblyJob(request);
       if (request.method === "POST" && path === "/real-estate/deliverables") return await putRealEstateDeliverable(request);
       if (request.method === "POST" && path === "/real-estate/deliverables/delete") return await deleteRealEstateDeliverable(request);
+      const realEstateAssetMatch = path.match(/^\/real-estate\/deliverables\/([^/]+)\/(view|download)$/);
+      if ((request.method === "GET" || request.method === "HEAD") && realEstateAssetMatch) {
+        return await getRealEstateDeliverableAsset(
+          request,
+          decodeURIComponent(realEstateAssetMatch[1]),
+          request.method === "HEAD" ? "head" : realEstateAssetMatch[2]
+        );
+      }
       const orderSessionMatch = path.match(/^\/orders\/by-session\/([^/]+)$/);
       if (request.method === "GET" && orderSessionMatch) return await getOrderByCheckoutSession(request, decodeURIComponent(orderSessionMatch[1]));
       const resendEmailMatch = path.match(/^\/orders\/([^/]+)\/resend-email$/);

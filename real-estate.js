@@ -1013,50 +1013,38 @@
     document.querySelectorAll("[data-re-open-outputs]").forEach((button) => {
       button.textContent = outputBusy && kind === "outputs-view"
         ? t("re.progress.working", {}, "Working...")
-        : "Preview all outputs";
-      button.title = "View selected PDF and video outputs in the browser, useful on mobile";
+        : "Queue all outputs";
+      button.title = "Queue selected PDF and video outputs for cloud assembly";
       button.disabled = outputBusy || noActiveSelection;
     });
     document.querySelectorAll("[data-re-download-outputs]").forEach((button) => {
       button.textContent = outputBusy && kind === "outputs-download"
-        ? t("re.output.download_everything_busy", {}, "Preparing everything...")
-        : t("re.output.download_everything", {}, "Download everything");
-      button.title = "Download selected true PDF and video files on phone or desktop";
+        ? t("re.output.download_everything_busy", {}, "Queueing everything...")
+        : "Queue PDF + video";
+      button.title = "Send selected PDF and video products to cloud assembly; download links appear on the shelf when ready";
       button.disabled = outputBusy || noActiveSelection;
     });
     document.querySelectorAll("[data-re-view-pdf]").forEach((button) => {
-      button.textContent = outputBusy && kind === "pdf-view" ? "Building PDF..." : t("re.output.preview_pdf", {}, "Preview PDF");
-      button.title = "Preview project PDFs in a mobile-safe browser page; selected videos appear as stills from 10% in";
+      button.textContent = outputBusy && kind === "pdf-view" ? "Queueing PDF..." : "Queue PDF";
+      button.title = "Queue project PDFs for cloud assembly; selected videos appear as stills from 10% in";
       button.disabled = outputBusy || noActiveSelection;
     });
     document.querySelectorAll("[data-re-download-pdf]").forEach((button) => {
-      button.textContent = outputBusy && kind === "pdf-download" ? "Building PDF..." : t("re.output.download_pdf", {}, "Download PDF");
-      button.title = "Download project PDFs; selected videos appear as stills from 10% in";
+      button.textContent = outputBusy && kind === "pdf-download" ? "Queueing PDF..." : "Queue PDF";
+      button.title = "Queue project PDFs for cloud assembly; download links appear on the shelf when ready";
       button.disabled = outputBusy || noActiveSelection;
     });
     document.querySelectorAll("[data-re-view-slideshow]").forEach((button) => {
-      button.textContent = outputBusy && kind === "video-view" ? "Preparing video..." : t("re.output.preview_video", {}, "Preview video");
-      button.title = "View a browser slideshow/video output with country-matched Pixabay music";
+      button.textContent = outputBusy && kind === "video-view" ? "Queueing video..." : "Queue video";
+      button.title = "Queue a cloud video with country-matched Pixabay guitar music";
       button.disabled = outputBusy || noActiveSelection;
     });
     document.querySelectorAll("[data-re-download-slideshow]").forEach((button) => {
-      const recordable = canRecordSlideshowVideo();
-      const videoPreparing = state.videoExportStatus === "building";
-      const videoError = state.videoExportStatus === "error";
       button.textContent = outputBusy && kind === "video-download"
-        ? "Preparing video..."
-        : videoPreparing
-          ? "Preparing video..."
-          : videoError
-            ? "Retry video"
-            : t("re.output.download_video", {}, "Download video");
-      button.title = recordable
-        ? (state.videoExportStatus === "ready"
-          ? "Download the prepared real video file"
-          : "Download a real video file with country-matched Pixabay music and a final-slide fade")
-        : "This browser cannot record a real video file from the slideshow";
-      if (state.videoExportError && videoError) button.title = state.videoExportError;
-      button.disabled = outputBusy || noActiveSelection || !recordable;
+        ? "Queueing video..."
+        : "Queue video";
+      button.title = "Queue a true slideshow video file in the cloud with source audio ducked under the guitar bed";
+      button.disabled = outputBusy || noActiveSelection;
     });
     document.querySelectorAll("[data-re-download-batch]").forEach((button) => {
       button.textContent = outputBusy && kind === "selection" ? "Saving..." : t("re.action.save_selection", {}, "Save selection");
@@ -1069,6 +1057,7 @@
       button.disabled = state.originalsBusy || outputBusy || selectedPhotos().length === 0;
     });
     document.querySelectorAll("[data-re-view-deliverable], [data-re-download-deliverable], [data-re-edit-deliverable]").forEach((button) => {
+      if (button.matches("[data-re-view-deliverable], [data-re-download-deliverable]") && button.hasAttribute("disabled")) return;
       button.disabled = outputBusy && !button.matches("[data-re-edit-deliverable]");
     });
     document.querySelectorAll("[data-re-load-batch]").forEach((button) => {
@@ -1135,6 +1124,10 @@
   const absoluteDeliverableUrl = (value) => {
     const raw = String(value || "").trim();
     if (!raw) return "";
+    if (/^\/(?:api\/)?real-estate\//.test(raw)) {
+      const baseUrl = workerBaseUrl();
+      return baseUrl ? `${baseUrl}${raw}` : "";
+    }
     try {
       return new URL(raw, window.location.href).href;
     } catch {
@@ -1171,7 +1164,8 @@
 
   const normalizeDeliverable = (row, index) => {
     const type = String(row?.type || row?.format || row?.kind || "file").toLowerCase();
-    const ready = !row?.status || ["ready", "complete", "completed", "published"].includes(String(row.status).toLowerCase());
+    const rawStatus = String(row?.status || "ready").toLowerCase().replace("_", "-");
+    const ready = !row?.status || ["ready", "complete", "completed", "published"].includes(rawStatus);
     const viewUrl = absoluteDeliverableUrl(row?.viewUrl || row?.watchUrl || row?.url || row?.href);
     const downloadUrl = absoluteDeliverableUrl(row?.downloadUrl || row?.fileUrl || row?.url || row?.href);
     const editUrl = absoluteDeliverableUrl(row?.editUrl || row?.batchUrl || row?.manifestUrl || row?.selectionUrl || row?.sourceBatchUrl);
@@ -1182,7 +1176,8 @@
       title: String(row?.title || row?.projectTitle || row?.name || `Deliverable ${index + 1}`),
       createdAt: String(row?.createdAt || row?.generatedAt || row?.updatedAt || ""),
       bytes: Number(row?.bytes || row?.size || 0) || 0,
-      status: ready ? "ready" : String(row?.status || "pending"),
+      status: ready ? "ready" : (rawStatus === "failed" ? "needs-attention" : rawStatus),
+      failureReason: String(row?.failureReason || row?.assemblyJob?.failureReason || ""),
       viewUrl,
       downloadUrl,
       editUrl,
@@ -1292,6 +1287,13 @@
         : group.rows.some((item) => item.source === "local")
           ? "local"
           : (primary?.source || "");
+      const statusValues = group.rows.map((row) => String(row.status || "ready").toLowerCase());
+      const status = statusValues.some((value) => value === "needs-attention" || value === "failed")
+        ? "needs-attention"
+        : statusValues.some((value) => value === "pending" || value === "queued" || value === "processing")
+          ? "pending"
+          : "ready";
+      const failureReason = group.rows.map((row) => row.failureReason).find(Boolean) || "";
       return {
         ...primary,
         id: group.id,
@@ -1299,6 +1301,8 @@
         label: deliverableFormatsLabel(formats),
         title: String(rowsByPreference.find((item) => !needsGeneratedDeliverableName(item))?.title || primary?.title || "").trim(),
         createdAt: latest?.createdAt || primary?.createdAt || "",
+        status,
+        failureReason,
         bytes: group.rows.reduce((sum, item) => sum + (Number(item.bytes) || 0), 0),
         batch: batchSource,
         source,
@@ -1564,6 +1568,93 @@
     return saved;
   };
 
+  const mergeCloudDeliverables = (records = []) => {
+    const incoming = (Array.isArray(records) ? records : []).filter((item) => item?.id);
+    if (!incoming.length) return;
+    const existing = Array.isArray(state.cloudDeliverables) ? state.cloudDeliverables : [];
+    const incomingIds = new Set(incoming.map((item) => String(item.id)));
+    state.cloudDeliverables = [...incoming, ...existing.filter((item) => !incomingIds.has(String(item?.id || "")))].slice(0, 50);
+    state.cloudDeliverablesLoaded = true;
+    state.cloudDeliverablesError = "";
+    renderProducedDeliverables();
+  };
+
+  const submitCloudAssemblyJob = async ({ batch, formats = ["pdf", "video"], title = "" } = {}) => {
+    const baseUrl = workerBaseUrl();
+    if (!batch?.batchId) throw new Error("Select media before creating cloud outputs.");
+    if (!state.gallery?.key || !baseUrl || !state.unlocked) throw new Error("Cloud output assembly needs the Photos By Elie Worker.");
+    const credentials = await credentialsForCloudDeliverables({ promptIfMissing: false });
+    if (!credentials) throw new Error("Client login is needed to create cloud outputs.");
+    const response = await fetch(`${baseUrl}/real-estate/deliverables/jobs`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        galleryKey: state.gallery?.key || "",
+        username: credentials.username,
+        title: title || activeDeliverableName(),
+        formats,
+        batch,
+      }),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw realEstateWorkerError(response, body);
+    mergeCloudDeliverables(body.deliverables || []);
+    return body;
+  };
+
+  const queueCloudOutputs = async ({ batch, formats = ["pdf", "video"], progressKind = "cloud-output" } = {}) => {
+    startOutputProgress({
+      title: "Sending output job to cloud",
+      detail: "Saving the selection manifest for cloud PDF/video assembly...",
+      total: 2,
+      kind: progressKind,
+    });
+    try {
+      const selection = saveLocalDeliverable({
+        type: "selection",
+        batch,
+        filename: `${state.gallery?.key || "real-estate"}-${batch.batchId}-selection.html`,
+      });
+      updateOutputProgress({
+        title: "Sending output job to cloud",
+        detail: "Queueing PDF/video assembly away from this browser...",
+        current: 1,
+        total: 2,
+      });
+      const result = await submitCloudAssemblyJob({
+        batch,
+        formats,
+        title: selection?.title || activeDeliverableName(),
+      });
+      const formatLabel = formats.map((format) => format === "pdf" ? "PDF" : "video").join(" + ");
+      completeOutputProgress(`${formatLabel} job queued in the cloud. The shelf will show pending, ready, or needs-attention.`);
+      setStatus(`${formatLabel} job queued in the cloud. You can leave this browser; refresh the shelf for status.`);
+      return result;
+    } catch (error) {
+      const message = error?.message || "Cloud output job could not be queued.";
+      setStatus(message);
+      failOutputProgress(message);
+      throw error;
+    }
+  };
+
+  const openDeliverableUrl = async (url, mode = "view") => {
+    const href = String(url || "");
+    if (!href) throw new Error("This cloud output is not ready yet.");
+    if (mode === "view") {
+      window.open(href, "_blank", "noopener");
+      return;
+    }
+    const link = document.createElement("a");
+    link.href = href;
+    link.download = "";
+    link.rel = "noopener";
+    document.body.append(link);
+    link.click();
+    link.remove();
+  };
+
   const relatedDeliverableIdsFor = (deliverableId) => {
     const item = producedDeliverables().find((deliverable) => deliverable.id === deliverableId);
     return new Set([deliverableId, ...(Array.isArray(item?.relatedIds) ? item.relatedIds : [])].filter(Boolean).map(String));
@@ -1767,18 +1858,24 @@
       const displayTitle = displayDeliverableTitleFor(item, generatedNames);
       const canRename = ["cloud", "local"].includes(item.source);
       const mediaSummaryLabel = deliverableMediaSummaryLabelFor(item);
+      const statusLabel = item.status === "ready"
+        ? "Ready"
+        : item.status === "needs-attention"
+          ? "Needs attention"
+          : "Pending";
       const meta = [
         item.label,
         mediaSummaryLabel,
-        item.status !== "ready" ? item.status : "",
+        statusLabel,
         dateLabel,
         item.bytes ? formatBytes(item.bytes) : "",
       ].filter(Boolean).join(" / ");
       const canOpen = Boolean(item.editUrl || item.batch);
       const editingName = state.editingDeliverableNameId === item.id;
       const thumbnail = deliverableThumbnailFor(item);
+      const hasReadyOutput = (Array.isArray(item.records) ? item.records : [item]).some((record) => record.status === "ready" && (record.viewUrl || record.downloadUrl));
       return `
-        <article class="real-estate-deliverable ${canOpen ? "is-openable" : ""} ${editingName ? "is-renaming" : ""}" ${canOpen ? `data-re-open-deliverable="${escapeHtml(item.id)}" role="button" tabindex="0"` : ""}>
+        <article class="real-estate-deliverable ${canOpen ? "is-openable" : ""} ${editingName ? "is-renaming" : ""}" data-re-status="${escapeHtml(item.status)}" ${canOpen ? `data-re-open-deliverable="${escapeHtml(item.id)}" role="button" tabindex="0"` : ""}>
           <button class="real-estate-deliverable-disclosure" type="button" ${canOpen ? `data-re-open-deliverable-button="${escapeHtml(item.id)}"` : "disabled"} aria-label="Open ${escapeHtml(displayTitle)}">
             <span aria-hidden="true"></span>
           </button>
@@ -1788,9 +1885,12 @@
               ? `<input class="real-estate-deliverable-name" type="text" value="${escapeHtml(displayTitle)}" data-re-rename-deliverable="${escapeHtml(item.id)}" aria-label="Product name"/>`
               : `<strong class="real-estate-deliverable-title">${escapeHtml(displayTitle)}</strong>`}
             <span>${escapeHtml(meta || item.label)}</span>
+            ${item.failureReason ? `<em class="real-estate-deliverable-reason">${escapeHtml(item.failureReason)}</em>` : ""}
           </div>
           ${canRename ? `
             <div class="real-estate-deliverable-tools">
+              <button class="real-estate-deliverable-output" type="button" data-re-view-deliverable="${escapeHtml(item.id)}" ${hasReadyOutput ? "" : "disabled"}>View</button>
+              <button class="real-estate-deliverable-output" type="button" data-re-download-deliverable="${escapeHtml(item.id)}" ${hasReadyOutput ? "" : "disabled"}>Download</button>
               <button class="real-estate-deliverable-rename" type="button" data-re-edit-name="${escapeHtml(item.id)}" aria-label="Rename ${escapeHtml(displayTitle)}">${reIcon("edit")}</button>
               <button class="real-estate-deliverable-delete" type="button" data-re-delete-deliverable="${escapeHtml(item.id)}" aria-label="Delete ${escapeHtml(displayTitle)}">${reIcon("trash")}</button>
             </div>
@@ -3915,6 +4015,13 @@
       setStatus(`Select media before ${mode === "view" ? "viewing" : "downloading"} a video output`);
       return;
     }
+    const cloudBatch = buildSlideshowManifest(selected, true, batchOverride);
+    await queueCloudOutputs({
+      batch: cloudBatch,
+      formats: ["video"],
+      progressKind: progressKind || (mode === "view" ? "video-view" : "video-download"),
+    });
+    return;
     const openInBrowser = mode === "view";
     const title = openInBrowser ? "Preparing video view" : "Preparing video file";
     const fallbackWindow = openInBrowser ? (reservedWindow || reserveOutputWindow("Building video preview")) : null;
@@ -4756,6 +4863,12 @@
       setStatus(`Select media before ${mode === "view" ? "viewing" : "downloading"} project PDFs`);
       return;
     }
+    await queueCloudOutputs({
+      batch,
+      formats: ["pdf"],
+      progressKind: progressKind || (mode === "view" ? "pdf-view" : "pdf-download"),
+    });
+    return;
     const outputWindows = mode === "view" ? [...reservedWindows] : [];
     while (mode === "view" && outputWindows.length < projects.length) outputWindows.push(reserveOutputWindow("Building PDF"));
     const batchId = batch.batchId;
@@ -4860,13 +4973,28 @@
       return;
     }
     const batch = buildBatchManifest(selected, true);
-    const selectionFilename = `${state.gallery?.key || "real-estate"}-${batch.batchId}-selection.html`;
-    saveLocalDeliverable({ type: "selection", batch, filename: selectionFilename });
-    const pdfWindow = mode === "view" ? reserveOutputWindow("Building PDF") : null;
-    const videoWindow = mode === "view" ? reserveOutputWindow("Building video preview") : null;
     const progressKind = mode === "view" ? "outputs-view" : "outputs-download";
-    await downloadPdf({ mode, reservedWindows: pdfWindow ? [pdfWindow] : [], recordProduct: false, progressKind, batchOverride: batch });
-    await shareSlideshowPlan({ mode, reservedWindow: videoWindow, recordProduct: false, progressKind, batchOverride: batch });
+    const videoBatch = buildSlideshowManifest(selected, true, batch);
+    await queueCloudOutputs({
+      batch: {
+        ...batch,
+        slideshowSettings: videoBatch.slideshowSettings,
+        projects: (batch.projects || []).map((project) => {
+          const videoProject = (videoBatch.projects || []).find((candidate) => candidate.projectId === project.projectId);
+          const videoItems = new Map((videoProject?.items || []).map((item) => [item.photoId, item]));
+          return {
+            ...project,
+            items: (project.items || []).map((item) => ({ ...item, ...(videoItems.get(item.photoId) || {}) })),
+          };
+        }),
+        items: (batch.items || []).map((item) => ({
+          ...item,
+          ...((videoBatch.items || []).find((candidate) => candidate.photoId === item.photoId) || {}),
+        })),
+      },
+      formats: ["pdf", "video"],
+      progressKind,
+    });
   };
 
   const openSelectedOutputs = () => outputSelectedOutputs("view");
@@ -5156,6 +5284,25 @@
     const item = producedDeliverables().find((deliverable) => deliverable.id === deliverableId);
     if (!item) return;
     try {
+      const outputRecords = (Array.isArray(item.records) ? item.records : [item])
+        .filter((record) => record.type === "pdf" || record.type === "video")
+        .filter((record) => record.status === "ready" && (mode === "view" ? record.viewUrl || record.downloadUrl : record.downloadUrl || record.viewUrl));
+      if (outputRecords.length) {
+        for (const record of outputRecords) {
+          await openDeliverableUrl(mode === "view" ? (record.viewUrl || record.downloadUrl) : (record.downloadUrl || record.viewUrl), mode);
+        }
+        setStatus(`${mode === "view" ? "Opened" : "Started download for"} ${outputRecords.length} ready cloud output${outputRecords.length === 1 ? "" : "s"}.`);
+        return;
+      }
+      if (item.status === "pending") {
+        await fetchCloudDeliverables({ quiet: true }).catch(() => []);
+        setStatus("Cloud output is still pending. The shelf will show Ready when PDF/video files are assembled.");
+        return;
+      }
+      if (item.status === "needs-attention") {
+        setStatus(item.failureReason || "Cloud output needs attention before it can be opened.");
+        return;
+      }
       const batch = await deliverableBatchFor(item);
       if (item.type === "pdf") {
         const projects = pdfProjectsForBatch(batch);

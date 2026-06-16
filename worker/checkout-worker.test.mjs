@@ -1362,6 +1362,109 @@ test("real-estate deliverables endpoint saves and lists client products", async 
   assert.equal(wrongPassword.status, 401);
 });
 
+test("real-estate cloud assembly jobs persist status and serve completed assets", async () => {
+  const randomUUID = deterministicIds();
+  const privateR2 = createFakeR2();
+  const galleries = [{
+    key: "corine-real-estate",
+    username: "Corine",
+    accessCode: "LaConcha",
+  }];
+  const worker = createPhotosByElieWorker({
+    catalog: loadCatalog(),
+    store: createMemoryStore(),
+    stripe: createMockStripeClient({ randomUUID }),
+    randomUUID,
+    realEstateDeliverables: createRealEstateDeliverables({
+      privateBucket: privateR2,
+      randomUUID,
+      now: () => new Date("2026-06-10T12:00:00.000Z"),
+      galleries,
+    }),
+    realEstateAuth: createRealEstateAuth({
+      galleries,
+      sessionSecret: "test-real-estate-session-secret",
+      now: () => new Date("2026-06-10T12:00:00.000Z"),
+    }),
+  });
+  const cookie = await realEstateSessionCookie(worker);
+  const batch = {
+    schema: "photosbyelie.realEstatePdfBatch.v1",
+    batchId: "20260610T120000Z",
+    createdAt: "2026-06-10T12:00:00.000Z",
+    galleryKey: "corine-real-estate",
+    pdfSettings: { paperFormat: "a4", videoTreatment: "still-from-video" },
+    slideshowSettings: {
+      audioPolicy: {
+        sourceVideoAudioGainDb: -20,
+        musicGainDb: 0,
+      },
+    },
+    projects: [{
+      projectId: "re-la-concha",
+      projectTitle: "La Concha",
+      items: [{
+        photoId: "corine-re-2026-la-concha-1-apt-8ab1-d5h-3043",
+        title: "Living room",
+        mediaType: "video",
+        sourceVideoPrivateKey: "real-estate/corine-real-estate/masters/la-concha/source.mp4",
+        slideshowDurationPolicy: "preserve-source-duration",
+      }],
+    }],
+  };
+
+  const jobResponse = await worker.fetch(jsonRequest("https://worker.test/real-estate/deliverables/jobs", {
+    galleryKey: "corine-real-estate",
+    username: "Corine",
+    title: "La Concha product",
+    formats: ["pdf", "video"],
+    batch,
+  }, { cookie }));
+  assert.equal(jobResponse.status, 202);
+  const queued = await jobResponse.json();
+  assert.equal(queued.deliverables.length, 2);
+  assert.equal(queued.deliverables[0].status, "pending");
+  assert.equal(queued.deliverables[1].assemblyJob.sourceVideoAudioPolicy, "duck-under-generated-guitar-bed");
+  assert.equal(queued.deliverables[1].assemblyJob.sourceVideoAudioGainDb, -20);
+
+  const pendingAsset = await worker.fetch(new Request(`https://worker.test/real-estate/deliverables/${queued.deliverables[0].id}/view`, {
+    headers: { cookie },
+  }));
+  assert.equal(pendingAsset.status, 409);
+  assert.equal((await pendingAsset.json()).error.code, "real_estate_deliverable_pending");
+
+  const pdfRecord = queued.deliverables.find((record) => record.type === "pdf");
+  const pdfOutputKey = pdfRecord.outputs.pdf.key;
+  await privateR2.put(pdfOutputKey, new TextEncoder().encode("%PDF-1.4 test"), {
+    httpMetadata: { contentType: "application/pdf" },
+  });
+  await privateR2.put(`real-estate/corine-real-estate/deliverables/${pdfRecord.id}.json`, new TextEncoder().encode(JSON.stringify({
+    ...pdfRecord,
+    status: "ready",
+    bytes: 13,
+  })), {
+    httpMetadata: { contentType: "application/json; charset=utf-8" },
+  });
+
+  const listResponse = await worker.fetch(jsonRequest("https://worker.test/real-estate/deliverables/list", {
+    galleryKey: "corine-real-estate",
+    username: "Corine",
+  }, { cookie }));
+  assert.equal(listResponse.status, 200);
+  const listed = await listResponse.json();
+  const listedPdf = listed.deliverables.find((record) => record.id === pdfRecord.id);
+  assert.equal(listedPdf.status, "ready");
+  assert.match(listedPdf.downloadUrl, /^\/real-estate\/deliverables\//);
+
+  const downloadResponse = await worker.fetch(new Request(`https://worker.test${listedPdf.downloadUrl}`, {
+    headers: { cookie },
+  }));
+  assert.equal(downloadResponse.status, 200);
+  assert.equal(downloadResponse.headers.get("content-type"), "application/pdf");
+  assert.match(downloadResponse.headers.get("content-disposition"), /^attachment;/);
+  assert.equal(Buffer.from(await downloadResponse.arrayBuffer()).toString(), "%PDF-1.4 test");
+});
+
 test("deployed Worker blocks checkout when private delivery files are missing", async () => {
   const catalog = loadCatalog();
   const photoId = firstDeliverablePhotoId(catalog);

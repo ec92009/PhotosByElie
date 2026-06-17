@@ -1,0 +1,83 @@
+{
+  "date": "2026-06-17",
+  "platform": "Threads",
+  "status": "prepared",
+  "account": "ec92009",
+  "post_type": "carousel",
+  "title": "Albert Kahn Garden Reflections",
+  "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-albert-kahn-garden-reflections-2026-06-17",
+  "campaign_id": "instagram-albert-kahn-garden-reflections-2026-06-17",
+  "caption": "Albert Kahn gardens in four frames: reflections, paths, trees, and quiet French light from Photos By Elie. Browse: https://photos-by-elie.com/campaign.html?c=instagram-albert-kahn-garden-reflections-2026-06-17",
+  "recommended_upload_set": "images",
+  "available_count": 4,
+  "notes": [
+    "Images are public watermarked R2 previews staged for upload/API publishing."
+  ],
+  "items": [
+    {
+      "order": 1,
+      "id": "img-5980-f2327928c5",
+      "media_id": "img-5980-f2327928c5",
+      "title": "Boulogne Billancourt, Musee Albert Kahn",
+      "collection": "france",
+      "location": "France",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5980-f2327928c5_1800.jpg",
+      "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5980-f2327928c5_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=img-5980-f2327928c5",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=img-5980-f2327928c5",
+      "image": "images/01-img-5980-f2327928c5-albert-kahn-garden-reflections.jpg",
+      "local_staged_path": "socials/Threads/2026-06-17/albert-kahn-garden-reflections/images/01-img-5980-f2327928c5-albert-kahn-garden-reflections.jpg"
+    },
+    {
+      "order": 2,
+      "id": "img-6038-8baf672836",
+      "media_id": "img-6038-8baf672836",
+      "title": "Boulogne Billancourt, Musee Albert Kahn",
+      "collection": "france",
+      "location": "France",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6038-8baf672836_1800.jpg",
+      "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6038-8baf672836_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=img-6038-8baf672836",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=img-6038-8baf672836",
+      "image": "images/02-img-6038-8baf672836-albert-kahn-garden-reflections.jpg",
+      "local_staged_path": "socials/Threads/2026-06-17/albert-kahn-garden-reflections/images/02-img-6038-8baf672836-albert-kahn-garden-reflections.jpg"
+    },
+    {
+      "order": 3,
+      "id": "img-6003-5d126c7054",
+      "media_id": "img-6003-5d126c7054",
+      "title": "Boulogne Billancourt, Musee Albert Kahn",
+      "collection": "france",
+      "location": "France",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6003-5d126c7054_1800.jpg",
+      "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6003-5d126c7054_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=img-6003-5d126c7054",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=img-6003-5d126c7054",
+      "image": "images/03-img-6003-5d126c7054-albert-kahn-garden-reflections.jpg",
+      "local_staged_path": "socials/Threads/2026-06-17/albert-kahn-garden-reflections/images/03-img-6003-5d126c7054-albert-kahn-garden-reflections.jpg"
+    },
+    {
+      "order": 4,
+      "id": "img-5984-7982536318",
+      "media_id": "img-5984-7982536318",
+      "title": "Boulogne Billancourt, Musee Albert Kahn",
+      "collection": "france",
+      "location": "France",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5984-7982536318_1800.jpg",
+      "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5984-7982536318_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=img-5984-7982536318",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=img-5984-7982536318",
+      "image": "images/04-img-5984-7982536318-albert-kahn-garden-reflections.jpg",
+      "local_staged_path": "socials/Threads/2026-06-17/albert-kahn-garden-reflections/images/04-img-5984-7982536318-albert-kahn-garden-reflections.jpg"
+    }
+  ],
+  "link_preview_note": "Remove any automatic link preview if it shows generic or off-theme campaign metadata before posting."
+}

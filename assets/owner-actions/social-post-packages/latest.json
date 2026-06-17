@@ -1,7 +1,8 @@
 {
-  "format": "photosbyelie-latest-social-package-pointer",
-  "generated_at": "2026-06-13T03:05:19.491Z",
-  "date": "2026-06-13",
-  "manifest": "assets/owner-actions/social-post-packages/2026-06-13/daily-social-package.json",
-  "readme": "assets/owner-actions/social-post-packages/2026-06-13/daily-social-package.md"
+  "format": "photosbyelie-daily-social-package",
+  "schema_version": 1,
+  "generated_at": "2026-06-17T03:04:53.106Z",
+  "queue_date": "2026-06-17",
+  "package_count": 4,
+  "json": "assets/owner-actions/social-post-packages/2026-06-17/daily-social-package.json"
 }

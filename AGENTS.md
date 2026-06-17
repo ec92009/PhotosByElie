@@ -1,4 +1,4 @@
-Before making changes, also read parent instruction files at `~/AGENTS.md` and `~/Dev/AGENTS.md` if they exist, then apply this repo file last.
+Before starting work, also read parent instruction file `~/Dev/AGENTS.md` if it exists, then apply this repo file last.
 
 # AGENTS.md
 
@@ -6,14 +6,13 @@ Repo-level working preferences for `/Users/ecohen/Dev/PhotosByElie`.
 
 ## Parent Instruction Order
 
-- Read `~/AGENTS.md` if it exists.
 - Read `~/Dev/AGENTS.md` if it exists.
 - Apply this repo file last.
 
 ## Response Protocol
 
 - If a task may take more than a few seconds, send a short acknowledgment before doing the work.
-- Read and follow this file before making changes.
+- Read and follow this file before starting work.
 - For Max/David machine handoff or ignored asset sync work, read [`HANDOFF.md`](./HANDOFF.md).
 - For "show me" requests, follow [`SHOW_ME_SOP.md`](./SHOW_ME_SOP.md).
 - For changes intended to be viewed externally, commit and push once complete unless the user asks not to.

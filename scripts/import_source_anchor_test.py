@@ -23,6 +23,13 @@ class ImportSourceAnchorTest(unittest.TestCase):
         self.assertTrue(first.startswith("img-1234-"))
         self.assertTrue(second.startswith("img-1234-"))
 
+    def test_photo_id_preserves_uri_source_anchor(self) -> None:
+        first = photo_id_for_source_path("apple-photos://A1B2/L0/001")
+        second = photo_id_for_source_path("apple-photos://A1B2/L0/002")
+
+        self.assertNotEqual(first, second)
+        self.assertTrue(first.startswith("001-") or first.startswith("photo-"))
+
     def test_source_paths_include_anchor_and_source_file_path(self) -> None:
         row = {
             "source_anchor": {"path": "/Volumes/Saturn/Pictures/LR/Camera/Italy/IMG_1234.jpg"},
@@ -72,6 +79,25 @@ class ImportSourceAnchorTest(unittest.TestCase):
 
         self.assertEqual(matched_row, old)
         self.assertEqual(photo_id_for_import("IMG_1234.jpg", Path(source_path), matched_row), "old-id")
+
+    def test_manifest_source_index_reuses_apple_photos_anchor(self) -> None:
+        source_anchor = "apple-photos://A1B2/L0/001"
+        old = {
+            "id": "apple-id",
+            "relative_path": "old-export/IMG_0001.jpeg",
+            "source_anchor": {"path": source_anchor, "modified_ns": 100},
+        }
+        manifest = {"old-export/IMG_0001.jpeg": old}
+        source_index, _keys_by_source_path = manifest_source_indexes(manifest)
+        _matched_key, matched_row = manifest_match_for_source(
+            manifest,
+            source_index,
+            "new-export/IMG_0001.jpeg",
+            source_anchor,
+        )
+
+        self.assertEqual(matched_row, old)
+        self.assertEqual(photo_id_for_import("new-export/IMG_0001.jpeg", source_anchor, matched_row), "apple-id")
 
 
 if __name__ == "__main__":

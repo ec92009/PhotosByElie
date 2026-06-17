@@ -9,6 +9,7 @@ output/
 facebook-built-in-*.md
 facebook-built-in-*.png
 .env.stripe-test.local
+handwritten notes/
 
 # Local/generated photo workspaces.
 # assets/expo is publishable and tracked. Hidden is local vault state.
@@ -16,6 +17,7 @@ facebook-built-in-*.png
 photosbyelie-assets-*.tar
 photosbyelie-*-assets-*.tar
 deliveries/
+tmp/apple-photos-import/
 assets/lightroom/gps-metadata.json
 assets/reserve/**
 !assets/reserve/
@@ -36,6 +38,12 @@ assets/owner-actions/Owner.sqlite-*
 assets/owner-actions/pixelmator-edits.local.json
 assets/owner-actions/real-estate-clients.local.json
 assets/owner-actions/etsy-listing-packages/
+assets/owner-actions/etsy-about-candidates/
+assets/owner-actions/aggressive-culling-backups/
+assets/owner-actions/aggressive-culling-*.json
+assets/owner-actions/approved-burst-culling-result-*.json
+assets/owner-actions/blocked-to-wastebasket-result-*.json
+assets/owner-actions/review-state-normalization-*.json
 assets/owner-actions/title-keyword-review-queue/*.json
 assets/owner-actions/title-keyword-review-queue/proposed-state.json
 

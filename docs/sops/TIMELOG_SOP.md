@@ -40,7 +40,7 @@ User instructions control the state:
 
 ## Estimation Method
 
-Codex does not have reliable presence telemetry. Use a conservative message-based estimate:
+Use a conservative message-based estimate for the local project timelog, even when central telemetry is available:
 
 - Count the active exchange window around project messages, not the full elapsed wall-clock gap.
 - If the user sends several project messages in a short burst, count the realistic review/typing/decision time for that burst.
@@ -51,6 +51,17 @@ Codex does not have reliable presence telemetry. Use a conservative message-base
 - Do not add time for simple acknowledgments such as "thanks" unless they include a decision, correction, or new instruction.
 
 When estimates are uncertain, err low and note the reason briefly.
+
+## Central Collaboration Telemetry
+
+In addition to the local timelog, record meaningful collaboration events in the central append-only telemetry ledger under `~/Dev/.codex-telemetry/`.
+
+- Write local node events first to `~/Dev/.codex-telemetry/nodes/<node-id>.jsonl`; on David, `<node-id>` is `david`.
+- Keep entries compact, client-safe, and free of credentials, private IDs, message bodies, and secrets.
+- Use telemetry for workflow analysis and handoff evidence only. Do not treat central telemetry as billable time.
+- Record meaningful starts, ends, human interventions, status changes, blockers/unblockers, significant tests, commits, deploys, and versioned or published milestones.
+- Do not log every small conversational turn; prefer events that would help reconstruct project attention or explain a handoff later.
+- When working on David and the aggregate is reachable, also keep `/Users/ecohen/Dev/.codex-telemetry/aggregate/collaboration-events.jsonl` in sync or ensure it can be regenerated from node logs.
 
 ## Timelog File Format
 
@@ -100,6 +111,8 @@ Update the timelog when:
 
 Do not force a timelog edit for unrelated repo-only documentation changes when the clock is paused and no project time should be counted.
 
+Update central telemetry when this SOP is active for the current work and a meaningful telemetry event occurs, even if the local timelog entry is shorter or not yet due.
+
 ## Budget Reporting
 
 When reporting time:
@@ -123,3 +136,4 @@ Timelog tracking is current when:
 - All countable active project exchanges have a session entry.
 - Totals match the session table.
 - Off-budget or paused conversation has not been charged.
+- Meaningful central telemetry events have been appended when this SOP is active and telemetry is reachable.

@@ -180,6 +180,29 @@ class TitleReviewUndoTests(unittest.TestCase):
         ]
         manifest_path.write_text(json.dumps({"photos": photos}), encoding="utf-8")
 
+    def _write_burst_manifest(self, repo_root, rows):
+        manifest_path = repo_root / local_server.IMPORT_CACHE_MANIFEST_PATH
+        manifest_path.parent.mkdir(parents=True, exist_ok=True)
+        photos = []
+        for media_id, capture, extra in rows:
+            extra = dict(extra or {})
+            dimensions = extra.pop("dimensions", {"width": 4000, "height": 3000})
+            media_type = extra.pop("media_type", "photo")
+            photos.append({
+                "id": media_id,
+                "relative_path": f"Camera/{media_id}.jpg",
+                "source_path_hint": f"/Volumes/Saturn/Pictures/LR/Camera/{media_id}.jpg",
+                "media_type": media_type,
+                "title": f"{media_id} Title",
+                "gallery_country": {"slug": "france", "label": "France"},
+                "derivatives": {"gallery": f"france/{media_id}_900.jpg", "detail": f"france/{media_id}_1800.jpg"},
+                "source_file": {"name": f"{media_id}.jpg", "extension": "jpg", "bytes": 1234},
+                "capture": {"sort": capture},
+                "dimensions": dimensions,
+                **extra,
+            })
+        manifest_path.write_text(json.dumps({"photos": photos}), encoding="utf-8")
+
     def _clear_title_keyword_applied_at(self, conn, media_id):
         conn.execute(
             "UPDATE title_keyword_queue SET applied_at = NULL WHERE media_id = ?",
@@ -213,6 +236,32 @@ class TitleReviewUndoTests(unittest.TestCase):
             self.assertEqual(counts["rejected"], 0)
             self.assertEqual(counts["approved"], 2)
             self.assertEqual(counts["accepted"], 0)
+
+    def test_blocked_rework_rows_count_as_blocked_not_rejected(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            conn = owner_state_db.connect(repo_root)
+            try:
+                self._seed_title_keyword_row(conn, "blocked-rework-photo", "blocked")
+                owner_state_db._upsert_queue(
+                    conn,
+                    media_id="blocked-rework-photo",
+                    review_state="blocked",
+                    latest_attempt=1,
+                    batch_id="batch-review-test",
+                    proposed_at="2026-06-14T08:00:00Z",
+                    reviewed_at="2026-06-14T08:01:00Z",
+                    rework_priority=True,
+                    rejected_count=2,
+                    owner_comment="old rejection context should not make blocked rows active",
+                )
+                conn.commit()
+            finally:
+                conn.close()
+
+            counts = owner_state_db.title_keyword_review_counts(repo_root)
+            self.assertEqual(counts["blocked"], 1)
+            self.assertEqual(counts["rejected"], 0)
 
     def test_auto_apply_approved_rows_updates_catalog_state_and_applied_at(self):
         photo_id = "approved-pending-auto"
@@ -368,6 +417,83 @@ class TitleReviewUndoTests(unittest.TestCase):
                 + summary["blockedOrParkedReady"]["count"],
                 summary["r2Ready"]["count"],
             )
+
+    def test_owner_burst_cull_preview_uses_less_than_one_second_boundary(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            self._write_burst_manifest(
+                repo_root,
+                [
+                    ("burst-a", "2026-06-14T08:00:00.000", {}),
+                    ("burst-b", "2026-06-14T08:00:00.999", {}),
+                    ("separate-c", "2026-06-14T08:00:01.999", {}),
+                ],
+            )
+
+            preview = local_server.owner_burst_cull_preview(repo_root)
+            self.assertEqual(preview["counts"]["eligible"], 3)
+            self.assertEqual(preview["counts"]["burst_groups"], 1)
+            self.assertEqual(preview["counts"]["survivors"], 1)
+            self.assertEqual(preview["counts"]["non_burst_kept"], 1)
+            self.assertEqual(preview["counts"]["waste_basket_moves"], 1)
+            outcomes = {item["photo_id"]: item["outcome"] for item in preview["candidates"]}
+            self.assertEqual(outcomes["burst-a"], "waste-basket")
+            self.assertEqual(outcomes["burst-b"], "survivor-keep")
+            self.assertEqual(outcomes["separate-c"], "non-burst-keep")
+
+            protected_preview = local_server.owner_burst_cull_preview(repo_root, ["burst-a"])
+            protected = {item["photo_id"]: item["reason"] for item in protected_preview["protected"]}
+            self.assertIn("liked/basket/order protected", protected["burst-a"])
+            self.assertEqual(protected_preview["counts"]["waste_basket_moves"], 0)
+
+    def test_owner_burst_cull_preview_keeps_every_fourth_from_second_for_large_burst(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            self._write_burst_manifest(
+                repo_root,
+                [(f"burst-{index}", f"2026-06-14T08:00:00.{index:03d}", {}) for index in range(10)],
+            )
+
+            preview = local_server.owner_burst_cull_preview(repo_root)
+            survivors = [
+                item["photo_id"]
+                for item in preview["candidates"]
+                if item["outcome"] == "survivor-keep"
+            ]
+            self.assertEqual(survivors, ["burst-1", "burst-5", "burst-9"])
+            self.assertEqual(preview["counts"]["waste_basket_moves"], 7)
+
+    def test_owner_burst_cull_run_discards_only_rejects_and_protects_approved(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            self._write_burst_manifest(
+                repo_root,
+                [
+                    ("reject-a", "2026-06-14T08:00:00.000", {}),
+                    ("survivor-b", "2026-06-14T08:00:00.100", {}),
+                    ("reject-c", "2026-06-14T08:00:00.200", {}),
+                    ("approved-d", "2026-06-14T08:00:00.300", {}),
+                ],
+            )
+            self._write_catalog_db(repo_root, [("approved-d", "Approved D", "2026-06-14T08:00:00.300")])
+
+            result = local_server.owner_burst_cull_run(repo_root)
+            self.assertEqual(result["counts"]["waste_basket_moves"], 2)
+            applied = {item["photo_id"] for item in result["outcomes"] if item.get("applied")}
+            self.assertEqual(applied, {"reject-a", "reject-c"})
+            protected = {item["photo_id"]: item["reason"] for item in result["protected"]}
+            self.assertIn("approved/public catalog", protected["approved-d"])
+
+            conn = sqlite3.connect(repo_root / "assets/owner-actions/Owner.sqlite")
+            conn.row_factory = sqlite3.Row
+            try:
+                states = {
+                    row["media_id"]: row["lifecycle_state"]
+                    for row in conn.execute("SELECT media_id, lifecycle_state FROM media_lifecycle")
+                }
+            finally:
+                conn.close()
+            self.assertEqual(states, {"reject-a": "discarded", "reject-c": "discarded"})
 
     def test_batch_import_cannot_pull_approved_rows_back_into_review(self):
         with tempfile.TemporaryDirectory() as temp_dir:

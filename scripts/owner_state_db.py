@@ -227,6 +227,22 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
           updated_at               TEXT
         ) WITHOUT ROWID;
 
+        CREATE TABLE IF NOT EXISTS import_source_history (
+          source_kind         TEXT NOT NULL CHECK (source_kind IN ('expo', 'real_estate')),
+          path                TEXT NOT NULL CHECK (trim(path) <> ''),
+          label               TEXT,
+          pinned              INTEGER NOT NULL DEFAULT 0 CHECK (pinned IN (0, 1)),
+          removed_at          TEXT,
+          review_required     INTEGER NOT NULL DEFAULT 0 CHECK (review_required IN (0, 1)),
+          review_completed_at TEXT,
+          legacy_source       TEXT,
+          first_seen_at       TEXT,
+          last_used_at        TEXT,
+          use_count           INTEGER NOT NULL DEFAULT 0 CHECK (use_count >= 0),
+          updated_at          TEXT,
+          PRIMARY KEY (source_kind, path)
+        ) WITHOUT ROWID;
+
         CREATE INDEX IF NOT EXISTS idx_title_keyword_batches_generated_at ON title_keyword_batches(generated_at);
         CREATE INDEX IF NOT EXISTS idx_title_keyword_queue_state_priority ON title_keyword_queue(review_state, rework_priority, latest_proposed_at);
         CREATE INDEX IF NOT EXISTS idx_title_keyword_queue_latest_batch ON title_keyword_queue(latest_proposed_batch_id, review_state);
@@ -238,6 +254,7 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS idx_title_keyword_proposals_status ON title_keyword_proposals(proposal_status, proposed_at);
         CREATE INDEX IF NOT EXISTS idx_title_keyword_decisions_state_time ON title_keyword_decisions(decision_state, decided_at);
         CREATE INDEX IF NOT EXISTS idx_title_keyword_decisions_applied_at ON title_keyword_decisions(applied_at);
+        CREATE INDEX IF NOT EXISTS idx_import_source_history_kind_active ON import_source_history(source_kind, removed_at, pinned, last_used_at);
         CREATE INDEX IF NOT EXISTS idx_country_assignments_country ON country_assignments(country_slug, media_id);
         CREATE INDEX IF NOT EXISTS idx_country_assignments_batch ON country_assignments(batch_id);
         CREATE INDEX IF NOT EXISTS idx_keyword_blacklist_updated_at ON keyword_blacklist(updated_at);
@@ -1443,6 +1460,8 @@ def _title_keyword_state_tags(review_state: str, rework_priority: bool = False) 
         return [TITLE_KEYWORDS_REVIEWED_FLAG]
     if review_state == "parked":
         return [TITLE_KEYWORDS_PARKED_FLAG]
+    if review_state == "blocked":
+        return []
     if review_state == "rejected" or rework_priority:
         return [TITLE_KEYWORDS_PROPOSED_FLAG, TITLE_KEYWORDS_REJECTED_FLAG]
     if review_state == "proposed":
@@ -2428,6 +2447,8 @@ def title_keyword_review_counts(repo_root: Path, db_path: Path | None = None) ->
             count = int(row["count"])
             if state in TITLE_KEYWORD_APPROVED_STATES:
                 counts["approved"] += count
+            elif state == "blocked":
+                counts["blocked"] += count
             elif state == "proposed" and row["rework_priority"]:
                 counts["rejected"] += count
             elif state == "proposed":
@@ -2436,8 +2457,6 @@ def title_keyword_review_counts(repo_root: Path, db_path: Path | None = None) ->
                 counts["parked"] += count
             elif state == "rejected" or row["rework_priority"]:
                 counts["rejected"] += count
-            elif state == "blocked":
-                counts["blocked"] += count
         return counts
     finally:
         conn.close()

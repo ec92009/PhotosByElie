@@ -154,7 +154,7 @@ const loadAppliedTitleKeywordIds = () => {
     JOIN title_keyword_decisions AS d
       ON d.media_id = q.media_id
      AND d.attempt = q.latest_attempt
-    WHERE q.review_state = 'applied'
+    WHERE q.review_state IN ('approved', 'applied')
       AND d.decision_state = 'accepted'
       AND COALESCE(d.applied_at, '') <> '';
   `;

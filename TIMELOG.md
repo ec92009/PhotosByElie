@@ -261,8 +261,56 @@ Clock state: running
 | 2026-06-10 | 12:05 CEST | 12:21 CEST | 0:02 | Reported backup email link opening the wrong order and requested cache-busting; implementation/deploy time excluded. |
 | 2026-06-10 | 12:30 CEST | 12:31 CEST | 0:01 | Resent the two recent Photos By Elie delivery emails after the cache-busted order recovery link fix. |
 | 2026-06-10 | 12:34 CEST | 12:41 CEST | 0:02 | Clarified buyer email download-window wording and renamed the fallback order link as an alternate order page; implementation/deploy wait excluded. |
+| 2026-06-10 | 14:33 CEST | 14:34 CEST | 0:01 | Added a back-burner backlog item to audit and design Real Estate email delivery coverage. |
+| 2026-06-11 | 09:57 CEST | 09:58 CEST | 0:01 | Requested the title-review undo restore bug fix; implementation/testing time excluded. |
+| 2026-06-12 | 16:35 CEST | 16:36 CEST | 0:01 | Requested execution of guarded checkout discount-code ticket PBE-20260610-B022; background implementation/testing time excluded. |
+| 2026-06-12 | 16:38 CEST | 16:39 CEST | 0:01 | Created central David ticket for panoramic detail Info panel placement. |
+| 2026-06-12 | 16:44 CEST | 16:45 CEST | 0:01 | Executed the title-review undo restore ticket and verified the keyboard undo path; background implementation/testing time excluded. |
+| 2026-06-12 | 16:45 CEST | 16:46 CEST | 0:01 | Reviewed last-week PhotosByElie accomplishments, active local work, and central backlog. |
+| 2026-06-12 | 16:45 CEST | 16:45 CEST | 0:01 | Requested the title-review count selector ticket; background implementation/testing time excluded. |
+| 2026-06-12 | 17:14 CEST | 17:15 CEST | 0:01 | Reviewed what Max-side Owner operations would require with Saturn source files remaining on David. |
+| 2026-06-12 | 19:38 CEST | 19:53 CEST | 0:15 | Executed PBE-20260610-B019 hidden/discarded lifecycle hardening and verified lifecycle, catalog, R2, and validation paths; background test/runtime wait excluded. |
+| 2026-06-13 | 05:34 CEST | 05:35 CEST | 0:01 | Requested execution of pano detail Info panel placement ticket PBE-20260612-7AFC; background implementation/testing time excluded. |
+| 2026-06-13 | 05:40 CEST | 05:43 CEST | 0:01 | Executed PBE-20260610-B005 latest-social springboard ticket; implementation/testing time excluded. |
+| 2026-06-13 | 05:43 CEST | 05:45 CEST | 0:01 | Executed PBE-20260610-B017 Owner artifact deploy audit, removed public review JSON exposure, and verified post-deploy 404s; deployment wait excluded. |
+| 2026-06-13 | 05:45 CEST | 05:46 CEST | 0:01 | Executed PBE-20260610-B008 import source re-export de-duplication ticket; background implementation/testing time excluded. |
+| 2026-06-14 | 08:06 CEST | 08:07 CEST | 0:01 | Located aggressive culling ticket PBE-20260614-6229 and prepared refinement questions; background search time excluded. |
+| 2026-06-14 | 08:07 CEST | 08:26 CEST | 0:02 | Refined PBE-20260614-6229 as Owner search-based aggressive burst culling with preview, Go confirmation, imports, tombstones, and protected-photo survival; background ticket API/validation time excluded. |
+| 2026-06-14 | 09:20 CEST | 09:21 CEST | 0:01 | Opened aggressive culling ticket PBE-20260614-6229 in the local Tickets app and summarized its ready state. |
+| 2026-06-14 | 09:22 CEST | 09:24 CEST | 0:01 | Reduced PBE-20260614-6229 to conservative in-system unapproved photo culling into Waste Basket. |
+| 2026-06-14 | 09:25 CEST | 09:32 CEST | 0:01 | Directed and performed the conservative PBE-20260614-6229 culling run into Waste Basket; background analysis/write/validation excluded. |
+| 2026-06-14 | 09:55 CEST | 09:56 CEST | 0:01 | Checked buyer-visible public catalog photo/video counts and Owner applied/discarded status. |
+| 2026-06-14 | 10:00 CEST | 10:01 CEST | 0:01 | Created ticket PBE-20260614-8290 to auto-apply approved title/keyword rows on review exit and remove Apply selected. |
+| 2026-06-14 | 10:02 CEST | 10:03 CEST | 0:01 | Created urgent ticket PBE-20260614-B1F1 to keep approved/applied photos out of review unless gallery R sends them back. |
+| 2026-06-14 | 10:06 CEST | 10:07 CEST | 0:01 | Expanded PBE-20260614-B1F1 with a Review all visible action for filtered gallery/search re-review. |
+| 2026-06-14 | 10:08 CEST | 10:09 CEST | 0:01 | Explained blocked title/keyword review rows versus Waste Basket/discarded lifecycle state. |
+| 2026-06-14 | 10:10 CEST | 10:12 CEST | 0:01 | Moved all remaining blocked title/keyword review rows into Waste Basket lifecycle; background write/validation excluded. |
+| 2026-06-14 | 10:17 CEST | 10:18 CEST | 0:01 | Normalized Owner title/keyword states so applied/approved are owner-facing approved, discarded rows are Waste Basket, and active unresolved rows remain in review. |
+| 2026-06-14 | 10:43 CEST | 10:44 CEST | 0:01 | Executed PBE-20260614-B1F1 to keep approved photos out of review unless deliberately re-queued; background implementation/testing time excluded. |
+| 2026-06-14 | 15:23 CEST | 15:24 CEST | 0:01 | Discussed Apple Photos direct-import feasibility for future Owner planning; no ticket or implementation started. |
+| 2026-06-14 | 15:24 CEST | 15:26 CEST | 0:01 | Moved approved-bucket burst extras into Waste Basket and regenerated public metadata; background write/export/validation time excluded. |
+| 2026-06-14 | 23:11 CEST | 23:12 CEST | 0:01 | Created and pushed central ticket PBE-20260614-AE19 for Apple Photos direct import planning. |
+| 2026-06-14 | 23:23 CEST | 23:24 CEST | 0:01 | Corrected the Owner R2 visibility gate count semantics after the mixed-denominator count check; background implementation/testing time excluded. |
+| 2026-06-14 | 23:49 CEST | 23:50 CEST | 0:01 | Verified PBE-20260614-B1F1 remains implemented and pushed; background test/runtime excluded. |
+| 2026-06-15 | 00:01 CEST | 00:02 CEST | 0:01 | Executed PBE-20260610-D37F for title-review culling continuity after blocking; background implementation/testing time excluded. |
+| 2026-06-15 | 00:27 CEST | 00:28 CEST | 0:01 | Executed PBE-20260614-8290 for title/keyword review auto-apply-on-exit; background implementation/testing time excluded. |
+| 2026-06-15 | 00:46 CEST | 00:47 CEST | 0:01 | Reported homescreen Add to Home Screen using a generated P instead of the Photos By Elie logo; background implementation/testing time excluded. |
+| 2026-06-15 | 00:55 CEST | 00:56 CEST | 0:01 | Reviewed durable Content Credentials and invisible pixel watermark usefulness for PhotosByElie previews; background research time excluded. |
+| 2026-06-15 | 01:00 CEST | 01:01 CEST | 0:01 | Created and pushed backburner ticket PBE-20260615-F8BE for a durable Content Credentials public-preview pilot. |
+| 2026-06-15 | 20:31 CEST | 20:32 CEST | 0:01 | Executed PBE-20260610-A94C for recent-purchase download allowance detection; background implementation/testing time excluded. |
+| 2026-06-15 | 20:32 CEST | 20:33 CEST | 0:01 | Executed PBE-20260610-B016 title/keyword queue decision pass; background review/write/validation time excluded. |
+| 2026-06-16 | 18:45 CEST | 19:20 CEST | 0:35 | Executed PBE-20260610-B003 Real Estate server-side auth hardening, versioned the visible client, and verified Worker tests; broader validation failure recorded as pre-existing catalog media state. |
+| 2026-06-16 | 19:13 CEST | 19:21 CEST | 0:08 | Executed PBE-20260614-AE19 for Owner-only direct Apple Photos import through a local PhotoKit bridge; live Photos album verification remains a manual promotion gate. |
+| 2026-06-16 | 19:21 CEST | 19:22 CEST | 0:01 | Executed PBE-20260614-6229 conservative Owner burst-cull preview/run workflow; background implementation and validation time excluded. |
+| 2026-06-16 | 20:12 CEST | 20:16 CEST | 0:04 | Executed PBE-20260610-B018 title/keyword generator pass after review and compared quality counts; background generator/test time excluded. |
+| 2026-06-16 | 20:20 CEST | 20:25 CEST | 0:05 | Executed PBE-20260610-B001 Real Estate cloud PDF/video assembly job flow; background implementation/testing time excluded. |
+| 2026-06-16 | 20:57 CEST | 21:04 CEST | 0:07 | Executed PBE-20260610-B015 public discovery and SEO improvements; background validation/runtime excluded. |
+| 2026-06-16 | 21:39 CEST | 21:40 CEST | 0:01 | Executed PBE-20260610-B009 import source history management; background implementation/testing time excluded. |
+| 2026-06-16 | 21:52 CEST | 21:53 CEST | 0:01 | Executed PBE-20260610-B023 Real Estate email delivery coverage; background implementation/testing time excluded. |
+| 2026-06-17 | 01:23 CEST | 01:24 CEST | 0:01 | Requested the web app background photo saturation be reduced by half; background implementation/versioning time excluded. |
+| 2026-06-17 | 16:01 CEST | 16:02 CEST | 0:01 | Requested repo cleanup to turn the dirty working tree into a clean committed handoff; background inventory/testing/commit time excluded. |
 
 ## Totals
 
-Active collaboration time used: 16:33
+Active collaboration time used: 18:30
 Remaining budget: not set

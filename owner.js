@@ -86,6 +86,15 @@
   const basketStateNoteRoot = document.querySelector("[data-owner-basket-state-note]");
   const blockedPreviewProgressRoot = document.querySelector("[data-owner-blocked-preview-progress]");
   const blockedPreviewNoteRoot = document.querySelector("[data-owner-blocked-preview-note]");
+  const burstCullPreviewButton = document.querySelector("[data-owner-burst-cull-preview]");
+  const burstCullLoadButton = document.querySelector("[data-owner-burst-cull-load]");
+  const burstCullGoButton = document.querySelector("[data-owner-burst-cull-go]");
+  const burstCullPoolRoot = document.querySelector("[data-owner-burst-cull-pool]");
+  const burstCullBurstsRoot = document.querySelector("[data-owner-burst-cull-bursts]");
+  const burstCullKeptRoot = document.querySelector("[data-owner-burst-cull-kept]");
+  const burstCullWasteRoot = document.querySelector("[data-owner-burst-cull-waste]");
+  const burstCullStatusRoot = document.querySelector("[data-owner-burst-cull-status]");
+  const burstCullOutputRoot = document.querySelector("[data-owner-burst-cull-output]");
   const syncCountryKeywordsButton = document.querySelector("[data-owner-sync-country-keywords]");
   const wipeHiddenR2Button = document.querySelector("[data-owner-wipe-hidden-r2]");
   const physicalProductsToggle = document.querySelector("[data-owner-physical-products]");
@@ -96,12 +105,27 @@
   const r2CoverageNote = document.querySelector("[data-owner-r2-coverage-note]");
   const r2FixButton = document.querySelector("[data-owner-r2-fix]");
   const importSourceSelect = document.querySelector("[data-owner-import-source-select]");
+  const importSourcePinButton = document.querySelector("[data-owner-import-source-pin]");
+  const importSourceReviewButton = document.querySelector("[data-owner-import-source-review]");
+  const importSourceRemoveButton = document.querySelector("[data-owner-import-source-remove]");
+  const importSourceDetails = document.querySelector("[data-owner-import-source-details]");
+  const importSourcePathRoot = document.querySelector("[data-owner-import-source-path]");
+  const importSourceLastUsedRoot = document.querySelector("[data-owner-import-source-last-used]");
+  const importSourceStateRoot = document.querySelector("[data-owner-import-source-state]");
   const r2FillGapsButtons = [...document.querySelectorAll("[data-owner-r2-fill-gaps]")];
   const r2MaintenanceButtons = [...document.querySelectorAll("[data-owner-r2-maintenance]")];
   const r2Card = document.querySelector("[data-owner-r2-card]");
   const r2Summary = document.querySelector("[data-owner-r2-summary]");
   const r2Phases = document.querySelector("[data-owner-r2-phases]");
   const r2Counts = document.querySelector("[data-owner-r2-counts]");
+  const applePhotosCard = document.querySelector("[data-owner-apple-photos-card]");
+  const applePhotosAlbumSelect = document.querySelector("[data-owner-apple-photos-albums]");
+  const applePhotosRefreshButton = document.querySelector("[data-owner-apple-photos-refresh]");
+  const applePhotosPreflightButton = document.querySelector("[data-owner-apple-photos-preflight]");
+  const applePhotosImportButton = document.querySelector("[data-owner-apple-photos-import]");
+  const applePhotosStatus = document.querySelector("[data-owner-apple-photos-status]");
+  const applePhotosCounts = document.querySelector("[data-owner-apple-photos-counts]");
+  const applePhotosPreview = document.querySelector("[data-owner-apple-photos-preview]");
   const expandedSweepPhaseKeys = new Set();
   const priceListRoot = document.querySelector("[data-owner-price-list]");
   const publishPricesButton = document.querySelector("[data-owner-publish-prices]");
@@ -157,8 +181,12 @@
   let r2RepairLogSummary = null;
   let r2RepairLogTaskId = "";
   let r2PhaseRenderSnapshot = null;
+  let applePhotosAlbums = [];
+  let applePhotosBusy = false;
   let wasteDeleteActive = false;
   let wasteCleanupActive = false;
+  let burstCullPreview = null;
+  let burstCullBusy = false;
   let lastWasteCoverageRefreshAt = 0;
   let lastImportCoverageRefreshAt = 0;
   let latestR2ProgressTasks = [];
@@ -1912,6 +1940,167 @@
     }
   };
 
+  const setBurstCullStatus = (message) => {
+    if (burstCullStatusRoot) burstCullStatusRoot.textContent = message;
+  };
+
+  const setBurstCullBusy = (busy) => {
+    burstCullBusy = busy;
+    [burstCullPreviewButton, burstCullLoadButton, burstCullGoButton].forEach((button) => {
+      if (!button) return;
+      button.disabled = busy || (button === burstCullGoButton && !(burstCullPreview?.counts?.waste_basket_moves > 0));
+    });
+  };
+
+  const burstCullProtectedIds = () => {
+    const ids = new Set();
+    const add = (value) => {
+      const text = String(value || "").trim();
+      if (text) ids.add(text);
+    };
+    try {
+      (window.photosByElieLiked?.read?.() || []).forEach((item) => add(item.photoId || item.id || item));
+      (window.photosByElieBasket?.read?.() || []).forEach((item) => add(item.photoId || item.id || item));
+      const checkout = JSON.parse(window.localStorage.getItem("photosbyelie-mock-checkout") || "{}");
+      (checkout?.lastResponse?.order?.items || checkout?.order?.items || []).forEach((item) => {
+        add(item.photoId || item.photo_id || item.id);
+      });
+    } catch {
+      // Client-side protection is best-effort; server-side Owner protections still apply.
+    }
+    return [...ids];
+  };
+
+  const renderBurstCullPreview = (payload = null) => {
+    burstCullPreview = payload;
+    const counts = payload?.counts || {};
+    const kept = Number(counts.survivors || 0) + Number(counts.non_burst_kept || 0);
+    setText(burstCullPoolRoot, formatCount(counts.pool || 0));
+    setText(burstCullBurstsRoot, formatCount(counts.burst_groups || 0));
+    setText(burstCullKeptRoot, formatCount(kept));
+    setText(burstCullWasteRoot, formatCount(counts.waste_basket_moves || 0));
+    if (burstCullGoButton) burstCullGoButton.disabled = burstCullBusy || !(Number(counts.waste_basket_moves || 0) > 0);
+    if (!burstCullOutputRoot) return;
+    if (!payload) {
+      burstCullOutputRoot.hidden = true;
+      burstCullOutputRoot.innerHTML = "";
+      return;
+    }
+    const groups = Array.isArray(payload.burst_groups) ? payload.burst_groups : [];
+    const candidates = Array.isArray(payload.candidates) ? payload.candidates : [];
+    const protectedRows = Array.isArray(payload.protected) ? payload.protected : [];
+    const groupRows = groups.slice(0, 80).map((group) => `
+      <tr>
+        <td>${escapeHtml(group.burst_id)}</td>
+        <td>${formatCount(group.size)}</td>
+        <td>${escapeHtml(group.start || "")}</td>
+        <td>${escapeHtml((group.survivor_ids || []).join(", "))}</td>
+        <td>${escapeHtml((group.reject_ids || []).join(", "))}</td>
+      </tr>
+    `).join("");
+    const candidateRows = candidates.map((item) => `
+      <tr>
+        <td>${escapeHtml(item.photo_id)}</td>
+        <td>${escapeHtml(item.captured_at || "")}</td>
+        <td>${escapeHtml(item.burst_id || "non-burst")}</td>
+        <td>${escapeHtml(item.burst_position ? `${item.burst_position}/${item.burst_size}` : "")}</td>
+        <td><span class="owner-burst-cull-outcome is-${escapeHtml(item.outcome || "keep")}">${escapeHtml(item.outcome || "keep")}</span></td>
+      </tr>
+    `).join("");
+    const protectedRowsHtml = protectedRows.slice(0, 160).map((item) => `
+      <tr>
+        <td>${escapeHtml(item.photo_id)}</td>
+        <td>${escapeHtml(item.captured_at || "")}</td>
+        <td>${escapeHtml(item.reason || "protected")}</td>
+      </tr>
+    `).join("");
+    burstCullOutputRoot.innerHTML = `
+      <div class="owner-burst-cull-section">
+        <h3>Burst groups</h3>
+        <p>${formatCount(groups.length)} burst groups. ${groups.length > 80 ? "Showing first 80 groups." : "Showing all groups."}</p>
+        <div class="owner-burst-cull-table-wrap">
+          <table class="owner-burst-cull-table">
+            <thead><tr><th>Group</th><th>Size</th><th>Start</th><th>Survivors</th><th>Waste Basket</th></tr></thead>
+            <tbody>${groupRows || `<tr><td colspan="5">No burst groups detected.</td></tr>`}</tbody>
+          </table>
+        </div>
+      </div>
+      <div class="owner-burst-cull-section">
+        <h3>Candidate outcomes</h3>
+        <p>${formatCount(candidates.length)} eligible candidates including non-bursts.</p>
+        <div class="owner-burst-cull-table-wrap">
+          <table class="owner-burst-cull-table">
+            <thead><tr><th>Photo</th><th>Capture</th><th>Group</th><th>Position</th><th>Outcome</th></tr></thead>
+            <tbody>${candidateRows || `<tr><td colspan="5">No eligible candidates.</td></tr>`}</tbody>
+          </table>
+        </div>
+      </div>
+      <div class="owner-burst-cull-section">
+        <h3>Protected skips</h3>
+        <p>${formatCount(protectedRows.length)} protected or ineligible rows. ${protectedRows.length > 160 ? "Showing first 160 skips." : "Showing all skips."}</p>
+        <div class="owner-burst-cull-table-wrap">
+          <table class="owner-burst-cull-table">
+            <thead><tr><th>Photo</th><th>Capture</th><th>Reason</th></tr></thead>
+            <tbody>${protectedRowsHtml || `<tr><td colspan="3">No protected skips.</td></tr>`}</tbody>
+          </table>
+        </div>
+      </div>
+    `;
+    burstCullOutputRoot.hidden = false;
+  };
+
+  const loadBurstCullPreview = async () => {
+    const authorized = await ownerAuth?.requireAuth?.("Start the local Photos By Elie server to preview burst culling.");
+    if (ownerAuth?.enabled && !authorized) throw new Error("Owner helper server required.");
+    setBurstCullBusy(true);
+    setBurstCullStatus("Loading conservative burst cull preview...");
+    try {
+      const response = await fetch("/__photosbyelie/owner-burst-cull", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ protected_ids: burstCullProtectedIds() }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Could not load burst cull preview.");
+      renderBurstCullPreview(payload);
+      const counts = payload.counts || {};
+      setBurstCullStatus(`${formatCount(counts.pool || 0)} in-system rows checked: ${formatCount(counts.burst_groups || 0)} bursts, ${formatCount(counts.waste_basket_moves || 0)} proposed Waste Basket moves, ${formatCount(counts.protected_skips || 0)} protected skips.`);
+      return payload;
+    } finally {
+      setBurstCullBusy(false);
+    }
+  };
+
+  const runBurstCull = async () => {
+    if (!burstCullPreview?.counts) await loadBurstCullPreview();
+    const moves = Number(burstCullPreview?.counts?.waste_basket_moves || 0);
+    if (!moves) {
+      setBurstCullStatus("No burst rejects are proposed.");
+      return;
+    }
+    const ok = window.confirm(`Move ${formatCount(moves)} conservative burst rejects to Waste Basket? Survivors and non-bursts stay unapproved; source files and R2 media are not deleted.`);
+    if (!ok) return;
+    setBurstCullBusy(true);
+    setBurstCullStatus("Moving proposed burst rejects to Waste Basket...");
+    try {
+      const response = await fetch("/__photosbyelie/owner-burst-cull", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirm: true, protected_ids: burstCullProtectedIds() }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Could not run burst cull.");
+      renderBurstCullPreview(payload);
+      const counts = payload.counts || {};
+      setBurstCullStatus(`Burst cull complete: ${formatCount(counts.waste_basket_moves || 0)} moved to Waste Basket, ${formatCount(counts.survivors || 0)} survivors, ${formatCount(counts.non_burst_kept || 0)} non-bursts kept, ${formatCount(counts.failures || 0)} failures.`);
+      setStatus(`Conservative burst cull complete: ${formatCount(counts.waste_basket_moves || 0)} Waste Basket moves.`);
+      refreshDiscardedCount();
+      loadVisibilitySummary();
+    } finally {
+      setBurstCullBusy(false);
+    }
+  };
+
   const refreshCountsFromSource = async () => {
     try {
       await hiddenActions.syncFromPublishedBlacklist?.();
@@ -1961,6 +2150,58 @@
 
   const importSourceByPath = (path) => importSourceOptions.find((source) => source.path === path) || null;
 
+  const formatImportSourceTime = (value) => {
+    const date = value ? new Date(value) : null;
+    if (!date || !Number.isFinite(date.getTime())) return "Never";
+    return date.toLocaleString([], {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  };
+
+  const importSourceStateText = (source) => {
+    if (!source) return "";
+    const parts = [];
+    parts.push(source.exists ? "Available" : "Missing");
+    if (source.pinned) parts.push("Pinned");
+    if (source.reviewRequired) parts.push("Legacy review needed");
+    if (source.useCount) parts.push(`${formatCount(source.useCount)} run${Number(source.useCount) === 1 ? "" : "s"}`);
+    return parts.join(" · ");
+  };
+
+  const renderImportSourceDetails = () => {
+    if (!importSourceSelect || !importSourceDetails) return;
+    const choice = importSourceSelect.value || "new";
+    const source = importSourceByPath(choice);
+    const hasSource = Boolean(source);
+    importSourceDetails.hidden = !hasSource;
+    setText(importSourcePathRoot, hasSource ? source.path : "");
+    setText(importSourceLastUsedRoot, hasSource ? formatImportSourceTime(source.lastUsedAt) : "");
+    setText(importSourceStateRoot, hasSource ? importSourceStateText(source) : "");
+    if (importSourcePinButton) {
+      importSourcePinButton.disabled = !hasSource;
+      importSourcePinButton.textContent = source?.pinned ? "Unpin" : "Pin";
+      importSourcePinButton.title = hasSource
+        ? (source.pinned ? "Remove this source from favorites" : "Pin this source as a favorite")
+        : "Choose a remembered source to pin";
+    }
+    if (importSourceReviewButton) {
+      importSourceReviewButton.hidden = !source?.reviewRequired;
+      importSourceReviewButton.disabled = !source?.reviewRequired;
+      importSourceReviewButton.title = source?.reviewRequired
+        ? "Mark this legacy remembered folder as reviewed"
+        : "";
+    }
+    if (importSourceRemoveButton) {
+      importSourceRemoveButton.disabled = !hasSource;
+      importSourceRemoveButton.title = hasSource
+        ? "Remove this remembered source folder from Owner.sqlite history"
+        : "Choose a remembered source to remove";
+    }
+  };
+
   const importSourceChoiceLabel = () => {
     const value = importSourceSelect?.value || "new";
     if (value === "all") return "All Expo source folders";
@@ -1996,6 +2237,7 @@
     importSourceSelect.value = path;
     lastImportSourceValue = path;
     syncR2ActionButtons();
+    renderImportSourceDetails();
     if (!latestR2ProgressTasks.some((task) => ["repair", "gap-fill", "maintenance"].includes(task?.operation))) {
       renderImportDashboardIdle();
     }
@@ -2055,6 +2297,11 @@
         label: String(source?.label || "").trim(),
         exists: source?.exists !== false,
         discovered: Boolean(source?.discovered),
+        pinned: Boolean(source?.pinned),
+        reviewRequired: Boolean(source?.reviewRequired),
+        reviewCompletedAt: String(source?.reviewCompletedAt || ""),
+        lastUsedAt: String(source?.lastUsedAt || ""),
+        useCount: Number(source?.useCount || 0),
       }))
       .filter((source) => source.path);
     realEstateImportSourceSelect.textContent = "";
@@ -2157,6 +2404,7 @@
       : importSourceOptions[0]?.path || "all";
     lastImportSourceValue = importSourceSelect.value;
     syncR2ActionButtons();
+    renderImportSourceDetails();
     if (!latestR2ProgressTasks.some((task) => ["repair", "gap-fill", "maintenance"].includes(task?.operation))) {
       renderImportDashboardIdle();
     }
@@ -2171,6 +2419,177 @@
       renderImportSourceOptions(Array.isArray(payload.sources) ? payload.sources : []);
     } catch {
       renderImportSourceOptions([]);
+    }
+  };
+
+  const updateImportSourceHistory = async (action, source = importSourceByPath(importSourceSelect?.value)) => {
+    if (!source?.path) return;
+    const response = await fetch("/__photosbyelie/import-sources", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        kind: "expo",
+        path: source.path,
+        action,
+      }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Could not update import source history.");
+    const nextSources = Array.isArray(payload.sources) ? payload.sources : [];
+    const nextValue = action === "remove" ? "" : source.path;
+    renderImportSourceOptions(nextSources);
+    if (nextValue && importSourceByPath(nextValue)) {
+      importSourceSelect.value = nextValue;
+      lastImportSourceValue = nextValue;
+      renderImportSourceDetails();
+    }
+  };
+
+  const selectedApplePhotosAlbum = () => (
+    applePhotosAlbums.find((album) => album.localIdentifier === applePhotosAlbumSelect?.value) || null
+  );
+
+  const renderApplePhotosPreview = (payload = null) => {
+    if (!applePhotosCounts || !applePhotosPreview) return;
+    if (!payload) {
+      setHtml(applePhotosCounts, "");
+      setHtml(applePhotosPreview, "");
+      applePhotosPreview.hidden = true;
+      return;
+    }
+    const items = Array.isArray(payload.items) ? payload.items : [];
+    const unavailable = items.filter((item) => item.status === "unavailable_from_icloud").length;
+    const rows = [
+      ["Album", payload.album?.title || selectedApplePhotosAlbum()?.title || "Apple Photos"],
+      ["Candidates", formatCount(payload.candidateCount ?? payload.materializedCount ?? 0)],
+      ["Blocked/skipped", formatCount((payload.blockedCount ?? 0) + unavailable)],
+      ["Total checked", formatCount(payload.count || items.length || 0)],
+    ];
+    setHtml(applePhotosCounts, ownerCountRowsHtml(rows, new Set(["Album"])));
+    const previewRows = items.slice(0, 16).map((item) => {
+      const statusText = item.status === "candidate" ? "Candidate"
+        : item.status === "materialized" ? "Ready"
+          : item.status === "unavailable_from_icloud" ? "iCloud original not local"
+            : item.status === "blocked_by_policy" ? "Blocked by policy"
+              : "Skipped";
+      return `
+        <div class="owner-coverage-missing-row">
+          <strong>${escapeHtml(statusText)}</strong>
+          <span>${escapeHtml(item.filename || item.localIdentifier || "Apple Photos asset")}</span>
+          ${item.reason ? `<small>${escapeHtml(item.reason)}</small>` : ""}
+        </div>
+      `;
+    }).join("");
+    setHtml(applePhotosPreview, previewRows || "<p>No Apple Photos assets returned.</p>");
+    applePhotosPreview.hidden = false;
+  };
+
+  const setApplePhotosBusy = (busy) => {
+    applePhotosBusy = Boolean(busy);
+    [applePhotosAlbumSelect, applePhotosRefreshButton, applePhotosPreflightButton, applePhotosImportButton].forEach((control) => {
+      if (control) control.disabled = applePhotosBusy;
+    });
+  };
+
+  const setApplePhotosStatus = (message) => {
+    setText(applePhotosStatus, message);
+  };
+
+  const renderApplePhotosAlbums = (albums = []) => {
+    if (!applePhotosAlbumSelect) return;
+    const previous = applePhotosAlbumSelect.value;
+    applePhotosAlbums = albums
+      .map((album) => ({
+        localIdentifier: String(album?.localIdentifier || "").trim(),
+        title: String(album?.title || "").trim() || "(Untitled)",
+        assetCount: Number(album?.assetCount || 0),
+      }))
+      .filter((album) => album.localIdentifier);
+    applePhotosAlbumSelect.textContent = "";
+    if (!applePhotosAlbums.length) {
+      const option = document.createElement("option");
+      option.value = "";
+      option.textContent = "No albums found";
+      applePhotosAlbumSelect.append(option);
+      return;
+    }
+    applePhotosAlbums.forEach((album) => {
+      const option = document.createElement("option");
+      option.value = album.localIdentifier;
+      option.textContent = `${album.title} (${formatCount(album.assetCount)})`;
+      option.title = album.localIdentifier;
+      applePhotosAlbumSelect.append(option);
+    });
+    const values = new Set(applePhotosAlbums.map((album) => album.localIdentifier));
+    applePhotosAlbumSelect.value = values.has(previous) ? previous : applePhotosAlbums[0].localIdentifier;
+  };
+
+  const loadApplePhotosAlbums = async () => {
+    if (!applePhotosAlbumSelect || !hiddenActions?.enabled) return;
+    setApplePhotosBusy(true);
+    setApplePhotosStatus("Loading Apple Photos albums through the local helper...");
+    try {
+      const response = await fetch("/__photosbyelie/apple-photos/albums", { cache: "no-store" });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Could not load Apple Photos albums.");
+      renderApplePhotosAlbums(Array.isArray(payload.albums) ? payload.albums : []);
+      setApplePhotosStatus("Choose an album, run dry run, then import when the candidate list looks right.");
+    } catch (error) {
+      renderApplePhotosAlbums([]);
+      setApplePhotosStatus(error?.message || "Apple Photos albums are unavailable. Check macOS Photos permission for the local helper.");
+    } finally {
+      setApplePhotosBusy(false);
+    }
+  };
+
+  const applePhotosRequestPayload = (extra = {}) => {
+    const album = selectedApplePhotosAlbum();
+    if (!album) throw new Error("Choose an Apple Photos album first.");
+    return { albumLocalIdentifier: album.localIdentifier, ...extra };
+  };
+
+  const runApplePhotosPreflight = async () => {
+    setApplePhotosBusy(true);
+    setApplePhotosStatus("Running Apple Photos dry run...");
+    try {
+      const response = await fetch("/__photosbyelie/apple-photos/preflight", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(applePhotosRequestPayload()),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Apple Photos dry run failed.");
+      renderApplePhotosPreview(payload);
+      setApplePhotosStatus(`Dry run complete: ${formatCount(payload.candidateCount || 0)} import candidates, ${formatCount(payload.blockedCount || 0)} blocked or unsupported.`);
+    } catch (error) {
+      setApplePhotosStatus(error?.message || "Apple Photos dry run failed.");
+    } finally {
+      setApplePhotosBusy(false);
+    }
+  };
+
+  const startApplePhotosImport = async () => {
+    setApplePhotosBusy(true);
+    setApplePhotosStatus("Materializing Apple Photos assets and starting import...");
+    try {
+      const response = await fetch("/__photosbyelie/apple-photos/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(applePhotosRequestPayload()),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Apple Photos import failed.");
+      renderApplePhotosPreview(payload.materialized || payload.preflight || null);
+      if (payload.task) {
+        r2RepairActive = payload.task.operation === "repair";
+        renderR2Progress([payload.task]);
+        startR2Polling();
+      }
+      setApplePhotosStatus(payload.message || "Apple Photos import started.");
+    } catch (error) {
+      setApplePhotosStatus(error?.message || "Apple Photos import failed.");
+    } finally {
+      setApplePhotosBusy(false);
     }
   };
 
@@ -3918,7 +4337,7 @@
         await withTimeout(loadR2Coverage(), 12000, "R2 coverage refresh");
         setStatus("R2 catalog coverage refreshed.");
       } else if (kind === "progress") {
-        await withTimeout(Promise.all([loadImportSources(), loadR2Progress()]), 12000, "Import dashboard refresh");
+        await withTimeout(Promise.all([loadImportSources(), loadApplePhotosAlbums(), loadR2Progress()]), 12000, "Import dashboard refresh");
         setStatus("Import dashboard refreshed.");
       } else if (kind === "cost") {
         await withTimeout(loadCostEstimate(), 12000, "Cloud cost refresh");
@@ -4120,6 +4539,24 @@
     }
   });
 
+  [burstCullPreviewButton, burstCullLoadButton].forEach((button) => {
+    button?.addEventListener("click", async () => {
+      try {
+        await loadBurstCullPreview();
+      } catch (error) {
+        setBurstCullStatus(error?.message || "Could not load burst cull preview.");
+      }
+    });
+  });
+
+  burstCullGoButton?.addEventListener("click", async () => {
+    try {
+      await runBurstCull();
+    } catch (error) {
+      setBurstCullStatus(error?.message || "Could not run burst cull.");
+    }
+  });
+
   const chooseImportFolder = async () => {
     const response = await fetch("/__photosbyelie/select-import-folder", {
       method: "POST",
@@ -4176,6 +4613,7 @@
     if (choice !== "new") {
       lastImportSourceValue = choice;
       syncR2ActionButtons();
+      renderImportSourceDetails();
       if (!latestR2ProgressTasks.some((task) => ["repair", "gap-fill", "maintenance"].includes(task?.operation))) {
         renderImportDashboardIdle();
       }
@@ -4205,7 +4643,58 @@
     } finally {
       importSourceDialogOpen = false;
       syncR2ActionButtons();
+      renderImportSourceDetails();
     }
+  });
+
+  importSourcePinButton?.addEventListener("click", async () => {
+    const source = importSourceByPath(importSourceSelect?.value);
+    if (!source) return;
+    try {
+      await updateImportSourceHistory(source.pinned ? "unpin" : "pin", source);
+      setStatus(`${source.pinned ? "Unpinned" : "Pinned"} import source: ${source.label || folderNameFromPath(source.path)}.`);
+    } catch (error) {
+      setStatus(error?.message || "Could not update import source pin.");
+    }
+  });
+
+  importSourceReviewButton?.addEventListener("click", async () => {
+    const source = importSourceByPath(importSourceSelect?.value);
+    if (!source) return;
+    try {
+      await updateImportSourceHistory("review", source);
+      setStatus(`Marked legacy import source reviewed: ${source.label || folderNameFromPath(source.path)}.`);
+    } catch (error) {
+      setStatus(error?.message || "Could not mark import source reviewed.");
+    }
+  });
+
+  importSourceRemoveButton?.addEventListener("click", async () => {
+    const source = importSourceByPath(importSourceSelect?.value);
+    if (!source) return;
+    const ok = window.confirm(`Remove remembered import source "${source.label || folderNameFromPath(source.path)}"?\n\nThe folder is removed from Owner.sqlite history only. Files on disk are not touched.`);
+    if (!ok) return;
+    try {
+      await updateImportSourceHistory("remove", source);
+      setStatus(`Removed remembered import source: ${source.label || folderNameFromPath(source.path)}.`);
+    } catch (error) {
+      setStatus(error?.message || "Could not remove remembered import source.");
+    }
+  });
+
+  applePhotosRefreshButton?.addEventListener("click", loadApplePhotosAlbums);
+  applePhotosPreflightButton?.addEventListener("click", async () => {
+    const authorized = await ownerAuth?.requireAuth?.("Start the local Photos By Elie server to preflight Apple Photos imports.");
+    if (ownerAuth?.enabled && !authorized) return;
+    runApplePhotosPreflight();
+  });
+  applePhotosImportButton?.addEventListener("click", async () => {
+    const authorized = await ownerAuth?.requireAuth?.("Start the local Photos By Elie server to import from Apple Photos.");
+    if (ownerAuth?.enabled && !authorized) return;
+    const album = selectedApplePhotosAlbum();
+    const ok = window.confirm(`Import eligible local assets from Apple Photos album "${album?.title || "selected album"}"?\n\nRun Dry run first if you have not reviewed what will be imported, skipped, or blocked.`);
+    if (!ok) return;
+    startApplePhotosImport();
   });
 
   r2FixButton?.addEventListener("click", async () => {
@@ -4416,6 +4905,7 @@
     refreshCountsFromSource();
     refreshBlockedSyncPanel();
     loadImportSources();
+    loadApplePhotosAlbums();
     loadR2Coverage();
     loadCostEstimate();
     loadKeywordBlacklist();

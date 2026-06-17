@@ -39,6 +39,9 @@ OWNER_VISIBILITY_SUMMARY_PATH = "/__photosbyelie/owner-visibility-summary"
 SELECT_IMPORT_FOLDER_PATH = "/__photosbyelie/select-import-folder"
 IMPORT_SOURCES_PATH = "/__photosbyelie/import-sources"
 IMPORT_SOURCE_THUMB_PATH = "/__photosbyelie/import-source-thumb"
+APPLE_PHOTOS_ALBUMS_PATH = "/__photosbyelie/apple-photos/albums"
+APPLE_PHOTOS_PREFLIGHT_PATH = "/__photosbyelie/apple-photos/preflight"
+APPLE_PHOTOS_IMPORT_PATH = "/__photosbyelie/apple-photos/import"
 REAL_ESTATE_OWNER_PATH = "/__photosbyelie/real-estate-owner"
 REAL_ESTATE_IMPORT_PROGRESS_PATH = "/__photosbyelie/real-estate-import-progress"
 OWNER_SESSION_PATH = "/__photosbyelie/owner-session"
@@ -56,6 +59,7 @@ SOURCE_EDIT_IMPORT_PATH = "/__photosbyelie/source-edit-import"
 SOURCE_EDIT_IMPORT_ALL_PATH = "/__photosbyelie/source-edit-import-all"
 PUBLISH_PRICES_PATH = "/__photosbyelie/publish-prices"
 PUBLISH_PRICES_PROGRESS_PATH = "/__photosbyelie/publish-prices-progress"
+OWNER_BURST_CULL_PATH = "/__photosbyelie/owner-burst-cull"
 MAX_BODY_BYTES = 5 * 1024 * 1024
 LOCAL_CLIENTS = {"127.0.0.1", "::1", "localhost"}
 VISIBLE_VERSION_EPOCH = date(2026, 2, 28)
@@ -82,6 +86,8 @@ REAL_ESTATE_PUBLIC_ROOT = Path("assets/real-estate")
 REAL_ESTATE_SOURCE_ROOT = Path("/Volumes/Saturn/Pictures/RE")
 REAL_ESTATE_MEDIA_EXTENSIONS = {".jpg", ".jpeg", ".mov", ".mp4", ".m4v"}
 IMPORT_SOURCE_THUMB_ROOT = Path(".review-logs/import-source-thumbs")
+APPLE_PHOTOS_BRIDGE = Path("scripts/apple_photos_bridge.swift")
+APPLE_PHOTOS_IMPORT_ROOT = Path("tmp/apple-photos-import")
 SOURCE_PREVIEW_CACHE_ROOT = Path(".review-logs/source-previews")
 IMPORT_SOURCE_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tif", ".tiff", ".heic", ".heif", ".webp"}
 SOURCE_PREVIEW_BROWSER_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
@@ -294,6 +300,12 @@ PIXELMATOR_EDIT_FOLDER = Path("pixelmator.pro.edits")
 PIXELMATOR_IMPORTED_EDIT_FOLDER = Path("pixelmator.pro.imported-edits")
 PIXELMATOR_EDIT_IMPORTS_PATH = OWNER_ACTION_ROOT / "pixelmator-edits.local.json"
 PIXELMATOR_EDIT_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tif", ".tiff", ".webp", ".heic"}
+BURST_CULL_KEEP_MARKERS = {
+    "manual-keep",
+    "manual_keep",
+    "review-approved",
+    "review_approved",
+}
 
 
 class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
@@ -341,8 +353,14 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         if path == OWNER_VISIBILITY_SUMMARY_PATH:
             self._handle_owner_visibility_summary()
             return
+        if path == OWNER_BURST_CULL_PATH:
+            self._handle_owner_burst_cull_preview()
+            return
         if path == IMPORT_SOURCES_PATH:
             self._handle_import_sources()
+            return
+        if path == APPLE_PHOTOS_ALBUMS_PATH:
+            self._handle_apple_photos_albums()
             return
         if path == IMPORT_SOURCE_THUMB_PATH:
             self._handle_import_source_thumb()
@@ -369,6 +387,9 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         if path == R2_FIX_PATH:
             self._handle_r2_fix()
             return
+        if path == IMPORT_SOURCES_PATH:
+            self._handle_import_sources_update()
+            return
         if path == R2_FILL_GAPS_PATH:
             self._handle_r2_fill_gaps()
             return
@@ -377,6 +398,12 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             return
         if path == SELECT_IMPORT_FOLDER_PATH:
             self._handle_select_import_folder()
+            return
+        if path == APPLE_PHOTOS_PREFLIGHT_PATH:
+            self._handle_apple_photos_preflight()
+            return
+        if path == APPLE_PHOTOS_IMPORT_PATH:
+            self._handle_apple_photos_import()
             return
         if path == PHOTO_ACTION_PATH:
             self._handle_photo_action()
@@ -392,6 +419,9 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             return
         if path == PUBLISH_PRICES_PATH:
             self._handle_publish_prices()
+            return
+        if path == OWNER_BURST_CULL_PATH:
+            self._handle_owner_burst_cull_run()
             return
         if path == REAL_ESTATE_OWNER_PATH:
             self._handle_real_estate_owner()
@@ -583,6 +613,38 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             return
         self._send_json(HTTPStatus.OK, {"ok": True, "summary": summary})
 
+    def _handle_owner_burst_cull_preview(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            preview = owner_burst_cull_preview(Path.cwd())
+        except (OSError, sqlite3.Error, json.JSONDecodeError, ValueError) as error:
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
+            return
+        self._send_json(HTTPStatus.OK, {"ok": True, **preview})
+
+    def _handle_owner_burst_cull_run(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            payload = self._read_json_body()
+            protected_ids = _normalized_photo_ids(payload.get("protected_ids") or payload.get("protectedIds"))
+            if payload.get("confirm") is not True:
+                preview = owner_burst_cull_preview(Path.cwd(), protected_ids)
+                self._send_json(HTTPStatus.OK, {"ok": True, **preview})
+                return
+            with OWNER_ACTION_LOCK:
+                result = owner_burst_cull_run(Path.cwd(), protected_ids)
+        except ValueError as error:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
+            return
+        except (OSError, sqlite3.Error, json.JSONDecodeError) as error:
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
+            return
+        self._send_json(HTTPStatus.OK, {"ok": True, **result})
+
     def _handle_import_sources(self) -> None:
         if not self._is_loopback_request():
             self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
@@ -599,6 +661,72 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
             return
         self._send_json(HTTPStatus.OK, {"ok": True, "sources": sources})
+
+    def _handle_import_sources_update(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            payload = self._read_json_body()
+            kind = _import_source_kind(payload.get("kind"))
+            path = _import_source_history_path(payload.get("path"))
+            action = str(payload.get("action") or "").strip().lower()
+            if action not in {"pin", "unpin", "remove", "review"}:
+                raise ValueError("action must be pin, unpin, remove, or review")
+            result = _update_import_source_history(Path.cwd(), kind, path, action)
+            sources = (
+                _real_estate_import_source_history(Path.cwd())
+                if kind == "real_estate"
+                else _import_source_history(Path.cwd())
+            )
+        except ValueError as error:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
+            return
+        except sqlite3.Error as error:
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
+            return
+        self._send_json(HTTPStatus.OK, {"ok": True, "source": result, "sources": sources})
+
+    def _handle_apple_photos_albums(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            result = _run_apple_photos_bridge(Path.cwd(), ["albums"])
+        except (OSError, RuntimeError, json.JSONDecodeError) as error:
+            self._send_json(HTTPStatus.BAD_GATEWAY, {"ok": False, "error": str(error)})
+            return
+        self._send_json(HTTPStatus.OK if result.get("ok") else HTTPStatus.BAD_GATEWAY, result)
+
+    def _handle_apple_photos_preflight(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            payload = self._read_json_body()
+            result = _apple_photos_preflight(Path.cwd(), payload)
+        except ValueError as error:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
+            return
+        except (OSError, RuntimeError, json.JSONDecodeError) as error:
+            self._send_json(HTTPStatus.BAD_GATEWAY, {"ok": False, "error": str(error)})
+            return
+        self._send_json(HTTPStatus.OK if result.get("ok") else HTTPStatus.BAD_GATEWAY, result)
+
+    def _handle_apple_photos_import(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            payload = self._read_json_body()
+            result = _start_apple_photos_import(Path.cwd(), payload)
+        except ValueError as error:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
+            return
+        except (OSError, RuntimeError, json.JSONDecodeError) as error:
+            self._send_json(HTTPStatus.BAD_GATEWAY, {"ok": False, "error": str(error)})
+            return
+        self._send_json(HTTPStatus.OK if result.get("ok") else HTTPStatus.BAD_GATEWAY, result)
 
     def _handle_import_source_thumb(self) -> None:
         if not self._is_loopback_request():
@@ -1826,6 +1954,337 @@ def owner_visibility_summary(repo_root: Path) -> dict:
             "byOrigin": _count_origins(blocked_ready_ids, origin_by_id),
         },
         "reviewStateCounts": dict(sorted(state_counts.items())),
+    }
+
+
+def _owner_burst_parse_timestamp(value: object) -> datetime | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    normalized = text.replace("Z", "+00:00")
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
+    if parsed.tzinfo is not None:
+        return parsed.astimezone(timezone.utc).replace(tzinfo=None)
+    return parsed
+
+
+def _owner_burst_manifest_rows(repo_root: Path) -> list[dict]:
+    payload = _read_json_file(repo_root / IMPORT_CACHE_MANIFEST_PATH, {})
+    rows = payload.get("photos") if isinstance(payload, dict) else []
+    if not isinstance(rows, list):
+        return []
+    return [row for row in rows if isinstance(row, dict) and str(row.get("id") or "").strip()]
+
+
+def _owner_burst_source_files(row: dict) -> list[dict]:
+    files: list[dict] = []
+    source_file = row.get("source_file")
+    if isinstance(source_file, dict):
+        name = str(source_file.get("name") or Path(str(row.get("relative_path") or "")).name).strip()
+        path = str(source_file.get("path") or row.get("source_path_hint") or row.get("relative_path") or name).strip()
+        if name or path:
+            files.append({"name": name or Path(path).name, "path": path, "type": str(source_file.get("extension") or Path(name or path).suffix).strip(".")})
+    for source in row.get("sourceFiles") or []:
+        if not isinstance(source, dict):
+            continue
+        name = str(source.get("name") or Path(str(source.get("path") or "")).name).strip()
+        path = str(source.get("path") or name).strip()
+        if name or path:
+            files.append({"name": name or Path(path).name, "path": path, "type": str(source.get("type") or Path(name or path).suffix).strip(".")})
+    if not files:
+        path = str(row.get("source_path_hint") or row.get("relative_path") or "").strip()
+        if path:
+            files.append({"name": Path(path).name, "path": path, "type": Path(path).suffix.strip(".")})
+    return files
+
+
+def _owner_burst_photo_from_row(row: dict) -> dict:
+    media = row.get("media") if isinstance(row.get("media"), dict) else {}
+    derivatives = row.get("derivatives") if isinstance(row.get("derivatives"), dict) else {}
+    slug = "unknown"
+    gallery_country = row.get("gallery_country")
+    if isinstance(gallery_country, dict):
+        slug = str(gallery_country.get("slug") or "unknown")
+    return {
+        "id": str(row.get("id") or "").strip(),
+        "title": _manifest_title(row) or str(row.get("id") or "").strip(),
+        "caption": str(row.get("caption") or ""),
+        "gallerySrc": derivatives.get("gallery") or row.get("gallerySrc") or "",
+        "imageSrc": derivatives.get("detail") or row.get("imageSrc") or "",
+        "media": {"type": str(row.get("media_type") or media.get("type") or "photo").strip().lower() or "photo"},
+        "sourceFiles": _owner_burst_source_files(row),
+        "ownerState": {
+            "burstCullMode": "conservative-unapproved-owner-pool",
+            "source": IMPORT_CACHE_MANIFEST_PATH.as_posix(),
+        },
+        "source_slug": slug if slug in ORDER else "unknown",
+    }
+
+
+def _owner_burst_manifest_source_paths(row: dict) -> list[str]:
+    paths = []
+    for key in ("source_path_hint", "metadata_path_hint", "relative_path"):
+        value = str(row.get(key) or "").strip()
+        if value:
+            paths.append(value)
+    for source in _owner_burst_source_files(row):
+        path = str(source.get("path") or "").strip()
+        if path:
+            paths.append(path)
+    seen = set()
+    unique = []
+    for path in paths:
+        if path in seen:
+            continue
+        unique.append(path)
+        seen.add(path)
+    return unique
+
+
+def _owner_burst_is_standard_photo(row: dict) -> tuple[bool, str]:
+    media_type = str(row.get("media_type") or (row.get("media") or {}).get("type") or "photo").strip().lower()
+    if media_type != "photo":
+        return False, "non-photo asset"
+    filenames = [str(source.get("name") or source.get("path") or "") for source in _owner_burst_source_files(row)]
+    joined = " ".join([str(row.get("relative_path") or ""), str(row.get("source_path_hint") or ""), *filenames]).casefold()
+    if re.search(r"(^|[._\\/-])(xmp|aae|dop|pp3)($|[._\\/-])", joined):
+        return False, "sidecar asset"
+    if any(marker in joined for marker in ("pixelmator", "edited", "-edit", "_edit", "/edit", ".edit", "derivative")):
+        return False, "edited derivative"
+    extensions = {Path(name).suffix.casefold().lstrip(".") for name in filenames if Path(name).suffix}
+    if extensions and not extensions <= {"jpg", "jpeg", "tif", "tiff", "png", "heic", "heif"}:
+        return False, "non-standard photo extension"
+    dimensions = row.get("dimensions") if isinstance(row.get("dimensions"), dict) else {}
+    width = float(dimensions.get("width") or 0)
+    height = float(dimensions.get("height") or 0)
+    if width > 0 and height > 0:
+        ratio = max(width / height, height / width)
+        if ratio >= 2.0:
+            return False, "panorama-like aspect ratio"
+    return True, ""
+
+
+def _owner_burst_has_keep_marker(row: dict) -> bool:
+    values = [
+        row.get("label"),
+        row.get("rating"),
+        row.get("review_state"),
+        row.get("owner_state"),
+        row.get("ownerState"),
+        row.get("flags"),
+        row.get("keywords"),
+        row.get("metadata"),
+    ]
+    text = json.dumps(values, ensure_ascii=False, sort_keys=True, default=str).casefold()
+    return any(marker in text for marker in BURST_CULL_KEEP_MARKERS)
+
+
+def _owner_burst_candidate_records(repo_root: Path, protected_ids: list[str] | None = None) -> tuple[list[dict], list[dict]]:
+    rows = _owner_burst_manifest_rows(repo_root)
+    client_protected_ids = set(protected_ids or [])
+    public_ids = set(_public_catalog_origin_by_id(repo_root))
+    review_state_by_id = _title_keyword_state_by_id(repo_root)
+    lifecycle_sets = _lifecycle_blocked_sets_readonly(repo_root)
+    blocked_ids = lifecycle_sets["blockedPhotoIds"]
+    records: list[dict] = []
+    protected: list[dict] = []
+    for index, row in enumerate(rows):
+        media_id = str(row.get("id") or "").strip()
+        timestamp_text = _manifest_capture(row)
+        timestamp = _owner_burst_parse_timestamp(timestamp_text)
+        title = _manifest_title(row) or media_id
+        base = {
+            "photo_id": media_id,
+            "title": title,
+            "captured_at": timestamp_text,
+            "source": str(row.get("relative_path") or row.get("source_path_hint") or ""),
+            "original_index": index,
+        }
+        reasons = []
+        if media_id in client_protected_ids:
+            reasons.append("liked/basket/order protected")
+        if media_id in public_ids:
+            reasons.append("approved/public catalog")
+        review_state = review_state_by_id.get(media_id, "")
+        if review_state in {"approved", "applied"}:
+            reasons.append(f"review {review_state}")
+        elif review_state in {"blocked", "parked"}:
+            reasons.append(f"review {review_state}")
+        if media_id in blocked_ids:
+            reasons.append("already in Waste Basket/discarded")
+        standard, standard_reason = _owner_burst_is_standard_photo(row)
+        if not standard:
+            reasons.append(standard_reason)
+        if _owner_burst_has_keep_marker(row):
+            reasons.append("manual/review keep marker")
+        if not timestamp:
+            reasons.append("missing capture timestamp")
+        if reasons:
+            protected.append({**base, "outcome": "protected-skip", "reason": "; ".join(reasons)})
+            continue
+        records.append({
+            **base,
+            "timestamp": timestamp,
+            "timestamp_epoch": timestamp.timestamp(),
+            "row": row,
+            "outcome": "non-burst-keep",
+            "burst_id": "",
+            "burst_position": None,
+            "burst_size": None,
+        })
+    records.sort(key=lambda item: (item["timestamp"], item["photo_id"]))
+    return records, protected
+
+
+def _owner_burst_survivor_positions(size: int) -> set[int]:
+    if size <= 1:
+        return {1}
+    if size <= 5:
+        return {2}
+    return set(range(2, size + 1, 4))
+
+
+def owner_burst_cull_preview(repo_root: Path, protected_ids: list[str] | None = None) -> dict:
+    records, protected = _owner_burst_candidate_records(repo_root, protected_ids)
+    groups: list[list[dict]] = []
+    current: list[dict] = []
+    previous: dict | None = None
+    for record in records:
+        if previous and (record["timestamp"] - previous["timestamp"]).total_seconds() < 1:
+            current.append(record)
+        else:
+            if current:
+                groups.append(current)
+            current = [record]
+        previous = record
+    if current:
+        groups.append(current)
+
+    burst_groups = []
+    candidates = []
+    reject_count = 0
+    survivor_count = 0
+    non_burst_count = 0
+    for group_index, group in enumerate(groups, start=1):
+        if len(group) == 1:
+            item = group[0]
+            item["outcome"] = "non-burst-keep"
+            non_burst_count += 1
+            candidates.append({key: value for key, value in item.items() if key not in {"timestamp", "row"}})
+            continue
+        burst_id = f"burst-{group_index:05d}"
+        survivor_positions = _owner_burst_survivor_positions(len(group))
+        survivor_ids = []
+        reject_ids = []
+        for position, item in enumerate(group, start=1):
+            keep = position in survivor_positions
+            item["burst_id"] = burst_id
+            item["burst_position"] = position
+            item["burst_size"] = len(group)
+            item["outcome"] = "survivor-keep" if keep else "waste-basket"
+            if keep:
+                survivor_count += 1
+                survivor_ids.append(item["photo_id"])
+            else:
+                reject_count += 1
+                reject_ids.append(item["photo_id"])
+            candidates.append({key: value for key, value in item.items() if key not in {"timestamp", "row"}})
+        burst_groups.append({
+            "burst_id": burst_id,
+            "size": len(group),
+            "start": group[0]["captured_at"],
+            "end": group[-1]["captured_at"],
+            "survivor_ids": survivor_ids,
+            "reject_ids": reject_ids,
+            "photo_ids": [item["photo_id"] for item in group],
+        })
+
+    counts = {
+        "pool": len(records) + len(protected),
+        "eligible": len(records),
+        "protected_skips": len(protected),
+        "burst_groups": len(burst_groups),
+        "survivors": survivor_count,
+        "non_burst_kept": non_burst_count,
+        "waste_basket_moves": reject_count,
+        "failures": 0,
+    }
+    return {
+        "format": "photosbyelie-owner-burst-cull-preview",
+        "schema_version": 1,
+        "mode": "conservative-unapproved-owner-pool",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "source": IMPORT_CACHE_MANIFEST_PATH.as_posix(),
+        "counts": counts,
+        "burst_groups": burst_groups,
+        "candidates": candidates,
+        "protected": protected,
+    }
+
+
+def owner_burst_cull_run(repo_root: Path, protected_ids: list[str] | None = None) -> dict:
+    preview = owner_burst_cull_preview(repo_root, protected_ids)
+    reject_ids = {
+        str(item.get("photo_id") or "")
+        for item in preview.get("candidates") or []
+        if item.get("outcome") == "waste-basket"
+    }
+    rows_by_id = {
+        str(row.get("id") or "").strip(): row
+        for row in _owner_burst_manifest_rows(repo_root)
+        if str(row.get("id") or "").strip() in reject_ids
+    }
+    timestamp = datetime.now(timezone.utc).isoformat()
+    entries = []
+    outcomes = []
+    failures = []
+    for item in preview.get("candidates") or []:
+        photo_id = str(item.get("photo_id") or "")
+        if item.get("outcome") != "waste-basket":
+            outcomes.append({**item, "applied": False})
+            continue
+        row = rows_by_id.get(photo_id)
+        if not row:
+            failures.append({"photo_id": photo_id, "error": "manifest row not found"})
+            outcomes.append({**item, "applied": False, "error": "manifest row not found"})
+            continue
+        photo = _owner_burst_photo_from_row(row)
+        slug = str(photo.get("source_slug") or "unknown")
+        entries.append({
+            "id": photo_id,
+            "title": photo.get("title") or photo_id,
+            "discarded_at": timestamp,
+            "from_state": "active",
+            "from_slug": slug,
+            "source_slug": slug,
+            "media_type": _photo_media_type(photo),
+            "asset_paths": _photo_asset_paths(photo),
+            "source_paths": _owner_burst_manifest_source_paths(row),
+            "public_preview_keys": _hidden_public_preview_keys(photo, slug),
+            "private_keys": _discarded_private_keys(photo),
+        })
+        outcomes.append({**item, "applied": True})
+
+    if entries:
+        _record_discarded_lifecycle(repo_root, entries)
+        _write_discarded_tombstones(repo_root, entries)
+
+    counts = dict(preview["counts"])
+    counts["failures"] = len(failures)
+    counts["waste_basket_moves"] = len(entries)
+    return {
+        "format": "photosbyelie-owner-burst-cull-result",
+        "schema_version": 1,
+        "mode": preview["mode"],
+        "generated_at": timestamp,
+        "counts": counts,
+        "burst_groups": preview.get("burst_groups") or [],
+        "outcomes": outcomes,
+        "protected": preview.get("protected") or [],
+        "failures": failures,
     }
 
 
@@ -5294,7 +5753,37 @@ def _import_source_label(path: Path) -> str:
     return f"{name} ({parent})" if parent else name
 
 
-def _import_source_entry(path: Path, *, last_used_at: str = "", use_count: int = 0, discovered: bool = False) -> dict:
+def _import_source_kind(value: object) -> str:
+    kind = str(value or "expo").strip().lower().replace("-", "_")
+    if kind in {"real_estate", "re"}:
+        return "real_estate"
+    if kind in {"", "expo"}:
+        return "expo"
+    raise ValueError("kind must be expo or real-estate")
+
+
+def _import_source_history_path(value: object) -> str:
+    raw = str(value or "").strip()
+    if not raw:
+        raise ValueError("path is required")
+    try:
+        return str(Path(raw).expanduser().resolve())
+    except OSError:
+        return str(Path(raw).expanduser())
+
+
+def _import_source_entry(
+    path: Path,
+    *,
+    last_used_at: str = "",
+    use_count: int = 0,
+    discovered: bool = False,
+    pinned: bool = False,
+    review_required: bool = False,
+    review_completed_at: str = "",
+    removed_at: str = "",
+    legacy_source: str = "",
+) -> dict:
     try:
         resolved = path.expanduser().resolve()
     except OSError:
@@ -5306,6 +5795,11 @@ def _import_source_entry(path: Path, *, last_used_at: str = "", use_count: int =
         "useCount": max(0, int(use_count or 0)),
         "exists": resolved.is_dir(),
         "discovered": bool(discovered),
+        "pinned": bool(pinned),
+        "reviewRequired": bool(review_required),
+        "reviewCompletedAt": str(review_completed_at or ""),
+        "removedAt": str(removed_at or ""),
+        "legacySource": str(legacy_source or ""),
     }
 
 
@@ -5323,7 +5817,7 @@ def _is_real_estate_import_source(path: Path) -> bool:
     return _path_is_relative_to(path, REAL_ESTATE_SOURCE_ROOT)
 
 
-def _read_import_source_setting(repo_root: Path, setting_key: str = IMPORT_SOURCE_SETTINGS_KEY) -> list[dict]:
+def _read_legacy_import_source_setting(repo_root: Path, setting_key: str = IMPORT_SOURCE_SETTINGS_KEY) -> list[dict]:
     conn = owner_db_connect(repo_root)
     try:
         row = conn.execute(
@@ -5361,32 +5855,235 @@ def _read_import_source_setting(repo_root: Path, setting_key: str = IMPORT_SOURC
     return entries
 
 
-def _write_import_source_setting(repo_root: Path, entries: list[dict], setting_key: str = IMPORT_SOURCE_SETTINGS_KEY) -> None:
+def _migrate_import_source_settings(repo_root: Path, conn: sqlite3.Connection) -> None:
+    marker = conn.execute(
+        "SELECT setting_value FROM owner_settings WHERE setting_key = ?",
+        ("import_source_history_migrated_v1",),
+    ).fetchone()
+    if marker:
+        return
     now = datetime.now(timezone.utc).isoformat()
-    payload = [
-        {
-            "path": entry["path"],
-            "label": entry.get("label") or _import_source_label(Path(entry["path"])),
-            "lastUsedAt": entry.get("lastUsedAt") or "",
-            "useCount": int(entry.get("useCount") or 0),
-            "rememberedBy": "owner",
-        }
-        for entry in entries[:IMPORT_SOURCE_HISTORY_LIMIT]
-        if entry.get("path")
-    ]
+    for setting_key, source_kind in (
+        (IMPORT_SOURCE_SETTINGS_KEY, "expo"),
+        (REAL_ESTATE_IMPORT_SOURCE_SETTINGS_KEY, "real_estate"),
+    ):
+        row = conn.execute(
+            "SELECT setting_value FROM owner_settings WHERE setting_key = ?",
+            (setting_key,),
+        ).fetchone()
+        if not row:
+            continue
+        try:
+            payload = json.loads(row["setting_value"] or "[]")
+        except json.JSONDecodeError:
+            payload = []
+        if not isinstance(payload, list):
+            continue
+        for item in payload:
+            if isinstance(item, str):
+                path = item
+                label = ""
+                last_used_at = ""
+                use_count = 0
+            elif isinstance(item, dict):
+                path = str(item.get("path") or "")
+                label = str(item.get("label") or "")
+                last_used_at = str(item.get("lastUsedAt") or "")
+                use_count = int(item.get("useCount") or 0)
+            else:
+                continue
+            path = path.strip()
+            if not path:
+                continue
+            normalized_path = _import_source_history_path(path)
+            conn.execute(
+                """
+                INSERT INTO import_source_history (
+                  source_kind, path, label, pinned, removed_at, review_required,
+                  review_completed_at, legacy_source, first_seen_at, last_used_at,
+                  use_count, updated_at
+                )
+                VALUES (?, ?, ?, 0, NULL, 1, NULL, ?, ?, ?, ?, ?)
+                ON CONFLICT(source_kind, path) DO UPDATE SET
+                  label = COALESCE(NULLIF(import_source_history.label, ''), excluded.label),
+                  review_required = CASE
+                    WHEN import_source_history.review_completed_at IS NULL THEN 1
+                    ELSE import_source_history.review_required
+                  END,
+                  legacy_source = COALESCE(import_source_history.legacy_source, excluded.legacy_source),
+                  first_seen_at = COALESCE(import_source_history.first_seen_at, excluded.first_seen_at),
+                  last_used_at = COALESCE(import_source_history.last_used_at, excluded.last_used_at),
+                  use_count = MAX(import_source_history.use_count, excluded.use_count),
+                  updated_at = excluded.updated_at
+                """,
+                (
+                    source_kind,
+                    normalized_path,
+                    label or _import_source_label(Path(normalized_path)),
+                    f"owner_settings:{setting_key}",
+                    now,
+                    last_used_at or None,
+                    max(0, use_count),
+                    now,
+                ),
+            )
+    conn.execute(
+        """
+        INSERT INTO owner_settings (setting_key, setting_value, updated_at)
+        VALUES (?, ?, ?)
+        ON CONFLICT(setting_key) DO UPDATE SET
+          setting_value = excluded.setting_value,
+          updated_at = excluded.updated_at
+        """,
+        ("import_source_history_migrated_v1", "true", now),
+    )
+
+
+def _read_import_source_setting(repo_root: Path, setting_key: str = IMPORT_SOURCE_SETTINGS_KEY) -> list[dict]:
+    kind = "real_estate" if setting_key == REAL_ESTATE_IMPORT_SOURCE_SETTINGS_KEY else "expo"
     conn = owner_db_connect(repo_root)
     try:
-        conn.execute(
-            """
-            INSERT INTO owner_settings (setting_key, setting_value, updated_at)
-            VALUES (?, ?, ?)
-            ON CONFLICT(setting_key) DO UPDATE SET
-              setting_value = excluded.setting_value,
-              updated_at = excluded.updated_at
-            """,
-            (setting_key, json.dumps(payload, ensure_ascii=True), now),
-        )
+        _migrate_import_source_settings(repo_root, conn)
         conn.commit()
+        rows = conn.execute(
+            """
+            SELECT source_kind, path, label, pinned, removed_at, review_required,
+                   review_completed_at, legacy_source, first_seen_at, last_used_at,
+                   use_count, updated_at
+              FROM import_source_history
+             WHERE source_kind = ?
+               AND removed_at IS NULL
+            """,
+            (kind,),
+        ).fetchall()
+    finally:
+        conn.close()
+    entries: list[dict] = []
+    for row in rows:
+        entry = _import_source_entry(
+            Path(row["path"]),
+            last_used_at=str(row["last_used_at"] or ""),
+            use_count=int(row["use_count"] or 0),
+            pinned=bool(row["pinned"]),
+            review_required=bool(row["review_required"]),
+            review_completed_at=str(row["review_completed_at"] or ""),
+            removed_at=str(row["removed_at"] or ""),
+            legacy_source=str(row["legacy_source"] or ""),
+        )
+        if row["label"]:
+            entry["label"] = str(row["label"])
+        entries.append(entry)
+    return entries
+
+
+def _write_import_source_setting(repo_root: Path, entries: list[dict], setting_key: str = IMPORT_SOURCE_SETTINGS_KEY) -> None:
+    now = datetime.now(timezone.utc).isoformat()
+    kind = "real_estate" if setting_key == REAL_ESTATE_IMPORT_SOURCE_SETTINGS_KEY else "expo"
+    conn = owner_db_connect(repo_root)
+    try:
+        _migrate_import_source_settings(repo_root, conn)
+        for index, entry in enumerate(entries[:IMPORT_SOURCE_HISTORY_LIMIT]):
+            if not entry.get("path"):
+                continue
+            path = _import_source_history_path(entry["path"])
+            conn.execute(
+                """
+                INSERT INTO import_source_history (
+                  source_kind, path, label, pinned, removed_at, review_required,
+                  review_completed_at, legacy_source, first_seen_at, last_used_at,
+                  use_count, updated_at
+                )
+                VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(source_kind, path) DO UPDATE SET
+                  label = excluded.label,
+                  removed_at = NULL,
+                  pinned = CASE
+                    WHEN excluded.pinned = 1 THEN 1
+                    ELSE import_source_history.pinned
+                  END,
+                  review_required = import_source_history.review_required,
+                  review_completed_at = COALESCE(excluded.review_completed_at, import_source_history.review_completed_at),
+                  legacy_source = COALESCE(import_source_history.legacy_source, excluded.legacy_source),
+                  first_seen_at = COALESCE(import_source_history.first_seen_at, excluded.first_seen_at),
+                  last_used_at = excluded.last_used_at,
+                  use_count = excluded.use_count,
+                  updated_at = excluded.updated_at
+                """,
+                (
+                    kind,
+                    path,
+                    entry.get("label") or _import_source_label(Path(path)),
+                    1 if entry.get("pinned") else 0,
+                    1 if entry.get("reviewRequired") else 0,
+                    entry.get("reviewCompletedAt") or None,
+                    entry.get("legacySource") or None,
+                    now,
+                    entry.get("lastUsedAt") or None,
+                    int(entry.get("useCount") or 0),
+                    now,
+                ),
+            )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def _update_import_source_history(repo_root: Path, kind: str, path: str, action: str) -> dict:
+    now = datetime.now(timezone.utc).isoformat()
+    conn = owner_db_connect(repo_root)
+    try:
+        _migrate_import_source_settings(repo_root, conn)
+        row = conn.execute(
+            "SELECT * FROM import_source_history WHERE source_kind = ? AND path = ?",
+            (kind, path),
+        ).fetchone()
+        if not row:
+            raise ValueError("import source is not remembered")
+        if action == "remove":
+            conn.execute(
+                """
+                UPDATE import_source_history
+                   SET removed_at = ?, pinned = 0, updated_at = ?
+                 WHERE source_kind = ? AND path = ?
+                """,
+                (now, now, kind, path),
+            )
+        elif action == "review":
+            conn.execute(
+                """
+                UPDATE import_source_history
+                   SET review_required = 0, review_completed_at = ?, updated_at = ?
+                 WHERE source_kind = ? AND path = ?
+                """,
+                (now, now, kind, path),
+            )
+        else:
+            conn.execute(
+                """
+                UPDATE import_source_history
+                   SET pinned = ?, updated_at = ?
+                 WHERE source_kind = ? AND path = ?
+                """,
+                (1 if action == "pin" else 0, now, kind, path),
+            )
+        conn.commit()
+        updated = conn.execute(
+            "SELECT * FROM import_source_history WHERE source_kind = ? AND path = ?",
+            (kind, path),
+        ).fetchone()
+        entry = _import_source_entry(
+            Path(updated["path"]),
+            last_used_at=str(updated["last_used_at"] or ""),
+            use_count=int(updated["use_count"] or 0),
+            pinned=bool(updated["pinned"]),
+            review_required=bool(updated["review_required"]),
+            review_completed_at=str(updated["review_completed_at"] or ""),
+            removed_at=str(updated["removed_at"] or ""),
+            legacy_source=str(updated["legacy_source"] or ""),
+        )
+        if updated["label"]:
+            entry["label"] = str(updated["label"])
+        return entry
     finally:
         conn.close()
 
@@ -5430,16 +6127,23 @@ def _import_source_history(repo_root: Path) -> list[dict]:
         existing = merged.get(entry["path"], {})
         merged[entry["path"]] = {**existing, **entry, "discovered": False}
     entries = list(merged.values())
+    pinned = sorted(
+        (entry for entry in entries if entry.get("pinned")),
+        key=lambda entry: (
+            str(entry.get("label") or entry.get("path") or "").casefold(),
+            str(entry.get("path") or ""),
+        ),
+    )
     recent = sorted(
-        (entry for entry in entries if entry.get("lastUsedAt")),
+        (entry for entry in entries if entry.get("lastUsedAt") and not entry.get("pinned")),
         key=lambda entry: str(entry.get("lastUsedAt") or ""),
         reverse=True,
     )
     discovered = sorted(
-        (entry for entry in entries if not entry.get("lastUsedAt")),
+        (entry for entry in entries if not entry.get("lastUsedAt") and not entry.get("pinned")),
         key=lambda entry: str(entry.get("label") or entry.get("path") or "").casefold(),
     )
-    return [*recent, *discovered][:IMPORT_SOURCE_HISTORY_LIMIT]
+    return [*pinned, *recent, *discovered][:IMPORT_SOURCE_HISTORY_LIMIT]
 
 
 def _remember_import_source_root(repo_root: Path, source_root: Path) -> None:
@@ -5477,16 +6181,23 @@ def _real_estate_import_source_history(repo_root: Path) -> list[dict]:
         existing = merged.get(entry["path"], {})
         merged[entry["path"]] = {**entry, **existing, "discovered": bool(existing.get("discovered") or entry.get("discovered"))}
     entries = list(merged.values())
+    pinned = sorted(
+        (entry for entry in entries if entry.get("pinned")),
+        key=lambda entry: (
+            str(entry.get("label") or entry.get("path") or "").casefold(),
+            str(entry.get("path") or ""),
+        ),
+    )
     recent = sorted(
-        (entry for entry in entries if entry.get("lastUsedAt")),
+        (entry for entry in entries if entry.get("lastUsedAt") and not entry.get("pinned")),
         key=lambda entry: str(entry.get("lastUsedAt") or ""),
         reverse=True,
     )
     discovered = sorted(
-        (entry for entry in entries if not entry.get("lastUsedAt")),
+        (entry for entry in entries if not entry.get("lastUsedAt") and not entry.get("pinned")),
         key=lambda entry: str(entry.get("label") or entry.get("path") or "").casefold(),
     )
-    return [*recent, *discovered][:IMPORT_SOURCE_HISTORY_LIMIT]
+    return [*pinned, *recent, *discovered][:IMPORT_SOURCE_HISTORY_LIMIT]
 
 
 def _remember_real_estate_import_source_root(repo_root: Path, source_root: Path) -> None:
@@ -6251,6 +6962,100 @@ def _start_cloud_media_sweep(
     )
     worker.start()
     return dict(task)
+
+
+def _apple_photos_payload_args(payload: dict, *, require_target: bool = True) -> list[str]:
+    album_id = str(payload.get("albumLocalIdentifier") or payload.get("album_id") or payload.get("albumId") or "").strip()
+    album_name = str(payload.get("albumName") or payload.get("album_name") or "").strip()
+    if require_target and not album_id and not album_name:
+        raise ValueError("Choose an Apple Photos album before preflight/import.")
+    args: list[str] = []
+    if album_id:
+        args.extend(["--album-id", album_id])
+    elif album_name:
+        args.extend(["--album-name", album_name])
+    try:
+        limit = int(payload.get("limit") or 0)
+    except (TypeError, ValueError) as error:
+        raise ValueError("limit must be a number") from error
+    if limit > 0:
+        args.extend(["--limit", str(limit)])
+    return args
+
+
+def _run_apple_photos_bridge(repo_root: Path, args: list[str]) -> dict:
+    bridge = repo_root / APPLE_PHOTOS_BRIDGE
+    if not bridge.exists():
+        raise RuntimeError(f"Apple Photos bridge is missing: {bridge}")
+    command = ["swift", str(bridge), *args]
+    try:
+        result = subprocess.run(command, cwd=repo_root, text=True, capture_output=True, timeout=900, check=False)
+    except FileNotFoundError as error:
+        raise RuntimeError("Swift is required for the Apple Photos PhotoKit bridge. Install Xcode Command Line Tools.") from error
+    output = (result.stdout or "").strip()
+    payload = json.loads(output or "{}")
+    if result.returncode != 0 and payload.get("ok") is not False:
+        message = (result.stderr or output or f"Apple Photos bridge exited {result.returncode}").strip()
+        return {"ok": False, "error": message, "code": "photos_bridge_error"}
+    if result.stderr and payload.get("ok") is False:
+        payload.setdefault("stderr", result.stderr.strip())
+    return payload
+
+
+def _apple_photos_preflight(repo_root: Path, payload: dict) -> dict:
+    return _run_apple_photos_bridge(repo_root, ["preflight", *_apple_photos_payload_args(payload)])
+
+
+def _apple_photos_import_destination(repo_root: Path, album_label: str = "") -> Path:
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    safe_label = re.sub(r"[^a-zA-Z0-9]+", "-", album_label).strip("-").lower()[:48] or "album"
+    return repo_root / APPLE_PHOTOS_IMPORT_ROOT / f"{stamp}-{safe_label}"
+
+
+def _start_apple_photos_import(repo_root: Path, payload: dict) -> dict:
+    preflight_only = bool(payload.get("dryRun") or payload.get("dry_run"))
+    preflight = _apple_photos_preflight(repo_root, payload)
+    if not preflight.get("ok"):
+        return preflight
+    if preflight_only:
+        return {**preflight, "dryRun": True}
+    candidate_count = int(preflight.get("candidateCount") or 0)
+    if candidate_count <= 0:
+        return {
+            **preflight,
+            "ok": False,
+            "error": "No eligible Apple Photos assets are available to import.",
+            "code": "no_eligible_assets",
+        }
+    album = preflight.get("album") if isinstance(preflight.get("album"), dict) else {}
+    destination = _apple_photos_import_destination(repo_root, str(album.get("title") or "album"))
+    export_result = _run_apple_photos_bridge(
+        repo_root,
+        ["export", *_apple_photos_payload_args(payload), "--destination", str(destination)],
+    )
+    if not export_result.get("ok"):
+        return export_result
+    materialized = int(export_result.get("materializedCount") or 0)
+    if materialized <= 0:
+        return {
+            **export_result,
+            "ok": False,
+            "error": "Apple Photos assets were selected, but none had locally available importable bytes. Open Photos and download originals, then retry.",
+            "code": "nothing_materialized",
+        }
+    task = _start_cloud_media_sweep(
+        repo_root,
+        source_root=destination,
+        source_select="all",
+    )
+    task["sourceKind"] = "apple-photos"
+    return {
+        "ok": True,
+        "preflight": preflight,
+        "materialized": export_result,
+        "task": task,
+        "message": f"Apple Photos import started for {materialized:,} materialized asset(s).",
+    }
 
 
 def _run_r2_gap_fill_task(task_id: str, repo_root: Path, log_path: Path, limit: int) -> None:

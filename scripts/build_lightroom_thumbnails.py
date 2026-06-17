@@ -77,6 +77,7 @@ DEFAULT_PRIVATE_DELIVERY_MANIFEST = Path("assets/private-delivery-manifest.json"
 DEFAULT_PUBLIC_PREVIEW_IDS = Path(".review-logs/r2-public-preview-ids.json")
 DEFAULT_PRIVATE_INVENTORY = Path(".review-logs/r2-private-inventory.json")
 DEFAULT_KEYWORD_BLACKLIST = Path("assets/owner-actions/keyword-blacklist.json")
+APPLE_PHOTOS_SOURCE_ANCHORS = ".pbe-apple-photos-assets.json"
 LOCAL_TOOL_DIRS = (
     Path("/opt/homebrew/bin"),
     Path("/usr/local/bin"),
@@ -677,7 +678,7 @@ def manifest_match_for_source(
     manifest: dict[str, dict[str, Any]],
     source_index: dict[str, tuple[str, dict[str, Any]]],
     relative_path: str,
-    source_path: Path,
+    source_path: Path | str,
 ) -> tuple[str | None, dict[str, Any] | None]:
     direct = manifest.get(relative_path)
     normalized = normalize_import_source_path(source_path)
@@ -696,7 +697,7 @@ def manifest_match_for_source(
 def replacement_relative_paths(
     keys_by_source_path: dict[str, list[str]],
     relative_path: str,
-    source_path: Path,
+    source_path: Path | str,
 ) -> list[str]:
     del relative_path
     normalized = normalize_import_source_path(source_path)
@@ -705,11 +706,56 @@ def replacement_relative_paths(
     return sorted(keys_by_source_path.get(normalized, []))
 
 
-def photo_id_for_import(relative_path: str, source_path: Path, row: dict[str, Any] | None = None) -> str:
+def photo_id_for_import(relative_path: str, source_path: Path | str, row: dict[str, Any] | None = None) -> str:
     existing = str((row or {}).get("id") or "").strip()
     if existing:
         return existing
     return photo_id_for_source_path(source_path)
+
+
+def load_apple_photos_source_overrides(source_root: Path) -> dict[str, dict[str, Any]]:
+    """Read stable Apple Photos asset anchors for exported temporary files."""
+    path = source_root / APPLE_PHOTOS_SOURCE_ANCHORS
+    if not path.exists():
+        return {}
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    items = payload.get("assets") if isinstance(payload, dict) else payload
+    overrides: dict[str, dict[str, Any]] = {}
+    if not isinstance(items, list):
+        return overrides
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        relative_path = str(item.get("relative_path") or item.get("relativePath") or "").strip()
+        anchor = item.get("source_anchor") or item.get("sourceAnchor")
+        if not relative_path or not isinstance(anchor, dict):
+            continue
+        anchor_path = normalize_import_source_path(anchor.get("path"))
+        if not anchor_path:
+            continue
+        normalized = {**anchor, "path": anchor_path}
+        overrides[Path(relative_path).as_posix()] = {**item, "source_anchor": normalized}
+    return overrides
+
+
+def source_anchor_for_import(source: Path, override: dict[str, Any] | None = None) -> dict[str, Any]:
+    if override and isinstance(override.get("source_anchor"), dict):
+        return dict(override["source_anchor"])
+    return import_anchor_for_path(source)
+
+
+def source_identity_for_import(source: Path, override: dict[str, Any] | None = None) -> str:
+    anchor = source_anchor_for_import(source, override)
+    return normalize_import_source_path(anchor.get("path")) or normalize_import_source_path(source) or str(source)
+
+
+def source_file_facts_for_import(source: Path, override: dict[str, Any] | None = None) -> dict[str, Any]:
+    facts = source_file_facts(source)
+    if override and isinstance(override.get("apple_photos"), dict):
+        facts["apple_photos"] = override["apple_photos"]
+    if override and isinstance(override.get("source_anchor"), dict):
+        facts["source_anchor_path"] = override["source_anchor"].get("path")
+    return facts
 
 
 def list_value(value: Any) -> list[str]:
@@ -2385,8 +2431,10 @@ def process_import_item(
     relative_path = item["relative_path"]
     source = item["source_path"]
     metadata_path = item["metadata_path"]
-    source_anchor = import_anchor_for_path(source)
-    photo_id = str(item.get("photo_id") or photo_id_for_source_path(source))
+    source_override = item.get("source_override") if isinstance(item.get("source_override"), dict) else None
+    source_anchor = source_anchor_for_import(source, source_override)
+    source_identity = source_identity_for_import(source, source_override)
+    photo_id = str(item.get("photo_id") or photo_id_for_source_path(source_identity))
     replaced_relative_paths = list(item.get("replace_relative_paths") or [])
     meta = item.get("metadata")
     if not isinstance(meta, dict):
@@ -2456,7 +2504,7 @@ def process_import_item(
         row["capture"] = selected_metadata["capture"]
         row["dimensions"] = selected_metadata["dimensions"]
         row["location"] = selected_metadata["location"]
-        row["source_file"] = source_file_facts(source)
+        row["source_file"] = source_file_facts_for_import(source, source_override)
         row["metadata"] = selected_metadata["display"]
         row["raw_metadata"] = selected_metadata["raw"]
         row["selection_metadata"] = compact_metadata(meta)
@@ -2686,6 +2734,7 @@ def main() -> int:
             if all((args.output_root / path).exists() for path in row.get("derivatives", {}).values())
         }
     manifest_source_index, manifest_keys_by_source_path = manifest_source_indexes(manifest)
+    source_anchor_overrides = load_apple_photos_source_overrides(source_root)
 
     def refresh_manifest_source_indexes() -> None:
         nonlocal manifest_source_index, manifest_keys_by_source_path
@@ -2771,7 +2820,8 @@ def main() -> int:
             source_path = selected_item.get("source_path")
             if not isinstance(source_path, Path):
                 continue
-            photo_id = str(selected_item.get("photo_id") or photo_id_for_source_path(source_path))
+            source_identity = str(selected_item.get("source_identity") or source_path)
+            photo_id = str(selected_item.get("photo_id") or photo_id_for_source_path(source_identity))
             plan = artifact_plan_for_source(args, photo_id, source_path)
             if selected_item.get("source_changed"):
                 force_artifact_plan_reimport(plan)
@@ -2799,7 +2849,7 @@ def main() -> int:
                     manifest,
                     manifest_source_index,
                     relative_path,
-                    source_path,
+                    source_identity,
                 )
                 manifest_has_row = matched_row is not None
             if plan.get("complete") and manifest_has_row:
@@ -2842,8 +2892,10 @@ def main() -> int:
                 sidecar = sidecar_for(source)
                 metadata_path = sidecar or source
                 stamp = checkpoint_key(source, sidecar)
-                source_anchor = import_anchor_for_path(source)
-                replace_relative_paths = replacement_relative_paths(manifest_keys_by_source_path, relative_path, source)
+                source_override = source_anchor_overrides.get(relative_path)
+                source_anchor = source_anchor_for_import(source, source_override)
+                source_identity = source_identity_for_import(source, source_override)
+                replace_relative_paths = replacement_relative_paths(manifest_keys_by_source_path, relative_path, source_identity)
                 if source_path_is_discarded(source, args):
                     append_state(
                         state_path,
@@ -2887,11 +2939,11 @@ def main() -> int:
                         manifest,
                         manifest_source_index,
                         relative_path,
-                        source,
+                        source_identity,
                     )
                     manifest_has_row = manifest_row is not None
-                    replace_relative_paths = replacement_relative_paths(manifest_keys_by_source_path, relative_path, source)
-                photo_id = photo_id_for_import(relative_path, source, manifest_row)
+                    replace_relative_paths = replacement_relative_paths(manifest_keys_by_source_path, relative_path, source_identity)
+                photo_id = photo_id_for_import(relative_path, source_identity, manifest_row)
                 prior_matches = should_skip_metadata(prior, stamp, args.force)
                 manifest_checkpoint = manifest_row.get("source_checkpoint") if manifest_row else None
                 manifest_matches = bool(manifest_checkpoint and manifest_checkpoint == stamp)
@@ -2937,6 +2989,8 @@ def main() -> int:
                         "source_changed": source_changed,
                         "photo_id": photo_id,
                         "replace_relative_paths": replace_relative_paths,
+                        "source_identity": source_identity,
+                        "source_override": source_override or {},
                     }
                 )
                 if len(batch) >= args.batch_size:

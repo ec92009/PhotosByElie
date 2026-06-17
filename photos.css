@@ -582,6 +582,34 @@ html[data-theme="light"] .photo-art.has-photo::after{
   padding:7px 34px 7px 10px;
   text-transform:none;
 }
+.owner-import-source-details{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:8px;
+  margin:10px 0 12px;
+}
+.owner-import-source-details div{
+  min-width:0;
+  border:1px solid var(--line);
+  border-radius:6px;
+  background:var(--surface-2);
+  padding:8px 10px;
+}
+.owner-import-source-details dt{
+  color:var(--muted);
+  font-size:.68rem;
+  font-weight:900;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.owner-import-source-details dd{
+  margin:3px 0 0;
+  color:var(--text);
+  font-size:.86rem;
+  font-weight:800;
+  line-height:1.25;
+  overflow-wrap:anywhere;
+}
 .owner-maintenance-actions{
   display:flex;
   flex-wrap:wrap;
@@ -1925,6 +1953,73 @@ html[data-theme="light"] .photo-art.has-photo::after{
 }
 .owner-card-cloud-progress .owner-counts div.is-wide dd{
   max-width:100%;
+}
+.owner-card-burst-cull{
+  align-content:start;
+}
+.owner-burst-cull-output{
+  display:grid;
+  gap:14px;
+  margin-top:4px;
+}
+.owner-burst-cull-section{
+  display:grid;
+  gap:6px;
+}
+.owner-burst-cull-section h3{
+  margin:0;
+  font-size:.9rem;
+}
+.owner-burst-cull-section p{
+  margin:0;
+  font-size:.78rem;
+}
+.owner-burst-cull-table-wrap{
+  max-height:320px;
+  overflow:auto;
+  border:1px solid var(--line);
+  border-radius:6px;
+  background:var(--surface-2);
+}
+.owner-burst-cull-table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:.74rem;
+}
+.owner-burst-cull-table th,
+.owner-burst-cull-table td{
+  padding:7px 8px;
+  border-bottom:1px solid var(--line);
+  text-align:left;
+  vertical-align:top;
+}
+.owner-burst-cull-table th{
+  position:sticky;
+  top:0;
+  z-index:1;
+  background:var(--surface);
+  color:var(--muted);
+  font-size:.66rem;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.owner-burst-cull-outcome{
+  display:inline-block;
+  padding:2px 6px;
+  border:1px solid var(--line);
+  border-radius:999px;
+  color:var(--muted);
+  font-size:.66rem;
+  font-weight:800;
+}
+.owner-burst-cull-outcome.is-waste-basket{
+  border-color:color-mix(in srgb, var(--danger) 45%, var(--line));
+  color:var(--danger);
+}
+.owner-burst-cull-outcome.is-survivor-keep,
+.owner-burst-cull-outcome.is-non-burst-keep{
+  border-color:color-mix(in srgb, var(--accent) 42%, var(--line));
+  color:var(--accent-strong);
 }
 .owner-r2-preview{
   display:grid;
@@ -6893,6 +6988,9 @@ html[data-theme="light"] .detail-preview.has-image::after{
   }
 }
 @media (max-width:760px){
+  .owner-import-source-details{
+    grid-template-columns:1fr;
+  }
   .keyboard-hint{
     display:none!important;
   }

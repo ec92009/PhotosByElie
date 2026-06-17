@@ -1,6 +1,6 @@
 # Photos By Elie Backlog
 
-Last updated: 2026-06-02
+Last updated: 2026-06-10
 
 ## Current Facts
 
@@ -113,76 +113,93 @@ Last updated: 2026-06-02
    - Pick one client/property set, import/publish/upload it, save a selection, generate PDF and video, reopen from the shelf on mobile, rename it, and delete a throwaway artifact.
    - Verify titles reach final PDF/video output, vertical photos are framed gently, downloads use browser-safe links, and Back to shelf works.
 
-3. **Add shelf polish for Real Estate saved products.**
+3. **Deploy and rehearse Real Estate server-side auth.**
+   - Install `REAL_ESTATE_SESSION_SECRET` in the deployed Worker environment and confirm `REAL_ESTATE_GALLERIES_JSON` carries Worker-held credentials or hashes.
+   - Run one public Real Estate login, saved-product sync, originals ZIP, logout, and expired-session rehearsal against the live Worker.
+   - Keep R2 as the private media/deliverables layer; do not reintroduce public context credential hashes or R2 object reads as a credential store.
+
+4. **Add shelf polish for Real Estate saved products.**
    - Add grouped shelf rows if one selection produces both PDF and video, without losing direct view/download/delete affordances in the detail page.
    - Consider a small status chip for selection/PDF/video and an explicit "saved in cloud" signal after R2 writes succeed.
    - Keep the first page focused on the shelf plus Create new selection.
 
-4. **Create first-party social springboards and a latest-social shelf.**
+5. **Create first-party social springboards and a latest-social shelf.**
    - Build focused campaign pages or homepage cards for the current social-package themes, including the 2026-05-27 packages.
    - Use only public catalog data and watermarked public previews.
    - Apply visible-site versioning, validation, commit, and push before using URLs in posts.
 
-5. **Turn daily social automation into a full pre-post target builder.**
+6. **Turn daily social automation into a full pre-post target builder.**
    - Before posting, choose or create the best first-party URL, then stage platform upload folders with images, captions, README, and manifest.
    - Keep Pinterest exactly five images; keep Facebook/Instagram at 5-10; derive Threads 3-4 image variants from Instagram when useful.
    - Record published URLs or explicit manual blockers in each package.
 
-6. **Bring Etsy listing publishing online.**
+7. **Bring Etsy listing publishing online.**
    - Etsy approved the `photosbyelie-listing-publisher` API integration on 2026-06-01.
    - Etsy approved the shop-name change to `PhotosByElieShop` on 2026-06-02, and the API shop record now reports shop `42422777` at `https://www.etsy.com/shop/PhotosByElieShop` with `0` active listings.
    - Keep the Etsy keystring/shared secret and OAuth tokens outside git; local OAuth and API smoke checks are already proven.
    - Build the first listing-publisher pass as dry-run/draft payload generation from public catalog data, campaign/gallery URLs, and watermarked public previews only.
 
-7. **Finish source re-export de-duplication and cleanup.**
+8. **Finish source re-export de-duplication and cleanup.**
    - Use full source pathname plus modified date as the import anchor.
    - Same-path newer exports should overwrite previous generated masters, public previews, and private JPG triplets instead of creating duplicates.
    - Audit duplicate candidates and prepare a reversible cleanup before deleting anything.
 
-8. **Add import source history management.**
+9. **Add import source history management.**
    - Let Owner remove missing or stale remembered folders, pin favorites, and inspect last-used path/time before starting a run.
    - Include a one-time review of legacy entries saved before `v83.24`.
    - Keep `Owner.sqlite` authoritative; do not add another JSON state source.
 
-9. **Preflight import dependencies before photo work starts.**
+10. **Preflight import dependencies before photo work starts.**
    - Check Pillow, `exiftool`, `ffmpeg`/`ffprobe`, R2 upload configuration, and source readability before queuing photos.
    - Surface one actionable Owner status instead of per-photo failure storms.
 
-10. **Review buyer support, refund, and license wording.**
+11. **Review buyer support, refund, and license wording.**
    - Use `docs/commerce/PRICE_OFFER_STRATEGY.md` as the current policy draft.
    - Keep Stripe receipts as payment records and PhotosByElie order/support pages as delivery/recovery records.
 
-11. **Approve and deploy the real price and offer strategy.**
+12. **Approve and deploy the real price and offer strategy.**
    - Review the proposed camera and AI price ladders.
    - After approval, update pricing, regenerate catalog/Worker artifacts, bump the visible version, deploy the Worker, and run one low-value live proof purchase.
 
-12. **Curate the first sellable storefront.**
+13. **Curate the first sellable storefront.**
    - Apply strong title/keyword approvals, block unsellable rows, pick featured collections, and put the strongest commercial/travel/editorial sets first.
 
-13. **Add conversion analytics.**
+14. **Add conversion analytics.**
    - Track privacy-conscious browsing, basket, checkout, payment, and download events while excluding localhost Owner activity.
 
-14. **Improve public discovery and SEO.**
+15. **Improve public discovery and SEO.**
    - Add fuzzy search, richer metadata, Open Graph images, canonical URLs, structured data, and per-campaign/per-gallery metadata without Owner-only details.
 
-15. **Owner decision pass for the current title/keyword queue.**
+16. **Owner decision pass for the current title/keyword queue.**
    - Open `owner-review.html?view=title-keywords` locally and review the active proposed rows, starting with batch `2026-05-24-000237-818Z`.
    - Resolve rejected and parked rows before the next large generator pass.
 
-16. **Verify Owner-private artifact separation after deploy.**
+17. **Verify Owner-private artifact separation after deploy.**
    - Confirm GitHub Pages does not serve private Owner review JSON or secrets.
    - Keep `Owner.sqlite` as durable state and treat review JSON as compatibility/audit output.
 
-17. **Run the next title/keyword generator pass after review.**
+18. **Run the next title/keyword generator pass after review.**
    - Use the improved keyword floor, larger subprocess buffer, and batch-summary preservation.
    - Compare misses and context-needed counts against `2026-05-24-000237-818Z`.
 
-18. **Harden hidden/discarded lifecycle.**
+19. **Harden hidden/discarded lifecycle.**
    - Make H/X, undo, Waste Basket, discard, R2 public wipe, and catalog rebuilds share one durable state flow.
    - Avoid publishing partial hidden/discarded state.
 
-19. **Replace temporary `r2.dev` preview URLs with a custom media domain.**
+20. **Replace temporary `r2.dev` preview URLs with a custom media domain.**
    - Attach a media domain, update `media-config.js`, and retest public and Real Estate preview loading.
 
-20. **Keep repo and media cleanup deliberate.**
+21. **Keep repo and media cleanup deliberate.**
    - Do not use GitHub as a media vault. Keep root HTML while GitHub Pages serves from repo root.
+
+22. **Add a guarded checkout discount code for low-cost live payment rehearsals.**
+   - Add a coupon/discount entry point in the basket or checkout flow so Owner can exercise basket, Stripe Checkout, webhooks, order recovery, downloads, and delivery emails without repeatedly paying full live prices.
+   - Keep validation server-side in the checkout Worker, preferably backed by secret/allowlisted test codes or Stripe promotion codes rather than trusting browser-submitted discounts.
+   - Preserve the Stripe minimum-charge floor, the stale-basket subtotal guard, and product availability checks; never let a public code create accidental free live checkouts.
+   - Record original subtotal, discount code, discount amount, and paid total in the order record, support tooling, and tests so discounted proof purchases remain auditable.
+
+23. **Check Real Estate email delivery coverage.**
+   - Audit whether Real Estate originals sessions, saved PDF/video deliverables, and future cloud assembly jobs send any client-facing email today.
+   - Decide which Real Estate events should email the client versus only updating the in-page saved-product shelf.
+   - If email is needed, reuse the Resend/Worker delivery-email path with Real Estate-specific wording, client/property context, human-friendly link availability, and no misleading "backup" language.
+   - Add tests proving Real Estate email failures do not block saved products or originals downloads, while still recording delivery-email status for support.

@@ -20,6 +20,9 @@ Do not use this SOP for repo-only documentation edits, CSS-only page polish, or 
 - The importer can use Apple Photos album/folder names as country hints when embedded country/GPS metadata is missing, for example a Malaga or Valencia album can infer Spain.
 - Keep Apple Photos still-image exports at full pixel size. If explicit JPEG quality control is needed, post-process exported corrected JPEGs to quality 90 without resizing; do not switch to RAW/NEF for the public pipeline.
 - Keep Apple Photos video exports as original MOV/MP4/M4V files. The importer generates a watermarked `still_900` poster at 10% into the source video for gallery cards and a watermarked 5-second `short_5s_720p` MP4 preview for detail pages. Buyer delivery for videos is the original/full video only.
+- Direct Apple Photos imports are Owner-only and must run through `python3 scripts/local_server.py` on localhost. The Owner card invokes `scripts/apple_photos_bridge.swift`, which uses PhotoKit/Photos automation and does not inspect `.photoslibrary` package contents or private SQLite files.
+- Direct Apple Photos imports may materialize selected album assets under ignored `tmp/apple-photos-import/` before the standard PBE import/cache/R2 pipeline runs. This is still considered direct import in the Owner workflow because Elie does not manually export Finder folders.
+- Direct Apple Photos imports write `.pbe-apple-photos-assets.json` next to the materialized bytes. The importer uses its `apple-photos://<asset-localIdentifier>` source anchors for IDs/dedupe and keeps the temporary cache path only as a local byte source.
 - The builder groups derivatives by inferred gallery country using Lightroom country fields, country keywords, and known location hints.
 
 ## Prerequisites
@@ -33,6 +36,7 @@ cd /Users/ecohen/Dev/PhotosByElie
 Required command-line tools:
 
 - `python3`
+- `swift` from Xcode Command Line Tools when using direct Apple Photos import
 - `exiftool`
 - `ffmpeg`
 - `ffprobe`
@@ -43,6 +47,8 @@ Check availability before a long run:
 ```bash
 command -v python3 exiftool ffmpeg ffprobe
 ```
+
+For direct Apple Photos imports, macOS must grant Photos access to the process that launches the helper, usually Terminal, Python, or the Owner launcher app. If permission is missing or denied, the Owner card reports the privacy setting to fix. iCloud-only originals are not downloaded silently; the bridge exports with network access disabled and reports those assets as unavailable until Photos has downloaded originals locally.
 
 ## Build Derivatives
 
@@ -78,6 +84,19 @@ python3 scripts/build_lightroom_thumbnails.py \
 
 Use only `/Volumes/Saturn/Pictures/LR/Apple Photo Albums`. Do not use `/Volumes/Saturn/Pictures/LR/Apple Photo Albums With Faces` unless the Owner explicitly authorizes that source in the current run.
 
+Owner direct Apple Photos import:
+
+```bash
+python3 scripts/local_server.py 8000
+open http://localhost:8000/owner.html?tab=imports
+```
+
+In Owner:
+
+1. Use **Import from Photos** to load albums through the local helper.
+2. Choose an album and run **Dry run**. Review import candidates, blocked RAW-only/unsupported assets, iCloud-original-not-local reports, and already-known/skipped behavior before any write/upload step.
+3. Click **Import** only after the dry run looks right. The helper materializes eligible local bytes to `tmp/apple-photos-import/`, writes stable `apple-photos://...` source anchors, and starts the normal selected-folder import sweep.
+
 ## Resume Behavior
 
 The builder is designed to be interrupted and resumed.
@@ -101,6 +120,7 @@ The builder is designed to be interrupted and resumed.
 ## Privacy Rules
 
 - Keep `tmp/import-cache` untracked. Hidden uses JSON state only (`assets/hidden/hidden-blacklist.json` and local `assets/hidden/hidden-data.json`); do not keep local preview media under Hidden.
+- Keep `tmp/apple-photos-import` untracked. It is a localhost materialization cache for direct Apple Photos imports, not a canonical library export.
 - Keep `assets/owner-actions/country-assignments.jsonl` and `assets/owner-actions/country-assignments.json` only as SQLite-derived handoff/audit exports for localhost Unknown-to-country moves; `Owner.sqlite` is the authoritative write path. Each Unknown assignment is a live server action, not a browser-staged value: it should remove the chosen photo and same-day cohort from Unknown immediately and move them into the target Reserve country. If the move fails, the card should remain visible and the country selector should reset.
 - Keep `assets/owner-actions/keyword-blacklist.json` only as a SQLite-derived UI compatibility export. The authoritative blacklist is `Owner.sqlite:keyword_blacklist`. It is metadata-only: import/export scripts use it to omit useless keyword strings from generated catalog metadata and keyword indexes, not to block, discard, skip, or rewrite media/source files.
 - Treat Waste Basket media as owner-controlled undo assets, not clock-controlled assets. Basketed photos can be put back until the owner empties the basket; emptying deletes public previews, private masters, and private render triplets, then keeps only durable tombstone state: photo id plus blacklisted master/source path so future Saturn/import sweeps do not resurrect the file.

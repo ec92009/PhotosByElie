@@ -373,6 +373,46 @@
             <button class="btn secondary danger" type="button" data-owner-wipe-hidden-r2>Purge R2 copies</button>
           </div>
         </article>
+        <article class="owner-card owner-card-wide owner-card-burst-cull" data-owner-tab="review">
+          <div class="owner-card-titlebar">
+            <div>
+              <p class="eyebrow">Cull</p>
+              <h2>Conservative burst cull</h2>
+            </div>
+            <div class="owner-card-title-actions">
+              <button class="owner-refresh-button" type="button" data-owner-burst-cull-preview aria-label="Preview conservative burst cull" title="Preview conservative burst cull"><span aria-hidden="true">↻</span></button>
+            </div>
+          </div>
+          <p>Preview the existing unapproved Owner pool before moving burst rejects to Waste Basket. Phase 1 uses in-system rows only and does not import, delete, or tombstone source files.</p>
+          <dl class="owner-counts owner-burst-cull-counts">
+            <div>
+              <dt>Pool</dt>
+              <dd data-owner-burst-cull-pool>0</dd>
+              <small class="owner-count-note">Candidates + skips</small>
+            </div>
+            <div>
+              <dt>Bursts</dt>
+              <dd data-owner-burst-cull-bursts>0</dd>
+              <small class="owner-count-note">Timestamp runs</small>
+            </div>
+            <div>
+              <dt>Keep</dt>
+              <dd data-owner-burst-cull-kept>0</dd>
+              <small class="owner-count-note">Survivors + non-bursts</small>
+            </div>
+            <div>
+              <dt>Waste Basket</dt>
+              <dd data-owner-burst-cull-waste>0</dd>
+              <small class="owner-count-note">Proposed moves</small>
+            </div>
+          </dl>
+          <p class="owner-card-note" data-owner-burst-cull-status>Load a preview before running.</p>
+          <div class="owner-card-actions">
+            <button class="btn secondary" type="button" data-owner-burst-cull-load>Load preview</button>
+            <button class="btn secondary danger" type="button" data-owner-burst-cull-go disabled>Go: move rejects</button>
+          </div>
+          <div class="owner-burst-cull-output" data-owner-burst-cull-output hidden></div>
+        </article>
         <article class="owner-card owner-card-wide owner-card-cloud-coverage" data-owner-r2-coverage-card data-owner-tab="cloud">
           <div class="owner-card-titlebar">
             <div>
@@ -404,10 +444,27 @@
                   <option value="new">New...</option>
                 </select>
               </label>
+              <button class="btn secondary" type="button" data-owner-import-source-pin disabled>Pin</button>
+              <button class="btn secondary" type="button" data-owner-import-source-review hidden>Mark reviewed</button>
+              <button class="btn secondary danger" type="button" data-owner-import-source-remove disabled>Remove</button>
               <button class="btn secondary" type="button" data-owner-r2-fix>Start import</button>
               <button class="owner-refresh-button" type="button" data-owner-refresh="progress" aria-label="Refresh import dashboard" title="Refresh import dashboard"><span aria-hidden="true">↻</span></button>
             </div>
           </div>
+          <dl class="owner-import-source-details" data-owner-import-source-details hidden>
+            <div>
+              <dt>Selected path</dt>
+              <dd data-owner-import-source-path></dd>
+            </div>
+            <div>
+              <dt>Last used</dt>
+              <dd data-owner-import-source-last-used></dd>
+            </div>
+            <div>
+              <dt>Status</dt>
+              <dd data-owner-import-source-state></dd>
+            </div>
+          </dl>
           <p data-owner-r2-summary>Background imports, uploads, cleanup, and validation will appear here.</p>
           <div class="owner-maintenance-actions" aria-label="Import maintenance tasks">
             <button class="btn secondary" type="button" data-owner-r2-maintenance="banned-cleanup">Banned cleanup</button>
@@ -417,6 +474,28 @@
           </div>
           <div class="owner-sweep-phases" data-owner-r2-phases></div>
           <dl class="owner-counts" data-owner-r2-counts></dl>
+        </article>
+        <article class="owner-card owner-card-wide" data-owner-apple-photos-card data-owner-tab="imports">
+          <div class="owner-card-titlebar">
+            <div>
+              <p class="eyebrow">Apple Photos</p>
+              <h2>Import from Photos</h2>
+            </div>
+            <div class="owner-card-title-actions">
+              <label class="owner-import-source-control">
+                <span>Photos album</span>
+                <select data-owner-apple-photos-albums aria-label="Apple Photos album">
+                  <option value="">Load albums...</option>
+                </select>
+              </label>
+              <button class="btn secondary" type="button" data-owner-apple-photos-refresh>Refresh</button>
+              <button class="btn secondary" type="button" data-owner-apple-photos-preflight>Dry run</button>
+              <button class="btn secondary danger" type="button" data-owner-apple-photos-import>Import</button>
+            </div>
+          </div>
+          <p class="owner-card-note" data-owner-apple-photos-status>Uses the local Owner helper and macOS Photos permission. Nothing is written until dry run is reviewed and Import is clicked.</p>
+          <dl class="owner-counts" data-owner-apple-photos-counts></dl>
+          <div class="owner-coverage-missing" data-owner-apple-photos-preview hidden></div>
         </article>
         <article class="owner-card owner-card-wide owner-card-price-list" data-owner-tab="commerce">
           <p class="eyebrow">Products</p>

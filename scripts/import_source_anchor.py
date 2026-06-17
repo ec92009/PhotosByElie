@@ -11,6 +11,8 @@ def normalize_import_source_path(value: object) -> str | None:
     text = str(value or "").strip()
     if not text:
         return None
+    if "://" in text:
+        return text
     try:
         return Path(text).expanduser().resolve(strict=False).as_posix()
     except OSError:

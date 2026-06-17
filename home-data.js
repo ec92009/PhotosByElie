@@ -4,12 +4,12 @@ window.photosByElieHomeData = {
     "title": "France",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "france-gallery",
-    "count": 283,
+    "count": 264,
     "href": "./gallery.html?gallery=france",
     "photos": [
       {
-        "id": "20180510-1443-00277-536a6ae39b",
-        "title": "Montmartre, Paris",
+        "id": "20160714-1357-07255-pano-735b2de8ed",
+        "title": "Place de l'Hotel de Ville Panorama, Paris",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -17,14 +17,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20180510-1443-00277-536a6ae39b_900.jpg",
-            "detailKey": "expo/20180510-1443-00277-536a6ae39b_1800.jpg"
+            "galleryKey": "expo/20160714-1357-07255-pano-735b2de8ed_900.jpg",
+            "detailKey": "expo/20160714-1357-07255-pano-735b2de8ed_1800.jpg"
           }
         }
       },
       {
-        "id": "img-5980-f2327928c5",
-        "title": "Boulogne Billancourt, Musee Albert Kahn",
+        "id": "20180511-1205-00368-3481c74f91",
+        "title": "Art, Institut du Monde Arabe, Paris, France",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -32,14 +32,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/img-5980-f2327928c5_900.jpg",
-            "detailKey": "expo/img-5980-f2327928c5_1800.jpg"
+            "galleryKey": "expo/20180511-1205-00368-3481c74f91_900.jpg",
+            "detailKey": "expo/20180511-1205-00368-3481c74f91_1800.jpg"
           }
         }
       },
       {
-        "id": "20160717-1424-03649-pano-c6d8818d93",
-        "title": "Giverny, Impressionists Museum, Monet House",
+        "id": "20160707-1531-17313-pano-59addf66f9",
+        "title": "Place du Capitole, Toulouse, France, vue des Arcades",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -47,14 +47,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20160717-1424-03649-pano-c6d8818d93_900.jpg",
-            "detailKey": "expo/20160717-1424-03649-pano-c6d8818d93_1800.jpg"
+            "galleryKey": "expo/20160707-1531-17313-pano-59addf66f9_900.jpg",
+            "detailKey": "expo/20160707-1531-17313-pano-59addf66f9_1800.jpg"
           }
         }
       },
       {
-        "id": "20180511-0222-00308-4d93b1ab5b",
-        "title": "Paris, Bateau Mouche",
+        "id": "img-6160-6ac795aa36",
+        "title": "Musée des Arts et Métiers in Paris",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -62,8 +62,8 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20180511-0222-00308-4d93b1ab5b_900.jpg",
-            "detailKey": "expo/20180511-0222-00308-4d93b1ab5b_1800.jpg"
+            "galleryKey": "expo/img-6160-6ac795aa36_900.jpg",
+            "detailKey": "expo/img-6160-6ac795aa36_1800.jpg"
           }
         }
       }
@@ -74,12 +74,12 @@ window.photosByElieHomeData = {
     "title": "USA",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "usa-gallery",
-    "count": 150,
+    "count": 145,
     "href": "./gallery.html?gallery=usa",
     "photos": [
       {
-        "id": "20180405-1909-00200-06da187409",
-        "title": "La Jolla, CA, Scripps Coastal Reserve",
+        "id": "20140907-1911-06385-5f3a5197a2",
+        "title": "Carlsbad, California at Dusk",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -87,14 +87,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20180405-1909-00200-06da187409_900.jpg",
-            "detailKey": "expo/20180405-1909-00200-06da187409_1800.jpg"
+            "galleryKey": "expo/20140907-1911-06385-5f3a5197a2_900.jpg",
+            "detailKey": "expo/20140907-1911-06385-5f3a5197a2_1800.jpg"
           }
         }
       },
       {
-        "id": "20180712-1827-16407-476b03451a",
-        "title": "Carlsbad, garden",
+        "id": "20180505-1820-00243-439436be32",
+        "title": "Pelican",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -102,14 +102,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20180712-1827-16407-476b03451a_900.jpg",
-            "detailKey": "expo/20180712-1827-16407-476b03451a_1800.jpg"
+            "galleryKey": "expo/20180505-1820-00243-439436be32_900.jpg",
+            "detailKey": "expo/20180505-1820-00243-439436be32_1800.jpg"
           }
         }
       },
       {
-        "id": "20161106-1557-28005-3d1ee36f82",
-        "title": "Diana Monkey Portrait in San Diego",
+        "id": "20161106-1558-00800-edit-9d8f5a9260",
+        "title": "Monkey Portrait at the Zoo",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -117,14 +117,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20161106-1557-28005-3d1ee36f82_900.jpg",
-            "detailKey": "expo/20161106-1557-28005-3d1ee36f82_1800.jpg"
+            "galleryKey": "expo/20161106-1558-00800-edit-9d8f5a9260_900.jpg",
+            "detailKey": "expo/20161106-1558-00800-edit-9d8f5a9260_1800.jpg"
           }
         }
       },
       {
-        "id": "20160416-1913-27477-pano-ecaa9f563f",
-        "title": "Wide Travel Panorama, from Oceanside Pier",
+        "id": "20160925-1524-00041-f21924756f",
+        "title": "San Diego Balboa park Museums and Gardens",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -132,8 +132,8 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20160416-1913-27477-pano-ecaa9f563f_900.jpg",
-            "detailKey": "expo/20160416-1913-27477-pano-ecaa9f563f_1800.jpg"
+            "galleryKey": "expo/20160925-1524-00041-f21924756f_900.jpg",
+            "detailKey": "expo/20160925-1524-00041-f21924756f_1800.jpg"
           }
         }
       }
@@ -144,12 +144,12 @@ window.photosByElieHomeData = {
     "title": "Spain",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "spain-gallery",
-    "count": 1299,
+    "count": 996,
     "href": "./gallery.html?gallery=spain",
     "photos": [
       {
-        "id": "20240307-135956-00069-2e388b986c",
-        "title": "Sevilla Cathedral",
+        "id": "img-5221-17297ac061",
+        "title": "Nerja",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -157,14 +157,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20240307-135956-00069-2e388b986c_900.jpg",
-            "detailKey": "expo/20240307-135956-00069-2e388b986c_1800.jpg"
+            "galleryKey": "expo/img-5221-17297ac061_900.jpg",
+            "detailKey": "expo/img-5221-17297ac061_1800.jpg"
           }
         }
       },
       {
-        "id": "20240307-133839-00030-16399b6e00",
-        "title": "Sevilla Cathedral",
+        "id": "20180515-1634-00438-383c90b340",
+        "title": "Bilbao Guggenheim Museum",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -172,14 +172,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20240307-133839-00030-16399b6e00_900.jpg",
-            "detailKey": "expo/20240307-133839-00030-16399b6e00_1800.jpg"
+            "galleryKey": "expo/20180515-1634-00438-383c90b340_900.jpg",
+            "detailKey": "expo/20180515-1634-00438-383c90b340_1800.jpg"
           }
         }
       },
       {
-        "id": "20230806-154045-00269-ec43eee5b7",
-        "title": "Setenil De Las Bodegas",
+        "id": "20220618-235625-00229-pano-8b1f8f8e76",
+        "title": "Malaga Cathedral",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -187,14 +187,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20230806-154045-00269-ec43eee5b7_900.jpg",
-            "detailKey": "expo/20230806-154045-00269-ec43eee5b7_1800.jpg"
+            "galleryKey": "expo/20220618-235625-00229-pano-8b1f8f8e76_900.jpg",
+            "detailKey": "expo/20220618-235625-00229-pano-8b1f8f8e76_1800.jpg"
           }
         }
       },
       {
-        "id": "20230812-173051-00172-c03622220a",
-        "title": "Malaga Auto Museum",
+        "id": "20220619-000102-00258-pano-8f64733ada",
+        "title": "Malaga Cathedral",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -202,8 +202,8 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20230812-173051-00172-c03622220a_900.jpg",
-            "detailKey": "expo/20230812-173051-00172-c03622220a_1800.jpg"
+            "galleryKey": "expo/20220619-000102-00258-pano-8f64733ada_900.jpg",
+            "detailKey": "expo/20220619-000102-00258-pano-8f64733ada_1800.jpg"
           }
         }
       }
@@ -218,7 +218,7 @@ window.photosByElieHomeData = {
     "href": "./gallery.html?gallery=mexico",
     "photos": [
       {
-        "id": "img-4983-d9ebed4c68",
+        "id": "img-4972-fa9620a496",
         "title": "Cruz De Huanacaxtle – San Pancho",
         "gallerySrc": "",
         "imageSrc": "",
@@ -227,43 +227,13 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/img-4983-d9ebed4c68_900.jpg",
-            "detailKey": "expo/img-4983-d9ebed4c68_1800.jpg"
+            "galleryKey": "expo/img-4972-fa9620a496_900.jpg",
+            "detailKey": "expo/img-4972-fa9620a496_1800.jpg"
           }
         }
       },
       {
-        "id": "20191206-0605-17192-85701a04f9",
-        "title": "Puerto Vallarta, Mexico, view from the Icon Towers",
-        "gallerySrc": "",
-        "imageSrc": "",
-        "media": {
-          "type": "photo",
-          "sourcePolicy": "developed-master",
-          "publicPreview": {
-            "allowed": true,
-            "galleryKey": "expo/20191206-0605-17192-85701a04f9_900.jpg",
-            "detailKey": "expo/20191206-0605-17192-85701a04f9_1800.jpg"
-          }
-        }
-      },
-      {
-        "id": "img-4992-692d25fcd3",
-        "title": "Cabo Corrientes",
-        "gallerySrc": "",
-        "imageSrc": "",
-        "media": {
-          "type": "photo",
-          "sourcePolicy": "developed-master",
-          "publicPreview": {
-            "allowed": true,
-            "galleryKey": "expo/img-4992-692d25fcd3_900.jpg",
-            "detailKey": "expo/img-4992-692d25fcd3_1800.jpg"
-          }
-        }
-      },
-      {
-        "id": "img-5038-94eafad832",
+        "id": "img-5011-3219c0b170",
         "title": "Puerto Vallarta",
         "gallerySrc": "",
         "imageSrc": "",
@@ -272,8 +242,38 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/img-5038-94eafad832_900.jpg",
-            "detailKey": "expo/img-5038-94eafad832_1800.jpg"
+            "galleryKey": "expo/img-5011-3219c0b170_900.jpg",
+            "detailKey": "expo/img-5011-3219c0b170_1800.jpg"
+          }
+        }
+      },
+      {
+        "id": "img-4984-81c472e7ae",
+        "title": "Cruz De Huanacaxtle – San Pancho",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-4984-81c472e7ae_900.jpg",
+            "detailKey": "expo/img-4984-81c472e7ae_1800.jpg"
+          }
+        }
+      },
+      {
+        "id": "img-4962-20fc5febfe",
+        "title": "Puerto Vallarta",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-4962-20fc5febfe_900.jpg",
+            "detailKey": "expo/img-4962-20fc5febfe_1800.jpg"
           }
         }
       }
@@ -284,12 +284,12 @@ window.photosByElieHomeData = {
     "title": "AI",
     "description": "Leonardo archive selections prepared from the Saturn Lightroom AI source.",
     "accent": "ai-gallery",
-    "count": 3448,
+    "count": 3417,
     "href": "./gallery.html?gallery=ai",
     "photos": [
       {
-        "id": "colorful-girafe-full-body-shot-abstract-background-ink-lin-1-upscale-4e8f4aff-7629-4179-83af-6cdc77f9d526-jpgx2-a50c04c697",
-        "title": "Colorful girafe, full body shot, Abstract background ink line de",
+        "id": "digital-communication-social-media-video-conferencing-mes-7-upscale-52961f6e-183f-4e35-bd3d-7f356568aca0-jpgx2-cb8ee150c6",
+        "title": "Digital communication- Social Media, Video Conferencing, Messagi",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -297,14 +297,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/colorful-girafe-full-body-shot-abstract-background-ink-lin-1-upscale-4e8f4aff-7629-4179-83af-6cdc77f9d526-jpgx2-a50c04c697_900.jpg",
-            "detailKey": "expo/colorful-girafe-full-body-shot-abstract-background-ink-lin-1-upscale-4e8f4aff-7629-4179-83af-6cdc77f9d526-jpgx2-a50c04c697_1800.jpg"
+            "galleryKey": "expo/digital-communication-social-media-video-conferencing-mes-7-upscale-52961f6e-183f-4e35-bd3d-7f356568aca0-jpgx2-cb8ee150c6_900.jpg",
+            "detailKey": "expo/digital-communication-social-media-video-conferencing-mes-7-upscale-52961f6e-183f-4e35-bd3d-7f356568aca0-jpgx2-cb8ee150c6_1800.jpg"
           }
         }
       },
       {
-        "id": "beach-vacation-sand-sun-ocean-relaxation-waves-seashe-3-upscale-3ddf67ad-a7e7-4d9a-87bc-ca1d724ae869-jpgx2-ee1a4f563d",
-        "title": "Beach Vacation - Sand, Sun, Ocean, Relaxation, Waves, Seashells,",
+        "id": "wavy-golden-and-purple-metallic-3d-background-low-saturatio-7-upscale-07a98eea-677e-4cfc-960b-d70dfefc1021-jpgx2-d6a9bc3fbc",
+        "title": "Wavy Golden and Purple Metallic 3D Background, low saturation, abstract, background, wavy, gold, texture, futuristic, de",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -312,14 +312,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/beach-vacation-sand-sun-ocean-relaxation-waves-seashe-3-upscale-3ddf67ad-a7e7-4d9a-87bc-ca1d724ae869-jpgx2-ee1a4f563d_900.jpg",
-            "detailKey": "expo/beach-vacation-sand-sun-ocean-relaxation-waves-seashe-3-upscale-3ddf67ad-a7e7-4d9a-87bc-ca1d724ae869-jpgx2-ee1a4f563d_1800.jpg"
+            "galleryKey": "expo/wavy-golden-and-purple-metallic-3d-background-low-saturatio-7-upscale-07a98eea-677e-4cfc-960b-d70dfefc1021-jpgx2-d6a9bc3fbc_900.jpg",
+            "detailKey": "expo/wavy-golden-and-purple-metallic-3d-background-low-saturatio-7-upscale-07a98eea-677e-4cfc-960b-d70dfefc1021-jpgx2-d6a9bc3fbc_1800.jpg"
           }
         }
       },
       {
-        "id": "masterpiece-realistic-portrait-of-a-girl-beautiful-fa-1-upscale-c6ff5d84-a867-48c7-8d45-64f472bd7db3-jpgx2-aa11f83b8e",
-        "title": "Realistic portrait of a young woman",
+        "id": "wall-paper-motif-pastel-colors-symmetrical-fruits-autumn-0-upscale-79101fac-88b4-4d42-8c80-c94141cff2f8-jpgx2-f38b626d5e",
+        "title": "Wall paper motif, pastel colors, symmetrical, fruits, autumn col",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -327,14 +327,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/masterpiece-realistic-portrait-of-a-girl-beautiful-fa-1-upscale-c6ff5d84-a867-48c7-8d45-64f472bd7db3-jpgx2-aa11f83b8e_900.jpg",
-            "detailKey": "expo/masterpiece-realistic-portrait-of-a-girl-beautiful-fa-1-upscale-c6ff5d84-a867-48c7-8d45-64f472bd7db3-jpgx2-aa11f83b8e_1800.jpg"
+            "galleryKey": "expo/wall-paper-motif-pastel-colors-symmetrical-fruits-autumn-0-upscale-79101fac-88b4-4d42-8c80-c94141cff2f8-jpgx2-f38b626d5e_900.jpg",
+            "detailKey": "expo/wall-paper-motif-pastel-colors-symmetrical-fruits-autumn-0-upscale-79101fac-88b4-4d42-8c80-c94141cff2f8-jpgx2-f38b626d5e_1800.jpg"
           }
         }
       },
       {
-        "id": "black-and-white-picture-of-mark-zuckerberg-age-30-cartoon-2-upscale-1068600e-9e33-4ccd-8d0d-a2624485b60f-jpgx2-727b0ac18c",
-        "title": "Black and white picture of Mark Zuckerberg, age 30, Cartoon styl",
+        "id": "eiffel-tower-prominent-in-the-foreground-abstract-backgrou-1-upscale-7cc466a9-17d2-4f4c-a862-ce5ee26604c7-jpgx2-1ee909b083",
+        "title": "Eiffel Tower, prominent in the foreground, Abstract background i",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -342,8 +342,8 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/black-and-white-picture-of-mark-zuckerberg-age-30-cartoon-2-upscale-1068600e-9e33-4ccd-8d0d-a2624485b60f-jpgx2-727b0ac18c_900.jpg",
-            "detailKey": "expo/black-and-white-picture-of-mark-zuckerberg-age-30-cartoon-2-upscale-1068600e-9e33-4ccd-8d0d-a2624485b60f-jpgx2-727b0ac18c_1800.jpg"
+            "galleryKey": "expo/eiffel-tower-prominent-in-the-foreground-abstract-backgrou-1-upscale-7cc466a9-17d2-4f4c-a862-ce5ee26604c7-jpgx2-1ee909b083_900.jpg",
+            "detailKey": "expo/eiffel-tower-prominent-in-the-foreground-abstract-backgrou-1-upscale-7cc466a9-17d2-4f4c-a862-ce5ee26604c7-jpgx2-1ee909b083_1800.jpg"
           }
         }
       }
@@ -358,8 +358,8 @@ window.photosByElieHomeData = {
     "href": "./gallery.html?gallery=italy",
     "photos": [
       {
-        "id": "img-1197-0132d88761",
-        "title": "Leaning Tower of Pisa",
+        "id": "img-1141-e7e66ca045",
+        "title": "Restaurant Interior in Florence",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -367,13 +367,13 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/img-1197-0132d88761_900.jpg",
-            "detailKey": "expo/img-1197-0132d88761_1800.jpg"
+            "galleryKey": "expo/img-1141-e7e66ca045_900.jpg",
+            "detailKey": "expo/img-1141-e7e66ca045_1800.jpg"
           }
         }
       },
       {
-        "id": "img-1166-5254d26291",
+        "id": "img-1163-865c215612",
         "title": "San Gimignano",
         "gallerySrc": "",
         "imageSrc": "",
@@ -382,34 +382,31 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/img-1166-5254d26291_900.jpg",
-            "detailKey": "expo/img-1166-5254d26291_short_5s_720p.mp4"
+            "galleryKey": "expo/img-1163-865c215612_900.jpg",
+            "detailKey": "expo/img-1163-865c215612_short_5s_720p.mp4"
           },
           "video": {
-            "duration": 5.84
+            "duration": 0.7
           }
         }
       },
       {
-        "id": "img-1142-7b199b33ad",
-        "title": "Florence, inside a restaurant",
+        "id": "img-1198-bb563d6235",
+        "title": "Historic Architecture in Pisa",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
-          "type": "video",
+          "type": "photo",
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/img-1142-7b199b33ad_900.jpg",
-            "detailKey": "expo/img-1142-7b199b33ad_short_5s_720p.mp4"
-          },
-          "video": {
-            "duration": 7.37
+            "galleryKey": "expo/img-1198-bb563d6235_900.jpg",
+            "detailKey": "expo/img-1198-bb563d6235_1800.jpg"
           }
         }
       },
       {
-        "id": "img-1180-fe3d9faa8d",
+        "id": "img-1184-adad54985d",
         "title": "San Gimignano",
         "gallerySrc": "",
         "imageSrc": "",
@@ -418,8 +415,8 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/img-1180-fe3d9faa8d_900.jpg",
-            "detailKey": "expo/img-1180-fe3d9faa8d_1800.jpg"
+            "galleryKey": "expo/img-1184-adad54985d_900.jpg",
+            "detailKey": "expo/img-1184-adad54985d_1800.jpg"
           }
         }
       }
@@ -430,12 +427,12 @@ window.photosByElieHomeData = {
     "title": "Portugal",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "portugal-gallery",
-    "count": 216,
+    "count": 214,
     "href": "./gallery.html?gallery=portugal",
     "photos": [
       {
-        "id": "20180520-1731-00738-1d66a4c1ca",
-        "title": "Historic Building in Lisbon, Portugal",
+        "id": "20180517-2236-00503-0d228da9ee",
+        "title": "Beach, Cascais",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -443,38 +440,8 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20180520-1731-00738-1d66a4c1ca_900.jpg",
-            "detailKey": "expo/20180520-1731-00738-1d66a4c1ca_1800.jpg"
-          }
-        }
-      },
-      {
-        "id": "20180520-1545-00719-e98749030b",
-        "title": "Belem, Lisbon",
-        "gallerySrc": "",
-        "imageSrc": "",
-        "media": {
-          "type": "photo",
-          "sourcePolicy": "developed-master",
-          "publicPreview": {
-            "allowed": true,
-            "galleryKey": "expo/20180520-1545-00719-e98749030b_900.jpg",
-            "detailKey": "expo/20180520-1545-00719-e98749030b_1800.jpg"
-          }
-        }
-      },
-      {
-        "id": "20180517-1157-00469-ed539494e1",
-        "title": "Lisbon, Lisbonne",
-        "gallerySrc": "",
-        "imageSrc": "",
-        "media": {
-          "type": "photo",
-          "sourcePolicy": "developed-master",
-          "publicPreview": {
-            "allowed": true,
-            "galleryKey": "expo/20180517-1157-00469-ed539494e1_900.jpg",
-            "detailKey": "expo/20180517-1157-00469-ed539494e1_1800.jpg"
+            "galleryKey": "expo/20180517-2236-00503-0d228da9ee_900.jpg",
+            "detailKey": "expo/20180517-2236-00503-0d228da9ee_1800.jpg"
           }
         }
       },
@@ -490,6 +457,36 @@ window.photosByElieHomeData = {
             "allowed": true,
             "galleryKey": "expo/20180518-1359-00513-759c490e7d_900.jpg",
             "detailKey": "expo/20180518-1359-00513-759c490e7d_1800.jpg"
+          }
+        }
+      },
+      {
+        "id": "20180520-1535-00715-795e204a97",
+        "title": "Belem, Lisbon",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/20180520-1535-00715-795e204a97_900.jpg",
+            "detailKey": "expo/20180520-1535-00715-795e204a97_1800.jpg"
+          }
+        }
+      },
+      {
+        "id": "20180518-1423-00531-54ae327384",
+        "title": "Castelo Dos Mouros, Lisbon",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/20180518-1423-00531-54ae327384_900.jpg",
+            "detailKey": "expo/20180518-1423-00531-54ae327384_1800.jpg"
           }
         }
       }

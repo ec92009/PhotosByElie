@@ -1,7 +1,7 @@
 {
   "date": "2026-06-17",
   "platform": "Facebook",
-  "status": "prepared",
+  "status": "published",
   "account": "Photos By Elie",
   "post_type": "multi_photo",
   "title": "Malaga Costa Brava Shore Color",
@@ -142,5 +142,25 @@
       "image": "images/08-20230114-173829-00178-ca96c1dc0d-malaga-costa-brava-shore-color.jpg",
       "local_staged_path": "socials/Facebook/2026-06-17/malaga-costa-brava-shore-color/images/08-20230114-173829-00178-ca96c1dc0d-malaga-costa-brava-shore-color.jpg"
     }
-  ]
+  ],
+  "published": {
+    "status": "published",
+    "post_id": "1146747141854670_122106623307334672",
+    "permalink": "https://www.facebook.com/122102168061334672/posts/122106623307334672",
+    "published_at": "2026-06-17T03:08:42+0000",
+    "verified_at": "2026-06-17T03:10:06.542Z",
+    "account": "Photos By Elie",
+    "image_count": 8,
+    "platform_visible_confirmation": "Graph API readback returned permalink and 8 photo subattachments."
+  },
+  "verification": {
+    "status": "published",
+    "post_id": "1146747141854670_122106623307334672",
+    "permalink": "https://www.facebook.com/122102168061334672/posts/122106623307334672",
+    "published_at": "2026-06-17T03:08:42+0000",
+    "verified_at": "2026-06-17T03:10:06.542Z",
+    "account": "Photos By Elie",
+    "image_count": 8,
+    "platform_visible_confirmation": "Graph API readback returned permalink and 8 photo subattachments."
+  }
 }

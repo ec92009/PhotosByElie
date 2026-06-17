@@ -1,7 +1,7 @@
 {
   "date": "2026-06-17",
   "platform": "Threads",
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "title": "Albert Kahn Garden Reflections",
@@ -79,5 +79,31 @@
       "local_staged_path": "socials/Threads/2026-06-17/albert-kahn-garden-reflections/images/04-img-5984-7982536318-albert-kahn-garden-reflections.jpg"
     }
   ],
-  "link_preview_note": "Remove any automatic link preview if it shows generic or off-theme campaign metadata before posting."
+  "link_preview_note": "Remove any automatic link preview if it shows generic or off-theme campaign metadata before posting.",
+  "published": {
+    "status": "published",
+    "media_id": "17904959832435690",
+    "permalink": "https://www.threads.com/@ec92009/post/DZq99JNDcD7",
+    "published_at": "2026-06-17T03:09:04+0000",
+    "verified_at": "2026-06-17T03:10:06.542Z",
+    "account": "ec92009",
+    "username": "ec92009",
+    "media_type": "CAROUSEL_ALBUM",
+    "child_count": 4,
+    "image_count": 4,
+    "platform_visible_confirmation": "Threads Graph readback returned permalink, CAROUSEL_ALBUM, and 4 children."
+  },
+  "verification": {
+    "status": "published",
+    "media_id": "17904959832435690",
+    "permalink": "https://www.threads.com/@ec92009/post/DZq99JNDcD7",
+    "published_at": "2026-06-17T03:09:04+0000",
+    "verified_at": "2026-06-17T03:10:06.542Z",
+    "account": "ec92009",
+    "username": "ec92009",
+    "media_type": "CAROUSEL_ALBUM",
+    "child_count": 4,
+    "image_count": 4,
+    "platform_visible_confirmation": "Threads Graph readback returned permalink, CAROUSEL_ALBUM, and 4 children."
+  }
 }

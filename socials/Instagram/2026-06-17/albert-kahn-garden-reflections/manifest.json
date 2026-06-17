@@ -1,7 +1,7 @@
 {
   "date": "2026-06-17",
   "platform": "Instagram",
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "title": "Albert Kahn Garden Reflections",
@@ -143,5 +143,31 @@
       "image": "images/08-img-5989-bda06bc8e5-albert-kahn-garden-reflections.jpg",
       "local_staged_path": "socials/Instagram/2026-06-17/albert-kahn-garden-reflections/images/08-img-5989-bda06bc8e5-albert-kahn-garden-reflections.jpg"
     }
-  ]
+  ],
+  "published": {
+    "status": "published",
+    "media_id": "17891647926375122",
+    "permalink": "https://www.instagram.com/p/DZq-AwDjSk2/",
+    "published_at": "2026-06-17T03:09:40+0000",
+    "verified_at": "2026-06-17T03:10:06.542Z",
+    "account": "ec92009",
+    "username": "ec92009",
+    "media_type": "CAROUSEL_ALBUM",
+    "child_count": 8,
+    "image_count": 8,
+    "platform_visible_confirmation": "Instagram Graph readback returned permalink, CAROUSEL_ALBUM, and 8 children."
+  },
+  "verification": {
+    "status": "published",
+    "media_id": "17891647926375122",
+    "permalink": "https://www.instagram.com/p/DZq-AwDjSk2/",
+    "published_at": "2026-06-17T03:09:40+0000",
+    "verified_at": "2026-06-17T03:10:06.542Z",
+    "account": "ec92009",
+    "username": "ec92009",
+    "media_type": "CAROUSEL_ALBUM",
+    "child_count": 8,
+    "image_count": 8,
+    "platform_visible_confirmation": "Instagram Graph readback returned permalink, CAROUSEL_ALBUM, and 8 children."
+  }
 }

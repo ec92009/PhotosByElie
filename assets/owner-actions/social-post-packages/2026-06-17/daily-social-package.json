@@ -2,7 +2,7 @@
   "date": "2026-06-17",
   "format": "photosbyelie-daily-social-package",
   "visible_version": "v109.1",
-  "status": "prepared",
+  "status": "published_partial",
   "themes": [
     "Malaga Costa Brava Shore Color",
     "Albert Kahn Garden Reflections",
@@ -12,7 +12,7 @@
     {
       "date": "2026-06-17",
       "platform": "Facebook",
-      "status": "prepared",
+      "status": "published",
       "account": "Photos By Elie",
       "post_type": "multi_photo",
       "title": "Malaga Costa Brava Shore Color",
@@ -153,12 +153,32 @@
           "image": "images/08-20230114-173829-00178-ca96c1dc0d-malaga-costa-brava-shore-color.jpg",
           "local_staged_path": "socials/Facebook/2026-06-17/malaga-costa-brava-shore-color/images/08-20230114-173829-00178-ca96c1dc0d-malaga-costa-brava-shore-color.jpg"
         }
-      ]
+      ],
+      "published": {
+        "status": "published",
+        "post_id": "1146747141854670_122106623307334672",
+        "permalink": "https://www.facebook.com/122102168061334672/posts/122106623307334672",
+        "published_at": "2026-06-17T03:08:42+0000",
+        "verified_at": "2026-06-17T03:10:06.542Z",
+        "account": "Photos By Elie",
+        "image_count": 8,
+        "platform_visible_confirmation": "Graph API readback returned permalink and 8 photo subattachments."
+      },
+      "verification": {
+        "status": "published",
+        "post_id": "1146747141854670_122106623307334672",
+        "permalink": "https://www.facebook.com/122102168061334672/posts/122106623307334672",
+        "published_at": "2026-06-17T03:08:42+0000",
+        "verified_at": "2026-06-17T03:10:06.542Z",
+        "account": "Photos By Elie",
+        "image_count": 8,
+        "platform_visible_confirmation": "Graph API readback returned permalink and 8 photo subattachments."
+      }
     },
     {
       "date": "2026-06-17",
       "platform": "Instagram",
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "title": "Albert Kahn Garden Reflections",
@@ -300,12 +320,38 @@
           "image": "images/08-img-5989-bda06bc8e5-albert-kahn-garden-reflections.jpg",
           "local_staged_path": "socials/Instagram/2026-06-17/albert-kahn-garden-reflections/images/08-img-5989-bda06bc8e5-albert-kahn-garden-reflections.jpg"
         }
-      ]
+      ],
+      "published": {
+        "status": "published",
+        "media_id": "17891647926375122",
+        "permalink": "https://www.instagram.com/p/DZq-AwDjSk2/",
+        "published_at": "2026-06-17T03:09:40+0000",
+        "verified_at": "2026-06-17T03:10:06.542Z",
+        "account": "ec92009",
+        "username": "ec92009",
+        "media_type": "CAROUSEL_ALBUM",
+        "child_count": 8,
+        "image_count": 8,
+        "platform_visible_confirmation": "Instagram Graph readback returned permalink, CAROUSEL_ALBUM, and 8 children."
+      },
+      "verification": {
+        "status": "published",
+        "media_id": "17891647926375122",
+        "permalink": "https://www.instagram.com/p/DZq-AwDjSk2/",
+        "published_at": "2026-06-17T03:09:40+0000",
+        "verified_at": "2026-06-17T03:10:06.542Z",
+        "account": "ec92009",
+        "username": "ec92009",
+        "media_type": "CAROUSEL_ALBUM",
+        "child_count": 8,
+        "image_count": 8,
+        "platform_visible_confirmation": "Instagram Graph readback returned permalink, CAROUSEL_ALBUM, and 8 children."
+      }
     },
     {
       "date": "2026-06-17",
       "platform": "Pinterest",
-      "status": "prepared",
+      "status": "prepared_no_api_token",
       "account": "PhotosByElie Pinterest",
       "post_type": "multi_pin_sequence",
       "title": "Del Mar Sunset Shoreline",
@@ -315,7 +361,8 @@
       "recommended_upload_set": "images",
       "available_count": 5,
       "notes": [
-        "Images are public watermarked R2 previews staged for upload/API publishing."
+        "Images are public watermarked R2 previews staged for upload/API publishing.",
+        "Pinterest remains prepared only because no Pinterest token/board id mapping is configured in this runner."
       ],
       "items": [
         {
@@ -413,7 +460,7 @@
     {
       "date": "2026-06-17",
       "platform": "Threads",
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "title": "Albert Kahn Garden Reflections",
@@ -491,7 +538,33 @@
           "local_staged_path": "socials/Threads/2026-06-17/albert-kahn-garden-reflections/images/04-img-5984-7982536318-albert-kahn-garden-reflections.jpg"
         }
       ],
-      "link_preview_note": "Remove any automatic link preview if it shows generic or off-theme campaign metadata before posting."
+      "link_preview_note": "Remove any automatic link preview if it shows generic or off-theme campaign metadata before posting.",
+      "published": {
+        "status": "published",
+        "media_id": "17904959832435690",
+        "permalink": "https://www.threads.com/@ec92009/post/DZq99JNDcD7",
+        "published_at": "2026-06-17T03:09:04+0000",
+        "verified_at": "2026-06-17T03:10:06.542Z",
+        "account": "ec92009",
+        "username": "ec92009",
+        "media_type": "CAROUSEL_ALBUM",
+        "child_count": 4,
+        "image_count": 4,
+        "platform_visible_confirmation": "Threads Graph readback returned permalink, CAROUSEL_ALBUM, and 4 children."
+      },
+      "verification": {
+        "status": "published",
+        "media_id": "17904959832435690",
+        "permalink": "https://www.threads.com/@ec92009/post/DZq99JNDcD7",
+        "published_at": "2026-06-17T03:09:04+0000",
+        "verified_at": "2026-06-17T03:10:06.542Z",
+        "account": "ec92009",
+        "username": "ec92009",
+        "media_type": "CAROUSEL_ALBUM",
+        "child_count": 4,
+        "image_count": 4,
+        "platform_visible_confirmation": "Threads Graph readback returned permalink, CAROUSEL_ALBUM, and 4 children."
+      }
     }
   ],
   "etsy": {
@@ -505,6 +578,7 @@
     "blockers": [
       "ETSY_KEYSTRING/ETSY_SHARED_SECRET are not available in this runner environment for live Etsy API calls.",
       "Current etsy_outlet tooling generates review payloads but does not upload and verify one public listing image plus one approved buyer download file per draft."
-    ]
+    ],
+    "verified_at": "2026-06-17T03:10:06.542Z"
   }
 }

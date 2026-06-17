@@ -1,7 +1,7 @@
 # Instagram: Albert Kahn Garden Reflections
 
 - Date: 2026-06-17
-- Status: prepared
+- Status: published
 - Destination: https://photos-by-elie.com/campaign.html?c=instagram-albert-kahn-garden-reflections-2026-06-17
 - Local package: /Users/ecohen/Dev/pbe-daily-social-20260617-Oli9yP/socials/Instagram/2026-06-17/albert-kahn-garden-reflections
 - Image count: 8
@@ -24,3 +24,15 @@ Images:
 | 6 | `img-5983-1bcdb41de5` | https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5983-1bcdb41de5_1800.jpg | socials/Instagram/2026-06-17/albert-kahn-garden-reflections/images/06-img-5983-1bcdb41de5-albert-kahn-garden-reflections.jpg |
 | 7 | `img-6002-6c95124a5e` | https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6002-6c95124a5e_1800.jpg | socials/Instagram/2026-06-17/albert-kahn-garden-reflections/images/07-img-6002-6c95124a5e-albert-kahn-garden-reflections.jpg |
 | 8 | `img-5989-bda06bc8e5` | https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-5989-bda06bc8e5_1800.jpg | socials/Instagram/2026-06-17/albert-kahn-garden-reflections/images/08-img-5989-bda06bc8e5-albert-kahn-garden-reflections.jpg |
+
+## Published Result
+
+- Status: published
+- Published at: 2026-06-17T03:09:40+0000
+- Verified at: 2026-06-17T03:10:06.542Z
+- Media ID: 17891647926375122
+- Permalink: https://www.instagram.com/p/DZq-AwDjSk2/
+- Media type: CAROUSEL_ALBUM
+- Child count: 8
+- Account: ec92009
+- Verified image count: 8

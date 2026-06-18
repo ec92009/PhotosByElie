@@ -3302,6 +3302,41 @@ body[data-real-estate] main.shell{
   display:grid;
   gap:8px;
 }
+.real-estate-deliverable-sync-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  min-height:44px;
+  border:1px solid var(--line);
+  background:var(--bg);
+  padding:10px 12px;
+}
+.real-estate-deliverable-sync-row[data-re-status-tone="pending"]{
+  border-color:color-mix(in srgb,var(--accent) 34%,var(--line));
+}
+.real-estate-deliverable-sync-row[data-re-status-tone="needs-attention"]{
+  border-color:color-mix(in srgb,#b94343 58%,var(--line));
+}
+.real-estate-deliverable-sync-row span{
+  min-width:0;
+  color:var(--muted);
+  font-size:.82rem;
+  font-weight:780;
+}
+.real-estate-deliverable-sync{
+  flex:0 0 auto;
+  min-height:32px;
+  border:1px solid var(--line);
+  background:var(--surface);
+  color:var(--text);
+  padding:0 12px;
+  font-size:.78rem;
+  font-weight:850;
+}
+.real-estate-deliverable-sync:disabled{
+  opacity:.55;
+}
 .real-estate-deliverable{
   display:grid;
   grid-template-columns:auto 64px minmax(0,1fr) auto;
@@ -3427,6 +3462,38 @@ body[data-real-estate] main.shell{
   color:var(--muted);
   font-size:.8rem;
   font-weight:760;
+}
+.real-estate-deliverable-statuses{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin-top:8px;
+}
+body[data-real-estate] .real-estate-deliverable .real-estate-deliverable-status{
+  display:inline-flex;
+  align-items:center;
+  min-height:22px;
+  margin-top:0;
+  border:1px solid var(--line);
+  border-radius:6px;
+  background:var(--surface);
+  color:var(--muted);
+  padding:0 8px;
+  font-size:.72rem;
+  font-weight:850;
+  line-height:1;
+}
+body[data-real-estate] .real-estate-deliverable-status[data-re-status-tone="ready"]{
+  border-color:color-mix(in srgb,var(--re-accent) 34%,var(--line));
+  color:color-mix(in srgb,var(--text) 78%,var(--re-accent));
+}
+body[data-real-estate] .real-estate-deliverable-status[data-re-status-tone="pending"]{
+  border-color:color-mix(in srgb,var(--accent) 42%,var(--line));
+  color:color-mix(in srgb,var(--text) 72%,var(--accent));
+}
+body[data-real-estate] .real-estate-deliverable-status[data-re-status-tone="needs-attention"]{
+  border-color:color-mix(in srgb,#b94343 58%,var(--line));
+  color:#9f2f2f;
 }
 .real-estate-deliverable-reason{
   display:block;

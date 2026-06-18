@@ -1448,6 +1448,81 @@
     return parts.join(" + ");
   };
 
+  const deliverableStatusTone = (status) => {
+    const value = String(status || "").toLowerCase();
+    if (value === "needs-attention" || value === "failed") return "needs-attention";
+    if (value === "pending" || value === "queued" || value === "processing") return "pending";
+    if (value === "local") return "local";
+    return "ready";
+  };
+
+  const statusForDeliverableRecords = (records = []) => {
+    const statuses = (Array.isArray(records) ? records : [])
+      .map((record) => deliverableStatusTone(record?.status || "ready"));
+    if (statuses.includes("needs-attention")) return "needs-attention";
+    if (statuses.includes("pending")) return "pending";
+    return "ready";
+  };
+
+  const deliverableSourceBadgeFor = (item) => {
+    const records = Array.isArray(item?.records) ? item.records : [item].filter(Boolean);
+    const hasCloud = records.some((record) => record?.source === "cloud");
+    const hasLocal = records.some((record) => record?.source === "local");
+    if (state.cloudDeliverablesError && hasLocal && !hasCloud) {
+      return { label: "Cloud save issue", tone: "needs-attention" };
+    }
+    if (hasCloud) return { label: "Cloud saved", tone: "ready" };
+    if (hasLocal) return { label: "Saved on this device", tone: "local" };
+    return { label: "Gallery record", tone: "local" };
+  };
+
+  const formatStatusBadgeFor = (format, records = []) => {
+    const label = format === "pdf" ? "PDF" : format === "video" ? "Video" : "Selection";
+    const status = statusForDeliverableRecords(records);
+    if (status === "needs-attention") return { label: `${label} needs attention`, tone: "needs-attention" };
+    if (status === "pending") return { label: `${label} pending`, tone: "pending" };
+    if (format === "selection") return { label: "Selection saved", tone: "ready" };
+    const hasOutputUrl = records.some((record) => record?.viewUrl || record?.downloadUrl);
+    return hasOutputUrl
+      ? { label: `${label} ready`, tone: "ready" }
+      : { label: `${label} pending`, tone: "pending" };
+  };
+
+  const deliverableStatusBadgesFor = (item) => {
+    const records = Array.isArray(item?.records) ? item.records : [item].filter(Boolean);
+    const badges = [deliverableSourceBadgeFor(item)];
+    ["selection", "pdf", "video"].forEach((format) => {
+      const matching = records.filter((record) => deliverableFormatCode(record?.type) === format);
+      if (matching.length) badges.push(formatStatusBadgeFor(format, matching));
+    });
+    return badges;
+  };
+
+  const cloudShelfStatusFor = () => {
+    if (!workerBaseUrl()) {
+      return { label: "Saved products are stored on this device.", tone: "local" };
+    }
+    if (state.cloudDeliverablesBusy) {
+      return { label: "Syncing cloud saved products...", tone: "pending" };
+    }
+    if (state.cloudDeliverablesError) {
+      return { label: `Cloud sync issue: ${state.cloudDeliverablesError}`, tone: "needs-attention" };
+    }
+    if (state.cloudDeliverablesLoaded) {
+      const count = Array.isArray(state.cloudDeliverables) ? state.cloudDeliverables.length : 0;
+      return { label: `Cloud shelf synced (${count} record${count === 1 ? "" : "s"}).`, tone: "ready" };
+    }
+    return { label: "Cloud shelf available. Sync to check saved products.", tone: "pending" };
+  };
+
+  const statusBadgesHtml = (badges = []) => (
+    badges.map((badge) => `
+      <span class="real-estate-deliverable-status" data-re-status-tone="${escapeHtml(badge.tone)}">
+        ${escapeHtml(badge.label)}
+      </span>
+    `).join("")
+  );
+
   const nextGeneratedDeliverableName = (type, createdAt, excludeId = "", projectTitle = "") => {
     const existingItems = producedDeliverables().filter((item) => item.id !== excludeId);
     const generatedNames = generatedDeliverableNamesFor(existingItems);
@@ -1852,27 +1927,32 @@
       return;
     }
     const generatedNames = generatedDeliverableNamesFor(items);
-    elements.deliverablesList.innerHTML = items.map((item) => {
+    const shelfStatus = cloudShelfStatusFor();
+    const syncDisabled = state.cloudDeliverablesBusy || !workerBaseUrl();
+    const syncControl = `
+      <div class="real-estate-deliverable-sync-row" data-re-status-tone="${escapeHtml(shelfStatus.tone)}">
+        <span>${escapeHtml(shelfStatus.label)}</span>
+        <button class="real-estate-deliverable-sync" type="button" data-re-sync-deliverables ${syncDisabled ? "disabled" : ""}>
+          ${state.cloudDeliverablesBusy ? "Syncing..." : "Sync"}
+        </button>
+      </div>
+    `;
+    const rowsHtml = items.map((item) => {
       const date = item.createdAt ? new Date(item.createdAt) : null;
       const dateLabel = date && !Number.isNaN(date.getTime()) ? date.toLocaleString() : item.createdAt;
       const displayTitle = displayDeliverableTitleFor(item, generatedNames);
       const canRename = ["cloud", "local"].includes(item.source);
       const mediaSummaryLabel = deliverableMediaSummaryLabelFor(item);
-      const statusLabel = item.status === "ready"
-        ? "Ready"
-        : item.status === "needs-attention"
-          ? "Needs attention"
-          : "Pending";
       const meta = [
         item.label,
         mediaSummaryLabel,
-        statusLabel,
         dateLabel,
         item.bytes ? formatBytes(item.bytes) : "",
       ].filter(Boolean).join(" / ");
       const canOpen = Boolean(item.editUrl || item.batch);
       const editingName = state.editingDeliverableNameId === item.id;
       const thumbnail = deliverableThumbnailFor(item);
+      const statusBadges = statusBadgesHtml(deliverableStatusBadgesFor(item));
       const hasReadyOutput = (Array.isArray(item.records) ? item.records : [item]).some((record) => {
         const format = deliverableFormatCode(record.type);
         return (format === "pdf" || format === "video")
@@ -1890,6 +1970,9 @@
               ? `<input class="real-estate-deliverable-name" type="text" value="${escapeHtml(displayTitle)}" data-re-rename-deliverable="${escapeHtml(item.id)}" aria-label="Product name"/>`
               : `<strong class="real-estate-deliverable-title">${escapeHtml(displayTitle)}</strong>`}
             <span>${escapeHtml(meta || item.label)}</span>
+            <div class="real-estate-deliverable-statuses" aria-label="Product save status">
+              ${statusBadges}
+            </div>
             ${item.failureReason ? `<em class="real-estate-deliverable-reason">${escapeHtml(item.failureReason)}</em>` : ""}
           </div>
           ${canRename ? `
@@ -1903,6 +1986,7 @@
         </article>
       `;
     }).join("");
+    elements.deliverablesList.innerHTML = `${syncControl}${rowsHtml}`;
     syncFileActionLabels();
   };
 

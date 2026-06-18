@@ -4,7 +4,7 @@ Last updated: 2026-06-18
 
 ## Current Facts
 
-- Current visible build: `v110.6`.
+- Current visible build: `v110.7`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`.
 - Local Owner page: use the Dock launcher or the active helper port near 8000, currently `http://localhost:8000/owner.html?v=90.13`.
 - Public slideshow music app: `https://ec92009.github.io/PhotosByElie/slideshow-music.html?v=90.13`.
@@ -92,7 +92,7 @@ Last updated: 2026-06-18
 - `v90.13` removes the property-name prefix from default Real Estate photo titles, strips older prefixed defaults in the viewer/output path, makes the Real Estate fixed header match the page panel opacity more closely, and limits the desktop bottom action bar to actions that apply to the current wizard step.
 - Price and offer strategy draft: `docs/commerce/PRICE_OFFER_STRATEGY.md`; no live price change has been made from that draft yet.
 - First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
-- Latest checkpoint is `v110.6`; this file remains the numbered backlog source of truth.
+- Latest checkpoint is `v110.7`; this file remains the numbered backlog source of truth.
 - New import/re-export rule requested by Owner: the durable import anchor should be the full source pathname plus the source modified date. If only the modified date changes for the same source path, the new render should overwrite the older stored forms instead of creating a duplicate media row.
 - Italy audit detail: the 25 first restored rows came from `2025 Florence`, `2025 San Gimignano`, and `2025 Pisa`. The 10 Italy rows from the older phone-export folder `Pisa, 12 May 2025` were restored in `v86.10` using their original `2024 Pisa/Pisa, 12 May 2025` relative paths and IDs. The broader same-path overwrite/de-dupe work remains open because arbitrary selected-root imports can still derive duplicate IDs.
 - Current source-path tombstone audit found `0` manifest dodgers and `0` current R2 dodgers from `4,699` discarded IDs and `301` recovered discarded source paths. Current Camera eligibility audit found `10` ineligible raw import-cache rows and `0` current R2 objects after cleanup.

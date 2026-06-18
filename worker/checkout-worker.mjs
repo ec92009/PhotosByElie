@@ -946,6 +946,7 @@ export const createPhotosByElieWorker = ({
   downloadTokenMaxDownloads = DEFAULT_DOWNLOAD_TOKEN_MAX_DOWNLOADS,
   purchaseAllowanceSeconds = downloadTokenTtlSeconds,
   discountCodes = [],
+  analytics = null,
 } = {}) => {
   if (!catalog) throw new Error("createPhotosByElieWorker requires a catalog index.");
   const deliveryClient = delivery || defaultDelivery({ now, randomUUID });
@@ -958,6 +959,24 @@ export const createPhotosByElieWorker = ({
       expiresAt: isoAfterSeconds(nowDate, ttlSeconds),
       downloadLimit: boundedPositiveInteger(downloadTokenMaxDownloads, DEFAULT_DOWNLOAD_TOKEN_MAX_DOWNLOADS),
     };
+  };
+  const recordAnalytics = async (event) => {
+    if (!analytics || typeof analytics.putEvent !== "function") return;
+    try {
+      await analytics.putEvent({ source: "worker", ...event });
+    } catch {
+      // Analytics must never block checkout, fulfillment, or downloads.
+    }
+  };
+
+  const recordAnalyticsEvents = async (request) => {
+    const payload = await parseJson(request);
+    const events = Array.isArray(payload.events) ? payload.events : [payload.event || payload];
+    if (!analytics || typeof analytics.putEvents !== "function") {
+      return json({ ok: true, accepted: 0, disabled: true });
+    }
+    const saved = await analytics.putEvents(events);
+    return json({ ok: true, accepted: saved.length });
   };
 
   const maybeSendReadyEmail = async (order, { force = false, throwOnFailure = false } = {}) => {
@@ -1242,6 +1261,15 @@ export const createPhotosByElieWorker = ({
       updatedAt: createdAt,
     };
     await store.putOrder(order);
+    await recordAnalytics({
+      event: "checkout_session_created",
+      checkoutMode,
+      provider: stripeProvider,
+      itemCount: orderItems.length,
+      productCount: lineItems.length,
+      amountCents: amountExpected,
+      discountPresent: Boolean(discount.code),
+    });
 
     return json({
       order: publicOrder(order),
@@ -1348,6 +1376,14 @@ export const createPhotosByElieWorker = ({
       });
     }
     ready = await maybeSendReadyEmail(ready);
+    await recordAnalytics({
+      event: "payment_completed",
+      checkoutMode: ready.checkoutMode,
+      itemCount: ready.items.length,
+      productCount: ready.items.reduce((sum, item) => sum + (item.products || []).length, 0),
+      amountCents: ready.amountPaid,
+      discountPresent: Boolean(ready.discountCode),
+    });
     return ready;
   };
 
@@ -1460,6 +1496,12 @@ export const createPhotosByElieWorker = ({
       if (updatedDownload?.orderId && typeof store.updateOrder === "function") {
         await store.updateOrder(updatedDownload.orderId, (order) => appendDownloadEvent(order, downloadRecord, downloadedAt));
       }
+      await recordAnalytics({
+        event: "download_success",
+        downloadType: downloadRecord.productId ? "file" : "archive",
+        photoId: downloadRecord.photoId || "",
+        productId: downloadRecord.productId || "",
+      });
     }
     return response;
   };
@@ -1578,6 +1620,7 @@ export const createPhotosByElieWorker = ({
       if (request.method === "GET" && path === "/health") {
         return json({ ok: true, service: "photosbyelie-worker", stripe: stripeProvider, currency: ORDER_CURRENCY });
       }
+      if (request.method === "POST" && path === "/analytics/events") return await recordAnalyticsEvents(request);
       if (request.method === "POST" && path === "/checkout/guest") return await createCheckout(request, "guest");
       if (request.method === "POST" && path === "/checkout/account") return await createCheckout(request, "account");
       if (request.method === "POST" && path === "/purchases/recent") return await checkRecentPurchases(request);

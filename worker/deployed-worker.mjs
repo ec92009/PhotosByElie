@@ -1,4 +1,5 @@
 import { createCatalogIndex, createPhotosByElieWorker } from "./checkout-worker.mjs";
+import { createAnalyticsStore } from "./analytics-store.mjs";
 import { createCloudflareImagesRenderer } from "./cloudflare-images-renderer.mjs";
 import { createKvStore } from "./kv-store.mjs";
 import { createMockStripeClient } from "./mock-stripe.mjs";
@@ -223,6 +224,13 @@ export default {
       checkoutSessionTtlSeconds: daysToSeconds(env.CHECKOUT_SESSION_TTL_DAYS, 90),
       downloadTtlSeconds: downloadTokenTtlSeconds + (24 * 60 * 60),
     });
+    const analytics = enabledFlag(env.ANALYTICS_ENABLED, true)
+      ? createAnalyticsStore({
+        namespace: env.ANALYTICS_KV || requiredBinding(env, "ORDERS_KV"),
+        prefix: env.KV_PREFIX || "pbe",
+        ttlSeconds: daysToSeconds(env.ANALYTICS_RETENTION_DAYS, 400),
+      })
+      : null;
     const privateBucket = requiredBinding(env, "PRIVATE_MEDIA");
     const realEstateGalleries = realEstateGalleriesFor(env);
     const emailClient = env.RESEND_API_KEY && env.ORDER_EMAIL_FROM
@@ -271,6 +279,7 @@ export default {
       downloadTokenTtlSeconds,
       downloadTokenMaxDownloads,
       discountCodes: checkoutDiscountCodesFor(env),
+      analytics,
     });
     return worker.fetch(request);
   },

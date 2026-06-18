@@ -3,6 +3,7 @@ import fs from "node:fs";
 import jpeg from "jpeg-js";
 import test from "node:test";
 import catalogTsv from "../scripts/catalog_tsv.cjs";
+import { createAnalyticsStore } from "./analytics-store.mjs";
 import { createCatalogIndex, createPhotosByElieWorker } from "./checkout-worker.mjs";
 import deployedWorker from "./deployed-worker.mjs";
 import { createLocalZipDelivery } from "./local-zip-delivery.mjs";
@@ -116,6 +117,99 @@ const createFakeKv = () => {
     _debug: values,
   };
 };
+
+test("analytics endpoint stores sanitized public funnel events", async () => {
+  const kv = createFakeKv();
+  const analytics = createAnalyticsStore({
+    namespace: kv,
+    prefix: "test",
+    now: () => new Date("2026-05-07T12:00:00.000Z"),
+  });
+  const worker = createPhotosByElieWorker({
+    catalog: loadCatalog(),
+    analytics,
+    now: () => new Date("2026-05-07T12:00:00.000Z"),
+  });
+
+  const response = await worker.fetch(jsonRequest("https://worker.test/analytics/events", {
+    events: [{
+      event: "page_view",
+      sessionId: "tab-session-1",
+      path: "/photo.html?id=secret#section",
+      pageType: "photo",
+      photoId: "photo-1",
+      email: "buyer@example.com",
+      orderId: "PBE-SECRET",
+      userAgent: "browser",
+    }],
+  }));
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { ok: true, accepted: 1 });
+
+  const eventKey = [...kv._debug.keys()].find((key) => key.startsWith("test:analytics:events:2026-05-07:"));
+  assert.ok(eventKey);
+  const event = JSON.parse(kv._debug.get(eventKey));
+  assert.equal(event.event, "page_view");
+  assert.equal(event.path, "/photo.html");
+  assert.equal(event.photoId, "photo-1");
+  assert.equal(event.email, undefined);
+  assert.equal(event.orderId, undefined);
+  assert.equal(event.userAgent, undefined);
+
+  const count = JSON.parse(kv._debug.get("test:analytics:counts:2026-05-07:page_view"));
+  assert.equal(count.count, 1);
+});
+
+test("checkout and download milestones record analytics without buyer identifiers", async () => {
+  const catalog = loadCatalog();
+  const photoId = firstDeliverablePhotoId(catalog);
+  const analyticsKv = createFakeKv();
+  const { worker } = (() => {
+    const randomUUID = deterministicIds();
+    return {
+      worker: createPhotosByElieWorker({
+        catalog,
+        store: createMemoryStore(),
+        stripe: createMockStripeClient({ randomUUID }),
+        analytics: createAnalyticsStore({
+          namespace: analyticsKv,
+          prefix: "test",
+          now: () => new Date("2026-05-07T12:00:00.000Z"),
+        }),
+        now: () => new Date("2026-05-07T12:00:00.000Z"),
+        randomUUID,
+      }),
+    };
+  })();
+
+  const checkoutResponse = await worker.fetch(jsonRequest("https://worker.test/checkout/guest", {
+    email: "buyer@example.com",
+    items: [{ photoId, options: [{ id: "jpg-1mp" }] }],
+  }));
+  assert.equal(checkoutResponse.status, 201);
+  const checkout = await checkoutResponse.json();
+
+  const payResponse = await worker.fetch(jsonRequest("https://worker.test/mock-stripe/pay", {
+    checkoutSessionId: checkout.checkout.sessionId,
+  }));
+  assert.equal(payResponse.status, 200);
+  const paid = await payResponse.json();
+  const downloadPath = paid.order.delivery.files?.[0]?.downloadUrl || paid.order.delivery.downloadUrl;
+  assert.ok(downloadPath);
+  const downloadResponse = await worker.fetch(new Request(`https://worker.test${downloadPath}`));
+  assert.equal(downloadResponse.status, 200);
+
+  const events = [...analyticsKv._debug.entries()]
+    .filter(([key]) => key.startsWith("test:analytics:events:2026-05-07:"))
+    .map(([, value]) => JSON.parse(value));
+  assert.deepEqual(events.map((event) => event.event).sort(), [
+    "checkout_session_created",
+    "download_success",
+    "payment_completed",
+  ]);
+  assert.ok(events.every((event) => event.email === undefined && event.orderId === undefined));
+  assert.equal(events.find((event) => event.event === "download_success")?.downloadType, "archive");
+});
 
 const createFakeEmailClient = ({ fail = false } = {}) => {
   const sent = [];

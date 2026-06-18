@@ -119,7 +119,7 @@ SOURCE_EDIT_VIDEO_UTIS = {
 }
 SOURCE_EDIT_APP_CACHE: dict[str, object] = {"expires_at": 0.0, "apps": []}
 PUBLIC_SITE_BASE_URL = "https://ec92009.github.io/PhotosByElie/"
-PUBLIC_MEDIA_BASE_URL = "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev"
+PUBLIC_MEDIA_BASE_URL = "https://download.photos-by-elie.com/media/"
 TITLE_KEYWORD_REVIEW_FLAG = "Title_Keywords_Reviewed"
 TITLE_KEYWORD_PROPOSED_FLAG = "Title_Keywords_Proposed"
 TITLE_KEYWORD_REJECTED_FLAG = "Title_Keywords_Rejected"

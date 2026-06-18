@@ -16,7 +16,7 @@ from PIL import Image, ImageOps
 
 
 DEFAULT_CATALOG = Path("assets/catalog/photosbyelie.sqlite")
-PUBLIC_MEDIA_BASE_URL = "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev"
+PUBLIC_MEDIA_BASE_URL = "https://download.photos-by-elie.com/media/"
 DEFAULT_SOURCE_ROOTS = (
     Path("/Volumes/Saturn/Pictures/LR/Camera"),
     Path("/Volumes/Saturn/Pictures/LR/Apple Photo Albums"),

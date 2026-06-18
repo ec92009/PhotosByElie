@@ -533,7 +533,7 @@ The S3 backend uses Python stdlib SigV4 signing and does not need Wrangler login
 
 Deletes also use the S3 backend when those credentials are present. The local Owner helper's Waste Basket purge batches R2 object deletion with S3 `DeleteObjects` by bucket, falling back to the older per-object Wrangler delete path when S3 credentials are not available.
 
-The public bucket currently exposes baked-watermark previews through the `r2.dev` URL in `media-config.js` as `publicBaseUrl`, with CORS managed by `docs/r2-public-cors.json`. Public-facing localhost pages use that public media base by default so local testing pays the same network/cache cost as deployed visitors. Owner-only pages keep local staging behavior unless an explicit `?mediaBase=https://...` override is supplied. Use `?mediaBase=local` to force local preview files for a debugging session.
+The public bucket exposes baked-watermark previews through the custom Worker media route in `media-config.js` as `publicBaseUrl`, with CORS managed by the Worker media response and `docs/r2-public-cors.json` kept as the bucket-side reference. Public-facing localhost pages use that public media base by default so local testing pays the same network/cache cost as deployed visitors. Owner-only pages keep local staging behavior unless an explicit `?mediaBase=https://...` override is supplied. Use `?mediaBase=local` to force local preview files for a debugging session.
 
 ## Classified Unknown Public R2 Cleanup
 

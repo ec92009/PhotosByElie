@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v110.3`
+- Current visible version: `v110.4`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -92,7 +92,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - Gallery/home load controls show exact remaining counts, using labels such as `See 24 more`, `See 48 more`, and `See all N more` instead of generic "See More" text.
 - Gallery pages load the publishable Expo subset from the public SQLite catalog through the `photos-data.js` bootstrap; public GitHub Pages builds resolve preview media through `media-config.js` and each catalog row's `media.publicPreview` R2/CDN key instead of relying on committed media assets.
 - Localhost Owner gallery search automatically augments normal public-catalog matching with Owner title/keyword review metadata from `Owner.sqlite`, including original, proposed, decided, blocked, and applied review text. Public search remains catalog-only.
-- Public previews currently resolve directly through the public R2 `r2.dev` media endpoint backed by `photosbyelie-public`; move `publicBaseUrl` to a custom media domain when that is attached.
+- Public previews resolve through the custom Worker media route `https://download.photos-by-elie.com/media`, backed by the `photosbyelie-public` R2 bucket.
 - Local preview asset folders are retired. Public previews should resolve from R2/CDN keys; use `node scripts/validate_publish.js --external-media` for that publishing mode.
 - R2 media uploads should run through the lock-guarded sweep wrapper, `scripts/run_cloud_media_sweep.zsh`, or otherwise one lane at a time. The wrapper uses `.review-logs/cloud-media-sweep.lock` so the daily automation and manual runs do not race each other.
 - Public R2 sync and Saturn imports skip IDs and known source paths from the durable Owner SQLite hidden/discarded lifecycle snapshot, with Waste Basket/discard JSON kept as compatibility state. Rejected or owner-discarded photos are not reintroduced by later bulk uploads under a fresh selected-folder ID. AI/Leonardo imports stay lifecycle/tombstone-driven. Publish validation now fails if a hidden/discarded id leaks into the public catalog or `assets/expo-manifest.json`.

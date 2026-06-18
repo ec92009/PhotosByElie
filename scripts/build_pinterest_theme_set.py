@@ -14,7 +14,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageOps
 
 
-R2_BASE_URL = "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/"
+R2_BASE_URL = "https://download.photos-by-elie.com/media/"
 
 
 def crop_to_ratio(image: Image.Image, ratio: float) -> Image.Image:

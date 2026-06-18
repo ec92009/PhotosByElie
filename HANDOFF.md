@@ -37,7 +37,7 @@ for remote execution.
 - Owner R2 coverage excludes Waste Basket tombstones from active repair targets and can list missing private masters/triplets for active photos, preferring Saturn/source-file repair when the source path resolves. The Owner dashboard is grouped into Review, Expo, Real Estate, Catalog, Cloud, and Commerce tabs, with cloud sweep progress details shown inline by phase.
 - Local Owner actions are unlocked by `scripts/local_server.py` on localhost without a password. Add `--bind 0.0.0.0 --allow-lan-owner` only when a private-LAN owner review session is intentional.
 - Public previews are watermarked and public in R2 under flat `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg` keys.
-- Public browsing now loads previews directly from the public R2 `r2.dev` endpoint: `https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev`.
+- Public browsing now loads previews through the custom Worker media route: `https://download.photos-by-elie.com/media`.
 - The checkout Worker is no longer in the public preview hot path. Keep it focused on checkout, order state, Stripe/webhook handling, pre-Stripe private-file validation, and delivery.
 - Private developed sources are in `photosbyelie-private/masters/<photo-id>/<original-file>`.
 - Private buyer JPG deliverables are in `photosbyelie-private/renders/<photo-id>/<original-file>-jpg-{6mp,3mp,1mp}.jpg`.
@@ -332,5 +332,5 @@ npm run validate
 14. Polish Real Estate production outputs and access model, including optional music for RE videos and Ken Burns-style motion for slideshows.
 15. Harden hidden/discarded lifecycle.
 16. Extend Owner operations dashboard and state-table browsing.
-17. Replace temporary `r2.dev` media URL with a custom media domain.
+17. Custom media-domain cutover is complete; keep future preview URLs on `https://download.photos-by-elie.com/media` unless a dedicated media hostname is attached.
 18. Keep physical products and long-horizon media cleanup deliberate.

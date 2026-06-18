@@ -78,3 +78,10 @@ Madrid Imprenta Municipal: four frames of type, ink, machinery, and paper textur
 ## Etsy
 
 Generated 21 Etsy outlet review candidates under `assets/owner-actions/etsy-listing-packages/2026-06-18/`. No Etsy drafts were created because current tooling does not upload and verify one public listing image plus one buyer download file per draft.
+
+## Published Results
+
+- Facebook: https://www.facebook.com/122102168061334672/posts/122106813837334672 (8 images)
+- Instagram: https://www.instagram.com/p/DZti3H7DBrm/ (8 images)
+- Threads: https://www.threads.com/@ec92009/post/DZti8A8DNYu (4 images)
+- Pinterest: prepared only; use socials/Pinterest/2026-06-18/estepa-chocolate-museum-color/ and board Spain Travel Photography.

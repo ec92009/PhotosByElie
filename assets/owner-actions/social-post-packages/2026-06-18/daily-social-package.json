@@ -2,7 +2,7 @@
   "date": "2026-06-18",
   "format": "photosbyelie-daily-social-package",
   "visible_version": "v110.1",
-  "status": "prepared",
+  "status": "published_partial",
   "themes": [
     "Granada Alhambra Tile Light",
     "Madrid Imprenta Type Patterns",
@@ -12,7 +12,7 @@
     {
       "date": "2026-06-18",
       "platform": "Facebook",
-      "status": "prepared",
+      "status": "published",
       "account": "Photos By Elie",
       "post_type": "multi_photo",
       "title": "Granada Alhambra Tile Light",
@@ -153,12 +153,32 @@
           "image": "images/08-20240517-132621-00251-bb146fc20e-granada-alhambra-tile-light.jpg",
           "local_staged_path": "socials/Facebook/2026-06-18/granada-alhambra-tile-light/images/08-20240517-132621-00251-bb146fc20e-granada-alhambra-tile-light.jpg"
         }
-      ]
+      ],
+      "published": {
+        "status": "published",
+        "post_id": "1146747141854670_122106813837334672",
+        "permalink": "https://www.facebook.com/122102168061334672/posts/122106813837334672",
+        "published_at": "2026-06-18T03:08:46+0000",
+        "verified_at": "2026-06-18T03:11:42.539Z",
+        "account": "Photos By Elie",
+        "image_count": 8,
+        "platform_visible_confirmation": "Graph API readback returned permalink and 8 photo subattachments."
+      },
+      "verification": {
+        "status": "published",
+        "post_id": "1146747141854670_122106813837334672",
+        "permalink": "https://www.facebook.com/122102168061334672/posts/122106813837334672",
+        "published_at": "2026-06-18T03:08:46+0000",
+        "verified_at": "2026-06-18T03:11:42.539Z",
+        "account": "Photos By Elie",
+        "image_count": 8,
+        "platform_visible_confirmation": "Graph API readback returned permalink and 8 photo subattachments."
+      }
     },
     {
       "date": "2026-06-18",
       "platform": "Instagram",
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "title": "Madrid Imprenta Type Patterns",
@@ -300,7 +320,29 @@
           "image": "images/08-20180522-1043-00818-26094a4b97-madrid-imprenta-type-patterns.jpg",
           "local_staged_path": "socials/Instagram/2026-06-18/madrid-imprenta-type-patterns/images/08-20180522-1043-00818-26094a4b97-madrid-imprenta-type-patterns.jpg"
         }
-      ]
+      ],
+      "published": {
+        "status": "published",
+        "media_id": "18086862326421861",
+        "permalink": "https://www.instagram.com/p/DZti3H7DBrm/",
+        "username": "ec92009",
+        "media_type": "CAROUSEL_ALBUM",
+        "published_at": "2026-06-18T03:10:02+0000",
+        "verified_at": "2026-06-18T03:11:42.539Z",
+        "image_count": 8,
+        "platform_visible_confirmation": "Instagram Graph readback returned permalink, CAROUSEL_ALBUM, and 8 children."
+      },
+      "verification": {
+        "status": "published",
+        "media_id": "18086862326421861",
+        "permalink": "https://www.instagram.com/p/DZti3H7DBrm/",
+        "username": "ec92009",
+        "media_type": "CAROUSEL_ALBUM",
+        "published_at": "2026-06-18T03:10:02+0000",
+        "verified_at": "2026-06-18T03:11:42.539Z",
+        "image_count": 8,
+        "platform_visible_confirmation": "Instagram Graph readback returned permalink, CAROUSEL_ALBUM, and 8 children."
+      }
     },
     {
       "date": "2026-06-18",
@@ -409,12 +451,13 @@
         "Estepa, Spain, Chocolate Museum, estepa chocolate museum color photograph by Photos By Elie.",
         "Estepa, Spain, Chocolate Museum, estepa chocolate museum color photograph by Photos By Elie.",
         "Estepa, Spain, Chocolate Museum, estepa chocolate museum color photograph by Photos By Elie."
-      ]
+      ],
+      "blocker": "No Pinterest token/board ID mapping configured; manual Pin Builder upload remains required."
     },
     {
       "date": "2026-06-18",
       "platform": "Threads",
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "title": "Madrid Imprenta Type Patterns",
@@ -493,7 +536,29 @@
           "local_staged_path": "socials/Threads/2026-06-18/madrid-imprenta-type-patterns/images/04-20180522-1047-00824-e31889ddcd-madrid-imprenta-type-patterns.jpg"
         }
       ],
-      "link_preview_note": "Remove automatic link previews if they show generic or off-theme metadata."
+      "link_preview_note": "Remove automatic link previews if they show generic or off-theme metadata.",
+      "published": {
+        "status": "published",
+        "media_id": "17913812610405033",
+        "permalink": "https://www.threads.com/@ec92009/post/DZti8A8DNYu",
+        "username": "ec92009",
+        "media_type": "CAROUSEL_ALBUM",
+        "published_at": "2026-06-18T03:10:48+0000",
+        "verified_at": "2026-06-18T03:11:42.539Z",
+        "image_count": 4,
+        "platform_visible_confirmation": "Threads Graph readback returned permalink, CAROUSEL_ALBUM, and 4 children."
+      },
+      "verification": {
+        "status": "published",
+        "media_id": "17913812610405033",
+        "permalink": "https://www.threads.com/@ec92009/post/DZti8A8DNYu",
+        "username": "ec92009",
+        "media_type": "CAROUSEL_ALBUM",
+        "published_at": "2026-06-18T03:10:48+0000",
+        "verified_at": "2026-06-18T03:11:42.539Z",
+        "image_count": 4,
+        "platform_visible_confirmation": "Threads Graph readback returned permalink, CAROUSEL_ALBUM, and 4 children."
+      }
     }
   ],
   "etsy": {
@@ -522,5 +587,44 @@
       "local HTTP campaign shell/manifest smoke"
     ],
     "warning": "npm run social:springboards:validate fails on pre-existing 2026-05-27 Ronda campaign IDs missing from the public catalog; 2026-06-18 campaign IDs passed targeted catalog validation."
-  }
+  },
+  "published": {
+    "facebook": {
+      "status": "published",
+      "post_id": "1146747141854670_122106813837334672",
+      "permalink": "https://www.facebook.com/122102168061334672/posts/122106813837334672",
+      "published_at": "2026-06-18T03:08:46+0000",
+      "verified_at": "2026-06-18T03:11:42.539Z",
+      "account": "Photos By Elie",
+      "image_count": 8,
+      "platform_visible_confirmation": "Graph API readback returned permalink and 8 photo subattachments."
+    },
+    "instagram": {
+      "status": "published",
+      "media_id": "18086862326421861",
+      "permalink": "https://www.instagram.com/p/DZti3H7DBrm/",
+      "username": "ec92009",
+      "media_type": "CAROUSEL_ALBUM",
+      "published_at": "2026-06-18T03:10:02+0000",
+      "verified_at": "2026-06-18T03:11:42.539Z",
+      "image_count": 8,
+      "platform_visible_confirmation": "Instagram Graph readback returned permalink, CAROUSEL_ALBUM, and 8 children."
+    },
+    "threads": {
+      "status": "published",
+      "media_id": "17913812610405033",
+      "permalink": "https://www.threads.com/@ec92009/post/DZti8A8DNYu",
+      "username": "ec92009",
+      "media_type": "CAROUSEL_ALBUM",
+      "published_at": "2026-06-18T03:10:48+0000",
+      "verified_at": "2026-06-18T03:11:42.539Z",
+      "image_count": 4,
+      "platform_visible_confirmation": "Threads Graph readback returned permalink, CAROUSEL_ALBUM, and 4 children."
+    }
+  },
+  "blockers": [
+    "Pinterest remains prepared only because no Pinterest token/board ID mapping is configured.",
+    "Etsy review packages generated, but no drafts created because current tooling cannot upload and verify listing image plus buyer file per draft.",
+    "Custom-domain /VERSION was still cached at 109.1 immediately after push, while the new campaign manifests returned HTTP 200."
+  ]
 }

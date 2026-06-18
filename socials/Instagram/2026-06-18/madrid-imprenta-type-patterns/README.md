@@ -20,3 +20,10 @@ Madrid Imprenta Municipal in eight frames: type, ink, machinery, and paper textu
 - 6. `20180522-1044-00819-c52a428a92` - https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1044-00819-c52a428a92_1800.jpg - socials/Instagram/2026-06-18/madrid-imprenta-type-patterns/images/06-20180522-1044-00819-c52a428a92-madrid-imprenta-type-patterns.jpg
 - 7. `20180522-1042-00817-442053ee3d` - https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1042-00817-442053ee3d_1800.jpg - socials/Instagram/2026-06-18/madrid-imprenta-type-patterns/images/07-20180522-1042-00817-442053ee3d-madrid-imprenta-type-patterns.jpg
 - 8. `20180522-1043-00818-26094a4b97` - https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1043-00818-26094a4b97_1800.jpg - socials/Instagram/2026-06-18/madrid-imprenta-type-patterns/images/08-20180522-1043-00818-26094a4b97-madrid-imprenta-type-patterns.jpg
+
+## Published
+
+- Status: published
+- URL: https://www.instagram.com/p/DZti3H7DBrm/
+- Verified at: 2026-06-18T03:11:42.539Z
+- Image count: 8

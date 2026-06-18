@@ -1,7 +1,7 @@
 {
   "date": "2026-06-18",
   "platform": "Facebook",
-  "status": "prepared",
+  "status": "published",
   "account": "Photos By Elie",
   "post_type": "multi_photo",
   "title": "Granada Alhambra Tile Light",
@@ -142,5 +142,25 @@
       "image": "images/08-20240517-132621-00251-bb146fc20e-granada-alhambra-tile-light.jpg",
       "local_staged_path": "socials/Facebook/2026-06-18/granada-alhambra-tile-light/images/08-20240517-132621-00251-bb146fc20e-granada-alhambra-tile-light.jpg"
     }
-  ]
+  ],
+  "published": {
+    "status": "published",
+    "post_id": "1146747141854670_122106813837334672",
+    "permalink": "https://www.facebook.com/122102168061334672/posts/122106813837334672",
+    "published_at": "2026-06-18T03:08:46+0000",
+    "verified_at": "2026-06-18T03:11:42.539Z",
+    "account": "Photos By Elie",
+    "image_count": 8,
+    "platform_visible_confirmation": "Graph API readback returned permalink and 8 photo subattachments."
+  },
+  "verification": {
+    "status": "published",
+    "post_id": "1146747141854670_122106813837334672",
+    "permalink": "https://www.facebook.com/122102168061334672/posts/122106813837334672",
+    "published_at": "2026-06-18T03:08:46+0000",
+    "verified_at": "2026-06-18T03:11:42.539Z",
+    "account": "Photos By Elie",
+    "image_count": 8,
+    "platform_visible_confirmation": "Graph API readback returned permalink and 8 photo subattachments."
+  }
 }

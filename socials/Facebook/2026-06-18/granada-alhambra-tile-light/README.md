@@ -18,3 +18,10 @@ Granada Alhambra tile light in eight frames: carved stone, patterned surfaces, g
 - 6. `20240517-131412-00222-a1ab6808eb` - https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240517-131412-00222-a1ab6808eb_1800.jpg - socials/Facebook/2026-06-18/granada-alhambra-tile-light/images/06-20240517-131412-00222-a1ab6808eb-granada-alhambra-tile-light.jpg
 - 7. `20240517-130602-00153-30d3e33c68` - https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240517-130602-00153-30d3e33c68_1800.jpg - socials/Facebook/2026-06-18/granada-alhambra-tile-light/images/07-20240517-130602-00153-30d3e33c68-granada-alhambra-tile-light.jpg
 - 8. `20240517-132621-00251-bb146fc20e` - https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240517-132621-00251-bb146fc20e_1800.jpg - socials/Facebook/2026-06-18/granada-alhambra-tile-light/images/08-20240517-132621-00251-bb146fc20e-granada-alhambra-tile-light.jpg
+
+## Published
+
+- Status: published
+- URL: https://www.facebook.com/122102168061334672/posts/122106813837334672
+- Verified at: 2026-06-18T03:11:42.539Z
+- Image count: 8

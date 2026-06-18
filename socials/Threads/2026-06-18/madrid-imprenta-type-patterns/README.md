@@ -14,3 +14,10 @@ Madrid Imprenta Municipal: four frames of type, ink, machinery, and paper textur
 - 2. `20180522-1047-00822-a87196398e` - https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1047-00822-a87196398e_1800.jpg - socials/Threads/2026-06-18/madrid-imprenta-type-patterns/images/02-20180522-1047-00822-a87196398e-madrid-imprenta-type-patterns.jpg
 - 3. `20180522-1052-00827-35836a2a52` - https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1052-00827-35836a2a52_1800.jpg - socials/Threads/2026-06-18/madrid-imprenta-type-patterns/images/03-20180522-1052-00827-35836a2a52-madrid-imprenta-type-patterns.jpg
 - 4. `20180522-1047-00824-e31889ddcd` - https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1047-00824-e31889ddcd_1800.jpg - socials/Threads/2026-06-18/madrid-imprenta-type-patterns/images/04-20180522-1047-00824-e31889ddcd-madrid-imprenta-type-patterns.jpg
+
+## Published
+
+- Status: published
+- URL: https://www.threads.com/@ec92009/post/DZti8A8DNYu
+- Verified at: 2026-06-18T03:11:42.539Z
+- Image count: 4

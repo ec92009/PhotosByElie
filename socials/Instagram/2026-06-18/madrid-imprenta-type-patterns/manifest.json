@@ -1,7 +1,7 @@
 {
   "date": "2026-06-18",
   "platform": "Instagram",
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "title": "Madrid Imprenta Type Patterns",
@@ -143,5 +143,27 @@
       "image": "images/08-20180522-1043-00818-26094a4b97-madrid-imprenta-type-patterns.jpg",
       "local_staged_path": "socials/Instagram/2026-06-18/madrid-imprenta-type-patterns/images/08-20180522-1043-00818-26094a4b97-madrid-imprenta-type-patterns.jpg"
     }
-  ]
+  ],
+  "published": {
+    "status": "published",
+    "media_id": "18086862326421861",
+    "permalink": "https://www.instagram.com/p/DZti3H7DBrm/",
+    "username": "ec92009",
+    "media_type": "CAROUSEL_ALBUM",
+    "published_at": "2026-06-18T03:10:02+0000",
+    "verified_at": "2026-06-18T03:11:42.539Z",
+    "image_count": 8,
+    "platform_visible_confirmation": "Instagram Graph readback returned permalink, CAROUSEL_ALBUM, and 8 children."
+  },
+  "verification": {
+    "status": "published",
+    "media_id": "18086862326421861",
+    "permalink": "https://www.instagram.com/p/DZti3H7DBrm/",
+    "username": "ec92009",
+    "media_type": "CAROUSEL_ALBUM",
+    "published_at": "2026-06-18T03:10:02+0000",
+    "verified_at": "2026-06-18T03:11:42.539Z",
+    "image_count": 8,
+    "platform_visible_confirmation": "Instagram Graph readback returned permalink, CAROUSEL_ALBUM, and 8 children."
+  }
 }

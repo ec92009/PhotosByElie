@@ -76,6 +76,58 @@ function itemIds(row) {
     .filter(Boolean);
 }
 
+function packageItems(row) {
+  return Array.isArray(row.media) ? row.media : Array.isArray(row.items) ? row.items : [];
+}
+
+function publishedUrl(row) {
+  return row.published_url
+    || row.published?.permalink
+    || row.verification?.permalink
+    || "";
+}
+
+function assertPlatformImageCounts(row, errors) {
+  const count = packageItems(row).length;
+  const platform = String(row.platform || "").toLowerCase();
+  if (platform === "pinterest" && count !== 5) {
+    errors.push(`${row.date} ${row.platform}: Pinterest packages must contain exactly 5 images; found ${count}.`);
+  }
+  if ((platform === "facebook" || platform === "instagram") && (count < 5 || count > 10)) {
+    errors.push(`${row.date} ${row.platform}: Facebook and Instagram packages must contain 5-10 images; found ${count}.`);
+  }
+  if (platform === "threads" && (count < 3 || count > 4)) {
+    errors.push(`${row.date} ${row.platform}: Threads packages must contain 3-4 images; found ${count}.`);
+  }
+}
+
+function packageDirFromRow(row) {
+  const item = packageItems(row).find((candidate) => candidate.local_staged_path);
+  if (!item) return "";
+  return path.dirname(path.dirname(path.join(REPO_ROOT, item.local_staged_path)));
+}
+
+function assertCurrentPackageArtifacts(row, errors) {
+  const packageDir = packageDirFromRow(row);
+  if (!packageDir) {
+    errors.push(`${row.date} ${row.platform}: package items do not record local_staged_path values.`);
+    return;
+  }
+  for (const file of ["manifest.json", "caption.txt", "README.md"]) {
+    if (!fs.existsSync(path.join(packageDir, file))) {
+      errors.push(`${row.date} ${row.platform}: missing staged ${path.relative(REPO_ROOT, path.join(packageDir, file))}.`);
+    }
+  }
+  for (const item of packageItems(row)) {
+    if (!item.local_staged_path || !fs.existsSync(path.join(REPO_ROOT, item.local_staged_path))) {
+      errors.push(`${row.date} ${row.platform}: missing staged image for ${item.media_id || item.id || "(unknown)"}.`);
+    }
+  }
+  if (!publishedUrl(row) && (!Array.isArray(row.manual_blockers) || row.manual_blockers.length === 0)) {
+    errors.push(`${row.date} ${row.platform}: package records neither a published URL nor explicit manual blockers.`);
+  }
+}
+
 function assertFirstPartyUrl(row, campaignId, errors) {
   let url;
   try {
@@ -105,8 +157,9 @@ function assertNoPrivateReferences(campaign, context, errors) {
   });
 }
 
-function validateCampaignRow({ row, campaignId, photoIndex, mediaConfig, indexCampaignIds, errors }) {
+function validateCampaignRow({ row, campaignId, photoIndex, mediaConfig, indexCampaignIds, enforceCurrentCatalog, errors }) {
   const campaignPath = path.join(CAMPAIGN_DIR, `${campaignId}.json`);
+  assertPlatformImageCounts(row, errors);
   if (!campaignId) {
     errors.push(`${row.date} ${row.platform}: missing campaign id.`);
     return;
@@ -133,7 +186,9 @@ function validateCampaignRow({ row, campaignId, photoIndex, mediaConfig, indexCa
   for (const id of primaryIds) {
     const entry = photoIndex.get(id);
     if (!entry) {
-      errors.push(`${campaignId}: primary photo ${id} is not in the public catalog.`);
+      if (enforceCurrentCatalog) {
+        errors.push(`${campaignId}: primary photo ${id} is not in the public catalog.`);
+      }
       continue;
     }
     if (!publicPreviewUrl(entry.photo, mediaConfig)) {
@@ -193,7 +248,9 @@ const latestIds = new Set();
 for (const row of rows) {
   const campaignId = campaignIdFrom(row);
   if (row.date === latestDate && campaignId) latestIds.add(campaignId);
-  validateCampaignRow({ row, campaignId, photoIndex, mediaConfig, indexCampaignIds, errors });
+  const enforceCurrentCatalog = row.date === latestDate;
+  validateCampaignRow({ row, campaignId, photoIndex, mediaConfig, indexCampaignIds, enforceCurrentCatalog, errors });
+  if (row.date === latestDate) assertCurrentPackageArtifacts(row, errors);
 }
 
 if (latestIds.size < 3) {

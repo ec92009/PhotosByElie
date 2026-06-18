@@ -12,7 +12,8 @@
   "available_count": 4,
   "notes": [
     "Threads package is a 4-image subset derived from the Instagram Madrid Imprenta carousel.",
-    "Remove any automatic link preview if it shows generic campaign metadata."
+    "Remove any automatic link preview if it shows generic campaign metadata.",
+    "Images are public watermarked R2 previews staged for upload/API publishing."
   ],
   "items": [
     {
@@ -24,8 +25,8 @@
       "location": "Madrid, Comunidad de Madrid, Spain",
       "width": 1800,
       "height": 1200,
-      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1053-00829-6b0491a51f_1800.jpg",
-      "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1053-00829-6b0491a51f_1800.jpg",
+      "source_url": "https://download.photos-by-elie.com/media/expo/20180522-1053-00829-6b0491a51f_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/20180522-1053-00829-6b0491a51f_1800.jpg",
       "photo_url": "https://photos-by-elie.com/photo.html?id=20180522-1053-00829-6b0491a51f",
       "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180522-1053-00829-6b0491a51f",
       "image": "images/01-20180522-1053-00829-6b0491a51f-madrid-imprenta-type-patterns.jpg",
@@ -40,8 +41,8 @@
       "location": "Madrid, Comunidad de Madrid, Spain",
       "width": 1800,
       "height": 1200,
-      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1047-00822-a87196398e_1800.jpg",
-      "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1047-00822-a87196398e_1800.jpg",
+      "source_url": "https://download.photos-by-elie.com/media/expo/20180522-1047-00822-a87196398e_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/20180522-1047-00822-a87196398e_1800.jpg",
       "photo_url": "https://photos-by-elie.com/photo.html?id=20180522-1047-00822-a87196398e",
       "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180522-1047-00822-a87196398e",
       "image": "images/02-20180522-1047-00822-a87196398e-madrid-imprenta-type-patterns.jpg",
@@ -56,8 +57,8 @@
       "location": "Madrid, Comunidad de Madrid, Spain",
       "width": 1800,
       "height": 1200,
-      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1052-00827-35836a2a52_1800.jpg",
-      "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1052-00827-35836a2a52_1800.jpg",
+      "source_url": "https://download.photos-by-elie.com/media/expo/20180522-1052-00827-35836a2a52_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/20180522-1052-00827-35836a2a52_1800.jpg",
       "photo_url": "https://photos-by-elie.com/photo.html?id=20180522-1052-00827-35836a2a52",
       "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180522-1052-00827-35836a2a52",
       "image": "images/03-20180522-1052-00827-35836a2a52-madrid-imprenta-type-patterns.jpg",
@@ -72,8 +73,8 @@
       "location": "Madrid, Comunidad de Madrid, Spain",
       "width": 1800,
       "height": 1200,
-      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1047-00824-e31889ddcd_1800.jpg",
-      "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1047-00824-e31889ddcd_1800.jpg",
+      "source_url": "https://download.photos-by-elie.com/media/expo/20180522-1047-00824-e31889ddcd_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/20180522-1047-00824-e31889ddcd_1800.jpg",
       "photo_url": "https://photos-by-elie.com/photo.html?id=20180522-1047-00824-e31889ddcd",
       "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180522-1047-00824-e31889ddcd",
       "image": "images/04-20180522-1047-00824-e31889ddcd-madrid-imprenta-type-patterns.jpg",
@@ -102,5 +103,7 @@
     "verified_at": "2026-06-18T03:11:42.539Z",
     "image_count": 4,
     "platform_visible_confirmation": "Threads Graph readback returned permalink, CAROUSEL_ALBUM, and 4 children."
-  }
+  },
+  "manual_blockers": [],
+  "published_url": "https://www.threads.com/@ec92009/post/DZti8A8DNYu"
 }

@@ -269,12 +269,16 @@ node scripts/validate_publish.js --summary
 
 ## Social Post Packages
 
-`generate_social_post_packages.mjs` turns the latest weekly Social Asset Queue in `DAVID2MAX.md` into ready-to-review posting kits for Instagram, Facebook, and Pinterest. It writes JSON plus a readable Markdown brief under `assets/owner-actions/social-post-packages/<date>/` and leaves actual posting disabled until platform credentials, account permissions, board mapping, and token storage are configured.
+`finalize_social_prepost_package.mjs` is the daily pre-post target finalizer. It reads the current `daily-social-package.json`, normalizes public preview URLs from `media-config.js`, creates or refreshes first-party campaign springboards, stages `socials/{Platform}/YYYY-MM-DD/{theme}/` upload folders with images, captions, READMEs, and manifests, derives a 3-4 image Threads package from Instagram when needed, records published URLs or manual blockers, and rebuilds `assets/campaigns/index.json`.
+
+`generate_social_post_packages.mjs` is the older DAVID2MAX Social Asset Queue draft helper. Use `npm run social:packages:queue` when you need that legacy queue-to-brief path.
 
 `etsy_outlet.mjs` turns a first-party campaign into an ignored local Etsy outlet package under `assets/owner-actions/etsy-listing-packages/<date>/<campaign>/`. It uses only public catalog rows, public R2 watermarked previews, and first-party campaign/photo URLs. By default it writes review payloads only for the `jpg-6mp` digital download lane; Etsy draft creation requires explicit `--create-drafts --confirm-create-drafts` plus a confirmed taxonomy id. Later POD or physical print lanes also require the appropriate shipping profile, readiness profile, production partner/material setup, and owner approval before draft creation.
 
 ```bash
 npm run social:packages
+npm run social:packages -- --date 2026-06-18
+npm run social:packages -- --date 2026-06-18 --dry-run
 ```
 
 Pinterest should be treated as a publishing target, not the canonical asset store. When a Pinterest work folder exists under `socials/Pinterest/<date>/`, build the first-party download kit instead of trying to download assets back from Pinterest's embedded browser UI:
@@ -338,8 +342,8 @@ For Instagram API with Instagram Login, generate the Instagram account token fro
 Useful options:
 
 ```bash
-node scripts/generate_social_post_packages.mjs --date 2026-05-13 --limit 3
-node scripts/generate_social_post_packages.mjs --dry-run
+npm run social:packages:queue -- --date 2026-05-13 --limit 3
+npm run social:packages:queue -- --dry-run
 ```
 
 ## Owner Title / Keyword Review Queue

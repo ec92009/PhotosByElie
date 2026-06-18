@@ -4,7 +4,7 @@ Last updated: 2026-06-18
 
 ## Current Facts
 
-- Current visible build: `v110.4`.
+- Current visible build: `v110.5`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`.
 - Local Owner page: use the Dock launcher or the active helper port near 8000, currently `http://localhost:8000/owner.html?v=90.13`.
 - Public slideshow music app: `https://ec92009.github.io/PhotosByElie/slideshow-music.html?v=90.13`.
@@ -92,13 +92,13 @@ Last updated: 2026-06-18
 - `v90.13` removes the property-name prefix from default Real Estate photo titles, strips older prefixed defaults in the viewer/output path, makes the Real Estate fixed header match the page panel opacity more closely, and limits the desktop bottom action bar to actions that apply to the current wizard step.
 - Price and offer strategy draft: `docs/commerce/PRICE_OFFER_STRATEGY.md`; no live price change has been made from that draft yet.
 - First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
-- Latest checkpoint is `v110.4`; this file remains the numbered backlog source of truth.
+- Latest checkpoint is `v110.5`; this file remains the numbered backlog source of truth.
 - New import/re-export rule requested by Owner: the durable import anchor should be the full source pathname plus the source modified date. If only the modified date changes for the same source path, the new render should overwrite the older stored forms instead of creating a duplicate media row.
 - Italy audit detail: the 25 first restored rows came from `2025 Florence`, `2025 San Gimignano`, and `2025 Pisa`. The 10 Italy rows from the older phone-export folder `Pisa, 12 May 2025` were restored in `v86.10` using their original `2024 Pisa/Pisa, 12 May 2025` relative paths and IDs. The broader same-path overwrite/de-dupe work remains open because arbitrary selected-root imports can still derive duplicate IDs.
 - Current source-path tombstone audit found `0` manifest dodgers and `0` current R2 dodgers from `4,699` discarded IDs and `301` recovered discarded source paths. Current Camera eligibility audit found `10` ineligible raw import-cache rows and `0` current R2 objects after cleanup.
-- Daily social-post automation `pbe-daily-social-posts` is active at 09:00 local time. It prepares three different daily themes for Facebook, Instagram, and Pinterest, with 5-10 watermarked public images for Facebook/Instagram and exactly 5 for Pinterest because Pinterest accepts only 5 photos at a time. It now should prepare first-party springboard/campaign targets before posting, stage drag-ready `socials/{Platform}/YYYY-MM-DD/{theme-slug}/` upload trees, and publish only when existing authentication allows it.
+- Daily social-post automation `pbe-daily-social-posts` is active at 09:00 local time. It prepares three different daily themes for Facebook, Instagram, and Pinterest, then `npm run social:packages -- --date YYYY-MM-DD` finalizes first-party campaign targets, stages drag-ready `socials/{Platform}/YYYY-MM-DD/{theme-slug}/` upload trees with images/captions/READMEs/manifests, derives Threads when useful, records published URLs or manual blockers, and publishes only when existing authentication allows it.
 - The 2026-05-25 package is prepared from public R2 previews only: Facebook `Albi River and Brick Cathedral` has 8 images, Instagram `Madrid Chapels and Courtyards` has 10 images, Pinterest `Northern Portugal Green Horizons` has exactly 5 images, and a 4-image Threads Madrid variant is staged. Threads onboarding was completed through the Instagram login and the first Threads test post was manually posted from Chrome, but no platform URL was captured.
-- Today's social packages use broad gallery URLs because no focused public campaign pages were created in that run. The next public-site/social pass should create conservative first-party springboards before posting, then apply the versioning SOP and validation before using those URLs publicly.
+- Current social packages use first-party campaign springboards; older broad-gallery packages remain historical artifacts.
 - Apple Photos with faces remains off limits.
 - `npm test`, `npm run validate`, syntax checks, browser checks, and `git diff --check` remain mandatory before publishing public-site changes.
 
@@ -128,67 +128,62 @@ Last updated: 2026-06-18
    - Use only public catalog data and watermarked public previews.
    - Apply visible-site versioning, validation, commit, and push before using URLs in posts.
 
-6. **Turn daily social automation into a full pre-post target builder.**
-   - Before posting, choose or create the best first-party URL, then stage platform upload folders with images, captions, README, and manifest.
-   - Keep Pinterest exactly five images; keep Facebook/Instagram at 5-10; derive Threads 3-4 image variants from Instagram when useful.
-   - Record published URLs or explicit manual blockers in each package.
-
-7. **Bring Etsy listing publishing online.**
+6. **Bring Etsy listing publishing online.**
    - Etsy approved the `photosbyelie-listing-publisher` API integration on 2026-06-01.
    - Etsy approved the shop-name change to `PhotosByElieShop` on 2026-06-02, and the API shop record now reports shop `42422777` at `https://www.etsy.com/shop/PhotosByElieShop` with `0` active listings.
    - Keep the Etsy keystring/shared secret and OAuth tokens outside git; local OAuth and API smoke checks are already proven.
    - Build the first listing-publisher pass as dry-run/draft payload generation from public catalog data, campaign/gallery URLs, and watermarked public previews only.
 
-8. **Finish source re-export de-duplication and cleanup.**
+7. **Finish source re-export de-duplication and cleanup.**
    - Use full source pathname plus modified date as the import anchor.
    - Same-path newer exports should overwrite previous generated masters, public previews, and private JPG triplets instead of creating duplicates.
    - Audit duplicate candidates and prepare a reversible cleanup before deleting anything.
 
-9. **Add import source history management.**
+8. **Add import source history management.**
    - Let Owner remove missing or stale remembered folders, pin favorites, and inspect last-used path/time before starting a run.
    - Include a one-time review of legacy entries saved before `v83.24`.
    - Keep `Owner.sqlite` authoritative; do not add another JSON state source.
 
-10. **Review buyer support, refund, and license wording.**
+9. **Review buyer support, refund, and license wording.**
    - Use `docs/commerce/PRICE_OFFER_STRATEGY.md` as the current policy draft.
    - Keep Stripe receipts as payment records and PhotosByElie order/support pages as delivery/recovery records.
 
-11. **Approve and deploy the real price and offer strategy.**
+10. **Approve and deploy the real price and offer strategy.**
    - Review the proposed camera and AI price ladders.
    - After approval, update pricing, regenerate catalog/Worker artifacts, bump the visible version, deploy the Worker, and run one low-value live proof purchase.
 
-12. **Curate the first sellable storefront.**
+11. **Curate the first sellable storefront.**
    - Apply strong title/keyword approvals, block unsellable rows, pick featured collections, and put the strongest commercial/travel/editorial sets first.
 
-13. **Improve public discovery and SEO.**
+12. **Improve public discovery and SEO.**
    - Add fuzzy search, richer metadata, Open Graph images, canonical URLs, structured data, and per-campaign/per-gallery metadata without Owner-only details.
 
-14. **Owner decision pass for the current title/keyword queue.**
+13. **Owner decision pass for the current title/keyword queue.**
    - Open `owner-review.html?view=title-keywords` locally and review the active proposed rows, starting with batch `2026-05-24-000237-818Z`.
    - Resolve rejected and parked rows before the next large generator pass.
 
-15. **Verify Owner-private artifact separation after deploy.**
+14. **Verify Owner-private artifact separation after deploy.**
    - Confirm GitHub Pages does not serve private Owner review JSON or secrets.
    - Keep `Owner.sqlite` as durable state and treat review JSON as compatibility/audit output.
 
-16. **Run the next title/keyword generator pass after review.**
+15. **Run the next title/keyword generator pass after review.**
    - Use the improved keyword floor, larger subprocess buffer, and batch-summary preservation.
    - Compare misses and context-needed counts against `2026-05-24-000237-818Z`.
 
-17. **Harden hidden/discarded lifecycle.**
+16. **Harden hidden/discarded lifecycle.**
    - Make H/X, undo, Waste Basket, discard, R2 public wipe, and catalog rebuilds share one durable state flow.
    - Avoid publishing partial hidden/discarded state.
 
-18. **Keep repo and media cleanup deliberate.**
+17. **Keep repo and media cleanup deliberate.**
    - Do not use GitHub as a media vault. Keep root HTML while GitHub Pages serves from repo root.
 
-19. **Add a guarded checkout discount code for low-cost live payment rehearsals.**
+18. **Add a guarded checkout discount code for low-cost live payment rehearsals.**
    - Add a coupon/discount entry point in the basket or checkout flow so Owner can exercise basket, Stripe Checkout, webhooks, order recovery, downloads, and delivery emails without repeatedly paying full live prices.
    - Keep validation server-side in the checkout Worker, preferably backed by secret/allowlisted test codes or Stripe promotion codes rather than trusting browser-submitted discounts.
    - Preserve the Stripe minimum-charge floor, the stale-basket subtotal guard, and product availability checks; never let a public code create accidental free live checkouts.
    - Record original subtotal, discount code, discount amount, and paid total in the order record, support tooling, and tests so discounted proof purchases remain auditable.
 
-20. **Check Real Estate email delivery coverage.**
+19. **Check Real Estate email delivery coverage.**
    - Audit whether Real Estate originals sessions, saved PDF/video deliverables, and future cloud assembly jobs send any client-facing email today.
    - Decide which Real Estate events should email the client versus only updating the in-page saved-product shelf.
    - If email is needed, reuse the Resend/Worker delivery-email path with Real Estate-specific wording, client/property context, human-friendly link availability, and no misleading "backup" language.

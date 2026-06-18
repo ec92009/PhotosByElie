@@ -547,6 +547,22 @@ python3 scripts/cleanup_classified_unknowns_public_r2.py --dry-run
 
 Run it only after confirming no public/private R2 upload lane is active. The script checks for active R2 writer processes and the shared throttle lock before making changes.
 
+## Local Ignored Cleanup
+
+`clean_local_ignored.py` is the safe repo-housekeeping helper for ignored scratch files. It defaults to a dry run, archives borderline artifacts under `../PhotosByElie-local-archive/`, and refuses to touch protected local state such as `assets/owner-actions/Owner.sqlite`, `.env.stripe-test.local`, `assets/hidden/`, Pixelmator edit folders, and active Owner review/config folders.
+
+Preview cleanup:
+
+```bash
+python3 scripts/clean_local_ignored.py
+```
+
+Apply the allowlisted cleanup:
+
+```bash
+python3 scripts/clean_local_ignored.py --apply
+```
+
 ## Local Asset Sync
 
 `sync_local_assets.py` moves ignored local review state between the David and Max checkouts. It syncs Hidden JSON state and `.review-logs` by default. The disposable import cache under `tmp/import-cache` should be rebuilt or uploaded, not handed off through Git. The tracked public metadata should normally move through Git.

@@ -24,7 +24,7 @@
     }
   ],
   "cloudPdfWorkflow": {
-    "assembly": "Cloud service receives selected media ids grouped by apartment project plus edited titles, then generates one PDF or slideshow per project on demand. Videos keep source duration in slideshow output and use the 10% still frame in PDFs.",
+    "assembly": "Cloud service receives selected media ids grouped by apartment project plus edited titles, then generates one PDF or slideshow per project on demand. Slideshows choose one single-guitar cue at random, keep generated music at 0 dB, mix source video audio 20 dB lower, and carry music credit metadata for an end-card only when a track requires it; videos keep source duration in slideshow output and use the 10% still frame in PDFs.",
     "batchManifest": {
       "batchIdFormat": "YYYYMMDDTHHMMSSZ",
       "itemFields": [
@@ -41,7 +41,10 @@
         "sourceDurationSeconds",
         "projectId",
         "projectTitle",
-        "projectIds"
+        "projectIds",
+        "transition",
+        "effect",
+        "outputTreatment"
       ],
       "projectFields": [
         "projectId",
@@ -103,7 +106,7 @@
         ],
         "schema": "photosbyelie.realEstatePdfBatch.v1",
         "sourceBatchId": "",
-        "sourceImportGeneratedAt": "2026-05-18T18:02:22+00:00"
+        "sourceImportGeneratedAt": "2026-06-18T13:41:25+00:00"
       }
     },
     "cloudImageKeyField": "cloudPdfSource.publicKey",
@@ -112,6 +115,83 @@
     "mode": "one-output-per-project",
     "projectStoreKey": "photosbyelie-real-estate-projects-Elie-gallery",
     "selectionStoreKey": "photosbyelie-real-estate-liked-Elie-gallery",
+    "slideshowMusic": {
+      "creditPolicy": {
+        "durationSeconds": 4,
+        "note": "CC0/public-domain tracks do not require attribution, but per-track source and license metadata can be carried into video manifests when needed.",
+        "renderPolicy": "append-end-card-when-required",
+        "requiredField": "creditRequired",
+        "textField": "creditText"
+      },
+      "musicGainDb": 0,
+      "schema": "photosbyelie.realEstateSlideshowMusic.v1",
+      "selection": "random-from-single-guitar-pool",
+      "sourceVideoAudioGainDb": -20,
+      "sourceVideoAudioLinearGain": 0.1,
+      "tracks": [
+        {
+          "bpm": 82,
+          "duration": 113.02,
+          "src": "./assets/music/slideshow-guitar/quiet-linden-study-single-guitar-113s.mp3",
+          "title": "Quiet Linden Study"
+        },
+        {
+          "bpm": 86,
+          "duration": 107.847,
+          "src": "./assets/music/slideshow-guitar/warm-balcony-theme-single-guitar-107s.mp3",
+          "title": "Warm Balcony Theme"
+        },
+        {
+          "bpm": 88,
+          "duration": 105.436,
+          "src": "./assets/music/slideshow-guitar/open-house-aria-single-guitar-104s.mp3",
+          "title": "Open House Aria"
+        },
+        {
+          "bpm": 80,
+          "duration": 115.8,
+          "src": "./assets/music/slideshow-guitar/cedar-stairwell-single-guitar-116s.mp3",
+          "title": "Cedar Stairwell"
+        },
+        {
+          "bpm": 84,
+          "duration": 110.371,
+          "src": "./assets/music/slideshow-guitar/terrace-in-c-single-guitar-109s.mp3",
+          "title": "Terrace in C"
+        },
+        {
+          "bpm": 90,
+          "duration": 103.133,
+          "src": "./assets/music/slideshow-guitar/window-light-etude-single-guitar-103s.mp3",
+          "title": "Window Light Etude"
+        },
+        {
+          "bpm": 82,
+          "duration": 113.02,
+          "src": "./assets/music/slideshow-guitar/blue-hour-listing-single-guitar-112s.mp3",
+          "title": "Blue Hour Listing"
+        },
+        {
+          "bpm": 86,
+          "duration": 107.847,
+          "src": "./assets/music/slideshow-guitar/ivory-courtyard-single-guitar-106s.mp3",
+          "title": "Ivory Courtyard"
+        },
+        {
+          "bpm": 84,
+          "duration": 110.371,
+          "src": "./assets/music/slideshow-guitar/sunday-parlor-single-guitar-108s.mp3",
+          "title": "Sunday Parlor"
+        },
+        {
+          "bpm": 90,
+          "duration": 103.133,
+          "src": "./assets/music/slideshow-guitar/soft-key-return-single-guitar-101s.mp3",
+          "title": "Soft Key Return"
+        }
+      ],
+      "transition": "subtle-centered-ken-burns"
+    },
     "titleField": "editableTitle",
     "titleStoreKey": "photosbyelie-real-estate-titles-Elie-gallery"
   },
@@ -120,8 +200,10 @@
     "name": "Elie",
     "username": "Elie"
   },
+  "deliverables": [],
   "gallery": {
     "accent": "spain",
+    "deliverables": [],
     "description": "Private real-estate selection gallery for project PDF and slideshow assembly.",
     "key": "Elie-gallery",
     "photos": [
@@ -130,6 +212,7 @@
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "566262",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 406795,
@@ -141,9 +224,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010601-1011-34463_1800.jpg",
-          "title": "Carlsbad - 01"
+          "title": "01"
         },
-        "editableTitle": "Carlsbad - 01",
+        "editableTitle": "01",
         "full": "20010601 1011 34463.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010601-1011-34463_900.jpg",
         "id": "elie-carlsbad-20010601-1011-34463",
@@ -195,13 +278,14 @@
           }
         ],
         "sortIndex": 1,
-        "title": "Carlsbad - 01"
+        "title": "01"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "3D4F4A",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 336896,
@@ -213,9 +297,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010601-1011-34535_1800.jpg",
-          "title": "Carlsbad - 02"
+          "title": "02"
         },
-        "editableTitle": "Carlsbad - 02",
+        "editableTitle": "02",
         "full": "20010601 1011 34535.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010601-1011-34535_900.jpg",
         "id": "elie-carlsbad-20010601-1011-34535",
@@ -267,13 +351,14 @@
           }
         ],
         "sortIndex": 2,
-        "title": "Carlsbad - 02"
+        "title": "02"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "646D65",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 404083,
@@ -285,9 +370,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010501-0000-34488_1800.jpg",
-          "title": "Carlsbad - 03"
+          "title": "03"
         },
-        "editableTitle": "Carlsbad - 03",
+        "editableTitle": "03",
         "full": "20010501 0000 34488.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010501-0000-34488_900.jpg",
         "id": "elie-carlsbad-20010501-0000-34488",
@@ -339,13 +424,14 @@
           }
         ],
         "sortIndex": 3,
-        "title": "Carlsbad - 03"
+        "title": "03"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "A5ACAE",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 381084,
@@ -357,9 +443,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010501-0454-34388_1800.jpg",
-          "title": "Carlsbad - 04"
+          "title": "04"
         },
-        "editableTitle": "Carlsbad - 04",
+        "editableTitle": "04",
         "full": "20010501 0454 34388.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010501-0454-34388_900.jpg",
         "id": "elie-carlsbad-20010501-0454-34388",
@@ -411,13 +497,14 @@
           }
         ],
         "sortIndex": 4,
-        "title": "Carlsbad - 04"
+        "title": "04"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "A4A197",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 385818,
@@ -429,9 +516,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010501-0454-34438_1800.jpg",
-          "title": "Carlsbad - 05"
+          "title": "05"
         },
-        "editableTitle": "Carlsbad - 05",
+        "editableTitle": "05",
         "full": "20010501 0454 34438.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010501-0454-34438_900.jpg",
         "id": "elie-carlsbad-20010501-0454-34438",
@@ -483,13 +570,14 @@
           }
         ],
         "sortIndex": 5,
-        "title": "Carlsbad - 05"
+        "title": "05"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "808071",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 484494,
@@ -501,9 +589,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010410-0454-31612_1800.jpg",
-          "title": "Carlsbad - 06"
+          "title": "06"
         },
-        "editableTitle": "Carlsbad - 06",
+        "editableTitle": "06",
         "full": "20010410 0454 31612.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010410-0454-31612_900.jpg",
         "id": "elie-carlsbad-20010410-0454-31612",
@@ -555,13 +643,14 @@
           }
         ],
         "sortIndex": 6,
-        "title": "Carlsbad - 06"
+        "title": "06"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "958F7E",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 478133,
@@ -573,9 +662,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010410-0454-34419_1800.jpg",
-          "title": "Carlsbad - 07"
+          "title": "07"
         },
-        "editableTitle": "Carlsbad - 07",
+        "editableTitle": "07",
         "full": "20010410 0454 34419.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010410-0454-34419_900.jpg",
         "id": "elie-carlsbad-20010410-0454-34419",
@@ -627,13 +716,14 @@
           }
         ],
         "sortIndex": 7,
-        "title": "Carlsbad - 07"
+        "title": "07"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "747167",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 336755,
@@ -645,9 +735,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010609-1601-34423_1800.jpg",
-          "title": "Carlsbad - 08"
+          "title": "08"
         },
-        "editableTitle": "Carlsbad - 08",
+        "editableTitle": "08",
         "full": "20010609 1601 34423.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010609-1601-34423_900.jpg",
         "id": "elie-carlsbad-20010609-1601-34423",
@@ -699,13 +789,14 @@
           }
         ],
         "sortIndex": 8,
-        "title": "Carlsbad - 08"
+        "title": "08"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "817E6F",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 257233,
@@ -717,9 +808,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010609-1601-34434_1800.jpg",
-          "title": "Carlsbad - 09"
+          "title": "09"
         },
-        "editableTitle": "Carlsbad - 09",
+        "editableTitle": "09",
         "full": "20010609 1601 34434.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010609-1601-34434_900.jpg",
         "id": "elie-carlsbad-20010609-1601-34434",
@@ -771,13 +862,14 @@
           }
         ],
         "sortIndex": 9,
-        "title": "Carlsbad - 09"
+        "title": "09"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "7D7B73",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 324615,
@@ -789,9 +881,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010610-1011-34464_1800.jpg",
-          "title": "Carlsbad - 10"
+          "title": "10"
         },
-        "editableTitle": "Carlsbad - 10",
+        "editableTitle": "10",
         "full": "20010610 1011 34464.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010610-1011-34464_900.jpg",
         "id": "elie-carlsbad-20010610-1011-34464",
@@ -843,13 +935,14 @@
           }
         ],
         "sortIndex": 10,
-        "title": "Carlsbad - 10"
+        "title": "10"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "6D7450",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 333972,
@@ -861,9 +954,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010610-1011-34503_1800.jpg",
-          "title": "Carlsbad - 11"
+          "title": "11"
         },
-        "editableTitle": "Carlsbad - 11",
+        "editableTitle": "11",
         "full": "20010610 1011 34503.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010610-1011-34503_900.jpg",
         "id": "elie-carlsbad-20010610-1011-34503",
@@ -915,13 +1008,14 @@
           }
         ],
         "sortIndex": 11,
-        "title": "Carlsbad - 11"
+        "title": "11"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "585A4B",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 437567,
@@ -933,9 +1027,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010410-1601-34534_1800.jpg",
-          "title": "Carlsbad - 12"
+          "title": "12"
         },
-        "editableTitle": "Carlsbad - 12",
+        "editableTitle": "12",
         "full": "20010410 1601 34534.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010410-1601-34534_900.jpg",
         "id": "elie-carlsbad-20010410-1601-34534",
@@ -987,13 +1081,14 @@
           }
         ],
         "sortIndex": 12,
-        "title": "Carlsbad - 12"
+        "title": "12"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "878375",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 317278,
@@ -1005,9 +1100,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010610-1601-34466_1800.jpg",
-          "title": "Carlsbad - 13"
+          "title": "13"
         },
-        "editableTitle": "Carlsbad - 13",
+        "editableTitle": "13",
         "full": "20010610 1601 34466.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010610-1601-34466_900.jpg",
         "id": "elie-carlsbad-20010610-1601-34466",
@@ -1059,13 +1154,14 @@
           }
         ],
         "sortIndex": 13,
-        "title": "Carlsbad - 13"
+        "title": "13"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "867F6F",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 240548,
@@ -1077,9 +1173,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010610-1601-34484_1800.jpg",
-          "title": "Carlsbad - 14"
+          "title": "14"
         },
-        "editableTitle": "Carlsbad - 14",
+        "editableTitle": "14",
         "full": "20010610 1601 34484.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010610-1601-34484_900.jpg",
         "id": "elie-carlsbad-20010610-1601-34484",
@@ -1131,13 +1227,14 @@
           }
         ],
         "sortIndex": 14,
-        "title": "Carlsbad - 14"
+        "title": "14"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "867D6E",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 293580,
@@ -1149,9 +1246,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010610-1601-34508_1800.jpg",
-          "title": "Carlsbad - 15"
+          "title": "15"
         },
-        "editableTitle": "Carlsbad - 15",
+        "editableTitle": "15",
         "full": "20010610 1601 34508.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010610-1601-34508_900.jpg",
         "id": "elie-carlsbad-20010610-1601-34508",
@@ -1203,13 +1300,14 @@
           }
         ],
         "sortIndex": 15,
-        "title": "Carlsbad - 15"
+        "title": "15"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "BFBFBD",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 340583,
@@ -1221,9 +1319,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010612-1400-34397_1800.jpg",
-          "title": "Carlsbad - 16"
+          "title": "16"
         },
-        "editableTitle": "Carlsbad - 16",
+        "editableTitle": "16",
         "full": "20010612 1400 34397.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010612-1400-34397_900.jpg",
         "id": "elie-carlsbad-20010612-1400-34397",
@@ -1275,13 +1373,14 @@
           }
         ],
         "sortIndex": 16,
-        "title": "Carlsbad - 16"
+        "title": "16"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "959E9F",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 414517,
@@ -1293,9 +1392,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010612-1402-34429_1800.jpg",
-          "title": "Carlsbad - 17"
+          "title": "17"
         },
-        "editableTitle": "Carlsbad - 17",
+        "editableTitle": "17",
         "full": "20010612 1402 34429.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010612-1402-34429_900.jpg",
         "id": "elie-carlsbad-20010612-1402-34429",
@@ -1347,13 +1446,14 @@
           }
         ],
         "sortIndex": 17,
-        "title": "Carlsbad - 17"
+        "title": "17"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "9AAAAF",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 433435,
@@ -1365,9 +1465,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010612-1403-34502_1800.jpg",
-          "title": "Carlsbad - 18"
+          "title": "18"
         },
-        "editableTitle": "Carlsbad - 18",
+        "editableTitle": "18",
         "full": "20010612 1403 34502.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010612-1403-34502_900.jpg",
         "id": "elie-carlsbad-20010612-1403-34502",
@@ -1419,13 +1519,14 @@
           }
         ],
         "sortIndex": 18,
-        "title": "Carlsbad - 18"
+        "title": "18"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "7F6B49",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 343752,
@@ -1437,9 +1538,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010512-1011-34399_1800.jpg",
-          "title": "Carlsbad - 19"
+          "title": "19"
         },
-        "editableTitle": "Carlsbad - 19",
+        "editableTitle": "19",
         "full": "20010512 1011 34399.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010512-1011-34399_900.jpg",
         "id": "elie-carlsbad-20010512-1011-34399",
@@ -1491,13 +1592,14 @@
           }
         ],
         "sortIndex": 19,
-        "title": "Carlsbad - 19"
+        "title": "19"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "7B705A",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 442276,
@@ -1509,9 +1611,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010512-1011-34439_1800.jpg",
-          "title": "Carlsbad - 20"
+          "title": "20"
         },
-        "editableTitle": "Carlsbad - 20",
+        "editableTitle": "20",
         "full": "20010512 1011 34439.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010512-1011-34439_900.jpg",
         "id": "elie-carlsbad-20010512-1011-34439",
@@ -1563,13 +1665,14 @@
           }
         ],
         "sortIndex": 20,
-        "title": "Carlsbad - 20"
+        "title": "20"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "4D6366",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 420023,
@@ -1581,9 +1684,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010512-1011-34444_1800.jpg",
-          "title": "Carlsbad - 21"
+          "title": "21"
         },
-        "editableTitle": "Carlsbad - 21",
+        "editableTitle": "21",
         "full": "20010512 1011 34444.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010512-1011-34444_900.jpg",
         "id": "elie-carlsbad-20010512-1011-34444",
@@ -1635,13 +1738,14 @@
           }
         ],
         "sortIndex": 21,
-        "title": "Carlsbad - 21"
+        "title": "21"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "7D949B",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 458857,
@@ -1653,9 +1757,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010512-1011-34453_1800.jpg",
-          "title": "Carlsbad - 22"
+          "title": "22"
         },
-        "editableTitle": "Carlsbad - 22",
+        "editableTitle": "22",
         "full": "20010512 1011 34453.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010512-1011-34453_900.jpg",
         "id": "elie-carlsbad-20010512-1011-34453",
@@ -1707,13 +1811,14 @@
           }
         ],
         "sortIndex": 22,
-        "title": "Carlsbad - 22"
+        "title": "22"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "8C8471",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 421621,
@@ -1725,9 +1830,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010413-0454-34425_1800.jpg",
-          "title": "Carlsbad - 23"
+          "title": "23"
         },
-        "editableTitle": "Carlsbad - 23",
+        "editableTitle": "23",
         "full": "20010413 0454 34425.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010413-0454-34425_900.jpg",
         "id": "elie-carlsbad-20010413-0454-34425",
@@ -1779,13 +1884,14 @@
           }
         ],
         "sortIndex": 23,
-        "title": "Carlsbad - 23"
+        "title": "23"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "C1BFB8",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 391596,
@@ -1797,9 +1903,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010514-1011-34514_1800.jpg",
-          "title": "Carlsbad - 24"
+          "title": "24"
         },
-        "editableTitle": "Carlsbad - 24",
+        "editableTitle": "24",
         "full": "20010514 1011 34514.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010514-1011-34514_900.jpg",
         "id": "elie-carlsbad-20010514-1011-34514",
@@ -1851,13 +1957,14 @@
           }
         ],
         "sortIndex": 24,
-        "title": "Carlsbad - 24"
+        "title": "24"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "BEBEBB",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 419460,
@@ -1869,9 +1976,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010514-1011-34523_1800.jpg",
-          "title": "Carlsbad - 25"
+          "title": "25"
         },
-        "editableTitle": "Carlsbad - 25",
+        "editableTitle": "25",
         "full": "20010514 1011 34523.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010514-1011-34523_900.jpg",
         "id": "elie-carlsbad-20010514-1011-34523",
@@ -1923,13 +2030,14 @@
           }
         ],
         "sortIndex": 25,
-        "title": "Carlsbad - 25"
+        "title": "25"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "BDBCB6",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 402259,
@@ -1941,9 +2049,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010514-1011-34528_1800.jpg",
-          "title": "Carlsbad - 26"
+          "title": "26"
         },
-        "editableTitle": "Carlsbad - 26",
+        "editableTitle": "26",
         "full": "20010514 1011 34528.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010514-1011-34528_900.jpg",
         "id": "elie-carlsbad-20010514-1011-34528",
@@ -1995,13 +2103,14 @@
           }
         ],
         "sortIndex": 26,
-        "title": "Carlsbad - 26"
+        "title": "26"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "B6B19F",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 422971,
@@ -2013,9 +2122,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010517-1011-34440_1800.jpg",
-          "title": "Carlsbad - 27"
+          "title": "27"
         },
-        "editableTitle": "Carlsbad - 27",
+        "editableTitle": "27",
         "full": "20010517 1011 34440.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010517-1011-34440_900.jpg",
         "id": "elie-carlsbad-20010517-1011-34440",
@@ -2067,13 +2176,14 @@
           }
         ],
         "sortIndex": 27,
-        "title": "Carlsbad - 27"
+        "title": "27"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "A29986",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 420195,
@@ -2085,9 +2195,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010517-1011-34449_1800.jpg",
-          "title": "Carlsbad - 28"
+          "title": "28"
         },
-        "editableTitle": "Carlsbad - 28",
+        "editableTitle": "28",
         "full": "20010517 1011 34449.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010517-1011-34449_900.jpg",
         "id": "elie-carlsbad-20010517-1011-34449",
@@ -2139,13 +2249,14 @@
           }
         ],
         "sortIndex": 28,
-        "title": "Carlsbad - 28"
+        "title": "28"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "72746A",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 431156,
@@ -2157,9 +2268,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010419-0454-34416_1800.jpg",
-          "title": "Carlsbad - 29"
+          "title": "29"
         },
-        "editableTitle": "Carlsbad - 29",
+        "editableTitle": "29",
         "full": "20010419 0454 34416.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010419-0454-34416_900.jpg",
         "id": "elie-carlsbad-20010419-0454-34416",
@@ -2211,13 +2322,14 @@
           }
         ],
         "sortIndex": 29,
-        "title": "Carlsbad - 29"
+        "title": "29"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "979283",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 397404,
@@ -2229,9 +2341,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010419-0454-34509_1800.jpg",
-          "title": "Carlsbad - 30"
+          "title": "30"
         },
-        "editableTitle": "Carlsbad - 30",
+        "editableTitle": "30",
         "full": "20010419 0454 34509.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010419-0454-34509_900.jpg",
         "id": "elie-carlsbad-20010419-0454-34509",
@@ -2283,13 +2395,14 @@
           }
         ],
         "sortIndex": 30,
-        "title": "Carlsbad - 30"
+        "title": "30"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "AE9F8A",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 435603,
@@ -2301,9 +2414,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010419-0454-34524_1800.jpg",
-          "title": "Carlsbad - 31"
+          "title": "31"
         },
-        "editableTitle": "Carlsbad - 31",
+        "editableTitle": "31",
         "full": "20010419 0454 34524.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010419-0454-34524_900.jpg",
         "id": "elie-carlsbad-20010419-0454-34524",
@@ -2355,13 +2468,14 @@
           }
         ],
         "sortIndex": 31,
-        "title": "Carlsbad - 31"
+        "title": "31"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "626864",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 317268,
@@ -2373,9 +2487,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010601-1601-31562_1800.jpg",
-          "title": "Carlsbad - 32"
+          "title": "32"
         },
-        "editableTitle": "Carlsbad - 32",
+        "editableTitle": "32",
         "full": "20010601 1601 31562.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010601-1601-31562_900.jpg",
         "id": "elie-carlsbad-20010601-1601-31562",
@@ -2427,13 +2541,14 @@
           }
         ],
         "sortIndex": 32,
-        "title": "Carlsbad - 32"
+        "title": "32"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "43453F",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 357129,
@@ -2445,9 +2560,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010627-0707-34398_1800.jpg",
-          "title": "Carlsbad - 33"
+          "title": "33"
         },
-        "editableTitle": "Carlsbad - 33",
+        "editableTitle": "33",
         "full": "20010627 0707 34398.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010627-0707-34398_900.jpg",
         "id": "elie-carlsbad-20010627-0707-34398",
@@ -2499,13 +2614,14 @@
           }
         ],
         "sortIndex": 33,
-        "title": "Carlsbad - 33"
+        "title": "33"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "5B5D59",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 371838,
@@ -2517,9 +2633,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010627-0707-34426_1800.jpg",
-          "title": "Carlsbad - 34"
+          "title": "34"
         },
-        "editableTitle": "Carlsbad - 34",
+        "editableTitle": "34",
         "full": "20010627 0707 34426.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010627-0707-34426_900.jpg",
         "id": "elie-carlsbad-20010627-0707-34426",
@@ -2571,13 +2687,14 @@
           }
         ],
         "sortIndex": 34,
-        "title": "Carlsbad - 34"
+        "title": "34"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "534B3D",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 382916,
@@ -2589,9 +2706,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010627-0707-34447_1800.jpg",
-          "title": "Carlsbad - 35"
+          "title": "35"
         },
-        "editableTitle": "Carlsbad - 35",
+        "editableTitle": "35",
         "full": "20010627 0707 34447.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010627-0707-34447_900.jpg",
         "id": "elie-carlsbad-20010627-0707-34447",
@@ -2643,13 +2760,14 @@
           }
         ],
         "sortIndex": 35,
-        "title": "Carlsbad - 35"
+        "title": "35"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "5C574D",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 400341,
@@ -2661,9 +2779,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010627-0707-34473_1800.jpg",
-          "title": "Carlsbad - 36"
+          "title": "36"
         },
-        "editableTitle": "Carlsbad - 36",
+        "editableTitle": "36",
         "full": "20010627 0707 34473.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010627-0707-34473_900.jpg",
         "id": "elie-carlsbad-20010627-0707-34473",
@@ -2715,13 +2833,14 @@
           }
         ],
         "sortIndex": 36,
-        "title": "Carlsbad - 36"
+        "title": "36"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "5E5F57",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 342125,
@@ -2733,9 +2852,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010627-0707-34519_1800.jpg",
-          "title": "Carlsbad - 37"
+          "title": "37"
         },
-        "editableTitle": "Carlsbad - 37",
+        "editableTitle": "37",
         "full": "20010627 0707 34519.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010627-0707-34519_900.jpg",
         "id": "elie-carlsbad-20010627-0707-34519",
@@ -2787,13 +2906,14 @@
           }
         ],
         "sortIndex": 37,
-        "title": "Carlsbad - 37"
+        "title": "37"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "C7C8C8",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 338979,
@@ -2805,9 +2925,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010428-0454-34470_1800.jpg",
-          "title": "Carlsbad - 38"
+          "title": "38"
         },
-        "editableTitle": "Carlsbad - 38",
+        "editableTitle": "38",
         "full": "20010428 0454 34470.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010428-0454-34470_900.jpg",
         "id": "elie-carlsbad-20010428-0454-34470",
@@ -2859,13 +2979,14 @@
           }
         ],
         "sortIndex": 38,
-        "title": "Carlsbad - 38"
+        "title": "38"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "B7B7B5",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 354121,
@@ -2877,9 +2998,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010428-0454-34531_1800.jpg",
-          "title": "Carlsbad - 39"
+          "title": "39"
         },
-        "editableTitle": "Carlsbad - 39",
+        "editableTitle": "39",
         "full": "20010428 0454 34531.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010428-0454-34531_900.jpg",
         "id": "elie-carlsbad-20010428-0454-34531",
@@ -2931,13 +3052,14 @@
           }
         ],
         "sortIndex": 39,
-        "title": "Carlsbad - 39"
+        "title": "39"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "6E6F65",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 417865,
@@ -2949,9 +3071,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010329-0454-31334_1800.jpg",
-          "title": "Carlsbad - 40"
+          "title": "40"
         },
-        "editableTitle": "Carlsbad - 40",
+        "editableTitle": "40",
         "full": "20010329 0454 31334.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010329-0454-31334_900.jpg",
         "id": "elie-carlsbad-20010329-0454-31334",
@@ -3003,13 +3125,14 @@
           }
         ],
         "sortIndex": 40,
-        "title": "Carlsbad - 40"
+        "title": "40"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "717268",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 429072,
@@ -3021,9 +3144,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010329-0454-34442_1800.jpg",
-          "title": "Carlsbad - 41"
+          "title": "41"
         },
-        "editableTitle": "Carlsbad - 41",
+        "editableTitle": "41",
         "full": "20010329 0454 34442.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010329-0454-34442_900.jpg",
         "id": "elie-carlsbad-20010329-0454-34442",
@@ -3075,13 +3198,14 @@
           }
         ],
         "sortIndex": 41,
-        "title": "Carlsbad - 41"
+        "title": "41"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "847556",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 376676,
@@ -3093,9 +3217,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010329-0454-34450_1800.jpg",
-          "title": "Carlsbad - 42"
+          "title": "42"
         },
-        "editableTitle": "Carlsbad - 42",
+        "editableTitle": "42",
         "full": "20010329 0454 34450.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010329-0454-34450_900.jpg",
         "id": "elie-carlsbad-20010329-0454-34450",
@@ -3147,13 +3271,14 @@
           }
         ],
         "sortIndex": 42,
-        "title": "Carlsbad - 42"
+        "title": "42"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "6E6A56",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 419857,
@@ -3165,9 +3290,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010329-0454-34494_1800.jpg",
-          "title": "Carlsbad - 43"
+          "title": "43"
         },
-        "editableTitle": "Carlsbad - 43",
+        "editableTitle": "43",
         "full": "20010329 0454 34494.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010329-0454-34494_900.jpg",
         "id": "elie-carlsbad-20010329-0454-34494",
@@ -3219,13 +3344,14 @@
           }
         ],
         "sortIndex": 43,
-        "title": "Carlsbad - 43"
+        "title": "43"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "849059",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 366070,
@@ -3237,9 +3363,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010329-0454-34512_1800.jpg",
-          "title": "Carlsbad - 44"
+          "title": "44"
         },
-        "editableTitle": "Carlsbad - 44",
+        "editableTitle": "44",
         "full": "20010329 0454 34512.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010329-0454-34512_900.jpg",
         "id": "elie-carlsbad-20010329-0454-34512",
@@ -3291,13 +3417,14 @@
           }
         ],
         "sortIndex": 44,
-        "title": "Carlsbad - 44"
+        "title": "44"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "40524E",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 466562,
@@ -3309,9 +3436,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010529-1011-34386_1800.jpg",
-          "title": "Carlsbad - 45"
+          "title": "45"
         },
-        "editableTitle": "Carlsbad - 45",
+        "editableTitle": "45",
         "full": "20010529 1011 34386.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010529-1011-34386_900.jpg",
         "id": "elie-carlsbad-20010529-1011-34386",
@@ -3363,13 +3490,14 @@
           }
         ],
         "sortIndex": 45,
-        "title": "Carlsbad - 45"
+        "title": "45"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "47554F",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 461663,
@@ -3381,9 +3509,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010529-1011-34391_1800.jpg",
-          "title": "Carlsbad - 46"
+          "title": "46"
         },
-        "editableTitle": "Carlsbad - 46",
+        "editableTitle": "46",
         "full": "20010529 1011 34391.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010529-1011-34391_900.jpg",
         "id": "elie-carlsbad-20010529-1011-34391",
@@ -3435,13 +3563,14 @@
           }
         ],
         "sortIndex": 46,
-        "title": "Carlsbad - 46"
+        "title": "46"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "6C7B75",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 436383,
@@ -3453,9 +3582,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010529-1011-34451_1800.jpg",
-          "title": "Carlsbad - 47"
+          "title": "47"
         },
-        "editableTitle": "Carlsbad - 47",
+        "editableTitle": "47",
         "full": "20010529 1011 34451.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010529-1011-34451_900.jpg",
         "id": "elie-carlsbad-20010529-1011-34451",
@@ -3507,13 +3636,14 @@
           }
         ],
         "sortIndex": 47,
-        "title": "Carlsbad - 47"
+        "title": "47"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "7A8F91",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 421976,
@@ -3525,9 +3655,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010529-1011-34469_1800.jpg",
-          "title": "Carlsbad - 48"
+          "title": "48"
         },
-        "editableTitle": "Carlsbad - 48",
+        "editableTitle": "48",
         "full": "20010529 1011 34469.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010529-1011-34469_900.jpg",
         "id": "elie-carlsbad-20010529-1011-34469",
@@ -3579,13 +3709,14 @@
           }
         ],
         "sortIndex": 48,
-        "title": "Carlsbad - 48"
+        "title": "48"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "565039",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 350937,
@@ -3597,9 +3728,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010529-1011-34513_1800.jpg",
-          "title": "Carlsbad - 49"
+          "title": "49"
         },
-        "editableTitle": "Carlsbad - 49",
+        "editableTitle": "49",
         "full": "20010529 1011 34513.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010529-1011-34513_900.jpg",
         "id": "elie-carlsbad-20010529-1011-34513",
@@ -3651,13 +3782,14 @@
           }
         ],
         "sortIndex": 49,
-        "title": "Carlsbad - 49"
+        "title": "49"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "816843",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 257540,
@@ -3669,9 +3801,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010702-1747-34499_1800.jpg",
-          "title": "Carlsbad - 50"
+          "title": "50"
         },
-        "editableTitle": "Carlsbad - 50",
+        "editableTitle": "50",
         "full": "20010702 1747 34499.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010702-1747-34499_900.jpg",
         "id": "elie-carlsbad-20010702-1747-34499",
@@ -3723,13 +3855,14 @@
           }
         ],
         "sortIndex": 50,
-        "title": "Carlsbad - 50"
+        "title": "50"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "785023",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 175445,
@@ -3741,9 +3874,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010702-1748-34458_1800.jpg",
-          "title": "Carlsbad - 51"
+          "title": "51"
         },
-        "editableTitle": "Carlsbad - 51",
+        "editableTitle": "51",
         "full": "20010702 1748 34458.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010702-1748-34458_900.jpg",
         "id": "elie-carlsbad-20010702-1748-34458",
@@ -3795,13 +3928,14 @@
           }
         ],
         "sortIndex": 51,
-        "title": "Carlsbad - 51"
+        "title": "51"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "663A15",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 202305,
@@ -3813,9 +3947,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010702-1749-34384_1800.jpg",
-          "title": "Carlsbad - 52"
+          "title": "52"
         },
-        "editableTitle": "Carlsbad - 52",
+        "editableTitle": "52",
         "full": "20010702 1749 34384.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010702-1749-34384_900.jpg",
         "id": "elie-carlsbad-20010702-1749-34384",
@@ -3867,13 +4001,14 @@
           }
         ],
         "sortIndex": 52,
-        "title": "Carlsbad - 52"
+        "title": "52"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "7D551E",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 170898,
@@ -3885,9 +4020,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010702-1749-34527_1800.jpg",
-          "title": "Carlsbad - 53"
+          "title": "53"
         },
-        "editableTitle": "Carlsbad - 53",
+        "editableTitle": "53",
         "full": "20010702 1749 34527.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010702-1749-34527_900.jpg",
         "id": "elie-carlsbad-20010702-1749-34527",
@@ -3939,13 +4074,14 @@
           }
         ],
         "sortIndex": 53,
-        "title": "Carlsbad - 53"
+        "title": "53"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "512914",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 236764,
@@ -3957,9 +4093,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010702-1750-34517_1800.jpg",
-          "title": "Carlsbad - 54"
+          "title": "54"
         },
-        "editableTitle": "Carlsbad - 54",
+        "editableTitle": "54",
         "full": "20010702 1750 34517.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010702-1750-34517_900.jpg",
         "id": "elie-carlsbad-20010702-1750-34517",
@@ -4011,13 +4147,14 @@
           }
         ],
         "sortIndex": 54,
-        "title": "Carlsbad - 54"
+        "title": "54"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "462515",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 168320,
@@ -4029,9 +4166,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010702-1751-34432_1800.jpg",
-          "title": "Carlsbad - 55"
+          "title": "55"
         },
-        "editableTitle": "Carlsbad - 55",
+        "editableTitle": "55",
         "full": "20010702 1751 34432.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010702-1751-34432_900.jpg",
         "id": "elie-carlsbad-20010702-1751-34432",
@@ -4083,13 +4220,14 @@
           }
         ],
         "sortIndex": 55,
-        "title": "Carlsbad - 55"
+        "title": "55"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "775134",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 205076,
@@ -4101,9 +4239,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010702-1752-34446_1800.jpg",
-          "title": "Carlsbad - 56"
+          "title": "56"
         },
-        "editableTitle": "Carlsbad - 56",
+        "editableTitle": "56",
         "full": "20010702 1752 34446.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010702-1752-34446_900.jpg",
         "id": "elie-carlsbad-20010702-1752-34446",
@@ -4155,13 +4293,14 @@
           }
         ],
         "sortIndex": 56,
-        "title": "Carlsbad - 56"
+        "title": "56"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "856648",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 208380,
@@ -4173,9 +4312,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010702-1752-34506_1800.jpg",
-          "title": "Carlsbad - 57"
+          "title": "57"
         },
-        "editableTitle": "Carlsbad - 57",
+        "editableTitle": "57",
         "full": "20010702 1752 34506.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010702-1752-34506_900.jpg",
         "id": "elie-carlsbad-20010702-1752-34506",
@@ -4227,13 +4366,14 @@
           }
         ],
         "sortIndex": 57,
-        "title": "Carlsbad - 57"
+        "title": "57"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "664030",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 271954,
@@ -4245,9 +4385,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010702-1753-34415_1800.jpg",
-          "title": "Carlsbad - 58"
+          "title": "58"
         },
-        "editableTitle": "Carlsbad - 58",
+        "editableTitle": "58",
         "full": "20010702 1753 34415.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010702-1753-34415_900.jpg",
         "id": "elie-carlsbad-20010702-1753-34415",
@@ -4299,13 +4439,14 @@
           }
         ],
         "sortIndex": 58,
-        "title": "Carlsbad - 58"
+        "title": "58"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "754E39",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 283181,
@@ -4317,9 +4458,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010702-1753-34480_1800.jpg",
-          "title": "Carlsbad - 59"
+          "title": "59"
         },
-        "editableTitle": "Carlsbad - 59",
+        "editableTitle": "59",
         "full": "20010702 1753 34480.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010702-1753-34480_900.jpg",
         "id": "elie-carlsbad-20010702-1753-34480",
@@ -4371,13 +4512,14 @@
           }
         ],
         "sortIndex": 59,
-        "title": "Carlsbad - 59"
+        "title": "59"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "3F2B1C",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 205621,
@@ -4389,9 +4531,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010702-1756-34511_1800.jpg",
-          "title": "Carlsbad - 60"
+          "title": "60"
         },
-        "editableTitle": "Carlsbad - 60",
+        "editableTitle": "60",
         "full": "20010702 1756 34511.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010702-1756-34511_900.jpg",
         "id": "elie-carlsbad-20010702-1756-34511",
@@ -4443,13 +4585,14 @@
           }
         ],
         "sortIndex": 60,
-        "title": "Carlsbad - 60"
+        "title": "60"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "254948",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 322440,
@@ -4461,9 +4604,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010303-0000-34456_1800.jpg",
-          "title": "Carlsbad - 61"
+          "title": "61"
         },
-        "editableTitle": "Carlsbad - 61",
+        "editableTitle": "61",
         "full": "20010303 0000 34456.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010303-0000-34456_900.jpg",
         "id": "elie-carlsbad-20010303-0000-34456",
@@ -4515,13 +4658,14 @@
           }
         ],
         "sortIndex": 61,
-        "title": "Carlsbad - 61"
+        "title": "61"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "515548",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 324084,
@@ -4533,9 +4677,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010329-1601-34532_1800.jpg",
-          "title": "Carlsbad - 62"
+          "title": "62"
         },
-        "editableTitle": "Carlsbad - 62",
+        "editableTitle": "62",
         "full": "20010329 1601 34532.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010329-1601-34532_900.jpg",
         "id": "elie-carlsbad-20010329-1601-34532",
@@ -4587,13 +4731,14 @@
           }
         ],
         "sortIndex": 62,
-        "title": "Carlsbad - 62"
+        "title": "62"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "A37C77",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 465934,
@@ -4605,9 +4750,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010703-1837-34393_1800.jpg",
-          "title": "Carlsbad - 63"
+          "title": "63"
         },
-        "editableTitle": "Carlsbad - 63",
+        "editableTitle": "63",
         "full": "20010703 1837 34393.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010703-1837-34393_900.jpg",
         "id": "elie-carlsbad-20010703-1837-34393",
@@ -4659,13 +4804,14 @@
           }
         ],
         "sortIndex": 63,
-        "title": "Carlsbad - 63"
+        "title": "63"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "5D3728",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 472505,
@@ -4677,9 +4823,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010703-1837-34427_1800.jpg",
-          "title": "Carlsbad - 64"
+          "title": "64"
         },
-        "editableTitle": "Carlsbad - 64",
+        "editableTitle": "64",
         "full": "20010703 1837 34427.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010703-1837-34427_900.jpg",
         "id": "elie-carlsbad-20010703-1837-34427",
@@ -4731,13 +4877,14 @@
           }
         ],
         "sortIndex": 64,
-        "title": "Carlsbad - 64"
+        "title": "64"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "485A63",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 342491,
@@ -4749,9 +4896,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010504-0000-34437_1800.jpg",
-          "title": "Carlsbad - 65"
+          "title": "65"
         },
-        "editableTitle": "Carlsbad - 65",
+        "editableTitle": "65",
         "full": "20010504 0000 34437.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010504-0000-34437_900.jpg",
         "id": "elie-carlsbad-20010504-0000-34437",
@@ -4803,13 +4950,14 @@
           }
         ],
         "sortIndex": 65,
-        "title": "Carlsbad - 65"
+        "title": "65"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "566362",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 374613,
@@ -4821,9 +4969,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010504-0454-34452_1800.jpg",
-          "title": "Carlsbad - 66"
+          "title": "66"
         },
-        "editableTitle": "Carlsbad - 66",
+        "editableTitle": "66",
         "full": "20010504 0454 34452.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010504-0454-34452_900.jpg",
         "id": "elie-carlsbad-20010504-0454-34452",
@@ -4875,13 +5023,14 @@
           }
         ],
         "sortIndex": 66,
-        "title": "Carlsbad - 66"
+        "title": "66"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "3E5D72",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 350688,
@@ -4893,9 +5042,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010504-0454-34468_1800.jpg",
-          "title": "Carlsbad - 67"
+          "title": "67"
         },
-        "editableTitle": "Carlsbad - 67",
+        "editableTitle": "67",
         "full": "20010504 0454 34468.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010504-0454-34468_900.jpg",
         "id": "elie-carlsbad-20010504-0454-34468",
@@ -4947,13 +5096,14 @@
           }
         ],
         "sortIndex": 67,
-        "title": "Carlsbad - 67"
+        "title": "67"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "96856A",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 458068,
@@ -4965,9 +5115,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010705-1837-34489_1800.jpg",
-          "title": "Carlsbad - 68"
+          "title": "68"
         },
-        "editableTitle": "Carlsbad - 68",
+        "editableTitle": "68",
         "full": "20010705 1837 34489.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010705-1837-34489_900.jpg",
         "id": "elie-carlsbad-20010705-1837-34489",
@@ -5019,13 +5169,14 @@
           }
         ],
         "sortIndex": 68,
-        "title": "Carlsbad - 68"
+        "title": "68"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "584233",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 356005,
@@ -5037,9 +5188,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010705-1838-34459_1800.jpg",
-          "title": "Carlsbad - 69"
+          "title": "69"
         },
-        "editableTitle": "Carlsbad - 69",
+        "editableTitle": "69",
         "full": "20010705 1838 34459.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010705-1838-34459_900.jpg",
         "id": "elie-carlsbad-20010705-1838-34459",
@@ -5091,13 +5242,14 @@
           }
         ],
         "sortIndex": 69,
-        "title": "Carlsbad - 69"
+        "title": "69"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "4E3A27",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 295620,
@@ -5109,9 +5261,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010705-1839-34435_1800.jpg",
-          "title": "Carlsbad - 70"
+          "title": "70"
         },
-        "editableTitle": "Carlsbad - 70",
+        "editableTitle": "70",
         "full": "20010705 1839 34435.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010705-1839-34435_900.jpg",
         "id": "elie-carlsbad-20010705-1839-34435",
@@ -5163,13 +5315,14 @@
           }
         ],
         "sortIndex": 70,
-        "title": "Carlsbad - 70"
+        "title": "70"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "504742",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 353809,
@@ -5181,9 +5334,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010705-1917-31610_1800.jpg",
-          "title": "Carlsbad - 71"
+          "title": "71"
         },
-        "editableTitle": "Carlsbad - 71",
+        "editableTitle": "71",
         "full": "20010705 1917 31610.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010705-1917-31610_900.jpg",
         "id": "elie-carlsbad-20010705-1917-31610",
@@ -5235,13 +5388,14 @@
           }
         ],
         "sortIndex": 71,
-        "title": "Carlsbad - 71"
+        "title": "71"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "3B322D",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 308100,
@@ -5253,9 +5407,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010705-1917-34424_1800.jpg",
-          "title": "Carlsbad - 72"
+          "title": "72"
         },
-        "editableTitle": "Carlsbad - 72",
+        "editableTitle": "72",
         "full": "20010705 1917 34424.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010705-1917-34424_900.jpg",
         "id": "elie-carlsbad-20010705-1917-34424",
@@ -5307,13 +5461,14 @@
           }
         ],
         "sortIndex": 72,
-        "title": "Carlsbad - 72"
+        "title": "72"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "463931",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 391184,
@@ -5325,9 +5480,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010705-1918-34430_1800.jpg",
-          "title": "Carlsbad - 73"
+          "title": "73"
         },
-        "editableTitle": "Carlsbad - 73",
+        "editableTitle": "73",
         "full": "20010705 1918 34430.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010705-1918-34430_900.jpg",
         "id": "elie-carlsbad-20010705-1918-34430",
@@ -5379,13 +5534,14 @@
           }
         ],
         "sortIndex": 73,
-        "title": "Carlsbad - 73"
+        "title": "73"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "6E4E35",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 395949,
@@ -5397,9 +5553,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010705-1923-34526_1800.jpg",
-          "title": "Carlsbad - 74"
+          "title": "74"
         },
-        "editableTitle": "Carlsbad - 74",
+        "editableTitle": "74",
         "full": "20010705 1923 34526.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010705-1923-34526_900.jpg",
         "id": "elie-carlsbad-20010705-1923-34526",
@@ -5451,13 +5607,14 @@
           }
         ],
         "sortIndex": 74,
-        "title": "Carlsbad - 74"
+        "title": "74"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "706662",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 337373,
@@ -5469,9 +5626,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010705-1924-34474_1800.jpg",
-          "title": "Carlsbad - 75"
+          "title": "75"
         },
-        "editableTitle": "Carlsbad - 75",
+        "editableTitle": "75",
         "full": "20010705 1924 34474.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010705-1924-34474_900.jpg",
         "id": "elie-carlsbad-20010705-1924-34474",
@@ -5523,13 +5680,14 @@
           }
         ],
         "sortIndex": 75,
-        "title": "Carlsbad - 75"
+        "title": "75"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "96938C",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 582894,
@@ -5541,9 +5699,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010705-1924-34476_1800.jpg",
-          "title": "Carlsbad - 76"
+          "title": "76"
         },
-        "editableTitle": "Carlsbad - 76",
+        "editableTitle": "76",
         "full": "20010705 1924 34476.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010705-1924-34476_900.jpg",
         "id": "elie-carlsbad-20010705-1924-34476",
@@ -5595,13 +5753,14 @@
           }
         ],
         "sortIndex": 76,
-        "title": "Carlsbad - 76"
+        "title": "76"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "8B867E",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 302486,
@@ -5613,9 +5772,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010706-1846-34479_1800.jpg",
-          "title": "Carlsbad - 77"
+          "title": "77"
         },
-        "editableTitle": "Carlsbad - 77",
+        "editableTitle": "77",
         "full": "20010706 1846 34479.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010706-1846-34479_900.jpg",
         "id": "elie-carlsbad-20010706-1846-34479",
@@ -5667,13 +5826,14 @@
           }
         ],
         "sortIndex": 77,
-        "title": "Carlsbad - 77"
+        "title": "77"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "96979B",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 316250,
@@ -5685,9 +5845,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010706-1848-34518_1800.jpg",
-          "title": "Carlsbad - 78"
+          "title": "78"
         },
-        "editableTitle": "Carlsbad - 78",
+        "editableTitle": "78",
         "full": "20010706 1848 34518.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010706-1848-34518_900.jpg",
         "id": "elie-carlsbad-20010706-1848-34518",
@@ -5739,13 +5899,14 @@
           }
         ],
         "sortIndex": 78,
-        "title": "Carlsbad - 78"
+        "title": "78"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "878373",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 395910,
@@ -5757,9 +5918,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010706-1852-34495_1800.jpg",
-          "title": "Carlsbad - 79"
+          "title": "79"
         },
-        "editableTitle": "Carlsbad - 79",
+        "editableTitle": "79",
         "full": "20010706 1852 34495.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010706-1852-34495_900.jpg",
         "id": "elie-carlsbad-20010706-1852-34495",
@@ -5811,13 +5972,14 @@
           }
         ],
         "sortIndex": 79,
-        "title": "Carlsbad - 79"
+        "title": "79"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "6E7E7A",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 302724,
@@ -5829,9 +5991,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010706-1856-31336_1800.jpg",
-          "title": "Carlsbad - 80"
+          "title": "80"
         },
-        "editableTitle": "Carlsbad - 80",
+        "editableTitle": "80",
         "full": "20010706 1856 31336.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010706-1856-31336_900.jpg",
         "id": "elie-carlsbad-20010706-1856-31336",
@@ -5883,13 +6045,14 @@
           }
         ],
         "sortIndex": 80,
-        "title": "Carlsbad - 80"
+        "title": "80"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "6A6461",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 335849,
@@ -5901,9 +6064,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010706-1859-31337_1800.jpg",
-          "title": "Carlsbad - 81"
+          "title": "81"
         },
-        "editableTitle": "Carlsbad - 81",
+        "editableTitle": "81",
         "full": "20010706 1859 31337.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010706-1859-31337_900.jpg",
         "id": "elie-carlsbad-20010706-1859-31337",
@@ -5955,13 +6118,14 @@
           }
         ],
         "sortIndex": 81,
-        "title": "Carlsbad - 81"
+        "title": "81"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "8E624A",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 359868,
@@ -5973,9 +6137,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010706-1859-34394_1800.jpg",
-          "title": "Carlsbad - 82"
+          "title": "82"
         },
-        "editableTitle": "Carlsbad - 82",
+        "editableTitle": "82",
         "full": "20010706 1859 34394.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010706-1859-34394_900.jpg",
         "id": "elie-carlsbad-20010706-1859-34394",
@@ -6027,13 +6191,14 @@
           }
         ],
         "sortIndex": 82,
-        "title": "Carlsbad - 82"
+        "title": "82"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "716B69",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 344230,
@@ -6045,9 +6210,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010706-1900-34431_1800.jpg",
-          "title": "Carlsbad - 83"
+          "title": "83"
         },
-        "editableTitle": "Carlsbad - 83",
+        "editableTitle": "83",
         "full": "20010706 1900 34431.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010706-1900-34431_900.jpg",
         "id": "elie-carlsbad-20010706-1900-34431",
@@ -6099,13 +6264,14 @@
           }
         ],
         "sortIndex": 83,
-        "title": "Carlsbad - 83"
+        "title": "83"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "777472",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 372298,
@@ -6117,9 +6283,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010706-1900-34441_1800.jpg",
-          "title": "Carlsbad - 84"
+          "title": "84"
         },
-        "editableTitle": "Carlsbad - 84",
+        "editableTitle": "84",
         "full": "20010706 1900 34441.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010706-1900-34441_900.jpg",
         "id": "elie-carlsbad-20010706-1900-34441",
@@ -6171,13 +6337,14 @@
           }
         ],
         "sortIndex": 84,
-        "title": "Carlsbad - 84"
+        "title": "84"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "7E7D7D",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 314717,
@@ -6189,9 +6356,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010706-1900-34491_1800.jpg",
-          "title": "Carlsbad - 85"
+          "title": "85"
         },
-        "editableTitle": "Carlsbad - 85",
+        "editableTitle": "85",
         "full": "20010706 1900 34491.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010706-1900-34491_900.jpg",
         "id": "elie-carlsbad-20010706-1900-34491",
@@ -6243,13 +6410,14 @@
           }
         ],
         "sortIndex": 85,
-        "title": "Carlsbad - 85"
+        "title": "85"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "936753",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 338563,
@@ -6261,9 +6429,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010706-1900-34493_1800.jpg",
-          "title": "Carlsbad - 86"
+          "title": "86"
         },
-        "editableTitle": "Carlsbad - 86",
+        "editableTitle": "86",
         "full": "20010706 1900 34493.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010706-1900-34493_900.jpg",
         "id": "elie-carlsbad-20010706-1900-34493",
@@ -6315,13 +6483,14 @@
           }
         ],
         "sortIndex": 86,
-        "title": "Carlsbad - 86"
+        "title": "86"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "746C5F",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 421326,
@@ -6333,9 +6502,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010706-1902-31338_1800.jpg",
-          "title": "Carlsbad - 87"
+          "title": "87"
         },
-        "editableTitle": "Carlsbad - 87",
+        "editableTitle": "87",
         "full": "20010706 1902 31338.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010706-1902-31338_900.jpg",
         "id": "elie-carlsbad-20010706-1902-31338",
@@ -6387,13 +6556,14 @@
           }
         ],
         "sortIndex": 87,
-        "title": "Carlsbad - 87"
+        "title": "87"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "978A8A",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 486802,
@@ -6405,9 +6575,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010706-1902-34475_1800.jpg",
-          "title": "Carlsbad - 88"
+          "title": "88"
         },
-        "editableTitle": "Carlsbad - 88",
+        "editableTitle": "88",
         "full": "20010706 1902 34475.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010706-1902-34475_900.jpg",
         "id": "elie-carlsbad-20010706-1902-34475",
@@ -6459,13 +6629,14 @@
           }
         ],
         "sortIndex": 88,
-        "title": "Carlsbad - 88"
+        "title": "88"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "445656",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 339570,
@@ -6477,9 +6648,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010507-0454-34525_1800.jpg",
-          "title": "Carlsbad - 89"
+          "title": "89"
         },
-        "editableTitle": "Carlsbad - 89",
+        "editableTitle": "89",
         "full": "20010507 0454 34525.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010507-0454-34525_900.jpg",
         "id": "elie-carlsbad-20010507-0454-34525",
@@ -6531,13 +6702,14 @@
           }
         ],
         "sortIndex": 89,
-        "title": "Carlsbad - 89"
+        "title": "89"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "5A5345",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 362812,
@@ -6549,9 +6721,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010609-1011-31594_1800.jpg",
-          "title": "Carlsbad - 90"
+          "title": "90"
         },
-        "editableTitle": "Carlsbad - 90",
+        "editableTitle": "90",
         "full": "20010609 1011 31594.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010609-1011-31594_900.jpg",
         "id": "elie-carlsbad-20010609-1011-31594",
@@ -6603,13 +6775,14 @@
           }
         ],
         "sortIndex": 90,
-        "title": "Carlsbad - 90"
+        "title": "90"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "6D726D",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 354282,
@@ -6621,9 +6794,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010609-1011-34387_1800.jpg",
-          "title": "Carlsbad - 91"
+          "title": "91"
         },
-        "editableTitle": "Carlsbad - 91",
+        "editableTitle": "91",
         "full": "20010609 1011 34387.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010609-1011-34387_900.jpg",
         "id": "elie-carlsbad-20010609-1011-34387",
@@ -6675,13 +6848,14 @@
           }
         ],
         "sortIndex": 91,
-        "title": "Carlsbad - 91"
+        "title": "91"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "59564D",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 364011,
@@ -6693,9 +6867,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010609-1011-34448_1800.jpg",
-          "title": "Carlsbad - 92"
+          "title": "92"
         },
-        "editableTitle": "Carlsbad - 92",
+        "editableTitle": "92",
         "full": "20010609 1011 34448.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010609-1011-34448_900.jpg",
         "id": "elie-carlsbad-20010609-1011-34448",
@@ -6747,13 +6921,14 @@
           }
         ],
         "sortIndex": 92,
-        "title": "Carlsbad - 92"
+        "title": "92"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "575A51",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 408495,
@@ -6765,9 +6940,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010609-1011-34522_1800.jpg",
-          "title": "Carlsbad - 93"
+          "title": "93"
         },
-        "editableTitle": "Carlsbad - 93",
+        "editableTitle": "93",
         "full": "20010609 1011 34522.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010609-1011-34522_900.jpg",
         "id": "elie-carlsbad-20010609-1011-34522",
@@ -6819,13 +6994,14 @@
           }
         ],
         "sortIndex": 93,
-        "title": "Carlsbad - 93"
+        "title": "93"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "7B7A6A",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 396113,
@@ -6837,9 +7013,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010621-0707-34392_1800.jpg",
-          "title": "Carlsbad - 94"
+          "title": "94"
         },
-        "editableTitle": "Carlsbad - 94",
+        "editableTitle": "94",
         "full": "20010621 0707 34392.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010621-0707-34392_900.jpg",
         "id": "elie-carlsbad-20010621-0707-34392",
@@ -6891,13 +7067,14 @@
           }
         ],
         "sortIndex": 94,
-        "title": "Carlsbad - 94"
+        "title": "94"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "534445",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 362647,
@@ -6909,9 +7086,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010621-0707-34421_1800.jpg",
-          "title": "Carlsbad - 95"
+          "title": "95"
         },
-        "editableTitle": "Carlsbad - 95",
+        "editableTitle": "95",
         "full": "20010621 0707 34421.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010621-0707-34421_900.jpg",
         "id": "elie-carlsbad-20010621-0707-34421",
@@ -6963,13 +7140,14 @@
           }
         ],
         "sortIndex": 95,
-        "title": "Carlsbad - 95"
+        "title": "95"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "32332B",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 365936,
@@ -6981,9 +7159,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010621-0707-34436_1800.jpg",
-          "title": "Carlsbad - 96"
+          "title": "96"
         },
-        "editableTitle": "Carlsbad - 96",
+        "editableTitle": "96",
         "full": "20010621 0707 34436.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010621-0707-34436_900.jpg",
         "id": "elie-carlsbad-20010621-0707-34436",
@@ -7035,13 +7213,14 @@
           }
         ],
         "sortIndex": 96,
-        "title": "Carlsbad - 96"
+        "title": "96"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "606051",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 418918,
@@ -7053,9 +7232,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010621-0707-34477_1800.jpg",
-          "title": "Carlsbad - 97"
+          "title": "97"
         },
-        "editableTitle": "Carlsbad - 97",
+        "editableTitle": "97",
         "full": "20010621 0707 34477.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010621-0707-34477_900.jpg",
         "id": "elie-carlsbad-20010621-0707-34477",
@@ -7107,13 +7286,14 @@
           }
         ],
         "sortIndex": 97,
-        "title": "Carlsbad - 97"
+        "title": "97"
       },
       {
         "album": "Carlsbad",
         "albumSlug": "carlsbad",
         "albumTitle": "Carlsbad",
         "caption": "Carlsbad",
+        "captionColor": "434248",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 352078,
@@ -7125,9 +7305,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010621-0707-34481_1800.jpg",
-          "title": "Carlsbad - 98"
+          "title": "98"
         },
-        "editableTitle": "Carlsbad - 98",
+        "editableTitle": "98",
         "full": "20010621 0707 34481.jpeg",
         "gallerySrc": "previews/carlsbad/elie-carlsbad-20010621-0707-34481_900.jpg",
         "id": "elie-carlsbad-20010621-0707-34481",
@@ -7179,13 +7359,14 @@
           }
         ],
         "sortIndex": 98,
-        "title": "Carlsbad - 98"
+        "title": "98"
       },
       {
         "album": "Lisbon",
         "albumSlug": "lisbon",
         "albumTitle": "Lisbon",
         "caption": "Lisbon",
+        "captionColor": "8B5327",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 345079,
@@ -7197,9 +7378,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20210701-2136-00018_1800.jpg",
-          "title": "Lisbon - 01"
+          "title": "01"
         },
-        "editableTitle": "Lisbon - 01",
+        "editableTitle": "01",
         "full": "20210701 2136 00018.jpeg",
         "gallerySrc": "previews/lisbon/elie-lisbon-20210701-2136-00018_900.jpg",
         "id": "elie-lisbon-20210701-2136-00018",
@@ -7251,13 +7432,14 @@
           }
         ],
         "sortIndex": 99,
-        "title": "Lisbon - 01"
+        "title": "01"
       },
       {
         "album": "Lisbon",
         "albumSlug": "lisbon",
         "albumTitle": "Lisbon",
         "caption": "Lisbon",
+        "captionColor": "885732",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 343293,
@@ -7269,9 +7451,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20210701-2136-00021_1800.jpg",
-          "title": "Lisbon - 02"
+          "title": "02"
         },
-        "editableTitle": "Lisbon - 02",
+        "editableTitle": "02",
         "full": "20210701 2136 00021.jpeg",
         "gallerySrc": "previews/lisbon/elie-lisbon-20210701-2136-00021_900.jpg",
         "id": "elie-lisbon-20210701-2136-00021",
@@ -7323,13 +7505,14 @@
           }
         ],
         "sortIndex": 100,
-        "title": "Lisbon - 02"
+        "title": "02"
       },
       {
         "album": "Lisbon",
         "albumSlug": "lisbon",
         "albumTitle": "Lisbon",
         "caption": "Lisbon",
+        "captionColor": "5A4737",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 346930,
@@ -7341,9 +7524,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20210701-2137-00024_1800.jpg",
-          "title": "Lisbon - 03"
+          "title": "03"
         },
-        "editableTitle": "Lisbon - 03",
+        "editableTitle": "03",
         "full": "20210701 2137 00024.jpeg",
         "gallerySrc": "previews/lisbon/elie-lisbon-20210701-2137-00024_900.jpg",
         "id": "elie-lisbon-20210701-2137-00024",
@@ -7395,13 +7578,14 @@
           }
         ],
         "sortIndex": 101,
-        "title": "Lisbon - 03"
+        "title": "03"
       },
       {
         "album": "Lisbon",
         "albumSlug": "lisbon",
         "albumTitle": "Lisbon",
         "caption": "Lisbon",
+        "captionColor": "7C6755",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 228581,
@@ -7413,9 +7597,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20210723-1128-00001_1800.jpg",
-          "title": "Lisbon - 04"
+          "title": "04"
         },
-        "editableTitle": "Lisbon - 04",
+        "editableTitle": "04",
         "full": "20210723 1128 00001.jpeg",
         "gallerySrc": "previews/lisbon/elie-lisbon-20210723-1128-00001_900.jpg",
         "id": "elie-lisbon-20210723-1128-00001",
@@ -7467,13 +7651,14 @@
           }
         ],
         "sortIndex": 102,
-        "title": "Lisbon - 04"
+        "title": "04"
       },
       {
         "album": "Lisbon",
         "albumSlug": "lisbon",
         "albumTitle": "Lisbon",
         "caption": "Lisbon",
+        "captionColor": "625A58",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 172165,
@@ -7485,9 +7670,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20210723-1129-00002_1800.jpg",
-          "title": "Lisbon - 05"
+          "title": "05"
         },
-        "editableTitle": "Lisbon - 05",
+        "editableTitle": "05",
         "full": "20210723 1129 00002.jpeg",
         "gallerySrc": "previews/lisbon/elie-lisbon-20210723-1129-00002_900.jpg",
         "id": "elie-lisbon-20210723-1129-00002",
@@ -7539,13 +7724,14 @@
           }
         ],
         "sortIndex": 103,
-        "title": "Lisbon - 05"
+        "title": "05"
       },
       {
         "album": "Lisbon",
         "albumSlug": "lisbon",
         "albumTitle": "Lisbon",
         "caption": "Lisbon",
+        "captionColor": "5271BD",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 283933,
@@ -7557,9 +7743,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20210912-1919-00193_1800.jpg",
-          "title": "Lisbon - 06"
+          "title": "06"
         },
-        "editableTitle": "Lisbon - 06",
+        "editableTitle": "06",
         "full": "20210912 1919 00193.jpeg",
         "gallerySrc": "previews/lisbon/elie-lisbon-20210912-1919-00193_900.jpg",
         "id": "elie-lisbon-20210912-1919-00193",
@@ -7611,13 +7797,14 @@
           }
         ],
         "sortIndex": 104,
-        "title": "Lisbon - 06"
+        "title": "06"
       },
       {
         "album": "Lisbon",
         "albumSlug": "lisbon",
         "albumTitle": "Lisbon",
         "caption": "Lisbon",
+        "captionColor": "AD8D81",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 281996,
@@ -7629,9 +7816,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20210912-1919-00194_1800.jpg",
-          "title": "Lisbon - 07"
+          "title": "07"
         },
-        "editableTitle": "Lisbon - 07",
+        "editableTitle": "07",
         "full": "20210912 1919 00194.jpeg",
         "gallerySrc": "previews/lisbon/elie-lisbon-20210912-1919-00194_900.jpg",
         "id": "elie-lisbon-20210912-1919-00194",
@@ -7683,13 +7870,14 @@
           }
         ],
         "sortIndex": 105,
-        "title": "Lisbon - 07"
+        "title": "07"
       },
       {
         "album": "Lisbon",
         "albumSlug": "lisbon",
         "albumTitle": "Lisbon",
         "caption": "Lisbon",
+        "captionColor": "B29386",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 304357,
@@ -7701,9 +7889,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20210912-1919-00195_1800.jpg",
-          "title": "Lisbon - 08"
+          "title": "08"
         },
-        "editableTitle": "Lisbon - 08",
+        "editableTitle": "08",
         "full": "20210912 1919 00195.jpeg",
         "gallerySrc": "previews/lisbon/elie-lisbon-20210912-1919-00195_900.jpg",
         "id": "elie-lisbon-20210912-1919-00195",
@@ -7755,13 +7943,14 @@
           }
         ],
         "sortIndex": 106,
-        "title": "Lisbon - 08"
+        "title": "08"
       },
       {
         "album": "Lisbon",
         "albumSlug": "lisbon",
         "albumTitle": "Lisbon",
         "caption": "Lisbon",
+        "captionColor": "264B93",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 329638,
@@ -7773,9 +7962,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20210912-1919-00197_1800.jpg",
-          "title": "Lisbon - 09"
+          "title": "09"
         },
-        "editableTitle": "Lisbon - 09",
+        "editableTitle": "09",
         "full": "20210912 1919 00197.jpeg",
         "gallerySrc": "previews/lisbon/elie-lisbon-20210912-1919-00197_900.jpg",
         "id": "elie-lisbon-20210912-1919-00197",
@@ -7827,13 +8016,14 @@
           }
         ],
         "sortIndex": 107,
-        "title": "Lisbon - 09"
+        "title": "09"
       },
       {
         "album": "Lisbon",
         "albumSlug": "lisbon",
         "albumTitle": "Lisbon",
         "caption": "Lisbon",
+        "captionColor": "626B7B",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 254915,
@@ -7845,9 +8035,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20210912-1920-00198_1800.jpg",
-          "title": "Lisbon - 10"
+          "title": "10"
         },
-        "editableTitle": "Lisbon - 10",
+        "editableTitle": "10",
         "full": "20210912 1920 00198.jpeg",
         "gallerySrc": "previews/lisbon/elie-lisbon-20210912-1920-00198_900.jpg",
         "id": "elie-lisbon-20210912-1920-00198",
@@ -7899,13 +8089,14 @@
           }
         ],
         "sortIndex": 108,
-        "title": "Lisbon - 10"
+        "title": "10"
       },
       {
         "album": "Lisbon",
         "albumSlug": "lisbon",
         "albumTitle": "Lisbon",
         "caption": "Lisbon",
+        "captionColor": "4C668B",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 270824,
@@ -7917,9 +8108,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20210912-1920-00200_1800.jpg",
-          "title": "Lisbon - 11"
+          "title": "11"
         },
-        "editableTitle": "Lisbon - 11",
+        "editableTitle": "11",
         "full": "20210912 1920 00200.jpeg",
         "gallerySrc": "previews/lisbon/elie-lisbon-20210912-1920-00200_900.jpg",
         "id": "elie-lisbon-20210912-1920-00200",
@@ -7971,13 +8162,14 @@
           }
         ],
         "sortIndex": 109,
-        "title": "Lisbon - 11"
+        "title": "11"
       },
       {
         "album": "Lisbon",
         "albumSlug": "lisbon",
         "albumTitle": "Lisbon",
         "caption": "Lisbon",
+        "captionColor": "423737",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 539686,
@@ -7989,9 +8181,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20220107-133820-00392_1800.jpg",
-          "title": "Lisbon - 12"
+          "title": "12"
         },
-        "editableTitle": "Lisbon - 12",
+        "editableTitle": "12",
         "full": "20220107 133820 00392.jpeg",
         "gallerySrc": "previews/lisbon/elie-lisbon-20220107-133820-00392_900.jpg",
         "id": "elie-lisbon-20220107-133820-00392",
@@ -8043,13 +8235,14 @@
           }
         ],
         "sortIndex": 110,
-        "title": "Lisbon - 12"
+        "title": "12"
       },
       {
         "album": "Lisbon",
         "albumSlug": "lisbon",
         "albumTitle": "Lisbon",
         "caption": "Lisbon",
+        "captionColor": "8B7A71",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 525487,
@@ -8061,9 +8254,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20220107-133904-00396_1800.jpg",
-          "title": "Lisbon - 13"
+          "title": "13"
         },
-        "editableTitle": "Lisbon - 13",
+        "editableTitle": "13",
         "full": "20220107 133904 00396.jpeg",
         "gallerySrc": "previews/lisbon/elie-lisbon-20220107-133904-00396_900.jpg",
         "id": "elie-lisbon-20220107-133904-00396",
@@ -8115,13 +8308,14 @@
           }
         ],
         "sortIndex": 111,
-        "title": "Lisbon - 13"
+        "title": "13"
       },
       {
         "album": "Lisbon",
         "albumSlug": "lisbon",
         "albumTitle": "Lisbon",
         "caption": "Lisbon",
+        "captionColor": "7A6D66",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 579021,
@@ -8133,9 +8327,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20220107-134331-00399_1800.jpg",
-          "title": "Lisbon - 14"
+          "title": "14"
         },
-        "editableTitle": "Lisbon - 14",
+        "editableTitle": "14",
         "full": "20220107 134331 00399.jpeg",
         "gallerySrc": "previews/lisbon/elie-lisbon-20220107-134331-00399_900.jpg",
         "id": "elie-lisbon-20220107-134331-00399",
@@ -8187,13 +8381,14 @@
           }
         ],
         "sortIndex": 112,
-        "title": "Lisbon - 14"
+        "title": "14"
       },
       {
         "album": "Lisbon",
         "albumSlug": "lisbon",
         "albumTitle": "Lisbon",
         "caption": "Lisbon",
+        "captionColor": "86624B",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 499257,
@@ -8205,9 +8400,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20220714-210123-00303_1800.jpg",
-          "title": "Lisbon - 15"
+          "title": "15"
         },
-        "editableTitle": "Lisbon - 15",
+        "editableTitle": "15",
         "full": "20220714 210123 00303.jpeg",
         "gallerySrc": "previews/lisbon/elie-lisbon-20220714-210123-00303_900.jpg",
         "id": "elie-lisbon-20220714-210123-00303",
@@ -8259,13 +8454,14 @@
           }
         ],
         "sortIndex": 113,
-        "title": "Lisbon - 15"
+        "title": "15"
       },
       {
         "album": "Lisbon",
         "albumSlug": "lisbon",
         "albumTitle": "Lisbon",
         "caption": "Lisbon",
+        "captionColor": "84614C",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 496097,
@@ -8277,9 +8473,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20220714-210123-00304_1800.jpg",
-          "title": "Lisbon - 16"
+          "title": "16"
         },
-        "editableTitle": "Lisbon - 16",
+        "editableTitle": "16",
         "full": "20220714 210123 00304.jpeg",
         "gallerySrc": "previews/lisbon/elie-lisbon-20220714-210123-00304_900.jpg",
         "id": "elie-lisbon-20220714-210123-00304",
@@ -8331,13 +8527,14 @@
           }
         ],
         "sortIndex": 114,
-        "title": "Lisbon - 16"
+        "title": "16"
       },
       {
         "album": "Lisbon",
         "albumSlug": "lisbon",
         "albumTitle": "Lisbon",
         "caption": "Lisbon",
+        "captionColor": "87634D",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 495175,
@@ -8349,9 +8546,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20220714-210123-00305_1800.jpg",
-          "title": "Lisbon - 17"
+          "title": "17"
         },
-        "editableTitle": "Lisbon - 17",
+        "editableTitle": "17",
         "full": "20220714 210123 00305.jpeg",
         "gallerySrc": "previews/lisbon/elie-lisbon-20220714-210123-00305_900.jpg",
         "id": "elie-lisbon-20220714-210123-00305",
@@ -8403,13 +8600,14 @@
           }
         ],
         "sortIndex": 115,
-        "title": "Lisbon - 17"
+        "title": "17"
       },
       {
         "album": "Lisbon",
         "albumSlug": "lisbon",
         "albumTitle": "Lisbon",
         "caption": "Lisbon",
+        "captionColor": "AEA77E",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 568512,
@@ -8421,9 +8619,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20220714-210129-00306_1800.jpg",
-          "title": "Lisbon - 18"
+          "title": "18"
         },
-        "editableTitle": "Lisbon - 18",
+        "editableTitle": "18",
         "full": "20220714 210129 00306.jpeg",
         "gallerySrc": "previews/lisbon/elie-lisbon-20220714-210129-00306_900.jpg",
         "id": "elie-lisbon-20220714-210129-00306",
@@ -8475,13 +8673,14 @@
           }
         ],
         "sortIndex": 116,
-        "title": "Lisbon - 18"
+        "title": "18"
       },
       {
         "album": "Lisbon",
         "albumSlug": "lisbon",
         "albumTitle": "Lisbon",
         "caption": "Lisbon",
+        "captionColor": "ACAA89",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 525110,
@@ -8493,9 +8692,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20220714-210129-00307_1800.jpg",
-          "title": "Lisbon - 19"
+          "title": "19"
         },
-        "editableTitle": "Lisbon - 19",
+        "editableTitle": "19",
         "full": "20220714 210129 00307.jpeg",
         "gallerySrc": "previews/lisbon/elie-lisbon-20220714-210129-00307_900.jpg",
         "id": "elie-lisbon-20220714-210129-00307",
@@ -8547,13 +8746,14 @@
           }
         ],
         "sortIndex": 117,
-        "title": "Lisbon - 19"
+        "title": "19"
       },
       {
         "album": "Lisbon",
         "albumSlug": "lisbon",
         "albumTitle": "Lisbon",
         "caption": "Lisbon",
+        "captionColor": "775F52",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 498038,
@@ -8565,9 +8765,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20220714-210137-00308_1800.jpg",
-          "title": "Lisbon - 20"
+          "title": "20"
         },
-        "editableTitle": "Lisbon - 20",
+        "editableTitle": "20",
         "full": "20220714 210137 00308.jpeg",
         "gallerySrc": "previews/lisbon/elie-lisbon-20220714-210137-00308_900.jpg",
         "id": "elie-lisbon-20220714-210137-00308",
@@ -8619,13 +8819,14 @@
           }
         ],
         "sortIndex": 118,
-        "title": "Lisbon - 20"
+        "title": "20"
       },
       {
         "album": "Lisbon",
         "albumSlug": "lisbon",
         "albumTitle": "Lisbon",
         "caption": "Lisbon",
+        "captionColor": "736053",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 496087,
@@ -8637,9 +8838,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20220714-210138-00310_1800.jpg",
-          "title": "Lisbon - 21"
+          "title": "21"
         },
-        "editableTitle": "Lisbon - 21",
+        "editableTitle": "21",
         "full": "20220714 210138 00310.jpeg",
         "gallerySrc": "previews/lisbon/elie-lisbon-20220714-210138-00310_900.jpg",
         "id": "elie-lisbon-20220714-210138-00310",
@@ -8691,13 +8892,14 @@
           }
         ],
         "sortIndex": 119,
-        "title": "Lisbon - 21"
+        "title": "21"
       },
       {
         "album": "Lisbon",
         "albumSlug": "lisbon",
         "albumTitle": "Lisbon",
         "caption": "Lisbon",
+        "captionColor": "9B7F68",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 408006,
@@ -8709,9 +8911,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20220714-210143-00312_1800.jpg",
-          "title": "Lisbon - 22"
+          "title": "22"
         },
-        "editableTitle": "Lisbon - 22",
+        "editableTitle": "22",
         "full": "20220714 210143 00312.jpeg",
         "gallerySrc": "previews/lisbon/elie-lisbon-20220714-210143-00312_900.jpg",
         "id": "elie-lisbon-20220714-210143-00312",
@@ -8763,13 +8965,14 @@
           }
         ],
         "sortIndex": 120,
-        "title": "Lisbon - 22"
+        "title": "22"
       },
       {
         "album": "Lisbon",
         "albumSlug": "lisbon",
         "albumTitle": "Lisbon",
         "caption": "Lisbon",
+        "captionColor": "594733",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 431173,
@@ -8781,9 +8984,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20220714-210204-00313_1800.jpg",
-          "title": "Lisbon - 23"
+          "title": "23"
         },
-        "editableTitle": "Lisbon - 23",
+        "editableTitle": "23",
         "full": "20220714 210204 00313.jpeg",
         "gallerySrc": "previews/lisbon/elie-lisbon-20220714-210204-00313_900.jpg",
         "id": "elie-lisbon-20220714-210204-00313",
@@ -8835,13 +9038,14 @@
           }
         ],
         "sortIndex": 121,
-        "title": "Lisbon - 23"
+        "title": "23"
       },
       {
         "album": "Lisbon",
         "albumSlug": "lisbon",
         "albumTitle": "Lisbon",
         "caption": "Lisbon",
+        "captionColor": "524B37",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 436538,
@@ -8853,9 +9057,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20220714-210210-00314_1800.jpg",
-          "title": "Lisbon - 24"
+          "title": "24"
         },
-        "editableTitle": "Lisbon - 24",
+        "editableTitle": "24",
         "full": "20220714 210210 00314.jpeg",
         "gallerySrc": "previews/lisbon/elie-lisbon-20220714-210210-00314_900.jpg",
         "id": "elie-lisbon-20220714-210210-00314",
@@ -8907,13 +9111,14 @@
           }
         ],
         "sortIndex": 122,
-        "title": "Lisbon - 24"
+        "title": "24"
       },
       {
         "album": "Lisbon",
         "albumSlug": "lisbon",
         "albumTitle": "Lisbon",
         "caption": "Lisbon",
+        "captionColor": "534B37",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 432218,
@@ -8925,9 +9130,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20220714-210211-00315_1800.jpg",
-          "title": "Lisbon - 25"
+          "title": "25"
         },
-        "editableTitle": "Lisbon - 25",
+        "editableTitle": "25",
         "full": "20220714 210211 00315.jpeg",
         "gallerySrc": "previews/lisbon/elie-lisbon-20220714-210211-00315_900.jpg",
         "id": "elie-lisbon-20220714-210211-00315",
@@ -8979,13 +9184,14 @@
           }
         ],
         "sortIndex": 123,
-        "title": "Lisbon - 25"
+        "title": "25"
       },
       {
         "album": "Lisbon",
         "albumSlug": "lisbon",
         "albumTitle": "Lisbon",
         "caption": "Lisbon",
+        "captionColor": "B78765",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 495113,
@@ -8997,9 +9203,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20220714-210228-00318_1800.jpg",
-          "title": "Lisbon - 26"
+          "title": "26"
         },
-        "editableTitle": "Lisbon - 26",
+        "editableTitle": "26",
         "full": "20220714 210228 00318.jpeg",
         "gallerySrc": "previews/lisbon/elie-lisbon-20220714-210228-00318_900.jpg",
         "id": "elie-lisbon-20220714-210228-00318",
@@ -9051,13 +9257,14 @@
           }
         ],
         "sortIndex": 124,
-        "title": "Lisbon - 26"
+        "title": "26"
       },
       {
         "album": "Lisbon",
         "albumSlug": "lisbon",
         "albumTitle": "Lisbon",
         "caption": "Lisbon",
+        "captionColor": "63422B",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 545691,
@@ -9069,9 +9276,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20220714-210233-00320_1800.jpg",
-          "title": "Lisbon - 27"
+          "title": "27"
         },
-        "editableTitle": "Lisbon - 27",
+        "editableTitle": "27",
         "full": "20220714 210233 00320.jpeg",
         "gallerySrc": "previews/lisbon/elie-lisbon-20220714-210233-00320_900.jpg",
         "id": "elie-lisbon-20220714-210233-00320",
@@ -9123,13 +9330,14 @@
           }
         ],
         "sortIndex": 125,
-        "title": "Lisbon - 27"
+        "title": "27"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "7E7265",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 520836,
@@ -9141,9 +9349,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112414-03919_1800.jpg",
-          "title": "Malaga - 01"
+          "title": "01"
         },
-        "editableTitle": "Malaga - 01",
+        "editableTitle": "01",
         "full": "20230422 112414 03919.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230422-112414-03919_900.jpg",
         "id": "elie-malaga-20230422-112414-03919",
@@ -9195,13 +9403,14 @@
           }
         ],
         "sortIndex": 126,
-        "title": "Malaga - 01"
+        "title": "01"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "9E897C",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 274051,
@@ -9213,9 +9422,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112419-03920_1800.jpg",
-          "title": "Malaga - 02"
+          "title": "02"
         },
-        "editableTitle": "Malaga - 02",
+        "editableTitle": "02",
         "full": "20230422 112419 03920.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230422-112419-03920_900.jpg",
         "id": "elie-malaga-20230422-112419-03920",
@@ -9267,13 +9476,14 @@
           }
         ],
         "sortIndex": 127,
-        "title": "Malaga - 02"
+        "title": "02"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "C59771",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 297952,
@@ -9285,9 +9495,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112424-03921_1800.jpg",
-          "title": "Malaga - 03"
+          "title": "03"
         },
-        "editableTitle": "Malaga - 03",
+        "editableTitle": "03",
         "full": "20230422 112424 03921.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230422-112424-03921_900.jpg",
         "id": "elie-malaga-20230422-112424-03921",
@@ -9339,13 +9549,14 @@
           }
         ],
         "sortIndex": 128,
-        "title": "Malaga - 03"
+        "title": "03"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "A48D74",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 172630,
@@ -9357,9 +9568,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112430-03922_1800.jpg",
-          "title": "Malaga - 04"
+          "title": "04"
         },
-        "editableTitle": "Malaga - 04",
+        "editableTitle": "04",
         "full": "20230422 112430 03922.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230422-112430-03922_900.jpg",
         "id": "elie-malaga-20230422-112430-03922",
@@ -9411,13 +9622,14 @@
           }
         ],
         "sortIndex": 129,
-        "title": "Malaga - 04"
+        "title": "04"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "BBA388",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 149708,
@@ -9429,9 +9641,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112434-03923_1800.jpg",
-          "title": "Malaga - 05"
+          "title": "05"
         },
-        "editableTitle": "Malaga - 05",
+        "editableTitle": "05",
         "full": "20230422 112434 03923.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230422-112434-03923_900.jpg",
         "id": "elie-malaga-20230422-112434-03923",
@@ -9483,13 +9695,14 @@
           }
         ],
         "sortIndex": 130,
-        "title": "Malaga - 05"
+        "title": "05"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "8B633D",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 264408,
@@ -9501,9 +9714,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112439-03924_1800.jpg",
-          "title": "Malaga - 06"
+          "title": "06"
         },
-        "editableTitle": "Malaga - 06",
+        "editableTitle": "06",
         "full": "20230422 112439 03924.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230422-112439-03924_900.jpg",
         "id": "elie-malaga-20230422-112439-03924",
@@ -9555,13 +9768,14 @@
           }
         ],
         "sortIndex": 131,
-        "title": "Malaga - 06"
+        "title": "06"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "866A55",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 187043,
@@ -9573,9 +9787,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112443-03925_1800.jpg",
-          "title": "Malaga - 07"
+          "title": "07"
         },
-        "editableTitle": "Malaga - 07",
+        "editableTitle": "07",
         "full": "20230422 112443 03925.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230422-112443-03925_900.jpg",
         "id": "elie-malaga-20230422-112443-03925",
@@ -9627,13 +9841,14 @@
           }
         ],
         "sortIndex": 132,
-        "title": "Malaga - 07"
+        "title": "07"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "B99578",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 192318,
@@ -9645,9 +9860,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112446-03926_1800.jpg",
-          "title": "Malaga - 08"
+          "title": "08"
         },
-        "editableTitle": "Malaga - 08",
+        "editableTitle": "08",
         "full": "20230422 112446 03926.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230422-112446-03926_900.jpg",
         "id": "elie-malaga-20230422-112446-03926",
@@ -9699,13 +9914,14 @@
           }
         ],
         "sortIndex": 133,
-        "title": "Malaga - 08"
+        "title": "08"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "ACABA8",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 148870,
@@ -9717,9 +9933,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112450-03927_1800.jpg",
-          "title": "Malaga - 09"
+          "title": "09"
         },
-        "editableTitle": "Malaga - 09",
+        "editableTitle": "09",
         "full": "20230422 112450 03927.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230422-112450-03927_900.jpg",
         "id": "elie-malaga-20230422-112450-03927",
@@ -9771,13 +9987,14 @@
           }
         ],
         "sortIndex": 134,
-        "title": "Malaga - 09"
+        "title": "09"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "AD8864",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 197532,
@@ -9789,9 +10006,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112454-03928_1800.jpg",
-          "title": "Malaga - 10"
+          "title": "10"
         },
-        "editableTitle": "Malaga - 10",
+        "editableTitle": "10",
         "full": "20230422 112454 03928.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230422-112454-03928_900.jpg",
         "id": "elie-malaga-20230422-112454-03928",
@@ -9843,13 +10060,14 @@
           }
         ],
         "sortIndex": 135,
-        "title": "Malaga - 10"
+        "title": "10"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "9C8873",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 138026,
@@ -9861,9 +10079,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112457-03929_1800.jpg",
-          "title": "Malaga - 11"
+          "title": "11"
         },
-        "editableTitle": "Malaga - 11",
+        "editableTitle": "11",
         "full": "20230422 112457 03929.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230422-112457-03929_900.jpg",
         "id": "elie-malaga-20230422-112457-03929",
@@ -9915,13 +10133,14 @@
           }
         ],
         "sortIndex": 136,
-        "title": "Malaga - 11"
+        "title": "11"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "BD8C7A",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 218673,
@@ -9933,9 +10152,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112501-03930_1800.jpg",
-          "title": "Malaga - 12"
+          "title": "12"
         },
-        "editableTitle": "Malaga - 12",
+        "editableTitle": "12",
         "full": "20230422 112501 03930.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230422-112501-03930_900.jpg",
         "id": "elie-malaga-20230422-112501-03930",
@@ -9987,13 +10206,14 @@
           }
         ],
         "sortIndex": 137,
-        "title": "Malaga - 12"
+        "title": "12"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "A27B70",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 186588,
@@ -10005,9 +10225,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112504-03931_1800.jpg",
-          "title": "Malaga - 13"
+          "title": "13"
         },
-        "editableTitle": "Malaga - 13",
+        "editableTitle": "13",
         "full": "20230422 112504 03931.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230422-112504-03931_900.jpg",
         "id": "elie-malaga-20230422-112504-03931",
@@ -10059,13 +10279,14 @@
           }
         ],
         "sortIndex": 138,
-        "title": "Malaga - 13"
+        "title": "13"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "AA8B74",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 223908,
@@ -10077,9 +10298,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112509-03932_1800.jpg",
-          "title": "Malaga - 14"
+          "title": "14"
         },
-        "editableTitle": "Malaga - 14",
+        "editableTitle": "14",
         "full": "20230422 112509 03932.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230422-112509-03932_900.jpg",
         "id": "elie-malaga-20230422-112509-03932",
@@ -10131,13 +10352,14 @@
           }
         ],
         "sortIndex": 139,
-        "title": "Malaga - 14"
+        "title": "14"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "CBB298",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 172800,
@@ -10149,9 +10371,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112512-03933_1800.jpg",
-          "title": "Malaga - 15"
+          "title": "15"
         },
-        "editableTitle": "Malaga - 15",
+        "editableTitle": "15",
         "full": "20230422 112512 03933.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230422-112512-03933_900.jpg",
         "id": "elie-malaga-20230422-112512-03933",
@@ -10203,13 +10425,14 @@
           }
         ],
         "sortIndex": 140,
-        "title": "Malaga - 15"
+        "title": "15"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "A4958A",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 193670,
@@ -10221,9 +10444,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112516-03934_1800.jpg",
-          "title": "Malaga - 16"
+          "title": "16"
         },
-        "editableTitle": "Malaga - 16",
+        "editableTitle": "16",
         "full": "20230422 112516 03934.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230422-112516-03934_900.jpg",
         "id": "elie-malaga-20230422-112516-03934",
@@ -10275,13 +10498,14 @@
           }
         ],
         "sortIndex": 141,
-        "title": "Malaga - 16"
+        "title": "16"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "BD8E84",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 220283,
@@ -10293,9 +10517,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112519-03935_1800.jpg",
-          "title": "Malaga - 17"
+          "title": "17"
         },
-        "editableTitle": "Malaga - 17",
+        "editableTitle": "17",
         "full": "20230422 112519 03935.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230422-112519-03935_900.jpg",
         "id": "elie-malaga-20230422-112519-03935",
@@ -10347,13 +10571,14 @@
           }
         ],
         "sortIndex": 142,
-        "title": "Malaga - 17"
+        "title": "17"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "A0877D",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 145031,
@@ -10365,9 +10590,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112523-03936_1800.jpg",
-          "title": "Malaga - 18"
+          "title": "18"
         },
-        "editableTitle": "Malaga - 18",
+        "editableTitle": "18",
         "full": "20230422 112523 03936.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230422-112523-03936_900.jpg",
         "id": "elie-malaga-20230422-112523-03936",
@@ -10419,13 +10644,14 @@
           }
         ],
         "sortIndex": 143,
-        "title": "Malaga - 18"
+        "title": "18"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "EDEDEC",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 288855,
@@ -10437,9 +10663,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112528-03937_1800.jpg",
-          "title": "Malaga - 19"
+          "title": "19"
         },
-        "editableTitle": "Malaga - 19",
+        "editableTitle": "19",
         "full": "20230422 112528 03937.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230422-112528-03937_900.jpg",
         "id": "elie-malaga-20230422-112528-03937",
@@ -10491,13 +10717,14 @@
           }
         ],
         "sortIndex": 144,
-        "title": "Malaga - 19"
+        "title": "19"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "333C35",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 355890,
@@ -10509,9 +10736,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112536-03938_1800.jpg",
-          "title": "Malaga - 20"
+          "title": "20"
         },
-        "editableTitle": "Malaga - 20",
+        "editableTitle": "20",
         "full": "20230422 112536 03938.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230422-112536-03938_900.jpg",
         "id": "elie-malaga-20230422-112536-03938",
@@ -10563,13 +10790,14 @@
           }
         ],
         "sortIndex": 145,
-        "title": "Malaga - 20"
+        "title": "20"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "7F6B36",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 417023,
@@ -10581,9 +10809,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112542-03939_1800.jpg",
-          "title": "Malaga - 21"
+          "title": "21"
         },
-        "editableTitle": "Malaga - 21",
+        "editableTitle": "21",
         "full": "20230422 112542 03939.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230422-112542-03939_900.jpg",
         "id": "elie-malaga-20230422-112542-03939",
@@ -10635,13 +10863,14 @@
           }
         ],
         "sortIndex": 146,
-        "title": "Malaga - 21"
+        "title": "21"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "988952",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 729359,
@@ -10653,9 +10882,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112545-03940_1800.jpg",
-          "title": "Malaga - 22"
+          "title": "22"
         },
-        "editableTitle": "Malaga - 22",
+        "editableTitle": "22",
         "full": "20230422 112545 03940.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230422-112545-03940_900.jpg",
         "id": "elie-malaga-20230422-112545-03940",
@@ -10707,13 +10936,14 @@
           }
         ],
         "sortIndex": 147,
-        "title": "Malaga - 22"
+        "title": "22"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "424657",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 236465,
@@ -10725,9 +10955,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112548-03941_1800.jpg",
-          "title": "Malaga - 23"
+          "title": "23"
         },
-        "editableTitle": "Malaga - 23",
+        "editableTitle": "23",
         "full": "20230422 112548 03941.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230422-112548-03941_900.jpg",
         "id": "elie-malaga-20230422-112548-03941",
@@ -10779,13 +11009,14 @@
           }
         ],
         "sortIndex": 148,
-        "title": "Malaga - 23"
+        "title": "23"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "3B3B4D",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 230143,
@@ -10797,9 +11028,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112551-03942_1800.jpg",
-          "title": "Malaga - 24"
+          "title": "24"
         },
-        "editableTitle": "Malaga - 24",
+        "editableTitle": "24",
         "full": "20230422 112551 03942.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230422-112551-03942_900.jpg",
         "id": "elie-malaga-20230422-112551-03942",
@@ -10851,13 +11082,14 @@
           }
         ],
         "sortIndex": 149,
-        "title": "Malaga - 24"
+        "title": "24"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "5D5545",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 436516,
@@ -10869,9 +11101,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112557-03943_1800.jpg",
-          "title": "Malaga - 25"
+          "title": "25"
         },
-        "editableTitle": "Malaga - 25",
+        "editableTitle": "25",
         "full": "20230422 112557 03943.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230422-112557-03943_900.jpg",
         "id": "elie-malaga-20230422-112557-03943",
@@ -10923,13 +11155,14 @@
           }
         ],
         "sortIndex": 150,
-        "title": "Malaga - 25"
+        "title": "25"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "9D5F46",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 246099,
@@ -10941,9 +11174,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112603-03944_1800.jpg",
-          "title": "Malaga - 26"
+          "title": "26"
         },
-        "editableTitle": "Malaga - 26",
+        "editableTitle": "26",
         "full": "20230422 112603 03944.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230422-112603-03944_900.jpg",
         "id": "elie-malaga-20230422-112603-03944",
@@ -10995,13 +11228,14 @@
           }
         ],
         "sortIndex": 151,
-        "title": "Malaga - 26"
+        "title": "26"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "0F0F1C",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 251832,
@@ -11013,9 +11247,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213640-00105_1800.jpg",
-          "title": "Malaga - 27"
+          "title": "27"
         },
-        "editableTitle": "Malaga - 27",
+        "editableTitle": "27",
         "full": "20230607 213640 00105.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230607-213640-00105_900.jpg",
         "id": "elie-malaga-20230607-213640-00105",
@@ -11067,13 +11301,14 @@
           }
         ],
         "sortIndex": 152,
-        "title": "Malaga - 27"
+        "title": "27"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "0D1121",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 251460,
@@ -11085,9 +11320,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213656-00109_1800.jpg",
-          "title": "Malaga - 28"
+          "title": "28"
         },
-        "editableTitle": "Malaga - 28",
+        "editableTitle": "28",
         "full": "20230607 213656 00109.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230607-213656-00109_900.jpg",
         "id": "elie-malaga-20230607-213656-00109",
@@ -11139,13 +11374,14 @@
           }
         ],
         "sortIndex": 153,
-        "title": "Malaga - 28"
+        "title": "28"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "472C20",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 383506,
@@ -11157,9 +11393,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213714-00110_1800.jpg",
-          "title": "Malaga - 29"
+          "title": "29"
         },
-        "editableTitle": "Malaga - 29",
+        "editableTitle": "29",
         "full": "20230607 213714 00110.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230607-213714-00110_900.jpg",
         "id": "elie-malaga-20230607-213714-00110",
@@ -11211,13 +11447,14 @@
           }
         ],
         "sortIndex": 154,
-        "title": "Malaga - 29"
+        "title": "29"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "412A20",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 409241,
@@ -11229,9 +11466,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213716-00111_1800.jpg",
-          "title": "Malaga - 30"
+          "title": "30"
         },
-        "editableTitle": "Malaga - 30",
+        "editableTitle": "30",
         "full": "20230607 213716 00111.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230607-213716-00111_900.jpg",
         "id": "elie-malaga-20230607-213716-00111",
@@ -11283,13 +11520,14 @@
           }
         ],
         "sortIndex": 155,
-        "title": "Malaga - 30"
+        "title": "30"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "01251C",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 395155,
@@ -11301,9 +11539,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213722-00114_1800.jpg",
-          "title": "Malaga - 31"
+          "title": "31"
         },
-        "editableTitle": "Malaga - 31",
+        "editableTitle": "31",
         "full": "20230607 213722 00114.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230607-213722-00114_900.jpg",
         "id": "elie-malaga-20230607-213722-00114",
@@ -11355,13 +11593,14 @@
           }
         ],
         "sortIndex": 156,
-        "title": "Malaga - 31"
+        "title": "31"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "002D20",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 366350,
@@ -11373,9 +11612,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213724-00115_1800.jpg",
-          "title": "Malaga - 32"
+          "title": "32"
         },
-        "editableTitle": "Malaga - 32",
+        "editableTitle": "32",
         "full": "20230607 213724 00115.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230607-213724-00115_900.jpg",
         "id": "elie-malaga-20230607-213724-00115",
@@ -11427,13 +11666,14 @@
           }
         ],
         "sortIndex": 157,
-        "title": "Malaga - 32"
+        "title": "32"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "3A291F",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 392705,
@@ -11445,9 +11685,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213728-00117_1800.jpg",
-          "title": "Malaga - 33"
+          "title": "33"
         },
-        "editableTitle": "Malaga - 33",
+        "editableTitle": "33",
         "full": "20230607 213728 00117.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230607-213728-00117_900.jpg",
         "id": "elie-malaga-20230607-213728-00117",
@@ -11499,13 +11739,14 @@
           }
         ],
         "sortIndex": 158,
-        "title": "Malaga - 33"
+        "title": "33"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "3F2D27",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 406321,
@@ -11517,9 +11758,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213736-00121_1800.jpg",
-          "title": "Malaga - 34"
+          "title": "34"
         },
-        "editableTitle": "Malaga - 34",
+        "editableTitle": "34",
         "full": "20230607 213736 00121.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230607-213736-00121_900.jpg",
         "id": "elie-malaga-20230607-213736-00121",
@@ -11571,13 +11812,14 @@
           }
         ],
         "sortIndex": 159,
-        "title": "Malaga - 34"
+        "title": "34"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "3A2B25",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 398405,
@@ -11589,9 +11831,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213737-00122_1800.jpg",
-          "title": "Malaga - 35"
+          "title": "35"
         },
-        "editableTitle": "Malaga - 35",
+        "editableTitle": "35",
         "full": "20230607 213737 00122.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230607-213737-00122_900.jpg",
         "id": "elie-malaga-20230607-213737-00122",
@@ -11643,13 +11885,14 @@
           }
         ],
         "sortIndex": 160,
-        "title": "Malaga - 35"
+        "title": "35"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "4D403C",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 423559,
@@ -11661,9 +11904,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213742-00124_1800.jpg",
-          "title": "Malaga - 36"
+          "title": "36"
         },
-        "editableTitle": "Malaga - 36",
+        "editableTitle": "36",
         "full": "20230607 213742 00124.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230607-213742-00124_900.jpg",
         "id": "elie-malaga-20230607-213742-00124",
@@ -11715,13 +11958,14 @@
           }
         ],
         "sortIndex": 161,
-        "title": "Malaga - 36"
+        "title": "36"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "4D4846",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 396765,
@@ -11733,9 +11977,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213746-00126_1800.jpg",
-          "title": "Malaga - 37"
+          "title": "37"
         },
-        "editableTitle": "Malaga - 37",
+        "editableTitle": "37",
         "full": "20230607 213746 00126.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230607-213746-00126_900.jpg",
         "id": "elie-malaga-20230607-213746-00126",
@@ -11787,13 +12031,14 @@
           }
         ],
         "sortIndex": 162,
-        "title": "Malaga - 37"
+        "title": "37"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "4F4547",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 410743,
@@ -11805,9 +12050,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213748-00127_1800.jpg",
-          "title": "Malaga - 38"
+          "title": "38"
         },
-        "editableTitle": "Malaga - 38",
+        "editableTitle": "38",
         "full": "20230607 213748 00127.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230607-213748-00127_900.jpg",
         "id": "elie-malaga-20230607-213748-00127",
@@ -11859,13 +12104,14 @@
           }
         ],
         "sortIndex": 163,
-        "title": "Malaga - 38"
+        "title": "38"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "393236",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 371592,
@@ -11877,9 +12123,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213753-00129_1800.jpg",
-          "title": "Malaga - 39"
+          "title": "39"
         },
-        "editableTitle": "Malaga - 39",
+        "editableTitle": "39",
         "full": "20230607 213753 00129.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230607-213753-00129_900.jpg",
         "id": "elie-malaga-20230607-213753-00129",
@@ -11931,13 +12177,14 @@
           }
         ],
         "sortIndex": 164,
-        "title": "Malaga - 39"
+        "title": "39"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "332E32",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 348250,
@@ -11949,9 +12196,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213755-00130_1800.jpg",
-          "title": "Malaga - 40"
+          "title": "40"
         },
-        "editableTitle": "Malaga - 40",
+        "editableTitle": "40",
         "full": "20230607 213755 00130.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230607-213755-00130_900.jpg",
         "id": "elie-malaga-20230607-213755-00130",
@@ -12003,13 +12250,14 @@
           }
         ],
         "sortIndex": 165,
-        "title": "Malaga - 40"
+        "title": "40"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "2A323C",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 336881,
@@ -12021,9 +12269,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213802-00134_1800.jpg",
-          "title": "Malaga - 41"
+          "title": "41"
         },
-        "editableTitle": "Malaga - 41",
+        "editableTitle": "41",
         "full": "20230607 213802 00134.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230607-213802-00134_900.jpg",
         "id": "elie-malaga-20230607-213802-00134",
@@ -12075,13 +12323,14 @@
           }
         ],
         "sortIndex": 166,
-        "title": "Malaga - 41"
+        "title": "41"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "1E283C",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 334310,
@@ -12093,9 +12342,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213806-00136_1800.jpg",
-          "title": "Malaga - 42"
+          "title": "42"
         },
-        "editableTitle": "Malaga - 42",
+        "editableTitle": "42",
         "full": "20230607 213806 00136.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230607-213806-00136_900.jpg",
         "id": "elie-malaga-20230607-213806-00136",
@@ -12147,13 +12396,14 @@
           }
         ],
         "sortIndex": 167,
-        "title": "Malaga - 42"
+        "title": "42"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "282231",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 369878,
@@ -12165,9 +12415,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213811-00139_1800.jpg",
-          "title": "Malaga - 43"
+          "title": "43"
         },
-        "editableTitle": "Malaga - 43",
+        "editableTitle": "43",
         "full": "20230607 213811 00139.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230607-213811-00139_900.jpg",
         "id": "elie-malaga-20230607-213811-00139",
@@ -12219,13 +12469,14 @@
           }
         ],
         "sortIndex": 168,
-        "title": "Malaga - 43"
+        "title": "43"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "155F55",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 274502,
@@ -12237,9 +12488,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213817-00142_1800.jpg",
-          "title": "Malaga - 44"
+          "title": "44"
         },
-        "editableTitle": "Malaga - 44",
+        "editableTitle": "44",
         "full": "20230607 213817 00142.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230607-213817-00142_900.jpg",
         "id": "elie-malaga-20230607-213817-00142",
@@ -12291,13 +12542,14 @@
           }
         ],
         "sortIndex": 169,
-        "title": "Malaga - 44"
+        "title": "44"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "261E29",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 362921,
@@ -12309,9 +12561,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213820-00144_1800.jpg",
-          "title": "Malaga - 45"
+          "title": "45"
         },
-        "editableTitle": "Malaga - 45",
+        "editableTitle": "45",
         "full": "20230607 213820 00144.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230607-213820-00144_900.jpg",
         "id": "elie-malaga-20230607-213820-00144",
@@ -12363,13 +12615,14 @@
           }
         ],
         "sortIndex": 170,
-        "title": "Malaga - 45"
+        "title": "45"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "26202C",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 368680,
@@ -12381,9 +12634,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213822-00145_1800.jpg",
-          "title": "Malaga - 46"
+          "title": "46"
         },
-        "editableTitle": "Malaga - 46",
+        "editableTitle": "46",
         "full": "20230607 213822 00145.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230607-213822-00145_900.jpg",
         "id": "elie-malaga-20230607-213822-00145",
@@ -12435,13 +12688,14 @@
           }
         ],
         "sortIndex": 171,
-        "title": "Malaga - 46"
+        "title": "46"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "086462",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 293057,
@@ -12453,9 +12707,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213824-00146_1800.jpg",
-          "title": "Malaga - 47"
+          "title": "47"
         },
-        "editableTitle": "Malaga - 47",
+        "editableTitle": "47",
         "full": "20230607 213824 00146.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230607-213824-00146_900.jpg",
         "id": "elie-malaga-20230607-213824-00146",
@@ -12507,13 +12761,14 @@
           }
         ],
         "sortIndex": 172,
-        "title": "Malaga - 47"
+        "title": "47"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "087672",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 305232,
@@ -12525,9 +12780,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213825-00147_1800.jpg",
-          "title": "Malaga - 48"
+          "title": "48"
         },
-        "editableTitle": "Malaga - 48",
+        "editableTitle": "48",
         "full": "20230607 213825 00147.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230607-213825-00147_900.jpg",
         "id": "elie-malaga-20230607-213825-00147",
@@ -12579,13 +12834,14 @@
           }
         ],
         "sortIndex": 173,
-        "title": "Malaga - 48"
+        "title": "48"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "0E0A1F",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 238149,
@@ -12597,9 +12853,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213850-00151_1800.jpg",
-          "title": "Malaga - 49"
+          "title": "49"
         },
-        "editableTitle": "Malaga - 49",
+        "editableTitle": "49",
         "full": "20230607 213850 00151.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230607-213850-00151_900.jpg",
         "id": "elie-malaga-20230607-213850-00151",
@@ -12651,13 +12907,14 @@
           }
         ],
         "sortIndex": 174,
-        "title": "Malaga - 49"
+        "title": "49"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "000000",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 13259,
@@ -12669,9 +12926,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213900-00155_1800.jpg",
-          "title": "Malaga - 50"
+          "title": "50"
         },
-        "editableTitle": "Malaga - 50",
+        "editableTitle": "50",
         "full": "20230607 213900 00155.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230607-213900-00155_900.jpg",
         "id": "elie-malaga-20230607-213900-00155",
@@ -12723,13 +12980,14 @@
           }
         ],
         "sortIndex": 175,
-        "title": "Malaga - 50"
+        "title": "50"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "807B6E",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 197662,
@@ -12741,9 +12999,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230616-080301-03945_1800.jpg",
-          "title": "Malaga - 51"
+          "title": "51"
         },
-        "editableTitle": "Malaga - 51",
+        "editableTitle": "51",
         "full": "20230616 080301 03945.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20230616-080301-03945_900.jpg",
         "id": "elie-malaga-20230616-080301-03945",
@@ -12795,13 +13053,14 @@
           }
         ],
         "sortIndex": 176,
-        "title": "Malaga - 51"
+        "title": "51"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "4C4443",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 281373,
@@ -12813,9 +13072,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20231018-084852-00001_1800.jpg",
-          "title": "Malaga - 52"
+          "title": "52"
         },
-        "editableTitle": "Malaga - 52",
+        "editableTitle": "52",
         "full": "20231018 084852 00001.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20231018-084852-00001_900.jpg",
         "id": "elie-malaga-20231018-084852-00001",
@@ -12867,13 +13126,14 @@
           }
         ],
         "sortIndex": 177,
-        "title": "Malaga - 52"
+        "title": "52"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "556268",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 311704,
@@ -12885,9 +13145,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20231031-000233-00614_1800.jpg",
-          "title": "Malaga - 53"
+          "title": "53"
         },
-        "editableTitle": "Malaga - 53",
+        "editableTitle": "53",
         "full": "20231031 000233 00614.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20231031-000233-00614_900.jpg",
         "id": "elie-malaga-20231031-000233-00614",
@@ -12939,13 +13199,14 @@
           }
         ],
         "sortIndex": 178,
-        "title": "Malaga - 53"
+        "title": "53"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "3D3E3F",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 262006,
@@ -12957,9 +13218,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240212-123617-00455_1800.jpg",
-          "title": "Malaga - 54"
+          "title": "54"
         },
-        "editableTitle": "Malaga - 54",
+        "editableTitle": "54",
         "full": "20240212 123617 00455.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20240212-123617-00455_900.jpg",
         "id": "elie-malaga-20240212-123617-00455",
@@ -13011,13 +13272,14 @@
           }
         ],
         "sortIndex": 179,
-        "title": "Malaga - 54"
+        "title": "54"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "484E5B",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 119782,
@@ -13029,9 +13291,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240212-123622-00457_1800.jpg",
-          "title": "Malaga - 55"
+          "title": "55"
         },
-        "editableTitle": "Malaga - 55",
+        "editableTitle": "55",
         "full": "20240212 123622 00457.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20240212-123622-00457_900.jpg",
         "id": "elie-malaga-20240212-123622-00457",
@@ -13083,13 +13345,14 @@
           }
         ],
         "sortIndex": 180,
-        "title": "Malaga - 55"
+        "title": "55"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "444952",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 119029,
@@ -13101,9 +13364,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240212-123636-00458_1800.jpg",
-          "title": "Malaga - 56"
+          "title": "56"
         },
-        "editableTitle": "Malaga - 56",
+        "editableTitle": "56",
         "full": "20240212 123636 00458.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20240212-123636-00458_900.jpg",
         "id": "elie-malaga-20240212-123636-00458",
@@ -13155,13 +13418,14 @@
           }
         ],
         "sortIndex": 181,
-        "title": "Malaga - 56"
+        "title": "56"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "464B56",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 113506,
@@ -13173,9 +13437,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240212-123637-00459_1800.jpg",
-          "title": "Malaga - 57"
+          "title": "57"
         },
-        "editableTitle": "Malaga - 57",
+        "editableTitle": "57",
         "full": "20240212 123637 00459.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20240212-123637-00459_900.jpg",
         "id": "elie-malaga-20240212-123637-00459",
@@ -13227,13 +13491,14 @@
           }
         ],
         "sortIndex": 182,
-        "title": "Malaga - 57"
+        "title": "57"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "5A514E",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 303197,
@@ -13245,9 +13510,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240326-142405-00005_1800.jpg",
-          "title": "Malaga - 58"
+          "title": "58"
         },
-        "editableTitle": "Malaga - 58",
+        "editableTitle": "58",
         "full": "20240326 142405 00005.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20240326-142405-00005_900.jpg",
         "id": "elie-malaga-20240326-142405-00005",
@@ -13299,13 +13564,14 @@
           }
         ],
         "sortIndex": 183,
-        "title": "Malaga - 58"
+        "title": "58"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "57584D",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 333238,
@@ -13317,9 +13583,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240327-133752-00008_1800.jpg",
-          "title": "Malaga - 59"
+          "title": "59"
         },
-        "editableTitle": "Malaga - 59",
+        "editableTitle": "59",
         "full": "20240327 133752 00008.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20240327-133752-00008_900.jpg",
         "id": "elie-malaga-20240327-133752-00008",
@@ -13371,13 +13637,14 @@
           }
         ],
         "sortIndex": 184,
-        "title": "Malaga - 59"
+        "title": "59"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "535844",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 378635,
@@ -13389,9 +13656,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240327-133757-00010_1800.jpg",
-          "title": "Malaga - 60"
+          "title": "60"
         },
-        "editableTitle": "Malaga - 60",
+        "editableTitle": "60",
         "full": "20240327 133757 00010.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20240327-133757-00010_900.jpg",
         "id": "elie-malaga-20240327-133757-00010",
@@ -13443,13 +13710,14 @@
           }
         ],
         "sortIndex": 185,
-        "title": "Malaga - 60"
+        "title": "60"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "555A48",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 369605,
@@ -13461,9 +13729,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240327-133758-00012_1800.jpg",
-          "title": "Malaga - 61"
+          "title": "61"
         },
-        "editableTitle": "Malaga - 61",
+        "editableTitle": "61",
         "full": "20240327 133758 00012.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20240327-133758-00012_900.jpg",
         "id": "elie-malaga-20240327-133758-00012",
@@ -13515,13 +13783,14 @@
           }
         ],
         "sortIndex": 186,
-        "title": "Malaga - 61"
+        "title": "61"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "343B40",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 300298,
@@ -13533,9 +13802,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240329-190327-00015_1800.jpg",
-          "title": "Malaga - 62"
+          "title": "62"
         },
-        "editableTitle": "Malaga - 62",
+        "editableTitle": "62",
         "full": "20240329 190327 00015.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20240329-190327-00015_900.jpg",
         "id": "elie-malaga-20240329-190327-00015",
@@ -13587,13 +13856,14 @@
           }
         ],
         "sortIndex": 187,
-        "title": "Malaga - 62"
+        "title": "62"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "262A26",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 291462,
@@ -13605,9 +13875,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240329-190335-00018_1800.jpg",
-          "title": "Malaga - 63"
+          "title": "63"
         },
-        "editableTitle": "Malaga - 63",
+        "editableTitle": "63",
         "full": "20240329 190335 00018.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20240329-190335-00018_900.jpg",
         "id": "elie-malaga-20240329-190335-00018",
@@ -13659,13 +13929,14 @@
           }
         ],
         "sortIndex": 188,
-        "title": "Malaga - 63"
+        "title": "63"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "405265",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 376383,
@@ -13677,9 +13948,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240329-190357-00020_1800.jpg",
-          "title": "Malaga - 64"
+          "title": "64"
         },
-        "editableTitle": "Malaga - 64",
+        "editableTitle": "64",
         "full": "20240329 190357 00020.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20240329-190357-00020_900.jpg",
         "id": "elie-malaga-20240329-190357-00020",
@@ -13731,13 +14002,14 @@
           }
         ],
         "sortIndex": 189,
-        "title": "Malaga - 64"
+        "title": "64"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "425569",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 357903,
@@ -13749,9 +14021,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240329-190357-00021_1800.jpg",
-          "title": "Malaga - 65"
+          "title": "65"
         },
-        "editableTitle": "Malaga - 65",
+        "editableTitle": "65",
         "full": "20240329 190357 00021.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20240329-190357-00021_900.jpg",
         "id": "elie-malaga-20240329-190357-00021",
@@ -13803,13 +14075,14 @@
           }
         ],
         "sortIndex": 190,
-        "title": "Malaga - 65"
+        "title": "65"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "16362A",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 359512,
@@ -13821,9 +14094,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240331-205053-00028_1800.jpg",
-          "title": "Malaga - 66"
+          "title": "66"
         },
-        "editableTitle": "Malaga - 66",
+        "editableTitle": "66",
         "full": "20240331 205053 00028.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20240331-205053-00028_900.jpg",
         "id": "elie-malaga-20240331-205053-00028",
@@ -13875,13 +14148,14 @@
           }
         ],
         "sortIndex": 191,
-        "title": "Malaga - 66"
+        "title": "66"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "000202",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 300788,
@@ -13893,9 +14167,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240331-205104-00030_1800.jpg",
-          "title": "Malaga - 67"
+          "title": "67"
         },
-        "editableTitle": "Malaga - 67",
+        "editableTitle": "67",
         "full": "20240331 205104 00030.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20240331-205104-00030_900.jpg",
         "id": "elie-malaga-20240331-205104-00030",
@@ -13947,13 +14221,14 @@
           }
         ],
         "sortIndex": 192,
-        "title": "Malaga - 67"
+        "title": "67"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "083C25",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 300179,
@@ -13965,9 +14240,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240331-205108-00033_1800.jpg",
-          "title": "Malaga - 68"
+          "title": "68"
         },
-        "editableTitle": "Malaga - 68",
+        "editableTitle": "68",
         "full": "20240331 205108 00033.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20240331-205108-00033_900.jpg",
         "id": "elie-malaga-20240331-205108-00033",
@@ -14019,13 +14294,14 @@
           }
         ],
         "sortIndex": 193,
-        "title": "Malaga - 68"
+        "title": "68"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "062704",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 89456,
@@ -14037,9 +14313,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240331-205128-00001_1800.jpg",
-          "title": "Malaga - 69"
+          "title": "69"
         },
-        "editableTitle": "Malaga - 69",
+        "editableTitle": "69",
         "full": "20240331 205128 00001.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20240331-205128-00001_900.jpg",
         "id": "elie-malaga-20240331-205128-00001",
@@ -14091,13 +14367,14 @@
           }
         ],
         "sortIndex": 194,
-        "title": "Malaga - 69"
+        "title": "69"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "012509",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 92846,
@@ -14109,9 +14386,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240331-205128-00035_1800.jpg",
-          "title": "Malaga - 70"
+          "title": "70"
         },
-        "editableTitle": "Malaga - 70",
+        "editableTitle": "70",
         "full": "20240331 205128 00035.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20240331-205128-00035_900.jpg",
         "id": "elie-malaga-20240331-205128-00035",
@@ -14163,13 +14440,14 @@
           }
         ],
         "sortIndex": 195,
-        "title": "Malaga - 70"
+        "title": "70"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "130A12",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 104895,
@@ -14181,9 +14459,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240331-205133-00038_1800.jpg",
-          "title": "Malaga - 71"
+          "title": "71"
         },
-        "editableTitle": "Malaga - 71",
+        "editableTitle": "71",
         "full": "20240331 205133 00038.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20240331-205133-00038_900.jpg",
         "id": "elie-malaga-20240331-205133-00038",
@@ -14235,13 +14513,14 @@
           }
         ],
         "sortIndex": 196,
-        "title": "Malaga - 71"
+        "title": "71"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "160B18",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 108276,
@@ -14253,9 +14532,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240331-205133-00040_1800.jpg",
-          "title": "Malaga - 72"
+          "title": "72"
         },
-        "editableTitle": "Malaga - 72",
+        "editableTitle": "72",
         "full": "20240331 205133 00040.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20240331-205133-00040_900.jpg",
         "id": "elie-malaga-20240331-205133-00040",
@@ -14307,13 +14586,14 @@
           }
         ],
         "sortIndex": 197,
-        "title": "Malaga - 72"
+        "title": "72"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "0A4337",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 287384,
@@ -14325,9 +14605,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240331-205144-00043_1800.jpg",
-          "title": "Malaga - 73"
+          "title": "73"
         },
-        "editableTitle": "Malaga - 73",
+        "editableTitle": "73",
         "full": "20240331 205144 00043.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20240331-205144-00043_900.jpg",
         "id": "elie-malaga-20240331-205144-00043",
@@ -14379,13 +14659,14 @@
           }
         ],
         "sortIndex": 198,
-        "title": "Malaga - 73"
+        "title": "73"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "73706C",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 446640,
@@ -14397,9 +14678,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240401-135409-00045_1800.jpg",
-          "title": "Malaga - 74"
+          "title": "74"
         },
-        "editableTitle": "Malaga - 74",
+        "editableTitle": "74",
         "full": "20240401 135409 00045.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20240401-135409-00045_900.jpg",
         "id": "elie-malaga-20240401-135409-00045",
@@ -14451,13 +14732,14 @@
           }
         ],
         "sortIndex": 199,
-        "title": "Malaga - 74"
+        "title": "74"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "726D6A",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 429048,
@@ -14469,9 +14751,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240401-135409-00047_1800.jpg",
-          "title": "Malaga - 75"
+          "title": "75"
         },
-        "editableTitle": "Malaga - 75",
+        "editableTitle": "75",
         "full": "20240401 135409 00047.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20240401-135409-00047_900.jpg",
         "id": "elie-malaga-20240401-135409-00047",
@@ -14523,13 +14805,14 @@
           }
         ],
         "sortIndex": 200,
-        "title": "Malaga - 75"
+        "title": "75"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "6885A3",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 87325,
@@ -14541,9 +14824,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240401-135416-00048-pano-1_1800.jpg",
-          "title": "Malaga - 76"
+          "title": "76"
         },
-        "editableTitle": "Malaga - 76",
+        "editableTitle": "76",
         "full": "20240401 135416 00048-Pano (1).jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20240401-135416-00048-pano-1_900.jpg",
         "id": "elie-malaga-20240401-135416-00048-pano-1",
@@ -14595,13 +14878,14 @@
           }
         ],
         "sortIndex": 201,
-        "title": "Malaga - 76"
+        "title": "76"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "424242",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 131858,
@@ -14613,9 +14897,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240401-135416-00048-pano_1800.jpg",
-          "title": "Malaga - 77"
+          "title": "77"
         },
-        "editableTitle": "Malaga - 77",
+        "editableTitle": "77",
         "full": "20240401 135416 00048-Pano.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20240401-135416-00048-pano_900.jpg",
         "id": "elie-malaga-20240401-135416-00048-pano",
@@ -14667,13 +14951,14 @@
           }
         ],
         "sortIndex": 202,
-        "title": "Malaga - 77"
+        "title": "77"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "5A5F65",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 301441,
@@ -14685,9 +14970,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240401-135421-00053_1800.jpg",
-          "title": "Malaga - 78"
+          "title": "78"
         },
-        "editableTitle": "Malaga - 78",
+        "editableTitle": "78",
         "full": "20240401 135421 00053.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20240401-135421-00053_900.jpg",
         "id": "elie-malaga-20240401-135421-00053",
@@ -14739,13 +15024,14 @@
           }
         ],
         "sortIndex": 203,
-        "title": "Malaga - 78"
+        "title": "78"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "666469",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 343908,
@@ -14757,9 +15043,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240401-135422-00055_1800.jpg",
-          "title": "Malaga - 79"
+          "title": "79"
         },
-        "editableTitle": "Malaga - 79",
+        "editableTitle": "79",
         "full": "20240401 135422 00055.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20240401-135422-00055_900.jpg",
         "id": "elie-malaga-20240401-135422-00055",
@@ -14811,13 +15097,14 @@
           }
         ],
         "sortIndex": 204,
-        "title": "Malaga - 79"
+        "title": "79"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "6F6B6B",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 368596,
@@ -14829,9 +15116,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240401-135423-00056_1800.jpg",
-          "title": "Malaga - 80"
+          "title": "80"
         },
-        "editableTitle": "Malaga - 80",
+        "editableTitle": "80",
         "full": "20240401 135423 00056.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20240401-135423-00056_900.jpg",
         "id": "elie-malaga-20240401-135423-00056",
@@ -14883,13 +15170,14 @@
           }
         ],
         "sortIndex": 205,
-        "title": "Malaga - 80"
+        "title": "80"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "433040",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 83110,
@@ -14901,9 +15189,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240401-135425-00058_1800.jpg",
-          "title": "Malaga - 81"
+          "title": "81"
         },
-        "editableTitle": "Malaga - 81",
+        "editableTitle": "81",
         "full": "20240401 135425 00058.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20240401-135425-00058_900.jpg",
         "id": "elie-malaga-20240401-135425-00058",
@@ -14955,13 +15243,14 @@
           }
         ],
         "sortIndex": 206,
-        "title": "Malaga - 81"
+        "title": "81"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "616775",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 365597,
@@ -14973,9 +15262,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240401-135447-00060_1800.jpg",
-          "title": "Malaga - 82"
+          "title": "82"
         },
-        "editableTitle": "Malaga - 82",
+        "editableTitle": "82",
         "full": "20240401 135447 00060.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20240401-135447-00060_900.jpg",
         "id": "elie-malaga-20240401-135447-00060",
@@ -15027,13 +15316,14 @@
           }
         ],
         "sortIndex": 207,
-        "title": "Malaga - 82"
+        "title": "82"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "646B79",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 309540,
@@ -15045,9 +15335,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240401-135450-00061_1800.jpg",
-          "title": "Malaga - 83"
+          "title": "83"
         },
-        "editableTitle": "Malaga - 83",
+        "editableTitle": "83",
         "full": "20240401 135450 00061.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20240401-135450-00061_900.jpg",
         "id": "elie-malaga-20240401-135450-00061",
@@ -15099,13 +15389,14 @@
           }
         ],
         "sortIndex": 208,
-        "title": "Malaga - 83"
+        "title": "83"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "677891",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 221047,
@@ -15117,9 +15408,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240401-135529-00064_1800.jpg",
-          "title": "Malaga - 84"
+          "title": "84"
         },
-        "editableTitle": "Malaga - 84",
+        "editableTitle": "84",
         "full": "20240401 135529 00064.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20240401-135529-00064_900.jpg",
         "id": "elie-malaga-20240401-135529-00064",
@@ -15171,13 +15462,14 @@
           }
         ],
         "sortIndex": 209,
-        "title": "Malaga - 84"
+        "title": "84"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "807E7F",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 413067,
@@ -15189,9 +15481,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240401-135541-00067_1800.jpg",
-          "title": "Malaga - 85"
+          "title": "85"
         },
-        "editableTitle": "Malaga - 85",
+        "editableTitle": "85",
         "full": "20240401 135541 00067.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20240401-135541-00067_900.jpg",
         "id": "elie-malaga-20240401-135541-00067",
@@ -15243,13 +15535,14 @@
           }
         ],
         "sortIndex": 210,
-        "title": "Malaga - 85"
+        "title": "85"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "595B56",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 374333,
@@ -15261,9 +15554,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240503-161108-00089_1800.jpg",
-          "title": "Malaga - 86"
+          "title": "86"
         },
-        "editableTitle": "Malaga - 86",
+        "editableTitle": "86",
         "full": "20240503 161108 00089.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20240503-161108-00089_900.jpg",
         "id": "elie-malaga-20240503-161108-00089",
@@ -15315,13 +15608,14 @@
           }
         ],
         "sortIndex": 211,
-        "title": "Malaga - 86"
+        "title": "86"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "5D7996",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 239485,
@@ -15333,9 +15627,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240503-161139-00092_1800.jpg",
-          "title": "Malaga - 87"
+          "title": "87"
         },
-        "editableTitle": "Malaga - 87",
+        "editableTitle": "87",
         "full": "20240503 161139 00092.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20240503-161139-00092_900.jpg",
         "id": "elie-malaga-20240503-161139-00092",
@@ -15387,13 +15681,14 @@
           }
         ],
         "sortIndex": 212,
-        "title": "Malaga - 87"
+        "title": "87"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "5B686D",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 327009,
@@ -15405,9 +15700,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240503-161147-00095_1800.jpg",
-          "title": "Malaga - 88"
+          "title": "88"
         },
-        "editableTitle": "Malaga - 88",
+        "editableTitle": "88",
         "full": "20240503 161147 00095.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20240503-161147-00095_900.jpg",
         "id": "elie-malaga-20240503-161147-00095",
@@ -15459,13 +15754,14 @@
           }
         ],
         "sortIndex": 213,
-        "title": "Malaga - 88"
+        "title": "88"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "2E3126",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 329369,
@@ -15477,9 +15773,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240517-101933-00098_1800.jpg",
-          "title": "Malaga - 89"
+          "title": "89"
         },
-        "editableTitle": "Malaga - 89",
+        "editableTitle": "89",
         "full": "20240517 101933 00098.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20240517-101933-00098_900.jpg",
         "id": "elie-malaga-20240517-101933-00098",
@@ -15531,13 +15827,14 @@
           }
         ],
         "sortIndex": 214,
-        "title": "Malaga - 89"
+        "title": "89"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "484C53",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 330681,
@@ -15549,9 +15846,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240517-101940-00101_1800.jpg",
-          "title": "Malaga - 90"
+          "title": "90"
         },
-        "editableTitle": "Malaga - 90",
+        "editableTitle": "90",
         "full": "20240517 101940 00101.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20240517-101940-00101_900.jpg",
         "id": "elie-malaga-20240517-101940-00101",
@@ -15603,13 +15900,14 @@
           }
         ],
         "sortIndex": 215,
-        "title": "Malaga - 90"
+        "title": "90"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "363A38",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 311705,
@@ -15621,9 +15919,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240517-101943-00103_1800.jpg",
-          "title": "Malaga - 91"
+          "title": "91"
         },
-        "editableTitle": "Malaga - 91",
+        "editableTitle": "91",
         "full": "20240517 101943 00103.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20240517-101943-00103_900.jpg",
         "id": "elie-malaga-20240517-101943-00103",
@@ -15675,13 +15973,14 @@
           }
         ],
         "sortIndex": 216,
-        "title": "Malaga - 91"
+        "title": "91"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "504E4D",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 472419,
@@ -15693,9 +15992,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240517-104557-00106_1800.jpg",
-          "title": "Malaga - 92"
+          "title": "92"
         },
-        "editableTitle": "Malaga - 92",
+        "editableTitle": "92",
         "full": "20240517 104557 00106.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20240517-104557-00106_900.jpg",
         "id": "elie-malaga-20240517-104557-00106",
@@ -15747,13 +16046,14 @@
           }
         ],
         "sortIndex": 217,
-        "title": "Malaga - 92"
+        "title": "92"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "6C6159",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 402819,
@@ -15765,9 +16065,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240517-104559-00107_1800.jpg",
-          "title": "Malaga - 93"
+          "title": "93"
         },
-        "editableTitle": "Malaga - 93",
+        "editableTitle": "93",
         "full": "20240517 104559 00107.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20240517-104559-00107_900.jpg",
         "id": "elie-malaga-20240517-104559-00107",
@@ -15819,13 +16119,14 @@
           }
         ],
         "sortIndex": 218,
-        "title": "Malaga - 93"
+        "title": "93"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "63564E",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 348012,
@@ -15837,9 +16138,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240517-104608-00109_1800.jpg",
-          "title": "Malaga - 94"
+          "title": "94"
         },
-        "editableTitle": "Malaga - 94",
+        "editableTitle": "94",
         "full": "20240517 104608 00109.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20240517-104608-00109_900.jpg",
         "id": "elie-malaga-20240517-104608-00109",
@@ -15891,13 +16192,14 @@
           }
         ],
         "sortIndex": 219,
-        "title": "Malaga - 94"
+        "title": "94"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "665850",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 313713,
@@ -15909,9 +16211,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240517-104615-00110_1800.jpg",
-          "title": "Malaga - 95"
+          "title": "95"
         },
-        "editableTitle": "Malaga - 95",
+        "editableTitle": "95",
         "full": "20240517 104615 00110.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20240517-104615-00110_900.jpg",
         "id": "elie-malaga-20240517-104615-00110",
@@ -15963,13 +16265,14 @@
           }
         ],
         "sortIndex": 220,
-        "title": "Malaga - 95"
+        "title": "95"
       },
       {
         "album": "Malaga",
         "albumSlug": "malaga",
         "albumTitle": "Malaga",
         "caption": "Malaga",
+        "captionColor": "4E4843",
         "className": "real-estate-photo",
         "cloudPdfSource": {
           "bytes": 394531,
@@ -15981,9 +16284,9 @@
           "maxEdge": 1800,
           "mediaType": "photo",
           "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240517-104618-00112_1800.jpg",
-          "title": "Malaga - 96"
+          "title": "96"
         },
-        "editableTitle": "Malaga - 96",
+        "editableTitle": "96",
         "full": "20240517 104618 00112.jpeg",
         "gallerySrc": "previews/malaga/elie-malaga-20240517-104618-00112_900.jpg",
         "id": "elie-malaga-20240517-104618-00112",
@@ -16035,18 +16338,19 @@
           }
         ],
         "sortIndex": 221,
-        "title": "Malaga - 96"
+        "title": "96"
       }
     ],
     "title": "Elie"
   },
-  "generatedAt": "2026-05-18T18:02:22+00:00",
+  "generatedAt": "2026-06-18T13:41:25+00:00",
   "photos": [
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "566262",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 406795,
@@ -16058,9 +16362,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010601-1011-34463_1800.jpg",
-        "title": "Carlsbad - 01"
+        "title": "01"
       },
-      "editableTitle": "Carlsbad - 01",
+      "editableTitle": "01",
       "full": "20010601 1011 34463.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010601-1011-34463_900.jpg",
       "id": "elie-carlsbad-20010601-1011-34463",
@@ -16112,13 +16416,14 @@
         }
       ],
       "sortIndex": 1,
-      "title": "Carlsbad - 01"
+      "title": "01"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "3D4F4A",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 336896,
@@ -16130,9 +16435,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010601-1011-34535_1800.jpg",
-        "title": "Carlsbad - 02"
+        "title": "02"
       },
-      "editableTitle": "Carlsbad - 02",
+      "editableTitle": "02",
       "full": "20010601 1011 34535.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010601-1011-34535_900.jpg",
       "id": "elie-carlsbad-20010601-1011-34535",
@@ -16184,13 +16489,14 @@
         }
       ],
       "sortIndex": 2,
-      "title": "Carlsbad - 02"
+      "title": "02"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "646D65",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 404083,
@@ -16202,9 +16508,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010501-0000-34488_1800.jpg",
-        "title": "Carlsbad - 03"
+        "title": "03"
       },
-      "editableTitle": "Carlsbad - 03",
+      "editableTitle": "03",
       "full": "20010501 0000 34488.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010501-0000-34488_900.jpg",
       "id": "elie-carlsbad-20010501-0000-34488",
@@ -16256,13 +16562,14 @@
         }
       ],
       "sortIndex": 3,
-      "title": "Carlsbad - 03"
+      "title": "03"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "A5ACAE",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 381084,
@@ -16274,9 +16581,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010501-0454-34388_1800.jpg",
-        "title": "Carlsbad - 04"
+        "title": "04"
       },
-      "editableTitle": "Carlsbad - 04",
+      "editableTitle": "04",
       "full": "20010501 0454 34388.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010501-0454-34388_900.jpg",
       "id": "elie-carlsbad-20010501-0454-34388",
@@ -16328,13 +16635,14 @@
         }
       ],
       "sortIndex": 4,
-      "title": "Carlsbad - 04"
+      "title": "04"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "A4A197",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 385818,
@@ -16346,9 +16654,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010501-0454-34438_1800.jpg",
-        "title": "Carlsbad - 05"
+        "title": "05"
       },
-      "editableTitle": "Carlsbad - 05",
+      "editableTitle": "05",
       "full": "20010501 0454 34438.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010501-0454-34438_900.jpg",
       "id": "elie-carlsbad-20010501-0454-34438",
@@ -16400,13 +16708,14 @@
         }
       ],
       "sortIndex": 5,
-      "title": "Carlsbad - 05"
+      "title": "05"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "808071",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 484494,
@@ -16418,9 +16727,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010410-0454-31612_1800.jpg",
-        "title": "Carlsbad - 06"
+        "title": "06"
       },
-      "editableTitle": "Carlsbad - 06",
+      "editableTitle": "06",
       "full": "20010410 0454 31612.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010410-0454-31612_900.jpg",
       "id": "elie-carlsbad-20010410-0454-31612",
@@ -16472,13 +16781,14 @@
         }
       ],
       "sortIndex": 6,
-      "title": "Carlsbad - 06"
+      "title": "06"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "958F7E",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 478133,
@@ -16490,9 +16800,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010410-0454-34419_1800.jpg",
-        "title": "Carlsbad - 07"
+        "title": "07"
       },
-      "editableTitle": "Carlsbad - 07",
+      "editableTitle": "07",
       "full": "20010410 0454 34419.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010410-0454-34419_900.jpg",
       "id": "elie-carlsbad-20010410-0454-34419",
@@ -16544,13 +16854,14 @@
         }
       ],
       "sortIndex": 7,
-      "title": "Carlsbad - 07"
+      "title": "07"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "747167",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 336755,
@@ -16562,9 +16873,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010609-1601-34423_1800.jpg",
-        "title": "Carlsbad - 08"
+        "title": "08"
       },
-      "editableTitle": "Carlsbad - 08",
+      "editableTitle": "08",
       "full": "20010609 1601 34423.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010609-1601-34423_900.jpg",
       "id": "elie-carlsbad-20010609-1601-34423",
@@ -16616,13 +16927,14 @@
         }
       ],
       "sortIndex": 8,
-      "title": "Carlsbad - 08"
+      "title": "08"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "817E6F",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 257233,
@@ -16634,9 +16946,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010609-1601-34434_1800.jpg",
-        "title": "Carlsbad - 09"
+        "title": "09"
       },
-      "editableTitle": "Carlsbad - 09",
+      "editableTitle": "09",
       "full": "20010609 1601 34434.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010609-1601-34434_900.jpg",
       "id": "elie-carlsbad-20010609-1601-34434",
@@ -16688,13 +17000,14 @@
         }
       ],
       "sortIndex": 9,
-      "title": "Carlsbad - 09"
+      "title": "09"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "7D7B73",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 324615,
@@ -16706,9 +17019,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010610-1011-34464_1800.jpg",
-        "title": "Carlsbad - 10"
+        "title": "10"
       },
-      "editableTitle": "Carlsbad - 10",
+      "editableTitle": "10",
       "full": "20010610 1011 34464.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010610-1011-34464_900.jpg",
       "id": "elie-carlsbad-20010610-1011-34464",
@@ -16760,13 +17073,14 @@
         }
       ],
       "sortIndex": 10,
-      "title": "Carlsbad - 10"
+      "title": "10"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "6D7450",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 333972,
@@ -16778,9 +17092,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010610-1011-34503_1800.jpg",
-        "title": "Carlsbad - 11"
+        "title": "11"
       },
-      "editableTitle": "Carlsbad - 11",
+      "editableTitle": "11",
       "full": "20010610 1011 34503.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010610-1011-34503_900.jpg",
       "id": "elie-carlsbad-20010610-1011-34503",
@@ -16832,13 +17146,14 @@
         }
       ],
       "sortIndex": 11,
-      "title": "Carlsbad - 11"
+      "title": "11"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "585A4B",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 437567,
@@ -16850,9 +17165,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010410-1601-34534_1800.jpg",
-        "title": "Carlsbad - 12"
+        "title": "12"
       },
-      "editableTitle": "Carlsbad - 12",
+      "editableTitle": "12",
       "full": "20010410 1601 34534.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010410-1601-34534_900.jpg",
       "id": "elie-carlsbad-20010410-1601-34534",
@@ -16904,13 +17219,14 @@
         }
       ],
       "sortIndex": 12,
-      "title": "Carlsbad - 12"
+      "title": "12"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "878375",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 317278,
@@ -16922,9 +17238,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010610-1601-34466_1800.jpg",
-        "title": "Carlsbad - 13"
+        "title": "13"
       },
-      "editableTitle": "Carlsbad - 13",
+      "editableTitle": "13",
       "full": "20010610 1601 34466.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010610-1601-34466_900.jpg",
       "id": "elie-carlsbad-20010610-1601-34466",
@@ -16976,13 +17292,14 @@
         }
       ],
       "sortIndex": 13,
-      "title": "Carlsbad - 13"
+      "title": "13"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "867F6F",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 240548,
@@ -16994,9 +17311,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010610-1601-34484_1800.jpg",
-        "title": "Carlsbad - 14"
+        "title": "14"
       },
-      "editableTitle": "Carlsbad - 14",
+      "editableTitle": "14",
       "full": "20010610 1601 34484.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010610-1601-34484_900.jpg",
       "id": "elie-carlsbad-20010610-1601-34484",
@@ -17048,13 +17365,14 @@
         }
       ],
       "sortIndex": 14,
-      "title": "Carlsbad - 14"
+      "title": "14"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "867D6E",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 293580,
@@ -17066,9 +17384,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010610-1601-34508_1800.jpg",
-        "title": "Carlsbad - 15"
+        "title": "15"
       },
-      "editableTitle": "Carlsbad - 15",
+      "editableTitle": "15",
       "full": "20010610 1601 34508.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010610-1601-34508_900.jpg",
       "id": "elie-carlsbad-20010610-1601-34508",
@@ -17120,13 +17438,14 @@
         }
       ],
       "sortIndex": 15,
-      "title": "Carlsbad - 15"
+      "title": "15"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "BFBFBD",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 340583,
@@ -17138,9 +17457,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010612-1400-34397_1800.jpg",
-        "title": "Carlsbad - 16"
+        "title": "16"
       },
-      "editableTitle": "Carlsbad - 16",
+      "editableTitle": "16",
       "full": "20010612 1400 34397.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010612-1400-34397_900.jpg",
       "id": "elie-carlsbad-20010612-1400-34397",
@@ -17192,13 +17511,14 @@
         }
       ],
       "sortIndex": 16,
-      "title": "Carlsbad - 16"
+      "title": "16"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "959E9F",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 414517,
@@ -17210,9 +17530,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010612-1402-34429_1800.jpg",
-        "title": "Carlsbad - 17"
+        "title": "17"
       },
-      "editableTitle": "Carlsbad - 17",
+      "editableTitle": "17",
       "full": "20010612 1402 34429.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010612-1402-34429_900.jpg",
       "id": "elie-carlsbad-20010612-1402-34429",
@@ -17264,13 +17584,14 @@
         }
       ],
       "sortIndex": 17,
-      "title": "Carlsbad - 17"
+      "title": "17"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "9AAAAF",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 433435,
@@ -17282,9 +17603,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010612-1403-34502_1800.jpg",
-        "title": "Carlsbad - 18"
+        "title": "18"
       },
-      "editableTitle": "Carlsbad - 18",
+      "editableTitle": "18",
       "full": "20010612 1403 34502.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010612-1403-34502_900.jpg",
       "id": "elie-carlsbad-20010612-1403-34502",
@@ -17336,13 +17657,14 @@
         }
       ],
       "sortIndex": 18,
-      "title": "Carlsbad - 18"
+      "title": "18"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "7F6B49",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 343752,
@@ -17354,9 +17676,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010512-1011-34399_1800.jpg",
-        "title": "Carlsbad - 19"
+        "title": "19"
       },
-      "editableTitle": "Carlsbad - 19",
+      "editableTitle": "19",
       "full": "20010512 1011 34399.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010512-1011-34399_900.jpg",
       "id": "elie-carlsbad-20010512-1011-34399",
@@ -17408,13 +17730,14 @@
         }
       ],
       "sortIndex": 19,
-      "title": "Carlsbad - 19"
+      "title": "19"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "7B705A",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 442276,
@@ -17426,9 +17749,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010512-1011-34439_1800.jpg",
-        "title": "Carlsbad - 20"
+        "title": "20"
       },
-      "editableTitle": "Carlsbad - 20",
+      "editableTitle": "20",
       "full": "20010512 1011 34439.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010512-1011-34439_900.jpg",
       "id": "elie-carlsbad-20010512-1011-34439",
@@ -17480,13 +17803,14 @@
         }
       ],
       "sortIndex": 20,
-      "title": "Carlsbad - 20"
+      "title": "20"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "4D6366",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 420023,
@@ -17498,9 +17822,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010512-1011-34444_1800.jpg",
-        "title": "Carlsbad - 21"
+        "title": "21"
       },
-      "editableTitle": "Carlsbad - 21",
+      "editableTitle": "21",
       "full": "20010512 1011 34444.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010512-1011-34444_900.jpg",
       "id": "elie-carlsbad-20010512-1011-34444",
@@ -17552,13 +17876,14 @@
         }
       ],
       "sortIndex": 21,
-      "title": "Carlsbad - 21"
+      "title": "21"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "7D949B",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 458857,
@@ -17570,9 +17895,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010512-1011-34453_1800.jpg",
-        "title": "Carlsbad - 22"
+        "title": "22"
       },
-      "editableTitle": "Carlsbad - 22",
+      "editableTitle": "22",
       "full": "20010512 1011 34453.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010512-1011-34453_900.jpg",
       "id": "elie-carlsbad-20010512-1011-34453",
@@ -17624,13 +17949,14 @@
         }
       ],
       "sortIndex": 22,
-      "title": "Carlsbad - 22"
+      "title": "22"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "8C8471",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 421621,
@@ -17642,9 +17968,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010413-0454-34425_1800.jpg",
-        "title": "Carlsbad - 23"
+        "title": "23"
       },
-      "editableTitle": "Carlsbad - 23",
+      "editableTitle": "23",
       "full": "20010413 0454 34425.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010413-0454-34425_900.jpg",
       "id": "elie-carlsbad-20010413-0454-34425",
@@ -17696,13 +18022,14 @@
         }
       ],
       "sortIndex": 23,
-      "title": "Carlsbad - 23"
+      "title": "23"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "C1BFB8",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 391596,
@@ -17714,9 +18041,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010514-1011-34514_1800.jpg",
-        "title": "Carlsbad - 24"
+        "title": "24"
       },
-      "editableTitle": "Carlsbad - 24",
+      "editableTitle": "24",
       "full": "20010514 1011 34514.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010514-1011-34514_900.jpg",
       "id": "elie-carlsbad-20010514-1011-34514",
@@ -17768,13 +18095,14 @@
         }
       ],
       "sortIndex": 24,
-      "title": "Carlsbad - 24"
+      "title": "24"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "BEBEBB",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 419460,
@@ -17786,9 +18114,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010514-1011-34523_1800.jpg",
-        "title": "Carlsbad - 25"
+        "title": "25"
       },
-      "editableTitle": "Carlsbad - 25",
+      "editableTitle": "25",
       "full": "20010514 1011 34523.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010514-1011-34523_900.jpg",
       "id": "elie-carlsbad-20010514-1011-34523",
@@ -17840,13 +18168,14 @@
         }
       ],
       "sortIndex": 25,
-      "title": "Carlsbad - 25"
+      "title": "25"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "BDBCB6",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 402259,
@@ -17858,9 +18187,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010514-1011-34528_1800.jpg",
-        "title": "Carlsbad - 26"
+        "title": "26"
       },
-      "editableTitle": "Carlsbad - 26",
+      "editableTitle": "26",
       "full": "20010514 1011 34528.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010514-1011-34528_900.jpg",
       "id": "elie-carlsbad-20010514-1011-34528",
@@ -17912,13 +18241,14 @@
         }
       ],
       "sortIndex": 26,
-      "title": "Carlsbad - 26"
+      "title": "26"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "B6B19F",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 422971,
@@ -17930,9 +18260,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010517-1011-34440_1800.jpg",
-        "title": "Carlsbad - 27"
+        "title": "27"
       },
-      "editableTitle": "Carlsbad - 27",
+      "editableTitle": "27",
       "full": "20010517 1011 34440.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010517-1011-34440_900.jpg",
       "id": "elie-carlsbad-20010517-1011-34440",
@@ -17984,13 +18314,14 @@
         }
       ],
       "sortIndex": 27,
-      "title": "Carlsbad - 27"
+      "title": "27"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "A29986",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 420195,
@@ -18002,9 +18333,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010517-1011-34449_1800.jpg",
-        "title": "Carlsbad - 28"
+        "title": "28"
       },
-      "editableTitle": "Carlsbad - 28",
+      "editableTitle": "28",
       "full": "20010517 1011 34449.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010517-1011-34449_900.jpg",
       "id": "elie-carlsbad-20010517-1011-34449",
@@ -18056,13 +18387,14 @@
         }
       ],
       "sortIndex": 28,
-      "title": "Carlsbad - 28"
+      "title": "28"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "72746A",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 431156,
@@ -18074,9 +18406,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010419-0454-34416_1800.jpg",
-        "title": "Carlsbad - 29"
+        "title": "29"
       },
-      "editableTitle": "Carlsbad - 29",
+      "editableTitle": "29",
       "full": "20010419 0454 34416.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010419-0454-34416_900.jpg",
       "id": "elie-carlsbad-20010419-0454-34416",
@@ -18128,13 +18460,14 @@
         }
       ],
       "sortIndex": 29,
-      "title": "Carlsbad - 29"
+      "title": "29"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "979283",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 397404,
@@ -18146,9 +18479,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010419-0454-34509_1800.jpg",
-        "title": "Carlsbad - 30"
+        "title": "30"
       },
-      "editableTitle": "Carlsbad - 30",
+      "editableTitle": "30",
       "full": "20010419 0454 34509.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010419-0454-34509_900.jpg",
       "id": "elie-carlsbad-20010419-0454-34509",
@@ -18200,13 +18533,14 @@
         }
       ],
       "sortIndex": 30,
-      "title": "Carlsbad - 30"
+      "title": "30"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "AE9F8A",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 435603,
@@ -18218,9 +18552,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010419-0454-34524_1800.jpg",
-        "title": "Carlsbad - 31"
+        "title": "31"
       },
-      "editableTitle": "Carlsbad - 31",
+      "editableTitle": "31",
       "full": "20010419 0454 34524.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010419-0454-34524_900.jpg",
       "id": "elie-carlsbad-20010419-0454-34524",
@@ -18272,13 +18606,14 @@
         }
       ],
       "sortIndex": 31,
-      "title": "Carlsbad - 31"
+      "title": "31"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "626864",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 317268,
@@ -18290,9 +18625,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010601-1601-31562_1800.jpg",
-        "title": "Carlsbad - 32"
+        "title": "32"
       },
-      "editableTitle": "Carlsbad - 32",
+      "editableTitle": "32",
       "full": "20010601 1601 31562.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010601-1601-31562_900.jpg",
       "id": "elie-carlsbad-20010601-1601-31562",
@@ -18344,13 +18679,14 @@
         }
       ],
       "sortIndex": 32,
-      "title": "Carlsbad - 32"
+      "title": "32"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "43453F",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 357129,
@@ -18362,9 +18698,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010627-0707-34398_1800.jpg",
-        "title": "Carlsbad - 33"
+        "title": "33"
       },
-      "editableTitle": "Carlsbad - 33",
+      "editableTitle": "33",
       "full": "20010627 0707 34398.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010627-0707-34398_900.jpg",
       "id": "elie-carlsbad-20010627-0707-34398",
@@ -18416,13 +18752,14 @@
         }
       ],
       "sortIndex": 33,
-      "title": "Carlsbad - 33"
+      "title": "33"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "5B5D59",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 371838,
@@ -18434,9 +18771,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010627-0707-34426_1800.jpg",
-        "title": "Carlsbad - 34"
+        "title": "34"
       },
-      "editableTitle": "Carlsbad - 34",
+      "editableTitle": "34",
       "full": "20010627 0707 34426.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010627-0707-34426_900.jpg",
       "id": "elie-carlsbad-20010627-0707-34426",
@@ -18488,13 +18825,14 @@
         }
       ],
       "sortIndex": 34,
-      "title": "Carlsbad - 34"
+      "title": "34"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "534B3D",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 382916,
@@ -18506,9 +18844,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010627-0707-34447_1800.jpg",
-        "title": "Carlsbad - 35"
+        "title": "35"
       },
-      "editableTitle": "Carlsbad - 35",
+      "editableTitle": "35",
       "full": "20010627 0707 34447.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010627-0707-34447_900.jpg",
       "id": "elie-carlsbad-20010627-0707-34447",
@@ -18560,13 +18898,14 @@
         }
       ],
       "sortIndex": 35,
-      "title": "Carlsbad - 35"
+      "title": "35"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "5C574D",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 400341,
@@ -18578,9 +18917,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010627-0707-34473_1800.jpg",
-        "title": "Carlsbad - 36"
+        "title": "36"
       },
-      "editableTitle": "Carlsbad - 36",
+      "editableTitle": "36",
       "full": "20010627 0707 34473.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010627-0707-34473_900.jpg",
       "id": "elie-carlsbad-20010627-0707-34473",
@@ -18632,13 +18971,14 @@
         }
       ],
       "sortIndex": 36,
-      "title": "Carlsbad - 36"
+      "title": "36"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "5E5F57",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 342125,
@@ -18650,9 +18990,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010627-0707-34519_1800.jpg",
-        "title": "Carlsbad - 37"
+        "title": "37"
       },
-      "editableTitle": "Carlsbad - 37",
+      "editableTitle": "37",
       "full": "20010627 0707 34519.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010627-0707-34519_900.jpg",
       "id": "elie-carlsbad-20010627-0707-34519",
@@ -18704,13 +19044,14 @@
         }
       ],
       "sortIndex": 37,
-      "title": "Carlsbad - 37"
+      "title": "37"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "C7C8C8",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 338979,
@@ -18722,9 +19063,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010428-0454-34470_1800.jpg",
-        "title": "Carlsbad - 38"
+        "title": "38"
       },
-      "editableTitle": "Carlsbad - 38",
+      "editableTitle": "38",
       "full": "20010428 0454 34470.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010428-0454-34470_900.jpg",
       "id": "elie-carlsbad-20010428-0454-34470",
@@ -18776,13 +19117,14 @@
         }
       ],
       "sortIndex": 38,
-      "title": "Carlsbad - 38"
+      "title": "38"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "B7B7B5",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 354121,
@@ -18794,9 +19136,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010428-0454-34531_1800.jpg",
-        "title": "Carlsbad - 39"
+        "title": "39"
       },
-      "editableTitle": "Carlsbad - 39",
+      "editableTitle": "39",
       "full": "20010428 0454 34531.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010428-0454-34531_900.jpg",
       "id": "elie-carlsbad-20010428-0454-34531",
@@ -18848,13 +19190,14 @@
         }
       ],
       "sortIndex": 39,
-      "title": "Carlsbad - 39"
+      "title": "39"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "6E6F65",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 417865,
@@ -18866,9 +19209,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010329-0454-31334_1800.jpg",
-        "title": "Carlsbad - 40"
+        "title": "40"
       },
-      "editableTitle": "Carlsbad - 40",
+      "editableTitle": "40",
       "full": "20010329 0454 31334.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010329-0454-31334_900.jpg",
       "id": "elie-carlsbad-20010329-0454-31334",
@@ -18920,13 +19263,14 @@
         }
       ],
       "sortIndex": 40,
-      "title": "Carlsbad - 40"
+      "title": "40"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "717268",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 429072,
@@ -18938,9 +19282,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010329-0454-34442_1800.jpg",
-        "title": "Carlsbad - 41"
+        "title": "41"
       },
-      "editableTitle": "Carlsbad - 41",
+      "editableTitle": "41",
       "full": "20010329 0454 34442.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010329-0454-34442_900.jpg",
       "id": "elie-carlsbad-20010329-0454-34442",
@@ -18992,13 +19336,14 @@
         }
       ],
       "sortIndex": 41,
-      "title": "Carlsbad - 41"
+      "title": "41"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "847556",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 376676,
@@ -19010,9 +19355,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010329-0454-34450_1800.jpg",
-        "title": "Carlsbad - 42"
+        "title": "42"
       },
-      "editableTitle": "Carlsbad - 42",
+      "editableTitle": "42",
       "full": "20010329 0454 34450.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010329-0454-34450_900.jpg",
       "id": "elie-carlsbad-20010329-0454-34450",
@@ -19064,13 +19409,14 @@
         }
       ],
       "sortIndex": 42,
-      "title": "Carlsbad - 42"
+      "title": "42"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "6E6A56",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 419857,
@@ -19082,9 +19428,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010329-0454-34494_1800.jpg",
-        "title": "Carlsbad - 43"
+        "title": "43"
       },
-      "editableTitle": "Carlsbad - 43",
+      "editableTitle": "43",
       "full": "20010329 0454 34494.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010329-0454-34494_900.jpg",
       "id": "elie-carlsbad-20010329-0454-34494",
@@ -19136,13 +19482,14 @@
         }
       ],
       "sortIndex": 43,
-      "title": "Carlsbad - 43"
+      "title": "43"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "849059",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 366070,
@@ -19154,9 +19501,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010329-0454-34512_1800.jpg",
-        "title": "Carlsbad - 44"
+        "title": "44"
       },
-      "editableTitle": "Carlsbad - 44",
+      "editableTitle": "44",
       "full": "20010329 0454 34512.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010329-0454-34512_900.jpg",
       "id": "elie-carlsbad-20010329-0454-34512",
@@ -19208,13 +19555,14 @@
         }
       ],
       "sortIndex": 44,
-      "title": "Carlsbad - 44"
+      "title": "44"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "40524E",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 466562,
@@ -19226,9 +19574,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010529-1011-34386_1800.jpg",
-        "title": "Carlsbad - 45"
+        "title": "45"
       },
-      "editableTitle": "Carlsbad - 45",
+      "editableTitle": "45",
       "full": "20010529 1011 34386.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010529-1011-34386_900.jpg",
       "id": "elie-carlsbad-20010529-1011-34386",
@@ -19280,13 +19628,14 @@
         }
       ],
       "sortIndex": 45,
-      "title": "Carlsbad - 45"
+      "title": "45"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "47554F",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 461663,
@@ -19298,9 +19647,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010529-1011-34391_1800.jpg",
-        "title": "Carlsbad - 46"
+        "title": "46"
       },
-      "editableTitle": "Carlsbad - 46",
+      "editableTitle": "46",
       "full": "20010529 1011 34391.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010529-1011-34391_900.jpg",
       "id": "elie-carlsbad-20010529-1011-34391",
@@ -19352,13 +19701,14 @@
         }
       ],
       "sortIndex": 46,
-      "title": "Carlsbad - 46"
+      "title": "46"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "6C7B75",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 436383,
@@ -19370,9 +19720,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010529-1011-34451_1800.jpg",
-        "title": "Carlsbad - 47"
+        "title": "47"
       },
-      "editableTitle": "Carlsbad - 47",
+      "editableTitle": "47",
       "full": "20010529 1011 34451.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010529-1011-34451_900.jpg",
       "id": "elie-carlsbad-20010529-1011-34451",
@@ -19424,13 +19774,14 @@
         }
       ],
       "sortIndex": 47,
-      "title": "Carlsbad - 47"
+      "title": "47"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "7A8F91",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 421976,
@@ -19442,9 +19793,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010529-1011-34469_1800.jpg",
-        "title": "Carlsbad - 48"
+        "title": "48"
       },
-      "editableTitle": "Carlsbad - 48",
+      "editableTitle": "48",
       "full": "20010529 1011 34469.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010529-1011-34469_900.jpg",
       "id": "elie-carlsbad-20010529-1011-34469",
@@ -19496,13 +19847,14 @@
         }
       ],
       "sortIndex": 48,
-      "title": "Carlsbad - 48"
+      "title": "48"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "565039",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 350937,
@@ -19514,9 +19866,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010529-1011-34513_1800.jpg",
-        "title": "Carlsbad - 49"
+        "title": "49"
       },
-      "editableTitle": "Carlsbad - 49",
+      "editableTitle": "49",
       "full": "20010529 1011 34513.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010529-1011-34513_900.jpg",
       "id": "elie-carlsbad-20010529-1011-34513",
@@ -19568,13 +19920,14 @@
         }
       ],
       "sortIndex": 49,
-      "title": "Carlsbad - 49"
+      "title": "49"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "816843",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 257540,
@@ -19586,9 +19939,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010702-1747-34499_1800.jpg",
-        "title": "Carlsbad - 50"
+        "title": "50"
       },
-      "editableTitle": "Carlsbad - 50",
+      "editableTitle": "50",
       "full": "20010702 1747 34499.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010702-1747-34499_900.jpg",
       "id": "elie-carlsbad-20010702-1747-34499",
@@ -19640,13 +19993,14 @@
         }
       ],
       "sortIndex": 50,
-      "title": "Carlsbad - 50"
+      "title": "50"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "785023",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 175445,
@@ -19658,9 +20012,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010702-1748-34458_1800.jpg",
-        "title": "Carlsbad - 51"
+        "title": "51"
       },
-      "editableTitle": "Carlsbad - 51",
+      "editableTitle": "51",
       "full": "20010702 1748 34458.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010702-1748-34458_900.jpg",
       "id": "elie-carlsbad-20010702-1748-34458",
@@ -19712,13 +20066,14 @@
         }
       ],
       "sortIndex": 51,
-      "title": "Carlsbad - 51"
+      "title": "51"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "663A15",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 202305,
@@ -19730,9 +20085,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010702-1749-34384_1800.jpg",
-        "title": "Carlsbad - 52"
+        "title": "52"
       },
-      "editableTitle": "Carlsbad - 52",
+      "editableTitle": "52",
       "full": "20010702 1749 34384.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010702-1749-34384_900.jpg",
       "id": "elie-carlsbad-20010702-1749-34384",
@@ -19784,13 +20139,14 @@
         }
       ],
       "sortIndex": 52,
-      "title": "Carlsbad - 52"
+      "title": "52"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "7D551E",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 170898,
@@ -19802,9 +20158,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010702-1749-34527_1800.jpg",
-        "title": "Carlsbad - 53"
+        "title": "53"
       },
-      "editableTitle": "Carlsbad - 53",
+      "editableTitle": "53",
       "full": "20010702 1749 34527.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010702-1749-34527_900.jpg",
       "id": "elie-carlsbad-20010702-1749-34527",
@@ -19856,13 +20212,14 @@
         }
       ],
       "sortIndex": 53,
-      "title": "Carlsbad - 53"
+      "title": "53"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "512914",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 236764,
@@ -19874,9 +20231,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010702-1750-34517_1800.jpg",
-        "title": "Carlsbad - 54"
+        "title": "54"
       },
-      "editableTitle": "Carlsbad - 54",
+      "editableTitle": "54",
       "full": "20010702 1750 34517.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010702-1750-34517_900.jpg",
       "id": "elie-carlsbad-20010702-1750-34517",
@@ -19928,13 +20285,14 @@
         }
       ],
       "sortIndex": 54,
-      "title": "Carlsbad - 54"
+      "title": "54"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "462515",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 168320,
@@ -19946,9 +20304,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010702-1751-34432_1800.jpg",
-        "title": "Carlsbad - 55"
+        "title": "55"
       },
-      "editableTitle": "Carlsbad - 55",
+      "editableTitle": "55",
       "full": "20010702 1751 34432.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010702-1751-34432_900.jpg",
       "id": "elie-carlsbad-20010702-1751-34432",
@@ -20000,13 +20358,14 @@
         }
       ],
       "sortIndex": 55,
-      "title": "Carlsbad - 55"
+      "title": "55"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "775134",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 205076,
@@ -20018,9 +20377,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010702-1752-34446_1800.jpg",
-        "title": "Carlsbad - 56"
+        "title": "56"
       },
-      "editableTitle": "Carlsbad - 56",
+      "editableTitle": "56",
       "full": "20010702 1752 34446.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010702-1752-34446_900.jpg",
       "id": "elie-carlsbad-20010702-1752-34446",
@@ -20072,13 +20431,14 @@
         }
       ],
       "sortIndex": 56,
-      "title": "Carlsbad - 56"
+      "title": "56"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "856648",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 208380,
@@ -20090,9 +20450,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010702-1752-34506_1800.jpg",
-        "title": "Carlsbad - 57"
+        "title": "57"
       },
-      "editableTitle": "Carlsbad - 57",
+      "editableTitle": "57",
       "full": "20010702 1752 34506.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010702-1752-34506_900.jpg",
       "id": "elie-carlsbad-20010702-1752-34506",
@@ -20144,13 +20504,14 @@
         }
       ],
       "sortIndex": 57,
-      "title": "Carlsbad - 57"
+      "title": "57"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "664030",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 271954,
@@ -20162,9 +20523,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010702-1753-34415_1800.jpg",
-        "title": "Carlsbad - 58"
+        "title": "58"
       },
-      "editableTitle": "Carlsbad - 58",
+      "editableTitle": "58",
       "full": "20010702 1753 34415.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010702-1753-34415_900.jpg",
       "id": "elie-carlsbad-20010702-1753-34415",
@@ -20216,13 +20577,14 @@
         }
       ],
       "sortIndex": 58,
-      "title": "Carlsbad - 58"
+      "title": "58"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "754E39",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 283181,
@@ -20234,9 +20596,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010702-1753-34480_1800.jpg",
-        "title": "Carlsbad - 59"
+        "title": "59"
       },
-      "editableTitle": "Carlsbad - 59",
+      "editableTitle": "59",
       "full": "20010702 1753 34480.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010702-1753-34480_900.jpg",
       "id": "elie-carlsbad-20010702-1753-34480",
@@ -20288,13 +20650,14 @@
         }
       ],
       "sortIndex": 59,
-      "title": "Carlsbad - 59"
+      "title": "59"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "3F2B1C",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 205621,
@@ -20306,9 +20669,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010702-1756-34511_1800.jpg",
-        "title": "Carlsbad - 60"
+        "title": "60"
       },
-      "editableTitle": "Carlsbad - 60",
+      "editableTitle": "60",
       "full": "20010702 1756 34511.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010702-1756-34511_900.jpg",
       "id": "elie-carlsbad-20010702-1756-34511",
@@ -20360,13 +20723,14 @@
         }
       ],
       "sortIndex": 60,
-      "title": "Carlsbad - 60"
+      "title": "60"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "254948",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 322440,
@@ -20378,9 +20742,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010303-0000-34456_1800.jpg",
-        "title": "Carlsbad - 61"
+        "title": "61"
       },
-      "editableTitle": "Carlsbad - 61",
+      "editableTitle": "61",
       "full": "20010303 0000 34456.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010303-0000-34456_900.jpg",
       "id": "elie-carlsbad-20010303-0000-34456",
@@ -20432,13 +20796,14 @@
         }
       ],
       "sortIndex": 61,
-      "title": "Carlsbad - 61"
+      "title": "61"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "515548",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 324084,
@@ -20450,9 +20815,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010329-1601-34532_1800.jpg",
-        "title": "Carlsbad - 62"
+        "title": "62"
       },
-      "editableTitle": "Carlsbad - 62",
+      "editableTitle": "62",
       "full": "20010329 1601 34532.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010329-1601-34532_900.jpg",
       "id": "elie-carlsbad-20010329-1601-34532",
@@ -20504,13 +20869,14 @@
         }
       ],
       "sortIndex": 62,
-      "title": "Carlsbad - 62"
+      "title": "62"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "A37C77",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 465934,
@@ -20522,9 +20888,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010703-1837-34393_1800.jpg",
-        "title": "Carlsbad - 63"
+        "title": "63"
       },
-      "editableTitle": "Carlsbad - 63",
+      "editableTitle": "63",
       "full": "20010703 1837 34393.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010703-1837-34393_900.jpg",
       "id": "elie-carlsbad-20010703-1837-34393",
@@ -20576,13 +20942,14 @@
         }
       ],
       "sortIndex": 63,
-      "title": "Carlsbad - 63"
+      "title": "63"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "5D3728",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 472505,
@@ -20594,9 +20961,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010703-1837-34427_1800.jpg",
-        "title": "Carlsbad - 64"
+        "title": "64"
       },
-      "editableTitle": "Carlsbad - 64",
+      "editableTitle": "64",
       "full": "20010703 1837 34427.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010703-1837-34427_900.jpg",
       "id": "elie-carlsbad-20010703-1837-34427",
@@ -20648,13 +21015,14 @@
         }
       ],
       "sortIndex": 64,
-      "title": "Carlsbad - 64"
+      "title": "64"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "485A63",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 342491,
@@ -20666,9 +21034,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010504-0000-34437_1800.jpg",
-        "title": "Carlsbad - 65"
+        "title": "65"
       },
-      "editableTitle": "Carlsbad - 65",
+      "editableTitle": "65",
       "full": "20010504 0000 34437.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010504-0000-34437_900.jpg",
       "id": "elie-carlsbad-20010504-0000-34437",
@@ -20720,13 +21088,14 @@
         }
       ],
       "sortIndex": 65,
-      "title": "Carlsbad - 65"
+      "title": "65"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "566362",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 374613,
@@ -20738,9 +21107,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010504-0454-34452_1800.jpg",
-        "title": "Carlsbad - 66"
+        "title": "66"
       },
-      "editableTitle": "Carlsbad - 66",
+      "editableTitle": "66",
       "full": "20010504 0454 34452.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010504-0454-34452_900.jpg",
       "id": "elie-carlsbad-20010504-0454-34452",
@@ -20792,13 +21161,14 @@
         }
       ],
       "sortIndex": 66,
-      "title": "Carlsbad - 66"
+      "title": "66"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "3E5D72",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 350688,
@@ -20810,9 +21180,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010504-0454-34468_1800.jpg",
-        "title": "Carlsbad - 67"
+        "title": "67"
       },
-      "editableTitle": "Carlsbad - 67",
+      "editableTitle": "67",
       "full": "20010504 0454 34468.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010504-0454-34468_900.jpg",
       "id": "elie-carlsbad-20010504-0454-34468",
@@ -20864,13 +21234,14 @@
         }
       ],
       "sortIndex": 67,
-      "title": "Carlsbad - 67"
+      "title": "67"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "96856A",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 458068,
@@ -20882,9 +21253,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010705-1837-34489_1800.jpg",
-        "title": "Carlsbad - 68"
+        "title": "68"
       },
-      "editableTitle": "Carlsbad - 68",
+      "editableTitle": "68",
       "full": "20010705 1837 34489.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010705-1837-34489_900.jpg",
       "id": "elie-carlsbad-20010705-1837-34489",
@@ -20936,13 +21307,14 @@
         }
       ],
       "sortIndex": 68,
-      "title": "Carlsbad - 68"
+      "title": "68"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "584233",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 356005,
@@ -20954,9 +21326,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010705-1838-34459_1800.jpg",
-        "title": "Carlsbad - 69"
+        "title": "69"
       },
-      "editableTitle": "Carlsbad - 69",
+      "editableTitle": "69",
       "full": "20010705 1838 34459.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010705-1838-34459_900.jpg",
       "id": "elie-carlsbad-20010705-1838-34459",
@@ -21008,13 +21380,14 @@
         }
       ],
       "sortIndex": 69,
-      "title": "Carlsbad - 69"
+      "title": "69"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "4E3A27",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 295620,
@@ -21026,9 +21399,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010705-1839-34435_1800.jpg",
-        "title": "Carlsbad - 70"
+        "title": "70"
       },
-      "editableTitle": "Carlsbad - 70",
+      "editableTitle": "70",
       "full": "20010705 1839 34435.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010705-1839-34435_900.jpg",
       "id": "elie-carlsbad-20010705-1839-34435",
@@ -21080,13 +21453,14 @@
         }
       ],
       "sortIndex": 70,
-      "title": "Carlsbad - 70"
+      "title": "70"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "504742",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 353809,
@@ -21098,9 +21472,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010705-1917-31610_1800.jpg",
-        "title": "Carlsbad - 71"
+        "title": "71"
       },
-      "editableTitle": "Carlsbad - 71",
+      "editableTitle": "71",
       "full": "20010705 1917 31610.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010705-1917-31610_900.jpg",
       "id": "elie-carlsbad-20010705-1917-31610",
@@ -21152,13 +21526,14 @@
         }
       ],
       "sortIndex": 71,
-      "title": "Carlsbad - 71"
+      "title": "71"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "3B322D",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 308100,
@@ -21170,9 +21545,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010705-1917-34424_1800.jpg",
-        "title": "Carlsbad - 72"
+        "title": "72"
       },
-      "editableTitle": "Carlsbad - 72",
+      "editableTitle": "72",
       "full": "20010705 1917 34424.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010705-1917-34424_900.jpg",
       "id": "elie-carlsbad-20010705-1917-34424",
@@ -21224,13 +21599,14 @@
         }
       ],
       "sortIndex": 72,
-      "title": "Carlsbad - 72"
+      "title": "72"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "463931",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 391184,
@@ -21242,9 +21618,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010705-1918-34430_1800.jpg",
-        "title": "Carlsbad - 73"
+        "title": "73"
       },
-      "editableTitle": "Carlsbad - 73",
+      "editableTitle": "73",
       "full": "20010705 1918 34430.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010705-1918-34430_900.jpg",
       "id": "elie-carlsbad-20010705-1918-34430",
@@ -21296,13 +21672,14 @@
         }
       ],
       "sortIndex": 73,
-      "title": "Carlsbad - 73"
+      "title": "73"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "6E4E35",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 395949,
@@ -21314,9 +21691,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010705-1923-34526_1800.jpg",
-        "title": "Carlsbad - 74"
+        "title": "74"
       },
-      "editableTitle": "Carlsbad - 74",
+      "editableTitle": "74",
       "full": "20010705 1923 34526.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010705-1923-34526_900.jpg",
       "id": "elie-carlsbad-20010705-1923-34526",
@@ -21368,13 +21745,14 @@
         }
       ],
       "sortIndex": 74,
-      "title": "Carlsbad - 74"
+      "title": "74"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "706662",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 337373,
@@ -21386,9 +21764,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010705-1924-34474_1800.jpg",
-        "title": "Carlsbad - 75"
+        "title": "75"
       },
-      "editableTitle": "Carlsbad - 75",
+      "editableTitle": "75",
       "full": "20010705 1924 34474.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010705-1924-34474_900.jpg",
       "id": "elie-carlsbad-20010705-1924-34474",
@@ -21440,13 +21818,14 @@
         }
       ],
       "sortIndex": 75,
-      "title": "Carlsbad - 75"
+      "title": "75"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "96938C",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 582894,
@@ -21458,9 +21837,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010705-1924-34476_1800.jpg",
-        "title": "Carlsbad - 76"
+        "title": "76"
       },
-      "editableTitle": "Carlsbad - 76",
+      "editableTitle": "76",
       "full": "20010705 1924 34476.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010705-1924-34476_900.jpg",
       "id": "elie-carlsbad-20010705-1924-34476",
@@ -21512,13 +21891,14 @@
         }
       ],
       "sortIndex": 76,
-      "title": "Carlsbad - 76"
+      "title": "76"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "8B867E",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 302486,
@@ -21530,9 +21910,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010706-1846-34479_1800.jpg",
-        "title": "Carlsbad - 77"
+        "title": "77"
       },
-      "editableTitle": "Carlsbad - 77",
+      "editableTitle": "77",
       "full": "20010706 1846 34479.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010706-1846-34479_900.jpg",
       "id": "elie-carlsbad-20010706-1846-34479",
@@ -21584,13 +21964,14 @@
         }
       ],
       "sortIndex": 77,
-      "title": "Carlsbad - 77"
+      "title": "77"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "96979B",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 316250,
@@ -21602,9 +21983,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010706-1848-34518_1800.jpg",
-        "title": "Carlsbad - 78"
+        "title": "78"
       },
-      "editableTitle": "Carlsbad - 78",
+      "editableTitle": "78",
       "full": "20010706 1848 34518.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010706-1848-34518_900.jpg",
       "id": "elie-carlsbad-20010706-1848-34518",
@@ -21656,13 +22037,14 @@
         }
       ],
       "sortIndex": 78,
-      "title": "Carlsbad - 78"
+      "title": "78"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "878373",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 395910,
@@ -21674,9 +22056,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010706-1852-34495_1800.jpg",
-        "title": "Carlsbad - 79"
+        "title": "79"
       },
-      "editableTitle": "Carlsbad - 79",
+      "editableTitle": "79",
       "full": "20010706 1852 34495.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010706-1852-34495_900.jpg",
       "id": "elie-carlsbad-20010706-1852-34495",
@@ -21728,13 +22110,14 @@
         }
       ],
       "sortIndex": 79,
-      "title": "Carlsbad - 79"
+      "title": "79"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "6E7E7A",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 302724,
@@ -21746,9 +22129,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010706-1856-31336_1800.jpg",
-        "title": "Carlsbad - 80"
+        "title": "80"
       },
-      "editableTitle": "Carlsbad - 80",
+      "editableTitle": "80",
       "full": "20010706 1856 31336.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010706-1856-31336_900.jpg",
       "id": "elie-carlsbad-20010706-1856-31336",
@@ -21800,13 +22183,14 @@
         }
       ],
       "sortIndex": 80,
-      "title": "Carlsbad - 80"
+      "title": "80"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "6A6461",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 335849,
@@ -21818,9 +22202,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010706-1859-31337_1800.jpg",
-        "title": "Carlsbad - 81"
+        "title": "81"
       },
-      "editableTitle": "Carlsbad - 81",
+      "editableTitle": "81",
       "full": "20010706 1859 31337.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010706-1859-31337_900.jpg",
       "id": "elie-carlsbad-20010706-1859-31337",
@@ -21872,13 +22256,14 @@
         }
       ],
       "sortIndex": 81,
-      "title": "Carlsbad - 81"
+      "title": "81"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "8E624A",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 359868,
@@ -21890,9 +22275,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010706-1859-34394_1800.jpg",
-        "title": "Carlsbad - 82"
+        "title": "82"
       },
-      "editableTitle": "Carlsbad - 82",
+      "editableTitle": "82",
       "full": "20010706 1859 34394.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010706-1859-34394_900.jpg",
       "id": "elie-carlsbad-20010706-1859-34394",
@@ -21944,13 +22329,14 @@
         }
       ],
       "sortIndex": 82,
-      "title": "Carlsbad - 82"
+      "title": "82"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "716B69",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 344230,
@@ -21962,9 +22348,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010706-1900-34431_1800.jpg",
-        "title": "Carlsbad - 83"
+        "title": "83"
       },
-      "editableTitle": "Carlsbad - 83",
+      "editableTitle": "83",
       "full": "20010706 1900 34431.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010706-1900-34431_900.jpg",
       "id": "elie-carlsbad-20010706-1900-34431",
@@ -22016,13 +22402,14 @@
         }
       ],
       "sortIndex": 83,
-      "title": "Carlsbad - 83"
+      "title": "83"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "777472",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 372298,
@@ -22034,9 +22421,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010706-1900-34441_1800.jpg",
-        "title": "Carlsbad - 84"
+        "title": "84"
       },
-      "editableTitle": "Carlsbad - 84",
+      "editableTitle": "84",
       "full": "20010706 1900 34441.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010706-1900-34441_900.jpg",
       "id": "elie-carlsbad-20010706-1900-34441",
@@ -22088,13 +22475,14 @@
         }
       ],
       "sortIndex": 84,
-      "title": "Carlsbad - 84"
+      "title": "84"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "7E7D7D",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 314717,
@@ -22106,9 +22494,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010706-1900-34491_1800.jpg",
-        "title": "Carlsbad - 85"
+        "title": "85"
       },
-      "editableTitle": "Carlsbad - 85",
+      "editableTitle": "85",
       "full": "20010706 1900 34491.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010706-1900-34491_900.jpg",
       "id": "elie-carlsbad-20010706-1900-34491",
@@ -22160,13 +22548,14 @@
         }
       ],
       "sortIndex": 85,
-      "title": "Carlsbad - 85"
+      "title": "85"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "936753",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 338563,
@@ -22178,9 +22567,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010706-1900-34493_1800.jpg",
-        "title": "Carlsbad - 86"
+        "title": "86"
       },
-      "editableTitle": "Carlsbad - 86",
+      "editableTitle": "86",
       "full": "20010706 1900 34493.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010706-1900-34493_900.jpg",
       "id": "elie-carlsbad-20010706-1900-34493",
@@ -22232,13 +22621,14 @@
         }
       ],
       "sortIndex": 86,
-      "title": "Carlsbad - 86"
+      "title": "86"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "746C5F",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 421326,
@@ -22250,9 +22640,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010706-1902-31338_1800.jpg",
-        "title": "Carlsbad - 87"
+        "title": "87"
       },
-      "editableTitle": "Carlsbad - 87",
+      "editableTitle": "87",
       "full": "20010706 1902 31338.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010706-1902-31338_900.jpg",
       "id": "elie-carlsbad-20010706-1902-31338",
@@ -22304,13 +22694,14 @@
         }
       ],
       "sortIndex": 87,
-      "title": "Carlsbad - 87"
+      "title": "87"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "978A8A",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 486802,
@@ -22322,9 +22713,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010706-1902-34475_1800.jpg",
-        "title": "Carlsbad - 88"
+        "title": "88"
       },
-      "editableTitle": "Carlsbad - 88",
+      "editableTitle": "88",
       "full": "20010706 1902 34475.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010706-1902-34475_900.jpg",
       "id": "elie-carlsbad-20010706-1902-34475",
@@ -22376,13 +22767,14 @@
         }
       ],
       "sortIndex": 88,
-      "title": "Carlsbad - 88"
+      "title": "88"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "445656",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 339570,
@@ -22394,9 +22786,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010507-0454-34525_1800.jpg",
-        "title": "Carlsbad - 89"
+        "title": "89"
       },
-      "editableTitle": "Carlsbad - 89",
+      "editableTitle": "89",
       "full": "20010507 0454 34525.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010507-0454-34525_900.jpg",
       "id": "elie-carlsbad-20010507-0454-34525",
@@ -22448,13 +22840,14 @@
         }
       ],
       "sortIndex": 89,
-      "title": "Carlsbad - 89"
+      "title": "89"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "5A5345",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 362812,
@@ -22466,9 +22859,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010609-1011-31594_1800.jpg",
-        "title": "Carlsbad - 90"
+        "title": "90"
       },
-      "editableTitle": "Carlsbad - 90",
+      "editableTitle": "90",
       "full": "20010609 1011 31594.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010609-1011-31594_900.jpg",
       "id": "elie-carlsbad-20010609-1011-31594",
@@ -22520,13 +22913,14 @@
         }
       ],
       "sortIndex": 90,
-      "title": "Carlsbad - 90"
+      "title": "90"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "6D726D",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 354282,
@@ -22538,9 +22932,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010609-1011-34387_1800.jpg",
-        "title": "Carlsbad - 91"
+        "title": "91"
       },
-      "editableTitle": "Carlsbad - 91",
+      "editableTitle": "91",
       "full": "20010609 1011 34387.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010609-1011-34387_900.jpg",
       "id": "elie-carlsbad-20010609-1011-34387",
@@ -22592,13 +22986,14 @@
         }
       ],
       "sortIndex": 91,
-      "title": "Carlsbad - 91"
+      "title": "91"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "59564D",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 364011,
@@ -22610,9 +23005,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010609-1011-34448_1800.jpg",
-        "title": "Carlsbad - 92"
+        "title": "92"
       },
-      "editableTitle": "Carlsbad - 92",
+      "editableTitle": "92",
       "full": "20010609 1011 34448.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010609-1011-34448_900.jpg",
       "id": "elie-carlsbad-20010609-1011-34448",
@@ -22664,13 +23059,14 @@
         }
       ],
       "sortIndex": 92,
-      "title": "Carlsbad - 92"
+      "title": "92"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "575A51",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 408495,
@@ -22682,9 +23078,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010609-1011-34522_1800.jpg",
-        "title": "Carlsbad - 93"
+        "title": "93"
       },
-      "editableTitle": "Carlsbad - 93",
+      "editableTitle": "93",
       "full": "20010609 1011 34522.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010609-1011-34522_900.jpg",
       "id": "elie-carlsbad-20010609-1011-34522",
@@ -22736,13 +23132,14 @@
         }
       ],
       "sortIndex": 93,
-      "title": "Carlsbad - 93"
+      "title": "93"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "7B7A6A",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 396113,
@@ -22754,9 +23151,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010621-0707-34392_1800.jpg",
-        "title": "Carlsbad - 94"
+        "title": "94"
       },
-      "editableTitle": "Carlsbad - 94",
+      "editableTitle": "94",
       "full": "20010621 0707 34392.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010621-0707-34392_900.jpg",
       "id": "elie-carlsbad-20010621-0707-34392",
@@ -22808,13 +23205,14 @@
         }
       ],
       "sortIndex": 94,
-      "title": "Carlsbad - 94"
+      "title": "94"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "534445",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 362647,
@@ -22826,9 +23224,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010621-0707-34421_1800.jpg",
-        "title": "Carlsbad - 95"
+        "title": "95"
       },
-      "editableTitle": "Carlsbad - 95",
+      "editableTitle": "95",
       "full": "20010621 0707 34421.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010621-0707-34421_900.jpg",
       "id": "elie-carlsbad-20010621-0707-34421",
@@ -22880,13 +23278,14 @@
         }
       ],
       "sortIndex": 95,
-      "title": "Carlsbad - 95"
+      "title": "95"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "32332B",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 365936,
@@ -22898,9 +23297,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010621-0707-34436_1800.jpg",
-        "title": "Carlsbad - 96"
+        "title": "96"
       },
-      "editableTitle": "Carlsbad - 96",
+      "editableTitle": "96",
       "full": "20010621 0707 34436.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010621-0707-34436_900.jpg",
       "id": "elie-carlsbad-20010621-0707-34436",
@@ -22952,13 +23351,14 @@
         }
       ],
       "sortIndex": 96,
-      "title": "Carlsbad - 96"
+      "title": "96"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "606051",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 418918,
@@ -22970,9 +23370,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010621-0707-34477_1800.jpg",
-        "title": "Carlsbad - 97"
+        "title": "97"
       },
-      "editableTitle": "Carlsbad - 97",
+      "editableTitle": "97",
       "full": "20010621 0707 34477.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010621-0707-34477_900.jpg",
       "id": "elie-carlsbad-20010621-0707-34477",
@@ -23024,13 +23424,14 @@
         }
       ],
       "sortIndex": 97,
-      "title": "Carlsbad - 97"
+      "title": "97"
     },
     {
       "album": "Carlsbad",
       "albumSlug": "carlsbad",
       "albumTitle": "Carlsbad",
       "caption": "Carlsbad",
+      "captionColor": "434248",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 352078,
@@ -23042,9 +23443,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/carlsbad/elie-carlsbad-20010621-0707-34481_1800.jpg",
-        "title": "Carlsbad - 98"
+        "title": "98"
       },
-      "editableTitle": "Carlsbad - 98",
+      "editableTitle": "98",
       "full": "20010621 0707 34481.jpeg",
       "gallerySrc": "previews/carlsbad/elie-carlsbad-20010621-0707-34481_900.jpg",
       "id": "elie-carlsbad-20010621-0707-34481",
@@ -23096,13 +23497,14 @@
         }
       ],
       "sortIndex": 98,
-      "title": "Carlsbad - 98"
+      "title": "98"
     },
     {
       "album": "Lisbon",
       "albumSlug": "lisbon",
       "albumTitle": "Lisbon",
       "caption": "Lisbon",
+      "captionColor": "8B5327",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 345079,
@@ -23114,9 +23516,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20210701-2136-00018_1800.jpg",
-        "title": "Lisbon - 01"
+        "title": "01"
       },
-      "editableTitle": "Lisbon - 01",
+      "editableTitle": "01",
       "full": "20210701 2136 00018.jpeg",
       "gallerySrc": "previews/lisbon/elie-lisbon-20210701-2136-00018_900.jpg",
       "id": "elie-lisbon-20210701-2136-00018",
@@ -23168,13 +23570,14 @@
         }
       ],
       "sortIndex": 99,
-      "title": "Lisbon - 01"
+      "title": "01"
     },
     {
       "album": "Lisbon",
       "albumSlug": "lisbon",
       "albumTitle": "Lisbon",
       "caption": "Lisbon",
+      "captionColor": "885732",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 343293,
@@ -23186,9 +23589,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20210701-2136-00021_1800.jpg",
-        "title": "Lisbon - 02"
+        "title": "02"
       },
-      "editableTitle": "Lisbon - 02",
+      "editableTitle": "02",
       "full": "20210701 2136 00021.jpeg",
       "gallerySrc": "previews/lisbon/elie-lisbon-20210701-2136-00021_900.jpg",
       "id": "elie-lisbon-20210701-2136-00021",
@@ -23240,13 +23643,14 @@
         }
       ],
       "sortIndex": 100,
-      "title": "Lisbon - 02"
+      "title": "02"
     },
     {
       "album": "Lisbon",
       "albumSlug": "lisbon",
       "albumTitle": "Lisbon",
       "caption": "Lisbon",
+      "captionColor": "5A4737",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 346930,
@@ -23258,9 +23662,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20210701-2137-00024_1800.jpg",
-        "title": "Lisbon - 03"
+        "title": "03"
       },
-      "editableTitle": "Lisbon - 03",
+      "editableTitle": "03",
       "full": "20210701 2137 00024.jpeg",
       "gallerySrc": "previews/lisbon/elie-lisbon-20210701-2137-00024_900.jpg",
       "id": "elie-lisbon-20210701-2137-00024",
@@ -23312,13 +23716,14 @@
         }
       ],
       "sortIndex": 101,
-      "title": "Lisbon - 03"
+      "title": "03"
     },
     {
       "album": "Lisbon",
       "albumSlug": "lisbon",
       "albumTitle": "Lisbon",
       "caption": "Lisbon",
+      "captionColor": "7C6755",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 228581,
@@ -23330,9 +23735,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20210723-1128-00001_1800.jpg",
-        "title": "Lisbon - 04"
+        "title": "04"
       },
-      "editableTitle": "Lisbon - 04",
+      "editableTitle": "04",
       "full": "20210723 1128 00001.jpeg",
       "gallerySrc": "previews/lisbon/elie-lisbon-20210723-1128-00001_900.jpg",
       "id": "elie-lisbon-20210723-1128-00001",
@@ -23384,13 +23789,14 @@
         }
       ],
       "sortIndex": 102,
-      "title": "Lisbon - 04"
+      "title": "04"
     },
     {
       "album": "Lisbon",
       "albumSlug": "lisbon",
       "albumTitle": "Lisbon",
       "caption": "Lisbon",
+      "captionColor": "625A58",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 172165,
@@ -23402,9 +23808,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20210723-1129-00002_1800.jpg",
-        "title": "Lisbon - 05"
+        "title": "05"
       },
-      "editableTitle": "Lisbon - 05",
+      "editableTitle": "05",
       "full": "20210723 1129 00002.jpeg",
       "gallerySrc": "previews/lisbon/elie-lisbon-20210723-1129-00002_900.jpg",
       "id": "elie-lisbon-20210723-1129-00002",
@@ -23456,13 +23862,14 @@
         }
       ],
       "sortIndex": 103,
-      "title": "Lisbon - 05"
+      "title": "05"
     },
     {
       "album": "Lisbon",
       "albumSlug": "lisbon",
       "albumTitle": "Lisbon",
       "caption": "Lisbon",
+      "captionColor": "5271BD",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 283933,
@@ -23474,9 +23881,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20210912-1919-00193_1800.jpg",
-        "title": "Lisbon - 06"
+        "title": "06"
       },
-      "editableTitle": "Lisbon - 06",
+      "editableTitle": "06",
       "full": "20210912 1919 00193.jpeg",
       "gallerySrc": "previews/lisbon/elie-lisbon-20210912-1919-00193_900.jpg",
       "id": "elie-lisbon-20210912-1919-00193",
@@ -23528,13 +23935,14 @@
         }
       ],
       "sortIndex": 104,
-      "title": "Lisbon - 06"
+      "title": "06"
     },
     {
       "album": "Lisbon",
       "albumSlug": "lisbon",
       "albumTitle": "Lisbon",
       "caption": "Lisbon",
+      "captionColor": "AD8D81",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 281996,
@@ -23546,9 +23954,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20210912-1919-00194_1800.jpg",
-        "title": "Lisbon - 07"
+        "title": "07"
       },
-      "editableTitle": "Lisbon - 07",
+      "editableTitle": "07",
       "full": "20210912 1919 00194.jpeg",
       "gallerySrc": "previews/lisbon/elie-lisbon-20210912-1919-00194_900.jpg",
       "id": "elie-lisbon-20210912-1919-00194",
@@ -23600,13 +24008,14 @@
         }
       ],
       "sortIndex": 105,
-      "title": "Lisbon - 07"
+      "title": "07"
     },
     {
       "album": "Lisbon",
       "albumSlug": "lisbon",
       "albumTitle": "Lisbon",
       "caption": "Lisbon",
+      "captionColor": "B29386",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 304357,
@@ -23618,9 +24027,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20210912-1919-00195_1800.jpg",
-        "title": "Lisbon - 08"
+        "title": "08"
       },
-      "editableTitle": "Lisbon - 08",
+      "editableTitle": "08",
       "full": "20210912 1919 00195.jpeg",
       "gallerySrc": "previews/lisbon/elie-lisbon-20210912-1919-00195_900.jpg",
       "id": "elie-lisbon-20210912-1919-00195",
@@ -23672,13 +24081,14 @@
         }
       ],
       "sortIndex": 106,
-      "title": "Lisbon - 08"
+      "title": "08"
     },
     {
       "album": "Lisbon",
       "albumSlug": "lisbon",
       "albumTitle": "Lisbon",
       "caption": "Lisbon",
+      "captionColor": "264B93",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 329638,
@@ -23690,9 +24100,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20210912-1919-00197_1800.jpg",
-        "title": "Lisbon - 09"
+        "title": "09"
       },
-      "editableTitle": "Lisbon - 09",
+      "editableTitle": "09",
       "full": "20210912 1919 00197.jpeg",
       "gallerySrc": "previews/lisbon/elie-lisbon-20210912-1919-00197_900.jpg",
       "id": "elie-lisbon-20210912-1919-00197",
@@ -23744,13 +24154,14 @@
         }
       ],
       "sortIndex": 107,
-      "title": "Lisbon - 09"
+      "title": "09"
     },
     {
       "album": "Lisbon",
       "albumSlug": "lisbon",
       "albumTitle": "Lisbon",
       "caption": "Lisbon",
+      "captionColor": "626B7B",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 254915,
@@ -23762,9 +24173,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20210912-1920-00198_1800.jpg",
-        "title": "Lisbon - 10"
+        "title": "10"
       },
-      "editableTitle": "Lisbon - 10",
+      "editableTitle": "10",
       "full": "20210912 1920 00198.jpeg",
       "gallerySrc": "previews/lisbon/elie-lisbon-20210912-1920-00198_900.jpg",
       "id": "elie-lisbon-20210912-1920-00198",
@@ -23816,13 +24227,14 @@
         }
       ],
       "sortIndex": 108,
-      "title": "Lisbon - 10"
+      "title": "10"
     },
     {
       "album": "Lisbon",
       "albumSlug": "lisbon",
       "albumTitle": "Lisbon",
       "caption": "Lisbon",
+      "captionColor": "4C668B",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 270824,
@@ -23834,9 +24246,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20210912-1920-00200_1800.jpg",
-        "title": "Lisbon - 11"
+        "title": "11"
       },
-      "editableTitle": "Lisbon - 11",
+      "editableTitle": "11",
       "full": "20210912 1920 00200.jpeg",
       "gallerySrc": "previews/lisbon/elie-lisbon-20210912-1920-00200_900.jpg",
       "id": "elie-lisbon-20210912-1920-00200",
@@ -23888,13 +24300,14 @@
         }
       ],
       "sortIndex": 109,
-      "title": "Lisbon - 11"
+      "title": "11"
     },
     {
       "album": "Lisbon",
       "albumSlug": "lisbon",
       "albumTitle": "Lisbon",
       "caption": "Lisbon",
+      "captionColor": "423737",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 539686,
@@ -23906,9 +24319,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20220107-133820-00392_1800.jpg",
-        "title": "Lisbon - 12"
+        "title": "12"
       },
-      "editableTitle": "Lisbon - 12",
+      "editableTitle": "12",
       "full": "20220107 133820 00392.jpeg",
       "gallerySrc": "previews/lisbon/elie-lisbon-20220107-133820-00392_900.jpg",
       "id": "elie-lisbon-20220107-133820-00392",
@@ -23960,13 +24373,14 @@
         }
       ],
       "sortIndex": 110,
-      "title": "Lisbon - 12"
+      "title": "12"
     },
     {
       "album": "Lisbon",
       "albumSlug": "lisbon",
       "albumTitle": "Lisbon",
       "caption": "Lisbon",
+      "captionColor": "8B7A71",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 525487,
@@ -23978,9 +24392,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20220107-133904-00396_1800.jpg",
-        "title": "Lisbon - 13"
+        "title": "13"
       },
-      "editableTitle": "Lisbon - 13",
+      "editableTitle": "13",
       "full": "20220107 133904 00396.jpeg",
       "gallerySrc": "previews/lisbon/elie-lisbon-20220107-133904-00396_900.jpg",
       "id": "elie-lisbon-20220107-133904-00396",
@@ -24032,13 +24446,14 @@
         }
       ],
       "sortIndex": 111,
-      "title": "Lisbon - 13"
+      "title": "13"
     },
     {
       "album": "Lisbon",
       "albumSlug": "lisbon",
       "albumTitle": "Lisbon",
       "caption": "Lisbon",
+      "captionColor": "7A6D66",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 579021,
@@ -24050,9 +24465,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20220107-134331-00399_1800.jpg",
-        "title": "Lisbon - 14"
+        "title": "14"
       },
-      "editableTitle": "Lisbon - 14",
+      "editableTitle": "14",
       "full": "20220107 134331 00399.jpeg",
       "gallerySrc": "previews/lisbon/elie-lisbon-20220107-134331-00399_900.jpg",
       "id": "elie-lisbon-20220107-134331-00399",
@@ -24104,13 +24519,14 @@
         }
       ],
       "sortIndex": 112,
-      "title": "Lisbon - 14"
+      "title": "14"
     },
     {
       "album": "Lisbon",
       "albumSlug": "lisbon",
       "albumTitle": "Lisbon",
       "caption": "Lisbon",
+      "captionColor": "86624B",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 499257,
@@ -24122,9 +24538,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20220714-210123-00303_1800.jpg",
-        "title": "Lisbon - 15"
+        "title": "15"
       },
-      "editableTitle": "Lisbon - 15",
+      "editableTitle": "15",
       "full": "20220714 210123 00303.jpeg",
       "gallerySrc": "previews/lisbon/elie-lisbon-20220714-210123-00303_900.jpg",
       "id": "elie-lisbon-20220714-210123-00303",
@@ -24176,13 +24592,14 @@
         }
       ],
       "sortIndex": 113,
-      "title": "Lisbon - 15"
+      "title": "15"
     },
     {
       "album": "Lisbon",
       "albumSlug": "lisbon",
       "albumTitle": "Lisbon",
       "caption": "Lisbon",
+      "captionColor": "84614C",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 496097,
@@ -24194,9 +24611,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20220714-210123-00304_1800.jpg",
-        "title": "Lisbon - 16"
+        "title": "16"
       },
-      "editableTitle": "Lisbon - 16",
+      "editableTitle": "16",
       "full": "20220714 210123 00304.jpeg",
       "gallerySrc": "previews/lisbon/elie-lisbon-20220714-210123-00304_900.jpg",
       "id": "elie-lisbon-20220714-210123-00304",
@@ -24248,13 +24665,14 @@
         }
       ],
       "sortIndex": 114,
-      "title": "Lisbon - 16"
+      "title": "16"
     },
     {
       "album": "Lisbon",
       "albumSlug": "lisbon",
       "albumTitle": "Lisbon",
       "caption": "Lisbon",
+      "captionColor": "87634D",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 495175,
@@ -24266,9 +24684,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20220714-210123-00305_1800.jpg",
-        "title": "Lisbon - 17"
+        "title": "17"
       },
-      "editableTitle": "Lisbon - 17",
+      "editableTitle": "17",
       "full": "20220714 210123 00305.jpeg",
       "gallerySrc": "previews/lisbon/elie-lisbon-20220714-210123-00305_900.jpg",
       "id": "elie-lisbon-20220714-210123-00305",
@@ -24320,13 +24738,14 @@
         }
       ],
       "sortIndex": 115,
-      "title": "Lisbon - 17"
+      "title": "17"
     },
     {
       "album": "Lisbon",
       "albumSlug": "lisbon",
       "albumTitle": "Lisbon",
       "caption": "Lisbon",
+      "captionColor": "AEA77E",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 568512,
@@ -24338,9 +24757,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20220714-210129-00306_1800.jpg",
-        "title": "Lisbon - 18"
+        "title": "18"
       },
-      "editableTitle": "Lisbon - 18",
+      "editableTitle": "18",
       "full": "20220714 210129 00306.jpeg",
       "gallerySrc": "previews/lisbon/elie-lisbon-20220714-210129-00306_900.jpg",
       "id": "elie-lisbon-20220714-210129-00306",
@@ -24392,13 +24811,14 @@
         }
       ],
       "sortIndex": 116,
-      "title": "Lisbon - 18"
+      "title": "18"
     },
     {
       "album": "Lisbon",
       "albumSlug": "lisbon",
       "albumTitle": "Lisbon",
       "caption": "Lisbon",
+      "captionColor": "ACAA89",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 525110,
@@ -24410,9 +24830,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20220714-210129-00307_1800.jpg",
-        "title": "Lisbon - 19"
+        "title": "19"
       },
-      "editableTitle": "Lisbon - 19",
+      "editableTitle": "19",
       "full": "20220714 210129 00307.jpeg",
       "gallerySrc": "previews/lisbon/elie-lisbon-20220714-210129-00307_900.jpg",
       "id": "elie-lisbon-20220714-210129-00307",
@@ -24464,13 +24884,14 @@
         }
       ],
       "sortIndex": 117,
-      "title": "Lisbon - 19"
+      "title": "19"
     },
     {
       "album": "Lisbon",
       "albumSlug": "lisbon",
       "albumTitle": "Lisbon",
       "caption": "Lisbon",
+      "captionColor": "775F52",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 498038,
@@ -24482,9 +24903,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20220714-210137-00308_1800.jpg",
-        "title": "Lisbon - 20"
+        "title": "20"
       },
-      "editableTitle": "Lisbon - 20",
+      "editableTitle": "20",
       "full": "20220714 210137 00308.jpeg",
       "gallerySrc": "previews/lisbon/elie-lisbon-20220714-210137-00308_900.jpg",
       "id": "elie-lisbon-20220714-210137-00308",
@@ -24536,13 +24957,14 @@
         }
       ],
       "sortIndex": 118,
-      "title": "Lisbon - 20"
+      "title": "20"
     },
     {
       "album": "Lisbon",
       "albumSlug": "lisbon",
       "albumTitle": "Lisbon",
       "caption": "Lisbon",
+      "captionColor": "736053",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 496087,
@@ -24554,9 +24976,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20220714-210138-00310_1800.jpg",
-        "title": "Lisbon - 21"
+        "title": "21"
       },
-      "editableTitle": "Lisbon - 21",
+      "editableTitle": "21",
       "full": "20220714 210138 00310.jpeg",
       "gallerySrc": "previews/lisbon/elie-lisbon-20220714-210138-00310_900.jpg",
       "id": "elie-lisbon-20220714-210138-00310",
@@ -24608,13 +25030,14 @@
         }
       ],
       "sortIndex": 119,
-      "title": "Lisbon - 21"
+      "title": "21"
     },
     {
       "album": "Lisbon",
       "albumSlug": "lisbon",
       "albumTitle": "Lisbon",
       "caption": "Lisbon",
+      "captionColor": "9B7F68",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 408006,
@@ -24626,9 +25049,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20220714-210143-00312_1800.jpg",
-        "title": "Lisbon - 22"
+        "title": "22"
       },
-      "editableTitle": "Lisbon - 22",
+      "editableTitle": "22",
       "full": "20220714 210143 00312.jpeg",
       "gallerySrc": "previews/lisbon/elie-lisbon-20220714-210143-00312_900.jpg",
       "id": "elie-lisbon-20220714-210143-00312",
@@ -24680,13 +25103,14 @@
         }
       ],
       "sortIndex": 120,
-      "title": "Lisbon - 22"
+      "title": "22"
     },
     {
       "album": "Lisbon",
       "albumSlug": "lisbon",
       "albumTitle": "Lisbon",
       "caption": "Lisbon",
+      "captionColor": "594733",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 431173,
@@ -24698,9 +25122,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20220714-210204-00313_1800.jpg",
-        "title": "Lisbon - 23"
+        "title": "23"
       },
-      "editableTitle": "Lisbon - 23",
+      "editableTitle": "23",
       "full": "20220714 210204 00313.jpeg",
       "gallerySrc": "previews/lisbon/elie-lisbon-20220714-210204-00313_900.jpg",
       "id": "elie-lisbon-20220714-210204-00313",
@@ -24752,13 +25176,14 @@
         }
       ],
       "sortIndex": 121,
-      "title": "Lisbon - 23"
+      "title": "23"
     },
     {
       "album": "Lisbon",
       "albumSlug": "lisbon",
       "albumTitle": "Lisbon",
       "caption": "Lisbon",
+      "captionColor": "524B37",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 436538,
@@ -24770,9 +25195,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20220714-210210-00314_1800.jpg",
-        "title": "Lisbon - 24"
+        "title": "24"
       },
-      "editableTitle": "Lisbon - 24",
+      "editableTitle": "24",
       "full": "20220714 210210 00314.jpeg",
       "gallerySrc": "previews/lisbon/elie-lisbon-20220714-210210-00314_900.jpg",
       "id": "elie-lisbon-20220714-210210-00314",
@@ -24824,13 +25249,14 @@
         }
       ],
       "sortIndex": 122,
-      "title": "Lisbon - 24"
+      "title": "24"
     },
     {
       "album": "Lisbon",
       "albumSlug": "lisbon",
       "albumTitle": "Lisbon",
       "caption": "Lisbon",
+      "captionColor": "534B37",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 432218,
@@ -24842,9 +25268,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20220714-210211-00315_1800.jpg",
-        "title": "Lisbon - 25"
+        "title": "25"
       },
-      "editableTitle": "Lisbon - 25",
+      "editableTitle": "25",
       "full": "20220714 210211 00315.jpeg",
       "gallerySrc": "previews/lisbon/elie-lisbon-20220714-210211-00315_900.jpg",
       "id": "elie-lisbon-20220714-210211-00315",
@@ -24896,13 +25322,14 @@
         }
       ],
       "sortIndex": 123,
-      "title": "Lisbon - 25"
+      "title": "25"
     },
     {
       "album": "Lisbon",
       "albumSlug": "lisbon",
       "albumTitle": "Lisbon",
       "caption": "Lisbon",
+      "captionColor": "B78765",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 495113,
@@ -24914,9 +25341,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20220714-210228-00318_1800.jpg",
-        "title": "Lisbon - 26"
+        "title": "26"
       },
-      "editableTitle": "Lisbon - 26",
+      "editableTitle": "26",
       "full": "20220714 210228 00318.jpeg",
       "gallerySrc": "previews/lisbon/elie-lisbon-20220714-210228-00318_900.jpg",
       "id": "elie-lisbon-20220714-210228-00318",
@@ -24968,13 +25395,14 @@
         }
       ],
       "sortIndex": 124,
-      "title": "Lisbon - 26"
+      "title": "26"
     },
     {
       "album": "Lisbon",
       "albumSlug": "lisbon",
       "albumTitle": "Lisbon",
       "caption": "Lisbon",
+      "captionColor": "63422B",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 545691,
@@ -24986,9 +25414,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/lisbon/elie-lisbon-20220714-210233-00320_1800.jpg",
-        "title": "Lisbon - 27"
+        "title": "27"
       },
-      "editableTitle": "Lisbon - 27",
+      "editableTitle": "27",
       "full": "20220714 210233 00320.jpeg",
       "gallerySrc": "previews/lisbon/elie-lisbon-20220714-210233-00320_900.jpg",
       "id": "elie-lisbon-20220714-210233-00320",
@@ -25040,13 +25468,14 @@
         }
       ],
       "sortIndex": 125,
-      "title": "Lisbon - 27"
+      "title": "27"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "7E7265",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 520836,
@@ -25058,9 +25487,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112414-03919_1800.jpg",
-        "title": "Malaga - 01"
+        "title": "01"
       },
-      "editableTitle": "Malaga - 01",
+      "editableTitle": "01",
       "full": "20230422 112414 03919.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230422-112414-03919_900.jpg",
       "id": "elie-malaga-20230422-112414-03919",
@@ -25112,13 +25541,14 @@
         }
       ],
       "sortIndex": 126,
-      "title": "Malaga - 01"
+      "title": "01"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "9E897C",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 274051,
@@ -25130,9 +25560,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112419-03920_1800.jpg",
-        "title": "Malaga - 02"
+        "title": "02"
       },
-      "editableTitle": "Malaga - 02",
+      "editableTitle": "02",
       "full": "20230422 112419 03920.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230422-112419-03920_900.jpg",
       "id": "elie-malaga-20230422-112419-03920",
@@ -25184,13 +25614,14 @@
         }
       ],
       "sortIndex": 127,
-      "title": "Malaga - 02"
+      "title": "02"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "C59771",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 297952,
@@ -25202,9 +25633,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112424-03921_1800.jpg",
-        "title": "Malaga - 03"
+        "title": "03"
       },
-      "editableTitle": "Malaga - 03",
+      "editableTitle": "03",
       "full": "20230422 112424 03921.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230422-112424-03921_900.jpg",
       "id": "elie-malaga-20230422-112424-03921",
@@ -25256,13 +25687,14 @@
         }
       ],
       "sortIndex": 128,
-      "title": "Malaga - 03"
+      "title": "03"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "A48D74",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 172630,
@@ -25274,9 +25706,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112430-03922_1800.jpg",
-        "title": "Malaga - 04"
+        "title": "04"
       },
-      "editableTitle": "Malaga - 04",
+      "editableTitle": "04",
       "full": "20230422 112430 03922.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230422-112430-03922_900.jpg",
       "id": "elie-malaga-20230422-112430-03922",
@@ -25328,13 +25760,14 @@
         }
       ],
       "sortIndex": 129,
-      "title": "Malaga - 04"
+      "title": "04"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "BBA388",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 149708,
@@ -25346,9 +25779,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112434-03923_1800.jpg",
-        "title": "Malaga - 05"
+        "title": "05"
       },
-      "editableTitle": "Malaga - 05",
+      "editableTitle": "05",
       "full": "20230422 112434 03923.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230422-112434-03923_900.jpg",
       "id": "elie-malaga-20230422-112434-03923",
@@ -25400,13 +25833,14 @@
         }
       ],
       "sortIndex": 130,
-      "title": "Malaga - 05"
+      "title": "05"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "8B633D",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 264408,
@@ -25418,9 +25852,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112439-03924_1800.jpg",
-        "title": "Malaga - 06"
+        "title": "06"
       },
-      "editableTitle": "Malaga - 06",
+      "editableTitle": "06",
       "full": "20230422 112439 03924.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230422-112439-03924_900.jpg",
       "id": "elie-malaga-20230422-112439-03924",
@@ -25472,13 +25906,14 @@
         }
       ],
       "sortIndex": 131,
-      "title": "Malaga - 06"
+      "title": "06"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "866A55",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 187043,
@@ -25490,9 +25925,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112443-03925_1800.jpg",
-        "title": "Malaga - 07"
+        "title": "07"
       },
-      "editableTitle": "Malaga - 07",
+      "editableTitle": "07",
       "full": "20230422 112443 03925.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230422-112443-03925_900.jpg",
       "id": "elie-malaga-20230422-112443-03925",
@@ -25544,13 +25979,14 @@
         }
       ],
       "sortIndex": 132,
-      "title": "Malaga - 07"
+      "title": "07"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "B99578",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 192318,
@@ -25562,9 +25998,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112446-03926_1800.jpg",
-        "title": "Malaga - 08"
+        "title": "08"
       },
-      "editableTitle": "Malaga - 08",
+      "editableTitle": "08",
       "full": "20230422 112446 03926.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230422-112446-03926_900.jpg",
       "id": "elie-malaga-20230422-112446-03926",
@@ -25616,13 +26052,14 @@
         }
       ],
       "sortIndex": 133,
-      "title": "Malaga - 08"
+      "title": "08"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "ACABA8",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 148870,
@@ -25634,9 +26071,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112450-03927_1800.jpg",
-        "title": "Malaga - 09"
+        "title": "09"
       },
-      "editableTitle": "Malaga - 09",
+      "editableTitle": "09",
       "full": "20230422 112450 03927.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230422-112450-03927_900.jpg",
       "id": "elie-malaga-20230422-112450-03927",
@@ -25688,13 +26125,14 @@
         }
       ],
       "sortIndex": 134,
-      "title": "Malaga - 09"
+      "title": "09"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "AD8864",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 197532,
@@ -25706,9 +26144,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112454-03928_1800.jpg",
-        "title": "Malaga - 10"
+        "title": "10"
       },
-      "editableTitle": "Malaga - 10",
+      "editableTitle": "10",
       "full": "20230422 112454 03928.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230422-112454-03928_900.jpg",
       "id": "elie-malaga-20230422-112454-03928",
@@ -25760,13 +26198,14 @@
         }
       ],
       "sortIndex": 135,
-      "title": "Malaga - 10"
+      "title": "10"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "9C8873",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 138026,
@@ -25778,9 +26217,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112457-03929_1800.jpg",
-        "title": "Malaga - 11"
+        "title": "11"
       },
-      "editableTitle": "Malaga - 11",
+      "editableTitle": "11",
       "full": "20230422 112457 03929.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230422-112457-03929_900.jpg",
       "id": "elie-malaga-20230422-112457-03929",
@@ -25832,13 +26271,14 @@
         }
       ],
       "sortIndex": 136,
-      "title": "Malaga - 11"
+      "title": "11"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "BD8C7A",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 218673,
@@ -25850,9 +26290,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112501-03930_1800.jpg",
-        "title": "Malaga - 12"
+        "title": "12"
       },
-      "editableTitle": "Malaga - 12",
+      "editableTitle": "12",
       "full": "20230422 112501 03930.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230422-112501-03930_900.jpg",
       "id": "elie-malaga-20230422-112501-03930",
@@ -25904,13 +26344,14 @@
         }
       ],
       "sortIndex": 137,
-      "title": "Malaga - 12"
+      "title": "12"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "A27B70",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 186588,
@@ -25922,9 +26363,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112504-03931_1800.jpg",
-        "title": "Malaga - 13"
+        "title": "13"
       },
-      "editableTitle": "Malaga - 13",
+      "editableTitle": "13",
       "full": "20230422 112504 03931.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230422-112504-03931_900.jpg",
       "id": "elie-malaga-20230422-112504-03931",
@@ -25976,13 +26417,14 @@
         }
       ],
       "sortIndex": 138,
-      "title": "Malaga - 13"
+      "title": "13"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "AA8B74",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 223908,
@@ -25994,9 +26436,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112509-03932_1800.jpg",
-        "title": "Malaga - 14"
+        "title": "14"
       },
-      "editableTitle": "Malaga - 14",
+      "editableTitle": "14",
       "full": "20230422 112509 03932.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230422-112509-03932_900.jpg",
       "id": "elie-malaga-20230422-112509-03932",
@@ -26048,13 +26490,14 @@
         }
       ],
       "sortIndex": 139,
-      "title": "Malaga - 14"
+      "title": "14"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "CBB298",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 172800,
@@ -26066,9 +26509,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112512-03933_1800.jpg",
-        "title": "Malaga - 15"
+        "title": "15"
       },
-      "editableTitle": "Malaga - 15",
+      "editableTitle": "15",
       "full": "20230422 112512 03933.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230422-112512-03933_900.jpg",
       "id": "elie-malaga-20230422-112512-03933",
@@ -26120,13 +26563,14 @@
         }
       ],
       "sortIndex": 140,
-      "title": "Malaga - 15"
+      "title": "15"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "A4958A",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 193670,
@@ -26138,9 +26582,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112516-03934_1800.jpg",
-        "title": "Malaga - 16"
+        "title": "16"
       },
-      "editableTitle": "Malaga - 16",
+      "editableTitle": "16",
       "full": "20230422 112516 03934.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230422-112516-03934_900.jpg",
       "id": "elie-malaga-20230422-112516-03934",
@@ -26192,13 +26636,14 @@
         }
       ],
       "sortIndex": 141,
-      "title": "Malaga - 16"
+      "title": "16"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "BD8E84",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 220283,
@@ -26210,9 +26655,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112519-03935_1800.jpg",
-        "title": "Malaga - 17"
+        "title": "17"
       },
-      "editableTitle": "Malaga - 17",
+      "editableTitle": "17",
       "full": "20230422 112519 03935.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230422-112519-03935_900.jpg",
       "id": "elie-malaga-20230422-112519-03935",
@@ -26264,13 +26709,14 @@
         }
       ],
       "sortIndex": 142,
-      "title": "Malaga - 17"
+      "title": "17"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "A0877D",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 145031,
@@ -26282,9 +26728,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112523-03936_1800.jpg",
-        "title": "Malaga - 18"
+        "title": "18"
       },
-      "editableTitle": "Malaga - 18",
+      "editableTitle": "18",
       "full": "20230422 112523 03936.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230422-112523-03936_900.jpg",
       "id": "elie-malaga-20230422-112523-03936",
@@ -26336,13 +26782,14 @@
         }
       ],
       "sortIndex": 143,
-      "title": "Malaga - 18"
+      "title": "18"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "EDEDEC",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 288855,
@@ -26354,9 +26801,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112528-03937_1800.jpg",
-        "title": "Malaga - 19"
+        "title": "19"
       },
-      "editableTitle": "Malaga - 19",
+      "editableTitle": "19",
       "full": "20230422 112528 03937.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230422-112528-03937_900.jpg",
       "id": "elie-malaga-20230422-112528-03937",
@@ -26408,13 +26855,14 @@
         }
       ],
       "sortIndex": 144,
-      "title": "Malaga - 19"
+      "title": "19"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "333C35",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 355890,
@@ -26426,9 +26874,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112536-03938_1800.jpg",
-        "title": "Malaga - 20"
+        "title": "20"
       },
-      "editableTitle": "Malaga - 20",
+      "editableTitle": "20",
       "full": "20230422 112536 03938.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230422-112536-03938_900.jpg",
       "id": "elie-malaga-20230422-112536-03938",
@@ -26480,13 +26928,14 @@
         }
       ],
       "sortIndex": 145,
-      "title": "Malaga - 20"
+      "title": "20"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "7F6B36",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 417023,
@@ -26498,9 +26947,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112542-03939_1800.jpg",
-        "title": "Malaga - 21"
+        "title": "21"
       },
-      "editableTitle": "Malaga - 21",
+      "editableTitle": "21",
       "full": "20230422 112542 03939.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230422-112542-03939_900.jpg",
       "id": "elie-malaga-20230422-112542-03939",
@@ -26552,13 +27001,14 @@
         }
       ],
       "sortIndex": 146,
-      "title": "Malaga - 21"
+      "title": "21"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "988952",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 729359,
@@ -26570,9 +27020,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112545-03940_1800.jpg",
-        "title": "Malaga - 22"
+        "title": "22"
       },
-      "editableTitle": "Malaga - 22",
+      "editableTitle": "22",
       "full": "20230422 112545 03940.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230422-112545-03940_900.jpg",
       "id": "elie-malaga-20230422-112545-03940",
@@ -26624,13 +27074,14 @@
         }
       ],
       "sortIndex": 147,
-      "title": "Malaga - 22"
+      "title": "22"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "424657",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 236465,
@@ -26642,9 +27093,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112548-03941_1800.jpg",
-        "title": "Malaga - 23"
+        "title": "23"
       },
-      "editableTitle": "Malaga - 23",
+      "editableTitle": "23",
       "full": "20230422 112548 03941.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230422-112548-03941_900.jpg",
       "id": "elie-malaga-20230422-112548-03941",
@@ -26696,13 +27147,14 @@
         }
       ],
       "sortIndex": 148,
-      "title": "Malaga - 23"
+      "title": "23"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "3B3B4D",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 230143,
@@ -26714,9 +27166,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112551-03942_1800.jpg",
-        "title": "Malaga - 24"
+        "title": "24"
       },
-      "editableTitle": "Malaga - 24",
+      "editableTitle": "24",
       "full": "20230422 112551 03942.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230422-112551-03942_900.jpg",
       "id": "elie-malaga-20230422-112551-03942",
@@ -26768,13 +27220,14 @@
         }
       ],
       "sortIndex": 149,
-      "title": "Malaga - 24"
+      "title": "24"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "5D5545",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 436516,
@@ -26786,9 +27239,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112557-03943_1800.jpg",
-        "title": "Malaga - 25"
+        "title": "25"
       },
-      "editableTitle": "Malaga - 25",
+      "editableTitle": "25",
       "full": "20230422 112557 03943.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230422-112557-03943_900.jpg",
       "id": "elie-malaga-20230422-112557-03943",
@@ -26840,13 +27293,14 @@
         }
       ],
       "sortIndex": 150,
-      "title": "Malaga - 25"
+      "title": "25"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "9D5F46",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 246099,
@@ -26858,9 +27312,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230422-112603-03944_1800.jpg",
-        "title": "Malaga - 26"
+        "title": "26"
       },
-      "editableTitle": "Malaga - 26",
+      "editableTitle": "26",
       "full": "20230422 112603 03944.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230422-112603-03944_900.jpg",
       "id": "elie-malaga-20230422-112603-03944",
@@ -26912,13 +27366,14 @@
         }
       ],
       "sortIndex": 151,
-      "title": "Malaga - 26"
+      "title": "26"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "0F0F1C",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 251832,
@@ -26930,9 +27385,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213640-00105_1800.jpg",
-        "title": "Malaga - 27"
+        "title": "27"
       },
-      "editableTitle": "Malaga - 27",
+      "editableTitle": "27",
       "full": "20230607 213640 00105.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230607-213640-00105_900.jpg",
       "id": "elie-malaga-20230607-213640-00105",
@@ -26984,13 +27439,14 @@
         }
       ],
       "sortIndex": 152,
-      "title": "Malaga - 27"
+      "title": "27"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "0D1121",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 251460,
@@ -27002,9 +27458,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213656-00109_1800.jpg",
-        "title": "Malaga - 28"
+        "title": "28"
       },
-      "editableTitle": "Malaga - 28",
+      "editableTitle": "28",
       "full": "20230607 213656 00109.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230607-213656-00109_900.jpg",
       "id": "elie-malaga-20230607-213656-00109",
@@ -27056,13 +27512,14 @@
         }
       ],
       "sortIndex": 153,
-      "title": "Malaga - 28"
+      "title": "28"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "472C20",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 383506,
@@ -27074,9 +27531,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213714-00110_1800.jpg",
-        "title": "Malaga - 29"
+        "title": "29"
       },
-      "editableTitle": "Malaga - 29",
+      "editableTitle": "29",
       "full": "20230607 213714 00110.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230607-213714-00110_900.jpg",
       "id": "elie-malaga-20230607-213714-00110",
@@ -27128,13 +27585,14 @@
         }
       ],
       "sortIndex": 154,
-      "title": "Malaga - 29"
+      "title": "29"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "412A20",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 409241,
@@ -27146,9 +27604,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213716-00111_1800.jpg",
-        "title": "Malaga - 30"
+        "title": "30"
       },
-      "editableTitle": "Malaga - 30",
+      "editableTitle": "30",
       "full": "20230607 213716 00111.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230607-213716-00111_900.jpg",
       "id": "elie-malaga-20230607-213716-00111",
@@ -27200,13 +27658,14 @@
         }
       ],
       "sortIndex": 155,
-      "title": "Malaga - 30"
+      "title": "30"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "01251C",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 395155,
@@ -27218,9 +27677,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213722-00114_1800.jpg",
-        "title": "Malaga - 31"
+        "title": "31"
       },
-      "editableTitle": "Malaga - 31",
+      "editableTitle": "31",
       "full": "20230607 213722 00114.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230607-213722-00114_900.jpg",
       "id": "elie-malaga-20230607-213722-00114",
@@ -27272,13 +27731,14 @@
         }
       ],
       "sortIndex": 156,
-      "title": "Malaga - 31"
+      "title": "31"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "002D20",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 366350,
@@ -27290,9 +27750,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213724-00115_1800.jpg",
-        "title": "Malaga - 32"
+        "title": "32"
       },
-      "editableTitle": "Malaga - 32",
+      "editableTitle": "32",
       "full": "20230607 213724 00115.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230607-213724-00115_900.jpg",
       "id": "elie-malaga-20230607-213724-00115",
@@ -27344,13 +27804,14 @@
         }
       ],
       "sortIndex": 157,
-      "title": "Malaga - 32"
+      "title": "32"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "3A291F",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 392705,
@@ -27362,9 +27823,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213728-00117_1800.jpg",
-        "title": "Malaga - 33"
+        "title": "33"
       },
-      "editableTitle": "Malaga - 33",
+      "editableTitle": "33",
       "full": "20230607 213728 00117.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230607-213728-00117_900.jpg",
       "id": "elie-malaga-20230607-213728-00117",
@@ -27416,13 +27877,14 @@
         }
       ],
       "sortIndex": 158,
-      "title": "Malaga - 33"
+      "title": "33"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "3F2D27",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 406321,
@@ -27434,9 +27896,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213736-00121_1800.jpg",
-        "title": "Malaga - 34"
+        "title": "34"
       },
-      "editableTitle": "Malaga - 34",
+      "editableTitle": "34",
       "full": "20230607 213736 00121.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230607-213736-00121_900.jpg",
       "id": "elie-malaga-20230607-213736-00121",
@@ -27488,13 +27950,14 @@
         }
       ],
       "sortIndex": 159,
-      "title": "Malaga - 34"
+      "title": "34"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "3A2B25",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 398405,
@@ -27506,9 +27969,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213737-00122_1800.jpg",
-        "title": "Malaga - 35"
+        "title": "35"
       },
-      "editableTitle": "Malaga - 35",
+      "editableTitle": "35",
       "full": "20230607 213737 00122.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230607-213737-00122_900.jpg",
       "id": "elie-malaga-20230607-213737-00122",
@@ -27560,13 +28023,14 @@
         }
       ],
       "sortIndex": 160,
-      "title": "Malaga - 35"
+      "title": "35"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "4D403C",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 423559,
@@ -27578,9 +28042,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213742-00124_1800.jpg",
-        "title": "Malaga - 36"
+        "title": "36"
       },
-      "editableTitle": "Malaga - 36",
+      "editableTitle": "36",
       "full": "20230607 213742 00124.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230607-213742-00124_900.jpg",
       "id": "elie-malaga-20230607-213742-00124",
@@ -27632,13 +28096,14 @@
         }
       ],
       "sortIndex": 161,
-      "title": "Malaga - 36"
+      "title": "36"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "4D4846",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 396765,
@@ -27650,9 +28115,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213746-00126_1800.jpg",
-        "title": "Malaga - 37"
+        "title": "37"
       },
-      "editableTitle": "Malaga - 37",
+      "editableTitle": "37",
       "full": "20230607 213746 00126.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230607-213746-00126_900.jpg",
       "id": "elie-malaga-20230607-213746-00126",
@@ -27704,13 +28169,14 @@
         }
       ],
       "sortIndex": 162,
-      "title": "Malaga - 37"
+      "title": "37"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "4F4547",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 410743,
@@ -27722,9 +28188,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213748-00127_1800.jpg",
-        "title": "Malaga - 38"
+        "title": "38"
       },
-      "editableTitle": "Malaga - 38",
+      "editableTitle": "38",
       "full": "20230607 213748 00127.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230607-213748-00127_900.jpg",
       "id": "elie-malaga-20230607-213748-00127",
@@ -27776,13 +28242,14 @@
         }
       ],
       "sortIndex": 163,
-      "title": "Malaga - 38"
+      "title": "38"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "393236",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 371592,
@@ -27794,9 +28261,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213753-00129_1800.jpg",
-        "title": "Malaga - 39"
+        "title": "39"
       },
-      "editableTitle": "Malaga - 39",
+      "editableTitle": "39",
       "full": "20230607 213753 00129.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230607-213753-00129_900.jpg",
       "id": "elie-malaga-20230607-213753-00129",
@@ -27848,13 +28315,14 @@
         }
       ],
       "sortIndex": 164,
-      "title": "Malaga - 39"
+      "title": "39"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "332E32",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 348250,
@@ -27866,9 +28334,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213755-00130_1800.jpg",
-        "title": "Malaga - 40"
+        "title": "40"
       },
-      "editableTitle": "Malaga - 40",
+      "editableTitle": "40",
       "full": "20230607 213755 00130.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230607-213755-00130_900.jpg",
       "id": "elie-malaga-20230607-213755-00130",
@@ -27920,13 +28388,14 @@
         }
       ],
       "sortIndex": 165,
-      "title": "Malaga - 40"
+      "title": "40"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "2A323C",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 336881,
@@ -27938,9 +28407,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213802-00134_1800.jpg",
-        "title": "Malaga - 41"
+        "title": "41"
       },
-      "editableTitle": "Malaga - 41",
+      "editableTitle": "41",
       "full": "20230607 213802 00134.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230607-213802-00134_900.jpg",
       "id": "elie-malaga-20230607-213802-00134",
@@ -27992,13 +28461,14 @@
         }
       ],
       "sortIndex": 166,
-      "title": "Malaga - 41"
+      "title": "41"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "1E283C",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 334310,
@@ -28010,9 +28480,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213806-00136_1800.jpg",
-        "title": "Malaga - 42"
+        "title": "42"
       },
-      "editableTitle": "Malaga - 42",
+      "editableTitle": "42",
       "full": "20230607 213806 00136.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230607-213806-00136_900.jpg",
       "id": "elie-malaga-20230607-213806-00136",
@@ -28064,13 +28534,14 @@
         }
       ],
       "sortIndex": 167,
-      "title": "Malaga - 42"
+      "title": "42"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "282231",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 369878,
@@ -28082,9 +28553,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213811-00139_1800.jpg",
-        "title": "Malaga - 43"
+        "title": "43"
       },
-      "editableTitle": "Malaga - 43",
+      "editableTitle": "43",
       "full": "20230607 213811 00139.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230607-213811-00139_900.jpg",
       "id": "elie-malaga-20230607-213811-00139",
@@ -28136,13 +28607,14 @@
         }
       ],
       "sortIndex": 168,
-      "title": "Malaga - 43"
+      "title": "43"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "155F55",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 274502,
@@ -28154,9 +28626,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213817-00142_1800.jpg",
-        "title": "Malaga - 44"
+        "title": "44"
       },
-      "editableTitle": "Malaga - 44",
+      "editableTitle": "44",
       "full": "20230607 213817 00142.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230607-213817-00142_900.jpg",
       "id": "elie-malaga-20230607-213817-00142",
@@ -28208,13 +28680,14 @@
         }
       ],
       "sortIndex": 169,
-      "title": "Malaga - 44"
+      "title": "44"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "261E29",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 362921,
@@ -28226,9 +28699,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213820-00144_1800.jpg",
-        "title": "Malaga - 45"
+        "title": "45"
       },
-      "editableTitle": "Malaga - 45",
+      "editableTitle": "45",
       "full": "20230607 213820 00144.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230607-213820-00144_900.jpg",
       "id": "elie-malaga-20230607-213820-00144",
@@ -28280,13 +28753,14 @@
         }
       ],
       "sortIndex": 170,
-      "title": "Malaga - 45"
+      "title": "45"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "26202C",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 368680,
@@ -28298,9 +28772,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213822-00145_1800.jpg",
-        "title": "Malaga - 46"
+        "title": "46"
       },
-      "editableTitle": "Malaga - 46",
+      "editableTitle": "46",
       "full": "20230607 213822 00145.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230607-213822-00145_900.jpg",
       "id": "elie-malaga-20230607-213822-00145",
@@ -28352,13 +28826,14 @@
         }
       ],
       "sortIndex": 171,
-      "title": "Malaga - 46"
+      "title": "46"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "086462",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 293057,
@@ -28370,9 +28845,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213824-00146_1800.jpg",
-        "title": "Malaga - 47"
+        "title": "47"
       },
-      "editableTitle": "Malaga - 47",
+      "editableTitle": "47",
       "full": "20230607 213824 00146.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230607-213824-00146_900.jpg",
       "id": "elie-malaga-20230607-213824-00146",
@@ -28424,13 +28899,14 @@
         }
       ],
       "sortIndex": 172,
-      "title": "Malaga - 47"
+      "title": "47"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "087672",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 305232,
@@ -28442,9 +28918,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213825-00147_1800.jpg",
-        "title": "Malaga - 48"
+        "title": "48"
       },
-      "editableTitle": "Malaga - 48",
+      "editableTitle": "48",
       "full": "20230607 213825 00147.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230607-213825-00147_900.jpg",
       "id": "elie-malaga-20230607-213825-00147",
@@ -28496,13 +28972,14 @@
         }
       ],
       "sortIndex": 173,
-      "title": "Malaga - 48"
+      "title": "48"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "0E0A1F",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 238149,
@@ -28514,9 +28991,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213850-00151_1800.jpg",
-        "title": "Malaga - 49"
+        "title": "49"
       },
-      "editableTitle": "Malaga - 49",
+      "editableTitle": "49",
       "full": "20230607 213850 00151.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230607-213850-00151_900.jpg",
       "id": "elie-malaga-20230607-213850-00151",
@@ -28568,13 +29045,14 @@
         }
       ],
       "sortIndex": 174,
-      "title": "Malaga - 49"
+      "title": "49"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "000000",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 13259,
@@ -28586,9 +29064,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230607-213900-00155_1800.jpg",
-        "title": "Malaga - 50"
+        "title": "50"
       },
-      "editableTitle": "Malaga - 50",
+      "editableTitle": "50",
       "full": "20230607 213900 00155.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230607-213900-00155_900.jpg",
       "id": "elie-malaga-20230607-213900-00155",
@@ -28640,13 +29118,14 @@
         }
       ],
       "sortIndex": 175,
-      "title": "Malaga - 50"
+      "title": "50"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "807B6E",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 197662,
@@ -28658,9 +29137,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20230616-080301-03945_1800.jpg",
-        "title": "Malaga - 51"
+        "title": "51"
       },
-      "editableTitle": "Malaga - 51",
+      "editableTitle": "51",
       "full": "20230616 080301 03945.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20230616-080301-03945_900.jpg",
       "id": "elie-malaga-20230616-080301-03945",
@@ -28712,13 +29191,14 @@
         }
       ],
       "sortIndex": 176,
-      "title": "Malaga - 51"
+      "title": "51"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "4C4443",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 281373,
@@ -28730,9 +29210,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20231018-084852-00001_1800.jpg",
-        "title": "Malaga - 52"
+        "title": "52"
       },
-      "editableTitle": "Malaga - 52",
+      "editableTitle": "52",
       "full": "20231018 084852 00001.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20231018-084852-00001_900.jpg",
       "id": "elie-malaga-20231018-084852-00001",
@@ -28784,13 +29264,14 @@
         }
       ],
       "sortIndex": 177,
-      "title": "Malaga - 52"
+      "title": "52"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "556268",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 311704,
@@ -28802,9 +29283,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20231031-000233-00614_1800.jpg",
-        "title": "Malaga - 53"
+        "title": "53"
       },
-      "editableTitle": "Malaga - 53",
+      "editableTitle": "53",
       "full": "20231031 000233 00614.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20231031-000233-00614_900.jpg",
       "id": "elie-malaga-20231031-000233-00614",
@@ -28856,13 +29337,14 @@
         }
       ],
       "sortIndex": 178,
-      "title": "Malaga - 53"
+      "title": "53"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "3D3E3F",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 262006,
@@ -28874,9 +29356,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240212-123617-00455_1800.jpg",
-        "title": "Malaga - 54"
+        "title": "54"
       },
-      "editableTitle": "Malaga - 54",
+      "editableTitle": "54",
       "full": "20240212 123617 00455.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20240212-123617-00455_900.jpg",
       "id": "elie-malaga-20240212-123617-00455",
@@ -28928,13 +29410,14 @@
         }
       ],
       "sortIndex": 179,
-      "title": "Malaga - 54"
+      "title": "54"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "484E5B",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 119782,
@@ -28946,9 +29429,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240212-123622-00457_1800.jpg",
-        "title": "Malaga - 55"
+        "title": "55"
       },
-      "editableTitle": "Malaga - 55",
+      "editableTitle": "55",
       "full": "20240212 123622 00457.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20240212-123622-00457_900.jpg",
       "id": "elie-malaga-20240212-123622-00457",
@@ -29000,13 +29483,14 @@
         }
       ],
       "sortIndex": 180,
-      "title": "Malaga - 55"
+      "title": "55"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "444952",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 119029,
@@ -29018,9 +29502,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240212-123636-00458_1800.jpg",
-        "title": "Malaga - 56"
+        "title": "56"
       },
-      "editableTitle": "Malaga - 56",
+      "editableTitle": "56",
       "full": "20240212 123636 00458.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20240212-123636-00458_900.jpg",
       "id": "elie-malaga-20240212-123636-00458",
@@ -29072,13 +29556,14 @@
         }
       ],
       "sortIndex": 181,
-      "title": "Malaga - 56"
+      "title": "56"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "464B56",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 113506,
@@ -29090,9 +29575,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240212-123637-00459_1800.jpg",
-        "title": "Malaga - 57"
+        "title": "57"
       },
-      "editableTitle": "Malaga - 57",
+      "editableTitle": "57",
       "full": "20240212 123637 00459.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20240212-123637-00459_900.jpg",
       "id": "elie-malaga-20240212-123637-00459",
@@ -29144,13 +29629,14 @@
         }
       ],
       "sortIndex": 182,
-      "title": "Malaga - 57"
+      "title": "57"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "5A514E",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 303197,
@@ -29162,9 +29648,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240326-142405-00005_1800.jpg",
-        "title": "Malaga - 58"
+        "title": "58"
       },
-      "editableTitle": "Malaga - 58",
+      "editableTitle": "58",
       "full": "20240326 142405 00005.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20240326-142405-00005_900.jpg",
       "id": "elie-malaga-20240326-142405-00005",
@@ -29216,13 +29702,14 @@
         }
       ],
       "sortIndex": 183,
-      "title": "Malaga - 58"
+      "title": "58"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "57584D",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 333238,
@@ -29234,9 +29721,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240327-133752-00008_1800.jpg",
-        "title": "Malaga - 59"
+        "title": "59"
       },
-      "editableTitle": "Malaga - 59",
+      "editableTitle": "59",
       "full": "20240327 133752 00008.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20240327-133752-00008_900.jpg",
       "id": "elie-malaga-20240327-133752-00008",
@@ -29288,13 +29775,14 @@
         }
       ],
       "sortIndex": 184,
-      "title": "Malaga - 59"
+      "title": "59"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "535844",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 378635,
@@ -29306,9 +29794,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240327-133757-00010_1800.jpg",
-        "title": "Malaga - 60"
+        "title": "60"
       },
-      "editableTitle": "Malaga - 60",
+      "editableTitle": "60",
       "full": "20240327 133757 00010.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20240327-133757-00010_900.jpg",
       "id": "elie-malaga-20240327-133757-00010",
@@ -29360,13 +29848,14 @@
         }
       ],
       "sortIndex": 185,
-      "title": "Malaga - 60"
+      "title": "60"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "555A48",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 369605,
@@ -29378,9 +29867,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240327-133758-00012_1800.jpg",
-        "title": "Malaga - 61"
+        "title": "61"
       },
-      "editableTitle": "Malaga - 61",
+      "editableTitle": "61",
       "full": "20240327 133758 00012.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20240327-133758-00012_900.jpg",
       "id": "elie-malaga-20240327-133758-00012",
@@ -29432,13 +29921,14 @@
         }
       ],
       "sortIndex": 186,
-      "title": "Malaga - 61"
+      "title": "61"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "343B40",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 300298,
@@ -29450,9 +29940,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240329-190327-00015_1800.jpg",
-        "title": "Malaga - 62"
+        "title": "62"
       },
-      "editableTitle": "Malaga - 62",
+      "editableTitle": "62",
       "full": "20240329 190327 00015.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20240329-190327-00015_900.jpg",
       "id": "elie-malaga-20240329-190327-00015",
@@ -29504,13 +29994,14 @@
         }
       ],
       "sortIndex": 187,
-      "title": "Malaga - 62"
+      "title": "62"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "262A26",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 291462,
@@ -29522,9 +30013,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240329-190335-00018_1800.jpg",
-        "title": "Malaga - 63"
+        "title": "63"
       },
-      "editableTitle": "Malaga - 63",
+      "editableTitle": "63",
       "full": "20240329 190335 00018.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20240329-190335-00018_900.jpg",
       "id": "elie-malaga-20240329-190335-00018",
@@ -29576,13 +30067,14 @@
         }
       ],
       "sortIndex": 188,
-      "title": "Malaga - 63"
+      "title": "63"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "405265",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 376383,
@@ -29594,9 +30086,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240329-190357-00020_1800.jpg",
-        "title": "Malaga - 64"
+        "title": "64"
       },
-      "editableTitle": "Malaga - 64",
+      "editableTitle": "64",
       "full": "20240329 190357 00020.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20240329-190357-00020_900.jpg",
       "id": "elie-malaga-20240329-190357-00020",
@@ -29648,13 +30140,14 @@
         }
       ],
       "sortIndex": 189,
-      "title": "Malaga - 64"
+      "title": "64"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "425569",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 357903,
@@ -29666,9 +30159,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240329-190357-00021_1800.jpg",
-        "title": "Malaga - 65"
+        "title": "65"
       },
-      "editableTitle": "Malaga - 65",
+      "editableTitle": "65",
       "full": "20240329 190357 00021.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20240329-190357-00021_900.jpg",
       "id": "elie-malaga-20240329-190357-00021",
@@ -29720,13 +30213,14 @@
         }
       ],
       "sortIndex": 190,
-      "title": "Malaga - 65"
+      "title": "65"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "16362A",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 359512,
@@ -29738,9 +30232,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240331-205053-00028_1800.jpg",
-        "title": "Malaga - 66"
+        "title": "66"
       },
-      "editableTitle": "Malaga - 66",
+      "editableTitle": "66",
       "full": "20240331 205053 00028.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20240331-205053-00028_900.jpg",
       "id": "elie-malaga-20240331-205053-00028",
@@ -29792,13 +30286,14 @@
         }
       ],
       "sortIndex": 191,
-      "title": "Malaga - 66"
+      "title": "66"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "000202",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 300788,
@@ -29810,9 +30305,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240331-205104-00030_1800.jpg",
-        "title": "Malaga - 67"
+        "title": "67"
       },
-      "editableTitle": "Malaga - 67",
+      "editableTitle": "67",
       "full": "20240331 205104 00030.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20240331-205104-00030_900.jpg",
       "id": "elie-malaga-20240331-205104-00030",
@@ -29864,13 +30359,14 @@
         }
       ],
       "sortIndex": 192,
-      "title": "Malaga - 67"
+      "title": "67"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "083C25",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 300179,
@@ -29882,9 +30378,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240331-205108-00033_1800.jpg",
-        "title": "Malaga - 68"
+        "title": "68"
       },
-      "editableTitle": "Malaga - 68",
+      "editableTitle": "68",
       "full": "20240331 205108 00033.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20240331-205108-00033_900.jpg",
       "id": "elie-malaga-20240331-205108-00033",
@@ -29936,13 +30432,14 @@
         }
       ],
       "sortIndex": 193,
-      "title": "Malaga - 68"
+      "title": "68"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "062704",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 89456,
@@ -29954,9 +30451,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240331-205128-00001_1800.jpg",
-        "title": "Malaga - 69"
+        "title": "69"
       },
-      "editableTitle": "Malaga - 69",
+      "editableTitle": "69",
       "full": "20240331 205128 00001.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20240331-205128-00001_900.jpg",
       "id": "elie-malaga-20240331-205128-00001",
@@ -30008,13 +30505,14 @@
         }
       ],
       "sortIndex": 194,
-      "title": "Malaga - 69"
+      "title": "69"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "012509",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 92846,
@@ -30026,9 +30524,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240331-205128-00035_1800.jpg",
-        "title": "Malaga - 70"
+        "title": "70"
       },
-      "editableTitle": "Malaga - 70",
+      "editableTitle": "70",
       "full": "20240331 205128 00035.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20240331-205128-00035_900.jpg",
       "id": "elie-malaga-20240331-205128-00035",
@@ -30080,13 +30578,14 @@
         }
       ],
       "sortIndex": 195,
-      "title": "Malaga - 70"
+      "title": "70"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "130A12",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 104895,
@@ -30098,9 +30597,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240331-205133-00038_1800.jpg",
-        "title": "Malaga - 71"
+        "title": "71"
       },
-      "editableTitle": "Malaga - 71",
+      "editableTitle": "71",
       "full": "20240331 205133 00038.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20240331-205133-00038_900.jpg",
       "id": "elie-malaga-20240331-205133-00038",
@@ -30152,13 +30651,14 @@
         }
       ],
       "sortIndex": 196,
-      "title": "Malaga - 71"
+      "title": "71"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "160B18",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 108276,
@@ -30170,9 +30670,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240331-205133-00040_1800.jpg",
-        "title": "Malaga - 72"
+        "title": "72"
       },
-      "editableTitle": "Malaga - 72",
+      "editableTitle": "72",
       "full": "20240331 205133 00040.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20240331-205133-00040_900.jpg",
       "id": "elie-malaga-20240331-205133-00040",
@@ -30224,13 +30724,14 @@
         }
       ],
       "sortIndex": 197,
-      "title": "Malaga - 72"
+      "title": "72"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "0A4337",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 287384,
@@ -30242,9 +30743,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240331-205144-00043_1800.jpg",
-        "title": "Malaga - 73"
+        "title": "73"
       },
-      "editableTitle": "Malaga - 73",
+      "editableTitle": "73",
       "full": "20240331 205144 00043.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20240331-205144-00043_900.jpg",
       "id": "elie-malaga-20240331-205144-00043",
@@ -30296,13 +30797,14 @@
         }
       ],
       "sortIndex": 198,
-      "title": "Malaga - 73"
+      "title": "73"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "73706C",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 446640,
@@ -30314,9 +30816,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240401-135409-00045_1800.jpg",
-        "title": "Malaga - 74"
+        "title": "74"
       },
-      "editableTitle": "Malaga - 74",
+      "editableTitle": "74",
       "full": "20240401 135409 00045.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20240401-135409-00045_900.jpg",
       "id": "elie-malaga-20240401-135409-00045",
@@ -30368,13 +30870,14 @@
         }
       ],
       "sortIndex": 199,
-      "title": "Malaga - 74"
+      "title": "74"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "726D6A",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 429048,
@@ -30386,9 +30889,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240401-135409-00047_1800.jpg",
-        "title": "Malaga - 75"
+        "title": "75"
       },
-      "editableTitle": "Malaga - 75",
+      "editableTitle": "75",
       "full": "20240401 135409 00047.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20240401-135409-00047_900.jpg",
       "id": "elie-malaga-20240401-135409-00047",
@@ -30440,13 +30943,14 @@
         }
       ],
       "sortIndex": 200,
-      "title": "Malaga - 75"
+      "title": "75"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "6885A3",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 87325,
@@ -30458,9 +30962,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240401-135416-00048-pano-1_1800.jpg",
-        "title": "Malaga - 76"
+        "title": "76"
       },
-      "editableTitle": "Malaga - 76",
+      "editableTitle": "76",
       "full": "20240401 135416 00048-Pano (1).jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20240401-135416-00048-pano-1_900.jpg",
       "id": "elie-malaga-20240401-135416-00048-pano-1",
@@ -30512,13 +31016,14 @@
         }
       ],
       "sortIndex": 201,
-      "title": "Malaga - 76"
+      "title": "76"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "424242",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 131858,
@@ -30530,9 +31035,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240401-135416-00048-pano_1800.jpg",
-        "title": "Malaga - 77"
+        "title": "77"
       },
-      "editableTitle": "Malaga - 77",
+      "editableTitle": "77",
       "full": "20240401 135416 00048-Pano.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20240401-135416-00048-pano_900.jpg",
       "id": "elie-malaga-20240401-135416-00048-pano",
@@ -30584,13 +31089,14 @@
         }
       ],
       "sortIndex": 202,
-      "title": "Malaga - 77"
+      "title": "77"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "5A5F65",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 301441,
@@ -30602,9 +31108,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240401-135421-00053_1800.jpg",
-        "title": "Malaga - 78"
+        "title": "78"
       },
-      "editableTitle": "Malaga - 78",
+      "editableTitle": "78",
       "full": "20240401 135421 00053.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20240401-135421-00053_900.jpg",
       "id": "elie-malaga-20240401-135421-00053",
@@ -30656,13 +31162,14 @@
         }
       ],
       "sortIndex": 203,
-      "title": "Malaga - 78"
+      "title": "78"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "666469",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 343908,
@@ -30674,9 +31181,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240401-135422-00055_1800.jpg",
-        "title": "Malaga - 79"
+        "title": "79"
       },
-      "editableTitle": "Malaga - 79",
+      "editableTitle": "79",
       "full": "20240401 135422 00055.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20240401-135422-00055_900.jpg",
       "id": "elie-malaga-20240401-135422-00055",
@@ -30728,13 +31235,14 @@
         }
       ],
       "sortIndex": 204,
-      "title": "Malaga - 79"
+      "title": "79"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "6F6B6B",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 368596,
@@ -30746,9 +31254,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240401-135423-00056_1800.jpg",
-        "title": "Malaga - 80"
+        "title": "80"
       },
-      "editableTitle": "Malaga - 80",
+      "editableTitle": "80",
       "full": "20240401 135423 00056.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20240401-135423-00056_900.jpg",
       "id": "elie-malaga-20240401-135423-00056",
@@ -30800,13 +31308,14 @@
         }
       ],
       "sortIndex": 205,
-      "title": "Malaga - 80"
+      "title": "80"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "433040",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 83110,
@@ -30818,9 +31327,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240401-135425-00058_1800.jpg",
-        "title": "Malaga - 81"
+        "title": "81"
       },
-      "editableTitle": "Malaga - 81",
+      "editableTitle": "81",
       "full": "20240401 135425 00058.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20240401-135425-00058_900.jpg",
       "id": "elie-malaga-20240401-135425-00058",
@@ -30872,13 +31381,14 @@
         }
       ],
       "sortIndex": 206,
-      "title": "Malaga - 81"
+      "title": "81"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "616775",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 365597,
@@ -30890,9 +31400,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240401-135447-00060_1800.jpg",
-        "title": "Malaga - 82"
+        "title": "82"
       },
-      "editableTitle": "Malaga - 82",
+      "editableTitle": "82",
       "full": "20240401 135447 00060.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20240401-135447-00060_900.jpg",
       "id": "elie-malaga-20240401-135447-00060",
@@ -30944,13 +31454,14 @@
         }
       ],
       "sortIndex": 207,
-      "title": "Malaga - 82"
+      "title": "82"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "646B79",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 309540,
@@ -30962,9 +31473,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240401-135450-00061_1800.jpg",
-        "title": "Malaga - 83"
+        "title": "83"
       },
-      "editableTitle": "Malaga - 83",
+      "editableTitle": "83",
       "full": "20240401 135450 00061.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20240401-135450-00061_900.jpg",
       "id": "elie-malaga-20240401-135450-00061",
@@ -31016,13 +31527,14 @@
         }
       ],
       "sortIndex": 208,
-      "title": "Malaga - 83"
+      "title": "83"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "677891",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 221047,
@@ -31034,9 +31546,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240401-135529-00064_1800.jpg",
-        "title": "Malaga - 84"
+        "title": "84"
       },
-      "editableTitle": "Malaga - 84",
+      "editableTitle": "84",
       "full": "20240401 135529 00064.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20240401-135529-00064_900.jpg",
       "id": "elie-malaga-20240401-135529-00064",
@@ -31088,13 +31600,14 @@
         }
       ],
       "sortIndex": 209,
-      "title": "Malaga - 84"
+      "title": "84"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "807E7F",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 413067,
@@ -31106,9 +31619,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240401-135541-00067_1800.jpg",
-        "title": "Malaga - 85"
+        "title": "85"
       },
-      "editableTitle": "Malaga - 85",
+      "editableTitle": "85",
       "full": "20240401 135541 00067.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20240401-135541-00067_900.jpg",
       "id": "elie-malaga-20240401-135541-00067",
@@ -31160,13 +31673,14 @@
         }
       ],
       "sortIndex": 210,
-      "title": "Malaga - 85"
+      "title": "85"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "595B56",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 374333,
@@ -31178,9 +31692,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240503-161108-00089_1800.jpg",
-        "title": "Malaga - 86"
+        "title": "86"
       },
-      "editableTitle": "Malaga - 86",
+      "editableTitle": "86",
       "full": "20240503 161108 00089.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20240503-161108-00089_900.jpg",
       "id": "elie-malaga-20240503-161108-00089",
@@ -31232,13 +31746,14 @@
         }
       ],
       "sortIndex": 211,
-      "title": "Malaga - 86"
+      "title": "86"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "5D7996",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 239485,
@@ -31250,9 +31765,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240503-161139-00092_1800.jpg",
-        "title": "Malaga - 87"
+        "title": "87"
       },
-      "editableTitle": "Malaga - 87",
+      "editableTitle": "87",
       "full": "20240503 161139 00092.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20240503-161139-00092_900.jpg",
       "id": "elie-malaga-20240503-161139-00092",
@@ -31304,13 +31819,14 @@
         }
       ],
       "sortIndex": 212,
-      "title": "Malaga - 87"
+      "title": "87"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "5B686D",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 327009,
@@ -31322,9 +31838,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240503-161147-00095_1800.jpg",
-        "title": "Malaga - 88"
+        "title": "88"
       },
-      "editableTitle": "Malaga - 88",
+      "editableTitle": "88",
       "full": "20240503 161147 00095.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20240503-161147-00095_900.jpg",
       "id": "elie-malaga-20240503-161147-00095",
@@ -31376,13 +31892,14 @@
         }
       ],
       "sortIndex": 213,
-      "title": "Malaga - 88"
+      "title": "88"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "2E3126",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 329369,
@@ -31394,9 +31911,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240517-101933-00098_1800.jpg",
-        "title": "Malaga - 89"
+        "title": "89"
       },
-      "editableTitle": "Malaga - 89",
+      "editableTitle": "89",
       "full": "20240517 101933 00098.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20240517-101933-00098_900.jpg",
       "id": "elie-malaga-20240517-101933-00098",
@@ -31448,13 +31965,14 @@
         }
       ],
       "sortIndex": 214,
-      "title": "Malaga - 89"
+      "title": "89"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "484C53",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 330681,
@@ -31466,9 +31984,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240517-101940-00101_1800.jpg",
-        "title": "Malaga - 90"
+        "title": "90"
       },
-      "editableTitle": "Malaga - 90",
+      "editableTitle": "90",
       "full": "20240517 101940 00101.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20240517-101940-00101_900.jpg",
       "id": "elie-malaga-20240517-101940-00101",
@@ -31520,13 +32038,14 @@
         }
       ],
       "sortIndex": 215,
-      "title": "Malaga - 90"
+      "title": "90"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "363A38",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 311705,
@@ -31538,9 +32057,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240517-101943-00103_1800.jpg",
-        "title": "Malaga - 91"
+        "title": "91"
       },
-      "editableTitle": "Malaga - 91",
+      "editableTitle": "91",
       "full": "20240517 101943 00103.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20240517-101943-00103_900.jpg",
       "id": "elie-malaga-20240517-101943-00103",
@@ -31592,13 +32111,14 @@
         }
       ],
       "sortIndex": 216,
-      "title": "Malaga - 91"
+      "title": "91"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "504E4D",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 472419,
@@ -31610,9 +32130,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240517-104557-00106_1800.jpg",
-        "title": "Malaga - 92"
+        "title": "92"
       },
-      "editableTitle": "Malaga - 92",
+      "editableTitle": "92",
       "full": "20240517 104557 00106.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20240517-104557-00106_900.jpg",
       "id": "elie-malaga-20240517-104557-00106",
@@ -31664,13 +32184,14 @@
         }
       ],
       "sortIndex": 217,
-      "title": "Malaga - 92"
+      "title": "92"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "6C6159",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 402819,
@@ -31682,9 +32203,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240517-104559-00107_1800.jpg",
-        "title": "Malaga - 93"
+        "title": "93"
       },
-      "editableTitle": "Malaga - 93",
+      "editableTitle": "93",
       "full": "20240517 104559 00107.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20240517-104559-00107_900.jpg",
       "id": "elie-malaga-20240517-104559-00107",
@@ -31736,13 +32257,14 @@
         }
       ],
       "sortIndex": 218,
-      "title": "Malaga - 93"
+      "title": "93"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "63564E",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 348012,
@@ -31754,9 +32276,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240517-104608-00109_1800.jpg",
-        "title": "Malaga - 94"
+        "title": "94"
       },
-      "editableTitle": "Malaga - 94",
+      "editableTitle": "94",
       "full": "20240517 104608 00109.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20240517-104608-00109_900.jpg",
       "id": "elie-malaga-20240517-104608-00109",
@@ -31808,13 +32330,14 @@
         }
       ],
       "sortIndex": 219,
-      "title": "Malaga - 94"
+      "title": "94"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "665850",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 313713,
@@ -31826,9 +32349,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240517-104615-00110_1800.jpg",
-        "title": "Malaga - 95"
+        "title": "95"
       },
-      "editableTitle": "Malaga - 95",
+      "editableTitle": "95",
       "full": "20240517 104615 00110.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20240517-104615-00110_900.jpg",
       "id": "elie-malaga-20240517-104615-00110",
@@ -31880,13 +32403,14 @@
         }
       ],
       "sortIndex": 220,
-      "title": "Malaga - 95"
+      "title": "95"
     },
     {
       "album": "Malaga",
       "albumSlug": "malaga",
       "albumTitle": "Malaga",
       "caption": "Malaga",
+      "captionColor": "4E4843",
       "className": "real-estate-photo",
       "cloudPdfSource": {
         "bytes": 394531,
@@ -31898,9 +32422,9 @@
         "maxEdge": 1800,
         "mediaType": "photo",
         "publicKey": "RE/Elie/previews/malaga/elie-malaga-20240517-104618-00112_1800.jpg",
-        "title": "Malaga - 96"
+        "title": "96"
       },
-      "editableTitle": "Malaga - 96",
+      "editableTitle": "96",
       "full": "20240517 104618 00112.jpeg",
       "gallerySrc": "previews/malaga/elie-malaga-20240517-104618-00112_900.jpg",
       "id": "elie-malaga-20240517-104618-00112",
@@ -31952,7 +32476,7 @@
         }
       ],
       "sortIndex": 221,
-      "title": "Malaga - 96"
+      "title": "96"
     }
   ],
   "r2": {
@@ -31966,10 +32490,10 @@
     "photoCount": 221,
     "preview1800Bytes": 74744185,
     "preview1800MaxEdge": 1800,
-    "preview1800Rendered": 0,
+    "preview1800Rendered": 221,
     "preview900Bytes": 21150097,
     "preview900MaxEdge": 900,
-    "preview900Rendered": 0,
+    "preview900Rendered": 221,
     "sourceBytes": 1804358446,
     "videoCount": 0
   }

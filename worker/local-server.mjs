@@ -1,10 +1,14 @@
 import http from "node:http";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import catalogTsv from "../scripts/catalog_tsv.cjs";
 import { createCatalogIndex, createPhotosByElieWorker } from "./checkout-worker.mjs";
 import { createLocalZipDelivery } from "./local-zip-delivery.mjs";
+import { createRealEstateAuth } from "./real-estate-auth.mjs";
+import { createRealEstateDeliverables } from "./real-estate-deliverables.mjs";
 import { createStripeClient } from "./stripe-client.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -26,6 +30,329 @@ const sourceRoots = (process.env.PBE_DELIVERY_SOURCE_ROOTS || process.env.PBE_DE
   .map((value) => value.trim())
   .filter(Boolean);
 
+const normalizeKeyPrefix = (value) => String(value || "")
+  .trim()
+  .replace(/^\/+|\/+$/g, "")
+  .replace(/\/+/g, "/");
+
+const cleanRealEstateGallery = (gallery = {}) => {
+  const key = String(gallery.key || gallery.galleryKey || "").trim();
+  if (!key) return null;
+  return {
+    key,
+    username: String(gallery.username || gallery.customer || "").trim(),
+    accessCode: String(gallery.accessCode || gallery.password || "").trim(),
+    accessCodeHash: String(gallery.accessCodeHash || "").trim().toLowerCase(),
+    accessCodeSalt: String(gallery.accessCodeSalt || "").trim(),
+    privateMasterPrefix: normalizeKeyPrefix(gallery.privateMasterPrefix || gallery.privateKeyPrefix || `real-estate/${key}/masters`),
+    deliverablesPrefix: normalizeKeyPrefix(gallery.deliverablesPrefix || `real-estate/${key}/deliverables`),
+    email: String(gallery.email || gallery.clientEmail || "").trim(),
+    customer: String(gallery.customer || gallery.username || "").trim(),
+    propertyTitle: String(gallery.propertyTitle || gallery.property || "").trim(),
+    maxItems: Number(gallery.maxItems || 300) || 300,
+  };
+};
+
+const realEstateGalleriesFromJson = (rawJson) => {
+  const raw = String(rawJson || "").trim();
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    const source = Array.isArray(parsed) ? parsed : Array.isArray(parsed.galleries) ? parsed.galleries : [];
+    return source
+      .map(cleanRealEstateGallery)
+      .filter((gallery) => gallery?.username && (gallery?.accessCode || (gallery?.accessCodeHash && gallery?.accessCodeSalt)));
+  } catch {
+    return [];
+  }
+};
+
+const loadLocalRealEstateGalleries = () => {
+  const envGalleries = realEstateGalleriesFromJson(process.env.REAL_ESTATE_GALLERIES_JSON);
+  if (envGalleries.length) return envGalleries;
+  const configPath = path.resolve(repoRoot, "assets/owner-actions/real-estate-clients.local.json");
+  if (!fs.existsSync(configPath)) return [];
+  try {
+    const payload = JSON.parse(fs.readFileSync(configPath, "utf8"));
+    const clients = Array.isArray(payload.clients) ? payload.clients : [];
+    return clients
+      .map(cleanRealEstateGallery)
+      .filter((gallery) => gallery?.username && (gallery?.accessCode || (gallery?.accessCodeHash && gallery?.accessCodeSalt)));
+  } catch {
+    return [];
+  }
+};
+
+const metadataPathFor = (filePath) => `${filePath}.metadata.json`;
+
+const keyPathSegments = (key) => {
+  const clean = normalizeKeyPrefix(key);
+  if (!clean || clean.split("/").some((segment) => !segment || segment === "." || segment === "..")) {
+    throw new Error("Invalid local R2 key.");
+  }
+  return clean.split("/").map((segment) => encodeURIComponent(segment));
+};
+
+const keyForLocalPath = (rootDir, filePath) => path.relative(rootDir, filePath)
+  .split(path.sep)
+  .filter(Boolean)
+  .map((segment) => decodeURIComponent(segment))
+  .join("/");
+
+const bodyBytes = async (body) => {
+  if (body instanceof Uint8Array) return Buffer.from(body.buffer, body.byteOffset, body.byteLength);
+  if (body instanceof ArrayBuffer) return Buffer.from(body);
+  if (typeof body === "string") return Buffer.from(body);
+  if (body && typeof body.arrayBuffer === "function") return Buffer.from(await body.arrayBuffer());
+  return Buffer.from(String(body ?? ""));
+};
+
+const localR2Object = (body, metadata = {}, range = null) => {
+  const bytes = Buffer.isBuffer(body) ? body : Buffer.from(body || "");
+  const start = Number.isInteger(range?.offset) ? Math.max(0, range.offset) : 0;
+  const end = Number.isInteger(range?.length) ? Math.min(bytes.length, start + range.length) : bytes.length;
+  const ranged = bytes.subarray(start, end);
+  return {
+    httpMetadata: metadata.httpMetadata || {},
+    customMetadata: metadata.customMetadata || {},
+    size: bytes.length,
+    arrayBuffer: async () => ranged.buffer.slice(ranged.byteOffset, ranged.byteOffset + ranged.byteLength),
+    text: async () => ranged.toString("utf8"),
+    body: ranged,
+  };
+};
+
+const createLocalR2Bucket = (rootDir) => {
+  fs.mkdirSync(rootDir, { recursive: true });
+  const filePathFor = (key) => path.join(rootDir, ...keyPathSegments(key));
+  const metadataFor = (filePath) => {
+    try {
+      return JSON.parse(fs.readFileSync(metadataPathFor(filePath), "utf8"));
+    } catch {
+      return {};
+    }
+  };
+  return {
+    head: async (key) => {
+      const filePath = filePathFor(key);
+      if (!fs.existsSync(filePath)) return null;
+      const metadata = metadataFor(filePath);
+      return {
+        httpMetadata: metadata.httpMetadata || {},
+        customMetadata: metadata.customMetadata || {},
+        size: fs.statSync(filePath).size,
+      };
+    },
+    get: async (key, options = {}) => {
+      const filePath = filePathFor(key);
+      if (!fs.existsSync(filePath)) return null;
+      return localR2Object(fs.readFileSync(filePath), metadataFor(filePath), options.range || null);
+    },
+    put: async (key, body, options = {}) => {
+      const filePath = filePathFor(key);
+      fs.mkdirSync(path.dirname(filePath), { recursive: true });
+      fs.writeFileSync(filePath, await bodyBytes(body));
+      fs.writeFileSync(metadataPathFor(filePath), JSON.stringify({
+        httpMetadata: options.httpMetadata || {},
+        customMetadata: options.customMetadata || {},
+      }, null, 2));
+    },
+    delete: async (key) => {
+      const filePath = filePathFor(key);
+      fs.rmSync(filePath, { force: true });
+      fs.rmSync(metadataPathFor(filePath), { force: true });
+    },
+    list: async ({ prefix = "", limit = 1000 } = {}) => {
+      const cleanPrefix = normalizeKeyPrefix(prefix);
+      const files = [];
+      const walk = (dir) => {
+        if (!fs.existsSync(dir)) return;
+        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+          const fullPath = path.join(dir, entry.name);
+          if (entry.isDirectory()) {
+            walk(fullPath);
+          } else if (!entry.name.endsWith(".metadata.json")) {
+            const key = keyForLocalPath(rootDir, fullPath);
+            if (!cleanPrefix || key.startsWith(cleanPrefix)) {
+              files.push({
+                key,
+                size: fs.statSync(fullPath).size,
+                ...metadataFor(fullPath),
+              });
+            }
+          }
+        }
+      };
+      walk(rootDir);
+      return {
+        objects: files.sort((left, right) => left.key.localeCompare(right.key)).slice(0, limit),
+        truncated: false,
+      };
+    },
+  };
+};
+
+const escapePdfText = (value) => String(value ?? "")
+  .replace(/\\/g, "\\\\")
+  .replace(/\(/g, "\\(")
+  .replace(/\)/g, "\\)")
+  .replace(/[\r\n\t]+/g, " ")
+  .slice(0, 180);
+
+const titleLinesForRecord = (record = {}) => {
+  const lines = ["Photos By Elie Real Estate Rehearsal", record.title || record.filename || record.id];
+  for (const project of record.batch?.projects || []) {
+    if (project?.projectTitle) lines.push(project.projectTitle);
+    for (const item of project?.items || []) {
+      if (item?.title) lines.push(item.title);
+    }
+  }
+  return [...new Set(lines.map((line) => String(line || "").trim()).filter(Boolean))].slice(0, 24);
+};
+
+const pdfBytesForRecord = (record) => {
+  const lines = titleLinesForRecord(record);
+  const stream = [
+    "BT",
+    "/F1 18 Tf",
+    "72 760 Td",
+    ...lines.flatMap((line, index) => [
+      index ? "0 -28 Td" : "",
+      `(${escapePdfText(line)}) Tj`,
+    ]).filter(Boolean),
+    "ET",
+  ].join("\n");
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    `<< /Length ${Buffer.byteLength(stream)} >>\nstream\n${stream}\nendstream`,
+  ];
+  let pdf = "%PDF-1.4\n";
+  const offsets = [0];
+  objects.forEach((object, index) => {
+    offsets.push(Buffer.byteLength(pdf));
+    pdf += `${index + 1} 0 obj\n${object}\nendobj\n`;
+  });
+  const xref = Buffer.byteLength(pdf);
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  pdf += offsets.slice(1).map((offset) => `${String(offset).padStart(10, "0")} 00000 n \n`).join("");
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(pdf);
+};
+
+const videoBytesForRecord = (record) => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "pbe-re-video-"));
+  const outputPath = path.join(tempDir, "rehearsal.mp4");
+  const title = titleLinesForRecord(record).join(" | ").slice(0, 400) || "Photos By Elie Real Estate Rehearsal";
+  const result = spawnSync("ffmpeg", [
+    "-y",
+    "-v", "error",
+    "-f", "lavfi",
+    "-i", "color=c=0x18212b:s=1280x720:d=2",
+    "-f", "lavfi",
+    "-i", "anullsrc=channel_layout=stereo:sample_rate=44100",
+    "-shortest",
+    "-c:v", "libx264",
+    "-pix_fmt", "yuv420p",
+    "-c:a", "aac",
+    "-metadata", `title=${title}`,
+    "-metadata", `comment=${title}`,
+    "-movflags", "+faststart",
+    outputPath,
+  ], { encoding: "utf8" });
+  if (result.status !== 0 || !fs.existsSync(outputPath)) {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+    throw new Error(`Local Real Estate video rehearsal render failed: ${result.stderr || result.stdout || "ffmpeg failed"}`);
+  }
+  const bytes = fs.readFileSync(outputPath);
+  fs.rmSync(tempDir, { recursive: true, force: true });
+  return bytes;
+};
+
+const deliverableKeyFor = (gallery, id) => `${normalizeKeyPrefix(gallery.deliverablesPrefix || `real-estate/${gallery.key}/deliverables`)}/${id}.json`;
+
+const assetUrlFor = (id, action) => `/real-estate/deliverables/${encodeURIComponent(id)}/${action}`;
+
+const createLocalRealEstateDeliverables = ({ privateBucket, galleries }) => {
+  const base = createRealEstateDeliverables({
+    privateBucket,
+    galleries,
+    publicSiteUrl: "http://localhost:8000",
+  });
+  const galleriesByKey = new Map(galleries.map((gallery) => [gallery.key, gallery]));
+  return {
+    ...base,
+    submitAssemblyJob: async (payload = {}) => {
+      const result = await base.submitAssemblyJob(payload);
+      const now = new Date().toISOString();
+      const readyDeliverables = [];
+      for (const record of result.deliverables || []) {
+        const output = record.outputs?.[record.type] || record.output || {};
+        const key = String(output.key || "").replace(/^\/+/, "");
+        const gallery = galleriesByKey.get(record.galleryKey);
+        if (!key || !gallery) {
+          readyDeliverables.push(record);
+          continue;
+        }
+        const bytes = record.type === "pdf" ? pdfBytesForRecord(record) : videoBytesForRecord(record);
+        await privateBucket.put(key, bytes, {
+          httpMetadata: { contentType: output.contentType || (record.type === "pdf" ? "application/pdf" : "video/mp4") },
+          customMetadata: {
+            galleryKey: record.galleryKey,
+            deliverableId: record.id,
+            type: record.type,
+            localRehearsal: "true",
+          },
+        });
+        const readyRecord = {
+          ...record,
+          status: "ready",
+          updatedAt: now,
+          bytes: bytes.byteLength,
+          viewUrl: assetUrlFor(record.id, "view"),
+          downloadUrl: assetUrlFor(record.id, "download"),
+          assemblyJob: {
+            ...(record.assemblyJob || {}),
+            status: "ready",
+            completedAt: now,
+            localRehearsal: true,
+          },
+          deliveryEmail: {
+            status: "not_sent",
+            decision: "local_rehearsal_only",
+            reason: "local_worker_does_not_send_real_estate_email",
+            decidedAt: now,
+          },
+        };
+        await privateBucket.put(deliverableKeyFor(gallery, record.id), new TextEncoder().encode(JSON.stringify(readyRecord, null, 2)), {
+          httpMetadata: { contentType: "application/json; charset=utf-8" },
+          customMetadata: {
+            galleryKey: record.galleryKey,
+            deliverableId: record.id,
+            type: record.type,
+            assemblyJobId: record.assemblyJob?.id || "",
+            status: "ready",
+            localRehearsal: "true",
+          },
+        });
+        readyDeliverables.push(readyRecord);
+      }
+      return {
+        ...result,
+        job: {
+          ...(result.job || {}),
+          status: readyDeliverables.length ? "ready" : result.job?.status,
+          completedAt: readyDeliverables.length ? now : undefined,
+          localRehearsal: true,
+        },
+        deliverables: readyDeliverables,
+      };
+    },
+  };
+};
+
 const delivery = createLocalZipDelivery({
   repoRoot,
   sourceRoots,
@@ -41,10 +368,30 @@ const stripe = process.env.STRIPE_SECRET_KEY
   })
   : undefined;
 
+const realEstateGalleries = loadLocalRealEstateGalleries();
+const realEstatePrivateBucket = realEstateGalleries.length
+  ? createLocalR2Bucket(path.resolve(repoRoot, process.env.PBE_REAL_ESTATE_LOCAL_BUCKET_DIR || "tmp/real-estate-worker-r2"))
+  : null;
+const realEstateAuth = realEstateGalleries.length
+  ? createRealEstateAuth({
+    galleries: realEstateGalleries,
+    sessionSecret: process.env.REAL_ESTATE_SESSION_SECRET || process.env.PBE_REAL_ESTATE_SESSION_SECRET || "local-real-estate-session-secret",
+    sessionSeconds: Number(process.env.REAL_ESTATE_SESSION_SECONDS || process.env.PBE_REAL_ESTATE_SESSION_SECONDS || 2 * 60 * 60),
+  })
+  : null;
+const realEstateDeliverables = realEstatePrivateBucket
+  ? createLocalRealEstateDeliverables({
+    privateBucket: realEstatePrivateBucket,
+    galleries: realEstateGalleries,
+  })
+  : null;
+
 const worker = createPhotosByElieWorker({
   catalog: loadCatalog(),
   delivery,
   stripe,
+  realEstateAuth,
+  realEstateDeliverables,
   ordersUrl: `http://localhost:${port}/orders`,
   successUrl: `http://localhost:8000/order.html?id={ORDER_ID}&session_id={CHECKOUT_SESSION_ID}&checkout=success`,
   cancelUrl: "http://localhost:8000/basket.html?checkout=cancelled",
@@ -132,4 +479,7 @@ const server = http.createServer(async (req, res) => {
 server.listen(port, () => {
   console.log(`PhotosByElie local ${stripe ? "Stripe" : "mock"} Worker listening on http://localhost:${port}`);
   console.log(`Delivery ZIPs will be written under ${path.resolve(repoRoot, process.env.PBE_DELIVERY_OUTPUT_DIR || "deliveries")}`);
+  if (realEstateGalleries.length) {
+    console.log(`Real Estate local Worker enabled for ${realEstateGalleries.length} gallery/galleries using ${path.resolve(repoRoot, process.env.PBE_REAL_ESTATE_LOCAL_BUCKET_DIR || "tmp/real-estate-worker-r2")}`);
+  }
 });

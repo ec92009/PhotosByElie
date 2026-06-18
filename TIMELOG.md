@@ -315,8 +315,9 @@ Clock state: running
 | 2026-06-18 | 15:16 CEST | 15:18 CEST | 0:02 | Executed PBE-20260610-B014 privacy-conscious conversion analytics ticket; background implementation/testing time excluded. |
 | 2026-06-18 | 15:19 CEST | 15:21 CEST | 0:02 | Executed PBE-20260610-B020 custom media-domain preview cutover; background verification time excluded. |
 | 2026-06-18 | 15:24 CEST | 15:31 CEST | 0:07 | Executed PBE-20260610-B006 daily social pre-post target builder; background implementation/testing time excluded. |
+| 2026-06-18 | 15:32 CEST | 16:02 CEST | 0:12 | Executed PBE-20260610-B002 Real Estate client rehearsal with Elie import/publish/upload, local Worker shelf rehearsal support, and mobile/browser verification; upload/runtime wait excluded. |
 
 ## Totals
 
-Active collaboration time used: 18:47
+Active collaboration time used: 18:59
 Remaining budget: not set

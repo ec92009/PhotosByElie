@@ -272,7 +272,8 @@ export const createRealEstateDeliverables = ({
 
   const publicRecordFor = (record) => {
     const ready = String(record?.status || "").toLowerCase() === "ready";
-    if (!ready) return record;
+    const type = String(record?.type || "").toLowerCase();
+    if (!ready || !["pdf", "video"].includes(type)) return record;
     const output = record.outputs?.[record.type] || record.output || {};
     return {
       ...record,

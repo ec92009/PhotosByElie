@@ -1873,7 +1873,12 @@
       const canOpen = Boolean(item.editUrl || item.batch);
       const editingName = state.editingDeliverableNameId === item.id;
       const thumbnail = deliverableThumbnailFor(item);
-      const hasReadyOutput = (Array.isArray(item.records) ? item.records : [item]).some((record) => record.status === "ready" && (record.viewUrl || record.downloadUrl));
+      const hasReadyOutput = (Array.isArray(item.records) ? item.records : [item]).some((record) => {
+        const format = deliverableFormatCode(record.type);
+        return (format === "pdf" || format === "video")
+          && record.status === "ready"
+          && (record.viewUrl || record.downloadUrl);
+      });
       return `
         <article class="real-estate-deliverable ${canOpen ? "is-openable" : ""} ${editingName ? "is-renaming" : ""}" data-re-status="${escapeHtml(item.status)}" ${canOpen ? `data-re-open-deliverable="${escapeHtml(item.id)}" role="button" tabindex="0"` : ""}>
           <button class="real-estate-deliverable-disclosure" type="button" ${canOpen ? `data-re-open-deliverable-button="${escapeHtml(item.id)}"` : "disabled"} aria-label="Open ${escapeHtml(displayTitle)}">
@@ -5673,43 +5678,36 @@
     document.querySelectorAll("[data-re-view-pdf]").forEach((button) => button.addEventListener("click", () => downloadPdf({ mode: "view" })));
     document.querySelectorAll("[data-re-download-pdf]").forEach((button) => button.addEventListener("click", () => downloadPdf({ mode: "download" })));
     elements.deliverablesList?.addEventListener("click", (event) => {
-      const nameEditButton = event.target?.closest?.("[data-re-edit-name]");
-      if (nameEditButton) {
-        event.preventDefault();
-        event.stopPropagation();
-        beginDeliverableNameEdit(nameEditButton.getAttribute("data-re-edit-name") || "");
-        return;
-      }
-      const deleteButton = event.target?.closest?.("[data-re-delete-deliverable]");
-      if (deleteButton) {
-        event.preventDefault();
-        event.stopPropagation();
-        deleteProducedDeliverable(deleteButton.getAttribute("data-re-delete-deliverable") || "").catch((error) => setStatus(error?.message || "Could not delete this product"));
-        return;
-      }
       if (event.target?.closest?.("[data-re-rename-deliverable]")) return;
+      const button = event.target?.closest?.("[data-re-edit-name], [data-re-edit-deliverable], [data-re-view-deliverable], [data-re-download-deliverable], [data-re-delete-deliverable], [data-re-sync-deliverables]");
+      if (button) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (button.matches("[data-re-edit-name]")) {
+          beginDeliverableNameEdit(button.getAttribute("data-re-edit-name") || "");
+          return;
+        }
+        if (button.matches("[data-re-sync-deliverables]")) {
+          fetchCloudDeliverables({ promptIfMissing: true, quiet: false }).catch(() => {});
+          return;
+        }
+        if (button.matches("[data-re-edit-deliverable]")) {
+          editProducedDeliverable(button.getAttribute("data-re-edit-deliverable") || "").catch(() => setStatus("Could not edit this product"));
+          return;
+        }
+        if (button.matches("[data-re-delete-deliverable]")) {
+          deleteProducedDeliverable(button.getAttribute("data-re-delete-deliverable") || "").catch((error) => setStatus(error?.message || "Could not delete this product"));
+          return;
+        }
+        const mode = button.matches("[data-re-view-deliverable]") ? "view" : "download";
+        const id = button.getAttribute(mode === "view" ? "data-re-view-deliverable" : "data-re-download-deliverable") || "";
+        runProducedDeliverable(id, mode).catch(() => setStatus("Could not prepare this product"));
+        return;
+      }
       const row = event.target?.closest?.("[data-re-open-deliverable]");
       if (row) {
         editProducedDeliverable(row.getAttribute("data-re-open-deliverable") || "").catch(() => setStatus("Could not edit this selection"));
-        return;
       }
-      const button = event.target?.closest?.("[data-re-edit-deliverable], [data-re-view-deliverable], [data-re-download-deliverable], [data-re-delete-deliverable], [data-re-sync-deliverables]");
-      if (!button) return;
-      if (button.matches("[data-re-sync-deliverables]")) {
-        fetchCloudDeliverables({ promptIfMissing: true, quiet: false }).catch(() => {});
-        return;
-      }
-      if (button.matches("[data-re-edit-deliverable]")) {
-        editProducedDeliverable(button.getAttribute("data-re-edit-deliverable") || "").catch(() => setStatus("Could not edit this product"));
-        return;
-      }
-      if (button.matches("[data-re-delete-deliverable]")) {
-        deleteProducedDeliverable(button.getAttribute("data-re-delete-deliverable") || "").catch((error) => setStatus(error?.message || "Could not delete this product"));
-        return;
-      }
-      const mode = button.matches("[data-re-view-deliverable]") ? "view" : "download";
-      const id = button.getAttribute(mode === "view" ? "data-re-view-deliverable" : "data-re-download-deliverable") || "";
-      runProducedDeliverable(id, mode).catch(() => setStatus("Could not prepare this product"));
     });
     elements.deliverablesList?.addEventListener("change", (event) => {
       const input = event.target?.closest?.("[data-re-rename-deliverable]");

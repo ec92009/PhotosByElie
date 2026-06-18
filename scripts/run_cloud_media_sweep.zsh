@@ -264,6 +264,22 @@ if [[ ! -d node_modules ]]; then
 fi
 done_phase prepare
 
+phase preflight "Preflight import dependencies"
+print -r -- "preflight" > "$(current_phase_file)"
+preflight_args=(
+  "$PYTHON_BIN" scripts/preflight_import_dependencies.py
+  --source-select "$(effective_selected_import_select)"
+)
+if [[ -n "$SELECTED_IMPORT_SOURCE_ROOT" ]]; then
+  preflight_args+=(--source-root "$SELECTED_IMPORT_SOURCE_ROOT")
+fi
+for key in "${SKIP_PHASES[@]}"; do
+  preflight_args+=(--skip-phase "$key")
+done
+"${preflight_args[@]}"
+clear_current_phase
+done_phase preflight
+
 if [[ -z "$SELECTED_IMPORT_SOURCE_ROOT" ]]; then
   run_skippable_phase discard-start "Double-check banned R2 cleanup" \
     node scripts/delete_discarded_r2_media.mjs --delete --discarded-tombstone assets/discarded/discarded-photo-ids.json --request-timeout-ms 180000 --retries 4

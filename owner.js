@@ -349,6 +349,7 @@
   const IMPORT_MATRIX_RECENT_DONE_LIMIT = 6;
   const SWEEP_PHASES = [
     ["prepare", "Prepare workspace"],
+    ["preflight", "Preflight import dependencies"],
     ["discard-start", "Double-check banned R2 cleanup"],
     ["import-cache", "Prepare import cache"],
     ["selected-folder", "Import selected folder"],
@@ -2667,6 +2668,8 @@
     const deleteProgress = lastMatch(/^DELETE_PROGRESS\s+([0-9,]+)\s+([0-9,]+)\s+([0-9,]+)\s+([0-9,]+)\s+([0-9,]+)/);
     const deleteContext = lastMatch(/^DELETE_CONTEXT\s+({.+})$/);
     const deleteContextPayload = parsePayloadMatch(deleteContext);
+    const preflight = lastMatch(/^PBE_PREFLIGHT\s+({.+})$/);
+    const preflightPayload = parsePayloadMatch(preflight);
     const phaseMarker = lastMatch(/^SWEEP_PHASE\s+(\S+)\s+(.+)/);
     const rawPhaseKey = phaseMarker?.match?.[1] || "";
     const importPhaseKey = normalizeSweepPhaseKey(rawPhaseKey);
@@ -2825,6 +2828,8 @@
       deleteProgress,
       deleteContext,
       deleteContextPayload,
+      preflight,
+      preflightPayload,
       scan,
       started,
       imported,
@@ -3329,6 +3334,9 @@
 
   const phaseProgress = (phase, logSummary, failed, task = null) => {
     if (failed) return { percent: 100, detail: phase.key === "coverage" ? coverageMissingDetail() : "Needs attention" };
+    if (phase.key === "preflight" && logSummary?.preflightPayload) {
+      return { percent: 100, detail: logSummary.preflightPayload.ok ? "Checks passed" : "Needs attention" };
+    }
     if (phase.key === "gap-fill") return gapFillProgress(logSummary, task);
     if ((phase.key === "discard-start" || phase.key === "discard-final") && (logSummary?.deleteProgress || logSummary?.deleteStart || logSummary?.deleted)) {
       if (logSummary?.deleted) {
@@ -3353,6 +3361,7 @@
     if ((phase.key === "discard-start" || phase.key === "discard-final") && logSummary?.deleted) {
       return `${logSummary.deleted.match[1]} public and ${logSummary.deleted.match[2]} private key checks`;
     }
+    if (phase.key === "preflight" && logSummary?.preflightPayload?.ok) return "Checks passed";
     if (phase.key === "coverage") return "Satisfied";
     return "Done";
   };
@@ -3730,6 +3739,24 @@
     };
     let lastPhotoId = "";
     if (active && latest.external_pid) addPhaseRow(activePhaseKey, "Sweep PID", latest.external_pid);
+    if (logSummary?.preflightPayload) {
+      const payload = logSummary.preflightPayload;
+      const python = payload.python || {};
+      const tools = Array.isArray(payload.tools) ? payload.tools : [];
+      const sources = Array.isArray(payload.sources) ? payload.sources : [];
+      const r2 = payload.r2 || {};
+      const toolSummary = tools.length
+        ? tools.map((tool) => `${tool.name}: ${tool.ok ? "OK" : "missing"}`).join(", ")
+        : "No tool results";
+      const sourceSummary = sources.length
+        ? sources.map((source) => `${source.label || source.phase}: ${source.status || (source.ok ? "ok" : "needs attention")}`).join(", ")
+        : "No source checks";
+      addPhaseRow("preflight", "Pillow", python.pillow === "ok" ? `OK for ${python.executable || "Python"}` : `Missing for ${python.executable || "Python"}`);
+      addPhaseRow("preflight", "Tools", toolSummary);
+      addPhaseRow("preflight", "R2 upload", r2.ok ? `${r2.backend || "R2"} ready` : `${r2.backend || "R2"} needs attention`);
+      addPhaseRow("preflight", "Sources", sourceSummary);
+      if (!payload.ok && Array.isArray(payload.errors) && payload.errors.length) addPhaseRow("preflight", "Needs attention", payload.errors[0]);
+    }
     if (catalogBlocked) {
       addPhaseRow("catalog", "Needs attention", "Catalog export was held back because one or more source import lanes were left unfinished.");
       if (skippedSourceLanes.length) {

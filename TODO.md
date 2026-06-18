@@ -149,56 +149,52 @@ Last updated: 2026-06-10
    - Include a one-time review of legacy entries saved before `v83.24`.
    - Keep `Owner.sqlite` authoritative; do not add another JSON state source.
 
-10. **Preflight import dependencies before photo work starts.**
-   - Check Pillow, `exiftool`, `ffmpeg`/`ffprobe`, R2 upload configuration, and source readability before queuing photos.
-   - Surface one actionable Owner status instead of per-photo failure storms.
-
-11. **Review buyer support, refund, and license wording.**
+10. **Review buyer support, refund, and license wording.**
    - Use `docs/commerce/PRICE_OFFER_STRATEGY.md` as the current policy draft.
    - Keep Stripe receipts as payment records and PhotosByElie order/support pages as delivery/recovery records.
 
-12. **Approve and deploy the real price and offer strategy.**
+11. **Approve and deploy the real price and offer strategy.**
    - Review the proposed camera and AI price ladders.
    - After approval, update pricing, regenerate catalog/Worker artifacts, bump the visible version, deploy the Worker, and run one low-value live proof purchase.
 
-13. **Curate the first sellable storefront.**
+12. **Curate the first sellable storefront.**
    - Apply strong title/keyword approvals, block unsellable rows, pick featured collections, and put the strongest commercial/travel/editorial sets first.
 
-14. **Add conversion analytics.**
+13. **Add conversion analytics.**
    - Track privacy-conscious browsing, basket, checkout, payment, and download events while excluding localhost Owner activity.
 
-15. **Improve public discovery and SEO.**
+14. **Improve public discovery and SEO.**
    - Add fuzzy search, richer metadata, Open Graph images, canonical URLs, structured data, and per-campaign/per-gallery metadata without Owner-only details.
 
-16. **Owner decision pass for the current title/keyword queue.**
+15. **Owner decision pass for the current title/keyword queue.**
    - Open `owner-review.html?view=title-keywords` locally and review the active proposed rows, starting with batch `2026-05-24-000237-818Z`.
    - Resolve rejected and parked rows before the next large generator pass.
 
-17. **Verify Owner-private artifact separation after deploy.**
+16. **Verify Owner-private artifact separation after deploy.**
    - Confirm GitHub Pages does not serve private Owner review JSON or secrets.
    - Keep `Owner.sqlite` as durable state and treat review JSON as compatibility/audit output.
 
-18. **Run the next title/keyword generator pass after review.**
+17. **Run the next title/keyword generator pass after review.**
    - Use the improved keyword floor, larger subprocess buffer, and batch-summary preservation.
    - Compare misses and context-needed counts against `2026-05-24-000237-818Z`.
 
-19. **Harden hidden/discarded lifecycle.**
+18. **Harden hidden/discarded lifecycle.**
    - Make H/X, undo, Waste Basket, discard, R2 public wipe, and catalog rebuilds share one durable state flow.
    - Avoid publishing partial hidden/discarded state.
 
-20. **Replace temporary `r2.dev` preview URLs with a custom media domain.**
+19. **Replace temporary `r2.dev` preview URLs with a custom media domain.**
    - Attach a media domain, update `media-config.js`, and retest public and Real Estate preview loading.
 
-21. **Keep repo and media cleanup deliberate.**
+20. **Keep repo and media cleanup deliberate.**
    - Do not use GitHub as a media vault. Keep root HTML while GitHub Pages serves from repo root.
 
-22. **Add a guarded checkout discount code for low-cost live payment rehearsals.**
+21. **Add a guarded checkout discount code for low-cost live payment rehearsals.**
    - Add a coupon/discount entry point in the basket or checkout flow so Owner can exercise basket, Stripe Checkout, webhooks, order recovery, downloads, and delivery emails without repeatedly paying full live prices.
    - Keep validation server-side in the checkout Worker, preferably backed by secret/allowlisted test codes or Stripe promotion codes rather than trusting browser-submitted discounts.
    - Preserve the Stripe minimum-charge floor, the stale-basket subtotal guard, and product availability checks; never let a public code create accidental free live checkouts.
    - Record original subtotal, discount code, discount amount, and paid total in the order record, support tooling, and tests so discounted proof purchases remain auditable.
 
-23. **Check Real Estate email delivery coverage.**
+22. **Check Real Estate email delivery coverage.**
    - Audit whether Real Estate originals sessions, saved PDF/video deliverables, and future cloud assembly jobs send any client-facing email today.
    - Decide which Real Estate events should email the client versus only updating the in-page saved-product shelf.
    - If email is needed, reuse the Resend/Worker delivery-email path with Real Estate-specific wording, client/property context, human-friendly link availability, and no misleading "backup" language.

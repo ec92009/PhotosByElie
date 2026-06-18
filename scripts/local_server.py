@@ -132,6 +132,31 @@ R2_BACKGROUND_TASKS: dict[str, dict] = {}
 R2_BACKGROUND_LOCK = threading.Lock()
 PRICE_PUBLISH_TASKS: dict[str, dict] = {}
 PRICE_PUBLISH_LOCK = threading.Lock()
+R2_SWEEP_PHASES = {
+    "prepare",
+    "preflight",
+    "discard-start",
+    "import-cache",
+    "selected-folder",
+    "camera",
+    "apple-photo-albums",
+    "leonardo",
+    "catalog",
+    "catalog-blocked",
+    "eligibility",
+    "worker",
+    "sidecar",
+    "gap-fill",
+    "private",
+    "discard-final",
+    "storage",
+    "test",
+    "validate",
+    "commit",
+    "coverage",
+    "cleanup-cache",
+    "real-estate",
+}
 R2_SWEEP_SKIPPABLE_PHASES = {
     "discard-start",
     "selected-folder",
@@ -6276,7 +6301,7 @@ def _read_cloud_media_sweep_current_phase(repo_root: Path) -> str:
         phase_key = _cloud_media_sweep_current_phase_path(repo_root).read_text(encoding="utf-8").strip()
     except OSError:
         return ""
-    return phase_key if phase_key in R2_SWEEP_SKIPPABLE_PHASES else ""
+    return phase_key if phase_key in R2_SWEEP_PHASES else ""
 
 
 def _read_cloud_media_sweep_current_child_pid(repo_root: Path) -> int | None:
@@ -6872,12 +6897,12 @@ def _run_cloud_media_sweep_task(
     source_root: Path | None,
     source_select: str,
 ) -> None:
-    current_phase = "selected-folder" if source_root else None
+    current_phase = "preflight"
     _update_r2_task(
         task_id,
         state="running",
         started_at=datetime.now(timezone.utc).isoformat(),
-        **({"currentPhaseKey": current_phase} if current_phase else {}),
+        currentPhaseKey=current_phase,
     )
     log_path.parent.mkdir(parents=True, exist_ok=True)
     command = _cloud_media_sweep_command(source_root, source_select, skip_phases)
@@ -6943,11 +6968,11 @@ def _start_cloud_media_sweep(
         "skipPhases": skip_phases,
         "sourceRoot": str(source_root) if source_root else "",
         "sourceSelect": _effective_import_select(source_root, source_select),
-        "currentPhaseKey": "selected-folder" if source_root else None,
+        "currentPhaseKey": "preflight",
         "phaseScopeKeys": (
-            ["prepare", "import-cache", "selected-folder", "catalog", "eligibility", "worker", "sidecar", "gap-fill", "storage", "test", "validate", "commit"]
+            ["prepare", "preflight", "import-cache", "selected-folder", "catalog", "eligibility", "worker", "sidecar", "gap-fill", "storage", "test", "validate", "commit"]
             if source_root
-            else ["prepare", "discard-start", "import-cache", "camera", "apple-photo-albums", "leonardo", "catalog", "eligibility", "worker", "sidecar", "gap-fill", "discard-final", "storage", "test", "validate", "commit"]
+            else ["prepare", "preflight", "discard-start", "import-cache", "camera", "apple-photo-albums", "leonardo", "catalog", "eligibility", "worker", "sidecar", "gap-fill", "discard-final", "storage", "test", "validate", "commit"]
         ),
         "items": [{"command": " ".join(command), "log": str(log_path)}],
         "errors": [],

@@ -60,7 +60,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `SHOW_ME_SOP.md`: preview/reporting workflow
 - `SUMMARY.md`, `HANDOFF.md`, `TODO.md`, and `TIMELOG.md`: durable cross-thread context, handoff state, numbered backlog, and active collaboration clock
 - `VERSION`: current visible version without the leading `v`
-- `docs/sops/`: local SOP copies/adaptations, including versioning, active collaboration timelog tracking, and Lightroom image ingestion
+- `docs/sops/`: local SOP copies/adaptations, including versioning, active collaboration timelog tracking, Lightroom image ingestion, and repo/media cleanup guardrails
 - `docs/commerce/PRICE_OFFER_STRATEGY.md`: launch price, bundle, refund/support, and implementation strategy draft for owner approval
 - `assets/branding/`: PhotosByElie brand assets used by Stripe and the public site favicon/topbar logo
 - `assets/music/slideshow-guitar/`: public MP3 cues used by the slideshow music mini-app, including `pixabay/` audition candidates with credit metadata and a `public-domain/` source manifest for CC0 Commons clips

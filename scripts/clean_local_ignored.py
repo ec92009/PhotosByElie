@@ -39,6 +39,10 @@ ARCHIVE_GLOBS = (
 )
 
 PROTECTED_PATHS = (
+    # Tracked public runtime artifacts are included so future helper expansion
+    # cannot accidentally turn this ignored-cleanup tool into a Pages cleanup.
+    "assets/catalog/photosbyelie.sqlite",
+    "assets/catalog/photosbyelie.sqlite.br",
     ".env.stripe-test.local",
     ".wrangler",
     "assets/hidden",
@@ -88,7 +92,9 @@ def overlaps(candidate: Path, protected: Path) -> bool:
 
 
 def protected_paths() -> list[Path]:
-    return [(REPO_ROOT / item).resolve() for item in PROTECTED_PATHS]
+    configured = [(REPO_ROOT / item).resolve() for item in PROTECTED_PATHS]
+    root_html = [path.resolve() for path in REPO_ROOT.glob("*.html")]
+    return configured + root_html
 
 
 def assert_not_protected(path: Path) -> None:

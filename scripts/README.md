@@ -553,7 +553,7 @@ Run it only after confirming no public/private R2 upload lane is active. The scr
 
 ## Local Ignored Cleanup
 
-`clean_local_ignored.py` is the safe repo-housekeeping helper for ignored scratch files. It defaults to a dry run, archives borderline artifacts under `../PhotosByElie-local-archive/`, and refuses to touch protected local state such as `assets/owner-actions/Owner.sqlite`, `.env.stripe-test.local`, `assets/hidden/`, Pixelmator edit folders, and active Owner review/config folders.
+`clean_local_ignored.py` is the safe repo-housekeeping helper for ignored scratch files. It follows `docs/sops/REPO_MEDIA_CLEANUP_SOP.md`, defaults to a dry run, archives borderline artifacts under `../PhotosByElie-local-archive/`, and refuses to touch protected local state such as `assets/owner-actions/Owner.sqlite`, `.env.stripe-test.local`, `assets/hidden/`, Pixelmator edit folders, active Owner review/config folders, root GitHub Pages HTML, and active catalog artifacts.
 
 Preview cleanup:
 

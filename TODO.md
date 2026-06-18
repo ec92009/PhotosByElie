@@ -175,7 +175,7 @@ Last updated: 2026-06-18
    - Avoid publishing partial hidden/discarded state.
 
 17. **Keep repo and media cleanup deliberate.**
-   - Do not use GitHub as a media vault. Keep root HTML while GitHub Pages serves from repo root.
+   - Follow `docs/sops/REPO_MEDIA_CLEANUP_SOP.md`: do not use GitHub as a media vault, keep root HTML while GitHub Pages serves from repo root, and protect active public catalog artifacts.
 
 18. **Add a guarded checkout discount code for low-cost live payment rehearsals.**
    - Add a coupon/discount entry point in the basket or checkout flow so Owner can exercise basket, Stripe Checkout, webhooks, order recovery, downloads, and delivery emails without repeatedly paying full live prices.

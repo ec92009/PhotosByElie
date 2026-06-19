@@ -1,0 +1,100 @@
+{
+  "platform": "Threads",
+  "title": "Basque Country Street Light",
+  "campaign_id": "instagram-basque-country-street-light-2026-06-19",
+  "account": "ec92009",
+  "post_type": "carousel",
+  "caption": "Basque Country street light, tightened to four frames: stone, color, and northern Spain atmosphere. https://photos-by-elie.com/campaign.html?c=instagram-basque-country-street-light-2026-06-19",
+  "link_preview_note": "Remove automatic link preview before posting if it shows generic/off-theme campaign metadata.",
+  "notes": [
+    "Threads package is a 4-image subset derived from the Instagram Basque Country carousel.",
+    "Images are public watermarked R2 previews staged for upload/API publishing."
+  ],
+  "items": [
+    {
+      "media_id": "20180523-1253-00923-9853f3d6a1",
+      "order": 1,
+      "id": "20180523-1253-00923-9853f3d6a1",
+      "title": "Basque Country, Spain",
+      "collection": "spain",
+      "location": "Madrid, Comunidad de Madrid, Spain",
+      "width": 1800,
+      "height": 1200,
+      "source_url": "https://download.photos-by-elie.com/media/expo/20180523-1253-00923-9853f3d6a1_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/20180523-1253-00923-9853f3d6a1_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=20180523-1253-00923-9853f3d6a1",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180523-1253-00923-9853f3d6a1",
+      "image": "images/01-20180523-1253-00923-9853f3d6a1-basque-country-street-light.jpg",
+      "local_staged_path": "socials/Threads/2026-06-19/basque-country-street-light/images/01-20180523-1253-00923-9853f3d6a1-basque-country-street-light.jpg"
+    },
+    {
+      "media_id": "20180523-1158-00908-c83ee908b8",
+      "order": 2,
+      "id": "20180523-1158-00908-c83ee908b8",
+      "title": "Basque Country Street Scene",
+      "collection": "spain",
+      "location": "Madrid, Comunidad de Madrid, Spain",
+      "width": 1800,
+      "height": 1069,
+      "source_url": "https://download.photos-by-elie.com/media/expo/20180523-1158-00908-c83ee908b8_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/20180523-1158-00908-c83ee908b8_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=20180523-1158-00908-c83ee908b8",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180523-1158-00908-c83ee908b8",
+      "image": "images/02-20180523-1158-00908-c83ee908b8-basque-country-street-light.jpg",
+      "local_staged_path": "socials/Threads/2026-06-19/basque-country-street-light/images/02-20180523-1158-00908-c83ee908b8-basque-country-street-light.jpg"
+    },
+    {
+      "media_id": "20220510-193610-00741-246e0e684e",
+      "order": 3,
+      "id": "20220510-193610-00741-246e0e684e",
+      "title": "Basque Country, Biblioteca Municipal De Bibebarrieta",
+      "collection": "spain",
+      "location": "Spain",
+      "width": 1800,
+      "height": 1405,
+      "source_url": "https://download.photos-by-elie.com/media/expo/20220510-193610-00741-246e0e684e_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/20220510-193610-00741-246e0e684e_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=20220510-193610-00741-246e0e684e",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=20220510-193610-00741-246e0e684e",
+      "image": "images/03-20220510-193610-00741-246e0e684e-basque-country-street-light.jpg",
+      "local_staged_path": "socials/Threads/2026-06-19/basque-country-street-light/images/03-20220510-193610-00741-246e0e684e-basque-country-street-light.jpg"
+    },
+    {
+      "media_id": "20180523-1054-00904-0d99c36c72",
+      "order": 4,
+      "id": "20180523-1054-00904-0d99c36c72",
+      "title": "Basque Country, Spain",
+      "collection": "spain",
+      "location": "Madrid, Comunidad de Madrid, Spain",
+      "width": 1800,
+      "height": 1200,
+      "source_url": "https://download.photos-by-elie.com/media/expo/20180523-1054-00904-0d99c36c72_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/20180523-1054-00904-0d99c36c72_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=20180523-1054-00904-0d99c36c72",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180523-1054-00904-0d99c36c72",
+      "image": "images/04-20180523-1054-00904-0d99c36c72-basque-country-street-light.jpg",
+      "local_staged_path": "socials/Threads/2026-06-19/basque-country-street-light/images/04-20180523-1054-00904-0d99c36c72-basque-country-street-light.jpg"
+    }
+  ],
+  "date": "2026-06-19",
+  "status": "published",
+  "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-basque-country-street-light-2026-06-19",
+  "recommended_upload_set": "images",
+  "available_count": 4,
+  "manual_blockers": [],
+  "published_url": "https://www.threads.com/@ec92009/post/DZwHkO3CJaE",
+  "published": {
+    "platform": "threads",
+    "media_id": "17869710633545441",
+    "permalink": "https://www.threads.com/@ec92009/post/DZwHkO3CJaE",
+    "username": "ec92009",
+    "media_type": "CAROUSEL_ALBUM",
+    "published_at": "2026-06-19T03:09:19+0000",
+    "image_count": 4,
+    "child_count": 4
+  },
+  "verification": {
+    "method": "Threads Graph API readback",
+    "platform_visible_confirmation": "Graph returned CAROUSEL_ALBUM, permalink, and 4 children."
+  }
+}

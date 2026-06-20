@@ -261,9 +261,13 @@
   };
 
   const workerBaseUrl = () => {
-    const override = normalizedWorkerBase(pageParams.get("workerBase"));
+    const override = normalizedWorkerBase(pageParams.get("authWorkerBase") || pageParams.get("workerBase"));
     if (override) return override;
-    const configured = normalizedWorkerBase(window.photosByElieMediaConfig?.checkoutWorkerBaseUrl || "");
+    const configured = normalizedWorkerBase(
+      window.photosByElieMediaConfig?.authWorkerBaseUrl
+      || window.photosByElieMediaConfig?.checkoutWorkerBaseUrl
+      || ""
+    );
     if (configured) return configured;
     return isLocalHost ? "http://localhost:8787" : "";
   };

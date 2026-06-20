@@ -321,6 +321,7 @@ test("real-estate access login issues a scoped session for a Google-authenticate
     accessAuth: fakeAccessAuthFor("corine@example.com"),
     accessUserRegistry: registry,
     accessAdminEmail: "ec92009@gmail.com",
+    authAllowedReturnOrigins: ["https://photos-by-elie.com"],
     realEstateAuth: createRealEstateAuth({
       galleries,
       sessionSecret: "test-real-estate-session-secret",
@@ -347,6 +348,14 @@ test("real-estate access login issues a scoped session for a Google-authenticate
     galleryKey: "elie-real-estate",
   }, { origin: "https://photos-by-elie.com" }));
   assert.equal(forbiddenResponse.status, 403);
+
+  const redirectResponse = await worker.fetch(new Request(
+    "https://worker.test/real-estate/access-login?galleryKey=corine-real-estate&returnTo=https%3A%2F%2Fphotos-by-elie.com%2Freal-estate.html%3Fclient%3Dcorine",
+    { headers: { origin: "https://photos-by-elie.com" } }
+  ));
+  assert.equal(redirectResponse.status, 302);
+  assert.equal(redirectResponse.headers.get("location"), "https://photos-by-elie.com/real-estate.html?client=corine");
+  assert.match(redirectResponse.headers.get("set-cookie") || "", /^pbe_re_session=/);
 });
 
 test("checkout and download milestones record analytics without buyer identifiers", async () => {

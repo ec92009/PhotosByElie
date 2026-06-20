@@ -1726,6 +1726,16 @@ export const createPhotosByElieWorker = ({
       email: accessSession.email,
       provider: accessSession.provider,
     }, request);
+    if (request.method === "GET") {
+      return new Response(null, {
+        status: 302,
+        headers: {
+          location: safeAuthReturnUrl(request),
+          "set-cookie": cookie,
+          "cache-control": "no-store",
+        },
+      });
+    }
     return credentialedJson(request, { session, access: authSessionPayload(accessSession) }, 200, { "set-cookie": cookie });
   };
 

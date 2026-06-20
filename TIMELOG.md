@@ -336,8 +336,9 @@ Clock state: running
 | 2026-06-20 | 11:01 CEST | 11:26 CEST | 0:04 | Finished remaining PBE-20260620-6EF2 auth/import-control slices: David-local access grants, cloud Owner action queue, RE Google-login preference, preflight tooling, versioning, and validation; background implementation/browser/test time excluded. |
 | 2026-06-20 | 14:01 CEST | 14:02 CEST | 0:01 | Requested a public account icon with visitor mode and Google email verification, without adding 30-day recovery behavior yet; background implementation/testing time excluded. |
 | 2026-06-20 | 15:20 CEST | 17:12 CEST | 0:14 | Activated Cloudflare Access Google login with Safari-assisted credential setup, corrected the auth app destination path, selected Google-only login, and verified return to PhotosByElie; browser/deploy/test wait excluded. |
+| 2026-06-20 | 17:20 CEST | 17:26 CEST | 0:02 | Reported and fixed the Real Estate Google login host mismatch that sent client login through the non-Access Worker path; test/deploy wait excluded. |
 
 ## Totals
 
-Active collaboration time used: 19:48
+Active collaboration time used: 19:50
 Remaining budget: not set

@@ -16,6 +16,19 @@ David should append automation results here. Keep newest entries near the top, b
 - Notes:
 ```
 
+## 2026-06-20 Google Auth Max Testing Handoff
+
+- Machine: David (`David-5.local`)
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- Commit checked: `cf7fc214`
+- Result: Prepared Max-facing handoff notes for Google account login, Real Estate Google client login, and sign-out testing.
+- Changes made:
+  - Refreshed `SUMMARY.md` with the 2026-06-20 conversation state, auth role model, Max pull/test checklist, and immediate backlog.
+  - Refreshed `HANDOFF.md` with the live `v112.5` auth testing surface and first commands for Max.
+  - Updated `README.md` to document the public Account control and the `v112.5` RE auth/sign-out behavior.
+- Commit pushed: yes, this handoff docs commit.
+- Notes: No OAuth client secret, Worker secret, or downloaded credential JSON was copied into the repo. Max should pull `main`, run `npm test` and `npm run validate`, then test Account sign-in/sign-out plus RE Google login against `https://photos-by-elie.com/`.
+
 ## 2026-05-19 PBE Weekly Social Caption Drafts
 
 - Machine: David (`David-5.local`)

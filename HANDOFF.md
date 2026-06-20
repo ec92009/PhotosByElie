@@ -8,6 +8,35 @@ GitHub carries code, safe metadata, SOPs, and handoff notes; private Owner DB
 snapshots and client artifacts move through private R2; SSH/Codex Remote SSH is
 for remote execution.
 
+## Current Handoff: 2026-06-20 Google Auth / Max Testing
+
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- Branch: `main`
+- Public site: `https://photos-by-elie.com/`
+- Current visible build: `v112.5`
+- Auth Worker/custom domain: `https://auth.photos-by-elie.com`
+- Worker version after sign-out support: `c12eb833-0fed-42ee-a048-b5088793bc3c`
+- Latest relevant commits:
+  - `cf7fc214 photosbyelie: add account sign out`
+  - `08d38809 photosbyelie: fix real estate google login host`
+  - `c757d26a photosbyelie: activate google access login`
+  - `88e07204 photosbyelie: add public google account entrypoint`
+- Max first action:
+
+```bash
+cd /Users/ecohen/Dev/PhotosByElie
+git pull --ff-only origin main
+npm install
+npm test
+npm run validate
+```
+
+- Test the public homepage account icon near the Settings cog, Google sign-in, signed-in account sheet, and `Sign out`.
+- Test Real Estate Google login from `real-estate.html?client=corine` or the current client key. It should route through Cloudflare Access/Google on `auth.photos-by-elie.com`, not return `owner_auth_missing`.
+- Expected role behavior: ungranted verified Google users remain normal users; granted RE client emails are limited to their assigned gallery keys; Owner work requires an Owner grant and still treats local David admin as the role-management authority.
+- If stale Cloudflare Access state causes confusing results, use Account -> Sign out and retry.
+- Google OAuth client credentials and Worker secrets were entered outside git. Do not copy secrets into repo docs or handoff files.
+
 ## Handoff Direction
 
 - Primary Max/David transport is Gmail self-email on `ec92009@gmail.com`.

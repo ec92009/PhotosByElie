@@ -1,6 +1,80 @@
 # Conversation Summary
 
-Date: 2026-06-02
+Date: 2026-06-20
+
+## Current Max Testing Handoff (2026-06-20)
+
+Use this section first. Older sections below are retained as historical context and may mention stale visible versions.
+
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- Branch: `main`
+- Current visible build: `v112.5`
+- Latest pushed site commit before this handoff docs refresh: `cf7fc214 photosbyelie: add account sign out`
+- Public site: `https://photos-by-elie.com/`
+- Auth Worker/custom domain: `https://auth.photos-by-elie.com`
+- Public media route: `https://download.photos-by-elie.com/media`
+- Deployed Worker version after sign-out support: `c12eb833-0fed-42ee-a048-b5088793bc3c`
+
+### What Changed In This Conversation
+
+- Confirmed the prior burst-photo dedupe/culling operation did affect the catalog/Owner state, then verified the corresponding public/private R2 objects against live listings and Owner SQLite lifecycle records.
+- Performed the confirmed R2 deletions for burst extras and reproducible private render triplets, with sold/order-linked keys protected.
+- Diagnosed the local Homebrew AWS CLI failure as a broken dynamic library path and confirmed the upgraded/overridden CLI path works for a read-only R2 probe. PhotosByElie mostly uses direct R2 scripts now, so the AWS CLI is only occasional owner-maintenance tooling.
+- Summarized the import tracks and started folding them toward a unified import-operation model: source, destination, filters, and output contract. Apple Photos/iCloud is now the intended universal source; R2 is the universal destination; routine Saturn/folder imports should become compatibility/recovery only because the same files exist in Apple Photos and can otherwise duplicate.
+- Implemented the core `PBE-20260620-6EF2` slices: unified import operation tracking, cloud access tiers, David-local access grants, cloud Owner action queue, RE Google-login preference, preflight tooling, versioning, validation, and ticket notes.
+- Activated Cloudflare Access Google login for PhotosByElie with the Google provider selected and the Access app destination path corrected. Credentials and secrets stay outside git.
+- Added a public account icon near Settings. The account sheet supports visitor mode, Google sign up/sign in, a signed-in state, and now a `Sign out` action.
+- Fixed the Real Estate Google login host mismatch. The RE page now uses `authWorkerBaseUrl`, so `Continue with Google` goes to the Cloudflare Access path instead of the checkout Worker path that returned `owner_auth_missing`.
+- Added Worker `/auth/logout` support so sign-out sends the browser through Cloudflare Access logout.
+
+### Auth And Role Model
+
+- Tier model: Admin, Owner, Real Estate client, User/visitor.
+- Admin bootstrap email: `ec92009@gmail.com`.
+- Admin remains David-local for privileged role management. Owner and RE Client status can be granted to verified Google email addresses through the cloud roles UI.
+- Real Estate clients do not need a password. They sign in with Google, then are restricted to their assigned gallery keys.
+- A user who signs in with Google but has no Owner/RE grant is just a verified normal user for now; no 30-day recovery behavior has been added yet.
+
+### Max Pull/Test Checklist
+
+```bash
+cd /Users/ecohen/Dev/PhotosByElie
+git pull --ff-only origin main
+npm install
+npm test
+npm run validate
+```
+
+Then test:
+
+1. Open `https://photos-by-elie.com/` and confirm the account icon appears near the Settings cog.
+2. Use Account -> Sign in with Google, then Account -> Sign out. Sign-out should route through `https://auth.photos-by-elie.com/auth/logout` and Cloudflare Access logout.
+3. Open the Real Estate client page, for example `https://photos-by-elie.com/real-estate.html?client=corine`, and click `Continue with Google`. The expected first hop is Google/Cloudflare Access, not a JSON `owner_auth_missing` error.
+4. After Google auth, an ungranted email should be rejected by role/gallery authorization. A granted RE client email should only see its assigned gallery.
+5. If a stale Access session confuses the result, use Account -> Sign out, then retry the flow.
+
+### Verification Already Run
+
+```text
+node --check photos.js && node --check worker/checkout-worker.mjs
+git diff --check
+node --test worker/checkout-worker.test.mjs --test-name-pattern "auth session treats configured Google admin"
+npm test
+npm run validate
+npm run auth:preflight -- --worker-url=https://auth.photos-by-elie.com
+npx wrangler deploy
+live curl checks for v112.5 HTML/cache-bust and /auth/logout 302
+Playwright local mock auth check for signed-in Account sheet and Sign out
+GitHub Pages rebuild via gh api after Pages briefly served the older commit
+```
+
+### Immediate Backlog From This Handoff
+
+1. Run a Max-side Google-auth verification pass across public Account, RE client login, role grants, and sign-out.
+2. Rehearse one non-admin RE client email assigned to exactly one gallery, including forbidden access to another gallery.
+3. Verify remote Owner work from a non-David machine once the Owner grant is present, focusing on cloud action queue behavior rather than local-only mutation paths.
+4. Continue the unified Apple Photos-first import work with duplicate reconciliation between old Saturn/folder imports and Apple Photos source anchors.
+5. Decide later whether verified normal users should support post-30-day recovery/download history.
 
 ## Current State
 

@@ -5,7 +5,7 @@ window.photosByElieMediaConfig = {
   // Checkout Worker. Use ?workerBase=http://localhost:8787 for local Worker testing.
   checkoutWorkerBaseUrl: "https://photosbyelie-checkout-mock.ec92009.workers.dev",
   // Google-backed auth/session checks use the same Worker unless overridden.
-  authWorkerBaseUrl: "https://photosbyelie-checkout-mock.ec92009.workers.dev",
+  authWorkerBaseUrl: "https://auth.photos-by-elie.com",
   // First-party commerce analytics post to the same Worker unless overridden.
   analyticsWorkerBaseUrl: "https://photosbyelie-checkout-mock.ec92009.workers.dev",
 };

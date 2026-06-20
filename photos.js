@@ -3433,18 +3433,9 @@ const accountWorkerBaseUrl = () => {
   const params = new URLSearchParams(window.location.search);
   const override = normalizedAccountWorkerBase(params.get("authWorkerBase") || params.get("workerBase"));
   if (override) return override;
-  const localHosts = new Set(["localhost", "127.0.0.1", "::1"]);
-  const isLocalPage = localHosts.has(window.location.hostname);
   const mediaConfig = window.photosByElieMediaConfig || {};
   const configured = normalizedAccountWorkerBase(mediaConfig.authWorkerBaseUrl || mediaConfig.checkoutWorkerBaseUrl || "");
-  if (!configured) return "";
-  if (!isLocalPage) return configured;
-  try {
-    const configuredUrl = new URL(configured);
-    return localHosts.has(configuredUrl.hostname) ? configured : "";
-  } catch {
-    return "";
-  }
+  return configured;
 };
 
 const accountReturnUrl = () => {

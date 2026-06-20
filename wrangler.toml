@@ -12,14 +12,15 @@ DOWNLOAD_TOKEN_TTL_DAYS = "30"
 DOWNLOAD_TOKEN_MAX_DOWNLOADS = "100"
 STRIPE_STATEMENT_DESCRIPTOR_SUFFIX = "DOWNLOAD"
 WORKER_PUBLIC_URL = "https://photosbyelie-checkout-mock.ec92009.workers.dev"
+AUTH_ALLOWED_RETURN_ORIGINS = "http://localhost:8000 http://127.0.0.1:8000"
 ORDER_EMAIL_FROM = "Photos By Elie <orders@photos-by-elie.com>"
 ORDER_EMAIL_REPLY_TO = "orders@photos-by-elie.com"
 ORDER_EMAIL_INCLUDE_DIRECT_DOWNLOAD_LINKS = "true"
 ACCESS_ADMIN_EMAIL = "ec92009@gmail.com"
+ACCESS_TEAM_NAME = "byelie"
 # Secret required to enable buyer delivery emails:
 #   npx wrangler secret put RESEND_API_KEY
 # Optional Google-backed Cloudflare Access login:
-#   ACCESS_TEAM_NAME = "<team-name>"
 #   npx wrangler secret put ACCESS_AUD
 # User tier records are stored in ORDERS_KV under pbe:access-users:<email>.
 # Owner action records are stored in ORDERS_KV under pbe:owner-actions:<id>
@@ -35,6 +36,10 @@ binding = "IMAGES"
 
 [[routes]]
 pattern = "download.photos-by-elie.com"
+custom_domain = true
+
+[[routes]]
+pattern = "auth.photos-by-elie.com"
 custom_domain = true
 
 [[kv_namespaces]]

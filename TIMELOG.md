@@ -339,8 +339,9 @@ Clock state: running
 | 2026-06-20 | 17:20 CEST | 17:26 CEST | 0:02 | Reported and fixed the Real Estate Google login host mismatch that sent client login through the non-Access Worker path; test/deploy wait excluded. |
 | 2026-06-20 | 17:36 CEST | 17:39 CEST | 0:01 | Requested a Sign out option in the signed-in Account sheet; implementation, validation, and deploy wait excluded. |
 | 2026-06-20 | 17:59 CEST | 18:00 CEST | 0:01 | Requested Max handoff docs refresh, conversation summary, commit/push, and a fresh numbered backlog; background documentation work excluded. |
+| 2026-06-20 | 18:08 CEST | 18:10 CEST | 0:02 | Updated from GitHub and retired obsolete Gmail-based Max/David handoff instructions; background repo inspection/editing excluded. |
 
 ## Totals
 
-Active collaboration time used: 19:52
+Active collaboration time used: 19:54
 Remaining budget: not set

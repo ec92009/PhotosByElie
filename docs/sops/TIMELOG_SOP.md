@@ -59,8 +59,9 @@ In addition to the local timelog, record meaningful collaboration events in the 
 - Write local node events first to `~/Dev/.codex-telemetry/nodes/<node-id>.jsonl`; on David, `<node-id>` is `david`.
 - Keep entries compact, client-safe, and free of credentials, private IDs, message bodies, and secrets.
 - Use telemetry for workflow analysis and handoff evidence only. Do not treat central telemetry as billable time.
-- Record meaningful starts, ends, human interventions, status changes, blockers/unblockers, significant tests, commits, deploys, and versioned or published milestones.
+- Record meaningful starts, ends, human interventions, status changes, blockers/unblockers, handoffs, time-log activity, significant tests, commits, deploys, and versioned or published milestones.
 - Do not log every small conversational turn; prefer events that would help reconstruct project attention or explain a handoff later.
+- Keep events represented in the aggregate telemetry ledger by sync or regeneration when the aggregate is reachable and appropriate for the current machine.
 - When working on David and the aggregate is reachable, also keep `/Users/ecohen/Dev/.codex-telemetry/aggregate/collaboration-events.jsonl` in sync or ensure it can be regenerated from node logs.
 
 ## Timelog File Format

@@ -39,13 +39,13 @@ npm run validate
 
 ## Handoff Direction
 
-- Primary Max/David transport is Gmail self-email on `ec92009@gmail.com`.
-- Max-to-David prompts use exact subject `MAX2DAVID`; David-to-Max acknowledgements, progress, and final reports use exact subject `DAVID2MAX`.
-- Only trust self-to-self handoff messages from `ec92009@gmail.com` to `ec92009@gmail.com`.
-- If `hostname` or ComputerName starts with `David`, read `MAX2DAVID` email first and use `MAX2DAVID.md` as inbound reference/fallback.
-- If `hostname` or ComputerName starts with `Max`, read `DAVID2MAX` email first and use `DAVID2MAX.md` as inbound reference/fallback.
-- Use `MAX_DAVID_CHAT.md` only for legacy/manual quick notes or when email is unavailable.
-- Before David starts acting on a new Max task, David should send or queue a `DAVID2MAX` acknowledgement email saying `David: starting <short task name>` so Max can see the task is in progress.
+- Gmail self-email is retired for Max/David handoff instructions and reports. Do not search, send, or treat Gmail as authoritative for this workflow unless the user explicitly asks about a specific message.
+- Primary Max/David transport is the repo/GitHub handoff files, with mesh, SSH, or Codex Remote SSH used for live coordination when available.
+- Max-to-David prompts belong in `MAX2DAVID.md`; David-to-Max acknowledgements, progress, blocked states, decisions, recommended prompt/spec changes, and final reports belong in `DAVID2MAX.md`.
+- If `hostname` or ComputerName starts with `David`, read `MAX2DAVID.md` as inbound from Max and write outbound reports to `DAVID2MAX.md`.
+- If `hostname` or ComputerName starts with `Max`, read `DAVID2MAX.md` as inbound from David and write outbound instructions to `MAX2DAVID.md`.
+- Use `MAX_DAVID_CHAT.md` only for legacy/manual quick notes or when a conversational scratchpad is explicitly useful.
+- Before David starts acting on a new Max task, David should update `DAVID2MAX.md` with `David: starting <short task name>` and commit/push it, or send the same acknowledgement over mesh when that is the active live channel.
 - Do not edit the opposite-direction file unless the user explicitly asks; record requested prompt or spec changes in the outbound file instead.
 
 ## Current Handoff: 2026-05-22 Revenue Track

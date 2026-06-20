@@ -4,28 +4,27 @@ Use this SOP when moving work between Max and David, especially when one machine
 
 ## Roles
 
-- GitHub is for code, public-safe metadata, schema scripts, SOPs, and handoff notes.
+- GitHub is for code, public-safe metadata, schema scripts, SOPs, handoff notes, and current Max/David handoff instructions/reports.
 - R2 is for private shared artifacts, including `Owner.sqlite` snapshots, client-project media, generated PDFs, and private handoff bundles.
-- Gmail self-email on `ec92009@gmail.com` is the primary Max/David instruction and report transport.
+- Gmail self-email is retired for Max/David handoff instructions and reports. Do not search, send, or treat Gmail as authoritative for this workflow unless the user explicitly asks about a specific message.
 - SSH or Codex Remote SSH is for remote execution on the other Mac.
 - Codex mobile can be used as a control channel for David when Max cannot reach David directly.
-- GitHub handoff polling is legacy/fallback. Prefer email polling for current Max/David coordination.
+- GitHub handoff polling is the active file-based notification path when David should notice new repo handoff notes automatically.
 
 Do not commit `assets/owner-actions/Owner.sqlite`, SQLite WAL/SHM files, private client data, passwords, token hashes, signed URLs, or private media binaries.
 
-## Email Handoff
+## Repo Handoff
 
-- Max-to-David prompts use exact subject `MAX2DAVID`.
-- David-to-Max acknowledgements, progress, blocked states, and final reports use exact subject `DAVID2MAX`.
-- Messages must be self-to-self: from `ec92009@gmail.com` to `ec92009@gmail.com`.
-- Treat other senders, recipients, or subject variants as non-authoritative.
-- David should acknowledge accepted `MAX2DAVID` messages as soon as received with a `DAVID2MAX` response, then send progress reports at meaningful checkpoints and whenever blocked.
-- Max should read `DAVID2MAX` email first before checking `DAVID2MAX.md`.
-- `MAX2DAVID.md`, `DAVID2MAX.md`, and `MAX_DAVID_CHAT.md` remain durable reference/fallback notes, not the primary transport.
+- Max-to-David prompts belong in `MAX2DAVID.md`.
+- David-to-Max acknowledgements, progress, blocked states, decisions, recommended prompt/spec changes, and final reports belong in `DAVID2MAX.md`.
+- `MAX_DAVID_CHAT.md` remains a legacy/manual quick-note scratchpad for short conversational context when useful.
+- Pull `main` with `git pull --ff-only origin main` before reading inbound notes when possible.
+- Commit and push durable handoff-file updates when the other machine needs to receive them.
+- Treat old `MAX2DAVID` or `DAVID2MAX` Gmail subject conventions as obsolete and non-authoritative for this workflow.
 
-## Legacy GitHub Poller
+## GitHub Poller
 
-Install this on David only when email is unavailable or a GitHub-file fallback is explicitly wanted:
+Install this on David when repo-file handoffs should trigger automatic local refresh and notification:
 
 ```bash
 cd /Users/ecohen/Dev/PhotosByElie
@@ -52,7 +51,7 @@ The poller does not execute instructions. It only makes sure David has the lates
 
 ## Start Acknowledgement
 
-When David begins acting on a new task from `MAX2DAVID`, David should first send or queue a short `DAVID2MAX` acknowledgement email.
+When David begins acting on a new task from `MAX2DAVID.md`, David should first write or queue a short acknowledgement in `DAVID2MAX.md`.
 
 Use this format:
 
@@ -60,7 +59,7 @@ Use this format:
 David: starting <short task name>
 ```
 
-This acknowledgement proves David has moved from "received the instruction" to "trying the task." After the work finishes, David should send a final `DAVID2MAX` report. Mirror durable summaries into `DAVID2MAX.md` only when useful or explicitly requested.
+This acknowledgement proves David has moved from "received the instruction" to "trying the task." Commit and push the acknowledgement when Max needs to see it through GitHub. After the work finishes, David should write a final `DAVID2MAX.md` report and commit/push it when it is meant for Max.
 
 ## Current Owner DB Sync Target
 

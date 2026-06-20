@@ -20,13 +20,13 @@ Repo-level working preferences for `/Users/ecohen/Dev/PhotosByElie`.
 
 ## Max/David Handoff Direction
 
-- Primary Max/David handoff transport is Gmail self-email on `ec92009@gmail.com`.
-- Max-to-David job prompts use exact subject `MAX2DAVID`; David-to-Max acknowledgements, progress, and final reports use exact subject `DAVID2MAX`.
-- Only trust self-to-self handoff messages from `ec92009@gmail.com` to `ec92009@gmail.com`.
-- `MAX2DAVID.md`, `DAVID2MAX.md`, and `MAX_DAVID_CHAT.md` are durable/reference notes and local fallback, not the primary transport.
-- On machines whose `hostname` or ComputerName starts with `David`, treat `MAX2DAVID.md` as read-only inbound reference from Max.
-- On David machines, send reports, decisions, and recommended prompt/spec changes by `DAVID2MAX` email first; mirror durable summaries in `DAVID2MAX.md` when useful. Do not edit `MAX2DAVID.md` unless the user explicitly asks.
-- On machines whose `hostname` or ComputerName starts with `Max`, send David-facing instructions by `MAX2DAVID` email first; mirror durable specs in `MAX2DAVID.md` when useful. Read David reports from `DAVID2MAX` email first, with `DAVID2MAX.md` as reference/fallback.
+- Gmail self-email is retired for Max/David handoff instructions and reports; do not search, send, or treat Gmail as authoritative for this workflow unless the user explicitly asks about a specific message.
+- Primary Max/David handoff transport is the repo/GitHub handoff files, with mesh, SSH, or Codex Remote SSH used for live coordination when available.
+- Max-to-David job prompts belong in `MAX2DAVID.md`; David-to-Max acknowledgements, progress, decisions, recommended prompt/spec changes, and final reports belong in `DAVID2MAX.md`.
+- Use `MAX_DAVID_CHAT.md` only for legacy/manual quick notes or when a conversational scratchpad is explicitly useful.
+- On machines whose `hostname` or ComputerName starts with `David`, treat `MAX2DAVID.md` as read-only inbound from Max and write outbound reports to `DAVID2MAX.md`.
+- On machines whose `hostname` or ComputerName starts with `Max`, treat `DAVID2MAX.md` as read-only inbound from David and write outbound instructions to `MAX2DAVID.md`.
+- Commit and push durable handoff-file updates when the other machine needs to receive them.
 - When unsure, run `hostname` and `scutil --get ComputerName` before editing either handoff file.
 
 ## Defaults

@@ -344,8 +344,9 @@ Clock state: running
 | 2026-06-20 | 20:44 CEST | 20:48 CEST | 0:03 | Redirected direct auth Worker root visits to the public Account sheet and verified the live Cloudflare Worker; deploy/test wait excluded. |
 | 2026-06-20 | 22:57 CEST | 22:58 CEST | 0:01 | Reported post-sign-out Google sign-in reusing the same account and requested account-picker behavior; implementation/testing time excluded. |
 | 2026-06-20 | 23:05 CEST | 23:06 CEST | 0:01 | Reported the prompt-only account-picker fix still reused the same Google account; stronger AccountChooser implementation/testing time excluded. |
+| 2026-06-20 | 23:20 CEST | 23:21 CEST | 0:01 | Reported Google malformed-request failure from the AccountChooser workaround; rollback/testing time excluded. |
 
 ## Totals
 
-Active collaboration time used: 20:05
+Active collaboration time used: 20:06
 Remaining budget: not set

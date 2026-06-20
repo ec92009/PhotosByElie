@@ -3612,11 +3612,8 @@ const ensureSiteAccount = () => {
     const loginUrl = new URL(`${workerBase}/auth/login`);
     loginUrl.searchParams.set("returnTo", accountReturnUrl());
     loginUrl.searchParams.set("prompt", "select_account");
-    const chooserUrl = new URL("https://accounts.google.com/AccountChooser");
-    chooserUrl.searchParams.set("service", "lso");
-    chooserUrl.searchParams.set("continue", loginUrl.href);
     setMessage(translate('account.redirecting'));
-    window.location.href = chooserUrl.href;
+    window.location.href = loginUrl.href;
   };
 
   const beginGoogleLogout = () => {

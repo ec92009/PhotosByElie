@@ -8,8 +8,8 @@ Use this section first. Older sections below are retained as historical context 
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Branch: `main`
-- Current visible build: `v112.8`
-- Latest pushed site commit before this handoff docs refresh: `cf7fc214 photosbyelie: add account sign out`
+- Current visible build: `v112.9`
+- Latest pushed site commit before the current v112.9 rollback: `c65b6df7 photosbyelie: route account login through google chooser`
 - Public site: `https://photos-by-elie.com/`
 - Auth Worker/custom domain: `https://auth.photos-by-elie.com`
 - Public media route: `https://download.photos-by-elie.com/media`
@@ -28,6 +28,7 @@ Use this section first. Older sections below are retained as historical context 
 - Added Worker `/auth/logout` support so sign-out sends the browser through Cloudflare Access logout.
 - Opened the public `owner.html` dashboard for authenticated cloud Owner/Admin sessions as read-only cloud state while leaving localhost-only mutation tools disabled until their cloud endpoints are complete.
 - Redirected direct `auth.photos-by-elie.com/` visits back to the public Account sheet instead of showing raw Worker `not_found` JSON.
+- Backed out the direct Google AccountChooser detour after iPhone testing showed Google returns a malformed-request page. The public Account sheet now returns to direct Cloudflare Access login with `prompt=select_account`; Cloudflare's Google identity provider still needs prompt behavior set to `select_account` for reliable account choice after sign-out.
 
 ### Auth And Role Model
 
@@ -53,7 +54,7 @@ Then test:
 2. Use Account -> Sign in with Google, then Account -> Sign out. Sign-out should route through `https://auth.photos-by-elie.com/auth/logout` and Cloudflare Access logout.
 3. Open the Real Estate client page, for example `https://photos-by-elie.com/real-estate.html?client=corine`, and click `Continue with Google`. The expected first hop is Google/Cloudflare Access, not a JSON `owner_auth_missing` error.
 4. After Google auth, an ungranted email should be rejected by role/gallery authorization. A granted RE client email should only see its assigned gallery.
-5. If a stale Access session confuses the result, use Account -> Sign out, then retry the flow.
+5. If a stale Access session confuses the result, use Account -> Sign out, then retry the flow. A reliable account picker still depends on the Cloudflare Google provider prompt setting, not on a direct Google AccountChooser URL.
 
 ### Verification Already Run
 

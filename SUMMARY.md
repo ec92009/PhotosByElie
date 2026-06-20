@@ -29,6 +29,7 @@ Use this section first. Older sections below are retained as historical context 
 - Opened the public `owner.html` dashboard for authenticated cloud Owner/Admin sessions as read-only cloud state while leaving localhost-only mutation tools disabled until their cloud endpoints are complete.
 - Redirected direct `auth.photos-by-elie.com/` visits back to the public Account sheet instead of showing raw Worker `not_found` JSON.
 - Backed out the direct Google AccountChooser detour after iPhone testing showed Google returns a malformed-request page. The public Account sheet now returns to direct Cloudflare Access login with `prompt=select_account`; Cloudflare's Google identity provider still needs prompt behavior set to `select_account` for reliable account choice after sign-out.
+- Confirmed after `v112.9` that account switching is still blocked by Cloudflare Access/Google IdP configuration, not by the public site code. New blocker ticket: `PBE-20260620-342B`. Local Cloudflare tokens cannot update the identity provider: the API token gets 403 on the Access identity provider endpoint, and Wrangler OAuth does not have Access IdP write permission.
 
 ### Auth And Role Model
 
@@ -55,6 +56,8 @@ Then test:
 3. Open the Real Estate client page, for example `https://photos-by-elie.com/real-estate.html?client=corine`, and click `Continue with Google`. The expected first hop is Google/Cloudflare Access, not a JSON `owner_auth_missing` error.
 4. After Google auth, an ungranted email should be rejected by role/gallery authorization. A granted RE client email should only see its assigned gallery.
 5. If a stale Access session confuses the result, use Account -> Sign out, then retry the flow. A reliable account picker still depends on the Cloudflare Google provider prompt setting, not on a direct Google AccountChooser URL.
+
+Account switching remains a known blocked test until Cloudflare's Google identity provider prompt behavior/config prompt is set to `select_account`.
 
 ### Verification Already Run
 

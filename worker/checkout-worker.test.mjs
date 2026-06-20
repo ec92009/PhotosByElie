@@ -3,6 +3,7 @@ import fs from "node:fs";
 import jpeg from "jpeg-js";
 import test from "node:test";
 import catalogTsv from "../scripts/catalog_tsv.cjs";
+import { createMemoryAccessUserRegistry } from "./access-user-registry.mjs";
 import { createAnalyticsStore } from "./analytics-store.mjs";
 import { createCatalogIndex, createPhotosByElieWorker } from "./checkout-worker.mjs";
 import deployedWorker from "./deployed-worker.mjs";
@@ -65,6 +66,25 @@ const testWorker = () => {
   });
   return { worker, stripe, store };
 };
+
+const fakeAccessAuthFor = (email) => ({
+  optionalSession: async () => email ? {
+    email,
+    provider: "cloudflare-access",
+    expiresAt: "2026-05-17T14:00:00.000Z",
+    sessionSeconds: 7200,
+  } : null,
+  requireSession: async () => {
+    if (!email) throw Object.assign(new Error("Access login is required."), { status: 401, code: "access_login_required" });
+    return {
+      email,
+      provider: "cloudflare-access",
+      expiresAt: "2026-05-17T14:00:00.000Z",
+      sessionSeconds: 7200,
+    };
+  },
+  logoutUrlFor: (baseUrl) => `${baseUrl}/cdn-cgi/access/logout`,
+});
 
 const firstDeliverablePhotoId = (catalog, collectionKey = null) => {
   for (const [photoId, entry] of catalog.photos.entries()) {
@@ -158,6 +178,125 @@ test("analytics endpoint stores sanitized public funnel events", async () => {
 
   const count = JSON.parse(kv._debug.get("test:analytics:counts:2026-05-07:page_view"));
   assert.equal(count.count, 1);
+});
+
+test("auth session treats configured Google admin as admin and owner", async () => {
+  const worker = createPhotosByElieWorker({
+    catalog: loadCatalog(),
+    accessAuth: fakeAccessAuthFor("ec92009@gmail.com"),
+    accessAdminEmail: "ec92009@gmail.com",
+  });
+
+  const response = await worker.fetch(new Request("https://worker.test/auth/session", {
+    headers: { origin: "https://photos-by-elie.com" },
+  }));
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.authenticated, true);
+  assert.equal(body.user.email, "ec92009@gmail.com");
+  assert.equal(body.tier, "admin");
+  assert.equal(body.admin, true);
+  assert.deepEqual(body.roles, ["user", "owner", "admin"]);
+
+  const ownerResponse = await worker.fetch(new Request("https://worker.test/owner/session", {
+    headers: { origin: "https://photos-by-elie.com" },
+  }));
+  assert.equal(ownerResponse.status, 200);
+  const ownerBody = await ownerResponse.json();
+  assert.equal(ownerBody.admin, true);
+  assert.equal(ownerBody.roles.includes("owner"), true);
+});
+
+test("auth session reads Owner and Real Estate client tiers from the user registry", async () => {
+  const registry = createMemoryAccessUserRegistry([
+    { email: "owner@example.com", tier: "owner" },
+    { email: "client@example.com", tier: "re_client", realEstateClients: ["corine-real-estate"] },
+  ]);
+  const ownerWorker = createPhotosByElieWorker({
+    catalog: loadCatalog(),
+    accessAuth: fakeAccessAuthFor("owner@example.com"),
+    accessUserRegistry: registry,
+    accessAdminEmail: "ec92009@gmail.com",
+  });
+  const ownerResponse = await ownerWorker.fetch(new Request("https://worker.test/owner/session", {
+    headers: { origin: "https://photos-by-elie.com" },
+  }));
+  assert.equal(ownerResponse.status, 200);
+  const ownerBody = await ownerResponse.json();
+  assert.equal(ownerBody.tier, "owner");
+  assert.deepEqual(ownerBody.roles, ["user", "owner"]);
+
+  const clientWorker = createPhotosByElieWorker({
+    catalog: loadCatalog(),
+    accessAuth: fakeAccessAuthFor("client@example.com"),
+    accessUserRegistry: registry,
+    accessAdminEmail: "ec92009@gmail.com",
+  });
+  const clientSessionResponse = await clientWorker.fetch(new Request("https://worker.test/auth/session", {
+    headers: { origin: "https://photos-by-elie.com" },
+  }));
+  assert.equal(clientSessionResponse.status, 200);
+  const clientSession = await clientSessionResponse.json();
+  assert.equal(clientSession.tier, "re_client");
+  assert.deepEqual(clientSession.roles, ["user", "re_client"]);
+  assert.deepEqual(clientSession.realEstateClients, ["corine-real-estate"]);
+
+  const clientOwnerResponse = await clientWorker.fetch(new Request("https://worker.test/owner/session", {
+    headers: { origin: "https://photos-by-elie.com" },
+  }));
+  assert.equal(clientOwnerResponse.status, 403);
+});
+
+test("real-estate access login issues a scoped session for a Google-authenticated client", async () => {
+  const galleries = [{
+    key: "corine-real-estate",
+    username: "Corine",
+    email: "corine@example.com",
+    accessCode: "legacy-code",
+    privateMasterPrefix: "real-estate/corine-real-estate/masters",
+  }, {
+    key: "elie-real-estate",
+    username: "Elie",
+    email: "elie@example.com",
+    accessCode: "legacy-code",
+    privateMasterPrefix: "real-estate/elie-real-estate/masters",
+  }];
+  const registry = createMemoryAccessUserRegistry([{
+    email: "corine@example.com",
+    tier: "re_client",
+    realEstateClients: ["corine-real-estate"],
+  }]);
+  const worker = createPhotosByElieWorker({
+    catalog: loadCatalog(),
+    accessAuth: fakeAccessAuthFor("corine@example.com"),
+    accessUserRegistry: registry,
+    accessAdminEmail: "ec92009@gmail.com",
+    realEstateAuth: createRealEstateAuth({
+      galleries,
+      sessionSecret: "test-real-estate-session-secret",
+      now: () => new Date("2026-05-17T12:00:00.000Z"),
+    }),
+  });
+
+  const response = await worker.fetch(jsonRequest("https://worker.test/real-estate/access-login", {
+    galleryKey: "corine-real-estate",
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get("set-cookie") || "", /^pbe_re_session=/);
+  const body = await response.json();
+  assert.equal(body.session.galleryKey, "corine-real-estate");
+  assert.equal(body.access.realEstateClients[0], "corine-real-estate");
+
+  const cookie = (response.headers.get("set-cookie") || "").split(";")[0];
+  const sessionResponse = await worker.fetch(new Request("https://worker.test/real-estate/session?galleryKey=corine-real-estate", {
+    headers: { cookie, origin: "https://photos-by-elie.com" },
+  }));
+  assert.equal(sessionResponse.status, 200);
+
+  const forbiddenResponse = await worker.fetch(jsonRequest("https://worker.test/real-estate/access-login", {
+    galleryKey: "elie-real-estate",
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(forbiddenResponse.status, 403);
 });
 
 test("checkout and download milestones record analytics without buyer identifiers", async () => {

@@ -34,7 +34,12 @@ All routes also work under `/api`, for example `/api/checkout/guest`.
 | `POST /purchases/recent` | Basket checks checkout email plus selected photo/product IDs | Scans paid Worker order records and reports whether each item is covered by the 30-day download allowance |
 | `POST /stripe-webhook` | Stripe/mocked Stripe says checkout completed | Verifies payment facts, prepares delivery, marks order `ready` |
 | `POST /mock-stripe/pay` | Local mock payment helper | Simulates a paid Stripe event for a Checkout Session |
-| `POST /real-estate/login` | Real Estate client submits username/password | Verifies Worker-held credentials and issues a short-lived signed HttpOnly session cookie |
+| `GET /auth/session` | Browser checks optional Google-backed session | Returns the authenticated email, tier, roles, Admin flag, and Real Estate gallery grants when a Cloudflare Access session exists |
+| `GET /auth/login` | Browser starts Google-backed Cloudflare Access login | Lets Access authenticate the browser and redirects back to the allowed `returnTo` URL |
+| `POST /auth/logout` | Browser signs out of the Access-backed session | Redirects through the Cloudflare Access logout endpoint when configured |
+| `GET /owner/session` | Owner checks cloud role authorization | Requires `owner` tier or the configured Admin email |
+| `POST /real-estate/access-login` | Real Estate client logs in with Google | Requires a registry grant for the requested gallery key, then issues the existing short-lived signed HttpOnly session cookie |
+| `POST /real-estate/login` | Legacy Real Estate client username/password login | Verifies Worker-held credentials and issues a short-lived signed HttpOnly session cookie |
 | `GET /real-estate/session` | Real Estate client checks current auth | Validates the signed session cookie |
 | `POST /real-estate/logout` | Real Estate client logs out | Clears the signed session cookie |
 | `POST /real-estate/originals/session` | Real Estate client requests selected originals | Requires the signed session cookie, checks private R2 originals, and returns per-file private download tokens |
@@ -99,6 +104,10 @@ Real Stripe is selected automatically when `STRIPE_SECRET_KEY` is present. Requi
 - `REAL_ESTATE_GALLERIES_JSON`: JSON array/object of Real Estate galleries with `key`, `username`/`email`, private prefixes, and either Worker-held `accessCode` or `accessCodeHash` plus `accessCodeSalt`.
 - `REAL_ESTATE_SESSION_SECRET`: required secret for signing short-lived Real Estate session cookies.
 - `REAL_ESTATE_SESSION_SECONDS`: optional Real Estate session TTL in seconds; default is 7200.
+- `ACCESS_ADMIN_EMAIL`: the only Admin bootstrap email; currently `ec92009@gmail.com`. Admin is not grantable through registry records.
+- `ACCESS_TEAM_NAME`: Cloudflare Access team name/domain for Google-backed login.
+- `ACCESS_AUD`: Cloudflare Access application audience, installed as a Worker secret.
+- Access user tier records live in KV under `pbe:access-users:<email>` unless a dedicated `ACCESS_USERS_KV` binding is added later. See `docs/architecture/access-tiers.md`.
 - `ORDER_EMAIL_FROM`: sender used for buyer delivery emails, for example `Photos By Elie <orders@photos-by-elie.com>`.
 - `ORDER_EMAIL_REPLY_TO`: optional reply-to mailbox for buyer delivery emails.
 - `ORDER_EMAIL_INCLUDE_DIRECT_DOWNLOAD_LINKS`: optional flag; currently disabled in production so buyer emails send the first-party order recovery page without direct token links that can trip spam heuristics or depend on a newly propagated download subdomain.

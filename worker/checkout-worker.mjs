@@ -1,3 +1,4 @@
+import { createMemoryAccessUserRegistry } from "./access-user-registry.mjs";
 import { createMemoryStore } from "./memory-store.mjs";
 import { createMockStripeClient } from "./mock-stripe.mjs";
 
@@ -41,6 +42,11 @@ const credentialedJson = (request, body, status = 200, headers = {}) =>
 
 const credentialedErrorJson = (request, status, code, message, details = undefined, headers = {}) =>
   credentialedJson(request, { error: { code, message, details } }, status, headers);
+
+const redirect = (location, status = 302) => new Response(null, {
+  status,
+  headers: { location },
+});
 
 const parseJson = async (request) => {
   try {
@@ -138,6 +144,51 @@ const normalizeEmailAllowlist = (emails) => {
   return emails
     .map((email) => String(email || "").trim().toLowerCase())
     .filter(validEmail);
+};
+
+const normalizeOriginList = (origins) => {
+  const source = Array.isArray(origins) ? origins : String(origins || "").split(/[\s,;]+/);
+  return source.map((origin) => {
+    try {
+      return new URL(origin).origin;
+    } catch {
+      return "";
+    }
+  }).filter(Boolean);
+};
+
+const normalizeAdminEmail = (value) => {
+  const email = String(value || "").trim().toLowerCase();
+  return validEmail(email) ? email : "";
+};
+
+const rolesForTier = (tier, admin = false) => {
+  const roles = ["user"];
+  if (tier === "re_client") roles.push("re_client");
+  if (tier === "owner" || admin) roles.push("owner");
+  if (admin) roles.push("admin");
+  return roles;
+};
+
+const sessionForAccessIdentity = async (identity, { accessUserRegistry, adminEmail }) => {
+  const email = String(identity?.email || "").trim().toLowerCase();
+  const record = email && accessUserRegistry?.getUser ? await accessUserRegistry.getUser(email) : null;
+  const admin = Boolean(email && adminEmail && email === adminEmail);
+  const tier = admin ? "admin" : String(record?.tier || "user").trim().toLowerCase();
+  const realEstateClients = Array.isArray(record?.realEstateClients) ? record.realEstateClients : [];
+  const roles = rolesForTier(tier, admin);
+  if (realEstateClients.length && !roles.includes("re_client")) roles.push("re_client");
+  return {
+    authenticated: Boolean(email),
+    email,
+    provider: identity?.provider || "",
+    roles,
+    tier,
+    admin,
+    realEstateClients,
+    expiresAt: identity?.expiresAt || null,
+    sessionSeconds: Number(identity?.sessionSeconds || 0),
+  };
 };
 
 const normalizeDiscountDefinition = (definition) => {
@@ -939,6 +990,10 @@ export const createPhotosByElieWorker = ({
   realEstateOriginals = null,
   realEstateAuth = null,
   realEstateDeliverables = null,
+  accessAuth = null,
+  accessUserRegistry = createMemoryAccessUserRegistry(),
+  accessAdminEmail = "",
+  authAllowedReturnOrigins = [],
   emailClient = null,
   downloadBaseUrl = ordersUrl,
   includeDirectDownloadLinks = true,
@@ -952,6 +1007,8 @@ export const createPhotosByElieWorker = ({
   const deliveryClient = delivery || defaultDelivery({ now, randomUUID });
   const stripeProvider = stripe.provider || "stripe";
   const discountDefinitions = discountDefinitionsByCode(discountCodes);
+  const authReturnOrigins = normalizeOriginList(authAllowedReturnOrigins);
+  const adminEmail = normalizeAdminEmail(accessAdminEmail);
   const downloadPolicy = () => {
     const nowDate = now();
     const ttlSeconds = boundedPositiveInteger(downloadTokenTtlSeconds, DEFAULT_DOWNLOAD_TOKEN_TTL_SECONDS);
@@ -1506,6 +1563,100 @@ export const createPhotosByElieWorker = ({
     return response;
   };
 
+  const safeAuthReturnUrl = (request) => {
+    const requestUrl = new URL(request.url);
+    const returnTo = requestUrl.searchParams.get("returnTo") || "";
+    if (!returnTo) return requestUrl.origin;
+    try {
+      const candidate = new URL(returnTo);
+      const allowedOrigins = new Set([requestUrl.origin, ...authReturnOrigins]);
+      return allowedOrigins.has(candidate.origin) ? candidate.href : requestUrl.origin;
+    } catch {
+      return requestUrl.origin;
+    }
+  };
+
+  const accessIdentityFor = async (request, { required = false } = {}) => {
+    if (!accessAuth) {
+      if (required) {
+        throw Object.assign(new Error("Google-backed access login is not configured."), {
+          status: 503,
+          code: "access_auth_unavailable",
+        });
+      }
+      return null;
+    }
+    if (!required && typeof accessAuth.optionalSession === "function") {
+      return accessAuth.optionalSession(request);
+    }
+    if (typeof accessAuth.requireSession === "function") {
+      return accessAuth.requireSession(request);
+    }
+    if (required) {
+      throw Object.assign(new Error("Google-backed access login is not configured."), {
+        status: 503,
+        code: "access_auth_unavailable",
+      });
+    }
+    return null;
+  };
+
+  const authSessionFor = async (request, { requiredRole = "", required = false } = {}) => {
+    const identity = await accessIdentityFor(request, { required: required || Boolean(requiredRole) });
+    const session = await sessionForAccessIdentity(identity, { accessUserRegistry, adminEmail });
+    if (requiredRole && !session.roles.includes(requiredRole)) {
+      throw Object.assign(new Error(`This Google account is not authorized for ${requiredRole} access.`), {
+        status: 403,
+        code: `${requiredRole}_role_required`,
+      });
+    }
+    return session;
+  };
+
+  const authSessionPayload = (session) => ({
+    ok: true,
+    authenticated: session.authenticated,
+    user: session.authenticated ? {
+      email: session.email,
+      provider: session.provider,
+      tier: session.tier,
+      expiresAt: session.expiresAt,
+    } : null,
+    roles: session.roles,
+    tier: session.tier,
+    admin: session.admin,
+    realEstateClients: session.realEstateClients,
+    sessionSeconds: session.sessionSeconds,
+  });
+
+  const getAuthSession = async (request) => {
+    const session = await authSessionFor(request);
+    return credentialedJson(request, authSessionPayload(session));
+  };
+
+  const loginAuth = async (request) => {
+    await accessIdentityFor(request, { required: true });
+    return redirect(safeAuthReturnUrl(request));
+  };
+
+  const logoutAuth = async (request) => {
+    const baseUrl = new URL(request.url).origin;
+    if (accessAuth?.logoutUrlFor) return redirect(accessAuth.logoutUrlFor(baseUrl));
+    return credentialedJson(request, { ok: true });
+  };
+
+  const getOwnerSession = async (request) => {
+    const session = await authSessionFor(request, { requiredRole: "owner" });
+    return credentialedJson(request, authSessionPayload(session));
+  };
+
+  const canUseRealEstateGallery = (session, galleryKey) =>
+    Boolean(
+      session?.roles?.includes("admin")
+      || session?.roles?.includes("owner")
+      || session?.realEstateClients?.includes(galleryKey)
+    );
+
   const requireRealEstateSession = async (request, payload) => {
     if (!realEstateAuth || typeof realEstateAuth.requireSession !== "function") {
       throw Object.assign(new Error("Real-estate client login is not configured."), {
@@ -1514,6 +1665,29 @@ export const createPhotosByElieWorker = ({
       });
     }
     return realEstateAuth.requireSession(request, payload.galleryKey);
+  };
+
+  const loginRealEstateWithAccess = async (request) => {
+    if (!realEstateAuth || typeof realEstateAuth.loginTrusted !== "function") {
+      return credentialedErrorJson(request, 503, "real_estate_auth_unavailable", "Real-estate client login is not configured.");
+    }
+    const payload = request.method === "GET"
+      ? Object.fromEntries(new URL(request.url).searchParams.entries())
+      : await parseJson(request);
+    const galleryKey = String(payload.galleryKey || "").trim();
+    if (!galleryKey) {
+      return credentialedErrorJson(request, 400, "missing_gallery_key", "Real-estate gallery key is required.");
+    }
+    const accessSession = await authSessionFor(request, { required: true });
+    if (!canUseRealEstateGallery(accessSession, galleryKey)) {
+      return credentialedErrorJson(request, 403, "real_estate_gallery_forbidden", "This Google account is not authorized for this photo pool.");
+    }
+    const { session, cookie } = await realEstateAuth.loginTrusted({
+      galleryKey,
+      email: accessSession.email,
+      provider: accessSession.provider,
+    }, request);
+    return credentialedJson(request, { session, access: authSessionPayload(accessSession) }, 200, { "set-cookie": cookie });
   };
 
   const loginRealEstate = async (request) => {
@@ -1611,7 +1785,7 @@ export const createPhotosByElieWorker = ({
     const url = new URL(request.url);
     const path = url.pathname.replace(/^\/api(?=\/)/, "");
     if (request.method === "OPTIONS") {
-      return path.startsWith("/real-estate/")
+      return path.startsWith("/real-estate/") || path.startsWith("/auth/") || path.startsWith("/owner/")
         ? credentialedJson(request, { ok: true })
         : json({ ok: true });
     }
@@ -1620,12 +1794,17 @@ export const createPhotosByElieWorker = ({
       if (request.method === "GET" && path === "/health") {
         return json({ ok: true, service: "photosbyelie-worker", stripe: stripeProvider, currency: ORDER_CURRENCY });
       }
+      if (request.method === "GET" && path === "/auth/session") return await getAuthSession(request);
+      if (request.method === "GET" && path === "/auth/login") return await loginAuth(request);
+      if (request.method === "POST" && path === "/auth/logout") return await logoutAuth(request);
+      if (request.method === "GET" && path === "/owner/session") return await getOwnerSession(request);
       if (request.method === "POST" && path === "/analytics/events") return await recordAnalyticsEvents(request);
       if (request.method === "POST" && path === "/checkout/guest") return await createCheckout(request, "guest");
       if (request.method === "POST" && path === "/checkout/account") return await createCheckout(request, "account");
       if (request.method === "POST" && path === "/purchases/recent") return await checkRecentPurchases(request);
       if (request.method === "POST" && path === "/stripe-webhook") return await stripeWebhook(request);
       if (request.method === "POST" && path === "/mock-stripe/pay") return await mockPay(request);
+      if ((request.method === "GET" || request.method === "POST") && path === "/real-estate/access-login") return await loginRealEstateWithAccess(request);
       if (request.method === "POST" && path === "/real-estate/login") return await loginRealEstate(request);
       if (request.method === "GET" && path === "/real-estate/session") return await getRealEstateSession(request);
       if (request.method === "POST" && path === "/real-estate/logout") return await logoutRealEstate(request);
@@ -1651,7 +1830,7 @@ export const createPhotosByElieWorker = ({
       const downloadMatch = path.match(/^\/download\/([^/]+)$/);
       if (request.method === "GET" && downloadMatch) return await download(request, decodeURIComponent(downloadMatch[1]));
     } catch (error) {
-      return path.startsWith("/real-estate/")
+      return path.startsWith("/real-estate/") || path.startsWith("/auth/") || path.startsWith("/owner/")
         ? credentialedErrorJson(request, error.status || 500, error.code || "worker_error", error.message, error.details)
         : errorJson(error.status || 500, error.code || "worker_error", error.message, error.details);
     }

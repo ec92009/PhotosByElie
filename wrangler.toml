@@ -15,8 +15,13 @@ WORKER_PUBLIC_URL = "https://photosbyelie-checkout-mock.ec92009.workers.dev"
 ORDER_EMAIL_FROM = "Photos By Elie <orders@photos-by-elie.com>"
 ORDER_EMAIL_REPLY_TO = "orders@photos-by-elie.com"
 ORDER_EMAIL_INCLUDE_DIRECT_DOWNLOAD_LINKS = "true"
+ACCESS_ADMIN_EMAIL = "ec92009@gmail.com"
 # Secret required to enable buyer delivery emails:
 #   npx wrangler secret put RESEND_API_KEY
+# Optional Google-backed Cloudflare Access login:
+#   ACCESS_TEAM_NAME = "<team-name>"
+#   npx wrangler secret put ACCESS_AUD
+# User tier records are stored in ORDERS_KV under pbe:access-users:<email>.
 # Optional owner-only live checkout rehearsal discount allowlist.
 # Store actual codes outside git, for example:
 #   npx wrangler secret put CHECKOUT_DISCOUNT_CODES_JSON

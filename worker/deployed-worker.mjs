@@ -1,8 +1,10 @@
 import { createCatalogIndex, createPhotosByElieWorker } from "./checkout-worker.mjs";
+import { createKvAccessUserRegistry } from "./access-user-registry.mjs";
 import { createAnalyticsStore } from "./analytics-store.mjs";
 import { createCloudflareImagesRenderer } from "./cloudflare-images-renderer.mjs";
 import { createKvStore } from "./kv-store.mjs";
 import { createMockStripeClient } from "./mock-stripe.mjs";
+import { createOwnerAccessAuth } from "./owner-access-auth.mjs";
 import { createRealEstateAuth } from "./real-estate-auth.mjs";
 import { createRealEstateDeliverables } from "./real-estate-deliverables.mjs";
 import { createRealEstateOriginals } from "./real-estate-originals.mjs";
@@ -53,6 +55,25 @@ const checkoutDiscountCodesFor = (env = {}) => {
     label: "Owner live rehearsal",
   }];
 };
+
+const ownerAccessAuthFor = (env = {}) => {
+  if (!env.ACCESS_TEAM_NAME || !env.ACCESS_AUD) return null;
+  return createOwnerAccessAuth({
+    teamName: env.ACCESS_TEAM_NAME,
+    audience: env.ACCESS_AUD,
+    allowedEmails: env.ACCESS_LOGIN_EMAIL_ALLOWLIST || "",
+  });
+};
+
+const authAllowedReturnOriginsFor = (env = {}, publicSiteUrl = "") => [
+  publicSiteUrl,
+  ...(String(env.AUTH_ALLOWED_RETURN_ORIGINS || "").split(/[\s,;]+/).filter(Boolean)),
+];
+
+const accessUserRegistryFor = (env = {}) => createKvAccessUserRegistry({
+  namespace: env.ACCESS_USERS_KV || requiredBinding(env, "ORDERS_KV"),
+  prefix: env.KV_PREFIX || "pbe",
+});
 
 const cleanRealEstateGallery = (gallery = {}) => {
   const key = String(gallery.key || "").trim();
@@ -269,6 +290,10 @@ export default {
         emailClient,
         publicSiteUrl,
       }),
+      accessAuth: ownerAccessAuthFor(env),
+      accessUserRegistry: accessUserRegistryFor(env),
+      accessAdminEmail: env.ACCESS_ADMIN_EMAIL || "ec92009@gmail.com",
+      authAllowedReturnOrigins: authAllowedReturnOriginsFor(env, publicSiteUrl),
       ordersUrl: `${publicSiteUrl}/order.html`,
       downloadBaseUrl: workerPublicUrl,
       emailClient,

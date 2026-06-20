@@ -183,6 +183,23 @@ export const createRealEstateAuth = ({
     };
   };
 
+  const loginTrusted = async (payload = {}, request) => {
+    const gallery = galleryFor(payload.galleryKey);
+    const createdAt = now();
+    const session = {
+      galleryKey: gallery.key,
+      username: String(gallery.username || gallery.customer || gallery.email || payload.email || "").trim(),
+      createdAt: createdAt.toISOString(),
+      expiresAt: new Date(createdAt.getTime() + ttlSeconds * 1000).toISOString(),
+      provider: payload.provider || "cloudflare-access",
+      email: String(payload.email || "").trim().toLowerCase(),
+    };
+    return {
+      session: publicSessionFor(session),
+      cookie: await cookieFor(session, request),
+    };
+  };
+
   const sessionFromRequest = async (request) => decodeSession(parseCookies(request).get(cookieName));
 
   const requireSession = async (request, galleryKey = "") => {
@@ -193,6 +210,7 @@ export const createRealEstateAuth = ({
 
   return {
     login,
+    loginTrusted,
     requireSession,
     clearCookieFor,
     publicSessionFor,

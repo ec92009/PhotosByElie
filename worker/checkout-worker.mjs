@@ -1845,7 +1845,7 @@ export const createPhotosByElieWorker = ({
       }
       if (request.method === "GET" && path === "/auth/session") return await getAuthSession(request);
       if (request.method === "GET" && path === "/auth/login") return await loginAuth(request);
-      if (request.method === "POST" && path === "/auth/logout") return await logoutAuth(request);
+      if ((request.method === "GET" || request.method === "POST") && path === "/auth/logout") return await logoutAuth(request);
       if (request.method === "GET" && path === "/owner/session") return await getOwnerSession(request);
       if (request.method === "POST" && path === "/owner/actions") return await createOwnerAction(request);
       const ownerActionMatch = path.match(/^\/owner\/actions\/([^/]+)$/);

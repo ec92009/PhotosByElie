@@ -337,8 +337,9 @@ Clock state: running
 | 2026-06-20 | 14:01 CEST | 14:02 CEST | 0:01 | Requested a public account icon with visitor mode and Google email verification, without adding 30-day recovery behavior yet; background implementation/testing time excluded. |
 | 2026-06-20 | 15:20 CEST | 17:12 CEST | 0:14 | Activated Cloudflare Access Google login with Safari-assisted credential setup, corrected the auth app destination path, selected Google-only login, and verified return to PhotosByElie; browser/deploy/test wait excluded. |
 | 2026-06-20 | 17:20 CEST | 17:26 CEST | 0:02 | Reported and fixed the Real Estate Google login host mismatch that sent client login through the non-Access Worker path; test/deploy wait excluded. |
+| 2026-06-20 | 17:36 CEST | 17:39 CEST | 0:01 | Requested a Sign out option in the signed-in Account sheet; implementation, validation, and deploy wait excluded. |
 
 ## Totals
 
-Active collaboration time used: 19:50
+Active collaboration time used: 19:51
 Remaining budget: not set

@@ -58,10 +58,12 @@ const translations = {
     'account.continue_browsing': 'Continue browsing',
     'account.sign_up_google': 'Sign up with Google',
     'account.sign_in_google': 'Sign in with Google',
+    'account.sign_out': 'Sign out',
     'account.signed_in': 'Signed in',
     'account.verified_email': 'Email verified by Google.',
     'account.loading': 'Checking account...',
     'account.redirecting': 'Opening Google sign-in...',
+    'account.signing_out': 'Signing out...',
     'account.login_unavailable': 'Google login is not available from this page.',
     'account.session_failed': 'Could not check the Google session.',
     'home.lead': 'A selected photo archive with country galleries, AI work kept separate, and fresh representative samples as the collection rail turns.',
@@ -577,10 +579,12 @@ const translations = {
     'account.continue_browsing': 'Continuer',
     'account.sign_up_google': 'Creer un compte avec Google',
     'account.sign_in_google': 'Connexion avec Google',
+    'account.sign_out': 'Deconnexion',
     'account.signed_in': 'Connecte',
     'account.verified_email': 'Email verifie par Google.',
     'account.loading': 'Verification du compte...',
     'account.redirecting': 'Ouverture de la connexion Google...',
+    'account.signing_out': 'Deconnexion...',
     'account.login_unavailable': 'La connexion Google n est pas disponible depuis cette page.',
     'account.session_failed': 'Impossible de verifier la session Google.',
     'home.lead': 'Une archive photo choisie, avec galeries par pays, images IA a part, et nouveaux apercus representatifs au fil du rail des collections.',
@@ -1096,10 +1100,12 @@ const translations = {
     'account.continue_browsing': 'Continuar',
     'account.sign_up_google': 'Registrarse con Google',
     'account.sign_in_google': 'Iniciar sesion con Google',
+    'account.sign_out': 'Cerrar sesion',
     'account.signed_in': 'Sesion iniciada',
     'account.verified_email': 'Email verificado por Google.',
     'account.loading': 'Comprobando cuenta...',
     'account.redirecting': 'Abriendo inicio de sesion de Google...',
+    'account.signing_out': 'Cerrando sesion...',
     'account.login_unavailable': 'El inicio de sesion con Google no esta disponible desde esta pagina.',
     'account.session_failed': 'No se pudo comprobar la sesion de Google.',
     'home.lead': 'Un archivo fotografico seleccionado, con galerias por pais, obra IA separada y muestras representativas nuevas mientras gira el carril de colecciones.',
@@ -3489,6 +3495,7 @@ const ensureSiteAccount = () => {
       </div>
       <div class="site-account-actions">
         <button class="site-account-action" type="button" data-account-visitor data-i18n="account.continue_visitor">${translate('account.continue_visitor')}</button>
+        <button class="site-account-action" type="button" data-account-signout data-i18n="account.sign_out" hidden>${translate('account.sign_out')}</button>
         <button class="site-account-action primary" type="button" data-account-signup data-i18n="account.sign_up_google">${translate('account.sign_up_google')}</button>
         <button class="site-account-action" type="button" data-account-signin data-i18n="account.sign_in_google">${translate('account.sign_in_google')}</button>
       </div>
@@ -3498,6 +3505,7 @@ const ensureSiteAccount = () => {
 
   const closeButton = modal.querySelector('[data-account-close]');
   const visitorButton = modal.querySelector('[data-account-visitor]');
+  const signoutButton = modal.querySelector('[data-account-signout]');
   const signupButton = modal.querySelector('[data-account-signup]');
   const signinButton = modal.querySelector('[data-account-signin]');
   const statusTitle = modal.querySelector('[data-account-status-title]');
@@ -3521,6 +3529,7 @@ const ensureSiteAccount = () => {
         visitorButton.dataset.i18n = 'account.continue_browsing';
         visitorButton.textContent = translate('account.continue_browsing');
       }
+      if (signoutButton) signoutButton.hidden = false;
       if (signupButton) signupButton.hidden = true;
       if (signinButton) signinButton.hidden = true;
       setMessage(translate('account.verified_email'));
@@ -3534,6 +3543,7 @@ const ensureSiteAccount = () => {
     }
     if (signupButton) signupButton.hidden = false;
     if (signinButton) signinButton.hidden = false;
+    if (signoutButton) signoutButton.hidden = true;
     if (signupButton) signupButton.disabled = !state.available;
     if (signinButton) signinButton.disabled = !state.available;
     setMessage(state.available ? "" : translate('account.login_unavailable'), !state.available);
@@ -3605,6 +3615,21 @@ const ensureSiteAccount = () => {
     window.location.href = loginUrl.href;
   };
 
+  const beginGoogleLogout = () => {
+    const workerBase = accountWorkerBaseUrl();
+    localStorage.setItem(accountPreferenceKey, 'visitor');
+    setMessage(translate('account.signing_out'));
+    if (!workerBase) {
+      state.authenticated = false;
+      state.email = "";
+      state.tier = "user";
+      updateAccountView();
+      return;
+    }
+    const logoutUrl = new URL(`${workerBase}/auth/logout`);
+    window.location.href = logoutUrl.href;
+  };
+
   document.body.append(modal);
   controls.append(accountButton);
 
@@ -3619,6 +3644,7 @@ const ensureSiteAccount = () => {
   });
   signupButton?.addEventListener('click', () => beginGoogleLogin('signup'));
   signinButton?.addEventListener('click', () => beginGoogleLogin('signin'));
+  signoutButton?.addEventListener('click', beginGoogleLogout);
   modal.addEventListener('click', (event) => {
     if (event.target === modal) closeAccount();
   });

@@ -205,6 +205,12 @@ test("auth session treats configured Google admin as admin and owner", async () 
   const ownerBody = await ownerResponse.json();
   assert.equal(ownerBody.admin, true);
   assert.equal(ownerBody.roles.includes("owner"), true);
+
+  const logoutResponse = await worker.fetch(new Request("https://worker.test/auth/logout", {
+    headers: { origin: "https://photos-by-elie.com" },
+  }));
+  assert.equal(logoutResponse.status, 302);
+  assert.equal(logoutResponse.headers.get("location"), "https://worker.test/cdn-cgi/access/logout");
 });
 
 test("auth session reads Owner and Real Estate client tiers from the user registry", async () => {

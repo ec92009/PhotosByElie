@@ -8,16 +8,17 @@ GitHub carries code, safe metadata, SOPs, and handoff notes; private Owner DB
 snapshots and client artifacts move through private R2; SSH/Codex Remote SSH is
 for remote execution.
 
-## Current Handoff: 2026-06-20 Google Auth / Max Testing
+## Current Handoff: 2026-06-21 Direct Google Auth / Max Testing
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Branch: `main`
 - Public site: `https://photos-by-elie.com/`
-- Current visible build: `v112.10`
+- Current visible build: `v113.0`
 - Auth Worker/custom domain: `https://auth.photos-by-elie.com`
-- Worker version after auth-root redirect: `1218c58b-ffc6-4f8b-b658-02f7c80bcd24`
+- Worker version after direct OAuth route deploy: `87e9419f-f47c-472b-80c8-fa7e8dbae07c`. Direct OAuth secrets are not enabled yet, so `/auth/google/login` currently falls back to legacy `/auth/login`.
 - Latest relevant commits:
-  - current `v112.10` experiment: Account sign-out targets the Cloudflare Access team-domain logout URL when configured, with a public return URL, to clear the global Access SSO cookie before the next login
+  - current `v113.0` implementation: public Account and Real Estate Google buttons target the Worker-owned direct OAuth route at `/auth/google/login`; successful callback sets a signed `pbe_google_session` cookie that feeds the existing role registry
+  - `v112.10` experiment: Account sign-out targeted the Cloudflare Access team-domain logout URL, but iPhone testing still ended in Cloudflare's no-cookie page or reused the previous Google account
   - `v112.9` rollback: remove the direct Google AccountChooser detour after Google returned a malformed-request page
   - `cf7fc214 photosbyelie: add account sign out`
   - `08d38809 photosbyelie: fix real estate google login host`
@@ -35,13 +36,14 @@ npm run validate
 
 - Test the public homepage account icon near the Settings cog, Google sign-in, signed-in account sheet, and `Sign out`.
 - Direct `https://auth.photos-by-elie.com/` visits should redirect to `https://photos-by-elie.com/?account=1`, not show raw Worker JSON.
-- Account sign-in/up goes straight to the Cloudflare Access login URL with `prompt=select_account`. Do not route directly through Google AccountChooser; iPhone testing showed Google returns a malformed-request page for that detour. Cloudflare's Google identity provider still needs prompt behavior set to `select_account` so a post-sign-out login gives the user a chance to choose a different Google account instead of silently reusing the warm Google session.
-- Current account-switching blocker: `PBE-20260620-342B`. After `v112.9`, iPhone testing still returned to the previous warm Google account, confirming the app-side prompt was not enough. `v112.10` now tests team-domain Access logout so the global Access SSO cookie is cleared too. If account switching still fails after waiting at least 30 seconds post-sign-out, fix in Cloudflare Zero Trust Dashboard or with an API token that can update the Google identity provider `config.prompt` to `select_account`.
-- Test Real Estate Google login from `real-estate.html?client=corine` or the current client key. It should route through Cloudflare Access/Google on `auth.photos-by-elie.com`, not return `owner_auth_missing`.
+- Account sign-in/up should go through direct Google OAuth on `https://auth.photos-by-elie.com/auth/google/login`, not through Google AccountChooser and not through the protected `/auth/login` Access app. The Worker includes a safe fallback: if direct OAuth secrets are not configured, `/auth/google/login` redirects to the legacy `/auth/login` path.
+- Current account-switching blocker: `PBE-20260620-342B`. Cloudflare Access prompt/logout experiments did not reliably let iPhone Safari choose another Google account. The durable path is direct Google OAuth with `prompt=select_account`, controlled by the Worker.
+- Direct OAuth activation gate: the Google OAuth client must authorize `https://auth.photos-by-elie.com/auth/google/callback`, and the Worker must have `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, and `GOOGLE_OAUTH_SESSION_SECRET` set as secrets. The downloaded JSON currently showed only Cloudflare's Access callback, so add the Worker callback before enabling secrets for live testing.
+- Test Real Estate Google login from `real-estate.html?client=corine` or the current client key. It should route through `/auth/google/login`, return to the RE page with `access=1`, then `/real-estate/access-login` should mint the gallery-scoped session.
 - Test `owner.html` after signing in with an Owner/Admin Google account. The public dashboard should open read-only with localhost-only import, upload, cleanup, publishing, and role-management actions disabled; full mutation actions still require the localhost Owner helper.
 - Expected role behavior: ungranted verified Google users remain normal users; granted RE client emails are limited to their assigned gallery keys; Owner work requires an Owner grant and still treats local David admin as the role-management authority.
-- If stale Cloudflare Access state causes confusing results, use Account -> Sign out and retry.
-- Google OAuth client credentials and Worker secrets were entered outside git. Do not copy secrets into repo docs or handoff files.
+- If stale Cloudflare Access state causes confusing results, verify whether direct OAuth secrets are actually enabled. Once direct OAuth is active, Account -> Sign out only needs to clear the Worker Google session cookie and return to the Account sheet.
+- Google OAuth client credentials and Worker secrets stay outside git. Do not copy secrets into repo docs or handoff files.
 
 ## Handoff Direction
 

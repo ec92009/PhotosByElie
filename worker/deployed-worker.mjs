@@ -4,6 +4,7 @@ import { createAnalyticsStore } from "./analytics-store.mjs";
 import { createCloudflareImagesRenderer } from "./cloudflare-images-renderer.mjs";
 import { createKvStore } from "./kv-store.mjs";
 import { createMockStripeClient } from "./mock-stripe.mjs";
+import { createGoogleOAuthAuth } from "./google-oauth-auth.mjs";
 import { createKvOwnerActionStore } from "./owner-action-store.mjs";
 import { createOwnerAccessAuth } from "./owner-access-auth.mjs";
 import { createRealEstateAuth } from "./real-estate-auth.mjs";
@@ -63,6 +64,16 @@ const ownerAccessAuthFor = (env = {}) => {
     teamName: env.ACCESS_TEAM_NAME,
     audience: env.ACCESS_AUD,
     allowedEmails: env.ACCESS_LOGIN_EMAIL_ALLOWLIST || "",
+  });
+};
+
+const googleOAuthAuthFor = (env = {}) => {
+  if (!env.GOOGLE_OAUTH_CLIENT_ID || !env.GOOGLE_OAUTH_CLIENT_SECRET || !env.GOOGLE_OAUTH_SESSION_SECRET) return null;
+  return createGoogleOAuthAuth({
+    clientId: env.GOOGLE_OAUTH_CLIENT_ID,
+    clientSecret: env.GOOGLE_OAUTH_CLIENT_SECRET,
+    sessionSecret: env.GOOGLE_OAUTH_SESSION_SECRET,
+    sessionSeconds: positiveInt(env.GOOGLE_OAUTH_SESSION_SECONDS, 7 * 24 * 60 * 60),
   });
 };
 
@@ -295,6 +306,7 @@ export default {
         emailClient,
         publicSiteUrl,
       }),
+      googleOAuthAuth: googleOAuthAuthFor(env),
       accessAuth: ownerAccessAuthFor(env),
       accessUserRegistry: accessUserRegistryFor(env),
       accessAdminEmail: env.ACCESS_ADMIN_EMAIL || "ec92009@gmail.com",

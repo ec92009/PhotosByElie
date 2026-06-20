@@ -49,15 +49,24 @@ Record shape:
 
 ## Worker Routes
 
-- `GET /auth/session`: optional session check. Without a Google Access session,
-  returns an unauthenticated `user` tier. With a session, returns email, roles,
-  tier, Admin flag, and Real Estate gallery grants.
-- `GET /auth/login`: Cloudflare Access login entrypoint. Redirects back to the
-  allowed `returnTo` origin after Access has authenticated the browser.
-- `GET /auth/logout` or `POST /auth/logout`: redirects through Cloudflare
-  Access logout when Access is configured. When a Cloudflare Access team name is
-  available, the Worker prefers the team-domain logout URL so the global Access
-  SSO cookie is targeted before the next login.
+- `GET /auth/session`: optional session check. Without a Google-backed session,
+  returns an unauthenticated `user` tier. With a direct Google OAuth or legacy
+  Cloudflare Access session, returns email, roles, tier, Admin flag, and Real
+  Estate gallery grants.
+- `GET /auth/google/login`: direct Google OAuth entrypoint for public Account
+  and Real Estate Google buttons. It asks Google for `prompt=select_account`,
+  signs the OAuth state, and redirects back through `/auth/google/callback`.
+  If direct OAuth secrets are not configured, it redirects to the legacy
+  `/auth/login` path.
+- `GET /auth/google/callback`: exchanges the Google authorization code,
+  validates the Google ID token, sets the signed `pbe_google_session` cookie,
+  and returns to the allowed `returnTo` URL.
+- `GET /auth/login`: legacy Cloudflare Access login entrypoint. Redirects back
+  to the allowed `returnTo` origin after Access has authenticated the browser.
+- `GET /auth/logout` or `POST /auth/logout`: clears the direct OAuth session
+  cookie when direct Google OAuth is configured. Otherwise it redirects through
+  Cloudflare Access logout when Access is configured; with a Cloudflare Access
+  team name, the Worker prefers the team-domain logout URL.
 - `GET /owner/session`: requires a Google session whose registry tier is
   `owner`, or the configured Admin email.
 - `POST /owner/actions`: requires an Owner/Admin Google session and stores a
@@ -70,9 +79,9 @@ Record shape:
   the existing signed Real Estate session cookie so the current gallery-scoped
   deliverables/originals APIs keep their object-prefix restrictions.
 
-The Real Estate page prefers Google login through `/auth/login` followed by
-`/real-estate/access-login`. The legacy `POST /real-estate/login` password flow
-remains for local fallback and older client links.
+The Real Estate page prefers Google login through `/auth/google/login` followed
+by `/real-estate/access-login`. The legacy `POST /real-estate/login` password
+flow remains for local fallback and older client links.
 
 ## Local Admin Grant Path
 
@@ -89,7 +98,31 @@ and Real Estate client sessions work from any computer after the KV row exists.
 Rows are marked `pending`, `synced`, or `failed` locally so a failed Wrangler
 publish can be retried without losing the intended grant.
 
-## Cloudflare Access Setup
+## Direct Google OAuth Setup
+
+Direct public Account and Real Estate login uses the Worker, not Cloudflare
+Access. Store the Google client credentials and session signing secret as
+Worker secrets:
+
+```text
+npx wrangler secret put GOOGLE_OAUTH_CLIENT_ID
+npx wrangler secret put GOOGLE_OAUTH_CLIENT_SECRET
+npx wrangler secret put GOOGLE_OAUTH_SESSION_SECRET
+```
+
+The Google OAuth client must include this authorized redirect URI:
+
+```text
+https://auth.photos-by-elie.com/auth/google/callback
+```
+
+The Worker validates Google ID tokens against Google's public certificates,
+requires the issuer/audience/expiry/email verification claims to match, and then
+maps the verified email through the same Admin/Owner/RE/User registry. The
+direct OAuth cookie is host-only to the auth Worker and is used by credentialed
+fetches from the public site.
+
+## Cloudflare Access Legacy Setup
 
 Configure Google as a Cloudflare One identity provider, then configure the
 Worker/auth hostname with Cloudflare Access. Cloudflare documents the Google IdP
@@ -97,13 +130,10 @@ setup in its Google identity provider guide:
 
 https://developers.cloudflare.com/cloudflare-one/integrations/identity-providers/google/
 
-Set the Google identity provider prompt behavior to `select_account`. The
-public Account buttons pass `prompt=select_account` when starting the
-Cloudflare Access login, but the Cloudflare IdP prompt setting is the durable
-way to avoid silently reusing the last warm Google browser session after a user
-signs out. Do not send browsers directly through Google AccountChooser for this
-flow; iPhone testing showed Google rejects that malformed continuation before
-Cloudflare Access can run.
+Keep the Access setup as a fallback for protected legacy `/auth/login` flows.
+Do not send browsers directly through Google AccountChooser; iPhone testing
+showed Google rejects that malformed continuation before Cloudflare Access can
+run.
 
 Cloudflare Access sends the Worker an Access JWT in the
 `Cf-Access-Jwt-Assertion` request header on protected requests. Browser sessions

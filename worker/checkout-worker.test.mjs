@@ -7,6 +7,7 @@ import { createMemoryAccessUserRegistry } from "./access-user-registry.mjs";
 import { createAnalyticsStore } from "./analytics-store.mjs";
 import { createCatalogIndex, createPhotosByElieWorker } from "./checkout-worker.mjs";
 import deployedWorker from "./deployed-worker.mjs";
+import { createGoogleOAuthAuth } from "./google-oauth-auth.mjs";
 import { createLocalZipDelivery } from "./local-zip-delivery.mjs";
 import { createMemoryStore } from "./memory-store.mjs";
 import { createMockStripeClient } from "./mock-stripe.mjs";
@@ -95,6 +96,65 @@ test("Access logout targets the team-domain session cookie when configured", () 
   assert.equal(logoutUrl.origin, "https://byelie.cloudflareaccess.com");
   assert.equal(logoutUrl.pathname, "/cdn-cgi/access/logout");
   assert.equal(logoutUrl.searchParams.get("redirect_url"), "https://photos-by-elie.com/?account=1");
+});
+
+test("Google OAuth auth requests account choice and stores a signed session cookie", async () => {
+  const now = () => new Date("2026-06-21T12:00:00.000Z");
+  let tokenExchangeSeen = false;
+  const auth = createGoogleOAuthAuth({
+    clientId: "google-client-id",
+    clientSecret: "google-client-secret",
+    sessionSecret: "google-session-secret",
+    now,
+    fetcher: async (url, init = {}) => {
+      tokenExchangeSeen = true;
+      assert.equal(String(url), "https://oauth2.googleapis.com/token");
+      const body = new URLSearchParams(init.body);
+      assert.equal(body.get("code"), "oauth-code");
+      assert.equal(body.get("redirect_uri"), "https://worker.test/auth/google/callback");
+      return new Response(JSON.stringify({ id_token: "verified-id-token" }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    },
+    verifyIdToken: async (idToken, context) => {
+      assert.equal(idToken, "verified-id-token");
+      assert.equal(context.clientId, "google-client-id");
+      return {
+        email: "ec92009@gmail.com",
+        provider: "google-oauth",
+        expiresAt: "2026-06-21T13:00:00.000Z",
+        sessionSeconds: 3600,
+      };
+    },
+  });
+
+  const loginUrl = new URL(await auth.loginUrlFor(new Request("https://worker.test/auth/google/login"), {
+    returnTo: "https://photos-by-elie.com/?account=1",
+    intent: "signin",
+  }));
+  assert.equal(loginUrl.origin, "https://accounts.google.com");
+  assert.equal(loginUrl.pathname, "/o/oauth2/v2/auth");
+  assert.equal(loginUrl.searchParams.get("client_id"), "google-client-id");
+  assert.equal(loginUrl.searchParams.get("redirect_uri"), "https://worker.test/auth/google/callback");
+  assert.equal(loginUrl.searchParams.get("response_type"), "code");
+  assert.equal(loginUrl.searchParams.get("scope"), "openid email profile");
+  assert.equal(loginUrl.searchParams.get("prompt"), "select_account");
+
+  const callback = await auth.handleCallback(new Request(
+    `https://worker.test/auth/google/callback?code=oauth-code&state=${encodeURIComponent(loginUrl.searchParams.get("state"))}`
+  ));
+  assert.equal(tokenExchangeSeen, true);
+  assert.equal(callback.returnTo, "https://photos-by-elie.com/?account=1");
+  assert.match(callback.cookie, /^pbe_google_session=/);
+  assert.match(callback.cookie, /HttpOnly/);
+
+  const cookie = callback.cookie.split(";")[0];
+  const session = await auth.optionalSession(new Request("https://worker.test/auth/session", {
+    headers: { cookie },
+  }));
+  assert.equal(session.email, "ec92009@gmail.com");
+  assert.equal(session.provider, "google-oauth");
 });
 
 const firstDeliverablePhotoId = (catalog, collectionKey = null) => {
@@ -373,6 +433,92 @@ test("real-estate access login issues a scoped session for a Google-authenticate
   assert.equal(redirectResponse.status, 302);
   assert.equal(redirectResponse.headers.get("location"), "https://photos-by-elie.com/real-estate.html?client=corine");
   assert.match(redirectResponse.headers.get("set-cookie") || "", /^pbe_re_session=/);
+});
+
+test("direct Google OAuth session feeds account roles, RE login, and logout", async () => {
+  const now = () => new Date("2026-06-21T12:00:00.000Z");
+  const googleAuth = createGoogleOAuthAuth({
+    clientId: "google-client-id",
+    clientSecret: "google-client-secret",
+    sessionSecret: "google-session-secret",
+    now,
+    fetcher: async () => new Response(JSON.stringify({ id_token: "client-id-token" }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    }),
+    verifyIdToken: async () => ({
+      email: "corine@example.com",
+      provider: "google-oauth",
+      expiresAt: "2026-06-21T13:00:00.000Z",
+      sessionSeconds: 3600,
+    }),
+  });
+  const galleries = [{
+    key: "corine-real-estate",
+    username: "Corine",
+    email: "corine@example.com",
+    accessCode: "legacy-code",
+    privateMasterPrefix: "real-estate/corine-real-estate/masters",
+  }];
+  const worker = createPhotosByElieWorker({
+    catalog: loadCatalog(),
+    googleOAuthAuth: googleAuth,
+    accessUserRegistry: createMemoryAccessUserRegistry([{
+      email: "corine@example.com",
+      tier: "re_client",
+      realEstateClients: ["corine-real-estate"],
+    }]),
+    accessAdminEmail: "ec92009@gmail.com",
+    authAllowedReturnOrigins: ["https://photos-by-elie.com"],
+    realEstateAuth: createRealEstateAuth({
+      galleries,
+      sessionSecret: "test-real-estate-session-secret",
+      now,
+    }),
+  });
+
+  const loginResponse = await worker.fetch(new Request(
+    "https://worker.test/auth/google/login?returnTo=https%3A%2F%2Fphotos-by-elie.com%2F%3Faccount%3D1",
+    { headers: { origin: "https://photos-by-elie.com" } }
+  ));
+  assert.equal(loginResponse.status, 302);
+  const googleLoginUrl = new URL(loginResponse.headers.get("location"));
+  assert.equal(googleLoginUrl.origin, "https://accounts.google.com");
+  assert.equal(googleLoginUrl.searchParams.get("prompt"), "select_account");
+
+  const callbackResponse = await worker.fetch(new Request(
+    `https://worker.test/auth/google/callback?code=oauth-code&state=${encodeURIComponent(googleLoginUrl.searchParams.get("state"))}`,
+    { headers: { origin: "https://photos-by-elie.com" } }
+  ));
+  assert.equal(callbackResponse.status, 302);
+  assert.equal(callbackResponse.headers.get("location"), "https://photos-by-elie.com/?account=1");
+  assert.match(callbackResponse.headers.get("set-cookie") || "", /^pbe_google_session=/);
+  const googleCookie = (callbackResponse.headers.get("set-cookie") || "").split(";")[0];
+
+  const sessionResponse = await worker.fetch(new Request("https://worker.test/auth/session", {
+    headers: { cookie: googleCookie, origin: "https://photos-by-elie.com" },
+  }));
+  assert.equal(sessionResponse.status, 200);
+  const session = await sessionResponse.json();
+  assert.equal(session.authenticated, true);
+  assert.equal(session.user.email, "corine@example.com");
+  assert.equal(session.user.provider, "google-oauth");
+  assert.equal(session.tier, "re_client");
+  assert.deepEqual(session.realEstateClients, ["corine-real-estate"]);
+
+  const accessResponse = await worker.fetch(jsonRequest("https://worker.test/real-estate/access-login", {
+    galleryKey: "corine-real-estate",
+  }, { cookie: googleCookie, origin: "https://photos-by-elie.com" }));
+  assert.equal(accessResponse.status, 200);
+  assert.match(accessResponse.headers.get("set-cookie") || "", /^pbe_re_session=/);
+
+  const logoutResponse = await worker.fetch(new Request(
+    "https://worker.test/auth/logout?returnTo=https%3A%2F%2Fphotos-by-elie.com%2F%3Faccount%3D1",
+    { headers: { cookie: googleCookie, origin: "https://photos-by-elie.com" } }
+  ));
+  assert.equal(logoutResponse.status, 302);
+  assert.equal(logoutResponse.headers.get("location"), "https://photos-by-elie.com/?account=1");
+  assert.match(logoutResponse.headers.get("set-cookie") || "", /^pbe_google_session=; Max-Age=0/);
 });
 
 test("checkout and download milestones record analytics without buyer identifiers", async () => {

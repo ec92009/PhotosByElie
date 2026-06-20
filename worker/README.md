@@ -35,9 +35,11 @@ All routes also work under `/api`, for example `/api/checkout/guest`.
 | `POST /purchases/recent` | Basket checks checkout email plus selected photo/product IDs | Scans paid Worker order records and reports whether each item is covered by the 30-day download allowance |
 | `POST /stripe-webhook` | Stripe/mocked Stripe says checkout completed | Verifies payment facts, prepares delivery, marks order `ready` |
 | `POST /mock-stripe/pay` | Local mock payment helper | Simulates a paid Stripe event for a Checkout Session |
-| `GET /auth/session` | Browser checks optional Google-backed session | Returns the authenticated email, tier, roles, Admin flag, and Real Estate gallery grants when a Cloudflare Access session exists |
-| `GET /auth/login` | Browser starts Google-backed Cloudflare Access login | Lets Access authenticate the browser and redirects back to the allowed `returnTo` URL |
-| `GET /auth/logout` or `POST /auth/logout` | Browser signs out of the Access-backed session | Redirects through the Cloudflare Access logout endpoint when configured, preferring the team-domain endpoint so the global SSO cookie is targeted |
+| `GET /auth/session` | Browser checks optional Google-backed session | Returns the authenticated email, tier, roles, Admin flag, and Real Estate gallery grants when a direct Google OAuth or legacy Access session exists |
+| `GET /auth/google/login` | Browser starts direct Google OAuth | Redirects to Google with `prompt=select_account`; falls back to `/auth/login` when direct OAuth secrets are not configured |
+| `GET /auth/google/callback` | Google returns an authorization code | Exchanges the code, validates the ID token, sets the signed `pbe_google_session` cookie, and redirects to the allowed `returnTo` URL |
+| `GET /auth/login` | Browser starts legacy Google-backed Cloudflare Access login | Lets Access authenticate the browser and redirects back to the allowed `returnTo` URL |
+| `GET /auth/logout` or `POST /auth/logout` | Browser signs out of the Google-backed account session | Clears the direct OAuth cookie when configured, otherwise redirects through the Cloudflare Access logout endpoint |
 | `GET /owner/session` | Owner checks cloud role authorization | Requires `owner` tier or the configured Admin email |
 | `POST /real-estate/access-login` | Real Estate client logs in with Google | Requires a registry grant for the requested gallery key, then issues the existing short-lived signed HttpOnly session cookie |
 | `POST /real-estate/login` | Legacy Real Estate client username/password login | Verifies Worker-held credentials and issues a short-lived signed HttpOnly session cookie |

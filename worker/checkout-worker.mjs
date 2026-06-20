@@ -44,9 +44,9 @@ const credentialedJson = (request, body, status = 200, headers = {}) =>
 const credentialedErrorJson = (request, status, code, message, details = undefined, headers = {}) =>
   credentialedJson(request, { error: { code, message, details } }, status, headers);
 
-const redirect = (location, status = 302) => new Response(null, {
+const redirect = (location, status = 302, headers = {}) => new Response(null, {
   status,
-  headers: { location },
+  headers: { location, ...headers },
 });
 
 const parseJson = async (request) => {
@@ -991,6 +991,7 @@ export const createPhotosByElieWorker = ({
   realEstateOriginals = null,
   realEstateAuth = null,
   realEstateDeliverables = null,
+  googleOAuthAuth = null,
   accessAuth = null,
   accessUserRegistry = createMemoryAccessUserRegistry(),
   accessAdminEmail = "",
@@ -1603,8 +1604,39 @@ export const createPhotosByElieWorker = ({
     return null;
   };
 
+  const googleIdentityFor = async (request, { required = false } = {}) => {
+    if (!googleOAuthAuth) {
+      if (required) {
+        throw Object.assign(new Error("Google login is not configured."), {
+          status: 503,
+          code: "google_auth_unavailable",
+        });
+      }
+      return null;
+    }
+    if (!required && typeof googleOAuthAuth.optionalSession === "function") {
+      return googleOAuthAuth.optionalSession(request);
+    }
+    if (typeof googleOAuthAuth.requireSession === "function") {
+      return googleOAuthAuth.requireSession(request);
+    }
+    if (required) {
+      throw Object.assign(new Error("Google login is not configured."), {
+        status: 503,
+        code: "google_auth_unavailable",
+      });
+    }
+    return null;
+  };
+
+  const authIdentityFor = async (request, { required = false } = {}) => {
+    const googleIdentity = await googleIdentityFor(request);
+    if (googleIdentity) return googleIdentity;
+    return accessIdentityFor(request, { required });
+  };
+
   const authSessionFor = async (request, { requiredRole = "", required = false } = {}) => {
-    const identity = await accessIdentityFor(request, { required: required || Boolean(requiredRole) });
+    const identity = await authIdentityFor(request, { required: required || Boolean(requiredRole) });
     const session = await sessionForAccessIdentity(identity, { accessUserRegistry, adminEmail });
     if (requiredRole && !session.roles.includes(requiredRole)) {
       throw Object.assign(new Error(`This Google account is not authorized for ${requiredRole} access.`), {
@@ -1637,12 +1669,44 @@ export const createPhotosByElieWorker = ({
   };
 
   const loginAuth = async (request) => {
+    if (googleOAuthAuth?.loginUrlFor) {
+      return redirect(await googleOAuthAuth.loginUrlFor(request, {
+        returnTo: safeAuthReturnUrl(request),
+        intent: new URL(request.url).searchParams.get("intent") || "",
+        prompt: new URL(request.url).searchParams.get("prompt") || "select_account",
+      }));
+    }
     await accessIdentityFor(request, { required: true });
     return redirect(safeAuthReturnUrl(request));
   };
 
+  const loginGoogleAuth = async (request) => {
+    if (!googleOAuthAuth?.loginUrlFor) {
+      const legacyUrl = new URL("/auth/login", new URL(request.url).origin);
+      for (const [key, value] of new URL(request.url).searchParams.entries()) legacyUrl.searchParams.append(key, value);
+      return redirect(legacyUrl.href);
+    }
+    const url = new URL(request.url);
+    return redirect(await googleOAuthAuth.loginUrlFor(request, {
+      returnTo: safeAuthReturnUrl(request),
+      intent: url.searchParams.get("intent") || "",
+      prompt: url.searchParams.get("prompt") || "select_account",
+    }));
+  };
+
+  const callbackGoogleAuth = async (request) => {
+    if (!googleOAuthAuth?.handleCallback) {
+      return credentialedErrorJson(request, 503, "google_auth_unavailable", "Google login is not configured.");
+    }
+    const result = await googleOAuthAuth.handleCallback(request);
+    return redirect(result.returnTo, 302, { "set-cookie": result.cookie });
+  };
+
   const logoutAuth = async (request) => {
     const baseUrl = new URL(request.url).origin;
+    if (googleOAuthAuth?.clearCookieFor) {
+      return redirect(safeAuthReturnUrl(request), 302, { "set-cookie": googleOAuthAuth.clearCookieFor(request) });
+    }
     if (accessAuth?.logoutUrlFor) return redirect(accessAuth.logoutUrlFor(baseUrl, { returnTo: safeAuthReturnUrl(request) }));
     return credentialedJson(request, { ok: true });
   };
@@ -1845,6 +1909,8 @@ export const createPhotosByElieWorker = ({
       }
       if (request.method === "GET" && path === "/auth/session") return await getAuthSession(request);
       if (request.method === "GET" && path === "/auth/login") return await loginAuth(request);
+      if (request.method === "GET" && path === "/auth/google/login") return await loginGoogleAuth(request);
+      if (request.method === "GET" && path === "/auth/google/callback") return await callbackGoogleAuth(request);
       if ((request.method === "GET" || request.method === "POST") && path === "/auth/logout") return await logoutAuth(request);
       if (request.method === "GET" && path === "/owner/session") return await getOwnerSession(request);
       if (request.method === "POST" && path === "/owner/actions") return await createOwnerAction(request);

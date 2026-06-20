@@ -1,19 +1,18 @@
 # Conversation Summary
 
-Date: 2026-06-20
+Date: 2026-06-21
 
-## Current Max Testing Handoff (2026-06-20)
+## Current Max Testing Handoff (2026-06-21)
 
 Use this section first. Older sections below are retained as historical context and may mention stale visible versions.
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Branch: `main`
-- Current visible build: `v112.10`
-- Latest pushed site commit before the current v112.9 rollback: `c65b6df7 photosbyelie: route account login through google chooser`
+- Current visible build: `v113.0`
 - Public site: `https://photos-by-elie.com/`
 - Auth Worker/custom domain: `https://auth.photos-by-elie.com`
 - Public media route: `https://download.photos-by-elie.com/media`
-- Deployed Worker version after auth-root redirect: `1218c58b-ffc6-4f8b-b658-02f7c80bcd24`
+- Deployed Worker version for direct OAuth route: `87e9419f-f47c-472b-80c8-fa7e8dbae07c`. Direct OAuth secrets are not enabled yet, so live `/auth/google/login` currently falls back to legacy `/auth/login`.
 
 ### What Changed In This Conversation
 
@@ -28,9 +27,11 @@ Use this section first. Older sections below are retained as historical context 
 - Added Worker `/auth/logout` support so sign-out sends the browser through Cloudflare Access logout.
 - Opened the public `owner.html` dashboard for authenticated cloud Owner/Admin sessions as read-only cloud state while leaving localhost-only mutation tools disabled until their cloud endpoints are complete.
 - Redirected direct `auth.photos-by-elie.com/` visits back to the public Account sheet instead of showing raw Worker `not_found` JSON.
-- Backed out the direct Google AccountChooser detour after iPhone testing showed Google returns a malformed-request page. The public Account sheet now returns to direct Cloudflare Access login with `prompt=select_account`; Cloudflare's Google identity provider still needs prompt behavior set to `select_account` for reliable account choice after sign-out.
+- Backed out the direct Google AccountChooser detour after iPhone testing showed Google returns a malformed-request page. At `v112.9`, the public Account sheet returned to direct Cloudflare Access login with `prompt=select_account`; that still did not make account switching reliable.
 - Confirmed after `v112.9` that account switching is still blocked by Cloudflare Access/Google IdP configuration, not by the public site code. New blocker ticket: `PBE-20260620-342B`. Local Cloudflare tokens cannot update the identity provider: the API token gets 403 on the Access identity provider endpoint, and Wrangler OAuth does not have Access IdP write permission.
 - Added `v112.10` as a controlled logout experiment: Account sign-out now asks Cloudflare's team-domain logout endpoint to clear the global Access SSO cookie and passes a public return URL, while Real Estate login also passes `prompt=select_account`.
+- iPhone testing still showed no joy after `v112.10`: Cloudflare Access either reused the same warm Google account or landed on its own no-cookie logout page. The new direction is direct Worker-owned Google OAuth at `/auth/google/login` and `/auth/google/callback`, with `prompt=select_account` controlled by PhotosByElie and a signed `pbe_google_session` cookie feeding the existing role registry.
+- Direct OAuth activation requires adding `https://auth.photos-by-elie.com/auth/google/callback` to the Google OAuth client and setting Worker secrets `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, and `GOOGLE_OAUTH_SESSION_SECRET`. The downloaded JSON currently only listed Cloudflare's Access callback, so live activation should wait for that Google Console redirect update. The route falls back to legacy `/auth/login` when secrets are not configured.
 
 ### Auth And Role Model
 
@@ -53,12 +54,12 @@ npm run validate
 Then test:
 
 1. Open `https://photos-by-elie.com/` and confirm the account icon appears near the Settings cog.
-2. Use Account -> Sign in with Google, then Account -> Sign out. Sign-out should route through `https://auth.photos-by-elie.com/auth/logout` and Cloudflare Access logout.
-3. Open the Real Estate client page, for example `https://photos-by-elie.com/real-estate.html?client=corine`, and click `Continue with Google`. The expected first hop is Google/Cloudflare Access, not a JSON `owner_auth_missing` error.
+2. Use Account -> Sign in with Google. Once direct OAuth is enabled, the first hop should be `https://auth.photos-by-elie.com/auth/google/login`, then Google with an account picker. Account -> Sign out should return to the Account sheet after clearing the Worker Google session cookie.
+3. Open the Real Estate client page, for example `https://photos-by-elie.com/real-estate.html?client=corine`, and click `Continue with Google`. Once direct OAuth is enabled, the first hop should be `/auth/google/login`, then the page should return with `access=1` and mint a scoped RE session.
 4. After Google auth, an ungranted email should be rejected by role/gallery authorization. A granted RE client email should only see its assigned gallery.
-5. If a stale Access session confuses the result, use Account -> Sign out, then retry the flow. A reliable account picker still depends on the Cloudflare Google provider prompt setting, not on a direct Google AccountChooser URL.
+5. If it still falls through to Cloudflare Access, direct OAuth secrets are not active yet or the Google redirect URI has not been authorized.
 
-Account switching remains a watch item. After `v112.10`, retest by signing out, waiting at least 30 seconds for Cloudflare's issued tokens to stop being accepted, then signing in. If it still reuses the old Google account, the remaining fix is Cloudflare's Google identity provider prompt behavior/config prompt set to `select_account`.
+Account switching remains a watch item until the Google Console redirect URI and Worker secrets are in place. The Cloudflare Access experiments are no longer the preferred path for public Account login.
 
 ### Verification Already Run
 

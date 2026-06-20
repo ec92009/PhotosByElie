@@ -347,8 +347,9 @@ Clock state: running
 | 2026-06-20 | 23:20 CEST | 23:21 CEST | 0:01 | Reported Google malformed-request failure from the AccountChooser workaround; rollback/testing time excluded. |
 | 2026-06-20 | 23:37 CEST | 23:42 CEST | 0:01 | Reported `v112.9` still reuses the previous warm Google account; traced blocker to Cloudflare IdP prompt configuration/token permission. |
 | 2026-06-20 | 23:53 CEST | 23:54 CEST | 0:01 | Reported continued same-account login; added team-domain Access logout experiment for `v112.10`. |
+| 2026-06-21 | 00:00 CEST | 00:02 CEST | 0:02 | Reported `v112.10` still failed on iPhone and showed Cloudflare's no-cookie logout page; shifted Account login direction to direct Worker-owned Google OAuth. |
 
 ## Totals
 
-Active collaboration time used: 20:08
+Active collaboration time used: 20:10
 Remaining budget: not set

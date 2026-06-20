@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v112.10`
+- Current visible version: `v113.0`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -89,7 +89,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - The homepage hides the decorative hero photo stack on narrow or short viewports so the collection carousel stays visible instead of competing for vertical space.
 - The homepage now has shared global discovery controls before Collections, including search, collection, camera/AI origin, media type, date from/to, orientation, adaptive size/duration, color mood, subject, and sort. Filtered results render 24 at a time with a full-match count and gallery-style hearts, keyboard selection, detail navigation, and localhost Owner shortcuts.
 - Every page exposes a top-right Settings control that opens a modal for language, Day/Night mode, glass transparency, and glass translucency. The visual sliders persist in `localStorage` and update shared glass CSS variables across pages.
-- Public pages also expose an Account control near Settings. Visitors can keep browsing anonymously, verify their email with Google through Cloudflare Access, see the signed-in email in the Account sheet, and sign out through the auth Worker/Cloudflare Access logout route.
+- Public pages also expose an Account control near Settings. Visitors can keep browsing anonymously, verify their email with direct Google OAuth through the auth Worker, see the signed-in email in the Account sheet, and sign out by clearing the Worker Google session. If the direct OAuth secrets are not configured yet, the Worker route falls back to the legacy Cloudflare Access login path.
 - Gallery grid density supports compact phone browsing beyond 3 columns, has a larger touch target, and writes the selected density back to the `columns=` URL parameter for reload/back consistency.
 - Gallery/home load controls show exact remaining counts, using labels such as `See 24 more`, `See 48 more`, and `See all N more` instead of generic "See More" text.
 - Gallery pages load the publishable Expo subset from the public SQLite catalog through the `photos-data.js` bootstrap; public GitHub Pages builds resolve preview media through `media-config.js` and each catalog row's `media.publicPreview` R2/CDN key instead of relying on committed media assets.
@@ -105,6 +105,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - On localhost Owner detail pages, buyer resolution controls and Basket entry points are hidden so detail review stays focused on moderation shortcuts and metadata edits.
 - When a localhost Owner title/keyword review row opens detail, double-clicking the detail preview requests the private JPG 6 MP render for full-screen inspection when available, and the back link restores the exact review scroll position.
 - `v110.7` adds a clearer Real Estate saved-product shelf sync strip and per-product save/output badges so clients can distinguish cloud-saved selections from ready or pending PDF/video files.
+- `v113.0` adds a direct Worker-owned Google OAuth path at `/auth/google/login` and `/auth/google/callback`, with signed `pbe_google_session` cookies feeding the existing Admin/Owner/RE/User tier model. Public Account and Real Estate Google buttons now target that route; without Google OAuth secrets, it falls back to the legacy Cloudflare Access path.
 - `v112.10` changes Account sign-out to target the Cloudflare Access team-domain logout when configured and passes a public return URL, so sign-out has a chance to clear the global Access SSO cookie before the next Google login. Real Estate Google login also carries the same `prompt=select_account` hint.
 - `v112.9` backs out the direct Google AccountChooser detour after iPhone testing showed Google rejects that malformed continuation. Public Account sign-in/up now goes straight to Cloudflare Access with `prompt=select_account`; durable account switching still requires the Cloudflare Google identity provider prompt behavior to be set to `select_account`.
 - `v112.5` adds signed-in Account sheet sign-out and routes Real Estate Google login through the auth Worker base URL, so client login reaches Cloudflare Access instead of the checkout Worker path that returns `owner_auth_missing`.

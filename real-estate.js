@@ -534,8 +534,9 @@
   const redirectToAccessLogin = () => {
     const baseUrl = workerBaseUrl();
     if (!baseUrl) throw new Error("Google login needs the Photos By Elie Worker.");
-    const loginUrl = new URL(`${baseUrl}/auth/login`);
+    const loginUrl = new URL(`${baseUrl}/auth/google/login`);
     loginUrl.searchParams.set("returnTo", accessLoginReturnUrl());
+    loginUrl.searchParams.set("intent", "real-estate");
     loginUrl.searchParams.set("prompt", "select_account");
     if (elements.loginStatus) elements.loginStatus.textContent = "Opening Google sign-in...";
     window.location.href = loginUrl.href;

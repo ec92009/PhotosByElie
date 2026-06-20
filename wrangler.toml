@@ -20,8 +20,14 @@ ACCESS_ADMIN_EMAIL = "ec92009@gmail.com"
 ACCESS_TEAM_NAME = "byelie"
 # Secret required to enable buyer delivery emails:
 #   npx wrangler secret put RESEND_API_KEY
-# Optional Google-backed Cloudflare Access login:
+# Optional legacy Google-backed Cloudflare Access login:
 #   npx wrangler secret put ACCESS_AUD
+# Optional direct Google OAuth login for public Account/RE flows:
+#   npx wrangler secret put GOOGLE_OAUTH_CLIENT_ID
+#   npx wrangler secret put GOOGLE_OAUTH_CLIENT_SECRET
+#   npx wrangler secret put GOOGLE_OAUTH_SESSION_SECRET
+# The Google OAuth client must authorize:
+#   https://auth.photos-by-elie.com/auth/google/callback
 # User tier records are stored in ORDERS_KV under pbe:access-users:<email>.
 # Owner action records are stored in ORDERS_KV under pbe:owner-actions:<id>
 # unless an OWNER_ACTIONS_KV binding is added later.

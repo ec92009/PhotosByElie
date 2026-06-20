@@ -2059,6 +2059,14 @@ test("deployed Worker serves public R2 previews through the media route", async 
   assert.equal(Buffer.from(await response.arrayBuffer()).toString("hex"), "ffd8ffd9");
 });
 
+test("deployed Worker root redirects direct auth-domain visits to Account", async () => {
+  const response = await deployedWorker.fetch(new Request("https://auth.photos-by-elie.com/"), {
+    PUBLIC_SITE_URL: "https://photos-by-elie.com",
+  });
+  assert.equal(response.status, 302);
+  assert.equal(response.headers.get("location"), "https://photos-by-elie.com/?account=1");
+});
+
 test("deployed Worker serves public R2 media byte ranges", async () => {
   const publicR2 = createFakeR2({
     "assets/music/slideshow-guitar/pixabay/sample.mp3": {

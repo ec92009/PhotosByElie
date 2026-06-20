@@ -13,7 +13,7 @@ Use this section first. Older sections below are retained as historical context 
 - Public site: `https://photos-by-elie.com/`
 - Auth Worker/custom domain: `https://auth.photos-by-elie.com`
 - Public media route: `https://download.photos-by-elie.com/media`
-- Deployed Worker version after sign-out support: `c12eb833-0fed-42ee-a048-b5088793bc3c`
+- Deployed Worker version after auth-root redirect: `1218c58b-ffc6-4f8b-b658-02f7c80bcd24`
 
 ### What Changed In This Conversation
 
@@ -27,6 +27,7 @@ Use this section first. Older sections below are retained as historical context 
 - Fixed the Real Estate Google login host mismatch. The RE page now uses `authWorkerBaseUrl`, so `Continue with Google` goes to the Cloudflare Access path instead of the checkout Worker path that returned `owner_auth_missing`.
 - Added Worker `/auth/logout` support so sign-out sends the browser through Cloudflare Access logout.
 - Opened the public `owner.html` dashboard for authenticated cloud Owner/Admin sessions as read-only cloud state while leaving localhost-only mutation tools disabled until their cloud endpoints are complete.
+- Redirected direct `auth.photos-by-elie.com/` visits back to the public Account sheet instead of showing raw Worker `not_found` JSON.
 
 ### Auth And Role Model
 

@@ -225,6 +225,10 @@ export default {
     }
 
     const publicSiteUrl = env.PUBLIC_SITE_URL || "https://photos-by-elie.com";
+    if ((request.method === "GET" || request.method === "HEAD") && url.pathname === "/") {
+      return Response.redirect(`${publicSiteUrl.replace(/\/+$/, "")}/?account=1`, 302);
+    }
+
     const workerPublicUrl = env.WORKER_PUBLIC_URL || url.origin;
     const downloadTokenTtlSeconds = daysToSeconds(env.DOWNLOAD_TOKEN_TTL_DAYS, 30);
     const downloadTokenMaxDownloads = positiveInt(env.DOWNLOAD_TOKEN_MAX_DOWNLOADS, 100);

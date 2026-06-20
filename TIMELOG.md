@@ -341,8 +341,9 @@ Clock state: running
 | 2026-06-20 | 17:59 CEST | 18:00 CEST | 0:01 | Requested Max handoff docs refresh, conversation summary, commit/push, and a fresh numbered backlog; background documentation work excluded. |
 | 2026-06-20 | 18:08 CEST | 18:10 CEST | 0:02 | Updated from GitHub and retired obsolete Gmail-based Max/David handoff instructions; background repo inspection/editing excluded. |
 | 2026-06-20 | 18:11 CEST | 18:28 CEST | 0:06 | Opened public Owner for cloud Owner/Admin read-only access with localhost helper actions disabled; browser/test wait excluded. |
+| 2026-06-20 | 20:44 CEST | 20:48 CEST | 0:03 | Redirected direct auth Worker root visits to the public Account sheet and verified the live Cloudflare Worker; deploy/test wait excluded. |
 
 ## Totals
 
-Active collaboration time used: 20:00
+Active collaboration time used: 20:03
 Remaining budget: not set

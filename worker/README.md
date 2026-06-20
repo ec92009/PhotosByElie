@@ -28,6 +28,7 @@ All routes also work under `/api`, for example `/api/checkout/guest`.
 
 | Route | Trigger | Result |
 |---|---|---|
+| `GET /` | Direct visit to the Worker/custom auth domain | Redirects to the public site Account sheet instead of exposing raw API JSON |
 | `GET /health` | Runtime check | Returns Worker status and fixed currency |
 | `POST /checkout/guest` | Buyer chooses guest checkout | Validates selected private R2 files, then creates `pending_payment` order and Stripe Checkout URL |
 | `POST /checkout/account` | Buyer chooses account checkout | Same order flow, tagged as `account` |

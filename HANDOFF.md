@@ -13,11 +13,12 @@ for remote execution.
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Branch: `main`
 - Public site: `https://photos-by-elie.com/`
-- Current visible build: `v112.9`
+- Current visible build: `v112.10`
 - Auth Worker/custom domain: `https://auth.photos-by-elie.com`
 - Worker version after auth-root redirect: `1218c58b-ffc6-4f8b-b658-02f7c80bcd24`
 - Latest relevant commits:
-  - current `v112.9` rollback: remove the direct Google AccountChooser detour after Google returned a malformed-request page
+  - current `v112.10` experiment: Account sign-out targets the Cloudflare Access team-domain logout URL when configured, with a public return URL, to clear the global Access SSO cookie before the next login
+  - `v112.9` rollback: remove the direct Google AccountChooser detour after Google returned a malformed-request page
   - `cf7fc214 photosbyelie: add account sign out`
   - `08d38809 photosbyelie: fix real estate google login host`
   - `c757d26a photosbyelie: activate google access login`
@@ -35,7 +36,7 @@ npm run validate
 - Test the public homepage account icon near the Settings cog, Google sign-in, signed-in account sheet, and `Sign out`.
 - Direct `https://auth.photos-by-elie.com/` visits should redirect to `https://photos-by-elie.com/?account=1`, not show raw Worker JSON.
 - Account sign-in/up goes straight to the Cloudflare Access login URL with `prompt=select_account`. Do not route directly through Google AccountChooser; iPhone testing showed Google returns a malformed-request page for that detour. Cloudflare's Google identity provider still needs prompt behavior set to `select_account` so a post-sign-out login gives the user a chance to choose a different Google account instead of silently reusing the warm Google session.
-- Current account-switching blocker: `PBE-20260620-342B`. After `v112.9`, iPhone testing still returns to the previous warm Google account, confirming the app-side prompt is not enough. Local Cloudflare tokens cannot change the IdP (`CLOUDFLARE_API_TOKEN` gets 403 on `/accounts/<account>/access/identity_providers`; Wrangler OAuth lacks Access IdP write). Fix in Cloudflare Zero Trust Dashboard or with an API token that can update the Google identity provider `config.prompt` to `select_account`.
+- Current account-switching blocker: `PBE-20260620-342B`. After `v112.9`, iPhone testing still returned to the previous warm Google account, confirming the app-side prompt was not enough. `v112.10` now tests team-domain Access logout so the global Access SSO cookie is cleared too. If account switching still fails after waiting at least 30 seconds post-sign-out, fix in Cloudflare Zero Trust Dashboard or with an API token that can update the Google identity provider `config.prompt` to `select_account`.
 - Test Real Estate Google login from `real-estate.html?client=corine` or the current client key. It should route through Cloudflare Access/Google on `auth.photos-by-elie.com`, not return `owner_auth_missing`.
 - Test `owner.html` after signing in with an Owner/Admin Google account. The public dashboard should open read-only with localhost-only import, upload, cleanup, publishing, and role-management actions disabled; full mutation actions still require the localhost Owner helper.
 - Expected role behavior: ungranted verified Google users remain normal users; granted RE client emails are limited to their assigned gallery keys; Owner work requires an Owner grant and still treats local David admin as the role-management authority.

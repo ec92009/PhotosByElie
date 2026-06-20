@@ -1643,7 +1643,7 @@ export const createPhotosByElieWorker = ({
 
   const logoutAuth = async (request) => {
     const baseUrl = new URL(request.url).origin;
-    if (accessAuth?.logoutUrlFor) return redirect(accessAuth.logoutUrlFor(baseUrl));
+    if (accessAuth?.logoutUrlFor) return redirect(accessAuth.logoutUrlFor(baseUrl, { returnTo: safeAuthReturnUrl(request) }));
     return credentialedJson(request, { ok: true });
   };
 

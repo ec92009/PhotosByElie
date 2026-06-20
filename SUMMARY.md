@@ -8,7 +8,7 @@ Use this section first. Older sections below are retained as historical context 
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Branch: `main`
-- Current visible build: `v112.9`
+- Current visible build: `v112.10`
 - Latest pushed site commit before the current v112.9 rollback: `c65b6df7 photosbyelie: route account login through google chooser`
 - Public site: `https://photos-by-elie.com/`
 - Auth Worker/custom domain: `https://auth.photos-by-elie.com`
@@ -30,6 +30,7 @@ Use this section first. Older sections below are retained as historical context 
 - Redirected direct `auth.photos-by-elie.com/` visits back to the public Account sheet instead of showing raw Worker `not_found` JSON.
 - Backed out the direct Google AccountChooser detour after iPhone testing showed Google returns a malformed-request page. The public Account sheet now returns to direct Cloudflare Access login with `prompt=select_account`; Cloudflare's Google identity provider still needs prompt behavior set to `select_account` for reliable account choice after sign-out.
 - Confirmed after `v112.9` that account switching is still blocked by Cloudflare Access/Google IdP configuration, not by the public site code. New blocker ticket: `PBE-20260620-342B`. Local Cloudflare tokens cannot update the identity provider: the API token gets 403 on the Access identity provider endpoint, and Wrangler OAuth does not have Access IdP write permission.
+- Added `v112.10` as a controlled logout experiment: Account sign-out now asks Cloudflare's team-domain logout endpoint to clear the global Access SSO cookie and passes a public return URL, while Real Estate login also passes `prompt=select_account`.
 
 ### Auth And Role Model
 
@@ -57,7 +58,7 @@ Then test:
 4. After Google auth, an ungranted email should be rejected by role/gallery authorization. A granted RE client email should only see its assigned gallery.
 5. If a stale Access session confuses the result, use Account -> Sign out, then retry the flow. A reliable account picker still depends on the Cloudflare Google provider prompt setting, not on a direct Google AccountChooser URL.
 
-Account switching remains a known blocked test until Cloudflare's Google identity provider prompt behavior/config prompt is set to `select_account`.
+Account switching remains a watch item. After `v112.10`, retest by signing out, waiting at least 30 seconds for Cloudflare's issued tokens to stop being accepted, then signing in. If it still reuses the old Google account, the remaining fix is Cloudflare's Google identity provider prompt behavior/config prompt set to `select_account`.
 
 ### Verification Already Run
 

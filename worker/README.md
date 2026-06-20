@@ -37,7 +37,7 @@ All routes also work under `/api`, for example `/api/checkout/guest`.
 | `POST /mock-stripe/pay` | Local mock payment helper | Simulates a paid Stripe event for a Checkout Session |
 | `GET /auth/session` | Browser checks optional Google-backed session | Returns the authenticated email, tier, roles, Admin flag, and Real Estate gallery grants when a Cloudflare Access session exists |
 | `GET /auth/login` | Browser starts Google-backed Cloudflare Access login | Lets Access authenticate the browser and redirects back to the allowed `returnTo` URL |
-| `POST /auth/logout` | Browser signs out of the Access-backed session | Redirects through the Cloudflare Access logout endpoint when configured |
+| `GET /auth/logout` or `POST /auth/logout` | Browser signs out of the Access-backed session | Redirects through the Cloudflare Access logout endpoint when configured, preferring the team-domain endpoint so the global SSO cookie is targeted |
 | `GET /owner/session` | Owner checks cloud role authorization | Requires `owner` tier or the configured Admin email |
 | `POST /real-estate/access-login` | Real Estate client logs in with Google | Requires a registry grant for the requested gallery key, then issues the existing short-lived signed HttpOnly session cookie |
 | `POST /real-estate/login` | Legacy Real Estate client username/password login | Verifies Worker-held credentials and issues a short-lived signed HttpOnly session cookie |

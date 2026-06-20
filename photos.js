@@ -3628,6 +3628,7 @@ const ensureSiteAccount = () => {
       return;
     }
     const logoutUrl = new URL(`${workerBase}/auth/logout`);
+    logoutUrl.searchParams.set("returnTo", accountReturnUrl());
     window.location.href = logoutUrl.href;
   };
 

@@ -54,8 +54,10 @@ Record shape:
   tier, Admin flag, and Real Estate gallery grants.
 - `GET /auth/login`: Cloudflare Access login entrypoint. Redirects back to the
   allowed `returnTo` origin after Access has authenticated the browser.
-- `POST /auth/logout`: redirects through Cloudflare Access logout when Access is
-  configured.
+- `GET /auth/logout` or `POST /auth/logout`: redirects through Cloudflare
+  Access logout when Access is configured. When a Cloudflare Access team name is
+  available, the Worker prefers the team-domain logout URL so the global Access
+  SSO cookie is targeted before the next login.
 - `GET /owner/session`: requires a Google session whose registry tier is
   `owner`, or the configured Admin email.
 - `POST /owner/actions`: requires an Owner/Admin Google session and stores a
@@ -110,7 +112,10 @@ JWT signature and audience before trusting the email:
 
 https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/validating-json/
 
-Access logout is handled by redirecting to the application logout endpoint:
+Access logout is handled by redirecting to Cloudflare Access logout. The Worker
+prefers the team-domain logout endpoint when configured because Cloudflare
+stores the global SSO token on the team domain, while the application token
+lives on the protected hostname:
 
 https://developers.cloudflare.com/cloudflare-one/faq/authentication-faq/#how-do-end-users-log-out-of-an-application-protected-by-access
 

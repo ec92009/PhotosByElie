@@ -155,9 +155,11 @@ export const createOwnerAccessAuth = ({
 
   return {
     provider: DEFAULT_PROVIDER,
-    logoutUrlFor: (baseUrl) => {
+    logoutUrlFor: (baseUrl, { returnTo = "" } = {}) => {
       try {
-        return new URL("/cdn-cgi/access/logout", baseUrl).href;
+        const logoutUrl = new URL("/cdn-cgi/access/logout", accessDomain ? `https://${accessDomain}` : baseUrl);
+        if (returnTo) logoutUrl.searchParams.set("redirect_url", returnTo);
+        return logoutUrl.href;
       } catch {
         return `https://${accessDomain}/cdn-cgi/access/logout`;
       }

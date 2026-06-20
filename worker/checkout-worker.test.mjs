@@ -10,6 +10,7 @@ import deployedWorker from "./deployed-worker.mjs";
 import { createLocalZipDelivery } from "./local-zip-delivery.mjs";
 import { createMemoryStore } from "./memory-store.mjs";
 import { createMockStripeClient } from "./mock-stripe.mjs";
+import { createOwnerAccessAuth } from "./owner-access-auth.mjs";
 import { createRealEstateAuth } from "./real-estate-auth.mjs";
 import { createRealEstateDeliverables } from "./real-estate-deliverables.mjs";
 import { createRealEstateOriginals } from "./real-estate-originals.mjs";
@@ -84,6 +85,16 @@ const fakeAccessAuthFor = (email) => ({
     };
   },
   logoutUrlFor: (baseUrl) => `${baseUrl}/cdn-cgi/access/logout`,
+});
+
+test("Access logout targets the team-domain session cookie when configured", () => {
+  const auth = createOwnerAccessAuth({ teamName: "byelie", audience: "aud" });
+  const logoutUrl = new URL(auth.logoutUrlFor("https://auth.photos-by-elie.com", {
+    returnTo: "https://photos-by-elie.com/?account=1",
+  }));
+  assert.equal(logoutUrl.origin, "https://byelie.cloudflareaccess.com");
+  assert.equal(logoutUrl.pathname, "/cdn-cgi/access/logout");
+  assert.equal(logoutUrl.searchParams.get("redirect_url"), "https://photos-by-elie.com/?account=1");
 });
 
 const firstDeliverablePhotoId = (catalog, collectionKey = null) => {

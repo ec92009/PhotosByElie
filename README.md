@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v112.9`
+- Current visible version: `v112.10`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -105,6 +105,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - On localhost Owner detail pages, buyer resolution controls and Basket entry points are hidden so detail review stays focused on moderation shortcuts and metadata edits.
 - When a localhost Owner title/keyword review row opens detail, double-clicking the detail preview requests the private JPG 6 MP render for full-screen inspection when available, and the back link restores the exact review scroll position.
 - `v110.7` adds a clearer Real Estate saved-product shelf sync strip and per-product save/output badges so clients can distinguish cloud-saved selections from ready or pending PDF/video files.
+- `v112.10` changes Account sign-out to target the Cloudflare Access team-domain logout when configured and passes a public return URL, so sign-out has a chance to clear the global Access SSO cookie before the next Google login. Real Estate Google login also carries the same `prompt=select_account` hint.
 - `v112.9` backs out the direct Google AccountChooser detour after iPhone testing showed Google rejects that malformed continuation. Public Account sign-in/up now goes straight to Cloudflare Access with `prompt=select_account`; durable account switching still requires the Cloudflare Google identity provider prompt behavior to be set to `select_account`.
 - `v112.5` adds signed-in Account sheet sign-out and routes Real Estate Google login through the auth Worker base URL, so client login reaches Cloudflare Access instead of the checkout Worker path that returns `owner_auth_missing`.
 - `v110.6` fixes the Real Estate saved-product shelf so ready grouped PDF/video products expose working View/Download controls instead of reopening the selection editor, and enables the local Worker to rehearse Real Estate auth, shelf sync, and ready PDF/video outputs from ignored local client config.

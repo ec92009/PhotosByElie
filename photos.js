@@ -3611,6 +3611,7 @@ const ensureSiteAccount = () => {
     localStorage.setItem(accountPreferenceKey, intent);
     const loginUrl = new URL(`${workerBase}/auth/login`);
     loginUrl.searchParams.set("returnTo", accountReturnUrl());
+    loginUrl.searchParams.set("prompt", "select_account");
     setMessage(translate('account.redirecting'));
     window.location.href = loginUrl.href;
   };

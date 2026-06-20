@@ -81,5 +81,62 @@ class ImportOperationTests(unittest.TestCase):
             self.assertEqual(operation["task"]["id"], "task-legacy")
 
 
+class AccessUserTests(unittest.TestCase):
+    def test_access_user_registry_rows_round_trip(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            db_path = Path("Owner.sqlite")
+
+            user = owner_state_db.upsert_access_user(
+                repo_root,
+                {
+                    "email": "Client@Example.com",
+                    "tier": "re-client",
+                    "realEstateClients": "corine-real-estate, elie-real-estate",
+                    "grantedBy": "ec92009@gmail.com",
+                    "notes": "test client",
+                },
+                db_path=db_path,
+            )
+
+            self.assertEqual(user["email"], "client@example.com")
+            self.assertEqual(user["tier"], "re_client")
+            self.assertEqual(user["realEstateClients"], ["corine-real-estate", "elie-real-estate"])
+            self.assertEqual(user["publishStatus"], "pending")
+            self.assertEqual(user["kvRecord"]["schema"], "photosbyelie.accessUser.v1")
+
+            synced = owner_state_db.mark_access_user_published(
+                repo_root,
+                "client@example.com",
+                ok=True,
+                db_path=db_path,
+            )
+            self.assertEqual(synced["publishStatus"], "synced")
+            self.assertTrue(synced["publishedAt"])
+
+            users = owner_state_db.list_access_users(repo_root, db_path=db_path)
+            self.assertEqual(len(users), 1)
+            self.assertEqual(users[0]["email"], "client@example.com")
+
+    def test_local_admin_access_user_save_action_without_publish(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            summary = local_server.apply_owner_access_user_action(
+                repo_root,
+                {
+                    "action": "save-user",
+                    "user": {
+                        "email": "owner@example.com",
+                        "tier": "owner",
+                    },
+                },
+            )
+
+            self.assertTrue(summary["ok"])
+            self.assertEqual(summary["user"]["email"], "owner@example.com")
+            self.assertEqual(summary["counts"]["owners"], 1)
+            self.assertEqual(summary["users"][0]["publishStatus"], "pending")
+
+
 if __name__ == "__main__":
     unittest.main()

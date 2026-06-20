@@ -1,6 +1,7 @@
 import { createMemoryAccessUserRegistry } from "./access-user-registry.mjs";
 import { createMemoryStore } from "./memory-store.mjs";
 import { createMockStripeClient } from "./mock-stripe.mjs";
+import { createMemoryOwnerActionStore } from "./owner-action-store.mjs";
 
 const ORDER_CURRENCY = "usd";
 const MINIMUM_CHARGE_AMOUNT = 50;
@@ -993,6 +994,7 @@ export const createPhotosByElieWorker = ({
   accessAuth = null,
   accessUserRegistry = createMemoryAccessUserRegistry(),
   accessAdminEmail = "",
+  ownerActionStore = createMemoryOwnerActionStore(),
   authAllowedReturnOrigins = [],
   emailClient = null,
   downloadBaseUrl = ordersUrl,
@@ -1650,6 +1652,43 @@ export const createPhotosByElieWorker = ({
     return credentialedJson(request, authSessionPayload(session));
   };
 
+  const ownerActionId = () => `owner-action-${randomUUID().replace(/[^a-z0-9-]/gi, "").slice(0, 48)}`;
+
+  const createOwnerAction = async (request) => {
+    const session = await authSessionFor(request, { requiredRole: "owner" });
+    if (!ownerActionStore || typeof ownerActionStore.putAction !== "function") {
+      return credentialedErrorJson(request, 503, "owner_actions_unavailable", "Owner action queue is not configured.");
+    }
+    const payload = await parseJson(request);
+    const actionType = String(payload.action || payload.type || "").trim().toLowerCase().replace(/[\s_]+/g, "-");
+    if (!/^[a-z0-9][a-z0-9-]{1,80}$/.test(actionType)) {
+      return credentialedErrorJson(request, 400, "invalid_owner_action", "Owner action type is required.");
+    }
+    const timestamp = now().toISOString();
+    const actionPayload = payload.payload && typeof payload.payload === "object" ? payload.payload : {};
+    const action = await ownerActionStore.putAction({
+      schema: "photosbyelie.ownerAction.v1",
+      id: ownerActionId(),
+      type: actionType,
+      state: "queued",
+      payload: actionPayload,
+      createdBy: session.email,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    });
+    return credentialedJson(request, { ok: true, action }, 202);
+  };
+
+  const getOwnerAction = async (request, actionId) => {
+    await authSessionFor(request, { requiredRole: "owner" });
+    if (!ownerActionStore || typeof ownerActionStore.getAction !== "function") {
+      return credentialedErrorJson(request, 503, "owner_actions_unavailable", "Owner action queue is not configured.");
+    }
+    const action = await ownerActionStore.getAction(actionId);
+    if (!action) return credentialedErrorJson(request, 404, "owner_action_not_found", "Owner action was not found.");
+    return credentialedJson(request, { ok: true, action });
+  };
+
   const canUseRealEstateGallery = (session, galleryKey) =>
     Boolean(
       session?.roles?.includes("admin")
@@ -1798,6 +1837,9 @@ export const createPhotosByElieWorker = ({
       if (request.method === "GET" && path === "/auth/login") return await loginAuth(request);
       if (request.method === "POST" && path === "/auth/logout") return await logoutAuth(request);
       if (request.method === "GET" && path === "/owner/session") return await getOwnerSession(request);
+      if (request.method === "POST" && path === "/owner/actions") return await createOwnerAction(request);
+      const ownerActionMatch = path.match(/^\/owner\/actions\/([^/]+)$/);
+      if (request.method === "GET" && ownerActionMatch) return await getOwnerAction(request, decodeURIComponent(ownerActionMatch[1]));
       if (request.method === "POST" && path === "/analytics/events") return await recordAnalyticsEvents(request);
       if (request.method === "POST" && path === "/checkout/guest") return await createCheckout(request, "guest");
       if (request.method === "POST" && path === "/checkout/account") return await createCheckout(request, "account");

@@ -6,14 +6,14 @@
   <title>Photos By Elie | Owner</title>
   <meta name="description" content="Local owner controls for Photos By Elie."/>
   <link rel="icon" type="image/png" sizes="512x512" href="./assets/branding/photosbyelie-camera-tripod-logo-512.png"/>
-  <link rel="apple-touch-icon" sizes="180x180" href="./assets/branding/photosbyelie-touch-icon-180.png?v=111.1"/>
-  <link rel="manifest" href="./site.webmanifest?v=111.1"/>
+  <link rel="apple-touch-icon" sizes="180x180" href="./assets/branding/photosbyelie-touch-icon-180.png?v=112.1"/>
+  <link rel="manifest" href="./site.webmanifest?v=112.1"/>
   <meta name="theme-color" content="#7b4d26"/>
   <meta name="apple-mobile-web-app-title" content="Photos By Elie"/>
   <script>(()=>{try{const saved=localStorage.getItem('byelie-theme');if(saved==='light'||saved==='dark')document.documentElement.dataset.theme=saved;localStorage.setItem('byelie-language','en');document.documentElement.lang='en';document.documentElement.dataset.language='en'}catch{}})();</script>
-  <link rel="stylesheet" href="./shared.css?v=111.1"/>
-  <link rel="stylesheet" href="./styles.css?v=111.1"/>
-  <link rel="stylesheet" href="./photos.css?v=111.1"/>
+  <link rel="stylesheet" href="./shared.css?v=112.1"/>
+  <link rel="stylesheet" href="./styles.css?v=112.1"/>
+  <link rel="stylesheet" href="./photos.css?v=112.1"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -27,7 +27,7 @@
       <a href="./">Photos</a> <span>|</span>
       <a class="is-active" href="./owner.html">Owner</a>
     </nav>
-    <span class="site-version-badge">v111.1</span>
+    <span class="site-version-badge">v112.1</span>
     <div class="header-controls">
       <button class="language-toggle" type="button" data-language-toggle data-owner-english-only title="Owner tools stay in English">English</button>
       <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light">Night</span><span class="mode-dark">Day</span></button>
@@ -90,7 +90,7 @@
             </div>
             <button class="owner-refresh-button" type="button" data-owner-refresh="real-estate" aria-label="Refresh real estate clients" title="Refresh real estate clients"><span aria-hidden="true">↻</span></button>
           </div>
-          <p>Client name drives the source folder, username, slugs, gallery key, title, and R2 prefixes. Add the email, plain-text local password, and property folders to import.</p>
+          <p>Client name drives the source folder, username, slugs, gallery key, title, and R2 prefixes. Add the email and property folders; legacy local access codes are optional.</p>
           <dl class="owner-counts owner-real-estate-counts">
             <div>
               <dt>Clients</dt>
@@ -111,7 +111,7 @@
                 <tr>
                   <th>Client</th>
                   <th>Email</th>
-                  <th>Password</th>
+                  <th>Legacy code</th>
                   <th>Max ZIP</th>
                   <th>Properties</th>
                   <th>Media</th>
@@ -342,6 +342,74 @@
           <div class="owner-cost-breakdown" data-owner-cost-breakdown></div>
           <p class="owner-card-note" data-owner-cost-note>Storage comes from the latest R2 estimate. Worker/request telemetry is not connected yet.</p>
         </article>
+        <article class="owner-card owner-card-wide owner-card-access-users" data-owner-access-users-card data-owner-tab="cloud">
+          <div class="owner-card-titlebar">
+            <div>
+              <p class="eyebrow">Access</p>
+              <h2>Cloud roles</h2>
+            </div>
+            <button class="owner-refresh-button" type="button" data-owner-refresh="access-users" aria-label="Refresh cloud roles" title="Refresh cloud roles"><span aria-hidden="true">↻</span></button>
+          </div>
+          <dl class="owner-counts owner-access-user-counts">
+            <div>
+              <dt>Owners</dt>
+              <dd data-owner-access-owner-count>0</dd>
+            </div>
+            <div>
+              <dt>RE clients</dt>
+              <dd data-owner-access-re-count>0</dd>
+            </div>
+            <div>
+              <dt>Pending sync</dt>
+              <dd data-owner-access-pending-count>0</dd>
+            </div>
+          </dl>
+          <div class="owner-access-user-layout">
+            <div class="owner-real-estate-table-wrap owner-access-user-table-wrap">
+              <table class="owner-real-estate-table owner-access-user-table">
+                <thead>
+                  <tr>
+                    <th>Email</th>
+                    <th>Tier</th>
+                    <th>RE pools</th>
+                    <th>Sync</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody data-owner-access-user-list>
+                  <tr><td colspan="5">Loading cloud roles...</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <form class="owner-access-user-form" data-owner-access-user-form>
+              <label>
+                <span>Email</span>
+                <input type="email" autocomplete="email" required data-owner-access-email/>
+              </label>
+              <label>
+                <span>Tier</span>
+                <select data-owner-access-tier>
+                  <option value="user">User</option>
+                  <option value="re_client">RE client</option>
+                  <option value="owner">Owner</option>
+                </select>
+              </label>
+              <label class="is-wide">
+                <span>RE gallery keys</span>
+                <textarea rows="3" data-owner-access-re-clients placeholder="Corine-gallery"></textarea>
+              </label>
+              <label class="is-wide">
+                <span>Notes</span>
+                <textarea rows="2" data-owner-access-notes></textarea>
+              </label>
+              <div class="owner-access-user-actions">
+                <button class="btn secondary" type="submit">Save</button>
+                <button class="btn secondary" type="button" data-owner-access-publish>Save + sync</button>
+              </div>
+            </form>
+          </div>
+          <p class="owner-card-note" data-owner-access-user-status>Loading cloud roles...</p>
+        </article>
         <article class="owner-card" data-owner-tab="review">
           <div class="owner-card-titlebar">
             <div>
@@ -526,16 +594,16 @@
     </div>
   </footer>
 
-  <script src="./media-config.js?v=111.1"></script>
-  <script src="./photos.js?v=111.1"></script>
-  <script src="./owner-auth.js?v=111.1"></script>
-  <script src="./owner-tools.js?v=111.1"></script>
-  <script src="./site-version.js?v=111.1"></script>
-  <script src="./analytics.js?v=111.1"></script>
-  <script src="./catalog-sqlite.js?v=111.1"></script>
-  <script src="./photos-data.js?v=111.1"></script>
-  <script src="./hidden-actions.js?v=111.1"></script>
-  <script src="./reserve-store.js?v=111.1"></script>
-  <script src="./owner.js?v=111.1"></script>
+  <script src="./media-config.js?v=112.1"></script>
+  <script src="./photos.js?v=112.1"></script>
+  <script src="./owner-auth.js?v=112.1"></script>
+  <script src="./owner-tools.js?v=112.1"></script>
+  <script src="./site-version.js?v=112.1"></script>
+  <script src="./analytics.js?v=112.1"></script>
+  <script src="./catalog-sqlite.js?v=112.1"></script>
+  <script src="./photos-data.js?v=112.1"></script>
+  <script src="./hidden-actions.js?v=112.1"></script>
+  <script src="./reserve-store.js?v=112.1"></script>
+  <script src="./owner.js?v=112.1"></script>
 </body>
 </html>

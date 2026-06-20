@@ -4,6 +4,7 @@ import { createAnalyticsStore } from "./analytics-store.mjs";
 import { createCloudflareImagesRenderer } from "./cloudflare-images-renderer.mjs";
 import { createKvStore } from "./kv-store.mjs";
 import { createMockStripeClient } from "./mock-stripe.mjs";
+import { createKvOwnerActionStore } from "./owner-action-store.mjs";
 import { createOwnerAccessAuth } from "./owner-access-auth.mjs";
 import { createRealEstateAuth } from "./real-estate-auth.mjs";
 import { createRealEstateDeliverables } from "./real-estate-deliverables.mjs";
@@ -293,6 +294,10 @@ export default {
       accessAuth: ownerAccessAuthFor(env),
       accessUserRegistry: accessUserRegistryFor(env),
       accessAdminEmail: env.ACCESS_ADMIN_EMAIL || "ec92009@gmail.com",
+      ownerActionStore: createKvOwnerActionStore({
+        namespace: env.OWNER_ACTIONS_KV || requiredBinding(env, "ORDERS_KV"),
+        prefix: env.KV_PREFIX || "pbe",
+      }),
       authAllowedReturnOrigins: authAllowedReturnOriginsFor(env, publicSiteUrl),
       ordersUrl: `${publicSiteUrl}/order.html`,
       downloadBaseUrl: workerPublicUrl,

@@ -58,13 +58,34 @@ Record shape:
   configured.
 - `GET /owner/session`: requires a Google session whose registry tier is
   `owner`, or the configured Admin email.
+- `POST /owner/actions`: requires an Owner/Admin Google session and stores a
+  queued cloud Owner action record. This is the protected mutation entrypoint
+  for future remote Owner work; it does not grant roles.
+- `GET /owner/actions/<id>`: requires an Owner/Admin Google session and reads a
+  queued cloud Owner action record.
 - `POST /real-estate/access-login`: requires a Google session whose registry
   grants include the requested `galleryKey` or an Owner/Admin session. It mints
   the existing signed Real Estate session cookie so the current gallery-scoped
   deliverables/originals APIs keep their object-prefix restrictions.
 
-The legacy `POST /real-estate/login` password flow remains for compatibility
-until the Real Estate page UI is converted to prefer Google login.
+The Real Estate page prefers Google login through `/auth/login` followed by
+`/real-estate/access-login`. The legacy `POST /real-estate/login` password flow
+remains for local fallback and older client links.
+
+## Local Admin Grant Path
+
+Admin role grants are not public Worker mutations. On David localhost, the Owner
+page Cloud tab can save email/tier rows into `Owner.sqlite:access_users` and
+publish the corresponding Worker KV record with:
+
+```text
+npx wrangler kv key put pbe:access-users:<email> --path <temp-json> --binding ORDERS_KV --remote
+```
+
+This keeps David-local Admin as the only grant surface while still letting Owner
+and Real Estate client sessions work from any computer after the KV row exists.
+Rows are marked `pending`, `synced`, or `failed` locally so a failed Wrangler
+publish can be retried without losing the intended grant.
 
 ## Cloudflare Access Setup
 
@@ -95,3 +116,10 @@ ACCESS_AUD=<cloudflare-access-application-audience>
 
 `ACCESS_AUD` belongs in Worker secrets. `ACCESS_ADMIN_EMAIL` is not secret.
 
+Run the local preflight before relying on a new machine or Worker auth host:
+
+```bash
+npm run auth:preflight -- --worker-url https://photosbyelie-checkout-mock.ec92009.workers.dev
+```
+
+Use `--offline` to check only local repo configuration.

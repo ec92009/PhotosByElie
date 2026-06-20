@@ -162,6 +162,18 @@
     [...document.querySelectorAll("[data-owner-re-computed]")]
       .map((field) => [field.dataset.ownerReComputed, field])
   );
+  const accessUsersCard = document.querySelector("[data-owner-access-users-card]");
+  const accessUserList = document.querySelector("[data-owner-access-user-list]");
+  const accessUserForm = document.querySelector("[data-owner-access-user-form]");
+  const accessUserEmailInput = document.querySelector("[data-owner-access-email]");
+  const accessUserTierInput = document.querySelector("[data-owner-access-tier]");
+  const accessUserRealEstateInput = document.querySelector("[data-owner-access-re-clients]");
+  const accessUserNotesInput = document.querySelector("[data-owner-access-notes]");
+  const accessUserPublishButton = document.querySelector("[data-owner-access-publish]");
+  const accessUserStatus = document.querySelector("[data-owner-access-user-status]");
+  const accessUserOwnerCountRoot = document.querySelector("[data-owner-access-owner-count]");
+  const accessUserRealEstateCountRoot = document.querySelector("[data-owner-access-re-count]");
+  const accessUserPendingCountRoot = document.querySelector("[data-owner-access-pending-count]");
   const refreshButtons = [...document.querySelectorAll("[data-owner-refresh]")];
   const productSettings = window.photosByElieProductSettings;
   const podStoreStateRoot = document.querySelector("[data-owner-pod-store-state]");
@@ -202,6 +214,9 @@
   let realEstateBusy = false;
   let realEstateProgressTimer = null;
   let realEstateDraftSerial = 0;
+  let accessUsers = [];
+  let selectedAccessUserEmail = "";
+  let accessUsersBusy = false;
   let pricePublishTimer = null;
 
   const setStatus = (message) => {
@@ -423,6 +438,7 @@
       loadKeywordBlacklist();
       loadTitleKeywordReviewCount();
       loadRealEstateOwner();
+      loadAccessUsers();
       startR2Polling();
       if (options.scrollToControls && controls) {
         window.requestAnimationFrame(() => {
@@ -1532,7 +1548,7 @@
           <tr class="${active ? "is-active" : ""}" data-owner-re-client="${escapeHtml(client.id)}">
             <td>${realEstateCellInput(client, "customer", client.customer || "", { required: true, placeholder: "Client" })}</td>
             <td>${realEstateCellInput(client, "email", client.email || "", { type: "email", placeholder: "email@example.com" })}</td>
-            <td>${realEstateCellInput(client, "accessCode", client.accessCode || "", { required: true, placeholder: "Password" })}</td>
+            <td>${realEstateCellInput(client, "accessCode", client.accessCode || "", { placeholder: "Optional" })}</td>
             <td>${realEstateCellInput(client, "maxItems", client.maxItems || 300, { type: "number", min: "1", step: "1", inputmode: "numeric" })}</td>
             <td>${realEstatePropertiesCell(client, properties)}</td>
             <td>${escapeHtml(formatCount(client.stats?.photoCount || 0))}</td>
@@ -1566,11 +1582,169 @@
       loadRealEstateImportSources();
       const selected = selectedRealEstateClient();
       setRealEstateStatus(selected
-        ? `${selected.customer}: ${formatCount(selected.stats?.photoCount || 0)} photos, ${selected.passwordSet ? "password set" : "password needed"}.`
+        ? `${selected.customer}: ${formatCount(selected.stats?.photoCount || 0)} photos, ${selected.passwordSet ? "legacy code set" : "Google access ready"}.`
         : "No real estate clients configured.");
       renderRealEstateOutput("");
     } catch (error) {
       setRealEstateStatus(error?.message || "Could not load real estate clients.");
+    }
+  };
+
+  const setAccessUserStatus = (message) => {
+    if (accessUserStatus) accessUserStatus.textContent = message;
+  };
+
+  const setAccessUsersBusy = (busy) => {
+    accessUsersBusy = busy;
+    if (accessUsersCard) {
+      accessUsersCard.querySelectorAll("button, input, textarea, select").forEach((control) => {
+        control.disabled = busy;
+      });
+    }
+    setRefreshBusy("access-users", busy);
+  };
+
+  const parseAccessRealEstateClients = (value) => String(value || "")
+    .split(/\r?\n|,|;/)
+    .map((client) => client.trim())
+    .filter(Boolean);
+
+  const accessUserByEmail = (email) => {
+    const target = String(email || "").trim().toLowerCase();
+    return accessUsers.find((user) => user.email === target) || null;
+  };
+
+  const fillAccessUserForm = (user = {}) => {
+    selectedAccessUserEmail = user.email || selectedAccessUserEmail || "";
+    if (accessUserEmailInput) accessUserEmailInput.value = user.email || "";
+    if (accessUserTierInput) accessUserTierInput.value = user.tier || "user";
+    if (accessUserRealEstateInput) accessUserRealEstateInput.value = (user.realEstateClients || []).join("\n");
+    if (accessUserNotesInput) accessUserNotesInput.value = user.notes || "";
+  };
+
+  const accessUserPayloadFromForm = () => ({
+    email: accessUserEmailInput?.value || "",
+    tier: accessUserTierInput?.value || "user",
+    realEstateClients: parseAccessRealEstateClients(accessUserRealEstateInput?.value || ""),
+    notes: accessUserNotesInput?.value || "",
+  });
+
+  const accessUserStatusLabel = (user) => {
+    if (user.publishStatus === "synced") return "synced";
+    if (user.publishStatus === "failed") return `failed: ${user.publishError || "sync failed"}`;
+    return "pending";
+  };
+
+  const renderAccessUsers = () => {
+    if (!accessUsersCard) return;
+    const counts = accessUsers.reduce((memo, user) => {
+      if (user.tier === "owner") memo.owners += 1;
+      if (user.tier === "re_client" || user.realEstateClients?.length) memo.realEstateClients += 1;
+      if (user.publishStatus === "pending" || user.publishStatus === "failed") memo.pending += 1;
+      return memo;
+    }, { owners: 0, realEstateClients: 0, pending: 0 });
+    setText(accessUserOwnerCountRoot, formatCount(counts.owners));
+    setText(accessUserRealEstateCountRoot, formatCount(counts.realEstateClients));
+    setText(accessUserPendingCountRoot, formatCount(counts.pending));
+    if (accessUserList) {
+      accessUserList.innerHTML = accessUsers.length ? accessUsers.map((user) => {
+        const active = user.email === selectedAccessUserEmail;
+        const label = user.email || "access user";
+        return `
+          <tr class="${active ? "is-active" : ""}" data-owner-access-email="${escapeHtml(user.email || "")}">
+            <td><strong>${escapeHtml(user.email || "")}</strong><small>${escapeHtml(user.grantedBy || "")}</small></td>
+            <td>${escapeHtml(user.tier || "user")}</td>
+            <td>${escapeHtml((user.realEstateClients || []).join(", ") || "none")}</td>
+            <td>${escapeHtml(accessUserStatusLabel(user))}</td>
+            <td>
+              <div class="owner-real-estate-row-actions">
+                <button class="owner-real-estate-icon-button" type="button" data-owner-access-action="edit" data-owner-access-email="${escapeHtml(user.email || "")}" aria-label="Edit ${escapeHtml(label)}" title="Edit role">${realEstateRowIcon("pen")}</button>
+                <button class="owner-real-estate-login-button" type="button" data-owner-access-action="publish" data-owner-access-email="${escapeHtml(user.email || "")}" aria-label="Sync ${escapeHtml(label)}" title="Sync to Worker KV">Sync</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join("") : `<tr><td colspan="5">No cloud roles saved yet.</td></tr>`;
+    }
+    fillAccessUserForm(accessUserByEmail(selectedAccessUserEmail) || {});
+  };
+
+  const loadAccessUsers = async () => {
+    if (!accessUsersCard) return;
+    setAccessUserStatus("Loading cloud roles...");
+    try {
+      const response = await fetch("/__photosbyelie/access-users", { cache: "no-store" });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Could not load cloud roles.");
+      accessUsers = Array.isArray(payload.users) ? payload.users : [];
+      if (!selectedAccessUserEmail || !accessUserByEmail(selectedAccessUserEmail)) {
+        selectedAccessUserEmail = accessUsers[0]?.email || "";
+      }
+      renderAccessUsers();
+      const counts = payload.counts || {};
+      setAccessUserStatus(`${formatCount(counts.total || accessUsers.length)} users. KV ${payload.kv?.binding || "binding"} / ${payload.kv?.prefix || "prefix"}.`);
+    } catch (error) {
+      accessUsers = [];
+      renderAccessUsers();
+      setAccessUserStatus(error?.message || "Cloud role admin is unavailable.");
+    }
+  };
+
+  const postAccessUserAction = async (body) => {
+    const response = await fetch("/__photosbyelie/access-users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Cloud role action failed.");
+    return payload;
+  };
+
+  const saveAccessUser = async (publish = false) => {
+    if (accessUsersBusy) return;
+    const user = accessUserPayloadFromForm();
+    if (!String(user.email || "").trim()) {
+      setAccessUserStatus("Email is required.");
+      accessUserEmailInput?.focus();
+      return;
+    }
+    const authorized = await ownerAuth?.requireAuth?.("Start the local Photos By Elie server on David to change cloud roles.");
+    if (ownerAuth?.enabled && !authorized) return;
+    setAccessUsersBusy(true);
+    setAccessUserStatus(publish ? `Saving and syncing ${user.email}...` : `Saving ${user.email}...`);
+    try {
+      const payload = await postAccessUserAction({ action: "save-user", user, publish });
+      accessUsers = Array.isArray(payload.users) ? payload.users : accessUsers;
+      selectedAccessUserEmail = payload.user?.email || String(user.email || "").trim().toLowerCase();
+      renderAccessUsers();
+      const syncText = payload.publish ? (payload.publish.ok ? " Synced to Worker KV." : ` Sync failed: ${payload.publish.error}`) : "";
+      setAccessUserStatus(`${selectedAccessUserEmail} saved.${syncText}`);
+    } catch (error) {
+      setAccessUserStatus(error?.message || "Could not save cloud role.");
+    } finally {
+      setAccessUsersBusy(false);
+    }
+  };
+
+  const publishAccessUser = async (email) => {
+    if (accessUsersBusy) return;
+    const target = String(email || "").trim().toLowerCase();
+    if (!target) return;
+    const authorized = await ownerAuth?.requireAuth?.("Start the local Photos By Elie server on David to sync cloud roles.");
+    if (ownerAuth?.enabled && !authorized) return;
+    setAccessUsersBusy(true);
+    setAccessUserStatus(`Syncing ${target}...`);
+    try {
+      const payload = await postAccessUserAction({ action: "publish-user", email: target });
+      accessUsers = Array.isArray(payload.users) ? payload.users : accessUsers;
+      selectedAccessUserEmail = target;
+      renderAccessUsers();
+      setAccessUserStatus(payload.publish?.ok ? `${target} synced to Worker KV.` : `${target} saved, but sync failed: ${payload.publish?.error || "unknown error"}`);
+    } catch (error) {
+      setAccessUserStatus(error?.message || "Could not sync cloud role.");
+    } finally {
+      setAccessUsersBusy(false);
     }
   };
 
@@ -1657,13 +1831,8 @@
     const client = realEstateClients.find((item) => item.id === clientId);
     if (!client) return;
     const clientName = String(client.customer || "").trim();
-    const password = String(client.accessCode || "").trim();
     if (!clientName) {
       setRealEstateStatus("Client name is required before autosave.");
-      return;
-    }
-    if (!password) {
-      setRealEstateStatus(`${clientName}: enter a password to save this client.`);
       return;
     }
     setRealEstateStatus(`Saving ${clientName}...`);
@@ -1688,7 +1857,7 @@
       selectedRealEstateClientId = existingDraft.id;
       renderRealEstateClients();
       focusRealEstateClientField(existingDraft.id, "customer");
-      setRealEstateStatus("Finish the draft client. It saves automatically after client and password are filled.");
+      setRealEstateStatus("Finish the draft client. It saves automatically after the client name is filled.");
       return;
     }
     realEstateDraftSerial += 1;
@@ -1702,7 +1871,7 @@
     renderRealEstateClients();
     renderRealEstateOutput("");
     focusRealEstateClientField(draft.id, "customer");
-    setRealEstateStatus("New client draft. Fill client and password; each field saves when you leave it.");
+    setRealEstateStatus("New client draft. Fill client name first; each field saves when you leave it.");
   };
 
   const deleteRealEstateClient = async (clientId = selectedRealEstateClientId) => {
@@ -1751,7 +1920,7 @@
       return;
     }
     if (!unlockRealEstateClientSession(client)) {
-      setRealEstateStatus(`${client.customer || "Client"} needs a saved password before direct login can open.`);
+      setRealEstateStatus(`${client.customer || "Client"} needs a gallery key before direct login can open.`);
       return;
     }
     markRealEstateRowSelected(client.id);
@@ -4388,6 +4557,9 @@
       } else if (kind === "real-estate") {
         await loadRealEstateOwner();
         setStatus("Real estate clients refreshed.");
+      } else if (kind === "access-users") {
+        await loadAccessUsers();
+        setStatus("Cloud roles refreshed.");
       }
     } catch (error) {
       setStatus(error?.message || "Could not refresh this Owner panel.");
@@ -4526,7 +4698,7 @@
     if (control.dataset.ownerReInlineField === "customer") updateRealEstateComputed(client.customer || "");
     const label = client.customer || "New client";
     setRealEstateStatus(client.isDraft
-      ? `${label}: fill client and password; it saves automatically when both are present.`
+      ? `${label}: fill client name first; it saves automatically when ready.`
       : `${label}: change will save when you leave the field.`);
   });
 
@@ -4548,6 +4720,38 @@
     const button = event.target.closest("[data-owner-re-action]");
     if (!button) return;
     runRealEstateClientAction(button.dataset.ownerReAction || "");
+  });
+
+  accessUserForm?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    saveAccessUser(false);
+  });
+
+  accessUserPublishButton?.addEventListener("click", () => {
+    saveAccessUser(true);
+  });
+
+  accessUserList?.addEventListener("click", (event) => {
+    const action = event.target.closest("[data-owner-access-action]");
+    if (action) {
+      const email = action.dataset.ownerAccessEmail || "";
+      selectedAccessUserEmail = email;
+      if (action.dataset.ownerAccessAction === "publish") {
+        publishAccessUser(email);
+        return;
+      }
+      fillAccessUserForm(accessUserByEmail(email) || {});
+      renderAccessUsers();
+      setAccessUserStatus(email ? `${email} selected.` : "No cloud role selected.");
+      accessUserEmailInput?.focus();
+      return;
+    }
+    const row = event.target.closest("[data-owner-access-email]");
+    if (!row) return;
+    selectedAccessUserEmail = row.dataset.ownerAccessEmail || "";
+    fillAccessUserForm(accessUserByEmail(selectedAccessUserEmail) || {});
+    renderAccessUsers();
+    setAccessUserStatus(selectedAccessUserEmail ? `${selectedAccessUserEmail} selected.` : "No cloud role selected.");
   });
 
   wipeHiddenR2Button?.addEventListener("click", async () => {
@@ -4956,6 +5160,7 @@
     loadKeywordBlacklist();
     loadTitleKeywordReviewCount();
     loadRealEstateOwner();
+    loadAccessUsers();
     startR2Polling();
   }
 })();

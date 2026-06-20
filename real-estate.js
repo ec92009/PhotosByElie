@@ -22,12 +22,14 @@
   const watermarkTextKey = "photosbyelie-real-estate-watermark-text";
 
   const clearLogoutFromHistory = () => {
-    if (!pageParams.has("logout")) return;
+    if (!pageParams.has("logout") && !pageParams.has("access")) return;
     pageParams.delete("logout");
+    pageParams.delete("access");
     if (!window.history?.replaceState) return;
     try {
       const cleanUrl = new URL(window.location.href);
       cleanUrl.searchParams.delete("logout");
+      cleanUrl.searchParams.delete("access");
       window.history.replaceState(window.history.state, "", `${cleanUrl.pathname}${cleanUrl.search}${cleanUrl.hash}`);
     } catch {
       // The current session is valid even if a browser blocks history cleanup.
@@ -62,6 +64,7 @@
     try {
       const url = new URL(window.location.href);
       url.searchParams.delete("logout");
+      url.searchParams.delete("access");
       url.searchParams.set("step", "output");
       url.hash = "real-estate-output-title";
       return `${url.pathname}${url.search}${url.hash}`;
@@ -78,6 +81,7 @@
     loginCode: app.querySelector("[data-re-login-code]"),
     loginCodeToggle: app.querySelector("[data-re-toggle-code]"),
     loginCodeIcon: app.querySelector("[data-re-code-icon]"),
+    loginGoogle: app.querySelector("[data-re-google-login]"),
     loginStatus: app.querySelector("[data-re-login-status]"),
     customer: app.querySelector("[data-re-customer]"),
     title: app.querySelector("[data-re-title]"),
@@ -514,6 +518,63 @@
     const body = await response.json().catch(() => ({}));
     if (!response.ok) throw realEstateWorkerError(response, body);
     return body.session || {};
+  };
+
+  const accessLoginReturnUrl = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("logout");
+    url.searchParams.set("access", "1");
+    return url.href;
+  };
+
+  const redirectToAccessLogin = () => {
+    const baseUrl = workerBaseUrl();
+    if (!baseUrl) throw new Error("Google login needs the Photos By Elie Worker.");
+    const loginUrl = new URL(`${baseUrl}/auth/login`);
+    loginUrl.searchParams.set("returnTo", accessLoginReturnUrl());
+    if (elements.loginStatus) elements.loginStatus.textContent = "Opening Google sign-in...";
+    window.location.href = loginUrl.href;
+  };
+
+  const loginWithAccess = async ({ redirectOnUnauthorized = false } = {}) => {
+    const baseUrl = workerBaseUrl();
+    if (!baseUrl) throw new Error("Google login needs the Photos By Elie Worker.");
+    const response = await fetch(`${baseUrl}/real-estate/access-login`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        galleryKey: state.gallery?.key || "",
+      }),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      if (redirectOnUnauthorized && (response.status === 401 || body?.error?.code === "access_login_required")) {
+        redirectToAccessLogin();
+        return null;
+      }
+      throw realEstateWorkerError(response, body);
+    }
+    return body || {};
+  };
+
+  const unlockFromAccessLogin = async ({ redirectOnUnauthorized = false } = {}) => {
+    const result = await loginWithAccess({ redirectOnUnauthorized });
+    if (!result) return false;
+    const session = result.session || {};
+    const username = session.username || result.access?.user?.email || state.payload?.customer?.username || state.payload?.customer?.name || "";
+    state.unlocked = true;
+    if (elements.loginCode) elements.loginCode.value = "";
+    if (elements.loginName && username) elements.loginName.value = username;
+    writeSessionCredentials(username);
+    writeSession(username);
+    clearLogoutFromHistory();
+    syncAuthUi();
+    setStatus(`${state.photos.length} visible / ${state.photos.length} media`);
+    fetchCloudDeliverables({ quiet: true }).catch(() => {});
+    scheduleVideoExportSynthesis(1000);
+    window.setTimeout(() => showHelp(), 120);
+    return true;
   };
 
   const renderLoginCodeIcon = () => {
@@ -5478,6 +5539,14 @@
       elements.loginCode.focus();
     });
 
+    elements.loginGoogle?.addEventListener("click", () => {
+      try {
+        redirectToAccessLogin();
+      } catch (error) {
+        if (elements.loginStatus) elements.loginStatus.textContent = error?.message || "Google login is unavailable.";
+      }
+    });
+
     elements.loginForm?.addEventListener("submit", async (event) => {
       event.preventDefault();
       const enteredUser = normalizeCredential(elements.loginName?.value);
@@ -5943,7 +6012,15 @@
       setStatus(error.message || "Real-estate gallery is not loaded");
     }
     bindEvents();
-    if (initialized) window.setTimeout(() => showHelp(), 160);
+    if (initialized) {
+      if (!state.unlocked && pageParams.has("access")) {
+        if (elements.loginStatus) elements.loginStatus.textContent = "Completing Google sign-in...";
+        unlockFromAccessLogin({ redirectOnUnauthorized: false }).catch((error) => {
+          if (elements.loginStatus) elements.loginStatus.textContent = error?.message || "Google login did not authorize this review.";
+        });
+      }
+      window.setTimeout(() => showHelp(), 160);
+    }
   };
 
   initialize();

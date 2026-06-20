@@ -22,6 +22,8 @@ ACCESS_ADMIN_EMAIL = "ec92009@gmail.com"
 #   ACCESS_TEAM_NAME = "<team-name>"
 #   npx wrangler secret put ACCESS_AUD
 # User tier records are stored in ORDERS_KV under pbe:access-users:<email>.
+# Owner action records are stored in ORDERS_KV under pbe:owner-actions:<id>
+# unless an OWNER_ACTIONS_KV binding is added later.
 # Optional owner-only live checkout rehearsal discount allowlist.
 # Store actual codes outside git, for example:
 #   npx wrangler secret put CHECKOUT_DISCOUNT_CODES_JSON

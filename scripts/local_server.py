@@ -17,6 +17,7 @@ import shutil
 import sqlite3
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import uuid
@@ -44,6 +45,7 @@ APPLE_PHOTOS_PREFLIGHT_PATH = "/__photosbyelie/apple-photos/preflight"
 APPLE_PHOTOS_IMPORT_PATH = "/__photosbyelie/apple-photos/import"
 REAL_ESTATE_OWNER_PATH = "/__photosbyelie/real-estate-owner"
 REAL_ESTATE_IMPORT_PROGRESS_PATH = "/__photosbyelie/real-estate-import-progress"
+OWNER_ACCESS_USERS_PATH = "/__photosbyelie/access-users"
 OWNER_SESSION_PATH = "/__photosbyelie/owner-session"
 OWNER_LOGIN_PATH = "/__photosbyelie/owner-login"
 OWNER_LOGOUT_PATH = "/__photosbyelie/owner-logout"
@@ -66,6 +68,9 @@ VISIBLE_VERSION_EPOCH = date(2026, 2, 28)
 DERIVATIVES = (("gallery", "gallerySrc"), ("detail", "imageSrc"))
 COUNTRY_ASSIGNMENT_TARGETS = {"france", "usa", "spain", "mexico", "italy", "portugal", "slovakia"}
 OWNER_SESSION_COOKIE = "pbe_owner_session"
+OWNER_ADMIN_EMAIL = os.environ.get("ACCESS_ADMIN_EMAIL", os.environ.get("PBE_OWNER_ADMIN_EMAIL", "ec92009@gmail.com")).strip().lower()
+ACCESS_USER_KV_BINDING = os.environ.get("PBE_ACCESS_USERS_KV_BINDING", "ORDERS_KV")
+ACCESS_USER_KV_PREFIX = os.environ.get("PBE_ACCESS_USERS_KV_PREFIX", os.environ.get("KV_PREFIX", "pbe"))
 OWNER_ACTION_ROOT = Path("assets/owner-actions")
 KEYWORD_BLACKLIST_PATH = OWNER_ACTION_ROOT / "keyword-blacklist.json"
 COUNTRY_ASSIGNMENT_LOG = OWNER_ACTION_ROOT / "country-assignments.jsonl"
@@ -157,6 +162,29 @@ R2_SWEEP_PHASES = {
     "cleanup-cache",
     "real-estate",
 }
+
+ADMIN_MACHINE_NAMES_CACHE: list[str] | None = None
+
+
+def _local_machine_names() -> list[str]:
+    global ADMIN_MACHINE_NAMES_CACHE
+    if ADMIN_MACHINE_NAMES_CACHE is not None:
+        return ADMIN_MACHINE_NAMES_CACHE
+    names: list[str] = []
+    for command in (["scutil", "--get", "ComputerName"], ["hostname"]):
+        try:
+            result = subprocess.run(command, check=False, capture_output=True, text=True, timeout=2)
+        except (OSError, subprocess.SubprocessError):
+            continue
+        name = (result.stdout or "").strip()
+        if name:
+            names.append(name)
+    ADMIN_MACHINE_NAMES_CACHE = names
+    return names
+
+
+def _is_david_admin_machine() -> bool:
+    return any(name.casefold().startswith("david") for name in _local_machine_names())
 R2_SWEEP_SKIPPABLE_PHASES = {
     "discard-start",
     "selected-folder",
@@ -277,9 +305,12 @@ from sync_r2_media import (  # noqa: E402
 from owner_state_db import (  # noqa: E402
     backfill_r2_object_metadata,
     connect as owner_db_connect,
+    list_access_users as list_access_users_db,
+    mark_access_user_published as mark_access_user_published_db,
     media_lifecycle_snapshot,
     record_import_operation as record_import_operation_db,
     update_import_operation as update_import_operation_db,
+    upsert_access_user as upsert_access_user_db,
     upsert_r2_object_state,
 )
 from owner_state_db import keyword_blacklist_terms as keyword_blacklist_terms_db  # noqa: E402
@@ -400,6 +431,9 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         if path == REAL_ESTATE_OWNER_PATH:
             self._handle_real_estate_owner()
             return
+        if path == OWNER_ACCESS_USERS_PATH:
+            self._handle_owner_access_users()
+            return
         if path == REAL_ESTATE_IMPORT_PROGRESS_PATH:
             self._handle_real_estate_import_progress()
             return
@@ -457,6 +491,9 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             return
         if path == REAL_ESTATE_OWNER_PATH:
             self._handle_real_estate_owner()
+            return
+        if path == OWNER_ACCESS_USERS_PATH:
+            self._handle_owner_access_users()
             return
         self.send_error(HTTPStatus.NOT_FOUND)
 
@@ -988,6 +1025,37 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             return
         self._send_json(HTTPStatus.OK, result)
 
+    def _is_admin_loopback_request(self) -> bool:
+        host = self.headers.get("Host", "").split(":", 1)[0].strip("[]")
+        client = self.client_address[0]
+        loopback = client.startswith("127.") or client == "::1"
+        local_host = host in LOCAL_CLIENTS or host.startswith("127.")
+        return loopback and local_host
+
+    def _handle_owner_access_users(self) -> None:
+        if not self._is_admin_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "admin endpoint is David localhost only"})
+            return
+        if not _is_david_admin_machine():
+            self._send_json(HTTPStatus.FORBIDDEN, {
+                "ok": False,
+                "error": "admin endpoint is available only on David",
+                "machineNames": _local_machine_names(),
+            })
+            return
+        try:
+            if self.command == "GET":
+                result = owner_access_users_summary(Path.cwd())
+            else:
+                result = apply_owner_access_user_action(Path.cwd(), self._read_json_body())
+        except ValueError as error:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
+            return
+        except (OSError, sqlite3.Error, subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
+            return
+        self._send_json(HTTPStatus.OK, result)
+
     def _handle_real_estate_import_progress(self) -> None:
         if not self._is_loopback_request():
             self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
@@ -1066,9 +1134,19 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         return False
 
     def _owner_session_payload(self) -> dict:
+        admin = _is_david_admin_machine()
+        roles = ["user", "owner"] + (["admin"] if admin else [])
         return {
             "ok": True,
             "authenticated": True,
+            "user": {
+                "email": "ec92009@gmail.com" if admin else "",
+                "provider": "localhost",
+                "tier": "admin" if admin else "owner",
+            },
+            "roles": roles,
+            "tier": "admin" if admin else "owner",
+            "admin": admin,
             "sessionSeconds": 0,
             "passwordConfigured": False,
             "passwordSource": "none",
@@ -7754,6 +7832,165 @@ def real_estate_owner_summary(repo_root: Path) -> dict:
     }
 
 
+def _access_user_kv_key(email: str) -> str:
+    return f"{ACCESS_USER_KV_PREFIX}:access-users:{email}"
+
+
+def _access_users_counts(users: list[dict]) -> dict:
+    counts = {"total": len(users), "owners": 0, "realEstateClients": 0, "pending": 0, "failed": 0}
+    for user in users:
+        if user.get("tier") == "owner":
+            counts["owners"] += 1
+        if user.get("tier") == "re_client" or user.get("realEstateClients"):
+            counts["realEstateClients"] += 1
+        if user.get("publishStatus") == "pending":
+            counts["pending"] += 1
+        if user.get("publishStatus") == "failed":
+            counts["failed"] += 1
+    return counts
+
+
+def owner_access_users_summary(repo_root: Path) -> dict:
+    users = list_access_users_db(repo_root)
+    return {
+        "ok": True,
+        "admin": True,
+        "adminEmail": OWNER_ADMIN_EMAIL,
+        "machineNames": _local_machine_names(),
+        "path": str(OWNER_ACTION_ROOT / "Owner.sqlite"),
+        "kv": {
+            "binding": ACCESS_USER_KV_BINDING,
+            "prefix": ACCESS_USER_KV_PREFIX,
+            "remote": True,
+            "keyPattern": f"{ACCESS_USER_KV_PREFIX}:access-users:<email>",
+        },
+        "counts": _access_users_counts(users),
+        "users": users,
+    }
+
+
+def _access_user_payload_from_request(payload: dict) -> dict:
+    source = payload.get("user") if isinstance(payload.get("user"), dict) else payload
+    if not isinstance(source, dict):
+        raise ValueError("user payload is required")
+    user = {
+        "email": source.get("email"),
+        "tier": source.get("tier") or "user",
+        "realEstateClients": source.get("realEstateClients") or source.get("realEstateGalleries") or source.get("galleryKeys") or [],
+        "displayName": source.get("displayName") or source.get("display_name") or "",
+        "notes": source.get("notes") or "",
+        "grantedBy": source.get("grantedBy") or OWNER_ADMIN_EMAIL,
+    }
+    if source.get("grantedAt"):
+        user["grantedAt"] = source.get("grantedAt")
+    return user
+
+
+def _find_access_user(repo_root: Path, email: str) -> dict:
+    target = str(email or "").strip().lower()
+    for user in list_access_users_db(repo_root):
+        if user.get("email") == target:
+            return user
+    raise ValueError("access user was not found")
+
+
+def _publish_access_user_to_worker_kv(repo_root: Path, user: dict) -> dict:
+    record = user.get("kvRecord") if isinstance(user.get("kvRecord"), dict) else user
+    email = str(record.get("email") or user.get("email") or "").strip().lower()
+    if not email:
+        raise ValueError("valid email is required")
+    record = {
+        "schema": "photosbyelie.accessUser.v1",
+        "email": email,
+        "tier": str(record.get("tier") or user.get("tier") or "user").strip().lower(),
+        "realEstateClients": record.get("realEstateClients") or user.get("realEstateClients") or [],
+        "grantedBy": str(record.get("grantedBy") or user.get("grantedBy") or OWNER_ADMIN_EMAIL).strip(),
+        "grantedAt": record.get("grantedAt") or user.get("grantedAt") or None,
+        "updatedAt": record.get("updatedAt") or user.get("updatedAt") or datetime.now(timezone.utc).isoformat(),
+    }
+    key = _access_user_kv_key(email)
+    tmp_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            "w",
+            encoding="utf-8",
+            prefix="pbe-access-user-",
+            suffix=".json",
+            delete=False,
+        ) as tmp:
+            tmp.write(json.dumps(record, ensure_ascii=False, sort_keys=True, separators=(",", ":")))
+            tmp_path = Path(tmp.name)
+        command = [
+            "npx",
+            "wrangler",
+            "kv",
+            "key",
+            "put",
+            key,
+            "--path",
+            str(tmp_path),
+            "--binding",
+            ACCESS_USER_KV_BINDING,
+            "--remote",
+        ]
+        result = subprocess.run(command, cwd=repo_root, check=False, capture_output=True, text=True, timeout=120)
+        output = ((result.stdout or "") + (("\n" + result.stderr) if result.stderr else "")).strip()
+        if result.returncode != 0:
+            raise RuntimeError(output[-2000:] or "wrangler kv key put failed")
+        return {
+            "ok": True,
+            "key": key,
+            "binding": ACCESS_USER_KV_BINDING,
+            "output": output[-2000:],
+        }
+    finally:
+        if tmp_path:
+            try:
+                tmp_path.unlink(missing_ok=True)
+            except OSError:
+                pass
+
+
+def _publish_and_mark_access_user(repo_root: Path, user: dict) -> tuple[dict, dict]:
+    try:
+        publish = _publish_access_user_to_worker_kv(repo_root, user)
+    except (OSError, RuntimeError, subprocess.SubprocessError) as error:
+        updated = mark_access_user_published_db(repo_root, user.get("email") or "", ok=False, error=str(error))
+        return updated, {"ok": False, "error": str(error)}
+    updated = mark_access_user_published_db(repo_root, user.get("email") or "", ok=True)
+    return updated, publish
+
+
+def apply_owner_access_user_action(repo_root: Path, payload: dict) -> dict:
+    if not isinstance(payload, dict):
+        raise ValueError("JSON payload is required")
+    action = str(payload.get("action") or "save-user").strip()
+    publish_requested = bool(payload.get("publish"))
+    publish_result: dict | None = None
+
+    if action in {"list-users", "list"}:
+        return owner_access_users_summary(repo_root)
+    if action in {"save-user", "save"}:
+        user = upsert_access_user_db(repo_root, _access_user_payload_from_request(payload))
+        if publish_requested:
+            user, publish_result = _publish_and_mark_access_user(repo_root, user)
+    elif action in {"publish-user", "publish"}:
+        if isinstance(payload.get("user"), dict):
+            user = upsert_access_user_db(repo_root, _access_user_payload_from_request(payload))
+        else:
+            user = _find_access_user(repo_root, str(payload.get("email") or ""))
+        user, publish_result = _publish_and_mark_access_user(repo_root, user)
+    else:
+        raise ValueError(f"unsupported access user action: {action}")
+
+    summary = owner_access_users_summary(repo_root)
+    summary["action"] = action
+    summary["user"] = user
+    if publish_result is not None:
+        summary["publish"] = publish_result
+    return summary
+
+
 def _real_estate_clients_by_id(payload: dict) -> dict[str, dict]:
     return {
         str(client.get("id") or _real_estate_client_output_slug(client)): client
@@ -7815,7 +8052,7 @@ def _save_real_estate_client(repo_root: Path, incoming: dict) -> dict:
     payload = _read_real_estate_client_payload(repo_root)
     clients_by_id = _real_estate_clients_by_id(payload)
     client_id = _slugify(str(incoming.get("id") or incoming.get("customer") or "client"))
-    client = _normalize_real_estate_client(incoming, clients_by_id.get(client_id))
+    client = _normalize_real_estate_client(incoming, clients_by_id.get(client_id), require_password=False)
     if client_id in clients_by_id and client_id != client["id"]:
         del clients_by_id[client_id]
     clients_by_id[client["id"]] = client

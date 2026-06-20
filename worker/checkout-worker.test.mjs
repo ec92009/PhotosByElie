@@ -247,6 +247,56 @@ test("auth session reads Owner and Real Estate client tiers from the user regist
   assert.equal(clientOwnerResponse.status, 403);
 });
 
+test("owner actions are queued behind Owner Google access", async () => {
+  const registry = createMemoryAccessUserRegistry([
+    { email: "owner@example.com", tier: "owner" },
+  ]);
+  const worker = createPhotosByElieWorker({
+    catalog: loadCatalog(),
+    accessAuth: fakeAccessAuthFor("owner@example.com"),
+    accessUserRegistry: registry,
+    accessAdminEmail: "ec92009@gmail.com",
+    now: () => new Date("2026-05-17T12:00:00.000Z"),
+    randomUUID: deterministicIds(),
+  });
+
+  const response = await worker.fetch(jsonRequest("https://worker.test/owner/actions", {
+    action: "import-operation",
+    payload: {
+      sourceKind: "apple_photos",
+      destinationKind: "expo",
+    },
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(response.status, 202);
+  const body = await response.json();
+  assert.equal(body.ok, true);
+  assert.equal(body.action.type, "import-operation");
+  assert.equal(body.action.state, "queued");
+  assert.equal(body.action.createdBy, "owner@example.com");
+  assert.deepEqual(body.action.payload, {
+    sourceKind: "apple_photos",
+    destinationKind: "expo",
+  });
+
+  const readback = await worker.fetch(new Request(`https://worker.test/owner/actions/${body.action.id}`, {
+    headers: { origin: "https://photos-by-elie.com" },
+  }));
+  assert.equal(readback.status, 200);
+  const readbackBody = await readback.json();
+  assert.equal(readbackBody.action.id, body.action.id);
+
+  const clientWorker = createPhotosByElieWorker({
+    catalog: loadCatalog(),
+    accessAuth: fakeAccessAuthFor("client@example.com"),
+    accessUserRegistry: createMemoryAccessUserRegistry([{ email: "client@example.com", tier: "re_client" }]),
+    accessAdminEmail: "ec92009@gmail.com",
+  });
+  const forbidden = await clientWorker.fetch(jsonRequest("https://worker.test/owner/actions", {
+    action: "import-operation",
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(forbidden.status, 403);
+});
+
 test("real-estate access login issues a scoped session for a Google-authenticated client", async () => {
   const galleries = [{
     key: "corine-real-estate",

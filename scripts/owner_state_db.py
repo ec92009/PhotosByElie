@@ -263,6 +263,20 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
           updated_at       TEXT
         ) WITHOUT ROWID;
 
+        CREATE TABLE IF NOT EXISTS access_users (
+          email                    TEXT PRIMARY KEY CHECK (trim(email) <> ''),
+          tier                     TEXT NOT NULL CHECK (tier IN ('user', 're_client', 'owner')),
+          real_estate_clients_json TEXT NOT NULL DEFAULT '[]',
+          display_name             TEXT,
+          notes                    TEXT,
+          granted_by               TEXT,
+          granted_at               TEXT,
+          updated_at               TEXT,
+          published_at             TEXT,
+          publish_status           TEXT NOT NULL DEFAULT 'pending' CHECK (publish_status IN ('pending', 'synced', 'failed')),
+          publish_error            TEXT
+        ) WITHOUT ROWID;
+
         CREATE INDEX IF NOT EXISTS idx_title_keyword_batches_generated_at ON title_keyword_batches(generated_at);
         CREATE INDEX IF NOT EXISTS idx_title_keyword_queue_state_priority ON title_keyword_queue(review_state, rework_priority, latest_proposed_at);
         CREATE INDEX IF NOT EXISTS idx_title_keyword_queue_latest_batch ON title_keyword_queue(latest_proposed_batch_id, review_state);
@@ -284,6 +298,7 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS idx_import_operations_state ON import_operations(state, updated_at);
         CREATE INDEX IF NOT EXISTS idx_import_operations_source ON import_operations(source_kind, updated_at);
         CREATE INDEX IF NOT EXISTS idx_import_operations_destination ON import_operations(destination_kind, updated_at);
+        CREATE INDEX IF NOT EXISTS idx_access_users_tier ON access_users(tier, updated_at);
         """
     )
     for column, ddl in {
@@ -710,6 +725,186 @@ def update_import_operation(
     finally:
         if owns_conn:
             conn.commit()
+            conn.close()
+
+
+ACCESS_USER_TIERS = {"user", "re_client", "owner"}
+ACCESS_USER_SCHEMA = "photosbyelie.accessUser.v1"
+
+
+def _access_user_email(value: Any) -> str:
+    email = str(value or "").strip().lower()
+    if not re.match(r"^[^\s@]+@[^\s@]+\.[^\s@]+$", email):
+        return ""
+    return email
+
+
+def _access_user_tier(value: Any) -> str:
+    tier = str(value or "user").strip().lower().replace("-", "_").replace(" ", "_")
+    return tier if tier in ACCESS_USER_TIERS else "user"
+
+
+def _access_user_real_estate_clients(value: Any) -> list[str]:
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError:
+            parsed = re.split(r"[\s,;]+", value)
+        value = parsed
+    source = value if isinstance(value, list) else []
+    return _unique_texts(str(item or "").strip() for item in source if str(item or "").strip())
+
+
+def _access_user_kv_record(record: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "schema": ACCESS_USER_SCHEMA,
+        "email": _access_user_email(record.get("email")),
+        "tier": _access_user_tier(record.get("tier")),
+        "realEstateClients": _access_user_real_estate_clients(record.get("realEstateClients")),
+        "grantedBy": str(record.get("grantedBy") or "").strip(),
+        "grantedAt": record.get("grantedAt") or None,
+        "updatedAt": record.get("updatedAt") or None,
+    }
+
+
+def _access_user_row(row: sqlite3.Row | None) -> dict[str, Any] | None:
+    if row is None:
+        return None
+    record = {
+        "email": row["email"],
+        "tier": row["tier"],
+        "realEstateClients": _access_user_real_estate_clients(row["real_estate_clients_json"] or "[]"),
+        "displayName": row["display_name"] or "",
+        "notes": row["notes"] or "",
+        "grantedBy": row["granted_by"] or "",
+        "grantedAt": row["granted_at"] or "",
+        "updatedAt": row["updated_at"] or "",
+        "publishedAt": row["published_at"] or "",
+        "publishStatus": row["publish_status"] or "pending",
+        "publishError": row["publish_error"] or "",
+    }
+    record["kvRecord"] = _access_user_kv_record(record)
+    return record
+
+
+def list_access_users(
+    repo_root: Path,
+    db_path: Path | None = None,
+    conn: sqlite3.Connection | None = None,
+) -> list[dict[str, Any]]:
+    owns_conn = conn is None
+    conn = conn or connect(repo_root, db_path)
+    try:
+        rows = conn.execute(
+            """
+            SELECT *
+            FROM access_users
+            ORDER BY
+              CASE tier WHEN 'owner' THEN 0 WHEN 're_client' THEN 1 ELSE 2 END,
+              email COLLATE NOCASE
+            """
+        ).fetchall()
+        return [_access_user_row(row) for row in rows if row is not None]
+    finally:
+        if owns_conn:
+            conn.close()
+
+
+def upsert_access_user(
+    repo_root: Path,
+    user: dict[str, Any],
+    db_path: Path | None = None,
+    conn: sqlite3.Connection | None = None,
+) -> dict[str, Any]:
+    owns_conn = conn is None
+    conn = conn or connect(repo_root, db_path)
+    try:
+        email = _access_user_email(user.get("email"))
+        if not email:
+            raise ValueError("valid email is required")
+        existing = conn.execute("SELECT * FROM access_users WHERE email = ?", (email,)).fetchone()
+        timestamp = now_iso()
+        granted_at = str(user.get("grantedAt") or (existing["granted_at"] if existing else "") or timestamp)
+        granted_by = str(user.get("grantedBy") or (existing["granted_by"] if existing else "") or "").strip()
+        conn.execute(
+            """
+            INSERT INTO access_users (
+              email, tier, real_estate_clients_json, display_name, notes, granted_by,
+              granted_at, updated_at, published_at, publish_status, publish_error
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', '')
+            ON CONFLICT(email) DO UPDATE SET
+              tier = excluded.tier,
+              real_estate_clients_json = excluded.real_estate_clients_json,
+              display_name = excluded.display_name,
+              notes = excluded.notes,
+              granted_by = COALESCE(NULLIF(excluded.granted_by, ''), access_users.granted_by),
+              granted_at = COALESCE(NULLIF(excluded.granted_at, ''), access_users.granted_at),
+              updated_at = excluded.updated_at,
+              publish_status = 'pending',
+              publish_error = ''
+            """,
+            (
+                email,
+                _access_user_tier(user.get("tier")),
+                json.dumps(_access_user_real_estate_clients(user.get("realEstateClients")), ensure_ascii=False, separators=(",", ":")),
+                str(user.get("displayName") or "").strip() or None,
+                str(user.get("notes") or "").strip() or None,
+                granted_by or None,
+                granted_at,
+                timestamp,
+                str(user.get("publishedAt") or (existing["published_at"] if existing else "") or "") or None,
+            ),
+        )
+        if owns_conn:
+            conn.commit()
+        row = conn.execute("SELECT * FROM access_users WHERE email = ?", (email,)).fetchone()
+        return _access_user_row(row) or {}
+    finally:
+        if owns_conn:
+            conn.close()
+
+
+def mark_access_user_published(
+    repo_root: Path,
+    email: str,
+    *,
+    ok: bool,
+    error: str = "",
+    db_path: Path | None = None,
+    conn: sqlite3.Connection | None = None,
+) -> dict[str, Any]:
+    owns_conn = conn is None
+    conn = conn or connect(repo_root, db_path)
+    try:
+        clean_email = _access_user_email(email)
+        if not clean_email:
+            raise ValueError("valid email is required")
+        timestamp = now_iso()
+        conn.execute(
+            """
+            UPDATE access_users
+            SET published_at = CASE WHEN ? THEN ? ELSE published_at END,
+                publish_status = ?,
+                publish_error = ?,
+                updated_at = ?
+            WHERE email = ?
+            """,
+            (
+                1 if ok else 0,
+                timestamp,
+                "synced" if ok else "failed",
+                str(error or "").strip(),
+                timestamp,
+                clean_email,
+            ),
+        )
+        if owns_conn:
+            conn.commit()
+        row = conn.execute("SELECT * FROM access_users WHERE email = ?", (clean_email,)).fetchone()
+        return _access_user_row(row) or {}
+    finally:
+        if owns_conn:
             conn.close()
 
 
@@ -2979,7 +3174,7 @@ def main() -> None:
     else:
         conn = connect(repo_root, args.db)
         try:
-            tables = ["keyword_blacklist", "country_assignments", "title_keyword_batches", "title_keyword_queue", "title_keyword_proposals", "title_keyword_decisions", "r2_objects", "media_lifecycle", "import_operations"]
+            tables = ["keyword_blacklist", "country_assignments", "title_keyword_batches", "title_keyword_queue", "title_keyword_proposals", "title_keyword_decisions", "r2_objects", "media_lifecycle", "import_operations", "access_users"]
             print(", ".join(f"{table}={conn.execute(f'SELECT count(*) FROM {table}').fetchone()[0]}" for table in tables))
         finally:
             conn.close()

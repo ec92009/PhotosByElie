@@ -333,8 +333,9 @@ Clock state: running
 | 2026-06-20 | 10:40 CEST | 10:41 CEST | 0:01 | Clarified that duplicate reconciliation is the next implementation slice under the active unified import ticket. |
 | 2026-06-20 | 10:43 CEST | 10:44 CEST | 0:01 | Confirmed PBE-20260620-6EF2 remains active after the first unified import operation slice. |
 | 2026-06-20 | 10:47 CEST | 11:01 CEST | 0:03 | Executed the cloud access tier foundation for Apple Photos/R2 equal-footing Owner work, including Admin/Owner/RE client/user model and no-password RE access-login; background implementation/testing time excluded. |
+| 2026-06-20 | 11:01 CEST | 11:26 CEST | 0:04 | Finished remaining PBE-20260620-6EF2 auth/import-control slices: David-local access grants, cloud Owner action queue, RE Google-login preference, preflight tooling, versioning, and validation; background implementation/browser/test time excluded. |
 
 ## Totals
 
-Active collaboration time used: 19:29
+Active collaboration time used: 19:33
 Remaining budget: not set

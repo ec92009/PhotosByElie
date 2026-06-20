@@ -183,6 +183,7 @@
   let r2PhaseRenderSnapshot = null;
   let applePhotosAlbums = [];
   let applePhotosBusy = false;
+  let applePhotosLastOperation = null;
   let wasteDeleteActive = false;
   let wasteCleanupActive = false;
   let burstCullPreview = null;
@@ -2523,6 +2524,9 @@
     });
     const values = new Set(applePhotosAlbums.map((album) => album.localIdentifier));
     applePhotosAlbumSelect.value = values.has(previous) ? previous : applePhotosAlbums[0].localIdentifier;
+    if (applePhotosLastOperation?.source?.albumLocalIdentifier !== applePhotosAlbumSelect.value) {
+      applePhotosLastOperation = null;
+    }
   };
 
   const loadApplePhotosAlbums = async () => {
@@ -2546,7 +2550,14 @@
   const applePhotosRequestPayload = (extra = {}) => {
     const album = selectedApplePhotosAlbum();
     if (!album) throw new Error("Choose an Apple Photos album first.");
-    return { albumLocalIdentifier: album.localIdentifier, ...extra };
+    const operationId = applePhotosLastOperation?.source?.albumLocalIdentifier === album.localIdentifier
+      ? applePhotosLastOperation.operationId
+      : "";
+    return {
+      albumLocalIdentifier: album.localIdentifier,
+      ...(operationId ? { operationId } : {}),
+      ...extra,
+    };
   };
 
   const runApplePhotosPreflight = async () => {
@@ -2560,6 +2571,7 @@
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Apple Photos dry run failed.");
+      applePhotosLastOperation = payload.operation || null;
       renderApplePhotosPreview(payload);
       setApplePhotosStatus(`Dry run complete: ${formatCount(payload.candidateCount || 0)} import candidates, ${formatCount(payload.blockedCount || 0)} blocked or unsupported.`);
     } catch (error) {
@@ -2580,6 +2592,7 @@
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Apple Photos import failed.");
+      applePhotosLastOperation = payload.operation || applePhotosLastOperation;
       renderApplePhotosPreview(payload.materialized || payload.preflight || null);
       if (payload.task) {
         r2RepairActive = payload.task.operation === "repair";
@@ -4710,6 +4723,11 @@
   });
 
   applePhotosRefreshButton?.addEventListener("click", loadApplePhotosAlbums);
+  applePhotosAlbumSelect?.addEventListener("change", () => {
+    applePhotosLastOperation = null;
+    renderApplePhotosPreview(null);
+    setApplePhotosStatus("Run dry run before importing the selected Apple Photos album.");
+  });
   applePhotosPreflightButton?.addEventListener("click", async () => {
     const authorized = await ownerAuth?.requireAuth?.("Start the local Photos By Elie server to preflight Apple Photos imports.");
     if (ownerAuth?.enabled && !authorized) return;

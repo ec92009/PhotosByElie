@@ -243,6 +243,26 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
           PRIMARY KEY (source_kind, path)
         ) WITHOUT ROWID;
 
+        CREATE TABLE IF NOT EXISTS import_operations (
+          operation_id     TEXT PRIMARY KEY CHECK (trim(operation_id) <> ''),
+          operation_label  TEXT,
+          state            TEXT NOT NULL CHECK (state IN ('draft', 'preflighted', 'queued', 'running', 'done', 'failed', 'cancelled')),
+          source_kind      TEXT NOT NULL CHECK (source_kind IN ('apple_photos', 'folder', 'legacy_folder')),
+          source_json      TEXT NOT NULL DEFAULT '{}',
+          destination_kind TEXT NOT NULL CHECK (destination_kind IN ('expo', 'real_estate', 'reserve', 'maintenance')),
+          destination_json TEXT NOT NULL DEFAULT '{}',
+          filters_json     TEXT NOT NULL DEFAULT '{}',
+          outputs_json     TEXT NOT NULL DEFAULT '{}',
+          preflight_json   TEXT,
+          task_json        TEXT,
+          error_text       TEXT,
+          created_at       TEXT NOT NULL,
+          queued_at        TEXT,
+          started_at       TEXT,
+          completed_at     TEXT,
+          updated_at       TEXT
+        ) WITHOUT ROWID;
+
         CREATE INDEX IF NOT EXISTS idx_title_keyword_batches_generated_at ON title_keyword_batches(generated_at);
         CREATE INDEX IF NOT EXISTS idx_title_keyword_queue_state_priority ON title_keyword_queue(review_state, rework_priority, latest_proposed_at);
         CREATE INDEX IF NOT EXISTS idx_title_keyword_queue_latest_batch ON title_keyword_queue(latest_proposed_batch_id, review_state);
@@ -261,6 +281,9 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS idx_r2_objects_state_bucket ON r2_objects(lifecycle_state, bucket);
         CREATE INDEX IF NOT EXISTS idx_r2_objects_photo ON r2_objects(photo_id, lifecycle_state);
         CREATE INDEX IF NOT EXISTS idx_media_lifecycle_state ON media_lifecycle(lifecycle_state, updated_at);
+        CREATE INDEX IF NOT EXISTS idx_import_operations_state ON import_operations(state, updated_at);
+        CREATE INDEX IF NOT EXISTS idx_import_operations_source ON import_operations(source_kind, updated_at);
+        CREATE INDEX IF NOT EXISTS idx_import_operations_destination ON import_operations(destination_kind, updated_at);
         """
     )
     for column, ddl in {
@@ -551,6 +574,143 @@ def _json_list(value: Any) -> list[str]:
 
 def _json_list_text(values: Iterable[Any]) -> str:
     return json.dumps(_unique_texts(values), ensure_ascii=False, separators=(",", ":"))
+
+
+def _json_payload_text(value: Any) -> str:
+    payload = value if value is not None else {}
+    return json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+
+
+def _import_operation_id(value: Any = None) -> str:
+    existing = str(value or "").strip()
+    return existing or f"import-{uuid.uuid4().hex[:16]}"
+
+
+def _import_operation_row(row: sqlite3.Row | None) -> dict[str, Any] | None:
+    if row is None:
+        return None
+    return {
+        "operationId": row["operation_id"],
+        "label": row["operation_label"] or "",
+        "state": row["state"],
+        "sourceKind": row["source_kind"],
+        "source": _read_json_text(row["source_json"] or "{}", {}),
+        "destinationKind": row["destination_kind"],
+        "destination": _read_json_text(row["destination_json"] or "{}", {}),
+        "filters": _read_json_text(row["filters_json"] or "{}", {}),
+        "outputs": _read_json_text(row["outputs_json"] or "{}", {}),
+        "preflight": _read_json_text(row["preflight_json"] or "", None),
+        "task": _read_json_text(row["task_json"] or "", None),
+        "error": row["error_text"] or "",
+        "createdAt": row["created_at"] or "",
+        "queuedAt": row["queued_at"] or "",
+        "startedAt": row["started_at"] or "",
+        "completedAt": row["completed_at"] or "",
+        "updatedAt": row["updated_at"] or "",
+    }
+
+
+def record_import_operation(
+    repo_root: Path,
+    operation: dict[str, Any],
+    db_path: Path | None = None,
+    conn: sqlite3.Connection | None = None,
+) -> dict[str, Any]:
+    owns_conn = conn is None
+    conn = conn or connect(repo_root, db_path)
+    try:
+        timestamp = now_iso()
+        operation_id = _import_operation_id(operation.get("operationId") or operation.get("operation_id"))
+        state = str(operation.get("state") or "draft").strip() or "draft"
+        source_kind = str(operation.get("sourceKind") or operation.get("source_kind") or "apple_photos").strip()
+        destination_kind = str(operation.get("destinationKind") or operation.get("destination_kind") or "expo").strip()
+        conn.execute(
+            """
+            INSERT INTO import_operations (
+              operation_id, operation_label, state, source_kind, source_json,
+              destination_kind, destination_json, filters_json, outputs_json,
+              preflight_json, task_json, error_text, created_at, queued_at,
+              started_at, completed_at, updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(operation_id) DO UPDATE SET
+              operation_label = excluded.operation_label,
+              state = excluded.state,
+              source_kind = excluded.source_kind,
+              source_json = excluded.source_json,
+              destination_kind = excluded.destination_kind,
+              destination_json = excluded.destination_json,
+              filters_json = excluded.filters_json,
+              outputs_json = excluded.outputs_json,
+              preflight_json = COALESCE(excluded.preflight_json, import_operations.preflight_json),
+              task_json = COALESCE(excluded.task_json, import_operations.task_json),
+              error_text = COALESCE(NULLIF(excluded.error_text, ''), import_operations.error_text),
+              queued_at = COALESCE(excluded.queued_at, import_operations.queued_at),
+              started_at = COALESCE(excluded.started_at, import_operations.started_at),
+              completed_at = COALESCE(excluded.completed_at, import_operations.completed_at),
+              updated_at = excluded.updated_at
+            """,
+            (
+                operation_id,
+                str(operation.get("label") or operation.get("operation_label") or "").strip() or None,
+                state,
+                source_kind,
+                _json_payload_text(operation.get("source")),
+                destination_kind,
+                _json_payload_text(operation.get("destination")),
+                _json_payload_text(operation.get("filters")),
+                _json_payload_text(operation.get("outputs")),
+                _json_payload_text(operation.get("preflight")) if "preflight" in operation else None,
+                _json_payload_text(operation.get("task")) if "task" in operation else None,
+                str(operation.get("error") or operation.get("error_text") or "").strip() or None,
+                str(operation.get("createdAt") or operation.get("created_at") or timestamp),
+                str(operation.get("queuedAt") or operation.get("queued_at") or "") or None,
+                str(operation.get("startedAt") or operation.get("started_at") or "") or None,
+                str(operation.get("completedAt") or operation.get("completed_at") or "") or None,
+                timestamp,
+            ),
+        )
+        if owns_conn:
+            conn.commit()
+        row = conn.execute("SELECT * FROM import_operations WHERE operation_id = ?", (operation_id,)).fetchone()
+        return _import_operation_row(row) or {}
+    finally:
+        if owns_conn:
+            conn.close()
+
+
+def update_import_operation(
+    repo_root: Path,
+    operation_id: str,
+    db_path: Path | None = None,
+    conn: sqlite3.Connection | None = None,
+    **updates: Any,
+) -> dict[str, Any]:
+    owns_conn = conn is None
+    conn = conn or connect(repo_root, db_path)
+    try:
+        row = conn.execute("SELECT * FROM import_operations WHERE operation_id = ?", (operation_id,)).fetchone()
+        if row is None:
+            return {}
+        payload = _import_operation_row(row) or {}
+        if "state" in updates and updates["state"]:
+            payload["state"] = str(updates["state"])
+        for key in ("preflight", "task", "error"):
+            if key in updates:
+                payload[key] = updates[key]
+        timestamp = now_iso()
+        state = payload.get("state")
+        if state == "queued" and not payload.get("queuedAt"):
+            payload["queuedAt"] = timestamp
+        if state == "running" and not payload.get("startedAt"):
+            payload["startedAt"] = timestamp
+        if state in {"done", "failed", "cancelled"} and not payload.get("completedAt"):
+            payload["completedAt"] = timestamp
+        return record_import_operation(repo_root, payload, db_path=db_path, conn=conn)
+    finally:
+        if owns_conn:
+            conn.commit()
+            conn.close()
 
 
 def _media_id_from_entry(entry: dict[str, Any] | str) -> str:
@@ -2819,7 +2979,7 @@ def main() -> None:
     else:
         conn = connect(repo_root, args.db)
         try:
-            tables = ["keyword_blacklist", "country_assignments", "title_keyword_batches", "title_keyword_queue", "title_keyword_proposals", "title_keyword_decisions", "r2_objects", "media_lifecycle"]
+            tables = ["keyword_blacklist", "country_assignments", "title_keyword_batches", "title_keyword_queue", "title_keyword_proposals", "title_keyword_decisions", "r2_objects", "media_lifecycle", "import_operations"]
             print(", ".join(f"{table}={conn.execute(f'SELECT count(*) FROM {table}').fetchone()[0]}" for table in tables))
         finally:
             conn.close()

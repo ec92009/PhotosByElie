@@ -318,8 +318,20 @@ Clock state: running
 | 2026-06-18 | 15:32 CEST | 16:02 CEST | 0:12 | Executed PBE-20260610-B002 Real Estate client rehearsal with Elie import/publish/upload, local Worker shelf rehearsal support, and mobile/browser verification; upload/runtime wait excluded. |
 | 2026-06-18 | 16:02 CEST | 16:10 CEST | 0:06 | Executed PBE-20260610-B004 Real Estate shelf status polish with cloud sync strip, grouped output badges, mobile browser verification, and v110.7 versioning; test/runtime wait excluded. |
 | 2026-06-18 | 16:10 CEST | 16:15 CEST | 0:04 | Executed PBE-20260610-B021 repo/media cleanup guardrails with a dedicated SOP, cleanup-helper protections, dry-run verification, and validation; test/runtime wait excluded. |
+| 2026-06-19 | 09:38 CEST | 09:39 CEST | 0:01 | Recovered the Pinterest API approval plan, token blocker, and current ready package; background repo inspection excluded. |
+| 2026-06-19 | 09:43 CEST | 09:44 CEST | 0:01 | Confirmed Pinterest OAuth/API publishing can wait until Paris; no live setup attempted without credentials. |
+| 2026-06-20 | 09:18 CEST | 09:19 CEST | 0:01 | Checked the burst photo dedupe/culling operation effect against discarded records and the active catalog; background repo inspection excluded. |
+| 2026-06-20 | 09:26 CEST | 09:27 CEST | 0:01 | Verified burst-cull public/private object keys against live R2 listings and Owner SQLite lifecycle state; background R2 listing time excluded. |
+| 2026-06-20 | 09:35 CEST | 09:38 CEST | 0:03 | Executed the confirmed R2 burst/triplet cleanup through signed S3 API batches, protected sold keys, and updated Owner R2 state; batch runtime excluded. |
+| 2026-06-20 | 09:43 CEST | 09:45 CEST | 0:01 | Diagnosed the broken Homebrew AWS CLI path and confirmed the expat library override workaround. |
+| 2026-06-20 | 09:54 CEST | 09:55 CEST | 0:01 | Rechecked upgraded Homebrew AWS CLI behavior against a read-only R2 list probe. |
+| 2026-06-20 | 09:56 CEST | 09:57 CEST | 0:01 | Assessed how often PhotosByElie depends on the local AWS CLI versus direct R2 scripts. |
+| 2026-06-20 | 10:02 CEST | 10:05 CEST | 0:02 | Reviewed current PhotosByElie import tracks, including the direct Apple Photos lane and Real Estate split; background repo inspection excluded. |
+| 2026-06-20 | 10:09 CEST | 10:10 CEST | 0:01 | Captured unified Apple Photos-first import direction and source/destination/filter model. |
+| 2026-06-20 | 10:12 CEST | 10:13 CEST | 0:01 | Added the duplicate-risk rationale for retiring routine Saturn/folder imports in favor of Apple Photos canonical imports. |
+| 2026-06-20 | 10:19 CEST | 10:20 CEST | 0:01 | Started PBE-20260620-6EF2 by adding the durable unified import operation layer; implementation/test runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 19:09
+Active collaboration time used: 19:24
 Remaining budget: not set

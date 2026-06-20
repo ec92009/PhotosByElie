@@ -274,7 +274,14 @@ from sync_r2_media import (  # noqa: E402
     wrangler_delete,
     wrangler_put,
 )
-from owner_state_db import backfill_r2_object_metadata, connect as owner_db_connect, media_lifecycle_snapshot, upsert_r2_object_state  # noqa: E402
+from owner_state_db import (  # noqa: E402
+    backfill_r2_object_metadata,
+    connect as owner_db_connect,
+    media_lifecycle_snapshot,
+    record_import_operation as record_import_operation_db,
+    update_import_operation as update_import_operation_db,
+    upsert_r2_object_state,
+)
 from owner_state_db import keyword_blacklist_terms as keyword_blacklist_terms_db  # noqa: E402
 from owner_state_db import record_country_assignments as record_country_assignments_db  # noqa: E402
 from owner_state_db import record_keyword_blacklist as record_keyword_blacklist_db  # noqa: E402
@@ -730,6 +737,14 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         try:
             payload = self._read_json_body()
             result = _apple_photos_preflight(Path.cwd(), payload)
+            operation = _record_apple_photos_import_operation(
+                Path.cwd(),
+                payload,
+                result,
+                state="preflighted" if result.get("ok") else "failed",
+                error=str(result.get("error") or ""),
+            )
+            result = {**result, "operation": operation}
         except ValueError as error:
             self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
             return
@@ -885,6 +900,9 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             task = _start_r2_maintenance_task(Path.cwd(), maintenance_key)
         else:
             task = _start_cloud_media_sweep(Path.cwd(), skip_phases, source_root=source_root, source_select=source_select)
+            operation = _record_legacy_folder_import_operation(Path.cwd(), source_root, source_select, task)
+            if operation:
+                task = {**task, "importOperationId": operation.get("operationId")}
             if source_root and task.get("sourceRoot") == str(source_root):
                 _remember_import_source_root(Path.cwd(), source_root)
         self._send_json(HTTPStatus.OK, {"ok": True, "task": task})
@@ -7031,6 +7049,147 @@ def _apple_photos_preflight(repo_root: Path, payload: dict) -> dict:
     return _run_apple_photos_bridge(repo_root, ["preflight", *_apple_photos_payload_args(payload)])
 
 
+def _record_legacy_folder_import_operation(
+    repo_root: Path,
+    source_root: Path | None,
+    source_select: str,
+    task: dict | None,
+) -> dict:
+    if not task or task.get("operation") != "repair":
+        return {}
+    mode = "selected_folder" if source_root else "fixed_anchors"
+    source = {
+        "kind": "legacy_folder",
+        "mode": mode,
+        "sourceSelect": _effective_import_select(source_root, source_select),
+        "canonicalSource": "apple_photos",
+        "duplicateRisk": "folder media may already exist in Apple Photos",
+    }
+    if source_root:
+        source["path"] = str(source_root)
+    else:
+        source["anchors"] = sorted(IMPORT_SOURCE_ROOTS)
+    operation = record_import_operation_db(
+        repo_root,
+        {
+            "label": f"Legacy folder -> expo: {source_root.name if source_root else 'fixed anchors'}",
+            "state": "queued",
+            "sourceKind": "legacy_folder",
+            "source": source,
+            "destinationKind": "expo",
+            "destination": {"kind": "expo", "collectionHint": "infer", "publishMode": "public_catalog"},
+            "filters": {
+                "selectionPolicy": source["sourceSelect"],
+                "skipDiscarded": True,
+                "duplicatePolicy": "legacy_recovery_only",
+            },
+            "outputs": {
+                "publicPreview": True,
+                "privateMaster": True,
+                "buyerRenders": "on_demand",
+                "watermarkPublicPreviews": True,
+            },
+            "task": task,
+        },
+    )
+    return operation
+
+
+def _apple_photos_operation_source(payload: dict, preflight: dict | None = None) -> dict:
+    album = preflight.get("album") if isinstance(preflight, dict) and isinstance(preflight.get("album"), dict) else {}
+    album_id = str(
+        payload.get("albumLocalIdentifier")
+        or payload.get("album_id")
+        or payload.get("albumId")
+        or album.get("localIdentifier")
+        or ""
+    ).strip()
+    album_name = str(payload.get("albumName") or payload.get("album_name") or album.get("title") or "").strip()
+    try:
+        limit = int(payload.get("limit") or 0)
+    except (TypeError, ValueError):
+        limit = 0
+    return {
+        "kind": "apple_photos",
+        "mode": "album",
+        "albumLocalIdentifier": album_id,
+        "albumName": album_name,
+        "albumAssetCount": int(album.get("assetCount") or 0) if album else 0,
+        "limit": max(0, limit),
+    }
+
+
+def _apple_photos_operation_destination(payload: dict) -> tuple[str, dict]:
+    raw = str(payload.get("destinationKind") or payload.get("destination_kind") or "expo").strip().lower().replace("-", "_")
+    if raw not in {"expo", "real_estate", "reserve"}:
+        raise ValueError("destinationKind must be expo, real-estate, or reserve")
+    destination = payload.get("destination") if isinstance(payload.get("destination"), dict) else {}
+    if raw == "expo":
+        return "expo", {
+            "kind": "expo",
+            "collectionHint": str(destination.get("collectionHint") or "infer"),
+            "publishMode": str(destination.get("publishMode") or "public_catalog"),
+        }
+    if raw == "real_estate":
+        return "real_estate", {
+            "kind": "real_estate",
+            "clientId": str(destination.get("clientId") or ""),
+            "property": str(destination.get("property") or ""),
+        }
+    return "reserve", {
+        "kind": "reserve",
+        "reviewState": str(destination.get("reviewState") or "owner_review"),
+    }
+
+
+def _apple_photos_operation_blueprint(payload: dict, preflight: dict | None = None, *, state: str = "draft") -> dict:
+    destination_kind, destination = _apple_photos_operation_destination(payload)
+    source = _apple_photos_operation_source(payload, preflight)
+    album_label = source.get("albumName") or "album"
+    return {
+        "operationId": str(payload.get("operationId") or payload.get("operation_id") or "").strip(),
+        "label": f"Apple Photos -> {destination_kind}: {album_label}",
+        "state": state,
+        "sourceKind": "apple_photos",
+        "source": source,
+        "destinationKind": destination_kind,
+        "destination": destination,
+        "filters": {
+            "selectionPolicy": "album_membership",
+            "mediaTypes": ["photo", "video"],
+            "skipDiscarded": True,
+            "rawPolicy": "block_raw_only",
+            "icloudPolicy": "require_local_original",
+            "duplicatePolicy": "prefer_apple_photos_anchor",
+        },
+        "outputs": {
+            "publicPreview": destination_kind == "expo",
+            "privateMaster": True,
+            "buyerRenders": "on_demand",
+            "watermarkPublicPreviews": destination_kind == "expo",
+        },
+    }
+
+
+def _record_apple_photos_import_operation(
+    repo_root: Path,
+    payload: dict,
+    preflight: dict | None = None,
+    *,
+    state: str = "draft",
+    task: dict | None = None,
+    error: str = "",
+) -> dict:
+    operation = _apple_photos_operation_blueprint(payload, preflight, state=state)
+    if preflight is not None:
+        operation["preflight"] = preflight
+    if task is not None:
+        operation["task"] = task
+    if error:
+        operation["error"] = error
+    return record_import_operation_db(repo_root, operation)
+
+
 def _apple_photos_import_destination(repo_root: Path, album_label: str = "") -> Path:
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     safe_label = re.sub(r"[^a-zA-Z0-9]+", "-", album_label).strip("-").lower()[:48] or "album"
@@ -7041,16 +7200,32 @@ def _start_apple_photos_import(repo_root: Path, payload: dict) -> dict:
     preflight_only = bool(payload.get("dryRun") or payload.get("dry_run"))
     preflight = _apple_photos_preflight(repo_root, payload)
     if not preflight.get("ok"):
-        return preflight
+        operation = _record_apple_photos_import_operation(
+            repo_root,
+            payload,
+            preflight,
+            state="failed",
+            error=str(preflight.get("error") or ""),
+        )
+        return {**preflight, "operation": operation}
+    operation = _record_apple_photos_import_operation(repo_root, payload, preflight, state="preflighted")
+    payload = {**payload, "operationId": operation.get("operationId") or payload.get("operationId")}
     if preflight_only:
-        return {**preflight, "dryRun": True}
+        return {**preflight, "dryRun": True, "operation": operation}
     candidate_count = int(preflight.get("candidateCount") or 0)
     if candidate_count <= 0:
+        operation = update_import_operation_db(
+            repo_root,
+            str(operation.get("operationId") or ""),
+            state="failed",
+            error="No eligible Apple Photos assets are available to import.",
+        )
         return {
             **preflight,
             "ok": False,
             "error": "No eligible Apple Photos assets are available to import.",
             "code": "no_eligible_assets",
+            "operation": operation,
         }
     album = preflight.get("album") if isinstance(preflight.get("album"), dict) else {}
     destination = _apple_photos_import_destination(repo_root, str(album.get("title") or "album"))
@@ -7059,14 +7234,27 @@ def _start_apple_photos_import(repo_root: Path, payload: dict) -> dict:
         ["export", *_apple_photos_payload_args(payload), "--destination", str(destination)],
     )
     if not export_result.get("ok"):
-        return export_result
+        operation = update_import_operation_db(
+            repo_root,
+            str(operation.get("operationId") or ""),
+            state="failed",
+            error=str(export_result.get("error") or "Apple Photos export failed"),
+        )
+        return {**export_result, "operation": operation}
     materialized = int(export_result.get("materializedCount") or 0)
     if materialized <= 0:
+        operation = update_import_operation_db(
+            repo_root,
+            str(operation.get("operationId") or ""),
+            state="failed",
+            error="Apple Photos assets were selected, but none had locally available importable bytes.",
+        )
         return {
             **export_result,
             "ok": False,
             "error": "Apple Photos assets were selected, but none had locally available importable bytes. Open Photos and download originals, then retry.",
             "code": "nothing_materialized",
+            "operation": operation,
         }
     task = _start_cloud_media_sweep(
         repo_root,
@@ -7074,11 +7262,18 @@ def _start_apple_photos_import(repo_root: Path, payload: dict) -> dict:
         source_select="all",
     )
     task["sourceKind"] = "apple-photos"
+    operation = update_import_operation_db(
+        repo_root,
+        str(operation.get("operationId") or ""),
+        state="queued",
+        task=task,
+    )
     return {
         "ok": True,
         "preflight": preflight,
         "materialized": export_result,
         "task": task,
+        "operation": operation,
         "message": f"Apple Photos import started for {materialized:,} materialized asset(s).",
     }
 

@@ -95,7 +95,7 @@ In Owner:
 
 1. Use **Import from Photos** to load albums through the local helper.
 2. Choose an album and run **Dry run**. Review import candidates, blocked RAW-only/unsupported assets, iCloud-original-not-local reports, and already-known/skipped behavior before any write/upload step.
-3. Click **Import** only after the dry run looks right. The helper materializes eligible local bytes to `tmp/apple-photos-import/`, writes stable `apple-photos://...` source anchors, and starts the normal selected-folder import sweep.
+3. Click **Import** only after the dry run looks right. The helper records the run in `Owner.sqlite:import_operations`, materializes eligible local bytes to `tmp/apple-photos-import/`, writes stable `apple-photos://...` source anchors, and starts the normal selected-folder import sweep.
 
 ## Resume Behavior
 

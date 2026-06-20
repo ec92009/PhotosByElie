@@ -49,6 +49,21 @@ const translations = {
     'settings.clear': 'Clear',
     'settings.sharp': 'Sharp',
     'settings.frosted': 'Frosted',
+    'account.open': 'Account',
+    'account.title': 'Account',
+    'account.close': 'Close account',
+    'account.visitor_status': 'Browse as a visitor',
+    'account.choose': 'Continue without signing in, or verify your email with Google.',
+    'account.continue_visitor': 'Continue as visitor',
+    'account.continue_browsing': 'Continue browsing',
+    'account.sign_up_google': 'Sign up with Google',
+    'account.sign_in_google': 'Sign in with Google',
+    'account.signed_in': 'Signed in',
+    'account.verified_email': 'Email verified by Google.',
+    'account.loading': 'Checking account...',
+    'account.redirecting': 'Opening Google sign-in...',
+    'account.login_unavailable': 'Google login is not available from this page.',
+    'account.session_failed': 'Could not check the Google session.',
     'home.lead': 'A selected photo archive with country galleries, AI work kept separate, and fresh representative samples as the collection rail turns.',
     'home.view_collections': 'View collections',
     'home.collections': 'Collections',
@@ -553,6 +568,21 @@ const translations = {
     'settings.clear': 'Clair',
     'settings.sharp': 'Net',
     'settings.frosted': 'Floute',
+    'account.open': 'Compte',
+    'account.title': 'Compte',
+    'account.close': 'Fermer le compte',
+    'account.visitor_status': 'Parcourir en visiteur',
+    'account.choose': 'Continuez sans connexion, ou verifiez votre email avec Google.',
+    'account.continue_visitor': 'Continuer en visiteur',
+    'account.continue_browsing': 'Continuer',
+    'account.sign_up_google': 'Creer un compte avec Google',
+    'account.sign_in_google': 'Connexion avec Google',
+    'account.signed_in': 'Connecte',
+    'account.verified_email': 'Email verifie par Google.',
+    'account.loading': 'Verification du compte...',
+    'account.redirecting': 'Ouverture de la connexion Google...',
+    'account.login_unavailable': 'La connexion Google n est pas disponible depuis cette page.',
+    'account.session_failed': 'Impossible de verifier la session Google.',
     'home.lead': 'Une archive photo choisie, avec galeries par pays, images IA a part, et nouveaux apercus representatifs au fil du rail des collections.',
     'home.view_collections': 'Voir les collections',
     'home.collections': 'Collections',
@@ -1057,6 +1087,21 @@ const translations = {
     'settings.clear': 'Claro',
     'settings.sharp': 'Nitido',
     'settings.frosted': 'Difuso',
+    'account.open': 'Cuenta',
+    'account.title': 'Cuenta',
+    'account.close': 'Cerrar cuenta',
+    'account.visitor_status': 'Navegar como visitante',
+    'account.choose': 'Continua sin iniciar sesion, o verifica tu email con Google.',
+    'account.continue_visitor': 'Continuar como visitante',
+    'account.continue_browsing': 'Continuar',
+    'account.sign_up_google': 'Registrarse con Google',
+    'account.sign_in_google': 'Iniciar sesion con Google',
+    'account.signed_in': 'Sesion iniciada',
+    'account.verified_email': 'Email verificado por Google.',
+    'account.loading': 'Comprobando cuenta...',
+    'account.redirecting': 'Abriendo inicio de sesion de Google...',
+    'account.login_unavailable': 'El inicio de sesion con Google no esta disponible desde esta pagina.',
+    'account.session_failed': 'No se pudo comprobar la sesion de Google.',
     'home.lead': 'Un archivo fotografico seleccionado, con galerias por pais, obra IA separada y muestras representativas nuevas mientras gira el carril de colecciones.',
     'home.view_collections': 'Ver colecciones',
     'home.collections': 'Colecciones',
@@ -3308,6 +3353,7 @@ window.photosByElieMdIcon = (name) => {
     shoppingBasket: 'M17.21 9l-4.38-6.56c-.19-.28-.51-.42-.83-.42s-.64.14-.83.43L6.79 9H2c-.55 0-1 .45-1 1 0 .09.01.18.04.27l2.54 9.27C3.81 20.39 4.59 21 5.5 21h13c.91 0 1.69-.61 1.93-1.46l2.54-9.27L23 10c0-.55-.45-1-1-1h-4.79zM9 9l3-4.4L15 9H9zm3 8c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z',
     photoCamera: 'M20 5h-3.17l-1.84-2H9.01L7.17 5H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-8 13c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-1.8c1.77 0 3.2-1.43 3.2-3.2S13.77 9.8 12 9.8 8.8 11.23 8.8 13s1.43 3.2 3.2 3.2z',
     autoAwesome: 'M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25L19 9zm-7.5.5L9 4 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5L17 12l-5.5-2.5zM19 15l-1.25 2.75L15 19l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25L19 15z',
+    accountCircle: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08s5.97 1.09 6 3.08c-1.29 1.94-3.5 3.22-6 3.22z',
     settings: 'M19.43 12.98c.04-.32.07-.65.07-.98s-.02-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.37-.31-.6-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98L14.5 2.42C14.47 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.5.42L9.12 5.07c-.61.25-1.18.59-1.69.98l-2.49-1c-.23-.08-.48 0-.6.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.08.65-.08.98s.03.66.08.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.37.31.6.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.04.24.25.42.5.42h4c.25 0 .47-.18.5-.42l.38-2.65c.61-.25 1.18-.58 1.69-.98l2.49 1c.23.08.48 0 .6-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z',
     visibility: 'M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zm0 12.5c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z',
     visibilityOff: 'M12 6.5c3.79 0 7.17 2.13 8.82 5.5-.7 1.43-1.79 2.62-3.08 3.49L19.16 16.91C20.69 15.88 22 14.2 23 12c-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l1.65 1.65c.74-.23 1.52-.35 2.33-.35zM2.1 3.27.82 4.55l3.01 3.01C2.67 8.68 1.7 10.19 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l3.07 3.07 1.27-1.27L2.1 3.27zm7.53 7.53 1.55 1.55c-.11-.39-.02-.82.29-1.13.31-.31.74-.4 1.13-.29l-1.55-1.55c.31-.08.63-.12.95-.12 1.66 0 3 1.34 3 3 0 .32-.04.64-.12.95l1.54 1.54c.37-.68.58-1.45.58-2.29 0-2.76-2.24-5-5-5-.84 0-1.61.21-2.29.58zm2.37 6.2c-2.76 0-5-2.24-5-5 0-.84.21-1.61.58-2.29l1.54 1.54c-.08.31-.12.63-.12.95 0 1.66 1.34 3 3 3 .32 0 .64-.04.95-.12l1.54 1.54c-.68.37-1.45.58-2.29.58z'
@@ -3368,6 +3414,230 @@ const ensureHeaderActionLinks = () => {
     ` : ''}
   `;
   controls.prepend(actions);
+};
+
+const accountPreferenceKey = 'photosbyelie-account-preference';
+
+const normalizedAccountWorkerBase = (value) => {
+  const raw = String(value || "").trim().replace(/\/+$/, "");
+  if (!raw) return "";
+  try {
+    const url = new URL(raw, window.location.href);
+    return /^https?:$/.test(url.protocol) ? url.href.replace(/\/+$/, "") : "";
+  } catch {
+    return "";
+  }
+};
+
+const accountWorkerBaseUrl = () => {
+  const params = new URLSearchParams(window.location.search);
+  const override = normalizedAccountWorkerBase(params.get("authWorkerBase") || params.get("workerBase"));
+  if (override) return override;
+  const localHosts = new Set(["localhost", "127.0.0.1", "::1"]);
+  const isLocalPage = localHosts.has(window.location.hostname);
+  const mediaConfig = window.photosByElieMediaConfig || {};
+  const configured = normalizedAccountWorkerBase(mediaConfig.authWorkerBaseUrl || mediaConfig.checkoutWorkerBaseUrl || "");
+  if (!configured) return "";
+  if (!isLocalPage) return configured;
+  try {
+    const configuredUrl = new URL(configured);
+    return localHosts.has(configuredUrl.hostname) ? configured : "";
+  } catch {
+    return "";
+  }
+};
+
+const accountReturnUrl = () => {
+  const url = new URL(window.location.href);
+  url.searchParams.set("account", "1");
+  return url.href;
+};
+
+const consumeAccountReturnFlag = () => {
+  const url = new URL(window.location.href);
+  if (url.searchParams.get("account") !== "1") return false;
+  url.searchParams.delete("account");
+  window.history.replaceState(window.history.state, document.title, url.href);
+  return true;
+};
+
+const ensureSiteAccount = () => {
+  const controls = document.querySelector('.header-controls');
+  if (!controls || controls.querySelector('[data-account-toggle]')) return;
+  const state = {
+    checked: false,
+    available: Boolean(accountWorkerBaseUrl()),
+    authenticated: false,
+    email: "",
+    tier: "user",
+  };
+
+  const accountButton = document.createElement('button');
+  accountButton.className = 'account-toggle';
+  accountButton.type = 'button';
+  accountButton.dataset.accountToggle = '';
+  accountButton.setAttribute('aria-haspopup', 'dialog');
+  accountButton.setAttribute('aria-expanded', 'false');
+  accountButton.dataset.i18nAriaLabel = 'account.open';
+  accountButton.dataset.i18nTitle = 'account.open';
+  accountButton.innerHTML = window.photosByElieMdIcon('accountCircle');
+
+  const modal = document.createElement('div');
+  modal.className = 'site-account-modal';
+  modal.hidden = true;
+  modal.dataset.accountModal = '';
+  modal.innerHTML = `
+    <section class="site-account-dialog" role="dialog" aria-modal="true" aria-labelledby="site-account-title">
+      <div class="site-settings-head site-account-head">
+        <h2 id="site-account-title" data-i18n="account.title">${translate('account.title')}</h2>
+        <button class="site-settings-close" type="button" data-account-close data-i18n-aria-label="account.close" data-i18n-title="account.close" aria-label="${translate('account.close')}" title="${translate('account.close')}">x</button>
+      </div>
+      <div class="site-account-status">
+        <strong data-account-status-title>${translate('account.visitor_status')}</strong>
+        <span data-account-status-detail>${translate('account.choose')}</span>
+      </div>
+      <div class="site-account-actions">
+        <button class="site-account-action" type="button" data-account-visitor data-i18n="account.continue_visitor">${translate('account.continue_visitor')}</button>
+        <button class="site-account-action primary" type="button" data-account-signup data-i18n="account.sign_up_google">${translate('account.sign_up_google')}</button>
+        <button class="site-account-action" type="button" data-account-signin data-i18n="account.sign_in_google">${translate('account.sign_in_google')}</button>
+      </div>
+      <p class="site-account-message" data-account-message aria-live="polite"></p>
+    </section>
+  `;
+
+  const closeButton = modal.querySelector('[data-account-close]');
+  const visitorButton = modal.querySelector('[data-account-visitor]');
+  const signupButton = modal.querySelector('[data-account-signup]');
+  const signinButton = modal.querySelector('[data-account-signin]');
+  const statusTitle = modal.querySelector('[data-account-status-title]');
+  const statusDetail = modal.querySelector('[data-account-status-detail]');
+  const message = modal.querySelector('[data-account-message]');
+
+  const setMessage = (text = "", isError = false) => {
+    if (!message) return;
+    message.textContent = text;
+    message.classList.toggle("is-error", isError);
+  };
+
+  const updateAccountView = () => {
+    const workerBase = accountWorkerBaseUrl();
+    state.available = Boolean(workerBase);
+    accountButton.classList.toggle("is-authenticated", state.authenticated);
+    if (state.authenticated) {
+      if (statusTitle) statusTitle.textContent = translate('account.signed_in');
+      if (statusDetail) statusDetail.textContent = state.email || translate('account.verified_email');
+      if (visitorButton) {
+        visitorButton.dataset.i18n = 'account.continue_browsing';
+        visitorButton.textContent = translate('account.continue_browsing');
+      }
+      if (signupButton) signupButton.hidden = true;
+      if (signinButton) signinButton.hidden = true;
+      setMessage(translate('account.verified_email'));
+      return;
+    }
+    if (statusTitle) statusTitle.textContent = translate('account.visitor_status');
+    if (statusDetail) statusDetail.textContent = translate('account.choose');
+    if (visitorButton) {
+      visitorButton.dataset.i18n = 'account.continue_visitor';
+      visitorButton.textContent = translate('account.continue_visitor');
+    }
+    if (signupButton) signupButton.hidden = false;
+    if (signinButton) signinButton.hidden = false;
+    if (signupButton) signupButton.disabled = !state.available;
+    if (signinButton) signinButton.disabled = !state.available;
+    setMessage(state.available ? "" : translate('account.login_unavailable'), !state.available);
+  };
+
+  const refreshAccountSession = async () => {
+    const workerBase = accountWorkerBaseUrl();
+    state.available = Boolean(workerBase);
+    if (!workerBase) {
+      state.checked = true;
+      state.authenticated = false;
+      state.email = "";
+      state.tier = "user";
+      updateAccountView();
+      return { ...state };
+    }
+    setMessage(translate('account.loading'));
+    try {
+      const response = await fetch(`${workerBase}/auth/session`, { cache: "no-store", credentials: "include" });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || payload?.ok === false) {
+        throw new Error(payload?.error?.message || payload?.error || "Session check failed.");
+      }
+      const user = payload.user || {};
+      state.checked = true;
+      state.available = true;
+      state.authenticated = payload.authenticated === true;
+      state.email = user.email || payload.email || "";
+      state.tier = payload.tier || user.tier || "user";
+      updateAccountView();
+    } catch {
+      state.checked = true;
+      state.available = false;
+      state.authenticated = false;
+      state.email = "";
+      state.tier = "user";
+      updateAccountView();
+      setMessage(translate('account.session_failed'), true);
+    }
+    return { ...state };
+  };
+
+  const closeAccount = () => {
+    if (modal.hidden) return;
+    modal.hidden = true;
+    accountButton.setAttribute('aria-expanded', 'false');
+    accountButton.focus({ preventScroll: true });
+  };
+
+  const openAccount = () => {
+    modal.hidden = false;
+    accountButton.setAttribute('aria-expanded', 'true');
+    updateAccountView();
+    closeButton?.focus({ preventScroll: true });
+    refreshAccountSession();
+  };
+
+  const beginGoogleLogin = (intent) => {
+    const workerBase = accountWorkerBaseUrl();
+    if (!workerBase) {
+      state.available = false;
+      updateAccountView();
+      return;
+    }
+    localStorage.setItem(accountPreferenceKey, intent);
+    const loginUrl = new URL(`${workerBase}/auth/login`);
+    loginUrl.searchParams.set("returnTo", accountReturnUrl());
+    setMessage(translate('account.redirecting'));
+    window.location.href = loginUrl.href;
+  };
+
+  document.body.append(modal);
+  controls.append(accountButton);
+
+  accountButton.addEventListener('click', () => {
+    if (modal.hidden) openAccount();
+    else closeAccount();
+  });
+  closeButton?.addEventListener('click', closeAccount);
+  visitorButton?.addEventListener('click', () => {
+    localStorage.setItem(accountPreferenceKey, 'visitor');
+    closeAccount();
+  });
+  signupButton?.addEventListener('click', () => beginGoogleLogin('signup'));
+  signinButton?.addEventListener('click', () => beginGoogleLogin('signin'));
+  modal.addEventListener('click', (event) => {
+    if (event.target === modal) closeAccount();
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !modal.hidden) closeAccount();
+  });
+  window.addEventListener('photosbyelie:languagechange', () => updateAccountView());
+  updateAccountView();
+  applyTranslations();
+  if (consumeAccountReturnFlag()) window.setTimeout(openAccount, 0);
 };
 
 const ensureSiteSettings = () => {
@@ -3466,6 +3736,7 @@ const ensureSiteSettings = () => {
 };
 
 ensureHeaderActionLinks();
+ensureSiteAccount();
 ensureSiteSettings();
 
 const syncFixedHeaderOffset = () => {

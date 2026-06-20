@@ -207,7 +207,7 @@ a:hover{
   display:block;
   fill:currentColor;
 }
-.version-switch,.theme-toggle,.language-toggle,.settings-toggle,.site-version-badge{
+.version-switch,.theme-toggle,.language-toggle,.account-toggle,.settings-toggle,.site-version-badge{
   min-height:38px;
   border:1px solid var(--glass-border);
   border-radius:999px;
@@ -231,6 +231,7 @@ html[data-theme="dark"] .mode-light { display: none; }
 .language-toggle { min-width: 92px; }
 .language-toggle{order:2}
 .theme-toggle{order:3}
+.account-toggle,
 .settings-toggle{
   order:3;
   display:inline-flex;
@@ -242,6 +243,10 @@ html[data-theme="dark"] .mode-light { display: none; }
   padding:0;
   cursor:pointer;
 }
+.account-toggle.is-authenticated{
+  box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--text) 34%,transparent);
+}
+.account-toggle .md-icon,
 .settings-toggle .md-icon{
   width:20px;
   height:20px;
@@ -259,13 +264,15 @@ html[data-theme="dark"] .mode-light { display: none; }
 html[data-theme="dark"] .version-switch,
 html[data-theme="dark"] .theme-toggle,
 html[data-theme="dark"] .language-toggle,
+html[data-theme="dark"] .account-toggle,
 html[data-theme="dark"] .settings-toggle,
 html[data-theme="dark"] .site-version-badge{
   border-color:var(--glass-border);
   background:var(--glass-pill-bg);
 }
 
-.site-settings-modal{
+.site-settings-modal,
+.site-account-modal{
   position:fixed;
   inset:0;
   z-index:220;
@@ -274,8 +281,10 @@ html[data-theme="dark"] .site-version-badge{
   padding:clamp(12px,2.4vw,28px);
   background:rgba(0,0,0,.22);
 }
-.site-settings-modal[hidden]{display:none!important}
-.site-settings-dialog{
+.site-settings-modal[hidden],
+.site-account-modal[hidden]{display:none!important}
+.site-settings-dialog,
+.site-account-dialog{
   width:min(360px,calc(100dvw - 24px));
   margin-top:clamp(52px,8dvh,84px);
   display:grid;
@@ -289,6 +298,10 @@ html[data-theme="dark"] .site-version-badge{
   text-shadow:var(--glass-copy-shadow);
   backdrop-filter:blur(var(--glass-heavy-blur));
   -webkit-backdrop-filter:blur(var(--glass-heavy-blur));
+}
+.site-account-dialog{
+  width:min(380px,calc(100dvw - 24px));
+  background:color-mix(in srgb,var(--surface) 88%,transparent);
 }
 .site-settings-head{
   display:flex;
@@ -314,6 +327,83 @@ html[data-theme="dark"] .site-version-badge{
   font:inherit;
   font-size:1.3rem;
   line-height:1;
+}
+.site-account-status{
+  display:grid;
+  gap:6px;
+  min-width:0;
+  padding:12px;
+  border:1px solid var(--glass-border);
+  border-radius:8px;
+  background:color-mix(in srgb,var(--surface) 92%,transparent);
+}
+.site-account-status strong{
+  overflow-wrap:anywhere;
+  font-size:1rem;
+  line-height:1.2;
+}
+.site-account-status span,
+.site-account-message{
+  color:var(--muted);
+  font-size:.82rem;
+  line-height:1.38;
+}
+.site-account-message{
+  min-height:1.2em;
+  margin:0;
+}
+.site-account-message.is-error{
+  color:#ffd6d6;
+}
+html[data-theme="light"] .site-account-message.is-error{
+  color:#7e1d1d;
+}
+.site-account-actions{
+  display:grid;
+  gap:8px;
+}
+.site-account-action{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:42px;
+  width:100%;
+  border:1px solid var(--glass-border);
+  border-radius:999px;
+  background:var(--glass-pill-bg);
+  color:var(--text);
+  padding:10px 14px;
+  font:inherit;
+  font-size:.9rem;
+  font-weight:800;
+  line-height:1.2;
+  cursor:pointer;
+  text-align:center;
+}
+.site-account-action.primary{
+  border-color:var(--text);
+  background:var(--text);
+  color:var(--bg);
+}
+.site-account-action:hover{
+  background:var(--glass-card-hover-bg);
+  color:var(--text);
+}
+.site-account-action:disabled{
+  cursor:not-allowed;
+  opacity:.58;
+}
+.site-account-action:disabled:hover{
+  background:var(--glass-pill-bg);
+  color:var(--text);
+}
+.site-account-action.primary:hover{
+  background:var(--brand-2);
+  color:var(--bg);
+}
+.site-account-action.primary:disabled:hover{
+  background:var(--text);
+  color:var(--bg);
 }
 .site-settings-section{
   display:grid;
@@ -369,8 +459,10 @@ html[data-theme="dark"] .site-version-badge{
   font-weight:700;
 }
 @media (max-width:840px){
-  .site-settings-modal{place-items:start center}
-  .site-settings-dialog{margin-top:64px}
+  .site-settings-modal,
+  .site-account-modal{place-items:start center}
+  .site-settings-dialog,
+  .site-account-dialog{margin-top:64px}
 }
 
 main{padding:clamp(4px,1dvh,10px) 0 clamp(30px,5dvh,42px);display:grid;gap:clamp(8px,1.4dvh,14px)}

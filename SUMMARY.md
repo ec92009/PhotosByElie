@@ -12,7 +12,7 @@ Use this section first. Older sections below are retained as historical context 
 - Public site: `https://photos-by-elie.com/`
 - Auth Worker/custom domain: `https://auth.photos-by-elie.com`
 - Public media route: `https://download.photos-by-elie.com/media`
-- Deployed Worker version for direct OAuth route: `87e9419f-f47c-472b-80c8-fa7e8dbae07c`. Direct OAuth secrets are not enabled yet, so live `/auth/google/login` currently falls back to legacy `/auth/login`.
+- Deployed Worker version for direct OAuth route: `87e9419f-f47c-472b-80c8-fa7e8dbae07c`. Direct OAuth secrets are enabled, so live `/auth/google/login` now redirects to Google with `prompt=select_account` and `redirect_uri=https://auth.photos-by-elie.com/auth/google/callback`.
 
 ### What Changed In This Conversation
 
@@ -31,7 +31,7 @@ Use this section first. Older sections below are retained as historical context 
 - Confirmed after `v112.9` that account switching is still blocked by Cloudflare Access/Google IdP configuration, not by the public site code. New blocker ticket: `PBE-20260620-342B`. Local Cloudflare tokens cannot update the identity provider: the API token gets 403 on the Access identity provider endpoint, and Wrangler OAuth does not have Access IdP write permission.
 - Added `v112.10` as a controlled logout experiment: Account sign-out now asks Cloudflare's team-domain logout endpoint to clear the global Access SSO cookie and passes a public return URL, while Real Estate login also passes `prompt=select_account`.
 - iPhone testing still showed no joy after `v112.10`: Cloudflare Access either reused the same warm Google account or landed on its own no-cookie logout page. The new direction is direct Worker-owned Google OAuth at `/auth/google/login` and `/auth/google/callback`, with `prompt=select_account` controlled by PhotosByElie and a signed `pbe_google_session` cookie feeding the existing role registry.
-- Direct OAuth activation requires adding `https://auth.photos-by-elie.com/auth/google/callback` to the Google OAuth client and setting Worker secrets `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, and `GOOGLE_OAUTH_SESSION_SECRET`. The downloaded JSON currently only listed Cloudflare's Access callback, so live activation should wait for that Google Console redirect update. The route falls back to legacy `/auth/login` when secrets are not configured.
+- Direct OAuth activation was completed after adding `https://auth.photos-by-elie.com/auth/google/callback` to the Google OAuth client and setting Worker secrets `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, and `GOOGLE_OAUTH_SESSION_SECRET`. Live verification confirmed the Google redirect uses the Worker callback.
 
 ### Auth And Role Model
 

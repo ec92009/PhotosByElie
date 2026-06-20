@@ -15,7 +15,7 @@ for remote execution.
 - Public site: `https://photos-by-elie.com/`
 - Current visible build: `v113.0`
 - Auth Worker/custom domain: `https://auth.photos-by-elie.com`
-- Worker version after direct OAuth route deploy: `87e9419f-f47c-472b-80c8-fa7e8dbae07c`. Direct OAuth secrets are not enabled yet, so `/auth/google/login` currently falls back to legacy `/auth/login`.
+- Worker version after direct OAuth route deploy: `87e9419f-f47c-472b-80c8-fa7e8dbae07c`. Direct OAuth secrets are enabled, so `/auth/google/login` now redirects to Google with `prompt=select_account` and `redirect_uri=https://auth.photos-by-elie.com/auth/google/callback`.
 - Latest relevant commits:
   - current `v113.0` implementation: public Account and Real Estate Google buttons target the Worker-owned direct OAuth route at `/auth/google/login`; successful callback sets a signed `pbe_google_session` cookie that feeds the existing role registry
   - `v112.10` experiment: Account sign-out targeted the Cloudflare Access team-domain logout URL, but iPhone testing still ended in Cloudflare's no-cookie page or reused the previous Google account
@@ -38,7 +38,7 @@ npm run validate
 - Direct `https://auth.photos-by-elie.com/` visits should redirect to `https://photos-by-elie.com/?account=1`, not show raw Worker JSON.
 - Account sign-in/up should go through direct Google OAuth on `https://auth.photos-by-elie.com/auth/google/login`, not through Google AccountChooser and not through the protected `/auth/login` Access app. The Worker includes a safe fallback: if direct OAuth secrets are not configured, `/auth/google/login` redirects to the legacy `/auth/login` path.
 - Current account-switching blocker: `PBE-20260620-342B`. Cloudflare Access prompt/logout experiments did not reliably let iPhone Safari choose another Google account. The durable path is direct Google OAuth with `prompt=select_account`, controlled by the Worker.
-- Direct OAuth activation gate: the Google OAuth client must authorize `https://auth.photos-by-elie.com/auth/google/callback`, and the Worker must have `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, and `GOOGLE_OAUTH_SESSION_SECRET` set as secrets. The downloaded JSON currently showed only Cloudflare's Access callback, so add the Worker callback before enabling secrets for live testing.
+- Direct OAuth activation state: the Google OAuth client now authorizes `https://auth.photos-by-elie.com/auth/google/callback`, and the Worker has `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, and `GOOGLE_OAUTH_SESSION_SECRET` set as secrets. Live `/auth/google/login` has been verified to redirect to Google with the Worker callback.
 - Test Real Estate Google login from `real-estate.html?client=corine` or the current client key. It should route through `/auth/google/login`, return to the RE page with `access=1`, then `/real-estate/access-login` should mint the gallery-scoped session.
 - Test `owner.html` after signing in with an Owner/Admin Google account. The public dashboard should open read-only with localhost-only import, upload, cleanup, publishing, and role-management actions disabled; full mutation actions still require the localhost Owner helper.
 - Expected role behavior: ungranted verified Google users remain normal users; granted RE client emails are limited to their assigned gallery keys; Owner work requires an Owner grant and still treats local David admin as the role-management authority.

@@ -235,6 +235,99 @@
     setText(pricePublishStatus, message);
   };
 
+  const ownerRolesFor = (authState = {}) => Array.isArray(authState.roles) ? authState.roles : [];
+  const hasOwnerRole = (authState = {}) => {
+    const roles = ownerRolesFor(authState);
+    return authState.admin === true
+      || authState.tier === "owner"
+      || authState.tier === "admin"
+      || roles.includes("owner")
+      || roles.includes("admin");
+  };
+  const localHelperAvailable = () => Boolean(hiddenActions?.enabled);
+  const localHelperWritable = (authState = ownerAuth?.state || {}) =>
+    localHelperAvailable() && authState.available === true;
+  const cloudOwnerAvailable = (authState = ownerAuth?.state || {}) =>
+    authState.mode === "cloud" && authState.available === true && hasOwnerRole(authState);
+  const ownerDashboardAvailable = (authState = ownerAuth?.state || {}) =>
+    localHelperAvailable() || cloudOwnerAvailable(authState);
+
+  const localHelperControls = () => [
+    keywordBlacklistInput,
+    publishPricesButton,
+    physicalProductsToggle,
+    syncCountryKeywordsButton,
+    wipeHiddenR2Button,
+    burstCullPreviewButton,
+    burstCullLoadButton,
+    burstCullGoButton,
+    r2FixButton,
+    importSourceSelect,
+    importSourcePinButton,
+    importSourceReviewButton,
+    importSourceRemoveButton,
+    applePhotosAlbumSelect,
+    applePhotosRefreshButton,
+    applePhotosPreflightButton,
+    applePhotosImportButton,
+    realEstateImportSourceSelect,
+    accessUserEmailInput,
+    accessUserTierInput,
+    accessUserRealEstateInput,
+    accessUserNotesInput,
+    accessUserPublishButton,
+    ...r2FillGapsButtons,
+    ...r2MaintenanceButtons,
+    ...refreshButtons.filter((button) => !["counts", "cost", "keyword-blacklist"].includes(button.dataset.ownerRefresh || "")),
+    ...document.querySelectorAll("[data-owner-re-action], [data-owner-re-inline-field], [data-owner-re-row-action], [data-owner-access-action], [data-owner-keyword-blacklist-form] button"),
+  ].filter(Boolean);
+
+  const setLocalHelperControlsEnabled = (enabled) => {
+    localHelperControls().forEach((control) => {
+      if (!enabled) {
+        if (!control.disabled) control.dataset.localHelperWasEnabled = "true";
+        if (control.title && !control.dataset.localHelperPreviousTitle) {
+          control.dataset.localHelperPreviousTitle = control.title;
+        }
+        control.disabled = true;
+        control.dataset.localHelperDisabled = "true";
+        control.title = "Requires the localhost Owner helper.";
+      } else if (control.dataset.localHelperDisabled === "true") {
+        delete control.dataset.localHelperDisabled;
+        if (control.dataset.localHelperWasEnabled === "true") control.disabled = false;
+        delete control.dataset.localHelperWasEnabled;
+        if (control.dataset.localHelperPreviousTitle) {
+          control.title = control.dataset.localHelperPreviousTitle;
+        } else if (control.title === "Requires the localhost Owner helper.") {
+          control.removeAttribute("title");
+        }
+        delete control.dataset.localHelperPreviousTitle;
+      }
+    });
+  };
+
+  const renderCloudOwnerReadOnlyState = () => {
+    renderCounts();
+    refreshDiscardedCount();
+    refreshBlockedSyncPanel();
+    renderPodCommerce();
+    loadCostEstimate();
+    loadKeywordBlacklist();
+    loadTitleKeywordReviewCount();
+    renderR2Coverage(null);
+    renderR2Progress([]);
+    renderImportDashboardIdle();
+    renderApplePhotosPreview(null);
+    setApplePhotosStatus("Apple Photos imports require the localhost Owner helper and macOS Photos permission.");
+    setRealEstateStatus("Real Estate admin actions require the localhost Owner helper. Public client review stays available through Google access.");
+    setAccessUserStatus("Cloud role changes are David-local through the localhost Owner helper.");
+    setPricePublishStatus("Price publishing requires the localhost Owner helper.");
+    setBurstCullStatus("Burst-cull preview and moves require the localhost Owner helper.");
+    if (r2CoverageNote) r2CoverageNote.textContent = "R2 coverage repair and upload actions require the localhost Owner helper.";
+    if (r2Summary) r2Summary.textContent = "Imports, uploads, cleanup, and validation require the localhost Owner helper.";
+    setLocalHelperControlsEnabled(false);
+  };
+
   const resetPricePublishStatus = () => {
     stopPricePublishPolling();
     renderPricePublishTask(null);
@@ -424,10 +517,24 @@
 
   const renderOwnerAvailability = (authState = ownerAuth?.state || {}, options = {}) => {
     if (!ownerAuth?.enabled) return;
-    const available = authState.available === true;
-    if (controls) controls.hidden = false;
-    if (locked) locked.hidden = available;
-    if (available) {
+    const localAvailable = localHelperAvailable();
+    const available = ownerDashboardAvailable(authState);
+    const helperAvailable = localHelperWritable(authState);
+    const cloudAvailable = cloudOwnerAvailable(authState);
+    if (controls) controls.hidden = !available;
+    if (!available) {
+      const message = authState.mode === "cloud"
+        ? "Owner access requires a Google account with the Owner role. Use Account to sign in, then reopen Owner."
+        : "Owner controls require localhost or a configured auth Worker.";
+      setText(locked, message);
+      if (locked) locked.hidden = false;
+      setStatus(authState.mode === "cloud" ? "Owner cloud session is not authorized." : "Owner controls are locked.");
+      setLocalHelperControlsEnabled(false);
+      return;
+    }
+    if (helperAvailable) {
+      if (locked) locked.hidden = true;
+      setLocalHelperControlsEnabled(true);
       setStatus("Owner controls unlocked on localhost.");
       refreshCountsFromSource();
       refreshBlockedSyncPanel();
@@ -445,10 +552,26 @@
           controls.scrollIntoView({ block: "start", behavior: "smooth" });
         });
       }
-    } else {
+    } else if (localAvailable) {
       setText(locked, "Owner helper actions are offline. Read-only Owner dashboard is still available; use 127.0.0.1 or start scripts/local_server.py for actions.");
+      if (locked) locked.hidden = false;
       setStatus("Owner helper actions are offline; dashboard shown read-only.");
+      setLocalHelperControlsEnabled(false);
       renderOwnerPreviewState();
+      if (options.scrollToControls && controls) {
+        window.requestAnimationFrame(() => {
+          controls.scrollIntoView({ block: "start", behavior: "smooth" });
+        });
+      }
+    } else if (cloudAvailable) {
+      if (locked) locked.hidden = true;
+      setStatus(`Owner cloud session verified${authState.email ? ` for ${authState.email}` : ""}; localhost-only actions are paused.`);
+      renderCloudOwnerReadOnlyState();
+      if (options.scrollToControls && controls) {
+        window.requestAnimationFrame(() => {
+          controls.scrollIntoView({ block: "start", behavior: "smooth" });
+        });
+      }
     }
   };
 
@@ -2037,8 +2160,7 @@
   };
 
   const renderCounts = () => {
-    if (!hiddenActions?.enabled) return;
-    const hiddenIds = hiddenActions.read();
+    const hiddenIds = hiddenActions?.enabled ? hiddenActions.read() : [];
     const hiddenCount = hiddenIds.length;
     const expoTotal = countPhotos(collections);
     const expoPhotoIds = collectionPhotoIdSet(collections);
@@ -2347,27 +2469,34 @@
     const choice = importSourceSelect.value || "new";
     const source = importSourceByPath(choice);
     const hasSource = Boolean(source);
+    const helperReady = localHelperWritable();
     importSourceDetails.hidden = !hasSource;
     setText(importSourcePathRoot, hasSource ? source.path : "");
     setText(importSourceLastUsedRoot, hasSource ? formatImportSourceTime(source.lastUsedAt) : "");
     setText(importSourceStateRoot, hasSource ? importSourceStateText(source) : "");
     if (importSourcePinButton) {
-      importSourcePinButton.disabled = !hasSource;
+      importSourcePinButton.disabled = !helperReady || !hasSource;
       importSourcePinButton.textContent = source?.pinned ? "Unpin" : "Pin";
-      importSourcePinButton.title = hasSource
+      importSourcePinButton.title = !helperReady
+        ? "Requires the localhost Owner helper."
+        : hasSource
         ? (source.pinned ? "Remove this source from favorites" : "Pin this source as a favorite")
         : "Choose a remembered source to pin";
     }
     if (importSourceReviewButton) {
       importSourceReviewButton.hidden = !source?.reviewRequired;
-      importSourceReviewButton.disabled = !source?.reviewRequired;
-      importSourceReviewButton.title = source?.reviewRequired
+      importSourceReviewButton.disabled = !helperReady || !source?.reviewRequired;
+      importSourceReviewButton.title = !helperReady
+        ? "Requires the localhost Owner helper."
+        : source?.reviewRequired
         ? "Mark this legacy remembered folder as reviewed"
         : "";
     }
     if (importSourceRemoveButton) {
-      importSourceRemoveButton.disabled = !hasSource;
-      importSourceRemoveButton.title = hasSource
+      importSourceRemoveButton.disabled = !helperReady || !hasSource;
+      importSourceRemoveButton.title = !helperReady
+        ? "Requires the localhost Owner helper."
+        : hasSource
         ? "Remove this remembered source folder from Owner.sqlite history"
         : "Choose a remembered source to remove";
     }
@@ -2778,19 +2907,24 @@
 
   const syncR2ActionButtons = () => {
     const busy = r2RepairActive || r2GapFillActive || r2MaintenanceActive;
+    const helperReady = localHelperWritable();
     if (r2FixButton) {
-      r2FixButton.disabled = busy;
+      r2FixButton.disabled = !helperReady || busy;
       r2FixButton.textContent = busy
         ? "Task running"
         : "Start Expo import";
-      r2FixButton.title = `Start Expo import from ${importSourceChoiceLabel()}`;
+      r2FixButton.title = helperReady
+        ? `Start Expo import from ${importSourceChoiceLabel()}`
+        : "Requires the localhost Owner helper.";
     }
-    if (importSourceSelect) importSourceSelect.disabled = busy;
+    if (importSourceSelect) importSourceSelect.disabled = !helperReady || busy;
     const gapCount = r2GapPhotoCount();
     r2FillGapsButtons.forEach((button) => {
-      button.disabled = r2CoverageOk || busy || gapCount === 0;
+      button.disabled = !helperReady || r2CoverageOk || busy || gapCount === 0;
       button.textContent = r2GapFillActive ? "Filling gaps..." : "Fill in gaps";
-      button.title = gapCount
+      button.title = !helperReady
+        ? "Requires the localhost Owner helper."
+        : gapCount
         ? `Render and upload missing media for ${formatCount(gapCount)} incomplete photos`
         : "No incomplete upload photos are listed";
     });
@@ -2799,11 +2933,13 @@
       if (!button.dataset.ownerDefaultLabel) {
         button.dataset.ownerDefaultLabel = button.textContent || R2_MAINTENANCE_LABELS.get(key) || "Maintenance";
       }
-      button.disabled = busy;
+      button.disabled = !helperReady || busy;
       button.textContent = r2MaintenanceActive && activeR2MaintenanceKey === key
         ? "Running..."
         : button.dataset.ownerDefaultLabel;
-      button.title = busy
+      button.title = !helperReady
+        ? "Requires the localhost Owner helper."
+        : busy
         ? "Another import or maintenance task is running"
         : `Start ${button.dataset.ownerDefaultLabel}`;
     });
@@ -4573,14 +4709,6 @@
     loadR2Progress();
     r2PollTimer = window.setInterval(loadR2Progress, 900);
   };
-
-  if (!hiddenActions?.enabled) {
-    if (controls) controls.hidden = true;
-    setText(locked, "Owner controls are only available on localhost.");
-    if (locked) locked.hidden = false;
-    setStatus("Owner controls are locked on the public site.");
-    return;
-  }
 
   if (controls) controls.hidden = true;
   renderPriceList();

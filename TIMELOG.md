@@ -340,8 +340,9 @@ Clock state: running
 | 2026-06-20 | 17:36 CEST | 17:39 CEST | 0:01 | Requested a Sign out option in the signed-in Account sheet; implementation, validation, and deploy wait excluded. |
 | 2026-06-20 | 17:59 CEST | 18:00 CEST | 0:01 | Requested Max handoff docs refresh, conversation summary, commit/push, and a fresh numbered backlog; background documentation work excluded. |
 | 2026-06-20 | 18:08 CEST | 18:10 CEST | 0:02 | Updated from GitHub and retired obsolete Gmail-based Max/David handoff instructions; background repo inspection/editing excluded. |
+| 2026-06-20 | 18:11 CEST | 18:28 CEST | 0:06 | Opened public Owner for cloud Owner/Admin read-only access with localhost helper actions disabled; browser/test wait excluded. |
 
 ## Totals
 
-Active collaboration time used: 19:54
+Active collaboration time used: 20:00
 Remaining budget: not set

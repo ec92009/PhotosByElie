@@ -13,7 +13,7 @@ for remote execution.
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Branch: `main`
 - Public site: `https://photos-by-elie.com/`
-- Current visible build: `v112.5`
+- Current visible build: `v112.6`
 - Auth Worker/custom domain: `https://auth.photos-by-elie.com`
 - Worker version after sign-out support: `c12eb833-0fed-42ee-a048-b5088793bc3c`
 - Latest relevant commits:
@@ -33,6 +33,7 @@ npm run validate
 
 - Test the public homepage account icon near the Settings cog, Google sign-in, signed-in account sheet, and `Sign out`.
 - Test Real Estate Google login from `real-estate.html?client=corine` or the current client key. It should route through Cloudflare Access/Google on `auth.photos-by-elie.com`, not return `owner_auth_missing`.
+- Test `owner.html` after signing in with an Owner/Admin Google account. The public dashboard should open read-only with localhost-only import, upload, cleanup, publishing, and role-management actions disabled; full mutation actions still require the localhost Owner helper.
 - Expected role behavior: ungranted verified Google users remain normal users; granted RE client emails are limited to their assigned gallery keys; Owner work requires an Owner grant and still treats local David admin as the role-management authority.
 - If stale Cloudflare Access state causes confusing results, use Account -> Sign out and retry.
 - Google OAuth client credentials and Worker secrets were entered outside git. Do not copy secrets into repo docs or handoff files.

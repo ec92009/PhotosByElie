@@ -8,7 +8,7 @@ Use this section first. Older sections below are retained as historical context 
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Branch: `main`
-- Current visible build: `v112.5`
+- Current visible build: `v112.6`
 - Latest pushed site commit before this handoff docs refresh: `cf7fc214 photosbyelie: add account sign out`
 - Public site: `https://photos-by-elie.com/`
 - Auth Worker/custom domain: `https://auth.photos-by-elie.com`
@@ -26,6 +26,7 @@ Use this section first. Older sections below are retained as historical context 
 - Added a public account icon near Settings. The account sheet supports visitor mode, Google sign up/sign in, a signed-in state, and now a `Sign out` action.
 - Fixed the Real Estate Google login host mismatch. The RE page now uses `authWorkerBaseUrl`, so `Continue with Google` goes to the Cloudflare Access path instead of the checkout Worker path that returned `owner_auth_missing`.
 - Added Worker `/auth/logout` support so sign-out sends the browser through Cloudflare Access logout.
+- Opened the public `owner.html` dashboard for authenticated cloud Owner/Admin sessions as read-only cloud state while leaving localhost-only mutation tools disabled until their cloud endpoints are complete.
 
 ### Auth And Role Model
 

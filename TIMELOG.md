@@ -343,8 +343,9 @@ Clock state: running
 | 2026-06-20 | 18:11 CEST | 18:28 CEST | 0:06 | Opened public Owner for cloud Owner/Admin read-only access with localhost helper actions disabled; browser/test wait excluded. |
 | 2026-06-20 | 20:44 CEST | 20:48 CEST | 0:03 | Redirected direct auth Worker root visits to the public Account sheet and verified the live Cloudflare Worker; deploy/test wait excluded. |
 | 2026-06-20 | 22:57 CEST | 22:58 CEST | 0:01 | Reported post-sign-out Google sign-in reusing the same account and requested account-picker behavior; implementation/testing time excluded. |
+| 2026-06-20 | 23:05 CEST | 23:06 CEST | 0:01 | Reported the prompt-only account-picker fix still reused the same Google account; stronger AccountChooser implementation/testing time excluded. |
 
 ## Totals
 
-Active collaboration time used: 20:04
+Active collaboration time used: 20:05
 Remaining budget: not set

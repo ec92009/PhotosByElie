@@ -8,7 +8,7 @@ Use this section first. Older sections below are retained as historical context 
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Branch: `main`
-- Current visible build: `v112.7`
+- Current visible build: `v112.8`
 - Latest pushed site commit before this handoff docs refresh: `cf7fc214 photosbyelie: add account sign out`
 - Public site: `https://photos-by-elie.com/`
 - Auth Worker/custom domain: `https://auth.photos-by-elie.com`

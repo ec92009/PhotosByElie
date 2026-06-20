@@ -96,9 +96,10 @@ setup in its Google identity provider guide:
 https://developers.cloudflare.com/cloudflare-one/integrations/identity-providers/google/
 
 Set the Google identity provider prompt behavior to `select_account`. The
-public Account buttons also pass `prompt=select_account` when starting login,
-but the Cloudflare IdP prompt setting is the durable way to avoid silently
-reusing the last warm Google browser session after a user signs out.
+public Account buttons first route through Google AccountChooser and also pass
+`prompt=select_account` when starting the Cloudflare Access login, but the
+Cloudflare IdP prompt setting is the durable way to avoid silently reusing the
+last warm Google browser session after a user signs out.
 
 Cloudflare Access sends the Worker an Access JWT in the
 `Cf-Access-Jwt-Assertion` request header on protected requests. Browser sessions

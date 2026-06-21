@@ -2,7 +2,7 @@
 
 ## Lightroom Thumbnail Builder
 
-`build_lightroom_thumbnails.py` scans developed photo/video exports, keeps Lightroom green label/rating 4+ files for Camera sources, infers a country bucket, and writes watermarked preview derivatives plus a resumable local import-cache manifest. RAW/DNG/NEF files are owner-local source material only; export developed JPG/TIFF/MOV/MP4/M4V masters before importing them.
+`build_lightroom_thumbnails.py` scans developed photo/video exports, keeps Lightroom green label/rating 4+ files for Camera sources, infers a country bucket, and writes watermarked preview derivatives plus a resumable local import-cache manifest. RAW/DNG/NEF files are owner-local source material only; export developed JPG/TIFF/MOV/MP4/M4V masters before importing them. The direct Apple Photos bridge can now fill the retired Saturn/Lightroom staging role for RAW-only Photos assets by rendering Photos' current JPG into `tmp/apple-photos-import/` before the normal import sweep.
 
 Required tools: `python3`, `exiftool`, `sips`, `ffmpeg`, `ffprobe`, and Pillow. Pillow is used to normalize rotated source photos and bake the repeating preview watermark. Install it with `python3 -m pip install --user pillow`.
 

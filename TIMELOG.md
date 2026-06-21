@@ -360,8 +360,9 @@ Clock state: running
 | 2026-06-21 | 11:42 CEST | 11:43 CEST | 0:01 | Explained the Owner Expo Apple Photos import card controls and safe dry-run/import sequence. |
 | 2026-06-21 | 12:30 CEST | 12:36 CEST | 0:06 | Refined the Owner Apple Photos import picker into a batch table with classic multi-selection, cached album feedback, imported/progress counts, and smart-album discovery; implementation/browser-test runtime excluded. |
 | 2026-06-21 | 12:39 CEST | 12:40 CEST | 0:01 | Requested Owner Apple Photos table width, resizing, and sortable-header polish; background implementation/testing time excluded. |
+| 2026-06-21 | 13:21 CEST | 13:22 CEST | 0:01 | Directed RAW-backed direct Photos imports to use rendered JPG temp exports now that Saturn staging is being retired; background implementation/testing time excluded. |
 
 ## Totals
 
-Active collaboration time used: 20:35
+Active collaboration time used: 20:36
 Remaining budget: not set

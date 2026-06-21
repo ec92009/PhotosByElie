@@ -21,6 +21,19 @@ func printJSON(_ value: Any) {
     FileHandle.standardOutput.write("\n".data(using: .utf8)!)
 }
 
+func emitProgress(_ event: String, _ payload: [String: Any]) {
+    var body = payload
+    body["event"] = event
+    body["ts"] = isoDate(Date())
+    guard JSONSerialization.isValidJSONObject(body),
+          let data = try? JSONSerialization.data(withJSONObject: body, options: [.sortedKeys]) else {
+        return
+    }
+    FileHandle.standardError.write("PBE_APPLE_PHOTOS_PROGRESS ".data(using: .utf8)!)
+    FileHandle.standardError.write(data)
+    FileHandle.standardError.write("\n".data(using: .utf8)!)
+}
+
 func fail(_ code: String, _ message: String, status: Int32 = 1) -> Never {
     printJSON(["ok": false, "code": code, "error": message])
     exit(status)
@@ -474,8 +487,24 @@ func writeResource(_ resource: PHAssetResource, to url: URL, allowIcloudDownload
 func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterBursts: Bool, allowIcloudDownloads: Bool) throws -> [String: Any] {
     try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)
     let (plans, burstFilter) = plannedAssets(album: album, limit: limit, filterBursts: filterBursts)
+    let albumInfo = albumSummary(album)
+    let candidateCount = plans.filter { ($0.row["eligible"] as? Bool) == true }.count
+    var attemptedCount = 0
+    var materializedCount = 0
     var sidecarRows: [[String: Any]] = []
     var itemRows: [[String: Any]] = []
+    emitProgress("materialize_start", [
+        "album": albumInfo,
+        "destination": destination.path,
+        "totalCount": plans.count,
+        "candidateCount": candidateCount,
+        "attemptedCount": attemptedCount,
+        "materializedCount": materializedCount,
+        "burstFilter": burstFilter,
+        "icloudDownloads": [
+            "enabled": allowIcloudDownloads,
+        ],
+    ])
     for plan in plans {
         let asset = plan.asset
         let index = plan.index - 1
@@ -488,12 +517,27 @@ func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterB
         if strategy == "rendered_jpeg" {
             let filename = safeFilename(row["filename"] as? String ?? "", fallback: "apple-photos-\(index + 1).jpg")
             let outputURL = destination.appendingPathComponent(String(format: "%04d-%@", index + 1, filename))
+            attemptedCount += 1
+            emitProgress("asset_start", [
+                "album": albumInfo,
+                "index": plan.index,
+                "totalCount": plans.count,
+                "candidateCount": candidateCount,
+                "attemptedCount": attemptedCount,
+                "materializedCount": materializedCount,
+                "localIdentifier": asset.localIdentifier,
+                "filename": filename,
+                "mediaType": row["mediaType"] as? String ?? "photo",
+                "exportStrategy": strategy,
+                "status": "materializing",
+            ])
             switch writeRenderedJPEG(asset, to: outputURL, allowIcloudDownloads: allowIcloudDownloads) {
             case .success:
                 let relativePath = outputURL.lastPathComponent
                 row["status"] = "materialized"
                 row["relative_path"] = relativePath
                 row["path"] = outputURL.path
+                materializedCount += 1
                 sidecarRows.append([
                     "relative_path": relativePath,
                     "source_anchor": [
@@ -505,12 +549,41 @@ func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterB
                     ],
                     "apple_photos": row,
                 ])
+                emitProgress("asset_done", [
+                    "album": albumInfo,
+                    "index": plan.index,
+                    "totalCount": plans.count,
+                    "candidateCount": candidateCount,
+                    "attemptedCount": attemptedCount,
+                    "materializedCount": materializedCount,
+                    "localIdentifier": asset.localIdentifier,
+                    "filename": filename,
+                    "relativePath": relativePath,
+                    "path": outputURL.path,
+                    "mediaType": row["mediaType"] as? String ?? "photo",
+                    "exportStrategy": strategy,
+                    "status": "materialized",
+                ])
             case .failure(let error):
                 row["eligible"] = false
                 row["status"] = "unavailable_from_icloud"
                 row["reason"] = allowIcloudDownloads
                     ? "Photos could not download or provide the rendered JPG for Owner import: \(error.localizedDescription)"
                     : "Rendered JPG is not available locally and network download is disabled for Owner import safety: \(error.localizedDescription)"
+                emitProgress("asset_failed", [
+                    "album": albumInfo,
+                    "index": plan.index,
+                    "totalCount": plans.count,
+                    "candidateCount": candidateCount,
+                    "attemptedCount": attemptedCount,
+                    "materializedCount": materializedCount,
+                    "localIdentifier": asset.localIdentifier,
+                    "filename": filename,
+                    "mediaType": row["mediaType"] as? String ?? "photo",
+                    "exportStrategy": strategy,
+                    "status": row["status"] as? String ?? "unavailable_from_icloud",
+                    "reason": row["reason"] as? String ?? error.localizedDescription,
+                ])
             }
             itemRows.append(row)
             continue
@@ -524,12 +597,27 @@ func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterB
         }
         let filename = safeFilename(resource.originalFilename, fallback: "apple-photos-\(index + 1)")
         let outputURL = destination.appendingPathComponent(String(format: "%04d-%@", index + 1, filename))
+        attemptedCount += 1
+        emitProgress("asset_start", [
+            "album": albumInfo,
+            "index": plan.index,
+            "totalCount": plans.count,
+            "candidateCount": candidateCount,
+            "attemptedCount": attemptedCount,
+            "materializedCount": materializedCount,
+            "localIdentifier": asset.localIdentifier,
+            "filename": filename,
+            "mediaType": row["mediaType"] as? String ?? "photo",
+            "exportStrategy": strategy,
+            "status": "materializing",
+        ])
         switch writeResource(resource, to: outputURL, allowIcloudDownloads: allowIcloudDownloads) {
         case .success:
             let relativePath = outputURL.lastPathComponent
             row["status"] = "materialized"
             row["relative_path"] = relativePath
             row["path"] = outputURL.path
+            materializedCount += 1
             sidecarRows.append([
                 "relative_path": relativePath,
                 "source_anchor": [
@@ -541,19 +629,60 @@ func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterB
                 ],
                 "apple_photos": row,
             ])
+            emitProgress("asset_done", [
+                "album": albumInfo,
+                "index": plan.index,
+                "totalCount": plans.count,
+                "candidateCount": candidateCount,
+                "attemptedCount": attemptedCount,
+                "materializedCount": materializedCount,
+                "localIdentifier": asset.localIdentifier,
+                "filename": filename,
+                "relativePath": relativePath,
+                "path": outputURL.path,
+                "mediaType": row["mediaType"] as? String ?? "photo",
+                "exportStrategy": strategy,
+                "status": "materialized",
+            ])
         case .failure(let error):
             row["eligible"] = false
             row["status"] = "unavailable_from_icloud"
             row["reason"] = allowIcloudDownloads
                 ? "Photos could not download or provide the original resource for Owner import: \(error.localizedDescription)"
                 : "Original resource is not available locally and network download is disabled for Owner import safety: \(error.localizedDescription)"
+            emitProgress("asset_failed", [
+                "album": albumInfo,
+                "index": plan.index,
+                "totalCount": plans.count,
+                "candidateCount": candidateCount,
+                "attemptedCount": attemptedCount,
+                "materializedCount": materializedCount,
+                "localIdentifier": asset.localIdentifier,
+                "filename": filename,
+                "mediaType": row["mediaType"] as? String ?? "photo",
+                "exportStrategy": strategy,
+                "status": row["status"] as? String ?? "unavailable_from_icloud",
+                "reason": row["reason"] as? String ?? error.localizedDescription,
+            ])
         }
         itemRows.append(row)
     }
+    emitProgress("materialize_done", [
+        "album": albumInfo,
+        "destination": destination.path,
+        "totalCount": plans.count,
+        "candidateCount": candidateCount,
+        "attemptedCount": attemptedCount,
+        "materializedCount": sidecarRows.count,
+        "burstFilter": burstFilter,
+        "icloudDownloads": [
+            "enabled": allowIcloudDownloads,
+        ],
+    ])
     let sidecar: [String: Any] = [
         "schema": "photosbyelie.apple-photos-source-anchors.v1",
         "created_at": isoDate(Date()),
-        "album": albumSummary(album),
+        "album": albumInfo,
         "icloudDownloads": [
             "enabled": allowIcloudDownloads,
         ],
@@ -564,7 +693,7 @@ func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterB
     return [
         "ok": true,
         "mode": "materialize",
-        "album": albumSummary(album),
+        "album": albumInfo,
         "destination": destination.path,
         "sidecar": sidecarURL.path,
         "count": itemRows.count,

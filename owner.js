@@ -208,6 +208,8 @@
   let applePhotosLogEntries = [];
   let applePhotosImportPhaseActive = false;
   let applePhotosImportProgressByAlbum = new Map();
+  let applePhotosImportProgressTimer = null;
+  let applePhotosActiveProgressId = "";
   let applePhotosAlbumCacheMeta = null;
   let applePhotosAlbumLoadTimer = null;
   let applePhotosSortKey = "title";
@@ -2929,6 +2931,142 @@
     renderApplePhotosAlbumList();
   };
 
+  const createApplePhotosProgressId = () => (
+    `apple-photos-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`
+  );
+
+  const stopApplePhotosProgressPolling = () => {
+    if (applePhotosImportProgressTimer) window.clearInterval(applePhotosImportProgressTimer);
+    applePhotosImportProgressTimer = null;
+    applePhotosActiveProgressId = "";
+  };
+
+  const applePhotosProgressStatusLabel = (status) => {
+    const key = String(status || "").trim();
+    if (key === "materializing") return "Materializing";
+    if (key === "materialized") return "Materialized";
+    if (key === "unavailable_from_icloud") return "Needs Photos/iCloud";
+    if (key === "blocked_by_policy") return "Skipped";
+    if (key === "unsupported") return "Unsupported";
+    return key ? key.replace(/_/g, " ") : "Waiting";
+  };
+
+  const applePhotosProgressItemKey = (item = {}) => (
+    `${item.localIdentifier || ""}:${item.index || ""}:${item.filename || ""}`
+  );
+
+  const applePhotosProgressItemRowHtml = (item = {}, albumName = "", label = "") => {
+    const status = String(item.status || "").trim();
+    const safeStatus = status.replace(/[^a-z0-9_-]/gi, "-") || "waiting";
+    const detail = item.relativePath || item.path || item.reason || albumName || "";
+    return `
+      <div class="owner-coverage-missing-row owner-apple-photos-progress-row is-${escapeHtml(safeStatus)}">
+        <strong>${escapeHtml(label || applePhotosProgressStatusLabel(status))}</strong>
+        <span>${escapeHtml(item.filename || "Apple Photos asset")}</span>
+        ${detail ? `<small>${escapeHtml(detail)}</small>` : ""}
+      </div>
+    `;
+  };
+
+  const renderApplePhotosMaterializationProgress = (progress = {}) => {
+    if (!applePhotosCounts || !applePhotosPreview || !progress) return;
+    const albums = Array.isArray(progress.albums) ? progress.albums : [];
+    const materializedCount = Number(progress.materializedCount || 0) || 0;
+    const importableCount = Number(progress.importableCount || 0) || 0;
+    const checkedCount = Number(progress.checkedCount || 0) || 0;
+    const completedAlbums = Number(progress.completedAlbums || 0) || 0;
+    const totalAlbums = Number(progress.totalAlbums || albums.length || 0) || 0;
+    const statusText = progress.state === "done" ? "Finishing" : progress.state === "failed" ? "Failed" : "Materializing";
+    const countRows = [
+      ["Status", statusText],
+      ["Materialized", `${formatCount(materializedCount)}/${formatCount(importableCount || checkedCount || 0)}`],
+      ["Checked", formatCount(checkedCount)],
+      ...(totalAlbums > 1 ? [["Albums", `${formatCount(completedAlbums)}/${formatCount(totalAlbums)}`]] : []),
+    ];
+    setHtml(applePhotosCounts, ownerCountRowsHtml(countRows, new Set(["Materialized"])));
+
+    const activeAlbum = albums.find((album) => album.currentItem)
+      || albums.find((album) => String(album.albumLocalIdentifier || "") === String(progress.currentAlbumLocalIdentifier || ""))
+      || albums[0]
+      || {};
+    const currentItem = progress.currentItem || activeAlbum.currentItem || null;
+    const currentRows = currentItem
+      ? applePhotosProgressItemRowHtml(currentItem, activeAlbum.albumName || "", "Materializing now")
+      : "";
+    const recentItems = albums
+      .flatMap((album) => (Array.isArray(album.items) ? album.items : []).map((item) => ({
+        ...item,
+        albumName: album.albumName || "Apple Photos album",
+      })))
+      .filter((item) => !currentItem || applePhotosProgressItemKey(item) !== applePhotosProgressItemKey(currentItem))
+      .sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")))
+      .slice(0, 16);
+    const recentRows = recentItems.map((item) => (
+      applePhotosProgressItemRowHtml(item, item.albumName || "")
+    )).join("");
+    const message = progress.message ? `
+      <div class="owner-coverage-missing-row">
+        <strong>Progress</strong>
+        <span>${escapeHtml(progress.message)}</span>
+      </div>
+    ` : "";
+    setHtml(applePhotosPreview, `
+      ${message}
+      ${currentRows}
+      ${recentRows || (!currentRows ? "<p>Waiting for the first Apple Photos asset...</p>" : "")}
+    `);
+    applePhotosPreview.hidden = false;
+  };
+
+  const syncApplePhotosMaterializationProgress = (progress = {}) => {
+    if (!progress || !Array.isArray(progress.albums)) return;
+    let listChanged = false;
+    progress.albums.forEach((row) => {
+      const albumId = String(row.albumLocalIdentifier || "").trim();
+      if (!albumId) return;
+      const album = applePhotosAlbums.find((item) => item.localIdentifier === albumId) || { localIdentifier: albumId, title: row.albumName || "Apple Photos album" };
+      const importableCount = Number(row.importableCount || 0);
+      const materializedCount = Number(row.materializedCount || 0);
+      applePhotosImportProgressByAlbum.set(albumId, {
+        state: String(row.state || progress.state || "running"),
+        importedCount: materializedCount,
+        materializedCount,
+        importableCount,
+      });
+      const current = row.currentItem || {};
+      updateApplePhotosLogEntry(album, {
+        state: String(row.state || progress.state || "") === "failed" ? "failed" : "running",
+        detail: current.filename
+          ? `${formatCount(materializedCount)}/${formatCount(importableCount || materializedCount)} materialized · ${current.filename}`
+          : `${formatCount(materializedCount)}/${formatCount(importableCount || materializedCount)} materialized`,
+      });
+      listChanged = true;
+    });
+    if (listChanged) renderApplePhotosAlbumList();
+    renderApplePhotosMaterializationProgress(progress);
+  };
+
+  const pollApplePhotosMaterializationProgress = async (progressId) => {
+    if (!progressId) return null;
+    const url = new URL("/__photosbyelie/apple-photos/import-progress", window.location.origin);
+    url.searchParams.set("progress_id", progressId);
+    const response = await fetch(url.href, { cache: "no-store" });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Could not load Apple Photos progress.");
+    if (payload.progress) syncApplePhotosMaterializationProgress(payload.progress);
+    return payload.progress || null;
+  };
+
+  const startApplePhotosProgressPolling = (progressId) => {
+    stopApplePhotosProgressPolling();
+    applePhotosActiveProgressId = progressId;
+    applePhotosImportProgressTimer = window.setInterval(() => {
+      pollApplePhotosMaterializationProgress(progressId).catch(() => {
+        // Older helpers do not expose live progress; the final import response still reports completion.
+      });
+    }, 1200);
+  };
+
   const applePhotosVisibleAlbumIds = () => visibleApplePhotosAlbums().map((album) => album.localIdentifier);
 
   const applyApplePhotosSelection = (albumId, event = {}, options = {}) => {
@@ -3550,13 +3688,35 @@
     renderApplePhotosAlbumList();
     resetApplePhotosLog(albums, "Waiting for materialization...");
     const iCloudMode = applePhotosAllowIcloudDownloads() ? " with iCloud downloads allowed" : "";
+    const progressId = createApplePhotosProgressId();
+    renderApplePhotosMaterializationProgress({
+      id: progressId,
+      state: "running",
+      message: "Preparing Apple Photos materialization...",
+      totalAlbums: albums.length,
+      completedAlbums: 0,
+      importableCount: albums.reduce((total, album) => total + (applePhotosKnownImportableCount(album) || 0), 0),
+      checkedCount: 0,
+      materializedCount: 0,
+      albums: albums.map((album) => ({
+        albumLocalIdentifier: album.localIdentifier,
+        albumName: album.title,
+        state: "queued",
+        importableCount: applePhotosKnownImportableCount(album) || 0,
+        checkedCount: 0,
+        materializedCount: 0,
+        items: [],
+      })),
+    });
+    startApplePhotosProgressPolling(progressId);
     setApplePhotosStatus(`Materializing Apple Photos assets for ${formatCount(albums.length)} album${albums.length === 1 ? "" : "s"} into a review folder${iCloudMode}...`);
     try {
       const response = await fetch("/__photosbyelie/apple-photos/import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(applePhotosImportPayload(albums)),
+        body: JSON.stringify(applePhotosImportPayload(albums, { progressId })),
       });
+      stopApplePhotosProgressPolling();
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Apple Photos import failed.");
       if (payload.batch) {
@@ -3631,11 +3791,13 @@
       }
       setApplePhotosStatus(payload.message || "Apple Photos assets were materialized to a review folder.");
     } catch (error) {
+      stopApplePhotosProgressPolling();
       applePhotosImportPhaseActive = false;
       applePhotosImportProgressByAlbum = new Map();
       renderApplePhotosAlbumList();
       setApplePhotosStatus(error?.message || "Apple Photos import failed.");
     } finally {
+      stopApplePhotosProgressPolling();
       setApplePhotosBusy(false);
     }
   };

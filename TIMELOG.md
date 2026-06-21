@@ -364,8 +364,10 @@ Clock state: running
 | 2026-06-21 | 13:33 CEST | 13:35 CEST | 0:02 | Directed direct Apple Photos materialization through an Owner review gate before R2 upload and requested a pre-conversion burst filter switch; background implementation/testing time excluded. |
 | 2026-06-21 | 19:39 CEST | 19:40 CEST | 0:01 | Requested an opt-in forced iCloud/Photos fetch path for missing Apple Photos assets during temp review-folder materialization; background implementation/testing time excluded. |
 | 2026-06-21 | 19:56 CEST | 19:57 CEST | 0:01 | Reported successful Apple Photos materialization was not visible in the review panel; background debugging and UI fix time excluded. |
+| 2026-06-21 | 21:28 CEST | 21:29 CEST | 0:01 | Requested moving the Apple Photos import command buttons beside the album table for a more comfortable Owner layout; background implementation/testing time excluded. |
+| 2026-06-21 | 21:45 CEST | 21:46 CEST | 0:01 | Requested live per-photo status while missing Apple Photos assets materialize into the review folder; background implementation/testing time excluded. |
 
 ## Totals
 
-Active collaboration time used: 20:40
+Active collaboration time used: 20:42
 Remaining budget: not set

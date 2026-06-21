@@ -43,6 +43,7 @@ IMPORT_SOURCE_THUMB_PATH = "/__photosbyelie/import-source-thumb"
 APPLE_PHOTOS_ALBUMS_PATH = "/__photosbyelie/apple-photos/albums"
 APPLE_PHOTOS_PREFLIGHT_PATH = "/__photosbyelie/apple-photos/preflight"
 APPLE_PHOTOS_IMPORT_PATH = "/__photosbyelie/apple-photos/import"
+APPLE_PHOTOS_IMPORT_PROGRESS_PATH = "/__photosbyelie/apple-photos/import-progress"
 APPLE_PHOTOS_SOURCE_ANCHORS = ".pbe-apple-photos-assets.json"
 REAL_ESTATE_OWNER_PATH = "/__photosbyelie/real-estate-owner"
 REAL_ESTATE_IMPORT_PROGRESS_PATH = "/__photosbyelie/real-estate-import-progress"
@@ -97,6 +98,10 @@ APPLE_PHOTOS_IMPORT_ROOT = Path("tmp/apple-photos-import")
 APPLE_PHOTOS_ALBUM_CACHE_TTL_SECONDS = 12 * 60 * 60
 APPLE_PHOTOS_ALBUMS_CACHE: dict[str, object] = {"payload": None, "loaded_at": 0.0}
 APPLE_PHOTOS_ALBUMS_CACHE_LOCK = threading.Lock()
+APPLE_PHOTOS_IMPORT_PROGRESS: dict[str, dict] = {}
+APPLE_PHOTOS_IMPORT_PROGRESS_LOCK = threading.Lock()
+APPLE_PHOTOS_PROGRESS_PREFIX = "PBE_APPLE_PHOTOS_PROGRESS "
+APPLE_PHOTOS_PROGRESS_ITEM_LIMIT = 60
 SOURCE_PREVIEW_CACHE_ROOT = Path(".review-logs/source-previews")
 IMPORT_SOURCE_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tif", ".tiff", ".heic", ".heif", ".webp"}
 SOURCE_PREVIEW_BROWSER_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
@@ -428,6 +433,9 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             return
         if path == APPLE_PHOTOS_ALBUMS_PATH:
             self._handle_apple_photos_albums()
+            return
+        if path == APPLE_PHOTOS_IMPORT_PROGRESS_PATH:
+            self._handle_apple_photos_import_progress()
             return
         if path == IMPORT_SOURCE_THUMB_PATH:
             self._handle_import_source_thumb()
@@ -835,16 +843,27 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         if not self._is_loopback_request():
             self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
             return
+        payload: dict = {}
         try:
             payload = self._read_json_body()
             result = _start_apple_photos_import(Path.cwd(), payload)
         except ValueError as error:
+            _finish_apple_photos_import_progress(_apple_photos_progress_id(payload), "failed", {"error": str(error)})
             self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
             return
         except (OSError, RuntimeError, json.JSONDecodeError) as error:
+            _finish_apple_photos_import_progress(_apple_photos_progress_id(payload), "failed", {"error": str(error)})
             self._send_json(HTTPStatus.BAD_GATEWAY, {"ok": False, "error": str(error)})
             return
         self._send_json(HTTPStatus.OK if result.get("ok") else HTTPStatus.BAD_GATEWAY, result)
+
+    def _handle_apple_photos_import_progress(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        query = parse_qs(urlparse(self.path).query)
+        progress_id = _clean_apple_photos_progress_id((query.get("progress_id") or query.get("task_id") or [""])[0])
+        self._send_json(HTTPStatus.OK, {"ok": True, "progress": _apple_photos_import_progress(progress_id)})
 
     def _handle_import_source_thumb(self) -> None:
         if not self._is_loopback_request():
@@ -7191,11 +7210,285 @@ def _apple_photos_filter_bursts(payload: dict) -> bool:
     return True
 
 
-def _run_apple_photos_bridge(repo_root: Path, args: list[str]) -> dict:
+def _clean_apple_photos_progress_id(value: object) -> str:
+    text = str(value or "").strip()
+    if not text or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,160}", text):
+        return ""
+    return text
+
+
+def _apple_photos_progress_id(payload: dict) -> str:
+    for key in ("progressId", "progress_id", "taskId", "task_id"):
+        progress_id = _clean_apple_photos_progress_id(payload.get(key))
+        if progress_id:
+            return progress_id
+    return ""
+
+
+def _apple_photos_import_progress(progress_id: str) -> dict | None:
+    if not progress_id:
+        return None
+    with APPLE_PHOTOS_IMPORT_PROGRESS_LOCK:
+        progress = APPLE_PHOTOS_IMPORT_PROGRESS.get(progress_id)
+        return copy.deepcopy(progress) if progress else None
+
+
+def _apple_photos_progress_album_payload(payload: dict) -> dict:
+    album = payload.get("album") if isinstance(payload.get("album"), dict) else {}
+    return {
+        "albumLocalIdentifier": str(album.get("localIdentifier") or payload.get("albumLocalIdentifier") or "").strip(),
+        "albumName": str(album.get("title") or payload.get("albumName") or "Apple Photos album").strip() or "Apple Photos album",
+    }
+
+
+def _start_apple_photos_import_progress(progress_id: str, albums: list[dict]) -> None:
+    if not progress_id:
+        return
+    now = datetime.now(timezone.utc).isoformat()
+    album_rows = []
+    seen: set[str] = set()
+    for payload in albums:
+        album = _apple_photos_progress_album_payload(payload)
+        album_id = album["albumLocalIdentifier"] or album["albumName"]
+        if not album_id or album_id in seen:
+            continue
+        seen.add(album_id)
+        album_rows.append({
+            **album,
+            "state": "queued",
+            "importableCount": 0,
+            "checkedCount": 0,
+            "materializedCount": 0,
+            "items": [],
+        })
+    with APPLE_PHOTOS_IMPORT_PROGRESS_LOCK:
+        APPLE_PHOTOS_IMPORT_PROGRESS[progress_id] = {
+            "id": progress_id,
+            "state": "running",
+            "message": "Preparing Apple Photos materialization...",
+            "startedAt": now,
+            "updatedAt": now,
+            "totalAlbums": len(album_rows),
+            "completedAlbums": 0,
+            "importableCount": 0,
+            "checkedCount": 0,
+            "materializedCount": 0,
+            "albums": album_rows,
+        }
+
+
+def _progress_event_album_key(event: dict) -> str:
+    album = event.get("album") if isinstance(event.get("album"), dict) else {}
+    return str(album.get("localIdentifier") or event.get("albumLocalIdentifier") or album.get("title") or event.get("albumName") or "").strip()
+
+
+def _progress_event_album_title(event: dict) -> str:
+    album = event.get("album") if isinstance(event.get("album"), dict) else {}
+    return str(album.get("title") or event.get("albumName") or "Apple Photos album").strip() or "Apple Photos album"
+
+
+def _progress_album_row(progress: dict, event: dict) -> dict:
+    album_key = _progress_event_album_key(event)
+    album_title = _progress_event_album_title(event)
+    albums = progress.setdefault("albums", [])
+    for row in albums:
+        if str(row.get("albumLocalIdentifier") or row.get("albumName") or "") == album_key:
+            return row
+    row = {
+        "albumLocalIdentifier": album_key,
+        "albumName": album_title,
+        "state": "queued",
+        "importableCount": 0,
+        "checkedCount": 0,
+        "materializedCount": 0,
+        "items": [],
+    }
+    albums.append(row)
+    progress["totalAlbums"] = len(albums)
+    return row
+
+
+def _progress_item_from_event(event: dict, state: str) -> dict:
+    return {
+        "localIdentifier": str(event.get("localIdentifier") or ""),
+        "filename": str(event.get("filename") or "Apple Photos asset"),
+        "index": int(event.get("index") or 0),
+        "status": state,
+        "reason": str(event.get("reason") or ""),
+        "relativePath": str(event.get("relativePath") or ""),
+        "path": str(event.get("path") or ""),
+        "mediaType": str(event.get("mediaType") or ""),
+        "exportStrategy": str(event.get("exportStrategy") or ""),
+        "updatedAt": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+def _append_apple_photos_progress_item(album_row: dict, item: dict) -> None:
+    item_key = item.get("localIdentifier") or f"{item.get('index')}:{item.get('filename')}"
+    items = [
+        existing for existing in album_row.get("items", [])
+        if (existing.get("localIdentifier") or f"{existing.get('index')}:{existing.get('filename')}") != item_key
+    ]
+    album_row["items"] = [item, *items][:APPLE_PHOTOS_PROGRESS_ITEM_LIMIT]
+
+
+def _recount_apple_photos_progress(progress: dict) -> None:
+    albums = progress.get("albums") if isinstance(progress.get("albums"), list) else []
+    progress["importableCount"] = sum(int(row.get("importableCount") or 0) for row in albums if isinstance(row, dict))
+    progress["checkedCount"] = sum(int(row.get("checkedCount") or 0) for row in albums if isinstance(row, dict))
+    progress["materializedCount"] = sum(int(row.get("materializedCount") or 0) for row in albums if isinstance(row, dict))
+    progress["completedAlbums"] = sum(1 for row in albums if isinstance(row, dict) and str(row.get("state") or "") in {"done", "failed"})
+
+
+def _update_apple_photos_import_progress_from_event(progress_id: str, event: dict) -> None:
+    if not progress_id or not isinstance(event, dict):
+        return
+    event_name = str(event.get("event") or "").strip()
+    now = datetime.now(timezone.utc).isoformat()
+    with APPLE_PHOTOS_IMPORT_PROGRESS_LOCK:
+        progress = APPLE_PHOTOS_IMPORT_PROGRESS.setdefault(progress_id, {
+            "id": progress_id,
+            "state": "running",
+            "startedAt": now,
+            "albums": [],
+        })
+        progress["state"] = "running"
+        progress["updatedAt"] = now
+        album_row = _progress_album_row(progress, event)
+        album_row["albumName"] = _progress_event_album_title(event)
+        album_row["importableCount"] = max(0, int(event.get("candidateCount") or album_row.get("importableCount") or 0))
+        album_row["checkedCount"] = max(0, int(event.get("attemptedCount") or album_row.get("checkedCount") or 0))
+        album_row["materializedCount"] = max(0, int(event.get("materializedCount") or album_row.get("materializedCount") or 0))
+        if event_name == "materialize_start":
+            album_row["state"] = "running"
+            progress["currentAlbumLocalIdentifier"] = album_row.get("albumLocalIdentifier") or ""
+            progress["message"] = f"Materializing {album_row['albumName']}..."
+        elif event_name == "asset_start":
+            item = _progress_item_from_event(event, "materializing")
+            album_row["state"] = "running"
+            album_row["currentItem"] = item
+            progress["currentAlbumLocalIdentifier"] = album_row.get("albumLocalIdentifier") or ""
+            progress["currentItem"] = item
+            progress["message"] = f"Materializing {item['filename']} from {album_row['albumName']}..."
+        elif event_name in {"asset_done", "asset_failed"}:
+            state = "materialized" if event_name == "asset_done" else str(event.get("status") or "unavailable")
+            item = _progress_item_from_event(event, state)
+            current = album_row.get("currentItem") if isinstance(album_row.get("currentItem"), dict) else {}
+            if current.get("localIdentifier") == item.get("localIdentifier"):
+                album_row.pop("currentItem", None)
+            _append_apple_photos_progress_item(album_row, item)
+            progress["currentAlbumLocalIdentifier"] = album_row.get("albumLocalIdentifier") or ""
+            progress["currentItem"] = item
+            progress["message"] = (
+                f"Materialized {item['filename']}."
+                if state == "materialized"
+                else f"{item['filename']} was not materialized."
+            )
+        elif event_name == "materialize_done":
+            album_row["state"] = "done"
+            album_row.pop("currentItem", None)
+            progress["message"] = f"Finished materializing {album_row['albumName']}."
+        _recount_apple_photos_progress(progress)
+
+
+def _finish_apple_photos_import_progress(progress_id: str, state: str, result: dict | None = None) -> None:
+    if not progress_id:
+        return
+    now = datetime.now(timezone.utc).isoformat()
+    result = result if isinstance(result, dict) else {}
+    with APPLE_PHOTOS_IMPORT_PROGRESS_LOCK:
+        progress = APPLE_PHOTOS_IMPORT_PROGRESS.setdefault(progress_id, {
+            "id": progress_id,
+            "startedAt": now,
+            "albums": [],
+        })
+        progress["state"] = state
+        progress["updatedAt"] = now
+        progress["completedAt"] = now
+        if result.get("message"):
+            progress["message"] = str(result.get("message") or "")
+        elif result.get("error"):
+            progress["message"] = str(result.get("error") or "")
+            progress["error"] = str(result.get("error") or "")
+        else:
+            progress["message"] = "Apple Photos materialization finished." if state == "done" else "Apple Photos materialization failed."
+        _recount_apple_photos_progress(progress)
+
+
+def _run_apple_photos_bridge_streaming(repo_root: Path, command: list[str], progress_id: str) -> dict:
+    try:
+        process = subprocess.Popen(
+            command,
+            cwd=repo_root,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+    except FileNotFoundError as error:
+        raise RuntimeError("Swift is required for the Apple Photos PhotoKit bridge. Install Xcode Command Line Tools.") from error
+    stdout_chunks: list[str] = []
+    stderr_lines: list[str] = []
+
+    def read_stdout() -> None:
+        if process.stdout is None:
+            return
+        stdout_chunks.append(process.stdout.read() or "")
+
+    def read_stderr() -> None:
+        if process.stderr is None:
+            return
+        for raw_line in process.stderr:
+            line = raw_line.rstrip("\r\n")
+            if line.startswith(APPLE_PHOTOS_PROGRESS_PREFIX):
+                try:
+                    event = json.loads(line[len(APPLE_PHOTOS_PROGRESS_PREFIX):])
+                except json.JSONDecodeError:
+                    stderr_lines.append(line)
+                    continue
+                _update_apple_photos_import_progress_from_event(progress_id, event)
+            elif line.strip():
+                stderr_lines.append(line)
+
+    stdout_thread = threading.Thread(target=read_stdout, daemon=True)
+    stderr_thread = threading.Thread(target=read_stderr, daemon=True)
+    stdout_thread.start()
+    stderr_thread.start()
+    try:
+        return_code = process.wait(timeout=900)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        return_code = process.wait(timeout=10)
+        stdout_thread.join(timeout=2)
+        stderr_thread.join(timeout=2)
+        _finish_apple_photos_import_progress(progress_id, "failed", {
+            "error": "Apple Photos bridge timed out while materializing assets.",
+        })
+        return {
+            "ok": False,
+            "error": "Apple Photos bridge timed out while materializing assets.",
+            "code": "photos_bridge_timeout",
+        }
+    stdout_thread.join(timeout=5)
+    stderr_thread.join(timeout=5)
+    output = "".join(stdout_chunks).strip()
+    payload = json.loads(output or "{}")
+    stderr = "\n".join(stderr_lines).strip()
+    if return_code != 0 and payload.get("ok") is not False:
+        message = (stderr or output or f"Apple Photos bridge exited {return_code}").strip()
+        return {"ok": False, "error": message, "code": "photos_bridge_error"}
+    if stderr and payload.get("ok") is False:
+        payload.setdefault("stderr", stderr)
+    return payload
+
+
+def _run_apple_photos_bridge(repo_root: Path, args: list[str], *, progress_id: str = "") -> dict:
     bridge = repo_root / APPLE_PHOTOS_BRIDGE
     if not bridge.exists():
         raise RuntimeError(f"Apple Photos bridge is missing: {bridge}")
     command = ["swift", str(bridge), *args]
+    progress_id = _clean_apple_photos_progress_id(progress_id)
+    if progress_id:
+        return _run_apple_photos_bridge_streaming(repo_root, command, progress_id)
     try:
         result = subprocess.run(command, cwd=repo_root, text=True, capture_output=True, timeout=900, check=False)
     except FileNotFoundError as error:
@@ -7664,6 +7957,9 @@ def _start_apple_photos_batch_import(repo_root: Path, payload: dict, album_paylo
     preflight_only = bool(payload.get("dryRun") or payload.get("dry_run"))
     if not preflight_only and _active_apple_photos_import_task(repo_root):
         return _apple_photos_import_busy_response(repo_root)
+    progress_id = "" if preflight_only else _apple_photos_progress_id(payload)
+    if progress_id:
+        _start_apple_photos_import_progress(progress_id, album_payloads)
     preflight_rows: list[dict] = []
     operation_rows: list[dict] = []
     failed_albums: list[dict] = []
@@ -7713,7 +8009,7 @@ def _start_apple_photos_batch_import(repo_root: Path, payload: dict, album_paylo
             "failedAlbums": failed_albums,
         }
     if not prepared_rows:
-        return {
+        result = {
             "ok": False,
             "batch": True,
             "error": "No selected Apple Photos albums have eligible local assets to import.",
@@ -7722,6 +8018,8 @@ def _start_apple_photos_batch_import(repo_root: Path, payload: dict, album_paylo
             "operations": operation_rows,
             "failedAlbums": failed_albums,
         }
+        _finish_apple_photos_import_progress(progress_id, "failed", result)
+        return result
     batch_root = _apple_photos_import_destination(repo_root, "batch")
     materialized_albums: list[dict] = []
     for index, album_payload, preflight, operation in prepared_rows:
@@ -7730,6 +8028,7 @@ def _start_apple_photos_batch_import(repo_root: Path, payload: dict, album_paylo
         export_result = _run_apple_photos_bridge(
             repo_root,
             ["export", *_apple_photos_payload_args(album_payload), "--destination", str(destination)],
+            progress_id=progress_id,
         )
         if not export_result.get("ok"):
             operation = update_import_operation_db(
@@ -7763,7 +8062,7 @@ def _start_apple_photos_batch_import(repo_root: Path, payload: dict, album_paylo
         nothing_message = _apple_photos_nothing_materialized_message({
             "allowIcloudDownloads": any(_apple_photos_allow_icloud_downloads(album_payload) for _, album_payload, _, _ in prepared_rows),
         })
-        return {
+        result = {
             "ok": False,
             "batch": True,
             "error": nothing_message,
@@ -7772,10 +8071,12 @@ def _start_apple_photos_batch_import(repo_root: Path, payload: dict, album_paylo
             "operations": operation_rows,
             "failedAlbums": failed_albums,
         }
+        _finish_apple_photos_import_progress(progress_id, "failed", result)
+        return result
     batch_sidecar = _merge_apple_photos_batch_sidecars(batch_root, materialized_albums)
     unique_materialized = int(batch_sidecar.get("assetCount") or 0)
     if unique_materialized <= 0:
-        return {
+        result = {
             "ok": False,
             "batch": True,
             "error": "The selected albums only produced duplicate or invalid temporary assets.",
@@ -7786,6 +8087,8 @@ def _start_apple_photos_batch_import(repo_root: Path, payload: dict, album_paylo
             "failedAlbums": failed_albums,
             "batchSidecar": batch_sidecar,
         }
+        _finish_apple_photos_import_progress(progress_id, "failed", result)
+        return result
     review_source = _remember_apple_photos_review_source(
         repo_root,
         batch_root,
@@ -7803,7 +8106,7 @@ def _start_apple_photos_batch_import(repo_root: Path, payload: dict, album_paylo
         )
         row["operation"] = updated
         updated_operations.append(updated)
-    return {
+    result = {
         "ok": True,
         "batch": True,
         "preflights": preflight_rows,
@@ -7818,6 +8121,8 @@ def _start_apple_photos_batch_import(repo_root: Path, payload: dict, album_paylo
             f" from {len(materialized_albums):,} album(s) to a review folder. Review it, mark reviewed, then start the Expo import."
         ),
     }
+    _finish_apple_photos_import_progress(progress_id, "done", result)
+    return result
 
 
 def _start_apple_photos_import(repo_root: Path, payload: dict) -> dict:
@@ -7827,6 +8132,9 @@ def _start_apple_photos_import(repo_root: Path, payload: dict) -> dict:
     preflight_only = bool(payload.get("dryRun") or payload.get("dry_run"))
     if not preflight_only and _active_apple_photos_import_task(repo_root):
         return _apple_photos_import_busy_response(repo_root)
+    progress_id = "" if preflight_only else _apple_photos_progress_id(payload)
+    if progress_id:
+        _start_apple_photos_import_progress(progress_id, [payload])
     preflight = _apple_photos_preflight(repo_root, payload)
     if not preflight.get("ok"):
         operation = _record_apple_photos_import_operation(
@@ -7836,7 +8144,9 @@ def _start_apple_photos_import(repo_root: Path, payload: dict) -> dict:
             state="failed",
             error=str(preflight.get("error") or ""),
         )
-        return {**preflight, "operation": operation}
+        result = {**preflight, "operation": operation}
+        _finish_apple_photos_import_progress(progress_id, "failed", result)
+        return result
     operation = _record_apple_photos_import_operation(repo_root, payload, preflight, state="preflighted")
     payload = {**payload, "operationId": operation.get("operationId") or payload.get("operationId")}
     if preflight_only:
@@ -7849,18 +8159,21 @@ def _start_apple_photos_import(repo_root: Path, payload: dict) -> dict:
             state="failed",
             error="No eligible Apple Photos assets are available to import.",
         )
-        return {
+        result = {
             **preflight,
             "ok": False,
             "error": "No eligible Apple Photos assets are available to import.",
             "code": "no_eligible_assets",
             "operation": operation,
         }
+        _finish_apple_photos_import_progress(progress_id, "failed", result)
+        return result
     album = preflight.get("album") if isinstance(preflight.get("album"), dict) else {}
     destination = _apple_photos_import_destination(repo_root, str(album.get("title") or "album"))
     export_result = _run_apple_photos_bridge(
         repo_root,
         ["export", *_apple_photos_payload_args(payload), "--destination", str(destination)],
+        progress_id=progress_id,
     )
     if not export_result.get("ok"):
         operation = update_import_operation_db(
@@ -7869,7 +8182,9 @@ def _start_apple_photos_import(repo_root: Path, payload: dict) -> dict:
             state="failed",
             error=str(export_result.get("error") or "Apple Photos export failed"),
         )
-        return {**export_result, "operation": operation}
+        result = {**export_result, "operation": operation}
+        _finish_apple_photos_import_progress(progress_id, "failed", result)
+        return result
     materialized = int(export_result.get("materializedCount") or 0)
     if materialized <= 0:
         nothing_message = _apple_photos_nothing_materialized_message(payload)
@@ -7879,13 +8194,15 @@ def _start_apple_photos_import(repo_root: Path, payload: dict) -> dict:
             state="failed",
             error=nothing_message,
         )
-        return {
+        result = {
             **export_result,
             "ok": False,
             "error": nothing_message,
             "code": "nothing_materialized",
             "operation": operation,
         }
+        _finish_apple_photos_import_progress(progress_id, "failed", result)
+        return result
     review_source = _remember_apple_photos_review_source(
         repo_root,
         destination,
@@ -7898,7 +8215,7 @@ def _start_apple_photos_import(repo_root: Path, payload: dict) -> dict:
         state="done",
         task=review_stage,
     )
-    return {
+    result = {
         "ok": True,
         "preflight": preflight,
         "materialized": export_result,
@@ -7907,6 +8224,8 @@ def _start_apple_photos_import(repo_root: Path, payload: dict) -> dict:
         "operation": operation,
         "message": f"Apple Photos materialized {materialized:,} asset(s) to a review folder. Review it, mark reviewed, then start the Expo import.",
     }
+    _finish_apple_photos_import_progress(progress_id, "done", result)
+    return result
 
 
 def _run_r2_gap_fill_task(task_id: str, repo_root: Path, log_path: Path, limit: int) -> None:

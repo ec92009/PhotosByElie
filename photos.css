@@ -610,9 +610,6 @@ html[data-theme="light"] .photo-art.has-photo::after{
   line-height:1.25;
   overflow-wrap:anywhere;
 }
-.owner-apple-photos-actions{
-  align-items:center;
-}
 .owner-apple-photos-options{
   display:flex;
   flex-wrap:wrap;
@@ -627,6 +624,25 @@ html[data-theme="light"] .photo-art.has-photo::after{
 .owner-apple-photos-picker{
   display:grid;
   gap:10px;
+}
+.owner-apple-photos-picker-main{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) clamp(150px,10vw,190px);
+  gap:12px;
+  align-items:start;
+}
+.owner-apple-photos-actions{
+  position:sticky;
+  top:64px;
+  display:grid;
+  gap:12px;
+  align-content:start;
+}
+.owner-apple-photos-actions .btn{
+  width:100%;
+  min-height:52px;
+  padding:10px 14px;
+  white-space:normal;
 }
 .owner-apple-photos-picker-toolbar{
   display:grid;
@@ -6774,6 +6790,21 @@ body.detail-fullscreen-active{
   color:var(--muted);
   overflow-wrap:anywhere;
 }
+.owner-apple-photos-progress-row{
+  border-left:3px solid color-mix(in srgb,var(--line) 82%,transparent);
+  padding-left:9px;
+}
+.owner-apple-photos-progress-row.is-materializing{
+  border-left-color:#1d4ed8;
+}
+.owner-apple-photos-progress-row.is-materialized{
+  border-left-color:#166534;
+}
+.owner-apple-photos-progress-row.is-unavailable_from_icloud,
+.owner-apple-photos-progress-row.is-unsupported,
+.owner-apple-photos-progress-row.is-blocked_by_policy{
+  border-left-color:#b91c1c;
+}
 .order-panel{
   display:grid;
   gap:18px;
@@ -7480,6 +7511,19 @@ html[data-theme="light"] .detail-preview.has-image::after{
   }
   .owner-apple-photos-picker-toolbar .btn{
     width:100%;
+  }
+  .owner-apple-photos-picker-main{
+    grid-template-columns:1fr;
+  }
+  .owner-apple-photos-actions{
+    position:static;
+    order:-1;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:8px;
+  }
+  .owner-apple-photos-actions .btn{
+    min-height:44px;
+    padding-inline:10px;
   }
   .owner-apple-photos-row{
     grid-template-columns:auto minmax(0,1fr);

@@ -68,7 +68,7 @@ func requirePhotosAccess() {
         return
     }
     if status == .denied || status == .restricted {
-        fail("permission_denied", "Apple Photos access is not allowed for this helper. Enable Photos access for Terminal, Python, or the Owner launcher in System Settings > Privacy & Security > Photos.")
+        fail("permission_denied", "macOS is blocking Apple Photos access for this helper. Open PhotosByElie Owner from the Dock, or enable Photos access for PhotosByElie Owner, Python, Swift, or Terminal in System Settings > Privacy & Security > Photos.")
     }
     let semaphore = DispatchSemaphore(value: 0)
     var granted = false
@@ -78,7 +78,7 @@ func requirePhotosAccess() {
     }
     _ = semaphore.wait(timeout: .now() + 120)
     if !granted {
-        fail("permission_missing", "Apple Photos permission was not granted. Re-run from the local Owner helper after approving the macOS Photos privacy prompt.")
+        fail("permission_missing", "Apple Photos permission was not granted. Quit the background helper, open PhotosByElie Owner from the Dock, approve the macOS Photos privacy prompt, then retry.")
     }
 }
 

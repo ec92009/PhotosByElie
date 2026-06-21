@@ -22,6 +22,7 @@ LOG_PATH = LOG_DIR / "owner-helper.log"
 PORT_START = 8000
 PORT_LIMIT = 8100
 OWNER_PATH = os.environ.get("PBE_OWNER_PATH", "owner.html?tab=imports")
+PREFER_OWN_HELPER = os.environ.get("PBE_OWNER_PREFER_OWN_HELPER", "").lower() in {"1", "true", "yes"}
 PATH_PREFIXES = (
     "/opt/homebrew/bin",
     "/usr/local/bin",
@@ -104,12 +105,15 @@ def main() -> int:
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     with LOG_PATH.open("a", encoding="utf-8") as log:
         log.write(f"\n--- Photos By Elie Owner launch {time.strftime('%Y-%m-%d %H:%M:%S')} ---\n")
-        for port in range(PORT_START, PORT_LIMIT):
-            if helper_ready(port):
-                log.write(f"Opened existing Owner helper at http://localhost:{port}/owner.html\n")
-                log.flush()
-                open_safari(port)
-                return 0
+        if not PREFER_OWN_HELPER:
+            for port in range(PORT_START, PORT_LIMIT):
+                if helper_ready(port):
+                    log.write(f"Opened existing Owner helper at http://localhost:{port}/owner.html\n")
+                    log.flush()
+                    open_safari(port)
+                    return 0
+        else:
+            log.write("Dock launcher requested its own helper; skipping existing helper reuse.\n")
 
         for port in range(PORT_START, PORT_LIMIT):
             server = launch_helper(port, log)

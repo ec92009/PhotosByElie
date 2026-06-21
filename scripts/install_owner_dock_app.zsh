@@ -75,6 +75,8 @@ cat > "$app_contents/Info.plist" <<PLIST
   <string>13.0</string>
   <key>NSHighResolutionCapable</key>
   <true/>
+  <key>NSPhotoLibraryUsageDescription</key>
+  <string>PhotosByElie Owner imports selected Apple Photos albums into a local review folder before publishing.</string>
 </dict>
 </plist>
 PLIST
@@ -85,6 +87,7 @@ set -euo pipefail
 
 export PBE_REPO_ROOT="$repo_root"
 export PBE_OWNER_PATH="\${PBE_OWNER_PATH:-owner.html?tab=imports}"
+export PBE_OWNER_PREFER_OWN_HELPER=1
 export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:\${PATH:-}"
 
 cd "\$PBE_REPO_ROOT"

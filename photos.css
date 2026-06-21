@@ -638,11 +638,11 @@ html[data-theme="light"] .photo-art.has-photo::after{
 }
 .owner-apple-photos-actions{
   position:sticky;
-  top:calc(var(--fixed-header-offset,86px) + 8px);
+  top:calc(var(--fixed-header-offset,86px) + 48px);
   display:grid;
   gap:12px;
   align-content:start;
-  max-height:calc(100dvh - var(--fixed-header-offset,86px) - 16px);
+  max-height:calc(100dvh - var(--fixed-header-offset,86px) - 56px);
   overflow:auto;
 }
 .owner-apple-photos-actions .btn{
@@ -1030,6 +1030,8 @@ html[data-theme="light"] .photo-art.has-photo::after{
 .owner-card[data-owner-apple-photos-card]{
   grid-column:1 / -1;
   min-width:0;
+  order:-4;
+  scroll-margin-top:calc(var(--fixed-header-offset,86px) + 52px);
 }
 .owner-number-control{
   display:grid;
@@ -1514,7 +1516,7 @@ html[data-theme="light"] .photo-art.has-photo::after{
 .owner-card-cloud-progress{
   grid-column:1 / -1;
   min-height:0;
-  order:-3;
+  order:-2;
 }
 .owner-card-cost{
   order:-2;

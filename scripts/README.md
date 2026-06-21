@@ -130,7 +130,7 @@ To create the macOS Dock launcher for an Owner import workstation, install the l
 zsh scripts/install_owner_dock_app.zsh --add-to-dock
 ```
 
-The launcher reuses an existing helper on ports `8000-8099` or starts `scripts/local_server.py`, opens Safari to `owner.html?tab=imports`, and uses the bundled Swift/PhotoKit bridge only when the Owner Apple Photos card asks for albums, dry runs, or imports.
+The launcher reuses an existing helper on ports `8000-8099` or starts `scripts/local_server.py`, opens Safari to `owner.html?tab=imports`, and uses the bundled Swift/PhotoKit bridge only when the Owner Apple Photos card asks for albums, dry runs, or imports. Album discovery includes both regular Photos albums and smart albums. Because the PhotoKit scan can take a few minutes on a large library, the helper and browser keep a short-lived album-list cache; use **Refresh** when you need a live rescan.
 
 For a temporary private-LAN review session, bind to all interfaces and opt in to LAN owner endpoints:
 

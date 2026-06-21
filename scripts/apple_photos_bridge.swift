@@ -68,6 +68,17 @@ func fetchAlbums() -> [PHAssetCollection] {
     return albums.sorted { ($0.localizedTitle ?? "") < ($1.localizedTitle ?? "") }
 }
 
+func collectionKind(_ collection: PHAssetCollection) -> String {
+    switch collection.assetCollectionType {
+    case .album:
+        return "album"
+    case .smartAlbum:
+        return "smart"
+    default:
+        return "other"
+    }
+}
+
 func findAlbum(id: String?, name: String?) throws -> PHAssetCollection {
     let matches = fetchAlbums().filter { collectionMatches($0, id: id, name: name) }
     if matches.isEmpty {
@@ -156,6 +167,7 @@ func albumSummary(_ collection: PHAssetCollection) -> [String: Any] {
         "localIdentifier": collection.localIdentifier,
         "title": collection.localizedTitle ?? "(Untitled)",
         "assetCount": assets.count,
+        "kind": collectionKind(collection),
         "type": collection.assetCollectionType.rawValue,
         "subtype": collection.assetCollectionSubtype.rawValue,
     ]

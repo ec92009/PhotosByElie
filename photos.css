@@ -610,6 +610,300 @@ html[data-theme="light"] .photo-art.has-photo::after{
   line-height:1.25;
   overflow-wrap:anywhere;
 }
+.owner-apple-photos-actions{
+  align-items:center;
+}
+.owner-apple-photos-picker{
+  display:grid;
+  gap:10px;
+}
+.owner-apple-photos-picker-toolbar{
+  display:grid;
+  grid-template-columns:minmax(180px,1fr) auto auto auto;
+  gap:8px;
+  align-items:end;
+}
+.owner-apple-photos-filter{
+  display:grid;
+  gap:3px;
+  color:var(--muted);
+  font-size:.7rem;
+  font-weight:900;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.owner-apple-photos-filter input{
+  width:100%;
+  min-height:38px;
+  border:1px solid var(--line);
+  border-radius:6px;
+  background:var(--surface-2);
+  color:var(--text);
+  font:inherit;
+  font-size:.9rem;
+  font-weight:800;
+  letter-spacing:0;
+  padding:8px 10px;
+  text-transform:none;
+}
+.owner-apple-photos-picker-toolbar p{
+  margin:0;
+  color:var(--muted);
+  font-size:.82rem;
+  font-weight:800;
+  line-height:1.2;
+  white-space:nowrap;
+}
+.owner-apple-photos-picker-toolbar .btn{
+  min-height:38px;
+  padding-inline:12px;
+  white-space:nowrap;
+}
+.owner-apple-photos-list{
+  display:block;
+  height:clamp(320px,48vh,640px);
+  min-height:220px;
+  max-height:75vh;
+  overflow:auto;
+  resize:vertical;
+  scrollbar-gutter:stable;
+  border:1px solid var(--line);
+  border-radius:6px;
+  background:color-mix(in srgb,var(--surface-2) 86%,transparent);
+  padding:0;
+}
+.owner-apple-photos-list > p{
+  margin:0;
+  color:var(--muted);
+  font-size:.9rem;
+  padding:10px;
+}
+.owner-apple-photos-group{
+  display:grid;
+  gap:5px;
+}
+.owner-apple-photos-group + .owner-apple-photos-group{
+  margin-top:4px;
+}
+.owner-apple-photos-group-title{
+  margin:0;
+  color:var(--muted);
+  font-size:.68rem;
+  font-weight:900;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+}
+.owner-apple-photos-row{
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  gap:9px;
+  align-items:center;
+  min-height:42px;
+  border:1px solid color-mix(in srgb,var(--line) 78%,transparent);
+  border-radius:6px;
+  background:color-mix(in srgb,var(--surface) 68%,transparent);
+  padding:7px 9px;
+}
+.owner-apple-photos-row input{
+  width:18px;
+  height:18px;
+  accent-color:color-mix(in srgb,#2f8f5b 80%,var(--text));
+}
+.owner-apple-photos-row strong,
+.owner-apple-photos-row small{
+  display:block;
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.owner-apple-photos-row strong{
+  font-size:.92rem;
+  line-height:1.2;
+}
+.owner-apple-photos-row small{
+  color:var(--muted);
+  font-size:.74rem;
+  font-weight:800;
+}
+.owner-apple-photos-kind{
+  justify-self:end;
+  border:1px solid color-mix(in srgb,var(--line) 80%,transparent);
+  border-radius:999px;
+  color:var(--muted);
+  font-size:.62rem;
+  font-weight:900;
+  letter-spacing:.06em;
+  padding:3px 7px;
+  text-transform:uppercase;
+}
+.owner-apple-photos-log{
+  display:grid;
+  gap:6px;
+  border:1px solid var(--line);
+  border-radius:6px;
+  background:color-mix(in srgb,var(--surface-2) 88%,transparent);
+  padding:10px;
+}
+.owner-apple-photos-log[hidden]{
+  display:none;
+}
+.owner-apple-photos-log-row{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:8px;
+  align-items:start;
+  border-top:1px solid color-mix(in srgb,var(--line) 70%,transparent);
+  padding-top:6px;
+}
+.owner-apple-photos-log-row:first-child{
+  border-top:0;
+  padding-top:0;
+}
+.owner-apple-photos-log-row strong,
+.owner-apple-photos-log-row span{
+  min-width:0;
+  overflow-wrap:anywhere;
+}
+.owner-apple-photos-log-row span{
+  color:var(--muted);
+  font-size:.78rem;
+  font-weight:800;
+}
+.owner-apple-photos-log-state{
+  border:1px solid color-mix(in srgb,var(--line) 80%,transparent);
+  border-radius:999px;
+  font-size:.62rem;
+  font-weight:900;
+  letter-spacing:.06em;
+  padding:3px 7px;
+  text-transform:uppercase;
+}
+.owner-apple-photos-log-row.is-done .owner-apple-photos-log-state{
+  color:#166534;
+}
+.owner-apple-photos-log-row.is-running .owner-apple-photos-log-state{
+  color:#1d4ed8;
+}
+.owner-apple-photos-log-row.is-failed .owner-apple-photos-log-state{
+  color:#b91c1c;
+}
+.owner-apple-photos-table{
+  min-width:560px;
+  width:100%;
+  border-collapse:separate;
+  border-spacing:0;
+  table-layout:fixed;
+}
+.owner-apple-photos-table th,
+.owner-apple-photos-table td{
+  border-top:1px solid color-mix(in srgb,var(--line) 78%,transparent);
+  padding:8px 10px;
+  text-align:left;
+  vertical-align:middle;
+}
+.owner-apple-photos-table th{
+  position:sticky;
+  top:0;
+  z-index:1;
+  background:color-mix(in srgb,var(--surface-2) 96%,transparent);
+  color:var(--muted);
+  font-size:.68rem;
+  font-weight:900;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.owner-apple-photos-table th.is-number .owner-apple-photos-sort{
+  justify-content:flex-end;
+}
+.owner-apple-photos-table th:first-child,
+.owner-apple-photos-table td:first-child{
+  width:34px;
+}
+.owner-apple-photos-table th:nth-child(3),
+.owner-apple-photos-table th:nth-child(4),
+.owner-apple-photos-table th:nth-child(5),
+.owner-apple-photos-table td:nth-child(3),
+.owner-apple-photos-table td:nth-child(4),
+.owner-apple-photos-table td:nth-child(5){
+  width:92px;
+}
+.owner-apple-photos-sort{
+  display:inline-flex;
+  width:100%;
+  gap:7px;
+  align-items:center;
+  border:0;
+  background:transparent;
+  color:inherit;
+  cursor:pointer;
+  font:inherit;
+  font-weight:900;
+  letter-spacing:0;
+  padding:0;
+  text-align:inherit;
+  text-transform:inherit;
+}
+.owner-apple-photos-sort:focus-visible{
+  outline:2px solid color-mix(in srgb,#2f8f5b 68%,var(--text));
+  outline-offset:3px;
+}
+.owner-apple-photos-sort-state{
+  border:1px solid color-mix(in srgb,var(--line) 80%,transparent);
+  border-radius:999px;
+  color:var(--text);
+  font-size:.56rem;
+  font-weight:900;
+  letter-spacing:0;
+  line-height:1;
+  padding:3px 5px;
+}
+.owner-apple-photos-table .owner-apple-photos-row{
+  display:table-row;
+  min-height:0;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  padding:0;
+  cursor:default;
+}
+.owner-apple-photos-table .owner-apple-photos-row.is-selected td{
+  background:color-mix(in srgb,#2f8f5b 14%,var(--surface-2));
+}
+.owner-apple-photos-table .owner-apple-photos-row:focus-visible td{
+  outline:2px solid color-mix(in srgb,#2f8f5b 70%,var(--text));
+  outline-offset:-2px;
+}
+.owner-apple-photos-check-cell{
+  text-align:center;
+}
+.owner-apple-photos-table input{
+  width:16px;
+  height:16px;
+  accent-color:color-mix(in srgb,#2f8f5b 80%,var(--text));
+}
+.owner-apple-photos-table strong,
+.owner-apple-photos-table small{
+  display:block;
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.owner-apple-photos-table strong{
+  font-size:.9rem;
+  line-height:1.2;
+}
+.owner-apple-photos-table small{
+  color:var(--muted);
+  font-size:.72rem;
+  font-weight:800;
+}
+.owner-apple-photos-number{
+  font-variant-numeric:tabular-nums;
+  font-weight:900;
+  text-align:right;
+}
 .owner-maintenance-actions{
   display:flex;
   flex-wrap:wrap;
@@ -698,6 +992,10 @@ html[data-theme="light"] .photo-art.has-photo::after{
 }
 .owner-card-wide{
   grid-column:span 1;
+}
+.owner-card[data-owner-apple-photos-card]{
+  grid-column:1 / -1;
+  min-width:0;
 }
 .owner-number-control{
   display:grid;
@@ -7161,6 +7459,23 @@ html[data-theme="light"] .detail-preview.has-image::after{
 @media (max-width:760px){
   .owner-import-source-details{
     grid-template-columns:1fr;
+  }
+  .owner-apple-photos-picker-toolbar{
+    grid-template-columns:1fr 1fr;
+  }
+  .owner-apple-photos-filter,
+  .owner-apple-photos-picker-toolbar p{
+    grid-column:1 / -1;
+  }
+  .owner-apple-photos-picker-toolbar .btn{
+    width:100%;
+  }
+  .owner-apple-photos-row{
+    grid-template-columns:auto minmax(0,1fr);
+  }
+  .owner-apple-photos-kind{
+    grid-column:2;
+    justify-self:start;
   }
   .keyboard-hint{
     display:none!important;

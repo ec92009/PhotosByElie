@@ -3,8 +3,10 @@
 
 from __future__ import annotations
 
+import json
 import os
 import signal
+import shutil
 import subprocess
 import sys
 import time
@@ -19,38 +21,61 @@ LOG_DIR = Path.home() / "Library" / "Logs" / "PhotosByElie"
 LOG_PATH = LOG_DIR / "owner-helper.log"
 PORT_START = 8000
 PORT_LIMIT = 8100
+OWNER_PATH = os.environ.get("PBE_OWNER_PATH", "owner.html?tab=imports")
+PATH_PREFIXES = (
+    "/opt/homebrew/bin",
+    "/usr/local/bin",
+    "/usr/bin",
+    "/bin",
+    "/usr/sbin",
+    "/sbin",
+)
 
 
 server: subprocess.Popen[str] | None = None
 
 
 def notify(title: str, message: str) -> None:
-    script = f'display alert {title!r} message {message!r} as warning'
+    script = f"display alert {json.dumps(title)} message {json.dumps(message)} as warning"
     subprocess.run(["osascript", "-e", script], check=False)
+
+
+def helper_env() -> dict[str, str]:
+    env = {**os.environ, "PYTHONUNBUFFERED": "1"}
+    current_path = env.get("PATH", "")
+    parts = [part for part in (*PATH_PREFIXES, *current_path.split(os.pathsep)) if part]
+    deduped = list(dict.fromkeys(parts))
+    env["PATH"] = os.pathsep.join(deduped)
+    return env
 
 
 def helper_ready(port: int) -> bool:
     try:
-        with urllib.request.urlopen(f"http://127.0.0.1:{port}/__photosbyelie/owner-session", timeout=0.5) as response:
+        with urllib.request.urlopen(
+            f"http://127.0.0.1:{port}/__photosbyelie/owner-session",
+            timeout=0.5,
+        ) as response:
             return 200 <= response.status < 500
     except (OSError, urllib.error.URLError):
         return False
 
 
 def launch_helper(port: int, log) -> subprocess.Popen[str]:
-    env = {**os.environ, "PYTHONUNBUFFERED": "1"}
+    env = helper_env()
+    python = shutil.which("python3", path=env["PATH"]) or sys.executable
     return subprocess.Popen(
-        [sys.executable, str(HELPER), str(port)],
+        [python, str(HELPER), str(port)],
         cwd=REPO_ROOT,
         stdout=log,
         stderr=subprocess.STDOUT,
         text=True,
         env=env,
+        start_new_session=True,
     )
 
 
 def open_safari(port: int) -> None:
-    url = f"http://localhost:{port}/owner.html"
+    url = f"http://localhost:{port}/{OWNER_PATH.lstrip('/')}"
     result = subprocess.run(["open", "-a", "Safari", url], check=False)
     if result.returncode != 0:
         subprocess.run(["open", url], check=False)

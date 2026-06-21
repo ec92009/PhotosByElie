@@ -354,8 +354,12 @@ Clock state: running
 | 2026-06-21 | 08:48 CEST | 08:49 CEST | 0:01 | Executed PBE-20260620-342B direct Google OAuth verification pass; physical Safari account-switching remains a real-device check. |
 | 2026-06-21 | 09:00 CEST | 09:01 CEST | 0:01 | Refreshed local main from GitHub with a clean fast-forward pull; background fetch/pull time excluded. |
 | 2026-06-21 | 09:04 CEST | 09:05 CEST | 0:01 | Clarified the current direct Apple Photos import implementation, UI, and unrun local operation state. |
+| 2026-06-21 | 11:29 CEST | 11:32 CEST | 0:03 | Checked direct Apple Photos import requirements on Max and started the localhost Owner helper for manual album testing; background server runtime excluded. |
+| 2026-06-21 | 11:34 CEST | 11:35 CEST | 0:01 | Clarified that Google-backed Owner auth does not replace the local Swift/PhotoKit bridge needed on Macs that import from Apple Photos. |
+| 2026-06-21 | 11:36 CEST | 11:41 CEST | 0:05 | Created and installed the Max Dock launcher for Owner imports, including helper startup, Safari opening, icon packaging, and verification. |
+| 2026-06-21 | 11:42 CEST | 11:43 CEST | 0:01 | Explained the Owner Expo Apple Photos import card controls and safe dry-run/import sequence. |
 
 ## Totals
 
-Active collaboration time used: 20:18
+Active collaboration time used: 20:28
 Remaining budget: not set

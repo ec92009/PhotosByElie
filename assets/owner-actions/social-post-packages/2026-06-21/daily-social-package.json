@@ -1,7 +1,7 @@
 {
   "date": "2026-06-21",
   "format": "photosbyelie-daily-social-package",
-  "status": "prepared",
+  "status": "published_partial",
   "themes": [
     "Lisbon Jeronimos Monastery Carved Stone",
     "Cordoba Mezquita Arches and Shadow",
@@ -151,13 +151,35 @@
         }
       ],
       "date": "2026-06-21",
-      "status": "prepared",
+      "status": "published",
       "destination_url": "https://photos-by-elie.com/campaign.html?c=facebook-lisbon-jeronimos-monastery-carved-stone-2026-06-21",
       "recommended_upload_set": "images",
       "available_count": 8,
-      "manual_blockers": [
-        "Publish pending: review socials/Facebook/2026-06-21/lisbon-jeronimos-monastery-carved-stone/manifest.json and use the Facebook browser/API workflow."
-      ]
+      "manual_blockers": [],
+      "published_url": "https://www.facebook.com/122102168061334672/posts/122107432617334672",
+      "published": {
+        "platform": "facebook",
+        "page_name": "Photos By Elie",
+        "post_id": "1146747141854670_122107432617334672",
+        "permalink": "https://www.facebook.com/122102168061334672/posts/122107432617334672",
+        "published_at": "2026-06-21T03:06:45+0000",
+        "image_count": 8,
+        "attachment_count": 8,
+        "uploaded_photo_ids": [
+          "122107432239334672",
+          "122107432287334672",
+          "122107432335334672",
+          "122107432383334672",
+          "122107432437334672",
+          "122107432485334672",
+          "122107432533334672",
+          "122107432581334672"
+        ]
+      },
+      "verification": {
+        "method": "Meta Graph API readback with Page access token",
+        "platform_visible_confirmation": "Graph returned permalink and 8 photo subattachments."
+      }
     },
     {
       "platform": "Instagram",
@@ -302,14 +324,35 @@
         }
       ],
       "date": "2026-06-21",
-      "status": "prepared",
+      "status": "published",
       "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-cordoba-mezquita-arches-shadow-2026-06-21",
       "recommended_upload_set": "images",
       "available_count": 8,
-      "manual_blockers": [
-        "Publish pending: review socials/Instagram/2026-06-21/cordoba-mezquita-arches-and-shadow/manifest.json and use the Instagram browser/API workflow.",
-        "Instagram feed captions are not clickable; update the profile website link or use a Story link sticker before posting."
-      ]
+      "manual_blockers": [],
+      "published_url": "https://www.instagram.com/p/DZ1RDC1CFly/",
+      "published": {
+        "platform": "instagram",
+        "media_id": "17972036733119014",
+        "permalink": "https://www.instagram.com/p/DZ1RDC1CFly/",
+        "username": "ec92009",
+        "media_type": "CAROUSEL_ALBUM",
+        "published_at": "2026-06-21T03:08:21+0000",
+        "image_count": 8,
+        "child_media_ids": [
+          "18572049913066010",
+          "18467384947108699",
+          "18107767945771063",
+          "17990894775003111",
+          "18330496213266412",
+          "18105258488002062",
+          "18352986403243700",
+          "18367576468230373"
+        ]
+      },
+      "verification": {
+        "method": "Instagram Graph API readback",
+        "platform_visible_confirmation": "Graph returned permalink, carousel media type, username, and 8 child images."
+      }
     },
     {
       "platform": "Pinterest",
@@ -496,14 +539,32 @@
           "local_staged_path": "socials/Threads/2026-06-21/cordoba-mezquita-arches-and-shadow/images/04-img-1402-4c2c98e288-cordoba-mezquita-arches-and-shadow.jpg"
         }
       ],
-      "status": "prepared",
+      "status": "published",
       "available_count": 4,
       "date": "2026-06-21",
       "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-cordoba-mezquita-arches-shadow-2026-06-21",
       "recommended_upload_set": "images",
-      "manual_blockers": [
-        "Publish pending: review socials/Threads/2026-06-21/cordoba-mezquita-arches-and-shadow/manifest.json and use the Threads browser/API workflow."
-      ]
+      "manual_blockers": [],
+      "published_url": "https://www.threads.com/@ec92009/post/DZ1RJjJCGsw",
+      "published": {
+        "platform": "threads",
+        "media_id": "17986666472990813",
+        "permalink": "https://www.threads.com/@ec92009/post/DZ1RJjJCGsw",
+        "username": "ec92009",
+        "media_type": "CAROUSEL_ALBUM",
+        "published_at": "2026-06-21T03:09:20+0000",
+        "image_count": 4,
+        "child_media_ids": [
+          "18599053315005272",
+          "17868926073626300",
+          "17965516202935206",
+          "18108586798765253"
+        ]
+      },
+      "verification": {
+        "method": "Threads Graph API readback",
+        "platform_visible_confirmation": "Graph returned permalink, carousel media type, username, and 4 child images."
+      }
     }
   ],
   "schema_version": 1,

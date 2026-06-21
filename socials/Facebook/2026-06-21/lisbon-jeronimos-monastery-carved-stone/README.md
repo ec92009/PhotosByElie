@@ -1,10 +1,8 @@
 # Facebook - 2026-06-21 - Lisbon Jeronimos Monastery Carved Stone
 
-Status: prepared
+Status: published
 Destination: https://photos-by-elie.com/campaign.html?c=facebook-lisbon-jeronimos-monastery-carved-stone-2026-06-21
-
-Manual blockers:
-- Publish pending: review socials/Facebook/2026-06-21/lisbon-jeronimos-monastery-carved-stone/manifest.json and use the Facebook browser/API workflow.
+Published URL: https://www.facebook.com/122102168061334672/posts/122107432617334672
 
 Caption:
 

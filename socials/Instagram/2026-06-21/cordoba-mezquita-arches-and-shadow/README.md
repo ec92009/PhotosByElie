@@ -1,11 +1,8 @@
 # Instagram - 2026-06-21 - Cordoba Mezquita Arches and Shadow
 
-Status: prepared
+Status: published
 Destination: https://photos-by-elie.com/campaign.html?c=instagram-cordoba-mezquita-arches-shadow-2026-06-21
-
-Manual blockers:
-- Publish pending: review socials/Instagram/2026-06-21/cordoba-mezquita-arches-and-shadow/manifest.json and use the Instagram browser/API workflow.
-- Instagram feed captions are not clickable; update the profile website link or use a Story link sticker before posting.
+Published URL: https://www.instagram.com/p/DZ1RDC1CFly/
 
 Caption:
 

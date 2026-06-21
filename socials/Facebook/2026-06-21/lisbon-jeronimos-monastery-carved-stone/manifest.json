@@ -141,11 +141,33 @@
     }
   ],
   "date": "2026-06-21",
-  "status": "prepared",
+  "status": "published",
   "destination_url": "https://photos-by-elie.com/campaign.html?c=facebook-lisbon-jeronimos-monastery-carved-stone-2026-06-21",
   "recommended_upload_set": "images",
   "available_count": 8,
-  "manual_blockers": [
-    "Publish pending: review socials/Facebook/2026-06-21/lisbon-jeronimos-monastery-carved-stone/manifest.json and use the Facebook browser/API workflow."
-  ]
+  "manual_blockers": [],
+  "published_url": "https://www.facebook.com/122102168061334672/posts/122107432617334672",
+  "published": {
+    "platform": "facebook",
+    "page_name": "Photos By Elie",
+    "post_id": "1146747141854670_122107432617334672",
+    "permalink": "https://www.facebook.com/122102168061334672/posts/122107432617334672",
+    "published_at": "2026-06-21T03:06:45+0000",
+    "image_count": 8,
+    "attachment_count": 8,
+    "uploaded_photo_ids": [
+      "122107432239334672",
+      "122107432287334672",
+      "122107432335334672",
+      "122107432383334672",
+      "122107432437334672",
+      "122107432485334672",
+      "122107432533334672",
+      "122107432581334672"
+    ]
+  },
+  "verification": {
+    "method": "Meta Graph API readback with Page access token",
+    "platform_visible_confirmation": "Graph returned permalink and 8 photo subattachments."
+  }
 }

@@ -75,12 +75,30 @@
       "local_staged_path": "socials/Threads/2026-06-21/cordoba-mezquita-arches-and-shadow/images/04-img-1402-4c2c98e288-cordoba-mezquita-arches-and-shadow.jpg"
     }
   ],
-  "status": "prepared",
+  "status": "published",
   "available_count": 4,
   "date": "2026-06-21",
   "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-cordoba-mezquita-arches-shadow-2026-06-21",
   "recommended_upload_set": "images",
-  "manual_blockers": [
-    "Publish pending: review socials/Threads/2026-06-21/cordoba-mezquita-arches-and-shadow/manifest.json and use the Threads browser/API workflow."
-  ]
+  "manual_blockers": [],
+  "published_url": "https://www.threads.com/@ec92009/post/DZ1RJjJCGsw",
+  "published": {
+    "platform": "threads",
+    "media_id": "17986666472990813",
+    "permalink": "https://www.threads.com/@ec92009/post/DZ1RJjJCGsw",
+    "username": "ec92009",
+    "media_type": "CAROUSEL_ALBUM",
+    "published_at": "2026-06-21T03:09:20+0000",
+    "image_count": 4,
+    "child_media_ids": [
+      "18599053315005272",
+      "17868926073626300",
+      "17965516202935206",
+      "18108586798765253"
+    ]
+  },
+  "verification": {
+    "method": "Threads Graph API readback",
+    "platform_visible_confirmation": "Graph returned permalink, carousel media type, username, and 4 child images."
+  }
 }

@@ -141,12 +141,33 @@
     }
   ],
   "date": "2026-06-21",
-  "status": "prepared",
+  "status": "published",
   "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-cordoba-mezquita-arches-shadow-2026-06-21",
   "recommended_upload_set": "images",
   "available_count": 8,
-  "manual_blockers": [
-    "Publish pending: review socials/Instagram/2026-06-21/cordoba-mezquita-arches-and-shadow/manifest.json and use the Instagram browser/API workflow.",
-    "Instagram feed captions are not clickable; update the profile website link or use a Story link sticker before posting."
-  ]
+  "manual_blockers": [],
+  "published_url": "https://www.instagram.com/p/DZ1RDC1CFly/",
+  "published": {
+    "platform": "instagram",
+    "media_id": "17972036733119014",
+    "permalink": "https://www.instagram.com/p/DZ1RDC1CFly/",
+    "username": "ec92009",
+    "media_type": "CAROUSEL_ALBUM",
+    "published_at": "2026-06-21T03:08:21+0000",
+    "image_count": 8,
+    "child_media_ids": [
+      "18572049913066010",
+      "18467384947108699",
+      "18107767945771063",
+      "17990894775003111",
+      "18330496213266412",
+      "18105258488002062",
+      "18352986403243700",
+      "18367576468230373"
+    ]
+  },
+  "verification": {
+    "method": "Instagram Graph API readback",
+    "platform_visible_confirmation": "Graph returned permalink, carousel media type, username, and 8 child images."
+  }
 }

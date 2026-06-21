@@ -1,13 +1,13 @@
 # Daily Social Package - 2026-06-21
 
-Status: prepared
+Status: published_partial
 Visible version: v113.1
 
 ## Facebook: Lisbon Jeronimos Monastery Carved Stone
 
-- Status: prepared
+- Status: published
 - Destination: https://photos-by-elie.com/campaign.html?c=facebook-lisbon-jeronimos-monastery-carved-stone-2026-06-21
-- Manual blockers: Publish pending: review socials/Facebook/2026-06-21/lisbon-jeronimos-monastery-carved-stone/manifest.json and use the Facebook browser/API workflow.
+- Published URL: https://www.facebook.com/122102168061334672/posts/122107432617334672
 
 | # | Media id | Source URL | Local image |
 | ---: | --- | --- | --- |
@@ -22,9 +22,9 @@ Visible version: v113.1
 
 ## Instagram: Cordoba Mezquita Arches and Shadow
 
-- Status: prepared
+- Status: published
 - Destination: https://photos-by-elie.com/campaign.html?c=instagram-cordoba-mezquita-arches-shadow-2026-06-21
-- Manual blockers: Publish pending: review socials/Instagram/2026-06-21/cordoba-mezquita-arches-and-shadow/manifest.json and use the Instagram browser/API workflow. | Instagram feed captions are not clickable; update the profile website link or use a Story link sticker before posting.
+- Published URL: https://www.instagram.com/p/DZ1RDC1CFly/
 
 | # | Media id | Source URL | Local image |
 | ---: | --- | --- | --- |
@@ -53,9 +53,9 @@ Visible version: v113.1
 
 ## Threads: Cordoba Mezquita Arches and Shadow
 
-- Status: prepared
+- Status: published
 - Destination: https://photos-by-elie.com/campaign.html?c=instagram-cordoba-mezquita-arches-shadow-2026-06-21
-- Manual blockers: Publish pending: review socials/Threads/2026-06-21/cordoba-mezquita-arches-and-shadow/manifest.json and use the Threads browser/API workflow.
+- Published URL: https://www.threads.com/@ec92009/post/DZ1RJjJCGsw
 
 | # | Media id | Source URL | Local image |
 | ---: | --- | --- | --- |

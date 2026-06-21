@@ -349,8 +349,10 @@ Clock state: running
 | 2026-06-20 | 23:53 CEST | 23:54 CEST | 0:01 | Reported continued same-account login; added team-domain Access logout experiment for `v112.10`. |
 | 2026-06-21 | 00:00 CEST | 00:02 CEST | 0:02 | Reported `v112.10` still failed on iPhone and showed Cloudflare's no-cookie logout page; shifted Account login direction to direct Worker-owned Google OAuth. |
 | 2026-06-21 | 00:30 CEST | 00:31 CEST | 0:01 | Confirmed Google Console callback URI was added and enabled direct OAuth Worker secrets; background secret setup/check time excluded. |
+| 2026-06-21 | 08:33 CEST | 08:36 CEST | 0:03 | Gauged PhotosByElie codebase size by separating maintained source, generated text/data, docs, and media artifacts. |
+| 2026-06-21 | 08:39 CEST | 08:39 CEST | 0:01 | Checked current PhotosByElie collaboration time and budget state. |
 
 ## Totals
 
-Active collaboration time used: 20:11
+Active collaboration time used: 20:15
 Remaining budget: not set

@@ -1,9 +1,78 @@
 {
   "format": "photosbyelie-campaign-index",
   "schema_version": 1,
-  "generated_at": "2026-06-19T03:10:24.104Z",
-  "campaign_count": 128,
+  "generated_at": "2026-06-21T03:03:47.007Z",
+  "campaign_count": 131,
   "campaigns": [
+    {
+      "id": "pinterest-la-jolla-coastal-blue-details-2026-06-21",
+      "source": "Pinterest",
+      "title": "La Jolla Coastal Blue Details",
+      "description": "A 5-photo La Jolla Coastal Blue Details edit prepared for Pinterest with public Photos By Elie previews and a first-party browsing destination.",
+      "date": "2026-06-21",
+      "href": "./campaign.html?c=pinterest-la-jolla-coastal-blue-details-2026-06-21",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=pinterest-la-jolla-coastal-blue-details-2026-06-21",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/20180421-1315-12105-b5fb72a520_900.jpg",
+      "imageAlt": "La Jolla, Ca",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/20180421-1315-12105-b5fb72a520_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180421-1314-12194-9720f6f4fc_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180421-1313-12169-c895ce5df7_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180421-1313-12291-8e3ec8452a_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180421-1314-12535-0e5de0d6d0_900.jpg"
+      ],
+      "primaryPhotoCount": 5,
+      "relatedPhotoCount": 0,
+      "mtimeMs": 1782011026823
+    },
+    {
+      "id": "instagram-cordoba-mezquita-arches-shadow-2026-06-21",
+      "source": "Instagram",
+      "title": "Cordoba Mezquita Arches and Shadow",
+      "description": "A 8-photo Cordoba Mezquita Arches and Shadow edit prepared for Instagram with public Photos By Elie previews and a first-party browsing destination.",
+      "date": "2026-06-21",
+      "href": "./campaign.html?c=instagram-cordoba-mezquita-arches-shadow-2026-06-21",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=instagram-cordoba-mezquita-arches-shadow-2026-06-21",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/img-1412-dde0e52bcb_900.jpg",
+      "imageAlt": "Cordoba, La Mezquita",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/img-1412-dde0e52bcb_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1395-81cbfcb7d3_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1404-b704ed7a17_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1402-4c2c98e288_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1413-96ea2c869f_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1396-aa0d5786b9_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1408-94456ca4fc_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1415-a0898b65fc_900.jpg"
+      ],
+      "primaryPhotoCount": 8,
+      "relatedPhotoCount": 0,
+      "mtimeMs": 1782011026822
+    },
+    {
+      "id": "facebook-lisbon-jeronimos-monastery-carved-stone-2026-06-21",
+      "source": "Facebook",
+      "title": "Lisbon Jeronimos Monastery Carved Stone",
+      "description": "A 8-photo Lisbon Jeronimos Monastery Carved Stone edit prepared for Facebook with public Photos By Elie previews and a first-party browsing destination.",
+      "date": "2026-06-21",
+      "href": "./campaign.html?c=facebook-lisbon-jeronimos-monastery-carved-stone-2026-06-21",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=facebook-lisbon-jeronimos-monastery-carved-stone-2026-06-21",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/20180519-1357-00624-c81f59de01_900.jpg",
+      "imageAlt": "Jeronimos Monastery, Lisbon",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/20180519-1357-00624-c81f59de01_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180519-1303-00590-5a73dfed14_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180519-1337-00615-a2dda38e79_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180519-1418-00629-8386a780e8_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180519-1323-00609-8acf5ae002_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180519-1317-00594-407fa2a7b2_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180519-1346-00618-d2b7edc2d4_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180519-1346-00619-fc41df1f05_900.jpg"
+      ],
+      "primaryPhotoCount": 8,
+      "relatedPhotoCount": 0,
+      "mtimeMs": 1782011026822
+    },
     {
       "id": "pinterest-oceanside-harbor-pelican-light-2026-06-19",
       "source": "Pinterest",

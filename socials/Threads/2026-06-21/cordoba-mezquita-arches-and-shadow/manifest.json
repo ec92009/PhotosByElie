@@ -1,0 +1,86 @@
+{
+  "platform": "Threads",
+  "title": "Cordoba Mezquita Arches and Shadow",
+  "campaign_id": "instagram-cordoba-mezquita-arches-shadow-2026-06-21",
+  "account": "ec92009",
+  "post_type": "carousel",
+  "caption": "Cordoba Mezquita Arches and Shadow in four Photos By Elie frames. Browse: https://photos-by-elie.com/campaign.html?c=instagram-cordoba-mezquita-arches-shadow-2026-06-21",
+  "notes": [
+    "Derived from the Instagram package for a 3-4 image Threads carousel.",
+    "Images are public watermarked R2 previews staged for upload/API publishing."
+  ],
+  "items": [
+    {
+      "media_id": "img-1412-dde0e52bcb",
+      "order": 1,
+      "id": "img-1412-dde0e52bcb",
+      "title": "Cordoba, La Mezquita",
+      "collection": "spain",
+      "location": "Spain",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/img-1412-dde0e52bcb_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/img-1412-dde0e52bcb_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=img-1412-dde0e52bcb",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=img-1412-dde0e52bcb",
+      "image": "images/01-img-1412-dde0e52bcb-cordoba-mezquita-arches-and-shadow.jpg",
+      "local_staged_path": "socials/Threads/2026-06-21/cordoba-mezquita-arches-and-shadow/images/01-img-1412-dde0e52bcb-cordoba-mezquita-arches-and-shadow.jpg"
+    },
+    {
+      "media_id": "img-1395-81cbfcb7d3",
+      "order": 2,
+      "id": "img-1395-81cbfcb7d3",
+      "title": "Cordoba, La Mezquita",
+      "collection": "spain",
+      "location": "Spain",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/img-1395-81cbfcb7d3_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/img-1395-81cbfcb7d3_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=img-1395-81cbfcb7d3",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=img-1395-81cbfcb7d3",
+      "image": "images/02-img-1395-81cbfcb7d3-cordoba-mezquita-arches-and-shadow.jpg",
+      "local_staged_path": "socials/Threads/2026-06-21/cordoba-mezquita-arches-and-shadow/images/02-img-1395-81cbfcb7d3-cordoba-mezquita-arches-and-shadow.jpg"
+    },
+    {
+      "media_id": "img-1404-b704ed7a17",
+      "order": 3,
+      "id": "img-1404-b704ed7a17",
+      "title": "Cordoba, La Mezquita",
+      "collection": "spain",
+      "location": "Spain",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/img-1404-b704ed7a17_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/img-1404-b704ed7a17_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=img-1404-b704ed7a17",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=img-1404-b704ed7a17",
+      "image": "images/03-img-1404-b704ed7a17-cordoba-mezquita-arches-and-shadow.jpg",
+      "local_staged_path": "socials/Threads/2026-06-21/cordoba-mezquita-arches-and-shadow/images/03-img-1404-b704ed7a17-cordoba-mezquita-arches-and-shadow.jpg"
+    },
+    {
+      "media_id": "img-1402-4c2c98e288",
+      "order": 4,
+      "id": "img-1402-4c2c98e288",
+      "title": "Cordoba, La Mezquita",
+      "collection": "spain",
+      "location": "Spain",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/img-1402-4c2c98e288_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/img-1402-4c2c98e288_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=img-1402-4c2c98e288",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=img-1402-4c2c98e288",
+      "image": "images/04-img-1402-4c2c98e288-cordoba-mezquita-arches-and-shadow.jpg",
+      "local_staged_path": "socials/Threads/2026-06-21/cordoba-mezquita-arches-and-shadow/images/04-img-1402-4c2c98e288-cordoba-mezquita-arches-and-shadow.jpg"
+    }
+  ],
+  "status": "prepared",
+  "available_count": 4,
+  "date": "2026-06-21",
+  "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-cordoba-mezquita-arches-shadow-2026-06-21",
+  "recommended_upload_set": "images",
+  "manual_blockers": [
+    "Publish pending: review socials/Threads/2026-06-21/cordoba-mezquita-arches-and-shadow/manifest.json and use the Threads browser/API workflow."
+  ]
+}

@@ -33,6 +33,10 @@ func intArg(_ name: String, default defaultValue: Int = 0) -> Int {
     return parsed
 }
 
+func boolArg(_ name: String) -> Bool {
+    return CommandLine.arguments.contains(name)
+}
+
 func requirePhotosAccess() {
     let status = PHPhotoLibrary.authorizationStatus()
     if status == .authorized || status == .limited {
@@ -119,6 +123,12 @@ let rawFileExtensions: Set<String> = [".raw", ".dng", ".nef", ".cr2", ".cr3", ".
 let developedPhotoExtensions: Set<String> = [".jpg", ".jpeg", ".heic", ".heif", ".tif", ".tiff", ".png"]
 let videoExtensions: Set<String> = [".mov", ".mp4", ".m4v"]
 
+struct AssetPlan {
+    let asset: PHAsset
+    let index: Int
+    var row: [String: Any]
+}
+
 func fileExtension(_ filename: String) -> String {
     return URL(fileURLWithPath: filename).pathExtension.lowercased()
 }
@@ -199,6 +209,128 @@ func assetRow(_ asset: PHAsset, index: Int) -> [String: Any] {
     ]
 }
 
+func burstSurvivorPositions(size: Int) -> Set<Int> {
+    if size <= 1 {
+        return [1]
+    }
+    if size <= 5 {
+        return [2]
+    }
+    return Set(stride(from: 2, through: size, by: 4))
+}
+
+func isStandardBurstFilterPhoto(_ plan: AssetPlan) -> Bool {
+    guard (plan.row["eligible"] as? Bool) == true, assetMediaType(plan.asset) == "photo" else {
+        return false
+    }
+    if plan.asset.creationDate == nil {
+        return false
+    }
+    let width = Double(plan.asset.pixelWidth)
+    let height = Double(plan.asset.pixelHeight)
+    if width > 0 && height > 0 && max(width / height, height / width) >= 2.0 {
+        return false
+    }
+    return true
+}
+
+func assetMediaType(_ asset: PHAsset) -> String {
+    return asset.mediaType == .video ? "video" : asset.mediaType == .image ? "photo" : "unsupported"
+}
+
+func applyBurstFilter(_ plans: inout [AssetPlan], enabled: Bool) -> [String: Any] {
+    var summary: [String: Any] = [
+        "enabled": enabled,
+        "mode": "conservative-preconversion",
+        "burstGroups": 0,
+        "survivorCount": 0,
+        "nonBurstKept": 0,
+        "skippedCount": 0,
+    ]
+    guard enabled else {
+        return summary
+    }
+    var candidates: [(planIndex: Int, date: Date)] = []
+    for (planIndex, plan) in plans.enumerated() {
+        if isStandardBurstFilterPhoto(plan), let date = plan.asset.creationDate {
+            candidates.append((planIndex, date))
+        }
+    }
+    candidates.sort { lhs, rhs in
+        if lhs.date == rhs.date {
+            return plans[lhs.planIndex].index < plans[rhs.planIndex].index
+        }
+        return lhs.date < rhs.date
+    }
+
+    var groups: [[(planIndex: Int, date: Date)]] = []
+    var current: [(planIndex: Int, date: Date)] = []
+    var previous: (planIndex: Int, date: Date)?
+    for candidate in candidates {
+        if let previous, candidate.date.timeIntervalSince(previous.date) < 1 {
+            current.append(candidate)
+        } else {
+            if !current.isEmpty {
+                groups.append(current)
+            }
+            current = [candidate]
+        }
+        previous = candidate
+    }
+    if !current.isEmpty {
+        groups.append(current)
+    }
+
+    var burstGroups = 0
+    var survivorCount = 0
+    var nonBurstKept = 0
+    var skippedCount = 0
+    for group in groups {
+        if group.count == 1 {
+            let planIndex = group[0].planIndex
+            plans[planIndex].row["burstFilterOutcome"] = "non-burst-keep"
+            nonBurstKept += 1
+            continue
+        }
+        burstGroups += 1
+        let burstId = String(format: "burst-%05d", burstGroups)
+        let survivors = burstSurvivorPositions(size: group.count)
+        for (offset, candidate) in group.enumerated() {
+            let position = offset + 1
+            let planIndex = candidate.planIndex
+            plans[planIndex].row["burstFilterId"] = burstId
+            plans[planIndex].row["burstFilterPosition"] = position
+            plans[planIndex].row["burstFilterSize"] = group.count
+            if survivors.contains(position) {
+                plans[planIndex].row["burstFilterOutcome"] = "survivor-keep"
+                survivorCount += 1
+            } else {
+                plans[planIndex].row["eligible"] = false
+                plans[planIndex].row["status"] = "blocked_by_policy"
+                plans[planIndex].row["reason"] = "Burst filter skipped this near-duplicate before conversion."
+                plans[planIndex].row["burstFilterOutcome"] = "waste-basket"
+                skippedCount += 1
+            }
+        }
+    }
+
+    summary["burstGroups"] = burstGroups
+    summary["survivorCount"] = survivorCount
+    summary["nonBurstKept"] = nonBurstKept
+    summary["skippedCount"] = skippedCount
+    return summary
+}
+
+func plannedAssets(album: PHAssetCollection, limit: Int, filterBursts: Bool) -> ([AssetPlan], [String: Any]) {
+    let assets = PHAsset.fetchAssets(in: album, options: assetFetchOptions(limit: limit))
+    var plans: [AssetPlan] = []
+    assets.enumerateObjects { asset, index, _ in
+        plans.append(AssetPlan(asset: asset, index: index + 1, row: assetRow(asset, index: index + 1)))
+    }
+    let burstFilter = applyBurstFilter(&plans, enabled: filterBursts)
+    return (plans, burstFilter)
+}
+
 func albumSummary(_ collection: PHAssetCollection) -> [String: Any] {
     let assets = PHAsset.fetchAssets(in: collection, options: nil)
     return [
@@ -211,10 +343,9 @@ func albumSummary(_ collection: PHAssetCollection) -> [String: Any] {
     ]
 }
 
-func preflight(album: PHAssetCollection, limit: Int) -> [String: Any] {
-    let assets = PHAsset.fetchAssets(in: album, options: assetFetchOptions(limit: limit))
-    var rows: [[String: Any]] = []
-    assets.enumerateObjects { asset, index, _ in rows.append(assetRow(asset, index: index + 1)) }
+func preflight(album: PHAssetCollection, limit: Int, filterBursts: Bool) -> [String: Any] {
+    let (plans, burstFilter) = plannedAssets(album: album, limit: limit, filterBursts: filterBursts)
+    let rows = plans.map { $0.row }
     let candidateCount = rows.filter { ($0["eligible"] as? Bool) == true }.count
     let blockedCount = rows.filter { ($0["eligible"] as? Bool) != true }.count
     return [
@@ -225,6 +356,7 @@ func preflight(album: PHAssetCollection, limit: Int) -> [String: Any] {
         "count": rows.count,
         "candidateCount": candidateCount,
         "blockedCount": blockedCount,
+        "burstFilter": burstFilter,
         "items": rows,
         "notes": [
             "Uses PhotoKit/Photos automation only; does not read .photoslibrary package internals.",
@@ -321,16 +453,18 @@ func writeResource(_ resource: PHAssetResource, to url: URL) -> Result<Void, Err
     return result
 }
 
-func materialize(album: PHAssetCollection, destination: URL, limit: Int) throws -> [String: Any] {
+func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterBursts: Bool) throws -> [String: Any] {
     try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)
-    let assets = PHAsset.fetchAssets(in: album, options: assetFetchOptions(limit: limit))
+    let (plans, burstFilter) = plannedAssets(album: album, limit: limit, filterBursts: filterBursts)
     var sidecarRows: [[String: Any]] = []
     var itemRows: [[String: Any]] = []
-    assets.enumerateObjects { asset, index, _ in
-        var row = assetRow(asset, index: index + 1)
+    for plan in plans {
+        let asset = plan.asset
+        let index = plan.index - 1
+        var row = plan.row
         guard (row["eligible"] as? Bool) == true else {
             itemRows.append(row)
-            return
+            continue
         }
         let strategy = row["exportStrategy"] as? String ?? "unsupported"
         if strategy == "rendered_jpeg" {
@@ -359,14 +493,14 @@ func materialize(album: PHAssetCollection, destination: URL, limit: Int) throws 
                 row["reason"] = "Rendered JPG is not available locally and network download is disabled for Owner import safety: \(error.localizedDescription)"
             }
             itemRows.append(row)
-            return
+            continue
         }
         guard let resource = preferredResource(asset), !hasExtension(resource.originalFilename, in: rawFileExtensions) else {
             row["eligible"] = false
             row["status"] = "unsupported"
             row["reason"] = "No supported developed photo/video resource found."
             itemRows.append(row)
-            return
+            continue
         }
         let filename = safeFilename(resource.originalFilename, fallback: "apple-photos-\(index + 1)")
         let outputURL = destination.appendingPathComponent(String(format: "%04d-%@", index + 1, filename))
@@ -410,13 +544,14 @@ func materialize(album: PHAssetCollection, destination: URL, limit: Int) throws 
         "sidecar": sidecarURL.path,
         "count": itemRows.count,
         "materializedCount": sidecarRows.count,
+        "burstFilter": burstFilter,
         "items": itemRows,
     ]
 }
 
 let command = CommandLine.arguments.dropFirst().first ?? ""
 if command.isEmpty || command == "--help" {
-    printJSON(["ok": true, "usage": "apple_photos_bridge.swift albums | preflight --album-id ID | export --album-id ID --destination PATH"])
+    printJSON(["ok": true, "usage": "apple_photos_bridge.swift albums | preflight --album-id ID [--filter-bursts] | export --album-id ID --destination PATH [--filter-bursts]"])
     exit(0)
 }
 
@@ -428,13 +563,13 @@ do {
         printJSON(["ok": true, "albums": fetchAlbums().map(albumSummary)])
     case "preflight":
         let album = try findAlbum(id: argValue("--album-id"), name: argValue("--album-name"))
-        printJSON(preflight(album: album, limit: intArg("--limit")))
+        printJSON(preflight(album: album, limit: intArg("--limit"), filterBursts: boolArg("--filter-bursts")))
     case "export":
         guard let destination = argValue("--destination") else {
             fail("missing_destination", "Missing --destination for Apple Photos export.")
         }
         let album = try findAlbum(id: argValue("--album-id"), name: argValue("--album-name"))
-        printJSON(try materialize(album: album, destination: URL(fileURLWithPath: destination), limit: intArg("--limit")))
+        printJSON(try materialize(album: album, destination: URL(fileURLWithPath: destination), limit: intArg("--limit"), filterBursts: boolArg("--filter-bursts")))
     default:
         fail("bad_command", "Unknown Apple Photos bridge command: \(command)", status: 2)
     }

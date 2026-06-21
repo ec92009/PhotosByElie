@@ -6163,8 +6163,14 @@ def _write_import_source_setting(repo_root: Path, entries: list[dict], setting_k
                     WHEN excluded.pinned = 1 THEN 1
                     ELSE import_source_history.pinned
                   END,
-                  review_required = import_source_history.review_required,
-                  review_completed_at = COALESCE(excluded.review_completed_at, import_source_history.review_completed_at),
+                  review_required = CASE
+                    WHEN excluded.review_required = 1 THEN 1
+                    ELSE import_source_history.review_required
+                  END,
+                  review_completed_at = CASE
+                    WHEN excluded.review_required = 1 THEN NULL
+                    ELSE COALESCE(excluded.review_completed_at, import_source_history.review_completed_at)
+                  END,
                   legacy_source = COALESCE(import_source_history.legacy_source, excluded.legacy_source),
                   first_seen_at = COALESCE(import_source_history.first_seen_at, excluded.first_seen_at),
                   last_used_at = excluded.last_used_at,
@@ -7142,7 +7148,26 @@ def _apple_photos_payload_args(payload: dict, *, require_target: bool = True) ->
         raise ValueError("limit must be a number") from error
     if limit > 0:
         args.extend(["--limit", str(limit)])
+    if _apple_photos_filter_bursts(payload):
+        args.append("--filter-bursts")
     return args
+
+
+def _apple_photos_filter_bursts(payload: dict) -> bool:
+    for key in ("filterBursts", "filter_bursts", "burstFilter"):
+        if key not in payload:
+            continue
+        value = payload.get(key)
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, (int, float)):
+            return value != 0
+        text = str(value or "").strip().lower()
+        if text in {"0", "false", "off", "no", "disabled"}:
+            return False
+        if text in {"1", "true", "on", "yes", "enabled"}:
+            return True
+    return True
 
 
 def _run_apple_photos_bridge(repo_root: Path, args: list[str]) -> dict:
@@ -7300,8 +7325,9 @@ def _apple_photos_operation_blueprint(payload: dict, preflight: dict | None = No
             "selectionPolicy": "album_membership",
             "mediaTypes": ["photo", "video"],
             "skipDiscarded": True,
-            "rawPolicy": "block_raw_only",
-            "icloudPolicy": "require_local_original",
+            "rawPolicy": "render_raw_current_jpg",
+            "icloudPolicy": "require_local_original_or_render",
+            "burstPolicy": "conservative_preconversion" if _apple_photos_filter_bursts(payload) else "off",
             "duplicatePolicy": "prefer_apple_photos_anchor",
         },
         "outputs": {
@@ -7336,6 +7362,61 @@ def _apple_photos_import_destination(repo_root: Path, album_label: str = "") -> 
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     safe_label = re.sub(r"[^a-zA-Z0-9]+", "-", album_label).strip("-").lower()[:48] or "album"
     return repo_root / APPLE_PHOTOS_IMPORT_ROOT / f"{stamp}-{safe_label}"
+
+
+def _remember_apple_photos_review_source(repo_root: Path, source_root: Path, label: str) -> dict:
+    now = datetime.now(timezone.utc).isoformat()
+    entry = _import_source_entry(
+        source_root,
+        last_used_at=now,
+        use_count=0,
+        review_required=True,
+        legacy_source="apple-photos-review-stage",
+    )
+    entry["label"] = label
+    entries = [item for item in _read_import_source_setting(repo_root) if item.get("path") != entry["path"]]
+    _write_import_source_setting(repo_root, [entry, *entries])
+    return entry
+
+
+def _apple_photos_review_stage(source_root: Path, materialized_albums: list[dict], *, batch_sidecar: dict | None = None) -> dict:
+    now = datetime.now(timezone.utc).isoformat()
+    album_rows = []
+    for row in materialized_albums:
+        preflight = row.get("preflight") if isinstance(row.get("preflight"), dict) else {}
+        album = row.get("album") if isinstance(row.get("album"), dict) else preflight.get("album") if isinstance(preflight.get("album"), dict) else {}
+        album_rows.append({
+            "albumLocalIdentifier": str(album.get("localIdentifier") or ""),
+            "albumName": str(album.get("title") or "Apple Photos album"),
+            "importableCount": int(preflight.get("candidateCount") or row.get("count") or 0),
+            "materializedCount": int(row.get("materializedCount") or 0),
+            "destination": str(row.get("destination") or ""),
+            "burstFilter": row.get("burstFilter") or preflight.get("burstFilter") or {},
+        })
+    total = sum(int(row.get("materializedCount") or 0) for row in album_rows)
+    return {
+        "id": f"apple-photos-review-{uuid.uuid4().hex[:16]}",
+        "kind": "apple-photos-review-stage",
+        "operation": "materialize-review",
+        "photo_id": "apple-photos-review",
+        "state": "done",
+        "queued_at": now,
+        "started_at": now,
+        "completed_at": now,
+        "updated_at": now,
+        "total": max(1, len(album_rows)),
+        "completed": len(album_rows),
+        "failed": 0,
+        "bytes_total": 0,
+        "bytes_done": 0,
+        "sourceKind": "apple-photos",
+        "sourceRoot": str(source_root),
+        "sourceSelect": "all",
+        "reviewRequired": True,
+        "batchSidecar": batch_sidecar or {},
+        "applePhotosAlbums": album_rows,
+        "materializedCount": total,
+    }
 
 
 def _json_dict_from_text(value: object) -> dict:
@@ -7375,6 +7456,14 @@ def _apple_photos_album_import_stats(repo_root: Path) -> dict[str, dict]:
         preflight = _json_dict_from_text(row["preflight_json"])
         task = _json_dict_from_text(row["task_json"])
         imported_count = int(preflight.get("candidateCount") or source.get("albumAssetCount") or 0)
+        task_albums = task.get("applePhotosAlbums") if isinstance(task.get("applePhotosAlbums"), list) else []
+        for task_album in task_albums:
+            if not isinstance(task_album, dict):
+                continue
+            if str(task_album.get("albumLocalIdentifier") or "").strip() != album_id:
+                continue
+            imported_count = int(task_album.get("materializedCount") or imported_count)
+            break
         current = stats.setdefault(album_id, {
             "importedCount": 0,
             "lastImportState": "",
@@ -7658,30 +7747,20 @@ def _start_apple_photos_batch_import(repo_root: Path, payload: dict, album_paylo
             "failedAlbums": failed_albums,
             "batchSidecar": batch_sidecar,
         }
-    task = _start_cloud_media_sweep(
+    review_source = _remember_apple_photos_review_source(
         repo_root,
-        source_root=batch_root,
-        source_select="all",
+        batch_root,
+        f"Apple Photos review: {len(materialized_albums):,} album(s)",
     )
-    task["sourceKind"] = "apple-photos"
-    task["applePhotosAlbums"] = [
-        {
-            "albumLocalIdentifier": str((row.get("album") or {}).get("localIdentifier") or (row.get("preflight") or {}).get("album", {}).get("localIdentifier") or ""),
-            "albumName": str((row.get("album") or {}).get("title") or (row.get("preflight") or {}).get("album", {}).get("title") or "Apple Photos album"),
-            "importableCount": int((row.get("preflight") or {}).get("candidateCount") or 0),
-            "materializedCount": int(row.get("materializedCount") or 0),
-            "destination": str(row.get("destination") or ""),
-        }
-        for row in materialized_albums
-    ]
+    review_stage = _apple_photos_review_stage(batch_root, materialized_albums, batch_sidecar=batch_sidecar)
     updated_operations: list[dict] = []
     for row in materialized_albums:
         operation = row.get("operation") if isinstance(row.get("operation"), dict) else {}
         updated = update_import_operation_db(
             repo_root,
             str(operation.get("operationId") or ""),
-            state="queued",
-            task=task,
+            state="done",
+            task=review_stage,
         )
         row["operation"] = updated
         updated_operations.append(updated)
@@ -7692,11 +7771,12 @@ def _start_apple_photos_batch_import(repo_root: Path, payload: dict, album_paylo
         "materializedAlbums": materialized_albums,
         "failedAlbums": failed_albums,
         "batchSidecar": batch_sidecar,
-        "task": task,
+        "reviewStage": review_stage,
+        "reviewSource": review_source,
         "operations": updated_operations,
         "message": (
-            f"Apple Photos batch import started for {unique_materialized:,} unique materialized asset(s)"
-            f" from {len(materialized_albums):,} album(s)."
+            f"Apple Photos materialized {unique_materialized:,} unique asset(s)"
+            f" from {len(materialized_albums):,} album(s) to a review folder. Review it, mark reviewed, then start the Expo import."
         ),
     }
 
@@ -7766,32 +7846,26 @@ def _start_apple_photos_import(repo_root: Path, payload: dict) -> dict:
             "code": "nothing_materialized",
             "operation": operation,
         }
-    task = _start_cloud_media_sweep(
+    review_source = _remember_apple_photos_review_source(
         repo_root,
-        source_root=destination,
-        source_select="all",
+        destination,
+        f"Apple Photos review: {album.get('title') or payload.get('albumName') or 'album'}",
     )
-    task["sourceKind"] = "apple-photos"
-    task["applePhotosAlbums"] = [{
-        "albumLocalIdentifier": str(album.get("localIdentifier") or payload.get("albumLocalIdentifier") or ""),
-        "albumName": str(album.get("title") or payload.get("albumName") or "Apple Photos album"),
-        "importableCount": int(preflight.get("candidateCount") or 0),
-        "materializedCount": materialized,
-        "destination": str(destination),
-    }]
+    review_stage = _apple_photos_review_stage(destination, [{**export_result, "preflight": preflight}])
     operation = update_import_operation_db(
         repo_root,
         str(operation.get("operationId") or ""),
-        state="queued",
-        task=task,
+        state="done",
+        task=review_stage,
     )
     return {
         "ok": True,
         "preflight": preflight,
         "materialized": export_result,
-        "task": task,
+        "reviewStage": review_stage,
+        "reviewSource": review_source,
         "operation": operation,
-        "message": f"Apple Photos import started for {materialized:,} materialized asset(s).",
+        "message": f"Apple Photos materialized {materialized:,} asset(s) to a review folder. Review it, mark reviewed, then start the Expo import.",
     }
 
 

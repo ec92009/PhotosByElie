@@ -613,6 +613,10 @@ html[data-theme="light"] .photo-art.has-photo::after{
 .owner-apple-photos-actions{
   align-items:center;
 }
+.owner-apple-photos-burst-filter{
+  justify-self:start;
+  margin-top:2px;
+}
 .owner-apple-photos-picker{
   display:grid;
   gap:10px;

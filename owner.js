@@ -127,6 +127,7 @@
   const applePhotosRefreshButton = document.querySelector("[data-owner-apple-photos-refresh]");
   const applePhotosPreflightButton = document.querySelector("[data-owner-apple-photos-preflight]");
   const applePhotosImportButton = document.querySelector("[data-owner-apple-photos-import]");
+  const applePhotosFilterBurstsToggle = document.querySelector("[data-owner-apple-photos-filter-bursts]");
   const applePhotosStatus = document.querySelector("[data-owner-apple-photos-status]");
   const applePhotosLog = document.querySelector("[data-owner-apple-photos-log]");
   const applePhotosCounts = document.querySelector("[data-owner-apple-photos-counts]");
@@ -288,6 +289,7 @@
     applePhotosRefreshButton,
     applePhotosPreflightButton,
     applePhotosImportButton,
+    applePhotosFilterBurstsToggle,
     realEstateImportSourceSelect,
     accessUserEmailInput,
     accessUserTierInput,
@@ -2477,7 +2479,9 @@
     const parts = [];
     parts.push(source.exists ? "Available" : "Missing");
     if (source.pinned) parts.push("Pinned");
-    if (source.reviewRequired) parts.push("Legacy review needed");
+    if (source.reviewRequired) {
+      parts.push(String(source.legacySource || "").includes("apple-photos") ? "Review needed" : "Legacy review needed");
+    }
     if (source.useCount) parts.push(`${formatCount(source.useCount)} run${Number(source.useCount) === 1 ? "" : "s"}`);
     return parts.join(" · ");
   };
@@ -2507,7 +2511,7 @@
       importSourceReviewButton.title = !helperReady
         ? "Requires the localhost Owner helper."
         : source?.reviewRequired
-        ? "Mark this legacy remembered folder as reviewed"
+        ? "Mark this source folder as reviewed"
         : "";
     }
     if (importSourceRemoveButton) {
@@ -2548,7 +2552,18 @@
     }
     if (!importSourceByPath(path)) {
       importSourceOptions = [
-        { path, label, exists: true, discovered: false },
+        {
+          path,
+          label,
+          exists: folder.exists !== false,
+          discovered: Boolean(folder.discovered),
+          pinned: Boolean(folder.pinned),
+          reviewRequired: Boolean(folder.reviewRequired),
+          reviewCompletedAt: String(folder.reviewCompletedAt || ""),
+          lastUsedAt: String(folder.lastUsedAt || ""),
+          useCount: Number(folder.useCount || 0),
+          legacySource: String(folder.legacySource || ""),
+        },
         ...importSourceOptions.filter((source) => source.path !== path),
       ];
     }
@@ -2700,6 +2715,12 @@
         label: String(source?.label || "").trim(),
         exists: source?.exists !== false,
         discovered: Boolean(source?.discovered),
+        pinned: Boolean(source?.pinned),
+        reviewRequired: Boolean(source?.reviewRequired),
+        reviewCompletedAt: String(source?.reviewCompletedAt || ""),
+        lastUsedAt: String(source?.lastUsedAt || ""),
+        useCount: Number(source?.useCount || 0),
+        legacySource: String(source?.legacySource || ""),
       }))
       .filter((source) => source.path);
     importSourceSelect.textContent = "";
@@ -3019,6 +3040,31 @@
     return (Number(payload.blockedCount ?? payload.preflight?.blockedCount ?? 0) || 0) + unavailable;
   };
 
+  const applePhotosPayloadBurstSkippedCount = (payload = {}) => Number(
+    payload.burstFilter?.skippedCount
+      ?? payload.preflight?.burstFilter?.skippedCount
+      ?? 0,
+  ) || 0;
+
+  const applePhotosPayloadBlockedUnsupportedCount = (payload = {}) => Math.max(
+    0,
+    applePhotosPayloadBlockedCount(payload) - applePhotosPayloadBurstSkippedCount(payload),
+  );
+
+  const applePhotosFilterBurstsEnabled = () => (
+    applePhotosFilterBurstsToggle ? applePhotosFilterBurstsToggle.checked : true
+  );
+
+  const applePhotosCandidateDetail = (payload = {}, materializedLabel = "candidates") => {
+    const parts = [
+      `${formatCount(applePhotosPayloadCandidateCount(payload))} ${materializedLabel}`,
+    ];
+    const burstSkipped = applePhotosPayloadBurstSkippedCount(payload);
+    if (burstSkipped) parts.push(`${formatCount(burstSkipped)} burst-filtered`);
+    parts.push(`${formatCount(applePhotosPayloadBlockedUnsupportedCount(payload))} blocked or unsupported`);
+    return parts.join("; ");
+  };
+
   const renderApplePhotosBatchPreview = (payloads = []) => {
     const rows = payloads.filter(Boolean);
     if (!rows.length) {
@@ -3030,14 +3076,17 @@
       return;
     }
     const candidateCount = rows.reduce((total, row) => total + applePhotosPayloadCandidateCount(row), 0);
-    const blockedCount = rows.reduce((total, row) => total + applePhotosPayloadBlockedCount(row), 0);
+    const blockedCount = rows.reduce((total, row) => total + applePhotosPayloadBlockedUnsupportedCount(row), 0);
+    const burstSkippedCount = rows.reduce((total, row) => total + applePhotosPayloadBurstSkippedCount(row), 0);
     const checkedCount = rows.reduce((total, row) => total + (Number(row.count ?? row.preflight?.count ?? 0) || 0), 0);
-    setHtml(applePhotosCounts, ownerCountRowsHtml([
+    const countRows = [
       ["Albums", formatCount(rows.length)],
       ["Candidates", formatCount(candidateCount)],
-      ["Blocked/skipped", formatCount(blockedCount)],
+      ...(burstSkippedCount ? [["Burst filtered", formatCount(burstSkippedCount)]] : []),
+      ["Blocked/unsupported", formatCount(blockedCount)],
       ["Total checked", formatCount(checkedCount)],
-    ], new Set(["Albums"])));
+    ];
+    setHtml(applePhotosCounts, ownerCountRowsHtml(countRows, new Set(["Albums"])));
     const previewRows = rows.map((row) => {
       const album = applePhotosPayloadAlbum(row);
       const title = album.title || row.albumTitle || "Apple Photos album";
@@ -3045,7 +3094,7 @@
       return `
         <div class="owner-coverage-missing-row">
           <strong>${escapeHtml(title)}</strong>
-          <span>${formatCount(applePhotosPayloadCandidateCount(row))} ${candidateLabel}; ${formatCount(applePhotosPayloadBlockedCount(row))} blocked or skipped</span>
+          <span>${escapeHtml(applePhotosCandidateDetail(row, candidateLabel))}</span>
         </div>
       `;
     }).join("");
@@ -3133,10 +3182,12 @@
     }
     const items = Array.isArray(payload.items) ? payload.items : [];
     const unavailable = items.filter((item) => item.status === "unavailable_from_icloud").length;
+    const burstSkipped = applePhotosPayloadBurstSkippedCount(payload);
     const rows = [
       ["Album", payload.album?.title || selectedApplePhotosAlbum()?.title || "Apple Photos"],
       ["Candidates", formatCount(payload.candidateCount ?? payload.materializedCount ?? 0)],
-      ["Blocked/skipped", formatCount((payload.blockedCount ?? 0) + unavailable)],
+      ...(burstSkipped ? [["Burst filtered", formatCount(burstSkipped)]] : []),
+      ["Blocked/unsupported", formatCount(Math.max(0, (payload.blockedCount ?? 0) + unavailable - burstSkipped))],
       ["Total checked", formatCount(payload.count || items.length || 0)],
     ];
     setHtml(applePhotosCounts, ownerCountRowsHtml(rows, new Set(["Album"])));
@@ -3177,6 +3228,7 @@
     if (applePhotosSelectVisibleButton) applePhotosSelectVisibleButton.disabled = commandBusy || !visibleCount;
     if (applePhotosClearButton) applePhotosClearButton.disabled = commandBusy || !selected.length;
     if (applePhotosAlbumFilter) applePhotosAlbumFilter.disabled = applePhotosBusy;
+    if (applePhotosFilterBurstsToggle) applePhotosFilterBurstsToggle.disabled = commandBusy;
     applePhotosAlbumList?.querySelectorAll("input[type='checkbox']").forEach((input) => {
       input.disabled = commandBusy;
     });
@@ -3320,6 +3372,7 @@
     return {
       albumLocalIdentifier: album.localIdentifier,
       albumName: album.title,
+      filterBursts: applePhotosFilterBurstsEnabled(),
       ...(operationId ? { operationId } : {}),
       ...extra,
     };
@@ -3360,7 +3413,7 @@
           successes.push(payload);
           updateApplePhotosLogEntry(album, {
             state: "done",
-            detail: `${formatCount(payload.candidateCount || 0)} candidates; ${formatCount(payload.blockedCount || 0)} blocked or unsupported.`,
+            detail: applePhotosCandidateDetail(payload, "candidates"),
           });
         } catch (error) {
           failures += 1;
@@ -3372,10 +3425,11 @@
       }
       if (successes.length) renderApplePhotosBatchPreview(successes);
       const candidateCount = successes.reduce((total, payload) => total + (Number(payload.candidateCount) || 0), 0);
-      const blockedCount = successes.reduce((total, payload) => total + (Number(payload.blockedCount) || 0), 0);
+      const burstSkippedCount = successes.reduce((total, payload) => total + applePhotosPayloadBurstSkippedCount(payload), 0);
+      const blockedCount = successes.reduce((total, payload) => total + applePhotosPayloadBlockedUnsupportedCount(payload), 0);
       setApplePhotosStatus(
         successes.length
-          ? `Dry run complete for ${formatCount(successes.length)} album${successes.length === 1 ? "" : "s"}: ${formatCount(candidateCount)} import candidates, ${formatCount(blockedCount)} blocked or unsupported${failures ? `, ${formatCount(failures)} failed` : ""}.`
+          ? `Dry run complete for ${formatCount(successes.length)} album${successes.length === 1 ? "" : "s"}: ${formatCount(candidateCount)} import candidates${burstSkippedCount ? `, ${formatCount(burstSkippedCount)} burst-filtered` : ""}, ${formatCount(blockedCount)} blocked or unsupported${failures ? `, ${formatCount(failures)} failed` : ""}.`
           : `Apple Photos dry run failed for ${formatCount(failures)} album${failures === 1 ? "" : "s"}.`,
       );
     } finally {
@@ -3400,8 +3454,8 @@
       });
     });
     renderApplePhotosAlbumList();
-    resetApplePhotosLog(albums, "Waiting for import...");
-    setApplePhotosStatus(`Materializing Apple Photos assets for ${formatCount(albums.length)} album${albums.length === 1 ? "" : "s"} and starting one import job...`);
+    resetApplePhotosLog(albums, "Waiting for materialization...");
+    setApplePhotosStatus(`Materializing Apple Photos assets for ${formatCount(albums.length)} album${albums.length === 1 ? "" : "s"} into a review folder...`);
     try {
       const response = await fetch("/__photosbyelie/apple-photos/import", {
         method: "POST",
@@ -3422,6 +3476,7 @@
           const materialized = materializedAlbums.find((row) => applePhotosPayloadAlbum(row).localIdentifier === album.localIdentifier);
           const failed = failedAlbums.find((row) => applePhotosPayloadAlbum(row).localIdentifier === album.localIdentifier || row.albumLocalIdentifier === album.localIdentifier);
           if (materialized) {
+            album.importedCount = Math.max(applePhotosImportedCount(album), Number(materialized.materializedCount || 0) || 0);
             applePhotosSetImportProgress(album, {
               state: "running",
               importedCount: Number(materialized.materializedCount || 0),
@@ -3429,7 +3484,7 @@
             });
             updateApplePhotosLogEntry(album, {
               state: "done",
-              detail: `${formatCount(materialized.materializedCount || 0)}/${formatCount(materialized.preflight?.candidateCount ?? materialized.count ?? 0)} assets materialized for the batch import.`,
+              detail: `${formatCount(materialized.materializedCount || 0)}/${formatCount(materialized.preflight?.candidateCount ?? materialized.count ?? 0)} assets materialized for review.`,
             });
           } else if (failed) {
             applePhotosSetImportProgress(album, {
@@ -3453,6 +3508,7 @@
         const album = selectedApplePhotosAlbum();
         if (payload.operation && album) applePhotosLastOperationsByAlbum.set(album.localIdentifier, payload.operation);
         if (album) {
+          album.importedCount = Math.max(applePhotosImportedCount(album), Number(payload.materialized?.materializedCount || 0) || 0);
           applePhotosSetImportProgress(album, {
             state: "running",
             importedCount: Number(payload.materialized?.materializedCount || 0),
@@ -3461,7 +3517,7 @@
         }
         updateApplePhotosLogEntry(album, {
           state: "done",
-          detail: `${formatCount(payload.materialized?.materializedCount || 0)}/${formatCount(payload.preflight?.candidateCount ?? payload.materialized?.count ?? 0)} assets materialized for import.`,
+          detail: `${formatCount(payload.materialized?.materializedCount || 0)}/${formatCount(payload.preflight?.candidateCount ?? payload.materialized?.count ?? 0)} assets materialized for review.`,
         });
         renderApplePhotosPreview(payload.materialized || payload.preflight || null);
       }
@@ -3469,8 +3525,16 @@
         r2RepairActive = payload.task.operation === "repair";
         renderR2Progress([payload.task]);
         startR2Polling();
+      } else {
+        applePhotosImportPhaseActive = false;
+        applePhotosImportProgressByAlbum = new Map();
+        if (payload.reviewSource?.path) {
+          await loadImportSources();
+          selectImportSourceFolder(payload.reviewSource);
+        }
+        renderApplePhotosAlbumList();
       }
-      setApplePhotosStatus(payload.message || "Apple Photos import started.");
+      setApplePhotosStatus(payload.message || "Apple Photos assets were materialized to a review folder.");
     } catch (error) {
       applePhotosImportPhaseActive = false;
       applePhotosImportProgressByAlbum = new Map();
@@ -5690,6 +5754,12 @@
   applePhotosAlbumFilter?.addEventListener("input", () => {
     renderApplePhotosAlbumList();
   });
+  applePhotosFilterBurstsToggle?.addEventListener("change", () => {
+    renderApplePhotosPreview(null);
+    setApplePhotosStatus(applePhotosFilterBurstsEnabled()
+      ? "Burst filtering is on for the next Apple Photos dry run or materialization."
+      : "Burst filtering is off for the next Apple Photos dry run or materialization.");
+  });
   applePhotosAlbumList?.addEventListener("click", (event) => {
     const sortButton = event.target.closest("[data-owner-apple-photos-sort]");
     if (sortButton) {
@@ -5743,7 +5813,7 @@
     const albumLabel = albums.length === 1
       ? `Apple Photos album "${albums[0]?.title || "selected album"}"`
       : `${formatCount(albums.length)} Apple Photos albums`;
-    const ok = window.confirm(`Import eligible local assets from ${albumLabel}?\n\nRun Dry run first if you have not reviewed what will be imported, skipped, or blocked.`);
+    const ok = window.confirm(`Materialize eligible local assets from ${albumLabel} into a review folder?\n\nRun Dry run first if you have not reviewed what will be converted, burst-filtered, skipped, or blocked. R2 upload starts later from Start Expo import.`);
     if (!ok) return;
     startApplePhotosImport();
   });

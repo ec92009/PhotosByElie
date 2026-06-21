@@ -353,8 +353,9 @@ Clock state: running
 | 2026-06-21 | 08:39 CEST | 08:39 CEST | 0:01 | Checked current PhotosByElie collaboration time and budget state. |
 | 2026-06-21 | 08:48 CEST | 08:49 CEST | 0:01 | Executed PBE-20260620-342B direct Google OAuth verification pass; physical Safari account-switching remains a real-device check. |
 | 2026-06-21 | 09:00 CEST | 09:01 CEST | 0:01 | Refreshed local main from GitHub with a clean fast-forward pull; background fetch/pull time excluded. |
+| 2026-06-21 | 09:04 CEST | 09:05 CEST | 0:01 | Clarified the current direct Apple Photos import implementation, UI, and unrun local operation state. |
 
 ## Totals
 
-Active collaboration time used: 20:17
+Active collaboration time used: 20:18
 Remaining budget: not set

@@ -2573,6 +2573,7 @@
     lastImportSourceValue = path;
     syncR2ActionButtons();
     renderImportSourceDetails();
+    if (applePhotosPreview?.hidden) renderApplePhotosRememberedReviewSource(importSourceByPath(path));
     if (!latestR2ProgressTasks.some((task) => ["repair", "gap-fill", "maintenance"].includes(task?.operation))) {
       renderImportDashboardIdle();
     }
@@ -2746,6 +2747,7 @@
     lastImportSourceValue = importSourceSelect.value;
     syncR2ActionButtons();
     renderImportSourceDetails();
+    if (applePhotosPreview?.hidden) renderApplePhotosRememberedReviewSource(importSourceByPath(importSourceSelect.value));
     if (!latestR2ProgressTasks.some((task) => ["repair", "gap-fill", "maintenance"].includes(task?.operation))) {
       renderImportDashboardIdle();
     }
@@ -3105,6 +3107,90 @@
       `;
     }).join("");
     setHtml(applePhotosPreview, previewRows);
+    applePhotosPreview.hidden = false;
+  };
+
+  const renderApplePhotosReviewReady = (payload = {}) => {
+    const source = payload.reviewSource || {};
+    const reviewStage = payload.reviewStage || {};
+    const materialized = payload.materialized || {};
+    const materializedAlbums = Array.isArray(payload.materializedAlbums) ? payload.materializedAlbums : [];
+    const sourcePath = String(source.path || reviewStage.sourceRoot || materialized.destination || "").trim();
+    if (!sourcePath) {
+      if (payload.batch) renderApplePhotosBatchPreview(materializedAlbums.length ? materializedAlbums : (payload.preflights || []));
+      else renderApplePhotosPreview(materialized || payload.preflight || null);
+      return;
+    }
+    const assetCount = Number(
+      payload.batchSidecar?.assetCount
+        ?? reviewStage.materializedCount
+        ?? materialized.materializedCount
+        ?? materializedAlbums.reduce((total, row) => total + (Number(row.materializedCount) || 0), 0),
+    ) || 0;
+    const albumCount = Number(reviewStage.completed || materializedAlbums.length || (materialized.album ? 1 : 0)) || 1;
+    setHtml(applePhotosCounts, ownerCountRowsHtml([
+      ["Review assets", formatCount(assetCount)],
+      ["Albums", formatCount(albumCount)],
+      ["Status", "Review needed"],
+      ["Next", "Mark reviewed, then Start import"],
+    ], new Set(["Review assets"])));
+    const albumRows = materializedAlbums.length
+      ? materializedAlbums.map((row) => {
+        const album = applePhotosPayloadAlbum(row);
+        return `
+          <div class="owner-coverage-missing-row">
+            <strong>${escapeHtml(album.title || "Apple Photos album")}</strong>
+            <span>${escapeHtml(`${formatCount(row.materializedCount || 0)} assets materialized for review`)}</span>
+          </div>
+        `;
+      }).join("")
+      : "";
+    const itemRows = !payload.batch && Array.isArray(materialized.items)
+      ? materialized.items.filter((item) => item.status === "materialized").slice(0, 12).map((item) => `
+        <div class="owner-coverage-missing-row">
+          <strong>${escapeHtml(item.filename || item.relative_path || "Apple Photos asset")}</strong>
+          <span>${escapeHtml(item.relative_path || item.path || "Materialized")}</span>
+        </div>
+      `).join("")
+      : "";
+    setHtml(applePhotosPreview, `
+      <div class="owner-coverage-missing-row owner-apple-photos-review-source">
+        <strong>Review folder selected</strong>
+        <span>${escapeHtml(source.label || reviewStage.id || folderNameFromPath(sourcePath))}</span>
+        <small>${escapeHtml(sourcePath)}</small>
+      </div>
+      <div class="owner-coverage-missing-row">
+        <strong>Expo source is ready</strong>
+        <span>Use Mark reviewed after inspection, then Start import uploads from this folder.</span>
+      </div>
+      ${albumRows || itemRows}
+    `);
+    applePhotosPreview.hidden = false;
+  };
+
+  const isApplePhotosReviewSource = (source = {}) => (
+    Boolean(source.reviewRequired)
+      && String(source.legacySource || "").includes("apple-photos")
+      && Boolean(source.path)
+  );
+
+  const renderApplePhotosRememberedReviewSource = (source = {}) => {
+    if (!isApplePhotosReviewSource(source) || !applePhotosCounts || !applePhotosPreview) return;
+    setHtml(applePhotosCounts, ownerCountRowsHtml([
+      ["Status", "Review needed"],
+      ["Next", "Mark reviewed, then Start import"],
+    ], new Set(["Status"])));
+    setHtml(applePhotosPreview, `
+      <div class="owner-coverage-missing-row owner-apple-photos-review-source">
+        <strong>Review folder selected</strong>
+        <span>${escapeHtml(source.label || folderNameFromPath(source.path))}</span>
+        <small>${escapeHtml(source.path)}</small>
+      </div>
+      <div class="owner-coverage-missing-row">
+        <strong>Expo source is ready</strong>
+        <span>Use Mark reviewed after inspection, then Start import uploads from this folder.</span>
+      </div>
+    `);
     applePhotosPreview.hidden = false;
   };
 
@@ -3512,7 +3598,7 @@
             });
           }
         });
-        renderApplePhotosBatchPreview(materializedAlbums.length ? materializedAlbums : (payload.preflights || []));
+        renderApplePhotosReviewReady(payload);
       } else {
         const album = selectedApplePhotosAlbum();
         if (payload.operation && album) applePhotosLastOperationsByAlbum.set(album.localIdentifier, payload.operation);
@@ -3528,7 +3614,7 @@
           state: "done",
           detail: `${formatCount(payload.materialized?.materializedCount || 0)}/${formatCount(payload.preflight?.candidateCount ?? payload.materialized?.count ?? 0)} assets materialized for review.`,
         });
-        renderApplePhotosPreview(payload.materialized || payload.preflight || null);
+        renderApplePhotosReviewReady(payload);
       }
       if (payload.task) {
         r2RepairActive = payload.task.operation === "repair";

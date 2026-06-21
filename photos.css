@@ -613,9 +613,16 @@ html[data-theme="light"] .photo-art.has-photo::after{
 .owner-apple-photos-actions{
   align-items:center;
 }
-.owner-apple-photos-burst-filter{
+.owner-apple-photos-options{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px 16px;
   justify-self:start;
   margin-top:2px;
+}
+.owner-apple-photos-burst-filter,
+.owner-apple-photos-icloud-downloads{
+  justify-self:start;
 }
 .owner-apple-photos-picker{
   display:grid;

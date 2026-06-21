@@ -128,6 +128,7 @@
   const applePhotosPreflightButton = document.querySelector("[data-owner-apple-photos-preflight]");
   const applePhotosImportButton = document.querySelector("[data-owner-apple-photos-import]");
   const applePhotosFilterBurstsToggle = document.querySelector("[data-owner-apple-photos-filter-bursts]");
+  const applePhotosIcloudDownloadsToggle = document.querySelector("[data-owner-apple-photos-icloud-downloads]");
   const applePhotosStatus = document.querySelector("[data-owner-apple-photos-status]");
   const applePhotosLog = document.querySelector("[data-owner-apple-photos-log]");
   const applePhotosCounts = document.querySelector("[data-owner-apple-photos-counts]");
@@ -290,6 +291,7 @@
     applePhotosPreflightButton,
     applePhotosImportButton,
     applePhotosFilterBurstsToggle,
+    applePhotosIcloudDownloadsToggle,
     realEstateImportSourceSelect,
     accessUserEmailInput,
     accessUserTierInput,
@@ -3055,6 +3057,10 @@
     applePhotosFilterBurstsToggle ? applePhotosFilterBurstsToggle.checked : true
   );
 
+  const applePhotosAllowIcloudDownloads = () => (
+    applePhotosIcloudDownloadsToggle ? applePhotosIcloudDownloadsToggle.checked : false
+  );
+
   const applePhotosCandidateDetail = (payload = {}, materializedLabel = "candidates") => {
     const parts = [
       `${formatCount(applePhotosPayloadCandidateCount(payload))} ${materializedLabel}`,
@@ -3229,6 +3235,7 @@
     if (applePhotosClearButton) applePhotosClearButton.disabled = commandBusy || !selected.length;
     if (applePhotosAlbumFilter) applePhotosAlbumFilter.disabled = applePhotosBusy;
     if (applePhotosFilterBurstsToggle) applePhotosFilterBurstsToggle.disabled = commandBusy;
+    if (applePhotosIcloudDownloadsToggle) applePhotosIcloudDownloadsToggle.disabled = commandBusy;
     applePhotosAlbumList?.querySelectorAll("input[type='checkbox']").forEach((input) => {
       input.disabled = commandBusy;
     });
@@ -3373,6 +3380,7 @@
       albumLocalIdentifier: album.localIdentifier,
       albumName: album.title,
       filterBursts: applePhotosFilterBurstsEnabled(),
+      allowIcloudDownloads: applePhotosAllowIcloudDownloads(),
       ...(operationId ? { operationId } : {}),
       ...extra,
     };
@@ -3455,7 +3463,8 @@
     });
     renderApplePhotosAlbumList();
     resetApplePhotosLog(albums, "Waiting for materialization...");
-    setApplePhotosStatus(`Materializing Apple Photos assets for ${formatCount(albums.length)} album${albums.length === 1 ? "" : "s"} into a review folder...`);
+    const iCloudMode = applePhotosAllowIcloudDownloads() ? " with iCloud downloads allowed" : "";
+    setApplePhotosStatus(`Materializing Apple Photos assets for ${formatCount(albums.length)} album${albums.length === 1 ? "" : "s"} into a review folder${iCloudMode}...`);
     try {
       const response = await fetch("/__photosbyelie/apple-photos/import", {
         method: "POST",
@@ -5760,6 +5769,12 @@
       ? "Burst filtering is on for the next Apple Photos dry run or materialization."
       : "Burst filtering is off for the next Apple Photos dry run or materialization.");
   });
+  applePhotosIcloudDownloadsToggle?.addEventListener("change", () => {
+    renderApplePhotosPreview(null);
+    setApplePhotosStatus(applePhotosAllowIcloudDownloads()
+      ? "iCloud download is on for the next Apple Photos materialization. Photos may fetch missing originals or renders before writing the review folder."
+      : "iCloud download is off; Apple Photos materialization will use local bytes only.");
+  });
   applePhotosAlbumList?.addEventListener("click", (event) => {
     const sortButton = event.target.closest("[data-owner-apple-photos-sort]");
     if (sortButton) {
@@ -5813,7 +5828,10 @@
     const albumLabel = albums.length === 1
       ? `Apple Photos album "${albums[0]?.title || "selected album"}"`
       : `${formatCount(albums.length)} Apple Photos albums`;
-    const ok = window.confirm(`Materialize eligible local assets from ${albumLabel} into a review folder?\n\nRun Dry run first if you have not reviewed what will be converted, burst-filtered, skipped, or blocked. R2 upload starts later from Start Expo import.`);
+    const iCloudNotice = applePhotosAllowIcloudDownloads()
+      ? "\n\niCloud download is ON. Photos may download missing originals or current renders to this Mac before writing the review folder."
+      : "";
+    const ok = window.confirm(`Materialize eligible local assets from ${albumLabel} into a review folder?${iCloudNotice}\n\nRun Dry run first if you have not reviewed what will be converted, burst-filtered, skipped, or blocked. R2 upload starts later from Start Expo import.`);
     if (!ok) return;
     startApplePhotosImport();
   });

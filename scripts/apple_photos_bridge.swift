@@ -8,6 +8,10 @@ struct BridgeError: Error {
     let message: String
 }
 
+extension BridgeError: LocalizedError {
+    var errorDescription: String? { message }
+}
+
 func jsonData(_ value: Any) -> Data {
     return try! JSONSerialization.data(withJSONObject: value, options: [.prettyPrinted, .sortedKeys])
 }
@@ -343,7 +347,7 @@ func albumSummary(_ collection: PHAssetCollection) -> [String: Any] {
     ]
 }
 
-func preflight(album: PHAssetCollection, limit: Int, filterBursts: Bool) -> [String: Any] {
+func preflight(album: PHAssetCollection, limit: Int, filterBursts: Bool, allowIcloudDownloads: Bool) -> [String: Any] {
     let (plans, burstFilter) = plannedAssets(album: album, limit: limit, filterBursts: filterBursts)
     let rows = plans.map { $0.row }
     let candidateCount = rows.filter { ($0["eligible"] as? Bool) == true }.count
@@ -357,10 +361,15 @@ func preflight(album: PHAssetCollection, limit: Int, filterBursts: Bool) -> [Str
         "candidateCount": candidateCount,
         "blockedCount": blockedCount,
         "burstFilter": burstFilter,
+        "icloudDownloads": [
+            "enabled": allowIcloudDownloads,
+        ],
         "items": rows,
         "notes": [
             "Uses PhotoKit/Photos automation only; does not read .photoslibrary package internals.",
-            "Export/import has not run yet. iCloud-only originals or rendered JPGs are detected during materialization with network access disabled.",
+            allowIcloudDownloads
+                ? "Export/import has not run yet. Materialization may ask Photos to download missing originals or rendered JPGs from iCloud."
+                : "Export/import has not run yet. iCloud-only originals or rendered JPGs are detected during materialization with network access disabled.",
         ],
     ]
 }
@@ -383,12 +392,12 @@ func renderedJPEGFilename(asset: PHAsset, index: Int, resource: PHAssetResource?
     return "\(filenameStem(sourceName, fallback: fallback)).jpg"
 }
 
-func writeRenderedJPEG(_ asset: PHAsset, to url: URL) -> Result<Void, Error> {
+func writeRenderedJPEG(_ asset: PHAsset, to url: URL, allowIcloudDownloads: Bool) -> Result<Void, Error> {
     let options = PHImageRequestOptions()
     options.version = .current
     options.deliveryMode = .highQualityFormat
     options.resizeMode = .none
-    options.isNetworkAccessAllowed = false
+    options.isNetworkAccessAllowed = allowIcloudDownloads
     options.isSynchronous = false
 
     let semaphore = DispatchSemaphore(value: 0)
@@ -411,7 +420,10 @@ func writeRenderedJPEG(_ asset: PHAsset, to url: URL) -> Result<Void, Error> {
     }
 
     if semaphore.wait(timeout: .now() + 600) == .timedOut {
-        return .failure(BridgeError(code: "render_timeout", message: "Timed out while rendering a Photos asset. Confirm the rendered version is local in Photos and retry."))
+        let message = allowIcloudDownloads
+            ? "Timed out while Photos was downloading or rendering an asset. Open the asset in Photos, confirm it downloads, then retry."
+            : "Timed out while rendering a Photos asset. Confirm the rendered version is local in Photos and retry."
+        return .failure(BridgeError(code: "render_timeout", message: message))
     }
     if let error = requestInfo[PHImageErrorKey] as? Error {
         return .failure(error)
@@ -420,7 +432,10 @@ func writeRenderedJPEG(_ asset: PHAsset, to url: URL) -> Result<Void, Error> {
         return .failure(BridgeError(code: "render_cancelled", message: "Photos cancelled the rendered JPG export."))
     }
     if renderedImage == nil && requestInfo[PHImageResultIsInCloudKey] as? Bool == true {
-        return .failure(BridgeError(code: "render_in_icloud", message: "The current rendered version is in iCloud and is not local."))
+        let message = allowIcloudDownloads
+            ? "Photos could not download or provide the current rendered version from iCloud."
+            : "The current rendered version is in iCloud and is not local."
+        return .failure(BridgeError(code: "render_in_icloud", message: message))
     }
     guard let image = renderedImage,
           let tiffData = image.tiffRepresentation,
@@ -436,9 +451,9 @@ func writeRenderedJPEG(_ asset: PHAsset, to url: URL) -> Result<Void, Error> {
     }
 }
 
-func writeResource(_ resource: PHAssetResource, to url: URL) -> Result<Void, Error> {
+func writeResource(_ resource: PHAssetResource, to url: URL, allowIcloudDownloads: Bool) -> Result<Void, Error> {
     let options = PHAssetResourceRequestOptions()
-    options.isNetworkAccessAllowed = false
+    options.isNetworkAccessAllowed = allowIcloudDownloads
     let semaphore = DispatchSemaphore(value: 0)
     var result: Result<Void, Error> = .success(())
     PHAssetResourceManager.default().writeData(for: resource, toFile: url, options: options) { error in
@@ -448,12 +463,15 @@ func writeResource(_ resource: PHAssetResource, to url: URL) -> Result<Void, Err
         semaphore.signal()
     }
     if semaphore.wait(timeout: .now() + 600) == .timedOut {
-        return .failure(BridgeError(code: "resource_timeout", message: "Timed out while exporting a Photos resource. Confirm the original is local in Photos and retry."))
+        let message = allowIcloudDownloads
+            ? "Timed out while Photos was downloading or exporting the original resource. Open the asset in Photos, confirm it downloads, then retry."
+            : "Timed out while exporting a Photos resource. Confirm the original is local in Photos and retry."
+        return .failure(BridgeError(code: "resource_timeout", message: message))
     }
     return result
 }
 
-func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterBursts: Bool) throws -> [String: Any] {
+func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterBursts: Bool, allowIcloudDownloads: Bool) throws -> [String: Any] {
     try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)
     let (plans, burstFilter) = plannedAssets(album: album, limit: limit, filterBursts: filterBursts)
     var sidecarRows: [[String: Any]] = []
@@ -470,7 +488,7 @@ func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterB
         if strategy == "rendered_jpeg" {
             let filename = safeFilename(row["filename"] as? String ?? "", fallback: "apple-photos-\(index + 1).jpg")
             let outputURL = destination.appendingPathComponent(String(format: "%04d-%@", index + 1, filename))
-            switch writeRenderedJPEG(asset, to: outputURL) {
+            switch writeRenderedJPEG(asset, to: outputURL, allowIcloudDownloads: allowIcloudDownloads) {
             case .success:
                 let relativePath = outputURL.lastPathComponent
                 row["status"] = "materialized"
@@ -490,7 +508,9 @@ func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterB
             case .failure(let error):
                 row["eligible"] = false
                 row["status"] = "unavailable_from_icloud"
-                row["reason"] = "Rendered JPG is not available locally and network download is disabled for Owner import safety: \(error.localizedDescription)"
+                row["reason"] = allowIcloudDownloads
+                    ? "Photos could not download or provide the rendered JPG for Owner import: \(error.localizedDescription)"
+                    : "Rendered JPG is not available locally and network download is disabled for Owner import safety: \(error.localizedDescription)"
             }
             itemRows.append(row)
             continue
@@ -504,7 +524,7 @@ func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterB
         }
         let filename = safeFilename(resource.originalFilename, fallback: "apple-photos-\(index + 1)")
         let outputURL = destination.appendingPathComponent(String(format: "%04d-%@", index + 1, filename))
-        switch writeResource(resource, to: outputURL) {
+        switch writeResource(resource, to: outputURL, allowIcloudDownloads: allowIcloudDownloads) {
         case .success:
             let relativePath = outputURL.lastPathComponent
             row["status"] = "materialized"
@@ -524,7 +544,9 @@ func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterB
         case .failure(let error):
             row["eligible"] = false
             row["status"] = "unavailable_from_icloud"
-            row["reason"] = "Original resource is not available locally and network download is disabled for Owner preflight safety: \(error.localizedDescription)"
+            row["reason"] = allowIcloudDownloads
+                ? "Photos could not download or provide the original resource for Owner import: \(error.localizedDescription)"
+                : "Original resource is not available locally and network download is disabled for Owner import safety: \(error.localizedDescription)"
         }
         itemRows.append(row)
     }
@@ -532,6 +554,9 @@ func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterB
         "schema": "photosbyelie.apple-photos-source-anchors.v1",
         "created_at": isoDate(Date()),
         "album": albumSummary(album),
+        "icloudDownloads": [
+            "enabled": allowIcloudDownloads,
+        ],
         "assets": sidecarRows,
     ]
     let sidecarURL = destination.appendingPathComponent(".pbe-apple-photos-assets.json")
@@ -545,13 +570,16 @@ func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterB
         "count": itemRows.count,
         "materializedCount": sidecarRows.count,
         "burstFilter": burstFilter,
+        "icloudDownloads": [
+            "enabled": allowIcloudDownloads,
+        ],
         "items": itemRows,
     ]
 }
 
 let command = CommandLine.arguments.dropFirst().first ?? ""
 if command.isEmpty || command == "--help" {
-    printJSON(["ok": true, "usage": "apple_photos_bridge.swift albums | preflight --album-id ID [--filter-bursts] | export --album-id ID --destination PATH [--filter-bursts]"])
+    printJSON(["ok": true, "usage": "apple_photos_bridge.swift albums | preflight --album-id ID [--filter-bursts] [--allow-icloud-downloads] | export --album-id ID --destination PATH [--filter-bursts] [--allow-icloud-downloads]"])
     exit(0)
 }
 
@@ -563,13 +591,13 @@ do {
         printJSON(["ok": true, "albums": fetchAlbums().map(albumSummary)])
     case "preflight":
         let album = try findAlbum(id: argValue("--album-id"), name: argValue("--album-name"))
-        printJSON(preflight(album: album, limit: intArg("--limit"), filterBursts: boolArg("--filter-bursts")))
+        printJSON(preflight(album: album, limit: intArg("--limit"), filterBursts: boolArg("--filter-bursts"), allowIcloudDownloads: boolArg("--allow-icloud-downloads")))
     case "export":
         guard let destination = argValue("--destination") else {
             fail("missing_destination", "Missing --destination for Apple Photos export.")
         }
         let album = try findAlbum(id: argValue("--album-id"), name: argValue("--album-name"))
-        printJSON(try materialize(album: album, destination: URL(fileURLWithPath: destination), limit: intArg("--limit"), filterBursts: boolArg("--filter-bursts")))
+        printJSON(try materialize(album: album, destination: URL(fileURLWithPath: destination), limit: intArg("--limit"), filterBursts: boolArg("--filter-bursts"), allowIcloudDownloads: boolArg("--allow-icloud-downloads")))
     default:
         fail("bad_command", "Unknown Apple Photos bridge command: \(command)", status: 2)
     }

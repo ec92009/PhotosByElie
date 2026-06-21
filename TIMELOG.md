@@ -362,8 +362,9 @@ Clock state: running
 | 2026-06-21 | 12:39 CEST | 12:40 CEST | 0:01 | Requested Owner Apple Photos table width, resizing, and sortable-header polish; background implementation/testing time excluded. |
 | 2026-06-21 | 13:21 CEST | 13:22 CEST | 0:01 | Directed RAW-backed direct Photos imports to use rendered JPG temp exports now that Saturn staging is being retired; background implementation/testing time excluded. |
 | 2026-06-21 | 13:33 CEST | 13:35 CEST | 0:02 | Directed direct Apple Photos materialization through an Owner review gate before R2 upload and requested a pre-conversion burst filter switch; background implementation/testing time excluded. |
+| 2026-06-21 | 19:39 CEST | 19:40 CEST | 0:01 | Requested an opt-in forced iCloud/Photos fetch path for missing Apple Photos assets during temp review-folder materialization; background implementation/testing time excluded. |
 
 ## Totals
 
-Active collaboration time used: 20:38
+Active collaboration time used: 20:39
 Remaining budget: not set

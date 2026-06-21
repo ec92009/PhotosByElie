@@ -7150,7 +7150,28 @@ def _apple_photos_payload_args(payload: dict, *, require_target: bool = True) ->
         args.extend(["--limit", str(limit)])
     if _apple_photos_filter_bursts(payload):
         args.append("--filter-bursts")
+    if _apple_photos_allow_icloud_downloads(payload):
+        args.append("--allow-icloud-downloads")
     return args
+
+
+def _apple_photos_allow_icloud_downloads(payload: dict) -> bool:
+    for key in ("allowIcloudDownloads", "allow_icloud_downloads", "icloudDownloads", "icloud_downloads"):
+        if key not in payload:
+            continue
+        value = payload.get(key)
+        if isinstance(value, dict):
+            value = value.get("enabled")
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, (int, float)):
+            return value != 0
+        text = str(value or "").strip().lower()
+        if text in {"0", "false", "off", "no", "disabled"}:
+            return False
+        if text in {"1", "true", "on", "yes", "enabled"}:
+            return True
+    return False
 
 
 def _apple_photos_filter_bursts(payload: dict) -> bool:
@@ -7214,6 +7235,18 @@ def _store_apple_photos_albums_payload(payload: dict) -> None:
 
 def _apple_photos_preflight(repo_root: Path, payload: dict) -> dict:
     return _run_apple_photos_bridge(repo_root, ["preflight", *_apple_photos_payload_args(payload)])
+
+
+def _apple_photos_nothing_materialized_message(payload: dict) -> str:
+    if _apple_photos_allow_icloud_downloads(payload):
+        return (
+            "Apple Photos assets were selected, but Photos could not download or provide importable bytes. "
+            "Confirm iCloud Photos is signed in and the assets can be opened in Photos, then retry."
+        )
+    return (
+        "Apple Photos assets were selected, but none had locally available importable bytes. "
+        "Open Photos and download originals, then retry."
+    )
 
 
 def _record_legacy_folder_import_operation(
@@ -7326,7 +7359,8 @@ def _apple_photos_operation_blueprint(payload: dict, preflight: dict | None = No
             "mediaTypes": ["photo", "video"],
             "skipDiscarded": True,
             "rawPolicy": "render_raw_current_jpg",
-            "icloudPolicy": "require_local_original_or_render",
+            "icloudPolicy": "allow_photos_download" if _apple_photos_allow_icloud_downloads(payload) else "require_local_original_or_render",
+            "icloudDownloadConsent": _apple_photos_allow_icloud_downloads(payload),
             "burstPolicy": "conservative_preconversion" if _apple_photos_filter_bursts(payload) else "off",
             "duplicatePolicy": "prefer_apple_photos_anchor",
         },
@@ -7392,6 +7426,7 @@ def _apple_photos_review_stage(source_root: Path, materialized_albums: list[dict
             "materializedCount": int(row.get("materializedCount") or 0),
             "destination": str(row.get("destination") or ""),
             "burstFilter": row.get("burstFilter") or preflight.get("burstFilter") or {},
+            "icloudDownloads": row.get("icloudDownloads") or preflight.get("icloudDownloads") or {},
         })
     total = sum(int(row.get("materializedCount") or 0) for row in album_rows)
     return {
@@ -7707,27 +7742,31 @@ def _start_apple_photos_batch_import(repo_root: Path, payload: dict, album_paylo
             continue
         materialized = int(export_result.get("materializedCount") or 0)
         if materialized <= 0:
+            nothing_message = _apple_photos_nothing_materialized_message(album_payload)
             operation = update_import_operation_db(
                 repo_root,
                 str(operation.get("operationId") or ""),
                 state="failed",
-                error="Apple Photos assets were selected, but none had locally available importable bytes.",
+                error=nothing_message,
             )
             failed_albums.append({
                 **export_result,
                 "ok": False,
                 "album": album,
                 "operation": operation,
-                "error": "Apple Photos assets were selected, but none had locally available importable bytes.",
+                "error": nothing_message,
                 "code": "nothing_materialized",
             })
             continue
         materialized_albums.append({**export_result, "preflight": preflight, "operation": operation})
     if not materialized_albums:
+        nothing_message = _apple_photos_nothing_materialized_message({
+            "allowIcloudDownloads": any(_apple_photos_allow_icloud_downloads(album_payload) for _, album_payload, _, _ in prepared_rows),
+        })
         return {
             "ok": False,
             "batch": True,
-            "error": "Apple Photos assets were selected, but no selected albums had locally available importable bytes. Open Photos and download originals, then retry.",
+            "error": nothing_message,
             "code": "nothing_materialized",
             "preflights": preflight_rows,
             "operations": operation_rows,
@@ -7833,16 +7872,17 @@ def _start_apple_photos_import(repo_root: Path, payload: dict) -> dict:
         return {**export_result, "operation": operation}
     materialized = int(export_result.get("materializedCount") or 0)
     if materialized <= 0:
+        nothing_message = _apple_photos_nothing_materialized_message(payload)
         operation = update_import_operation_db(
             repo_root,
             str(operation.get("operationId") or ""),
             state="failed",
-            error="Apple Photos assets were selected, but none had locally available importable bytes.",
+            error=nothing_message,
         )
         return {
             **export_result,
             "ok": False,
-            "error": "Apple Photos assets were selected, but none had locally available importable bytes. Open Photos and download originals, then retry.",
+            "error": nothing_message,
             "code": "nothing_materialized",
             "operation": operation,
         }

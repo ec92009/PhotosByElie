@@ -366,8 +366,9 @@ Clock state: running
 | 2026-06-21 | 19:56 CEST | 19:57 CEST | 0:01 | Reported successful Apple Photos materialization was not visible in the review panel; background debugging and UI fix time excluded. |
 | 2026-06-21 | 21:28 CEST | 21:29 CEST | 0:01 | Requested moving the Apple Photos import command buttons beside the album table for a more comfortable Owner layout; background implementation/testing time excluded. |
 | 2026-06-21 | 21:45 CEST | 21:46 CEST | 0:01 | Requested live per-photo status while missing Apple Photos assets materialize into the review folder; background implementation/testing time excluded. |
+| 2026-06-21 | 22:17 CEST | 22:18 CEST | 0:01 | Requested PhotoKit percentage progress, a persistent Apple Photos action rail, and Owner imports panel order polish; background implementation/testing time excluded. |
 
 ## Totals
 
-Active collaboration time used: 20:42
+Active collaboration time used: 20:43
 Remaining budget: not set

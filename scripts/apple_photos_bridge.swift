@@ -21,6 +21,8 @@ func printJSON(_ value: Any) {
     FileHandle.standardOutput.write("\n".data(using: .utf8)!)
 }
 
+let progressOutputLock = NSLock()
+
 func emitProgress(_ event: String, _ payload: [String: Any]) {
     var body = payload
     body["event"] = event
@@ -29,9 +31,15 @@ func emitProgress(_ event: String, _ payload: [String: Any]) {
           let data = try? JSONSerialization.data(withJSONObject: body, options: [.sortedKeys]) else {
         return
     }
+    progressOutputLock.lock()
+    defer { progressOutputLock.unlock() }
     FileHandle.standardError.write("PBE_APPLE_PHOTOS_PROGRESS ".data(using: .utf8)!)
     FileHandle.standardError.write(data)
     FileHandle.standardError.write("\n".data(using: .utf8)!)
+}
+
+func normalizedProgress(_ progress: Double) -> Double {
+    return min(1.0, max(0.0, progress))
 }
 
 func fail(_ code: String, _ message: String, status: Int32 = 1) -> Never {
@@ -405,13 +413,16 @@ func renderedJPEGFilename(asset: PHAsset, index: Int, resource: PHAssetResource?
     return "\(filenameStem(sourceName, fallback: fallback)).jpg"
 }
 
-func writeRenderedJPEG(_ asset: PHAsset, to url: URL, allowIcloudDownloads: Bool) -> Result<Void, Error> {
+func writeRenderedJPEG(_ asset: PHAsset, to url: URL, allowIcloudDownloads: Bool, progressHandler: ((Double, String) -> Void)? = nil) -> Result<Void, Error> {
     let options = PHImageRequestOptions()
     options.version = .current
     options.deliveryMode = .highQualityFormat
     options.resizeMode = .none
     options.isNetworkAccessAllowed = allowIcloudDownloads
     options.isSynchronous = false
+    options.progressHandler = { progress, _, _, _ in
+        progressHandler?(normalizedProgress(progress), "downloading")
+    }
 
     let semaphore = DispatchSemaphore(value: 0)
     var renderedImage: NSImage?
@@ -456,6 +467,7 @@ func writeRenderedJPEG(_ asset: PHAsset, to url: URL, allowIcloudDownloads: Bool
           let jpegData = bitmap.representation(using: .jpeg, properties: [.compressionFactor: 0.95]) else {
         return .failure(BridgeError(code: "render_failed", message: "Photos did not provide a renderable image for JPG export."))
     }
+    progressHandler?(1.0, "rendering")
     do {
         try jpegData.write(to: url, options: .atomic)
         return .success(())
@@ -464,9 +476,12 @@ func writeRenderedJPEG(_ asset: PHAsset, to url: URL, allowIcloudDownloads: Bool
     }
 }
 
-func writeResource(_ resource: PHAssetResource, to url: URL, allowIcloudDownloads: Bool) -> Result<Void, Error> {
+func writeResource(_ resource: PHAssetResource, to url: URL, allowIcloudDownloads: Bool, progressHandler: ((Double, String) -> Void)? = nil) -> Result<Void, Error> {
     let options = PHAssetResourceRequestOptions()
     options.isNetworkAccessAllowed = allowIcloudDownloads
+    options.progressHandler = { progress in
+        progressHandler?(normalizedProgress(progress), "downloading")
+    }
     let semaphore = DispatchSemaphore(value: 0)
     var result: Result<Void, Error> = .success(())
     PHAssetResourceManager.default().writeData(for: resource, toFile: url, options: options) { error in
@@ -482,6 +497,41 @@ func writeResource(_ resource: PHAssetResource, to url: URL, allowIcloudDownload
         return .failure(BridgeError(code: "resource_timeout", message: message))
     }
     return result
+}
+
+func assetProgressPayload(
+    albumInfo: [String: Any],
+    asset: PHAsset,
+    plan: AssetPlan,
+    row: [String: Any],
+    filename: String,
+    strategy: String,
+    status: String,
+    totalCount: Int,
+    candidateCount: Int,
+    attemptedCount: Int,
+    materializedCount: Int,
+    progress: Double? = nil
+) -> [String: Any] {
+    var payload: [String: Any] = [
+        "album": albumInfo,
+        "index": plan.index,
+        "totalCount": totalCount,
+        "candidateCount": candidateCount,
+        "attemptedCount": attemptedCount,
+        "materializedCount": materializedCount,
+        "localIdentifier": asset.localIdentifier,
+        "filename": filename,
+        "mediaType": row["mediaType"] as? String ?? "photo",
+        "exportStrategy": strategy,
+        "status": status,
+    ]
+    if let progress {
+        let normalized = normalizedProgress(progress)
+        payload["progress"] = normalized
+        payload["progressPercent"] = Int((normalized * 100).rounded())
+    }
+    return payload
 }
 
 func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterBursts: Bool, allowIcloudDownloads: Bool) throws -> [String: Any] {
@@ -518,6 +568,33 @@ func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterB
             let filename = safeFilename(row["filename"] as? String ?? "", fallback: "apple-photos-\(index + 1).jpg")
             let outputURL = destination.appendingPathComponent(String(format: "%04d-%@", index + 1, filename))
             attemptedCount += 1
+            let progressLock = NSLock()
+            var lastProgressPercent = -1
+            let emitAssetProgress = { (rawProgress: Double, status: String) in
+                let normalized = normalizedProgress(rawProgress)
+                let percent = Int((normalized * 100).rounded())
+                progressLock.lock()
+                defer { progressLock.unlock() }
+                if lastProgressPercent >= 0 {
+                    if percent == lastProgressPercent { return }
+                    if percent < 100 && percent - lastProgressPercent < 5 { return }
+                }
+                lastProgressPercent = max(lastProgressPercent, percent)
+                emitProgress("asset_progress", assetProgressPayload(
+                    albumInfo: albumInfo,
+                    asset: asset,
+                    plan: plan,
+                    row: row,
+                    filename: filename,
+                    strategy: strategy,
+                    status: status,
+                    totalCount: plans.count,
+                    candidateCount: candidateCount,
+                    attemptedCount: attemptedCount,
+                    materializedCount: materializedCount,
+                    progress: normalized
+                ))
+            }
             emitProgress("asset_start", [
                 "album": albumInfo,
                 "index": plan.index,
@@ -531,7 +608,7 @@ func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterB
                 "exportStrategy": strategy,
                 "status": "materializing",
             ])
-            switch writeRenderedJPEG(asset, to: outputURL, allowIcloudDownloads: allowIcloudDownloads) {
+            switch writeRenderedJPEG(asset, to: outputURL, allowIcloudDownloads: allowIcloudDownloads, progressHandler: emitAssetProgress) {
             case .success:
                 let relativePath = outputURL.lastPathComponent
                 row["status"] = "materialized"
@@ -598,6 +675,33 @@ func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterB
         let filename = safeFilename(resource.originalFilename, fallback: "apple-photos-\(index + 1)")
         let outputURL = destination.appendingPathComponent(String(format: "%04d-%@", index + 1, filename))
         attemptedCount += 1
+        let progressLock = NSLock()
+        var lastProgressPercent = -1
+        let emitAssetProgress = { (rawProgress: Double, status: String) in
+            let normalized = normalizedProgress(rawProgress)
+            let percent = Int((normalized * 100).rounded())
+            progressLock.lock()
+            defer { progressLock.unlock() }
+            if lastProgressPercent >= 0 {
+                if percent == lastProgressPercent { return }
+                if percent < 100 && percent - lastProgressPercent < 5 { return }
+            }
+            lastProgressPercent = max(lastProgressPercent, percent)
+            emitProgress("asset_progress", assetProgressPayload(
+                albumInfo: albumInfo,
+                asset: asset,
+                plan: plan,
+                row: row,
+                filename: filename,
+                strategy: strategy,
+                status: status,
+                totalCount: plans.count,
+                candidateCount: candidateCount,
+                attemptedCount: attemptedCount,
+                materializedCount: materializedCount,
+                progress: normalized
+            ))
+        }
         emitProgress("asset_start", [
             "album": albumInfo,
             "index": plan.index,
@@ -611,7 +715,7 @@ func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterB
             "exportStrategy": strategy,
             "status": "materializing",
         ])
-        switch writeResource(resource, to: outputURL, allowIcloudDownloads: allowIcloudDownloads) {
+        switch writeResource(resource, to: outputURL, allowIcloudDownloads: allowIcloudDownloads, progressHandler: emitAssetProgress) {
         case .success:
             let relativePath = outputURL.lastPathComponent
             row["status"] = "materialized"

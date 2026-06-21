@@ -2944,6 +2944,9 @@
   const applePhotosProgressStatusLabel = (status) => {
     const key = String(status || "").trim();
     if (key === "materializing") return "Materializing";
+    if (key === "downloading") return "Downloading from Photos";
+    if (key === "rendering") return "Rendering";
+    if (key === "waiting_on_photos") return "Waiting on Photos";
     if (key === "materialized") return "Materialized";
     if (key === "unavailable_from_icloud") return "Needs Photos/iCloud";
     if (key === "blocked_by_policy") return "Skipped";
@@ -2955,15 +2958,36 @@
     `${item.localIdentifier || ""}:${item.index || ""}:${item.filename || ""}`
   );
 
+  const applePhotosProgressPercent = (item = {}) => {
+    const explicitPercent = Number(item.progressPercent);
+    if (Number.isFinite(explicitPercent) && explicitPercent >= 0) {
+      return Math.max(0, Math.min(100, Math.round(explicitPercent)));
+    }
+    const progress = Number(item.progress);
+    if (Number.isFinite(progress) && progress >= 0) {
+      return Math.max(0, Math.min(100, Math.round(progress * 100)));
+    }
+    return null;
+  };
+
+  const applePhotosProgressPercentLabel = (item = {}) => {
+    const percent = applePhotosProgressPercent(item);
+    return percent === null ? "" : `${percent}%`;
+  };
+
   const applePhotosProgressItemRowHtml = (item = {}, albumName = "", label = "") => {
     const status = String(item.status || "").trim();
     const safeStatus = status.replace(/[^a-z0-9_-]/gi, "-") || "waiting";
     const detail = item.relativePath || item.path || item.reason || albumName || "";
+    const percent = applePhotosProgressPercent(item);
+    const percentLabel = percent === null ? "" : `${percent}%`;
+    const labelText = label || applePhotosProgressStatusLabel(status);
     return `
       <div class="owner-coverage-missing-row owner-apple-photos-progress-row is-${escapeHtml(safeStatus)}">
-        <strong>${escapeHtml(label || applePhotosProgressStatusLabel(status))}</strong>
+        <strong>${escapeHtml(percentLabel ? `${labelText} · ${percentLabel}` : labelText)}</strong>
         <span>${escapeHtml(item.filename || "Apple Photos asset")}</span>
         ${detail ? `<small>${escapeHtml(detail)}</small>` : ""}
+        ${percent === null ? "" : `<span class="owner-apple-photos-progress-meter" aria-label="PhotoKit progress ${escapeHtml(percentLabel)}"><span style="width:${percent}%"></span></span>`}
       </div>
     `;
   };
@@ -3034,10 +3058,11 @@
         importableCount,
       });
       const current = row.currentItem || {};
+      const currentProgress = applePhotosProgressPercentLabel(current);
       updateApplePhotosLogEntry(album, {
         state: String(row.state || progress.state || "") === "failed" ? "failed" : "running",
         detail: current.filename
-          ? `${formatCount(materializedCount)}/${formatCount(importableCount || materializedCount)} materialized · ${current.filename}`
+          ? `${formatCount(materializedCount)}/${formatCount(importableCount || materializedCount)} materialized · ${currentProgress ? `${currentProgress} · ` : ""}${current.filename}`
           : `${formatCount(materializedCount)}/${formatCount(importableCount || materializedCount)} materialized`,
       });
       listChanged = true;
@@ -3307,7 +3332,10 @@
   };
 
   const isApplePhotosReviewSource = (source = {}) => (
-    Boolean(source.reviewRequired)
+    Boolean(source)
+      && typeof source === "object"
+      && !Array.isArray(source)
+      && Boolean(source.reviewRequired)
       && String(source.legacySource || "").includes("apple-photos")
       && Boolean(source.path)
   );

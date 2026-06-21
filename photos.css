@@ -625,18 +625,25 @@ html[data-theme="light"] .photo-art.has-photo::after{
   display:grid;
   gap:10px;
 }
-.owner-apple-photos-picker-main{
+.owner-apple-photos-layout{
   display:grid;
   grid-template-columns:minmax(0,1fr) clamp(150px,10vw,190px);
   gap:12px;
   align-items:start;
 }
+.owner-apple-photos-main{
+  display:grid;
+  gap:10px;
+  min-width:0;
+}
 .owner-apple-photos-actions{
   position:sticky;
-  top:64px;
+  top:calc(var(--fixed-header-offset,86px) + 8px);
   display:grid;
   gap:12px;
   align-content:start;
+  max-height:calc(100dvh - var(--fixed-header-offset,86px) - 16px);
+  overflow:auto;
 }
 .owner-apple-photos-actions .btn{
   width:100%;
@@ -6797,6 +6804,11 @@ body.detail-fullscreen-active{
 .owner-apple-photos-progress-row.is-materializing{
   border-left-color:#1d4ed8;
 }
+.owner-apple-photos-progress-row.is-downloading,
+.owner-apple-photos-progress-row.is-rendering,
+.owner-apple-photos-progress-row.is-waiting_on_photos{
+  border-left-color:#2563eb;
+}
 .owner-apple-photos-progress-row.is-materialized{
   border-left-color:#166534;
 }
@@ -6804,6 +6816,23 @@ body.detail-fullscreen-active{
 .owner-apple-photos-progress-row.is-unsupported,
 .owner-apple-photos-progress-row.is-blocked_by_policy{
   border-left-color:#b91c1c;
+}
+.owner-apple-photos-progress-meter{
+  display:block;
+  width:min(320px,100%);
+  height:6px;
+  overflow:hidden;
+  border:1px solid color-mix(in srgb,var(--text) 16%,transparent);
+  border-radius:999px;
+  background:color-mix(in srgb,var(--surface-2) 82%,transparent);
+}
+.owner-apple-photos-progress-meter span{
+  display:block;
+  width:0;
+  height:100%;
+  border-radius:inherit;
+  background:#2563eb;
+  transition:width .2s ease;
 }
 .order-panel{
   display:grid;
@@ -7502,6 +7531,9 @@ html[data-theme="light"] .detail-preview.has-image::after{
   .owner-import-source-details{
     grid-template-columns:1fr;
   }
+  .owner-apple-photos-layout{
+    grid-template-columns:1fr;
+  }
   .owner-apple-photos-picker-toolbar{
     grid-template-columns:1fr 1fr;
   }
@@ -7512,14 +7544,13 @@ html[data-theme="light"] .detail-preview.has-image::after{
   .owner-apple-photos-picker-toolbar .btn{
     width:100%;
   }
-  .owner-apple-photos-picker-main{
-    grid-template-columns:1fr;
-  }
   .owner-apple-photos-actions{
     position:static;
     order:-1;
     grid-template-columns:repeat(3,minmax(0,1fr));
     gap:8px;
+    max-height:none;
+    overflow:visible;
   }
   .owner-apple-photos-actions .btn{
     min-height:44px;

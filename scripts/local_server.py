@@ -7309,7 +7309,20 @@ def _progress_album_row(progress: dict, event: dict) -> dict:
 
 
 def _progress_item_from_event(event: dict, state: str) -> dict:
-    return {
+    progress_value = None
+    try:
+        progress_value = float(event.get("progress"))
+    except (TypeError, ValueError):
+        progress_value = None
+    if progress_value is not None:
+        progress_value = max(0.0, min(1.0, progress_value))
+    try:
+        progress_percent = int(event.get("progressPercent"))
+    except (TypeError, ValueError):
+        progress_percent = int(round(progress_value * 100)) if progress_value is not None else None
+    if progress_percent is not None:
+        progress_percent = max(0, min(100, progress_percent))
+    item = {
         "localIdentifier": str(event.get("localIdentifier") or ""),
         "filename": str(event.get("filename") or "Apple Photos asset"),
         "index": int(event.get("index") or 0),
@@ -7321,6 +7334,11 @@ def _progress_item_from_event(event: dict, state: str) -> dict:
         "exportStrategy": str(event.get("exportStrategy") or ""),
         "updatedAt": datetime.now(timezone.utc).isoformat(),
     }
+    if progress_value is not None:
+        item["progress"] = progress_value
+    if progress_percent is not None:
+        item["progressPercent"] = progress_percent
+    return item
 
 
 def _append_apple_photos_progress_item(album_row: dict, item: dict) -> None:
@@ -7370,6 +7388,18 @@ def _update_apple_photos_import_progress_from_event(progress_id: str, event: dic
             progress["currentAlbumLocalIdentifier"] = album_row.get("albumLocalIdentifier") or ""
             progress["currentItem"] = item
             progress["message"] = f"Materializing {item['filename']} from {album_row['albumName']}..."
+        elif event_name == "asset_progress":
+            state = str(event.get("status") or "materializing")
+            item = _progress_item_from_event(event, state)
+            album_row["state"] = "running"
+            album_row["currentItem"] = item
+            progress["currentAlbumLocalIdentifier"] = album_row.get("albumLocalIdentifier") or ""
+            progress["currentItem"] = item
+            percent = item.get("progressPercent")
+            if percent is None:
+                progress["message"] = f"Photos is materializing {item['filename']} from {album_row['albumName']}..."
+            else:
+                progress["message"] = f"Photos reports {percent}% for {item['filename']} from {album_row['albumName']}..."
         elif event_name in {"asset_done", "asset_failed"}:
             state = "materialized" if event_name == "asset_done" else str(event.get("status") or "unavailable")
             item = _progress_item_from_event(event, state)

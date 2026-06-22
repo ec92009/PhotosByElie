@@ -21,9 +21,9 @@ Do not use this SOP for repo-only documentation edits, CSS-only page polish, or 
 - Keep Apple Photos still-image exports at full pixel size. If explicit JPEG quality control is needed, post-process exported corrected JPEGs to quality 90 without resizing; do not switch to RAW/NEF for the public pipeline.
 - Keep Apple Photos video exports as original MOV/MP4/M4V files. The importer generates a watermarked `still_900` poster at 10% into the source video for gallery cards and a watermarked 5-second `short_5s_720p` MP4 preview for detail pages. Buyer delivery for videos is the original/full video only.
 - Direct Apple Photos imports are Owner-only and must run through `python3 scripts/local_server.py` on localhost. The Owner card invokes `scripts/apple_photos_bridge.swift`, which uses PhotoKit/Photos automation and does not inspect `.photoslibrary` package contents or private SQLite files.
-- Apple Photos/iCloud is the intended universal source and R2 is the intended cloud destination. Any authorized Owner machine can become an import workstation once it is signed into the same iCloud Photos library and Google-backed Owner auth is configured; PhotoKit staging still happens on that local Mac, while durable media/state promotion targets R2 and the cloud Owner access registry.
-- Direct Apple Photos imports may stage selected album assets under ignored `tmp/apple-photos-import/` before the standard PBE import/cache/R2 pipeline runs. This is still considered direct import in the Owner workflow because Elie does not manually export Finder folders.
-- Direct Apple Photos imports write `.pbe-apple-photos-assets.json` next to the staged bytes. The importer uses its `apple-photos://<asset-localIdentifier>` source anchors for IDs/dedupe and keeps the temporary cache path only as a local byte source.
+- Apple Photos/iCloud is the intended universal source and R2 is the intended cloud destination. Any authorized Owner machine can become an import workstation once it is signed into the same iCloud Photos library and Google-backed Owner auth is configured; PhotoKit exports still happen on that local Mac, while durable media/state promotion targets R2 and the cloud Owner access registry.
+- Direct Apple Photos imports may export selected album assets under ignored `tmp/apple-photos-import/` before the standard PBE import/cache/R2 pipeline runs. This is still considered direct import in the Owner workflow because Elie does not manually export Finder folders.
+- Direct Apple Photos imports write `.pbe-apple-photos-assets.json` next to the temporary bytes. The importer uses its `apple-photos://<asset-localIdentifier>` source anchors for IDs/dedupe and keeps the temporary cache path only as a local byte source.
 - The builder groups derivatives by inferred gallery country using Lightroom country fields, country keywords, and known location hints.
 
 ## Prerequisites
@@ -96,9 +96,7 @@ In Owner:
 
 1. Use **Import from Photos** to load albums through the local helper.
 2. Choose an album and run **Dry run**. Review import candidates, blocked RAW-only/unsupported assets, iCloud-original-not-local reports, and already-known/skipped behavior before any write/upload step.
-3. Click **Stage** only after the dry run looks right. The helper records the run in `Owner.sqlite:import_operations`, stages eligible local bytes to `tmp/apple-photos-import/`, writes stable `apple-photos://...` source anchors, and registers the staged folder as a review-required Expo source.
-4. Use **Preview in Finder** to inspect the staged folder, then **Mark reviewed**.
-5. Use **Start Expo import** after review to run the normal selected-folder import sweep.
+3. Click **Import to Expo** only after the dry run looks right. The helper records the run in `Owner.sqlite:import_operations`, exports eligible local bytes to `tmp/apple-photos-import/`, writes stable `apple-photos://...` source anchors, and immediately starts the normal selected-folder Expo import sweep from that temporary folder.
 
 ## Resume Behavior
 
@@ -123,7 +121,7 @@ The builder is designed to be interrupted and resumed.
 ## Privacy Rules
 
 - Keep `tmp/import-cache` untracked. Hidden uses JSON state only (`assets/hidden/hidden-blacklist.json` and local `assets/hidden/hidden-data.json`); do not keep local preview media under Hidden.
-- Keep `tmp/apple-photos-import` untracked. It is a localhost staging cache for direct Apple Photos imports, not a canonical library export.
+- Keep `tmp/apple-photos-import` untracked. It is a localhost temporary export cache for direct Apple Photos imports, not a canonical library export.
 - Keep `assets/owner-actions/country-assignments.jsonl` and `assets/owner-actions/country-assignments.json` only as SQLite-derived handoff/audit exports for localhost Unknown-to-country moves; `Owner.sqlite` is the authoritative write path. Each Unknown assignment is a live server action, not a browser-staged value: it should remove the chosen photo and same-day cohort from Unknown immediately and move them into the target Reserve country. If the move fails, the card should remain visible and the country selector should reset.
 - Keep `assets/owner-actions/keyword-blacklist.json` only as a SQLite-derived UI compatibility export. The authoritative blacklist is `Owner.sqlite:keyword_blacklist`. It is metadata-only: import/export scripts use it to omit useless keyword strings from generated catalog metadata and keyword indexes, not to block, discard, skip, or rewrite media/source files.
 - Treat Waste Basket media as owner-controlled undo assets, not clock-controlled assets. Basketed photos can be put back until the owner empties the basket; emptying deletes public previews, private masters, and private render triplets, then keeps only durable tombstone state: photo id plus blacklisted master/source path so future Saturn/import sweeps do not resurrect the file.

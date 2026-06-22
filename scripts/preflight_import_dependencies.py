@@ -52,14 +52,15 @@ def resolve_tool(name: str) -> str:
 def check_python(result: dict, errors: list[str]) -> None:
     python_result = {"executable": sys.executable, "pillow": "missing"}
     try:
-        __import__("PIL")
-    except ImportError:
+        from PIL import Image
+    except (ImportError, OSError) as error:
         errors.append(
-            f"Pillow is missing for {sys.executable}; install Pillow for this interpreter "
-            "or set PBE_SWEEP_PYTHON to a Python that has it."
+            f"Pillow is not usable for {sys.executable}: {error}. Install Pillow for this interpreter "
+            "or set PBE_SWEEP_PYTHON to a Python that can import PIL.Image."
         )
     else:
         python_result["pillow"] = "ok"
+        python_result["pillowVersion"] = getattr(Image, "__version__", "")
     result["python"] = python_result
 
 

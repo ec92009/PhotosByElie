@@ -127,6 +127,9 @@
   const applePhotosRefreshButton = document.querySelector("[data-owner-apple-photos-refresh]");
   const applePhotosPreflightButton = document.querySelector("[data-owner-apple-photos-preflight]");
   const applePhotosImportButton = document.querySelector("[data-owner-apple-photos-import]");
+  const applePhotosPreviewFolderButton = document.querySelector("[data-owner-apple-photos-preview-folder]");
+  const applePhotosMarkReviewedButton = document.querySelector("[data-owner-apple-photos-mark-reviewed]");
+  const applePhotosStartExpoButton = document.querySelector("[data-owner-apple-photos-start-expo]");
   const applePhotosFilterBurstsToggle = document.querySelector("[data-owner-apple-photos-filter-bursts]");
   const applePhotosIcloudDownloadsToggle = document.querySelector("[data-owner-apple-photos-icloud-downloads]");
   const applePhotosStatus = document.querySelector("[data-owner-apple-photos-status]");
@@ -212,6 +215,7 @@
   let applePhotosActiveProgressId = "";
   let applePhotosAlbumCacheMeta = null;
   let applePhotosAlbumLoadTimer = null;
+  let applePhotosCurrentStageSource = null;
   let applePhotosSortKey = "title";
   let applePhotosSortDirection = "asc";
   let wasteDeleteActive = false;
@@ -292,6 +296,9 @@
     applePhotosRefreshButton,
     applePhotosPreflightButton,
     applePhotosImportButton,
+    applePhotosPreviewFolderButton,
+    applePhotosMarkReviewedButton,
+    applePhotosStartExpoButton,
     applePhotosFilterBurstsToggle,
     applePhotosIcloudDownloadsToggle,
     realEstateImportSourceSelect,
@@ -2490,6 +2497,64 @@
     return parts.join(" · ");
   };
 
+  const isApplePhotosStageSource = (source = {}) => (
+    Boolean(source)
+      && typeof source === "object"
+      && !Array.isArray(source)
+      && String(source.legacySource || "").includes("apple-photos")
+      && Boolean(source.path)
+  );
+
+  const currentApplePhotosStageSource = () => {
+    return isApplePhotosStageSource(applePhotosCurrentStageSource) ? applePhotosCurrentStageSource : null;
+  };
+
+  const currentReviewRequiredSource = () => {
+    const source = importSourceByPath(importSourceSelect?.value || "");
+    return source?.reviewRequired ? source : null;
+  };
+
+  const syncApplePhotosPipelineButtons = () => {
+    const helperReady = localHelperWritable();
+    const busy = r2RepairActive || r2GapFillActive || r2MaintenanceActive || applePhotosBusy || applePhotosImportPhaseActive;
+    const source = currentApplePhotosStageSource();
+    const hasReviewFolder = Boolean(source?.path);
+    const reviewNeeded = Boolean(source?.reviewRequired);
+    const exists = source?.exists !== false;
+    if (applePhotosPreviewFolderButton) {
+      applePhotosPreviewFolderButton.disabled = !helperReady || !hasReviewFolder || !exists;
+      applePhotosPreviewFolderButton.title = !helperReady
+        ? "Requires the localhost Owner helper."
+        : !hasReviewFolder
+        ? "Stage Apple Photos assets before previewing the review folder."
+        : !exists
+        ? "The staged review folder is missing."
+        : `Open ${source.label || folderNameFromPath(source.path)} in Finder.`;
+    }
+    if (applePhotosMarkReviewedButton) {
+      applePhotosMarkReviewedButton.disabled = !helperReady || !hasReviewFolder || !reviewNeeded;
+      applePhotosMarkReviewedButton.title = !helperReady
+        ? "Requires the localhost Owner helper."
+        : !hasReviewFolder
+        ? "Stage Apple Photos assets before marking review complete."
+        : reviewNeeded
+        ? "Mark this staged Apple Photos folder as reviewed."
+        : "This staged Apple Photos folder has already been marked reviewed.";
+    }
+    if (applePhotosStartExpoButton) {
+      applePhotosStartExpoButton.disabled = !helperReady || busy || !hasReviewFolder || reviewNeeded || !exists;
+      applePhotosStartExpoButton.title = !helperReady
+        ? "Requires the localhost Owner helper."
+        : !hasReviewFolder
+        ? "Stage Apple Photos assets before starting the Expo import."
+        : reviewNeeded
+        ? "Preview in Finder and Mark reviewed before starting the Expo import."
+        : !exists
+        ? "The staged review folder is missing."
+        : `Start Expo import from ${source.label || folderNameFromPath(source.path)}.`;
+    }
+  };
+
   const renderImportSourceDetails = () => {
     if (!importSourceSelect || !importSourceDetails) return;
     const choice = importSourceSelect.value || "new";
@@ -2526,6 +2591,7 @@
         ? "Remove this remembered source folder from Owner.sqlite history"
         : "Choose a remembered source to remove";
     }
+    syncApplePhotosPipelineButtons();
   };
 
   const importSourceChoiceLabel = () => {
@@ -2554,23 +2620,24 @@
       existingOption.textContent = existingOption.textContent || label;
       existingOption.title = existingOption.title || path;
     }
-    if (!importSourceByPath(path)) {
-      importSourceOptions = [
-        {
-          path,
-          label,
-          exists: folder.exists !== false,
-          discovered: Boolean(folder.discovered),
-          pinned: Boolean(folder.pinned),
-          reviewRequired: Boolean(folder.reviewRequired),
-          reviewCompletedAt: String(folder.reviewCompletedAt || ""),
-          lastUsedAt: String(folder.lastUsedAt || ""),
-          useCount: Number(folder.useCount || 0),
-          legacySource: String(folder.legacySource || ""),
-        },
-        ...importSourceOptions.filter((source) => source.path !== path),
-      ];
-    }
+    const nextSource = {
+      ...(importSourceByPath(path) || {}),
+      path,
+      label,
+      exists: folder.exists !== false,
+      discovered: Boolean(folder.discovered),
+      pinned: Boolean(folder.pinned),
+      reviewRequired: Boolean(folder.reviewRequired),
+      reviewCompletedAt: String(folder.reviewCompletedAt || ""),
+      lastUsedAt: String(folder.lastUsedAt || ""),
+      useCount: Number(folder.useCount || 0),
+      legacySource: String(folder.legacySource || ""),
+    };
+    importSourceOptions = [
+      nextSource,
+      ...importSourceOptions.filter((source) => source.path !== path),
+    ];
+    if (isApplePhotosStageSource(nextSource)) applePhotosCurrentStageSource = nextSource;
     importSourceSelect.value = path;
     lastImportSourceValue = path;
     syncR2ActionButtons();
@@ -2728,6 +2795,9 @@
         legacySource: String(source?.legacySource || ""),
       }))
       .filter((source) => source.path);
+    if (applePhotosCurrentStageSource && !importSourceOptions.some((source) => source.path === applePhotosCurrentStageSource.path)) {
+      applePhotosCurrentStageSource = null;
+    }
     importSourceSelect.textContent = "";
     const addOption = (value, label, title = "") => {
       const option = document.createElement("option");
@@ -2788,6 +2858,32 @@
       lastImportSourceValue = nextValue;
       renderImportSourceDetails();
     }
+    if (isApplePhotosStageSource(payload?.source)) applePhotosCurrentStageSource = payload.source;
+    if (action === "remove" && applePhotosCurrentStageSource?.path === source.path) applePhotosCurrentStageSource = null;
+    syncR2ActionButtons();
+    return payload;
+  };
+
+  const revealImportSourceInFinder = async (source = currentApplePhotosStageSource()) => {
+    if (!source?.path) throw new Error("Stage Apple Photos assets before previewing the review folder.");
+    const response = await fetch("/__photosbyelie/reveal-import-source", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path: source.path }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Could not open the review folder in Finder.");
+    return payload;
+  };
+
+  const markCurrentApplePhotosStageReviewed = async () => {
+    const source = currentApplePhotosStageSource();
+    if (!source) throw new Error("Stage Apple Photos assets before marking review complete.");
+    if (!source.reviewRequired) return source;
+    const payload = await updateImportSourceHistory("review", source);
+    const updated = payload?.source || importSourceByPath(source.path) || source;
+    renderApplePhotosRememberedReviewSource(updated);
+    return updated;
   };
 
   const applePhotosAlbumKind = (album = {}) => {
@@ -2943,11 +3039,11 @@
 
   const applePhotosProgressStatusLabel = (status) => {
     const key = String(status || "").trim();
-    if (key === "materializing") return "Materializing";
+    if (key === "materializing") return "Staging";
     if (key === "downloading") return "Downloading from Photos";
     if (key === "rendering") return "Rendering";
     if (key === "waiting_on_photos") return "Waiting on Photos";
-    if (key === "materialized") return "Materialized";
+    if (key === "materialized") return "Staged";
     if (key === "unavailable_from_icloud") return "Needs Photos/iCloud";
     if (key === "blocked_by_policy") return "Skipped";
     if (key === "unsupported") return "Unsupported";
@@ -3000,14 +3096,14 @@
     const checkedCount = Number(progress.checkedCount || 0) || 0;
     const completedAlbums = Number(progress.completedAlbums || 0) || 0;
     const totalAlbums = Number(progress.totalAlbums || albums.length || 0) || 0;
-    const statusText = progress.state === "done" ? "Finishing" : progress.state === "failed" ? "Failed" : "Materializing";
+    const statusText = progress.state === "done" ? "Finishing" : progress.state === "failed" ? "Failed" : "Staging";
     const countRows = [
       ["Status", statusText],
-      ["Materialized", `${formatCount(materializedCount)}/${formatCount(importableCount || checkedCount || 0)}`],
+      ["Staged", `${formatCount(materializedCount)}/${formatCount(importableCount || checkedCount || 0)}`],
       ["Checked", formatCount(checkedCount)],
       ...(totalAlbums > 1 ? [["Albums", `${formatCount(completedAlbums)}/${formatCount(totalAlbums)}`]] : []),
     ];
-    setHtml(applePhotosCounts, ownerCountRowsHtml(countRows, new Set(["Materialized"])));
+    setHtml(applePhotosCounts, ownerCountRowsHtml(countRows, new Set(["Staged"])));
 
     const activeAlbum = albums.find((album) => album.currentItem)
       || albums.find((album) => String(album.albumLocalIdentifier || "") === String(progress.currentAlbumLocalIdentifier || ""))
@@ -3015,7 +3111,7 @@
       || {};
     const currentItem = progress.currentItem || activeAlbum.currentItem || null;
     const currentRows = currentItem
-      ? applePhotosProgressItemRowHtml(currentItem, activeAlbum.albumName || "", "Materializing now")
+      ? applePhotosProgressItemRowHtml(currentItem, activeAlbum.albumName || "", "Staging now")
       : "";
     const recentItems = albums
       .flatMap((album) => (Array.isArray(album.items) ? album.items : []).map((item) => ({
@@ -3062,8 +3158,8 @@
       updateApplePhotosLogEntry(album, {
         state: String(row.state || progress.state || "") === "failed" ? "failed" : "running",
         detail: current.filename
-          ? `${formatCount(materializedCount)}/${formatCount(importableCount || materializedCount)} materialized · ${currentProgress ? `${currentProgress} · ` : ""}${current.filename}`
-          : `${formatCount(materializedCount)}/${formatCount(importableCount || materializedCount)} materialized`,
+          ? `${formatCount(materializedCount)}/${formatCount(importableCount || materializedCount)} staged · ${currentProgress ? `${currentProgress} · ` : ""}${current.filename}`
+          : `${formatCount(materializedCount)}/${formatCount(importableCount || materializedCount)} staged`,
       });
       listChanged = true;
     });
@@ -3237,6 +3333,7 @@
   };
 
   const renderApplePhotosBatchPreview = (payloads = []) => {
+    applePhotosCurrentStageSource = null;
     const rows = payloads.filter(Boolean);
     if (!rows.length) {
       renderApplePhotosPreview(null);
@@ -3261,7 +3358,7 @@
     const previewRows = rows.map((row) => {
       const album = applePhotosPayloadAlbum(row);
       const title = album.title || row.albumTitle || "Apple Photos album";
-      const candidateLabel = row.materializedCount !== undefined ? "materialized" : "candidates";
+      const candidateLabel = row.materializedCount !== undefined ? "staged" : "candidates";
       return `
         <div class="owner-coverage-missing-row">
           <strong>${escapeHtml(title)}</strong>
@@ -3271,6 +3368,7 @@
     }).join("");
     setHtml(applePhotosPreview, previewRows);
     applePhotosPreview.hidden = false;
+    syncApplePhotosPipelineButtons();
   };
 
   const renderApplePhotosReviewReady = (payload = {}) => {
@@ -3279,6 +3377,20 @@
     const materialized = payload.materialized || {};
     const materializedAlbums = Array.isArray(payload.materializedAlbums) ? payload.materializedAlbums : [];
     const sourcePath = String(source.path || reviewStage.sourceRoot || materialized.destination || "").trim();
+    if (sourcePath) {
+      applePhotosCurrentStageSource = {
+        path: sourcePath,
+        label: String(source.label || reviewStage.id || folderNameFromPath(sourcePath)),
+        exists: source.exists !== false,
+        discovered: Boolean(source.discovered),
+        pinned: Boolean(source.pinned),
+        reviewRequired: source.reviewRequired !== false,
+        reviewCompletedAt: String(source.reviewCompletedAt || ""),
+        lastUsedAt: String(source.lastUsedAt || ""),
+        useCount: Number(source.useCount || 0),
+        legacySource: String(source.legacySource || "apple-photos-review-stage"),
+      };
+    }
     if (!sourcePath) {
       if (payload.batch) renderApplePhotosBatchPreview(materializedAlbums.length ? materializedAlbums : (payload.preflights || []));
       else renderApplePhotosPreview(materialized || payload.preflight || null);
@@ -3295,7 +3407,7 @@
       ["Review assets", formatCount(assetCount)],
       ["Albums", formatCount(albumCount)],
       ["Status", "Review needed"],
-      ["Next", "Mark reviewed, then Start import"],
+      ["Next", "Preview in Finder, then Mark reviewed"],
     ], new Set(["Review assets"])));
     const albumRows = materializedAlbums.length
       ? materializedAlbums.map((row) => {
@@ -3303,7 +3415,7 @@
         return `
           <div class="owner-coverage-missing-row">
             <strong>${escapeHtml(album.title || "Apple Photos album")}</strong>
-            <span>${escapeHtml(`${formatCount(row.materializedCount || 0)} assets materialized for review`)}</span>
+            <span>${escapeHtml(`${formatCount(row.materializedCount || 0)} assets staged for review`)}</span>
           </div>
         `;
       }).join("")
@@ -3312,7 +3424,7 @@
       ? materialized.items.filter((item) => item.status === "materialized").slice(0, 12).map((item) => `
         <div class="owner-coverage-missing-row">
           <strong>${escapeHtml(item.filename || item.relative_path || "Apple Photos asset")}</strong>
-          <span>${escapeHtml(item.relative_path || item.path || "Materialized")}</span>
+          <span>${escapeHtml(item.relative_path || item.path || "Staged")}</span>
         </div>
       `).join("")
       : "";
@@ -3323,28 +3435,26 @@
         <small>${escapeHtml(sourcePath)}</small>
       </div>
       <div class="owner-coverage-missing-row">
-        <strong>Expo source is ready</strong>
-        <span>Use Mark reviewed after inspection, then Start import uploads from this folder.</span>
+        <strong>Review needed</strong>
+        <span>Preview the staged folder in Finder, then mark it reviewed before starting the Expo import.</span>
       </div>
       ${albumRows || itemRows}
     `);
     applePhotosPreview.hidden = false;
+    syncApplePhotosPipelineButtons();
   };
 
   const isApplePhotosReviewSource = (source = {}) => (
-    Boolean(source)
-      && typeof source === "object"
-      && !Array.isArray(source)
-      && Boolean(source.reviewRequired)
-      && String(source.legacySource || "").includes("apple-photos")
-      && Boolean(source.path)
+    isApplePhotosStageSource(source) && Boolean(source.reviewRequired)
   );
 
   const renderApplePhotosRememberedReviewSource = (source = {}) => {
-    if (!isApplePhotosReviewSource(source) || !applePhotosCounts || !applePhotosPreview) return;
+    if (!isApplePhotosStageSource(source) || !applePhotosCounts || !applePhotosPreview) return;
+    applePhotosCurrentStageSource = source;
+    const reviewNeeded = Boolean(source.reviewRequired);
     setHtml(applePhotosCounts, ownerCountRowsHtml([
-      ["Status", "Review needed"],
-      ["Next", "Mark reviewed, then Start import"],
+      ["Status", reviewNeeded ? "Review needed" : "Reviewed"],
+      ["Next", reviewNeeded ? "Preview in Finder, then Mark reviewed" : "Start Expo import"],
     ], new Set(["Status"])));
     setHtml(applePhotosPreview, `
       <div class="owner-coverage-missing-row owner-apple-photos-review-source">
@@ -3353,11 +3463,12 @@
         <small>${escapeHtml(source.path)}</small>
       </div>
       <div class="owner-coverage-missing-row">
-        <strong>Expo source is ready</strong>
-        <span>Use Mark reviewed after inspection, then Start import uploads from this folder.</span>
+        <strong>${reviewNeeded ? "Review needed" : "Expo source is ready"}</strong>
+        <span>${reviewNeeded ? "Preview the staged folder in Finder, then mark it reviewed." : "Start Expo import uploads from this folder."}</span>
       </div>
     `);
     applePhotosPreview.hidden = false;
+    syncApplePhotosPipelineButtons();
   };
 
   const applePhotosCacheTimeLabel = (value) => {
@@ -3432,10 +3543,12 @@
 
   const renderApplePhotosPreview = (payload = null) => {
     if (!applePhotosCounts || !applePhotosPreview) return;
+    applePhotosCurrentStageSource = null;
     if (!payload) {
       setHtml(applePhotosCounts, "");
       setHtml(applePhotosPreview, "");
       applePhotosPreview.hidden = true;
+      syncApplePhotosPipelineButtons();
       return;
     }
     const items = Array.isArray(payload.items) ? payload.items : [];
@@ -3465,6 +3578,7 @@
     }).join("");
     setHtml(applePhotosPreview, previewRows || "<p>No Apple Photos assets returned.</p>");
     applePhotosPreview.hidden = false;
+    syncApplePhotosPipelineButtons();
   };
 
   const updateApplePhotosSelectionState = () => {
@@ -3482,7 +3596,10 @@
     }
     if (applePhotosRefreshButton) applePhotosRefreshButton.disabled = commandBusy;
     if (applePhotosPreflightButton) applePhotosPreflightButton.disabled = commandBusy || !selected.length;
-    if (applePhotosImportButton) applePhotosImportButton.disabled = commandBusy || !selected.length;
+    if (applePhotosImportButton) {
+      applePhotosImportButton.disabled = commandBusy || !selected.length;
+      applePhotosImportButton.textContent = commandBusy ? "Staging..." : "Stage";
+    }
     if (applePhotosSelectVisibleButton) applePhotosSelectVisibleButton.disabled = commandBusy || !visibleCount;
     if (applePhotosClearButton) applePhotosClearButton.disabled = commandBusy || !selected.length;
     if (applePhotosAlbumFilter) applePhotosAlbumFilter.disabled = applePhotosBusy;
@@ -3491,6 +3608,7 @@
     applePhotosAlbumList?.querySelectorAll("input[type='checkbox']").forEach((input) => {
       input.disabled = commandBusy;
     });
+    syncApplePhotosPipelineButtons();
   };
 
   const renderApplePhotosAlbumList = () => {
@@ -3714,13 +3832,13 @@
       });
     });
     renderApplePhotosAlbumList();
-    resetApplePhotosLog(albums, "Waiting for materialization...");
+    resetApplePhotosLog(albums, "Waiting for staging...");
     const iCloudMode = applePhotosAllowIcloudDownloads() ? " with iCloud downloads allowed" : "";
     const progressId = createApplePhotosProgressId();
     renderApplePhotosMaterializationProgress({
       id: progressId,
       state: "running",
-      message: "Preparing Apple Photos materialization...",
+      message: "Preparing Apple Photos staging...",
       totalAlbums: albums.length,
       completedAlbums: 0,
       importableCount: albums.reduce((total, album) => total + (applePhotosKnownImportableCount(album) || 0), 0),
@@ -3737,7 +3855,7 @@
       })),
     });
     startApplePhotosProgressPolling(progressId);
-    setApplePhotosStatus(`Materializing Apple Photos assets for ${formatCount(albums.length)} album${albums.length === 1 ? "" : "s"} into a review folder${iCloudMode}...`);
+    setApplePhotosStatus(`Staging Apple Photos assets for ${formatCount(albums.length)} album${albums.length === 1 ? "" : "s"} into a review folder${iCloudMode}...`);
     try {
       const response = await fetch("/__photosbyelie/apple-photos/import", {
         method: "POST",
@@ -3746,7 +3864,7 @@
       });
       stopApplePhotosProgressPolling();
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Apple Photos import failed.");
+      if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Apple Photos staging failed.");
       if (payload.batch) {
         const operations = Array.isArray(payload.operations) ? payload.operations : [];
         operations.forEach((operation) => {
@@ -3767,7 +3885,7 @@
             });
             updateApplePhotosLogEntry(album, {
               state: "done",
-              detail: `${formatCount(materialized.materializedCount || 0)}/${formatCount(materialized.preflight?.candidateCount ?? materialized.count ?? 0)} assets materialized for review.`,
+              detail: `${formatCount(materialized.materializedCount || 0)}/${formatCount(materialized.preflight?.candidateCount ?? materialized.count ?? 0)} assets staged for review.`,
             });
           } else if (failed) {
             applePhotosSetImportProgress(album, {
@@ -3777,12 +3895,12 @@
             });
             updateApplePhotosLogEntry(album, {
               state: "failed",
-              detail: failed.error || "Album was not materialized.",
+              detail: failed.error || "Album was not staged.",
             });
           } else {
             updateApplePhotosLogEntry(album, {
               state: "queued",
-              detail: "No eligible local assets were materialized.",
+              detail: "No eligible local assets were staged.",
             });
           }
         });
@@ -3800,7 +3918,7 @@
         }
         updateApplePhotosLogEntry(album, {
           state: "done",
-          detail: `${formatCount(payload.materialized?.materializedCount || 0)}/${formatCount(payload.preflight?.candidateCount ?? payload.materialized?.count ?? 0)} assets materialized for review.`,
+          detail: `${formatCount(payload.materialized?.materializedCount || 0)}/${formatCount(payload.preflight?.candidateCount ?? payload.materialized?.count ?? 0)} assets staged for review.`,
         });
         renderApplePhotosReviewReady(payload);
       }
@@ -3817,13 +3935,13 @@
         }
         renderApplePhotosAlbumList();
       }
-      setApplePhotosStatus(payload.message || "Apple Photos assets were materialized to a review folder.");
+      setApplePhotosStatus(payload.message || "Apple Photos assets were staged to a review folder.");
     } catch (error) {
       stopApplePhotosProgressPolling();
       applePhotosImportPhaseActive = false;
       applePhotosImportProgressByAlbum = new Map();
       renderApplePhotosAlbumList();
-      setApplePhotosStatus(error?.message || "Apple Photos import failed.");
+      setApplePhotosStatus(error?.message || "Apple Photos staging failed.");
     } finally {
       stopApplePhotosProgressPolling();
       setApplePhotosBusy(false);
@@ -3863,14 +3981,17 @@
   const syncR2ActionButtons = () => {
     const busy = r2RepairActive || r2GapFillActive || r2MaintenanceActive;
     const helperReady = localHelperWritable();
+    const reviewBlocker = currentReviewRequiredSource();
     if (r2FixButton) {
-      r2FixButton.disabled = !helperReady || busy;
+      r2FixButton.disabled = !helperReady || busy || Boolean(reviewBlocker);
       r2FixButton.textContent = busy
         ? "Task running"
         : "Start Expo import";
-      r2FixButton.title = helperReady
-        ? `Start Expo import from ${importSourceChoiceLabel()}`
-        : "Requires the localhost Owner helper.";
+      r2FixButton.title = !helperReady
+        ? "Requires the localhost Owner helper."
+        : reviewBlocker
+        ? "Preview the staged Apple Photos folder and Mark reviewed before starting the Expo import."
+        : `Start Expo import from ${importSourceChoiceLabel()}`;
     }
     if (importSourceSelect) importSourceSelect.disabled = !helperReady || busy;
     const gapCount = r2GapPhotoCount();
@@ -3883,6 +4004,7 @@
         ? `Render and upload missing media for ${formatCount(gapCount)} incomplete photos`
         : "No incomplete upload photos are listed";
     });
+    syncApplePhotosPipelineButtons();
     r2MaintenanceButtons.forEach((button) => {
       const key = button.dataset.ownerR2Maintenance || "";
       if (!button.dataset.ownerDefaultLabel) {
@@ -5035,7 +5157,7 @@
       if (skippedSourceLanes.length) {
         addPhaseRow("catalog", "Unfinished source lanes", skippedSourceLanes.map((key) => importSourceLabel(key)).join(", "));
       }
-      addPhaseRow("catalog", "What happens", "Start Import refuses to publish a new catalog after skipped source lanes unless partial publishing is explicitly allowed.");
+      addPhaseRow("catalog", "What happens", "Start Expo import refuses to publish a new catalog after skipped source lanes unless partial publishing is explicitly allowed.");
     }
     const matrixPhaseKey = PHOTO_IMPORT_PHASES.has(activePhaseKey)
       ? activePhaseKey
@@ -5560,7 +5682,7 @@
         ${importMatrixHtml(missingImportPhotos, "gap-fill")}
       ` : missingPrivateDelivery.length ? `
           <h3>Missing private delivery files</h3>
-          <p>${escapeHtml(formatCount(missingPrivateDelivery.length))} shown. Start Import asks for a local source folder, uploads missing masters when the source file exists, and rebuilds missing photo JPG triplets.</p>
+          <p>${escapeHtml(formatCount(missingPrivateDelivery.length))} shown. Start Expo import asks for a local source folder, uploads missing masters when the source file exists, and rebuilds missing photo JPG triplets.</p>
           <div class="owner-coverage-missing-list">
             ${missingPrivateDelivery.slice(0, 12).map((item) => `
               <div class="owner-coverage-missing-row">
@@ -5967,6 +6089,13 @@
       lastImportSourceValue = choice;
       syncR2ActionButtons();
       renderImportSourceDetails();
+      const selectedSource = importSourceByPath(choice);
+      if (isApplePhotosStageSource(selectedSource)) {
+        renderApplePhotosRememberedReviewSource(selectedSource);
+      } else if (applePhotosCurrentStageSource?.path === choice) {
+        applePhotosCurrentStageSource = null;
+        syncApplePhotosPipelineButtons();
+      }
       if (!latestR2ProgressTasks.some((task) => ["repair", "gap-fill", "maintenance"].includes(task?.operation))) {
         renderImportDashboardIdle();
       }
@@ -5988,7 +6117,7 @@
         return;
       }
       selectImportSourceFolder(selectedFolder);
-      setStatus(`Selected import folder: ${selectedFolder.name}. Press Start import when ready.`);
+      setStatus(`Selected import folder: ${selectedFolder.name}. Press Start Expo import when ready.`);
     } catch (error) {
       importSourceSelect.value = fallback;
       lastImportSourceValue = fallback;
@@ -6015,10 +6144,38 @@
     const source = importSourceByPath(importSourceSelect?.value);
     if (!source) return;
     try {
-      await updateImportSourceHistory("review", source);
-      setStatus(`Marked legacy import source reviewed: ${source.label || folderNameFromPath(source.path)}.`);
+      if (isApplePhotosStageSource(source)) {
+        await markCurrentApplePhotosStageReviewed();
+        setStatus(`Marked Apple Photos stage reviewed: ${source.label || folderNameFromPath(source.path)}.`);
+      } else {
+        await updateImportSourceHistory("review", source);
+        setStatus(`Marked legacy import source reviewed: ${source.label || folderNameFromPath(source.path)}.`);
+      }
     } catch (error) {
       setStatus(error?.message || "Could not mark import source reviewed.");
+    }
+  });
+
+  applePhotosPreviewFolderButton?.addEventListener("click", async () => {
+    const source = currentApplePhotosStageSource();
+    if (!source) {
+      setApplePhotosStatus("Stage Apple Photos assets before previewing the review folder.");
+      return;
+    }
+    try {
+      await revealImportSourceInFinder(source);
+      setApplePhotosStatus(`Opened review folder in Finder: ${source.label || folderNameFromPath(source.path)}.`);
+    } catch (error) {
+      setApplePhotosStatus(error?.message || "Could not open the review folder in Finder.");
+    }
+  });
+
+  applePhotosMarkReviewedButton?.addEventListener("click", async () => {
+    try {
+      const source = await markCurrentApplePhotosStageReviewed();
+      setApplePhotosStatus(`Marked review complete for ${source.label || folderNameFromPath(source.path)}. Start Expo import when ready.`);
+    } catch (error) {
+      setApplePhotosStatus(error?.message || "Could not mark the staged folder reviewed.");
     }
   });
 
@@ -6042,14 +6199,14 @@
   applePhotosFilterBurstsToggle?.addEventListener("change", () => {
     renderApplePhotosPreview(null);
     setApplePhotosStatus(applePhotosFilterBurstsEnabled()
-      ? "Burst filtering is on for the next Apple Photos dry run or materialization."
-      : "Burst filtering is off for the next Apple Photos dry run or materialization.");
+      ? "Burst filtering is on for the next Apple Photos dry run or stage."
+      : "Burst filtering is off for the next Apple Photos dry run or stage.");
   });
   applePhotosIcloudDownloadsToggle?.addEventListener("change", () => {
     renderApplePhotosPreview(null);
     setApplePhotosStatus(applePhotosAllowIcloudDownloads()
-      ? "iCloud download is on for the next Apple Photos materialization. Photos may fetch missing originals or renders before writing the review folder."
-      : "iCloud download is off; Apple Photos materialization will use local bytes only.");
+      ? "iCloud download is on for the next Apple Photos stage. Photos may fetch missing originals or renders before writing the review folder."
+      : "iCloud download is off; Apple Photos staging will use local bytes only.");
   });
   applePhotosAlbumList?.addEventListener("click", (event) => {
     const sortButton = event.target.closest("[data-owner-apple-photos-sort]");
@@ -6083,7 +6240,7 @@
     applePhotosSelectionAnchorId = visible.at(-1)?.localIdentifier || applePhotosSelectionAnchorId;
     renderApplePhotosAlbumList();
     renderApplePhotosPreview(null);
-    setApplePhotosStatus("Run dry run before importing the selected Apple Photos album batch.");
+    setApplePhotosStatus("Run dry run before staging the selected Apple Photos album batch.");
   });
   applePhotosClearButton?.addEventListener("click", () => {
     applePhotosSelectedIds = new Set();
@@ -6093,12 +6250,12 @@
     setApplePhotosStatus("Select one or more Apple Photos albums first.");
   });
   applePhotosPreflightButton?.addEventListener("click", async () => {
-    const authorized = await ownerAuth?.requireAuth?.("Start the local Photos By Elie server to preflight Apple Photos imports.");
+    const authorized = await ownerAuth?.requireAuth?.("Start the local Photos By Elie server to preflight Apple Photos staging.");
     if (ownerAuth?.enabled && !authorized) return;
     runApplePhotosPreflight();
   });
   applePhotosImportButton?.addEventListener("click", async () => {
-    const authorized = await ownerAuth?.requireAuth?.("Start the local Photos By Elie server to import from Apple Photos.");
+    const authorized = await ownerAuth?.requireAuth?.("Start the local Photos By Elie server to stage from Apple Photos.");
     if (ownerAuth?.enabled && !authorized) return;
     const albums = selectedApplePhotosAlbums();
     const albumLabel = albums.length === 1
@@ -6107,19 +6264,20 @@
     const iCloudNotice = applePhotosAllowIcloudDownloads()
       ? "\n\niCloud download is ON. Photos may download missing originals or current renders to this Mac before writing the review folder."
       : "";
-    const ok = window.confirm(`Materialize eligible local assets from ${albumLabel} into a review folder?${iCloudNotice}\n\nRun Dry run first if you have not reviewed what will be converted, burst-filtered, skipped, or blocked. R2 upload starts later from Start Expo import.`);
+    const ok = window.confirm(`Stage eligible local assets from ${albumLabel} into a review folder?${iCloudNotice}\n\nRun Dry run first if you have not reviewed what will be converted, burst-filtered, skipped, or blocked. R2 upload starts later from Start Expo import.`);
     if (!ok) return;
     startApplePhotosImport();
   });
 
-  r2FixButton?.addEventListener("click", async () => {
+  const startExpoImportFromSelection = async (sourceOverride = null) => {
     const authorized = await ownerAuth?.requireAuth?.("Start the local Photos By Elie server to scan an import folder.");
     if (ownerAuth?.enabled && !authorized) return;
     if (!window.photosByElieR2Coverage) {
       setStatus("Loading current catalog coverage before starting imports...");
       await loadR2Coverage();
     }
-    const choice = importSourceSelect?.value || "new";
+    const overrideSource = isApplePhotosStageSource(sourceOverride) ? sourceOverride : null;
+    const choice = overrideSource?.path || importSourceSelect?.value || "new";
     let selectedFolder = null;
     if (choice === "new") {
       setStatus("Choose the folder to import...");
@@ -6134,7 +6292,12 @@
         return;
       }
     } else if (choice !== "all") {
-      const source = importSourceByPath(choice);
+      const source = overrideSource || importSourceByPath(choice);
+      if (source?.reviewRequired) {
+        setStatus("Preview the staged Apple Photos folder in Finder, then Mark reviewed before starting the Expo import.");
+        setApplePhotosStatus("Preview in Finder, then Mark reviewed before starting the Expo import.");
+        return;
+      }
       selectedFolder = {
         path: choice,
         name: source?.label || choice.split(/[\\/]/).filter(Boolean).at(-1) || choice,
@@ -6178,6 +6341,16 @@
       setStatus(error?.message || "Could not start imports.");
       loadR2Coverage();
     }
+  };
+
+  r2FixButton?.addEventListener("click", () => startExpoImportFromSelection());
+  applePhotosStartExpoButton?.addEventListener("click", () => {
+    const source = currentApplePhotosStageSource();
+    if (!source) {
+      setApplePhotosStatus("Stage Apple Photos assets before starting the Expo import.");
+      return;
+    }
+    startExpoImportFromSelection(source);
   });
 
   const startR2GapFill = async (triggerButton = null) => {

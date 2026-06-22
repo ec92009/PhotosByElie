@@ -11,6 +11,7 @@ LOCK_DIR="$REPO_ROOT/.review-logs/cloud-media-sweep.lock"
 LOG_ROOT="$REPO_ROOT/.review-logs"
 IMPORT_CACHE_ROOT="${PBE_IMPORT_CACHE_ROOT:-tmp/import-cache}"
 PYTHON_BIN="${PBE_SWEEP_PYTHON:-/usr/bin/python3}"
+PYTHON_ARCH="${PBE_SWEEP_ARCH:-}"
 PUSH=0
 SKIP_PHASES=()
 SKIPPED_PHASES=()
@@ -19,6 +20,13 @@ SELECTED_IMPORT_SELECT="auto"
 
 if [[ ! -x "$PYTHON_BIN" ]]; then
   PYTHON_BIN="$(command -v python3)"
+fi
+if [[ -z "$PYTHON_ARCH" ]] && [[ "$(sysctl -n hw.optional.arm64 2>/dev/null || echo 0)" == "1" ]]; then
+  PYTHON_ARCH="arm64"
+fi
+PYTHON_CMD=("$PYTHON_BIN")
+if [[ -n "$PYTHON_ARCH" ]] && command -v arch >/dev/null 2>&1; then
+  PYTHON_CMD=(arch "-$PYTHON_ARCH" "$PYTHON_BIN")
 fi
 
 append_skip_phase() {
@@ -267,7 +275,7 @@ done_phase prepare
 phase preflight "Preflight import dependencies"
 print -r -- "preflight" > "$(current_phase_file)"
 preflight_args=(
-  "$PYTHON_BIN" scripts/preflight_import_dependencies.py
+  "${PYTHON_CMD[@]}" scripts/preflight_import_dependencies.py
   --source-select "$(effective_selected_import_select)"
 )
 if [[ -n "$SELECTED_IMPORT_SOURCE_ROOT" ]]; then
@@ -295,7 +303,7 @@ if [[ -n "$SELECTED_IMPORT_SOURCE_ROOT" ]]; then
     exit 2
   fi
   selected_import_args=(
-    "$PYTHON_BIN" scripts/build_lightroom_thumbnails.py \
+    "${PYTHON_CMD[@]}" scripts/build_lightroom_thumbnails.py \
     --source-root "$SELECTED_IMPORT_SOURCE_ROOT" \
     --output-root "$IMPORT_CACHE_ROOT" \
     --select "$(effective_selected_import_select)" \
@@ -309,7 +317,7 @@ if [[ -n "$SELECTED_IMPORT_SOURCE_ROOT" ]]; then
   run_skippable_phase selected-folder "Import selected folder" "${selected_import_args[@]}"
 else
   run_skippable_phase camera "Import Camera sources" \
-    "$PYTHON_BIN" scripts/build_lightroom_thumbnails.py \
+    "${PYTHON_CMD[@]}" scripts/build_lightroom_thumbnails.py \
     --source-root /Volumes/Saturn/Pictures/LR/Camera \
     --output-root "$IMPORT_CACHE_ROOT" \
     --r2-upload both \
@@ -319,7 +327,7 @@ else
   APPLE_PHOTO_ALBUMS_ROOT="/Volumes/Saturn/Pictures/LR/Apple Photo Albums"
   if [[ -d "$APPLE_PHOTO_ALBUMS_ROOT" ]]; then
     run_skippable_phase apple-photo-albums "Import Apple Photos album sources" \
-      "$PYTHON_BIN" scripts/build_lightroom_thumbnails.py \
+      "${PYTHON_CMD[@]}" scripts/build_lightroom_thumbnails.py \
       --source-root "$APPLE_PHOTO_ALBUMS_ROOT" \
       --output-root "$IMPORT_CACHE_ROOT" \
       --select all \
@@ -329,7 +337,7 @@ else
   fi
 
   run_skippable_phase leonardo "Import Leonardo sources" \
-    "$PYTHON_BIN" scripts/build_lightroom_thumbnails.py \
+    "${PYTHON_CMD[@]}" scripts/build_lightroom_thumbnails.py \
     --source-root "/Volumes/Saturn/Pictures/LR/_All Leonardo" \
     --output-root "$IMPORT_CACHE_ROOT" \
     --select all \
@@ -342,7 +350,7 @@ fi
 abort_if_catalog_sources_incomplete
 
 phase catalog "Export catalog"
-"$PYTHON_BIN" scripts/export_photos_data.py \
+"${PYTHON_CMD[@]}" scripts/export_photos_data.py \
   --selection newest \
   --external-media \
   --review-snapshot assets/hidden/hidden-blacklist.json
@@ -350,7 +358,7 @@ done_phase catalog
 
 run_skippable_phase eligibility "Force Camera import eligibility on R2" \
   zsh -lc '
-    "$1" scripts/audit_import_eligibility.py \
+    "$@" scripts/audit_import_eligibility.py \
       --write-delete-plan .review-logs/import-eligibility-r2-delete-plan.json &&
     node scripts/delete_discarded_r2_media.mjs \
       --delete \
@@ -359,7 +367,7 @@ run_skippable_phase eligibility "Force Camera import eligibility on R2" \
       --output .review-logs/import-eligibility-r2-delete-manifest.json \
       --request-timeout-ms 180000 \
       --retries 4
-  ' _ "$PYTHON_BIN"
+  ' _ "${PYTHON_CMD[@]}"
 
 phase worker "Write worker catalog"
 node scripts/write_worker_catalog.mjs
@@ -369,7 +377,7 @@ node scripts/write_media_sidecar.mjs
 done_phase sidecar
 
 run_skippable_phase gap-fill "Fill in gaps" \
-  "$PYTHON_BIN" scripts/fill_r2_coverage_gaps.py
+  "${PYTHON_CMD[@]}" scripts/fill_r2_coverage_gaps.py
 
 if [[ -z "$SELECTED_IMPORT_SOURCE_ROOT" ]]; then
   run_skippable_phase discard-final "Final banned R2 cleanup double-check" \

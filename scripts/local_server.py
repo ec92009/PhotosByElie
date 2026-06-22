@@ -38,6 +38,7 @@ R2_FILL_GAPS_PATH = "/__photosbyelie/r2-fill-gaps"
 R2_SKIP_PHASE_PATH = "/__photosbyelie/r2-skip-phase"
 OWNER_VISIBILITY_SUMMARY_PATH = "/__photosbyelie/owner-visibility-summary"
 SELECT_IMPORT_FOLDER_PATH = "/__photosbyelie/select-import-folder"
+REVEAL_IMPORT_SOURCE_PATH = "/__photosbyelie/reveal-import-source"
 IMPORT_SOURCES_PATH = "/__photosbyelie/import-sources"
 IMPORT_SOURCE_THUMB_PATH = "/__photosbyelie/import-source-thumb"
 APPLE_PHOTOS_ALBUMS_PATH = "/__photosbyelie/apple-photos/albums"
@@ -476,6 +477,9 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             return
         if path == SELECT_IMPORT_FOLDER_PATH:
             self._handle_select_import_folder()
+            return
+        if path == REVEAL_IMPORT_SOURCE_PATH:
+            self._handle_reveal_import_source()
             return
         if path == APPLE_PHOTOS_PREFLIGHT_PATH:
             self._handle_apple_photos_preflight()
@@ -993,6 +997,22 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
                 {"ok": False, "error": "Use the Real Estate tab for real-estate source folders."},
             )
             return
+        if source_root:
+            try:
+                review_required = _import_source_requires_review(Path.cwd(), "expo", source_root)
+            except sqlite3.Error as error:
+                self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
+                return
+            if review_required:
+                self._send_json(
+                    HTTPStatus.BAD_REQUEST,
+                    {
+                        "ok": False,
+                        "error": "Preview the staged Apple Photos folder in Finder, then mark it reviewed before starting the Expo import.",
+                        "code": "review_required",
+                    },
+                )
+                return
         if maintenance_key:
             task = _start_r2_maintenance_task(Path.cwd(), maintenance_key)
         else:
@@ -1017,6 +1037,28 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             self._send_json(HTTPStatus.OK, {"ok": True, "cancelled": True})
             return
         self._send_json(HTTPStatus.OK, {"ok": True, "path": str(folder), "name": folder.name or str(folder)})
+
+    def _handle_reveal_import_source(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            payload = self._read_json_body()
+            path = Path(_import_source_history_path(payload.get("path")))
+            if not path.is_dir():
+                raise ValueError(f"review folder not found: {path}")
+            subprocess.run(["open", str(path)], check=True, capture_output=True, text=True)
+        except ValueError as error:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
+            return
+        except subprocess.CalledProcessError as error:
+            message = (error.stderr or error.stdout or str(error)).strip() or "Could not open the review folder in Finder."
+            self._send_json(HTTPStatus.BAD_GATEWAY, {"ok": False, "error": message})
+            return
+        except OSError as error:
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
+            return
+        self._send_json(HTTPStatus.OK, {"ok": True, "path": str(path), "name": path.name or str(path)})
 
     def _handle_r2_fill_gaps(self) -> None:
         if not self._is_loopback_request():
@@ -5953,6 +5995,20 @@ def _import_source_history_path(value: object) -> str:
         return str(Path(raw).expanduser())
 
 
+def _import_source_requires_review(repo_root: Path, kind: str, path: Path) -> bool:
+    normalized_path = _import_source_history_path(path)
+    conn = owner_db_connect(repo_root)
+    try:
+        _migrate_import_source_settings(repo_root, conn)
+        row = conn.execute(
+            "SELECT review_required FROM import_source_history WHERE source_kind = ? AND path = ?",
+            (kind, normalized_path),
+        ).fetchone()
+    finally:
+        conn.close()
+    return bool(row and row["review_required"])
+
+
 def _import_source_entry(
     path: Path,
     *,
@@ -7265,7 +7321,7 @@ def _start_apple_photos_import_progress(progress_id: str, albums: list[dict]) ->
         APPLE_PHOTOS_IMPORT_PROGRESS[progress_id] = {
             "id": progress_id,
             "state": "running",
-            "message": "Preparing Apple Photos materialization...",
+            "message": "Preparing Apple Photos staging...",
             "startedAt": now,
             "updatedAt": now,
             "totalAlbums": len(album_rows),
@@ -7380,14 +7436,14 @@ def _update_apple_photos_import_progress_from_event(progress_id: str, event: dic
         if event_name == "materialize_start":
             album_row["state"] = "running"
             progress["currentAlbumLocalIdentifier"] = album_row.get("albumLocalIdentifier") or ""
-            progress["message"] = f"Materializing {album_row['albumName']}..."
+            progress["message"] = f"Staging {album_row['albumName']}..."
         elif event_name == "asset_start":
             item = _progress_item_from_event(event, "materializing")
             album_row["state"] = "running"
             album_row["currentItem"] = item
             progress["currentAlbumLocalIdentifier"] = album_row.get("albumLocalIdentifier") or ""
             progress["currentItem"] = item
-            progress["message"] = f"Materializing {item['filename']} from {album_row['albumName']}..."
+            progress["message"] = f"Staging {item['filename']} from {album_row['albumName']}..."
         elif event_name == "asset_progress":
             state = str(event.get("status") or "materializing")
             item = _progress_item_from_event(event, state)
@@ -7397,7 +7453,7 @@ def _update_apple_photos_import_progress_from_event(progress_id: str, event: dic
             progress["currentItem"] = item
             percent = item.get("progressPercent")
             if percent is None:
-                progress["message"] = f"Photos is materializing {item['filename']} from {album_row['albumName']}..."
+                progress["message"] = f"Photos is staging {item['filename']} from {album_row['albumName']}..."
             else:
                 progress["message"] = f"Photos reports {percent}% for {item['filename']} from {album_row['albumName']}..."
         elif event_name in {"asset_done", "asset_failed"}:
@@ -7410,14 +7466,14 @@ def _update_apple_photos_import_progress_from_event(progress_id: str, event: dic
             progress["currentAlbumLocalIdentifier"] = album_row.get("albumLocalIdentifier") or ""
             progress["currentItem"] = item
             progress["message"] = (
-                f"Materialized {item['filename']}."
+                f"Staged {item['filename']}."
                 if state == "materialized"
-                else f"{item['filename']} was not materialized."
+                else f"{item['filename']} was not staged."
             )
         elif event_name == "materialize_done":
             album_row["state"] = "done"
             album_row.pop("currentItem", None)
-            progress["message"] = f"Finished materializing {album_row['albumName']}."
+            progress["message"] = f"Finished staging {album_row['albumName']}."
         _recount_apple_photos_progress(progress)
 
 
@@ -7441,7 +7497,7 @@ def _finish_apple_photos_import_progress(progress_id: str, state: str, result: d
             progress["message"] = str(result.get("error") or "")
             progress["error"] = str(result.get("error") or "")
         else:
-            progress["message"] = "Apple Photos materialization finished." if state == "done" else "Apple Photos materialization failed."
+            progress["message"] = "Apple Photos staging finished." if state == "done" else "Apple Photos staging failed."
         _recount_apple_photos_progress(progress)
 
 
@@ -7491,11 +7547,11 @@ def _run_apple_photos_bridge_streaming(repo_root: Path, command: list[str], prog
         stdout_thread.join(timeout=2)
         stderr_thread.join(timeout=2)
         _finish_apple_photos_import_progress(progress_id, "failed", {
-            "error": "Apple Photos bridge timed out while materializing assets.",
+            "error": "Apple Photos bridge timed out while staging assets.",
         })
         return {
             "ok": False,
-            "error": "Apple Photos bridge timed out while materializing assets.",
+            "error": "Apple Photos bridge timed out while staging assets.",
             "code": "photos_bridge_timeout",
         }
     stdout_thread.join(timeout=5)
@@ -7898,7 +7954,7 @@ def _active_apple_photos_import_task(repo_root: Path) -> dict | None:
 def _apple_photos_import_busy_response(repo_root: Path) -> dict:
     return {
         "ok": False,
-        "error": "Another import or maintenance task is already running. Wait for it to finish, then retry Apple Photos import.",
+        "error": "Another import or maintenance task is already running. Wait for it to finish, then retry Apple Photos staging.",
         "code": "import_busy",
         "task": _active_apple_photos_import_task(repo_root),
     }
@@ -8147,8 +8203,8 @@ def _start_apple_photos_batch_import(repo_root: Path, payload: dict, album_paylo
         "reviewSource": review_source,
         "operations": updated_operations,
         "message": (
-            f"Apple Photos materialized {unique_materialized:,} unique asset(s)"
-            f" from {len(materialized_albums):,} album(s) to a review folder. Review it, mark reviewed, then start the Expo import."
+            f"Apple Photos staged {unique_materialized:,} unique asset(s)"
+            f" from {len(materialized_albums):,} album(s) to a review folder. Preview it, mark reviewed, then start the Expo import."
         ),
     }
     _finish_apple_photos_import_progress(progress_id, "done", result)
@@ -8187,12 +8243,12 @@ def _start_apple_photos_import(repo_root: Path, payload: dict) -> dict:
             repo_root,
             str(operation.get("operationId") or ""),
             state="failed",
-            error="No eligible Apple Photos assets are available to import.",
+            error="No eligible Apple Photos assets are available to stage.",
         )
         result = {
             **preflight,
             "ok": False,
-            "error": "No eligible Apple Photos assets are available to import.",
+            "error": "No eligible Apple Photos assets are available to stage.",
             "code": "no_eligible_assets",
             "operation": operation,
         }
@@ -8252,7 +8308,7 @@ def _start_apple_photos_import(repo_root: Path, payload: dict) -> dict:
         "reviewStage": review_stage,
         "reviewSource": review_source,
         "operation": operation,
-        "message": f"Apple Photos materialized {materialized:,} asset(s) to a review folder. Review it, mark reviewed, then start the Expo import.",
+        "message": f"Apple Photos staged {materialized:,} asset(s) to a review folder. Preview it, mark reviewed, then start the Expo import.",
     }
     _finish_apple_photos_import_progress(progress_id, "done", result)
     return result

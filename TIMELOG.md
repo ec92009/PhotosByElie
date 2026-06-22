@@ -368,8 +368,9 @@ Clock state: running
 | 2026-06-21 | 21:45 CEST | 21:46 CEST | 0:01 | Requested live per-photo status while missing Apple Photos assets materialize into the review folder; background implementation/testing time excluded. |
 | 2026-06-21 | 22:17 CEST | 22:18 CEST | 0:01 | Requested PhotoKit percentage progress, a persistent Apple Photos action rail, and Owner imports panel order polish; background implementation/testing time excluded. |
 | 2026-06-21 | 22:53 CEST | 22:54 CEST | 0:01 | Requested Owner import rail/header spacing, robust Apple Photos panel ordering, and Photos permission-path diagnosis; background implementation/testing time excluded. |
+| 2026-06-22 | 11:00 CEST | 11:03 CEST | 0:03 | Requested an Apple Photos staging pipeline, Finder preview, review gate, Expo-import handoff, and a video-processing sanity check; background implementation/testing time excluded. |
 
 ## Totals
 
-Active collaboration time used: 20:44
+Active collaboration time used: 20:47
 Remaining budget: not set

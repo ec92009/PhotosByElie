@@ -3045,13 +3045,25 @@
     if (key === "waiting_on_photos") return "Waiting on Photos";
     if (key === "waiting_for_photos") return "Waiting on Photos";
     if (key === "waiting_for_render") return "Waiting for rendered JPEG";
+    if (key === "render_fallback") return "Using local HEIC fallback";
+    if (key === "exporting_local_resource") return "Exporting local file";
+    if (key === "waiting_for_local_resource") return "Waiting for local file";
+    if (key === "converting_local_jpeg") return "Converting local HEIC";
     if (key === "exporting_resource") return "Exporting from Photos";
     if (key === "waiting_for_file") return "Waiting for exported file";
     if (key === "materialized") return "Exported";
     if (key === "unavailable_from_icloud") return "Needs Photos/iCloud";
+    if (key === "photos_export_failed" || key === "render_failed") return "Photos export failed";
     if (key === "blocked_by_policy") return "Skipped";
     if (key === "unsupported") return "Unsupported";
     return key ? key.replace(/_/g, " ") : "Waiting";
+  };
+
+  const applePhotosItemNeedsPhotosAttention = (item = {}) => {
+    const status = String(item.status || "").trim();
+    return status === "unavailable_from_icloud"
+      || status === "photos_export_failed"
+      || status === "render_failed";
   };
 
   const applePhotosProgressItemKey = (item = {}) => (
@@ -3315,7 +3327,7 @@
 
   const applePhotosPayloadBlockedCount = (payload = {}) => {
     const items = Array.isArray(payload.items) ? payload.items : [];
-    const unavailable = items.filter((item) => item.status === "unavailable_from_icloud").length;
+    const unavailable = items.filter(applePhotosItemNeedsPhotosAttention).length;
     return (Number(payload.blockedCount ?? payload.preflight?.blockedCount ?? 0) || 0) + unavailable;
   };
 
@@ -3563,7 +3575,7 @@
       return;
     }
     const items = Array.isArray(payload.items) ? payload.items : [];
-    const unavailable = items.filter((item) => item.status === "unavailable_from_icloud").length;
+    const unavailable = items.filter(applePhotosItemNeedsPhotosAttention).length;
     const burstSkipped = applePhotosPayloadBurstSkippedCount(payload);
     const rows = [
       ["Album", payload.album?.title || selectedApplePhotosAlbum()?.title || "Apple Photos"],
@@ -3576,7 +3588,7 @@
     const previewRows = items.slice(0, 16).map((item) => {
       const statusText = item.status === "candidate" ? "Candidate"
         : item.status === "materialized" ? "Ready"
-          : item.status === "unavailable_from_icloud" ? "iCloud original not local"
+          : applePhotosItemNeedsPhotosAttention(item) ? "Needs Photos/export attention"
             : item.status === "blocked_by_policy" ? "Blocked by policy"
               : "Skipped";
       return `

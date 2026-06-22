@@ -7429,6 +7429,14 @@ def _apple_photos_asset_progress_message(item: dict, album_name: str) -> str:
     elapsed_label = f" after {elapsed}s" if isinstance(elapsed, int) and elapsed > 0 else ""
     if status == "waiting_for_render":
         return f"Photos reports 100% for {filename}; waiting{elapsed_label} for the rendered JPEG from {album_name}..."
+    if status == "render_fallback":
+        return f"Rendered JPEG stalled for {filename}; trying the local HEIC/source fallback from {album_name}..."
+    if status == "exporting_local_resource":
+        return f"Exporting the local HEIC/source file for {filename} from {album_name}..."
+    if status == "waiting_for_local_resource":
+        return f"Waiting{elapsed_label} for Photos to write the local source file for {filename} from {album_name}..."
+    if status == "converting_local_jpeg":
+        return f"Converting the local HEIC/source file to JPEG for {filename} from {album_name}..."
     if status == "waiting_for_file":
         return f"Photos reports 100% for {filename}; waiting{elapsed_label} for the exported file from {album_name}..."
     if status == "waiting_for_photos":
@@ -7511,7 +7519,7 @@ def _update_apple_photos_import_progress_from_event(progress_id: str, event: dic
             progress["message"] = (
                 f"Exported {item['filename']}."
                 if state == "materialized"
-                else f"{item['filename']} was not exported."
+                else f"{item['filename']} was not exported: {item.get('reason') or 'Photos export failed'}"
             )
         elif event_name == "materialize_done":
             album_row["state"] = "done"

@@ -1,6 +1,7 @@
 #!/usr/bin/env swift
 import AppKit
 import Foundation
+import ImageIO
 import Photos
 
 struct BridgeError: Error {
@@ -404,6 +405,79 @@ func renderedJPEGFilename(asset: PHAsset, index: Int, resource: PHAssetResource?
     return "\(filenameStem(sourceName, fallback: fallback)).jpg"
 }
 
+let localJPEGConvertibleImageExtensions: Set<String> = [".heic", ".heif", ".jpg", ".jpeg", ".png", ".tif", ".tiff"]
+
+func localImageResourceForJPEGFallback(_ asset: PHAsset) -> PHAssetResource? {
+    guard asset.mediaType == .image, let resource = preferredResource(asset) else { return nil }
+    if hasExtension(resource.originalFilename, in: rawFileExtensions) { return nil }
+    if !hasExtension(resource.originalFilename, in: localJPEGConvertibleImageExtensions) { return nil }
+    return resource
+}
+
+func temporaryResourceURL(for outputURL: URL, resource: PHAssetResource) -> URL {
+    let fallback = outputURL.deletingPathExtension().lastPathComponent
+    let safeSource = safeFilename(resource.originalFilename, fallback: "\(fallback)-source")
+    let sourceURL = URL(fileURLWithPath: safeSource)
+    let ext = sourceURL.pathExtension.isEmpty ? "img" : sourceURL.pathExtension
+    return outputURL.deletingLastPathComponent().appendingPathComponent(
+        ".\(fallback)-source-\(UUID().uuidString).\(ext)"
+    )
+}
+
+func convertImageResourceToJPEG(sourceURL: URL, destinationURL: URL) -> Result<Void, Error> {
+    guard let source = CGImageSourceCreateWithURL(sourceURL as CFURL, nil) else {
+        return .failure(BridgeError(code: "source_image_unreadable", message: "Could not read the local image resource for JPEG conversion."))
+    }
+    guard CGImageSourceGetCount(source) > 0 else {
+        return .failure(BridgeError(code: "source_image_empty", message: "The local image resource did not contain an image frame."))
+    }
+    guard let destination = CGImageDestinationCreateWithURL(destinationURL as CFURL, "public.jpeg" as CFString, 1, nil) else {
+        return .failure(BridgeError(code: "jpeg_destination_failed", message: "Could not create the temporary JPEG destination."))
+    }
+    let properties: [CFString: Any] = [
+        kCGImageDestinationLossyCompressionQuality: 0.95,
+    ]
+    CGImageDestinationAddImageFromSource(destination, source, 0, properties as CFDictionary)
+    guard CGImageDestinationFinalize(destination) else {
+        return .failure(BridgeError(code: "jpeg_conversion_failed", message: "Could not convert the local image resource to JPEG."))
+    }
+    return .success(())
+}
+
+func writeLocalImageResourceAsJPEG(_ asset: PHAsset, to url: URL, allowIcloudDownloads: Bool, progressHandler: AssetProgressHandler? = nil) -> Result<Void, Error> {
+    guard let resource = localImageResourceForJPEGFallback(asset) else {
+        return .failure(BridgeError(
+            code: "local_image_resource_unavailable",
+            message: "Photos did not expose a local HEIC/JPEG-compatible image resource that Owner can convert after the rendered JPEG stalled."
+        ))
+    }
+    let tempURL = temporaryResourceURL(for: url, resource: resource)
+    defer { try? FileManager.default.removeItem(at: tempURL) }
+    progressHandler?(0.0, "exporting_local_resource", nil)
+    let resourceResult = writeResource(resource, to: tempURL, allowIcloudDownloads: allowIcloudDownloads) { progress, status, elapsedSeconds in
+        let mappedStatus: String
+        if status == "waiting_for_file" {
+            mappedStatus = "waiting_for_local_resource"
+        } else if status == "downloading" || status == "exporting_resource" {
+            mappedStatus = "exporting_local_resource"
+        } else {
+            mappedStatus = status
+        }
+        progressHandler?(progress, mappedStatus, elapsedSeconds)
+    }
+    switch resourceResult {
+    case .success:
+        progressHandler?(1.0, "converting_local_jpeg", nil)
+        let conversionResult = convertImageResourceToJPEG(sourceURL: tempURL, destinationURL: url)
+        if case .success = conversionResult {
+            progressHandler?(1.0, "writing_file", nil)
+        }
+        return conversionResult
+    case .failure(let error):
+        return .failure(error)
+    }
+}
+
 func writeRenderedJPEG(_ asset: PHAsset, to url: URL, allowIcloudDownloads: Bool, progressHandler: AssetProgressHandler? = nil) -> Result<Void, Error> {
     let renderOverallTimeoutSeconds: TimeInterval = 240
     let renderAfterPhotoKitCompleteTimeoutSeconds: TimeInterval = 45
@@ -636,7 +710,7 @@ func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterB
                     if !statusChanged && !isHeartbeat && percent == lastProgressPercent { return }
                     if !statusChanged && !isHeartbeat && percent < 100 && percent - lastProgressPercent < 5 { return }
                 }
-                lastProgressPercent = max(lastProgressPercent, percent)
+                lastProgressPercent = statusChanged ? percent : max(lastProgressPercent, percent)
                 lastProgressStatus = status
                 emitProgress("asset_progress", assetProgressPayload(
                     albumInfo: albumInfo,
@@ -667,7 +741,29 @@ func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterB
                 "exportStrategy": strategy,
                 "status": "materializing",
             ])
+            var sourceAnchorVersion = "current-rendered-jpeg"
+            let materializeResult: Result<Void, Error>
             switch writeRenderedJPEG(asset, to: outputURL, allowIcloudDownloads: allowIcloudDownloads, progressHandler: emitAssetProgress) {
+            case .success:
+                materializeResult = .success(())
+            case .failure(let renderError):
+                try? FileManager.default.removeItem(at: outputURL)
+                row["renderAttemptError"] = renderError.localizedDescription
+                emitAssetProgress(1.0, "render_fallback", nil)
+                switch writeLocalImageResourceAsJPEG(asset, to: outputURL, allowIcloudDownloads: allowIcloudDownloads, progressHandler: emitAssetProgress) {
+                case .success:
+                    row["renderFallback"] = "local-resource-jpeg"
+                    row["renderFallbackReason"] = renderError.localizedDescription
+                    sourceAnchorVersion = "local-resource-jpeg"
+                    materializeResult = .success(())
+                case .failure(let fallbackError):
+                    materializeResult = .failure(BridgeError(
+                        code: "render_and_local_resource_failed",
+                        message: "Photos did not provide the rendered JPG: \(renderError.localizedDescription) Local HEIC/source fallback also failed: \(fallbackError.localizedDescription)"
+                    ))
+                }
+            }
+            switch materializeResult {
             case .success:
                 let relativePath = outputURL.lastPathComponent
                 row["status"] = "materialized"
@@ -681,7 +777,7 @@ func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterB
                         "modified_at": isoDate(asset.modificationDate ?? asset.creationDate),
                         "modified_ns": Int64((asset.modificationDate ?? asset.creationDate ?? Date(timeIntervalSince1970: 0)).timeIntervalSince1970 * 1_000_000_000),
                         "filename": filename,
-                        "version": "current-rendered-jpeg",
+                        "version": sourceAnchorVersion,
                     ],
                     "apple_photos": row,
                 ])
@@ -702,10 +798,8 @@ func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterB
                 ])
             case .failure(let error):
                 row["eligible"] = false
-                row["status"] = "unavailable_from_icloud"
-                row["reason"] = allowIcloudDownloads
-                    ? "Photos could not download or provide the rendered JPG for Owner import: \(error.localizedDescription)"
-                    : "Rendered JPG is not available locally and network download is disabled for Owner import safety: \(error.localizedDescription)"
+                row["status"] = "photos_export_failed"
+                row["reason"] = "Photos could not provide a rendered JPG, and the local HEIC/source fallback could not create one: \(error.localizedDescription)"
                 emitProgress("asset_failed", [
                     "album": albumInfo,
                     "index": plan.index,
@@ -717,7 +811,7 @@ func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterB
                     "filename": filename,
                     "mediaType": row["mediaType"] as? String ?? "photo",
                     "exportStrategy": strategy,
-                    "status": row["status"] as? String ?? "unavailable_from_icloud",
+                    "status": row["status"] as? String ?? "photos_export_failed",
                     "reason": row["reason"] as? String ?? error.localizedDescription,
                 ])
             }
@@ -748,7 +842,7 @@ func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterB
                 if !statusChanged && !isHeartbeat && percent == lastProgressPercent { return }
                 if !statusChanged && !isHeartbeat && percent < 100 && percent - lastProgressPercent < 5 { return }
             }
-            lastProgressPercent = max(lastProgressPercent, percent)
+            lastProgressPercent = statusChanged ? percent : max(lastProgressPercent, percent)
             lastProgressStatus = status
             emitProgress("asset_progress", assetProgressPayload(
                 albumInfo: albumInfo,

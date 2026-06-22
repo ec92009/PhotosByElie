@@ -3045,10 +3045,10 @@
     if (key === "waiting_on_photos") return "Waiting on Photos";
     if (key === "waiting_for_photos") return "Waiting on Photos";
     if (key === "waiting_for_render") return "Waiting for rendered JPEG";
-    if (key === "render_fallback") return "Using local HEIC fallback";
+    if (key === "render_fallback") return "Using local source fallback";
     if (key === "exporting_local_resource") return "Exporting local file";
     if (key === "waiting_for_local_resource") return "Waiting for local file";
-    if (key === "converting_local_jpeg") return "Converting local HEIC";
+    if (key === "converting_local_jpeg") return "Converting local source";
     if (key === "exporting_resource") return "Exporting from Photos";
     if (key === "waiting_for_file") return "Waiting for exported file";
     if (key === "materialized") return "Exported";
@@ -3095,6 +3095,16 @@
       ? `${formatDuration(elapsedSeconds)} elapsed`
       : "";
     const detail = [elapsedLabel, item.relativePath || item.path || item.reason || albumName || ""].filter(Boolean).join(" · ");
+    const resourceFormat = String(item.resourceFormat || "").trim();
+    const fallbackName = String(item.fallbackResourceFilename || "").trim();
+    const fallbackFormat = String(item.fallbackResourceFormat || "").trim();
+    const resourceDetail = [
+      resourceFormat ? `${resourceFormat} source` : "",
+      fallbackName && fallbackName !== item.filename
+        ? `fallback ${fallbackFormat ? `${fallbackFormat} ` : ""}${fallbackName}`
+        : "",
+    ].filter(Boolean).join(" · ");
+    const fullDetail = [resourceDetail, detail].filter(Boolean).join(" · ");
     const percent = applePhotosProgressPercent(item);
     const percentLabel = percent === null ? "" : `${percent}%`;
     const labelText = label || applePhotosProgressStatusLabel(status);
@@ -3102,7 +3112,7 @@
       <div class="owner-coverage-missing-row owner-apple-photos-progress-row is-${escapeHtml(safeStatus)}">
         <strong>${escapeHtml(percentLabel ? `${labelText} · ${percentLabel}` : labelText)}</strong>
         <span>${escapeHtml(item.filename || "Apple Photos asset")}</span>
-        ${detail ? `<small>${escapeHtml(detail)}</small>` : ""}
+        ${fullDetail ? `<small>${escapeHtml(fullDetail)}</small>` : ""}
         ${percent === null ? "" : `<span class="owner-apple-photos-progress-meter" aria-label="PhotoKit progress ${escapeHtml(percentLabel)}"><span style="width:${percent}%"></span></span>`}
       </div>
     `;
@@ -3178,8 +3188,10 @@
       const currentStatus = current.status ? applePhotosProgressStatusLabel(current.status) : "";
       const currentElapsed = Number(current.elapsedSeconds);
       const currentElapsedLabel = Number.isFinite(currentElapsed) && currentElapsed >= 1 ? `${formatDuration(currentElapsed)} elapsed` : "";
+      const currentResourceFormat = String(current.resourceFormat || "").trim();
       const currentParts = [
         `${formatCount(materializedCount)}/${formatCount(importableCount || materializedCount)} exported`,
+        currentResourceFormat,
         currentProgress,
         currentStatus,
         currentElapsedLabel,
@@ -3337,6 +3349,16 @@
       ?? 0,
   ) || 0;
 
+  const applePhotosPayloadFormatSummary = (payload = {}) => {
+    const counts = payload.resourceFormatCounts || payload.preflight?.resourceFormatCounts || {};
+    if (!counts || typeof counts !== "object") return "";
+    return Object.entries(counts)
+      .filter(([, count]) => Number(count) > 0)
+      .sort(([a], [b]) => String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: "base" }))
+      .map(([format, count]) => `${format}: ${formatCount(Number(count) || 0)}`)
+      .join(", ");
+  };
+
   const applePhotosPayloadBlockedUnsupportedCount = (payload = {}) => Math.max(
     0,
     applePhotosPayloadBlockedCount(payload) - applePhotosPayloadBurstSkippedCount(payload),
@@ -3354,6 +3376,10 @@
     const parts = [
       `${formatCount(applePhotosPayloadCandidateCount(payload))} ${materializedLabel}`,
     ];
+    const formatSummary = applePhotosPayloadFormatSummary(payload);
+    if (formatSummary) parts.push(formatSummary);
+    const localFallbackCount = Number(payload.localJPEGFallbackCount ?? payload.preflight?.localJPEGFallbackCount ?? 0) || 0;
+    if (localFallbackCount) parts.push(`${formatCount(localFallbackCount)} local source fallback${localFallbackCount === 1 ? "" : "s"}`);
     const burstSkipped = applePhotosPayloadBurstSkippedCount(payload);
     if (burstSkipped) parts.push(`${formatCount(burstSkipped)} burst-filtered`);
     parts.push(`${formatCount(applePhotosPayloadBlockedUnsupportedCount(payload))} blocked or unsupported`);
@@ -3591,11 +3617,21 @@
           : applePhotosItemNeedsPhotosAttention(item) ? "Needs Photos/export attention"
             : item.status === "blocked_by_policy" ? "Blocked by policy"
               : "Skipped";
+      const resourceFormat = String(item.resourceFormat || "").trim();
+      const fallbackName = String(item.fallbackResourceFilename || "").trim();
+      const fallbackFormat = String(item.fallbackResourceFormat || "").trim();
+      const detail = [
+        resourceFormat ? `${resourceFormat} source` : "",
+        item.localJPEGFallbackAvailable && fallbackName
+          ? `local fallback ${fallbackFormat ? `${fallbackFormat} ` : ""}${fallbackName}`
+          : "",
+        item.reason || "",
+      ].filter(Boolean).join(" · ");
       return `
         <div class="owner-coverage-missing-row">
           <strong>${escapeHtml(statusText)}</strong>
           <span>${escapeHtml(item.filename || item.localIdentifier || "Apple Photos asset")}</span>
-          ${item.reason ? `<small>${escapeHtml(item.reason)}</small>` : ""}
+          ${detail ? `<small>${escapeHtml(detail)}</small>` : ""}
         </div>
       `;
     }).join("");

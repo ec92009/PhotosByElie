@@ -7424,8 +7424,17 @@ def _progress_item_from_event(event: dict, state: str) -> dict:
         "path": str(event.get("path") or ""),
         "mediaType": str(event.get("mediaType") or ""),
         "exportStrategy": str(event.get("exportStrategy") or ""),
+        "resourceFormat": str(event.get("resourceFormat") or ""),
+        "preferredResourceFilename": str(event.get("preferredResourceFilename") or ""),
+        "preferredResourceFormat": str(event.get("preferredResourceFormat") or ""),
+        "fallbackResourceFilename": str(event.get("fallbackResourceFilename") or ""),
+        "fallbackResourceFormat": str(event.get("fallbackResourceFormat") or ""),
+        "localJPEGFallbackAvailable": bool(event.get("localJPEGFallbackAvailable") or False),
         "updatedAt": datetime.now(timezone.utc).isoformat(),
     }
+    resource_formats = event.get("resourceFormats")
+    if isinstance(resource_formats, list):
+        item["resourceFormats"] = [str(value) for value in resource_formats if str(value or "").strip()]
     try:
         elapsed_seconds = int(round(float(event.get("elapsedSeconds"))))
     except (TypeError, ValueError):
@@ -7444,30 +7453,32 @@ def _apple_photos_asset_progress_message(item: dict, album_name: str) -> str:
     status = str(item.get("status") or "").strip()
     percent = item.get("progressPercent")
     elapsed = item.get("elapsedSeconds")
+    resource_format = str(item.get("resourceFormat") or "").strip()
+    format_suffix = f" ({resource_format})" if resource_format else ""
     elapsed_label = f" after {elapsed}s" if isinstance(elapsed, int) and elapsed > 0 else ""
     if status == "waiting_for_render":
-        return f"Photos reports 100% for {filename}; waiting{elapsed_label} for the rendered JPEG from {album_name}..."
+        return f"Photos reports 100% for {filename}{format_suffix}; waiting{elapsed_label} for the rendered JPEG from {album_name}..."
     if status == "render_fallback":
-        return f"Rendered JPEG stalled for {filename}; trying the local HEIC/source fallback from {album_name}..."
+        return f"Rendered JPEG stalled for {filename}{format_suffix}; trying the local source fallback from {album_name}..."
     if status == "exporting_local_resource":
-        return f"Exporting the local HEIC/source file for {filename} from {album_name}..."
+        return f"Exporting the local source file for {filename}{format_suffix} from {album_name}..."
     if status == "waiting_for_local_resource":
-        return f"Waiting{elapsed_label} for Photos to write the local source file for {filename} from {album_name}..."
+        return f"Waiting{elapsed_label} for Photos to write the local source file for {filename}{format_suffix} from {album_name}..."
     if status == "converting_local_jpeg":
-        return f"Converting the local HEIC/source file to JPEG for {filename} from {album_name}..."
+        return f"Converting the local source file to JPEG for {filename}{format_suffix} from {album_name}..."
     if status == "waiting_for_file":
-        return f"Photos reports 100% for {filename}; waiting{elapsed_label} for the exported file from {album_name}..."
+        return f"Photos reports 100% for {filename}{format_suffix}; waiting{elapsed_label} for the exported file from {album_name}..."
     if status == "waiting_for_photos":
-        return f"Waiting{elapsed_label} for Photos to provide {filename} from {album_name}..."
+        return f"Waiting{elapsed_label} for Photos to provide {filename}{format_suffix} from {album_name}..."
     if status == "exporting_resource":
-        return f"Photos is exporting {filename} from {album_name}{elapsed_label}..."
+        return f"Photos is exporting {filename}{format_suffix} from {album_name}{elapsed_label}..."
     if status == "encoding_jpeg":
         return f"Encoding JPEG for {filename} from {album_name}..."
     if status == "writing_file":
         return f"Writing {filename} to the temporary import folder..."
     if percent is None:
         return f"Photos is exporting {filename} from {album_name}..."
-    return f"Photos reports {percent}% for {filename} from {album_name}..."
+    return f"Photos reports {percent}% for {filename}{format_suffix} from {album_name}..."
 
 
 def _append_apple_photos_progress_item(album_row: dict, item: dict) -> None:

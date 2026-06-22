@@ -138,13 +138,157 @@ func isoDate(_ date: Date?) -> String {
     return formatter.string(from: date)
 }
 
+let rawFileExtensions: Set<String> = [
+    ".raw", ".dng", ".nef", ".cr2", ".cr3", ".arw", ".raf", ".rw2", ".orf", ".pef", ".srw",
+]
+let heicFileExtensions: Set<String> = [".heic", ".heif", ".hif"]
+let jpegFileExtensions: Set<String> = [".jpg", ".jpeg", ".jpe"]
+let pngFileExtensions: Set<String> = [".png"]
+let tiffFileExtensions: Set<String> = [".tif", ".tiff"]
+let videoFileExtensions: Set<String> = [".mov", ".mp4", ".m4v"]
+let localJPEGConvertibleImageExtensions: Set<String> = heicFileExtensions
+    .union(jpegFileExtensions)
+    .union(pngFileExtensions)
+    .union(tiffFileExtensions)
+
+func fileExtension(_ filename: String) -> String {
+    return URL(fileURLWithPath: filename).pathExtension.lowercased()
+}
+
+func hasExtension(_ filename: String, in extensions: Set<String>) -> Bool {
+    let ext = fileExtension(filename)
+    return !ext.isEmpty && extensions.contains(".\(ext)")
+}
+
+func resourceUTI(_ resource: PHAssetResource) -> String {
+    return resource.uniformTypeIdentifier.lowercased()
+}
+
+func resourceFormat(_ resource: PHAssetResource) -> String {
+    let uti = resourceUTI(resource)
+    if hasExtension(resource.originalFilename, in: rawFileExtensions)
+        || uti.contains("raw")
+        || uti.contains("digital-camera-raw") {
+        return "RAW"
+    }
+    if hasExtension(resource.originalFilename, in: heicFileExtensions)
+        || uti.contains("heic")
+        || uti.contains("heif") {
+        return "HEIC"
+    }
+    if hasExtension(resource.originalFilename, in: jpegFileExtensions)
+        || uti.contains("jpeg")
+        || uti.contains("jpg") {
+        return "JPEG"
+    }
+    if hasExtension(resource.originalFilename, in: pngFileExtensions)
+        || uti.contains("png") {
+        return "PNG"
+    }
+    if hasExtension(resource.originalFilename, in: tiffFileExtensions)
+        || uti.contains("tiff") {
+        return "TIFF"
+    }
+    if hasExtension(resource.originalFilename, in: videoFileExtensions)
+        || uti.contains("movie")
+        || uti.contains("video")
+        || uti.contains("mpeg-4") {
+        return "MOV"
+    }
+    let ext = fileExtension(resource.originalFilename)
+    if !ext.isEmpty {
+        return ext.uppercased()
+    }
+    return uti.isEmpty ? "Unknown" : uti
+}
+
+func isJPEGConvertibleImageResource(_ resource: PHAssetResource) -> Bool {
+    let format = resourceFormat(resource)
+    if format == "RAW" || format == "MOV" {
+        return false
+    }
+    if hasExtension(resource.originalFilename, in: localJPEGConvertibleImageExtensions) {
+        return true
+    }
+    let uti = resourceUTI(resource)
+    return uti.contains("heic")
+        || uti.contains("heif")
+        || uti.contains("jpeg")
+        || uti.contains("jpg")
+        || uti.contains("png")
+        || uti.contains("tiff")
+}
+
+func imageFallbackResourceTypePriority(_ resource: PHAssetResource) -> Int {
+    switch resource.type {
+    case .fullSizePhoto:
+        return 0
+    case .photo:
+        return 1
+    case .alternatePhoto:
+        return 2
+    case .adjustmentBasePhoto:
+        return 3
+    default:
+        return 9
+    }
+}
+
+func imageFallbackResourceFormatPriority(_ resource: PHAssetResource) -> Int {
+    let format = resourceFormat(resource)
+    if format == "JPEG" { return 0 }
+    if format == "HEIC" { return 1 }
+    if format == "PNG" || format == "TIFF" { return 2 }
+    return 9
+}
+
+func imageFallbackResourceCandidates(_ asset: PHAsset) -> [PHAssetResource] {
+    guard asset.mediaType == .image else { return [] }
+    return PHAssetResource.assetResources(for: asset)
+        .filter(isJPEGConvertibleImageResource)
+        .sorted { lhs, rhs in
+            let lhsType = imageFallbackResourceTypePriority(lhs)
+            let rhsType = imageFallbackResourceTypePriority(rhs)
+            if lhsType != rhsType { return lhsType < rhsType }
+            let lhsFormat = imageFallbackResourceFormatPriority(lhs)
+            let rhsFormat = imageFallbackResourceFormatPriority(rhs)
+            if lhsFormat != rhsFormat { return lhsFormat < rhsFormat }
+            return lhs.originalFilename < rhs.originalFilename
+        }
+}
+
+func resourceFormatSummary(_ resources: [PHAssetResource]) -> [String: Any] {
+    var formats: [String] = []
+    var counts: [String: Int] = [:]
+    for resource in resources {
+        let format = resourceFormat(resource)
+        if !formats.contains(format) {
+            formats.append(format)
+        }
+        counts[format] = (counts[format] ?? 0) + 1
+    }
+    let label = formats.isEmpty ? "Unknown" : formats.joined(separator: "+")
+    return [
+        "label": label,
+        "formats": formats,
+        "counts": counts,
+    ]
+}
+
 func resourceRows(_ asset: PHAsset) -> [[String: Any]] {
     return PHAssetResource.assetResources(for: asset).map { resource in
-        [
+        let ext = fileExtension(resource.originalFilename)
+        var row: [String: Any] = [
             "type": resource.type.rawValue,
             "uniformTypeIdentifier": resource.uniformTypeIdentifier,
             "originalFilename": resource.originalFilename,
+            "format": resourceFormat(resource),
+            "jpegFallbackCompatible": isJPEGConvertibleImageResource(resource),
         ]
+        if !ext.isEmpty {
+            row["fileExtension"] = ext.uppercased()
+        }
+        return row
     }
 }
 
@@ -167,21 +311,10 @@ func assetLocationRow(_ asset: PHAsset) -> [String: Any]? {
     return row
 }
 
-let rawFileExtensions: Set<String> = [".raw", ".dng", ".nef", ".cr2", ".cr3", ".arw", ".raf"]
-
 struct AssetPlan {
     let asset: PHAsset
     let index: Int
     var row: [String: Any]
-}
-
-func fileExtension(_ filename: String) -> String {
-    return URL(fileURLWithPath: filename).pathExtension.lowercased()
-}
-
-func hasExtension(_ filename: String, in extensions: Set<String>) -> Bool {
-    let ext = fileExtension(filename)
-    return !ext.isEmpty && extensions.contains(".\(ext)")
 }
 
 func preferredResource(_ asset: PHAsset) -> PHAssetResource? {
@@ -218,13 +351,17 @@ func exportStrategy(_ asset: PHAsset) -> String {
 }
 
 func assetRow(_ asset: PHAsset, index: Int) -> [String: Any] {
+    let resources = PHAssetResource.assetResources(for: asset)
+    let fallbackResource = imageFallbackResourceCandidates(asset).first
     let resource = preferredResource(asset)
+    let displayResource = fallbackResource ?? resource
     let strategy = exportStrategy(asset)
     let mediaType = asset.mediaType == .video ? "video" : asset.mediaType == .image ? "photo" : "unsupported"
     let eligible = strategy == "resource" || strategy == "rendered_jpeg"
     let filename = strategy == "rendered_jpeg"
-        ? renderedJPEGFilename(asset: asset, index: index, resource: resource)
+        ? renderedJPEGFilename(asset: asset, index: index, resource: displayResource)
         : resource?.originalFilename ?? ""
+    let summary = resourceFormatSummary(resources)
     let reason = eligible
         ? (mediaType == "photo" ? "Photos still image will import as the current rendered JPG from Photos." : "")
         : "No supported photo/video resource found."
@@ -239,6 +376,14 @@ func assetRow(_ asset: PHAsset, index: Int) -> [String: Any] {
         "pixelWidth": asset.pixelWidth,
         "pixelHeight": asset.pixelHeight,
         "resources": resourceRows(asset),
+        "resourceFormat": summary["label"] as? String ?? "Unknown",
+        "resourceFormats": summary["formats"] as? [String] ?? [],
+        "resourceFormatCounts": summary["counts"] as? [String: Int] ?? [:],
+        "preferredResourceFilename": resource?.originalFilename ?? "",
+        "preferredResourceFormat": resource.map(resourceFormat) ?? "",
+        "fallbackResourceFilename": fallbackResource?.originalFilename ?? "",
+        "fallbackResourceFormat": fallbackResource.map(resourceFormat) ?? "",
+        "localJPEGFallbackAvailable": fallbackResource != nil,
         "eligible": eligible,
         "exportStrategy": strategy,
         "status": eligible ? "candidate" : "unsupported",
@@ -389,6 +534,15 @@ func preflight(album: PHAssetCollection, limit: Int, filterBursts: Bool, allowIc
     let rows = plans.map { $0.row }
     let candidateCount = rows.filter { ($0["eligible"] as? Bool) == true }.count
     let blockedCount = rows.filter { ($0["eligible"] as? Bool) != true }.count
+    var formatCounts: [String: Int] = [:]
+    var fallbackCount = 0
+    for row in rows {
+        let format = row["resourceFormat"] as? String ?? "Unknown"
+        formatCounts[format] = (formatCounts[format] ?? 0) + 1
+        if row["localJPEGFallbackAvailable"] as? Bool == true {
+            fallbackCount += 1
+        }
+    }
     return [
         "ok": true,
         "mode": "preflight",
@@ -397,6 +551,8 @@ func preflight(album: PHAssetCollection, limit: Int, filterBursts: Bool, allowIc
         "count": rows.count,
         "candidateCount": candidateCount,
         "blockedCount": blockedCount,
+        "resourceFormatCounts": formatCounts,
+        "localJPEGFallbackCount": fallbackCount,
         "burstFilter": burstFilter,
         "icloudDownloads": [
             "enabled": allowIcloudDownloads,
@@ -429,13 +585,8 @@ func renderedJPEGFilename(asset: PHAsset, index: Int, resource: PHAssetResource?
     return "\(filenameStem(sourceName, fallback: fallback)).jpg"
 }
 
-let localJPEGConvertibleImageExtensions: Set<String> = [".heic", ".heif", ".jpg", ".jpeg", ".png", ".tif", ".tiff"]
-
 func localImageResourceForJPEGFallback(_ asset: PHAsset) -> PHAssetResource? {
-    guard asset.mediaType == .image, let resource = preferredResource(asset) else { return nil }
-    if hasExtension(resource.originalFilename, in: rawFileExtensions) { return nil }
-    if !hasExtension(resource.originalFilename, in: localJPEGConvertibleImageExtensions) { return nil }
-    return resource
+    return imageFallbackResourceCandidates(asset).first
 }
 
 func temporaryResourceURL(for outputURL: URL, resource: PHAssetResource) -> URL {
@@ -683,6 +834,13 @@ func assetProgressPayload(
         "filename": filename,
         "mediaType": row["mediaType"] as? String ?? "photo",
         "exportStrategy": strategy,
+        "resourceFormat": row["resourceFormat"] as? String ?? "",
+        "resourceFormats": row["resourceFormats"] as? [String] ?? [],
+        "preferredResourceFilename": row["preferredResourceFilename"] as? String ?? "",
+        "preferredResourceFormat": row["preferredResourceFormat"] as? String ?? "",
+        "fallbackResourceFilename": row["fallbackResourceFilename"] as? String ?? "",
+        "fallbackResourceFormat": row["fallbackResourceFormat"] as? String ?? "",
+        "localJPEGFallbackAvailable": row["localJPEGFallbackAvailable"] as? Bool ?? false,
         "status": status,
     ]
     if let progress {
@@ -774,6 +932,13 @@ func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterB
                 "filename": filename,
                 "mediaType": row["mediaType"] as? String ?? "photo",
                 "exportStrategy": strategy,
+                "resourceFormat": row["resourceFormat"] as? String ?? "",
+                "resourceFormats": row["resourceFormats"] as? [String] ?? [],
+                "preferredResourceFilename": row["preferredResourceFilename"] as? String ?? "",
+                "preferredResourceFormat": row["preferredResourceFormat"] as? String ?? "",
+                "fallbackResourceFilename": row["fallbackResourceFilename"] as? String ?? "",
+                "fallbackResourceFormat": row["fallbackResourceFormat"] as? String ?? "",
+                "localJPEGFallbackAvailable": row["localJPEGFallbackAvailable"] as? Bool ?? false,
                 "status": "materializing",
             ])
             var sourceAnchorVersion = "current-rendered-jpeg"
@@ -830,6 +995,13 @@ func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterB
                     "path": outputURL.path,
                     "mediaType": row["mediaType"] as? String ?? "photo",
                     "exportStrategy": strategy,
+                    "resourceFormat": row["resourceFormat"] as? String ?? "",
+                    "resourceFormats": row["resourceFormats"] as? [String] ?? [],
+                    "preferredResourceFilename": row["preferredResourceFilename"] as? String ?? "",
+                    "preferredResourceFormat": row["preferredResourceFormat"] as? String ?? "",
+                    "fallbackResourceFilename": row["fallbackResourceFilename"] as? String ?? "",
+                    "fallbackResourceFormat": row["fallbackResourceFormat"] as? String ?? "",
+                    "localJPEGFallbackAvailable": row["localJPEGFallbackAvailable"] as? Bool ?? false,
                     "status": "materialized",
                 ])
             case .failure(let error):
@@ -847,6 +1019,13 @@ func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterB
                     "filename": filename,
                     "mediaType": row["mediaType"] as? String ?? "photo",
                     "exportStrategy": strategy,
+                    "resourceFormat": row["resourceFormat"] as? String ?? "",
+                    "resourceFormats": row["resourceFormats"] as? [String] ?? [],
+                    "preferredResourceFilename": row["preferredResourceFilename"] as? String ?? "",
+                    "preferredResourceFormat": row["preferredResourceFormat"] as? String ?? "",
+                    "fallbackResourceFilename": row["fallbackResourceFilename"] as? String ?? "",
+                    "fallbackResourceFormat": row["fallbackResourceFormat"] as? String ?? "",
+                    "localJPEGFallbackAvailable": row["localJPEGFallbackAvailable"] as? Bool ?? false,
                     "status": row["status"] as? String ?? "photos_export_failed",
                     "reason": row["reason"] as? String ?? error.localizedDescription,
                 ])
@@ -907,6 +1086,13 @@ func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterB
             "filename": filename,
             "mediaType": row["mediaType"] as? String ?? "photo",
             "exportStrategy": strategy,
+            "resourceFormat": row["resourceFormat"] as? String ?? "",
+            "resourceFormats": row["resourceFormats"] as? [String] ?? [],
+            "preferredResourceFilename": row["preferredResourceFilename"] as? String ?? "",
+            "preferredResourceFormat": row["preferredResourceFormat"] as? String ?? "",
+            "fallbackResourceFilename": row["fallbackResourceFilename"] as? String ?? "",
+            "fallbackResourceFormat": row["fallbackResourceFormat"] as? String ?? "",
+            "localJPEGFallbackAvailable": row["localJPEGFallbackAvailable"] as? Bool ?? false,
             "status": "materializing",
         ])
         switch writeResource(resource, to: outputURL, allowIcloudDownloads: allowIcloudDownloads, progressHandler: emitAssetProgress) {
@@ -941,6 +1127,13 @@ func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterB
                 "path": outputURL.path,
                 "mediaType": row["mediaType"] as? String ?? "photo",
                 "exportStrategy": strategy,
+                "resourceFormat": row["resourceFormat"] as? String ?? "",
+                "resourceFormats": row["resourceFormats"] as? [String] ?? [],
+                "preferredResourceFilename": row["preferredResourceFilename"] as? String ?? "",
+                "preferredResourceFormat": row["preferredResourceFormat"] as? String ?? "",
+                "fallbackResourceFilename": row["fallbackResourceFilename"] as? String ?? "",
+                "fallbackResourceFormat": row["fallbackResourceFormat"] as? String ?? "",
+                "localJPEGFallbackAvailable": row["localJPEGFallbackAvailable"] as? Bool ?? false,
                 "status": "materialized",
             ])
         case .failure(let error):
@@ -960,6 +1153,13 @@ func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterB
                 "filename": filename,
                 "mediaType": row["mediaType"] as? String ?? "photo",
                 "exportStrategy": strategy,
+                "resourceFormat": row["resourceFormat"] as? String ?? "",
+                "resourceFormats": row["resourceFormats"] as? [String] ?? [],
+                "preferredResourceFilename": row["preferredResourceFilename"] as? String ?? "",
+                "preferredResourceFormat": row["preferredResourceFormat"] as? String ?? "",
+                "fallbackResourceFilename": row["fallbackResourceFilename"] as? String ?? "",
+                "fallbackResourceFormat": row["fallbackResourceFormat"] as? String ?? "",
+                "localJPEGFallbackAvailable": row["localJPEGFallbackAvailable"] as? Bool ?? false,
                 "status": row["status"] as? String ?? "unavailable_from_icloud",
                 "reason": row["reason"] as? String ?? error.localizedDescription,
             ])

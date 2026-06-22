@@ -582,6 +582,33 @@ html[data-theme="light"] .photo-art.has-photo::after{
   padding:7px 34px 7px 10px;
   text-transform:none;
 }
+.owner-manual-import-tools{
+  margin:8px 0 10px;
+  border:1px solid var(--line);
+  border-radius:6px;
+  background:color-mix(in srgb,var(--surface-2) 68%,transparent);
+}
+.owner-manual-import-tools summary{
+  cursor:pointer;
+  padding:8px 10px;
+  color:var(--text);
+  font-size:.78rem;
+  font-weight:900;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+}
+.owner-manual-import-toolbar{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  align-items:flex-end;
+  border-top:1px solid var(--line);
+  padding:10px;
+}
+.owner-manual-import-toolbar .btn{
+  min-height:36px;
+  padding:7px 12px;
+}
 .owner-import-source-details{
   display:grid;
   grid-template-columns:repeat(3, minmax(0, 1fr));
@@ -6808,7 +6835,13 @@ body.detail-fullscreen-active{
 }
 .owner-apple-photos-progress-row.is-downloading,
 .owner-apple-photos-progress-row.is-rendering,
-.owner-apple-photos-progress-row.is-waiting_on_photos{
+.owner-apple-photos-progress-row.is-waiting_on_photos,
+.owner-apple-photos-progress-row.is-waiting_for_photos,
+.owner-apple-photos-progress-row.is-waiting_for_render,
+.owner-apple-photos-progress-row.is-encoding_jpeg,
+.owner-apple-photos-progress-row.is-writing_file,
+.owner-apple-photos-progress-row.is-exporting_resource,
+.owner-apple-photos-progress-row.is-waiting_for_file{
   border-left-color:#2563eb;
 }
 .owner-apple-photos-progress-row.is-materialized{

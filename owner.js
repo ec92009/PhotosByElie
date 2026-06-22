@@ -3040,8 +3040,13 @@
     const key = String(status || "").trim();
     if (key === "materializing") return "Exporting";
     if (key === "downloading") return "Downloading from Photos";
-    if (key === "rendering") return "Rendering";
+    if (key === "rendering" || key === "encoding_jpeg") return "Encoding JPEG";
+    if (key === "writing_file") return "Writing file";
     if (key === "waiting_on_photos") return "Waiting on Photos";
+    if (key === "waiting_for_photos") return "Waiting on Photos";
+    if (key === "waiting_for_render") return "Waiting for rendered JPEG";
+    if (key === "exporting_resource") return "Exporting from Photos";
+    if (key === "waiting_for_file") return "Waiting for exported file";
     if (key === "materialized") return "Exported";
     if (key === "unavailable_from_icloud") return "Needs Photos/iCloud";
     if (key === "blocked_by_policy") return "Skipped";
@@ -3073,7 +3078,11 @@
   const applePhotosProgressItemRowHtml = (item = {}, albumName = "", label = "") => {
     const status = String(item.status || "").trim();
     const safeStatus = status.replace(/[^a-z0-9_-]/gi, "-") || "waiting";
-    const detail = item.relativePath || item.path || item.reason || albumName || "";
+    const elapsedSeconds = Number(item.elapsedSeconds);
+    const elapsedLabel = Number.isFinite(elapsedSeconds) && elapsedSeconds >= 1
+      ? `${formatDuration(elapsedSeconds)} elapsed`
+      : "";
+    const detail = [elapsedLabel, item.relativePath || item.path || item.reason || albumName || ""].filter(Boolean).join(" · ");
     const percent = applePhotosProgressPercent(item);
     const percentLabel = percent === null ? "" : `${percent}%`;
     const labelText = label || applePhotosProgressStatusLabel(status);
@@ -3110,7 +3119,7 @@
       || {};
     const currentItem = progress.currentItem || activeAlbum.currentItem || null;
     const currentRows = currentItem
-      ? applePhotosProgressItemRowHtml(currentItem, activeAlbum.albumName || "", "Exporting now")
+      ? applePhotosProgressItemRowHtml(currentItem, activeAlbum.albumName || "")
       : "";
     const recentItems = albums
       .flatMap((album) => (Array.isArray(album.items) ? album.items : []).map((item) => ({
@@ -3154,11 +3163,19 @@
       });
       const current = row.currentItem || {};
       const currentProgress = applePhotosProgressPercentLabel(current);
+      const currentStatus = current.status ? applePhotosProgressStatusLabel(current.status) : "";
+      const currentElapsed = Number(current.elapsedSeconds);
+      const currentElapsedLabel = Number.isFinite(currentElapsed) && currentElapsed >= 1 ? `${formatDuration(currentElapsed)} elapsed` : "";
+      const currentParts = [
+        `${formatCount(materializedCount)}/${formatCount(importableCount || materializedCount)} exported`,
+        currentProgress,
+        currentStatus,
+        currentElapsedLabel,
+        current.filename,
+      ].filter(Boolean);
       updateApplePhotosLogEntry(album, {
         state: String(row.state || progress.state || "") === "failed" ? "failed" : "running",
-        detail: current.filename
-          ? `${formatCount(materializedCount)}/${formatCount(importableCount || materializedCount)} exported · ${currentProgress ? `${currentProgress} · ` : ""}${current.filename}`
-          : `${formatCount(materializedCount)}/${formatCount(importableCount || materializedCount)} exported`,
+        detail: currentParts.join(" · "),
       });
       listChanged = true;
     });

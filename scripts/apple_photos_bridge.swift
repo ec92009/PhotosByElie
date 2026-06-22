@@ -42,6 +42,8 @@ func normalizedProgress(_ progress: Double) -> Double {
     return min(1.0, max(0.0, progress))
 }
 
+typealias AssetProgressHandler = (_ progress: Double, _ status: String, _ elapsedSeconds: Double?) -> Void
+
 func fail(_ code: String, _ message: String, status: Int32 = 1) -> Never {
     printJSON(["ok": false, "code": code, "error": message])
     exit(status)
@@ -402,7 +404,13 @@ func renderedJPEGFilename(asset: PHAsset, index: Int, resource: PHAssetResource?
     return "\(filenameStem(sourceName, fallback: fallback)).jpg"
 }
 
-func writeRenderedJPEG(_ asset: PHAsset, to url: URL, allowIcloudDownloads: Bool, progressHandler: ((Double, String) -> Void)? = nil) -> Result<Void, Error> {
+func writeRenderedJPEG(_ asset: PHAsset, to url: URL, allowIcloudDownloads: Bool, progressHandler: AssetProgressHandler? = nil) -> Result<Void, Error> {
+    let renderOverallTimeoutSeconds: TimeInterval = 240
+    let renderAfterPhotoKitCompleteTimeoutSeconds: TimeInterval = 45
+    let heartbeatSeconds: TimeInterval = 5
+    let progressStateLock = NSLock()
+    var lastPhotoKitProgress = 0.0
+    var photoKitCompleteAt: Date?
     let options = PHImageRequestOptions()
     options.version = .current
     options.deliveryMode = .highQualityFormat
@@ -410,14 +418,23 @@ func writeRenderedJPEG(_ asset: PHAsset, to url: URL, allowIcloudDownloads: Bool
     options.isNetworkAccessAllowed = allowIcloudDownloads
     options.isSynchronous = false
     options.progressHandler = { progress, _, _, _ in
-        progressHandler?(normalizedProgress(progress), "downloading")
+        let normalized = normalizedProgress(progress)
+        progressStateLock.lock()
+        lastPhotoKitProgress = max(lastPhotoKitProgress, normalized)
+        if normalized >= 0.999 && photoKitCompleteAt == nil {
+            photoKitCompleteAt = Date()
+        }
+        progressStateLock.unlock()
+        progressHandler?(normalized, "downloading", nil)
     }
 
     let semaphore = DispatchSemaphore(value: 0)
     var renderedImage: NSImage?
     var requestInfo: [AnyHashable: Any] = [:]
 
-    PHImageManager.default().requestImage(
+    let startedAt = Date()
+    var lastHeartbeatAt = Date.distantPast
+    let requestId = PHImageManager.default().requestImage(
         for: asset,
         targetSize: PHImageManagerMaximumSize,
         contentMode: .aspectFit,
@@ -432,11 +449,32 @@ func writeRenderedJPEG(_ asset: PHAsset, to url: URL, allowIcloudDownloads: Bool
         semaphore.signal()
     }
 
-    if semaphore.wait(timeout: .now() + 600) == .timedOut {
-        let message = allowIcloudDownloads
-            ? "Timed out while Photos was downloading or rendering an asset. Open the asset in Photos, confirm it downloads, then retry."
-            : "Timed out while rendering a Photos asset. Confirm the rendered version is local in Photos and retry."
-        return .failure(BridgeError(code: "render_timeout", message: message))
+    while semaphore.wait(timeout: .now() + 1) == .timedOut {
+        let now = Date()
+        let elapsed = now.timeIntervalSince(startedAt)
+        progressStateLock.lock()
+        let observedProgress = lastPhotoKitProgress
+        let completedFor = photoKitCompleteAt.map { now.timeIntervalSince($0) }
+        progressStateLock.unlock()
+        if now.timeIntervalSince(lastHeartbeatAt) >= heartbeatSeconds {
+            let status = observedProgress >= 0.999 ? "waiting_for_render" : "waiting_for_photos"
+            progressHandler?(observedProgress, status, elapsed)
+            lastHeartbeatAt = now
+        }
+        if let completedFor, completedFor >= renderAfterPhotoKitCompleteTimeoutSeconds {
+            PHImageManager.default().cancelImageRequest(requestId)
+            return .failure(BridgeError(
+                code: "render_completion_timeout",
+                message: "Photos reported the rendered asset at 100% but did not provide the JPEG callback after \(Int(renderAfterPhotoKitCompleteTimeoutSeconds)) seconds."
+            ))
+        }
+        if elapsed >= renderOverallTimeoutSeconds {
+            PHImageManager.default().cancelImageRequest(requestId)
+            let message = allowIcloudDownloads
+                ? "Timed out while Photos was downloading or rendering an asset. Open the asset in Photos, confirm it downloads, then retry."
+                : "Timed out while rendering a Photos asset. Confirm the rendered version is local in Photos and retry."
+            return .failure(BridgeError(code: "render_timeout", message: message))
+        }
     }
     if let error = requestInfo[PHImageErrorKey] as? Error {
         return .failure(error)
@@ -456,8 +494,9 @@ func writeRenderedJPEG(_ asset: PHAsset, to url: URL, allowIcloudDownloads: Bool
           let jpegData = bitmap.representation(using: .jpeg, properties: [.compressionFactor: 0.95]) else {
         return .failure(BridgeError(code: "render_failed", message: "Photos did not provide a renderable image for JPG export."))
     }
-    progressHandler?(1.0, "rendering")
+    progressHandler?(1.0, "encoding_jpeg", Date().timeIntervalSince(startedAt))
     do {
+        progressHandler?(1.0, "writing_file", Date().timeIntervalSince(startedAt))
         try jpegData.write(to: url, options: .atomic)
         return .success(())
     } catch {
@@ -465,11 +504,19 @@ func writeRenderedJPEG(_ asset: PHAsset, to url: URL, allowIcloudDownloads: Bool
     }
 }
 
-func writeResource(_ resource: PHAssetResource, to url: URL, allowIcloudDownloads: Bool, progressHandler: ((Double, String) -> Void)? = nil) -> Result<Void, Error> {
+func writeResource(_ resource: PHAssetResource, to url: URL, allowIcloudDownloads: Bool, progressHandler: AssetProgressHandler? = nil) -> Result<Void, Error> {
+    let timeoutSeconds: TimeInterval = 600
+    let heartbeatSeconds: TimeInterval = 5
+    let progressStateLock = NSLock()
+    var lastPhotoKitProgress = 0.0
     let options = PHAssetResourceRequestOptions()
     options.isNetworkAccessAllowed = allowIcloudDownloads
     options.progressHandler = { progress in
-        progressHandler?(normalizedProgress(progress), "downloading")
+        let normalized = normalizedProgress(progress)
+        progressStateLock.lock()
+        lastPhotoKitProgress = max(lastPhotoKitProgress, normalized)
+        progressStateLock.unlock()
+        progressHandler?(normalized, "downloading", nil)
     }
     let semaphore = DispatchSemaphore(value: 0)
     var result: Result<Void, Error> = .success(())
@@ -479,11 +526,25 @@ func writeResource(_ resource: PHAssetResource, to url: URL, allowIcloudDownload
         }
         semaphore.signal()
     }
-    if semaphore.wait(timeout: .now() + 600) == .timedOut {
-        let message = allowIcloudDownloads
-            ? "Timed out while Photos was downloading or exporting the original resource. Open the asset in Photos, confirm it downloads, then retry."
-            : "Timed out while exporting a Photos resource. Confirm the original is local in Photos and retry."
-        return .failure(BridgeError(code: "resource_timeout", message: message))
+    let startedAt = Date()
+    var lastHeartbeatAt = Date.distantPast
+    while semaphore.wait(timeout: .now() + 1) == .timedOut {
+        let now = Date()
+        let elapsed = now.timeIntervalSince(startedAt)
+        progressStateLock.lock()
+        let observedProgress = lastPhotoKitProgress
+        progressStateLock.unlock()
+        if now.timeIntervalSince(lastHeartbeatAt) >= heartbeatSeconds {
+            let status = observedProgress >= 0.999 ? "waiting_for_file" : "exporting_resource"
+            progressHandler?(observedProgress, status, elapsed)
+            lastHeartbeatAt = now
+        }
+        if elapsed >= timeoutSeconds {
+            let message = allowIcloudDownloads
+                ? "Timed out while Photos was downloading or exporting the original resource. Open the asset in Photos, confirm it downloads, then retry."
+                : "Timed out while exporting a Photos resource. Confirm the original is local in Photos and retry."
+            return .failure(BridgeError(code: "resource_timeout", message: message))
+        }
     }
     return result
 }
@@ -500,7 +561,8 @@ func assetProgressPayload(
     candidateCount: Int,
     attemptedCount: Int,
     materializedCount: Int,
-    progress: Double? = nil
+    progress: Double? = nil,
+    elapsedSeconds: Double? = nil
 ) -> [String: Any] {
     var payload: [String: Any] = [
         "album": albumInfo,
@@ -519,6 +581,9 @@ func assetProgressPayload(
         let normalized = normalizedProgress(progress)
         payload["progress"] = normalized
         payload["progressPercent"] = Int((normalized * 100).rounded())
+    }
+    if let elapsedSeconds {
+        payload["elapsedSeconds"] = Int(elapsedSeconds.rounded())
     }
     return payload
 }
@@ -559,16 +624,20 @@ func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterB
             attemptedCount += 1
             let progressLock = NSLock()
             var lastProgressPercent = -1
-            let emitAssetProgress = { (rawProgress: Double, status: String) in
+            var lastProgressStatus = ""
+            let emitAssetProgress = { (rawProgress: Double, status: String, elapsedSeconds: Double?) in
                 let normalized = normalizedProgress(rawProgress)
                 let percent = Int((normalized * 100).rounded())
                 progressLock.lock()
                 defer { progressLock.unlock() }
+                let statusChanged = status != lastProgressStatus
+                let isHeartbeat = elapsedSeconds != nil
                 if lastProgressPercent >= 0 {
-                    if percent == lastProgressPercent { return }
-                    if percent < 100 && percent - lastProgressPercent < 5 { return }
+                    if !statusChanged && !isHeartbeat && percent == lastProgressPercent { return }
+                    if !statusChanged && !isHeartbeat && percent < 100 && percent - lastProgressPercent < 5 { return }
                 }
                 lastProgressPercent = max(lastProgressPercent, percent)
+                lastProgressStatus = status
                 emitProgress("asset_progress", assetProgressPayload(
                     albumInfo: albumInfo,
                     asset: asset,
@@ -581,7 +650,8 @@ func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterB
                     candidateCount: candidateCount,
                     attemptedCount: attemptedCount,
                     materializedCount: materializedCount,
-                    progress: normalized
+                    progress: normalized,
+                    elapsedSeconds: elapsedSeconds
                 ))
             }
             emitProgress("asset_start", [
@@ -666,16 +736,20 @@ func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterB
         attemptedCount += 1
         let progressLock = NSLock()
         var lastProgressPercent = -1
-        let emitAssetProgress = { (rawProgress: Double, status: String) in
+        var lastProgressStatus = ""
+        let emitAssetProgress = { (rawProgress: Double, status: String, elapsedSeconds: Double?) in
             let normalized = normalizedProgress(rawProgress)
             let percent = Int((normalized * 100).rounded())
             progressLock.lock()
             defer { progressLock.unlock() }
+            let statusChanged = status != lastProgressStatus
+            let isHeartbeat = elapsedSeconds != nil
             if lastProgressPercent >= 0 {
-                if percent == lastProgressPercent { return }
-                if percent < 100 && percent - lastProgressPercent < 5 { return }
+                if !statusChanged && !isHeartbeat && percent == lastProgressPercent { return }
+                if !statusChanged && !isHeartbeat && percent < 100 && percent - lastProgressPercent < 5 { return }
             }
             lastProgressPercent = max(lastProgressPercent, percent)
+            lastProgressStatus = status
             emitProgress("asset_progress", assetProgressPayload(
                 albumInfo: albumInfo,
                 asset: asset,
@@ -688,7 +762,8 @@ func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterB
                 candidateCount: candidateCount,
                 attemptedCount: attemptedCount,
                 materializedCount: materializedCount,
-                progress: normalized
+                progress: normalized,
+                elapsedSeconds: elapsedSeconds
             ))
         }
         emitProgress("asset_start", [

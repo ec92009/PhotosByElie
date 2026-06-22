@@ -867,7 +867,8 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             return
         query = parse_qs(urlparse(self.path).query)
         progress_id = _clean_apple_photos_progress_id((query.get("progress_id") or query.get("task_id") or [""])[0])
-        self._send_json(HTTPStatus.OK, {"ok": True, "progress": _apple_photos_import_progress(progress_id)})
+        progress = _apple_photos_import_progress(progress_id) if progress_id else _latest_apple_photos_import_progress()
+        self._send_json(HTTPStatus.OK, {"ok": True, "progress": progress})
 
     def _handle_import_source_thumb(self) -> None:
         if not self._is_loopback_request():
@@ -7291,6 +7292,21 @@ def _apple_photos_import_progress(progress_id: str) -> dict | None:
         return copy.deepcopy(progress) if progress else None
 
 
+def _latest_apple_photos_import_progress() -> dict | None:
+    with APPLE_PHOTOS_IMPORT_PROGRESS_LOCK:
+        progresses = [copy.deepcopy(progress) for progress in APPLE_PHOTOS_IMPORT_PROGRESS.values()]
+    if not progresses:
+        return None
+    progresses.sort(
+        key=lambda progress: (
+            1 if str(progress.get("state") or "") == "running" else 0,
+            str(progress.get("updatedAt") or progress.get("startedAt") or ""),
+        ),
+        reverse=True,
+    )
+    return progresses[0]
+
+
 def _apple_photos_progress_album_payload(payload: dict) -> dict:
     album = payload.get("album") if isinstance(payload.get("album"), dict) else {}
     return {
@@ -7392,11 +7408,40 @@ def _progress_item_from_event(event: dict, state: str) -> dict:
         "exportStrategy": str(event.get("exportStrategy") or ""),
         "updatedAt": datetime.now(timezone.utc).isoformat(),
     }
+    try:
+        elapsed_seconds = int(round(float(event.get("elapsedSeconds"))))
+    except (TypeError, ValueError):
+        elapsed_seconds = None
     if progress_value is not None:
         item["progress"] = progress_value
     if progress_percent is not None:
         item["progressPercent"] = progress_percent
+    if elapsed_seconds is not None and elapsed_seconds >= 0:
+        item["elapsedSeconds"] = elapsed_seconds
     return item
+
+
+def _apple_photos_asset_progress_message(item: dict, album_name: str) -> str:
+    filename = item.get("filename") or "Apple Photos asset"
+    status = str(item.get("status") or "").strip()
+    percent = item.get("progressPercent")
+    elapsed = item.get("elapsedSeconds")
+    elapsed_label = f" after {elapsed}s" if isinstance(elapsed, int) and elapsed > 0 else ""
+    if status == "waiting_for_render":
+        return f"Photos reports 100% for {filename}; waiting{elapsed_label} for the rendered JPEG from {album_name}..."
+    if status == "waiting_for_file":
+        return f"Photos reports 100% for {filename}; waiting{elapsed_label} for the exported file from {album_name}..."
+    if status == "waiting_for_photos":
+        return f"Waiting{elapsed_label} for Photos to provide {filename} from {album_name}..."
+    if status == "exporting_resource":
+        return f"Photos is exporting {filename} from {album_name}{elapsed_label}..."
+    if status == "encoding_jpeg":
+        return f"Encoding JPEG for {filename} from {album_name}..."
+    if status == "writing_file":
+        return f"Writing {filename} to the temporary import folder..."
+    if percent is None:
+        return f"Photos is exporting {filename} from {album_name}..."
+    return f"Photos reports {percent}% for {filename} from {album_name}..."
 
 
 def _append_apple_photos_progress_item(album_row: dict, item: dict) -> None:
@@ -7453,11 +7498,7 @@ def _update_apple_photos_import_progress_from_event(progress_id: str, event: dic
             album_row["currentItem"] = item
             progress["currentAlbumLocalIdentifier"] = album_row.get("albumLocalIdentifier") or ""
             progress["currentItem"] = item
-            percent = item.get("progressPercent")
-            if percent is None:
-                progress["message"] = f"Photos is exporting {item['filename']} from {album_row['albumName']}..."
-            else:
-                progress["message"] = f"Photos reports {percent}% for {item['filename']} from {album_row['albumName']}..."
+            progress["message"] = _apple_photos_asset_progress_message(item, album_row["albumName"])
         elif event_name in {"asset_done", "asset_failed"}:
             state = "materialized" if event_name == "asset_done" else str(event.get("status") or "unavailable")
             item = _progress_item_from_event(event, state)

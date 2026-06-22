@@ -372,8 +372,9 @@ Clock state: running
 | 2026-06-22 | 11:47 CEST | 11:53 CEST | 0:06 | Collapsed direct Apple Photos import into a single import-to-Expo flow after confirming Photos albums are the real selection/review surface; background implementation/testing time excluded. |
 | 2026-06-22 | 12:40 CEST | 12:41 CEST | 0:01 | Requested Dock launcher clean-start behavior to stop stale Owner helpers before Apple Photos import sessions; background implementation/testing time excluded. |
 | 2026-06-22 | 16:09 CEST | 16:11 CEST | 0:02 | Diagnosed Apple Photos HEIC temp exports being skipped by Expo import and directed still images to render as Photos JPEGs; background implementation/testing time excluded. |
+| 2026-06-22 | 17:22 CEST | 17:24 CEST | 0:02 | Requested Owner import control simplification and better PhotoKit stuck-export progress reporting; background implementation/testing time excluded. |
 
 ## Totals
 
-Active collaboration time used: 20:56
+Active collaboration time used: 20:58
 Remaining budget: not set

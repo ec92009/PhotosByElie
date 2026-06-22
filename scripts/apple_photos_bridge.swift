@@ -480,7 +480,9 @@ func writeLocalImageResourceAsJPEG(_ asset: PHAsset, to url: URL, allowIcloudDow
 
 func writeRenderedJPEG(_ asset: PHAsset, to url: URL, allowIcloudDownloads: Bool, progressHandler: AssetProgressHandler? = nil) -> Result<Void, Error> {
     let renderOverallTimeoutSeconds: TimeInterval = 240
-    let renderAfterPhotoKitCompleteTimeoutSeconds: TimeInterval = 45
+    let localFallbackAvailable = localImageResourceForJPEGFallback(asset) != nil
+    let renderAfterPhotoKitCompleteTimeoutSeconds: TimeInterval = localFallbackAvailable ? 6 : 45
+    let renderBeforeLocalFallbackTimeoutSeconds: TimeInterval = 10
     let heartbeatSeconds: TimeInterval = 5
     let progressStateLock = NSLock()
     var lastPhotoKitProgress = 0.0
@@ -537,9 +539,17 @@ func writeRenderedJPEG(_ asset: PHAsset, to url: URL, allowIcloudDownloads: Bool
         }
         if let completedFor, completedFor >= renderAfterPhotoKitCompleteTimeoutSeconds {
             PHImageManager.default().cancelImageRequest(requestId)
+            let localFallbackSuffix = localFallbackAvailable ? " Owner will try the local HEIC/source fallback next." : ""
             return .failure(BridgeError(
                 code: "render_completion_timeout",
-                message: "Photos reported the rendered asset at 100% but did not provide the JPEG callback after \(Int(renderAfterPhotoKitCompleteTimeoutSeconds)) seconds."
+                message: "Photos reported the rendered asset at 100% but did not provide the JPEG callback after \(Int(renderAfterPhotoKitCompleteTimeoutSeconds)) seconds.\(localFallbackSuffix)"
+            ))
+        }
+        if localFallbackAvailable && elapsed >= renderBeforeLocalFallbackTimeoutSeconds {
+            PHImageManager.default().cancelImageRequest(requestId)
+            return .failure(BridgeError(
+                code: "render_local_fallback_timeout",
+                message: "Photos did not provide a rendered JPEG within \(Int(renderBeforeLocalFallbackTimeoutSeconds)) seconds. Owner will try the local HEIC/source fallback next."
             ))
         }
         if elapsed >= renderOverallTimeoutSeconds {

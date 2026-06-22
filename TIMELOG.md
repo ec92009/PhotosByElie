@@ -374,8 +374,9 @@ Clock state: running
 | 2026-06-22 | 16:09 CEST | 16:11 CEST | 0:02 | Diagnosed Apple Photos HEIC temp exports being skipped by Expo import and directed still images to render as Photos JPEGs; background implementation/testing time excluded. |
 | 2026-06-22 | 17:22 CEST | 17:24 CEST | 0:02 | Requested Owner import control simplification and better PhotoKit stuck-export progress reporting; background implementation/testing time excluded. |
 | 2026-06-22 | 17:43 CEST | 17:44 CEST | 0:01 | Clarified that the stalled Apple Photos assets are local HEIC files, redirecting the fix to local HEIC-to-JPEG fallback conversion; background implementation/testing time excluded. |
+| 2026-06-22 | 17:57 CEST | 17:58 CEST | 0:01 | Reported local HEIC conversion was still slow, revealing the rendered-JPEG wait timeout rather than actual JPEG conversion as the bottleneck; background implementation/testing time excluded. |
 
 ## Totals
 
-Active collaboration time used: 20:59
+Active collaboration time used: 21:00
 Remaining budget: not set

@@ -30,6 +30,7 @@ const deepInventory = hasFlag("--deep-inventory");
 const useHistory = !hasFlag("--no-history");
 const requestTimeoutMs = Number(valueFor("--request-timeout-ms", "180000")) || 180000;
 const retries = Number(valueFor("--retries", "4")) || 0;
+const deleteConcurrency = Math.max(1, Math.min(64, Number(valueFor("--concurrency", "16")) || 16));
 
 const firstEnv = (...names) => names.map((name) => process.env[name]).find(Boolean) || "";
 const credentials = {
@@ -206,19 +207,31 @@ const listPrefix = async (bucket, prefix) => {
   return keys;
 };
 
-const deleteKeys = async (bucket, keys, progress, scope) => {
-  const deleted = [];
-  for (const key of keys) {
-    if (!dryRun) await s3Request("DELETE", bucket, key);
-    deleted.push(key);
-    progress.completed += 1;
-    if (scope === "public") progress.publicCompleted += 1;
-    if (scope === "private") progress.privateCompleted += 1;
-    console.log(`${dryRun ? "would check" : "checked"} ${bucket}/${key}`);
-    if (progress.completed === 1 || progress.completed % 25 === 0 || progress.completed === progress.total) {
-      deleteProgressLine(progress);
+const deleteCandidates = async (candidates, progress) => {
+  const deleted = { public: [], private: [] };
+  let nextIndex = 0;
+
+  const worker = async () => {
+    while (nextIndex < candidates.length) {
+      const candidate = candidates[nextIndex];
+      nextIndex += 1;
+      if (!dryRun) await s3Request("DELETE", candidate.bucket, candidate.key);
+      deleted[candidate.scope].push(candidate.key);
+      progress.completed += 1;
+      if (candidate.scope === "public") progress.publicCompleted += 1;
+      if (candidate.scope === "private") progress.privateCompleted += 1;
+      console.log(`${dryRun ? "would check" : "checked"} ${candidate.bucket}/${candidate.key}`);
+      if (progress.completed === 1 || progress.completed % 25 === 0 || progress.completed === progress.total) {
+        deleteProgressLine(progress);
+      }
     }
-  }
+  };
+
+  const workers = Array.from(
+    { length: Math.min(deleteConcurrency, candidates.length) },
+    () => worker()
+  );
+  await Promise.all(workers);
   return deleted;
 };
 
@@ -351,6 +364,7 @@ console.log([
 console.log(`DELETE_CONTEXT ${JSON.stringify({
   mode: "double-check",
   deepInventory,
+  concurrency: deleteConcurrency,
   currentDiscardedPhotos: currentDiscardedIds.size,
   historicalDiscardedPhotos: historicalDiscardedIds.size,
   ownerDbDeletedConfirmed: ownerDbConfirmedCount,
@@ -363,8 +377,12 @@ await writeOwnerDbState([
   ...privateDeleteCandidates.map((key) => ({ bucket: privateBucket, key, photo_id: keyPhotoId(key), kind: key.startsWith("masters/") ? "private-master" : "private-render" })),
 ], "marked_for_delete");
 
-const deletedPublic = await deleteKeys(publicBucket, publicDeleteCandidates, deleteProgress, "public");
-const deletedPrivate = await deleteKeys(privateBucket, privateDeleteCandidates, deleteProgress, "private");
+const deleteResults = await deleteCandidates([
+  ...publicDeleteCandidates.map((key) => ({ bucket: publicBucket, key, scope: "public" })),
+  ...privateDeleteCandidates.map((key) => ({ bucket: privateBucket, key, scope: "private" })),
+], deleteProgress);
+const deletedPublic = deleteResults.public;
+const deletedPrivate = deleteResults.private;
 
 await writeOwnerDbState([
   ...deletedPublic.map((key) => ({ bucket: publicBucket, key, photo_id: keyPhotoId(key), kind: key.endsWith(".mp4") ? "public-preview-video" : "public-preview" })),

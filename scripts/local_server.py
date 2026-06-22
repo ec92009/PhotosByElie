@@ -7191,7 +7191,7 @@ def _start_cloud_media_sweep(
         "sourceSelect": _effective_import_select(source_root, source_select),
         "currentPhaseKey": "preflight",
         "phaseScopeKeys": (
-            ["prepare", "preflight", "import-cache", "selected-folder", "catalog", "eligibility", "worker", "sidecar", "gap-fill", "storage", "test", "validate", "commit"]
+            ["prepare", "preflight", "import-cache", "selected-folder", "catalog"]
             if source_root
             else ["prepare", "preflight", "discard-start", "import-cache", "camera", "apple-photo-albums", "leonardo", "catalog", "eligibility", "worker", "sidecar", "gap-fill", "discard-final", "storage", "test", "validate", "commit"]
         ),

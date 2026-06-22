@@ -3,8 +3,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import random
 import re
+import sqlite3
 import subprocess
 from collections import defaultdict
 from pathlib import Path, PurePosixPath
@@ -47,6 +49,7 @@ DEFAULT_UPLOAD_STATE = Path(".review-logs/r2-upload-state.jsonl")
 IMPORT_CACHE_ROOT = Path("tmp/import-cache")
 HIDDEN_DATA_PATH = Path("assets/hidden/hidden-data.json")
 EXPO_MANIFEST_PATH = Path("assets/expo-manifest.json")
+PUBLIC_CATALOG_DB_PATH = Path("assets/catalog/photosbyelie.sqlite")
 DEFAULT_KEYWORD_BLACKLIST = Path("assets/owner-actions/keyword-blacklist.json")
 DISCARDED_TOMBSTONE_PATH = Path("assets/discarded/discarded-photo-ids.json")
 DISCARDED_MEDIA_MANIFEST_PATH = Path("assets/discarded-media-manifest.json")
@@ -60,6 +63,23 @@ def refresh_public_catalog_artifacts(repo_root: Path) -> None:
         stdout=subprocess.DEVNULL,
     )
 HOME_SAMPLE_COUNT = 4
+
+
+def existing_public_catalog_media_count(repo_root: Path) -> int:
+    path = repo_root / PUBLIC_CATALOG_DB_PATH
+    if not path.exists():
+        return 0
+    try:
+        conn = sqlite3.connect(path)
+        row = conn.execute("SELECT COUNT(*) FROM media_items").fetchone()
+        return int(row[0] or 0) if row else 0
+    except sqlite3.Error:
+        return 0
+    finally:
+        try:
+            conn.close()
+        except UnboundLocalError:
+            pass
 
 
 def ensure_state_folders(root: Path) -> None:
@@ -959,6 +979,15 @@ def write_photos_data(
         reserve_only_ids=reserve_only_ids,
     )
     regular_rows = [item for slug in PUBLIC_ORDER for item in regular_groups.get(slug, [])]
+    if (
+        not regular_rows
+        and existing_public_catalog_media_count(repo_root) > 0
+        and os.environ.get("PBE_ALLOW_EMPTY_PUBLIC_CATALOG") != "1"
+    ):
+        raise RuntimeError(
+            "Refusing to overwrite a populated public catalog with zero publishable photos. "
+            "Rebuild the full import cache or set PBE_ALLOW_EMPTY_PUBLIC_CATALOG=1 if this is intentional."
+        )
     if sync_regular_assets:
         copy_regular_assets(repo_root, regular_rows)
     if write_regular_state:

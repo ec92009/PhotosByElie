@@ -347,6 +347,14 @@ else
     --discarded-tombstone assets/discarded/discarded-photo-ids.json
 fi
 
+if [[ -n "$SELECTED_IMPORT_SOURCE_ROOT" ]]; then
+  phase catalog "Keep public catalog"
+  echo "Selected source import is partial; preserving the existing public catalog until Owner metadata review applies publishable rows."
+  done_phase catalog
+  mkdir -p "$IMPORT_CACHE_ROOT"
+  exit 0
+fi
+
 abort_if_catalog_sources_incomplete
 
 phase catalog "Export catalog"

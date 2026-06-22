@@ -6336,7 +6336,7 @@
       };
     }
     const confirmText = selectedFolder
-      ? `Start the lock-guarded Expo import from "${selectedFolder.name}" now?\n\nThe sweep scans this selected gallery folder, imports developed photo/video files it needs, renders/uploads missing media, refreshes manifests, validates, commits, and pushes changes.`
+      ? `Start the lock-guarded Expo import from "${selectedFolder.name}" now?\n\nThe sweep scans this selected gallery folder, imports developed photo/video files, uploads the media it needs, and preserves the public catalog until Owner review applies publishable rows.`
       : "Start the broad lock-guarded Expo import from all gallery source folders now?\n\nThis scans Camera, Apple Photos, and AI sources, then refreshes manifests, validates, commits, and pushes changes. Real Estate imports live in the Real Estate tab.";
     if (!skipConfirm) {
       const ok = window.confirm(confirmText);

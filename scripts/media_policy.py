@@ -37,6 +37,10 @@ DEVELOPED_SOURCE_TYPES = {
     for extension in DEVELOPED_IMAGE_EXTENSIONS | DEVELOPED_VIDEO_EXTENSIONS
 }
 RAW_SOURCE_TYPES = {extension.removeprefix(".").upper() for extension in RAW_IMAGE_EXTENSIONS}
+PUBLIC_SOURCE_FILE_EXTRA_KEYS = (
+    "apple_photos_album",
+    "gps",
+)
 
 
 def normalized_source_type(value: object) -> str:
@@ -46,6 +50,14 @@ def normalized_source_type(value: object) -> str:
     if text == "TIFF":
         return "TIF"
     return text
+
+
+def public_source_file_extras(source: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: source[key]
+        for key in PUBLIC_SOURCE_FILE_EXTRA_KEYS
+        if key in source and source.get(key) not in (None, "", [])
+    }
 
 
 def source_file_entries(row: dict[str, Any]) -> list[dict[str, Any]]:
@@ -71,6 +83,7 @@ def source_file_entries(row: dict[str, Any]) -> list[dict[str, Any]]:
             "path": row.get("relative_path"),
             "type": source_type,
             "bytes": source.get("bytes"),
+            **public_source_file_extras(source),
         }
     ]
 

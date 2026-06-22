@@ -85,6 +85,31 @@ test("local rules clean internal markers and still meet the keyword floor", () =
   assert.ok(proposal.keywordTargetMet);
 });
 
+test("Apple Photos album context can title imported filename photos", () => {
+  const proposal = proposalForPhoto({
+    photo: {
+      id: "img-4401-test",
+      sourceOrigin: "camera",
+      metadata: [{ label: "Original size", value: "4032 x 3024" }],
+    },
+    galleryLabel: "Spain",
+    currentTitle: "IMG_4401",
+    currentKeywords: [],
+    currentKeywordsRaw: "",
+    blacklist: [],
+    sourceFile: {
+      path: "apple-photos-import/20260622T140000Z-batch/0001-IMG_4401.jpg",
+      apple_photos_album: { title: "2023 Nerja" },
+      gps: { latitude: 36.746, longitude: -3.879 },
+    },
+    capture: { raw: "2023:06:04 12:00:00", sort: "2023-06-04T12:00:00" },
+  });
+  assert.equal(proposal.title, "Nerja");
+  assert.ok(proposal.keywords.includes("Nerja"));
+  assert.ok(proposal.keywords.includes("Spain"));
+  assert.notEqual(proposal.status, "needs_owner_context");
+});
+
 test("Codex model invocation uses the configured CLI and output file", () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "pbe-title-keyword-test-"));
   const fakeCodex = path.join(tempDir, "codex");

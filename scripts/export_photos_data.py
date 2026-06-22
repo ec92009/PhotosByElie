@@ -381,6 +381,7 @@ def photo_object_data(
         "imageSrc": detail_rel,
         "metadata": normalize_metadata(row),
         "media": media_object(row, gallery_rel, detail_rel),
+        "gps": row.get("gps") or {},
         "sourceFiles": source_files(row),
     }
 
@@ -409,6 +410,7 @@ def photo_object_lines(
         f"        imageSrc: {js(photo['imageSrc'])},",
         f"        metadata: {json.dumps(photo['metadata'], ensure_ascii=False, indent=10)},",
         f"        media: {json.dumps(photo['media'], ensure_ascii=False, indent=10)},",
+        f"        gps: {json.dumps(photo['gps'], ensure_ascii=False, indent=10)},",
         f"        sourceFiles: {json.dumps(photo['sourceFiles'], ensure_ascii=False, indent=10)}",
         "      },",
     ]

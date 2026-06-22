@@ -376,8 +376,9 @@ Clock state: running
 | 2026-06-22 | 17:43 CEST | 17:44 CEST | 0:01 | Clarified that the stalled Apple Photos assets are local HEIC files, redirecting the fix to local HEIC-to-JPEG fallback conversion; background implementation/testing time excluded. |
 | 2026-06-22 | 17:57 CEST | 17:58 CEST | 0:01 | Reported local HEIC conversion was still slow, revealing the rendered-JPEG wait timeout rather than actual JPEG conversion as the bottleneck; background implementation/testing time excluded. |
 | 2026-06-22 | 18:15 CEST | 18:19 CEST | 0:04 | Diagnosed selected Apple Photos imports entering the full publish/test path and Waste Basket R2 purge running serially; background implementation/testing time excluded. |
+| 2026-06-22 | 19:16 CEST | 19:18 CEST | 0:02 | Requested Apple Photos sidecar GPS/date/album metadata feed import fallbacks and Title/Keyword Review hints; background implementation/testing time excluded. |
 
 ## Totals
 
-Active collaboration time used: 21:04
+Active collaboration time used: 21:06
 Remaining budget: not set

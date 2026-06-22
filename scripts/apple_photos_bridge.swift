@@ -1,5 +1,6 @@
 #!/usr/bin/env swift
 import AppKit
+import CoreLocation
 import Foundation
 import ImageIO
 import Photos
@@ -147,6 +148,25 @@ func resourceRows(_ asset: PHAsset) -> [[String: Any]] {
     }
 }
 
+func assetLocationRow(_ asset: PHAsset) -> [String: Any]? {
+    guard let location = asset.location else { return nil }
+    var row: [String: Any] = [
+        "latitude": location.coordinate.latitude,
+        "longitude": location.coordinate.longitude,
+        "timestamp": isoDate(location.timestamp),
+    ]
+    if location.altitude.isFinite {
+        row["altitude"] = location.altitude
+    }
+    if location.horizontalAccuracy >= 0 {
+        row["horizontalAccuracy"] = location.horizontalAccuracy
+    }
+    if location.verticalAccuracy >= 0 {
+        row["verticalAccuracy"] = location.verticalAccuracy
+    }
+    return row
+}
+
 let rawFileExtensions: Set<String> = [".raw", ".dng", ".nef", ".cr2", ".cr3", ".arw", ".raf"]
 
 struct AssetPlan {
@@ -208,7 +228,7 @@ func assetRow(_ asset: PHAsset, index: Int) -> [String: Any] {
     let reason = eligible
         ? (mediaType == "photo" ? "Photos still image will import as the current rendered JPG from Photos." : "")
         : "No supported photo/video resource found."
-    return [
+    var row: [String: Any] = [
         "index": index,
         "localIdentifier": asset.localIdentifier,
         "sourceAnchor": "apple-photos://\(asset.localIdentifier)",
@@ -224,6 +244,10 @@ func assetRow(_ asset: PHAsset, index: Int) -> [String: Any] {
         "status": eligible ? "candidate" : "unsupported",
         "reason": reason,
     ]
+    if let location = assetLocationRow(asset) {
+        row["location"] = location
+    }
+    return row
 }
 
 func burstSurvivorPositions(size: Int) -> Set<Int> {
@@ -697,6 +721,7 @@ func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterB
         let asset = plan.asset
         let index = plan.index - 1
         var row = plan.row
+        row["album"] = albumInfo
         guard (row["eligible"] as? Bool) == true else {
             itemRows.append(row)
             continue
@@ -782,6 +807,7 @@ func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterB
                 materializedCount += 1
                 sidecarRows.append([
                     "relative_path": relativePath,
+                    "album": albumInfo,
                     "source_anchor": [
                         "path": "apple-photos://\(asset.localIdentifier)",
                         "modified_at": isoDate(asset.modificationDate ?? asset.creationDate),
@@ -892,6 +918,7 @@ func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterB
             materializedCount += 1
             sidecarRows.append([
                 "relative_path": relativePath,
+                "album": albumInfo,
                 "source_anchor": [
                     "path": "apple-photos://\(asset.localIdentifier)",
                     "modified_at": isoDate(asset.modificationDate ?? asset.creationDate),

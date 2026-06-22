@@ -448,6 +448,37 @@ const usefulPathParts = (sourcePath) => {
   });
 };
 
+const contextTextParts = (value) => {
+  const base = cleanText(value).replace(/^\d{4}\s+/, "").trim();
+  if (!base) return [];
+  return uniqueKeywords(base
+    .split(/\s*,\s*|\s+-\s+|\s+\/\s+|\s+·\s+/)
+    .map((part) => cleanText(part).replace(/^\d{4}\s+/, "").trim())
+    .filter((part) => part && !/^\d{1,4}$/.test(part)));
+};
+
+const sourceAlbumFromPhoto = (photo, sourceFile = {}) => {
+  const candidates = [
+    sourceFile?.apple_photos_album?.title,
+    sourceFile?.applePhotosAlbum?.title,
+    sourceFile?.apple_photos?.album?.title,
+    sourceFile?.applePhotos?.album?.title,
+    metadataValue(photo, "Apple Photos album"),
+    metadataValue(photo, "Album"),
+  ];
+  return cleanText(candidates.find((candidate) => String(candidate || "").trim()) || "");
+};
+
+const sourceGpsFromPhoto = (photo, sourceFile = {}) => {
+  const candidates = [
+    sourceFile?.gps,
+    sourceFile?.apple_photos?.location,
+    sourceFile?.applePhotos?.location,
+    photo?.gps,
+  ];
+  return candidates.find((candidate) => candidate && typeof candidate === "object" && !Array.isArray(candidate)) || {};
+};
+
 const compactVenue = (value) => titleCase(value)
   .replace(/^Collection Of The\s+/i, "")
   .replace(/^Colleccion Del\s+/i, "")
@@ -616,31 +647,41 @@ const metadataExpansionKeywords = ({ photo, galleryLabel, context, currentTitle,
   return uniqueKeywords(keywords);
 };
 
-const contextFromSource = (sourcePath, galleryLabel) => {
-  const parts = usefulPathParts(sourcePath).map(titleCase).filter(Boolean);
-  const city = parts.find((part) => /malaga|valencia|paris|madrid|barcelona|lisbon|porto|rome|venice|pisa|bratislava|new york|miami|mexico/i.test(part)) || "";
+const CONTEXT_CITY_PATTERN = /malaga|málaga|valencia|paris|madrid|barcelona|lisbon|porto|rome|venice|pisa|bratislava|new york|miami|mexico|ronda|nerja|albi|bilbao|seville|sevilla|cordoba|córdoba|granada|cadiz|florence|san gimignano|aveiro|coimbra|cascais/i;
+
+const contextFromSource = (sourcePath, galleryLabel, hints = {}) => {
+  const hintParts = [
+    ...contextTextParts(hints.albumTitle),
+    ...contextTextParts(hints.location),
+  ];
+  const parts = uniqueKeywords([...usefulPathParts(sourcePath), ...hintParts]).map(titleCase).filter(Boolean);
+  const city = parts.find((part) => CONTEXT_CITY_PATTERN.test(part)) || "";
   const venue = parts.find((part) => part !== city && /aquarium|museum|museo|cathedral|church|castle|palace|beach|coast|garden|park|bridge|tower|street|market|gallery|collection|colleccion|coleccion/i.test(part)) || "";
   const cleanedVenue = venue ? compactVenue(venue) : "";
   const titleContext = cleanedVenue && city
     ? `${cleanedVenue}, ${city}`
     : cleanedVenue || city || "";
+  const sourceText = `${cleanedVenue} ${sourcePath} ${hints.albumTitle || ""} ${hints.location || ""}`;
   const inferredKeywords = [
     galleryLabel,
     city,
     cleanedVenue,
-    /museo|museum|collection|colleccion|coleccion/i.test(`${cleanedVenue} ${sourcePath}`) ? "Museum" : "",
-    /museo|museum|gallery|art|collection|colleccion|coleccion/i.test(`${cleanedVenue} ${sourcePath}`) ? "Art" : "",
-    /aquarium/i.test(`${cleanedVenue} ${sourcePath}`) ? "Aquarium" : "",
-    /aquarium/i.test(`${cleanedVenue} ${sourcePath}`) ? "Marine life" : "",
-    /church|cathedral/i.test(`${cleanedVenue} ${sourcePath}`) ? "Church" : "",
-    /beach|coast|sea|ocean/i.test(`${cleanedVenue} ${sourcePath}`) ? "Coast" : "",
-    /street|market|city/i.test(`${cleanedVenue} ${sourcePath}`) ? "City" : "",
+    ...hintParts.map(titleCase),
+    /museo|museum|collection|colleccion|coleccion/i.test(sourceText) ? "Museum" : "",
+    /museo|museum|gallery|art|collection|colleccion|coleccion/i.test(sourceText) ? "Art" : "",
+    /aquarium/i.test(sourceText) ? "Aquarium" : "",
+    /aquarium/i.test(sourceText) ? "Marine life" : "",
+    /church|cathedral/i.test(sourceText) ? "Church" : "",
+    /beach|coast|sea|ocean/i.test(sourceText) ? "Coast" : "",
+    /street|market|city/i.test(sourceText) ? "City" : "",
   ];
   return {
     parts,
     city,
     venue: cleanedVenue,
     title: titleContext,
+    albumTitle: hints.albumTitle || "",
+    location: hints.location || "",
     keywords: uniqueKeywords(inferredKeywords.filter(Boolean)),
   };
 };
@@ -704,7 +745,9 @@ const titleFromKeywordHints = ({ keywords, galleryLabel, context }) => {
 };
 
 const proposalForPhoto = ({ photo, galleryLabel, currentTitle, currentKeywords, currentKeywordsRaw, blacklist, sourceFile, capture }) => {
-  const context = contextFromSource(sourceFile?.path || "", galleryLabel);
+  const albumTitle = sourceAlbumFromPhoto(photo, sourceFile);
+  const location = metadataValue(photo, "Location");
+  const context = contextFromSource(sourceFile?.path || "", galleryLabel, { albumTitle, location });
   const withoutBlacklisted = currentKeywords.filter((keyword) => !hasBlacklistedTerm(keyword, blacklist));
   const removedBlacklisted = currentKeywords.filter((keyword) => hasBlacklistedTerm(keyword, blacklist));
   const placeholder = isPlaceholderTitle(currentTitle, sourceFile?.path || metadataValue(photo, "Original file"));
@@ -858,6 +901,8 @@ const modelPromptForPhoto = ({
 }) => {
   const media = photo?.media || {};
   const preview = media?.publicPreview || {};
+  const albumTitle = sourceAlbumFromPhoto(photo, sourceFile);
+  const gps = sourceGpsFromPhoto(photo, sourceFile);
   const context = {
     photo_id: String(photo?.id || ""),
     gallery: galleryLabel,
@@ -868,6 +913,8 @@ const modelPromptForPhoto = ({
     source_origin: String(photo?.sourceOrigin || ""),
     pricing_tier: String(photo?.pricingTier || ""),
     location: metadataValue(photo, "Location"),
+    apple_photos_album: albumTitle,
+    gps,
     camera: meta.camera,
     lens: meta.lens,
     exposure: meta.exposure,
@@ -1540,6 +1587,9 @@ const main = async () => {
     const sourceFile = Array.isArray(photo?.sourceFiles) && photo.sourceFiles.length && typeof photo.sourceFiles[0] === "object"
       ? photo.sourceFiles[0]
       : {};
+    const sourceAlbumTitle = sourceAlbumFromPhoto(photo, sourceFile);
+    const sourcePlaceHint = metadataValue(photo, "Location");
+    const sourceGps = sourceGpsFromPhoto(photo, sourceFile);
     const localProposal = proposalForPhoto({
       photo,
       galleryLabel: row.galleryLabel,
@@ -1621,6 +1671,9 @@ const main = async () => {
       source: {
         origin: String(photo?.sourceOrigin || ""),
         pricingTier: String(photo?.pricingTier || ""),
+        album: sourceAlbumTitle,
+        placeHint: sourcePlaceHint,
+        gps: sourceGps,
         file: {
           path: String(sourceFile?.path || ""),
           type: String(sourceFile?.type || ""),

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import unittest
 import sys
+import tempfile
 from pathlib import Path
 
 SCRIPT_ROOT = Path(__file__).resolve().parent
@@ -11,7 +12,14 @@ if str(SCRIPT_ROOT) not in sys.path:
 
 from export_photos_data import dedupe_rows_by_source_anchor
 from import_source_anchor import photo_id_for_source_path, source_paths_from_row
-from build_lightroom_thumbnails import manifest_match_for_source, manifest_source_indexes, photo_id_for_import
+from build_lightroom_thumbnails import (
+    infer_gallery_country_from_gps,
+    manifest_match_for_source,
+    manifest_source_indexes,
+    parse_exif_datetime,
+    photo_id_for_import,
+    source_file_facts_for_import,
+)
 
 
 class ImportSourceAnchorTest(unittest.TestCase):
@@ -98,6 +106,29 @@ class ImportSourceAnchorTest(unittest.TestCase):
 
         self.assertEqual(matched_row, old)
         self.assertEqual(photo_id_for_import("new-export/IMG_0001.jpeg", source_anchor, matched_row), "apple-id")
+
+    def test_apple_photos_override_preserves_album_and_decimal_gps(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            source = Path(temp_dir) / "0001-IMG_4401.jpg"
+            source.write_bytes(b"jpeg")
+            override = {
+                "album": {"title": "2023 Nerja", "kind": "album"},
+                "source_anchor": {"path": "apple-photos://A1B2/L0/001"},
+                "apple_photos": {
+                    "filename": "IMG_4401.jpg",
+                    "creationDate": "2023-06-04T12:00:00Z",
+                    "location": {"latitude": 36.746, "longitude": -3.879},
+                },
+            }
+
+            facts = source_file_facts_for_import(source, override)
+
+        self.assertEqual(facts["apple_photos_album"]["title"], "2023 Nerja")
+        self.assertEqual(facts["source_anchor_path"], "apple-photos://A1B2/L0/001")
+        self.assertEqual(facts["gps"]["GPSLatitudeDecimal"], 36.746)
+        self.assertEqual(facts["gps"]["GPSLongitudeDecimal"], -3.879)
+        self.assertEqual(infer_gallery_country_from_gps(facts["gps"]), {"slug": "spain", "label": "Spain", "source": "gps_hint"})
+        self.assertEqual(parse_exif_datetime("2023-06-04T12:00:00Z")["sort"], "2023-06-04T12:00:00")
 
 
 if __name__ == "__main__":

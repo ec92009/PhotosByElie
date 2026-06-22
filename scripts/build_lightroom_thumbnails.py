@@ -749,10 +749,42 @@ def source_identity_for_import(source: Path, override: dict[str, Any] | None = N
     return normalize_import_source_path(anchor.get("path")) or normalize_import_source_path(source) or str(source)
 
 
+def apple_photos_payload_from_override(override: dict[str, Any] | None) -> dict[str, Any]:
+    if not isinstance(override, dict):
+        return {}
+    payload = override.get("apple_photos")
+    return payload if isinstance(payload, dict) else {}
+
+
+def apple_photos_album_from_override(override: dict[str, Any] | None) -> dict[str, Any]:
+    if not isinstance(override, dict):
+        return {}
+    payload = apple_photos_payload_from_override(override)
+    for candidate in (override.get("album"), payload.get("album")):
+        if isinstance(candidate, dict) and any(str(value or "").strip() for value in candidate.values()):
+            return {str(key): value for key, value in candidate.items() if value not in (None, "")}
+    return {}
+
+
+def apple_photos_location_from_override(override: dict[str, Any] | None) -> dict[str, Any]:
+    payload = apple_photos_payload_from_override(override)
+    location = payload.get("location")
+    if not isinstance(location, dict):
+        return {}
+    return {str(key): value for key, value in location.items() if value not in (None, "")}
+
+
 def source_file_facts_for_import(source: Path, override: dict[str, Any] | None = None) -> dict[str, Any]:
     facts = source_file_facts(source)
-    if override and isinstance(override.get("apple_photos"), dict):
-        facts["apple_photos"] = override["apple_photos"]
+    apple_photos = apple_photos_payload_from_override(override)
+    if apple_photos:
+        facts["apple_photos"] = apple_photos
+    album = apple_photos_album_from_override(override)
+    if album:
+        facts["apple_photos_album"] = album
+    apple_location = apple_photos_location_from_override(override)
+    if apple_location:
+        facts["gps"] = apple_photos_gps_from_location(apple_location)
     if override and isinstance(override.get("source_anchor"), dict):
         facts["source_anchor_path"] = override["source_anchor"].get("path")
     return facts
@@ -877,9 +909,38 @@ def dms_to_decimal(value: Any) -> float | None:
     return decimal
 
 
+def apple_photos_gps_from_location(location: dict[str, Any]) -> dict[str, Any]:
+    gps = {str(key): value for key, value in location.items() if value not in (None, "")}
+    latitude = number_value(location.get("latitude"))
+    longitude = number_value(location.get("longitude"))
+    if latitude is not None:
+        gps["GPSLatitudeDecimal"] = latitude
+    if longitude is not None:
+        gps["GPSLongitudeDecimal"] = longitude
+    if latitude is not None and longitude is not None:
+        gps.setdefault("source", "apple_photos")
+    return gps
+
+
+def gps_decimal_values(gps: dict[str, Any]) -> tuple[float | None, float | None]:
+    latitude = number_value(metadata_value(gps, "latitude", "GPSLatitudeDecimal", "Latitude"))
+    longitude = number_value(metadata_value(gps, "longitude", "GPSLongitudeDecimal", "Longitude"))
+    if latitude is None:
+        latitude = dms_to_decimal(gps.get("GPSLatitude"))
+    if longitude is None:
+        longitude = dms_to_decimal(gps.get("GPSLongitude"))
+    return latitude, longitude
+
+
+def gps_coordinate_label(gps: dict[str, Any]) -> str:
+    latitude, longitude = gps_decimal_values(gps)
+    if latitude is None or longitude is None:
+        return ""
+    return f"{latitude:.6f}, {longitude:.6f}"
+
+
 def infer_gallery_country_from_gps(gps: dict[str, Any]) -> dict[str, str] | None:
-    latitude = dms_to_decimal(gps.get("GPSLatitude"))
-    longitude = dms_to_decimal(gps.get("GPSLongitude"))
+    latitude, longitude = gps_decimal_values(gps)
     if latitude is None or longitude is None:
         return None
     matches = []
@@ -909,6 +970,8 @@ def parse_exif_datetime(value: Any) -> dict[str, Any]:
         return {}
     text = str(value)
     match = re.match(r"^(\d{4}):(\d{2}):(\d{2})[ T](\d{2}):(\d{2}):(\d{2})", text)
+    if not match:
+        match = re.match(r"^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})", text)
     if not match:
         return {"raw": text}
     year, month, day, hour, minute, second = (int(part) for part in match.groups())
@@ -981,7 +1044,13 @@ def dimension_facts(meta: dict[str, Any]) -> dict[str, Any]:
     return facts
 
 
-def merged_selected_metadata(source: Path, metadata_path: Path, args: argparse.Namespace, relative_path: str = "") -> dict[str, Any]:
+def merged_selected_metadata(
+    source: Path,
+    metadata_path: Path,
+    args: argparse.Namespace,
+    relative_path: str = "",
+    source_override: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     extract_gps = args.include_gps or not args.redact_gps
     include_private_keywords = args.include_private_keywords or not args.redact_private_keywords
     gps_tags = ["GPSLatitude", "GPSLongitude", "GPSAltitude", "GPSPosition"]
@@ -990,22 +1059,35 @@ def merged_selected_metadata(source: Path, metadata_path: Path, args: argparse.N
     lightroom_meta = run_exiftool_tags(metadata_path, DISPLAY_LIGHTROOM_TAGS)
     merged = {**source_meta, **{key: value for key, value in lightroom_meta.items() if value not in (None, "")}}
     merged.pop("SourceFile", None)
+    apple_photos = apple_photos_payload_from_override(source_override)
+    apple_album = apple_photos_album_from_override(source_override)
+    apple_album_title = str(apple_album.get("title") or "").strip()
+    apple_location = apple_photos_location_from_override(source_override)
+    if not metadata_value(merged, "DateTimeOriginal", "CreateDate") and apple_photos.get("creationDate"):
+        merged["CreateDate"] = apple_photos["creationDate"]
     gps = {key: merged.pop(key) for key in gps_tags if key in merged}
+    apple_gps = apple_photos_gps_from_location(apple_location) if apple_location else {}
+    for key, value in apple_gps.items():
+        if value not in (None, "") and gps.get(key) in (None, ""):
+            gps[key] = value
     keywords = cleaned_keywords(merged, include_private_keywords, args.keyword_blacklist_values)
     capture = parse_exif_datetime(metadata_value(merged, "DateTimeOriginal", "CreateDate"))
     dimensions = dimension_facts(merged)
+    gps_label = gps_coordinate_label(gps)
     display = []
     display_specs = [
         ("Metadata title", metadata_value(merged, "Title")),
         ("Description", metadata_value(merged, "Description", "Caption-Abstract")),
         ("Keywords", ", ".join(keywords) if keywords else None),
         ("Captured", metadata_value(merged, "DateTimeOriginal", "CreateDate")),
+        ("Apple Photos album", apple_album_title),
         ("Camera", " ".join(str(part) for part in [metadata_value(merged, "Make"), metadata_value(merged, "Model")] if part)),
         ("Lens", metadata_value(merged, "Lens", "LensModel")),
         ("Exposure", exposure_label(merged)),
         ("Focal length", focal_length_label(merged)),
         ("Duration", metadata_value(merged, "Duration", "MediaDuration")),
         ("Location", location_label(merged)),
+        ("GPS", gps_label),
         ("Software", metadata_value(merged, "Software")),
         ("Color profile", metadata_value(merged, "ProfileDescription", "ColorSpace")),
         ("Original file", source.name),
@@ -1022,7 +1104,7 @@ def merged_selected_metadata(source: Path, metadata_path: Path, args: argparse.N
     }
     gallery_country = (
         forced_gallery_country(args.force_country)
-        or infer_gallery_country(location, keywords, [relative_path, *Path(relative_path).parts])
+        or infer_gallery_country(location, keywords, [relative_path, *Path(relative_path).parts, apple_album_title])
     )
     if gallery_country["slug"] == "unknown" and gps:
         gallery_country = infer_gallery_country_from_gps(gps) or gallery_country
@@ -1034,6 +1116,8 @@ def merged_selected_metadata(source: Path, metadata_path: Path, args: argparse.N
         "dimensions": dimensions,
         "location": location,
         "gallery_country": gallery_country,
+        "apple_photos_album": apple_album,
+        "apple_photos_location": apple_location,
         "raw": merged,
         "gps": gps,
         "display": display,
@@ -2479,7 +2563,7 @@ def process_import_item(
             emit_import_event("PHOTO_DONE", photoId=slug, relativePath=relative_path, sourcePath=str(source), status="done")
             result["completed"] = 1
             return result
-        selected_metadata = merged_selected_metadata(source, metadata_path, args, relative_path)
+        selected_metadata = merged_selected_metadata(source, metadata_path, args, relative_path, source_override)
         gallery_country = selected_metadata["gallery_country"]
         media_type = "video" if is_video(source) else "photo"
         gallery_path, detail_path = derivative_paths(args.output_root, gallery_country["slug"], slug, media_type)
@@ -2504,6 +2588,7 @@ def process_import_item(
         row["capture"] = selected_metadata["capture"]
         row["dimensions"] = selected_metadata["dimensions"]
         row["location"] = selected_metadata["location"]
+        row["gps"] = selected_metadata["gps"]
         row["source_file"] = source_file_facts_for_import(source, source_override)
         row["metadata"] = selected_metadata["display"]
         row["raw_metadata"] = selected_metadata["raw"]

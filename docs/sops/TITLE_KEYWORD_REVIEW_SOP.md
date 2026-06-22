@@ -33,6 +33,7 @@ Proposal/rejection state lives in local `assets/owner-actions/Owner.sqlite`, whi
    - Exclude blacklisted keywords from proposed keywords, without using the blacklist to filter photos.
    - Prefer preview-pixel/vision inspection when available.
    - Use catalog/source path metadata only as fallback, and mark uncertain rows `needs_owner_context`.
+   - For direct Apple Photos imports, sidecar album title, creation date, PhotoKit GPS, and location facts exposed through `sourceFiles` are allowed proposal hints; treat album names as hints, not proof of the visible subject.
    - Avoid filename-style titles as improved proposals.
    - Attempt at least 10 proposed keywords per photo.
    - Record the actual generator/model used for every proposal. Rework should escalate to the next stronger available model/generator level; park only after the model ladder is exhausted or the Owner explicitly parks/blocks the photo.

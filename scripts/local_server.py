@@ -2798,6 +2798,24 @@ def _manifest_capture(row: dict) -> str:
     return str(capture.get("sort") or capture.get("datetime") or capture.get("raw") or _metadata_label_value(row, "Captured") or "")
 
 
+def _manifest_location(row: dict) -> str:
+    location = row.get("location")
+    if isinstance(location, dict):
+        parts = []
+        seen = set()
+        for key in ("location", "city", "region", "country"):
+            value = str(location.get(key) or "").strip()
+            comparable = value.casefold()
+            if value and comparable not in seen:
+                parts.append(value)
+                seen.add(comparable)
+        if parts:
+            return ", ".join(parts)
+    if location:
+        return str(location).strip()
+    return _metadata_label_value(row, "Location")
+
+
 def _manifest_gallery(row: dict) -> tuple[str, str]:
     gallery = row.get("gallery_country") if isinstance(row.get("gallery_country"), dict) else {}
     slug = str(gallery.get("slug") or row.get("gallery_key") or "unknown").strip() or "unknown"
@@ -2840,7 +2858,7 @@ def _manifest_catalog_row(row: dict) -> dict:
         "full_height": int(dimensions.get("height") or 0),
         "full_bytes": int(source_file.get("bytes") or 0),
         "full_duration_seconds": float((dimensions.get("duration_seconds") or dimensions.get("duration") or 0) or 0),
-        "location": str(row.get("location") or _metadata_label_value(row, "Location") or ""),
+        "location": _manifest_location(row),
     }
 
 

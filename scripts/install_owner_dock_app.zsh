@@ -22,9 +22,9 @@ while (($#)); do
       cat <<'USAGE'
 Usage: zsh scripts/install_owner_dock_app.zsh [--app-dir PATH] [--add-to-dock] [--open]
 
-Builds a local Dock-friendly "PhotosByElie Owner.app" launcher. The app starts
-the localhost Owner helper when needed, then opens Safari to the Owner Imports
-tab so direct Apple Photos import is ready.
+Builds a local Dock-friendly "PhotosByElie Owner.app" launcher. The app stops
+stale Owner helpers, starts a fresh localhost Owner helper, then opens Safari
+to the Owner Imports tab so direct Apple Photos import is ready.
 USAGE
       exit 0
       ;;
@@ -76,7 +76,7 @@ cat > "$app_contents/Info.plist" <<PLIST
   <key>NSHighResolutionCapable</key>
   <true/>
   <key>NSPhotoLibraryUsageDescription</key>
-  <string>PhotosByElie Owner imports selected Apple Photos albums into a local review folder before publishing.</string>
+  <string>PhotosByElie Owner imports selected Apple Photos albums through a local temporary folder before publishing.</string>
 </dict>
 </plist>
 PLIST
@@ -88,6 +88,7 @@ set -euo pipefail
 export PBE_REPO_ROOT="$repo_root"
 export PBE_OWNER_PATH="\${PBE_OWNER_PATH:-owner.html?tab=imports}"
 export PBE_OWNER_PREFER_OWN_HELPER=1
+export PBE_OWNER_CLEAN_START=1
 export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:\${PATH:-}"
 
 cd "\$PBE_REPO_ROOT"

@@ -17,12 +17,14 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 HELPER = REPO_ROOT / "scripts" / "local_server.py"
+APPLE_PHOTOS_BRIDGE = REPO_ROOT / "scripts" / "apple_photos_bridge.swift"
 LOG_DIR = Path.home() / "Library" / "Logs" / "PhotosByElie"
 LOG_PATH = LOG_DIR / "owner-helper.log"
 PORT_START = 8000
 PORT_LIMIT = 8100
 OWNER_PATH = os.environ.get("PBE_OWNER_PATH", "owner.html?tab=imports")
 PREFER_OWN_HELPER = os.environ.get("PBE_OWNER_PREFER_OWN_HELPER", "").lower() in {"1", "true", "yes"}
+CLEAN_START = os.environ.get("PBE_OWNER_CLEAN_START", "1").lower() not in {"0", "false", "no", "off"}
 PATH_PREFIXES = (
     "/opt/homebrew/bin",
     "/usr/local/bin",
@@ -59,6 +61,125 @@ def helper_ready(port: int) -> bool:
             return 200 <= response.status < 500
     except (OSError, urllib.error.URLError):
         return False
+
+
+def process_alive(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+        return True
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+
+
+def owner_helper_listener_pids() -> set[int]:
+    pids: set[int] = set()
+    for port in range(PORT_START, PORT_LIMIT):
+        if not helper_ready(port):
+            continue
+        result = subprocess.run(
+            ["lsof", f"-tiTCP:{port}", "-sTCP:LISTEN"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        for line in result.stdout.splitlines():
+            try:
+                pids.add(int(line.strip()))
+            except ValueError:
+                continue
+    return pids
+
+
+def owner_helper_command_pids() -> set[int]:
+    pids: set[int] = set()
+    helper_path = str(HELPER)
+    result = subprocess.run(
+        ["ps", "-axo", "pid=,command="],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    for line in result.stdout.splitlines():
+        row = line.strip()
+        if not row:
+            continue
+        try:
+            pid_text, command = row.split(maxsplit=1)
+            pid = int(pid_text)
+        except ValueError:
+            continue
+        if pid == os.getpid():
+            continue
+        if helper_path in command:
+            pids.add(pid)
+    return pids
+
+
+def apple_photos_bridge_pids() -> set[int]:
+    pids: set[int] = set()
+    bridge_path = str(APPLE_PHOTOS_BRIDGE)
+    result = subprocess.run(
+        ["ps", "-axo", "pid=,command="],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    for line in result.stdout.splitlines():
+        row = line.strip()
+        if not row:
+            continue
+        try:
+            pid_text, command = row.split(maxsplit=1)
+            pid = int(pid_text)
+        except ValueError:
+            continue
+        if pid == os.getpid():
+            continue
+        if bridge_path in command:
+            pids.add(pid)
+    return pids
+
+
+def terminate_pids(pids: set[int], log, reason: str) -> None:
+    pids.discard(os.getpid())
+    if not pids:
+        return
+    ordered = sorted(pids)
+    log.write(f"Clean start: stopping {reason}: {', '.join(str(pid) for pid in ordered)}\n")
+    log.flush()
+    for pid in ordered:
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except ProcessLookupError:
+            continue
+        except PermissionError as error:
+            log.write(f"Clean start: could not terminate pid {pid}: {error}\n")
+    deadline = time.monotonic() + 3
+    while time.monotonic() < deadline:
+        alive = [pid for pid in ordered if process_alive(pid)]
+        if not alive:
+            return
+        time.sleep(0.1)
+    for pid in ordered:
+        if not process_alive(pid):
+            continue
+        try:
+            os.kill(pid, signal.SIGKILL)
+            log.write(f"Clean start: force-killed pid {pid}.\n")
+        except ProcessLookupError:
+            continue
+        except PermissionError as error:
+            log.write(f"Clean start: could not force-kill pid {pid}: {error}\n")
+    log.flush()
+
+
+def clean_start(log) -> None:
+    helper_pids = owner_helper_listener_pids() | owner_helper_command_pids()
+    bridge_pids = apple_photos_bridge_pids()
+    terminate_pids(bridge_pids, log, "Apple Photos bridge process")
+    terminate_pids(helper_pids, log, "stale Owner helper")
 
 
 def launch_helper(port: int, log) -> subprocess.Popen[str]:
@@ -114,6 +235,8 @@ def main() -> int:
                     return 0
         else:
             log.write("Dock launcher requested its own helper; skipping existing helper reuse.\n")
+            if CLEAN_START:
+                clean_start(log)
 
         for port in range(PORT_START, PORT_LIMIT):
             server = launch_helper(port, log)

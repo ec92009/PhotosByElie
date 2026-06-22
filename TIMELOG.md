@@ -370,8 +370,9 @@ Clock state: running
 | 2026-06-21 | 22:53 CEST | 22:54 CEST | 0:01 | Requested Owner import rail/header spacing, robust Apple Photos panel ordering, and Photos permission-path diagnosis; background implementation/testing time excluded. |
 | 2026-06-22 | 11:00 CEST | 11:03 CEST | 0:03 | Requested an Apple Photos staging pipeline, Finder preview, review gate, Expo-import handoff, and a video-processing sanity check; background implementation/testing time excluded. |
 | 2026-06-22 | 11:47 CEST | 11:53 CEST | 0:06 | Collapsed direct Apple Photos import into a single import-to-Expo flow after confirming Photos albums are the real selection/review surface; background implementation/testing time excluded. |
+| 2026-06-22 | 12:40 CEST | 12:41 CEST | 0:01 | Requested Dock launcher clean-start behavior to stop stale Owner helpers before Apple Photos import sessions; background implementation/testing time excluded. |
 
 ## Totals
 
-Active collaboration time used: 20:53
+Active collaboration time used: 20:54
 Remaining budget: not set

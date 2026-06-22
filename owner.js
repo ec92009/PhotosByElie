@@ -4971,6 +4971,14 @@
     task?.operation === "repair" && (task.state === "queued" || task.state === "running")
   ) || null;
 
+  const coverageOkFromTask = (task) => {
+    if (!task || (task.coverage_ok === undefined && task.coverageOk === undefined)) return null;
+    const value = task.coverage_ok ?? task.coverageOk;
+    if (value === true || value === "true") return true;
+    if (value === false || value === "false") return false;
+    return null;
+  };
+
   const requestCurrentSweepPhaseSkip = async (phaseKey) => {
     const response = await fetch("/__photosbyelie/r2-skip-phase", {
       method: "POST",
@@ -5046,7 +5054,10 @@
     }
     const fullPhaseList = phaseListForTask(task);
     const active = task.state === "queued" || task.state === "running";
-    const coverageIncomplete = task.operation === "repair" && !active && task.state === "done" && r2CoverageOk === false;
+    const taskCoverageOk = coverageOkFromTask(task);
+    const coverageIncomplete = task.operation === "repair" && !active && task.state === "done" && (
+      taskCoverageOk === false || (taskCoverageOk === null && r2CoverageOk === false)
+    );
     const failed = Number(task.failed || 0) > 0 || task.state === "failed" || coverageIncomplete;
     const complete = !active && !failed && task.state === "done";
     const taskPhaseKey = normalizeSweepPhaseKey(task?.currentPhaseKey || "");
@@ -5133,7 +5144,11 @@
     const active = latest.state === "queued" || latest.state === "running";
     const gapFill = latest.operation === "gap-fill";
     const maintenance = latest.operation === "maintenance";
-    const coverageIncomplete = latest.operation === "repair" && !active && latest.state === "done" && r2CoverageOk === false;
+    const latestCoverageOk = coverageOkFromTask(latest);
+    if (latestCoverageOk !== null) r2CoverageOk = latestCoverageOk;
+    const coverageIncomplete = latest.operation === "repair" && !active && latest.state === "done" && (
+      latestCoverageOk === false || (latestCoverageOk === null && r2CoverageOk === false)
+    );
     const failureCount = Number(latest.failed || 0);
     const failed = failureCount > 0 || latest.state === "failed" || coverageIncomplete;
     const latestPhaseKey = normalizeSweepPhaseKey(latest.currentPhaseKey || "");

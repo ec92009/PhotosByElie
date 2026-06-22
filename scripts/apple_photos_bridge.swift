@@ -145,8 +145,6 @@ func resourceRows(_ asset: PHAsset) -> [[String: Any]] {
 }
 
 let rawFileExtensions: Set<String> = [".raw", ".dng", ".nef", ".cr2", ".cr3", ".arw", ".raf"]
-let developedPhotoExtensions: Set<String> = [".jpg", ".jpeg", ".heic", ".heif", ".tif", ".tiff", ".png"]
-let videoExtensions: Set<String> = [".mov", ".mp4", ".m4v"]
 
 struct AssetPlan {
     let asset: PHAsset
@@ -186,19 +184,11 @@ func preferredResource(_ asset: PHAsset) -> PHAssetResource? {
     return nil
 }
 
-func isRawOnly(_ asset: PHAsset) -> Bool {
-    let resources = PHAssetResource.assetResources(for: asset)
-    let filenames = resources.map { $0.originalFilename.lowercased() }
-    let hasDeveloped = filenames.contains { hasExtension($0, in: developedPhotoExtensions.union(videoExtensions)) }
-    let hasRaw = filenames.contains { hasExtension($0, in: rawFileExtensions) }
-    return hasRaw && !hasDeveloped
-}
-
 func exportStrategy(_ asset: PHAsset) -> String {
-    if asset.mediaType == .image && isRawOnly(asset) {
+    if asset.mediaType == .image {
         return "rendered_jpeg"
     }
-    if preferredResource(asset) != nil && (asset.mediaType == .image || asset.mediaType == .video) {
+    if preferredResource(asset) != nil && asset.mediaType == .video {
         return "resource"
     }
     return "unsupported"
@@ -206,7 +196,6 @@ func exportStrategy(_ asset: PHAsset) -> String {
 
 func assetRow(_ asset: PHAsset, index: Int) -> [String: Any] {
     let resource = preferredResource(asset)
-    let rawOnly = isRawOnly(asset)
     let strategy = exportStrategy(asset)
     let mediaType = asset.mediaType == .video ? "video" : asset.mediaType == .image ? "photo" : "unsupported"
     let eligible = strategy == "resource" || strategy == "rendered_jpeg"
@@ -214,7 +203,7 @@ func assetRow(_ asset: PHAsset, index: Int) -> [String: Any] {
         ? renderedJPEGFilename(asset: asset, index: index, resource: resource)
         : resource?.originalFilename ?? ""
     let reason = eligible
-        ? (rawOnly ? "RAW-only Photos asset will import as the current rendered JPG from Photos." : "")
+        ? (mediaType == "photo" ? "Photos still image will import as the current rendered JPG from Photos." : "")
         : "No supported photo/video resource found."
     return [
         "index": index,

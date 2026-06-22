@@ -7739,7 +7739,7 @@ def _apple_photos_operation_blueprint(payload: dict, preflight: dict | None = No
             "selectionPolicy": "album_membership",
             "mediaTypes": ["photo", "video"],
             "skipDiscarded": True,
-            "rawPolicy": "render_raw_current_jpg",
+            "stillImagePolicy": "render_photos_current_jpg",
             "icloudPolicy": "allow_photos_download" if _apple_photos_allow_icloud_downloads(payload) else "require_local_original_or_render",
             "icloudDownloadConsent": _apple_photos_allow_icloud_downloads(payload),
             "burstPolicy": "conservative_preconversion" if _apple_photos_filter_bursts(payload) else "off",

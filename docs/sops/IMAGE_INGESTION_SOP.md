@@ -18,7 +18,7 @@ Do not use this SOP for repo-only documentation edits, CSS-only page polish, or 
 - The default importer selects developed files with Lightroom green label and rating 4 or higher. Use `--select all` only for explicitly selected folders such as Leonardo/AI.
 - Apple Photos album exports are treated as explicitly selected by folder membership, so use `--select all` and let country inference assign them to a gallery or Unknown.
 - The importer can use Apple Photos album/folder names as country hints when embedded country/GPS metadata is missing, for example a Malaga or Valencia album can infer Spain.
-- Keep Apple Photos still-image exports at full pixel size. If explicit JPEG quality control is needed, post-process exported corrected JPEGs to quality 90 without resizing; do not switch to RAW/NEF for the public pipeline.
+- Direct Apple Photos imports export still images at full pixel size as Photos' current rendered JPEG, including HEIC and RAW-backed assets; do not switch to RAW/NEF for the public pipeline.
 - Keep Apple Photos video exports as original MOV/MP4/M4V files. The importer generates a watermarked `still_900` poster at 10% into the source video for gallery cards and a watermarked 5-second `short_5s_720p` MP4 preview for detail pages. Buyer delivery for videos is the original/full video only.
 - Direct Apple Photos imports are Owner-only and must run through `python3 scripts/local_server.py` on localhost. The Owner card invokes `scripts/apple_photos_bridge.swift`, which uses PhotoKit/Photos automation and does not inspect `.photoslibrary` package contents or private SQLite files.
 - Apple Photos/iCloud is the intended universal source and R2 is the intended cloud destination. Any authorized Owner machine can become an import workstation once it is signed into the same iCloud Photos library and Google-backed Owner auth is configured; PhotoKit exports still happen on that local Mac, while durable media/state promotion targets R2 and the cloud Owner access registry.
@@ -95,7 +95,7 @@ open http://localhost:8000/owner.html?tab=imports
 In Owner:
 
 1. Use **Import from Photos** to load albums through the local helper.
-2. Choose an album and run **Dry run**. Review import candidates, blocked RAW-only/unsupported assets, iCloud-original-not-local reports, and already-known/skipped behavior before any write/upload step.
+2. Choose an album and run **Dry run**. Review import candidates, unsupported assets, iCloud-original-not-local reports, and already-known/skipped behavior before any write/upload step.
 3. Click **Import to Expo** only after the dry run looks right. The helper records the run in `Owner.sqlite:import_operations`, exports eligible local bytes to `tmp/apple-photos-import/`, writes stable `apple-photos://...` source anchors, and immediately starts the normal selected-folder Expo import sweep from that temporary folder.
 
 ## Resume Behavior

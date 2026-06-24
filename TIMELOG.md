@@ -381,8 +381,9 @@ Clock state: running
 | 2026-06-22 | 20:04 CEST | 20:06 CEST | 0:02 | Diagnosed a stale Owner R2 coverage warning after a successful selected Apple Photos import and patched the progress UI to trust the task coverage result; background validation time excluded. |
 | 2026-06-24 | 20:30 CEST | 20:43 CEST | 0:02 | Requested signed-in user profiles remember likes, basket, orders, and redownload access; noted the ticket system outage. Background implementation/testing excluded. |
 | 2026-06-24 | 21:02 CEST | 21:02 CEST | 0:00 | Published the signed-in profile memory release and Worker CORS redeploy; background implementation/testing/deploy time excluded. |
+| 2026-06-24 | 21:20 CEST | 21:21 CEST | 0:01 | Clarified guest checkout orders should be claimable by later same-email signup, with likes and basket merge not required; background verification/testing excluded. |
 
 ## Totals
 
-Active collaboration time used: 21:11
+Active collaboration time used: 21:12
 Remaining budget: not set

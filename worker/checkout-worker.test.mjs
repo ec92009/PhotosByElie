@@ -839,6 +839,77 @@ test("signed-in account remembers likes, basket, orders, and redownload access",
   assert.equal(forbiddenOrderResponse.status, 403);
 });
 
+test("signed-in account claims previous guest purchases by checkout email", async () => {
+  const catalog = loadCatalog();
+  const photoId = firstDeliverablePhotoId(catalog);
+  const randomUUID = deterministicIds();
+  const now = () => new Date("2026-05-07T12:00:00.000Z");
+  const store = createMemoryStore();
+  const origin = "https://photos-by-elie.com";
+  const worker = createPhotosByElieWorker({
+    catalog,
+    store,
+    stripe: createMockStripeClient({ randomUUID }),
+    delivery: createPerFileTestDelivery(now),
+    now,
+    randomUUID,
+  });
+
+  const guestCheckoutResponse = await worker.fetch(jsonRequest("https://worker.test/checkout/guest", {
+    email: "Buyer@Example.com",
+    items: [{ photoId, options: [{ id: "full" }] }],
+  }));
+  assert.equal(guestCheckoutResponse.status, 201);
+  const guestCheckout = await guestCheckoutResponse.json();
+  assert.equal(guestCheckout.order.checkoutMode, "guest");
+  assert.equal(guestCheckout.order.buyerEmail, "buyer@example.com");
+
+  const payResponse = await worker.fetch(jsonRequest("https://worker.test/mock-stripe/pay", {
+    checkoutSessionId: guestCheckout.checkout.sessionId,
+  }));
+  assert.equal(payResponse.status, 200);
+  const paid = await payResponse.json();
+  assert.equal(paid.order.status, "ready");
+  assert.equal(paid.order.checkoutMode, "guest");
+  assert.equal(paid.order.delivery.files.length, 1);
+
+  const accountWorker = createPhotosByElieWorker({
+    catalog,
+    store,
+    accessAuth: fakeAccessAuthFor("buyer@example.com"),
+  });
+  const profileResponse = await accountWorker.fetch(new Request("https://worker.test/account/profile", {
+    headers: { origin },
+  }));
+  assert.equal(profileResponse.status, 200);
+  const profile = await profileResponse.json();
+  assert.deepEqual(profile.profile.liked, []);
+  assert.deepEqual(profile.profile.basket, []);
+  assert.equal(profile.orders.length, 1);
+  assert.equal(profile.orders[0].id, paid.order.id);
+  assert.equal(profile.orders[0].checkoutMode, "guest");
+  assert.equal(profile.orders[0].delivery.files[0].downloadUrl, paid.order.delivery.files[0].downloadUrl);
+
+  const accountOrderResponse = await accountWorker.fetch(new Request(`https://worker.test/account/orders/${paid.order.id}`, {
+    headers: { origin },
+  }));
+  assert.equal(accountOrderResponse.status, 200);
+  const accountOrder = await accountOrderResponse.json();
+  assert.equal(accountOrder.order.id, paid.order.id);
+  assert.equal(accountOrder.order.checkoutMode, "guest");
+  assert.equal(accountOrder.order.delivery.files[0].downloadUrl, paid.order.delivery.files[0].downloadUrl);
+
+  const otherAccountWorker = createPhotosByElieWorker({
+    catalog,
+    store,
+    accessAuth: fakeAccessAuthFor("other@example.com"),
+  });
+  const forbiddenOrderResponse = await otherAccountWorker.fetch(new Request(`https://worker.test/account/orders/${paid.order.id}`, {
+    headers: { origin },
+  }));
+  assert.equal(forbiddenOrderResponse.status, 403);
+});
+
 test("recent purchase lookup reports paid product coverage from Worker order records", async () => {
   const catalog = loadCatalog();
   let currentNow = new Date("2026-05-07T12:00:00.000Z");

@@ -75,11 +75,18 @@ const workerBaseUrl = () => {
   if (stored) localStorage.removeItem(workerBaseKey);
   return configured || "http://localhost:8787";
 };
+const accountWorkerBaseUrl = () => {
+  const fromQuery = normalizedWorkerBase(params.get("authWorkerBase") || params.get("workerBase"));
+  if (fromQuery && !isUnsafePublicWorkerBase(fromQuery)) return fromQuery;
+  const configured = normalizedWorkerBase(window.photosByElieMediaConfig?.authWorkerBaseUrl || window.photosByElieMediaConfig?.checkoutWorkerBaseUrl || "");
+  return configured || workerBaseUrl();
+};
 
 const currentParams = () => new URLSearchParams(window.location.search);
 const orderId = () => currentParams().get("id") || checkoutState().orderId || "";
 const buyerEmail = () => currentParams().get("email") || checkoutState().email || "";
 const checkoutSessionId = () => currentParams().get("session_id") || checkoutState().checkoutSessionId || "";
+const accountOrderRequested = () => currentParams().get("account") === "1";
 const supportHrefFor = (order = {}) => {
   const url = new URL("./support.html", window.location.href);
   const id = order.id || orderId();
@@ -478,6 +485,34 @@ const loadOrder = async () => {
   const email = buyerEmail();
   const sessionId = checkoutSessionId();
   syncOrderSupportLinks();
+  if (id && accountOrderRequested()) {
+    status.textContent = t("order.refreshing");
+    try {
+      const response = await fetch(`${accountWorkerBaseUrl()}/account/orders/${encodeURIComponent(id)}`, {
+        cache: "no-store",
+        credentials: "include",
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body?.error?.message || `Order lookup failed with HTTP ${response.status}.`);
+      renderOrder(body.order);
+      status.textContent = t("order.refreshed");
+      return;
+    } catch (error) {
+      if (!email) {
+        syncOrderLookup(true);
+        heading.textContent = t("order.unavailable");
+        message.textContent = error.message;
+        setProgress("");
+        currentZipPath = "";
+        currentDownloadHref = "";
+        currentOrder = null;
+        downloadZip.hidden = true;
+        syncZipLocationField();
+        status.textContent = t("order.could_not_load");
+        return;
+      }
+    }
+  }
   if (!id || !email) {
     if (sessionId) {
       status.textContent = t("order.refreshing");

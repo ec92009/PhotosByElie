@@ -85,6 +85,19 @@ export const createKvStore = ({
     return putDownload(next);
   };
 
+  const accountEmail = (email) => String(email || "").trim().toLowerCase();
+
+  const getAccountProfile = async (email) => {
+    const normalized = accountEmail(email);
+    return normalized ? jsonGet(namespace, key("account-profiles", normalized)) : null;
+  };
+
+  const putAccountProfile = async (profile) => {
+    const normalized = accountEmail(profile?.email);
+    if (!normalized) return null;
+    return jsonPut(namespace, key("account-profiles", normalized), { ...profile, email: normalized });
+  };
+
   return {
     putOrder,
     getOrder,
@@ -94,5 +107,7 @@ export const createKvStore = ({
     putDownload,
     getDownload,
     recordDownload,
+    getAccountProfile,
+    putAccountProfile,
   };
 };

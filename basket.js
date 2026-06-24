@@ -110,6 +110,11 @@ const escapeText = (value) => String(value || "").replace(/[&<>"']/g, (char) => 
 }[char]));
 
 const validCheckoutEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
+const signedInAccountEmail = () => {
+  const accountState = window.photosByElieAccount?.state;
+  return accountState?.authenticated && validCheckoutEmail(accountState.email) ? String(accountState.email).trim().toLowerCase() : "";
+};
+const checkoutEmailValue = () => signedInAccountEmail() || String(checkoutEmail?.value || "").trim();
 
 const dateLabel = (value) => {
   if (!value) return "";
@@ -509,7 +514,7 @@ const clearRecentPurchaseRows = (rerender = false) => {
 };
 
 const checkRecentPurchases = async ({ force = false, rerender = true } = {}) => {
-  const email = String(checkoutEmail?.value || "").trim();
+  const email = checkoutEmailValue();
   const items = digitalCheckoutItems();
   if (!validCheckoutEmail(email) || !items.length) {
     clearRecentPurchaseRows(rerender);
@@ -533,7 +538,7 @@ const checkRecentPurchases = async ({ force = false, rerender = true } = {}) => 
     });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(body?.error?.message || `Recent purchase check failed with HTTP ${response.status}.`);
-    if (requestKey !== recentPurchaseSelectionKey(String(checkoutEmail?.value || "").trim(), digitalCheckoutItems())) return body;
+    if (requestKey !== recentPurchaseSelectionKey(checkoutEmailValue(), digitalCheckoutItems())) return body;
     setRecentPurchaseRows(body.items || [], {
       source: body.source,
       sourceDetail: body.sourceDetail,
@@ -661,6 +666,8 @@ const syncCheckoutControls = () => {
   const state = checkoutState();
   const provider = state.provider || state.lastResponse?.checkout?.provider || "stripe";
   if (mockPay) mockPay.hidden = !(isLocalPage() && state.checkoutSessionId && provider === "mock-stripe");
+  const accountEmail = signedInAccountEmail();
+  if (checkoutEmail && accountEmail && !checkoutEmail.value) checkoutEmail.value = accountEmail;
   if (checkoutEmail && state.email && !checkoutEmail.value) checkoutEmail.value = state.email;
   if (discountCodeInput && state.discountCode && !discountCodeInput.value) discountCodeInput.value = state.discountCode;
   if (state.lastResponse) renderCheckoutResult(state.lastResponse, state.mode);
@@ -669,7 +676,9 @@ const syncCheckoutControls = () => {
 checkoutGuest?.addEventListener("click", async () => {
   checkoutGuest.disabled = true;
   try {
-    const email = String(checkoutEmail?.value || "").trim();
+    const accountEmail = signedInAccountEmail();
+    if (checkoutEmail && accountEmail && !checkoutEmail.value) checkoutEmail.value = accountEmail;
+    const email = accountEmail || String(checkoutEmail?.value || "").trim();
     if (!validCheckoutEmail(email)) {
       setBasketStatus(t("basket.enter_email"), { checkout: true });
       checkoutEmail?.focus();
@@ -703,8 +712,10 @@ checkoutGuest?.addEventListener("click", async () => {
       return;
     }
     setBasketStatus(t("basket.creating_checkout"), { checkout: true });
-    const body = await checkoutFetch("/checkout/guest", {
+    const accountCheckout = Boolean(accountEmail);
+    const body = await checkoutFetch(accountCheckout ? "/checkout/account" : "/checkout/guest", {
       method: "POST",
+      ...(accountCheckout ? { credentials: "include" } : {}),
       body: JSON.stringify({
         email,
         items,

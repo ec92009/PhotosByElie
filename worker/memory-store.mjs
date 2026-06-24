@@ -2,6 +2,7 @@ export const createMemoryStore = () => {
   const orders = new Map();
   const checkoutSessionIndex = new Map();
   const downloads = new Map();
+  const accountProfiles = new Map();
 
   const clone = (value) => value == null ? value : JSON.parse(JSON.stringify(value));
 
@@ -48,6 +49,15 @@ export const createMemoryStore = () => {
     return clone(next);
   };
 
+  const getAccountProfile = async (email) => clone(accountProfiles.get(String(email || "").trim().toLowerCase()));
+
+  const putAccountProfile = async (profile) => {
+    const email = String(profile?.email || "").trim().toLowerCase();
+    if (!email) return null;
+    accountProfiles.set(email, clone({ ...profile, email }));
+    return clone(accountProfiles.get(email));
+  };
+
   return {
     putOrder,
     getOrder,
@@ -57,9 +67,12 @@ export const createMemoryStore = () => {
     putDownload,
     getDownload,
     recordDownload,
+    getAccountProfile,
+    putAccountProfile,
     _debug: {
       orders,
       downloads,
+      accountProfiles,
     },
   };
 };

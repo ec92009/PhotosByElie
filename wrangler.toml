@@ -29,6 +29,8 @@ ACCESS_TEAM_NAME = "byelie"
 # The Google OAuth client must authorize:
 #   https://auth.photos-by-elie.com/auth/google/callback
 # User tier records are stored in ORDERS_KV under pbe:access-users:<email>.
+# Public account profile records are stored in ORDERS_KV under
+# pbe:account-profiles:<email> and keep signed-in likes/basket state.
 # Owner action records are stored in ORDERS_KV under pbe:owner-actions:<id>
 # unless an OWNER_ACTIONS_KV binding is added later.
 # Optional owner-only live checkout rehearsal discount allowlist.

@@ -66,6 +66,21 @@ const translations = {
     'account.signing_out': 'Signing out...',
     'account.login_unavailable': 'Google login is not available from this page.',
     'account.session_failed': 'Could not check the Google session.',
+    'account.memory_title': 'Saved profile',
+    'account.memory_body': 'Signed-in profiles remember liked photos, basket choices, orders, and download links.',
+    'account.memory_counts': '{likes} liked · {basket} basket · {orders} orders',
+    'account.sync_now': 'Sync profile',
+    'account.open_liked': 'Open liked',
+    'account.open_basket': 'Open basket',
+    'account.orders_title': 'Orders and downloads',
+    'account.no_orders': 'No orders saved to this account yet.',
+    'account.view_downloads': 'View downloads',
+    'account.order_ready': 'Ready',
+    'account.order_pending': 'Pending',
+    'account.profile_loaded': 'Profile synced.',
+    'account.profile_saved': 'Profile saved.',
+    'account.profile_syncing': 'Syncing profile...',
+    'account.profile_failed': 'Could not sync profile.',
     'home.lead': 'A selected photo archive with country galleries, AI work kept separate, and fresh representative samples as the collection rail turns.',
     'home.view_collections': 'View collections',
     'home.collections': 'Collections',
@@ -587,6 +602,21 @@ const translations = {
     'account.signing_out': 'Deconnexion...',
     'account.login_unavailable': 'La connexion Google n est pas disponible depuis cette page.',
     'account.session_failed': 'Impossible de verifier la session Google.',
+    'account.memory_title': 'Profil enregistre',
+    'account.memory_body': 'Les profils connectes gardent les photos aimees, le panier, les commandes et les liens de telechargement.',
+    'account.memory_counts': '{likes} aimees · {basket} panier · {orders} commandes',
+    'account.sync_now': 'Synchroniser',
+    'account.open_liked': 'Voir les aimees',
+    'account.open_basket': 'Voir le panier',
+    'account.orders_title': 'Commandes et telechargements',
+    'account.no_orders': 'Aucune commande n est encore enregistree pour ce compte.',
+    'account.view_downloads': 'Voir les telechargements',
+    'account.order_ready': 'Pret',
+    'account.order_pending': 'En attente',
+    'account.profile_loaded': 'Profil synchronise.',
+    'account.profile_saved': 'Profil enregistre.',
+    'account.profile_syncing': 'Synchronisation du profil...',
+    'account.profile_failed': 'Impossible de synchroniser le profil.',
     'home.lead': 'Une archive photo choisie, avec galeries par pays, images IA a part, et nouveaux apercus representatifs au fil du rail des collections.',
     'home.view_collections': 'Voir les collections',
     'home.collections': 'Collections',
@@ -1108,6 +1138,21 @@ const translations = {
     'account.signing_out': 'Cerrando sesion...',
     'account.login_unavailable': 'El inicio de sesion con Google no esta disponible desde esta pagina.',
     'account.session_failed': 'No se pudo comprobar la sesion de Google.',
+    'account.memory_title': 'Perfil guardado',
+    'account.memory_body': 'Los perfiles conectados recuerdan fotos favoritas, cesta, pedidos y enlaces de descarga.',
+    'account.memory_counts': '{likes} favoritas · {basket} cesta · {orders} pedidos',
+    'account.sync_now': 'Sincronizar',
+    'account.open_liked': 'Ver favoritas',
+    'account.open_basket': 'Ver cesta',
+    'account.orders_title': 'Pedidos y descargas',
+    'account.no_orders': 'Aun no hay pedidos guardados en esta cuenta.',
+    'account.view_downloads': 'Ver descargas',
+    'account.order_ready': 'Listo',
+    'account.order_pending': 'Pendiente',
+    'account.profile_loaded': 'Perfil sincronizado.',
+    'account.profile_saved': 'Perfil guardado.',
+    'account.profile_syncing': 'Sincronizando perfil...',
+    'account.profile_failed': 'No se pudo sincronizar el perfil.',
     'home.lead': 'Un archivo fotografico seleccionado, con galerias por pais, obra IA separada y muestras representativas nuevas mientras gira el carril de colecciones.',
     'home.view_collections': 'Ver colecciones',
     'home.collections': 'Colecciones',
@@ -3467,7 +3512,20 @@ const ensureSiteAccount = () => {
     authenticated: false,
     email: "",
     tier: "user",
+    profileLoading: false,
+    profileLoaded: false,
+    profile: { liked: [], basket: [] },
+    orders: [],
   };
+  let accountProfileWriteTimer = null;
+  let applyingAccountProfile = false;
+  const escapeAccountHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "\"": "&quot;",
+    "'": "&#39;",
+  }[char]));
 
   const accountButton = document.createElement('button');
   accountButton.className = 'account-toggle';
@@ -3493,6 +3551,23 @@ const ensureSiteAccount = () => {
         <strong data-account-status-title>${translate('account.visitor_status')}</strong>
         <span data-account-status-detail>${translate('account.choose')}</span>
       </div>
+      <div class="site-account-memory" data-account-memory hidden>
+        <div>
+          <p class="site-account-section-title" data-i18n="account.memory_title">${translate('account.memory_title')}</p>
+          <strong data-account-memory-counts>${translate('account.memory_counts', { likes: 0, basket: 0, orders: 0 })}</strong>
+          <span data-i18n="account.memory_body">${translate('account.memory_body')}</span>
+        </div>
+        <div class="site-account-memory-actions">
+          <a class="site-account-mini-action" href="./liked.html" data-i18n="account.open_liked">${translate('account.open_liked')}</a>
+          <a class="site-account-mini-action" href="./basket.html" data-i18n="account.open_basket">${translate('account.open_basket')}</a>
+          <button class="site-account-mini-action" type="button" data-account-sync>${translate('account.sync_now')}</button>
+        </div>
+      </div>
+      <div class="site-account-orders" data-account-orders hidden>
+        <p class="site-account-section-title" data-i18n="account.orders_title">${translate('account.orders_title')}</p>
+        <p class="site-account-empty" data-account-orders-empty>${translate('account.no_orders')}</p>
+        <ol data-account-orders-list></ol>
+      </div>
       <div class="site-account-actions">
         <button class="site-account-action" type="button" data-account-visitor data-i18n="account.continue_visitor">${translate('account.continue_visitor')}</button>
         <button class="site-account-action" type="button" data-account-signout data-i18n="account.sign_out" hidden>${translate('account.sign_out')}</button>
@@ -3511,11 +3586,219 @@ const ensureSiteAccount = () => {
   const statusTitle = modal.querySelector('[data-account-status-title]');
   const statusDetail = modal.querySelector('[data-account-status-detail]');
   const message = modal.querySelector('[data-account-message]');
+  const memoryPanel = modal.querySelector('[data-account-memory]');
+  const memoryCounts = modal.querySelector('[data-account-memory-counts]');
+  const syncButton = modal.querySelector('[data-account-sync]');
+  const ordersPanel = modal.querySelector('[data-account-orders]');
+  const ordersEmpty = modal.querySelector('[data-account-orders-empty]');
+  const ordersList = modal.querySelector('[data-account-orders-list]');
 
   const setMessage = (text = "", isError = false) => {
     if (!message) return;
     message.textContent = text;
     message.classList.toggle("is-error", isError);
+  };
+
+  const accountStoresAvailable = () => Boolean(
+    window.photosByElieLiked?.read
+    && window.photosByElieLiked?.write
+    && window.photosByElieBasket?.read
+    && window.photosByElieBasket?.write
+  );
+
+  const waitForAccountCatalog = async () => {
+    try {
+      await window.photosByElieCatalogReady;
+    } catch {
+      // Profile sync can still list orders on pages without a catalog.
+    }
+  };
+
+  const readLocalAccountState = () => ({
+    liked: accountStoresAvailable() ? window.photosByElieLiked.read() : [],
+    basket: accountStoresAvailable() ? window.photosByElieBasket.read() : [],
+  });
+
+  const mergeLikedItems = (...groups) => {
+    const byPhoto = new Map();
+    groups.flat().forEach((item) => {
+      const photoId = String(typeof item === "string" ? item : item?.photoId || "").trim();
+      if (!photoId || byPhoto.has(photoId)) return;
+      byPhoto.set(photoId, typeof item === "string" ? { photoId } : item);
+    });
+    return [...byPhoto.values()];
+  };
+
+  const optionKey = (option) => String(typeof option === "string" ? option : option?.id || "").trim();
+
+  const mergeBasketItems = (...groups) => {
+    const byPhoto = new Map();
+    groups.flat().forEach((item) => {
+      const photoId = String(item?.photoId || "").trim();
+      if (!photoId) return;
+      const existing = byPhoto.get(photoId) || { ...item, photoId, options: [] };
+      const options = new Map((existing.options || []).map((option) => [optionKey(option), option]).filter(([key]) => key));
+      (item.options || []).forEach((option) => {
+        const keyName = optionKey(option);
+        if (keyName) options.set(keyName, option);
+      });
+      byPhoto.set(photoId, { ...existing, ...item, options: [...options.values()] });
+    });
+    return [...byPhoto.values()];
+  };
+
+  const orderHrefFor = (order) => {
+    const url = new URL("./order.html", window.location.href);
+    url.searchParams.set("id", order.id);
+    url.searchParams.set("account", "1");
+    return url.href;
+  };
+
+  const accountOrderDate = (order) => {
+    const date = new Date(order.paidAt || order.createdAt || order.updatedAt || "");
+    if (!Number.isFinite(date.getTime())) return "";
+    return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" }).format(date);
+  };
+
+  const renderAccountOrders = () => {
+    const orders = Array.isArray(state.orders) ? state.orders : [];
+    if (ordersPanel) ordersPanel.hidden = !state.authenticated;
+    if (ordersEmpty) ordersEmpty.hidden = orders.length > 0;
+    if (!ordersList) return;
+    ordersList.innerHTML = orders.slice(0, 6).map((order) => {
+      const ready = order.status === "ready";
+      const itemCount = (order.items || []).length;
+      const fileCount = (order.delivery?.files || []).length || (order.delivery?.downloadUrl ? 1 : 0);
+      return `
+        <li>
+          <div>
+            <strong>${escapeAccountHtml(order.id)}</strong>
+            <span>${escapeAccountHtml(accountOrderDate(order))}${itemCount ? ` · ${itemCount} photo${itemCount === 1 ? "" : "s"}` : ""}${fileCount ? ` · ${fileCount} file${fileCount === 1 ? "" : "s"}` : ""}</span>
+            <span>${escapeAccountHtml(translate(ready ? 'account.order_ready' : 'account.order_pending'))}</span>
+          </div>
+          <a class="site-account-mini-action" href="${escapeAccountHtml(orderHrefFor(order))}">${escapeAccountHtml(translate('account.view_downloads'))}</a>
+        </li>
+      `;
+    }).join("");
+  };
+
+  const renderAccountMemory = () => {
+    if (memoryPanel) memoryPanel.hidden = !state.authenticated;
+    const local = readLocalAccountState();
+    const likedCount = accountStoresAvailable() ? local.liked.length : state.profile?.liked?.length || 0;
+    const basketCount = accountStoresAvailable() ? local.basket.length : state.profile?.basket?.length || 0;
+    const orderCount = Array.isArray(state.orders) ? state.orders.length : 0;
+    if (memoryCounts) {
+      memoryCounts.textContent = translate('account.memory_counts', {
+        likes: likedCount,
+        basket: basketCount,
+        orders: orderCount,
+      });
+    }
+    if (syncButton) syncButton.disabled = !state.authenticated || state.profileLoading;
+    renderAccountOrders();
+  };
+
+  const accountApiFetch = async (path, options = {}) => {
+    const workerBase = accountWorkerBaseUrl();
+    if (!workerBase) throw new Error(translate('account.login_unavailable'));
+    const response = await fetch(`${workerBase}${path}`, {
+      cache: "no-store",
+      credentials: "include",
+      ...options,
+      headers: {
+        ...(options.body ? { "content-type": "application/json" } : {}),
+        ...(options.headers || {}),
+      },
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || payload?.ok === false) {
+      throw new Error(payload?.error?.message || payload?.error || `HTTP ${response.status}`);
+    }
+    return payload;
+  };
+
+  const applyAccountProfileToStores = (profile) => {
+    if (!accountStoresAvailable() || !profile) return;
+    applyingAccountProfile = true;
+    try {
+      window.photosByElieLiked.write(profile.liked || []);
+      window.photosByElieBasket.write(profile.basket || []);
+    } finally {
+      applyingAccountProfile = false;
+    }
+  };
+
+  const saveAccountProfile = async ({ quiet = false } = {}) => {
+    if (!state.authenticated || !accountStoresAvailable()) return null;
+    state.profileLoading = true;
+    renderAccountMemory();
+    if (!quiet) setMessage(translate('account.profile_syncing'));
+    try {
+      await waitForAccountCatalog();
+      const local = readLocalAccountState();
+      const payload = await accountApiFetch("/account/profile", {
+        method: "PUT",
+        body: JSON.stringify(local),
+      });
+      state.profile = payload.profile || local;
+      state.orders = Array.isArray(payload.orders) ? payload.orders : state.orders;
+      state.profileLoaded = true;
+      if (!quiet) setMessage(translate('account.profile_saved'));
+      return payload;
+    } catch (error) {
+      if (!quiet) setMessage(error?.message || translate('account.profile_failed'), true);
+      return null;
+    } finally {
+      state.profileLoading = false;
+      renderAccountMemory();
+    }
+  };
+
+  const loadAccountProfile = async ({ mergeLocal = false, quiet = false } = {}) => {
+    if (!state.authenticated) return null;
+    state.profileLoading = true;
+    renderAccountMemory();
+    if (!quiet) setMessage(translate('account.profile_syncing'));
+    try {
+      let payload = await accountApiFetch("/account/profile");
+      let profile = payload.profile || { liked: [], basket: [] };
+      if (mergeLocal && accountStoresAvailable()) {
+        await waitForAccountCatalog();
+        const local = readLocalAccountState();
+        const merged = {
+          liked: mergeLikedItems(profile.liked || [], local.liked || []),
+          basket: mergeBasketItems(profile.basket || [], local.basket || []),
+        };
+        payload = await accountApiFetch("/account/profile", {
+          method: "PUT",
+          body: JSON.stringify(merged),
+        });
+        profile = payload.profile || merged;
+      }
+      state.profile = profile;
+      state.orders = Array.isArray(payload.orders) ? payload.orders : [];
+      state.profileLoaded = true;
+      if (accountStoresAvailable()) await waitForAccountCatalog();
+      applyAccountProfileToStores(profile);
+      if (!quiet) setMessage(translate('account.profile_loaded'));
+      return payload;
+    } catch (error) {
+      if (!quiet) setMessage(error?.message || translate('account.profile_failed'), true);
+      return null;
+    } finally {
+      state.profileLoading = false;
+      renderAccountMemory();
+    }
+  };
+
+  const scheduleAccountProfileSave = () => {
+    if (applyingAccountProfile || !state.authenticated || !accountStoresAvailable()) return;
+    window.clearTimeout(accountProfileWriteTimer);
+    accountProfileWriteTimer = window.setTimeout(() => {
+      saveAccountProfile({ quiet: true });
+    }, 900);
+    renderAccountMemory();
   };
 
   const updateAccountView = () => {
@@ -3532,7 +3815,8 @@ const ensureSiteAccount = () => {
       if (signoutButton) signoutButton.hidden = false;
       if (signupButton) signupButton.hidden = true;
       if (signinButton) signinButton.hidden = true;
-      setMessage(translate('account.verified_email'));
+      if (!state.profileLoaded && !state.profileLoading) setMessage(translate('account.verified_email'));
+      renderAccountMemory();
       return;
     }
     if (statusTitle) statusTitle.textContent = translate('account.visitor_status');
@@ -3547,9 +3831,10 @@ const ensureSiteAccount = () => {
     if (signupButton) signupButton.disabled = !state.available;
     if (signinButton) signinButton.disabled = !state.available;
     setMessage(state.available ? "" : translate('account.login_unavailable'), !state.available);
+    renderAccountMemory();
   };
 
-  const refreshAccountSession = async () => {
+  const refreshAccountSession = async ({ syncProfile = false, mergeLocal = false, quiet = false } = {}) => {
     const workerBase = accountWorkerBaseUrl();
     state.available = Boolean(workerBase);
     if (!workerBase) {
@@ -3557,10 +3842,13 @@ const ensureSiteAccount = () => {
       state.authenticated = false;
       state.email = "";
       state.tier = "user";
+      state.profileLoaded = false;
+      state.profile = { liked: [], basket: [] };
+      state.orders = [];
       updateAccountView();
       return { ...state };
     }
-    setMessage(translate('account.loading'));
+    if (!quiet) setMessage(translate('account.loading'));
     try {
       const response = await fetch(`${workerBase}/auth/session`, { cache: "no-store", credentials: "include" });
       const payload = await response.json().catch(() => ({}));
@@ -3573,15 +3861,26 @@ const ensureSiteAccount = () => {
       state.authenticated = payload.authenticated === true;
       state.email = user.email || payload.email || "";
       state.tier = payload.tier || user.tier || "user";
+      if (!state.authenticated) {
+        state.profileLoaded = false;
+        state.profile = { liked: [], basket: [] };
+        state.orders = [];
+      }
       updateAccountView();
+      if (state.authenticated && syncProfile) {
+        await loadAccountProfile({ mergeLocal, quiet });
+      }
     } catch {
       state.checked = true;
       state.available = false;
       state.authenticated = false;
       state.email = "";
       state.tier = "user";
+      state.profileLoaded = false;
+      state.profile = { liked: [], basket: [] };
+      state.orders = [];
       updateAccountView();
-      setMessage(translate('account.session_failed'), true);
+      if (!quiet) setMessage(translate('account.session_failed'), true);
     }
     return { ...state };
   };
@@ -3598,7 +3897,7 @@ const ensureSiteAccount = () => {
     accountButton.setAttribute('aria-expanded', 'true');
     updateAccountView();
     closeButton?.focus({ preventScroll: true });
-    refreshAccountSession();
+    refreshAccountSession({ syncProfile: true, mergeLocal: true });
   };
 
   const beginGoogleLogin = (intent) => {
@@ -3648,6 +3947,7 @@ const ensureSiteAccount = () => {
   signupButton?.addEventListener('click', () => beginGoogleLogin('signup'));
   signinButton?.addEventListener('click', () => beginGoogleLogin('signin'));
   signoutButton?.addEventListener('click', beginGoogleLogout);
+  syncButton?.addEventListener('click', () => saveAccountProfile());
   modal.addEventListener('click', (event) => {
     if (event.target === modal) closeAccount();
   });
@@ -3655,9 +3955,33 @@ const ensureSiteAccount = () => {
     if (event.key === 'Escape' && !modal.hidden) closeAccount();
   });
   window.addEventListener('photosbyelie:languagechange', () => updateAccountView());
+  window.addEventListener('photosbyelie:likedchange', scheduleAccountProfileSave);
+  window.addEventListener('photosbyelie:basketchange', scheduleAccountProfileSave);
+  window.photosByElieAccount = {
+    get state() {
+      return {
+        checked: state.checked,
+        available: state.available,
+        authenticated: state.authenticated,
+        email: state.email,
+        tier: state.tier,
+        profileLoaded: state.profileLoaded,
+        profile: state.profile,
+        orders: state.orders,
+      };
+    },
+    refresh: refreshAccountSession,
+    sync: saveAccountProfile,
+    workerBaseUrl: accountWorkerBaseUrl,
+  };
   updateAccountView();
   applyTranslations();
   if (consumeAccountReturnFlag()) window.setTimeout(openAccount, 0);
+  else if (accountWorkerBaseUrl() && localStorage.getItem(accountPreferenceKey) !== 'visitor') {
+    window.setTimeout(() => {
+      refreshAccountSession({ syncProfile: true, mergeLocal: true, quiet: true });
+    }, 900);
+  }
 };
 
 const ensureSiteSettings = () => {

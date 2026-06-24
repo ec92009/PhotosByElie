@@ -737,6 +737,96 @@ test("guest checkout creates a pending order and mock Stripe session", async () 
   assert.match(body.checkout.url, /^https:\/\/mock\.stripe\.local\/checkout\/cs_mock_/);
 });
 
+test("signed-in account remembers likes, basket, orders, and redownload access", async () => {
+  const catalog = loadCatalog();
+  const photoId = firstDeliverablePhotoId(catalog);
+  const randomUUID = deterministicIds();
+  const now = () => new Date("2026-05-07T12:00:00.000Z");
+  const store = createMemoryStore();
+  const worker = createPhotosByElieWorker({
+    catalog,
+    store,
+    stripe: createMockStripeClient({ randomUUID }),
+    delivery: createPerFileTestDelivery(now),
+    accessAuth: fakeAccessAuthFor("buyer@example.com"),
+    now,
+    randomUUID,
+  });
+  const origin = "https://photos-by-elie.com";
+
+  const emptyProfileResponse = await worker.fetch(new Request("https://worker.test/account/profile", {
+    headers: { origin },
+  }));
+  assert.equal(emptyProfileResponse.status, 200);
+  assert.equal(emptyProfileResponse.headers.get("access-control-allow-credentials"), "true");
+  const emptyProfile = await emptyProfileResponse.json();
+  assert.deepEqual(emptyProfile.profile.liked, []);
+  assert.deepEqual(emptyProfile.profile.basket, []);
+  assert.deepEqual(emptyProfile.orders, []);
+
+  const saveProfileResponse = await worker.fetch(jsonRequest("https://worker.test/account/profile", {
+    liked: [{ photoId }],
+    basket: [{ photoId, options: [{ id: "full" }] }],
+  }, { origin }));
+  assert.equal(saveProfileResponse.status, 200);
+  const savedProfile = await saveProfileResponse.json();
+  assert.equal(savedProfile.profile.email, "buyer@example.com");
+  assert.equal(savedProfile.profile.liked[0].photoId, photoId);
+  assert.equal(savedProfile.profile.basket[0].photoId, photoId);
+  assert.equal(savedProfile.profile.basket[0].options[0].id, "full");
+
+  const mismatchResponse = await worker.fetch(jsonRequest("https://worker.test/checkout/account", {
+    email: "other@example.com",
+    items: [{ photoId, options: [{ id: "full" }] }],
+  }, { origin }));
+  assert.equal(mismatchResponse.status, 403);
+
+  const checkoutResponse = await worker.fetch(jsonRequest("https://worker.test/checkout/account", {
+    email: "buyer@example.com",
+    items: [{ photoId, options: [{ id: "full" }] }],
+  }, { origin }));
+  assert.equal(checkoutResponse.status, 201);
+  assert.equal(checkoutResponse.headers.get("access-control-allow-credentials"), "true");
+  const checkout = await checkoutResponse.json();
+  assert.equal(checkout.order.checkoutMode, "account");
+  assert.equal(checkout.order.buyerEmail, "buyer@example.com");
+
+  const payResponse = await worker.fetch(jsonRequest("https://worker.test/mock-stripe/pay", {
+    checkoutSessionId: checkout.checkout.sessionId,
+  }));
+  assert.equal(payResponse.status, 200);
+  const paid = await payResponse.json();
+  assert.equal(paid.order.status, "ready");
+  assert.equal(paid.order.delivery.files.length, 1);
+
+  const accountProfileResponse = await worker.fetch(new Request("https://worker.test/account/profile", {
+    headers: { origin },
+  }));
+  assert.equal(accountProfileResponse.status, 200);
+  const accountProfile = await accountProfileResponse.json();
+  assert.equal(accountProfile.orders.length, 1);
+  assert.equal(accountProfile.orders[0].id, paid.order.id);
+  assert.equal(accountProfile.orders[0].delivery.files[0].downloadUrl, paid.order.delivery.files[0].downloadUrl);
+
+  const accountOrderResponse = await worker.fetch(new Request(`https://worker.test/account/orders/${paid.order.id}`, {
+    headers: { origin },
+  }));
+  assert.equal(accountOrderResponse.status, 200);
+  const accountOrder = await accountOrderResponse.json();
+  assert.equal(accountOrder.order.id, paid.order.id);
+  assert.equal(accountOrder.order.delivery.files[0].productId, "full");
+
+  const otherAccountWorker = createPhotosByElieWorker({
+    catalog,
+    store,
+    accessAuth: fakeAccessAuthFor("other@example.com"),
+  });
+  const forbiddenOrderResponse = await otherAccountWorker.fetch(new Request(`https://worker.test/account/orders/${paid.order.id}`, {
+    headers: { origin },
+  }));
+  assert.equal(forbiddenOrderResponse.status, 403);
+});
+
 test("recent purchase lookup reports paid product coverage from Worker order records", async () => {
   const catalog = loadCatalog();
   let currentNow = new Date("2026-05-07T12:00:00.000Z");

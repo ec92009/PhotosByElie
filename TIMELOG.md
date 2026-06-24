@@ -379,8 +379,9 @@ Clock state: running
 | 2026-06-22 | 19:16 CEST | 19:18 CEST | 0:02 | Requested Apple Photos sidecar GPS/date/album metadata feed import fallbacks and Title/Keyword Review hints; background implementation/testing time excluded. |
 | 2026-06-22 | 19:47 CEST | 19:48 CEST | 0:01 | Asked whether Apple Photos can preflight RAW/HEIC/JPEG and whether bounded parallelization would help iCloud downloads; background implementation/testing time excluded. |
 | 2026-06-22 | 20:04 CEST | 20:06 CEST | 0:02 | Diagnosed a stale Owner R2 coverage warning after a successful selected Apple Photos import and patched the progress UI to trust the task coverage result; background validation time excluded. |
+| 2026-06-24 | 20:30 CEST | 20:43 CEST | 0:02 | Requested signed-in user profiles remember likes, basket, orders, and redownload access; noted the ticket system outage. Background implementation/testing excluded. |
 
 ## Totals
 
-Active collaboration time used: 21:09
+Active collaboration time used: 21:11
 Remaining budget: not set

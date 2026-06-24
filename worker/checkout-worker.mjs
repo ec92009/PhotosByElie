@@ -533,6 +533,81 @@ const normalizeOrderItems = (catalog, incomingItems = []) => {
   return orderItems;
 };
 
+const normalizeAccountLiked = (catalog, incomingItems = []) => {
+  if (!Array.isArray(incomingItems)) return [];
+  const seen = new Set();
+  return incomingItems.reduce((items, item) => {
+    const photoId = String(typeof item === "string" ? item : item?.photoId || item?.id || "").trim();
+    if (!photoId || seen.has(photoId)) return items;
+    const entry = catalog.photos.get(photoId);
+    if (!entry) return items;
+    seen.add(photoId);
+    items.push({
+      photoId,
+      title: entry.photo.title || photoId,
+      collection: entry.collectionTitle || entry.collectionKey || "",
+      collectionKey: entry.collectionKey || "",
+    });
+    return items;
+  }, []);
+};
+
+const normalizeAccountBasket = (catalog, incomingItems = []) => {
+  if (!Array.isArray(incomingItems)) return [];
+  const byPhoto = new Map();
+  incomingItems.forEach((item) => {
+    const photoId = String(item?.photoId || item?.id || "").trim();
+    if (!photoId || !catalog.photos.has(photoId)) return;
+    const existing = byPhoto.get(photoId) || { photoId, options: [] };
+    existing.options.push(...(Array.isArray(item.options) ? item.options : []));
+    byPhoto.set(photoId, existing);
+  });
+
+  return [...byPhoto.values()].map((item) => {
+    const entry = catalog.photos.get(item.photoId);
+    const availableOptions = catalog.availableOptionsFor(entry.photo);
+    const availableById = new Map(availableOptions.map((option) => [option.id, option]));
+    const seenOptions = new Set();
+    const options = (item.options || []).reduce((next, rawOption) => {
+      const optionId = String(typeof rawOption === "string" ? rawOption : rawOption?.id || rawOption?.optionId || "").trim();
+      const option = availableById.get(optionId);
+      if (!option || seenOptions.has(optionId)) return next;
+      seenOptions.add(optionId);
+      const normalized = {
+        id: option.id,
+        type: option.type || "digital",
+        label: option.label || option.id,
+        detail: option.detail || "",
+        dimensions: option.dimensions || "",
+        price: option.type === "video" ? Number(option.price) || 0 : optionPriceFor(entry.photo, entry.collectionKey, option),
+      };
+      if (normalized.type === "print") {
+        normalized.quantity = Math.max(1, Math.min(99, Math.round(Number(rawOption.quantity) || 1)));
+        normalized.frameId = String(rawOption.frameId || rawOption.frame?.id || "none");
+      }
+      next.push(normalized);
+      return next;
+    }, []);
+    return {
+      photoId: item.photoId,
+      title: entry.photo.title || item.photoId,
+      collection: entry.collectionTitle || entry.collectionKey || "",
+      collectionKey: entry.collectionKey || "",
+      options,
+      total: options.reduce((sum, option) => sum + (Number(option.price) || 0) * (Number(option.quantity) || 1), 0),
+    };
+  }).filter((item) => item.options.length);
+};
+
+const normalizeAccountProfilePayload = (catalog, payload = {}, existing = {}, email = "", updatedAt = "") => ({
+  schema: "photosbyelie.accountProfile.v1",
+  email: String(email || existing.email || "").trim().toLowerCase(),
+  liked: normalizeAccountLiked(catalog, payload.liked || payload.likes || existing.liked || []),
+  basket: normalizeAccountBasket(catalog, payload.basket || existing.basket || []),
+  createdAt: existing.createdAt || updatedAt,
+  updatedAt,
+});
+
 const publicOrder = (order) => ({
   id: order.id,
   status: order.status,
@@ -606,6 +681,11 @@ const publicOrder = (order) => ({
   paidAt: order.paidAt || null,
   updatedAt: order.updatedAt,
 });
+
+const orderTime = (order) => {
+  const timestamp = Date.parse(order?.updatedAt || order?.paidAt || order?.createdAt || "");
+  return Number.isFinite(timestamp) ? timestamp : 0;
+};
 
 const defaultDelivery = ({ now, randomUUID } = {}) => ({
   createDelivery: async (order) => {
@@ -1197,18 +1277,79 @@ export const createPhotosByElieWorker = ({
     });
   };
 
-  const createCheckout = async (request, checkoutMode) => {
+  const accountOrdersFor = async (email) => {
+    const normalizedEmail = String(email || "").trim().toLowerCase();
+    if (!normalizedEmail || typeof store.listOrders !== "function") return [];
+    const orders = await store.listOrders();
+    return orders
+      .filter((order) => String(order?.buyerEmail || "").trim().toLowerCase() === normalizedEmail)
+      .sort((left, right) => orderTime(right) - orderTime(left))
+      .map(publicOrder);
+  };
+
+  const storedAccountProfileFor = async (email) => {
+    const normalizedEmail = String(email || "").trim().toLowerCase();
+    const existing = typeof store.getAccountProfile === "function"
+      ? await store.getAccountProfile(normalizedEmail)
+      : null;
+    return normalizeAccountProfilePayload(catalog, {}, existing || {}, normalizedEmail, existing?.updatedAt || now().toISOString());
+  };
+
+  const getAccountProfile = async (request) => {
+    const session = await authSessionFor(request, { required: true });
+    const profile = await storedAccountProfileFor(session.email);
+    const orders = await accountOrdersFor(session.email);
+    return credentialedJson(request, { ok: true, profile, orders });
+  };
+
+  const putAccountProfile = async (request) => {
+    const session = await authSessionFor(request, { required: true });
+    if (typeof store.putAccountProfile !== "function") {
+      return credentialedErrorJson(request, 503, "account_profile_unavailable", "Account profile storage is not configured.");
+    }
     const payload = await parseJson(request);
-    const buyerEmail = String(payload.email || payload.buyerEmail || "").trim().toLowerCase();
+    const existing = typeof store.getAccountProfile === "function"
+      ? await store.getAccountProfile(session.email)
+      : null;
+    const updatedAt = now().toISOString();
+    const profile = normalizeAccountProfilePayload(catalog, payload, existing || {}, session.email, updatedAt);
+    const saved = await store.putAccountProfile(profile);
+    const orders = await accountOrdersFor(session.email);
+    return credentialedJson(request, { ok: true, profile: saved || profile, orders });
+  };
+
+  const getAccountOrder = async (request, orderId) => {
+    const session = await authSessionFor(request, { required: true });
+    const order = await store.getOrder(orderId);
+    if (!order) return credentialedErrorJson(request, 404, "unknown_order", "Order was not found.");
+    if (String(order.buyerEmail || "").trim().toLowerCase() !== String(session.email || "").trim().toLowerCase()) {
+      return credentialedErrorJson(request, 403, "account_order_forbidden", "This order is not attached to the signed-in account.");
+    }
+    return credentialedJson(request, { order: publicOrder(order) });
+  };
+
+  const createCheckout = async (request, checkoutMode, accountSession = null) => {
+    const checkoutJson = (body, status = 200) => checkoutMode === "account"
+      ? credentialedJson(request, body, status)
+      : json(body, status);
+    const checkoutErrorJson = (status, code, message, details = undefined) => checkoutMode === "account"
+      ? credentialedErrorJson(request, status, code, message, details)
+      : errorJson(status, code, message, details);
+    const payload = await parseJson(request);
+    const requestedEmail = String(payload.email || payload.buyerEmail || "").trim().toLowerCase();
+    const buyerEmail = checkoutMode === "account" ? String(accountSession?.email || "").trim().toLowerCase() : requestedEmail;
+    if (checkoutMode === "account" && requestedEmail && requestedEmail !== buyerEmail) {
+      return checkoutErrorJson(403, "account_email_mismatch", "Signed-in checkout must use the verified account email.");
+    }
     if (!validEmail(buyerEmail)) {
-      return errorJson(400, "invalid_email", "Checkout requires a valid buyer email.");
+      return checkoutErrorJson(400, "invalid_email", "Checkout requires a valid buyer email.");
     }
 
     const items = normalizeOrderItems(catalog, payload.items || payload.basket || []);
     const subtotalAmount = items.reduce((sum, item) => sum + item.subtotal, 0);
     const expectedSubtotalAmount = Number(payload.expectedSubtotalAmount);
     if (Number.isFinite(expectedSubtotalAmount) && Math.round(expectedSubtotalAmount) !== subtotalAmount) {
-      return errorJson(409, "checkout_total_mismatch", "Basket prices changed before Stripe checkout. Refresh the basket and review the total before paying.", {
+      return checkoutErrorJson(409, "checkout_total_mismatch", "Basket prices changed before Stripe checkout. Refresh the basket and review the total before paying.", {
         browserSubtotalAmount: Math.round(expectedSubtotalAmount),
         workerSubtotalAmount: subtotalAmount,
       });
@@ -1331,7 +1472,7 @@ export const createPhotosByElieWorker = ({
       discountPresent: Boolean(discount.code),
     });
 
-    return json({
+    return checkoutJson({
       order: publicOrder(order),
       checkout: {
         provider: stripeProvider,
@@ -1897,8 +2038,13 @@ export const createPhotosByElieWorker = ({
   const fetch = async (request) => {
     const url = new URL(request.url);
     const path = url.pathname.replace(/^\/api(?=\/)/, "");
+    const usesCredentialedCors = path.startsWith("/real-estate/")
+      || path.startsWith("/auth/")
+      || path.startsWith("/owner/")
+      || path.startsWith("/account/")
+      || path === "/checkout/account";
     if (request.method === "OPTIONS") {
-      return path.startsWith("/real-estate/") || path.startsWith("/auth/") || path.startsWith("/owner/")
+      return usesCredentialedCors
         ? credentialedJson(request, { ok: true })
         : json({ ok: true });
     }
@@ -1916,9 +2062,16 @@ export const createPhotosByElieWorker = ({
       if (request.method === "POST" && path === "/owner/actions") return await createOwnerAction(request);
       const ownerActionMatch = path.match(/^\/owner\/actions\/([^/]+)$/);
       if (request.method === "GET" && ownerActionMatch) return await getOwnerAction(request, decodeURIComponent(ownerActionMatch[1]));
+      if (request.method === "GET" && path === "/account/profile") return await getAccountProfile(request);
+      if ((request.method === "POST" || request.method === "PUT" || request.method === "PATCH") && path === "/account/profile") return await putAccountProfile(request);
+      const accountOrderMatch = path.match(/^\/account\/orders\/([^/]+)$/);
+      if (request.method === "GET" && accountOrderMatch) return await getAccountOrder(request, decodeURIComponent(accountOrderMatch[1]));
       if (request.method === "POST" && path === "/analytics/events") return await recordAnalyticsEvents(request);
       if (request.method === "POST" && path === "/checkout/guest") return await createCheckout(request, "guest");
-      if (request.method === "POST" && path === "/checkout/account") return await createCheckout(request, "account");
+      if (request.method === "POST" && path === "/checkout/account") {
+        const session = await authSessionFor(request, { required: true });
+        return await createCheckout(request, "account", session);
+      }
       if (request.method === "POST" && path === "/purchases/recent") return await checkRecentPurchases(request);
       if (request.method === "POST" && path === "/stripe-webhook") return await stripeWebhook(request);
       if (request.method === "POST" && path === "/mock-stripe/pay") return await mockPay(request);
@@ -1948,7 +2101,7 @@ export const createPhotosByElieWorker = ({
       const downloadMatch = path.match(/^\/download\/([^/]+)$/);
       if (request.method === "GET" && downloadMatch) return await download(request, decodeURIComponent(downloadMatch[1]));
     } catch (error) {
-      return path.startsWith("/real-estate/") || path.startsWith("/auth/") || path.startsWith("/owner/")
+      return usesCredentialedCors
         ? credentialedErrorJson(request, error.status || 500, error.code || "worker_error", error.message, error.details)
         : errorJson(error.status || 500, error.code || "worker_error", error.message, error.details);
     }

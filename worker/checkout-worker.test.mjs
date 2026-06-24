@@ -754,6 +754,18 @@ test("signed-in account remembers likes, basket, orders, and redownload access",
   });
   const origin = "https://photos-by-elie.com";
 
+  const preflightResponse = await worker.fetch(new Request("https://worker.test/account/profile", {
+    method: "OPTIONS",
+    headers: {
+      origin,
+      "access-control-request-method": "PATCH",
+      "access-control-request-headers": "content-type",
+    },
+  }));
+  assert.equal(preflightResponse.status, 200);
+  assert.match(preflightResponse.headers.get("access-control-allow-methods"), /\bPATCH\b/);
+  assert.match(preflightResponse.headers.get("access-control-allow-methods"), /\bPUT\b/);
+
   const emptyProfileResponse = await worker.fetch(new Request("https://worker.test/account/profile", {
     headers: { origin },
   }));

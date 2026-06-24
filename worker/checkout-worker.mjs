@@ -18,7 +18,7 @@ const json = (body, status = 200, headers = {}) => new Response(JSON.stringify(b
   headers: {
     "content-type": "application/json; charset=utf-8",
     "access-control-allow-origin": "*",
-    "access-control-allow-methods": "GET,POST,OPTIONS",
+    "access-control-allow-methods": "GET,POST,PUT,PATCH,OPTIONS",
     "access-control-allow-headers": "content-type,stripe-signature,x-mock-stripe-signature",
     ...headers,
   },
@@ -30,7 +30,7 @@ const credentialedCorsHeaders = (request, extraHeaders = {}) => {
   const origin = request.headers.get("origin") || "*";
   return {
     "access-control-allow-origin": origin,
-    "access-control-allow-methods": "GET,POST,OPTIONS",
+    "access-control-allow-methods": "GET,POST,PUT,PATCH,OPTIONS",
     "access-control-allow-headers": "content-type,stripe-signature,x-mock-stripe-signature",
     "access-control-allow-credentials": "true",
     vary: "Origin",

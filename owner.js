@@ -3369,7 +3369,7 @@
   );
 
   const applePhotosAllowIcloudDownloads = () => (
-    applePhotosIcloudDownloadsToggle ? applePhotosIcloudDownloadsToggle.checked : false
+    applePhotosIcloudDownloadsToggle ? applePhotosIcloudDownloadsToggle.checked : true
   );
 
   const applePhotosCandidateDetail = (payload = {}, materializedLabel = "candidates") => {

@@ -13,13 +13,13 @@ Do not use this SOP for repo-only documentation edits, CSS-only page polish, or 
 - Canonical Lightroom camera archive: `/Volumes/Saturn/Pictures/LR/Camera`
 - Apple Photos album exports for small source-agnostic import tests: `/Volumes/Saturn/Pictures/LR/Apple Photo Albums`
 - Source files must be developed exports: `.jpg`, `.jpeg`, `.tif`, `.tiff`, `.mov`, `.mp4`, or `.m4v`.
-- Do not import DNG, NEF, or other raw camera files. Develop/export them first.
+- Do not import DNG, NEF, or other raw camera files as public media masters. Develop/export them first, or use the direct Apple Photos path so Owner produces temporary JPGs.
 - Lightroom sidecars may sit next to source media files as `.xmp` files when metadata is not embedded. The Photos By Elie Owner flow does not rewrite source files or sidecars automatically after upload; future XMP saves should be explicit Owner maintenance actions.
 - The default importer selects developed files with Lightroom green label and rating 4 or higher. Use `--select all` only for explicitly selected folders such as Leonardo/AI.
 - Apple Photos album exports are treated as explicitly selected by folder membership, so use `--select all` and let country inference assign them to a gallery or Unknown.
 - The importer can use Apple Photos album/folder names as country hints when embedded country/GPS metadata is missing, for example a Malaga or Valencia album can infer Spain. Direct Apple Photos imports also preserve PhotoKit latitude/longitude and creation date in the sidecar so rendered JPGs can recover date/GPS context even when Photos does not write EXIF.
-- Direct Apple Photos imports export still images at full pixel size as Photos' current rendered JPEG, including HEIC and RAW-backed assets; do not switch to RAW/NEF for the public pipeline.
-- Direct Apple Photos dry runs record PhotoKit resource formats before export, including RAW, HEIC, JPEG, and video resources. If Photos' current rendered JPEG stalls, the bridge may fall back to a local JPEG-convertible source resource such as an alternate JPEG/HEIC; this fallback is reported in Owner progress and sidecar metadata.
+- Direct Apple Photos imports export still images at full pixel size as Photos' current rendered JPEG, including HEIC and RAW-backed assets; do not switch to RAW/NEF as public pipeline outputs.
+- Direct Apple Photos dry runs record PhotoKit resource formats before export, including RAW, HEIC, JPEG, and video resources. If Photos' current rendered JPEG stalls, the bridge may fall back to a local JPEG/HEIC/RAW image resource such as an alternate JPEG, HEIC, or DNG and convert it to a temporary JPG; this fallback is reported in Owner progress and sidecar metadata.
 - Keep Apple Photos video exports as original MOV/MP4/M4V files. The importer generates a watermarked `still_900` poster at 10% into the source video for gallery cards and a watermarked 5-second `short_5s_720p` MP4 preview for detail pages. Buyer delivery for videos is the original/full video only.
 - Direct Apple Photos imports are Owner-only and must run through `python3 scripts/local_server.py` on localhost. The Owner card invokes `scripts/apple_photos_bridge.swift`, which uses PhotoKit/Photos automation and does not inspect `.photoslibrary` package contents or private SQLite files.
 - Apple Photos/iCloud is the intended universal source and R2 is the intended cloud destination. Any authorized Owner machine can become an import workstation once it is signed into the same iCloud Photos library and Google-backed Owner auth is configured; PhotoKit exports still happen on that local Mac, while durable media/state promotion targets R2 and the cloud Owner access registry.
@@ -50,7 +50,7 @@ Check availability before a long run:
 command -v python3 exiftool ffmpeg ffprobe
 ```
 
-For direct Apple Photos imports, macOS must grant Photos access to the process that launches the helper, usually Terminal, Python, or the Owner launcher app. If permission is missing or denied, the Owner card reports the privacy setting to fix. iCloud-only originals are not downloaded silently; the bridge exports with network access disabled and reports those assets as unavailable until Photos has downloaded originals locally.
+For direct Apple Photos imports, macOS must grant Photos access to the process that launches the helper, usually Terminal, Python, or the Owner launcher app. If permission is missing or denied, the Owner card reports the privacy setting to fix. The Owner card enables iCloud downloads by default so Photos can fetch missing originals or renders during the import; if that switch is disabled, iCloud-only originals are reported as unavailable until Photos has downloaded them locally.
 
 ## Build Derivatives
 

@@ -383,8 +383,10 @@ Clock state: running
 | 2026-06-24 | 21:02 CEST | 21:02 CEST | 0:00 | Published the signed-in profile memory release and Worker CORS redeploy; background implementation/testing/deploy time excluded. |
 | 2026-06-24 | 21:20 CEST | 21:21 CEST | 0:01 | Clarified guest checkout orders should be claimable by later same-email signup, with likes and basket merge not required; background verification/testing excluded. |
 | 2026-06-25 | 11:22 CEST | 11:23 CEST | 0:01 | Rechecked yesterday's npm test concern with a fresh full test run; background test runtime excluded. |
+| 2026-06-25 | 11:29 CEST | 11:39 CEST | 0:03 | Requested Apple Photos refresh-control relocation, default-on iCloud downloads, and diagnosed RAW/DNG Photos render fallback failure; background implementation/testing time excluded. |
+| 2026-06-25 | 11:41 CEST | 11:42 CEST | 0:01 | Caught and corrected the date-based visible version from v116.1 to v117.0; background retest time excluded. |
 
 ## Totals
 
-Active collaboration time used: 21:13
+Active collaboration time used: 21:17
 Remaining budget: not set

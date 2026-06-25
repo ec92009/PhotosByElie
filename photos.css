@@ -693,6 +693,18 @@ html[data-theme="light"] .photo-art.has-photo::after{
   letter-spacing:.08em;
   text-transform:uppercase;
 }
+.owner-apple-photos-filter-heading{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  min-height:28px;
+}
+.owner-apple-photos-refresh-button{
+  width:28px;
+  height:28px;
+  min-width:28px;
+  font-size:.85rem;
+}
 .owner-apple-photos-filter input{
   width:100%;
   min-height:38px;

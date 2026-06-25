@@ -150,6 +150,7 @@ let localJPEGConvertibleImageExtensions: Set<String> = heicFileExtensions
     .union(jpegFileExtensions)
     .union(pngFileExtensions)
     .union(tiffFileExtensions)
+    .union(rawFileExtensions)
 
 func fileExtension(_ filename: String) -> String {
     return URL(fileURLWithPath: filename).pathExtension.lowercased()
@@ -204,7 +205,7 @@ func resourceFormat(_ resource: PHAssetResource) -> String {
 
 func isJPEGConvertibleImageResource(_ resource: PHAssetResource) -> Bool {
     let format = resourceFormat(resource)
-    if format == "RAW" || format == "MOV" {
+    if format == "MOV" {
         return false
     }
     if hasExtension(resource.originalFilename, in: localJPEGConvertibleImageExtensions) {
@@ -217,6 +218,8 @@ func isJPEGConvertibleImageResource(_ resource: PHAssetResource) -> Bool {
         || uti.contains("jpg")
         || uti.contains("png")
         || uti.contains("tiff")
+        || uti.contains("raw")
+        || uti.contains("digital-camera-raw")
 }
 
 func imageFallbackResourceTypePriority(_ resource: PHAssetResource) -> Int {
@@ -239,6 +242,7 @@ func imageFallbackResourceFormatPriority(_ resource: PHAssetResource) -> Int {
     if format == "JPEG" { return 0 }
     if format == "HEIC" { return 1 }
     if format == "PNG" || format == "TIFF" { return 2 }
+    if format == "RAW" { return 3 }
     return 9
 }
 
@@ -623,7 +627,7 @@ func writeLocalImageResourceAsJPEG(_ asset: PHAsset, to url: URL, allowIcloudDow
     guard let resource = localImageResourceForJPEGFallback(asset) else {
         return .failure(BridgeError(
             code: "local_image_resource_unavailable",
-            message: "Photos did not expose a local HEIC/JPEG-compatible image resource that Owner can convert after the rendered JPEG stalled."
+            message: "Photos did not expose a local JPEG/HEIC/RAW image resource that Owner can convert after the rendered JPEG stalled."
         ))
     }
     let tempURL = temporaryResourceURL(for: url, resource: resource)
@@ -714,7 +718,7 @@ func writeRenderedJPEG(_ asset: PHAsset, to url: URL, allowIcloudDownloads: Bool
         }
         if let completedFor, completedFor >= renderAfterPhotoKitCompleteTimeoutSeconds {
             PHImageManager.default().cancelImageRequest(requestId)
-            let localFallbackSuffix = localFallbackAvailable ? " Owner will try the local HEIC/source fallback next." : ""
+            let localFallbackSuffix = localFallbackAvailable ? " Owner will try the local image-source fallback next." : ""
             return .failure(BridgeError(
                 code: "render_completion_timeout",
                 message: "Photos reported the rendered asset at 100% but did not provide the JPEG callback after \(Int(renderAfterPhotoKitCompleteTimeoutSeconds)) seconds.\(localFallbackSuffix)"
@@ -724,7 +728,7 @@ func writeRenderedJPEG(_ asset: PHAsset, to url: URL, allowIcloudDownloads: Bool
             PHImageManager.default().cancelImageRequest(requestId)
             return .failure(BridgeError(
                 code: "render_local_fallback_timeout",
-                message: "Photos did not provide a rendered JPEG within \(Int(renderBeforeLocalFallbackTimeoutSeconds)) seconds. Owner will try the local HEIC/source fallback next."
+                message: "Photos did not provide a rendered JPEG within \(Int(renderBeforeLocalFallbackTimeoutSeconds)) seconds. Owner will try the local image-source fallback next."
             ))
         }
         if elapsed >= renderOverallTimeoutSeconds {
@@ -959,7 +963,7 @@ func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterB
                 case .failure(let fallbackError):
                     materializeResult = .failure(BridgeError(
                         code: "render_and_local_resource_failed",
-                        message: "Photos did not provide the rendered JPG: \(renderError.localizedDescription) Local HEIC/source fallback also failed: \(fallbackError.localizedDescription)"
+                        message: "Photos did not provide the rendered JPG: \(renderError.localizedDescription) Local image-source fallback also failed: \(fallbackError.localizedDescription)"
                     ))
                 }
             }
@@ -1007,7 +1011,7 @@ func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterB
             case .failure(let error):
                 row["eligible"] = false
                 row["status"] = "photos_export_failed"
-                row["reason"] = "Photos could not provide a rendered JPG, and the local HEIC/source fallback could not create one: \(error.localizedDescription)"
+                row["reason"] = "Photos could not provide a rendered JPG, and the local image-source fallback could not create one: \(error.localizedDescription)"
                 emitProgress("asset_failed", [
                     "album": albumInfo,
                     "index": plan.index,

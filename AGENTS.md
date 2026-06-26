@@ -33,13 +33,7 @@ Repo-level working preferences for `/Users/ecohen/Dev/PhotosByElie`.
 
 ## Versioning
 
-- Canonical procedure lives in `~/Dev/.SOPs/VERSIONING_SOP.md`.
-- Repo-local versioning deltas live in [`docs/sops/VERSIONING_SOP.md`](./docs/sops/VERSIONING_SOP.md).
-- Apply the versioning SOP when the public site, gallery pages, carousel behavior, viewer UX, or another user-visible surface changes.
-- Do not treat repo-only documentation changes as automatic visible-version bumps by themselves.
-- Update the version badge in the topbar for every user-visible build.
-- Also bump CSS and JS cache-bust query strings (`?v=X.Y`) on `shared.css`, `styles.css`, `photos.css`, and `photos.js` in every HTML file.
-- Keep `VERSION` as the source of the current visible version number without the leading `v`.
+- Follow `~/Dev/.SOPs/VERSIONING_SOP.md`.
 
 ## Timelog
 

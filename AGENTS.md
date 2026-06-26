@@ -4,18 +4,10 @@ Before starting work, also read parent instruction file `~/Dev/AGENTS.md` if it 
 
 Repo-level working preferences for `/Users/ecohen/Dev/PhotosByElie`.
 
-## Parent Instruction Order
-
-- Read `~/Dev/AGENTS.md` if it exists.
-- Apply this repo file last.
-
 ## Response Protocol
 
-- If a task may take more than a few seconds, send a short acknowledgment before doing the work.
-- Read and follow this file before starting work.
 - For Max/David machine handoff or ignored asset sync work, read [`HANDOFF.md`](./HANDOFF.md).
 - For "show me" requests, follow [`SHOW_ME_SOP.md`](./SHOW_ME_SOP.md).
-- For changes intended to be viewed externally, commit and push once complete unless the user asks not to.
 - Keep the active collaboration timelog in [`TIMELOG.md`](./TIMELOG.md) current according to the timelog SOP.
 
 ## Max/David Handoff Direction
@@ -31,23 +23,18 @@ Repo-level working preferences for `/Users/ecohen/Dev/PhotosByElie`.
 
 ## Defaults
 
-- Prefer `rg` and `rg --files` for search.
-- Prefer small, direct edits over broad refactors.
-- Prefer Python for one-off scripts and automation tasks.
 - If Python dependencies are introduced, prefer `uv` for environment and package management.
 
 ## Repo Workflow
 
 - Run commands from the repo root: `/Users/ecohen/Dev/PhotosByElie`.
 - Make small, clear commits with the prefix `photosbyelie:`.
-- Default to keeping `main` pushable.
 - Use branches for larger changes; preferred branch prefix: `codex/`.
-- After modifying the site, update documentation when needed.
 
 ## Versioning
 
-- Canonical procedure lives in `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`.
-- Local copy/adaptation lives in [`docs/sops/VERSIONING_SOP.md`](./docs/sops/VERSIONING_SOP.md).
+- Canonical procedure lives in `~/Dev/.SOPs/VERSIONING_SOP.md`.
+- Repo-local versioning deltas live in [`docs/sops/VERSIONING_SOP.md`](./docs/sops/VERSIONING_SOP.md).
 - Apply the versioning SOP when the public site, gallery pages, carousel behavior, viewer UX, or another user-visible surface changes.
 - Do not treat repo-only documentation changes as automatic visible-version bumps by themselves.
 - Update the version badge in the topbar for every user-visible build.
@@ -57,10 +44,6 @@ Repo-level working preferences for `/Users/ecohen/Dev/PhotosByElie`.
 ## Timelog
 
 - Local SOP: [`docs/sops/TIMELOG_SOP.md`](./docs/sops/TIMELOG_SOP.md).
-- Count only the user's active project collaboration time, not Codex background work or idle gaps.
-- Treat explicit user clock instructions as authoritative: start, resume, pause, stop, or off-budget.
-- When the clock is paused, do not add active collaboration time until project work is clearly resumed.
-- Log time conservatively in one-minute increments.
 - Keep totals and remaining budget in `TIMELOG.md` accurate whenever countable time changes.
 - Use `TIMELOG.md` as the source of the current PhotosByElie clock state across threads in this repo.
 - When `TIMELOG.md` shows `running`, keep logging countable active project collaboration time until the user explicitly pauses, stops, or marks work off-budget.
@@ -98,17 +81,9 @@ Repo-level working preferences for `/Users/ecohen/Dev/PhotosByElie`.
 
 ## Execution Discipline
 
-- Prefer deterministic tooling over manual repetition.
 - Before adding new scripts, check whether the repo already contains a file or workflow that solves the task.
-- If a task fails, read the full error, fix the cause, and retest.
-- Keep secrets out of source files.
 
 ## Python Hygiene
 
 - Do not commit virtual environments such as `.venv/`.
 - Do not commit Python cache artifacts such as `__pycache__/` or `*.pyc`.
-
-## Safety
-
-- Do not delete or overwrite user files without explicit confirmation.
-- Do not rewrite Git history unless explicitly requested.

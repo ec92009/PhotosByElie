@@ -138,6 +138,24 @@ func isoDate(_ date: Date?) -> String {
     return formatter.string(from: date)
 }
 
+func parseISODateArg(_ value: String?) -> Date? {
+    guard let value, !value.isEmpty else { return nil }
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    if let date = formatter.date(from: value) {
+        return date
+    }
+    formatter.formatOptions = [.withInternetDateTime]
+    if let date = formatter.date(from: value) {
+        return date
+    }
+    let dayFormatter = DateFormatter()
+    dayFormatter.locale = Locale(identifier: "en_US_POSIX")
+    dayFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+    dayFormatter.dateFormat = "yyyy-MM-dd"
+    return dayFormatter.date(from: value)
+}
+
 let rawFileExtensions: Set<String> = [
     ".raw", ".dng", ".nef", ".cr2", ".cr3", ".arw", ".raf", ".rw2", ".orf", ".pef", ".srw",
 ]
@@ -379,6 +397,10 @@ func assetRow(_ asset: PHAsset, index: Int) -> [String: Any] {
         "modificationDate": isoDate(asset.modificationDate),
         "pixelWidth": asset.pixelWidth,
         "pixelHeight": asset.pixelHeight,
+        "duration": asset.duration,
+        "favorite": asset.isFavorite,
+        "hidden": asset.isHidden,
+        "mediaSubtypeRaw": asset.mediaSubtypes.rawValue,
         "resources": resourceRows(asset),
         "resourceFormat": summary["label"] as? String ?? "Unknown",
         "resourceFormats": summary["formats"] as? [String] ?? [],
@@ -397,6 +419,128 @@ func assetRow(_ asset: PHAsset, index: Int) -> [String: Any] {
         row["location"] = location
     }
     return row
+}
+
+func libraryFetchOptions(limit: Int, offset: Int, dateFrom: Date?, dateTo: Date?) -> PHFetchOptions {
+    let options = PHFetchOptions()
+    options.sortDescriptors = [
+        NSSortDescriptor(key: "creationDate", ascending: false),
+    ]
+    var predicates: [NSPredicate] = []
+    if let dateFrom {
+        predicates.append(NSPredicate(format: "creationDate >= %@", dateFrom as NSDate))
+    }
+    if let dateTo {
+        predicates.append(NSPredicate(format: "creationDate <= %@", dateTo as NSDate))
+    }
+    if !predicates.isEmpty {
+        options.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
+    }
+    if limit > 0 {
+        options.fetchLimit = max(0, offset) + limit
+    }
+    return options
+}
+
+func libraryIndex(limit: Int, offset: Int, dateFrom: Date?, dateTo: Date?) -> [String: Any] {
+    let safeOffset = max(0, offset)
+    let safeLimit = limit > 0 ? min(limit, 1000) : 120
+    let options = libraryFetchOptions(limit: safeLimit, offset: safeOffset, dateFrom: dateFrom, dateTo: dateTo)
+    let assets = PHAsset.fetchAssets(with: options)
+    var rows: [[String: Any]] = []
+    var skipped = 0
+    assets.enumerateObjects { asset, index, stop in
+        if index < safeOffset {
+            skipped += 1
+            return
+        }
+        if rows.count >= safeLimit {
+            stop.pointee = true
+            return
+        }
+        rows.append(assetRow(asset, index: index + 1))
+    }
+    return [
+        "ok": true,
+        "mode": "library-index",
+        "limit": safeLimit,
+        "offset": safeOffset,
+        "count": rows.count,
+        "fetchedCount": assets.count,
+        "skippedCount": skipped,
+        "dateFrom": isoDate(dateFrom),
+        "dateTo": isoDate(dateTo),
+        "items": rows,
+        "notes": [
+            "Uses PhotoKit metadata only; does not read .photoslibrary package internals.",
+            "Sidecar culling decisions are local-first. Photos keyword/title write-back is staged separately.",
+        ],
+    ]
+}
+
+func findAsset(id: String?) throws -> PHAsset {
+    guard let id, !id.isEmpty else {
+        throw BridgeError(code: "missing_asset_id", message: "Missing Apple Photos asset identifier.")
+    }
+    let result = PHAsset.fetchAssets(withLocalIdentifiers: [id], options: nil)
+    guard let asset = result.firstObject else {
+        throw BridgeError(code: "asset_not_found", message: "Apple Photos asset not found.")
+    }
+    return asset
+}
+
+func writePreviewJPEG(asset: PHAsset, destination: URL, maxPixel: Int) throws -> [String: Any] {
+    guard asset.mediaType == .image else {
+        throw BridgeError(code: "preview_unsupported", message: "Sidecar preview export currently supports still images.")
+    }
+    let pixel = max(256, min(maxPixel, 1800))
+    let target = CGSize(width: pixel, height: pixel)
+    let options = PHImageRequestOptions()
+    options.isNetworkAccessAllowed = false
+    options.deliveryMode = .highQualityFormat
+    options.resizeMode = .fast
+    options.version = .current
+    let semaphore = DispatchSemaphore(value: 0)
+    var capturedImage: NSImage?
+    var capturedInfo: [AnyHashable: Any] = [:]
+    PHImageManager.default().requestImage(
+        for: asset,
+        targetSize: target,
+        contentMode: .aspectFit,
+        options: options
+    ) { image, info in
+        if let info {
+            capturedInfo = info
+        }
+        if let image {
+            capturedImage = image
+        }
+        semaphore.signal()
+    }
+    if semaphore.wait(timeout: .now() + 20) == .timedOut {
+        throw BridgeError(code: "preview_timeout", message: "Timed out while asking Photos for a local preview.")
+    }
+    if capturedInfo[PHImageResultIsInCloudKey] as? Bool == true && capturedImage == nil {
+        throw BridgeError(code: "preview_needs_icloud", message: "Photos reports this preview is only available from iCloud; Sidecar preview did not download it.")
+    }
+    guard let image = capturedImage,
+          let tiff = image.tiffRepresentation,
+          let bitmap = NSBitmapImageRep(data: tiff),
+          let data = bitmap.representation(using: .jpeg, properties: [.compressionFactor: 0.86]) else {
+        throw BridgeError(code: "preview_unavailable", message: "Photos did not provide a local preview image.")
+    }
+    try FileManager.default.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
+    try data.write(to: destination, options: .atomic)
+    return [
+        "ok": true,
+        "mode": "preview",
+        "localIdentifier": asset.localIdentifier,
+        "destination": destination.path,
+        "bytes": data.count,
+        "pixelWidth": bitmap.pixelsWide,
+        "pixelHeight": bitmap.pixelsHigh,
+        "networkAccessAllowed": false,
+    ]
 }
 
 func burstSurvivorPositions(size: Int) -> Set<Int> {
@@ -1211,7 +1355,7 @@ func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterB
 
 let command = CommandLine.arguments.dropFirst().first ?? ""
 if command.isEmpty || command == "--help" {
-    printJSON(["ok": true, "usage": "apple_photos_bridge.swift albums | preflight --album-id ID [--filter-bursts] [--allow-icloud-downloads] | export --album-id ID --destination PATH [--filter-bursts] [--allow-icloud-downloads]"])
+    printJSON(["ok": true, "usage": "apple_photos_bridge.swift albums | library-index [--limit N] [--offset N] [--date-from YYYY-MM-DD] [--date-to YYYY-MM-DD] | preview --asset-id ID --destination PATH [--max-pixel N] | preflight --album-id ID [--filter-bursts] [--allow-icloud-downloads] | export --album-id ID --destination PATH [--filter-bursts] [--allow-icloud-downloads]"])
     exit(0)
 }
 
@@ -1221,6 +1365,23 @@ do {
     switch command {
     case "albums":
         printJSON(["ok": true, "albums": fetchAlbums().map(albumSummary)])
+    case "library-index":
+        printJSON(libraryIndex(
+            limit: intArg("--limit", default: 120),
+            offset: intArg("--offset", default: 0),
+            dateFrom: parseISODateArg(argValue("--date-from")),
+            dateTo: parseISODateArg(argValue("--date-to"))
+        ))
+    case "preview":
+        guard let destination = argValue("--destination") else {
+            fail("missing_destination", "Missing --destination for Apple Photos preview.")
+        }
+        let asset = try findAsset(id: argValue("--asset-id"))
+        printJSON(try writePreviewJPEG(
+            asset: asset,
+            destination: URL(fileURLWithPath: destination),
+            maxPixel: intArg("--max-pixel", default: 900)
+        ))
     case "preflight":
         let album = try findAlbum(id: argValue("--album-id"), name: argValue("--album-name"))
         printJSON(preflight(album: album, limit: intArg("--limit"), filterBursts: boolArg("--filter-bursts"), allowIcloudDownloads: boolArg("--allow-icloud-downloads")))

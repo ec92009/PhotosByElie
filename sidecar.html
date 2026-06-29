@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Photos By Elie | Sidecar</title>
+  <meta name="robots" content="noindex,nofollow"/>
+  <meta name="theme-color" content="#7b4d26"/>
+  <link rel="stylesheet" href="./shared.css"/>
+  <link rel="stylesheet" href="./photos.css"/>
+  <link rel="stylesheet" href="./sidecar.css"/>
+</head>
+<body data-gallery="sidecar">
+  <header class="site-header">
+    <a class="brand" href="./owner.html"><img class="site-logo" src="./assets/branding/photosbyelie-camera-tripod-logo-512.png" alt="Photos By Elie camera logo"/>PHOTOS BY ELIE</a>
+    <nav aria-label="Sidecar navigation">
+      <a href="./owner.html">Owner</a>
+      <span>|</span>
+      <a class="is-active" href="./sidecar.html">Sidecar</a>
+    </nav>
+  </header>
+
+  <main class="owner-main sidecar-shell">
+    <section class="owner-hero sidecar-hero">
+      <p class="eyebrow">Apple Photos workspace</p>
+      <h1>Sidecar</h1>
+      <p class="gallery-status" data-sidecar-status>Local-first culling. Photos write-back is staged until commit.</p>
+      <div class="sidecar-version" data-sidecar-version>v...</div>
+    </section>
+
+    <section class="panel sidecar-controls" aria-label="Sidecar source controls">
+      <div class="sidecar-control-grid">
+        <label>
+          <span>Date from</span>
+          <input type="date" data-sidecar-date-from/>
+        </label>
+        <label>
+          <span>Date to</span>
+          <input type="date" data-sidecar-date-to/>
+        </label>
+        <label>
+          <span>Previews</span>
+          <select data-sidecar-limit>
+            <option value="48">48</option>
+            <option value="96" selected>96</option>
+            <option value="180">180</option>
+            <option value="300">300</option>
+          </select>
+        </label>
+        <label>
+          <span>Offset</span>
+          <input type="number" min="0" step="1" value="0" inputmode="numeric" data-sidecar-offset/>
+        </label>
+      </div>
+      <div class="cta sidecar-actions">
+        <button class="btn primary" type="button" data-sidecar-load>Load slice</button>
+        <button class="btn secondary" type="button" data-sidecar-summary>Refresh summary</button>
+        <button class="btn secondary" type="button" data-sidecar-upload-plan>Upload plan</button>
+        <button class="btn secondary" type="button" data-sidecar-commit-plan>Photos commit plan</button>
+      </div>
+      <p class="owner-card-note">Shortcuts: <kbd>1</kbd>-<kbd>5</kbd> rating, <kbd>0</kbd> clear rating, <kbd>P</kbd> pick, <kbd>A</kbd> approve metadata + pick, <kbd>X</kbd> reject, <kbd>H</kbd> hide, <kbd>U</kbd> unpick, arrows select.</p>
+    </section>
+
+    <section class="sidecar-workspace">
+      <section class="panel sidecar-grid-panel" aria-label="Sidecar culling grid">
+        <div class="owner-card-titlebar">
+          <div>
+            <p class="eyebrow">Cull</p>
+            <h2>Library slice</h2>
+          </div>
+          <dl class="sidecar-mini-counts" data-sidecar-counts></dl>
+        </div>
+        <div class="sidecar-grid" data-sidecar-grid>
+          <p class="empty-basket">Load a library slice to begin.</p>
+        </div>
+      </section>
+
+      <aside class="panel sidecar-edit-panel" aria-label="Sidecar edit panel">
+        <div class="owner-card-titlebar">
+          <div>
+            <p class="eyebrow">Edit</p>
+            <h2>Decision</h2>
+          </div>
+        </div>
+        <div data-sidecar-detail class="sidecar-detail">
+          <p class="empty-basket">Select a photo to edit.</p>
+        </div>
+      </aside>
+    </section>
+
+    <section class="panel sidecar-plan-panel" data-sidecar-plan-panel hidden>
+      <div class="owner-card-titlebar">
+        <div>
+          <p class="eyebrow" data-sidecar-plan-eyebrow>Plan</p>
+          <h2 data-sidecar-plan-title>Plan</h2>
+        </div>
+      </div>
+      <div data-sidecar-plan-output></div>
+    </section>
+  </main>
+
+  <script src="./photos.js"></script>
+  <script src="./sidecar.js"></script>
+</body>
+</html>

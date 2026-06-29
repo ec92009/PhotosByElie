@@ -385,8 +385,19 @@ Clock state: running
 | 2026-06-25 | 11:22 CEST | 11:23 CEST | 0:01 | Rechecked yesterday's npm test concern with a fresh full test run; background test runtime excluded. |
 | 2026-06-25 | 11:29 CEST | 11:39 CEST | 0:03 | Requested Apple Photos refresh-control relocation, default-on iCloud downloads, and diagnosed RAW/DNG Photos render fallback failure; background implementation/testing time excluded. |
 | 2026-06-25 | 11:41 CEST | 11:42 CEST | 0:01 | Caught and corrected the date-based visible version from v116.1 to v117.0; background retest time excluded. |
+| 2026-06-26 | 11:36 CEST | 11:37 CEST | 0:01 | Requested Owner Apple Photos scan status move next to Refresh with higher contrast; background implementation/testing time excluded. |
+| 2026-06-26 | 11:44 CEST | 11:45 CEST | 0:01 | Reread current AGENTS/versioning direction and clarified whether the Owner UI tweak needs a visible version bump. |
+| 2026-06-26 | 12:14 CEST | 12:17 CEST | 0:03 | Diagnosed Apple Photos import-cache rows appearing in Title/Keywords Review without catalog/state writeback targets; background implementation/testing time excluded. |
+| 2026-06-26 | 13:42 CEST | 13:44 CEST | 0:02 | Diagnosed the 14th Street Apple Photos import as R2-ready but not review-queued, then queued the batch and clarified the TKR review path; background implementation/testing time excluded. |
+| 2026-06-26 | 14:04 CEST | 14:05 CEST | 0:01 | Discussed where to credit Web By Elie for site creation and maintenance. |
+| 2026-06-26 | 14:05 CEST | 14:06 CEST | 0:01 | Approved adding Web By Elie crediting to the site footer and Support page; background implementation/testing time excluded. |
+| 2026-06-26 | 14:06 CEST | 14:07 CEST | 0:01 | Confirmed 14th Street Apple Photos imports need first-class Title/Keyword Review visibility and approval handling; background implementation/testing time excluded. |
+| 2026-06-26 | 19:07 CEST | 19:13 CEST | 0:03 | Requested clearer Account logout, Sync profile meaning, all-order download history, and per-order resend instructions; thumbnails skipped after clarification. Background implementation/testing time excluded. |
+| 2026-06-26 | 19:20 CEST | 19:27 CEST | 0:04 | Diagnosed localhost Google sign-in loop as a cross-site auth cookie issue and deployed the Worker cookie attribute fix from a clean full-catalog bundle; background validation/deploy time excluded. |
+| 2026-06-29 | 15:15 CEST | 15:33 CEST | 0:18 | Strategized Apple Photos-first Owner rethink with Lightroom-style stars/colors/pick/reject/title/keyword write-back, named the Sidecar prototype, chose its language/architecture boundary, revisited earlier mobile-tap decisions, shaped Sidecar cull/edit UI around date/search preview slices, reframed Sidecar as a whole-library triage engine, and switched workflow actions to local-first staged commits. |
+| 2026-06-29 | 15:33 CEST | 15:35 CEST | 0:02 | Requested Sidecar implementation start, repo backlog/docs updates, Sidecar-specific versioning, and a Dock launcher that starts the helper and opens Safari; background coding/testing time excluded. |
 
 ## Totals
 
-Active collaboration time used: 21:17
+Active collaboration time used: 21:54
 Remaining budget: not set

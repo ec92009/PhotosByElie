@@ -14,16 +14,18 @@ import subprocess
 import sys
 from urllib.parse import parse_qs, unquote, urlparse
 
-from sidecar_state_db import commit_plan, merge_state, record_decision, summary, upload_plan, upsert_assets
+from sidecar_state_db import commit_plan, merge_state, record_decision, record_decisions, summary, upload_plan, upsert_assets
 
 
 APPLE_PHOTOS_BRIDGE = Path("scripts/apple_photos_bridge.swift")
 SIDECAR_VERSION_FILE = Path("SIDECAR_VERSION")
-SIDECAR_DEFAULT_VERSION = "121.0"
+SIDECAR_DEFAULT_VERSION = "121.4"
 SIDECAR_PREVIEW_ROOT = Path("tmp/sidecar-previews")
+SIDECAR_PREVIEW_CACHE_VERSION = "v2"
 SIDECAR_LIBRARY_PATH = "/__sidecar/library"
 SIDECAR_PREVIEW_PATH = "/__sidecar/preview/"
 SIDECAR_DECISION_PATH = "/__sidecar/decision"
+SIDECAR_DECISIONS_PATH = "/__sidecar/decisions"
 SIDECAR_SUMMARY_PATH = "/__sidecar/summary"
 SIDECAR_UPLOAD_PLAN_PATH = "/__sidecar/upload-plan"
 SIDECAR_COMMIT_PLAN_PATH = "/__sidecar/commit-plan"
@@ -87,7 +89,7 @@ def _text_query(query: dict[str, list[str]], *names: str) -> str:
 
 def _preview_cache_path(repo_root: Path, asset_id: str, max_pixel: int) -> Path:
     digest = hashlib.sha256(asset_id.encode("utf-8")).hexdigest()[:24]
-    return repo_root / SIDECAR_PREVIEW_ROOT / f"{digest}_{max_pixel}.jpg"
+    return repo_root / SIDECAR_PREVIEW_ROOT / f"{digest}_{max_pixel}_{SIDECAR_PREVIEW_CACHE_VERSION}.jpg"
 
 
 class SidecarHandler(SimpleHTTPRequestHandler):
@@ -119,6 +121,9 @@ class SidecarHandler(SimpleHTTPRequestHandler):
         path = self.path.split("?", 1)[0]
         if path == SIDECAR_DECISION_PATH:
             self._handle_decision()
+            return
+        if path == SIDECAR_DECISIONS_PATH:
+            self._handle_decisions()
             return
         self.send_error(HTTPStatus.NOT_FOUND)
 
@@ -234,6 +239,27 @@ class SidecarHandler(SimpleHTTPRequestHandler):
         try:
             payload = self._read_json_body()
             result = record_decision(Path.cwd(), payload)
+            result["summary"] = summary(Path.cwd())
+        except ValueError as error:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
+            return
+        except Exception as error:
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
+            return
+        self._send_json(HTTPStatus.OK, result)
+
+    def _handle_decisions(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            payload = self._read_json_body()
+            decisions = payload.get("decisions") or []
+            if not isinstance(decisions, list):
+                raise ValueError("decisions must be a JSON array.")
+            if len(decisions) > 500:
+                raise ValueError("Sidecar batch decisions are limited to 500 rows.")
+            result = record_decisions(Path.cwd(), decisions)
             result["summary"] = summary(Path.cwd())
         except ValueError as error:
             self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})

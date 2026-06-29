@@ -35,16 +35,87 @@
   const itemId = (item) => String(item?.localIdentifier || item?.assetId || "").trim();
   const previewUrl = (item) => `/__sidecar/preview/${encodeURIComponent(itemId(item))}?maxPixel=900`;
   const selectedItem = () => state.items[state.selectedIndex] || null;
+  const previewFallbackMarkup = `<span class="sidecar-thumb-fallback">Preview unavailable</span>`;
+  const shootWindowMs = 2 * 60 * 60 * 1000;
+  const colorShortcuts = {
+    6: "red",
+    7: "yellow",
+    8: "green",
+    9: "blue",
+  };
+
+  const wirePreviewFallbacks = (root) => {
+    root?.querySelectorAll("img[data-sidecar-preview]").forEach((img) => {
+      const markMissing = () => {
+        img.closest(".sidecar-thumb, .sidecar-detail-preview")?.classList.add("is-missing");
+        img.removeAttribute("src");
+      };
+      img.addEventListener("error", markMissing, { once: true });
+      if (img.complete && img.naturalWidth === 0) markMissing();
+    });
+  };
 
   const sidecarBadges = (item) => {
     const sidecar = item.sidecarState || {};
     const badges = [];
-    if (sidecar.rating) badges.push(`${sidecar.rating} star`);
     if (sidecar.color) badges.push(sidecar.color);
     if (sidecar.pickState && sidecar.pickState !== "undecided") badges.push(sidecar.pickState);
     if (sidecar.metadataState && sidecar.metadataState !== "unreviewed") badges.push(sidecar.metadataState);
     if (item.pendingSyncCount) badges.push(`${item.pendingSyncCount} pending`);
     return badges.map((badge) => `<span class="sidecar-badge">${escapeHtml(badge)}</span>`).join("");
+  };
+
+  const cardDecisionClasses = (item, selected = false) => {
+    const sidecar = item.sidecarState || {};
+    return [
+      "sidecar-card",
+      selected ? "is-selected" : "",
+      Number(sidecar.rating || 0) > 0 ? "has-rating" : "",
+      sidecar.color ? "has-color" : "",
+      sidecar.pickState === "picked" ? "is-picked" : "",
+      sidecar.pickState === "rejected" ? "is-rejected" : "",
+      sidecar.pickState === "hidden" ? "is-hidden-decision" : "",
+    ].filter(Boolean).join(" ");
+  };
+
+  const cardDecisionAttrs = (item) => {
+    const sidecar = item.sidecarState || {};
+    const attrs = [];
+    if (sidecar.color) attrs.push(`data-sidecar-color="${escapeHtml(sidecar.color)}"`);
+    if (sidecar.pickState) attrs.push(`data-sidecar-pick="${escapeHtml(sidecar.pickState)}"`);
+    const rating = Number(sidecar.rating || 0);
+    if (rating > 0) attrs.push(`data-sidecar-rating="${rating}"`);
+    return attrs.join(" ");
+  };
+
+  const ratingStars = (item) => {
+    const rating = Math.max(0, Math.min(5, Number(item.sidecarState?.rating || 0)));
+    return rating ? `<span class="sidecar-stars" aria-label="${rating} star rating">${"&#9733;".repeat(rating)}</span>` : "";
+  };
+
+  const parseKeywords = (value = "") => String(value || "")
+    .replace(/;/g, ",")
+    .split(",")
+    .map((keyword) => keyword.trim())
+    .filter(Boolean);
+
+  const metadataFormValues = () => {
+    const form = detail?.querySelector("[data-sidecar-metadata-form]");
+    const data = form ? new FormData(form) : new FormData();
+    return {
+      title: String(data.get("title") || "").trim(),
+      keywords: parseKeywords(data.get("keywords") || ""),
+    };
+  };
+
+  const sameShootIndexes = () => {
+    const source = selectedItem();
+    const sourceTime = Date.parse(source?.creationDate || "");
+    if (!Number.isFinite(sourceTime)) return state.selectedIndex >= 0 ? [state.selectedIndex] : [];
+    return state.items
+      .map((item, index) => ({ index, time: Date.parse(item.creationDate || "") }))
+      .filter(({ index, time }) => index >= state.selectedIndex && Number.isFinite(time) && Math.abs(time - sourceTime) <= shootWindowMs)
+      .map(({ index }) => index);
   };
 
   const renderCounts = (summary = state.summary) => {
@@ -71,9 +142,11 @@
       const selected = index === state.selectedIndex;
       const label = item.filename || id;
       return `
-        <article class="sidecar-card${selected ? " is-selected" : ""}" data-sidecar-index="${index}" tabindex="0" aria-selected="${selected ? "true" : "false"}">
+        <article class="${cardDecisionClasses(item, selected)}" ${cardDecisionAttrs(item)} data-sidecar-index="${index}" tabindex="0" aria-selected="${selected ? "true" : "false"}">
           <div class="sidecar-thumb">
-            <img src="${escapeHtml(previewUrl(item))}" alt="${escapeHtml(label)}" loading="lazy"/>
+            <img data-sidecar-preview src="${escapeHtml(previewUrl(item))}" alt="${escapeHtml(label)}" loading="lazy"/>
+            ${previewFallbackMarkup}
+            ${ratingStars(item)}
           </div>
           <div class="sidecar-card-copy">
             <strong>${escapeHtml(label)}</strong>
@@ -83,6 +156,56 @@
         </article>
       `;
     }).join("");
+    wirePreviewFallbacks(grid);
+  };
+
+  const cardForIndex = (index) => grid?.querySelector(`[data-sidecar-index="${index}"]`);
+
+  const updateGridSelection = (previousIndex) => {
+    if (!grid) return;
+    [previousIndex, state.selectedIndex].forEach((index) => {
+      if (index < 0) return;
+      const card = cardForIndex(index);
+      if (!card) return;
+      const selected = index === state.selectedIndex;
+      card.classList.toggle("is-selected", selected);
+      card.setAttribute("aria-selected", selected ? "true" : "false");
+    });
+  };
+
+  const updateCardVisualState = (index) => {
+    if (index < 0) return;
+    const card = cardForIndex(index);
+    const item = state.items[index];
+    if (!card || !item) return;
+    const selected = index === state.selectedIndex;
+    card.className = cardDecisionClasses(item, selected);
+    card.setAttribute("aria-selected", selected ? "true" : "false");
+    const color = item.sidecarState?.color || "";
+    const pick = item.sidecarState?.pickState || "";
+    const rating = Number(item.sidecarState?.rating || 0);
+    if (color) card.setAttribute("data-sidecar-color", color);
+    else card.removeAttribute("data-sidecar-color");
+    if (pick) card.setAttribute("data-sidecar-pick", pick);
+    else card.removeAttribute("data-sidecar-pick");
+    if (rating > 0) card.setAttribute("data-sidecar-rating", String(rating));
+    else card.removeAttribute("data-sidecar-rating");
+    const thumb = card.querySelector(".sidecar-thumb");
+    if (thumb) {
+      let stars = thumb.querySelector(".sidecar-stars");
+      const starsHtml = ratingStars(item);
+      if (starsHtml) {
+        if (!stars) {
+          thumb.insertAdjacentHTML("beforeend", starsHtml);
+        } else {
+          stars.outerHTML = starsHtml;
+        }
+      } else {
+        stars?.remove();
+      }
+    }
+    const badges = card?.querySelector(".sidecar-badges");
+    if (badges) badges.innerHTML = sidecarBadges(item);
   };
 
   const chip = (label, action, value, active = false) => `
@@ -98,9 +221,12 @@
     }
     const sidecar = item.sidecarState || {};
     const keywords = Array.isArray(sidecar.keywords) ? sidecar.keywords.join(", ") : "";
+    const titleInputId = `sidecar-title-${state.selectedIndex}`;
+    const keywordsInputId = `sidecar-keywords-${state.selectedIndex}`;
     detail.innerHTML = `
       <div class="sidecar-detail-preview">
-        <img src="${escapeHtml(previewUrl(item))}" alt="${escapeHtml(item.filename || itemId(item))}"/>
+        <img data-sidecar-preview src="${escapeHtml(previewUrl(item))}" alt="${escapeHtml(item.filename || itemId(item))}"/>
+        ${previewFallbackMarkup}
       </div>
       <div>
         <strong>${escapeHtml(item.filename || itemId(item))}</strong>
@@ -123,17 +249,27 @@
         ${chip("AI rework", "metadata-rework", "", sidecar.metadataState === "rework")}
       </div>
       <form class="sidecar-edit-form" data-sidecar-metadata-form>
-        <label>
-          <span>Title</span>
-          <input type="text" name="title" value="${escapeHtml(sidecar.title || "")}" placeholder="Title for Photos and future catalog"/>
-        </label>
-        <label>
-          <span>Keywords</span>
-          <textarea name="keywords" placeholder="Comma-separated descriptive keywords">${escapeHtml(keywords)}</textarea>
-        </label>
-        <button class="btn secondary" type="submit">Stage metadata</button>
+        <div class="sidecar-edit-field">
+          <div class="sidecar-field-heading">
+            <label for="${titleInputId}">Title</label>
+            <button class="sidecar-propagate-field" type="button" data-sidecar-propagate-field="title" aria-label="Propagate title down" title="Propagate this title to current and following rows in the same two-hour shoot window">↓</button>
+          </div>
+          <input id="${titleInputId}" type="text" name="title" value="${escapeHtml(sidecar.title || "")}" placeholder="Title for Photos and future catalog"/>
+        </div>
+        <div class="sidecar-edit-field">
+          <div class="sidecar-field-heading">
+            <label for="${keywordsInputId}">Keywords</label>
+            <button class="sidecar-propagate-field" type="button" data-sidecar-propagate-field="keywords" aria-label="Propagate keywords down" title="Propagate these keywords to current and following rows in the same two-hour shoot window">↓</button>
+          </div>
+          <textarea id="${keywordsInputId}" name="keywords" placeholder="Comma-separated descriptive keywords">${escapeHtml(keywords)}</textarea>
+        </div>
+        <div class="sidecar-metadata-actions">
+          <button class="btn secondary" type="submit">Stage metadata</button>
+          <button class="btn secondary" type="button" data-sidecar-propagate-field="metadata">Propagate metadata</button>
+        </div>
       </form>
     `;
+    wirePreviewFallbacks(detail);
   };
 
   const selectIndex = (index) => {
@@ -143,18 +279,21 @@
       renderDetail();
       return;
     }
+    const previousIndex = state.selectedIndex;
     state.selectedIndex = Math.max(0, Math.min(index, state.items.length - 1));
-    renderGrid();
+    if (state.selectedIndex === previousIndex) return;
+    updateGridSelection(previousIndex);
     renderDetail();
-    grid?.querySelector(`[data-sidecar-index="${state.selectedIndex}"]`)?.scrollIntoView({ block: "nearest" });
+    cardForIndex(state.selectedIndex)?.scrollIntoView({ block: "nearest" });
   };
 
   const mergeChangedItem = (assetId, nextState, pendingCount = 1) => {
     const index = state.items.findIndex((item) => itemId(item) === assetId);
-    if (index < 0) return;
+    if (index < 0) return -1;
     const item = state.items[index];
     item.sidecarState = { ...(item.sidecarState || {}), ...nextState };
     item.pendingSyncCount = Math.max(Number(item.pendingSyncCount || 0), pendingCount);
+    return index;
   };
 
   const postDecision = async (payload, { advance = true } = {}) => {
@@ -169,15 +308,61 @@
     });
     const result = await response.json().catch(() => ({}));
     if (!response.ok || !result.ok) throw new Error(result.error || "Could not stage Sidecar decision.");
-    mergeChangedItem(assetId, result.state || {}, result.changedFamilies?.length || 1);
+    const changedIndex = mergeChangedItem(assetId, result.state || {}, result.changedFamilies?.length || 1);
     state.summary = result.summary || state.summary;
     renderCounts();
+    updateCardVisualState(changedIndex);
     if (advance) selectIndex(state.selectedIndex + 1);
     else {
-      renderGrid();
+      updateGridSelection(state.selectedIndex);
       renderDetail();
     }
     setStatus(`Staged ${payload.action}. Photos write-back is pending commit.`);
+  };
+
+  const postDecisions = async (decisions, message) => {
+    if (!decisions.length) return;
+    setStatus(message || `Staging ${decisions.length.toLocaleString()} local decisions...`);
+    const response = await fetch("/__sidecar/decisions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ decisions }),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || !result.ok) throw new Error(result.error || "Could not stage Sidecar decisions.");
+    (result.items || []).forEach((item) => {
+      const changedIndex = mergeChangedItem(item.assetId, item.state || {}, item.changedFamilies?.length || 1);
+      updateCardVisualState(changedIndex);
+    });
+    state.summary = result.summary || state.summary;
+    renderCounts();
+    renderDetail();
+    setStatus(`Propagated metadata to ${Number(result.count || 0).toLocaleString()} same-shoot assets. Photos write-back is pending commit.`);
+  };
+
+  const propagateMetadataField = async (field) => {
+    const source = selectedItem();
+    if (!source) return;
+    const sourceValues = metadataFormValues();
+    const targets = sameShootIndexes();
+    const decisions = targets.map((index) => {
+      const target = state.items[index];
+      const sidecar = target.sidecarState || {};
+      const isSource = index === state.selectedIndex;
+      const existingTitle = isSource ? sourceValues.title : String(sidecar.title || "");
+      const existingKeywords = isSource
+        ? sourceValues.keywords
+        : (Array.isArray(sidecar.keywords) ? sidecar.keywords : []);
+      return {
+        assetId: itemId(target),
+        action: "metadata",
+        title: field === "keywords" ? existingTitle : sourceValues.title,
+        keywords: field === "title" ? existingKeywords : sourceValues.keywords,
+        metadataState: "proposed",
+      };
+    });
+    const label = field === "metadata" ? "title and keywords" : field;
+    await postDecisions(decisions, `Propagating ${label} locally...`);
   };
 
   const loadSlice = async () => {
@@ -255,6 +440,9 @@
       } else if (key === "0") {
         event.preventDefault();
         await postDecision({ action: "rating", rating: 0 });
+      } else if (colorShortcuts[key]) {
+        event.preventDefault();
+        await postDecision({ action: "color", color: colorShortcuts[key] }, { advance: false });
       } else if (key === "p" || key === "P") {
         event.preventDefault();
         await postDecision({ action: "pick" });
@@ -289,6 +477,15 @@
   });
 
   detail?.addEventListener("click", async (event) => {
+    const propagateButton = event.target.closest("[data-sidecar-propagate-field]");
+    if (propagateButton) {
+      try {
+        await propagateMetadataField(propagateButton.dataset.sidecarPropagateField || "");
+      } catch (error) {
+        setStatus(error.message || "Could not propagate metadata.");
+      }
+      return;
+    }
     const button = event.target.closest("[data-sidecar-action]");
     if (!button) return;
     try {
@@ -311,7 +508,7 @@
       await postDecision({
         action: "metadata",
         title: data.get("title") || "",
-        keywords: data.get("keywords") || "",
+        keywords: parseKeywords(data.get("keywords") || ""),
         metadataState: "proposed",
       }, { advance: false });
     } catch (error) {
@@ -328,10 +525,10 @@
   fetch("/__sidecar/version")
     .then((response) => response.json())
     .then((payload) => {
-      if (versionRoot) versionRoot.textContent = `v${payload.version || "121.0"}`;
+      if (versionRoot) versionRoot.textContent = `v${payload.version || "121.4"}`;
     })
     .catch(() => {
-      if (versionRoot) versionRoot.textContent = "v121.0";
+      if (versionRoot) versionRoot.textContent = "v121.4";
     });
   loadSummary().catch(() => {});
 })();

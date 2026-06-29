@@ -51,6 +51,13 @@ func fail(_ code: String, _ message: String, status: Int32 = 1) -> Never {
     exit(status)
 }
 
+func errorMessage(_ error: Error) -> String {
+    if let bridgeError = error as? BridgeError {
+        return bridgeError.message
+    }
+    return error.localizedDescription
+}
+
 func argValue(_ name: String) -> String? {
     let args = CommandLine.arguments
     guard let index = args.firstIndex(of: name), index + 1 < args.count else { return nil }
@@ -497,13 +504,13 @@ func writePreviewJPEG(asset: PHAsset, destination: URL, maxPixel: Int) throws ->
     let target = CGSize(width: pixel, height: pixel)
     let options = PHImageRequestOptions()
     options.isNetworkAccessAllowed = false
-    options.deliveryMode = .highQualityFormat
+    options.deliveryMode = .opportunistic
     options.resizeMode = .fast
     options.version = .current
     let semaphore = DispatchSemaphore(value: 0)
     var capturedImage: NSImage?
     var capturedInfo: [AnyHashable: Any] = [:]
-    PHImageManager.default().requestImage(
+    let requestId = PHImageManager.default().requestImage(
         for: asset,
         targetSize: target,
         contentMode: .aspectFit,
@@ -517,30 +524,69 @@ func writePreviewJPEG(asset: PHAsset, destination: URL, maxPixel: Int) throws ->
         }
         semaphore.signal()
     }
-    if semaphore.wait(timeout: .now() + 20) == .timedOut {
-        throw BridgeError(code: "preview_timeout", message: "Timed out while asking Photos for a local preview.")
+    var photoKitFailure: Error?
+    if semaphore.wait(timeout: .now() + 6) == .timedOut {
+        PHImageManager.default().cancelImageRequest(requestId)
+        photoKitFailure = BridgeError(code: "preview_timeout", message: "Timed out while asking Photos for a local preview.")
+    } else if capturedInfo[PHImageResultIsInCloudKey] as? Bool == true && capturedImage == nil {
+        photoKitFailure = BridgeError(code: "preview_needs_icloud", message: "Photos reports this preview is only available from iCloud; Sidecar preview did not download it.")
     }
-    if capturedInfo[PHImageResultIsInCloudKey] as? Bool == true && capturedImage == nil {
-        throw BridgeError(code: "preview_needs_icloud", message: "Photos reports this preview is only available from iCloud; Sidecar preview did not download it.")
+    var smallPhotoKitPreview: (data: Data, bitmap: NSBitmapImageRep)?
+    if let image = capturedImage,
+       let tiff = image.tiffRepresentation,
+       let bitmap = NSBitmapImageRep(data: tiff),
+       let data = bitmap.representation(using: .jpeg, properties: [.compressionFactor: 0.86]) {
+        let minimumUsefulPixel = min(256, max(128, pixel / 2))
+        if max(bitmap.pixelsWide, bitmap.pixelsHigh) < minimumUsefulPixel {
+            smallPhotoKitPreview = (data: data, bitmap: bitmap)
+        } else {
+            try FileManager.default.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try data.write(to: destination, options: .atomic)
+            return [
+                "ok": true,
+                "mode": "preview",
+                "localIdentifier": asset.localIdentifier,
+                "destination": destination.path,
+                "bytes": data.count,
+                "pixelWidth": bitmap.pixelsWide,
+                "pixelHeight": bitmap.pixelsHigh,
+                "networkAccessAllowed": false,
+                "previewSource": "photokit_render",
+            ]
+        }
     }
-    guard let image = capturedImage,
-          let tiff = image.tiffRepresentation,
-          let bitmap = NSBitmapImageRep(data: tiff),
-          let data = bitmap.representation(using: .jpeg, properties: [.compressionFactor: 0.86]) else {
-        throw BridgeError(code: "preview_unavailable", message: "Photos did not provide a local preview image.")
+
+    let fallbackReason = photoKitFailure.map(errorMessage)
+        ?? (smallPhotoKitPreview == nil
+            ? "Photos did not provide a local preview image."
+            : "Photos only provided a tiny degraded preview image.")
+    switch writeLocalImageResourcePreviewJPEG(asset, to: destination, maxPixel: pixel) {
+    case .success(var payload):
+        payload["photoKitFallbackReason"] = fallbackReason
+        return payload
+    case .failure(let fallbackError):
+        if let smallPhotoKitPreview {
+            try FileManager.default.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try smallPhotoKitPreview.data.write(to: destination, options: .atomic)
+            let bitmap = smallPhotoKitPreview.bitmap
+            return [
+                "ok": true,
+                "mode": "preview",
+                "localIdentifier": asset.localIdentifier,
+                "destination": destination.path,
+                "bytes": smallPhotoKitPreview.data.count,
+                "pixelWidth": bitmap.pixelsWide,
+                "pixelHeight": bitmap.pixelsHigh,
+                "networkAccessAllowed": false,
+                "previewSource": "photokit_degraded",
+                "localPreviewFallbackError": errorMessage(fallbackError),
+            ]
+        }
+        throw BridgeError(
+            code: "preview_unavailable",
+            message: "\(fallbackReason) Local preview fallback also failed: \(errorMessage(fallbackError))"
+        )
     }
-    try FileManager.default.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
-    try data.write(to: destination, options: .atomic)
-    return [
-        "ok": true,
-        "mode": "preview",
-        "localIdentifier": asset.localIdentifier,
-        "destination": destination.path,
-        "bytes": data.count,
-        "pixelWidth": bitmap.pixelsWide,
-        "pixelHeight": bitmap.pixelsHigh,
-        "networkAccessAllowed": false,
-    ]
 }
 
 func burstSurvivorPositions(size: Int) -> Set<Int> {
@@ -767,6 +813,82 @@ func convertImageResourceToJPEG(sourceURL: URL, destinationURL: URL) -> Result<V
     return .success(())
 }
 
+func convertImageResourceToPreviewJPEG(sourceURL: URL, destinationURL: URL, maxPixel: Int) -> Result<[String: Int], Error> {
+    guard let source = CGImageSourceCreateWithURL(sourceURL as CFURL, nil) else {
+        return .failure(BridgeError(code: "source_image_unreadable", message: "Could not read the local image resource for preview conversion."))
+    }
+    guard CGImageSourceGetCount(source) > 0 else {
+        return .failure(BridgeError(code: "source_image_empty", message: "The local image resource did not contain an image frame for preview conversion."))
+    }
+    let pixel = max(256, min(maxPixel, 1800))
+    let thumbnailOptions: [CFString: Any] = [
+        kCGImageSourceCreateThumbnailFromImageAlways: true,
+        kCGImageSourceCreateThumbnailWithTransform: true,
+        kCGImageSourceThumbnailMaxPixelSize: pixel,
+    ]
+    guard let thumbnail = CGImageSourceCreateThumbnailAtIndex(source, 0, thumbnailOptions as CFDictionary) else {
+        return .failure(BridgeError(code: "preview_thumbnail_failed", message: "Could not downsample the local image resource for preview."))
+    }
+    do {
+        try FileManager.default.createDirectory(at: destinationURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+    } catch {
+        return .failure(error)
+    }
+    guard let destination = CGImageDestinationCreateWithURL(destinationURL as CFURL, "public.jpeg" as CFString, 1, nil) else {
+        return .failure(BridgeError(code: "jpeg_destination_failed", message: "Could not create the preview JPEG destination."))
+    }
+    let properties: [CFString: Any] = [
+        kCGImageDestinationLossyCompressionQuality: 0.86,
+    ]
+    CGImageDestinationAddImage(destination, thumbnail, properties as CFDictionary)
+    guard CGImageDestinationFinalize(destination) else {
+        return .failure(BridgeError(code: "preview_conversion_failed", message: "Could not write the preview JPEG."))
+    }
+    return .success([
+        "pixelWidth": thumbnail.width,
+        "pixelHeight": thumbnail.height,
+    ])
+}
+
+func writeLocalImageResourcePreviewJPEG(_ asset: PHAsset, to url: URL, maxPixel: Int) -> Result<[String: Any], Error> {
+    guard let resource = localImageResourceForJPEGFallback(asset) else {
+        return .failure(BridgeError(
+            code: "local_preview_resource_unavailable",
+            message: "Photos did not expose a local image resource that Sidecar can convert for preview."
+        ))
+    }
+    let tempURL = temporaryResourceURL(for: url, resource: resource)
+    defer { try? FileManager.default.removeItem(at: tempURL) }
+    do {
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+    } catch {
+        return .failure(error)
+    }
+    switch writeResource(resource, to: tempURL, allowIcloudDownloads: false, timeoutSeconds: 8) {
+    case .success:
+        switch convertImageResourceToPreviewJPEG(sourceURL: tempURL, destinationURL: url, maxPixel: maxPixel) {
+        case .success(let dimensions):
+            return .success([
+                "ok": true,
+                "mode": "preview",
+                "localIdentifier": asset.localIdentifier,
+                "destination": url.path,
+                "bytes": (try? Data(contentsOf: url).count) ?? 0,
+                "pixelWidth": dimensions["pixelWidth"] ?? 0,
+                "pixelHeight": dimensions["pixelHeight"] ?? 0,
+                "networkAccessAllowed": false,
+                "previewSource": "local_resource",
+                "fallbackResourceFilename": resource.originalFilename,
+                "fallbackResourceFormat": resourceFormat(resource),
+            ])
+        case .failure(let error):
+            return .failure(error)
+        }
+    case .failure(let error):
+        return .failure(error)
+    }
+}
+
 func writeLocalImageResourceAsJPEG(_ asset: PHAsset, to url: URL, allowIcloudDownloads: Bool, progressHandler: AssetProgressHandler? = nil) -> Result<Void, Error> {
     guard let resource = localImageResourceForJPEGFallback(asset) else {
         return .failure(BridgeError(
@@ -911,8 +1033,7 @@ func writeRenderedJPEG(_ asset: PHAsset, to url: URL, allowIcloudDownloads: Bool
     }
 }
 
-func writeResource(_ resource: PHAssetResource, to url: URL, allowIcloudDownloads: Bool, progressHandler: AssetProgressHandler? = nil) -> Result<Void, Error> {
-    let timeoutSeconds: TimeInterval = 600
+func writeResource(_ resource: PHAssetResource, to url: URL, allowIcloudDownloads: Bool, timeoutSeconds: TimeInterval = 600, progressHandler: AssetProgressHandler? = nil) -> Result<Void, Error> {
     let heartbeatSeconds: TimeInterval = 5
     let progressStateLock = NSLock()
     var lastPhotoKitProgress = 0.0

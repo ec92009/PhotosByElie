@@ -343,6 +343,15 @@ def record_decision(repo_root: Path, payload: dict[str, Any]) -> dict[str, Any]:
     return {"ok": True, "assetId": asset_id, "state": after, "changedFamilies": sorted(changed_families)}
 
 
+def record_decisions(repo_root: Path, payloads: Iterable[dict[str, Any]]) -> dict[str, Any]:
+    items: list[dict[str, Any]] = []
+    for payload in payloads:
+        if not isinstance(payload, dict):
+            raise ValueError("Each Sidecar decision must be a JSON object.")
+        items.append(record_decision(repo_root, payload))
+    return {"ok": True, "count": len(items), "items": items}
+
+
 def summary(repo_root: Path) -> dict[str, Any]:
     with connect(repo_root) as conn:
         rows = conn.execute(

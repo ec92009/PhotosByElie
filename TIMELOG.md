@@ -396,8 +396,10 @@ Clock state: running
 | 2026-06-26 | 19:20 CEST | 19:27 CEST | 0:04 | Diagnosed localhost Google sign-in loop as a cross-site auth cookie issue and deployed the Worker cookie attribute fix from a clean full-catalog bundle; background validation/deploy time excluded. |
 | 2026-06-29 | 15:15 CEST | 15:33 CEST | 0:18 | Strategized Apple Photos-first Owner rethink with Lightroom-style stars/colors/pick/reject/title/keyword write-back, named the Sidecar prototype, chose its language/architecture boundary, revisited earlier mobile-tap decisions, shaped Sidecar cull/edit UI around date/search preview slices, reframed Sidecar as a whole-library triage engine, and switched workflow actions to local-first staged commits. |
 | 2026-06-29 | 15:33 CEST | 15:35 CEST | 0:02 | Requested Sidecar implementation start, repo backlog/docs updates, Sidecar-specific versioning, and a Dock launcher that starts the helper and opens Safari; background coding/testing time excluded. |
+| 2026-06-29 | 16:14 CEST | 16:36 CEST | 0:06 | Reported Sidecar thumbnails missing, requested numeric color shortcuts, diagnosed click-selection page black flash, and asked to restore the useful edit-page propagation flow; background implementation/testing time excluded. |
+| 2026-06-29 | 16:36 CEST | 16:40 CEST | 0:01 | Requested Lightroom-style visible decision marks on Sidecar photos: star overlays, color outlines, picked outlines, and rejected-photo desaturation; background implementation/testing time excluded. |
 
 ## Totals
 
-Active collaboration time used: 21:54
+Active collaboration time used: 22:01
 Remaining budget: not set

@@ -37,7 +37,7 @@ body[data-gallery="sidecar"] {
 }
 
 .sidecar-control-grid label,
-.sidecar-edit-form label {
+.sidecar-edit-field {
   display: grid;
   gap: .3rem;
   color: var(--muted);
@@ -85,25 +85,63 @@ body[data-gallery="sidecar"] {
 }
 
 .sidecar-card {
+  --sidecar-color: transparent;
+  --sidecar-color-shadow: 0 0 0 0 transparent;
+  --sidecar-pick-shadow: 0 0 0 0 transparent;
   border: 1px solid color-mix(in srgb, var(--text) 13%, transparent);
   border-radius: 8px;
   background: color-mix(in srgb, var(--surface) 84%, transparent);
   overflow: hidden;
   cursor: pointer;
   min-width: 0;
+  box-shadow: var(--sidecar-color-shadow), var(--sidecar-pick-shadow);
   transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
 }
 
 .sidecar-card.is-selected {
   border-color: var(--selected-frame);
-  box-shadow: inset 0 0 0 4px var(--selected-frame), 0 0 0 5px var(--selected-halo-soft);
+  box-shadow: inset 0 0 0 4px var(--selected-frame), 0 0 0 5px var(--selected-halo-soft), var(--sidecar-color-shadow), var(--sidecar-pick-shadow);
 }
 
 .sidecar-card:hover {
   transform: translateY(-1px);
 }
 
+.sidecar-card[data-sidecar-color="red"] {
+  --sidecar-color: #f05b52;
+}
+
+.sidecar-card[data-sidecar-color="yellow"] {
+  --sidecar-color: #f4c84f;
+}
+
+.sidecar-card[data-sidecar-color="green"] {
+  --sidecar-color: #56c47a;
+}
+
+.sidecar-card[data-sidecar-color="blue"] {
+  --sidecar-color: #4f92e8;
+}
+
+.sidecar-card[data-sidecar-color="purple"] {
+  --sidecar-color: #a978e8;
+}
+
+.sidecar-card.has-color {
+  border-color: var(--sidecar-color);
+  --sidecar-color-shadow: 0 0 0 2px color-mix(in srgb, var(--sidecar-color) 72%, transparent);
+}
+
+.sidecar-card.is-picked {
+  --sidecar-pick-shadow: inset 0 0 0 3px rgba(103, 238, 151, .96);
+}
+
+.sidecar-card.is-rejected {
+  opacity: .72;
+}
+
 .sidecar-thumb {
+  position: relative;
   aspect-ratio: 4 / 3;
   background: color-mix(in srgb, var(--text) 8%, transparent);
   display: grid;
@@ -115,6 +153,55 @@ body[data-gallery="sidecar"] {
   height: 100%;
   object-fit: contain;
   display: block;
+  transition: filter .16s ease, opacity .16s ease;
+}
+
+.sidecar-card.is-rejected .sidecar-thumb img {
+  filter: grayscale(1) saturate(.18) brightness(.62);
+  opacity: .72;
+}
+
+.sidecar-stars {
+  position: absolute;
+  top: .35rem;
+  left: .38rem;
+  z-index: 2;
+  display: inline-flex;
+  max-width: calc(100% - .76rem);
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, .6);
+  color: #ffd966;
+  font-size: .82rem;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: .04em;
+  padding: .22rem .34rem .24rem;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, .8);
+}
+
+.sidecar-thumb-fallback {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  padding: .75rem;
+  color: var(--muted);
+  font-size: .74rem;
+  font-weight: 800;
+  line-height: 1.2;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.sidecar-thumb.is-missing img,
+.sidecar-detail-preview.is-missing img {
+  display: none;
+}
+
+.sidecar-thumb.is-missing .sidecar-thumb-fallback,
+.sidecar-detail-preview.is-missing .sidecar-thumb-fallback {
+  display: flex;
 }
 
 .sidecar-card-copy {
@@ -160,6 +247,8 @@ body[data-gallery="sidecar"] {
 }
 
 .sidecar-detail-preview {
+  position: relative;
+  min-height: 12rem;
   border-radius: 8px;
   overflow: hidden;
   background: color-mix(in srgb, var(--text) 8%, transparent);
@@ -198,6 +287,46 @@ body[data-gallery="sidecar"] {
 .sidecar-edit-form {
   display: grid;
   gap: .7rem;
+}
+
+.sidecar-field-heading {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  min-width: 0;
+}
+
+.sidecar-field-heading label {
+  min-width: 0;
+}
+
+.sidecar-propagate-field {
+  display: grid;
+  flex: 0 0 auto;
+  width: 1.55rem;
+  height: 1.55rem;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--text) 18%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 86%, white 14%);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-size: .86rem;
+  font-weight: 850;
+  line-height: 1;
+  padding: 0;
+}
+
+.sidecar-propagate-field:hover,
+.sidecar-propagate-field:focus-visible {
+  border-color: var(--text);
+}
+
+.sidecar-metadata-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .55rem;
 }
 
 .sidecar-edit-form textarea {

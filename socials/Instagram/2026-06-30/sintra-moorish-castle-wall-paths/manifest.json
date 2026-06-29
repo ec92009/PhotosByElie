@@ -142,12 +142,24 @@
     }
   ],
   "date": "2026-06-30",
-  "status": "prepared",
+  "status": "published",
   "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-sintra-moorish-castle-wall-paths-2026-06-30",
   "recommended_upload_set": "images",
   "available_count": 8,
-  "manual_blockers": [
-    "Publish pending: review socials/Instagram/2026-06-30/sintra-moorish-castle-wall-paths/manifest.json and use the Instagram browser/API workflow.",
-    "Instagram feed captions are not clickable; update the profile website link or use a Story link sticker before posting."
-  ]
+  "manual_blockers": [],
+  "published_url": "https://www.instagram.com/p/DaL--1ADGdS/",
+  "published": {
+    "platform": "instagram",
+    "username": "ec92009",
+    "media_id": "18102035342038531",
+    "permalink": "https://www.instagram.com/p/DaL--1ADGdS/",
+    "media_type": "CAROUSEL_ALBUM",
+    "published_at": "2026-06-29T22:53:04+0000",
+    "image_count": 8,
+    "child_count": 8
+  },
+  "verification": {
+    "method": "Instagram Graph API readback",
+    "platform_visible_confirmation": "Graph returned permalink, CAROUSEL_ALBUM media type, and 8 children. Caption contains no raw URL."
+  }
 }

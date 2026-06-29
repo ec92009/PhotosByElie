@@ -142,11 +142,33 @@
     }
   ],
   "date": "2026-06-30",
-  "status": "prepared",
+  "status": "published",
   "destination_url": "https://photos-by-elie.com/campaign.html?c=facebook-paris-carnavalet-interior-color-2026-06-30",
   "recommended_upload_set": "images",
   "available_count": 8,
-  "manual_blockers": [
-    "Publish pending: review socials/Facebook/2026-06-30/paris-carnavalet-interior-color/manifest.json and use the Facebook browser/API workflow."
-  ]
+  "manual_blockers": [],
+  "published_url": "https://www.facebook.com/122102168061334672/posts/122108752125334672",
+  "published": {
+    "platform": "facebook",
+    "page_name": "Photos By Elie",
+    "post_id": "1146747141854670_122108752125334672",
+    "permalink": "https://www.facebook.com/122102168061334672/posts/122108752125334672",
+    "published_at": "2026-06-29T22:51:26+0000",
+    "image_count": 8,
+    "attachment_count": 8,
+    "uploaded_photo_ids": [
+      "122108751741334672",
+      "122108751789334672",
+      "122108751837334672",
+      "122108751885334672",
+      "122108751933334672",
+      "122108751981334672",
+      "122108752029334672",
+      "122108752077334672"
+    ]
+  },
+  "verification": {
+    "method": "Meta Graph API readback with Page access token",
+    "platform_visible_confirmation": "Graph returned permalink and 8 photo subattachments."
+  }
 }

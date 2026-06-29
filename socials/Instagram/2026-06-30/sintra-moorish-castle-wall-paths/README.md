@@ -1,11 +1,8 @@
 # Instagram - 2026-06-30 - Sintra Moorish Castle Wall Paths
 
-Status: prepared
+Status: published
 Destination: https://photos-by-elie.com/campaign.html?c=instagram-sintra-moorish-castle-wall-paths-2026-06-30
-
-Manual blockers:
-- Publish pending: review socials/Instagram/2026-06-30/sintra-moorish-castle-wall-paths/manifest.json and use the Instagram browser/API workflow.
-- Instagram feed captions are not clickable; update the profile website link or use a Story link sticker before posting.
+Published URL: https://www.instagram.com/p/DaL--1ADGdS/
 
 Caption:
 

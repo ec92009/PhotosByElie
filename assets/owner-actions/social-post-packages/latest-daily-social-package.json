@@ -1,7 +1,7 @@
 {
   "date": "2026-06-30",
   "format": "photosbyelie-daily-social-package",
-  "status": "prepared",
+  "status": "published_partial",
   "themes": [
     "Paris Carnavalet Interior Color",
     "Sintra Moorish Castle Wall Paths",
@@ -152,13 +152,35 @@
         }
       ],
       "date": "2026-06-30",
-      "status": "prepared",
+      "status": "published",
       "destination_url": "https://photos-by-elie.com/campaign.html?c=facebook-paris-carnavalet-interior-color-2026-06-30",
       "recommended_upload_set": "images",
       "available_count": 8,
-      "manual_blockers": [
-        "Publish pending: review socials/Facebook/2026-06-30/paris-carnavalet-interior-color/manifest.json and use the Facebook browser/API workflow."
-      ]
+      "manual_blockers": [],
+      "published_url": "https://www.facebook.com/122102168061334672/posts/122108752125334672",
+      "published": {
+        "platform": "facebook",
+        "page_name": "Photos By Elie",
+        "post_id": "1146747141854670_122108752125334672",
+        "permalink": "https://www.facebook.com/122102168061334672/posts/122108752125334672",
+        "published_at": "2026-06-29T22:51:26+0000",
+        "image_count": 8,
+        "attachment_count": 8,
+        "uploaded_photo_ids": [
+          "122108751741334672",
+          "122108751789334672",
+          "122108751837334672",
+          "122108751885334672",
+          "122108751933334672",
+          "122108751981334672",
+          "122108752029334672",
+          "122108752077334672"
+        ]
+      },
+      "verification": {
+        "method": "Meta Graph API readback with Page access token",
+        "platform_visible_confirmation": "Graph returned permalink and 8 photo subattachments."
+      }
     },
     {
       "platform": "Instagram",
@@ -304,14 +326,26 @@
         }
       ],
       "date": "2026-06-30",
-      "status": "prepared",
+      "status": "published",
       "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-sintra-moorish-castle-wall-paths-2026-06-30",
       "recommended_upload_set": "images",
       "available_count": 8,
-      "manual_blockers": [
-        "Publish pending: review socials/Instagram/2026-06-30/sintra-moorish-castle-wall-paths/manifest.json and use the Instagram browser/API workflow.",
-        "Instagram feed captions are not clickable; update the profile website link or use a Story link sticker before posting."
-      ]
+      "manual_blockers": [],
+      "published_url": "https://www.instagram.com/p/DaL--1ADGdS/",
+      "published": {
+        "platform": "instagram",
+        "username": "ec92009",
+        "media_id": "18102035342038531",
+        "permalink": "https://www.instagram.com/p/DaL--1ADGdS/",
+        "media_type": "CAROUSEL_ALBUM",
+        "published_at": "2026-06-29T22:53:04+0000",
+        "image_count": 8,
+        "child_count": 8
+      },
+      "verification": {
+        "method": "Instagram Graph API readback",
+        "platform_visible_confirmation": "Graph returned permalink, CAROUSEL_ALBUM media type, and 8 children. Caption contains no raw URL."
+      }
     },
     {
       "platform": "Pinterest",
@@ -418,8 +452,7 @@
       "recommended_upload_set": "images",
       "available_count": 5,
       "manual_blockers": [
-        "Publish pending: review socials/Pinterest/2026-06-30/puerto-vallarta-marina-tropical-color/manifest.json and use the Pinterest browser/API workflow.",
-        "Pinterest publish pending: choose the board and publish one Pin per staged image or use the prepared browser upload set."
+        "Pinterest token is missing at ~/.config/photosbyelie/pinterest-token.json; package is ready for manual Pin Builder upload to Mexico Travel Photography."
       ]
     },
     {
@@ -500,17 +533,30 @@
           "local_staged_path": "socials/Threads/2026-06-30/sintra-moorish-castle-wall-paths/images/04-20180518-1503-00541-62669e193f-sintra-moorish-castle-wall-paths.jpg"
         }
       ],
-      "status": "prepared",
+      "status": "published",
       "available_count": 4,
       "date": "2026-06-30",
       "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-sintra-moorish-castle-wall-paths-2026-06-30",
       "recommended_upload_set": "images",
-      "manual_blockers": [
-        "Publish pending: review socials/Threads/2026-06-30/sintra-moorish-castle-wall-paths/manifest.json and use the Threads browser/API workflow."
-      ]
+      "manual_blockers": [],
+      "published_url": "https://www.threads.com/@ec92009/post/DaL_EqZjHb7",
+      "published": {
+        "platform": "threads",
+        "username": "ec92009",
+        "post_id": "18328355983248754",
+        "permalink": "https://www.threads.com/@ec92009/post/DaL_EqZjHb7",
+        "media_type": "CAROUSEL_ALBUM",
+        "published_at": "2026-06-29T22:53:52+0000",
+        "image_count": 4
+      },
+      "verification": {
+        "method": "Threads Graph API readback",
+        "platform_visible_confirmation": "Graph returned permalink, username ec92009, and CAROUSEL_ALBUM media type.",
+        "link_preview_note": "API-published Threads post uses text URL; no browser link preview was available to remove."
+      }
     }
   ],
   "schema_version": 1,
-  "generated_at": "2026-06-29T22:48:03.978Z",
+  "generated_at": "2026-06-29T22:54:59.494Z",
   "visible_version": "v122.0"
 }

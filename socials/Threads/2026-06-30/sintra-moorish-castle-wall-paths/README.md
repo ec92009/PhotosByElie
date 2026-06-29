@@ -1,10 +1,8 @@
 # Threads - 2026-06-30 - Sintra Moorish Castle Wall Paths
 
-Status: prepared
+Status: published
 Destination: https://photos-by-elie.com/campaign.html?c=instagram-sintra-moorish-castle-wall-paths-2026-06-30
-
-Manual blockers:
-- Publish pending: review socials/Threads/2026-06-30/sintra-moorish-castle-wall-paths/manifest.json and use the Threads browser/API workflow.
+Published URL: https://www.threads.com/@ec92009/post/DaL_EqZjHb7
 
 Caption:
 

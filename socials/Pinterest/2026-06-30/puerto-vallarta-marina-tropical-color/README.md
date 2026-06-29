@@ -4,8 +4,7 @@ Status: prepared
 Destination: https://photos-by-elie.com/campaign.html?c=pinterest-puerto-vallarta-marina-tropical-color-2026-06-30
 
 Manual blockers:
-- Publish pending: review socials/Pinterest/2026-06-30/puerto-vallarta-marina-tropical-color/manifest.json and use the Pinterest browser/API workflow.
-- Pinterest publish pending: choose the board and publish one Pin per staged image or use the prepared browser upload set.
+- Pinterest token is missing at ~/.config/photosbyelie/pinterest-token.json; package is ready for manual Pin Builder upload to Mexico Travel Photography.
 
 Caption:
 

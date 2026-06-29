@@ -1,10 +1,8 @@
 # Facebook - 2026-06-30 - Paris Carnavalet Interior Color
 
-Status: prepared
+Status: published
 Destination: https://photos-by-elie.com/campaign.html?c=facebook-paris-carnavalet-interior-color-2026-06-30
-
-Manual blockers:
-- Publish pending: review socials/Facebook/2026-06-30/paris-carnavalet-interior-color/manifest.json and use the Facebook browser/API workflow.
+Published URL: https://www.facebook.com/122102168061334672/posts/122108752125334672
 
 Caption:
 

@@ -1,0 +1,87 @@
+{
+  "platform": "Threads",
+  "title": "Sintra Moorish Castle Wall Paths",
+  "slug": "sintra-moorish-castle-wall-paths",
+  "campaign_id": "instagram-sintra-moorish-castle-wall-paths-2026-06-30",
+  "account": "ec92009",
+  "post_type": "carousel",
+  "caption": "Sintra Moorish Castle Wall Paths in four Photos By Elie frames. Browse: https://photos-by-elie.com/campaign.html?c=instagram-sintra-moorish-castle-wall-paths-2026-06-30",
+  "notes": [
+    "Derived from the Instagram package for a 3-4 image Threads carousel.",
+    "Images are public watermarked R2 previews staged for upload/API publishing."
+  ],
+  "items": [
+    {
+      "media_id": "20180518-1359-00513-759c490e7d",
+      "order": 1,
+      "id": "20180518-1359-00513-759c490e7d",
+      "title": "Castelo Dos Mouros, Lisbon",
+      "collection": "portugal",
+      "location": "Sintra, Lisbon, Portugal",
+      "width": 1800,
+      "height": 1200,
+      "source_url": "https://download.photos-by-elie.com/media/expo/20180518-1359-00513-759c490e7d_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/20180518-1359-00513-759c490e7d_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=20180518-1359-00513-759c490e7d",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180518-1359-00513-759c490e7d",
+      "image": "images/01-20180518-1359-00513-759c490e7d-sintra-moorish-castle-wall-paths.jpg",
+      "local_staged_path": "socials/Threads/2026-06-30/sintra-moorish-castle-wall-paths/images/01-20180518-1359-00513-759c490e7d-sintra-moorish-castle-wall-paths.jpg"
+    },
+    {
+      "media_id": "20180518-1423-00531-54ae327384",
+      "order": 2,
+      "id": "20180518-1423-00531-54ae327384",
+      "title": "Castelo Dos Mouros, Lisbon",
+      "collection": "portugal",
+      "location": "Sintra, Lisbon, Portugal",
+      "width": 1800,
+      "height": 1200,
+      "source_url": "https://download.photos-by-elie.com/media/expo/20180518-1423-00531-54ae327384_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/20180518-1423-00531-54ae327384_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=20180518-1423-00531-54ae327384",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180518-1423-00531-54ae327384",
+      "image": "images/02-20180518-1423-00531-54ae327384-sintra-moorish-castle-wall-paths.jpg",
+      "local_staged_path": "socials/Threads/2026-06-30/sintra-moorish-castle-wall-paths/images/02-20180518-1423-00531-54ae327384-sintra-moorish-castle-wall-paths.jpg"
+    },
+    {
+      "media_id": "20180518-1340-00504-13096677a9",
+      "order": 3,
+      "id": "20180518-1340-00504-13096677a9",
+      "title": "Castelo Dos Mouros, Lisbon",
+      "collection": "portugal",
+      "location": "Sintra, Lisbon, Portugal",
+      "width": 1800,
+      "height": 1200,
+      "source_url": "https://download.photos-by-elie.com/media/expo/20180518-1340-00504-13096677a9_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/20180518-1340-00504-13096677a9_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=20180518-1340-00504-13096677a9",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180518-1340-00504-13096677a9",
+      "image": "images/03-20180518-1340-00504-13096677a9-sintra-moorish-castle-wall-paths.jpg",
+      "local_staged_path": "socials/Threads/2026-06-30/sintra-moorish-castle-wall-paths/images/03-20180518-1340-00504-13096677a9-sintra-moorish-castle-wall-paths.jpg"
+    },
+    {
+      "media_id": "20180518-1503-00541-62669e193f",
+      "order": 4,
+      "id": "20180518-1503-00541-62669e193f",
+      "title": "Castelo Dos Mouros, Lisbon",
+      "collection": "portugal",
+      "location": "Sintra, Lisbon, Portugal",
+      "width": 1800,
+      "height": 1200,
+      "source_url": "https://download.photos-by-elie.com/media/expo/20180518-1503-00541-62669e193f_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/20180518-1503-00541-62669e193f_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=20180518-1503-00541-62669e193f",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180518-1503-00541-62669e193f",
+      "image": "images/04-20180518-1503-00541-62669e193f-sintra-moorish-castle-wall-paths.jpg",
+      "local_staged_path": "socials/Threads/2026-06-30/sintra-moorish-castle-wall-paths/images/04-20180518-1503-00541-62669e193f-sintra-moorish-castle-wall-paths.jpg"
+    }
+  ],
+  "status": "prepared",
+  "available_count": 4,
+  "date": "2026-06-30",
+  "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-sintra-moorish-castle-wall-paths-2026-06-30",
+  "recommended_upload_set": "images",
+  "manual_blockers": [
+    "Publish pending: review socials/Threads/2026-06-30/sintra-moorish-castle-wall-paths/manifest.json and use the Threads browser/API workflow."
+  ]
+}

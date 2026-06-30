@@ -398,8 +398,10 @@ Clock state: running
 | 2026-06-29 | 15:33 CEST | 15:35 CEST | 0:02 | Requested Sidecar implementation start, repo backlog/docs updates, Sidecar-specific versioning, and a Dock launcher that starts the helper and opens Safari; background coding/testing time excluded. |
 | 2026-06-29 | 16:14 CEST | 16:36 CEST | 0:06 | Reported Sidecar thumbnails missing, requested numeric color shortcuts, diagnosed click-selection page black flash, and asked to restore the useful edit-page propagation flow; background implementation/testing time excluded. |
 | 2026-06-29 | 16:36 CEST | 16:40 CEST | 0:01 | Requested Lightroom-style visible decision marks on Sidecar photos: star overlays, color outlines, picked outlines, and rejected-photo desaturation; background implementation/testing time excluded. |
+| 2026-06-29 | 16:49 CEST | 16:50 CEST | 0:01 | Requested Sidecar wastebasket recovery/tombstone workflow and a picked-items fence handoff page; background implementation/testing time excluded. |
+| 2026-06-30 | 09:22 CEST | 09:23 CEST | 0:01 | Redirected Sidecar to a two-page Culling/Editing model with a persisted current window, slide controls, rating/color/decision filters, row-based editing, and explicit wastebasket emptying; background implementation/testing time excluded. |
 
 ## Totals
 
-Active collaboration time used: 22:01
+Active collaboration time used: 22:03
 Remaining budget: not set

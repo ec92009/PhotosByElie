@@ -29,6 +29,10 @@
     </section>
 
     <section class="panel sidecar-controls" aria-label="Sidecar source controls">
+      <div class="sidecar-view-tabs" role="tablist" aria-label="Sidecar pages">
+        <button class="sidecar-view-tab" type="button" role="tab" aria-selected="true" data-sidecar-page="culling">Culling</button>
+        <button class="sidecar-view-tab" type="button" role="tab" aria-selected="false" data-sidecar-page="editing">Editing</button>
+      </div>
       <div class="sidecar-control-grid">
         <label>
           <span>Date from</span>
@@ -52,21 +56,50 @@
           <input type="number" min="0" step="1" value="0" inputmode="numeric" data-sidecar-offset/>
         </label>
       </div>
+      <div class="sidecar-filter-grid" aria-label="Sidecar filters">
+        <fieldset class="sidecar-filter-group">
+          <legend>Stars</legend>
+          <label><input type="checkbox" value="0" data-sidecar-filter="rating" checked/>0</label>
+          <label><input type="checkbox" value="1" data-sidecar-filter="rating" checked/>1</label>
+          <label><input type="checkbox" value="2" data-sidecar-filter="rating" checked/>2</label>
+          <label><input type="checkbox" value="3" data-sidecar-filter="rating" checked/>3</label>
+          <label><input type="checkbox" value="4" data-sidecar-filter="rating" checked/>4</label>
+          <label><input type="checkbox" value="5" data-sidecar-filter="rating" checked/>5</label>
+        </fieldset>
+        <fieldset class="sidecar-filter-group">
+          <legend>Colors</legend>
+          <label><input type="checkbox" value="none" data-sidecar-filter="color" checked/>none</label>
+          <label><input type="checkbox" value="red" data-sidecar-filter="color" checked/>red</label>
+          <label><input type="checkbox" value="yellow" data-sidecar-filter="color" checked/>yellow</label>
+          <label><input type="checkbox" value="green" data-sidecar-filter="color" checked/>green</label>
+          <label><input type="checkbox" value="blue" data-sidecar-filter="color" checked/>blue</label>
+          <label><input type="checkbox" value="purple" data-sidecar-filter="color" checked/>purple</label>
+        </fieldset>
+        <fieldset class="sidecar-filter-group">
+          <legend>Decisions</legend>
+          <label><input type="checkbox" value="undecided" data-sidecar-filter="pickState" checked/>undecided</label>
+          <label><input type="checkbox" value="picked" data-sidecar-filter="pickState" checked/>picked</label>
+          <label><input type="checkbox" value="rejected" data-sidecar-filter="pickState" checked/>rejected</label>
+        </fieldset>
+      </div>
       <div class="cta sidecar-actions">
-        <button class="btn primary" type="button" data-sidecar-load>Load slice</button>
+        <button class="btn primary" type="button" data-sidecar-load>Load window</button>
+        <button class="btn secondary" type="button" data-sidecar-slide-back>Slide back</button>
+        <button class="btn secondary" type="button" data-sidecar-slide-forward>Slide forward</button>
         <button class="btn secondary" type="button" data-sidecar-summary>Refresh summary</button>
         <button class="btn secondary" type="button" data-sidecar-upload-plan>Upload plan</button>
         <button class="btn secondary" type="button" data-sidecar-commit-plan>Photos commit plan</button>
+        <button class="btn secondary sidecar-danger-action" type="button" data-sidecar-empty-wastebasket>Empty wastebasket</button>
       </div>
-      <p class="owner-card-note">Shortcuts: <kbd>1</kbd>-<kbd>5</kbd> rating, <kbd>0</kbd> clear rating, <kbd>6</kbd> red, <kbd>7</kbd> yellow, <kbd>8</kbd> green, <kbd>9</kbd> blue, <kbd>P</kbd> pick, <kbd>A</kbd> approve metadata + pick, <kbd>X</kbd> reject, <kbd>H</kbd> hide, <kbd>U</kbd> unpick, arrows select.</p>
+      <p class="owner-card-note">Shortcuts: <kbd>1</kbd>-<kbd>5</kbd> rating, <kbd>0</kbd> clear rating, <kbd>6</kbd>-<kbd>9</kbd> toggle red/yellow/green/blue, <kbd>P</kbd> pick, <kbd>A</kbd> approve metadata + pick, <kbd>X</kbd> reject, <kbd>H</kbd> hide, <kbd>U</kbd> unpick, arrows select. Click, <kbd>Cmd</kbd>-click, and <kbd>Shift</kbd>-click select.</p>
     </section>
 
     <section class="sidecar-workspace">
       <section class="panel sidecar-grid-panel" aria-label="Sidecar culling grid">
         <div class="owner-card-titlebar">
           <div>
-            <p class="eyebrow">Cull</p>
-            <h2>Library slice</h2>
+            <p class="eyebrow" data-sidecar-grid-eyebrow>Cull</p>
+            <h2 data-sidecar-grid-title>Library slice</h2>
           </div>
           <dl class="sidecar-mini-counts" data-sidecar-counts></dl>
         </div>

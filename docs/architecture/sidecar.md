@@ -1,6 +1,6 @@
 # Photos By Elie Sidecar Architecture
 
-Date: 2026-06-29
+Date: 2026-06-30
 
 Sidecar is a local-only Apple Photos triage workstation that rides beside Owner.
 It is deliberately not the commercial app. Sidecar decides library fate and
@@ -10,7 +10,7 @@ metadata; Owner decides publication and commerce.
 
 Sidecar has its own local visible version in `SIDECAR_VERSION`.
 
-- Current Sidecar version: `v121.4`
+- Current Sidecar version: `v122.0`
 - Versioning follows the canonical `~/Dev/.SOPs/VERSIONING_SOP.md` default
   calendar visible-version rule for this local web-app surface.
 - Sidecar version bumps do not imply a public Photos By Elie site version bump.
@@ -40,6 +40,8 @@ Sidecar owns:
 - Title/keyword editing and AI proposal review state.
 - Pending Photos write-back plans.
 - Next-upload eligibility plans.
+- Persistent current-window culling, one-row-per-item metadata editing, and
+  explicit wastebasket tombstoning.
 
 Owner owns:
 
@@ -118,21 +120,24 @@ Photos update, but preserves non-PBE user keywords.
 
 ## UI Model
 
-Sidecar has two primary modes:
+Sidecar has two primary pages backed by the same current window:
 
-- **Cull:** keyboard-first, fast review of date/search slices. `1`-`5` rates,
-  `0` clears rating, `P` picks, `X` rejects, `H` hides, `U` unpicks, and arrows
-  select. Actions update local SQLite and advance without blocking on Photos.
-- **Edit:** Owner-style title/keyword review. It supports approve, reject,
-  resubmit to AI, manual title/keyword edits, and batch operations.
+- **Culling:** keyboard-first, fast review of the current Apple Photos window.
+  `1`-`5` rates, `0` clears rating, `6`-`9` toggle red/yellow/green/blue,
+  `P` picks, `X` rejects, `H` hides, `U` unpicks, and arrows select. Click,
+  Command-click, and Shift-click support single, toggle, and range selection.
+  Actions update local SQLite and advance without blocking on Photos.
+- **Editing:** Owner-style title/keyword review of the same current window,
+  rendered as one item per row with preview, current state, title/keyword fields,
+  approve, reject, resubmit to AI, pick, and unpick actions.
 
 Source controls should include:
 
 - date from/to
 - preview count
-- offset/page
+- offset/page plus slide back and slide forward
 - album/smart album later
-- state filters later
+- rating, color, and decision-state filters
 - search terms later
 
 ## Current V0 Slice
@@ -144,8 +149,10 @@ The first implemented slice includes:
   iCloud/network access disabled.
 - Sidecar helper endpoints under `/__sidecar/*`.
 - SQLite-backed local decisions and pending sync queue.
-- Sidecar web UI for loading slices, staging cull decisions, editing metadata,
-  viewing upload eligibility, and viewing the pending Photos commit plan.
+- Sidecar web UI for loading a persistent current window, sliding the window
+  forward/back, filtering by rating/color/decision state, staging cull decisions,
+  editing metadata in row form, tombstoning the wastebasket explicitly, viewing
+  upload eligibility, and viewing the pending Photos commit plan.
 - Dock launcher script for `PhotosByElie Sidecar.app`.
 
 Remaining near-term slices:

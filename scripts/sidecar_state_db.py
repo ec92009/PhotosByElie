@@ -106,6 +106,17 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
 
         CREATE INDEX IF NOT EXISTS idx_sidecar_pending_status ON sidecar_pending_sync(status, updated_at);
         CREATE INDEX IF NOT EXISTS idx_sidecar_pending_asset ON sidecar_pending_sync(asset_id, status);
+
+        CREATE TABLE IF NOT EXISTS sidecar_tombstones (
+          asset_id        TEXT PRIMARY KEY CHECK (trim(asset_id) <> ''),
+          tombstone_state TEXT NOT NULL DEFAULT 'active' CHECK (tombstone_state IN ('active', 'restored')),
+          reason          TEXT,
+          tombstoned_at   TEXT,
+          updated_at      TEXT,
+          FOREIGN KEY (asset_id) REFERENCES sidecar_assets(asset_id) ON DELETE CASCADE
+        ) WITHOUT ROWID;
+
+        CREATE INDEX IF NOT EXISTS idx_sidecar_tombstones_state ON sidecar_tombstones(tombstone_state, updated_at);
         """
     )
 
@@ -216,6 +227,15 @@ def merge_state(repo_root: Path, rows: list[dict[str, Any]]) -> list[dict[str, A
             asset_ids,
         ).fetchall()
         pending = {str(row["asset_id"]): int(row["pending_count"] or 0) for row in pending_rows}
+        tombstone_rows = conn.execute(
+            f"""
+            SELECT asset_id, tombstone_state
+            FROM sidecar_tombstones
+            WHERE tombstone_state = 'active' AND asset_id IN ({placeholders})
+            """,
+            asset_ids,
+        ).fetchall()
+        tombstones = {str(row["asset_id"]): str(row["tombstone_state"] or "") for row in tombstone_rows}
     merged = []
     for row in rows:
         asset_id = _asset_id(row)
@@ -223,6 +243,7 @@ def merge_state(repo_root: Path, rows: list[dict[str, Any]]) -> list[dict[str, A
             **row,
             "sidecarState": decisions.get(asset_id, _decision_payload(None)),
             "pendingSyncCount": pending.get(asset_id, 0),
+            "tombstoneState": tombstones.get(asset_id, ""),
         })
     return merged
 
@@ -300,12 +321,22 @@ def record_decision(repo_root: Path, payload: dict[str, Any]) -> dict[str, Any]:
         elif action == "unpick":
             pick_state = "undecided"
             changed_families.add("pick_state")
+        elif action == "restore":
+            pick_state = "undecided"
+            if metadata_state == "blocked":
+                metadata_state = "unreviewed"
+                changed_families.add("metadata")
+            changed_families.add("pick_state")
         elif action == "reject":
             pick_state = "rejected"
             changed_families.add("pick_state")
         elif action == "hide":
             pick_state = "hidden"
             changed_families.add("pick_state")
+        elif action == "tombstone":
+            pick_state = "rejected"
+            metadata_state = "blocked"
+            changed_families.update({"metadata", "pick_state", "tombstone"})
         elif action == "approve":
             pick_state = "picked"
             metadata_state = "approved"
@@ -337,7 +368,31 @@ def record_decision(repo_root: Path, payload: dict[str, Any]) -> dict[str, Any]:
             """,
             (rating, color, pick_state, metadata_state, title, _json_text(keywords), action, now, asset_id),
         )
+        if action == "restore":
+            conn.execute(
+                """
+                UPDATE sidecar_tombstones
+                SET tombstone_state = 'restored', updated_at = ?
+                WHERE asset_id = ? AND tombstone_state = 'active'
+                """,
+                (now, asset_id),
+            )
+        elif action == "tombstone":
+            conn.execute(
+                """
+                INSERT INTO sidecar_tombstones (asset_id, tombstone_state, reason, tombstoned_at, updated_at)
+                VALUES (?, 'active', ?, ?, ?)
+                ON CONFLICT(asset_id) DO UPDATE SET
+                  tombstone_state = 'active',
+                  reason = excluded.reason,
+                  tombstoned_at = excluded.tombstoned_at,
+                  updated_at = excluded.updated_at
+                """,
+                (asset_id, str(payload.get("reason") or "").strip(), now, now),
+            )
         after = _current_decision(conn, asset_id)
+        if action == "tombstone":
+            after["tombstoneState"] = "active"
         for family in sorted(changed_families):
             _queue_pending_sync(conn, asset_id, family, before, after, now)
     return {"ok": True, "assetId": asset_id, "state": after, "changedFamilies": sorted(changed_families)}
@@ -365,10 +420,14 @@ def summary(repo_root: Path) -> dict[str, Any]:
             "SELECT count(*) AS total FROM sidecar_pending_sync WHERE status = 'pending'"
         ).fetchone()["total"]
         indexed_count = conn.execute("SELECT count(*) AS total FROM sidecar_assets").fetchone()["total"]
+        tombstone_count = conn.execute(
+            "SELECT count(*) AS total FROM sidecar_tombstones WHERE tombstone_state = 'active'"
+        ).fetchone()["total"]
     return {
         "ok": True,
         "indexedCount": int(indexed_count or 0),
         "pendingSyncCount": int(pending_count or 0),
+        "tombstoneCount": int(tombstone_count or 0),
         "states": [
             {
                 "pickState": row["pick_state"],
@@ -378,6 +437,30 @@ def summary(repo_root: Path) -> dict[str, Any]:
             for row in rows
         ],
     }
+
+def empty_wastebasket(repo_root: Path) -> dict[str, Any]:
+    with connect(repo_root) as conn:
+        rows = conn.execute(
+            """
+            SELECT d.asset_id
+            FROM sidecar_decisions AS d
+            WHERE d.pick_state IN ('rejected', 'hidden')
+              AND NOT EXISTS (
+                SELECT 1 FROM sidecar_tombstones AS t
+                WHERE t.asset_id = d.asset_id AND t.tombstone_state = 'active'
+              )
+            ORDER BY d.updated_at, d.asset_id
+            """
+        ).fetchall()
+    items = [
+        record_decision(repo_root, {
+            "assetId": row["asset_id"],
+            "action": "tombstone",
+            "reason": "empty wastebasket",
+        })
+        for row in rows
+    ]
+    return {"ok": True, "count": len(items), "items": items, "summary": summary(repo_root)}
 
 
 def upload_plan(repo_root: Path, limit: int = 500) -> dict[str, Any]:
@@ -389,6 +472,10 @@ def upload_plan(repo_root: Path, limit: int = 500) -> dict[str, Any]:
             FROM sidecar_decisions AS d
             JOIN sidecar_assets AS a ON a.asset_id = d.asset_id
             WHERE d.pick_state = 'picked' AND d.metadata_state = 'approved'
+              AND NOT EXISTS (
+                SELECT 1 FROM sidecar_tombstones AS t
+                WHERE t.asset_id = d.asset_id AND t.tombstone_state = 'active'
+              )
             ORDER BY a.captured_at DESC, a.asset_id
             LIMIT ?
             """,
@@ -453,9 +540,12 @@ def main() -> None:
     parser.add_argument("--summary", action="store_true")
     parser.add_argument("--upload-plan", action="store_true")
     parser.add_argument("--commit-plan", action="store_true")
+    parser.add_argument("--empty-wastebasket", action="store_true")
     args = parser.parse_args()
     repo_root = Path.cwd()
-    if args.upload_plan:
+    if args.empty_wastebasket:
+        print(json.dumps(empty_wastebasket(repo_root), indent=2))
+    elif args.upload_plan:
         print(json.dumps(upload_plan(repo_root), indent=2))
     elif args.commit_plan:
         print(json.dumps(commit_plan(repo_root), indent=2))

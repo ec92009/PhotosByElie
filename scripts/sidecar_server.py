@@ -14,12 +14,12 @@ import subprocess
 import sys
 from urllib.parse import parse_qs, unquote, urlparse
 
-from sidecar_state_db import commit_plan, merge_state, record_decision, record_decisions, summary, upload_plan, upsert_assets
+from sidecar_state_db import commit_plan, empty_wastebasket, merge_state, record_decision, record_decisions, summary, upload_plan, upsert_assets
 
 
 APPLE_PHOTOS_BRIDGE = Path("scripts/apple_photos_bridge.swift")
 SIDECAR_VERSION_FILE = Path("SIDECAR_VERSION")
-SIDECAR_DEFAULT_VERSION = "121.4"
+SIDECAR_DEFAULT_VERSION = "122.0"
 SIDECAR_PREVIEW_ROOT = Path("tmp/sidecar-previews")
 SIDECAR_PREVIEW_CACHE_VERSION = "v2"
 SIDECAR_LIBRARY_PATH = "/__sidecar/library"
@@ -30,6 +30,7 @@ SIDECAR_SUMMARY_PATH = "/__sidecar/summary"
 SIDECAR_UPLOAD_PLAN_PATH = "/__sidecar/upload-plan"
 SIDECAR_COMMIT_PLAN_PATH = "/__sidecar/commit-plan"
 SIDECAR_VERSION_PATH = "/__sidecar/version"
+SIDECAR_EMPTY_WASTEBASKET_PATH = "/__sidecar/empty-wastebasket"
 
 
 def sidecar_version(repo_root: Path) -> str:
@@ -124,6 +125,9 @@ class SidecarHandler(SimpleHTTPRequestHandler):
             return
         if path == SIDECAR_DECISIONS_PATH:
             self._handle_decisions()
+            return
+        if path == SIDECAR_EMPTY_WASTEBASKET_PATH:
+            self._handle_empty_wastebasket()
             return
         self.send_error(HTTPStatus.NOT_FOUND)
 
@@ -269,6 +273,17 @@ class SidecarHandler(SimpleHTTPRequestHandler):
             return
         self._send_json(HTTPStatus.OK, result)
 
+    def _handle_empty_wastebasket(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            result = empty_wastebasket(Path.cwd())
+        except Exception as error:
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
+            return
+        self._send_json(HTTPStatus.OK, result)
+
     def _handle_upload_plan(self) -> None:
         query = parse_qs(urlparse(self.path).query)
         limit = _int_query(query, "limit", 500, 1, 5000)
@@ -288,7 +303,6 @@ class SidecarHandler(SimpleHTTPRequestHandler):
             self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
             return
         self._send_json(HTTPStatus.OK, result)
-
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Serve the local Photos By Elie Sidecar prototype.")

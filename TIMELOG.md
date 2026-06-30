@@ -403,8 +403,10 @@ Clock state: running
 | 2026-06-30 | 12:01 CEST | 12:02 CEST | 0:01 | Requested Sidecar startup auto-load of the current slice and horizontal filter checkboxes; background implementation/testing time excluded. |
 | 2026-06-30 | 12:15 CEST | 12:16 CEST | 0:01 | Approved the first Sidecar video slice: culling parity, local poster thumbnails, and selected-item playback without forced iCloud downloads; background implementation/testing time excluded. |
 | 2026-06-30 | 14:50 CEST | 14:51 CEST | 0:01 | Requested a Sidecar button to perform local burst culling on the current review window; background implementation/testing time excluded. |
+| 2026-06-30 | 15:18 CEST | 15:19 CEST | 0:01 | Asked for the current Sidecar video state across culling, poster thumbnails, local playback, and upload-production boundaries; background investigation time excluded. |
+| 2026-06-30 | 15:25 CEST | 15:26 CEST | 0:01 | Requested Sidecar video preview polish: replace text video badges with a play overlay and duration-only bottom-right chip; background implementation/testing time excluded. |
 
 ## Totals
 
-Active collaboration time used: 22:06
+Active collaboration time used: 22:08
 Remaining budget: not set

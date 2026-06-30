@@ -183,12 +183,21 @@
     if (hours > 0) return `${hours}:${String(minutes).padStart(2, "0")}:${String(remaining).padStart(2, "0")}`;
     return `${minutes}:${String(remaining).padStart(2, "0")}`;
   };
-  const mediaLabel = (item) => {
-    const duration = formatDuration(item?.duration || 0);
-    return `${isVideo(item) ? "video" : "photo"}${duration ? ` · ${duration}` : ""}`;
+  const mediaLabel = (item) => (isVideo(item) ? "" : "photo");
+  const mediaLine = (item) => [formatDate(item.creationDate), mediaLabel(item)].filter(Boolean).join(" · ");
+  const detailMediaLine = (item) => [formatDate(item.creationDate), mediaLabel(item), itemId(item)].filter(Boolean).join(" · ");
+  const videoOverlay = (item) => {
+    if (!isVideo(item)) return "";
+    const duration = formatDuration(item.duration);
+    return `
+      <span class="sidecar-video-play" aria-hidden="true">&gt;</span>
+      ${duration ? `<span class="sidecar-video-duration" aria-label="Video length ${escapeHtml(duration)}">${escapeHtml(duration)}</span>` : ""}
+    `;
   };
+  const versionFallback = "122.4";
+  const versionFallbackLabel = `v${versionFallback}`;
   const videoBadge = (item) => isVideo(item)
-    ? `<span class="sidecar-media-badge" aria-label="Video${formatDuration(item.duration) ? `, ${formatDuration(item.duration)}` : ""}">VIDEO${formatDuration(item.duration) ? ` ${escapeHtml(formatDuration(item.duration))}` : ""}</span>`
+    ? videoOverlay(item)
     : "";
   const selectedItem = () => state.items[state.selectedIndex] || null;
   const selectedIndexes = () => Array.from(state.selectedIndexes || [])
@@ -280,7 +289,6 @@
     const sidecar = item.sidecarState || {};
     const badges = [];
     if (sidecar.color) badges.push(sidecar.color);
-    if (isVideo(item)) badges.push(`video${formatDuration(item.duration) ? ` ${formatDuration(item.duration)}` : ""}`);
     if (sidecar.pickState && sidecar.pickState !== "undecided") badges.push(sidecar.pickState);
     if (sidecar.metadataState && sidecar.metadataState !== "unreviewed") badges.push(sidecar.metadataState);
     if (item.tombstoneState === "active") badges.push("tombstoned");
@@ -462,7 +470,7 @@
           </div>
           <div class="sidecar-card-copy">
             <strong>${escapeHtml(label)}</strong>
-            <small>${escapeHtml(formatDate(item.creationDate))} · ${escapeHtml(mediaLabel(item))}</small>
+            <small>${escapeHtml(mediaLine(item))}</small>
             <div class="sidecar-badges">${sidecarBadges(item)}</div>
           </div>
         </article>
@@ -496,7 +504,7 @@
         </div>
         <div class="sidecar-editing-current">
           <strong>${escapeHtml(label)}</strong>
-          <small>${escapeHtml(formatDate(item.creationDate))} · ${escapeHtml(mediaLabel(item))}</small>
+          <small>${escapeHtml(mediaLine(item))}</small>
           <div class="sidecar-badges">${sidecarBadges(item)}</div>
         </div>
         <form class="sidecar-editing-form" data-sidecar-row-form data-sidecar-index="${index}">
@@ -592,7 +600,7 @@
       </div>
       <div>
         <strong>${escapeHtml(item.filename || itemId(item))}</strong>
-        <p class="owner-card-note">${escapeHtml(formatDate(item.creationDate))} · ${escapeHtml(mediaLabel(item))} · ${escapeHtml(itemId(item))}</p>
+        <p class="owner-card-note">${escapeHtml(detailMediaLine(item))}</p>
         ${selectionNote}
       </div>
       ${isVideo(item) ? `
@@ -1105,10 +1113,10 @@
   fetch("/__sidecar/version")
     .then((response) => response.json())
     .then((payload) => {
-      if (versionRoot) versionRoot.textContent = `v${payload.version || "122.3"}`;
+      if (versionRoot) versionRoot.textContent = `v${payload.version || versionFallback}`;
     })
     .catch(() => {
-      if (versionRoot) versionRoot.textContent = "v122.3";
+      if (versionRoot) versionRoot.textContent = versionFallbackLabel;
     });
   loadWindow().catch((error) => {
     setStatus(error.message);

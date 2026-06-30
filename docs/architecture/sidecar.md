@@ -10,7 +10,7 @@ metadata; Owner decides publication and commerce.
 
 Sidecar has its own local visible version in `SIDECAR_VERSION`.
 
-- Current Sidecar version: `v122.3`
+- Current Sidecar version: `v122.4`
 - Versioning follows the canonical `~/Dev/.SOPs/VERSIONING_SOP.md` default
   calendar visible-version rule for this local web-app surface.
 - Sidecar version bumps do not imply a public Photos By Elie site version bump.
@@ -134,10 +134,10 @@ Sidecar has two primary pages backed by the same current window:
   rendered as one item per row with preview, current state, title/keyword fields,
   approve, reject, resubmit to AI, pick, and unpick actions.
 
-Videos are first-class Sidecar review items. The UI shows video badges and
-durations, filters photos/videos separately, asks PhotoKit for local poster
-frames without iCloud downloads, and offers selected-video local playback only
-when Photos can expose the video resource locally.
+Videos are first-class Sidecar review items. The UI marks video previews with a
+play overlay and duration chip, filters photos/videos separately, asks PhotoKit
+for local poster frames without iCloud downloads, and offers selected-video
+local playback only when Photos can expose the video resource locally.
 
 Source controls should include:
 

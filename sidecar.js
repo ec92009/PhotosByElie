@@ -196,7 +196,7 @@
   const videoPlayerMarkup = (item, autoplay = true) => `
     <video class="sidecar-inline-video" controls playsinline preload="metadata" ${autoplay ? "autoplay" : ""} poster="${escapeHtml(previewUrl(item))}" src="${escapeHtml(videoUrl(item))}"></video>
   `;
-  const versionFallback = "122.5";
+  const versionFallback = "122.6";
   const versionFallbackLabel = `v${versionFallback}`;
   const videoBadge = (item, index, label) => isVideo(item)
     ? videoOverlay(item, index, label)
@@ -576,7 +576,18 @@
     if (autoplay) {
       const playResult = video.play();
       if (playResult && typeof playResult.catch === "function") {
-        playResult.catch(() => setStatus("Local video preview is ready; use the play control to start."));
+        playResult.catch(() => {
+          video.muted = true;
+          video.setAttribute("muted", "");
+          const mutedPlayResult = video.play();
+          if (mutedPlayResult && typeof mutedPlayResult.then === "function") {
+            mutedPlayResult
+              .then(() => setStatus("Local video preview playing muted; use controls for sound."))
+              .catch(() => setStatus("Local video preview is ready; use the play control to start."));
+          } else {
+            setStatus("Local video preview playing muted; use controls for sound.");
+          }
+        });
       }
     }
   };
@@ -631,6 +642,19 @@
     document.body.append(quickLook);
     document.body.classList.add("sidecar-has-quick-look");
     wirePreviewFallbacks(quickLook);
+    if (isVideo(item)) {
+      playVideoInPlace(quickLook.querySelector("[data-sidecar-video-shell]"), item);
+    }
+  };
+
+  const syncQuickLookToSelection = () => {
+    if (state.quickLookIndex < 0) return;
+    if (state.selectedIndex < 0 || !state.items[state.selectedIndex]) {
+      closeQuickLook();
+      return;
+    }
+    state.quickLookIndex = state.selectedIndex;
+    renderQuickLook();
   };
 
   const openQuickLook = (index = state.selectedIndex) => {
@@ -673,10 +697,7 @@
     if (nextIndexes.has(bounded)) state.selectedIndex = bounded;
     else state.selectedIndex = selectedIndexes()[0] ?? -1;
     updateGridSelection(previousIndexes);
-    if (state.quickLookIndex >= 0) {
-      state.quickLookIndex = state.selectedIndex;
-      renderQuickLook();
-    }
+    syncQuickLookToSelection();
     if (scroll && state.selectedIndex >= 0) cardForIndex(state.selectedIndex)?.scrollIntoView({ block: "nearest" });
   };
 
@@ -733,6 +754,7 @@
     const preferredIndex = advance && !indexes && decisions.length === 1 ? nextVisibleAfter(previousActive) : previousActive;
     reconcileSelection(preferredIndex);
     renderSurface();
+    syncQuickLookToSelection();
     setStatus(`Staged ${actionLabel(payload)} on ${decisions.length.toLocaleString()} item${decisions.length === 1 ? "" : "s"}. Photos write-back is pending commit.`);
   };
 
@@ -752,6 +774,7 @@
     state.summary = result.summary || state.summary;
     reconcileSelection(state.selectedIndex);
     renderSurface();
+    syncQuickLookToSelection();
     setStatus(completeMessage || `Staged ${Number(result.count || decisions.length).toLocaleString()} local decisions. Photos write-back is pending commit.`);
   };
 
@@ -883,7 +906,13 @@
     state.summary = payload.summary || state.summary;
     reconcileSelection(state.selectedIndex);
     renderSurface();
+    syncQuickLookToSelection();
     setStatus(`Tombstoned ${Number(payload.count || 0).toLocaleString()} discarded item${Number(payload.count || 0) === 1 ? "" : "s"}. Photos write-back is pending commit.`);
+  };
+
+  const claimShortcut = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
   };
 
   const handleShortcut = async (event) => {
@@ -893,41 +922,41 @@
     const key = event.key;
     try {
       if (key === " " || key === "Spacebar") {
-        event.preventDefault();
+        claimShortcut(event);
         if (state.quickLookIndex >= 0) closeQuickLook();
         else openQuickLook();
       } else if (key === "Escape" && state.quickLookIndex >= 0) {
-        event.preventDefault();
+        claimShortcut(event);
         closeQuickLook();
       } else if (/^[1-5]$/.test(key)) {
-        event.preventDefault();
+        claimShortcut(event);
         await postDecision({ action: "rating", rating: Number(key) });
       } else if (key === "0") {
-        event.preventDefault();
+        claimShortcut(event);
         await postDecision({ action: "rating", rating: 0 });
       } else if (colorShortcuts[key]) {
-        event.preventDefault();
+        claimShortcut(event);
         await postDecision(colorDecisionPayload(colorShortcuts[key]), { advance: false });
       } else if (key === "p" || key === "P") {
-        event.preventDefault();
+        claimShortcut(event);
         await postDecision({ action: "pick" });
       } else if (key === "a" || key === "A") {
-        event.preventDefault();
+        claimShortcut(event);
         await postDecision({ action: "approve" });
       } else if (key === "x" || key === "X") {
-        event.preventDefault();
+        claimShortcut(event);
         await postDecision({ action: "reject" });
       } else if (key === "h" || key === "H") {
-        event.preventDefault();
+        claimShortcut(event);
         await postDecision({ action: "hide" });
       } else if (key === "u" || key === "U") {
-        event.preventDefault();
+        claimShortcut(event);
         await postDecision({ action: "unpick" });
       } else if (key === "ArrowRight" || key === "ArrowDown") {
-        event.preventDefault();
+        claimShortcut(event);
         stepVisibleSelection(1);
       } else if (key === "ArrowLeft" || key === "ArrowUp") {
-        event.preventDefault();
+        claimShortcut(event);
         stepVisibleSelection(-1);
       }
     } catch (error) {
@@ -1025,6 +1054,7 @@
       state.filters = readFiltersFromControls();
       reconcileSelection(state.selectedIndex);
       renderSurface();
+      syncQuickLookToSelection();
       setStatus(`Showing ${visibleIndexes().length.toLocaleString()} of ${state.items.length.toLocaleString()} current-window items after filters.`);
       saveWindowState();
     });
@@ -1038,7 +1068,7 @@
   $("[data-sidecar-summary]")?.addEventListener("click", () => loadSummary().catch((error) => setStatus(error.message)));
   $("[data-sidecar-upload-plan]")?.addEventListener("click", () => loadPlan("upload").catch((error) => setStatus(error.message)));
   $("[data-sidecar-commit-plan]")?.addEventListener("click", () => loadPlan("commit").catch((error) => setStatus(error.message)));
-  document.addEventListener("keydown", handleShortcut);
+  document.addEventListener("keydown", handleShortcut, true);
 
   applyStoredWindow();
   renderPageChrome();

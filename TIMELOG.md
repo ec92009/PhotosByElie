@@ -406,8 +406,9 @@ Clock state: running
 | 2026-06-30 | 15:18 CEST | 15:19 CEST | 0:01 | Asked for the current Sidecar video state across culling, poster thumbnails, local playback, and upload-production boundaries; background investigation time excluded. |
 | 2026-06-30 | 15:25 CEST | 15:26 CEST | 0:01 | Requested Sidecar video preview polish: replace text video badges with a play overlay and duration-only bottom-right chip; background implementation/testing time excluded. |
 | 2026-06-30 | 15:54 CEST | 15:54 CEST | 0:01 | Requested Sidecar Finder-style Space previews, in-place video playback, and removal of the persistent Decision panel; background implementation/testing time excluded. |
+| 2026-06-30 | 16:23 CEST | 16:23 CEST | 0:01 | Requested Sidecar video Quick Look auto-start and keeping culling shortcuts active inside preview mode; background implementation/testing time excluded. |
 
 ## Totals
 
-Active collaboration time used: 22:09
+Active collaboration time used: 22:10
 Remaining budget: not set

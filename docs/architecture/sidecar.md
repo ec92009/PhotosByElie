@@ -10,7 +10,7 @@ metadata; Owner decides publication and commerce.
 
 Sidecar has its own local visible version in `SIDECAR_VERSION`.
 
-- Current Sidecar version: `v122.6`
+- Current Sidecar version: `v122.7`
 - Versioning follows the canonical `~/Dev/.SOPs/VERSIONING_SOP.md` default
   calendar visible-version rule for this local web-app surface.
 - Sidecar version bumps do not imply a public Photos By Elie site version bump.
@@ -134,7 +134,9 @@ Sidecar has two primary pages backed by the same current window:
   in favor of Space-bar Quick Look and the dedicated Editing page. Quick Look
   remains an active culling mode: rating, color, pick/reject/hide/unpick, and
   arrow navigation shortcuts keep acting on the selected item while the preview
-  stays open and follows the active selection.
+  stays open and follows the active selection. Quick Look also repeats the
+  active item status with explicit stars, color, decision, metadata, and pending
+  Photos write-back reminders.
 - **Editing:** Owner-style title/keyword review of the same current window,
   rendered as one item per row with preview, current state, title/keyword fields,
   approve, reject, resubmit to AI, pick, and unpick actions.

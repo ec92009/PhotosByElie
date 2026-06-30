@@ -663,7 +663,7 @@ body[data-gallery="sidecar"] {
 
 .sidecar-quick-look-card {
   display: grid;
-  gap: .8rem;
+  gap: .65rem;
   width: min(92vw, 1180px);
   max-height: 92vh;
   margin: 0;
@@ -672,21 +672,21 @@ body[data-gallery="sidecar"] {
 .sidecar-quick-look-media {
   position: relative;
   display: grid;
-  min-height: min(70vh, 760px);
+  min-height: min(64vh, 700px);
   place-items: center;
   overflow: hidden;
 }
 
 .sidecar-quick-look-media img {
   max-width: 100%;
-  max-height: 78vh;
+  max-height: 72vh;
   object-fit: contain;
   display: block;
 }
 
 .sidecar-quick-look-media .sidecar-inline-video {
   width: 100%;
-  max-height: 78vh;
+  max-height: 72vh;
   background: #000;
   display: block;
 }
@@ -705,6 +705,78 @@ body[data-gallery="sidecar"] {
 .sidecar-quick-look-media .sidecar-video-duration {
   right: 1rem;
   bottom: 1rem;
+}
+
+.sidecar-quick-look-status {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: .4rem;
+  color: rgba(255, 255, 255, .9);
+}
+
+.sidecar-status-pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: .34rem;
+  min-height: 1.9rem;
+  border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, .42);
+  padding: .22rem .58rem;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, .2);
+}
+
+.sidecar-status-pill > span {
+  color: rgba(255, 255, 255, .58);
+  font-size: .66rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.sidecar-status-pill strong {
+  color: rgba(255, 255, 255, .95);
+  font-size: .78rem;
+  font-weight: 900;
+}
+
+.sidecar-status-pill.is-empty {
+  opacity: .72;
+}
+
+.sidecar-status-pill.has-stars strong {
+  color: #ffd75a;
+}
+
+.sidecar-status-pill.has-color::before {
+  content: "";
+  width: .68rem;
+  height: .68rem;
+  border: 1px solid rgba(255, 255, 255, .72);
+  border-radius: 999px;
+  background: var(--sidecar-status-color, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--sidecar-status-color, transparent) 30%, transparent);
+}
+
+.sidecar-status-pill[data-sidecar-status-color="red"] {
+  --sidecar-status-color: #f05b52;
+}
+
+.sidecar-status-pill[data-sidecar-status-color="yellow"] {
+  --sidecar-status-color: #f4c84f;
+}
+
+.sidecar-status-pill[data-sidecar-status-color="green"] {
+  --sidecar-status-color: #56c47a;
+}
+
+.sidecar-status-pill[data-sidecar-status-color="blue"] {
+  --sidecar-status-color: #4f92e8;
+}
+
+.sidecar-status-pill[data-sidecar-status-color="purple"] {
+  --sidecar-status-color: #a978e8;
 }
 
 .sidecar-quick-look-card figcaption {

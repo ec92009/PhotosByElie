@@ -196,7 +196,7 @@
   const videoPlayerMarkup = (item, autoplay = true) => `
     <video class="sidecar-inline-video" controls playsinline preload="metadata" ${autoplay ? "autoplay" : ""} poster="${escapeHtml(previewUrl(item))}" src="${escapeHtml(videoUrl(item))}"></video>
   `;
-  const versionFallback = "122.6";
+  const versionFallback = "122.7";
   const versionFallbackLabel = `v${versionFallback}`;
   const videoBadge = (item, index, label) => isVideo(item)
     ? videoOverlay(item, index, label)
@@ -296,6 +296,39 @@
     if (item.tombstoneState === "active") badges.push("tombstoned");
     if (item.pendingSyncCount) badges.push(`${item.pendingSyncCount} pending`);
     return badges.map((badge) => `<span class="sidecar-badge">${escapeHtml(badge)}</span>`).join("");
+  };
+
+  const quickLookStatusPill = (label, value, options = {}) => {
+    const classes = ["sidecar-status-pill", options.className || ""].filter(Boolean).join(" ");
+    const attrs = options.color ? ` data-sidecar-status-color="${escapeHtml(options.color)}"` : "";
+    const renderedValue = options.rawValue ? value : escapeHtml(value);
+    return `
+      <span class="${classes}"${attrs}>
+        <span>${escapeHtml(label)}</span>
+        <strong>${renderedValue}</strong>
+      </span>
+    `;
+  };
+
+  const quickLookStatus = (item) => {
+    const sidecar = item.sidecarState || {};
+    const rating = Math.max(0, Math.min(5, Number(sidecar.rating || 0)));
+    const stars = rating ? "&#9733;".repeat(rating) : "0";
+    const color = sidecar.color || "";
+    const decision = item.tombstoneState === "active"
+      ? "tombstoned"
+      : (sidecar.pickState || "undecided");
+    const metadata = sidecar.metadataState || "unreviewed";
+    const pending = Number(item.pendingSyncCount || 0);
+    return `
+      <div class="sidecar-quick-look-status" aria-label="Sidecar item status">
+        ${quickLookStatusPill("Stars", stars, { rawValue: true, className: rating ? "has-stars" : "is-empty" })}
+        ${quickLookStatusPill("Color", color || "none", { color, className: color ? "has-color" : "is-empty" })}
+        ${quickLookStatusPill("Decision", decision, { className: decision === "undecided" ? "is-empty" : "" })}
+        ${quickLookStatusPill("Metadata", metadata, { className: metadata === "unreviewed" ? "is-empty" : "" })}
+        ${quickLookStatusPill("Pending", String(pending), { className: pending ? "" : "is-empty" })}
+      </div>
+    `;
   };
 
   const decisionClasses = (baseClass, item, selected = false) => {
@@ -628,6 +661,7 @@
           ${previewFallbackMarkup}
           ${videoBadge(item, index, "Play video")}
         </div>
+        ${quickLookStatus(item)}
         <figcaption>
           <strong>${escapeHtml(label)}</strong>
           <span>${escapeHtml(mediaLine(item))}</span>

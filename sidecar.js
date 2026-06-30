@@ -93,6 +93,7 @@
     selectedIndexes: new Set(),
     selectionAnchorIndex: -1,
     quickLookIndex: -1,
+    autoAdvanceDirection: 1,
     summary: null,
     filters: normalizeFilters(readStoredWindow()?.filters || cloneDefaultFilters()),
     hasWindow: Boolean(readStoredWindow()?.hasWindow),
@@ -196,7 +197,7 @@
   const videoPlayerMarkup = (item, autoplay = true) => `
     <video class="sidecar-inline-video" controls playsinline preload="metadata" ${autoplay ? "autoplay" : ""} poster="${escapeHtml(previewUrl(item))}" src="${escapeHtml(videoUrl(item))}"></video>
   `;
-  const versionFallback = "122.7";
+  const versionFallback = "122.8";
   const versionFallbackLabel = `v${versionFallback}`;
   const videoBadge = (item, index, label) => isVideo(item)
     ? videoOverlay(item, index, label)
@@ -237,7 +238,16 @@
     const visible = visibleIndexes();
     return visible.find((visibleIndex) => visibleIndex > index) ?? visible[visible.length - 1] ?? -1;
   };
+  const nextVisibleFrom = (index, direction = 1) => {
+    const visible = visibleIndexes();
+    if (!visible.length) return -1;
+    if (direction < 0) {
+      return [...visible].reverse().find((visibleIndex) => visibleIndex < index) ?? visible[0] ?? -1;
+    }
+    return nextVisibleAfter(index);
+  };
   const stepVisibleSelection = (direction) => {
+    state.autoAdvanceDirection = direction < 0 ? -1 : 1;
     const visible = visibleIndexes();
     if (!visible.length) return;
     const currentPosition = visible.indexOf(state.selectedIndex);
@@ -345,15 +355,28 @@
     ].filter(Boolean).join(" ");
   };
 
-  const decisionAttrs = (item) => {
+  const decisionAttributeMap = (item) => {
     const sidecar = item.sidecarState || {};
-    const attrs = [];
-    if (sidecar.color) attrs.push(`data-sidecar-color="${escapeHtml(sidecar.color)}"`);
-    if (sidecar.pickState) attrs.push(`data-sidecar-pick="${escapeHtml(sidecar.pickState)}"`);
-    if (item.tombstoneState) attrs.push(`data-sidecar-tombstone="${escapeHtml(item.tombstoneState)}"`);
+    const attrs = {};
+    if (sidecar.color) attrs["data-sidecar-color"] = sidecar.color;
+    if (sidecar.pickState) attrs["data-sidecar-pick"] = sidecar.pickState;
+    if (item.tombstoneState) attrs["data-sidecar-tombstone"] = item.tombstoneState;
     const rating = Number(sidecar.rating || 0);
-    if (rating > 0) attrs.push(`data-sidecar-rating="${rating}"`);
-    return attrs.join(" ");
+    if (rating > 0) attrs["data-sidecar-rating"] = String(rating);
+    return attrs;
+  };
+
+  const decisionAttrs = (item) => Object.entries(decisionAttributeMap(item))
+    .map(([key, value]) => `${key}="${escapeHtml(value)}"`)
+    .join(" ");
+
+  const syncDecisionAttrs = (element, item) => {
+    ["data-sidecar-color", "data-sidecar-pick", "data-sidecar-tombstone", "data-sidecar-rating"].forEach((name) => {
+      element.removeAttribute(name);
+    });
+    Object.entries(decisionAttributeMap(item)).forEach(([key, value]) => {
+      element.setAttribute(key, value);
+    });
   };
 
   const ratingStars = (item) => {
@@ -569,6 +592,47 @@
 
   const cardForIndex = (index) => surface?.querySelector(`[data-sidecar-index="${index}"]`);
 
+  const refreshRenderedItem = (index) => {
+    const item = state.items[index];
+    if (!item) return true;
+    const element = cardForIndex(index);
+    if (!element) return !matchesFilters(item);
+    const baseClass = element.classList.contains("sidecar-editing-row") ? "sidecar-editing-row" : "sidecar-card";
+    const selected = state.selectedIndexes.has(index);
+    element.className = decisionClasses(baseClass, item, selected);
+    element.setAttribute("aria-selected", selected ? "true" : "false");
+    syncDecisionAttrs(element, item);
+
+    const badges = element.querySelector(".sidecar-badges");
+    if (badges) badges.innerHTML = sidecarBadges(item);
+
+    const starRoot = element.querySelector(".sidecar-stars");
+    const starMarkup = ratingStars(item);
+    if (starRoot && starMarkup) starRoot.outerHTML = starMarkup;
+    else if (starRoot) starRoot.remove();
+    else if (starMarkup) {
+      element.querySelector(".sidecar-thumb, .sidecar-editing-preview")?.insertAdjacentHTML("beforeend", starMarkup);
+    }
+
+    const sidecar = item.sidecarState || {};
+    const pressedStates = {
+      approve: sidecar.metadataState === "approved",
+      "metadata-rework": sidecar.metadataState === "rework",
+      pick: sidecar.pickState === "picked",
+      unpick: sidecar.pickState === "undecided",
+      reject: sidecar.pickState === "rejected",
+    };
+    Object.entries(pressedStates).forEach(([action, pressed]) => {
+      element.querySelector(`[data-sidecar-row-action="${action}"]`)?.setAttribute("aria-pressed", pressed ? "true" : "false");
+    });
+    return true;
+  };
+
+  const refreshRenderedItems = (indexes) => {
+    const uniqueIndexes = [...new Set(indexes)].filter((index) => Number.isFinite(index) && index >= 0);
+    return uniqueIndexes.every((index) => refreshRenderedItem(index));
+  };
+
   const updateGridSelection = (previousIndexes = new Set()) => {
     if (!surface) return;
     const indexes = new Set([...previousIndexes, ...selectedIndexes()]);
@@ -763,6 +827,8 @@
     const targetIndexes = Array.isArray(indexes) ? indexes : selectedIndexes();
     if (!targetIndexes.length) return;
     const previousActive = state.selectedIndex;
+    const previousSelection = selectedSelectionSet();
+    const visibilityBefore = new Map(targetIndexes.map((index) => [index, matchesFilters(state.items[index])]));
     const decisions = targetIndexes
       .map((index) => state.items[index])
       .filter(Boolean)
@@ -781,13 +847,22 @@
     if (!response.ok || !result.ok) throw new Error(result.error || "Could not stage Sidecar decision.");
 
     const changedItems = decisions.length === 1 ? [result] : (result.items || []);
+    const changedIndexes = [];
     changedItems.forEach((item) => {
-      mergeChangedItem(item.assetId, item.state || {}, item.changedFamilies?.length || 1);
+      const changedIndex = mergeChangedItem(item.assetId, item.state || {}, item.changedFamilies?.length || 1);
+      if (changedIndex >= 0) changedIndexes.push(changedIndex);
     });
     state.summary = result.summary || state.summary;
-    const preferredIndex = advance && !indexes && decisions.length === 1 ? nextVisibleAfter(previousActive) : previousActive;
+    const preferredIndex = advance && !indexes && decisions.length === 1
+      ? nextVisibleFrom(previousActive, state.autoAdvanceDirection)
+      : previousActive;
     reconcileSelection(preferredIndex);
-    renderSurface();
+    const visibilityChanged = changedIndexes.some((index) => visibilityBefore.get(index) !== matchesFilters(state.items[index]));
+    if (visibilityChanged || !refreshRenderedItems([...changedIndexes, previousActive, ...previousSelection, ...selectedIndexes()])) {
+      renderSurface();
+    } else {
+      renderCounts();
+    }
     syncQuickLookToSelection();
     setStatus(`Staged ${actionLabel(payload)} on ${decisions.length.toLocaleString()} item${decisions.length === 1 ? "" : "s"}. Photos write-back is pending commit.`);
   };

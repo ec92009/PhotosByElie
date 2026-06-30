@@ -408,8 +408,9 @@ Clock state: running
 | 2026-06-30 | 15:54 CEST | 15:54 CEST | 0:01 | Requested Sidecar Finder-style Space previews, in-place video playback, and removal of the persistent Decision panel; background implementation/testing time excluded. |
 | 2026-06-30 | 16:23 CEST | 16:23 CEST | 0:01 | Requested Sidecar video Quick Look auto-start and keeping culling shortcuts active inside preview mode; background implementation/testing time excluded. |
 | 2026-06-30 | 16:37 CEST | 16:38 CEST | 0:01 | Requested Sidecar Quick Look status reminders for stars, color, decision, metadata, and pending Photos write-back state; background implementation/testing time excluded. |
+| 2026-06-30 | 17:30 CEST | 17:31 CEST | 0:01 | Reported Sidecar gallery blinking on P/X culling decisions and requested last-arrow directional auto-advance; background implementation/testing time excluded. |
 
 ## Totals
 
-Active collaboration time used: 22:11
+Active collaboration time used: 22:12
 Remaining budget: not set

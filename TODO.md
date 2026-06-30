@@ -93,7 +93,7 @@ Last updated: 2026-06-29
 - Price and offer strategy draft: `docs/commerce/PRICE_OFFER_STRATEGY.md`; no live price change has been made from that draft yet.
 - First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
 - Latest checkpoint is `v110.7`; this file remains the numbered backlog source of truth.
-- Sidecar is now the planned local Apple Photos triage engine. Sidecar has its own visible local version, currently `v122.8` in `SIDECAR_VERSION`, and does not bump the public commercial site version by itself.
+- Sidecar is now the planned local Apple Photos triage engine. Sidecar has its own visible local version, currently `v122.9` in `SIDECAR_VERSION`, and does not bump the public commercial site version by itself.
 - Sidecar's hard boundary: it owns whole-library Apple Photos indexing, local-first culling, staged stars/colors/pick/reject/hide/title/keyword decisions, AI metadata review queues, pending Photos write-back plans, and next-upload eligibility. Owner owns forced materialization, R2 generation/upload, catalog rebuilds, validation, and commercial publication.
 - Sidecar decisions must be instant local SQLite writes. Apple Photos keyword/title write-back is explicit and staged through Save/Commit flows, not performed on every culling keystroke.
 - New import/re-export rule requested by Owner: the durable import anchor should be the full source pathname plus the source modified date. If only the modified date changes for the same source path, the new render should overwrite the older stored forms instead of creating a duplicate media row.
@@ -200,6 +200,7 @@ Last updated: 2026-06-29
    - Maintain two primary Sidecar pages: full-width Culling for the persistent current window and Editing for one-row-per-item title/keyword review of that same window; avoid restoring the persistent Decision side panel unless a new workflow proves it necessary.
    - Support current-window slide back/forward controls, persisted window criteria, and filters for rating, color, and decision state.
    - Keep quick culling decisions local-feeling: patch affected visible items in place, avoid thumbnail-reloading gallery blinks when filters do not require a full render, and let auto-advance follow the last left/right arrow direction.
+   - Support session-local multilevel `Cmd-Z` undo for staged Sidecar decision operations while preserving native text undo inside title/keyword fields.
    - Support a local-first `Cull bursts` action that rejects non-survivor near-duplicate photo burst frames in the visible current window while preserving picked/videos/already discarded items.
    - Treat videos as first-class culling/editing items with media filters, local poster thumbnails, standard play-icon duration chips, in-place local playback, auto-starting video Quick Look with muted autoplay fallback, and shortcut-active Space-bar Quick Look previews with visible item-status reminders before any forced iCloud materialization.
    - Keep rejected/hidden items recoverable through normal culling filters until the explicit Empty wastebasket action tombstones them.

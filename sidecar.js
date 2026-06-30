@@ -58,6 +58,7 @@
     9: "blue",
   };
   const burstWindowMs = 1000;
+  const undoLimit = 100;
   const previewFallbackMarkup = `<span class="sidecar-thumb-fallback">Preview unavailable</span>`;
 
   const normalizePage = (value) => (pageConfigs[value] ? value : "culling");
@@ -94,6 +95,7 @@
     selectionAnchorIndex: -1,
     quickLookIndex: -1,
     autoAdvanceDirection: 1,
+    undoStack: [],
     summary: null,
     filters: normalizeFilters(readStoredWindow()?.filters || cloneDefaultFilters()),
     hasWindow: Boolean(readStoredWindow()?.hasWindow),
@@ -197,7 +199,7 @@
   const videoPlayerMarkup = (item, autoplay = true) => `
     <video class="sidecar-inline-video" controls playsinline preload="metadata" ${autoplay ? "autoplay" : ""} poster="${escapeHtml(previewUrl(item))}" src="${escapeHtml(videoUrl(item))}"></video>
   `;
-  const versionFallback = "122.8";
+  const versionFallback = "122.9";
   const versionFallbackLabel = `v${versionFallback}`;
   const videoBadge = (item, index, label) => isVideo(item)
     ? videoOverlay(item, index, label)
@@ -209,6 +211,54 @@
   const selectedItems = () => selectedIndexes().map((index) => state.items[index]).filter(Boolean);
   const selectedItemCount = () => selectedIndexes().length;
   const selectedSelectionSet = () => new Set(selectedIndexes());
+  const selectionSnapshot = () => ({
+    selectedIndex: state.selectedIndex,
+    selectedIndexes: selectedIndexes(),
+    selectionAnchorIndex: state.selectionAnchorIndex,
+    autoAdvanceDirection: state.autoAdvanceDirection,
+  });
+
+  const restoreSelectionSnapshot = (snapshot = {}) => {
+    const visible = new Set(visibleIndexes());
+    const selected = Array.isArray(snapshot.selectedIndexes)
+      ? snapshot.selectedIndexes.filter((index) => visible.has(index))
+      : [];
+    const preferred = visible.has(snapshot.selectedIndex) ? snapshot.selectedIndex : selected[0];
+    if (Number.isFinite(preferred)) {
+      state.selectedIndex = preferred;
+      state.selectedIndexes = new Set(selected.length ? selected : [preferred]);
+      state.selectionAnchorIndex = visible.has(snapshot.selectionAnchorIndex) ? snapshot.selectionAnchorIndex : preferred;
+    } else {
+      reconcileSelection(state.selectedIndex);
+    }
+    state.autoAdvanceDirection = snapshot.autoAdvanceDirection < 0 ? -1 : 1;
+  };
+
+  const undoSnapshot = (item) => {
+    const sidecar = item?.sidecarState || {};
+    return {
+      rating: Math.max(0, Math.min(5, Number(sidecar.rating || 0))),
+      color: sidecar.color || "",
+      pickState: sidecar.pickState || "undecided",
+      metadataState: sidecar.metadataState || "unreviewed",
+      title: sidecar.title || "",
+      keywords: Array.isArray(sidecar.keywords) ? sidecar.keywords.map(String) : [],
+      tombstoneState: item?.tombstoneState || "",
+    };
+  };
+
+  const indexesForAssetIds = (assetIds) => assetIds
+    .map((assetId) => state.items.findIndex((item) => itemId(item) === assetId))
+    .filter((index) => index >= 0);
+
+  const beforeStatesForIndexes = (indexes) => new Map(indexes
+    .map((index) => state.items[index])
+    .filter(Boolean)
+    .map((item) => [itemId(item), undoSnapshot(item)]));
+
+  const visibilityForIndexes = (indexes) => new Map(indexes
+    .filter((index) => index >= 0)
+    .map((index) => [index, matchesFilters(state.items[index])]));
 
   const pickFilterValue = (item) => {
     const pickState = item.sidecarState?.pickState || "undecided";
@@ -803,11 +853,35 @@
     const index = state.items.findIndex((item) => itemId(item) === assetId);
     if (index < 0) return -1;
     const item = state.items[index];
-    const { tombstoneState, ...sidecarState } = nextState || {};
+    const { tombstoneState, pendingSyncCount, ...sidecarState } = nextState || {};
     item.sidecarState = { ...(item.sidecarState || {}), ...sidecarState };
-    if (typeof tombstoneState !== "undefined") item.tombstoneState = tombstoneState;
-    item.pendingSyncCount = Math.max(Number(item.pendingSyncCount || 0), pendingCount);
+    if (typeof tombstoneState !== "undefined") item.tombstoneState = tombstoneState || "";
+    if (Number.isFinite(Number(pendingSyncCount))) item.pendingSyncCount = Number(pendingSyncCount);
+    else item.pendingSyncCount = Math.max(Number(item.pendingSyncCount || 0), pendingCount);
     return index;
+  };
+
+  const applyChangedItems = (changedItems, visibilityBefore, {
+    preferredIndex = state.selectedIndex,
+    previousActive = state.selectedIndex,
+    previousSelection = new Set(),
+    restoreSelection = null,
+  } = {}) => {
+    const changedIndexes = [];
+    changedItems.forEach((item) => {
+      const changedIndex = mergeChangedItem(item.assetId, item.state || {}, item.pendingSyncCount ?? item.changedFamilies?.length ?? 1);
+      if (changedIndex >= 0) changedIndexes.push(changedIndex);
+    });
+    if (restoreSelection) restoreSelectionSnapshot(restoreSelection);
+    else reconcileSelection(preferredIndex);
+    const visibilityChanged = changedIndexes.some((index) => visibilityBefore.get(index) !== matchesFilters(state.items[index]));
+    if (visibilityChanged || !refreshRenderedItems([...changedIndexes, previousActive, ...previousSelection, ...selectedIndexes()])) {
+      renderSurface();
+    } else {
+      renderCounts();
+    }
+    syncQuickLookToSelection();
+    return changedIndexes;
   };
 
   const colorDecisionPayload = (color) => {
@@ -823,12 +897,68 @@
     return payload.action;
   };
 
-  const postDecision = async (payload, { advance = true, indexes = null } = {}) => {
+  const pushUndoEntry = (label, changedItems, beforeStates, selection) => {
+    const items = changedItems
+      .map((item) => ({
+        assetId: item.assetId,
+        before: beforeStates.get(item.assetId),
+        changedFamilies: Array.isArray(item.changedFamilies) ? item.changedFamilies : [],
+      }))
+      .filter((item) => item.assetId && item.before && item.changedFamilies.length);
+    if (!items.length) return;
+    state.undoStack.push({
+      label,
+      items,
+      selection,
+      createdAt: Date.now(),
+    });
+    if (state.undoStack.length > undoLimit) state.undoStack.splice(0, state.undoStack.length - undoLimit);
+  };
+
+  const pickStateUndoPayload = (assetId, pickState) => {
+    const action = {
+      picked: "pick",
+      rejected: "reject",
+      hidden: "hide",
+      undecided: "unpick",
+    }[pickState || "undecided"] || "unpick";
+    return { assetId, action };
+  };
+
+  const undoPayloadsForEntry = (entry) => entry.items.flatMap((item) => {
+    const previous = item.before || {};
+    const families = new Set(item.changedFamilies || []);
+    const payloads = [];
+    if (families.has("tombstone")) {
+      payloads.push({
+        assetId: item.assetId,
+        action: previous.tombstoneState === "active" ? "tombstone" : "restore",
+        reason: "undo",
+      });
+    }
+    if (families.has("rating")) payloads.push({ assetId: item.assetId, action: "rating", rating: previous.rating || 0 });
+    if (families.has("color")) payloads.push({ assetId: item.assetId, action: "color", color: previous.color || "" });
+    if (families.has("pick_state")) payloads.push(pickStateUndoPayload(item.assetId, previous.pickState));
+    if (families.has("metadata")) {
+      payloads.push({
+        assetId: item.assetId,
+        action: "metadata",
+        title: previous.title || "",
+        keywords: Array.isArray(previous.keywords) ? previous.keywords : [],
+        metadataState: previous.metadataState || "unreviewed",
+      });
+    }
+    return payloads;
+  });
+
+  const postDecision = async (payload, { advance = true, indexes = null, recordUndo = true } = {}) => {
     const targetIndexes = Array.isArray(indexes) ? indexes : selectedIndexes();
     if (!targetIndexes.length) return;
     const previousActive = state.selectedIndex;
     const previousSelection = selectedSelectionSet();
-    const visibilityBefore = new Map(targetIndexes.map((index) => [index, matchesFilters(state.items[index])]));
+    const selectionBefore = selectionSnapshot();
+    const beforeStates = beforeStatesForIndexes(targetIndexes);
+    const visibilityBefore = visibilityForIndexes(targetIndexes);
     const decisions = targetIndexes
       .map((index) => state.items[index])
       .filter(Boolean)
@@ -847,28 +977,28 @@
     if (!response.ok || !result.ok) throw new Error(result.error || "Could not stage Sidecar decision.");
 
     const changedItems = decisions.length === 1 ? [result] : (result.items || []);
-    const changedIndexes = [];
-    changedItems.forEach((item) => {
-      const changedIndex = mergeChangedItem(item.assetId, item.state || {}, item.changedFamilies?.length || 1);
-      if (changedIndex >= 0) changedIndexes.push(changedIndex);
-    });
+    if (recordUndo) pushUndoEntry(actionLabel(payload), changedItems, beforeStates, selectionBefore);
     state.summary = result.summary || state.summary;
     const preferredIndex = advance && !indexes && decisions.length === 1
       ? nextVisibleFrom(previousActive, state.autoAdvanceDirection)
       : previousActive;
-    reconcileSelection(preferredIndex);
-    const visibilityChanged = changedIndexes.some((index) => visibilityBefore.get(index) !== matchesFilters(state.items[index]));
-    if (visibilityChanged || !refreshRenderedItems([...changedIndexes, previousActive, ...previousSelection, ...selectedIndexes()])) {
-      renderSurface();
-    } else {
-      renderCounts();
-    }
-    syncQuickLookToSelection();
+    applyChangedItems(changedItems, visibilityBefore, { preferredIndex, previousActive, previousSelection });
     setStatus(`Staged ${actionLabel(payload)} on ${decisions.length.toLocaleString()} item${decisions.length === 1 ? "" : "s"}. Photos write-back is pending commit.`);
   };
 
-  const postDecisions = async (decisions, message, completeMessage = "") => {
+  const postDecisions = async (decisions, message, completeMessage = "", {
+    recordUndo = true,
+    undoLabel = "local decisions",
+    restoreSelection = null,
+  } = {}) => {
     if (!decisions.length) return;
+    const assetIds = decisions.map((decision) => String(decision.assetId || decision.asset_id || decision.localIdentifier || "")).filter(Boolean);
+    const targetIndexes = indexesForAssetIds(assetIds);
+    const previousActive = state.selectedIndex;
+    const previousSelection = selectedSelectionSet();
+    const selectionBefore = selectionSnapshot();
+    const beforeStates = beforeStatesForIndexes(targetIndexes);
+    const visibilityBefore = visibilityForIndexes(targetIndexes);
     setStatus(message || `Staging ${decisions.length.toLocaleString()} local decisions...`);
     const response = await fetch("/__sidecar/decisions", {
       method: "POST",
@@ -877,14 +1007,45 @@
     });
     const result = await response.json().catch(() => ({}));
     if (!response.ok || !result.ok) throw new Error(result.error || "Could not stage Sidecar decisions.");
-    (result.items || []).forEach((item) => {
-      mergeChangedItem(item.assetId, item.state || {}, item.changedFamilies?.length || 1);
-    });
+    const changedItems = result.items || [];
+    if (recordUndo) pushUndoEntry(undoLabel, changedItems, beforeStates, selectionBefore);
     state.summary = result.summary || state.summary;
-    reconcileSelection(state.selectedIndex);
-    renderSurface();
-    syncQuickLookToSelection();
+    applyChangedItems(changedItems, visibilityBefore, {
+      preferredIndex: state.selectedIndex,
+      previousActive,
+      previousSelection,
+      restoreSelection,
+    });
     setStatus(completeMessage || `Staged ${Number(result.count || decisions.length).toLocaleString()} local decisions. Photos write-back is pending commit.`);
+  };
+
+  const undoLastDecision = async () => {
+    if (!state.undoStack.length) {
+      setStatus("Nothing to undo.");
+      return;
+    }
+    const entry = state.undoStack.pop();
+    const decisions = undoPayloadsForEntry(entry);
+    if (!decisions.length) {
+      setStatus("Nothing to undo.");
+      return;
+    }
+    const remaining = state.undoStack.length;
+    const remainingLabel = remaining ? `${remaining.toLocaleString()} undo step${remaining === 1 ? "" : "s"} remaining.` : "Undo stack is empty.";
+    try {
+      await postDecisions(
+        decisions,
+        `Undoing ${entry.label}...`,
+        `Undid ${entry.label}. ${remainingLabel}`,
+        {
+          recordUndo: false,
+          restoreSelection: entry.selection,
+        },
+      );
+    } catch (error) {
+      state.undoStack.push(entry);
+      throw error;
+    }
   };
 
   const performBurstCull = async () => {
@@ -919,6 +1080,7 @@
       decisions,
       `Culling ${rejectCount.toLocaleString()} burst extra photo${rejectCount === 1 ? "" : "s"} locally...`,
       `Rejected ${rejectCount.toLocaleString()} burst extra photo${rejectCount === 1 ? "" : "s"} from ${groupCount.toLocaleString()} visible burst group${groupCount === 1 ? "" : "s"}. Photos write-back is pending commit.`,
+      { undoLabel: "burst cull" },
     );
   };
 
@@ -940,6 +1102,7 @@
     state.items = Array.isArray(payload.items) ? payload.items : [];
     state.summary = payload.sidecarSummary || state.summary;
     state.hasWindow = true;
+    state.undoStack = [];
     setInitialSelection();
     renderPageChrome();
     renderSurface();
@@ -1025,10 +1188,21 @@
   };
 
   const handleShortcut = async (event) => {
-    if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
     const tag = String(event.target?.tagName || "").toLowerCase();
-    if (tag === "input" || tag === "textarea" || tag === "select") return;
+    const isTextEntry = tag === "input" || tag === "textarea" || tag === "select";
     const key = event.key;
+    if (!event.defaultPrevented && (event.metaKey || event.ctrlKey) && !event.altKey && !event.shiftKey && (key === "z" || key === "Z")) {
+      if (isTextEntry) return;
+      claimShortcut(event);
+      try {
+        await undoLastDecision();
+      } catch (error) {
+        setStatus(error.message || "Could not undo the last Sidecar decision.");
+      }
+      return;
+    }
+    if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
+    if (isTextEntry) return;
     try {
       if (key === " " || key === "Spacebar") {
         claimShortcut(event);

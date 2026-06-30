@@ -275,6 +275,30 @@ def _queue_pending_sync(
     )
 
 
+def _pending_sync_count(conn: sqlite3.Connection, asset_id: str) -> int:
+    row = conn.execute(
+        """
+        SELECT count(*) AS total
+        FROM sidecar_pending_sync
+        WHERE asset_id = ? AND status = 'pending'
+        """,
+        (asset_id,),
+    ).fetchone()
+    return int(row["total"] or 0)
+
+
+def _active_tombstone_state(conn: sqlite3.Connection, asset_id: str) -> str:
+    row = conn.execute(
+        """
+        SELECT tombstone_state
+        FROM sidecar_tombstones
+        WHERE asset_id = ? AND tombstone_state = 'active'
+        """,
+        (asset_id,),
+    ).fetchone()
+    return str(row["tombstone_state"] or "") if row else ""
+
+
 def record_decision(repo_root: Path, payload: dict[str, Any]) -> dict[str, Any]:
     asset_id = str(payload.get("assetId") or payload.get("asset_id") or payload.get("localIdentifier") or "").strip()
     if not asset_id:
@@ -297,6 +321,8 @@ def record_decision(repo_root: Path, payload: dict[str, Any]) -> dict[str, Any]:
             (asset_id, now, now),
         )
         before = _current_decision(conn, asset_id)
+        before_tombstone_state = _active_tombstone_state(conn, asset_id)
+        before_for_sync = {**before, "tombstoneState": before_tombstone_state}
         rating = before["rating"]
         color = before["color"]
         pick_state = before["pickState"]
@@ -326,6 +352,8 @@ def record_decision(repo_root: Path, payload: dict[str, Any]) -> dict[str, Any]:
             if metadata_state == "blocked":
                 metadata_state = "unreviewed"
                 changed_families.add("metadata")
+            if before_tombstone_state == "active":
+                changed_families.add("tombstone")
             changed_families.add("pick_state")
         elif action == "reject":
             pick_state = "rejected"
@@ -391,11 +419,18 @@ def record_decision(repo_root: Path, payload: dict[str, Any]) -> dict[str, Any]:
                 (asset_id, str(payload.get("reason") or "").strip(), now, now),
             )
         after = _current_decision(conn, asset_id)
-        if action == "tombstone":
-            after["tombstoneState"] = "active"
+        after["tombstoneState"] = _active_tombstone_state(conn, asset_id)
         for family in sorted(changed_families):
-            _queue_pending_sync(conn, asset_id, family, before, after, now)
-    return {"ok": True, "assetId": asset_id, "state": after, "changedFamilies": sorted(changed_families)}
+            _queue_pending_sync(conn, asset_id, family, before_for_sync, after, now)
+        pending_sync_count = _pending_sync_count(conn, asset_id)
+        after["pendingSyncCount"] = pending_sync_count
+    return {
+        "ok": True,
+        "assetId": asset_id,
+        "state": after,
+        "changedFamilies": sorted(changed_families),
+        "pendingSyncCount": pending_sync_count,
+    }
 
 
 def record_decisions(repo_root: Path, payloads: Iterable[dict[str, Any]]) -> dict[str, Any]:

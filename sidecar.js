@@ -199,7 +199,7 @@
   const videoPlayerMarkup = (item, autoplay = true) => `
     <video class="sidecar-inline-video" controls playsinline preload="metadata" ${autoplay ? "autoplay" : ""} poster="${escapeHtml(previewUrl(item))}" src="${escapeHtml(videoUrl(item))}"></video>
   `;
-  const versionFallback = "122.9";
+  const versionFallback = "122.10";
   const versionFallbackLabel = `v${versionFallback}`;
   const videoBadge = (item, index, label) => isVideo(item)
     ? videoOverlay(item, index, label)
@@ -296,16 +296,38 @@
     }
     return nextVisibleAfter(index);
   };
-  const stepVisibleSelection = (direction) => {
-    state.autoAdvanceDirection = direction < 0 ? -1 : 1;
+  const visibleColumnCount = () => {
+    if (!surface || state.page === "editing") return 1;
+    const elements = Array.from(surface.querySelectorAll(".sidecar-card[data-sidecar-index], .sidecar-editing-row[data-sidecar-index]"));
+    if (elements.length <= 1) return 1;
+    const firstTop = elements[0].getBoundingClientRect().top;
+    const sameRowCount = elements.filter((element) => Math.abs(element.getBoundingClientRect().top - firstTop) <= 3).length;
+    if (sameRowCount > 1) return sameRowCount;
+    const template = getComputedStyle(surface).gridTemplateColumns || "";
+    const computedCount = template.split(/\s+/).filter((value) => value && value !== "none").length;
+    return Math.max(1, computedCount || 1);
+  };
+
+  const arrowSelectionDelta = (key) => {
+    if (key === "ArrowRight") return 1;
+    if (key === "ArrowLeft") return -1;
+    if (key === "ArrowDown") return visibleColumnCount();
+    if (key === "ArrowUp") return -visibleColumnCount();
+    return 0;
+  };
+
+  const stepVisibleSelection = (key, { extend = false } = {}) => {
+    const delta = arrowSelectionDelta(key);
+    if (!delta) return;
+    state.autoAdvanceDirection = delta < 0 ? -1 : 1;
     const visible = visibleIndexes();
     if (!visible.length) return;
     const currentPosition = visible.indexOf(state.selectedIndex);
-    const fallbackPosition = direction > 0 ? 0 : visible.length - 1;
+    const fallbackPosition = delta > 0 ? 0 : visible.length - 1;
     const nextPosition = currentPosition < 0
       ? fallbackPosition
-      : Math.max(0, Math.min(visible.length - 1, currentPosition + direction));
-    selectIndex(visible[nextPosition]);
+      : Math.max(0, Math.min(visible.length - 1, currentPosition + delta));
+    selectIndex(visible[nextPosition], { extend });
   };
 
   const reconcileSelection = (preferredIndex = null) => {
@@ -640,7 +662,7 @@
     renderCounts();
   };
 
-  const cardForIndex = (index) => surface?.querySelector(`[data-sidecar-index="${index}"]`);
+  const cardForIndex = (index) => surface?.querySelector(`.sidecar-card[data-sidecar-index="${index}"], .sidecar-editing-row[data-sidecar-index="${index}"]`);
 
   const refreshRenderedItem = (index) => {
     const item = state.items[index];
@@ -1235,12 +1257,9 @@
       } else if (key === "u" || key === "U") {
         claimShortcut(event);
         await postDecision({ action: "unpick" });
-      } else if (key === "ArrowRight" || key === "ArrowDown") {
+      } else if (key === "ArrowRight" || key === "ArrowDown" || key === "ArrowLeft" || key === "ArrowUp") {
         claimShortcut(event);
-        stepVisibleSelection(1);
-      } else if (key === "ArrowLeft" || key === "ArrowUp") {
-        claimShortcut(event);
-        stepVisibleSelection(-1);
+        stepVisibleSelection(key, { extend: event.shiftKey });
       }
     } catch (error) {
       setStatus(error.message || "Sidecar shortcut failed.");

@@ -10,7 +10,7 @@ metadata; Owner decides publication and commerce.
 
 Sidecar has its own local visible version in `SIDECAR_VERSION`.
 
-- Current Sidecar version: `v122.4`
+- Current Sidecar version: `v122.5`
 - Versioning follows the canonical `~/Dev/.SOPs/VERSIONING_SOP.md` default
   calendar visible-version rule for this local web-app surface.
 - Sidecar version bumps do not imply a public Photos By Elie site version bump.
@@ -129,15 +129,18 @@ Sidecar has two primary pages backed by the same current window:
   Actions update local SQLite and advance without blocking on Photos. The
   **Cull bursts** action applies the conservative one-second burst pass to the
   visible current-window photos, skips picked/videos/already rejected items, and
-  stages reject decisions for non-survivor frames.
+  stages reject decisions for non-survivor frames. Culling stays full-width and
+  grid-first; the former persistent Decision side panel is intentionally removed
+  in favor of Space-bar Quick Look and the dedicated Editing page.
 - **Editing:** Owner-style title/keyword review of the same current window,
   rendered as one item per row with preview, current state, title/keyword fields,
   approve, reject, resubmit to AI, pick, and unpick actions.
 
 Videos are first-class Sidecar review items. The UI marks video previews with a
-play overlay and duration chip, filters photos/videos separately, asks PhotoKit
-for local poster frames without iCloud downloads, and offers selected-video
-local playback only when Photos can expose the video resource locally.
+standard play icon and duration chip, filters photos/videos separately, asks
+PhotoKit for local poster frames without iCloud downloads, plays local videos in
+place when Photos can expose the video resource locally, and supports
+Space-bar Quick Look previews for the active item.
 
 Source controls should include:
 
@@ -163,8 +166,9 @@ The first implemented slice includes:
   sliding the window
   forward/back, filtering by rating/color/decision state, staging cull decisions,
   applying current-window burst culling,
-  editing metadata in row form, tombstoning the wastebasket explicitly, viewing
-  upload eligibility, and viewing the pending Photos commit plan.
+  editing metadata in row form, previewing the active item with Space,
+  tombstoning the wastebasket explicitly, viewing upload eligibility, and
+  viewing the pending Photos commit plan.
 - Dock launcher script for `PhotosByElie Sidecar.app`.
 
 Remaining near-term slices:

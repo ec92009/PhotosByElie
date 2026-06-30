@@ -60,8 +60,7 @@ body[data-gallery="sidecar"] {
   gap: .75rem;
 }
 
-.sidecar-control-grid label,
-.sidecar-edit-field {
+.sidecar-control-grid label {
   display: grid;
   gap: .3rem;
   color: var(--muted);
@@ -71,9 +70,7 @@ body[data-gallery="sidecar"] {
 }
 
 .sidecar-control-grid input,
-.sidecar-control-grid select,
-.sidecar-edit-form input,
-.sidecar-edit-form textarea {
+.sidecar-control-grid select {
   width: 100%;
   border: 1px solid color-mix(in srgb, var(--text) 16%, transparent);
   border-radius: 8px;
@@ -152,14 +149,10 @@ body[data-gallery="sidecar"] {
 }
 
 .sidecar-workspace {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(19rem, 26rem);
-  gap: 1rem;
-  align-items: start;
+  display: block;
 }
 
-.sidecar-grid-panel,
-.sidecar-edit-panel {
+.sidecar-grid-panel {
   min-height: 20rem;
 }
 
@@ -287,12 +280,25 @@ body[data-gallery="sidecar"] {
   background: rgba(0, 0, 0, .48);
   box-shadow: 0 12px 34px rgba(0, 0, 0, .34);
   color: rgba(255, 255, 255, .94);
-  font-size: 1.55rem;
-  font-weight: 900;
-  line-height: 1;
-  padding-left: .14rem;
+  cursor: pointer;
+  padding: 0 0 0 .14rem;
   transform: translate(-50%, -50%);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, .72);
+}
+
+.sidecar-video-play:hover,
+.sidecar-video-play:focus-visible {
+  border-color: rgba(255, 255, 255, .86);
+  background: rgba(0, 0, 0, .62);
+  outline: none;
+}
+
+.sidecar-play-icon {
+  display: block;
+  width: 0;
+  height: 0;
+  border-top: .48rem solid transparent;
+  border-bottom: .48rem solid transparent;
+  border-left: .76rem solid currentColor;
   pointer-events: none;
 }
 
@@ -315,6 +321,28 @@ body[data-gallery="sidecar"] {
   pointer-events: none;
 }
 
+.sidecar-video-surface {
+  position: relative;
+}
+
+.sidecar-video-surface.is-playing-video img,
+.sidecar-video-surface.is-playing-video .sidecar-thumb-fallback,
+.sidecar-video-surface.is-playing-video .sidecar-video-play,
+.sidecar-video-surface.is-playing-video .sidecar-video-duration {
+  display: none;
+}
+
+.sidecar-thumb .sidecar-inline-video,
+.sidecar-editing-preview .sidecar-inline-video {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+}
+
 .sidecar-thumb-fallback {
   display: none;
   align-items: center;
@@ -330,12 +358,12 @@ body[data-gallery="sidecar"] {
 }
 
 .sidecar-thumb.is-missing img,
-.sidecar-detail-preview.is-missing img {
+.sidecar-quick-look-media.is-missing img {
   display: none;
 }
 
 .sidecar-thumb.is-missing .sidecar-thumb-fallback,
-.sidecar-detail-preview.is-missing .sidecar-thumb-fallback {
+.sidecar-quick-look-media.is-missing .sidecar-thumb-fallback {
   display: flex;
 }
 
@@ -374,14 +402,6 @@ body[data-gallery="sidecar"] {
   font-size: .68rem;
   font-weight: 800;
   padding: .12rem .38rem;
-}
-
-body[data-sidecar-active-page="editing"] .sidecar-workspace {
-  grid-template-columns: 1fr;
-}
-
-body[data-sidecar-active-page="editing"] .sidecar-edit-panel {
-  display: none;
 }
 
 .sidecar-editing-list {
@@ -545,64 +565,11 @@ body[data-sidecar-active-page="editing"] .sidecar-edit-panel {
   gap: .42rem;
 }
 
-.sidecar-detail {
-  display: grid;
-  gap: .8rem;
-}
-
-.sidecar-selection-note {
-  color: var(--selected-frame);
-  font-size: .78rem;
-  font-weight: 850;
-  margin: .25rem 0 0;
-}
-
-.sidecar-detail-preview {
-  position: relative;
-  min-height: 12rem;
-  border-radius: 8px;
-  overflow: hidden;
-  background: color-mix(in srgb, var(--text) 8%, transparent);
-}
-
-.sidecar-detail-preview img {
-  width: 100%;
-  max-height: 46vh;
-  object-fit: contain;
-  display: block;
-}
-
-.sidecar-decision-row,
-.sidecar-button-row,
-.sidecar-video-actions,
-.sidecar-workflow-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .45rem;
-}
-
-.sidecar-video-actions {
-  align-items: center;
-}
-
-.sidecar-video-panel[hidden] {
-  display: none;
-}
-
-.sidecar-video-panel video {
-  width: 100%;
-  max-height: 44vh;
-  border-radius: 8px;
-  background: #000;
-  display: block;
-}
-
-.sidecar-workflow-actions {
-  border-bottom: 1px solid color-mix(in srgb, var(--text) 10%, transparent);
-  padding-bottom: .7rem;
-}
-
 .sidecar-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .35rem;
   border: 1px solid color-mix(in srgb, var(--text) 14%, transparent);
   border-radius: 999px;
   background: color-mix(in srgb, var(--surface) 90%, white 10%);
@@ -611,6 +578,12 @@ body[data-sidecar-active-page="editing"] .sidecar-edit-panel {
   font-weight: 800;
   min-height: 2.1rem;
   padding: .35rem .65rem;
+}
+
+.sidecar-chip .sidecar-play-icon {
+  border-top-width: .34rem;
+  border-bottom-width: .34rem;
+  border-left-width: .52rem;
 }
 
 .sidecar-chip[aria-pressed="true"] {
@@ -625,57 +598,6 @@ body[data-sidecar-active-page="editing"] .sidecar-edit-panel {
 
 .sidecar-chip[data-sidecar-action="restore"] {
   border-color: color-mix(in srgb, #4c9f6d 54%, transparent);
-}
-
-.sidecar-edit-form {
-  display: grid;
-  gap: .7rem;
-}
-
-.sidecar-field-heading {
-  display: flex;
-  align-items: center;
-  gap: .45rem;
-  min-width: 0;
-}
-
-.sidecar-field-heading label {
-  min-width: 0;
-}
-
-.sidecar-propagate-field {
-  display: grid;
-  flex: 0 0 auto;
-  width: 1.55rem;
-  height: 1.55rem;
-  place-items: center;
-  border: 1px solid color-mix(in srgb, var(--text) 18%, transparent);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--surface) 86%, white 14%);
-  color: var(--text);
-  cursor: pointer;
-  font: inherit;
-  font-size: .86rem;
-  font-weight: 850;
-  line-height: 1;
-  padding: 0;
-}
-
-.sidecar-propagate-field:hover,
-.sidecar-propagate-field:focus-visible {
-  border-color: var(--text);
-}
-
-.sidecar-metadata-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .55rem;
-}
-
-.sidecar-edit-form textarea {
-  min-height: 5.2rem;
-  resize: vertical;
-  text-transform: none;
 }
 
 .sidecar-mini-counts {
@@ -696,6 +618,108 @@ body[data-sidecar-active-page="editing"] .sidecar-edit-panel {
   font-size: .72rem;
   font-weight: 800;
   text-transform: uppercase;
+}
+
+.sidecar-has-quick-look {
+  overflow: hidden;
+}
+
+.sidecar-quick-look {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 2.2rem;
+  background: rgba(0, 0, 0, .84);
+  backdrop-filter: blur(10px);
+}
+
+.sidecar-quick-look-close {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 2;
+  display: grid;
+  width: 2.4rem;
+  height: 2.4rem;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, .34);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, .46);
+  color: rgba(255, 255, 255, .94);
+  cursor: pointer;
+  font: inherit;
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.sidecar-quick-look-close:hover,
+.sidecar-quick-look-close:focus-visible {
+  border-color: rgba(255, 255, 255, .82);
+  background: rgba(0, 0, 0, .64);
+  outline: none;
+}
+
+.sidecar-quick-look-card {
+  display: grid;
+  gap: .8rem;
+  width: min(92vw, 1180px);
+  max-height: 92vh;
+  margin: 0;
+}
+
+.sidecar-quick-look-media {
+  position: relative;
+  display: grid;
+  min-height: min(70vh, 760px);
+  place-items: center;
+  overflow: hidden;
+}
+
+.sidecar-quick-look-media img {
+  max-width: 100%;
+  max-height: 78vh;
+  object-fit: contain;
+  display: block;
+}
+
+.sidecar-quick-look-media .sidecar-inline-video {
+  width: 100%;
+  max-height: 78vh;
+  background: #000;
+  display: block;
+}
+
+.sidecar-quick-look-media .sidecar-video-play {
+  width: 4.25rem;
+  height: 4.25rem;
+}
+
+.sidecar-quick-look-media .sidecar-play-icon {
+  border-top-width: .68rem;
+  border-bottom-width: .68rem;
+  border-left-width: 1.05rem;
+}
+
+.sidecar-quick-look-media .sidecar-video-duration {
+  right: 1rem;
+  bottom: 1rem;
+}
+
+.sidecar-quick-look-card figcaption {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: .4rem .7rem;
+  color: rgba(255, 255, 255, .9);
+  font-size: .9rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.sidecar-quick-look-card figcaption span {
+  color: rgba(255, 255, 255, .68);
 }
 
 .sidecar-mini-counts dd {
@@ -723,8 +747,7 @@ body[data-sidecar-active-page="editing"] .sidecar-edit-panel {
 
 @media (max-width: 900px) {
   .sidecar-control-grid,
-  .sidecar-filter-grid,
-  .sidecar-workspace {
+  .sidecar-filter-grid {
     grid-template-columns: 1fr;
   }
 
@@ -737,7 +760,4 @@ body[data-sidecar-active-page="editing"] .sidecar-edit-panel {
     grid-column: 1 / -1;
   }
 
-  .sidecar-edit-panel {
-    position: static;
-  }
 }

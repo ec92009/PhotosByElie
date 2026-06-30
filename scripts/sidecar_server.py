@@ -20,7 +20,7 @@ from sidecar_state_db import commit_plan, empty_wastebasket, merge_state, record
 
 APPLE_PHOTOS_BRIDGE = Path("scripts/apple_photos_bridge.swift")
 SIDECAR_VERSION_FILE = Path("SIDECAR_VERSION")
-SIDECAR_DEFAULT_VERSION = "122.4"
+SIDECAR_DEFAULT_VERSION = "122.5"
 SIDECAR_PREVIEW_ROOT = Path("tmp/sidecar-previews")
 SIDECAR_PREVIEW_CACHE_VERSION = "v2"
 SIDECAR_VIDEO_ROOT = Path("tmp/sidecar-videos")

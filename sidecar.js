@@ -5,7 +5,6 @@
   const surface = $("[data-sidecar-grid]");
   const surfaceEyebrow = $("[data-sidecar-grid-eyebrow]");
   const surfaceTitle = $("[data-sidecar-grid-title]");
-  const detail = $("[data-sidecar-detail]");
   const countsRoot = $("[data-sidecar-counts]");
   const planPanel = $("[data-sidecar-plan-panel]");
   const planEyebrow = $("[data-sidecar-plan-eyebrow]");
@@ -58,7 +57,6 @@
     8: "green",
     9: "blue",
   };
-  const shootWindowMs = 2 * 60 * 60 * 1000;
   const burstWindowMs = 1000;
   const previewFallbackMarkup = `<span class="sidecar-thumb-fallback">Preview unavailable</span>`;
 
@@ -94,6 +92,7 @@
     selectedIndex: -1,
     selectedIndexes: new Set(),
     selectionAnchorIndex: -1,
+    quickLookIndex: -1,
     summary: null,
     filters: normalizeFilters(readStoredWindow()?.filters || cloneDefaultFilters()),
     hasWindow: Boolean(readStoredWindow()?.hasWindow),
@@ -185,19 +184,22 @@
   };
   const mediaLabel = (item) => (isVideo(item) ? "" : "photo");
   const mediaLine = (item) => [formatDate(item.creationDate), mediaLabel(item)].filter(Boolean).join(" · ");
-  const detailMediaLine = (item) => [formatDate(item.creationDate), mediaLabel(item), itemId(item)].filter(Boolean).join(" · ");
-  const videoOverlay = (item) => {
+  const playIconMarkup = `<span class="sidecar-play-icon" aria-hidden="true"></span>`;
+  const videoOverlay = (item, index, label = "Play video preview") => {
     if (!isVideo(item)) return "";
     const duration = formatDuration(item.duration);
     return `
-      <span class="sidecar-video-play" aria-hidden="true">&gt;</span>
+      <button class="sidecar-video-play" type="button" data-sidecar-video-inline data-sidecar-index="${index}" aria-label="${escapeHtml(label)}">${playIconMarkup}</button>
       ${duration ? `<span class="sidecar-video-duration" aria-label="Video length ${escapeHtml(duration)}">${escapeHtml(duration)}</span>` : ""}
     `;
   };
-  const versionFallback = "122.4";
+  const videoPlayerMarkup = (item, autoplay = true) => `
+    <video class="sidecar-inline-video" controls playsinline preload="metadata" ${autoplay ? "autoplay" : ""} poster="${escapeHtml(previewUrl(item))}" src="${escapeHtml(videoUrl(item))}"></video>
+  `;
+  const versionFallback = "122.5";
   const versionFallbackLabel = `v${versionFallback}`;
-  const videoBadge = (item) => isVideo(item)
-    ? videoOverlay(item)
+  const videoBadge = (item, index, label) => isVideo(item)
+    ? videoOverlay(item, index, label)
     : "";
   const selectedItem = () => state.items[state.selectedIndex] || null;
   const selectedIndexes = () => Array.from(state.selectedIndexes || [])
@@ -277,7 +279,7 @@
   const wirePreviewFallbacks = (root) => {
     root?.querySelectorAll("img[data-sidecar-preview]").forEach((img) => {
       const markMissing = () => {
-        img.closest(".sidecar-thumb, .sidecar-detail-preview, .sidecar-editing-preview")?.classList.add("is-missing");
+        img.closest(".sidecar-thumb, .sidecar-editing-preview, .sidecar-quick-look-media")?.classList.add("is-missing");
         img.removeAttribute("src");
       };
       img.addEventListener("error", markMissing, { once: true });
@@ -331,25 +333,6 @@
     .split(",")
     .map((keyword) => keyword.trim())
     .filter(Boolean);
-
-  const metadataFormValues = () => {
-    const form = detail?.querySelector("[data-sidecar-metadata-form]");
-    const data = form ? new FormData(form) : new FormData();
-    return {
-      title: String(data.get("title") || "").trim(),
-      keywords: parseKeywords(data.get("keywords") || ""),
-    };
-  };
-
-  const sameShootIndexes = () => {
-    const source = selectedItem();
-    const sourceTime = Date.parse(source?.creationDate || "");
-    if (!Number.isFinite(sourceTime)) return state.selectedIndex >= 0 ? [state.selectedIndex] : [];
-    return state.items
-      .map((item, index) => ({ index, time: Date.parse(item.creationDate || "") }))
-      .filter(({ index, time }) => index >= state.selectedIndex && Number.isFinite(time) && Math.abs(time - sourceTime) <= shootWindowMs)
-      .map(({ index }) => index);
-  };
 
   const burstSurvivorPositions = (size) => {
     const positions = new Set();
@@ -462,10 +445,10 @@
       const label = item.filename || id;
       return `
         <article class="${decisionClasses("sidecar-card", item, selected)}" ${decisionAttrs(item)} data-sidecar-index="${index}" tabindex="0" aria-selected="${selected ? "true" : "false"}">
-          <div class="sidecar-thumb">
+          <div class="sidecar-thumb ${isVideo(item) ? "sidecar-video-surface" : ""}" data-sidecar-video-shell data-sidecar-index="${index}">
             <img data-sidecar-preview src="${escapeHtml(previewUrl(item))}" alt="${escapeHtml(label)}" loading="lazy"/>
             ${previewFallbackMarkup}
-            ${videoBadge(item)}
+            ${videoBadge(item, index)}
             ${ratingStars(item)}
           </div>
           <div class="sidecar-card-copy">
@@ -496,10 +479,10 @@
     const keywords = Array.isArray(sidecar.keywords) ? sidecar.keywords.join(", ") : "";
     return `
       <article class="${decisionClasses("sidecar-editing-row", item, selected)}" ${decisionAttrs(item)} data-sidecar-index="${index}" tabindex="0" aria-selected="${selected ? "true" : "false"}">
-        <div class="sidecar-editing-preview">
+        <div class="sidecar-editing-preview ${isVideo(item) ? "sidecar-video-surface" : ""}" data-sidecar-video-shell data-sidecar-index="${index}">
           <img data-sidecar-preview src="${escapeHtml(previewUrl(item))}" alt="${escapeHtml(label)}" loading="lazy"/>
           ${previewFallbackMarkup}
-          ${videoBadge(item)}
+          ${videoBadge(item, index)}
           ${ratingStars(item)}
         </div>
         <div class="sidecar-editing-current">
@@ -536,7 +519,6 @@
     if (!state.items.length) {
       surface.innerHTML = `<p class="empty-basket">${escapeHtml(config.empty)}</p>`;
       renderCounts();
-      renderDetail();
       return;
     }
     reconcileSelection();
@@ -544,7 +526,6 @@
     if (!indexes.length) {
       surface.innerHTML = `<p class="empty-basket">${escapeHtml(config.filteredEmpty)}</p>`;
       renderCounts();
-      renderDetail();
       return;
     }
     if (state.page === "editing") renderEditingList(indexes);
@@ -569,96 +550,93 @@
     });
   };
 
-  const chip = (label, action, value, active = false) => `
-    <button class="sidecar-chip" type="button" data-sidecar-action="${escapeHtml(action)}" data-sidecar-value="${escapeHtml(value)}" aria-pressed="${active ? "true" : "false"}">${escapeHtml(label)}</button>
-  `;
-
-  const renderDetail = () => {
-    const item = selectedItem();
-    if (!detail) return;
-    if (state.page === "editing") {
-      detail.innerHTML = `<p class="empty-basket">Use the editing rows to stage titles and keywords.</p>`;
-      return;
+  const playVideoInPlace = (shell, item, { autoplay = true } = {}) => {
+    if (!shell || !item || !isVideo(item)) return;
+    document.querySelectorAll(".sidecar-video-surface.is-playing-video").forEach((activeShell) => {
+      if (activeShell === shell) return;
+      activeShell.querySelectorAll(".sidecar-inline-video").forEach((video) => {
+        video.pause();
+        video.remove();
+      });
+      activeShell.classList.remove("is-playing-video");
+    });
+    shell.querySelectorAll(".sidecar-inline-video").forEach((video) => video.remove());
+    shell.insertAdjacentHTML("beforeend", videoPlayerMarkup(item, autoplay));
+    shell.classList.add("is-playing-video");
+    const video = shell.querySelector(".sidecar-inline-video");
+    if (!video) return;
+    video.addEventListener("error", () => {
+      shell.classList.remove("is-playing-video");
+      video.remove();
+      setStatus("Local video preview is unavailable. Sidecar did not force an iCloud download.");
+    }, { once: true });
+    video.addEventListener("canplay", () => {
+      setStatus("Local video preview ready.");
+    }, { once: true });
+    if (autoplay) {
+      const playResult = video.play();
+      if (playResult && typeof playResult.catch === "function") {
+        playResult.catch(() => setStatus("Local video preview is ready; use the play control to start."));
+      }
     }
-    if (!item) {
-      detail.innerHTML = `<p class="empty-basket">Select a photo to edit.</p>`;
-      return;
-    }
-    const sidecar = item.sidecarState || {};
-    const keywords = Array.isArray(sidecar.keywords) ? sidecar.keywords.join(", ") : "";
-    const titleInputId = `sidecar-title-${state.selectedIndex}`;
-    const keywordsInputId = `sidecar-keywords-${state.selectedIndex}`;
-    const selectionCount = selectedItemCount();
-    const selectionNote = selectionCount > 1
-      ? `<p class="sidecar-selection-note">${selectionCount.toLocaleString()} selected. Decision buttons apply to the selection; metadata fields edit the active item.</p>`
-      : "";
-    detail.innerHTML = `
-      <div class="sidecar-detail-preview">
-        <img data-sidecar-preview src="${escapeHtml(previewUrl(item))}" alt="${escapeHtml(item.filename || itemId(item))}"/>
-        ${previewFallbackMarkup}
-        ${videoBadge(item)}
-      </div>
-      <div>
-        <strong>${escapeHtml(item.filename || itemId(item))}</strong>
-        <p class="owner-card-note">${escapeHtml(detailMediaLine(item))}</p>
-        ${selectionNote}
-      </div>
-      ${isVideo(item) ? `
-        <div class="sidecar-video-actions">
-          <button class="sidecar-chip" type="button" data-sidecar-video-toggle>Play preview</button>
-          <span class="owner-card-note">Local video only. Sidecar will not force iCloud downloads here.</span>
-        </div>
-        <div class="sidecar-video-panel" data-sidecar-video-panel hidden>
-          <video controls preload="metadata" poster="${escapeHtml(previewUrl(item))}" src="${escapeHtml(videoUrl(item))}"></video>
-        </div>
-      ` : ""}
-      <div class="sidecar-decision-row" aria-label="Rating">
-        ${[1, 2, 3, 4, 5].map((value) => chip(`${value}`, "rating", String(value), Number(sidecar.rating || 0) === value)).join("")}
-        ${chip("0", "rating", "0", Number(sidecar.rating || 0) === 0)}
-      </div>
-      <div class="sidecar-decision-row" aria-label="Color">
-        ${["red", "yellow", "green", "blue", "purple"].map((value) => chip(value, "color", value, sidecar.color === value)).join("")}
-        ${chip("clear", "color", "", !sidecar.color)}
-      </div>
-      <div class="sidecar-button-row">
-        ${chip("Pick", "pick", "", sidecar.pickState === "picked")}
-        ${chip("Unpick", "unpick", "", sidecar.pickState === "undecided")}
-        ${chip("Reject", "reject", "", sidecar.pickState === "rejected")}
-        ${chip("Hide", "hide", "", sidecar.pickState === "hidden")}
-        ${chip("Approve", "approve", "", sidecar.metadataState === "approved")}
-        ${chip("AI rework", "metadata-rework", "", sidecar.metadataState === "rework")}
-      </div>
-      <form class="sidecar-edit-form" data-sidecar-metadata-form>
-        <div class="sidecar-edit-field">
-          <div class="sidecar-field-heading">
-            <label for="${titleInputId}">Title</label>
-            <button class="sidecar-propagate-field" type="button" data-sidecar-propagate-field="title" aria-label="Propagate title down" title="Propagate this title to current and following rows in the same two-hour shoot window">↓</button>
-          </div>
-          <input id="${titleInputId}" type="text" name="title" value="${escapeHtml(sidecar.title || "")}" placeholder="Title for Photos and future catalog"/>
-        </div>
-        <div class="sidecar-edit-field">
-          <div class="sidecar-field-heading">
-            <label for="${keywordsInputId}">Keywords</label>
-            <button class="sidecar-propagate-field" type="button" data-sidecar-propagate-field="keywords" aria-label="Propagate keywords down" title="Propagate these keywords to current and following rows in the same two-hour shoot window">↓</button>
-          </div>
-          <textarea id="${keywordsInputId}" name="keywords" placeholder="Comma-separated descriptive keywords">${escapeHtml(keywords)}</textarea>
-        </div>
-        <div class="sidecar-metadata-actions">
-          <button class="btn secondary" type="submit">Stage metadata</button>
-          <button class="btn secondary" type="button" data-sidecar-propagate-field="metadata">Propagate metadata</button>
-        </div>
-      </form>
-    `;
-    wirePreviewFallbacks(detail);
   };
 
-  const toggleVideoPreview = () => {
-    const panel = detail?.querySelector("[data-sidecar-video-panel]");
-    const button = detail?.querySelector("[data-sidecar-video-toggle]");
-    if (!panel || !button) return;
-    const nextHidden = !panel.hidden;
-    panel.hidden = nextHidden;
-    button.textContent = nextHidden ? "Play preview" : "Hide preview";
+  const stopInlineVideos = (root = document) => {
+    root.querySelectorAll(".sidecar-inline-video").forEach((video) => {
+      video.pause();
+      video.removeAttribute("src");
+      video.load();
+    });
+  };
+
+  const closeQuickLook = () => {
+    const quickLook = $("[data-sidecar-quick-look]");
+    if (!quickLook) return;
+    stopInlineVideos(quickLook);
+    quickLook.remove();
+    state.quickLookIndex = -1;
+    document.body.classList.remove("sidecar-has-quick-look");
+  };
+
+  const renderQuickLook = () => {
+    const item = state.items[state.quickLookIndex] || selectedItem();
+    if (!item) return;
+    const index = state.quickLookIndex >= 0 ? state.quickLookIndex : state.selectedIndex;
+    const label = item.filename || itemId(item);
+    const quickLook = document.createElement("div");
+    quickLook.className = "sidecar-quick-look";
+    quickLook.dataset.sidecarQuickLook = "true";
+    quickLook.setAttribute("role", "dialog");
+    quickLook.setAttribute("aria-modal", "true");
+    quickLook.setAttribute("aria-label", `Preview ${label}`);
+    quickLook.innerHTML = `
+      <button class="sidecar-quick-look-close" type="button" data-sidecar-quick-look-close aria-label="Close preview">×</button>
+      <figure class="sidecar-quick-look-card">
+        <div class="sidecar-quick-look-media ${isVideo(item) ? "sidecar-video-surface" : ""}" data-sidecar-video-shell data-sidecar-index="${index}">
+          <img data-sidecar-preview src="${escapeHtml(previewUrl(item))}" alt="${escapeHtml(label)}"/>
+          ${previewFallbackMarkup}
+          ${videoBadge(item, index, "Play video")}
+        </div>
+        <figcaption>
+          <strong>${escapeHtml(label)}</strong>
+          <span>${escapeHtml(mediaLine(item))}</span>
+        </figcaption>
+      </figure>
+    `;
+    const existingQuickLook = $("[data-sidecar-quick-look]");
+    if (existingQuickLook) {
+      stopInlineVideos(existingQuickLook);
+      existingQuickLook.remove();
+    }
+    document.body.append(quickLook);
+    document.body.classList.add("sidecar-has-quick-look");
+    wirePreviewFallbacks(quickLook);
+  };
+
+  const openQuickLook = (index = state.selectedIndex) => {
+    if (!state.items.length || index < 0 || !state.items[index]) return;
+    state.quickLookIndex = index;
+    renderQuickLook();
   };
 
   const selectIndex = (index, { extend = false, toggle = false, scroll = true } = {}) => {
@@ -667,7 +645,6 @@
       state.selectedIndexes = new Set();
       state.selectionAnchorIndex = -1;
       renderSurface();
-      renderDetail();
       return;
     }
     const visible = new Set(visibleIndexes());
@@ -696,7 +673,10 @@
     if (nextIndexes.has(bounded)) state.selectedIndex = bounded;
     else state.selectedIndex = selectedIndexes()[0] ?? -1;
     updateGridSelection(previousIndexes);
-    renderDetail();
+    if (state.quickLookIndex >= 0) {
+      state.quickLookIndex = state.selectedIndex;
+      renderQuickLook();
+    }
     if (scroll && state.selectedIndex >= 0) cardForIndex(state.selectedIndex)?.scrollIntoView({ block: "nearest" });
   };
 
@@ -753,7 +733,6 @@
     const preferredIndex = advance && !indexes && decisions.length === 1 ? nextVisibleAfter(previousActive) : previousActive;
     reconcileSelection(preferredIndex);
     renderSurface();
-    renderDetail();
     setStatus(`Staged ${actionLabel(payload)} on ${decisions.length.toLocaleString()} item${decisions.length === 1 ? "" : "s"}. Photos write-back is pending commit.`);
   };
 
@@ -773,37 +752,7 @@
     state.summary = result.summary || state.summary;
     reconcileSelection(state.selectedIndex);
     renderSurface();
-    renderDetail();
     setStatus(completeMessage || `Staged ${Number(result.count || decisions.length).toLocaleString()} local decisions. Photos write-back is pending commit.`);
-  };
-
-  const propagateMetadataField = async (field) => {
-    const source = selectedItem();
-    if (!source) return;
-    const sourceValues = metadataFormValues();
-    const targets = sameShootIndexes();
-    const decisions = targets.map((index) => {
-      const target = state.items[index];
-      const sidecar = target.sidecarState || {};
-      const isSource = index === state.selectedIndex;
-      const existingTitle = isSource ? sourceValues.title : String(sidecar.title || "");
-      const existingKeywords = isSource
-        ? sourceValues.keywords
-        : (Array.isArray(sidecar.keywords) ? sidecar.keywords : []);
-      return {
-        assetId: itemId(target),
-        action: "metadata",
-        title: field === "keywords" ? existingTitle : sourceValues.title,
-        keywords: field === "title" ? existingKeywords : sourceValues.keywords,
-        metadataState: "proposed",
-      };
-    });
-    const label = field === "metadata" ? "title and keywords" : field;
-    await postDecisions(
-      decisions,
-      `Propagating ${label} locally...`,
-      `Propagated ${label} to ${decisions.length.toLocaleString()} same-shoot assets. Photos write-back is pending commit.`,
-    );
   };
 
   const performBurstCull = async () => {
@@ -862,7 +811,6 @@
     setInitialSelection();
     renderPageChrome();
     renderSurface();
-    renderDetail();
     saveWindowState();
     setStatus(`Loaded window ${Number(offset).toLocaleString()}-${(Number(offset) + state.items.length).toLocaleString()} from Apple Photos. Showing ${visibleIndexes().length.toLocaleString()} after filters.`);
   };
@@ -920,7 +868,6 @@
     window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
     renderPageChrome();
     renderSurface();
-    renderDetail();
     saveWindowState();
   };
 
@@ -936,7 +883,6 @@
     state.summary = payload.summary || state.summary;
     reconcileSelection(state.selectedIndex);
     renderSurface();
-    renderDetail();
     setStatus(`Tombstoned ${Number(payload.count || 0).toLocaleString()} discarded item${Number(payload.count || 0) === 1 ? "" : "s"}. Photos write-back is pending commit.`);
   };
 
@@ -946,7 +892,14 @@
     if (tag === "input" || tag === "textarea" || tag === "select") return;
     const key = event.key;
     try {
-      if (/^[1-5]$/.test(key)) {
+      if (key === " " || key === "Spacebar") {
+        event.preventDefault();
+        if (state.quickLookIndex >= 0) closeQuickLook();
+        else openQuickLook();
+      } else if (key === "Escape" && state.quickLookIndex >= 0) {
+        event.preventDefault();
+        closeQuickLook();
+      } else if (/^[1-5]$/.test(key)) {
         event.preventDefault();
         await postDecision({ action: "rating", rating: Number(key) });
       } else if (key === "0") {
@@ -995,6 +948,17 @@
   };
 
   surface?.addEventListener("click", async (event) => {
+    const inlineVideoButton = event.target.closest("[data-sidecar-video-inline]");
+    if (inlineVideoButton) {
+      event.preventDefault();
+      const index = Number(inlineVideoButton.dataset.sidecarIndex || -1);
+      const item = state.items[index];
+      if (item) {
+        selectIndex(index, { scroll: false });
+        playVideoInPlace(inlineVideoButton.closest("[data-sidecar-video-shell]"), item);
+      }
+      return;
+    }
     const rowSubmit = event.target.closest("[data-sidecar-row-submit]");
     if (rowSubmit) {
       try {
@@ -1036,48 +1000,19 @@
     }
   });
 
-  detail?.addEventListener("click", async (event) => {
-    const propagateButton = event.target.closest("[data-sidecar-propagate-field]");
-    if (propagateButton) {
-      try {
-        await propagateMetadataField(propagateButton.dataset.sidecarPropagateField || "");
-      } catch (error) {
-        setStatus(error.message || "Could not propagate metadata.");
-      }
+  document.addEventListener("click", (event) => {
+    const quickLook = event.target.closest("[data-sidecar-quick-look]");
+    if (!quickLook) return;
+    const inlineVideoButton = event.target.closest("[data-sidecar-video-inline]");
+    if (inlineVideoButton) {
+      event.preventDefault();
+      const index = Number(inlineVideoButton.dataset.sidecarIndex || state.quickLookIndex);
+      playVideoInPlace(inlineVideoButton.closest("[data-sidecar-video-shell]"), state.items[index]);
       return;
     }
-    const videoButton = event.target.closest("[data-sidecar-video-toggle]");
-    if (videoButton) {
-      toggleVideoPreview();
-      return;
-    }
-    const button = event.target.closest("[data-sidecar-action]");
-    if (!button) return;
-    try {
-      const action = button.dataset.sidecarAction;
-      const value = button.dataset.sidecarValue || "";
-      if (action === "rating") await postDecision({ action, rating: Number(value) }, { advance: false });
-      else if (action === "color") await postDecision(colorDecisionPayload(value), { advance: false });
-      else await postDecision({ action }, { advance: action !== "metadata-rework" });
-    } catch (error) {
-      setStatus(error.message || "Could not stage decision.");
-    }
-  });
-
-  detail?.addEventListener("submit", async (event) => {
-    const form = event.target.closest("[data-sidecar-metadata-form]");
-    if (!form) return;
-    event.preventDefault();
-    const data = new FormData(form);
-    try {
-      await postDecision({
-        action: "metadata",
-        title: data.get("title") || "",
-        keywords: parseKeywords(data.get("keywords") || ""),
-        metadataState: "proposed",
-      }, { advance: false, indexes: [state.selectedIndex] });
-    } catch (error) {
-      setStatus(error.message || "Could not stage metadata.");
+    if (event.target.closest("[data-sidecar-quick-look-close]") || event.target === quickLook) {
+      event.preventDefault();
+      closeQuickLook();
     }
   });
 
@@ -1090,7 +1025,6 @@
       state.filters = readFiltersFromControls();
       reconcileSelection(state.selectedIndex);
       renderSurface();
-      renderDetail();
       setStatus(`Showing ${visibleIndexes().length.toLocaleString()} of ${state.items.length.toLocaleString()} current-window items after filters.`);
       saveWindowState();
     });
@@ -1109,7 +1043,6 @@
   applyStoredWindow();
   renderPageChrome();
   renderSurface();
-  renderDetail();
   fetch("/__sidecar/version")
     .then((response) => response.json())
     .then((payload) => {

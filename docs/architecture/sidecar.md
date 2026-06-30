@@ -10,7 +10,7 @@ metadata; Owner decides publication and commerce.
 
 Sidecar has its own local visible version in `SIDECAR_VERSION`.
 
-- Current Sidecar version: `v122.1`
+- Current Sidecar version: `v122.2`
 - Versioning follows the canonical `~/Dev/.SOPs/VERSIONING_SOP.md` default
   calendar visible-version rule for this local web-app surface.
 - Sidecar version bumps do not imply a public Photos By Elie site version bump.
@@ -131,13 +131,18 @@ Sidecar has two primary pages backed by the same current window:
   rendered as one item per row with preview, current state, title/keyword fields,
   approve, reject, resubmit to AI, pick, and unpick actions.
 
+Videos are first-class Sidecar review items. The UI shows video badges and
+durations, filters photos/videos separately, asks PhotoKit for local poster
+frames without iCloud downloads, and offers selected-video local playback only
+when Photos can expose the video resource locally.
+
 Source controls should include:
 
 - date from/to
 - preview count
 - offset/page plus slide back and slide forward
 - album/smart album later
-- horizontal rating, color, and decision-state filters
+- horizontal rating, color, decision-state, and media-type filters
 - search terms later
 
 ## Current V0 Slice
@@ -145,8 +150,10 @@ Source controls should include:
 The first implemented slice includes:
 
 - `library-index` PhotoKit bridge command for date/limit/offset slices.
-- `preview` PhotoKit bridge command for best-available local JPEG previews with
-  iCloud/network access disabled.
+- `preview` PhotoKit bridge command for best-available local JPEG still previews
+  and video poster frames with iCloud/network access disabled.
+- `video` PhotoKit bridge command for selected-video local playback when the
+  underlying video resource is already local.
 - Sidecar helper endpoints under `/__sidecar/*`.
 - SQLite-backed local decisions and pending sync queue.
 - Sidecar web UI for automatically loading the persistent current window,

@@ -401,8 +401,9 @@ Clock state: running
 | 2026-06-29 | 16:49 CEST | 16:50 CEST | 0:01 | Requested Sidecar wastebasket recovery/tombstone workflow and a picked-items fence handoff page; background implementation/testing time excluded. |
 | 2026-06-30 | 09:22 CEST | 09:23 CEST | 0:01 | Redirected Sidecar to a two-page Culling/Editing model with a persisted current window, slide controls, rating/color/decision filters, row-based editing, and explicit wastebasket emptying; background implementation/testing time excluded. |
 | 2026-06-30 | 12:01 CEST | 12:02 CEST | 0:01 | Requested Sidecar startup auto-load of the current slice and horizontal filter checkboxes; background implementation/testing time excluded. |
+| 2026-06-30 | 12:15 CEST | 12:16 CEST | 0:01 | Approved the first Sidecar video slice: culling parity, local poster thumbnails, and selected-item playback without forced iCloud downloads; background implementation/testing time excluded. |
 
 ## Totals
 
-Active collaboration time used: 22:04
+Active collaboration time used: 22:05
 Remaining budget: not set

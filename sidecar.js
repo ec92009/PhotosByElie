@@ -37,16 +37,19 @@
     ratings: ["0", "1", "2", "3", "4", "5"],
     colors: ["none", "red", "yellow", "green", "blue", "purple"],
     pickStates: ["undecided", "picked", "rejected"],
+    mediaTypes: ["photo", "video"],
   };
   const allowedFilters = {
     ratings: new Set(defaultFilters.ratings),
     colors: new Set(defaultFilters.colors),
     pickStates: new Set(defaultFilters.pickStates),
+    mediaTypes: new Set(defaultFilters.mediaTypes),
   };
   const filterKeyByName = {
     rating: "ratings",
     color: "colors",
     pickState: "pickStates",
+    mediaType: "mediaTypes",
   };
   const colorShortcuts = {
     6: "red",
@@ -62,6 +65,7 @@
     ratings: [...defaultFilters.ratings],
     colors: [...defaultFilters.colors],
     pickStates: [...defaultFilters.pickStates],
+    mediaTypes: [...defaultFilters.mediaTypes],
   });
   const normalizeFilterValues = (values, family) => {
     if (!Array.isArray(values)) return [...defaultFilters[family]];
@@ -71,6 +75,7 @@
     ratings: normalizeFilterValues(filters.ratings, "ratings"),
     colors: normalizeFilterValues(filters.colors, "colors"),
     pickStates: normalizeFilterValues(filters.pickStates, "pickStates"),
+    mediaTypes: normalizeFilterValues(filters.mediaTypes, "mediaTypes"),
   });
 
   const readStoredWindow = () => {
@@ -130,7 +135,7 @@
   };
 
   const readFiltersFromControls = () => {
-    const filters = { ratings: [], colors: [], pickStates: [] };
+    const filters = { ratings: [], colors: [], pickStates: [], mediaTypes: [] };
     filterInputs.forEach((input) => {
       const key = filterKeyByName[input.dataset.sidecarFilter];
       if (key && input.checked) filters[key].push(input.value);
@@ -164,6 +169,25 @@
 
   const itemId = (item) => String(item?.localIdentifier || item?.assetId || "").trim();
   const previewUrl = (item) => `/__sidecar/preview/${encodeURIComponent(itemId(item))}?maxPixel=900`;
+  const videoUrl = (item) => `/__sidecar/video/${encodeURIComponent(itemId(item))}`;
+  const mediaTypeValue = (item) => (String(item?.mediaType || "photo").toLowerCase() === "video" ? "video" : "photo");
+  const isVideo = (item) => mediaTypeValue(item) === "video";
+  const formatDuration = (value = 0) => {
+    const seconds = Math.max(0, Math.ceil(Number(value || 0)));
+    if (!seconds) return "";
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const remaining = seconds % 60;
+    if (hours > 0) return `${hours}:${String(minutes).padStart(2, "0")}:${String(remaining).padStart(2, "0")}`;
+    return `${minutes}:${String(remaining).padStart(2, "0")}`;
+  };
+  const mediaLabel = (item) => {
+    const duration = formatDuration(item?.duration || 0);
+    return `${isVideo(item) ? "video" : "photo"}${duration ? ` · ${duration}` : ""}`;
+  };
+  const videoBadge = (item) => isVideo(item)
+    ? `<span class="sidecar-media-badge" aria-label="Video${formatDuration(item.duration) ? `, ${formatDuration(item.duration)}` : ""}">VIDEO${formatDuration(item.duration) ? ` ${escapeHtml(formatDuration(item.duration))}` : ""}</span>`
+    : "";
   const selectedItem = () => state.items[state.selectedIndex] || null;
   const selectedIndexes = () => Array.from(state.selectedIndexes || [])
     .filter((index) => index >= 0 && index < state.items.length)
@@ -186,7 +210,8 @@
     const color = sidecar.color || "none";
     return state.filters.ratings.includes(rating)
       && state.filters.colors.includes(color)
-      && state.filters.pickStates.includes(pickFilterValue(item));
+      && state.filters.pickStates.includes(pickFilterValue(item))
+      && state.filters.mediaTypes.includes(mediaTypeValue(item));
   };
 
   const visibleIndexes = () => state.items
@@ -253,6 +278,7 @@
     const sidecar = item.sidecarState || {};
     const badges = [];
     if (sidecar.color) badges.push(sidecar.color);
+    if (isVideo(item)) badges.push(`video${formatDuration(item.duration) ? ` ${formatDuration(item.duration)}` : ""}`);
     if (sidecar.pickState && sidecar.pickState !== "undecided") badges.push(sidecar.pickState);
     if (sidecar.metadataState && sidecar.metadataState !== "unreviewed") badges.push(sidecar.metadataState);
     if (item.tombstoneState === "active") badges.push("tombstoned");
@@ -354,11 +380,12 @@
           <div class="sidecar-thumb">
             <img data-sidecar-preview src="${escapeHtml(previewUrl(item))}" alt="${escapeHtml(label)}" loading="lazy"/>
             ${previewFallbackMarkup}
+            ${videoBadge(item)}
             ${ratingStars(item)}
           </div>
           <div class="sidecar-card-copy">
             <strong>${escapeHtml(label)}</strong>
-            <small>${escapeHtml(formatDate(item.creationDate))} · ${escapeHtml(item.mediaType || "photo")}</small>
+            <small>${escapeHtml(formatDate(item.creationDate))} · ${escapeHtml(mediaLabel(item))}</small>
             <div class="sidecar-badges">${sidecarBadges(item)}</div>
           </div>
         </article>
@@ -387,11 +414,12 @@
         <div class="sidecar-editing-preview">
           <img data-sidecar-preview src="${escapeHtml(previewUrl(item))}" alt="${escapeHtml(label)}" loading="lazy"/>
           ${previewFallbackMarkup}
+          ${videoBadge(item)}
           ${ratingStars(item)}
         </div>
         <div class="sidecar-editing-current">
           <strong>${escapeHtml(label)}</strong>
-          <small>${escapeHtml(formatDate(item.creationDate))} · ${escapeHtml(item.mediaType || "photo")}</small>
+          <small>${escapeHtml(formatDate(item.creationDate))} · ${escapeHtml(mediaLabel(item))}</small>
           <div class="sidecar-badges">${sidecarBadges(item)}</div>
         </div>
         <form class="sidecar-editing-form" data-sidecar-row-form data-sidecar-index="${index}">
@@ -483,12 +511,22 @@
       <div class="sidecar-detail-preview">
         <img data-sidecar-preview src="${escapeHtml(previewUrl(item))}" alt="${escapeHtml(item.filename || itemId(item))}"/>
         ${previewFallbackMarkup}
+        ${videoBadge(item)}
       </div>
       <div>
         <strong>${escapeHtml(item.filename || itemId(item))}</strong>
-        <p class="owner-card-note">${escapeHtml(formatDate(item.creationDate))} · ${escapeHtml(item.mediaType || "photo")} · ${escapeHtml(itemId(item))}</p>
+        <p class="owner-card-note">${escapeHtml(formatDate(item.creationDate))} · ${escapeHtml(mediaLabel(item))} · ${escapeHtml(itemId(item))}</p>
         ${selectionNote}
       </div>
+      ${isVideo(item) ? `
+        <div class="sidecar-video-actions">
+          <button class="sidecar-chip" type="button" data-sidecar-video-toggle>Play preview</button>
+          <span class="owner-card-note">Local video only. Sidecar will not force iCloud downloads here.</span>
+        </div>
+        <div class="sidecar-video-panel" data-sidecar-video-panel hidden>
+          <video controls preload="metadata" poster="${escapeHtml(previewUrl(item))}" src="${escapeHtml(videoUrl(item))}"></video>
+        </div>
+      ` : ""}
       <div class="sidecar-decision-row" aria-label="Rating">
         ${[1, 2, 3, 4, 5].map((value) => chip(`${value}`, "rating", String(value), Number(sidecar.rating || 0) === value)).join("")}
         ${chip("0", "rating", "0", Number(sidecar.rating || 0) === 0)}
@@ -527,6 +565,15 @@
       </form>
     `;
     wirePreviewFallbacks(detail);
+  };
+
+  const toggleVideoPreview = () => {
+    const panel = detail?.querySelector("[data-sidecar-video-panel]");
+    const button = detail?.querySelector("[data-sidecar-video-toggle]");
+    if (!panel || !button) return;
+    const nextHidden = !panel.hidden;
+    panel.hidden = nextHidden;
+    button.textContent = nextHidden ? "Play preview" : "Hide preview";
   };
 
   const selectIndex = (index, { extend = false, toggle = false, scroll = true } = {}) => {
@@ -875,6 +922,11 @@
       }
       return;
     }
+    const videoButton = event.target.closest("[data-sidecar-video-toggle]");
+    if (videoButton) {
+      toggleVideoPreview();
+      return;
+    }
     const button = event.target.closest("[data-sidecar-action]");
     if (!button) return;
     try {
@@ -915,6 +967,7 @@
       reconcileSelection(state.selectedIndex);
       renderSurface();
       renderDetail();
+      setStatus(`Showing ${visibleIndexes().length.toLocaleString()} of ${state.items.length.toLocaleString()} current-window items after filters.`);
       saveWindowState();
     });
   });
@@ -935,10 +988,10 @@
   fetch("/__sidecar/version")
     .then((response) => response.json())
     .then((payload) => {
-      if (versionRoot) versionRoot.textContent = `v${payload.version || "122.1"}`;
+      if (versionRoot) versionRoot.textContent = `v${payload.version || "122.2"}`;
     })
     .catch(() => {
-      if (versionRoot) versionRoot.textContent = "v122.1";
+      if (versionRoot) versionRoot.textContent = "v122.2";
     });
   loadWindow().catch((error) => {
     setStatus(error.message);

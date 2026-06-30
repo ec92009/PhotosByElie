@@ -8,6 +8,7 @@ from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import hashlib
 import json
+import mimetypes
 from pathlib import Path
 import sqlite3
 import subprocess
@@ -19,11 +20,14 @@ from sidecar_state_db import commit_plan, empty_wastebasket, merge_state, record
 
 APPLE_PHOTOS_BRIDGE = Path("scripts/apple_photos_bridge.swift")
 SIDECAR_VERSION_FILE = Path("SIDECAR_VERSION")
-SIDECAR_DEFAULT_VERSION = "122.1"
+SIDECAR_DEFAULT_VERSION = "122.2"
 SIDECAR_PREVIEW_ROOT = Path("tmp/sidecar-previews")
 SIDECAR_PREVIEW_CACHE_VERSION = "v2"
+SIDECAR_VIDEO_ROOT = Path("tmp/sidecar-videos")
+SIDECAR_VIDEO_CACHE_VERSION = "v1"
 SIDECAR_LIBRARY_PATH = "/__sidecar/library"
 SIDECAR_PREVIEW_PATH = "/__sidecar/preview/"
+SIDECAR_VIDEO_PATH = "/__sidecar/video/"
 SIDECAR_DECISION_PATH = "/__sidecar/decision"
 SIDECAR_DECISIONS_PATH = "/__sidecar/decisions"
 SIDECAR_SUMMARY_PATH = "/__sidecar/summary"
@@ -93,6 +97,15 @@ def _preview_cache_path(repo_root: Path, asset_id: str, max_pixel: int) -> Path:
     return repo_root / SIDECAR_PREVIEW_ROOT / f"{digest}_{max_pixel}_{SIDECAR_PREVIEW_CACHE_VERSION}.jpg"
 
 
+def _video_cache_stem(repo_root: Path, asset_id: str) -> Path:
+    digest = hashlib.sha256(asset_id.encode("utf-8")).hexdigest()[:24]
+    return repo_root / SIDECAR_VIDEO_ROOT / f"{digest}_{SIDECAR_VIDEO_CACHE_VERSION}"
+
+
+def _video_cache_candidates(stem: Path) -> list[Path]:
+    return sorted(path for path in stem.parent.glob(f"{stem.name}.*") if path.is_file())
+
+
 class SidecarHandler(SimpleHTTPRequestHandler):
     server_version = "PhotosByElieSidecar/0.1"
 
@@ -109,6 +122,9 @@ class SidecarHandler(SimpleHTTPRequestHandler):
             return
         if path.startswith(SIDECAR_PREVIEW_PATH):
             self._handle_preview(path)
+            return
+        if path.startswith(SIDECAR_VIDEO_PATH):
+            self._handle_video(path)
             return
         if path == SIDECAR_UPLOAD_PLAN_PATH:
             self._handle_upload_plan()
@@ -235,6 +251,76 @@ class SidecarHandler(SimpleHTTPRequestHandler):
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
         self.wfile.write(data)
+
+    def _handle_video(self, path: str) -> None:
+        if not self._is_loopback_request():
+            self.send_error(HTTPStatus.FORBIDDEN, "localhost-only endpoint")
+            return
+        asset_id = unquote(path[len(SIDECAR_VIDEO_PATH):])
+        if not asset_id:
+            self.send_error(HTTPStatus.BAD_REQUEST, "missing asset id")
+            return
+        stem = _video_cache_stem(Path.cwd(), asset_id)
+        candidates = _video_cache_candidates(stem)
+        video_path = candidates[0] if candidates else None
+        payload: dict = {}
+        if video_path is None:
+            payload = _run_apple_photos_bridge(
+                Path.cwd(),
+                ["video", "--asset-id", asset_id, "--destination", str(stem)],
+                timeout=120,
+            )
+            if not payload.get("ok"):
+                self._send_json(HTTPStatus.BAD_GATEWAY, payload)
+                return
+            destination = str(payload.get("destination") or "")
+            video_path = Path(destination) if destination else None
+        if video_path is None or not video_path.exists():
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": "Video cache file was not created."})
+            return
+        content_type = str(payload.get("mimeType") or mimetypes.guess_type(video_path.name)[0] or "application/octet-stream")
+        self._send_ranged_file(video_path, content_type)
+
+    def _send_ranged_file(self, path: Path, content_type: str) -> None:
+        size = path.stat().st_size
+        start = 0
+        end = size - 1
+        range_header = self.headers.get("Range") or ""
+        status = HTTPStatus.OK
+        if range_header.startswith("bytes="):
+            spec = range_header.removeprefix("bytes=").split(",", 1)[0].strip()
+            if "-" in spec:
+                left, right = spec.split("-", 1)
+                try:
+                    if left:
+                        start = int(left)
+                        end = int(right) if right else end
+                    elif right:
+                        suffix = int(right)
+                        start = max(0, size - suffix)
+                except ValueError:
+                    self.send_error(HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE)
+                    return
+                start = max(0, min(start, size - 1))
+                end = max(start, min(end, size - 1))
+                status = HTTPStatus.PARTIAL_CONTENT
+        length = max(0, end - start + 1)
+        self.send_response(status)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Accept-Ranges", "bytes")
+        self.send_header("Content-Length", str(length))
+        if status == HTTPStatus.PARTIAL_CONTENT:
+            self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
+        self.end_headers()
+        with path.open("rb") as handle:
+            handle.seek(start)
+            remaining = length
+            while remaining > 0:
+                chunk = handle.read(min(1024 * 1024, remaining))
+                if not chunk:
+                    break
+                self.wfile.write(chunk)
+                remaining -= len(chunk)
 
     def _handle_decision(self) -> None:
         if not self._is_loopback_request():

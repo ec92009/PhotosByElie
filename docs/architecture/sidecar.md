@@ -10,7 +10,7 @@ metadata; Owner decides publication and commerce.
 
 Sidecar has its own local visible version in `SIDECAR_VERSION`.
 
-- Current Sidecar version: `v122.10`
+- Current Sidecar version: `v122.11`
 - Versioning follows the canonical `~/Dev/.SOPs/VERSIONING_SOP.md` default
   calendar visible-version rule for this local web-app surface.
 - Sidecar version bumps do not imply a public Photos By Elie site version bump.
@@ -40,7 +40,7 @@ Sidecar owns:
 - Title/keyword editing and AI proposal review state.
 - Pending Photos write-back plans.
 - Next-upload eligibility plans.
-- Persistent current-window culling, one-row-per-item metadata editing, and
+- Persistent current-window culling, one-row-per-picked-item metadata review, and
   explicit wastebasket tombstoning.
 
 Owner owns:
@@ -133,7 +133,7 @@ Sidecar has two primary pages backed by the same current window:
   visible current-window photos, skips picked/videos/already rejected items, and
   stages reject decisions for non-survivor frames. Culling stays full-width and
   grid-first; the former persistent Decision side panel is intentionally removed
-  in favor of Space-bar Quick Look and the dedicated Editing page. Quick Look
+  in favor of Space-bar Quick Look and the dedicated Review page. Quick Look
   remains an active culling mode: rating, color, pick/reject/hide/unpick, and
   arrow navigation shortcuts keep acting on the selected item while the preview
   stays open and follows the active selection. Quick Look also repeats the
@@ -143,9 +143,11 @@ Sidecar has two primary pages backed by the same current window:
   arrow travel direction. `Cmd-Z` provides session-local multilevel undo
   for staged local decision operations while leaving native text-field undo alone
   in title/keyword fields.
-- **Editing:** Owner-style title/keyword review of the same current window,
-  rendered as one item per row with preview, current state, title/keyword fields,
-  approve, reject, resubmit to AI, pick, and unpick actions.
+- **Review:** Owner-style title/keyword review of picked current-window items
+  only, rendered as one item per row with preview, current state,
+  title/keyword fields, approve, reject, resubmit to AI, pick, and unpick
+  actions. Picked assets do not enter the Owner upload plan until this review
+  page marks their metadata approved.
 
 Videos are first-class Sidecar review items. The UI marks video previews with a
 standard play icon and duration chip, filters photos/videos separately, asks
@@ -178,7 +180,7 @@ The first implemented slice includes:
   sliding the window
   forward/back, filtering by rating/color/decision state, staging cull decisions,
   applying current-window burst culling,
-  editing metadata in row form, previewing the active item with Space,
+  reviewing picked-item metadata in row form, previewing the active item with Space,
   tombstoning the wastebasket explicitly, viewing upload eligibility, and
   viewing the pending Photos commit plan.
 - Dock launcher script for `PhotosByElie Sidecar.app`.

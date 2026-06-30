@@ -501,6 +501,24 @@ def empty_wastebasket(repo_root: Path) -> dict[str, Any]:
 def upload_plan(repo_root: Path, limit: int = 500) -> dict[str, Any]:
     safe_limit = max(1, min(int(limit or 500), 5000))
     with connect(repo_root) as conn:
+        readiness = conn.execute(
+            """
+            SELECT
+              COUNT(CASE WHEN d.pick_state = 'picked' THEN 1 END) AS picked_count,
+              COUNT(CASE WHEN d.pick_state = 'picked' AND d.metadata_state = 'approved' THEN 1 END) AS approved_picked_count,
+              COUNT(CASE WHEN d.pick_state = 'picked' AND d.metadata_state <> 'approved' THEN 1 END) AS picked_needs_review_count,
+              COUNT(CASE WHEN d.pick_state = 'picked' AND d.metadata_state = 'unreviewed' THEN 1 END) AS picked_unreviewed_count,
+              COUNT(CASE WHEN d.pick_state = 'picked' AND d.metadata_state = 'proposed' THEN 1 END) AS picked_proposed_count,
+              COUNT(CASE WHEN d.pick_state = 'picked' AND d.metadata_state = 'rework' THEN 1 END) AS picked_rework_count,
+              COUNT(CASE WHEN d.pick_state = 'picked' AND d.metadata_state = 'blocked' THEN 1 END) AS picked_blocked_count
+            FROM sidecar_decisions AS d
+            JOIN sidecar_assets AS a ON a.asset_id = d.asset_id
+            WHERE NOT EXISTS (
+              SELECT 1 FROM sidecar_tombstones AS t
+              WHERE t.asset_id = d.asset_id AND t.tombstone_state = 'active'
+            )
+            """
+        ).fetchone()
         rows = conn.execute(
             """
             SELECT a.*, d.rating, d.color, d.pick_state, d.metadata_state, d.title, d.keywords_json
@@ -530,7 +548,18 @@ def upload_plan(repo_root: Path, limit: int = 500) -> dict[str, Any]:
             "keywords": _read_json_text(row["keywords_json"], []),
             "eligibleReason": "picked and metadata approved",
         })
-    return {"ok": True, "count": len(items), "items": items}
+    return {
+        "ok": True,
+        "count": len(items),
+        "items": items,
+        "pickedCount": int(readiness["picked_count"] or 0),
+        "approvedPickedCount": int(readiness["approved_picked_count"] or 0),
+        "pickedNeedsReviewCount": int(readiness["picked_needs_review_count"] or 0),
+        "pickedUnreviewedCount": int(readiness["picked_unreviewed_count"] or 0),
+        "pickedProposedCount": int(readiness["picked_proposed_count"] or 0),
+        "pickedReworkCount": int(readiness["picked_rework_count"] or 0),
+        "pickedBlockedCount": int(readiness["picked_blocked_count"] or 0),
+    }
 
 
 def commit_plan(repo_root: Path, limit: int = 500) -> dict[str, Any]:

@@ -1,6 +1,6 @@
 # Photos By Elie Backlog
 
-Last updated: 2026-06-29
+Last updated: 2026-06-30
 
 ## Current Facts
 
@@ -93,7 +93,7 @@ Last updated: 2026-06-29
 - Price and offer strategy draft: `docs/commerce/PRICE_OFFER_STRATEGY.md`; no live price change has been made from that draft yet.
 - First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
 - Latest checkpoint is `v110.7`; this file remains the numbered backlog source of truth.
-- Sidecar is now the planned local Apple Photos triage engine. Sidecar has its own visible local version, currently `v122.10` in `SIDECAR_VERSION`, and does not bump the public commercial site version by itself.
+- Sidecar is now the planned local Apple Photos triage engine. Sidecar has its own visible local version, currently `v122.11` in `SIDECAR_VERSION`, and does not bump the public commercial site version by itself.
 - Sidecar's hard boundary: it owns whole-library Apple Photos indexing, local-first culling, staged stars/colors/pick/reject/hide/title/keyword decisions, AI metadata review queues, pending Photos write-back plans, and next-upload eligibility. Owner owns forced materialization, R2 generation/upload, catalog rebuilds, validation, and commercial publication.
 - Sidecar decisions must be instant local SQLite writes. Apple Photos keyword/title write-back is explicit and staged through Save/Commit flows, not performed on every culling keystroke.
 - New import/re-export rule requested by Owner: the durable import anchor should be the full source pathname plus the source modified date. If only the modified date changes for the same source path, the new render should overwrite the older stored forms instead of creating a duplicate media row.
@@ -197,13 +197,13 @@ Last updated: 2026-06-29
    - Store Sidecar state locally in SQLite first: rating, color, pick/reject/hide, title, descriptive keywords, metadata review state, pending Photos sync, and upload-plan eligibility.
    - Use exclusive PBE keyword families for eventual Photos write-back: `PBE Rating 1..5`, `PBE Color ...`, `PBE Picked`, `PBE Rejected`, `PBE Hidden`, and later tombstone keywords.
    - Keep culling actions instant and local; batch Photos write-back only on explicit Save/Commit or exit prompts.
-   - Maintain two primary Sidecar pages: full-width Culling for the persistent current window and Editing for one-row-per-item title/keyword review of that same window; avoid restoring the persistent Decision side panel unless a new workflow proves it necessary.
+   - Maintain two primary Sidecar pages: full-width Culling for the persistent current window and Review for one-row-per-picked-item title/keyword approval of that same window; avoid restoring the persistent Decision side panel unless a new workflow proves it necessary.
    - Support current-window slide back/forward controls, persisted window criteria, and filters for rating, color, and decision state.
    - Keep quick culling decisions local-feeling: patch affected visible items in place, avoid thumbnail-reloading gallery blinks when filters do not require a full render, make Up/Down row-aware in the culling grid, support Shift-arrow range selection, and let auto-advance follow the last arrow direction.
    - Support session-local multilevel `Cmd-Z` undo for staged Sidecar decision operations while preserving native text undo inside title/keyword fields.
    - Support a local-first `Cull bursts` action that rejects non-survivor near-duplicate photo burst frames in the visible current window while preserving picked/videos/already discarded items.
-   - Treat videos as first-class culling/editing items with media filters, local poster thumbnails, standard play-icon duration chips, in-place local playback, auto-starting video Quick Look with muted autoplay fallback, and shortcut-active Space-bar Quick Look previews with visible item-status reminders before any forced iCloud materialization.
+   - Treat videos as first-class culling/review items with media filters, local poster thumbnails, standard play-icon duration chips, in-place local playback, auto-starting video Quick Look with muted autoplay fallback, and shortcut-active Space-bar Quick Look previews with visible item-status reminders before any forced iCloud materialization.
    - Keep rejected/hidden items recoverable through normal culling filters until the explicit Empty wastebasket action tombstones them.
-   - Reuse the Owner title/keyword review interaction model for Sidecar Edit: approve, reject, resubmit to AI, manual title/keyword edits, and batch operations.
+   - Reuse the Owner title/keyword review interaction model for Sidecar Review: approve, reject, resubmit to AI, manual title/keyword edits, and batch operations.
    - Feed the undecided middle into nightly AI runs: unreviewed, picked-needs-metadata, weak metadata, rejected proposals, low confidence, and high-confidence batch-approval candidates.
    - Keep Owner as the commercial gate: picked + metadata-approved assets become eligible for materialization/download, derivative generation, R2 upload, public catalog publication, and checkout delivery.

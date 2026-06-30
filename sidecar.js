@@ -26,11 +26,11 @@
       empty: "Load a window to begin.",
       filteredEmpty: "No items in the current window match these filters.",
     },
-    editing: {
-      eyebrow: "Editing",
-      title: "Title and keyword rows",
-      empty: "Load a window to edit.",
-      filteredEmpty: "No editable rows in the current window match these filters.",
+    review: {
+      eyebrow: "Review",
+      title: "Picked title and keyword review",
+      empty: "Load a window to review picked items.",
+      filteredEmpty: "No picked items in the current window match these review filters.",
     },
   };
   const defaultFilters = {
@@ -61,7 +61,11 @@
   const undoLimit = 100;
   const previewFallbackMarkup = `<span class="sidecar-thumb-fallback">Preview unavailable</span>`;
 
-  const normalizePage = (value) => (pageConfigs[value] ? value : "culling");
+  const normalizePage = (value) => {
+    if (value === "editing") return "review";
+    return pageConfigs[value] ? value : "culling";
+  };
+  const isReviewPage = () => state.page === "review";
   const cloneDefaultFilters = () => ({
     ratings: [...defaultFilters.ratings],
     colors: [...defaultFilters.colors],
@@ -165,6 +169,15 @@
     }
   };
 
+  const syncPageUrl = () => {
+    const url = new URL(window.location.href);
+    if (state.page === "culling") url.searchParams.delete("page");
+    else url.searchParams.set("page", state.page);
+    const nextUrl = `${url.pathname}${url.search}${url.hash}`;
+    const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    if (nextUrl !== currentUrl) window.history.replaceState({}, "", nextUrl);
+  };
+
   const formatDate = (value = "") => {
     if (!value) return "";
     const date = new Date(value);
@@ -199,7 +212,7 @@
   const videoPlayerMarkup = (item, autoplay = true) => `
     <video class="sidecar-inline-video" controls playsinline preload="metadata" ${autoplay ? "autoplay" : ""} poster="${escapeHtml(previewUrl(item))}" src="${escapeHtml(videoUrl(item))}"></video>
   `;
-  const versionFallback = "122.10";
+  const versionFallback = "122.11";
   const versionFallbackLabel = `v${versionFallback}`;
   const videoBadge = (item, index, label) => isVideo(item)
     ? videoOverlay(item, index, label)
@@ -267,15 +280,23 @@
     return "undecided";
   };
 
-  const matchesFilters = (item) => {
-    if (!item || item.tombstoneState === "active") return false;
+  const isVisibleBaseItem = (item) => Boolean(item && item.tombstoneState !== "active");
+  const isPickedItem = (item) => (item?.sidecarState?.pickState || "undecided") === "picked";
+  const matchesRatingColorMediaFilters = (item) => {
+    if (!isVisibleBaseItem(item)) return false;
     const sidecar = item.sidecarState || {};
     const rating = String(Math.max(0, Math.min(5, Number(sidecar.rating || 0))));
     const color = sidecar.color || "none";
     return state.filters.ratings.includes(rating)
       && state.filters.colors.includes(color)
-      && state.filters.pickStates.includes(pickFilterValue(item))
       && state.filters.mediaTypes.includes(mediaTypeValue(item));
+  };
+  const matchesReviewFilters = (item) => matchesRatingColorMediaFilters(item) && isPickedItem(item);
+  const matchesFilters = (item) => {
+    if (!item || item.tombstoneState === "active") return false;
+    if (isReviewPage()) return matchesReviewFilters(item);
+    return matchesRatingColorMediaFilters(item)
+      && state.filters.pickStates.includes(pickFilterValue(item));
   };
 
   const visibleIndexes = () => state.items
@@ -297,7 +318,7 @@
     return nextVisibleAfter(index);
   };
   const visibleColumnCount = () => {
-    if (!surface || state.page === "editing") return 1;
+    if (!surface || isReviewPage()) return 1;
     const elements = Array.from(surface.querySelectorAll(".sidecar-card[data-sidecar-index], .sidecar-editing-row[data-sidecar-index]"));
     if (elements.length <= 1) return 1;
     const firstTop = elements[0].getBoundingClientRect().top;
@@ -643,7 +664,7 @@
   const renderSurface = () => {
     if (!surface) return;
     const config = pageConfigs[state.page] || pageConfigs.culling;
-    surface.classList.toggle("is-editing-list", state.page === "editing");
+    surface.classList.toggle("is-editing-list", isReviewPage());
     if (!state.items.length) {
       surface.innerHTML = `<p class="empty-basket">${escapeHtml(config.empty)}</p>`;
       renderCounts();
@@ -656,7 +677,7 @@
       renderCounts();
       return;
     }
-    if (state.page === "editing") renderEditingList(indexes);
+    if (isReviewPage()) renderEditingList(indexes);
     else renderCullingGrid(indexes);
     wirePreviewFallbacks(surface);
     renderCounts();
@@ -1146,16 +1167,57 @@
     setStatus(`${Number(payload.pendingSyncCount || 0).toLocaleString()} pending Photos write-back changes.`);
   };
 
-  const renderPlan = (title, eyebrow, payload) => {
+  const currentWindowUploadReadiness = () => {
+    const totals = { picked: 0, approved: 0, needsReview: 0, visiblePicked: 0, visibleApproved: 0, visibleNeedsReview: 0 };
+    state.items.forEach((item) => {
+      if (!isVisibleBaseItem(item) || !isPickedItem(item)) return;
+      const approved = item.sidecarState?.metadataState === "approved";
+      totals.picked += 1;
+      if (approved) totals.approved += 1;
+      else totals.needsReview += 1;
+      if (matchesReviewFilters(item)) {
+        totals.visiblePicked += 1;
+        if (approved) totals.visibleApproved += 1;
+        else totals.visibleNeedsReview += 1;
+      }
+    });
+    return totals;
+  };
+
+  const uploadPlanSummaryMarkup = (payload, itemCount) => {
+    const windowPlan = currentWindowUploadReadiness();
+    const globalPicked = Number(payload.pickedCount ?? 0);
+    const globalReady = Number(payload.approvedPickedCount ?? itemCount);
+    const globalNeedsReview = Number(payload.pickedNeedsReviewCount ?? 0);
+    const currentLine = windowPlan.picked
+      ? `${windowPlan.picked.toLocaleString()} picked current-window item${windowPlan.picked === 1 ? "" : "s"}: ${windowPlan.approved.toLocaleString()} metadata-approved, ${windowPlan.needsReview.toLocaleString()} still need Review approval.`
+      : "No picked items in the current window.";
+    const visibleLine = windowPlan.visiblePicked && windowPlan.visiblePicked !== windowPlan.picked
+      ? `<p>${windowPlan.visiblePicked.toLocaleString()} picked item${windowPlan.visiblePicked === 1 ? "" : "s"} match the current Review filters.</p>`
+      : "";
+    const globalLine = globalPicked
+      ? `<p>${globalPicked.toLocaleString()} picked item${globalPicked === 1 ? "" : "s"} indexed globally: ${globalReady.toLocaleString()} ready for Owner upload, ${globalNeedsReview.toLocaleString()} still need Review approval.</p>`
+      : "";
+    return `
+      <p>${escapeHtml(currentLine)}</p>
+      ${visibleLine}
+      ${globalLine}
+    `;
+  };
+
+  const renderPlan = (title, eyebrow, payload, kind = "") => {
     if (!planPanel || !planOutput) return;
     planPanel.hidden = false;
     if (planTitle) planTitle.textContent = title;
     if (planEyebrow) planEyebrow.textContent = eyebrow;
     const items = Array.isArray(payload.items) ? payload.items : [];
     const message = payload.message ? `<p>${escapeHtml(payload.message)}</p>` : "";
+    const uploadSummary = kind === "upload" ? uploadPlanSummaryMarkup(payload, items.length) : "";
+    const emptyMessage = kind === "upload" ? "No rows are ready for Owner upload yet." : "No rows.";
     planOutput.innerHTML = `
       <p><strong>${items.length.toLocaleString()}</strong> row${items.length === 1 ? "" : "s"}.</p>
       ${message}
+      ${uploadSummary}
       <div class="sidecar-plan-list">
         ${items.slice(0, 80).map((item) => `
           <div class="sidecar-plan-row">
@@ -1163,7 +1225,7 @@
             <small>${escapeHtml(item.fieldFamily || item.eligibleReason || "")}</small>
             <small>${escapeHtml(item.capturedAt || item.createdAt || "")}</small>
           </div>
-        `).join("") || "<p>No rows.</p>"}
+        `).join("") || `<p>${escapeHtml(emptyMessage)}</p>`}
       </div>
     `;
   };
@@ -1173,16 +1235,21 @@
     const response = await fetch(endpoint);
     const payload = await response.json().catch(() => ({}));
     if (!response.ok || !payload.ok) throw new Error(payload.error || "Could not load Sidecar plan.");
-    renderPlan(kind === "upload" ? "Next Upload Eligibility" : "Pending Photos Write-Back", kind === "upload" ? "Upload plan" : "Commit plan", payload);
-    setStatus(kind === "upload" ? "Upload plan refreshed." : "Photos commit plan refreshed.");
+    renderPlan(kind === "upload" ? "Next Upload Eligibility" : "Pending Photos Write-Back", kind === "upload" ? "Upload plan" : "Commit plan", payload, kind);
+    if (kind === "upload") {
+      const readiness = currentWindowUploadReadiness();
+      const statusSuffix = Number(payload.count || 0)
+        ? `${Number(payload.count || 0).toLocaleString()} ready row${Number(payload.count || 0) === 1 ? "" : "s"}.`
+        : `${readiness.needsReview.toLocaleString()} picked current-window item${readiness.needsReview === 1 ? "" : "s"} still need Review approval.`;
+      setStatus(`Upload plan refreshed: ${statusSuffix}`);
+    } else {
+      setStatus("Photos commit plan refreshed.");
+    }
   };
 
   const setPage = (page) => {
     state.page = normalizePage(page);
-    const url = new URL(window.location.href);
-    if (state.page === "culling") url.searchParams.delete("page");
-    else url.searchParams.set("page", state.page);
-    window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+    syncPageUrl();
     renderPageChrome();
     renderSurface();
     saveWindowState();
@@ -1373,6 +1440,7 @@
   document.addEventListener("keydown", handleShortcut, true);
 
   applyStoredWindow();
+  syncPageUrl();
   renderPageChrome();
   renderSurface();
   fetch("/__sidecar/version")

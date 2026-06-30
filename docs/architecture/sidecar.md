@@ -10,7 +10,7 @@ metadata; Owner decides publication and commerce.
 
 Sidecar has its own local visible version in `SIDECAR_VERSION`.
 
-- Current Sidecar version: `v122.0`
+- Current Sidecar version: `v122.1`
 - Versioning follows the canonical `~/Dev/.SOPs/VERSIONING_SOP.md` default
   calendar visible-version rule for this local web-app surface.
 - Sidecar version bumps do not imply a public Photos By Elie site version bump.
@@ -137,7 +137,7 @@ Source controls should include:
 - preview count
 - offset/page plus slide back and slide forward
 - album/smart album later
-- rating, color, and decision-state filters
+- horizontal rating, color, and decision-state filters
 - search terms later
 
 ## Current V0 Slice
@@ -149,7 +149,8 @@ The first implemented slice includes:
   iCloud/network access disabled.
 - Sidecar helper endpoints under `/__sidecar/*`.
 - SQLite-backed local decisions and pending sync queue.
-- Sidecar web UI for loading a persistent current window, sliding the window
+- Sidecar web UI for automatically loading the persistent current window,
+  sliding the window
   forward/back, filtering by rating/color/decision state, staging cull decisions,
   editing metadata in row form, tombstoning the wastebasket explicitly, viewing
   upload eligibility, and viewing the pending Photos commit plan.

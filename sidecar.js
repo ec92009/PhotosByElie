@@ -935,11 +935,13 @@
   fetch("/__sidecar/version")
     .then((response) => response.json())
     .then((payload) => {
-      if (versionRoot) versionRoot.textContent = `v${payload.version || "122.0"}`;
+      if (versionRoot) versionRoot.textContent = `v${payload.version || "122.1"}`;
     })
     .catch(() => {
-      if (versionRoot) versionRoot.textContent = "v122.0";
+      if (versionRoot) versionRoot.textContent = "v122.1";
     });
-  if (state.hasWindow) loadWindow().catch((error) => setStatus(error.message));
-  else loadSummary().catch(() => {});
+  loadWindow().catch((error) => {
+    setStatus(error.message);
+    loadSummary().catch(() => {});
+  });
 })();

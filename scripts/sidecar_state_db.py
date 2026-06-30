@@ -17,6 +17,7 @@ RATING_VALUES = {0, 1, 2, 3, 4, 5}
 COLOR_VALUES = {"", "red", "yellow", "green", "blue", "purple"}
 PICK_STATES = {"undecided", "picked", "rejected", "hidden"}
 METADATA_STATES = {"unreviewed", "proposed", "approved", "rework", "blocked"}
+REWORK_CATEGORIES = {"", "incorrect", "generic", "placeholder", "keywords", "detail", "shoot", "other"}
 
 
 def now_iso() -> str:
@@ -82,6 +83,8 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
           metadata_state TEXT NOT NULL DEFAULT 'unreviewed' CHECK (metadata_state IN ('unreviewed', 'proposed', 'approved', 'rework', 'blocked')),
           title          TEXT,
           keywords_json  TEXT NOT NULL DEFAULT '[]',
+          rework_category TEXT NOT NULL DEFAULT '',
+          rework_comment TEXT,
           last_action    TEXT,
           created_at     TEXT,
           updated_at     TEXT,
@@ -119,6 +122,14 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS idx_sidecar_tombstones_state ON sidecar_tombstones(tombstone_state, updated_at);
         """
     )
+    decision_columns = {
+        str(row["name"])
+        for row in conn.execute("PRAGMA table_info(sidecar_decisions)").fetchall()
+    }
+    if "rework_category" not in decision_columns:
+        conn.execute("ALTER TABLE sidecar_decisions ADD COLUMN rework_category TEXT NOT NULL DEFAULT ''")
+    if "rework_comment" not in decision_columns:
+        conn.execute("ALTER TABLE sidecar_decisions ADD COLUMN rework_comment TEXT")
 
 
 def _asset_id(row: dict[str, Any]) -> str:
@@ -191,6 +202,8 @@ def _decision_payload(row: sqlite3.Row | None) -> dict[str, Any]:
             "metadataState": "unreviewed",
             "title": "",
             "keywords": [],
+            "reworkCategory": "",
+            "reworkComment": "",
             "lastAction": "",
             "updatedAt": "",
         }
@@ -201,6 +214,8 @@ def _decision_payload(row: sqlite3.Row | None) -> dict[str, Any]:
         "metadataState": row["metadata_state"] or "unreviewed",
         "title": row["title"] or "",
         "keywords": _read_json_text(row["keywords_json"], []),
+        "reworkCategory": row["rework_category"] or "",
+        "reworkComment": row["rework_comment"] or "",
         "lastAction": row["last_action"] or "",
         "updatedAt": row["updated_at"] or "",
     }
@@ -299,6 +314,26 @@ def _active_tombstone_state(conn: sqlite3.Connection, asset_id: str) -> str:
     return str(row["tombstone_state"] or "") if row else ""
 
 
+def _normalize_rework_category(value: Any) -> str:
+    category = str(value or "").strip().casefold()
+    if category not in REWORK_CATEGORIES:
+        raise ValueError("reworkCategory is invalid")
+    return category
+
+
+def _metadata_values_from_payload(payload: dict[str, Any], fallback_title: str, fallback_keywords: list[str]) -> tuple[str, list[str]]:
+    title = fallback_title
+    keywords = fallback_keywords
+    if "title" in payload:
+        title = str(payload.get("title") or "").strip()
+    if "keywords" in payload:
+        raw_keywords = payload.get("keywords") or []
+        if isinstance(raw_keywords, str):
+            raw_keywords = [part.strip() for part in raw_keywords.replace(";", ",").split(",")]
+        keywords = [str(keyword).strip() for keyword in raw_keywords if str(keyword).strip()]
+    return title, keywords
+
+
 def record_decision(repo_root: Path, payload: dict[str, Any]) -> dict[str, Any]:
     asset_id = str(payload.get("assetId") or payload.get("asset_id") or payload.get("localIdentifier") or "").strip()
     if not asset_id:
@@ -329,6 +364,8 @@ def record_decision(repo_root: Path, payload: dict[str, Any]) -> dict[str, Any]:
         metadata_state = before["metadataState"]
         title = before["title"]
         keywords = before["keywords"]
+        rework_category = before["reworkCategory"]
+        rework_comment = before["reworkComment"]
         changed_families: set[str] = set()
 
         if action == "rating":
@@ -364,23 +401,35 @@ def record_decision(repo_root: Path, payload: dict[str, Any]) -> dict[str, Any]:
         elif action == "tombstone":
             pick_state = "rejected"
             metadata_state = "blocked"
+            rework_category = ""
+            rework_comment = ""
             changed_families.update({"metadata", "pick_state", "tombstone"})
         elif action == "approve":
             pick_state = "picked"
             metadata_state = "approved"
+            title, keywords = _metadata_values_from_payload(payload, title, keywords)
+            rework_category = ""
+            rework_comment = ""
             changed_families.update({"pick_state", "metadata"})
         elif action == "metadata":
-            title = str(payload.get("title") or "").strip()
-            raw_keywords = payload.get("keywords") or []
-            if isinstance(raw_keywords, str):
-                raw_keywords = [part.strip() for part in raw_keywords.replace(";", ",").split(",")]
-            keywords = [str(keyword).strip() for keyword in raw_keywords if str(keyword).strip()]
+            title, keywords = _metadata_values_from_payload(payload, title, keywords)
             metadata_state = str(payload.get("metadataState") or "proposed").strip().casefold()
             if metadata_state not in METADATA_STATES:
                 raise ValueError("metadataState is invalid")
+            if metadata_state == "rework":
+                rework_category = _normalize_rework_category(payload.get("reworkCategory") or payload.get("rework_category"))
+                rework_comment = str(payload.get("reworkComment") or payload.get("rework_comment") or "").strip()
+            elif metadata_state != "blocked":
+                rework_category = ""
+                rework_comment = ""
             changed_families.add("metadata")
         elif action == "metadata-rework":
             metadata_state = "rework"
+            title, keywords = _metadata_values_from_payload(payload, title, keywords)
+            rework_category = _normalize_rework_category(payload.get("reworkCategory") or payload.get("rework_category"))
+            rework_comment = str(payload.get("reworkComment") or payload.get("rework_comment") or "").strip()
+            if rework_comment and not rework_category:
+                rework_category = "other"
             changed_families.add("metadata")
         else:
             raise ValueError("Unsupported Sidecar action")
@@ -391,10 +440,23 @@ def record_decision(repo_root: Path, payload: dict[str, Any]) -> dict[str, Any]:
             """
             UPDATE sidecar_decisions
             SET rating = ?, color = ?, pick_state = ?, metadata_state = ?,
-                title = ?, keywords_json = ?, last_action = ?, updated_at = ?
+                title = ?, keywords_json = ?, rework_category = ?, rework_comment = ?,
+                last_action = ?, updated_at = ?
             WHERE asset_id = ?
             """,
-            (rating, color, pick_state, metadata_state, title, _json_text(keywords), action, now, asset_id),
+            (
+                rating,
+                color,
+                pick_state,
+                metadata_state,
+                title,
+                _json_text(keywords),
+                rework_category,
+                rework_comment,
+                action,
+                now,
+                asset_id,
+            ),
         )
         if action == "restore":
             conn.execute(

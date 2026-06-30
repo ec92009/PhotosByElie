@@ -57,7 +57,18 @@
     8: "green",
     9: "blue",
   };
+  const reworkCategories = [
+    { value: "incorrect", label: "incorrect", note: "this title is incorrect" },
+    { value: "generic", label: "too generic", note: "too generic; make the title more specific" },
+    { value: "placeholder", label: "placeholder", note: "too placeholder-y; replace with a real title" },
+    { value: "keywords", label: "use keywords", note: "use the existing keywords as clues" },
+    { value: "detail", label: "add details", note: "dig up more details" },
+    { value: "shoot", label: "use shoot", note: "use other photos in the 2-3 hour window for clues" },
+    { value: "other", label: "other", note: "what should change?" },
+  ];
+  const reworkCategoryByValue = new Map(reworkCategories.map((category) => [category.value, category]));
   const burstWindowMs = 1000;
+  const shootWindowMs = 2 * 60 * 60 * 1000;
   const undoLimit = 100;
   const previewFallbackMarkup = `<span class="sidecar-thumb-fallback">Preview unavailable</span>`;
 
@@ -200,6 +211,10 @@
   };
   const mediaLabel = (item) => (isVideo(item) ? "" : "photo");
   const mediaLine = (item) => [formatDate(item.creationDate), mediaLabel(item)].filter(Boolean).join(" · ");
+  const captureTime = (item) => {
+    const time = Date.parse(item?.creationDate || "");
+    return Number.isFinite(time) ? time : Number.POSITIVE_INFINITY;
+  };
   const playIconMarkup = `<span class="sidecar-play-icon" aria-hidden="true"></span>`;
   const videoOverlay = (item, index, label = "Play video preview") => {
     if (!isVideo(item)) return "";
@@ -212,7 +227,7 @@
   const videoPlayerMarkup = (item, autoplay = true) => `
     <video class="sidecar-inline-video" controls playsinline preload="metadata" ${autoplay ? "autoplay" : ""} poster="${escapeHtml(previewUrl(item))}" src="${escapeHtml(videoUrl(item))}"></video>
   `;
-  const versionFallback = "122.11";
+  const versionFallback = "122.12";
   const versionFallbackLabel = `v${versionFallback}`;
   const videoBadge = (item, index, label) => isVideo(item)
     ? videoOverlay(item, index, label)
@@ -256,6 +271,8 @@
       metadataState: sidecar.metadataState || "unreviewed",
       title: sidecar.title || "",
       keywords: Array.isArray(sidecar.keywords) ? sidecar.keywords.map(String) : [],
+      reworkCategory: sidecar.reworkCategory || "",
+      reworkComment: sidecar.reworkComment || "",
       tombstoneState: item?.tombstoneState || "",
     };
   };
@@ -299,23 +316,35 @@
       && state.filters.pickStates.includes(pickFilterValue(item));
   };
 
+  const visibleIndexComparator = (left, right) => {
+    if (!isReviewPage()) return left - right;
+    const leftTime = captureTime(state.items[left]);
+    const rightTime = captureTime(state.items[right]);
+    if (leftTime !== rightTime) return leftTime - rightTime;
+    return left - right;
+  };
+
   const visibleIndexes = () => state.items
     .map((item, index) => ({ item, index }))
     .filter(({ item }) => matchesFilters(item))
-    .map(({ index }) => index);
+    .map(({ index }) => index)
+    .sort(visibleIndexComparator);
 
   const firstVisibleIndex = () => visibleIndexes()[0] ?? -1;
   const nextVisibleAfter = (index) => {
     const visible = visibleIndexes();
-    return visible.find((visibleIndex) => visibleIndex > index) ?? visible[visible.length - 1] ?? -1;
+    if (!visible.length) return -1;
+    const currentPosition = visible.indexOf(index);
+    if (currentPosition < 0) return visible[0] ?? -1;
+    return visible[Math.min(visible.length - 1, currentPosition + 1)] ?? -1;
   };
   const nextVisibleFrom = (index, direction = 1) => {
     const visible = visibleIndexes();
     if (!visible.length) return -1;
-    if (direction < 0) {
-      return [...visible].reverse().find((visibleIndex) => visibleIndex < index) ?? visible[0] ?? -1;
-    }
-    return nextVisibleAfter(index);
+    const currentPosition = visible.indexOf(index);
+    if (currentPosition < 0) return direction < 0 ? visible[visible.length - 1] : visible[0];
+    const delta = direction < 0 ? -1 : 1;
+    return visible[Math.max(0, Math.min(visible.length - 1, currentPosition + delta))] ?? -1;
   };
   const visibleColumnCount = () => {
     if (!surface || isReviewPage()) return 1;
@@ -395,7 +424,10 @@
     const badges = [];
     if (sidecar.color) badges.push(sidecar.color);
     if (sidecar.pickState && sidecar.pickState !== "undecided") badges.push(sidecar.pickState);
-    if (sidecar.metadataState && sidecar.metadataState !== "unreviewed") badges.push(sidecar.metadataState);
+    if (sidecar.metadataState && sidecar.metadataState !== "unreviewed") {
+      const reworkLabel = sidecar.metadataState === "rework" ? reworkCategoryLabel(sidecar.reworkCategory) : "";
+      badges.push(reworkLabel ? `rework: ${reworkLabel}` : sidecar.metadataState);
+    }
     if (item.tombstoneState === "active") badges.push("tombstoned");
     if (item.pendingSyncCount) badges.push(`${item.pendingSyncCount} pending`);
     return badges.map((badge) => `<span class="sidecar-badge">${escapeHtml(badge)}</span>`).join("");
@@ -421,14 +453,16 @@
     const decision = item.tombstoneState === "active"
       ? "tombstoned"
       : (sidecar.pickState || "undecided");
-    const metadata = sidecar.metadataState || "unreviewed";
+    const metadataBase = sidecar.metadataState || "unreviewed";
+    const reworkLabel = metadataBase === "rework" ? reworkCategoryLabel(sidecar.reworkCategory) : "";
+    const metadata = reworkLabel ? `rework: ${reworkLabel}` : metadataBase;
     const pending = Number(item.pendingSyncCount || 0);
     return `
       <div class="sidecar-quick-look-status" aria-label="Sidecar item status">
         ${quickLookStatusPill("Stars", stars, { rawValue: true, className: rating ? "has-stars" : "is-empty" })}
         ${quickLookStatusPill("Color", color || "none", { color, className: color ? "has-color" : "is-empty" })}
         ${quickLookStatusPill("Decision", decision, { className: decision === "undecided" ? "is-empty" : "" })}
-        ${quickLookStatusPill("Metadata", metadata, { className: metadata === "unreviewed" ? "is-empty" : "" })}
+        ${quickLookStatusPill("Metadata", metadata, { className: metadataBase === "unreviewed" ? "is-empty" : "" })}
         ${quickLookStatusPill("Pending", String(pending), { className: pending ? "" : "is-empty" })}
       </div>
     `;
@@ -477,11 +511,124 @@
     return rating ? `<span class="sidecar-stars" aria-label="${rating} star rating">${"&#9733;".repeat(rating)}</span>` : "";
   };
 
+  const reworkCategoryLabel = (value = "") => reworkCategoryByValue.get(String(value || "").trim())?.label || "";
+
   const parseKeywords = (value = "") => String(value || "")
     .replace(/;/g, ",")
     .split(",")
     .map((keyword) => keyword.trim())
     .filter(Boolean);
+
+  const rowFormForIndex = (index) => surface?.querySelector(`[data-sidecar-row-form][data-sidecar-index="${index}"]`);
+
+  const rowMetadataValues = (index) => {
+    const item = state.items[index];
+    const sidecar = item?.sidecarState || {};
+    const form = rowFormForIndex(index);
+    if (!form) {
+      return {
+        title: sidecar.title || "",
+        keywords: Array.isArray(sidecar.keywords) ? sidecar.keywords.map(String).filter(Boolean) : [],
+        reworkCategory: sidecar.reworkCategory || "",
+        reworkComment: sidecar.reworkComment || "",
+      };
+    }
+    const data = new FormData(form);
+    const checkedCategory = form.querySelector("[data-sidecar-rework-category]:checked");
+    return {
+      title: String(data.get("title") || "").trim(),
+      keywords: parseKeywords(data.get("keywords") || ""),
+      reworkCategory: checkedCategory?.value || "",
+      reworkComment: String(data.get("reworkComment") || "").trim(),
+    };
+  };
+
+  const metadataDecisionForIndex = (index, metadataState = "proposed") => ({
+    assetId: itemId(state.items[index]),
+    action: "metadata",
+    ...rowMetadataValues(index),
+    metadataState,
+  });
+
+  const metadataPayloadForIndex = (index, metadataState = "proposed") => {
+    const { assetId, ...payload } = metadataDecisionForIndex(index, metadataState);
+    return payload;
+  };
+
+  const reworkDecisionForIndex = (index, overrides = {}) => {
+    const values = rowMetadataValues(index);
+    return {
+      assetId: itemId(state.items[index]),
+      action: "metadata-rework",
+      title: values.title,
+      keywords: values.keywords,
+      reworkCategory: overrides.reworkCategory ?? values.reworkCategory,
+      reworkComment: overrides.reworkComment ?? values.reworkComment,
+    };
+  };
+
+  const reworkPayloadForIndex = (index, overrides = {}) => {
+    const { assetId, ...payload } = reworkDecisionForIndex(index, overrides);
+    return payload;
+  };
+
+  const defaultReworkNote = (category) => reworkCategoryByValue.get(category)?.note || "";
+
+  const setReworkCategoryValue = (form, category) => {
+    form?.querySelectorAll("[data-sidecar-rework-category]").forEach((input) => {
+      input.checked = input.value === category;
+    });
+  };
+
+  const fillReworkDefaultNote = (form, category) => {
+    const note = form?.querySelector("[data-sidecar-rework-comment]");
+    if (!note) return;
+    const defaultNote = defaultReworkNote(category);
+    if (!String(note.value || "").trim()) note.value = defaultNote;
+  };
+
+  const setRowFieldValue = (index, field, value) => {
+    const form = rowFormForIndex(index);
+    if (!form) return;
+    if (field === "title") {
+      const input = form.querySelector('[name="title"]');
+      if (input) input.value = value;
+    } else if (field === "keywords") {
+      const input = form.querySelector('[name="keywords"]');
+      if (input) input.value = value;
+    }
+  };
+
+  const sameShootReviewIndexes = (sourceIndex) => {
+    if (!isReviewPage() || !matchesReviewFilters(state.items[sourceIndex])) return [];
+    const ordered = visibleIndexes();
+    const sourcePosition = ordered.indexOf(sourceIndex);
+    if (sourcePosition < 0) return [];
+    const sourceTime = captureTime(state.items[sourceIndex]);
+    if (!Number.isFinite(sourceTime)) return [sourceIndex];
+    const targets = [];
+    for (let position = sourcePosition; position < ordered.length; position += 1) {
+      const index = ordered[position];
+      const time = captureTime(state.items[index]);
+      if (!Number.isFinite(time) || time - sourceTime > shootWindowMs) break;
+      targets.push(index);
+    }
+    return targets;
+  };
+
+  const reworkCategoryMarkup = (index, selected = "") => `
+    <fieldset class="sidecar-rework-categories" data-sidecar-rework-group>
+      <legend>AI rework</legend>
+      <div class="sidecar-rework-options">
+        ${reworkCategories.map((category) => `
+          <label class="sidecar-rework-option">
+            <input type="radio" name="reworkCategory-${index}" value="${escapeHtml(category.value)}" data-sidecar-rework-category ${selected === category.value ? "checked" : ""}/>
+            <span>${escapeHtml(category.label)}</span>
+          </label>
+        `).join("")}
+      </div>
+    </fieldset>
+  `;
 
   const burstSurvivorPositions = (size) => {
     const positions = new Set();
@@ -640,19 +787,31 @@
           <div class="sidecar-badges">${sidecarBadges(item)}</div>
         </div>
         <form class="sidecar-editing-form" data-sidecar-row-form data-sidecar-index="${index}">
-          <label>
-            <span>Title</span>
+          <label class="sidecar-editing-field">
+            <span class="sidecar-editing-field-heading">
+              <span>Title</span>
+              <button class="sidecar-propagate-field" type="button" data-sidecar-propagate-field="title" data-sidecar-index="${index}" title="Propagate this title to current and following picked rows in the same two-hour shoot window" aria-label="Propagate title">↓</button>
+            </span>
             <input type="text" name="title" value="${escapeHtml(sidecar.title || "")}" placeholder="Title for Photos and future catalog"/>
           </label>
-          <label>
-            <span>Keywords</span>
+          <label class="sidecar-editing-field">
+            <span class="sidecar-editing-field-heading">
+              <span>Keywords</span>
+              <button class="sidecar-propagate-field" type="button" data-sidecar-propagate-field="keywords" data-sidecar-index="${index}" title="Propagate these keywords to current and following picked rows in the same two-hour shoot window" aria-label="Propagate keywords">↓</button>
+            </span>
             <textarea name="keywords" placeholder="Comma-separated descriptive keywords">${escapeHtml(keywords)}</textarea>
+          </label>
+          ${reworkCategoryMarkup(index, sidecar.reworkCategory || "")}
+          <label class="sidecar-rework-note">
+            <span>Rework note</span>
+            <textarea name="reworkComment" data-sidecar-rework-comment placeholder="Optional instruction for the next AI pass">${escapeHtml(sidecar.reworkComment || "")}</textarea>
           </label>
         </form>
         <div class="sidecar-editing-actions">
           <button class="sidecar-chip" type="button" data-sidecar-row-submit data-sidecar-index="${index}">Stage</button>
           <button class="sidecar-chip" type="button" data-sidecar-row-action="approve" data-sidecar-index="${index}" aria-pressed="${sidecar.metadataState === "approved" ? "true" : "false"}">Approve</button>
           <button class="sidecar-chip" type="button" data-sidecar-row-action="metadata-rework" data-sidecar-index="${index}" aria-pressed="${sidecar.metadataState === "rework" ? "true" : "false"}">AI rework</button>
+          <button class="sidecar-chip" type="button" data-sidecar-row-propagate data-sidecar-index="${index}">Propagate</button>
           <button class="sidecar-chip" type="button" data-sidecar-row-action="pick" data-sidecar-index="${index}" aria-pressed="${sidecar.pickState === "picked" ? "true" : "false"}">Pick</button>
           <button class="sidecar-chip" type="button" data-sidecar-row-action="unpick" data-sidecar-index="${index}" aria-pressed="${sidecar.pickState === "undecided" ? "true" : "false"}">Unpick</button>
           <button class="sidecar-chip" type="button" data-sidecar-row-action="reject" data-sidecar-index="${index}" aria-pressed="${sidecar.pickState === "rejected" ? "true" : "false"}">Reject</button>
@@ -718,6 +877,12 @@
     Object.entries(pressedStates).forEach(([action, pressed]) => {
       element.querySelector(`[data-sidecar-row-action="${action}"]`)?.setAttribute("aria-pressed", pressed ? "true" : "false");
     });
+    const form = element.querySelector("[data-sidecar-row-form]");
+    if (form) {
+      setReworkCategoryValue(form, sidecar.reworkCategory || "");
+      const note = form.querySelector("[data-sidecar-rework-comment]");
+      if (note && document.activeElement !== note) note.value = sidecar.reworkComment || "";
+    }
     return true;
   };
 
@@ -937,6 +1102,12 @@
   const actionLabel = (payload) => {
     if (payload.action === "color" && !payload.color) return "clear color";
     if (payload.action === "color") return `${payload.color} color`;
+    if (payload.action === "metadata-rework") {
+      const label = reworkCategoryLabel(payload.reworkCategory);
+      return label ? `AI rework (${label})` : "AI rework";
+    }
+    if (payload.action === "metadata" && payload.metadataState === "approved") return "metadata approval";
+    if (payload.action === "metadata") return "metadata";
     return payload.action;
   };
 
@@ -989,6 +1160,8 @@
         title: previous.title || "",
         keywords: Array.isArray(previous.keywords) ? previous.keywords : [],
         metadataState: previous.metadataState || "unreviewed",
+        reworkCategory: previous.reworkCategory || "",
+        reworkComment: previous.reworkComment || "",
       });
     }
     return payloads;
@@ -1333,16 +1506,75 @@
     }
   };
 
-  const stageRowMetadata = async (index) => {
-    const form = surface?.querySelector(`[data-sidecar-row-form][data-sidecar-index="${index}"]`);
+  const stageRowMetadata = async (index, metadataState = "proposed") => {
+    const form = rowFormForIndex(index);
     if (!form) return;
-    const data = new FormData(form);
-    await postDecision({
-      action: "metadata",
-      title: data.get("title") || "",
-      keywords: parseKeywords(data.get("keywords") || ""),
-      metadataState: "proposed",
-    }, { advance: false, indexes: [index] });
+    await postDecision(metadataPayloadForIndex(index, metadataState), { advance: false, indexes: [index] });
+  };
+
+  const stageRowRework = async (index, overrides = {}) => {
+    const form = rowFormForIndex(index);
+    if (!form) return;
+    const payload = reworkPayloadForIndex(index, overrides);
+    if (!payload.reworkCategory && !payload.reworkComment) {
+      setStatus("Choose an AI rework category or type a rework note first.");
+      return;
+    }
+    await postDecision(payload, { advance: false, indexes: [index] });
+  };
+
+  const propagateReviewField = async (index, field) => {
+    if (field !== "title" && field !== "keywords") return;
+    const targets = sameShootReviewIndexes(index);
+    if (!targets.length) {
+      setStatus("No current-window picked rows are available for this propagation.");
+      return;
+    }
+    const sourceValues = rowMetadataValues(index);
+    const value = field === "title" ? sourceValues.title : sourceValues.keywords.join(", ");
+    targets.forEach((targetIndex) => setRowFieldValue(targetIndex, field, value));
+    const decisions = targets.map((targetIndex) => metadataDecisionForIndex(targetIndex, "approved"));
+    await postDecisions(
+      decisions,
+      `Propagating ${field} through this two-hour shoot window...`,
+      `Propagated ${field} to ${targets.length.toLocaleString()} picked row${targets.length === 1 ? "" : "s"} and approved their metadata locally.`,
+      { undoLabel: `propagate ${field}` },
+    );
+  };
+
+  const propagateReviewDecision = async (index) => {
+    const item = state.items[index];
+    const sidecar = item?.sidecarState || {};
+    const targets = sameShootReviewIndexes(index);
+    if (!targets.length) {
+      setStatus("No current-window picked rows are available for this propagation.");
+      return;
+    }
+    const sourceValues = rowMetadataValues(index);
+    let decisions = [];
+    let label = "";
+    if (sidecar.pickState === "rejected") {
+      decisions = targets.map((targetIndex) => ({ assetId: itemId(state.items[targetIndex]), action: "reject" }));
+      label = "reject decision";
+    } else if (sourceValues.reworkCategory || sourceValues.reworkComment || sidecar.metadataState === "rework") {
+      const reworkCategory = sourceValues.reworkCategory || sidecar.reworkCategory || "";
+      const reworkComment = sourceValues.reworkComment || sidecar.reworkComment || "";
+      decisions = targets.map((targetIndex) => reworkDecisionForIndex(targetIndex, { reworkCategory, reworkComment }));
+      label = reworkCategoryLabel(reworkCategory) ? `AI rework (${reworkCategoryLabel(reworkCategory)})` : "AI rework";
+    } else if (sidecar.metadataState === "approved") {
+      decisions = targets.map((targetIndex) => metadataDecisionForIndex(targetIndex, "approved"));
+      label = "metadata approval";
+    }
+    if (!decisions.length) {
+      setStatus("Approve the row or choose an AI rework category before propagating.");
+      return;
+    }
+    await postDecisions(
+      decisions,
+      `Propagating ${label} through this two-hour shoot window...`,
+      `Propagated ${label} to ${targets.length.toLocaleString()} picked row${targets.length === 1 ? "" : "s"}. Photos write-back is pending commit.`,
+      { undoLabel: `propagate ${label}` },
+    );
   };
 
   surface?.addEventListener("click", async (event) => {
@@ -1357,6 +1589,16 @@
       }
       return;
     }
+    const fieldPropagate = event.target.closest("[data-sidecar-propagate-field]");
+    if (fieldPropagate) {
+      event.preventDefault();
+      try {
+        await propagateReviewField(Number(fieldPropagate.dataset.sidecarIndex || -1), fieldPropagate.dataset.sidecarPropagateField || "");
+      } catch (error) {
+        setStatus(error.message || "Could not propagate the Review field.");
+      }
+      return;
+    }
     const rowSubmit = event.target.closest("[data-sidecar-row-submit]");
     if (rowSubmit) {
       try {
@@ -1366,13 +1608,28 @@
       }
       return;
     }
+    const rowPropagate = event.target.closest("[data-sidecar-row-propagate]");
+    if (rowPropagate) {
+      try {
+        await propagateReviewDecision(Number(rowPropagate.dataset.sidecarIndex || -1));
+      } catch (error) {
+        setStatus(error.message || "Could not propagate the Review decision.");
+      }
+      return;
+    }
     const rowAction = event.target.closest("[data-sidecar-row-action]");
     if (rowAction) {
       try {
-        await postDecision({ action: rowAction.dataset.sidecarRowAction }, {
-          advance: false,
-          indexes: [Number(rowAction.dataset.sidecarIndex || -1)],
-        });
+        const index = Number(rowAction.dataset.sidecarIndex || -1);
+        const action = rowAction.dataset.sidecarRowAction || "";
+        if (action === "approve") await stageRowMetadata(index, "approved");
+        else if (action === "metadata-rework") await stageRowRework(index);
+        else {
+          await postDecision({ action }, {
+            advance: false,
+            indexes: [index],
+          });
+        }
       } catch (error) {
         setStatus(error.message || "Could not stage row decision.");
       }
@@ -1385,6 +1642,24 @@
       extend: event.shiftKey,
       toggle: event.metaKey || event.ctrlKey,
     });
+  });
+
+  surface?.addEventListener("change", async (event) => {
+    const categoryInput = event.target.closest("[data-sidecar-rework-category]");
+    if (!categoryInput || !categoryInput.checked) return;
+    const form = categoryInput.closest("[data-sidecar-row-form]");
+    if (!form) return;
+    const index = Number(form.dataset.sidecarIndex || -1);
+    setReworkCategoryValue(form, categoryInput.value);
+    fillReworkDefaultNote(form, categoryInput.value);
+    try {
+      await stageRowRework(index, {
+        reworkCategory: categoryInput.value,
+        reworkComment: String(form.querySelector("[data-sidecar-rework-comment]")?.value || "").trim(),
+      });
+    } catch (error) {
+      setStatus(error.message || "Could not stage AI rework category.");
+    }
   });
 
   surface?.addEventListener("submit", async (event) => {

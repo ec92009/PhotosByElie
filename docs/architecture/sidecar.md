@@ -10,7 +10,7 @@ metadata; Owner decides publication and commerce.
 
 Sidecar has its own local visible version in `SIDECAR_VERSION`.
 
-- Current Sidecar version: `v122.11`
+- Current Sidecar version: `v122.12`
 - Versioning follows the canonical `~/Dev/.SOPs/VERSIONING_SOP.md` default
   calendar visible-version rule for this local web-app surface.
 - Sidecar version bumps do not imply a public Photos By Elie site version bump.
@@ -144,10 +144,17 @@ Sidecar has two primary pages backed by the same current window:
   for staged local decision operations while leaving native text-field undo alone
   in title/keyword fields.
 - **Review:** Owner-style title/keyword review of picked current-window items
-  only, rendered as one item per row with preview, current state,
-  title/keyword fields, approve, reject, resubmit to AI, pick, and unpick
-  actions. Picked assets do not enter the Owner upload plan until this review
-  page marks their metadata approved.
+  only, rendered oldest-to-newest so propagation moves forward through a shoot.
+  Each row shows preview, current state, title/keyword fields, approve, reject,
+  AI rework, pick, and unpick actions. Approve saves the visible title and
+  keywords as approved metadata; picked assets do not enter the Owner upload
+  plan until this page marks their metadata approved. The title and keyword
+  field arrows propagate that single field to the current and following picked
+  rows inside the same two-hour capture window, then approve those rows locally.
+  The row **Propagate** action carries the review decision itself: metadata
+  approval or the selected AI rework category/comment. AI rework categories
+  match Owner review: incorrect, too generic, placeholder, use keywords, add
+  details, use shoot, and other.
 
 Videos are first-class Sidecar review items. The UI marks video previews with a
 standard play icon and duration chip, filters photos/videos separately, asks
@@ -180,7 +187,8 @@ The first implemented slice includes:
   sliding the window
   forward/back, filtering by rating/color/decision state, staging cull decisions,
   applying current-window burst culling,
-  reviewing picked-item metadata in row form, previewing the active item with Space,
+  reviewing picked-item metadata in oldest-to-newest row form with field and
+  decision propagation, AI rework categories, previewing the active item with Space,
   tombstoning the wastebasket explicitly, viewing upload eligibility, and
   viewing the pending Photos commit plan.
 - Dock launcher script for `PhotosByElie Sidecar.app`.

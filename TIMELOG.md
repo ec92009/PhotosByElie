@@ -412,8 +412,9 @@ Clock state: running
 | 2026-06-30 | 17:52 CEST | 17:58 CEST | 0:01 | Requested Sidecar session-local multilevel Cmd-Z undo for staged local decisions while preserving native title/keyword field undo; background implementation/testing time excluded. |
 | 2026-06-30 | 18:13 CEST | 18:14 CEST | 0:01 | Reported Sidecar Up/Down arrow navigation should move by rendered rows and requested Shift-arrow range selection; background implementation/testing time excluded. |
 | 2026-06-30 | 19:25 CEST | 19:26 CEST | 0:01 | Chose the Sidecar Review direction: rename Editing to Review, show only picked items there, and clarify that upload eligibility requires metadata approval; background implementation/testing time excluded. |
+| 2026-06-30 | 23:10 CEST | 23:11 CEST | 0:01 | Requested restoring Owner-style Review propagation, AI rework categories, and oldest-to-newest Review ordering; background implementation/testing time excluded. |
 
 ## Totals
 
-Active collaboration time used: 22:15
+Active collaboration time used: 22:16
 Remaining budget: not set

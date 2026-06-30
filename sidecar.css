@@ -146,6 +146,11 @@ body[data-gallery="sidecar"] {
   color: color-mix(in srgb, #ffebe5 74%, var(--text) 26%);
 }
 
+.sidecar-burst-action {
+  border-color: color-mix(in srgb, #d7a641 56%, transparent);
+  color: color-mix(in srgb, #fff2cf 76%, var(--text) 24%);
+}
+
 .sidecar-workspace {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(19rem, 26rem);

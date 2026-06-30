@@ -14,6 +14,7 @@
   const loadButton = $("[data-sidecar-load]");
   const slideBackButton = $("[data-sidecar-slide-back]");
   const slideForwardButton = $("[data-sidecar-slide-forward]");
+  const burstCullButton = $("[data-sidecar-burst-cull]");
   const emptyWastebasketButton = $("[data-sidecar-empty-wastebasket]");
   const pageTabs = Array.from(document.querySelectorAll("[data-sidecar-page]"));
   const filterInputs = Array.from(document.querySelectorAll("[data-sidecar-filter]"));
@@ -58,6 +59,7 @@
     9: "blue",
   };
   const shootWindowMs = 2 * 60 * 60 * 1000;
+  const burstWindowMs = 1000;
   const previewFallbackMarkup = `<span class="sidecar-thumb-fallback">Preview unavailable</span>`;
 
   const normalizePage = (value) => (pageConfigs[value] ? value : "culling");
@@ -339,6 +341,81 @@
       .map((item, index) => ({ index, time: Date.parse(item.creationDate || "") }))
       .filter(({ index, time }) => index >= state.selectedIndex && Number.isFinite(time) && Math.abs(time - sourceTime) <= shootWindowMs)
       .map(({ index }) => index);
+  };
+
+  const burstSurvivorPositions = (size) => {
+    const positions = new Set();
+    if (size <= 1) positions.add(1);
+    else if (size <= 5) positions.add(2);
+    else {
+      for (let position = 2; position <= size; position += 4) positions.add(position);
+    }
+    return positions;
+  };
+
+  const isStandardBurstPhoto = (item) => {
+    if (!item || item.tombstoneState === "active" || isVideo(item) || item.eligible === false) return false;
+    const time = Date.parse(item.creationDate || "");
+    if (!Number.isFinite(time)) return false;
+    const width = Number(item.pixelWidth || 0);
+    const height = Number(item.pixelHeight || 0);
+    if (width > 0 && height > 0 && Math.max(width / height, height / width) >= 2.0) return false;
+    const pickState = item.sidecarState?.pickState || "undecided";
+    return pickState !== "rejected" && pickState !== "hidden";
+  };
+
+  const burstCullPlan = () => {
+    const candidates = visibleIndexes()
+      .map((index) => ({ index, item: state.items[index], time: Date.parse(state.items[index]?.creationDate || "") }))
+      .filter(({ item, time }) => isStandardBurstPhoto(item) && Number.isFinite(time))
+      .sort((left, right) => (left.time - right.time) || (left.index - right.index));
+    const groups = [];
+    let current = [];
+    let previous = null;
+    candidates.forEach((candidate) => {
+      if (previous && candidate.time - previous.time < burstWindowMs) current.push(candidate);
+      else {
+        if (current.length) groups.push(current);
+        current = [candidate];
+      }
+      previous = candidate;
+    });
+    if (current.length) groups.push(current);
+
+    const burstGroups = [];
+    const rejectIndexes = new Set();
+    let pickedSurvivorCount = 0;
+    groups.forEach((group) => {
+      if (group.length <= 1) return;
+      const picked = group.filter(({ item }) => item.sidecarState?.pickState === "picked");
+      const survivors = picked.length
+        ? new Set(picked.map(({ index }) => index))
+        : new Set([...burstSurvivorPositions(group.length)]
+          .map((position) => group[position - 1]?.index)
+          .filter((index) => Number.isFinite(index)));
+      if (!survivors.size && group[0]) survivors.add(group[0].index);
+      pickedSurvivorCount += picked.length;
+      const rejected = [];
+      group.forEach(({ index, item }) => {
+        const pickState = item.sidecarState?.pickState || "undecided";
+        if (survivors.has(index) || pickState === "picked" || pickState === "rejected" || pickState === "hidden") return;
+        rejectIndexes.add(index);
+        rejected.push(index);
+      });
+      if (rejected.length) {
+        burstGroups.push({
+          size: group.length,
+          kept: [...survivors],
+          rejected,
+          startedAt: group[0]?.item?.creationDate || "",
+        });
+      }
+    });
+    return {
+      burstGroups,
+      rejectIndexes: [...rejectIndexes].sort((left, right) => left - right),
+      pickedSurvivorCount,
+    };
   };
 
   const renderCounts = (summary = state.summary) => {
@@ -672,7 +749,7 @@
     setStatus(`Staged ${actionLabel(payload)} on ${decisions.length.toLocaleString()} item${decisions.length === 1 ? "" : "s"}. Photos write-back is pending commit.`);
   };
 
-  const postDecisions = async (decisions, message) => {
+  const postDecisions = async (decisions, message, completeMessage = "") => {
     if (!decisions.length) return;
     setStatus(message || `Staging ${decisions.length.toLocaleString()} local decisions...`);
     const response = await fetch("/__sidecar/decisions", {
@@ -689,7 +766,7 @@
     reconcileSelection(state.selectedIndex);
     renderSurface();
     renderDetail();
-    setStatus(`Propagated metadata to ${Number(result.count || 0).toLocaleString()} same-shoot assets. Photos write-back is pending commit.`);
+    setStatus(completeMessage || `Staged ${Number(result.count || decisions.length).toLocaleString()} local decisions. Photos write-back is pending commit.`);
   };
 
   const propagateMetadataField = async (field) => {
@@ -714,7 +791,46 @@
       };
     });
     const label = field === "metadata" ? "title and keywords" : field;
-    await postDecisions(decisions, `Propagating ${label} locally...`);
+    await postDecisions(
+      decisions,
+      `Propagating ${label} locally...`,
+      `Propagated ${label} to ${decisions.length.toLocaleString()} same-shoot assets. Photos write-back is pending commit.`,
+    );
+  };
+
+  const performBurstCull = async () => {
+    if (!state.items.length) {
+      setStatus("Load a current window before culling bursts.");
+      return;
+    }
+    const plan = burstCullPlan();
+    const rejectCount = plan.rejectIndexes.length;
+    const groupCount = plan.burstGroups.length;
+    if (!rejectCount) {
+      setStatus("No rejectable burst extras found among the visible current-window photos.");
+      return;
+    }
+    const pickedNote = plan.pickedSurvivorCount
+      ? ` ${plan.pickedSurvivorCount.toLocaleString()} picked photo${plan.pickedSurvivorCount === 1 ? " was" : "s were"} kept automatically.`
+      : "";
+    const confirmed = window.confirm(
+      `Cull bursts in the visible current window?\n\n`
+      + `This will locally reject ${rejectCount.toLocaleString()} burst extra photo${rejectCount === 1 ? "" : "s"} from ${groupCount.toLocaleString()} burst group${groupCount === 1 ? "" : "s"}.${pickedNote}\n\n`
+      + "Videos, picked, already rejected/hidden, tombstoned, and wide/panoramic photos are skipped. Rejected items remain recoverable until you empty the wastebasket.",
+    );
+    if (!confirmed) {
+      setStatus("Burst cull canceled.");
+      return;
+    }
+    const decisions = plan.rejectIndexes.map((index) => ({
+      assetId: itemId(state.items[index]),
+      action: "reject",
+    }));
+    await postDecisions(
+      decisions,
+      `Culling ${rejectCount.toLocaleString()} burst extra photo${rejectCount === 1 ? "" : "s"} locally...`,
+      `Rejected ${rejectCount.toLocaleString()} burst extra photo${rejectCount === 1 ? "" : "s"} from ${groupCount.toLocaleString()} visible burst group${groupCount === 1 ? "" : "s"}. Photos write-back is pending commit.`,
+    );
   };
 
   const loadWindow = async () => {
@@ -975,6 +1091,7 @@
   loadButton?.addEventListener("click", () => loadWindow().catch((error) => setStatus(error.message)));
   slideBackButton?.addEventListener("click", () => slideWindow(-1).catch((error) => setStatus(error.message)));
   slideForwardButton?.addEventListener("click", () => slideWindow(1).catch((error) => setStatus(error.message)));
+  burstCullButton?.addEventListener("click", () => performBurstCull().catch((error) => setStatus(error.message)));
   emptyWastebasketButton?.addEventListener("click", () => emptyWastebasket().catch((error) => setStatus(error.message)));
   $("[data-sidecar-summary]")?.addEventListener("click", () => loadSummary().catch((error) => setStatus(error.message)));
   $("[data-sidecar-upload-plan]")?.addEventListener("click", () => loadPlan("upload").catch((error) => setStatus(error.message)));
@@ -988,10 +1105,10 @@
   fetch("/__sidecar/version")
     .then((response) => response.json())
     .then((payload) => {
-      if (versionRoot) versionRoot.textContent = `v${payload.version || "122.2"}`;
+      if (versionRoot) versionRoot.textContent = `v${payload.version || "122.3"}`;
     })
     .catch(() => {
-      if (versionRoot) versionRoot.textContent = "v122.2";
+      if (versionRoot) versionRoot.textContent = "v122.3";
     });
   loadWindow().catch((error) => {
     setStatus(error.message);

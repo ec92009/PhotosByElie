@@ -10,7 +10,7 @@ metadata; Owner decides publication and commerce.
 
 Sidecar has its own local visible version in `SIDECAR_VERSION`.
 
-- Current Sidecar version: `v122.2`
+- Current Sidecar version: `v122.3`
 - Versioning follows the canonical `~/Dev/.SOPs/VERSIONING_SOP.md` default
   calendar visible-version rule for this local web-app surface.
 - Sidecar version bumps do not imply a public Photos By Elie site version bump.
@@ -126,7 +126,10 @@ Sidecar has two primary pages backed by the same current window:
   `1`-`5` rates, `0` clears rating, `6`-`9` toggle red/yellow/green/blue,
   `P` picks, `X` rejects, `H` hides, `U` unpicks, and arrows select. Click,
   Command-click, and Shift-click support single, toggle, and range selection.
-  Actions update local SQLite and advance without blocking on Photos.
+  Actions update local SQLite and advance without blocking on Photos. The
+  **Cull bursts** action applies the conservative one-second burst pass to the
+  visible current-window photos, skips picked/videos/already rejected items, and
+  stages reject decisions for non-survivor frames.
 - **Editing:** Owner-style title/keyword review of the same current window,
   rendered as one item per row with preview, current state, title/keyword fields,
   approve, reject, resubmit to AI, pick, and unpick actions.
@@ -159,6 +162,7 @@ The first implemented slice includes:
 - Sidecar web UI for automatically loading the persistent current window,
   sliding the window
   forward/back, filtering by rating/color/decision state, staging cull decisions,
+  applying current-window burst culling,
   editing metadata in row form, tombstoning the wastebasket explicitly, viewing
   upload eligibility, and viewing the pending Photos commit plan.
 - Dock launcher script for `PhotosByElie Sidecar.app`.

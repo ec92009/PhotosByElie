@@ -15,12 +15,12 @@ import subprocess
 import sys
 from urllib.parse import parse_qs, unquote, urlparse
 
-from sidecar_state_db import commit_plan, empty_wastebasket, merge_state, record_decision, record_decisions, summary, upload_plan, upsert_assets
+from sidecar_state_db import commit_plan, empty_wastebasket, merge_state, mock_upload, record_decision, record_decisions, summary, upload_plan, upsert_assets
 
 
 APPLE_PHOTOS_BRIDGE = Path("scripts/apple_photos_bridge.swift")
 SIDECAR_VERSION_FILE = Path("SIDECAR_VERSION")
-SIDECAR_DEFAULT_VERSION = "122.12"
+SIDECAR_DEFAULT_VERSION = "123.1"
 SIDECAR_PREVIEW_ROOT = Path("tmp/sidecar-previews")
 SIDECAR_PREVIEW_CACHE_VERSION = "v2"
 SIDECAR_VIDEO_ROOT = Path("tmp/sidecar-videos")
@@ -32,6 +32,7 @@ SIDECAR_DECISION_PATH = "/__sidecar/decision"
 SIDECAR_DECISIONS_PATH = "/__sidecar/decisions"
 SIDECAR_SUMMARY_PATH = "/__sidecar/summary"
 SIDECAR_UPLOAD_PLAN_PATH = "/__sidecar/upload-plan"
+SIDECAR_MOCK_UPLOAD_PATH = "/__sidecar/mock-upload"
 SIDECAR_COMMIT_PLAN_PATH = "/__sidecar/commit-plan"
 SIDECAR_VERSION_PATH = "/__sidecar/version"
 SIDECAR_EMPTY_WASTEBASKET_PATH = "/__sidecar/empty-wastebasket"
@@ -144,6 +145,9 @@ class SidecarHandler(SimpleHTTPRequestHandler):
             return
         if path == SIDECAR_EMPTY_WASTEBASKET_PATH:
             self._handle_empty_wastebasket()
+            return
+        if path == SIDECAR_MOCK_UPLOAD_PATH:
+            self._handle_mock_upload()
             return
         self.send_error(HTTPStatus.NOT_FOUND)
 
@@ -375,6 +379,25 @@ class SidecarHandler(SimpleHTTPRequestHandler):
         limit = _int_query(query, "limit", 500, 1, 5000)
         try:
             result = upload_plan(Path.cwd(), limit=limit)
+        except Exception as error:
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
+            return
+        self._send_json(HTTPStatus.OK, result)
+
+    def _handle_mock_upload(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            payload = self._read_json_body()
+            asset_ids = payload.get("assetIds") or []
+            if not isinstance(asset_ids, list):
+                raise ValueError("assetIds must be a JSON array.")
+            limit = int(payload.get("limit") or 500)
+            result = mock_upload(Path.cwd(), asset_ids=asset_ids, limit=limit)
+        except ValueError as error:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
+            return
         except Exception as error:
             self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
             return

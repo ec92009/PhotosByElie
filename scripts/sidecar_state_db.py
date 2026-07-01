@@ -11,8 +11,20 @@ import uuid
 from pathlib import Path
 from typing import Any, Iterable
 
+try:
+    from import_source_anchor import photo_id_for_source_path
+    from media_keys import DEFAULT_PUBLIC_PREFIX, private_master_key, private_render_key, public_preview_key
+except ModuleNotFoundError:  # pragma: no cover - supports package-style test imports.
+    from scripts.import_source_anchor import photo_id_for_source_path
+    from scripts.media_keys import DEFAULT_PUBLIC_PREFIX, private_master_key, private_render_key, public_preview_key
+
 
 DEFAULT_DB = Path("assets/owner-actions/Owner.sqlite")
+KEYWORD_BLACKLIST_JSON = Path("assets/owner-actions/keyword-blacklist.json")
+DEFAULT_PUBLIC_BUCKET = "photosbyelie-public"
+DEFAULT_PRIVATE_BUCKET = "photosbyelie-private"
+DEFAULT_PRIVATE_PREFIX = "masters"
+PRIVATE_RENDER_PRODUCTS = ("jpg-6mp", "jpg-3mp", "jpg-1mp")
 RATING_VALUES = {0, 1, 2, 3, 4, 5}
 COLOR_VALUES = {"", "red", "yellow", "green", "blue", "purple"}
 PICK_STATES = {"undecided", "picked", "rejected", "hidden"}
@@ -120,6 +132,17 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         ) WITHOUT ROWID;
 
         CREATE INDEX IF NOT EXISTS idx_sidecar_tombstones_state ON sidecar_tombstones(tombstone_state, updated_at);
+
+        CREATE TABLE IF NOT EXISTS sidecar_mock_uploads (
+          asset_id      TEXT PRIMARY KEY CHECK (trim(asset_id) <> ''),
+          mock_state    TEXT NOT NULL DEFAULT 'active' CHECK (mock_state IN ('active', 'cleared')),
+          mock_run_id   TEXT,
+          uploaded_at   TEXT,
+          updated_at    TEXT,
+          FOREIGN KEY (asset_id) REFERENCES sidecar_assets(asset_id) ON DELETE CASCADE
+        ) WITHOUT ROWID;
+
+        CREATE INDEX IF NOT EXISTS idx_sidecar_mock_uploads_state ON sidecar_mock_uploads(mock_state, updated_at);
         """
     )
     decision_columns = {
@@ -321,16 +344,57 @@ def _normalize_rework_category(value: Any) -> str:
     return category
 
 
-def _metadata_values_from_payload(payload: dict[str, Any], fallback_title: str, fallback_keywords: list[str]) -> tuple[str, list[str]]:
+def _keyword_blacklist_json_fallback(repo_root: Path) -> set[str]:
+    path = repo_root / KEYWORD_BLACKLIST_JSON
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return set()
+    values = payload.get("keywords") if isinstance(payload, dict) else None
+    if not isinstance(values, list):
+        return set()
+    return {str(keyword).strip().casefold() for keyword in values if str(keyword).strip()}
+
+
+def _keyword_blacklist_set(conn: sqlite3.Connection, repo_root: Path) -> set[str]:
+    try:
+        rows = conn.execute("SELECT keyword FROM keyword_blacklist ORDER BY keyword COLLATE NOCASE").fetchall()
+    except sqlite3.OperationalError:
+        return _keyword_blacklist_json_fallback(repo_root)
+    values = {str(row["keyword"] or "").strip().casefold() for row in rows if str(row["keyword"] or "").strip()}
+    return values or _keyword_blacklist_json_fallback(repo_root)
+
+
+def _clean_keywords(value: Any, keyword_blacklist: set[str]) -> list[str]:
+    raw_keywords = value
+    if isinstance(raw_keywords, str):
+        raw_keywords = [part.strip() for part in raw_keywords.replace(";", ",").split(",")]
+    elif not isinstance(raw_keywords, list):
+        raw_keywords = []
+    cleaned: list[str] = []
+    seen: set[str] = set()
+    for keyword in raw_keywords:
+        clean = str(keyword).strip()
+        normalized = clean.casefold()
+        if not clean or normalized in seen or normalized in keyword_blacklist:
+            continue
+        seen.add(normalized)
+        cleaned.append(clean)
+    return cleaned
+
+
+def _metadata_values_from_payload(
+    payload: dict[str, Any],
+    fallback_title: str,
+    fallback_keywords: list[str],
+    keyword_blacklist: set[str],
+) -> tuple[str, list[str]]:
     title = fallback_title
-    keywords = fallback_keywords
+    keywords = _clean_keywords(fallback_keywords, keyword_blacklist)
     if "title" in payload:
         title = str(payload.get("title") or "").strip()
     if "keywords" in payload:
-        raw_keywords = payload.get("keywords") or []
-        if isinstance(raw_keywords, str):
-            raw_keywords = [part.strip() for part in raw_keywords.replace(";", ",").split(",")]
-        keywords = [str(keyword).strip() for keyword in raw_keywords if str(keyword).strip()]
+        keywords = _clean_keywords(payload.get("keywords") or [], keyword_blacklist)
     return title, keywords
 
 
@@ -366,6 +430,7 @@ def record_decision(repo_root: Path, payload: dict[str, Any]) -> dict[str, Any]:
         keywords = before["keywords"]
         rework_category = before["reworkCategory"]
         rework_comment = before["reworkComment"]
+        keyword_blacklist = _keyword_blacklist_set(conn, repo_root)
         changed_families: set[str] = set()
 
         if action == "rating":
@@ -407,12 +472,12 @@ def record_decision(repo_root: Path, payload: dict[str, Any]) -> dict[str, Any]:
         elif action == "approve":
             pick_state = "picked"
             metadata_state = "approved"
-            title, keywords = _metadata_values_from_payload(payload, title, keywords)
+            title, keywords = _metadata_values_from_payload(payload, title, keywords, keyword_blacklist)
             rework_category = ""
             rework_comment = ""
             changed_families.update({"pick_state", "metadata"})
         elif action == "metadata":
-            title, keywords = _metadata_values_from_payload(payload, title, keywords)
+            title, keywords = _metadata_values_from_payload(payload, title, keywords, keyword_blacklist)
             metadata_state = str(payload.get("metadataState") or "proposed").strip().casefold()
             if metadata_state not in METADATA_STATES:
                 raise ValueError("metadataState is invalid")
@@ -425,7 +490,7 @@ def record_decision(repo_root: Path, payload: dict[str, Any]) -> dict[str, Any]:
             changed_families.add("metadata")
         elif action == "metadata-rework":
             metadata_state = "rework"
-            title, keywords = _metadata_values_from_payload(payload, title, keywords)
+            title, keywords = _metadata_values_from_payload(payload, title, keywords, keyword_blacklist)
             rework_category = _normalize_rework_category(payload.get("reworkCategory") or payload.get("rework_category"))
             rework_comment = str(payload.get("reworkComment") or payload.get("rework_comment") or "").strip()
             if rework_comment and not rework_category:
@@ -567,12 +632,23 @@ def upload_plan(repo_root: Path, limit: int = 500) -> dict[str, Any]:
             """
             SELECT
               COUNT(CASE WHEN d.pick_state = 'picked' THEN 1 END) AS picked_count,
-              COUNT(CASE WHEN d.pick_state = 'picked' AND d.metadata_state = 'approved' THEN 1 END) AS approved_picked_count,
+              COUNT(CASE WHEN d.pick_state = 'picked' AND d.metadata_state = 'approved'
+                AND NOT EXISTS (
+                  SELECT 1 FROM sidecar_mock_uploads AS m
+                  WHERE m.asset_id = d.asset_id AND m.mock_state = 'active'
+                )
+              THEN 1 END) AS approved_picked_count,
               COUNT(CASE WHEN d.pick_state = 'picked' AND d.metadata_state <> 'approved' THEN 1 END) AS picked_needs_review_count,
               COUNT(CASE WHEN d.pick_state = 'picked' AND d.metadata_state = 'unreviewed' THEN 1 END) AS picked_unreviewed_count,
               COUNT(CASE WHEN d.pick_state = 'picked' AND d.metadata_state = 'proposed' THEN 1 END) AS picked_proposed_count,
               COUNT(CASE WHEN d.pick_state = 'picked' AND d.metadata_state = 'rework' THEN 1 END) AS picked_rework_count,
-              COUNT(CASE WHEN d.pick_state = 'picked' AND d.metadata_state = 'blocked' THEN 1 END) AS picked_blocked_count
+              COUNT(CASE WHEN d.pick_state = 'picked' AND d.metadata_state = 'blocked' THEN 1 END) AS picked_blocked_count,
+              COUNT(CASE WHEN d.pick_state = 'picked' AND d.metadata_state = 'approved'
+                AND EXISTS (
+                  SELECT 1 FROM sidecar_mock_uploads AS m
+                  WHERE m.asset_id = d.asset_id AND m.mock_state = 'active'
+                )
+              THEN 1 END) AS mock_uploaded_count
             FROM sidecar_decisions AS d
             JOIN sidecar_assets AS a ON a.asset_id = d.asset_id
             WHERE NOT EXISTS (
@@ -590,6 +666,10 @@ def upload_plan(repo_root: Path, limit: int = 500) -> dict[str, Any]:
               AND NOT EXISTS (
                 SELECT 1 FROM sidecar_tombstones AS t
                 WHERE t.asset_id = d.asset_id AND t.tombstone_state = 'active'
+              )
+              AND NOT EXISTS (
+                SELECT 1 FROM sidecar_mock_uploads AS m
+                WHERE m.asset_id = d.asset_id AND m.mock_state = 'active'
               )
             ORDER BY a.captured_at DESC, a.asset_id
             LIMIT ?
@@ -621,6 +701,166 @@ def upload_plan(repo_root: Path, limit: int = 500) -> dict[str, Any]:
         "pickedProposedCount": int(readiness["picked_proposed_count"] or 0),
         "pickedReworkCount": int(readiness["picked_rework_count"] or 0),
         "pickedBlockedCount": int(readiness["picked_blocked_count"] or 0),
+        "mockUploadedCount": int(readiness["mock_uploaded_count"] or 0),
+    }
+
+
+def _planned_r2_keys(row: sqlite3.Row) -> tuple[str, list[dict[str, str]]]:
+    source_anchor = str(row["source_anchor"] or f"apple-photos://{row['asset_id']}")
+    photo_id = photo_id_for_source_path(source_anchor)
+    filename = str(row["filename"] or "")
+    media_type = str(row["media_type"] or "").casefold()
+    is_video = media_type == "video" or Path(filename).suffix.lower() in {".mov", ".mp4", ".m4v"}
+    source_reference = filename or (f"{photo_id}.mp4" if is_video else f"{photo_id}.jpg")
+    keys = [
+        {
+            "bucket": DEFAULT_PRIVATE_BUCKET,
+            "key": private_master_key(DEFAULT_PRIVATE_PREFIX, photo_id, source_reference),
+            "kind": "private-master",
+        },
+        {
+            "bucket": DEFAULT_PUBLIC_BUCKET,
+            "key": public_preview_key(DEFAULT_PUBLIC_PREFIX, photo_id, "gallery", "video" if is_video else "photo"),
+            "kind": "public-preview",
+        },
+        {
+            "bucket": DEFAULT_PUBLIC_BUCKET,
+            "key": public_preview_key(DEFAULT_PUBLIC_PREFIX, photo_id, "detail", "video" if is_video else "photo"),
+            "kind": "public-preview-video" if is_video else "public-preview",
+        },
+    ]
+    if not is_video:
+        keys.extend(
+            {
+                "bucket": DEFAULT_PRIVATE_BUCKET,
+                "key": private_render_key(photo_id, product_id),
+                "kind": "private-render",
+            }
+            for product_id in PRIVATE_RENDER_PRODUCTS
+        )
+    return photo_id, keys
+
+
+def _current_r2_objects_for_plan(conn: sqlite3.Connection, planned_keys: list[dict[str, str]]) -> dict[tuple[str, str], dict[str, Any]]:
+    if not planned_keys:
+        return {}
+    conditions = " OR ".join("(bucket = ? AND object_key = ?)" for _ in planned_keys)
+    params: list[str] = []
+    for item in planned_keys:
+        params.extend([item["bucket"], item["key"]])
+    try:
+        rows = conn.execute(
+            f"""
+            SELECT bucket, object_key, photo_id, object_kind, lifecycle_state, bytes, last_seen_at
+            FROM r2_objects
+            WHERE lifecycle_state = 'current' AND ({conditions})
+            """,
+            params,
+        ).fetchall()
+    except sqlite3.OperationalError:
+        return {}
+    return {
+        (str(row["bucket"] or ""), str(row["object_key"] or "")): {
+            "photoId": str(row["photo_id"] or ""),
+            "kind": str(row["object_kind"] or ""),
+            "bytes": int(row["bytes"]) if row["bytes"] is not None else None,
+            "lastSeenAt": str(row["last_seen_at"] or ""),
+        }
+        for row in rows
+    }
+
+
+def mock_upload(repo_root: Path, asset_ids: Iterable[str] | None = None, limit: int = 500) -> dict[str, Any]:
+    safe_limit = max(1, min(int(limit or 500), 5000))
+    requested_ids = [str(asset_id or "").strip() for asset_id in (asset_ids or []) if str(asset_id or "").strip()]
+    now = now_iso()
+    run_id = uuid.uuid4().hex
+    with connect(repo_root) as conn:
+        params: list[Any] = []
+        asset_filter = ""
+        if requested_ids:
+            placeholders = ",".join("?" for _ in requested_ids)
+            asset_filter = f"AND d.asset_id IN ({placeholders})"
+            params.extend(requested_ids)
+        params.append(safe_limit)
+        rows = conn.execute(
+            f"""
+            SELECT a.asset_id, a.source_anchor, a.media_type, a.filename, a.captured_at
+            FROM sidecar_decisions AS d
+            JOIN sidecar_assets AS a ON a.asset_id = d.asset_id
+            WHERE d.pick_state = 'picked' AND d.metadata_state = 'approved'
+              {asset_filter}
+              AND NOT EXISTS (
+                SELECT 1 FROM sidecar_tombstones AS t
+                WHERE t.asset_id = d.asset_id AND t.tombstone_state = 'active'
+              )
+              AND NOT EXISTS (
+                SELECT 1 FROM sidecar_mock_uploads AS m
+                WHERE m.asset_id = d.asset_id AND m.mock_state = 'active'
+              )
+            ORDER BY a.captured_at DESC, a.asset_id
+            LIMIT ?
+            """,
+            params,
+        ).fetchall()
+        planned_key_sets: dict[str, list[dict[str, str]]] = {}
+        photo_ids: dict[str, str] = {}
+        all_planned_keys: list[dict[str, str]] = []
+        for row in rows:
+            photo_id, keys = _planned_r2_keys(row)
+            photo_ids[str(row["asset_id"])] = photo_id
+            planned_key_sets[str(row["asset_id"])] = keys
+            all_planned_keys.extend(keys)
+        current_r2 = _current_r2_objects_for_plan(conn, all_planned_keys)
+        for row in rows:
+            conn.execute(
+                """
+                INSERT INTO sidecar_mock_uploads (asset_id, mock_state, mock_run_id, uploaded_at, updated_at)
+                VALUES (?, 'active', ?, ?, ?)
+                ON CONFLICT(asset_id) DO UPDATE SET
+                  mock_state = 'active',
+                  mock_run_id = excluded.mock_run_id,
+                  uploaded_at = excluded.uploaded_at,
+                  updated_at = excluded.updated_at
+                """,
+                (row["asset_id"], run_id, now, now),
+            )
+    items = []
+    collision_count = 0
+    covered_key_count = 0
+    for row in rows:
+        asset_id = str(row["asset_id"])
+        planned = []
+        item_collision_count = 0
+        for key in planned_key_sets.get(asset_id, []):
+            current = current_r2.get((key["bucket"], key["key"]))
+            exists = current is not None
+            if exists:
+                item_collision_count += 1
+                covered_key_count += 1
+            planned.append({
+                **key,
+                "exists": exists,
+                **({"existing": current} if current else {}),
+            })
+        if item_collision_count:
+            collision_count += 1
+        items.append({
+            "assetId": asset_id,
+            "photoId": photo_ids.get(asset_id, ""),
+            "filename": row["filename"] or "",
+            "capturedAt": row["captured_at"] or "",
+            "collisionCount": item_collision_count,
+            "plannedKeys": planned,
+        })
+    return {
+        "ok": True,
+        "mockRunId": run_id,
+        "mockUploadedCount": len(rows),
+        "collisionCount": collision_count,
+        "coveredKeyCount": covered_key_count,
+        "items": items,
+        "remainingPlan": upload_plan(repo_root, limit=safe_limit),
     }
 
 
@@ -665,12 +905,15 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Inspect Sidecar local workflow state.")
     parser.add_argument("--summary", action="store_true")
     parser.add_argument("--upload-plan", action="store_true")
+    parser.add_argument("--mock-upload", action="store_true")
     parser.add_argument("--commit-plan", action="store_true")
     parser.add_argument("--empty-wastebasket", action="store_true")
     args = parser.parse_args()
     repo_root = Path.cwd()
     if args.empty_wastebasket:
         print(json.dumps(empty_wastebasket(repo_root), indent=2))
+    elif args.mock_upload:
+        print(json.dumps(mock_upload(repo_root), indent=2))
     elif args.upload_plan:
         print(json.dumps(upload_plan(repo_root), indent=2))
     elif args.commit_plan:

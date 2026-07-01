@@ -10,7 +10,7 @@ metadata; Owner decides publication and commerce.
 
 Sidecar has its own local visible version in `SIDECAR_VERSION`.
 
-- Current Sidecar version: `v122.12`
+- Current Sidecar version: `v123.1`
 - Versioning follows the canonical `~/Dev/.SOPs/VERSIONING_SOP.md` default
   calendar visible-version rule for this local web-app surface.
 - Sidecar version bumps do not imply a public Photos By Elie site version bump.
@@ -81,6 +81,14 @@ AND not rejected
 AND not hidden
 AND not already current in Owner publication state
 ```
+
+Sidecar's mock upload simulates the Owner handoff boundary without writing to
+R2. It derives the Owner-style photo id from the stable source anchor, computes
+the expected public preview, private master, and private render R2 keys, then
+checks Owner's current `r2_objects` state for exact bucket/key coverage. A mock
+collision warning means the planned key already exists in current R2 state; it is
+not a perceptual duplicate detector for visually similar files with different
+source anchors.
 
 ## Photos Write-Back
 
@@ -154,7 +162,10 @@ Sidecar has two primary pages backed by the same current window:
   The row **Propagate** action carries the review decision itself: metadata
   approval or the selected AI rework category/comment. AI rework categories
   match Owner review: incorrect, too generic, placeholder, use keywords, add
-  details, use shoot, and other.
+  details, use shoot, and other. Staged Sidecar keywords are filtered through
+  Owner's keyword blacklist before they become local decisions. Sidecar reads
+  the SQLite table first and falls back to the JSON compatibility export when
+  the table is missing or empty.
 
 Videos are first-class Sidecar review items. The UI marks video previews with a
 standard play icon and duration chip, filters photos/videos separately, asks
@@ -189,8 +200,9 @@ The first implemented slice includes:
   applying current-window burst culling,
   reviewing picked-item metadata in oldest-to-newest row form with field and
   decision propagation, AI rework categories, previewing the active item with Space,
-  tombstoning the wastebasket explicitly, viewing upload eligibility, and
-  viewing the pending Photos commit plan.
+  tombstoning the wastebasket explicitly, viewing upload eligibility as a
+  right-side thumbnail rail, mock-uploading that plan locally with Owner R2 key
+  collision warnings, and viewing the pending Photos commit plan.
 - Dock launcher script for `PhotosByElie Sidecar.app`.
 
 Remaining near-term slices:

@@ -112,6 +112,7 @@
     autoAdvanceDirection: 1,
     undoStack: [],
     summary: null,
+    keywordBlacklist: new Set(),
     filters: normalizeFilters(readStoredWindow()?.filters || cloneDefaultFilters()),
     hasWindow: Boolean(readStoredWindow()?.hasWindow),
   };
@@ -227,7 +228,7 @@
   const videoPlayerMarkup = (item, autoplay = true) => `
     <video class="sidecar-inline-video" controls playsinline preload="metadata" ${autoplay ? "autoplay" : ""} poster="${escapeHtml(previewUrl(item))}" src="${escapeHtml(videoUrl(item))}"></video>
   `;
-  const versionFallback = "122.12";
+  const versionFallback = "123.1";
   const versionFallbackLabel = `v${versionFallback}`;
   const videoBadge = (item, index, label) => isVideo(item)
     ? videoOverlay(item, index, label)
@@ -411,7 +412,7 @@
   const wirePreviewFallbacks = (root) => {
     root?.querySelectorAll("img[data-sidecar-preview]").forEach((img) => {
       const markMissing = () => {
-        img.closest(".sidecar-thumb, .sidecar-editing-preview, .sidecar-quick-look-media")?.classList.add("is-missing");
+        img.closest(".sidecar-thumb, .sidecar-editing-preview, .sidecar-quick-look-media, .sidecar-upload-plan-tile")?.classList.add("is-missing");
         img.removeAttribute("src");
       };
       img.addEventListener("error", markMissing, { once: true });
@@ -513,11 +514,34 @@
 
   const reworkCategoryLabel = (value = "") => reworkCategoryByValue.get(String(value || "").trim())?.label || "";
 
-  const parseKeywords = (value = "") => String(value || "")
-    .replace(/;/g, ",")
-    .split(",")
-    .map((keyword) => keyword.trim())
-    .filter(Boolean);
+  const parseKeywords = (value = "") => {
+    const seen = new Set();
+    return String(value || "")
+      .replace(/;/g, ",")
+      .split(",")
+      .map((keyword) => keyword.trim())
+      .filter(Boolean)
+      .filter((keyword) => {
+        const normalized = keyword.toLowerCase();
+        if (state.keywordBlacklist.has(normalized) || seen.has(normalized)) return false;
+        seen.add(normalized);
+        return true;
+      });
+  };
+
+  const loadKeywordBlacklist = async () => {
+    try {
+      const response = await fetch("./assets/owner-actions/keyword-blacklist.json", { cache: "no-store" });
+      if (!response.ok) return;
+      const payload = await response.json();
+      const keywords = Array.isArray(payload?.keywords) ? payload.keywords : [];
+      state.keywordBlacklist = new Set(keywords
+        .map((keyword) => String(keyword || "").trim().toLowerCase())
+        .filter(Boolean));
+    } catch {
+      state.keywordBlacklist = new Set();
+    }
+  };
 
   const rowFormForIndex = (index) => surface?.querySelector(`[data-sidecar-row-form][data-sidecar-index="${index}"]`);
 
@@ -1378,15 +1402,60 @@
     `;
   };
 
+  const mockUploadSummaryMarkup = (payload) => {
+    const result = payload?.mockResult;
+    if (!result) return "";
+    const uploaded = Number(result.mockUploadedCount || 0);
+    const collisions = Number(result.collisionCount || 0);
+    const coveredKeys = Number(result.coveredKeyCount || 0);
+    const remaining = Number(payload.count || 0);
+    const warning = collisions
+      ? `<strong>${collisions.toLocaleString()} item${collisions === 1 ? "" : "s"} already have current R2 key coverage.</strong>`
+      : "<strong>No current R2 key collisions found.</strong>";
+    return `
+      <div class="sidecar-mock-upload-result${collisions ? " has-warning" : ""}">
+        <span>Mock uploaded ${uploaded.toLocaleString()} item${uploaded === 1 ? "" : "s"}; ${remaining.toLocaleString()} remain.</span>
+        <span>${warning}</span>
+        ${coveredKeys ? `<span>${coveredKeys.toLocaleString()} planned key${coveredKeys === 1 ? "" : "s"} already exist in Owner R2 state.</span>` : ""}
+      </div>
+    `;
+  };
+
   const renderPlan = (title, eyebrow, payload, kind = "") => {
     if (!planPanel || !planOutput) return;
     planPanel.hidden = false;
+    planPanel.classList.toggle("is-upload-plan", kind === "upload");
+    planPanel.dataset.sidecarPlanKind = kind || "";
+    document.body.classList.add("sidecar-has-plan");
     if (planTitle) planTitle.textContent = title;
     if (planEyebrow) planEyebrow.textContent = eyebrow;
     const items = Array.isArray(payload.items) ? payload.items : [];
+    const assetIds = items.map((item) => item.assetId).filter(Boolean);
     const message = payload.message ? `<p>${escapeHtml(payload.message)}</p>` : "";
     const uploadSummary = kind === "upload" ? uploadPlanSummaryMarkup(payload, items.length) : "";
     const emptyMessage = kind === "upload" ? "No rows are ready for Owner upload yet." : "No rows.";
+    if (kind === "upload") {
+      if (planTitle) planTitle.textContent = `Upload plan${items.length ? ` (${items.length.toLocaleString()})` : ""}`;
+      planOutput.innerHTML = `
+        <div class="sidecar-plan-actions">
+          <button class="btn secondary" type="button" data-sidecar-mock-upload-action ${assetIds.length ? "" : "disabled"}>Mock upload</button>
+        </div>
+        ${mockUploadSummaryMarkup(payload)}
+        <div class="sidecar-plan-list sidecar-upload-plan-list">
+          ${items.slice(0, 80).map((item) => `
+            <div class="sidecar-upload-plan-tile" title="${escapeHtml(item.filename || item.assetId || "")}" aria-label="${escapeHtml(item.filename || item.assetId || "Upload-ready item")}">
+              <img data-sidecar-preview src="${escapeHtml(previewUrl({ localIdentifier: item.assetId }))}" alt="" loading="lazy"/>
+              ${previewFallbackMarkup}
+            </div>
+          `).join("") || `<p>${escapeHtml(emptyMessage)}</p>`}
+        </div>
+      `;
+      wirePreviewFallbacks(planPanel);
+      planOutput.querySelector("[data-sidecar-mock-upload-action]")?.addEventListener("click", () => {
+        mockUpload(assetIds).catch((error) => setStatus(error.message));
+      });
+      return;
+    }
     planOutput.innerHTML = `
       <p><strong>${items.length.toLocaleString()}</strong> row${items.length === 1 ? "" : "s"}.</p>
       ${message}
@@ -1418,6 +1487,31 @@
     } else {
       setStatus("Photos commit plan refreshed.");
     }
+  };
+
+  const mockUpload = async (assetIds) => {
+    const cleanIds = Array.isArray(assetIds) ? assetIds.filter(Boolean) : [];
+    if (!cleanIds.length) {
+      setStatus("No upload-ready rows to mock upload.");
+      return;
+    }
+    setStatus(`Mock upload checking ${cleanIds.length.toLocaleString()} row${cleanIds.length === 1 ? "" : "s"} against Owner R2 state...`);
+    const response = await fetch("/__sidecar/mock-upload", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ assetIds: cleanIds, limit: Math.max(500, cleanIds.length) }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload.ok) throw new Error(payload.error || "Could not run mock upload.");
+    const remainingPlan = payload.remainingPlan || { ok: true, count: 0, items: [] };
+    remainingPlan.mockResult = payload;
+    renderPlan("Next Upload Eligibility", "Upload plan", remainingPlan, "upload");
+    const collisions = Number(payload.collisionCount || 0);
+    const coveredKeys = Number(payload.coveredKeyCount || 0);
+    const warning = collisions
+      ? ` ${collisions.toLocaleString()} item${collisions === 1 ? "" : "s"} had current R2 key coverage across ${coveredKeys.toLocaleString()} key${coveredKeys === 1 ? "" : "s"}.`
+      : " No current R2 key collisions found.";
+    setStatus(`Mock upload removed ${Number(payload.mockUploadedCount || 0).toLocaleString()} row${Number(payload.mockUploadedCount || 0) === 1 ? "" : "s"} from the upload plan.${warning}`);
   };
 
   const setPage = (page) => {
@@ -1718,6 +1812,7 @@
   syncPageUrl();
   renderPageChrome();
   renderSurface();
+  loadKeywordBlacklist();
   fetch("/__sidecar/version")
     .then((response) => response.json())
     .then((payload) => {

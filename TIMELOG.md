@@ -413,8 +413,10 @@ Clock state: running
 | 2026-06-30 | 18:13 CEST | 18:14 CEST | 0:01 | Reported Sidecar Up/Down arrow navigation should move by rendered rows and requested Shift-arrow range selection; background implementation/testing time excluded. |
 | 2026-06-30 | 19:25 CEST | 19:26 CEST | 0:01 | Chose the Sidecar Review direction: rename Editing to Review, show only picked items there, and clarify that upload eligibility requires metadata approval; background implementation/testing time excluded. |
 | 2026-06-30 | 23:10 CEST | 23:11 CEST | 0:01 | Requested restoring Owner-style Review propagation, AI rework categories, and oldest-to-newest Review ordering; background implementation/testing time excluded. |
+| 2026-07-01 | 10:28 CEST | 10:29 CEST | 0:01 | Requested Sidecar upload plan move to a right thumbnail rail and Sidecar keywords honor Owner's keyword blacklist; background implementation/testing time excluded. |
+| 2026-07-01 | 10:45 CEST | 10:46 CEST | 0:01 | Requested Sidecar mock upload simulation that removes rows from the upload plan and warns about planned R2 key collisions; background implementation/testing time excluded. |
 
 ## Totals
 
-Active collaboration time used: 22:16
+Active collaboration time used: 22:18
 Remaining budget: not set

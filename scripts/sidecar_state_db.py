@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import argparse
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import json
 import sqlite3
 import uuid
@@ -125,6 +125,7 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
           metadata_seed_title TEXT,
           metadata_seed_keywords_json TEXT NOT NULL DEFAULT '[]',
           raw_json       TEXT NOT NULL DEFAULT '{}',
+          missing_at     TEXT,
           indexed_at     TEXT,
           updated_at     TEXT
         ) WITHOUT ROWID;
@@ -209,10 +210,12 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         "location_keywords_json": "TEXT NOT NULL DEFAULT '[]'",
         "metadata_seed_title": "TEXT",
         "metadata_seed_keywords_json": "TEXT NOT NULL DEFAULT '[]'",
+        "missing_at": "TEXT",
     }
     for column, definition in asset_column_defaults.items():
         if column not in asset_columns:
             conn.execute(f"ALTER TABLE sidecar_assets ADD COLUMN {column} {definition}")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_sidecar_assets_available ON sidecar_assets(missing_at, captured_at, asset_id)")
 
 
 def _asset_id(row: dict[str, Any]) -> str:
@@ -398,6 +401,7 @@ def upsert_assets(repo_root: Path, rows: Iterable[dict[str, Any]]) -> int:
                   metadata_seed_title = excluded.metadata_seed_title,
                   metadata_seed_keywords_json = excluded.metadata_seed_keywords_json,
                   raw_json = excluded.raw_json,
+                  missing_at = NULL,
                   indexed_at = excluded.indexed_at,
                   updated_at = excluded.updated_at
                 """,
@@ -433,6 +437,124 @@ def upsert_assets(repo_root: Path, rows: Iterable[dict[str, Any]]) -> int:
             )
             count += 1
     return count
+
+
+def mark_missing_assets(repo_root: Path, present_asset_ids: Iterable[str]) -> int:
+    """Mark previously indexed assets absent after a full Photos index scan."""
+    present = {str(asset_id or "").strip() for asset_id in present_asset_ids if str(asset_id or "").strip()}
+    if not present:
+        return 0
+    now = now_iso()
+    with connect(repo_root) as conn:
+        existing = conn.execute("SELECT asset_id FROM sidecar_assets WHERE missing_at IS NULL OR missing_at = ''").fetchall()
+        missing = [str(row["asset_id"]) for row in existing if str(row["asset_id"]) not in present]
+        for start in range(0, len(missing), 500):
+            batch = missing[start:start + 500]
+            placeholders = ",".join("?" for _ in batch)
+            conn.execute(
+                f"UPDATE sidecar_assets SET missing_at = ?, updated_at = ? WHERE asset_id IN ({placeholders})",
+                [now, now, *batch],
+            )
+    return len(missing)
+
+
+def _indexed_asset_row(row: sqlite3.Row) -> dict[str, Any]:
+    raw = _read_json_text(row["raw_json"], {})
+    if not isinstance(raw, dict):
+        raw = {}
+    asset_id = str(row["asset_id"] or "")
+    merged = {
+        **raw,
+        "localIdentifier": str(raw.get("localIdentifier") or asset_id),
+        "sourceAnchor": str(row["source_anchor"] or raw.get("sourceAnchor") or f"apple-photos://{asset_id}"),
+        "filename": str(row["filename"] or raw.get("filename") or ""),
+        "mediaType": str(row["media_type"] or raw.get("mediaType") or ""),
+        "creationDate": str(row["captured_at"] or raw.get("creationDate") or ""),
+        "modificationDate": str(row["modified_at"] or raw.get("modificationDate") or ""),
+        "pixelWidth": int(row["pixel_width"] or raw.get("pixelWidth") or 0),
+        "pixelHeight": int(row["pixel_height"] or raw.get("pixelHeight") or 0),
+        "duration": float(row["duration"] or raw.get("duration") or 0),
+        "favorite": bool(row["favorite"]),
+        "hidden": bool(row["hidden"]),
+    }
+    if row["photos_title"]:
+        merged["applePhotosTitle"] = row["photos_title"]
+    photos_keywords = _read_json_text(row["photos_keywords_json"], [])
+    if photos_keywords:
+        merged["applePhotosKeywords"] = photos_keywords
+    return merged
+
+
+def _date_window_bounds(date_from: str = "", date_to: str = "") -> tuple[str, str]:
+    start = str(date_from or "").strip()
+    end = str(date_to or "").strip()
+    if start and len(start) == 10:
+        start = f"{start}T00:00:00Z"
+    if end and len(end) == 10:
+        try:
+            next_day = datetime.fromisoformat(end).date() + timedelta(days=1)
+            end = f"{next_day.isoformat()}T00:00:00Z"
+        except ValueError:
+            end = f"{end}T23:59:59Z"
+    return start, end
+
+
+def indexed_library_window(
+    repo_root: Path,
+    offset: int = 0,
+    limit: int = 120,
+    date_from: str = "",
+    date_to: str = "",
+) -> dict[str, Any]:
+    """Return a Sidecar window from the local metadata index."""
+    safe_offset = max(0, int(offset or 0))
+    safe_limit = max(1, min(int(limit or 120), 5000))
+    start, end = _date_window_bounds(date_from, date_to)
+    predicates = ["(a.missing_at IS NULL OR a.missing_at = '')"]
+    params: list[Any] = []
+    if start:
+        predicates.append("a.captured_at >= ?")
+        params.append(start)
+    if end:
+        predicates.append("a.captured_at < ?")
+        params.append(end)
+    where_sql = " AND ".join(predicates)
+    with connect(repo_root) as conn:
+        indexed_count = conn.execute(
+            "SELECT count(*) AS total FROM sidecar_assets WHERE missing_at IS NULL OR missing_at = ''"
+        ).fetchone()["total"]
+        filtered_count = conn.execute(
+            f"SELECT count(*) AS total FROM sidecar_assets AS a WHERE {where_sql}",
+            params,
+        ).fetchone()["total"]
+        rows = conn.execute(
+            f"""
+            SELECT a.*
+            FROM sidecar_assets AS a
+            WHERE {where_sql}
+            ORDER BY
+              CASE WHEN a.captured_at IS NULL OR a.captured_at = '' THEN 1 ELSE 0 END,
+              a.captured_at DESC,
+              a.asset_id
+            LIMIT ? OFFSET ?
+            """,
+            [*params, safe_limit, safe_offset],
+        ).fetchall()
+    items = merge_state(repo_root, [_indexed_asset_row(row) for row in rows])
+    return {
+        "ok": True,
+        "mode": "sidecar-index-window",
+        "source": "sidecar-index",
+        "limit": safe_limit,
+        "offset": safe_offset,
+        "count": len(items),
+        "indexedCount": int(indexed_count or 0),
+        "filteredIndexedCount": int(filtered_count or 0),
+        "dateFrom": date_from,
+        "dateTo": date_to,
+        "items": items,
+        "sidecarSummary": summary(repo_root),
+    }
 
 
 def _decision_payload(row: sqlite3.Row | None) -> dict[str, Any]:
@@ -830,13 +952,23 @@ def summary(repo_root: Path) -> dict[str, Any]:
         pending_count = conn.execute(
             "SELECT count(*) AS total FROM sidecar_pending_sync WHERE status = 'pending'"
         ).fetchone()["total"]
-        indexed_count = conn.execute("SELECT count(*) AS total FROM sidecar_assets").fetchone()["total"]
+        indexed_count = conn.execute(
+            "SELECT count(*) AS total FROM sidecar_assets WHERE missing_at IS NULL OR missing_at = ''"
+        ).fetchone()["total"]
+        missing_count = conn.execute(
+            "SELECT count(*) AS total FROM sidecar_assets WHERE missing_at IS NOT NULL AND missing_at <> ''"
+        ).fetchone()["total"]
+        last_indexed_at = conn.execute(
+            "SELECT max(indexed_at) AS value FROM sidecar_assets WHERE missing_at IS NULL OR missing_at = ''"
+        ).fetchone()["value"]
         tombstone_count = conn.execute(
             "SELECT count(*) AS total FROM sidecar_tombstones WHERE tombstone_state = 'active'"
         ).fetchone()["total"]
     return {
         "ok": True,
         "indexedCount": int(indexed_count or 0),
+        "missingIndexedCount": int(missing_count or 0),
+        "lastIndexedAt": str(last_indexed_at or ""),
         "pendingSyncCount": int(pending_count or 0),
         "tombstoneCount": int(tombstone_count or 0),
         "states": [

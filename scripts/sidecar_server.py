@@ -13,11 +13,16 @@ from pathlib import Path
 import sqlite3
 import subprocess
 import sys
+import threading
+import time
+import uuid
 from urllib.parse import parse_qs, unquote, urlparse
 
 from sidecar_state_db import (
     commit_plan,
     empty_wastebasket,
+    indexed_library_window,
+    mark_missing_assets,
     merge_state,
     mock_upload,
     record_decision,
@@ -30,12 +35,15 @@ from sidecar_state_db import (
 
 APPLE_PHOTOS_BRIDGE = Path("scripts/apple_photos_bridge.swift")
 SIDECAR_VERSION_FILE = Path("SIDECAR_VERSION")
-SIDECAR_DEFAULT_VERSION = "123.9"
+SIDECAR_DEFAULT_VERSION = "124.0"
 SIDECAR_PREVIEW_ROOT = Path("tmp/sidecar-previews")
 SIDECAR_PREVIEW_CACHE_VERSION = "v2"
 SIDECAR_VIDEO_ROOT = Path("tmp/sidecar-videos")
 SIDECAR_VIDEO_CACHE_VERSION = "v1"
 SIDECAR_LIBRARY_PATH = "/__sidecar/library"
+SIDECAR_INDEX_WINDOW_PATH = "/__sidecar/index-window"
+SIDECAR_INDEX_REFRESH_PATH = "/__sidecar/index-refresh"
+SIDECAR_INDEX_STATUS_PATH = "/__sidecar/index-status"
 SIDECAR_PREVIEW_PATH = "/__sidecar/preview/"
 SIDECAR_VIDEO_PATH = "/__sidecar/video/"
 SIDECAR_DECISION_PATH = "/__sidecar/decision"
@@ -46,6 +54,21 @@ SIDECAR_MOCK_UPLOAD_PATH = "/__sidecar/mock-upload"
 SIDECAR_COMMIT_PLAN_PATH = "/__sidecar/commit-plan"
 SIDECAR_VERSION_PATH = "/__sidecar/version"
 SIDECAR_EMPTY_WASTEBASKET_PATH = "/__sidecar/empty-wastebasket"
+SIDECAR_INDEX_ROOT = Path("tmp/sidecar-index")
+APPLE_PHOTOS_PROGRESS_PREFIX = "PBE_APPLE_PHOTOS_PROGRESS "
+INDEX_JOB_LOCK = threading.Lock()
+INDEX_JOB: dict = {
+    "ok": True,
+    "status": "idle",
+    "stage": "idle",
+    "jobId": "",
+    "indexedCount": 0,
+    "importedCount": 0,
+    "totalCount": 0,
+    "progress": 0,
+    "error": "",
+    "updatedAt": "",
+}
 
 
 def sidecar_version(repo_root: Path) -> str:
@@ -54,6 +77,28 @@ def sidecar_version(repo_root: Path) -> str:
     except OSError:
         value = ""
     return value or SIDECAR_DEFAULT_VERSION
+
+
+def _utc_now() -> str:
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
+def _set_index_job(**updates: object) -> dict:
+    with INDEX_JOB_LOCK:
+        INDEX_JOB.update(updates)
+        INDEX_JOB["updatedAt"] = _utc_now()
+        return dict(INDEX_JOB)
+
+
+def _index_job_snapshot(repo_root: Path) -> dict:
+    with INDEX_JOB_LOCK:
+        payload = dict(INDEX_JOB)
+    try:
+        payload["sidecarSummary"] = summary(repo_root)
+    except sqlite3.Error as error:
+        payload["summaryError"] = str(error)
+    payload["version"] = sidecar_version(repo_root)
+    return payload
 
 
 def _run_apple_photos_bridge(repo_root: Path, args: list[str], timeout: int = 900) -> dict:
@@ -87,6 +132,50 @@ def _run_apple_photos_bridge(repo_root: Path, args: list[str], timeout: int = 90
     return payload
 
 
+def _run_apple_photos_bridge_stream(
+    repo_root: Path,
+    args: list[str],
+    progress_handler,
+) -> dict:
+    bridge = repo_root / APPLE_PHOTOS_BRIDGE
+    if not bridge.exists():
+        raise RuntimeError(f"Apple Photos bridge is missing: {bridge}")
+    try:
+        process = subprocess.Popen(
+            ["swift", str(bridge), *args],
+            cwd=repo_root,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+    except FileNotFoundError as error:
+        raise RuntimeError("Swift is required for the Apple Photos PhotoKit bridge. Install Xcode Command Line Tools.") from error
+    stderr_lines: list[str] = []
+    assert process.stderr is not None
+    for line in process.stderr:
+        clean = line.strip()
+        if clean.startswith(APPLE_PHOTOS_PROGRESS_PREFIX):
+            try:
+                progress_handler(json.loads(clean[len(APPLE_PHOTOS_PROGRESS_PREFIX):]))
+            except json.JSONDecodeError:
+                stderr_lines.append(clean)
+        elif clean:
+            stderr_lines.append(clean)
+    stdout = process.stdout.read() if process.stdout is not None else ""
+    returncode = process.wait()
+    output = (stdout or "").strip()
+    try:
+        payload = json.loads(output or "{}")
+    except json.JSONDecodeError as error:
+        raise RuntimeError(("\n".join(stderr_lines) or output or "Apple Photos bridge returned invalid JSON.").strip()) from error
+    if returncode != 0 or payload.get("ok") is False:
+        message = payload.get("error") or "\n".join(stderr_lines) or f"Apple Photos bridge exited {returncode}"
+        raise RuntimeError(str(message).strip())
+    if stderr_lines:
+        payload["stderr"] = "\n".join(stderr_lines)
+    return payload
+
+
 def _int_query(query: dict[str, list[str]], name: str, default: int, minimum: int, maximum: int) -> int:
     try:
         value = int((query.get(name) or [""])[0] or default)
@@ -101,6 +190,161 @@ def _text_query(query: dict[str, list[str]], *names: str) -> str:
         if value:
             return value
     return ""
+
+
+def _asset_id_from_row(row: dict) -> str:
+    return str(row.get("localIdentifier") or row.get("asset_id") or row.get("assetId") or "").strip()
+
+
+def _handle_index_progress(payload: dict) -> None:
+    event = str(payload.get("event") or "")
+    total = int(payload.get("totalCount") or 0)
+    indexed = int(payload.get("indexedCount") or 0)
+    progress = float(payload.get("progress") or (indexed / total if total else 0))
+    if event == "library_index_start":
+        _set_index_job(
+            status="running",
+            stage="Scanning Apple Photos metadata",
+            indexedCount=0,
+            totalCount=total,
+            progress=0,
+            error="",
+        )
+    elif event == "library_index_progress":
+        _set_index_job(
+            status="running",
+            stage="Scanning Apple Photos metadata",
+            indexedCount=indexed,
+            totalCount=total,
+            progress=max(0, min(1, progress)),
+        )
+    elif event == "library_index_done":
+        _set_index_job(
+            status="running",
+            stage="Importing metadata into Sidecar",
+            indexedCount=indexed,
+            totalCount=total,
+            progress=1,
+        )
+
+
+def _import_index_jsonl(repo_root: Path, path: Path, total_count: int, prune_missing: bool) -> tuple[int, int]:
+    imported = 0
+    present_ids: list[str] = []
+    batch: list[dict] = []
+    with path.open("r", encoding="utf-8") as handle:
+        for line in handle:
+            clean = line.strip()
+            if not clean:
+                continue
+            row = json.loads(clean)
+            if not isinstance(row, dict):
+                continue
+            asset_id = _asset_id_from_row(row)
+            if asset_id:
+                present_ids.append(asset_id)
+            batch.append(row)
+            if len(batch) >= 500:
+                upsert_assets(repo_root, batch)
+                imported += len(batch)
+                batch = []
+                _set_index_job(
+                    status="running",
+                    stage="Importing metadata into Sidecar",
+                    importedCount=imported,
+                    totalCount=total_count,
+                    progress=(imported / total_count if total_count else 1),
+                )
+        if batch:
+            upsert_assets(repo_root, batch)
+            imported += len(batch)
+            _set_index_job(
+                status="running",
+                stage="Importing metadata into Sidecar",
+                importedCount=imported,
+                totalCount=total_count,
+                progress=(imported / total_count if total_count else 1),
+            )
+    missing_count = mark_missing_assets(repo_root, present_ids) if prune_missing and present_ids else 0
+    return imported, missing_count
+
+
+def _run_index_job(repo_root: Path, job_id: str, date_from: str = "", date_to: str = "") -> None:
+    index_dir = repo_root / SIDECAR_INDEX_ROOT
+    index_path = index_dir / f"photos-index-{int(time.time())}-{job_id}.jsonl"
+    try:
+        _set_index_job(
+            ok=True,
+            status="running",
+            stage="Starting Apple Photos metadata scan",
+            jobId=job_id,
+            indexedCount=0,
+            importedCount=0,
+            totalCount=0,
+            progress=0,
+            error="",
+            destination=str(index_path),
+            startedAt=_utc_now(),
+            completedAt="",
+            missingMarkedCount=0,
+        )
+        args = [
+            "library-index-file",
+            "--destination",
+            str(index_path),
+            "--progress-every",
+            "100",
+        ]
+        if date_from:
+            args.extend(["--date-from", date_from])
+        if date_to:
+            args.extend(["--date-to", date_to])
+        bridge_payload = _run_apple_photos_bridge_stream(repo_root, args, _handle_index_progress)
+        total_count = int(bridge_payload.get("totalCount") or bridge_payload.get("count") or 0)
+        imported, missing_count = _import_index_jsonl(repo_root, index_path, total_count, prune_missing=not date_from and not date_to)
+        _set_index_job(
+            ok=True,
+            status="done",
+            stage="Complete",
+            indexedCount=int(bridge_payload.get("count") or imported),
+            importedCount=imported,
+            totalCount=total_count,
+            progress=1,
+            completedAt=_utc_now(),
+            missingMarkedCount=missing_count,
+            sidecarSummary=summary(repo_root),
+        )
+    except Exception as error:
+        _set_index_job(
+            ok=True,
+            status="failed",
+            stage="Failed",
+            error=str(error),
+            completedAt=_utc_now(),
+        )
+
+
+def _start_index_job(repo_root: Path, date_from: str = "", date_to: str = "") -> dict:
+    with INDEX_JOB_LOCK:
+        if INDEX_JOB.get("status") == "running":
+            return dict(INDEX_JOB)
+    job_id = uuid.uuid4().hex[:12]
+    _set_index_job(
+        ok=True,
+        status="running",
+        stage="Queued Apple Photos metadata scan",
+        jobId=job_id,
+        indexedCount=0,
+        importedCount=0,
+        totalCount=0,
+        progress=0,
+        error="",
+        startedAt=_utc_now(),
+        completedAt="",
+    )
+    thread = threading.Thread(target=_run_index_job, args=(repo_root, job_id, date_from, date_to), daemon=True)
+    thread.start()
+    return _index_job_snapshot(repo_root)
 
 
 def _preview_cache_path(repo_root: Path, asset_id: str, max_pixel: int) -> Path:
@@ -127,6 +371,12 @@ class SidecarHandler(SimpleHTTPRequestHandler):
             return
         if path == SIDECAR_SUMMARY_PATH:
             self._handle_summary()
+            return
+        if path == SIDECAR_INDEX_STATUS_PATH:
+            self._handle_index_status()
+            return
+        if path == SIDECAR_INDEX_WINDOW_PATH:
+            self._handle_index_window()
             return
         if path == SIDECAR_LIBRARY_PATH:
             self._handle_library()
@@ -158,6 +408,9 @@ class SidecarHandler(SimpleHTTPRequestHandler):
             return
         if path == SIDECAR_MOCK_UPLOAD_PATH:
             self._handle_mock_upload()
+            return
+        if path == SIDECAR_INDEX_REFRESH_PATH:
+            self._handle_index_refresh()
             return
         self.send_error(HTTPStatus.NOT_FOUND)
 
@@ -204,6 +457,50 @@ class SidecarHandler(SimpleHTTPRequestHandler):
         try:
             payload = {**summary(Path.cwd()), "version": sidecar_version(Path.cwd())}
         except sqlite3.Error as error:  # type: ignore[name-defined]
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
+            return
+        self._send_json(HTTPStatus.OK, payload)
+
+    def _handle_index_status(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        self._send_json(HTTPStatus.OK, _index_job_snapshot(Path.cwd()))
+
+    def _handle_index_refresh(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            payload = self._read_json_body()
+            date_from = str(payload.get("dateFrom") or payload.get("date_from") or "").strip()
+            date_to = str(payload.get("dateTo") or payload.get("date_to") or "").strip()
+            result = _start_index_job(Path.cwd(), date_from=date_from, date_to=date_to)
+        except Exception as error:
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
+            return
+        self._send_json(HTTPStatus.OK, result)
+
+    def _handle_index_window(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        query = parse_qs(urlparse(self.path).query)
+        limit = _int_query(query, "limit", 120, 1, 5000)
+        offset = _int_query(query, "offset", 0, 0, 1_000_000)
+        date_from = _text_query(query, "dateFrom", "date_from", "from")
+        date_to = _text_query(query, "dateTo", "date_to", "to")
+        try:
+            payload = indexed_library_window(
+                Path.cwd(),
+                offset=offset,
+                limit=limit,
+                date_from=date_from,
+                date_to=date_to,
+            )
+            payload["version"] = sidecar_version(Path.cwd())
+            payload["indexStatus"] = _index_job_snapshot(Path.cwd())
+        except Exception as error:
             self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
             return
         self._send_json(HTTPStatus.OK, payload)

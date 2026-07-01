@@ -12,6 +12,11 @@
   const planOutput = $("[data-sidecar-plan-output]");
   const loadButton = $("[data-sidecar-load]");
   const refillButton = $("[data-sidecar-refill]");
+  const indexRefreshButton = $("[data-sidecar-index-refresh]");
+  const indexStatusRoot = $("[data-sidecar-index-status]");
+  const indexStatusLabel = $("[data-sidecar-index-label]");
+  const indexStatusCount = $("[data-sidecar-index-count]");
+  const indexStatusProgress = $("[data-sidecar-index-progress]");
   const slideBackButton = $("[data-sidecar-slide-back]");
   const slideForwardButton = $("[data-sidecar-slide-forward]");
   const burstCullButton = $("[data-sidecar-burst-cull]");
@@ -72,9 +77,10 @@
   const burstWindowMs = 1000;
   const shootWindowMs = 2 * 60 * 60 * 1000;
   const undoLimit = 100;
-  const refillBatchSize = 1000;
-  const refillMaxFetches = 30;
+  const refillBatchSize = 250;
+  const refillMaxFetches = 120;
   const previewFallbackMarkup = `<span class="sidecar-thumb-fallback">Preview unavailable</span>`;
+  let indexStatusTimer = null;
 
   const normalizePage = (value) => {
     if (value === "editing") return "review";
@@ -116,6 +122,7 @@
     autoAdvanceDirection: 1,
     undoStack: [],
     summary: null,
+    indexStatus: null,
     keywordBlacklist: new Set(),
     filters: normalizeFilters(readStoredWindow()?.filters || cloneDefaultFilters()),
     hasWindow: Boolean(readStoredWindow()?.hasWindow),
@@ -130,6 +137,88 @@
 
   const setStatus = (message) => {
     if (status) status.textContent = message;
+  };
+  const waitForStatusPaint = () => new Promise((resolve) => {
+    if (typeof requestAnimationFrame !== "function") {
+      window.setTimeout(resolve, 0);
+      return;
+    }
+    requestAnimationFrame(() => requestAnimationFrame(resolve));
+  });
+
+  const renderIndexStatus = (payload = {}) => {
+    state.indexStatus = payload;
+    const summary = payload.sidecarSummary || state.summary || {};
+    if (payload.sidecarSummary) state.summary = payload.sidecarSummary;
+    if (!indexStatusRoot) return;
+    const running = payload.status === "running";
+    const failed = payload.status === "failed";
+    const indexedCount = Number(summary.indexedCount ?? payload.importedCount ?? payload.indexedCount ?? 0);
+    const activeCount = Number(payload.importedCount || payload.indexedCount || indexedCount || 0);
+    const totalCount = Number(payload.totalCount || 0);
+    const progress = Math.max(0, Math.min(1, Number(payload.progress || 0)));
+    indexStatusRoot.hidden = false;
+    indexStatusRoot.dataset.sidecarIndexState = failed ? "failed" : running ? "running" : "idle";
+    if (indexStatusLabel) {
+      if (running) {
+        const stage = payload.stage || "Indexing Apple Photos";
+        indexStatusLabel.textContent = totalCount
+          ? `${stage}: ${activeCount.toLocaleString()} / ${totalCount.toLocaleString()}`
+          : stage;
+      } else if (failed) {
+        indexStatusLabel.textContent = `Index failed: ${payload.error || "unknown error"}`;
+      } else {
+        const lastIndexed = summary.lastIndexedAt ? ` · last ${formatDate(summary.lastIndexedAt)}` : "";
+        indexStatusLabel.textContent = `Local Photos index ready${lastIndexed}`;
+      }
+    }
+    if (indexStatusCount) indexStatusCount.textContent = `${indexedCount.toLocaleString()} indexed`;
+    if (indexStatusProgress) {
+      indexStatusProgress.hidden = !running;
+      indexStatusProgress.value = Math.round(progress * 100);
+    }
+  };
+
+  const stopIndexStatusPolling = () => {
+    if (!indexStatusTimer) return;
+    window.clearInterval(indexStatusTimer);
+    indexStatusTimer = null;
+  };
+
+  const startIndexStatusPolling = () => {
+    if (indexStatusTimer) return;
+    indexStatusTimer = window.setInterval(() => {
+      refreshIndexStatus({ silent: true }).catch(() => {});
+    }, 1000);
+  };
+
+  const refreshIndexStatus = async ({ silent = false } = {}) => {
+    const response = await fetch("/__sidecar/index-status");
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload.ok) throw new Error(payload.error || "Could not load Sidecar index status.");
+    renderIndexStatus(payload);
+    renderCounts();
+    if (payload.status === "running") startIndexStatusPolling();
+    else stopIndexStatusPolling();
+    if (!silent && payload.status !== "running") {
+      const indexed = Number(payload.sidecarSummary?.indexedCount || 0);
+      setStatus(`Local Photos index has ${indexed.toLocaleString()} active item${indexed === 1 ? "" : "s"}.`);
+    }
+    return payload;
+  };
+
+  const refreshPhotosIndex = async () => {
+    setStatus("Starting metadata-only Apple Photos index refresh...");
+    const response = await fetch("/__sidecar/index-refresh", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload.ok) throw new Error(payload.error || "Could not start Photos index refresh.");
+    renderIndexStatus(payload);
+    startIndexStatusPolling();
+    setStatus("Index refresh started. Sidecar will report Photos scan and SQLite import progress here.");
   };
 
   const getLimit = () => Math.max(1, Number($("[data-sidecar-limit]")?.value || 96));
@@ -244,7 +333,7 @@
   const videoPlayerMarkup = (item, autoplay = true) => `
     <video class="sidecar-inline-video" controls playsinline preload="metadata" ${autoplay ? "autoplay" : ""} poster="${escapeHtml(previewUrl(item))}" src="${escapeHtml(videoUrl(item))}"></video>
   `;
-  const versionFallback = "123.9";
+  const versionFallback = "124.0";
   const versionFallbackLabel = `v${versionFallback}`;
   const videoBadge = (item, index, label) => isVideo(item)
     ? videoOverlay(item, index, label)
@@ -1467,7 +1556,7 @@
     );
   };
 
-  const fetchLibrarySlice = async (offset, limit) => {
+  const librarySliceParams = (offset, limit) => {
     const params = new URLSearchParams();
     const dateFrom = $("[data-sidecar-date-from]")?.value || "";
     const dateTo = $("[data-sidecar-date-to]")?.value || "";
@@ -1475,17 +1564,41 @@
     params.set("offset", String(Math.max(0, Number(offset || 0))));
     if (dateFrom) params.set("dateFrom", dateFrom);
     if (dateTo) params.set("dateTo", dateTo);
+    return params;
+  };
+
+  const fetchPhotoKitLibrarySlice = async (offset, limit) => {
+    const params = librarySliceParams(offset, limit);
     const response = await fetch(`/__sidecar/library?${params.toString()}`);
     const payload = await response.json().catch(() => ({}));
     if (!response.ok || !payload.ok) throw new Error(payload.error || "Could not load current window.");
+    payload.source = payload.source || "apple-photos";
     return payload;
+  };
+
+  const fetchIndexedLibrarySlice = async (offset, limit) => {
+    const params = librarySliceParams(offset, limit);
+    const response = await fetch(`/__sidecar/index-window?${params.toString()}`);
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload.ok) throw new Error(payload.error || "Could not load local Photos index window.");
+    if (payload.indexStatus) renderIndexStatus(payload.indexStatus);
+    return payload;
+  };
+
+  const fetchLibrarySlice = async (offset, limit, { allowPhotoKitFallback = true } = {}) => {
+    const payload = await fetchIndexedLibrarySlice(offset, limit);
+    const indexedCount = Number(payload.indexedCount || payload.sidecarSummary?.indexedCount || 0);
+    if (indexedCount || !allowPhotoKitFallback) return payload;
+    setStatus("Local Photos index is empty; loading this window once from Apple Photos. Use Refresh Photos index for fast refill.");
+    await waitForStatusPaint();
+    return fetchPhotoKitLibrarySlice(offset, limit);
   };
 
   const loadWindow = async () => {
     state.filters = readFiltersFromControls();
     const limit = getLimit();
     const offset = getOffset();
-    setStatus("Loading current Apple Photos window...");
+    setStatus("Loading current window from local Photos index...");
     const payload = await fetchLibrarySlice(offset, limit);
     state.items = Array.isArray(payload.items) ? payload.items : [];
     state.summary = payload.sidecarSummary || state.summary;
@@ -1496,7 +1609,12 @@
     renderPageChrome();
     renderSurface();
     saveWindowState();
-    const loadedMessage = `Loaded window ${offset.toLocaleString()}-${(offset + state.items.length).toLocaleString()} from Apple Photos. Showing ${visibleIndexes().length.toLocaleString()} after filters.`;
+    const sourceLabel = payload.source === "sidecar-index" ? "local Photos index" : "Apple Photos fallback";
+    const filteredCount = Number(payload.filteredIndexedCount || payload.indexedCount || 0);
+    const indexedNote = payload.source === "sidecar-index"
+      ? ` Indexed range has ${filteredCount.toLocaleString()} item${filteredCount === 1 ? "" : "s"}.`
+      : " Refresh the local Photos index for faster future windows.";
+    const loadedMessage = `Loaded window ${offset.toLocaleString()}-${(offset + state.items.length).toLocaleString()} from ${sourceLabel}. Showing ${visibleIndexes().length.toLocaleString()} after filters.${indexedNote}`;
     setStatus(loadedMessage);
     try {
       await refreshUploadRail({ silent: true });
@@ -1522,8 +1640,13 @@
     let appendedCount = 0;
     let scannedCount = 0;
     let exhausted = false;
-    setStatus(`Refilling current window from Apple Photos offset ${cursor.toLocaleString()}...`);
+    setStatus(`Refill starting at local index offset ${cursor.toLocaleString()}; showing ${currentVisible.toLocaleString()} of ${targetVisible.toLocaleString()}, appended 0, scanned 0.`);
+    await waitForStatusPaint();
     for (let pass = 0; pass < refillMaxFetches && currentVisible < targetVisible; pass += 1) {
+      const batchStart = cursor;
+      const batchEnd = cursor + refillBatchSize - 1;
+      setStatus(`Refill batch ${pass + 1}: scanning local index ${batchStart.toLocaleString()}-${batchEnd.toLocaleString()}; showing ${currentVisible.toLocaleString()} of ${targetVisible.toLocaleString()}, appended ${appendedCount.toLocaleString()}, scanned ${scannedCount.toLocaleString()}.`);
+      await waitForStatusPaint();
       const payload = await fetchLibrarySlice(cursor, refillBatchSize);
       const rows = Array.isArray(payload.items) ? payload.items : [];
       state.summary = payload.sidecarSummary || state.summary;
@@ -1541,6 +1664,8 @@
       }
       scannedCount += consumedRows;
       cursor += consumedRows;
+      setStatus(`Refill progress: showing ${currentVisible.toLocaleString()} of ${targetVisible.toLocaleString()}; appended ${appendedCount.toLocaleString()}, scanned ${scannedCount.toLocaleString()}, next offset ${cursor.toLocaleString()}.`);
+      await waitForStatusPaint();
       if (currentVisible >= targetVisible) break;
       if (rows.length < refillBatchSize) {
         exhausted = true;
@@ -1557,7 +1682,7 @@
     const suffix = filled
       ? "filled the visible window"
       : exhausted
-        ? "reached the end of this Photos range"
+        ? "reached the end of this indexed Photos range"
         : `paused after ${refillMaxFetches.toLocaleString()} scan batches`;
     setStatus(`Refill ${suffix}: appended ${appendedCount.toLocaleString()} item${appendedCount === 1 ? "" : "s"} after scanning ${scannedCount.toLocaleString()}; showing ${currentVisible.toLocaleString()} of ${targetVisible.toLocaleString()}.`);
     refreshUploadRailQuietly();
@@ -1574,6 +1699,7 @@
     if (!response.ok || !payload.ok) throw new Error(payload.error || "Could not load Sidecar summary.");
     state.summary = payload;
     renderCounts();
+    renderIndexStatus({ ...(state.indexStatus || {}), sidecarSummary: payload });
     setStatus(`${Number(payload.pendingSyncCount || 0).toLocaleString()} pending Photos write-back changes.`);
   };
 
@@ -2032,6 +2158,7 @@
 
   loadButton?.addEventListener("click", () => loadWindow().catch((error) => setStatus(error.message)));
   refillButton?.addEventListener("click", () => refillWindow().catch((error) => setStatus(error.message)));
+  indexRefreshButton?.addEventListener("click", () => refreshPhotosIndex().catch((error) => setStatus(error.message)));
   slideBackButton?.addEventListener("click", () => slideWindow(-1).catch((error) => setStatus(error.message)));
   slideForwardButton?.addEventListener("click", () => slideWindow(1).catch((error) => setStatus(error.message)));
   burstCullButton?.addEventListener("click", () => performBurstCull().catch((error) => setStatus(error.message)));
@@ -2046,6 +2173,7 @@
   renderPageChrome();
   renderSurface();
   loadKeywordBlacklist();
+  refreshIndexStatus({ silent: true }).catch(() => {});
   fetch("/__sidecar/version")
     .then((response) => response.json())
     .then((payload) => {

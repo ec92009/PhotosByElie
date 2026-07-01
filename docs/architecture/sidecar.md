@@ -1,6 +1,6 @@
 # Photos By Elie Sidecar Architecture
 
-Date: 2026-06-30
+Date: 2026-07-02
 
 Sidecar is a local-only Apple Photos triage workstation that rides beside Owner.
 It is deliberately not the commercial app. Sidecar decides library fate and
@@ -10,7 +10,7 @@ metadata; Owner decides publication and commerce.
 
 Sidecar has its own local visible version in `SIDECAR_VERSION`.
 
-- Current Sidecar version: `v123.9`
+- Current Sidecar version: `v124.0`
 - Versioning follows the canonical `~/Dev/.SOPs/VERSIONING_SOP.md` default
   calendar visible-version rule for this local web-app surface.
 - Sidecar version bumps do not imply a public Photos By Elie site version bump.
@@ -22,8 +22,8 @@ Sidecar v0 uses the existing repo shape:
 - `sidecar.html`, `sidecar.js`, `sidecar.css`: local web UI.
 - `scripts/sidecar_server.py`: localhost helper and JSON endpoints.
 - `scripts/sidecar_state_db.py`: Sidecar tables in `assets/owner-actions/Owner.sqlite`.
-- `scripts/apple_photos_bridge.swift`: PhotoKit bridge for library slices and
-  best-available local previews.
+- `scripts/apple_photos_bridge.swift`: PhotoKit bridge for metadata index scans,
+  compatibility library slices, and best-available local previews.
 - `scripts/install_sidecar_dock_app.zsh` and `scripts/open_sidecar_main.py`:
   Dock-friendly launcher that starts the helper and opens Safari.
 
@@ -62,6 +62,14 @@ The commercial app owns:
 
 Sidecar starts from the entire Apple Photos library, roughly 57K items. Every
 item should be reachable by capture date, even when album membership is messy.
+
+Sidecar now treats `sidecar_assets` in `assets/owner-actions/Owner.sqlite` as
+the local Photos metadata index. A metadata-only refresh walks PhotoKit once,
+writes JSONL, imports batches into SQLite, reports scan/import progress, and
+does not ask Photos for previews, originals, video resources, or iCloud
+downloads. Current-window load/refill reads this local index first; the older
+PhotoKit offset slice path remains only as a cold-start fallback when the local
+index is empty.
 
 Core states:
 
@@ -140,9 +148,12 @@ Sidecar has two primary pages backed by the same current window:
   selection. Click, Command-click, and Shift-click support single, toggle, and
   range selection.
   The **Refill window** action preserves the current starting offset and filters
-  while scanning forward through later Apple Photos assets to fill depleted
-  visible space after mock uploads, rejects, tombstones, or active filters remove
-  rows from the working view.
+  while scanning forward through later local-index rows to fill depleted visible
+  space after mock uploads, rejects, tombstones, or active filters remove rows
+  from the working view. Refill reports each local scan chunk and cumulative
+  progress. The **Refresh Photos index** action is the explicit place where
+  PhotoKit performs a whole-library metadata pass, with visible progress while
+  scanning Photos and importing into SQLite.
   Actions update local SQLite and advance without blocking on Photos. The
   **Cull bursts** action applies the conservative one-second burst pass to the
   visible current-window photos, skips picked/videos/already rejected items, and
@@ -206,16 +217,19 @@ Source controls should include:
 The first implemented slice includes:
 
 - `library-index` PhotoKit bridge command for date/limit/offset slices.
+- `library-index-file` PhotoKit bridge command for one-pass, metadata-only
+  JSONL index refreshes with progress events.
 - `preview` PhotoKit bridge command for best-available local JPEG still previews
   and video poster frames with iCloud/network access disabled.
 - `video` PhotoKit bridge command for selected-video local playback when the
   underlying video resource is already local.
 - Sidecar helper endpoints under `/__sidecar/*`.
-- SQLite-backed local decisions and pending sync queue.
+- SQLite-backed local Photos metadata index, local decisions, and pending sync
+  queue.
 - Sidecar web UI for automatically loading the persistent current window,
-  sliding the window
-  forward/back, filtering by rating/color/decision state, staging cull decisions,
-  applying current-window burst culling,
+  sliding the window forward/back, refilling depleted space from the local index,
+  refreshing the Photos metadata index with visible progress, filtering by
+  rating/color/decision state, staging cull decisions, applying current-window burst culling,
   reviewing picked-item metadata in oldest-to-newest row form with field and
   decision propagation, AI rework categories, previewing the active item with Space,
   tombstoning the wastebasket explicitly, viewing upload eligibility as a
@@ -227,7 +241,8 @@ The first implemented slice includes:
 Remaining near-term slices:
 
 - Actual Photos title/keyword write-back for pending sync records.
-- Whole-library incremental indexing with durable progress.
+- Incremental index refresh refinements, such as cheaper change detection and
+  richer missing-asset reporting.
 - Album/smart-album source filters.
 - AI nightly queue generation from the undecided middle.
 - Owner consumption of Sidecar upload plans.

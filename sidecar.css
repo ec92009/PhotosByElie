@@ -310,6 +310,52 @@ body[data-gallery="sidecar"] {
   gap: .6rem;
 }
 
+.sidecar-index-status {
+  display: grid;
+  gap: .42rem;
+  max-width: 48rem;
+  border: 1px solid color-mix(in srgb, var(--text) 14%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+  padding: .62rem .75rem;
+}
+
+.sidecar-index-status-copy {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem .75rem;
+  align-items: baseline;
+  justify-content: space-between;
+  color: var(--text);
+  font-size: .84rem;
+  font-weight: 800;
+}
+
+.sidecar-index-status-copy span {
+  color: color-mix(in srgb, var(--text) 84%, transparent);
+}
+
+.sidecar-index-status-copy strong {
+  color: var(--muted);
+  font-size: .76rem;
+  text-transform: uppercase;
+}
+
+.sidecar-index-status[data-sidecar-index-state="running"] {
+  border-color: color-mix(in srgb, var(--selected-frame) 58%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--selected-frame) 14%, transparent);
+}
+
+.sidecar-index-status[data-sidecar-index-state="failed"] {
+  border-color: color-mix(in srgb, #d95043 70%, transparent);
+}
+
+.sidecar-index-progress {
+  width: 100%;
+  height: .55rem;
+  accent-color: var(--selected-frame);
+}
+
 .sidecar-danger-action {
   border-color: color-mix(in srgb, #c83f33 54%, transparent);
   color: color-mix(in srgb, #ffebe5 74%, var(--text) 26%);

@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#7b4d26"/>
   <link rel="stylesheet" href="./shared.css"/>
   <link rel="stylesheet" href="./photos.css"/>
-  <link rel="stylesheet" href="./sidecar.css?v=123.9"/>
+  <link rel="stylesheet" href="./sidecar.css?v=124.0"/>
 </head>
 <body data-gallery="sidecar">
   <header class="site-header">
@@ -98,6 +98,7 @@
       <div class="cta sidecar-actions">
         <button class="btn primary" type="button" data-sidecar-load>Load window</button>
         <button class="btn secondary" type="button" data-sidecar-refill>Refill window</button>
+        <button class="btn secondary" type="button" data-sidecar-index-refresh>Refresh Photos index</button>
         <button class="btn secondary" type="button" data-sidecar-slide-back>Slide back</button>
         <button class="btn secondary" type="button" data-sidecar-slide-forward>Slide forward</button>
         <button class="btn secondary sidecar-burst-action" type="button" data-sidecar-burst-cull>Cull bursts</button>
@@ -105,6 +106,13 @@
         <button class="btn secondary" type="button" data-sidecar-upload-plan>Upload plan</button>
         <button class="btn secondary" type="button" data-sidecar-commit-plan>Photos commit plan</button>
         <button class="btn secondary sidecar-danger-action" type="button" data-sidecar-empty-wastebasket>Empty wastebasket</button>
+      </div>
+      <div class="sidecar-index-status" data-sidecar-index-status hidden>
+        <div class="sidecar-index-status-copy">
+          <span data-sidecar-index-label>Local Photos index status</span>
+          <strong data-sidecar-index-count>0 indexed</strong>
+        </div>
+        <progress class="sidecar-index-progress" max="100" value="0" data-sidecar-index-progress hidden></progress>
       </div>
       <p class="owner-card-note">Shortcuts: <kbd>1</kbd>-<kbd>5</kbd> rating, <kbd>0</kbd> clear rating, <kbd>6</kbd>-<kbd>9</kbd> toggle red/yellow/green/blue, <kbd>P</kbd> pick, <kbd>A</kbd> approve metadata + pick, <kbd>X</kbd> reject, <kbd>H</kbd> hide, <kbd>U</kbd> unpick, arrows select, <kbd>Shift</kbd>+arrows extend selection, <kbd>Space</kbd> preview, <kbd>Cmd</kbd>-<kbd>Z</kbd> undo. Shortcuts keep working in preview. Click, <kbd>Cmd</kbd>-click, and <kbd>Shift</kbd>-click select.</p>
     </section>
@@ -136,6 +144,6 @@
   </main>
 
   <script src="./photos.js"></script>
-  <script src="./sidecar.js?v=123.9"></script>
+  <script src="./sidecar.js?v=124.0"></script>
 </body>
 </html>

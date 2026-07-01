@@ -554,6 +554,70 @@ func libraryIndex(limit: Int, offset: Int, dateFrom: Date?, dateTo: Date?) -> [S
     ]
 }
 
+func writeLibraryIndexFile(destination: URL, dateFrom: Date?, dateTo: Date?, progressEvery: Int) throws -> [String: Any] {
+    let safeProgressEvery = max(1, progressEvery)
+    let options = libraryFetchOptions(limit: 0, offset: 0, dateFrom: dateFrom, dateTo: dateTo)
+    let assets = PHAsset.fetchAssets(with: options)
+    try FileManager.default.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
+    FileManager.default.createFile(atPath: destination.path, contents: nil)
+    let handle = try FileHandle(forWritingTo: destination)
+    defer { handle.closeFile() }
+
+    let totalCount = assets.count
+    emitProgress("library_index_start", [
+        "destination": destination.path,
+        "totalCount": totalCount,
+        "dateFrom": isoDate(dateFrom),
+        "dateTo": isoDate(dateTo),
+    ])
+
+    var indexedCount = 0
+    var writeError: Error?
+    assets.enumerateObjects { asset, index, stop in
+        let row = assetRow(asset, index: index + 1)
+        guard JSONSerialization.isValidJSONObject(row),
+              let data = try? JSONSerialization.data(withJSONObject: row, options: [.sortedKeys]) else {
+            writeError = BridgeError(code: "index_row_invalid", message: "Apple Photos asset metadata could not be encoded for local indexing.")
+            stop.pointee = true
+            return
+        }
+        handle.write(data)
+        handle.write("\n".data(using: .utf8)!)
+        indexedCount += 1
+        if indexedCount == 1 || indexedCount == totalCount || indexedCount % safeProgressEvery == 0 {
+            emitProgress("library_index_progress", [
+                "destination": destination.path,
+                "indexedCount": indexedCount,
+                "totalCount": totalCount,
+                "progress": totalCount > 0 ? Double(indexedCount) / Double(totalCount) : 1.0,
+            ])
+        }
+    }
+    if let writeError {
+        throw writeError
+    }
+    emitProgress("library_index_done", [
+        "destination": destination.path,
+        "indexedCount": indexedCount,
+        "totalCount": totalCount,
+        "dateFrom": isoDate(dateFrom),
+        "dateTo": isoDate(dateTo),
+    ])
+    return [
+        "ok": true,
+        "mode": "library-index-file",
+        "destination": destination.path,
+        "count": indexedCount,
+        "totalCount": totalCount,
+        "dateFrom": isoDate(dateFrom),
+        "dateTo": isoDate(dateTo),
+        "notes": [
+            "Metadata-only index scan; previews, videos, originals, and iCloud downloads are not requested.",
+            "Uses PhotoKit metadata only; does not read .photoslibrary package internals.",
+        ],
+    ]
+}
+
 func findAsset(id: String?) throws -> PHAsset {
     guard let id, !id.isEmpty else {
         throw BridgeError(code: "missing_asset_id", message: "Missing Apple Photos asset identifier.")
@@ -1608,7 +1672,7 @@ func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterB
 
 let command = CommandLine.arguments.dropFirst().first ?? ""
 if command.isEmpty || command == "--help" {
-    printJSON(["ok": true, "usage": "apple_photos_bridge.swift albums | library-index [--limit N] [--offset N] [--date-from YYYY-MM-DD] [--date-to YYYY-MM-DD] | preview --asset-id ID --destination PATH [--max-pixel N] | video --asset-id ID --destination PATH | preflight --album-id ID [--filter-bursts] [--allow-icloud-downloads] | export --album-id ID --destination PATH [--filter-bursts] [--allow-icloud-downloads]"])
+    printJSON(["ok": true, "usage": "apple_photos_bridge.swift albums | library-index [--limit N] [--offset N] [--date-from YYYY-MM-DD] [--date-to YYYY-MM-DD] | library-index-file --destination PATH [--date-from YYYY-MM-DD] [--date-to YYYY-MM-DD] [--progress-every N] | preview --asset-id ID --destination PATH [--max-pixel N] | video --asset-id ID --destination PATH | preflight --album-id ID [--filter-bursts] [--allow-icloud-downloads] | export --album-id ID --destination PATH [--filter-bursts] [--allow-icloud-downloads]"])
     exit(0)
 }
 
@@ -1624,6 +1688,16 @@ do {
             offset: intArg("--offset", default: 0),
             dateFrom: parseISODateArg(argValue("--date-from")),
             dateTo: parseISODateArg(argValue("--date-to"))
+        ))
+    case "library-index-file":
+        guard let destination = argValue("--destination") else {
+            fail("missing_destination", "Missing --destination for Apple Photos library index file.")
+        }
+        printJSON(try writeLibraryIndexFile(
+            destination: URL(fileURLWithPath: destination),
+            dateFrom: parseISODateArg(argValue("--date-from")),
+            dateTo: parseISODateArg(argValue("--date-to")),
+            progressEvery: intArg("--progress-every", default: 100)
         ))
     case "preview":
         guard let destination = argValue("--destination") else {

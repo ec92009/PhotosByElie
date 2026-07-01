@@ -421,8 +421,10 @@ Clock state: running
 | 2026-07-01 | 22:21 CEST | 22:22 CEST | 0:01 | Requested Sidecar bulk decisions keep multi-selection alive after Pick so follow-up stars/colors can be applied without reselecting; background implementation/testing time excluded. |
 | 2026-07-01 | 23:24 CEST | 23:25 CEST | 0:01 | Requested compact Sidecar Stars/Colors filter controls with All/None buttons and color swatches; background implementation/testing time excluded. |
 | 2026-07-01 | 23:45 CEST | 23:46 CEST | 0:01 | Requested a Sidecar current-window refill path so depleted mock-uploaded/rejected/filter-hidden windows can pull later reviewable items without repeated slide clicks; background implementation/testing time excluded. |
+| 2026-07-02 | 00:13 CEST | 00:14 CEST | 0:01 | Requested visible Sidecar refill progress while Apple Photos scans later rows; background implementation/testing time excluded. |
+| 2026-07-02 | 00:31 CEST | 00:35 CEST | 0:01 | Approved switching Sidecar refill to a local Photos metadata index and asked about the indexing tradeoffs; background implementation/testing time excluded. |
 
 ## Totals
 
-Active collaboration time used: 22:25
+Active collaboration time used: 22:27
 Remaining budget: not set

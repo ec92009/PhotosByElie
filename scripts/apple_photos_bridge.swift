@@ -340,6 +340,65 @@ func assetLocationRow(_ asset: PHAsset) -> [String: Any]? {
     return row
 }
 
+func compactString(_ value: Any?) -> String {
+    guard let value else { return "" }
+    return String(describing: value).trimmingCharacters(in: .whitespacesAndNewlines)
+}
+
+func selectorValue(_ asset: PHAsset, _ selectorName: String) -> Any? {
+    let selector = NSSelectorFromString(selectorName)
+    guard asset.responds(to: selector) else { return nil }
+    return asset.value(forKey: selectorName)
+}
+
+func firstAssetString(_ asset: PHAsset, selectors: [String]) -> String {
+    for selector in selectors {
+        let value = compactString(selectorValue(asset, selector))
+        if !value.isEmpty {
+            return value
+        }
+    }
+    return ""
+}
+
+func assetStringArray(_ asset: PHAsset, selectors: [String]) -> [String] {
+    for selector in selectors {
+        guard let value = selectorValue(asset, selector) else { continue }
+        if let strings = value as? [String] {
+            let cleaned = strings.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+            if !cleaned.isEmpty { return cleaned }
+        }
+        if let array = value as? NSArray {
+            let cleaned = array.compactMap { item -> String? in
+                let text = compactString(item)
+                return text.isEmpty ? nil : text
+            }
+            if !cleaned.isEmpty { return cleaned }
+        }
+        let text = compactString(value)
+        if !text.isEmpty {
+            return text
+                .split(separator: ",")
+                .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+        }
+    }
+    return []
+}
+
+func assetPhotosMetadata(_ asset: PHAsset) -> [String: Any] {
+    var row: [String: Any] = [:]
+    let title = firstAssetString(asset, selectors: ["title", "localizedTitle"])
+    let keywords = assetStringArray(asset, selectors: ["keywordTitles", "keywords"])
+    if !title.isEmpty {
+        row["title"] = title
+    }
+    if !keywords.isEmpty {
+        row["keywords"] = keywords
+    }
+    return row
+}
+
 struct AssetPlan {
     let asset: PHAsset
     let index: Int
@@ -424,6 +483,16 @@ func assetRow(_ asset: PHAsset, index: Int) -> [String: Any] {
     ]
     if let location = assetLocationRow(asset) {
         row["location"] = location
+    }
+    let photosMetadata = assetPhotosMetadata(asset)
+    if !photosMetadata.isEmpty {
+        row["applePhotosMetadata"] = photosMetadata
+        if let title = photosMetadata["title"] as? String, !title.isEmpty {
+            row["applePhotosTitle"] = title
+        }
+        if let keywords = photosMetadata["keywords"] as? [String], !keywords.isEmpty {
+            row["applePhotosKeywords"] = keywords
+        }
     }
     return row
 }

@@ -10,7 +10,7 @@ metadata; Owner decides publication and commerce.
 
 Sidecar has its own local visible version in `SIDECAR_VERSION`.
 
-- Current Sidecar version: `v123.2`
+- Current Sidecar version: `v123.3`
 - Versioning follows the canonical `~/Dev/.SOPs/VERSIONING_SOP.md` default
   calendar visible-version rule for this local web-app surface.
 - Sidecar version bumps do not imply a public Photos By Elie site version bump.
@@ -160,6 +160,12 @@ Sidecar has two primary pages backed by the same current window:
   plan until this page marks their metadata approved. The title and keyword
   field arrows propagate that single field to the current and following picked
   rows inside the same two-hour capture window, then approve those rows locally.
+  Unedited rows seed those fields from existing Apple Photos title/keywords
+  when PhotoKit exposes them. If GPS maps to a known place and the Photos title
+  is blank, Review seeds a compact fallback title such as `2026 Paris` and adds
+  human place labels to the keyword seed without exposing exact coordinates.
+  When Photos exposes a useful title but not the keyword list, Sidecar derives
+  starter keywords from comma/section-separated title parts.
   The row **Propagate** action carries the review decision itself: metadata
   approval or the selected AI rework category/comment. AI rework categories
   match Owner review: incorrect, too generic, placeholder, use keywords, add

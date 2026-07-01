@@ -30,6 +30,45 @@ COLOR_VALUES = {"", "red", "yellow", "green", "blue", "purple"}
 PICK_STATES = {"undecided", "picked", "rejected", "hidden"}
 METADATA_STATES = {"unreviewed", "proposed", "approved", "rework", "blocked"}
 REWORK_CATEGORIES = {"", "incorrect", "generic", "placeholder", "keywords", "detail", "shoot", "other"}
+CITY_GPS_HINTS: tuple[dict[str, Any], ...] = (
+    {"city": "Solana Beach", "region": "California", "country": "United States", "lat": (32.98, 33.02), "lon": (-117.29, -117.24)},
+    {"city": "Del Mar", "region": "California", "country": "United States", "lat": (32.93, 33.00), "lon": (-117.30, -117.22)},
+    {"city": "San Diego", "region": "California", "country": "United States", "lat": (32.65, 32.90), "lon": (-117.30, -117.00)},
+    {"city": "Malaga", "region": "Andalusia", "country": "Spain", "lat": (36.62, 36.82), "lon": (-4.58, -4.25)},
+    {"city": "Nerja", "region": "Andalusia", "country": "Spain", "lat": (36.70, 36.80), "lon": (-3.95, -3.80)},
+    {"city": "Ronda", "region": "Andalusia", "country": "Spain", "lat": (36.68, 36.78), "lon": (-5.22, -5.10)},
+    {"city": "Seville", "region": "Andalusia", "country": "Spain", "lat": (37.30, 37.45), "lon": (-6.05, -5.85)},
+    {"city": "Cordoba", "region": "Andalusia", "country": "Spain", "lat": (37.82, 37.95), "lon": (-4.86, -4.70)},
+    {"city": "Granada", "region": "Andalusia", "country": "Spain", "lat": (37.12, 37.25), "lon": (-3.65, -3.50)},
+    {"city": "Cadiz", "region": "Andalusia", "country": "Spain", "lat": (36.45, 36.58), "lon": (-6.35, -6.20)},
+    {"city": "Madrid", "region": "Community of Madrid", "country": "Spain", "lat": (40.30, 40.55), "lon": (-3.85, -3.55)},
+    {"city": "Barcelona", "region": "Catalonia", "country": "Spain", "lat": (41.30, 41.50), "lon": (2.05, 2.25)},
+    {"city": "Valencia", "region": "Valencian Community", "country": "Spain", "lat": (39.40, 39.55), "lon": (-0.45, -0.25)},
+    {"city": "Bilbao", "region": "Basque Country", "country": "Spain", "lat": (43.22, 43.32), "lon": (-3.00, -2.85)},
+    {"city": "Paris", "region": "Ile-de-France", "country": "France", "lat": (48.80, 48.92), "lon": (2.20, 2.48)},
+    {"city": "Albi", "region": "Occitanie", "country": "France", "lat": (43.88, 43.96), "lon": (2.10, 2.22)},
+    {"city": "Lisbon", "region": "Lisbon", "country": "Portugal", "lat": (38.65, 38.82), "lon": (-9.25, -9.05)},
+    {"city": "Cascais", "region": "Lisbon", "country": "Portugal", "lat": (38.65, 38.75), "lon": (-9.50, -9.35)},
+    {"city": "Sintra", "region": "Lisbon", "country": "Portugal", "lat": (38.75, 38.85), "lon": (-9.45, -9.30)},
+    {"city": "Porto", "region": "Northern Portugal", "country": "Portugal", "lat": (41.10, 41.25), "lon": (-8.75, -8.50)},
+    {"city": "Florence", "region": "Tuscany", "country": "Italy", "lat": (43.72, 43.83), "lon": (11.18, 11.33)},
+    {"city": "Pisa", "region": "Tuscany", "country": "Italy", "lat": (43.67, 43.76), "lon": (10.35, 10.48)},
+    {"city": "San Gimignano", "region": "Tuscany", "country": "Italy", "lat": (43.43, 43.50), "lon": (11.00, 11.08)},
+    {"city": "Rome", "region": "Lazio", "country": "Italy", "lat": (41.80, 42.02), "lon": (12.35, 12.65)},
+    {"city": "Venice", "region": "Veneto", "country": "Italy", "lat": (45.39, 45.48), "lon": (12.25, 12.40)},
+    {"city": "Bratislava", "region": "Bratislava", "country": "Slovakia", "lat": (48.08, 48.22), "lon": (16.95, 17.25)},
+    {"city": "New York", "region": "New York", "country": "United States", "lat": (40.50, 40.92), "lon": (-74.10, -73.70)},
+    {"city": "Miami", "region": "Florida", "country": "United States", "lat": (25.70, 25.90), "lon": (-80.35, -80.10)},
+)
+COUNTRY_GPS_HINTS: tuple[dict[str, Any], ...] = (
+    {"country": "Spain", "lat": (35.0, 44.3), "lon": (-9.5, 4.5)},
+    {"country": "France", "lat": (41.0, 51.3), "lon": (-5.5, 9.8)},
+    {"country": "Portugal", "lat": (36.8, 42.3), "lon": (-9.7, -6.0)},
+    {"country": "Italy", "lat": (36.5, 47.2), "lon": (6.5, 18.6)},
+    {"country": "Slovakia", "lat": (47.7, 49.7), "lon": (16.8, 22.7)},
+    {"country": "United States", "lat": (24.0, 49.5), "lon": (-125.0, -66.0)},
+    {"country": "Mexico", "lat": (14.0, 33.0), "lon": (-118.0, -86.0)},
+)
 
 
 def now_iso() -> str:
@@ -79,6 +118,12 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
           duration       REAL,
           favorite       INTEGER NOT NULL DEFAULT 0 CHECK (favorite IN (0, 1)),
           hidden         INTEGER NOT NULL DEFAULT 0 CHECK (hidden IN (0, 1)),
+          photos_title   TEXT,
+          photos_keywords_json TEXT NOT NULL DEFAULT '[]',
+          location_label TEXT,
+          location_keywords_json TEXT NOT NULL DEFAULT '[]',
+          metadata_seed_title TEXT,
+          metadata_seed_keywords_json TEXT NOT NULL DEFAULT '[]',
           raw_json       TEXT NOT NULL DEFAULT '{}',
           indexed_at     TEXT,
           updated_at     TEXT
@@ -153,26 +198,188 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE sidecar_decisions ADD COLUMN rework_category TEXT NOT NULL DEFAULT ''")
     if "rework_comment" not in decision_columns:
         conn.execute("ALTER TABLE sidecar_decisions ADD COLUMN rework_comment TEXT")
+    asset_columns = {
+        str(row["name"])
+        for row in conn.execute("PRAGMA table_info(sidecar_assets)").fetchall()
+    }
+    asset_column_defaults = {
+        "photos_title": "TEXT",
+        "photos_keywords_json": "TEXT NOT NULL DEFAULT '[]'",
+        "location_label": "TEXT",
+        "location_keywords_json": "TEXT NOT NULL DEFAULT '[]'",
+        "metadata_seed_title": "TEXT",
+        "metadata_seed_keywords_json": "TEXT NOT NULL DEFAULT '[]'",
+    }
+    for column, definition in asset_column_defaults.items():
+        if column not in asset_columns:
+            conn.execute(f"ALTER TABLE sidecar_assets ADD COLUMN {column} {definition}")
 
 
 def _asset_id(row: dict[str, Any]) -> str:
     return str(row.get("localIdentifier") or row.get("asset_id") or row.get("assetId") or "").strip()
 
 
+def _number(value: Any) -> float | None:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _dedupe_text(values: Iterable[Any]) -> list[str]:
+    cleaned: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        text = str(value or "").strip()
+        normalized = text.casefold()
+        if not text or normalized in seen:
+            continue
+        seen.add(normalized)
+        cleaned.append(text)
+    return cleaned
+
+
+def _location_dict(row: dict[str, Any]) -> dict[str, Any]:
+    location = row.get("location")
+    return location if isinstance(location, dict) else {}
+
+
+def _location_place_from_gps(row: dict[str, Any]) -> dict[str, str]:
+    location = _location_dict(row)
+    latitude = _number(location.get("latitude"))
+    longitude = _number(location.get("longitude"))
+    if latitude is None or longitude is None:
+        return {}
+    for hint in CITY_GPS_HINTS:
+        min_lat, max_lat = hint["lat"]
+        min_lon, max_lon = hint["lon"]
+        if min_lat <= latitude <= max_lat and min_lon <= longitude <= max_lon:
+            return {
+                "city": str(hint.get("city") or ""),
+                "region": str(hint.get("region") or ""),
+                "country": str(hint.get("country") or ""),
+            }
+    for hint in COUNTRY_GPS_HINTS:
+        min_lat, max_lat = hint["lat"]
+        min_lon, max_lon = hint["lon"]
+        if min_lat <= latitude <= max_lat and min_lon <= longitude <= max_lon:
+            return {"country": str(hint.get("country") or "")}
+    return {}
+
+
+def _location_metadata_from_row(row: dict[str, Any]) -> tuple[str, list[str], str]:
+    location = _location_dict(row)
+    place = {
+        "city": str(location.get("city") or row.get("locationCity") or "").strip(),
+        "region": str(location.get("region") or row.get("locationRegion") or "").strip(),
+        "country": str(location.get("country") or row.get("locationCountry") or "").strip(),
+    }
+    if not any(place.values()):
+        place = _location_place_from_gps(row)
+    label = str(row.get("locationLabel") or row.get("locationName") or "").strip()
+    keywords = _dedupe_text([place.get("city"), place.get("region"), place.get("country")])
+    if not label:
+        label = ", ".join(keywords)
+    title_place = place.get("city") or place.get("country") or (keywords[0] if keywords else "")
+    return label, keywords, title_place
+
+
+def _photos_title_from_row(row: dict[str, Any]) -> str:
+    metadata = row.get("applePhotosMetadata")
+    if isinstance(metadata, dict):
+        title = str(metadata.get("title") or "").strip()
+        if title:
+            return title
+    return str(row.get("applePhotosTitle") or row.get("photosTitle") or "").strip()
+
+
+def _photos_keywords_from_row(row: dict[str, Any]) -> list[str]:
+    metadata = row.get("applePhotosMetadata")
+    if isinstance(metadata, dict) and metadata.get("keywords") is not None:
+        return _dedupe_text(metadata.get("keywords") if isinstance(metadata.get("keywords"), list) else [metadata.get("keywords")])
+    value = row.get("applePhotosKeywords") if row.get("applePhotosKeywords") is not None else row.get("photosKeywords")
+    if isinstance(value, str):
+        return _dedupe_text(value.replace(";", ",").split(","))
+    if isinstance(value, list):
+        return _dedupe_text(value)
+    return []
+
+
+def _capture_year(row: dict[str, Any]) -> str:
+    captured = str(row.get("creationDate") or row.get("captured_at") or row.get("capturedAt") or "")
+    return captured[:4] if len(captured) >= 4 and captured[:4].isdigit() else ""
+
+
+def _title_keyword_hints(title: str) -> list[str]:
+    value = str(title or "").strip()
+    if not value:
+        return []
+    separators = [",", " - ", " · ", " / "]
+    if not any(separator in value for separator in separators):
+        return []
+    normalized = value
+    for separator in separators[1:]:
+        normalized = normalized.replace(separator, ",")
+    return _dedupe_text(part.strip() for part in normalized.split(",") if part.strip())
+
+
+def _metadata_seed_from_row(row: dict[str, Any], keyword_blacklist: set[str]) -> dict[str, Any]:
+    photos_title = _photos_title_from_row(row)
+    photos_keywords = _clean_keywords(_photos_keywords_from_row(row), keyword_blacklist)
+    title_keywords = _clean_keywords(_title_keyword_hints(photos_title), keyword_blacklist)
+    location_label, location_keywords, title_place = _location_metadata_from_row(row)
+    location_keywords = _clean_keywords(location_keywords, keyword_blacklist)
+    year = _capture_year(row)
+    seed_title = photos_title or (" ".join(part for part in [year, title_place] if part).strip())
+    seed_keywords = _clean_keywords([*photos_keywords, *title_keywords, *location_keywords], keyword_blacklist)
+    return {
+        "photosTitle": photos_title,
+        "photosKeywords": photos_keywords,
+        "locationLabel": location_label,
+        "locationKeywords": location_keywords,
+        "seedTitle": seed_title,
+        "seedKeywords": seed_keywords,
+    }
+
+
+def _asset_metadata_payload(row: sqlite3.Row | None) -> dict[str, Any]:
+    if row is None:
+        return {
+            "title": "",
+            "keywords": [],
+            "locationLabel": "",
+            "locationKeywords": [],
+            "seedTitle": "",
+            "seedKeywords": [],
+        }
+    return {
+        "title": row["photos_title"] or "",
+        "keywords": _read_json_text(row["photos_keywords_json"], []),
+        "locationLabel": row["location_label"] or "",
+        "locationKeywords": _read_json_text(row["location_keywords_json"], []),
+        "seedTitle": row["metadata_seed_title"] or "",
+        "seedKeywords": _read_json_text(row["metadata_seed_keywords_json"], []),
+    }
+
+
 def upsert_assets(repo_root: Path, rows: Iterable[dict[str, Any]]) -> int:
     now = now_iso()
     count = 0
     with connect(repo_root) as conn:
+        keyword_blacklist = _keyword_blacklist_set(conn, repo_root)
         for row in rows:
             asset_id = _asset_id(row)
             if not asset_id:
                 continue
+            metadata_seed = _metadata_seed_from_row(row, keyword_blacklist)
             conn.execute(
                 """
                 INSERT INTO sidecar_assets (
                   asset_id, source_anchor, media_type, filename, captured_at, modified_at,
-                  pixel_width, pixel_height, duration, favorite, hidden, raw_json, indexed_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                  pixel_width, pixel_height, duration, favorite, hidden, photos_title,
+                  photos_keywords_json, location_label, location_keywords_json,
+                  metadata_seed_title, metadata_seed_keywords_json, raw_json, indexed_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(asset_id) DO UPDATE SET
                   source_anchor = excluded.source_anchor,
                   media_type = excluded.media_type,
@@ -184,6 +391,12 @@ def upsert_assets(repo_root: Path, rows: Iterable[dict[str, Any]]) -> int:
                   duration = excluded.duration,
                   favorite = excluded.favorite,
                   hidden = excluded.hidden,
+                  photos_title = excluded.photos_title,
+                  photos_keywords_json = excluded.photos_keywords_json,
+                  location_label = excluded.location_label,
+                  location_keywords_json = excluded.location_keywords_json,
+                  metadata_seed_title = excluded.metadata_seed_title,
+                  metadata_seed_keywords_json = excluded.metadata_seed_keywords_json,
                   raw_json = excluded.raw_json,
                   indexed_at = excluded.indexed_at,
                   updated_at = excluded.updated_at
@@ -200,6 +413,12 @@ def upsert_assets(repo_root: Path, rows: Iterable[dict[str, Any]]) -> int:
                     float(row.get("duration") or 0),
                     1 if row.get("favorite") else 0,
                     1 if row.get("hidden") else 0,
+                    metadata_seed["photosTitle"],
+                    _json_text(metadata_seed["photosKeywords"]),
+                    metadata_seed["locationLabel"],
+                    _json_text(metadata_seed["locationKeywords"]),
+                    metadata_seed["seedTitle"],
+                    _json_text(metadata_seed["seedKeywords"]),
                     _json_text(row),
                     now,
                     now,
@@ -255,6 +474,16 @@ def merge_state(repo_root: Path, rows: list[dict[str, Any]]) -> list[dict[str, A
             asset_ids,
         ).fetchall()
         decisions = {str(row["asset_id"]): _decision_payload(row) for row in decision_rows}
+        asset_metadata_rows = conn.execute(
+            f"""
+            SELECT asset_id, photos_title, photos_keywords_json, location_label, location_keywords_json,
+                   metadata_seed_title, metadata_seed_keywords_json
+            FROM sidecar_assets
+            WHERE asset_id IN ({placeholders})
+            """,
+            asset_ids,
+        ).fetchall()
+        asset_metadata = {str(row["asset_id"]): _asset_metadata_payload(row) for row in asset_metadata_rows}
         pending_rows = conn.execute(
             f"""
             SELECT asset_id, count(*) AS pending_count
@@ -297,6 +526,7 @@ def merge_state(repo_root: Path, rows: list[dict[str, Any]]) -> list[dict[str, A
         merged.append({
             **row,
             "sidecarState": decisions.get(asset_id, _decision_payload(None)),
+            "applePhotosMetadata": asset_metadata.get(asset_id, _asset_metadata_payload(None)),
             "pendingSyncCount": pending.get(asset_id, 0),
             "tombstoneState": tombstones.get(asset_id, ""),
             "mockUploadState": mock_upload.get("state", ""),

@@ -228,7 +228,7 @@
   const videoPlayerMarkup = (item, autoplay = true) => `
     <video class="sidecar-inline-video" controls playsinline preload="metadata" ${autoplay ? "autoplay" : ""} poster="${escapeHtml(previewUrl(item))}" src="${escapeHtml(videoUrl(item))}"></video>
   `;
-  const versionFallback = "123.2";
+  const versionFallback = "123.3";
   const versionFallbackLabel = `v${versionFallback}`;
   const videoBadge = (item, index, label) => isVideo(item)
     ? videoOverlay(item, index, label)
@@ -530,6 +530,56 @@
       });
   };
 
+  const cleanKeywordList = (keywords = []) => {
+    const seen = new Set();
+    const values = Array.isArray(keywords) ? keywords : [keywords];
+    return values
+      .flatMap((keyword) => String(keyword || "").replace(/;/g, ",").split(","))
+      .map((keyword) => keyword.trim())
+      .filter(Boolean)
+      .filter((keyword) => {
+        const normalized = keyword.toLowerCase();
+        if (state.keywordBlacklist.has(normalized) || seen.has(normalized)) return false;
+        seen.add(normalized);
+        return true;
+      });
+  };
+
+  const hasLocalMetadataDecision = (sidecar = {}) => {
+    const metadataState = sidecar.metadataState || "unreviewed";
+    if (metadataState && metadataState !== "unreviewed") return true;
+    return ["metadata", "approve", "metadata-rework"].includes(sidecar.lastAction || "");
+  };
+
+  const seededMetadataForItem = (item) => {
+    const metadata = item?.applePhotosMetadata || {};
+    return {
+      title: metadata.seedTitle || metadata.title || "",
+      keywords: cleanKeywordList(metadata.seedKeywords?.length ? metadata.seedKeywords : metadata.keywords || []),
+      locationLabel: metadata.locationLabel || "",
+      locationKeywords: cleanKeywordList(metadata.locationKeywords || []),
+    };
+  };
+
+  const effectiveMetadataForItem = (item) => {
+    const sidecar = item?.sidecarState || {};
+    if (hasLocalMetadataDecision(sidecar)) {
+      return {
+        title: sidecar.title || "",
+        keywords: cleanKeywordList(Array.isArray(sidecar.keywords) ? sidecar.keywords : []),
+      };
+    }
+    return seededMetadataForItem(item);
+  };
+
+  const metadataPayloadValuesForIndex = (index) => {
+    const values = effectiveMetadataForItem(state.items[index]);
+    return {
+      title: values.title || "",
+      keywords: cleanKeywordList(values.keywords || []),
+    };
+  };
+
   const loadKeywordBlacklist = async () => {
     try {
       const response = await fetch("./assets/owner-actions/keyword-blacklist.json", { cache: "no-store" });
@@ -539,6 +589,7 @@
       state.keywordBlacklist = new Set(keywords
         .map((keyword) => String(keyword || "").trim().toLowerCase())
         .filter(Boolean));
+      if (state.hasWindow && isReviewPage()) renderSurface();
     } catch {
       state.keywordBlacklist = new Set();
     }
@@ -552,8 +603,7 @@
     const form = rowFormForIndex(index);
     if (!form) {
       return {
-        title: sidecar.title || "",
-        keywords: Array.isArray(sidecar.keywords) ? sidecar.keywords.map(String).filter(Boolean) : [],
+        ...metadataPayloadValuesForIndex(index),
         reworkCategory: sidecar.reworkCategory || "",
         reworkComment: sidecar.reworkComment || "",
       };
@@ -797,7 +847,8 @@
     const id = itemId(item);
     const label = item.filename || id;
     const selected = state.selectedIndexes.has(index);
-    const keywords = Array.isArray(sidecar.keywords) ? sidecar.keywords.join(", ") : "";
+    const metadataValues = effectiveMetadataForItem(item);
+    const keywords = metadataValues.keywords.join(", ");
     return `
       <article class="${decisionClasses("sidecar-editing-row", item, selected)}" ${decisionAttrs(item)} data-sidecar-index="${index}" tabindex="0" aria-selected="${selected ? "true" : "false"}">
         <div class="sidecar-editing-preview ${isVideo(item) ? "sidecar-video-surface" : ""}" data-sidecar-video-shell data-sidecar-index="${index}">
@@ -817,7 +868,7 @@
               <span>Title</span>
               <button class="sidecar-propagate-field" type="button" data-sidecar-propagate-field="title" data-sidecar-index="${index}" title="Propagate this title to current and following picked rows in the same two-hour shoot window" aria-label="Propagate title">↓</button>
             </span>
-            <input type="text" name="title" value="${escapeHtml(sidecar.title || "")}" placeholder="Title for Photos and future catalog"/>
+            <input type="text" name="title" value="${escapeHtml(metadataValues.title || "")}" placeholder="Title for Photos and future catalog"/>
           </label>
           <label class="sidecar-editing-field">
             <span class="sidecar-editing-field-heading">
@@ -905,6 +956,11 @@
     const form = element.querySelector("[data-sidecar-row-form]");
     if (form) {
       setReworkCategoryValue(form, sidecar.reworkCategory || "");
+      const metadataValues = effectiveMetadataForItem(item);
+      const titleInput = form.querySelector('[name="title"]');
+      if (titleInput && document.activeElement !== titleInput) titleInput.value = metadataValues.title || "";
+      const keywordsInput = form.querySelector('[name="keywords"]');
+      if (keywordsInput && document.activeElement !== keywordsInput) keywordsInput.value = (metadataValues.keywords || []).join(", ");
       const note = form.querySelector("[data-sidecar-rework-comment]");
       if (note && document.activeElement !== note) note.value = sidecar.reworkComment || "";
     }
@@ -1310,6 +1366,27 @@
     }
   };
 
+  const approveSelectedItems = async () => {
+    const indexes = selectedIndexes();
+    if (!indexes.length) return;
+    if (indexes.length === 1) {
+      const { title, keywords } = rowMetadataValues(indexes[0]);
+      await postDecision({ action: "approve", title, keywords });
+      return;
+    }
+    const decisions = indexes.map((index) => ({
+      assetId: itemId(state.items[index]),
+      action: "approve",
+      ...rowMetadataValues(index),
+    }));
+    await postDecisions(
+      decisions,
+      `Approving metadata on ${indexes.length.toLocaleString()} item${indexes.length === 1 ? "" : "s"}...`,
+      `Approved metadata on ${indexes.length.toLocaleString()} item${indexes.length === 1 ? "" : "s"}. Photos write-back is pending commit.`,
+      { undoLabel: "metadata approval" },
+    );
+  };
+
   const performBurstCull = async () => {
     if (!state.items.length) {
       setStatus("Load a current window before culling bursts.");
@@ -1607,7 +1684,7 @@
         await postDecision({ action: "pick" });
       } else if (key === "a" || key === "A") {
         claimShortcut(event);
-        await postDecision({ action: "approve" });
+        await approveSelectedItems();
       } else if (key === "x" || key === "X") {
         claimShortcut(event);
         await postDecision({ action: "reject" });

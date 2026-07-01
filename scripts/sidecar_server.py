@@ -15,12 +15,22 @@ import subprocess
 import sys
 from urllib.parse import parse_qs, unquote, urlparse
 
-from sidecar_state_db import commit_plan, empty_wastebasket, merge_state, mock_upload, record_decision, record_decisions, summary, upload_plan, upsert_assets
+from sidecar_state_db import (
+    commit_plan,
+    empty_wastebasket,
+    merge_state,
+    mock_upload,
+    record_decision,
+    record_decisions,
+    summary,
+    upload_plan,
+    upsert_assets,
+)
 
 
 APPLE_PHOTOS_BRIDGE = Path("scripts/apple_photos_bridge.swift")
 SIDECAR_VERSION_FILE = Path("SIDECAR_VERSION")
-SIDECAR_DEFAULT_VERSION = "123.2"
+SIDECAR_DEFAULT_VERSION = "123.3"
 SIDECAR_PREVIEW_ROOT = Path("tmp/sidecar-previews")
 SIDECAR_PREVIEW_CACHE_VERSION = "v2"
 SIDECAR_VIDEO_ROOT = Path("tmp/sidecar-videos")

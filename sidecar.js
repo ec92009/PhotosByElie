@@ -228,7 +228,7 @@
   const videoPlayerMarkup = (item, autoplay = true) => `
     <video class="sidecar-inline-video" controls playsinline preload="metadata" ${autoplay ? "autoplay" : ""} poster="${escapeHtml(previewUrl(item))}" src="${escapeHtml(videoUrl(item))}"></video>
   `;
-  const versionFallback = "123.3";
+  const versionFallback = "123.4";
   const versionFallbackLabel = `v${versionFallback}`;
   const videoBadge = (item, index, label) => isVideo(item)
     ? videoOverlay(item, index, label)
@@ -1301,6 +1301,7 @@
       ? nextVisibleFrom(previousActive, state.autoAdvanceDirection)
       : previousActive;
     applyChangedItems(changedItems, visibilityBefore, { preferredIndex, previousActive, previousSelection });
+    refreshUploadRailQuietly();
     setStatus(`Staged ${actionLabel(payload)} on ${decisions.length.toLocaleString()} item${decisions.length === 1 ? "" : "s"}. Photos write-back is pending commit.`);
   };
 
@@ -1334,6 +1335,7 @@
       previousSelection,
       restoreSelection,
     });
+    refreshUploadRailQuietly();
     setStatus(completeMessage || `Staged ${Number(result.count || decisions.length).toLocaleString()} local decisions. Photos write-back is pending commit.`);
   };
 
@@ -1446,7 +1448,13 @@
     renderPageChrome();
     renderSurface();
     saveWindowState();
-    setStatus(`Loaded window ${Number(offset).toLocaleString()}-${(Number(offset) + state.items.length).toLocaleString()} from Apple Photos. Showing ${visibleIndexes().length.toLocaleString()} after filters.`);
+    const loadedMessage = `Loaded window ${Number(offset).toLocaleString()}-${(Number(offset) + state.items.length).toLocaleString()} from Apple Photos. Showing ${visibleIndexes().length.toLocaleString()} after filters.`;
+    setStatus(loadedMessage);
+    try {
+      await refreshUploadRail({ silent: true });
+    } catch (error) {
+      setStatus(`${loadedMessage} Upload plan unavailable: ${error.message || "unknown error"}`);
+    }
   };
 
   const slideWindow = async (direction) => {
@@ -1571,7 +1579,7 @@
     `;
   };
 
-  const loadPlan = async (kind) => {
+  const loadPlan = async (kind, { silent = false } = {}) => {
     const endpoint = kind === "upload" ? "/__sidecar/upload-plan" : "/__sidecar/commit-plan";
     const response = await fetch(endpoint);
     const payload = await response.json().catch(() => ({}));
@@ -1582,10 +1590,20 @@
       const statusSuffix = Number(payload.count || 0)
         ? `${Number(payload.count || 0).toLocaleString()} ready row${Number(payload.count || 0) === 1 ? "" : "s"}.`
         : `${readiness.needsReview.toLocaleString()} picked current-window item${readiness.needsReview === 1 ? "" : "s"} still need Review approval.`;
-      setStatus(`Upload plan refreshed: ${statusSuffix}`);
-    } else {
+      if (!silent) setStatus(`Upload plan refreshed: ${statusSuffix}`);
+    } else if (!silent) {
       setStatus("Photos commit plan refreshed.");
     }
+  };
+
+  const refreshUploadRail = async (options = {}) => {
+    await loadPlan("upload", options);
+  };
+
+  const refreshUploadRailQuietly = () => {
+    refreshUploadRail({ silent: true }).catch((error) => {
+      setStatus(`Upload plan refresh failed: ${error.message || "unknown error"}`);
+    });
   };
 
   const mockUpload = async (assetIds) => {
@@ -1638,6 +1656,7 @@
     reconcileSelection(state.selectedIndex);
     renderSurface();
     syncQuickLookToSelection();
+    refreshUploadRailQuietly();
     setStatus(`Tombstoned ${Number(payload.count || 0).toLocaleString()} discarded item${Number(payload.count || 0) === 1 ? "" : "s"}. Photos write-back is pending commit.`);
   };
 

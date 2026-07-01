@@ -423,10 +423,11 @@ body.sidecar-has-plan .sidecar-workspace {
   --sidecar-pick-shadow: 0 0 0 0 transparent;
   position: relative;
   display: grid;
-  grid-template-columns: minmax(7rem, 11rem) minmax(11rem, .72fr) minmax(16rem, 1.2fr) minmax(10rem, .55fr);
+  grid-template-columns: minmax(10rem, 18rem) minmax(9rem, .58fr) minmax(18rem, 1.25fr) minmax(8rem, .42fr);
   gap: .75rem;
   align-items: stretch;
   min-width: 0;
+  min-height: clamp(18rem, 42vh, 34rem);
   border: 1px solid color-mix(in srgb, var(--text) 13%, transparent);
   border-radius: 8px;
   background: color-mix(in srgb, var(--surface) 86%, transparent);
@@ -485,8 +486,8 @@ body.sidecar-has-plan .sidecar-workspace {
   position: relative;
   display: grid;
   place-items: center;
-  align-self: start;
-  aspect-ratio: 4 / 3;
+  align-self: stretch;
+  min-height: clamp(16rem, 38vh, 32rem);
   overflow: hidden;
   border-radius: 8px;
   background: color-mix(in srgb, var(--text) 8%, transparent);
@@ -1013,6 +1014,11 @@ body.sidecar-has-plan .sidecar-workspace {
 
   .sidecar-editing-row {
     grid-template-columns: minmax(6rem, .42fr) minmax(10rem, .58fr);
+    min-height: 0;
+  }
+
+  .sidecar-editing-preview {
+    min-height: clamp(13rem, 34vh, 24rem);
   }
 
   .sidecar-editing-form,

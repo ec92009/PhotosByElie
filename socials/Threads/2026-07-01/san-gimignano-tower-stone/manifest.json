@@ -1,0 +1,87 @@
+{
+  "platform": "Threads",
+  "title": "San Gimignano Tower Stone",
+  "slug": "san-gimignano-tower-stone",
+  "campaign_id": "instagram-san-gimignano-tower-stone-2026-07-01",
+  "caption": "San Gimignano Tower Stone in four Photos By Elie frames. Browse: https://photos-by-elie.com/campaign.html?c=instagram-san-gimignano-tower-stone-2026-07-01",
+  "notes": [
+    "Derived from the Instagram package for a 3-4 image Threads carousel.",
+    "Images are public watermarked R2 previews staged for upload/API publishing."
+  ],
+  "items": [
+    {
+      "media_id": "img-1184-adad54985d",
+      "order": 1,
+      "id": "img-1184-adad54985d",
+      "title": "San Gimignano",
+      "collection": "italy",
+      "location": "Italy",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/img-1184-adad54985d_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/img-1184-adad54985d_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=img-1184-adad54985d",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=img-1184-adad54985d",
+      "image": "images/01-img-1184-adad54985d-san-gimignano-tower-stone.jpg",
+      "local_staged_path": "socials/Threads/2026-07-01/san-gimignano-tower-stone/images/01-img-1184-adad54985d-san-gimignano-tower-stone.jpg"
+    },
+    {
+      "media_id": "img-1180-fe3d9faa8d",
+      "order": 2,
+      "id": "img-1180-fe3d9faa8d",
+      "title": "San Gimignano",
+      "collection": "italy",
+      "location": "Italy",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/img-1180-fe3d9faa8d_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/img-1180-fe3d9faa8d_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=img-1180-fe3d9faa8d",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=img-1180-fe3d9faa8d",
+      "image": "images/02-img-1180-fe3d9faa8d-san-gimignano-tower-stone.jpg",
+      "local_staged_path": "socials/Threads/2026-07-01/san-gimignano-tower-stone/images/02-img-1180-fe3d9faa8d-san-gimignano-tower-stone.jpg"
+    },
+    {
+      "media_id": "img-1179-73dc1ce59c",
+      "order": 3,
+      "id": "img-1179-73dc1ce59c",
+      "title": "San Gimignano",
+      "collection": "italy",
+      "location": "Italy",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/img-1179-73dc1ce59c_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/img-1179-73dc1ce59c_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=img-1179-73dc1ce59c",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=img-1179-73dc1ce59c",
+      "image": "images/03-img-1179-73dc1ce59c-san-gimignano-tower-stone.jpg",
+      "local_staged_path": "socials/Threads/2026-07-01/san-gimignano-tower-stone/images/03-img-1179-73dc1ce59c-san-gimignano-tower-stone.jpg"
+    },
+    {
+      "media_id": "img-1182-5aa2cfd683",
+      "order": 4,
+      "id": "img-1182-5aa2cfd683",
+      "title": "San Gimignano",
+      "collection": "italy",
+      "location": "Italy",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/img-1182-5aa2cfd683_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/img-1182-5aa2cfd683_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=img-1182-5aa2cfd683",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=img-1182-5aa2cfd683",
+      "image": "images/04-img-1182-5aa2cfd683-san-gimignano-tower-stone.jpg",
+      "local_staged_path": "socials/Threads/2026-07-01/san-gimignano-tower-stone/images/04-img-1182-5aa2cfd683-san-gimignano-tower-stone.jpg"
+    }
+  ],
+  "status": "prepared",
+  "account": "ec92009",
+  "post_type": "carousel",
+  "available_count": 4,
+  "date": "2026-07-01",
+  "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-san-gimignano-tower-stone-2026-07-01",
+  "recommended_upload_set": "images",
+  "manual_blockers": [
+    "Publish pending: review socials/Threads/2026-07-01/san-gimignano-tower-stone/manifest.json and use the Threads browser/API workflow."
+  ]
+}

@@ -418,8 +418,9 @@ Clock state: running
 | 2026-07-01 | 13:30 CEST | 13:31 CEST | 0:01 | Requested mock-uploaded Sidecar items disappear from active Culling and Review pages after crossing the mock upload boundary; background implementation/testing time excluded. |
 | 2026-07-01 | 21:06 CEST | 21:08 CEST | 0:02 | Requested Sidecar Review start from existing Apple Photos title/keyword metadata and GPS-derived place hints, including blank-title year/place fallbacks; background implementation/testing time excluded. |
 | 2026-07-01 | 21:20 CEST | 21:21 CEST | 0:01 | Requested taller Sidecar Review portrait previews, a default/permanent upload-plan rail, and immediate rail refresh after item approval; background implementation/testing time excluded. |
+| 2026-07-01 | 22:21 CEST | 22:22 CEST | 0:01 | Requested Sidecar bulk decisions keep multi-selection alive after Pick so follow-up stars/colors can be applied without reselecting; background implementation/testing time excluded. |
 
 ## Totals
 
-Active collaboration time used: 22:22
+Active collaboration time used: 22:23
 Remaining budget: not set

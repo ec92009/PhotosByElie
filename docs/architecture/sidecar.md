@@ -10,7 +10,7 @@ metadata; Owner decides publication and commerce.
 
 Sidecar has its own local visible version in `SIDECAR_VERSION`.
 
-- Current Sidecar version: `v123.4`
+- Current Sidecar version: `v123.5`
 - Versioning follows the canonical `~/Dev/.SOPs/VERSIONING_SOP.md` default
   calendar visible-version rule for this local web-app surface.
 - Sidecar version bumps do not imply a public Photos By Elie site version bump.
@@ -149,9 +149,11 @@ Sidecar has two primary pages backed by the same current window:
   active item status with explicit stars, color, decision, metadata, and pending
   Photos write-back reminders. Quick decisions patch affected items in place so
   thumbnails do not blink, and single-item auto-advance follows the most recent
-  arrow travel direction. `Cmd-Z` provides session-local multilevel undo
-  for staged local decision operations while leaving native text-field undo alone
-  in title/keyword fields.
+  arrow travel direction. Bulk Pick, rating, color, and metadata decisions keep
+  the visible multi-selection alive so another bulk action can be applied without
+  reselecting. `Cmd-Z` provides session-local multilevel undo for staged local
+  decision operations while leaving native text-field undo alone in
+  title/keyword fields.
 - **Review:** Owner-style title/keyword review of picked current-window items
   only, rendered oldest-to-newest so propagation moves forward through a shoot.
   Each row shows a taller contained preview, current state, title/keyword fields,

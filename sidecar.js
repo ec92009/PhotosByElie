@@ -228,7 +228,7 @@
   const videoPlayerMarkup = (item, autoplay = true) => `
     <video class="sidecar-inline-video" controls playsinline preload="metadata" ${autoplay ? "autoplay" : ""} poster="${escapeHtml(previewUrl(item))}" src="${escapeHtml(videoUrl(item))}"></video>
   `;
-  const versionFallback = "123.4";
+  const versionFallback = "123.5";
   const versionFallbackLabel = `v${versionFallback}`;
   const videoBadge = (item, index, label) => isVideo(item)
     ? videoOverlay(item, index, label)
@@ -382,8 +382,26 @@
     selectIndex(visible[nextPosition], { extend });
   };
 
-  const reconcileSelection = (preferredIndex = null) => {
+  const reconcileSelection = (preferredIndex = null, {
+    preserveSelection = false,
+    previousSelection = null,
+  } = {}) => {
     const visible = new Set(visibleIndexes());
+    const preservedSource = previousSelection instanceof Set
+      ? Array.from(previousSelection)
+      : (preserveSelection ? selectedIndexes() : []);
+    const preserved = preserveSelection
+      ? preservedSource.filter((index) => visible.has(index))
+      : [];
+    if (preserved.length) {
+      state.selectedIndexes = new Set(preserved);
+      if (preferredIndex !== null && preserved.includes(preferredIndex)) state.selectedIndex = preferredIndex;
+      else if (!preserved.includes(state.selectedIndex)) state.selectedIndex = preserved[0];
+      state.selectionAnchorIndex = preserved.includes(state.selectionAnchorIndex)
+        ? state.selectionAnchorIndex
+        : state.selectedIndex;
+      return;
+    }
     if (preferredIndex !== null && preferredIndex >= 0 && visible.has(preferredIndex)) {
       state.selectedIndex = preferredIndex;
       state.selectedIndexes = new Set([preferredIndex]);
@@ -1175,6 +1193,7 @@
     preferredIndex = state.selectedIndex,
     previousActive = state.selectedIndex,
     previousSelection = new Set(),
+    preserveSelection = false,
     restoreSelection = null,
   } = {}) => {
     const changedIndexes = [];
@@ -1183,7 +1202,7 @@
       if (changedIndex >= 0) changedIndexes.push(changedIndex);
     });
     if (restoreSelection) restoreSelectionSnapshot(restoreSelection);
-    else reconcileSelection(preferredIndex);
+    else reconcileSelection(preferredIndex, { preserveSelection, previousSelection });
     const visibilityChanged = changedIndexes.some((index) => visibilityBefore.get(index) !== matchesFilters(state.items[index]));
     if (visibilityChanged || !refreshRenderedItems([...changedIndexes, previousActive, ...previousSelection, ...selectedIndexes()])) {
       renderSurface();
@@ -1300,7 +1319,12 @@
     const preferredIndex = advance && !indexes && decisions.length === 1
       ? nextVisibleFrom(previousActive, state.autoAdvanceDirection)
       : previousActive;
-    applyChangedItems(changedItems, visibilityBefore, { preferredIndex, previousActive, previousSelection });
+    applyChangedItems(changedItems, visibilityBefore, {
+      preferredIndex,
+      previousActive,
+      previousSelection,
+      preserveSelection: !indexes && decisions.length > 1,
+    });
     refreshUploadRailQuietly();
     setStatus(`Staged ${actionLabel(payload)} on ${decisions.length.toLocaleString()} item${decisions.length === 1 ? "" : "s"}. Photos write-back is pending commit.`);
   };
@@ -1309,6 +1333,7 @@
     recordUndo = true,
     undoLabel = "local decisions",
     restoreSelection = null,
+    preserveSelection = false,
   } = {}) => {
     if (!decisions.length) return;
     const assetIds = decisions.map((decision) => String(decision.assetId || decision.asset_id || decision.localIdentifier || "")).filter(Boolean);
@@ -1333,6 +1358,7 @@
       preferredIndex: state.selectedIndex,
       previousActive,
       previousSelection,
+      preserveSelection,
       restoreSelection,
     });
     refreshUploadRailQuietly();
@@ -1385,7 +1411,7 @@
       decisions,
       `Approving metadata on ${indexes.length.toLocaleString()} item${indexes.length === 1 ? "" : "s"}...`,
       `Approved metadata on ${indexes.length.toLocaleString()} item${indexes.length === 1 ? "" : "s"}. Photos write-back is pending commit.`,
-      { undoLabel: "metadata approval" },
+      { undoLabel: "metadata approval", preserveSelection: true },
     );
   };
 

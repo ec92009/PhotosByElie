@@ -10,7 +10,7 @@ metadata; Owner decides publication and commerce.
 
 Sidecar has its own local visible version in `SIDECAR_VERSION`.
 
-- Current Sidecar version: `v123.7`
+- Current Sidecar version: `v123.9`
 - Versioning follows the canonical `~/Dev/.SOPs/VERSIONING_SOP.md` default
   calendar visible-version rule for this local web-app surface.
 - Sidecar version bumps do not imply a public Photos By Elie site version bump.
@@ -139,6 +139,10 @@ Sidecar has two primary pages backed by the same current window:
   by the rendered row stride on the culling grid, and Shift-arrows extend
   selection. Click, Command-click, and Shift-click support single, toggle, and
   range selection.
+  The **Refill window** action preserves the current starting offset and filters
+  while scanning forward through later Apple Photos assets to fill depleted
+  visible space after mock uploads, rejects, tombstones, or active filters remove
+  rows from the working view.
   Actions update local SQLite and advance without blocking on Photos. The
   **Cull bursts** action applies the conservative one-second burst pass to the
   visible current-window photos, skips picked/videos/already rejected items, and

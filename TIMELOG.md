@@ -420,8 +420,9 @@ Clock state: running
 | 2026-07-01 | 21:20 CEST | 21:21 CEST | 0:01 | Requested taller Sidecar Review portrait previews, a default/permanent upload-plan rail, and immediate rail refresh after item approval; background implementation/testing time excluded. |
 | 2026-07-01 | 22:21 CEST | 22:22 CEST | 0:01 | Requested Sidecar bulk decisions keep multi-selection alive after Pick so follow-up stars/colors can be applied without reselecting; background implementation/testing time excluded. |
 | 2026-07-01 | 23:24 CEST | 23:25 CEST | 0:01 | Requested compact Sidecar Stars/Colors filter controls with All/None buttons and color swatches; background implementation/testing time excluded. |
+| 2026-07-01 | 23:45 CEST | 23:46 CEST | 0:01 | Requested a Sidecar current-window refill path so depleted mock-uploaded/rejected/filter-hidden windows can pull later reviewable items without repeated slide clicks; background implementation/testing time excluded. |
 
 ## Totals
 
-Active collaboration time used: 22:24
+Active collaboration time used: 22:25
 Remaining budget: not set

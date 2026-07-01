@@ -11,6 +11,7 @@
   const planTitle = $("[data-sidecar-plan-title]");
   const planOutput = $("[data-sidecar-plan-output]");
   const loadButton = $("[data-sidecar-load]");
+  const refillButton = $("[data-sidecar-refill]");
   const slideBackButton = $("[data-sidecar-slide-back]");
   const slideForwardButton = $("[data-sidecar-slide-forward]");
   const burstCullButton = $("[data-sidecar-burst-cull]");
@@ -71,6 +72,8 @@
   const burstWindowMs = 1000;
   const shootWindowMs = 2 * 60 * 60 * 1000;
   const undoLimit = 100;
+  const refillBatchSize = 1000;
+  const refillMaxFetches = 30;
   const previewFallbackMarkup = `<span class="sidecar-thumb-fallback">Preview unavailable</span>`;
 
   const normalizePage = (value) => {
@@ -116,6 +119,7 @@
     keywordBlacklist: new Set(),
     filters: normalizeFilters(readStoredWindow()?.filters || cloneDefaultFilters()),
     hasWindow: Boolean(readStoredWindow()?.hasWindow),
+    windowCursorOffset: Number(readStoredWindow()?.windowCursorOffset || 0),
   };
 
   const escapeHtml = (value = "") => String(value)
@@ -149,6 +153,7 @@
     if (dateTo && typeof stored.dateTo === "string") dateTo.value = stored.dateTo;
     if (limit && stored.limit) limit.value = String(stored.limit);
     if (offset && Number.isFinite(Number(stored.offset))) offset.value = String(Math.max(0, Number(stored.offset)));
+    if (Number.isFinite(Number(stored.windowCursorOffset))) state.windowCursorOffset = Math.max(0, Number(stored.windowCursorOffset));
     filterInputs.forEach((input) => {
       const key = filterKeyByName[input.dataset.sidecarFilter];
       input.checked = Boolean(key && state.filters[key]?.includes(input.value));
@@ -182,6 +187,7 @@
       offset: getOffset(),
       filters: state.filters,
       hasWindow: state.hasWindow,
+      windowCursorOffset: state.windowCursorOffset,
       savedAt: new Date().toISOString(),
     };
     try {
@@ -238,7 +244,7 @@
   const videoPlayerMarkup = (item, autoplay = true) => `
     <video class="sidecar-inline-video" controls playsinline preload="metadata" ${autoplay ? "autoplay" : ""} poster="${escapeHtml(previewUrl(item))}" src="${escapeHtml(videoUrl(item))}"></video>
   `;
-  const versionFallback = "123.7";
+  const versionFallback = "123.9";
   const versionFallbackLabel = `v${versionFallback}`;
   const videoBadge = (item, index, label) => isVideo(item)
     ? videoOverlay(item, index, label)
@@ -1461,36 +1467,100 @@
     );
   };
 
-  const loadWindow = async () => {
-    state.filters = readFiltersFromControls();
+  const fetchLibrarySlice = async (offset, limit) => {
     const params = new URLSearchParams();
-    const limit = String(getLimit());
-    const offset = String(getOffset());
     const dateFrom = $("[data-sidecar-date-from]")?.value || "";
     const dateTo = $("[data-sidecar-date-to]")?.value || "";
-    params.set("limit", limit);
-    params.set("offset", offset);
+    params.set("limit", String(Math.max(1, Math.min(1000, Number(limit || getLimit())))));
+    params.set("offset", String(Math.max(0, Number(offset || 0))));
     if (dateFrom) params.set("dateFrom", dateFrom);
     if (dateTo) params.set("dateTo", dateTo);
-    setStatus("Loading current Apple Photos window...");
     const response = await fetch(`/__sidecar/library?${params.toString()}`);
     const payload = await response.json().catch(() => ({}));
     if (!response.ok || !payload.ok) throw new Error(payload.error || "Could not load current window.");
+    return payload;
+  };
+
+  const loadWindow = async () => {
+    state.filters = readFiltersFromControls();
+    const limit = getLimit();
+    const offset = getOffset();
+    setStatus("Loading current Apple Photos window...");
+    const payload = await fetchLibrarySlice(offset, limit);
     state.items = Array.isArray(payload.items) ? payload.items : [];
     state.summary = payload.sidecarSummary || state.summary;
     state.hasWindow = true;
+    state.windowCursorOffset = offset + state.items.length;
     state.undoStack = [];
     setInitialSelection();
     renderPageChrome();
     renderSurface();
     saveWindowState();
-    const loadedMessage = `Loaded window ${Number(offset).toLocaleString()}-${(Number(offset) + state.items.length).toLocaleString()} from Apple Photos. Showing ${visibleIndexes().length.toLocaleString()} after filters.`;
+    const loadedMessage = `Loaded window ${offset.toLocaleString()}-${(offset + state.items.length).toLocaleString()} from Apple Photos. Showing ${visibleIndexes().length.toLocaleString()} after filters.`;
     setStatus(loadedMessage);
     try {
       await refreshUploadRail({ silent: true });
     } catch (error) {
       setStatus(`${loadedMessage} Upload plan unavailable: ${error.message || "unknown error"}`);
     }
+  };
+
+  const refillWindow = async () => {
+    if (!state.hasWindow) {
+      await loadWindow();
+      return;
+    }
+    state.filters = readFiltersFromControls();
+    const targetVisible = getLimit();
+    let currentVisible = visibleIndexes().length;
+    if (currentVisible >= targetVisible) {
+      setStatus(`Current window already shows ${currentVisible.toLocaleString()} item${currentVisible === 1 ? "" : "s"}; no refill needed.`);
+      return;
+    }
+    const seenIds = new Set(state.items.map((item) => itemId(item)).filter(Boolean));
+    let cursor = Math.max(state.windowCursorOffset || 0, getOffset() + state.items.length);
+    let appendedCount = 0;
+    let scannedCount = 0;
+    let exhausted = false;
+    setStatus(`Refilling current window from Apple Photos offset ${cursor.toLocaleString()}...`);
+    for (let pass = 0; pass < refillMaxFetches && currentVisible < targetVisible; pass += 1) {
+      const payload = await fetchLibrarySlice(cursor, refillBatchSize);
+      const rows = Array.isArray(payload.items) ? payload.items : [];
+      state.summary = payload.sidecarSummary || state.summary;
+      let consumedRows = 0;
+      for (const item of rows) {
+        consumedRows += 1;
+        const id = itemId(item);
+        if (!id || seenIds.has(id)) continue;
+        seenIds.add(id);
+        const visibleAfterAppend = matchesFilters(item);
+        state.items.push(item);
+        appendedCount += 1;
+        if (visibleAfterAppend) currentVisible += 1;
+        if (currentVisible >= targetVisible) break;
+      }
+      scannedCount += consumedRows;
+      cursor += consumedRows;
+      if (currentVisible >= targetVisible) break;
+      if (rows.length < refillBatchSize) {
+        exhausted = true;
+        break;
+      }
+    }
+    state.windowCursorOffset = cursor;
+    reconcileSelection(state.selectedIndex);
+    renderPageChrome();
+    renderSurface();
+    syncQuickLookToSelection();
+    saveWindowState();
+    const filled = currentVisible >= targetVisible;
+    const suffix = filled
+      ? "filled the visible window"
+      : exhausted
+        ? "reached the end of this Photos range"
+        : `paused after ${refillMaxFetches.toLocaleString()} scan batches`;
+    setStatus(`Refill ${suffix}: appended ${appendedCount.toLocaleString()} item${appendedCount === 1 ? "" : "s"} after scanning ${scannedCount.toLocaleString()}; showing ${currentVisible.toLocaleString()} of ${targetVisible.toLocaleString()}.`);
+    refreshUploadRailQuietly();
   };
 
   const slideWindow = async (direction) => {
@@ -1961,6 +2031,7 @@
   });
 
   loadButton?.addEventListener("click", () => loadWindow().catch((error) => setStatus(error.message)));
+  refillButton?.addEventListener("click", () => refillWindow().catch((error) => setStatus(error.message)));
   slideBackButton?.addEventListener("click", () => slideWindow(-1).catch((error) => setStatus(error.message)));
   slideForwardButton?.addEventListener("click", () => slideWindow(1).catch((error) => setStatus(error.message)));
   burstCullButton?.addEventListener("click", () => performBurstCull().catch((error) => setStatus(error.message)));

@@ -2,7 +2,7 @@
   "format": "photosbyelie-daily-social-package",
   "schema_version": 1,
   "date": "2026-07-01",
-  "generated_at": "2026-07-01T03:05:03.222Z",
+  "generated_at": "2026-07-01T03:11:24.987Z",
   "platforms": [
     {
       "platform": "Facebook",
@@ -141,7 +141,7 @@
         }
       ],
       "date": "2026-07-01",
-      "status": "prepared",
+      "status": "published",
       "account": "Photos By Elie",
       "post_type": "multi_photo",
       "destination_url": "https://photos-by-elie.com/campaign.html?c=facebook-paris-arts-et-metiers-machines-2026-07-01",
@@ -150,9 +150,19 @@
       "notes": [
         "Images are public watermarked R2 previews staged for upload/API publishing."
       ],
-      "manual_blockers": [
-        "Publish pending: review socials/Facebook/2026-07-01/paris-arts-et-metiers-machines/manifest.json and use the Facebook browser/API workflow."
-      ]
+      "manual_blockers": [],
+      "published_url": "https://www.facebook.com/122102168061334672/posts/122108918271334672",
+      "published": {
+        "platform": "facebook",
+        "account": "Photos By Elie",
+        "page_id": "1146747141854670",
+        "post_id": "1146747141854670_122108918271334672",
+        "permalink": "https://www.facebook.com/122102168061334672/posts/122108918271334672",
+        "published_at": "2026-07-01T03:08:38+0000",
+        "image_count": 8,
+        "subattachment_count": 8,
+        "verification": "Graph API readback returned 8 photo subattachments."
+      }
     },
     {
       "platform": "Instagram",
@@ -263,16 +273,26 @@
         }
       ],
       "date": "2026-07-01",
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-san-gimignano-tower-stone-2026-07-01",
       "recommended_upload_set": "images",
       "available_count": 6,
-      "manual_blockers": [
-        "Publish pending: review socials/Instagram/2026-07-01/san-gimignano-tower-stone/manifest.json and use the Instagram browser/API workflow.",
-        "Instagram feed captions are not clickable; update the profile website link or use a Story link sticker before posting."
-      ]
+      "manual_blockers": [],
+      "published_url": "https://www.instagram.com/p/DaPBH8lCGAt/",
+      "published": {
+        "platform": "instagram",
+        "account": "ec92009",
+        "username": "ec92009",
+        "media_id": "18124872214581659",
+        "permalink": "https://www.instagram.com/p/DaPBH8lCGAt/",
+        "published_at": "2026-07-01T03:09:30+0000",
+        "media_type": "CAROUSEL_ALBUM",
+        "image_count": 6,
+        "child_count": 6,
+        "verification": "Graph API readback returned CAROUSEL_ALBUM with 6 children; caption has no raw URL."
+      }
     },
     {
       "platform": "Pinterest",
@@ -367,7 +387,7 @@
         }
       ],
       "date": "2026-07-01",
-      "status": "prepared",
+      "status": "prepared_no_api_token_or_board_id",
       "account": "PhotosByElie Pinterest",
       "post_type": "multi_pin_sequence",
       "destination_url": "https://photos-by-elie.com/campaign.html?c=pinterest-albi-tarn-old-town-light-2026-07-01",
@@ -377,9 +397,15 @@
         "Images are public watermarked R2 previews staged for upload/API publishing."
       ],
       "manual_blockers": [
+        "Pinterest token is missing at ~/.config/photosbyelie/pinterest-token.json and no board ID mapping is configured; package is ready for manual Pin Builder upload to Paris and France Photography.",
         "Publish pending: review socials/Pinterest/2026-07-01/albi-tarn-old-town-light/manifest.json and use the Pinterest browser/API workflow.",
         "Pinterest publish pending: choose the board and publish one Pin per staged image or use the prepared browser upload set."
-      ]
+      ],
+      "publish_plan": {
+        "status": "manual_ready",
+        "recommended_board": "Paris and France Photography",
+        "blocker": "Pinterest token is missing at ~/.config/photosbyelie/pinterest-token.json and no board ID mapping is configured; package is ready for manual Pin Builder upload to Paris and France Photography."
+      }
     },
     {
       "platform": "Threads",
@@ -457,23 +483,64 @@
           "local_staged_path": "socials/Threads/2026-07-01/san-gimignano-tower-stone/images/04-img-1182-5aa2cfd683-san-gimignano-tower-stone.jpg"
         }
       ],
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "available_count": 4,
       "date": "2026-07-01",
       "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-san-gimignano-tower-stone-2026-07-01",
       "recommended_upload_set": "images",
-      "manual_blockers": [
-        "Publish pending: review socials/Threads/2026-07-01/san-gimignano-tower-stone/manifest.json and use the Threads browser/API workflow."
-      ]
+      "manual_blockers": [],
+      "published_url": "https://www.threads.com/@ec92009/post/DaPBFGjCPZE",
+      "published": {
+        "platform": "threads",
+        "account": "ec92009",
+        "username": "ec92009",
+        "media_id": "17907244836439408",
+        "permalink": "https://www.threads.com/@ec92009/post/DaPBFGjCPZE",
+        "published_at": "2026-07-01T03:09:09+0000",
+        "media_type": "CAROUSEL_ALBUM",
+        "image_count": 4,
+        "child_count": 4,
+        "verification": "Threads Graph API readback returned CAROUSEL_ALBUM with 4 children. API flow had no browser link-preview removal step."
+      }
     }
   ],
   "visible_version": "v123.0",
-  "status": "prepared",
+  "status": "published_partial",
   "themes": [
     "Paris Arts et Metiers Machines",
     "San Gimignano Tower Stone",
     "Albi Tarn Old Town Light"
-  ]
+  ],
+  "etsy_companion": {
+    "status": "review_packages_only_attachment_verification_blocked",
+    "refreshed_api_identity": {
+      "user_id": "317360226",
+      "shop_id": "42422777"
+    },
+    "selected_product": "jpg-6mp",
+    "candidate_listing_count": 19,
+    "package_paths": [
+      "assets/owner-actions/etsy-listing-packages/2026-07-01/facebook-paris-arts-et-metiers-machines-2026-07-01",
+      "assets/owner-actions/etsy-listing-packages/2026-07-01/instagram-san-gimignano-tower-stone-2026-07-01",
+      "assets/owner-actions/etsy-listing-packages/2026-07-01/pinterest-albi-tarn-old-town-light-2026-07-01"
+    ],
+    "blocker": "Etsy OAuth/API identity works after refresh, but current etsy:outlet tooling generates review payloads only and does not attach and verify one public listing image plus one approved buyer download file per draft; no Etsy drafts were created and no listing fees were incurred."
+  },
+  "etsy": {
+    "status": "review_packages_only_attachment_verification_blocked",
+    "refreshed_api_identity": {
+      "user_id": "317360226",
+      "shop_id": "42422777"
+    },
+    "selected_product": "jpg-6mp",
+    "candidate_listing_count": 19,
+    "package_paths": [
+      "assets/owner-actions/etsy-listing-packages/2026-07-01/facebook-paris-arts-et-metiers-machines-2026-07-01",
+      "assets/owner-actions/etsy-listing-packages/2026-07-01/instagram-san-gimignano-tower-stone-2026-07-01",
+      "assets/owner-actions/etsy-listing-packages/2026-07-01/pinterest-albi-tarn-old-town-light-2026-07-01"
+    ],
+    "blocker": "Etsy OAuth/API identity works after refresh, but current etsy:outlet tooling generates review payloads only and does not attach and verify one public listing image plus one approved buyer download file per draft; no Etsy drafts were created and no listing fees were incurred."
+  }
 }

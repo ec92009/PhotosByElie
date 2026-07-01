@@ -1,9 +1,10 @@
 # Pinterest - 2026-07-01 - Albi Tarn Old Town Light
 
-Status: prepared
+Status: prepared_no_api_token_or_board_id
 Destination: https://photos-by-elie.com/campaign.html?c=pinterest-albi-tarn-old-town-light-2026-07-01
 
 Manual blockers:
+- Pinterest token is missing at ~/.config/photosbyelie/pinterest-token.json and no board ID mapping is configured; package is ready for manual Pin Builder upload to Paris and France Photography.
 - Publish pending: review socials/Pinterest/2026-07-01/albi-tarn-old-town-light/manifest.json and use the Pinterest browser/API workflow.
 - Pinterest publish pending: choose the board and publish one Pin per staged image or use the prepared browser upload set.
 

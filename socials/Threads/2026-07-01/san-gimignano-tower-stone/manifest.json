@@ -74,14 +74,25 @@
       "local_staged_path": "socials/Threads/2026-07-01/san-gimignano-tower-stone/images/04-img-1182-5aa2cfd683-san-gimignano-tower-stone.jpg"
     }
   ],
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "available_count": 4,
   "date": "2026-07-01",
   "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-san-gimignano-tower-stone-2026-07-01",
   "recommended_upload_set": "images",
-  "manual_blockers": [
-    "Publish pending: review socials/Threads/2026-07-01/san-gimignano-tower-stone/manifest.json and use the Threads browser/API workflow."
-  ]
+  "manual_blockers": [],
+  "published_url": "https://www.threads.com/@ec92009/post/DaPBFGjCPZE",
+  "published": {
+    "platform": "threads",
+    "account": "ec92009",
+    "username": "ec92009",
+    "media_id": "17907244836439408",
+    "permalink": "https://www.threads.com/@ec92009/post/DaPBFGjCPZE",
+    "published_at": "2026-07-01T03:09:09+0000",
+    "media_type": "CAROUSEL_ALBUM",
+    "image_count": 4,
+    "child_count": 4,
+    "verification": "Threads Graph API readback returned CAROUSEL_ALBUM with 4 children. API flow had no browser link-preview removal step."
+  }
 }

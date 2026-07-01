@@ -107,14 +107,24 @@
     }
   ],
   "date": "2026-07-01",
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-san-gimignano-tower-stone-2026-07-01",
   "recommended_upload_set": "images",
   "available_count": 6,
-  "manual_blockers": [
-    "Publish pending: review socials/Instagram/2026-07-01/san-gimignano-tower-stone/manifest.json and use the Instagram browser/API workflow.",
-    "Instagram feed captions are not clickable; update the profile website link or use a Story link sticker before posting."
-  ]
+  "manual_blockers": [],
+  "published_url": "https://www.instagram.com/p/DaPBH8lCGAt/",
+  "published": {
+    "platform": "instagram",
+    "account": "ec92009",
+    "username": "ec92009",
+    "media_id": "18124872214581659",
+    "permalink": "https://www.instagram.com/p/DaPBH8lCGAt/",
+    "published_at": "2026-07-01T03:09:30+0000",
+    "media_type": "CAROUSEL_ALBUM",
+    "image_count": 6,
+    "child_count": 6,
+    "verification": "Graph API readback returned CAROUSEL_ALBUM with 6 children; caption has no raw URL."
+  }
 }

@@ -1,10 +1,8 @@
 # Threads - 2026-07-01 - San Gimignano Tower Stone
 
-Status: prepared
+Status: published
 Destination: https://photos-by-elie.com/campaign.html?c=instagram-san-gimignano-tower-stone-2026-07-01
-
-Manual blockers:
-- Publish pending: review socials/Threads/2026-07-01/san-gimignano-tower-stone/manifest.json and use the Threads browser/API workflow.
+Published URL: https://www.threads.com/@ec92009/post/DaPBFGjCPZE
 
 Caption:
 

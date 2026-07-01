@@ -1,13 +1,13 @@
 # Daily Social Package - 2026-07-01
 
-Status: prepared
+Status: published_partial
 Visible version: v123.0
 
 ## Facebook: Paris Arts et Metiers Machines
 
-- Status: prepared
+- Status: published
 - Destination: https://photos-by-elie.com/campaign.html?c=facebook-paris-arts-et-metiers-machines-2026-07-01
-- Manual blockers: Publish pending: review socials/Facebook/2026-07-01/paris-arts-et-metiers-machines/manifest.json and use the Facebook browser/API workflow.
+- Published URL: https://www.facebook.com/122102168061334672/posts/122108918271334672
 
 | # | Media id | Source URL | Local image |
 | ---: | --- | --- | --- |
@@ -22,9 +22,9 @@ Visible version: v123.0
 
 ## Instagram: San Gimignano Tower Stone
 
-- Status: prepared
+- Status: published
 - Destination: https://photos-by-elie.com/campaign.html?c=instagram-san-gimignano-tower-stone-2026-07-01
-- Manual blockers: Publish pending: review socials/Instagram/2026-07-01/san-gimignano-tower-stone/manifest.json and use the Instagram browser/API workflow. | Instagram feed captions are not clickable; update the profile website link or use a Story link sticker before posting.
+- Published URL: https://www.instagram.com/p/DaPBH8lCGAt/
 
 | # | Media id | Source URL | Local image |
 | ---: | --- | --- | --- |
@@ -37,9 +37,9 @@ Visible version: v123.0
 
 ## Pinterest: Albi Tarn Old Town Light
 
-- Status: prepared
+- Status: prepared_no_api_token_or_board_id
 - Destination: https://photos-by-elie.com/campaign.html?c=pinterest-albi-tarn-old-town-light-2026-07-01
-- Manual blockers: Publish pending: review socials/Pinterest/2026-07-01/albi-tarn-old-town-light/manifest.json and use the Pinterest browser/API workflow. | Pinterest publish pending: choose the board and publish one Pin per staged image or use the prepared browser upload set.
+- Manual blockers: Pinterest token is missing at ~/.config/photosbyelie/pinterest-token.json and no board ID mapping is configured; package is ready for manual Pin Builder upload to Paris and France Photography. | Publish pending: review socials/Pinterest/2026-07-01/albi-tarn-old-town-light/manifest.json and use the Pinterest browser/API workflow. | Pinterest publish pending: choose the board and publish one Pin per staged image or use the prepared browser upload set.
 
 | # | Media id | Source URL | Local image |
 | ---: | --- | --- | --- |
@@ -51,9 +51,9 @@ Visible version: v123.0
 
 ## Threads: San Gimignano Tower Stone
 
-- Status: prepared
+- Status: published
 - Destination: https://photos-by-elie.com/campaign.html?c=instagram-san-gimignano-tower-stone-2026-07-01
-- Manual blockers: Publish pending: review socials/Threads/2026-07-01/san-gimignano-tower-stone/manifest.json and use the Threads browser/API workflow.
+- Published URL: https://www.threads.com/@ec92009/post/DaPBFGjCPZE
 
 | # | Media id | Source URL | Local image |
 | ---: | --- | --- | --- |

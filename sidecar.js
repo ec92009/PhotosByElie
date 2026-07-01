@@ -17,6 +17,7 @@
   const emptyWastebasketButton = $("[data-sidecar-empty-wastebasket]");
   const pageTabs = Array.from(document.querySelectorAll("[data-sidecar-page]"));
   const filterInputs = Array.from(document.querySelectorAll("[data-sidecar-filter]"));
+  const filterToggleButtons = Array.from(document.querySelectorAll("[data-sidecar-filter-toggle]"));
 
   const storageKey = "photosByElie.sidecar.window.v2";
   const pageConfigs = {
@@ -163,6 +164,15 @@
     return normalizeFilters(filters);
   };
 
+  const applyFilterChanges = () => {
+    state.filters = readFiltersFromControls();
+    reconcileSelection(state.selectedIndex);
+    renderSurface();
+    syncQuickLookToSelection();
+    setStatus(`Showing ${visibleIndexes().length.toLocaleString()} of ${state.items.length.toLocaleString()} current-window items after filters.`);
+    saveWindowState();
+  };
+
   const saveWindowState = () => {
     const payload = {
       page: state.page,
@@ -228,7 +238,7 @@
   const videoPlayerMarkup = (item, autoplay = true) => `
     <video class="sidecar-inline-video" controls playsinline preload="metadata" ${autoplay ? "autoplay" : ""} poster="${escapeHtml(previewUrl(item))}" src="${escapeHtml(videoUrl(item))}"></video>
   `;
-  const versionFallback = "123.5";
+  const versionFallback = "123.7";
   const versionFallbackLabel = `v${versionFallback}`;
   const videoBadge = (item, index, label) => isVideo(item)
     ? videoOverlay(item, index, label)
@@ -1936,13 +1946,17 @@
   });
 
   filterInputs.forEach((input) => {
-    input.addEventListener("change", () => {
-      state.filters = readFiltersFromControls();
-      reconcileSelection(state.selectedIndex);
-      renderSurface();
-      syncQuickLookToSelection();
-      setStatus(`Showing ${visibleIndexes().length.toLocaleString()} of ${state.items.length.toLocaleString()} current-window items after filters.`);
-      saveWindowState();
+    input.addEventListener("change", applyFilterChanges);
+  });
+
+  filterToggleButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const family = button.dataset.sidecarFilterToggle;
+      const checked = button.dataset.sidecarFilterChecked === "true";
+      filterInputs.forEach((input) => {
+        if (input.dataset.sidecarFilter === family) input.checked = checked;
+      });
+      applyFilterChanges();
     });
   });
 

@@ -30,7 +30,7 @@ from sidecar_state_db import (
 
 APPLE_PHOTOS_BRIDGE = Path("scripts/apple_photos_bridge.swift")
 SIDECAR_VERSION_FILE = Path("SIDECAR_VERSION")
-SIDECAR_DEFAULT_VERSION = "123.5"
+SIDECAR_DEFAULT_VERSION = "123.7"
 SIDECAR_PREVIEW_ROOT = Path("tmp/sidecar-previews")
 SIDECAR_PREVIEW_CACHE_VERSION = "v2"
 SIDECAR_VIDEO_ROOT = Path("tmp/sidecar-videos")

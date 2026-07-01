@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#7b4d26"/>
   <link rel="stylesheet" href="./shared.css"/>
   <link rel="stylesheet" href="./photos.css"/>
-  <link rel="stylesheet" href="./sidecar.css?v=123.5"/>
+  <link rel="stylesheet" href="./sidecar.css?v=123.7"/>
 </head>
 <body data-gallery="sidecar">
   <header class="site-header">
@@ -57,23 +57,31 @@
         </label>
       </div>
       <div class="sidecar-filter-grid" aria-label="Sidecar filters">
-        <fieldset class="sidecar-filter-group">
+        <fieldset class="sidecar-filter-group" data-sidecar-filter-group="rating">
           <legend>Stars</legend>
-          <label><input type="checkbox" value="0" data-sidecar-filter="rating" checked/>0</label>
-          <label><input type="checkbox" value="1" data-sidecar-filter="rating" checked/>1</label>
-          <label><input type="checkbox" value="2" data-sidecar-filter="rating" checked/>2</label>
-          <label><input type="checkbox" value="3" data-sidecar-filter="rating" checked/>3</label>
-          <label><input type="checkbox" value="4" data-sidecar-filter="rating" checked/>4</label>
-          <label><input type="checkbox" value="5" data-sidecar-filter="rating" checked/>5</label>
+          <span class="sidecar-filter-actions" aria-label="Stars filter actions">
+            <button class="sidecar-filter-action" type="button" data-sidecar-filter-toggle="rating" data-sidecar-filter-checked="true" aria-label="Select all star filters">All</button>
+            <button class="sidecar-filter-action" type="button" data-sidecar-filter-toggle="rating" data-sidecar-filter-checked="false" aria-label="Deselect all star filters">None</button>
+          </span>
+          <label class="sidecar-filter-rating-option"><input type="checkbox" value="0" data-sidecar-filter="rating" checked/><span class="sidecar-filter-rating-chip" aria-hidden="true">0</span><span class="sidecar-visually-hidden">0 stars</span></label>
+          <label class="sidecar-filter-rating-option"><input type="checkbox" value="1" data-sidecar-filter="rating" checked/><span class="sidecar-filter-rating-chip" aria-hidden="true">1</span><span class="sidecar-visually-hidden">1 star</span></label>
+          <label class="sidecar-filter-rating-option"><input type="checkbox" value="2" data-sidecar-filter="rating" checked/><span class="sidecar-filter-rating-chip" aria-hidden="true">2</span><span class="sidecar-visually-hidden">2 stars</span></label>
+          <label class="sidecar-filter-rating-option"><input type="checkbox" value="3" data-sidecar-filter="rating" checked/><span class="sidecar-filter-rating-chip" aria-hidden="true">3</span><span class="sidecar-visually-hidden">3 stars</span></label>
+          <label class="sidecar-filter-rating-option"><input type="checkbox" value="4" data-sidecar-filter="rating" checked/><span class="sidecar-filter-rating-chip" aria-hidden="true">4</span><span class="sidecar-visually-hidden">4 stars</span></label>
+          <label class="sidecar-filter-rating-option"><input type="checkbox" value="5" data-sidecar-filter="rating" checked/><span class="sidecar-filter-rating-chip" aria-hidden="true">5</span><span class="sidecar-visually-hidden">5 stars</span></label>
         </fieldset>
-        <fieldset class="sidecar-filter-group">
+        <fieldset class="sidecar-filter-group" data-sidecar-filter-group="color">
           <legend>Colors</legend>
-          <label><input type="checkbox" value="none" data-sidecar-filter="color" checked/>none</label>
-          <label><input type="checkbox" value="red" data-sidecar-filter="color" checked/>red</label>
-          <label><input type="checkbox" value="yellow" data-sidecar-filter="color" checked/>yellow</label>
-          <label><input type="checkbox" value="green" data-sidecar-filter="color" checked/>green</label>
-          <label><input type="checkbox" value="blue" data-sidecar-filter="color" checked/>blue</label>
-          <label><input type="checkbox" value="purple" data-sidecar-filter="color" checked/>purple</label>
+          <span class="sidecar-filter-actions" aria-label="Colors filter actions">
+            <button class="sidecar-filter-action" type="button" data-sidecar-filter-toggle="color" data-sidecar-filter-checked="true" aria-label="Select all color filters">All</button>
+            <button class="sidecar-filter-action" type="button" data-sidecar-filter-toggle="color" data-sidecar-filter-checked="false" aria-label="Deselect all color filters">None</button>
+          </span>
+          <label class="sidecar-filter-swatch-option" title="none"><input type="checkbox" value="none" data-sidecar-filter="color" checked/><span class="sidecar-filter-swatch sidecar-filter-swatch-none" aria-hidden="true"></span><span class="sidecar-visually-hidden">none</span></label>
+          <label class="sidecar-filter-swatch-option" title="red"><input type="checkbox" value="red" data-sidecar-filter="color" checked/><span class="sidecar-filter-swatch" data-sidecar-color="red" aria-hidden="true"></span><span class="sidecar-visually-hidden">red</span></label>
+          <label class="sidecar-filter-swatch-option" title="yellow"><input type="checkbox" value="yellow" data-sidecar-filter="color" checked/><span class="sidecar-filter-swatch" data-sidecar-color="yellow" aria-hidden="true"></span><span class="sidecar-visually-hidden">yellow</span></label>
+          <label class="sidecar-filter-swatch-option" title="green"><input type="checkbox" value="green" data-sidecar-filter="color" checked/><span class="sidecar-filter-swatch" data-sidecar-color="green" aria-hidden="true"></span><span class="sidecar-visually-hidden">green</span></label>
+          <label class="sidecar-filter-swatch-option" title="blue"><input type="checkbox" value="blue" data-sidecar-filter="color" checked/><span class="sidecar-filter-swatch" data-sidecar-color="blue" aria-hidden="true"></span><span class="sidecar-visually-hidden">blue</span></label>
+          <label class="sidecar-filter-swatch-option" title="purple"><input type="checkbox" value="purple" data-sidecar-filter="color" checked/><span class="sidecar-filter-swatch" data-sidecar-color="purple" aria-hidden="true"></span><span class="sidecar-visually-hidden">purple</span></label>
         </fieldset>
         <fieldset class="sidecar-filter-group">
           <legend>Decisions</legend>
@@ -127,6 +135,6 @@
   </main>
 
   <script src="./photos.js"></script>
-  <script src="./sidecar.js?v=123.5"></script>
+  <script src="./sidecar.js?v=123.7"></script>
 </body>
 </html>

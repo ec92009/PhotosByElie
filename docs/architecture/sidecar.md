@@ -10,7 +10,7 @@ metadata; Owner decides publication and commerce.
 
 Sidecar has its own local visible version in `SIDECAR_VERSION`.
 
-- Current Sidecar version: `v123.5`
+- Current Sidecar version: `v123.7`
 - Versioning follows the canonical `~/Dev/.SOPs/VERSIONING_SOP.md` default
   calendar visible-version rule for this local web-app surface.
 - Sidecar version bumps do not imply a public Photos By Elie site version bump.
@@ -42,6 +42,8 @@ Sidecar owns:
 - Next-upload eligibility plans.
 - Persistent current-window culling, one-row-per-picked-item metadata review, and
   explicit wastebasket tombstoning.
+- Compact star/color filter controls with group-level All/None toggles and
+  star/color checkbox pills for culling-speed scans.
 
 Owner owns:
 

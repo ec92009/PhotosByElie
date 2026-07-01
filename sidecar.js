@@ -228,7 +228,7 @@
   const videoPlayerMarkup = (item, autoplay = true) => `
     <video class="sidecar-inline-video" controls playsinline preload="metadata" ${autoplay ? "autoplay" : ""} poster="${escapeHtml(previewUrl(item))}" src="${escapeHtml(videoUrl(item))}"></video>
   `;
-  const versionFallback = "123.1";
+  const versionFallback = "123.2";
   const versionFallbackLabel = `v${versionFallback}`;
   const videoBadge = (item, index, label) => isVideo(item)
     ? videoOverlay(item, index, label)
@@ -298,7 +298,8 @@
     return "undecided";
   };
 
-  const isVisibleBaseItem = (item) => Boolean(item && item.tombstoneState !== "active");
+  const isMockUploadedItem = (item) => item?.mockUploadState === "active" || item?.mockUpload?.state === "active";
+  const isVisibleBaseItem = (item) => Boolean(item && item.tombstoneState !== "active" && !isMockUploadedItem(item));
   const isPickedItem = (item) => (item?.sidecarState?.pickState || "undecided") === "picked";
   const matchesRatingColorMediaFilters = (item) => {
     if (!isVisibleBaseItem(item)) return false;
@@ -1093,6 +1094,27 @@
     return index;
   };
 
+  const applyMockUploadedItems = (items = []) => {
+    const uploadedIds = new Set(items.map((item) => item.assetId).filter(Boolean));
+    if (!uploadedIds.size) return 0;
+    let changed = 0;
+    state.items.forEach((item) => {
+      if (!uploadedIds.has(itemId(item))) return;
+      item.mockUploadState = "active";
+      item.mockUpload = {
+        ...(item.mockUpload || {}),
+        state: "active",
+      };
+      changed += 1;
+    });
+    if (changed) {
+      reconcileSelection(state.selectedIndex);
+      renderSurface();
+      syncQuickLookToSelection();
+    }
+    return changed;
+  };
+
   const applyChangedItems = (changedItems, visibilityBefore, {
     preferredIndex = state.selectedIndex,
     previousActive = state.selectedIndex,
@@ -1506,12 +1528,16 @@
     const remainingPlan = payload.remainingPlan || { ok: true, count: 0, items: [] };
     remainingPlan.mockResult = payload;
     renderPlan("Next Upload Eligibility", "Upload plan", remainingPlan, "upload");
+    const hiddenCurrentWindowCount = applyMockUploadedItems(payload.items || []);
     const collisions = Number(payload.collisionCount || 0);
     const coveredKeys = Number(payload.coveredKeyCount || 0);
     const warning = collisions
       ? ` ${collisions.toLocaleString()} item${collisions === 1 ? "" : "s"} had current R2 key coverage across ${coveredKeys.toLocaleString()} key${coveredKeys === 1 ? "" : "s"}.`
       : " No current R2 key collisions found.";
-    setStatus(`Mock upload removed ${Number(payload.mockUploadedCount || 0).toLocaleString()} row${Number(payload.mockUploadedCount || 0) === 1 ? "" : "s"} from the upload plan.${warning}`);
+    const hiddenWindow = hiddenCurrentWindowCount
+      ? ` ${hiddenCurrentWindowCount.toLocaleString()} current-window item${hiddenCurrentWindowCount === 1 ? "" : "s"} hidden from Culling/Review.`
+      : "";
+    setStatus(`Mock upload removed ${Number(payload.mockUploadedCount || 0).toLocaleString()} row${Number(payload.mockUploadedCount || 0) === 1 ? "" : "s"} from the upload plan.${hiddenWindow}${warning}`);
   };
 
   const setPage = (page) => {

@@ -415,8 +415,9 @@ Clock state: running
 | 2026-06-30 | 23:10 CEST | 23:11 CEST | 0:01 | Requested restoring Owner-style Review propagation, AI rework categories, and oldest-to-newest Review ordering; background implementation/testing time excluded. |
 | 2026-07-01 | 10:28 CEST | 10:29 CEST | 0:01 | Requested Sidecar upload plan move to a right thumbnail rail and Sidecar keywords honor Owner's keyword blacklist; background implementation/testing time excluded. |
 | 2026-07-01 | 10:45 CEST | 10:46 CEST | 0:01 | Requested Sidecar mock upload simulation that removes rows from the upload plan and warns about planned R2 key collisions; background implementation/testing time excluded. |
+| 2026-07-01 | 13:30 CEST | 13:31 CEST | 0:01 | Requested mock-uploaded Sidecar items disappear from active Culling and Review pages after crossing the mock upload boundary; background implementation/testing time excluded. |
 
 ## Totals
 
-Active collaboration time used: 22:18
+Active collaboration time used: 22:19
 Remaining budget: not set

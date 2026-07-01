@@ -10,7 +10,7 @@ metadata; Owner decides publication and commerce.
 
 Sidecar has its own local visible version in `SIDECAR_VERSION`.
 
-- Current Sidecar version: `v123.1`
+- Current Sidecar version: `v123.2`
 - Versioning follows the canonical `~/Dev/.SOPs/VERSIONING_SOP.md` default
   calendar visible-version rule for this local web-app surface.
 - Sidecar version bumps do not imply a public Photos By Elie site version bump.
@@ -88,7 +88,8 @@ the expected public preview, private master, and private render R2 keys, then
 checks Owner's current `r2_objects` state for exact bucket/key coverage. A mock
 collision warning means the planned key already exists in current R2 state; it is
 not a perceptual duplicate detector for visually similar files with different
-source anchors.
+source anchors. Mock-uploaded items are treated as having crossed the Owner
+handoff boundary and are hidden from active Culling and Review surfaces.
 
 ## Photos Write-Back
 
@@ -202,7 +203,8 @@ The first implemented slice includes:
   decision propagation, AI rework categories, previewing the active item with Space,
   tombstoning the wastebasket explicitly, viewing upload eligibility as a
   right-side thumbnail rail, mock-uploading that plan locally with Owner R2 key
-  collision warnings, and viewing the pending Photos commit plan.
+  collision warnings, hiding mock-uploaded items from active Culling/Review
+  surfaces, and viewing the pending Photos commit plan.
 - Dock launcher script for `PhotosByElie Sidecar.app`.
 
 Remaining near-term slices:

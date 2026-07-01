@@ -274,14 +274,33 @@ def merge_state(repo_root: Path, rows: list[dict[str, Any]]) -> list[dict[str, A
             asset_ids,
         ).fetchall()
         tombstones = {str(row["asset_id"]): str(row["tombstone_state"] or "") for row in tombstone_rows}
+        mock_upload_rows = conn.execute(
+            f"""
+            SELECT asset_id, mock_state, mock_run_id, uploaded_at
+            FROM sidecar_mock_uploads
+            WHERE mock_state = 'active' AND asset_id IN ({placeholders})
+            """,
+            asset_ids,
+        ).fetchall()
+        mock_uploads = {
+            str(row["asset_id"]): {
+                "state": str(row["mock_state"] or ""),
+                "mockRunId": str(row["mock_run_id"] or ""),
+                "uploadedAt": str(row["uploaded_at"] or ""),
+            }
+            for row in mock_upload_rows
+        }
     merged = []
     for row in rows:
         asset_id = _asset_id(row)
+        mock_upload = mock_uploads.get(asset_id, {})
         merged.append({
             **row,
             "sidecarState": decisions.get(asset_id, _decision_payload(None)),
             "pendingSyncCount": pending.get(asset_id, 0),
             "tombstoneState": tombstones.get(asset_id, ""),
+            "mockUploadState": mock_upload.get("state", ""),
+            "mockUpload": mock_upload,
         })
     return merged
 

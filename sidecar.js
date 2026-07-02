@@ -19,6 +19,7 @@
   const indexStatusProgress = $("[data-sidecar-index-progress]");
   const slideBackButton = $("[data-sidecar-slide-back]");
   const slideForwardButton = $("[data-sidecar-slide-forward]");
+  const syncPlanButton = $("[data-sidecar-sync-plan]");
   const burstCullButton = $("[data-sidecar-burst-cull]");
   const emptyWastebasketButton = $("[data-sidecar-empty-wastebasket]");
   const pageTabs = Array.from(document.querySelectorAll("[data-sidecar-page]"));
@@ -333,7 +334,7 @@
   const videoPlayerMarkup = (item, autoplay = true) => `
     <video class="sidecar-inline-video" controls playsinline preload="metadata" ${autoplay ? "autoplay" : ""} poster="${escapeHtml(previewUrl(item))}" src="${escapeHtml(videoUrl(item))}"></video>
   `;
-  const versionFallback = "124.0";
+  const versionFallback = "124.1";
   const versionFallbackLabel = `v${versionFallback}`;
   const videoBadge = (item, index, label) => isVideo(item)
     ? videoOverlay(item, index, label)
@@ -1614,7 +1615,7 @@
     const indexedNote = payload.source === "sidecar-index"
       ? ` Indexed range has ${filteredCount.toLocaleString()} item${filteredCount === 1 ? "" : "s"}.`
       : " Refresh the local Photos index for faster future windows.";
-    const loadedMessage = `Loaded window ${offset.toLocaleString()}-${(offset + state.items.length).toLocaleString()} from ${sourceLabel}. Showing ${visibleIndexes().length.toLocaleString()} after filters.${indexedNote}`;
+    const loadedMessage = `Loaded current window from ${sourceLabel} starting at index ${offset.toLocaleString()}. Showing ${visibleIndexes().length.toLocaleString()} after filters.${indexedNote}`;
     setStatus(loadedMessage);
     try {
       await refreshUploadRail({ silent: true });
@@ -1640,7 +1641,7 @@
     let appendedCount = 0;
     let scannedCount = 0;
     let exhausted = false;
-    setStatus(`Refill starting at local index offset ${cursor.toLocaleString()}; showing ${currentVisible.toLocaleString()} of ${targetVisible.toLocaleString()}, appended 0, scanned 0.`);
+    setStatus(`Refill starting at local index position ${cursor.toLocaleString()}; showing ${currentVisible.toLocaleString()} of ${targetVisible.toLocaleString()}, appended 0, scanned 0.`);
     await waitForStatusPaint();
     for (let pass = 0; pass < refillMaxFetches && currentVisible < targetVisible; pass += 1) {
       const batchStart = cursor;
@@ -1664,7 +1665,7 @@
       }
       scannedCount += consumedRows;
       cursor += consumedRows;
-      setStatus(`Refill progress: showing ${currentVisible.toLocaleString()} of ${targetVisible.toLocaleString()}; appended ${appendedCount.toLocaleString()}, scanned ${scannedCount.toLocaleString()}, next offset ${cursor.toLocaleString()}.`);
+      setStatus(`Refill progress: showing ${currentVisible.toLocaleString()} of ${targetVisible.toLocaleString()}; appended ${appendedCount.toLocaleString()}, scanned ${scannedCount.toLocaleString()}, next index position ${cursor.toLocaleString()}.`);
       await waitForStatusPaint();
       if (currentVisible >= targetVisible) break;
       if (rows.length < refillBatchSize) {
@@ -1760,6 +1761,60 @@
     `;
   };
 
+  const syncStatMarkup = (label, value) => `
+    <div>
+      <dt>${escapeHtml(label)}</dt>
+      <dd>${Number(value || 0).toLocaleString()}</dd>
+    </div>
+  `;
+
+  const syncPlanSummaryMarkup = (payload = {}) => {
+    const index = payload.index || {};
+    const ai = payload.ai || {};
+    const writeBack = payload.writeBack || {};
+    const upload = payload.upload || {};
+    const lastIndexed = index.lastIndexedAt ? formatDate(index.lastIndexedAt) : "not indexed";
+    return `
+      <dl class="sidecar-sync-stats">
+        ${syncStatMarkup("Indexed", index.indexedCount)}
+        ${syncStatMarkup("Missing", index.missingIndexedCount)}
+        ${syncStatMarkup("AI queue", ai.candidateCount)}
+        ${syncStatMarkup("Rework", ai.reworkCount)}
+        ${syncStatMarkup("Write-back", writeBack.pendingCount)}
+        ${syncStatMarkup("Upload-ready", upload.readyCount)}
+      </dl>
+      <div class="sidecar-sync-plan-copy">
+        <span>Last index: ${escapeHtml(lastIndexed)}</span>
+        <span>AI lane: picked only</span>
+        <span>Photos write-back: explicit commit</span>
+      </div>
+    `;
+  };
+
+  const renderSyncPlan = (payload = {}) => {
+    if (!planPanel || !planOutput) return;
+    const ai = payload.ai || {};
+    const items = Array.isArray(ai.items) ? ai.items : [];
+    planPanel.hidden = false;
+    planPanel.classList.toggle("is-upload-plan", false);
+    planPanel.dataset.sidecarPlanKind = "sync";
+    document.body.classList.add("sidecar-has-plan");
+    if (planTitle) planTitle.textContent = `Sync & AI${Number(ai.candidateCount || 0) ? ` (${Number(ai.candidateCount || 0).toLocaleString()})` : ""}`;
+    if (planEyebrow) planEyebrow.textContent = "Nightly plan";
+    planOutput.innerHTML = `
+      ${syncPlanSummaryMarkup(payload)}
+      <div class="sidecar-plan-list sidecar-upload-plan-list sidecar-ai-candidate-list" aria-label="Picked AI metadata candidates">
+        ${items.slice(0, 80).map((item) => `
+          <div class="sidecar-upload-plan-tile" title="${escapeHtml(item.filename || item.assetId || "")}" aria-label="${escapeHtml(item.filename || item.assetId || "AI metadata candidate")}">
+            <img data-sidecar-preview src="${escapeHtml(previewUrl({ localIdentifier: item.assetId }))}" alt="" loading="lazy"/>
+            ${previewFallbackMarkup}
+          </div>
+        `).join("") || `<p>No picked rows need AI metadata work.</p>`}
+      </div>
+    `;
+    wirePreviewFallbacks(planPanel);
+  };
+
   const renderPlan = (title, eyebrow, payload, kind = "") => {
     if (!planPanel || !planOutput) return;
     planPanel.hidden = false;
@@ -1825,6 +1880,18 @@
       if (!silent) setStatus(`Upload plan refreshed: ${statusSuffix}`);
     } else if (!silent) {
       setStatus("Photos commit plan refreshed.");
+    }
+  };
+
+  const loadSyncPlan = async ({ silent = false } = {}) => {
+    const response = await fetch("/__sidecar/sync-status");
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload.ok) throw new Error(payload.error || "Could not load Sidecar sync plan.");
+    renderSyncPlan(payload);
+    if (!silent) {
+      const aiCount = Number(payload.ai?.candidateCount || 0);
+      const pendingWriteBack = Number(payload.writeBack?.pendingCount || 0);
+      setStatus(`Sync & AI plan refreshed: ${aiCount.toLocaleString()} picked AI candidate${aiCount === 1 ? "" : "s"}, ${pendingWriteBack.toLocaleString()} pending Photos write-back change${pendingWriteBack === 1 ? "" : "s"}.`);
     }
   };
 
@@ -2166,6 +2233,7 @@
   $("[data-sidecar-summary]")?.addEventListener("click", () => loadSummary().catch((error) => setStatus(error.message)));
   $("[data-sidecar-upload-plan]")?.addEventListener("click", () => loadPlan("upload").catch((error) => setStatus(error.message)));
   $("[data-sidecar-commit-plan]")?.addEventListener("click", () => loadPlan("commit").catch((error) => setStatus(error.message)));
+  syncPlanButton?.addEventListener("click", () => loadSyncPlan().catch((error) => setStatus(error.message)));
   document.addEventListener("keydown", handleShortcut, true);
 
   applyStoredWindow();

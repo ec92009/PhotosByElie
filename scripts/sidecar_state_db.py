@@ -1086,6 +1086,175 @@ def upload_plan(repo_root: Path, limit: int = 500) -> dict[str, Any]:
     }
 
 
+def _ai_metadata_reason(row: sqlite3.Row, seed_keywords: list[str]) -> str:
+    metadata_state = str(row["metadata_state"] or "")
+    if metadata_state == "rework":
+        category = str(row["rework_category"] or "").strip()
+        return f"rework:{category}" if category else "rework"
+    if row["metadata_seed_title"] or seed_keywords:
+        return "picked_unreviewed_seeded"
+    return "picked_unreviewed_missing_seed_metadata"
+
+
+def ai_metadata_plan(repo_root: Path, limit: int = 200) -> dict[str, Any]:
+    """Plan picked-only Sidecar rows for a future local AI metadata pass."""
+    safe_limit = max(1, min(int(limit or 200), 5000))
+    active_item_predicate = """
+      d.pick_state = 'picked'
+      AND (a.missing_at IS NULL OR a.missing_at = '')
+      AND NOT EXISTS (
+        SELECT 1 FROM sidecar_tombstones AS t
+        WHERE t.asset_id = d.asset_id AND t.tombstone_state = 'active'
+      )
+    """
+    with connect(repo_root) as conn:
+        counts = conn.execute(
+            f"""
+            SELECT
+              COUNT(*) AS picked_count,
+              COUNT(CASE WHEN d.metadata_state = 'unreviewed' THEN 1 END) AS unreviewed_count,
+              COUNT(CASE WHEN d.metadata_state = 'rework' THEN 1 END) AS rework_count,
+              COUNT(CASE WHEN d.metadata_state = 'proposed' THEN 1 END) AS proposed_count,
+              COUNT(CASE WHEN d.metadata_state = 'approved' THEN 1 END) AS approved_count,
+              COUNT(CASE WHEN d.metadata_state = 'blocked' THEN 1 END) AS blocked_count,
+              COUNT(CASE WHEN d.metadata_state IN ('unreviewed', 'rework')
+                AND NOT EXISTS (
+                  SELECT 1 FROM sidecar_mock_uploads AS m
+                  WHERE m.asset_id = d.asset_id AND m.mock_state = 'active'
+                )
+              THEN 1 END) AS candidate_count,
+              COUNT(CASE WHEN EXISTS (
+                SELECT 1 FROM sidecar_mock_uploads AS m
+                WHERE m.asset_id = d.asset_id AND m.mock_state = 'active'
+              ) THEN 1 END) AS mock_uploaded_count
+            FROM sidecar_decisions AS d
+            JOIN sidecar_assets AS a ON a.asset_id = d.asset_id
+            WHERE {active_item_predicate}
+            """
+        ).fetchone()
+        rows = conn.execute(
+            f"""
+            SELECT
+              a.asset_id, a.source_anchor, a.media_type, a.filename, a.captured_at,
+              a.pixel_width, a.pixel_height, a.duration, a.photos_title,
+              a.photos_keywords_json, a.location_label, a.location_keywords_json,
+              a.metadata_seed_title, a.metadata_seed_keywords_json,
+              d.rating, d.color, d.metadata_state, d.title, d.keywords_json,
+              d.rework_category, d.rework_comment
+            FROM sidecar_decisions AS d
+            JOIN sidecar_assets AS a ON a.asset_id = d.asset_id
+            WHERE {active_item_predicate}
+              AND d.metadata_state IN ('unreviewed', 'rework')
+              AND NOT EXISTS (
+                SELECT 1 FROM sidecar_mock_uploads AS m
+                WHERE m.asset_id = d.asset_id AND m.mock_state = 'active'
+              )
+            ORDER BY
+              CASE WHEN a.captured_at IS NULL OR a.captured_at = '' THEN 1 ELSE 0 END,
+              a.captured_at ASC,
+              a.asset_id
+            LIMIT ?
+            """,
+            (safe_limit,),
+        ).fetchall()
+    items: list[dict[str, Any]] = []
+    for row in rows:
+        photos_keywords = _read_json_text(row["photos_keywords_json"], [])
+        location_keywords = _read_json_text(row["location_keywords_json"], [])
+        seed_keywords = _read_json_text(row["metadata_seed_keywords_json"], [])
+        decision_keywords = _read_json_text(row["keywords_json"], [])
+        items.append({
+            "assetId": row["asset_id"],
+            "sourceAnchor": row["source_anchor"],
+            "filename": row["filename"] or "",
+            "capturedAt": row["captured_at"] or "",
+            "mediaType": row["media_type"] or "",
+            "pixelWidth": int(row["pixel_width"] or 0),
+            "pixelHeight": int(row["pixel_height"] or 0),
+            "duration": float(row["duration"] or 0),
+            "rating": int(row["rating"] or 0),
+            "color": row["color"] or "",
+            "metadataState": row["metadata_state"] or "unreviewed",
+            "decisionTitle": row["title"] or "",
+            "decisionKeywords": decision_keywords,
+            "photosTitle": row["photos_title"] or "",
+            "photosKeywords": photos_keywords,
+            "locationLabel": row["location_label"] or "",
+            "locationKeywords": location_keywords,
+            "seedTitle": row["metadata_seed_title"] or "",
+            "seedKeywords": seed_keywords,
+            "titleSeeded": bool(row["metadata_seed_title"] or row["photos_title"] or row["title"]),
+            "keywordSeedCount": len(seed_keywords),
+            "reworkCategory": row["rework_category"] or "",
+            "reworkComment": row["rework_comment"] or "",
+            "reason": _ai_metadata_reason(row, seed_keywords),
+        })
+    return {
+        "ok": True,
+        "mode": "picked-only-ai-metadata-plan",
+        "count": len(items),
+        "candidateCount": int(counts["candidate_count"] or 0),
+        "pickedCount": int(counts["picked_count"] or 0),
+        "unreviewedCount": int(counts["unreviewed_count"] or 0),
+        "reworkCount": int(counts["rework_count"] or 0),
+        "proposedCount": int(counts["proposed_count"] or 0),
+        "approvedCount": int(counts["approved_count"] or 0),
+        "blockedCount": int(counts["blocked_count"] or 0),
+        "mockUploadedPickedCount": int(counts["mock_uploaded_count"] or 0),
+        "items": items,
+        "message": "Only picked Sidecar items are eligible for this AI metadata planning lane.",
+    }
+
+
+def sidecar_sync_status(repo_root: Path, limit: int = 80) -> dict[str, Any]:
+    """Summarize the planned nightly Photos index, AI metadata, and write-back lanes."""
+    safe_limit = max(1, min(int(limit or 80), 500))
+    sidecar_summary = summary(repo_root)
+    ai_plan = ai_metadata_plan(repo_root, limit=safe_limit)
+    upload = upload_plan(repo_root, limit=safe_limit)
+    write_back = commit_plan(repo_root, limit=safe_limit)
+    return {
+        "ok": True,
+        "mode": "sidecar-sync-status",
+        "index": {
+            "indexedCount": sidecar_summary["indexedCount"],
+            "missingIndexedCount": sidecar_summary["missingIndexedCount"],
+            "lastIndexedAt": sidecar_summary["lastIndexedAt"],
+        },
+        "ai": {
+            "pickedOnly": True,
+            "candidateCount": ai_plan["candidateCount"],
+            "visibleCount": ai_plan["count"],
+            "unreviewedCount": ai_plan["unreviewedCount"],
+            "reworkCount": ai_plan["reworkCount"],
+            "proposedCount": ai_plan["proposedCount"],
+            "approvedCount": ai_plan["approvedCount"],
+            "blockedCount": ai_plan["blockedCount"],
+            "items": ai_plan["items"],
+        },
+        "writeBack": {
+            "pendingCount": sidecar_summary["pendingSyncCount"],
+            "visibleCount": write_back["count"],
+            "writeBackImplemented": write_back["writeBackImplemented"],
+            "items": write_back["items"],
+            "message": write_back["message"],
+        },
+        "upload": {
+            "readyCount": upload["approvedPickedCount"],
+            "visibleCount": upload["count"],
+            "pickedCount": upload["pickedCount"],
+            "needsReviewCount": upload["pickedNeedsReviewCount"],
+            "mockUploadedCount": upload["mockUploadedCount"],
+            "items": upload["items"],
+        },
+        "nightly": {
+            "photosIndexRefresh": "planned-metadata-only",
+            "aiMetadata": "planned-picked-only",
+            "photosWriteBack": "explicit-commit-only",
+        },
+    }
+
+
 def _planned_r2_keys(row: sqlite3.Row) -> tuple[str, list[dict[str, str]]]:
     source_anchor = str(row["source_anchor"] or f"apple-photos://{row['asset_id']}")
     photo_id = photo_id_for_source_path(source_anchor)
@@ -1286,6 +1455,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Inspect Sidecar local workflow state.")
     parser.add_argument("--summary", action="store_true")
     parser.add_argument("--upload-plan", action="store_true")
+    parser.add_argument("--ai-plan", action="store_true")
+    parser.add_argument("--sync-status", action="store_true")
     parser.add_argument("--mock-upload", action="store_true")
     parser.add_argument("--commit-plan", action="store_true")
     parser.add_argument("--empty-wastebasket", action="store_true")
@@ -1297,6 +1468,10 @@ def main() -> None:
         print(json.dumps(mock_upload(repo_root), indent=2))
     elif args.upload_plan:
         print(json.dumps(upload_plan(repo_root), indent=2))
+    elif args.ai_plan:
+        print(json.dumps(ai_metadata_plan(repo_root), indent=2))
+    elif args.sync_status:
+        print(json.dumps(sidecar_sync_status(repo_root), indent=2))
     elif args.commit_plan:
         print(json.dumps(commit_plan(repo_root), indent=2))
     else:

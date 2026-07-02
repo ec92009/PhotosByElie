@@ -1,6 +1,6 @@
 # Photos By Elie Backlog
 
-Last updated: 2026-07-01
+Last updated: 2026-07-02
 
 ## Current Facts
 
@@ -93,16 +93,17 @@ Last updated: 2026-07-01
 - Price and offer strategy draft: `docs/commerce/PRICE_OFFER_STRATEGY.md`; no live price change has been made from that draft yet.
 - First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
 - Latest checkpoint is `v110.7`; this file remains the numbered backlog source of truth.
-- Sidecar is now the planned local Apple Photos triage engine. Sidecar has its own visible local version, currently `v124.0` in `SIDECAR_VERSION`, and does not bump the public commercial site version by itself.
+- Sidecar is now the planned local Apple Photos triage engine. Sidecar has its own visible local version, currently `v124.1` in `SIDECAR_VERSION`, and does not bump the public commercial site version by itself.
 - Sidecar's hard boundary: it owns whole-library Apple Photos indexing, local-first culling, staged stars/colors/pick/reject/hide/title/keyword decisions, AI metadata review queues, pending Photos write-back plans, and next-upload eligibility. Owner owns forced materialization, R2 generation/upload, catalog rebuilds, validation, and commercial publication.
 - Sidecar decisions must be instant local SQLite writes. Apple Photos keyword/title write-back is explicit and staged through Save/Commit flows, not performed on every culling keystroke.
 - Sidecar Review is picked-item only and sorts oldest-to-newest for propagation. Title/keyword arrows propagate a single field through current-and-following picked rows in the same two-hour shoot window, while row Propagate carries metadata approval or the selected AI rework category/comment.
 - Sidecar Review uses taller contained previews so portrait images can use the row's vertical space. The upload plan rail is part of the default Sidecar workspace after a window loads and refreshes immediately after local approval/decision changes.
 - Sidecar bulk decisions keep multi-selection alive after Pick, rating, color, and metadata actions when the selected items remain visible, so follow-up bulk changes can be applied without reselecting.
 - Sidecar Stars and Colors filters expose compact All/None controls; star and color filters use visible pills as the checkbox controls, with accessible names instead of duplicate native checkboxes.
-- Sidecar Culling has an explicit Refill window action that keeps the current offset anchored while scanning later Apple Photos rows to top up depleted visible space after mock uploads, rejects, tombstones, or active filters hide rows.
-- Sidecar refill scans in smaller chunks and updates status before and after each chunk with scanned rows, appended rows, visible/target count, and next offset.
+- Sidecar Culling has an explicit Refill window action that keeps the current working-set start anchored while scanning later Apple Photos rows to top up depleted visible space after mock uploads, rejects, tombstones, or active filters hide rows. Date and index-start controls are now advanced jump tools rather than the default culling path.
+- Sidecar refill scans in smaller chunks and updates status before and after each chunk with scanned rows, appended rows, visible/target count, and next index position.
 - Sidecar now uses the local SQLite `sidecar_assets` Photos metadata index for current-window load and refill. The explicit Refresh Photos index action runs a metadata-only one-pass PhotoKit scan, reports scan/import progress, and avoids previews, originals, videos, and iCloud downloads.
+- Sidecar has a Sync & AI planning rail. It reports local Photos index freshness, pending Photos write-back, upload readiness, and a picked-only AI metadata queue for picked rows in `unreviewed` or `rework` state. Undecided/rejected/hidden/tombstoned/mock-uploaded items are intentionally excluded from AI metadata work.
 - Sidecar upload eligibility is shown as a right-side thumbnail rail; mock upload removes simulated rows from that rail, hides them from active Culling/Review windows, and warns when Owner's current R2 object state already covers planned keys. Sidecar metadata staging strips Owner keyword-blacklist terms before storing local keyword decisions, reading SQLite first with a JSON compatibility fallback when needed.
 - Sidecar Review seeds unedited picked rows from existing Apple Photos title/keywords when PhotoKit exposes them. When Photos exposes a useful title but not the keyword list, Sidecar derives starter keywords from comma/section-separated title parts. GPS-derived human place hints are added to seed keywords, and blank-title rows can start from a compact year/place fallback such as `2026 Paris`; exact coordinates stay local and are not written as keywords.
 - New import/re-export rule requested by Owner: the durable import anchor should be the full source pathname plus the source modified date. If only the modified date changes for the same source path, the new render should overwrite the older stored forms instead of creating a duplicate media row.
@@ -214,5 +215,5 @@ Last updated: 2026-07-01
    - Treat videos as first-class culling/review items with media filters, local poster thumbnails, standard play-icon duration chips, in-place local playback, auto-starting video Quick Look with muted autoplay fallback, and shortcut-active Space-bar Quick Look previews with visible item-status reminders before any forced iCloud materialization.
    - Keep rejected/hidden items recoverable through normal culling filters until the explicit Empty wastebasket action tombstones them.
    - Reuse the Owner title/keyword review interaction model for Sidecar Review: approve, reject, resubmit to AI, manual title/keyword edits, and batch operations.
-   - Feed the undecided middle into nightly AI runs: unreviewed, picked-needs-metadata, weak metadata, rejected proposals, low confidence, and high-confidence batch-approval candidates.
+   - Feed picked items only into nightly AI runs: unreviewed picked rows, picked rows marked for rework, weak picked metadata, low-confidence picked proposals, and high-confidence picked batch-approval candidates.
    - Keep Owner as the commercial gate: picked + metadata-approved assets become eligible for materialization/download, derivative generation, R2 upload, public catalog publication, and checkout delivery.

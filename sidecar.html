@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#7b4d26"/>
   <link rel="stylesheet" href="./shared.css"/>
   <link rel="stylesheet" href="./photos.css"/>
-  <link rel="stylesheet" href="./sidecar.css?v=124.0"/>
+  <link rel="stylesheet" href="./sidecar.css?v=124.1"/>
 </head>
 <body data-gallery="sidecar">
   <header class="site-header">
@@ -33,15 +33,7 @@
         <button class="sidecar-view-tab" type="button" role="tab" aria-selected="true" data-sidecar-page="culling">Culling</button>
         <button class="sidecar-view-tab" type="button" role="tab" aria-selected="false" data-sidecar-page="review">Review</button>
       </div>
-      <div class="sidecar-control-grid">
-        <label>
-          <span>Date from</span>
-          <input type="date" data-sidecar-date-from/>
-        </label>
-        <label>
-          <span>Date to</span>
-          <input type="date" data-sidecar-date-to/>
-        </label>
+      <div class="sidecar-control-grid sidecar-working-set-grid">
         <label>
           <span>Previews</span>
           <select data-sidecar-limit>
@@ -51,10 +43,23 @@
             <option value="300">300</option>
           </select>
         </label>
-        <label>
-          <span>Offset</span>
-          <input type="number" min="0" step="1" value="0" inputmode="numeric" data-sidecar-offset/>
-        </label>
+        <details class="sidecar-advanced-window">
+          <summary>Jump / date</summary>
+          <div class="sidecar-advanced-grid">
+            <label>
+              <span>Date from</span>
+              <input type="date" data-sidecar-date-from/>
+            </label>
+            <label>
+              <span>Date to</span>
+              <input type="date" data-sidecar-date-to/>
+            </label>
+            <label>
+              <span>Index start</span>
+              <input type="number" min="0" step="1" value="0" inputmode="numeric" data-sidecar-offset/>
+            </label>
+          </div>
+        </details>
       </div>
       <div class="sidecar-filter-grid" aria-label="Sidecar filters">
         <fieldset class="sidecar-filter-group" data-sidecar-filter-group="rating">
@@ -99,12 +104,13 @@
         <button class="btn primary" type="button" data-sidecar-load>Load window</button>
         <button class="btn secondary" type="button" data-sidecar-refill>Refill window</button>
         <button class="btn secondary" type="button" data-sidecar-index-refresh>Refresh Photos index</button>
-        <button class="btn secondary" type="button" data-sidecar-slide-back>Slide back</button>
-        <button class="btn secondary" type="button" data-sidecar-slide-forward>Slide forward</button>
+        <button class="btn secondary" type="button" data-sidecar-slide-back>Previous window</button>
+        <button class="btn secondary" type="button" data-sidecar-slide-forward>Next window</button>
         <button class="btn secondary sidecar-burst-action" type="button" data-sidecar-burst-cull>Cull bursts</button>
         <button class="btn secondary" type="button" data-sidecar-summary>Refresh summary</button>
         <button class="btn secondary" type="button" data-sidecar-upload-plan>Upload plan</button>
         <button class="btn secondary" type="button" data-sidecar-commit-plan>Photos commit plan</button>
+        <button class="btn secondary" type="button" data-sidecar-sync-plan>Sync &amp; AI plan</button>
         <button class="btn secondary sidecar-danger-action" type="button" data-sidecar-empty-wastebasket>Empty wastebasket</button>
       </div>
       <div class="sidecar-index-status" data-sidecar-index-status hidden>
@@ -144,6 +150,6 @@
   </main>
 
   <script src="./photos.js"></script>
-  <script src="./sidecar.js?v=124.0"></script>
+  <script src="./sidecar.js?v=124.1"></script>
 </body>
 </html>

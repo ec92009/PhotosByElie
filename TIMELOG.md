@@ -425,8 +425,9 @@ Clock state: running
 | 2026-07-02 | 00:31 CEST | 00:35 CEST | 0:01 | Approved switching Sidecar refill to a local Photos metadata index and asked about the indexing tradeoffs; background implementation/testing time excluded. |
 | 2026-07-02 | 09:42 CEST | 09:43 CEST | 0:01 | Approved demoting date/offset controls, requested picked-only AI metadata work, and asked to ticket and start the Sidecar sync/AI slice; background implementation/testing time excluded. |
 | 2026-07-02 | 09:57 CEST | 09:58 CEST | 0:01 | Requested removing Sidecar UI exposure for date/index jumps and Sync/AI planning, moving Photos sync and picked-only AI planning to separate scheduled tasks; background implementation/testing time excluded. |
+| 2026-07-02 | 10:18 CEST | 10:22 CEST | 0:04 | Verified the full 57,489-item Sidecar Photos index, reloaded scheduled maintenance agents, pushed v124.2, and closed the central tickets; background command/runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 22:29
+Active collaboration time used: 22:33
 Remaining budget: not set

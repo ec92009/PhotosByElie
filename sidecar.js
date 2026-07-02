@@ -12,14 +12,12 @@
   const planOutput = $("[data-sidecar-plan-output]");
   const loadButton = $("[data-sidecar-load]");
   const refillButton = $("[data-sidecar-refill]");
-  const indexRefreshButton = $("[data-sidecar-index-refresh]");
   const indexStatusRoot = $("[data-sidecar-index-status]");
   const indexStatusLabel = $("[data-sidecar-index-label]");
   const indexStatusCount = $("[data-sidecar-index-count]");
   const indexStatusProgress = $("[data-sidecar-index-progress]");
   const slideBackButton = $("[data-sidecar-slide-back]");
   const slideForwardButton = $("[data-sidecar-slide-forward]");
-  const syncPlanButton = $("[data-sidecar-sync-plan]");
   const burstCullButton = $("[data-sidecar-burst-cull]");
   const emptyWastebasketButton = $("[data-sidecar-empty-wastebasket]");
   const pageTabs = Array.from(document.querySelectorAll("[data-sidecar-page]"));
@@ -127,6 +125,7 @@
     keywordBlacklist: new Set(),
     filters: normalizeFilters(readStoredWindow()?.filters || cloneDefaultFilters()),
     hasWindow: Boolean(readStoredWindow()?.hasWindow),
+    windowStartOffset: Math.max(0, Number(readStoredWindow()?.windowStartOffset ?? readStoredWindow()?.offset ?? 0)),
     windowCursorOffset: Number(readStoredWindow()?.windowCursorOffset || 0),
   };
 
@@ -208,25 +207,10 @@
     return payload;
   };
 
-  const refreshPhotosIndex = async () => {
-    setStatus("Starting metadata-only Apple Photos index refresh...");
-    const response = await fetch("/__sidecar/index-refresh", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
-    });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok || !payload.ok) throw new Error(payload.error || "Could not start Photos index refresh.");
-    renderIndexStatus(payload);
-    startIndexStatusPolling();
-    setStatus("Index refresh started. Sidecar will report Photos scan and SQLite import progress here.");
-  };
-
   const getLimit = () => Math.max(1, Number($("[data-sidecar-limit]")?.value || 96));
-  const getOffset = () => Math.max(0, Number($("[data-sidecar-offset]")?.value || 0));
+  const getOffset = () => Math.max(0, Number(state.windowStartOffset || 0));
   const setOffset = (offset) => {
-    const input = $("[data-sidecar-offset]");
-    if (input) input.value = String(Math.max(0, offset));
+    state.windowStartOffset = Math.max(0, Number(offset || 0));
   };
 
   const applyStoredWindow = () => {
@@ -235,14 +219,10 @@
       filterInputs.forEach((input) => { input.checked = true; });
       return;
     }
-    const dateFrom = $("[data-sidecar-date-from]");
-    const dateTo = $("[data-sidecar-date-to]");
     const limit = $("[data-sidecar-limit]");
-    const offset = $("[data-sidecar-offset]");
-    if (dateFrom && typeof stored.dateFrom === "string") dateFrom.value = stored.dateFrom;
-    if (dateTo && typeof stored.dateTo === "string") dateTo.value = stored.dateTo;
     if (limit && stored.limit) limit.value = String(stored.limit);
-    if (offset && Number.isFinite(Number(stored.offset))) offset.value = String(Math.max(0, Number(stored.offset)));
+    if (Number.isFinite(Number(stored.windowStartOffset))) state.windowStartOffset = Math.max(0, Number(stored.windowStartOffset));
+    else if (Number.isFinite(Number(stored.offset))) state.windowStartOffset = Math.max(0, Number(stored.offset));
     if (Number.isFinite(Number(stored.windowCursorOffset))) state.windowCursorOffset = Math.max(0, Number(stored.windowCursorOffset));
     filterInputs.forEach((input) => {
       const key = filterKeyByName[input.dataset.sidecarFilter];
@@ -271,10 +251,8 @@
   const saveWindowState = () => {
     const payload = {
       page: state.page,
-      dateFrom: $("[data-sidecar-date-from]")?.value || "",
-      dateTo: $("[data-sidecar-date-to]")?.value || "",
       limit: getLimit(),
-      offset: getOffset(),
+      windowStartOffset: getOffset(),
       filters: state.filters,
       hasWindow: state.hasWindow,
       windowCursorOffset: state.windowCursorOffset,
@@ -334,7 +312,7 @@
   const videoPlayerMarkup = (item, autoplay = true) => `
     <video class="sidecar-inline-video" controls playsinline preload="metadata" ${autoplay ? "autoplay" : ""} poster="${escapeHtml(previewUrl(item))}" src="${escapeHtml(videoUrl(item))}"></video>
   `;
-  const versionFallback = "124.1";
+  const versionFallback = "124.2";
   const versionFallbackLabel = `v${versionFallback}`;
   const videoBadge = (item, index, label) => isVideo(item)
     ? videoOverlay(item, index, label)
@@ -1559,12 +1537,8 @@
 
   const librarySliceParams = (offset, limit) => {
     const params = new URLSearchParams();
-    const dateFrom = $("[data-sidecar-date-from]")?.value || "";
-    const dateTo = $("[data-sidecar-date-to]")?.value || "";
     params.set("limit", String(Math.max(1, Math.min(1000, Number(limit || getLimit())))));
     params.set("offset", String(Math.max(0, Number(offset || 0))));
-    if (dateFrom) params.set("dateFrom", dateFrom);
-    if (dateTo) params.set("dateTo", dateTo);
     return params;
   };
 
@@ -1590,7 +1564,7 @@
     const payload = await fetchIndexedLibrarySlice(offset, limit);
     const indexedCount = Number(payload.indexedCount || payload.sidecarSummary?.indexedCount || 0);
     if (indexedCount || !allowPhotoKitFallback) return payload;
-    setStatus("Local Photos index is empty; loading this window once from Apple Photos. Use Refresh Photos index for fast refill.");
+    setStatus("Local Photos index is empty; loading this window once from Apple Photos. Scheduled Photos sync will make future windows faster.");
     await waitForStatusPaint();
     return fetchPhotoKitLibrarySlice(offset, limit);
   };
@@ -1632,7 +1606,13 @@
     state.filters = readFiltersFromControls();
     const targetVisible = getLimit();
     let currentVisible = visibleIndexes().length;
-    if (currentVisible >= targetVisible) {
+    if (currentVisible > targetVisible) {
+      setStatus(`Current window has ${currentVisible.toLocaleString()} visible items, above the ${targetVisible.toLocaleString()} preview target; reloading the working window.`);
+      await waitForStatusPaint();
+      await loadWindow();
+      return;
+    }
+    if (currentVisible === targetVisible) {
       setStatus(`Current window already shows ${currentVisible.toLocaleString()} item${currentVisible === 1 ? "" : "s"}; no refill needed.`);
       return;
     }
@@ -1761,60 +1741,6 @@
     `;
   };
 
-  const syncStatMarkup = (label, value) => `
-    <div>
-      <dt>${escapeHtml(label)}</dt>
-      <dd>${Number(value || 0).toLocaleString()}</dd>
-    </div>
-  `;
-
-  const syncPlanSummaryMarkup = (payload = {}) => {
-    const index = payload.index || {};
-    const ai = payload.ai || {};
-    const writeBack = payload.writeBack || {};
-    const upload = payload.upload || {};
-    const lastIndexed = index.lastIndexedAt ? formatDate(index.lastIndexedAt) : "not indexed";
-    return `
-      <dl class="sidecar-sync-stats">
-        ${syncStatMarkup("Indexed", index.indexedCount)}
-        ${syncStatMarkup("Missing", index.missingIndexedCount)}
-        ${syncStatMarkup("AI queue", ai.candidateCount)}
-        ${syncStatMarkup("Rework", ai.reworkCount)}
-        ${syncStatMarkup("Write-back", writeBack.pendingCount)}
-        ${syncStatMarkup("Upload-ready", upload.readyCount)}
-      </dl>
-      <div class="sidecar-sync-plan-copy">
-        <span>Last index: ${escapeHtml(lastIndexed)}</span>
-        <span>AI lane: picked only</span>
-        <span>Photos write-back: explicit commit</span>
-      </div>
-    `;
-  };
-
-  const renderSyncPlan = (payload = {}) => {
-    if (!planPanel || !planOutput) return;
-    const ai = payload.ai || {};
-    const items = Array.isArray(ai.items) ? ai.items : [];
-    planPanel.hidden = false;
-    planPanel.classList.toggle("is-upload-plan", false);
-    planPanel.dataset.sidecarPlanKind = "sync";
-    document.body.classList.add("sidecar-has-plan");
-    if (planTitle) planTitle.textContent = `Sync & AI${Number(ai.candidateCount || 0) ? ` (${Number(ai.candidateCount || 0).toLocaleString()})` : ""}`;
-    if (planEyebrow) planEyebrow.textContent = "Nightly plan";
-    planOutput.innerHTML = `
-      ${syncPlanSummaryMarkup(payload)}
-      <div class="sidecar-plan-list sidecar-upload-plan-list sidecar-ai-candidate-list" aria-label="Picked AI metadata candidates">
-        ${items.slice(0, 80).map((item) => `
-          <div class="sidecar-upload-plan-tile" title="${escapeHtml(item.filename || item.assetId || "")}" aria-label="${escapeHtml(item.filename || item.assetId || "AI metadata candidate")}">
-            <img data-sidecar-preview src="${escapeHtml(previewUrl({ localIdentifier: item.assetId }))}" alt="" loading="lazy"/>
-            ${previewFallbackMarkup}
-          </div>
-        `).join("") || `<p>No picked rows need AI metadata work.</p>`}
-      </div>
-    `;
-    wirePreviewFallbacks(planPanel);
-  };
-
   const renderPlan = (title, eyebrow, payload, kind = "") => {
     if (!planPanel || !planOutput) return;
     planPanel.hidden = false;
@@ -1880,18 +1806,6 @@
       if (!silent) setStatus(`Upload plan refreshed: ${statusSuffix}`);
     } else if (!silent) {
       setStatus("Photos commit plan refreshed.");
-    }
-  };
-
-  const loadSyncPlan = async ({ silent = false } = {}) => {
-    const response = await fetch("/__sidecar/sync-status");
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok || !payload.ok) throw new Error(payload.error || "Could not load Sidecar sync plan.");
-    renderSyncPlan(payload);
-    if (!silent) {
-      const aiCount = Number(payload.ai?.candidateCount || 0);
-      const pendingWriteBack = Number(payload.writeBack?.pendingCount || 0);
-      setStatus(`Sync & AI plan refreshed: ${aiCount.toLocaleString()} picked AI candidate${aiCount === 1 ? "" : "s"}, ${pendingWriteBack.toLocaleString()} pending Photos write-back change${pendingWriteBack === 1 ? "" : "s"}.`);
     }
   };
 
@@ -2225,7 +2139,6 @@
 
   loadButton?.addEventListener("click", () => loadWindow().catch((error) => setStatus(error.message)));
   refillButton?.addEventListener("click", () => refillWindow().catch((error) => setStatus(error.message)));
-  indexRefreshButton?.addEventListener("click", () => refreshPhotosIndex().catch((error) => setStatus(error.message)));
   slideBackButton?.addEventListener("click", () => slideWindow(-1).catch((error) => setStatus(error.message)));
   slideForwardButton?.addEventListener("click", () => slideWindow(1).catch((error) => setStatus(error.message)));
   burstCullButton?.addEventListener("click", () => performBurstCull().catch((error) => setStatus(error.message)));
@@ -2233,7 +2146,6 @@
   $("[data-sidecar-summary]")?.addEventListener("click", () => loadSummary().catch((error) => setStatus(error.message)));
   $("[data-sidecar-upload-plan]")?.addEventListener("click", () => loadPlan("upload").catch((error) => setStatus(error.message)));
   $("[data-sidecar-commit-plan]")?.addEventListener("click", () => loadPlan("commit").catch((error) => setStatus(error.message)));
-  syncPlanButton?.addEventListener("click", () => loadSyncPlan().catch((error) => setStatus(error.message)));
   document.addEventListener("keydown", handleShortcut, true);
 
   applyStoredWindow();

@@ -61,7 +61,7 @@ body[data-gallery="sidecar"] {
 }
 
 .sidecar-working-set-grid {
-  grid-template-columns: minmax(8rem, 14rem) minmax(18rem, 1fr);
+  grid-template-columns: minmax(8rem, 14rem);
   align-items: end;
 }
 
@@ -88,37 +88,6 @@ body[data-gallery="sidecar"] {
 
 .sidecar-control-grid input:disabled {
   opacity: .48;
-}
-
-.sidecar-advanced-window {
-  align-self: stretch;
-  min-width: 0;
-  border: 1px solid color-mix(in srgb, var(--text) 13%, transparent);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--surface) 66%, transparent);
-  color: var(--muted);
-}
-
-.sidecar-advanced-window summary {
-  display: flex;
-  align-items: center;
-  min-height: 2.6rem;
-  cursor: pointer;
-  font-size: .82rem;
-  font-weight: 850;
-  padding: .55rem .7rem;
-  text-transform: uppercase;
-}
-
-.sidecar-advanced-window[open] summary {
-  border-bottom: 1px solid color-mix(in srgb, var(--text) 12%, transparent);
-}
-
-.sidecar-advanced-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(8rem, 1fr));
-  gap: .75rem;
-  padding: .75rem;
 }
 
 .sidecar-filter-grid {
@@ -1191,46 +1160,6 @@ body.sidecar-has-plan .sidecar-workspace {
 .sidecar-mock-upload-result.has-warning {
   border-color: color-mix(in srgb, var(--accent) 48%, transparent);
   background: color-mix(in srgb, var(--accent) 12%, transparent);
-}
-
-.sidecar-sync-stats {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: .45rem;
-  margin: 0 0 .55rem;
-}
-
-.sidecar-sync-stats div {
-  min-width: 0;
-  border: 1px solid color-mix(in srgb, var(--text) 11%, transparent);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--surface) 70%, transparent);
-  padding: .5rem .55rem;
-}
-
-.sidecar-sync-stats dt {
-  color: var(--muted);
-  font-size: .62rem;
-  font-weight: 850;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-}
-
-.sidecar-sync-stats dd {
-  margin: .12rem 0 0;
-  color: var(--text);
-  font-size: 1rem;
-  font-weight: 900;
-}
-
-.sidecar-sync-plan-copy {
-  display: grid;
-  gap: .24rem;
-  margin: 0 0 .6rem;
-  color: var(--muted);
-  font-size: .72rem;
-  font-weight: 750;
-  line-height: 1.25;
 }
 
 .sidecar-plan-list {

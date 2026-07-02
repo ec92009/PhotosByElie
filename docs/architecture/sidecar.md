@@ -10,7 +10,7 @@ metadata; Owner decides publication and commerce.
 
 Sidecar has its own local visible version in `SIDECAR_VERSION`.
 
-- Current Sidecar version: `v124.1`
+- Current Sidecar version: `v124.2`
 - Versioning follows the canonical `~/Dev/.SOPs/VERSIONING_SOP.md` default
   calendar visible-version rule for this local web-app surface.
 - Sidecar version bumps do not imply a public Photos By Elie site version bump.
@@ -26,6 +26,9 @@ Sidecar v0 uses the existing repo shape:
   compatibility library slices, and best-available local previews.
 - `scripts/install_sidecar_dock_app.zsh` and `scripts/open_sidecar_main.py`:
   Dock-friendly launcher that starts the helper and opens Safari.
+- `scripts/sidecar_maintenance.py` and
+  `scripts/install_sidecar_scheduled_tasks.zsh`: non-UI scheduled maintenance
+  entrypoints for Photos index sync and picked-only AI metadata planning.
 
 This keeps the UI fast to prototype, Python responsible for local orchestration
 and SQLite, and Swift responsible only for Apple Photos/PhotoKit boundaries.
@@ -69,9 +72,9 @@ writes JSONL, imports batches into SQLite, reports scan/import progress, and
 does not ask Photos for previews, originals, video resources, or iCloud
 downloads. Current-window load/refill reads this local index first; the older
 PhotoKit offset slice path remains only as a cold-start fallback when the local
-index is empty. Date bounds and index-start jumps are advanced controls; normal
-culling loads, refills, and moves between persisted working-set windows from the
-local index.
+index is empty. Date bounds and index-start jumps are not exposed in Sidecar.
+Normal culling loads, refills, and moves between persisted working-set windows
+from the local index.
 
 Core states:
 
@@ -153,11 +156,8 @@ Sidecar has two primary pages backed by the same current window:
   filters while scanning forward through later local-index rows to fill depleted
   visible space after mock uploads, rejects, tombstones, or active filters
   remove rows from the working view. Refill reports each local scan chunk and
-  cumulative progress. The **Refresh Photos index** action is the explicit place
-  where PhotoKit performs a whole-library metadata pass, with visible progress
-  while scanning Photos and importing into SQLite. Date and index-start jumps
-  remain available in the collapsed advanced controls, but they are no longer
-  the main culling path.
+  cumulative progress. Photos index sync and AI metadata planning are not
+  Sidecar UI actions; they run through scheduler-facing maintenance entrypoints.
   Actions update local SQLite and advance without blocking on Photos. The
   **Cull bursts** action applies the conservative one-second burst pass to the
   visible current-window photos, skips picked/videos/already rejected items, and
@@ -211,7 +211,6 @@ Source controls should include:
 
 - preview count
 - load/refill plus previous/next working-window movement
-- advanced date from/to and index-start jump controls
 - album/smart album later
 - horizontal rating, color, decision-state, and media-type filters
 - search terms later
@@ -234,10 +233,14 @@ The first implemented slice includes:
   counts for unreviewed, rework, proposed, approved, and blocked picked items.
 - Sync planning through `/__sidecar/sync-status`, reporting index freshness,
   picked-only AI pressure, pending Photos write-back, and upload readiness.
+- Non-UI scheduler entrypoints: `sidecar_maintenance.py photos-index-sync` and
+  `sidecar_maintenance.py picked-ai-plan`, with separate LaunchAgent installer
+  defaults so they can run on different schedules. The current local defaults
+  are Photos metadata sync at 02:10 and picked-only AI planning at 03:10.
 - Sidecar web UI for automatically loading the persistent current window,
   moving the window forward/back, refilling depleted space from the local index,
-  refreshing the Photos metadata index with visible progress, filtering by
-  rating/color/decision state, staging cull decisions, applying current-window burst culling,
+  filtering by rating/color/decision state, staging cull decisions,
+  applying current-window burst culling,
   reviewing picked-item metadata in oldest-to-newest row form with field and
   decision propagation, AI rework categories, previewing the active item with Space,
   tombstoning the wastebasket explicitly, viewing upload eligibility as a
@@ -249,8 +252,7 @@ The first implemented slice includes:
 Remaining near-term slices:
 
 - Actual Photos title/keyword write-back for pending sync records.
-- Actual scheduler/orchestration for nightly Photos index refresh and picked-only
-  AI metadata proposal generation.
+- Actual picked-only AI metadata proposal generation beyond queue planning.
 - Incremental index refresh refinements, such as cheaper change detection and
   richer missing-asset reporting.
 - Album/smart-album source filters.

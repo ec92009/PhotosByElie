@@ -102,6 +102,10 @@
     pickStates: normalizeFilterValues(filters.pickStates, "pickStates"),
     mediaTypes: normalizeFilterValues(filters.mediaTypes, "mediaTypes"),
   });
+  const normalizeOffsetStack = (values) => (Array.isArray(values) ? values : [])
+    .map((value) => Math.max(0, Number(value || 0)))
+    .filter(Number.isFinite)
+    .slice(-50);
 
   const readStoredWindow = () => {
     try {
@@ -127,6 +131,8 @@
     hasWindow: Boolean(readStoredWindow()?.hasWindow),
     windowStartOffset: Math.max(0, Number(readStoredWindow()?.windowStartOffset ?? readStoredWindow()?.offset ?? 0)),
     windowCursorOffset: Number(readStoredWindow()?.windowCursorOffset || 0),
+    windowBackStack: normalizeOffsetStack(readStoredWindow()?.windowBackStack),
+    windowForwardStack: normalizeOffsetStack(readStoredWindow()?.windowForwardStack),
   };
 
   const escapeHtml = (value = "") => String(value)
@@ -224,6 +230,8 @@
     if (Number.isFinite(Number(stored.windowStartOffset))) state.windowStartOffset = Math.max(0, Number(stored.windowStartOffset));
     else if (Number.isFinite(Number(stored.offset))) state.windowStartOffset = Math.max(0, Number(stored.offset));
     if (Number.isFinite(Number(stored.windowCursorOffset))) state.windowCursorOffset = Math.max(0, Number(stored.windowCursorOffset));
+    state.windowBackStack = normalizeOffsetStack(stored.windowBackStack);
+    state.windowForwardStack = normalizeOffsetStack(stored.windowForwardStack);
     filterInputs.forEach((input) => {
       const key = filterKeyByName[input.dataset.sidecarFilter];
       input.checked = Boolean(key && state.filters[key]?.includes(input.value));
@@ -256,6 +264,8 @@
       filters: state.filters,
       hasWindow: state.hasWindow,
       windowCursorOffset: state.windowCursorOffset,
+      windowBackStack: state.windowBackStack,
+      windowForwardStack: state.windowForwardStack,
       savedAt: new Date().toISOString(),
     };
     try {
@@ -312,7 +322,7 @@
   const videoPlayerMarkup = (item, autoplay = true) => `
     <video class="sidecar-inline-video" controls playsinline preload="metadata" ${autoplay ? "autoplay" : ""} poster="${escapeHtml(previewUrl(item))}" src="${escapeHtml(videoUrl(item))}"></video>
   `;
-  const versionFallback = "124.2";
+  const versionFallback = "124.3";
   const versionFallbackLabel = `v${versionFallback}`;
   const videoBadge = (item, index, label) => isVideo(item)
     ? videoOverlay(item, index, label)
@@ -1669,9 +1679,46 @@
     refreshUploadRailQuietly();
   };
 
-  const slideWindow = async (direction) => {
-    setOffset(getOffset() + (direction * getLimit()));
+  const pushWindowStack = (stack, offset) => {
+    const value = Math.max(0, Number(offset || 0));
+    const last = stack[stack.length - 1];
+    if (last !== value) stack.push(value);
+    while (stack.length > 50) stack.shift();
+  };
+
+  const currentWindowEndOffset = () => {
+    const currentOffset = getOffset();
+    const cursor = Math.max(0, Number(state.windowCursorOffset || 0));
+    return Math.max(cursor, currentOffset + state.items.length, currentOffset + getLimit());
+  };
+
+  const loadAndFillWindow = async () => {
     await loadWindow();
+    if (visibleIndexes().length < getLimit()) await refillWindow();
+  };
+
+  const slideWindow = async (direction) => {
+    const currentOffset = getOffset();
+    const forward = direction >= 0;
+    let nextOffset = currentOffset;
+    if (forward) {
+      nextOffset = state.windowForwardStack.length
+        ? state.windowForwardStack.pop()
+        : currentWindowEndOffset();
+      if (nextOffset <= currentOffset) nextOffset = currentOffset + getLimit();
+      pushWindowStack(state.windowBackStack, currentOffset);
+      setStatus(`Loading next window from local index position ${nextOffset.toLocaleString()}...`);
+    } else if (state.windowBackStack.length) {
+      pushWindowStack(state.windowForwardStack, currentOffset);
+      nextOffset = state.windowBackStack.pop();
+      setStatus(`Loading previous window from local index position ${nextOffset.toLocaleString()}...`);
+    } else {
+      nextOffset = Math.max(0, currentOffset - getLimit());
+      setStatus(`Loading previous window from local index position ${nextOffset.toLocaleString()}...`);
+    }
+    setOffset(nextOffset);
+    await waitForStatusPaint();
+    await loadAndFillWindow();
   };
 
   const loadSummary = async () => {
@@ -2137,7 +2184,11 @@
     });
   });
 
-  loadButton?.addEventListener("click", () => loadWindow().catch((error) => setStatus(error.message)));
+  loadButton?.addEventListener("click", () => {
+    state.windowBackStack = [];
+    state.windowForwardStack = [];
+    loadWindow().catch((error) => setStatus(error.message));
+  });
   refillButton?.addEventListener("click", () => refillWindow().catch((error) => setStatus(error.message)));
   slideBackButton?.addEventListener("click", () => slideWindow(-1).catch((error) => setStatus(error.message)));
   slideForwardButton?.addEventListener("click", () => slideWindow(1).catch((error) => setStatus(error.message)));

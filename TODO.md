@@ -93,7 +93,7 @@ Last updated: 2026-07-02
 - Price and offer strategy draft: `docs/commerce/PRICE_OFFER_STRATEGY.md`; no live price change has been made from that draft yet.
 - First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
 - Latest checkpoint is `v110.7`; this file remains the numbered backlog source of truth.
-- Sidecar is now the planned local Apple Photos triage engine. Sidecar has its own visible local version, currently `v124.2` in `SIDECAR_VERSION`, and does not bump the public commercial site version by itself.
+- Sidecar is now the planned local Apple Photos triage engine. Sidecar has its own visible local version, currently `v124.3` in `SIDECAR_VERSION`, and does not bump the public commercial site version by itself.
 - Sidecar's hard boundary: it owns whole-library Apple Photos indexing, local-first culling, staged stars/colors/pick/reject/hide/title/keyword decisions, AI metadata review queues, pending Photos write-back plans, and next-upload eligibility. Owner owns forced materialization, R2 generation/upload, catalog rebuilds, validation, and commercial publication.
 - Sidecar decisions must be instant local SQLite writes. Apple Photos keyword/title write-back is explicit and staged through Save/Commit flows, not performed on every culling keystroke.
 - Sidecar Review is picked-item only and sorts oldest-to-newest for propagation. Title/keyword arrows propagate a single field through current-and-following picked rows in the same two-hour shoot window, while row Propagate carries metadata approval or the selected AI rework category/comment.

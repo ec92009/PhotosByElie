@@ -30,6 +30,18 @@ COLOR_VALUES = {"", "red", "yellow", "green", "blue", "purple"}
 PICK_STATES = {"undecided", "picked", "rejected", "hidden"}
 METADATA_STATES = {"unreviewed", "proposed", "approved", "rework", "blocked"}
 REWORK_CATEGORIES = {"", "incorrect", "generic", "placeholder", "keywords", "detail", "shoot", "other"}
+INTERNAL_TITLE_MARKERS = {"dontexport", "don't export", "do not export", "notmyphoto", "not my photo"}
+POI_GPS_HINTS: tuple[dict[str, Any], ...] = (
+    {
+        "name": "Musée des Années 30",
+        "city": "Boulogne-Billancourt",
+        "region": "Île-de-France",
+        "country": "France",
+        "keywords": ["Musée des Années 30", "Boulogne-Billancourt", "Hauts-de-Seine", "Île-de-France", "France"],
+        "lat": (48.8358, 48.8368),
+        "lon": (2.2391, 2.2403),
+    },
+)
 CITY_GPS_HINTS: tuple[dict[str, Any], ...] = (
     {"city": "Solana Beach", "region": "California", "country": "United States", "lat": (32.98, 33.02), "lon": (-117.29, -117.24)},
     {"city": "Del Mar", "region": "California", "country": "United States", "lat": (32.93, 33.00), "lon": (-117.30, -117.22)},
@@ -270,30 +282,67 @@ def _location_place_from_gps(row: dict[str, Any]) -> dict[str, str]:
     return {}
 
 
+def _location_poi_from_gps(row: dict[str, Any]) -> dict[str, Any]:
+    location = _location_dict(row)
+    latitude = _number(location.get("latitude"))
+    longitude = _number(location.get("longitude"))
+    if latitude is None or longitude is None:
+        return {}
+    for hint in POI_GPS_HINTS:
+        min_lat, max_lat = hint["lat"]
+        min_lon, max_lon = hint["lon"]
+        if min_lat <= latitude <= max_lat and min_lon <= longitude <= max_lon:
+            return hint
+    return {}
+
+
 def _location_metadata_from_row(row: dict[str, Any]) -> tuple[str, list[str], str]:
     location = _location_dict(row)
+    poi = _location_poi_from_gps(row)
     place = {
         "city": str(location.get("city") or row.get("locationCity") or "").strip(),
         "region": str(location.get("region") or row.get("locationRegion") or "").strip(),
         "country": str(location.get("country") or row.get("locationCountry") or "").strip(),
     }
-    if not any(place.values()):
+    if poi:
+        place = {
+            "city": str(poi.get("city") or "").strip(),
+            "region": str(poi.get("region") or "").strip(),
+            "country": str(poi.get("country") or "").strip(),
+        }
+    elif not any(place.values()):
         place = _location_place_from_gps(row)
-    label = str(row.get("locationLabel") or row.get("locationName") or "").strip()
-    keywords = _dedupe_text([place.get("city"), place.get("region"), place.get("country")])
+    label = "" if poi else str(row.get("locationLabel") or row.get("locationName") or "").strip()
+    keywords = _dedupe_text([
+        poi.get("name"),
+        *(poi.get("keywords") or []),
+        place.get("city"),
+        place.get("region"),
+        place.get("country"),
+    ])
     if not label:
-        label = ", ".join(keywords)
-    title_place = place.get("city") or place.get("country") or (keywords[0] if keywords else "")
+        label = ", ".join(_dedupe_text([poi.get("name"), place.get("city"), place.get("region"), place.get("country")]))
+    title_place = str(poi.get("name") or place.get("city") or place.get("country") or (keywords[0] if keywords else "")).strip()
     return label, keywords, title_place
+
+
+def _seedable_title(value: Any) -> str:
+    title = str(value or "").strip()
+    if not title:
+        return ""
+    normalized = "".join(character for character in title.casefold() if character.isalnum())
+    if normalized in {"".join(character for character in marker if character.isalnum()) for marker in INTERNAL_TITLE_MARKERS}:
+        return ""
+    return title
 
 
 def _photos_title_from_row(row: dict[str, Any]) -> str:
     metadata = row.get("applePhotosMetadata")
     if isinstance(metadata, dict):
-        title = str(metadata.get("title") or "").strip()
+        title = _seedable_title(metadata.get("title"))
         if title:
             return title
-    return str(row.get("applePhotosTitle") or row.get("photosTitle") or "").strip()
+    return _seedable_title(row.get("applePhotosTitle") or row.get("photosTitle"))
 
 
 def _photos_keywords_from_row(row: dict[str, Any]) -> list[str]:
@@ -1138,7 +1187,7 @@ def ai_metadata_plan(repo_root: Path, limit: int = 200) -> dict[str, Any]:
               a.asset_id, a.source_anchor, a.media_type, a.filename, a.captured_at,
               a.pixel_width, a.pixel_height, a.duration, a.photos_title,
               a.photos_keywords_json, a.location_label, a.location_keywords_json,
-              a.metadata_seed_title, a.metadata_seed_keywords_json,
+              a.metadata_seed_title, a.metadata_seed_keywords_json, a.raw_json,
               d.rating, d.color, d.metadata_state, d.title, d.keywords_json,
               d.rework_category, d.rework_comment
             FROM sidecar_decisions AS d
@@ -1159,10 +1208,22 @@ def ai_metadata_plan(repo_root: Path, limit: int = 200) -> dict[str, Any]:
         ).fetchall()
     items: list[dict[str, Any]] = []
     for row in rows:
+        raw_row = _read_json_text(row["raw_json"], {})
+        derived_location_label = ""
+        derived_location_keywords: list[str] = []
+        derived_title_place = ""
+        if isinstance(raw_row, dict):
+            derived_location_label, derived_location_keywords, derived_title_place = _location_metadata_from_row(raw_row)
         photos_keywords = _read_json_text(row["photos_keywords_json"], [])
-        location_keywords = _read_json_text(row["location_keywords_json"], [])
-        seed_keywords = _read_json_text(row["metadata_seed_keywords_json"], [])
+        location_label = derived_location_label or row["location_label"] or ""
+        location_keywords = _dedupe_text([*derived_location_keywords, *_read_json_text(row["location_keywords_json"], [])])
+        seed_title = _seedable_title(row["metadata_seed_title"])
+        if not seed_title and derived_title_place:
+            year = str(row["captured_at"] or "")[:4]
+            seed_title = " ".join(part for part in [year if year.isdigit() else "", derived_title_place] if part).strip()
+        seed_keywords = _dedupe_text([*_read_json_text(row["metadata_seed_keywords_json"], []), *location_keywords])
         decision_keywords = _read_json_text(row["keywords_json"], [])
+        photos_title = _seedable_title(row["photos_title"])
         items.append({
             "assetId": row["asset_id"],
             "sourceAnchor": row["source_anchor"],
@@ -1177,13 +1238,13 @@ def ai_metadata_plan(repo_root: Path, limit: int = 200) -> dict[str, Any]:
             "metadataState": row["metadata_state"] or "unreviewed",
             "decisionTitle": row["title"] or "",
             "decisionKeywords": decision_keywords,
-            "photosTitle": row["photos_title"] or "",
+            "photosTitle": photos_title,
             "photosKeywords": photos_keywords,
-            "locationLabel": row["location_label"] or "",
+            "locationLabel": location_label,
             "locationKeywords": location_keywords,
-            "seedTitle": row["metadata_seed_title"] or "",
+            "seedTitle": seed_title,
             "seedKeywords": seed_keywords,
-            "titleSeeded": bool(row["metadata_seed_title"] or row["photos_title"] or row["title"]),
+            "titleSeeded": bool(seed_title or row["title"]),
             "keywordSeedCount": len(seed_keywords),
             "reworkCategory": row["rework_category"] or "",
             "reworkComment": row["rework_comment"] or "",

@@ -428,8 +428,9 @@ Clock state: running
 | 2026-07-02 | 10:18 CEST | 10:22 CEST | 0:04 | Verified the full 57,489-item Sidecar Photos index, reloaded scheduled maintenance agents, pushed v124.2, and closed the central tickets; background command/runtime excluded. |
 | 2026-07-02 | 10:40 CEST | 10:41 CEST | 0:01 | Created daily Sidecar Photos index sync and picked-only AI metadata review Codex scheduled tasks; background setup time excluded. |
 | 2026-07-02 | 10:41 CEST | 10:42 CEST | 0:01 | Removed local Sidecar LaunchAgent fallback jobs after Codex Scheduled task creation and updated scheduler documentation; background command/runtime excluded. |
+| 2026-07-02 | 11:03 CEST | 11:08 CEST | 0:05 | Ran the Sidecar picked-only AI metadata plan manually, confirmed 609 picked/unreviewed candidates, and hardened location/title seeding for the Paris museum batch; background command/runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 22:35
+Active collaboration time used: 22:40
 Remaining budget: not set

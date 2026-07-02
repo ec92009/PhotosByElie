@@ -1,10 +1,8 @@
 # Facebook - 2026-07-02 - Cascais Atlantic Shore Color
 
-Status: prepared
+Status: published
 Destination: https://photos-by-elie.com/campaign.html?c=facebook-cascais-atlantic-shore-color-2026-07-02
-
-Manual blockers:
-- Publish pending: review socials/Facebook/2026-07-02/cascais-atlantic-shore-color/manifest.json and use the Facebook browser/API workflow.
+Published URL: https://www.facebook.com/122102168061334672/posts/122109029667334672
 
 Caption:
 

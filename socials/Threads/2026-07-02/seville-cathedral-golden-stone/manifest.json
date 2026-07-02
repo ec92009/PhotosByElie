@@ -74,14 +74,27 @@
       "local_staged_path": "socials/Threads/2026-07-02/seville-cathedral-golden-stone/images/04-img-1320-415d5fa2c8-seville-cathedral-golden-stone.jpg"
     }
   ],
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "available_count": 4,
   "date": "2026-07-02",
   "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-seville-cathedral-golden-stone-2026-07-02",
   "recommended_upload_set": "images",
-  "manual_blockers": [
-    "Publish pending: review socials/Threads/2026-07-02/seville-cathedral-golden-stone/manifest.json and use the Threads browser/API workflow."
-  ]
+  "manual_blockers": [],
+  "published_url": "https://www.threads.com/@ec92009/post/DaRmIIcjESm",
+  "published": {
+    "platform": "threads",
+    "account": "ec92009",
+    "threads_user_id": "me",
+    "media_id": "17880893148608730",
+    "permalink": "https://www.threads.com/@ec92009/post/DaRmIIcjESm",
+    "username": "ec92009",
+    "media_type": "CAROUSEL_ALBUM",
+    "published_at": "2026-07-02T03:11:19+0000",
+    "image_count": 4,
+    "child_count": 4,
+    "verification": "Threads Graph readback returned 4 carousel children.",
+    "link_preview_note": "API publish path did not expose an automatic link preview removal step."
+  }
 }

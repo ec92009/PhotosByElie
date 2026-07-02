@@ -135,7 +135,7 @@
     }
   ],
   "date": "2026-07-02",
-  "status": "prepared",
+  "status": "published",
   "account": "Photos By Elie",
   "post_type": "multi_photo",
   "destination_url": "https://photos-by-elie.com/campaign.html?c=facebook-cascais-atlantic-shore-color-2026-07-02",
@@ -144,7 +144,17 @@
   "notes": [
     "Images are public watermarked R2 previews staged for upload/API publishing."
   ],
-  "manual_blockers": [
-    "Publish pending: review socials/Facebook/2026-07-02/cascais-atlantic-shore-color/manifest.json and use the Facebook browser/API workflow."
-  ]
+  "manual_blockers": [],
+  "published_url": "https://www.facebook.com/122102168061334672/posts/122109029667334672",
+  "published": {
+    "platform": "facebook",
+    "account": "Photos By Elie",
+    "page_id": "1146747141854670",
+    "post_id": "1146747141854670_122109029667334672",
+    "permalink": "https://www.facebook.com/122102168061334672/posts/122109029667334672",
+    "published_at": "2026-07-02T03:08:58+0000",
+    "image_count": 8,
+    "subattachment_count": 8,
+    "verification": "Graph API readback returned 8 photo subattachments."
+  }
 }

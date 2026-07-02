@@ -139,14 +139,25 @@
     }
   ],
   "date": "2026-07-02",
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-seville-cathedral-golden-stone-2026-07-02",
   "recommended_upload_set": "images",
   "available_count": 8,
-  "manual_blockers": [
-    "Publish pending: review socials/Instagram/2026-07-02/seville-cathedral-golden-stone/manifest.json and use the Instagram browser/API workflow.",
-    "Instagram feed captions are not clickable; update the profile website link or use a Story link sticker before posting."
-  ]
+  "manual_blockers": [],
+  "published_url": "https://www.instagram.com/p/DaRmB1tjB9g/",
+  "published": {
+    "platform": "instagram",
+    "account": "ec92009",
+    "ig_user_id": "17841400866970070",
+    "media_id": "18120447308504751",
+    "permalink": "https://www.instagram.com/p/DaRmB1tjB9g/",
+    "username": "ec92009",
+    "media_type": "CAROUSEL_ALBUM",
+    "published_at": "2026-07-02T03:10:28+0000",
+    "image_count": 8,
+    "child_count": 8,
+    "verification": "Graph API readback returned 8 carousel children."
+  }
 }

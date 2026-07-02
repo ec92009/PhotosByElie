@@ -1,10 +1,8 @@
 # Threads - 2026-07-02 - Seville Cathedral Golden Stone
 
-Status: prepared
+Status: published
 Destination: https://photos-by-elie.com/campaign.html?c=instagram-seville-cathedral-golden-stone-2026-07-02
-
-Manual blockers:
-- Publish pending: review socials/Threads/2026-07-02/seville-cathedral-golden-stone/manifest.json and use the Threads browser/API workflow.
+Published URL: https://www.threads.com/@ec92009/post/DaRmIIcjESm
 
 Caption:
 

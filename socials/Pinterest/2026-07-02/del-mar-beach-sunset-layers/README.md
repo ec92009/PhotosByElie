@@ -1,9 +1,10 @@
 # Pinterest - 2026-07-02 - Del Mar Beach Sunset Layers
 
-Status: prepared
+Status: prepared_no_api_token_or_board_id
 Destination: https://photos-by-elie.com/campaign.html?c=pinterest-del-mar-beach-sunset-layers-2026-07-02
 
 Manual blockers:
+- Pinterest token is missing/expired or no board ID mapping is configured; package is ready for manual Pin Builder upload to California Travel Photography.
 - Publish pending: review socials/Pinterest/2026-07-02/del-mar-beach-sunset-layers/manifest.json and use the Pinterest browser/API workflow.
 - Pinterest publish pending: choose the board and publish one Pin per staged image or use the prepared browser upload set.
 

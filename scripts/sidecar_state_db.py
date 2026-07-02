@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 from datetime import datetime, timedelta, timezone
 import json
+import re
 import sqlite3
 import uuid
 from pathlib import Path
@@ -1157,6 +1158,7 @@ def ai_metadata_plan(repo_root: Path, limit: int = 200) -> dict[str, Any]:
       )
     """
     with connect(repo_root) as conn:
+        keyword_blacklist = _keyword_blacklist_set(conn, repo_root)
         counts = conn.execute(
             f"""
             SELECT
@@ -1214,14 +1216,20 @@ def ai_metadata_plan(repo_root: Path, limit: int = 200) -> dict[str, Any]:
         derived_title_place = ""
         if isinstance(raw_row, dict):
             derived_location_label, derived_location_keywords, derived_title_place = _location_metadata_from_row(raw_row)
-        photos_keywords = _read_json_text(row["photos_keywords_json"], [])
+        photos_keywords = _clean_keywords(_read_json_text(row["photos_keywords_json"], []), keyword_blacklist)
         location_label = derived_location_label or row["location_label"] or ""
-        location_keywords = _dedupe_text([*derived_location_keywords, *_read_json_text(row["location_keywords_json"], [])])
+        location_keywords = _clean_keywords(
+            _dedupe_text([*derived_location_keywords, *_read_json_text(row["location_keywords_json"], [])]),
+            keyword_blacklist,
+        )
         seed_title = _seedable_title(row["metadata_seed_title"])
         if not seed_title and derived_title_place:
             year = str(row["captured_at"] or "")[:4]
             seed_title = " ".join(part for part in [year if year.isdigit() else "", derived_title_place] if part).strip()
-        seed_keywords = _dedupe_text([*_read_json_text(row["metadata_seed_keywords_json"], []), *location_keywords])
+        seed_keywords = _clean_keywords(
+            _dedupe_text([*_read_json_text(row["metadata_seed_keywords_json"], []), *location_keywords]),
+            keyword_blacklist,
+        )
         decision_keywords = _read_json_text(row["keywords_json"], [])
         photos_title = _seedable_title(row["photos_title"])
         items.append({
@@ -1264,6 +1272,84 @@ def ai_metadata_plan(repo_root: Path, limit: int = 200) -> dict[str, Any]:
         "mockUploadedPickedCount": int(counts["mock_uploaded_count"] or 0),
         "items": items,
         "message": "Only picked Sidecar items are eligible for this AI metadata planning lane.",
+    }
+
+
+def _useful_proposal_title(title: str) -> bool:
+    value = str(title or "").strip()
+    return bool(value and not re.fullmatch(r"\d{4}", value))
+
+
+def apply_ai_metadata_proposals(repo_root: Path, limit: int = 20) -> dict[str, Any]:
+    """Promote safe picked-item plan seeds into Sidecar Review proposals.
+
+    This deliberately does not enqueue Photos write-back. Proposed rows still need
+    Review approval before they become upload/write-back candidates.
+    """
+    safe_limit = max(1, min(int(limit or 20), 200))
+    plan = ai_metadata_plan(repo_root, limit=safe_limit)
+    now = now_iso()
+    proposed: list[dict[str, Any]] = []
+    skipped: list[dict[str, str]] = []
+    with connect(repo_root) as conn:
+        keyword_blacklist = _keyword_blacklist_set(conn, repo_root)
+        for item in plan["items"]:
+            asset_id = str(item.get("assetId") or "").strip()
+            if not asset_id:
+                continue
+            title = _seedable_title(item.get("decisionTitle")) or _seedable_title(item.get("seedTitle"))
+            keywords = _clean_keywords(
+                _dedupe_text([*(item.get("decisionKeywords") or []), *(item.get("seedKeywords") or [])]),
+                keyword_blacklist,
+            )
+            if not _useful_proposal_title(title):
+                skipped.append({
+                    "assetId": asset_id,
+                    "filename": str(item.get("filename") or ""),
+                    "reason": "missing_useful_title_seed",
+                })
+                continue
+            if not keywords:
+                skipped.append({
+                    "assetId": asset_id,
+                    "filename": str(item.get("filename") or ""),
+                    "reason": "missing_keyword_seed",
+                })
+                continue
+            result = conn.execute(
+                """
+                UPDATE sidecar_decisions
+                SET metadata_state = 'proposed',
+                    title = ?,
+                    keywords_json = ?,
+                    rework_category = '',
+                    rework_comment = '',
+                    last_action = 'ai-metadata-proposal',
+                    updated_at = ?
+                WHERE asset_id = ?
+                  AND pick_state = 'picked'
+                  AND metadata_state IN ('unreviewed', 'rework')
+                """,
+                (title, _json_text(keywords), now, asset_id),
+            )
+            if result.rowcount:
+                proposed.append({
+                    "assetId": asset_id,
+                    "filename": str(item.get("filename") or ""),
+                    "title": title,
+                    "keywords": keywords,
+                    "locationLabel": str(item.get("locationLabel") or ""),
+                })
+    return {
+        "ok": True,
+        "mode": "picked-only-ai-metadata-proposals",
+        "plannedCount": plan["count"],
+        "candidateCountBefore": plan["candidateCount"],
+        "proposedCount": len(proposed),
+        "skippedCount": len(skipped),
+        "proposed": proposed,
+        "skipped": skipped,
+        "message": "Wrote Sidecar Review proposals only; no Photos write-back rows were queued.",
     }
 
 

@@ -11,10 +11,10 @@ from pathlib import Path
 
 try:
     from sidecar_server import _index_job_snapshot, _run_index_job
-    from sidecar_state_db import ai_metadata_plan, now_iso, sidecar_sync_status
+    from sidecar_state_db import ai_metadata_plan, apply_ai_metadata_proposals, now_iso, sidecar_sync_status
 except ModuleNotFoundError:  # pragma: no cover - supports package-style imports.
     from scripts.sidecar_server import _index_job_snapshot, _run_index_job
-    from scripts.sidecar_state_db import ai_metadata_plan, now_iso, sidecar_sync_status
+    from scripts.sidecar_state_db import ai_metadata_plan, apply_ai_metadata_proposals, now_iso, sidecar_sync_status
 
 
 DEFAULT_AI_PLAN_PATH = Path("assets/owner-actions/sidecar-ai-metadata-plan.json")
@@ -65,6 +65,20 @@ def picked_ai_plan(args: argparse.Namespace) -> int:
     return 0
 
 
+def picked_ai_propose(args: argparse.Namespace) -> int:
+    repo_root = args.repo_root.resolve()
+    payload = {
+        "ok": True,
+        "task": "sidecar-picked-ai-metadata-propose",
+        "generatedAt": now_iso(),
+        "result": apply_ai_metadata_proposals(repo_root, limit=args.limit),
+    }
+    if args.output:
+        _write_json(repo_root, args.output, payload)
+    _print_json(payload)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run scheduled Sidecar maintenance tasks without opening the Sidecar UI.")
     parser.add_argument("--repo-root", type=Path, default=Path.cwd(), help="PhotosByElie repo root. Defaults to the current directory.")
@@ -79,6 +93,11 @@ def build_parser() -> argparse.ArgumentParser:
     ai.add_argument("--limit", type=int, default=500, help="Maximum picked rows to include in the planning artifact.")
     ai.add_argument("--output", type=Path, default=DEFAULT_AI_PLAN_PATH, help="JSON artifact path for the scheduler result.")
     ai.set_defaults(func=picked_ai_plan)
+
+    propose = subparsers.add_parser("picked-ai-propose", help="Write bounded picked-only metadata proposals into Sidecar Review.")
+    propose.add_argument("--limit", type=int, default=20, help="Maximum picked rows to convert from safe plan seeds into Review proposals.")
+    propose.add_argument("--output", type=Path, help="Optional JSON artifact path for the proposal result.")
+    propose.set_defaults(func=picked_ai_propose)
 
     return parser
 

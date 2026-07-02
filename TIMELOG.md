@@ -426,8 +426,10 @@ Clock state: running
 | 2026-07-02 | 09:42 CEST | 09:43 CEST | 0:01 | Approved demoting date/offset controls, requested picked-only AI metadata work, and asked to ticket and start the Sidecar sync/AI slice; background implementation/testing time excluded. |
 | 2026-07-02 | 09:57 CEST | 09:58 CEST | 0:01 | Requested removing Sidecar UI exposure for date/index jumps and Sync/AI planning, moving Photos sync and picked-only AI planning to separate scheduled tasks; background implementation/testing time excluded. |
 | 2026-07-02 | 10:18 CEST | 10:22 CEST | 0:04 | Verified the full 57,489-item Sidecar Photos index, reloaded scheduled maintenance agents, pushed v124.2, and closed the central tickets; background command/runtime excluded. |
+| 2026-07-02 | 10:40 CEST | 10:41 CEST | 0:01 | Created daily Sidecar Photos index sync and picked-only AI metadata review Codex scheduled tasks; background setup time excluded. |
+| 2026-07-02 | 10:41 CEST | 10:42 CEST | 0:01 | Removed local Sidecar LaunchAgent fallback jobs after Codex Scheduled task creation and updated scheduler documentation; background command/runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 22:33
+Active collaboration time used: 22:35
 Remaining budget: not set

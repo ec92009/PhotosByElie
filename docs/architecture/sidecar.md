@@ -26,9 +26,11 @@ Sidecar v0 uses the existing repo shape:
   compatibility library slices, and best-available local previews.
 - `scripts/install_sidecar_dock_app.zsh` and `scripts/open_sidecar_main.py`:
   Dock-friendly launcher that starts the helper and opens Safari.
-- `scripts/sidecar_maintenance.py` and
-  `scripts/install_sidecar_scheduled_tasks.zsh`: non-UI scheduled maintenance
-  entrypoints for Photos index sync and picked-only AI metadata planning.
+- `scripts/sidecar_maintenance.py`: non-UI scheduled maintenance entrypoints
+  for Photos index sync and picked-only AI metadata planning.
+- `scripts/install_sidecar_scheduled_tasks.zsh`: optional local LaunchAgent
+  fallback for the same maintenance entrypoints; Codex Scheduled is the primary
+  scheduler when available.
 
 This keeps the UI fast to prototype, Python responsible for local orchestration
 and SQLite, and Swift responsible only for Apple Photos/PhotoKit boundaries.
@@ -157,7 +159,8 @@ Sidecar has two primary pages backed by the same current window:
   visible space after mock uploads, rejects, tombstones, or active filters
   remove rows from the working view. Refill reports each local scan chunk and
   cumulative progress. Photos index sync and AI metadata planning are not
-  Sidecar UI actions; they run through scheduler-facing maintenance entrypoints.
+  Sidecar UI actions; they run through Codex Scheduled tasks backed by
+  scheduler-facing maintenance entrypoints.
   Actions update local SQLite and advance without blocking on Photos. The
   **Cull bursts** action applies the conservative one-second burst pass to the
   visible current-window photos, skips picked/videos/already rejected items, and
@@ -234,9 +237,10 @@ The first implemented slice includes:
 - Sync planning through `/__sidecar/sync-status`, reporting index freshness,
   picked-only AI pressure, pending Photos write-back, and upload readiness.
 - Non-UI scheduler entrypoints: `sidecar_maintenance.py photos-index-sync` and
-  `sidecar_maintenance.py picked-ai-plan`, with separate LaunchAgent installer
-  defaults so they can run on different schedules. The current local defaults
-  are Photos metadata sync at 02:10 and picked-only AI planning at 03:10.
+  `sidecar_maintenance.py picked-ai-plan`. These are run by separate Codex
+  Scheduled tasks so Photos metadata sync and picked-only AI planning can keep
+  different schedules. The optional LaunchAgent installer remains only as a
+  local fallback.
 - Sidecar web UI for automatically loading the persistent current window,
   moving the window forward/back, refilling depleted space from the local index,
   filtering by rating/color/decision state, staging cull decisions,

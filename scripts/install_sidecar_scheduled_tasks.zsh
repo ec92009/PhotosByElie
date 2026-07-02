@@ -43,7 +43,8 @@ while (($#)); do
 Usage: zsh scripts/install_sidecar_scheduled_tasks.zsh [--load] [--unload]
        [--photos-hour H --photos-minute M] [--ai-hour H --ai-minute M]
 
-Installs two separate local LaunchAgents:
+Installs two separate local LaunchAgents as a fallback when Codex Scheduled is
+not available:
   - com.photosbyelie.sidecar.photos-index-sync
   - com.photosbyelie.sidecar.picked-ai-plan
 

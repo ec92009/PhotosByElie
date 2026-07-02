@@ -1,9 +1,78 @@
 {
   "format": "photosbyelie-campaign-index",
   "schema_version": 1,
-  "generated_at": "2026-07-01T03:11:25.163Z",
-  "campaign_count": 137,
+  "generated_at": "2026-07-02T03:04:58.960Z",
+  "campaign_count": 140,
   "campaigns": [
+    {
+      "id": "pinterest-del-mar-beach-sunset-layers-2026-07-02",
+      "source": "Pinterest",
+      "title": "Del Mar Beach Sunset Layers",
+      "description": "A 5-photo Del Mar Beach Sunset Layers edit prepared for Pinterest with public Photos By Elie previews and a first-party browsing destination.",
+      "date": "2026-07-02",
+      "href": "./campaign.html?c=pinterest-del-mar-beach-sunset-layers-2026-07-02",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=pinterest-del-mar-beach-sunset-layers-2026-07-02",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/20180130-1807-00056-ce796ea795_900.jpg",
+      "imageAlt": "Del Mar Dog Beach at Sunset",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/20180130-1807-00056-ce796ea795_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180130-1809-00057-5d56be5106_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180130-1810-00058-16dcf3e4ea_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180130-1811-00060-1-a085d7d522_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180130-1815-00062-b5ef84fe92_900.jpg"
+      ],
+      "primaryPhotoCount": 5,
+      "relatedPhotoCount": 0,
+      "mtimeMs": 1782961491425
+    },
+    {
+      "id": "facebook-cascais-atlantic-shore-color-2026-07-02",
+      "source": "Facebook",
+      "title": "Cascais Atlantic Shore Color",
+      "description": "A 8-photo Cascais Atlantic Shore Color edit prepared for Facebook with public Photos By Elie previews and a first-party browsing destination.",
+      "date": "2026-07-02",
+      "href": "./campaign.html?c=facebook-cascais-atlantic-shore-color-2026-07-02",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=facebook-cascais-atlantic-shore-color-2026-07-02",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/20180517-2126-00483-f23ed1e1e2_900.jpg",
+      "imageAlt": "Beach, Cascais",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/20180517-2126-00483-f23ed1e1e2_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180517-2127-00484-cec825a469_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180517-2132-00488-18ec1fa871_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180517-2134-00489-a3c2036451_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180517-2134-00490-dc7a915651_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180517-2135-00491-f90f6d821a_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180517-2135-00492-564b88a104_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180517-2139-00498-3f6caeaf91_900.jpg"
+      ],
+      "primaryPhotoCount": 8,
+      "relatedPhotoCount": 0,
+      "mtimeMs": 1782961491424
+    },
+    {
+      "id": "instagram-seville-cathedral-golden-stone-2026-07-02",
+      "source": "Instagram",
+      "title": "Seville Cathedral Golden Stone",
+      "description": "A 8-photo Seville Cathedral Golden Stone edit prepared for Instagram with public Photos By Elie previews and a first-party browsing destination.",
+      "date": "2026-07-02",
+      "href": "./campaign.html?c=instagram-seville-cathedral-golden-stone-2026-07-02",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=instagram-seville-cathedral-golden-stone-2026-07-02",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/img-1315-3d319b8fdb_900.jpg",
+      "imageAlt": "Seville Cathedral",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/img-1315-3d319b8fdb_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1317-06e4d01f50_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1319-3cd3714815_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1320-415d5fa2c8_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1321-4c1ec8fc95_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1322-79081c04e0_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1316-e7917d1295_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1318-00395678a4_900.jpg"
+      ],
+      "primaryPhotoCount": 8,
+      "relatedPhotoCount": 0,
+      "mtimeMs": 1782961491424
+    },
     {
       "id": "pinterest-albi-tarn-old-town-light-2026-07-01",
       "source": "Pinterest",

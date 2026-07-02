@@ -1,0 +1,87 @@
+{
+  "platform": "Threads",
+  "title": "Seville Cathedral Golden Stone",
+  "slug": "seville-cathedral-golden-stone",
+  "campaign_id": "instagram-seville-cathedral-golden-stone-2026-07-02",
+  "caption": "Seville Cathedral Golden Stone in four Photos By Elie frames. Browse: https://photos-by-elie.com/campaign.html?c=instagram-seville-cathedral-golden-stone-2026-07-02",
+  "notes": [
+    "Derived from the Instagram package for a 3-4 image Threads carousel.",
+    "Images are public watermarked R2 previews staged for upload/API publishing."
+  ],
+  "items": [
+    {
+      "media_id": "img-1315-3d319b8fdb",
+      "order": 1,
+      "id": "img-1315-3d319b8fdb",
+      "title": "Seville Cathedral",
+      "collection": "spain",
+      "location": "Spain",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/img-1315-3d319b8fdb_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/img-1315-3d319b8fdb_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=img-1315-3d319b8fdb",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=img-1315-3d319b8fdb",
+      "image": "images/01-img-1315-3d319b8fdb-seville-cathedral-golden-stone.jpg",
+      "local_staged_path": "socials/Threads/2026-07-02/seville-cathedral-golden-stone/images/01-img-1315-3d319b8fdb-seville-cathedral-golden-stone.jpg"
+    },
+    {
+      "media_id": "img-1317-06e4d01f50",
+      "order": 2,
+      "id": "img-1317-06e4d01f50",
+      "title": "Seville Cathedral",
+      "collection": "spain",
+      "location": "Spain",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/img-1317-06e4d01f50_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/img-1317-06e4d01f50_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=img-1317-06e4d01f50",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=img-1317-06e4d01f50",
+      "image": "images/02-img-1317-06e4d01f50-seville-cathedral-golden-stone.jpg",
+      "local_staged_path": "socials/Threads/2026-07-02/seville-cathedral-golden-stone/images/02-img-1317-06e4d01f50-seville-cathedral-golden-stone.jpg"
+    },
+    {
+      "media_id": "img-1319-3cd3714815",
+      "order": 3,
+      "id": "img-1319-3cd3714815",
+      "title": "Seville Cathedral",
+      "collection": "spain",
+      "location": "Spain",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/img-1319-3cd3714815_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/img-1319-3cd3714815_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=img-1319-3cd3714815",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=img-1319-3cd3714815",
+      "image": "images/03-img-1319-3cd3714815-seville-cathedral-golden-stone.jpg",
+      "local_staged_path": "socials/Threads/2026-07-02/seville-cathedral-golden-stone/images/03-img-1319-3cd3714815-seville-cathedral-golden-stone.jpg"
+    },
+    {
+      "media_id": "img-1320-415d5fa2c8",
+      "order": 4,
+      "id": "img-1320-415d5fa2c8",
+      "title": "Seville Cathedral",
+      "collection": "spain",
+      "location": "Spain",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/img-1320-415d5fa2c8_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/img-1320-415d5fa2c8_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=img-1320-415d5fa2c8",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=img-1320-415d5fa2c8",
+      "image": "images/04-img-1320-415d5fa2c8-seville-cathedral-golden-stone.jpg",
+      "local_staged_path": "socials/Threads/2026-07-02/seville-cathedral-golden-stone/images/04-img-1320-415d5fa2c8-seville-cathedral-golden-stone.jpg"
+    }
+  ],
+  "status": "prepared",
+  "account": "ec92009",
+  "post_type": "carousel",
+  "available_count": 4,
+  "date": "2026-07-02",
+  "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-seville-cathedral-golden-stone-2026-07-02",
+  "recommended_upload_set": "images",
+  "manual_blockers": [
+    "Publish pending: review socials/Threads/2026-07-02/seville-cathedral-golden-stone/manifest.json and use the Threads browser/API workflow."
+  ]
+}

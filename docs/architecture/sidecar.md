@@ -1,6 +1,6 @@
 # Photos By Elie Sidecar Architecture
 
-Date: 2026-07-02
+Date: 2026-07-03
 
 Sidecar is a local-only Apple Photos triage workstation that rides beside Owner.
 It is deliberately not the commercial app. Sidecar decides library fate and
@@ -10,7 +10,7 @@ metadata; Owner decides publication and commerce.
 
 Sidecar has its own local visible version in `SIDECAR_VERSION`.
 
-- Current Sidecar version: `v124.3`
+- Current Sidecar version: `v125.2`
 - Versioning follows the canonical `~/Dev/.SOPs/VERSIONING_SOP.md` default
   calendar visible-version rule for this local web-app surface.
 - Sidecar version bumps do not imply a public Photos By Elie site version bump.
@@ -49,6 +49,8 @@ Sidecar owns:
   explicit wastebasket tombstoning.
 - Compact star/color filter controls with group-level All/None toggles and
   star/color checkbox pills for culling-speed scans.
+- Local-index search across filenames, Apple Photos titles/keywords, local
+  decision metadata, seed keywords, and coarse location labels.
 
 Owner owns:
 
@@ -87,7 +89,7 @@ Core states:
 - `metadata proposed`
 - `metadata approved`
 - `metadata rework`
-- `ready for Owner upload`
+- `ready for Upload Bridge`
 
 Upload eligibility is local and immediate:
 
@@ -99,14 +101,24 @@ AND not hidden
 AND not already current in Owner publication state
 ```
 
-Sidecar's mock upload simulates the Owner handoff boundary without writing to
-R2. It derives the Owner-style photo id from the stable source anchor, computes
-the expected public preview, private master, and private render R2 keys, then
-checks Owner's current `r2_objects` state for exact bucket/key coverage. A mock
-collision warning means the planned key already exists in current R2 state; it is
-not a perceptual duplicate detector for visually similar files with different
-source anchors. Mock-uploaded items are treated as having crossed the Owner
+Sidecar's Upload Bridge is the handoff boundary for picked, metadata-approved
+items. The current bridge queue is still backed by the compatibility
+`sidecar_mock_uploads` table, but user-facing workflow language treats these
+rows as bridge-queued, not uploaded.
+
+The bridge derives the Owner-style photo id from the stable source anchor,
+computes the expected private master and public preview R2 keys, then checks
+Owner's current `r2_objects` state for exact bucket/key coverage. A bridge
+collision warning means the planned key already exists in current R2 state; it
+is not a perceptual duplicate detector for visually similar files with different
+source anchors. Bridge-queued items are treated as having crossed the Owner
 handoff boundary and are hidden from active Culling and Review surfaces.
+
+Upload Bridge does not generate private JPG render triplets. Private renders are
+an on-demand Worker cache: checkout/delivery can lazily create
+`renders/<media_id>_1mp.jpg`, `renders/<media_id>_3mp.jpg`, and
+`renders/<media_id>_6mp.jpg` from the private master, then leave those cached
+objects in R2.
 
 ## Photos Write-Back
 
@@ -156,7 +168,7 @@ Sidecar has two primary pages backed by the same current window:
   range selection.
   The **Refill window** action preserves the current working-set start and
   filters while scanning forward through later local-index rows to fill depleted
-  visible space after mock uploads, rejects, tombstones, or active filters
+  visible space after bridge queueing, rejects, tombstones, or active filters
   remove rows from the working view. Refill reports each local scan chunk and
   cumulative progress. Photos index sync and AI metadata planning are not
   Sidecar UI actions; they run through Codex Scheduled tasks backed by
@@ -173,18 +185,20 @@ Sidecar has two primary pages backed by the same current window:
   active item status with explicit stars, color, decision, metadata, and pending
   Photos write-back reminders. Quick decisions patch affected items in place so
   thumbnails do not blink, and single-item auto-advance follows the most recent
-  arrow travel direction. Bulk Pick, rating, color, and metadata decisions keep
-  the visible multi-selection alive so another bulk action can be applied without
-  reselecting. `Cmd-Z` provides session-local multilevel undo for staged local
-  decision operations while leaving native text-field undo alone in
-  title/keyword fields.
+  arrow travel direction. Cull and Review selection is tracked by stable Apple
+  Photos asset IDs across local refresh/refill/decision writes, so background
+  work preserves the intended item set when those assets remain visible. Bulk
+  Pick, rating, color, and metadata decisions keep the visible multi-selection
+  alive so another bulk action can be applied without reselecting. `Cmd-Z`
+  provides session-local multilevel undo for staged local decision operations
+  while leaving native text-field undo alone in title/keyword fields.
 - **Review:** Owner-style title/keyword review of picked current-window items
   only, rendered oldest-to-newest so propagation moves forward through a shoot.
   Each row shows a taller contained preview, current state, title/keyword fields,
   approve, reject, AI rework, pick, and unpick actions. Approve saves the
   visible title and keywords as approved metadata; picked assets do not enter
-  the Owner upload plan until this page marks their metadata approved. The
-  upload plan rail loads by default with the current window, stays visible even
+  the Upload Bridge until this page marks their metadata approved. The
+  Upload Bridge rail loads by default with the current window, stays visible even
   when empty, and refreshes after local decision changes such as approval or
   undo. The title and keyword field arrows propagate that single field to the
   current and following picked rows inside the same two-hour capture window,
@@ -195,10 +209,14 @@ Sidecar has two primary pages backed by the same current window:
   human place labels to the keyword seed without exposing exact coordinates.
   When Photos exposes a useful title but not the keyword list, Sidecar derives
   starter keywords from comma/section-separated title parts.
-  The row **Propagate** action carries the review decision itself: metadata
-  approval or the selected AI rework category/comment. AI rework categories
-  match Owner review: incorrect, too generic, placeholder, use keywords, add
-  details, use shoot, and other. Staged Sidecar keywords are filtered through
+  The toolbar **AI title pass** action runs the same safe picked-only proposal
+  writer in the foreground for visible Review rows; the scheduled picked-only AI
+  task remains the non-UI nightly path. The row **Propagate** action carries the
+  review decision itself: metadata approval or additive AI rework
+  category/comment guidance. AI rework categories match Owner review: incorrect,
+  too generic, placeholder, use keywords, add details, use shoot, and other.
+  They are checkboxes, not radio buttons; their default notes combine with any
+  manual note. Staged Sidecar keywords are filtered through
   Owner's keyword blacklist before they become local decisions. Sidecar reads
   the SQLite table first and falls back to the JSON compatibility export when
   the table is missing or empty.
@@ -234,6 +252,12 @@ The first implemented slice includes:
   queue.
 - Picked-only AI metadata planning through `/__sidecar/ai-plan`, with candidate
   counts for unreviewed, rework, proposed, approved, and blocked picked items.
+  The plan also carries explicit vision guidance to consider likely
+  AI-generated images and photos of 3D printed artefacts, adding those keyword
+  families only when visual evidence supports them.
+  Location keywords stay city-level for private or ambiguous places; street,
+  building, and neighborhood precision is reserved for supported public places
+  such as museums, landmarks, parks, stations, galleries, or venues.
 - Sync planning through `/__sidecar/sync-status`, reporting index freshness,
   picked-only AI pressure, pending Photos write-back, and upload readiness.
 - Non-UI scheduler entrypoints: `sidecar_maintenance.py photos-index-sync` and
@@ -248,8 +272,8 @@ The first implemented slice includes:
   reviewing picked-item metadata in oldest-to-newest row form with field and
   decision propagation, AI rework categories, previewing the active item with Space,
   tombstoning the wastebasket explicitly, viewing upload eligibility as a
-  right-side thumbnail rail, mock-uploading that plan locally with Owner R2 key
-  collision warnings, hiding mock-uploaded items from active Culling/Review
+  right-side thumbnail rail, queueing that plan into Upload Bridge with Owner R2
+  key collision warnings, hiding bridge-queued items from active Culling/Review
   surfaces, and viewing the pending Photos commit plan.
 - Dock launcher script for `PhotosByElie Sidecar.app`.
 
@@ -260,4 +284,9 @@ Remaining near-term slices:
 - Incremental index refresh refinements, such as cheaper change detection and
   richer missing-asset reporting.
 - Album/smart-album source filters.
-- Owner consumption of Sidecar upload plans.
+- Real Upload Bridge execution: force Photos downloads only for queued approved
+  picks, export full assets, upload private masters and public previews to R2,
+  and register the results through the Owner import/catalog path.
+- Private render cache pruning for existing `renders/<media_id>_<size>mp.jpg`
+  objects, protecting sold media and leaving future Worker-created renders in
+  place.

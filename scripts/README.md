@@ -487,6 +487,25 @@ python3 scripts/sync_r2_media.py --scope private --upload --workers 2 --request-
 
 Normal imports upload public previews and private developed masters only. Private buyer JPG render triplets are now an on-demand Worker cache: checkout can generate missing JPG 1 MP, 3 MP, and 6 MP files from the private master through Cloudflare Images and then store the result back under `renders/<photo-id>_<size>mp.jpg`.
 
+Sidecar Upload Bridge starts from picked + Review-approved Apple Photos rows
+that have been queued across the bridge. The first implementation slice is a
+dry-run manifest only; it reports planned private master and public preview keys
+without exporting from Photos or writing R2:
+
+```bash
+python3 scripts/sidecar_upload_bridge.py --limit 20
+python3 scripts/sidecar_upload_bridge.py --json --output assets/owner-actions/sidecar-upload-runs/dry-run.json
+```
+
+Bridge plans intentionally omit private JPG render triplets. Existing private
+render cache cleanup should also begin as a dry run until sold-media protection
+is loaded from the Worker order ledger:
+
+```bash
+python3 scripts/prune_private_render_cache.py
+python3 scripts/prune_private_render_cache.py --protected-photo-ids-file assets/owner-actions/protected-sold-media-ids.json
+```
+
 For an explicit cache-warming or fallback repair run on David, which owns the developed masters, generate/upload private buyer JPG renders during import/private upload:
 
 ```bash

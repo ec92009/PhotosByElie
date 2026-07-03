@@ -9,6 +9,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import hashlib
 import json
 import mimetypes
+import os
 from pathlib import Path
 import sqlite3
 import subprocess
@@ -20,24 +21,30 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 from sidecar_state_db import (
     ai_metadata_plan,
+    apply_ai_metadata_proposals,
     commit_plan,
     empty_wastebasket,
     indexed_library_window,
     mark_missing_assets,
     merge_state,
     mock_upload,
+    queue_upload_bridge,
     record_decision,
     record_decisions,
     sidecar_sync_status,
     summary,
+    upload_bridge_plan,
     upload_plan,
     upsert_assets,
 )
 
 
 APPLE_PHOTOS_BRIDGE = Path("scripts/apple_photos_bridge.swift")
+APPLE_PHOTOS_BRIDGE_APP_INSTALLER = Path("scripts/install_sidecar_photos_bridge_app.zsh")
+APPLE_PHOTOS_BRIDGE_APP = Path.home() / "Applications" / "PhotosByElie Photos Bridge.app"
+APPLE_PHOTOS_BRIDGE_APP_EXECUTABLE = APPLE_PHOTOS_BRIDGE_APP / "Contents" / "MacOS" / "PhotosByElie Photos Bridge"
 SIDECAR_VERSION_FILE = Path("SIDECAR_VERSION")
-SIDECAR_DEFAULT_VERSION = "124.3"
+SIDECAR_DEFAULT_VERSION = "125.2"
 SIDECAR_PREVIEW_ROOT = Path("tmp/sidecar-previews")
 SIDECAR_PREVIEW_CACHE_VERSION = "v2"
 SIDECAR_VIDEO_ROOT = Path("tmp/sidecar-videos")
@@ -53,8 +60,11 @@ SIDECAR_DECISIONS_PATH = "/__sidecar/decisions"
 SIDECAR_SUMMARY_PATH = "/__sidecar/summary"
 SIDECAR_UPLOAD_PLAN_PATH = "/__sidecar/upload-plan"
 SIDECAR_AI_PLAN_PATH = "/__sidecar/ai-plan"
+SIDECAR_AI_PROPOSE_PATH = "/__sidecar/ai-propose"
 SIDECAR_SYNC_STATUS_PATH = "/__sidecar/sync-status"
 SIDECAR_MOCK_UPLOAD_PATH = "/__sidecar/mock-upload"
+SIDECAR_UPLOAD_BRIDGE_PATH = "/__sidecar/upload-bridge"
+SIDECAR_UPLOAD_BRIDGE_PLAN_PATH = "/__sidecar/upload-bridge-plan"
 SIDECAR_COMMIT_PLAN_PATH = "/__sidecar/commit-plan"
 SIDECAR_VERSION_PATH = "/__sidecar/version"
 SIDECAR_EMPTY_WASTEBASKET_PATH = "/__sidecar/empty-wastebasket"
@@ -106,12 +116,10 @@ def _index_job_snapshot(repo_root: Path) -> dict:
 
 
 def _run_apple_photos_bridge(repo_root: Path, args: list[str], timeout: int = 900) -> dict:
-    bridge = repo_root / APPLE_PHOTOS_BRIDGE
-    if not bridge.exists():
-        raise RuntimeError(f"Apple Photos bridge is missing: {bridge}")
+    command = _apple_photos_bridge_command(repo_root, args)
     try:
         result = subprocess.run(
-            ["swift", str(bridge), *args],
+            command,
             cwd=repo_root,
             text=True,
             capture_output=True,
@@ -141,12 +149,10 @@ def _run_apple_photos_bridge_stream(
     args: list[str],
     progress_handler,
 ) -> dict:
-    bridge = repo_root / APPLE_PHOTOS_BRIDGE
-    if not bridge.exists():
-        raise RuntimeError(f"Apple Photos bridge is missing: {bridge}")
+    command = _apple_photos_bridge_command(repo_root, args)
     try:
         process = subprocess.Popen(
-            ["swift", str(bridge), *args],
+            command,
             cwd=repo_root,
             text=True,
             stdout=subprocess.PIPE,
@@ -180,6 +186,85 @@ def _run_apple_photos_bridge_stream(
     return payload
 
 
+def _run_apple_photos_bridge_app_index(repo_root: Path, args: list[str], destination: Path, timeout: int = 900) -> dict:
+    _ensure_apple_photos_bridge_app(repo_root)
+    try:
+        result = subprocess.run(
+            ["open", "-W", "-n", str(APPLE_PHOTOS_BRIDGE_APP), "--args", *args],
+            cwd=repo_root,
+            text=True,
+            capture_output=True,
+            timeout=timeout,
+            check=False,
+        )
+    except FileNotFoundError as error:
+        raise RuntimeError("macOS open is required to launch the bundled Apple Photos bridge.") from error
+    if result.returncode != 0:
+        message = (result.stderr or result.stdout or f"Apple Photos bridge app exited {result.returncode}").strip()
+        raise RuntimeError(message)
+    if not destination.exists() or destination.stat().st_size == 0:
+        raise RuntimeError(
+            "Apple Photos bridge app did not write the index file. "
+            "Confirm PhotosByElie Photos Bridge has Full Access in System Settings > Privacy & Security > Photos, then retry."
+        )
+    total_count = 0
+    with destination.open("r", encoding="utf-8") as handle:
+        for total_count, _line in enumerate(handle, start=1):
+            pass
+    _handle_index_progress({
+        "event": "library_index_done",
+        "indexedCount": total_count,
+        "totalCount": total_count,
+        "progress": 1,
+    })
+    return {
+        "ok": True,
+        "mode": "library-index-file",
+        "destination": str(destination),
+        "count": total_count,
+        "totalCount": total_count,
+    }
+
+
+def _ensure_apple_photos_bridge_app(repo_root: Path) -> None:
+    installer = repo_root / APPLE_PHOTOS_BRIDGE_APP_INSTALLER
+    bridge_source = repo_root / APPLE_PHOTOS_BRIDGE
+    if not installer.exists():
+        raise RuntimeError(f"Photos Bridge app installer is missing: {installer}")
+    needs_build = not APPLE_PHOTOS_BRIDGE_APP_EXECUTABLE.exists()
+    if not needs_build:
+        try:
+            needs_build = bridge_source.stat().st_mtime > APPLE_PHOTOS_BRIDGE_APP_EXECUTABLE.stat().st_mtime
+        except OSError:
+            needs_build = True
+    if not needs_build:
+        return
+    result = subprocess.run(
+        ["zsh", str(installer)],
+        cwd=repo_root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        message = (result.stderr or result.stdout or f"Photos Bridge installer exited {result.returncode}").strip()
+        raise RuntimeError(message)
+
+
+def _apple_photos_bridge_command(repo_root: Path, args: list[str]) -> list[str]:
+    override = os.environ.get("PBE_APPLE_PHOTOS_BRIDGE_EXECUTABLE", "").strip()
+    if override:
+        executable = Path(override).expanduser()
+        if not executable.exists():
+            raise RuntimeError(f"Configured Apple Photos bridge executable is missing: {executable}")
+        return [str(executable), *args]
+
+    bridge = repo_root / APPLE_PHOTOS_BRIDGE
+    if not bridge.exists():
+        raise RuntimeError(f"Apple Photos bridge is missing: {bridge}")
+    return ["swift", str(bridge), *args]
+
+
 def _int_query(query: dict[str, list[str]], name: str, default: int, minimum: int, maximum: int) -> int:
     try:
         value = int((query.get(name) or [""])[0] or default)
@@ -194,6 +279,14 @@ def _text_query(query: dict[str, list[str]], *names: str) -> str:
         if value:
             return value
     return ""
+
+
+def _list_query(query: dict[str, list[str]], *names: str) -> list[str]:
+    values: list[str] = []
+    for name in names:
+        for value in query.get(name) or []:
+            values.extend(part.strip() for part in str(value or "").split(",") if part.strip())
+    return values
 
 
 def _asset_id_from_row(row: dict) -> str:
@@ -303,7 +396,7 @@ def _run_index_job(repo_root: Path, job_id: str, date_from: str = "", date_to: s
             args.extend(["--date-from", date_from])
         if date_to:
             args.extend(["--date-to", date_to])
-        bridge_payload = _run_apple_photos_bridge_stream(repo_root, args, _handle_index_progress)
+        bridge_payload = _run_apple_photos_bridge_app_index(repo_root, args, index_path)
         total_count = int(bridge_payload.get("totalCount") or bridge_payload.get("count") or 0)
         imported, missing_count = _import_index_jsonl(repo_root, index_path, total_count, prune_missing=not date_from and not date_to)
         _set_index_job(
@@ -394,6 +487,9 @@ class SidecarHandler(SimpleHTTPRequestHandler):
         if path == SIDECAR_UPLOAD_PLAN_PATH:
             self._handle_upload_plan()
             return
+        if path == SIDECAR_UPLOAD_BRIDGE_PLAN_PATH:
+            self._handle_upload_bridge_plan()
+            return
         if path == SIDECAR_AI_PLAN_PATH:
             self._handle_ai_plan()
             return
@@ -416,11 +512,14 @@ class SidecarHandler(SimpleHTTPRequestHandler):
         if path == SIDECAR_EMPTY_WASTEBASKET_PATH:
             self._handle_empty_wastebasket()
             return
-        if path == SIDECAR_MOCK_UPLOAD_PATH:
-            self._handle_mock_upload()
+        if path in {SIDECAR_MOCK_UPLOAD_PATH, SIDECAR_UPLOAD_BRIDGE_PATH}:
+            self._handle_upload_bridge()
             return
         if path == SIDECAR_INDEX_REFRESH_PATH:
             self._handle_index_refresh()
+            return
+        if path == SIDECAR_AI_PROPOSE_PATH:
+            self._handle_ai_propose()
             return
         self.send_error(HTTPStatus.NOT_FOUND)
 
@@ -459,6 +558,14 @@ class SidecarHandler(SimpleHTTPRequestHandler):
         if not isinstance(payload, dict):
             raise ValueError("Request body must be a JSON object.")
         return payload
+
+    def _include_summary(self, payload: dict | None = None) -> bool:
+        query = parse_qs(urlparse(self.path).query)
+        raw_values = query.get("summary") or query.get("includeSummary") or query.get("include_summary") or []
+        raw = raw_values[0] if raw_values else None
+        if raw is None and payload is not None:
+            raw = payload.get("includeSummary", payload.get("include_summary", True))
+        return str(raw).strip().lower() not in {"0", "false", "no", "off"}
 
     def _handle_version(self) -> None:
         self._send_json(HTTPStatus.OK, {"ok": True, "version": sidecar_version(Path.cwd())})
@@ -500,6 +607,11 @@ class SidecarHandler(SimpleHTTPRequestHandler):
         offset = _int_query(query, "offset", 0, 0, 1_000_000)
         date_from = _text_query(query, "dateFrom", "date_from", "from")
         date_to = _text_query(query, "dateTo", "date_to", "to")
+        ratings = _list_query(query, "rating", "ratings")
+        colors = _list_query(query, "color", "colors")
+        pick_states = _list_query(query, "pickState", "pick_state", "pickStates", "pick_states")
+        media_types = _list_query(query, "mediaType", "media_type", "mediaTypes", "media_types")
+        search = _text_query(query, "q", "search", "query")
         try:
             payload = indexed_library_window(
                 Path.cwd(),
@@ -507,6 +619,11 @@ class SidecarHandler(SimpleHTTPRequestHandler):
                 limit=limit,
                 date_from=date_from,
                 date_to=date_to,
+                ratings=ratings,
+                colors=colors,
+                pick_states=pick_states,
+                media_types=media_types,
+                search=search,
             )
             payload["version"] = sidecar_version(Path.cwd())
             payload["indexStatus"] = _index_job_snapshot(Path.cwd())
@@ -650,7 +767,8 @@ class SidecarHandler(SimpleHTTPRequestHandler):
         try:
             payload = self._read_json_body()
             result = record_decision(Path.cwd(), payload)
-            result["summary"] = summary(Path.cwd())
+            if self._include_summary(payload):
+                result["summary"] = summary(Path.cwd())
         except ValueError as error:
             self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
             return
@@ -671,7 +789,8 @@ class SidecarHandler(SimpleHTTPRequestHandler):
             if len(decisions) > 500:
                 raise ValueError("Sidecar batch decisions are limited to 500 rows.")
             result = record_decisions(Path.cwd(), decisions)
-            result["summary"] = summary(Path.cwd())
+            if self._include_summary(payload):
+                result["summary"] = summary(Path.cwd())
         except ValueError as error:
             self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
             return
@@ -701,6 +820,19 @@ class SidecarHandler(SimpleHTTPRequestHandler):
             return
         self._send_json(HTTPStatus.OK, result)
 
+    def _handle_upload_bridge_plan(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        query = parse_qs(urlparse(self.path).query)
+        limit = _int_query(query, "limit", 500, 1, 5000)
+        try:
+            result = upload_bridge_plan(Path.cwd(), limit=limit)
+        except Exception as error:
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
+            return
+        self._send_json(HTTPStatus.OK, result)
+
     def _handle_ai_plan(self) -> None:
         if not self._is_loopback_request():
             self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
@@ -710,6 +842,31 @@ class SidecarHandler(SimpleHTTPRequestHandler):
         try:
             result = ai_metadata_plan(Path.cwd(), limit=limit)
             result["version"] = sidecar_version(Path.cwd())
+        except Exception as error:
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
+            return
+        self._send_json(HTTPStatus.OK, result)
+
+    def _handle_ai_propose(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            payload = self._read_json_body()
+            asset_ids = payload.get("assetIds") or payload.get("asset_ids") or []
+            if not isinstance(asset_ids, list):
+                raise ValueError("assetIds must be a JSON array.")
+            if len(asset_ids) > 500:
+                raise ValueError("Foreground AI proposal batches are limited to 500 rows.")
+            limit = int(payload.get("limit") or len(asset_ids) or 20)
+            max_rung = str(payload.get("maxRung") or payload.get("max_rung") or "filename-gps").strip()
+            result = apply_ai_metadata_proposals(Path.cwd(), limit=limit, max_rung=max_rung, asset_ids=asset_ids)
+            result["version"] = sidecar_version(Path.cwd())
+            if self._include_summary(payload):
+                result["summary"] = summary(Path.cwd())
+        except ValueError as error:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
+            return
         except Exception as error:
             self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
             return
@@ -729,7 +886,7 @@ class SidecarHandler(SimpleHTTPRequestHandler):
             return
         self._send_json(HTTPStatus.OK, result)
 
-    def _handle_mock_upload(self) -> None:
+    def _handle_upload_bridge(self) -> None:
         if not self._is_loopback_request():
             self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
             return
@@ -739,7 +896,10 @@ class SidecarHandler(SimpleHTTPRequestHandler):
             if not isinstance(asset_ids, list):
                 raise ValueError("assetIds must be a JSON array.")
             limit = int(payload.get("limit") or 500)
-            result = mock_upload(Path.cwd(), asset_ids=asset_ids, limit=limit)
+            if self.path.split("?", 1)[0] == SIDECAR_MOCK_UPLOAD_PATH:
+                result = mock_upload(Path.cwd(), asset_ids=asset_ids, limit=limit)
+            else:
+                result = queue_upload_bridge(Path.cwd(), asset_ids=asset_ids, limit=limit)
         except ValueError as error:
             self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
             return

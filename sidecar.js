@@ -10,21 +10,19 @@
   const planEyebrow = $("[data-sidecar-plan-eyebrow]");
   const planTitle = $("[data-sidecar-plan-title]");
   const planOutput = $("[data-sidecar-plan-output]");
-  const loadButton = $("[data-sidecar-load]");
-  const refillButton = $("[data-sidecar-refill]");
   const indexStatusRoot = $("[data-sidecar-index-status]");
   const indexStatusLabel = $("[data-sidecar-index-label]");
   const indexStatusCount = $("[data-sidecar-index-count]");
   const indexStatusProgress = $("[data-sidecar-index-progress]");
-  const slideBackButton = $("[data-sidecar-slide-back]");
-  const slideForwardButton = $("[data-sidecar-slide-forward]");
   const burstCullButton = $("[data-sidecar-burst-cull]");
   const emptyWastebasketButton = $("[data-sidecar-empty-wastebasket]");
   const pageTabs = Array.from(document.querySelectorAll("[data-sidecar-page]"));
   const filterInputs = Array.from(document.querySelectorAll("[data-sidecar-filter]"));
   const filterToggleButtons = Array.from(document.querySelectorAll("[data-sidecar-filter-toggle]"));
+  const searchInput = $("[data-sidecar-search]");
+  const clearSearchButton = $("[data-sidecar-search-clear]");
 
-  const storageKey = "photosByElie.sidecar.window.v2";
+  const storageKey = "photosByElie.sidecar.window.v4";
   const pageConfigs = {
     culling: {
       eyebrow: "Culling",
@@ -70,9 +68,10 @@
     { value: "keywords", label: "use keywords", note: "use the existing keywords as clues" },
     { value: "detail", label: "add details", note: "dig up more details" },
     { value: "shoot", label: "use shoot", note: "use other photos in the 2-3 hour window for clues" },
-    { value: "other", label: "other", note: "what should change?" },
+    { value: "other", label: "other", note: "review this picked item and improve its title and keywords" },
   ];
   const reworkCategoryByValue = new Map(reworkCategories.map((category) => [category.value, category]));
+  const defaultAiReviewNote = "review this picked item and improve its title and keywords";
   const burstWindowMs = 1000;
   const shootWindowMs = 2 * 60 * 60 * 1000;
   const undoLimit = 100;
@@ -80,6 +79,7 @@
   const refillMaxFetches = 120;
   const previewFallbackMarkup = `<span class="sidecar-thumb-fallback">Preview unavailable</span>`;
   let indexStatusTimer = null;
+  let searchChangeTimer = null;
 
   const normalizePage = (value) => {
     if (value === "editing") return "review";
@@ -106,6 +106,7 @@
     .map((value) => Math.max(0, Number(value || 0)))
     .filter(Number.isFinite)
     .slice(-50);
+  const normalizeSearchQuery = (value = "") => String(value || "").trim().replace(/\s+/g, " ").slice(0, 160);
 
   const readStoredWindow = () => {
     try {
@@ -115,24 +116,32 @@
     }
   };
 
+  const urlParams = new URLSearchParams(window.location.search);
   const state = {
-    page: normalizePage(new URLSearchParams(window.location.search).get("page") || readStoredWindow()?.page || "culling"),
+    page: normalizePage(urlParams.get("page") || readStoredWindow()?.page || "culling"),
     items: [],
     selectedIndex: -1,
     selectedIndexes: new Set(),
+    selectedAssetIds: new Set(),
+    selectedAssetId: "",
     selectionAnchorIndex: -1,
+    selectionAnchorAssetId: "",
     quickLookIndex: -1,
     autoAdvanceDirection: 1,
     undoStack: [],
     summary: null,
     indexStatus: null,
+    aiReviewResult: null,
+    aiReviewRunning: false,
     keywordBlacklist: new Set(),
     filters: normalizeFilters(readStoredWindow()?.filters || cloneDefaultFilters()),
-    hasWindow: Boolean(readStoredWindow()?.hasWindow),
-    windowStartOffset: Math.max(0, Number(readStoredWindow()?.windowStartOffset ?? readStoredWindow()?.offset ?? 0)),
-    windowCursorOffset: Number(readStoredWindow()?.windowCursorOffset || 0),
-    windowBackStack: normalizeOffsetStack(readStoredWindow()?.windowBackStack),
-    windowForwardStack: normalizeOffsetStack(readStoredWindow()?.windowForwardStack),
+    searchQuery: normalizeSearchQuery(urlParams.get("q") || readStoredWindow()?.searchQuery || ""),
+    hasWindow: false,
+    windowStartOffset: 0,
+    windowCursorOffset: 0,
+    filteredIndexedCount: 0,
+    windowBackStack: [],
+    windowForwardStack: [],
   };
 
   const escapeHtml = (value = "") => String(value)
@@ -151,6 +160,25 @@
     }
     requestAnimationFrame(() => requestAnimationFrame(resolve));
   });
+  const withBusyControl = async (control, label, work) => {
+    if (!control) return work();
+    const originalText = control.textContent;
+    const originalDisabled = control.disabled;
+    control.disabled = true;
+    control.classList.add("is-busy");
+    control.setAttribute("aria-busy", "true");
+    if (label) control.textContent = label;
+    await waitForStatusPaint();
+    try {
+      return await work();
+    } finally {
+      if (!control.isConnected) return;
+      control.disabled = originalDisabled;
+      control.classList.remove("is-busy");
+      control.removeAttribute("aria-busy");
+      control.textContent = originalText;
+    }
+  };
 
   const renderIndexStatus = (payload = {}) => {
     state.indexStatus = payload;
@@ -223,19 +251,20 @@
     const stored = readStoredWindow();
     if (!stored) {
       filterInputs.forEach((input) => { input.checked = true; });
+      if (searchInput) searchInput.value = state.searchQuery;
       return;
     }
     const limit = $("[data-sidecar-limit]");
     if (limit && stored.limit) limit.value = String(stored.limit);
-    if (Number.isFinite(Number(stored.windowStartOffset))) state.windowStartOffset = Math.max(0, Number(stored.windowStartOffset));
-    else if (Number.isFinite(Number(stored.offset))) state.windowStartOffset = Math.max(0, Number(stored.offset));
-    if (Number.isFinite(Number(stored.windowCursorOffset))) state.windowCursorOffset = Math.max(0, Number(stored.windowCursorOffset));
-    state.windowBackStack = normalizeOffsetStack(stored.windowBackStack);
-    state.windowForwardStack = normalizeOffsetStack(stored.windowForwardStack);
+    if (searchInput) searchInput.value = state.searchQuery;
     filterInputs.forEach((input) => {
       const key = filterKeyByName[input.dataset.sidecarFilter];
       input.checked = Boolean(key && state.filters[key]?.includes(input.value));
     });
+  };
+
+  const updateSearchClearState = () => {
+    if (clearSearchButton) clearSearchButton.disabled = !normalizeSearchQuery(searchInput?.value || state.searchQuery);
   };
 
   const readFiltersFromControls = () => {
@@ -247,13 +276,28 @@
     return normalizeFilters(filters);
   };
 
-  const applyFilterChanges = () => {
+  const applyFilterChanges = async () => {
     state.filters = readFiltersFromControls();
-    reconcileSelection(state.selectedIndex);
-    renderSurface();
-    syncQuickLookToSelection();
-    setStatus(`Showing ${visibleIndexes().length.toLocaleString()} of ${state.items.length.toLocaleString()} current-window items after filters.`);
+    setOffset(0);
+    state.windowCursorOffset = 0;
+    state.windowBackStack = [];
+    state.windowForwardStack = [];
     saveWindowState();
+    await loadWindow();
+  };
+
+  const applySearchChanges = async () => {
+    const nextQuery = normalizeSearchQuery(searchInput?.value || "");
+    updateSearchClearState();
+    if (nextQuery === state.searchQuery) return;
+    state.searchQuery = nextQuery;
+    setOffset(0);
+    state.windowCursorOffset = 0;
+    state.windowBackStack = [];
+    state.windowForwardStack = [];
+    syncPageUrl();
+    saveWindowState();
+    await loadWindow();
   };
 
   const saveWindowState = () => {
@@ -262,8 +306,10 @@
       limit: getLimit(),
       windowStartOffset: getOffset(),
       filters: state.filters,
+      searchQuery: state.searchQuery,
       hasWindow: state.hasWindow,
       windowCursorOffset: state.windowCursorOffset,
+      filteredIndexedCount: state.filteredIndexedCount,
       windowBackStack: state.windowBackStack,
       windowForwardStack: state.windowForwardStack,
       savedAt: new Date().toISOString(),
@@ -279,6 +325,8 @@
     const url = new URL(window.location.href);
     if (state.page === "culling") url.searchParams.delete("page");
     else url.searchParams.set("page", state.page);
+    if (state.searchQuery) url.searchParams.set("q", state.searchQuery);
+    else url.searchParams.delete("q");
     const nextUrl = `${url.pathname}${url.search}${url.hash}`;
     const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
     if (nextUrl !== currentUrl) window.history.replaceState({}, "", nextUrl);
@@ -293,6 +341,16 @@
   const itemId = (item) => String(item?.localIdentifier || item?.assetId || "").trim();
   const previewUrl = (item) => `/__sidecar/preview/${encodeURIComponent(itemId(item))}?maxPixel=900`;
   const videoUrl = (item) => `/__sidecar/video/${encodeURIComponent(itemId(item))}`;
+  const uniqueItemsById = (items) => {
+    const seen = new Set();
+    return (Array.isArray(items) ? items : []).filter((item) => {
+      const id = itemId(item);
+      if (!id) return false;
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+  };
   const mediaTypeValue = (item) => (String(item?.mediaType || "photo").toLowerCase() === "video" ? "video" : "photo");
   const isVideo = (item) => mediaTypeValue(item) === "video";
   const formatDuration = (value = 0) => {
@@ -322,35 +380,63 @@
   const videoPlayerMarkup = (item, autoplay = true) => `
     <video class="sidecar-inline-video" controls playsinline preload="metadata" ${autoplay ? "autoplay" : ""} poster="${escapeHtml(previewUrl(item))}" src="${escapeHtml(videoUrl(item))}"></video>
   `;
-  const versionFallback = "124.3";
+  const versionFallback = "125.1";
   const versionFallbackLabel = `v${versionFallback}`;
   const videoBadge = (item, index, label) => isVideo(item)
     ? videoOverlay(item, index, label)
     : "";
   const selectedItem = () => state.items[state.selectedIndex] || null;
+  const indexForAssetId = (assetId) => {
+    const cleanId = String(assetId || "").trim();
+    if (!cleanId) return -1;
+    return state.items.findIndex((item) => itemId(item) === cleanId);
+  };
   const selectedIndexes = () => Array.from(state.selectedIndexes || [])
     .filter((index) => index >= 0 && index < state.items.length)
     .sort((left, right) => left - right);
+  const selectedAssetIds = () => selectedIndexes()
+    .map((index) => itemId(state.items[index]))
+    .filter(Boolean);
+  const syncSelectionAssetState = () => {
+    const ids = selectedAssetIds();
+    state.selectedAssetIds = new Set(ids);
+    state.selectedAssetId = itemId(selectedItem()) || ids[0] || "";
+    state.selectionAnchorAssetId = itemId(state.items[state.selectionAnchorIndex]) || state.selectedAssetId || "";
+  };
   const selectedItems = () => selectedIndexes().map((index) => state.items[index]).filter(Boolean);
   const selectedItemCount = () => selectedIndexes().length;
   const selectedSelectionSet = () => new Set(selectedIndexes());
   const selectionSnapshot = () => ({
     selectedIndex: state.selectedIndex,
     selectedIndexes: selectedIndexes(),
+    selectedAssetId: state.selectedAssetId || itemId(selectedItem()) || "",
+    selectedAssetIds: selectedAssetIds(),
     selectionAnchorIndex: state.selectionAnchorIndex,
+    selectionAnchorAssetId: state.selectionAnchorAssetId || itemId(state.items[state.selectionAnchorIndex]) || "",
     autoAdvanceDirection: state.autoAdvanceDirection,
   });
 
   const restoreSelectionSnapshot = (snapshot = {}) => {
     const visible = new Set(visibleIndexes());
-    const selected = Array.isArray(snapshot.selectedIndexes)
-      ? snapshot.selectedIndexes.filter((index) => visible.has(index))
+    const selectedByAsset = Array.isArray(snapshot.selectedAssetIds)
+      ? snapshot.selectedAssetIds.map(indexForAssetId).filter((index) => visible.has(index))
       : [];
-    const preferred = visible.has(snapshot.selectedIndex) ? snapshot.selectedIndex : selected[0];
+    const preferredByAsset = indexForAssetId(snapshot.selectedAssetId);
+    const anchorByAsset = indexForAssetId(snapshot.selectionAnchorAssetId);
+    const selected = Array.isArray(snapshot.selectedIndexes)
+      ? snapshot.selectedIndexes.filter((index) => visible.has(index) && !selectedByAsset.includes(index))
+      : [];
+    const combinedSelected = [...selectedByAsset, ...selected];
+    const preferred = visible.has(preferredByAsset)
+      ? preferredByAsset
+      : (visible.has(snapshot.selectedIndex) ? snapshot.selectedIndex : combinedSelected[0]);
     if (Number.isFinite(preferred)) {
       state.selectedIndex = preferred;
-      state.selectedIndexes = new Set(selected.length ? selected : [preferred]);
-      state.selectionAnchorIndex = visible.has(snapshot.selectionAnchorIndex) ? snapshot.selectionAnchorIndex : preferred;
+      state.selectedIndexes = new Set(combinedSelected.length ? combinedSelected : [preferred]);
+      state.selectionAnchorIndex = visible.has(anchorByAsset)
+        ? anchorByAsset
+        : (visible.has(snapshot.selectionAnchorIndex) ? snapshot.selectionAnchorIndex : preferred);
+      syncSelectionAssetState();
     } else {
       reconcileSelection(state.selectedIndex);
     }
@@ -392,8 +478,13 @@
     return "undecided";
   };
 
-  const isMockUploadedItem = (item) => item?.mockUploadState === "active" || item?.mockUpload?.state === "active";
-  const isVisibleBaseItem = (item) => Boolean(item && item.tombstoneState !== "active" && !isMockUploadedItem(item));
+  const isBridgeQueuedItem = (item) => (
+    item?.uploadBridgeState === "active"
+    || item?.uploadBridge?.state === "active"
+    || item?.mockUploadState === "active"
+    || item?.mockUpload?.state === "active"
+  );
+  const isVisibleBaseItem = (item) => Boolean(item && item.tombstoneState !== "active" && !isBridgeQueuedItem(item));
   const isPickedItem = (item) => (item?.sidecarState?.pickState || "undecided") === "picked";
   const matchesRatingColorMediaFilters = (item) => {
     if (!isVisibleBaseItem(item)) return false;
@@ -420,11 +511,20 @@
     return left - right;
   };
 
-  const visibleIndexes = () => state.items
-    .map((item, index) => ({ item, index }))
-    .filter(({ item }) => matchesFilters(item))
-    .map(({ index }) => index)
-    .sort(visibleIndexComparator);
+  const visibleIndexes = () => {
+    const seen = new Set();
+    return state.items
+      .map((item, index) => ({ item, index }))
+      .filter(({ item }) => {
+        const id = itemId(item);
+        if (!id || seen.has(id) || !matchesFilters(item)) return false;
+        seen.add(id);
+        return true;
+      })
+      .map(({ index }) => index)
+      .sort(visibleIndexComparator)
+      .slice(0, getLimit());
+  };
 
   const firstVisibleIndex = () => visibleIndexes()[0] ?? -1;
   const nextVisibleAfter = (index) => {
@@ -444,12 +544,13 @@
   };
   const visibleColumnCount = () => {
     if (!surface || isReviewPage()) return 1;
-    const elements = Array.from(surface.querySelectorAll(".sidecar-card[data-sidecar-index], .sidecar-editing-row[data-sidecar-index]"));
+    const gridRoot = surface.querySelector(".sidecar-culling-items") || surface;
+    const elements = Array.from(gridRoot.querySelectorAll(".sidecar-card[data-sidecar-index], .sidecar-editing-row[data-sidecar-index]"));
     if (elements.length <= 1) return 1;
     const firstTop = elements[0].getBoundingClientRect().top;
     const sameRowCount = elements.filter((element) => Math.abs(element.getBoundingClientRect().top - firstTop) <= 3).length;
     if (sameRowCount > 1) return sameRowCount;
-    const template = getComputedStyle(surface).gridTemplateColumns || "";
+    const template = getComputedStyle(gridRoot).gridTemplateColumns || "";
     const computedCount = template.split(/\s+/).filter((value) => value && value !== "none").length;
     return Math.max(1, computedCount || 1);
   };
@@ -479,27 +580,47 @@
   const reconcileSelection = (preferredIndex = null, {
     preserveSelection = false,
     previousSelection = null,
+    preferredAssetId = "",
+    previousSelectionAssetIds = null,
   } = {}) => {
     const visible = new Set(visibleIndexes());
+    const preferredByAsset = indexForAssetId(preferredAssetId || state.selectedAssetId);
+    const assetPreservedSource = Array.isArray(previousSelectionAssetIds)
+      ? previousSelectionAssetIds
+      : Array.from(state.selectedAssetIds || []);
+    const preservedByAsset = assetPreservedSource
+      .map(indexForAssetId)
+      .filter((index) => visible.has(index));
     const preservedSource = previousSelection instanceof Set
       ? Array.from(previousSelection)
       : (preserveSelection ? selectedIndexes() : []);
-    const preserved = preserveSelection
+    const preservedByIndex = preserveSelection
       ? preservedSource.filter((index) => visible.has(index))
       : [];
+    const preserved = [...new Set([...preservedByAsset, ...preservedByIndex])];
     if (preserved.length) {
       state.selectedIndexes = new Set(preserved);
-      if (preferredIndex !== null && preserved.includes(preferredIndex)) state.selectedIndex = preferredIndex;
+      if (visible.has(preferredByAsset) && preserved.includes(preferredByAsset)) state.selectedIndex = preferredByAsset;
+      else if (preferredIndex !== null && preserved.includes(preferredIndex)) state.selectedIndex = preferredIndex;
       else if (!preserved.includes(state.selectedIndex)) state.selectedIndex = preserved[0];
       state.selectionAnchorIndex = preserved.includes(state.selectionAnchorIndex)
         ? state.selectionAnchorIndex
         : state.selectedIndex;
+      syncSelectionAssetState();
+      return;
+    }
+    if (visible.has(preferredByAsset)) {
+      state.selectedIndex = preferredByAsset;
+      state.selectedIndexes = new Set([preferredByAsset]);
+      state.selectionAnchorIndex = preferredByAsset;
+      syncSelectionAssetState();
       return;
     }
     if (preferredIndex !== null && preferredIndex >= 0 && visible.has(preferredIndex)) {
       state.selectedIndex = preferredIndex;
       state.selectedIndexes = new Set([preferredIndex]);
       state.selectionAnchorIndex = preferredIndex;
+      syncSelectionAssetState();
       return;
     }
     const retained = selectedIndexes().filter((index) => visible.has(index));
@@ -507,12 +628,14 @@
       state.selectedIndexes = new Set(retained);
       state.selectedIndex = retained.includes(state.selectedIndex) ? state.selectedIndex : retained[0];
       state.selectionAnchorIndex = state.selectedIndex;
+      syncSelectionAssetState();
       return;
     }
     const first = firstVisibleIndex();
     state.selectedIndex = first;
     state.selectedIndexes = first >= 0 ? new Set([first]) : new Set();
     state.selectionAnchorIndex = first;
+    syncSelectionAssetState();
   };
 
   const setInitialSelection = () => {
@@ -520,6 +643,7 @@
     state.selectedIndex = first;
     state.selectedIndexes = first >= 0 ? new Set([first]) : new Set();
     state.selectionAnchorIndex = first;
+    syncSelectionAssetState();
   };
 
   const wirePreviewFallbacks = (root) => {
@@ -625,7 +749,24 @@
     return rating ? `<span class="sidecar-stars" aria-label="${rating} star rating">${"&#9733;".repeat(rating)}</span>` : "";
   };
 
-  const reworkCategoryLabel = (value = "") => reworkCategoryByValue.get(String(value || "").trim())?.label || "";
+  const reworkCategoryValues = (value = "") => {
+    const rawValues = Array.isArray(value)
+      ? value
+      : String(value || "").split(/[;,|]/);
+    const seen = new Set();
+    return rawValues
+      .map((item) => String(item || "").trim())
+      .filter((item) => {
+        if (!item || seen.has(item) || !reworkCategoryByValue.has(item)) return false;
+        seen.add(item);
+        return true;
+      });
+  };
+  const reworkCategoryValue = (value = "") => reworkCategoryValues(value).join(",");
+  const reworkCategoryLabel = (value = "") => reworkCategoryValues(value)
+    .map((category) => reworkCategoryByValue.get(category)?.label || "")
+    .filter(Boolean)
+    .join(" + ");
 
   const parseKeywords = (value = "") => {
     const seen = new Set();
@@ -709,6 +850,47 @@
 
   const rowFormForIndex = (index) => surface?.querySelector(`[data-sidecar-row-form][data-sidecar-index="${index}"]`);
 
+  const checkedReworkCategories = (form) => Array.from(form?.querySelectorAll("[data-sidecar-rework-category]:checked") || [])
+    .map((input) => input.value)
+    .filter((value) => reworkCategoryByValue.has(value));
+
+  const defaultReworkNote = (category) => reworkCategoryByValue.get(category)?.note || "";
+
+  const generatedReworkNotePrefix = (categories = "") => reworkCategoryValues(categories)
+    .map(defaultReworkNote)
+    .filter(Boolean)
+    .join("; ");
+
+  const combinedReworkNote = (categories = "", manualNote = "") => {
+    const prefix = generatedReworkNotePrefix(categories);
+    const manual = String(manualNote || "").trim();
+    if (!prefix) return manual;
+    if (!manual) return prefix;
+    if (manual === prefix || manual.startsWith(`${prefix};`)) return manual;
+    return `${prefix}; ${manual}`;
+  };
+
+  const manualReworkNoteFromForm = (form) => {
+    const note = form?.querySelector("[data-sidecar-rework-comment]");
+    const current = String(note?.value || "").trim();
+    const prefix = String(note?.dataset.sidecarReworkPrefix || "").trim();
+    if (!prefix || !current) return current;
+    if (current === prefix) return "";
+    if (current.startsWith(`${prefix};`)) return current.slice(prefix.length + 1).trim();
+    return current;
+  };
+
+  const syncReworkNoteFromCategories = (form) => {
+    const note = form?.querySelector("[data-sidecar-rework-comment]");
+    if (!note) return "";
+    const categories = reworkCategoryValue(checkedReworkCategories(form));
+    const manual = manualReworkNoteFromForm(form);
+    const prefix = generatedReworkNotePrefix(categories);
+    note.dataset.sidecarReworkPrefix = prefix;
+    note.value = combinedReworkNote(categories, manual);
+    return note.value;
+  };
+
   const rowMetadataValues = (index) => {
     const item = state.items[index];
     const sidecar = item?.sidecarState || {};
@@ -721,11 +903,10 @@
       };
     }
     const data = new FormData(form);
-    const checkedCategory = form.querySelector("[data-sidecar-rework-category]:checked");
     return {
       title: String(data.get("title") || "").trim(),
       keywords: parseKeywords(data.get("keywords") || ""),
-      reworkCategory: checkedCategory?.value || "",
+      reworkCategory: reworkCategoryValue(checkedReworkCategories(form)),
       reworkComment: String(data.get("reworkComment") || "").trim(),
     };
   };
@@ -759,19 +940,11 @@
     return payload;
   };
 
-  const defaultReworkNote = (category) => reworkCategoryByValue.get(category)?.note || "";
-
   const setReworkCategoryValue = (form, category) => {
+    const selected = new Set(reworkCategoryValues(category));
     form?.querySelectorAll("[data-sidecar-rework-category]").forEach((input) => {
-      input.checked = input.value === category;
+      input.checked = selected.has(input.value);
     });
-  };
-
-  const fillReworkDefaultNote = (form, category) => {
-    const note = form?.querySelector("[data-sidecar-rework-comment]");
-    if (!note) return;
-    const defaultNote = defaultReworkNote(category);
-    if (!String(note.value || "").trim()) note.value = defaultNote;
   };
 
   const setRowFieldValue = (index, field, value) => {
@@ -809,7 +982,7 @@
       <div class="sidecar-rework-options">
         ${reworkCategories.map((category) => `
           <label class="sidecar-rework-option">
-            <input type="radio" name="reworkCategory-${index}" value="${escapeHtml(category.value)}" data-sidecar-rework-category ${selected === category.value ? "checked" : ""}/>
+            <input type="checkbox" name="reworkCategory-${index}" value="${escapeHtml(category.value)}" data-sidecar-rework-category ${reworkCategoryValues(selected).includes(category.value) ? "checked" : ""}/>
             <span>${escapeHtml(category.label)}</span>
           </label>
         `).join("")}
@@ -911,7 +1084,6 @@
     const config = pageConfigs[state.page] || pageConfigs.culling;
     if (surfaceEyebrow) surfaceEyebrow.textContent = config.eyebrow;
     if (surfaceTitle) surfaceTitle.textContent = config.title;
-    if (loadButton) loadButton.textContent = "Load window";
     document.body.dataset.sidecarActivePage = state.page;
     pageTabs.forEach((button) => {
       const selected = button.dataset.sidecarPage === state.page;
@@ -921,7 +1093,7 @@
   };
 
   const renderCullingGrid = (indexes) => {
-    surface.innerHTML = indexes.map((index) => {
+    const itemMarkup = indexes.map((index) => {
       const item = state.items[index];
       const id = itemId(item);
       const selected = state.selectedIndexes.has(index);
@@ -942,11 +1114,41 @@
         </article>
       `;
     }).join("");
+    surface.innerHTML = `
+      <div class="sidecar-culling-items">
+        <button class="sidecar-window-step sidecar-window-step-back" type="button" data-sidecar-window-slide="-1" aria-label="Previous window" title="Previous window">
+          <span aria-hidden="true">&lt;&lt;</span>
+        </button>
+        ${itemMarkup}
+        <button class="sidecar-window-step sidecar-window-step-forward" type="button" data-sidecar-window-slide="1" aria-label="Next window" title="Next window">
+          <span aria-hidden="true">&gt;&gt;</span>
+        </button>
+      </div>
+    `;
+  };
+
+  const aiReviewResultMarkup = () => {
+    const result = state.aiReviewResult;
+    if (!result) return "";
+    const proposed = Number(result.proposedCount || 0);
+    const skipped = Number(result.skippedCount || 0);
+    const scoped = Number(result.scopedCount || result.plannedCount || 0);
+    const bits = [
+      `${proposed.toLocaleString()} proposed`,
+      `${skipped.toLocaleString()} skipped`,
+      scoped ? `${scoped.toLocaleString()} scoped` : "",
+    ].filter(Boolean);
+    return `<span class="sidecar-review-ai-result">Last pass: ${escapeHtml(bits.join(" · "))}</span>`;
   };
 
   const renderEditingList = (indexes) => {
     const multi = selectedItemCount() > 1;
+    const aiButtonLabel = state.aiReviewRunning ? "Running..." : "Run AI proposals";
     surface.innerHTML = `
+      <div class="sidecar-review-toolbar">
+        <button class="btn secondary sidecar-review-ai-action" type="button" data-sidecar-ai-propose-current ${indexes.length && !state.aiReviewRunning ? "" : "disabled"}>${aiButtonLabel}</button>
+        ${aiReviewResultMarkup()}
+      </div>
       <div class="sidecar-editing-list ${multi ? "has-multi-selection" : ""}">
         ${indexes.map((index) => renderEditingRow(index)).join("")}
       </div>
@@ -961,6 +1163,8 @@
     const selected = state.selectedIndexes.has(index);
     const metadataValues = effectiveMetadataForItem(item);
     const keywords = metadataValues.keywords.join(", ");
+    const reworkPrefix = generatedReworkNotePrefix(sidecar.reworkCategory || "");
+    const reworkComment = combinedReworkNote(sidecar.reworkCategory || "", sidecar.reworkComment || "");
     return `
       <article class="${decisionClasses("sidecar-editing-row", item, selected)}" ${decisionAttrs(item)} data-sidecar-index="${index}" tabindex="0" aria-selected="${selected ? "true" : "false"}">
         <div class="sidecar-editing-preview ${isVideo(item) ? "sidecar-video-surface" : ""}" data-sidecar-video-shell data-sidecar-index="${index}">
@@ -992,7 +1196,7 @@
           ${reworkCategoryMarkup(index, sidecar.reworkCategory || "")}
           <label class="sidecar-rework-note">
             <span>Rework note</span>
-            <textarea name="reworkComment" data-sidecar-rework-comment placeholder="Optional instruction for the next AI pass">${escapeHtml(sidecar.reworkComment || "")}</textarea>
+            <textarea name="reworkComment" data-sidecar-rework-comment data-sidecar-rework-prefix="${escapeHtml(reworkPrefix)}" placeholder="Optional instruction for the next AI pass">${escapeHtml(reworkComment)}</textarea>
           </label>
         </form>
         <div class="sidecar-editing-actions">
@@ -1012,6 +1216,7 @@
     if (!surface) return;
     const config = pageConfigs[state.page] || pageConfigs.culling;
     surface.classList.toggle("is-editing-list", isReviewPage());
+    surface.classList.toggle("is-culling-window", !isReviewPage());
     if (!state.items.length) {
       surface.innerHTML = `<p class="empty-basket">${escapeHtml(config.empty)}</p>`;
       renderCounts();
@@ -1074,7 +1279,11 @@
       const keywordsInput = form.querySelector('[name="keywords"]');
       if (keywordsInput && document.activeElement !== keywordsInput) keywordsInput.value = (metadataValues.keywords || []).join(", ");
       const note = form.querySelector("[data-sidecar-rework-comment]");
-      if (note && document.activeElement !== note) note.value = sidecar.reworkComment || "";
+      if (note && document.activeElement !== note) {
+        const prefix = generatedReworkNotePrefix(sidecar.reworkCategory || "");
+        note.dataset.sidecarReworkPrefix = prefix;
+        note.value = combinedReworkNote(sidecar.reworkCategory || "", sidecar.reworkComment || "");
+      }
     }
     return true;
   };
@@ -1082,6 +1291,46 @@
   const refreshRenderedItems = (indexes) => {
     const uniqueIndexes = [...new Set(indexes)].filter((index) => Number.isFinite(index) && index >= 0);
     return uniqueIndexes.every((index) => refreshRenderedItem(index));
+  };
+
+  const clearVideoMessage = (shell) => {
+    shell?.querySelectorAll("[data-sidecar-video-message]").forEach((message) => message.remove());
+  };
+
+  const setVideoMessage = (shell, message, title = "") => {
+    if (!shell || !message) return;
+    clearVideoMessage(shell);
+    const messageRoot = document.createElement("span");
+    messageRoot.className = "sidecar-video-message";
+    messageRoot.dataset.sidecarVideoMessage = "true";
+    messageRoot.textContent = message;
+    if (title) messageRoot.title = title;
+    shell.append(messageRoot);
+  };
+
+  const compactVideoMessage = (message = "") => {
+    if (message.includes("Apple Photos permission was not granted")) {
+      return "Photos permission needed. Open PhotosByElie Owner, approve Photos access, then retry.";
+    }
+    if (message.length <= 140) return message;
+    return `${message.slice(0, 137).trim()}...`;
+  };
+
+  const videoPreviewErrorMessage = async (response, fallback = "Local video preview is unavailable.") => {
+    let payload = null;
+    try {
+      payload = await response.clone().json();
+    } catch (_error) {
+      payload = null;
+    }
+    return payload?.error || response.statusText || fallback;
+  };
+
+  const preflightVideoPreview = async (item) => {
+    const response = await fetch(videoUrl(item), { headers: { Range: "bytes=0-0" } });
+    if (!response.ok && response.status !== 206) {
+      throw new Error(await videoPreviewErrorMessage(response));
+    }
   };
 
   const updateGridSelection = (previousIndexes = new Set()) => {
@@ -1098,7 +1347,7 @@
     });
   };
 
-  const playVideoInPlace = (shell, item, { autoplay = true } = {}) => {
+  const playVideoInPlace = async (shell, item, { autoplay = true } = {}) => {
     if (!shell || !item || !isVideo(item)) return;
     document.querySelectorAll(".sidecar-video-surface.is-playing-video").forEach((activeShell) => {
       if (activeShell === shell) return;
@@ -1109,16 +1358,31 @@
       activeShell.classList.remove("is-playing-video");
     });
     shell.querySelectorAll(".sidecar-inline-video").forEach((video) => video.remove());
+    clearVideoMessage(shell);
+    shell.classList.add("is-loading-video");
+    try {
+      await preflightVideoPreview(item);
+    } catch (error) {
+      const message = error.message || "Local video preview is unavailable. Sidecar did not force an iCloud download.";
+      shell.classList.remove("is-loading-video", "is-playing-video");
+      setVideoMessage(shell, compactVideoMessage(message), message);
+      setStatus(message);
+      return;
+    }
+    shell.classList.remove("is-loading-video");
     shell.insertAdjacentHTML("beforeend", videoPlayerMarkup(item, autoplay));
     shell.classList.add("is-playing-video");
     const video = shell.querySelector(".sidecar-inline-video");
     if (!video) return;
     video.addEventListener("error", () => {
-      shell.classList.remove("is-playing-video");
+      shell.classList.remove("is-loading-video", "is-playing-video");
       video.remove();
-      setStatus("Local video preview is unavailable. Sidecar did not force an iCloud download.");
+      const message = "Local video preview is unavailable. Sidecar did not force an iCloud download.";
+      setVideoMessage(shell, compactVideoMessage(message), message);
+      setStatus(message);
     }, { once: true });
     video.addEventListener("canplay", () => {
+      clearVideoMessage(shell);
       setStatus("Local video preview ready.");
     }, { once: true });
     if (autoplay) {
@@ -1206,6 +1470,19 @@
     renderQuickLook();
   };
 
+  const switchToCullingIfReviewEmpty = (message = "Review window is empty; returning to Culling.") => {
+    if (!isReviewPage() || !state.hasWindow || visibleIndexes().length) return false;
+    state.page = "culling";
+    syncPageUrl();
+    renderPageChrome();
+    reconcileSelection(state.selectedIndex);
+    renderSurface();
+    syncQuickLookToSelection();
+    saveWindowState();
+    setStatus(message);
+    return true;
+  };
+
   const openQuickLook = (index = state.selectedIndex) => {
     if (!state.items.length || index < 0 || !state.items[index]) return;
     state.quickLookIndex = index;
@@ -1216,7 +1493,10 @@
     if (!state.items.length) {
       state.selectedIndex = -1;
       state.selectedIndexes = new Set();
+      state.selectedAssetIds = new Set();
+      state.selectedAssetId = "";
       state.selectionAnchorIndex = -1;
+      state.selectionAnchorAssetId = "";
       renderSurface();
       return;
     }
@@ -1245,6 +1525,7 @@
     state.selectedIndexes = nextIndexes;
     if (nextIndexes.has(bounded)) state.selectedIndex = bounded;
     else state.selectedIndex = selectedIndexes()[0] ?? -1;
+    syncSelectionAssetState();
     updateGridSelection(previousIndexes);
     syncQuickLookToSelection();
     if (scroll && state.selectedIndex >= 0) cardForIndex(state.selectedIndex)?.scrollIntoView({ block: "nearest" });
@@ -1262,12 +1543,17 @@
     return index;
   };
 
-  const applyMockUploadedItems = (items = []) => {
-    const uploadedIds = new Set(items.map((item) => item.assetId).filter(Boolean));
-    if (!uploadedIds.size) return 0;
+  const applyBridgeQueuedItems = (items = []) => {
+    const queuedIds = new Set(items.map((item) => item.assetId).filter(Boolean));
+    if (!queuedIds.size) return 0;
     let changed = 0;
     state.items.forEach((item) => {
-      if (!uploadedIds.has(itemId(item))) return;
+      if (!queuedIds.has(itemId(item))) return;
+      item.uploadBridgeState = "active";
+      item.uploadBridge = {
+        ...(item.uploadBridge || item.mockUpload || {}),
+        state: "active",
+      };
       item.mockUploadState = "active";
       item.mockUpload = {
         ...(item.mockUpload || {}),
@@ -1278,15 +1564,17 @@
     if (changed) {
       reconcileSelection(state.selectedIndex);
       renderSurface();
-      syncQuickLookToSelection();
+      if (!switchToCullingIfReviewEmpty()) syncQuickLookToSelection();
     }
     return changed;
   };
 
   const applyChangedItems = (changedItems, visibilityBefore, {
     preferredIndex = state.selectedIndex,
+    preferredAssetId = state.selectedAssetId,
     previousActive = state.selectedIndex,
     previousSelection = new Set(),
+    previousSelectionAssetIds = null,
     preserveSelection = false,
     restoreSelection = null,
   } = {}) => {
@@ -1296,15 +1584,21 @@
       if (changedIndex >= 0) changedIndexes.push(changedIndex);
     });
     if (restoreSelection) restoreSelectionSnapshot(restoreSelection);
-    else reconcileSelection(preferredIndex, { preserveSelection, previousSelection });
+    else reconcileSelection(preferredIndex, {
+      preserveSelection,
+      previousSelection,
+      preferredAssetId,
+      previousSelectionAssetIds,
+    });
     const visibilityChanged = changedIndexes.some((index) => visibilityBefore.get(index) !== matchesFilters(state.items[index]));
     if (visibilityChanged || !refreshRenderedItems([...changedIndexes, previousActive, ...previousSelection, ...selectedIndexes()])) {
       renderSurface();
     } else {
       renderCounts();
     }
-    syncQuickLookToSelection();
-    return changedIndexes;
+    const switchedToCulling = switchToCullingIfReviewEmpty();
+    if (!switchedToCulling) syncQuickLookToSelection();
+    return { changedIndexes, visibilityChanged, switchedToCulling };
   };
 
   const colorDecisionPayload = (color) => {
@@ -1397,7 +1691,8 @@
     if (!decisions.length) return;
 
     setStatus(`Staging ${actionLabel(payload)} on ${decisions.length.toLocaleString()} item${decisions.length === 1 ? "" : "s"}...`);
-    const endpoint = decisions.length === 1 ? "/__sidecar/decision" : "/__sidecar/decisions";
+    await waitForStatusPaint();
+    const endpoint = decisions.length === 1 ? "/__sidecar/decision?summary=0" : "/__sidecar/decisions?summary=0";
     const body = decisions.length === 1 ? decisions[0] : { decisions };
     const response = await fetch(endpoint, {
       method: "POST",
@@ -1409,17 +1704,26 @@
 
     const changedItems = decisions.length === 1 ? [result] : (result.items || []);
     if (recordUndo) pushUndoEntry(actionLabel(payload), changedItems, beforeStates, selectionBefore);
-    state.summary = result.summary || state.summary;
+    if (result.summary) state.summary = result.summary;
+    else refreshSummaryQuietly();
     const preferredIndex = advance && !indexes && decisions.length === 1
       ? nextVisibleFrom(previousActive, state.autoAdvanceDirection)
       : previousActive;
-    applyChangedItems(changedItems, visibilityBefore, {
+    const preferredAssetId = preferredIndex >= 0
+      ? itemId(state.items[preferredIndex])
+      : selectionBefore.selectedAssetId;
+    const applyResult = applyChangedItems(changedItems, visibilityBefore, {
       preferredIndex,
+      preferredAssetId,
       previousActive,
       previousSelection,
+      previousSelectionAssetIds: selectionBefore.selectedAssetIds,
       preserveSelection: !indexes && decisions.length > 1,
     });
     refreshUploadRailQuietly();
+    if ((applyResult.visibilityChanged || applyResult.switchedToCulling) && state.hasWindow) {
+      await loadWindow();
+    }
     setStatus(`Staged ${actionLabel(payload)} on ${decisions.length.toLocaleString()} item${decisions.length === 1 ? "" : "s"}. Photos write-back is pending commit.`);
   };
 
@@ -1438,7 +1742,8 @@
     const beforeStates = beforeStatesForIndexes(targetIndexes);
     const visibilityBefore = visibilityForIndexes(targetIndexes);
     setStatus(message || `Staging ${decisions.length.toLocaleString()} local decisions...`);
-    const response = await fetch("/__sidecar/decisions", {
+    await waitForStatusPaint();
+    const response = await fetch("/__sidecar/decisions?summary=0", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ decisions }),
@@ -1447,15 +1752,21 @@
     if (!response.ok || !result.ok) throw new Error(result.error || "Could not stage Sidecar decisions.");
     const changedItems = result.items || [];
     if (recordUndo) pushUndoEntry(undoLabel, changedItems, beforeStates, selectionBefore);
-    state.summary = result.summary || state.summary;
-    applyChangedItems(changedItems, visibilityBefore, {
+    if (result.summary) state.summary = result.summary;
+    else refreshSummaryQuietly();
+    const applyResult = applyChangedItems(changedItems, visibilityBefore, {
       preferredIndex: state.selectedIndex,
+      preferredAssetId: selectionBefore.selectedAssetId,
       previousActive,
       previousSelection,
+      previousSelectionAssetIds: selectionBefore.selectedAssetIds,
       preserveSelection,
       restoreSelection,
     });
     refreshUploadRailQuietly();
+    if ((applyResult.visibilityChanged || applyResult.switchedToCulling) && state.hasWindow) {
+      await loadWindow();
+    }
     setStatus(completeMessage || `Staged ${Number(result.count || decisions.length).toLocaleString()} local decisions. Photos write-back is pending commit.`);
   };
 
@@ -1549,6 +1860,13 @@
     const params = new URLSearchParams();
     params.set("limit", String(Math.max(1, Math.min(1000, Number(limit || getLimit())))));
     params.set("offset", String(Math.max(0, Number(offset || 0))));
+    const filters = state.filters || cloneDefaultFilters();
+    (filters.ratings || []).forEach((value) => params.append("rating", value));
+    (filters.colors || []).forEach((value) => params.append("color", value));
+    (filters.mediaTypes || []).forEach((value) => params.append("mediaType", value));
+    const pickStates = isReviewPage() ? ["picked"] : (filters.pickStates || []);
+    pickStates.forEach((value) => params.append("pickState", value));
+    if (state.searchQuery) params.set("q", state.searchQuery);
     return params;
   };
 
@@ -1583,152 +1901,85 @@
     state.filters = readFiltersFromControls();
     const limit = getLimit();
     const offset = getOffset();
-    setStatus("Loading current window from local Photos index...");
-    const payload = await fetchLibrarySlice(offset, limit);
-    state.items = Array.isArray(payload.items) ? payload.items : [];
+    const selectionBeforeLoad = selectionSnapshot();
+    setStatus("Loading matching items from local Photos index...");
+    let payload = await fetchLibrarySlice(offset, limit);
+    let effectiveOffset = offset;
+    const filteredCount = Number(payload.filteredIndexedCount || payload.indexedCount || 0);
+    const maxOffset = Math.max(0, filteredCount - limit);
+    if (offset > maxOffset) {
+      effectiveOffset = maxOffset;
+      setOffset(effectiveOffset);
+      payload = await fetchLibrarySlice(effectiveOffset, limit);
+    }
+    state.items = uniqueItemsById(payload.items);
     state.summary = payload.sidecarSummary || state.summary;
     state.hasWindow = true;
-    state.windowCursorOffset = offset + state.items.length;
+    state.filteredIndexedCount = Number(payload.filteredIndexedCount || payload.indexedCount || 0);
+    state.windowCursorOffset = Number(payload.nextOffset || (effectiveOffset + state.items.length));
     state.undoStack = [];
-    setInitialSelection();
+    if ((selectionBeforeLoad.selectedAssetIds || []).length || selectionBeforeLoad.selectedIndex >= 0) {
+      restoreSelectionSnapshot(selectionBeforeLoad);
+    } else {
+      setInitialSelection();
+    }
     renderPageChrome();
     renderSurface();
     saveWindowState();
+    if (switchToCullingIfReviewEmpty()) {
+      await waitForStatusPaint();
+      await loadWindow();
+      return;
+    }
     const sourceLabel = payload.source === "sidecar-index" ? "local Photos index" : "Apple Photos fallback";
-    const filteredCount = Number(payload.filteredIndexedCount || payload.indexedCount || 0);
+    const currentFilteredCount = Number(payload.filteredIndexedCount || payload.indexedCount || 0);
     const indexedNote = payload.source === "sidecar-index"
-      ? ` Indexed range has ${filteredCount.toLocaleString()} item${filteredCount === 1 ? "" : "s"}.`
+      ? ` Active ${state.searchQuery ? "filters/search match" : "filters match"} ${currentFilteredCount.toLocaleString()} item${currentFilteredCount === 1 ? "" : "s"}.`
       : " Refresh the local Photos index for faster future windows.";
-    const loadedMessage = `Loaded current window from ${sourceLabel} starting at index ${offset.toLocaleString()}. Showing ${visibleIndexes().length.toLocaleString()} after filters.${indexedNote}`;
+    const visibleCount = visibleIndexes().length;
+    const startLabel = visibleCount ? effectiveOffset + 1 : 0;
+    const endLabel = effectiveOffset + visibleCount;
+    const loadedMessage = `Showing matching item${visibleCount === 1 ? "" : "s"} ${startLabel.toLocaleString()}-${endLabel.toLocaleString()} from ${sourceLabel}. Showing ${visibleCount.toLocaleString()} of ${limit.toLocaleString()} visible preview${limit === 1 ? "" : "s"}.${indexedNote}`;
     setStatus(loadedMessage);
     try {
       await refreshUploadRail({ silent: true });
     } catch (error) {
-      setStatus(`${loadedMessage} Upload plan unavailable: ${error.message || "unknown error"}`);
+      setStatus(`${loadedMessage} Upload Bridge unavailable: ${error.message || "unknown error"}`);
     }
-  };
-
-  const refillWindow = async () => {
-    if (!state.hasWindow) {
-      await loadWindow();
-      return;
-    }
-    state.filters = readFiltersFromControls();
-    const targetVisible = getLimit();
-    let currentVisible = visibleIndexes().length;
-    if (currentVisible > targetVisible) {
-      setStatus(`Current window has ${currentVisible.toLocaleString()} visible items, above the ${targetVisible.toLocaleString()} preview target; reloading the working window.`);
-      await waitForStatusPaint();
-      await loadWindow();
-      return;
-    }
-    if (currentVisible === targetVisible) {
-      setStatus(`Current window already shows ${currentVisible.toLocaleString()} item${currentVisible === 1 ? "" : "s"}; no refill needed.`);
-      return;
-    }
-    const seenIds = new Set(state.items.map((item) => itemId(item)).filter(Boolean));
-    let cursor = Math.max(state.windowCursorOffset || 0, getOffset() + state.items.length);
-    let appendedCount = 0;
-    let scannedCount = 0;
-    let exhausted = false;
-    setStatus(`Refill starting at local index position ${cursor.toLocaleString()}; showing ${currentVisible.toLocaleString()} of ${targetVisible.toLocaleString()}, appended 0, scanned 0.`);
-    await waitForStatusPaint();
-    for (let pass = 0; pass < refillMaxFetches && currentVisible < targetVisible; pass += 1) {
-      const batchStart = cursor;
-      const batchEnd = cursor + refillBatchSize - 1;
-      setStatus(`Refill batch ${pass + 1}: scanning local index ${batchStart.toLocaleString()}-${batchEnd.toLocaleString()}; showing ${currentVisible.toLocaleString()} of ${targetVisible.toLocaleString()}, appended ${appendedCount.toLocaleString()}, scanned ${scannedCount.toLocaleString()}.`);
-      await waitForStatusPaint();
-      const payload = await fetchLibrarySlice(cursor, refillBatchSize);
-      const rows = Array.isArray(payload.items) ? payload.items : [];
-      state.summary = payload.sidecarSummary || state.summary;
-      let consumedRows = 0;
-      for (const item of rows) {
-        consumedRows += 1;
-        const id = itemId(item);
-        if (!id || seenIds.has(id)) continue;
-        seenIds.add(id);
-        const visibleAfterAppend = matchesFilters(item);
-        state.items.push(item);
-        appendedCount += 1;
-        if (visibleAfterAppend) currentVisible += 1;
-        if (currentVisible >= targetVisible) break;
-      }
-      scannedCount += consumedRows;
-      cursor += consumedRows;
-      setStatus(`Refill progress: showing ${currentVisible.toLocaleString()} of ${targetVisible.toLocaleString()}; appended ${appendedCount.toLocaleString()}, scanned ${scannedCount.toLocaleString()}, next index position ${cursor.toLocaleString()}.`);
-      await waitForStatusPaint();
-      if (currentVisible >= targetVisible) break;
-      if (rows.length < refillBatchSize) {
-        exhausted = true;
-        break;
-      }
-    }
-    state.windowCursorOffset = cursor;
-    reconcileSelection(state.selectedIndex);
-    renderPageChrome();
-    renderSurface();
-    syncQuickLookToSelection();
-    saveWindowState();
-    const filled = currentVisible >= targetVisible;
-    const suffix = filled
-      ? "filled the visible window"
-      : exhausted
-        ? "reached the end of this indexed Photos range"
-        : `paused after ${refillMaxFetches.toLocaleString()} scan batches`;
-    setStatus(`Refill ${suffix}: appended ${appendedCount.toLocaleString()} item${appendedCount === 1 ? "" : "s"} after scanning ${scannedCount.toLocaleString()}; showing ${currentVisible.toLocaleString()} of ${targetVisible.toLocaleString()}.`);
-    refreshUploadRailQuietly();
-  };
-
-  const pushWindowStack = (stack, offset) => {
-    const value = Math.max(0, Number(offset || 0));
-    const last = stack[stack.length - 1];
-    if (last !== value) stack.push(value);
-    while (stack.length > 50) stack.shift();
-  };
-
-  const currentWindowEndOffset = () => {
-    const currentOffset = getOffset();
-    const cursor = Math.max(0, Number(state.windowCursorOffset || 0));
-    return Math.max(cursor, currentOffset + state.items.length, currentOffset + getLimit());
   };
 
   const loadAndFillWindow = async () => {
     await loadWindow();
-    if (visibleIndexes().length < getLimit()) await refillWindow();
   };
 
   const slideWindow = async (direction) => {
     const currentOffset = getOffset();
-    const forward = direction >= 0;
-    let nextOffset = currentOffset;
-    if (forward) {
-      nextOffset = state.windowForwardStack.length
-        ? state.windowForwardStack.pop()
-        : currentWindowEndOffset();
-      if (nextOffset <= currentOffset) nextOffset = currentOffset + getLimit();
-      pushWindowStack(state.windowBackStack, currentOffset);
-      setStatus(`Loading next window from local index position ${nextOffset.toLocaleString()}...`);
-    } else if (state.windowBackStack.length) {
-      pushWindowStack(state.windowForwardStack, currentOffset);
-      nextOffset = state.windowBackStack.pop();
-      setStatus(`Loading previous window from local index position ${nextOffset.toLocaleString()}...`);
-    } else {
-      nextOffset = Math.max(0, currentOffset - getLimit());
-      setStatus(`Loading previous window from local index position ${nextOffset.toLocaleString()}...`);
-    }
+    const limit = getLimit();
+    const filteredCount = Math.max(0, Number(state.filteredIndexedCount || state.items.length || 0));
+    const maxOffset = Math.max(0, filteredCount - limit);
+    const nextOffset = direction >= 0
+      ? Math.min(currentOffset + limit, maxOffset)
+      : Math.max(0, currentOffset - limit);
+    setStatus(`${direction >= 0 ? "Loading next" : "Loading previous"} ${limit.toLocaleString()} matching item${limit === 1 ? "" : "s"}...`);
     setOffset(nextOffset);
     await waitForStatusPaint();
-    await loadAndFillWindow();
+    await loadWindow();
   };
 
-  const loadSummary = async () => {
+  const loadSummary = async ({ silent = false } = {}) => {
     const response = await fetch("/__sidecar/summary");
     const payload = await response.json().catch(() => ({}));
     if (!response.ok || !payload.ok) throw new Error(payload.error || "Could not load Sidecar summary.");
     state.summary = payload;
     renderCounts();
     renderIndexStatus({ ...(state.indexStatus || {}), sidecarSummary: payload });
-    setStatus(`${Number(payload.pendingSyncCount || 0).toLocaleString()} pending Photos write-back changes.`);
+    if (!silent) setStatus(`${Number(payload.pendingSyncCount || 0).toLocaleString()} pending Photos write-back changes.`);
+  };
+
+  const refreshSummaryQuietly = () => {
+    loadSummary({ silent: true }).catch((error) => {
+      setStatus(`Summary refresh failed: ${error.message || "unknown error"}`);
+    });
   };
 
   const currentWindowUploadReadiness = () => {
@@ -1760,7 +2011,7 @@
       ? `<p>${windowPlan.visiblePicked.toLocaleString()} picked item${windowPlan.visiblePicked === 1 ? "" : "s"} match the current Review filters.</p>`
       : "";
     const globalLine = globalPicked
-      ? `<p>${globalPicked.toLocaleString()} picked item${globalPicked === 1 ? "" : "s"} indexed globally: ${globalReady.toLocaleString()} ready for Owner upload, ${globalNeedsReview.toLocaleString()} still need Review approval.</p>`
+      ? `<p>${globalPicked.toLocaleString()} picked item${globalPicked === 1 ? "" : "s"} indexed globally: ${globalReady.toLocaleString()} ready for Upload Bridge, ${globalNeedsReview.toLocaleString()} still need Review approval.</p>`
       : "";
     return `
       <p>${escapeHtml(currentLine)}</p>
@@ -1769,19 +2020,26 @@
     `;
   };
 
-  const mockUploadSummaryMarkup = (payload) => {
+  const uploadBridgeSummaryMarkup = (payload) => {
     const result = payload?.mockResult;
-    if (!result) return "";
-    const uploaded = Number(result.mockUploadedCount || 0);
-    const collisions = Number(result.collisionCount || 0);
-    const coveredKeys = Number(result.coveredKeyCount || 0);
-    const remaining = Number(payload.count || 0);
+    const summary = payload?.uploadBridgeSummary || payload?.mockUploadSummary;
+    if (!result && !summary) return "";
+    const queued = Number((result || summary).bridgeQueuedCount || (result || summary).mockUploadedCount || 0);
+    if (!queued) return "";
+    const collisions = Number((result || summary).collisionCount || 0);
+    const coveredKeys = Number((result || summary).coveredKeyCount || 0);
+    const remaining = result ? Number(payload.count || 0) : null;
+    const latestQueuedAt = summary?.latestQueuedAt || summary?.latestUploadedAt || "";
+    const latestRun = latestQueuedAt ? ` Latest queue run: ${escapeHtml(latestQueuedAt)}.` : "";
+    const lead = result
+      ? `Queued ${queued.toLocaleString()} item${queued === 1 ? "" : "s"} across the Upload Bridge; ${remaining.toLocaleString()} remain.`
+      : `${queued.toLocaleString()} item${queued === 1 ? "" : "s"} already queued across the Upload Bridge.${latestRun}`;
     const warning = collisions
-      ? `<strong>${collisions.toLocaleString()} item${collisions === 1 ? "" : "s"} already have current R2 key coverage.</strong>`
-      : "<strong>No current R2 key collisions found.</strong>";
+      ? `<strong>${collisions.toLocaleString()} bridged item${collisions === 1 ? "" : "s"} collide with existing R2 coverage.</strong>`
+      : "<strong>No existing R2 collisions found for bridged items.</strong>";
     return `
-      <div class="sidecar-mock-upload-result${collisions ? " has-warning" : ""}">
-        <span>Mock uploaded ${uploaded.toLocaleString()} item${uploaded === 1 ? "" : "s"}; ${remaining.toLocaleString()} remain.</span>
+      <div class="sidecar-upload-bridge-result${collisions ? " has-warning" : ""}">
+        <span>${lead}</span>
         <span>${warning}</span>
         ${coveredKeys ? `<span>${coveredKeys.toLocaleString()} planned key${coveredKeys === 1 ? "" : "s"} already exist in Owner R2 state.</span>` : ""}
       </div>
@@ -1800,14 +2058,15 @@
     const assetIds = items.map((item) => item.assetId).filter(Boolean);
     const message = payload.message ? `<p>${escapeHtml(payload.message)}</p>` : "";
     const uploadSummary = kind === "upload" ? uploadPlanSummaryMarkup(payload, items.length) : "";
-    const emptyMessage = kind === "upload" ? "No rows are ready for Owner upload yet." : "No rows.";
+    const emptyMessage = kind === "upload" ? "No rows are ready for Upload Bridge yet." : "No rows.";
     if (kind === "upload") {
-      if (planTitle) planTitle.textContent = `Upload plan${items.length ? ` (${items.length.toLocaleString()})` : ""}`;
+      if (planTitle) planTitle.textContent = `Upload Bridge${items.length ? ` (${items.length.toLocaleString()})` : ""}`;
       planOutput.innerHTML = `
         <div class="sidecar-plan-actions">
-          <button class="btn secondary" type="button" data-sidecar-mock-upload-action ${assetIds.length ? "" : "disabled"}>Mock upload</button>
+          <button class="btn secondary" type="button" data-sidecar-upload-bridge-action ${assetIds.length ? "" : "disabled"}>Queue bridge</button>
         </div>
-        ${mockUploadSummaryMarkup(payload)}
+        ${uploadSummary}
+        ${uploadBridgeSummaryMarkup(payload)}
         <div class="sidecar-plan-list sidecar-upload-plan-list">
           ${items.slice(0, 80).map((item) => `
             <div class="sidecar-upload-plan-tile" title="${escapeHtml(item.filename || item.assetId || "")}" aria-label="${escapeHtml(item.filename || item.assetId || "Upload-ready item")}">
@@ -1818,8 +2077,8 @@
         </div>
       `;
       wirePreviewFallbacks(planPanel);
-      planOutput.querySelector("[data-sidecar-mock-upload-action]")?.addEventListener("click", () => {
-        mockUpload(assetIds).catch((error) => setStatus(error.message));
+      planOutput.querySelector("[data-sidecar-upload-bridge-action]")?.addEventListener("click", () => {
+        queueUploadBridge(assetIds).catch((error) => setStatus(error.message));
       });
       return;
     }
@@ -1844,13 +2103,13 @@
     const response = await fetch(endpoint);
     const payload = await response.json().catch(() => ({}));
     if (!response.ok || !payload.ok) throw new Error(payload.error || "Could not load Sidecar plan.");
-    renderPlan(kind === "upload" ? "Next Upload Eligibility" : "Pending Photos Write-Back", kind === "upload" ? "Upload plan" : "Commit plan", payload, kind);
+    renderPlan(kind === "upload" ? "Next Upload Bridge Eligibility" : "Pending Photos Write-Back", kind === "upload" ? "Upload Bridge" : "Commit plan", payload, kind);
     if (kind === "upload") {
       const readiness = currentWindowUploadReadiness();
       const statusSuffix = Number(payload.count || 0)
         ? `${Number(payload.count || 0).toLocaleString()} ready row${Number(payload.count || 0) === 1 ? "" : "s"}.`
         : `${readiness.needsReview.toLocaleString()} picked current-window item${readiness.needsReview === 1 ? "" : "s"} still need Review approval.`;
-      if (!silent) setStatus(`Upload plan refreshed: ${statusSuffix}`);
+      if (!silent) setStatus(`Upload Bridge refreshed: ${statusSuffix}`);
     } else if (!silent) {
       setStatus("Photos commit plan refreshed.");
     }
@@ -1862,28 +2121,28 @@
 
   const refreshUploadRailQuietly = () => {
     refreshUploadRail({ silent: true }).catch((error) => {
-      setStatus(`Upload plan refresh failed: ${error.message || "unknown error"}`);
+      setStatus(`Upload Bridge refresh failed: ${error.message || "unknown error"}`);
     });
   };
 
-  const mockUpload = async (assetIds) => {
+  const queueUploadBridge = async (assetIds) => {
     const cleanIds = Array.isArray(assetIds) ? assetIds.filter(Boolean) : [];
     if (!cleanIds.length) {
-      setStatus("No upload-ready rows to mock upload.");
+      setStatus("No upload-ready rows to queue across the bridge.");
       return;
     }
-    setStatus(`Mock upload checking ${cleanIds.length.toLocaleString()} row${cleanIds.length === 1 ? "" : "s"} against Owner R2 state...`);
-    const response = await fetch("/__sidecar/mock-upload", {
+    setStatus(`Upload Bridge checking ${cleanIds.length.toLocaleString()} row${cleanIds.length === 1 ? "" : "s"} against Owner R2 state...`);
+    const response = await fetch("/__sidecar/upload-bridge", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ assetIds: cleanIds, limit: Math.max(500, cleanIds.length) }),
     });
     const payload = await response.json().catch(() => ({}));
-    if (!response.ok || !payload.ok) throw new Error(payload.error || "Could not run mock upload.");
+    if (!response.ok || !payload.ok) throw new Error(payload.error || "Could not queue Upload Bridge rows.");
     const remainingPlan = payload.remainingPlan || { ok: true, count: 0, items: [] };
     remainingPlan.mockResult = payload;
-    renderPlan("Next Upload Eligibility", "Upload plan", remainingPlan, "upload");
-    const hiddenCurrentWindowCount = applyMockUploadedItems(payload.items || []);
+    renderPlan("Next Upload Bridge Eligibility", "Upload Bridge", remainingPlan, "upload");
+    const hiddenCurrentWindowCount = applyBridgeQueuedItems(payload.items || []);
     const collisions = Number(payload.collisionCount || 0);
     const coveredKeys = Number(payload.coveredKeyCount || 0);
     const warning = collisions
@@ -1892,15 +2151,24 @@
     const hiddenWindow = hiddenCurrentWindowCount
       ? ` ${hiddenCurrentWindowCount.toLocaleString()} current-window item${hiddenCurrentWindowCount === 1 ? "" : "s"} hidden from Culling/Review.`
       : "";
-    setStatus(`Mock upload removed ${Number(payload.mockUploadedCount || 0).toLocaleString()} row${Number(payload.mockUploadedCount || 0) === 1 ? "" : "s"} from the upload plan.${hiddenWindow}${warning}`);
+    if (hiddenCurrentWindowCount && state.hasWindow) {
+      await loadWindow();
+    }
+    const queued = Number(payload.bridgeQueuedCount || payload.mockUploadedCount || 0);
+    setStatus(`Upload Bridge queued ${queued.toLocaleString()} row${queued === 1 ? "" : "s"} and removed them from active Culling/Review.${hiddenWindow}${warning}`);
   };
 
-  const setPage = (page) => {
+  const setPage = async (page) => {
     state.page = normalizePage(page);
+    setOffset(0);
+    state.windowCursorOffset = 0;
+    state.windowBackStack = [];
+    state.windowForwardStack = [];
     syncPageUrl();
     renderPageChrome();
     renderSurface();
     saveWindowState();
+    await loadWindow();
   };
 
   const emptyWastebasket = async () => {
@@ -1946,6 +2214,9 @@
         claimShortcut(event);
         if (state.quickLookIndex >= 0) closeQuickLook();
         else openQuickLook();
+      } else if (key === "c" || key === "C") {
+        claimShortcut(event);
+        await setPage(isReviewPage() ? "culling" : "review");
       } else if (key === "Escape" && state.quickLookIndex >= 0) {
         claimShortcut(event);
         closeQuickLook();
@@ -1993,10 +2264,49 @@
     if (!form) return;
     const payload = reworkPayloadForIndex(index, overrides);
     if (!payload.reworkCategory && !payload.reworkComment) {
-      setStatus("Choose an AI rework category or type a rework note first.");
-      return;
+      payload.reworkComment = defaultAiReviewNote;
+      const note = form.querySelector("[data-sidecar-rework-comment]");
+      if (note && !String(note.value || "").trim()) note.value = defaultAiReviewNote;
     }
     await postDecision(payload, { advance: false, indexes: [index] });
+  };
+
+  const runForegroundAiReview = async () => {
+    if (!isReviewPage()) return;
+    const indexes = visibleIndexes();
+    const assetIds = indexes.map((index) => itemId(state.items[index])).filter(Boolean);
+    if (!assetIds.length) {
+      setStatus("No visible picked Review rows are available for an AI title pass.");
+      return;
+    }
+    state.aiReviewRunning = true;
+    setStatus(`Running AI title pass for ${assetIds.length.toLocaleString()} visible picked Review row${assetIds.length === 1 ? "" : "s"}...`);
+    renderSurface();
+    await waitForStatusPaint();
+    try {
+      const response = await fetch("/__sidecar/ai-propose", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          assetIds,
+          limit: assetIds.length,
+          maxRung: "filename-gps",
+          includeSummary: false,
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.ok) throw new Error(payload.error || "Could not run the AI title pass.");
+      state.aiReviewResult = payload;
+      if (payload.summary) state.summary = payload.summary;
+      else refreshSummaryQuietly();
+      await loadWindow();
+      const proposed = Number(payload.proposedCount || 0);
+      const skipped = Number(payload.skippedCount || 0);
+      setStatus(`AI title pass complete: ${proposed.toLocaleString()} proposal${proposed === 1 ? "" : "s"}, ${skipped.toLocaleString()} skipped.`);
+    } finally {
+      state.aiReviewRunning = false;
+      renderSurface();
+    }
   };
 
   const propagateReviewField = async (index, field) => {
@@ -2054,6 +2364,16 @@
   };
 
   surface?.addEventListener("click", async (event) => {
+    const windowSlideButton = event.target.closest("[data-sidecar-window-slide]");
+    if (windowSlideButton) {
+      event.preventDefault();
+      try {
+        await slideWindow(Number(windowSlideButton.dataset.sidecarWindowSlide || 1));
+      } catch (error) {
+        setStatus(error.message || "Could not load that Sidecar window.");
+      }
+      return;
+    }
     const inlineVideoButton = event.target.closest("[data-sidecar-video-inline]");
     if (inlineVideoButton) {
       event.preventDefault();
@@ -2065,11 +2385,25 @@
       }
       return;
     }
+    const aiReviewButton = event.target.closest("[data-sidecar-ai-propose-current]");
+    if (aiReviewButton) {
+      event.preventDefault();
+      try {
+        await withBusyControl(aiReviewButton, "Running...", () => runForegroundAiReview());
+      } catch (error) {
+        setStatus(error.message || "Could not run the AI title pass.");
+        state.aiReviewRunning = false;
+        renderSurface();
+      }
+      return;
+    }
     const fieldPropagate = event.target.closest("[data-sidecar-propagate-field]");
     if (fieldPropagate) {
       event.preventDefault();
       try {
-        await propagateReviewField(Number(fieldPropagate.dataset.sidecarIndex || -1), fieldPropagate.dataset.sidecarPropagateField || "");
+        await withBusyControl(fieldPropagate, "...", () => (
+          propagateReviewField(Number(fieldPropagate.dataset.sidecarIndex || -1), fieldPropagate.dataset.sidecarPropagateField || "")
+        ));
       } catch (error) {
         setStatus(error.message || "Could not propagate the Review field.");
       }
@@ -2078,7 +2412,7 @@
     const rowSubmit = event.target.closest("[data-sidecar-row-submit]");
     if (rowSubmit) {
       try {
-        await stageRowMetadata(Number(rowSubmit.dataset.sidecarIndex || -1));
+        await withBusyControl(rowSubmit, "Staging...", () => stageRowMetadata(Number(rowSubmit.dataset.sidecarIndex || -1)));
       } catch (error) {
         setStatus(error.message || "Could not stage row metadata.");
       }
@@ -2087,7 +2421,7 @@
     const rowPropagate = event.target.closest("[data-sidecar-row-propagate]");
     if (rowPropagate) {
       try {
-        await propagateReviewDecision(Number(rowPropagate.dataset.sidecarIndex || -1));
+        await withBusyControl(rowPropagate, "Propagating...", () => propagateReviewDecision(Number(rowPropagate.dataset.sidecarIndex || -1)));
       } catch (error) {
         setStatus(error.message || "Could not propagate the Review decision.");
       }
@@ -2098,14 +2432,23 @@
       try {
         const index = Number(rowAction.dataset.sidecarIndex || -1);
         const action = rowAction.dataset.sidecarRowAction || "";
-        if (action === "approve") await stageRowMetadata(index, "approved");
-        else if (action === "metadata-rework") await stageRowRework(index);
-        else {
-          await postDecision({ action }, {
-            advance: false,
-            indexes: [index],
-          });
-        }
+        const busyLabel = {
+          approve: "Approving...",
+          "metadata-rework": "Flagging...",
+          pick: "Picking...",
+          unpick: "Unpicking...",
+          reject: "Rejecting...",
+        }[action] || "Staging...";
+        await withBusyControl(rowAction, busyLabel, async () => {
+          if (action === "approve") await stageRowMetadata(index, "approved");
+          else if (action === "metadata-rework") await stageRowRework(index);
+          else {
+            await postDecision({ action }, {
+              advance: false,
+              indexes: [index],
+            });
+          }
+        });
       } catch (error) {
         setStatus(error.message || "Could not stage row decision.");
       }
@@ -2122,16 +2465,16 @@
 
   surface?.addEventListener("change", async (event) => {
     const categoryInput = event.target.closest("[data-sidecar-rework-category]");
-    if (!categoryInput || !categoryInput.checked) return;
+    if (!categoryInput) return;
     const form = categoryInput.closest("[data-sidecar-row-form]");
     if (!form) return;
     const index = Number(form.dataset.sidecarIndex || -1);
-    setReworkCategoryValue(form, categoryInput.value);
-    fillReworkDefaultNote(form, categoryInput.value);
+    const reworkComment = syncReworkNoteFromCategories(form);
+    const reworkCategory = reworkCategoryValue(checkedReworkCategories(form));
     try {
       await stageRowRework(index, {
-        reworkCategory: categoryInput.value,
-        reworkComment: String(form.querySelector("[data-sidecar-rework-comment]")?.value || "").trim(),
+        reworkCategory,
+        reworkComment: reworkComment.trim(),
       });
     } catch (error) {
       setStatus(error.message || "Could not stage AI rework category.");
@@ -2166,11 +2509,15 @@
   });
 
   pageTabs.forEach((button) => {
-    button.addEventListener("click", () => setPage(button.dataset.sidecarPage || "culling"));
+    button.addEventListener("click", () => {
+      setPage(button.dataset.sidecarPage || "culling").catch((error) => setStatus(error.message));
+    });
   });
 
   filterInputs.forEach((input) => {
-    input.addEventListener("change", applyFilterChanges);
+    input.addEventListener("change", () => {
+      applyFilterChanges().catch((error) => setStatus(error.message));
+    });
   });
 
   filterToggleButtons.forEach((button) => {
@@ -2180,18 +2527,40 @@
       filterInputs.forEach((input) => {
         if (input.dataset.sidecarFilter === family) input.checked = checked;
       });
-      applyFilterChanges();
+      applyFilterChanges().catch((error) => setStatus(error.message));
     });
   });
 
-  loadButton?.addEventListener("click", () => {
+  searchInput?.addEventListener("input", () => {
+    updateSearchClearState();
+    if (searchChangeTimer) window.clearTimeout(searchChangeTimer);
+    searchChangeTimer = window.setTimeout(() => {
+      applySearchChanges().catch((error) => setStatus(error.message));
+    }, 350);
+  });
+  searchInput?.addEventListener("search", () => {
+    if (searchChangeTimer) window.clearTimeout(searchChangeTimer);
+    applySearchChanges().catch((error) => setStatus(error.message));
+  });
+  searchInput?.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    if (searchChangeTimer) window.clearTimeout(searchChangeTimer);
+    applySearchChanges().catch((error) => setStatus(error.message));
+  });
+  clearSearchButton?.addEventListener("click", () => {
+    if (searchInput) searchInput.value = "";
+    if (searchChangeTimer) window.clearTimeout(searchChangeTimer);
+    applySearchChanges().catch((error) => setStatus(error.message));
+  });
+
+  $("[data-sidecar-limit]")?.addEventListener("change", () => {
+    setOffset(0);
+    state.windowCursorOffset = 0;
     state.windowBackStack = [];
     state.windowForwardStack = [];
-    loadWindow().catch((error) => setStatus(error.message));
+    loadAndFillWindow().catch((error) => setStatus(error.message));
   });
-  refillButton?.addEventListener("click", () => refillWindow().catch((error) => setStatus(error.message)));
-  slideBackButton?.addEventListener("click", () => slideWindow(-1).catch((error) => setStatus(error.message)));
-  slideForwardButton?.addEventListener("click", () => slideWindow(1).catch((error) => setStatus(error.message)));
   burstCullButton?.addEventListener("click", () => performBurstCull().catch((error) => setStatus(error.message)));
   emptyWastebasketButton?.addEventListener("click", () => emptyWastebasket().catch((error) => setStatus(error.message)));
   $("[data-sidecar-summary]")?.addEventListener("click", () => loadSummary().catch((error) => setStatus(error.message)));
@@ -2200,6 +2569,7 @@
   document.addEventListener("keydown", handleShortcut, true);
 
   applyStoredWindow();
+  updateSearchClearState();
   syncPageUrl();
   renderPageChrome();
   renderSurface();
@@ -2213,7 +2583,7 @@
     .catch(() => {
       if (versionRoot) versionRoot.textContent = versionFallbackLabel;
     });
-  loadWindow().catch((error) => {
+  loadAndFillWindow().catch((error) => {
     setStatus(error.message);
     loadSummary().catch(() => {});
   });

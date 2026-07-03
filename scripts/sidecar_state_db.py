@@ -32,7 +32,76 @@ PICK_STATES = {"undecided", "picked", "rejected", "hidden"}
 METADATA_STATES = {"unreviewed", "proposed", "approved", "rework", "blocked"}
 REWORK_CATEGORIES = {"", "incorrect", "generic", "placeholder", "keywords", "detail", "shoot", "other"}
 INTERNAL_TITLE_MARKERS = {"dontexport", "don't export", "do not export", "notmyphoto", "not my photo"}
+AI_METADATA_LADDER: tuple[dict[str, str], ...] = (
+    {
+        "rung": "seed",
+        "label": "Seed metadata",
+        "description": "Use existing Photos title, keyword, album, and coarse location seeds only.",
+    },
+    {
+        "rung": "filename-gps",
+        "label": "Filename and GPS context",
+        "description": "Use descriptive filenames plus known local GPS/city hints; no visual scene understanding.",
+    },
+    {
+        "rung": "geocode-context",
+        "label": "Reverse-geocode context",
+        "description": "Use external reverse-geocode context when local GPS hints are too coarse; no visual scene understanding.",
+    },
+    {
+        "rung": "vision-description",
+        "label": "Vision description",
+        "description": "Use image understanding to describe visible subjects, setting, colors, composition, and likely AI-generated or 3D printed media.",
+    },
+    {
+        "rung": "human-review",
+        "label": "Human review",
+        "description": "Require owner judgment when evidence is ambiguous or policy/context-sensitive.",
+    },
+)
+AI_METADATA_RUNG_ORDER = {item["rung"]: index for index, item in enumerate(AI_METADATA_LADDER)}
+AI_GENERATED_KEYWORDS = ("AI generated image", "AI artwork", "Generative AI", "Digital artwork")
+THREE_D_PRINTED_KEYWORDS = ("3D printed object", "3D printing", "3D printed sculpture", "3D printed decor")
+VISION_CLASSIFICATION_GUIDANCE = {
+    "summary": "When visual evidence supports it, classify whether the item appears AI-generated or is a photo of a 3D printed artefact.",
+    "rules": [
+        "Do not assume all non-photographic or unusual images are AI-generated; only add AI keywords when visual evidence makes it likely.",
+        "Do not assume every physical object is 3D printed; add 3D printing keywords when layer lines, filament-like material, printed geometry, or known printed artefact context makes it likely.",
+        "If uncertain, prefer a descriptive physical-object keyword and leave AI/3D-printing labels for owner review.",
+    ],
+    "keywordFamilies": {
+        "aiGenerated": list(AI_GENERATED_KEYWORDS),
+        "threeDPrinted": list(THREE_D_PRINTED_KEYWORDS),
+    },
+}
+LOCATION_KEYWORD_GUIDANCE = {
+    "summary": "Use precise location keywords only for public places; otherwise keep location metadata vague.",
+    "rules": [
+        "For named public places such as museums, landmarks, parks, stations, galleries, or venues, public-place and neighborhood keywords are acceptable when supported by evidence.",
+        "For homes, private interiors, street scenes near a residence, or locations that are not clearly public attractions, keep location keywords to city, region, and country.",
+        "Do not add street, building, neighborhood, or address-level keywords for private or ambiguous locations.",
+    ],
+    "privateLocationMaxPrecision": "city",
+}
 POI_GPS_HINTS: tuple[dict[str, Any], ...] = (
+    {
+        "name": "Royal Palace of Madrid",
+        "city": "Madrid",
+        "region": "Community of Madrid",
+        "country": "Spain",
+        "keywords": [
+            "Royal Palace of Madrid",
+            "Palacio Real de Madrid",
+            "Royal Palace",
+            "Palace",
+            "Historic palace",
+            "Madrid",
+            "Community of Madrid",
+            "Spain",
+        ],
+        "lat": (40.4160, 40.4190),
+        "lon": (-3.7160, -3.7120),
+    },
     {
         "name": "Musée des Années 30",
         "city": "Boulogne-Billancourt",
@@ -145,6 +214,7 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
 
         CREATE INDEX IF NOT EXISTS idx_sidecar_assets_captured ON sidecar_assets(captured_at, asset_id);
         CREATE INDEX IF NOT EXISTS idx_sidecar_assets_media_type ON sidecar_assets(media_type, captured_at);
+        CREATE INDEX IF NOT EXISTS idx_sidecar_assets_missing_indexed ON sidecar_assets(missing_at, indexed_at);
 
         CREATE TABLE IF NOT EXISTS sidecar_decisions (
           asset_id       TEXT PRIMARY KEY CHECK (trim(asset_id) <> ''),
@@ -156,6 +226,9 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
           keywords_json  TEXT NOT NULL DEFAULT '[]',
           rework_category TEXT NOT NULL DEFAULT '',
           rework_comment TEXT,
+          metadata_ai_rung TEXT,
+          metadata_ai_evidence_json TEXT NOT NULL DEFAULT '[]',
+          metadata_ai_note TEXT,
           last_action    TEXT,
           created_at     TEXT,
           updated_at     TEXT,
@@ -212,6 +285,12 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE sidecar_decisions ADD COLUMN rework_category TEXT NOT NULL DEFAULT ''")
     if "rework_comment" not in decision_columns:
         conn.execute("ALTER TABLE sidecar_decisions ADD COLUMN rework_comment TEXT")
+    if "metadata_ai_rung" not in decision_columns:
+        conn.execute("ALTER TABLE sidecar_decisions ADD COLUMN metadata_ai_rung TEXT")
+    if "metadata_ai_evidence_json" not in decision_columns:
+        conn.execute("ALTER TABLE sidecar_decisions ADD COLUMN metadata_ai_evidence_json TEXT NOT NULL DEFAULT '[]'")
+    if "metadata_ai_note" not in decision_columns:
+        conn.execute("ALTER TABLE sidecar_decisions ADD COLUMN metadata_ai_note TEXT")
     asset_columns = {
         str(row["name"])
         for row in conn.execute("PRAGMA table_info(sidecar_assets)").fetchall()
@@ -555,6 +634,11 @@ def indexed_library_window(
     limit: int = 120,
     date_from: str = "",
     date_to: str = "",
+    ratings: Iterable[Any] | None = None,
+    colors: Iterable[Any] | None = None,
+    pick_states: Iterable[Any] | None = None,
+    media_types: Iterable[Any] | None = None,
+    search: str = "",
 ) -> dict[str, Any]:
     """Return a Sidecar window from the local metadata index."""
     safe_offset = max(0, int(offset or 0))
@@ -569,27 +653,119 @@ def indexed_library_window(
         predicates.append("a.captured_at < ?")
         params.append(end)
     where_sql = " AND ".join(predicates)
+    filter_predicates = [
+        """
+        NOT EXISTS (
+          SELECT 1 FROM sidecar_tombstones AS t
+          WHERE t.asset_id = a.asset_id AND t.tombstone_state = 'active'
+        )
+        """,
+        """
+        NOT EXISTS (
+          SELECT 1 FROM sidecar_mock_uploads AS m
+          WHERE m.asset_id = a.asset_id AND m.mock_state = 'active'
+        )
+        """,
+    ]
+    filter_params: list[Any] = []
+    clean_ratings = sorted({
+        max(0, min(5, int(str(value).strip())))
+        for value in (ratings or [])
+        if str(value).strip().isdigit()
+    })
+    if clean_ratings:
+        filter_predicates.append(f"COALESCE(a.decision_rating, 0) IN ({', '.join('?' for _ in clean_ratings)})")
+        filter_params.extend(clean_ratings)
+    clean_colors = []
+    for value in colors or []:
+        color = str(value or "").strip()
+        if color == "none":
+            color = ""
+        if color in COLOR_VALUES and color not in clean_colors:
+            clean_colors.append(color)
+    if clean_colors:
+        filter_predicates.append(f"COALESCE(a.decision_color, '') IN ({', '.join('?' for _ in clean_colors)})")
+        filter_params.extend(clean_colors)
+    clean_media_types = []
+    for value in media_types or []:
+        media_type = str(value or "").strip()
+        if media_type in {"photo", "video"} and media_type not in clean_media_types:
+            clean_media_types.append(media_type)
+    if clean_media_types:
+        filter_predicates.append(f"COALESCE(a.media_type, '') IN ({', '.join('?' for _ in clean_media_types)})")
+        filter_params.extend(clean_media_types)
+    search_columns = (
+        "a.asset_id",
+        "a.filename",
+        "a.photos_title",
+        "a.photos_keywords_json",
+        "a.location_label",
+        "a.location_keywords_json",
+        "a.metadata_seed_title",
+        "a.metadata_seed_keywords_json",
+        "a.decision_title",
+        "a.decision_keywords_json",
+    )
+    for term in re.findall(r"[^\s,;]+", str(search or "").casefold())[:8]:
+        escaped = term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        filter_predicates.append(
+            "(" + " OR ".join(f"lower(COALESCE({column}, '')) LIKE ? ESCAPE '\\'" for column in search_columns) + ")"
+        )
+        filter_params.extend([f"%{escaped}%"] * len(search_columns))
+    clean_pick_states = {str(value or "").strip() for value in (pick_states or [])}
+    pick_predicates: list[str] = []
+    if "picked" in clean_pick_states:
+        pick_predicates.append("COALESCE(a.decision_pick_state, 'undecided') = 'picked'")
+    if "undecided" in clean_pick_states:
+        pick_predicates.append("COALESCE(a.decision_pick_state, 'undecided') = 'undecided'")
+    if "rejected" in clean_pick_states:
+        pick_predicates.append("COALESCE(a.decision_pick_state, 'undecided') IN ('rejected', 'hidden')")
+    if pick_predicates:
+        filter_predicates.append(f"({' OR '.join(pick_predicates)})")
+    filter_sql = " AND ".join(filter_predicates)
+    ordered_sql = f"""
+        WITH ordered AS (
+          SELECT
+            a.*,
+            d.rating AS decision_rating,
+            d.color AS decision_color,
+            d.pick_state AS decision_pick_state,
+            d.title AS decision_title,
+            d.keywords_json AS decision_keywords_json,
+            ROW_NUMBER() OVER (
+              ORDER BY
+                CASE WHEN a.captured_at IS NULL OR a.captured_at = '' THEN 1 ELSE 0 END,
+                a.captured_at DESC,
+                a.asset_id
+            ) - 1 AS sidecar_position
+          FROM sidecar_assets AS a
+          LEFT JOIN sidecar_decisions AS d ON d.asset_id = a.asset_id
+          WHERE {where_sql}
+        )
+    """
     with connect(repo_root) as conn:
-        indexed_count = conn.execute(
-            "SELECT count(*) AS total FROM sidecar_assets WHERE missing_at IS NULL OR missing_at = ''"
-        ).fetchone()["total"]
+        indexed_count = _active_asset_count(conn)
         filtered_count = conn.execute(
-            f"SELECT count(*) AS total FROM sidecar_assets AS a WHERE {where_sql}",
-            params,
+            f"""
+            {ordered_sql}
+            SELECT count(*) AS total
+            FROM ordered AS a
+            WHERE {filter_sql}
+            """,
+            [*params, *filter_params],
         ).fetchone()["total"]
         rows = conn.execute(
             f"""
+            {ordered_sql}
             SELECT a.*
-            FROM sidecar_assets AS a
-            WHERE {where_sql}
-            ORDER BY
-              CASE WHEN a.captured_at IS NULL OR a.captured_at = '' THEN 1 ELSE 0 END,
-              a.captured_at DESC,
-              a.asset_id
+            FROM ordered AS a
+            WHERE {filter_sql}
+            ORDER BY a.sidecar_position
             LIMIT ? OFFSET ?
             """,
-            [*params, safe_limit, safe_offset],
+            [*params, *filter_params, safe_limit, safe_offset],
         ).fetchall()
+        next_offset = safe_offset + len(rows)
     items = merge_state(repo_root, [_indexed_asset_row(row) for row in rows])
     return {
         "ok": True,
@@ -597,11 +773,13 @@ def indexed_library_window(
         "source": "sidecar-index",
         "limit": safe_limit,
         "offset": safe_offset,
+        "nextOffset": next_offset,
         "count": len(items),
         "indexedCount": int(indexed_count or 0),
         "filteredIndexedCount": int(filtered_count or 0),
         "dateFrom": date_from,
         "dateTo": date_to,
+        "search": str(search or "").strip(),
         "items": items,
         "sidecarSummary": summary(repo_root),
     }
@@ -618,6 +796,9 @@ def _decision_payload(row: sqlite3.Row | None) -> dict[str, Any]:
             "keywords": [],
             "reworkCategory": "",
             "reworkComment": "",
+            "metadataAiRung": "",
+            "metadataAiEvidence": [],
+            "metadataAiNote": "",
             "lastAction": "",
             "updatedAt": "",
         }
@@ -630,6 +811,9 @@ def _decision_payload(row: sqlite3.Row | None) -> dict[str, Any]:
         "keywords": _read_json_text(row["keywords_json"], []),
         "reworkCategory": row["rework_category"] or "",
         "reworkComment": row["rework_comment"] or "",
+        "metadataAiRung": row["metadata_ai_rung"] or "",
+        "metadataAiEvidence": _read_json_text(row["metadata_ai_evidence_json"], []),
+        "metadataAiNote": row["metadata_ai_note"] or "",
         "lastAction": row["last_action"] or "",
         "updatedAt": row["updated_at"] or "",
     }
@@ -687,7 +871,9 @@ def merge_state(repo_root: Path, rows: list[dict[str, Any]]) -> list[dict[str, A
             str(row["asset_id"]): {
                 "state": str(row["mock_state"] or ""),
                 "mockRunId": str(row["mock_run_id"] or ""),
+                "bridgeRunId": str(row["mock_run_id"] or ""),
                 "uploadedAt": str(row["uploaded_at"] or ""),
+                "queuedAt": str(row["uploaded_at"] or ""),
             }
             for row in mock_upload_rows
         }
@@ -703,6 +889,8 @@ def merge_state(repo_root: Path, rows: list[dict[str, Any]]) -> list[dict[str, A
             "tombstoneState": tombstones.get(asset_id, ""),
             "mockUploadState": mock_upload.get("state", ""),
             "mockUpload": mock_upload,
+            "uploadBridgeState": mock_upload.get("state", ""),
+            "uploadBridge": mock_upload,
         })
     return merged
 
@@ -746,6 +934,32 @@ def _pending_sync_count(conn: sqlite3.Connection, asset_id: str) -> int:
     return int(row["total"] or 0)
 
 
+def _missing_asset_count(conn: sqlite3.Connection) -> int:
+    row = conn.execute(
+        "SELECT count(*) AS total FROM sidecar_assets WHERE missing_at IS NOT NULL AND missing_at <> ''"
+    ).fetchone()
+    return int(row["total"] or 0)
+
+
+def _active_asset_count(conn: sqlite3.Connection) -> int:
+    total = conn.execute("SELECT count(*) AS total FROM sidecar_assets").fetchone()["total"]
+    return max(0, int(total or 0) - _missing_asset_count(conn))
+
+
+def _last_active_indexed_at(conn: sqlite3.Connection) -> str:
+    row = conn.execute(
+        """
+        SELECT max(value) AS value
+        FROM (
+          SELECT max(indexed_at) AS value FROM sidecar_assets WHERE missing_at IS NULL
+          UNION ALL
+          SELECT max(indexed_at) AS value FROM sidecar_assets WHERE missing_at = ''
+        )
+        """
+    ).fetchone()
+    return str(row["value"] or "")
+
+
 def _active_tombstone_state(conn: sqlite3.Connection, asset_id: str) -> str:
     row = conn.execute(
         """
@@ -758,11 +972,25 @@ def _active_tombstone_state(conn: sqlite3.Connection, asset_id: str) -> str:
     return str(row["tombstone_state"] or "") if row else ""
 
 
+def _rework_category_values(value: Any) -> list[str]:
+    if isinstance(value, (list, tuple, set)):
+        raw_values = [str(item or "") for item in value]
+    else:
+        raw_values = re.split(r"[,;|]", str(value or ""))
+    values = []
+    for item in raw_values:
+        category = str(item or "").strip().casefold()
+        if not category:
+            continue
+        if category not in REWORK_CATEGORIES:
+            raise ValueError("reworkCategory is invalid")
+        if category not in values:
+            values.append(category)
+    return values
+
+
 def _normalize_rework_category(value: Any) -> str:
-    category = str(value or "").strip().casefold()
-    if category not in REWORK_CATEGORIES:
-        raise ValueError("reworkCategory is invalid")
-    return category
+    return ",".join(_rework_category_values(value))
 
 
 def _keyword_blacklist_json_fallback(repo_root: Path) -> set[str]:
@@ -802,6 +1030,94 @@ def _clean_keywords(value: Any, keyword_blacklist: set[str]) -> list[str]:
         seen.add(normalized)
         cleaned.append(clean)
     return cleaned
+
+
+def _filename_ai_generated_keywords(filename: Any, keyword_blacklist: set[str]) -> list[str]:
+    """Return AI-art keywords only when filename evidence is explicit."""
+    text = str(filename or "").casefold()
+    if not text:
+        return []
+    ai_filename_markers = (
+        "dreamshaper",
+        "realityvisionsdxl",
+        "hassakuxl",
+        "juggernautxl",
+        "leosamsfilmgirlultra",
+        "ultrabasemodel",
+        "realismenginesdxl",
+        "dpmsde",
+    )
+    if not any(marker in text for marker in ai_filename_markers):
+        return []
+    return _clean_keywords(list(AI_GENERATED_KEYWORDS), keyword_blacklist)
+
+
+def _filename_style_keywords(filename: Any) -> list[str]:
+    text = str(filename or "").casefold()
+    styles = (
+        ("mucha style", "Mucha style"),
+        ("art nouveau", "Art Nouveau"),
+        ("art moderne", "Art Moderne"),
+        ("gaudi style", "Gaudi-inspired"),
+        ("dali style", "Dali-inspired"),
+        ("gothic", "Gothic"),
+        ("religious", "Religious"),
+        ("spiritual", "Spiritual"),
+    )
+    return [label for marker, label in styles if marker in text]
+
+
+def _filename_metadata_seed(filename: Any, captured_at: Any, keyword_blacklist: set[str]) -> tuple[str, list[str]]:
+    """Derive conservative metadata from explicit generated-image filenames."""
+    name = Path(str(filename or "")).stem
+    if not name:
+        return "", []
+    text = name.replace("_", ", ")
+    lowered = text.casefold()
+    if "stained glass" not in lowered:
+        return "", []
+
+    styles = _filename_style_keywords(name)
+    title_parts: list[str] = []
+    year = str(captured_at or "")[:4]
+    if year.isdigit():
+        title_parts.append(year)
+    if "mucha style" in lowered:
+        title_parts.append("Mucha Style")
+    title_parts.append("Stained Glass")
+    if styles and styles[0] not in {"Mucha style"} and styles[0] not in title_parts:
+        title_parts.append(styles[0])
+    if "diana" in lowered:
+        title_parts.extend(["Diana", "Portrait"])
+    elif "abstract drawing" in lowered:
+        title_parts.append("Abstract Drawing")
+    elif "portrait" in lowered:
+        title_parts.append("Portrait")
+    title = " ".join(_dedupe_text(title_parts)).strip()
+
+    keywords: list[str] = ["Stained glass"]
+    if "abstract drawing" in lowered:
+        keywords.append("Abstract drawing")
+    if "portrait" in lowered:
+        keywords.append("Portrait")
+    if "diana" in lowered:
+        keywords.extend(["Diana", "Goddess of the hunt"])
+    if "black lead" in lowered:
+        keywords.append("Black leading")
+    if "solid plain" in lowered or "solid colors" in lowered:
+        keywords.extend(["Solid colors", "Flat colors"])
+    if "primary colors" in lowered or "primary colors only" in lowered:
+        keywords.append("Primary palette")
+    for color in ("black", "red", "green", "blue"):
+        if re.search(rf"\b{color}\b", lowered):
+            keywords.append(color.title())
+    if "hair red" in lowered:
+        keywords.append("Red hair")
+    if "dress blue" in lowered:
+        keywords.append("Blue dress")
+    keywords.extend(styles)
+    keywords.extend(_filename_ai_generated_keywords(filename, keyword_blacklist))
+    return title, _clean_keywords(_dedupe_text(keywords), keyword_blacklist)
 
 
 def _metadata_values_from_payload(
@@ -851,6 +1167,9 @@ def record_decision(repo_root: Path, payload: dict[str, Any]) -> dict[str, Any]:
         keywords = before["keywords"]
         rework_category = before["reworkCategory"]
         rework_comment = before["reworkComment"]
+        metadata_ai_rung = before["metadataAiRung"]
+        metadata_ai_evidence = before["metadataAiEvidence"]
+        metadata_ai_note = before["metadataAiNote"]
         keyword_blacklist = _keyword_blacklist_set(conn, repo_root)
         changed_families: set[str] = set()
 
@@ -889,6 +1208,9 @@ def record_decision(repo_root: Path, payload: dict[str, Any]) -> dict[str, Any]:
             metadata_state = "blocked"
             rework_category = ""
             rework_comment = ""
+            metadata_ai_rung = ""
+            metadata_ai_evidence = []
+            metadata_ai_note = ""
             changed_families.update({"metadata", "pick_state", "tombstone"})
         elif action == "approve":
             pick_state = "picked"
@@ -896,15 +1218,30 @@ def record_decision(repo_root: Path, payload: dict[str, Any]) -> dict[str, Any]:
             title, keywords = _metadata_values_from_payload(payload, title, keywords, keyword_blacklist)
             rework_category = ""
             rework_comment = ""
+            metadata_ai_rung = str(payload.get("metadataAiRung") or payload.get("metadata_ai_rung") or metadata_ai_rung or "").strip()
+            metadata_ai_evidence = _clean_keywords(
+                payload.get("metadataAiEvidence") or payload.get("metadata_ai_evidence") or metadata_ai_evidence,
+                set(),
+            )
+            metadata_ai_note = str(payload.get("metadataAiNote") or payload.get("metadata_ai_note") or metadata_ai_note or "").strip()
             changed_families.update({"pick_state", "metadata"})
         elif action == "metadata":
             title, keywords = _metadata_values_from_payload(payload, title, keywords, keyword_blacklist)
             metadata_state = str(payload.get("metadataState") or "proposed").strip().casefold()
             if metadata_state not in METADATA_STATES:
                 raise ValueError("metadataState is invalid")
+            metadata_ai_rung = str(payload.get("metadataAiRung") or payload.get("metadata_ai_rung") or metadata_ai_rung or "").strip()
+            metadata_ai_evidence = _clean_keywords(
+                payload.get("metadataAiEvidence") or payload.get("metadata_ai_evidence") or metadata_ai_evidence,
+                set(),
+            )
+            metadata_ai_note = str(payload.get("metadataAiNote") or payload.get("metadata_ai_note") or metadata_ai_note or "").strip()
             if metadata_state == "rework":
                 rework_category = _normalize_rework_category(payload.get("reworkCategory") or payload.get("rework_category"))
                 rework_comment = str(payload.get("reworkComment") or payload.get("rework_comment") or "").strip()
+                metadata_ai_rung = ""
+                metadata_ai_evidence = []
+                metadata_ai_note = ""
             elif metadata_state != "blocked":
                 rework_category = ""
                 rework_comment = ""
@@ -916,6 +1253,9 @@ def record_decision(repo_root: Path, payload: dict[str, Any]) -> dict[str, Any]:
             rework_comment = str(payload.get("reworkComment") or payload.get("rework_comment") or "").strip()
             if rework_comment and not rework_category:
                 rework_category = "other"
+            metadata_ai_rung = ""
+            metadata_ai_evidence = []
+            metadata_ai_note = ""
             changed_families.add("metadata")
         else:
             raise ValueError("Unsupported Sidecar action")
@@ -927,6 +1267,7 @@ def record_decision(repo_root: Path, payload: dict[str, Any]) -> dict[str, Any]:
             UPDATE sidecar_decisions
             SET rating = ?, color = ?, pick_state = ?, metadata_state = ?,
                 title = ?, keywords_json = ?, rework_category = ?, rework_comment = ?,
+                metadata_ai_rung = ?, metadata_ai_evidence_json = ?, metadata_ai_note = ?,
                 last_action = ?, updated_at = ?
             WHERE asset_id = ?
             """,
@@ -939,6 +1280,9 @@ def record_decision(repo_root: Path, payload: dict[str, Any]) -> dict[str, Any]:
                 _json_text(keywords),
                 rework_category,
                 rework_comment,
+                metadata_ai_rung,
+                _json_text(metadata_ai_evidence),
+                metadata_ai_note,
                 action,
                 now,
                 asset_id,
@@ -1002,15 +1346,10 @@ def summary(repo_root: Path) -> dict[str, Any]:
         pending_count = conn.execute(
             "SELECT count(*) AS total FROM sidecar_pending_sync WHERE status = 'pending'"
         ).fetchone()["total"]
-        indexed_count = conn.execute(
-            "SELECT count(*) AS total FROM sidecar_assets WHERE missing_at IS NULL OR missing_at = ''"
-        ).fetchone()["total"]
-        missing_count = conn.execute(
-            "SELECT count(*) AS total FROM sidecar_assets WHERE missing_at IS NOT NULL AND missing_at <> ''"
-        ).fetchone()["total"]
-        last_indexed_at = conn.execute(
-            "SELECT max(indexed_at) AS value FROM sidecar_assets WHERE missing_at IS NULL OR missing_at = ''"
-        ).fetchone()["value"]
+        total_assets = conn.execute("SELECT count(*) AS total FROM sidecar_assets").fetchone()["total"]
+        missing_count = _missing_asset_count(conn)
+        indexed_count = max(0, int(total_assets or 0) - missing_count)
+        last_indexed_at = _last_active_indexed_at(conn)
         tombstone_count = conn.execute(
             "SELECT count(*) AS total FROM sidecar_tombstones WHERE tombstone_state = 'active'"
         ).fetchone()["total"]
@@ -1056,36 +1395,154 @@ def empty_wastebasket(repo_root: Path) -> dict[str, Any]:
     return {"ok": True, "count": len(items), "items": items, "summary": summary(repo_root)}
 
 
+def _upload_bridge_rows(conn: sqlite3.Connection, limit: int | None = None) -> list[sqlite3.Row]:
+    limit_sql = ""
+    params: tuple[Any, ...] = ()
+    if limit is not None:
+        limit_sql = "LIMIT ?"
+        params = (max(1, min(int(limit or 500), 5000)),)
+    return conn.execute(
+        f"""
+        SELECT a.asset_id, a.source_anchor, a.media_type, a.filename, a.captured_at, m.uploaded_at
+        FROM sidecar_mock_uploads AS m
+        JOIN sidecar_assets AS a ON a.asset_id = m.asset_id
+        JOIN sidecar_decisions AS d ON d.asset_id = m.asset_id
+        WHERE m.mock_state = 'active'
+          AND d.pick_state = 'picked'
+          AND d.metadata_state = 'approved'
+          AND NOT EXISTS (
+            SELECT 1 FROM sidecar_tombstones AS t
+            WHERE t.asset_id = m.asset_id AND t.tombstone_state = 'active'
+          )
+        ORDER BY m.uploaded_at DESC, a.captured_at DESC, a.asset_id
+        {limit_sql}
+        """,
+        params,
+    ).fetchall()
+
+
+def _mock_upload_summary(conn: sqlite3.Connection) -> dict[str, Any]:
+    """Summarize rows queued across the Sidecar upload bridge."""
+    rows = _upload_bridge_rows(conn)
+    planned_key_sets: dict[str, list[dict[str, str]]] = {}
+    all_planned_keys: list[dict[str, str]] = []
+    for row in rows:
+        _photo_id, keys = _planned_r2_keys(row)
+        planned_key_sets[str(row["asset_id"])] = keys
+        all_planned_keys.extend(keys)
+    current_r2 = _current_r2_objects_for_plan(conn, all_planned_keys)
+    collision_count = 0
+    covered_key_count = 0
+    for row in rows:
+        item_collision_count = 0
+        for key in planned_key_sets.get(str(row["asset_id"]), []):
+            if current_r2.get((key["bucket"], key["key"])) is not None:
+                item_collision_count += 1
+                covered_key_count += 1
+        if item_collision_count:
+            collision_count += 1
+    latest_uploaded_at = str(rows[0]["uploaded_at"] or "") if rows else ""
+    return {
+        "mockUploadedCount": len(rows),
+        "bridgeQueuedCount": len(rows),
+        "collisionCount": collision_count,
+        "coveredKeyCount": covered_key_count,
+        "latestUploadedAt": latest_uploaded_at,
+        "latestQueuedAt": latest_uploaded_at,
+    }
+
+
+def upload_bridge_plan(repo_root: Path, limit: int = 500) -> dict[str, Any]:
+    """Return the dry-run plan for rows already queued across the upload bridge."""
+    safe_limit = max(1, min(int(limit or 500), 5000))
+    with connect(repo_root) as conn:
+        rows = _upload_bridge_rows(conn, safe_limit)
+        planned_key_sets: dict[str, list[dict[str, str]]] = {}
+        photo_ids: dict[str, str] = {}
+        all_planned_keys: list[dict[str, str]] = []
+        for row in rows:
+            photo_id, keys = _planned_r2_keys(row)
+            asset_id = str(row["asset_id"])
+            photo_ids[asset_id] = photo_id
+            planned_key_sets[asset_id] = keys
+            all_planned_keys.extend(keys)
+        current_r2 = _current_r2_objects_for_plan(conn, all_planned_keys)
+        total_queued = conn.execute(
+            """
+            SELECT count(*) AS total
+            FROM sidecar_mock_uploads AS m
+            JOIN sidecar_decisions AS d ON d.asset_id = m.asset_id
+            LEFT JOIN sidecar_tombstones AS t ON t.asset_id = m.asset_id AND t.tombstone_state = 'active'
+            WHERE m.mock_state = 'active'
+              AND d.pick_state = 'picked'
+              AND d.metadata_state = 'approved'
+              AND t.asset_id IS NULL
+            """
+        ).fetchone()["total"]
+    items = []
+    collision_count = 0
+    covered_key_count = 0
+    total_key_count = 0
+    for row in rows:
+        asset_id = str(row["asset_id"])
+        planned = []
+        item_collision_count = 0
+        for key in planned_key_sets.get(asset_id, []):
+            total_key_count += 1
+            current = current_r2.get((key["bucket"], key["key"]))
+            exists = current is not None
+            if exists:
+                item_collision_count += 1
+                covered_key_count += 1
+            planned.append({
+                **key,
+                "exists": exists,
+                **({"existing": current} if current else {}),
+            })
+        if item_collision_count:
+            collision_count += 1
+        items.append({
+            "assetId": asset_id,
+            "photoId": photo_ids.get(asset_id, ""),
+            "filename": row["filename"] or "",
+            "capturedAt": row["captured_at"] or "",
+            "mediaType": row["media_type"] or "",
+            "queuedAt": row["uploaded_at"] or "",
+            "collisionCount": item_collision_count,
+            "plannedKeys": planned,
+        })
+    return {
+        "ok": True,
+        "mode": "dry-run",
+        "realUploadImplemented": False,
+        "bridgeQueuedCount": int(total_queued or 0),
+        "count": len(items),
+        "items": items,
+        "collisionCount": collision_count,
+        "coveredKeyCount": covered_key_count,
+        "plannedKeyCount": total_key_count,
+        "message": "Upload Bridge dry-run only. Real Apple Photos export, R2 upload, and Owner registration are the next implementation slice.",
+    }
+
+
 def upload_plan(repo_root: Path, limit: int = 500) -> dict[str, Any]:
     safe_limit = max(1, min(int(limit or 500), 5000))
     with connect(repo_root) as conn:
         readiness = conn.execute(
             """
             SELECT
-              COUNT(CASE WHEN d.pick_state = 'picked' THEN 1 END) AS picked_count,
-              COUNT(CASE WHEN d.pick_state = 'picked' AND d.metadata_state = 'approved'
-                AND NOT EXISTS (
-                  SELECT 1 FROM sidecar_mock_uploads AS m
-                  WHERE m.asset_id = d.asset_id AND m.mock_state = 'active'
-                )
-              THEN 1 END) AS approved_picked_count,
-              COUNT(CASE WHEN d.pick_state = 'picked' AND d.metadata_state <> 'approved' THEN 1 END) AS picked_needs_review_count,
-              COUNT(CASE WHEN d.pick_state = 'picked' AND d.metadata_state = 'unreviewed' THEN 1 END) AS picked_unreviewed_count,
-              COUNT(CASE WHEN d.pick_state = 'picked' AND d.metadata_state = 'proposed' THEN 1 END) AS picked_proposed_count,
-              COUNT(CASE WHEN d.pick_state = 'picked' AND d.metadata_state = 'rework' THEN 1 END) AS picked_rework_count,
-              COUNT(CASE WHEN d.pick_state = 'picked' AND d.metadata_state = 'blocked' THEN 1 END) AS picked_blocked_count,
-              COUNT(CASE WHEN d.pick_state = 'picked' AND d.metadata_state = 'approved'
-                AND EXISTS (
-                  SELECT 1 FROM sidecar_mock_uploads AS m
-                  WHERE m.asset_id = d.asset_id AND m.mock_state = 'active'
-                )
-              THEN 1 END) AS mock_uploaded_count
+              COUNT(*) AS picked_count,
+              COUNT(CASE WHEN d.metadata_state = 'approved' AND m.asset_id IS NULL THEN 1 END) AS approved_picked_count,
+              COUNT(CASE WHEN d.metadata_state <> 'approved' THEN 1 END) AS picked_needs_review_count,
+              COUNT(CASE WHEN d.metadata_state = 'unreviewed' THEN 1 END) AS picked_unreviewed_count,
+              COUNT(CASE WHEN d.metadata_state = 'proposed' THEN 1 END) AS picked_proposed_count,
+              COUNT(CASE WHEN d.metadata_state = 'rework' THEN 1 END) AS picked_rework_count,
+              COUNT(CASE WHEN d.metadata_state = 'blocked' THEN 1 END) AS picked_blocked_count,
+              COUNT(CASE WHEN d.metadata_state = 'approved' AND m.asset_id IS NOT NULL THEN 1 END) AS mock_uploaded_count
             FROM sidecar_decisions AS d
-            JOIN sidecar_assets AS a ON a.asset_id = d.asset_id
-            WHERE NOT EXISTS (
-              SELECT 1 FROM sidecar_tombstones AS t
-              WHERE t.asset_id = d.asset_id AND t.tombstone_state = 'active'
-            )
+            LEFT JOIN sidecar_mock_uploads AS m ON m.asset_id = d.asset_id AND m.mock_state = 'active'
+            LEFT JOIN sidecar_tombstones AS t ON t.asset_id = d.asset_id AND t.tombstone_state = 'active'
+            WHERE d.pick_state = 'picked' AND t.asset_id IS NULL
             """
         ).fetchone()
         rows = conn.execute(
@@ -1107,6 +1564,7 @@ def upload_plan(repo_root: Path, limit: int = 500) -> dict[str, Any]:
             """,
             (safe_limit,),
         ).fetchall()
+        mock_upload_summary = _mock_upload_summary(conn)
     items = []
     for row in rows:
         items.append({
@@ -1133,6 +1591,9 @@ def upload_plan(repo_root: Path, limit: int = 500) -> dict[str, Any]:
         "pickedReworkCount": int(readiness["picked_rework_count"] or 0),
         "pickedBlockedCount": int(readiness["picked_blocked_count"] or 0),
         "mockUploadedCount": int(readiness["mock_uploaded_count"] or 0),
+        "mockUploadSummary": mock_upload_summary,
+        "bridgeQueuedCount": int(readiness["mock_uploaded_count"] or 0),
+        "uploadBridgeSummary": mock_upload_summary,
     }
 
 
@@ -1146,15 +1607,152 @@ def _ai_metadata_reason(row: sqlite3.Row, seed_keywords: list[str]) -> str:
     return "picked_unreviewed_missing_seed_metadata"
 
 
-def ai_metadata_plan(repo_root: Path, limit: int = 200) -> dict[str, Any]:
+def _metadata_ai_ladder_payload() -> list[dict[str, str]]:
+    return [dict(item) for item in AI_METADATA_LADDER]
+
+
+def _vision_classification_guidance_payload() -> dict[str, Any]:
+    return json.loads(json.dumps(VISION_CLASSIFICATION_GUIDANCE))
+
+
+def _location_keyword_guidance_payload() -> dict[str, Any]:
+    return json.loads(json.dumps(LOCATION_KEYWORD_GUIDANCE))
+
+
+def _metadata_ai_rung_rank(rung: str) -> int:
+    return AI_METADATA_RUNG_ORDER.get(str(rung or "").strip(), AI_METADATA_RUNG_ORDER["human-review"])
+
+
+def _filename_has_subject_hint(filename: str) -> bool:
+    value = Path(str(filename or "")).stem.strip()
+    if not value:
+        return False
+    if re.fullmatch(r"(IMG|DSC|PXL|VID|MOV|MVI)[-_ ]?\d+", value, re.IGNORECASE):
+        return False
+    words = re.findall(r"[A-Za-z][A-Za-z-]{2,}", value)
+    return len(words) >= 2
+
+
+def _title_is_location_only(title: str, keywords: Iterable[Any]) -> bool:
+    value = str(title or "").strip()
+    if not value:
+        return True
+    without_year = re.sub(r"^\d{4}\s+", "", value).strip()
+    if not without_year:
+        return True
+    keyword_set = {str(keyword or "").strip().casefold() for keyword in keywords if str(keyword or "").strip()}
+    return without_year.casefold() in keyword_set
+
+
+def _title_has_public_place_subject(title: str) -> bool:
+    value = re.sub(r"^\d{4}\s+", "", str(title or "").strip()).casefold()
+    return bool(re.search(r"\b(palace|museum|musee|gallery|landmark|cathedral|castle|monument|station|park|venue)\b", value))
+
+
+def _metadata_ai_context(
+    row: sqlite3.Row,
+    raw_row: dict[str, Any],
+    photos_title: str,
+    photos_keywords: list[str],
+    location_label: str,
+    location_keywords: list[str],
+    seed_title: str,
+    seed_keywords: list[str],
+) -> dict[str, Any]:
+    evidence: list[str] = []
+    limitations: list[str] = []
+    filename = str(row["filename"] or "")
+    rework_categories = set(_rework_category_values(row["rework_category"]))
+    rework_category = ",".join(sorted(rework_categories))
+    candidate_title = _seedable_title(row["title"]) or seed_title
+    candidate_keywords = _dedupe_text([*_read_json_text(row["keywords_json"], []), *seed_keywords])
+    has_subject_filename = _filename_has_subject_hint(filename)
+    has_public_poi = bool(_location_poi_from_gps(raw_row))
+    location_only = _title_is_location_only(candidate_title, candidate_keywords)
+
+    if photos_title:
+        evidence.append("photos-title")
+    if photos_keywords:
+        evidence.append("photos-keywords")
+    if has_subject_filename:
+        evidence.append("descriptive-filename")
+    if location_label or location_keywords:
+        evidence.append("local-gps-location")
+    if isinstance(raw_row.get("location"), dict):
+        evidence.append("gps-coordinates")
+    for category in sorted(rework_categories):
+        evidence.append(f"owner-rework-{category}")
+
+    if has_subject_filename:
+        recommended_rung = "filename-gps"
+        note = "Filename contains subject/style words, so non-vision proposal can be specific enough."
+    elif photos_title or photos_keywords:
+        recommended_rung = "seed"
+        note = "Existing Photos metadata contains title or keyword subject hints."
+    elif location_label or location_keywords:
+        recommended_rung = "vision-description"
+        note = "Local evidence is location-only; use vision to identify visible subject, setting, and likely AI-generated or 3D printed media."
+        limitations.append("location-only")
+    else:
+        recommended_rung = "vision-description"
+        note = "No subject evidence is available from local seeds; use vision before proposing metadata, including likely AI-generated or 3D printed media."
+        limitations.append("missing-subject-evidence")
+
+    if "generic" in rework_categories and recommended_rung != "filename-gps":
+        if has_public_poi:
+            recommended_rung = "geocode-context"
+            note = "Owner rejected the current metadata as generic; GPS resolves to a supported public place, so proposal can use public-place context."
+            evidence.append("gps-public-place")
+        elif location_only:
+            recommended_rung = "vision-description"
+            note = "Owner rejected the current metadata as generic and available local evidence is still location-only; use vision to identify the subject and likely AI-generated or 3D printed media."
+            if "location-only" not in limitations:
+                limitations.append("location-only")
+    if location_only:
+        limitations.append("generic-title")
+
+    return {
+        "evidence": _dedupe_text(evidence),
+        "limitations": _dedupe_text(limitations),
+        "recommendedRung": recommended_rung,
+        "recommendedRungLabel": AI_METADATA_LADDER[_metadata_ai_rung_rank(recommended_rung)]["label"],
+        "note": note,
+    }
+
+
+def _normalize_asset_id_scope(asset_ids: Iterable[Any] | None = None) -> list[str]:
+    values = []
+    for value in asset_ids or []:
+        asset_id = str(value or "").strip()
+        if asset_id and asset_id not in values:
+            values.append(asset_id)
+    return values[:500]
+
+
+def ai_metadata_plan(repo_root: Path, limit: int = 200, asset_ids: Iterable[Any] | None = None) -> dict[str, Any]:
     """Plan picked-only Sidecar rows for a future local AI metadata pass."""
     safe_limit = max(1, min(int(limit or 200), 5000))
+    scoped_asset_ids = _normalize_asset_id_scope(asset_ids)
+    asset_scope_sql = ""
+    asset_scope_params: list[Any] = []
+    if scoped_asset_ids:
+        asset_scope_sql = f" AND d.asset_id IN ({','.join('?' for _ in scoped_asset_ids)})"
+        asset_scope_params = scoped_asset_ids
     active_item_predicate = """
       d.pick_state = 'picked'
       AND (a.missing_at IS NULL OR a.missing_at = '')
       AND NOT EXISTS (
         SELECT 1 FROM sidecar_tombstones AS t
         WHERE t.asset_id = d.asset_id AND t.tombstone_state = 'active'
+      )
+    """
+    actionable_ai_predicate = """
+      d.metadata_state != 'approved'
+      AND NOT (
+        d.metadata_state = 'proposed'
+        AND d.last_action = 'ai-metadata-proposal'
+        AND trim(COALESCE(d.title, '')) <> ''
+        AND COALESCE(d.keywords_json, '[]') NOT IN ('', '[]')
       )
     """
     with connect(repo_root) as conn:
@@ -1168,12 +1766,15 @@ def ai_metadata_plan(repo_root: Path, limit: int = 200) -> dict[str, Any]:
               COUNT(CASE WHEN d.metadata_state = 'proposed' THEN 1 END) AS proposed_count,
               COUNT(CASE WHEN d.metadata_state = 'approved' THEN 1 END) AS approved_count,
               COUNT(CASE WHEN d.metadata_state = 'blocked' THEN 1 END) AS blocked_count,
-              COUNT(CASE WHEN d.metadata_state IN ('unreviewed', 'rework')
+              COUNT(CASE WHEN {actionable_ai_predicate}
                 AND NOT EXISTS (
                   SELECT 1 FROM sidecar_mock_uploads AS m
                   WHERE m.asset_id = d.asset_id AND m.mock_state = 'active'
                 )
               THEN 1 END) AS candidate_count,
+              COUNT(CASE WHEN d.metadata_state = 'proposed'
+                AND d.last_action = 'ai-metadata-proposal'
+              THEN 1 END) AS ai_proposed_count,
               COUNT(CASE WHEN EXISTS (
                 SELECT 1 FROM sidecar_mock_uploads AS m
                 WHERE m.asset_id = d.asset_id AND m.mock_state = 'active'
@@ -1181,7 +1782,9 @@ def ai_metadata_plan(repo_root: Path, limit: int = 200) -> dict[str, Any]:
             FROM sidecar_decisions AS d
             JOIN sidecar_assets AS a ON a.asset_id = d.asset_id
             WHERE {active_item_predicate}
-            """
+              {asset_scope_sql}
+            """,
+            asset_scope_params,
         ).fetchone()
         rows = conn.execute(
             f"""
@@ -1195,18 +1798,25 @@ def ai_metadata_plan(repo_root: Path, limit: int = 200) -> dict[str, Any]:
             FROM sidecar_decisions AS d
             JOIN sidecar_assets AS a ON a.asset_id = d.asset_id
             WHERE {active_item_predicate}
-              AND d.metadata_state IN ('unreviewed', 'rework')
+              {asset_scope_sql}
+              AND {actionable_ai_predicate}
               AND NOT EXISTS (
                 SELECT 1 FROM sidecar_mock_uploads AS m
                 WHERE m.asset_id = d.asset_id AND m.mock_state = 'active'
               )
             ORDER BY
+              CASE
+                WHEN d.metadata_state = 'rework' THEN 0
+                WHEN d.metadata_state = 'unreviewed' THEN 1
+                WHEN d.metadata_state = 'proposed' AND d.last_action = 'ai-metadata-proposal' THEN 3
+                ELSE 2
+              END,
               CASE WHEN a.captured_at IS NULL OR a.captured_at = '' THEN 1 ELSE 0 END,
               a.captured_at ASC,
               a.asset_id
             LIMIT ?
             """,
-            (safe_limit,),
+            (*asset_scope_params, safe_limit),
         ).fetchall()
     items: list[dict[str, Any]] = []
     for row in rows:
@@ -1223,7 +1833,11 @@ def ai_metadata_plan(repo_root: Path, limit: int = 200) -> dict[str, Any]:
             keyword_blacklist,
         )
         seed_title = _seedable_title(row["metadata_seed_title"])
-        if not seed_title and derived_title_place:
+        rework_categories = set(_rework_category_values(row["rework_category"]))
+        if "generic" in rework_categories and derived_title_place:
+            year = str(row["captured_at"] or "")[:4]
+            seed_title = " ".join(part for part in [year if year.isdigit() else "", derived_title_place] if part).strip()
+        elif not seed_title and derived_title_place:
             year = str(row["captured_at"] or "")[:4]
             seed_title = " ".join(part for part in [year if year.isdigit() else "", derived_title_place] if part).strip()
         seed_keywords = _clean_keywords(
@@ -1232,6 +1846,16 @@ def ai_metadata_plan(repo_root: Path, limit: int = 200) -> dict[str, Any]:
         )
         decision_keywords = _read_json_text(row["keywords_json"], [])
         photos_title = _seedable_title(row["photos_title"])
+        ai_context = _metadata_ai_context(
+            row,
+            raw_row if isinstance(raw_row, dict) else {},
+            photos_title,
+            photos_keywords,
+            location_label,
+            location_keywords,
+            seed_title,
+            seed_keywords,
+        )
         items.append({
             "assetId": row["asset_id"],
             "sourceAnchor": row["source_anchor"],
@@ -1257,10 +1881,21 @@ def ai_metadata_plan(repo_root: Path, limit: int = 200) -> dict[str, Any]:
             "reworkCategory": row["rework_category"] or "",
             "reworkComment": row["rework_comment"] or "",
             "reason": _ai_metadata_reason(row, seed_keywords),
+            "aiEvidence": ai_context["evidence"],
+            "aiLimitations": ai_context["limitations"],
+            "recommendedAiRung": ai_context["recommendedRung"],
+            "recommendedAiRungLabel": ai_context["recommendedRungLabel"],
+            "aiRungNote": ai_context["note"],
+            "visionClassificationGuidance": _vision_classification_guidance_payload(),
+            "locationKeywordGuidance": _location_keyword_guidance_payload(),
         })
     return {
         "ok": True,
         "mode": "picked-only-ai-metadata-plan",
+        "scopedCount": len(scoped_asset_ids),
+        "aiLadder": _metadata_ai_ladder_payload(),
+        "visionClassificationGuidance": _vision_classification_guidance_payload(),
+        "locationKeywordGuidance": _location_keyword_guidance_payload(),
         "count": len(items),
         "candidateCount": int(counts["candidate_count"] or 0),
         "pickedCount": int(counts["picked_count"] or 0),
@@ -1269,25 +1904,39 @@ def ai_metadata_plan(repo_root: Path, limit: int = 200) -> dict[str, Any]:
         "proposedCount": int(counts["proposed_count"] or 0),
         "approvedCount": int(counts["approved_count"] or 0),
         "blockedCount": int(counts["blocked_count"] or 0),
+        "aiProposedCount": int(counts["ai_proposed_count"] or 0),
         "mockUploadedPickedCount": int(counts["mock_uploaded_count"] or 0),
         "items": items,
-        "message": "Only picked Sidecar items are eligible for this AI metadata planning lane.",
+        "message": "Only picked, not-approved Sidecar items are eligible for this AI metadata planning lane.",
     }
 
 
-def _useful_proposal_title(title: str) -> bool:
+def _useful_proposal_title(title: str, keywords: Iterable[Any] = ()) -> bool:
     value = str(title or "").strip()
-    return bool(value and not re.fullmatch(r"\d{4}", value))
+    return bool(
+        value
+        and not re.fullmatch(r"\d{4}", value)
+        and (_title_has_public_place_subject(value) or not _title_is_location_only(value, keywords))
+    )
 
 
-def apply_ai_metadata_proposals(repo_root: Path, limit: int = 20) -> dict[str, Any]:
+def apply_ai_metadata_proposals(
+    repo_root: Path,
+    limit: int = 20,
+    max_rung: str = "filename-gps",
+    asset_ids: Iterable[Any] | None = None,
+) -> dict[str, Any]:
     """Promote safe picked-item plan seeds into Sidecar Review proposals.
 
     This deliberately does not enqueue Photos write-back. Proposed rows still need
     Review approval before they become upload/write-back candidates.
     """
-    safe_limit = max(1, min(int(limit or 20), 200))
-    plan = ai_metadata_plan(repo_root, limit=safe_limit)
+    scoped_asset_ids = _normalize_asset_id_scope(asset_ids)
+    safe_limit = max(1, min(int(limit or len(scoped_asset_ids) or 20), 500))
+    safe_max_rung = str(max_rung or "filename-gps").strip()
+    if safe_max_rung not in AI_METADATA_RUNG_ORDER:
+        raise ValueError("max_rung is invalid")
+    plan = ai_metadata_plan(repo_root, limit=safe_limit, asset_ids=scoped_asset_ids)
     now = now_iso()
     proposed: list[dict[str, Any]] = []
     skipped: list[dict[str, str]] = []
@@ -1297,16 +1946,52 @@ def apply_ai_metadata_proposals(repo_root: Path, limit: int = 20) -> dict[str, A
             asset_id = str(item.get("assetId") or "").strip()
             if not asset_id:
                 continue
-            title = _seedable_title(item.get("decisionTitle")) or _seedable_title(item.get("seedTitle"))
-            keywords = _clean_keywords(
-                _dedupe_text([*(item.get("decisionKeywords") or []), *(item.get("seedKeywords") or [])]),
+            rework_categories = set(_rework_category_values(item.get("reworkCategory")))
+            if "generic" in rework_categories:
+                title = _seedable_title(item.get("seedTitle")) or _seedable_title(item.get("decisionTitle"))
+            else:
+                title = _seedable_title(item.get("decisionTitle")) or _seedable_title(item.get("seedTitle"))
+            filename_title, filename_keywords = _filename_metadata_seed(
+                item.get("filename"),
+                item.get("capturedAt"),
                 keyword_blacklist,
             )
-            if not _useful_proposal_title(title):
+            if (
+                not _useful_proposal_title(title, item.get("decisionKeywords") or item.get("seedKeywords") or [])
+                and _useful_proposal_title(item.get("decisionTitle"), item.get("decisionKeywords") or item.get("seedKeywords") or [])
+            ):
+                title = _seedable_title(item.get("decisionTitle"))
+            if not _useful_proposal_title(title, item.get("decisionKeywords") or item.get("seedKeywords") or []):
+                title = filename_title
+            filename_ai_keywords = _filename_ai_generated_keywords(item.get("filename"), keyword_blacklist)
+            keywords = _clean_keywords(
+                _dedupe_text([
+                    *(item.get("decisionKeywords") or []),
+                    *(item.get("seedKeywords") or []),
+                    *filename_keywords,
+                    *filename_ai_keywords,
+                ]),
+                keyword_blacklist,
+            )
+            metadata_ai_evidence = _dedupe_text([
+                *(item.get("aiEvidence") or []),
+                *(["ai-generated-filename-marker"] if filename_ai_keywords else []),
+            ])
+            recommended_rung = str(item.get("recommendedAiRung") or "human-review")
+            if _metadata_ai_rung_rank(recommended_rung) > _metadata_ai_rung_rank(safe_max_rung):
+                skipped.append({
+                    "assetId": asset_id,
+                    "filename": str(item.get("filename") or ""),
+                    "reason": "requires_stronger_ai_rung",
+                    "recommendedAiRung": recommended_rung,
+                })
+                continue
+            if not _useful_proposal_title(title, keywords):
                 skipped.append({
                     "assetId": asset_id,
                     "filename": str(item.get("filename") or ""),
                     "reason": "missing_useful_title_seed",
+                    "recommendedAiRung": recommended_rung,
                 })
                 continue
             if not keywords:
@@ -1314,6 +1999,7 @@ def apply_ai_metadata_proposals(repo_root: Path, limit: int = 20) -> dict[str, A
                     "assetId": asset_id,
                     "filename": str(item.get("filename") or ""),
                     "reason": "missing_keyword_seed",
+                    "recommendedAiRung": recommended_rung,
                 })
                 continue
             result = conn.execute(
@@ -1324,13 +2010,24 @@ def apply_ai_metadata_proposals(repo_root: Path, limit: int = 20) -> dict[str, A
                     keywords_json = ?,
                     rework_category = '',
                     rework_comment = '',
+                    metadata_ai_rung = ?,
+                    metadata_ai_evidence_json = ?,
+                    metadata_ai_note = ?,
                     last_action = 'ai-metadata-proposal',
                     updated_at = ?
                 WHERE asset_id = ?
                   AND pick_state = 'picked'
-                  AND metadata_state IN ('unreviewed', 'rework')
+                  AND metadata_state != 'approved'
                 """,
-                (title, _json_text(keywords), now, asset_id),
+                (
+                    title,
+                    _json_text(keywords),
+                    recommended_rung,
+                    _json_text(metadata_ai_evidence),
+                    str(item.get("aiRungNote") or ""),
+                    now,
+                    asset_id,
+                ),
             )
             if result.rowcount:
                 proposed.append({
@@ -1339,10 +2036,16 @@ def apply_ai_metadata_proposals(repo_root: Path, limit: int = 20) -> dict[str, A
                     "title": title,
                     "keywords": keywords,
                     "locationLabel": str(item.get("locationLabel") or ""),
+                    "metadataAiRung": recommended_rung,
+                    "metadataAiEvidence": metadata_ai_evidence,
+                    "metadataAiNote": str(item.get("aiRungNote") or ""),
                 })
     return {
         "ok": True,
         "mode": "picked-only-ai-metadata-proposals",
+        "scopedCount": len(scoped_asset_ids),
+        "maxRung": safe_max_rung,
+        "aiLadder": _metadata_ai_ladder_payload(),
         "plannedCount": plan["count"],
         "candidateCountBefore": plan["candidateCount"],
         "proposedCount": len(proposed),
@@ -1402,7 +2105,7 @@ def sidecar_sync_status(repo_root: Path, limit: int = 80) -> dict[str, Any]:
     }
 
 
-def _planned_r2_keys(row: sqlite3.Row) -> tuple[str, list[dict[str, str]]]:
+def _planned_r2_keys(row: sqlite3.Row, *, include_private_renders: bool = False) -> tuple[str, list[dict[str, str]]]:
     source_anchor = str(row["source_anchor"] or f"apple-photos://{row['asset_id']}")
     photo_id = photo_id_for_source_path(source_anchor)
     filename = str(row["filename"] or "")
@@ -1426,7 +2129,7 @@ def _planned_r2_keys(row: sqlite3.Row) -> tuple[str, list[dict[str, str]]]:
             "kind": "public-preview-video" if is_video else "public-preview",
         },
     ]
-    if not is_video:
+    if include_private_renders and not is_video:
         keys.extend(
             {
                 "bucket": DEFAULT_PRIVATE_BUCKET,
@@ -1553,12 +2256,21 @@ def mock_upload(repo_root: Path, asset_ids: Iterable[str] | None = None, limit: 
     return {
         "ok": True,
         "mockRunId": run_id,
+        "bridgeRunId": run_id,
         "mockUploadedCount": len(rows),
+        "bridgeQueuedCount": len(rows),
         "collisionCount": collision_count,
         "coveredKeyCount": covered_key_count,
         "items": items,
         "remainingPlan": upload_plan(repo_root, limit=safe_limit),
     }
+
+
+def queue_upload_bridge(repo_root: Path, asset_ids: Iterable[str] | None = None, limit: int = 500) -> dict[str, Any]:
+    """Queue upload-ready Sidecar items for the bridge using the legacy mock table."""
+    result = mock_upload(repo_root, asset_ids=asset_ids, limit=limit)
+    result["uploadBridgePlan"] = upload_bridge_plan(repo_root, limit=limit)
+    return result
 
 
 def commit_plan(repo_root: Path, limit: int = 500) -> dict[str, Any]:
@@ -1602,17 +2314,23 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Inspect Sidecar local workflow state.")
     parser.add_argument("--summary", action="store_true")
     parser.add_argument("--upload-plan", action="store_true")
+    parser.add_argument("--upload-bridge-plan", action="store_true")
     parser.add_argument("--ai-plan", action="store_true")
     parser.add_argument("--sync-status", action="store_true")
     parser.add_argument("--mock-upload", action="store_true")
+    parser.add_argument("--queue-upload-bridge", action="store_true")
     parser.add_argument("--commit-plan", action="store_true")
     parser.add_argument("--empty-wastebasket", action="store_true")
     args = parser.parse_args()
     repo_root = Path.cwd()
     if args.empty_wastebasket:
         print(json.dumps(empty_wastebasket(repo_root), indent=2))
+    elif args.queue_upload_bridge:
+        print(json.dumps(queue_upload_bridge(repo_root), indent=2))
     elif args.mock_upload:
         print(json.dumps(mock_upload(repo_root), indent=2))
+    elif args.upload_bridge_plan:
+        print(json.dumps(upload_bridge_plan(repo_root), indent=2))
     elif args.upload_plan:
         print(json.dumps(upload_plan(repo_root), indent=2))
     elif args.ai_plan:

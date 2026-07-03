@@ -431,8 +431,34 @@ Clock state: running
 | 2026-07-02 | 11:03 CEST | 11:08 CEST | 0:05 | Ran the Sidecar picked-only AI metadata plan manually, confirmed 609 picked/unreviewed candidates, and hardened location/title seeding for the Paris museum batch; background command/runtime excluded. |
 | 2026-07-02 | 11:09 CEST | 11:16 CEST | 0:07 | Added and ran the bounded Sidecar picked-only metadata proposal writer for 6 Paris museum rows without queueing Photos write-back; background command/runtime excluded. |
 | 2026-07-02 | 11:20 CEST | 11:32 CEST | 0:12 | Fixed Sidecar Next/Previous window navigation after refill so filled batches advance from the scan cursor and auto-fill the next visible page; browser QA time included, background waits excluded. |
+| 2026-07-02 | 15:42 CEST | 15:45 CEST | 0:03 | Clarified Sidecar picked metadata exclusions and directed draining the remaining eligible proposal queue; background proposal runtime excluded. |
+| 2026-07-02 | 15:55 CEST | 15:56 CEST | 0:01 | Diagnosed duplicate Sidecar Review rows as a client working-set issue rather than duplicate SQLite state. |
+| 2026-07-02 | 16:05 CEST | 16:18 CEST | 0:04 | Fixed Sidecar visible preview count so Review loads 300 rows after active filters instead of counting pre-filter rows; browser QA included, query/runtime waits excluded. |
+| 2026-07-02 | 16:31 CEST | 16:50 CEST | 0:06 | Reworked Sidecar window controls into automatic filtered paging with no Load/Refill buttons and validated Review/Culling pager behavior; browser/runtime waits excluded. |
+| 2026-07-02 | 16:58 CEST | 17:03 CEST | 0:05 | Diagnosed Sidecar video previews as Photos permission failures and surfaced the exact failure in the video tile; browser QA included, reload waits excluded. |
+| 2026-07-02 | 17:15 CEST | 17:20 CEST | 0:05 | Moved Sidecar Culling pager controls into thumbnail-grid cells, added C toggle for Cull/Review, and verified Review hides pager cells; browser QA included. |
+| 2026-07-02 | 17:45 CEST | 17:46 CEST | 0:01 | Reported Sidecar rework category changes preserving the previous default note; background fix/testing excluded. |
+| 2026-07-02 | 19:40 CEST | 19:41 CEST | 0:01 | Directed Sidecar AI metadata to recognize likely AI-generated images and 3D printed artefacts in keywords; background implementation excluded. |
+| 2026-07-02 | 19:47 CEST | 19:49 CEST | 0:02 | Directed Sidecar AI metadata to keep non-public location keywords at city level and scrub existing precise private-location terms; background implementation excluded. |
+| 2026-07-02 | 21:49 CEST | 21:50 CEST | 0:01 | Clarified picked/not-approved Sidecar items, including proposed rows, are subject to AI rework; background implementation excluded. |
+| 2026-07-02 | 21:54 CEST | 21:55 CEST | 0:01 | Requested Sidecar automatically leave Review when the current review window becomes empty; background implementation and QA excluded. |
+| 2026-07-02 | 22:02 CEST | 22:24 CEST | 0:07 | Added Sidecar Culling local-index search across filenames, Photos metadata, decision metadata, seed fields, and location labels; browser QA included, endpoint/runtime waits excluded. |
+| 2026-07-03 | 03:02 CEST | 03:03 CEST | 0:01 | Ran picked-only Sidecar AI metadata review automation and proposed safe filename/seed-backed rows; background proposal runtime excluded. |
+| 2026-07-03 | 03:17 CEST | 03:18 CEST | 0:01 | Ran Sidecar Photos index sync automation; command runtime excluded and Photos permission blocker recorded. |
+| 2026-07-03 | 03:20 CEST | 03:21 CEST | 0:01 | Retried Sidecar Photos index sync automation; same Photos permission blocker persisted. |
+| 2026-07-03 | 03:25 CEST | 03:26 CEST | 0:01 | Checked macOS Photos permission screen, verified python3.14 access, and confirmed the Swift bridge still lacks Photos access. |
+| 2026-07-03 | 03:30 CEST | 03:31 CEST | 0:01 | Added the bundled Photos Bridge helper path and identified the remaining macOS Photos permission target. |
+| 2026-07-03 | 03:31 CEST | 03:41 CEST | 0:01 | Granted Photos Bridge access and completed the Sidecar Photos index sync; scan/import runtime excluded. |
+| 2026-07-03 | 03:42 CEST | 03:43 CEST | 0:01 | Hardened the Sidecar Photos sync automation prompt and scripts around the Photos Bridge LaunchServices path. |
+| 2026-07-03 | 04:41 CEST | 04:42 CEST | 0:01 | Ran Sidecar picked-only AI metadata review automation and proposed the remaining Valencia Aquarium seed-backed rows; command runtime excluded. |
+| 2026-07-03 | 04:46 CEST | 04:48 CEST | 0:01 | Reran Sidecar picked-only AI metadata review, fixed generic-title fallback, and drained 103 Valencia Aquarium rework rows to proposed; command runtime excluded. |
+| 2026-07-03 | 10:31 CEST | 10:46 CEST | 0:15 | Stabilized Sidecar selection through local reloads, added foreground Review AI title-pass controls, converted AI rework guidance to additive checkboxes, and normalized Safari control heights; browser QA included, endpoint waits excluded. |
+| 2026-07-03 | 12:20 CEST | 12:31 CEST | 0:01 | Requested Sidecar button feedback and foreground decision/plan latency cleanup; implementation, timing probes, and browser QA excluded. |
+| 2026-07-03 | 14:19 CEST | 14:20 CEST | 0:01 | Ran Sidecar picked-only AI metadata review automation and reworked remaining proposed rows; command/runtime excluded. |
+| 2026-07-03 | 15:00 CEST | 15:01 CEST | 0:01 | Requested Upload plan show mock-uploaded summary and R2 collision count; implementation/testing excluded. |
+| 2026-07-03 | 16:05 CEST | 16:06 CEST | 0:01 | Started the Sidecar Upload Bridge implementation slice, renaming mock upload into a bridge queue and adding dry-run upload/cache-prune tooling; command/runtime and browser QA excluded. |
 
 ## Totals
 
-Active collaboration time used: 22:59
+Active collaboration time used: 24:46
 Remaining budget: not set

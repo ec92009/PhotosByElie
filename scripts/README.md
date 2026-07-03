@@ -114,7 +114,7 @@ By default the import metadata omits owner-blacklisted keyword strings from `ass
 
 Product and pricing data comes from `assets/catalog/product-pricing.json`. `scripts/build_public_catalog_db.py` materializes that file into the public SQLite product tables and the local-only POD supplier tables. The browser and Worker still see the existing `photosByElieResolutions`, frame, shipping, and video-tier globals, but those values are reconstructed from shared catalog data instead of hand-authored generated JS constants. POD automation preview data is exposed as `photosByEliePodAutomation`, `photosByEliePodSuppliers`, `photosByEliePodQualityTiers`, and `photosByEliePodOptions` for Owner Commerce inspection while the public storefront flag remains off.
 
-Public catalog rebuilds refuse to overwrite a populated SQLite or Worker catalog with zero media rows unless `PBE_ALLOW_EMPTY_PUBLIC_CATALOG=1` is set, or `scripts/build_public_catalog_db.py` is run with `--allow-empty`.
+Public catalog rebuilds refuse to overwrite a populated SQLite catalog, Worker catalog, or homepage manifest with zero media rows unless `PBE_ALLOW_EMPTY_PUBLIC_CATALOG=1` is set, or `scripts/build_public_catalog_db.py` is run with `--allow-empty`.
 
 For normal localhost preview with Owner tools, run the small local server instead of the bare static server:
 

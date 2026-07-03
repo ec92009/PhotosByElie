@@ -49,7 +49,9 @@ DEFAULT_UPLOAD_STATE = Path(".review-logs/r2-upload-state.jsonl")
 IMPORT_CACHE_ROOT = Path("tmp/import-cache")
 HIDDEN_DATA_PATH = Path("assets/hidden/hidden-data.json")
 EXPO_MANIFEST_PATH = Path("assets/expo-manifest.json")
+HOME_DATA_PATH = Path("home-data.js")
 PUBLIC_CATALOG_DB_PATH = Path("assets/catalog/photosbyelie.sqlite")
+ALLOW_EMPTY_PUBLIC_CATALOG_ENV = "PBE_ALLOW_EMPTY_PUBLIC_CATALOG"
 DEFAULT_KEYWORD_BLACKLIST = Path("assets/owner-actions/keyword-blacklist.json")
 DISCARDED_TOMBSTONE_PATH = Path("assets/discarded/discarded-photo-ids.json")
 DISCARDED_MEDIA_MANIFEST_PATH = Path("assets/discarded-media-manifest.json")
@@ -72,7 +74,6 @@ def existing_public_catalog_media_count(repo_root: Path) -> int:
     try:
         conn = sqlite3.connect(path)
         row = conn.execute("SELECT COUNT(*) FROM media_items").fetchone()
-        return int(row[0] or 0) if row else 0
     except sqlite3.Error:
         return 0
     finally:
@@ -80,6 +81,35 @@ def existing_public_catalog_media_count(repo_root: Path) -> int:
             conn.close()
         except UnboundLocalError:
             pass
+    return int(row[0] or 0) if row else 0
+
+
+def existing_home_data_photo_count(repo_root: Path) -> int:
+    path = repo_root / HOME_DATA_PATH
+    if not path.exists():
+        return 0
+    prefix = "window.photosByElieHomeData = "
+    text = path.read_text(encoding="utf-8")
+    if not text.startswith(prefix):
+        return 0
+    payload = text[len(prefix) :].strip()
+    if payload.endswith(";"):
+        payload = payload[:-1].strip()
+    try:
+        data = json.loads(payload)
+    except json.JSONDecodeError:
+        return 0
+    total = 0
+    for collection in data.values():
+        if not isinstance(collection, dict):
+            continue
+        count = collection.get("count")
+        if isinstance(count, int):
+            total += count
+            continue
+        photos = collection.get("photos")
+        total += len(photos) if isinstance(photos, list) else 0
+    return total
 
 
 def ensure_state_folders(root: Path) -> None:
@@ -981,14 +1011,17 @@ def write_photos_data(
         reserve_only_ids=reserve_only_ids,
     )
     regular_rows = [item for slug in PUBLIC_ORDER for item in regular_groups.get(slug, [])]
+    existing_catalog_count = existing_public_catalog_media_count(repo_root)
+    existing_home_count = existing_home_data_photo_count(repo_root)
     if (
         not regular_rows
-        and existing_public_catalog_media_count(repo_root) > 0
-        and os.environ.get("PBE_ALLOW_EMPTY_PUBLIC_CATALOG") != "1"
+        and (existing_catalog_count > 0 or existing_home_count > 0)
+        and os.environ.get(ALLOW_EMPTY_PUBLIC_CATALOG_ENV) != "1"
     ):
         raise RuntimeError(
-            "Refusing to overwrite a populated public catalog with zero publishable photos. "
-            "Rebuild the full import cache or set PBE_ALLOW_EMPTY_PUBLIC_CATALOG=1 if this is intentional."
+            "Refusing to overwrite populated public catalog artifacts with zero publishable photos "
+            f"(sqlite={existing_catalog_count:,}, home-data={existing_home_count:,}). "
+            f"Rebuild the full import cache or set {ALLOW_EMPTY_PUBLIC_CATALOG_ENV}=1 if this is intentional."
         )
     if sync_regular_assets:
         copy_regular_assets(repo_root, regular_rows)

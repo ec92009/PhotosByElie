@@ -79,7 +79,7 @@ func requirePhotosAccess() {
         return
     }
     if status == .denied || status == .restricted {
-        fail("permission_denied", "macOS is blocking Apple Photos access for this helper. Open PhotosByElie Owner from the Dock, or enable Photos access for PhotosByElie Owner, Python, Swift, or Terminal in System Settings > Privacy & Security > Photos.")
+        fail("permission_denied", "macOS is blocking Apple Photos access for this helper. Enable Photos access for PhotosByElie Photos Bridge in System Settings > Privacy & Security > Photos, then retry.")
     }
     let semaphore = DispatchSemaphore(value: 0)
     var granted = false
@@ -89,7 +89,7 @@ func requirePhotosAccess() {
     }
     _ = semaphore.wait(timeout: .now() + 120)
     if !granted {
-        fail("permission_missing", "Apple Photos permission was not granted. Quit the background helper, open PhotosByElie Owner from the Dock, approve the macOS Photos privacy prompt, then retry.")
+        fail("permission_missing", "Apple Photos permission was not granted. Enable Photos access for PhotosByElie Photos Bridge in System Settings > Privacy & Security > Photos, then retry.")
     }
 }
 
@@ -1670,9 +1670,168 @@ func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterB
     ]
 }
 
+func materializeOne(asset: PHAsset, destination: URL, allowIcloudDownloads: Bool) throws -> [String: Any] {
+    try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)
+    var row = assetRow(asset, index: 1)
+    let strategy = row["exportStrategy"] as? String ?? "unsupported"
+    let mediaType = row["mediaType"] as? String ?? "photo"
+    var materializedCount = 0
+    var sidecarRows: [[String: Any]] = []
+
+    let emitAssetProgress = { (rawProgress: Double, status: String, elapsedSeconds: Double?) in
+        let normalized = normalizedProgress(rawProgress)
+        var payload: [String: Any] = [
+            "index": 1,
+            "totalCount": 1,
+            "candidateCount": (row["eligible"] as? Bool) == true ? 1 : 0,
+            "attemptedCount": 1,
+            "materializedCount": materializedCount,
+            "localIdentifier": asset.localIdentifier,
+            "filename": row["filename"] as? String ?? "",
+            "mediaType": mediaType,
+            "exportStrategy": strategy,
+            "status": status,
+            "progress": normalized,
+            "progressPercent": Int((normalized * 100).rounded()),
+        ]
+        if let elapsedSeconds {
+            payload["elapsedSeconds"] = Int(elapsedSeconds.rounded())
+        }
+        emitProgress("asset_progress", payload)
+    }
+
+    emitProgress("materialize_one_start", [
+        "destination": destination.path,
+        "localIdentifier": asset.localIdentifier,
+        "filename": row["filename"] as? String ?? "",
+        "mediaType": mediaType,
+        "exportStrategy": strategy,
+        "icloudDownloads": [
+            "enabled": allowIcloudDownloads,
+        ],
+    ])
+
+    if strategy == "rendered_jpeg" {
+        let filename = safeFilename(row["filename"] as? String ?? "", fallback: "apple-photos-1.jpg")
+        let outputURL = destination.appendingPathComponent("0001-\(filename)")
+        var sourceAnchorVersion = "current-rendered-jpeg"
+        let materializeResult: Result<Void, Error>
+        switch writeRenderedJPEG(asset, to: outputURL, allowIcloudDownloads: allowIcloudDownloads, progressHandler: emitAssetProgress) {
+        case .success:
+            materializeResult = .success(())
+        case .failure(let renderError):
+            try? FileManager.default.removeItem(at: outputURL)
+            row["renderAttemptError"] = renderError.localizedDescription
+            emitAssetProgress(1.0, "render_fallback", nil)
+            switch writeLocalImageResourceAsJPEG(asset, to: outputURL, allowIcloudDownloads: allowIcloudDownloads, progressHandler: emitAssetProgress) {
+            case .success:
+                row["renderFallback"] = "local-resource-jpeg"
+                row["renderFallbackReason"] = renderError.localizedDescription
+                sourceAnchorVersion = "local-resource-jpeg"
+                materializeResult = .success(())
+            case .failure(let fallbackError):
+                materializeResult = .failure(BridgeError(
+                    code: "render_and_local_resource_failed",
+                    message: "Photos did not provide the rendered JPG: \(renderError.localizedDescription) Local image-source fallback also failed: \(fallbackError.localizedDescription)"
+                ))
+            }
+        }
+        switch materializeResult {
+        case .success:
+            let relativePath = outputURL.lastPathComponent
+            row["status"] = "materialized"
+            row["relative_path"] = relativePath
+            row["path"] = outputURL.path
+            materializedCount = 1
+            sidecarRows.append([
+                "relative_path": relativePath,
+                "source_anchor": [
+                    "path": "apple-photos://\(asset.localIdentifier)",
+                    "modified_at": isoDate(asset.modificationDate ?? asset.creationDate),
+                    "modified_ns": Int64((asset.modificationDate ?? asset.creationDate ?? Date(timeIntervalSince1970: 0)).timeIntervalSince1970 * 1_000_000_000),
+                    "filename": filename,
+                    "version": sourceAnchorVersion,
+                ],
+                "apple_photos": row,
+            ])
+        case .failure(let error):
+            row["eligible"] = false
+            row["status"] = "photos_export_failed"
+            row["reason"] = "Photos could not provide a rendered JPG, and the local image-source fallback could not create one: \(error.localizedDescription)"
+        }
+    } else if strategy == "resource" {
+        if let resource = preferredResource(asset), !hasExtension(resource.originalFilename, in: rawFileExtensions) {
+            let filename = safeFilename(resource.originalFilename, fallback: "apple-photos-1")
+            let outputURL = destination.appendingPathComponent("0001-\(filename)")
+            switch writeResource(resource, to: outputURL, allowIcloudDownloads: allowIcloudDownloads, progressHandler: emitAssetProgress) {
+            case .success:
+                let relativePath = outputURL.lastPathComponent
+                row["status"] = "materialized"
+                row["relative_path"] = relativePath
+                row["path"] = outputURL.path
+                materializedCount = 1
+                sidecarRows.append([
+                    "relative_path": relativePath,
+                    "source_anchor": [
+                        "path": "apple-photos://\(asset.localIdentifier)",
+                        "modified_at": isoDate(asset.modificationDate ?? asset.creationDate),
+                        "modified_ns": Int64((asset.modificationDate ?? asset.creationDate ?? Date(timeIntervalSince1970: 0)).timeIntervalSince1970 * 1_000_000_000),
+                        "filename": filename,
+                        "version": "current",
+                    ],
+                    "apple_photos": row,
+                ])
+            case .failure(let error):
+                row["eligible"] = false
+                row["status"] = "unavailable_from_icloud"
+                row["reason"] = allowIcloudDownloads
+                    ? "Photos could not download or provide the original resource for Owner import: \(error.localizedDescription)"
+                    : "Original resource is not available locally and network download is disabled for Owner import safety: \(error.localizedDescription)"
+            }
+        } else {
+            row["eligible"] = false
+            row["status"] = "unsupported"
+            row["reason"] = "No supported developed photo/video resource found."
+        }
+    } else {
+        row["eligible"] = false
+        row["status"] = "unsupported"
+        row["reason"] = "No supported developed photo/video resource found."
+    }
+
+    let sidecar: [String: Any] = [
+        "schema": "photosbyelie.apple-photos-source-anchors.v1",
+        "created_at": isoDate(Date()),
+        "icloudDownloads": [
+            "enabled": allowIcloudDownloads,
+        ],
+        "assets": sidecarRows,
+    ]
+    let sidecarURL = destination.appendingPathComponent(".pbe-apple-photos-assets.json")
+    try jsonData(sidecar).write(to: sidecarURL, options: .atomic)
+    emitProgress("materialize_one_done", [
+        "destination": destination.path,
+        "localIdentifier": asset.localIdentifier,
+        "materializedCount": materializedCount,
+        "status": row["status"] as? String ?? "",
+    ])
+    return [
+        "ok": true,
+        "mode": "materialize-one",
+        "destination": destination.path,
+        "sidecar": sidecarURL.path,
+        "count": 1,
+        "materializedCount": materializedCount,
+        "icloudDownloads": [
+            "enabled": allowIcloudDownloads,
+        ],
+        "items": [row],
+    ]
+}
+
 let command = CommandLine.arguments.dropFirst().first ?? ""
 if command.isEmpty || command == "--help" {
-    printJSON(["ok": true, "usage": "apple_photos_bridge.swift albums | library-index [--limit N] [--offset N] [--date-from YYYY-MM-DD] [--date-to YYYY-MM-DD] | library-index-file --destination PATH [--date-from YYYY-MM-DD] [--date-to YYYY-MM-DD] [--progress-every N] | preview --asset-id ID --destination PATH [--max-pixel N] | video --asset-id ID --destination PATH | preflight --album-id ID [--filter-bursts] [--allow-icloud-downloads] | export --album-id ID --destination PATH [--filter-bursts] [--allow-icloud-downloads]"])
+    printJSON(["ok": true, "usage": "apple_photos_bridge.swift albums | library-index [--limit N] [--offset N] [--date-from YYYY-MM-DD] [--date-to YYYY-MM-DD] | library-index-file --destination PATH [--date-from YYYY-MM-DD] [--date-to YYYY-MM-DD] [--progress-every N] | preview --asset-id ID --destination PATH [--max-pixel N] | video --asset-id ID --destination PATH | preflight --album-id ID [--filter-bursts] [--allow-icloud-downloads] | export --album-id ID --destination PATH [--filter-bursts] [--allow-icloud-downloads] | materialize-one --asset-id ID --destination PATH [--allow-icloud-downloads] [--result-destination PATH]"])
     exit(0)
 }
 
@@ -1727,6 +1886,18 @@ do {
         }
         let album = try findAlbum(id: argValue("--album-id"), name: argValue("--album-name"))
         printJSON(try materialize(album: album, destination: URL(fileURLWithPath: destination), limit: intArg("--limit"), filterBursts: boolArg("--filter-bursts"), allowIcloudDownloads: boolArg("--allow-icloud-downloads")))
+    case "materialize-one":
+        guard let destination = argValue("--destination") else {
+            fail("missing_destination", "Missing --destination for Apple Photos single-asset materialization.")
+        }
+        let asset = try findAsset(id: argValue("--asset-id"))
+        let payload = try materializeOne(asset: asset, destination: URL(fileURLWithPath: destination), allowIcloudDownloads: boolArg("--allow-icloud-downloads"))
+        if let resultDestination = argValue("--result-destination") {
+            let resultURL = URL(fileURLWithPath: resultDestination)
+            try FileManager.default.createDirectory(at: resultURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try jsonData(payload).write(to: resultURL, options: .atomic)
+        }
+        printJSON(payload)
     default:
         fail("bad_command", "Unknown Apple Photos bridge command: \(command)", status: 2)
     }

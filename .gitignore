@@ -45,6 +45,7 @@ assets/owner-actions/approved-burst-culling-result-*.json
 assets/owner-actions/blocked-to-wastebasket-result-*.json
 assets/owner-actions/sidecar-ai-metadata-plan.json
 assets/owner-actions/sidecar-photos-sync-status.json
+assets/owner-actions/sidecar-upload-runs/
 assets/owner-actions/review-state-normalization-*.json
 assets/owner-actions/title-keyword-review-queue/*.json
 assets/owner-actions/title-keyword-review-queue/proposed-state.json

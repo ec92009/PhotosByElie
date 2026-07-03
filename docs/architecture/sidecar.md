@@ -114,6 +114,19 @@ is not a perceptual duplicate detector for visually similar files with different
 source anchors. Bridge-queued items are treated as having crossed the Owner
 handoff boundary and are hidden from active Culling and Review surfaces.
 
+Bridge execution now has a durable local run ledger:
+
+- `sidecar_upload_bridge_runs` records each bridge dry run, status, spool path,
+  summary, and whether upload execution was requested.
+- `sidecar_upload_bridge_run_items` records the queued asset, derived Owner
+  photo id, planned R2 keys, export status, exported file path, byte count, and
+  failure reason when Photos cannot materialize the item.
+
+The current execution slice can materialize one queued item from Apple Photos
+into `assets/owner-actions/sidecar-upload-runs/<run-id>/export/`, allowing
+iCloud downloads for that approved bridge item only. It stops before any R2
+write or Owner catalog registration.
+
 Upload Bridge does not generate private JPG render triplets. Private renders are
 an on-demand Worker cache: checkout/delivery can lazily create
 `renders/<media_id>_1mp.jpg`, `renders/<media_id>_3mp.jpg`, and
@@ -284,9 +297,9 @@ Remaining near-term slices:
 - Incremental index refresh refinements, such as cheaper change detection and
   richer missing-asset reporting.
 - Album/smart-album source filters.
-- Real Upload Bridge execution: force Photos downloads only for queued approved
-  picks, export full assets, upload private masters and public previews to R2,
-  and register the results through the Owner import/catalog path.
+- Real Upload Bridge execution: extend the one-item ledgered export dry run into
+  guarded `--execute` uploads of private masters and public previews to R2, then
+  register the results through the Owner import/catalog path.
 - Private render cache pruning for existing `renders/<media_id>_<size>mp.jpg`
   objects, protecting sold media and leaving future Worker-created renders in
   place.

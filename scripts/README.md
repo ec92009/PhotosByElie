@@ -488,13 +488,22 @@ python3 scripts/sync_r2_media.py --scope private --upload --workers 2 --request-
 Normal imports upload public previews and private developed masters only. Private buyer JPG render triplets are now an on-demand Worker cache: checkout can generate missing JPG 1 MP, 3 MP, and 6 MP files from the private master through Cloudflare Images and then store the result back under `renders/<photo-id>_<size>mp.jpg`.
 
 Sidecar Upload Bridge starts from picked + Review-approved Apple Photos rows
-that have been queued across the bridge. The first implementation slice is a
-dry-run manifest only; it reports planned private master and public preview keys
-without exporting from Photos or writing R2:
+that have been queued across the bridge. Plan mode reports planned private
+master and public preview keys without exporting from Photos or writing R2:
 
 ```bash
 python3 scripts/sidecar_upload_bridge.py --limit 20
 python3 scripts/sidecar_upload_bridge.py --json --output assets/owner-actions/sidecar-upload-runs/dry-run.json
+```
+
+The first materialization dry run exports one queued Apple Photos asset into a
+local run spool and records the attempt in `sidecar_upload_bridge_runs` plus
+`sidecar_upload_bridge_run_items`. It may allow Photos/iCloud downloads for that
+one bridge-approved item, but still does not write R2 or register catalog rows:
+
+```bash
+python3 scripts/sidecar_upload_bridge.py --export-one --limit 1
+python3 scripts/sidecar_upload_bridge.py --export-one --json
 ```
 
 Bridge plans intentionally omit private JPG render triplets. Existing private

@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, timezone
 import json
 import re
 import sqlite3
+import subprocess
 import uuid
 from pathlib import Path
 from typing import Any, Iterable
@@ -25,6 +26,8 @@ KEYWORD_BLACKLIST_JSON = Path("assets/owner-actions/keyword-blacklist.json")
 DEFAULT_PUBLIC_BUCKET = "photosbyelie-public"
 DEFAULT_PRIVATE_BUCKET = "photosbyelie-private"
 DEFAULT_PRIVATE_PREFIX = "masters"
+DEFAULT_UPLOAD_BRIDGE_RUN_ROOT = Path("assets/owner-actions/sidecar-upload-runs")
+APPLE_PHOTOS_BRIDGE_APP = Path.home() / "Applications" / "PhotosByElie Photos Bridge.app"
 PRIVATE_RENDER_PRODUCTS = ("jpg-6mp", "jpg-3mp", "jpg-1mp")
 RATING_VALUES = {0, 1, 2, 3, 4, 5}
 COLOR_VALUES = {"", "red", "yellow", "green", "blue", "purple"}
@@ -275,6 +278,49 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         ) WITHOUT ROWID;
 
         CREATE INDEX IF NOT EXISTS idx_sidecar_mock_uploads_state ON sidecar_mock_uploads(mock_state, updated_at);
+
+        CREATE TABLE IF NOT EXISTS sidecar_upload_bridge_runs (
+          run_id         TEXT PRIMARY KEY CHECK (trim(run_id) <> ''),
+          mode           TEXT NOT NULL DEFAULT 'export-dry-run' CHECK (trim(mode) <> ''),
+          status         TEXT NOT NULL DEFAULT 'planned' CHECK (trim(status) <> ''),
+          execute_upload INTEGER NOT NULL DEFAULT 0 CHECK (execute_upload IN (0, 1)),
+          limit_count    INTEGER NOT NULL DEFAULT 1,
+          started_at     TEXT,
+          completed_at   TEXT,
+          error_text     TEXT,
+          spool_root     TEXT,
+          summary_json   TEXT NOT NULL DEFAULT '{}',
+          created_at     TEXT,
+          updated_at     TEXT
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_sidecar_upload_bridge_runs_status
+          ON sidecar_upload_bridge_runs(status, created_at);
+
+        CREATE TABLE IF NOT EXISTS sidecar_upload_bridge_run_items (
+          run_item_id       TEXT PRIMARY KEY CHECK (trim(run_item_id) <> ''),
+          run_id            TEXT NOT NULL CHECK (trim(run_id) <> ''),
+          asset_id          TEXT NOT NULL CHECK (trim(asset_id) <> ''),
+          photo_id          TEXT NOT NULL CHECK (trim(photo_id) <> ''),
+          filename          TEXT,
+          media_type        TEXT,
+          queued_at         TEXT,
+          status            TEXT NOT NULL DEFAULT 'planned' CHECK (trim(status) <> ''),
+          export_status     TEXT NOT NULL DEFAULT 'planned' CHECK (trim(export_status) <> ''),
+          export_path       TEXT,
+          export_bytes      INTEGER,
+          planned_keys_json TEXT NOT NULL DEFAULT '[]',
+          error_text        TEXT,
+          created_at        TEXT,
+          updated_at        TEXT,
+          FOREIGN KEY (run_id) REFERENCES sidecar_upload_bridge_runs(run_id) ON DELETE CASCADE,
+          FOREIGN KEY (asset_id) REFERENCES sidecar_assets(asset_id) ON DELETE CASCADE
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_sidecar_upload_bridge_run_items_run
+          ON sidecar_upload_bridge_run_items(run_id, status);
+        CREATE INDEX IF NOT EXISTS idx_sidecar_upload_bridge_run_items_asset
+          ON sidecar_upload_bridge_run_items(asset_id, created_at);
         """
     )
     decision_columns = {
@@ -1521,7 +1567,316 @@ def upload_bridge_plan(repo_root: Path, limit: int = 500) -> dict[str, Any]:
         "collisionCount": collision_count,
         "coveredKeyCount": covered_key_count,
         "plannedKeyCount": total_key_count,
-        "message": "Upload Bridge dry-run only. Real Apple Photos export, R2 upload, and Owner registration are the next implementation slice.",
+        "message": "Upload Bridge plan only. Use sidecar_upload_bridge.py --export-one to materialize one queued item into a local spool; R2 upload and Owner registration remain reserved for the future --execute slice.",
+    }
+
+
+def _upload_bridge_run_id() -> str:
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    return f"ub-{stamp}-{uuid.uuid4().hex[:8]}"
+
+
+def _run_apple_photos_materialize_one(
+    repo_root: Path,
+    *,
+    asset_id: str,
+    destination: Path,
+    allow_icloud_downloads: bool,
+    timeout: int = 1800,
+) -> dict[str, Any]:
+    destination.mkdir(parents=True, exist_ok=True)
+    result_destination = destination / "photos-bridge-result.json"
+    if APPLE_PHOTOS_BRIDGE_APP.exists():
+        command = [
+            "open",
+            "-W",
+            "-n",
+            str(APPLE_PHOTOS_BRIDGE_APP),
+            "--args",
+            "materialize-one",
+        ]
+    else:
+        bridge = repo_root / "scripts/apple_photos_bridge.swift"
+        if not bridge.exists():
+            raise RuntimeError(f"Apple Photos bridge is missing: {bridge}")
+        command = ["swift", str(bridge), "materialize-one"]
+    command.extend([
+        "--asset-id",
+        asset_id,
+        "--destination",
+        str(destination),
+        "--result-destination",
+        str(result_destination),
+    ])
+    if allow_icloud_downloads:
+        command.append("--allow-icloud-downloads")
+    try:
+        result = subprocess.run(
+            command,
+            cwd=repo_root,
+            text=True,
+            capture_output=True,
+            timeout=timeout,
+            check=False,
+        )
+    except FileNotFoundError as error:
+        raise RuntimeError("Swift is required for the Apple Photos PhotoKit bridge. Install Xcode Command Line Tools.") from error
+    except subprocess.TimeoutExpired as error:
+        raise RuntimeError("Apple Photos bridge timed out while materializing the queued asset.") from error
+    stdout = (result.stdout or "").strip()
+    stderr = (result.stderr or "").strip()
+    if result_destination.exists() and result_destination.stat().st_size > 0:
+        stdout = result_destination.read_text(encoding="utf-8").strip()
+    try:
+        payload = json.loads(stdout or "{}")
+    except json.JSONDecodeError as error:
+        message = stderr or stdout or "Apple Photos bridge returned invalid JSON or did not write its result file."
+        raise RuntimeError(message.strip()) from error
+    if result.returncode != 0 or payload.get("ok") is False:
+        message = str(payload.get("error") or stderr or f"Apple Photos bridge exited {result.returncode}").strip()
+        raise RuntimeError(message)
+    if stderr:
+        payload["stderr"] = stderr
+    return payload
+
+
+def run_upload_bridge_export_dry_run(
+    repo_root: Path,
+    *,
+    limit: int = 1,
+    spool_root: Path | None = None,
+    allow_icloud_downloads: bool = True,
+    execute_upload: bool = False,
+) -> dict[str, Any]:
+    """Materialize one bridge-queued item from Photos and record an upload-run ledger.
+
+    This is deliberately not an R2 uploader yet. It proves the bridge can force
+    the Apple Photos materialization step for approved picks, computes the exact
+    Owner-style keys, and records the run so the later R2 execution slice can
+    resume from an auditable trail.
+    """
+    if execute_upload:
+        raise ValueError("R2 upload execution is not implemented yet. Run without --execute for the export dry run.")
+    safe_limit = max(1, min(int(limit or 1), 1))
+    run_id = _upload_bridge_run_id()
+    now = now_iso()
+    base_root = spool_root or DEFAULT_UPLOAD_BRIDGE_RUN_ROOT
+    if not base_root.is_absolute():
+        base_root = repo_root / base_root
+    run_root = base_root / run_id
+    export_root = run_root / "export"
+    export_root.mkdir(parents=True, exist_ok=True)
+
+    with connect(repo_root) as conn:
+        rows = _upload_bridge_rows(conn, safe_limit)
+        if not rows:
+            conn.execute(
+                """
+                INSERT INTO sidecar_upload_bridge_runs
+                  (run_id, mode, status, execute_upload, limit_count, started_at, completed_at,
+                   spool_root, summary_json, created_at, updated_at)
+                VALUES (?, 'export-dry-run', 'no-queued-items', 0, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    run_id,
+                    safe_limit,
+                    now,
+                    now,
+                    str(run_root),
+                    _json_text({"bridgeQueuedCount": 0, "r2UploadPerformed": False}),
+                    now,
+                    now,
+                ),
+            )
+            return {
+                "ok": True,
+                "mode": "export-dry-run",
+                "runId": run_id,
+                "status": "no-queued-items",
+                "count": 0,
+                "spoolRoot": str(run_root),
+                "r2UploadPerformed": False,
+                "message": "No active Upload Bridge rows are queued.",
+            }
+        planned_key_sets: dict[str, list[dict[str, str]]] = {}
+        photo_ids: dict[str, str] = {}
+        all_planned_keys: list[dict[str, str]] = []
+        for row in rows:
+            photo_id, keys = _planned_r2_keys(row)
+            asset_id = str(row["asset_id"])
+            photo_ids[asset_id] = photo_id
+            planned_key_sets[asset_id] = keys
+            all_planned_keys.extend(keys)
+        current_r2 = _current_r2_objects_for_plan(conn, all_planned_keys)
+        conn.execute(
+            """
+            INSERT INTO sidecar_upload_bridge_runs
+              (run_id, mode, status, execute_upload, limit_count, started_at, spool_root,
+               summary_json, created_at, updated_at)
+            VALUES (?, 'export-dry-run', 'running', 0, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                run_id,
+                safe_limit,
+                now,
+                str(run_root),
+                _json_text({"bridgeQueuedCount": len(rows), "r2UploadPerformed": False}),
+                now,
+                now,
+            ),
+        )
+        ledger_items: list[dict[str, Any]] = []
+        for row in rows:
+            asset_id = str(row["asset_id"])
+            planned_keys: list[dict[str, Any]] = []
+            item_collision_count = 0
+            for key in planned_key_sets.get(asset_id, []):
+                current = current_r2.get((key["bucket"], key["key"]))
+                if current is not None:
+                    item_collision_count += 1
+                planned_keys.append({
+                    **key,
+                    "exists": current is not None,
+                    **({"existing": current} if current else {}),
+                })
+            run_item_id = uuid.uuid4().hex
+            conn.execute(
+                """
+                INSERT INTO sidecar_upload_bridge_run_items
+                  (run_item_id, run_id, asset_id, photo_id, filename, media_type, queued_at,
+                   status, export_status, planned_keys_json, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'planned', 'planned', ?, ?, ?)
+                """,
+                (
+                    run_item_id,
+                    run_id,
+                    asset_id,
+                    photo_ids.get(asset_id, ""),
+                    row["filename"] or "",
+                    row["media_type"] or "",
+                    row["uploaded_at"] or "",
+                    _json_text(planned_keys),
+                    now,
+                    now,
+                ),
+            )
+            ledger_items.append({
+                "runItemId": run_item_id,
+                "assetId": asset_id,
+                "photoId": photo_ids.get(asset_id, ""),
+                "filename": row["filename"] or "",
+                "capturedAt": row["captured_at"] or "",
+                "mediaType": row["media_type"] or "",
+                "queuedAt": row["uploaded_at"] or "",
+                "collisionCount": item_collision_count,
+                "plannedKeys": planned_keys,
+            })
+
+    item = ledger_items[0]
+    export_payload: dict[str, Any] | None = None
+    export_error = ""
+    export_status = "planned"
+    export_path = ""
+    export_bytes: int | None = None
+    item_status = "planned"
+    run_status = "running"
+    try:
+        export_payload = _run_apple_photos_materialize_one(
+            repo_root,
+            asset_id=item["assetId"],
+            destination=export_root,
+            allow_icloud_downloads=allow_icloud_downloads,
+        )
+        exported_item = (export_payload.get("items") or [{}])[0]
+        if isinstance(exported_item, dict):
+            export_status = str(exported_item.get("status") or "")
+            export_path = str(exported_item.get("path") or "")
+            export_error = str(exported_item.get("reason") or exported_item.get("error") or "")
+        materialized_count = int(export_payload.get("materializedCount") or 0)
+        if export_path and Path(export_path).exists():
+            export_bytes = Path(export_path).stat().st_size
+        if materialized_count > 0 and export_path:
+            item_status = "exported"
+            run_status = "exported"
+        else:
+            item_status = "export_failed"
+            run_status = "export_failed"
+            export_error = export_error or "Apple Photos bridge did not materialize an export file."
+    except Exception as error:  # noqa: BLE001 - ledger must capture bridge failures.
+        item_status = "export_failed"
+        run_status = "export_failed"
+        export_status = "failed"
+        export_error = str(error)
+
+    completed_at = now_iso()
+    run_summary = {
+        "bridgeQueuedCount": len(ledger_items),
+        "exportedCount": 1 if item_status == "exported" else 0,
+        "failedCount": 1 if item_status != "exported" else 0,
+        "r2UploadPerformed": False,
+        "executeUpload": False,
+    }
+    with connect(repo_root) as conn:
+        conn.execute(
+            """
+            UPDATE sidecar_upload_bridge_run_items
+            SET status = ?, export_status = ?, export_path = ?, export_bytes = ?,
+                error_text = ?, updated_at = ?
+            WHERE run_item_id = ?
+            """,
+            (
+                item_status,
+                export_status,
+                export_path,
+                export_bytes,
+                export_error,
+                completed_at,
+                item["runItemId"],
+            ),
+        )
+        conn.execute(
+            """
+            UPDATE sidecar_upload_bridge_runs
+            SET status = ?, completed_at = ?, error_text = ?, summary_json = ?, updated_at = ?
+            WHERE run_id = ?
+            """,
+            (
+                run_status,
+                completed_at,
+                export_error,
+                _json_text(run_summary),
+                completed_at,
+                run_id,
+            ),
+        )
+
+    item["status"] = item_status
+    item["export"] = {
+        "status": export_status,
+        "path": export_path,
+        "bytes": export_bytes,
+        "error": export_error,
+        "allowIcloudDownloads": allow_icloud_downloads,
+    }
+    if export_payload:
+        item["photosBridge"] = {
+            "mode": export_payload.get("mode"),
+            "materializedCount": export_payload.get("materializedCount"),
+            "sidecar": export_payload.get("sidecar"),
+        }
+    return {
+        "ok": item_status == "exported",
+        "mode": "export-dry-run",
+        "runId": run_id,
+        "status": run_status,
+        "spoolRoot": str(run_root),
+        "exportRoot": str(export_root),
+        "r2UploadPerformed": False,
+        "executeUpload": False,
+        "count": len(ledger_items),
+        "items": [item],
+        "summary": run_summary,
+        "message": "Apple Photos export dry run completed; no R2 writes or Owner catalog registration were performed.",
     }
 
 
@@ -2315,6 +2670,7 @@ def main() -> None:
     parser.add_argument("--summary", action="store_true")
     parser.add_argument("--upload-plan", action="store_true")
     parser.add_argument("--upload-bridge-plan", action="store_true")
+    parser.add_argument("--upload-bridge-export-one", action="store_true")
     parser.add_argument("--ai-plan", action="store_true")
     parser.add_argument("--sync-status", action="store_true")
     parser.add_argument("--mock-upload", action="store_true")
@@ -2331,6 +2687,8 @@ def main() -> None:
         print(json.dumps(mock_upload(repo_root), indent=2))
     elif args.upload_bridge_plan:
         print(json.dumps(upload_bridge_plan(repo_root), indent=2))
+    elif args.upload_bridge_export_one:
+        print(json.dumps(run_upload_bridge_export_dry_run(repo_root), indent=2))
     elif args.upload_plan:
         print(json.dumps(upload_plan(repo_root), indent=2))
     elif args.ai_plan:

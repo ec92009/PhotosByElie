@@ -457,8 +457,9 @@ Clock state: running
 | 2026-07-03 | 14:19 CEST | 14:20 CEST | 0:01 | Ran Sidecar picked-only AI metadata review automation and reworked remaining proposed rows; command/runtime excluded. |
 | 2026-07-03 | 15:00 CEST | 15:01 CEST | 0:01 | Requested Upload plan show mock-uploaded summary and R2 collision count; implementation/testing excluded. |
 | 2026-07-03 | 16:05 CEST | 16:06 CEST | 0:01 | Started the Sidecar Upload Bridge implementation slice, renaming mock upload into a bridge queue and adding dry-run upload/cache-prune tooling; command/runtime and browser QA excluded. |
+| 2026-07-03 | 16:29 CEST | 16:30 CEST | 0:01 | Directed the next Upload Bridge slice: durable run ledger plus one queued-item Apple Photos export dry run without R2 writes; implementation/runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 24:46
+Active collaboration time used: 24:47
 Remaining budget: not set

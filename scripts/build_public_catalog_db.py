@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 import re
 import sqlite3
 import subprocess
@@ -18,6 +19,7 @@ from owner_state_db import connect as owner_db_connect, media_lifecycle_snapshot
 
 DEFAULT_OUTPUT = Path("assets/catalog/photosbyelie.sqlite")
 DEFAULT_PRODUCT_PRICING = Path("assets/catalog/product-pricing.json")
+ALLOW_EMPTY_CATALOG_ENV = "PBE_ALLOW_EMPTY_PUBLIC_CATALOG"
 COLLECTION_ORDER = ["france", "usa", "spain", "mexico", "ai", "italy", "portugal", "slovakia", "unknown"]
 COLLECTION_DEFAULTS = {
     "france": ("France", "Saturn Lightroom archive selections prepared from the Camera source."),
@@ -103,6 +105,35 @@ def load_existing_video_durations(path: Path) -> dict[str, float]:
         except UnboundLocalError:
             pass
     return {str(media_id): float(duration) for media_id, duration in rows}
+
+
+def existing_media_item_count(path: Path) -> int:
+    if not path.exists():
+        return 0
+    try:
+        conn = sqlite3.connect(path)
+        row = conn.execute("SELECT COUNT(*) FROM media_items").fetchone()
+    except sqlite3.Error:
+        return 0
+    finally:
+        try:
+            conn.close()
+        except UnboundLocalError:
+            pass
+    return int(row[0] or 0) if row else 0
+
+
+def guard_nonempty_catalog(output: Path, media_item_count: int, allow_empty: bool = False) -> None:
+    if media_item_count > 0 or allow_empty or os.environ.get(ALLOW_EMPTY_CATALOG_ENV) == "1":
+        return
+    existing_count = existing_media_item_count(output)
+    if existing_count <= 0:
+        return
+    raise RuntimeError(
+        "Refusing to overwrite populated public catalog "
+        f"{output} ({existing_count:,} media rows) with zero media rows. "
+        f"Pass --allow-empty or set {ALLOW_EMPTY_CATALOG_ENV}=1 if this is intentional."
+    )
 
 
 def metadata_value(photo: dict[str, Any], label: str) -> str:
@@ -704,7 +735,7 @@ def ordered_collections(catalog: dict[str, Any]) -> list[tuple[str, dict[str, An
     return sorted(merged.items(), key=lambda item: (order.get(item[0], len(order)), item[0]))
 
 
-def write_db(repo_root: Path, output: Path, source: str = "auto") -> dict[str, int]:
+def write_db(repo_root: Path, output: Path, source: str = "auto", allow_empty: bool = False) -> dict[str, int]:
     catalog = load_catalog(repo_root, source=source)
     title_keyword_decisions = load_applied_title_keyword_decisions(repo_root)
     applied_title_keyword_ids = set(title_keyword_decisions)
@@ -731,6 +762,7 @@ def write_db(repo_root: Path, output: Path, source: str = "auto") -> dict[str, i
                 photos.append((slug, collection, photo_id, sort_index, photo))
     if duplicate_photo_ids:
         raise RuntimeError(f"duplicate media ids: {', '.join(sorted(duplicate_photo_ids)[:20])}")
+    guard_nonempty_catalog(output, len(photos), allow_empty=allow_empty)
 
     camera_names = sorted({metadata_value(photo, "Camera") for *_prefix, photo in photos if metadata_value(photo, "Camera")}, key=str.casefold)
     lens_names = sorted({metadata_value(photo, "Lens") for *_prefix, photo in photos if metadata_value(photo, "Lens")}, key=str.casefold)
@@ -1219,10 +1251,15 @@ def main() -> None:
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--source", choices=("auto", "photos-data"), default="auto")
+    parser.add_argument(
+        "--allow-empty",
+        action="store_true",
+        help=f"allow overwriting an existing populated public catalog with zero media rows; also allowed by {ALLOW_EMPTY_CATALOG_ENV}=1",
+    )
     args = parser.parse_args()
     repo_root = args.repo_root.resolve()
     output = args.output if args.output.is_absolute() else repo_root / args.output
-    counts = write_db(repo_root, output, source=args.source)
+    counts = write_db(repo_root, output, source=args.source, allow_empty=args.allow_empty)
     if not args.quiet:
         print(f"Wrote {output}")
         print(", ".join(f"{table}={count}" for table, count in counts.items()))

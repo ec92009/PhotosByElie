@@ -463,8 +463,10 @@ Clock state: running
 | 2026-07-03 | 17:01 CEST | 17:42 CEST | 0:02 | Requested Sidecar UI cleanup for Upload Bridge real-upload controls, item count, visible stats, and live progress feedback; implementation/runtime/browser QA excluded. |
 | 2026-07-03 | 17:48 CEST | 17:50 CEST | 0:01 | Requested Review-only Upload Bridge UI placement and clarified real-upload source pool wording; implementation/browser QA excluded. |
 | 2026-07-03 | 18:10 CEST | 18:12 CEST | 0:01 | Requested Upload Bridge remaining-count semantics and live uploaded-item thumbnails; implementation/browser QA excluded. |
+| 2026-07-03 | 18:39 CEST | 18:40 CEST | 0:01 | Diagnosed empty Expo as local generated public catalog artifacts overwritten with zero media rows, while R2 uploaded objects remain reachable. |
+| 2026-07-03 | 18:40 CEST | 18:41 CEST | 0:01 | Approved restoring the public catalog artifacts and adding a zero-row overwrite guard. |
 
 ## Totals
 
-Active collaboration time used: 24:59
+Active collaboration time used: 25:01
 Remaining budget: not set

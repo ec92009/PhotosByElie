@@ -10,7 +10,7 @@ metadata; Owner decides publication and commerce.
 
 Sidecar has its own local visible version in `SIDECAR_VERSION`.
 
-- Current Sidecar version: `v125.5`
+- Current Sidecar version: `v125.6`
 - Versioning follows the canonical `~/Dev/.SOPs/VERSIONING_SOP.md` default
   calendar visible-version rule for this local web-app surface.
 - Sidecar version bumps do not imply a public Photos By Elie site version bump.
@@ -219,9 +219,9 @@ Sidecar has two primary pages backed by the same current window:
   approve, reject, AI rework, pick, and unpick actions. Approve saves the
   visible title and keywords as approved metadata; picked assets do not enter
   the Upload Bridge until this page marks their metadata approved. The
-  Upload Bridge rail loads by default with the current window, stays visible even
-  when empty, and refreshes after local decision changes such as approval or
-  undo. The title and keyword field arrows propagate that single field to the
+  Upload Bridge rail is Review-only, stays off the Culling panel, and refreshes
+  after local decision changes such as approval or undo. The title and keyword
+  field arrows propagate that single field to the
   current and following picked rows inside the same two-hour capture window,
   then approve those rows locally.
   Unedited rows seed those fields from existing Apple Photos title/keywords

@@ -511,9 +511,9 @@ master and watermarked public preview pair to R2. Planned key collisions are
 skipped by default; pass `--allow-r2-overwrite` only when you intentionally want
 to replace existing R2 objects. Successful bridge-uploaded keys are remembered
 in the local bridge ledger, so retrying after a partial run skips already
-uploaded keys even before Owner catalog registration exists. The Sidecar UI
-exposes the same guarded execution through the Upload Bridge rail with an item
-count field and streamed per-item progress feedback:
+uploaded keys even before Owner catalog registration exists. The Sidecar Review
+UI exposes the same guarded execution through the Upload Bridge rail with an
+item count field and streamed per-item progress feedback:
 
 ```bash
 python3 scripts/sidecar_upload_bridge.py --execute --limit 1

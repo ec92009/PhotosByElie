@@ -16,6 +16,7 @@
   const indexStatusProgress = $("[data-sidecar-index-progress]");
   const burstCullButton = $("[data-sidecar-burst-cull]");
   const emptyWastebasketButton = $("[data-sidecar-empty-wastebasket]");
+  const uploadPlanButton = $("[data-sidecar-upload-plan]");
   const pageTabs = Array.from(document.querySelectorAll("[data-sidecar-page]"));
   const filterInputs = Array.from(document.querySelectorAll("[data-sidecar-filter]"));
   const filterToggleButtons = Array.from(document.querySelectorAll("[data-sidecar-filter-toggle]"));
@@ -382,7 +383,7 @@
   const videoPlayerMarkup = (item, autoplay = true) => `
     <video class="sidecar-inline-video" controls playsinline preload="metadata" ${autoplay ? "autoplay" : ""} poster="${escapeHtml(previewUrl(item))}" src="${escapeHtml(videoUrl(item))}"></video>
   `;
-  const versionFallback = "125.5";
+  const versionFallback = "125.6";
   const versionFallbackLabel = `v${versionFallback}`;
   const videoBadge = (item, index, label) => isVideo(item)
     ? videoOverlay(item, index, label)
@@ -1082,11 +1083,26 @@
     `;
   };
 
+  const hidePlanPanel = () => {
+    if (!planPanel) return;
+    planPanel.hidden = true;
+    planPanel.classList.remove("is-upload-plan");
+    planPanel.dataset.sidecarPlanKind = "";
+    if (planOutput) planOutput.innerHTML = "";
+    document.body.classList.remove("sidecar-has-plan");
+  };
+
   const renderPageChrome = () => {
     const config = pageConfigs[state.page] || pageConfigs.culling;
+    const reviewActive = isReviewPage();
     if (surfaceEyebrow) surfaceEyebrow.textContent = config.eyebrow;
     if (surfaceTitle) surfaceTitle.textContent = config.title;
     document.body.dataset.sidecarActivePage = state.page;
+    if (uploadPlanButton) {
+      uploadPlanButton.hidden = !reviewActive;
+      uploadPlanButton.disabled = !reviewActive;
+    }
+    if (!reviewActive && planPanel?.dataset.sidecarPlanKind === "upload") hidePlanPanel();
     pageTabs.forEach((button) => {
       const selected = button.dataset.sidecarPage === state.page;
       button.setAttribute("aria-selected", selected ? "true" : "false");
@@ -1923,7 +1939,19 @@
     renderPageChrome();
     renderSurface();
     saveWindowState();
-    if (switchToCullingIfReviewEmpty()) {
+    let uploadRailPayload = null;
+    let uploadRailError = null;
+    if (isReviewPage()) {
+      try {
+        uploadRailPayload = await refreshUploadRail({ silent: true });
+      } catch (error) {
+        uploadRailError = error;
+      }
+    }
+    const keepEmptyReviewForBridge = isReviewPage()
+      && !visibleIndexes().length
+      && bridgeQueuedCountFromPayload(uploadRailPayload || {}) > 0;
+    if (!keepEmptyReviewForBridge && switchToCullingIfReviewEmpty()) {
       await waitForStatusPaint();
       await loadWindow();
       return;
@@ -1938,10 +1966,8 @@
     const endLabel = effectiveOffset + visibleCount;
     const loadedMessage = `Showing matching item${visibleCount === 1 ? "" : "s"} ${startLabel.toLocaleString()}-${endLabel.toLocaleString()} from ${sourceLabel}. Showing ${visibleCount.toLocaleString()} of ${limit.toLocaleString()} visible preview${limit === 1 ? "" : "s"}.${indexedNote}`;
     setStatus(loadedMessage);
-    try {
-      await refreshUploadRail({ silent: true });
-    } catch (error) {
-      setStatus(`${loadedMessage} Upload Bridge unavailable: ${error.message || "unknown error"}`);
+    if (uploadRailError && isReviewPage()) {
+      setStatus(`${loadedMessage} Upload Bridge unavailable: ${uploadRailError.message || "unknown error"}`);
     }
   };
 
@@ -2049,7 +2075,7 @@
       ? `<p>${windowPlan.visiblePicked.toLocaleString()} picked item${windowPlan.visiblePicked === 1 ? "" : "s"} match the current Review filters.</p>`
       : "";
     const globalLine = globalPicked
-      ? `<p>${globalPicked.toLocaleString()} picked item${globalPicked === 1 ? "" : "s"} indexed globally: ${globalReady.toLocaleString()} ready for Upload Bridge, ${globalNeedsReview.toLocaleString()} still need Review approval.</p>`
+      ? `<p>${globalPicked.toLocaleString()} picked item${globalPicked === 1 ? "" : "s"} indexed globally: ${globalReady.toLocaleString()} approved but not yet queued, ${globalNeedsReview.toLocaleString()} still need Review approval.</p>`
       : "";
     return `
       <p>${escapeHtml(currentLine)}</p>
@@ -2153,6 +2179,11 @@
   };
 
   const loadPlan = async (kind, { silent = false } = {}) => {
+    if (kind === "upload" && !isReviewPage()) {
+      if (planPanel?.dataset.sidecarPlanKind === "upload") hidePlanPanel();
+      if (!silent) setStatus("Upload Bridge is available from Review.");
+      return null;
+    }
     const endpoint = kind === "upload" ? "/__sidecar/upload-plan" : "/__sidecar/commit-plan";
     const response = await fetch(endpoint);
     const payload = await response.json().catch(() => ({}));
@@ -2167,10 +2198,11 @@
     } else if (!silent) {
       setStatus("Photos commit plan refreshed.");
     }
+    return payload;
   };
 
   const refreshUploadRail = async (options = {}) => {
-    await loadPlan("upload", options);
+    return loadPlan("upload", options);
   };
 
   const refreshUploadRailQuietly = () => {

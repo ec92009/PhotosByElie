@@ -466,8 +466,9 @@ Clock state: running
 | 2026-07-03 | 18:39 CEST | 18:40 CEST | 0:01 | Diagnosed empty Expo as local generated public catalog artifacts overwritten with zero media rows, while R2 uploaded objects remain reachable. |
 | 2026-07-03 | 18:40 CEST | 18:41 CEST | 0:01 | Approved restoring the public catalog artifacts and adding a zero-row overwrite guard. |
 | 2026-07-03 | 18:50 CEST | 18:53 CEST | 0:01 | Reported missing homepage previews after the catalog restore and approved restoring the homepage manifest plus exporter guard. |
+| 2026-07-03 | 19:01 CEST | 19:07 CEST | 0:01 | Reported homepage previews still showed fallback artwork and fixed homepage randomizer data precedence; browser QA included. |
 
 ## Totals
 
-Active collaboration time used: 25:02
+Active collaboration time used: 25:03
 Remaining budget: not set

@@ -10,7 +10,16 @@ const baseHomeCollections = [
 ];
 const panoramaCollectionKey = "panoramas";
 const homeCollections = [...baseHomeCollections, panoramaCollectionKey];
-const homeData = () => window.photosByElieData || window.photosByElieHomeData || {};
+const hasCollectionSamples = (data = {}) => (
+  baseHomeCollections.some((key) => Array.isArray(data[key]?.photos) && data[key].photos.length)
+);
+const homeData = () => {
+  const fullCatalog = window.photosByElieData || {};
+  if (hasCollectionSamples(fullCatalog)) return fullCatalog;
+  const homeCatalog = window.photosByElieHomeData || {};
+  if (hasCollectionSamples(homeCatalog)) return homeCatalog;
+  return fullCatalog || homeCatalog || {};
+};
 
 const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({
   "&": "&amp;",

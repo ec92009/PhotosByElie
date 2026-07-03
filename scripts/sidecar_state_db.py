@@ -6,6 +6,8 @@ from __future__ import annotations
 import argparse
 from datetime import datetime, timedelta, timezone
 import json
+import mimetypes
+import os
 import re
 import sqlite3
 import subprocess
@@ -310,6 +312,9 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
           export_path       TEXT,
           export_bytes      INTEGER,
           planned_keys_json TEXT NOT NULL DEFAULT '[]',
+          upload_status     TEXT NOT NULL DEFAULT 'not_requested' CHECK (trim(upload_status) <> ''),
+          upload_keys_json  TEXT NOT NULL DEFAULT '[]',
+          upload_error_text TEXT,
           error_text        TEXT,
           created_at        TEXT,
           updated_at        TEXT,
@@ -354,6 +359,18 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         if column not in asset_columns:
             conn.execute(f"ALTER TABLE sidecar_assets ADD COLUMN {column} {definition}")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_sidecar_assets_available ON sidecar_assets(missing_at, captured_at, asset_id)")
+    upload_item_columns = {
+        str(row["name"])
+        for row in conn.execute("PRAGMA table_info(sidecar_upload_bridge_run_items)").fetchall()
+    }
+    upload_item_column_defaults = {
+        "upload_status": "TEXT NOT NULL DEFAULT 'not_requested'",
+        "upload_keys_json": "TEXT NOT NULL DEFAULT '[]'",
+        "upload_error_text": "TEXT",
+    }
+    for column, definition in upload_item_column_defaults.items():
+        if column not in upload_item_columns:
+            conn.execute(f"ALTER TABLE sidecar_upload_bridge_run_items ADD COLUMN {column} {definition}")
 
 
 def _asset_id(row: dict[str, Any]) -> str:
@@ -1560,14 +1577,14 @@ def upload_bridge_plan(repo_root: Path, limit: int = 500) -> dict[str, Any]:
     return {
         "ok": True,
         "mode": "dry-run",
-        "realUploadImplemented": False,
+        "realUploadImplemented": True,
         "bridgeQueuedCount": int(total_queued or 0),
         "count": len(items),
         "items": items,
         "collisionCount": collision_count,
         "coveredKeyCount": covered_key_count,
         "plannedKeyCount": total_key_count,
-        "message": "Upload Bridge plan only. Use sidecar_upload_bridge.py --export-one to materialize one queued item into a local spool; R2 upload and Owner registration remain reserved for the future --execute slice.",
+        "message": "Upload Bridge plan only. Use sidecar_upload_bridge.py --export-one for a local Photos export dry run, or --execute --limit 1 for guarded R2 upload execution. Owner catalog registration remains a later slice.",
     }
 
 
@@ -1640,6 +1657,194 @@ def _run_apple_photos_materialize_one(
     return payload
 
 
+def _first_env(*names: str) -> str:
+    for name in names:
+        value = os.environ.get(name)
+        if value:
+            return value
+    return ""
+
+
+def _default_r2_backend() -> str:
+    configured = os.environ.get("PBE_R2_BACKEND", "").strip().casefold()
+    if configured in {"wrangler", "s3"}:
+        return configured
+    if (
+        _first_env("R2_ACCOUNT_ID", "CLOUDFLARE_ACCOUNT_ID")
+        and _first_env("R2_ACCESS_KEY_ID", "AWS_ACCESS_KEY_ID")
+        and _first_env("R2_SECRET_ACCESS_KEY", "AWS_SECRET_ACCESS_KEY")
+    ):
+        return "s3"
+    return "wrangler"
+
+
+def _content_type_for_upload(path: Path, kind: str) -> str:
+    if kind == "public-preview-video" or path.suffix.lower() == ".mp4":
+        return "video/mp4"
+    if kind == "public-preview":
+        return "image/jpeg"
+    return mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+
+
+def _artifact_path_for_key(artifact_root: Path, key: str) -> Path:
+    return artifact_root.joinpath(*[part for part in str(key).split("/") if part])
+
+
+def _prepare_upload_bridge_artifact(
+    *,
+    export_path: Path,
+    planned_key: dict[str, Any],
+    media_type: str,
+    artifact_root: Path,
+    force: bool = False,
+) -> tuple[Path, str]:
+    """Return the local file to upload for one planned bridge key."""
+    kind = str(planned_key.get("kind") or "")
+    key = str(planned_key.get("key") or "")
+    if kind == "private-master":
+        return export_path, _content_type_for_upload(export_path, kind)
+
+    if not export_path.exists():
+        raise FileNotFoundError(f"Missing exported source for public preview generation: {export_path}")
+
+    from build_lightroom_thumbnails import (  # noqa: PLC0415
+        DEFAULT_DETAIL_MAX,
+        DEFAULT_GALLERY_MAX,
+        DEFAULT_WATERMARK,
+        choose_font,
+        render_derivative,
+        render_video_poster,
+        render_video_preview,
+    )
+
+    output = _artifact_path_for_key(artifact_root, key)
+    normalized_media_type = str(media_type or "").casefold()
+    is_video = normalized_media_type == "video" or export_path.suffix.lower() in {".mov", ".mp4", ".m4v"}
+    font = choose_font()
+    if kind == "public-preview-video":
+        render_video_preview(export_path, output, DEFAULT_WATERMARK, font, force)
+        return output, "video/mp4"
+    if is_video and key.endswith("_900.jpg"):
+        render_video_poster(export_path, output, DEFAULT_WATERMARK, font, force)
+        return output, "image/jpeg"
+    max_px = DEFAULT_GALLERY_MAX if key.endswith("_900.jpg") else DEFAULT_DETAIL_MAX
+    render_derivative(export_path, output, max_px, DEFAULT_WATERMARK, font, force)
+    return output, "image/jpeg"
+
+
+def _upload_bridge_execute_r2(
+    *,
+    planned_keys: list[dict[str, Any]],
+    export_path: Path,
+    media_type: str,
+    artifact_root: Path,
+    allow_r2_overwrite: bool = False,
+    backend: str | None = None,
+    retries: int = 2,
+    request_min_interval: float = 0.75,
+    retry_max_delay: float = 900.0,
+    s3_account_id: str | None = None,
+    s3_access_key_id: str | None = None,
+    s3_secret_access_key: str | None = None,
+    s3_endpoint: str | None = None,
+) -> list[dict[str, Any]]:
+    from sync_r2_media import (  # noqa: PLC0415
+        DEFAULT_THROTTLE_FILE,
+        UploadItem,
+        s3_put,
+        wrangler_put,
+    )
+
+    selected_backend = (backend or _default_r2_backend()).strip().casefold()
+    if selected_backend not in {"wrangler", "s3"}:
+        raise ValueError(f"Unsupported R2 backend: {backend}")
+
+    account_id = s3_account_id if s3_account_id is not None else _first_env("R2_ACCOUNT_ID", "CLOUDFLARE_ACCOUNT_ID")
+    access_key_id = s3_access_key_id if s3_access_key_id is not None else _first_env("R2_ACCESS_KEY_ID", "AWS_ACCESS_KEY_ID")
+    secret_access_key = s3_secret_access_key if s3_secret_access_key is not None else _first_env("R2_SECRET_ACCESS_KEY", "AWS_SECRET_ACCESS_KEY")
+    endpoint = s3_endpoint if s3_endpoint is not None else os.environ.get("R2_S3_ENDPOINT", "")
+    if selected_backend == "s3":
+        missing = [
+            name
+            for name, value in (
+                ("R2_ACCOUNT_ID or CLOUDFLARE_ACCOUNT_ID", account_id),
+                ("R2_ACCESS_KEY_ID or AWS_ACCESS_KEY_ID", access_key_id),
+                ("R2_SECRET_ACCESS_KEY or AWS_SECRET_ACCESS_KEY", secret_access_key),
+            )
+            if not value
+        ]
+        if missing:
+            raise RuntimeError(f"Missing S3 backend credential(s): {', '.join(missing)}")
+
+    results: list[dict[str, Any]] = []
+    for key in planned_keys:
+        bucket = str(key.get("bucket") or "")
+        object_key = str(key.get("key") or "")
+        kind = str(key.get("kind") or "")
+        exists = bool(key.get("exists"))
+        base_result: dict[str, Any] = {
+            "bucket": bucket,
+            "key": object_key,
+            "kind": kind,
+            "backend": selected_backend,
+            "existedBeforeUpload": exists,
+        }
+        if exists and not allow_r2_overwrite:
+            results.append({
+                **base_result,
+                "status": "skipped_collision",
+                "error": "planned R2 key already exists in Owner R2 inventory",
+                **({"existing": key.get("existing")} if key.get("existing") else {}),
+            })
+            continue
+        try:
+            source_path, content_type = _prepare_upload_bridge_artifact(
+                export_path=export_path,
+                planned_key=key,
+                media_type=media_type,
+                artifact_root=artifact_root,
+            )
+            cache_control = "public, max-age=31536000, immutable" if bucket == DEFAULT_PUBLIC_BUCKET else ""
+            upload_item = UploadItem(
+                bucket=bucket,
+                key=object_key,
+                path=source_path,
+                content_type=content_type,
+                cache_control=cache_control,
+            )
+            if selected_backend == "s3":
+                _, ok, output = s3_put(
+                    upload_item,
+                    retries,
+                    DEFAULT_THROTTLE_FILE,
+                    request_min_interval,
+                    retry_max_delay,
+                    account_id,
+                    access_key_id,
+                    secret_access_key,
+                    endpoint,
+                )
+            else:
+                _, ok, output = wrangler_put(upload_item, retries, DEFAULT_THROTTLE_FILE, request_min_interval, retry_max_delay)
+            results.append({
+                **base_result,
+                "status": "uploaded" if ok else "failed",
+                "sourcePath": str(source_path),
+                "bytes": source_path.stat().st_size if source_path.exists() else 0,
+                "contentType": content_type,
+                "cacheControl": cache_control,
+                "output": output[-4000:] if output else "",
+                **({"error": output[-4000:]} if not ok and output else {}),
+            })
+        except Exception as error:  # noqa: BLE001 - keep remaining planned keys auditable.
+            results.append({
+                **base_result,
+                "status": "failed",
+                "error": str(error),
+            })
+    return results
+
+
 def run_upload_bridge_export_dry_run(
     repo_root: Path,
     *,
@@ -1647,18 +1852,26 @@ def run_upload_bridge_export_dry_run(
     spool_root: Path | None = None,
     allow_icloud_downloads: bool = True,
     execute_upload: bool = False,
+    allow_r2_overwrite: bool = False,
+    r2_backend: str | None = None,
+    r2_retries: int = 2,
+    r2_request_min_interval: float = 0.75,
+    r2_retry_max_delay: float = 900.0,
+    r2_s3_account_id: str | None = None,
+    r2_s3_access_key_id: str | None = None,
+    r2_s3_secret_access_key: str | None = None,
+    r2_s3_endpoint: str | None = None,
 ) -> dict[str, Any]:
     """Materialize one bridge-queued item from Photos and record an upload-run ledger.
 
-    This is deliberately not an R2 uploader yet. It proves the bridge can force
-    the Apple Photos materialization step for approved picks, computes the exact
-    Owner-style keys, and records the run so the later R2 execution slice can
-    resume from an auditable trail.
+    The default path is still export-only. When execute_upload is true, the
+    exported master and generated watermarked public previews are uploaded to
+    their planned R2 keys, while Owner catalog registration remains out of scope.
     """
-    if execute_upload:
-        raise ValueError("R2 upload execution is not implemented yet. Run without --execute for the export dry run.")
     safe_limit = max(1, min(int(limit or 1), 1))
     run_id = _upload_bridge_run_id()
+    run_mode = "execute" if execute_upload else "export-dry-run"
+    execute_int = 1 if execute_upload else 0
     now = now_iso()
     base_root = spool_root or DEFAULT_UPLOAD_BRIDGE_RUN_ROOT
     if not base_root.is_absolute():
@@ -1675,22 +1888,24 @@ def run_upload_bridge_export_dry_run(
                 INSERT INTO sidecar_upload_bridge_runs
                   (run_id, mode, status, execute_upload, limit_count, started_at, completed_at,
                    spool_root, summary_json, created_at, updated_at)
-                VALUES (?, 'export-dry-run', 'no-queued-items', 0, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, 'no-queued-items', ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     run_id,
+                    run_mode,
+                    execute_int,
                     safe_limit,
                     now,
                     now,
                     str(run_root),
-                    _json_text({"bridgeQueuedCount": 0, "r2UploadPerformed": False}),
+                    _json_text({"bridgeQueuedCount": 0, "r2UploadPerformed": False, "executeUpload": execute_upload}),
                     now,
                     now,
                 ),
             )
             return {
                 "ok": True,
-                "mode": "export-dry-run",
+                "mode": run_mode,
                 "runId": run_id,
                 "status": "no-queued-items",
                 "count": 0,
@@ -1713,14 +1928,16 @@ def run_upload_bridge_export_dry_run(
             INSERT INTO sidecar_upload_bridge_runs
               (run_id, mode, status, execute_upload, limit_count, started_at, spool_root,
                summary_json, created_at, updated_at)
-            VALUES (?, 'export-dry-run', 'running', 0, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, 'running', ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 run_id,
+                run_mode,
+                execute_int,
                 safe_limit,
                 now,
                 str(run_root),
-                _json_text({"bridgeQueuedCount": len(rows), "r2UploadPerformed": False}),
+                _json_text({"bridgeQueuedCount": len(rows), "r2UploadPerformed": False, "executeUpload": execute_upload}),
                 now,
                 now,
             ),
@@ -1780,6 +1997,9 @@ def run_upload_bridge_export_dry_run(
     export_bytes: int | None = None
     item_status = "planned"
     run_status = "running"
+    upload_status = "not_requested"
+    upload_results: list[dict[str, Any]] = []
+    upload_error = ""
     try:
         export_payload = _run_apple_photos_materialize_one(
             repo_root,
@@ -1798,29 +2018,78 @@ def run_upload_bridge_export_dry_run(
         if materialized_count > 0 and export_path:
             item_status = "exported"
             run_status = "exported"
+            if execute_upload:
+                upload_results = _upload_bridge_execute_r2(
+                    planned_keys=item.get("plannedKeys") or [],
+                    export_path=Path(export_path),
+                    media_type=str(item.get("mediaType") or ""),
+                    artifact_root=run_root / "public-artifacts",
+                    allow_r2_overwrite=allow_r2_overwrite,
+                    backend=r2_backend,
+                    retries=r2_retries,
+                    request_min_interval=r2_request_min_interval,
+                    retry_max_delay=r2_retry_max_delay,
+                    s3_account_id=r2_s3_account_id,
+                    s3_access_key_id=r2_s3_access_key_id,
+                    s3_secret_access_key=r2_s3_secret_access_key,
+                    s3_endpoint=r2_s3_endpoint,
+                )
+                failed_uploads = [result for result in upload_results if result.get("status") == "failed"]
+                skipped_uploads = [result for result in upload_results if result.get("status") == "skipped_collision"]
+                if failed_uploads:
+                    upload_status = "failed"
+                    item_status = "upload_failed"
+                    run_status = "upload_failed"
+                    upload_error = "; ".join(str(result.get("error") or "") for result in failed_uploads if result.get("error"))
+                elif skipped_uploads:
+                    upload_status = "uploaded_with_skips"
+                    item_status = "uploaded_with_skips"
+                    run_status = "uploaded_with_skips"
+                else:
+                    upload_status = "uploaded"
+                    item_status = "uploaded"
+                    run_status = "uploaded"
         else:
             item_status = "export_failed"
             run_status = "export_failed"
             export_error = export_error or "Apple Photos bridge did not materialize an export file."
     except Exception as error:  # noqa: BLE001 - ledger must capture bridge failures.
-        item_status = "export_failed"
-        run_status = "export_failed"
-        export_status = "failed"
-        export_error = str(error)
+        message = str(error)
+        if item_status == "exported" and execute_upload:
+            item_status = "upload_failed"
+            run_status = "upload_failed"
+            upload_status = "failed"
+            upload_error = message
+        else:
+            item_status = "export_failed"
+            run_status = "export_failed"
+            export_status = "failed"
+            export_error = message
 
     completed_at = now_iso()
+    uploaded_key_count = sum(1 for result in upload_results if result.get("status") == "uploaded")
+    skipped_collision_count = sum(1 for result in upload_results if result.get("status") == "skipped_collision")
+    failed_upload_count = sum(1 for result in upload_results if result.get("status") == "failed")
+    if upload_status == "failed" and not upload_results:
+        failed_upload_count = 1
+    run_error = export_error or upload_error
     run_summary = {
         "bridgeQueuedCount": len(ledger_items),
-        "exportedCount": 1 if item_status == "exported" else 0,
-        "failedCount": 1 if item_status != "exported" else 0,
-        "r2UploadPerformed": False,
-        "executeUpload": False,
+        "exportedCount": 1 if export_path and item_status != "export_failed" else 0,
+        "failedCount": 1 if item_status in {"export_failed", "upload_failed"} else 0,
+        "r2UploadPerformed": bool(execute_upload and upload_results),
+        "executeUpload": execute_upload,
+        "allowR2Overwrite": allow_r2_overwrite,
+        "uploadedKeyCount": uploaded_key_count,
+        "skippedCollisionCount": skipped_collision_count,
+        "failedUploadCount": failed_upload_count,
     }
     with connect(repo_root) as conn:
         conn.execute(
             """
             UPDATE sidecar_upload_bridge_run_items
             SET status = ?, export_status = ?, export_path = ?, export_bytes = ?,
+                upload_status = ?, upload_keys_json = ?, upload_error_text = ?,
                 error_text = ?, updated_at = ?
             WHERE run_item_id = ?
             """,
@@ -1829,6 +2098,9 @@ def run_upload_bridge_export_dry_run(
                 export_status,
                 export_path,
                 export_bytes,
+                upload_status,
+                _json_text(upload_results),
+                upload_error,
                 export_error,
                 completed_at,
                 item["runItemId"],
@@ -1843,7 +2115,7 @@ def run_upload_bridge_export_dry_run(
             (
                 run_status,
                 completed_at,
-                export_error,
+                run_error,
                 _json_text(run_summary),
                 completed_at,
                 run_id,
@@ -1858,6 +2130,12 @@ def run_upload_bridge_export_dry_run(
         "error": export_error,
         "allowIcloudDownloads": allow_icloud_downloads,
     }
+    item["upload"] = {
+        "status": upload_status,
+        "keys": upload_results,
+        "error": upload_error,
+        "allowR2Overwrite": allow_r2_overwrite,
+    }
     if export_payload:
         item["photosBridge"] = {
             "mode": export_payload.get("mode"),
@@ -1865,18 +2143,22 @@ def run_upload_bridge_export_dry_run(
             "sidecar": export_payload.get("sidecar"),
         }
     return {
-        "ok": item_status == "exported",
-        "mode": "export-dry-run",
+        "ok": item_status in {"exported", "uploaded", "uploaded_with_skips"},
+        "mode": run_mode,
         "runId": run_id,
         "status": run_status,
         "spoolRoot": str(run_root),
         "exportRoot": str(export_root),
-        "r2UploadPerformed": False,
-        "executeUpload": False,
+        "r2UploadPerformed": bool(execute_upload and upload_results),
+        "executeUpload": execute_upload,
         "count": len(ledger_items),
         "items": [item],
         "summary": run_summary,
-        "message": "Apple Photos export dry run completed; no R2 writes or Owner catalog registration were performed.",
+        "message": (
+            "Apple Photos export and guarded R2 upload completed; Owner catalog registration was not performed."
+            if execute_upload
+            else "Apple Photos export dry run completed; no R2 writes or Owner catalog registration were performed."
+        ),
     }
 
 
@@ -2499,6 +2781,7 @@ def _planned_r2_keys(row: sqlite3.Row, *, include_private_renders: bool = False)
 def _current_r2_objects_for_plan(conn: sqlite3.Connection, planned_keys: list[dict[str, str]]) -> dict[tuple[str, str], dict[str, Any]]:
     if not planned_keys:
         return {}
+    planned_pairs = {(str(item["bucket"]), str(item["key"])) for item in planned_keys}
     conditions = " OR ".join("(bucket = ? AND object_key = ?)" for _ in planned_keys)
     params: list[str] = []
     for item in planned_keys:
@@ -2513,16 +2796,46 @@ def _current_r2_objects_for_plan(conn: sqlite3.Connection, planned_keys: list[di
             params,
         ).fetchall()
     except sqlite3.OperationalError:
-        return {}
-    return {
+        rows = []
+    current = {
         (str(row["bucket"] or ""), str(row["object_key"] or "")): {
             "photoId": str(row["photo_id"] or ""),
             "kind": str(row["object_kind"] or ""),
             "bytes": int(row["bytes"]) if row["bytes"] is not None else None,
             "lastSeenAt": str(row["last_seen_at"] or ""),
+            "source": "owner-r2-objects",
         }
         for row in rows
     }
+    try:
+        bridge_rows = conn.execute(
+            """
+            SELECT photo_id, upload_keys_json, updated_at
+            FROM sidecar_upload_bridge_run_items
+            WHERE upload_keys_json IS NOT NULL AND upload_keys_json <> '[]'
+            ORDER BY updated_at DESC
+            """
+        ).fetchall()
+    except sqlite3.OperationalError:
+        bridge_rows = []
+    for row in bridge_rows:
+        uploaded_keys = _read_json_text(str(row["upload_keys_json"] or ""), [])
+        if not isinstance(uploaded_keys, list):
+            continue
+        for uploaded in uploaded_keys:
+            if not isinstance(uploaded, dict) or uploaded.get("status") != "uploaded":
+                continue
+            pair = (str(uploaded.get("bucket") or ""), str(uploaded.get("key") or ""))
+            if pair not in planned_pairs or pair in current:
+                continue
+            current[pair] = {
+                "photoId": str(row["photo_id"] or ""),
+                "kind": str(uploaded.get("kind") or ""),
+                "bytes": int(uploaded["bytes"]) if uploaded.get("bytes") is not None else None,
+                "lastSeenAt": str(row["updated_at"] or ""),
+                "source": "sidecar-upload-bridge-ledger",
+            }
+    return current
 
 
 def mock_upload(repo_root: Path, asset_ids: Iterable[str] | None = None, limit: int = 500) -> dict[str, Any]:

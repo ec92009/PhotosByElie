@@ -496,8 +496,8 @@ python3 scripts/sidecar_upload_bridge.py --limit 20
 python3 scripts/sidecar_upload_bridge.py --json --output assets/owner-actions/sidecar-upload-runs/dry-run.json
 ```
 
-The first materialization dry run exports one queued Apple Photos asset into a
-local run spool and records the attempt in `sidecar_upload_bridge_runs` plus
+The materialization dry run exports one queued Apple Photos asset into a local
+run spool and records the attempt in `sidecar_upload_bridge_runs` plus
 `sidecar_upload_bridge_run_items`. It may allow Photos/iCloud downloads for that
 one bridge-approved item, but still does not write R2 or register catalog rows:
 
@@ -505,6 +505,22 @@ one bridge-approved item, but still does not write R2 or register catalog rows:
 python3 scripts/sidecar_upload_bridge.py --export-one --limit 1
 python3 scripts/sidecar_upload_bridge.py --export-one --json
 ```
+
+Live bridge execution keeps that same one-item scope, then uploads the private
+master and watermarked public preview pair to R2. Planned key collisions are
+skipped by default; pass `--allow-r2-overwrite` only when you intentionally want
+to replace existing R2 objects. Successful bridge-uploaded keys are remembered
+in the local bridge ledger, so retrying after a partial run skips already
+uploaded keys even before Owner catalog registration exists:
+
+```bash
+python3 scripts/sidecar_upload_bridge.py --execute --limit 1
+python3 scripts/sidecar_upload_bridge.py --execute --limit 1 --json --output /tmp/sidecar-upload-bridge-execute.json
+```
+
+This bridge slice does not register the uploaded media in Owner/catalog state
+yet. Until that downstream registration runs, the files can exist in R2 without
+appearing in the public catalog.
 
 Bridge plans intentionally omit private JPG render triplets. Existing private
 render cache cleanup should also begin as a dry run until sold-media protection

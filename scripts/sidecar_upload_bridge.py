@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Plan or dry-run the Sidecar Upload Bridge queue.
+"""Plan, dry-run, or execute the Sidecar Upload Bridge queue.
 
 Bridge plan mode is read-only: it reports which Sidecar-approved Photos items
 are queued for Owner-style materialization and which R2 keys would be involved.
 Export dry-run mode materializes one queued asset from Apple Photos into a local
-spool and records a run ledger, but still performs no R2 writes.
+spool and records a run ledger. Execute mode keeps the same one-item scope, then
+uploads the private master plus watermarked public previews to R2.
 """
 
 from __future__ import annotations
@@ -54,7 +55,7 @@ def human_report(plan: dict[str, Any]) -> str:
             marker = "exists" if key.get("exists") else "missing"
             lines.append(f"  {marker}: {key.get('bucket')}/{key.get('key')} [{key.get('kind')}]")
         if collision_count:
-            lines.append(f"  warning: {collision_count} planned key(s) already exist in Owner R2 state")
+            lines.append(f"  warning: {collision_count} planned key(s) already exist in Owner R2/bridge ledger state")
     if shown > 20:
         lines.append(f"... {shown - 20:,} more item(s) omitted from text output. Use --json for the full manifest.")
     return "\n".join(lines)
@@ -62,14 +63,26 @@ def human_report(plan: dict[str, Any]) -> str:
 
 def human_export_report(plan: dict[str, Any]) -> str:
     status = str(plan.get("status") or "")
+    is_execute = bool(plan.get("executeUpload"))
+    summary = plan.get("summary") or {}
     lines = [
-        "Sidecar Upload Bridge export dry run",
+        "Sidecar Upload Bridge execute run" if is_execute else "Sidecar Upload Bridge export dry run",
         f"Run: {plan.get('runId') or '(none)'}",
         f"Status: {status}",
         f"Spool: {plan.get('spoolRoot') or '(none)'}",
         "",
-        "No R2 writes or Owner catalog registration were performed.",
+        (
+            "R2 upload was attempted for the exported item. Owner catalog registration was not performed."
+            if is_execute
+            else "No R2 writes or Owner catalog registration were performed."
+        ),
     ]
+    if is_execute:
+        lines.extend([
+            f"Uploaded keys: {int(summary.get('uploadedKeyCount') or 0):,}",
+            f"Skipped collisions: {int(summary.get('skippedCollisionCount') or 0):,}",
+            f"Failed uploads: {int(summary.get('failedUploadCount') or 0):,}",
+        ])
     items = plan.get("items") or []
     if not items:
         lines.append("No queued bridge items found.")
@@ -88,6 +101,17 @@ def human_export_report(plan: dict[str, Any]) -> str:
         lines.append(f"  file: {export.get('path')}{suffix}")
     if export.get("error"):
         lines.append(f"  error: {export.get('error')}")
+    upload = item.get("upload") or {}
+    upload_keys = upload.get("keys") or []
+    if upload_keys:
+        lines.append(f"  upload: {upload.get('status') or 'unknown'}")
+        for uploaded in upload_keys:
+            marker = uploaded.get("status") or "unknown"
+            lines.append(f"  {marker}: {uploaded.get('bucket')}/{uploaded.get('key')} [{uploaded.get('kind')}]")
+            if uploaded.get("error") and marker != "uploaded":
+                lines.append(f"    warning: {uploaded.get('error')}")
+    elif is_execute and upload.get("error"):
+        lines.append(f"  upload error: {upload.get('error')}")
     for key in item.get("plannedKeys") or []:
         marker = "exists" if key.get("exists") else "missing"
         lines.append(f"  {marker}: {key.get('bucket')}/{key.get('key')} [{key.get('kind')}]")
@@ -99,22 +123,28 @@ def main() -> None:
     parser.add_argument("--limit", type=int, default=500, help="Maximum queued rows to include in the report.")
     parser.add_argument("--export-one", action="store_true", help="Materialize one queued asset from Apple Photos into a local spool.")
     parser.add_argument("--no-icloud-downloads", action="store_true", help="Do not let Photos download the queued asset during --export-one.")
-    parser.add_argument("--execute", action="store_true", help="Reserved for the future R2 upload execution path.")
+    parser.add_argument("--execute", action="store_true", help="Materialize one queued asset and upload planned private/public R2 objects.")
+    parser.add_argument("--allow-r2-overwrite", action="store_true", help="Upload even when a planned R2 key already exists in Owner R2 state.")
+    parser.add_argument("--backend", choices=("wrangler", "s3"), default=None, help="R2 upload backend for --execute. Defaults to PBE_R2_BACKEND, S3 env credentials, then Wrangler.")
+    parser.add_argument("--retries", type=int, default=2, help="Upload retry count for --execute.")
+    parser.add_argument("--request-min-interval", type=float, default=0.75, help="Minimum seconds between R2 write requests.")
+    parser.add_argument("--retry-max-delay", type=float, default=900.0, help="Maximum seconds between R2 upload retries.")
     parser.add_argument("--json", action="store_true", help="Print the full JSON manifest instead of a text summary.")
     parser.add_argument("--output", type=Path, help="Write the full JSON manifest to this path.")
     args = parser.parse_args()
 
-    if args.export_one and args.execute:
-        parser.error("--execute is reserved for the future real R2 upload path; omit it for the export dry run.")
-    if args.export_one:
+    if args.export_one or args.execute:
         plan = run_upload_bridge_export_dry_run(
             REPO_ROOT,
             limit=args.limit,
             allow_icloud_downloads=not args.no_icloud_downloads,
             execute_upload=args.execute,
+            allow_r2_overwrite=args.allow_r2_overwrite,
+            r2_backend=args.backend,
+            r2_retries=args.retries,
+            r2_request_min_interval=args.request_min_interval,
+            r2_retry_max_delay=args.retry_max_delay,
         )
-    elif args.execute:
-        parser.error("--execute is reserved for the future real R2 upload path. Use --export-one for the one-item Photos export dry run.")
     else:
         plan = upload_bridge_plan(REPO_ROOT, limit=args.limit)
     if args.output:

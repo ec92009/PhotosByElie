@@ -10,7 +10,7 @@ metadata; Owner decides publication and commerce.
 
 Sidecar has its own local visible version in `SIDECAR_VERSION`.
 
-- Current Sidecar version: `v125.2`
+- Current Sidecar version: `v125.4`
 - Versioning follows the canonical `~/Dev/.SOPs/VERSIONING_SOP.md` default
   calendar visible-version rule for this local web-app surface.
 - Sidecar version bumps do not imply a public Photos By Elie site version bump.
@@ -120,12 +120,17 @@ Bridge execution now has a durable local run ledger:
   summary, and whether upload execution was requested.
 - `sidecar_upload_bridge_run_items` records the queued asset, derived Owner
   photo id, planned R2 keys, export status, exported file path, byte count, and
-  failure reason when Photos cannot materialize the item.
+  failure reason when Photos cannot materialize the item. It also records
+  per-key R2 upload results for live bridge executions.
 
 The current execution slice can materialize one queued item from Apple Photos
-into `assets/owner-actions/sidecar-upload-runs/<run-id>/export/`, allowing
-iCloud downloads for that approved bridge item only. It stops before any R2
-write or Owner catalog registration.
+into `assets/owner-actions/sidecar-upload-runs/<run-id>/export/`. Without
+`--execute`, this is export-only and performs no R2 writes. With
+`--execute --limit 1`, Sidecar uploads the private master to
+`photosbyelie-private/masters/<photo-id>.<ext>` and uploads the watermarked
+public preview pair to `photosbyelie-public/expo/`. Planned key collisions are
+skipped by default unless `--allow-r2-overwrite` is passed. Owner catalog
+registration is still a separate downstream slice.
 
 Upload Bridge does not generate private JPG render triplets. Private renders are
 an on-demand Worker cache: checkout/delivery can lazily create
@@ -297,9 +302,9 @@ Remaining near-term slices:
 - Incremental index refresh refinements, such as cheaper change detection and
   richer missing-asset reporting.
 - Album/smart-album source filters.
-- Real Upload Bridge execution: extend the one-item ledgered export dry run into
-  guarded `--execute` uploads of private masters and public previews to R2, then
-  register the results through the Owner import/catalog path.
+- Upload Bridge Owner registration: take successful bridge upload ledger rows,
+  mark the uploaded R2 objects in Owner's state, and publish them through the
+  normal catalog build path.
 - Private render cache pruning for existing `renders/<media_id>_<size>mp.jpg`
   objects, protecting sold media and leaving future Worker-created renders in
   place.

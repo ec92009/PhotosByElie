@@ -1,0 +1,87 @@
+{
+  "platform": "Threads",
+  "title": "Bilbao Guggenheim Metal Curves",
+  "slug": "bilbao-guggenheim-metal-curves",
+  "campaign_id": "instagram-bilbao-guggenheim-metal-curves-2026-07-03",
+  "caption": "Bilbao Guggenheim Metal Curves in four Photos By Elie frames. Browse: https://photos-by-elie.com/campaign.html?c=instagram-bilbao-guggenheim-metal-curves-2026-07-03",
+  "notes": [
+    "Derived from the Instagram package for a 3-4 image Threads carousel.",
+    "Images are public watermarked R2 previews staged for upload/API publishing."
+  ],
+  "items": [
+    {
+      "media_id": "20180515-1634-00438-383c90b340",
+      "order": 1,
+      "id": "20180515-1634-00438-383c90b340",
+      "title": "Bilbao Guggenheim Museum",
+      "collection": "spain",
+      "location": "Bilbo, Euskadi, Spain",
+      "width": 1800,
+      "height": 1200,
+      "source_url": "https://download.photos-by-elie.com/media/expo/20180515-1634-00438-383c90b340_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/20180515-1634-00438-383c90b340_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=20180515-1634-00438-383c90b340",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180515-1634-00438-383c90b340",
+      "image": "images/01-20180515-1634-00438-383c90b340-bilbao-guggenheim-metal-curves.jpg",
+      "local_staged_path": "socials/Threads/2026-07-03/bilbao-guggenheim-metal-curves/images/01-20180515-1634-00438-383c90b340-bilbao-guggenheim-metal-curves.jpg"
+    },
+    {
+      "media_id": "20180515-1617-00426-96dc06c36e",
+      "order": 2,
+      "id": "20180515-1617-00426-96dc06c36e",
+      "title": "Bilbao Guggenheim Museum",
+      "collection": "spain",
+      "location": "Bilbo, Euskadi, Spain",
+      "width": 1800,
+      "height": 1200,
+      "source_url": "https://download.photos-by-elie.com/media/expo/20180515-1617-00426-96dc06c36e_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/20180515-1617-00426-96dc06c36e_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=20180515-1617-00426-96dc06c36e",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180515-1617-00426-96dc06c36e",
+      "image": "images/02-20180515-1617-00426-96dc06c36e-bilbao-guggenheim-metal-curves.jpg",
+      "local_staged_path": "socials/Threads/2026-07-03/bilbao-guggenheim-metal-curves/images/02-20180515-1617-00426-96dc06c36e-bilbao-guggenheim-metal-curves.jpg"
+    },
+    {
+      "media_id": "20180515-1510-00398-b6b2dcafad",
+      "order": 3,
+      "id": "20180515-1510-00398-b6b2dcafad",
+      "title": "Bilbao Guggenheim Museum",
+      "collection": "spain",
+      "location": "Bilbo, Euskadi, Spain",
+      "width": 1800,
+      "height": 1046,
+      "source_url": "https://download.photos-by-elie.com/media/expo/20180515-1510-00398-b6b2dcafad_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/20180515-1510-00398-b6b2dcafad_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=20180515-1510-00398-b6b2dcafad",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180515-1510-00398-b6b2dcafad",
+      "image": "images/03-20180515-1510-00398-b6b2dcafad-bilbao-guggenheim-metal-curves.jpg",
+      "local_staged_path": "socials/Threads/2026-07-03/bilbao-guggenheim-metal-curves/images/03-20180515-1510-00398-b6b2dcafad-bilbao-guggenheim-metal-curves.jpg"
+    },
+    {
+      "media_id": "20180515-1641-00445-ee15db60e2",
+      "order": 4,
+      "id": "20180515-1641-00445-ee15db60e2",
+      "title": "Bilbao Guggenheim Museum",
+      "collection": "spain",
+      "location": "Bilbo, Euskadi, Spain",
+      "width": 1800,
+      "height": 1200,
+      "source_url": "https://download.photos-by-elie.com/media/expo/20180515-1641-00445-ee15db60e2_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/20180515-1641-00445-ee15db60e2_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=20180515-1641-00445-ee15db60e2",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180515-1641-00445-ee15db60e2",
+      "image": "images/04-20180515-1641-00445-ee15db60e2-bilbao-guggenheim-metal-curves.jpg",
+      "local_staged_path": "socials/Threads/2026-07-03/bilbao-guggenheim-metal-curves/images/04-20180515-1641-00445-ee15db60e2-bilbao-guggenheim-metal-curves.jpg"
+    }
+  ],
+  "status": "prepared",
+  "account": "ec92009",
+  "post_type": "carousel",
+  "available_count": 4,
+  "date": "2026-07-03",
+  "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-bilbao-guggenheim-metal-curves-2026-07-03",
+  "recommended_upload_set": "images",
+  "manual_blockers": [
+    "Publish pending: review socials/Threads/2026-07-03/bilbao-guggenheim-metal-curves/manifest.json and use the Threads browser/API workflow."
+  ]
+}

@@ -1,0 +1,113 @@
+{
+  "platform": "Pinterest",
+  "title": "Nerja Mediterranean Beach Blues",
+  "slug": "nerja-mediterranean-beach-blues",
+  "campaign_id": "pinterest-nerja-mediterranean-beach-blues-2026-07-03",
+  "caption": "Nerja Mediterranean beach blues, clear water, and quiet shoreline texture from Photos By Elie. Browse: https://photos-by-elie.com/campaign.html?c=pinterest-nerja-mediterranean-beach-blues-2026-07-03",
+  "post_type": "multi_pin_sequence",
+  "board_recommendation": "Spain Travel Photography",
+  "pin_title": "Nerja Mediterranean Beach Blues",
+  "description": "A five-photo Photos By Elie edit of Nerja beach blues, clean Mediterranean water, and calm shoreline detail for travel photography and wall-art inspiration.",
+  "alt_text": "Photos By Elie Nerja Mediterranean beach photograph with blue water and shoreline texture.",
+  "pinterest": {
+    "title": "Nerja Mediterranean Beach Blues",
+    "description": "A five-photo Photos By Elie edit of Nerja beach blues, clean Mediterranean water, and calm shoreline detail for travel photography and wall-art inspiration.",
+    "board_recommendation": "Spain Travel Photography",
+    "alt_text": "Photos By Elie Nerja Mediterranean beach photograph with blue water and shoreline texture."
+  },
+  "items": [
+    {
+      "media_id": "20180421-1533-13173-45d10d758d",
+      "order": 1,
+      "id": "20180421-1533-13173-45d10d758d",
+      "title": "Nerja, beach",
+      "collection": "usa",
+      "location": "USA",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/20180421-1533-13173-45d10d758d_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/20180421-1533-13173-45d10d758d_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=20180421-1533-13173-45d10d758d",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180421-1533-13173-45d10d758d",
+      "image": "images/01-20180421-1533-13173-45d10d758d-nerja-mediterranean-beach-blues.jpg",
+      "local_staged_path": "socials/Pinterest/2026-07-03/nerja-mediterranean-beach-blues/images/01-20180421-1533-13173-45d10d758d-nerja-mediterranean-beach-blues.jpg"
+    },
+    {
+      "media_id": "20180421-1537-12617-c2d492125d",
+      "order": 2,
+      "id": "20180421-1537-12617-c2d492125d",
+      "title": "Nerja, beach",
+      "collection": "usa",
+      "location": "USA",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/20180421-1537-12617-c2d492125d_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/20180421-1537-12617-c2d492125d_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=20180421-1537-12617-c2d492125d",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180421-1537-12617-c2d492125d",
+      "image": "images/02-20180421-1537-12617-c2d492125d-nerja-mediterranean-beach-blues.jpg",
+      "local_staged_path": "socials/Pinterest/2026-07-03/nerja-mediterranean-beach-blues/images/02-20180421-1537-12617-c2d492125d-nerja-mediterranean-beach-blues.jpg"
+    },
+    {
+      "media_id": "20180421-1535-11896-ead94a86da",
+      "order": 3,
+      "id": "20180421-1535-11896-ead94a86da",
+      "title": "Nerja, beach",
+      "collection": "usa",
+      "location": "USA",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/20180421-1535-11896-ead94a86da_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/20180421-1535-11896-ead94a86da_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=20180421-1535-11896-ead94a86da",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180421-1535-11896-ead94a86da",
+      "image": "images/03-20180421-1535-11896-ead94a86da-nerja-mediterranean-beach-blues.jpg",
+      "local_staged_path": "socials/Pinterest/2026-07-03/nerja-mediterranean-beach-blues/images/03-20180421-1535-11896-ead94a86da-nerja-mediterranean-beach-blues.jpg"
+    },
+    {
+      "media_id": "20180421-1533-11883-ffd69b01d5",
+      "order": 4,
+      "id": "20180421-1533-11883-ffd69b01d5",
+      "title": "Nerja, beach",
+      "collection": "usa",
+      "location": "USA",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/20180421-1533-11883-ffd69b01d5_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/20180421-1533-11883-ffd69b01d5_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=20180421-1533-11883-ffd69b01d5",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180421-1533-11883-ffd69b01d5",
+      "image": "images/04-20180421-1533-11883-ffd69b01d5-nerja-mediterranean-beach-blues.jpg",
+      "local_staged_path": "socials/Pinterest/2026-07-03/nerja-mediterranean-beach-blues/images/04-20180421-1533-11883-ffd69b01d5-nerja-mediterranean-beach-blues.jpg"
+    },
+    {
+      "media_id": "20180421-1536-12740-41ca079ecc",
+      "order": 5,
+      "id": "20180421-1536-12740-41ca079ecc",
+      "title": "Nerja, beach",
+      "collection": "usa",
+      "location": "USA",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/20180421-1536-12740-41ca079ecc_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/20180421-1536-12740-41ca079ecc_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=20180421-1536-12740-41ca079ecc",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=20180421-1536-12740-41ca079ecc",
+      "image": "images/05-20180421-1536-12740-41ca079ecc-nerja-mediterranean-beach-blues.jpg",
+      "local_staged_path": "socials/Pinterest/2026-07-03/nerja-mediterranean-beach-blues/images/05-20180421-1536-12740-41ca079ecc-nerja-mediterranean-beach-blues.jpg"
+    }
+  ],
+  "date": "2026-07-03",
+  "status": "prepared",
+  "account": "PhotosByElie Pinterest",
+  "destination_url": "https://photos-by-elie.com/campaign.html?c=pinterest-nerja-mediterranean-beach-blues-2026-07-03",
+  "recommended_upload_set": "images",
+  "available_count": 5,
+  "notes": [
+    "Images are public watermarked R2 previews staged for upload/API publishing."
+  ],
+  "manual_blockers": [
+    "Publish pending: review socials/Pinterest/2026-07-03/nerja-mediterranean-beach-blues/manifest.json and use the Pinterest browser/API workflow.",
+    "Pinterest publish pending: choose the board and publish one Pin per staged image or use the prepared browser upload set."
+  ]
+}

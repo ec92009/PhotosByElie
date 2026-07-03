@@ -1,9 +1,76 @@
 {
   "format": "photosbyelie-campaign-index",
   "schema_version": 1,
-  "generated_at": "2026-07-02T03:04:58.960Z",
-  "campaign_count": 140,
+  "generated_at": "2026-07-03T03:05:19.557Z",
+  "campaign_count": 143,
   "campaigns": [
+    {
+      "id": "instagram-bilbao-guggenheim-metal-curves-2026-07-03",
+      "source": "Instagram",
+      "title": "Bilbao Guggenheim Metal Curves",
+      "description": "A 8-photo Bilbao Guggenheim Metal Curves edit prepared for Instagram with public Photos By Elie previews and a first-party browsing destination.",
+      "date": "2026-07-03",
+      "href": "./campaign.html?c=instagram-bilbao-guggenheim-metal-curves-2026-07-03",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=instagram-bilbao-guggenheim-metal-curves-2026-07-03",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/20180515-1634-00438-383c90b340_900.jpg",
+      "imageAlt": "Bilbao Guggenheim Museum",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/20180515-1634-00438-383c90b340_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180515-1617-00426-96dc06c36e_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180515-1510-00398-b6b2dcafad_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180515-1641-00445-ee15db60e2_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180515-1608-00420-95ca51dd01_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180515-1630-00436-1b277ba8a9_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180515-1617-00427-c6e399f26c_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180515-2054-00449-5e6e92acf2_900.jpg"
+      ],
+      "primaryPhotoCount": 8,
+      "relatedPhotoCount": 0,
+      "mtimeMs": 1783047919377
+    },
+    {
+      "id": "pinterest-nerja-mediterranean-beach-blues-2026-07-03",
+      "source": "Pinterest",
+      "title": "Nerja Mediterranean Beach Blues",
+      "description": "A 5-photo Nerja Mediterranean Beach Blues edit prepared for Pinterest with public Photos By Elie previews and a first-party browsing destination.",
+      "date": "2026-07-03",
+      "href": "./campaign.html?c=pinterest-nerja-mediterranean-beach-blues-2026-07-03",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=pinterest-nerja-mediterranean-beach-blues-2026-07-03",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/20180421-1533-13173-45d10d758d_900.jpg",
+      "imageAlt": "Nerja, beach",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/20180421-1533-13173-45d10d758d_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180421-1537-12617-c2d492125d_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180421-1535-11896-ead94a86da_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180421-1533-11883-ffd69b01d5_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180421-1536-12740-41ca079ecc_900.jpg"
+      ],
+      "primaryPhotoCount": 5,
+      "relatedPhotoCount": 0,
+      "mtimeMs": 1783047919377
+    },
+    {
+      "id": "facebook-pisa-marble-tower-light-2026-07-03",
+      "source": "Facebook",
+      "title": "Pisa Marble Tower Light",
+      "description": "A 6-photo Pisa Marble Tower Light edit prepared for Facebook with public Photos By Elie previews and a first-party browsing destination.",
+      "date": "2026-07-03",
+      "href": "./campaign.html?c=facebook-pisa-marble-tower-light-2026-07-03",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=facebook-pisa-marble-tower-light-2026-07-03",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/img-1198-bb563d6235_900.jpg",
+      "imageAlt": "Historic Architecture in Pisa",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/img-1198-bb563d6235_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1212-96505e7356_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1219-570b09bebb_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1218-fe487846d6_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1204-1d710fba81_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1207-5079ff3336_900.jpg"
+      ],
+      "primaryPhotoCount": 6,
+      "relatedPhotoCount": 0,
+      "mtimeMs": 1783047919376
+    },
     {
       "id": "pinterest-del-mar-beach-sunset-layers-2026-07-02",
       "source": "Pinterest",

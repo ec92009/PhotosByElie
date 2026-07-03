@@ -108,7 +108,7 @@
         }
       ],
       "date": "2026-07-03",
-      "status": "prepared",
+      "status": "published",
       "account": "Photos By Elie",
       "post_type": "multi_photo",
       "destination_url": "https://photos-by-elie.com/campaign.html?c=facebook-pisa-marble-tower-light-2026-07-03",
@@ -117,9 +117,21 @@
       "notes": [
         "Images are public watermarked R2 previews staged for upload/API publishing."
       ],
-      "manual_blockers": [
-        "Publish pending: review socials/Facebook/2026-07-03/pisa-marble-tower-light/manifest.json and use the Facebook browser/API workflow."
-      ]
+      "manual_blockers": [],
+      "published_url": "https://www.facebook.com/122102168061334672/posts/122109160485334672",
+      "published": {
+        "platform": "facebook",
+        "account": "Photos By Elie",
+        "page_id": "1146747141854670",
+        "post_id": "1146747141854670_122109160485334672",
+        "permalink": "https://www.facebook.com/122102168061334672/posts/122109160485334672",
+        "timestamp": "2026-07-03T03:08:24+0000",
+        "image_count": 6,
+        "graph_readback": {
+          "subattachments": 6
+        },
+        "verification": "Graph API readback confirmed the Photos By Elie Page post and six photo subattachments."
+      }
     },
     {
       "platform": "Instagram",
@@ -262,16 +274,27 @@
         }
       ],
       "date": "2026-07-03",
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-bilbao-guggenheim-metal-curves-2026-07-03",
       "recommended_upload_set": "images",
       "available_count": 8,
-      "manual_blockers": [
-        "Publish pending: review socials/Instagram/2026-07-03/bilbao-guggenheim-metal-curves/manifest.json and use the Instagram browser/API workflow.",
-        "Instagram feed captions are not clickable; update the profile website link or use a Story link sticker before posting."
-      ]
+      "manual_blockers": [],
+      "published_url": "https://www.instagram.com/p/DaUKtxWiPC3/",
+      "published": {
+        "platform": "instagram",
+        "account": "ec92009",
+        "ig_user_id": "17841400866970070",
+        "media_id": "17910477216431429",
+        "permalink": "https://www.instagram.com/p/DaUKtxWiPC3/",
+        "username": "ec92009",
+        "media_type": "CAROUSEL_ALBUM",
+        "timestamp": "2026-07-03T03:09:29+0000",
+        "image_count": 8,
+        "child_count": 8,
+        "verification": "Instagram Graph readback confirmed the carousel album and eight child images; caption has no raw URL."
+      }
     },
     {
       "platform": "Pinterest",
@@ -382,6 +405,8 @@
         "Images are public watermarked R2 previews staged for upload/API publishing."
       ],
       "manual_blockers": [
+        "Pinterest publish pending: ~/.config/photosbyelie/pinterest-token.json is missing and no board ID mapping is configured.",
+        "Manual Pin Builder/API target: upload exactly five staged images and choose board Spain Travel Photography.",
         "Publish pending: review socials/Pinterest/2026-07-03/nerja-mediterranean-beach-blues/manifest.json and use the Pinterest browser/API workflow.",
         "Pinterest publish pending: choose the board and publish one Pin per staged image or use the prepared browser upload set."
       ]
@@ -462,24 +487,89 @@
           "local_staged_path": "socials/Threads/2026-07-03/bilbao-guggenheim-metal-curves/images/04-20180515-1641-00445-ee15db60e2-bilbao-guggenheim-metal-curves.jpg"
         }
       ],
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "available_count": 4,
       "date": "2026-07-03",
       "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-bilbao-guggenheim-metal-curves-2026-07-03",
       "recommended_upload_set": "images",
-      "manual_blockers": [
-        "Publish pending: review socials/Threads/2026-07-03/bilbao-guggenheim-metal-curves/manifest.json and use the Threads browser/API workflow."
-      ]
+      "manual_blockers": [],
+      "published_url": "https://www.threads.com/@ec92009/post/DaUKoMPiPRT",
+      "published": {
+        "platform": "threads",
+        "account": "ec92009",
+        "threads_user_id": "36227075590239114",
+        "media_id": "17981180700045882",
+        "permalink": "https://www.threads.com/@ec92009/post/DaUKoMPiPRT",
+        "username": "ec92009",
+        "media_type": "CAROUSEL_ALBUM",
+        "timestamp": "2026-07-03T03:08:43+0000",
+        "image_count": 4,
+        "verification": "Threads Graph readback confirmed the carousel post. API flow provided no browser link-preview removal step."
+      }
     }
   ],
-  "generated_at": "2026-07-03T03:05:19.374Z",
+  "generated_at": "2026-07-03T03:10:49.380Z",
   "visible_version": "v125.0",
-  "status": "prepared",
+  "status": "published_partial",
   "themes": [
     "Pisa Marble Tower Light",
     "Bilbao Guggenheim Metal Curves",
     "Nerja Mediterranean Beach Blues"
+  ],
+  "etsy_companion": {
+    "status": "review_packages_prepared_drafts_blocked",
+    "product": "jpg-6mp",
+    "intended_listing_state": "draft",
+    "total_candidate_listings": 19,
+    "packages": [
+      {
+        "campaign_id": "facebook-pisa-marble-tower-light-2026-07-03",
+        "listing_count": 6,
+        "local_package": "assets/owner-actions/etsy-listing-packages/2026-07-03/facebook-pisa-marble-tower-light-2026-07-03",
+        "media_ids": [
+          "img-1198-bb563d6235",
+          "img-1212-96505e7356",
+          "img-1219-570b09bebb",
+          "img-1218-fe487846d6",
+          "img-1204-1d710fba81",
+          "img-1207-5079ff3336"
+        ]
+      },
+      {
+        "campaign_id": "instagram-bilbao-guggenheim-metal-curves-2026-07-03",
+        "listing_count": 8,
+        "local_package": "assets/owner-actions/etsy-listing-packages/2026-07-03/instagram-bilbao-guggenheim-metal-curves-2026-07-03",
+        "media_ids": [
+          "20180515-1634-00438-383c90b340",
+          "20180515-1617-00426-96dc06c36e",
+          "20180515-1510-00398-b6b2dcafad",
+          "20180515-1641-00445-ee15db60e2",
+          "20180515-1608-00420-95ca51dd01",
+          "20180515-1630-00436-1b277ba8a9",
+          "20180515-1617-00427-c6e399f26c",
+          "20180515-2054-00449-5e6e92acf2"
+        ]
+      },
+      {
+        "campaign_id": "pinterest-nerja-mediterranean-beach-blues-2026-07-03",
+        "listing_count": 5,
+        "local_package": "assets/owner-actions/etsy-listing-packages/2026-07-03/pinterest-nerja-mediterranean-beach-blues-2026-07-03",
+        "media_ids": [
+          "20180421-1533-13173-45d10d758d",
+          "20180421-1537-12617-c2d492125d",
+          "20180421-1535-11896-ead94a86da",
+          "20180421-1533-11883-ffd69b01d5",
+          "20180421-1536-12740-41ca079ecc"
+        ]
+      }
+    ],
+    "blocker": "No Etsy drafts were created: ETSY_KEYSTRING is unavailable in this runner, and current etsy:outlet tooling generates review packages but does not attach and verify one public listing image plus one approved buyer download file per draft.",
+    "api_check": "npm run etsy:api-check -- --me failed before authentication with ETSY_KEYSTRING is required.",
+    "verification": "Generated local review manifests show 19 ready_for_owner_review jpg-6mp payloads; no Etsy listing IDs, media IDs, digital file IDs, fees, or active listings were created."
+  },
+  "notes": [
+    "Etsy companion: 19 local jpg-6mp review payloads prepared; live draft creation blocked by missing Etsy app credentials and media attachment verification gap."
   ]
 }

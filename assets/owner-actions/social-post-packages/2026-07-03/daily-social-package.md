@@ -1,13 +1,13 @@
 # Daily Social Package - 2026-07-03
 
-Status: prepared
+Status: published_partial
 Visible version: v125.0
 
 ## Facebook: Pisa Marble Tower Light
 
-- Status: prepared
+- Status: published
 - Destination: https://photos-by-elie.com/campaign.html?c=facebook-pisa-marble-tower-light-2026-07-03
-- Manual blockers: Publish pending: review socials/Facebook/2026-07-03/pisa-marble-tower-light/manifest.json and use the Facebook browser/API workflow.
+- Published URL: https://www.facebook.com/122102168061334672/posts/122109160485334672
 
 | # | Media id | Source URL | Local image |
 | ---: | --- | --- | --- |
@@ -20,9 +20,9 @@ Visible version: v125.0
 
 ## Instagram: Bilbao Guggenheim Metal Curves
 
-- Status: prepared
+- Status: published
 - Destination: https://photos-by-elie.com/campaign.html?c=instagram-bilbao-guggenheim-metal-curves-2026-07-03
-- Manual blockers: Publish pending: review socials/Instagram/2026-07-03/bilbao-guggenheim-metal-curves/manifest.json and use the Instagram browser/API workflow. | Instagram feed captions are not clickable; update the profile website link or use a Story link sticker before posting.
+- Published URL: https://www.instagram.com/p/DaUKtxWiPC3/
 
 | # | Media id | Source URL | Local image |
 | ---: | --- | --- | --- |
@@ -39,7 +39,7 @@ Visible version: v125.0
 
 - Status: prepared
 - Destination: https://photos-by-elie.com/campaign.html?c=pinterest-nerja-mediterranean-beach-blues-2026-07-03
-- Manual blockers: Publish pending: review socials/Pinterest/2026-07-03/nerja-mediterranean-beach-blues/manifest.json and use the Pinterest browser/API workflow. | Pinterest publish pending: choose the board and publish one Pin per staged image or use the prepared browser upload set.
+- Manual blockers: Pinterest publish pending: ~/.config/photosbyelie/pinterest-token.json is missing and no board ID mapping is configured. | Manual Pin Builder/API target: upload exactly five staged images and choose board Spain Travel Photography. | Publish pending: review socials/Pinterest/2026-07-03/nerja-mediterranean-beach-blues/manifest.json and use the Pinterest browser/API workflow. | Pinterest publish pending: choose the board and publish one Pin per staged image or use the prepared browser upload set.
 
 | # | Media id | Source URL | Local image |
 | ---: | --- | --- | --- |
@@ -51,9 +51,9 @@ Visible version: v125.0
 
 ## Threads: Bilbao Guggenheim Metal Curves
 
-- Status: prepared
+- Status: published
 - Destination: https://photos-by-elie.com/campaign.html?c=instagram-bilbao-guggenheim-metal-curves-2026-07-03
-- Manual blockers: Publish pending: review socials/Threads/2026-07-03/bilbao-guggenheim-metal-curves/manifest.json and use the Threads browser/API workflow.
+- Published URL: https://www.threads.com/@ec92009/post/DaUKoMPiPRT
 
 | # | Media id | Source URL | Local image |
 | ---: | --- | --- | --- |
@@ -61,3 +61,11 @@ Visible version: v125.0
 | 2 | `20180515-1617-00426-96dc06c36e` | https://download.photos-by-elie.com/media/expo/20180515-1617-00426-96dc06c36e_1800.jpg | socials/Threads/2026-07-03/bilbao-guggenheim-metal-curves/images/02-20180515-1617-00426-96dc06c36e-bilbao-guggenheim-metal-curves.jpg |
 | 3 | `20180515-1510-00398-b6b2dcafad` | https://download.photos-by-elie.com/media/expo/20180515-1510-00398-b6b2dcafad_1800.jpg | socials/Threads/2026-07-03/bilbao-guggenheim-metal-curves/images/03-20180515-1510-00398-b6b2dcafad-bilbao-guggenheim-metal-curves.jpg |
 | 4 | `20180515-1641-00445-ee15db60e2` | https://download.photos-by-elie.com/media/expo/20180515-1641-00445-ee15db60e2_1800.jpg | socials/Threads/2026-07-03/bilbao-guggenheim-metal-curves/images/04-20180515-1641-00445-ee15db60e2-bilbao-guggenheim-metal-curves.jpg |
+
+## Etsy Companion
+
+- Status: review packages prepared; live Etsy draft creation blocked.
+- Product lane: `jpg-6mp`.
+- Candidate listings: 19 total: 6 Pisa, 8 Bilbao, 5 Nerja.
+- Local packages: `assets/owner-actions/etsy-listing-packages/2026-07-03/facebook-pisa-marble-tower-light-2026-07-03`, `assets/owner-actions/etsy-listing-packages/2026-07-03/instagram-bilbao-guggenheim-metal-curves-2026-07-03`, `assets/owner-actions/etsy-listing-packages/2026-07-03/pinterest-nerja-mediterranean-beach-blues-2026-07-03`.
+- Blocker: `ETSY_KEYSTRING` is unavailable in this runner, and current `etsy:outlet` tooling generates owner-review payloads but does not attach and verify one public listing image plus one approved buyer download file per draft.

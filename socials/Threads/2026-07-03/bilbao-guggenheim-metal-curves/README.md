@@ -1,10 +1,8 @@
 # Threads - 2026-07-03 - Bilbao Guggenheim Metal Curves
 
-Status: prepared
+Status: published
 Destination: https://photos-by-elie.com/campaign.html?c=instagram-bilbao-guggenheim-metal-curves-2026-07-03
-
-Manual blockers:
-- Publish pending: review socials/Threads/2026-07-03/bilbao-guggenheim-metal-curves/manifest.json and use the Threads browser/API workflow.
+Published URL: https://www.threads.com/@ec92009/post/DaUKoMPiPRT
 
 Caption:
 

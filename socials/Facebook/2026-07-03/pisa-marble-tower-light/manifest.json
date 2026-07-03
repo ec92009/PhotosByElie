@@ -103,7 +103,7 @@
     }
   ],
   "date": "2026-07-03",
-  "status": "prepared",
+  "status": "published",
   "account": "Photos By Elie",
   "post_type": "multi_photo",
   "destination_url": "https://photos-by-elie.com/campaign.html?c=facebook-pisa-marble-tower-light-2026-07-03",
@@ -112,7 +112,19 @@
   "notes": [
     "Images are public watermarked R2 previews staged for upload/API publishing."
   ],
-  "manual_blockers": [
-    "Publish pending: review socials/Facebook/2026-07-03/pisa-marble-tower-light/manifest.json and use the Facebook browser/API workflow."
-  ]
+  "manual_blockers": [],
+  "published_url": "https://www.facebook.com/122102168061334672/posts/122109160485334672",
+  "published": {
+    "platform": "facebook",
+    "account": "Photos By Elie",
+    "page_id": "1146747141854670",
+    "post_id": "1146747141854670_122109160485334672",
+    "permalink": "https://www.facebook.com/122102168061334672/posts/122109160485334672",
+    "timestamp": "2026-07-03T03:08:24+0000",
+    "image_count": 6,
+    "graph_readback": {
+      "subattachments": 6
+    },
+    "verification": "Graph API readback confirmed the Photos By Elie Page post and six photo subattachments."
+  }
 }

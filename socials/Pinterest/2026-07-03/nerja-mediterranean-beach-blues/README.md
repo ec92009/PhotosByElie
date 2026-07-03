@@ -4,6 +4,8 @@ Status: prepared
 Destination: https://photos-by-elie.com/campaign.html?c=pinterest-nerja-mediterranean-beach-blues-2026-07-03
 
 Manual blockers:
+- Pinterest publish pending: ~/.config/photosbyelie/pinterest-token.json is missing and no board ID mapping is configured.
+- Manual Pin Builder/API target: upload exactly five staged images and choose board Spain Travel Photography.
 - Publish pending: review socials/Pinterest/2026-07-03/nerja-mediterranean-beach-blues/manifest.json and use the Pinterest browser/API workflow.
 - Pinterest publish pending: choose the board and publish one Pin per staged image or use the prepared browser upload set.
 

@@ -74,14 +74,25 @@
       "local_staged_path": "socials/Threads/2026-07-03/bilbao-guggenheim-metal-curves/images/04-20180515-1641-00445-ee15db60e2-bilbao-guggenheim-metal-curves.jpg"
     }
   ],
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "available_count": 4,
   "date": "2026-07-03",
   "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-bilbao-guggenheim-metal-curves-2026-07-03",
   "recommended_upload_set": "images",
-  "manual_blockers": [
-    "Publish pending: review socials/Threads/2026-07-03/bilbao-guggenheim-metal-curves/manifest.json and use the Threads browser/API workflow."
-  ]
+  "manual_blockers": [],
+  "published_url": "https://www.threads.com/@ec92009/post/DaUKoMPiPRT",
+  "published": {
+    "platform": "threads",
+    "account": "ec92009",
+    "threads_user_id": "36227075590239114",
+    "media_id": "17981180700045882",
+    "permalink": "https://www.threads.com/@ec92009/post/DaUKoMPiPRT",
+    "username": "ec92009",
+    "media_type": "CAROUSEL_ALBUM",
+    "timestamp": "2026-07-03T03:08:43+0000",
+    "image_count": 4,
+    "verification": "Threads Graph readback confirmed the carousel post. API flow provided no browser link-preview removal step."
+  }
 }

@@ -1,11 +1,8 @@
 # Instagram - 2026-07-03 - Bilbao Guggenheim Metal Curves
 
-Status: prepared
+Status: published
 Destination: https://photos-by-elie.com/campaign.html?c=instagram-bilbao-guggenheim-metal-curves-2026-07-03
-
-Manual blockers:
-- Publish pending: review socials/Instagram/2026-07-03/bilbao-guggenheim-metal-curves/manifest.json and use the Instagram browser/API workflow.
-- Instagram feed captions are not clickable; update the profile website link or use a Story link sticker before posting.
+Published URL: https://www.instagram.com/p/DaUKtxWiPC3/
 
 Caption:
 

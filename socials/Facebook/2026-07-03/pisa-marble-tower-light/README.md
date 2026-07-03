@@ -1,10 +1,8 @@
 # Facebook - 2026-07-03 - Pisa Marble Tower Light
 
-Status: prepared
+Status: published
 Destination: https://photos-by-elie.com/campaign.html?c=facebook-pisa-marble-tower-light-2026-07-03
-
-Manual blockers:
-- Publish pending: review socials/Facebook/2026-07-03/pisa-marble-tower-light/manifest.json and use the Facebook browser/API workflow.
+Published URL: https://www.facebook.com/122102168061334672/posts/122109160485334672
 
 Caption:
 

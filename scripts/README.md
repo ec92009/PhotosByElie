@@ -513,7 +513,8 @@ to replace existing R2 objects. Successful bridge-uploaded keys are remembered
 in the local bridge ledger, so retrying after a partial run skips already
 uploaded keys even before Owner catalog registration exists. The Sidecar Review
 UI exposes the same guarded execution through the Upload Bridge rail with an
-item count field and streamed per-item progress feedback:
+item count field capped by the remaining R2-uploadable queue and streamed
+per-item progress feedback with uploaded-item thumbnails:
 
 ```bash
 python3 scripts/sidecar_upload_bridge.py --execute --limit 1

@@ -1496,20 +1496,40 @@ def _mock_upload_summary(conn: sqlite3.Connection) -> dict[str, Any]:
     current_r2 = _current_r2_objects_for_plan(conn, all_planned_keys)
     collision_count = 0
     covered_key_count = 0
+    planned_key_count = 0
+    missing_key_count = 0
+    uploadable_item_count = 0
+    fully_covered_item_count = 0
+    partially_covered_item_count = 0
     for row in rows:
         item_collision_count = 0
-        for key in planned_key_sets.get(str(row["asset_id"]), []):
+        item_keys = planned_key_sets.get(str(row["asset_id"]), [])
+        for key in item_keys:
+            planned_key_count += 1
             if current_r2.get((key["bucket"], key["key"])) is not None:
                 item_collision_count += 1
                 covered_key_count += 1
+            else:
+                missing_key_count += 1
         if item_collision_count:
             collision_count += 1
+        if item_keys and item_collision_count >= len(item_keys):
+            fully_covered_item_count += 1
+        elif item_collision_count:
+            partially_covered_item_count += 1
+        if item_keys and item_collision_count < len(item_keys):
+            uploadable_item_count += 1
     latest_uploaded_at = str(rows[0]["uploaded_at"] or "") if rows else ""
     return {
         "mockUploadedCount": len(rows),
         "bridgeQueuedCount": len(rows),
+        "uploadableItemCount": uploadable_item_count,
+        "fullyCoveredItemCount": fully_covered_item_count,
+        "partiallyCoveredItemCount": partially_covered_item_count,
         "collisionCount": collision_count,
         "coveredKeyCount": covered_key_count,
+        "missingKeyCount": missing_key_count,
+        "plannedKeyCount": planned_key_count,
         "latestUploadedAt": latest_uploaded_at,
         "latestQueuedAt": latest_uploaded_at,
     }
@@ -1542,6 +1562,7 @@ def upload_bridge_plan(repo_root: Path, limit: int = 500) -> dict[str, Any]:
               AND t.asset_id IS NULL
             """
         ).fetchone()["total"]
+        mock_upload_summary = _mock_upload_summary(conn)
     items = []
     collision_count = 0
     covered_key_count = 0
@@ -1581,9 +1602,14 @@ def upload_bridge_plan(repo_root: Path, limit: int = 500) -> dict[str, Any]:
         "bridgeQueuedCount": int(total_queued or 0),
         "count": len(items),
         "items": items,
-        "collisionCount": collision_count,
-        "coveredKeyCount": covered_key_count,
-        "plannedKeyCount": total_key_count,
+        "collisionCount": int(mock_upload_summary.get("collisionCount") or collision_count),
+        "coveredKeyCount": int(mock_upload_summary.get("coveredKeyCount") or covered_key_count),
+        "missingKeyCount": int(mock_upload_summary.get("missingKeyCount") or 0),
+        "plannedKeyCount": int(mock_upload_summary.get("plannedKeyCount") or total_key_count),
+        "uploadableItemCount": int(mock_upload_summary.get("uploadableItemCount") or 0),
+        "fullyCoveredItemCount": int(mock_upload_summary.get("fullyCoveredItemCount") or 0),
+        "partiallyCoveredItemCount": int(mock_upload_summary.get("partiallyCoveredItemCount") or 0),
+        "uploadBridgeSummary": mock_upload_summary,
         "message": "Upload Bridge plan only. Use sidecar_upload_bridge.py --export-one for a local Photos export dry run, or --execute --limit 1 for guarded R2 upload execution. Owner catalog registration remains a later slice.",
     }
 
@@ -2294,6 +2320,12 @@ def upload_plan(repo_root: Path, limit: int = 500) -> dict[str, Any]:
         "mockUploadedCount": int(readiness["mock_uploaded_count"] or 0),
         "mockUploadSummary": mock_upload_summary,
         "bridgeQueuedCount": int(readiness["mock_uploaded_count"] or 0),
+        "uploadableItemCount": int(mock_upload_summary.get("uploadableItemCount") or 0),
+        "fullyCoveredItemCount": int(mock_upload_summary.get("fullyCoveredItemCount") or 0),
+        "partiallyCoveredItemCount": int(mock_upload_summary.get("partiallyCoveredItemCount") or 0),
+        "coveredKeyCount": int(mock_upload_summary.get("coveredKeyCount") or 0),
+        "missingKeyCount": int(mock_upload_summary.get("missingKeyCount") or 0),
+        "plannedKeyCount": int(mock_upload_summary.get("plannedKeyCount") or 0),
         "uploadBridgeSummary": mock_upload_summary,
     }
 

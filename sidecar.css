@@ -1388,13 +1388,72 @@ button.is-busy,
 
 .sidecar-upload-bridge-progress ol {
   display: grid;
-  gap: .18rem;
+  gap: .34rem;
   margin: .1rem 0 0;
   padding-left: 1.05rem;
 }
 
 .sidecar-upload-bridge-progress li {
   overflow-wrap: anywhere;
+}
+
+.sidecar-upload-progress-list {
+  padding-left: .9rem;
+}
+
+.sidecar-upload-progress-item {
+  min-height: 2.65rem;
+  padding-left: .1rem;
+}
+
+.sidecar-upload-progress-item::marker {
+  color: rgba(255, 255, 255, .74);
+  font-weight: 900;
+}
+
+.sidecar-upload-progress-item {
+  display: grid;
+  grid-template-columns: 2.8rem minmax(0, 1fr);
+  gap: .45rem;
+  align-items: center;
+}
+
+.sidecar-upload-progress-list.is-text-only .sidecar-upload-progress-item,
+.sidecar-upload-progress-list.is-text-only li {
+  display: list-item;
+}
+
+.sidecar-upload-progress-thumb {
+  position: relative;
+  display: block;
+  width: 2.8rem;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--text) 15%, transparent);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, .08);
+}
+
+.sidecar-upload-progress-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sidecar-upload-progress-item strong,
+.sidecar-upload-progress-item small {
+  display: block;
+}
+
+.sidecar-upload-progress-item strong {
+  font-size: .74rem;
+  line-height: 1.15;
+}
+
+.sidecar-upload-progress-item small {
+  color: var(--muted);
+  font-size: .67rem;
+  line-height: 1.18;
 }
 
 .sidecar-plan-list {

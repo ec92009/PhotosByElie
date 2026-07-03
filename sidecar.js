@@ -383,7 +383,7 @@
   const videoPlayerMarkup = (item, autoplay = true) => `
     <video class="sidecar-inline-video" controls playsinline preload="metadata" ${autoplay ? "autoplay" : ""} poster="${escapeHtml(previewUrl(item))}" src="${escapeHtml(videoUrl(item))}"></video>
   `;
-  const versionFallback = "125.6";
+  const versionFallback = "125.7";
   const versionFallbackLabel = `v${versionFallback}`;
   const videoBadge = (item, index, label) => isVideo(item)
     ? videoOverlay(item, index, label)
@@ -2027,6 +2027,13 @@
     return Number(summary.bridgeQueuedCount || summary.mockUploadedCount || payload.bridgeQueuedCount || payload.mockUploadedCount || 0);
   };
 
+  const bridgeUploadableCountFromPayload = (payload = {}) => {
+    const summary = payload.uploadBridgeSummary || payload.mockUploadSummary || {};
+    const explicit = summary.uploadableItemCount ?? payload.uploadableItemCount;
+    if (explicit !== undefined && explicit !== null) return Number(explicit || 0);
+    return bridgeQueuedCountFromPayload(payload);
+  };
+
   const uploadBridgeProgressMarkup = () => {
     const progress = state.uploadBridgeRun;
     if (!progress) {
@@ -2043,14 +2050,32 @@
     const uploaded = Number(totals.uploadedKeyCount || 0);
     const skipped = Number(totals.skippedCollisionCount || 0);
     const failed = Number(totals.failedUploadCount || 0);
-    const lines = Array.isArray(progress.lines) ? progress.lines.slice(-8) : [];
+    const entries = Array.isArray(progress.entries) ? progress.entries.slice(-12) : [];
+    const lines = Array.isArray(progress.lines) ? progress.lines.slice(-12) : [];
     return `
       <div class="sidecar-upload-bridge-progress${progress.running ? " is-running" : ""}${failed ? " has-warning" : ""}">
         <strong>${escapeHtml(progress.message || (progress.running ? "Real upload running..." : "Real upload finished."))}</strong>
         <span>${completed.toLocaleString()} of ${requested.toLocaleString()} item${requested === 1 ? "" : "s"} processed.</span>
         <span>${uploaded.toLocaleString()} uploaded key${uploaded === 1 ? "" : "s"} · ${skipped.toLocaleString()} skipped collision key${skipped === 1 ? "" : "s"} · ${failed.toLocaleString()} failed key${failed === 1 ? "" : "s"}</span>
-        ${lines.length ? `
-          <ol>
+        ${entries.length ? `
+          <ol class="sidecar-upload-progress-list">
+            ${entries.map((entry) => `
+              <li class="sidecar-upload-progress-item">
+                ${entry.assetId ? `
+                  <span class="sidecar-upload-progress-thumb">
+                    <img data-sidecar-preview src="${escapeHtml(previewUrl({ localIdentifier: entry.assetId }))}" alt="" loading="lazy"/>
+                    ${previewFallbackMarkup}
+                  </span>
+                ` : ""}
+                <span>
+                  <strong>${escapeHtml(entry.filename || entry.photoId || entry.assetId || "Upload Bridge item")}</strong>
+                  <small>${escapeHtml(entry.detail || "")}</small>
+                </span>
+              </li>
+            `).join("")}
+          </ol>
+        ` : lines.length ? `
+          <ol class="sidecar-upload-progress-list is-text-only">
             ${lines.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}
           </ol>
         ` : ""}
@@ -2060,7 +2085,10 @@
 
   const updateUploadBridgeProgress = () => {
     const progressRoot = planOutput?.querySelector("[data-sidecar-upload-bridge-progress]");
-    if (progressRoot) progressRoot.innerHTML = uploadBridgeProgressMarkup();
+    if (progressRoot) {
+      progressRoot.innerHTML = uploadBridgeProgressMarkup();
+      wirePreviewFallbacks(progressRoot);
+    }
   };
 
   const uploadPlanSummaryMarkup = (payload, itemCount) => {
@@ -2090,14 +2118,18 @@
     if (!result && !summary) return "";
     const queued = Number((result || summary).bridgeQueuedCount || (result || summary).mockUploadedCount || 0);
     if (!queued) return "";
+    const uploadable = Number((result || summary).uploadableItemCount ?? queued);
+    const fullyCovered = Number((result || summary).fullyCoveredItemCount || Math.max(0, queued - uploadable));
+    const partiallyCovered = Number((result || summary).partiallyCoveredItemCount || 0);
     const collisions = Number((result || summary).collisionCount || 0);
     const coveredKeys = Number((result || summary).coveredKeyCount || 0);
+    const missingKeys = Number((result || summary).missingKeyCount || 0);
     const remaining = result ? Number(payload.count || 0) : null;
     const latestQueuedAt = summary?.latestQueuedAt || summary?.latestUploadedAt || "";
     const latestRun = latestQueuedAt ? ` Latest queue run: ${escapeHtml(latestQueuedAt)}.` : "";
     const lead = result
       ? `Queued ${queued.toLocaleString()} item${queued === 1 ? "" : "s"} across the Upload Bridge; ${remaining.toLocaleString()} remain.`
-      : `${queued.toLocaleString()} item${queued === 1 ? "" : "s"} already queued across the Upload Bridge.${latestRun}`;
+      : `${queued.toLocaleString()} item${queued === 1 ? "" : "s"} queued across the Upload Bridge; ${uploadable.toLocaleString()} still need R2 upload; ${fullyCovered.toLocaleString()} already fully uploaded or covered.${latestRun}`;
     const warning = collisions
       ? `<strong>${collisions.toLocaleString()} bridged item${collisions === 1 ? "" : "s"} collide with existing R2 coverage.</strong>`
       : "<strong>No existing R2 collisions found for bridged items.</strong>";
@@ -2105,7 +2137,9 @@
       <div class="sidecar-upload-bridge-result${collisions ? " has-warning" : ""}">
         <span>${lead}</span>
         <span>${warning}</span>
+        ${partiallyCovered ? `<span>${partiallyCovered.toLocaleString()} item${partiallyCovered === 1 ? "" : "s"} are partially uploaded and will resume missing keys.</span>` : ""}
         ${coveredKeys ? `<span>${coveredKeys.toLocaleString()} planned key${coveredKeys === 1 ? "" : "s"} already exist in Owner R2/bridge ledger state.</span>` : ""}
+        ${missingKeys ? `<span>${missingKeys.toLocaleString()} planned key${missingKeys === 1 ? "" : "s"} still missing from R2/bridge ledger coverage.</span>` : ""}
       </div>
     `;
   };
@@ -2124,9 +2158,9 @@
     const uploadSummary = kind === "upload" ? uploadPlanSummaryMarkup(payload, items.length) : "";
     const emptyMessage = kind === "upload" ? "No rows are ready for Upload Bridge yet." : "No rows.";
     if (kind === "upload") {
-      const queuedCount = bridgeQueuedCountFromPayload(payload);
-      const uploadMax = Math.max(1, Math.min(50, queuedCount || 50));
-      const uploadDisabled = state.uploadBridgeUploading || queuedCount <= 0;
+      const uploadableCount = bridgeUploadableCountFromPayload(payload);
+      const uploadMax = Math.max(1, Math.min(50, uploadableCount || 50));
+      const uploadDisabled = state.uploadBridgeUploading || uploadableCount <= 0;
       if (planTitle) planTitle.textContent = `Upload Bridge${items.length ? ` (${items.length.toLocaleString()})` : ""}`;
       planOutput.innerHTML = `
         <div class="sidecar-plan-actions">
@@ -2251,6 +2285,7 @@
         requestedCount: Number(event.count || 1),
         totals: { requestedCount: Number(event.count || 1) },
         lines: [],
+        entries: [],
         message: "",
       };
     }
@@ -2260,6 +2295,7 @@
       progress.requestedCount = Number(event.count || progress.requestedCount || 1);
       progress.totals = { requestedCount: progress.requestedCount };
       progress.lines = [];
+      progress.entries = [];
       progress.message = event.message || "Real upload starting...";
     } else if (event.event === "item-start") {
       progress.running = true;
@@ -2272,7 +2308,17 @@
       const skipped = Number(summary.skippedCollisionCount || 0);
       const failed = Number(summary.failedUploadCount || 0);
       const name = item.filename || item.photoId || item.assetId || "Upload Bridge item";
-      progress.lines = [...(progress.lines || []), `${name}: ${event.status || item.status || "done"} (${uploaded} uploaded, ${skipped} skipped, ${failed} failed)`].slice(-12);
+      const detail = `${event.status || item.status || "done"} (${uploaded} uploaded, ${skipped} skipped, ${failed} failed)`;
+      progress.entries = [
+        ...(progress.entries || []),
+        {
+          assetId: item.assetId || "",
+          photoId: item.photoId || "",
+          filename: name,
+          detail,
+        },
+      ].slice(-12);
+      progress.lines = [...(progress.lines || []), `${name}: ${detail}`].slice(-12);
       progress.message = failed
         ? `Real upload stopped on ${name}.`
         : `Real upload processed ${name}.`;
@@ -2280,6 +2326,13 @@
       progress.running = false;
       progress.totals = event.totals || progress.totals || {};
       progress.lines = [...(progress.lines || []), `Error: ${event.error || "Upload failed"}`].slice(-12);
+      progress.entries = [
+        ...(progress.entries || []),
+        {
+          filename: "Upload error",
+          detail: event.error || "Upload failed",
+        },
+      ].slice(-12);
       progress.message = event.error || "Real upload failed.";
     } else if (event.event === "done") {
       progress.running = false;
@@ -2333,6 +2386,7 @@
       requestedCount,
       totals: { requestedCount },
       lines: [],
+      entries: [],
       message: `Starting real upload for ${requestedCount.toLocaleString()} item${requestedCount === 1 ? "" : "s"}...`,
     };
     if (control) {

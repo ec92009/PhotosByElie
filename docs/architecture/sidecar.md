@@ -10,7 +10,7 @@ metadata; Owner decides publication and commerce.
 
 Sidecar has its own local visible version in `SIDECAR_VERSION`.
 
-- Current Sidecar version: `v125.6`
+- Current Sidecar version: `v125.7`
 - Versioning follows the canonical `~/Dev/.SOPs/VERSIONING_SOP.md` default
   calendar visible-version rule for this local web-app surface.
 - Sidecar version bumps do not imply a public Photos By Elie site version bump.
@@ -132,8 +132,10 @@ upload control, Sidecar uploads the private master to
 public preview pair to `photosbyelie-public/expo/`. Planned key collisions are
 skipped by default unless `--allow-r2-overwrite` is passed. The browser helper
 endpoint streams per-item progress so the rail can show uploaded, skipped, and
-failed key counts while the batch runs. Owner catalog registration is still a
-separate downstream slice.
+failed key counts while the batch runs. The Review rail shows both total queued
+bridge rows and remaining rows that still need R2 upload; successful real-upload
+runs reduce the remaining count without deleting the queued ledger rows. Owner
+catalog registration is still a separate downstream slice.
 
 Upload Bridge does not generate private JPG render triplets. Private renders are
 an on-demand Worker cache: checkout/delivery can lazily create
@@ -220,7 +222,9 @@ Sidecar has two primary pages backed by the same current window:
   visible title and keywords as approved metadata; picked assets do not enter
   the Upload Bridge until this page marks their metadata approved. The
   Upload Bridge rail is Review-only, stays off the Culling panel, and refreshes
-  after local decision changes such as approval or undo. The title and keyword
+  after local decision changes such as approval or undo. Real-upload progress
+  rows include the uploaded asset thumbnail so the operator can see what is
+  crossing to R2. The title and keyword
   field arrows propagate that single field to the
   current and following picked rows inside the same two-hour capture window,
   then approve those rows locally.

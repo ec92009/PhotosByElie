@@ -462,8 +462,9 @@ Clock state: running
 | 2026-07-03 | 16:55 CEST | 17:00 CEST | 0:05 | Verified the guarded Upload Bridge live run, tightened bridge-ledger collision wording, and prepared the implementation commit; command/runtime excluded. |
 | 2026-07-03 | 17:01 CEST | 17:42 CEST | 0:02 | Requested Sidecar UI cleanup for Upload Bridge real-upload controls, item count, visible stats, and live progress feedback; implementation/runtime/browser QA excluded. |
 | 2026-07-03 | 17:48 CEST | 17:50 CEST | 0:01 | Requested Review-only Upload Bridge UI placement and clarified real-upload source pool wording; implementation/browser QA excluded. |
+| 2026-07-03 | 18:10 CEST | 18:12 CEST | 0:01 | Requested Upload Bridge remaining-count semantics and live uploaded-item thumbnails; implementation/browser QA excluded. |
 
 ## Totals
 
-Active collaboration time used: 24:58
+Active collaboration time used: 24:59
 Remaining budget: not set

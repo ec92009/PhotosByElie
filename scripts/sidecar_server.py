@@ -31,6 +31,7 @@ from sidecar_state_db import (
     queue_upload_bridge,
     record_decision,
     record_decisions,
+    run_upload_bridge_export_dry_run,
     sidecar_sync_status,
     summary,
     upload_bridge_plan,
@@ -64,6 +65,7 @@ SIDECAR_AI_PROPOSE_PATH = "/__sidecar/ai-propose"
 SIDECAR_SYNC_STATUS_PATH = "/__sidecar/sync-status"
 SIDECAR_MOCK_UPLOAD_PATH = "/__sidecar/mock-upload"
 SIDECAR_UPLOAD_BRIDGE_PATH = "/__sidecar/upload-bridge"
+SIDECAR_UPLOAD_BRIDGE_EXECUTE_PATH = "/__sidecar/upload-bridge-execute"
 SIDECAR_UPLOAD_BRIDGE_PLAN_PATH = "/__sidecar/upload-bridge-plan"
 SIDECAR_COMMIT_PLAN_PATH = "/__sidecar/commit-plan"
 SIDECAR_VERSION_PATH = "/__sidecar/version"
@@ -515,6 +517,9 @@ class SidecarHandler(SimpleHTTPRequestHandler):
         if path in {SIDECAR_MOCK_UPLOAD_PATH, SIDECAR_UPLOAD_BRIDGE_PATH}:
             self._handle_upload_bridge()
             return
+        if path == SIDECAR_UPLOAD_BRIDGE_EXECUTE_PATH:
+            self._handle_upload_bridge_execute()
+            return
         if path == SIDECAR_INDEX_REFRESH_PATH:
             self._handle_index_refresh()
             return
@@ -907,6 +912,125 @@ class SidecarHandler(SimpleHTTPRequestHandler):
             self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
             return
         self._send_json(HTTPStatus.OK, result)
+
+    def _write_ndjson_event(self, payload: dict) -> None:
+        self.wfile.write((json.dumps(payload, ensure_ascii=False) + "\n").encode("utf-8"))
+        self.wfile.flush()
+
+    def _handle_upload_bridge_execute(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            payload = self._read_json_body()
+            requested_count = int(payload.get("count") or payload.get("limit") or 1)
+            requested_count = max(1, min(requested_count, 50))
+            allow_overwrite = bool(payload.get("allowR2Overwrite") or payload.get("allow_r2_overwrite"))
+            allow_icloud_downloads = payload.get("allowIcloudDownloads", payload.get("allow_icloud_downloads", True)) is not False
+        except ValueError as error:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
+            return
+        except Exception as error:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
+            return
+
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", "application/x-ndjson; charset=utf-8")
+        self.send_header("Cache-Control", "no-cache, max-age=0, must-revalidate")
+        self.send_header("Pragma", "no-cache")
+        self.end_headers()
+
+        totals = {
+            "requestedCount": requested_count,
+            "completedCount": 0,
+            "uploadedKeyCount": 0,
+            "skippedCollisionCount": 0,
+            "failedUploadCount": 0,
+        }
+        self._write_ndjson_event({
+            "ok": True,
+            "event": "start",
+            "count": requested_count,
+            "message": f"Starting Upload Bridge real upload for up to {requested_count} item(s).",
+        })
+        for index in range(requested_count):
+            self._write_ndjson_event({
+                "ok": True,
+                "event": "item-start",
+                "index": index + 1,
+                "count": requested_count,
+                "message": f"Uploading item {index + 1} of {requested_count}.",
+            })
+            try:
+                result = run_upload_bridge_export_dry_run(
+                    Path.cwd(),
+                    limit=5000,
+                    allow_icloud_downloads=allow_icloud_downloads,
+                    execute_upload=True,
+                    allow_r2_overwrite=allow_overwrite,
+                )
+            except Exception as error:  # noqa: BLE001 - stream the failure to the UI.
+                totals["failedUploadCount"] += 1
+                self._write_ndjson_event({
+                    "ok": False,
+                    "event": "error",
+                    "index": index + 1,
+                    "count": requested_count,
+                    "error": str(error),
+                    "totals": totals,
+                })
+                break
+
+            summary_payload = result.get("summary") or {}
+            item = (result.get("items") or [{}])[0] if result.get("items") else {}
+            uploaded_keys = int(summary_payload.get("uploadedKeyCount") or 0)
+            skipped_keys = int(summary_payload.get("skippedCollisionCount") or 0)
+            failed_keys = int(summary_payload.get("failedUploadCount") or 0)
+            totals["completedCount"] += 1 if item else 0
+            totals["uploadedKeyCount"] += uploaded_keys
+            totals["skippedCollisionCount"] += skipped_keys
+            totals["failedUploadCount"] += failed_keys
+            status = str(result.get("status") or "")
+            self._write_ndjson_event({
+                "ok": bool(result.get("ok")),
+                "event": "item-complete",
+                "index": index + 1,
+                "count": requested_count,
+                "status": status,
+                "runId": result.get("runId") or "",
+                "item": {
+                    "assetId": item.get("assetId") or "",
+                    "photoId": item.get("photoId") or "",
+                    "filename": item.get("filename") or "",
+                    "mediaType": item.get("mediaType") or "",
+                    "status": item.get("status") or status,
+                    "upload": item.get("upload") or {},
+                },
+                "summary": summary_payload,
+                "totals": totals,
+                "message": result.get("message") or "",
+            })
+            if status in {"no-queued-items", "no-uploadable-items"}:
+                break
+            if not result.get("ok") or failed_keys:
+                break
+
+        try:
+            plan = upload_plan(Path.cwd(), limit=500)
+        except Exception as error:  # noqa: BLE001 - progress is more important than final plan refresh.
+            plan = {"ok": False, "error": str(error)}
+        self._write_ndjson_event({
+            "ok": totals["failedUploadCount"] == 0,
+            "event": "done",
+            "totals": totals,
+            "uploadPlan": plan,
+            "message": (
+                f"Upload Bridge finished: {totals['completedCount']} item(s), "
+                f"{totals['uploadedKeyCount']} uploaded key(s), "
+                f"{totals['skippedCollisionCount']} skipped collision key(s), "
+                f"{totals['failedUploadCount']} failed key(s)."
+            ),
+        })
 
     def _handle_commit_plan(self) -> None:
         query = parse_qs(urlparse(self.path).query)

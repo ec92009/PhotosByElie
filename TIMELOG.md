@@ -460,8 +460,9 @@ Clock state: running
 | 2026-07-03 | 16:29 CEST | 16:30 CEST | 0:01 | Directed the next Upload Bridge slice: durable run ledger plus one queued-item Apple Photos export dry run without R2 writes; implementation/runtime excluded. |
 | 2026-07-03 | 16:52 CEST | 16:55 CEST | 0:03 | Approved starting guarded real Upload Bridge execution from the backlog, including live R2 upload of one bridge item; implementation/runtime excluded. |
 | 2026-07-03 | 16:55 CEST | 17:00 CEST | 0:05 | Verified the guarded Upload Bridge live run, tightened bridge-ledger collision wording, and prepared the implementation commit; command/runtime excluded. |
+| 2026-07-03 | 17:01 CEST | 17:42 CEST | 0:02 | Requested Sidecar UI cleanup for Upload Bridge real-upload controls, item count, visible stats, and live progress feedback; implementation/runtime/browser QA excluded. |
 
 ## Totals
 
-Active collaboration time used: 24:55
+Active collaboration time used: 24:57
 Remaining budget: not set

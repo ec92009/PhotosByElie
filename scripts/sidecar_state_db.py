@@ -1868,7 +1868,10 @@ def run_upload_bridge_export_dry_run(
     exported master and generated watermarked public previews are uploaded to
     their planned R2 keys, while Owner catalog registration remains out of scope.
     """
-    safe_limit = max(1, min(int(limit or 1), 1))
+    requested_limit = max(1, min(int(limit or 1), 5000))
+    safe_limit = 1
+    scan_limit = 5000 if execute_upload and not allow_r2_overwrite else safe_limit
+    scan_limit = max(scan_limit, requested_limit)
     run_id = _upload_bridge_run_id()
     run_mode = "execute" if execute_upload else "export-dry-run"
     execute_int = 1 if execute_upload else 0
@@ -1881,7 +1884,7 @@ def run_upload_bridge_export_dry_run(
     export_root.mkdir(parents=True, exist_ok=True)
 
     with connect(repo_root) as conn:
-        rows = _upload_bridge_rows(conn, safe_limit)
+        rows = _upload_bridge_rows(conn, scan_limit)
         if not rows:
             conn.execute(
                 """
@@ -1923,6 +1926,67 @@ def run_upload_bridge_export_dry_run(
             planned_key_sets[asset_id] = keys
             all_planned_keys.extend(keys)
         current_r2 = _current_r2_objects_for_plan(conn, all_planned_keys)
+        selected_rows = rows
+        if execute_upload and not allow_r2_overwrite:
+            selected_rows = []
+            skipped_covered = 0
+            for row in rows:
+                asset_id = str(row["asset_id"])
+                keys = planned_key_sets.get(asset_id, [])
+                missing_keys = [
+                    key
+                    for key in keys
+                    if current_r2.get((key["bucket"], key["key"])) is None
+                ]
+                if missing_keys:
+                    selected_rows = [row]
+                    break
+                skipped_covered += 1
+            if not selected_rows:
+                conn.execute(
+                    """
+                    INSERT INTO sidecar_upload_bridge_runs
+                      (run_id, mode, status, execute_upload, limit_count, started_at, completed_at,
+                       spool_root, summary_json, created_at, updated_at)
+                    VALUES (?, ?, 'no-uploadable-items', ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        run_id,
+                        run_mode,
+                        execute_int,
+                        safe_limit,
+                        now,
+                        now,
+                        str(run_root),
+                        _json_text({
+                            "bridgeQueuedCount": len(rows),
+                            "skippedCoveredCount": skipped_covered,
+                            "r2UploadPerformed": False,
+                            "executeUpload": execute_upload,
+                        }),
+                        now,
+                        now,
+                    ),
+                )
+                return {
+                    "ok": True,
+                    "mode": run_mode,
+                    "runId": run_id,
+                    "status": "no-uploadable-items",
+                    "count": 0,
+                    "spoolRoot": str(run_root),
+                    "r2UploadPerformed": False,
+                    "summary": {
+                        "bridgeQueuedCount": len(rows),
+                        "skippedCoveredCount": skipped_covered,
+                        "r2UploadPerformed": False,
+                        "executeUpload": execute_upload,
+                    },
+                    "message": "All active Upload Bridge rows already have their planned R2 keys covered.",
+                }
+        else:
+            selected_rows = rows[:1]
+
         conn.execute(
             """
             INSERT INTO sidecar_upload_bridge_runs
@@ -1937,13 +2001,13 @@ def run_upload_bridge_export_dry_run(
                 safe_limit,
                 now,
                 str(run_root),
-                _json_text({"bridgeQueuedCount": len(rows), "r2UploadPerformed": False, "executeUpload": execute_upload}),
+                _json_text({"bridgeQueuedCount": len(selected_rows), "r2UploadPerformed": False, "executeUpload": execute_upload}),
                 now,
                 now,
             ),
         )
         ledger_items: list[dict[str, Any]] = []
-        for row in rows:
+        for row in selected_rows:
             asset_id = str(row["asset_id"])
             planned_keys: list[dict[str, Any]] = []
             item_collision_count = 0

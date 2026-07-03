@@ -10,7 +10,7 @@ metadata; Owner decides publication and commerce.
 
 Sidecar has its own local visible version in `SIDECAR_VERSION`.
 
-- Current Sidecar version: `v125.4`
+- Current Sidecar version: `v125.5`
 - Versioning follows the canonical `~/Dev/.SOPs/VERSIONING_SOP.md` default
   calendar visible-version rule for this local web-app surface.
 - Sidecar version bumps do not imply a public Photos By Elie site version bump.
@@ -123,14 +123,17 @@ Bridge execution now has a durable local run ledger:
   failure reason when Photos cannot materialize the item. It also records
   per-key R2 upload results for live bridge executions.
 
-The current execution slice can materialize one queued item from Apple Photos
-into `assets/owner-actions/sidecar-upload-runs/<run-id>/export/`. Without
-`--execute`, this is export-only and performs no R2 writes. With
-`--execute --limit 1`, Sidecar uploads the private master to
+The current execution slice can materialize queued items from Apple Photos into
+`assets/owner-actions/sidecar-upload-runs/<run-id>/export/`. Without
+`--execute`, the CLI path is export-only and performs no R2 writes. With
+`--execute --limit 1`, or from Sidecar's Upload Bridge rail through the Real
+upload control, Sidecar uploads the private master to
 `photosbyelie-private/masters/<photo-id>.<ext>` and uploads the watermarked
 public preview pair to `photosbyelie-public/expo/`. Planned key collisions are
-skipped by default unless `--allow-r2-overwrite` is passed. Owner catalog
-registration is still a separate downstream slice.
+skipped by default unless `--allow-r2-overwrite` is passed. The browser helper
+endpoint streams per-item progress so the rail can show uploaded, skipped, and
+failed key counts while the batch runs. Owner catalog registration is still a
+separate downstream slice.
 
 Upload Bridge does not generate private JPG render triplets. Private renders are
 an on-demand Worker cache: checkout/delivery can lazily create

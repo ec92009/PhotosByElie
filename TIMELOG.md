@@ -467,8 +467,35 @@ Clock state: running
 | 2026-07-03 | 18:40 CEST | 18:41 CEST | 0:01 | Approved restoring the public catalog artifacts and adding a zero-row overwrite guard. |
 | 2026-07-03 | 18:50 CEST | 18:53 CEST | 0:01 | Reported missing homepage previews after the catalog restore and approved restoring the homepage manifest plus exporter guard. |
 | 2026-07-03 | 19:01 CEST | 19:07 CEST | 0:01 | Reported homepage previews still showed fallback artwork and fixed homepage randomizer data precedence; browser QA included. |
+| 2026-07-03 | 19:54 CEST | 19:55 CEST | 0:01 | Requested Upload Bridge cap increase to 500 and more prominent live queue/upload/collision counts; implementation/browser QA excluded. |
+| 2026-07-04 | 13:31 CEST | 13:32 CEST | 0:01 | Reported Upload Bridge 500-run falling back to 1 and stopping after a failed Photos export; implementation/browser QA excluded. |
+| 2026-07-04 | 16:00 CEST | 16:01 CEST | 0:01 | Reported confusing Sidecar preview fallbacks and traced them to Photos Bridge permission failures; implementation/browser QA excluded. |
+| 2026-07-04 | 16:17 CEST | 16:18 CEST | 0:01 | Challenged the Photos permission diagnosis and identified Sidecar preview generation was using the old Swift launch identity instead of the permitted app bundle. |
+| 2026-07-04 | 16:32 CEST | 16:33 CEST | 0:01 | Asked whether Review foreground AI proposals match the scheduled Sidecar picked AI metadata review and scoped the shared implementation path; implementation excluded. |
+| 2026-07-04 | 16:42 CEST | 16:43 CEST | 0:01 | Corrected the Sidecar picked AI automation blocker to the PhotoKit launched-app identity issue; implementation excluded. |
+| 2026-07-04 | 16:43 CEST | 16:45 CEST | 0:02 | Updated Sidecar documentation and scheduler help text for the Photos Bridge app permission identity and raw Swift automation footgun; verification included. |
+| 2026-07-04 | 16:52 CEST | 16:53 CEST | 0:01 | Requested next-run Sidecar picked AI prompt, script, and doc updates for app-bundled preview export; implementation excluded. |
+| 2026-07-04 | 17:00 CEST | 17:01 CEST | 0:01 | Asked whether Sidecar could support preview-vision proposal write-back; implementation/runtime excluded. |
+| 2026-07-04 | 17:03 CEST | 17:04 CEST | 0:01 | Requested updating the Sidecar picked AI automation prompt, scripts, and docs for the next run; implementation/runtime excluded. |
+| 2026-07-04 | 17:13 CEST | 17:14 CEST | 0:01 | Diagnosed Upload Bridge export_failed rows as Apple Photos materialization failures before any R2 key upload attempt. |
+| 2026-07-04 | 17:14 CEST | 20:30 CEST | 0:12 | Added Upload Bridge interrupt controls, export-failure memory, and measured direct upload drain throughput; long upload runtime excluded. |
+| 2026-07-04 | 20:30 CEST | 20:55 CEST | 0:06 | Optimized Upload Bridge execution into one planned streamed batch, parallelized per-item R2 key uploads, and verified a 25-item timing sample; upload runtime excluded. |
+| 2026-07-04/05 | 20:55 CEST | 02:33 CEST | 0:12 | Drained the remaining Upload Bridge queue outside the GUI, resumed after interruption, and verified zero upload collisions or failed keys; long upload runtime excluded. |
+| 2026-07-05 | 04:12 CEST | 04:22 CEST | 0:01 | Ran Sidecar Photos index sync automation through the Photos Bridge app identity; scan/import runtime excluded. |
+| 2026-07-05 | 09:35 CEST | 09:36 CEST | 0:01 | Reported four uploaded Sidecar videos missing from the Italy gallery and traced the gap to catalog registration; implementation/runtime excluded. |
+| 2026-07-05 | 09:36 CEST | 09:43 CEST | 0:03 | Directed broad Sidecar upload catalog registration, accepted expected R2 collisions, and classified La Concha as Spain and stained-glass rows as AI; implementation/runtime excluded. |
+| 2026-07-05 | 09:44 CEST | 09:45 CEST | 0:01 | Requested Upload Bridge block approved rows with generic metadata or no gallery signal; implementation/runtime excluded. |
+| 2026-07-05 | 09:57 CEST | 10:08 CEST | 0:03 | Diagnosed main gallery version/cache state, fixed Sidecar quick-preview source resolution, and repaired Italy rotated public previews; upload/runtime waits excluded. |
+| 2026-07-05 | 10:12 CEST | 10:20 CEST | 0:03 | Fixed Owner title/keyword saves for SQLite-backed catalog rows and made missing-original quick previews use public media URLs instead of localhost cache; verification included. |
+| 2026-07-05 | 10:21 CEST | 10:23 CEST | 0:02 | Audited remaining Sidecar/gallery loose ends: 20 unsupported unknown uploads, non-Italy rotation backlog, local-only changes, and queue state. |
+| 2026-07-05 | 10:24 CEST | 10:40 CEST | 0:04 | Repaired remaining Spain, France, and AI Sidecar rotated public previews; long R2 upload runtime excluded. |
+| 2026-07-05 | 11:03 CEST | 11:04 CEST | 0:01 | Reset the 20 unsupported unknown Upload Bridge rows back to unpicked review state; verification included. |
+| 2026-07-05 | 11:05 CEST | 11:06 CEST | 0:01 | Audited remaining loose ends after the 20-row reset: catalog state, picked AI queue, Upload Bridge blocks, versions, and dirty files. |
+| 2026-07-05 | 11:08 CEST | 11:09 CEST | 0:01 | Normalized visible site/cache-bust versions to v125.0 across HTML pages; verification included. |
+| 2026-07-05 | 11:10 CEST | 11:16 CEST | 0:02 | Retried 27 blocked Upload Bridge exports, kept 3 covered approvals, and reset 24 persistent Photos export failures to unpicked rework; retry runtime excluded. |
+| 2026-07-05 | 11:40 CEST | 11:41 CEST | 0:01 | Final loose-end audit after version and Upload Bridge cleanup; confirmed queues clean and identified remaining review/commit/deploy work. |
 
 ## Totals
 
-Active collaboration time used: 25:03
+Active collaboration time used: 26:09
 Remaining budget: not set

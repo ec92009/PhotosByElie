@@ -25,6 +25,7 @@ let currentDownloadHref = "";
 let refreshTimer = null;
 let currentDeliveryFiles = [];
 let currentOrder = null;
+let currentAccountOrders = [];
 const t = (key, replacements = {}) => window.photosByElieI18n?.t?.(key, replacements) || key;
 
 const escapeText = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({
@@ -75,7 +76,7 @@ const workerBaseUrl = () => {
   if (stored) localStorage.removeItem(workerBaseKey);
   return configured || "http://localhost:8787";
 };
-const accountWorkerBaseUrl = () => {
+const orderAccountWorkerBaseUrl = () => {
   const fromQuery = normalizedWorkerBase(params.get("authWorkerBase") || params.get("workerBase"));
   if (fromQuery && !isUnsafePublicWorkerBase(fromQuery)) return fromQuery;
   const configured = normalizedWorkerBase(window.photosByElieMediaConfig?.authWorkerBaseUrl || window.photosByElieMediaConfig?.checkoutWorkerBaseUrl || "");
@@ -144,6 +145,13 @@ const downloadHrefFor = (order) => {
 };
 
 const deliveryFileHref = (file) => file?.downloadUrl ? `${workerBaseUrl()}${file.downloadUrl}` : "";
+
+const accountOrderHrefFor = (order) => {
+  const url = new URL("./order.html", window.location.href);
+  url.searchParams.set("id", order.id);
+  url.searchParams.set("account", "1");
+  return url.href;
+};
 
 const deliveryRowsFor = (order) => {
   const readyFiles = order.delivery?.files || [];
@@ -478,6 +486,109 @@ const resendDeliveryEmail = async (button) => {
   }
 };
 
+const orderHistoryDate = (order) => {
+  const date = new Date(order.paidAt || order.createdAt || order.updatedAt || "");
+  if (!Number.isFinite(date.getTime())) return "";
+  return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" }).format(date);
+};
+
+const orderHistoryLines = (order) => (order.items || []).map((item) => {
+  const products = (item.products || []).map((product) => product.label || product.id).filter(Boolean);
+  return {
+    photoId: item.photoId || "",
+    title: item.title || item.photoId || "",
+    products: products.join(", "),
+  };
+});
+
+const renderAccountPurchaseHistory = (orders = [], currentOrderId = "") => {
+  itemsRoot.querySelector("[data-account-purchase-history]")?.remove();
+  if (!accountOrderRequested()) return;
+  const orderList = Array.isArray(orders) ? orders : [];
+  const rows = orderList.map((order) => {
+    const ready = order.status === "ready";
+    const lines = orderHistoryLines(order);
+    const fileCount = (order.delivery?.files || []).length || (order.delivery?.downloadUrl ? 1 : 0);
+    return `
+      <li class="${order.id === currentOrderId ? "is-current" : ""}">
+        <div class="account-order-history-main">
+          <div>
+            <strong>${escapeText(order.id)}</strong>
+            <span>${escapeText(orderHistoryDate(order))}${fileCount ? ` · ${fileCount} file${fileCount === 1 ? "" : "s"}` : ""} · ${escapeText(t(ready ? "account.order_ready" : "account.order_pending"))}</span>
+            ${order.id === currentOrderId ? `<em>${escapeText(t("order.account_history_current"))}</em>` : ""}
+          </div>
+          <ul>
+            ${lines.map((line) => `
+              <li>
+                <b>${escapeText(line.title)}</b>
+                <span>${escapeText(line.products || line.photoId)}</span>
+              </li>
+            `).join("")}
+          </ul>
+        </div>
+        <div class="account-order-history-actions">
+          <a class="btn secondary" href="${escapeText(accountOrderHrefFor(order))}">${escapeText(t("account.view_downloads"))}</a>
+          <button class="btn secondary" type="button" data-account-history-resend="${escapeText(order.id)}"${ready ? "" : " disabled"}>${escapeText(t("order.resend_original_email"))}</button>
+        </div>
+      </li>
+    `;
+  }).join("");
+  itemsRoot.insertAdjacentHTML("beforeend", `
+    <section class="account-order-history" data-account-purchase-history>
+      <div class="account-order-history-head">
+        <p class="eyebrow">${escapeText(t("account.orders_title"))}</p>
+        <h3>${escapeText(t("order.account_history_title"))}</h3>
+        <p>${escapeText(orderList.length ? t("order.account_history_body") : t("order.account_history_empty"))}</p>
+      </div>
+      ${orderList.length ? `<ol>${rows}</ol>` : ""}
+    </section>
+  `);
+};
+
+const loadAccountPurchaseHistory = async (currentOrderId = "") => {
+  if (!accountOrderRequested()) return;
+  try {
+    const response = await fetch(`${orderAccountWorkerBaseUrl()}/account/profile`, {
+      cache: "no-store",
+      credentials: "include",
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body?.error?.message || `Account orders failed with HTTP ${response.status}.`);
+    currentAccountOrders = Array.isArray(body.orders) ? body.orders : [];
+    renderAccountPurchaseHistory(currentAccountOrders, currentOrderId);
+  } catch (error) {
+    currentAccountOrders = [];
+    renderAccountPurchaseHistory([], currentOrderId);
+    status.textContent = error?.message || t("order.could_not_load");
+  }
+};
+
+const resendAccountHistoryEmail = async (orderId, button) => {
+  const order = currentAccountOrders.find((candidate) => candidate.id === orderId);
+  if (!order?.id || !order?.buyerEmail || order.status !== "ready") return;
+  button?.setAttribute("disabled", "");
+  status.textContent = t("order.resending_email");
+  try {
+    const response = await fetch(`${workerBaseUrl()}/orders/${encodeURIComponent(order.id)}/resend-email`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email: order.buyerEmail }),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body?.error?.message || `Email resend failed with HTTP ${response.status}.`);
+    if (body.order) {
+      currentAccountOrders = currentAccountOrders.map((candidate) => candidate.id === body.order.id ? body.order : candidate);
+      if (currentOrder?.id === body.order.id) currentOrder = body.order;
+    }
+    renderAccountPurchaseHistory(currentAccountOrders, currentOrder?.id || orderId);
+    status.textContent = t("order.account_history_resent", { email: order.buyerEmail });
+  } catch (error) {
+    status.textContent = t("order.account_history_resend_failed", { message: error.message });
+  } finally {
+    button?.removeAttribute("disabled");
+  }
+};
+
 const loadOrder = async () => {
   window.clearTimeout(refreshTimer);
   refreshTimer = null;
@@ -488,13 +599,14 @@ const loadOrder = async () => {
   if (id && accountOrderRequested()) {
     status.textContent = t("order.refreshing");
     try {
-      const response = await fetch(`${accountWorkerBaseUrl()}/account/orders/${encodeURIComponent(id)}`, {
+      const response = await fetch(`${orderAccountWorkerBaseUrl()}/account/orders/${encodeURIComponent(id)}`, {
         cache: "no-store",
         credentials: "include",
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body?.error?.message || `Order lookup failed with HTTP ${response.status}.`);
       renderOrder(body.order);
+      await loadAccountPurchaseHistory(body.order?.id || id);
       status.textContent = t("order.refreshed");
       return;
     } catch (error) {
@@ -596,6 +708,11 @@ copyBrowserLink?.addEventListener("click", async () => {
   status.textContent = copied ? t("browser_warning.copied") : t("browser_warning.copy_failed");
 });
 itemsRoot?.addEventListener("click", async (event) => {
+  const accountHistoryResendButton = event.target.closest("[data-account-history-resend]");
+  if (accountHistoryResendButton) {
+    await resendAccountHistoryEmail(accountHistoryResendButton.dataset.accountHistoryResend, accountHistoryResendButton);
+    return;
+  }
   const resendButton = event.target.closest("[data-resend-delivery-email]");
   if (resendButton) {
     await resendDeliveryEmail(resendButton);

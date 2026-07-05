@@ -1,8 +1,9 @@
 {
   "format": "photosbyelie-discarded-photo-ids",
   "version": 1,
-  "updated_at": "2026-06-16T17:50:37.862361+00:00",
+  "updated_at": "2026-06-22T16:21:43.948597+00:00",
   "photo_ids": [
+    "001-5eee93ad03",
     "1-enchanted-forest-create-a-picture-that-captures-the-mysti-0-upscale-bb8bcad4-29ef-4642-afda-c7132dd3a420-59a0e14d4c",
     "1-enchanted-forest-create-a-picture-that-captures-the-mysti-1-upscale-c8c4bd2f-49b8-4c9f-9c47-ab38973d051e-c7ed38c1ab",
     "1-enchanted-forest-create-a-picture-that-captures-the-mysti-3-upscale-e51496af-0c49-4a85-a21e-d8f552f70cff-5d1eca6a04",
@@ -3255,14 +3256,22 @@
     "d5h-2906-c2c1af6c22",
     "d5h-2907-fb9bf81957",
     "d5h-2908-b30840b1cb",
+    "d5h-2913-cd3c48a8f3",
     "d5h-2915-e8ae08ef29",
+    "d5h-2916-254fd278e3",
     "d5h-2917-b11b38fda5",
+    "d5h-2917-db41fa6f24",
     "d5h-2921-3d36843cce",
+    "d5h-2921-d1aae21c3f",
     "d5h-2923-5cdb3a529c",
+    "d5h-2925-312a2467b4",
+    "d5h-2928-9476a86cea",
     "d5h-2930-c1a88d16ef",
+    "d5h-2931-776eed3914",
     "d5h-2932-1e61b84cd5",
     "d5h-2933-69ed458df9",
     "d5h-2935-8e6e530856",
+    "d5h-2936-dd283ee5d0",
     "d5h-2937-a23780bb54",
     "d5h-2937-dade9e30bf",
     "d5h-2938-e9e2bb0480",
@@ -6188,6 +6197,7 @@
     "/20240307 144259 00207.JPG",
     "/20240307 144311 00209.JPG",
     "/20240307 144322 00211.JPG",
+    "/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260622T160454Z-batch/001-2022-la-celle-saint-cloud-marche/0024-20221211 123538 00759.jpg",
     "/Volumes/Saturn/Pictures/LR/Apple Photo Albums/2022/2015-2019/20180427 1527 00227.jpg",
     "/Volumes/Saturn/Pictures/LR/Apple Photo Albums/2022/2015-2019/20180427 1528 00228.jpg",
     "/Volumes/Saturn/Pictures/LR/Apple Photo Albums/2022/2015-2019/20180731 1512 42012.jpg",
@@ -7627,6 +7637,7 @@
     "/Volumes/Saturn/Pictures/LR/_All Leonardo/2023/05/29/UPSCALE/Scaled/champion black and white male cocker spaniel-0-UPSCALE_cc6b22a2-20c5-4f0a-998b-97bc659274cf.jpgx3.jpg",
     "/Volumes/Saturn/Pictures/LR/_All Leonardo/2023/05/29/UPSCALE/Scaled/champion black and white male cocker spaniel-0-UPSCALE_fd9f1972-c90c-434b-bc42-30b9857d0cf7.jpgx2.jpg",
     "/Volumes/Saturn/Pictures/LR/_All Leonardo/Beyrouth.mp4",
+    "001-2022-la-celle-saint-cloud-marche/0024-20221211 123538 00759.jpg",
     "13 August 2023/20230812 162617 00006.jpeg",
     "15 January 2023/20230114 173550 00171.jpeg",
     "15 January 2023/20230114 173905 00195.jpeg",
@@ -8593,10 +8604,18 @@
     "2026 Malaga, Colleccion del Museo Ruso/D5H_2906.JPG",
     "2026 Malaga, Colleccion del Museo Ruso/D5H_2907.JPG",
     "2026 Malaga, Colleccion del Museo Ruso/D5H_2908.JPG",
+    "2026 Malaga, Colleccion del Museo Ruso/D5H_2913.jpeg",
     "2026 Malaga, Colleccion del Museo Ruso/D5H_2915.JPG",
+    "2026 Malaga, Colleccion del Museo Ruso/D5H_2916.jpeg",
     "2026 Malaga, Colleccion del Museo Ruso/D5H_2917.JPG",
+    "2026 Malaga, Colleccion del Museo Ruso/D5H_2917.jpeg",
     "2026 Malaga, Colleccion del Museo Ruso/D5H_2921.JPG",
+    "2026 Malaga, Colleccion del Museo Ruso/D5H_2921.jpeg",
     "2026 Malaga, Colleccion del Museo Ruso/D5H_2923.JPG",
+    "2026 Malaga, Colleccion del Museo Ruso/D5H_2925.jpeg",
+    "2026 Malaga, Colleccion del Museo Ruso/D5H_2928.jpeg",
+    "2026 Malaga, Colleccion del Museo Ruso/D5H_2931.jpeg",
+    "2026 Malaga, Colleccion del Museo Ruso/D5H_2936.jpeg",
     "7 August 2023/20230806 161929 00286.jpeg",
     "7 August 2023/20230806 161935 00289.jpeg",
     "7 August 2023/20230806 162016 00300.jpeg",
@@ -9007,9 +9026,12 @@
     "{'name': '20221215 170956 03373.jpeg', 'extension': 'jpeg', 'bytes': 11101738, 'mtime': '2026-06-06T16:57:25+00:00'}",
     "{'name': '20221215 170959 03374.jpeg', 'extension': 'jpeg', 'bytes': 13960564, 'mtime': '2026-06-06T16:57:25+00:00'}",
     "{'name': '20221215 171001 03375.jpeg', 'extension': 'jpeg', 'bytes': 12323180, 'mtime': '2026-06-06T16:57:25+00:00'}",
-    "{'name': '20221215 171009 03376.jpeg', 'extension': 'jpeg', 'bytes': 10067665, 'mtime': '2026-06-06T16:57:25+00:00'}"
+    "{'name': '20221215 171009 03376.jpeg', 'extension': 'jpeg', 'bytes': 10067665, 'mtime': '2026-06-06T16:57:25+00:00'}",
+    "{'path': '/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260622T160454Z-batch/001-2022-la-celle-saint-cloud-marche/0024-20221211 123538 00759.jpg', 'name': '0024-20221211 123538 00759.jpg', 'extension': 'jpg', 'bytes': 949968, 'mtime': '2026-06-22T16:07:27+00:00', 'mtime_ns': 1782144447943982324, 'apple_photos': {'burstFilterOutcome': 'non-burst-keep', 'creationDate': '2022-12-11T20:35:38Z', 'eligible': True, 'exportStrategy': 'rendered_jpeg', 'filename': '20221211 123538 00759.jpg', 'index': 24, 'localIdentifier': 'E2034294-7C15-4ABC-9C96-80292CF0C4F9/L0/001', 'mediaType': 'photo', 'modificationDate': '2025-03-31T18:36:07Z', 'path': '/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260622T160454Z-batch/001-2022-la-celle-saint-cloud-marche/0024-20221211 123538 00759.jpg', 'pixelHeight': 2048, 'pixelWidth': 1151, 'reason': 'Photos still image will import as the current rendered JPG from Photos.', 'relative_path': '0024-20221211 123538 00759.jpg', 'renderAttemptError': 'Photos reported the rendered asset at 100% but did not provide the JPEG callback after 6 seconds. Owner will try the local HEIC/source fallback next.', 'renderFallback': 'local-resource-jpeg', 'renderFallbackReason': 'Photos reported the rendered asset at 100% but did not provide the JPEG callback after 6 seconds. Owner will try the local HEIC/source fallback next.', 'resources': [{'originalFilename': '20221211 123538 00759.jpg', 'type': 1, 'uniformTypeIdentifier': 'public.jpeg'}], 'sourceAnchor': 'apple-photos://E2034294-7C15-4ABC-9C96-80292CF0C4F9/L0/001', 'status': 'materialized'}, 'source_anchor_path': 'apple-photos://E2034294-7C15-4ABC-9C96-80292CF0C4F9/L0/001'}"
   ],
   "public_preview_keys": [
+    "expo/001-5eee93ad03_1800.jpg",
+    "expo/001-5eee93ad03_900.jpg",
     "expo/20161106-1622-03567-edit-edit-fd53d9a73d_1800.jpg",
     "expo/20161106-1622-03567-edit-edit-fd53d9a73d_900.jpg",
     "expo/20161106-1622-27069-edit-edit-6600df7daa_1800.jpg",
@@ -11224,14 +11246,30 @@
     "expo/d5h-2907-fb9bf81957_900.jpg",
     "expo/d5h-2908-b30840b1cb_1800.jpg",
     "expo/d5h-2908-b30840b1cb_900.jpg",
+    "expo/d5h-2913-cd3c48a8f3_1800.jpg",
+    "expo/d5h-2913-cd3c48a8f3_900.jpg",
     "expo/d5h-2915-e8ae08ef29_1800.jpg",
     "expo/d5h-2915-e8ae08ef29_900.jpg",
+    "expo/d5h-2916-254fd278e3_1800.jpg",
+    "expo/d5h-2916-254fd278e3_900.jpg",
     "expo/d5h-2917-b11b38fda5_1800.jpg",
     "expo/d5h-2917-b11b38fda5_900.jpg",
+    "expo/d5h-2917-db41fa6f24_1800.jpg",
+    "expo/d5h-2917-db41fa6f24_900.jpg",
     "expo/d5h-2921-3d36843cce_1800.jpg",
     "expo/d5h-2921-3d36843cce_900.jpg",
+    "expo/d5h-2921-d1aae21c3f_1800.jpg",
+    "expo/d5h-2921-d1aae21c3f_900.jpg",
     "expo/d5h-2923-5cdb3a529c_1800.jpg",
     "expo/d5h-2923-5cdb3a529c_900.jpg",
+    "expo/d5h-2925-312a2467b4_1800.jpg",
+    "expo/d5h-2925-312a2467b4_900.jpg",
+    "expo/d5h-2928-9476a86cea_1800.jpg",
+    "expo/d5h-2928-9476a86cea_900.jpg",
+    "expo/d5h-2931-776eed3914_1800.jpg",
+    "expo/d5h-2931-776eed3914_900.jpg",
+    "expo/d5h-2936-dd283ee5d0_1800.jpg",
+    "expo/d5h-2936-dd283ee5d0_900.jpg",
     "expo/easter-blessings-with-a-religious-theme-and-imagery-such-as-3-upscale-9e5d02f4-6570-4516-a4ed-ea43735418b6-jpgx3-7cc84f4c07_1800.jpg",
     "expo/easter-blessings-with-a-religious-theme-and-imagery-such-as-3-upscale-9e5d02f4-6570-4516-a4ed-ea43735418b6-jpgx3-7cc84f4c07_900.jpg",
     "expo/easter-eggstravaganza-with-bold-typography-and-colorful-east-1-upscale-372eb546-1aa7-417e-9c15-af8c67627ae2-jpgx3-89525ed0e7_1800.jpg",
@@ -12392,6 +12430,7 @@
     "expo/usa/img-6598-66bfa401b3_900.jpg"
   ],
   "private_keys": [
+    "masters/001-5eee93ad03.jpg",
     "masters/20110103-0616-15770-639b853c2d.jpg",
     "masters/20110103-0616-15770-639b853c2d/20110103 0616 15770.jpg",
     "masters/20110103-0617-15824-b5b45b29da.jpg",
@@ -13784,10 +13823,18 @@
     "masters/d5h-2906-c2c1af6c22.jpg",
     "masters/d5h-2907-fb9bf81957.jpg",
     "masters/d5h-2908-b30840b1cb.jpg",
+    "masters/d5h-2913-cd3c48a8f3.jpg",
     "masters/d5h-2915-e8ae08ef29.jpg",
+    "masters/d5h-2916-254fd278e3.jpg",
     "masters/d5h-2917-b11b38fda5.jpg",
+    "masters/d5h-2917-db41fa6f24.jpg",
     "masters/d5h-2921-3d36843cce.jpg",
+    "masters/d5h-2921-d1aae21c3f.jpg",
     "masters/d5h-2923-5cdb3a529c.jpg",
+    "masters/d5h-2925-312a2467b4.jpg",
+    "masters/d5h-2928-9476a86cea.jpg",
+    "masters/d5h-2931-776eed3914.jpg",
+    "masters/d5h-2936-dd283ee5d0.jpg",
     "masters/d5h-2937-dade9e30bf.jpg",
     "masters/d5h-2937-dade9e30bf/D5H_2937.JPG",
     "masters/d5h-2938-e9e2bb0480.jpg",
@@ -14483,6 +14530,9 @@
     "masters/tulips-prominent-in-the-foreground-abstract-background-ink-0-upscale-97302596-138d-445d-aa54-2e7a623de0f8-jpgx2-427afb6009.jpg",
     "masters/tulips-prominent-in-the-foreground-abstract-background-ink-1-upscale-c9a5bc37-fa85-4748-96ab-b2d94409fffa-jpgx2-e4f3f5b2fe.jpg",
     "masters/tulips-prominent-in-the-foreground-abstract-background-ink-1-upscale-cfcd1f2d-4889-4a36-99c6-d22ad06fece0-jpgx2-dbf7252c63.jpg",
+    "renders/001-5eee93ad03_1mp.jpg",
+    "renders/001-5eee93ad03_3mp.jpg",
+    "renders/001-5eee93ad03_6mp.jpg",
     "renders/20110103-0616-15770-639b853c2d/20110103-0616-15770.jpg-jpg-1mp.jpg",
     "renders/20110103-0616-15770-639b853c2d/20110103-0616-15770.jpg-jpg-3mp.jpg",
     "renders/20110103-0616-15770-639b853c2d/20110103-0616-15770.jpg-jpg-6mp.jpg",
@@ -18644,18 +18694,42 @@
     "renders/d5h-2908-b30840b1cb_1mp.jpg",
     "renders/d5h-2908-b30840b1cb_3mp.jpg",
     "renders/d5h-2908-b30840b1cb_6mp.jpg",
+    "renders/d5h-2913-cd3c48a8f3_1mp.jpg",
+    "renders/d5h-2913-cd3c48a8f3_3mp.jpg",
+    "renders/d5h-2913-cd3c48a8f3_6mp.jpg",
     "renders/d5h-2915-e8ae08ef29_1mp.jpg",
     "renders/d5h-2915-e8ae08ef29_3mp.jpg",
     "renders/d5h-2915-e8ae08ef29_6mp.jpg",
+    "renders/d5h-2916-254fd278e3_1mp.jpg",
+    "renders/d5h-2916-254fd278e3_3mp.jpg",
+    "renders/d5h-2916-254fd278e3_6mp.jpg",
     "renders/d5h-2917-b11b38fda5_1mp.jpg",
     "renders/d5h-2917-b11b38fda5_3mp.jpg",
     "renders/d5h-2917-b11b38fda5_6mp.jpg",
+    "renders/d5h-2917-db41fa6f24_1mp.jpg",
+    "renders/d5h-2917-db41fa6f24_3mp.jpg",
+    "renders/d5h-2917-db41fa6f24_6mp.jpg",
     "renders/d5h-2921-3d36843cce_1mp.jpg",
     "renders/d5h-2921-3d36843cce_3mp.jpg",
     "renders/d5h-2921-3d36843cce_6mp.jpg",
+    "renders/d5h-2921-d1aae21c3f_1mp.jpg",
+    "renders/d5h-2921-d1aae21c3f_3mp.jpg",
+    "renders/d5h-2921-d1aae21c3f_6mp.jpg",
     "renders/d5h-2923-5cdb3a529c_1mp.jpg",
     "renders/d5h-2923-5cdb3a529c_3mp.jpg",
     "renders/d5h-2923-5cdb3a529c_6mp.jpg",
+    "renders/d5h-2925-312a2467b4_1mp.jpg",
+    "renders/d5h-2925-312a2467b4_3mp.jpg",
+    "renders/d5h-2925-312a2467b4_6mp.jpg",
+    "renders/d5h-2928-9476a86cea_1mp.jpg",
+    "renders/d5h-2928-9476a86cea_3mp.jpg",
+    "renders/d5h-2928-9476a86cea_6mp.jpg",
+    "renders/d5h-2931-776eed3914_1mp.jpg",
+    "renders/d5h-2931-776eed3914_3mp.jpg",
+    "renders/d5h-2931-776eed3914_6mp.jpg",
+    "renders/d5h-2936-dd283ee5d0_1mp.jpg",
+    "renders/d5h-2936-dd283ee5d0_3mp.jpg",
+    "renders/d5h-2936-dd283ee5d0_6mp.jpg",
     "renders/d5h-2937-dade9e30bf/D5H_2937.JPG-jpg-1mp.jpg",
     "renders/d5h-2937-dade9e30bf/D5H_2937.JPG-jpg-3mp.jpg",
     "renders/d5h-2937-dade9e30bf/D5H_2937.JPG-jpg-6mp.jpg",
@@ -20728,6 +20802,31 @@
     "renders/tulips-prominent-in-the-foreground-abstract-background-ink-1-upscale-cfcd1f2d-4889-4a36-99c6-d22ad06fece0-jpgx2-dbf7252c63_6mp.jpg"
   ],
   "photos": [
+    {
+      "id": "001-5eee93ad03",
+      "title": "0024 20221211 123538 00759",
+      "discarded_at": "2026-06-22T16:21:43.909393+00:00",
+      "from_state": "hidden",
+      "from_slug": "unknown",
+      "source_slug": "unknown",
+      "media_type": "photo",
+      "asset_paths": {},
+      "source_paths": [
+        "001-2022-la-celle-saint-cloud-marche/0024-20221211 123538 00759.jpg",
+        "/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260622T160454Z-batch/001-2022-la-celle-saint-cloud-marche/0024-20221211 123538 00759.jpg",
+        "{'path': '/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260622T160454Z-batch/001-2022-la-celle-saint-cloud-marche/0024-20221211 123538 00759.jpg', 'name': '0024-20221211 123538 00759.jpg', 'extension': 'jpg', 'bytes': 949968, 'mtime': '2026-06-22T16:07:27+00:00', 'mtime_ns': 1782144447943982324, 'apple_photos': {'burstFilterOutcome': 'non-burst-keep', 'creationDate': '2022-12-11T20:35:38Z', 'eligible': True, 'exportStrategy': 'rendered_jpeg', 'filename': '20221211 123538 00759.jpg', 'index': 24, 'localIdentifier': 'E2034294-7C15-4ABC-9C96-80292CF0C4F9/L0/001', 'mediaType': 'photo', 'modificationDate': '2025-03-31T18:36:07Z', 'path': '/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260622T160454Z-batch/001-2022-la-celle-saint-cloud-marche/0024-20221211 123538 00759.jpg', 'pixelHeight': 2048, 'pixelWidth': 1151, 'reason': 'Photos still image will import as the current rendered JPG from Photos.', 'relative_path': '0024-20221211 123538 00759.jpg', 'renderAttemptError': 'Photos reported the rendered asset at 100% but did not provide the JPEG callback after 6 seconds. Owner will try the local HEIC/source fallback next.', 'renderFallback': 'local-resource-jpeg', 'renderFallbackReason': 'Photos reported the rendered asset at 100% but did not provide the JPEG callback after 6 seconds. Owner will try the local HEIC/source fallback next.', 'resources': [{'originalFilename': '20221211 123538 00759.jpg', 'type': 1, 'uniformTypeIdentifier': 'public.jpeg'}], 'sourceAnchor': 'apple-photos://E2034294-7C15-4ABC-9C96-80292CF0C4F9/L0/001', 'status': 'materialized'}, 'source_anchor_path': 'apple-photos://E2034294-7C15-4ABC-9C96-80292CF0C4F9/L0/001'}"
+      ],
+      "public_preview_keys": [
+        "expo/001-5eee93ad03_900.jpg",
+        "expo/001-5eee93ad03_1800.jpg"
+      ],
+      "private_keys": [
+        "masters/001-5eee93ad03.jpg",
+        "renders/001-5eee93ad03_1mp.jpg",
+        "renders/001-5eee93ad03_3mp.jpg",
+        "renders/001-5eee93ad03_6mp.jpg"
+      ]
+    },
     {
       "id": "20110103-0616-15770-639b853c2d",
       "title": "20110103 0616 15770",
@@ -50007,6 +50106,29 @@
       }
     },
     {
+      "id": "d5h-2913-cd3c48a8f3",
+      "title": "D5H 2913",
+      "discarded_at": "2026-06-22T16:21:43.905532+00:00",
+      "from_state": "hidden",
+      "from_slug": "spain",
+      "source_slug": "spain",
+      "media_type": "photo",
+      "asset_paths": {},
+      "source_paths": [
+        "2026 Malaga, Colleccion del Museo Ruso/D5H_2913.jpeg"
+      ],
+      "public_preview_keys": [
+        "expo/d5h-2913-cd3c48a8f3_900.jpg",
+        "expo/d5h-2913-cd3c48a8f3_1800.jpg"
+      ],
+      "private_keys": [
+        "masters/d5h-2913-cd3c48a8f3.jpg",
+        "renders/d5h-2913-cd3c48a8f3_1mp.jpg",
+        "renders/d5h-2913-cd3c48a8f3_3mp.jpg",
+        "renders/d5h-2913-cd3c48a8f3_6mp.jpg"
+      ]
+    },
+    {
       "id": "d5h-2915-e8ae08ef29",
       "title": "Museo Ruso, Malaga",
       "discarded_at": "2026-06-14T13:23:02.877209+00:00",
@@ -50034,6 +50156,29 @@
         "relative_path": "2026 Malaga, Colleccion del Museo Ruso/D5H_2915.JPG",
         "review_state": "approved"
       }
+    },
+    {
+      "id": "d5h-2916-254fd278e3",
+      "title": "D5H 2916",
+      "discarded_at": "2026-06-22T16:21:43.901779+00:00",
+      "from_state": "hidden",
+      "from_slug": "spain",
+      "source_slug": "spain",
+      "media_type": "photo",
+      "asset_paths": {},
+      "source_paths": [
+        "2026 Malaga, Colleccion del Museo Ruso/D5H_2916.jpeg"
+      ],
+      "public_preview_keys": [
+        "expo/d5h-2916-254fd278e3_900.jpg",
+        "expo/d5h-2916-254fd278e3_1800.jpg"
+      ],
+      "private_keys": [
+        "masters/d5h-2916-254fd278e3.jpg",
+        "renders/d5h-2916-254fd278e3_1mp.jpg",
+        "renders/d5h-2916-254fd278e3_3mp.jpg",
+        "renders/d5h-2916-254fd278e3_6mp.jpg"
+      ]
     },
     {
       "id": "d5h-2917-b11b38fda5",
@@ -50065,6 +50210,29 @@
       }
     },
     {
+      "id": "d5h-2917-db41fa6f24",
+      "title": "D5H 2917",
+      "discarded_at": "2026-06-22T16:21:43.897814+00:00",
+      "from_state": "hidden",
+      "from_slug": "spain",
+      "source_slug": "spain",
+      "media_type": "photo",
+      "asset_paths": {},
+      "source_paths": [
+        "2026 Malaga, Colleccion del Museo Ruso/D5H_2917.jpeg"
+      ],
+      "public_preview_keys": [
+        "expo/d5h-2917-db41fa6f24_900.jpg",
+        "expo/d5h-2917-db41fa6f24_1800.jpg"
+      ],
+      "private_keys": [
+        "masters/d5h-2917-db41fa6f24.jpg",
+        "renders/d5h-2917-db41fa6f24_1mp.jpg",
+        "renders/d5h-2917-db41fa6f24_3mp.jpg",
+        "renders/d5h-2917-db41fa6f24_6mp.jpg"
+      ]
+    },
+    {
       "id": "d5h-2921-3d36843cce",
       "title": "Museo Ruso, Malaga",
       "discarded_at": "2026-06-14T13:23:02.877209+00:00",
@@ -50092,6 +50260,29 @@
         "relative_path": "2026 Malaga, Colleccion del Museo Ruso/D5H_2921.JPG",
         "review_state": "approved"
       }
+    },
+    {
+      "id": "d5h-2921-d1aae21c3f",
+      "title": "D5H 2921",
+      "discarded_at": "2026-06-22T16:21:43.894260+00:00",
+      "from_state": "hidden",
+      "from_slug": "spain",
+      "source_slug": "spain",
+      "media_type": "photo",
+      "asset_paths": {},
+      "source_paths": [
+        "2026 Malaga, Colleccion del Museo Ruso/D5H_2921.jpeg"
+      ],
+      "public_preview_keys": [
+        "expo/d5h-2921-d1aae21c3f_900.jpg",
+        "expo/d5h-2921-d1aae21c3f_1800.jpg"
+      ],
+      "private_keys": [
+        "masters/d5h-2921-d1aae21c3f.jpg",
+        "renders/d5h-2921-d1aae21c3f_1mp.jpg",
+        "renders/d5h-2921-d1aae21c3f_3mp.jpg",
+        "renders/d5h-2921-d1aae21c3f_6mp.jpg"
+      ]
     },
     {
       "id": "d5h-2923-5cdb3a529c",
@@ -50123,6 +50314,52 @@
       }
     },
     {
+      "id": "d5h-2925-312a2467b4",
+      "title": "D5H 2925",
+      "discarded_at": "2026-06-22T16:21:43.890528+00:00",
+      "from_state": "hidden",
+      "from_slug": "spain",
+      "source_slug": "spain",
+      "media_type": "photo",
+      "asset_paths": {},
+      "source_paths": [
+        "2026 Malaga, Colleccion del Museo Ruso/D5H_2925.jpeg"
+      ],
+      "public_preview_keys": [
+        "expo/d5h-2925-312a2467b4_900.jpg",
+        "expo/d5h-2925-312a2467b4_1800.jpg"
+      ],
+      "private_keys": [
+        "masters/d5h-2925-312a2467b4.jpg",
+        "renders/d5h-2925-312a2467b4_1mp.jpg",
+        "renders/d5h-2925-312a2467b4_3mp.jpg",
+        "renders/d5h-2925-312a2467b4_6mp.jpg"
+      ]
+    },
+    {
+      "id": "d5h-2928-9476a86cea",
+      "title": "D5H 2928",
+      "discarded_at": "2026-06-22T16:21:43.886710+00:00",
+      "from_state": "hidden",
+      "from_slug": "spain",
+      "source_slug": "spain",
+      "media_type": "photo",
+      "asset_paths": {},
+      "source_paths": [
+        "2026 Malaga, Colleccion del Museo Ruso/D5H_2928.jpeg"
+      ],
+      "public_preview_keys": [
+        "expo/d5h-2928-9476a86cea_900.jpg",
+        "expo/d5h-2928-9476a86cea_1800.jpg"
+      ],
+      "private_keys": [
+        "masters/d5h-2928-9476a86cea.jpg",
+        "renders/d5h-2928-9476a86cea_1mp.jpg",
+        "renders/d5h-2928-9476a86cea_3mp.jpg",
+        "renders/d5h-2928-9476a86cea_6mp.jpg"
+      ]
+    },
+    {
       "id": "d5h-2930-c1a88d16ef",
       "title": "Museo Ruso, Malaga",
       "discarded_at": "2026-06-14T08:11:31.457293+00:00",
@@ -50140,6 +50377,29 @@
         "latest_proposed_batch_id": "2026-05-13",
         "owner_comment": "blocked by Owner review"
       }
+    },
+    {
+      "id": "d5h-2931-776eed3914",
+      "title": "D5H 2931",
+      "discarded_at": "2026-06-22T16:21:43.882863+00:00",
+      "from_state": "hidden",
+      "from_slug": "spain",
+      "source_slug": "spain",
+      "media_type": "photo",
+      "asset_paths": {},
+      "source_paths": [
+        "2026 Malaga, Colleccion del Museo Ruso/D5H_2931.jpeg"
+      ],
+      "public_preview_keys": [
+        "expo/d5h-2931-776eed3914_900.jpg",
+        "expo/d5h-2931-776eed3914_1800.jpg"
+      ],
+      "private_keys": [
+        "masters/d5h-2931-776eed3914.jpg",
+        "renders/d5h-2931-776eed3914_1mp.jpg",
+        "renders/d5h-2931-776eed3914_3mp.jpg",
+        "renders/d5h-2931-776eed3914_6mp.jpg"
+      ]
     },
     {
       "id": "d5h-2932-1e61b84cd5",
@@ -50197,6 +50457,29 @@
         "latest_proposed_batch_id": "2026-05-13",
         "owner_comment": "blocked by Owner review"
       }
+    },
+    {
+      "id": "d5h-2936-dd283ee5d0",
+      "title": "D5H 2936",
+      "discarded_at": "2026-06-22T16:21:43.878738+00:00",
+      "from_state": "hidden",
+      "from_slug": "spain",
+      "source_slug": "spain",
+      "media_type": "photo",
+      "asset_paths": {},
+      "source_paths": [
+        "2026 Malaga, Colleccion del Museo Ruso/D5H_2936.jpeg"
+      ],
+      "public_preview_keys": [
+        "expo/d5h-2936-dd283ee5d0_900.jpg",
+        "expo/d5h-2936-dd283ee5d0_1800.jpg"
+      ],
+      "private_keys": [
+        "masters/d5h-2936-dd283ee5d0.jpg",
+        "renders/d5h-2936-dd283ee5d0_1mp.jpg",
+        "renders/d5h-2936-dd283ee5d0_3mp.jpg",
+        "renders/d5h-2936-dd283ee5d0_6mp.jpg"
+      ]
     },
     {
       "id": "d5h-2937-a23780bb54",

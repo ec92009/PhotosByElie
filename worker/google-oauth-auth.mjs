@@ -261,6 +261,11 @@ export const createGoogleOAuthAuth = ({
     return defaultVerifyIdToken({ idToken, clientId: cleanClientId, certs, now });
   };
 
+  const sessionCookieSecurity = (request) => {
+    const url = new URL(request.url);
+    return url.protocol === "https:" ? "; SameSite=None; Secure" : "; SameSite=Lax";
+  };
+
   const cookieFor = async (identity, request) => {
     const createdAt = now();
     const expiresAt = new Date(createdAt.getTime() + ttlSeconds * 1000).toISOString();
@@ -270,12 +275,10 @@ export const createGoogleOAuthAuth = ({
       createdAt: createdAt.toISOString(),
       expiresAt,
     };
-    const url = new URL(request.url);
-    const secure = url.protocol === "https:" ? "; Secure" : "";
-    return `${cookieName}=${encodeURIComponent(await encodeSignedJson(cleanSessionSecret, session))}; Max-Age=${ttlSeconds}; Path=/; HttpOnly; SameSite=Lax${secure}`;
+    return `${cookieName}=${encodeURIComponent(await encodeSignedJson(cleanSessionSecret, session))}; Max-Age=${ttlSeconds}; Path=/; HttpOnly${sessionCookieSecurity(request)}`;
   };
 
-  const clearCookieFor = () => `${cookieName}=; Max-Age=0; Path=/; HttpOnly; SameSite=Lax`;
+  const clearCookieFor = (request) => `${cookieName}=; Max-Age=0; Path=/; HttpOnly${request ? sessionCookieSecurity(request) : "; SameSite=Lax"}`;
 
   const optionalSession = async (request) => {
     const token = parseCookies(request).get(cookieName);

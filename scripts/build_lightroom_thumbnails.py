@@ -868,6 +868,17 @@ def normalize_country(value: Any) -> tuple[str, str] | None:
     return (slug or "unknown", text)
 
 
+def country_alias_from_text(value: Any) -> tuple[str, str] | None:
+    if value in (None, ""):
+        return None
+    text = str(value).casefold()
+    for alias, country in COUNTRY_ALIASES.items():
+        pattern = rf"(?<![a-z0-9]){re.escape(alias.casefold())}(?![a-z0-9])"
+        if re.search(pattern, text):
+            return country
+    return None
+
+
 def infer_gallery_country(location: dict[str, Any], keywords: list[str], path_hints: list[str] | None = None) -> dict[str, str]:
     explicit = normalize_country(location.get("country"))
     if explicit:
@@ -881,6 +892,10 @@ def infer_gallery_country(location: dict[str, Any], keywords: list[str], path_hi
     for value in [location.get("region"), location.get("city"), location.get("location"), *keywords]:
         if not value:
             continue
+        normalized = country_alias_from_text(value)
+        if normalized:
+            slug, label = normalized
+            return {"slug": slug, "label": label, "source": "location_hint"}
         text = str(value).casefold()
         for hint, country in COUNTRY_HINTS.items():
             if hint in text:
@@ -889,6 +904,10 @@ def infer_gallery_country(location: dict[str, Any], keywords: list[str], path_hi
     for value in path_hints or []:
         if not value:
             continue
+        normalized = country_alias_from_text(value)
+        if normalized:
+            slug, label = normalized
+            return {"slug": slug, "label": label, "source": "path_hint"}
         text = str(value).casefold()
         for hint, country in COUNTRY_HINTS.items():
             if hint in text:

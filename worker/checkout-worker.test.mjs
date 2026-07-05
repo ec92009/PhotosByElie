@@ -148,6 +148,8 @@ test("Google OAuth auth requests account choice and stores a signed session cook
   assert.equal(callback.returnTo, "https://photos-by-elie.com/?account=1");
   assert.match(callback.cookie, /^pbe_google_session=/);
   assert.match(callback.cookie, /HttpOnly/);
+  assert.match(callback.cookie, /SameSite=None/);
+  assert.match(callback.cookie, /Secure/);
 
   const cookie = callback.cookie.split(";")[0];
   const session = await auth.optionalSession(new Request("https://worker.test/auth/session", {
@@ -493,6 +495,8 @@ test("direct Google OAuth session feeds account roles, RE login, and logout", as
   assert.equal(callbackResponse.status, 302);
   assert.equal(callbackResponse.headers.get("location"), "https://photos-by-elie.com/?account=1");
   assert.match(callbackResponse.headers.get("set-cookie") || "", /^pbe_google_session=/);
+  assert.match(callbackResponse.headers.get("set-cookie") || "", /SameSite=None/);
+  assert.match(callbackResponse.headers.get("set-cookie") || "", /Secure/);
   const googleCookie = (callbackResponse.headers.get("set-cookie") || "").split(";")[0];
 
   const sessionResponse = await worker.fetch(new Request("https://worker.test/auth/session", {
@@ -519,6 +523,8 @@ test("direct Google OAuth session feeds account roles, RE login, and logout", as
   assert.equal(logoutResponse.status, 302);
   assert.equal(logoutResponse.headers.get("location"), "https://photos-by-elie.com/?account=1");
   assert.match(logoutResponse.headers.get("set-cookie") || "", /^pbe_google_session=; Max-Age=0/);
+  assert.match(logoutResponse.headers.get("set-cookie") || "", /SameSite=None/);
+  assert.match(logoutResponse.headers.get("set-cookie") || "", /Secure/);
 });
 
 test("checkout and download milestones record analytics without buyer identifiers", async () => {

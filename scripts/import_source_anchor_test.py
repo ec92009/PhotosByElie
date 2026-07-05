@@ -13,6 +13,7 @@ if str(SCRIPT_ROOT) not in sys.path:
 from export_photos_data import dedupe_rows_by_source_anchor
 from import_source_anchor import photo_id_for_source_path, source_paths_from_row
 from build_lightroom_thumbnails import (
+    infer_gallery_country,
     infer_gallery_country_from_gps,
     manifest_match_for_source,
     manifest_source_indexes,
@@ -129,6 +130,12 @@ class ImportSourceAnchorTest(unittest.TestCase):
         self.assertEqual(facts["gps"]["GPSLongitudeDecimal"], -3.879)
         self.assertEqual(infer_gallery_country_from_gps(facts["gps"]), {"slug": "spain", "label": "Spain", "source": "gps_hint"})
         self.assertEqual(parse_exif_datetime("2023-06-04T12:00:00Z")["sort"], "2023-06-04T12:00:00")
+
+    def test_apple_photos_album_country_name_infers_gallery_country(self) -> None:
+        self.assertEqual(
+            infer_gallery_country({}, [], ["003-fontainebleau-france", "Fontainebleau, France"]),
+            {"slug": "france", "label": "France", "source": "path_hint"},
+        )
 
 
 if __name__ == "__main__":

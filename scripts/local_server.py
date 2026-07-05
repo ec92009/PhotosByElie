@@ -330,6 +330,7 @@ from owner_state_db import record_media_lifecycle_active as record_media_lifecyc
 from owner_state_db import record_media_lifecycle_discarded as record_media_lifecycle_discarded_db  # noqa: E402
 from owner_state_db import record_media_lifecycle_hidden as record_media_lifecycle_hidden_db  # noqa: E402
 from owner_state_db import clear_title_keyword_review_blocks as clear_title_keyword_review_blocks_db  # noqa: E402
+from owner_state_db import import_title_keyword_batch_file as import_title_keyword_batch_file_db  # noqa: E402
 from owner_state_db import queue_title_keyword_review_photo as queue_title_keyword_review_photo_db  # noqa: E402
 from owner_state_db import queue_title_keyword_review_photos as queue_title_keyword_review_photos_db  # noqa: E402
 from owner_state_db import record_title_keyword_review_decisions as record_title_keyword_review_decisions_db  # noqa: E402
@@ -906,7 +907,7 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             self.send_error(HTTPStatus.BAD_REQUEST, "invalid media key")
             return
         safe_key = "/".join(quote(part, safe="") for part in key.split("/") if part)
-        upstream = f"{PUBLIC_MEDIA_BASE_URL}/{safe_key}"
+        upstream = f"{PUBLIC_MEDIA_BASE_URL.rstrip('/')}/{safe_key}"
         try:
             request = Request(upstream, headers={"User-Agent": "PhotosByElieLocal/1.0"})
             with urlopen(request, timeout=20) as response:
@@ -961,8 +962,14 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         if info_only:
             self._send_json(HTTPStatus.OK, {
                 **{key: value for key, value in result.items() if key != "path"},
-                "previewUrl": f"{SOURCE_PREVIEW_PATH}{quote(media_id, safe='')}",
+                "previewUrl": result.get("previewUrl") or f"{SOURCE_PREVIEW_PATH}{quote(media_id, safe='')}",
             })
+            return
+        if result.get("previewUrl") and not result.get("path"):
+            self.send_response(HTTPStatus.FOUND)
+            self.send_header("Location", str(result["previewUrl"]))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
             return
         source_path = Path(result["path"])
         try:
@@ -1689,6 +1696,23 @@ def _state_groups(repo_root: Path) -> tuple[dict[str, list[dict]], dict[str, lis
     return expo_groups, reserve_groups, hidden_groups
 
 
+def _site_state_media_ids(repo_root: Path) -> set[str]:
+    try:
+        expo_groups, reserve_groups, hidden_groups = _state_groups(repo_root)
+    except Exception:
+        return set()
+    media_ids: set[str] = set()
+    for groups in (expo_groups, reserve_groups, hidden_groups):
+        for photos in groups.values():
+            for photo in photos:
+                if not isinstance(photo, dict):
+                    continue
+                media_id = str(photo.get("id") or "").strip()
+                if media_id:
+                    media_ids.add(media_id)
+    return media_ids
+
+
 def _find_and_remove(groups: dict[str, list[dict]], photo_id: str) -> tuple[str, dict] | None:
     for slug, photos in groups.items():
         for index, photo in enumerate(photos):
@@ -1765,6 +1789,42 @@ def _photo_asset_paths(photo: dict) -> dict[str, str]:
 
 def _source_paths_from_manifest_rows(repo_root: Path, photo_id: str) -> list[str]:
     return _source_paths_from_manifest_rows_for_ids(repo_root, {photo_id}).get(photo_id, [])
+
+
+def _source_paths_from_upload_bridge_ledger(repo_root: Path, photo_id: str) -> list[str]:
+    clean_id = str(photo_id or "").strip()
+    if not clean_id:
+        return []
+    owner_path = repo_root / OWNER_ACTION_ROOT / "Owner.sqlite"
+    if not owner_path.exists():
+        return []
+    try:
+        conn = _sqlite_readonly_connect(owner_path)
+        try:
+            rows = conn.execute(
+                """
+                SELECT export_path
+                FROM sidecar_upload_bridge_run_items
+                WHERE photo_id = ?
+                  AND COALESCE(export_path, '') <> ''
+                  AND COALESCE(export_status, '') = 'materialized'
+                ORDER BY updated_at DESC, created_at DESC
+                LIMIT 8
+                """,
+                (clean_id,),
+            ).fetchall()
+        finally:
+            conn.close()
+    except sqlite3.Error:
+        return []
+    paths: list[str] = []
+    seen: set[str] = set()
+    for row in rows:
+        path = str(row["export_path"] or "").strip()
+        if path and path not in seen:
+            seen.add(path)
+            paths.append(path)
+    return paths
 
 
 def _source_paths_from_manifest_rows_for_ids(repo_root: Path, photo_ids: set[str]) -> dict[str, list[str]]:
@@ -2761,6 +2821,54 @@ def _catalog_keywords(keyword_ids: object, keyword_lookup: dict[int, str]) -> li
     return keywords
 
 
+def _ensure_catalog_keyword_ids(conn: sqlite3.Connection, keywords: list[str]) -> str:
+    ids: list[str] = []
+    seen: set[str] = set()
+    for keyword in _unique_keywords(keywords):
+        clean = str(keyword or "").strip()
+        normalized = clean.casefold()
+        if not clean or normalized in seen:
+            continue
+        seen.add(normalized)
+        row = conn.execute("SELECT keyword_id FROM keyword_terms WHERE keyword = ?", (clean,)).fetchone()
+        if row:
+            keyword_id = int(row["keyword_id"] if isinstance(row, sqlite3.Row) else row[0])
+        else:
+            keyword_id = int(conn.execute("SELECT COALESCE(MAX(keyword_id), 0) + 1 FROM keyword_terms").fetchone()[0])
+            conn.execute("INSERT INTO keyword_terms(keyword_id, keyword) VALUES (?, ?)", (keyword_id, clean))
+        ids.append(str(keyword_id))
+    return ",".join(ids)
+
+
+def _update_public_catalog_metadata(repo_root: Path, media_id: str, title: str, keywords: list[str]) -> dict:
+    clean_id = str(media_id or "").strip()
+    catalog_path = repo_root / "assets/catalog/photosbyelie.sqlite"
+    if not clean_id or not catalog_path.exists():
+        return {"updated": 0, "path": str(catalog_path)}
+    conn = sqlite3.connect(catalog_path)
+    conn.row_factory = sqlite3.Row
+    try:
+        row = conn.execute("SELECT media_id FROM media_items WHERE media_id = ?", (clean_id,)).fetchone()
+        if not row:
+            return {"updated": 0, "path": str(catalog_path)}
+        keyword_ids = _ensure_catalog_keyword_ids(conn, keywords)
+        updated_at = datetime.now(timezone.utc).isoformat()
+        conn.execute(
+            "UPDATE media_items SET title = ?, keyword_ids = ?, updated_at = ? WHERE media_id = ?",
+            (title, keyword_ids or None, updated_at, clean_id),
+        )
+        integrity = conn.execute("PRAGMA integrity_check").fetchone()[0]
+        if integrity != "ok":
+            raise RuntimeError(f"catalog integrity_check failed: {integrity}")
+        conn.commit()
+        return {"updated": 1, "path": str(catalog_path), "keyword_ids": keyword_ids}
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
 def _metadata_label_value(row: dict, label: str) -> str:
     target = label.casefold()
     for item in row.get("metadata") or []:
@@ -2811,7 +2919,8 @@ def _manifest_location(row: dict) -> str:
                 seen.add(comparable)
         if parts:
             return ", ".join(parts)
-    if location:
+        return _metadata_label_value(row, "Location")
+    if isinstance(location, str) and location.strip():
         return str(location).strip()
     return _metadata_label_value(row, "Location")
 
@@ -3380,14 +3489,20 @@ def _incomplete_title_keyword_backlog_photos(
         for row in conn.execute("SELECT media_id, review_state FROM title_keyword_queue")
     }
     blocked_ids = _lifecycle_blocked_ids(repo_root)
-    public_ids = set(_public_catalog_origin_by_id(repo_root))
+    writeback_ids = _site_state_media_ids(repo_root)
     r2_ready_ids = _current_public_preview_ready_ids(repo_root)
     candidates: list[dict] = []
     for row in photos:
         if not isinstance(row, dict):
             continue
         media_id = str(row.get("id") or "").strip()
-        if not media_id or media_id in excluded_ids or media_id in blocked_ids or media_id in public_ids or media_id not in r2_ready_ids:
+        if (
+            not media_id
+            or media_id in excluded_ids
+            or media_id in blocked_ids
+            or media_id not in writeback_ids
+            or media_id not in r2_ready_ids
+        ):
             continue
         review_state = queue_states.get(media_id, "")
         if review_state in {"applied", "approved", "parked", "blocked", "rejected"}:
@@ -3401,6 +3516,289 @@ def _incomplete_title_keyword_backlog_photos(
         _title_keyword_backlog_photo(_manifest_catalog_row(row), batch_id, queue_states.get(str(row.get("id") or ""), "incomplete") or "incomplete")
         for row in candidates[:limit]
     ], len(candidates)
+
+
+def _manifest_all_photo_rows(repo_root: Path) -> list[dict]:
+    payload = _read_json_file(repo_root / IMPORT_CACHE_MANIFEST_PATH, {})
+    photos = payload.get("photos") if isinstance(payload, dict) else []
+    if not isinstance(photos, list):
+        return []
+    return [row for row in photos if isinstance(row, dict)]
+
+
+def _manifest_row_source_paths(row: dict) -> list[str]:
+    paths: list[str] = []
+
+    def add(value: object) -> None:
+        text = str(value or "").strip()
+        if text and text not in paths:
+            paths.append(text)
+
+    for key in ("source_path_hint", "metadata_path_hint", "relative_path"):
+        add(row.get(key))
+    source_file = row.get("source_file") if isinstance(row.get("source_file"), dict) else {}
+    for key in ("path", "original_path", "source_path", "metadata_path"):
+        add(source_file.get(key))
+    for source in row.get("sourceFiles") or []:
+        if not isinstance(source, dict):
+            continue
+        for key in ("path", "original_path", "source_path"):
+            add(source.get(key))
+    return paths
+
+
+def _manifest_row_matches_source_root(row: dict, source_root: Path | None) -> bool:
+    if source_root is None:
+        return True
+    root = source_root.expanduser().resolve(strict=False)
+    for path_text in _manifest_row_source_paths(row):
+        candidate = Path(path_text).expanduser()
+        if not candidate.is_absolute():
+            continue
+        try:
+            candidate.resolve(strict=False).relative_to(root)
+        except ValueError:
+            continue
+        return True
+    return False
+
+
+def _manifest_apple_photos_album(row: dict) -> str:
+    source_file = row.get("source_file") if isinstance(row.get("source_file"), dict) else {}
+    candidates = [
+        source_file.get("apple_photos_album"),
+        source_file.get("apple_photos"),
+        row.get("apple_photos_album"),
+        row.get("apple_photos"),
+        row.get("album"),
+        row.get("albumName"),
+        row.get("album_name"),
+        _metadata_label_value(row, "Apple Photos album"),
+    ]
+    for candidate in candidates:
+        if isinstance(candidate, dict):
+            text = str(candidate.get("title") or candidate.get("name") or "").strip()
+        else:
+            text = str(candidate or "").strip()
+        if text:
+            return text
+    return ""
+
+
+def _review_album_title(album_name: str) -> str:
+    title = str(album_name or "").strip()
+    if not title:
+        return ""
+    without_year = re.sub(r"^\s*(?:19|20)\d{2}\s+[-–—]?\s*", "", title).strip()
+    return without_year or title
+
+
+def _album_keyword_candidates(album_name: str) -> list[str]:
+    clean_album = str(album_name or "").strip()
+    if not clean_album:
+        return []
+    candidates = [clean_album]
+    for part in re.split(r"[,/|;]+|\s+-\s+", clean_album):
+        part = re.sub(r"^\s*(?:19|20)\d{2}\s+", "", part).strip(" ._-")
+        if part and not re.fullmatch(r"(?:19|20)\d{2}", part):
+            candidates.append(part)
+    return candidates
+
+
+def _manifest_import_review_keywords(repo_root: Path, row: dict, catalog: dict) -> list[str]:
+    keywords: list[str] = []
+    current_keywords = catalog.get("keywords") if isinstance(catalog.get("keywords"), list) else []
+    keywords.extend(str(keyword) for keyword in current_keywords)
+
+    album_name = _manifest_apple_photos_album(row)
+    keywords.extend(_album_keyword_candidates(album_name))
+
+    location = _manifest_location(row)
+    if location:
+        keywords.extend(part.strip() for part in re.split(r"[,/;]+", location) if part.strip())
+
+    gallery_key = str(catalog.get("gallery_key") or "").strip()
+    gallery_label = str(catalog.get("gallery_label") or "").strip()
+    if gallery_key and gallery_key != "unknown" and gallery_label:
+        keywords.append(gallery_label)
+
+    capture = row.get("capture") if isinstance(row.get("capture"), dict) else {}
+    year = str(capture.get("year") or "") or _manifest_capture(row)[:4]
+    if re.fullmatch(r"(?:19|20)\d{2}", year):
+        keywords.append(year)
+
+    return _review_keywords(repo_root, keywords)
+
+
+def _manifest_import_review_photo(repo_root: Path, row: dict, batch_id: str, source_label: str) -> dict:
+    catalog = _manifest_catalog_row(row)
+    photo = _title_keyword_backlog_photo(catalog, batch_id, "proposed")
+    album_name = _manifest_apple_photos_album(row)
+    proposed_title = _review_album_title(album_name) or _manifest_location(row) or str(catalog.get("title") or "")
+    proposed_keywords = _manifest_import_review_keywords(repo_root, row, catalog)
+    model = "apple-photos-import-context-v1" if album_name else "metadata-baseline-v1"
+    reason = "Seeded from the Apple Photos import sidecar before public catalog publication."
+    if album_name:
+        reason = f"Seeded from Apple Photos album \"{album_name}\" before public catalog publication."
+    photo["proposed"] = {
+        **photo.get("proposed", {}),
+        "title": proposed_title,
+        "keywords": proposed_keywords,
+        "status": "apple_photos_album_context" if album_name else "metadata_baseline",
+        "confidence": "medium",
+        "reason": reason,
+        "generator": {
+            "model": model,
+            "model_level": 0,
+            "model_maxed": False,
+            "model_ladder": [model],
+        },
+    }
+    photo["state"] = {
+        **photo.get("state", {}),
+        "review_state": "proposed",
+        "requested_generator": {
+            "model": model,
+            "model_level": 0,
+            "model_maxed": False,
+            "model_ladder": [model],
+        },
+    }
+    photo["changes"] = {
+        **photo.get("changes", {}),
+        "keyword_target": 8,
+        "keyword_target_met": len(proposed_keywords) >= 8,
+    }
+    source_file = row.get("source_file") if isinstance(row.get("source_file"), dict) else {}
+    source_path = str(source_file.get("path") or row.get("source_path_hint") or "").strip()
+    source_type = str(source_file.get("extension") or Path(source_path).suffix.lstrip(".") or "").strip().upper()
+    source = dict(photo.get("source") if isinstance(photo.get("source"), dict) else {})
+    source["file"] = {
+        **(source.get("file") if isinstance(source.get("file"), dict) else {}),
+        "path": source_path or (source.get("file") or {}).get("path", ""),
+        "type": source_type or (source.get("file") or {}).get("type", ""),
+        "bytes": int(source_file.get("bytes") or (source.get("file") or {}).get("bytes") or 0),
+    }
+    source["album"] = album_name
+    source["source_label"] = source_label
+    source["media_type"] = str(catalog.get("media_type") or "photo")
+    photo["source"] = source
+    return photo
+
+
+def queue_import_cache_title_keyword_review(
+    repo_root: Path,
+    *,
+    source_root: Path | None = None,
+    source_label: str = "",
+    limit: int = 0,
+) -> dict:
+    """Queue R2-ready import-cache rows for title/keyword review before catalog publication."""
+    rows = _manifest_all_photo_rows(repo_root)
+    queue_states = _title_keyword_state_by_id(repo_root)
+    blocked_ids = _lifecycle_blocked_ids(repo_root)
+    r2_ready_ids = _current_public_preview_ready_ids(repo_root)
+    selected: list[dict] = []
+    skipped = {
+        "outside_source": 0,
+        "missing_id": 0,
+        "blocked": 0,
+        "already_reviewed_or_pending": 0,
+        "not_import_eligible": 0,
+        "not_public_preview_allowed": 0,
+        "not_r2_ready": 0,
+    }
+    for row in rows:
+        if not _manifest_row_matches_source_root(row, source_root):
+            skipped["outside_source"] += 1
+            continue
+        media_id = str(row.get("id") or "").strip()
+        if not media_id:
+            skipped["missing_id"] += 1
+            continue
+        if media_id in blocked_ids:
+            skipped["blocked"] += 1
+            continue
+        if queue_states.get(media_id, "") in {"proposed", "approved", "applied", "parked", "blocked"}:
+            skipped["already_reviewed_or_pending"] += 1
+            continue
+        if not row_import_eligible(row)[0]:
+            skipped["not_import_eligible"] += 1
+            continue
+        if not public_preview_allowed(row):
+            skipped["not_public_preview_allowed"] += 1
+            continue
+        if media_id not in r2_ready_ids:
+            skipped["not_r2_ready"] += 1
+            continue
+        selected.append(row)
+
+    selected.sort(key=lambda row: (_manifest_capture(row), str(row.get("relative_path") or row.get("id") or "")))
+    if limit > 0:
+        selected = selected[:limit]
+    if not selected:
+        return {
+            "queued": 0,
+            "photo_count": 0,
+            "batch_id": "",
+            "path": "",
+            "latest_path": "",
+            "source_root": str(source_root) if source_root else "",
+            "skipped": skipped,
+        }
+
+    now = datetime.now(timezone.utc)
+    source_name = source_label or (source_root.name if source_root else "import-cache")
+    slug = re.sub(r"[^a-z0-9]+", "-", source_name.casefold()).strip("-")[:40] or "import-cache"
+    batch_id = f"import-title-keyword-review-{now.strftime('%Y%m%dT%H%M%SZ')}-{slug}-{uuid.uuid4().hex[:6]}"
+    generated_at = now.isoformat()
+    photos = [_manifest_import_review_photo(repo_root, row, batch_id, source_name) for row in selected]
+    capture_values = [value for value in (_capture_sort_value(item) for item in photos) if value]
+    queue_root = repo_root / TITLE_KEYWORD_REVIEW_ROOT
+    batch_path = queue_root / f"batch-{batch_id}.json"
+    latest_path = queue_root / "latest.json"
+    payload = {
+        "ok": True,
+        "format": "photosbyelie-title-keyword-review-queue",
+        "schema_version": 1,
+        "queue_source": "import-cache-selected-source",
+        "source_of_truth": OWNER_ACTION_ROOT.joinpath("Owner.sqlite").as_posix(),
+        "batch_id": batch_id,
+        "generated_at": generated_at,
+        "source": {
+            "label": source_name,
+            "source_root": str(source_root) if source_root else "",
+            "manifest": IMPORT_CACHE_MANIFEST_PATH.as_posix(),
+        },
+        "proposal_files": {"batch": batch_path.relative_to(repo_root).as_posix()},
+        "selection": {
+            "total_count": len(photos),
+            "visible_pending_count": len(photos),
+            "candidate_count": len(selected),
+            "r2_ready_count": len(r2_ready_ids),
+            "source_root": str(source_root) if source_root else "",
+            "skipped": skipped,
+        },
+        "range": {
+            "newest": max(capture_values) if capture_values else "",
+            "oldest": min(capture_values) if capture_values else "",
+        },
+        "photos": photos,
+    }
+    _write_json_file(batch_path, payload)
+    _write_json_file(latest_path, payload)
+    db_result = import_title_keyword_batch_file_db(repo_root, batch_path)
+    return {
+        "queued": len(photos),
+        "photo_count": len(photos),
+        "batch_id": batch_id,
+        "path": batch_path.relative_to(repo_root).as_posix(),
+        "latest_path": latest_path.relative_to(repo_root).as_posix(),
+        "source_root": str(source_root) if source_root else "",
+        "skipped": skipped,
+        "db": db_result.get("db", ""),
+        "review_url": "./owner-review.html?view=title-keywords",
+    }
 
 
 def title_keyword_review_queue_payload(repo_root: Path) -> dict:
@@ -4374,18 +4772,20 @@ def _apply_title_keyword_review_approval_payload(
         hidden_groups,
         normalized,
     )
-    if fail_on_not_found and not_found:
-        preview = ", ".join(not_found[:10])
-        suffix = "..." if len(not_found) > 10 else ""
-        raise ValueError(f"Could not auto-apply approved title/keyword rows because {len(not_found)} photo(s) were not found: {preview}{suffix}")
+    pre_catalog_not_found = _pre_catalog_review_ready_ids(repo_root, not_found)
+    hard_not_found = [media_id for media_id in not_found if media_id not in pre_catalog_not_found]
+    if fail_on_not_found and hard_not_found:
+        preview = ", ".join(hard_not_found[:10])
+        suffix = "..." if len(hard_not_found) > 10 else ""
+        raise ValueError(f"Could not auto-apply approved title/keyword rows because {len(hard_not_found)} photo(s) were not found: {preview}{suffix}")
 
     site_state = {}
     worker_catalog = {}
-    if normalized:
+    if normalized and updated:
         site_state, worker_catalog = _write_catalog_state(repo_root, expo_groups, reserve_groups, hidden_groups)
 
     decided_at = datetime.now(timezone.utc).isoformat()
-    not_found_records = _review_record_not_found(not_found, normalized, batch_id)
+    not_found_records = _review_record_not_found(hard_not_found, normalized, batch_id)
     save_result = _save_title_keyword_review_records(
         repo_root,
         fallback_batch_id=batch_id,
@@ -4410,6 +4810,8 @@ def _apply_title_keyword_review_approval_payload(
         "applied_count": len({item["id"] for item in updated}),
         "metadata_changed": metadata_changed,
         "not_found": not_found,
+        "hard_not_found": hard_not_found,
+        "pre_catalog_not_found": sorted(pre_catalog_not_found),
         "updated": updated,
         "review_flag": TITLE_KEYWORD_REVIEW_FLAG,
         "proposal_state_flag": TITLE_KEYWORD_PROPOSED_FLAG,
@@ -4576,6 +4978,14 @@ def _apply_title_keyword_approvals_to_groups(
         if photo_changed:
             metadata_changed += 1
     return updated, not_found, metadata_changed
+
+
+def _pre_catalog_review_ready_ids(repo_root: Path, media_ids: list[str]) -> set[str]:
+    manifest_rows = _manifest_rows_by_media_id(repo_root, media_ids)
+    if not manifest_rows:
+        return set()
+    r2_ready_ids = _current_public_preview_ready_ids(repo_root)
+    return {media_id for media_id in manifest_rows if media_id in r2_ready_ids}
 
 
 def _remove_photo_keyword(photo: dict, keyword: str) -> bool:
@@ -4788,6 +5198,14 @@ def _source_paths(repo_root: Path, photo: dict) -> list[Path]:
     if paths:
         return paths
 
+    upload_bridge_raw_start = len(raw_paths)
+    if photo_id:
+        for raw_path in _source_paths_from_upload_bridge_ledger(repo_root, photo_id):
+            add_raw_path(raw_path)
+    append_existing_paths(raw_paths[upload_bridge_raw_start:])
+    if paths:
+        return paths
+
     for raw_path in raw_paths:
         names = {variant.name.lower() for variant in _source_path_variants(Path(raw_path))}
         for root in RECURSIVE_SOURCE_ROOT_CANDIDATES:
@@ -4856,6 +5274,26 @@ def _source_preview_cache_path(source: Path) -> Path:
     ).hexdigest()[:20]
     stem = re.sub(r"[^A-Za-z0-9._-]+", "-", source.stem).strip("-._") or "source"
     return SOURCE_PREVIEW_CACHE_ROOT / f"{stem}-{digest}.jpg"
+
+
+def _source_preview_public_fallback(repo_root: Path, photo: dict, media_id: str, media_type: str) -> dict | None:
+    preview = photo.get("media", {}).get("publicPreview") if isinstance(photo.get("media"), dict) else {}
+    if not isinstance(preview, dict) or preview.get("allowed") is False:
+        return None
+    key = str(preview.get("detailKey") or preview.get("galleryKey") or "").strip().lstrip("/")
+    if not key or "\\" in key or ".." in key.split("/"):
+        return None
+    public_url = f"{PUBLIC_MEDIA_BASE_URL.rstrip('/')}/{key}"
+    return {
+        "ok": True,
+        "mediaId": media_id,
+        "mediaType": media_type,
+        "sourceType": "public preview fallback",
+        "sourceLabel": public_url,
+        "previewUrl": public_url,
+        "contentType": mimetypes.guess_type(key)[0] or ("video/mp4" if media_type == "video" else "image/jpeg"),
+        "isOriginal": False,
+    }
 
 
 def _source_original_for_media_id(repo_root: Path, media_id: str) -> dict:
@@ -5209,6 +5647,9 @@ def _source_preview_for_media_id(repo_root: Path, media_id: str) -> dict:
     source_type = str(source_files[0].get("type") if source_files and isinstance(source_files[0], dict) else "source/full")
     paths = _source_paths(repo_root, photo)
     if not paths:
+        fallback = _source_preview_public_fallback(repo_root, photo, clean_id, media_type)
+        if fallback:
+            return fallback
         return _source_preview_error(
             HTTPStatus.NOT_FOUND,
             clean_id,
@@ -7149,10 +7590,23 @@ def _run_cloud_media_sweep_task(
         process = subprocess.run(command, cwd=repo_root, stdout=log, stderr=subprocess.STDOUT)
     coverage = _r2_coverage_summary(repo_root, resolve_sources=False, private_missing_limit=0, import_missing_limit=0)
     coverage_ok = bool(coverage.get("ok"))
+    review_queue = {}
+    review_queue_error = ""
+    if source_root and process.returncode == 0:
+        try:
+            review_queue = queue_import_cache_title_keyword_review(
+                repo_root,
+                source_root=source_root,
+                source_label=f"Import source: {source_root.name}",
+            )
+        except Exception as error:  # noqa: BLE001 - background task should surface queue failures in Owner.
+            review_queue_error = str(error)
     errors = []
-    failed = process.returncode != 0 or not coverage_ok
+    failed = process.returncode != 0 or not coverage_ok or bool(review_queue_error)
     if process.returncode != 0:
         errors.append(f"cloud media sweep exited {process.returncode}")
+    if review_queue_error:
+        errors.append(f"title/keyword review queue failed: {review_queue_error}")
     if not coverage_ok:
         rows = coverage.get("rows") if isinstance(coverage, dict) else []
         missing = max((int(row.get("missing") or 0) for row in rows if isinstance(row, dict)), default=0)
@@ -7166,6 +7620,7 @@ def _run_cloud_media_sweep_task(
         task["failed"] = 1 if failed else 0
         task["return_code"] = process.returncode
         task["coverage_ok"] = coverage_ok
+        task["title_keyword_review"] = review_queue
         task["errors"] = errors
         task["completed_at"] = datetime.now(timezone.utc).isoformat()
         task["updated_at"] = task["completed_at"]
@@ -9588,6 +10043,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         "sync-country-keywords",
         "remove-collection-keyword",
         "update-photo-metadata",
+        "queue-import-cache-title-keyword-review",
         "queue-title-keyword-review",
         "queue-title-keyword-review-many",
         "apply-title-keyword-review-approvals",
@@ -9602,6 +10058,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
     if action not in {
         "assign-country",
         "hide-many",
+        "queue-import-cache-title-keyword-review",
         "queue-title-keyword-review-many",
         "sync-country-keywords",
         "remove-collection-keyword",
@@ -9628,6 +10085,25 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         photo_ids = _normalized_photo_ids(payload.get("photo_ids"))
         if not photo_ids:
             raise ValueError("photo_ids must include at least one photo id")
+
+    if action == "queue-import-cache-title-keyword-review":
+        source_root_text = str(payload.get("source_root") or payload.get("sourceRoot") or "").strip()
+        source_root = Path(source_root_text).expanduser() if source_root_text else None
+        try:
+            limit = int(payload.get("limit") or 0)
+        except (TypeError, ValueError) as error:
+            raise ValueError("limit must be a number") from error
+        queue_result = queue_import_cache_title_keyword_review(
+            repo_root,
+            source_root=source_root,
+            source_label=str(payload.get("source_label") or payload.get("sourceLabel") or ""),
+            limit=limit,
+        )
+        return {
+            "ok": True,
+            "action": action,
+            **queue_result,
+        }
 
     if action == "save-title-keyword-review-approvals":
         batch_id = str(payload.get("batch_id") or "").strip()
@@ -9723,7 +10199,9 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             )
             if metadata_changed:
                 site_state, worker_catalog = _write_catalog_state(repo_root, expo_groups, reserve_groups, hidden_groups)
-        not_found_records = _review_record_not_found(not_found, normalized, batch_id)
+        pre_catalog_not_found = _pre_catalog_review_ready_ids(repo_root, not_found)
+        hard_not_found = [media_id for media_id in not_found if media_id not in pre_catalog_not_found]
+        not_found_records = _review_record_not_found(hard_not_found, normalized, batch_id)
         save_result = _save_title_keyword_review_records(
             repo_root,
             fallback_batch_id=batch_id,
@@ -9748,6 +10226,8 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             "applied_count": len({item["id"] for item in updated}),
             "metadata_changed": metadata_changed,
             "not_found": not_found,
+            "hard_not_found": hard_not_found,
+            "pre_catalog_not_found": sorted(pre_catalog_not_found),
             "updated": updated,
             "review_flag": review_flag,
             "proposal_state_flag": TITLE_KEYWORD_PROPOSED_FLAG,
@@ -9979,6 +10459,30 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         if not title:
             raise ValueError("title must be a non-empty string")
         keywords = _unique_keywords(_split_keyword_text(payload.get("keywords")))
+        catalog_update = _update_public_catalog_metadata(repo_root, photo_id, title, keywords)
+        if int(catalog_update.get("updated") or 0) > 0:
+            worker_catalog = _write_worker_catalog(repo_root)
+            return {
+                "ok": True,
+                "action": action,
+                "photo_id": photo_id,
+                "updated": [{"state": "catalog", "slug": "", "id": photo_id}],
+                "metadata_changed": 1,
+                "file_updates": {
+                    "updated": 0,
+                    "skipped": 0,
+                    "error_count": 0,
+                    "errors": [],
+                    "state": "sqlite-catalog",
+                },
+                "metadata": {
+                    "photo_id": photo_id,
+                    "title": title,
+                    "keywords": keywords,
+                },
+                "catalog": catalog_update,
+                "worker_catalog": worker_catalog,
+            }
         matches = (
             [("expo", *item) for item in _matching_photos(expo_groups, photo_id)]
             + [("reserve", *item) for item in _matching_photos(reserve_groups, photo_id)]

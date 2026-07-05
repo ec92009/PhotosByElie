@@ -6,14 +6,14 @@
   <title>Photos By Elie | Owner</title>
   <meta name="description" content="Local owner controls for Photos By Elie."/>
   <link rel="icon" type="image/png" sizes="512x512" href="./assets/branding/photosbyelie-camera-tripod-logo-512.png"/>
-  <link rel="apple-touch-icon" sizes="180x180" href="./assets/branding/photosbyelie-touch-icon-180.png?v=124.0"/>
-  <link rel="manifest" href="./site.webmanifest?v=124.0"/>
+  <link rel="apple-touch-icon" sizes="180x180" href="./assets/branding/photosbyelie-touch-icon-180.png?v=125.0"/>
+  <link rel="manifest" href="./site.webmanifest?v=125.0"/>
   <meta name="theme-color" content="#7b4d26"/>
   <meta name="apple-mobile-web-app-title" content="Photos By Elie"/>
   <script>(()=>{try{const saved=localStorage.getItem('byelie-theme');if(saved==='light'||saved==='dark')document.documentElement.dataset.theme=saved;localStorage.setItem('byelie-language','en');document.documentElement.lang='en';document.documentElement.dataset.language='en'}catch{}})();</script>
-  <link rel="stylesheet" href="./shared.css?v=124.0"/>
-  <link rel="stylesheet" href="./styles.css?v=124.0"/>
-  <link rel="stylesheet" href="./photos.css?v=124.0"/>
+  <link rel="stylesheet" href="./shared.css?v=125.0"/>
+  <link rel="stylesheet" href="./styles.css?v=125.0"/>
+  <link rel="stylesheet" href="./photos.css?v=125.0"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -27,7 +27,7 @@
       <a href="./">Photos</a> <span>|</span>
       <a class="is-active" href="./owner.html">Owner</a>
     </nav>
-    <span class="site-version-badge">v124.0</span>
+    <span class="site-version-badge">v125.0</span>
     <div class="header-controls">
       <button class="language-toggle" type="button" data-language-toggle data-owner-english-only title="Owner tools stay in English">English</button>
       <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light">Night</span><span class="mode-dark">Day</span></button>
@@ -506,7 +506,6 @@
           </div>
           <div class="owner-apple-photos-layout">
             <div class="owner-apple-photos-main">
-              <p class="owner-card-note" data-owner-apple-photos-status>Uses the local Owner helper and macOS Photos permission. Import writes a temporary source folder, then starts the Expo import.</p>
               <div class="owner-apple-photos-options">
                 <label class="owner-toggle-control owner-apple-photos-burst-filter">
                   <input type="checkbox" data-owner-apple-photos-filter-bursts checked/>
@@ -526,6 +525,7 @@
                     <div class="owner-apple-photos-filter-heading">
                       <span>Albums</span>
                       <button class="owner-refresh-button owner-apple-photos-refresh-button" type="button" data-owner-apple-photos-refresh aria-label="Refresh Apple Photos albums" title="Refresh Apple Photos albums"><span aria-hidden="true">↻</span></button>
+                      <p class="owner-card-note owner-apple-photos-status" data-owner-apple-photos-status role="status" aria-live="polite">Uses the local Owner helper and macOS Photos permission. Import writes a temporary source folder, then starts the Expo import.</p>
                     </div>
                     <input type="search" data-owner-apple-photos-filter placeholder="Filter albums" autocomplete="off"/>
                   </div>
@@ -614,6 +614,7 @@
   <footer class="site-footer">
     <div class="shell">
       <p class="footer-note">© 2026 Photos By Elie</p>
+      <p class="footer-credit"><span data-i18n="footer.credit_prefix">Site creation and ongoing maintenance by</span> <a href="https://web-by-elie.com/" rel="noopener">Web By Elie</a>.</p>
       <nav class="footer-nav" aria-label="Footer navigation">
         <a href="https://ec92009.github.io/byElie/">By Elie</a>
         <a href="./#collections">Collections</a>
@@ -624,16 +625,16 @@
     </div>
   </footer>
 
-  <script src="./media-config.js?v=124.0"></script>
-  <script src="./photos.js?v=124.0"></script>
-  <script src="./owner-auth.js?v=124.0"></script>
-  <script src="./owner-tools.js?v=124.0"></script>
-  <script src="./site-version.js?v=124.0"></script>
-  <script src="./analytics.js?v=124.0"></script>
-  <script src="./catalog-sqlite.js?v=124.0"></script>
-  <script src="./photos-data.js?v=124.0"></script>
-  <script src="./hidden-actions.js?v=124.0"></script>
-  <script src="./reserve-store.js?v=124.0"></script>
-  <script src="./owner.js?v=124.0"></script>
+  <script src="./media-config.js?v=125.0"></script>
+  <script src="./photos.js?v=125.0"></script>
+  <script src="./owner-auth.js?v=125.0"></script>
+  <script src="./owner-tools.js?v=125.0"></script>
+  <script src="./site-version.js?v=125.0"></script>
+  <script src="./analytics.js?v=125.0"></script>
+  <script src="./catalog-sqlite.js?v=125.0"></script>
+  <script src="./photos-data.js?v=125.0"></script>
+  <script src="./hidden-actions.js?v=125.0"></script>
+  <script src="./reserve-store.js?v=125.0"></script>
+  <script src="./owner.js?v=125.0"></script>
 </body>
 </html>

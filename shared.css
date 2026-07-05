@@ -337,6 +337,18 @@ html[data-theme="dark"] .site-version-badge{
   border-radius:8px;
   background:color-mix(in srgb,var(--surface) 92%,transparent);
 }
+.site-account-status-row{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:8px;
+  align-items:center;
+  min-width:0;
+}
+.site-account-status-row > div{
+  display:grid;
+  gap:4px;
+  min-width:0;
+}
 .site-account-status strong{
   overflow-wrap:anywhere;
   font-size:1rem;
@@ -412,7 +424,9 @@ html[data-theme="dark"] .site-version-badge{
 .site-account-orders ol{
   display:grid;
   gap:8px;
+  max-height:min(42dvh,440px);
   margin:0;
+  overflow:auto;
   padding:0;
   list-style:none;
 }
@@ -430,6 +444,13 @@ html[data-theme="dark"] .site-version-badge{
 .site-account-orders li div{
   display:grid;
   gap:3px;
+  min-width:0;
+}
+.site-account-order-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  justify-content:flex-end;
   min-width:0;
 }
 .site-account-orders li strong,
@@ -816,6 +837,20 @@ h2{margin:0 0 8px;font-size:clamp(1.25rem,2vw,1.8rem)}
   padding-bottom:clamp(14px,2.2dvh,24px);
 }
 .footer-note{font-size:.85rem;color:var(--text);margin:0;font-weight:700}
+.footer-credit{
+  color:var(--muted);
+  font-size:.78rem;
+  line-height:1.35;
+  margin:0;
+}
+.footer-credit a{
+  color:var(--text);
+  font-weight:800;
+  text-decoration:none;
+}
+.footer-credit a:hover{
+  text-decoration:underline;
+}
 .site-footer{
   border-top:0;
   padding:clamp(12px,2dvh,22px) 0;

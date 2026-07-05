@@ -36,6 +36,7 @@ const translations = {
     'nav.collections': 'Collections',
     'nav.owner': 'Owner',
     'nav.support': 'Support and license',
+    'footer.credit_prefix': 'Site creation and ongoing maintenance by',
     'theme.night': 'Night',
     'theme.day': 'Day',
     'settings.open': 'Settings',
@@ -67,20 +68,26 @@ const translations = {
     'account.login_unavailable': 'Google login is not available from this page.',
     'account.session_failed': 'Could not check the Google session.',
     'account.memory_title': 'Saved profile',
-    'account.memory_body': 'Signed-in profiles remember liked photos, basket choices, orders, and download links.',
+    'account.memory_body': 'Orders and download links load from your verified email. Save liked/basket copies this browser\'s liked photos and basket into the account.',
     'account.memory_counts': '{likes} liked · {basket} basket · {orders} orders',
-    'account.sync_now': 'Sync profile',
+    'account.sync_now': 'Save liked/basket',
+    'account.sync_help': 'Saves liked photos and basket choices from this browser. Orders and download links are attached automatically to your checkout email.',
     'account.open_liked': 'Open liked',
     'account.open_basket': 'Open basket',
     'account.orders_title': 'Orders and downloads',
     'account.no_orders': 'No orders saved to this account yet.',
-    'account.view_downloads': 'View downloads',
+    'account.view_downloads': 'Open order',
+    'account.resend_downloads': 'Resend instructions',
+    'account.resend_unavailable': 'Resend after files are ready',
+    'account.order_resending': 'Sending download instructions...',
+    'account.order_resent': 'Download instructions sent to {email}.',
+    'account.order_resend_failed': 'Could not resend instructions: {message}',
     'account.order_ready': 'Ready',
     'account.order_pending': 'Pending',
-    'account.profile_loaded': 'Profile synced.',
-    'account.profile_saved': 'Profile saved.',
-    'account.profile_syncing': 'Syncing profile...',
-    'account.profile_failed': 'Could not sync profile.',
+    'account.profile_loaded': 'Orders refreshed.',
+    'account.profile_saved': 'Liked and basket saved.',
+    'account.profile_syncing': 'Updating account...',
+    'account.profile_failed': 'Could not update account.',
     'home.lead': 'A selected photo archive with country galleries, AI work kept separate, and fresh representative samples as the collection rail turns.',
     'home.view_collections': 'View collections',
     'home.collections': 'Collections',
@@ -345,6 +352,13 @@ const translations = {
     'order.resending_email': 'Sending delivery email...',
     'order.email_resent': 'Delivery email sent again. Check your inbox, Spam, or Junk.',
     'order.email_resend_failed': 'Could not resend delivery email: {message}',
+    'order.account_history_title': 'All purchased photos',
+    'order.account_history_body': 'Orders attached to this signed-in email. Open an order to download; resend sends instructions to the original checkout email.',
+    'order.account_history_empty': 'No signed-in order history was found.',
+    'order.account_history_current': 'Current order',
+    'order.resend_original_email': 'Resend instructions',
+    'order.account_history_resent': 'Download instructions sent to {email}.',
+    'order.account_history_resend_failed': 'Could not resend instructions: {message}',
     'order.blocked_phase_2': 'Blocked after Phase 2',
     'order.delivery_attention': 'Delivery needs attention',
     'order.delivery_failed': 'Payment is complete, but the Worker could not prepare one or more delivery files.',
@@ -415,6 +429,8 @@ const translations = {
     'support.refunds_1': 'If a file cannot be delivered, a duplicate charge appears, or the wrong resolution was purchased by mistake, email support with the order ID.',
     'support.refunds_2': 'Refunds are reviewed case by case. Delivery failures and duplicate charges are treated as support issues first.',
     'support.refunds_3': 'Use the Email support button from your order page for delivery help.',
+    'support.credits_title': 'Site credits',
+    'support.credits_copy_prefix': 'Photos By Elie is photographed and curated by Elie Cohen. Website design, build, and ongoing maintenance by',
     'product.digital': 'Digital asset',
     'product.print': 'Print',
     'product.frame': 'Frame',
@@ -572,6 +588,7 @@ const translations = {
     'nav.collections': 'Collections',
     'nav.owner': 'Owner',
     'nav.support': 'Support et licence',
+    'footer.credit_prefix': 'Creation et maintenance du site par',
     'theme.night': 'Nuit',
     'theme.day': 'Jour',
     'settings.open': 'Reglages',
@@ -603,20 +620,26 @@ const translations = {
     'account.login_unavailable': 'La connexion Google n est pas disponible depuis cette page.',
     'account.session_failed': 'Impossible de verifier la session Google.',
     'account.memory_title': 'Profil enregistre',
-    'account.memory_body': 'Les profils connectes gardent les photos aimees, le panier, les commandes et les liens de telechargement.',
+    'account.memory_body': 'Les commandes et liens de telechargement viennent de l email verifie. Enregistrer aimees/panier copie les choix de ce navigateur dans le compte.',
     'account.memory_counts': '{likes} aimees · {basket} panier · {orders} commandes',
-    'account.sync_now': 'Synchroniser',
+    'account.sync_now': 'Enregistrer aimees/panier',
+    'account.sync_help': 'Enregistre les photos aimees et le panier de ce navigateur. Les commandes et liens de telechargement sont rattaches automatiquement a l email de paiement.',
     'account.open_liked': 'Voir les aimees',
     'account.open_basket': 'Voir le panier',
     'account.orders_title': 'Commandes et telechargements',
     'account.no_orders': 'Aucune commande n est encore enregistree pour ce compte.',
-    'account.view_downloads': 'Voir les telechargements',
+    'account.view_downloads': 'Ouvrir commande',
+    'account.resend_downloads': 'Renvoyer instructions',
+    'account.resend_unavailable': 'Renvoyer quand les fichiers sont prets',
+    'account.order_resending': 'Envoi des instructions...',
+    'account.order_resent': 'Instructions envoyees a {email}.',
+    'account.order_resend_failed': 'Impossible de renvoyer : {message}',
     'account.order_ready': 'Pret',
     'account.order_pending': 'En attente',
-    'account.profile_loaded': 'Profil synchronise.',
-    'account.profile_saved': 'Profil enregistre.',
-    'account.profile_syncing': 'Synchronisation du profil...',
-    'account.profile_failed': 'Impossible de synchroniser le profil.',
+    'account.profile_loaded': 'Commandes actualisees.',
+    'account.profile_saved': 'Photos aimees et panier enregistres.',
+    'account.profile_syncing': 'Mise a jour du compte...',
+    'account.profile_failed': 'Impossible de mettre le compte a jour.',
     'home.lead': 'Une archive photo choisie, avec galeries par pays, images IA a part, et nouveaux apercus representatifs au fil du rail des collections.',
     'home.view_collections': 'Voir les collections',
     'home.collections': 'Collections',
@@ -881,6 +904,13 @@ const translations = {
     'order.resending_email': 'Envoi de l email de livraison...',
     'order.email_resent': 'Email de livraison renvoye. Verifiez votre boite, Spam ou Indesirables.',
     'order.email_resend_failed': 'Impossible de renvoyer l email : {message}',
+    'order.account_history_title': 'Toutes les photos achetees',
+    'order.account_history_body': 'Commandes rattachees a cet email connecte. Ouvrez une commande pour telecharger; renvoyer envoie les instructions a l email de paiement original.',
+    'order.account_history_empty': 'Aucun historique de commandes connecte trouve.',
+    'order.account_history_current': 'Commande actuelle',
+    'order.resend_original_email': 'Renvoyer instructions',
+    'order.account_history_resent': 'Instructions envoyees a {email}.',
+    'order.account_history_resend_failed': 'Impossible de renvoyer : {message}',
     'order.blocked_phase_2': 'Bloque apres la phase 2',
     'order.delivery_attention': 'Livraison a verifier',
     'order.delivery_failed': 'Le paiement est termine, mais le Worker n a pas pu preparer un ou plusieurs fichiers.',
@@ -951,6 +981,8 @@ const translations = {
     'support.refunds_1': 'Si un fichier ne peut pas etre livre, si un frais en double apparait, ou si une mauvaise resolution a ete achetee par erreur, envoyez un email avec le numero de commande.',
     'support.refunds_2': 'Les remboursements sont examines au cas par cas. Les echecs de livraison et frais en double sont traites comme problemes de support en premier.',
     'support.refunds_3': 'Utilisez le bouton Email support depuis votre page commande pour l aide livraison.',
+    'support.credits_title': 'Credits du site',
+    'support.credits_copy_prefix': 'Photos By Elie est photographie et selectionne par Elie Cohen. Conception, creation et maintenance continue du site par',
     'product.digital': 'Fichier numerique',
     'product.print': 'Tirage',
     'product.frame': 'Cadre',
@@ -1108,6 +1140,7 @@ const translations = {
     'nav.collections': 'Colecciones',
     'nav.owner': 'Owner',
     'nav.support': 'Soporte y licencia',
+    'footer.credit_prefix': 'Creacion y mantenimiento continuo del sitio por',
     'theme.night': 'Noche',
     'theme.day': 'Dia',
     'settings.open': 'Ajustes',
@@ -1139,20 +1172,26 @@ const translations = {
     'account.login_unavailable': 'El inicio de sesion con Google no esta disponible desde esta pagina.',
     'account.session_failed': 'No se pudo comprobar la sesion de Google.',
     'account.memory_title': 'Perfil guardado',
-    'account.memory_body': 'Los perfiles conectados recuerdan fotos favoritas, cesta, pedidos y enlaces de descarga.',
+    'account.memory_body': 'Los pedidos y enlaces de descarga vienen del email verificado. Guardar favoritos/cesta copia las elecciones de este navegador a la cuenta.',
     'account.memory_counts': '{likes} favoritas · {basket} cesta · {orders} pedidos',
-    'account.sync_now': 'Sincronizar',
+    'account.sync_now': 'Guardar favoritos/cesta',
+    'account.sync_help': 'Guarda favoritos y cesta de este navegador. Los pedidos y enlaces de descarga se conectan automaticamente al email de pago.',
     'account.open_liked': 'Ver favoritas',
     'account.open_basket': 'Ver cesta',
     'account.orders_title': 'Pedidos y descargas',
     'account.no_orders': 'Aun no hay pedidos guardados en esta cuenta.',
-    'account.view_downloads': 'Ver descargas',
+    'account.view_downloads': 'Abrir pedido',
+    'account.resend_downloads': 'Reenviar instrucciones',
+    'account.resend_unavailable': 'Reenviar cuando los archivos esten listos',
+    'account.order_resending': 'Enviando instrucciones...',
+    'account.order_resent': 'Instrucciones enviadas a {email}.',
+    'account.order_resend_failed': 'No se pudo reenviar: {message}',
     'account.order_ready': 'Listo',
     'account.order_pending': 'Pendiente',
-    'account.profile_loaded': 'Perfil sincronizado.',
-    'account.profile_saved': 'Perfil guardado.',
-    'account.profile_syncing': 'Sincronizando perfil...',
-    'account.profile_failed': 'No se pudo sincronizar el perfil.',
+    'account.profile_loaded': 'Pedidos actualizados.',
+    'account.profile_saved': 'Favoritos y cesta guardados.',
+    'account.profile_syncing': 'Actualizando cuenta...',
+    'account.profile_failed': 'No se pudo actualizar la cuenta.',
     'home.lead': 'Un archivo fotografico seleccionado, con galerias por pais, obra IA separada y muestras representativas nuevas mientras gira el carril de colecciones.',
     'home.view_collections': 'Ver colecciones',
     'home.collections': 'Colecciones',
@@ -1411,6 +1450,13 @@ const translations = {
     'order.resending_email': 'Enviando email de entrega...',
     'order.email_resent': 'Email de entrega reenviado. Revisa tu bandeja, Spam o Correo no deseado.',
     'order.email_resend_failed': 'No se pudo reenviar el email: {message}',
+    'order.account_history_title': 'Todas las fotos compradas',
+    'order.account_history_body': 'Pedidos vinculados a este email conectado. Abre un pedido para descargar; reenviar manda instrucciones al email original de pago.',
+    'order.account_history_empty': 'No se encontro historial de pedidos conectado.',
+    'order.account_history_current': 'Pedido actual',
+    'order.resend_original_email': 'Reenviar instrucciones',
+    'order.account_history_resent': 'Instrucciones enviadas a {email}.',
+    'order.account_history_resend_failed': 'No se pudo reenviar: {message}',
     'order.blocked_phase_2': 'Bloqueado despues de fase 2',
     'order.delivery_attention': 'Entrega necesita atencion',
     'order.delivery_failed': 'El pago esta completo, pero el Worker no pudo preparar uno o mas archivos.',
@@ -1481,6 +1527,8 @@ const translations = {
     'support.refunds_1': 'Si un archivo no puede entregarse, aparece un cargo duplicado, o compraste una resolucion equivocada por error, envia un email con el ID del pedido.',
     'support.refunds_2': 'Los reembolsos se revisan caso por caso. Errores de entrega y cargos duplicados se tratan primero como problemas de soporte.',
     'support.refunds_3': 'Usa el boton Email soporte desde la pagina del pedido para ayuda de entrega.',
+    'support.credits_title': 'Creditos del sitio',
+    'support.credits_copy_prefix': 'Photos By Elie esta fotografiado y curado por Elie Cohen. Diseno, creacion y mantenimiento continuo del sitio por',
     'product.digital': 'Archivo digital',
     'product.print': 'Copia',
     'product.frame': 'Marco',
@@ -2628,12 +2676,13 @@ window.photosByElieVideoDurationLabel = (photo) => (
           return true;
         }
         const previewUrl = payload.previewUrl || window.photosByElieSourcePreviewUrl(targetPhoto);
+        const isPublicFallback = payload.isOriginal === false;
         renderInfo({
-          eyebrow: "Owner original preview",
+          eyebrow: isPublicFallback ? "Public preview" : "Owner original preview",
           rows: [
             ["Source", payload.sourceType || "original/source"],
             ["Path", payload.sourceLabel || sourceLabel],
-            ["Status", payload.isOriginal === false ? "Loaded full-size source-derived preview" : "Loaded original from localhost source"],
+            ["Status", isPublicFallback ? "Loaded public media, matching regular visitor delivery" : "Loaded original from localhost source"],
           ],
         });
         const handleSourceLoadError = ({ sourceType, attemptedSourceLabel, reason }) => {
@@ -3498,6 +3547,7 @@ const accountReturnUrl = () => {
 const consumeAccountReturnFlag = () => {
   const url = new URL(window.location.href);
   if (url.searchParams.get("account") !== "1") return false;
+  if (/\/order\.html$/i.test(url.pathname)) return true;
   url.searchParams.delete("account");
   window.history.replaceState(window.history.state, document.title, url.href);
   return true;
@@ -3548,8 +3598,13 @@ const ensureSiteAccount = () => {
         <button class="site-settings-close" type="button" data-account-close data-i18n-aria-label="account.close" data-i18n-title="account.close" aria-label="${translate('account.close')}" title="${translate('account.close')}">x</button>
       </div>
       <div class="site-account-status">
-        <strong data-account-status-title>${translate('account.visitor_status')}</strong>
-        <span data-account-status-detail>${translate('account.choose')}</span>
+        <div class="site-account-status-row">
+          <div>
+            <strong data-account-status-title>${translate('account.visitor_status')}</strong>
+            <span data-account-status-detail>${translate('account.choose')}</span>
+          </div>
+          <button class="site-account-mini-action site-account-signout-inline" type="button" data-account-signout-inline data-i18n="account.sign_out" hidden>${translate('account.sign_out')}</button>
+        </div>
       </div>
       <div class="site-account-memory" data-account-memory hidden>
         <div>
@@ -3560,7 +3615,7 @@ const ensureSiteAccount = () => {
         <div class="site-account-memory-actions">
           <a class="site-account-mini-action" href="./liked.html" data-i18n="account.open_liked">${translate('account.open_liked')}</a>
           <a class="site-account-mini-action" href="./basket.html" data-i18n="account.open_basket">${translate('account.open_basket')}</a>
-          <button class="site-account-mini-action" type="button" data-account-sync>${translate('account.sync_now')}</button>
+          <button class="site-account-mini-action" type="button" data-account-sync data-i18n-title="account.sync_help" title="${translate('account.sync_help')}">${translate('account.sync_now')}</button>
         </div>
       </div>
       <div class="site-account-orders" data-account-orders hidden>
@@ -3581,6 +3636,7 @@ const ensureSiteAccount = () => {
   const closeButton = modal.querySelector('[data-account-close]');
   const visitorButton = modal.querySelector('[data-account-visitor]');
   const signoutButton = modal.querySelector('[data-account-signout]');
+  const signoutInlineButton = modal.querySelector('[data-account-signout-inline]');
   const signupButton = modal.querySelector('[data-account-signup]');
   const signinButton = modal.querySelector('[data-account-signin]');
   const statusTitle = modal.querySelector('[data-account-status-title]');
@@ -3660,23 +3716,64 @@ const ensureSiteAccount = () => {
     return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" }).format(date);
   };
 
+  const accountOrderItemsSummary = (order) => {
+    const items = (order.items || []).map((item) => String(item.title || item.photoId || "").trim()).filter(Boolean);
+    if (!items.length) return "";
+    const visible = items.slice(0, 3).join(" · ");
+    return items.length > 3 ? `${visible} · +${items.length - 3}` : visible;
+  };
+
+  const resendAccountOrderInstructions = async (orderId, button) => {
+    const order = (state.orders || []).find((candidate) => candidate.id === orderId);
+    if (!order?.id || !order?.buyerEmail || order.status !== "ready") return;
+    const workerBase = accountWorkerBaseUrl();
+    if (!workerBase) return;
+    button?.setAttribute("disabled", "");
+    setMessage(translate('account.order_resending'));
+    try {
+      const response = await fetch(`${workerBase}/orders/${encodeURIComponent(order.id)}/resend-email`, {
+        method: "POST",
+        cache: "no-store",
+        credentials: "omit",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: order.buyerEmail }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload?.error?.message || `HTTP ${response.status}`);
+      if (payload.order) {
+        state.orders = state.orders.map((candidate) => candidate.id === payload.order.id ? payload.order : candidate);
+      }
+      setMessage(translate('account.order_resent', { email: order.buyerEmail }));
+      renderAccountOrders();
+    } catch (error) {
+      setMessage(translate('account.order_resend_failed', { message: error?.message || "unknown" }), true);
+    } finally {
+      button?.removeAttribute("disabled");
+    }
+  };
+
   const renderAccountOrders = () => {
     const orders = Array.isArray(state.orders) ? state.orders : [];
     if (ordersPanel) ordersPanel.hidden = !state.authenticated;
     if (ordersEmpty) ordersEmpty.hidden = orders.length > 0;
     if (!ordersList) return;
-    ordersList.innerHTML = orders.slice(0, 6).map((order) => {
+    ordersList.innerHTML = orders.map((order) => {
       const ready = order.status === "ready";
       const itemCount = (order.items || []).length;
       const fileCount = (order.delivery?.files || []).length || (order.delivery?.downloadUrl ? 1 : 0);
+      const itemsSummary = accountOrderItemsSummary(order);
       return `
         <li>
           <div>
             <strong>${escapeAccountHtml(order.id)}</strong>
             <span>${escapeAccountHtml(accountOrderDate(order))}${itemCount ? ` · ${itemCount} photo${itemCount === 1 ? "" : "s"}` : ""}${fileCount ? ` · ${fileCount} file${fileCount === 1 ? "" : "s"}` : ""}</span>
+            ${itemsSummary ? `<span class="site-account-order-products">${escapeAccountHtml(itemsSummary)}</span>` : ""}
             <span>${escapeAccountHtml(translate(ready ? 'account.order_ready' : 'account.order_pending'))}</span>
           </div>
-          <a class="site-account-mini-action" href="${escapeAccountHtml(orderHrefFor(order))}">${escapeAccountHtml(translate('account.view_downloads'))}</a>
+          <div class="site-account-order-actions">
+            <a class="site-account-mini-action" href="${escapeAccountHtml(orderHrefFor(order))}">${escapeAccountHtml(translate('account.view_downloads'))}</a>
+            <button class="site-account-mini-action" type="button" data-account-resend-order="${escapeAccountHtml(order.id)}"${ready ? "" : " disabled"} title="${escapeAccountHtml(translate(ready ? 'account.resend_downloads' : 'account.resend_unavailable'))}">${escapeAccountHtml(translate('account.resend_downloads'))}</button>
+          </div>
         </li>
       `;
     }).join("");
@@ -3813,6 +3910,7 @@ const ensureSiteAccount = () => {
         visitorButton.textContent = translate('account.continue_browsing');
       }
       if (signoutButton) signoutButton.hidden = false;
+      if (signoutInlineButton) signoutInlineButton.hidden = false;
       if (signupButton) signupButton.hidden = true;
       if (signinButton) signinButton.hidden = true;
       if (!state.profileLoaded && !state.profileLoading) setMessage(translate('account.verified_email'));
@@ -3828,6 +3926,7 @@ const ensureSiteAccount = () => {
     if (signupButton) signupButton.hidden = false;
     if (signinButton) signinButton.hidden = false;
     if (signoutButton) signoutButton.hidden = true;
+    if (signoutInlineButton) signoutInlineButton.hidden = true;
     if (signupButton) signupButton.disabled = !state.available;
     if (signinButton) signinButton.disabled = !state.available;
     setMessage(state.available ? "" : translate('account.login_unavailable'), !state.available);
@@ -3947,7 +4046,13 @@ const ensureSiteAccount = () => {
   signupButton?.addEventListener('click', () => beginGoogleLogin('signup'));
   signinButton?.addEventListener('click', () => beginGoogleLogin('signin'));
   signoutButton?.addEventListener('click', beginGoogleLogout);
+  signoutInlineButton?.addEventListener('click', beginGoogleLogout);
   syncButton?.addEventListener('click', () => saveAccountProfile());
+  ordersList?.addEventListener('click', async (event) => {
+    const resendButton = event.target.closest('[data-account-resend-order]');
+    if (!resendButton) return;
+    await resendAccountOrderInstructions(resendButton.dataset.accountResendOrder, resendButton);
+  });
   modal.addEventListener('click', (event) => {
     if (event.target === modal) closeAccount();
   });

@@ -172,7 +172,8 @@ class TitleReviewUndoTests(unittest.TestCase):
                 "keywords": ["France", "Travel"],
                 "gallery_key": "france",
                 "capture": {"sort": "2026-06-14T08:00:00"},
-                "source_file": {"path": f"Camera/{media_id}.jpg", "name": f"{media_id}.jpg"},
+                "relative_path": f"Apple Photo Albums/Unit Test/{media_id}.jpg",
+                "source_file": {"path": f"Apple Photo Albums/Unit Test/{media_id}.jpg", "name": f"{media_id}.jpg"},
                 "media_type": "photo",
                 "media": {"publicPreview": {"allowed": True}},
             }
@@ -236,6 +237,128 @@ class TitleReviewUndoTests(unittest.TestCase):
             self.assertEqual(counts["rejected"], 0)
             self.assertEqual(counts["approved"], 2)
             self.assertEqual(counts["accepted"], 0)
+
+    def test_review_queue_excludes_manifest_only_backlog_without_site_writeback_target(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            self._write_import_manifest(repo_root, ["manifest-only"])
+            conn = owner_state_db.connect(repo_root)
+            try:
+                self._seed_r2_preview_pair(conn, "manifest-only")
+                conn.commit()
+            finally:
+                conn.close()
+
+            payload = local_server.title_keyword_review_queue_payload(repo_root)
+
+            self.assertEqual(payload["photos"], [])
+            self.assertEqual(payload["selection"]["incomplete_backlog_count"], 0)
+            self.assertEqual(payload["selection"]["visible_pending_count"], 0)
+
+    def test_review_queue_includes_manifest_backlog_with_site_writeback_target(self):
+        photo_id = "site-backed"
+        photo = {
+            "id": photo_id,
+            "title": "Site Backed",
+            "keywords": [],
+            "metadata": [{"label": "Keywords", "value": ""}],
+            "media": {"type": "photo", "publicPreview": {"allowed": True}},
+        }
+        state = {
+            "expo": {slug: [] for slug in local_server.ORDER},
+            "reserve": {slug: [] for slug in local_server.ORDER},
+            "hidden": {slug: [] for slug in local_server.ORDER},
+        }
+        state["expo"]["france"].append(copy.deepcopy(photo))
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            self._write_import_manifest(repo_root, [photo_id])
+            conn = owner_state_db.connect(repo_root)
+            try:
+                self._seed_r2_preview_pair(conn, photo_id)
+                conn.commit()
+            finally:
+                conn.close()
+
+            with patched_server_state(state, photo):
+                payload = local_server.title_keyword_review_queue_payload(repo_root)
+
+            self.assertEqual([item["photo_id"] for item in payload["photos"]], [photo_id])
+            self.assertEqual(payload["selection"]["incomplete_backlog_count"], 1)
+            self.assertEqual(payload["selection"]["visible_pending_count"], 1)
+
+    def test_selected_import_source_queues_r2_ready_manifest_rows_for_title_review(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            source_root = repo_root / "tmp/apple-photos-import/20260626T111452Z-14th-street"
+            other_root = repo_root / "tmp/apple-photos-import/20260626T111500Z-other-album"
+            manifest_path = repo_root / local_server.IMPORT_CACHE_MANIFEST_PATH
+            manifest_path.parent.mkdir(parents=True, exist_ok=True)
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "photos": [
+                            {
+                                "id": "apple-14th-street",
+                                "relative_path": "0001-EC8_1474.jpg",
+                                "source_path_hint": str(source_root / "0001-EC8_1474.jpg"),
+                                "source_file": {
+                                    "path": str(source_root / "0001-EC8_1474.jpg"),
+                                    "name": "0001-EC8_1474.jpg",
+                                    "extension": "jpg",
+                                    "bytes": 1234,
+                                    "apple_photos_album": {"title": "14th Street"},
+                                },
+                                "metadata": [{"label": "Apple Photos album", "value": "14th Street"}],
+                                "capture": {"year": 2019, "sort": "2019-01-03T00:49:40"},
+                                "dimensions": {"width": 2304, "height": 1536},
+                                "gallery_country": {"slug": "unknown", "label": "Unknown"},
+                                "location": {"country": None, "region": None, "city": None, "location": None},
+                                "media_type": "photo",
+                            },
+                            {
+                                "id": "other-album",
+                                "relative_path": "0001-other.jpg",
+                                "source_path_hint": str(other_root / "0001-other.jpg"),
+                                "source_file": {
+                                    "path": str(other_root / "0001-other.jpg"),
+                                    "name": "0001-other.jpg",
+                                    "extension": "jpg",
+                                },
+                                "capture": {"year": 2020, "sort": "2020-01-01T00:00:00"},
+                                "media_type": "photo",
+                            },
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+            conn = owner_state_db.connect(repo_root)
+            try:
+                self._seed_r2_preview_pair(conn, "apple-14th-street")
+                self._seed_r2_preview_pair(conn, "other-album")
+                conn.commit()
+            finally:
+                conn.close()
+
+            result = local_server.queue_import_cache_title_keyword_review(
+                repo_root,
+                source_root=source_root,
+                source_label="14th Street",
+            )
+
+            self.assertEqual(result["queued"], 1)
+            self.assertTrue((repo_root / result["path"]).exists())
+
+            payload = local_server.title_keyword_review_queue_payload(repo_root)
+            self.assertEqual([item["photo_id"] for item in payload["photos"]], ["apple-14th-street"])
+            review_photo = payload["photos"][0]
+            self.assertEqual(review_photo["proposed"]["title"], "14th Street")
+            self.assertIn("14th Street", review_photo["proposed"]["keywords"])
+            self.assertIn("2019", review_photo["proposed"]["keywords"])
+            self.assertFalse(any("{" in keyword or "}" in keyword for keyword in review_photo["proposed"]["keywords"]))
+            self.assertEqual(review_photo["source"]["album"], "14th Street")
+            self.assertEqual(payload["selection"]["sqlite_pending_count"], 1)
 
     def test_blocked_rework_rows_count_as_blocked_not_rejected(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -376,6 +499,128 @@ class TitleReviewUndoTests(unittest.TestCase):
                 self.assertEqual(row["review_state"], "approved")
                 self.assertIsNone(row["queue_applied_at"])
                 self.assertIsNone(row["decision_applied_at"])
+            finally:
+                conn.close()
+
+    def test_auto_apply_tolerates_approved_pre_catalog_import_rows(self):
+        photo_id = "approved-pre-catalog-import"
+        fallback_photo = {"id": "unused-fallback", "title": "Unused"}
+        state = {
+            "expo": {slug: [] for slug in local_server.ORDER},
+            "reserve": {slug: [] for slug in local_server.ORDER},
+            "hidden": {slug: [] for slug in local_server.ORDER},
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            self._write_import_manifest(repo_root, [photo_id])
+            conn = owner_state_db.connect(repo_root)
+            try:
+                self._seed_title_keyword_row(conn, photo_id, "approved")
+                self._clear_title_keyword_applied_at(conn, photo_id)
+                self._seed_r2_preview_pair(conn, photo_id)
+                conn.commit()
+            finally:
+                conn.close()
+
+            with patched_server_state(state, fallback_photo):
+                result = local_server.apply_photo_action(
+                    repo_root,
+                    {
+                        "action": "apply-approved-title-keyword-review-approvals",
+                        "reason": "unit-test",
+                    },
+                )
+
+            self.assertEqual(result["pending_count"], 1)
+            self.assertEqual(result["approved_count"], 1)
+            self.assertEqual(result["applied_count"], 0)
+            self.assertEqual(result["not_found"], [photo_id])
+            self.assertEqual(result["pre_catalog_not_found"], [photo_id])
+
+            conn = sqlite3.connect(repo_root / "assets/owner-actions/Owner.sqlite")
+            conn.row_factory = sqlite3.Row
+            try:
+                row = conn.execute(
+                    """
+                    SELECT q.review_state, q.applied_at AS queue_applied_at,
+                           d.applied_at AS decision_applied_at
+                    FROM title_keyword_queue AS q
+                    JOIN title_keyword_decisions AS d
+                      ON d.media_id = q.media_id
+                     AND d.attempt = q.latest_attempt
+                    WHERE q.media_id = ?
+                    """,
+                    (photo_id,),
+                ).fetchone()
+                self.assertEqual(row["review_state"], "approved")
+                self.assertTrue(row["queue_applied_at"])
+                self.assertTrue(row["decision_applied_at"])
+            finally:
+                conn.close()
+
+    def test_direct_approval_tolerates_pre_catalog_import_rows(self):
+        photo_id = "direct-approved-pre-catalog-import"
+        fallback_photo = {"id": "unused-fallback", "title": "Unused"}
+        state = {
+            "expo": {slug: [] for slug in local_server.ORDER},
+            "reserve": {slug: [] for slug in local_server.ORDER},
+            "hidden": {slug: [] for slug in local_server.ORDER},
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            self._write_import_manifest(repo_root, [photo_id])
+            conn = owner_state_db.connect(repo_root)
+            try:
+                self._seed_title_keyword_row(conn, photo_id, "proposed")
+                self._seed_r2_preview_pair(conn, photo_id)
+                conn.commit()
+            finally:
+                conn.close()
+
+            with patched_server_state(state, fallback_photo):
+                result = local_server.apply_photo_action(
+                    repo_root,
+                    {
+                        "action": "save-title-keyword-review-approvals",
+                        "batch_id": "batch-review-test",
+                        "approvals": [
+                            {
+                                "photo_id": photo_id,
+                                "approved": True,
+                                "title": "Direct Import Title",
+                                "keywords": ["Apple Photos", "Import"],
+                            }
+                        ],
+                    },
+                )
+
+            self.assertEqual(result["approved_count"], 1)
+            self.assertEqual(result["applied_count"], 0)
+            self.assertEqual(result["not_found"], [photo_id])
+            self.assertEqual(result["pre_catalog_not_found"], [photo_id])
+
+            conn = sqlite3.connect(repo_root / "assets/owner-actions/Owner.sqlite")
+            conn.row_factory = sqlite3.Row
+            try:
+                row = conn.execute(
+                    """
+                    SELECT q.review_state, q.applied_at AS queue_applied_at,
+                           d.decision_state, d.decided_title, d.applied_at AS decision_applied_at
+                    FROM title_keyword_queue AS q
+                    JOIN title_keyword_decisions AS d
+                      ON d.media_id = q.media_id
+                     AND d.attempt = q.latest_attempt
+                    WHERE q.media_id = ?
+                    """,
+                    (photo_id,),
+                ).fetchone()
+                self.assertEqual(row["review_state"], "approved")
+                self.assertEqual(row["decision_state"], "accepted")
+                self.assertEqual(row["decided_title"], "Direct Import Title")
+                self.assertTrue(row["queue_applied_at"])
+                self.assertTrue(row["decision_applied_at"])
             finally:
                 conn.close()
 

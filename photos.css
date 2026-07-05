@@ -687,6 +687,7 @@ html[data-theme="light"] .photo-art.has-photo::after{
 .owner-apple-photos-filter{
   display:grid;
   gap:3px;
+  min-width:0;
   color:var(--muted);
   font-size:.7rem;
   font-weight:900;
@@ -694,16 +695,38 @@ html[data-theme="light"] .photo-art.has-photo::after{
   text-transform:uppercase;
 }
 .owner-apple-photos-filter-heading{
-  display:flex;
+  display:grid;
+  grid-template-columns:auto auto minmax(0,1fr);
   align-items:center;
-  gap:6px;
-  min-height:28px;
+  gap:6px 8px;
+  min-height:32px;
+  min-width:0;
 }
 .owner-apple-photos-refresh-button{
   width:28px;
   height:28px;
   min-width:28px;
   font-size:.85rem;
+}
+.owner-apple-photos-filter-heading .owner-apple-photos-status{
+  width:100%;
+  min-width:0;
+  max-width:100%;
+  margin:0;
+  border:1px solid color-mix(in srgb,var(--text) 42%,var(--line));
+  border-radius:6px;
+  background:color-mix(in srgb,var(--surface) 90%,var(--text) 10%);
+  box-shadow:0 0 0 1px color-mix(in srgb,var(--text) 14%,transparent);
+  color:var(--text);
+  font-size:.78rem;
+  font-weight:900;
+  letter-spacing:0;
+  line-height:1.25;
+  overflow-wrap:anywhere;
+  padding:6px 9px;
+  text-transform:none;
+  text-shadow:none;
+  white-space:normal;
 }
 .owner-apple-photos-filter input{
   width:100%;
@@ -7224,6 +7247,83 @@ body.detail-fullscreen-active{
   margin:0;
   padding-left:18px;
 }
+.account-order-history{
+  display:grid;
+  gap:12px;
+  border-top:1px solid var(--line);
+  padding-top:14px;
+}
+.account-order-history-head h3,
+.account-order-history-head p{
+  margin:0;
+}
+.account-order-history-head p{
+  color:var(--muted);
+  font-weight:800;
+  line-height:1.45;
+}
+.account-order-history ol{
+  display:grid;
+  gap:10px;
+  margin:0;
+  padding:0;
+  list-style:none;
+}
+.account-order-history > ol > li{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:12px;
+  align-items:start;
+  border:1px solid var(--line);
+  background:var(--surface-2);
+  padding:12px;
+}
+.account-order-history > ol > li.is-current{
+  border-color:color-mix(in srgb,#2d6b56 54%,var(--line));
+}
+.account-order-history-main{
+  display:grid;
+  gap:8px;
+  min-width:0;
+}
+.account-order-history-main strong,
+.account-order-history-main span,
+.account-order-history-main b,
+.account-order-history-main em{
+  display:block;
+  overflow-wrap:anywhere;
+}
+.account-order-history-main span,
+.account-order-history-main em{
+  color:var(--muted);
+  font-size:.84rem;
+  font-weight:800;
+}
+.account-order-history-main em{
+  color:var(--text);
+  font-style:normal;
+}
+.account-order-history-main ul{
+  display:grid;
+  gap:6px;
+  margin:0;
+  padding:0;
+  list-style:none;
+}
+.account-order-history-main ul li{
+  border-left:3px solid color-mix(in srgb,var(--text) 22%,transparent);
+  padding-left:8px;
+}
+.account-order-history-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  justify-content:flex-end;
+}
+.account-order-history-actions .btn:disabled{
+  cursor:not-allowed;
+  opacity:.5;
+}
 .support-main{
   display:grid;
   gap:18px;
@@ -7247,6 +7347,20 @@ body.detail-fullscreen-active{
 .support-panel{
   display:grid;
   gap:10px;
+}
+.support-credit-copy{
+  color:var(--muted);
+  line-height:1.5;
+  margin:0;
+  max-width:760px;
+}
+.support-credit-copy a{
+  color:var(--text);
+  font-weight:800;
+  text-decoration:none;
+}
+.support-credit-copy a:hover{
+  text-decoration:underline;
 }
 .order-email-draft[hidden]{
   display:none;
@@ -7750,8 +7864,12 @@ html[data-theme="light"] .detail-preview.has-image::after{
   }
   .order-email-notice,
   .order-file-downloads-header,
-  .order-file-downloads li{
+  .order-file-downloads li,
+  .account-order-history > ol > li{
     grid-template-columns:1fr;
+  }
+  .account-order-history-actions{
+    justify-content:flex-start;
   }
   .order-file-downloads-header{
     align-items:stretch;

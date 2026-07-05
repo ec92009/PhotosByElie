@@ -6,8 +6,8 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v113.13`
-- Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
+- Current visible version: `v125.0`
+- Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
 
 ## Structure
 
@@ -104,6 +104,9 @@ Use the GitHub Pages URL above after pushing to `main`.
 - On localhost gallery/detail pages, Owner can edit Title and Keywords; saves update the catalog metadata and generated Worker catalog used by checkout deliverables. Source-file embedded metadata is left alone because catalog manifests are the authoritative title/keyword source.
 - On localhost Owner detail pages, buyer resolution controls and Basket entry points are hidden so detail review stays focused on moderation shortcuts and metadata edits.
 - When a localhost Owner title/keyword review row opens detail, double-clicking the detail preview requests the private JPG 6 MP render for full-screen inspection when available, and the back link restores the exact review scroll position.
+- `v118.3` makes Account sign-out visible beside the signed-in email, clarifies that Save liked/basket only stores this browser's liked and basket state, and adds full signed-in order/download history with per-order resend instructions controls.
+- `v118.2` adds quiet Web By Elie site creation and maintenance crediting in the shared footer and Support page credits section.
+- `v118.1` promotes direct Apple Photos imports into first-class title/keyword review candidates as soon as the selected-source Expo/R2 pass finishes: R2-ready import-cache rows are queued from the Apple Photos sidecar before public catalog publication, seeded with album/capture/place hints, and the 14th Street recovery batch is visible in Owner TKR.
 - `v110.7` adds a clearer Real Estate saved-product shelf sync strip and per-product save/output badges so clients can distinguish cloud-saved selections from ready or pending PDF/video files.
 - `v113.0` adds a direct Worker-owned Google OAuth path at `/auth/google/login` and `/auth/google/callback`, with signed `pbe_google_session` cookies feeding the existing Admin/Owner/RE/User tier model. Public Account and Real Estate Google buttons now target that route; without Google OAuth secrets, it falls back to the legacy Cloudflare Access path.
 - `v112.10` changes Account sign-out to target the Cloudflare Access team-domain logout when configured and passes a public return URL, so sign-out has a chance to clear the global Access SSO cookie before the next Google login. Real Estate Google login also carries the same `prompt=select_account` hint.

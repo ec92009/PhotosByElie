@@ -157,6 +157,7 @@ body[data-gallery="access-console"] .acs-hero h1 {
 .acs-people-panel,
 .acs-editor,
 .acs-fixtures,
+.acs-groups-panel,
 .acs-capabilities,
 .acs-audit {
   border: 1px solid var(--acs-line);
@@ -270,6 +271,7 @@ body[data-gallery="access-console"] .acs-hero h1 {
 }
 
 .acs-editor input,
+.acs-editor select,
 .acs-editor textarea {
   width: 100%;
   border: 1px solid var(--acs-line);
@@ -282,6 +284,75 @@ body[data-gallery="access-console"] .acs-hero h1 {
 
 .acs-editor input[type="checkbox"] {
   width: auto;
+}
+
+.acs-group-form {
+  display: grid;
+  gap: .75rem;
+}
+
+.acs-group-manager {
+  display: grid;
+  gap: 1rem;
+}
+
+.acs-group-list {
+  display: grid;
+  gap: .55rem;
+  max-height: 16rem;
+  overflow: auto;
+  padding-right: .15rem;
+}
+
+.acs-group-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .75rem;
+  width: 100%;
+  border: 1px solid var(--acs-line);
+  border-radius: 8px;
+  padding: .65rem .75rem;
+  background: color-mix(in srgb, var(--surface) 94%, var(--acs-teal) 6%);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.acs-group-row small {
+  display: block;
+  margin-top: .2rem;
+  color: var(--muted, var(--acs-muted));
+}
+
+.acs-group-row.is-active {
+  outline: 2px solid color-mix(in srgb, var(--acs-teal) 70%, white 30%);
+  outline-offset: -2px;
+  background: color-mix(in srgb, var(--acs-teal) 13%, var(--surface));
+}
+
+.acs-group-row.is-archived {
+  opacity: .72;
+}
+
+.acs-group-row-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: .35rem;
+}
+
+.acs-two-col {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .65rem;
+}
+
+.acs-event-list-compact {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--acs-line);
 }
 
 .acs-role-fieldset {
@@ -437,8 +508,17 @@ body[data-gallery="access-console"] .bottom-photo-actions {
 
   .acs-counts,
   .acs-layout,
-  .acs-lower-grid {
+  .acs-lower-grid,
+  .acs-two-col {
     grid-template-columns: 1fr;
+  }
+
+  .acs-group-row {
+    grid-template-columns: 1fr;
+  }
+
+  .acs-group-row-chips {
+    justify-content: flex-start;
   }
 
   body[data-gallery="access-console"] main.acs-shell {

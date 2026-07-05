@@ -1,5 +1,7 @@
 const SCHEMA = "photosbyelie.accessUser.v1";
 const VALID_TIERS = new Set(["user", "re_client", "owner"]);
+const VALID_GROUP_KINDS = new Set(["family", "event", "real_estate", "public", "custom"]);
+const VALID_GALLERY_KINDS = new Set(["event", "real_estate", "public", "custom"]);
 const GRANTABLE_ROLES = new Set(["owner", "re_client"]);
 export const ACCESS_CAPABILITIES = [
   { id: "view_public", label: "View public galleries" },
@@ -111,6 +113,21 @@ const normalizeTier = (value) => {
   return VALID_TIERS.has(tier) ? tier : "user";
 };
 
+const normalizeGroupKind = (value, fallback = "event") => {
+  const kind = String(value || fallback).trim().toLowerCase().replace(/[-\s]+/g, "_");
+  return VALID_GROUP_KINDS.has(kind) ? kind : fallback;
+};
+
+const normalizeGalleryKind = (value, fallback = "event") => {
+  const kind = String(value || fallback).trim().toLowerCase().replace(/[-\s]+/g, "_");
+  return VALID_GALLERY_KINDS.has(kind) ? kind : fallback;
+};
+
+const normalizeGroupState = (value) => {
+  const state = String(value || "active").trim().toLowerCase().replace(/[-\s]+/g, "_");
+  return state === "archived" ? "archived" : "active";
+};
+
 const normalizeGalleryKeys = (value) => {
   const source = Array.isArray(value) ? value : String(value || "").split(/[\s,;]+/);
   return [...new Set(source.map((item) => String(item || "").trim()).filter(Boolean))];
@@ -163,11 +180,14 @@ const normalizeAudienceGroup = (group = {}) => {
   return {
     id,
     label: String(group.label || group.name || id).trim(),
-    kind: String(group.kind || "event").trim().toLowerCase().replace(/[-\s]+/g, "_"),
-    galleryKind: String(group.galleryKind || group.gallery_kind || group.kind || "event").trim().toLowerCase().replace(/[-\s]+/g, "_"),
+    kind: normalizeGroupKind(group.kind),
+    galleryKind: normalizeGalleryKind(group.galleryKind || group.gallery_kind || group.kind),
     galleryKey,
     accessPolicy: String(group.accessPolicy || group.access_policy || "").trim(),
     capabilities: normalizeCapabilities(capabilities),
+    state: normalizeGroupState(group.state),
+    archivedAt: group.archivedAt || group.archived_at || null,
+    archivedBy: String(group.archivedBy || group.archived_by || "").trim(),
     fixture: group.fixture === true || group.fixture === 1 || group.fixture === "1",
   };
 };
@@ -176,9 +196,12 @@ const fixtureGroups = () => FIXTURE_GROUPS
   .map((group) => normalizeAudienceGroup({ ...group, fixture: true }))
   .filter(Boolean);
 
-const galleryOptionsFor = (groups = []) => groups
+const activeAudienceGroups = (groups = []) => groups
   .map(normalizeAudienceGroup)
   .filter(Boolean)
+  .filter((group) => group.state !== "archived");
+
+const galleryOptionsFor = (groups = []) => activeAudienceGroups(groups)
   .map((group) => ({
     id: group.id,
     label: group.label,
@@ -220,7 +243,7 @@ const tierForRoles = (roles = [], realEstateClients = []) => {
 const decorateAccessUserRecord = (record, groups = []) => {
   const normalized = normalizeAccessUserRecord(record);
   if (!normalized) return null;
-  const normalizedGroups = groups.map(normalizeAudienceGroup).filter(Boolean);
+  const normalizedGroups = activeAudienceGroups(groups);
   const groupsById = new Map(normalizedGroups.map((group) => [group.id, group]));
   const groupRecords = normalized.groupIds
     .map((groupId) => groupsById.get(groupId) || normalizeAudienceGroup({ id: groupId, label: groupId }))
@@ -352,9 +375,12 @@ export const createMemoryAccessUserRegistry = (initialRecords = []) => {
   const listAudienceGroups = async () => [...groups.values()]
     .map((group) => normalizeAudienceGroup(group))
     .filter(Boolean)
-    .sort((left, right) => `${left.kind}:${left.label}`.localeCompare(`${right.kind}:${right.label}`));
+    .sort((left, right) => `${left.state === "archived" ? 1 : 0}:${left.kind}:${left.label}`
+      .localeCompare(`${right.state === "archived" ? 1 : 0}:${right.kind}:${right.label}`));
 
-  const decorate = async (record) => decorateAccessUserRecord(record, await listAudienceGroups());
+  const listActiveAudienceGroups = async () => activeAudienceGroups(await listAudienceGroups());
+
+  const decorate = async (record) => decorateAccessUserRecord(record, await listActiveAudienceGroups());
 
   const audit = (eventType, actorEmail, targetEmail, before, after) => {
     const event = {
@@ -376,7 +402,7 @@ export const createMemoryAccessUserRegistry = (initialRecords = []) => {
   };
 
   const listUsers = async () => [...users.values()]
-    .map((record) => decorateAccessUserRecord(record, [...groups.values()]))
+    .map((record) => decorateAccessUserRecord(record, activeAudienceGroups([...groups.values()])))
     .filter(Boolean)
     .sort((left, right) => String(left.email).localeCompare(String(right.email)));
 
@@ -385,8 +411,10 @@ export const createMemoryAccessUserRegistry = (initialRecords = []) => {
     if (!normalized) throw new Error("Access user record requires a valid email address.");
     const before = await getUser(normalized.email);
     const timestamp = nowIso();
+    const activeGroupIds = new Set((await listActiveAudienceGroups()).map((group) => group.id));
     const after = {
       ...normalized,
+      groupIds: normalized.groupIds.filter((groupId) => activeGroupIds.has(groupId)),
       grantedBy: normalized.grantedBy || options.actorEmail || "",
       grantedAt: normalized.grantedAt || timestamp,
       updatedAt: timestamp,
@@ -394,6 +422,60 @@ export const createMemoryAccessUserRegistry = (initialRecords = []) => {
     users.set(after.email, clone(after));
     audit("user_upserted", options.actorEmail || after.grantedBy || "", after.email, before, after);
     return clone(await decorate(after));
+  };
+
+  const getAudienceGroup = async (groupId) => {
+    const group = groups.get(String(groupId || "").trim());
+    return group ? clone(normalizeAudienceGroup(group)) : null;
+  };
+
+  const putAudienceGroup = async (group, options = {}) => {
+    const normalized = normalizeAudienceGroup({
+      ...group,
+      state: "active",
+      archivedAt: null,
+      archivedBy: "",
+    });
+    if (!normalized?.label) throw new Error("Audience group requires a label.");
+    if (!normalized.galleryKey) throw new Error("Audience group requires a gallery key.");
+    const before = await getAudienceGroup(normalized.id);
+    const timestamp = nowIso();
+    const after = {
+      ...normalized,
+      fixture: normalized.fixture || before?.fixture === true,
+      createdAt: before?.createdAt || timestamp,
+      createdBy: before?.createdBy || options.actorEmail || "",
+      updatedAt: timestamp,
+      updatedBy: options.actorEmail || "",
+    };
+    groups.set(after.id, clone(after));
+    audit("group_upserted", options.actorEmail || "", after.id, before, after);
+    return clone(after);
+  };
+
+  const archiveAudienceGroup = async (groupId, options = {}) => {
+    const before = await getAudienceGroup(groupId);
+    if (!before) return null;
+    const timestamp = nowIso();
+    const after = {
+      ...before,
+      state: "archived",
+      archivedAt: timestamp,
+      archivedBy: options.actorEmail || "",
+      updatedAt: timestamp,
+      updatedBy: options.actorEmail || "",
+    };
+    groups.set(after.id, clone(after));
+    for (const [email, record] of users.entries()) {
+      if (!record.groupIds?.includes(after.id)) continue;
+      users.set(email, {
+        ...record,
+        groupIds: record.groupIds.filter((id) => id !== after.id),
+        updatedAt: timestamp,
+      });
+    }
+    audit("group_archived", options.actorEmail || "", after.id, before, after);
+    return clone(after);
   };
 
   const disableUser = async (email, options = {}) => {
@@ -439,6 +521,8 @@ export const createMemoryAccessUserRegistry = (initialRecords = []) => {
     listUsers,
     putUser,
     disableUser,
+    putAudienceGroup,
+    archiveAudienceGroup,
     seedFixtureData,
     listFixtureEvents,
     listAudienceGroups,
@@ -543,7 +627,7 @@ const galleryRowsFor = async (database, email = "") => d1All(
   database.prepare("SELECT gallery_key FROM pbe_access_gallery_grants WHERE email = ? AND gallery_kind = 'real_estate' AND state = 'active' ORDER BY gallery_key").bind(email)
 );
 
-const audienceGroupRows = async (database) => d1All(database.prepare(`
+const audienceGroupRows = async (database, { includeArchived = true } = {}) => d1All(database.prepare(`
   SELECT
     id,
     label,
@@ -552,9 +636,17 @@ const audienceGroupRows = async (database) => d1All(database.prepare(`
     gallery_key AS galleryKey,
     access_policy AS accessPolicy,
     capabilities_json AS capabilities_json,
+    state,
+    archived_at AS archivedAt,
+    archived_by AS archivedBy,
+    created_at AS createdAt,
+    created_by AS createdBy,
+    updated_at AS updatedAt,
+    updated_by AS updatedBy,
     fixture
   FROM pbe_access_audience_groups
-  ORDER BY kind, label
+  ${includeArchived ? "" : "WHERE COALESCE(state, 'active') = 'active'"}
+  ORDER BY CASE WHEN COALESCE(state, 'active') = 'archived' THEN 1 ELSE 0 END, kind, label
 `));
 
 const membershipRowsFor = async (database, email = "") => d1All(
@@ -567,10 +659,13 @@ const membershipRowsFor = async (database, email = "") => d1All(
       g.gallery_key AS galleryKey,
       g.access_policy AS accessPolicy,
       g.capabilities_json AS capabilities_json,
+      g.state,
+      g.archived_at AS archivedAt,
+      g.archived_by AS archivedBy,
       g.fixture
     FROM pbe_access_group_memberships AS m
     JOIN pbe_access_audience_groups AS g ON g.id = m.group_id
-    WHERE m.email = ? AND m.state = 'active'
+    WHERE m.email = ? AND m.state = 'active' AND COALESCE(g.state, 'active') = 'active'
     ORDER BY g.kind, g.label
   `).bind(email)
 );
@@ -637,7 +732,7 @@ export const createD1AccessUserRegistry = ({
       roleRowsFor(database, normalizedEmail),
       galleryRowsFor(database, normalizedEmail),
       membershipRowsFor(database, normalizedEmail),
-      audienceGroupRows(database),
+      audienceGroupRows(database, { includeArchived: false }),
     ]);
     return recordFromD1Rows(person, roles, galleries, memberGroups, allGroups);
   };
@@ -724,7 +819,7 @@ export const createD1AccessUserRegistry = ({
       `).bind(randomId("gallery-grant"), normalized.email, galleryKey, timestamp, actorEmail, timestamp, actorEmail));
     }
 
-    const knownGroups = await audienceGroupRows(database);
+    const knownGroups = await audienceGroupRows(database, { includeArchived: false });
     const knownGroupIds = new Set(knownGroups.map((group) => group.id));
     const wantedGroupIds = new Set(normalized.groupIds.filter((groupId) => knownGroupIds.has(groupId)));
     const existingMemberships = await activeMembershipIdsFor(database, normalized.email);
@@ -758,7 +853,7 @@ export const createD1AccessUserRegistry = ({
 
   const listUsers = async () => {
     const people = await d1All(database.prepare("SELECT * FROM pbe_access_people ORDER BY fixture DESC, email ASC"));
-    const allGroups = await audienceGroupRows(database);
+    const allGroups = await audienceGroupRows(database, { includeArchived: false });
     const users = [];
     for (const person of people) {
       const [roles, galleries, memberGroups] = await Promise.all([
@@ -803,10 +898,111 @@ export const createD1AccessUserRegistry = ({
     return after;
   };
 
+  const getAudienceGroup = async (groupId, { includeArchived = true } = {}) => d1First(
+    database.prepare(`
+      SELECT
+        id,
+        label,
+        kind,
+        gallery_kind AS galleryKind,
+        gallery_key AS galleryKey,
+        access_policy AS accessPolicy,
+        capabilities_json AS capabilities_json,
+        state,
+        archived_at AS archivedAt,
+        archived_by AS archivedBy,
+        created_at AS createdAt,
+        created_by AS createdBy,
+        updated_at AS updatedAt,
+        updated_by AS updatedBy,
+        fixture
+      FROM pbe_access_audience_groups
+      WHERE id = ? ${includeArchived ? "" : "AND COALESCE(state, 'active') = 'active'"}
+    `).bind(String(groupId || "").trim())
+  ).then((row) => row ? normalizeAudienceGroup(row) : null);
+
+  const putAudienceGroup = async (group, options = {}) => {
+    const normalized = normalizeAudienceGroup({
+      ...group,
+      state: "active",
+      archivedAt: null,
+      archivedBy: "",
+    });
+    if (!normalized?.label) throw new Error("Audience group requires a label.");
+    if (!normalized.galleryKey) throw new Error("Audience group requires a gallery key.");
+    const before = await getAudienceGroup(normalized.id);
+    const actorEmail = normalizeEmail(options.actorEmail || "");
+    const timestamp = nowIso();
+    await d1Run(database.prepare(`
+      INSERT INTO pbe_access_audience_groups (
+        id, label, kind, gallery_kind, gallery_key, access_policy, capabilities_json,
+        state, archived_at, archived_by, fixture, created_at, created_by, updated_at, updated_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'active', NULL, '', ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        label = excluded.label,
+        kind = excluded.kind,
+        gallery_kind = excluded.gallery_kind,
+        gallery_key = excluded.gallery_key,
+        access_policy = excluded.access_policy,
+        capabilities_json = excluded.capabilities_json,
+        state = 'active',
+        archived_at = NULL,
+        archived_by = '',
+        fixture = CASE WHEN pbe_access_audience_groups.fixture = 1 THEN 1 ELSE excluded.fixture END,
+        updated_at = excluded.updated_at,
+        updated_by = excluded.updated_by
+    `).bind(
+      normalized.id,
+      normalized.label,
+      normalized.kind,
+      normalized.galleryKind,
+      normalized.galleryKey,
+      normalized.accessPolicy,
+      JSON.stringify(normalized.capabilities),
+      normalized.fixture || before?.fixture ? 1 : 0,
+      timestamp,
+      actorEmail,
+      timestamp,
+      actorEmail
+    ));
+    const after = await getAudienceGroup(normalized.id);
+    await auditD1(database, { eventType: "group_upserted", actorEmail, targetEmail: normalized.id, before, after });
+    return after;
+  };
+
+  const archiveAudienceGroup = async (groupId, options = {}) => {
+    const normalizedGroupId = String(groupId || "").trim();
+    const before = await getAudienceGroup(normalizedGroupId);
+    if (!before) return null;
+    const actorEmail = normalizeEmail(options.actorEmail || "");
+    const timestamp = nowIso();
+    await d1Run(database.prepare(`
+      UPDATE pbe_access_audience_groups
+      SET state = 'archived',
+          archived_at = ?,
+          archived_by = ?,
+          updated_at = ?,
+          updated_by = ?
+      WHERE id = ?
+    `).bind(timestamp, actorEmail, timestamp, actorEmail, normalizedGroupId));
+    await d1Run(database.prepare(`
+      UPDATE pbe_access_group_memberships
+      SET state = 'revoked',
+          revoked_at = ?,
+          revoked_by = ?,
+          updated_at = ?,
+          updated_by = ?
+      WHERE group_id = ? AND state = 'active'
+    `).bind(timestamp, actorEmail, timestamp, actorEmail, normalizedGroupId));
+    const after = await getAudienceGroup(normalizedGroupId);
+    await auditD1(database, { eventType: "group_archived", actorEmail, targetEmail: normalizedGroupId, before, after });
+    return after;
+  };
+
   const listAudienceGroups = async () => audienceGroupRows(database)
     .then((rows) => rows.map(normalizeAudienceGroup).filter(Boolean));
 
-  const listGalleryOptions = async () => galleryOptionsFor(await audienceGroupRows(database));
+  const listGalleryOptions = async () => galleryOptionsFor(await audienceGroupRows(database, { includeArchived: false }));
 
   const seedFixtureData = async (options = {}) => {
     const timestamp = nowIso();
@@ -818,8 +1014,8 @@ export const createD1AccessUserRegistry = ({
       await d1Run(database.prepare(`
         INSERT INTO pbe_access_audience_groups (
           id, label, kind, gallery_kind, gallery_key, access_policy, capabilities_json,
-          fixture, created_at, created_by, updated_at, updated_by
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)
+          state, archived_at, archived_by, fixture, created_at, created_by, updated_at, updated_by
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, 'active', NULL, '', 1, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
           label = excluded.label,
           kind = excluded.kind,
@@ -827,6 +1023,9 @@ export const createD1AccessUserRegistry = ({
           gallery_key = excluded.gallery_key,
           access_policy = excluded.access_policy,
           capabilities_json = excluded.capabilities_json,
+          state = 'active',
+          archived_at = NULL,
+          archived_by = '',
           fixture = 1,
           updated_at = excluded.updated_at,
           updated_by = excluded.updated_by
@@ -892,6 +1091,8 @@ export const createD1AccessUserRegistry = ({
     putUser,
     listUsers,
     disableUser,
+    putAudienceGroup,
+    archiveAudienceGroup,
     seedFixtureData,
     listFixtureEvents,
     listAudienceGroups,

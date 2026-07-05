@@ -11,6 +11,7 @@
     auditEvents: [],
     roles: [],
     selectedEmail: "",
+    selectedGroupId: "",
     session: null,
   };
 
@@ -22,17 +23,29 @@
   const eventsRoot = $("[data-acs-events]");
   const auditRoot = $("[data-acs-audit]");
   const groupsRoot = $("[data-acs-groups]");
+  const groupListRoot = $("[data-acs-group-list]");
   const galleryOptionsRoot = $("[data-acs-gallery-options]");
   const effectiveAccessRoot = $("[data-acs-effective-access]");
   const capabilitiesRoot = $("[data-acs-capabilities]");
+  const groupCapabilitiesRoot = $("[data-acs-group-capabilities]");
   const workerBaseRoot = $("[data-acs-worker-base]");
   const themeToggle = $("[data-theme-toggle]");
   const form = $("[data-acs-person-form]");
+  const groupForm = $("[data-acs-group-form]");
   const emailInput = $("[data-acs-email]");
   const displayNameInput = $("[data-acs-display-name]");
   const realEstateInput = $("[data-acs-real-estate]");
   const notesInput = $("[data-acs-notes]");
   const editorTitle = $("[data-acs-editor-title]");
+  const groupEditorTitle = $("[data-acs-group-editor-title]");
+  const groupIdInput = $("[data-acs-group-id]");
+  const groupLabelInput = $("[data-acs-group-label]");
+  const groupKindInput = $("[data-acs-group-kind]");
+  const groupGalleryKindInput = $("[data-acs-group-gallery-kind]");
+  const groupGalleryKeyInput = $("[data-acs-group-gallery-key]");
+  const groupPolicyInput = $("[data-acs-group-policy]");
+  let groupIdEdited = false;
+  let groupGalleryKeyEdited = false;
 
   const setStatus = (message) => {
     if (statusRoot) statusRoot.textContent = message;
@@ -90,6 +103,13 @@
     .map((item) => item.trim())
     .filter(Boolean))];
 
+  const slugify = (value) => String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/['"]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
   const roleClass = (role) => role === "owner" ? " is-owner" : "";
 
   const capabilityLabel = (capabilityId) =>
@@ -97,6 +117,10 @@
 
   const groupLabel = (groupId) =>
     state.audienceGroups.find((group) => group.id === groupId)?.label || groupId;
+
+  const activeAudienceGroups = () => state.audienceGroups.filter((group) => group.state !== "archived");
+
+  const selectedGroup = () => state.audienceGroups.find((group) => group.id === state.selectedGroupId) || null;
 
   const formatCapabilityChips = (capabilities = []) => {
     const list = Array.isArray(capabilities) ? capabilities : [];
@@ -145,7 +169,7 @@
   };
 
   const renderPickers = () => {
-    renderChoiceList(groupsRoot, state.audienceGroups, "acs-group", "data-acs-group", "Seed fixtures to load audience groups.");
+    renderChoiceList(groupsRoot, activeAudienceGroups(), "acs-group", "data-acs-group", "Seed fixtures to load audience groups.");
     renderChoiceList(
       galleryOptionsRoot,
       state.galleryOptions.filter((option) => option.galleryKind === "real_estate"),
@@ -225,7 +249,7 @@
     setCount("people", people.length);
     setCount("owners", people.filter((user) => (user.roles || []).includes("owner") && !user.disabledAt).length);
     setCount("re", people.filter((user) => hasRealEstateAccess(user) && !user.disabledAt).length);
-    setCount("groups", state.audienceGroups.length);
+    setCount("groups", activeAudienceGroups().length);
     setCount("fixtures", people.filter((user) => user.fixture).length);
     setCount("disabled", people.filter((user) => user.disabledAt).length);
   };
@@ -267,6 +291,72 @@
     `).join("");
   };
 
+  const renderGroupCapabilities = () => {
+    if (!groupCapabilitiesRoot) return;
+    if (!state.capabilities.length) {
+      groupCapabilitiesRoot.innerHTML = `<p class="acs-empty">No capability metadata loaded.</p>`;
+      return;
+    }
+    groupCapabilitiesRoot.innerHTML = state.capabilities.map((capability) => {
+      const id = `acs-group-capability-${capability.id}`.replace(/[^a-z0-9_-]+/gi, "-");
+      return `
+        <label for="${escapeHtml(id)}">
+          <input id="${escapeHtml(id)}" type="checkbox" data-acs-group-capability="${escapeHtml(capability.id)}"/>
+          <span>
+            <strong>${escapeHtml(capability.label || capability.id)}</strong>
+            <small>${escapeHtml(capability.id)}</small>
+          </span>
+        </label>
+      `;
+    }).join("");
+  };
+
+  const fillGroupForm = (group = null) => {
+    const item = group || {};
+    groupIdEdited = Boolean(item.id);
+    groupGalleryKeyEdited = Boolean(item.id);
+    if (groupIdInput) {
+      groupIdInput.value = item.id || "";
+      groupIdInput.readOnly = Boolean(item.id);
+    }
+    if (groupLabelInput) groupLabelInput.value = item.label || "";
+    if (groupKindInput) groupKindInput.value = item.kind || "event";
+    if (groupGalleryKindInput) groupGalleryKindInput.value = item.galleryKind || item.kind || "event";
+    if (groupGalleryKeyInput) groupGalleryKeyInput.value = item.galleryKey || item.id || "";
+    if (groupPolicyInput) groupPolicyInput.value = item.accessPolicy || "";
+    const capabilities = new Set(item.capabilities || []);
+    document.querySelectorAll("[data-acs-group-capability]").forEach((input) => {
+      input.checked = capabilities.has(input.dataset.acsGroupCapability);
+    });
+    if (groupEditorTitle) groupEditorTitle.textContent = item.id ? item.label || item.id : "New audience group";
+    const archiveButton = $("[data-acs-archive-group]");
+    if (archiveButton) archiveButton.disabled = !item.id || item.state === "archived";
+  };
+
+  const renderGroupList = () => {
+    if (!groupListRoot) return;
+    if (!state.audienceGroups.length) {
+      groupListRoot.innerHTML = `<p class="acs-empty">No audience groups yet. Seed fixtures or save a group.</p>`;
+      return;
+    }
+    groupListRoot.innerHTML = state.audienceGroups.map((group) => {
+      const active = group.id === state.selectedGroupId;
+      const archived = group.state === "archived";
+      return `
+        <button type="button" class="acs-group-row${active ? " is-active" : ""}${archived ? " is-archived" : ""}" data-acs-group-row="${escapeHtml(group.id)}">
+          <span>
+            <strong>${escapeHtml(group.label || group.id)}</strong>
+            <small>${escapeHtml([group.kind, group.galleryKind, group.galleryKey].filter(Boolean).join(" / "))}</small>
+          </span>
+          <span class="acs-group-row-chips">
+            <span class="acs-chip${archived ? " is-disabled" : ""}">${escapeHtml(archived ? "archived" : "active")}</span>
+            ${group.fixture ? `<span class="acs-chip is-fixture">fixture</span>` : ""}
+          </span>
+        </button>
+      `;
+    }).join("");
+  };
+
   const renderEffectiveAccess = () => {
     if (!effectiveAccessRoot) return;
     const user = selectedUser();
@@ -306,7 +396,7 @@
     }));
     const groupRows = state.audienceGroups.map((group) => ({
       label: group.label || group.id,
-      kind: group.kind || "group",
+      kind: [group.kind || "group", group.state === "archived" ? "archived" : ""].filter(Boolean).join(" / "),
       capabilities: group.capabilities || [],
     }));
     const rows = [...roleRows, ...groupRows];
@@ -347,6 +437,9 @@
     renderPickers();
     renderPeople();
     renderEvents();
+    renderGroupCapabilities();
+    renderGroupList();
+    fillGroupForm(selectedGroup());
     renderCapabilities();
     renderAudit();
     fillForm(selectedUser());
@@ -370,6 +463,9 @@
       if (!state.selectedEmail || !state.people.some((user) => user.email === state.selectedEmail)) {
         state.selectedEmail = state.people[0]?.email || "";
       }
+      if (!state.selectedGroupId || !state.audienceGroups.some((group) => group.id === state.selectedGroupId)) {
+        state.selectedGroupId = state.audienceGroups[0]?.id || "";
+      }
       setStatus(`${state.people.length} people loaded from cloud access state.`);
       render();
     } catch (error) {
@@ -381,6 +477,7 @@
       state.galleryOptions = [];
       state.capabilities = [];
       state.auditEvents = [];
+      state.selectedGroupId = "";
       render();
     } finally {
       root?.classList.remove("is-loading");
@@ -437,6 +534,48 @@
     await load();
   };
 
+  const saveGroup = async () => {
+    const existing = selectedGroup();
+    const label = groupLabelInput?.value || "";
+    const generatedId = slugify(label);
+    const payload = {
+      id: groupIdInput?.value || existing?.id || generatedId,
+      label,
+      kind: groupKindInput?.value || "event",
+      galleryKind: groupGalleryKindInput?.value || "event",
+      galleryKey: groupGalleryKeyInput?.value || groupIdInput?.value || generatedId,
+      accessPolicy: groupPolicyInput?.value || "",
+      capabilities: checkedValues("[data-acs-group-capability]", "acsGroupCapability"),
+      fixture: existing?.fixture === true,
+    };
+    setStatus(`Saving group ${payload.label || payload.id || ""}...`);
+    const body = await apiFetch("/access-console/groups", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    state.selectedGroupId = body.group?.id || payload.id;
+    await load();
+  };
+
+  const archiveSelectedGroup = async () => {
+    const group = selectedGroup();
+    if (!group?.id) {
+      setStatus("Select a group before archiving.");
+      return;
+    }
+    if (group.state === "archived") {
+      setStatus(`${group.label || group.id} is already archived.`);
+      return;
+    }
+    if (!window.confirm?.(`Archive ${group.label || group.id}? Active memberships will be revoked, but the audit record stays visible.`)) return;
+    setStatus(`Archiving group ${group.label || group.id}...`);
+    await apiFetch(`/access-console/groups/${encodeURIComponent(group.id)}/archive`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+    await load();
+  };
+
   const login = () => {
     if (!workerBase) return;
     const url = new URL(`${workerBase}/auth/google/login`);
@@ -458,12 +597,28 @@
     render();
   });
 
+  groupListRoot?.addEventListener("click", (event) => {
+    const row = event.target.closest("[data-acs-group-row]");
+    if (!row) return;
+    state.selectedGroupId = row.dataset.acsGroupRow || "";
+    render();
+  });
+
   form?.addEventListener("submit", async (event) => {
     event.preventDefault();
     try {
       await savePerson();
     } catch (error) {
       setStatus(error.message || "Could not save person.");
+    }
+  });
+
+  groupForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    try {
+      await saveGroup();
+    } catch (error) {
+      setStatus(error.message || "Could not save group.");
     }
   });
 
@@ -474,7 +629,25 @@
     renderPeople();
     renderEffectiveAccess();
   });
+  $("[data-acs-new-group]")?.addEventListener("click", () => {
+    state.selectedGroupId = "";
+    fillGroupForm(null);
+    renderGroupList();
+  });
+  groupIdInput?.addEventListener("input", () => {
+    groupIdEdited = true;
+  });
+  groupGalleryKeyInput?.addEventListener("input", () => {
+    groupGalleryKeyEdited = true;
+  });
+  groupLabelInput?.addEventListener("input", () => {
+    if (state.selectedGroupId) return;
+    const generated = slugify(groupLabelInput.value);
+    if (groupIdInput && !groupIdEdited) groupIdInput.value = generated;
+    if (groupGalleryKeyInput && !groupGalleryKeyEdited) groupGalleryKeyInput.value = generated;
+  });
   $("[data-acs-disable-person]")?.addEventListener("click", () => disableSelected().catch((error) => setStatus(error.message || "Could not disable person.")));
+  $("[data-acs-archive-group]")?.addEventListener("click", () => archiveSelectedGroup().catch((error) => setStatus(error.message || "Could not archive group.")));
   $("[data-acs-seed-fixtures]")?.addEventListener("click", () => seedFixtures().catch((error) => setStatus(error.message || "Could not seed fixtures.")));
   $("[data-acs-login]")?.addEventListener("click", login);
   $("[data-acs-logout]")?.addEventListener("click", logout);

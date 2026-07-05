@@ -450,6 +450,31 @@ test("access console is admin-only and writes reversible role grants", async () 
   ].sort());
   assert.equal(seedBody.fixtures.groups.some((group) => group.id === "johnson-palmer-wedding"), true);
 
+  const groupResponse = await adminWorker.fetch(jsonRequest("https://worker.test/access-console/groups", {
+    id: "cohen-cousins",
+    label: "Cohen cousins",
+    kind: "family",
+    galleryKind: "event",
+    galleryKey: "cohen-cousins",
+    accessPolicy: "family rehearsal previews with watermarks and normal download rules",
+    capabilities: ["view_gallery", "view_watermarked", "download_items"],
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(groupResponse.status, 200);
+  const groupBody = await groupResponse.json();
+  assert.equal(groupBody.group.id, "cohen-cousins");
+  assert.equal(groupBody.group.state, "active");
+
+  const cousinResponse = await adminWorker.fetch(jsonRequest("https://worker.test/access-console/people", {
+    email: "cousin@example.test",
+    displayName: "Cohen Cousin",
+    roles: ["user"],
+    groupIds: ["cohen-cousins"],
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(cousinResponse.status, 200);
+  const cousinBody = await cousinResponse.json();
+  assert.deepEqual(cousinBody.user.groupIds, ["cohen-cousins"]);
+  assert.equal(cousinBody.user.effectiveAccess.scopes.some((scope) => scope.galleryKey === "cohen-cousins"), true);
+
   const attendeeResponse = await adminWorker.fetch(jsonRequest("https://worker.test/access-console/people", {
     email: "attendee@example.test",
     displayName: "Wedding Attendee",
@@ -484,6 +509,13 @@ test("access console is admin-only and writes reversible role grants", async () 
   assert.equal(reGroupSession.roles.includes("re_client"), true);
   assert.deepEqual(reGroupSession.realEstateClients, ["re-la-concha"]);
 
+  const archiveGroupResponse = await adminWorker.fetch(jsonRequest("https://worker.test/access-console/groups/cohen-cousins/archive", {}, {
+    origin: "https://photos-by-elie.com",
+  }));
+  assert.equal(archiveGroupResponse.status, 200);
+  const archiveGroupBody = await archiveGroupResponse.json();
+  assert.equal(archiveGroupBody.group.state, "archived");
+
   const disableResponse = await adminWorker.fetch(jsonRequest("https://worker.test/access-console/people/helper%40example.test/disable", {}, {
     origin: "https://photos-by-elie.com",
   }));
@@ -503,8 +535,12 @@ test("access console is admin-only and writes reversible role grants", async () 
   }));
   const finalState = await finalStateResponse.json();
   assert.equal(finalState.audienceGroups.some((group) => group.label === "Agnes's B'day"), true);
+  assert.equal(finalState.audienceGroups.find((group) => group.id === "cohen-cousins")?.state, "archived");
+  assert.equal(finalState.galleryOptions.some((option) => option.galleryKey === "cohen-cousins"), false);
+  assert.deepEqual(finalState.people.find((user) => user.email === "cousin@example.test")?.groupIds, []);
   assert.equal(finalState.galleryOptions.some((option) => option.galleryKey === "re-la-concha"), true);
   assert.equal(finalState.capabilities.some((capability) => capability.id === "manage_access"), true);
+  assert.equal(finalState.auditEvents.some((event) => event.eventType === "group_archived"), true);
   assert.equal(finalState.auditEvents.some((event) => event.eventType === "user_disabled"), true);
 });
 

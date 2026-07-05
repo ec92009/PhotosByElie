@@ -146,14 +146,66 @@
       </div>
 
       <div class="acs-lower-grid">
-        <section class="acs-fixtures" aria-label="Fixture events">
+        <section class="acs-groups-panel" aria-label="Audience group manager">
           <div class="owner-card-titlebar">
             <div>
-              <p class="eyebrow">Fixtures</p>
-              <h2>Event/group rehearsal data</h2>
+              <p class="eyebrow">Groups</p>
+              <h2 data-acs-group-editor-title>Audience manager</h2>
             </div>
           </div>
-          <div data-acs-events class="acs-event-list"></div>
+          <div class="acs-group-manager">
+            <div data-acs-group-list class="acs-group-list"></div>
+            <form data-acs-group-form class="acs-group-form">
+              <label>
+                <span>Group ID</span>
+                <input type="text" autocomplete="off" data-acs-group-id placeholder="johnson-palmer-wedding"/>
+              </label>
+              <label>
+                <span>Label</span>
+                <input type="text" required data-acs-group-label placeholder="Johnson-Palmer wedding"/>
+              </label>
+              <div class="acs-two-col">
+                <label>
+                  <span>Group kind</span>
+                  <select data-acs-group-kind>
+                    <option value="family">Family</option>
+                    <option value="event">Event</option>
+                    <option value="real_estate">Real Estate</option>
+                    <option value="custom">Custom</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Gallery kind</span>
+                  <select data-acs-group-gallery-kind>
+                    <option value="event">Event</option>
+                    <option value="real_estate">Real Estate</option>
+                    <option value="public">Public</option>
+                    <option value="custom">Custom</option>
+                  </select>
+                </label>
+              </div>
+              <label>
+                <span>Gallery key</span>
+                <input type="text" required data-acs-group-gallery-key placeholder="johnson-palmer-wedding"/>
+              </label>
+              <label>
+                <span>Access policy</span>
+                <textarea rows="3" data-acs-group-policy></textarea>
+              </label>
+              <fieldset class="acs-role-fieldset">
+                <legend>Capabilities</legend>
+                <div class="acs-choice-list" data-acs-group-capabilities>
+                  <p class="acs-empty">Loading capabilities...</p>
+                </div>
+              </fieldset>
+              <div class="acs-editor-actions">
+                <button class="btn secondary" type="submit">Save group</button>
+                <button class="btn secondary" type="button" data-acs-new-group>New</button>
+                <button class="btn secondary danger" type="button" data-acs-archive-group>Archive</button>
+              </div>
+            </form>
+          </div>
+          <div data-acs-events class="acs-event-list acs-event-list-compact"></div>
         </section>
         <section class="acs-capabilities" aria-label="Capability matrix">
           <div class="owner-card-titlebar">

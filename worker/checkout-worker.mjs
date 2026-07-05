@@ -186,6 +186,15 @@ const normalizeAccessConsoleRoles = (roles = []) => {
   return [...cleaned];
 };
 
+const ACCESS_CONSOLE_CAPABILITY_IDS = new Set(ACCESS_CAPABILITIES.map((capability) => capability.id));
+
+const normalizeAccessConsoleCapabilities = (capabilities = []) => {
+  const source = Array.isArray(capabilities) ? capabilities : String(capabilities || "").split(/[\s,;]+/);
+  return [...new Set(source
+    .map((capability) => String(capability || "").trim().toLowerCase().replace(/[-\s]+/g, "_"))
+    .filter((capability) => ACCESS_CONSOLE_CAPABILITY_IDS.has(capability)))];
+};
+
 const accessConsolePayloadRequestsAdmin = (roles = []) => {
   const source = Array.isArray(roles) ? roles : String(roles || "").split(/[\s,;]+/);
   return source
@@ -2061,6 +2070,41 @@ export const createPhotosByElieWorker = ({
     return credentialedJson(request, { ok: true, fixtures });
   };
 
+  const putAccessConsoleGroup = async (request) => {
+    const session = await requireAccessConsoleAdmin(request);
+    const registry = accessConsoleRegistryRequired();
+    if (typeof registry.putAudienceGroup !== "function") {
+      return credentialedErrorJson(request, 503, "access_console_groups_unavailable", "Access Console group writes are not configured.");
+    }
+    const payload = await parseJson(request);
+    try {
+      const group = await registry.putAudienceGroup({
+        id: payload.id || payload.groupId || payload.group_id || "",
+        label: payload.label || payload.name || "",
+        kind: payload.kind || "event",
+        galleryKind: payload.galleryKind || payload.gallery_kind || payload.kind || "event",
+        galleryKey: payload.galleryKey || payload.gallery_key || "",
+        accessPolicy: payload.accessPolicy || payload.access_policy || "",
+        capabilities: normalizeAccessConsoleCapabilities(payload.capabilities || payload.capabilityIds || []),
+        fixture: payload.fixture === true,
+      }, { actorEmail: session.email });
+      return credentialedJson(request, { ok: true, group });
+    } catch (error) {
+      return credentialedErrorJson(request, 400, "invalid_access_group", error.message || "Audience group could not be saved.");
+    }
+  };
+
+  const archiveAccessConsoleGroup = async (request, groupId) => {
+    const session = await requireAccessConsoleAdmin(request);
+    const registry = accessConsoleRegistryRequired();
+    if (typeof registry.archiveAudienceGroup !== "function") {
+      return credentialedErrorJson(request, 503, "access_console_groups_unavailable", "Access Console group archiving is not configured.");
+    }
+    const group = await registry.archiveAudienceGroup(groupId, { actorEmail: session.email });
+    if (!group) return credentialedErrorJson(request, 404, "access_group_not_found", "Access group was not found.");
+    return credentialedJson(request, { ok: true, group });
+  };
+
   const canUseRealEstateGallery = (session, galleryKey) =>
     Boolean(
       session?.roles?.includes("admin")
@@ -2232,8 +2276,11 @@ export const createPhotosByElieWorker = ({
       if (request.method === "GET" && ownerActionMatch) return await getOwnerAction(request, decodeURIComponent(ownerActionMatch[1]));
       if (request.method === "GET" && path === "/access-console/state") return await accessConsoleState(request);
       if ((request.method === "POST" || request.method === "PUT" || request.method === "PATCH") && path === "/access-console/people") return await putAccessConsolePerson(request);
+      if ((request.method === "POST" || request.method === "PUT" || request.method === "PATCH") && path === "/access-console/groups") return await putAccessConsoleGroup(request);
       const accessPersonDisableMatch = path.match(/^\/access-console\/people\/([^/]+)\/disable$/);
       if (request.method === "POST" && accessPersonDisableMatch) return await disableAccessConsolePerson(request, decodeURIComponent(accessPersonDisableMatch[1]));
+      const accessGroupArchiveMatch = path.match(/^\/access-console\/groups\/([^/]+)\/archive$/);
+      if (request.method === "POST" && accessGroupArchiveMatch) return await archiveAccessConsoleGroup(request, decodeURIComponent(accessGroupArchiveMatch[1]));
       if (request.method === "POST" && path === "/access-console/fixtures/seed") return await seedAccessConsoleFixtures(request);
       if (request.method === "GET" && path === "/account/profile") return await getAccountProfile(request);
       if ((request.method === "POST" || request.method === "PUT" || request.method === "PATCH") && path === "/account/profile") return await putAccountProfile(request);

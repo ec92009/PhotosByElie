@@ -23,7 +23,7 @@ ignores registry records as a source of additional admins.
 
 ## Registry
 
-Access Console V2 stores structured access state in D1 once the Worker has an
+Access Console V3 stores structured access state in D1 once the Worker has an
 `ACCESS_DB` binding. Auth/session reads switch to the D1 registry immediately
 when that binding exists. Until then, deployed auth keeps the legacy KV registry
 as a compatibility fallback.
@@ -34,7 +34,8 @@ Current ACS deployment:
 - D1 database name: `photosbyelie-access`
 - D1 binding: `ACCESS_DB`
 - Migrations: `migrations/0001_access_console.sql`,
-  `migrations/0002_access_console_audience_groups.sql`
+  `migrations/0002_access_console_audience_groups.sql`,
+  `migrations/0003_access_console_group_state.sql`
 
 D1 tables:
 
@@ -44,7 +45,7 @@ D1 tables:
 - `pbe_access_gallery_grants`: active/revoked gallery grants, currently Real
   Estate gallery keys.
 - `pbe_access_audience_groups`: family, event, and Real Estate audience groups,
-  each tied to a gallery key and capability list.
+  each tied to a gallery key, capability list, and active/archived state.
 - `pbe_access_group_memberships`: active/revoked email-to-group assignments.
 - `pbe_access_fixture_events`: clearly marked rehearsal family/event/RE records.
 - `pbe_access_audit_events`: before/after snapshots for role and disable changes.
@@ -127,6 +128,10 @@ and cannot be granted through ACS.
 - `POST|PUT|PATCH /access-console/people`: requires Admin and upserts one
   person's non-admin roles, audience group memberships, Real Estate grants, name,
   and notes.
+- `POST|PUT|PATCH /access-console/groups`: requires Admin and creates or updates
+  an audience group, gallery key, access policy, and capability list.
+- `POST /access-console/groups/<id>/archive`: requires Admin, marks the audience
+  group archived, and revokes active memberships for that group.
 - `POST /access-console/people/<email>/disable`: requires Admin and revokes
   active roles, group memberships, and grants without deleting audit history.
 - `POST /access-console/fixtures/seed`: requires Admin and seeds fake `.test`
@@ -148,6 +153,10 @@ session, and performs reversible writes:
 - `admin` is displayed as bootstrap-only and rejected if submitted.
 - Audience group checkboxes assign family, event, and Real Estate memberships
   without hard-coding future roles such as family member or event attendee.
+- The group manager can create, edit, and archive family/event/RE/custom groups
+  with gallery keys, access policies, and capability lists.
+- Archived groups stay visible in ACS but no longer appear in person assignment
+  pickers, gallery options, auth-session effective access, or new memberships.
 - The effective-access inspector shows the selected person's base user scope,
   role scope, group/gallery scopes, and capability chips.
 - Disable revokes active roles, group memberships, and gallery grants but keeps

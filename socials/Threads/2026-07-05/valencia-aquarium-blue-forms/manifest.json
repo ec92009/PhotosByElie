@@ -1,0 +1,86 @@
+{
+  "platform": "Threads",
+  "title": "Valencia Aquarium Blue Forms",
+  "campaign_id": "instagram-valencia-aquarium-blue-forms-2026-07-05",
+  "caption": "Valencia Aquarium Blue Forms in four Photos By Elie frames. Browse: https://photos-by-elie.com/campaign.html?c=instagram-valencia-aquarium-blue-forms-2026-07-05",
+  "items": [
+    {
+      "media_id": "img-1566-4571418d2f",
+      "order": 1,
+      "id": "img-1566-4571418d2f",
+      "title": "Aquarium, Valencia",
+      "collection": "spain",
+      "location": "Spain",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/img-1566-4571418d2f_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/img-1566-4571418d2f_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=img-1566-4571418d2f",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=img-1566-4571418d2f",
+      "image": "images/01-img-1566-4571418d2f-valencia-aquarium-blue-forms.jpg",
+      "local_staged_path": "socials/Threads/2026-07-05/valencia-aquarium-blue-forms/images/01-img-1566-4571418d2f-valencia-aquarium-blue-forms.jpg"
+    },
+    {
+      "media_id": "img-1567-c3eb2cb23a",
+      "order": 2,
+      "id": "img-1567-c3eb2cb23a",
+      "title": "Aquarium, Valencia",
+      "collection": "spain",
+      "location": "Spain",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/img-1567-c3eb2cb23a_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/img-1567-c3eb2cb23a_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=img-1567-c3eb2cb23a",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=img-1567-c3eb2cb23a",
+      "image": "images/02-img-1567-c3eb2cb23a-valencia-aquarium-blue-forms.jpg",
+      "local_staged_path": "socials/Threads/2026-07-05/valencia-aquarium-blue-forms/images/02-img-1567-c3eb2cb23a-valencia-aquarium-blue-forms.jpg"
+    },
+    {
+      "media_id": "img-1572-f014372b0b",
+      "order": 3,
+      "id": "img-1572-f014372b0b",
+      "title": "Aquarium, Valencia",
+      "collection": "spain",
+      "location": "Spain",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/img-1572-f014372b0b_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/img-1572-f014372b0b_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=img-1572-f014372b0b",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=img-1572-f014372b0b",
+      "image": "images/03-img-1572-f014372b0b-valencia-aquarium-blue-forms.jpg",
+      "local_staged_path": "socials/Threads/2026-07-05/valencia-aquarium-blue-forms/images/03-img-1572-f014372b0b-valencia-aquarium-blue-forms.jpg"
+    },
+    {
+      "media_id": "img-1564-6fad310ac7",
+      "order": 4,
+      "id": "img-1564-6fad310ac7",
+      "title": "Aquarium, Valencia",
+      "collection": "spain",
+      "location": "Spain",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/img-1564-6fad310ac7_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/img-1564-6fad310ac7_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=img-1564-6fad310ac7",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=img-1564-6fad310ac7",
+      "image": "images/04-img-1564-6fad310ac7-valencia-aquarium-blue-forms.jpg",
+      "local_staged_path": "socials/Threads/2026-07-05/valencia-aquarium-blue-forms/images/04-img-1564-6fad310ac7-valencia-aquarium-blue-forms.jpg"
+    }
+  ],
+  "notes": [
+    "Derived from the Instagram package for a 3-4 image Threads carousel.",
+    "Images are public watermarked R2 previews staged for upload/API publishing."
+  ],
+  "status": "prepared",
+  "account": "ec92009",
+  "post_type": "carousel",
+  "available_count": 4,
+  "date": "2026-07-05",
+  "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-valencia-aquarium-blue-forms-2026-07-05",
+  "recommended_upload_set": "images",
+  "manual_blockers": [
+    "Publish pending: review socials/Threads/2026-07-05/valencia-aquarium-blue-forms/manifest.json and use the Threads browser/API workflow."
+  ]
+}

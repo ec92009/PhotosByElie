@@ -1,9 +1,78 @@
 {
   "format": "photosbyelie-campaign-index",
   "schema_version": 1,
-  "generated_at": "2026-07-03T03:10:49.569Z",
-  "campaign_count": 143,
+  "generated_at": "2026-07-05T06:27:28.012Z",
+  "campaign_count": 146,
   "campaigns": [
+    {
+      "id": "pinterest-carlsbad-garden-coast-light-2026-07-05",
+      "source": "Pinterest",
+      "title": "Carlsbad Garden and Coast Light",
+      "description": "A 5-photo Carlsbad Garden and Coast Light edit prepared for Pinterest with public Photos By Elie previews and a first-party browsing destination.",
+      "date": "2026-07-05",
+      "href": "./campaign.html?c=pinterest-carlsbad-garden-coast-light-2026-07-05",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=pinterest-carlsbad-garden-coast-light-2026-07-05",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/20140907-1911-06385-5f3a5197a2_900.jpg",
+      "imageAlt": "Carlsbad, California at Dusk",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/20140907-1911-06385-5f3a5197a2_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180813-0936-18935-ff4ebcc12a_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180712-1827-16407-476b03451a_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180712-1827-16605-457c78af75_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180217-1828-00091-1-9ddb0e40d8_900.jpg"
+      ],
+      "primaryPhotoCount": 5,
+      "relatedPhotoCount": 0,
+      "mtimeMs": 1783232840572
+    },
+    {
+      "id": "facebook-cascais-castle-stone-sea-2026-07-05",
+      "source": "Facebook",
+      "title": "Cascais Castle Stone and Sea",
+      "description": "A 8-photo Cascais Castle Stone and Sea edit prepared for Facebook with public Photos By Elie previews and a first-party browsing destination.",
+      "date": "2026-07-05",
+      "href": "./campaign.html?c=facebook-cascais-castle-stone-sea-2026-07-05",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=facebook-cascais-castle-stone-sea-2026-07-05",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/20180518-1943-00586-774731a7a1_900.jpg",
+      "imageAlt": "Cascais, Castelo Dos Mouros",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/20180518-1943-00586-774731a7a1_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180518-1900-00580-35bb6f1333_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180518-1913-00585-250cb95ac6_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180518-1856-00576-9b3565b612_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180518-1907-00581-fd6a59f062_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180518-1857-00578-94deb09cb0_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180518-1908-00582-ce14d231bb_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180518-1909-00583-cbdb3185f0_900.jpg"
+      ],
+      "primaryPhotoCount": 8,
+      "relatedPhotoCount": 0,
+      "mtimeMs": 1783232840564
+    },
+    {
+      "id": "instagram-valencia-aquarium-blue-forms-2026-07-05",
+      "source": "Instagram",
+      "title": "Valencia Aquarium Blue Forms",
+      "description": "A 8-photo Valencia Aquarium Blue Forms edit prepared for Instagram with public Photos By Elie previews and a first-party browsing destination.",
+      "date": "2026-07-05",
+      "href": "./campaign.html?c=instagram-valencia-aquarium-blue-forms-2026-07-05",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=instagram-valencia-aquarium-blue-forms-2026-07-05",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/img-1566-4571418d2f_900.jpg",
+      "imageAlt": "Aquarium, Valencia",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/img-1566-4571418d2f_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1567-c3eb2cb23a_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1572-f014372b0b_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1564-6fad310ac7_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1569-a4f19d878c_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1565-76c631a44a_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1562-dd0da6eba6_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1560-bc652b01c9_900.jpg"
+      ],
+      "primaryPhotoCount": 8,
+      "relatedPhotoCount": 0,
+      "mtimeMs": 1783232840564
+    },
     {
       "id": "instagram-bilbao-guggenheim-metal-curves-2026-07-03",
       "source": "Instagram",

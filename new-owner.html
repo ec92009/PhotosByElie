@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="./shared.css?v=125.0"/>
   <link rel="stylesheet" href="./styles.css?v=125.0"/>
   <link rel="stylesheet" href="./photos.css?v=125.0"/>
-  <link rel="stylesheet" href="./new-owner.css?v=trackb2"/>
+  <link rel="stylesheet" href="./new-owner.css?v=trackb3"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -84,10 +84,16 @@
             </div>
           </div>
           <div class="new-owner-action-controls">
+            <label class="new-owner-connector-label">
+              <span>Connector</span>
+              <input type="text" value="Max" autocomplete="off" data-new-owner-connector/>
+            </label>
             <button class="btn secondary" type="button" data-new-owner-queue-check>Queue check</button>
+            <button class="btn secondary" type="button" data-new-owner-queue-sidecar>Queue culling</button>
+            <button class="btn secondary" type="button" data-new-owner-claim-next>Claim next</button>
             <span data-new-owner-action-status aria-live="polite"></span>
           </div>
-          <p class="new-owner-card-note">Recent actions are read from cloud state, so David should see the same queue after fetching this branch.</p>
+          <p class="new-owner-card-note">Recent actions are read from cloud state; claimed actions carry a connector id for Max/David handoff.</p>
           <div data-new-owner-action class="new-owner-action-result"></div>
         </section>
 
@@ -105,6 +111,6 @@
   </main>
 
   <script src="./media-config.js"></script>
-  <script src="./new-owner.js?v=trackb2"></script>
+  <script src="./new-owner.js?v=trackb3"></script>
 </body>
 </html>

@@ -133,6 +133,13 @@ and cannot be granted through ACS.
   for future remote Owner work; it does not grant roles.
 - `GET /owner/actions/<id>`: requires an Owner/Admin Google session and reads a
   queued cloud Owner action record.
+- `POST /owner/actions/<id>/claim`: requires an Owner/Admin Google session,
+  changes a queued action to `claimed`, stores connector id, claimant, claim
+  time, and a short lease timestamp.
+- `POST /owner/actions/<id>/complete`: requires an Owner/Admin Google session,
+  changes a claimed action to `completed`, and stores a result object.
+- `POST /owner/actions/<id>/fail`: requires an Owner/Admin Google session and
+  marks a queued or claimed action `failed` with a short error message.
 - `POST /real-estate/access-login`: requires a Google session whose registry
   grants include the requested `galleryKey` or an Owner/Admin session. It mints
   the existing signed Real Estate session cookie so the current gallery-scoped

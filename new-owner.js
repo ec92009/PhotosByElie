@@ -25,6 +25,7 @@
   const lanesRoot = $("[data-new-owner-lanes]");
   const actionRoot = $("[data-new-owner-action]");
   const actionStatusRoot = $("[data-new-owner-action-status]");
+  const connectorInput = $("[data-new-owner-connector]");
   const workerBaseRoot = $("[data-new-owner-worker-base]");
   const themeToggle = $("[data-theme-toggle]");
 
@@ -86,6 +87,25 @@
   const ownerAllowed = () => {
     const roles = Array.isArray(state.session?.roles) ? state.session.roles : [];
     return state.session?.admin === true || state.session?.tier === "owner" || roles.includes("owner") || roles.includes("admin");
+  };
+
+  const cleanConnectorId = (value) => String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80) || "max";
+
+  const connectorId = () => cleanConnectorId(connectorInput?.value || "Max");
+
+  const rememberConnector = () => {
+    if (!connectorInput) return;
+    connectorInput.value = cleanConnectorId(connectorInput.value || "Max");
+    try {
+      localStorage.setItem("pbe-new-owner-connector", connectorInput.value);
+    } catch {
+      // Connector naming is local UI convenience.
+    }
   };
 
   const renderSession = () => {
@@ -202,12 +222,20 @@
       return;
     }
     actionRoot.innerHTML = actions.map((action) => `
-      <article class="new-owner-action-row">
+      <article class="new-owner-action-row" data-action-id="${escapeHtml(action.id)}">
         <strong>${escapeHtml(action.type || "owner action")}</strong>
         <small>${escapeHtml(action.id)}</small>
         <div class="new-owner-chip-stack">
-          ${chip(action.state || "queued", action.state === "failed" ? "local" : "live")}
+          ${chip(action.state || "queued", action.state === "failed" ? "local" : (action.state === "claimed" ? "planned" : "live"))}
           ${action.createdAt ? chip(action.createdAt) : ""}
+          ${action.claim?.connectorId ? chip(action.claim.connectorId, "planned") : ""}
+          ${action.completedAt ? chip(action.completedAt, "live") : ""}
+          ${action.error?.message ? chip(action.error.message, "local") : ""}
+        </div>
+        <div class="new-owner-action-row-controls">
+          ${action.state === "queued" ? `<button class="btn secondary" type="button" data-new-owner-action-command="claim" data-action-id="${escapeHtml(action.id)}">Claim</button>` : ""}
+          ${action.state === "claimed" ? `<button class="btn secondary" type="button" data-new-owner-action-command="complete" data-action-id="${escapeHtml(action.id)}">Complete</button>` : ""}
+          ${["queued", "claimed"].includes(action.state) ? `<button class="btn secondary" type="button" data-new-owner-action-command="fail" data-action-id="${escapeHtml(action.id)}">Fail</button>` : ""}
         </div>
       </article>
     `).join("");
@@ -272,20 +300,16 @@
     window.location.href = url.href;
   };
 
-  const queueCheck = async () => {
+  const queueAction = async ({ action, payload, statusLabel = "Queueing..." }) => {
     if (state.busy) return;
     state.busy = true;
-    if (actionStatusRoot) actionStatusRoot.textContent = "Queueing...";
+    if (actionStatusRoot) actionStatusRoot.textContent = statusLabel;
     try {
       const body = await apiFetch("/owner/actions", {
         method: "POST",
         body: JSON.stringify({
-          action: "track-b-cloud-shell-check",
-          payload: {
-            surface: "new-owner",
-            localFilesRequired: false,
-            checkedAt: new Date().toISOString(),
-          },
+          action,
+          payload,
         }),
       });
       state.action = body.action || null;
@@ -295,7 +319,7 @@
       }
       await loadActions();
       if (actionStatusRoot) actionStatusRoot.textContent = state.action?.id ? "Queued" : "";
-      setStatus("Owner action queue check complete.");
+      setStatus("Owner action queued.");
       render();
     } catch (error) {
       if (actionStatusRoot) actionStatusRoot.textContent = "";
@@ -305,12 +329,96 @@
     }
   };
 
+  const queueCheck = () => queueAction({
+    action: "track-b-cloud-shell-check",
+    payload: {
+      surface: "new-owner",
+      localFilesRequired: false,
+      checkedAt: new Date().toISOString(),
+    },
+    statusLabel: "Queueing...",
+  });
+
+  const queueSidecarCulling = () => queueAction({
+    action: "sidecar-culling-review",
+    payload: {
+      surface: "new-owner",
+      workflow: "sidecar-culling",
+      connectorRequired: true,
+      requestedConnector: connectorId(),
+      localFilesRequired: true,
+      manifest: {
+        mode: "review-window",
+        source: "owner-sqlite",
+        limit: 50,
+      },
+      queuedAt: new Date().toISOString(),
+    },
+    statusLabel: "Queueing culling...",
+  });
+
+  const transitionAction = async (actionId, command) => {
+    if (state.busy || !actionId || !command) return;
+    state.busy = true;
+    if (actionStatusRoot) actionStatusRoot.textContent = `${command[0].toUpperCase()}${command.slice(1)}...`;
+    try {
+      const payload = command === "claim"
+        ? { connectorId: connectorId() }
+        : command === "complete"
+          ? { result: { connectorId: connectorId(), surface: "new-owner", completedAt: new Date().toISOString() } }
+          : { message: `Marked failed from ${connectorId()} in NewOwner.` };
+      const body = await apiFetch(`/owner/actions/${encodeURIComponent(actionId)}/${command}`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      state.action = body.action || state.action;
+      await loadActions();
+      if (actionStatusRoot) actionStatusRoot.textContent = state.action?.state || "";
+      setStatus(`Owner action ${state.action?.state || "updated"}.`);
+      render();
+    } catch (error) {
+      if (actionStatusRoot) actionStatusRoot.textContent = "";
+      setStatus(error.message || "Could not update Owner action.");
+    } finally {
+      state.busy = false;
+    }
+  };
+
+  const claimNextAction = () => {
+    const target = state.actions.find((action) => action.state === "queued" && action.type === "sidecar-culling-review")
+      || state.actions.find((action) => action.state === "queued");
+    if (!target?.id) {
+      setStatus("No queued Owner action is ready to claim.");
+      return;
+    }
+    transitionAction(target.id, "claim");
+  };
+
+  const hydrateConnector = () => {
+    if (!connectorInput) return;
+    try {
+      connectorInput.value = cleanConnectorId(localStorage.getItem("pbe-new-owner-connector") || connectorInput.value || "Max");
+    } catch {
+      connectorInput.value = cleanConnectorId(connectorInput.value || "Max");
+    }
+  };
+
   $("[data-new-owner-refresh]")?.addEventListener("click", () => load());
   $("[data-new-owner-login]")?.addEventListener("click", login);
   $("[data-new-owner-logout]")?.addEventListener("click", logout);
   $("[data-new-owner-queue-check]")?.addEventListener("click", queueCheck);
+  $("[data-new-owner-queue-sidecar]")?.addEventListener("click", queueSidecarCulling);
+  $("[data-new-owner-claim-next]")?.addEventListener("click", claimNextAction);
+  connectorInput?.addEventListener("change", rememberConnector);
+  connectorInput?.addEventListener("blur", rememberConnector);
+  actionRoot?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-new-owner-action-command]");
+    if (!button) return;
+    transitionAction(button.getAttribute("data-action-id"), button.getAttribute("data-new-owner-action-command"));
+  });
   themeToggle?.addEventListener("click", toggleTheme);
 
+  hydrateConnector();
   syncThemeToggle();
   renderLanes();
   load();

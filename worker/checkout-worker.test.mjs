@@ -394,6 +394,31 @@ test("owner actions are queued behind Owner Google access", async () => {
   const readbackBody = await readback.json();
   assert.equal(readbackBody.action.id, body.action.id);
 
+  const claimResponse = await worker.fetch(jsonRequest(`https://worker.test/owner/actions/${body.action.id}/claim`, {
+    connectorId: "Max Sidecar",
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(claimResponse.status, 200);
+  const claimBody = await claimResponse.json();
+  assert.equal(claimBody.action.state, "claimed");
+  assert.equal(claimBody.action.claim.connectorId, "max-sidecar");
+  assert.equal(claimBody.action.claim.claimedBy, "owner@example.com");
+  assert.equal(claimBody.action.history.at(-1).event, "claimed");
+
+  const completeResponse = await worker.fetch(jsonRequest(`https://worker.test/owner/actions/${body.action.id}/complete`, {
+    result: { connector: "max-sidecar", recordsReviewed: 0 },
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(completeResponse.status, 200);
+  const completeBody = await completeResponse.json();
+  assert.equal(completeBody.action.state, "completed");
+  assert.deepEqual(completeBody.action.result, { connector: "max-sidecar", recordsReviewed: 0 });
+  assert.equal(completeBody.action.completedBy, "owner@example.com");
+  assert.equal(completeBody.action.history.at(-1).event, "completed");
+
+  const reclaimResponse = await worker.fetch(jsonRequest(`https://worker.test/owner/actions/${body.action.id}/claim`, {
+    connectorId: "max-sidecar",
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(reclaimResponse.status, 409);
+
   const secondResponse = await worker.fetch(jsonRequest("https://worker.test/owner/actions", {
     action: "track-b-cloud-shell-check",
     payload: { surface: "new-owner" },
@@ -424,6 +449,10 @@ test("owner actions are queued behind Owner Google access", async () => {
     headers: { origin: "https://photos-by-elie.com" },
   }));
   assert.equal(listForbidden.status, 403);
+  const claimForbidden = await clientWorker.fetch(jsonRequest(`https://worker.test/owner/actions/${body.action.id}/claim`, {
+    connectorId: "client-sidecar",
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(claimForbidden.status, 403);
 });
 
 test("access console is admin-only and writes reversible role grants", async () => {

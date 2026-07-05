@@ -22,11 +22,22 @@ The shell uses only deployed Worker routes:
   KV-backed recent-action head plus timestamp index.
 - `POST /owner/actions`: queues a cloud Owner action.
 - `GET /owner/actions/<id>`: reads the queued action back.
+- `POST /owner/actions/<id>/claim`: assigns a queued action to a connector id
+  such as `max`, `david`, or a future local worker name.
+- `POST /owner/actions/<id>/complete`: marks a claimed action completed and
+  records a small result object.
+- `POST /owner/actions/<id>/fail`: marks a queued or claimed action failed with
+  a short error message.
 
 The first action probe is `track-b-cloud-shell-check`. It writes a harmless
 queued Owner action to the existing cloud KV-backed Owner action store, reads
 the same action back, and refreshes the recent queue so a reload on Max or David
 shows the same cloud state.
+
+The first connector-ready action type is `sidecar-culling-review`. NewOwner can
+queue a small culling manifest, claim it for the current connector id, and mark
+it completed or failed. This is still a rehearsal action; it does not yet make a
+local machine mutate `Owner.sqlite`.
 
 ## Boundaries
 
@@ -39,7 +50,8 @@ Cloud-ready now:
 
 - Google Owner/Admin session.
 - D1-backed role, group, and access-policy visibility.
-- Cloud Owner action queue creation, readback, and recent-action listing.
+- Cloud Owner action queue creation, readback, recent-action listing, and
+  claim/complete/fail lifecycle.
 - Links back to ACS for role and group assignment.
 
 Still connector-backed later:
@@ -51,7 +63,8 @@ Still connector-backed later:
 
 ## Next Step
 
-The next Track B slice should add a real action type with a worker/connector
-contract instead of a probe. A good candidate is a Sidecar culling/import job
-manifest that the cloud app can queue and a Max/David local connector can claim
-without moving local source files into the static public repo.
+The next Track B slice should add the first local connector runner. The runner
+can poll or fetch the claimed `sidecar-culling-review` action, perform a
+read-only Sidecar/Owner SQLite inspection on that machine, and post completion
+details back to the cloud action without moving local source files into the
+static public repo.

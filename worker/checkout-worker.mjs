@@ -2026,6 +2026,14 @@ export const createPhotosByElieWorker = ({
   };
 
   const ownerActionId = () => `owner-action-${randomUUID().replace(/[^a-z0-9-]/gi, "").slice(0, 48)}`;
+  const ownerActionHistory = (action, event) => [
+    ...(Array.isArray(action.history) ? action.history : []),
+    event,
+  ].slice(-50);
+  const cleanOwnerConnectorId = (value) => {
+    const cleaned = String(value || "").trim().toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
+    return cleaned.slice(0, 80) || "manual-owner";
+  };
 
   const createOwnerAction = async (request) => {
     const session = await authSessionFor(request, { requiredRole: "owner" });
@@ -2048,6 +2056,11 @@ export const createPhotosByElieWorker = ({
       createdBy: session.email,
       createdAt: timestamp,
       updatedAt: timestamp,
+      history: [{
+        event: "queued",
+        at: timestamp,
+        by: session.email,
+      }],
     });
     return credentialedJson(request, { ok: true, action }, 202);
   };
@@ -2072,6 +2085,89 @@ export const createPhotosByElieWorker = ({
     const action = await ownerActionStore.getAction(actionId);
     if (!action) return credentialedErrorJson(request, 404, "owner_action_not_found", "Owner action was not found.");
     return credentialedJson(request, { ok: true, action });
+  };
+
+  const transitionOwnerAction = async (request, actionId, transition) => {
+    const session = await authSessionFor(request, { requiredRole: "owner" });
+    if (!ownerActionStore || typeof ownerActionStore.getAction !== "function" || typeof ownerActionStore.putAction !== "function") {
+      return credentialedErrorJson(request, 503, "owner_actions_unavailable", "Owner action queue is not configured.");
+    }
+    const action = await ownerActionStore.getAction(actionId);
+    if (!action) return credentialedErrorJson(request, 404, "owner_action_not_found", "Owner action was not found.");
+    const payload = await parseJson(request);
+    const nowDate = now();
+    const timestamp = nowDate.toISOString();
+    let next = null;
+
+    if (transition === "claim") {
+      if (action.state !== "queued") {
+        return credentialedErrorJson(request, 409, "owner_action_not_claimable", "Only queued Owner actions can be claimed.");
+      }
+      const connectorId = cleanOwnerConnectorId(payload.connectorId || payload.connector || payload.machine);
+      const leaseExpiresAt = new Date(nowDate.getTime() + 4 * 60 * 60 * 1000).toISOString();
+      next = {
+        ...action,
+        state: "claimed",
+        claim: {
+          connectorId,
+          claimedBy: session.email,
+          claimedAt: timestamp,
+          leaseExpiresAt,
+        },
+        updatedAt: timestamp,
+      };
+      next.history = ownerActionHistory(action, {
+        event: "claimed",
+        at: timestamp,
+        by: session.email,
+        connectorId,
+        leaseExpiresAt,
+      });
+    } else if (transition === "complete") {
+      if (action.state !== "claimed") {
+        return credentialedErrorJson(request, 409, "owner_action_not_claimed", "Only claimed Owner actions can be completed.");
+      }
+      const result = payload.result && typeof payload.result === "object" ? payload.result : {};
+      next = {
+        ...action,
+        state: "completed",
+        result,
+        completedBy: session.email,
+        completedAt: timestamp,
+        updatedAt: timestamp,
+      };
+      next.history = ownerActionHistory(action, {
+        event: "completed",
+        at: timestamp,
+        by: session.email,
+      });
+    } else if (transition === "fail") {
+      if (!["queued", "claimed"].includes(action.state)) {
+        return credentialedErrorJson(request, 409, "owner_action_not_open", "Only queued or claimed Owner actions can be failed.");
+      }
+      const message = String(payload.message || payload.error?.message || payload.error || "Owner action failed.").trim().slice(0, 500);
+      next = {
+        ...action,
+        state: "failed",
+        error: {
+          message: message || "Owner action failed.",
+        },
+        failedBy: session.email,
+        failedAt: timestamp,
+        updatedAt: timestamp,
+      };
+      next.history = ownerActionHistory(action, {
+        event: "failed",
+        at: timestamp,
+        by: session.email,
+        message: next.error.message,
+      });
+    } else {
+      return credentialedErrorJson(request, 400, "invalid_owner_action_transition", "Owner action transition is not supported.");
+    }
+
+    const saved = await ownerActionStore.putAction(next);
+    return credentialedJson(request, { ok: true, action: saved });
   };
 
   const parseAuditJson = (value) => {
@@ -2464,6 +2560,14 @@ export const createPhotosByElieWorker = ({
       if (request.method === "GET" && path === "/owner/session") return await getOwnerSession(request);
       if (request.method === "GET" && path === "/owner/actions") return await listOwnerActions(request);
       if (request.method === "POST" && path === "/owner/actions") return await createOwnerAction(request);
+      const ownerActionTransitionMatch = path.match(/^\/owner\/actions\/([^/]+)\/(claim|complete|fail)$/);
+      if ((request.method === "POST" || request.method === "PATCH") && ownerActionTransitionMatch) {
+        return await transitionOwnerAction(
+          request,
+          decodeURIComponent(ownerActionTransitionMatch[1]),
+          ownerActionTransitionMatch[2]
+        );
+      }
       const ownerActionMatch = path.match(/^\/owner\/actions\/([^/]+)$/);
       if (request.method === "GET" && ownerActionMatch) return await getOwnerAction(request, decodeURIComponent(ownerActionMatch[1]));
       if (request.method === "GET" && path === "/access-console/state") return await accessConsoleState(request);

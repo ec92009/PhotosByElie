@@ -11,7 +11,7 @@ Last updated: 2026-07-06
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`.
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`.
 - Access Console Sandbox V7: deployed on `auth.photos-by-elie.com` with D1 database `photosbyelie-access`; local preview at `http://100.111.30.109:8000/access-console.html`; group manager creates/edits/archives audience groups, connects groups to real gallery records, persists per-gallery defaults, filters people, manages group memberships, previews gallery permissions for selected group/person/visitor/owner modes, and runs cloud Worker policy tests for selected gallery access; audience fixtures are `Agnes's B'day`, `RE La Concha`, and `Johnson-Palmer wedding`.
-- Track B NewOwner shell: local preview at `http://100.111.30.109:8000/new-owner.html`; uses the deployed auth Worker for Google Owner/Admin session checks, D1 access-state summary, and a reload-persistent recent cloud Owner action queue without local Owner files.
+- Track B NewOwner shell: local preview at `http://100.111.30.109:8000/new-owner.html`; uses the deployed auth Worker for Google Owner/Admin session checks, D1 access-state summary, and a reload-persistent recent cloud Owner action queue with connector claim/complete/fail rehearsal for Sidecar culling actions.
 - Public catalog integrity: `ok`.
 - Public catalog scale: `7770` media rows.
 - Gallery counts: AI `5076`, France `379`, Italy `70`, Mexico `31`, Portugal `214`, Slovakia `2`, Spain `1853`, USA `145`.
@@ -134,9 +134,9 @@ Last updated: 2026-07-06
     - Add group-specific audit trails and join-code issuance/revocation once ACS V7 permission preview has been exercised against non-fixture data.
 
 23. **Promote the Track B NewOwner shell into real cloud workflows.**
-    - Replace the `track-b-cloud-shell-check` probe with real queued action types; the cloud queue already supports recent-action listing for Max/David reload continuity.
-    - Define a connector-claim protocol for Max/David/Curie local workers.
-    - Start with a Sidecar culling/import manifest that can be queued in cloud state and claimed by a local machine without moving source files into the public repo.
+    - Replace remaining `track-b-cloud-shell-check` probes with real queued action types; the cloud queue already supports recent-action listing for Max/David reload continuity.
+    - Build the first local connector runner for the existing claim/complete/fail protocol.
+    - Start with the `sidecar-culling-review` manifest now queued in cloud state and claimed by a local machine without moving source files into the public repo.
 
 ## Validation Before Publishing
 

@@ -26,7 +26,7 @@ git pull --ff-only origin main
 - Push successful commits to the active branch named in the handoff prompt.
 - Record what happened in `DAVID2MAX.md`.
 
-## 2026-07-06 Track B NewOwner Cloud Queue Check
+## 2026-07-06 Track B NewOwner Connector Queue Check
 
 Prompt for David:
 
@@ -48,9 +48,14 @@ Verify:
 - The recent Owner action list loads without local Owner files.
 - Queue check adds a new track-b-cloud-shell-check action.
 - Reloading the page keeps the new action visible from cloud state.
+- Set Connector to `david`, use Queue culling, then Claim next.
+- Confirm the new sidecar-culling-review action changes from queued to claimed
+  and shows connector `david`.
+- Use Complete or Fail on that claimed action and reload; the final state should
+  stay visible from cloud state.
 - The page has no visible horizontal overflow on desktop or phone width.
 
-Report the result in DAVID2MAX.md, including the newest owner-action id shown after reload and any console/layout errors. Commit and push DAVID2MAX.md if you change it.
+Report the result in DAVID2MAX.md, including the newest sidecar-culling-review owner-action id shown after reload, its final state, and any console/layout errors. Commit and push DAVID2MAX.md if you change it.
 ```
 
 ## 2026-05-17 Install Max Instruction Poller

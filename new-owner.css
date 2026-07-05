@@ -97,6 +97,29 @@ body[data-gallery="new-owner"] main.new-owner-shell {
   justify-content: flex-end;
 }
 
+.new-owner-connector-label {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  min-width: min(100%, 13rem);
+  color: var(--muted);
+  font-size: .88rem;
+  font-weight: 700;
+}
+
+.new-owner-connector-label input {
+  min-width: 0;
+  width: 8rem;
+  max-width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--new-owner-line);
+  border-radius: 8px;
+  padding: .45rem .55rem;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
 .new-owner-counts {
   grid-template-columns: repeat(5, minmax(0, 1fr));
   margin: 0;
@@ -168,6 +191,18 @@ body[data-gallery="new-owner"] main.new-owner-shell {
   gap: .35rem;
 }
 
+.new-owner-action-row-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .45rem;
+}
+
+.new-owner-action-row-controls .btn {
+  min-height: 2rem;
+  padding: .35rem .6rem;
+  font-size: .82rem;
+}
+
 .new-owner-chip {
   display: inline-flex;
   align-items: center;
@@ -212,6 +247,14 @@ body[data-gallery="new-owner"] main.new-owner-shell {
   .new-owner-toolbar-actions,
   .new-owner-action-controls {
     justify-content: flex-start;
+  }
+
+  .new-owner-connector-label {
+    width: 100%;
+  }
+
+  .new-owner-connector-label input {
+    flex: 1 1 auto;
   }
 
   .new-owner-session {

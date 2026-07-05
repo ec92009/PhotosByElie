@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Photos By Elie | NewOwner</title>
+  <meta name="robots" content="noindex,nofollow"/>
+  <link rel="icon" type="image/png" sizes="512x512" href="./assets/branding/photosbyelie-camera-tripod-logo-512.png"/>
+  <meta name="theme-color" content="#263f4a"/>
+  <script>(()=>{try{const saved=localStorage.getItem('byelie-theme');if(saved==='light'||saved==='dark')document.documentElement.dataset.theme=saved;localStorage.setItem('byelie-language','en');document.documentElement.lang='en';document.documentElement.dataset.language='en'}catch{}})();</script>
+  <link rel="stylesheet" href="./shared.css?v=125.0"/>
+  <link rel="stylesheet" href="./styles.css?v=125.0"/>
+  <link rel="stylesheet" href="./photos.css?v=125.0"/>
+  <link rel="stylesheet" href="./new-owner.css?v=trackb1"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body data-gallery="new-owner">
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="topbar shell">
+    <a class="header-back-button mobile-header-back" href="./owner.html" aria-label="Back to Owner"><span aria-hidden="true">&lt;</span></a>
+    <div class="brand"><img class="site-logo" src="./assets/branding/photosbyelie-camera-tripod-logo-512.png" alt="Photos By Elie camera logo"/>PHOTOS BY ELIE</div>
+    <nav class="version-switch" aria-label="Site navigation">
+      <a href="./">Photos</a> <span>|</span>
+      <a href="./owner.html">Owner</a> <span>|</span>
+      <a class="is-active" href="./new-owner.html">NewOwner</a> <span>|</span>
+      <a href="./access-console.html">ACS</a>
+    </nav>
+    <span class="site-version-badge">track b</span>
+    <div class="header-controls">
+      <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light">Night</span><span class="mode-dark">Day</span></button>
+    </div>
+  </header>
+
+  <main id="main-content" class="shell new-owner-shell">
+    <section class="panel new-owner-hero">
+      <div>
+        <p class="eyebrow">Track B</p>
+        <h1>NewOwner</h1>
+        <p class="gallery-status" data-new-owner-status aria-live="polite">Connecting to cloud Owner state...</p>
+      </div>
+      <div class="new-owner-session" data-new-owner-session></div>
+    </section>
+
+    <section class="panel new-owner-panel" data-new-owner-root>
+      <div class="new-owner-toolbar">
+        <div>
+          <strong data-new-owner-worker-base>Worker pending</strong>
+          <span>cloud-only rehearsal</span>
+        </div>
+        <div class="new-owner-toolbar-actions">
+          <button class="btn secondary" type="button" data-new-owner-refresh>Refresh</button>
+          <button class="btn secondary" type="button" data-new-owner-login>Google sign-in</button>
+          <button class="btn secondary" type="button" data-new-owner-logout>Sign out</button>
+          <a class="btn secondary" href="./access-console.html">ACS</a>
+        </div>
+      </div>
+
+      <dl class="owner-counts new-owner-counts">
+        <div><dt>Owner</dt><dd data-new-owner-count="owner">locked</dd></div>
+        <div><dt>People</dt><dd data-new-owner-count="people">0</dd></div>
+        <div><dt>Groups</dt><dd data-new-owner-count="groups">0</dd></div>
+        <div><dt>Fixtures</dt><dd data-new-owner-count="fixtures">0</dd></div>
+        <div><dt>Last action</dt><dd data-new-owner-count="action">none</dd></div>
+      </dl>
+
+      <div class="new-owner-grid">
+        <section class="new-owner-card new-owner-card-wide" aria-label="Cloud access snapshot">
+          <div class="owner-card-titlebar">
+            <div>
+              <p class="eyebrow">Access</p>
+              <h2>D1 role state</h2>
+            </div>
+          </div>
+          <div data-new-owner-access class="new-owner-access-list"></div>
+        </section>
+
+        <section class="new-owner-card" aria-label="Owner action queue">
+          <div class="owner-card-titlebar">
+            <div>
+              <p class="eyebrow">Actions</p>
+              <h2>Owner queue</h2>
+            </div>
+          </div>
+          <div class="new-owner-action-controls">
+            <button class="btn secondary" type="button" data-new-owner-queue-check>Queue check</button>
+            <span data-new-owner-action-status aria-live="polite"></span>
+          </div>
+          <div data-new-owner-action class="new-owner-action-result"></div>
+        </section>
+
+        <section class="new-owner-card" aria-label="Migration lanes">
+          <div class="owner-card-titlebar">
+            <div>
+              <p class="eyebrow">Track B</p>
+              <h2>Work lanes</h2>
+            </div>
+          </div>
+          <div data-new-owner-lanes class="new-owner-lane-list"></div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <script src="./media-config.js"></script>
+  <script src="./new-owner.js?v=trackb1"></script>
+</body>
+</html>

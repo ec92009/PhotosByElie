@@ -496,8 +496,33 @@ Clock state: running
 | 2026-07-05 | 11:40 CEST | 11:41 CEST | 0:01 | Final loose-end audit after version and Upload Bridge cleanup; confirmed queues clean and identified remaining review/commit/deploy work. |
 | 2026-07-05 | 11:42 CEST | 11:47 CEST | 0:02 | Pruned stale Git worktrees, verified changed surfaces, and committed the working tree cleanup; command/runtime excluded. |
 | 2026-07-05 | 17:44 CEST | 17:48 CEST | 0:04 | Refreshed summary, handoff, README, and numbered backlog docs for the Sidecar cleanup closeout, then committed and pushed the docs bundle; command/runtime excluded. |
+| 2026-07-05 | 17:56 CEST | 17:57 CEST | 0:01 | Started planning the Sidecar-back-into-Owner merge direction; repo-reading/background analysis excluded. |
+| 2026-07-05 | 18:02 CEST | 18:03 CEST | 0:01 | Scoped Plan B for a cloud-backed NewOwner app and created ticket PBE-20260705-9591; background source checks excluded. |
+| 2026-07-05 | 18:05 CEST | 18:10 CEST | 0:01 | Requested the Graphify architecture graph and reviewed the focused Owner/Sidecar graph output; extraction/runtime excluded. |
+| 2026-07-05 | 18:15 CEST | 18:16 CEST | 0:01 | Restarted the local Graphify graph server after the Built-in Browser tab could not load the stopped localhost page. |
+| 2026-07-05 | 18:17 CEST | 18:18 CEST | 0:01 | Moved the Graphify graph server into detached tmux so the Built-in Browser page stays available. |
+| 2026-07-05 | 18:22 CEST | 18:24 CEST | 0:01 | Corrected the Graphify preview from Max-local localhost to Max's Tailscale URL for David; remote fetch verification included. |
+| 2026-07-05 | 18:28 CEST | 18:30 CEST | 0:01 | Finished the Track B NewOwner planning outline from the focused Graphify map and updated ticket PBE-20260705-9591. |
+| 2026-07-05 | 18:31 CEST | 18:32 CEST | 0:01 | Mapped how the focused Graphify data also informs Track A merge-back planning and its highest-risk local integration points. |
+| 2026-07-05 | 18:33 CEST | 18:36 CEST | 0:02 | Assessed Google sign-in and role-readiness against Track A versus Track B planning; auth test/runtime excluded. |
+| 2026-07-05 | 18:39 CEST | 18:40 CEST | 0:01 | Chose role-management UI as the prudent first Track B readiness slice. |
+| 2026-07-05 | 18:46 CEST | 18:48 CEST | 0:02 | Expanded future access planning to family circles and event groups using shared audience grants rather than hard-coded roles. |
+| 2026-07-05 | 18:58 CEST | 19:00 CEST | 0:02 | Split the future access model into galleries, roles/capabilities, and role-to-gallery permissions for family/event/RE flows. |
+| 2026-07-05 | 19:03 CEST | 19:05 CEST | 0:02 | Clarified buyer re-download entitlements, additive RE/event public access, and Owner original-versus-public-preview viewing modes. |
+| 2026-07-05 | 19:08 CEST | 19:09 CEST | 0:01 | Chose a single-repo sandbox Access Console for the role-management pre-Track B slice. |
+| 2026-07-05 | 19:09 CEST | 19:10 CEST | 0:01 | Chose real role/access data rather than mock data for the sandbox Access Console. |
+| 2026-07-05 | 19:10 CEST | 19:11 CEST | 0:01 | Approved read/write Access Console behavior with reversible write safeguards. |
+| 2026-07-05 | 19:11 CEST | 19:12 CEST | 0:01 | Chose cloud-authoritative role/access writes for the sandbox Access Console. |
+| 2026-07-05 | 19:12 CEST | 19:13 CEST | 0:01 | Chose D1-first structured access storage to match the Track B NewOwner direction. |
+| 2026-07-05 | 19:14 CEST | 19:15 CEST | 0:01 | Chose immediate D1-backed auth/session reads instead of long-term KV mirroring. |
+| 2026-07-05 | 19:24 CEST | 19:25 CEST | 0:01 | Kept ec92009@gmail.com as bootstrap break-glass admin during D1 auth migration. |
+| 2026-07-05 | 19:26 CEST | 19:27 CEST | 0:01 | Deferred audience groups until after Access Console V1 and added the follow-up to the backlog. |
+| 2026-07-05 | 19:27 CEST | 19:29 CEST | 0:02 | Added fixture people and event records to the Access Console V1 backlog for safe role-assignment rehearsal. |
+| 2026-07-05 | 19:29 CEST | 19:30 CEST | 0:01 | Decided to start with the Access Console role/group sandbox as the pre-Track B development slice. |
+| 2026-07-05 | 19:30 CEST | 19:31 CEST | 0:01 | Confirmed ACS implementation kickoff; autonomous coding, testing, and browser QA excluded. |
+| 2026-07-05 | 20:05 CEST | 20:08 CEST | 0:02 | Updated Cloudflare token permissions with user approval, created/deployed the ACS D1 database, and seeded fixture access data; command/deploy runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 26:15
+Active collaboration time used: 26:46
 Remaining budget: not set

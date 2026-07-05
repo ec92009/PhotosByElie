@@ -376,6 +376,96 @@ test("owner actions are queued behind Owner Google access", async () => {
   assert.equal(forbidden.status, 403);
 });
 
+test("access console is admin-only and writes reversible role grants", async () => {
+  const registry = createMemoryAccessUserRegistry([
+    { email: "owner@example.com", tier: "owner" },
+  ]);
+  const nonAdminWorker = createPhotosByElieWorker({
+    catalog: loadCatalog(),
+    accessAuth: fakeAccessAuthFor("owner@example.com"),
+    accessUserRegistry: registry,
+    accessAdminEmail: "ec92009@gmail.com",
+  });
+  const forbidden = await nonAdminWorker.fetch(new Request("https://worker.test/access-console/state", {
+    headers: { origin: "https://photos-by-elie.com" },
+  }));
+  assert.equal(forbidden.status, 403);
+
+  const adminWorker = createPhotosByElieWorker({
+    catalog: loadCatalog(),
+    accessAuth: fakeAccessAuthFor("ec92009@gmail.com"),
+    accessUserRegistry: registry,
+    accessAdminEmail: "ec92009@gmail.com",
+  });
+  const stateResponse = await adminWorker.fetch(new Request("https://worker.test/access-console/state", {
+    headers: { origin: "https://photos-by-elie.com" },
+  }));
+  assert.equal(stateResponse.status, 200);
+  const state = await stateResponse.json();
+  assert.equal(state.bootstrapAdminEmail, "ec92009@gmail.com");
+  assert.equal(state.roles.find((role) => role.id === "admin")?.grantable, false);
+
+  const adminGrantResponse = await adminWorker.fetch(jsonRequest("https://worker.test/access-console/people", {
+    email: "helper@example.test",
+    roles: ["admin"],
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(adminGrantResponse.status, 400);
+
+  const writeResponse = await adminWorker.fetch(jsonRequest("https://worker.test/access-console/people", {
+    email: "helper@example.test",
+    displayName: "Helper Example",
+    roles: ["user", "owner"],
+    notes: "Temporary ACS rehearsal owner.",
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(writeResponse.status, 200);
+  const writeBody = await writeResponse.json();
+  assert.equal(writeBody.user.email, "helper@example.test");
+  assert.equal(writeBody.user.tier, "owner");
+  assert.deepEqual(writeBody.user.roles, ["user", "owner"]);
+
+  const helperWorker = createPhotosByElieWorker({
+    catalog: loadCatalog(),
+    accessAuth: fakeAccessAuthFor("helper@example.test"),
+    accessUserRegistry: registry,
+    accessAdminEmail: "ec92009@gmail.com",
+  });
+  const helperSessionResponse = await helperWorker.fetch(new Request("https://worker.test/owner/session", {
+    headers: { origin: "https://photos-by-elie.com" },
+  }));
+  assert.equal(helperSessionResponse.status, 200);
+  const helperSession = await helperSessionResponse.json();
+  assert.equal(helperSession.tier, "owner");
+  assert.equal(helperSession.roles.includes("owner"), true);
+
+  const seedResponse = await adminWorker.fetch(jsonRequest("https://worker.test/access-console/fixtures/seed", {}, {
+    origin: "https://photos-by-elie.com",
+  }));
+  assert.equal(seedResponse.status, 200);
+  const seedBody = await seedResponse.json();
+  assert.equal(seedBody.fixtures.users.some((user) => user.email.endsWith(".test")), true);
+  assert.equal(seedBody.fixtures.events.some((event) => event.kind === "event"), true);
+
+  const disableResponse = await adminWorker.fetch(jsonRequest("https://worker.test/access-console/people/helper%40example.test/disable", {}, {
+    origin: "https://photos-by-elie.com",
+  }));
+  assert.equal(disableResponse.status, 200);
+  const disabledBody = await disableResponse.json();
+  assert.equal(disabledBody.user.tier, "user");
+  assert.deepEqual(disabledBody.user.roles, ["user"]);
+  assert.ok(disabledBody.user.disabledAt);
+
+  const disabledOwnerSession = await helperWorker.fetch(new Request("https://worker.test/owner/session", {
+    headers: { origin: "https://photos-by-elie.com" },
+  }));
+  assert.equal(disabledOwnerSession.status, 403);
+
+  const finalStateResponse = await adminWorker.fetch(new Request("https://worker.test/access-console/state", {
+    headers: { origin: "https://photos-by-elie.com" },
+  }));
+  const finalState = await finalStateResponse.json();
+  assert.equal(finalState.auditEvents.some((event) => event.eventType === "user_disabled"), true);
+});
+
 test("real-estate access login issues a scoped session for a Google-authenticated client", async () => {
   const galleries = [{
     key: "corine-real-estate",

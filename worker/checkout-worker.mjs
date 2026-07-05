@@ -12,6 +12,32 @@ const DEFAULT_DOWNLOAD_TOKEN_MAX_DOWNLOADS = 100;
 const PURCHASE_ALLOWANCE_SOURCE = "photosbyelie-worker-order-ledger";
 const PURCHASE_ALLOWANCE_SOURCE_DETAIL = "PhotosByElie checkout Worker order records in ORDERS_KV";
 const SECONDS_PER_DAY = 60 * 60 * 24;
+const ACCESS_CONSOLE_ROLE_OPTIONS = [
+  {
+    id: "user",
+    label: "Regular user",
+    description: "Default Google-authenticated account with public browsing and account/order recovery.",
+    grantable: true,
+  },
+  {
+    id: "re_client",
+    label: "RE client",
+    description: "Regular user plus assigned real-estate gallery permissions.",
+    grantable: true,
+  },
+  {
+    id: "owner",
+    label: "Owner",
+    description: "Owner workflow access without bootstrap admin recovery powers.",
+    grantable: true,
+  },
+  {
+    id: "admin",
+    label: "Bootstrap admin",
+    description: "Break-glass admin identity configured outside D1.",
+    grantable: false,
+  },
+];
 
 const json = (body, status = 200, headers = {}) => new Response(JSON.stringify(body, null, 2), {
   status,
@@ -145,6 +171,29 @@ const normalizeEmailAllowlist = (emails) => {
   return emails
     .map((email) => String(email || "").trim().toLowerCase())
     .filter(validEmail);
+};
+
+const normalizeAccessConsoleRoles = (roles = []) => {
+  const source = Array.isArray(roles) ? roles : String(roles || "").split(/[\s,;]+/);
+  const cleaned = new Set(source
+    .map((role) => String(role || "").trim().toLowerCase().replace(/[-\s]+/g, "_"))
+    .filter((role) => ["user", "re_client", "owner"].includes(role)));
+  cleaned.add("user");
+  return [...cleaned];
+};
+
+const accessConsolePayloadRequestsAdmin = (roles = []) => {
+  const source = Array.isArray(roles) ? roles : String(roles || "").split(/[\s,;]+/);
+  return source
+    .map((role) => String(role || "").trim().toLowerCase().replace(/[-\s]+/g, "_"))
+    .includes("admin");
+};
+
+const tierFromAccessConsoleRoles = (roles = []) => {
+  const set = new Set(roles);
+  if (set.has("owner")) return "owner";
+  if (set.has("re_client")) return "re_client";
+  return "user";
 };
 
 const normalizeOriginList = (origins) => {
@@ -1894,6 +1943,103 @@ export const createPhotosByElieWorker = ({
     return credentialedJson(request, { ok: true, action });
   };
 
+  const parseAuditJson = (value) => {
+    if (value == null || typeof value !== "string") return value ?? null;
+    try {
+      return JSON.parse(value);
+    } catch {
+      return null;
+    }
+  };
+
+  const publicAuditEvent = (event = {}) => ({
+    id: event.id || "",
+    eventType: event.eventType || event.event_type || "",
+    actorEmail: event.actorEmail || event.actor_email || "",
+    targetEmail: event.targetEmail || event.target_email || "",
+    before: event.before || parseAuditJson(event.beforeJson || event.before_json),
+    after: event.after || parseAuditJson(event.afterJson || event.after_json),
+    createdAt: event.createdAt || event.created_at || "",
+  });
+
+  const accessConsoleRegistryRequired = () => {
+    if (!accessUserRegistry || typeof accessUserRegistry.listUsers !== "function" || typeof accessUserRegistry.putUser !== "function") {
+      throw Object.assign(new Error("Access Console registry is not configured."), {
+        status: 503,
+        code: "access_console_unavailable",
+      });
+    }
+    return accessUserRegistry;
+  };
+
+  const requireAccessConsoleAdmin = async (request) => authSessionFor(request, { requiredRole: "admin" });
+
+  const accessConsoleState = async (request) => {
+    const session = await requireAccessConsoleAdmin(request);
+    const registry = accessConsoleRegistryRequired();
+    const [people, fixtureEvents, auditEvents] = await Promise.all([
+      registry.listUsers(),
+      typeof registry.listFixtureEvents === "function" ? registry.listFixtureEvents() : [],
+      typeof registry.listAuditEvents === "function" ? registry.listAuditEvents(30) : [],
+    ]);
+    return credentialedJson(request, {
+      ok: true,
+      session: authSessionPayload(session),
+      roles: ACCESS_CONSOLE_ROLE_OPTIONS,
+      bootstrapAdminEmail: adminEmail,
+      people,
+      fixtureEvents,
+      auditEvents: auditEvents.map(publicAuditEvent),
+    });
+  };
+
+  const putAccessConsolePerson = async (request) => {
+    const session = await requireAccessConsoleAdmin(request);
+    const registry = accessConsoleRegistryRequired();
+    const payload = await parseJson(request);
+    const email = String(payload.email || "").trim().toLowerCase();
+    if (!validEmail(email)) {
+      return credentialedErrorJson(request, 400, "invalid_access_email", "A valid email address is required.");
+    }
+    const requestedRoles = payload.roles || payload.role || payload.tier;
+    if (accessConsolePayloadRequestsAdmin(requestedRoles)) {
+      return credentialedErrorJson(request, 400, "admin_not_grantable", "Admin is a bootstrap identity, not a grantable role.");
+    }
+    const roles = normalizeAccessConsoleRoles(requestedRoles);
+    const user = await registry.putUser({
+      email,
+      displayName: payload.displayName || payload.name || "",
+      tier: tierFromAccessConsoleRoles(roles),
+      roles,
+      realEstateClients: payload.realEstateClients || payload.realEstateGalleries || [],
+      notes: payload.notes || "",
+      fixture: payload.fixture === true,
+      source: payload.fixture === true ? "fixture" : "manual",
+    }, { actorEmail: session.email });
+    return credentialedJson(request, { ok: true, user });
+  };
+
+  const disableAccessConsolePerson = async (request, email) => {
+    const session = await requireAccessConsoleAdmin(request);
+    const registry = accessConsoleRegistryRequired();
+    if (typeof registry.disableUser !== "function") {
+      return credentialedErrorJson(request, 503, "access_console_disable_unavailable", "Access Console disable is not configured.");
+    }
+    const user = await registry.disableUser(email, { actorEmail: session.email });
+    if (!user) return credentialedErrorJson(request, 404, "access_person_not_found", "Access person was not found.");
+    return credentialedJson(request, { ok: true, user });
+  };
+
+  const seedAccessConsoleFixtures = async (request) => {
+    const session = await requireAccessConsoleAdmin(request);
+    const registry = accessConsoleRegistryRequired();
+    if (typeof registry.seedFixtureData !== "function") {
+      return credentialedErrorJson(request, 503, "access_console_fixtures_unavailable", "Access Console fixtures are not configured.");
+    }
+    const fixtures = await registry.seedFixtureData({ actorEmail: session.email });
+    return credentialedJson(request, { ok: true, fixtures });
+  };
+
   const canUseRealEstateGallery = (session, galleryKey) =>
     Boolean(
       session?.roles?.includes("admin")
@@ -2042,6 +2188,7 @@ export const createPhotosByElieWorker = ({
       || path.startsWith("/auth/")
       || path.startsWith("/owner/")
       || path.startsWith("/account/")
+      || path.startsWith("/access-console/")
       || path === "/checkout/account";
     if (request.method === "OPTIONS") {
       return usesCredentialedCors
@@ -2062,6 +2209,11 @@ export const createPhotosByElieWorker = ({
       if (request.method === "POST" && path === "/owner/actions") return await createOwnerAction(request);
       const ownerActionMatch = path.match(/^\/owner\/actions\/([^/]+)$/);
       if (request.method === "GET" && ownerActionMatch) return await getOwnerAction(request, decodeURIComponent(ownerActionMatch[1]));
+      if (request.method === "GET" && path === "/access-console/state") return await accessConsoleState(request);
+      if ((request.method === "POST" || request.method === "PUT" || request.method === "PATCH") && path === "/access-console/people") return await putAccessConsolePerson(request);
+      const accessPersonDisableMatch = path.match(/^\/access-console\/people\/([^/]+)\/disable$/);
+      if (request.method === "POST" && accessPersonDisableMatch) return await disableAccessConsolePerson(request, decodeURIComponent(accessPersonDisableMatch[1]));
+      if (request.method === "POST" && path === "/access-console/fixtures/seed") return await seedAccessConsoleFixtures(request);
       if (request.method === "GET" && path === "/account/profile") return await getAccountProfile(request);
       if ((request.method === "POST" || request.method === "PUT" || request.method === "PATCH") && path === "/account/profile") return await putAccountProfile(request);
       const accountOrderMatch = path.match(/^\/account\/orders\/([^/]+)$/);

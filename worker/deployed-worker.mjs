@@ -1,5 +1,5 @@
 import { createCatalogIndex, createPhotosByElieWorker } from "./checkout-worker.mjs";
-import { createKvAccessUserRegistry } from "./access-user-registry.mjs";
+import { createD1AccessUserRegistry, createKvAccessUserRegistry } from "./access-user-registry.mjs";
 import { createAnalyticsStore } from "./analytics-store.mjs";
 import { createCloudflareImagesRenderer } from "./cloudflare-images-renderer.mjs";
 import { createKvStore } from "./kv-store.mjs";
@@ -82,10 +82,12 @@ const authAllowedReturnOriginsFor = (env = {}, publicSiteUrl = "") => [
   ...(String(env.AUTH_ALLOWED_RETURN_ORIGINS || "").split(/[\s,;]+/).filter(Boolean)),
 ];
 
-const accessUserRegistryFor = (env = {}) => createKvAccessUserRegistry({
-  namespace: env.ACCESS_USERS_KV || requiredBinding(env, "ORDERS_KV"),
-  prefix: env.KV_PREFIX || "pbe",
-});
+const accessUserRegistryFor = (env = {}) => env.ACCESS_DB
+  ? createD1AccessUserRegistry({ database: env.ACCESS_DB })
+  : createKvAccessUserRegistry({
+    namespace: env.ACCESS_USERS_KV || requiredBinding(env, "ORDERS_KV"),
+    prefix: env.KV_PREFIX || "pbe",
+  });
 
 const cleanRealEstateGallery = (gallery = {}) => {
   const key = String(gallery.key || "").trim();

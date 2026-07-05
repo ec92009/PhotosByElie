@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Photos By Elie | ACS</title>
+  <meta name="robots" content="noindex,nofollow"/>
+  <link rel="icon" type="image/png" sizes="512x512" href="./assets/branding/photosbyelie-camera-tripod-logo-512.png"/>
+  <meta name="theme-color" content="#263f4a"/>
+  <script>(()=>{try{const saved=localStorage.getItem('byelie-theme');if(saved==='light'||saved==='dark')document.documentElement.dataset.theme=saved;localStorage.setItem('byelie-language','en');document.documentElement.lang='en';document.documentElement.dataset.language='en'}catch{}})();</script>
+  <link rel="stylesheet" href="./shared.css?v=125.0"/>
+  <link rel="stylesheet" href="./styles.css?v=125.0"/>
+  <link rel="stylesheet" href="./photos.css?v=125.0"/>
+  <link rel="stylesheet" href="./access-console.css"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body data-gallery="access-console">
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="topbar shell">
+    <a class="header-back-button mobile-header-back" href="./owner.html" aria-label="Back to Owner"><span aria-hidden="true">&lt;</span></a>
+    <div class="brand"><img class="site-logo" src="./assets/branding/photosbyelie-camera-tripod-logo-512.png" alt="Photos By Elie camera logo"/>PHOTOS BY ELIE</div>
+    <nav class="version-switch" aria-label="Site navigation">
+      <a href="./">Photos</a> <span>|</span>
+      <a href="./owner.html">Owner</a> <span>|</span>
+      <a class="is-active" href="./access-console.html">ACS</a>
+    </nav>
+    <span class="site-version-badge">sandbox</span>
+    <div class="header-controls">
+      <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light">Night</span><span class="mode-dark">Day</span></button>
+    </div>
+  </header>
+
+  <main id="main-content" class="shell acs-shell">
+    <section class="panel gallery-hero acs-hero">
+      <div>
+        <h1>Access Console Sandbox</h1>
+        <p class="gallery-status" data-acs-status aria-live="polite">Connecting to cloud access state...</p>
+      </div>
+      <div class="acs-session" data-acs-session></div>
+    </section>
+
+    <section class="panel acs-panel" data-acs-root>
+      <div class="acs-toolbar">
+        <div class="acs-toolbar-copy">
+          <strong>D1 access rehearsal</strong>
+          <span data-acs-worker-base>Worker pending</span>
+        </div>
+        <div class="acs-toolbar-actions">
+          <button class="btn secondary" type="button" data-acs-refresh>Refresh</button>
+          <button class="btn secondary" type="button" data-acs-seed-fixtures>Seed fixtures</button>
+          <button class="btn secondary" type="button" data-acs-login>Google sign-in</button>
+          <button class="btn secondary" type="button" data-acs-logout>Sign out</button>
+        </div>
+      </div>
+
+      <dl class="owner-counts acs-counts">
+        <div><dt>People</dt><dd data-acs-count="people">0</dd></div>
+        <div><dt>Owners</dt><dd data-acs-count="owners">0</dd></div>
+        <div><dt>RE clients</dt><dd data-acs-count="re">0</dd></div>
+        <div><dt>Fixtures</dt><dd data-acs-count="fixtures">0</dd></div>
+        <div><dt>Disabled</dt><dd data-acs-count="disabled">0</dd></div>
+      </dl>
+
+      <div class="acs-layout">
+        <section class="acs-people-panel" aria-label="Access people">
+          <div class="owner-card-titlebar">
+            <div>
+              <p class="eyebrow">People</p>
+              <h2>Role assignments</h2>
+            </div>
+          </div>
+          <div class="acs-table-wrap">
+            <table class="owner-real-estate-table acs-table">
+              <thead>
+                <tr>
+                  <th>Email</th>
+                  <th>Roles</th>
+                  <th>RE grants</th>
+                  <th>State</th>
+                </tr>
+              </thead>
+              <tbody data-acs-people>
+                <tr><td colspan="4">Loading access people...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <aside class="acs-editor" aria-label="Access person editor">
+          <div class="owner-card-titlebar">
+            <div>
+              <p class="eyebrow">Editor</p>
+              <h2 data-acs-editor-title>New person</h2>
+            </div>
+          </div>
+          <form data-acs-person-form>
+            <label>
+              <span>Email</span>
+              <input type="email" autocomplete="email" required data-acs-email/>
+            </label>
+            <label>
+              <span>Name</span>
+              <input type="text" autocomplete="name" data-acs-display-name/>
+            </label>
+            <fieldset class="acs-role-fieldset" data-acs-roles>
+              <legend>Roles</legend>
+              <label><input type="checkbox" checked disabled data-acs-role="user"/>Regular user</label>
+              <label><input type="checkbox" data-acs-role="re_client"/>RE client</label>
+              <label><input type="checkbox" data-acs-role="owner"/>Owner</label>
+              <label class="is-disabled"><input type="checkbox" disabled data-acs-role="admin"/>Bootstrap admin</label>
+            </fieldset>
+            <label>
+              <span>RE gallery grants</span>
+              <textarea rows="3" data-acs-real-estate placeholder="fixture-re-gallery"></textarea>
+            </label>
+            <label>
+              <span>Notes</span>
+              <textarea rows="3" data-acs-notes></textarea>
+            </label>
+            <div class="acs-editor-actions">
+              <button class="btn secondary" type="submit">Save role</button>
+              <button class="btn secondary" type="button" data-acs-new-person>New</button>
+              <button class="btn secondary danger" type="button" data-acs-disable-person>Disable</button>
+            </div>
+          </form>
+        </aside>
+      </div>
+
+      <div class="acs-lower-grid">
+        <section class="acs-fixtures" aria-label="Fixture events">
+          <div class="owner-card-titlebar">
+            <div>
+              <p class="eyebrow">Fixtures</p>
+              <h2>Event/group rehearsal data</h2>
+            </div>
+          </div>
+          <div data-acs-events class="acs-event-list"></div>
+        </section>
+        <section class="acs-audit" aria-label="Access audit">
+          <div class="owner-card-titlebar">
+            <div>
+              <p class="eyebrow">Audit</p>
+              <h2>Recent changes</h2>
+            </div>
+          </div>
+          <ol data-acs-audit class="acs-audit-list"></ol>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <script src="./media-config.js"></script>
+  <script src="./access-console.js"></script>
+</body>
+</html>

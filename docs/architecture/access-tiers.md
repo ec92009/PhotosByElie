@@ -6,10 +6,9 @@ registry answers "what can this email do?"
 
 ## Tiers
 
-- `admin`: `ec92009@gmail.com` only. Admin can manage the user registry, but
-  registry mutation must stay a David-local Owner/Admin action. The cloud
-  Worker reports this tier for session awareness, but should not expose a public
-  self-service grant endpoint.
+- `admin`: `ec92009@gmail.com` only. Admin can open the Access Console Sandbox
+  and manage the user registry through guarded cloud Worker routes. Admin is a
+  bootstrap identity, not a stored or grantable role.
 - `owner`: trusted Owner workflow user. Owner can run cloud Owner work from any
   machine after Google login once the corresponding cloud Owner APIs exist.
 - `re_client`: Real Estate client. The registry stores the exact gallery keys
@@ -24,28 +23,50 @@ ignores registry records as a source of additional admins.
 
 ## Registry
 
-The first implementation stores user records in the existing Worker KV namespace
-under:
+Access Console V1 stores structured access state in D1 once the Worker has an
+`ACCESS_DB` binding. Auth/session reads switch to the D1 registry immediately
+when that binding exists. Until then, deployed auth keeps the legacy KV registry
+as a compatibility fallback.
 
-```text
-pbe:access-users:<lowercase-email>
-```
+Current ACS deployment:
 
-Record shape:
+- Worker routes: `https://auth.photos-by-elie.com/access-console/*`
+- D1 database name: `photosbyelie-access`
+- D1 binding: `ACCESS_DB`
+- Migration: `migrations/0001_access_console.sql`
+
+D1 tables:
+
+- `pbe_access_people`: email, display name, notes, fixture marker, disable state,
+  and created/updated actor metadata.
+- `pbe_access_role_grants`: active/revoked `owner` and `re_client` grants.
+- `pbe_access_gallery_grants`: active/revoked gallery grants, currently Real
+  Estate gallery keys.
+- `pbe_access_fixture_events`: clearly marked rehearsal family/event/RE records.
+- `pbe_access_audit_events`: before/after snapshots for role and disable changes.
+
+Public registry record shape:
 
 ```json
 {
   "schema": "photosbyelie.accessUser.v1",
   "email": "client@example.com",
+  "displayName": "Client Example",
   "tier": "re_client",
+  "roles": ["user", "re_client"],
   "realEstateClients": ["corine-real-estate"],
+  "notes": "",
+  "source": "manual",
+  "fixture": false,
+  "disabledAt": null,
   "grantedBy": "ec92009@gmail.com",
   "grantedAt": "2026-06-20T00:00:00.000Z",
   "updatedAt": "2026-06-20T00:00:00.000Z"
 }
 ```
 
-`tier` is one of `user`, `re_client`, or `owner`. Admin is not a registry tier.
+`tier` is derived from active roles and gallery grants. Admin is not a registry
+tier and cannot be granted through ACS.
 
 ## Worker Routes
 
@@ -78,25 +99,53 @@ Record shape:
   grants include the requested `galleryKey` or an Owner/Admin session. It mints
   the existing signed Real Estate session cookie so the current gallery-scoped
   deliverables/originals APIs keep their object-prefix restrictions.
+- `GET /access-console/state`: requires Admin and returns session, people,
+  fixture events, audit events, and grantable role metadata.
+- `POST|PUT|PATCH /access-console/people`: requires Admin and upserts one
+  person's non-admin roles, Real Estate grants, name, and notes.
+- `POST /access-console/people/<email>/disable`: requires Admin and revokes
+  active roles/grants without deleting audit history.
+- `POST /access-console/fixtures/seed`: requires Admin and seeds fake `.test`
+  people plus family/event/RE rehearsal records.
 
 The Real Estate page prefers Google login through `/auth/google/login` followed
 by `/real-estate/access-login`. The legacy `POST /real-estate/login` password
 flow remains for local fallback and older client links.
 
-## Local Admin Grant Path
+## Access Console Grant Path
 
-Admin role grants are not public Worker mutations. On David localhost, the Owner
-page Cloud tab can save email/tier rows into `Owner.sqlite:access_users` and
-publish the corresponding Worker KV record with:
+`access-console.html` is the single-repo sandbox UI for role-management
+rehearsal. It talks to the auth Worker at the configured
+`authWorkerBaseUrl`/`checkoutWorkerBaseUrl`, requires the bootstrap Admin Google
+session, and performs reversible writes:
+
+- `owner` and `re_client` can be granted or revoked.
+- `admin` is displayed as bootstrap-only and rejected if submitted.
+- Disable revokes active roles and gallery grants but keeps the person and audit
+  events.
+- Fixture people use fake `.test` addresses and are marked `fixture`.
+
+Provision/apply command history:
 
 ```text
-npx wrangler kv key put pbe:access-users:<email> --path <temp-json> --binding ORDERS_KV --remote
+npx wrangler d1 create photosbyelie-access
+npx wrangler d1 migrations apply photosbyelie-access --remote
 ```
 
-This keeps David-local Admin as the only grant surface while still letting Owner
-and Real Estate client sessions work from any computer after the KV row exists.
-Rows are marked `pending`, `synced`, or `failed` locally so a failed Wrangler
-publish can be retried without losing the intended grant.
+The database is bound in `wrangler.toml` as `ACCESS_DB`; deploy the Worker after
+future access-schema changes.
+
+## Legacy KV Fallback
+
+When `ACCESS_DB` is absent, the deployed Worker still reads legacy KV records so
+existing Owner/RE auth does not break during the D1 cutover. Legacy records live
+under:
+
+```text
+pbe:access-users:<lowercase-email>
+```
+
+Do not use KV as the long-term source of truth once `ACCESS_DB` is bound.
 
 ## Direct Google OAuth Setup
 

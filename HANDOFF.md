@@ -8,7 +8,50 @@ GitHub carries code, safe metadata, SOPs, and handoff notes; private Owner DB
 snapshots and client artifacts move through private R2; SSH/Codex Remote SSH is
 for remote execution.
 
-## Current Handoff: 2026-06-21 Direct Google Auth / Max Testing
+## Current Handoff: 2026-07-05 Sidecar Upload/Catalog Cleanup
+
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- Branch: `main`
+- Public site: `https://ec92009.github.io/PhotosByElie/`
+- Local preview: `http://localhost:8000/`
+- Current visible build: `v125.0`
+- Sidecar local build: `v126.2`
+- Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
+- Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
+- Current public catalog: `7,770` media rows.
+- Current gallery counts: AI `5,076`, France `379`, Italy `70`, Mexico `31`, Portugal `214`, Slovakia `2`, Spain `1,853`, USA `145`.
+- Queue health after cleanup:
+  - Upload Bridge uploadable count: `0`.
+  - Upload Bridge active blocked approved rows: `0`.
+  - Upload Bridge missing key count: `0`.
+  - Picked AI metadata candidate count: `0`.
+  - Uploaded-catalog registration dry-run: `2,676` candidates, all `already_in_catalog`.
+  - Public catalog SQLite integrity: `ok`.
+- Review backlog created by this cleanup:
+  - `20` unknown-gallery/generic-title rows are back in unpicked rework with `gallery-signal` notes.
+  - `24` persistent Photos export failures are back in unpicked rework with `source-export-failed` notes.
+  - `63` unpicked/proposed rows are harmless but state-untidy; decide whether to keep proposals as context or normalize them.
+- Latest closeout commits before this docs handoff:
+  - `3c58fe88 photosbyelie: harden sidecar upload workflow`
+  - `9154ef16 photosbyelie: refresh public catalog and owner surfaces`
+  - `cc3bb953 photosbyelie: record working tree cleanup`
+- First action on another machine:
+
+```bash
+cd /Users/ecohen/Dev/PhotosByElie
+git pull --ff-only origin main
+python3 scripts/sidecar_maintenance.py picked-ai-plan
+python3 scripts/sidecar_state_db.py --upload-bridge-plan
+python3 scripts/sidecar_maintenance.py register-uploaded-catalog --dry-run
+```
+
+- Sidecar PhotoKit automation must launch through the permission-bearing app bundle, `~/Applications/PhotosByElie Photos Bridge.app`, via LaunchServices. Do not call `swift scripts/apple_photos_bridge.swift` or the bare bundle executable for scheduled Sidecar automation.
+- Approved Upload Bridge rows with generic titles and no country/gallery signal should be blocked from queueing until metadata is repaired.
+- Owner quick previews now fall back to the same public media URL a regular visitor receives when original source files cannot be resolved.
+- Owner title/keyword edits for SQLite-backed catalog rows should write through the localhost helper to `assets/catalog/photosbyelie.sqlite` and regenerate the Worker catalog; the old TSV writer path is not the authority.
+- Public deploy verification after GitHub Pages catches up: confirm public `v125.0`, Italy `70`, repaired portrait previews, and regular-user quick preview behavior.
+
+## Historical Handoff: 2026-06-21 Direct Google Auth / Max Testing
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Branch: `main`
@@ -56,7 +99,7 @@ npm run validate
 - Before David starts acting on a new Max task, David should update `DAVID2MAX.md` with `David: starting <short task name>` and commit/push it, or send the same acknowledgement over mesh when that is the active live channel.
 - Do not edit the opposite-direction file unless the user explicitly asks; record requested prompt or spec changes in the outbound file instead.
 
-## Current Handoff: 2026-05-22 Revenue Track
+## Historical Handoff: 2026-05-22 Revenue Track
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Public site: `https://ec92009.github.io/PhotosByElie/`

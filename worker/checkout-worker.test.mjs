@@ -12,6 +12,7 @@ import { createLocalZipDelivery } from "./local-zip-delivery.mjs";
 import { createMemoryStore } from "./memory-store.mjs";
 import { createMockStripeClient } from "./mock-stripe.mjs";
 import { createOwnerAccessAuth } from "./owner-access-auth.mjs";
+import { createKvOwnerActionStore } from "./owner-action-store.mjs";
 import { createRealEstateAuth } from "./real-estate-auth.mjs";
 import { createRealEstateDeliverables } from "./real-estate-deliverables.mjs";
 import { createRealEstateOriginals } from "./real-estate-originals.mjs";
@@ -253,6 +254,34 @@ test("analytics endpoint stores sanitized public funnel events", async () => {
   assert.equal(count.count, 1);
 });
 
+test("KV owner action store lists newest actions through its time index", async () => {
+  const kv = createFakeKv();
+  const store = createKvOwnerActionStore({ namespace: kv, prefix: "test" });
+
+  for (let index = 0; index < 12; index += 1) {
+    await store.putAction({
+      id: `000-old-${String(index).padStart(2, "0")}`,
+      type: "import-operation",
+      state: "queued",
+      createdAt: `2026-05-17T12:${String(index).padStart(2, "0")}:00.000Z`,
+    });
+  }
+  await store.putAction({
+    id: "zzz-newest",
+    type: "track-b-cloud-shell-check",
+    state: "queued",
+    createdAt: "2026-05-17T12:30:00.000Z",
+  });
+
+  const actions = await store.listActions({ limit: 1 });
+  assert.equal(actions.length, 1);
+  assert.equal(actions[0].id, "zzz-newest");
+  assert.deepEqual(JSON.parse(kv._debug.get("test:owner-action-head")).ids.slice(0, 2), [
+    "zzz-newest",
+    "000-old-11",
+  ]);
+});
+
 test("auth session treats configured Google admin as admin and owner", async () => {
   const worker = createPhotosByElieWorker({
     catalog: loadCatalog(),
@@ -330,12 +359,13 @@ test("owner actions are queued behind Owner Google access", async () => {
   const registry = createMemoryAccessUserRegistry([
     { email: "owner@example.com", tier: "owner" },
   ]);
+  let nowTick = 0;
   const worker = createPhotosByElieWorker({
     catalog: loadCatalog(),
     accessAuth: fakeAccessAuthFor("owner@example.com"),
     accessUserRegistry: registry,
     accessAdminEmail: "ec92009@gmail.com",
-    now: () => new Date("2026-05-17T12:00:00.000Z"),
+    now: () => new Date(`2026-05-17T12:${String(nowTick++).padStart(2, "0")}:00.000Z`),
     randomUUID: deterministicIds(),
   });
 
@@ -364,6 +394,22 @@ test("owner actions are queued behind Owner Google access", async () => {
   const readbackBody = await readback.json();
   assert.equal(readbackBody.action.id, body.action.id);
 
+  const secondResponse = await worker.fetch(jsonRequest("https://worker.test/owner/actions", {
+    action: "track-b-cloud-shell-check",
+    payload: { surface: "new-owner" },
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(secondResponse.status, 202);
+  const secondBody = await secondResponse.json();
+
+  const listResponse = await worker.fetch(new Request("https://worker.test/owner/actions?limit=1", {
+    headers: { origin: "https://photos-by-elie.com" },
+  }));
+  assert.equal(listResponse.status, 200);
+  const listBody = await listResponse.json();
+  assert.equal(listBody.limit, 1);
+  assert.equal(listBody.actions.length, 1);
+  assert.equal(listBody.actions[0].id, secondBody.action.id);
+
   const clientWorker = createPhotosByElieWorker({
     catalog: loadCatalog(),
     accessAuth: fakeAccessAuthFor("client@example.com"),
@@ -374,6 +420,10 @@ test("owner actions are queued behind Owner Google access", async () => {
     action: "import-operation",
   }, { origin: "https://photos-by-elie.com" }));
   assert.equal(forbidden.status, 403);
+  const listForbidden = await clientWorker.fetch(new Request("https://worker.test/owner/actions", {
+    headers: { origin: "https://photos-by-elie.com" },
+  }));
+  assert.equal(listForbidden.status, 403);
 });
 
 test("access console is admin-only and writes reversible role grants", async () => {

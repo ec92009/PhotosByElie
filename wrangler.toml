@@ -35,7 +35,8 @@ ACCESS_TEAM_NAME = "byelie"
 # a fallback only for deployments without this binding.
 # Public account profile records are stored in ORDERS_KV under
 # pbe:account-profiles:<email> and keep signed-in likes/basket state.
-# Owner action records are stored in ORDERS_KV under pbe:owner-actions:<id>
+# Owner action records are stored in ORDERS_KV under pbe:owner-actions:<id>,
+# with pbe:owner-action-head and pbe:owner-action-index:* for recent listing,
 # unless an OWNER_ACTIONS_KV binding is added later.
 # Optional owner-only live checkout rehearsal discount allowlist.
 # Store actual codes outside git, for example:

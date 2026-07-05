@@ -6,6 +6,7 @@
     session: null,
     access: null,
     action: null,
+    actions: [],
     busy: false,
   };
   const lanes = [
@@ -110,11 +111,25 @@
     setCount("people", people.length);
     setCount("groups", groups.filter((group) => group.state !== "archived").length);
     setCount("fixtures", people.filter((user) => user.fixture).length);
-    setCount("action", state.action?.id ? "queued" : "none");
+    setCount("action", state.actions.length);
   };
 
   const chip = (label, modifier = "") =>
     `<span class="new-owner-chip ${modifier ? `is-${escapeHtml(modifier)}` : ""}">${escapeHtml(label)}</span>`;
+
+  const actionTime = (action) => {
+    const timestamp = Date.parse(action?.createdAt || action?.updatedAt || "");
+    return Number.isFinite(timestamp) ? timestamp : 0;
+  };
+
+  const mergeActions = (actions = [], preferredAction = state.action) => {
+    const byId = new Map();
+    if (preferredAction?.id) byId.set(preferredAction.id, preferredAction);
+    for (const action of actions) {
+      if (action?.id && !byId.has(action.id)) byId.set(action.id, action);
+    }
+    return [...byId.values()].sort((left, right) => actionTime(right) - actionTime(left));
+  };
 
   const renderAccess = () => {
     if (!accessRoot) return;
@@ -181,19 +196,21 @@
 
   const renderAction = () => {
     if (!actionRoot) return;
-    const action = state.action;
-    if (!action?.id) {
-      actionRoot.innerHTML = "";
+    const actions = state.actions.length ? state.actions : (state.action?.id ? [state.action] : []);
+    if (!actions.length) {
+      actionRoot.innerHTML = `<p class="new-owner-empty">No recent cloud Owner actions.</p>`;
       return;
     }
-    actionRoot.innerHTML = `
-      <strong>${escapeHtml(action.type || "owner action")}</strong>
-      <small>${escapeHtml(action.id)}</small>
-      <div class="new-owner-chip-stack">
-        ${chip(action.state || "queued", "live")}
-        ${action.createdAt ? chip(action.createdAt) : ""}
-      </div>
-    `;
+    actionRoot.innerHTML = actions.map((action) => `
+      <article class="new-owner-action-row">
+        <strong>${escapeHtml(action.type || "owner action")}</strong>
+        <small>${escapeHtml(action.id)}</small>
+        <div class="new-owner-chip-stack">
+          ${chip(action.state || "queued", action.state === "failed" ? "local" : "live")}
+          ${action.createdAt ? chip(action.createdAt) : ""}
+        </div>
+      </article>
+    `).join("");
   };
 
   const render = () => {
@@ -202,6 +219,12 @@
     renderAccess();
     renderLanes();
     renderAction();
+  };
+
+  const loadActions = async () => {
+    const body = await apiFetch("/owner/actions?limit=8");
+    state.actions = mergeActions(Array.isArray(body.actions) ? body.actions : []);
+    state.action = state.actions[0] || state.action;
   };
 
   const load = async () => {
@@ -217,11 +240,17 @@
         } catch {
           state.access = null;
         }
+        try {
+          await loadActions();
+        } catch {
+          state.actions = state.action?.id ? [state.action] : [];
+        }
       }
       setStatus(ownerAllowed() ? "Cloud Owner session verified." : "Owner role is required.");
     } catch (error) {
       state.session = null;
       state.access = null;
+      state.actions = [];
       setStatus(error.message || "Cloud Owner is unavailable.");
     } finally {
       root?.classList.remove("is-loading");
@@ -264,6 +293,7 @@
         const readback = await apiFetch(`/owner/actions/${encodeURIComponent(state.action.id)}`);
         state.action = readback.action || state.action;
       }
+      await loadActions();
       if (actionStatusRoot) actionStatusRoot.textContent = state.action?.id ? "Queued" : "";
       setStatus("Owner action queue check complete.");
       render();

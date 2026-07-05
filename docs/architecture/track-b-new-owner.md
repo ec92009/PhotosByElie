@@ -18,12 +18,15 @@ The shell uses only deployed Worker routes:
 - `GET /owner/session`: verifies a Google Owner/Admin session.
 - `GET /access-console/state`: reads D1 people, groups, fixtures, roles, and
   capability state when the signed-in account is the bootstrap Admin.
+- `GET /owner/actions`: lists the recent cloud Owner action queue from the
+  KV-backed recent-action head plus timestamp index.
 - `POST /owner/actions`: queues a cloud Owner action.
 - `GET /owner/actions/<id>`: reads the queued action back.
 
 The first action probe is `track-b-cloud-shell-check`. It writes a harmless
-queued Owner action to the existing cloud KV-backed Owner action store and reads
-the same action back to prove cross-machine continuity.
+queued Owner action to the existing cloud KV-backed Owner action store, reads
+the same action back, and refreshes the recent queue so a reload on Max or David
+shows the same cloud state.
 
 ## Boundaries
 
@@ -36,7 +39,7 @@ Cloud-ready now:
 
 - Google Owner/Admin session.
 - D1-backed role, group, and access-policy visibility.
-- Cloud Owner action queue creation/readback.
+- Cloud Owner action queue creation, readback, and recent-action listing.
 - Links back to ACS for role and group assignment.
 
 Still connector-backed later:

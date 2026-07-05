@@ -2052,6 +2052,18 @@ export const createPhotosByElieWorker = ({
     return credentialedJson(request, { ok: true, action }, 202);
   };
 
+  const listOwnerActions = async (request) => {
+    await authSessionFor(request, { requiredRole: "owner" });
+    if (!ownerActionStore || typeof ownerActionStore.listActions !== "function") {
+      return credentialedErrorJson(request, 503, "owner_actions_unavailable", "Owner action queue listing is not configured.");
+    }
+    const url = new URL(request.url);
+    const requestedLimit = Number(url.searchParams.get("limit") || 25);
+    const limit = Math.max(1, Math.min(100, Number.isFinite(requestedLimit) ? Math.round(requestedLimit) : 25));
+    const actions = await ownerActionStore.listActions({ limit });
+    return credentialedJson(request, { ok: true, actions, limit });
+  };
+
   const getOwnerAction = async (request, actionId) => {
     await authSessionFor(request, { requiredRole: "owner" });
     if (!ownerActionStore || typeof ownerActionStore.getAction !== "function") {
@@ -2450,6 +2462,7 @@ export const createPhotosByElieWorker = ({
       if (request.method === "GET" && path === "/auth/google/callback") return await callbackGoogleAuth(request);
       if ((request.method === "GET" || request.method === "POST") && path === "/auth/logout") return await logoutAuth(request);
       if (request.method === "GET" && path === "/owner/session") return await getOwnerSession(request);
+      if (request.method === "GET" && path === "/owner/actions") return await listOwnerActions(request);
       if (request.method === "POST" && path === "/owner/actions") return await createOwnerAction(request);
       const ownerActionMatch = path.match(/^\/owner\/actions\/([^/]+)$/);
       if (request.method === "GET" && ownerActionMatch) return await getOwnerAction(request, decodeURIComponent(ownerActionMatch[1]));

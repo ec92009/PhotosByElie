@@ -124,6 +124,10 @@ and cannot be granted through ACS.
   team name, the Worker prefers the team-domain logout URL.
 - `GET /owner/session`: requires a Google session whose registry tier is
   `owner`, or the configured Admin email.
+- `GET /owner/actions`: requires an Owner/Admin Google session and lists recent
+  queued cloud Owner actions from the KV recent-action head plus timestamp
+  index. New actions update the head key so the NewOwner app can reload across
+  machines without depending only on KV prefix-list freshness.
 - `POST /owner/actions`: requires an Owner/Admin Google session and stores a
   queued cloud Owner action record. This is the protected mutation entrypoint
   for future remote Owner work; it does not grant roles.

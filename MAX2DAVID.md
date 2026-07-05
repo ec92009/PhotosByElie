@@ -1,6 +1,9 @@
 # Max to David Automation Handoff
 
-Primary Max-to-David transport is Gmail self-email from `ec92009@gmail.com` to `ec92009@gmail.com` with exact subject `MAX2DAVID`. Use this file as durable reference/fallback for instructions prepared on Max for David, the always-on machine. David should report by Gmail self-email with exact subject `DAVID2MAX`; mirror durable summaries in `DAVID2MAX.md` only when useful or explicitly requested.
+Primary Max-to-David transport is this repo/GitHub handoff file. Gmail self-email
+is retired for this workflow unless the user explicitly asks about a specific
+message. David should acknowledge and report in `DAVID2MAX.md`, then commit and
+push durable handoff updates.
 
 ## Operating Rules
 
@@ -16,12 +19,39 @@ git pull --ff-only origin main
 - Do not rewrite image/JPG metadata.
 - Do not use the keyword blacklist to filter photos. It only removes useless keyword strings from generated metadata.
 - If an automation creates tracked changes, run validation before committing.
-- Acknowledge Max/David handoff messages as soon as they are received by sending or queuing the matching `DAVID2MAX` email before starting substantial work.
-- Before starting a new Max task, send `David: starting <short task name>` by `DAVID2MAX` email so Max can see the task is in progress.
+- Acknowledge Max/David handoff messages as soon as they are received by writing the matching `DAVID2MAX.md` note before starting substantial work.
+- Before starting a new Max task, write `David: starting <short task name>` in `DAVID2MAX.md` so Max can see the task is in progress.
 - For jobs that take more than a few minutes, send `DAVID2MAX` progress reports at meaningful checkpoints and whenever blocked.
 - Use commit prefix `photosbyelie:`.
-- Push successful commits to `main`.
-- Record what happened by `DAVID2MAX` email; mirror to `DAVID2MAX.md` only when useful or requested.
+- Push successful commits to the active branch named in the handoff prompt.
+- Record what happened in `DAVID2MAX.md`.
+
+## 2026-07-06 Track B NewOwner Cloud Queue Check
+
+Prompt for David:
+
+```text
+In /Users/ecohen/Dev/PhotosByElie, do not touch assets/owner-actions/Owner.sqlite.
+
+Run:
+
+cd /Users/ecohen/Dev/PhotosByElie
+git fetch origin
+git switch codex/new-owner-foundation || git switch -c codex/new-owner-foundation origin/codex/new-owner-foundation
+python3 -m http.server 8000
+
+Then open http://localhost:8000/new-owner.html while signed in with the Owner/Admin Google account.
+
+Verify:
+- Status says Cloud Owner session verified.
+- Counts show Owner open, 5 people, 3 groups, and fixture data from the cloud D1 access registry.
+- The recent Owner action list loads without local Owner files.
+- Queue check adds a new track-b-cloud-shell-check action.
+- Reloading the page keeps the new action visible from cloud state.
+- The page has no visible horizontal overflow on desktop or phone width.
+
+Report the result in DAVID2MAX.md, including the newest owner-action id shown after reload and any console/layout errors. Commit and push DAVID2MAX.md if you change it.
+```
 
 ## 2026-05-17 Install Max Instruction Poller
 

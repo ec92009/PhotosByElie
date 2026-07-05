@@ -57,8 +57,14 @@ body[data-gallery="new-owner"] main.new-owner-shell {
 .new-owner-session small,
 .new-owner-toolbar span,
 .new-owner-card small,
+.new-owner-card-note,
 .new-owner-action-controls span {
   color: var(--muted);
+}
+
+.new-owner-card-note {
+  margin: 0;
+  font-size: .9rem;
 }
 
 .new-owner-panel {
@@ -125,7 +131,7 @@ body[data-gallery="new-owner"] main.new-owner-shell {
 
 .new-owner-access-row,
 .new-owner-lane-row,
-.new-owner-action-result {
+.new-owner-action-row {
   display: grid;
   gap: .45rem;
   min-width: 0;
@@ -145,8 +151,14 @@ body[data-gallery="new-owner"] main.new-owner-shell {
   align-items: center;
 }
 
+.new-owner-action-result {
+  display: grid;
+  gap: .65rem;
+}
+
 .new-owner-access-row strong,
-.new-owner-lane-row strong {
+.new-owner-lane-row strong,
+.new-owner-action-row strong {
   overflow-wrap: anywhere;
 }
 

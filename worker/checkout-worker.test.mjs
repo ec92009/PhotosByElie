@@ -390,6 +390,10 @@ test("access console is admin-only and writes reversible role grants", async () 
     headers: { origin: "https://photos-by-elie.com" },
   }));
   assert.equal(forbidden.status, 403);
+  const policyForbidden = await nonAdminWorker.fetch(new Request("https://worker.test/access-console/gallery-access?galleryKind=event&galleryKey=johnson-palmer-wedding", {
+    headers: { origin: "https://photos-by-elie.com" },
+  }));
+  assert.equal(policyForbidden.status, 403);
 
   const adminWorker = createPhotosByElieWorker({
     catalog: loadCatalog(),
@@ -499,6 +503,21 @@ test("access console is admin-only and writes reversible role grants", async () 
   assert.equal(attendeeBody.user.groups[0].label, "Johnson-Palmer wedding");
   assert.equal(attendeeBody.user.effectiveAccess.scopes.some((scope) => scope.galleryKey === "johnson-palmer-wedding"), true);
 
+  const policyResponse = await adminWorker.fetch(new Request("https://worker.test/access-console/gallery-access?galleryKind=event&galleryKey=johnson-palmer-wedding&email=attendee%40example.test&ownerOriginals=1", {
+    headers: { origin: "https://photos-by-elie.com" },
+  }));
+  assert.equal(policyResponse.status, 200);
+  const policyBody = await policyResponse.json();
+  assert.equal(policyBody.gallery.label, "Johnson-Palmer wedding");
+  assert.equal(policyBody.decisions.visitor.allowed, false);
+  assert.equal(policyBody.decisions.visitor.access.previewMode, "blocked");
+  assert.equal(policyBody.decisions.selected.allowed, true);
+  assert.equal(policyBody.decisions.selected.access.previewMode, "watermarked");
+  assert.equal(policyBody.decisions.selected.access.assignedDownloads, true);
+  assert.equal(policyBody.decisions.selected.access.checkout, true);
+  assert.equal(policyBody.decisions.owner.allowed, true);
+  assert.equal(policyBody.decisions.owner.access.previewMode, "originals");
+
   const reGroupResponse = await adminWorker.fetch(jsonRequest("https://worker.test/access-console/people", {
     email: "la-concha-member@example.test",
     displayName: "La Concha Member",
@@ -527,6 +546,15 @@ test("access console is admin-only and writes reversible role grants", async () 
   assert.equal(archiveGroupResponse.status, 200);
   const archiveGroupBody = await archiveGroupResponse.json();
   assert.equal(archiveGroupBody.group.state, "archived");
+
+  const archivedPolicyResponse = await adminWorker.fetch(new Request("https://worker.test/access-console/gallery-access?galleryKind=event&galleryKey=cohen-cousins&email=cousin%40example.test", {
+    headers: { origin: "https://photos-by-elie.com" },
+  }));
+  assert.equal(archivedPolicyResponse.status, 200);
+  const archivedPolicy = await archivedPolicyResponse.json();
+  assert.equal(archivedPolicy.gallery.groupId, "");
+  assert.equal(archivedPolicy.decisions.selected.allowed, false);
+  assert.equal(archivedPolicy.decisions.selected.access.previewMode, "blocked");
 
   const disableResponse = await adminWorker.fetch(jsonRequest("https://worker.test/access-console/people/helper%40example.test/disable", {}, {
     origin: "https://photos-by-elie.com",

@@ -23,7 +23,7 @@ ignores registry records as a source of additional admins.
 
 ## Registry
 
-Access Console V6 stores structured access state in D1 once the Worker has an
+Access Console V7 stores structured access state in D1 once the Worker has an
 `ACCESS_DB` binding. Auth/session reads switch to the D1 registry immediately
 when that binding exists. Until then, deployed auth keeps the legacy KV registry
 as a compatibility fallback.
@@ -136,6 +136,10 @@ and cannot be granted through ACS.
 - `GET /access-console/state`: requires Admin and returns session, people,
   audience groups, gallery options, fixture events, audit events, grantable role
   metadata, and capability metadata.
+- `GET /access-console/gallery-access`: requires Admin and returns a read-only
+  policy rehearsal for a gallery key: regular visitor, selected access person,
+  and Owner/Admin decisions for view, watermark/original preview, checkout,
+  assigned downloads, re-downloads, PDF, and video.
 - `POST|PUT|PATCH /access-console/people`: requires Admin and upserts one
   person's non-admin roles, audience group memberships, Real Estate grants, name,
   and notes.
@@ -178,6 +182,10 @@ session, and performs reversible writes:
   regular visitor, and Owner/Admin modes from the same effective-access scopes,
   including an Owner originals switch for full-resolution/unwatermarked preview
   rehearsal without granting new public capabilities.
+- The Worker policy tester calls `/access-console/gallery-access` for the
+  selected group and selected person, confirming the cloud-side visitor,
+  member, and Owner/Admin decisions before those rules are enforced by public,
+  event, and Real Estate gallery routes.
 - Archived groups stay visible in ACS but no longer appear in person assignment
   pickers, gallery options, auth-session effective access, or new memberships.
 - The effective-access inspector shows the selected person's base user scope,

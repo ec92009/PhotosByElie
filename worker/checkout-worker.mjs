@@ -259,8 +259,104 @@ const sessionForAccessIdentity = async (identity, { accessUserRegistry, adminEma
     tier,
     admin,
     realEstateClients,
+    accessRecord: record,
     expiresAt: identity?.expiresAt || null,
     sessionSeconds: Number(identity?.sessionSeconds || 0),
+  };
+};
+
+const accessConsoleRoleCapabilities = (roleId) =>
+  ACCESS_CONSOLE_ROLE_OPTIONS.find((role) => role.id === roleId)?.capabilities || [];
+
+const normalizePolicyGalleryKind = (value) => {
+  const kind = String(value || "public").trim().toLowerCase().replace(/[-\s]+/g, "_");
+  return ["event", "real_estate", "public", "custom"].includes(kind) ? kind : "custom";
+};
+
+const normalizePolicyGalleryKey = (value) => String(value || "").trim();
+
+const boolParam = (value) => ["1", "true", "yes", "on"].includes(String(value || "").trim().toLowerCase());
+
+const fallbackGalleryDefaultsFor = (galleryKind) => ({
+  watermarked: true,
+  saleEnabled: galleryKind !== "real_estate",
+  downloads: false,
+  pdf: galleryKind === "real_estate",
+  video: galleryKind === "real_estate",
+  memberOriginals: false,
+  ownerOriginals: false,
+});
+
+const accessScopeMatchesGallery = (scope, galleryKind, galleryKey) =>
+  scope?.galleryKind === galleryKind && String(scope.galleryKey || "") === galleryKey;
+
+const galleryDefaultsForPolicy = ({ galleryKind, galleryKey, scopes = [], audienceGroups = [] }) => {
+  const scope = scopes.find((item) => accessScopeMatchesGallery(item, galleryKind, galleryKey));
+  if (scope?.galleryDefaults) return scope.galleryDefaults;
+  const group = audienceGroups.find((item) => item.galleryKind === galleryKind && item.galleryKey === galleryKey);
+  return group?.galleryDefaults || fallbackGalleryDefaultsFor(galleryKind);
+};
+
+const galleryAccessDecisionFor = ({
+  viewer = null,
+  mode = "visitor",
+  galleryKind = "public",
+  galleryKey = "",
+  audienceGroups = [],
+  ownerOriginals = false,
+} = {}) => {
+  const roles = Array.isArray(viewer?.roles) && viewer.roles.length ? viewer.roles : ["user"];
+  const scopes = Array.isArray(viewer?.effectiveAccess?.scopes) ? viewer.effectiveAccess.scopes : [];
+  const matchingScopes = scopes.filter((scope) => accessScopeMatchesGallery(scope, galleryKind, galleryKey));
+  const scopeCapabilities = new Set(matchingScopes.flatMap((scope) => scope.capabilities || []));
+  const capabilities = new Set(accessConsoleRoleCapabilities("user"));
+  roles.forEach((role) => accessConsoleRoleCapabilities(role).forEach((capability) => capabilities.add(capability)));
+  scopes.forEach((scope) => (scope.capabilities || []).forEach((capability) => capabilities.add(capability)));
+  const defaults = galleryDefaultsForPolicy({ galleryKind, galleryKey, scopes, audienceGroups });
+  const canViewAll = capabilities.has("view_all_galleries") || roles.includes("admin");
+  const canViewPublic = galleryKind === "public" && capabilities.has("view_public");
+  const canViewAssigned = scopeCapabilities.has("view_gallery");
+  const canView = Boolean(canViewAll || canViewPublic || canViewAssigned);
+  const memberOriginals = canView && scopeCapabilities.has("view_originals") && defaults.memberOriginals === true;
+  const ownerOriginalsActive = canView && canViewAll && (ownerOriginals || defaults.ownerOriginals === true);
+  const originals = Boolean(memberOriginals || ownerOriginalsActive);
+  const watermarked = canView && !originals && (defaults.watermarked === true || scopeCapabilities.has("view_watermarked"));
+  const previewMode = !canView ? "blocked" : (originals ? "originals" : (watermarked ? "watermarked" : "compressed"));
+  const reasons = [];
+  if (canViewAll) reasons.push("view_all_galleries");
+  if (canViewPublic) reasons.push("view_public");
+  if (canViewAssigned) reasons.push("assigned_gallery");
+  if (!canView) reasons.push("no_matching_gallery_grant");
+  return {
+    mode,
+    email: viewer?.email || "",
+    label: mode === "visitor" ? "Regular visitor" : (viewer?.displayName || viewer?.email || mode),
+    allowed: canView,
+    gallery: { galleryKind, galleryKey },
+    access: {
+      previewMode,
+      watermarked,
+      saleEnabled: Boolean(canView && defaults.saleEnabled && capabilities.has("buy_downloads")),
+      checkout: Boolean(canView && defaults.saleEnabled && capabilities.has("buy_downloads")),
+      assignedDownloads: Boolean(canView && defaults.downloads && scopeCapabilities.has("download_items")),
+      purchasedRedownloads: Boolean(canView && capabilities.has("redownload_purchases_30d")),
+      pdf: Boolean(canView && defaults.pdf && scopeCapabilities.has("pdf")),
+      video: Boolean(canView && defaults.video && scopeCapabilities.has("video")),
+      originals,
+      memberOriginals,
+      ownerOriginals: ownerOriginalsActive,
+      manageAccess: Boolean(capabilities.has("manage_access")),
+    },
+    defaults,
+    matchingScopes: matchingScopes.map((scope) => ({
+      source: scope.source || "",
+      label: scope.label || scope.galleryKey || "",
+      role: scope.role || "",
+      groupId: scope.groupId || "",
+      capabilities: scope.capabilities || [],
+    })),
+    capabilities: [...capabilities].sort(),
+    reasons,
   };
 };
 
@@ -2106,6 +2202,88 @@ export const createPhotosByElieWorker = ({
     return credentialedJson(request, { ok: true, group });
   };
 
+  const accessConsoleGalleryAccess = async (request) => {
+    const session = await requireAccessConsoleAdmin(request);
+    const registry = accessConsoleRegistryRequired();
+    const url = new URL(request.url);
+    const galleryKind = normalizePolicyGalleryKind(url.searchParams.get("galleryKind") || url.searchParams.get("gallery_kind"));
+    const galleryKey = normalizePolicyGalleryKey(url.searchParams.get("galleryKey") || url.searchParams.get("gallery_key"));
+    const email = String(url.searchParams.get("email") || "").trim().toLowerCase();
+    const ownerOriginals = boolParam(url.searchParams.get("ownerOriginals") || url.searchParams.get("owner_originals"));
+    if (!galleryKey) {
+      return credentialedErrorJson(request, 400, "missing_gallery_key", "A gallery key is required.");
+    }
+    if (email && !validEmail(email)) {
+      return credentialedErrorJson(request, 400, "invalid_access_email", "Policy testing requires a valid email address.");
+    }
+    const audienceGroups = typeof registry.listAudienceGroups === "function" ? await registry.listAudienceGroups() : [];
+    const activeAudienceGroups = audienceGroups.filter((group) => group?.state !== "archived");
+    const selectedUser = email && typeof registry.getUser === "function" ? await registry.getUser(email) : null;
+    const galleryGroup = activeAudienceGroups.find((group) =>
+      group.galleryKind === galleryKind && String(group.galleryKey || "") === galleryKey
+    );
+    const ownerViewer = {
+      email: session.email,
+      displayName: "Owner/admin",
+      roles: ["user", "owner", "admin"],
+      effectiveAccess: {
+        scopes: [],
+      },
+    };
+    const visitorViewer = {
+      email: "",
+      displayName: "Regular visitor",
+      roles: ["user"],
+      effectiveAccess: { scopes: [] },
+    };
+    return credentialedJson(request, {
+      ok: true,
+      gallery: {
+        galleryKind,
+        galleryKey,
+        label: galleryGroup?.label || galleryKey,
+        groupId: galleryGroup?.id || "",
+      },
+      requestedEmail: email,
+      selectedUser: selectedUser ? {
+        email: selectedUser.email,
+        displayName: selectedUser.displayName || "",
+        roles: selectedUser.roles || ["user"],
+        tier: selectedUser.tier || "user",
+        groupIds: selectedUser.groupIds || [],
+        disabledAt: selectedUser.disabledAt || null,
+        effectiveAccess: selectedUser.effectiveAccess || null,
+      } : null,
+      decisions: {
+        visitor: galleryAccessDecisionFor({
+          viewer: visitorViewer,
+          mode: "visitor",
+          galleryKind,
+          galleryKey,
+          audienceGroups: activeAudienceGroups,
+          ownerOriginals: false,
+        }),
+        selected: selectedUser ? galleryAccessDecisionFor({
+          viewer: selectedUser,
+          mode: "selected",
+          galleryKind,
+          galleryKey,
+          audienceGroups: activeAudienceGroups,
+          ownerOriginals: false,
+        }) : null,
+        owner: galleryAccessDecisionFor({
+          viewer: ownerViewer,
+          mode: "owner",
+          galleryKind,
+          galleryKey,
+          audienceGroups: activeAudienceGroups,
+          ownerOriginals,
+        }),
+      },
+      generatedAt: now().toISOString(),
+    });
+  };
+
   const canUseRealEstateGallery = (session, galleryKey) =>
     Boolean(
       session?.roles?.includes("admin")
@@ -2276,6 +2454,7 @@ export const createPhotosByElieWorker = ({
       const ownerActionMatch = path.match(/^\/owner\/actions\/([^/]+)$/);
       if (request.method === "GET" && ownerActionMatch) return await getOwnerAction(request, decodeURIComponent(ownerActionMatch[1]));
       if (request.method === "GET" && path === "/access-console/state") return await accessConsoleState(request);
+      if (request.method === "GET" && path === "/access-console/gallery-access") return await accessConsoleGalleryAccess(request);
       if ((request.method === "POST" || request.method === "PUT" || request.method === "PATCH") && path === "/access-console/people") return await putAccessConsolePerson(request);
       if ((request.method === "POST" || request.method === "PUT" || request.method === "PATCH") && path === "/access-console/groups") return await putAccessConsoleGroup(request);
       const accessPersonDisableMatch = path.match(/^\/access-console\/people\/([^/]+)\/disable$/);

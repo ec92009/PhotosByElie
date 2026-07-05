@@ -20,6 +20,8 @@
     },
     accessPreviewMode: "group",
     ownerOriginals: false,
+    policyResult: null,
+    policyBusy: false,
     session: null,
   };
   const BASE_USER_CAPABILITIES = ["view_public", "buy_downloads", "redownload_purchases_30d"];
@@ -76,6 +78,9 @@
   const memberListRoot = $("[data-acs-member-list]");
   const galleryAccessRoot = $("[data-acs-gallery-access]");
   const galleryAccessSummaryRoot = $("[data-acs-access-summary]");
+  const policyTestButton = $("[data-acs-policy-test]");
+  const policyStatusRoot = $("[data-acs-policy-status]");
+  const policyResultRoot = $("[data-acs-policy-result]");
   const galleryOptionsRoot = $("[data-acs-gallery-options]");
   const effectiveAccessRoot = $("[data-acs-effective-access]");
   const capabilitiesRoot = $("[data-acs-capabilities]");
@@ -892,6 +897,94 @@
       : `<p class="acs-empty">No gallery scopes found.</p>`;
   };
 
+  const policyReasonLabel = (value) => String(value || "")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+
+  const policyBool = (value) => value ? "Yes" : "No";
+
+  const policyRows = (decision = {}) => {
+    const access = decision.access || {};
+    return [
+      ["View", decision.allowed ? "Allowed" : "Blocked"],
+      ["Preview", access.previewMode || "blocked"],
+      ["Watermark", policyBool(access.watermarked)],
+      ["Checkout", policyBool(access.checkout)],
+      ["Downloads", policyBool(access.assignedDownloads)],
+      ["Re-download", policyBool(access.purchasedRedownloads)],
+      ["PDF", policyBool(access.pdf)],
+      ["Video", policyBool(access.video)],
+      ["Originals", policyBool(access.originals)],
+    ];
+  };
+
+  const policyDecisionCard = (title, decision, emptyText = "") => {
+    if (!decision) {
+      return `
+        <article class="acs-access-card acs-policy-card">
+          <header>
+            <strong>${escapeHtml(title)}</strong>
+            <span class="acs-chip is-disabled">not tested</span>
+          </header>
+          <small>${escapeHtml(emptyText || "No selected person.")}</small>
+        </article>
+      `;
+    }
+    const reasons = Array.isArray(decision.reasons) ? decision.reasons : [];
+    const scopes = Array.isArray(decision.matchingScopes) ? decision.matchingScopes : [];
+    return `
+      <article class="acs-access-card acs-policy-card">
+        <header>
+          <strong>${escapeHtml(title)}</strong>
+          <span class="acs-chip ${decision.allowed ? "is-ok" : "is-blocked"}">${escapeHtml(decision.allowed ? "allowed" : "blocked")}</span>
+        </header>
+        <dl class="acs-policy-grid">
+          ${policyRows(decision).map(([term, value]) => `
+            <div>
+              <dt>${escapeHtml(term)}</dt>
+              <dd>${escapeHtml(value)}</dd>
+            </div>
+          `).join("")}
+        </dl>
+        ${reasons.length ? `<small>${escapeHtml(reasons.map(policyReasonLabel).join(", "))}</small>` : ""}
+        ${scopes.length ? `<span class="acs-gallery-stack">${scopes.map((scope) => `<span class="acs-chip">${escapeHtml(scope.label || scope.galleryKey || scope.source)}</span>`).join("")}</span>` : ""}
+      </article>
+    `;
+  };
+
+  const renderPolicyResult = () => {
+    if (policyTestButton) {
+      const group = selectedGroup();
+      policyTestButton.disabled = state.policyBusy || !group?.galleryKey;
+    }
+    if (!policyResultRoot) return;
+    const body = state.policyResult;
+    if (!body?.decisions) {
+      policyResultRoot.innerHTML = "";
+      return;
+    }
+    const selectedLabel = body.selectedUser?.email
+      ? `Selected: ${body.selectedUser.email}`
+      : "Selected person";
+    policyResultRoot.innerHTML = `
+      <div class="acs-policy-result-header">
+        <strong>Worker policy</strong>
+        <small>${escapeHtml(body.gallery?.label || body.gallery?.galleryKey || "")}</small>
+      </div>
+      <div class="acs-policy-result-grid">
+        ${policyDecisionCard("Regular visitor", body.decisions.visitor)}
+        ${policyDecisionCard(selectedLabel, body.decisions.selected, body.requestedEmail ? "No access person found." : "No selected person.")}
+        ${policyDecisionCard("Owner/admin", body.decisions.owner)}
+      </div>
+    `;
+  };
+
+  const clearPolicyResult = () => {
+    state.policyResult = null;
+    if (policyStatusRoot) policyStatusRoot.textContent = "";
+    renderPolicyResult();
+  };
+
   const renderAudit = () => {
     if (!auditRoot) return;
     if (!state.auditEvents.length) {
@@ -920,6 +1013,7 @@
     renderMembership();
     fillGroupForm(selectedGroup());
     renderAccessPreview();
+    renderPolicyResult();
     renderCapabilities();
     renderAudit();
     fillForm(selectedUser());
@@ -940,6 +1034,7 @@
       state.audienceGroups = Array.isArray(body.audienceGroups) ? body.audienceGroups : [];
       state.galleryOptions = Array.isArray(body.galleryOptions) ? body.galleryOptions : [];
       state.auditEvents = Array.isArray(body.auditEvents) ? body.auditEvents : [];
+      state.policyResult = null;
       if (!state.selectedEmail || !state.people.some((user) => user.email === state.selectedEmail)) {
         state.selectedEmail = state.people[0]?.email || "";
       }
@@ -958,6 +1053,7 @@
       state.capabilities = [];
       state.auditEvents = [];
       state.selectedGroupId = "";
+      state.policyResult = null;
       render();
     } finally {
       root?.classList.remove("is-loading");
@@ -1136,6 +1232,35 @@
     render();
   };
 
+  const testSelectedPolicy = async () => {
+    const group = selectedGroup();
+    if (!group?.galleryKey) {
+      setStatus("Select a group with a gallery key before testing policy.");
+      return;
+    }
+    const user = selectedUser();
+    const params = new URLSearchParams({
+      galleryKind: group.galleryKind || group.kind || "event",
+      galleryKey: group.galleryKey || group.id,
+      ownerOriginals: state.ownerOriginals ? "1" : "0",
+    });
+    if (user?.email) params.set("email", user.email);
+    state.policyResult = null;
+    state.policyBusy = true;
+    if (policyStatusRoot) policyStatusRoot.textContent = "Testing...";
+    renderPolicyResult();
+    try {
+      const body = await apiFetch(`/access-console/gallery-access?${params.toString()}`);
+      state.policyResult = body;
+      if (policyStatusRoot) policyStatusRoot.textContent = `${body.gallery?.label || group.label || group.id} tested`;
+      setStatus("Worker policy test complete.");
+      renderPolicyResult();
+    } finally {
+      state.policyBusy = false;
+      renderPolicyResult();
+    }
+  };
+
   const login = () => {
     if (!workerBase) return;
     const url = new URL(`${workerBase}/auth/google/login`);
@@ -1154,6 +1279,7 @@
     const row = event.target.closest("[data-acs-person]");
     if (!row) return;
     state.selectedEmail = row.dataset.acsPerson || "";
+    clearPolicyResult();
     render();
   });
 
@@ -1161,6 +1287,7 @@
     const row = event.target.closest("[data-acs-group-row]");
     if (!row) return;
     state.selectedGroupId = row.dataset.acsGroupRow || "";
+    clearPolicyResult();
     render();
   });
 
@@ -1213,6 +1340,7 @@
   filterGroupInput?.addEventListener("change", () => {
     state.filters.groupId = filterGroupInput.value || "";
     if (state.filters.groupId) state.selectedGroupId = state.filters.groupId;
+    clearPolicyResult();
     render();
   });
   filterRoleInput?.addEventListener("change", () => {
@@ -1229,12 +1357,14 @@
   });
   $("[data-acs-new-person]")?.addEventListener("click", () => {
     state.selectedEmail = "";
+    clearPolicyResult();
     fillForm(null);
     renderPeople();
     renderEffectiveAccess();
   });
   $("[data-acs-new-group]")?.addEventListener("click", () => {
     state.selectedGroupId = "";
+    clearPolicyResult();
     fillGroupForm(null);
     renderGroupList();
   });
@@ -1247,11 +1377,13 @@
   groupGalleryRecordInput?.addEventListener("change", () => {
     const record = knownGalleryRecords().find((item) => galleryRecordKeyFor(item) === groupGalleryRecordInput.value);
     applyGalleryRecord(record);
+    clearPolicyResult();
     renderAccessPreview();
   });
   document.querySelectorAll("[data-acs-gallery-default]").forEach((input) => {
     input.addEventListener("change", () => {
       syncCapabilitiesFromDefaults();
+      clearPolicyResult();
       renderAccessPreview();
     });
   });
@@ -1264,12 +1396,17 @@
   $("[data-acs-disable-person]")?.addEventListener("click", () => disableSelected().catch((error) => setStatus(error.message || "Could not disable person.")));
   $("[data-acs-archive-group]")?.addEventListener("click", () => archiveSelectedGroup().catch((error) => setStatus(error.message || "Could not archive group.")));
   $("[data-acs-filter-selected-group]")?.addEventListener("click", showSelectedGroupMembers);
+  policyTestButton?.addEventListener("click", () => testSelectedPolicy().catch((error) => {
+    if (policyStatusRoot) policyStatusRoot.textContent = "";
+    setStatus(error.message || "Could not test policy.");
+  }));
   accessPreviewInput?.addEventListener("change", () => {
     state.accessPreviewMode = accessPreviewInput.value || "group";
     renderAccessPreview();
   });
   ownerOriginalsInput?.addEventListener("change", () => {
     state.ownerOriginals = Boolean(ownerOriginalsInput.checked);
+    clearPolicyResult();
     renderAccessPreview();
   });
   $("[data-acs-seed-fixtures]")?.addEventListener("click", () => seedFixtures().catch((error) => setStatus(error.message || "Could not seed fixtures.")));

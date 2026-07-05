@@ -1,6 +1,6 @@
 # Photos By Elie Sidecar Architecture
 
-Date: 2026-07-03
+Date: 2026-07-04
 
 Sidecar is a local-only Apple Photos triage workstation that rides beside Owner.
 It is deliberately not the commercial app. Sidecar decides library fate and
@@ -10,7 +10,7 @@ metadata; Owner decides publication and commerce.
 
 Sidecar has its own local visible version in `SIDECAR_VERSION`.
 
-- Current Sidecar version: `v125.7`
+- Current Sidecar version: `v126.2`
 - Versioning follows the canonical `~/Dev/.SOPs/VERSIONING_SOP.md` default
   calendar visible-version rule for this local web-app surface.
 - Sidecar version bumps do not imply a public Photos By Elie site version bump.
@@ -24,6 +24,8 @@ Sidecar v0 uses the existing repo shape:
 - `scripts/sidecar_state_db.py`: Sidecar tables in `assets/owner-actions/Owner.sqlite`.
 - `scripts/apple_photos_bridge.swift`: PhotoKit bridge for metadata index scans,
   compatibility library slices, and best-available local previews.
+- `~/Applications/PhotosByElie Photos Bridge.app`: the permission-bearing app
+  bundle used by Sidecar for PhotoKit work.
 - `scripts/install_sidecar_dock_app.zsh` and `scripts/open_sidecar_main.py`:
   Dock-friendly launcher that starts the helper and opens Safari.
 - `scripts/sidecar_maintenance.py`: non-UI scheduled maintenance entrypoints
@@ -34,6 +36,37 @@ Sidecar v0 uses the existing repo shape:
 
 This keeps the UI fast to prototype, Python responsible for local orchestration
 and SQLite, and Swift responsible only for Apple Photos/PhotoKit boundaries.
+
+## Apple Photos Permissions
+
+macOS Photos access is granted to the identity that actually touches PhotoKit.
+For Sidecar, that identity must be `PhotosByElie Photos Bridge.app`, not an
+incidental `swift`, `python3`, Terminal, Codex, or `launchd` process. Sidecar
+therefore installs and launches the Swift bridge through the app bundle:
+
+```bash
+open -W -n "$HOME/Applications/PhotosByElie Photos Bridge.app" --args <bridge-command>
+```
+
+Do not invoke `swift scripts/apple_photos_bridge.swift ...` directly from
+Sidecar UI code, scheduled tasks, or Codex automations. Direct Swift invocation
+uses the caller's TCC identity and can report `Photos access needed` even when
+`PhotosByElie Photos Bridge.app` already has Full Access in System Settings >
+Privacy & Security > Photos.
+
+The canonical Sidecar paths are:
+
+- `scripts/sidecar_server.py` preview/video/index helpers, which call the app
+  bundle before touching PhotoKit.
+- `python3 scripts/sidecar_maintenance.py photos-index-sync`, which delegates
+  to the same app-bundled index helper.
+- `scripts/install_sidecar_scheduled_tasks.zsh`, only as a local LaunchAgent
+  fallback for those maintenance entrypoints.
+
+If Photos access fails, first confirm the failing path launched the app bundle.
+Only after that should the operator revisit macOS Photos permissions. Granting
+Full Access to `PhotosByElie Photos Bridge.app` does not automatically authorize
+a raw Swift or Python process that bypasses the bundle.
 
 ## Product Boundary
 
@@ -106,6 +139,13 @@ items. The current bridge queue is still backed by the compatibility
 `sidecar_mock_uploads` table, but user-facing workflow language treats these
 rows as bridge-queued, not uploaded.
 
+Upload Bridge eligibility requires more than `metadata_state='approved'`.
+Before queueing or selecting rows for real upload, Sidecar verifies that the
+approved metadata has a safe public gallery/country signal and a non-generic
+title. Rows with placeholder titles such as `2026`, `WhatsApp`, or `DJI Album`
+and no gallery signal are counted as metadata-blocked and excluded from bridge
+queueing/upload until Owner review fixes the metadata.
+
 The bridge derives the Owner-style photo id from the stable source anchor,
 computes the expected private master and public preview R2 keys, then checks
 Owner's current `r2_objects` state for exact bucket/key coverage. A bridge
@@ -126,16 +166,27 @@ Bridge execution now has a durable local run ledger:
 The current execution slice can materialize queued items from Apple Photos into
 `assets/owner-actions/sidecar-upload-runs/<run-id>/export/`. Without
 `--execute`, the CLI path is export-only and performs no R2 writes. With
-`--execute --limit 1`, or from Sidecar's Upload Bridge rail through the Real
-upload control, Sidecar uploads the private master to
+`--execute --limit 1`, the CLI processes one uploadable item. From Sidecar's
+Upload Bridge rail, the browser helper uses a streamed batch executor: it
+selects the requested uploadable rows once, checks planned R2 coverage once, and
+then uploads each materialized item's three planned keys in a small parallel
+group. Sidecar uploads the private master to
 `photosbyelie-private/masters/<photo-id>.<ext>` and uploads the watermarked
 public preview pair to `photosbyelie-public/expo/`. Planned key collisions are
 skipped by default unless `--allow-r2-overwrite` is passed. The browser helper
-endpoint streams per-item progress so the rail can show uploaded, skipped, and
-failed key counts while the batch runs. The Review rail shows both total queued
-bridge rows and remaining rows that still need R2 upload; successful real-upload
-runs reduce the remaining count without deleting the queued ledger rows. Owner
-catalog registration is still a separate downstream slice.
+endpoint streams planning, per-item progress, item timings, uploaded/skipped
+key counts, and failures while the batch runs. The Review rail's Stop upload
+control requests a clean interrupt after the current item finishes; it does not
+abort a PhotoKit export or R2 object write mid-item. The Review rail shows both
+total queued bridge rows and remaining rows that still need R2 upload;
+successful real-upload runs reduce the remaining count without deleting the
+queued ledger rows. Uploaded, approved bridge rows can be registered into the
+public catalog with `python3 scripts/sidecar_maintenance.py
+register-uploaded-catalog`; the command also records uploaded keys in Owner's
+current R2 object ledger and refreshes the generated Worker catalog.
+Apple Photos export failures are remembered per asset and skipped by later
+bridge selection until a retry/clear path is used, so repeated PhotoKit
+materialization failures do not burn time on every batch.
 
 Upload Bridge does not generate private JPG render triplets. Private renders are
 an on-demand Worker cache: checkout/delivery can lazily create
@@ -195,7 +246,9 @@ Sidecar has two primary pages backed by the same current window:
   remove rows from the working view. Refill reports each local scan chunk and
   cumulative progress. Photos index sync and AI metadata planning are not
   Sidecar UI actions; they run through Codex Scheduled tasks backed by
-  scheduler-facing maintenance entrypoints.
+  scheduler-facing maintenance entrypoints. Any scheduled task that needs
+  PhotoKit must call `sidecar_maintenance.py` or the Sidecar helper path; it
+  must not call `scripts/apple_photos_bridge.swift` directly.
   Actions update local SQLite and advance without blocking on Photos. The
   **Cull bursts** action applies the conservative one-second burst pass to the
   visible current-window photos, skips picked/videos/already rejected items, and
@@ -272,6 +325,13 @@ The first implemented slice includes:
   and video poster frames with iCloud/network access disabled.
 - `video` PhotoKit bridge command for selected-video local playback when the
   underlying video resource is already local.
+- PhotoKit privacy permission belongs to the launched macOS process identity.
+  Sidecar automation must use the installed
+  `~/Applications/PhotosByElie Photos Bridge.app` through LaunchServices for
+  index, preview, video, and materialize/export tasks whenever that app bundle
+  exists. Direct `swift scripts/apple_photos_bridge.swift ...` execution is a
+  development fallback only; it has a separate TCC identity and can fail with
+  `permission_missing` even after the bridge app has Photos access.
 - Sidecar helper endpoints under `/__sidecar/*`.
 - SQLite-backed local Photos metadata index, local decisions, and pending sync
   queue.
@@ -286,10 +346,16 @@ The first implemented slice includes:
 - Sync planning through `/__sidecar/sync-status`, reporting index freshness,
   picked-only AI pressure, pending Photos write-back, and upload readiness.
 - Non-UI scheduler entrypoints: `sidecar_maintenance.py photos-index-sync` and
-  `sidecar_maintenance.py picked-ai-plan`. These are run by separate Codex
-  Scheduled tasks so Photos metadata sync and picked-only AI planning can keep
-  different schedules. The optional LaunchAgent installer remains only as a
-  local fallback.
+  `sidecar_maintenance.py picked-ai-plan`, with
+  `sidecar_maintenance.py picked-ai-preview-export` available when the AI review
+  queue needs visual evidence and `sidecar_maintenance.py
+  picked-ai-vision-propose` available for reviewed preview-backed proposal
+  payloads. These are run by separate Codex Scheduled tasks so Photos metadata
+  sync and picked-only AI planning can keep different schedules. The optional
+  LaunchAgent installer remains only as a local fallback. The Photos index sync
+  and preview export entrypoints are app-bundle backed for PhotoKit permission
+  stability; materialize automation must preserve that app identity too. Direct
+  Swift invocations are not equivalent.
 - Sidecar web UI for automatically loading the persistent current window,
   moving the window forward/back, refilling depleted space from the local index,
   filtering by rating/color/decision state, staging cull decisions,
@@ -305,13 +371,14 @@ The first implemented slice includes:
 Remaining near-term slices:
 
 - Actual Photos title/keyword write-back for pending sync records.
-- Actual picked-only AI metadata proposal generation beyond queue planning.
+- Fully automated model-driven vision proposal generation. The current
+  non-UI lane supports seed/filename/GPS proposals directly and reviewed
+  preview-backed proposal payload write-back through `picked-ai-vision-propose`.
 - Incremental index refresh refinements, such as cheaper change detection and
   richer missing-asset reporting.
 - Album/smart-album source filters.
-- Upload Bridge Owner registration: take successful bridge upload ledger rows,
-  mark the uploaded R2 objects in Owner's state, and publish them through the
-  normal catalog build path.
+- Upload Bridge Owner registration refinements, including UI surfacing and
+  batch status around `sidecar_maintenance.py register-uploaded-catalog`.
 - Private render cache pruning for existing `renders/<media_id>_<size>mp.jpg`
   objects, protecting sold media and leaving future Worker-created renders in
   place.

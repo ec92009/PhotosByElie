@@ -1,0 +1,71 @@
+{
+  "bridgeApp": "/Users/ecohen/Applications/PhotosByElie Photos Bridge.app",
+  "contactSheet": "/Users/ecohen/Dev/PhotosByElie/tmp/sidecar-picked-ai-previews/contact-sheet.jpg",
+  "exportedCount": 4,
+  "failedCount": 0,
+  "generatedAt": "2026-07-05T07:27:42.968421Z",
+  "items": [
+    {
+      "assetId": "7D6383D7-AE23-4065-BF6D-D4A30990281C/L0/001",
+      "filename": "DJI_20250513_125129_637_video.mp4",
+      "locationLabel": "Florence, Tuscany, Italy",
+      "mediaType": "video",
+      "metadataState": "proposed",
+      "ok": true,
+      "previewPath": "/Users/ecohen/Dev/PhotosByElie/tmp/sidecar-picked-ai-previews/001-DJI_20250513_125129_637_video-900.jpg",
+      "queueIndex": 1,
+      "recommendedAiRung": "filename-gps",
+      "returnCode": 0,
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "assetId": "959EB510-11CA-477C-ABAD-F8A9F1BF53BF/L0/001",
+      "filename": "DJI_20250513_125256_069_video.mp4",
+      "locationLabel": "Florence, Tuscany, Italy",
+      "mediaType": "video",
+      "metadataState": "proposed",
+      "ok": true,
+      "previewPath": "/Users/ecohen/Dev/PhotosByElie/tmp/sidecar-picked-ai-previews/002-DJI_20250513_125256_069_video-900.jpg",
+      "queueIndex": 2,
+      "recommendedAiRung": "filename-gps",
+      "returnCode": 0,
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "assetId": "D98A7189-4E14-4485-861B-951ED18831EF/L0/001",
+      "filename": "DJI_20250513_125313_403_video.mp4",
+      "locationLabel": "Florence, Tuscany, Italy",
+      "mediaType": "video",
+      "metadataState": "proposed",
+      "ok": true,
+      "previewPath": "/Users/ecohen/Dev/PhotosByElie/tmp/sidecar-picked-ai-previews/003-DJI_20250513_125313_403_video-900.jpg",
+      "queueIndex": 3,
+      "recommendedAiRung": "filename-gps",
+      "returnCode": 0,
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "assetId": "DBC8658D-1645-4B03-B539-ED157AB03ED9/L0/001",
+      "filename": "DJI_20250513_125402_200_video.mp4",
+      "locationLabel": "Florence, Tuscany, Italy",
+      "mediaType": "video",
+      "metadataState": "proposed",
+      "ok": true,
+      "previewPath": "/Users/ecohen/Dev/PhotosByElie/tmp/sidecar-picked-ai-previews/004-DJI_20250513_125402_200_video-900.jpg",
+      "queueIndex": 4,
+      "recommendedAiRung": "filename-gps",
+      "returnCode": 0,
+      "stderr": "",
+      "stdout": ""
+    }
+  ],
+  "message": "Preview export uses PhotosByElie Photos Bridge.app through LaunchServices; do not replace this with raw Swift.",
+  "mode": "picked-only-ai-preview-export",
+  "ok": true,
+  "plannedCount": 4,
+  "previewRoot": "/Users/ecohen/Dev/PhotosByElie/tmp/sidecar-picked-ai-previews",
+  "task": "sidecar-picked-ai-metadata-preview-export"
+}

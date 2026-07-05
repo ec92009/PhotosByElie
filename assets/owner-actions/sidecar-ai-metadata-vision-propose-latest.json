@@ -1,0 +1,110 @@
+{
+  "generatedAt": "2026-07-05T07:28:29.335233Z",
+  "ok": true,
+  "result": {
+    "dryRun": false,
+    "inputCount": 4,
+    "message": "Wrote vision-backed Sidecar Review proposals only; no Photos write-back rows were queued.",
+    "mode": "picked-only-ai-metadata-vision-proposals",
+    "ok": true,
+    "proposed": [
+      {
+        "assetId": "7D6383D7-AE23-4065-BF6D-D4A30990281C/L0/001",
+        "dryRun": false,
+        "filename": "DJI_20250513_125129_637_video.mp4",
+        "keywords": [
+          "Florence",
+          "Tuscany",
+          "Italy",
+          "Museum/Gallery",
+          "Classical sculpture",
+          "Statue",
+          "Sculpture detail"
+        ],
+        "locationLabel": "Florence, Tuscany, Italy",
+        "metadataAiEvidence": [
+          "preview-vision",
+          "preview-manifest",
+          "preview-path"
+        ],
+        "metadataAiNote": "Preview shows a close, low-detail poster frame of a classical statue or sculpture in Florence; no specific venue or statue identity is asserted. Preview: /Users/ecohen/Dev/PhotosByElie/tmp/sidecar-picked-ai-previews/001-DJI_20250513_125129_637_video-900.jpg",
+        "metadataAiRung": "vision-description",
+        "title": "Florence Classical Sculpture Detail"
+      },
+      {
+        "assetId": "959EB510-11CA-477C-ABAD-F8A9F1BF53BF/L0/001",
+        "dryRun": false,
+        "filename": "DJI_20250513_125256_069_video.mp4",
+        "keywords": [
+          "Florence",
+          "Tuscany",
+          "Italy",
+          "Museum/Gallery",
+          "Classical sculpture",
+          "Statue",
+          "Gallery interior"
+        ],
+        "locationLabel": "Florence, Tuscany, Italy",
+        "metadataAiEvidence": [
+          "preview-vision",
+          "preview-manifest",
+          "preview-path"
+        ],
+        "metadataAiNote": "Preview shows a low-detail vertical video poster frame with a classical statue in a Florence gallery-like interior; frame quality is too low for a named statue or venue. Preview: /Users/ecohen/Dev/PhotosByElie/tmp/sidecar-picked-ai-previews/002-DJI_20250513_125256_069_video-900.jpg",
+        "metadataAiRung": "vision-description",
+        "title": "Florence Gallery Statue Video"
+      },
+      {
+        "assetId": "D98A7189-4E14-4485-861B-951ED18831EF/L0/001",
+        "dryRun": false,
+        "filename": "DJI_20250513_125313_403_video.mp4",
+        "keywords": [
+          "Florence",
+          "Tuscany",
+          "Italy",
+          "Museum/Gallery",
+          "Classical sculpture",
+          "Statue",
+          "Gallery interior",
+          "Arches"
+        ],
+        "locationLabel": "Florence, Tuscany, Italy",
+        "metadataAiEvidence": [
+          "preview-vision",
+          "preview-manifest",
+          "preview-path"
+        ],
+        "metadataAiNote": "Preview shows a low-detail horizontal poster frame of a classical statue, visitors, and arched gallery architecture in Florence; location remains city-level. Preview: /Users/ecohen/Dev/PhotosByElie/tmp/sidecar-picked-ai-previews/003-DJI_20250513_125313_403_video-900.jpg",
+        "metadataAiRung": "vision-description",
+        "title": "Florence Statue Gallery Interior"
+      },
+      {
+        "assetId": "DBC8658D-1645-4B03-B539-ED157AB03ED9/L0/001",
+        "dryRun": false,
+        "filename": "DJI_20250513_125402_200_video.mp4",
+        "keywords": [
+          "Florence",
+          "Tuscany",
+          "Italy",
+          "Museum/Gallery",
+          "Gallery interior",
+          "Arches",
+          "Classical architecture"
+        ],
+        "locationLabel": "Florence, Tuscany, Italy",
+        "metadataAiEvidence": [
+          "preview-vision",
+          "preview-manifest",
+          "preview-path"
+        ],
+        "metadataAiNote": "Preview shows a low-detail horizontal poster frame focused on arched gallery architecture in Florence; no private or address-level location details are added. Preview: /Users/ecohen/Dev/PhotosByElie/tmp/sidecar-picked-ai-previews/004-DJI_20250513_125402_200_video-900.jpg",
+        "metadataAiRung": "vision-description",
+        "title": "Florence Gallery Arches Video"
+      }
+    ],
+    "proposedCount": 4,
+    "skipped": [],
+    "skippedCount": 0
+  },
+  "task": "sidecar-picked-ai-metadata-vision-propose"
+}

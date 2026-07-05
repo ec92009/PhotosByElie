@@ -35,6 +35,8 @@ pixelmator.pro.imported-edits/
 # Local Owner workflow database.
 assets/owner-actions/Owner.sqlite
 assets/owner-actions/Owner.sqlite-*
+assets/owner-actions/Sidecar.sqlite
+assets/owner-actions/Sidecar.sqlite-*
 assets/owner-actions/pixelmator-edits.local.json
 assets/owner-actions/real-estate-clients.local.json
 assets/owner-actions/etsy-listing-packages/

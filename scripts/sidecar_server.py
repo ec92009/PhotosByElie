@@ -28,10 +28,12 @@ from sidecar_state_db import (
     mark_missing_assets,
     merge_state,
     mock_upload,
+    execute_upload_bridge_batch_item,
+    finish_upload_bridge_execute_batch,
+    prepare_upload_bridge_execute_batch,
     queue_upload_bridge,
     record_decision,
     record_decisions,
-    run_upload_bridge_export_dry_run,
     sidecar_sync_status,
     summary,
     upload_bridge_plan,
@@ -66,12 +68,16 @@ SIDECAR_SYNC_STATUS_PATH = "/__sidecar/sync-status"
 SIDECAR_MOCK_UPLOAD_PATH = "/__sidecar/mock-upload"
 SIDECAR_UPLOAD_BRIDGE_PATH = "/__sidecar/upload-bridge"
 SIDECAR_UPLOAD_BRIDGE_EXECUTE_PATH = "/__sidecar/upload-bridge-execute"
+SIDECAR_UPLOAD_BRIDGE_CANCEL_PATH = "/__sidecar/upload-bridge-cancel"
 SIDECAR_UPLOAD_BRIDGE_PLAN_PATH = "/__sidecar/upload-bridge-plan"
 SIDECAR_COMMIT_PLAN_PATH = "/__sidecar/commit-plan"
 SIDECAR_VERSION_PATH = "/__sidecar/version"
 SIDECAR_EMPTY_WASTEBASKET_PATH = "/__sidecar/empty-wastebasket"
 SIDECAR_INDEX_ROOT = Path("tmp/sidecar-index")
+SIDECAR_UPLOAD_BRIDGE_EXECUTE_LIMIT = 500
 APPLE_PHOTOS_PROGRESS_PREFIX = "PBE_APPLE_PHOTOS_PROGRESS "
+UPLOAD_BRIDGE_CANCEL_LOCK = threading.Lock()
+UPLOAD_BRIDGE_CANCEL_REQUESTS: set[str] = set()
 INDEX_JOB_LOCK = threading.Lock()
 INDEX_JOB: dict = {
     "ok": True,
@@ -85,6 +91,27 @@ INDEX_JOB: dict = {
     "error": "",
     "updatedAt": "",
 }
+
+
+def _set_upload_bridge_cancel_requested(upload_id: str) -> None:
+    if not upload_id:
+        return
+    with UPLOAD_BRIDGE_CANCEL_LOCK:
+        UPLOAD_BRIDGE_CANCEL_REQUESTS.add(upload_id)
+
+
+def _clear_upload_bridge_cancel_requested(upload_id: str) -> None:
+    if not upload_id:
+        return
+    with UPLOAD_BRIDGE_CANCEL_LOCK:
+        UPLOAD_BRIDGE_CANCEL_REQUESTS.discard(upload_id)
+
+
+def _upload_bridge_cancel_requested(upload_id: str) -> bool:
+    if not upload_id:
+        return False
+    with UPLOAD_BRIDGE_CANCEL_LOCK:
+        return upload_id in UPLOAD_BRIDGE_CANCEL_REQUESTS
 
 
 def sidecar_version(repo_root: Path) -> str:
@@ -226,6 +253,28 @@ def _run_apple_photos_bridge_app_index(repo_root: Path, args: list[str], destina
         "count": total_count,
         "totalCount": total_count,
     }
+
+
+def _run_apple_photos_bridge_app_task(repo_root: Path, args: list[str], timeout: int = 900) -> dict:
+    _ensure_apple_photos_bridge_app(repo_root)
+    try:
+        result = subprocess.run(
+            ["open", "-W", "-n", str(APPLE_PHOTOS_BRIDGE_APP), "--args", *args],
+            cwd=repo_root,
+            text=True,
+            capture_output=True,
+            timeout=timeout,
+            check=False,
+        )
+    except FileNotFoundError as error:
+        raise RuntimeError("macOS open is required to launch the bundled Apple Photos bridge.") from error
+    if result.returncode != 0:
+        return {
+            "ok": False,
+            "code": "photos_bridge_app_error",
+            "error": (result.stderr or result.stdout or f"Apple Photos bridge app exited {result.returncode}").strip(),
+        }
+    return {"ok": True}
 
 
 def _ensure_apple_photos_bridge_app(repo_root: Path) -> None:
@@ -520,6 +569,9 @@ class SidecarHandler(SimpleHTTPRequestHandler):
         if path == SIDECAR_UPLOAD_BRIDGE_EXECUTE_PATH:
             self._handle_upload_bridge_execute()
             return
+        if path == SIDECAR_UPLOAD_BRIDGE_CANCEL_PATH:
+            self._handle_upload_bridge_cancel()
+            return
         if path == SIDECAR_INDEX_REFRESH_PATH:
             self._handle_index_refresh()
             return
@@ -676,13 +728,20 @@ class SidecarHandler(SimpleHTTPRequestHandler):
             return
         cache_path = _preview_cache_path(Path.cwd(), asset_id, max_pixel)
         if not cache_path.exists():
-            payload = _run_apple_photos_bridge(
+            payload = _run_apple_photos_bridge_app_task(
                 Path.cwd(),
                 ["preview", "--asset-id", asset_id, "--destination", str(cache_path), "--max-pixel", str(max_pixel)],
                 timeout=60,
             )
             if not payload.get("ok"):
                 self._send_json(HTTPStatus.BAD_GATEWAY, payload)
+                return
+            if not cache_path.exists():
+                self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {
+                    "ok": False,
+                    "code": "preview_cache_missing",
+                    "error": "Photos Bridge app did not create the preview cache file.",
+                })
                 return
         try:
             data = cache_path.read_bytes()
@@ -708,7 +767,7 @@ class SidecarHandler(SimpleHTTPRequestHandler):
         video_path = candidates[0] if candidates else None
         payload: dict = {}
         if video_path is None:
-            payload = _run_apple_photos_bridge(
+            payload = _run_apple_photos_bridge_app_task(
                 Path.cwd(),
                 ["video", "--asset-id", asset_id, "--destination", str(stem)],
                 timeout=120,
@@ -716,8 +775,8 @@ class SidecarHandler(SimpleHTTPRequestHandler):
             if not payload.get("ok"):
                 self._send_json(HTTPStatus.BAD_GATEWAY, payload)
                 return
-            destination = str(payload.get("destination") or "")
-            video_path = Path(destination) if destination else None
+            candidates = _video_cache_candidates(stem)
+            video_path = candidates[0] if candidates else None
         if video_path is None or not video_path.exists():
             self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": "Video cache file was not created."})
             return
@@ -924,7 +983,8 @@ class SidecarHandler(SimpleHTTPRequestHandler):
         try:
             payload = self._read_json_body()
             requested_count = int(payload.get("count") or payload.get("limit") or 1)
-            requested_count = max(1, min(requested_count, 50))
+            requested_count = max(1, min(requested_count, SIDECAR_UPLOAD_BRIDGE_EXECUTE_LIMIT))
+            upload_id = str(payload.get("uploadId") or payload.get("upload_id") or uuid.uuid4().hex)
             allow_overwrite = bool(payload.get("allowR2Overwrite") or payload.get("allow_r2_overwrite"))
             allow_icloud_downloads = payload.get("allowIcloudDownloads", payload.get("allow_icloud_downloads", True)) is not False
         except ValueError as error:
@@ -943,39 +1003,138 @@ class SidecarHandler(SimpleHTTPRequestHandler):
         totals = {
             "requestedCount": requested_count,
             "completedCount": 0,
+            "uploadedItemCount": 0,
+            "failedItemCount": 0,
             "uploadedKeyCount": 0,
             "skippedCollisionCount": 0,
             "failedUploadCount": 0,
         }
+        _clear_upload_bridge_cancel_requested(upload_id)
         self._write_ndjson_event({
             "ok": True,
             "event": "start",
+            "uploadId": upload_id,
             "count": requested_count,
             "message": f"Starting Upload Bridge real upload for up to {requested_count} item(s).",
         })
-        for index in range(requested_count):
+        self._write_ndjson_event({
+            "ok": True,
+            "event": "planning",
+            "uploadId": upload_id,
+            "count": requested_count,
+            "message": "Planning Upload Bridge batch and checking R2 coverage once.",
+        })
+        try:
+            batch = prepare_upload_bridge_execute_batch(
+                Path.cwd(),
+                limit=requested_count,
+                allow_r2_overwrite=allow_overwrite,
+            )
+        except Exception as error:  # noqa: BLE001 - stream setup failure to the UI.
+            totals["failedItemCount"] += 1
+            self._write_ndjson_event({
+                "ok": False,
+                "event": "error",
+                "uploadId": upload_id,
+                "index": 0,
+                "count": requested_count,
+                "error": str(error),
+                "totals": totals,
+            })
+            self._write_ndjson_event({
+                "ok": False,
+                "event": "done",
+                "uploadId": upload_id,
+                "status": "failed",
+                "cancelled": False,
+                "totals": totals,
+                "message": f"Upload Bridge failed during batch planning: {error}",
+            })
+            _clear_upload_bridge_cancel_requested(upload_id)
+            return
+
+        batch_items = batch.get("items") or []
+        batch_summary = batch.get("summary") or {}
+        batch_run_id = str(batch.get("runId") or "")
+        totals["requestedCount"] = len(batch_items) if batch_items else requested_count
+        self._write_ndjson_event({
+            "ok": bool(batch.get("ok")),
+            "event": "planned",
+            "uploadId": upload_id,
+            "runId": batch_run_id,
+            "count": len(batch_items),
+            "requestedCount": requested_count,
+            "summary": batch_summary,
+            "message": batch.get("message") or "",
+        })
+        if not batch_items:
+            try:
+                plan = upload_plan(Path.cwd(), limit=500)
+            except Exception as error:  # noqa: BLE001
+                plan = {"ok": False, "error": str(error)}
+            self._write_ndjson_event({
+                "ok": True,
+                "event": "done",
+                "uploadId": upload_id,
+                "runId": batch_run_id,
+                "status": str(batch.get("status") or "done"),
+                "cancelled": False,
+                "totals": totals,
+                "uploadPlan": plan,
+                "message": batch.get("message") or "No Upload Bridge rows were available.",
+            })
+            _clear_upload_bridge_cancel_requested(upload_id)
+            return
+
+        canceled = False
+        terminal_error = ""
+        for index, planned_item in enumerate(batch_items):
+            if _upload_bridge_cancel_requested(upload_id):
+                canceled = True
+                self._write_ndjson_event({
+                    "ok": True,
+                    "event": "cancelled",
+                    "uploadId": upload_id,
+                    "index": index + 1,
+                    "count": len(batch_items),
+                    "totals": totals,
+                    "message": "Upload Bridge interrupt requested; stopped before starting the next item.",
+                })
+                break
             self._write_ndjson_event({
                 "ok": True,
                 "event": "item-start",
+                "uploadId": upload_id,
                 "index": index + 1,
-                "count": requested_count,
-                "message": f"Uploading item {index + 1} of {requested_count}.",
+                "count": len(batch_items),
+                "item": {
+                    "assetId": planned_item.get("assetId") or "",
+                    "photoId": planned_item.get("photoId") or "",
+                    "filename": planned_item.get("filename") or "",
+                    "mediaType": planned_item.get("mediaType") or "",
+                },
+                "message": f"Uploading item {index + 1} of {len(batch_items)}.",
             })
             try:
-                result = run_upload_bridge_export_dry_run(
+                result = execute_upload_bridge_batch_item(
                     Path.cwd(),
-                    limit=5000,
+                    run_id=batch_run_id,
+                    run_root=Path(str(batch.get("spoolRoot") or "")),
+                    export_root=Path(str(batch.get("exportRoot") or "")),
+                    item=planned_item,
                     allow_icloud_downloads=allow_icloud_downloads,
-                    execute_upload=True,
                     allow_r2_overwrite=allow_overwrite,
                 )
             except Exception as error:  # noqa: BLE001 - stream the failure to the UI.
+                totals["failedItemCount"] += 1
                 totals["failedUploadCount"] += 1
+                terminal_error = str(error)
                 self._write_ndjson_event({
                     "ok": False,
                     "event": "error",
+                    "uploadId": upload_id,
                     "index": index + 1,
-                    "count": requested_count,
+                    "count": len(batch_items),
                     "error": str(error),
                     "totals": totals,
                 })
@@ -986,16 +1145,22 @@ class SidecarHandler(SimpleHTTPRequestHandler):
             uploaded_keys = int(summary_payload.get("uploadedKeyCount") or 0)
             skipped_keys = int(summary_payload.get("skippedCollisionCount") or 0)
             failed_keys = int(summary_payload.get("failedUploadCount") or 0)
+            failed_items = int(summary_payload.get("failedCount") or 0)
+            status = str(result.get("status") or "")
+            item_failed = bool(item) and (failed_items > 0 or status in {"export_failed", "upload_failed"} or not result.get("ok"))
+            item_uploaded = bool(item) and status in {"uploaded", "uploaded_with_skips"} and not item_failed
             totals["completedCount"] += 1 if item else 0
+            totals["uploadedItemCount"] += 1 if item_uploaded else 0
+            totals["failedItemCount"] += 1 if item_failed else 0
             totals["uploadedKeyCount"] += uploaded_keys
             totals["skippedCollisionCount"] += skipped_keys
             totals["failedUploadCount"] += failed_keys
-            status = str(result.get("status") or "")
             self._write_ndjson_event({
                 "ok": bool(result.get("ok")),
                 "event": "item-complete",
+                "uploadId": upload_id,
                 "index": index + 1,
-                "count": requested_count,
+                "count": len(batch_items),
                 "status": status,
                 "runId": result.get("runId") or "",
                 "item": {
@@ -1004,32 +1169,87 @@ class SidecarHandler(SimpleHTTPRequestHandler):
                     "filename": item.get("filename") or "",
                     "mediaType": item.get("mediaType") or "",
                     "status": item.get("status") or status,
+                    "export": item.get("export") or {},
                     "upload": item.get("upload") or {},
+                    "timings": item.get("timings") or {},
                 },
                 "summary": summary_payload,
                 "totals": totals,
                 "message": result.get("message") or "",
             })
-            if status in {"no-queued-items", "no-uploadable-items"}:
+            if status == "upload_failed" or failed_keys:
+                terminal_error = str((item.get("upload") or {}).get("error") or "Upload Bridge R2 upload failed.")
                 break
-            if not result.get("ok") or failed_keys:
+            if not result.get("ok") and status != "export_failed":
+                terminal_error = result.get("message") or f"Upload Bridge item failed with status {status}."
                 break
 
         try:
             plan = upload_plan(Path.cwd(), limit=500)
         except Exception as error:  # noqa: BLE001 - progress is more important than final plan refresh.
             plan = {"ok": False, "error": str(error)}
+        final_verb = "interrupted" if canceled else "finished"
+        batch_status = "cancelled" if canceled else ("completed_with_failures" if terminal_error or totals["failedItemCount"] else "completed")
+        final_summary = {
+            **batch_summary,
+            **totals,
+            "uploadId": upload_id,
+            "cancelled": canceled,
+            "terminalError": terminal_error,
+        }
+        if batch_run_id:
+            try:
+                finish_upload_bridge_execute_batch(
+                    Path.cwd(),
+                    run_id=batch_run_id,
+                    status=batch_status,
+                    summary=final_summary,
+                    error_text=terminal_error,
+                )
+            except Exception as error:  # noqa: BLE001 - do not hide upload results behind finalization.
+                final_summary["finalizeError"] = str(error)
+        final_message = (
+            f"Upload Bridge {final_verb}: {totals['completedCount']} processed item(s), "
+            f"{totals['uploadedItemCount']} uploaded item(s), "
+            f"{totals['uploadedKeyCount']} uploaded key(s), "
+            f"{totals['skippedCollisionCount']} skipped collision key(s), "
+            f"{totals['failedItemCount']} failed item(s), "
+            f"{totals['failedUploadCount']} failed key(s)."
+        )
         self._write_ndjson_event({
-            "ok": totals["failedUploadCount"] == 0,
+            "ok": canceled or not terminal_error,
             "event": "done",
+            "uploadId": upload_id,
+            "runId": batch_run_id,
+            "status": batch_status,
+            "cancelled": canceled,
             "totals": totals,
+            "summary": final_summary,
             "uploadPlan": plan,
-            "message": (
-                f"Upload Bridge finished: {totals['completedCount']} item(s), "
-                f"{totals['uploadedKeyCount']} uploaded key(s), "
-                f"{totals['skippedCollisionCount']} skipped collision key(s), "
-                f"{totals['failedUploadCount']} failed key(s)."
-            ),
+            "message": final_message,
+        })
+        _clear_upload_bridge_cancel_requested(upload_id)
+
+    def _handle_upload_bridge_cancel(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            payload = self._read_json_body()
+            upload_id = str(payload.get("uploadId") or payload.get("upload_id") or "").strip()
+            if not upload_id:
+                raise ValueError("uploadId is required.")
+            _set_upload_bridge_cancel_requested(upload_id)
+        except ValueError as error:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
+            return
+        except Exception as error:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
+            return
+        self._send_json(HTTPStatus.OK, {
+            "ok": True,
+            "uploadId": upload_id,
+            "message": "Upload Bridge interrupt requested. The current item will finish before the run stops.",
         })
 
     def _handle_commit_plan(self) -> None:

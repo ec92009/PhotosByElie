@@ -996,13 +996,25 @@ func convertImageResourceToJPEG(sourceURL: URL, destinationURL: URL) -> Result<V
     guard CGImageSourceGetCount(source) > 0 else {
         return .failure(BridgeError(code: "source_image_empty", message: "The local image resource did not contain an image frame."))
     }
+    let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any] ?? [:]
+    let width = properties[kCGImagePropertyPixelWidth] as? Int ?? 0
+    let height = properties[kCGImagePropertyPixelHeight] as? Int ?? 0
+    let maxPixel = max(width, height, 256)
+    let thumbnailOptions: [CFString: Any] = [
+        kCGImageSourceCreateThumbnailFromImageAlways: true,
+        kCGImageSourceCreateThumbnailWithTransform: true,
+        kCGImageSourceThumbnailMaxPixelSize: maxPixel,
+    ]
+    guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, thumbnailOptions as CFDictionary) else {
+        return .failure(BridgeError(code: "jpeg_conversion_failed", message: "Could not apply the local image orientation transform."))
+    }
     guard let destination = CGImageDestinationCreateWithURL(destinationURL as CFURL, "public.jpeg" as CFString, 1, nil) else {
         return .failure(BridgeError(code: "jpeg_destination_failed", message: "Could not create the temporary JPEG destination."))
     }
-    let properties: [CFString: Any] = [
+    let destinationProperties: [CFString: Any] = [
         kCGImageDestinationLossyCompressionQuality: 0.95,
     ]
-    CGImageDestinationAddImageFromSource(destination, source, 0, properties as CFDictionary)
+    CGImageDestinationAddImage(destination, image, destinationProperties as CFDictionary)
     guard CGImageDestinationFinalize(destination) else {
         return .failure(BridgeError(code: "jpeg_conversion_failed", message: "Could not convert the local image resource to JPEG."))
     }

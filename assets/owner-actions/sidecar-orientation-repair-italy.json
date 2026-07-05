@@ -1,0 +1,388 @@
+{
+  "ok": true,
+  "repairedCount": 19,
+  "failedCount": 0,
+  "repaired": [
+    {
+      "mediaId": "001-9d59c6de9a",
+      "title": "Florence Flowering Garden Wall",
+      "objects": [
+        {
+          "key": "expo/001-9d59c6de9a_900.jpg",
+          "path": "/Users/ecohen/Dev/PhotosByElie/assets/owner-actions/sidecar-upload-runs/ub-20260704T153419Z-2afd37af/public-artifacts/expo/001-9d59c6de9a_900.jpg",
+          "width": 675,
+          "height": 900,
+          "uploaded": true
+        },
+        {
+          "key": "expo/001-9d59c6de9a_1800.jpg",
+          "path": "/Users/ecohen/Dev/PhotosByElie/assets/owner-actions/sidecar-upload-runs/ub-20260704T153419Z-2afd37af/public-artifacts/expo/001-9d59c6de9a_1800.jpg",
+          "width": 1350,
+          "height": 1800,
+          "uploaded": true
+        }
+      ]
+    },
+    {
+      "mediaId": "001-d71ceb77f2",
+      "title": "Pisa Marble Facade Detail",
+      "objects": [
+        {
+          "key": "expo/001-d71ceb77f2_900.jpg",
+          "path": "/Users/ecohen/Dev/PhotosByElie/assets/owner-actions/sidecar-upload-runs/ub-20260704T021024Z-03ac8433/public-artifacts/expo/001-d71ceb77f2_900.jpg",
+          "width": 506,
+          "height": 900,
+          "uploaded": true
+        },
+        {
+          "key": "expo/001-d71ceb77f2_1800.jpg",
+          "path": "/Users/ecohen/Dev/PhotosByElie/assets/owner-actions/sidecar-upload-runs/ub-20260704T021024Z-03ac8433/public-artifacts/expo/001-d71ceb77f2_1800.jpg",
+          "width": 1012,
+          "height": 1800,
+          "uploaded": true
+        }
+      ]
+    },
+    {
+      "mediaId": "001-4fe29d62ff",
+      "title": "Leaning Tower of Pisa",
+      "objects": [
+        {
+          "key": "expo/001-4fe29d62ff_900.jpg",
+          "path": "/Users/ecohen/Dev/PhotosByElie/assets/owner-actions/sidecar-upload-runs/ub-20260704T021008Z-43ae6f01/public-artifacts/expo/001-4fe29d62ff_900.jpg",
+          "width": 675,
+          "height": 900,
+          "uploaded": true
+        },
+        {
+          "key": "expo/001-4fe29d62ff_1800.jpg",
+          "path": "/Users/ecohen/Dev/PhotosByElie/assets/owner-actions/sidecar-upload-runs/ub-20260704T021008Z-43ae6f01/public-artifacts/expo/001-4fe29d62ff_1800.jpg",
+          "width": 1350,
+          "height": 1800,
+          "uploaded": true
+        }
+      ]
+    },
+    {
+      "mediaId": "001-5526287d88",
+      "title": "Leaning Tower of Pisa",
+      "objects": [
+        {
+          "key": "expo/001-5526287d88_900.jpg",
+          "path": "/Users/ecohen/Dev/PhotosByElie/assets/owner-actions/sidecar-upload-runs/ub-20260704T020952Z-ec2aae07/public-artifacts/expo/001-5526287d88_900.jpg",
+          "width": 675,
+          "height": 900,
+          "uploaded": true
+        },
+        {
+          "key": "expo/001-5526287d88_1800.jpg",
+          "path": "/Users/ecohen/Dev/PhotosByElie/assets/owner-actions/sidecar-upload-runs/ub-20260704T020952Z-ec2aae07/public-artifacts/expo/001-5526287d88_1800.jpg",
+          "width": 1350,
+          "height": 1800,
+          "uploaded": true
+        }
+      ]
+    },
+    {
+      "mediaId": "001-8b970cecd9",
+      "title": "Pisa Cathedral Doorway",
+      "objects": [
+        {
+          "key": "expo/001-8b970cecd9_900.jpg",
+          "path": "/Users/ecohen/Dev/PhotosByElie/assets/owner-actions/sidecar-upload-runs/ub-20260704T020834Z-f173dc74/public-artifacts/expo/001-8b970cecd9_900.jpg",
+          "width": 675,
+          "height": 900,
+          "uploaded": true
+        },
+        {
+          "key": "expo/001-8b970cecd9_1800.jpg",
+          "path": "/Users/ecohen/Dev/PhotosByElie/assets/owner-actions/sidecar-upload-runs/ub-20260704T020834Z-f173dc74/public-artifacts/expo/001-8b970cecd9_1800.jpg",
+          "width": 1350,
+          "height": 1800,
+          "uploaded": true
+        }
+      ]
+    },
+    {
+      "mediaId": "001-53c763c7df",
+      "title": "Pisa Cathedral Entrance",
+      "objects": [
+        {
+          "key": "expo/001-53c763c7df_900.jpg",
+          "path": "/Users/ecohen/Dev/PhotosByElie/assets/owner-actions/sidecar-upload-runs/ub-20260704T020819Z-1d056707/public-artifacts/expo/001-53c763c7df_900.jpg",
+          "width": 675,
+          "height": 900,
+          "uploaded": true
+        },
+        {
+          "key": "expo/001-53c763c7df_1800.jpg",
+          "path": "/Users/ecohen/Dev/PhotosByElie/assets/owner-actions/sidecar-upload-runs/ub-20260704T020819Z-1d056707/public-artifacts/expo/001-53c763c7df_1800.jpg",
+          "width": 1350,
+          "height": 1800,
+          "uploaded": true
+        }
+      ]
+    },
+    {
+      "mediaId": "001-ae4ed8911b",
+      "title": "Pisa Baptistery",
+      "objects": [
+        {
+          "key": "expo/001-ae4ed8911b_900.jpg",
+          "path": "/Users/ecohen/Dev/PhotosByElie/assets/owner-actions/sidecar-upload-runs/ub-20260704T020803Z-ab59503d/public-artifacts/expo/001-ae4ed8911b_900.jpg",
+          "width": 675,
+          "height": 900,
+          "uploaded": true
+        },
+        {
+          "key": "expo/001-ae4ed8911b_1800.jpg",
+          "path": "/Users/ecohen/Dev/PhotosByElie/assets/owner-actions/sidecar-upload-runs/ub-20260704T020803Z-ab59503d/public-artifacts/expo/001-ae4ed8911b_1800.jpg",
+          "width": 1350,
+          "height": 1800,
+          "uploaded": true
+        }
+      ]
+    },
+    {
+      "mediaId": "001-69617b1af9",
+      "title": "Pisa Baptistery",
+      "objects": [
+        {
+          "key": "expo/001-69617b1af9_900.jpg",
+          "path": "/Users/ecohen/Dev/PhotosByElie/assets/owner-actions/sidecar-upload-runs/ub-20260704T020747Z-a3efb067/public-artifacts/expo/001-69617b1af9_900.jpg",
+          "width": 675,
+          "height": 900,
+          "uploaded": true
+        },
+        {
+          "key": "expo/001-69617b1af9_1800.jpg",
+          "path": "/Users/ecohen/Dev/PhotosByElie/assets/owner-actions/sidecar-upload-runs/ub-20260704T020747Z-a3efb067/public-artifacts/expo/001-69617b1af9_1800.jpg",
+          "width": 1350,
+          "height": 1800,
+          "uploaded": true
+        }
+      ]
+    },
+    {
+      "mediaId": "001-d80240a5e3",
+      "title": "Pisa Baptistery Entrance",
+      "objects": [
+        {
+          "key": "expo/001-d80240a5e3_900.jpg",
+          "path": "/Users/ecohen/Dev/PhotosByElie/assets/owner-actions/sidecar-upload-runs/ub-20260704T020732Z-a6365b94/public-artifacts/expo/001-d80240a5e3_900.jpg",
+          "width": 675,
+          "height": 900,
+          "uploaded": true
+        },
+        {
+          "key": "expo/001-d80240a5e3_1800.jpg",
+          "path": "/Users/ecohen/Dev/PhotosByElie/assets/owner-actions/sidecar-upload-runs/ub-20260704T020732Z-a6365b94/public-artifacts/expo/001-d80240a5e3_1800.jpg",
+          "width": 1350,
+          "height": 1800,
+          "uploaded": true
+        }
+      ]
+    },
+    {
+      "mediaId": "001-abb3ba6e0f",
+      "title": "Pisa Baptistery and Lawn",
+      "objects": [
+        {
+          "key": "expo/001-abb3ba6e0f_900.jpg",
+          "path": "/Users/ecohen/Dev/PhotosByElie/assets/owner-actions/sidecar-upload-runs/ub-20260704T020716Z-af1bd2e9/public-artifacts/expo/001-abb3ba6e0f_900.jpg",
+          "width": 763,
+          "height": 900,
+          "uploaded": true
+        },
+        {
+          "key": "expo/001-abb3ba6e0f_1800.jpg",
+          "path": "/Users/ecohen/Dev/PhotosByElie/assets/owner-actions/sidecar-upload-runs/ub-20260704T020716Z-af1bd2e9/public-artifacts/expo/001-abb3ba6e0f_1800.jpg",
+          "width": 1526,
+          "height": 1800,
+          "uploaded": true
+        }
+      ]
+    },
+    {
+      "mediaId": "001-ca3691704b",
+      "title": "Pisa Cathedral Facade Detail",
+      "objects": [
+        {
+          "key": "expo/001-ca3691704b_900.jpg",
+          "path": "/Users/ecohen/Dev/PhotosByElie/assets/owner-actions/sidecar-upload-runs/ub-20260704T020628Z-a79f6f73/public-artifacts/expo/001-ca3691704b_900.jpg",
+          "width": 630,
+          "height": 900,
+          "uploaded": true
+        },
+        {
+          "key": "expo/001-ca3691704b_1800.jpg",
+          "path": "/Users/ecohen/Dev/PhotosByElie/assets/owner-actions/sidecar-upload-runs/ub-20260704T020628Z-a79f6f73/public-artifacts/expo/001-ca3691704b_1800.jpg",
+          "width": 1260,
+          "height": 1800,
+          "uploaded": true
+        }
+      ]
+    },
+    {
+      "mediaId": "001-5513ccc829",
+      "title": "Pisa Cathedral Approach",
+      "objects": [
+        {
+          "key": "expo/001-5513ccc829_900.jpg",
+          "path": "/Users/ecohen/Dev/PhotosByElie/assets/owner-actions/sidecar-upload-runs/ub-20260704T020613Z-a439c35b/public-artifacts/expo/001-5513ccc829_900.jpg",
+          "width": 675,
+          "height": 900,
+          "uploaded": true
+        },
+        {
+          "key": "expo/001-5513ccc829_1800.jpg",
+          "path": "/Users/ecohen/Dev/PhotosByElie/assets/owner-actions/sidecar-upload-runs/ub-20260704T020613Z-a439c35b/public-artifacts/expo/001-5513ccc829_1800.jpg",
+          "width": 1350,
+          "height": 1800,
+          "uploaded": true
+        }
+      ]
+    },
+    {
+      "mediaId": "001-f76c04347a",
+      "title": "Pisa Cathedral Facade",
+      "objects": [
+        {
+          "key": "expo/001-f76c04347a_900.jpg",
+          "path": "/Users/ecohen/Dev/PhotosByElie/assets/owner-actions/sidecar-upload-runs/ub-20260704T020558Z-60740e1d/public-artifacts/expo/001-f76c04347a_900.jpg",
+          "width": 675,
+          "height": 900,
+          "uploaded": true
+        },
+        {
+          "key": "expo/001-f76c04347a_1800.jpg",
+          "path": "/Users/ecohen/Dev/PhotosByElie/assets/owner-actions/sidecar-upload-runs/ub-20260704T020558Z-60740e1d/public-artifacts/expo/001-f76c04347a_1800.jpg",
+          "width": 1350,
+          "height": 1800,
+          "uploaded": true
+        }
+      ]
+    },
+    {
+      "mediaId": "001-fa0b01e363",
+      "title": "Pisa Cathedral Facade",
+      "objects": [
+        {
+          "key": "expo/001-fa0b01e363_900.jpg",
+          "path": "/Users/ecohen/Dev/PhotosByElie/assets/owner-actions/sidecar-upload-runs/ub-20260704T020542Z-b1bf4523/public-artifacts/expo/001-fa0b01e363_900.jpg",
+          "width": 675,
+          "height": 900,
+          "uploaded": true
+        },
+        {
+          "key": "expo/001-fa0b01e363_1800.jpg",
+          "path": "/Users/ecohen/Dev/PhotosByElie/assets/owner-actions/sidecar-upload-runs/ub-20260704T020542Z-b1bf4523/public-artifacts/expo/001-fa0b01e363_1800.jpg",
+          "width": 1350,
+          "height": 1800,
+          "uploaded": true
+        }
+      ]
+    },
+    {
+      "mediaId": "001-731188735c",
+      "title": "Pisa Cathedral Facade",
+      "objects": [
+        {
+          "key": "expo/001-731188735c_900.jpg",
+          "path": "/Users/ecohen/Dev/PhotosByElie/assets/owner-actions/sidecar-upload-runs/ub-20260704T020526Z-d6a6fce8/public-artifacts/expo/001-731188735c_900.jpg",
+          "width": 675,
+          "height": 900,
+          "uploaded": true
+        },
+        {
+          "key": "expo/001-731188735c_1800.jpg",
+          "path": "/Users/ecohen/Dev/PhotosByElie/assets/owner-actions/sidecar-upload-runs/ub-20260704T020526Z-d6a6fce8/public-artifacts/expo/001-731188735c_1800.jpg",
+          "width": 1350,
+          "height": 1800,
+          "uploaded": true
+        }
+      ]
+    },
+    {
+      "mediaId": "001-0be874564a",
+      "title": "Pisa Cathedral Facade With Visitors",
+      "objects": [
+        {
+          "key": "expo/001-0be874564a_900.jpg",
+          "path": "/Users/ecohen/Dev/PhotosByElie/assets/owner-actions/sidecar-upload-runs/ub-20260704T020510Z-bc45988d/public-artifacts/expo/001-0be874564a_900.jpg",
+          "width": 675,
+          "height": 900,
+          "uploaded": true
+        },
+        {
+          "key": "expo/001-0be874564a_1800.jpg",
+          "path": "/Users/ecohen/Dev/PhotosByElie/assets/owner-actions/sidecar-upload-runs/ub-20260704T020510Z-bc45988d/public-artifacts/expo/001-0be874564a_1800.jpg",
+          "width": 1350,
+          "height": 1800,
+          "uploaded": true
+        }
+      ]
+    },
+    {
+      "mediaId": "001-e4ddaf9620",
+      "title": "Pisa Baptistery Doorway",
+      "objects": [
+        {
+          "key": "expo/001-e4ddaf9620_900.jpg",
+          "path": "/Users/ecohen/Dev/PhotosByElie/assets/owner-actions/sidecar-upload-runs/ub-20260704T020455Z-f49dd077/public-artifacts/expo/001-e4ddaf9620_900.jpg",
+          "width": 675,
+          "height": 900,
+          "uploaded": true
+        },
+        {
+          "key": "expo/001-e4ddaf9620_1800.jpg",
+          "path": "/Users/ecohen/Dev/PhotosByElie/assets/owner-actions/sidecar-upload-runs/ub-20260704T020455Z-f49dd077/public-artifacts/expo/001-e4ddaf9620_1800.jpg",
+          "width": 1350,
+          "height": 1800,
+          "uploaded": true
+        }
+      ]
+    },
+    {
+      "mediaId": "001-663e2b2c0d",
+      "title": "Pisa Baptistery Entrance Detail",
+      "objects": [
+        {
+          "key": "expo/001-663e2b2c0d_900.jpg",
+          "path": "/Users/ecohen/Dev/PhotosByElie/assets/owner-actions/sidecar-upload-runs/ub-20260704T020438Z-089ef393/public-artifacts/expo/001-663e2b2c0d_900.jpg",
+          "width": 675,
+          "height": 900,
+          "uploaded": true
+        },
+        {
+          "key": "expo/001-663e2b2c0d_1800.jpg",
+          "path": "/Users/ecohen/Dev/PhotosByElie/assets/owner-actions/sidecar-upload-runs/ub-20260704T020438Z-089ef393/public-artifacts/expo/001-663e2b2c0d_1800.jpg",
+          "width": 1350,
+          "height": 1800,
+          "uploaded": true
+        }
+      ]
+    },
+    {
+      "mediaId": "001-a212797ad7",
+      "title": "Pisa Cathedral Marble Detail",
+      "objects": [
+        {
+          "key": "expo/001-a212797ad7_900.jpg",
+          "path": "/Users/ecohen/Dev/PhotosByElie/assets/owner-actions/sidecar-upload-runs/ub-20260704T020421Z-464d50f3/public-artifacts/expo/001-a212797ad7_900.jpg",
+          "width": 675,
+          "height": 900,
+          "uploaded": true
+        },
+        {
+          "key": "expo/001-a212797ad7_1800.jpg",
+          "path": "/Users/ecohen/Dev/PhotosByElie/assets/owner-actions/sidecar-upload-runs/ub-20260704T020421Z-464d50f3/public-artifacts/expo/001-a212797ad7_1800.jpg",
+          "width": 1350,
+          "height": 1800,
+          "uploaded": true
+        }
+      ]
+    }
+  ],
+  "failed": []
+}

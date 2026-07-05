@@ -1334,12 +1334,30 @@ button.is-busy,
   padding: .45rem .58rem;
 }
 
+.sidecar-real-upload-buttons {
+  display: grid;
+  gap: .38rem;
+}
+
 .sidecar-real-upload-action {
   width: 100%;
   min-height: 2.5rem;
   justify-content: center;
   border-color: color-mix(in srgb, var(--selected-frame) 62%, transparent);
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--selected-frame) 22%, transparent);
+}
+
+.sidecar-stop-upload-action {
+  width: 100%;
+  min-height: 2.5rem;
+  justify-content: center;
+  border-color: color-mix(in srgb, var(--danger, #b15b50) 50%, transparent);
+  color: color-mix(in srgb, var(--danger, #b15b50) 72%, var(--text));
+}
+
+.sidecar-stop-upload-action:disabled {
+  border-color: color-mix(in srgb, var(--text) 14%, transparent);
+  color: var(--muted);
 }
 
 .sidecar-upload-bridge-result {
@@ -1379,6 +1397,58 @@ button.is-busy,
 .sidecar-upload-bridge-progress.is-running {
   border-color: color-mix(in srgb, var(--selected-frame) 55%, transparent);
   background: color-mix(in srgb, var(--selected-frame) 10%, transparent);
+}
+
+.sidecar-upload-bridge-progress.is-canceling {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.sidecar-upload-bridge-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .38rem;
+  margin: 0 0 .45rem;
+}
+
+.sidecar-upload-bridge-metric {
+  display: grid;
+  min-height: 4.1rem;
+  align-content: center;
+  gap: .1rem;
+  border: 1px solid color-mix(in srgb, var(--text) 12%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 74%, transparent);
+  padding: .48rem .55rem;
+}
+
+.sidecar-upload-bridge-metric span {
+  color: color-mix(in srgb, var(--text) 68%, transparent);
+  font-size: .58rem;
+  font-weight: 900;
+  letter-spacing: .08em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.sidecar-upload-bridge-metric strong {
+  color: var(--text);
+  font-size: clamp(1.22rem, 3.2vw, 1.9rem);
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: .98;
+}
+
+.sidecar-upload-bridge-metric small {
+  color: var(--muted);
+  font-size: .6rem;
+  font-weight: 800;
+  line-height: 1.12;
+}
+
+.sidecar-upload-bridge-metric.is-warning {
+  border-color: color-mix(in srgb, var(--accent) 52%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 
 .sidecar-upload-bridge-progress.has-warning {

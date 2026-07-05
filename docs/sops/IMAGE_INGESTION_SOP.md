@@ -21,7 +21,8 @@ Do not use this SOP for repo-only documentation edits, CSS-only page polish, or 
 - Direct Apple Photos imports export still images at full pixel size as Photos' current rendered JPEG, including HEIC and RAW-backed assets; do not switch to RAW/NEF as public pipeline outputs.
 - Direct Apple Photos dry runs record PhotoKit resource formats before export, including RAW, HEIC, JPEG, and video resources. If Photos' current rendered JPEG stalls, the bridge may fall back to a local JPEG/HEIC/RAW image resource such as an alternate JPEG, HEIC, or DNG and convert it to a temporary JPG; this fallback is reported in Owner progress and sidecar metadata.
 - Keep Apple Photos video exports as original MOV/MP4/M4V files. The importer generates a watermarked `still_900` poster at 10% into the source video for gallery cards and a watermarked 5-second `short_5s_720p` MP4 preview for detail pages. Buyer delivery for videos is the original/full video only.
-- Direct Apple Photos imports are Owner-only and must run through `python3 scripts/local_server.py` on localhost. The Owner card invokes `scripts/apple_photos_bridge.swift`, which uses PhotoKit/Photos automation and does not inspect `.photoslibrary` package contents or private SQLite files.
+- Direct Apple Photos imports are Owner-only and must run through `python3 scripts/local_server.py` on localhost. The Owner card invokes the Apple Photos bridge, which uses PhotoKit/Photos automation and does not inspect `.photoslibrary` package contents or private SQLite files.
+- Sidecar uses the same Swift bridge source through the installed app bundle at `~/Applications/PhotosByElie Photos Bridge.app`. Sidecar UI, Sidecar maintenance, LaunchAgent fallback, and Codex Scheduled prompts must not call `swift scripts/apple_photos_bridge.swift ...` directly; doing so changes the macOS Photos permission identity and can fail even when the bridge app already has Full Access.
 - Apple Photos/iCloud is the intended universal source and R2 is the intended cloud destination. Any authorized Owner machine can become an import workstation once it is signed into the same iCloud Photos library and Google-backed Owner auth is configured; PhotoKit exports still happen on that local Mac, while durable media/state promotion targets R2 and the cloud Owner access registry.
 - Direct Apple Photos imports may export selected album assets under ignored `tmp/apple-photos-import/` before the standard PBE import/cache/R2 pipeline runs. This is still considered direct import in the Owner workflow because Elie does not manually export Finder folders.
 - Direct Apple Photos imports write `.pbe-apple-photos-assets.json` next to the temporary bytes. The importer uses its `apple-photos://<asset-localIdentifier>` source anchors for IDs/dedupe, uses sidecar album/date/GPS values as metadata fallbacks, and keeps the temporary cache path only as a local byte source.
@@ -38,7 +39,8 @@ cd /Users/ecohen/Dev/PhotosByElie
 Required command-line tools:
 
 - `python3`
-- `swift` from Xcode Command Line Tools when using direct Apple Photos import
+- `swift` from Xcode Command Line Tools when using direct Apple Photos import or
+  installing the Sidecar Photos Bridge app bundle
 - `exiftool`
 - `ffmpeg`
 - `ffprobe`
@@ -50,7 +52,7 @@ Check availability before a long run:
 command -v python3 exiftool ffmpeg ffprobe
 ```
 
-For direct Apple Photos imports, macOS must grant Photos access to the process that launches the helper, usually Terminal, Python, or the Owner launcher app. If permission is missing or denied, the Owner card reports the privacy setting to fix. The Owner card enables iCloud downloads by default so Photos can fetch missing originals or renders during the import; if that switch is disabled, iCloud-only originals are reported as unavailable until Photos has downloaded them locally.
+For direct Apple Photos imports, macOS must grant Photos access to the process identity that PhotoKit sees. When `~/Applications/PhotosByElie Photos Bridge.app` exists, automation and helpers should launch that app bundle through LaunchServices rather than running `swift scripts/apple_photos_bridge.swift` directly. Raw Swift has a different TCC identity from the installed bridge app and can report `permission_missing` even when the app bundle has Photos access. If permission is missing or denied, the Owner card reports the privacy setting to fix. The Owner card enables iCloud downloads by default so Photos can fetch missing originals or renders during the import; if that switch is disabled, iCloud-only originals are reported as unavailable until Photos has downloaded them locally.
 
 ## Build Derivatives
 

@@ -134,6 +134,56 @@ zsh scripts/install_owner_dock_app.zsh --add-to-dock
 
 The Dock launcher starts from a clean Owner helper state: it stops stale localhost Owner helpers and any still-running Apple Photos bridge for this repo, starts `scripts/local_server.py`, opens Safari to `owner.html?tab=imports`, and uses the bundled Swift/PhotoKit bridge only when the Owner Apple Photos card asks for albums, dry runs, or imports. Album discovery includes both regular Photos albums and smart albums. Because the PhotoKit scan can take a few minutes on a large library, the helper and browser keep a short-lived album-list cache; use the small Albums refresh control when you need a live rescan. The bridge can apply the default-on conservative burst filter before conversion, exports Photos still images as current rendered JPGs with iCloud downloads allowed by default, reports PhotoKit resource format labels before export, falls back to alternate local JPEG/HEIC/RAW image resources when the rendered JPG callback stalls, copies videos through as video resources, writes album/date/GPS facts into the sidecar, and hands the temporary folder directly to the Expo import sweep.
 
+### Apple Photos Bridge Permissions
+
+macOS Photos access is granted to the process or app bundle that touches
+PhotoKit. For Sidecar, use the installed app bundle:
+`~/Applications/PhotosByElie Photos Bridge.app`. The Sidecar helper launches it
+with `open -W -n ... --args` for index refreshes, previews, and local video
+resources. Do not replace that with `swift scripts/apple_photos_bridge.swift`
+from Sidecar UI code, LaunchAgents, or Codex Scheduled prompts; direct Swift
+uses the caller identity and can show `Photos access needed` even when the app
+bundle already has Full Access.
+
+Correct scheduled entrypoint:
+
+```bash
+python3 scripts/sidecar_maintenance.py photos-index-sync
+```
+
+That command delegates PhotoKit work back through the app-bundled bridge. The
+picked-only AI planning task does not touch PhotoKit directly. When the AI
+review needs visual evidence, export the current picked/not-approved preview
+queue through the same app-bundled bridge:
+
+```bash
+python3 scripts/sidecar_maintenance.py picked-ai-plan
+python3 scripts/sidecar_maintenance.py picked-ai-preview-export
+```
+
+The preview export writes
+`assets/owner-actions/sidecar-ai-metadata-previews.json` plus JPEG previews and,
+when Pillow is available, `tmp/sidecar-picked-ai-previews/contact-sheet.jpg`.
+Use those artifacts for vision-backed metadata review; do not launch raw Swift
+or the bare app executable to fetch previews.
+
+Reviewed preview observations can be written back as local Sidecar Review
+proposals with:
+
+```bash
+python3 scripts/sidecar_maintenance.py picked-ai-vision-propose --dry-run
+python3 scripts/sidecar_maintenance.py picked-ai-vision-propose
+```
+
+By default, the command reads
+`assets/owner-actions/sidecar-ai-metadata-vision-proposals-current.json`; pass
+`--input path/to/proposals.json` to use another file. The proposal JSON should
+contain a top-level `proposals` array with `assetId`, `title`, `keywords`, and
+a short evidence-grounded `note`. The command requires the preview manifest by
+default, keeps scope to picked/not-approved rows, filters keywords through the
+Owner blacklist, records `metadata_ai_rung=vision-description`, and does not
+queue Photos write-back.
+
 For a temporary private-LAN review session, bind to all interfaces and opt in to LAN owner endpoints:
 
 ```bash
@@ -493,6 +543,13 @@ Sidecar Upload Bridge starts from picked + Review-approved Apple Photos rows
 that have been queued across the bridge. Plan mode reports planned private
 master and public preview keys without exporting from Photos or writing R2:
 
+Upload Bridge eligibility is stricter than local Review approval. A picked row
+must also have enough metadata to publish safely: a clear public gallery/country
+signal from title, keywords, filename, or location context, plus a non-generic
+title. Rows with titles such as `2026`, `WhatsApp`, `DJI Album`, or blank titles
+and no gallery signal are blocked from bridge queueing/upload and surfaced as
+metadata-blocked in the Upload Bridge panel.
+
 ```bash
 python3 scripts/sidecar_upload_bridge.py --limit 20
 python3 scripts/sidecar_upload_bridge.py --json --output assets/owner-actions/sidecar-upload-runs/dry-run.json
@@ -508,24 +565,39 @@ python3 scripts/sidecar_upload_bridge.py --export-one --limit 1
 python3 scripts/sidecar_upload_bridge.py --export-one --json
 ```
 
-Live bridge execution keeps that same one-item scope, then uploads the private
-master and watermarked public preview pair to R2. Planned key collisions are
-skipped by default; pass `--allow-r2-overwrite` only when you intentionally want
-to replace existing R2 objects. Successful bridge-uploaded keys are remembered
-in the local bridge ledger, so retrying after a partial run skips already
-uploaded keys even before Owner catalog registration exists. The Sidecar Review
-UI exposes the same guarded execution through the Upload Bridge rail with an
-item count field capped by the remaining R2-uploadable queue and streamed
-per-item progress feedback with uploaded-item thumbnails:
+Live bridge execution through the CLI processes one selected uploadable item per
+invocation, then uploads the private master and watermarked public preview pair
+to R2. Planned key collisions are skipped by default; pass
+`--allow-r2-overwrite` only when you intentionally want to replace existing R2
+objects. Successful bridge-uploaded keys are remembered in the local bridge
+ledger, so retrying after a partial run skips already uploaded keys. The
+Sidecar Review UI uses a faster streamed
+batch executor: it selects the requested uploadable rows once, checks planned R2
+coverage once, then materializes each item and uploads that item's three planned
+R2 keys in a small parallel group. The rail has an item count field capped by
+the remaining R2-uploadable queue, streamed per-item progress feedback with
+uploaded-item thumbnails and timings, and a Stop upload control that interrupts
+the batch after the current item completes:
 
 ```bash
 python3 scripts/sidecar_upload_bridge.py --execute --limit 1
 python3 scripts/sidecar_upload_bridge.py --execute --limit 1 --json --output /tmp/sidecar-upload-bridge-execute.json
 ```
 
-This bridge slice does not register the uploaded media in Owner/catalog state
-yet. Until that downstream registration runs, the files can exist in R2 without
-appearing in the public catalog.
+After a successful bridge upload, register missing approved rows in the public
+catalog with:
+
+```bash
+python3 scripts/sidecar_maintenance.py register-uploaded-catalog --dry-run
+python3 scripts/sidecar_maintenance.py register-uploaded-catalog
+```
+
+The registration command reads approved, picked Sidecar rows plus successful
+Upload Bridge ledger results, upserts current R2 object ledger rows, inserts
+missing `media_items`/`media_assets` rows into
+`assets/catalog/photosbyelie.sqlite`, and refreshes
+`worker/photos-catalog.generated.mjs`. Until registration runs, files can exist
+in R2 without appearing in the public catalog.
 
 Bridge plans intentionally omit private JPG render triplets. Existing private
 render cache cleanup should also begin as a dry run until sold-media protection

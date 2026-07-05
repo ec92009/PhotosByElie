@@ -1,0 +1,112 @@
+{
+  "generatedAt": "2026-07-04T14:37:54.380776Z",
+  "ok": true,
+  "result": {
+    "aiLadder": [
+      {
+        "description": "Use existing Photos title, keyword, album, and coarse location seeds only.",
+        "label": "Seed metadata",
+        "rung": "seed"
+      },
+      {
+        "description": "Use descriptive filenames plus known local GPS/city hints; no visual scene understanding.",
+        "label": "Filename and GPS context",
+        "rung": "filename-gps"
+      },
+      {
+        "description": "Use external reverse-geocode context when local GPS hints are too coarse; no visual scene understanding.",
+        "label": "Reverse-geocode context",
+        "rung": "geocode-context"
+      },
+      {
+        "description": "Use image understanding to describe visible subjects, setting, colors, composition, and likely AI-generated or 3D printed media.",
+        "label": "Vision description",
+        "rung": "vision-description"
+      },
+      {
+        "description": "Require owner judgment when evidence is ambiguous or policy/context-sensitive.",
+        "label": "Human review",
+        "rung": "human-review"
+      }
+    ],
+    "candidateCountBefore": 11,
+    "maxRung": "seed",
+    "message": "Wrote Sidecar Review proposals only; no Photos write-back rows were queued.",
+    "mode": "picked-only-ai-metadata-proposals",
+    "ok": true,
+    "plannedCount": 11,
+    "proposed": [],
+    "proposedCount": 0,
+    "scopedCount": 0,
+    "skipped": [
+      {
+        "assetId": "0DC36DF5-B6BF-4B41-996F-9FEE1AA03AB7/L0/001",
+        "filename": "IMG_1174.jpg",
+        "reason": "missing_useful_title_seed",
+        "recommendedAiRung": "seed"
+      },
+      {
+        "assetId": "268204F7-173D-4D53-B614-C39AFFDC4809/L0/001",
+        "filename": "IMG_1175.jpg",
+        "reason": "missing_useful_title_seed",
+        "recommendedAiRung": "seed"
+      },
+      {
+        "assetId": "0CC04FB3-FF82-4587-B571-54CDDD817100/L0/001",
+        "filename": "IMG_1176.jpg",
+        "reason": "missing_useful_title_seed",
+        "recommendedAiRung": "seed"
+      },
+      {
+        "assetId": "89642575-1902-4D30-815C-2A8DCC6E4618/L0/001",
+        "filename": "IMG_1177.jpg",
+        "reason": "missing_useful_title_seed",
+        "recommendedAiRung": "seed"
+      },
+      {
+        "assetId": "1156F45D-5C28-4149-8085-1742CF8A7371/L0/001",
+        "filename": "IMG_1178.jpg",
+        "reason": "missing_useful_title_seed",
+        "recommendedAiRung": "seed"
+      },
+      {
+        "assetId": "B583DAE3-6DE6-4656-A6CB-2001122C161B/L0/001",
+        "filename": "IMG_1270.jpg",
+        "reason": "requires_stronger_ai_rung",
+        "recommendedAiRung": "vision-description"
+      },
+      {
+        "assetId": "191CC94B-722B-4F65-84C5-C912BEBE985A/L0/001",
+        "filename": "IMG_1271.MOV",
+        "reason": "requires_stronger_ai_rung",
+        "recommendedAiRung": "vision-description"
+      },
+      {
+        "assetId": "7A205A6C-6656-4171-95AC-5F23268BBEFD/L0/001",
+        "filename": "IMG_1273.MOV",
+        "reason": "requires_stronger_ai_rung",
+        "recommendedAiRung": "vision-description"
+      },
+      {
+        "assetId": "C1F201AA-7C54-4980-89B5-F570EBCD860F/L0/001",
+        "filename": "IMG_1274.MOV",
+        "reason": "requires_stronger_ai_rung",
+        "recommendedAiRung": "vision-description"
+      },
+      {
+        "assetId": "E8488FFD-F88C-4992-88A1-FE66008B0068/L0/001",
+        "filename": "IMG_1280.MOV",
+        "reason": "requires_stronger_ai_rung",
+        "recommendedAiRung": "vision-description"
+      },
+      {
+        "assetId": "70D1A030-8334-4E05-87EB-C05F0D0D14BD/L0/001",
+        "filename": "IMG_1281.MOV",
+        "reason": "requires_stronger_ai_rung",
+        "recommendedAiRung": "vision-description"
+      }
+    ],
+    "skippedCount": 11
+  },
+  "task": "sidecar-picked-ai-metadata-propose"
+}

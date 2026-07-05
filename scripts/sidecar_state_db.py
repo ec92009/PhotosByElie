@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
 import json
 import mimetypes
@@ -11,6 +12,7 @@ import os
 import re
 import sqlite3
 import subprocess
+import time
 import uuid
 from pathlib import Path
 from typing import Any, Iterable
@@ -37,6 +39,36 @@ PICK_STATES = {"undecided", "picked", "rejected", "hidden"}
 METADATA_STATES = {"unreviewed", "proposed", "approved", "rework", "blocked"}
 REWORK_CATEGORIES = {"", "incorrect", "generic", "placeholder", "keywords", "detail", "shoot", "other"}
 INTERNAL_TITLE_MARKERS = {"dontexport", "don't export", "do not export", "notmyphoto", "not my photo"}
+GENERIC_UPLOAD_TITLES = {"", "2025", "2026", "whatsapp", "img", "dji album", "untitled", "video", "photo"}
+UPLOAD_BRIDGE_GALLERY_TERMS = {
+    "italy": ("italy", "florence", "tuscany"),
+    "france": ("france", "paris", "toulouse"),
+    "spain": (
+        "spain",
+        "malaga",
+        "málaga",
+        "andalusia",
+        "andalucía",
+        "benalmadena",
+        "benalmádena",
+        "fuengirola",
+        "nerja",
+        "ronda",
+        "mijas",
+        "marbella",
+        "cordoba",
+        "córdoba",
+        "granada",
+        "la concha",
+        "colleccion del museo ruso",
+        "colección del museo ruso",
+    ),
+    "portugal": ("portugal", "lisbon", "lisboa"),
+    "usa": ("usa", "united states"),
+    "mexico": ("mexico",),
+    "slovakia": ("slovakia",),
+    "ai": ("ai generated", "generative ai", "stained glass"),
+}
 AI_METADATA_LADDER: tuple[dict[str, str], ...] = (
     {
         "rung": "seed",
@@ -326,7 +358,63 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
           ON sidecar_upload_bridge_run_items(run_id, status);
         CREATE INDEX IF NOT EXISTS idx_sidecar_upload_bridge_run_items_asset
           ON sidecar_upload_bridge_run_items(asset_id, created_at);
+
+        CREATE TABLE IF NOT EXISTS sidecar_upload_bridge_asset_blocks (
+          asset_id        TEXT PRIMARY KEY CHECK (trim(asset_id) <> ''),
+          block_state     TEXT NOT NULL DEFAULT 'active' CHECK (block_state IN ('active', 'cleared')),
+          block_reason    TEXT NOT NULL DEFAULT 'export_failed' CHECK (trim(block_reason) <> ''),
+          failure_count   INTEGER NOT NULL DEFAULT 0,
+          last_status     TEXT NOT NULL DEFAULT '',
+          last_error      TEXT,
+          first_failed_at TEXT,
+          last_failed_at  TEXT,
+          cleared_at      TEXT,
+          updated_at      TEXT,
+          FOREIGN KEY (asset_id) REFERENCES sidecar_assets(asset_id) ON DELETE CASCADE
+        ) WITHOUT ROWID;
+
+        CREATE INDEX IF NOT EXISTS idx_sidecar_upload_bridge_asset_blocks_state
+          ON sidecar_upload_bridge_asset_blocks(block_state, last_failed_at);
         """
+    )
+    conn.execute(
+        """
+        INSERT OR IGNORE INTO sidecar_upload_bridge_asset_blocks
+          (asset_id, block_state, block_reason, failure_count, last_status, last_error,
+           first_failed_at, last_failed_at, cleared_at, updated_at)
+        SELECT
+          failures.asset_id,
+          'active',
+          'export_failed',
+          failures.failure_count,
+          COALESCE(latest.export_status, latest.status, 'export_failed'),
+          latest.error_text,
+          failures.first_failed_at,
+          failures.last_failed_at,
+          NULL,
+          COALESCE(failures.last_failed_at, ?)
+        FROM (
+          SELECT
+            asset_id,
+            COUNT(*) AS failure_count,
+            MIN(updated_at) AS first_failed_at,
+            MAX(updated_at) AS last_failed_at
+          FROM sidecar_upload_bridge_run_items
+          WHERE status = 'export_failed'
+          GROUP BY asset_id
+        ) AS failures
+        JOIN sidecar_upload_bridge_run_items AS latest
+          ON latest.asset_id = failures.asset_id
+         AND latest.updated_at = failures.last_failed_at
+        WHERE NOT EXISTS (
+          SELECT 1
+          FROM sidecar_upload_bridge_run_items AS success
+          WHERE success.asset_id = failures.asset_id
+            AND success.status IN ('exported', 'uploaded', 'uploaded_with_skips')
+            AND COALESCE(success.updated_at, '') > COALESCE(failures.last_failed_at, '')
+        )
+        """,
+        (now_iso(),),
     )
     decision_columns = {
         str(row["name"])
@@ -367,6 +455,7 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         "upload_status": "TEXT NOT NULL DEFAULT 'not_requested'",
         "upload_keys_json": "TEXT NOT NULL DEFAULT '[]'",
         "upload_error_text": "TEXT",
+        "timings_json": "TEXT NOT NULL DEFAULT '{}'",
     }
     for column, definition in upload_item_column_defaults.items():
         if column not in upload_item_columns:
@@ -1458,15 +1547,22 @@ def empty_wastebasket(repo_root: Path) -> dict[str, Any]:
     return {"ok": True, "count": len(items), "items": items, "summary": summary(repo_root)}
 
 
-def _upload_bridge_rows(conn: sqlite3.Connection, limit: int | None = None) -> list[sqlite3.Row]:
+def _upload_bridge_rows(conn: sqlite3.Connection, limit: int | None = None, *, include_blocked: bool = False) -> list[sqlite3.Row]:
     limit_sql = ""
     params: tuple[Any, ...] = ()
     if limit is not None:
         limit_sql = "LIMIT ?"
         params = (max(1, min(int(limit or 500), 5000)),)
-    return conn.execute(
+    blocked_sql = "" if include_blocked else """
+          AND NOT EXISTS (
+            SELECT 1 FROM sidecar_upload_bridge_asset_blocks AS b
+            WHERE b.asset_id = m.asset_id AND b.block_state = 'active'
+          )
+    """
+    rows = conn.execute(
         f"""
-        SELECT a.asset_id, a.source_anchor, a.media_type, a.filename, a.captured_at, m.uploaded_at
+        SELECT a.asset_id, a.source_anchor, a.media_type, a.filename, a.captured_at, m.uploaded_at,
+               a.location_label, a.location_keywords_json, d.title, d.keywords_json
         FROM sidecar_mock_uploads AS m
         JOIN sidecar_assets AS a ON a.asset_id = m.asset_id
         JOIN sidecar_decisions AS d ON d.asset_id = m.asset_id
@@ -1477,16 +1573,117 @@ def _upload_bridge_rows(conn: sqlite3.Connection, limit: int | None = None) -> l
             SELECT 1 FROM sidecar_tombstones AS t
             WHERE t.asset_id = m.asset_id AND t.tombstone_state = 'active'
           )
+          {blocked_sql}
         ORDER BY m.uploaded_at DESC, a.captured_at DESC, a.asset_id
         {limit_sql}
         """,
         params,
     ).fetchall()
+    if include_blocked:
+        return rows
+    return [row for row in rows if _upload_bridge_metadata_ready(row)]
+
+
+def _upload_bridge_block_summary(conn: sqlite3.Connection) -> dict[str, Any]:
+    row = conn.execute(
+        """
+        SELECT
+          COUNT(*) AS blocked_count,
+          COALESCE(SUM(b.failure_count), 0) AS failure_count,
+          MAX(b.last_failed_at) AS last_blocked_at
+        FROM sidecar_upload_bridge_asset_blocks AS b
+        JOIN sidecar_mock_uploads AS m ON m.asset_id = b.asset_id AND m.mock_state = 'active'
+        JOIN sidecar_decisions AS d ON d.asset_id = b.asset_id
+        LEFT JOIN sidecar_tombstones AS t ON t.asset_id = b.asset_id AND t.tombstone_state = 'active'
+        WHERE b.block_state = 'active'
+          AND d.pick_state = 'picked'
+          AND d.metadata_state = 'approved'
+          AND t.asset_id IS NULL
+        """
+    ).fetchone()
+    return {
+        "blockedExportFailureCount": int(row["blocked_count"] or 0),
+        "blockedExportAttemptCount": int(row["failure_count"] or 0),
+        "latestBlockedExportAt": str(row["last_blocked_at"] or ""),
+    }
+
+
+def _record_upload_bridge_export_block(conn: sqlite3.Connection, asset_id: str, status: str, error: str, failed_at: str) -> None:
+    clean_asset_id = str(asset_id or "").strip()
+    if not clean_asset_id:
+        return
+    conn.execute(
+        """
+        INSERT INTO sidecar_upload_bridge_asset_blocks
+          (asset_id, block_state, block_reason, failure_count, last_status, last_error,
+           first_failed_at, last_failed_at, cleared_at, updated_at)
+        VALUES (?, 'active', 'export_failed', 1, ?, ?, ?, ?, NULL, ?)
+        ON CONFLICT(asset_id) DO UPDATE SET
+          block_state = 'active',
+          block_reason = 'export_failed',
+          failure_count = sidecar_upload_bridge_asset_blocks.failure_count + 1,
+          last_status = excluded.last_status,
+          last_error = excluded.last_error,
+          first_failed_at = COALESCE(sidecar_upload_bridge_asset_blocks.first_failed_at, excluded.first_failed_at),
+          last_failed_at = excluded.last_failed_at,
+          cleared_at = NULL,
+          updated_at = excluded.updated_at
+        """,
+        (clean_asset_id, status, error, failed_at, failed_at, failed_at),
+    )
+
+
+def _clear_upload_bridge_export_block(conn: sqlite3.Connection, asset_id: str, cleared_at: str) -> None:
+    clean_asset_id = str(asset_id or "").strip()
+    if not clean_asset_id:
+        return
+    conn.execute(
+        """
+        UPDATE sidecar_upload_bridge_asset_blocks
+        SET block_state = 'cleared', cleared_at = ?, updated_at = ?
+        WHERE asset_id = ? AND block_state = 'active'
+        """,
+        (cleared_at, cleared_at, clean_asset_id),
+    )
+
+
+def _upload_bridge_gallery_slug(row: sqlite3.Row) -> str:
+    text = " ".join(
+        [
+            str(row["location_label"] or ""),
+            str(row["location_keywords_json"] or ""),
+            str(row["keywords_json"] or ""),
+            str(row["title"] or ""),
+            str(row["filename"] or ""),
+        ]
+    ).casefold()
+    for slug, terms in UPLOAD_BRIDGE_GALLERY_TERMS.items():
+        if any(term in text for term in terms):
+            return slug
+    return ""
+
+
+def _upload_bridge_metadata_block_reason(row: sqlite3.Row) -> str:
+    title = str(row["title"] or "").strip()
+    normalized_title = re.sub(r"\s+", " ", title).casefold()
+    gallery_slug = _upload_bridge_gallery_slug(row)
+    if not gallery_slug:
+        return "missing-gallery-signal"
+    if normalized_title in GENERIC_UPLOAD_TITLES:
+        return "generic-title"
+    return ""
+
+
+def _upload_bridge_metadata_ready(row: sqlite3.Row) -> bool:
+    return _upload_bridge_metadata_block_reason(row) == ""
 
 
 def _mock_upload_summary(conn: sqlite3.Connection) -> dict[str, Any]:
     """Summarize rows queued across the Sidecar upload bridge."""
     rows = _upload_bridge_rows(conn)
+    all_rows = _upload_bridge_rows(conn, include_blocked=True)
+    metadata_blocked_rows = [row for row in all_rows if not _upload_bridge_metadata_ready(row)]
+    block_summary = _upload_bridge_block_summary(conn)
     planned_key_sets: dict[str, list[dict[str, str]]] = {}
     all_planned_keys: list[dict[str, str]] = []
     for row in rows:
@@ -1519,10 +1716,11 @@ def _mock_upload_summary(conn: sqlite3.Connection) -> dict[str, Any]:
             partially_covered_item_count += 1
         if item_keys and item_collision_count < len(item_keys):
             uploadable_item_count += 1
-    latest_uploaded_at = str(rows[0]["uploaded_at"] or "") if rows else ""
+    latest_uploaded_at = str(all_rows[0]["uploaded_at"] or "") if all_rows else ""
     return {
-        "mockUploadedCount": len(rows),
-        "bridgeQueuedCount": len(rows),
+        "mockUploadedCount": len(all_rows),
+        "bridgeQueuedCount": len(all_rows),
+        "metadataBlockedQueuedCount": len(metadata_blocked_rows),
         "uploadableItemCount": uploadable_item_count,
         "fullyCoveredItemCount": fully_covered_item_count,
         "partiallyCoveredItemCount": partially_covered_item_count,
@@ -1532,6 +1730,7 @@ def _mock_upload_summary(conn: sqlite3.Connection) -> dict[str, Any]:
         "plannedKeyCount": planned_key_count,
         "latestUploadedAt": latest_uploaded_at,
         "latestQueuedAt": latest_uploaded_at,
+        **block_summary,
     }
 
 
@@ -1609,8 +1808,10 @@ def upload_bridge_plan(repo_root: Path, limit: int = 500) -> dict[str, Any]:
         "uploadableItemCount": int(mock_upload_summary.get("uploadableItemCount") or 0),
         "fullyCoveredItemCount": int(mock_upload_summary.get("fullyCoveredItemCount") or 0),
         "partiallyCoveredItemCount": int(mock_upload_summary.get("partiallyCoveredItemCount") or 0),
+        "blockedExportFailureCount": int(mock_upload_summary.get("blockedExportFailureCount") or 0),
+        "blockedExportAttemptCount": int(mock_upload_summary.get("blockedExportAttemptCount") or 0),
         "uploadBridgeSummary": mock_upload_summary,
-        "message": "Upload Bridge plan only. Use sidecar_upload_bridge.py --export-one for a local Photos export dry run, or --execute --limit 1 for guarded R2 upload execution. Owner catalog registration remains a later slice.",
+        "message": "Upload Bridge plan only. Use sidecar_upload_bridge.py --export-one for a local Photos export dry run, or --execute --limit 1 for guarded single-item R2 upload execution. The Sidecar Review rail can execute larger streamed batches. Owner catalog registration remains a later slice.",
     }
 
 
@@ -1629,7 +1830,8 @@ def _run_apple_photos_materialize_one(
 ) -> dict[str, Any]:
     destination.mkdir(parents=True, exist_ok=True)
     result_destination = destination / "photos-bridge-result.json"
-    if APPLE_PHOTOS_BRIDGE_APP.exists():
+    launched_app_bundle = APPLE_PHOTOS_BRIDGE_APP.exists()
+    if launched_app_bundle:
         command = [
             "open",
             "-W",
@@ -1663,7 +1865,9 @@ def _run_apple_photos_materialize_one(
             check=False,
         )
     except FileNotFoundError as error:
-        raise RuntimeError("Swift is required for the Apple Photos PhotoKit bridge. Install Xcode Command Line Tools.") from error
+        if launched_app_bundle:
+            raise RuntimeError("macOS open is required to launch the Photos Bridge app bundle.") from error
+        raise RuntimeError("Swift is required for the Apple Photos PhotoKit bridge development fallback. Install Xcode Command Line Tools.") from error
     except subprocess.TimeoutExpired as error:
         raise RuntimeError("Apple Photos bridge timed out while materializing the queued asset.") from error
     stdout = (result.stdout or "").strip()
@@ -1741,6 +1945,7 @@ def _prepare_upload_bridge_artifact(
         render_derivative,
         render_video_poster,
         render_video_preview,
+        run_exiftool_tags,
     )
 
     output = _artifact_path_for_key(artifact_root, key)
@@ -1754,7 +1959,12 @@ def _prepare_upload_bridge_artifact(
         render_video_poster(export_path, output, DEFAULT_WATERMARK, font, force)
         return output, "image/jpeg"
     max_px = DEFAULT_GALLERY_MAX if key.endswith("_900.jpg") else DEFAULT_DETAIL_MAX
-    render_derivative(export_path, output, max_px, DEFAULT_WATERMARK, font, force)
+    source_orientation = None
+    try:
+        source_orientation = run_exiftool_tags(export_path, ["Orientation"]).get("Orientation")
+    except Exception:
+        source_orientation = None
+    render_derivative(export_path, output, max_px, DEFAULT_WATERMARK, font, force, source_orientation)
     return output, "image/jpeg"
 
 
@@ -1802,8 +2012,8 @@ def _upload_bridge_execute_r2(
         if missing:
             raise RuntimeError(f"Missing S3 backend credential(s): {', '.join(missing)}")
 
-    results: list[dict[str, Any]] = []
-    for key in planned_keys:
+    def upload_one(position: int, key: dict[str, Any]) -> tuple[int, dict[str, Any]]:
+        key_started = time.perf_counter()
         bucket = str(key.get("bucket") or "")
         object_key = str(key.get("key") or "")
         kind = str(key.get("kind") or "")
@@ -1816,20 +2026,22 @@ def _upload_bridge_execute_r2(
             "existedBeforeUpload": exists,
         }
         if exists and not allow_r2_overwrite:
-            results.append({
+            return position, {
                 **base_result,
                 "status": "skipped_collision",
+                "timings": {"totalSeconds": round(time.perf_counter() - key_started, 3)},
                 "error": "planned R2 key already exists in Owner R2 inventory",
                 **({"existing": key.get("existing")} if key.get("existing") else {}),
-            })
-            continue
+            }
         try:
+            prepare_started = time.perf_counter()
             source_path, content_type = _prepare_upload_bridge_artifact(
                 export_path=export_path,
                 planned_key=key,
                 media_type=media_type,
                 artifact_root=artifact_root,
             )
+            upload_started = time.perf_counter()
             cache_control = "public, max-age=31536000, immutable" if bucket == DEFAULT_PUBLIC_BUCKET else ""
             upload_item = UploadItem(
                 bucket=bucket,
@@ -1852,23 +2064,494 @@ def _upload_bridge_execute_r2(
                 )
             else:
                 _, ok, output = wrangler_put(upload_item, retries, DEFAULT_THROTTLE_FILE, request_min_interval, retry_max_delay)
-            results.append({
+            return position, {
                 **base_result,
                 "status": "uploaded" if ok else "failed",
                 "sourcePath": str(source_path),
                 "bytes": source_path.stat().st_size if source_path.exists() else 0,
                 "contentType": content_type,
                 "cacheControl": cache_control,
+                "timings": {
+                    "prepareSeconds": round(upload_started - prepare_started, 3),
+                    "uploadSeconds": round(time.perf_counter() - upload_started, 3),
+                    "totalSeconds": round(time.perf_counter() - key_started, 3),
+                },
                 "output": output[-4000:] if output else "",
                 **({"error": output[-4000:]} if not ok and output else {}),
-            })
+            }
         except Exception as error:  # noqa: BLE001 - keep remaining planned keys auditable.
-            results.append({
+            return position, {
                 **base_result,
                 "status": "failed",
+                "timings": {"totalSeconds": round(time.perf_counter() - key_started, 3)},
                 "error": str(error),
+            }
+
+    if len(planned_keys) <= 1:
+        return [upload_one(index, key)[1] for index, key in enumerate(planned_keys)]
+
+    ordered: list[dict[str, Any] | None] = [None] * len(planned_keys)
+    worker_count = min(3, len(planned_keys))
+    with ThreadPoolExecutor(max_workers=worker_count) as executor:
+        futures = [executor.submit(upload_one, index, key) for index, key in enumerate(planned_keys)]
+        for future in as_completed(futures):
+            position, result = future.result()
+            ordered[position] = result
+    return [result for result in ordered if result is not None]
+
+
+def prepare_upload_bridge_execute_batch(
+    repo_root: Path,
+    *,
+    limit: int = 500,
+    spool_root: Path | None = None,
+    allow_r2_overwrite: bool = False,
+    exclude_asset_ids: Iterable[str] | None = None,
+) -> dict[str, Any]:
+    """Plan a multi-item Upload Bridge execute run with one queue/R2 coverage pass."""
+    requested_limit = max(1, min(int(limit or 1), 5000))
+    scan_limit = 5000 if not allow_r2_overwrite else requested_limit
+    scan_limit = max(scan_limit, requested_limit)
+    run_id = _upload_bridge_run_id()
+    run_mode = "execute-batch"
+    now = now_iso()
+    planning_started = time.perf_counter()
+    base_root = spool_root or DEFAULT_UPLOAD_BRIDGE_RUN_ROOT
+    if not base_root.is_absolute():
+        base_root = repo_root / base_root
+    run_root = base_root / run_id
+    export_root = run_root / "export"
+    export_root.mkdir(parents=True, exist_ok=True)
+    excluded_asset_ids = {str(asset_id) for asset_id in (exclude_asset_ids or []) if str(asset_id)}
+
+    with connect(repo_root) as conn:
+        rows = _upload_bridge_rows(conn, scan_limit)
+        if excluded_asset_ids:
+            rows = [row for row in rows if str(row["asset_id"]) not in excluded_asset_ids]
+        if not rows:
+            summary_payload = {
+                "bridgeQueuedCount": 0,
+                "excludedAssetCount": len(excluded_asset_ids),
+                "requestedCount": requested_limit,
+                "r2UploadPerformed": False,
+                "executeUpload": True,
+                "planningSeconds": round(time.perf_counter() - planning_started, 3),
+            }
+            conn.execute(
+                """
+                INSERT INTO sidecar_upload_bridge_runs
+                  (run_id, mode, status, execute_upload, limit_count, started_at, completed_at,
+                   spool_root, summary_json, created_at, updated_at)
+                VALUES (?, ?, 'no-queued-items', 1, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    run_id,
+                    run_mode,
+                    requested_limit,
+                    now,
+                    now,
+                    str(run_root),
+                    _json_text(summary_payload),
+                    now,
+                    now,
+                ),
+            )
+            return {
+                "ok": True,
+                "mode": run_mode,
+                "runId": run_id,
+                "status": "no-queued-items",
+                "count": 0,
+                "spoolRoot": str(run_root),
+                "exportRoot": str(export_root),
+                "items": [],
+                "summary": summary_payload,
+                "message": "No active Upload Bridge rows are queued.",
+            }
+
+        planned_key_sets: dict[str, list[dict[str, str]]] = {}
+        photo_ids: dict[str, str] = {}
+        all_planned_keys: list[dict[str, str]] = []
+        for row in rows:
+            photo_id, keys = _planned_r2_keys(row)
+            asset_id = str(row["asset_id"])
+            photo_ids[asset_id] = photo_id
+            planned_key_sets[asset_id] = keys
+            all_planned_keys.extend(keys)
+        current_r2 = _current_r2_objects_for_plan(conn, all_planned_keys)
+
+        selected_rows: list[sqlite3.Row] = []
+        skipped_covered = 0
+        for row in rows:
+            asset_id = str(row["asset_id"])
+            keys = planned_key_sets.get(asset_id, [])
+            missing_keys = [
+                key
+                for key in keys
+                if current_r2.get((key["bucket"], key["key"])) is None
+            ]
+            if allow_r2_overwrite or missing_keys:
+                selected_rows.append(row)
+                if len(selected_rows) >= requested_limit:
+                    break
+            else:
+                skipped_covered += 1
+
+        if not selected_rows:
+            summary_payload = {
+                "bridgeQueuedCount": len(rows),
+                "scannedCount": len(rows),
+                "skippedCoveredCount": skipped_covered,
+                "requestedCount": requested_limit,
+                "r2UploadPerformed": False,
+                "executeUpload": True,
+                "planningSeconds": round(time.perf_counter() - planning_started, 3),
+            }
+            conn.execute(
+                """
+                INSERT INTO sidecar_upload_bridge_runs
+                  (run_id, mode, status, execute_upload, limit_count, started_at, completed_at,
+                   spool_root, summary_json, created_at, updated_at)
+                VALUES (?, ?, 'no-uploadable-items', 1, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    run_id,
+                    run_mode,
+                    requested_limit,
+                    now,
+                    now,
+                    str(run_root),
+                    _json_text(summary_payload),
+                    now,
+                    now,
+                ),
+            )
+            return {
+                "ok": True,
+                "mode": run_mode,
+                "runId": run_id,
+                "status": "no-uploadable-items",
+                "count": 0,
+                "spoolRoot": str(run_root),
+                "exportRoot": str(export_root),
+                "items": [],
+                "summary": summary_payload,
+                "message": "All active Upload Bridge rows already have their planned R2 keys covered.",
+            }
+
+        summary_payload = {
+            "bridgeQueuedCount": len(rows),
+            "scannedCount": len(rows),
+            "selectedCount": len(selected_rows),
+            "skippedCoveredCount": skipped_covered,
+            "requestedCount": requested_limit,
+            "r2UploadPerformed": False,
+            "executeUpload": True,
+            "allowR2Overwrite": allow_r2_overwrite,
+            "planningSeconds": round(time.perf_counter() - planning_started, 3),
+        }
+        conn.execute(
+            """
+            INSERT INTO sidecar_upload_bridge_runs
+              (run_id, mode, status, execute_upload, limit_count, started_at, spool_root,
+               summary_json, created_at, updated_at)
+            VALUES (?, ?, 'running', 1, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                run_id,
+                run_mode,
+                requested_limit,
+                now,
+                str(run_root),
+                _json_text(summary_payload),
+                now,
+                now,
+            ),
+        )
+
+        ledger_items: list[dict[str, Any]] = []
+        for row in selected_rows:
+            asset_id = str(row["asset_id"])
+            planned_keys: list[dict[str, Any]] = []
+            item_collision_count = 0
+            for key in planned_key_sets.get(asset_id, []):
+                current = current_r2.get((key["bucket"], key["key"]))
+                if current is not None:
+                    item_collision_count += 1
+                planned_keys.append({
+                    **key,
+                    "exists": current is not None,
+                    **({"existing": current} if current else {}),
+                })
+            run_item_id = uuid.uuid4().hex
+            conn.execute(
+                """
+                INSERT INTO sidecar_upload_bridge_run_items
+                  (run_item_id, run_id, asset_id, photo_id, filename, media_type, queued_at,
+                   status, export_status, planned_keys_json, timings_json, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'planned', 'planned', ?, '{}', ?, ?)
+                """,
+                (
+                    run_item_id,
+                    run_id,
+                    asset_id,
+                    photo_ids.get(asset_id, ""),
+                    row["filename"] or "",
+                    row["media_type"] or "",
+                    row["uploaded_at"] or "",
+                    _json_text(planned_keys),
+                    now,
+                    now,
+                ),
+            )
+            ledger_items.append({
+                "runItemId": run_item_id,
+                "assetId": asset_id,
+                "photoId": photo_ids.get(asset_id, ""),
+                "filename": row["filename"] or "",
+                "capturedAt": row["captured_at"] or "",
+                "mediaType": row["media_type"] or "",
+                "queuedAt": row["uploaded_at"] or "",
+                "collisionCount": item_collision_count,
+                "plannedKeys": planned_keys,
             })
-    return results
+
+    return {
+        "ok": True,
+        "mode": run_mode,
+        "runId": run_id,
+        "status": "running",
+        "spoolRoot": str(run_root),
+        "exportRoot": str(export_root),
+        "count": len(ledger_items),
+        "items": ledger_items,
+        "summary": summary_payload,
+        "message": f"Planned {len(ledger_items):,} Upload Bridge item(s) with one R2 coverage pass.",
+    }
+
+
+def execute_upload_bridge_batch_item(
+    repo_root: Path,
+    *,
+    run_id: str,
+    run_root: Path,
+    export_root: Path,
+    item: dict[str, Any],
+    allow_icloud_downloads: bool = True,
+    allow_r2_overwrite: bool = False,
+    r2_backend: str | None = None,
+    r2_retries: int = 2,
+    r2_request_min_interval: float = 0.75,
+    r2_retry_max_delay: float = 900.0,
+    r2_s3_account_id: str | None = None,
+    r2_s3_access_key_id: str | None = None,
+    r2_s3_secret_access_key: str | None = None,
+    r2_s3_endpoint: str | None = None,
+) -> dict[str, Any]:
+    """Materialize and upload one already-planned batch item."""
+    item_started = time.perf_counter()
+    now = now_iso()
+    with connect(repo_root) as conn:
+        conn.execute(
+            """
+            UPDATE sidecar_upload_bridge_run_items
+            SET status = 'exporting', export_status = 'running', updated_at = ?
+            WHERE run_item_id = ?
+            """,
+            (now, item["runItemId"]),
+        )
+
+    export_payload: dict[str, Any] | None = None
+    export_error = ""
+    export_status = "planned"
+    export_path = ""
+    export_bytes: int | None = None
+    item_status = "planned"
+    upload_status = "not_requested"
+    upload_results: list[dict[str, Any]] = []
+    upload_error = ""
+    timings: dict[str, Any] = {}
+
+    try:
+        export_started = time.perf_counter()
+        export_payload = _run_apple_photos_materialize_one(
+            repo_root,
+            asset_id=item["assetId"],
+            destination=export_root / str(item["runItemId"]),
+            allow_icloud_downloads=allow_icloud_downloads,
+        )
+        timings["photosExportSeconds"] = round(time.perf_counter() - export_started, 3)
+        exported_item = (export_payload.get("items") or [{}])[0]
+        if isinstance(exported_item, dict):
+            export_status = str(exported_item.get("status") or "")
+            export_path = str(exported_item.get("path") or "")
+            export_error = str(exported_item.get("reason") or exported_item.get("error") or "")
+        materialized_count = int(export_payload.get("materializedCount") or 0)
+        if export_path and Path(export_path).exists():
+            export_bytes = Path(export_path).stat().st_size
+        if materialized_count > 0 and export_path:
+            item_status = "exported"
+            upload_started = time.perf_counter()
+            upload_results = _upload_bridge_execute_r2(
+                planned_keys=item.get("plannedKeys") or [],
+                export_path=Path(export_path),
+                media_type=str(item.get("mediaType") or ""),
+                artifact_root=run_root / "public-artifacts",
+                allow_r2_overwrite=allow_r2_overwrite,
+                backend=r2_backend,
+                retries=r2_retries,
+                request_min_interval=r2_request_min_interval,
+                retry_max_delay=r2_retry_max_delay,
+                s3_account_id=r2_s3_account_id,
+                s3_access_key_id=r2_s3_access_key_id,
+                s3_secret_access_key=r2_s3_secret_access_key,
+                s3_endpoint=r2_s3_endpoint,
+            )
+            timings["r2UploadSeconds"] = round(time.perf_counter() - upload_started, 3)
+            failed_uploads = [result for result in upload_results if result.get("status") == "failed"]
+            skipped_uploads = [result for result in upload_results if result.get("status") == "skipped_collision"]
+            if failed_uploads:
+                upload_status = "failed"
+                item_status = "upload_failed"
+                upload_error = "; ".join(str(result.get("error") or "") for result in failed_uploads if result.get("error"))
+            elif skipped_uploads:
+                upload_status = "uploaded_with_skips"
+                item_status = "uploaded_with_skips"
+            else:
+                upload_status = "uploaded"
+                item_status = "uploaded"
+        else:
+            item_status = "export_failed"
+            export_error = export_error or "Apple Photos bridge did not materialize an export file."
+    except Exception as error:  # noqa: BLE001 - ledger must capture bridge failures.
+        message = str(error)
+        if item_status == "exported":
+            item_status = "upload_failed"
+            upload_status = "failed"
+            upload_error = message
+        else:
+            item_status = "export_failed"
+            export_status = "failed"
+            export_error = message
+
+    completed_at = now_iso()
+    timings["totalSeconds"] = round(time.perf_counter() - item_started, 3)
+    uploaded_key_count = sum(1 for result in upload_results if result.get("status") == "uploaded")
+    skipped_collision_count = sum(1 for result in upload_results if result.get("status") == "skipped_collision")
+    failed_upload_count = sum(1 for result in upload_results if result.get("status") == "failed")
+    if upload_status == "failed" and not upload_results:
+        failed_upload_count = 1
+    run_error = export_error or upload_error
+    run_summary = {
+        "bridgeQueuedCount": 1,
+        "exportedCount": 1 if export_path and item_status != "export_failed" else 0,
+        "failedCount": 1 if item_status in {"export_failed", "upload_failed"} else 0,
+        "r2UploadPerformed": bool(upload_results),
+        "executeUpload": True,
+        "allowR2Overwrite": allow_r2_overwrite,
+        "uploadedKeyCount": uploaded_key_count,
+        "skippedCollisionCount": skipped_collision_count,
+        "failedUploadCount": failed_upload_count,
+        "timings": timings,
+    }
+    with connect(repo_root) as conn:
+        if item_status == "export_failed":
+            _record_upload_bridge_export_block(
+                conn,
+                asset_id=str(item.get("assetId") or ""),
+                status=export_status or item_status,
+                error=export_error,
+                failed_at=completed_at,
+            )
+        elif item_status in {"exported", "uploaded", "uploaded_with_skips"}:
+            _clear_upload_bridge_export_block(conn, str(item.get("assetId") or ""), completed_at)
+        conn.execute(
+            """
+            UPDATE sidecar_upload_bridge_run_items
+            SET status = ?, export_status = ?, export_path = ?, export_bytes = ?,
+                upload_status = ?, upload_keys_json = ?, upload_error_text = ?,
+                error_text = ?, timings_json = ?, updated_at = ?
+            WHERE run_item_id = ?
+            """,
+            (
+                item_status,
+                export_status,
+                export_path,
+                export_bytes,
+                upload_status,
+                _json_text(upload_results),
+                upload_error,
+                run_error,
+                _json_text(timings),
+                completed_at,
+                item["runItemId"],
+            ),
+        )
+        conn.execute(
+            """
+            UPDATE sidecar_upload_bridge_runs
+            SET summary_json = ?, updated_at = ?
+            WHERE run_id = ?
+            """,
+            (_json_text(run_summary), completed_at, run_id),
+        )
+
+    item = {**item}
+    item["status"] = item_status
+    item["export"] = {
+        "status": export_status,
+        "path": export_path,
+        "bytes": export_bytes,
+        "error": export_error,
+        "allowIcloudDownloads": allow_icloud_downloads,
+    }
+    item["upload"] = {
+        "status": upload_status,
+        "keys": upload_results,
+        "error": upload_error,
+        "allowR2Overwrite": allow_r2_overwrite,
+    }
+    item["timings"] = timings
+    if export_payload:
+        item["photosBridge"] = {
+            "mode": export_payload.get("mode"),
+            "materializedCount": export_payload.get("materializedCount"),
+            "sidecar": export_payload.get("sidecar"),
+        }
+    return {
+        "ok": item_status in {"uploaded", "uploaded_with_skips"},
+        "mode": "execute-batch",
+        "runId": run_id,
+        "status": item_status,
+        "spoolRoot": str(run_root),
+        "exportRoot": str(export_root),
+        "r2UploadPerformed": bool(upload_results),
+        "executeUpload": True,
+        "count": 1,
+        "items": [item],
+        "summary": run_summary,
+        "message": "Apple Photos export and guarded R2 upload completed; Owner catalog registration was not performed.",
+    }
+
+
+def finish_upload_bridge_execute_batch(
+    repo_root: Path,
+    *,
+    run_id: str,
+    status: str,
+    summary: dict[str, Any],
+    error_text: str = "",
+) -> None:
+    completed_at = now_iso()
+    with connect(repo_root) as conn:
+        conn.execute(
+            """
+            UPDATE sidecar_upload_bridge_runs
+            SET status = ?, completed_at = ?, error_text = ?, summary_json = ?, updated_at = ?
+            WHERE run_id = ?
+            """,
+            (status, completed_at, error_text, _json_text(summary), completed_at, run_id),
+        )
 
 
 def run_upload_bridge_export_dry_run(
@@ -1887,6 +2570,7 @@ def run_upload_bridge_export_dry_run(
     r2_s3_access_key_id: str | None = None,
     r2_s3_secret_access_key: str | None = None,
     r2_s3_endpoint: str | None = None,
+    exclude_asset_ids: Iterable[str] | None = None,
 ) -> dict[str, Any]:
     """Materialize one bridge-queued item from Photos and record an upload-run ledger.
 
@@ -1909,8 +2593,12 @@ def run_upload_bridge_export_dry_run(
     export_root = run_root / "export"
     export_root.mkdir(parents=True, exist_ok=True)
 
+    excluded_asset_ids = {str(asset_id) for asset_id in (exclude_asset_ids or []) if str(asset_id)}
+
     with connect(repo_root) as conn:
         rows = _upload_bridge_rows(conn, scan_limit)
+        if excluded_asset_ids:
+            rows = [row for row in rows if str(row["asset_id"]) not in excluded_asset_ids]
         if not rows:
             conn.execute(
                 """
@@ -1927,7 +2615,12 @@ def run_upload_bridge_export_dry_run(
                     now,
                     now,
                     str(run_root),
-                    _json_text({"bridgeQueuedCount": 0, "r2UploadPerformed": False, "executeUpload": execute_upload}),
+                    _json_text({
+                        "bridgeQueuedCount": 0,
+                        "excludedAssetCount": len(excluded_asset_ids),
+                        "r2UploadPerformed": False,
+                        "executeUpload": execute_upload,
+                    }),
                     now,
                     now,
                 ),
@@ -1940,7 +2633,17 @@ def run_upload_bridge_export_dry_run(
                 "count": 0,
                 "spoolRoot": str(run_root),
                 "r2UploadPerformed": False,
-                "message": "No active Upload Bridge rows are queued.",
+                "summary": {
+                    "bridgeQueuedCount": 0,
+                    "excludedAssetCount": len(excluded_asset_ids),
+                    "r2UploadPerformed": False,
+                    "executeUpload": execute_upload,
+                },
+                "message": (
+                    "No unattempted Upload Bridge rows remain in this batch."
+                    if excluded_asset_ids
+                    else "No active Upload Bridge rows are queued."
+                ),
             }
         planned_key_sets: dict[str, list[dict[str, str]]] = {}
         photo_ids: dict[str, str] = {}
@@ -2175,6 +2878,16 @@ def run_upload_bridge_export_dry_run(
         "failedUploadCount": failed_upload_count,
     }
     with connect(repo_root) as conn:
+        if item_status == "export_failed":
+            _record_upload_bridge_export_block(
+                conn,
+                asset_id=str(item.get("assetId") or ""),
+                status=export_status or item_status,
+                error=export_error,
+                failed_at=completed_at,
+            )
+        elif item_status in {"exported", "uploaded", "uploaded_with_skips"}:
+            _clear_upload_bridge_export_block(conn, str(item.get("assetId") or ""), completed_at)
         conn.execute(
             """
             UPDATE sidecar_upload_bridge_run_items
@@ -2272,7 +2985,7 @@ def upload_plan(repo_root: Path, limit: int = 500) -> dict[str, Any]:
             WHERE d.pick_state = 'picked' AND t.asset_id IS NULL
             """
         ).fetchone()
-        rows = conn.execute(
+        raw_rows = conn.execute(
             """
             SELECT a.*, d.rating, d.color, d.pick_state, d.metadata_state, d.title, d.keywords_json
             FROM sidecar_decisions AS d
@@ -2287,10 +3000,10 @@ def upload_plan(repo_root: Path, limit: int = 500) -> dict[str, Any]:
                 WHERE m.asset_id = d.asset_id AND m.mock_state = 'active'
               )
             ORDER BY a.captured_at DESC, a.asset_id
-            LIMIT ?
             """,
-            (safe_limit,),
         ).fetchall()
+        metadata_blocked_rows = [row for row in raw_rows if not _upload_bridge_metadata_ready(row)]
+        rows = [row for row in raw_rows if _upload_bridge_metadata_ready(row)][:safe_limit]
         mock_upload_summary = _mock_upload_summary(conn)
     items = []
     for row in rows:
@@ -2305,6 +3018,7 @@ def upload_plan(repo_root: Path, limit: int = 500) -> dict[str, Any]:
             "title": row["title"] or "",
             "keywords": _read_json_text(row["keywords_json"], []),
             "eligibleReason": "picked and metadata approved",
+            "gallerySlug": _upload_bridge_gallery_slug(row),
         })
     return {
         "ok": True,
@@ -2317,6 +3031,16 @@ def upload_plan(repo_root: Path, limit: int = 500) -> dict[str, Any]:
         "pickedProposedCount": int(readiness["picked_proposed_count"] or 0),
         "pickedReworkCount": int(readiness["picked_rework_count"] or 0),
         "pickedBlockedCount": int(readiness["picked_blocked_count"] or 0),
+        "metadataBlockedCount": len(metadata_blocked_rows),
+        "metadataBlockedExamples": [
+            {
+                "assetId": row["asset_id"],
+                "filename": row["filename"] or "",
+                "title": row["title"] or "",
+                "reason": _upload_bridge_metadata_block_reason(row),
+            }
+            for row in metadata_blocked_rows[:12]
+        ],
         "mockUploadedCount": int(readiness["mock_uploaded_count"] or 0),
         "mockUploadSummary": mock_upload_summary,
         "bridgeQueuedCount": int(readiness["mock_uploaded_count"] or 0),
@@ -2326,6 +3050,8 @@ def upload_plan(repo_root: Path, limit: int = 500) -> dict[str, Any]:
         "coveredKeyCount": int(mock_upload_summary.get("coveredKeyCount") or 0),
         "missingKeyCount": int(mock_upload_summary.get("missingKeyCount") or 0),
         "plannedKeyCount": int(mock_upload_summary.get("plannedKeyCount") or 0),
+        "blockedExportFailureCount": int(mock_upload_summary.get("blockedExportFailureCount") or 0),
+        "blockedExportAttemptCount": int(mock_upload_summary.get("blockedExportAttemptCount") or 0),
         "uploadBridgeSummary": mock_upload_summary,
     }
 
@@ -2789,6 +3515,190 @@ def apply_ai_metadata_proposals(
     }
 
 
+def _proposal_items_from_payload(payload: Any) -> list[dict[str, Any]]:
+    if isinstance(payload, list):
+        raw_items = payload
+    elif isinstance(payload, dict):
+        raw_items = payload.get("proposals") or payload.get("updates") or payload.get("items") or []
+    else:
+        raw_items = []
+    return [item for item in raw_items if isinstance(item, dict)]
+
+
+def apply_ai_metadata_vision_proposals(
+    repo_root: Path,
+    payload: Any,
+    preview_manifest: Any | None = None,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Apply reviewed preview/vision proposals to picked Sidecar Review rows.
+
+    This intentionally writes only local Review proposals. Owner approval is still
+    required before Photos write-back or upload eligibility.
+    """
+    items = _proposal_items_from_payload(payload)
+    preview_items = _proposal_items_from_payload(preview_manifest)
+    preview_by_asset_id = {
+        str(item.get("assetId") or "").strip(): item
+        for item in preview_items
+        if str(item.get("assetId") or "").strip()
+    }
+    now = now_iso()
+    proposed: list[dict[str, Any]] = []
+    skipped: list[dict[str, str]] = []
+    seen_asset_ids: set[str] = set()
+    with connect(repo_root) as conn:
+        keyword_blacklist = _keyword_blacklist_set(conn, repo_root)
+        for item in items:
+            asset_id = str(item.get("assetId") or item.get("asset_id") or "").strip()
+            if not asset_id:
+                skipped.append({"assetId": "", "reason": "missing_asset_id"})
+                continue
+            if asset_id in seen_asset_ids:
+                skipped.append({"assetId": asset_id, "reason": "duplicate_asset_id"})
+                continue
+            seen_asset_ids.add(asset_id)
+
+            row = conn.execute(
+                """
+                SELECT
+                  a.filename, a.media_type, a.location_label, a.location_keywords_json,
+                  a.metadata_seed_keywords_json, d.metadata_state, d.pick_state
+                FROM sidecar_decisions AS d
+                JOIN sidecar_assets AS a ON a.asset_id = d.asset_id
+                WHERE d.asset_id = ?
+                """,
+                (asset_id,),
+            ).fetchone()
+            if row is None:
+                skipped.append({"assetId": asset_id, "reason": "asset_not_found"})
+                continue
+            if str(row["pick_state"] or "") != "picked":
+                skipped.append({
+                    "assetId": asset_id,
+                    "filename": str(row["filename"] or ""),
+                    "reason": "not_picked",
+                })
+                continue
+            if str(row["metadata_state"] or "") == "approved":
+                skipped.append({
+                    "assetId": asset_id,
+                    "filename": str(row["filename"] or ""),
+                    "reason": "already_approved",
+                })
+                continue
+
+            preview = preview_by_asset_id.get(asset_id)
+            if preview_manifest is not None and not preview:
+                skipped.append({
+                    "assetId": asset_id,
+                    "filename": str(row["filename"] or ""),
+                    "reason": "missing_preview_manifest_row",
+                })
+                continue
+            if preview and not preview.get("ok"):
+                skipped.append({
+                    "assetId": asset_id,
+                    "filename": str(row["filename"] or ""),
+                    "reason": "preview_export_failed",
+                })
+                continue
+
+            title = _seedable_title(item.get("title") or item.get("proposedTitle"))
+            seed_keywords = _read_json_text(row["metadata_seed_keywords_json"], [])
+            location_keywords = _read_json_text(row["location_keywords_json"], [])
+            keywords = _clean_keywords(
+                _dedupe_text([*location_keywords, *seed_keywords, *(item.get("keywords") or item.get("proposedKeywords") or [])]),
+                keyword_blacklist,
+            )
+            if not _useful_proposal_title(title, keywords):
+                skipped.append({
+                    "assetId": asset_id,
+                    "filename": str(row["filename"] or ""),
+                    "reason": "missing_useful_title",
+                })
+                continue
+            if not keywords:
+                skipped.append({
+                    "assetId": asset_id,
+                    "filename": str(row["filename"] or ""),
+                    "reason": "missing_keywords",
+                })
+                continue
+
+            evidence = _dedupe_text([
+                "preview-vision",
+                *(item.get("evidence") or item.get("metadataAiEvidence") or []),
+                *(["preview-manifest"] if preview else []),
+            ])
+            preview_path = str((preview or {}).get("previewPath") or item.get("previewPath") or "").strip()
+            if preview_path:
+                evidence.append("preview-path")
+            note_parts = [
+                str(item.get("note") or item.get("metadataAiNote") or "Vision proposal from exported Sidecar preview.").strip(),
+                f"Preview: {preview_path}" if preview_path else "",
+            ]
+            note = " ".join(part for part in note_parts if part)
+
+            if not dry_run:
+                result = conn.execute(
+                    """
+                    UPDATE sidecar_decisions
+                    SET metadata_state = 'proposed',
+                        title = ?,
+                        keywords_json = ?,
+                        rework_category = '',
+                        rework_comment = '',
+                        metadata_ai_rung = 'vision-description',
+                        metadata_ai_evidence_json = ?,
+                        metadata_ai_note = ?,
+                        last_action = 'ai-metadata-proposal',
+                        updated_at = ?
+                    WHERE asset_id = ?
+                      AND pick_state = 'picked'
+                      AND metadata_state != 'approved'
+                    """,
+                    (
+                        title,
+                        _json_text(keywords),
+                        _json_text(evidence),
+                        note,
+                        now,
+                        asset_id,
+                    ),
+                )
+                if not result.rowcount:
+                    skipped.append({
+                        "assetId": asset_id,
+                        "filename": str(row["filename"] or ""),
+                        "reason": "update_not_applied",
+                    })
+                    continue
+
+            proposed.append({
+                "assetId": asset_id,
+                "filename": str(row["filename"] or ""),
+                "title": title,
+                "keywords": keywords,
+                "locationLabel": str(row["location_label"] or ""),
+                "metadataAiRung": "vision-description",
+                "metadataAiEvidence": evidence,
+                "metadataAiNote": note,
+                "dryRun": dry_run,
+            })
+    return {
+        "ok": True,
+        "mode": "picked-only-ai-metadata-vision-proposals",
+        "dryRun": dry_run,
+        "inputCount": len(items),
+        "proposedCount": len(proposed),
+        "skippedCount": len(skipped),
+        "proposed": proposed,
+        "skipped": skipped,
+        "message": "Wrote vision-backed Sidecar Review proposals only; no Photos write-back rows were queued.",
+    }
+
+
 def sidecar_sync_status(repo_root: Path, limit: int = 80) -> dict[str, Any]:
     """Summarize the planned nightly Photos index, AI metadata, and write-back lanes."""
     safe_limit = max(1, min(int(limit or 80), 500))
@@ -2946,10 +3856,10 @@ def mock_upload(repo_root: Path, asset_ids: Iterable[str] | None = None, limit: 
             placeholders = ",".join("?" for _ in requested_ids)
             asset_filter = f"AND d.asset_id IN ({placeholders})"
             params.extend(requested_ids)
-        params.append(safe_limit)
-        rows = conn.execute(
+        raw_rows = conn.execute(
             f"""
-            SELECT a.asset_id, a.source_anchor, a.media_type, a.filename, a.captured_at
+            SELECT a.asset_id, a.source_anchor, a.media_type, a.filename, a.captured_at,
+                   a.location_label, a.location_keywords_json, d.title, d.keywords_json
             FROM sidecar_decisions AS d
             JOIN sidecar_assets AS a ON a.asset_id = d.asset_id
             WHERE d.pick_state = 'picked' AND d.metadata_state = 'approved'
@@ -2961,12 +3871,13 @@ def mock_upload(repo_root: Path, asset_ids: Iterable[str] | None = None, limit: 
               AND NOT EXISTS (
                 SELECT 1 FROM sidecar_mock_uploads AS m
                 WHERE m.asset_id = d.asset_id AND m.mock_state = 'active'
-              )
+            )
             ORDER BY a.captured_at DESC, a.asset_id
-            LIMIT ?
             """,
             params,
         ).fetchall()
+        metadata_blocked_rows = [row for row in raw_rows if not _upload_bridge_metadata_ready(row)]
+        rows = [row for row in raw_rows if _upload_bridge_metadata_ready(row)][:safe_limit]
         planned_key_sets: dict[str, list[dict[str, str]]] = {}
         photo_ids: dict[str, str] = {}
         all_planned_keys: list[dict[str, str]] = []
@@ -3023,6 +3934,16 @@ def mock_upload(repo_root: Path, asset_ids: Iterable[str] | None = None, limit: 
         "bridgeRunId": run_id,
         "mockUploadedCount": len(rows),
         "bridgeQueuedCount": len(rows),
+        "metadataBlockedCount": len(metadata_blocked_rows),
+        "metadataBlocked": [
+            {
+                "assetId": row["asset_id"],
+                "filename": row["filename"] or "",
+                "title": row["title"] or "",
+                "reason": _upload_bridge_metadata_block_reason(row),
+            }
+            for row in metadata_blocked_rows[:50]
+        ],
         "collisionCount": collision_count,
         "coveredKeyCount": covered_key_count,
         "items": items,

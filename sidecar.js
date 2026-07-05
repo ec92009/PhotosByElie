@@ -28,14 +28,14 @@
     culling: {
       eyebrow: "Culling",
       title: "Current window",
-      empty: "Load a window to begin.",
-      filteredEmpty: "No items in the current window match these filters.",
+      empty: "No items match the current search and filters.",
+      filteredEmpty: "No items match the current search and filters.",
     },
     review: {
       eyebrow: "Review",
       title: "Picked title and keyword review",
-      empty: "Load a window to review picked items.",
-      filteredEmpty: "No picked items in the current window match these review filters.",
+      empty: "No picked items match the current search and filters.",
+      filteredEmpty: "No picked items match the current search and filters.",
     },
   };
   const defaultFilters = {
@@ -78,6 +78,7 @@
   const undoLimit = 100;
   const refillBatchSize = 250;
   const refillMaxFetches = 120;
+  const uploadBridgeMaxItems = 500;
   const previewFallbackMarkup = `<span class="sidecar-thumb-fallback">Preview unavailable</span>`;
   let indexStatusTimer = null;
   let searchChangeTimer = null;
@@ -135,7 +136,10 @@
     aiReviewResult: null,
     aiReviewRunning: false,
     uploadBridgeUploading: false,
+    uploadBridgeCancelRequested: false,
     uploadBridgeRun: null,
+    uploadBridgePlanStats: null,
+    uploadBridgeRequestedCount: 1,
     keywordBlacklist: new Set(),
     filters: normalizeFilters(readStoredWindow()?.filters || cloneDefaultFilters()),
     searchQuery: normalizeSearchQuery(urlParams.get("q") || readStoredWindow()?.searchQuery || ""),
@@ -383,7 +387,7 @@
   const videoPlayerMarkup = (item, autoplay = true) => `
     <video class="sidecar-inline-video" controls playsinline preload="metadata" ${autoplay ? "autoplay" : ""} poster="${escapeHtml(previewUrl(item))}" src="${escapeHtml(videoUrl(item))}"></video>
   `;
-  const versionFallback = "125.7";
+  const versionFallback = "126.2";
   const versionFallbackLabel = `v${versionFallback}`;
   const videoBadge = (item, index, label) => isVideo(item)
     ? videoOverlay(item, index, label)
@@ -649,10 +653,43 @@
     syncSelectionAssetState();
   };
 
+  const compactPreviewMessage = (message = "") => {
+    if (message.includes("Apple Photos permission was not granted")) return "Photos access needed";
+    if (message.includes("iCloud")) return "iCloud original not local";
+    if (message.length <= 80) return message || "Preview unavailable";
+    return `${message.slice(0, 77).trim()}...`;
+  };
+
+  const previewFailureMessage = async (source = "") => {
+    if (!source) return { compact: "Preview unavailable", full: "" };
+    try {
+      const response = await fetch(source, { cache: "no-store" });
+      if (response.ok) return { compact: "Preview unavailable", full: "" };
+      let payload = null;
+      try {
+        payload = await response.clone().json();
+      } catch (_error) {
+        payload = null;
+      }
+      const full = payload?.error || response.statusText || "Preview unavailable";
+      return { compact: compactPreviewMessage(full), full };
+    } catch (_error) {
+      return { compact: "Preview unavailable", full: "" };
+    }
+  };
+
   const wirePreviewFallbacks = (root) => {
     root?.querySelectorAll("img[data-sidecar-preview]").forEach((img) => {
-      const markMissing = () => {
-        img.closest(".sidecar-thumb, .sidecar-editing-preview, .sidecar-quick-look-media, .sidecar-upload-plan-tile")?.classList.add("is-missing");
+      const markMissing = async () => {
+        const source = img.currentSrc || img.src || "";
+        const container = img.closest(".sidecar-thumb, .sidecar-editing-preview, .sidecar-quick-look-media, .sidecar-upload-plan-tile");
+        const fallback = container?.querySelector(".sidecar-thumb-fallback");
+        const message = await previewFailureMessage(source);
+        if (fallback) {
+          fallback.textContent = message.compact;
+          fallback.title = message.full || message.compact;
+        }
+        container?.classList.add("is-missing");
         img.removeAttribute("src");
       };
       img.addEventListener("error", markMissing, { once: true });
@@ -1326,13 +1363,7 @@
     shell.append(messageRoot);
   };
 
-  const compactVideoMessage = (message = "") => {
-    if (message.includes("Apple Photos permission was not granted")) {
-      return "Photos permission needed. Open PhotosByElie Owner, approve Photos access, then retry.";
-    }
-    if (message.length <= 140) return message;
-    return `${message.slice(0, 137).trim()}...`;
-  };
+  const compactVideoMessage = (message = "") => compactPreviewMessage(message);
 
   const videoPreviewErrorMessage = async (response, fallback = "Local video preview is unavailable.") => {
     let payload = null;
@@ -2034,6 +2065,48 @@
     return bridgeQueuedCountFromPayload(payload);
   };
 
+  const uploadBridgeStatsFromPayload = (payload = {}) => {
+    const result = payload?.bridgeResult || payload?.mockResult || null;
+    const summary = payload?.uploadBridgeSummary || payload?.mockUploadSummary || {};
+    const source = result || summary || payload || {};
+    const queued = Number(source.bridgeQueuedCount || source.mockUploadedCount || payload.bridgeQueuedCount || payload.mockUploadedCount || 0);
+    const uploadable = Number(source.uploadableItemCount ?? payload.uploadableItemCount ?? queued);
+    const fullyCovered = Number(source.fullyCoveredItemCount || Math.max(0, queued - uploadable));
+    const partiallyCovered = Number(source.partiallyCoveredItemCount || 0);
+    const collisions = Number(source.collisionCount || payload.collisionCount || 0);
+    const coveredKeys = Number(source.coveredKeyCount || payload.coveredKeyCount || 0);
+    const missingKeys = Number(source.missingKeyCount || payload.missingKeyCount || 0);
+    const blockedExports = Number(source.blockedExportFailureCount || payload.blockedExportFailureCount || 0);
+    const blockedAttempts = Number(source.blockedExportAttemptCount || payload.blockedExportAttemptCount || 0);
+    const metadataBlocked = Number(source.metadataBlockedQueuedCount || payload.metadataBlockedQueuedCount || payload.metadataBlockedCount || 0);
+    const latestQueuedAt = source.latestQueuedAt || source.latestUploadedAt || "";
+    return {
+      queued,
+      uploadable,
+      fullyCovered,
+      partiallyCovered,
+      collisions,
+      coveredKeys,
+      missingKeys,
+      blockedExports,
+      blockedAttempts,
+      metadataBlocked,
+      latestQueuedAt,
+    };
+  };
+
+  const uploadBridgeMetricStripMarkup = (metrics = []) => `
+    <div class="sidecar-upload-bridge-metrics" aria-label="Upload Bridge counts">
+      ${metrics.map((metric) => `
+        <div class="sidecar-upload-bridge-metric${metric.tone ? ` is-${escapeHtml(metric.tone)}` : ""}">
+          <span>${escapeHtml(metric.label)}</span>
+          <strong>${escapeHtml(metric.value)}</strong>
+          ${metric.note ? `<small>${escapeHtml(metric.note)}</small>` : ""}
+        </div>
+      `).join("")}
+    </div>
+  `;
+
   const uploadBridgeProgressMarkup = () => {
     const progress = state.uploadBridgeRun;
     if (!progress) {
@@ -2047,16 +2120,29 @@
     const totals = progress.totals || {};
     const completed = Number(totals.completedCount || 0);
     const requested = Number(totals.requestedCount || progress.requestedCount || 0);
-    const uploaded = Number(totals.uploadedKeyCount || 0);
+    const uploadedItems = Number(totals.uploadedItemCount || 0);
+    const uploadedKeys = Number(totals.uploadedKeyCount || 0);
     const skipped = Number(totals.skippedCollisionCount || 0);
-    const failed = Number(totals.failedUploadCount || 0);
+    const failedItems = Number(totals.failedItemCount || 0);
+    const failedKeys = Number(totals.failedUploadCount || 0);
+    const initialQueue = Number(progress.initialQueuedCount ?? progress.requestedCount ?? requested);
+    const queueRemaining = Math.max(0, initialQueue - uploadedItems);
+    const uploadingValue = progress.running
+      ? `${Math.min(completed + 1, requested).toLocaleString()}/${requested.toLocaleString()}`
+      : `${completed.toLocaleString()}/${requested.toLocaleString()}`;
     const entries = Array.isArray(progress.entries) ? progress.entries.slice(-12) : [];
     const lines = Array.isArray(progress.lines) ? progress.lines.slice(-12) : [];
     return `
-      <div class="sidecar-upload-bridge-progress${progress.running ? " is-running" : ""}${failed ? " has-warning" : ""}">
+      <div class="sidecar-upload-bridge-progress${progress.running ? " is-running" : ""}${progress.cancelRequested ? " is-canceling" : ""}${failedItems || failedKeys ? " has-warning" : ""}">
+        ${uploadBridgeMetricStripMarkup([
+          { label: "Queue", value: queueRemaining.toLocaleString(), note: "remaining" },
+          { label: "Uploading", value: uploadingValue, note: progress.running ? "current run" : "complete" },
+          { label: "Uploaded", value: uploadedItems.toLocaleString(), note: `${uploadedKeys.toLocaleString()} key${uploadedKeys === 1 ? "" : "s"}` },
+          { label: "Collisions", value: skipped.toLocaleString(), note: "skipped keys", tone: skipped ? "warning" : "" },
+        ])}
         <strong>${escapeHtml(progress.message || (progress.running ? "Real upload running..." : "Real upload finished."))}</strong>
         <span>${completed.toLocaleString()} of ${requested.toLocaleString()} item${requested === 1 ? "" : "s"} processed.</span>
-        <span>${uploaded.toLocaleString()} uploaded key${uploaded === 1 ? "" : "s"} · ${skipped.toLocaleString()} skipped collision key${skipped === 1 ? "" : "s"} · ${failed.toLocaleString()} failed key${failed === 1 ? "" : "s"}</span>
+        <span>${uploadedKeys.toLocaleString()} uploaded key${uploadedKeys === 1 ? "" : "s"} · ${skipped.toLocaleString()} skipped collision key${skipped === 1 ? "" : "s"} · ${failedItems.toLocaleString()} failed item${failedItems === 1 ? "" : "s"} · ${failedKeys.toLocaleString()} failed key${failedKeys === 1 ? "" : "s"}</span>
         ${entries.length ? `
           <ol class="sidecar-upload-progress-list">
             ${entries.map((entry) => `
@@ -2096,6 +2182,7 @@
     const globalPicked = Number(payload.pickedCount ?? 0);
     const globalReady = Number(payload.approvedPickedCount ?? itemCount);
     const globalNeedsReview = Number(payload.pickedNeedsReviewCount ?? 0);
+    const metadataBlocked = Number(payload.metadataBlockedCount || 0);
     const currentLine = windowPlan.picked
       ? `${windowPlan.picked.toLocaleString()} picked current-window item${windowPlan.picked === 1 ? "" : "s"}: ${windowPlan.approved.toLocaleString()} metadata-approved, ${windowPlan.needsReview.toLocaleString()} still need Review approval.`
       : "No picked items in the current window.";
@@ -2105,10 +2192,14 @@
     const globalLine = globalPicked
       ? `<p>${globalPicked.toLocaleString()} picked item${globalPicked === 1 ? "" : "s"} indexed globally: ${globalReady.toLocaleString()} approved but not yet queued, ${globalNeedsReview.toLocaleString()} still need Review approval.</p>`
       : "";
+    const metadataBlockedLine = metadataBlocked
+      ? `<p><strong>${metadataBlocked.toLocaleString()} approved picked item${metadataBlocked === 1 ? "" : "s"} blocked from Upload Bridge</strong> until they have a clear gallery/country signal and non-generic title.</p>`
+      : "";
     return `
       <p>${escapeHtml(currentLine)}</p>
       ${visibleLine}
       ${globalLine}
+      ${metadataBlockedLine}
     `;
   };
 
@@ -2116,16 +2207,12 @@
     const result = payload?.bridgeResult || payload?.mockResult;
     const summary = payload?.uploadBridgeSummary || payload?.mockUploadSummary;
     if (!result && !summary) return "";
-    const queued = Number((result || summary).bridgeQueuedCount || (result || summary).mockUploadedCount || 0);
+    const stats = uploadBridgeStatsFromPayload(payload);
+    const queued = stats.queued;
     if (!queued) return "";
-    const uploadable = Number((result || summary).uploadableItemCount ?? queued);
-    const fullyCovered = Number((result || summary).fullyCoveredItemCount || Math.max(0, queued - uploadable));
-    const partiallyCovered = Number((result || summary).partiallyCoveredItemCount || 0);
-    const collisions = Number((result || summary).collisionCount || 0);
-    const coveredKeys = Number((result || summary).coveredKeyCount || 0);
-    const missingKeys = Number((result || summary).missingKeyCount || 0);
+    const { uploadable, fullyCovered, partiallyCovered, collisions, coveredKeys, missingKeys, blockedExports, blockedAttempts, metadataBlocked } = stats;
     const remaining = result ? Number(payload.count || 0) : null;
-    const latestQueuedAt = summary?.latestQueuedAt || summary?.latestUploadedAt || "";
+    const latestQueuedAt = stats.latestQueuedAt || "";
     const latestRun = latestQueuedAt ? ` Latest queue run: ${escapeHtml(latestQueuedAt)}.` : "";
     const lead = result
       ? `Queued ${queued.toLocaleString()} item${queued === 1 ? "" : "s"} across the Upload Bridge; ${remaining.toLocaleString()} remain.`
@@ -2135,9 +2222,19 @@
       : "<strong>No existing R2 collisions found for bridged items.</strong>";
     return `
       <div class="sidecar-upload-bridge-result${collisions ? " has-warning" : ""}">
+        ${uploadBridgeMetricStripMarkup([
+          { label: "Queue", value: uploadable.toLocaleString(), note: "need upload" },
+          { label: "Uploading", value: state.uploadBridgeUploading ? "live" : "0", note: state.uploadBridgeUploading ? "running" : "idle" },
+          { label: "Uploaded", value: fullyCovered.toLocaleString(), note: "covered items" },
+          { label: "Collisions", value: collisions.toLocaleString(), note: "items", tone: collisions ? "warning" : "" },
+          { label: "Blocked", value: blockedExports.toLocaleString(), note: "export failures", tone: blockedExports ? "warning" : "" },
+          { label: "Metadata", value: metadataBlocked.toLocaleString(), note: "blocked", tone: metadataBlocked ? "warning" : "" },
+        ])}
         <span>${lead}</span>
         <span>${warning}</span>
         ${partiallyCovered ? `<span>${partiallyCovered.toLocaleString()} item${partiallyCovered === 1 ? "" : "s"} are partially uploaded and will resume missing keys.</span>` : ""}
+        ${blockedExports ? `<span>${blockedExports.toLocaleString()} item${blockedExports === 1 ? "" : "s"} are blocked after Apple Photos export failure${blockedAttempts ? ` across ${blockedAttempts.toLocaleString()} attempt${blockedAttempts === 1 ? "" : "s"}` : ""}.</span>` : ""}
+        ${metadataBlocked ? `<span>${metadataBlocked.toLocaleString()} queued item${metadataBlocked === 1 ? "" : "s"} are blocked from real upload because approved metadata lacks a safe public gallery signal.</span>` : ""}
         ${coveredKeys ? `<span>${coveredKeys.toLocaleString()} planned key${coveredKeys === 1 ? "" : "s"} already exist in Owner R2/bridge ledger state.</span>` : ""}
         ${missingKeys ? `<span>${missingKeys.toLocaleString()} planned key${missingKeys === 1 ? "" : "s"} still missing from R2/bridge ledger coverage.</span>` : ""}
       </div>
@@ -2158,8 +2255,11 @@
     const uploadSummary = kind === "upload" ? uploadPlanSummaryMarkup(payload, items.length) : "";
     const emptyMessage = kind === "upload" ? "No rows are ready for Upload Bridge yet." : "No rows.";
     if (kind === "upload") {
+      const planStats = uploadBridgeStatsFromPayload(payload);
+      state.uploadBridgePlanStats = planStats;
       const uploadableCount = bridgeUploadableCountFromPayload(payload);
-      const uploadMax = Math.max(1, Math.min(50, uploadableCount || 50));
+      const uploadMax = Math.max(1, Math.min(uploadBridgeMaxItems, uploadableCount || uploadBridgeMaxItems));
+      const uploadValue = Math.max(1, Math.min(uploadMax, Number(state.uploadBridgeRequestedCount || 1)));
       const uploadDisabled = state.uploadBridgeUploading || uploadableCount <= 0;
       if (planTitle) planTitle.textContent = `Upload Bridge${items.length ? ` (${items.length.toLocaleString()})` : ""}`;
       planOutput.innerHTML = `
@@ -2169,9 +2269,12 @@
         <div class="sidecar-real-upload-controls">
           <label>
             <span>Items to upload</span>
-            <input type="number" min="1" max="${uploadMax}" step="1" value="${Math.min(1, uploadMax)}" data-sidecar-real-upload-count ${uploadDisabled ? "disabled" : ""}/>
+            <input type="number" min="1" max="${uploadMax}" step="1" value="${uploadValue}" data-sidecar-real-upload-count ${uploadDisabled ? "disabled" : ""}/>
           </label>
-          <button class="btn secondary sidecar-real-upload-action" type="button" data-sidecar-real-upload ${uploadDisabled ? "disabled" : ""}>Real upload</button>
+          <div class="sidecar-real-upload-buttons">
+            <button class="btn secondary sidecar-real-upload-action" type="button" data-sidecar-real-upload ${uploadDisabled ? "disabled" : ""}>Real upload</button>
+            <button class="btn secondary sidecar-stop-upload-action" type="button" data-sidecar-real-upload-cancel ${state.uploadBridgeUploading ? "" : "disabled"}>${state.uploadBridgeCancelRequested ? "Stopping..." : "Stop upload"}</button>
+          </div>
         </div>
         <div data-sidecar-upload-bridge-progress>
           ${uploadBridgeProgressMarkup()}
@@ -2193,6 +2296,9 @@
       });
       planOutput.querySelector("[data-sidecar-real-upload]")?.addEventListener("click", (event) => {
         executeUploadBridge(event.currentTarget).catch((error) => setStatus(error.message));
+      });
+      planOutput.querySelector("[data-sidecar-real-upload-cancel]")?.addEventListener("click", (event) => {
+        cancelUploadBridge(event.currentTarget).catch((error) => setStatus(error.message));
       });
       return;
     }
@@ -2280,10 +2386,15 @@
 
   const readUploadBridgeEvent = (event) => {
     if (!state.uploadBridgeRun) {
+      const planStats = state.uploadBridgePlanStats || {};
       state.uploadBridgeRun = {
         running: true,
         requestedCount: Number(event.count || 1),
-        totals: { requestedCount: Number(event.count || 1) },
+        uploadId: event.uploadId || "",
+        cancelRequested: false,
+        initialQueuedCount: Number(planStats.uploadable || event.count || 1),
+        initialCollisionCount: Number(planStats.collisions || 0),
+        totals: { requestedCount: Number(event.count || 1), uploadedItemCount: 0, failedItemCount: 0 },
         lines: [],
         entries: [],
         message: "",
@@ -2292,11 +2403,34 @@
     const progress = state.uploadBridgeRun;
     if (event.event === "start") {
       progress.running = true;
+      progress.uploadId = event.uploadId || progress.uploadId || "";
       progress.requestedCount = Number(event.count || progress.requestedCount || 1);
-      progress.totals = { requestedCount: progress.requestedCount };
+      if (!progress.initialQueuedCount) {
+        const planStats = state.uploadBridgePlanStats || {};
+        progress.initialQueuedCount = Number(planStats.uploadable || progress.requestedCount || 1);
+      }
+      progress.totals = { requestedCount: progress.requestedCount, uploadedItemCount: 0, failedItemCount: 0 };
       progress.lines = [];
       progress.entries = [];
       progress.message = event.message || "Real upload starting...";
+    } else if (event.event === "planning") {
+      progress.running = true;
+      progress.message = event.message || "Planning Upload Bridge batch...";
+      progress.lines = [...(progress.lines || []), progress.message].slice(-12);
+    } else if (event.event === "planned") {
+      const summary = event.summary || {};
+      const plannedCount = Number(event.count || summary.selectedCount || progress.requestedCount || 1);
+      const planningSeconds = Number(summary.planningSeconds || 0);
+      progress.running = plannedCount > 0;
+      progress.requestedCount = plannedCount || progress.requestedCount;
+      progress.totals = { ...(progress.totals || {}), requestedCount: progress.requestedCount };
+      progress.message = event.message || `Planned ${plannedCount.toLocaleString()} Upload Bridge item${plannedCount === 1 ? "" : "s"}.`;
+      progress.lines = [
+        ...(progress.lines || []),
+        planningSeconds
+          ? `${progress.message} Planning took ${planningSeconds.toFixed(1)}s.`
+          : progress.message,
+      ].slice(-12);
     } else if (event.event === "item-start") {
       progress.running = true;
       progress.message = event.message || `Uploading item ${event.index || ""}...`;
@@ -2306,9 +2440,14 @@
       const summary = event.summary || {};
       const uploaded = Number(summary.uploadedKeyCount || 0);
       const skipped = Number(summary.skippedCollisionCount || 0);
-      const failed = Number(summary.failedUploadCount || 0);
+      const failedItems = Number(summary.failedCount || 0);
+      const failedKeys = Number(summary.failedUploadCount || 0);
       const name = item.filename || item.photoId || item.assetId || "Upload Bridge item";
-      const detail = `${event.status || item.status || "done"} (${uploaded} uploaded, ${skipped} skipped, ${failed} failed)`;
+      const timings = item.timings || {};
+      const timingDetail = Number(timings.totalSeconds || 0)
+        ? ` · ${Number(timings.totalSeconds).toFixed(1)}s`
+        : "";
+      const detail = `${event.status || item.status || "done"} (${uploaded} uploaded, ${skipped} skipped, ${failedItems || failedKeys} failed)${timingDetail}`;
       progress.entries = [
         ...(progress.entries || []),
         {
@@ -2319,9 +2458,15 @@
         },
       ].slice(-12);
       progress.lines = [...(progress.lines || []), `${name}: ${detail}`].slice(-12);
-      progress.message = failed
-        ? `Real upload stopped on ${name}.`
+      progress.message = failedItems || failedKeys
+        ? `Real upload skipped failed item ${name}.`
         : `Real upload processed ${name}.`;
+    } else if (event.event === "cancelled") {
+      progress.running = false;
+      progress.cancelRequested = true;
+      progress.totals = event.totals || progress.totals || {};
+      progress.lines = [...(progress.lines || []), event.message || "Upload Bridge interrupted."].slice(-12);
+      progress.message = event.message || "Upload Bridge interrupted.";
     } else if (event.event === "error") {
       progress.running = false;
       progress.totals = event.totals || progress.totals || {};
@@ -2336,6 +2481,7 @@
       progress.message = event.error || "Real upload failed.";
     } else if (event.event === "done") {
       progress.running = false;
+      progress.cancelRequested = Boolean(event.cancelled);
       progress.totals = event.totals || progress.totals || {};
       progress.message = event.message || "Real upload finished.";
     }
@@ -2379,12 +2525,21 @@
   const executeUploadBridge = async (control) => {
     if (state.uploadBridgeUploading) return;
     const countInput = planOutput?.querySelector("[data-sidecar-real-upload-count]");
-    const requestedCount = Math.max(1, Math.min(50, Number(countInput?.value || 1)));
+    const requestedCount = Math.max(1, Math.min(uploadBridgeMaxItems, Number(countInput?.value || 1)));
+    state.uploadBridgeRequestedCount = requestedCount;
+    if (countInput) countInput.value = String(requestedCount);
+    const planStats = state.uploadBridgePlanStats || {};
     state.uploadBridgeUploading = true;
+    state.uploadBridgeCancelRequested = false;
+    const uploadId = (window.crypto?.randomUUID?.() || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`);
     state.uploadBridgeRun = {
       running: true,
+      uploadId,
+      cancelRequested: false,
       requestedCount,
-      totals: { requestedCount },
+      initialQueuedCount: Number(planStats.uploadable || requestedCount),
+      initialCollisionCount: Number(planStats.collisions || 0),
+      totals: { requestedCount, uploadedItemCount: 0, failedItemCount: 0 },
       lines: [],
       entries: [],
       message: `Starting real upload for ${requestedCount.toLocaleString()} item${requestedCount === 1 ? "" : "s"}...`,
@@ -2394,6 +2549,12 @@
       control.classList.add("is-busy");
       control.setAttribute("aria-busy", "true");
     }
+    const cancelControl = planOutput?.querySelector("[data-sidecar-real-upload-cancel]");
+    if (cancelControl) {
+      cancelControl.disabled = false;
+      cancelControl.textContent = "Stop upload";
+      cancelControl.removeAttribute("aria-busy");
+    }
     if (countInput) countInput.disabled = true;
     updateUploadBridgeProgress();
     setStatus(state.uploadBridgeRun.message);
@@ -2402,7 +2563,7 @@
       const response = await fetch("/__sidecar/upload-bridge-execute", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ count: requestedCount }),
+        body: JSON.stringify({ count: requestedCount, uploadId }),
       });
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
@@ -2411,13 +2572,16 @@
       const finalEvent = await streamUploadBridgeEvents(response);
       const finalPlan = finalEvent?.uploadPlan;
       state.uploadBridgeUploading = false;
+      state.uploadBridgeCancelRequested = false;
       if (state.uploadBridgeRun) state.uploadBridgeRun.running = false;
       if (finalPlan?.ok) renderPlan("Upload Bridge", "Upload Bridge", finalPlan, "upload");
       else await refreshUploadRail({ silent: true });
       const totals = finalEvent?.totals || state.uploadBridgeRun?.totals || {};
-      setStatus(`Real upload complete: ${Number(totals.completedCount || 0).toLocaleString()} item${Number(totals.completedCount || 0) === 1 ? "" : "s"}, ${Number(totals.uploadedKeyCount || 0).toLocaleString()} uploaded key${Number(totals.uploadedKeyCount || 0) === 1 ? "" : "s"}, ${Number(totals.failedUploadCount || 0).toLocaleString()} failed key${Number(totals.failedUploadCount || 0) === 1 ? "" : "s"}.`);
+      const finishedLabel = finalEvent?.cancelled ? "Real upload interrupted" : "Real upload complete";
+      setStatus(`${finishedLabel}: ${Number(totals.completedCount || 0).toLocaleString()} processed item${Number(totals.completedCount || 0) === 1 ? "" : "s"}, ${Number(totals.uploadedItemCount || 0).toLocaleString()} uploaded item${Number(totals.uploadedItemCount || 0) === 1 ? "" : "s"}, ${Number(totals.uploadedKeyCount || 0).toLocaleString()} uploaded key${Number(totals.uploadedKeyCount || 0) === 1 ? "" : "s"}, ${Number(totals.failedItemCount || 0).toLocaleString()} failed item${Number(totals.failedItemCount || 0) === 1 ? "" : "s"}.`);
     } finally {
       state.uploadBridgeUploading = false;
+      state.uploadBridgeCancelRequested = false;
       if (state.uploadBridgeRun) state.uploadBridgeRun.running = false;
       if (control?.isConnected) {
         control.disabled = false;
@@ -2425,7 +2589,52 @@
         control.removeAttribute("aria-busy");
       }
       if (countInput?.isConnected) countInput.disabled = false;
+      if (cancelControl?.isConnected) {
+        cancelControl.disabled = true;
+        cancelControl.textContent = "Stop upload";
+        cancelControl.classList.remove("is-busy");
+        cancelControl.removeAttribute("aria-busy");
+      }
       updateUploadBridgeProgress();
+    }
+  };
+
+  const cancelUploadBridge = async (control) => {
+    const uploadId = state.uploadBridgeRun?.uploadId || "";
+    if (!state.uploadBridgeUploading || !uploadId || state.uploadBridgeCancelRequested) return;
+    state.uploadBridgeCancelRequested = true;
+    if (state.uploadBridgeRun) {
+      state.uploadBridgeRun.cancelRequested = true;
+      state.uploadBridgeRun.message = "Interrupt requested. The current item will finish, then the upload will stop.";
+    }
+    if (control) {
+      control.disabled = true;
+      control.classList.add("is-busy");
+      control.setAttribute("aria-busy", "true");
+      control.textContent = "Stopping...";
+    }
+    updateUploadBridgeProgress();
+    setStatus(state.uploadBridgeRun?.message || "Interrupt requested.");
+    try {
+      const response = await fetch("/__sidecar/upload-bridge-cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ uploadId }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.ok) throw new Error(payload.error || "Could not interrupt Upload Bridge.");
+      setStatus(payload.message || "Upload Bridge interrupt requested.");
+    } catch (error) {
+      state.uploadBridgeCancelRequested = false;
+      if (state.uploadBridgeRun) state.uploadBridgeRun.cancelRequested = false;
+      if (control?.isConnected) {
+        control.disabled = false;
+        control.classList.remove("is-busy");
+        control.removeAttribute("aria-busy");
+        control.textContent = "Stop upload";
+      }
+      updateUploadBridgeProgress();
+      throw error;
     }
   };
 

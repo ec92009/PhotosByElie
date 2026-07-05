@@ -1,0 +1,460 @@
+{
+  "generatedAt": "2026-07-03T17:54:01.087533Z",
+  "message": "Reworked picked/not-approved Sidecar rows using cached preview vision plus local GPS/public-place context; no Photos write-back rows were queued.",
+  "ok": true,
+  "task": "sidecar-picked-ai-metadata-review-vision-rework",
+  "updatedCount": 30,
+  "updates": [
+    {
+      "assetId": "0D9E1320-ACD2-4283-8347-CB4FE7B6B8E1/L0/001",
+      "keywords": [
+        "San Gimignano",
+        "Tuscany",
+        "Italy",
+        "Olive grove",
+        "Olive trees",
+        "Tuscan countryside",
+        "Rural landscape",
+        "Wooden railing"
+      ],
+      "metadataState": null,
+      "title": "San Gimignano Olive Grove"
+    },
+    {
+      "assetId": "945965F2-A4BA-419C-BEA7-368D15A9440A/L0/001",
+      "keywords": [
+        "San Gimignano",
+        "Tuscany",
+        "Italy",
+        "Olive grove",
+        "Olive trees",
+        "Gravel path",
+        "Tuscan countryside",
+        "Wooden railing"
+      ],
+      "metadataState": null,
+      "title": "San Gimignano Olive Grove Path"
+    },
+    {
+      "assetId": "B184D0E1-8B03-4C58-B0E8-5DFB31A85CBF/L0/001",
+      "keywords": [
+        "San Gimignano",
+        "Tuscany",
+        "Italy",
+        "Cypress trees",
+        "Gravel path",
+        "Tuscan countryside",
+        "Valley view",
+        "Wooden railing"
+      ],
+      "metadataState": null,
+      "title": "Cypress Path Above San Gimignano"
+    },
+    {
+      "assetId": "A1B0DD20-0AA1-489D-85E0-41EC56B6EC44/L0/001",
+      "keywords": [
+        "San Gimignano",
+        "Tuscany",
+        "Italy",
+        "Tuscan countryside",
+        "Valley view",
+        "Rolling hills",
+        "Gravel path",
+        "Wooden railing"
+      ],
+      "metadataState": null,
+      "title": "Tuscan Valley View From San Gimignano"
+    },
+    {
+      "assetId": "CAB96017-E3A3-4C0E-807A-CE2FB48AEEA9/L0/001",
+      "keywords": [
+        "San Gimignano",
+        "Tuscany",
+        "Italy",
+        "Countryside overlook",
+        "Tuscan countryside",
+        "Rolling hills",
+        "Vineyards",
+        "Terrace view"
+      ],
+      "metadataState": null,
+      "title": "San Gimignano Countryside Overlook"
+    },
+    {
+      "assetId": "C0ECC0DD-37FD-4CD7-B275-C53FB371F457/L0/001",
+      "keywords": [
+        "San Gimignano",
+        "Tuscany",
+        "Italy",
+        "Terrace view",
+        "Tuscan countryside",
+        "Rolling hills",
+        "Garden terrace",
+        "Umbrella"
+      ],
+      "metadataState": null,
+      "title": "San Gimignano Terrace View"
+    },
+    {
+      "assetId": "304AF3B2-F1DF-4E7E-ADF6-3EBA42C34702/L0/001",
+      "keywords": [
+        "Pisa",
+        "Tuscany",
+        "Italy",
+        "Leaning Tower of Pisa",
+        "Piazza dei Miracoli",
+        "Landmark",
+        "Bell tower",
+        "Marble architecture"
+      ],
+      "metadataState": null,
+      "title": "Leaning Tower of Pisa"
+    },
+    {
+      "assetId": "F579D90B-EB36-4B1D-AC91-CA1401C13CF5/L0/001",
+      "keywords": [
+        "Pisa",
+        "Tuscany",
+        "Italy",
+        "Leaning Tower of Pisa",
+        "Piazza dei Miracoli",
+        "Landmark",
+        "Bell tower",
+        "Marble architecture"
+      ],
+      "metadataState": null,
+      "title": "Leaning Tower of Pisa"
+    },
+    {
+      "assetId": "E71A93EE-8B50-4244-8F3F-8055EE59CC3C/L0/001",
+      "keywords": [
+        "Pisa",
+        "Tuscany",
+        "Italy",
+        "Pisa Cathedral",
+        "Pisa Baptistery",
+        "Piazza dei Miracoli",
+        "Romanesque architecture",
+        "Marble architecture"
+      ],
+      "metadataState": null,
+      "title": "Pisa Cathedral and Baptistery"
+    },
+    {
+      "assetId": "44FC8CD4-10C6-41A3-A5B1-717DB9C18D77/L0/001",
+      "keywords": [
+        "Pisa",
+        "Tuscany",
+        "Italy",
+        "Pisa Cathedral",
+        "Pisa Baptistery",
+        "Piazza dei Miracoli",
+        "Cathedral lawn",
+        "Romanesque architecture"
+      ],
+      "metadataState": null,
+      "title": "Pisa Cathedral and Baptistery Lawn"
+    },
+    {
+      "assetId": "8CDAF8AE-42D1-49D1-B1D5-8DE89BFDE843/L0/001",
+      "keywords": [
+        "Pisa",
+        "Tuscany",
+        "Italy",
+        "Camposanto Monumentale",
+        "Piazza dei Miracoli",
+        "Cathedral lawn",
+        "Marble architecture",
+        "Arcade"
+      ],
+      "metadataState": null,
+      "title": "Camposanto Monumentale Lawn"
+    },
+    {
+      "assetId": "BEB5BFC6-3D99-4E58-A3BB-CF43DB9FCD1E/L0/001",
+      "keywords": [
+        "Pisa",
+        "Tuscany",
+        "Italy",
+        "Camposanto Monumentale",
+        "Piazza dei Miracoli",
+        "Cathedral lawn",
+        "Marble architecture",
+        "Arcade"
+      ],
+      "metadataState": null,
+      "title": "Camposanto Monumentale Lawn"
+    },
+    {
+      "assetId": "7A2E7428-C033-4888-8D04-B5993553D493/L0/001",
+      "keywords": [
+        "Pisa",
+        "Tuscany",
+        "Italy",
+        "Pisa Cathedral",
+        "Cathedral doorway",
+        "Piazza dei Miracoli",
+        "Marble facade",
+        "Romanesque architecture"
+      ],
+      "metadataState": null,
+      "title": "Pisa Cathedral Doorway"
+    },
+    {
+      "assetId": "248C4156-04AB-45C7-98F9-ADB15BB2E9FC/L0/001",
+      "keywords": [
+        "Pisa",
+        "Tuscany",
+        "Italy",
+        "Pisa Cathedral",
+        "Cathedral entrance",
+        "Piazza dei Miracoli",
+        "Marble facade",
+        "Romanesque architecture"
+      ],
+      "metadataState": null,
+      "title": "Pisa Cathedral Entrance"
+    },
+    {
+      "assetId": "8701A084-34C4-49E2-8EAE-C9235EC87C08/L0/001",
+      "keywords": [
+        "Pisa",
+        "Tuscany",
+        "Italy",
+        "Pisa Baptistery",
+        "Piazza dei Miracoli",
+        "Marble architecture",
+        "Romanesque architecture",
+        "Cathedral lawn"
+      ],
+      "metadataState": null,
+      "title": "Pisa Baptistery"
+    },
+    {
+      "assetId": "23A9B13E-A7BA-4610-8B84-F22BA6809075/L0/001",
+      "keywords": [
+        "Pisa",
+        "Tuscany",
+        "Italy",
+        "Pisa Baptistery",
+        "Piazza dei Miracoli",
+        "Marble architecture",
+        "Romanesque architecture",
+        "Cathedral lawn"
+      ],
+      "metadataState": null,
+      "title": "Pisa Baptistery"
+    },
+    {
+      "assetId": "D3A79622-9D3E-4E90-ACB2-4D5B180F95C7/L0/001",
+      "keywords": [
+        "Pisa",
+        "Tuscany",
+        "Italy",
+        "Pisa Baptistery",
+        "Baptistery entrance",
+        "Piazza dei Miracoli",
+        "Marble facade",
+        "Romanesque architecture"
+      ],
+      "metadataState": null,
+      "title": "Pisa Baptistery Entrance"
+    },
+    {
+      "assetId": "8704EF0C-61BB-4687-ABA6-99EA04BD17F4/L0/001",
+      "keywords": [
+        "Pisa",
+        "Tuscany",
+        "Italy",
+        "Pisa Baptistery",
+        "Piazza dei Miracoli",
+        "Cathedral lawn",
+        "Marble architecture",
+        "Romanesque architecture"
+      ],
+      "metadataState": null,
+      "title": "Pisa Baptistery and Lawn"
+    },
+    {
+      "assetId": "0D2A993B-7199-403E-A181-3F819BC5D579/L0/001",
+      "keywords": [
+        "Pisa",
+        "Tuscany",
+        "Italy",
+        "Pisa Cathedral",
+        "Cathedral facade",
+        "Piazza dei Miracoli",
+        "Marble facade",
+        "Romanesque architecture"
+      ],
+      "metadataState": null,
+      "title": "Pisa Cathedral Facade"
+    },
+    {
+      "assetId": "78358C8A-5B69-45FF-A9EE-9239F350820C/L0/001",
+      "keywords": [
+        "Pisa",
+        "Tuscany",
+        "Italy",
+        "Pisa Cathedral",
+        "Cathedral facade",
+        "Piazza dei Miracoli",
+        "Marble facade",
+        "Romanesque architecture"
+      ],
+      "metadataState": null,
+      "title": "Pisa Cathedral Facade"
+    },
+    {
+      "assetId": "6E21F7E8-2DD6-42F2-ADE2-4C1592B4C806/L0/001",
+      "keywords": [
+        "Pisa",
+        "Tuscany",
+        "Italy",
+        "Pisa Cathedral",
+        "Cathedral facade",
+        "Piazza dei Miracoli",
+        "Marble facade",
+        "Romanesque architecture"
+      ],
+      "metadataState": null,
+      "title": "Pisa Cathedral Facade Detail"
+    },
+    {
+      "assetId": "316691EB-3FAF-453D-B18B-977F684B63C3/L0/001",
+      "keywords": [
+        "Pisa",
+        "Tuscany",
+        "Italy",
+        "Pisa Cathedral",
+        "Cathedral approach",
+        "Piazza dei Miracoli",
+        "Marble facade",
+        "Stone walkway"
+      ],
+      "metadataState": null,
+      "title": "Pisa Cathedral Approach"
+    },
+    {
+      "assetId": "FCB363E1-6E1F-4B99-8E19-B874C6917334/L0/001",
+      "keywords": [
+        "Pisa",
+        "Tuscany",
+        "Italy",
+        "Pisa Cathedral",
+        "Cathedral facade",
+        "Piazza dei Miracoli",
+        "Marble facade",
+        "Romanesque architecture"
+      ],
+      "metadataState": null,
+      "title": "Pisa Cathedral Facade"
+    },
+    {
+      "assetId": "92F496B5-0115-4DC4-A364-278C96203E36/L0/001",
+      "keywords": [
+        "Pisa",
+        "Tuscany",
+        "Italy",
+        "Pisa Cathedral",
+        "Cathedral facade",
+        "Piazza dei Miracoli",
+        "Marble facade",
+        "Romanesque architecture"
+      ],
+      "metadataState": null,
+      "title": "Pisa Cathedral Facade"
+    },
+    {
+      "assetId": "D412A076-6BD5-4303-A5C0-33283CEB03D6/L0/001",
+      "keywords": [
+        "Pisa",
+        "Tuscany",
+        "Italy",
+        "Pisa Cathedral",
+        "Cathedral facade",
+        "Piazza dei Miracoli",
+        "Marble facade",
+        "Romanesque architecture"
+      ],
+      "metadataState": null,
+      "title": "Pisa Cathedral Facade"
+    },
+    {
+      "assetId": "89FCD1C3-03AD-4D58-B0FD-3C09B395DBAF/L0/001",
+      "keywords": [
+        "Pisa",
+        "Tuscany",
+        "Italy",
+        "Pisa Cathedral",
+        "Cathedral facade",
+        "Piazza dei Miracoli",
+        "Marble facade",
+        "Visitors"
+      ],
+      "metadataState": null,
+      "title": "Pisa Cathedral Facade With Visitors"
+    },
+    {
+      "assetId": "C1198A37-7BAD-491C-97A7-C2756A9838D2/L0/001",
+      "keywords": [
+        "Pisa",
+        "Tuscany",
+        "Italy",
+        "Pisa Baptistery",
+        "Baptistery doorway",
+        "Piazza dei Miracoli",
+        "Marble facade",
+        "Romanesque architecture"
+      ],
+      "metadataState": null,
+      "title": "Pisa Baptistery Doorway"
+    },
+    {
+      "assetId": "77C5B39E-DE4B-49BD-8278-A002E36F2A39/L0/001",
+      "keywords": [
+        "Pisa",
+        "Tuscany",
+        "Italy",
+        "Pisa Baptistery",
+        "Baptistery entrance",
+        "Piazza dei Miracoli",
+        "Marble facade",
+        "Architectural detail"
+      ],
+      "metadataState": null,
+      "title": "Pisa Baptistery Entrance Detail"
+    },
+    {
+      "assetId": "4A8735A6-8205-46BF-9A8F-8ED91A44CF85/L0/001",
+      "keywords": [
+        "Pisa",
+        "Tuscany",
+        "Italy",
+        "Pisa Cathedral",
+        "Marble detail",
+        "Architectural detail",
+        "Piazza dei Miracoli",
+        "Stone carving"
+      ],
+      "metadataState": null,
+      "title": "Pisa Cathedral Marble Detail"
+    },
+    {
+      "assetId": "7EDEEA33-D371-4761-9B14-C8AC9061B0E1/L0/001",
+      "keywords": [
+        "Pisa",
+        "Tuscany",
+        "Italy",
+        "Piazza dei Miracoli",
+        "Marble facade",
+        "Architectural detail",
+        "Romanesque architecture",
+        "DJI",
+        "Drone"
+      ],
+      "metadataState": null,
+      "title": "Pisa Marble Facade Detail"
+    }
+  ]
+}

@@ -18,8 +18,12 @@
       role: "",
       state: "",
     },
+    accessPreviewMode: "group",
+    ownerOriginals: false,
     session: null,
   };
+  const BASE_USER_CAPABILITIES = ["view_public", "buy_downloads", "redownload_purchases_30d"];
+  const OWNER_PREVIEW_CAPABILITIES = ["view_all_galleries", "view_originals", "manage_access"];
 
   const $ = (selector) => document.querySelector(selector);
   const root = $("[data-acs-root]");
@@ -31,6 +35,8 @@
   const groupsRoot = $("[data-acs-groups]");
   const groupListRoot = $("[data-acs-group-list]");
   const memberListRoot = $("[data-acs-member-list]");
+  const galleryAccessRoot = $("[data-acs-gallery-access]");
+  const galleryAccessSummaryRoot = $("[data-acs-access-summary]");
   const galleryOptionsRoot = $("[data-acs-gallery-options]");
   const effectiveAccessRoot = $("[data-acs-effective-access]");
   const capabilitiesRoot = $("[data-acs-capabilities]");
@@ -60,6 +66,8 @@
   const membershipTitle = $("[data-acs-membership-title]");
   const memberEmailsInput = $("[data-acs-member-emails]");
   const addMembersButton = $("[data-acs-add-members]");
+  const accessPreviewInput = $("[data-acs-access-preview]");
+  const ownerOriginalsInput = $("[data-acs-owner-originals]");
   let groupIdEdited = false;
   let groupGalleryKeyEdited = false;
 
@@ -209,6 +217,56 @@
     const list = Array.isArray(capabilities) ? capabilities : [];
     if (!list.length) return `<span class="acs-person-meta">none</span>`;
     return `<span class="acs-gallery-stack">${list.map((capability) => `<span class="acs-chip">${escapeHtml(capabilityLabel(capability))}</span>`).join("")}</span>`;
+  };
+
+  const capabilitySet = (capabilities = [], { ownerOriginals = false } = {}) => {
+    const set = new Set(Array.isArray(capabilities) ? capabilities : []);
+    if (ownerOriginals) set.add("view_originals");
+    return set;
+  };
+
+  const permissionRows = (capabilities, { ownerOriginals = false } = {}) => {
+    const set = capabilitySet(capabilities, { ownerOriginals });
+    const originals = set.has("view_originals");
+    const watermarked = set.has("view_watermarked");
+    return [
+      ["Gallery", set.has("view_all_galleries") ? "All galleries" : (set.has("view_gallery") ? "Assigned gallery" : "Public galleries")],
+      ["Preview", originals ? "Full-res available" : (watermarked ? "Watermarked" : "Compressed/public")],
+      ["Downloads", set.has("download_items") ? "Assigned items" : (set.has("redownload_purchases_30d") ? "Purchased re-downloads" : "No direct downloads")],
+      ["Checkout", set.has("buy_downloads") ? "Enabled" : "No sales"],
+      ["PDF", set.has("pdf") ? "Granted" : "No"],
+      ["Video", set.has("video") ? "Granted" : "No"],
+      ["Originals", originals ? (ownerOriginals ? "Owner switch on" : "Granted") : "No"],
+      ["Access", set.has("manage_access") ? "Can manage" : "Viewer"],
+    ];
+  };
+
+  const accessCard = ({ title, meta, capabilities = [], policy = "", people = "" }) => {
+    const ownerOriginals = state.accessPreviewMode !== "visitor"
+      && (state.ownerOriginals || state.accessPreviewMode === "owner");
+    const effectiveCapabilities = [...capabilitySet(capabilities, {
+      ownerOriginals,
+    })];
+    const rows = permissionRows(effectiveCapabilities, { ownerOriginals });
+    return `
+      <article class="acs-access-card">
+        <header>
+          <strong>${escapeHtml(title)}</strong>
+          ${meta ? `<small>${escapeHtml(meta)}</small>` : ""}
+        </header>
+        ${policy ? `<small>${escapeHtml(policy)}</small>` : ""}
+        <dl class="acs-policy-grid">
+          ${rows.map(([term, value]) => `
+            <div>
+              <dt>${escapeHtml(term)}</dt>
+              <dd>${escapeHtml(value)}</dd>
+            </div>
+          `).join("")}
+        </dl>
+        ${formatCapabilityChips(effectiveCapabilities)}
+        ${people ? `<small>${escapeHtml(people)}</small>` : ""}
+      </article>
+    `;
   };
 
   const formatRoles = (user) => {
@@ -570,6 +628,81 @@
     `).join("");
   };
 
+  const renderAccessPreview = () => {
+    if (!galleryAccessRoot) return;
+    const validModes = new Set(["group", "person", "visitor", "owner"]);
+    if (!validModes.has(state.accessPreviewMode)) state.accessPreviewMode = "group";
+    if (accessPreviewInput) accessPreviewInput.value = state.accessPreviewMode;
+    if (ownerOriginalsInput) {
+      ownerOriginalsInput.checked = state.accessPreviewMode === "owner"
+        || (state.accessPreviewMode !== "visitor" && state.ownerOriginals);
+      ownerOriginalsInput.disabled = state.accessPreviewMode === "visitor";
+    }
+
+    const mode = state.accessPreviewMode;
+    const cards = [];
+    let summary = "";
+    if (mode === "group") {
+      const group = selectedGroup();
+      if (!group?.id) {
+        if (galleryAccessSummaryRoot) galleryAccessSummaryRoot.textContent = "Select a group to preview gallery permissions.";
+        galleryAccessRoot.innerHTML = `<p class="acs-empty">No group selected.</p>`;
+        return;
+      }
+      const members = groupMembers(group.id);
+      const capabilities = [...new Set([...BASE_USER_CAPABILITIES, ...(group.capabilities || [])])];
+      const people = members.length
+        ? `${members.length} member${members.length === 1 ? "" : "s"}: ${members.slice(0, 3).map((user) => user.email).join(", ")}${members.length > 3 ? ", ..." : ""}`
+        : "No assigned members";
+      summary = `${group.label || group.id} -> ${[group.kind, group.galleryKind, group.galleryKey].filter(Boolean).join(" / ")}`;
+      cards.push(accessCard({
+        title: group.label || group.id,
+        meta: [group.kind, group.galleryKind, group.galleryKey].filter(Boolean).join(" / "),
+        capabilities,
+        policy: group.accessPolicy || "",
+        people,
+      }));
+    } else if (mode === "person") {
+      const user = selectedUser();
+      if (!user?.email) {
+        if (galleryAccessSummaryRoot) galleryAccessSummaryRoot.textContent = "Select a person to preview their gallery permissions.";
+        galleryAccessRoot.innerHTML = `<p class="acs-empty">No person selected.</p>`;
+        return;
+      }
+      const scopes = Array.isArray(user.effectiveAccess?.scopes) ? user.effectiveAccess.scopes : [];
+      summary = `${user.email} -> ${user.effectiveAccess?.summary || "Public galleries and account recovery"}`;
+      scopes.forEach((scope) => {
+        cards.push(accessCard({
+          title: scope.label || scope.galleryKey || scope.role || "Access",
+          meta: [scope.source, scope.galleryKind, scope.galleryKey].filter(Boolean).join(" / "),
+          capabilities: scope.capabilities || [],
+          policy: scope.accessPolicy || "",
+        }));
+      });
+    } else if (mode === "owner") {
+      summary = "Owner/admin preview -> all galleries, originals, and access management";
+      cards.push(accessCard({
+        title: "Owner/admin",
+        meta: "owner / all",
+        capabilities: [...BASE_USER_CAPABILITIES, ...OWNER_PREVIEW_CAPABILITIES],
+        policy: "owner workflow access, full-gallery inspection, and access assignment",
+      }));
+    } else {
+      summary = "Regular visitor -> public browsing, checkout, and purchased re-downloads";
+      cards.push(accessCard({
+        title: "Regular visitor",
+        meta: "user / public",
+        capabilities: BASE_USER_CAPABILITIES,
+        policy: "public browsing, checkout, and 30-day purchased-download recovery",
+      }));
+    }
+
+    if (galleryAccessSummaryRoot) galleryAccessSummaryRoot.textContent = summary;
+    galleryAccessRoot.innerHTML = cards.length
+      ? cards.join("")
+      : `<p class="acs-empty">No gallery scopes found.</p>`;
+  };
+
   const renderAudit = () => {
     if (!auditRoot) return;
     if (!state.auditEvents.length) {
@@ -597,6 +730,7 @@
     renderGroupList();
     renderMembership();
     fillGroupForm(selectedGroup());
+    renderAccessPreview();
     renderCapabilities();
     renderAudit();
     fillForm(selectedUser());
@@ -929,6 +1063,14 @@
   $("[data-acs-disable-person]")?.addEventListener("click", () => disableSelected().catch((error) => setStatus(error.message || "Could not disable person.")));
   $("[data-acs-archive-group]")?.addEventListener("click", () => archiveSelectedGroup().catch((error) => setStatus(error.message || "Could not archive group.")));
   $("[data-acs-filter-selected-group]")?.addEventListener("click", showSelectedGroupMembers);
+  accessPreviewInput?.addEventListener("change", () => {
+    state.accessPreviewMode = accessPreviewInput.value || "group";
+    renderAccessPreview();
+  });
+  ownerOriginalsInput?.addEventListener("change", () => {
+    state.ownerOriginals = Boolean(ownerOriginalsInput.checked);
+    renderAccessPreview();
+  });
   $("[data-acs-seed-fixtures]")?.addEventListener("click", () => seedFixtures().catch((error) => setStatus(error.message || "Could not seed fixtures.")));
   $("[data-acs-login]")?.addEventListener("click", login);
   $("[data-acs-logout]")?.addEventListener("click", logout);

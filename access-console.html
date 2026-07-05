@@ -258,6 +258,31 @@
           </div>
           <div data-acs-events class="acs-event-list acs-event-list-compact"></div>
         </section>
+        <section class="acs-gallery-access" aria-label="Gallery access permissions">
+          <div class="owner-card-titlebar">
+            <div>
+              <p class="eyebrow">Access</p>
+              <h2>Gallery permissions</h2>
+            </div>
+          </div>
+          <div class="acs-access-controls">
+            <label>
+              <span>Preview</span>
+              <select data-acs-access-preview>
+                <option value="group">Selected group</option>
+                <option value="person">Selected person</option>
+                <option value="visitor">Regular visitor</option>
+                <option value="owner">Owner/admin</option>
+              </select>
+            </label>
+            <label class="acs-switch">
+              <input type="checkbox" data-acs-owner-originals/>
+              <span>Owner originals</span>
+            </label>
+          </div>
+          <p class="acs-access-summary" data-acs-access-summary></p>
+          <div data-acs-gallery-access class="acs-access-list"></div>
+        </section>
         <section class="acs-capabilities" aria-label="Capability matrix">
           <div class="owner-card-titlebar">
             <div>

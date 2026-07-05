@@ -196,6 +196,7 @@ body[data-gallery="access-console"] .acs-hero h1 {
 .acs-editor,
 .acs-fixtures,
 .acs-groups-panel,
+.acs-gallery-access,
 .acs-capabilities,
 .acs-audit {
   border: 1px solid var(--acs-line);
@@ -422,8 +423,8 @@ body[data-gallery="access-console"] .acs-hero h1 {
 
 .acs-member-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: .75rem;
+  grid-template-columns: 1fr;
+  gap: .65rem;
   align-items: start;
   padding: .7rem;
   border: 1px solid var(--acs-line);
@@ -440,7 +441,13 @@ body[data-gallery="access-console"] .acs-hero h1 {
   display: flex;
   flex-wrap: wrap;
   gap: .4rem;
-  justify-content: flex-end;
+  justify-content: flex-start;
+}
+
+.acs-member-actions .acs-chip,
+.acs-role-stack .acs-chip,
+.acs-group-row-chips .acs-chip {
+  white-space: nowrap;
 }
 
 .acs-role-fieldset {
@@ -464,16 +471,116 @@ body[data-gallery="access-console"] .acs-hero h1 {
   opacity: .58;
 }
 
-.acs-lower-grid {
-  grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr) minmax(0, 1fr);
-}
-
 .acs-choice-list,
 .acs-effective,
 .acs-scope-list,
-.acs-capability-list {
+.acs-capability-list,
+.acs-access-list {
   display: grid;
   gap: .65rem;
+}
+
+.acs-lower-grid {
+  grid-template-columns: minmax(22rem, .95fr) minmax(28rem, 1.05fr);
+  align-items: start;
+}
+
+.acs-access-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .65rem;
+  align-items: end;
+  margin-bottom: .65rem;
+}
+
+.acs-access-controls label {
+  display: grid;
+  gap: .3rem;
+}
+
+.acs-access-controls select {
+  min-width: 13rem;
+  border: 1px solid var(--acs-line);
+  border-radius: 8px;
+  padding: .62rem .68rem;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
+.acs-access-controls span {
+  color: var(--muted, var(--acs-muted));
+  font-size: .82rem;
+  font-weight: 700;
+}
+
+.acs-switch {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  min-height: 2.65rem;
+  padding: .55rem .7rem;
+  border: 1px solid var(--acs-line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 92%, var(--acs-teal) 8%);
+}
+
+.acs-switch input {
+  width: auto;
+}
+
+.acs-access-summary {
+  min-height: 1.25rem;
+  margin: 0 0 .7rem;
+  color: var(--muted, var(--acs-muted));
+  font-size: .9rem;
+}
+
+.acs-access-card {
+  display: grid;
+  gap: .65rem;
+  min-width: 0;
+  padding: .75rem;
+  border: 1px solid var(--acs-line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 94%, var(--acs-teal) 6%);
+}
+
+.acs-access-card header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem .65rem;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.acs-access-card small {
+  color: var(--muted, var(--acs-muted));
+}
+
+.acs-policy-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .55rem;
+  margin: 0;
+}
+
+.acs-policy-grid div {
+  display: grid;
+  gap: .12rem;
+  min-width: 0;
+}
+
+.acs-policy-grid dt {
+  color: var(--muted, var(--acs-muted));
+  font-size: .74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.acs-policy-grid dd {
+  margin: 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
 .acs-choice-list label {
@@ -596,10 +703,9 @@ body[data-gallery="access-console"] .bottom-photo-actions {
 
   .acs-counts,
   .acs-layout,
-  .acs-lower-grid,
   .acs-two-col,
   .acs-filterbar,
-  .acs-member-row {
+  .acs-lower-grid {
     grid-template-columns: 1fr;
   }
 

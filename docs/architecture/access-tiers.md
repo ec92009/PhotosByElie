@@ -23,7 +23,7 @@ ignores registry records as a source of additional admins.
 
 ## Registry
 
-Access Console V4 stores structured access state in D1 once the Worker has an
+Access Console V5 stores structured access state in D1 once the Worker has an
 `ACCESS_DB` binding. Auth/session reads switch to the D1 registry immediately
 when that binding exists. Until then, deployed auth keeps the legacy KV registry
 as a compatibility fallback.
@@ -158,6 +158,10 @@ session, and performs reversible writes:
 - The membership workbench lists selected-group members, bulk-adds Google-style
   email identities, revokes individual memberships, and filters the people table
   by group, role, state, or search text.
+- The gallery-permission preview derives selected group, selected person,
+  regular visitor, and Owner/Admin modes from the same effective-access scopes,
+  including an Owner originals switch for full-resolution/unwatermarked preview
+  rehearsal without granting new public capabilities.
 - Archived groups stay visible in ACS but no longer appear in person assignment
   pickers, gallery options, auth-session effective access, or new memberships.
 - The effective-access inspector shows the selected person's base user scope,

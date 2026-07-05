@@ -10,7 +10,7 @@ Last updated: 2026-07-05
 - Local preview: `http://localhost:8000/`.
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`.
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`.
-- Access Console Sandbox V4: deployed on `auth.photos-by-elie.com` with D1 database `photosbyelie-access`; local preview at `http://100.111.30.109:8000/access-console.html`; group manager creates/edits/archives audience groups, filters people, and manages group memberships; audience fixtures are `Agnes's B'day`, `RE La Concha`, and `Johnson-Palmer wedding`.
+- Access Console Sandbox V5: deployed on `auth.photos-by-elie.com` with D1 database `photosbyelie-access`; local preview at `http://100.111.30.109:8000/access-console.html`; group manager creates/edits/archives audience groups, filters people, manages group memberships, and previews gallery permissions for selected group/person/visitor/owner modes; audience fixtures are `Agnes's B'day`, `RE La Concha`, and `Johnson-Palmer wedding`.
 - Public catalog integrity: `ok`.
 - Public catalog scale: `7770` media rows.
 - Gallery counts: AI `5076`, France `379`, Italy `70`, Mexico `31`, Portugal `214`, Slovakia `2`, Spain `1853`, USA `145`.
@@ -120,8 +120,8 @@ Last updated: 2026-07-05
     - Protect `assets/catalog/photosbyelie.sqlite` as the active public catalog artifact.
     - Keep local Owner DB state out of git.
 
-21. **Exercise and harden the D1-backed sandbox Access Console V4.**
-    - Current V4 is deployed with real cloud/D1 read-write paths, immediate D1-backed auth/session reads, audience groups, group create/edit/archive, group membership workbench, people filters, effective-access preview, and capability metadata.
+21. **Exercise and harden the D1-backed sandbox Access Console V5.**
+    - Current V5 is deployed with real cloud/D1 read-write paths, immediate D1-backed auth/session reads, audience groups, group create/edit/archive, group membership workbench, people filters, effective-access preview, gallery-permission preview, and capability metadata.
     - Keep `ec92009@gmail.com` as the bootstrap break-glass admin during the D1 auth migration.
     - Exercise people, roles, group create/edit/archive, bulk add/revoke memberships, and reversible writes from the browser before granting real non-fixture users.
     - Keep clearly marked fixture people and event/group records with fake `.test` email addresses so role assignment and event access flows can be rehearsed without granting real people.
@@ -129,8 +129,8 @@ Last updated: 2026-07-05
 
 22. **Extend audience groups into real gallery access flows.**
     - Add future join-code/password flows for family/event groups.
-    - Connect real gallery records to group creation and per-gallery defaults for watermark, sale, download, PDF, and video access.
-    - Add group-specific audit trails, join-code issuance/revocation, and real-gallery defaults once ACS V4 membership handling has been exercised.
+    - Connect real gallery records to group creation and persist per-gallery defaults for watermark, sale, download, PDF, video, and Owner original-preview access.
+    - Add group-specific audit trails, join-code issuance/revocation, and real-gallery defaults once ACS V5 permission preview has been exercised against non-fixture data.
 
 ## Validation Before Publishing
 

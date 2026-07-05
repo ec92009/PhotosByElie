@@ -23,7 +23,7 @@ ignores registry records as a source of additional admins.
 
 ## Registry
 
-Access Console V1 stores structured access state in D1 once the Worker has an
+Access Console V2 stores structured access state in D1 once the Worker has an
 `ACCESS_DB` binding. Auth/session reads switch to the D1 registry immediately
 when that binding exists. Until then, deployed auth keeps the legacy KV registry
 as a compatibility fallback.
@@ -33,7 +33,8 @@ Current ACS deployment:
 - Worker routes: `https://auth.photos-by-elie.com/access-console/*`
 - D1 database name: `photosbyelie-access`
 - D1 binding: `ACCESS_DB`
-- Migration: `migrations/0001_access_console.sql`
+- Migrations: `migrations/0001_access_console.sql`,
+  `migrations/0002_access_console_audience_groups.sql`
 
 D1 tables:
 
@@ -42,6 +43,9 @@ D1 tables:
 - `pbe_access_role_grants`: active/revoked `owner` and `re_client` grants.
 - `pbe_access_gallery_grants`: active/revoked gallery grants, currently Real
   Estate gallery keys.
+- `pbe_access_audience_groups`: family, event, and Real Estate audience groups,
+  each tied to a gallery key and capability list.
+- `pbe_access_group_memberships`: active/revoked email-to-group assignments.
 - `pbe_access_fixture_events`: clearly marked rehearsal family/event/RE records.
 - `pbe_access_audit_events`: before/after snapshots for role and disable changes.
 
@@ -55,6 +59,22 @@ Public registry record shape:
   "tier": "re_client",
   "roles": ["user", "re_client"],
   "realEstateClients": ["corine-real-estate"],
+  "groupIds": ["re-la-concha"],
+  "groups": [
+    {
+      "id": "re-la-concha",
+      "label": "RE La Concha",
+      "kind": "real_estate",
+      "galleryKind": "real_estate",
+      "galleryKey": "re-la-concha",
+      "capabilities": ["view_gallery", "view_watermarked", "pdf", "video", "view_originals"]
+    }
+  ],
+  "effectiveAccess": {
+    "summary": "RE La Concha",
+    "capabilities": ["pdf", "video", "view_gallery", "view_originals", "view_public", "view_watermarked"],
+    "scopes": []
+  },
   "notes": "",
   "source": "manual",
   "fixture": false,
@@ -65,15 +85,17 @@ Public registry record shape:
 }
 ```
 
-`tier` is derived from active roles and gallery grants. Admin is not a registry
-tier and cannot be granted through ACS.
+`tier` is derived from active roles and direct Real Estate gallery grants. Auth
+session calculation also reads `effectiveAccess` so a Real Estate audience group
+can grant the existing gallery-scoped login path. Admin is not a registry tier
+and cannot be granted through ACS.
 
 ## Worker Routes
 
 - `GET /auth/session`: optional session check. Without a Google-backed session,
   returns an unauthenticated `user` tier. With a direct Google OAuth or legacy
-  Cloudflare Access session, returns email, roles, tier, Admin flag, and Real
-  Estate gallery grants.
+  Cloudflare Access session, returns email, roles, tier, Admin flag, and direct
+  plus group-derived Real Estate gallery grants.
 - `GET /auth/google/login`: direct Google OAuth entrypoint for public Account
   and Real Estate Google buttons. It asks Google for `prompt=select_account`,
   signs the OAuth state, and redirects back through `/auth/google/callback`.
@@ -100,13 +122,16 @@ tier and cannot be granted through ACS.
   the existing signed Real Estate session cookie so the current gallery-scoped
   deliverables/originals APIs keep their object-prefix restrictions.
 - `GET /access-console/state`: requires Admin and returns session, people,
-  fixture events, audit events, and grantable role metadata.
+  audience groups, gallery options, fixture events, audit events, grantable role
+  metadata, and capability metadata.
 - `POST|PUT|PATCH /access-console/people`: requires Admin and upserts one
-  person's non-admin roles, Real Estate grants, name, and notes.
+  person's non-admin roles, audience group memberships, Real Estate grants, name,
+  and notes.
 - `POST /access-console/people/<email>/disable`: requires Admin and revokes
-  active roles/grants without deleting audit history.
+  active roles, group memberships, and grants without deleting audit history.
 - `POST /access-console/fixtures/seed`: requires Admin and seeds fake `.test`
-  people plus family/event/RE rehearsal records.
+  people plus the `Agnes's B'day`, `RE La Concha`, and `Johnson-Palmer wedding`
+  family/event/RE rehearsal records.
 
 The Real Estate page prefers Google login through `/auth/google/login` followed
 by `/real-estate/access-login`. The legacy `POST /real-estate/login` password
@@ -121,8 +146,12 @@ session, and performs reversible writes:
 
 - `owner` and `re_client` can be granted or revoked.
 - `admin` is displayed as bootstrap-only and rejected if submitted.
-- Disable revokes active roles and gallery grants but keeps the person and audit
-  events.
+- Audience group checkboxes assign family, event, and Real Estate memberships
+  without hard-coding future roles such as family member or event attendee.
+- The effective-access inspector shows the selected person's base user scope,
+  role scope, group/gallery scopes, and capability chips.
+- Disable revokes active roles, group memberships, and gallery grants but keeps
+  the person and audit events.
 - Fixture people use fake `.test` addresses and are marked `fixture`.
 
 Provision/apply command history:
@@ -130,6 +159,7 @@ Provision/apply command history:
 ```text
 npx wrangler d1 create photosbyelie-access
 npx wrangler d1 migrations apply photosbyelie-access --remote
+npx wrangler deploy
 ```
 
 The database is bound in `wrangler.toml` as `ACCESS_DB`; deploy the Worker after

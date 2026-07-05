@@ -1,4 +1,4 @@
-import { createMemoryAccessUserRegistry } from "./access-user-registry.mjs";
+import { ACCESS_CAPABILITIES, createMemoryAccessUserRegistry } from "./access-user-registry.mjs";
 import { createMemoryStore } from "./memory-store.mjs";
 import { createMockStripeClient } from "./mock-stripe.mjs";
 import { createMemoryOwnerActionStore } from "./owner-action-store.mjs";
@@ -18,24 +18,28 @@ const ACCESS_CONSOLE_ROLE_OPTIONS = [
     label: "Regular user",
     description: "Default Google-authenticated account with public browsing and account/order recovery.",
     grantable: true,
+    capabilities: ["view_public", "buy_downloads", "redownload_purchases_30d"],
   },
   {
     id: "re_client",
     label: "RE client",
     description: "Regular user plus assigned real-estate gallery permissions.",
     grantable: true,
+    capabilities: ["view_gallery", "view_watermarked", "pdf", "video", "view_originals"],
   },
   {
     id: "owner",
     label: "Owner",
     description: "Owner workflow access without bootstrap admin recovery powers.",
     grantable: true,
+    capabilities: ["view_all_galleries", "view_originals", "manage_access"],
   },
   {
     id: "admin",
     label: "Bootstrap admin",
     description: "Break-glass admin identity configured outside D1.",
     grantable: false,
+    capabilities: ["view_all_galleries", "view_originals", "manage_access"],
   },
 ];
 
@@ -224,8 +228,18 @@ const sessionForAccessIdentity = async (identity, { accessUserRegistry, adminEma
   const email = String(identity?.email || "").trim().toLowerCase();
   const record = email && accessUserRegistry?.getUser ? await accessUserRegistry.getUser(email) : null;
   const admin = Boolean(email && adminEmail && email === adminEmail);
-  const tier = admin ? "admin" : String(record?.tier || "user").trim().toLowerCase();
-  const realEstateClients = Array.isArray(record?.realEstateClients) ? record.realEstateClients : [];
+  const effectiveRealEstateClients = Array.isArray(record?.effectiveAccess?.scopes)
+    ? record.effectiveAccess.scopes
+      .filter((scope) => scope?.galleryKind === "real_estate" && scope.galleryKey)
+      .map((scope) => String(scope.galleryKey || "").trim())
+      .filter(Boolean)
+    : [];
+  const realEstateClients = [...new Set([
+    ...(Array.isArray(record?.realEstateClients) ? record.realEstateClients : []),
+    ...effectiveRealEstateClients,
+  ])];
+  const registryTier = String(record?.tier || "user").trim().toLowerCase();
+  const tier = admin ? "admin" : (registryTier === "user" && realEstateClients.length ? "re_client" : registryTier);
   const roles = rolesForTier(tier, admin);
   if (realEstateClients.length && !roles.includes("re_client")) roles.push("re_client");
   return {
@@ -1977,18 +1991,24 @@ export const createPhotosByElieWorker = ({
   const accessConsoleState = async (request) => {
     const session = await requireAccessConsoleAdmin(request);
     const registry = accessConsoleRegistryRequired();
-    const [people, fixtureEvents, auditEvents] = await Promise.all([
+    const [people, fixtureEvents, auditEvents, audienceGroups, galleryOptions, capabilities] = await Promise.all([
       registry.listUsers(),
       typeof registry.listFixtureEvents === "function" ? registry.listFixtureEvents() : [],
       typeof registry.listAuditEvents === "function" ? registry.listAuditEvents(30) : [],
+      typeof registry.listAudienceGroups === "function" ? registry.listAudienceGroups() : [],
+      typeof registry.listGalleryOptions === "function" ? registry.listGalleryOptions() : [],
+      typeof registry.listCapabilities === "function" ? registry.listCapabilities() : ACCESS_CAPABILITIES,
     ]);
     return credentialedJson(request, {
       ok: true,
       session: authSessionPayload(session),
       roles: ACCESS_CONSOLE_ROLE_OPTIONS,
+      capabilities,
       bootstrapAdminEmail: adminEmail,
       people,
       fixtureEvents,
+      audienceGroups,
+      galleryOptions,
       auditEvents: auditEvents.map(publicAuditEvent),
     });
   };
@@ -2012,6 +2032,7 @@ export const createPhotosByElieWorker = ({
       tier: tierFromAccessConsoleRoles(roles),
       roles,
       realEstateClients: payload.realEstateClients || payload.realEstateGalleries || [],
+      groupIds: payload.groupIds || payload.audienceGroups || [],
       notes: payload.notes || "",
       fixture: payload.fixture === true,
       source: payload.fixture === true ? "fixture" : "manual",

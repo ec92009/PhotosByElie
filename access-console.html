@@ -59,6 +59,7 @@
         <div><dt>People</dt><dd data-acs-count="people">0</dd></div>
         <div><dt>Owners</dt><dd data-acs-count="owners">0</dd></div>
         <div><dt>RE clients</dt><dd data-acs-count="re">0</dd></div>
+        <div><dt>Groups</dt><dd data-acs-count="groups">0</dd></div>
         <div><dt>Fixtures</dt><dd data-acs-count="fixtures">0</dd></div>
         <div><dt>Disabled</dt><dd data-acs-count="disabled">0</dd></div>
       </dl>
@@ -77,7 +78,7 @@
                 <tr>
                   <th>Email</th>
                   <th>Roles</th>
-                  <th>RE grants</th>
+                  <th>Access</th>
                   <th>State</th>
                 </tr>
               </thead>
@@ -111,10 +112,22 @@
               <label><input type="checkbox" data-acs-role="owner"/>Owner</label>
               <label class="is-disabled"><input type="checkbox" disabled data-acs-role="admin"/>Bootstrap admin</label>
             </fieldset>
-            <label>
-              <span>RE gallery grants</span>
-              <textarea rows="3" data-acs-real-estate placeholder="fixture-re-gallery"></textarea>
-            </label>
+            <fieldset class="acs-role-fieldset" data-acs-groups-fieldset>
+              <legend>Audience groups</legend>
+              <div class="acs-choice-list" data-acs-groups>
+                <p class="acs-empty">Seed fixtures to load audience groups.</p>
+              </div>
+            </fieldset>
+            <fieldset class="acs-role-fieldset" data-acs-gallery-grants-fieldset>
+              <legend>Direct RE gallery grants</legend>
+              <div class="acs-choice-list" data-acs-gallery-options>
+                <p class="acs-empty">Seed fixtures to load gallery options.</p>
+              </div>
+              <label class="acs-fallback-field">
+                <span>Extra RE gallery keys</span>
+                <textarea rows="2" data-acs-real-estate placeholder="re-la-concha"></textarea>
+              </label>
+            </fieldset>
             <label>
               <span>Notes</span>
               <textarea rows="3" data-acs-notes></textarea>
@@ -125,6 +138,10 @@
               <button class="btn secondary danger" type="button" data-acs-disable-person>Disable</button>
             </div>
           </form>
+          <section class="acs-effective" aria-label="Effective access">
+            <p class="eyebrow">Effective access</p>
+            <div data-acs-effective-access></div>
+          </section>
         </aside>
       </div>
 
@@ -137,6 +154,15 @@
             </div>
           </div>
           <div data-acs-events class="acs-event-list"></div>
+        </section>
+        <section class="acs-capabilities" aria-label="Capability matrix">
+          <div class="owner-card-titlebar">
+            <div>
+              <p class="eyebrow">Capabilities</p>
+              <h2>Role and group matrix</h2>
+            </div>
+          </div>
+          <div data-acs-capabilities class="acs-capability-list"></div>
         </section>
         <section class="acs-audit" aria-label="Access audit">
           <div class="owner-card-titlebar">

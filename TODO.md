@@ -10,7 +10,7 @@ Last updated: 2026-07-05
 - Local preview: `http://localhost:8000/`.
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`.
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`.
-- Access Console Sandbox: deployed on `auth.photos-by-elie.com` with D1 database `photosbyelie-access`; local preview at `http://100.111.30.109:8000/access-console.html`.
+- Access Console Sandbox V2: deployed on `auth.photos-by-elie.com` with D1 database `photosbyelie-access`; local preview at `http://100.111.30.109:8000/access-console.html`; audience fixtures are `Agnes's B'day`, `RE La Concha`, and `Johnson-Palmer wedding`.
 - Public catalog integrity: `ok`.
 - Public catalog scale: `7770` media rows.
 - Gallery counts: AI `5076`, France `379`, Italy `70`, Mexico `31`, Portugal `214`, Slovakia `2`, Spain `1853`, USA `145`.
@@ -120,17 +120,17 @@ Last updated: 2026-07-05
     - Protect `assets/catalog/photosbyelie.sqlite` as the active public catalog artifact.
     - Keep local Owner DB state out of git.
 
-21. **Exercise and harden the D1-backed sandbox Access Console V1.**
-    - Current V1 is deployed with real cloud/D1 read-write paths and immediate D1-backed auth/session reads.
+21. **Exercise and harden the D1-backed sandbox Access Console V2.**
+    - Current V2 is deployed with real cloud/D1 read-write paths, immediate D1-backed auth/session reads, audience groups, effective-access preview, and capability metadata.
     - Keep `ec92009@gmail.com` as the bootstrap break-glass admin during the D1 auth migration.
-    - Exercise people, roles, and reversible role writes from the browser before granting real non-fixture users.
-    - Keep clearly marked fixture people and event records with fake `.test` email addresses so role assignment and event access flows can be rehearsed without granting real people.
+    - Exercise people, roles, group memberships, and reversible writes from the browser before granting real non-fixture users.
+    - Keep clearly marked fixture people and event/group records with fake `.test` email addresses so role assignment and event access flows can be rehearsed without granting real people.
     - Snapshot before mutations, append audit entries, and prefer disable/revoke over hard delete.
 
-22. **Add audience groups after Access Console V1.**
-    - Add groups in the follow-up slice for family circles, event attendee groups, and Real Estate audience memberships.
-    - Model group access as memberships/grants to galleries and actions rather than hard-coded roles.
-    - Include future join-code/password flows, grant/revoke audit, and per-gallery policy defaults for watermark, sale, download, PDF, and video access.
+22. **Extend audience groups into real gallery access flows.**
+    - Add future join-code/password flows for family/event groups.
+    - Connect real gallery records to group creation and per-gallery defaults for watermark, sale, download, PDF, and video access.
+    - Add group management beyond fixture seeding: create/edit/archive groups, revoke memberships in bulk, and inspect group-specific audit trails.
 
 ## Validation Before Publishing
 

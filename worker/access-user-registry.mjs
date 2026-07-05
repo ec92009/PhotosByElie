@@ -1,19 +1,72 @@
 const SCHEMA = "photosbyelie.accessUser.v1";
 const VALID_TIERS = new Set(["user", "re_client", "owner"]);
 const GRANTABLE_ROLES = new Set(["owner", "re_client"]);
+export const ACCESS_CAPABILITIES = [
+  { id: "view_public", label: "View public galleries" },
+  { id: "buy_downloads", label: "Buy downloads" },
+  { id: "redownload_purchases_30d", label: "30-day purchase redownloads" },
+  { id: "view_gallery", label: "View assigned gallery" },
+  { id: "view_watermarked", label: "Watermarked previews" },
+  { id: "download_items", label: "Download assigned items" },
+  { id: "pdf", label: "PDF deliverables" },
+  { id: "video", label: "Video deliverables" },
+  { id: "view_originals", label: "Full-resolution originals" },
+  { id: "view_all_galleries", label: "View all galleries" },
+  { id: "manage_access", label: "Manage access" },
+];
+const ACCESS_CAPABILITY_IDS = new Set(ACCESS_CAPABILITIES.map((capability) => capability.id));
+const BASE_USER_CAPABILITIES = ["view_public", "buy_downloads", "redownload_purchases_30d"];
+const OWNER_CAPABILITIES = ["view_all_galleries", "view_originals", "manage_access"];
+const DEFAULT_REAL_ESTATE_CAPABILITIES = ["view_gallery", "view_watermarked", "pdf", "video", "view_originals"];
+const LEGACY_FIXTURE_EVENT_IDS = [
+  "fixture-family-direct-kin",
+  "fixture-event-summer-portraits",
+  "fixture-re-gallery",
+];
+const FIXTURE_GROUPS = [
+  {
+    id: "agnes-bday",
+    label: "Agnes's B'day",
+    kind: "family",
+    galleryKind: "event",
+    galleryKey: "agnes-bday",
+    accessPolicy: "family-circle previews, watermarked by default, downloads through normal purchase/re-download rules",
+    capabilities: ["view_gallery", "view_watermarked", "download_items"],
+  },
+  {
+    id: "re-la-concha",
+    label: "RE La Concha",
+    kind: "real_estate",
+    galleryKind: "real_estate",
+    galleryKey: "re-la-concha",
+    accessPolicy: "assigned Real Estate gallery with PDF, video, and original-deliverable access",
+    capabilities: DEFAULT_REAL_ESTATE_CAPABILITIES,
+  },
+  {
+    id: "johnson-palmer-wedding",
+    label: "Johnson-Palmer wedding",
+    kind: "event",
+    galleryKind: "event",
+    galleryKey: "johnson-palmer-wedding",
+    accessPolicy: "event attendee previews with watermarks plus assigned item downloads",
+    capabilities: ["view_gallery", "view_watermarked", "download_items"],
+  },
+];
 const FIXTURE_PEOPLE = [
   {
     email: "alex.rivera@example.test",
-    displayName: "Alex Rivera",
+    displayName: "Alex Rivera / Agnes guest",
     tier: "user",
-    notes: "Fixture regular user for ACS role-assignment rehearsal.",
+    groupIds: ["agnes-bday"],
+    notes: "Fixture family-circle user for Agnes's B'day rehearsal.",
   },
   {
     email: "morgan.lee@example.test",
-    displayName: "Morgan Lee",
+    displayName: "Morgan Lee / La Concha client",
     tier: "re_client",
-    realEstateClients: ["fixture-re-gallery"],
-    notes: "Fixture RE client tied to a sample gallery grant.",
+    realEstateClients: ["re-la-concha"],
+    groupIds: ["re-la-concha"],
+    notes: "Fixture RE client tied to the RE La Concha gallery.",
   },
   {
     email: "sam.patel@example.test",
@@ -23,31 +76,25 @@ const FIXTURE_PEOPLE = [
   },
   {
     email: "jamie.martin@example.test",
-    displayName: "Jamie Martin",
+    displayName: "Jamie Martin / Johnson-Palmer guest",
     tier: "user",
-    notes: "Fixture event attendee candidate.",
+    groupIds: ["johnson-palmer-wedding"],
+    notes: "Fixture event attendee for the Johnson-Palmer wedding.",
+  },
+  {
+    email: "palmer.family@example.test",
+    displayName: "Palmer Family",
+    tier: "user",
+    groupIds: ["johnson-palmer-wedding"],
+    notes: "Second fixture event attendee for role/group assignment rehearsal.",
   },
 ];
-const FIXTURE_EVENTS = [
-  {
-    id: "fixture-family-direct-kin",
-    label: "Direct kin rehearsal circle",
-    kind: "family",
-    accessPolicy: "private previews, downloads later",
-  },
-  {
-    id: "fixture-event-summer-portraits",
-    label: "Summer portraits rehearsal event",
-    kind: "event",
-    accessPolicy: "watermarked previews, paid downloads",
-  },
-  {
-    id: "fixture-re-gallery",
-    label: "Fixture real estate gallery",
-    kind: "real_estate",
-    accessPolicy: "PDF/video/originals for assigned RE client",
-  },
-];
+const FIXTURE_EVENTS = FIXTURE_GROUPS.map(({ id, label, kind, accessPolicy }) => ({
+  id,
+  label,
+  kind,
+  accessPolicy,
+}));
 
 const clone = (value) => value == null ? value : JSON.parse(JSON.stringify(value));
 
@@ -68,6 +115,82 @@ const normalizeGalleryKeys = (value) => {
   const source = Array.isArray(value) ? value : String(value || "").split(/[\s,;]+/);
   return [...new Set(source.map((item) => String(item || "").trim()).filter(Boolean))];
 };
+
+const normalizeSlug = (value) => String(value || "")
+  .trim()
+  .toLowerCase()
+  .replace(/['"]/g, "")
+  .replace(/[^a-z0-9]+/g, "-")
+  .replace(/^-+|-+$/g, "");
+
+const parseJsonArray = (value) => {
+  if (Array.isArray(value)) return value;
+  if (value == null || value === "") return [];
+  if (typeof value !== "string") return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const normalizeCapabilities = (value) => {
+  const source = Array.isArray(value) ? value : String(value || "").split(/[\s,;]+/);
+  return [...new Set(source
+    .map((item) => String(item || "").trim().toLowerCase().replace(/[-\s]+/g, "_"))
+    .filter((item) => item && (ACCESS_CAPABILITY_IDS.has(item) || /^[a-z0-9_:]+$/.test(item))))];
+};
+
+const normalizeGroupIds = (value) => {
+  const source = Array.isArray(value) ? value : String(value || "").split(/[\s,;]+/);
+  return [...new Set(source
+    .map((item) => {
+      if (item && typeof item === "object") return item.id || item.groupId || item.group_id || item.galleryKey;
+      return item;
+    })
+    .map((item) => String(item || "").trim())
+    .filter(Boolean))];
+};
+
+const normalizeAudienceGroup = (group = {}) => {
+  const id = String(group.id || group.groupId || group.group_id || normalizeSlug(group.label || group.name)).trim();
+  if (!id) return null;
+  const galleryKey = String(group.galleryKey || group.gallery_key || id).trim();
+  const capabilities = group.capabilities
+    || group.capabilitiesJson
+    || parseJsonArray(group.capabilities_json);
+  return {
+    id,
+    label: String(group.label || group.name || id).trim(),
+    kind: String(group.kind || "event").trim().toLowerCase().replace(/[-\s]+/g, "_"),
+    galleryKind: String(group.galleryKind || group.gallery_kind || group.kind || "event").trim().toLowerCase().replace(/[-\s]+/g, "_"),
+    galleryKey,
+    accessPolicy: String(group.accessPolicy || group.access_policy || "").trim(),
+    capabilities: normalizeCapabilities(capabilities),
+    fixture: group.fixture === true || group.fixture === 1 || group.fixture === "1",
+  };
+};
+
+const fixtureGroups = () => FIXTURE_GROUPS
+  .map((group) => normalizeAudienceGroup({ ...group, fixture: true }))
+  .filter(Boolean);
+
+const galleryOptionsFor = (groups = []) => groups
+  .map(normalizeAudienceGroup)
+  .filter(Boolean)
+  .map((group) => ({
+    id: group.id,
+    label: group.label,
+    kind: group.kind,
+    galleryKind: group.galleryKind,
+    galleryKey: group.galleryKey,
+    accessPolicy: group.accessPolicy,
+    capabilities: group.capabilities,
+    fixture: group.fixture,
+    source: "audience_group",
+  }))
+  .sort((left, right) => `${left.galleryKind}:${left.label}`.localeCompare(`${right.galleryKind}:${right.label}`));
 
 const normalizeDisplayName = (value) => String(value || "").trim().replace(/\s+/g, " ").slice(0, 160);
 
@@ -94,6 +217,98 @@ const tierForRoles = (roles = [], realEstateClients = []) => {
   return "user";
 };
 
+const decorateAccessUserRecord = (record, groups = []) => {
+  const normalized = normalizeAccessUserRecord(record);
+  if (!normalized) return null;
+  const normalizedGroups = groups.map(normalizeAudienceGroup).filter(Boolean);
+  const groupsById = new Map(normalizedGroups.map((group) => [group.id, group]));
+  const groupRecords = normalized.groupIds
+    .map((groupId) => groupsById.get(groupId) || normalizeAudienceGroup({ id: groupId, label: groupId }))
+    .filter(Boolean);
+  const scopes = [];
+  const capabilitySet = new Set();
+  const addScope = (scope) => {
+    const capabilities = normalizeCapabilities(scope.capabilities);
+    capabilities.forEach((capability) => capabilitySet.add(capability));
+    scopes.push({
+      source: scope.source || "",
+      label: scope.label || scope.galleryKey || scope.role || "",
+      role: scope.role || "",
+      groupId: scope.groupId || "",
+      galleryKind: scope.galleryKind || "",
+      galleryKey: scope.galleryKey || "",
+      accessPolicy: scope.accessPolicy || "",
+      capabilities,
+    });
+  };
+
+  addScope({
+    source: "role",
+    role: "user",
+    label: "Regular user",
+    galleryKind: "public",
+    galleryKey: "public",
+    accessPolicy: "public browsing, checkout, and 30-day purchased-download recovery",
+    capabilities: BASE_USER_CAPABILITIES,
+  });
+
+  if (normalized.roles.includes("owner")) {
+    addScope({
+      source: "role",
+      role: "owner",
+      label: "Owner role",
+      galleryKind: "owner",
+      galleryKey: "all",
+      accessPolicy: "owner workflow access, full-gallery inspection, and access assignment",
+      capabilities: OWNER_CAPABILITIES,
+    });
+  }
+
+  for (const group of groupRecords) {
+    addScope({
+      source: "group",
+      groupId: group.id,
+      label: group.label,
+      galleryKind: group.galleryKind,
+      galleryKey: group.galleryKey,
+      accessPolicy: group.accessPolicy,
+      capabilities: group.capabilities,
+    });
+  }
+
+  const groupRealEstateKeys = new Set(groupRecords
+    .filter((group) => group.galleryKind === "real_estate")
+    .map((group) => group.galleryKey)
+    .filter(Boolean));
+  for (const galleryKey of normalized.realEstateClients) {
+    if (groupRealEstateKeys.has(galleryKey)) continue;
+    const group = normalizedGroups.find((item) => item.galleryKind === "real_estate" && item.galleryKey === galleryKey);
+    addScope({
+      source: "direct_grant",
+      label: group?.label || galleryKey,
+      galleryKind: "real_estate",
+      galleryKey,
+      accessPolicy: group?.accessPolicy || "direct Real Estate gallery grant",
+      capabilities: group?.capabilities?.length ? group.capabilities : DEFAULT_REAL_ESTATE_CAPABILITIES,
+    });
+  }
+
+  const gallerySummary = scopes
+    .filter((scope) => scope.galleryKind && scope.galleryKind !== "public")
+    .map((scope) => scope.label)
+    .filter(Boolean);
+
+  return {
+    ...normalized,
+    groups: groupRecords,
+    effectiveAccess: {
+      summary: normalized.disabledAt ? "Disabled; public-only if signed in" : (gallerySummary.join(", ") || "Public galleries and account recovery"),
+      scopes,
+      capabilities: [...capabilitySet].sort(),
+    },
+  };
+};
+
 export const normalizeAccessUserRecord = (record = {}, fallbackEmail = "") => {
   const email = normalizeEmail(record.email || fallbackEmail);
   if (!validEmail(email)) return null;
@@ -102,6 +317,7 @@ export const normalizeAccessUserRecord = (record = {}, fallbackEmail = "") => {
     record.realEstateClients || record.realEstateGalleries || record.galleryKeys || record.galleryKey
   );
   const disabledAt = record.disabledAt || record.disabled_at || null;
+  const groupIds = normalizeGroupIds(record.groupIds || record.group_ids || record.audienceGroups || record.groups);
   return {
     schema: SCHEMA,
     email,
@@ -109,6 +325,7 @@ export const normalizeAccessUserRecord = (record = {}, fallbackEmail = "") => {
     tier: disabledAt ? "user" : tierForRoles(grantableRoles, realEstateClients),
     roles: disabledAt ? ["user"] : ["user", ...grantableRoles],
     realEstateClients: disabledAt ? [] : realEstateClients,
+    groupIds: disabledAt ? [] : groupIds,
     notes: normalizeNotes(record.notes),
     source: String(record.source || "").trim() || (record.fixture ? "fixture" : "manual"),
     fixture: record.fixture === true || record.fixture === 1 || record.fixture === "1",
@@ -126,10 +343,18 @@ export const createMemoryAccessUserRegistry = (initialRecords = []) => {
   const users = new Map();
   const auditEvents = [];
   const events = new Map();
+  const groups = new Map();
   initialRecords
     .map((record) => normalizeAccessUserRecord(record))
     .filter(Boolean)
     .forEach((record) => users.set(record.email, record));
+
+  const listAudienceGroups = async () => [...groups.values()]
+    .map((group) => normalizeAudienceGroup(group))
+    .filter(Boolean)
+    .sort((left, right) => `${left.kind}:${left.label}`.localeCompare(`${right.kind}:${right.label}`));
+
+  const decorate = async (record) => decorateAccessUserRecord(record, await listAudienceGroups());
 
   const audit = (eventType, actorEmail, targetEmail, before, after) => {
     const event = {
@@ -145,10 +370,14 @@ export const createMemoryAccessUserRegistry = (initialRecords = []) => {
     return clone(event);
   };
 
-  const getUser = async (email) => clone(users.get(normalizeEmail(email))) || null;
+  const getUser = async (email) => {
+    const record = users.get(normalizeEmail(email));
+    return record ? clone(await decorate(record)) : null;
+  };
 
   const listUsers = async () => [...users.values()]
-    .map(clone)
+    .map((record) => decorateAccessUserRecord(record, [...groups.values()]))
+    .filter(Boolean)
     .sort((left, right) => String(left.email).localeCompare(String(right.email)));
 
   const putUser = async (record, options = {}) => {
@@ -164,7 +393,7 @@ export const createMemoryAccessUserRegistry = (initialRecords = []) => {
     };
     users.set(after.email, clone(after));
     audit("user_upserted", options.actorEmail || after.grantedBy || "", after.email, before, after);
-    return clone(after);
+    return clone(await decorate(after));
   };
 
   const disableUser = async (email, options = {}) => {
@@ -179,20 +408,25 @@ export const createMemoryAccessUserRegistry = (initialRecords = []) => {
     });
     users.set(normalizedEmail, clone(after));
     audit("user_disabled", options.actorEmail || "", normalizedEmail, before, after);
-    return clone(after);
+    return clone(await decorate(after));
   };
 
   const seedFixtureData = async (options = {}) => {
+    events.clear();
+    groups.clear();
+    for (const group of fixtureGroups()) {
+      groups.set(group.id, group);
+    }
     for (const person of FIXTURE_PEOPLE) {
-      const email = normalizeEmail(person.email);
-      if (!users.has(email)) await putUser({ ...person, fixture: true, source: "fixture" }, options);
+      await putUser({ ...person, fixture: true, source: "fixture" }, options);
     }
     for (const event of FIXTURE_EVENTS) {
-      if (!events.has(event.id)) events.set(event.id, { ...event, fixture: true });
+      events.set(event.id, { ...event, fixture: true });
     }
     return {
       users: (await listUsers()).filter((user) => user.fixture),
       events: await listFixtureEvents(),
+      groups: await listAudienceGroups(),
     };
   };
 
@@ -207,8 +441,11 @@ export const createMemoryAccessUserRegistry = (initialRecords = []) => {
     disableUser,
     seedFixtureData,
     listFixtureEvents,
+    listAudienceGroups,
+    listGalleryOptions: async () => galleryOptionsFor(await listAudienceGroups()),
+    listCapabilities: async () => ACCESS_CAPABILITIES.map(clone),
     listAuditEvents: async (limit = 25) => auditEvents.slice(0, limit).map(clone),
-    _debug: { users, events, auditEvents },
+    _debug: { users, events, groups, auditEvents },
   };
 };
 
@@ -223,7 +460,7 @@ export const createKvAccessUserRegistry = ({
     const normalizedEmail = normalizeEmail(email);
     if (!validEmail(normalizedEmail)) return null;
     const value = await namespace.get(keyFor(normalizedEmail), { type: "json" });
-    return normalizeAccessUserRecord(value || {}, normalizedEmail);
+    return value ? decorateAccessUserRecord(value, fixtureGroups()) : null;
   };
 
   const putUser = async (record, options = {}) => {
@@ -235,7 +472,7 @@ export const createKvAccessUserRegistry = ({
     });
     if (!normalized) throw new Error("Access user record requires a valid email address.");
     await namespace.put(keyFor(normalized.email), JSON.stringify(normalized));
-    return clone(normalized);
+    return clone(decorateAccessUserRecord(normalized, fixtureGroups()));
   };
 
   const listUsers = async () => {
@@ -269,14 +506,18 @@ export const createKvAccessUserRegistry = ({
     },
     seedFixtureData: async (options = {}) => {
       for (const person of FIXTURE_PEOPLE) {
-        if (!await getUser(person.email)) await putUser({ ...person, fixture: true, source: "fixture" }, options);
+        await putUser({ ...person, fixture: true, source: "fixture" }, options);
       }
       return {
         users: await listUsers(),
         events: fixtureEvents(),
+        groups: fixtureGroups(),
       };
     },
     listFixtureEvents: async () => fixtureEvents(),
+    listAudienceGroups: async () => fixtureGroups(),
+    listGalleryOptions: async () => galleryOptionsFor(fixtureGroups()),
+    listCapabilities: async () => ACCESS_CAPABILITIES.map(clone),
     listAuditEvents: async () => [],
   };
 };
@@ -302,13 +543,55 @@ const galleryRowsFor = async (database, email = "") => d1All(
   database.prepare("SELECT gallery_key FROM pbe_access_gallery_grants WHERE email = ? AND gallery_kind = 'real_estate' AND state = 'active' ORDER BY gallery_key").bind(email)
 );
 
-const recordFromD1Rows = (person, roleRows = [], galleryRows = []) => {
+const audienceGroupRows = async (database) => d1All(database.prepare(`
+  SELECT
+    id,
+    label,
+    kind,
+    gallery_kind AS galleryKind,
+    gallery_key AS galleryKey,
+    access_policy AS accessPolicy,
+    capabilities_json AS capabilities_json,
+    fixture
+  FROM pbe_access_audience_groups
+  ORDER BY kind, label
+`));
+
+const membershipRowsFor = async (database, email = "") => d1All(
+  database.prepare(`
+    SELECT
+      g.id,
+      g.label,
+      g.kind,
+      g.gallery_kind AS galleryKind,
+      g.gallery_key AS galleryKey,
+      g.access_policy AS accessPolicy,
+      g.capabilities_json AS capabilities_json,
+      g.fixture
+    FROM pbe_access_group_memberships AS m
+    JOIN pbe_access_audience_groups AS g ON g.id = m.group_id
+    WHERE m.email = ? AND m.state = 'active'
+    ORDER BY g.kind, g.label
+  `).bind(email)
+);
+
+const activeMembershipIdsFor = async (database, email = "") => d1All(
+  database.prepare(`
+    SELECT group_id AS groupId
+    FROM pbe_access_group_memberships
+    WHERE email = ? AND state = 'active'
+    ORDER BY group_id
+  `).bind(email)
+);
+
+const recordFromD1Rows = (person, roleRows = [], galleryRows = [], groupRows = [], allGroups = []) => {
   if (!person) return null;
-  return normalizeAccessUserRecord({
+  return decorateAccessUserRecord({
     email: person.email,
     displayName: person.display_name,
     roles: roleRows.map((row) => row.role),
     realEstateClients: galleryRows.map((row) => row.gallery_key),
+    groupIds: groupRows.map((row) => row.id || row.groupId || row.group_id).filter(Boolean),
     notes: person.notes,
     source: person.source,
     fixture: person.fixture,
@@ -317,7 +600,7 @@ const recordFromD1Rows = (person, roleRows = [], galleryRows = []) => {
     grantedBy: person.created_by,
     grantedAt: person.created_at,
     updatedAt: person.updated_at,
-  });
+  }, allGroups.length ? allGroups : groupRows);
 };
 
 const auditD1 = async (database, { eventType, actorEmail, targetEmail, before, after }) => d1Run(
@@ -350,11 +633,13 @@ export const createD1AccessUserRegistry = ({
     if (!validEmail(normalizedEmail)) return null;
     const person = await getPerson(normalizedEmail);
     if (!person) return null;
-    const [roles, galleries] = await Promise.all([
+    const [roles, galleries, memberGroups, allGroups] = await Promise.all([
       roleRowsFor(database, normalizedEmail),
       galleryRowsFor(database, normalizedEmail),
+      membershipRowsFor(database, normalizedEmail),
+      audienceGroupRows(database),
     ]);
-    return recordFromD1Rows(person, roles, galleries);
+    return recordFromD1Rows(person, roles, galleries, memberGroups, allGroups);
   };
 
   const putUser = async (record, options = {}) => {
@@ -439,6 +724,33 @@ export const createD1AccessUserRegistry = ({
       `).bind(randomId("gallery-grant"), normalized.email, galleryKey, timestamp, actorEmail, timestamp, actorEmail));
     }
 
+    const knownGroups = await audienceGroupRows(database);
+    const knownGroupIds = new Set(knownGroups.map((group) => group.id));
+    const wantedGroupIds = new Set(normalized.groupIds.filter((groupId) => knownGroupIds.has(groupId)));
+    const existingMemberships = await activeMembershipIdsFor(database, normalized.email);
+    for (const row of existingMemberships) {
+      if (!wantedGroupIds.has(row.groupId)) {
+        await d1Run(database.prepare(`
+          UPDATE pbe_access_group_memberships
+          SET state = 'revoked', revoked_at = ?, revoked_by = ?, updated_at = ?, updated_by = ?
+          WHERE email = ? AND group_id = ? AND state = 'active'
+        `).bind(timestamp, actorEmail, timestamp, actorEmail, normalized.email, row.groupId));
+      }
+    }
+    for (const groupId of wantedGroupIds) {
+      await d1Run(database.prepare(`
+        INSERT INTO pbe_access_group_memberships (
+          id, email, group_id, state, granted_at, granted_by, updated_at, updated_by
+        ) VALUES (?, ?, ?, 'active', ?, ?, ?, ?)
+        ON CONFLICT(email, group_id) DO UPDATE SET
+          state = 'active',
+          revoked_at = NULL,
+          revoked_by = '',
+          updated_at = excluded.updated_at,
+          updated_by = excluded.updated_by
+      `).bind(randomId("group-member"), normalized.email, groupId, timestamp, actorEmail, timestamp, actorEmail));
+    }
+
     const after = await getUser(normalized.email);
     await auditD1(database, { eventType: "user_upserted", actorEmail, targetEmail: normalized.email, before, after });
     return after;
@@ -446,13 +758,15 @@ export const createD1AccessUserRegistry = ({
 
   const listUsers = async () => {
     const people = await d1All(database.prepare("SELECT * FROM pbe_access_people ORDER BY fixture DESC, email ASC"));
+    const allGroups = await audienceGroupRows(database);
     const users = [];
     for (const person of people) {
-      const [roles, galleries] = await Promise.all([
+      const [roles, galleries, memberGroups] = await Promise.all([
         roleRowsFor(database, person.email),
         galleryRowsFor(database, person.email),
+        membershipRowsFor(database, person.email),
       ]);
-      const record = recordFromD1Rows(person, roles, galleries);
+      const record = recordFromD1Rows(person, roles, galleries, memberGroups, allGroups);
       if (record) users.push(record);
     }
     return users;
@@ -479,19 +793,60 @@ export const createD1AccessUserRegistry = ({
       SET state = 'revoked', revoked_at = ?, revoked_by = ?, updated_at = ?, updated_by = ?
       WHERE email = ? AND state = 'active'
     `).bind(timestamp, actorEmail, timestamp, actorEmail, normalizedEmail));
+    await d1Run(database.prepare(`
+      UPDATE pbe_access_group_memberships
+      SET state = 'revoked', revoked_at = ?, revoked_by = ?, updated_at = ?, updated_by = ?
+      WHERE email = ? AND state = 'active'
+    `).bind(timestamp, actorEmail, timestamp, actorEmail, normalizedEmail));
     const after = await getUser(normalizedEmail);
     await auditD1(database, { eventType: "user_disabled", actorEmail, targetEmail: normalizedEmail, before, after });
     return after;
   };
 
+  const listAudienceGroups = async () => audienceGroupRows(database)
+    .then((rows) => rows.map(normalizeAudienceGroup).filter(Boolean));
+
+  const listGalleryOptions = async () => galleryOptionsFor(await audienceGroupRows(database));
+
   const seedFixtureData = async (options = {}) => {
-    for (const person of FIXTURE_PEOPLE) {
-      if (!await getPerson(person.email)) {
-        await putUser({ ...person, fixture: true, source: "fixture" }, options);
-      }
-    }
     const timestamp = nowIso();
     const actorEmail = normalizeEmail(options.actorEmail || "");
+    for (const oldId of LEGACY_FIXTURE_EVENT_IDS) {
+      await d1Run(database.prepare("DELETE FROM pbe_access_fixture_events WHERE id = ? AND fixture = 1").bind(oldId));
+    }
+    for (const group of fixtureGroups()) {
+      await d1Run(database.prepare(`
+        INSERT INTO pbe_access_audience_groups (
+          id, label, kind, gallery_kind, gallery_key, access_policy, capabilities_json,
+          fixture, created_at, created_by, updated_at, updated_by
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+          label = excluded.label,
+          kind = excluded.kind,
+          gallery_kind = excluded.gallery_kind,
+          gallery_key = excluded.gallery_key,
+          access_policy = excluded.access_policy,
+          capabilities_json = excluded.capabilities_json,
+          fixture = 1,
+          updated_at = excluded.updated_at,
+          updated_by = excluded.updated_by
+      `).bind(
+        group.id,
+        group.label,
+        group.kind,
+        group.galleryKind,
+        group.galleryKey,
+        group.accessPolicy,
+        JSON.stringify(group.capabilities),
+        timestamp,
+        actorEmail,
+        timestamp,
+        actorEmail
+      ));
+    }
+    for (const person of FIXTURE_PEOPLE) {
+      await putUser({ ...person, fixture: true, source: "fixture" }, options);
+    }
     for (const event of FIXTURE_EVENTS) {
       await d1Run(database.prepare(`
         INSERT INTO pbe_access_fixture_events (
@@ -508,6 +863,7 @@ export const createD1AccessUserRegistry = ({
     return {
       users: (await listUsers()).filter((user) => user.fixture),
       events: await listFixtureEvents(),
+      groups: await listAudienceGroups(),
     };
   };
 
@@ -538,6 +894,9 @@ export const createD1AccessUserRegistry = ({
     disableUser,
     seedFixtureData,
     listFixtureEvents,
+    listAudienceGroups,
+    listGalleryOptions,
+    listCapabilities: async () => ACCESS_CAPABILITIES.map(clone),
     listAuditEvents,
   };
 };

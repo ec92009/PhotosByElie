@@ -144,6 +144,44 @@ body[data-gallery="access-console"] .acs-hero h1 {
   justify-content: flex-end;
 }
 
+.acs-filterbar {
+  display: grid;
+  grid-template-columns: minmax(12rem, 1fr) minmax(10rem, .8fr) minmax(8rem, .55fr) minmax(8rem, .55fr) auto;
+  gap: .65rem;
+  align-items: end;
+  margin: .75rem 0 .35rem;
+}
+
+.acs-filterbar label {
+  display: grid;
+  gap: .3rem;
+  min-width: 0;
+}
+
+.acs-filterbar input,
+.acs-filterbar select {
+  width: 100%;
+  border: 1px solid var(--acs-line);
+  border-radius: 8px;
+  padding: .62rem .68rem;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
+.acs-filterbar span {
+  color: var(--muted, var(--acs-muted));
+  font-size: .82rem;
+  font-weight: 700;
+}
+
+.acs-filter-summary {
+  min-height: 1.4rem;
+  margin: 0 0 .6rem;
+  color: var(--muted, var(--acs-muted));
+  font-size: .9rem;
+}
+
 .acs-counts {
   grid-template-columns: repeat(6, minmax(0, 1fr));
   margin: 0;
@@ -258,12 +296,16 @@ body[data-gallery="access-console"] .acs-hero h1 {
   text-decoration: line-through;
 }
 
-.acs-editor form {
+.acs-editor form,
+.acs-group-form,
+.acs-member-form {
   display: grid;
   gap: .9rem;
 }
 
 .acs-editor label,
+.acs-group-form label,
+.acs-member-form label,
 .acs-role-fieldset {
   display: grid;
   gap: .35rem;
@@ -272,7 +314,11 @@ body[data-gallery="access-console"] .acs-hero h1 {
 
 .acs-editor input,
 .acs-editor select,
-.acs-editor textarea {
+.acs-editor textarea,
+.acs-group-form input,
+.acs-group-form select,
+.acs-group-form textarea,
+.acs-member-form textarea {
   width: 100%;
   border: 1px solid var(--acs-line);
   border-radius: 8px;
@@ -353,6 +399,48 @@ body[data-gallery="access-console"] .acs-hero h1 {
   margin-top: 1rem;
   padding-top: 1rem;
   border-top: 1px solid var(--acs-line);
+}
+
+.acs-membership-panel {
+  display: grid;
+  gap: .75rem;
+  border-top: 1px solid var(--acs-line);
+  padding-top: 1rem;
+}
+
+.acs-membership-panel h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.15;
+}
+
+.acs-member-list,
+.acs-member-form {
+  display: grid;
+  gap: .65rem;
+}
+
+.acs-member-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: .75rem;
+  align-items: start;
+  padding: .7rem;
+  border: 1px solid var(--acs-line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 94%, var(--acs-teal) 6%);
+}
+
+.acs-member-row small {
+  display: block;
+  color: var(--muted, var(--acs-muted));
+}
+
+.acs-member-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+  justify-content: flex-end;
 }
 
 .acs-role-fieldset {
@@ -509,7 +597,9 @@ body[data-gallery="access-console"] .bottom-photo-actions {
   .acs-counts,
   .acs-layout,
   .acs-lower-grid,
-  .acs-two-col {
+  .acs-two-col,
+  .acs-filterbar,
+  .acs-member-row {
     grid-template-columns: 1fr;
   }
 
@@ -518,6 +608,10 @@ body[data-gallery="access-console"] .bottom-photo-actions {
   }
 
   .acs-group-row-chips {
+    justify-content: flex-start;
+  }
+
+  .acs-member-actions {
     justify-content: flex-start;
   }
 

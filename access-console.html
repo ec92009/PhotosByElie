@@ -72,6 +72,38 @@
               <h2>Role assignments</h2>
             </div>
           </div>
+          <div class="acs-filterbar" aria-label="People filters">
+            <label>
+              <span>Search</span>
+              <input type="search" data-acs-people-search placeholder="email or name"/>
+            </label>
+            <label>
+              <span>Group</span>
+              <select data-acs-filter-group>
+                <option value="">All groups</option>
+              </select>
+            </label>
+            <label>
+              <span>Role</span>
+              <select data-acs-filter-role>
+                <option value="">All roles</option>
+                <option value="owner">Owner</option>
+                <option value="re_client">RE client</option>
+                <option value="user">Regular user</option>
+              </select>
+            </label>
+            <label>
+              <span>State</span>
+              <select data-acs-filter-state>
+                <option value="">Any state</option>
+                <option value="active">Active</option>
+                <option value="fixture">Fixture</option>
+                <option value="disabled">Disabled</option>
+              </select>
+            </label>
+            <button class="btn secondary" type="button" data-acs-clear-filters>Clear</button>
+          </div>
+          <p class="acs-filter-summary" data-acs-filter-summary></p>
           <div class="acs-table-wrap">
             <table class="owner-real-estate-table acs-table">
               <thead>
@@ -204,6 +236,25 @@
                 <button class="btn secondary danger" type="button" data-acs-archive-group>Archive</button>
               </div>
             </form>
+            <section class="acs-membership-panel" aria-label="Selected group members">
+              <div class="owner-card-titlebar">
+                <div>
+                  <p class="eyebrow">Membership</p>
+                  <h3 data-acs-membership-title>Group members</h3>
+                </div>
+              </div>
+              <div class="acs-member-list" data-acs-member-list></div>
+              <form class="acs-member-form" data-acs-member-form>
+                <label>
+                  <span>Add emails</span>
+                  <textarea rows="4" data-acs-member-emails placeholder="guest@example.com&#10;Guest Name &lt;guest2@example.com&gt;"></textarea>
+                </label>
+                <div class="acs-editor-actions">
+                  <button class="btn secondary" type="submit" data-acs-add-members>Add to group</button>
+                  <button class="btn secondary" type="button" data-acs-filter-selected-group>Show members</button>
+                </div>
+              </form>
+            </section>
           </div>
           <div data-acs-events class="acs-event-list acs-event-list-compact"></div>
         </section>

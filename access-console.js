@@ -24,6 +24,45 @@
   };
   const BASE_USER_CAPABILITIES = ["view_public", "buy_downloads", "redownload_purchases_30d"];
   const OWNER_PREVIEW_CAPABILITIES = ["view_all_galleries", "view_originals", "manage_access"];
+  const DEFAULT_GALLERY_DEFAULTS = {
+    watermarked: true,
+    saleEnabled: true,
+    downloads: false,
+    pdf: false,
+    video: false,
+    memberOriginals: false,
+    ownerOriginals: false,
+  };
+  const PUBLIC_GALLERY_DEFAULTS = {
+    ...DEFAULT_GALLERY_DEFAULTS,
+    ownerOriginals: true,
+  };
+  const EVENT_GALLERY_DEFAULTS = {
+    ...DEFAULT_GALLERY_DEFAULTS,
+    downloads: true,
+    ownerOriginals: true,
+  };
+  const RE_GALLERY_DEFAULTS = {
+    ...DEFAULT_GALLERY_DEFAULTS,
+    saleEnabled: false,
+    pdf: true,
+    video: true,
+    memberOriginals: true,
+    ownerOriginals: true,
+  };
+  const KNOWN_GALLERY_RECORDS = [
+    { id: "public:ai", label: "AI", kind: "custom", galleryKind: "public", galleryKey: "ai", count: 5076, defaults: PUBLIC_GALLERY_DEFAULTS },
+    { id: "public:france", label: "France", kind: "custom", galleryKind: "public", galleryKey: "france", count: 379, defaults: PUBLIC_GALLERY_DEFAULTS },
+    { id: "public:italy", label: "Italy", kind: "custom", galleryKind: "public", galleryKey: "italy", count: 70, defaults: PUBLIC_GALLERY_DEFAULTS },
+    { id: "public:mexico", label: "Mexico", kind: "custom", galleryKind: "public", galleryKey: "mexico", count: 31, defaults: PUBLIC_GALLERY_DEFAULTS },
+    { id: "public:portugal", label: "Portugal", kind: "custom", galleryKind: "public", galleryKey: "portugal", count: 214, defaults: PUBLIC_GALLERY_DEFAULTS },
+    { id: "public:slovakia", label: "Slovakia", kind: "custom", galleryKind: "public", galleryKey: "slovakia", count: 2, defaults: PUBLIC_GALLERY_DEFAULTS },
+    { id: "public:spain", label: "Spain", kind: "custom", galleryKind: "public", galleryKey: "spain", count: 1853, defaults: PUBLIC_GALLERY_DEFAULTS },
+    { id: "public:usa", label: "USA", kind: "custom", galleryKind: "public", galleryKey: "usa", count: 145, defaults: PUBLIC_GALLERY_DEFAULTS },
+    { id: "event:agnes-bday", label: "Agnes's B'day", kind: "family", galleryKind: "event", galleryKey: "agnes-bday", defaults: EVENT_GALLERY_DEFAULTS },
+    { id: "real_estate:re-la-concha", label: "RE La Concha", kind: "real_estate", galleryKind: "real_estate", galleryKey: "re-la-concha", defaults: RE_GALLERY_DEFAULTS },
+    { id: "event:johnson-palmer-wedding", label: "Johnson-Palmer wedding", kind: "event", galleryKind: "event", galleryKey: "johnson-palmer-wedding", defaults: EVENT_GALLERY_DEFAULTS },
+  ];
 
   const $ = (selector) => document.querySelector(selector);
   const root = $("[data-acs-root]");
@@ -62,6 +101,7 @@
   const groupKindInput = $("[data-acs-group-kind]");
   const groupGalleryKindInput = $("[data-acs-group-gallery-kind]");
   const groupGalleryKeyInput = $("[data-acs-group-gallery-key]");
+  const groupGalleryRecordInput = $("[data-acs-gallery-record]");
   const groupPolicyInput = $("[data-acs-group-policy]");
   const membershipTitle = $("[data-acs-membership-title]");
   const memberEmailsInput = $("[data-acs-member-emails]");
@@ -172,6 +212,86 @@
 
   const groupMembers = (groupId) => state.people.filter((user) => (user.groupIds || []).includes(groupId));
 
+  const knownGalleryRecords = () => {
+    const audienceRecords = state.audienceGroups.map((group) => ({
+      id: `${group.galleryKind || group.kind || "custom"}:${group.galleryKey || group.id}`,
+      label: group.label || group.id,
+      kind: group.kind || "event",
+      galleryKind: group.galleryKind || group.kind || "event",
+      galleryKey: group.galleryKey || group.id,
+      defaults: group.galleryDefaults,
+    }));
+    const records = new Map();
+    [...KNOWN_GALLERY_RECORDS, ...audienceRecords].forEach((record) => {
+      if (!record.galleryKey) return;
+      records.set(`${record.galleryKind}:${record.galleryKey}`, record);
+    });
+    return [...records.values()];
+  };
+
+  const galleryRecordKeyFor = (item = {}) =>
+    item.galleryKind && item.galleryKey ? `${item.galleryKind}:${item.galleryKey}` : "";
+
+  const galleryRecordFor = (item = {}) =>
+    knownGalleryRecords().find((record) => galleryRecordKeyFor(record) === galleryRecordKeyFor(item)) || null;
+
+  const normalizeGalleryDefaults = (value = {}, capabilities = [], group = {}) => {
+    const source = value && typeof value === "object" ? value : {};
+    const caps = new Set(Array.isArray(capabilities) ? capabilities : []);
+    const bool = (key, fallback) => source[key] === true || source[key] === 1 || source[key] === "1"
+      ? true
+      : (source[key] === false || source[key] === 0 || source[key] === "0" ? false : fallback);
+    return {
+      ...DEFAULT_GALLERY_DEFAULTS,
+      watermarked: bool("watermarked", caps.has("view_watermarked")),
+      saleEnabled: bool("saleEnabled", (group.galleryKind || group.kind) !== "real_estate"),
+      downloads: bool("downloads", caps.has("download_items")),
+      pdf: bool("pdf", caps.has("pdf")),
+      video: bool("video", caps.has("video")),
+      memberOriginals: bool("memberOriginals", caps.has("view_originals")),
+      ownerOriginals: bool("ownerOriginals", false),
+    };
+  };
+
+  const defaultsToCapabilities = (defaults = {}) => {
+    const normalized = normalizeGalleryDefaults(defaults);
+    return [
+      "view_gallery",
+      normalized.watermarked ? "view_watermarked" : "",
+      normalized.saleEnabled ? "buy_downloads" : "",
+      normalized.downloads ? "download_items" : "",
+      normalized.pdf ? "pdf" : "",
+      normalized.video ? "video" : "",
+      normalized.memberOriginals ? "view_originals" : "",
+    ].filter(Boolean);
+  };
+
+  const galleryDefaultsFromForm = () => {
+    const defaults = { ...DEFAULT_GALLERY_DEFAULTS };
+    document.querySelectorAll("[data-acs-gallery-default]").forEach((input) => {
+      defaults[input.dataset.acsGalleryDefault] = Boolean(input.checked);
+    });
+    return defaults;
+  };
+
+  const fillGalleryDefaults = (defaults = {}) => {
+    const normalized = normalizeGalleryDefaults(defaults);
+    document.querySelectorAll("[data-acs-gallery-default]").forEach((input) => {
+      input.checked = Boolean(normalized[input.dataset.acsGalleryDefault]);
+    });
+  };
+
+  const syncCapabilitiesFromDefaults = () => {
+    const defaults = galleryDefaultsFromForm();
+    const wanted = new Set(defaultsToCapabilities(defaults));
+    document.querySelectorAll("[data-acs-group-capability]").forEach((input) => {
+      const capability = input.dataset.acsGroupCapability;
+      if (["view_gallery", "view_watermarked", "buy_downloads", "download_items", "pdf", "video", "view_originals"].includes(capability)) {
+        input.checked = wanted.has(capability);
+      }
+    });
+  };
+
   const personPayloadFor = (user = {}, overrides = {}) => {
     const roles = Array.isArray(user.roles) && user.roles.length ? user.roles : ["user"];
     return {
@@ -241,9 +361,10 @@
     ];
   };
 
-  const accessCard = ({ title, meta, capabilities = [], policy = "", people = "" }) => {
-    const ownerOriginals = state.accessPreviewMode !== "visitor"
-      && (state.ownerOriginals || state.accessPreviewMode === "owner");
+  const accessCard = ({ title, meta, capabilities = [], policy = "", people = "", ownerOriginals: ownerOriginalsOverride = null }) => {
+    const ownerOriginals = ownerOriginalsOverride == null
+      ? state.accessPreviewMode !== "visitor" && (state.ownerOriginals || state.accessPreviewMode === "owner")
+      : Boolean(ownerOriginalsOverride);
     const effectiveCapabilities = [...capabilitySet(capabilities, {
       ownerOriginals,
     })];
@@ -318,6 +439,23 @@
       "data-acs-gallery",
       "Seed fixtures to load RE gallery options."
     );
+    if (groupGalleryRecordInput) {
+      const selectedValue = groupGalleryRecordInput.value;
+      groupGalleryRecordInput.innerHTML = [
+        `<option value="">Custom gallery key</option>`,
+        ...knownGalleryRecords().map((record) => {
+          const detail = [
+            record.galleryKind,
+            record.galleryKey,
+            Number.isFinite(Number(record.count)) ? `${record.count} items` : "",
+          ].filter(Boolean).join(" / ");
+          return `<option value="${escapeHtml(galleryRecordKeyFor(record))}">${escapeHtml(record.label)}${detail ? ` - ${escapeHtml(detail)}` : ""}</option>`;
+        }),
+      ].join("");
+      groupGalleryRecordInput.value = [...groupGalleryRecordInput.options].some((option) => option.value === selectedValue)
+        ? selectedValue
+        : "";
+    }
   };
 
   const renderPeopleFilters = () => {
@@ -501,14 +639,34 @@
     if (groupKindInput) groupKindInput.value = item.kind || "event";
     if (groupGalleryKindInput) groupGalleryKindInput.value = item.galleryKind || item.kind || "event";
     if (groupGalleryKeyInput) groupGalleryKeyInput.value = item.galleryKey || item.id || "";
+    if (groupGalleryRecordInput) {
+      const recordKey = galleryRecordKeyFor(item);
+      groupGalleryRecordInput.value = [...groupGalleryRecordInput.options].some((option) => option.value === recordKey)
+        ? recordKey
+        : "";
+    }
     if (groupPolicyInput) groupPolicyInput.value = item.accessPolicy || "";
     const capabilities = new Set(item.capabilities || []);
     document.querySelectorAll("[data-acs-group-capability]").forEach((input) => {
       input.checked = capabilities.has(input.dataset.acsGroupCapability);
     });
+    fillGalleryDefaults(item.galleryDefaults || normalizeGalleryDefaults({}, item.capabilities || [], item));
     if (groupEditorTitle) groupEditorTitle.textContent = item.id ? item.label || item.id : "New audience group";
     const archiveButton = $("[data-acs-archive-group]");
     if (archiveButton) archiveButton.disabled = !item.id || item.state === "archived";
+  };
+
+  const applyGalleryRecord = (record) => {
+    if (!record) return;
+    if (groupLabelInput && !state.selectedGroupId && !groupLabelInput.value) groupLabelInput.value = record.label || "";
+    if (groupKindInput) groupKindInput.value = record.kind || "event";
+    if (groupGalleryKindInput) groupGalleryKindInput.value = record.galleryKind || record.kind || "event";
+    if (groupGalleryKeyInput) groupGalleryKeyInput.value = record.galleryKey || "";
+    if (groupIdInput && !state.selectedGroupId && !groupIdEdited) groupIdInput.value = slugify(record.label || record.galleryKey || "");
+    if (groupPolicyInput && !groupPolicyInput.value && record.accessPolicy) groupPolicyInput.value = record.accessPolicy;
+    groupGalleryKeyEdited = true;
+    fillGalleryDefaults(record.defaults || record.galleryDefaults || {});
+    syncCapabilitiesFromDefaults();
   };
 
   const renderGroupList = () => {
@@ -650,17 +808,48 @@
         return;
       }
       const members = groupMembers(group.id);
-      const capabilities = [...new Set([...BASE_USER_CAPABILITIES, ...(group.capabilities || [])])];
+      const defaults = normalizeGalleryDefaults(group.galleryDefaults || {}, group.capabilities || [], group);
+      const memberCapabilities = [...new Set([
+        ...BASE_USER_CAPABILITIES,
+        ...(group.capabilities || []),
+        ...defaultsToCapabilities(defaults),
+      ])];
+      const ownerCapabilities = [...new Set([
+        ...BASE_USER_CAPABILITIES,
+        ...OWNER_PREVIEW_CAPABILITIES,
+        "view_gallery",
+        ...(defaults.watermarked ? ["view_watermarked"] : []),
+        ...(defaults.downloads ? ["download_items"] : []),
+        ...(defaults.pdf ? ["pdf"] : []),
+        ...(defaults.video ? ["video"] : []),
+      ])];
       const people = members.length
         ? `${members.length} member${members.length === 1 ? "" : "s"}: ${members.slice(0, 3).map((user) => user.email).join(", ")}${members.length > 3 ? ", ..." : ""}`
         : "No assigned members";
       summary = `${group.label || group.id} -> ${[group.kind, group.galleryKind, group.galleryKey].filter(Boolean).join(" / ")}`;
       cards.push(accessCard({
-        title: group.label || group.id,
+        title: "Regular visitor",
+        meta: "user / public",
+        capabilities: BASE_USER_CAPABILITIES,
+        policy: "public browsing, checkout, and 30-day purchased-download recovery",
+        ownerOriginals: false,
+      }));
+      cards.push(accessCard({
+        title: `Assigned member: ${group.label || group.id}`,
         meta: [group.kind, group.galleryKind, group.galleryKey].filter(Boolean).join(" / "),
-        capabilities,
+        capabilities: memberCapabilities,
         policy: group.accessPolicy || "",
         people,
+        ownerOriginals: false,
+      }));
+      cards.push(accessCard({
+        title: "Owner/admin",
+        meta: defaults.ownerOriginals ? "owner switch / originals" : "owner switch / compressed",
+        capabilities: ownerCapabilities,
+        policy: defaults.ownerOriginals
+          ? "owner inspection may use full-resolution unwatermarked originals"
+          : "owner inspection defaults to the compressed or watermarked view",
+        ownerOriginals: defaults.ownerOriginals || state.ownerOriginals,
       }));
     } else if (mode === "person") {
       const user = selectedUser();
@@ -837,6 +1026,7 @@
       galleryKey: groupGalleryKeyInput?.value || groupIdInput?.value || generatedId,
       accessPolicy: groupPolicyInput?.value || "",
       capabilities: checkedValues("[data-acs-group-capability]", "acsGroupCapability"),
+      galleryDefaults: galleryDefaultsFromForm(),
       fixture: existing?.fixture === true,
     };
     setStatus(`Saving group ${payload.label || payload.id || ""}...`);
@@ -1053,6 +1243,17 @@
   });
   groupGalleryKeyInput?.addEventListener("input", () => {
     groupGalleryKeyEdited = true;
+  });
+  groupGalleryRecordInput?.addEventListener("change", () => {
+    const record = knownGalleryRecords().find((item) => galleryRecordKeyFor(item) === groupGalleryRecordInput.value);
+    applyGalleryRecord(record);
+    renderAccessPreview();
+  });
+  document.querySelectorAll("[data-acs-gallery-default]").forEach((input) => {
+    input.addEventListener("change", () => {
+      syncCapabilitiesFromDefaults();
+      renderAccessPreview();
+    });
   });
   groupLabelInput?.addEventListener("input", () => {
     if (state.selectedGroupId) return;

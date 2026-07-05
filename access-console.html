@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="./shared.css?v=125.0"/>
   <link rel="stylesheet" href="./styles.css?v=125.0"/>
   <link rel="stylesheet" href="./photos.css?v=125.0"/>
-  <link rel="stylesheet" href="./access-console.css"/>
+  <link rel="stylesheet" href="./access-console.css?v=acs6"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -196,6 +196,12 @@
                 <span>Label</span>
                 <input type="text" required data-acs-group-label placeholder="Johnson-Palmer wedding"/>
               </label>
+              <label>
+                <span>Gallery record</span>
+                <select data-acs-gallery-record>
+                  <option value="">Custom gallery key</option>
+                </select>
+              </label>
               <div class="acs-two-col">
                 <label>
                   <span>Group kind</span>
@@ -220,6 +226,18 @@
                 <span>Gallery key</span>
                 <input type="text" required data-acs-group-gallery-key placeholder="johnson-palmer-wedding"/>
               </label>
+              <fieldset class="acs-role-fieldset acs-gallery-defaults">
+                <legend>Gallery defaults</legend>
+                <div class="acs-default-grid">
+                  <label><input type="checkbox" data-acs-gallery-default="watermarked"/>Watermarked previews</label>
+                  <label><input type="checkbox" data-acs-gallery-default="saleEnabled"/>Sale / checkout</label>
+                  <label><input type="checkbox" data-acs-gallery-default="downloads"/>Assigned downloads</label>
+                  <label><input type="checkbox" data-acs-gallery-default="pdf"/>PDF</label>
+                  <label><input type="checkbox" data-acs-gallery-default="video"/>Video</label>
+                  <label><input type="checkbox" data-acs-gallery-default="memberOriginals"/>Member originals</label>
+                  <label><input type="checkbox" data-acs-gallery-default="ownerOriginals"/>Owner originals</label>
+                </div>
+              </fieldset>
               <label>
                 <span>Access policy</span>
                 <textarea rows="3" data-acs-group-policy></textarea>

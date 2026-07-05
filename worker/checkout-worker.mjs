@@ -2086,6 +2086,7 @@ export const createPhotosByElieWorker = ({
         galleryKey: payload.galleryKey || payload.gallery_key || "",
         accessPolicy: payload.accessPolicy || payload.access_policy || "",
         capabilities: normalizeAccessConsoleCapabilities(payload.capabilities || payload.capabilityIds || []),
+        galleryDefaults: payload.galleryDefaults || payload.gallery_defaults || {},
         fixture: payload.fixture === true,
       }, { actorEmail: session.email });
       return credentialedJson(request, { ok: true, group });

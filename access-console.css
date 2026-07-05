@@ -93,7 +93,10 @@ body[data-gallery="access-console"] .acs-hero h1 {
 }
 
 .acs-session {
-  min-width: min(100%, 24rem);
+  min-width: 0;
+  width: 100%;
+  max-width: 24rem;
+  box-sizing: border-box;
   padding: .8rem 1rem;
   border: 1px solid var(--acs-line);
   border-radius: 8px;
@@ -472,10 +475,34 @@ body[data-gallery="access-console"] .acs-hero h1 {
 .acs-role-fieldset label {
   grid-template-columns: auto 1fr;
   align-items: center;
+  min-width: 0;
 }
 
 .acs-role-fieldset .is-disabled {
   opacity: .58;
+}
+
+.acs-default-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .45rem .75rem;
+}
+
+.acs-default-grid label {
+  min-height: 2.15rem;
+  padding: .45rem .55rem;
+  border: 1px solid var(--acs-line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 92%, var(--acs-teal) 8%);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.acs-role-fieldset input[type="checkbox"],
+.acs-choice-list input[type="checkbox"],
+.acs-default-grid input[type="checkbox"] {
+  width: auto;
+  min-width: 1rem;
 }
 
 .acs-choice-list,
@@ -708,9 +735,15 @@ body[data-gallery="access-console"] .bottom-photo-actions {
     justify-content: flex-start;
   }
 
+  .acs-session {
+    max-width: 100%;
+    justify-self: stretch;
+  }
+
   .acs-counts,
   .acs-layout,
   .acs-two-col,
+  .acs-default-grid,
   .acs-filterbar,
   .acs-lower-grid {
     grid-template-columns: 1fr;

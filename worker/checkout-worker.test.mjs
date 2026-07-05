@@ -458,11 +458,22 @@ test("access console is admin-only and writes reversible role grants", async () 
     galleryKey: "cohen-cousins",
     accessPolicy: "family rehearsal previews with watermarks and normal download rules",
     capabilities: ["view_gallery", "view_watermarked", "download_items"],
+    galleryDefaults: {
+      watermarked: true,
+      saleEnabled: true,
+      downloads: true,
+      pdf: false,
+      video: false,
+      memberOriginals: false,
+      ownerOriginals: true,
+    },
   }, { origin: "https://photos-by-elie.com" }));
   assert.equal(groupResponse.status, 200);
   const groupBody = await groupResponse.json();
   assert.equal(groupBody.group.id, "cohen-cousins");
   assert.equal(groupBody.group.state, "active");
+  assert.equal(groupBody.group.galleryDefaults.downloads, true);
+  assert.equal(groupBody.group.galleryDefaults.ownerOriginals, true);
 
   const cousinResponse = await adminWorker.fetch(jsonRequest("https://worker.test/access-console/people", {
     email: "cousin@example.test",
@@ -474,6 +485,7 @@ test("access console is admin-only and writes reversible role grants", async () 
   const cousinBody = await cousinResponse.json();
   assert.deepEqual(cousinBody.user.groupIds, ["cohen-cousins"]);
   assert.equal(cousinBody.user.effectiveAccess.scopes.some((scope) => scope.galleryKey === "cohen-cousins"), true);
+  assert.equal(cousinBody.user.effectiveAccess.scopes.find((scope) => scope.galleryKey === "cohen-cousins").galleryDefaults.ownerOriginals, true);
 
   const attendeeResponse = await adminWorker.fetch(jsonRequest("https://worker.test/access-console/people", {
     email: "attendee@example.test",

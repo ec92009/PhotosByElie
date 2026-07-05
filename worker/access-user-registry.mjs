@@ -20,6 +20,15 @@ const ACCESS_CAPABILITY_IDS = new Set(ACCESS_CAPABILITIES.map((capability) => ca
 const BASE_USER_CAPABILITIES = ["view_public", "buy_downloads", "redownload_purchases_30d"];
 const OWNER_CAPABILITIES = ["view_all_galleries", "view_originals", "manage_access"];
 const DEFAULT_REAL_ESTATE_CAPABILITIES = ["view_gallery", "view_watermarked", "pdf", "video", "view_originals"];
+const DEFAULT_GALLERY_DEFAULTS = {
+  watermarked: true,
+  saleEnabled: true,
+  downloads: false,
+  pdf: false,
+  video: false,
+  memberOriginals: false,
+  ownerOriginals: false,
+};
 const LEGACY_FIXTURE_EVENT_IDS = [
   "fixture-family-direct-kin",
   "fixture-event-summer-portraits",
@@ -34,6 +43,15 @@ const FIXTURE_GROUPS = [
     galleryKey: "agnes-bday",
     accessPolicy: "family-circle previews, watermarked by default, downloads through normal purchase/re-download rules",
     capabilities: ["view_gallery", "view_watermarked", "download_items"],
+    galleryDefaults: {
+      watermarked: true,
+      saleEnabled: true,
+      downloads: true,
+      pdf: false,
+      video: false,
+      memberOriginals: false,
+      ownerOriginals: true,
+    },
   },
   {
     id: "re-la-concha",
@@ -43,6 +61,15 @@ const FIXTURE_GROUPS = [
     galleryKey: "re-la-concha",
     accessPolicy: "assigned Real Estate gallery with PDF, video, and original-deliverable access",
     capabilities: DEFAULT_REAL_ESTATE_CAPABILITIES,
+    galleryDefaults: {
+      watermarked: true,
+      saleEnabled: false,
+      downloads: false,
+      pdf: true,
+      video: true,
+      memberOriginals: true,
+      ownerOriginals: true,
+    },
   },
   {
     id: "johnson-palmer-wedding",
@@ -52,6 +79,15 @@ const FIXTURE_GROUPS = [
     galleryKey: "johnson-palmer-wedding",
     accessPolicy: "event attendee previews with watermarks plus assigned item downloads",
     capabilities: ["view_gallery", "view_watermarked", "download_items"],
+    galleryDefaults: {
+      watermarked: true,
+      saleEnabled: true,
+      downloads: true,
+      pdf: false,
+      video: false,
+      memberOriginals: false,
+      ownerOriginals: true,
+    },
   },
 ];
 const FIXTURE_PEOPLE = [
@@ -152,11 +188,41 @@ const parseJsonArray = (value) => {
   }
 };
 
+const parseJsonObject = (value) => {
+  if (value && typeof value === "object" && !Array.isArray(value)) return value;
+  if (value == null || value === "") return {};
+  if (typeof value !== "string") return {};
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+};
+
 const normalizeCapabilities = (value) => {
   const source = Array.isArray(value) ? value : String(value || "").split(/[\s,;]+/);
   return [...new Set(source
     .map((item) => String(item || "").trim().toLowerCase().replace(/[-\s]+/g, "_"))
     .filter((item) => item && (ACCESS_CAPABILITY_IDS.has(item) || /^[a-z0-9_:]+$/.test(item))))];
+};
+
+const normalizeGalleryDefaults = (value = {}, capabilities = [], group = {}) => {
+  const source = parseJsonObject(value);
+  const caps = new Set(normalizeCapabilities(capabilities));
+  const bool = (key, fallback) => source[key] === true || source[key] === 1 || source[key] === "1"
+    ? true
+    : (source[key] === false || source[key] === 0 || source[key] === "0" ? false : fallback);
+  return {
+    ...DEFAULT_GALLERY_DEFAULTS,
+    watermarked: bool("watermarked", caps.has("view_watermarked")),
+    saleEnabled: bool("saleEnabled", group.galleryKind !== "real_estate"),
+    downloads: bool("downloads", caps.has("download_items")),
+    pdf: bool("pdf", caps.has("pdf")),
+    video: bool("video", caps.has("video")),
+    memberOriginals: bool("memberOriginals", caps.has("view_originals")),
+    ownerOriginals: bool("ownerOriginals", false),
+  };
 };
 
 const normalizeGroupIds = (value) => {
@@ -177,14 +243,23 @@ const normalizeAudienceGroup = (group = {}) => {
   const capabilities = group.capabilities
     || group.capabilitiesJson
     || parseJsonArray(group.capabilities_json);
+  const base = {
+    kind: normalizeGroupKind(group.kind),
+    galleryKind: normalizeGalleryKind(group.galleryKind || group.gallery_kind || group.kind),
+  };
   return {
     id,
     label: String(group.label || group.name || id).trim(),
-    kind: normalizeGroupKind(group.kind),
-    galleryKind: normalizeGalleryKind(group.galleryKind || group.gallery_kind || group.kind),
+    kind: base.kind,
+    galleryKind: base.galleryKind,
     galleryKey,
     accessPolicy: String(group.accessPolicy || group.access_policy || "").trim(),
     capabilities: normalizeCapabilities(capabilities),
+    galleryDefaults: normalizeGalleryDefaults(
+      group.galleryDefaults || group.gallery_defaults || group.galleryDefaultsJson || group.gallery_defaults_json,
+      capabilities,
+      base
+    ),
     state: normalizeGroupState(group.state),
     archivedAt: group.archivedAt || group.archived_at || null,
     archivedBy: String(group.archivedBy || group.archived_by || "").trim(),
@@ -210,6 +285,7 @@ const galleryOptionsFor = (groups = []) => activeAudienceGroups(groups)
     galleryKey: group.galleryKey,
     accessPolicy: group.accessPolicy,
     capabilities: group.capabilities,
+    galleryDefaults: group.galleryDefaults,
     fixture: group.fixture,
     source: "audience_group",
   }))
@@ -262,6 +338,7 @@ const decorateAccessUserRecord = (record, groups = []) => {
       galleryKey: scope.galleryKey || "",
       accessPolicy: scope.accessPolicy || "",
       capabilities,
+      galleryDefaults: normalizeGalleryDefaults(scope.galleryDefaults || {}, capabilities, scope),
     });
   };
 
@@ -296,6 +373,7 @@ const decorateAccessUserRecord = (record, groups = []) => {
       galleryKey: group.galleryKey,
       accessPolicy: group.accessPolicy,
       capabilities: group.capabilities,
+      galleryDefaults: group.galleryDefaults,
     });
   }
 
@@ -313,6 +391,7 @@ const decorateAccessUserRecord = (record, groups = []) => {
       galleryKey,
       accessPolicy: group?.accessPolicy || "direct Real Estate gallery grant",
       capabilities: group?.capabilities?.length ? group.capabilities : DEFAULT_REAL_ESTATE_CAPABILITIES,
+      galleryDefaults: group?.galleryDefaults || {},
     });
   }
 
@@ -636,6 +715,7 @@ const audienceGroupRows = async (database, { includeArchived = true } = {}) => d
     gallery_key AS galleryKey,
     access_policy AS accessPolicy,
     capabilities_json AS capabilities_json,
+    gallery_defaults_json AS galleryDefaultsJson,
     state,
     archived_at AS archivedAt,
     archived_by AS archivedBy,
@@ -659,6 +739,7 @@ const membershipRowsFor = async (database, email = "") => d1All(
       g.gallery_key AS galleryKey,
       g.access_policy AS accessPolicy,
       g.capabilities_json AS capabilities_json,
+      g.gallery_defaults_json AS galleryDefaultsJson,
       g.state,
       g.archived_at AS archivedAt,
       g.archived_by AS archivedBy,
@@ -908,6 +989,7 @@ export const createD1AccessUserRegistry = ({
         gallery_key AS galleryKey,
         access_policy AS accessPolicy,
         capabilities_json AS capabilities_json,
+        gallery_defaults_json AS galleryDefaultsJson,
         state,
         archived_at AS archivedAt,
         archived_by AS archivedBy,
@@ -935,9 +1017,9 @@ export const createD1AccessUserRegistry = ({
     const timestamp = nowIso();
     await d1Run(database.prepare(`
       INSERT INTO pbe_access_audience_groups (
-        id, label, kind, gallery_kind, gallery_key, access_policy, capabilities_json,
+        id, label, kind, gallery_kind, gallery_key, access_policy, capabilities_json, gallery_defaults_json,
         state, archived_at, archived_by, fixture, created_at, created_by, updated_at, updated_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'active', NULL, '', ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', NULL, '', ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         label = excluded.label,
         kind = excluded.kind,
@@ -945,6 +1027,7 @@ export const createD1AccessUserRegistry = ({
         gallery_key = excluded.gallery_key,
         access_policy = excluded.access_policy,
         capabilities_json = excluded.capabilities_json,
+        gallery_defaults_json = excluded.gallery_defaults_json,
         state = 'active',
         archived_at = NULL,
         archived_by = '',
@@ -959,6 +1042,7 @@ export const createD1AccessUserRegistry = ({
       normalized.galleryKey,
       normalized.accessPolicy,
       JSON.stringify(normalized.capabilities),
+      JSON.stringify(normalized.galleryDefaults),
       normalized.fixture || before?.fixture ? 1 : 0,
       timestamp,
       actorEmail,
@@ -1013,9 +1097,9 @@ export const createD1AccessUserRegistry = ({
     for (const group of fixtureGroups()) {
       await d1Run(database.prepare(`
         INSERT INTO pbe_access_audience_groups (
-          id, label, kind, gallery_kind, gallery_key, access_policy, capabilities_json,
+          id, label, kind, gallery_kind, gallery_key, access_policy, capabilities_json, gallery_defaults_json,
           state, archived_at, archived_by, fixture, created_at, created_by, updated_at, updated_by
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, 'active', NULL, '', 1, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', NULL, '', 1, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
           label = excluded.label,
           kind = excluded.kind,
@@ -1023,6 +1107,7 @@ export const createD1AccessUserRegistry = ({
           gallery_key = excluded.gallery_key,
           access_policy = excluded.access_policy,
           capabilities_json = excluded.capabilities_json,
+          gallery_defaults_json = excluded.gallery_defaults_json,
           state = 'active',
           archived_at = NULL,
           archived_by = '',
@@ -1037,6 +1122,7 @@ export const createD1AccessUserRegistry = ({
         group.galleryKey,
         group.accessPolicy,
         JSON.stringify(group.capabilities),
+        JSON.stringify(group.galleryDefaults),
         timestamp,
         actorEmail,
         timestamp,

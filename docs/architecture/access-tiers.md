@@ -23,7 +23,7 @@ ignores registry records as a source of additional admins.
 
 ## Registry
 
-Access Console V5 stores structured access state in D1 once the Worker has an
+Access Console V6 stores structured access state in D1 once the Worker has an
 `ACCESS_DB` binding. Auth/session reads switch to the D1 registry immediately
 when that binding exists. Until then, deployed auth keeps the legacy KV registry
 as a compatibility fallback.
@@ -35,7 +35,8 @@ Current ACS deployment:
 - D1 binding: `ACCESS_DB`
 - Migrations: `migrations/0001_access_console.sql`,
   `migrations/0002_access_console_audience_groups.sql`,
-  `migrations/0003_access_console_group_state.sql`
+  `migrations/0003_access_console_group_state.sql`,
+  `migrations/0004_access_console_gallery_defaults.sql`
 
 D1 tables:
 
@@ -45,7 +46,8 @@ D1 tables:
 - `pbe_access_gallery_grants`: active/revoked gallery grants, currently Real
   Estate gallery keys.
 - `pbe_access_audience_groups`: family, event, and Real Estate audience groups,
-  each tied to a gallery key, capability list, and active/archived state.
+  each tied to a gallery key, capability list, per-gallery defaults, and
+  active/archived state.
 - `pbe_access_group_memberships`: active/revoked email-to-group assignments.
 - `pbe_access_fixture_events`: clearly marked rehearsal family/event/RE records.
 - `pbe_access_audit_events`: before/after snapshots for role and disable changes.
@@ -68,7 +70,16 @@ Public registry record shape:
       "kind": "real_estate",
       "galleryKind": "real_estate",
       "galleryKey": "re-la-concha",
-      "capabilities": ["view_gallery", "view_watermarked", "pdf", "video", "view_originals"]
+      "capabilities": ["view_gallery", "view_watermarked", "pdf", "video", "view_originals"],
+      "galleryDefaults": {
+        "watermarked": true,
+        "saleEnabled": false,
+        "downloads": false,
+        "pdf": true,
+        "video": true,
+        "memberOriginals": true,
+        "ownerOriginals": true
+      }
     }
   ],
   "effectiveAccess": {
@@ -129,7 +140,8 @@ and cannot be granted through ACS.
   person's non-admin roles, audience group memberships, Real Estate grants, name,
   and notes.
 - `POST|PUT|PATCH /access-console/groups`: requires Admin and creates or updates
-  an audience group, gallery key, access policy, and capability list.
+  an audience group, gallery key, access policy, capability list, and
+  per-gallery defaults.
 - `POST /access-console/groups/<id>/archive`: requires Admin, marks the audience
   group archived, and revokes active memberships for that group.
 - `POST /access-console/people/<email>/disable`: requires Admin and revokes
@@ -154,7 +166,11 @@ session, and performs reversible writes:
 - Audience group checkboxes assign family, event, and Real Estate memberships
   without hard-coding future roles such as family member or event attendee.
 - The group manager can create, edit, and archive family/event/RE/custom groups
-  with gallery keys, access policies, and capability lists.
+  with gallery keys, access policies, capability lists, and per-gallery defaults.
+- The gallery record picker can prefill public galleries, fixture events, and
+  Real Estate groups. Gallery defaults persist watermark, sale/checkout,
+  assigned-download, PDF, video, member-original, and Owner-original-preview
+  behavior; Owner originals do not grant ordinary member access.
 - The membership workbench lists selected-group members, bulk-adds Google-style
   email identities, revokes individual memberships, and filters the people table
   by group, role, state, or search text.

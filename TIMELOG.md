@@ -494,8 +494,9 @@ Clock state: running
 | 2026-07-05 | 11:08 CEST | 11:09 CEST | 0:01 | Normalized visible site/cache-bust versions to v125.0 across HTML pages; verification included. |
 | 2026-07-05 | 11:10 CEST | 11:16 CEST | 0:02 | Retried 27 blocked Upload Bridge exports, kept 3 covered approvals, and reset 24 persistent Photos export failures to unpicked rework; retry runtime excluded. |
 | 2026-07-05 | 11:40 CEST | 11:41 CEST | 0:01 | Final loose-end audit after version and Upload Bridge cleanup; confirmed queues clean and identified remaining review/commit/deploy work. |
+| 2026-07-05 | 11:42 CEST | 11:47 CEST | 0:02 | Pruned stale Git worktrees, verified changed surfaces, and committed the working tree cleanup; command/runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 26:09
+Active collaboration time used: 26:11
 Remaining budget: not set

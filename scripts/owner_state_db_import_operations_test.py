@@ -7,6 +7,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import owner_state_db
 import local_server
+import sidecar_state_db
 
 
 class ImportOperationTests(unittest.TestCase):
@@ -136,6 +137,104 @@ class AccessUserTests(unittest.TestCase):
             self.assertEqual(summary["user"]["email"], "owner@example.com")
             self.assertEqual(summary["counts"]["owners"], 1)
             self.assertEqual(summary["users"][0]["publishStatus"], "pending")
+
+
+class NewOwnerConnectorTests(unittest.TestCase):
+    def test_tailscale_addresses_are_lan_owner_addresses(self):
+        self.assertTrue(local_server._is_private_lan_address("100.111.30.109"))
+        self.assertFalse(local_server._is_private_lan_address("8.8.8.8"))
+
+    def test_sidecar_culling_connector_returns_read_only_window(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            with sidecar_state_db.connect(repo_root) as conn:
+                conn.executemany(
+                    """
+                    INSERT INTO sidecar_assets (
+                      asset_id, source_anchor, media_type, filename, captured_at,
+                      photos_title, indexed_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    [
+                        (
+                            "asset-1",
+                            "apple-photos://asset-1",
+                            "photo",
+                            "agnes-001.jpg",
+                            "2026-07-05T10:00:00Z",
+                            "Agnes birthday",
+                            "2026-07-05T11:00:00Z",
+                            "2026-07-05T11:00:00Z",
+                        ),
+                        (
+                            "asset-2",
+                            "apple-photos://asset-2",
+                            "video",
+                            "agnes-clip.mov",
+                            "2026-07-05T09:00:00Z",
+                            "",
+                            "2026-07-05T11:00:00Z",
+                            "2026-07-05T11:00:00Z",
+                        ),
+                        (
+                            "asset-3",
+                            "apple-photos://asset-3",
+                            "photo",
+                            "already-tombstoned.jpg",
+                            "2026-07-05T08:00:00Z",
+                            "",
+                            "2026-07-05T11:00:00Z",
+                            "2026-07-05T11:00:00Z",
+                        ),
+                    ],
+                )
+                conn.execute(
+                    """
+                    INSERT INTO sidecar_decisions (
+                      asset_id, rating, color, pick_state, metadata_state, title, keywords_json
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    ("asset-1", 5, "green", "picked", "approved", "Agnes's B'day candle moment", '["birthday"]'),
+                )
+                conn.execute(
+                    """
+                    INSERT INTO sidecar_tombstones (
+                      asset_id, tombstone_state, reason, tombstoned_at, updated_at
+                    ) VALUES (?, 'active', 'fixture', ?, ?)
+                    """,
+                    ("asset-3", "2026-07-05T12:00:00Z", "2026-07-05T12:00:00Z"),
+                )
+                conn.commit()
+
+            result = local_server.new_owner_connector_result(
+                repo_root,
+                {
+                    "action": {
+                        "id": "owner-action-test",
+                        "type": "sidecar-culling-review",
+                        "state": "claimed",
+                        "claim": {"connectorId": "Max Sidecar"},
+                        "payload": {
+                            "manifest": {
+                                "mode": "review-window",
+                                "source": "owner-sqlite",
+                                "limit": 2,
+                            },
+                        },
+                    },
+                },
+            )
+
+            self.assertTrue(result["ok"])
+            self.assertTrue(result["result"]["readOnly"])
+            self.assertEqual(result["result"]["connectorId"], "max-sidecar")
+            self.assertEqual(result["result"]["actionId"], "owner-action-test")
+            self.assertEqual(result["result"]["indexedCount"], 3)
+            self.assertEqual(result["result"]["candidateCount"], 2)
+            self.assertEqual(result["result"]["recordsPrepared"], 2)
+            self.assertEqual(result["result"]["sampleItems"][0]["assetId"], "asset-1")
+            self.assertEqual(result["result"]["sampleItems"][0]["pickState"], "picked")
+            self.assertEqual(result["result"]["reviewWindow"]["source"], "owner-sqlite")
 
 
 if __name__ == "__main__":

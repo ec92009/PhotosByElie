@@ -3,7 +3,7 @@
 Track B separates the public buyer app from a cloud-backed Owner app that can
 run from Max, David, or Curie. The first committed shell is intentionally small:
 it proves cloud identity, cloud access state, and cloud action queueing without
-reading local Owner SQLite, Apple Photos, or Sidecar files.
+moving local Owner SQLite, Apple Photos, or Sidecar files into the public app.
 
 ## Current Shell
 
@@ -13,7 +13,7 @@ reading local Owner SQLite, Apple Photos, or Sidecar files.
 - Local preview: `http://100.111.30.109:8000/new-owner.html` on Max
 - Worker base: `window.photosByElieMediaConfig.authWorkerBaseUrl`
 
-The shell uses only deployed Worker routes:
+The cloud shell uses deployed Worker routes:
 
 - `GET /owner/session`: verifies a Google Owner/Admin session.
 - `GET /access-console/state`: reads D1 people, groups, fixtures, roles, and
@@ -35,9 +35,26 @@ the same action back, and refreshes the recent queue so a reload on Max or David
 shows the same cloud state.
 
 The first connector-ready action type is `sidecar-culling-review`. NewOwner can
-queue a small culling manifest, claim it for the current connector id, and mark
-it completed or failed. This is still a rehearsal action; it does not yet make a
-local machine mutate `Owner.sqlite`.
+queue a small culling manifest, claim it for the current connector id, run the
+local read-only connector, and mark it completed or failed. The connector reads
+Sidecar state from local `assets/owner-actions/Owner.sqlite` through
+`POST /__photosbyelie/new-owner-connector`, prepares a review-window summary,
+and posts compact completion details back through the cloud action lifecycle.
+It does not mutate `Owner.sqlite`.
+
+When the app is opened through the Max/David Tailscale URL
+`http://100.111.30.109:8000/new-owner.html`, the local helper must be running
+with:
+
+```bash
+python3 scripts/local_server.py 8000 --bind 100.111.30.109 --allow-lan-owner
+```
+
+Loopback-only previews can use:
+
+```bash
+python3 scripts/local_server.py 8000
+```
 
 ## Boundaries
 
@@ -52,19 +69,21 @@ Cloud-ready now:
 - D1-backed role, group, and access-policy visibility.
 - Cloud Owner action queue creation, readback, recent-action listing, and
   claim/complete/fail lifecycle.
+- Browser-mediated local connector execution for read-only Sidecar culling
+  review-window summaries.
 - Links back to ACS for role and group assignment.
 
 Still connector-backed later:
 
 - Apple Photos imports and source materialization.
-- Sidecar culling and Upload Bridge exports.
+- Sidecar culling decisions and Upload Bridge exports.
 - Local cache warming and machine-specific file previews.
 - Full catalog publish orchestration from Owner SQLite into public SQLite/R2.
 
 ## Next Step
 
-The next Track B slice should add the first local connector runner. The runner
-can poll or fetch the claimed `sidecar-culling-review` action, perform a
-read-only Sidecar/Owner SQLite inspection on that machine, and post completion
-details back to the cloud action without moving local source files into the
-static public repo.
+The next Track B slice should turn the read-only Sidecar connector result into
+a real review workspace: open the prepared culling window, let the owner assign
+gallery/routing decisions, and keep those writes behind explicit local Owner
+actions. After that, reuse the same browser-mediated connector pattern for
+Apple Photos import and Real Estate source operations.

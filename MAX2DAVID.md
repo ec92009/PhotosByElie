@@ -31,14 +31,17 @@ git pull --ff-only origin main
 Prompt for David:
 
 ```text
-In /Users/ecohen/Dev/PhotosByElie, do not touch assets/owner-actions/Owner.sqlite.
+In /Users/ecohen/Dev/PhotosByElie, do not mutate assets/owner-actions/Owner.sqlite.
+The NewOwner connector endpoint opens it read-only; if David does not have a
+local Owner.sqlite cache with Sidecar tables, report that as the expected
+current blocker instead of creating or syncing one.
 
 Run:
 
 cd /Users/ecohen/Dev/PhotosByElie
 git fetch origin
 git switch codex/new-owner-foundation || git switch -c codex/new-owner-foundation origin/codex/new-owner-foundation
-python3 -m http.server 8000
+python3 scripts/local_server.py 8000
 
 Then open http://localhost:8000/new-owner.html while signed in with the Owner/Admin Google account.
 
@@ -51,11 +54,16 @@ Verify:
 - Set Connector to `david`, use Queue culling, then Claim next.
 - Confirm the new sidecar-culling-review action changes from queued to claimed
   and shows connector `david`.
-- Use Complete or Fail on that claimed action and reload; the final state should
-  stay visible from cloud state.
+- If the local read-only connector can see Sidecar state, use Run local on that
+  claimed action and confirm it completes with read-only, prepared-count, and
+  candidate-count chips. Reload; the completed state should stay visible from
+  cloud state.
+- If Run local reports that Owner.sqlite is missing or lacks Sidecar tables,
+  leave the action claimed or mark it failed with that exact blocker, then
+  report it. Do not create or sync Owner.sqlite for this check.
 - The page has no visible horizontal overflow on desktop or phone width.
 
-Report the result in DAVID2MAX.md, including the newest sidecar-culling-review owner-action id shown after reload, its final state, and any console/layout errors. Commit and push DAVID2MAX.md if you change it.
+Report the result in DAVID2MAX.md, including the newest sidecar-culling-review owner-action id shown after reload, its final state, whether Run local completed or blocked, and any console/layout errors. Commit and push DAVID2MAX.md if you change it.
 ```
 
 ## 2026-05-17 Install Max Instruction Poller

@@ -140,6 +140,12 @@ and cannot be granted through ACS.
   changes a claimed action to `completed`, and stores a result object.
 - `POST /owner/actions/<id>/fail`: requires an Owner/Admin Google session and
   marks a queued or claimed action `failed` with a short error message.
+- Local helper `POST /__photosbyelie/new-owner-connector`: requires localhost
+  or `--allow-lan-owner` private/Tailscale access, accepts a claimed
+  `sidecar-culling-review` action, reads Sidecar state from local
+  `Owner.sqlite` in read-only mode, and returns compact completion details for
+  the Worker `complete` route. It does not grant roles and does not mutate
+  `Owner.sqlite`.
 - `POST /real-estate/access-login`: requires a Google session whose registry
   grants include the requested `galleryKey` or an Owner/Admin session. It mints
   the existing signed Real Estate session cookie so the current gallery-scoped

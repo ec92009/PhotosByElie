@@ -58,6 +58,23 @@
     return body;
   };
 
+  const localApiFetch = async (path, options = {}) => {
+    const response = await fetch(path, {
+      credentials: "same-origin",
+      cache: "no-store",
+      ...options,
+      headers: {
+        ...(options.body ? { "content-type": "application/json" } : {}),
+        ...(options.headers || {}),
+      },
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok || body?.ok === false || body?.error) {
+      throw new Error(body?.error?.message || body?.error || `Local connector failed with HTTP ${response.status}.`);
+    }
+    return body;
+  };
+
   const countNode = (key) => $(`[data-new-owner-count="${key}"]`);
 
   const setCount = (key, value) => {
@@ -136,6 +153,16 @@
 
   const chip = (label, modifier = "") =>
     `<span class="new-owner-chip ${modifier ? `is-${escapeHtml(modifier)}` : ""}">${escapeHtml(label)}</span>`;
+
+  const renderActionResultChips = (action) => {
+    const result = action?.result || {};
+    const chips = [];
+    if (result.readOnly) chips.push(chip("read-only", "local"));
+    if (Number.isFinite(result.recordsPrepared)) chips.push(chip(`${result.recordsPrepared} prepared`, "live"));
+    if (Number.isFinite(result.candidateCount)) chips.push(chip(`${result.candidateCount} candidates`));
+    if (result.local?.machineNames?.length) chips.push(chip(result.local.machineNames[0], "planned"));
+    return chips.join("");
+  };
 
   const actionTime = (action) => {
     const timestamp = Date.parse(action?.createdAt || action?.updatedAt || "");
@@ -231,9 +258,11 @@
           ${action.claim?.connectorId ? chip(action.claim.connectorId, "planned") : ""}
           ${action.completedAt ? chip(action.completedAt, "live") : ""}
           ${action.error?.message ? chip(action.error.message, "local") : ""}
+          ${renderActionResultChips(action)}
         </div>
         <div class="new-owner-action-row-controls">
           ${action.state === "queued" ? `<button class="btn secondary" type="button" data-new-owner-action-command="claim" data-action-id="${escapeHtml(action.id)}">Claim</button>` : ""}
+          ${action.state === "claimed" && action.type === "sidecar-culling-review" ? `<button class="btn secondary" type="button" data-new-owner-action-command="run-local" data-action-id="${escapeHtml(action.id)}">Run local</button>` : ""}
           ${action.state === "claimed" ? `<button class="btn secondary" type="button" data-new-owner-action-command="complete" data-action-id="${escapeHtml(action.id)}">Complete</button>` : ""}
           ${["queued", "claimed"].includes(action.state) ? `<button class="btn secondary" type="button" data-new-owner-action-command="fail" data-action-id="${escapeHtml(action.id)}">Fail</button>` : ""}
         </div>
@@ -384,6 +413,43 @@
     }
   };
 
+  const runLocalConnector = async (actionId) => {
+    if (state.busy || !actionId) return;
+    const action = state.actions.find((candidate) => candidate.id === actionId)
+      || (state.action?.id === actionId ? state.action : null);
+    if (!action?.id) {
+      setStatus("Owner action is not loaded locally.");
+      return;
+    }
+    state.busy = true;
+    if (actionStatusRoot) actionStatusRoot.textContent = "Running local...";
+    try {
+      const local = await localApiFetch("/__photosbyelie/new-owner-connector", {
+        method: "POST",
+        body: JSON.stringify({
+          action,
+          connectorId: connectorId(),
+        }),
+      });
+      const body = await apiFetch(`/owner/actions/${encodeURIComponent(actionId)}/complete`, {
+        method: "POST",
+        body: JSON.stringify({
+          result: local.result,
+        }),
+      });
+      state.action = body.action || state.action;
+      await loadActions();
+      if (actionStatusRoot) actionStatusRoot.textContent = state.action?.state || "";
+      setStatus(`Local connector prepared ${local.result?.recordsPrepared ?? 0} Sidecar records.`);
+      render();
+    } catch (error) {
+      if (actionStatusRoot) actionStatusRoot.textContent = "";
+      setStatus(error.message || "Could not run local connector.");
+    } finally {
+      state.busy = false;
+    }
+  };
+
   const claimNextAction = () => {
     const target = state.actions.find((action) => action.state === "queued" && action.type === "sidecar-culling-review")
       || state.actions.find((action) => action.state === "queued");
@@ -414,7 +480,13 @@
   actionRoot?.addEventListener("click", (event) => {
     const button = event.target.closest("[data-new-owner-action-command]");
     if (!button) return;
-    transitionAction(button.getAttribute("data-action-id"), button.getAttribute("data-new-owner-action-command"));
+    const command = button.getAttribute("data-new-owner-action-command");
+    const actionId = button.getAttribute("data-action-id");
+    if (command === "run-local") {
+      runLocalConnector(actionId);
+      return;
+    }
+    transitionAction(actionId, command);
   });
   themeToggle?.addEventListener("click", toggleTheme);
 

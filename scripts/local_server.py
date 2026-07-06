@@ -65,8 +65,10 @@ SOURCE_EDIT_IMPORT_ALL_PATH = "/__photosbyelie/source-edit-import-all"
 PUBLISH_PRICES_PATH = "/__photosbyelie/publish-prices"
 PUBLISH_PRICES_PROGRESS_PATH = "/__photosbyelie/publish-prices-progress"
 OWNER_BURST_CULL_PATH = "/__photosbyelie/owner-burst-cull"
+NEW_OWNER_CONNECTOR_PATH = "/__photosbyelie/new-owner-connector"
 MAX_BODY_BYTES = 5 * 1024 * 1024
 LOCAL_CLIENTS = {"127.0.0.1", "::1", "localhost"}
+TAILSCALE_CGNAT_NETWORK = ipaddress.ip_network("100.64.0.0/10")
 VISIBLE_VERSION_EPOCH = date(2026, 2, 28)
 DERIVATIVES = (("gallery", "gallerySrc"), ("detail", "imageSrc"))
 COUNTRY_ASSIGNMENT_TARGETS = {"france", "usa", "spain", "mexico", "italy", "portugal", "slovakia"}
@@ -506,6 +508,9 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         if path == OWNER_BURST_CULL_PATH:
             self._handle_owner_burst_cull_run()
             return
+        if path == NEW_OWNER_CONNECTOR_PATH:
+            self._handle_new_owner_connector()
+            return
         if path == REAL_ESTATE_OWNER_PATH:
             self._handle_real_estate_owner()
             return
@@ -730,6 +735,23 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
             return
         self._send_json(HTTPStatus.OK, {"ok": True, **result})
+
+    def _handle_new_owner_connector(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            result = new_owner_connector_result(Path.cwd(), self._read_json_body())
+        except ValueError as error:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
+            return
+        except FileNotFoundError as error:
+            self._send_json(HTTPStatus.NOT_FOUND, {"ok": False, "error": str(error)})
+            return
+        except sqlite3.Error as error:
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
+            return
+        self._send_json(HTTPStatus.OK, result)
 
     def _handle_import_sources(self) -> None:
         if not self._is_loopback_request():
@@ -1298,6 +1320,232 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         self.wfile.write(body)
 
 
+def _clean_connector_id(value: object) -> str:
+    clean = re.sub(r"[^a-z0-9._-]+", "-", str(value or "").strip().lower()).strip("-")
+    return (clean[:80] or "local")
+
+
+def _new_owner_action_from_payload(payload: dict) -> dict:
+    action = payload.get("action")
+    if not isinstance(action, dict):
+        raise ValueError("action must be a JSON object")
+    return action
+
+
+def _new_owner_manifest(action: dict) -> dict:
+    action_payload = action.get("payload")
+    if not isinstance(action_payload, dict):
+        return {}
+    manifest = action_payload.get("manifest")
+    return manifest if isinstance(manifest, dict) else {}
+
+
+def _new_owner_manifest_limit(manifest: dict, default: int = 50) -> int:
+    try:
+        value = int(manifest.get("limit") or default)
+    except (TypeError, ValueError):
+        value = default
+    return max(1, min(value, 120))
+
+
+def _owner_sqlite_path(repo_root: Path) -> Path:
+    return repo_root / OWNER_ACTION_ROOT / "Owner.sqlite"
+
+
+def _connect_owner_sqlite_readonly(repo_root: Path) -> sqlite3.Connection:
+    path = _owner_sqlite_path(repo_root)
+    if not path.exists():
+        raise FileNotFoundError(f"{path} is missing")
+    conn = sqlite3.connect(f"{path.resolve().as_uri()}?mode=ro", uri=True)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def _require_sidecar_tables(conn: sqlite3.Connection) -> None:
+    required = {
+        "sidecar_assets",
+        "sidecar_decisions",
+        "sidecar_pending_sync",
+        "sidecar_tombstones",
+        "sidecar_mock_uploads",
+    }
+    rows = conn.execute(
+        f"""
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'table'
+          AND name IN ({", ".join("?" for _ in required)})
+        """,
+        sorted(required),
+    ).fetchall()
+    found = {str(row["name"]) for row in rows}
+    missing = sorted(required - found)
+    if missing:
+        raise ValueError(f"Owner.sqlite does not contain Sidecar state yet: missing {', '.join(missing)}")
+
+
+def _sidecar_state_counts(conn: sqlite3.Connection) -> list[dict]:
+    rows = conn.execute(
+        """
+        SELECT
+          COALESCE(d.pick_state, 'undecided') AS pick_state,
+          COALESCE(d.metadata_state, 'unreviewed') AS metadata_state,
+          count(*) AS total
+        FROM sidecar_assets AS a
+        LEFT JOIN sidecar_decisions AS d ON d.asset_id = a.asset_id
+        WHERE a.missing_at IS NULL OR a.missing_at = ''
+        GROUP BY COALESCE(d.pick_state, 'undecided'), COALESCE(d.metadata_state, 'unreviewed')
+        ORDER BY total DESC, pick_state, metadata_state
+        """
+    ).fetchall()
+    return [
+        {
+            "pickState": str(row["pick_state"] or "undecided"),
+            "metadataState": str(row["metadata_state"] or "unreviewed"),
+            "count": int(row["total"] or 0),
+        }
+        for row in rows
+    ]
+
+
+def _sidecar_culling_review_rows(conn: sqlite3.Connection, limit: int) -> tuple[int, int, list[dict]]:
+    indexed_count = conn.execute(
+        "SELECT count(*) AS total FROM sidecar_assets WHERE missing_at IS NULL OR missing_at = ''"
+    ).fetchone()["total"]
+    candidate_sql = """
+      FROM sidecar_assets AS a
+      LEFT JOIN sidecar_decisions AS d ON d.asset_id = a.asset_id
+      WHERE (a.missing_at IS NULL OR a.missing_at = '')
+        AND NOT EXISTS (
+          SELECT 1
+          FROM sidecar_tombstones AS t
+          WHERE t.asset_id = a.asset_id AND t.tombstone_state = 'active'
+        )
+        AND NOT EXISTS (
+          SELECT 1
+          FROM sidecar_mock_uploads AS m
+          WHERE m.asset_id = a.asset_id AND m.mock_state = 'active'
+        )
+    """
+    candidate_count = conn.execute(f"SELECT count(*) AS total {candidate_sql}").fetchone()["total"]
+    rows = conn.execute(
+        f"""
+        SELECT
+          a.asset_id,
+          a.filename,
+          a.media_type,
+          a.captured_at,
+          a.indexed_at,
+          a.photos_title,
+          a.metadata_seed_title,
+          COALESCE(d.rating, 0) AS rating,
+          COALESCE(d.color, '') AS color,
+          COALESCE(d.pick_state, 'undecided') AS pick_state,
+          COALESCE(d.metadata_state, 'unreviewed') AS metadata_state,
+          COALESCE(d.title, '') AS decision_title,
+          ROW_NUMBER() OVER (
+            ORDER BY
+              CASE WHEN a.captured_at IS NULL OR a.captured_at = '' THEN 1 ELSE 0 END,
+              a.captured_at DESC,
+              a.asset_id
+          ) - 1 AS sidecar_position
+        {candidate_sql}
+        ORDER BY sidecar_position
+        LIMIT ?
+        """,
+        (limit,),
+    ).fetchall()
+    items = [
+        {
+            "assetId": str(row["asset_id"] or ""),
+            "filename": str(row["filename"] or ""),
+            "mediaType": str(row["media_type"] or ""),
+            "capturedAt": str(row["captured_at"] or ""),
+            "indexedAt": str(row["indexed_at"] or ""),
+            "rating": int(row["rating"] or 0),
+            "color": str(row["color"] or ""),
+            "pickState": str(row["pick_state"] or "undecided"),
+            "metadataState": str(row["metadata_state"] or "unreviewed"),
+            "title": str(row["decision_title"] or row["photos_title"] or row["metadata_seed_title"] or ""),
+            "sidecarPosition": int(row["sidecar_position"] or 0),
+        }
+        for row in rows
+    ]
+    return int(indexed_count or 0), int(candidate_count or 0), items
+
+
+def _new_owner_sidecar_culling_review_result(repo_root: Path, action: dict, connector_id: str) -> dict:
+    manifest = _new_owner_manifest(action)
+    limit = _new_owner_manifest_limit(manifest)
+    owner_db = _owner_sqlite_path(repo_root)
+    with _connect_owner_sqlite_readonly(repo_root) as conn:
+        _require_sidecar_tables(conn)
+        indexed_count, candidate_count, items = _sidecar_culling_review_rows(conn, limit)
+        state_counts = _sidecar_state_counts(conn)
+        pending_sync_count = conn.execute(
+            "SELECT count(*) AS total FROM sidecar_pending_sync WHERE status = 'pending'"
+        ).fetchone()["total"]
+        tombstone_count = conn.execute(
+            "SELECT count(*) AS total FROM sidecar_tombstones WHERE tombstone_state = 'active'"
+        ).fetchone()["total"]
+        last_indexed_at = conn.execute(
+            "SELECT max(indexed_at) AS value FROM sidecar_assets WHERE missing_at IS NULL OR missing_at = ''"
+        ).fetchone()["value"]
+    completed_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    result = {
+        "connectorId": connector_id,
+        "surface": "new-owner-local-bridge",
+        "actionId": str(action.get("id") or ""),
+        "type": "sidecar-culling-review",
+        "readOnly": True,
+        "recordsPrepared": len(items),
+        "candidateCount": candidate_count,
+        "indexedCount": indexed_count,
+        "pendingSyncCount": int(pending_sync_count or 0),
+        "tombstoneCount": int(tombstone_count or 0),
+        "lastIndexedAt": str(last_indexed_at or ""),
+        "stateCounts": state_counts,
+        "reviewWindow": {
+            "mode": str(manifest.get("mode") or "review-window"),
+            "source": "owner-sqlite",
+            "limit": limit,
+            "count": len(items),
+        },
+        "sampleItems": items[:8],
+        "local": {
+            "machineNames": _local_machine_names(),
+            "ownerDb": str(owner_db.relative_to(repo_root) if owner_db.is_relative_to(repo_root) else owner_db),
+        },
+        "completedAt": completed_at,
+    }
+    return {
+        "ok": True,
+        "connector": {
+            "id": connector_id,
+            "type": "sidecar-culling-review",
+            "readOnly": True,
+            "completedAt": completed_at,
+        },
+        "result": result,
+        "preview": {
+            "items": items,
+            "stateCounts": state_counts,
+        },
+    }
+
+
+def new_owner_connector_result(repo_root: Path, payload: dict) -> dict:
+    action = _new_owner_action_from_payload(payload)
+    action_type = str(action.get("type") or action.get("action") or "").strip()
+    if action_type != "sidecar-culling-review":
+        raise ValueError(f"Unsupported NewOwner connector action: {action_type or 'missing'}")
+    if str(action.get("state") or "").strip() != "claimed":
+        raise ValueError("Sidecar culling connector actions must be claimed before local execution.")
+    claim = action.get("claim") if isinstance(action.get("claim"), dict) else {}
+    connector_id = _clean_connector_id(payload.get("connectorId") or claim.get("connectorId") or "local")
+    return _new_owner_sidecar_culling_review_result(repo_root, action, connector_id)
+
+
 def _clean_price_value(value: object) -> float:
     try:
         amount = float(value)
@@ -1684,7 +1932,7 @@ def _is_private_lan_address(value: str) -> bool:
         address = ipaddress.ip_address(value)
     except ValueError:
         return False
-    return bool(address.is_private or address.is_loopback)
+    return bool(address.is_private or address.is_loopback or address in TAILSCALE_CGNAT_NETWORK)
 
 
 def _state_groups(repo_root: Path) -> tuple[dict[str, list[dict]], dict[str, list[dict]], dict[str, list[dict]]]:

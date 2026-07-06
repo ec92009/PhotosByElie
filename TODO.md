@@ -11,7 +11,7 @@ Last updated: 2026-07-06
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`.
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`.
 - Access Console Sandbox V7: deployed on `auth.photos-by-elie.com` with D1 database `photosbyelie-access`; local preview at `http://100.111.30.109:8000/access-console.html`; group manager creates/edits/archives audience groups, connects groups to real gallery records, persists per-gallery defaults, filters people, manages group memberships, previews gallery permissions for selected group/person/visitor/owner modes, and runs cloud Worker policy tests for selected gallery access; audience fixtures are `Agnes's B'day`, `RE La Concha`, and `Johnson-Palmer wedding`.
-- Track B NewOwner shell: local preview at `http://100.111.30.109:8000/new-owner.html`; uses the deployed auth Worker for Google Owner/Admin session checks, D1 access-state summary, a reload-persistent recent cloud Owner action queue, and a browser-mediated read-only local connector for claimed `sidecar-culling-review` actions.
+- Track B NewOwner shell: local preview at `http://100.111.30.109:8000/new-owner.html`; uses the deployed auth Worker for Google Owner/Admin session checks, D1 access-state summary, a reload-persistent recent cloud Owner action queue, and a browser-mediated Sidecar review workspace for claimed/completed `sidecar-culling-review` actions with explicit local pick/unpick/reject writes.
 - Public catalog integrity: `ok`.
 - Public catalog scale: `7770` media rows.
 - Gallery counts: AI `5076`, France `379`, Italy `70`, Mexico `31`, Portugal `214`, Slovakia `2`, Spain `1853`, USA `145`.
@@ -135,7 +135,7 @@ Last updated: 2026-07-06
 
 23. **Promote the Track B NewOwner shell into real cloud workflows.**
     - Replace remaining `track-b-cloud-shell-check` probes with real queued action types; the cloud queue already supports recent-action listing for Max/David reload continuity.
-    - Turn the read-only `sidecar-culling-review` connector result into an actual review workspace with explicit local write actions.
+    - Enrich the `sidecar-culling-review` review workspace with thumbnails/previews, gallery/routing assignment, and clearer staged-decision audit feedback.
     - Reuse the same browser-mediated connector pattern for Apple Photos import and Real Estate source operations without moving source files into the public repo.
 
 ## Validation Before Publishing

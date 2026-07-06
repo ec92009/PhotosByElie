@@ -36,11 +36,18 @@ shows the same cloud state.
 
 The first connector-ready action type is `sidecar-culling-review`. NewOwner can
 queue a small culling manifest, claim it for the current connector id, run the
-local read-only connector, and mark it completed or failed. The connector reads
-Sidecar state from local `assets/owner-actions/Owner.sqlite` through
+local read-only connector, mark it completed or failed, and reopen completed
+review windows from the cloud action list. The connector reads Sidecar state
+from local `assets/owner-actions/Owner.sqlite` through
 `POST /__photosbyelie/new-owner-connector`, prepares a review-window summary,
 and posts compact completion details back through the cloud action lifecycle.
-It does not mutate `Owner.sqlite`.
+Completed review windows render the first 50 Sidecar records with current
+pick/reject state and explicit `Pick`, `Unpick`, and `Reject` controls.
+
+Those controls call the local helper route
+`POST /__photosbyelie/new-owner-sidecar-decision`, which writes back to local
+`Owner.sqlite` only after an explicit owner click. Browser QA opened the review
+workspace read-only and deliberately did not click a real-data decision button.
 
 When the app is opened through the Max/David Tailscale URL
 `http://100.111.30.109:8000/new-owner.html`, the local helper must be running
@@ -71,19 +78,22 @@ Cloud-ready now:
   claim/complete/fail lifecycle.
 - Browser-mediated local connector execution for read-only Sidecar culling
   review-window summaries.
+- Reopening completed Sidecar review windows from cloud action state and staging
+  explicit pick/unpick/reject decisions through the local helper.
 - Links back to ACS for role and group assignment.
 
 Still connector-backed later:
 
 - Apple Photos imports and source materialization.
-- Sidecar culling decisions and Upload Bridge exports.
+- Sidecar gallery routing decisions, richer thumbnails/previews, and Upload
+  Bridge exports.
 - Local cache warming and machine-specific file previews.
 - Full catalog publish orchestration from Owner SQLite into public SQLite/R2.
 
 ## Next Step
 
-The next Track B slice should turn the read-only Sidecar connector result into
-a real review workspace: open the prepared culling window, let the owner assign
-gallery/routing decisions, and keep those writes behind explicit local Owner
-actions. After that, reuse the same browser-mediated connector pattern for
+The next Track B slice should enrich the Sidecar review workspace with the
+owner-grade things that make it useful for real work: thumbnails or cached
+previews, gallery/routing assignment, and a clearer audit trail for staged local
+decisions. After that, reuse the same browser-mediated connector pattern for
 Apple Photos import and Real Estate source operations.

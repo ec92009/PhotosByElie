@@ -236,6 +236,81 @@ class NewOwnerConnectorTests(unittest.TestCase):
             self.assertEqual(result["result"]["sampleItems"][0]["pickState"], "picked")
             self.assertEqual(result["result"]["reviewWindow"]["source"], "owner-sqlite")
 
+    def test_completed_sidecar_culling_connector_reopens_read_only_window(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            with sidecar_state_db.connect(repo_root) as conn:
+                conn.execute(
+                    """
+                    INSERT INTO sidecar_assets (
+                      asset_id, source_anchor, media_type, filename, captured_at,
+                      indexed_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        "asset-1",
+                        "apple-photos://asset-1",
+                        "photo",
+                        "reopen-001.jpg",
+                        "2026-07-05T10:00:00Z",
+                        "2026-07-05T11:00:00Z",
+                        "2026-07-05T11:00:00Z",
+                    ),
+                )
+                conn.commit()
+
+            result = local_server.new_owner_connector_result(
+                repo_root,
+                {
+                    "action": {
+                        "id": "owner-action-completed",
+                        "type": "sidecar-culling-review",
+                        "state": "completed",
+                        "claim": {"connectorId": "Max"},
+                        "payload": {"manifest": {"limit": 1}},
+                    },
+                },
+            )
+
+            self.assertTrue(result["ok"])
+            self.assertEqual(result["result"]["actionId"], "owner-action-completed")
+            self.assertEqual(result["result"]["recordsPrepared"], 1)
+
+    def test_new_owner_sidecar_decision_stages_explicit_pick(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            with sidecar_state_db.connect(repo_root) as conn:
+                conn.execute(
+                    """
+                    INSERT INTO sidecar_assets (
+                      asset_id, source_anchor, media_type, filename, captured_at,
+                      indexed_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        "asset-1",
+                        "apple-photos://asset-1",
+                        "photo",
+                        "decision-001.jpg",
+                        "2026-07-05T10:00:00Z",
+                        "2026-07-05T11:00:00Z",
+                        "2026-07-05T11:00:00Z",
+                    ),
+                )
+                conn.commit()
+
+            result = local_server.new_owner_sidecar_decision_result(
+                repo_root,
+                {"assetId": "asset-1", "action": "pick"},
+            )
+
+            self.assertTrue(result["ok"])
+            self.assertEqual(result["source"], "new-owner-review")
+            self.assertEqual(result["state"]["pickState"], "picked")
+            self.assertIn("pick_state", result["changedFamilies"])
+            self.assertGreaterEqual(result["pendingSyncCount"], 1)
+            self.assertEqual(result["summary"]["pendingSyncCount"], 1)
+
 
 if __name__ == "__main__":
     unittest.main()

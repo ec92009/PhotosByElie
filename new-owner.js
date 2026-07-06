@@ -7,6 +7,7 @@
     access: null,
     action: null,
     actions: [],
+    review: null,
     busy: false,
   };
   const lanes = [
@@ -24,6 +25,7 @@
   const accessRoot = $("[data-new-owner-access]");
   const lanesRoot = $("[data-new-owner-lanes]");
   const actionRoot = $("[data-new-owner-action]");
+  const reviewRoot = $("[data-new-owner-review]");
   const actionStatusRoot = $("[data-new-owner-action-status]");
   const connectorInput = $("[data-new-owner-connector]");
   const workerBaseRoot = $("[data-new-owner-worker-base]");
@@ -164,6 +166,9 @@
     return chips.join("");
   };
 
+  const reviewAction = (actionId, label) =>
+    `<button class="btn secondary" type="button" data-new-owner-action-command="open-review" data-action-id="${escapeHtml(actionId)}">${escapeHtml(label)}</button>`;
+
   const actionTime = (action) => {
     const timestamp = Date.parse(action?.createdAt || action?.updatedAt || "");
     return Number.isFinite(timestamp) ? timestamp : 0;
@@ -263,11 +268,86 @@
         <div class="new-owner-action-row-controls">
           ${action.state === "queued" ? `<button class="btn secondary" type="button" data-new-owner-action-command="claim" data-action-id="${escapeHtml(action.id)}">Claim</button>` : ""}
           ${action.state === "claimed" && action.type === "sidecar-culling-review" ? `<button class="btn secondary" type="button" data-new-owner-action-command="run-local" data-action-id="${escapeHtml(action.id)}">Run local</button>` : ""}
+          ${action.state === "completed" && action.type === "sidecar-culling-review" ? reviewAction(action.id, "Open review") : ""}
           ${action.state === "claimed" ? `<button class="btn secondary" type="button" data-new-owner-action-command="complete" data-action-id="${escapeHtml(action.id)}">Complete</button>` : ""}
           ${["queued", "claimed"].includes(action.state) ? `<button class="btn secondary" type="button" data-new-owner-action-command="fail" data-action-id="${escapeHtml(action.id)}">Fail</button>` : ""}
         </div>
       </article>
     `).join("");
+  };
+
+  const itemTitle = (item) => item.title || item.filename || item.assetId || "Sidecar item";
+
+  const reviewItemChips = (item) => [
+    item.mediaType ? chip(item.mediaType) : "",
+    chip(item.pickState || "undecided", item.pickState === "rejected" ? "local" : (item.pickState === "picked" ? "live" : "planned")),
+    item.metadataState ? chip(item.metadataState) : "",
+    Number.isFinite(item.rating) ? chip(`${item.rating} star${item.rating === 1 ? "" : "s"}`) : "",
+    item.color ? chip(item.color) : "",
+    item.pendingSyncCount ? chip(`${item.pendingSyncCount} pending`, "local") : "",
+  ].filter(Boolean).join("");
+
+  const reviewCommandButton = (item, action, label) => {
+    const active = (action === "pick" && item.pickState === "picked")
+      || (action === "unpick" && (!item.pickState || item.pickState === "undecided"))
+      || (action === "reject" && item.pickState === "rejected");
+    return `
+      <button
+        class="btn secondary ${active ? "is-active" : ""}"
+        type="button"
+        data-new-owner-review-command="${escapeHtml(action)}"
+        data-asset-id="${escapeHtml(item.assetId)}"
+        aria-pressed="${active ? "true" : "false"}"
+      >${escapeHtml(label)}</button>
+    `;
+  };
+
+  const renderReview = () => {
+    if (!reviewRoot) return;
+    const review = state.review;
+    if (!review) {
+      reviewRoot.hidden = true;
+      reviewRoot.innerHTML = "";
+      return;
+    }
+    const items = Array.isArray(review.items) ? review.items : [];
+    const result = review.result || {};
+    reviewRoot.hidden = false;
+    reviewRoot.innerHTML = `
+      <div class="owner-card-titlebar">
+        <div>
+          <p class="eyebrow">Sidecar</p>
+          <h2>Review window</h2>
+        </div>
+        <div class="new-owner-review-summary">
+          ${chip(`${items.length} shown`, "live")}
+          ${Number.isFinite(result.candidateCount) ? chip(`${result.candidateCount} candidates`) : ""}
+          ${Number.isFinite(result.indexedCount) ? chip(`${result.indexedCount} indexed`) : ""}
+          ${result.readOnly ? chip("opened read-only", "local") : ""}
+        </div>
+      </div>
+      <div class="new-owner-review-meta">
+        <strong>${escapeHtml(review.actionId || "sidecar-culling-review")}</strong>
+        <span>${escapeHtml(result.local?.ownerDb || "Owner.sqlite")}</span>
+      </div>
+      <div class="new-owner-review-list">
+        ${items.map((item) => `
+          <article class="new-owner-review-row" data-review-asset-id="${escapeHtml(item.assetId)}">
+            <div class="new-owner-review-row-main">
+              <strong>${escapeHtml(itemTitle(item))}</strong>
+              <small>${escapeHtml([item.filename, item.assetId].filter(Boolean).join(" / "))}</small>
+              <small>${escapeHtml(item.capturedAt || item.indexedAt || "")}</small>
+            </div>
+            <div class="new-owner-chip-stack">${reviewItemChips(item)}</div>
+            <div class="new-owner-review-row-controls">
+              ${reviewCommandButton(item, "pick", "Pick")}
+              ${reviewCommandButton(item, "unpick", "Unpick")}
+              ${reviewCommandButton(item, "reject", "Reject")}
+            </div>
+          </article>
+        `).join("") || `<p class="new-owner-empty">No Sidecar records in this review window.</p>`}
+      </div>
+    `;
   };
 
   const render = () => {
@@ -276,6 +356,7 @@
     renderAccess();
     renderLanes();
     renderAction();
+    renderReview();
   };
 
   const loadActions = async () => {
@@ -413,6 +494,46 @@
     }
   };
 
+  const reviewFromLocal = (local, action) => ({
+    actionId: action?.id || local?.result?.actionId || "",
+    action,
+    connector: local?.connector || null,
+    result: local?.result || {},
+    items: Array.isArray(local?.preview?.items) ? local.preview.items : [],
+    stateCounts: Array.isArray(local?.preview?.stateCounts) ? local.preview.stateCounts : [],
+  });
+
+  const openReviewWorkspace = async (actionId) => {
+    if (state.busy || !actionId) return;
+    const action = state.actions.find((candidate) => candidate.id === actionId)
+      || (state.action?.id === actionId ? state.action : null);
+    if (!action?.id) {
+      setStatus("Owner action is not loaded locally.");
+      return;
+    }
+    state.busy = true;
+    if (actionStatusRoot) actionStatusRoot.textContent = "Opening review...";
+    try {
+      const local = await localApiFetch("/__photosbyelie/new-owner-connector", {
+        method: "POST",
+        body: JSON.stringify({
+          action,
+          connectorId: connectorId(),
+        }),
+      });
+      state.review = reviewFromLocal(local, action);
+      if (actionStatusRoot) actionStatusRoot.textContent = "";
+      setStatus(`Opened ${state.review.items.length} Sidecar records.`);
+      render();
+      reviewRoot?.scrollIntoView({ block: "start", behavior: "smooth" });
+    } catch (error) {
+      if (actionStatusRoot) actionStatusRoot.textContent = "";
+      setStatus(error.message || "Could not open Sidecar review.");
+    } finally {
+      state.busy = false;
+    }
+  };
+
   const runLocalConnector = async (actionId) => {
     if (state.busy || !actionId) return;
     const action = state.actions.find((candidate) => candidate.id === actionId)
@@ -439,12 +560,48 @@
       });
       state.action = body.action || state.action;
       await loadActions();
+      state.review = reviewFromLocal(local, state.action || action);
       if (actionStatusRoot) actionStatusRoot.textContent = state.action?.state || "";
       setStatus(`Local connector prepared ${local.result?.recordsPrepared ?? 0} Sidecar records.`);
       render();
+      reviewRoot?.scrollIntoView({ block: "start", behavior: "smooth" });
     } catch (error) {
       if (actionStatusRoot) actionStatusRoot.textContent = "";
       setStatus(error.message || "Could not run local connector.");
+    } finally {
+      state.busy = false;
+    }
+  };
+
+  const updateReviewItem = (assetId, decision) => {
+    if (!state.review?.items?.length) return;
+    state.review.items = state.review.items.map((item) => {
+      if (item.assetId !== assetId) return item;
+      const nextState = decision?.state || {};
+      return {
+        ...item,
+        pickState: nextState.pickState || item.pickState,
+        metadataState: nextState.metadataState || item.metadataState,
+        rating: Number.isFinite(nextState.rating) ? nextState.rating : item.rating,
+        color: nextState.color ?? item.color,
+        pendingSyncCount: decision?.pendingSyncCount ?? item.pendingSyncCount,
+      };
+    });
+  };
+
+  const recordReviewDecision = async (assetId, action) => {
+    if (state.busy || !assetId || !action) return;
+    state.busy = true;
+    try {
+      const decision = await localApiFetch("/__photosbyelie/new-owner-sidecar-decision", {
+        method: "POST",
+        body: JSON.stringify({ assetId, action }),
+      });
+      updateReviewItem(assetId, decision);
+      setStatus(`Staged ${action} for ${assetId}.`);
+      renderReview();
+    } catch (error) {
+      setStatus(error.message || "Could not stage Sidecar decision.");
     } finally {
       state.busy = false;
     }
@@ -482,11 +639,20 @@
     if (!button) return;
     const command = button.getAttribute("data-new-owner-action-command");
     const actionId = button.getAttribute("data-action-id");
+    if (command === "open-review") {
+      openReviewWorkspace(actionId);
+      return;
+    }
     if (command === "run-local") {
       runLocalConnector(actionId);
       return;
     }
     transitionAction(actionId, command);
+  });
+  reviewRoot?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-new-owner-review-command]");
+    if (!button) return;
+    recordReviewDecision(button.getAttribute("data-asset-id"), button.getAttribute("data-new-owner-review-command"));
   });
   themeToggle?.addEventListener("click", toggleTheme);
 

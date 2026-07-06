@@ -66,6 +66,7 @@ PUBLISH_PRICES_PATH = "/__photosbyelie/publish-prices"
 PUBLISH_PRICES_PROGRESS_PATH = "/__photosbyelie/publish-prices-progress"
 OWNER_BURST_CULL_PATH = "/__photosbyelie/owner-burst-cull"
 NEW_OWNER_CONNECTOR_PATH = "/__photosbyelie/new-owner-connector"
+NEW_OWNER_SIDECAR_DECISION_PATH = "/__photosbyelie/new-owner-sidecar-decision"
 MAX_BODY_BYTES = 5 * 1024 * 1024
 LOCAL_CLIENTS = {"127.0.0.1", "::1", "localhost"}
 TAILSCALE_CGNAT_NETWORK = ipaddress.ip_network("100.64.0.0/10")
@@ -336,6 +337,8 @@ from owner_state_db import import_title_keyword_batch_file as import_title_keywo
 from owner_state_db import queue_title_keyword_review_photo as queue_title_keyword_review_photo_db  # noqa: E402
 from owner_state_db import queue_title_keyword_review_photos as queue_title_keyword_review_photos_db  # noqa: E402
 from owner_state_db import record_title_keyword_review_decisions as record_title_keyword_review_decisions_db  # noqa: E402
+from sidecar_state_db import record_decision as record_sidecar_decision_db  # noqa: E402
+from sidecar_state_db import summary as sidecar_summary_db  # noqa: E402
 
 
 COLLECTION_KEYWORD_TARGETS = {
@@ -510,6 +513,9 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             return
         if path == NEW_OWNER_CONNECTOR_PATH:
             self._handle_new_owner_connector()
+            return
+        if path == NEW_OWNER_SIDECAR_DECISION_PATH:
+            self._handle_new_owner_sidecar_decision()
             return
         if path == REAL_ESTATE_OWNER_PATH:
             self._handle_real_estate_owner()
@@ -747,6 +753,20 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             return
         except FileNotFoundError as error:
             self._send_json(HTTPStatus.NOT_FOUND, {"ok": False, "error": str(error)})
+            return
+        except sqlite3.Error as error:
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
+            return
+        self._send_json(HTTPStatus.OK, result)
+
+    def _handle_new_owner_sidecar_decision(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            result = new_owner_sidecar_decision_result(Path.cwd(), self._read_json_body())
+        except ValueError as error:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
             return
         except sqlite3.Error as error:
             self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
@@ -1539,11 +1559,27 @@ def new_owner_connector_result(repo_root: Path, payload: dict) -> dict:
     action_type = str(action.get("type") or action.get("action") or "").strip()
     if action_type != "sidecar-culling-review":
         raise ValueError(f"Unsupported NewOwner connector action: {action_type or 'missing'}")
-    if str(action.get("state") or "").strip() != "claimed":
-        raise ValueError("Sidecar culling connector actions must be claimed before local execution.")
+    if str(action.get("state") or "").strip() not in {"claimed", "completed"}:
+        raise ValueError("Sidecar culling connector actions must be claimed or completed before local review.")
     claim = action.get("claim") if isinstance(action.get("claim"), dict) else {}
     connector_id = _clean_connector_id(payload.get("connectorId") or claim.get("connectorId") or "local")
     return _new_owner_sidecar_culling_review_result(repo_root, action, connector_id)
+
+
+def new_owner_sidecar_decision_result(repo_root: Path, payload: dict) -> dict:
+    asset_id = str(payload.get("assetId") or payload.get("asset_id") or "").strip()
+    action = str(payload.get("action") or "").strip().casefold()
+    if not asset_id:
+        raise ValueError("assetId is required")
+    if action not in {"pick", "unpick", "reject"}:
+        raise ValueError("action must be pick, unpick, or reject")
+    decision = record_sidecar_decision_db(repo_root, {
+        "assetId": asset_id,
+        "action": action,
+    })
+    decision["summary"] = sidecar_summary_db(repo_root)
+    decision["source"] = "new-owner-review"
+    return decision
 
 
 def _clean_price_value(value: object) -> float:

@@ -26,15 +26,17 @@ git pull --ff-only origin main
 - Push successful commits to the active branch named in the handoff prompt.
 - Record what happened in `DAVID2MAX.md`.
 
-## 2026-07-06 Track B NewOwner Connector Queue Check
+## 2026-07-06 Track B NewOwner Sidecar Review Check
 
 Prompt for David:
 
 ```text
-In /Users/ecohen/Dev/PhotosByElie, do not mutate assets/owner-actions/Owner.sqlite.
-The NewOwner connector endpoint opens it read-only; if David does not have a
-local Owner.sqlite cache with Sidecar tables, report that as the expected
-current blocker instead of creating or syncing one.
+In /Users/ecohen/Dev/PhotosByElie, avoid mutating assets/owner-actions/Owner.sqlite
+unless you are intentionally testing a single explicit decision on a known row.
+The NewOwner connector open path is read-only; the Pick/Unpick/Reject buttons
+are the write path. If David does not have a local Owner.sqlite cache with
+Sidecar tables, report that as the expected current blocker instead of creating
+or syncing one.
 
 Run:
 
@@ -58,12 +60,17 @@ Verify:
   claimed action and confirm it completes with read-only, prepared-count, and
   candidate-count chips. Reload; the completed state should stay visible from
   cloud state.
+- On a completed sidecar-culling-review action, click Open review and confirm
+  the review workspace opens with 50 Sidecar records, candidate/indexed summary
+  chips, current pick/reject state chips, and Pick/Unpick/Reject controls.
+- Do not click Pick, Unpick, or Reject against real data for this check unless
+  Elie explicitly names the row and decision to stage.
 - If Run local reports that Owner.sqlite is missing or lacks Sidecar tables,
   leave the action claimed or mark it failed with that exact blocker, then
   report it. Do not create or sync Owner.sqlite for this check.
 - The page has no visible horizontal overflow on desktop or phone width.
 
-Report the result in DAVID2MAX.md, including the newest sidecar-culling-review owner-action id shown after reload, its final state, whether Run local completed or blocked, and any console/layout errors. Commit and push DAVID2MAX.md if you change it.
+Report the result in DAVID2MAX.md, including the newest sidecar-culling-review owner-action id shown after reload, its final state, whether Run local/Open review completed or blocked, and any console/layout errors. Commit and push DAVID2MAX.md if you change it.
 ```
 
 ## 2026-05-17 Install Max Instruction Poller

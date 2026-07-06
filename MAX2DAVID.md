@@ -26,6 +26,56 @@ git pull --ff-only origin main
 - Push successful commits to the active branch named in the handoff prompt.
 - Record what happened in `DAVID2MAX.md`.
 
+## 2026-07-06 David Tickets API Outage Check
+
+Prompt for David:
+
+```text
+Please check why the central Tickets API is unreachable from Max.
+
+Symptom seen on Max during PhotosByElie Track B work:
+
+cd /Users/ecohen/Dev/PhotosByElie
+python3 /Users/ecohen/Dev/Tickets/scripts/tickets.py search --project PhotosByElie "Safari NewOwner sign in Tailscale"
+
+Result:
+
+Tickets API is unreachable at https://david.tail7576f4.ts.net: [Errno 61] Connection refused
+No local ticket JSON was changed. In normal operation, start the API on David with `python3 -m app.server --host 127.0.0.1 --port 8765` and `launcher/configure_tailscale_https.sh`.
+
+This blocked Max from updating ticket PBE-20260705-9591 after the NewOwner Safari/Tailscale auth fix.
+
+Please verify on David:
+- Whether the Tickets app/API is running locally.
+- Whether `http://127.0.0.1:8765/` answers from David.
+- Whether the private route Max should use is still `https://david.tail7576f4.ts.net`, or whether the expected route is `http://100.82.91.128:8765`.
+- Whether `launcher/configure_tailscale_https.sh`, LaunchAgent/launcher state, or firewall/Tailscale serving config needs repair.
+- Whether ticket PBE-20260705-9591 exists in David's canonical Tickets store.
+
+Useful checks:
+
+cd /Users/ecohen/Dev/Tickets
+git status --short
+python3 scripts/validate_tickets.py
+TICKETS_API_URL=http://127.0.0.1:8765 python3 scripts/tickets.py show PBE-20260705-9591
+TICKETS_API_URL=http://127.0.0.1:8765 python3 scripts/tickets.py list --project PhotosByElie
+
+If the API is not running, start it using the normal David-local path. If the
+Tailscale route or HTTPS route changed, record the exact Max-side URL and any
+environment/config update needed.
+
+Report in DAVID2MAX.md:
+- Root cause.
+- What was fixed or left blocked.
+- Exact Tickets API URL Max should use.
+- Proof command/output from David-local access.
+- Whether Max can retry updating PBE-20260705-9591.
+
+Do not use Gmail for this handoff. Do not edit PhotosByElie Owner.sqlite. If
+you make durable Tickets repo config changes, commit/push them from the Tickets
+repo; if you only report, commit/push DAVID2MAX.md in PhotosByElie.
+```
+
 ## 2026-07-06 Track B NewOwner Sidecar Review Check
 
 Prompt for David:

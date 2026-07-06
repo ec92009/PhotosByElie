@@ -535,8 +535,9 @@ Clock state: running
 | 2026-07-06 | 13:46 CEST | 13:47 CEST | 0:01 | Requested David investigate the central Tickets API connection-refused blocker; handoff transport work included. |
 | 2026-07-06 | 13:47 CEST | 13:56 CEST | 0:09 | Replaced the obsolete MAX2DAVID handoff route with direct David Tailscale Tickets probes, confirmed the raw IP API works, recorded the inactive HTTPS Serve endpoint in ticket PBE-20260705-9591, and updated handoff/SOP docs to prefer direct Tailscale/mesh; command/runtime excluded. |
 | 2026-07-06 | 19:19 CEST | 19:28 CEST | 0:09 | Closed out ACS V8 audit/undo: confirmed D1 schema, Worker deploy, rendered ACS shell, mobile hero fix, and validation status; long implementation/test runtime excluded. |
+| 2026-07-06 | 20:08 CEST | 20:11 CEST | 0:03 | Live-tested ACS V8 from David through Max's Tailscale URL: confirmed admin session, reversible fixture undo, and fixture gallery policy decisions; browser/runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 27:16
+Active collaboration time used: 27:19
 Remaining budget: not set

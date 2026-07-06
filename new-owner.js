@@ -2,6 +2,8 @@
   const cleanBase = (value) => String(value || "").trim().replace(/\/+$/, "");
   const mediaConfig = window.photosByElieMediaConfig || {};
   const workerBase = cleanBase(mediaConfig.authWorkerBaseUrl || mediaConfig.checkoutWorkerBaseUrl || "");
+  const AUTH_TOKEN_HASH_PARAM = "pbe_auth_token";
+  const AUTH_TOKEN_STORAGE_KEY = "pbe-new-owner-auth-token";
   const state = {
     session: null,
     access: null,
@@ -43,12 +45,46 @@
 
   const apiUrl = (path) => workerBase ? `${workerBase}${path}` : path;
 
+  const storedAuthToken = () => {
+    try {
+      return sessionStorage.getItem(AUTH_TOKEN_STORAGE_KEY) || "";
+    } catch {
+      return "";
+    }
+  };
+
+  const storeAuthToken = (token) => {
+    try {
+      if (token) sessionStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token);
+      else sessionStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+    } catch {
+      // Session transfer is a Safari/local convenience; cookie auth can still work.
+    }
+  };
+
+  const absorbAuthTokenFromHash = () => {
+    const hash = window.location.hash ? window.location.hash.slice(1) : "";
+    if (!hash) return;
+    const params = new URLSearchParams(hash);
+    const token = params.get(AUTH_TOKEN_HASH_PARAM) || "";
+    if (!token) return;
+    storeAuthToken(token);
+    params.delete(AUTH_TOKEN_HASH_PARAM);
+    const preservedHash = params.get("pbe_return_hash") || "";
+    params.delete("pbe_return_hash");
+    const nextHash = params.toString() || preservedHash;
+    const nextUrl = `${window.location.pathname}${window.location.search}${nextHash ? `#${nextHash}` : ""}`;
+    window.history.replaceState(null, "", nextUrl);
+  };
+
   const apiFetch = async (path, options = {}) => {
+    const token = storedAuthToken();
     const response = await fetch(apiUrl(path), {
       credentials: "include",
       cache: "no-store",
       ...options,
       headers: {
+        ...(token ? { authorization: `Bearer ${token}` } : {}),
         ...(options.body ? { "content-type": "application/json" } : {}),
         ...(options.headers || {}),
       },
@@ -398,6 +434,7 @@
 
   const login = () => {
     if (!workerBase) return;
+    storeAuthToken("");
     const url = new URL(`${workerBase}/auth/google/login`);
     url.searchParams.set("returnTo", window.location.href);
     window.location.href = url.href;
@@ -405,6 +442,7 @@
 
   const logout = () => {
     if (!workerBase) return;
+    storeAuthToken("");
     const url = new URL(`${workerBase}/auth/logout`);
     url.searchParams.set("returnTo", window.location.href);
     window.location.href = url.href;
@@ -656,6 +694,7 @@
   });
   themeToggle?.addEventListener("click", toggleTheme);
 
+  absorbAuthTokenFromHash();
   hydrateConnector();
   syncThemeToggle();
   renderLanes();

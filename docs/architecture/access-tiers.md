@@ -115,7 +115,10 @@ and cannot be granted through ACS.
   `/auth/login` path.
 - `GET /auth/google/callback`: exchanges the Google authorization code,
   validates the Google ID token, sets the signed `pbe_google_session` cookie,
-  and returns to the allowed `returnTo` URL.
+  and returns to the allowed `returnTo` URL. When that URL is an allowed
+  local/Tailscale HTTP preview, the callback also adds a signed session token to
+  the URL fragment so Safari can authenticate Owner/ACS API calls without
+  depending on third-party cookies.
 - `GET /auth/login`: legacy Cloudflare Access login entrypoint. Redirects back
   to the allowed `returnTo` origin after Access has authenticated the browser.
 - `GET /auth/logout` or `POST /auth/logout`: clears the direct OAuth session
@@ -261,6 +264,13 @@ requires the issuer/audience/expiry/email verification claims to match, and then
 maps the verified email through the same Admin/Owner/RE/User registry. The
 direct OAuth cookie is host-only to the auth Worker and is used by credentialed
 fetches from the public site.
+
+For local and Tailscale previews listed in `AUTH_ALLOWED_RETURN_ORIGINS`, the
+Worker also accepts the same signed Google session as a Bearer token. NewOwner
+and ACS consume `#pbe_auth_token=...` from the OAuth return URL, remove it from
+the address bar, keep it in tab-scoped `sessionStorage`, and send it in the
+`Authorization` header. This path is intended for local Owner tooling where
+Safari blocks cross-site cookies from an IP-origin page.
 
 ## Cloudflare Access Legacy Setup
 

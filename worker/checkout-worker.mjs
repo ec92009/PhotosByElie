@@ -49,7 +49,7 @@ const json = (body, status = 200, headers = {}) => new Response(JSON.stringify(b
     "content-type": "application/json; charset=utf-8",
     "access-control-allow-origin": "*",
     "access-control-allow-methods": "GET,POST,PUT,PATCH,OPTIONS",
-    "access-control-allow-headers": "content-type,stripe-signature,x-mock-stripe-signature",
+    "access-control-allow-headers": "authorization,content-type,stripe-signature,x-mock-stripe-signature",
     ...headers,
   },
 });
@@ -61,7 +61,7 @@ const credentialedCorsHeaders = (request, extraHeaders = {}) => {
   return {
     "access-control-allow-origin": origin,
     "access-control-allow-methods": "GET,POST,PUT,PATCH,OPTIONS",
-    "access-control-allow-headers": "content-type,stripe-signature,x-mock-stripe-signature",
+    "access-control-allow-headers": "authorization,content-type,stripe-signature,x-mock-stripe-signature",
     "access-control-allow-credentials": "true",
     vary: "Origin",
     ...extraHeaders,
@@ -1888,6 +1888,42 @@ export const createPhotosByElieWorker = ({
     }
   };
 
+  const isTailscaleHostname = (hostname) => {
+    const parts = String(hostname || "").split(".").map((part) => Number(part));
+    return parts.length === 4
+      && parts.every((part) => Number.isInteger(part) && part >= 0 && part <= 255)
+      && parts[0] === 100
+      && parts[1] >= 64
+      && parts[1] <= 127;
+  };
+
+  const isLocalAuthTransferReturn = (returnTo) => {
+    try {
+      const candidate = new URL(returnTo);
+      const hostname = candidate.hostname.replace(/^\[|\]$/g, "");
+      return candidate.protocol === "http:"
+        && (
+          hostname === "localhost"
+          || hostname === "127.0.0.1"
+          || hostname === "::1"
+          || isTailscaleHostname(hostname)
+        );
+    } catch {
+      return false;
+    }
+  };
+
+  const returnUrlWithLocalAuthTransfer = (returnTo, sessionToken = "") => {
+    if (!sessionToken || !isLocalAuthTransferReturn(returnTo)) return returnTo;
+    const url = new URL(returnTo);
+    const hash = url.hash ? url.hash.slice(1) : "";
+    const params = new URLSearchParams(hash.includes("=") ? hash : "");
+    if (hash && !hash.includes("=")) params.set("pbe_return_hash", hash);
+    params.set("pbe_auth_token", sessionToken);
+    url.hash = params.toString();
+    return url.href;
+  };
+
   const accessIdentityFor = async (request, { required = false } = {}) => {
     if (!accessAuth) {
       if (required) {
@@ -2008,7 +2044,7 @@ export const createPhotosByElieWorker = ({
       return credentialedErrorJson(request, 503, "google_auth_unavailable", "Google login is not configured.");
     }
     const result = await googleOAuthAuth.handleCallback(request);
-    return redirect(result.returnTo, 302, { "set-cookie": result.cookie });
+    return redirect(returnUrlWithLocalAuthTransfer(result.returnTo, result.sessionToken), 302, { "set-cookie": result.cookie });
   };
 
   const logoutAuth = async (request) => {

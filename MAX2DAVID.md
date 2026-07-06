@@ -46,6 +46,9 @@ git switch codex/new-owner-foundation || git switch -c codex/new-owner-foundatio
 python3 scripts/local_server.py 8000
 
 Then open http://localhost:8000/new-owner.html while signed in with the Owner/Admin Google account.
+Safari on `http://100.111.30.109:8000/new-owner.html` should also sign in after
+the OAuth callback because NewOwner now consumes the local/Tailscale
+`#pbe_auth_token` transfer and sends it as a Bearer token.
 
 Verify:
 - Status says Cloud Owner session verified.

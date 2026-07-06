@@ -531,8 +531,9 @@ Clock state: running
 | 2026-07-06 | 01:09 CEST | 01:10 CEST | 0:01 | Reported ACS Clear button overflow and continued ACS V7 policy tester direction; implementation/deploy/browser QA excluded. |
 | 2026-07-06 | 01:57 CEST | 01:58 CEST | 0:01 | Continued Track B NewOwner connector direction and reviewed the local read-only Sidecar bridge result; implementation/browser QA excluded. |
 | 2026-07-06 | 10:40 CEST | 10:41 CEST | 0:01 | Directed the Track B NewOwner Sidecar review workspace slice and verified the built-in browser walkthrough; implementation/testing excluded. |
+| 2026-07-06 | 13:22 CEST | 13:23 CEST | 0:01 | Reported Safari sign-in failure from the Tailscale NewOwner URL and verified the local auth-transfer fix; implementation/deploy/testing excluded. |
 
 ## Totals
 
-Active collaboration time used: 26:56
+Active collaboration time used: 26:57
 Remaining budget: not set

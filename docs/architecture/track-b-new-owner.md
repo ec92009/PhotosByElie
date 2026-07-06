@@ -29,6 +29,14 @@ The cloud shell uses deployed Worker routes:
 - `POST /owner/actions/<id>/fail`: marks a queued or claimed action failed with
   a short error message.
 
+For local/Tailscale previews such as `http://100.111.30.109:8000/new-owner.html`,
+Safari may not send the `auth.photos-by-elie.com` session cookie as a
+third-party credential. The auth Worker therefore adds a signed session token in
+the URL fragment only when Google OAuth returns to allowed local/Tailscale HTTP
+origins. `new-owner.js` removes that fragment immediately, stores the token in
+`sessionStorage`, and sends it as `Authorization: Bearer ...` for Owner API
+calls. Public same-site auth still uses the HttpOnly cookie path.
+
 The first action probe is `track-b-cloud-shell-check`. It writes a harmless
 queued Owner action to the existing cloud KV-backed Owner action store, reads
 the same action back, and refreshes the recent queue so a reload on Max or David
@@ -73,6 +81,7 @@ Bridge work.
 Cloud-ready now:
 
 - Google Owner/Admin session.
+- Safari-compatible local/Tailscale OAuth transfer for NewOwner and ACS.
 - D1-backed role, group, and access-policy visibility.
 - Cloud Owner action queue creation, readback, recent-action listing, and
   claim/complete/fail lifecycle.

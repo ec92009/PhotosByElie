@@ -148,6 +148,7 @@ test("Google OAuth auth requests account choice and stores a signed session cook
   assert.equal(tokenExchangeSeen, true);
   assert.equal(callback.returnTo, "https://photos-by-elie.com/?account=1");
   assert.match(callback.cookie, /^pbe_google_session=/);
+  assert.match(callback.sessionToken, /^[^.]+\.[^.]+$/);
   assert.match(callback.cookie, /HttpOnly/);
   assert.match(callback.cookie, /SameSite=None/);
   assert.match(callback.cookie, /Secure/);
@@ -158,6 +159,12 @@ test("Google OAuth auth requests account choice and stores a signed session cook
   }));
   assert.equal(session.email, "ec92009@gmail.com");
   assert.equal(session.provider, "google-oauth");
+
+  const bearerSession = await auth.optionalSession(new Request("https://worker.test/auth/session", {
+    headers: { authorization: `Bearer ${callback.sessionToken}` },
+  }));
+  assert.equal(bearerSession.email, "ec92009@gmail.com");
+  assert.equal(bearerSession.provider, "google-oauth");
 });
 
 const firstDeliverablePhotoId = (catalog, collectionKey = null) => {
@@ -812,6 +819,80 @@ test("direct Google OAuth session feeds account roles, RE login, and logout", as
   assert.match(logoutResponse.headers.get("set-cookie") || "", /^pbe_google_session=; Max-Age=0/);
   assert.match(logoutResponse.headers.get("set-cookie") || "", /SameSite=None/);
   assert.match(logoutResponse.headers.get("set-cookie") || "", /Secure/);
+});
+
+test("direct Google OAuth returns a local transfer token for Tailscale Owner previews", async () => {
+  const now = () => new Date("2026-06-21T12:00:00.000Z");
+  const googleAuth = createGoogleOAuthAuth({
+    clientId: "google-client-id",
+    clientSecret: "google-client-secret",
+    sessionSecret: "google-session-secret",
+    now,
+    fetcher: async () => new Response(JSON.stringify({ id_token: "owner-id-token" }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    }),
+    verifyIdToken: async () => ({
+      email: "ec92009@gmail.com",
+      provider: "google-oauth",
+      expiresAt: "2026-06-21T13:00:00.000Z",
+      sessionSeconds: 3600,
+    }),
+  });
+  const worker = createPhotosByElieWorker({
+    catalog: loadCatalog(),
+    googleOAuthAuth: googleAuth,
+    accessUserRegistry: createMemoryAccessUserRegistry([]),
+    accessAdminEmail: "ec92009@gmail.com",
+    authAllowedReturnOrigins: ["http://100.111.30.109:8000"],
+  });
+  const localOrigin = "http://100.111.30.109:8000";
+  const returnTo = `${localOrigin}/new-owner.html`;
+
+  const loginResponse = await worker.fetch(new Request(
+    `https://worker.test/auth/google/login?returnTo=${encodeURIComponent(returnTo)}`,
+    { headers: { origin: localOrigin } }
+  ));
+  assert.equal(loginResponse.status, 302);
+  const googleLoginUrl = new URL(loginResponse.headers.get("location"));
+
+  const callbackResponse = await worker.fetch(new Request(
+    `https://worker.test/auth/google/callback?code=oauth-code&state=${encodeURIComponent(googleLoginUrl.searchParams.get("state"))}`,
+    { headers: { origin: localOrigin } }
+  ));
+  assert.equal(callbackResponse.status, 302);
+  const localReturnUrl = new URL(callbackResponse.headers.get("location"));
+  assert.equal(localReturnUrl.origin, localOrigin);
+  assert.equal(localReturnUrl.pathname, "/new-owner.html");
+  assert.equal(localReturnUrl.searchParams.has("pbe_auth_token"), false);
+  const hashParams = new URLSearchParams(localReturnUrl.hash.slice(1));
+  const transferToken = hashParams.get("pbe_auth_token") || "";
+  assert.match(transferToken, /^[^.]+\.[^.]+$/);
+
+  const preflightResponse = await worker.fetch(new Request("https://worker.test/owner/session", {
+    method: "OPTIONS",
+    headers: {
+      origin: localOrigin,
+      "access-control-request-method": "GET",
+      "access-control-request-headers": "authorization",
+    },
+  }));
+  assert.equal(preflightResponse.status, 200);
+  assert.match(preflightResponse.headers.get("access-control-allow-headers") || "", /authorization/);
+
+  const sessionResponse = await worker.fetch(new Request("https://worker.test/owner/session", {
+    headers: {
+      authorization: `Bearer ${transferToken}`,
+      origin: localOrigin,
+    },
+  }));
+  assert.equal(sessionResponse.status, 200);
+  const session = await sessionResponse.json();
+  assert.equal(session.authenticated, true);
+  assert.equal(session.admin, true);
+  assert.equal(session.user.email, "ec92009@gmail.com");
+  assert.equal(session.user.provider, "google-oauth");
+  assert.ok(session.roles.includes("owner"));
 });
 
 test("checkout and download milestones record analytics without buyer identifiers", async () => {

@@ -5,7 +5,8 @@
   "caption": "Benalmadena Aquarium Blue Glass in four Photos By Elie frames. Browse: https://photos-by-elie.com/campaign.html?c=instagram-benalmadena-aquarium-blue-glass-2026-07-06",
   "notes": [
     "Derived from the Instagram package for a 3-4 image Threads carousel.",
-    "Images are public watermarked R2 previews staged for upload/API publishing."
+    "Images are public watermarked R2 previews staged for upload/API publishing.",
+    "Published by Threads Graph API; API flow did not expose a browser link-preview removal step."
   ],
   "items": [
     {
@@ -73,14 +74,30 @@
       "local_staged_path": "socials/Threads/2026-07-06/benalmadena-aquarium-blue-glass/images/04-001-0f609a32b7-benalmadena-aquarium-blue-glass.jpg"
     }
   ],
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "available_count": 4,
   "date": "2026-07-06",
   "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-benalmadena-aquarium-blue-glass-2026-07-06",
   "recommended_upload_set": "images",
-  "manual_blockers": [
-    "Publish pending: review socials/Threads/2026-07-06/benalmadena-aquarium-blue-glass/manifest.json and use the Threads browser/API workflow."
-  ]
+  "manual_blockers": [],
+  "published_url": "https://www.threads.com/@ec92009/post/Dab5PnTiF6G",
+  "published": {
+    "id": "18046263221584849",
+    "permalink": "https://www.threads.com/@ec92009/post/Dab5PnTiF6G",
+    "username": "ec92009",
+    "media_type": "CAROUSEL_ALBUM",
+    "timestamp": "2026-07-06T03:10:43+0000",
+    "child_count": 4
+  },
+  "verification": {
+    "method": "Threads Graph API readback",
+    "media_id": "18046263221584849",
+    "permalink": "https://www.threads.com/@ec92009/post/Dab5PnTiF6G",
+    "username": "ec92009",
+    "media_type": "CAROUSEL_ALBUM",
+    "child_count": 4,
+    "verified_at": "2026-07-06T03:11:39.138Z"
+  }
 }

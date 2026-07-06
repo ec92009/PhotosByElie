@@ -134,7 +134,7 @@
     }
   ],
   "date": "2026-07-06",
-  "status": "prepared",
+  "status": "published",
   "account": "Photos By Elie",
   "post_type": "multi_photo",
   "destination_url": "https://photos-by-elie.com/campaign.html?c=facebook-paris-musee-dorsay-gallery-light-2026-07-06",
@@ -143,7 +143,20 @@
   "notes": [
     "Images are public watermarked R2 previews staged for upload/API publishing."
   ],
-  "manual_blockers": [
-    "Publish pending: review socials/Facebook/2026-07-06/paris-musee-d-orsay-gallery-light/manifest.json and use the Facebook browser/API workflow."
-  ]
+  "manual_blockers": [],
+  "published_url": "https://www.facebook.com/122102168061334672/posts/122109556977334672",
+  "published": {
+    "id": "1146747141854670_122109556977334672",
+    "permalink": "https://www.facebook.com/122102168061334672/posts/122109556977334672",
+    "timestamp": "2026-07-06T03:07:41+0000",
+    "account": "Photos By Elie",
+    "attachment_count": 8
+  },
+  "verification": {
+    "method": "Meta Graph API readback",
+    "post_id": "1146747141854670_122109556977334672",
+    "permalink": "https://www.facebook.com/122102168061334672/posts/122109556977334672",
+    "attachment_count": 8,
+    "verified_at": "2026-07-06T03:11:39.137Z"
+  }
 }

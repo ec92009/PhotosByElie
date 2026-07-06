@@ -138,14 +138,29 @@
     }
   ],
   "date": "2026-07-06",
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-benalmadena-aquarium-blue-glass-2026-07-06",
   "recommended_upload_set": "images",
   "available_count": 8,
-  "manual_blockers": [
-    "Publish pending: review socials/Instagram/2026-07-06/benalmadena-aquarium-blue-glass/manifest.json and use the Instagram browser/API workflow.",
-    "Instagram feed captions are not clickable; update the profile website link or use a Story link sticker before posting."
-  ]
+  "manual_blockers": [],
+  "published_url": "https://www.instagram.com/p/Dab5FkkiLjF/",
+  "published": {
+    "id": "17956962579169213",
+    "permalink": "https://www.instagram.com/p/Dab5FkkiLjF/",
+    "username": "ec92009",
+    "media_type": "CAROUSEL_ALBUM",
+    "timestamp": "2026-07-06T03:09:24+0000",
+    "child_count": 8
+  },
+  "verification": {
+    "method": "Instagram Graph API readback",
+    "media_id": "17956962579169213",
+    "permalink": "https://www.instagram.com/p/Dab5FkkiLjF/",
+    "username": "ec92009",
+    "media_type": "CAROUSEL_ALBUM",
+    "child_count": 8,
+    "verified_at": "2026-07-06T03:11:39.138Z"
+  }
 }

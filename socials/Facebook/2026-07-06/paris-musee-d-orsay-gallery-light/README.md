@@ -1,10 +1,8 @@
 # Facebook - 2026-07-06 - Paris Musee d'Orsay Gallery Light
 
-Status: prepared
+Status: published
 Destination: https://photos-by-elie.com/campaign.html?c=facebook-paris-musee-dorsay-gallery-light-2026-07-06
-
-Manual blockers:
-- Publish pending: review socials/Facebook/2026-07-06/paris-musee-d-orsay-gallery-light/manifest.json and use the Facebook browser/API workflow.
+Published URL: https://www.facebook.com/122102168061334672/posts/122109556977334672
 
 Caption:
 

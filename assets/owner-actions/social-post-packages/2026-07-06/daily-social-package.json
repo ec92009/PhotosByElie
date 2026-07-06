@@ -139,7 +139,7 @@
         }
       ],
       "date": "2026-07-06",
-      "status": "prepared",
+      "status": "published",
       "account": "Photos By Elie",
       "post_type": "multi_photo",
       "destination_url": "https://photos-by-elie.com/campaign.html?c=facebook-paris-musee-dorsay-gallery-light-2026-07-06",
@@ -148,9 +148,22 @@
       "notes": [
         "Images are public watermarked R2 previews staged for upload/API publishing."
       ],
-      "manual_blockers": [
-        "Publish pending: review socials/Facebook/2026-07-06/paris-musee-d-orsay-gallery-light/manifest.json and use the Facebook browser/API workflow."
-      ]
+      "manual_blockers": [],
+      "published_url": "https://www.facebook.com/122102168061334672/posts/122109556977334672",
+      "published": {
+        "id": "1146747141854670_122109556977334672",
+        "permalink": "https://www.facebook.com/122102168061334672/posts/122109556977334672",
+        "timestamp": "2026-07-06T03:07:41+0000",
+        "account": "Photos By Elie",
+        "attachment_count": 8
+      },
+      "verification": {
+        "method": "Meta Graph API readback",
+        "post_id": "1146747141854670_122109556977334672",
+        "permalink": "https://www.facebook.com/122102168061334672/posts/122109556977334672",
+        "attachment_count": 8,
+        "verified_at": "2026-07-06T03:11:39.137Z"
+      }
     },
     {
       "platform": "Instagram",
@@ -292,16 +305,31 @@
         }
       ],
       "date": "2026-07-06",
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-benalmadena-aquarium-blue-glass-2026-07-06",
       "recommended_upload_set": "images",
       "available_count": 8,
-      "manual_blockers": [
-        "Publish pending: review socials/Instagram/2026-07-06/benalmadena-aquarium-blue-glass/manifest.json and use the Instagram browser/API workflow.",
-        "Instagram feed captions are not clickable; update the profile website link or use a Story link sticker before posting."
-      ]
+      "manual_blockers": [],
+      "published_url": "https://www.instagram.com/p/Dab5FkkiLjF/",
+      "published": {
+        "id": "17956962579169213",
+        "permalink": "https://www.instagram.com/p/Dab5FkkiLjF/",
+        "username": "ec92009",
+        "media_type": "CAROUSEL_ALBUM",
+        "timestamp": "2026-07-06T03:09:24+0000",
+        "child_count": 8
+      },
+      "verification": {
+        "method": "Instagram Graph API readback",
+        "media_id": "17956962579169213",
+        "permalink": "https://www.instagram.com/p/Dab5FkkiLjF/",
+        "username": "ec92009",
+        "media_type": "CAROUSEL_ALBUM",
+        "child_count": 8,
+        "verified_at": "2026-07-06T03:11:39.138Z"
+      }
     },
     {
       "platform": "Pinterest",
@@ -406,7 +434,8 @@
       ],
       "manual_blockers": [
         "Publish pending: review socials/Pinterest/2026-07-06/boulogne-musee-des-annees-30-interiors/manifest.json and use the Pinterest browser/API workflow.",
-        "Pinterest publish pending: choose the board and publish one Pin per staged image or use the prepared browser upload set."
+        "Pinterest publish pending: choose the board and publish one Pin per staged image or use the prepared browser upload set.",
+        "Pinterest remains prepared only: no Pinterest token/board ID mapping is configured in this runner. Use Pin Builder or configure a board ID for Paris and France Photography."
       ]
     },
     {
@@ -416,7 +445,8 @@
       "caption": "Benalmadena Aquarium Blue Glass in four Photos By Elie frames. Browse: https://photos-by-elie.com/campaign.html?c=instagram-benalmadena-aquarium-blue-glass-2026-07-06",
       "notes": [
         "Derived from the Instagram package for a 3-4 image Threads carousel.",
-        "Images are public watermarked R2 previews staged for upload/API publishing."
+        "Images are public watermarked R2 previews staged for upload/API publishing.",
+        "Published by Threads Graph API; API flow did not expose a browser link-preview removal step."
       ],
       "items": [
         {
@@ -484,24 +514,80 @@
           "local_staged_path": "socials/Threads/2026-07-06/benalmadena-aquarium-blue-glass/images/04-001-0f609a32b7-benalmadena-aquarium-blue-glass.jpg"
         }
       ],
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "available_count": 4,
       "date": "2026-07-06",
       "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-benalmadena-aquarium-blue-glass-2026-07-06",
       "recommended_upload_set": "images",
-      "manual_blockers": [
-        "Publish pending: review socials/Threads/2026-07-06/benalmadena-aquarium-blue-glass/manifest.json and use the Threads browser/API workflow."
-      ]
+      "manual_blockers": [],
+      "published_url": "https://www.threads.com/@ec92009/post/Dab5PnTiF6G",
+      "published": {
+        "id": "18046263221584849",
+        "permalink": "https://www.threads.com/@ec92009/post/Dab5PnTiF6G",
+        "username": "ec92009",
+        "media_type": "CAROUSEL_ALBUM",
+        "timestamp": "2026-07-06T03:10:43+0000",
+        "child_count": 4
+      },
+      "verification": {
+        "method": "Threads Graph API readback",
+        "media_id": "18046263221584849",
+        "permalink": "https://www.threads.com/@ec92009/post/Dab5PnTiF6G",
+        "username": "ec92009",
+        "media_type": "CAROUSEL_ALBUM",
+        "child_count": 4,
+        "verified_at": "2026-07-06T03:11:39.138Z"
+      }
     }
   ],
-  "generated_at": "2026-07-06T03:03:33.781Z",
+  "generated_at": "2026-07-06T03:11:39.540Z",
   "visible_version": "v128.0",
-  "status": "prepared",
+  "status": "published_partial",
   "themes": [
     "Paris Musee d'Orsay Gallery Light",
     "Benalmadena Aquarium Blue Glass",
     "Boulogne Musee des Annees 30 Interiors"
-  ]
+  ],
+  "publishing_summary": {
+    "facebook": {
+      "id": "1146747141854670_122109556977334672",
+      "permalink": "https://www.facebook.com/122102168061334672/posts/122109556977334672",
+      "timestamp": "2026-07-06T03:07:41+0000",
+      "account": "Photos By Elie",
+      "attachment_count": 8
+    },
+    "instagram": {
+      "id": "17956962579169213",
+      "permalink": "https://www.instagram.com/p/Dab5FkkiLjF/",
+      "username": "ec92009",
+      "media_type": "CAROUSEL_ALBUM",
+      "timestamp": "2026-07-06T03:09:24+0000",
+      "child_count": 8
+    },
+    "threads": {
+      "id": "18046263221584849",
+      "permalink": "https://www.threads.com/@ec92009/post/Dab5PnTiF6G",
+      "username": "ec92009",
+      "media_type": "CAROUSEL_ALBUM",
+      "timestamp": "2026-07-06T03:10:43+0000",
+      "child_count": 4
+    },
+    "pinterest": {
+      "status": "prepared",
+      "blocker": "No Pinterest token/board ID mapping configured."
+    }
+  },
+  "etsy_companion": {
+    "status": "review_packages_prepared_no_drafts",
+    "candidate_count": 20,
+    "product": "jpg-6mp",
+    "packages": [
+      "assets/owner-actions/etsy-listing-packages/2026-07-06/facebook-paris-musee-dorsay-gallery-light-2026-07-06",
+      "assets/owner-actions/etsy-listing-packages/2026-07-06/instagram-benalmadena-aquarium-blue-glass-2026-07-06",
+      "assets/owner-actions/etsy-listing-packages/2026-07-06/pinterest-boulogne-musee-annees-30-interiors-2026-07-06"
+    ],
+    "blocker": "ETSY_KEYSTRING is unavailable in this runner, and current etsy_outlet tooling does not upload and verify one public listing image plus one approved buyer download file per draft. No Etsy drafts were created and no listing fees were incurred."
+  }
 }

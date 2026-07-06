@@ -6,6 +6,7 @@ Destination: https://photos-by-elie.com/campaign.html?c=pinterest-boulogne-musee
 Manual blockers:
 - Publish pending: review socials/Pinterest/2026-07-06/boulogne-musee-des-annees-30-interiors/manifest.json and use the Pinterest browser/API workflow.
 - Pinterest publish pending: choose the board and publish one Pin per staged image or use the prepared browser upload set.
+- Pinterest remains prepared only: no Pinterest token/board ID mapping is configured in this runner. Use Pin Builder or configure a board ID for Paris and France Photography.
 
 Caption:
 

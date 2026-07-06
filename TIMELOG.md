@@ -533,8 +533,9 @@ Clock state: running
 | 2026-07-06 | 10:40 CEST | 10:41 CEST | 0:01 | Directed the Track B NewOwner Sidecar review workspace slice and verified the built-in browser walkthrough; implementation/testing excluded. |
 | 2026-07-06 | 13:22 CEST | 13:23 CEST | 0:01 | Reported Safari sign-in failure from the Tailscale NewOwner URL and verified the local auth-transfer fix; implementation/deploy/testing excluded. |
 | 2026-07-06 | 13:46 CEST | 13:47 CEST | 0:01 | Requested David investigate the central Tickets API connection-refused blocker; handoff transport work included. |
+| 2026-07-06 | 13:47 CEST | 13:56 CEST | 0:09 | Replaced the obsolete MAX2DAVID handoff route with direct David Tailscale Tickets probes, confirmed the raw IP API works, recorded the inactive HTTPS Serve endpoint in ticket PBE-20260705-9591, and updated handoff/SOP docs to prefer direct Tailscale/mesh; command/runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 26:58
+Active collaboration time used: 27:07
 Remaining budget: not set

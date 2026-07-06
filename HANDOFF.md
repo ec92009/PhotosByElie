@@ -91,13 +91,10 @@ npm run validate
 ## Handoff Direction
 
 - Gmail self-email is retired for Max/David handoff instructions and reports. Do not search, send, or treat Gmail as authoritative for this workflow unless the user explicitly asks about a specific message.
-- Primary Max/David transport is the repo/GitHub handoff files, with mesh, SSH, or Codex Remote SSH used for live coordination when available.
-- Max-to-David prompts belong in `MAX2DAVID.md`; David-to-Max acknowledgements, progress, blocked states, decisions, recommended prompt/spec changes, and final reports belong in `DAVID2MAX.md`.
-- If `hostname` or ComputerName starts with `David`, read `MAX2DAVID.md` as inbound from Max and write outbound reports to `DAVID2MAX.md`.
-- If `hostname` or ComputerName starts with `Max`, read `DAVID2MAX.md` as inbound from David and write outbound instructions to `MAX2DAVID.md`.
-- Use `MAX_DAVID_CHAT.md` only for legacy/manual quick notes or when a conversational scratchpad is explicitly useful.
-- Before David starts acting on a new Max task, David should update `DAVID2MAX.md` with `David: starting <short task name>` and commit/push it, or send the same acknowledgement over mesh when that is the active live channel.
-- Do not edit the opposite-direction file unless the user explicitly asks; record requested prompt or spec changes in the outbound file instead.
+- Primary Max/David coordination is direct Tailscale/mesh. Use the central Tickets API for routine ticket updates, SSH/Codex Remote SSH for remote execution when available, and live mesh/remote channels for Codex-to-Codex delegation.
+- `MAX2DAVID.md`, `DAVID2MAX.md`, and `MAX_DAVID_CHAT.md` are legacy/manual fallback records. Do not add new routine prompts there unless direct Tailscale/mesh coordination is unavailable or the user explicitly asks for file-based handoff.
+- If a file-based fallback is active, keep the old directionality: Max-to-David prompts in `MAX2DAVID.md`, David-to-Max reports in `DAVID2MAX.md`, and commit/push durable handoff-file updates when the other machine needs to receive them.
+- When direct mesh is the active live channel, acknowledge and report there instead of writing a handoff file.
 
 ## Historical Handoff: 2026-05-22 Revenue Track
 

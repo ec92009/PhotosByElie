@@ -1,9 +1,12 @@
-# Max to David Automation Handoff
+# Max to David Automation Handoff (Legacy Fallback)
 
-Primary Max-to-David transport is this repo/GitHub handoff file. Gmail self-email
-is retired for this workflow unless the user explicitly asks about a specific
-message. David should acknowledge and report in `DAVID2MAX.md`, then commit and
-push durable handoff updates.
+As of 2026-07-06, primary Max-to-David coordination is direct Tailscale/mesh.
+Use the central Tickets API for routine ticket state, SSH/Codex Remote SSH for
+remote execution when available, and live mesh/remote channels for Codex-to-Codex
+delegation. This file is a legacy/manual fallback record; do not add new routine
+prompts here unless direct coordination is unavailable or the user explicitly
+asks for file-based handoff. Gmail self-email is retired for this workflow
+unless the user explicitly asks about a specific message.
 
 ## Operating Rules
 
@@ -27,6 +30,11 @@ git pull --ff-only origin main
 - Record what happened in `DAVID2MAX.md`.
 
 ## 2026-07-06 David Tickets API Outage Check
+
+Superseded on 2026-07-06: Max reached David's Tickets API directly at
+`http://100.82.91.128:8765`, confirmed ticket `PBE-20260705-9591` loads, and
+recorded the inactive `https://david.tail7576f4.ts.net` Serve endpoint in the
+central ticket notes. This is historical context, not an active David task.
 
 Prompt for David:
 

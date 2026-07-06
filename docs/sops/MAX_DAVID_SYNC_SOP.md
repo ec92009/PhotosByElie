@@ -9,22 +9,23 @@ Use this SOP when moving work between Max and David, especially when one machine
 - Gmail self-email is retired for Max/David handoff instructions and reports. Do not search, send, or treat Gmail as authoritative for this workflow unless the user explicitly asks about a specific message.
 - SSH or Codex Remote SSH is for remote execution on the other Mac.
 - Codex mobile can be used as a control channel for David when Max cannot reach David directly.
-- GitHub handoff polling is the active file-based notification path when David should notice new repo handoff notes automatically.
+- Direct Tailscale/mesh coordination is the primary path. Use the central Tickets API for routine ticket state, SSH/Codex Remote SSH for remote execution when available, and live mesh/remote channels for Codex-to-Codex delegation.
+- GitHub handoff polling is a legacy/manual fallback notification path when direct Tailscale/mesh coordination is unavailable or the user explicitly asks for file-based handoff.
 
 Do not commit `assets/owner-actions/Owner.sqlite`, SQLite WAL/SHM files, private client data, passwords, token hashes, signed URLs, or private media binaries.
 
-## Repo Handoff
+## Repo Handoff Fallback
 
-- Max-to-David prompts belong in `MAX2DAVID.md`.
-- David-to-Max acknowledgements, progress, blocked states, decisions, recommended prompt/spec changes, and final reports belong in `DAVID2MAX.md`.
+- Max-to-David prompts belong in `MAX2DAVID.md` only during an active file-based fallback.
+- David-to-Max acknowledgements, progress, blocked states, decisions, recommended prompt/spec changes, and final reports belong in `DAVID2MAX.md` only during an active file-based fallback.
 - `MAX_DAVID_CHAT.md` remains a legacy/manual quick-note scratchpad for short conversational context when useful.
 - Pull `main` with `git pull --ff-only origin main` before reading inbound notes when possible.
-- Commit and push durable handoff-file updates when the other machine needs to receive them.
+- Commit and push durable handoff-file updates only when the other machine needs to receive that file-based fallback.
 - Treat old `MAX2DAVID` or `DAVID2MAX` Gmail subject conventions as obsolete and non-authoritative for this workflow.
 
 ## GitHub Poller
 
-Install this on David when repo-file handoffs should trigger automatic local refresh and notification:
+Install this on David only when repo-file fallback handoffs should trigger automatic local refresh and notification:
 
 ```bash
 cd /Users/ecohen/Dev/PhotosByElie
@@ -51,7 +52,7 @@ The poller does not execute instructions. It only makes sure David has the lates
 
 ## Start Acknowledgement
 
-When David begins acting on a new task from `MAX2DAVID.md`, David should first write or queue a short acknowledgement in `DAVID2MAX.md`.
+When David begins acting on a new file-based fallback task from `MAX2DAVID.md`, David should first write or queue a short acknowledgement in `DAVID2MAX.md`.
 
 Use this format:
 

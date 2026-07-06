@@ -666,8 +666,48 @@ test("access console is admin-only and writes reversible role grants", async () 
   assert.deepEqual(finalState.people.find((user) => user.email === "cousin@example.test")?.groupIds, []);
   assert.equal(finalState.galleryOptions.some((option) => option.galleryKey === "re-la-concha"), true);
   assert.equal(finalState.capabilities.some((capability) => capability.id === "manage_access"), true);
-  assert.equal(finalState.auditEvents.some((event) => event.eventType === "group_archived"), true);
-  assert.equal(finalState.auditEvents.some((event) => event.eventType === "user_disabled"), true);
+  const archivedEvent = finalState.auditEvents.find((event) => event.eventType === "group_archived");
+  const disabledEvent = finalState.auditEvents.find((event) => event.eventType === "user_disabled");
+  assert.equal(Boolean(archivedEvent?.id), true);
+  assert.equal(Boolean(disabledEvent?.id), true);
+  assert.equal(archivedEvent.targetType, "group");
+  assert.equal(archivedEvent.targetId, "cohen-cousins");
+  assert.equal(archivedEvent.reversible, true);
+  assert.equal(disabledEvent.targetType, "person");
+  assert.equal(disabledEvent.targetEmail, "helper@example.test");
+  assert.equal(disabledEvent.reversible, true);
+
+  const undoDisableResponse = await adminWorker.fetch(jsonRequest(`https://worker.test/access-console/audit/${disabledEvent.id}/undo`, {}, {
+    origin: "https://photos-by-elie.com",
+  }));
+  assert.equal(undoDisableResponse.status, 200);
+  const undoDisableBody = await undoDisableResponse.json();
+  assert.equal(undoDisableBody.event.revertedAt.length > 0, true);
+  assert.equal(undoDisableBody.undoEvent.eventType, "access_undo");
+  assert.equal(undoDisableBody.restored.email, "helper@example.test");
+
+  const restoredOwnerSessionResponse = await helperWorker.fetch(new Request("https://worker.test/owner/session", {
+    headers: { origin: "https://photos-by-elie.com" },
+  }));
+  assert.equal(restoredOwnerSessionResponse.status, 200);
+
+  const undoArchiveResponse = await adminWorker.fetch(jsonRequest(`https://worker.test/access-console/audit/${archivedEvent.id}/undo`, {}, {
+    origin: "https://photos-by-elie.com",
+  }));
+  assert.equal(undoArchiveResponse.status, 200);
+  const undoArchiveBody = await undoArchiveResponse.json();
+  assert.equal(undoArchiveBody.event.revertedAt.length > 0, true);
+  assert.equal(undoArchiveBody.undoEvent.eventType, "access_undo");
+  assert.equal(undoArchiveBody.restored.id, "cohen-cousins");
+
+  const undoStateResponse = await adminWorker.fetch(new Request("https://worker.test/access-console/state", {
+    headers: { origin: "https://photos-by-elie.com" },
+  }));
+  const undoState = await undoStateResponse.json();
+  assert.equal(undoState.audienceGroups.find((group) => group.id === "cohen-cousins")?.state, "active");
+  assert.equal(undoState.galleryOptions.some((option) => option.galleryKey === "cohen-cousins"), true);
+  assert.deepEqual(undoState.people.find((user) => user.email === "cousin@example.test")?.groupIds, ["cohen-cousins"]);
+  assert.equal(undoState.auditEvents.some((event) => event.eventType === "access_undo"), true);
 });
 
 test("real-estate access login issues a scoped session for a Google-authenticated client", async () => {

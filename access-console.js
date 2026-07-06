@@ -24,6 +24,7 @@
     ownerOriginals: false,
     policyResult: null,
     policyBusy: false,
+    undoBusy: false,
     session: null,
   };
   const BASE_USER_CAPABILITIES = ["view_public", "buy_downloads", "redownload_purchases_30d"];
@@ -75,6 +76,7 @@
   const peopleRoot = $("[data-acs-people]");
   const eventsRoot = $("[data-acs-events]");
   const auditRoot = $("[data-acs-audit]");
+  const auditStatusRoot = $("[data-acs-audit-status]");
   const groupsRoot = $("[data-acs-groups]");
   const groupListRoot = $("[data-acs-group-list]");
   const memberListRoot = $("[data-acs-member-list]");
@@ -1021,18 +1023,50 @@
     renderPolicyResult();
   };
 
+  const auditActionLabel = (event = {}) => {
+    const value = event.summary || event.action || event.eventType || "Access change";
+    return String(value)
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (letter) => letter.toUpperCase());
+  };
+
+  const auditTargetLabel = (event = {}) => {
+    if (event.targetType === "person") return event.targetEmail || event.targetId || "";
+    if (event.targetType === "group") return event.targetId || event.targetEmail || "";
+    return event.targetId || event.targetEmail || "";
+  };
+
+  const auditDetailText = (event = {}) => [
+    event.eventType || "",
+    event.actorEmail ? `by ${event.actorEmail}` : "",
+    event.createdAt || "",
+  ].filter(Boolean).join(" / ");
+
   const renderAudit = () => {
     if (!auditRoot) return;
     if (!state.auditEvents.length) {
       auditRoot.innerHTML = `<li class="acs-empty">No audit events yet.</li>`;
+      if (auditStatusRoot) auditStatusRoot.textContent = "No access changes recorded yet.";
       return;
     }
+    if (auditStatusRoot && !state.undoBusy) {
+      const reversibleCount = state.auditEvents.filter((event) => event.reversible && !event.revertedAt).length;
+      auditStatusRoot.textContent = `${state.auditEvents.length} recent changes, ${reversibleCount} reversible.`;
+    }
     auditRoot.innerHTML = state.auditEvents.map((event) => `
-      <li>
-        <strong>${escapeHtml(event.eventType || "change")}</strong>
-        ${event.targetEmail ? `for <code>${escapeHtml(event.targetEmail)}</code>` : ""}
-        ${event.actorEmail ? `by <code>${escapeHtml(event.actorEmail)}</code>` : ""}
-        <br><time>${escapeHtml(event.createdAt || "")}</time>
+      <li class="${event.revertedAt ? "is-reverted" : ""}">
+        <div class="acs-audit-main">
+          <strong>${escapeHtml(auditActionLabel(event))}</strong>
+          ${auditTargetLabel(event) ? `<code>${escapeHtml(auditTargetLabel(event))}</code>` : ""}
+          <small>${escapeHtml(auditDetailText(event))}</small>
+        </div>
+        <div class="acs-audit-actions">
+          ${event.revertedAt
+            ? `<span class="acs-chip is-disabled">undone</span>`
+            : (event.reversible
+              ? `<button class="btn secondary" type="button" data-acs-undo-audit="${escapeHtml(event.id)}" ${state.undoBusy ? "disabled" : ""}>Undo</button>`
+              : `<span class="acs-chip">logged</span>`)}
+        </div>
       </li>
     `).join("");
   };
@@ -1253,6 +1287,35 @@
     await load();
   };
 
+  const undoAuditEvent = async (auditId) => {
+    const event = state.auditEvents.find((item) => item.id === auditId);
+    if (!event) {
+      setStatus("Select an audit event before undoing.");
+      return;
+    }
+    if (!event.reversible || event.revertedAt) {
+      setStatus("That access change is not reversible.");
+      return;
+    }
+    const label = auditActionLabel(event);
+    const target = auditTargetLabel(event);
+    if (!window.confirm?.(`Undo ${label}${target ? ` for ${target}` : ""}?`)) return;
+    state.undoBusy = true;
+    if (auditStatusRoot) auditStatusRoot.textContent = "Undoing access change...";
+    renderAudit();
+    try {
+      await apiFetch(`/access-console/audit/${encodeURIComponent(auditId)}/undo`, {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+      setStatus("Access change undone.");
+      await load();
+    } finally {
+      state.undoBusy = false;
+      renderAudit();
+    }
+  };
+
   const showSelectedGroupMembers = () => {
     const group = selectedGroup();
     if (!group?.id) {
@@ -1368,6 +1431,13 @@
       revokeMembership(revokeButton.dataset.acsRevokeMembership || "")
         .catch((error) => setStatus(error.message || "Could not revoke membership."));
     }
+  });
+
+  auditRoot?.addEventListener("click", (event) => {
+    const undoButton = event.target.closest("[data-acs-undo-audit]");
+    if (!undoButton) return;
+    undoAuditEvent(undoButton.dataset.acsUndoAudit || "")
+      .catch((error) => setStatus(error.message || "Could not undo access change."));
   });
 
   $("[data-acs-refresh]")?.addEventListener("click", () => load());

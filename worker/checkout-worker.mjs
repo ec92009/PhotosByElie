@@ -2218,10 +2218,18 @@ export const createPhotosByElieWorker = ({
   const publicAuditEvent = (event = {}) => ({
     id: event.id || "",
     eventType: event.eventType || event.event_type || "",
+    action: event.action || "",
+    summary: event.summary || "",
     actorEmail: event.actorEmail || event.actor_email || "",
+    targetType: event.targetType || event.target_type || "",
+    targetId: event.targetId || event.target_id || "",
     targetEmail: event.targetEmail || event.target_email || "",
     before: event.before || parseAuditJson(event.beforeJson || event.before_json),
     after: event.after || parseAuditJson(event.afterJson || event.after_json),
+    reversible: event.reversible === true || event.reversible === 1 || event.reversible === "1",
+    revertedAt: event.revertedAt || event.reverted_at || null,
+    revertedBy: event.revertedBy || event.reverted_by || "",
+    revertedEventId: event.revertedEventId || event.reverted_event_id || "",
     createdAt: event.createdAt || event.created_at || "",
   });
 
@@ -2344,6 +2352,31 @@ export const createPhotosByElieWorker = ({
     const group = await registry.archiveAudienceGroup(groupId, { actorEmail: session.email });
     if (!group) return credentialedErrorJson(request, 404, "access_group_not_found", "Access group was not found.");
     return credentialedJson(request, { ok: true, group });
+  };
+
+  const undoAccessConsoleAuditEvent = async (request, auditId) => {
+    const session = await requireAccessConsoleAdmin(request);
+    const registry = accessConsoleRegistryRequired();
+    if (typeof registry.undoAuditEvent !== "function") {
+      return credentialedErrorJson(request, 503, "access_console_undo_unavailable", "Access Console undo is not configured.");
+    }
+    try {
+      const result = await registry.undoAuditEvent(auditId, { actorEmail: session.email });
+      if (!result) return credentialedErrorJson(request, 404, "access_audit_not_found", "Access audit event was not found.");
+      return credentialedJson(request, {
+        ok: true,
+        event: publicAuditEvent(result.event),
+        undoEvent: publicAuditEvent(result.undoEvent),
+        restored: result.restored || null,
+      });
+    } catch (error) {
+      return credentialedErrorJson(
+        request,
+        error.status || 409,
+        error.code || "access_audit_undo_failed",
+        error.message || "Access change could not be undone."
+      );
+    }
   };
 
   const accessConsoleGalleryAccess = async (request) => {
@@ -2614,6 +2647,8 @@ export const createPhotosByElieWorker = ({
       if (request.method === "POST" && accessPersonDisableMatch) return await disableAccessConsolePerson(request, decodeURIComponent(accessPersonDisableMatch[1]));
       const accessGroupArchiveMatch = path.match(/^\/access-console\/groups\/([^/]+)\/archive$/);
       if (request.method === "POST" && accessGroupArchiveMatch) return await archiveAccessConsoleGroup(request, decodeURIComponent(accessGroupArchiveMatch[1]));
+      const accessAuditUndoMatch = path.match(/^\/access-console\/audit\/([^/]+)\/undo$/);
+      if (request.method === "POST" && accessAuditUndoMatch) return await undoAccessConsoleAuditEvent(request, decodeURIComponent(accessAuditUndoMatch[1]));
       if (request.method === "POST" && path === "/access-console/fixtures/seed") return await seedAccessConsoleFixtures(request);
       if (request.method === "GET" && path === "/account/profile") return await getAccountProfile(request);
       if ((request.method === "POST" || request.method === "PUT" || request.method === "PATCH") && path === "/account/profile") return await putAccountProfile(request);

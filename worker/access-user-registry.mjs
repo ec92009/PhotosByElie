@@ -439,6 +439,134 @@ export const normalizeAccessUserRecord = (record = {}, fallbackEmail = "") => {
   };
 };
 
+const UNDOABLE_AUDIT_TYPES = new Set(["user_upserted", "user_disabled", "group_upserted", "group_archived"]);
+
+const parseAuditJsonValue = (value) => {
+  if (value == null || value === "") return null;
+  if (typeof value !== "string") return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+};
+
+const unwrapAuditGroupSnapshot = (value = {}) => {
+  if (!value || typeof value !== "object") return null;
+  return normalizeAudienceGroup(value.group || value);
+};
+
+const unwrapAuditUserSnapshot = (value = {}) => {
+  if (!value || typeof value !== "object") return null;
+  return normalizeAccessUserRecord(value.user || value);
+};
+
+const auditTargetFromSnapshot = (value = {}) => {
+  const user = unwrapAuditUserSnapshot(value);
+  if (user?.email) return { targetType: "person", targetId: user.email, targetEmail: user.email, label: user.displayName || user.email };
+  const group = unwrapAuditGroupSnapshot(value);
+  if (group?.id) return { targetType: "group", targetId: group.id, targetEmail: "", label: group.label || group.id };
+  return { targetType: "", targetId: "", targetEmail: "", label: "" };
+};
+
+const auditTargetFor = ({ eventType = "", targetEmail = "", before = null, after = null } = {}) => {
+  const afterTarget = auditTargetFromSnapshot(after);
+  const beforeTarget = auditTargetFromSnapshot(before);
+  if (String(eventType).startsWith("group_")) {
+    const targetId = afterTarget.targetId || beforeTarget.targetId || String(targetEmail || "").trim();
+    return { targetType: "group", targetId, targetEmail: "", label: afterTarget.label || beforeTarget.label || targetId };
+  }
+  if (String(eventType).startsWith("user_")) {
+    const email = afterTarget.targetEmail || beforeTarget.targetEmail || normalizeEmail(targetEmail);
+    return { targetType: "person", targetId: email, targetEmail: email, label: afterTarget.label || beforeTarget.label || email };
+  }
+  if (String(eventType) === "access_undo") {
+    const targetId = after?.targetId || before?.targetId || String(targetEmail || "").trim();
+    const targetType = after?.targetType || before?.targetType || "";
+    const email = targetType === "person" ? normalizeEmail(targetId || targetEmail) : "";
+    return { targetType, targetId, targetEmail: email, label: after?.label || before?.label || targetId };
+  }
+  return { targetType: "", targetId: String(targetEmail || "").trim(), targetEmail: normalizeEmail(targetEmail), label: "" };
+};
+
+const auditActionFor = (eventType = "") => ({
+  user_upserted: "person_saved",
+  user_disabled: "person_disabled",
+  group_upserted: "group_saved",
+  group_archived: "group_archived",
+  access_undo: "change_undone",
+}[eventType] || "access_change");
+
+const auditSummaryFor = ({ eventType = "", target = {}, before = null, after = null } = {}) => {
+  const label = target.label || target.targetId || target.targetEmail || "access record";
+  if (eventType === "user_upserted") return before ? `Updated ${label}` : `Created ${label}`;
+  if (eventType === "user_disabled") return `Disabled ${label}`;
+  if (eventType === "group_upserted") return before ? `Updated ${label}` : `Created ${label}`;
+  if (eventType === "group_archived") return `Archived ${label}`;
+  if (eventType === "access_undo") return `Undid ${after?.sourceEventType || before?.sourceEventType || "change"} for ${label}`;
+  return `Changed ${label}`;
+};
+
+const auditHasUndoSnapshot = (event = {}) => {
+  if (String(event.eventType || "").startsWith("user_")) return Boolean(unwrapAuditUserSnapshot(event.before)?.email);
+  if (String(event.eventType || "").startsWith("group_")) return Boolean(unwrapAuditGroupSnapshot(event.before)?.id);
+  return false;
+};
+
+const isAuditReversible = (event = {}) =>
+  UNDOABLE_AUDIT_TYPES.has(event.eventType)
+  && auditHasUndoSnapshot(event)
+  && !event.revertedAt
+  && !event.reverted_at;
+
+const enrichAuditEvent = (event = {}) => {
+  const eventType = event.eventType || event.event_type || "access_change";
+  const before = event.before !== undefined ? event.before : parseAuditJsonValue(event.beforeJson || event.before_json);
+  const after = event.after !== undefined ? event.after : parseAuditJsonValue(event.afterJson || event.after_json);
+  const target = auditTargetFor({ eventType, targetEmail: event.targetEmail || event.target_email || event.targetId || event.target_id, before, after });
+  const action = event.action || auditActionFor(eventType);
+  const summary = event.summary || auditSummaryFor({ eventType, target, before, after });
+  const enriched = {
+    id: event.id || "",
+    eventType,
+    action,
+    summary,
+    actorEmail: normalizeEmail(event.actorEmail || event.actor_email || ""),
+    targetType: event.targetType || event.target_type || target.targetType,
+    targetId: event.targetId || event.target_id || target.targetId,
+    targetEmail: event.targetEmail || event.target_email || target.targetEmail,
+    before,
+    after,
+    reversible: event.reversible === true || event.reversible === 1 || event.reversible === "1",
+    revertedAt: event.revertedAt || event.reverted_at || null,
+    revertedBy: event.revertedBy || event.reverted_by || "",
+    revertedEventId: event.revertedEventId || event.reverted_event_id || "",
+    createdAt: event.createdAt || event.created_at || "",
+  };
+  enriched.reversible = enriched.reversible || isAuditReversible(enriched);
+  if (enriched.revertedAt) enriched.reversible = false;
+  return enriched;
+};
+
+const auditMetadataFor = ({ eventType, actorEmail, targetEmail, before, after }) => {
+  const target = auditTargetFor({ eventType, targetEmail, before, after });
+  const event = enrichAuditEvent({
+    eventType,
+    actorEmail,
+    targetEmail: target.targetEmail,
+    targetType: target.targetType,
+    targetId: target.targetId,
+    before,
+    after,
+    action: auditActionFor(eventType),
+    summary: auditSummaryFor({ eventType, target, before, after }),
+  });
+  return {
+    ...event,
+    reversible: isAuditReversible(event),
+  };
+};
+
 const fixtureEvents = () => FIXTURE_EVENTS.map((event) => ({ ...event, fixture: true }));
 
 export const createMemoryAccessUserRegistry = (initialRecords = []) => {
@@ -462,11 +590,10 @@ export const createMemoryAccessUserRegistry = (initialRecords = []) => {
   const decorate = async (record) => decorateAccessUserRecord(record, await listActiveAudienceGroups());
 
   const audit = (eventType, actorEmail, targetEmail, before, after) => {
+    const metadata = auditMetadataFor({ eventType, actorEmail, targetEmail, before, after });
     const event = {
+      ...metadata,
       id: randomId("access-audit"),
-      eventType,
-      actorEmail: normalizeEmail(actorEmail),
-      targetEmail: normalizeEmail(targetEmail),
       before,
       after,
       createdAt: nowIso(),
@@ -499,7 +626,7 @@ export const createMemoryAccessUserRegistry = (initialRecords = []) => {
       updatedAt: timestamp,
     };
     users.set(after.email, clone(after));
-    audit("user_upserted", options.actorEmail || after.grantedBy || "", after.email, before, after);
+    if (!options.skipAudit) audit("user_upserted", options.actorEmail || after.grantedBy || "", after.email, before, after);
     return clone(await decorate(after));
   };
 
@@ -528,16 +655,20 @@ export const createMemoryAccessUserRegistry = (initialRecords = []) => {
       updatedBy: options.actorEmail || "",
     };
     groups.set(after.id, clone(after));
-    audit("group_upserted", options.actorEmail || "", after.id, before, after);
+    if (!options.skipAudit) audit("group_upserted", options.actorEmail || "", after.id, before, after);
     return clone(after);
   };
 
   const archiveAudienceGroup = async (groupId, options = {}) => {
-    const before = await getAudienceGroup(groupId);
-    if (!before) return null;
+    const beforeGroup = await getAudienceGroup(groupId);
+    if (!beforeGroup) return null;
+    const beforeMemberships = [...users.values()]
+      .filter((record) => record.groupIds?.includes(beforeGroup.id))
+      .map((record) => ({ email: record.email, groupId: beforeGroup.id }));
+    const before = { group: beforeGroup, memberships: beforeMemberships };
     const timestamp = nowIso();
     const after = {
-      ...before,
+      ...beforeGroup,
       state: "archived",
       archivedAt: timestamp,
       archivedBy: options.actorEmail || "",
@@ -553,7 +684,7 @@ export const createMemoryAccessUserRegistry = (initialRecords = []) => {
         updatedAt: timestamp,
       });
     }
-    audit("group_archived", options.actorEmail || "", after.id, before, after);
+    if (!options.skipAudit) audit("group_archived", options.actorEmail || "", after.id, before, { group: after, revokedMemberships: beforeMemberships });
     return clone(after);
   };
 
@@ -568,8 +699,61 @@ export const createMemoryAccessUserRegistry = (initialRecords = []) => {
       updatedAt: nowIso(),
     });
     users.set(normalizedEmail, clone(after));
-    audit("user_disabled", options.actorEmail || "", normalizedEmail, before, after);
+    if (!options.skipAudit) audit("user_disabled", options.actorEmail || "", normalizedEmail, before, after);
     return clone(await decorate(after));
+  };
+
+  const undoAuditEvent = async (auditId, options = {}) => {
+    const event = auditEvents.find((item) => item.id === String(auditId || ""));
+    if (!event) return null;
+    const enriched = enrichAuditEvent(event);
+    if (!isAuditReversible(enriched)) {
+      throw Object.assign(new Error("This access change is not reversible."), {
+        status: 409,
+        code: "access_audit_not_reversible",
+      });
+    }
+    const actorEmail = normalizeEmail(options.actorEmail || "");
+    const timestamp = nowIso();
+    let restored = null;
+    if (String(enriched.eventType).startsWith("user_")) {
+      const user = unwrapAuditUserSnapshot(enriched.before);
+      restored = await putUser(user, { actorEmail, skipAudit: true });
+    } else if (enriched.eventType === "group_upserted") {
+      const group = unwrapAuditGroupSnapshot(enriched.before);
+      restored = await putAudienceGroup(group, { actorEmail, skipAudit: true });
+    } else if (enriched.eventType === "group_archived") {
+      const group = unwrapAuditGroupSnapshot(enriched.before);
+      restored = await putAudienceGroup(group, { actorEmail, skipAudit: true });
+      const memberships = Array.isArray(enriched.before?.memberships) ? enriched.before.memberships : [];
+      for (const membership of memberships) {
+        const email = normalizeEmail(membership.email);
+        const record = users.get(email);
+        if (!record) continue;
+        const groupIds = new Set(record.groupIds || []);
+        groupIds.add(group.id);
+        users.set(email, { ...record, groupIds: [...groupIds], updatedAt: timestamp });
+      }
+    }
+    event.revertedAt = timestamp;
+    event.revertedBy = actorEmail;
+    event.reversible = false;
+    const undoEvent = audit("access_undo", actorEmail, enriched.targetId || enriched.targetEmail, {
+      sourceEventId: enriched.id,
+      sourceEventType: enriched.eventType,
+      targetType: enriched.targetType,
+      targetId: enriched.targetId,
+      label: enriched.summary,
+    }, {
+      sourceEventId: enriched.id,
+      sourceEventType: enriched.eventType,
+      targetType: enriched.targetType,
+      targetId: enriched.targetId,
+      label: enriched.summary,
+      restored,
+    });
+    event.revertedEventId = undoEvent.id;
+    return { event: clone(enrichAuditEvent(event)), undoEvent, restored };
   };
 
   const seedFixtureData = async (options = {}) => {
@@ -607,7 +791,8 @@ export const createMemoryAccessUserRegistry = (initialRecords = []) => {
     listAudienceGroups,
     listGalleryOptions: async () => galleryOptionsFor(await listAudienceGroups()),
     listCapabilities: async () => ACCESS_CAPABILITIES.map(clone),
-    listAuditEvents: async (limit = 25) => auditEvents.slice(0, limit).map(clone),
+    listAuditEvents: async (limit = 25) => auditEvents.slice(0, limit).map((event) => clone(enrichAuditEvent(event))),
+    undoAuditEvent,
     _debug: { users, events, groups, auditEvents },
   };
 };
@@ -779,21 +964,30 @@ const recordFromD1Rows = (person, roleRows = [], galleryRows = [], groupRows = [
   }, allGroups.length ? allGroups : groupRows);
 };
 
-const auditD1 = async (database, { eventType, actorEmail, targetEmail, before, after }) => d1Run(
-  database.prepare(`
+const auditD1 = async (database, { eventType, actorEmail, targetEmail, before, after }) => {
+  const metadata = auditMetadataFor({ eventType, actorEmail, targetEmail, before, after });
+  const id = randomId("access-audit");
+  await d1Run(database.prepare(`
     INSERT INTO pbe_access_audit_events (
-      id, event_type, actor_email, target_email, before_json, after_json, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      id, event_type, actor_email, target_email, target_type, target_id, action, summary,
+      before_json, after_json, reversible, reverted_at, reverted_by, reverted_event_id, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, '', '', ?)
   `).bind(
-    randomId("access-audit"),
-    String(eventType || "access_change"),
-    normalizeEmail(actorEmail),
-    normalizeEmail(targetEmail),
-    JSON.stringify(before || null),
-    JSON.stringify(after || null),
+    id,
+    metadata.eventType,
+    metadata.actorEmail,
+    metadata.targetEmail,
+    metadata.targetType,
+    metadata.targetId,
+    metadata.action,
+    metadata.summary,
+    JSON.stringify(before ?? null),
+    JSON.stringify(after ?? null),
+    metadata.reversible ? 1 : 0,
     nowIso()
-  )
-);
+  ));
+  return { ...metadata, id };
+};
 
 export const createD1AccessUserRegistry = ({
   database,
@@ -928,7 +1122,7 @@ export const createD1AccessUserRegistry = ({
     }
 
     const after = await getUser(normalized.email);
-    await auditD1(database, { eventType: "user_upserted", actorEmail, targetEmail: normalized.email, before, after });
+    if (!options.skipAudit) await auditD1(database, { eventType: "user_upserted", actorEmail, targetEmail: normalized.email, before, after });
     return after;
   };
 
@@ -975,7 +1169,7 @@ export const createD1AccessUserRegistry = ({
       WHERE email = ? AND state = 'active'
     `).bind(timestamp, actorEmail, timestamp, actorEmail, normalizedEmail));
     const after = await getUser(normalizedEmail);
-    await auditD1(database, { eventType: "user_disabled", actorEmail, targetEmail: normalizedEmail, before, after });
+    if (!options.skipAudit) await auditD1(database, { eventType: "user_disabled", actorEmail, targetEmail: normalizedEmail, before, after });
     return after;
   };
 
@@ -1050,14 +1244,21 @@ export const createD1AccessUserRegistry = ({
       actorEmail
     ));
     const after = await getAudienceGroup(normalized.id);
-    await auditD1(database, { eventType: "group_upserted", actorEmail, targetEmail: normalized.id, before, after });
+    if (!options.skipAudit) await auditD1(database, { eventType: "group_upserted", actorEmail, targetEmail: normalized.id, before, after });
     return after;
   };
 
   const archiveAudienceGroup = async (groupId, options = {}) => {
     const normalizedGroupId = String(groupId || "").trim();
-    const before = await getAudienceGroup(normalizedGroupId);
-    if (!before) return null;
+    const beforeGroup = await getAudienceGroup(normalizedGroupId);
+    if (!beforeGroup) return null;
+    const beforeMemberships = await d1All(database.prepare(`
+      SELECT email, group_id AS groupId
+      FROM pbe_access_group_memberships
+      WHERE group_id = ? AND state = 'active'
+      ORDER BY email
+    `).bind(normalizedGroupId));
+    const before = { group: beforeGroup, memberships: beforeMemberships };
     const actorEmail = normalizeEmail(options.actorEmail || "");
     const timestamp = nowIso();
     await d1Run(database.prepare(`
@@ -1079,7 +1280,15 @@ export const createD1AccessUserRegistry = ({
       WHERE group_id = ? AND state = 'active'
     `).bind(timestamp, actorEmail, timestamp, actorEmail, normalizedGroupId));
     const after = await getAudienceGroup(normalizedGroupId);
-    await auditD1(database, { eventType: "group_archived", actorEmail, targetEmail: normalizedGroupId, before, after });
+    if (!options.skipAudit) {
+      await auditD1(database, {
+        eventType: "group_archived",
+        actorEmail,
+        targetEmail: normalizedGroupId,
+        before,
+        after: { group: after, revokedMemberships: beforeMemberships },
+      });
+    }
     return after;
   };
 
@@ -1158,19 +1367,128 @@ export const createD1AccessUserRegistry = ({
     ORDER BY kind, label
   `));
 
+  const getAuditEvent = async (auditId) => d1First(database.prepare(`
+    SELECT
+      id,
+      event_type AS eventType,
+      actor_email AS actorEmail,
+      target_email AS targetEmail,
+      target_type AS targetType,
+      target_id AS targetId,
+      action,
+      summary,
+      before_json AS beforeJson,
+      after_json AS afterJson,
+      reversible,
+      reverted_at AS revertedAt,
+      reverted_by AS revertedBy,
+      reverted_event_id AS revertedEventId,
+      created_at AS createdAt
+    FROM pbe_access_audit_events
+    WHERE id = ?
+  `).bind(String(auditId || "").trim())).then((row) => row ? enrichAuditEvent(row) : null);
+
+  const markAuditEventReverted = async (auditId, { actorEmail, revertedEventId, timestamp }) => d1Run(database.prepare(`
+    UPDATE pbe_access_audit_events
+    SET reversible = 0,
+        reverted_at = ?,
+        reverted_by = ?,
+        reverted_event_id = ?
+    WHERE id = ?
+  `).bind(timestamp, actorEmail, revertedEventId || "", auditId));
+
+  const restoreMemberships = async (memberships = [], { actorEmail, timestamp }) => {
+    for (const membership of memberships) {
+      const email = normalizeEmail(membership.email);
+      const groupId = String(membership.groupId || membership.group_id || "").trim();
+      if (!validEmail(email) || !groupId) continue;
+      await d1Run(database.prepare(`
+        INSERT INTO pbe_access_group_memberships (
+          id, email, group_id, state, granted_at, granted_by, revoked_at, revoked_by, updated_at, updated_by
+        ) VALUES (?, ?, ?, 'active', ?, ?, NULL, '', ?, ?)
+        ON CONFLICT(email, group_id) DO UPDATE SET
+          state = 'active',
+          revoked_at = NULL,
+          revoked_by = '',
+          updated_at = excluded.updated_at,
+          updated_by = excluded.updated_by
+      `).bind(randomId("group-member"), email, groupId, timestamp, actorEmail, timestamp, actorEmail));
+    }
+  };
+
+  const undoAuditEvent = async (auditId, options = {}) => {
+    const event = await getAuditEvent(auditId);
+    if (!event) return null;
+    if (!isAuditReversible(event)) {
+      throw Object.assign(new Error("This access change is not reversible."), {
+        status: 409,
+        code: "access_audit_not_reversible",
+      });
+    }
+    const actorEmail = normalizeEmail(options.actorEmail || "");
+    const timestamp = nowIso();
+    let restored = null;
+    if (String(event.eventType).startsWith("user_")) {
+      const user = unwrapAuditUserSnapshot(event.before);
+      restored = await putUser(user, { actorEmail, skipAudit: true });
+    } else if (event.eventType === "group_upserted") {
+      const group = unwrapAuditGroupSnapshot(event.before);
+      restored = await putAudienceGroup(group, { actorEmail, skipAudit: true });
+    } else if (event.eventType === "group_archived") {
+      const group = unwrapAuditGroupSnapshot(event.before);
+      restored = await putAudienceGroup(group, { actorEmail, skipAudit: true });
+      await restoreMemberships(Array.isArray(event.before?.memberships) ? event.before.memberships : [], { actorEmail, timestamp });
+    }
+    const undoEvent = await auditD1(database, {
+      eventType: "access_undo",
+      actorEmail,
+      targetEmail: event.targetId || event.targetEmail,
+      before: {
+        sourceEventId: event.id,
+        sourceEventType: event.eventType,
+        targetType: event.targetType,
+        targetId: event.targetId,
+        label: event.summary,
+      },
+      after: {
+        sourceEventId: event.id,
+        sourceEventType: event.eventType,
+        targetType: event.targetType,
+        targetId: event.targetId,
+        label: event.summary,
+        restored,
+      },
+    });
+    await markAuditEventReverted(event.id, { actorEmail, revertedEventId: undoEvent.id, timestamp });
+    return {
+      event: await getAuditEvent(event.id),
+      undoEvent: await getAuditEvent(undoEvent.id),
+      restored,
+    };
+  };
+
   const listAuditEvents = async (limit = 25) => d1All(database.prepare(`
     SELECT
       id,
       event_type AS eventType,
       actor_email AS actorEmail,
       target_email AS targetEmail,
+      target_type AS targetType,
+      target_id AS targetId,
+      action,
+      summary,
       before_json AS beforeJson,
       after_json AS afterJson,
+      reversible,
+      reverted_at AS revertedAt,
+      reverted_by AS revertedBy,
+      reverted_event_id AS revertedEventId,
       created_at AS createdAt
     FROM pbe_access_audit_events
     ORDER BY created_at DESC
     LIMIT ?
-  `).bind(Math.max(1, Math.min(100, Number(limit) || 25))));
+  `).bind(Math.max(1, Math.min(100, Number(limit) || 25))))
+    .then((rows) => rows.map(enrichAuditEvent));
 
   return {
     getUser,
@@ -1185,5 +1503,6 @@ export const createD1AccessUserRegistry = ({
     listGalleryOptions,
     listCapabilities: async () => ACCESS_CAPABILITIES.map(clone),
     listAuditEvents,
+    undoAuditEvent,
   };
 };

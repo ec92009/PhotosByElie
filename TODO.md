@@ -10,7 +10,7 @@ Last updated: 2026-07-06
 - Local preview: `http://localhost:8000/`.
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`.
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`.
-- Access Console Sandbox V7: deployed on `auth.photos-by-elie.com` with D1 database `photosbyelie-access`; local preview at `http://100.111.30.109:8000/access-console.html`; group manager creates/edits/archives audience groups, connects groups to real gallery records, persists per-gallery defaults, filters people, manages group memberships, previews gallery permissions for selected group/person/visitor/owner modes, and runs cloud Worker policy tests for selected gallery access; audience fixtures are `Agnes's B'day`, `RE La Concha`, and `Johnson-Palmer wedding`.
+- Access Console Sandbox V8: deployed on `auth.photos-by-elie.com` with D1 database `photosbyelie-access`; local preview at `http://100.111.30.109:8000/access-console.html`; group manager creates/edits/archives audience groups, connects groups to real gallery records, persists per-gallery defaults, filters people, manages group memberships, previews gallery permissions for selected group/person/visitor/owner modes, runs cloud Worker policy tests for selected gallery access, and shows a reversible audit/undo ledger for person/group access changes; audience fixtures are `Agnes's B'day`, `RE La Concha`, and `Johnson-Palmer wedding`.
 - Track B NewOwner shell: local preview at `http://100.111.30.109:8000/new-owner.html`; uses the deployed auth Worker for Google Owner/Admin session checks with Safari-compatible local/Tailscale token transfer, D1 access-state summary, a reload-persistent recent cloud Owner action queue, and a browser-mediated Sidecar review workspace for claimed/completed `sidecar-culling-review` actions with explicit local pick/unpick/reject writes.
 - Public catalog integrity: `ok`.
 - Public catalog scale: `7770` media rows.
@@ -121,8 +121,8 @@ Last updated: 2026-07-06
     - Protect `assets/catalog/photosbyelie.sqlite` as the active public catalog artifact.
     - Keep local Owner DB state out of git.
 
-21. **Exercise and harden the D1-backed sandbox Access Console V7.**
-    - Current V7 is deployed with real cloud/D1 read-write paths, immediate D1-backed auth/session reads, audience groups, real-gallery picker/defaults, group create/edit/archive, group membership workbench, people filters, effective-access preview, gallery-permission preview, Worker policy testing, and capability metadata.
+21. **Exercise and harden the D1-backed sandbox Access Console V8.**
+    - Current V8 is deployed with real cloud/D1 read-write paths, immediate D1-backed auth/session reads, audience groups, real-gallery picker/defaults, group create/edit/archive, group membership workbench, people filters, effective-access preview, gallery-permission preview, Worker policy testing, capability metadata, and audit/undo for reversible person/group access changes.
     - Keep `ec92009@gmail.com` as the bootstrap break-glass admin during the D1 auth migration.
     - Exercise people, roles, group create/edit/archive, bulk add/revoke memberships, and reversible writes from the browser before granting real non-fixture users.
     - Keep clearly marked fixture people and event/group records with fake `.test` email addresses so role assignment and event access flows can be rehearsed without granting real people.
@@ -130,8 +130,8 @@ Last updated: 2026-07-06
 
 22. **Extend audience groups into real gallery access flows.**
     - Add future join-code/password flows for family/event groups.
-    - Use ACS V7 gallery defaults and Worker policy decisions as the policy source for watermark, sale, download, PDF, video, member-original, and Owner-original preview behavior when public/event/RE gallery routes begin enforcing group access.
-    - Add group-specific audit trails and join-code issuance/revocation once ACS V7 permission preview has been exercised against non-fixture data.
+    - Use ACS V8 gallery defaults and Worker policy decisions as the policy source for watermark, sale, download, PDF, video, member-original, and Owner-original preview behavior when public/event/RE gallery routes begin enforcing group access.
+    - Add join-code issuance/revocation once ACS V8 permission preview has been exercised against non-fixture data.
 
 23. **Promote the Track B NewOwner shell into real cloud workflows.**
     - Replace remaining `track-b-cloud-shell-check` probes with real queued action types; the cloud queue already supports recent-action listing for Max/David reload continuity.

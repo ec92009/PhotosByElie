@@ -1,11 +1,8 @@
 # Instagram - 2026-07-07 - Malaga Cathedral Stone and Evening Light
 
-Status: prepared
+Status: published
 Destination: https://photos-by-elie.com/campaign.html?c=instagram-malaga-cathedral-stone-evening-light-2026-07-07
-
-Manual blockers:
-- Publish pending: review socials/Instagram/2026-07-07/malaga-cathedral-stone-and-evening-light/manifest.json and use the Instagram browser/API workflow.
-- Instagram feed captions are not clickable; update the profile website link or use a Story link sticker before posting.
+Published URL: https://www.instagram.com/p/Daed7gBCGz9/
 
 Caption:
 

@@ -1,10 +1,8 @@
 # Threads - 2026-07-07 - Malaga Cathedral Stone and Evening Light
 
-Status: prepared
+Status: published
 Destination: https://photos-by-elie.com/campaign.html?c=instagram-malaga-cathedral-stone-evening-light-2026-07-07
-
-Manual blockers:
-- Publish pending: review socials/Threads/2026-07-07/malaga-cathedral-stone-and-evening-light/manifest.json and use the Threads browser/API workflow.
+Published URL: https://www.threads.com/@ec92009/post/Daed1wNiDI7
 
 Caption:
 

@@ -1,10 +1,8 @@
 # Facebook - 2026-07-07 - Granada Alhambra Stone and Garden Light
 
-Status: prepared
+Status: published
 Destination: https://photos-by-elie.com/campaign.html?c=facebook-granada-alhambra-stone-garden-light-2026-07-07
-
-Manual blockers:
-- Publish pending: review socials/Facebook/2026-07-07/granada-alhambra-stone-and-garden-light/manifest.json and use the Facebook browser/API workflow.
+Published URL: https://www.facebook.com/122102168061334672/posts/122109675531334672
 
 Caption:
 

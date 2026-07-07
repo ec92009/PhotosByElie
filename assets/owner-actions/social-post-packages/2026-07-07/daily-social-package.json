@@ -139,7 +139,7 @@
         }
       ],
       "date": "2026-07-07",
-      "status": "prepared",
+      "status": "published",
       "account": "Photos By Elie",
       "post_type": "multi_photo",
       "destination_url": "https://photos-by-elie.com/campaign.html?c=facebook-granada-alhambra-stone-garden-light-2026-07-07",
@@ -148,9 +148,33 @@
       "notes": [
         "Images are public watermarked R2 previews staged for upload/API publishing."
       ],
-      "manual_blockers": [
-        "Publish pending: review socials/Facebook/2026-07-07/granada-alhambra-stone-and-garden-light/manifest.json and use the Facebook browser/API workflow."
-      ]
+      "manual_blockers": [],
+      "published_url": "https://www.facebook.com/122102168061334672/posts/122109675531334672",
+      "published": {
+        "platform": "facebook",
+        "account": "Photos By Elie",
+        "page_id": "1146747141854670",
+        "post_id": "1146747141854670_122109675531334672",
+        "permalink": "https://www.facebook.com/122102168061334672/posts/122109675531334672",
+        "timestamp": "2026-07-07T03:08:46+0000",
+        "image_count": 8,
+        "uploaded_photo_ids": [
+          "122109675135334672",
+          "122109675177334672",
+          "122109675231334672",
+          "122109675279334672",
+          "122109675327334672",
+          "122109675375334672",
+          "122109675429334672",
+          "122109675477334672"
+        ]
+      },
+      "verification": {
+        "permalink": "https://www.facebook.com/122102168061334672/posts/122109675531334672",
+        "subattachment_count": 8,
+        "graph_readback_at": "2026-07-07T03:11:14.251Z",
+        "note": "Graph API readback verified 8 photo subattachments."
+      }
     },
     {
       "platform": "Instagram",
@@ -292,16 +316,31 @@
         }
       ],
       "date": "2026-07-07",
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-malaga-cathedral-stone-evening-light-2026-07-07",
       "recommended_upload_set": "images",
       "available_count": 8,
-      "manual_blockers": [
-        "Publish pending: review socials/Instagram/2026-07-07/malaga-cathedral-stone-and-evening-light/manifest.json and use the Instagram browser/API workflow.",
-        "Instagram feed captions are not clickable; update the profile website link or use a Story link sticker before posting."
-      ]
+      "manual_blockers": [],
+      "published_url": "https://www.instagram.com/p/Daed7gBCGz9/",
+      "published": {
+        "platform": "instagram",
+        "account": "ec92009",
+        "username": "ec92009",
+        "media_id": "18095608982610780",
+        "permalink": "https://www.instagram.com/p/Daed7gBCGz9/",
+        "media_type": "CAROUSEL_ALBUM",
+        "timestamp": "2026-07-07T03:09:48+0000",
+        "image_count": 8
+      },
+      "verification": {
+        "permalink": "https://www.instagram.com/p/Daed7gBCGz9/",
+        "child_count": 8,
+        "media_type": "CAROUSEL_ALBUM",
+        "graph_readback_at": "2026-07-07T03:11:14.251Z",
+        "note": "Graph API readback verified 8 child images; caption has no raw URL."
+      }
     },
     {
       "platform": "Pinterest",
@@ -406,7 +445,8 @@
       ],
       "manual_blockers": [
         "Publish pending: review socials/Pinterest/2026-07-07/cadiz-market-color-and-texture/manifest.json and use the Pinterest browser/API workflow.",
-        "Pinterest publish pending: choose the board and publish one Pin per staged image or use the prepared browser upload set."
+        "Pinterest publish pending: choose the board and publish one Pin per staged image or use the prepared browser upload set.",
+        "Pinterest remains prepared only: no Pinterest token/board ID mapping is configured in this runner. Use Pin Builder or configure a board ID for Spain Travel Photography."
       ]
     },
     {
@@ -484,21 +524,38 @@
           "local_staged_path": "socials/Threads/2026-07-07/malaga-cathedral-stone-and-evening-light/images/04-20230114-180227-00379-a98d79e688-malaga-cathedral-stone-and-evening-light.jpg"
         }
       ],
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "available_count": 4,
       "date": "2026-07-07",
       "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-malaga-cathedral-stone-evening-light-2026-07-07",
       "recommended_upload_set": "images",
-      "manual_blockers": [
-        "Publish pending: review socials/Threads/2026-07-07/malaga-cathedral-stone-and-evening-light/manifest.json and use the Threads browser/API workflow."
-      ]
+      "manual_blockers": [],
+      "published_url": "https://www.threads.com/@ec92009/post/Daed1wNiDI7",
+      "published": {
+        "platform": "threads",
+        "account": "ec92009",
+        "username": "ec92009",
+        "threads_user_id": "36227075590239114",
+        "media_id": "18202259650318520",
+        "permalink": "https://www.threads.com/@ec92009/post/Daed1wNiDI7",
+        "media_type": "CAROUSEL_ALBUM",
+        "timestamp": "2026-07-07T03:09:04+0000",
+        "image_count": 4
+      },
+      "verification": {
+        "permalink": "https://www.threads.com/@ec92009/post/Daed1wNiDI7",
+        "child_count": 4,
+        "media_type": "CAROUSEL_ALBUM",
+        "graph_readback_at": "2026-07-07T03:11:14.251Z",
+        "note": "Graph API readback verified 4 child images. API flow did not expose a browser link-preview removal step."
+      }
     }
   ],
-  "generated_at": "2026-07-07T03:03:52.961Z",
+  "generated_at": "2026-07-07T03:11:14.598Z",
   "visible_version": "v129.0",
-  "status": "prepared",
+  "status": "published_partial",
   "themes": [
     "Granada Alhambra Stone and Garden Light",
     "Malaga Cathedral Stone and Evening Light",
@@ -519,6 +576,49 @@
     "blocker": "ETSY_KEYSTRING is unavailable in this runner, and current etsy_outlet tooling does not upload and verify one public listing image plus one approved buyer download file per draft. No Etsy drafts were created and no listing fees were incurred."
   },
   "package_notes": [
-    "Etsy companion: generated 20 jpg-6mp owner-review listing payloads from today's newly curated campaign photos; no Etsy drafts were created because ETSY_KEYSTRING/setup is unavailable and media/file verification is not supported by current tooling."
-  ]
+    "Etsy companion: generated 20 jpg-6mp owner-review listing payloads from today's newly curated campaign photos; no Etsy drafts were created because ETSY_KEYSTRING/setup is unavailable and media/file verification is not supported by current tooling.",
+    "Published Facebook, Instagram, and Threads via authenticated APIs after custom-domain campaign manifests served VERSION 129.0; Pinterest remains prepared only."
+  ],
+  "published": {
+    "facebook": {
+      "platform": "facebook",
+      "account": "Photos By Elie",
+      "page_id": "1146747141854670",
+      "post_id": "1146747141854670_122109675531334672",
+      "permalink": "https://www.facebook.com/122102168061334672/posts/122109675531334672",
+      "timestamp": "2026-07-07T03:08:46+0000",
+      "image_count": 8,
+      "uploaded_photo_ids": [
+        "122109675135334672",
+        "122109675177334672",
+        "122109675231334672",
+        "122109675279334672",
+        "122109675327334672",
+        "122109675375334672",
+        "122109675429334672",
+        "122109675477334672"
+      ]
+    },
+    "instagram": {
+      "platform": "instagram",
+      "account": "ec92009",
+      "username": "ec92009",
+      "media_id": "18095608982610780",
+      "permalink": "https://www.instagram.com/p/Daed7gBCGz9/",
+      "media_type": "CAROUSEL_ALBUM",
+      "timestamp": "2026-07-07T03:09:48+0000",
+      "image_count": 8
+    },
+    "threads": {
+      "platform": "threads",
+      "account": "ec92009",
+      "username": "ec92009",
+      "threads_user_id": "36227075590239114",
+      "media_id": "18202259650318520",
+      "permalink": "https://www.threads.com/@ec92009/post/Daed1wNiDI7",
+      "media_type": "CAROUSEL_ALBUM",
+      "timestamp": "2026-07-07T03:09:04+0000",
+      "image_count": 4
+    }
+  }
 }

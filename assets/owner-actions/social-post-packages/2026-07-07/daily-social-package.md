@@ -1,13 +1,13 @@
 # Daily Social Package - 2026-07-07
 
-Status: prepared
+Status: published_partial
 Visible version: v129.0
 
 ## Facebook: Granada Alhambra Stone and Garden Light
 
-- Status: prepared
+- Status: published
 - Destination: https://photos-by-elie.com/campaign.html?c=facebook-granada-alhambra-stone-garden-light-2026-07-07
-- Manual blockers: Publish pending: review socials/Facebook/2026-07-07/granada-alhambra-stone-and-garden-light/manifest.json and use the Facebook browser/API workflow.
+- Published URL: https://www.facebook.com/122102168061334672/posts/122109675531334672
 
 | # | Media id | Source URL | Local image |
 | ---: | --- | --- | --- |
@@ -22,9 +22,9 @@ Visible version: v129.0
 
 ## Instagram: Malaga Cathedral Stone and Evening Light
 
-- Status: prepared
+- Status: published
 - Destination: https://photos-by-elie.com/campaign.html?c=instagram-malaga-cathedral-stone-evening-light-2026-07-07
-- Manual blockers: Publish pending: review socials/Instagram/2026-07-07/malaga-cathedral-stone-and-evening-light/manifest.json and use the Instagram browser/API workflow. | Instagram feed captions are not clickable; update the profile website link or use a Story link sticker before posting.
+- Published URL: https://www.instagram.com/p/Daed7gBCGz9/
 
 | # | Media id | Source URL | Local image |
 | ---: | --- | --- | --- |
@@ -41,7 +41,7 @@ Visible version: v129.0
 
 - Status: prepared
 - Destination: https://photos-by-elie.com/campaign.html?c=pinterest-cadiz-market-color-texture-2026-07-07
-- Manual blockers: Publish pending: review socials/Pinterest/2026-07-07/cadiz-market-color-and-texture/manifest.json and use the Pinterest browser/API workflow. | Pinterest publish pending: choose the board and publish one Pin per staged image or use the prepared browser upload set.
+- Manual blockers: Publish pending: review socials/Pinterest/2026-07-07/cadiz-market-color-and-texture/manifest.json and use the Pinterest browser/API workflow. | Pinterest publish pending: choose the board and publish one Pin per staged image or use the prepared browser upload set. | Pinterest remains prepared only: no Pinterest token/board ID mapping is configured in this runner. Use Pin Builder or configure a board ID for Spain Travel Photography.
 
 | # | Media id | Source URL | Local image |
 | ---: | --- | --- | --- |
@@ -53,9 +53,9 @@ Visible version: v129.0
 
 ## Threads: Malaga Cathedral Stone and Evening Light
 
-- Status: prepared
+- Status: published
 - Destination: https://photos-by-elie.com/campaign.html?c=instagram-malaga-cathedral-stone-evening-light-2026-07-07
-- Manual blockers: Publish pending: review socials/Threads/2026-07-07/malaga-cathedral-stone-and-evening-light/manifest.json and use the Threads browser/API workflow.
+- Published URL: https://www.threads.com/@ec92009/post/Daed1wNiDI7
 
 | # | Media id | Source URL | Local image |
 | ---: | --- | --- | --- |
@@ -63,6 +63,7 @@ Visible version: v129.0
 | 2 | `20230114-174510-00263-bc6d9079dc` | https://download.photos-by-elie.com/media/expo/20230114-174510-00263-bc6d9079dc_1800.jpg | socials/Threads/2026-07-07/malaga-cathedral-stone-and-evening-light/images/02-20230114-174510-00263-bc6d9079dc-malaga-cathedral-stone-and-evening-light.jpg |
 | 3 | `20230114-181205-00398-d80c8bf052` | https://download.photos-by-elie.com/media/expo/20230114-181205-00398-d80c8bf052_1800.jpg | socials/Threads/2026-07-07/malaga-cathedral-stone-and-evening-light/images/03-20230114-181205-00398-d80c8bf052-malaga-cathedral-stone-and-evening-light.jpg |
 | 4 | `20230114-180227-00379-a98d79e688` | https://download.photos-by-elie.com/media/expo/20230114-180227-00379-a98d79e688_1800.jpg | socials/Threads/2026-07-07/malaga-cathedral-stone-and-evening-light/images/04-20230114-180227-00379-a98d79e688-malaga-cathedral-stone-and-evening-light.jpg |
+
 ## Etsy companion
 
 - Status: review packages prepared; no Etsy drafts created.

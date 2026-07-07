@@ -138,14 +138,29 @@
     }
   ],
   "date": "2026-07-07",
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-malaga-cathedral-stone-evening-light-2026-07-07",
   "recommended_upload_set": "images",
   "available_count": 8,
-  "manual_blockers": [
-    "Publish pending: review socials/Instagram/2026-07-07/malaga-cathedral-stone-and-evening-light/manifest.json and use the Instagram browser/API workflow.",
-    "Instagram feed captions are not clickable; update the profile website link or use a Story link sticker before posting."
-  ]
+  "manual_blockers": [],
+  "published_url": "https://www.instagram.com/p/Daed7gBCGz9/",
+  "published": {
+    "platform": "instagram",
+    "account": "ec92009",
+    "username": "ec92009",
+    "media_id": "18095608982610780",
+    "permalink": "https://www.instagram.com/p/Daed7gBCGz9/",
+    "media_type": "CAROUSEL_ALBUM",
+    "timestamp": "2026-07-07T03:09:48+0000",
+    "image_count": 8
+  },
+  "verification": {
+    "permalink": "https://www.instagram.com/p/Daed7gBCGz9/",
+    "child_count": 8,
+    "media_type": "CAROUSEL_ALBUM",
+    "graph_readback_at": "2026-07-07T03:11:14.251Z",
+    "note": "Graph API readback verified 8 child images; caption has no raw URL."
+  }
 }

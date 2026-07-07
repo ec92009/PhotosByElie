@@ -73,14 +73,31 @@
       "local_staged_path": "socials/Threads/2026-07-07/malaga-cathedral-stone-and-evening-light/images/04-20230114-180227-00379-a98d79e688-malaga-cathedral-stone-and-evening-light.jpg"
     }
   ],
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "available_count": 4,
   "date": "2026-07-07",
   "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-malaga-cathedral-stone-evening-light-2026-07-07",
   "recommended_upload_set": "images",
-  "manual_blockers": [
-    "Publish pending: review socials/Threads/2026-07-07/malaga-cathedral-stone-and-evening-light/manifest.json and use the Threads browser/API workflow."
-  ]
+  "manual_blockers": [],
+  "published_url": "https://www.threads.com/@ec92009/post/Daed1wNiDI7",
+  "published": {
+    "platform": "threads",
+    "account": "ec92009",
+    "username": "ec92009",
+    "threads_user_id": "36227075590239114",
+    "media_id": "18202259650318520",
+    "permalink": "https://www.threads.com/@ec92009/post/Daed1wNiDI7",
+    "media_type": "CAROUSEL_ALBUM",
+    "timestamp": "2026-07-07T03:09:04+0000",
+    "image_count": 4
+  },
+  "verification": {
+    "permalink": "https://www.threads.com/@ec92009/post/Daed1wNiDI7",
+    "child_count": 4,
+    "media_type": "CAROUSEL_ALBUM",
+    "graph_readback_at": "2026-07-07T03:11:14.251Z",
+    "note": "Graph API readback verified 4 child images. API flow did not expose a browser link-preview removal step."
+  }
 }

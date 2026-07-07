@@ -25,6 +25,7 @@
     policyResult: null,
     policyBusy: false,
     undoBusy: false,
+    inviteOutput: null,
     session: null,
   };
   const BASE_USER_CAPABILITIES = ["view_public", "buy_downloads", "redownload_purchases_30d"];
@@ -115,6 +116,13 @@
   const membershipTitle = $("[data-acs-membership-title]");
   const memberEmailsInput = $("[data-acs-member-emails]");
   const addMembersButton = $("[data-acs-add-members]");
+  const inviteTitle = $("[data-acs-invite-title]");
+  const inviteSummaryRoot = $("[data-acs-invite-summary]");
+  const inviteForm = $("[data-acs-invite-form]");
+  const inviteEmailsInput = $("[data-acs-invite-emails]");
+  const inviteOutputRoot = $("[data-acs-invite-output]");
+  const copyInviteLinkButton = $("[data-acs-copy-invite-link]");
+  const showInviteQrButton = $("[data-acs-show-invite-qr]");
   const accessPreviewInput = $("[data-acs-access-preview]");
   const ownerOriginalsInput = $("[data-acs-owner-originals]");
   let groupIdEdited = false;
@@ -771,6 +779,117 @@
     `).join("")}`;
   };
 
+  const inviteScopeFor = (group = {}) =>
+    [group.galleryKind || group.kind || "event", group.galleryKey || group.id || ""].filter(Boolean).join(":");
+
+  const previewInviteTokenFor = (group = {}, channel = "link", seed = "") => {
+    const source = `${group.id || ""}|${group.galleryKey || ""}|${channel}|${seed}`;
+    let hash = 2166136261;
+    for (let index = 0; index < source.length; index += 1) {
+      hash ^= source.charCodeAt(index);
+      hash = Math.imul(hash, 16777619);
+    }
+    return `preview-${(hash >>> 0).toString(36)}`;
+  };
+
+  const inviteUrlFor = (group = {}, channel = "link", seed = "") => {
+    const url = new URL("/invite/preview", "https://photos-by-elie.com");
+    url.searchParams.set("token", previewInviteTokenFor(group, channel, seed));
+    url.searchParams.set("channel", channel);
+    url.searchParams.set("scope", inviteScopeFor(group));
+    return url.href;
+  };
+
+  const invitationOutputCard = ({ title, meta, body, code = "", chips = [] }) => `
+    <article class="acs-invite-card">
+      <header>
+        <strong>${escapeHtml(title)}</strong>
+        ${meta ? `<small>${escapeHtml(meta)}</small>` : ""}
+      </header>
+      ${body ? `<p>${escapeHtml(body)}</p>` : ""}
+      ${code ? `<code class="acs-invite-link">${escapeHtml(code)}</code>` : ""}
+      ${chips.length ? `<span class="acs-gallery-stack">${chips.map((chip) => `<span class="acs-chip">${escapeHtml(chip)}</span>`).join("")}</span>` : ""}
+    </article>
+  `;
+
+  const renderInvitation = () => {
+    if (!inviteSummaryRoot || !inviteOutputRoot) return;
+    const group = selectedGroup();
+    const archived = group?.state === "archived";
+    const disabled = !group?.id || archived;
+    [inviteEmailsInput, copyInviteLinkButton, showInviteQrButton].forEach((node) => {
+      if (node) node.disabled = disabled;
+    });
+    const prepareButton = $("[data-acs-prepare-email-invites]");
+    if (prepareButton) prepareButton.disabled = disabled;
+
+    if (!group?.id) {
+      if (inviteTitle) inviteTitle.textContent = "Invite access";
+      inviteSummaryRoot.textContent = "Select a group before preparing invitations.";
+      inviteOutputRoot.innerHTML = `<p class="acs-empty">Invitation rehearsals are scoped to one selected fixture group.</p>`;
+      return;
+    }
+    if (state.inviteOutput?.groupId !== group.id) state.inviteOutput = null;
+    if (inviteTitle) inviteTitle.textContent = `${group.label || group.id} invites`;
+    inviteSummaryRoot.textContent = archived
+      ? "Archived groups cannot receive new invitation accepts."
+      : "Active fixture members may invite others into this same gallery scope. They cannot un-invite; Owner/Admin revokes pending invites or memberships.";
+
+    if (archived) {
+      inviteOutputRoot.innerHTML = `<p class="acs-empty">Restore or recreate the group before issuing invitations.</p>`;
+      return;
+    }
+    if (!state.inviteOutput) {
+      inviteOutputRoot.innerHTML = invitationOutputCard({
+        title: "Invite model",
+        meta: inviteScopeFor(group),
+        body: "Email invites are address-bound. Link and QR invites use the same scoped accept URL after Google sign-in.",
+        chips: ["same fixture only", "no un-invite", "admin revoke"],
+      });
+      return;
+    }
+
+    const output = state.inviteOutput;
+    if (output.kind === "email") {
+      inviteOutputRoot.innerHTML = `
+        ${invitationOutputCard({
+          title: "Email invite batch",
+          meta: `${output.recipients.length} recipient${output.recipients.length === 1 ? "" : "s"}`,
+          body: "Each invite is bound to the recipient email. Accepting with a different Google account should be blocked.",
+          chips: ["address-bound", "pending", "audited"],
+        })}
+        <div class="acs-invite-recipient-list">
+          ${output.recipients.map((entry) => invitationOutputCard({
+            title: entry.displayName || entry.email,
+            meta: entry.email,
+            code: inviteUrlFor(group, "email", entry.email),
+          })).join("")}
+        </div>
+      `;
+      return;
+    }
+
+    if (output.kind === "qr") {
+      const url = inviteUrlFor(group, "qr");
+      inviteOutputRoot.innerHTML = invitationOutputCard({
+        title: "QR payload",
+        meta: inviteScopeFor(group),
+        body: "The production QR code should encode this same opaque, expiring invite URL.",
+        code: url,
+        chips: ["QR", "Google sign-in", "membership on accept"],
+      });
+      return;
+    }
+
+    inviteOutputRoot.innerHTML = invitationOutputCard({
+      title: "Share link",
+      meta: inviteScopeFor(group),
+      body: "The link is fixture-scoped and should create membership only after the recipient signs in with Google.",
+      code: inviteUrlFor(group, "link"),
+      chips: ["copyable", "limited scope", "admin revoke"],
+    });
+  };
+
   const renderEffectiveAccess = () => {
     if (!effectiveAccessRoot) return;
     const user = selectedUser();
@@ -1081,6 +1200,7 @@
     renderGroupCapabilities();
     renderGroupList();
     renderMembership();
+    renderInvitation();
     fillGroupForm(selectedGroup());
     renderAccessPreview();
     renderPolicyResult();
@@ -1331,6 +1451,54 @@
     render();
   };
 
+  const prepareEmailInvites = () => {
+    const group = selectedGroup();
+    if (!group?.id || group.state === "archived") {
+      setStatus("Select an active group before preparing invitations.");
+      return;
+    }
+    const recipients = parseMemberEntries(inviteEmailsInput?.value || "");
+    if (!recipients.length) {
+      setStatus("Enter at least one valid invitee email address.");
+      return;
+    }
+    state.inviteOutput = {
+      kind: "email",
+      groupId: group.id,
+      recipients,
+    };
+    setStatus(`Prepared ${recipients.length} email invite${recipients.length === 1 ? "" : "s"} for ${group.label || group.id}.`);
+    renderInvitation();
+  };
+
+  const copyInviteLink = async () => {
+    const group = selectedGroup();
+    if (!group?.id || group.state === "archived") {
+      setStatus("Select an active group before copying an invite link.");
+      return;
+    }
+    const url = inviteUrlFor(group, "link");
+    state.inviteOutput = { kind: "link", groupId: group.id };
+    try {
+      await navigator.clipboard?.writeText(url);
+      setStatus(`Copied preview invite link for ${group.label || group.id}.`);
+    } catch {
+      setStatus("Preview invite link is ready; clipboard access was unavailable.");
+    }
+    renderInvitation();
+  };
+
+  const showInviteQrPayload = () => {
+    const group = selectedGroup();
+    if (!group?.id || group.state === "archived") {
+      setStatus("Select an active group before preparing a QR payload.");
+      return;
+    }
+    state.inviteOutput = { kind: "qr", groupId: group.id };
+    setStatus(`Prepared QR payload for ${group.label || group.id}.`);
+    renderInvitation();
+  };
+
   const testSelectedPolicy = async () => {
     const group = selectedGroup();
     if (!group?.galleryKey) {
@@ -1388,6 +1556,7 @@
     const row = event.target.closest("[data-acs-group-row]");
     if (!row) return;
     state.selectedGroupId = row.dataset.acsGroupRow || "";
+    state.inviteOutput = null;
     clearPolicyResult();
     render();
   });
@@ -1419,6 +1588,11 @@
     }
   });
 
+  inviteForm?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    prepareEmailInvites();
+  });
+
   memberListRoot?.addEventListener("click", (event) => {
     const editButton = event.target.closest("[data-acs-edit-member]");
     if (editButton) {
@@ -1448,6 +1622,7 @@
   filterGroupInput?.addEventListener("change", () => {
     state.filters.groupId = filterGroupInput.value || "";
     if (state.filters.groupId) state.selectedGroupId = state.filters.groupId;
+    state.inviteOutput = null;
     clearPolicyResult();
     render();
   });
@@ -1472,9 +1647,11 @@
   });
   $("[data-acs-new-group]")?.addEventListener("click", () => {
     state.selectedGroupId = "";
+    state.inviteOutput = null;
     clearPolicyResult();
     fillGroupForm(null);
     renderGroupList();
+    renderInvitation();
   });
   groupIdInput?.addEventListener("input", () => {
     groupIdEdited = true;
@@ -1504,6 +1681,8 @@
   $("[data-acs-disable-person]")?.addEventListener("click", () => disableSelected().catch((error) => setStatus(error.message || "Could not disable person.")));
   $("[data-acs-archive-group]")?.addEventListener("click", () => archiveSelectedGroup().catch((error) => setStatus(error.message || "Could not archive group.")));
   $("[data-acs-filter-selected-group]")?.addEventListener("click", showSelectedGroupMembers);
+  copyInviteLinkButton?.addEventListener("click", () => copyInviteLink());
+  showInviteQrButton?.addEventListener("click", showInviteQrPayload);
   policyTestButton?.addEventListener("click", () => testSelectedPolicy().catch((error) => {
     if (policyStatusRoot) policyStatusRoot.textContent = "";
     setStatus(error.message || "Could not test policy.");

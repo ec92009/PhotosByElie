@@ -319,7 +319,8 @@ body[data-gallery="access-console"] .acs-hero h1 {
 
 .acs-editor form,
 .acs-group-form,
-.acs-member-form {
+.acs-member-form,
+.acs-invite-form {
   display: grid;
   gap: .9rem;
 }
@@ -327,6 +328,7 @@ body[data-gallery="access-console"] .acs-hero h1 {
 .acs-editor label,
 .acs-group-form label,
 .acs-member-form label,
+.acs-invite-form label,
 .acs-role-fieldset {
   display: grid;
   gap: .35rem;
@@ -339,7 +341,8 @@ body[data-gallery="access-console"] .acs-hero h1 {
 .acs-group-form input,
 .acs-group-form select,
 .acs-group-form textarea,
-.acs-member-form textarea {
+.acs-member-form textarea,
+.acs-invite-form textarea {
   width: 100%;
   max-width: 100%;
   border: 1px solid var(--acs-line);
@@ -352,7 +355,8 @@ body[data-gallery="access-console"] .acs-hero h1 {
 
 .acs-editor textarea,
 .acs-group-form textarea,
-.acs-member-form textarea {
+.acs-member-form textarea,
+.acs-invite-form textarea {
   resize: vertical;
 }
 
@@ -443,7 +447,9 @@ body[data-gallery="access-console"] .acs-hero h1 {
 }
 
 .acs-member-list,
-.acs-member-form {
+.acs-member-form,
+.acs-invite-form,
+.acs-invite-output {
   display: grid;
   gap: .65rem;
 }
@@ -469,6 +475,73 @@ body[data-gallery="access-console"] .acs-hero h1 {
   flex-wrap: wrap;
   gap: .4rem;
   justify-content: flex-start;
+}
+
+.acs-invite-panel {
+  display: grid;
+  gap: .7rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--acs-line);
+}
+
+.acs-invite-panel h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.15;
+}
+
+.acs-invite-summary {
+  min-height: 1.25rem;
+  margin: 0;
+  color: var(--muted, var(--acs-muted));
+  font-size: .9rem;
+}
+
+.acs-invite-card {
+  display: grid;
+  gap: .55rem;
+  min-width: 0;
+  padding: .7rem;
+  border: 1px solid var(--acs-line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 94%, var(--acs-rust) 6%);
+}
+
+.acs-invite-card header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem .65rem;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.acs-invite-card p {
+  margin: 0;
+  color: var(--muted, var(--acs-muted));
+  font-size: .9rem;
+}
+
+.acs-invite-card small {
+  color: var(--muted, var(--acs-muted));
+}
+
+.acs-invite-link {
+  display: block;
+  max-width: 100%;
+  padding: .45rem .55rem;
+  border: 1px solid var(--acs-line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 88%, var(--acs-teal) 12%);
+  color: var(--text);
+  font-size: .82rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.acs-invite-recipient-list {
+  display: grid;
+  gap: .55rem;
 }
 
 .acs-member-actions .acs-chip,

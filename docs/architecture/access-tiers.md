@@ -23,7 +23,7 @@ ignores registry records as a source of additional admins.
 
 ## Registry
 
-Access Console V7 stores structured access state in D1 once the Worker has an
+Access Console V8 stores structured access state in D1 once the Worker has an
 `ACCESS_DB` binding. Auth/session reads switch to the D1 registry immediately
 when that binding exists. Until then, deployed auth keeps the legacy KV registry
 as a compatibility fallback.
@@ -36,7 +36,8 @@ Current ACS deployment:
 - Migrations: `migrations/0001_access_console.sql`,
   `migrations/0002_access_console_audience_groups.sql`,
   `migrations/0003_access_console_group_state.sql`,
-  `migrations/0004_access_console_gallery_defaults.sql`
+  `migrations/0004_access_console_gallery_defaults.sql`,
+  `migrations/0005_access_console_audit_undo.sql`
 
 D1 tables:
 
@@ -51,6 +52,10 @@ D1 tables:
 - `pbe_access_group_memberships`: active/revoked email-to-group assignments.
 - `pbe_access_fixture_events`: clearly marked rehearsal family/event/RE records.
 - `pbe_access_audit_events`: before/after snapshots for role and disable changes.
+
+Planned invitation tables are described in
+[`access-invitations.md`](./access-invitations.md). Invitations are pending
+paths into existing audience-group membership, not separate roles.
 
 Public registry record shape:
 
@@ -202,6 +207,9 @@ session, and performs reversible writes:
 - The membership workbench lists selected-group members, bulk-adds Google-style
   email identities, revokes individual memberships, and filters the people table
   by group, role, state, or search text.
+- The invitation rehearsal panel previews the next access path: active fixture
+  members may invite others into the same selected group by email, link, or QR
+  payload, while revoke/disable remains Owner/Admin-only.
 - The gallery-permission preview derives selected group, selected person,
   regular visitor, and Owner/Admin modes from the same effective-access scopes,
   including an Owner originals switch for full-resolution/unwatermarked preview

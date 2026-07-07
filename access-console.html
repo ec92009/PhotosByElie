@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="./shared.css?v=125.0"/>
   <link rel="stylesheet" href="./styles.css?v=125.0"/>
   <link rel="stylesheet" href="./photos.css?v=125.0"/>
-  <link rel="stylesheet" href="./access-console.css?v=acs8"/>
+  <link rel="stylesheet" href="./access-console.css?v=acs9"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -273,6 +273,27 @@
                   <button class="btn secondary" type="button" data-acs-filter-selected-group>Show members</button>
                 </div>
               </form>
+              <section class="acs-invite-panel" aria-label="Selected group invitations">
+                <div class="owner-card-titlebar">
+                  <div>
+                    <p class="eyebrow">Invitations</p>
+                    <h3 data-acs-invite-title>Invite access</h3>
+                  </div>
+                </div>
+                <p class="acs-invite-summary" data-acs-invite-summary></p>
+                <form class="acs-invite-form" data-acs-invite-form>
+                  <label>
+                    <span>Email invitees</span>
+                    <textarea rows="3" data-acs-invite-emails placeholder="friend@example.com&#10;Family Name &lt;kin@example.com&gt;"></textarea>
+                  </label>
+                  <div class="acs-editor-actions">
+                    <button class="btn secondary" type="submit" data-acs-prepare-email-invites>Email invites</button>
+                    <button class="btn secondary" type="button" data-acs-copy-invite-link>Copy link</button>
+                    <button class="btn secondary" type="button" data-acs-show-invite-qr>QR payload</button>
+                  </div>
+                </form>
+                <div class="acs-invite-output" data-acs-invite-output></div>
+              </section>
             </section>
           </div>
           <div data-acs-events class="acs-event-list acs-event-list-compact"></div>
@@ -331,6 +352,6 @@
   </main>
 
   <script src="./media-config.js"></script>
-  <script src="./access-console.js?v=acs8"></script>
+  <script src="./access-console.js?v=acs9"></script>
 </body>
 </html>

@@ -2574,6 +2574,21 @@ export const createPhotosByElieWorker = ({
     return credentialedJson(request, result, 202);
   };
 
+  const getRealEstateAssemblyJob = async (request, jobId) => {
+    if (!realEstateDeliverables || typeof realEstateDeliverables.getAssemblyJob !== "function") {
+      return errorJson(503, "real_estate_deliverables_unavailable", "Real-estate cloud assembly is not configured.");
+    }
+    const url = new URL(request.url);
+    const payload = {
+      galleryKey: url.searchParams.get("galleryKey") || "",
+      jobId,
+    };
+    payload.realEstateSession = await requireRealEstateSession(request, payload);
+    payload.galleryKey = payload.realEstateSession.galleryKey;
+    const result = await realEstateDeliverables.getAssemblyJob(payload);
+    return credentialedJson(request, result);
+  };
+
   const getRealEstateDeliverableAsset = async (request, id, action) => {
     if (!realEstateDeliverables || typeof realEstateDeliverables.getDeliverableAsset !== "function") {
       return errorJson(503, "real_estate_deliverables_unavailable", "Real-estate cloud products are not configured.");
@@ -2670,6 +2685,10 @@ export const createPhotosByElieWorker = ({
       if (request.method === "POST" && path === "/real-estate/originals/session") return await createRealEstateOriginalsSession(request);
       if (request.method === "POST" && path === "/real-estate/deliverables/list") return await listRealEstateDeliverables(request);
       if (request.method === "POST" && path === "/real-estate/deliverables/jobs") return await submitRealEstateAssemblyJob(request);
+      const realEstateJobMatch = path.match(/^\/real-estate\/deliverables\/jobs\/([^/]+)$/);
+      if (request.method === "GET" && realEstateJobMatch) {
+        return await getRealEstateAssemblyJob(request, decodeURIComponent(realEstateJobMatch[1]));
+      }
       if (request.method === "POST" && path === "/real-estate/deliverables") return await putRealEstateDeliverable(request);
       if (request.method === "POST" && path === "/real-estate/deliverables/delete") return await deleteRealEstateDeliverable(request);
       const realEstateAssetMatch = path.match(/^\/real-estate\/deliverables\/([^/]+)\/(view|download)$/);

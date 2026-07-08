@@ -2559,6 +2559,18 @@ test("real-estate cloud assembly jobs persist status and serve completed assets"
   assert.equal(queued.deliverables[0].deliveryEmail.status, "not_sent");
   assert.equal(queued.deliverables[1].assemblyJob.sourceVideoAudioPolicy, "duck-under-generated-guitar-bed");
   assert.equal(queued.deliverables[1].assemblyJob.sourceVideoAudioGainDb, -20);
+  assert.equal(queued.job.status, "pending");
+  assert.equal(queued.job.inputManifestBatchId, batch.batchId);
+  assert.equal(queued.job.inputManifest.projects[0].items[0].sourceVideoPrivateKey, "real-estate/corine-real-estate/masters/la-concha/source.mp4");
+
+  const jobStatusResponse = await worker.fetch(new Request(`https://worker.test/real-estate/deliverables/jobs/${queued.job.id}`, {
+    headers: { cookie },
+  }));
+  assert.equal(jobStatusResponse.status, 200);
+  const jobStatus = await jobStatusResponse.json();
+  assert.equal(jobStatus.job.id, queued.job.id);
+  assert.equal(jobStatus.job.status, "pending");
+  assert.equal(jobStatus.job.deliverables.length, 2);
 
   const pendingAsset = await worker.fetch(new Request(`https://worker.test/real-estate/deliverables/${queued.deliverables[0].id}/view`, {
     headers: { cookie },
@@ -2567,6 +2579,7 @@ test("real-estate cloud assembly jobs persist status and serve completed assets"
   assert.equal((await pendingAsset.json()).error.code, "real_estate_deliverable_pending");
 
   const pdfRecord = queued.deliverables.find((record) => record.type === "pdf");
+  const videoRecord = queued.deliverables.find((record) => record.type === "video");
   const pdfOutputKey = pdfRecord.outputs.pdf.key;
   await privateR2.put(pdfOutputKey, new TextEncoder().encode("%PDF-1.4 test"), {
     httpMetadata: { contentType: "application/pdf" },
@@ -2578,6 +2591,22 @@ test("real-estate cloud assembly jobs persist status and serve completed assets"
   })), {
     httpMetadata: { contentType: "application/json; charset=utf-8" },
   });
+  await privateR2.put(`real-estate/corine-real-estate/deliverables/${videoRecord.id}.json`, new TextEncoder().encode(JSON.stringify({
+    ...videoRecord,
+    status: "failed",
+    failureReason: "Cloud renderer could not read the source video.",
+  })), {
+    httpMetadata: { contentType: "application/json; charset=utf-8" },
+  });
+
+  const failedJobResponse = await worker.fetch(new Request(`https://worker.test/real-estate/deliverables/jobs/${queued.job.id}`, {
+    headers: { cookie },
+  }));
+  assert.equal(failedJobResponse.status, 200);
+  const failedJob = await failedJobResponse.json();
+  assert.equal(failedJob.job.status, "needs-attention");
+  assert.equal(failedJob.job.failureReason, "Cloud renderer could not read the source video.");
+  assert.equal(failedJob.job.deliverables.find((record) => record.type === "pdf").status, "ready");
 
   const listResponse = await worker.fetch(jsonRequest("https://worker.test/real-estate/deliverables/list", {
     galleryKey: "corine-real-estate",

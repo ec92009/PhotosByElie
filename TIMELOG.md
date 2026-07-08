@@ -538,8 +538,14 @@ Clock state: running
 | 2026-07-06 | 20:08 CEST | 20:11 CEST | 0:03 | Live-tested ACS V8 from David through Max's Tailscale URL: confirmed admin session, reversible fixture undo, and fixture gallery policy decisions; browser/runtime excluded. |
 | 2026-07-07 | 05:11 CEST | 05:12 CEST | 0:01 | Ran the picked-only Sidecar AI metadata review automation direction; command/runtime excluded. |
 | 2026-07-07 | 09:06 CEST | 09:07 CEST | 0:01 | Added fixture invitation direction for email/link/QR access propagation with member invite but Owner/Admin-only revoke; implementation time excluded. |
+| 2026-07-08 | 05:11 CEST | 05:12 CEST | 0:01 | Ran the picked-only Sidecar AI metadata review automation direction; command/runtime excluded. |
+| 2026-07-08 | 07:55 CEST | 08:01 CEST | 0:06 | Resolved the 20 unknown-gallery Sidecar rework rows: approved 19 Benalmadena Aquarium videos, tombstoned one unsupported WhatsApp still, verified Upload Bridge stayed clean, and refreshed the backlog. |
+| 2026-07-08 | 08:04 CEST | 08:05 CEST | 0:01 | Reviewed the fresh numbered backlog and expanded the next source-export-failed cleanup item. |
+| 2026-07-08 | 08:05 CEST | 08:15 CEST | 0:06 | Repaired the 24 source-export-failed Sidecar rows from external picGen PNG originals, uploaded R2 masters/previews, approved/re-queued/unblocked them, and refreshed backlog/handoff notes; upload runtime excluded. |
+| 2026-07-08 | 08:16 CEST | 08:17 CEST | 0:01 | Reviewed the refreshed backlog and expanded the next catalog-registration item. |
+| 2026-07-08 | 08:18 CEST | 08:24 CEST | 0:06 | Registered 43 uploaded Sidecar rows into the public catalog, normalized 63 unpicked/proposed rows back to unreviewed, verified clean catalog/upload state, and refreshed backlog/handoff notes; command/runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 27:21
+Active collaboration time used: 27:42
 Remaining budget: not set

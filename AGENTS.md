@@ -8,6 +8,7 @@ Repo-level working preferences for `/Users/ecohen/Dev/PhotosByElie`.
 
 - For Max/David machine handoff or ignored asset sync work, read [`HANDOFF.md`](./HANDOFF.md).
 - For "show me" requests, follow [`SHOW_ME_SOP.md`](./SHOW_ME_SOP.md).
+- Use [`docs/architecture/north-star.md`](./docs/architecture/north-star.md) as the Photos By Elie project compass; warn when requested work appears to deviate from it unless the deviation is explicit and intentional.
 - Keep the active collaboration timelog in [`TIMELOG.md`](./TIMELOG.md) current according to the timelog SOP.
 
 ## Max/David Handoff Direction

@@ -8,6 +8,8 @@ Last updated: 2026-07-08
 - Sidecar local build: `v126.2`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`.
 - Local preview: `http://localhost:8000/`.
+- North Star: `docs/architecture/north-star.md`; the overarching goal is to make money from the enterprise by optimizing sellable offers, buyer/client trust, private access, and market learning.
+- Main near-term inventory: the Apple Photos library has `57K+` photos, many potentially usable for the public gallery/store; finishing intake-to-sellable-catalog flow takes priority over hypothetical Real Estate, family, and private event verticals.
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`.
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`.
 - Access Console Sandbox V8 cloud backend plus ACS9 local front-end rehearsal: deployed on `auth.photos-by-elie.com` with D1 database `photosbyelie-access`; local preview at `http://100.111.30.109:8000/access-console.html`; group manager creates/edits/archives audience groups, connects groups to real gallery records, persists per-gallery defaults, filters people, manages group memberships, previews gallery permissions for selected group/person/visitor/owner modes, runs cloud Worker policy tests for selected gallery access, shows a reversible audit/undo ledger for person/group access changes, and includes a selected-group invitation rehearsal for email/link/QR access propagation; audience fixtures are `Agnes's B'day`, `RE La Concha`, and `Johnson-Palmer wedding`.
@@ -27,92 +29,121 @@ Last updated: 2026-07-08
 
 ## Fresh Numbered Backlog
 
-1. **Add a supported retry/reset command for Upload Bridge export blocks.**
+1. **Finish Apple Photos intake into a sellable public catalog.**
+   - Turn the `57K+` Apple Photos library into a repeatable intake, cull, metadata, upload, and publish pipeline.
+   - Prioritize photos and sets that can become public gallery/store inventory.
+   - Keep local connector work limited to source access/export; durable decisions should land in Owner/NewOwner cloud or SQLite-backed state.
+   - Track counts from library candidates to approved, uploaded, cataloged, protected, and purchasable items.
+   - Use this as the main revenue unlock before spending heavily on hypothetical RE/family/event workflows.
+
+2. **Validate commercial offers and market positioning.**
+   - Research comparable photo-download pricing, Real Estate media packages, private event gallery sales, and SEO/search demand.
+   - Decide the first offers to test, starting with the public download store and treating Real Estate, family/private sharing, and private paid event galleries as secondary future offers.
+   - Identify the likely buyer/client, price range, promise, proof path, and biggest conversion/security risk for each offer.
+   - Turn research into concrete offer copy, package names, pricing hypotheses, and testable next actions.
+
+3. **Curate the first sellable storefront.**
+   - Apply strong title/keyword approvals.
+   - Block unsellable rows.
+   - Pick featured collections and hero images.
+   - Put the strongest commercial/travel/editorial sets first.
+   - Make the first purchasable path feel intentional on mobile and desktop.
+   - Use Apple Photos intake output as the main pool for storefront expansion.
+
+4. **Prove paid/private access cannot be bypassed.**
+   - Smoke-test unpaid users, paid users, 30-day re-downloads, RE clients, event attendees, family members, and Owner/Admin access.
+   - Verify private originals and paid downloads only flow through authorized Worker paths.
+   - Check that watermarked previews and public media remain usable without exposing protected assets.
+   - Record the test matrix before inviting real buyers or clients.
+
+5. **Review buyer support, refund, and license wording.**
+   - Use `docs/commerce/PRICE_OFFER_STRATEGY.md` as the current policy draft.
+   - Make delivery/recovery expectations explicit before heavier public traffic.
+   - Align license language with the offers selected in the North Star commercial pass.
+
+6. **Approve and deploy the real price and offer strategy.**
+   - Review camera and AI price ladders.
+   - After approval, update pricing, regenerate catalog/Worker artifacts, deploy the Worker, and run one low-value live proof purchase.
+   - Use live checkout rehearsal data to revise prices and offer copy.
+
+7. **Improve public discovery and SEO.**
+   - Add richer per-gallery/per-photo metadata, Open Graph images, canonical URLs, structured data, and focused campaign metadata.
+   - Keep Owner-only workflow details out of public page metadata.
+   - Let market research decide which galleries, subjects, and search terms get attention first.
+
+8. **Promote the Track B NewOwner shell into real cloud workflows.**
+   - Replace remaining `track-b-cloud-shell-check` probes with real queued action types; the cloud queue already supports recent-action listing for Max/David reload continuity.
+   - Enrich the `sidecar-culling-review` review workspace with thumbnails/previews, gallery/routing assignment, and clearer staged-decision audit feedback.
+   - Reuse the same browser-mediated connector pattern for Apple Photos import and Real Estate source operations without moving source files into the public repo.
+   - Prioritize Apple Photos intake, sellable storefront expansion, and protected download workflows ahead of hypothetical verticals.
+
+9. **Run a full Real Estate client rehearsal.**
+   - Import/publish/upload one client property set.
+   - Save a selection, generate PDF/video, reopen from mobile, rename, and delete a throwaway product.
+   - Confirm the client-facing offer feels coherent enough to sell as a service.
+   - Keep this behind the public photo-store intake priority unless a real RE client opportunity appears.
+
+10. **Extend audience groups into real gallery access flows.**
+   - Add production invitation flows described in `docs/architecture/access-invitations.md`: email invites, share links, and QR-code invite URLs.
+   - Let any authenticated person with active access to a given fixture/group invite others into that same scope when member invites are enabled.
+   - Do not let ordinary members un-invite, revoke, disable, or grant broader roles; Owner/Admin keeps pending-invite revocation, accepted-membership disable/revoke, expiry, and audit controls.
+   - Store invitation records in D1 with opaque token hashes, expiry, accept limits, inviter identity, invitee email when address-bound, and acceptance provenance on resulting memberships.
+   - Add a public `/invite/<token>` accept page that requires Google sign-in, validates email binding/link scope/group state, creates group membership, and redirects to the assigned gallery.
+   - Use ACS V8 gallery defaults and Worker policy decisions as the policy source for watermark, sale, download, PDF, video, member-original, and Owner-original preview behavior when public/event/RE gallery routes begin enforcing group access.
+   - Default family/event groups toward member invites; keep Real Estate groups Owner/Admin-only unless a specific client is intentionally allowed to propagate access.
+
+11. **Bring Etsy listing publishing online.**
+   - Etsy API access is approved and smoke-tested locally.
+   - Build the first listing-publisher pass as dry-run/draft payload generation from public catalog data and watermarked public previews only.
+   - Use it only where market research suggests Etsy can drive incremental revenue.
+
+12. **Add a guarded checkout discount code for low-cost live payment rehearsals.**
+   - Keep validation server-side in the checkout Worker.
+   - Preserve Stripe minimum-charge, stale-basket, and availability checks.
+   - Record original subtotal, discount, and paid total in order state.
+
+13. **Create a compact post-upload health dashboard.**
+   - Summarize picked approvals, covered R2 keys, uploadable rows, blocked rows, catalog registration candidates, and public catalog counts.
+   - Use Owner SQLite and public SQLite as the authoritative sources.
+   - Surface commercial readiness: sellable item count, protected download health, and gallery publication status.
+
+14. **Add a supported retry/reset command for Upload Bridge export blocks.**
    - Replace ad hoc SQL block clearing with a maintenance command.
    - It should clear selected active export blocks, retry through the normal bridge path, and optionally reset persistent failures to review.
    - Keep audit artifacts and Owner SQLite as the durable state path.
 
-2. **Improve Sidecar review visibility for source/export failures.**
+15. **Improve Sidecar review visibility for source/export failures.**
    - Surface `source-export-failed` rows with a clear status pill and review filter.
    - Show the last PhotoKit/local fallback error in the detail panel.
    - Provide a safe "ready to retry" action only after source repair.
 
-3. **Tighten Upload Bridge metadata guard UX.**
+16. **Tighten Upload Bridge metadata guard UX.**
    - Show why a row is metadata-blocked before queueing.
    - Keep the generic-title/no-gallery block list visible in the Upload Bridge rail.
    - Add a direct jump from a blocked row to metadata review.
 
-4. **Create a compact post-upload health dashboard.**
-   - Summarize picked approvals, covered R2 keys, uploadable rows, blocked rows, catalog registration candidates, and public catalog counts.
-   - Use Owner SQLite and public SQLite as the authoritative sources.
+17. **Finish source re-export de-duplication and cleanup.**
+   - Use full source pathname plus modified date as the import anchor.
+   - Same-path newer exports should overwrite previous generated masters, public previews, and private JPG triplets instead of creating duplicates.
+   - Audit duplicate candidates before deleting anything.
 
-5. **Finish source re-export de-duplication and cleanup.**
-    - Use full source pathname plus modified date as the import anchor.
-    - Same-path newer exports should overwrite previous generated masters, public previews, and private JPG triplets instead of creating duplicates.
-    - Audit duplicate candidates before deleting anything.
+18. **Add import source history management.**
+   - Let Owner remove stale remembered folders, pin favorites, and inspect last-used path/time.
+   - Keep `Owner.sqlite` authoritative; do not add another JSON state source.
 
-6. **Add import source history management.**
-    - Let Owner remove stale remembered folders, pin favorites, and inspect last-used path/time.
-    - Keep `Owner.sqlite` authoritative; do not add another JSON state source.
+19. **Keep repo/media cleanup deliberate.**
+   - Follow `docs/sops/REPO_MEDIA_CLEANUP_SOP.md`.
+   - Do not use GitHub as a media vault.
+   - Protect `assets/catalog/photosbyelie.sqlite` as the active public catalog artifact.
+   - Keep local Owner DB state out of git.
 
-7. **Review buyer support, refund, and license wording.**
-    - Use `docs/commerce/PRICE_OFFER_STRATEGY.md` as the current policy draft.
-    - Make delivery/recovery expectations explicit before heavier public traffic.
-
-8. **Approve and deploy the real price and offer strategy.**
-    - Review camera and AI price ladders.
-    - After approval, update pricing, regenerate catalog/Worker artifacts, deploy the Worker, and run one low-value live proof purchase.
-
-9. **Curate the first sellable storefront.**
-    - Apply strong title/keyword approvals.
-    - Block unsellable rows.
-    - Pick featured collections and hero images.
-    - Put the strongest commercial/travel/editorial sets first.
-
-10. **Improve public discovery and SEO.**
-    - Add richer per-gallery/per-photo metadata, Open Graph images, canonical URLs, structured data, and focused campaign metadata.
-    - Keep Owner-only workflow details out of public page metadata.
-
-11. **Run a full Real Estate client rehearsal.**
-    - Import/publish/upload one client property set.
-    - Save a selection, generate PDF/video, reopen from mobile, rename, and delete a throwaway product.
-
-12. **Bring Etsy listing publishing online.**
-    - Etsy API access is approved and smoke-tested locally.
-    - Build the first listing-publisher pass as dry-run/draft payload generation from public catalog data and watermarked public previews only.
-
-13. **Add a guarded checkout discount code for low-cost live payment rehearsals.**
-    - Keep validation server-side in the checkout Worker.
-    - Preserve Stripe minimum-charge, stale-basket, and availability checks.
-    - Record original subtotal, discount, and paid total in order state.
-
-14. **Keep repo/media cleanup deliberate.**
-    - Follow `docs/sops/REPO_MEDIA_CLEANUP_SOP.md`.
-    - Do not use GitHub as a media vault.
-    - Protect `assets/catalog/photosbyelie.sqlite` as the active public catalog artifact.
-    - Keep local Owner DB state out of git.
-
-15. **Exercise and harden the D1-backed sandbox Access Console V8.**
-    - Current V8 cloud backend is deployed with real cloud/D1 read-write paths, immediate D1-backed auth/session reads, audience groups, real-gallery picker/defaults, group create/edit/archive, group membership workbench, people filters, effective-access preview, gallery-permission preview, Worker policy testing, capability metadata, and audit/undo for reversible person/group access changes.
-    - ACS9 front-end rehearsal adds selected-group invitations for email, copyable link, and QR payloads; this is a UI/design rehearsal until the D1 invitation tables and public accept routes are implemented.
-    - Keep `ec92009@gmail.com` as the bootstrap break-glass admin during the D1 auth migration.
-    - Exercise people, roles, group create/edit/archive, bulk add/revoke memberships, and reversible writes from the browser before granting real non-fixture users.
-    - Keep clearly marked fixture people and event/group records with fake `.test` email addresses so role assignment and event access flows can be rehearsed without granting real people.
-    - Snapshot before mutations, append audit entries, and prefer disable/revoke over hard delete.
-
-16. **Extend audience groups into real gallery access flows.**
-    - Add production invitation flows described in `docs/architecture/access-invitations.md`: email invites, share links, and QR-code invite URLs.
-    - Let any authenticated person with active access to a given fixture/group invite others into that same scope when member invites are enabled.
-    - Do not let ordinary members un-invite, revoke, disable, or grant broader roles; Owner/Admin keeps pending-invite revocation, accepted-membership disable/revoke, expiry, and audit controls.
-    - Store invitation records in D1 with opaque token hashes, expiry, accept limits, inviter identity, invitee email when address-bound, and acceptance provenance on resulting memberships.
-    - Add a public `/invite/<token>` accept page that requires Google sign-in, validates email binding/link scope/group state, creates group membership, and redirects to the assigned gallery.
-    - Use ACS V8 gallery defaults and Worker policy decisions as the policy source for watermark, sale, download, PDF, video, member-original, and Owner-original preview behavior when public/event/RE gallery routes begin enforcing group access.
-    - Default family/event groups toward member invites; keep Real Estate groups Owner/Admin-only unless a specific client is intentionally allowed to propagate access.
-
-17. **Promote the Track B NewOwner shell into real cloud workflows.**
-    - Replace remaining `track-b-cloud-shell-check` probes with real queued action types; the cloud queue already supports recent-action listing for Max/David reload continuity.
-    - Enrich the `sidecar-culling-review` review workspace with thumbnails/previews, gallery/routing assignment, and clearer staged-decision audit feedback.
-    - Reuse the same browser-mediated connector pattern for Apple Photos import and Real Estate source operations without moving source files into the public repo.
+20. **Exercise and harden the D1-backed sandbox Access Console V8.**
+   - Current V8 cloud backend is deployed with real cloud/D1 read-write paths, immediate D1-backed auth/session reads, audience groups, real-gallery picker/defaults, group create/edit/archive, group membership workbench, people filters, effective-access preview, gallery-permission preview, Worker policy testing, capability metadata, and audit/undo for reversible person/group access changes.
+   - ACS9 front-end rehearsal adds selected-group invitations for email, copyable link, and QR payloads; this is a UI/design rehearsal until the D1 invitation tables and public accept routes are implemented.
+   - Keep `ec92009@gmail.com` as the bootstrap break-glass admin during the D1 auth migration.
+   - Exercise people, roles, group create/edit/archive, bulk add/revoke memberships, and reversible writes from the browser before granting real non-fixture users.
+   - Keep clearly marked fixture people and event/group records with fake `.test` email addresses so role assignment and event access flows can be rehearsed without granting real people.
+   - Snapshot before mutations, append audit entries, and prefer disable/revoke over hard delete.
 
 ## Validation Before Publishing
 

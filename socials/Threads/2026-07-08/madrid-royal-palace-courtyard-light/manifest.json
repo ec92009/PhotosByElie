@@ -1,0 +1,86 @@
+{
+  "platform": "Threads",
+  "title": "Madrid Royal Palace Courtyard Light",
+  "campaign_id": "instagram-madrid-royal-palace-courtyard-light-2026-07-08",
+  "caption": "Madrid Royal Palace Courtyard Light in four Photos By Elie frames. Browse: https://photos-by-elie.com/campaign.html?c=instagram-madrid-royal-palace-courtyard-light-2026-07-08",
+  "notes": [
+    "Derived from the Instagram package for a 3-4 image Threads carousel.",
+    "Images are public watermarked R2 previews staged for upload/API publishing."
+  ],
+  "items": [
+    {
+      "media_id": "001-04c0fcd857",
+      "order": 1,
+      "id": "001-04c0fcd857",
+      "title": "2025 Royal Palace of Madrid",
+      "collection": "spain",
+      "location": "Royal Palace of Madrid, Madrid, Community of Madrid, Spain",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/001-04c0fcd857_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/001-04c0fcd857_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=001-04c0fcd857",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=001-04c0fcd857",
+      "image": "images/01-001-04c0fcd857-madrid-royal-palace-courtyard-light.jpg",
+      "local_staged_path": "socials/Threads/2026-07-08/madrid-royal-palace-courtyard-light/images/01-001-04c0fcd857-madrid-royal-palace-courtyard-light.jpg"
+    },
+    {
+      "media_id": "001-0b6ab2f8be",
+      "order": 2,
+      "id": "001-0b6ab2f8be",
+      "title": "2025 Royal Palace of Madrid",
+      "collection": "spain",
+      "location": "Royal Palace of Madrid, Madrid, Community of Madrid, Spain",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/001-0b6ab2f8be_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/001-0b6ab2f8be_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=001-0b6ab2f8be",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=001-0b6ab2f8be",
+      "image": "images/02-001-0b6ab2f8be-madrid-royal-palace-courtyard-light.jpg",
+      "local_staged_path": "socials/Threads/2026-07-08/madrid-royal-palace-courtyard-light/images/02-001-0b6ab2f8be-madrid-royal-palace-courtyard-light.jpg"
+    },
+    {
+      "media_id": "001-0bf694676e",
+      "order": 3,
+      "id": "001-0bf694676e",
+      "title": "2025 Royal Palace of Madrid",
+      "collection": "spain",
+      "location": "Royal Palace of Madrid, Madrid, Community of Madrid, Spain",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/001-0bf694676e_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/001-0bf694676e_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=001-0bf694676e",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=001-0bf694676e",
+      "image": "images/03-001-0bf694676e-madrid-royal-palace-courtyard-light.jpg",
+      "local_staged_path": "socials/Threads/2026-07-08/madrid-royal-palace-courtyard-light/images/03-001-0bf694676e-madrid-royal-palace-courtyard-light.jpg"
+    },
+    {
+      "media_id": "001-179edea53d",
+      "order": 4,
+      "id": "001-179edea53d",
+      "title": "2025 Royal Palace of Madrid",
+      "collection": "spain",
+      "location": "Royal Palace of Madrid, Madrid, Community of Madrid, Spain",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/001-179edea53d_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/001-179edea53d_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=001-179edea53d",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=001-179edea53d",
+      "image": "images/04-001-179edea53d-madrid-royal-palace-courtyard-light.jpg",
+      "local_staged_path": "socials/Threads/2026-07-08/madrid-royal-palace-courtyard-light/images/04-001-179edea53d-madrid-royal-palace-courtyard-light.jpg"
+    }
+  ],
+  "status": "prepared",
+  "account": "ec92009",
+  "post_type": "carousel",
+  "available_count": 4,
+  "date": "2026-07-08",
+  "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-madrid-royal-palace-courtyard-light-2026-07-08",
+  "recommended_upload_set": "images",
+  "manual_blockers": [
+    "Publish pending: review socials/Threads/2026-07-08/madrid-royal-palace-courtyard-light/manifest.json and use the Threads browser/API workflow."
+  ]
+}

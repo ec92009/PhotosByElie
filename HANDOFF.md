@@ -20,6 +20,7 @@ for remote execution.
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
 - Current public catalog: `7,813` media rows.
 - Current gallery counts: AI `5,100`, France `379`, Italy `70`, Mexico `31`, Portugal `214`, Slovakia `2`, Spain `1,872`, USA `145`.
+- Public GitHub Pages verification: `v125.0` gallery pages load, public catalog serves `7,813` rows, and repaired AI stained-glass plus Benalmadena Aquarium preview/video media URLs return HTTP 200.
 - Queue health after cleanup:
   - Upload Bridge uploadable count: `0`.
   - Upload Bridge active blocked approved rows: `0`.
@@ -46,13 +47,13 @@ python3 scripts/sidecar_state_db.py --upload-bridge-plan
 python3 scripts/sidecar_maintenance.py register-uploaded-catalog --dry-run
 ```
 
-- Next catalog action: verify public gallery counts and repaired previews after GitHub Pages updates.
+- Next action: run one Owner title/keyword save smoke test on localhost and confirm the SQLite catalog plus generated Worker catalog stay in sync.
 
 - Sidecar PhotoKit automation must launch through the permission-bearing app bundle, `~/Applications/PhotosByElie Photos Bridge.app`, via LaunchServices. Do not call `swift scripts/apple_photos_bridge.swift` or the bare bundle executable for scheduled Sidecar automation.
 - Approved Upload Bridge rows with generic titles and no country/gallery signal should be blocked from queueing until metadata is repaired.
 - Owner quick previews now fall back to the same public media URL a regular visitor receives when original source files cannot be resolved.
 - Owner title/keyword edits for SQLite-backed catalog rows should write through the localhost helper to `assets/catalog/photosbyelie.sqlite` and regenerate the Worker catalog; the old TSV writer path is not the authority.
-- Public deploy verification after GitHub Pages catches up: confirm public `v125.0`, Italy `70`, repaired portrait previews, and regular-user quick preview behavior.
+- Public deploy verification after the catalog publish is complete: public `v125.0` loads, AI `5,100`, Spain `1,872`, Italy `70`, repaired portrait previews, and Benalmadena Aquarium video previews are verified.
 
 ## Historical Handoff: 2026-06-21 Direct Google Auth / Max Testing
 

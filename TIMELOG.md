@@ -544,8 +544,9 @@ Clock state: running
 | 2026-07-08 | 08:05 CEST | 08:15 CEST | 0:06 | Repaired the 24 source-export-failed Sidecar rows from external picGen PNG originals, uploaded R2 masters/previews, approved/re-queued/unblocked them, and refreshed backlog/handoff notes; upload runtime excluded. |
 | 2026-07-08 | 08:16 CEST | 08:17 CEST | 0:01 | Reviewed the refreshed backlog and expanded the next catalog-registration item. |
 | 2026-07-08 | 08:18 CEST | 08:24 CEST | 0:06 | Registered 43 uploaded Sidecar rows into the public catalog, normalized 63 unpicked/proposed rows back to unreviewed, verified clean catalog/upload state, and refreshed backlog/handoff notes; command/runtime excluded. |
+| 2026-07-08 | 08:51 CEST | 09:00 CEST | 0:04 | Published the Sidecar catalog registration to `main`, waited for GitHub Pages to serve the new catalog, verified public counts/previews, and refreshed backlog/handoff notes; push and Pages wait time excluded. |
 
 ## Totals
 
-Active collaboration time used: 27:42
+Active collaboration time used: 27:46
 Remaining budget: not set

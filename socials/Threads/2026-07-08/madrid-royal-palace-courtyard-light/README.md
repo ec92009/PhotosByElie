@@ -1,10 +1,8 @@
 # Threads - 2026-07-08 - Madrid Royal Palace Courtyard Light
 
-Status: prepared
+Status: published
 Destination: https://photos-by-elie.com/campaign.html?c=instagram-madrid-royal-palace-courtyard-light-2026-07-08
-
-Manual blockers:
-- Publish pending: review socials/Threads/2026-07-08/madrid-royal-palace-courtyard-light/manifest.json and use the Threads browser/API workflow.
+Published URL: https://www.threads.com/@ec92009/post/DahC3MpjMgJ
 
 Caption:
 

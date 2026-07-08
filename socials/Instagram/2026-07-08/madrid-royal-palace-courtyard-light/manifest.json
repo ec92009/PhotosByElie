@@ -139,14 +139,28 @@
     }
   ],
   "date": "2026-07-08",
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-madrid-royal-palace-courtyard-light-2026-07-08",
   "recommended_upload_set": "images",
   "available_count": 8,
-  "manual_blockers": [
-    "Publish pending: review socials/Instagram/2026-07-08/madrid-royal-palace-courtyard-light/manifest.json and use the Instagram browser/API workflow.",
-    "Instagram feed captions are not clickable; update the profile website link or use a Story link sticker before posting."
-  ]
+  "manual_blockers": [],
+  "published_url": "https://www.instagram.com/p/DahCvi2DEfV/",
+  "published": {
+    "platform": "instagram",
+    "account": "ec92009",
+    "media_id": "18133877911608524",
+    "permalink": "https://www.instagram.com/p/DahCvi2DEfV/",
+    "timestamp": "2026-07-08T03:09:59+0000",
+    "username": "ec92009",
+    "media_type": "CAROUSEL_ALBUM",
+    "image_count": 8
+  },
+  "verification": {
+    "permalink": "https://www.instagram.com/p/DahCvi2DEfV/",
+    "child_count": 8,
+    "graph_readback_at": "2026-07-08T03:12:19.662Z",
+    "note": "Instagram Graph readback verified CAROUSEL_ALBUM with 8 children; caption has no raw URL."
+  }
 }

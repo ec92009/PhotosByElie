@@ -4,8 +4,8 @@ Status: prepared
 Destination: https://photos-by-elie.com/campaign.html?c=pinterest-gibraltar-rock-mediterranean-light-2026-07-08
 
 Manual blockers:
-- Publish pending: review socials/Pinterest/2026-07-08/gibraltar-rock-mediterranean-light/manifest.json and use the Pinterest browser/API workflow.
-- Pinterest publish pending: choose the board and publish one Pin per staged image or use the prepared browser upload set.
+- Pinterest publish pending: token file ~/.config/photosbyelie/pinterest-token.json is missing and no board ID mapping is configured.
+- Manual Pin Builder/API target: Spain Travel Photography; use the staged exactly-five-image package.
 
 Caption:
 

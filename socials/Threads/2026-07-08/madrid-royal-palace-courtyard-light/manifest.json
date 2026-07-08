@@ -73,14 +73,30 @@
       "local_staged_path": "socials/Threads/2026-07-08/madrid-royal-palace-courtyard-light/images/04-001-179edea53d-madrid-royal-palace-courtyard-light.jpg"
     }
   ],
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "available_count": 4,
   "date": "2026-07-08",
   "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-madrid-royal-palace-courtyard-light-2026-07-08",
   "recommended_upload_set": "images",
-  "manual_blockers": [
-    "Publish pending: review socials/Threads/2026-07-08/madrid-royal-palace-courtyard-light/manifest.json and use the Threads browser/API workflow."
-  ]
+  "manual_blockers": [],
+  "published_url": "https://www.threads.com/@ec92009/post/DahC3MpjMgJ",
+  "published": {
+    "platform": "threads",
+    "account": "ec92009",
+    "threads_user_id": "36227075590239114",
+    "media_id": "18102011198159249",
+    "permalink": "https://www.threads.com/@ec92009/post/DahC3MpjMgJ",
+    "timestamp": "2026-07-08T03:11:01+0000",
+    "username": "ec92009",
+    "media_type": "CAROUSEL_ALBUM",
+    "image_count": 4
+  },
+  "verification": {
+    "permalink": "https://www.threads.com/@ec92009/post/DahC3MpjMgJ",
+    "child_count": 4,
+    "graph_readback_at": "2026-07-08T03:12:19.662Z",
+    "note": "Threads Graph readback verified CAROUSEL_ALBUM with 4 children. API flow had no browser link-preview removal step."
+  }
 }

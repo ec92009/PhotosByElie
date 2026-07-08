@@ -1,11 +1,8 @@
 # Instagram - 2026-07-08 - Madrid Royal Palace Courtyard Light
 
-Status: prepared
+Status: published
 Destination: https://photos-by-elie.com/campaign.html?c=instagram-madrid-royal-palace-courtyard-light-2026-07-08
-
-Manual blockers:
-- Publish pending: review socials/Instagram/2026-07-08/madrid-royal-palace-courtyard-light/manifest.json and use the Instagram browser/API workflow.
-- Instagram feed captions are not clickable; update the profile website link or use a Story link sticker before posting.
+Published URL: https://www.instagram.com/p/DahCvi2DEfV/
 
 Caption:
 

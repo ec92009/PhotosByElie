@@ -1,13 +1,17 @@
 # Daily Social Package - 2026-07-08
 
-Status: prepared
+Status: published_partial
 Visible version: v130.0
 
 ## Facebook: Ronda White Town and Gorge Light
 
-- Status: prepared
+- Status: published
 - Destination: https://photos-by-elie.com/campaign.html?c=facebook-ronda-white-town-gorge-light-2026-07-08
-- Manual blockers: Publish pending: review socials/Facebook/2026-07-08/ronda-white-town-and-gorge-light/manifest.json and use the Facebook browser/API workflow.
+- Published URL: https://www.facebook.com/122102168061334672/posts/122109833313334672
+
+Caption:
+
+Ronda in white walls, deep gorge views, and Andalusian light, curated as an eight-image Photos By Elie wall-art edit. Browse the set: https://photos-by-elie.com/campaign.html?c=facebook-ronda-white-town-gorge-light-2026-07-08
 
 | # | Media id | Source URL | Local image |
 | ---: | --- | --- | --- |
@@ -22,9 +26,15 @@ Visible version: v130.0
 
 ## Instagram: Madrid Royal Palace Courtyard Light
 
-- Status: prepared
+- Status: published
 - Destination: https://photos-by-elie.com/campaign.html?c=instagram-madrid-royal-palace-courtyard-light-2026-07-08
-- Manual blockers: Publish pending: review socials/Instagram/2026-07-08/madrid-royal-palace-courtyard-light/manifest.json and use the Instagram browser/API workflow. | Instagram feed captions are not clickable; update the profile website link or use a Story link sticker before posting.
+- Published URL: https://www.instagram.com/p/DahCvi2DEfV/
+
+Caption:
+
+Madrid Royal Palace in courtyard rhythm, carved stone, and quiet Spanish light, edited into eight Photos By Elie wall-art frames. Browse the edit from the profile link.
+
+#PhotosByElie #Madrid #TravelPhotography #WallArt
 
 | # | Media id | Source URL | Local image |
 | ---: | --- | --- | --- |
@@ -41,7 +51,11 @@ Visible version: v130.0
 
 - Status: prepared
 - Destination: https://photos-by-elie.com/campaign.html?c=pinterest-gibraltar-rock-mediterranean-light-2026-07-08
-- Manual blockers: Publish pending: review socials/Pinterest/2026-07-08/gibraltar-rock-mediterranean-light/manifest.json and use the Pinterest browser/API workflow. | Pinterest publish pending: choose the board and publish one Pin per staged image or use the prepared browser upload set.
+- Manual blockers: Pinterest publish pending: token file ~/.config/photosbyelie/pinterest-token.json is missing and no board ID mapping is configured. | Manual Pin Builder/API target: Spain Travel Photography; use the staged exactly-five-image package.
+
+Caption:
+
+Gibraltar rock, bay, and Mediterranean edges in five Photos By Elie wall-art frames. Browse the set: https://photos-by-elie.com/campaign.html?c=pinterest-gibraltar-rock-mediterranean-light-2026-07-08
 
 | # | Media id | Source URL | Local image |
 | ---: | --- | --- | --- |
@@ -53,9 +67,13 @@ Visible version: v130.0
 
 ## Threads: Madrid Royal Palace Courtyard Light
 
-- Status: prepared
+- Status: published
 - Destination: https://photos-by-elie.com/campaign.html?c=instagram-madrid-royal-palace-courtyard-light-2026-07-08
-- Manual blockers: Publish pending: review socials/Threads/2026-07-08/madrid-royal-palace-courtyard-light/manifest.json and use the Threads browser/API workflow.
+- Published URL: https://www.threads.com/@ec92009/post/DahC3MpjMgJ
+
+Caption:
+
+Madrid Royal Palace Courtyard Light in four Photos By Elie frames. Browse: https://photos-by-elie.com/campaign.html?c=instagram-madrid-royal-palace-courtyard-light-2026-07-08
 
 | # | Media id | Source URL | Local image |
 | ---: | --- | --- | --- |
@@ -63,3 +81,9 @@ Visible version: v130.0
 | 2 | `001-0b6ab2f8be` | https://download.photos-by-elie.com/media/expo/001-0b6ab2f8be_1800.jpg | socials/Threads/2026-07-08/madrid-royal-palace-courtyard-light/images/02-001-0b6ab2f8be-madrid-royal-palace-courtyard-light.jpg |
 | 3 | `001-0bf694676e` | https://download.photos-by-elie.com/media/expo/001-0bf694676e_1800.jpg | socials/Threads/2026-07-08/madrid-royal-palace-courtyard-light/images/03-001-0bf694676e-madrid-royal-palace-courtyard-light.jpg |
 | 4 | `001-179edea53d` | https://download.photos-by-elie.com/media/expo/001-179edea53d_1800.jpg | socials/Threads/2026-07-08/madrid-royal-palace-courtyard-light/images/04-001-179edea53d-madrid-royal-palace-courtyard-light.jpg |
+
+## Etsy companion
+
+- Status: prepared review packages only; no Etsy drafts created.
+- Planned payloads: 20 `jpg-6mp` listings under `assets/owner-actions/etsy-listing-packages/2026-07-08/`.
+- Blocker: `ETSY_KEYSTRING` is unavailable in this runner; draft creation remains unattempted.

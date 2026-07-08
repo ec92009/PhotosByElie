@@ -1,10 +1,8 @@
 # Facebook - 2026-07-08 - Ronda White Town and Gorge Light
 
-Status: prepared
+Status: published
 Destination: https://photos-by-elie.com/campaign.html?c=facebook-ronda-white-town-gorge-light-2026-07-08
-
-Manual blockers:
-- Publish pending: review socials/Facebook/2026-07-08/ronda-white-town-and-gorge-light/manifest.json and use the Facebook browser/API workflow.
+Published URL: https://www.facebook.com/122102168061334672/posts/122109833313334672
 
 Caption:
 

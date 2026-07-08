@@ -8,12 +8,13 @@ GitHub carries code, safe metadata, SOPs, and handoff notes; private Owner DB
 snapshots and client artifacts move through private R2; SSH/Codex Remote SSH is
 for remote execution.
 
-## Current Handoff: 2026-07-08 Sidecar Upload/Catalog Cleanup
+## Current Handoff: 2026-07-08 Apple Photos Intake Prep
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Branch: `codex/new-owner-foundation`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Local preview: `http://localhost:8000/`
+- Helper-backed Owner intake URL on this Mac: `http://localhost:8001/owner.html?tab=imports`
 - Current visible build: `v125.0`
 - Sidecar local build: `v126.2`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
@@ -29,6 +30,14 @@ for remote execution.
   - Picked AI metadata candidate count: `0`.
   - Uploaded-catalog registration dry-run: `2,719` candidates, `0` would register, all `already_in_catalog`.
   - Public catalog SQLite integrity: `ok`.
+- Intake prep checkpoint:
+  - `python3 scripts/local_server.py 8001 --bind 127.0.0.1` is the correct local helper surface for Apple Photos intake; the plain LAN/static server on port `8000` can show Owner but cannot run the Apple Photos helper endpoints.
+  - The helper-backed Owner Imports page is open in the Built-in Browser at `http://localhost:8001/owner.html?tab=imports`.
+  - The installed permission-bearing app bundle exists at `~/Applications/PhotosByElie Photos Bridge.app`, version `126.2`, bundle id `com.photosbyelie.photos-bridge`.
+  - The current local Sidecar Apple Photos index has `57,497` available assets: `56,000` photos and `1,497` videos, ranging from `1947-05-09T20:09:49Z` to `2026-07-07T18:06:01Z`.
+  - Owner Apple Photos helper now launches `~/Applications/PhotosByElie Photos Bridge.app` through LaunchServices and reads a `--result-destination` JSON file; this fixes the previous false Photos-permission failure caused by raw `swift scripts/apple_photos_bridge.swift` using the wrong TCC identity.
+  - Apple Photos album scan is working through the Owner helper: `187` albums returned (`165` regular, `22` smart).
+  - The Built-in Browser is parked with `2018 Paris` selected and dry-run complete: `318` assets checked, `263` import candidates, `55` burst-filtered, `0` blocked/unsupported. The next button would materialize assets and start the Expo import/upload path, so get explicit operator approval before clicking `Import to Expo`.
 - Review backlog created by this cleanup:
   - `20` unknown-gallery/generic-title rows are resolved: `19` Benalmadena Aquarium videos are approved/picked, and `1` unsupported WhatsApp still is tombstoned.
   - `24` persistent Photos export failures are repaired from verified external picGen PNG originals, uploaded to R2 in run `ub-20260708T061127Z-325f39ae`, approved/picked, re-queued, unblocked, and registered in the public catalog.
@@ -51,7 +60,8 @@ python3 scripts/sidecar_maintenance.py register-uploaded-catalog --dry-run
 - North Star is official at `docs/architecture/north-star.md`: the project compass is to make money from Photos By Elie through tested offers, secure paid/private access, market research, and real public/RE/family/event workflows. The near-term priority is the `57K+` Apple Photos library intake-to-sellable-catalog path; Real Estate, family sharing, and private event sales are valuable but secondary unless a real opportunity appears. `AGENTS.md` now tells future Codex sessions to warn when work drifts from that compass.
 - Owner title/keyword save smoke passed on localhost helper port `8001`: row `001-0116ccd189` temporarily changed from `Benalmadena Aquarium` / `Spain` to `Benalmadena Aquarium Smoke Check` / `Spain, Aquarium`, SQLite and `worker/photos-catalog.generated.mjs` both reflected the edit, and the row was restored. The catalog DB and Worker catalog were restored byte-for-byte from the pre-smoke backup after verification.
 - Real Estate output assembly is now cloud-contract backed and deployed in Worker version `6f67bc40-8b92-4ded-aa68-defeb40a7ca7`: the client queues PDF/video jobs to the Worker, the Worker stores a durable R2 job record with the saved selection manifest, each pending deliverable records its output key and future view/download URLs, and `/real-estate/deliverables/jobs/<jobId>` reports current status plus failure detail from the deliverable records. The browser probes the job status after queueing so the shelf reflects pending/ready/needs-attention without local PDF/video rendering.
-- Next action: add a supported retry/reset command for Upload Bridge export blocks so future block clearing uses a named maintenance path instead of ad hoc SQL.
+- Next Apple Photos intake action: on `http://localhost:8001/owner.html?tab=imports`, import the selected `2018 Paris` dry-run batch only after explicit operator approval, then monitor the Expo import/R2 task through the Owner Imports page.
+- Deferred hygiene action: add a supported retry/reset command for Upload Bridge export blocks so future block clearing uses a named maintenance path instead of ad hoc SQL.
 
 - Sidecar PhotoKit automation must launch through the permission-bearing app bundle, `~/Applications/PhotosByElie Photos Bridge.app`, via LaunchServices. Do not call `swift scripts/apple_photos_bridge.swift` or the bare bundle executable for scheduled Sidecar automation.
 - Approved Upload Bridge rows with generic titles and no country/gallery signal should be blocked from queueing until metadata is repaired.

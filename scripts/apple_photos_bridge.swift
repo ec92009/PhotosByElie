@@ -23,6 +23,22 @@ func printJSON(_ value: Any) {
     FileHandle.standardOutput.write("\n".data(using: .utf8)!)
 }
 
+func writeResultJSON(_ value: Any) {
+    guard let resultDestination = argValue("--result-destination") else { return }
+    let resultURL = URL(fileURLWithPath: resultDestination)
+    do {
+        try FileManager.default.createDirectory(at: resultURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try jsonData(value).write(to: resultURL, options: .atomic)
+    } catch {
+        // stdout remains the fallback for direct development runs.
+    }
+}
+
+func outputJSON(_ value: Any) {
+    writeResultJSON(value)
+    printJSON(value)
+}
+
 let progressOutputLock = NSLock()
 
 func emitProgress(_ event: String, _ payload: [String: Any]) {
@@ -47,7 +63,7 @@ func normalizedProgress(_ progress: Double) -> Double {
 typealias AssetProgressHandler = (_ progress: Double, _ status: String, _ elapsedSeconds: Double?) -> Void
 
 func fail(_ code: String, _ message: String, status: Int32 = 1) -> Never {
-    printJSON(["ok": false, "code": code, "error": message])
+    outputJSON(["ok": false, "code": code, "error": message])
     exit(status)
 }
 
@@ -1843,7 +1859,7 @@ func materializeOne(asset: PHAsset, destination: URL, allowIcloudDownloads: Bool
 
 let command = CommandLine.arguments.dropFirst().first ?? ""
 if command.isEmpty || command == "--help" {
-    printJSON(["ok": true, "usage": "apple_photos_bridge.swift albums | library-index [--limit N] [--offset N] [--date-from YYYY-MM-DD] [--date-to YYYY-MM-DD] | library-index-file --destination PATH [--date-from YYYY-MM-DD] [--date-to YYYY-MM-DD] [--progress-every N] | preview --asset-id ID --destination PATH [--max-pixel N] | video --asset-id ID --destination PATH | preflight --album-id ID [--filter-bursts] [--allow-icloud-downloads] | export --album-id ID --destination PATH [--filter-bursts] [--allow-icloud-downloads] | materialize-one --asset-id ID --destination PATH [--allow-icloud-downloads] [--result-destination PATH]"])
+    outputJSON(["ok": true, "usage": "apple_photos_bridge.swift albums | library-index [--limit N] [--offset N] [--date-from YYYY-MM-DD] [--date-to YYYY-MM-DD] | library-index-file --destination PATH [--date-from YYYY-MM-DD] [--date-to YYYY-MM-DD] [--progress-every N] | preview --asset-id ID --destination PATH [--max-pixel N] | video --asset-id ID --destination PATH | preflight --album-id ID [--filter-bursts] [--allow-icloud-downloads] | export --album-id ID --destination PATH [--filter-bursts] [--allow-icloud-downloads] | materialize-one --asset-id ID --destination PATH [--allow-icloud-downloads] [--result-destination PATH]"])
     exit(0)
 }
 
@@ -1852,9 +1868,9 @@ requirePhotosAccess()
 do {
     switch command {
     case "albums":
-        printJSON(["ok": true, "albums": fetchAlbums().map(albumSummary)])
+        outputJSON(["ok": true, "albums": fetchAlbums().map(albumSummary)])
     case "library-index":
-        printJSON(libraryIndex(
+        outputJSON(libraryIndex(
             limit: intArg("--limit", default: 120),
             offset: intArg("--offset", default: 0),
             dateFrom: parseISODateArg(argValue("--date-from")),
@@ -1864,7 +1880,7 @@ do {
         guard let destination = argValue("--destination") else {
             fail("missing_destination", "Missing --destination for Apple Photos library index file.")
         }
-        printJSON(try writeLibraryIndexFile(
+        outputJSON(try writeLibraryIndexFile(
             destination: URL(fileURLWithPath: destination),
             dateFrom: parseISODateArg(argValue("--date-from")),
             dateTo: parseISODateArg(argValue("--date-to")),
@@ -1875,7 +1891,7 @@ do {
             fail("missing_destination", "Missing --destination for Apple Photos preview.")
         }
         let asset = try findAsset(id: argValue("--asset-id"))
-        printJSON(try writePreviewJPEG(
+        outputJSON(try writePreviewJPEG(
             asset: asset,
             destination: URL(fileURLWithPath: destination),
             maxPixel: intArg("--max-pixel", default: 900)
@@ -1885,31 +1901,26 @@ do {
             fail("missing_destination", "Missing --destination for Apple Photos video preview.")
         }
         let asset = try findAsset(id: argValue("--asset-id"))
-        printJSON(try writeVideoResource(
+        outputJSON(try writeVideoResource(
             asset: asset,
             destination: URL(fileURLWithPath: destination)
         ))
     case "preflight":
         let album = try findAlbum(id: argValue("--album-id"), name: argValue("--album-name"))
-        printJSON(preflight(album: album, limit: intArg("--limit"), filterBursts: boolArg("--filter-bursts"), allowIcloudDownloads: boolArg("--allow-icloud-downloads")))
+        outputJSON(preflight(album: album, limit: intArg("--limit"), filterBursts: boolArg("--filter-bursts"), allowIcloudDownloads: boolArg("--allow-icloud-downloads")))
     case "export":
         guard let destination = argValue("--destination") else {
             fail("missing_destination", "Missing --destination for Apple Photos export.")
         }
         let album = try findAlbum(id: argValue("--album-id"), name: argValue("--album-name"))
-        printJSON(try materialize(album: album, destination: URL(fileURLWithPath: destination), limit: intArg("--limit"), filterBursts: boolArg("--filter-bursts"), allowIcloudDownloads: boolArg("--allow-icloud-downloads")))
+        outputJSON(try materialize(album: album, destination: URL(fileURLWithPath: destination), limit: intArg("--limit"), filterBursts: boolArg("--filter-bursts"), allowIcloudDownloads: boolArg("--allow-icloud-downloads")))
     case "materialize-one":
         guard let destination = argValue("--destination") else {
             fail("missing_destination", "Missing --destination for Apple Photos single-asset materialization.")
         }
         let asset = try findAsset(id: argValue("--asset-id"))
         let payload = try materializeOne(asset: asset, destination: URL(fileURLWithPath: destination), allowIcloudDownloads: boolArg("--allow-icloud-downloads"))
-        if let resultDestination = argValue("--result-destination") {
-            let resultURL = URL(fileURLWithPath: resultDestination)
-            try FileManager.default.createDirectory(at: resultURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try jsonData(payload).write(to: resultURL, options: .atomic)
-        }
-        printJSON(payload)
+        outputJSON(payload)
     default:
         fail("bad_command", "Unknown Apple Photos bridge command: \(command)", status: 2)
     }

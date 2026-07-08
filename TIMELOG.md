@@ -548,8 +548,10 @@ Clock state: running
 | 2026-07-08 | 09:09 CEST | 09:10 CEST | 0:01 | Ran the Owner title/keyword localhost save smoke test and refreshed backlog/handoff notes; command/runtime excluded. |
 | 2026-07-08 | 09:17 CEST | 09:18 CEST | 0:01 | Directed the Real Estate cloud-side output assembly contract slice; implementation/test runtime excluded. |
 | 2026-07-08 | 09:20 CEST | 09:21 CEST | 0:01 | Made the Photos By Elie North Star official and reprioritized the backlog around commercial offer validation, with Apple Photos intake as the near-term inventory priority; implementation time excluded. |
+| 2026-07-08 | 09:45 CEST | 09:54 CEST | 0:09 | Prepared the Apple Photos intake starting point: audited Sidecar/catalog readiness, started the helper-backed Owner server, opened the Owner Imports page, identified the Photos Bridge macOS permission blocker, and refreshed handoff notes; command/runtime excluded. |
+| 2026-07-08 | 09:58 CEST | 10:06 CEST | 0:08 | Fixed Owner Apple Photos intake to use the permission-bearing Photos Bridge app bundle, verified 187 albums through the helper, and dry-ran the 2018 Paris album; command/runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 27:49
+Active collaboration time used: 28:06
 Remaining budget: not set

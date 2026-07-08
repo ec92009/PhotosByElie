@@ -98,6 +98,9 @@ REAL_ESTATE_SOURCE_ROOT = Path("/Volumes/Saturn/Pictures/RE")
 REAL_ESTATE_MEDIA_EXTENSIONS = {".jpg", ".jpeg", ".mov", ".mp4", ".m4v"}
 IMPORT_SOURCE_THUMB_ROOT = Path(".review-logs/import-source-thumbs")
 APPLE_PHOTOS_BRIDGE = Path("scripts/apple_photos_bridge.swift")
+APPLE_PHOTOS_BRIDGE_APP_INSTALLER = Path("scripts/install_sidecar_photos_bridge_app.zsh")
+APPLE_PHOTOS_BRIDGE_APP = Path.home() / "Applications" / "PhotosByElie Photos Bridge.app"
+APPLE_PHOTOS_BRIDGE_APP_EXECUTABLE = APPLE_PHOTOS_BRIDGE_APP / "Contents" / "MacOS" / "PhotosByElie Photos Bridge"
 APPLE_PHOTOS_IMPORT_ROOT = Path("tmp/apple-photos-import")
 APPLE_PHOTOS_ALBUM_CACHE_TTL_SECONDS = 12 * 60 * 60
 APPLE_PHOTOS_ALBUMS_CACHE: dict[str, object] = {"payload": None, "loaded_at": 0.0}
@@ -8386,25 +8389,79 @@ def _run_apple_photos_bridge_streaming(repo_root: Path, command: list[str], prog
     return payload
 
 
+def _ensure_apple_photos_bridge_app(repo_root: Path) -> None:
+    installer = repo_root / APPLE_PHOTOS_BRIDGE_APP_INSTALLER
+    bridge_source = repo_root / APPLE_PHOTOS_BRIDGE
+    if not installer.exists():
+        raise RuntimeError(f"Photos Bridge app installer is missing: {installer}")
+    if not bridge_source.exists():
+        raise RuntimeError(f"Apple Photos bridge is missing: {bridge_source}")
+    needs_build = not APPLE_PHOTOS_BRIDGE_APP_EXECUTABLE.exists()
+    if not needs_build:
+        try:
+            needs_build = bridge_source.stat().st_mtime > APPLE_PHOTOS_BRIDGE_APP_EXECUTABLE.stat().st_mtime
+        except OSError:
+            needs_build = True
+    if not needs_build:
+        return
+    result = subprocess.run(
+        ["zsh", str(installer)],
+        cwd=repo_root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        message = (result.stderr or result.stdout or f"Photos Bridge installer exited {result.returncode}").strip()
+        raise RuntimeError(message)
+
+
 def _run_apple_photos_bridge(repo_root: Path, args: list[str], *, progress_id: str = "") -> dict:
-    bridge = repo_root / APPLE_PHOTOS_BRIDGE
-    if not bridge.exists():
-        raise RuntimeError(f"Apple Photos bridge is missing: {bridge}")
-    command = ["swift", str(bridge), *args]
+    _ensure_apple_photos_bridge_app(repo_root)
     progress_id = _clean_apple_photos_progress_id(progress_id)
-    if progress_id:
-        return _run_apple_photos_bridge_streaming(repo_root, command, progress_id)
-    try:
-        result = subprocess.run(command, cwd=repo_root, text=True, capture_output=True, timeout=900, check=False)
-    except FileNotFoundError as error:
-        raise RuntimeError("Swift is required for the Apple Photos PhotoKit bridge. Install Xcode Command Line Tools.") from error
-    output = (result.stdout or "").strip()
+    with tempfile.TemporaryDirectory(prefix="pbe-photos-bridge-result-") as result_dir:
+        result_path = Path(result_dir) / "result.json"
+        command = [
+            "open",
+            "-W",
+            "-n",
+            str(APPLE_PHOTOS_BRIDGE_APP),
+            "--args",
+            *args,
+            "--result-destination",
+            str(result_path),
+        ]
+        try:
+            result = subprocess.run(command, cwd=repo_root, text=True, capture_output=True, timeout=900, check=False)
+        except FileNotFoundError as error:
+            raise RuntimeError("macOS open is required to launch the bundled Apple Photos bridge.") from error
+        except subprocess.TimeoutExpired:
+            if progress_id:
+                _finish_apple_photos_import_progress(progress_id, "failed", {
+                    "error": "Photos Bridge app timed out while exporting assets.",
+                })
+            return {
+                "ok": False,
+                "error": "Photos Bridge app timed out while exporting assets.",
+                "code": "photos_bridge_timeout",
+            }
+        output = ""
+        if result_path.exists():
+            output = result_path.read_text(encoding="utf-8").strip()
+        elif result.stdout:
+            output = result.stdout.strip()
     payload = json.loads(output or "{}")
     if result.returncode != 0 and payload.get("ok") is not False:
-        message = (result.stderr or output or f"Apple Photos bridge exited {result.returncode}").strip()
+        message = (result.stderr or result.stdout or output or f"Photos Bridge app exited {result.returncode}").strip()
         return {"ok": False, "error": message, "code": "photos_bridge_error"}
     if result.stderr and payload.get("ok") is False:
         payload.setdefault("stderr", result.stderr.strip())
+    if not payload and not output:
+        return {
+            "ok": False,
+            "error": "Photos Bridge app did not write a result payload.",
+            "code": "photos_bridge_empty_result",
+        }
     return payload
 
 

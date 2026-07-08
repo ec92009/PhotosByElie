@@ -48,7 +48,8 @@ python3 scripts/sidecar_maintenance.py register-uploaded-catalog --dry-run
 ```
 
 - For another machine, the public catalog/docs bundle is on `main`; sync ignored/private `Owner.sqlite` through the private Owner-state path only if that machine needs the local Sidecar cleanup state.
-- Next action: run one Owner title/keyword save smoke test on localhost and confirm the SQLite catalog plus generated Worker catalog stay in sync.
+- Owner title/keyword save smoke passed on localhost helper port `8001`: row `001-0116ccd189` temporarily changed from `Benalmadena Aquarium` / `Spain` to `Benalmadena Aquarium Smoke Check` / `Spain, Aquarium`, SQLite and `worker/photos-catalog.generated.mjs` both reflected the edit, and the row was restored. The catalog DB and Worker catalog were restored byte-for-byte from the pre-smoke backup after verification.
+- Next action: add a supported retry/reset command for Upload Bridge export blocks so future block clearing uses a named maintenance path instead of ad hoc SQL.
 
 - Sidecar PhotoKit automation must launch through the permission-bearing app bundle, `~/Applications/PhotosByElie Photos Bridge.app`, via LaunchServices. Do not call `swift scripts/apple_photos_bridge.swift` or the bare bundle executable for scheduled Sidecar automation.
 - Approved Upload Bridge rows with generic titles and no country/gallery signal should be blocked from queueing until metadata is repaired.

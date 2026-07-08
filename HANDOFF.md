@@ -8,7 +8,7 @@ GitHub carries code, safe metadata, SOPs, and handoff notes; private Owner DB
 snapshots and client artifacts move through private R2; SSH/Codex Remote SSH is
 for remote execution.
 
-## Current Handoff: 2026-07-05 Sidecar Upload/Catalog Cleanup
+## Current Handoff: 2026-07-08 Sidecar Upload/Catalog Cleanup
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Branch: `main`
@@ -18,19 +18,20 @@ for remote execution.
 - Sidecar local build: `v126.2`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
-- Current public catalog: `7,770` media rows.
-- Current gallery counts: AI `5,076`, France `379`, Italy `70`, Mexico `31`, Portugal `214`, Slovakia `2`, Spain `1,853`, USA `145`.
+- Current public catalog: `7,813` media rows.
+- Current gallery counts: AI `5,100`, France `379`, Italy `70`, Mexico `31`, Portugal `214`, Slovakia `2`, Spain `1,872`, USA `145`.
 - Queue health after cleanup:
   - Upload Bridge uploadable count: `0`.
   - Upload Bridge active blocked approved rows: `0`.
   - Upload Bridge missing key count: `0`.
+  - Upload Bridge blocked export failures: `0`.
   - Picked AI metadata candidate count: `0`.
-  - Uploaded-catalog registration dry-run: `2,676` candidates, all `already_in_catalog`.
+  - Uploaded-catalog registration dry-run: `2,719` candidates, `0` would register, all `already_in_catalog`.
   - Public catalog SQLite integrity: `ok`.
 - Review backlog created by this cleanup:
-  - `20` unknown-gallery/generic-title rows are back in unpicked rework with `gallery-signal` notes.
-  - `24` persistent Photos export failures are back in unpicked rework with `source-export-failed` notes.
-  - `63` unpicked/proposed rows are harmless but state-untidy; decide whether to keep proposals as context or normalize them.
+  - `20` unknown-gallery/generic-title rows are resolved: `19` Benalmadena Aquarium videos are approved/picked, and `1` unsupported WhatsApp still is tombstoned.
+  - `24` persistent Photos export failures are repaired from verified external picGen PNG originals, uploaded to R2 in run `ub-20260708T061127Z-325f39ae`, approved/picked, re-queued, unblocked, and registered in the public catalog.
+  - `63` unpicked/proposed rows are normalized back to `unreviewed`; their proposed title/keyword context remains available in Owner SQLite.
 - Latest closeout commits before this docs handoff:
   - `3c58fe88 photosbyelie: harden sidecar upload workflow`
   - `9154ef16 photosbyelie: refresh public catalog and owner surfaces`
@@ -44,6 +45,8 @@ python3 scripts/sidecar_maintenance.py picked-ai-plan
 python3 scripts/sidecar_state_db.py --upload-bridge-plan
 python3 scripts/sidecar_maintenance.py register-uploaded-catalog --dry-run
 ```
+
+- Next catalog action: verify public gallery counts and repaired previews after GitHub Pages updates.
 
 - Sidecar PhotoKit automation must launch through the permission-bearing app bundle, `~/Applications/PhotosByElie Photos Bridge.app`, via LaunchServices. Do not call `swift scripts/apple_photos_bridge.swift` or the bare bundle executable for scheduled Sidecar automation.
 - Approved Upload Bridge rows with generic titles and no country/gallery signal should be blocked from queueing until metadata is repaired.

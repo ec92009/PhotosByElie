@@ -16,7 +16,7 @@ for remote execution.
 - Local preview: `http://localhost:8000/`
 - Helper-backed Owner intake URL on this Mac: `http://localhost:8001/owner.html?tab=imports`
 - Current visible build: `v125.0`
-- Sidecar local build: `v126.4`
+- Sidecar local build: `v126.5`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
 - Current public catalog: `7,813` media rows.
@@ -40,6 +40,7 @@ for remote execution.
   - The Owner Imports page proved Apple Photos album preflight with `2018 Paris` selected and dry-run complete: `318` assets checked, `263` import candidates, `55` burst-filtered, `0` blocked/unsupported. This direct Expo materialization path is now secondary; do not click `Import to Expo` for the North Star intake pass unless Elie explicitly chooses the legacy/direct path.
   - The active intake direction is Sidecar sandbox culling first, newest-to-oldest from the indexed Apple Photos library. No album selector is needed for the first pass.
   - Sidecar is running on this Mac in tmux session `photosbyelie-sidecar` at `http://localhost:8011/sidecar.html`; the Built-in Browser is parked on the Culling tab with `96` visible previews, `57,497` indexed assets, and the first batch sorted from `2026-07-07` backward.
+  - Sidecar v126.5 fixes RAW-origin preview color by preferring PhotoKit current rendered JPEG data before falling back to older image render/resource paths; verified on `20221216 172145 01113.jpg`.
 - Review backlog created by this cleanup:
   - `20` unknown-gallery/generic-title rows are resolved: `19` Benalmadena Aquarium videos are approved/picked, and `1` unsupported WhatsApp still is tombstoned.
   - `24` persistent Photos export failures are repaired from verified external picGen PNG originals, uploaded to R2 in run `ub-20260708T061127Z-325f39ae`, approved/picked, re-queued, unblocked, and registered in the public catalog.

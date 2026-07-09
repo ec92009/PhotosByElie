@@ -557,8 +557,10 @@ Clock state: running
 | 2026-07-09 | 04:11 CEST | 04:12 CEST | 0:01 | Ran the scheduled Sidecar Photos index sync with the bundled Photos Bridge app; scan/runtime excluded. |
 | 2026-07-09 | 10:15 CEST | 10:17 CEST | 0:02 | Added and browser-verified the Sidecar quick-view metadata panel for camera/location/format/size; implementation runtime excluded. |
 | 2026-07-09 | 12:58 CEST | 13:01 CEST | 0:03 | Fixed and browser-tested Sidecar culling selection so disappearing cards advance to the adjacent logical neighbor; QA decisions were cleaned from local state. |
+| 2026-07-09 | 19:44 CEST | 19:47 CEST | 0:03 | Reviewed highest-risk test coverage and added checkout authorization/webhook boundary tests; test runtime excluded. |
+| 2026-07-09 | 21:17 CEST | 21:20 CEST | 0:03 | Diagnosed and fixed the Sidecar RAW-origin preview color shift for `20221216 172145 01113.jpg`; rebuild/server test runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 28:18
+Active collaboration time used: 28:24
 Remaining budget: not set

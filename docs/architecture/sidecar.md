@@ -10,7 +10,7 @@ metadata; Owner decides publication and commerce.
 
 Sidecar has its own local visible version in `SIDECAR_VERSION`.
 
-- Current Sidecar version: `v126.4`
+- Current Sidecar version: `v126.5`
 - Versioning follows the canonical `~/Dev/.SOPs/VERSIONING_SOP.md` default
   calendar visible-version rule for this local web-app surface.
 - Sidecar version bumps do not imply a public Photos By Elie site version bump.
@@ -23,7 +23,9 @@ Sidecar v0 uses the existing repo shape:
 - `scripts/sidecar_server.py`: localhost helper and JSON endpoints.
 - `scripts/sidecar_state_db.py`: Sidecar tables in `assets/owner-actions/Owner.sqlite`.
 - `scripts/apple_photos_bridge.swift`: PhotoKit bridge for metadata index scans,
-  compatibility library slices, and best-available local previews.
+  compatibility library slices, and best-available local previews. Still-image
+  previews prefer PhotoKit current rendered image data before older image/render
+  and local-resource fallbacks so RAW-origin JPEG previews retain Photos' color.
 - `~/Applications/PhotosByElie Photos Bridge.app`: the permission-bearing app
   bundle used by Sidecar for PhotoKit work.
 - `scripts/install_sidecar_dock_app.zsh` and `scripts/open_sidecar_main.py`:

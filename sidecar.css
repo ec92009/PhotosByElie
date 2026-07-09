@@ -1143,7 +1143,8 @@ button.is-busy,
 
 .sidecar-quick-look-card {
   display: grid;
-  gap: .65rem;
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, .34fr);
+  gap: .65rem 1.15rem;
   width: min(92vw, 1180px);
   max-height: 92vh;
   margin: 0;
@@ -1152,6 +1153,8 @@ button.is-busy,
 .sidecar-quick-look-media {
   position: relative;
   display: grid;
+  grid-column: 1;
+  grid-row: 1;
   min-height: min(64vh, 700px);
   place-items: center;
   overflow: hidden;
@@ -1190,6 +1193,7 @@ button.is-busy,
 .sidecar-quick-look-status {
   display: flex;
   flex-wrap: wrap;
+  grid-column: 1 / -1;
   justify-content: center;
   gap: .4rem;
   color: rgba(255, 255, 255, .9);
@@ -1262,6 +1266,7 @@ button.is-busy,
 .sidecar-quick-look-card figcaption {
   display: flex;
   flex-wrap: wrap;
+  grid-column: 1 / -1;
   justify-content: center;
   gap: .4rem .7rem;
   color: rgba(255, 255, 255, .9);
@@ -1272,6 +1277,45 @@ button.is-busy,
 
 .sidecar-quick-look-card figcaption span {
   color: rgba(255, 255, 255, .68);
+}
+
+.sidecar-quick-look-metadata {
+  display: grid;
+  grid-column: 2;
+  grid-row: 1;
+  align-self: center;
+  gap: .55rem;
+  margin: 0;
+}
+
+.sidecar-quick-look-metadata div {
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, .36);
+  padding: .65rem .75rem;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, .2);
+}
+
+.sidecar-quick-look-metadata dt,
+.sidecar-quick-look-metadata dd {
+  margin: 0;
+}
+
+.sidecar-quick-look-metadata dt {
+  color: rgba(255, 255, 255, .56);
+  font-size: .66rem;
+  font-weight: 900;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.sidecar-quick-look-metadata dd {
+  overflow-wrap: anywhere;
+  color: rgba(255, 255, 255, .94);
+  font-size: .92rem;
+  font-weight: 850;
+  line-height: 1.25;
 }
 
 .sidecar-mini-counts dd {
@@ -1616,6 +1660,26 @@ button.is-busy,
   .sidecar-editing-form,
   .sidecar-editing-actions {
     grid-column: 1 / -1;
+  }
+
+  .sidecar-quick-look-card {
+    grid-template-columns: 1fr;
+  }
+
+  .sidecar-quick-look-media,
+  .sidecar-quick-look-status,
+  .sidecar-quick-look-card figcaption,
+  .sidecar-quick-look-metadata {
+    grid-column: 1;
+  }
+
+  .sidecar-quick-look-media,
+  .sidecar-quick-look-metadata {
+    grid-row: auto;
+  }
+
+  .sidecar-quick-look-metadata {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
 }

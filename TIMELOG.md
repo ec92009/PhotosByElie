@@ -550,8 +550,14 @@ Clock state: running
 | 2026-07-08 | 09:20 CEST | 09:21 CEST | 0:01 | Made the Photos By Elie North Star official and reprioritized the backlog around commercial offer validation, with Apple Photos intake as the near-term inventory priority; implementation time excluded. |
 | 2026-07-08 | 09:45 CEST | 09:54 CEST | 0:09 | Prepared the Apple Photos intake starting point: audited Sidecar/catalog readiness, started the helper-backed Owner server, opened the Owner Imports page, identified the Photos Bridge macOS permission blocker, and refreshed handoff notes; command/runtime excluded. |
 | 2026-07-08 | 09:58 CEST | 10:06 CEST | 0:08 | Fixed Owner Apple Photos intake to use the permission-bearing Photos Bridge app bundle, verified 187 albums through the helper, and dry-ran the 2018 Paris album; command/runtime excluded. |
+| 2026-07-08 | 10:37 CEST | 10:40 CEST | 0:03 | Pivoted Apple Photos intake from direct Expo import to Sidecar sandbox culling, started the Sidecar helper, verified newest-first today-back batches, and refreshed handoff/backlog notes. |
+| 2026-07-08 | 14:18 CEST | 14:19 CEST | 0:01 | Reviewed the current fresh numbered backlog and expanded the Sidecar-first Apple Photos intake item. |
+| 2026-07-08 | 14:25 CEST | 14:26 CEST | 0:01 | Directed item #4 access-control hardening while away; implementation and test runtime excluded. |
+| 2026-07-08 | 16:14 CEST | 16:15 CEST | 0:01 | Directed continued item #4 hardening while away; implementation and test runtime excluded. |
+| 2026-07-09 | 04:11 CEST | 04:12 CEST | 0:01 | Ran the scheduled Sidecar Photos index sync with the bundled Photos Bridge app; scan/runtime excluded. |
+| 2026-07-09 | 10:15 CEST | 10:17 CEST | 0:02 | Added and browser-verified the Sidecar quick-view metadata panel for camera/location/format/size; implementation runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 28:06
+Active collaboration time used: 28:15
 Remaining budget: not set

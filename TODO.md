@@ -5,7 +5,7 @@ Last updated: 2026-07-08
 ## Current Facts
 
 - Public visible build: `v125.0`.
-- Sidecar local build: `v126.2`.
+- Sidecar local build: `v126.3`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`.
 - Local preview: `http://localhost:8000/`.
 - North Star: `docs/architecture/north-star.md`; the overarching goal is to make money from the enterprise by optimizing sellable offers, buyer/client trust, private access, and market learning.
@@ -21,8 +21,10 @@ Last updated: 2026-07-08
 - Upload Bridge active approvals are clean: `0` uploadable items, `0` active blocked approved items, `0` missing keys, `0` blocked export failures.
 - Picked-only Sidecar AI metadata queue is drained: `0` candidates.
 - Uploaded-catalog registration dry-run is clean: `2719` candidates, `0` would register, all `already_in_catalog`.
+- Paid/private access regression slice: central ticket `PBE-20260708-6FBE` tracks backlog item #4. Public order JSON now hides delivery ZIP/storage keys by default; deployed checkout/order/session payloads expose only Worker download-token URLs and buyer-facing file details. Real Estate deliverable/job/list responses now keep R2 output keys and source-video private keys internal while returning only status, failure detail, metadata, and authorized view/download URLs. `npm test` passes with coverage for unpaid token guesses, paid deployed downloads, wrong-account order access, 30-day redownload boundaries, Real Estate client scoping, Owner/Admin gates, Access Console admin-only writes, private R2 delivery missing-file blocks, and Real Estate public-payload leak checks.
 - Sidecar review cleanup backlog: the `20` unknown-gallery/generic-title reset rows are resolved (`19` Benalmadena Aquarium videos approved/picked, `1` unsupported WhatsApp still tombstoned); the `24` persistent Photos export failures are repaired from verified external picGen PNG originals, uploaded to R2, approved/picked, re-queued, unblocked, and registered in the public catalog; the `63` unpicked/proposed rows are normalized back to `unreviewed` while preserving their proposed title/keyword context.
 - Sidecar automation must use `~/Applications/PhotosByElie Photos Bridge.app` through LaunchServices for PhotoKit work. Do not call raw Swift or the bare bundle executable for scheduled Sidecar automation.
+- Sidecar quick view now shows a desktop side metadata panel with camera, location, format, and pixel size. Current Apple Photos index data supplies location/format/size when available; camera shows `not indexed` until EXIF/camera enrichment is added to the PhotoKit bridge/index.
 - Apple Photos with faces remains off limits.
 - Public pages use the shared visible site version; Sidecar has its own version in `SIDECAR_VERSION`.
 - `Owner.sqlite` remains ignored/local. Owner-action JSON files are compatibility views, audit files, or handoff artifacts, not primary workflow state when SQLite tables exist.
@@ -30,10 +32,13 @@ Last updated: 2026-07-08
 ## Fresh Numbered Backlog
 
 1. **Finish Apple Photos intake into a sellable public catalog.**
-   - Turn the `57K+` Apple Photos library into a repeatable intake, cull, metadata, upload, and publish pipeline.
+   - Use the Sidecar sandbox as the default first intake surface: newest-to-oldest from the indexed Apple Photos library, no album selector for the first pass.
+   - Cull in reasonable visible-preview batches before any Expo materialization or R2 upload.
+   - Turn picked survivors into a repeatable cull, metadata-review, Upload Bridge, catalog publish, and protected-download pipeline.
    - Prioritize photos and sets that can become public gallery/store inventory.
    - Keep local connector work limited to source access/export; durable decisions should land in Owner/NewOwner cloud or SQLite-backed state.
-   - Track counts from library candidates to approved, uploaded, cataloged, protected, and purchasable items.
+   - Track counts from library candidates to culled, picked, metadata-approved, uploaded, cataloged, protected, and purchasable items.
+   - Treat Owner direct `Import to Expo` as a secondary/legacy route unless Elie explicitly chooses it.
    - Use this as the main revenue unlock before spending heavily on hypothetical RE/family/event workflows.
 
 2. **Validate commercial offers and market positioning.**
@@ -51,10 +56,13 @@ Last updated: 2026-07-08
    - Use Apple Photos intake output as the main pool for storefront expansion.
 
 4. **Prove paid/private access cannot be bypassed.**
-   - Smoke-test unpaid users, paid users, 30-day re-downloads, RE clients, event attendees, family members, and Owner/Admin access.
-   - Verify private originals and paid downloads only flow through authorized Worker paths.
-   - Check that watermarked previews and public media remain usable without exposing protected assets.
-   - Record the test matrix before inviting real buyers or clients.
+   - Central ticket: `PBE-20260708-6FBE`.
+   - First Worker regression pass is complete: unpaid checkout/session/order state has no delivery object and guessed order/session/photo/`dl_`/`re_` tokens return `unknown_download`.
+   - Public checkout/order/session payloads now omit delivery storage keys, private object keys, render keys, source keys, mock signed URLs, and local ZIP paths by default; localhost local-server opt-in remains only for local ZIP workflow.
+   - Paid deployed Worker checkout still serves private R2 files only through `/download/<token>`; guessing the private R2 key as a token returns `404`.
+   - Real Estate deliverable save/list/job/status payloads now omit output storage keys, source-video private keys, private master fields, and cloud-source keys while the internal R2 job/deliverable records retain what the Worker needs to serve authorized ready assets.
+   - Existing coverage also verifies wrong-account order access, 30-day re-download boundaries, RE client scoping, Owner/Admin gates, Access Console admin-only writes, and private R2 missing-file checkout blocks.
+   - Remaining work: run a live/manual matrix before inviting real buyers or clients, including unpaid visitor, paid buyer, expired token, download-limit hit, RE client, event attendee, family member, Owner/Admin, and public watermarked-preview-only cases.
 
 5. **Review buyer support, refund, and license wording.**
    - Use `docs/commerce/PRICE_OFFER_STRATEGY.md` as the current policy draft.

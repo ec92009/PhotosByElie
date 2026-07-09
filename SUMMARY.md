@@ -7,7 +7,7 @@ Date: 2026-07-05
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Branch: `main`
 - Public visible version: `v125.0`
-- Sidecar version: `v126.2`
+- Sidecar version: `v126.3`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Local preview: `http://localhost:8000/`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
@@ -27,7 +27,7 @@ This thread started with the scheduled Sidecar picked-only AI metadata review an
 6. Fixed Owner title/keyword saves for SQLite-backed catalog rows. The local helper now updates `assets/catalog/photosbyelie.sqlite` directly and regenerates the Worker catalog instead of failing through the legacy TSV writer.
 7. Changed missing-original Owner quick previews to fall back to the same public media URL regular visitors receive, avoiding false Owner-only snappiness.
 8. Retried `27` blocked Upload Bridge exports. Three were already R2-covered; `24` persistent Photos export failures were moved back to unpicked review as `undecided/rework` with `source-export-failed` notes.
-9. Normalized public HTML versions and cache-busts to `v125.0`; Sidecar remains separately versioned at `v126.2`.
+9. Normalized public HTML versions and cache-busts to `v125.0`; Sidecar remains separately versioned at `v126.3`.
 10. Pruned stale Git worktree registrations, ignored the inactive local `Sidecar.sqlite`, committed all local changes, and pushed them to GitHub as part of this closeout request.
 
 ## Current Queue Health

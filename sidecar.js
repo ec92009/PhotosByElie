@@ -371,6 +371,54 @@
   };
   const mediaLabel = (item) => (isVideo(item) ? "" : "photo");
   const mediaLine = (item) => [formatDate(item.creationDate), mediaLabel(item)].filter(Boolean).join(" · ");
+  const compactLocationLabel = (item) => {
+    const label = String(item?.applePhotosMetadata?.locationLabel || "").trim();
+    if (label) return label.split(",").map((part) => part.trim()).find(Boolean) || label;
+    const latitude = Number(item?.location?.latitude);
+    const longitude = Number(item?.location?.longitude);
+    if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+      return `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+    }
+    return "not indexed";
+  };
+  const cameraLabel = (item) => {
+    const metadata = item?.cameraMetadata || item?.exifMetadata || item?.applePhotosMetadata?.camera || {};
+    const make = String(metadata.make || metadata.cameraMake || "").trim();
+    const model = String(metadata.model || metadata.cameraModel || metadata.lensModel || "").trim();
+    const label = [make, model].filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+    return label || "not indexed";
+  };
+  const resourceFormatLabel = (item) => {
+    const formats = Array.isArray(item?.resourceFormats) ? item.resourceFormats.filter(Boolean) : [];
+    const source = formats.length ? formats.join(" + ") : String(item?.resourceFormat || item?.preferredResourceFormat || "").trim();
+    const strategy = String(item?.exportStrategy || "").trim();
+    if (isVideo(item)) return source || "video";
+    if (strategy === "rendered_jpeg") return source ? `rendered JPG from ${source}` : "rendered JPG";
+    return source || "not indexed";
+  };
+  const pixelSizeLabel = (item) => {
+    const width = Number(item?.pixelWidth || 0);
+    const height = Number(item?.pixelHeight || 0);
+    return width && height ? `${width.toLocaleString()} x ${height.toLocaleString()}` : "not indexed";
+  };
+  const quickLookMetadata = (item) => {
+    const rows = [
+      ["Camera", cameraLabel(item)],
+      ["Location", compactLocationLabel(item)],
+      ["Format", resourceFormatLabel(item)],
+      ["Size", pixelSizeLabel(item)],
+    ];
+    return `
+      <dl class="sidecar-quick-look-metadata" aria-label="Photo metadata">
+        ${rows.map(([label, value]) => `
+          <div>
+            <dt>${escapeHtml(label)}</dt>
+            <dd>${escapeHtml(value)}</dd>
+          </div>
+        `).join("")}
+      </dl>
+    `;
+  };
   const captureTime = (item) => {
     const time = Date.parse(item?.creationDate || "");
     return Number.isFinite(time) ? time : Number.POSITIVE_INFINITY;
@@ -387,7 +435,7 @@
   const videoPlayerMarkup = (item, autoplay = true) => `
     <video class="sidecar-inline-video" controls playsinline preload="metadata" ${autoplay ? "autoplay" : ""} poster="${escapeHtml(previewUrl(item))}" src="${escapeHtml(videoUrl(item))}"></video>
   `;
-  const versionFallback = "126.2";
+  const versionFallback = "126.3";
   const versionFallbackLabel = `v${versionFallback}`;
   const videoBadge = (item, index, label) => isVideo(item)
     ? videoOverlay(item, index, label)
@@ -1494,6 +1542,7 @@
           <strong>${escapeHtml(label)}</strong>
           <span>${escapeHtml(mediaLine(item))}</span>
         </figcaption>
+        ${quickLookMetadata(item)}
       </figure>
     `;
     const existingQuickLook = $("[data-sidecar-quick-look]");

@@ -139,14 +139,40 @@
     }
   ],
   "date": "2026-07-09",
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-cordoba-mezquita-arches-light-2026-07-09",
   "recommended_upload_set": "images",
   "available_count": 8,
-  "manual_blockers": [
-    "Publish pending: review socials/Instagram/2026-07-09/cordoba-mezquita-arches-and-light/manifest.json and use the Instagram browser/API workflow.",
-    "Instagram feed captions are not clickable; update the profile website link or use a Story link sticker before posting."
-  ]
+  "manual_blockers": [],
+  "published_url": "https://www.instagram.com/p/DajnmVxDJGO/",
+  "published": {
+    "platform": "instagram",
+    "account": "ec92009",
+    "media_id": "18116438174305460",
+    "permalink": "https://www.instagram.com/p/DajnmVxDJGO/",
+    "timestamp": "2026-07-09T03:10:31+0000",
+    "username": "ec92009",
+    "media_type": "CAROUSEL_ALBUM",
+    "image_count": 8,
+    "child_creation_ids": [
+      "18604156318028900",
+      "18604156348028900",
+      "18604156369028900",
+      "18604156405028900",
+      "18604156423028900",
+      "18604156444028900",
+      "18604156465028900",
+      "18604156480028900"
+    ],
+    "carousel_creation_id": "18604156507028900"
+  },
+  "verification": {
+    "permalink": "https://www.instagram.com/p/DajnmVxDJGO/",
+    "child_count": 8,
+    "media_type": "CAROUSEL_ALBUM",
+    "graph_readback_at": "2026-07-09T03:13:08.299Z",
+    "note": "Instagram Graph API readback verified 8 carousel children; caption has no raw URL."
+  }
 }

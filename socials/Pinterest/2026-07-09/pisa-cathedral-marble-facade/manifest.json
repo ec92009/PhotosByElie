@@ -12,7 +12,8 @@
   },
   "notes": [
     "Pinterest package is capped at exactly five images.",
-    "Images are public watermarked R2 previews staged for upload/API publishing."
+    "Images are public watermarked R2 previews staged for upload/API publishing.",
+    "Pinterest package is exactly 5 images; publish is blocked only by missing Pinterest API token/board mapping."
   ],
   "items": [
     {
@@ -104,7 +105,6 @@
   "recommended_upload_set": "images",
   "available_count": 5,
   "manual_blockers": [
-    "Publish pending: review socials/Pinterest/2026-07-09/pisa-cathedral-marble-facade/manifest.json and use the Pinterest browser/API workflow.",
-    "Pinterest publish pending: choose the board and publish one Pin per staged image or use the prepared browser upload set."
+    "Pinterest remains prepared only: no ~/.config/photosbyelie/pinterest-token.json token file or board ID mapping is configured. Manual Pin Builder/API target should use this package and board recommendation Italy Travel Photography."
   ]
 }

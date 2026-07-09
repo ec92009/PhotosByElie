@@ -143,15 +143,39 @@
         }
       ],
       "date": "2026-07-09",
-      "status": "prepared",
+      "status": "published",
       "account": "Photos By Elie",
       "post_type": "multi_photo",
       "destination_url": "https://photos-by-elie.com/campaign.html?c=facebook-benalmadena-seaport-evening-color-2026-07-09",
       "recommended_upload_set": "images",
       "available_count": 8,
-      "manual_blockers": [
-        "Publish pending: review socials/Facebook/2026-07-09/benalmadena-seaport-evening-color/manifest.json and use the Facebook browser/API workflow."
-      ]
+      "manual_blockers": [],
+      "published_url": "https://www.facebook.com/122102168061334672/posts/122109955281334672",
+      "published": {
+        "platform": "facebook",
+        "account": "Photos By Elie",
+        "page_id": "1146747141854670",
+        "post_id": "1146747141854670_122109955281334672",
+        "permalink": "https://www.facebook.com/122102168061334672/posts/122109955281334672",
+        "timestamp": "2026-07-09T03:08:41+0000",
+        "image_count": 8,
+        "uploaded_photo_ids": [
+          "122109954885334672",
+          "122109954933334672",
+          "122109954981334672",
+          "122109955029334672",
+          "122109955071334672",
+          "122109955125334672",
+          "122109955173334672",
+          "122109955227334672"
+        ]
+      },
+      "verification": {
+        "permalink": "https://www.facebook.com/122102168061334672/posts/122109955281334672",
+        "subattachment_count": 8,
+        "graph_readback_at": "2026-07-09T03:13:08.299Z",
+        "note": "Graph API readback verified 8 photo subattachments."
+      }
     },
     {
       "platform": "Instagram",
@@ -294,16 +318,42 @@
         }
       ],
       "date": "2026-07-09",
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-cordoba-mezquita-arches-light-2026-07-09",
       "recommended_upload_set": "images",
       "available_count": 8,
-      "manual_blockers": [
-        "Publish pending: review socials/Instagram/2026-07-09/cordoba-mezquita-arches-and-light/manifest.json and use the Instagram browser/API workflow.",
-        "Instagram feed captions are not clickable; update the profile website link or use a Story link sticker before posting."
-      ]
+      "manual_blockers": [],
+      "published_url": "https://www.instagram.com/p/DajnmVxDJGO/",
+      "published": {
+        "platform": "instagram",
+        "account": "ec92009",
+        "media_id": "18116438174305460",
+        "permalink": "https://www.instagram.com/p/DajnmVxDJGO/",
+        "timestamp": "2026-07-09T03:10:31+0000",
+        "username": "ec92009",
+        "media_type": "CAROUSEL_ALBUM",
+        "image_count": 8,
+        "child_creation_ids": [
+          "18604156318028900",
+          "18604156348028900",
+          "18604156369028900",
+          "18604156405028900",
+          "18604156423028900",
+          "18604156444028900",
+          "18604156465028900",
+          "18604156480028900"
+        ],
+        "carousel_creation_id": "18604156507028900"
+      },
+      "verification": {
+        "permalink": "https://www.instagram.com/p/DajnmVxDJGO/",
+        "child_count": 8,
+        "media_type": "CAROUSEL_ALBUM",
+        "graph_readback_at": "2026-07-09T03:13:08.299Z",
+        "note": "Instagram Graph API readback verified 8 carousel children; caption has no raw URL."
+      }
     },
     {
       "platform": "Pinterest",
@@ -319,7 +369,8 @@
       },
       "notes": [
         "Pinterest package is capped at exactly five images.",
-        "Images are public watermarked R2 previews staged for upload/API publishing."
+        "Images are public watermarked R2 previews staged for upload/API publishing.",
+        "Pinterest package is exactly 5 images; publish is blocked only by missing Pinterest API token/board mapping."
       ],
       "items": [
         {
@@ -411,8 +462,7 @@
       "recommended_upload_set": "images",
       "available_count": 5,
       "manual_blockers": [
-        "Publish pending: review socials/Pinterest/2026-07-09/pisa-cathedral-marble-facade/manifest.json and use the Pinterest browser/API workflow.",
-        "Pinterest publish pending: choose the board and publish one Pin per staged image or use the prepared browser upload set."
+        "Pinterest remains prepared only: no ~/.config/photosbyelie/pinterest-token.json token file or board ID mapping is configured. Manual Pin Builder/API target should use this package and board recommendation Italy Travel Photography."
       ]
     },
     {
@@ -490,16 +540,40 @@
           "local_staged_path": "socials/Threads/2026-07-09/cordoba-mezquita-arches-and-light/images/04-img-1402-4c2c98e288-cordoba-mezquita-arches-and-light.jpg"
         }
       ],
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "available_count": 4,
       "date": "2026-07-09",
       "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-cordoba-mezquita-arches-light-2026-07-09",
       "recommended_upload_set": "images",
-      "manual_blockers": [
-        "Publish pending: review socials/Threads/2026-07-09/cordoba-mezquita-arches-and-light/manifest.json and use the Threads browser/API workflow."
-      ]
+      "manual_blockers": [],
+      "published_url": "https://www.threads.com/@ec92009/post/DajnsT2jHOD",
+      "published": {
+        "platform": "threads",
+        "account": "ec92009",
+        "threads_user_id": "36227075590239114",
+        "media_id": "17901792660467434",
+        "permalink": "https://www.threads.com/@ec92009/post/DajnsT2jHOD",
+        "timestamp": "2026-07-09T03:11:15+0000",
+        "username": "ec92009",
+        "media_type": "CAROUSEL_ALBUM",
+        "image_count": 4,
+        "child_creation_ids": [
+          "18090454283139106",
+          "18090454298139106",
+          "18090454313139106",
+          "18090454334139106"
+        ],
+        "carousel_creation_id": "18090454349139106"
+      },
+      "verification": {
+        "permalink": "https://www.threads.com/@ec92009/post/DajnsT2jHOD",
+        "child_count": 4,
+        "media_type": "CAROUSEL_ALBUM",
+        "graph_readback_at": "2026-07-09T03:13:08.299Z",
+        "note": "Threads Graph API readback verified 4 carousel children. API flow had no browser link-preview removal step."
+      }
     }
   ],
   "planning_notes": [
@@ -508,10 +582,54 @@
   ],
   "generated_at": "2026-07-09T03:04:42.440Z",
   "visible_version": "v131.0",
-  "status": "prepared",
+  "status": "published_partial",
   "themes": [
     "Benalmadena Seaport Evening Color",
     "Cordoba Mezquita Arches and Light",
     "Pisa Cathedral Marble Facade"
-  ]
+  ],
+  "publishing": {
+    "custom_domain_version": "131.0",
+    "custom_domain_checked_at": "2026-07-09T03:13:08.306Z",
+    "custom_domain_campaigns": [
+      "facebook-benalmadena-seaport-evening-color-2026-07-09",
+      "instagram-cordoba-mezquita-arches-light-2026-07-09",
+      "pinterest-pisa-cathedral-marble-facade-2026-07-09"
+    ],
+    "summary": "Published Facebook, Instagram, and Threads via authenticated APIs after custom-domain campaign manifests served VERSION 131.0; Pinterest remains prepared only."
+  },
+  "validation": [
+    "Public R2 HEAD checks passed for all 21 selected unique public preview URLs.",
+    "Facebook, Instagram, Threads, and Pinterest dry-runs passed before publishing.",
+    "Instagram/Threads aspect-ratio guard passed for the 4:3 Cordoba set.",
+    "npm test passed after local npm install in the temporary worktree.",
+    "npm run social:springboards:validate passed for the 2026-07-09 package.",
+    "git diff --check passed.",
+    "npm run validate still fails on broad pre-existing Owner/catalog visibility/sourceOrigin/AI-origin mismatches unrelated to today's package."
+  ],
+  "etsy": {
+    "status": "review_packages_generated_no_drafts",
+    "product": "jpg-6mp",
+    "taxonomy_id": 2078,
+    "total_ready_for_owner_review": 20,
+    "packages": [
+      {
+        "campaign_id": "facebook-benalmadena-seaport-evening-color-2026-07-09",
+        "ready_for_owner_review": 7,
+        "local_package": "assets/owner-actions/etsy-listing-packages/2026-07-09/facebook-benalmadena-seaport-evening-color-2026-07-09"
+      },
+      {
+        "campaign_id": "instagram-cordoba-mezquita-arches-light-2026-07-09",
+        "ready_for_owner_review": 8,
+        "local_package": "assets/owner-actions/etsy-listing-packages/2026-07-09/instagram-cordoba-mezquita-arches-light-2026-07-09"
+      },
+      {
+        "campaign_id": "pinterest-pisa-cathedral-marble-facade-2026-07-09",
+        "ready_for_owner_review": 5,
+        "local_package": "assets/owner-actions/etsy-listing-packages/2026-07-09/pinterest-pisa-cathedral-marble-facade-2026-07-09"
+      }
+    ],
+    "draft_ids": [],
+    "blocker": "No Etsy drafts were created: ETSY_KEYSTRING is unavailable in this runner, and current etsy:outlet tooling generates owner-review payloads but does not attach and verify one public listing image plus one approved buyer download file per draft. No listing fees were incurred."
+  }
 }

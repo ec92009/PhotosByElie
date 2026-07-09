@@ -73,14 +73,38 @@
       "local_staged_path": "socials/Threads/2026-07-09/cordoba-mezquita-arches-and-light/images/04-img-1402-4c2c98e288-cordoba-mezquita-arches-and-light.jpg"
     }
   ],
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "available_count": 4,
   "date": "2026-07-09",
   "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-cordoba-mezquita-arches-light-2026-07-09",
   "recommended_upload_set": "images",
-  "manual_blockers": [
-    "Publish pending: review socials/Threads/2026-07-09/cordoba-mezquita-arches-and-light/manifest.json and use the Threads browser/API workflow."
-  ]
+  "manual_blockers": [],
+  "published_url": "https://www.threads.com/@ec92009/post/DajnsT2jHOD",
+  "published": {
+    "platform": "threads",
+    "account": "ec92009",
+    "threads_user_id": "36227075590239114",
+    "media_id": "17901792660467434",
+    "permalink": "https://www.threads.com/@ec92009/post/DajnsT2jHOD",
+    "timestamp": "2026-07-09T03:11:15+0000",
+    "username": "ec92009",
+    "media_type": "CAROUSEL_ALBUM",
+    "image_count": 4,
+    "child_creation_ids": [
+      "18090454283139106",
+      "18090454298139106",
+      "18090454313139106",
+      "18090454334139106"
+    ],
+    "carousel_creation_id": "18090454349139106"
+  },
+  "verification": {
+    "permalink": "https://www.threads.com/@ec92009/post/DajnsT2jHOD",
+    "child_count": 4,
+    "media_type": "CAROUSEL_ALBUM",
+    "graph_readback_at": "2026-07-09T03:13:08.299Z",
+    "note": "Threads Graph API readback verified 4 carousel children. API flow had no browser link-preview removal step."
+  }
 }

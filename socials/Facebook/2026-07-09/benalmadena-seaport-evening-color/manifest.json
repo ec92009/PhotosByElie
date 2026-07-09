@@ -138,13 +138,37 @@
     }
   ],
   "date": "2026-07-09",
-  "status": "prepared",
+  "status": "published",
   "account": "Photos By Elie",
   "post_type": "multi_photo",
   "destination_url": "https://photos-by-elie.com/campaign.html?c=facebook-benalmadena-seaport-evening-color-2026-07-09",
   "recommended_upload_set": "images",
   "available_count": 8,
-  "manual_blockers": [
-    "Publish pending: review socials/Facebook/2026-07-09/benalmadena-seaport-evening-color/manifest.json and use the Facebook browser/API workflow."
-  ]
+  "manual_blockers": [],
+  "published_url": "https://www.facebook.com/122102168061334672/posts/122109955281334672",
+  "published": {
+    "platform": "facebook",
+    "account": "Photos By Elie",
+    "page_id": "1146747141854670",
+    "post_id": "1146747141854670_122109955281334672",
+    "permalink": "https://www.facebook.com/122102168061334672/posts/122109955281334672",
+    "timestamp": "2026-07-09T03:08:41+0000",
+    "image_count": 8,
+    "uploaded_photo_ids": [
+      "122109954885334672",
+      "122109954933334672",
+      "122109954981334672",
+      "122109955029334672",
+      "122109955071334672",
+      "122109955125334672",
+      "122109955173334672",
+      "122109955227334672"
+    ]
+  },
+  "verification": {
+    "permalink": "https://www.facebook.com/122102168061334672/posts/122109955281334672",
+    "subattachment_count": 8,
+    "graph_readback_at": "2026-07-09T03:13:08.299Z",
+    "note": "Graph API readback verified 8 photo subattachments."
+  }
 }

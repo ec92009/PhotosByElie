@@ -1,13 +1,13 @@
 # Daily Social Package - 2026-07-09
 
-Status: prepared
+Status: published_partial
 Visible version: v131.0
 
 ## Facebook: Benalmadena Seaport Evening Color
 
-- Status: prepared
+- Status: published
 - Destination: https://photos-by-elie.com/campaign.html?c=facebook-benalmadena-seaport-evening-color-2026-07-09
-- Manual blockers: Publish pending: review socials/Facebook/2026-07-09/benalmadena-seaport-evening-color/manifest.json and use the Facebook browser/API workflow.
+- Published URL: https://www.facebook.com/122102168061334672/posts/122109955281334672
 
 | # | Media id | Source URL | Local image |
 | ---: | --- | --- | --- |
@@ -22,9 +22,9 @@ Visible version: v131.0
 
 ## Instagram: Cordoba Mezquita Arches and Light
 
-- Status: prepared
+- Status: published
 - Destination: https://photos-by-elie.com/campaign.html?c=instagram-cordoba-mezquita-arches-light-2026-07-09
-- Manual blockers: Publish pending: review socials/Instagram/2026-07-09/cordoba-mezquita-arches-and-light/manifest.json and use the Instagram browser/API workflow. | Instagram feed captions are not clickable; update the profile website link or use a Story link sticker before posting.
+- Published URL: https://www.instagram.com/p/DajnmVxDJGO/
 
 | # | Media id | Source URL | Local image |
 | ---: | --- | --- | --- |
@@ -41,7 +41,7 @@ Visible version: v131.0
 
 - Status: prepared
 - Destination: https://photos-by-elie.com/campaign.html?c=pinterest-pisa-cathedral-marble-facade-2026-07-09
-- Manual blockers: Publish pending: review socials/Pinterest/2026-07-09/pisa-cathedral-marble-facade/manifest.json and use the Pinterest browser/API workflow. | Pinterest publish pending: choose the board and publish one Pin per staged image or use the prepared browser upload set.
+- Manual blockers: Pinterest remains prepared only: no ~/.config/photosbyelie/pinterest-token.json token file or board ID mapping is configured. Manual Pin Builder/API target should use this package and board recommendation Italy Travel Photography.
 
 | # | Media id | Source URL | Local image |
 | ---: | --- | --- | --- |
@@ -53,9 +53,9 @@ Visible version: v131.0
 
 ## Threads: Cordoba Mezquita Arches and Light
 
-- Status: prepared
+- Status: published
 - Destination: https://photos-by-elie.com/campaign.html?c=instagram-cordoba-mezquita-arches-light-2026-07-09
-- Manual blockers: Publish pending: review socials/Threads/2026-07-09/cordoba-mezquita-arches-and-light/manifest.json and use the Threads browser/API workflow.
+- Published URL: https://www.threads.com/@ec92009/post/DajnsT2jHOD
 
 | # | Media id | Source URL | Local image |
 | ---: | --- | --- | --- |
@@ -63,3 +63,21 @@ Visible version: v131.0
 | 2 | `img-1395-81cbfcb7d3` | https://download.photos-by-elie.com/media/expo/img-1395-81cbfcb7d3_1800.jpg | socials/Threads/2026-07-09/cordoba-mezquita-arches-and-light/images/02-img-1395-81cbfcb7d3-cordoba-mezquita-arches-and-light.jpg |
 | 3 | `img-1404-b704ed7a17` | https://download.photos-by-elie.com/media/expo/img-1404-b704ed7a17_1800.jpg | socials/Threads/2026-07-09/cordoba-mezquita-arches-and-light/images/03-img-1404-b704ed7a17-cordoba-mezquita-arches-and-light.jpg |
 | 4 | `img-1402-4c2c98e288` | https://download.photos-by-elie.com/media/expo/img-1402-4c2c98e288_1800.jpg | socials/Threads/2026-07-09/cordoba-mezquita-arches-and-light/images/04-img-1402-4c2c98e288-cordoba-mezquita-arches-and-light.jpg |
+
+## Validation
+
+- Public R2 HEAD checks passed for all 21 selected unique public preview URLs.
+- Facebook, Instagram, Threads, and Pinterest dry-runs passed before publishing.
+- Instagram/Threads aspect-ratio guard passed for the 4:3 Cordoba set.
+- npm test passed after local npm install in the temporary worktree.
+- npm run social:springboards:validate passed for the 2026-07-09 package.
+- git diff --check passed.
+- npm run validate still fails on broad pre-existing Owner/catalog visibility/sourceOrigin/AI-origin mismatches unrelated to today's package.
+
+## Etsy
+
+- Status: review_packages_generated_no_drafts
+- facebook-benalmadena-seaport-evening-color-2026-07-09: 7 review payloads, local package assets/owner-actions/etsy-listing-packages/2026-07-09/facebook-benalmadena-seaport-evening-color-2026-07-09
+- instagram-cordoba-mezquita-arches-light-2026-07-09: 8 review payloads, local package assets/owner-actions/etsy-listing-packages/2026-07-09/instagram-cordoba-mezquita-arches-light-2026-07-09
+- pinterest-pisa-cathedral-marble-facade-2026-07-09: 5 review payloads, local package assets/owner-actions/etsy-listing-packages/2026-07-09/pinterest-pisa-cathedral-marble-facade-2026-07-09
+- Blocker: No Etsy drafts were created: ETSY_KEYSTRING is unavailable in this runner, and current etsy:outlet tooling generates owner-review payloads but does not attach and verify one public listing image plus one approved buyer download file per draft. No listing fees were incurred.

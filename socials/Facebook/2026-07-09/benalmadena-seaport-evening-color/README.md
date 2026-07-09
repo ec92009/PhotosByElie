@@ -1,10 +1,8 @@
 # Facebook - 2026-07-09 - Benalmadena Seaport Evening Color
 
-Status: prepared
+Status: published
 Destination: https://photos-by-elie.com/campaign.html?c=facebook-benalmadena-seaport-evening-color-2026-07-09
-
-Manual blockers:
-- Publish pending: review socials/Facebook/2026-07-09/benalmadena-seaport-evening-color/manifest.json and use the Facebook browser/API workflow.
+Published URL: https://www.facebook.com/122102168061334672/posts/122109955281334672
 
 Caption:
 

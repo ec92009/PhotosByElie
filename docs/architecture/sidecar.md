@@ -10,7 +10,7 @@ metadata; Owner decides publication and commerce.
 
 Sidecar has its own local visible version in `SIDECAR_VERSION`.
 
-- Current Sidecar version: `v126.5`
+- Current Sidecar version: `v126.6`
 - Versioning follows the canonical `~/Dev/.SOPs/VERSIONING_SOP.md` default
   calendar visible-version rule for this local web-app surface.
 - Sidecar version bumps do not imply a public Photos By Elie site version bump.
@@ -26,6 +26,8 @@ Sidecar v0 uses the existing repo shape:
   compatibility library slices, and best-available local previews. Still-image
   previews prefer PhotoKit current rendered image data before older image/render
   and local-resource fallbacks so RAW-origin JPEG previews retain Photos' color.
+  Video previews fall back to a JPEG frame from the same local video resource
+  used by Quick Look when PhotoKit does not provide a poster.
 - `~/Applications/PhotosByElie Photos Bridge.app`: the permission-bearing app
   bundle used by Sidecar for PhotoKit work.
 - `scripts/install_sidecar_dock_app.zsh` and `scripts/open_sidecar_main.py`:
@@ -303,10 +305,12 @@ Sidecar has two primary pages backed by the same current window:
 
 Videos are first-class Sidecar review items. The UI marks video previews with a
 standard play icon and duration chip, filters photos/videos separately, asks
-PhotoKit for local poster frames without iCloud downloads, plays local videos in
-place when Photos can expose the video resource locally, starts video playback
-immediately in Quick Look with a muted fallback when browser autoplay policy
-requires it, and supports Space-bar Quick Look previews for the active item.
+PhotoKit for local poster frames without iCloud downloads, then derives a JPEG
+frame from the same local video resource used by Quick Look when PhotoKit has no
+usable poster. It plays local videos in place when Photos can expose the video
+resource locally, starts video playback immediately in Quick Look with a muted
+fallback when browser autoplay policy requires it, and supports Space-bar Quick
+Look previews for the active item.
 
 Source controls should include:
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env swift
 import AppKit
+import AVFoundation
 import CoreLocation
 import Foundation
 import ImageIO
@@ -740,23 +741,32 @@ func writePreviewJPEG(asset: PHAsset, destination: URL, maxPixel: Int) throws ->
             ? "Photos did not provide a local preview image."
             : "Photos only provided a tiny degraded preview image.")
     if asset.mediaType == .video {
-        if let smallPhotoKitPreview {
-            try FileManager.default.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try smallPhotoKitPreview.data.write(to: destination, options: .atomic)
-            let bitmap = smallPhotoKitPreview.bitmap
-            return [
-                "ok": true,
-                "mode": "preview",
-                "localIdentifier": asset.localIdentifier,
-                "destination": destination.path,
-                "bytes": smallPhotoKitPreview.data.count,
-                "pixelWidth": bitmap.pixelsWide,
-                "pixelHeight": bitmap.pixelsHigh,
-                "networkAccessAllowed": false,
-                "previewSource": "photokit_degraded_video_poster",
-            ]
+        switch writeLocalVideoPosterPreviewJPEG(asset, to: destination, maxPixel: pixel) {
+        case .success(let payload):
+            return payload
+        case .failure(let localPosterError):
+            if let smallPhotoKitPreview {
+                try FileManager.default.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try smallPhotoKitPreview.data.write(to: destination, options: .atomic)
+                let bitmap = smallPhotoKitPreview.bitmap
+                return [
+                    "ok": true,
+                    "mode": "preview",
+                    "localIdentifier": asset.localIdentifier,
+                    "destination": destination.path,
+                    "bytes": smallPhotoKitPreview.data.count,
+                    "pixelWidth": bitmap.pixelsWide,
+                    "pixelHeight": bitmap.pixelsHigh,
+                    "networkAccessAllowed": false,
+                    "previewSource": "photokit_degraded_video_poster",
+                    "localVideoPosterFallbackError": errorMessage(localPosterError),
+                ]
+            }
+            throw BridgeError(
+                code: "video_poster_unavailable",
+                message: "\(fallbackReason) Sidecar also could not derive a poster from the local video resource: \(errorMessage(localPosterError))"
+            )
         }
-        throw BridgeError(code: "preview_unavailable", message: "\(fallbackReason) Sidecar did not download the video from iCloud.")
     }
     if let resource = localImageResourceForJPEGFallback(asset),
        resourceFormat(resource) == "RAW",
@@ -817,6 +827,65 @@ func writePreviewJPEG(asset: PHAsset, destination: URL, maxPixel: Int) throws ->
             message: "\(fallbackReason) Local preview fallback also failed: \(errorMessage(fallbackError))"
         )
     }
+}
+
+func writeLocalVideoPosterPreviewJPEG(_ asset: PHAsset, to destination: URL, maxPixel: Int) -> Result<[String: Any], Error> {
+    guard let resource = preferredResource(asset) else {
+        return .failure(BridgeError(code: "video_resource_unavailable", message: "Photos did not expose a local video resource for this asset."))
+    }
+    let sourceURL = temporaryResourceURL(for: destination, resource: resource)
+    defer { try? FileManager.default.removeItem(at: sourceURL) }
+    switch writeResource(resource, to: sourceURL, allowIcloudDownloads: false, timeoutSeconds: 90) {
+    case .failure(let error):
+        return .failure(BridgeError(code: "video_resource_export_failed", message: "Could not export the local video resource for its poster frame: \(errorMessage(error))"))
+    case .success:
+        break
+    }
+
+    let video = AVURLAsset(url: sourceURL)
+    let generator = AVAssetImageGenerator(asset: video)
+    generator.appliesPreferredTrackTransform = true
+    let pixel = max(256, min(maxPixel, 1800))
+    generator.maximumSize = CGSize(width: pixel, height: pixel)
+    let durationSeconds = CMTimeGetSeconds(video.duration)
+    let posterSeconds = durationSeconds.isFinite && durationSeconds > 0
+        ? min(0.5, durationSeconds * 0.1)
+        : 0
+    var actualTime = CMTime.zero
+    let requestedTime = CMTime(seconds: posterSeconds, preferredTimescale: 600)
+    let image: CGImage
+    do {
+        image = try generator.copyCGImage(at: requestedTime, actualTime: &actualTime)
+    } catch {
+        return .failure(BridgeError(code: "video_poster_frame_failed", message: "Could not decode a still frame from the local video resource: \(errorMessage(error))"))
+    }
+    do {
+        try FileManager.default.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
+    } catch {
+        return .failure(error)
+    }
+    guard let jpeg = CGImageDestinationCreateWithURL(destination as CFURL, "public.jpeg" as CFString, 1, nil) else {
+        return .failure(BridgeError(code: "jpeg_destination_failed", message: "Could not create the video poster JPEG destination."))
+    }
+    let properties: [CFString: Any] = [kCGImageDestinationLossyCompressionQuality: 0.86]
+    CGImageDestinationAddImage(jpeg, image, properties as CFDictionary)
+    guard CGImageDestinationFinalize(jpeg) else {
+        return .failure(BridgeError(code: "video_poster_write_failed", message: "Could not write the local video poster JPEG."))
+    }
+    return .success([
+        "ok": true,
+        "mode": "preview",
+        "localIdentifier": asset.localIdentifier,
+        "destination": destination.path,
+        "bytes": (try? Data(contentsOf: destination).count) ?? 0,
+        "pixelWidth": image.width,
+        "pixelHeight": image.height,
+        "networkAccessAllowed": false,
+        "previewSource": "local_video_resource",
+        "posterTimeSeconds": actualTime.isValid ? CMTimeGetSeconds(actualTime) : posterSeconds,
+        "resourceFilename": resource.originalFilename,
+        "resourceFormat": resourceFormat(resource),
+    ])
 }
 
 func videoMimeType(_ resource: PHAssetResource) -> String {

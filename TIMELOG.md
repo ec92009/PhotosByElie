@@ -559,8 +559,9 @@ Clock state: running
 | 2026-07-09 | 12:58 CEST | 13:01 CEST | 0:03 | Fixed and browser-tested Sidecar culling selection so disappearing cards advance to the adjacent logical neighbor; QA decisions were cleaned from local state. |
 | 2026-07-09 | 19:44 CEST | 19:47 CEST | 0:03 | Reviewed highest-risk test coverage and added checkout authorization/webhook boundary tests; test runtime excluded. |
 | 2026-07-09 | 21:17 CEST | 21:20 CEST | 0:03 | Diagnosed and fixed the Sidecar RAW-origin preview color shift for `20221216 172145 01113.jpg`; rebuild/server test runtime excluded. |
+| 2026-07-09 | 22:29 CEST | 22:32 CEST | 0:03 | Diagnosed video poster preview failure and approved a local-video-frame fallback with truthful bridge errors; implementation/test runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 28:24
+Active collaboration time used: 28:27
 Remaining budget: not set

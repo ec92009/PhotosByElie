@@ -149,6 +149,7 @@
     filteredIndexedCount: 0,
     windowBackStack: [],
     windowForwardStack: [],
+    pendingSelectionAfterLoad: null,
   };
 
   const escapeHtml = (value = "") => String(value)
@@ -435,7 +436,7 @@
   const videoPlayerMarkup = (item, autoplay = true) => `
     <video class="sidecar-inline-video" controls playsinline preload="metadata" ${autoplay ? "autoplay" : ""} poster="${escapeHtml(previewUrl(item))}" src="${escapeHtml(videoUrl(item))}"></video>
   `;
-  const versionFallback = "126.3";
+  const versionFallback = "126.4";
   const versionFallbackLabel = `v${versionFallback}`;
   const videoBadge = (item, index, label) => isVideo(item)
     ? videoOverlay(item, index, label)
@@ -496,6 +497,22 @@
       reconcileSelection(state.selectedIndex);
     }
     state.autoAdvanceDirection = snapshot.autoAdvanceDirection < 0 ? -1 : 1;
+  };
+
+  const scheduleSelectionAfterLoad = (target = {}) => {
+    const index = Number(target.index);
+    state.pendingSelectionAfterLoad = {
+      index: Number.isFinite(index) ? index : -1,
+      assetId: String(target.assetId || "").trim(),
+    };
+  };
+
+  const applyPendingSelectionAfterLoad = () => {
+    const target = state.pendingSelectionAfterLoad;
+    state.pendingSelectionAfterLoad = null;
+    if (!target) return false;
+    reconcileSelection(target.index, { preferredAssetId: target.assetId });
+    return true;
   };
 
   const undoSnapshot = (item) => {
@@ -1601,6 +1618,9 @@
     const visible = new Set(visibleIndexes());
     if (!visible.has(index)) return;
     const bounded = Math.max(0, Math.min(Number.isFinite(index) ? index : 0, state.items.length - 1));
+    if (state.selectedIndex >= 0 && bounded !== state.selectedIndex) {
+      state.autoAdvanceDirection = bounded < state.selectedIndex ? -1 : 1;
+    }
     const previousIndexes = selectedSelectionSet();
     let nextIndexes;
     if (extend) {
@@ -1805,6 +1825,9 @@
     const preferredAssetId = preferredIndex >= 0
       ? itemId(state.items[preferredIndex])
       : selectionBefore.selectedAssetId;
+    if (advance && !indexes && decisions.length === 1) {
+      scheduleSelectionAfterLoad({ index: preferredIndex, assetId: preferredAssetId });
+    }
     const applyResult = applyChangedItems(changedItems, visibilityBefore, {
       preferredIndex,
       preferredAssetId,
@@ -2011,7 +2034,9 @@
     state.filteredIndexedCount = Number(payload.filteredIndexedCount || payload.indexedCount || 0);
     state.windowCursorOffset = Number(payload.nextOffset || (effectiveOffset + state.items.length));
     state.undoStack = [];
-    if ((selectionBeforeLoad.selectedAssetIds || []).length || selectionBeforeLoad.selectedIndex >= 0) {
+    if (applyPendingSelectionAfterLoad()) {
+      // A decision made the previous card disappear; keep culling on its neighbor.
+    } else if ((selectionBeforeLoad.selectedAssetIds || []).length || selectionBeforeLoad.selectedIndex >= 0) {
       restoreSelectionSnapshot(selectionBeforeLoad);
     } else {
       setInitialSelection();

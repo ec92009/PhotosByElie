@@ -5,7 +5,7 @@ Last updated: 2026-07-08
 ## Current Facts
 
 - Public visible build: `v125.0`.
-- Sidecar local build: `v126.3`.
+- Sidecar local build: `v126.4`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`.
 - Local preview: `http://localhost:8000/`.
 - North Star: `docs/architecture/north-star.md`; the overarching goal is to make money from the enterprise by optimizing sellable offers, buyer/client trust, private access, and market learning.
@@ -25,6 +25,7 @@ Last updated: 2026-07-08
 - Sidecar review cleanup backlog: the `20` unknown-gallery/generic-title reset rows are resolved (`19` Benalmadena Aquarium videos approved/picked, `1` unsupported WhatsApp still tombstoned); the `24` persistent Photos export failures are repaired from verified external picGen PNG originals, uploaded to R2, approved/picked, re-queued, unblocked, and registered in the public catalog; the `63` unpicked/proposed rows are normalized back to `unreviewed` while preserving their proposed title/keyword context.
 - Sidecar automation must use `~/Applications/PhotosByElie Photos Bridge.app` through LaunchServices for PhotoKit work. Do not call raw Swift or the bare bundle executable for scheduled Sidecar automation.
 - Sidecar quick view now shows a desktop side metadata panel with camera, location, format, and pixel size. Current Apple Photos index data supplies location/format/size when available; camera shows `not indexed` until EXIF/camera enrichment is added to the PhotoKit bridge/index.
+- Sidecar culling selection keeps a direction of travel: when a pick/reject/hide/unpick decision makes the selected card disappear under the active filters, the next highlighted card is the adjacent logical neighbor in the current travel direction.
 - Apple Photos with faces remains off limits.
 - Public pages use the shared visible site version; Sidecar has its own version in `SIDECAR_VERSION`.
 - `Owner.sqlite` remains ignored/local. Owner-action JSON files are compatibility views, audit files, or handoff artifacts, not primary workflow state when SQLite tables exist.

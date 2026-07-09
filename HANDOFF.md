@@ -16,7 +16,7 @@ for remote execution.
 - Local preview: `http://localhost:8000/`
 - Helper-backed Owner intake URL on this Mac: `http://localhost:8001/owner.html?tab=imports`
 - Current visible build: `v125.0`
-- Sidecar local build: `v126.3`
+- Sidecar local build: `v126.4`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
 - Current public catalog: `7,813` media rows.
@@ -68,6 +68,7 @@ python3 scripts/sidecar_maintenance.py register-uploaded-catalog --dry-run
 
 - Sidecar PhotoKit automation must launch through the permission-bearing app bundle, `~/Applications/PhotosByElie Photos Bridge.app`, via LaunchServices. Do not call `swift scripts/apple_photos_bridge.swift` or the bare bundle executable for scheduled Sidecar automation.
 - Sidecar quick view now includes a desktop side metadata panel for camera, location, resource format, and pixel size. Format/size and some location labels come from the current Apple Photos index; camera currently falls back to `not indexed` because the PhotoKit bridge does not yet persist EXIF camera make/model.
+- Sidecar culling selection now preserves direction of travel across disappearing cards. If the active card is picked/rejected/hidden/unpicked and stops matching the current filters, the next highlight lands on the adjacent visible neighbor rather than restoring a stale index after reload.
 - Approved Upload Bridge rows with generic titles and no country/gallery signal should be blocked from queueing until metadata is repaired.
 - Owner quick previews now fall back to the same public media URL a regular visitor receives when original source files cannot be resolved.
 - Owner title/keyword edits for SQLite-backed catalog rows should write through the localhost helper to `assets/catalog/photosbyelie.sqlite` and regenerate the Worker catalog; the old TSV writer path is not the authority.

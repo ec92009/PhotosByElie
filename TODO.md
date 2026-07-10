@@ -4,7 +4,7 @@ Last updated: 2026-07-10
 
 ## Current Facts
 
-- Public visible build: `v132.5`.
+- Public visible build: `v132.6`.
 - Sidecar local build: `v126.6`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`.
 - Local preview: `http://localhost:8000/`.

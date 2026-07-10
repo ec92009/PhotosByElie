@@ -3555,7 +3555,8 @@ const consumeAccountReturnFlag = () => {
 
 const ensureSiteAccount = () => {
   const controls = document.querySelector('.header-controls');
-  if (!controls || controls.querySelector('[data-account-toggle]')) return;
+  const topbar = controls?.closest('.topbar');
+  if (!controls || !topbar || topbar.querySelector('[data-account-toggle]')) return;
   const state = {
     checked: false,
     available: Boolean(accountWorkerBaseUrl()),
@@ -4032,7 +4033,7 @@ const ensureSiteAccount = () => {
   };
 
   document.body.append(modal);
-  controls.append(accountButton);
+  topbar.append(accountButton);
 
   accountButton.addEventListener('click', () => {
     if (modal.hidden) openAccount();
@@ -4091,7 +4092,8 @@ const ensureSiteAccount = () => {
 
 const ensureSiteSettings = () => {
   const controls = document.querySelector('.header-controls');
-  if (!controls || controls.querySelector('[data-settings-toggle]')) return;
+  const topbar = controls?.closest('.topbar');
+  if (!controls || !topbar || topbar.querySelector('[data-settings-toggle]')) return;
   const settings = readDisplaySettings();
   const settingsButton = document.createElement('button');
   settingsButton.className = 'settings-toggle';
@@ -4144,7 +4146,7 @@ const ensureSiteSettings = () => {
   if (languageBtn && languageSlot) languageSlot.append(languageBtn);
   if (btn && themeSlot) themeSlot.append(btn);
   document.body.append(modal);
-  controls.append(settingsButton);
+  topbar.append(settingsButton);
 
   const closeButton = modal.querySelector('[data-settings-close]');
   const closeSettings = () => {

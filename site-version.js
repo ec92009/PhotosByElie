@@ -7,6 +7,13 @@
 
   if (!version) return;
 
+  const floatVersionBadge = () => {
+    const badge = document.querySelector(".topbar .site-version-badge");
+    if (badge && badge.parentElement !== document.body) document.body.append(badge);
+  };
+
+  floatVersionBadge();
+
   const versionedHref = (href) => {
     if (!href || href.startsWith("#")) return href;
     let url;

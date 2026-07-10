@@ -1,4 +1,7 @@
 (() => {
+  const versionBadge = document.querySelector(".topbar .site-version-badge");
+  if (versionBadge && versionBadge.parentElement !== document.body) document.body.append(versionBadge);
+
   const cleanBase = (value) => String(value || "").trim().replace(/\/+$/, "");
   const mediaConfig = window.photosByElieMediaConfig || {};
   const workerBase = cleanBase(mediaConfig.authWorkerBaseUrl || mediaConfig.checkoutWorkerBaseUrl || "");

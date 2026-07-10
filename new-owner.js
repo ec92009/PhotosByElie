@@ -167,7 +167,7 @@
 
   const detectLocalConnector = async () => {
     const controller = new AbortController();
-    const timer = window.setTimeout(() => controller.abort(), 550);
+    const timer = window.setTimeout(() => controller.abort(), 3000);
     try {
       const response = await fetch(LOCAL_CONNECTOR_STATUS_URL, {
         cache: "no-store",

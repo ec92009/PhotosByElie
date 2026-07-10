@@ -6,7 +6,7 @@ Date: 2026-07-10
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Branch: `main`
-- Public visible version: `v132.13`
+- Public visible version: `v132.14`
 - Sidecar version: `v126.6`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Local preview: `http://localhost:8000/`

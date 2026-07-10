@@ -92,9 +92,11 @@ const priceAscending = (options = []) => options.map((option, index) => ({ optio
     return priceDelta || sortDelta || left.index - right.index;
   })
   .map(({ option }) => option);
-const availableResolutions = priceAscending(photo && window.photosByElieAvailableResolutions
-  ? window.photosByElieAvailableResolutions(photo, resolutions)
-  : resolutions);
+const availableResolutions = priceAscending(photo && window.photosByElieIsVideo?.(photo)
+  ? [window.photosByElieVideoDownloadOption?.(photo)].filter(Boolean)
+  : photo && window.photosByElieAvailableResolutions
+    ? window.photosByElieAvailableResolutions(photo, resolutions)
+    : resolutions);
 const basketStore = window.photosByElieBasket;
 const likedStore = window.photosByElieLiked;
 const hiddenActions = window.photosByElieHiddenActions;

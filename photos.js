@@ -1986,6 +1986,57 @@ window.photosByElieInputMode = {
 const productSettingsKey = 'photosbyelie-product-settings';
 const physicalProductsToggleKey = 'physicalGoodsEnabled';
 const physicalProductsAvailable = true;
+const productCatalogUrl = './assets/catalog/product-pricing.json';
+const applyProductCatalog = (catalog = {}) => {
+  const products = Array.isArray(catalog.products) ? catalog.products : [];
+  if (!products.length) return false;
+  window.photosByElieProductCatalog = catalog;
+  window.photosByElieResolutions = products.map((product) => ({
+    ...product,
+    prices: { ...(product.prices || {}) },
+    price: Number(product.prices?.original ?? product.price ?? 0),
+  }));
+  window.photosByEliePriceTiers = Object.fromEntries(
+    (Array.isArray(catalog.priceTiers) ? catalog.priceTiers : []).map((tier) => [tier.id, { label: tier.label }])
+  );
+  window.photosByElieFrameOptions = (catalog.frames || []).map((frame) => ({ ...frame, prices: { ...(frame.prices || {}) } }));
+  window.photosByElieShippingHandlingPrices = { ...(catalog.shippingHandlingPrices || {}) };
+  window.photosByElieVideoPriceTiers = Object.fromEntries(
+    (Array.isArray(catalog.videoPriceTiers) ? catalog.videoPriceTiers : []).map((tier) => [tier.id, { ...tier }])
+  );
+  return true;
+};
+const loadProductCatalog = async () => {
+  const response = await fetch(productCatalogUrl, { cache: 'no-store' });
+  if (!response.ok) throw new Error(`Product catalog HTTP ${response.status}`);
+  const catalog = await response.json();
+  if (!applyProductCatalog(catalog)) throw new Error('Product catalog has no products.');
+  return catalog;
+};
+window.photosByElieCatalogReady = window.photosByElieCatalogReady || loadProductCatalog().catch((error) => {
+  console.warn(error?.message || 'Could not load the product catalog.');
+  return null;
+});
+window.photosByElieVideoTier = window.photosByElieVideoTier || ((photo) => {
+  const duration = Number(photo?.media?.video?.duration ?? photo?.duration ?? 0);
+  if (duration < 10) return 'video_short';
+  if (duration < 30) return 'video_medium';
+  if (duration < 60) return 'video_long';
+  if (duration < 180) return 'video_extended';
+  return 'video_premium';
+});
+window.photosByElieVideoDownloadOption = window.photosByElieVideoDownloadOption || ((photo) => {
+  const priceKey = window.photosByElieVideoTier(photo);
+  const priceTier = window.photosByElieVideoPriceTiers?.[priceKey] || { price: 0 };
+  return {
+    id: 'video-original',
+    type: 'video',
+    label: 'Original video download',
+    detail: 'Private original video file after purchase',
+    price: Number(priceTier.price) || 0,
+    priceKey,
+  };
+});
 const readProductSettings = () => {
   try {
     const parsed = JSON.parse(localStorage.getItem(productSettingsKey) || '{}');

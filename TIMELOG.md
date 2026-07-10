@@ -568,8 +568,9 @@ Clock state: running
 | 2026-07-10 | 18:04 CEST | 18:06 CEST | 0:02 | Reopened the current Sidecar culling review from the live Owner workspace and clarified the live review entry versus the Mac-local bridge; no review choices changed. |
 | 2026-07-10 | 18:06 CEST | 18:15 CEST | 0:09 | Recovered the intended two-phase Sidecar direction—keyboard-first Culling gallery with C-toggle into picked Title/Keywords review—and directed its reintegration into authenticated New Owner; implementation/runtime excluded. |
 | 2026-07-10 | 18:15 CEST | 18:25 CEST | 0:10 | Rejected the reduced cloud imitation and directed New Owner to launch the selected Mac’s canonical Sidecar workspace so the original controls and behaviors remain shared; implementation/runtime excluded. |
+| 2026-07-10 | 18:44 CEST | 18:49 CEST | 0:05 | Reported the sitewide empty product-choice panel and directed photo and video purchase choices be restored from the shared catalog; implementation/runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 29:00
+Active collaboration time used: 29:05
 Remaining budget: not set

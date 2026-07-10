@@ -1,7 +1,4 @@
 (() => {
-  const versionBadge = document.querySelector(".topbar .site-version-badge");
-  if (versionBadge && versionBadge.parentElement !== document.body) document.body.append(versionBadge);
-
   const cleanBase = (value) => String(value || "").trim().replace(/\/+$/, "");
   const mediaConfig = window.photosByElieMediaConfig || {};
   const workerBase = cleanBase(mediaConfig.authWorkerBaseUrl || mediaConfig.checkoutWorkerBaseUrl || "");
@@ -37,7 +34,6 @@
   const connectorInput = $("[data-new-owner-connector]");
   const workerBaseRoot = $("[data-new-owner-worker-base]");
   const connectorDownload = $("[data-new-owner-download-connector]");
-  const themeToggle = $("[data-theme-toggle]");
 
   const setStatus = (message) => {
     if (statusRoot) statusRoot.textContent = message;
@@ -107,25 +103,6 @@
   const setCount = (key, value) => {
     const node = countNode(key);
     if (node) node.textContent = String(value);
-  };
-
-  const syncThemeToggle = () => {
-    if (!themeToggle) return;
-    const isDark = document.documentElement.dataset.theme === "dark";
-    themeToggle.setAttribute("aria-pressed", String(isDark));
-    themeToggle.setAttribute("title", isDark ? "Switch to day mode" : "Switch to night mode");
-  };
-
-  const toggleTheme = () => {
-    const current = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
-    const next = current === "dark" ? "light" : "dark";
-    document.documentElement.dataset.theme = next;
-    try {
-      localStorage.setItem("byelie-theme", next);
-    } catch {
-      // Theme persistence is best-effort only.
-    }
-    syncThemeToggle();
   };
 
   const ownerAllowed = () => {
@@ -735,11 +712,8 @@
         : {};
     recordReviewDecision(button.getAttribute("data-asset-id"), command, details);
   });
-  themeToggle?.addEventListener("click", toggleTheme);
-
   absorbAuthTokenFromHash();
   hydrateConnector();
-  syncThemeToggle();
   renderLanes();
   load();
 })();

@@ -562,8 +562,9 @@ Clock state: running
 | 2026-07-09 | 22:29 CEST | 22:32 CEST | 0:03 | Diagnosed video poster preview failure and approved a local-video-frame fallback with truthful bridge errors; implementation/test runtime excluded. |
 | 2026-07-10 | 12:18 CEST | 12:19 CEST | 0:01 | Directed completion of Sidecar-to-main-site integration, retirement of the localhost Owner UI, and downloadable per-Mac connector support; background implementation/runtime excluded. |
 | 2026-07-10 | 16:30 CEST | 16:32 CEST | 0:02 | Directed the shared header review: moved Account and Settings to the top row, Liked/Basket controls to the third-row right edge, and the visible version into a floating bottom-right pill; implementation/runtime excluded. |
+| 2026-07-10 | 16:40 CEST | 16:43 CEST | 0:03 | Reviewed and clarified Owner connector controls, identified the Cloudflare KV quota interruption, and directed the shared header/account consolidation; implementation/runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 28:30
+Active collaboration time used: 28:33
 Remaining budget: not set

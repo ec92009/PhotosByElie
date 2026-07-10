@@ -3516,6 +3516,17 @@ const ensureHeaderActionLinks = () => {
   controls.prepend(actions);
 };
 
+const headerUtilityControls = (topbar) => {
+  let utilities = topbar?.querySelector('.header-utility-controls');
+  if (!topbar) return null;
+  if (!utilities) {
+    utilities = document.createElement('div');
+    utilities.className = 'header-utility-controls';
+    topbar.append(utilities);
+  }
+  return utilities;
+};
+
 const accountPreferenceKey = 'photosbyelie-account-preference';
 
 const normalizedAccountWorkerBase = (value) => {
@@ -4033,7 +4044,7 @@ const ensureSiteAccount = () => {
   };
 
   document.body.append(modal);
-  topbar.append(accountButton);
+  headerUtilityControls(topbar)?.append(accountButton);
 
   accountButton.addEventListener('click', () => {
     if (modal.hidden) openAccount();
@@ -4146,7 +4157,7 @@ const ensureSiteSettings = () => {
   if (languageBtn && languageSlot) languageSlot.append(languageBtn);
   if (btn && themeSlot) themeSlot.append(btn);
   document.body.append(modal);
-  topbar.append(settingsButton);
+  headerUtilityControls(topbar)?.append(settingsButton);
 
   const closeButton = modal.querySelector('[data-settings-close]');
   const closeSettings = () => {

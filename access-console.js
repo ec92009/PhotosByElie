@@ -92,7 +92,6 @@
   const groupCapabilitiesRoot = $("[data-acs-group-capabilities]");
   const filterSummaryRoot = $("[data-acs-filter-summary]");
   const workerBaseRoot = $("[data-acs-worker-base]");
-  const themeToggle = $("[data-theme-toggle]");
   const form = $("[data-acs-person-form]");
   const groupForm = $("[data-acs-group-form]");
   const memberForm = $("[data-acs-member-form]");
@@ -130,25 +129,6 @@
 
   const setStatus = (message) => {
     if (statusRoot) statusRoot.textContent = message;
-  };
-
-  const syncThemeToggle = () => {
-    if (!themeToggle) return;
-    const isDark = document.documentElement.dataset.theme === "dark";
-    themeToggle.setAttribute("aria-pressed", String(isDark));
-    themeToggle.setAttribute("title", isDark ? "Switch to day mode" : "Switch to night mode");
-  };
-
-  const toggleTheme = () => {
-    const current = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
-    const next = current === "dark" ? "light" : "dark";
-    document.documentElement.dataset.theme = next;
-    try {
-      localStorage.setItem("byelie-theme", next);
-    } catch {
-      // Theme persistence is best-effort only.
-    }
-    syncThemeToggle();
   };
 
   const escapeHtml = (value) => String(value ?? "")
@@ -1699,9 +1679,6 @@
   $("[data-acs-seed-fixtures]")?.addEventListener("click", () => seedFixtures().catch((error) => setStatus(error.message || "Could not seed fixtures.")));
   $("[data-acs-login]")?.addEventListener("click", login);
   $("[data-acs-logout]")?.addEventListener("click", logout);
-  themeToggle?.addEventListener("click", toggleTheme);
-
   absorbAuthTokenFromHash();
-  syncThemeToggle();
   load();
 })();

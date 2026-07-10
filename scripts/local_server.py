@@ -1460,12 +1460,19 @@ def _sidecar_culling_review_rows(conn: sqlite3.Connection, limit: int) -> tuple[
           a.captured_at,
           a.indexed_at,
           a.photos_title,
+          a.photos_keywords_json,
           a.metadata_seed_title,
+          a.metadata_seed_keywords_json,
           COALESCE(d.rating, 0) AS rating,
           COALESCE(d.color, '') AS color,
           COALESCE(d.pick_state, 'undecided') AS pick_state,
           COALESCE(d.metadata_state, 'unreviewed') AS metadata_state,
           COALESCE(d.title, '') AS decision_title,
+          COALESCE(d.keywords_json, '[]') AS decision_keywords_json,
+          (
+            SELECT count(*) FROM sidecar_pending_sync AS p
+            WHERE p.asset_id = a.asset_id AND p.status = 'pending'
+          ) AS pending_sync_count,
           ROW_NUMBER() OVER (
             ORDER BY
               CASE WHEN a.captured_at IS NULL OR a.captured_at = '' THEN 1 ELSE 0 END,
@@ -1478,8 +1485,23 @@ def _sidecar_culling_review_rows(conn: sqlite3.Connection, limit: int) -> tuple[
         """,
         (limit,),
     ).fetchall()
-    items = [
-        {
+    items = []
+    for row in rows:
+        keyword_candidates = [
+            row["decision_keywords_json"],
+            row["photos_keywords_json"],
+            row["metadata_seed_keywords_json"],
+        ]
+        keywords = []
+        for value in keyword_candidates:
+            try:
+                parsed = json.loads(str(value or "[]"))
+            except json.JSONDecodeError:
+                parsed = []
+            if isinstance(parsed, list) and parsed:
+                keywords = [str(item).strip() for item in parsed if str(item).strip()]
+                break
+        items.append({
             "assetId": str(row["asset_id"] or ""),
             "filename": str(row["filename"] or ""),
             "mediaType": str(row["media_type"] or ""),
@@ -1490,10 +1512,10 @@ def _sidecar_culling_review_rows(conn: sqlite3.Connection, limit: int) -> tuple[
             "pickState": str(row["pick_state"] or "undecided"),
             "metadataState": str(row["metadata_state"] or "unreviewed"),
             "title": str(row["decision_title"] or row["photos_title"] or row["metadata_seed_title"] or ""),
+            "keywords": keywords,
+            "pendingSyncCount": int(row["pending_sync_count"] or 0),
             "sidecarPosition": int(row["sidecar_position"] or 0),
-        }
-        for row in rows
-    ]
+        })
     return int(indexed_count or 0), int(candidate_count or 0), items
 
 
@@ -1574,12 +1596,16 @@ def new_owner_sidecar_decision_result(repo_root: Path, payload: dict) -> dict:
     action = str(payload.get("action") or "").strip().casefold()
     if not asset_id:
         raise ValueError("assetId is required")
-    if action not in {"pick", "unpick", "reject"}:
-        raise ValueError("action must be pick, unpick, or reject")
-    decision = record_sidecar_decision_db(repo_root, {
+    if action not in {"pick", "unpick", "reject", "rating", "color", "approve", "metadata"}:
+        raise ValueError("unsupported Sidecar decision action")
+    decision_payload = {
         "assetId": asset_id,
         "action": action,
-    })
+    }
+    for key in ["rating", "color", "title", "keywords", "metadataState"]:
+        if key in payload:
+            decision_payload[key] = payload[key]
+    decision = record_sidecar_decision_db(repo_root, decision_payload)
     decision["summary"] = sidecar_summary_db(repo_root)
     decision["source"] = "new-owner-review"
     return decision

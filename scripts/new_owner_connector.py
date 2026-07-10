@@ -207,6 +207,11 @@ def execute_action(config: ConnectorConfig, action: dict) -> dict:
         decision = decision_result(config.repo_root, {
             "assetId": payload.get("assetId"),
             "action": payload.get("decision"),
+            "rating": payload.get("rating"),
+            "color": payload.get("color"),
+            "title": payload.get("title"),
+            "keywords": payload.get("keywords"),
+            "metadataState": payload.get("metadataState"),
         })
         return {
             "connectorId": config.connector_id,

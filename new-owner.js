@@ -9,15 +9,16 @@
     access: null,
     action: null,
     actions: [],
+    connectors: [],
     review: null,
     busy: false,
   };
   const lanes = [
     { label: "Identity and roles", state: "live", detail: "Google session, D1 access registry, ACS policy tester" },
-    { label: "Owner action queue", state: "live", detail: "Worker-authenticated queue records in cloud KV" },
+    { label: "Owner action queue", state: "live", detail: "Authenticated browser requests with connector claim/complete audit" },
     { label: "Real Estate outputs", state: "mixed", detail: "Cloud PDF/video storage with local source import still pending" },
-    { label: "Apple Photos import", state: "local", detail: "Requires a local connector on Max, David, or Curie" },
-    { label: "Sidecar culling", state: "local", detail: "Candidate for the first connector-backed Track B workflow" },
+    { label: "Apple Photos import", state: "mixed", detail: "Cloud controlled; PhotoKit work runs on an enrolled Mac connector" },
+    { label: "Sidecar culling", state: "live", detail: "Cloud review windows and decisions with connector-backed Photos previews" },
   ];
 
   const $ = (selector) => document.querySelector(selector);
@@ -26,6 +27,7 @@
   const sessionRoot = $("[data-new-owner-session]");
   const accessRoot = $("[data-new-owner-access]");
   const lanesRoot = $("[data-new-owner-lanes]");
+  const connectorsRoot = $("[data-new-owner-connectors]");
   const actionRoot = $("[data-new-owner-action]");
   const reviewRoot = $("[data-new-owner-review]");
   const actionStatusRoot = $("[data-new-owner-action-status]");
@@ -96,23 +98,6 @@
     return body;
   };
 
-  const localApiFetch = async (path, options = {}) => {
-    const response = await fetch(path, {
-      credentials: "same-origin",
-      cache: "no-store",
-      ...options,
-      headers: {
-        ...(options.body ? { "content-type": "application/json" } : {}),
-        ...(options.headers || {}),
-      },
-    });
-    const body = await response.json().catch(() => ({}));
-    if (!response.ok || body?.ok === false || body?.error) {
-      throw new Error(body?.error?.message || body?.error || `Local connector failed with HTTP ${response.status}.`);
-    }
-    return body;
-  };
-
   const countNode = (key) => $(`[data-new-owner-count="${key}"]`);
 
   const setCount = (key, value) => {
@@ -149,13 +134,13 @@
     .toLowerCase()
     .replace(/[^a-z0-9._-]+/g, "-")
     .replace(/^-+|-+$/g, "")
-    .slice(0, 80) || "max";
+    .slice(0, 80);
 
-  const connectorId = () => cleanConnectorId(connectorInput?.value || "Max");
+  const connectorId = () => cleanConnectorId(connectorInput?.value || "");
 
   const rememberConnector = () => {
     if (!connectorInput) return;
-    connectorInput.value = cleanConnectorId(connectorInput.value || "Max");
+    connectorInput.value = cleanConnectorId(connectorInput.value || "");
     try {
       localStorage.setItem("pbe-new-owner-connector", connectorInput.value);
     } catch {
@@ -187,6 +172,7 @@
     setCount("groups", groups.filter((group) => group.state !== "archived").length);
     setCount("fixtures", people.filter((user) => user.fixture).length);
     setCount("action", state.actions.length);
+    setCount("connector", state.connectors.length);
   };
 
   const chip = (label, modifier = "") =>
@@ -282,6 +268,27 @@
     }).join("");
   };
 
+  const renderConnectors = () => {
+    if (!connectorsRoot) return;
+    if (!state.connectors.length) {
+      connectorsRoot.innerHTML = `<p class="new-owner-empty">No Mac connector has checked in yet.</p>`;
+      return;
+    }
+    connectorsRoot.innerHTML = state.connectors.map((connector) => {
+      const age = Date.now() - Date.parse(connector.lastSeenAt || "");
+      const online = Number.isFinite(age) && age < 2 * 60 * 1000;
+      return `
+        <article class="new-owner-lane-row">
+          <div>
+            <strong>${escapeHtml(connector.id || "Mac connector")}</strong><br>
+            <small>${escapeHtml([connector.hostname, connector.platform, connector.version].filter(Boolean).join(" / "))}</small>
+          </div>
+          ${chip(online ? "online" : "last seen", online ? "live" : "planned")}
+        </article>
+      `;
+    }).join("");
+  };
+
   const renderAction = () => {
     if (!actionRoot) return;
     const actions = state.actions.length ? state.actions : (state.action?.id ? [state.action] : []);
@@ -302,10 +309,7 @@
           ${renderActionResultChips(action)}
         </div>
         <div class="new-owner-action-row-controls">
-          ${action.state === "queued" ? `<button class="btn secondary" type="button" data-new-owner-action-command="claim" data-action-id="${escapeHtml(action.id)}">Claim</button>` : ""}
-          ${action.state === "claimed" && action.type === "sidecar-culling-review" ? `<button class="btn secondary" type="button" data-new-owner-action-command="run-local" data-action-id="${escapeHtml(action.id)}">Run local</button>` : ""}
           ${action.state === "completed" && action.type === "sidecar-culling-review" ? reviewAction(action.id, "Open review") : ""}
-          ${action.state === "claimed" ? `<button class="btn secondary" type="button" data-new-owner-action-command="complete" data-action-id="${escapeHtml(action.id)}">Complete</button>` : ""}
           ${["queued", "claimed"].includes(action.state) ? `<button class="btn secondary" type="button" data-new-owner-action-command="fail" data-action-id="${escapeHtml(action.id)}">Fail</button>` : ""}
         </div>
       </article>
@@ -338,6 +342,17 @@
     `;
   };
 
+  const reviewRatingButtons = (item) => [0, 1, 2, 3, 4, 5].map((rating) => `
+    <button
+      class="new-owner-rating-button ${Number(item.rating || 0) === rating ? "is-active" : ""}"
+      type="button"
+      data-new-owner-review-command="rating"
+      data-rating="${rating}"
+      data-asset-id="${escapeHtml(item.assetId)}"
+      aria-label="${rating ? `${rating} stars` : "Clear stars"}"
+    >${rating || "×"}</button>
+  `).join("");
+
   const renderReview = () => {
     if (!reviewRoot) return;
     const review = state.review;
@@ -369,16 +384,25 @@
       <div class="new-owner-review-list">
         ${items.map((item) => `
           <article class="new-owner-review-row" data-review-asset-id="${escapeHtml(item.assetId)}">
+            <div class="new-owner-review-preview">
+              ${item.previewDataUrl
+                ? `<img src="${escapeHtml(item.previewDataUrl)}" alt="${escapeHtml(itemTitle(item))}" loading="lazy"/>`
+                : `<span>${escapeHtml(item.previewError || "Preview unavailable")}</span>`}
+            </div>
             <div class="new-owner-review-row-main">
               <strong>${escapeHtml(itemTitle(item))}</strong>
               <small>${escapeHtml([item.filename, item.assetId].filter(Boolean).join(" / "))}</small>
               <small>${escapeHtml(item.capturedAt || item.indexedAt || "")}</small>
+              <label><span>Title</span><input type="text" data-review-title value="${escapeHtml(item.title || "")}"/></label>
+              <label><span>Keywords</span><textarea rows="2" data-review-keywords>${escapeHtml((item.keywords || []).join(", "))}</textarea></label>
             </div>
             <div class="new-owner-chip-stack">${reviewItemChips(item)}</div>
             <div class="new-owner-review-row-controls">
+              <div class="new-owner-rating-row">${reviewRatingButtons(item)}</div>
               ${reviewCommandButton(item, "pick", "Pick")}
               ${reviewCommandButton(item, "unpick", "Unpick")}
               ${reviewCommandButton(item, "reject", "Reject")}
+              ${reviewCommandButton(item, "approve", "Approve metadata")}
             </div>
           </article>
         `).join("") || `<p class="new-owner-empty">No Sidecar records in this review window.</p>`}
@@ -391,6 +415,7 @@
     renderCounts();
     renderAccess();
     renderLanes();
+    renderConnectors();
     renderAction();
     renderReview();
   };
@@ -399,6 +424,11 @@
     const body = await apiFetch("/owner/actions?limit=8");
     state.actions = mergeActions(Array.isArray(body.actions) ? body.actions : []);
     state.action = state.actions[0] || state.action;
+  };
+
+  const loadConnectors = async () => {
+    const body = await apiFetch("/owner/connectors");
+    state.connectors = Array.isArray(body.connectors) ? body.connectors : [];
   };
 
   const load = async () => {
@@ -418,6 +448,11 @@
           await loadActions();
         } catch {
           state.actions = state.action?.id ? [state.action] : [];
+        }
+        try {
+          await loadConnectors();
+        } catch {
+          state.connectors = [];
         }
       }
       setStatus(ownerAllowed() ? "Cloud Owner session verified." : "Owner role is required.");
@@ -498,7 +533,8 @@
       manifest: {
         mode: "review-window",
         source: "owner-sqlite",
-        limit: 50,
+        limit: 24,
+        includePreviews: true,
       },
       queuedAt: new Date().toISOString(),
     },
@@ -532,13 +568,13 @@
     }
   };
 
-  const reviewFromLocal = (local, action) => ({
-    actionId: action?.id || local?.result?.actionId || "",
+  const reviewFromAction = (action) => ({
+    actionId: action?.id || action?.result?.actionId || "",
     action,
-    connector: local?.connector || null,
-    result: local?.result || {},
-    items: Array.isArray(local?.preview?.items) ? local.preview.items : [],
-    stateCounts: Array.isArray(local?.preview?.stateCounts) ? local.preview.stateCounts : [],
+    connector: action?.claim || null,
+    result: action?.result || {},
+    items: Array.isArray(action?.result?.previewItems) ? action.result.previewItems : [],
+    stateCounts: Array.isArray(action?.result?.stateCounts) ? action.result.stateCounts : [],
   });
 
   const openReviewWorkspace = async (actionId) => {
@@ -552,14 +588,7 @@
     state.busy = true;
     if (actionStatusRoot) actionStatusRoot.textContent = "Opening review...";
     try {
-      const local = await localApiFetch("/__photosbyelie/new-owner-connector", {
-        method: "POST",
-        body: JSON.stringify({
-          action,
-          connectorId: connectorId(),
-        }),
-      });
-      state.review = reviewFromLocal(local, action);
+      state.review = reviewFromAction(action);
       if (actionStatusRoot) actionStatusRoot.textContent = "";
       setStatus(`Opened ${state.review.items.length} Sidecar records.`);
       render();
@@ -567,45 +596,6 @@
     } catch (error) {
       if (actionStatusRoot) actionStatusRoot.textContent = "";
       setStatus(error.message || "Could not open Sidecar review.");
-    } finally {
-      state.busy = false;
-    }
-  };
-
-  const runLocalConnector = async (actionId) => {
-    if (state.busy || !actionId) return;
-    const action = state.actions.find((candidate) => candidate.id === actionId)
-      || (state.action?.id === actionId ? state.action : null);
-    if (!action?.id) {
-      setStatus("Owner action is not loaded locally.");
-      return;
-    }
-    state.busy = true;
-    if (actionStatusRoot) actionStatusRoot.textContent = "Running local...";
-    try {
-      const local = await localApiFetch("/__photosbyelie/new-owner-connector", {
-        method: "POST",
-        body: JSON.stringify({
-          action,
-          connectorId: connectorId(),
-        }),
-      });
-      const body = await apiFetch(`/owner/actions/${encodeURIComponent(actionId)}/complete`, {
-        method: "POST",
-        body: JSON.stringify({
-          result: local.result,
-        }),
-      });
-      state.action = body.action || state.action;
-      await loadActions();
-      state.review = reviewFromLocal(local, state.action || action);
-      if (actionStatusRoot) actionStatusRoot.textContent = state.action?.state || "";
-      setStatus(`Local connector prepared ${local.result?.recordsPrepared ?? 0} Sidecar records.`);
-      render();
-      reviewRoot?.scrollIntoView({ block: "start", behavior: "smooth" });
-    } catch (error) {
-      if (actionStatusRoot) actionStatusRoot.textContent = "";
-      setStatus(error.message || "Could not run local connector.");
     } finally {
       state.busy = false;
     }
@@ -622,19 +612,44 @@
         metadataState: nextState.metadataState || item.metadataState,
         rating: Number.isFinite(nextState.rating) ? nextState.rating : item.rating,
         color: nextState.color ?? item.color,
+        title: nextState.title ?? item.title,
+        keywords: Array.isArray(nextState.keywords) ? nextState.keywords : item.keywords,
         pendingSyncCount: decision?.pendingSyncCount ?? item.pendingSyncCount,
       };
     });
   };
 
-  const recordReviewDecision = async (assetId, action) => {
+  const waitForAction = async (actionId, timeoutMs = 90000) => {
+    const startedAt = Date.now();
+    while (Date.now() - startedAt < timeoutMs) {
+      const body = await apiFetch(`/owner/actions/${encodeURIComponent(actionId)}`);
+      const action = body.action || {};
+      if (["completed", "failed"].includes(action.state)) return action;
+      await new Promise((resolve) => window.setTimeout(resolve, 1500));
+    }
+    throw new Error("The Mac connector did not finish this decision in time.");
+  };
+
+  const recordReviewDecision = async (assetId, action, details = {}) => {
     if (state.busy || !assetId || !action) return;
     state.busy = true;
     try {
-      const decision = await localApiFetch("/__photosbyelie/new-owner-sidecar-decision", {
+      const queued = await apiFetch("/owner/actions", {
         method: "POST",
-        body: JSON.stringify({ assetId, action }),
+        body: JSON.stringify({
+          action: "sidecar-review-decision",
+          payload: {
+            assetId,
+            decision: action,
+            sourceActionId: state.review?.actionId || "",
+            requestedConnector: state.review?.action?.claim?.connectorId || connectorId() || undefined,
+            ...details,
+          },
+        }),
       });
+      const finished = await waitForAction(queued.action?.id);
+      if (finished.state === "failed") throw new Error(finished.error?.message || "The connector rejected this decision.");
+      const decision = finished.result?.decision;
       updateReviewItem(assetId, decision);
       setStatus(`Staged ${action} for ${assetId}.`);
       renderReview();
@@ -645,22 +660,12 @@
     }
   };
 
-  const claimNextAction = () => {
-    const target = state.actions.find((action) => action.state === "queued" && action.type === "sidecar-culling-review")
-      || state.actions.find((action) => action.state === "queued");
-    if (!target?.id) {
-      setStatus("No queued Owner action is ready to claim.");
-      return;
-    }
-    transitionAction(target.id, "claim");
-  };
-
   const hydrateConnector = () => {
     if (!connectorInput) return;
     try {
-      connectorInput.value = cleanConnectorId(localStorage.getItem("pbe-new-owner-connector") || connectorInput.value || "Max");
+      connectorInput.value = cleanConnectorId(localStorage.getItem("pbe-new-owner-connector") || connectorInput.value || "");
     } catch {
-      connectorInput.value = cleanConnectorId(connectorInput.value || "Max");
+      connectorInput.value = cleanConnectorId(connectorInput.value || "");
     }
   };
 
@@ -669,7 +674,6 @@
   $("[data-new-owner-logout]")?.addEventListener("click", logout);
   $("[data-new-owner-queue-check]")?.addEventListener("click", queueCheck);
   $("[data-new-owner-queue-sidecar]")?.addEventListener("click", queueSidecarCulling);
-  $("[data-new-owner-claim-next]")?.addEventListener("click", claimNextAction);
   connectorInput?.addEventListener("change", rememberConnector);
   connectorInput?.addEventListener("blur", rememberConnector);
   actionRoot?.addEventListener("click", (event) => {
@@ -681,16 +685,22 @@
       openReviewWorkspace(actionId);
       return;
     }
-    if (command === "run-local") {
-      runLocalConnector(actionId);
-      return;
-    }
     transitionAction(actionId, command);
   });
   reviewRoot?.addEventListener("click", (event) => {
     const button = event.target.closest("[data-new-owner-review-command]");
     if (!button) return;
-    recordReviewDecision(button.getAttribute("data-asset-id"), button.getAttribute("data-new-owner-review-command"));
+    const row = button.closest("[data-review-asset-id]");
+    const command = button.getAttribute("data-new-owner-review-command");
+    const details = command === "rating"
+      ? { rating: Number(button.getAttribute("data-rating") || 0) }
+      : command === "approve"
+        ? {
+          title: row?.querySelector("[data-review-title]")?.value || "",
+          keywords: String(row?.querySelector("[data-review-keywords]")?.value || "").split(",").map((item) => item.trim()).filter(Boolean),
+        }
+        : {};
+    recordReviewDecision(button.getAttribute("data-asset-id"), command, details);
   });
   themeToggle?.addEventListener("click", toggleTheme);
 

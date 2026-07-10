@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Photos By Elie | NewOwner</title>
+  <title>Photos By Elie | Owner</title>
   <meta name="robots" content="noindex,nofollow"/>
   <link rel="icon" type="image/png" sizes="512x512" href="./assets/branding/photosbyelie-camera-tripod-logo-512.png"/>
   <meta name="theme-color" content="#263f4a"/>
@@ -19,15 +19,14 @@
 <body data-gallery="new-owner">
   <a class="skip-link" href="#main-content">Skip to content</a>
   <header class="topbar shell">
-    <a class="header-back-button mobile-header-back" href="./owner.html" aria-label="Back to Owner"><span aria-hidden="true">&lt;</span></a>
+    <a class="header-back-button mobile-header-back" href="./" aria-label="Back to Photos"><span aria-hidden="true">&lt;</span></a>
     <div class="brand"><img class="site-logo" src="./assets/branding/photosbyelie-camera-tripod-logo-512.png" alt="Photos By Elie camera logo"/>PHOTOS BY ELIE</div>
     <nav class="version-switch" aria-label="Site navigation">
       <a href="./">Photos</a> <span>|</span>
-      <a href="./owner.html">Owner</a> <span>|</span>
-      <a class="is-active" href="./new-owner.html">NewOwner</a> <span>|</span>
+      <a class="is-active" href="./new-owner.html">Owner</a> <span>|</span>
       <a href="./access-console.html">ACS</a>
     </nav>
-    <span class="site-version-badge">track b</span>
+    <span class="site-version-badge">Owner</span>
     <div class="header-controls">
       <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light">Night</span><span class="mode-dark">Day</span></button>
     </div>
@@ -36,8 +35,8 @@
   <main id="main-content" class="shell new-owner-shell">
     <section class="panel new-owner-hero">
       <div>
-        <p class="eyebrow">Track B</p>
-        <h1>NewOwner</h1>
+        <p class="eyebrow">Cloud workspace</p>
+        <h1>Owner</h1>
         <p class="gallery-status" data-new-owner-status aria-live="polite">Connecting to cloud Owner state...</p>
       </div>
       <div class="new-owner-session" data-new-owner-session></div>
@@ -47,7 +46,7 @@
       <div class="new-owner-toolbar">
         <div>
           <strong data-new-owner-worker-base>Worker pending</strong>
-          <span>cloud-only rehearsal</span>
+          <span>authenticated cloud control</span>
         </div>
         <div class="new-owner-toolbar-actions">
           <button class="btn secondary" type="button" data-new-owner-refresh>Refresh</button>
@@ -63,6 +62,7 @@
         <div><dt>Groups</dt><dd data-new-owner-count="groups">0</dd></div>
         <div><dt>Fixtures</dt><dd data-new-owner-count="fixtures">0</dd></div>
         <div><dt>Actions</dt><dd data-new-owner-count="action">0</dd></div>
+        <div><dt>Connectors</dt><dd data-new-owner-count="connector">0</dd></div>
       </dl>
 
       <div class="new-owner-grid">
@@ -85,15 +85,18 @@
           </div>
           <div class="new-owner-action-controls">
             <label class="new-owner-connector-label">
-              <span>Connector</span>
-              <input type="text" value="Max" autocomplete="off" data-new-owner-connector/>
+              <span>Preferred Mac</span>
+              <select data-new-owner-connector>
+                <option value="">Auto</option>
+                <option value="david">David</option>
+                <option value="max">Max</option>
+              </select>
             </label>
             <button class="btn secondary" type="button" data-new-owner-queue-check>Queue check</button>
             <button class="btn secondary" type="button" data-new-owner-queue-sidecar>Queue culling</button>
-            <button class="btn secondary" type="button" data-new-owner-claim-next>Claim next</button>
             <span data-new-owner-action-status aria-live="polite"></span>
           </div>
-          <p class="new-owner-card-note">Recent actions are read from cloud state; claimed actions carry a connector id for Max/David handoff.</p>
+          <p class="new-owner-card-note">Recent actions are cloud-backed. An enrolled Mac claims PhotoKit/local-file work automatically.</p>
           <div data-new-owner-action class="new-owner-action-result"></div>
         </section>
 
@@ -105,6 +108,17 @@
             </div>
           </div>
           <div data-new-owner-lanes class="new-owner-lane-list"></div>
+        </section>
+
+        <section class="new-owner-card" aria-label="Mac connectors">
+          <div class="owner-card-titlebar">
+            <div>
+              <p class="eyebrow">Hardware bridge</p>
+              <h2>Mac connectors</h2>
+            </div>
+          </div>
+          <div data-new-owner-connectors class="new-owner-lane-list"></div>
+          <p class="new-owner-card-note">Each Mac uses its own revocable credential and grants Photos access locally.</p>
         </section>
       </div>
 

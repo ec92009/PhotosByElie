@@ -8669,7 +8669,7 @@ body.best-mix-current-home [data-home-stack].is-dog-turning [data-home-stack-car
   pointer-events:none;
 }
 body.best-mix-current-home [data-home-stack-replacement]{
-  z-index:1!important;
+  will-change:left,top,opacity;
 }
 body.best-mix-current-home .home-stack-companion{
   position:absolute;

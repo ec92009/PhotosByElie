@@ -89,7 +89,7 @@
 
     const replacement = outgoing.cloneNode(true);
     replacement.dataset.homeStackReplacement = "true";
-    replacement.style.zIndex = "1";
+    replacement.style.zIndex = "21";
     replacement.style.opacity = "0";
     replacement.removeAttribute("aria-hidden");
     replacement.removeAttribute("tabindex");
@@ -97,10 +97,6 @@
     stack.insertBefore(replacement, stack.firstChild);
     const replacementLeft = replacement.offsetLeft;
     const replacementTop = replacement.offsetTop;
-    const replacementRevealLeft = replacementLeft - replacement.offsetWidth * .12;
-    const replacementRevealTop = replacementTop + replacement.offsetHeight * .28;
-    replacement.style.left = `${Math.round(replacementRevealLeft)}px`;
-    replacement.style.top = `${Math.round(replacementRevealTop)}px`;
 
     outgoing.setAttribute("aria-hidden", "true");
     outgoing.setAttribute("tabindex", "-1");
@@ -122,6 +118,12 @@
     const outgoingLeft = outgoing.offsetLeft;
     const outgoingTop = outgoing.offsetTop;
     const exitDistance = stackRect.width - (cardRect.left - stackRect.left) + cardRect.width * .65;
+    const replacementStartLeft = stackRect.width + replacement.offsetWidth * .16;
+    const replacementPreviewLeft = Math.min(
+      stackRect.width - replacement.offsetWidth * .86,
+      replacementLeft + replacement.offsetWidth * .68,
+    );
+    const replacementPreviewTop = replacementTop + replacement.offsetHeight * .1;
 
     companion.style.width = `${Math.round(dogWidth)}px`;
     companion.style.transform = dogTransform(startX, startY, 7, .86);
@@ -129,12 +131,15 @@
     companion.classList.add("is-working");
     outgoing.style.left = `${outgoingLeft}px`;
     outgoing.style.top = `${outgoingTop}px`;
+    replacement.style.left = `${Math.round(replacementStartLeft)}px`;
+    replacement.style.top = `${Math.round(replacementPreviewTop)}px`;
 
     if (typeof companion.animate !== "function" || typeof outgoing.animate !== "function") {
       outgoing.remove();
       companion.remove();
       replacement.style.left = `${replacementLeft}px`;
       replacement.style.top = `${replacementTop}px`;
+      replacement.style.zIndex = "1";
       replacement.style.opacity = "1";
       stack.classList.remove("is-dog-turning");
       stack.classList.add("has-dog-turned-card");
@@ -152,26 +157,6 @@
     });
     await approach.finished.catch(() => {});
     await wait(180);
-
-    const replacementArrival = replacement.animate([
-      {
-        opacity: 0,
-        filter: "saturate(.82)",
-        left: `${Math.round(replacementRevealLeft)}px`,
-        top: `${Math.round(replacementRevealTop)}px`,
-      },
-      {
-        opacity: 1,
-        filter: "saturate(1)",
-        left: `${replacementLeft}px`,
-        top: `${replacementTop}px`,
-      },
-    ], {
-      duration: 720,
-      delay: 180,
-      easing: "ease-out",
-      fill: "forwards",
-    });
 
     const carryDog = companion.animate([
       { opacity: 1, transform: dogTransform(grabX, grabY, 2, 1) },
@@ -193,12 +178,65 @@
     });
 
     await Promise.allSettled([carryDog.finished, carryCard.finished]);
-    replacement.style.left = `${replacementLeft}px`;
-    replacement.style.top = `${replacementTop}px`;
-    replacement.style.opacity = "1";
-    replacementArrival.cancel();
     outgoing.remove();
     companion.remove();
+    await wait(160);
+
+    const replacementArrival = replacement.animate([
+      {
+        opacity: 0,
+        filter: "saturate(.86)",
+        left: `${Math.round(replacementStartLeft)}px`,
+        top: `${Math.round(replacementPreviewTop + 10)}px`,
+      },
+      {
+        opacity: 1,
+        filter: "saturate(1)",
+        left: `${Math.round(replacementPreviewLeft)}px`,
+        top: `${Math.round(replacementPreviewTop)}px`,
+      },
+    ], {
+      duration: 680,
+      easing: "cubic-bezier(.2,.82,.24,1)",
+      fill: "forwards",
+    });
+    await replacementArrival.finished.catch(() => {});
+    replacement.style.left = `${Math.round(replacementPreviewLeft)}px`;
+    replacement.style.top = `${Math.round(replacementPreviewTop)}px`;
+    replacement.style.opacity = "1";
+    replacementArrival.cancel();
+    await wait(260);
+
+    const tuckMidLeft = replacementLeft + (replacementPreviewLeft - replacementLeft) * .42;
+    const tuckMidTop = replacementTop + (replacementPreviewTop - replacementTop) * .42;
+    const tuckFront = replacement.animate([
+      { left: `${Math.round(replacementPreviewLeft)}px`, top: `${Math.round(replacementPreviewTop)}px` },
+      { left: `${Math.round(tuckMidLeft)}px`, top: `${Math.round(tuckMidTop)}px` },
+    ], {
+      duration: 420,
+      easing: "cubic-bezier(.5,.02,.72,.9)",
+      fill: "forwards",
+    });
+    await tuckFront.finished.catch(() => {});
+    replacement.style.left = `${Math.round(tuckMidLeft)}px`;
+    replacement.style.top = `${Math.round(tuckMidTop)}px`;
+    tuckFront.cancel();
+    replacement.style.zIndex = "1";
+
+    const tuckUnder = replacement.animate([
+      { left: `${Math.round(tuckMidLeft)}px`, top: `${Math.round(tuckMidTop)}px` },
+      { left: `${replacementLeft}px`, top: `${replacementTop}px` },
+    ], {
+      duration: 520,
+      easing: "cubic-bezier(.3,.04,.28,1)",
+      fill: "forwards",
+    });
+    await tuckUnder.finished.catch(() => {});
+    replacement.style.left = `${replacementLeft}px`;
+    replacement.style.top = `${replacementTop}px`;
+    replacement.style.zIndex = "1";
+    replacement.style.opacity = "1";
+    tuckUnder.cancel();
     stack.classList.remove("is-dog-turning");
     stack.classList.add("has-dog-turned-card");
   };

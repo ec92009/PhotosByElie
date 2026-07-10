@@ -258,6 +258,31 @@ def _upload_and_register(config: ConnectorConfig, action: dict) -> dict:
     }
 
 
+def _launch_sidecar_workspace(config: ConnectorConfig) -> dict:
+    """Open the canonical local Sidecar UI on this connector Mac."""
+    launcher = config.repo_root / "scripts" / "open_sidecar_main.py"
+    if not launcher.exists():
+        raise RuntimeError(f"Sidecar launcher is missing: {launcher}")
+    log_dir = Path.home() / "Library" / "Logs" / "PhotosByElie"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_path = log_dir / "new-owner-sidecar-launch.log"
+    with log_path.open("a", encoding="utf-8") as log:
+        subprocess.Popen(
+            [sys.executable, str(launcher)],
+            cwd=config.repo_root,
+            stdout=log,
+            stderr=subprocess.STDOUT,
+            text=True,
+            start_new_session=True,
+        )
+    return {
+        "launched": True,
+        "surface": "sidecar.html",
+        "connectorId": config.connector_id,
+        "requestedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+
+
 def execute_action(config: ConnectorConfig, action: dict) -> dict:
     action_type = str(action.get("type") or "").strip()
     if action_type == "owner-connector-check":
@@ -300,6 +325,8 @@ def execute_action(config: ConnectorConfig, action: dict) -> dict:
         result["stateCounts"] = list(local.get("preview", {}).get("stateCounts") or [])
         result["previewErrors"] = preview_errors
         result["readOnly"] = False
+        if manifest.get("launchWorkspace"):
+            result["workspace"] = _launch_sidecar_workspace(config)
         return result
     if action_type == "sidecar-review-decision":
         payload = action.get("payload") if isinstance(action.get("payload"), dict) else {}

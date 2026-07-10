@@ -49,6 +49,27 @@ class UploadRegistrationScopeTest(unittest.TestCase):
         self.assertEqual(result["job"]["status"], "done")
         self.assertEqual(result["job"]["indexedCount"], 57_500)
 
+    def test_culling_action_launches_the_canonical_local_sidecar_when_requested(self):
+        local_result = {
+            "result": {"recordsPrepared": 24},
+            "preview": {"items": [], "stateCounts": [{"pickState": "undecided", "count": 24}]},
+        }
+        with patch(
+            "scripts.new_owner_connector._load_local_modules",
+            return_value=(lambda *_args, **_kwargs: local_result, None, None, None),
+        ), patch(
+            "scripts.new_owner_connector._launch_sidecar_workspace",
+            return_value={"launched": True, "surface": "sidecar.html", "connectorId": "david"},
+        ) as launch:
+            result = execute_action(self.config, {
+                "type": "sidecar-culling-review",
+                "payload": {"manifest": {"includePreviews": False, "launchWorkspace": True}},
+            })
+
+        launch.assert_called_once_with(self.config)
+        self.assertTrue(result["workspace"]["launched"])
+        self.assertEqual(result["workspace"]["surface"], "sidecar.html")
+
 
 if __name__ == "__main__":
     unittest.main()

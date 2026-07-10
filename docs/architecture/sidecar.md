@@ -3,9 +3,10 @@
 Date: 2026-07-04
 
 Sidecar is the Apple Photos triage engine behind the authenticated cloud Owner
-workspace. Its local fallback UI remains useful for recovery and high-speed Mac
-work, while Owner is the normal control surface. Sidecar decides library fate
-and metadata; Owner controls connector work, publication, and commerce.
+workspace. Its Mac-local Culling and Review UI is the canonical working surface,
+launched from New Owner on the selected connector Mac; it is not replaced by a
+reduced cloud record list. Sidecar decides library fate and metadata; Owner
+controls which Mac opens it, connector work, publication, and commerce.
 
 ## Version
 

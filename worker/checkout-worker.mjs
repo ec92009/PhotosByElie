@@ -2072,6 +2072,12 @@ export const createPhotosByElieWorker = ({
     const cleaned = String(value || "").trim().toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
     return cleaned.slice(0, 80) || "manual-owner";
   };
+  const ownerConnectorActionTypes = new Set([
+    "owner-connector-check",
+    "sidecar-culling-review",
+    "sidecar-review-decision",
+    "sidecar-upload-publish",
+  ]);
 
   const requireOwnerConnector = async (request) => {
     if (!ownerConnectorAuth || typeof ownerConnectorAuth.requireConnector !== "function") {
@@ -2175,6 +2181,7 @@ export const createPhotosByElieWorker = ({
     }
     const actions = await ownerActionStore.listActions({ limit: 100 });
     const available = actions.filter((action) => {
+      if (!ownerConnectorActionTypes.has(action.type)) return false;
       if (action.state === "claimed") return action.claim?.connectorId === connector.connectorId;
       if (action.state !== "queued") return false;
       const requested = cleanOwnerConnectorId(action.payload?.requestedConnector || "");

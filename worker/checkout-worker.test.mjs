@@ -496,6 +496,9 @@ test("background Owner connectors use scoped credentials and report health", asy
     payload: { requestedConnector: "david", manifest: { limit: 24 } },
   }, { origin: "https://photos-by-elie.com" }));
   const queued = (await queuedResponse.json()).action;
+  await worker.fetch(jsonRequest("https://worker.test/owner/actions", {
+    action: "track-b-cloud-shell-check",
+  }, { origin: "https://photos-by-elie.com" }));
 
   const unauthorized = await worker.fetch(new Request("https://worker.test/owner/connector/actions"));
   assert.equal(unauthorized.status, 401);

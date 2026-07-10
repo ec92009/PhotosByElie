@@ -520,10 +520,10 @@
   };
 
   const queueCheck = () => queueAction({
-    action: "track-b-cloud-shell-check",
+    action: "owner-connector-check",
     payload: {
-      surface: "new-owner",
-      localFilesRequired: false,
+      requestedConnector: connectorId() || undefined,
+      surface: "owner",
       checkedAt: new Date().toISOString(),
     },
     statusLabel: "Queueing...",

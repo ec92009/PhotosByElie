@@ -251,8 +251,15 @@ def _upload_and_register(config: ConnectorConfig, action: dict) -> dict:
 
 
 def execute_action(config: ConnectorConfig, action: dict) -> dict:
-    connector_result, decision_result, preview_cache_path, run_bridge_task = _load_local_modules(config.repo_root)
     action_type = str(action.get("type") or "").strip()
+    if action_type == "owner-connector-check":
+        return {
+            "connectorId": config.connector_id,
+            "type": action_type,
+            "hostname": socket.gethostname(),
+            "completedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        }
+    connector_result, decision_result, preview_cache_path, run_bridge_task = _load_local_modules(config.repo_root)
     if action_type == "sidecar-culling-review":
         local = connector_result(config.repo_root, {"action": action, "connectorId": config.connector_id})
         manifest = action.get("payload", {}).get("manifest", {}) if isinstance(action.get("payload"), dict) else {}

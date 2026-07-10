@@ -2,8 +2,16 @@ const clone = (value) => value == null ? value : JSON.parse(JSON.stringify(value
 
 const cleanId = (value) => String(value || "").trim();
 
+const actionTime = (action) => {
+  const timestamp = Date.parse(action?.createdAt || action?.updatedAt || "");
+  return Number.isFinite(timestamp) ? timestamp : 0;
+};
+
+const byNewestAction = (left, right) => actionTime(right) - actionTime(left);
+
 export const createMemoryOwnerActionStore = () => {
   const actions = new Map();
+  const connectors = new Map();
 
   return {
     putAction: async (action) => {
@@ -12,7 +20,19 @@ export const createMemoryOwnerActionStore = () => {
       return clone(action);
     },
     getAction: async (id) => clone(actions.get(cleanId(id))) || null,
-    _debug: { actions },
+    listActions: async ({ limit = 25 } = {}) => [...actions.values()]
+      .map(clone)
+      .sort(byNewestAction)
+      .slice(0, Math.max(1, Math.min(100, Number(limit) || 25))),
+    putConnector: async (connector) => {
+      if (!cleanId(connector?.id)) throw new Error("Owner connector requires an id.");
+      connectors.set(connector.id, clone(connector));
+      return clone(connector);
+    },
+    listConnectors: async () => [...connectors.values()].map(clone).sort((left, right) =>
+      String(right.lastSeenAt || "").localeCompare(String(left.lastSeenAt || ""))
+    ),
+    _debug: { actions, connectors },
   };
 };
 
@@ -21,18 +41,85 @@ export const createKvOwnerActionStore = ({
   prefix = "pbe",
 } = {}) => {
   if (!namespace) throw new Error("createKvOwnerActionStore requires a KV namespace binding.");
-  const keyFor = (id) => `${prefix}:owner-actions:${cleanId(id)}`;
+  const actionPrefix = `${prefix}:owner-actions:`;
+  const indexPrefix = `${prefix}:owner-action-index:`;
+  const headKey = `${prefix}:owner-action-head`;
+  const connectorPrefix = `${prefix}:owner-connectors:`;
+  const connectorHeadKey = `${prefix}:owner-connector-head`;
+  const keyFor = (id) => `${actionPrefix}${cleanId(id)}`;
+  const indexKeyFor = (action) => {
+    const timestamp = Math.max(0, Math.min(Number.MAX_SAFE_INTEGER, actionTime(action)));
+    const reverseTime = String(Number.MAX_SAFE_INTEGER - timestamp).padStart(16, "0");
+    return `${indexPrefix}${reverseTime}:${cleanId(action?.id)}`;
+  };
+  const idFromIndexKey = (name) => String(name || "").slice(indexPrefix.length).split(":").pop() || "";
+  const readHeadIds = async () => {
+    const head = await namespace.get(headKey, { type: "json" });
+    if (Array.isArray(head?.ids)) return head.ids.map(cleanId).filter(Boolean);
+    if (Array.isArray(head)) return head.map(cleanId).filter(Boolean);
+    return [];
+  };
 
   return {
     putAction: async (action) => {
       if (!cleanId(action?.id)) throw new Error("Owner action requires an id.");
       await namespace.put(keyFor(action.id), JSON.stringify(action));
+      await namespace.put(indexKeyFor(action), JSON.stringify({ id: cleanId(action.id) }));
+      const headIds = await readHeadIds();
+      const nextHeadIds = [cleanId(action.id), ...headIds.filter((id) => id !== cleanId(action.id))].slice(0, 100);
+      await namespace.put(headKey, JSON.stringify({ ids: nextHeadIds }));
       return clone(action);
     },
     getAction: async (id) => {
       const clean = cleanId(id);
       if (!clean) return null;
       return await namespace.get(keyFor(clean), { type: "json" });
+    },
+    listActions: async ({ limit = 25 } = {}) => {
+      if (typeof namespace.list !== "function") return [];
+      const boundedLimit = Math.max(1, Math.min(100, Number(limit) || 25));
+      const actionsById = new Map();
+      const addAction = async (id) => {
+        const clean = cleanId(id);
+        if (!clean || actionsById.has(clean)) return;
+        const action = await namespace.get(keyFor(clean), { type: "json" });
+        if (action) actionsById.set(clean, action);
+      };
+
+      for (const id of await readHeadIds()) {
+        await addAction(id);
+      }
+
+      const indexPage = await namespace.list({ prefix: indexPrefix, limit: Math.min(1000, boundedLimit * 4) });
+      for (const key of indexPage.keys || []) {
+        await addAction(idFromIndexKey(key.name));
+      }
+
+      const fallbackPage = await namespace.list({ prefix: actionPrefix, limit: Math.min(1000, boundedLimit * 8) });
+      for (const key of fallbackPage.keys || []) {
+        await addAction(String(key.name || "").slice(actionPrefix.length));
+      }
+
+      return [...actionsById.values()].sort(byNewestAction).slice(0, boundedLimit).map(clone);
+    },
+    putConnector: async (connector) => {
+      const id = cleanId(connector?.id);
+      if (!id) throw new Error("Owner connector requires an id.");
+      await namespace.put(`${connectorPrefix}${id}`, JSON.stringify(connector), { expirationTtl: 24 * 60 * 60 });
+      const head = await namespace.get(connectorHeadKey, { type: "json" });
+      const ids = Array.isArray(head?.ids) ? head.ids.map(cleanId).filter(Boolean) : [];
+      await namespace.put(connectorHeadKey, JSON.stringify({ ids: [id, ...ids.filter((item) => item !== id)].slice(0, 25) }));
+      return clone(connector);
+    },
+    listConnectors: async () => {
+      const head = await namespace.get(connectorHeadKey, { type: "json" });
+      const ids = Array.isArray(head?.ids) ? head.ids.map(cleanId).filter(Boolean) : [];
+      const connectors = [];
+      for (const id of ids) {
+        const connector = await namespace.get(`${connectorPrefix}${id}`, { type: "json" });
+        if (connector) connectors.push(connector);
+      }
+      return connectors.sort((left, right) => String(right.lastSeenAt || "").localeCompare(String(left.lastSeenAt || ""))).map(clone);
     },
   };
 };

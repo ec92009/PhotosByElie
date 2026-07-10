@@ -149,6 +149,7 @@
     filteredIndexedCount: 0,
     windowBackStack: [],
     windowForwardStack: [],
+    pendingSelectionAfterLoad: null,
   };
 
   const escapeHtml = (value = "") => String(value)
@@ -371,6 +372,54 @@
   };
   const mediaLabel = (item) => (isVideo(item) ? "" : "photo");
   const mediaLine = (item) => [formatDate(item.creationDate), mediaLabel(item)].filter(Boolean).join(" · ");
+  const compactLocationLabel = (item) => {
+    const label = String(item?.applePhotosMetadata?.locationLabel || "").trim();
+    if (label) return label.split(",").map((part) => part.trim()).find(Boolean) || label;
+    const latitude = Number(item?.location?.latitude);
+    const longitude = Number(item?.location?.longitude);
+    if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+      return `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+    }
+    return "not indexed";
+  };
+  const cameraLabel = (item) => {
+    const metadata = item?.cameraMetadata || item?.exifMetadata || item?.applePhotosMetadata?.camera || {};
+    const make = String(metadata.make || metadata.cameraMake || "").trim();
+    const model = String(metadata.model || metadata.cameraModel || metadata.lensModel || "").trim();
+    const label = [make, model].filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+    return label || "not indexed";
+  };
+  const resourceFormatLabel = (item) => {
+    const formats = Array.isArray(item?.resourceFormats) ? item.resourceFormats.filter(Boolean) : [];
+    const source = formats.length ? formats.join(" + ") : String(item?.resourceFormat || item?.preferredResourceFormat || "").trim();
+    const strategy = String(item?.exportStrategy || "").trim();
+    if (isVideo(item)) return source || "video";
+    if (strategy === "rendered_jpeg") return source ? `rendered JPG from ${source}` : "rendered JPG";
+    return source || "not indexed";
+  };
+  const pixelSizeLabel = (item) => {
+    const width = Number(item?.pixelWidth || 0);
+    const height = Number(item?.pixelHeight || 0);
+    return width && height ? `${width.toLocaleString()} x ${height.toLocaleString()}` : "not indexed";
+  };
+  const quickLookMetadata = (item) => {
+    const rows = [
+      ["Camera", cameraLabel(item)],
+      ["Location", compactLocationLabel(item)],
+      ["Format", resourceFormatLabel(item)],
+      ["Size", pixelSizeLabel(item)],
+    ];
+    return `
+      <dl class="sidecar-quick-look-metadata" aria-label="Photo metadata">
+        ${rows.map(([label, value]) => `
+          <div>
+            <dt>${escapeHtml(label)}</dt>
+            <dd>${escapeHtml(value)}</dd>
+          </div>
+        `).join("")}
+      </dl>
+    `;
+  };
   const captureTime = (item) => {
     const time = Date.parse(item?.creationDate || "");
     return Number.isFinite(time) ? time : Number.POSITIVE_INFINITY;
@@ -387,7 +436,7 @@
   const videoPlayerMarkup = (item, autoplay = true) => `
     <video class="sidecar-inline-video" controls playsinline preload="metadata" ${autoplay ? "autoplay" : ""} poster="${escapeHtml(previewUrl(item))}" src="${escapeHtml(videoUrl(item))}"></video>
   `;
-  const versionFallback = "126.2";
+  const versionFallback = "126.6";
   const versionFallbackLabel = `v${versionFallback}`;
   const videoBadge = (item, index, label) => isVideo(item)
     ? videoOverlay(item, index, label)
@@ -448,6 +497,22 @@
       reconcileSelection(state.selectedIndex);
     }
     state.autoAdvanceDirection = snapshot.autoAdvanceDirection < 0 ? -1 : 1;
+  };
+
+  const scheduleSelectionAfterLoad = (target = {}) => {
+    const index = Number(target.index);
+    state.pendingSelectionAfterLoad = {
+      index: Number.isFinite(index) ? index : -1,
+      assetId: String(target.assetId || "").trim(),
+    };
+  };
+
+  const applyPendingSelectionAfterLoad = () => {
+    const target = state.pendingSelectionAfterLoad;
+    state.pendingSelectionAfterLoad = null;
+    if (!target) return false;
+    reconcileSelection(target.index, { preferredAssetId: target.assetId });
+    return true;
   };
 
   const undoSnapshot = (item) => {
@@ -1494,6 +1559,7 @@
           <strong>${escapeHtml(label)}</strong>
           <span>${escapeHtml(mediaLine(item))}</span>
         </figcaption>
+        ${quickLookMetadata(item)}
       </figure>
     `;
     const existingQuickLook = $("[data-sidecar-quick-look]");
@@ -1552,6 +1618,9 @@
     const visible = new Set(visibleIndexes());
     if (!visible.has(index)) return;
     const bounded = Math.max(0, Math.min(Number.isFinite(index) ? index : 0, state.items.length - 1));
+    if (state.selectedIndex >= 0 && bounded !== state.selectedIndex) {
+      state.autoAdvanceDirection = bounded < state.selectedIndex ? -1 : 1;
+    }
     const previousIndexes = selectedSelectionSet();
     let nextIndexes;
     if (extend) {
@@ -1756,6 +1825,9 @@
     const preferredAssetId = preferredIndex >= 0
       ? itemId(state.items[preferredIndex])
       : selectionBefore.selectedAssetId;
+    if (advance && !indexes && decisions.length === 1) {
+      scheduleSelectionAfterLoad({ index: preferredIndex, assetId: preferredAssetId });
+    }
     const applyResult = applyChangedItems(changedItems, visibilityBefore, {
       preferredIndex,
       preferredAssetId,
@@ -1962,7 +2034,9 @@
     state.filteredIndexedCount = Number(payload.filteredIndexedCount || payload.indexedCount || 0);
     state.windowCursorOffset = Number(payload.nextOffset || (effectiveOffset + state.items.length));
     state.undoStack = [];
-    if ((selectionBeforeLoad.selectedAssetIds || []).length || selectionBeforeLoad.selectedIndex >= 0) {
+    if (applyPendingSelectionAfterLoad()) {
+      // A decision made the previous card disappear; keep culling on its neighbor.
+    } else if ((selectionBeforeLoad.selectedAssetIds || []).length || selectionBeforeLoad.selectedIndex >= 0) {
       restoreSelectionSnapshot(selectionBeforeLoad);
     } else {
       setInitialSelection();

@@ -1,10 +1,13 @@
-# Max / David Chat
+# Max / David Chat (Legacy Scratchpad)
 
 Use this file only as a legacy/manual fallback for quick back-and-forth between Max and David. Keep it simple: one message per line, prefixed with `Max:` or `David:`.
 
-Primary handoff transport is Gmail self-email on `ec92009@gmail.com`: exact subject `MAX2DAVID` for Max-to-David prompts and exact subject `DAVID2MAX` for David-to-Max acknowledgements, progress, decisions, and final reports.
+As of 2026-07-06, primary Max/David coordination is direct Tailscale/mesh. The
+old Gmail self-email route is retired unless the user explicitly asks about a
+specific message.
 
-For durable automation prompt reference, use `MAX2DAVID.md`. For durable report reference, use `DAVID2MAX.md`.
+For durable automation prompt/reference files during a file-based fallback, use
+`MAX2DAVID.md` and `DAVID2MAX.md`.
 
 Do not put secrets, private client data, signed URLs, or private media paths here.
 

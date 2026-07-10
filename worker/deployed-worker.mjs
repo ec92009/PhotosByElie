@@ -1,11 +1,13 @@
 import { createCatalogIndex, createPhotosByElieWorker } from "./checkout-worker.mjs";
-import { createKvAccessUserRegistry } from "./access-user-registry.mjs";
+import { createD1AccessUserRegistry, createKvAccessUserRegistry } from "./access-user-registry.mjs";
 import { createAnalyticsStore } from "./analytics-store.mjs";
 import { createCloudflareImagesRenderer } from "./cloudflare-images-renderer.mjs";
 import { createKvStore } from "./kv-store.mjs";
 import { createMockStripeClient } from "./mock-stripe.mjs";
 import { createGoogleOAuthAuth } from "./google-oauth-auth.mjs";
 import { createKvOwnerActionStore } from "./owner-action-store.mjs";
+import { createOwnerConnectorAuth } from "./owner-connector-auth.mjs";
+import { createR2OwnerConnectorPackage } from "./owner-connector-package.mjs";
 import { createOwnerAccessAuth } from "./owner-access-auth.mjs";
 import { createRealEstateAuth } from "./real-estate-auth.mjs";
 import { createRealEstateDeliverables } from "./real-estate-deliverables.mjs";
@@ -82,10 +84,23 @@ const authAllowedReturnOriginsFor = (env = {}, publicSiteUrl = "") => [
   ...(String(env.AUTH_ALLOWED_RETURN_ORIGINS || "").split(/[\s,;]+/).filter(Boolean)),
 ];
 
-const accessUserRegistryFor = (env = {}) => createKvAccessUserRegistry({
-  namespace: env.ACCESS_USERS_KV || requiredBinding(env, "ORDERS_KV"),
-  prefix: env.KV_PREFIX || "pbe",
-});
+const accessUserRegistryFor = (env = {}) => env.ACCESS_DB
+  ? createD1AccessUserRegistry({ database: env.ACCESS_DB })
+  : createKvAccessUserRegistry({
+    namespace: env.ACCESS_USERS_KV || requiredBinding(env, "ORDERS_KV"),
+    prefix: env.KV_PREFIX || "pbe",
+  });
+
+const ownerConnectorAuthFor = (env = {}) => {
+  const raw = String(env.OWNER_CONNECTOR_TOKENS_JSON || "").trim();
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    return createOwnerConnectorAuth({ credentials: parsed });
+  } catch {
+    return null;
+  }
+};
 
 const cleanRealEstateGallery = (gallery = {}) => {
   const key = String(gallery.key || "").trim();
@@ -313,6 +328,11 @@ export default {
       ownerActionStore: createKvOwnerActionStore({
         namespace: env.OWNER_ACTIONS_KV || requiredBinding(env, "ORDERS_KV"),
         prefix: env.KV_PREFIX || "pbe",
+      }),
+      ownerConnectorAuth: ownerConnectorAuthFor(env),
+      ownerConnectorPackage: createR2OwnerConnectorPackage({
+        bucket: privateBucket,
+        key: env.OWNER_CONNECTOR_MAC_KEY || "owner-connectors/photosbyelie-mac-connector.zip",
       }),
       authAllowedReturnOrigins: authAllowedReturnOriginsFor(env, publicSiteUrl),
       ordersUrl: `${publicSiteUrl}/order.html`,

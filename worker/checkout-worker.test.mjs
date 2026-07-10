@@ -12,6 +12,7 @@ import { createLocalZipDelivery } from "./local-zip-delivery.mjs";
 import { createMemoryStore } from "./memory-store.mjs";
 import { createMockStripeClient } from "./mock-stripe.mjs";
 import { createOwnerAccessAuth } from "./owner-access-auth.mjs";
+import { createKvOwnerActionStore, createMemoryOwnerActionStore } from "./owner-action-store.mjs";
 import { createRealEstateAuth } from "./real-estate-auth.mjs";
 import { createRealEstateDeliverables } from "./real-estate-deliverables.mjs";
 import { createRealEstateOriginals } from "./real-estate-originals.mjs";
@@ -147,6 +148,7 @@ test("Google OAuth auth requests account choice and stores a signed session cook
   assert.equal(tokenExchangeSeen, true);
   assert.equal(callback.returnTo, "https://photos-by-elie.com/?account=1");
   assert.match(callback.cookie, /^pbe_google_session=/);
+  assert.match(callback.sessionToken, /^[^.]+\.[^.]+$/);
   assert.match(callback.cookie, /HttpOnly/);
   assert.match(callback.cookie, /SameSite=None/);
   assert.match(callback.cookie, /Secure/);
@@ -157,6 +159,12 @@ test("Google OAuth auth requests account choice and stores a signed session cook
   }));
   assert.equal(session.email, "ec92009@gmail.com");
   assert.equal(session.provider, "google-oauth");
+
+  const bearerSession = await auth.optionalSession(new Request("https://worker.test/auth/session", {
+    headers: { authorization: `Bearer ${callback.sessionToken}` },
+  }));
+  assert.equal(bearerSession.email, "ec92009@gmail.com");
+  assert.equal(bearerSession.provider, "google-oauth");
 });
 
 const firstDeliverablePhotoId = (catalog, collectionKey = null) => {
@@ -253,6 +261,34 @@ test("analytics endpoint stores sanitized public funnel events", async () => {
   assert.equal(count.count, 1);
 });
 
+test("KV owner action store lists newest actions through its time index", async () => {
+  const kv = createFakeKv();
+  const store = createKvOwnerActionStore({ namespace: kv, prefix: "test" });
+
+  for (let index = 0; index < 12; index += 1) {
+    await store.putAction({
+      id: `000-old-${String(index).padStart(2, "0")}`,
+      type: "import-operation",
+      state: "queued",
+      createdAt: `2026-05-17T12:${String(index).padStart(2, "0")}:00.000Z`,
+    });
+  }
+  await store.putAction({
+    id: "zzz-newest",
+    type: "track-b-cloud-shell-check",
+    state: "queued",
+    createdAt: "2026-05-17T12:30:00.000Z",
+  });
+
+  const actions = await store.listActions({ limit: 1 });
+  assert.equal(actions.length, 1);
+  assert.equal(actions[0].id, "zzz-newest");
+  assert.deepEqual(JSON.parse(kv._debug.get("test:owner-action-head")).ids.slice(0, 2), [
+    "zzz-newest",
+    "000-old-11",
+  ]);
+});
+
 test("auth session treats configured Google admin as admin and owner", async () => {
   const worker = createPhotosByElieWorker({
     catalog: loadCatalog(),
@@ -330,12 +366,13 @@ test("owner actions are queued behind Owner Google access", async () => {
   const registry = createMemoryAccessUserRegistry([
     { email: "owner@example.com", tier: "owner" },
   ]);
+  let nowTick = 0;
   const worker = createPhotosByElieWorker({
     catalog: loadCatalog(),
     accessAuth: fakeAccessAuthFor("owner@example.com"),
     accessUserRegistry: registry,
     accessAdminEmail: "ec92009@gmail.com",
-    now: () => new Date("2026-05-17T12:00:00.000Z"),
+    now: () => new Date(`2026-05-17T12:${String(nowTick++).padStart(2, "0")}:00.000Z`),
     randomUUID: deterministicIds(),
   });
 
@@ -364,6 +401,47 @@ test("owner actions are queued behind Owner Google access", async () => {
   const readbackBody = await readback.json();
   assert.equal(readbackBody.action.id, body.action.id);
 
+  const claimResponse = await worker.fetch(jsonRequest(`https://worker.test/owner/actions/${body.action.id}/claim`, {
+    connectorId: "Max Sidecar",
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(claimResponse.status, 200);
+  const claimBody = await claimResponse.json();
+  assert.equal(claimBody.action.state, "claimed");
+  assert.equal(claimBody.action.claim.connectorId, "max-sidecar");
+  assert.equal(claimBody.action.claim.claimedBy, "owner@example.com");
+  assert.equal(claimBody.action.history.at(-1).event, "claimed");
+
+  const completeResponse = await worker.fetch(jsonRequest(`https://worker.test/owner/actions/${body.action.id}/complete`, {
+    result: { connector: "max-sidecar", recordsReviewed: 0 },
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(completeResponse.status, 200);
+  const completeBody = await completeResponse.json();
+  assert.equal(completeBody.action.state, "completed");
+  assert.deepEqual(completeBody.action.result, { connector: "max-sidecar", recordsReviewed: 0 });
+  assert.equal(completeBody.action.completedBy, "owner@example.com");
+  assert.equal(completeBody.action.history.at(-1).event, "completed");
+
+  const reclaimResponse = await worker.fetch(jsonRequest(`https://worker.test/owner/actions/${body.action.id}/claim`, {
+    connectorId: "max-sidecar",
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(reclaimResponse.status, 409);
+
+  const secondResponse = await worker.fetch(jsonRequest("https://worker.test/owner/actions", {
+    action: "track-b-cloud-shell-check",
+    payload: { surface: "new-owner" },
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(secondResponse.status, 202);
+  const secondBody = await secondResponse.json();
+
+  const listResponse = await worker.fetch(new Request("https://worker.test/owner/actions?limit=1", {
+    headers: { origin: "https://photos-by-elie.com" },
+  }));
+  assert.equal(listResponse.status, 200);
+  const listBody = await listResponse.json();
+  assert.equal(listBody.limit, 1);
+  assert.equal(listBody.actions.length, 1);
+  assert.equal(listBody.actions[0].id, secondBody.action.id);
+
   const clientWorker = createPhotosByElieWorker({
     catalog: loadCatalog(),
     accessAuth: fakeAccessAuthFor("client@example.com"),
@@ -374,6 +452,354 @@ test("owner actions are queued behind Owner Google access", async () => {
     action: "import-operation",
   }, { origin: "https://photos-by-elie.com" }));
   assert.equal(forbidden.status, 403);
+  const listForbidden = await clientWorker.fetch(new Request("https://worker.test/owner/actions", {
+    headers: { origin: "https://photos-by-elie.com" },
+  }));
+  assert.equal(listForbidden.status, 403);
+  const claimForbidden = await clientWorker.fetch(jsonRequest(`https://worker.test/owner/actions/${body.action.id}/claim`, {
+    connectorId: "client-sidecar",
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(claimForbidden.status, 403);
+});
+
+test("background Owner connectors use scoped credentials and report health", async () => {
+  const ownerActionStore = createMemoryOwnerActionStore();
+  const registry = createMemoryAccessUserRegistry([{ email: "owner@example.com", tier: "owner" }]);
+  const ownerConnectorAuth = {
+    requireConnector: async (request) => {
+      if (request.headers.get("authorization") !== "Bearer connector-secret") {
+        throw Object.assign(new Error("Connector credential required."), {
+          status: 401,
+          code: "owner_connector_auth_required",
+        });
+      }
+      return { connectorId: "david" };
+    },
+  };
+  const worker = createPhotosByElieWorker({
+    catalog: loadCatalog(),
+    accessAuth: fakeAccessAuthFor("owner@example.com"),
+    accessUserRegistry: registry,
+    ownerActionStore,
+    ownerConnectorAuth,
+    ownerConnectorPackage: {
+      getMacPackage: async () => ({
+        body: "connector-zip",
+        headers: { "content-type": "application/zip", "content-disposition": "attachment; filename=connector.zip" },
+      }),
+    },
+    randomUUID: deterministicIds(),
+  });
+
+  const queuedResponse = await worker.fetch(jsonRequest("https://worker.test/owner/actions", {
+    action: "sidecar-culling-review",
+    payload: { requestedConnector: "david", manifest: { limit: 24 } },
+  }, { origin: "https://photos-by-elie.com" }));
+  const queued = (await queuedResponse.json()).action;
+  await worker.fetch(jsonRequest("https://worker.test/owner/actions", {
+    action: "track-b-cloud-shell-check",
+  }, { origin: "https://photos-by-elie.com" }));
+
+  const unauthorized = await worker.fetch(new Request("https://worker.test/owner/connector/actions"));
+  assert.equal(unauthorized.status, 401);
+
+  const connectorHeaders = { authorization: "Bearer connector-secret" };
+  const heartbeatResponse = await worker.fetch(jsonRequest("https://worker.test/owner/connector/heartbeat", {
+    hostname: "David-5.local",
+    platform: "macos",
+    version: "1.0",
+    capabilities: ["apple-photos", "sidecar"],
+  }, connectorHeaders));
+  assert.equal(heartbeatResponse.status, 200);
+  assert.equal((await heartbeatResponse.json()).connector.id, "david");
+
+  const connectorList = await worker.fetch(new Request("https://worker.test/owner/connector/actions", {
+    headers: connectorHeaders,
+  }));
+  const connectorListBody = await connectorList.json();
+  assert.equal(connectorListBody.actions.length, 1);
+  assert.equal(connectorListBody.actions[0].id, queued.id);
+
+  const claimResponse = await worker.fetch(jsonRequest(
+    `https://worker.test/owner/connector/actions/${queued.id}/claim`,
+    {},
+    connectorHeaders
+  ));
+  const claimed = (await claimResponse.json()).action;
+  assert.equal(claimed.claim.connectorId, "david");
+  assert.equal(claimed.claim.claimedBy, "connector:david");
+
+  const completeResponse = await worker.fetch(jsonRequest(
+    `https://worker.test/owner/connector/actions/${queued.id}/complete`,
+    { result: { recordsPrepared: 24 } },
+    connectorHeaders
+  ));
+  const completed = (await completeResponse.json()).action;
+  assert.equal(completed.state, "completed");
+  assert.equal(completed.completedBy, "connector:david");
+  assert.equal(completed.result.recordsPrepared, 24);
+
+  const ownerConnectorResponse = await worker.fetch(new Request("https://worker.test/owner/connectors", {
+    headers: { origin: "https://photos-by-elie.com" },
+  }));
+  assert.equal(ownerConnectorResponse.status, 200);
+  const ownerConnectors = await ownerConnectorResponse.json();
+  assert.equal(ownerConnectors.connectors[0].hostname, "David-5.local");
+
+  const packageResponse = await worker.fetch(new Request("https://worker.test/owner/connector/download/mac", {
+    headers: { origin: "https://photos-by-elie.com" },
+  }));
+  assert.equal(packageResponse.status, 200);
+  assert.equal(packageResponse.headers.get("content-type"), "application/zip");
+  assert.equal(await packageResponse.text(), "connector-zip");
+});
+
+test("access console is admin-only and writes reversible role grants", async () => {
+  const registry = createMemoryAccessUserRegistry([
+    { email: "owner@example.com", tier: "owner" },
+  ]);
+  const nonAdminWorker = createPhotosByElieWorker({
+    catalog: loadCatalog(),
+    accessAuth: fakeAccessAuthFor("owner@example.com"),
+    accessUserRegistry: registry,
+    accessAdminEmail: "ec92009@gmail.com",
+  });
+  const forbidden = await nonAdminWorker.fetch(new Request("https://worker.test/access-console/state", {
+    headers: { origin: "https://photos-by-elie.com" },
+  }));
+  assert.equal(forbidden.status, 403);
+  const policyForbidden = await nonAdminWorker.fetch(new Request("https://worker.test/access-console/gallery-access?galleryKind=event&galleryKey=johnson-palmer-wedding", {
+    headers: { origin: "https://photos-by-elie.com" },
+  }));
+  assert.equal(policyForbidden.status, 403);
+
+  const adminWorker = createPhotosByElieWorker({
+    catalog: loadCatalog(),
+    accessAuth: fakeAccessAuthFor("ec92009@gmail.com"),
+    accessUserRegistry: registry,
+    accessAdminEmail: "ec92009@gmail.com",
+  });
+  const stateResponse = await adminWorker.fetch(new Request("https://worker.test/access-console/state", {
+    headers: { origin: "https://photos-by-elie.com" },
+  }));
+  assert.equal(stateResponse.status, 200);
+  const state = await stateResponse.json();
+  assert.equal(state.bootstrapAdminEmail, "ec92009@gmail.com");
+  assert.equal(state.roles.find((role) => role.id === "admin")?.grantable, false);
+
+  const adminGrantResponse = await adminWorker.fetch(jsonRequest("https://worker.test/access-console/people", {
+    email: "helper@example.test",
+    roles: ["admin"],
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(adminGrantResponse.status, 400);
+
+  const writeResponse = await adminWorker.fetch(jsonRequest("https://worker.test/access-console/people", {
+    email: "helper@example.test",
+    displayName: "Helper Example",
+    roles: ["user", "owner"],
+    notes: "Temporary ACS rehearsal owner.",
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(writeResponse.status, 200);
+  const writeBody = await writeResponse.json();
+  assert.equal(writeBody.user.email, "helper@example.test");
+  assert.equal(writeBody.user.tier, "owner");
+  assert.deepEqual(writeBody.user.roles, ["user", "owner"]);
+
+  const helperWorker = createPhotosByElieWorker({
+    catalog: loadCatalog(),
+    accessAuth: fakeAccessAuthFor("helper@example.test"),
+    accessUserRegistry: registry,
+    accessAdminEmail: "ec92009@gmail.com",
+  });
+  const helperSessionResponse = await helperWorker.fetch(new Request("https://worker.test/owner/session", {
+    headers: { origin: "https://photos-by-elie.com" },
+  }));
+  assert.equal(helperSessionResponse.status, 200);
+  const helperSession = await helperSessionResponse.json();
+  assert.equal(helperSession.tier, "owner");
+  assert.equal(helperSession.roles.includes("owner"), true);
+
+  const seedResponse = await adminWorker.fetch(jsonRequest("https://worker.test/access-console/fixtures/seed", {}, {
+    origin: "https://photos-by-elie.com",
+  }));
+  assert.equal(seedResponse.status, 200);
+  const seedBody = await seedResponse.json();
+  assert.equal(seedBody.fixtures.users.some((user) => user.email.endsWith(".test")), true);
+  assert.deepEqual(seedBody.fixtures.events.map((event) => event.label).sort(), [
+    "Agnes's B'day",
+    "Johnson-Palmer wedding",
+    "RE La Concha",
+  ].sort());
+  assert.equal(seedBody.fixtures.groups.some((group) => group.id === "johnson-palmer-wedding"), true);
+
+  const groupResponse = await adminWorker.fetch(jsonRequest("https://worker.test/access-console/groups", {
+    id: "cohen-cousins",
+    label: "Cohen cousins",
+    kind: "family",
+    galleryKind: "event",
+    galleryKey: "cohen-cousins",
+    accessPolicy: "family rehearsal previews with watermarks and normal download rules",
+    capabilities: ["view_gallery", "view_watermarked", "download_items"],
+    galleryDefaults: {
+      watermarked: true,
+      saleEnabled: true,
+      downloads: true,
+      pdf: false,
+      video: false,
+      memberOriginals: false,
+      ownerOriginals: true,
+    },
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(groupResponse.status, 200);
+  const groupBody = await groupResponse.json();
+  assert.equal(groupBody.group.id, "cohen-cousins");
+  assert.equal(groupBody.group.state, "active");
+  assert.equal(groupBody.group.galleryDefaults.downloads, true);
+  assert.equal(groupBody.group.galleryDefaults.ownerOriginals, true);
+
+  const cousinResponse = await adminWorker.fetch(jsonRequest("https://worker.test/access-console/people", {
+    email: "cousin@example.test",
+    displayName: "Cohen Cousin",
+    roles: ["user"],
+    groupIds: ["cohen-cousins"],
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(cousinResponse.status, 200);
+  const cousinBody = await cousinResponse.json();
+  assert.deepEqual(cousinBody.user.groupIds, ["cohen-cousins"]);
+  assert.equal(cousinBody.user.effectiveAccess.scopes.some((scope) => scope.galleryKey === "cohen-cousins"), true);
+  assert.equal(cousinBody.user.effectiveAccess.scopes.find((scope) => scope.galleryKey === "cohen-cousins").galleryDefaults.ownerOriginals, true);
+
+  const attendeeResponse = await adminWorker.fetch(jsonRequest("https://worker.test/access-console/people", {
+    email: "attendee@example.test",
+    displayName: "Wedding Attendee",
+    roles: ["user"],
+    groupIds: ["johnson-palmer-wedding"],
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(attendeeResponse.status, 200);
+  const attendeeBody = await attendeeResponse.json();
+  assert.deepEqual(attendeeBody.user.groupIds, ["johnson-palmer-wedding"]);
+  assert.equal(attendeeBody.user.groups[0].label, "Johnson-Palmer wedding");
+  assert.equal(attendeeBody.user.effectiveAccess.scopes.some((scope) => scope.galleryKey === "johnson-palmer-wedding"), true);
+
+  const policyResponse = await adminWorker.fetch(new Request("https://worker.test/access-console/gallery-access?galleryKind=event&galleryKey=johnson-palmer-wedding&email=attendee%40example.test&ownerOriginals=1", {
+    headers: { origin: "https://photos-by-elie.com" },
+  }));
+  assert.equal(policyResponse.status, 200);
+  const policyBody = await policyResponse.json();
+  assert.equal(policyBody.gallery.label, "Johnson-Palmer wedding");
+  assert.equal(policyBody.decisions.visitor.allowed, false);
+  assert.equal(policyBody.decisions.visitor.access.previewMode, "blocked");
+  assert.equal(policyBody.decisions.selected.allowed, true);
+  assert.equal(policyBody.decisions.selected.access.previewMode, "watermarked");
+  assert.equal(policyBody.decisions.selected.access.assignedDownloads, true);
+  assert.equal(policyBody.decisions.selected.access.checkout, true);
+  assert.equal(policyBody.decisions.owner.allowed, true);
+  assert.equal(policyBody.decisions.owner.access.previewMode, "originals");
+
+  const reGroupResponse = await adminWorker.fetch(jsonRequest("https://worker.test/access-console/people", {
+    email: "la-concha-member@example.test",
+    displayName: "La Concha Member",
+    roles: ["user"],
+    groupIds: ["re-la-concha"],
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(reGroupResponse.status, 200);
+
+  const reGroupWorker = createPhotosByElieWorker({
+    catalog: loadCatalog(),
+    accessAuth: fakeAccessAuthFor("la-concha-member@example.test"),
+    accessUserRegistry: registry,
+    accessAdminEmail: "ec92009@gmail.com",
+  });
+  const reGroupSessionResponse = await reGroupWorker.fetch(new Request("https://worker.test/auth/session", {
+    headers: { origin: "https://photos-by-elie.com" },
+  }));
+  assert.equal(reGroupSessionResponse.status, 200);
+  const reGroupSession = await reGroupSessionResponse.json();
+  assert.equal(reGroupSession.roles.includes("re_client"), true);
+  assert.deepEqual(reGroupSession.realEstateClients, ["re-la-concha"]);
+
+  const archiveGroupResponse = await adminWorker.fetch(jsonRequest("https://worker.test/access-console/groups/cohen-cousins/archive", {}, {
+    origin: "https://photos-by-elie.com",
+  }));
+  assert.equal(archiveGroupResponse.status, 200);
+  const archiveGroupBody = await archiveGroupResponse.json();
+  assert.equal(archiveGroupBody.group.state, "archived");
+
+  const archivedPolicyResponse = await adminWorker.fetch(new Request("https://worker.test/access-console/gallery-access?galleryKind=event&galleryKey=cohen-cousins&email=cousin%40example.test", {
+    headers: { origin: "https://photos-by-elie.com" },
+  }));
+  assert.equal(archivedPolicyResponse.status, 200);
+  const archivedPolicy = await archivedPolicyResponse.json();
+  assert.equal(archivedPolicy.gallery.groupId, "");
+  assert.equal(archivedPolicy.decisions.selected.allowed, false);
+  assert.equal(archivedPolicy.decisions.selected.access.previewMode, "blocked");
+
+  const disableResponse = await adminWorker.fetch(jsonRequest("https://worker.test/access-console/people/helper%40example.test/disable", {}, {
+    origin: "https://photos-by-elie.com",
+  }));
+  assert.equal(disableResponse.status, 200);
+  const disabledBody = await disableResponse.json();
+  assert.equal(disabledBody.user.tier, "user");
+  assert.deepEqual(disabledBody.user.roles, ["user"]);
+  assert.ok(disabledBody.user.disabledAt);
+
+  const disabledOwnerSession = await helperWorker.fetch(new Request("https://worker.test/owner/session", {
+    headers: { origin: "https://photos-by-elie.com" },
+  }));
+  assert.equal(disabledOwnerSession.status, 403);
+
+  const finalStateResponse = await adminWorker.fetch(new Request("https://worker.test/access-console/state", {
+    headers: { origin: "https://photos-by-elie.com" },
+  }));
+  const finalState = await finalStateResponse.json();
+  assert.equal(finalState.audienceGroups.some((group) => group.label === "Agnes's B'day"), true);
+  assert.equal(finalState.audienceGroups.find((group) => group.id === "cohen-cousins")?.state, "archived");
+  assert.equal(finalState.galleryOptions.some((option) => option.galleryKey === "cohen-cousins"), false);
+  assert.deepEqual(finalState.people.find((user) => user.email === "cousin@example.test")?.groupIds, []);
+  assert.equal(finalState.galleryOptions.some((option) => option.galleryKey === "re-la-concha"), true);
+  assert.equal(finalState.capabilities.some((capability) => capability.id === "manage_access"), true);
+  const archivedEvent = finalState.auditEvents.find((event) => event.eventType === "group_archived");
+  const disabledEvent = finalState.auditEvents.find((event) => event.eventType === "user_disabled");
+  assert.equal(Boolean(archivedEvent?.id), true);
+  assert.equal(Boolean(disabledEvent?.id), true);
+  assert.equal(archivedEvent.targetType, "group");
+  assert.equal(archivedEvent.targetId, "cohen-cousins");
+  assert.equal(archivedEvent.reversible, true);
+  assert.equal(disabledEvent.targetType, "person");
+  assert.equal(disabledEvent.targetEmail, "helper@example.test");
+  assert.equal(disabledEvent.reversible, true);
+
+  const undoDisableResponse = await adminWorker.fetch(jsonRequest(`https://worker.test/access-console/audit/${disabledEvent.id}/undo`, {}, {
+    origin: "https://photos-by-elie.com",
+  }));
+  assert.equal(undoDisableResponse.status, 200);
+  const undoDisableBody = await undoDisableResponse.json();
+  assert.equal(undoDisableBody.event.revertedAt.length > 0, true);
+  assert.equal(undoDisableBody.undoEvent.eventType, "access_undo");
+  assert.equal(undoDisableBody.restored.email, "helper@example.test");
+
+  const restoredOwnerSessionResponse = await helperWorker.fetch(new Request("https://worker.test/owner/session", {
+    headers: { origin: "https://photos-by-elie.com" },
+  }));
+  assert.equal(restoredOwnerSessionResponse.status, 200);
+
+  const undoArchiveResponse = await adminWorker.fetch(jsonRequest(`https://worker.test/access-console/audit/${archivedEvent.id}/undo`, {}, {
+    origin: "https://photos-by-elie.com",
+  }));
+  assert.equal(undoArchiveResponse.status, 200);
+  const undoArchiveBody = await undoArchiveResponse.json();
+  assert.equal(undoArchiveBody.event.revertedAt.length > 0, true);
+  assert.equal(undoArchiveBody.undoEvent.eventType, "access_undo");
+  assert.equal(undoArchiveBody.restored.id, "cohen-cousins");
+
+  const undoStateResponse = await adminWorker.fetch(new Request("https://worker.test/access-console/state", {
+    headers: { origin: "https://photos-by-elie.com" },
+  }));
+  const undoState = await undoStateResponse.json();
+  assert.equal(undoState.audienceGroups.find((group) => group.id === "cohen-cousins")?.state, "active");
+  assert.equal(undoState.galleryOptions.some((option) => option.galleryKey === "cohen-cousins"), true);
+  assert.deepEqual(undoState.people.find((user) => user.email === "cousin@example.test")?.groupIds, ["cohen-cousins"]);
+  assert.equal(undoState.auditEvents.some((event) => event.eventType === "access_undo"), true);
 });
 
 test("real-estate access login issues a scoped session for a Google-authenticated client", async () => {
@@ -525,6 +951,80 @@ test("direct Google OAuth session feeds account roles, RE login, and logout", as
   assert.match(logoutResponse.headers.get("set-cookie") || "", /^pbe_google_session=; Max-Age=0/);
   assert.match(logoutResponse.headers.get("set-cookie") || "", /SameSite=None/);
   assert.match(logoutResponse.headers.get("set-cookie") || "", /Secure/);
+});
+
+test("direct Google OAuth returns a local transfer token for Tailscale Owner previews", async () => {
+  const now = () => new Date("2026-06-21T12:00:00.000Z");
+  const googleAuth = createGoogleOAuthAuth({
+    clientId: "google-client-id",
+    clientSecret: "google-client-secret",
+    sessionSecret: "google-session-secret",
+    now,
+    fetcher: async () => new Response(JSON.stringify({ id_token: "owner-id-token" }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    }),
+    verifyIdToken: async () => ({
+      email: "ec92009@gmail.com",
+      provider: "google-oauth",
+      expiresAt: "2026-06-21T13:00:00.000Z",
+      sessionSeconds: 3600,
+    }),
+  });
+  const worker = createPhotosByElieWorker({
+    catalog: loadCatalog(),
+    googleOAuthAuth: googleAuth,
+    accessUserRegistry: createMemoryAccessUserRegistry([]),
+    accessAdminEmail: "ec92009@gmail.com",
+    authAllowedReturnOrigins: ["http://100.111.30.109:8000"],
+  });
+  const localOrigin = "http://100.111.30.109:8000";
+  const returnTo = `${localOrigin}/new-owner.html`;
+
+  const loginResponse = await worker.fetch(new Request(
+    `https://worker.test/auth/google/login?returnTo=${encodeURIComponent(returnTo)}`,
+    { headers: { origin: localOrigin } }
+  ));
+  assert.equal(loginResponse.status, 302);
+  const googleLoginUrl = new URL(loginResponse.headers.get("location"));
+
+  const callbackResponse = await worker.fetch(new Request(
+    `https://worker.test/auth/google/callback?code=oauth-code&state=${encodeURIComponent(googleLoginUrl.searchParams.get("state"))}`,
+    { headers: { origin: localOrigin } }
+  ));
+  assert.equal(callbackResponse.status, 302);
+  const localReturnUrl = new URL(callbackResponse.headers.get("location"));
+  assert.equal(localReturnUrl.origin, localOrigin);
+  assert.equal(localReturnUrl.pathname, "/new-owner.html");
+  assert.equal(localReturnUrl.searchParams.has("pbe_auth_token"), false);
+  const hashParams = new URLSearchParams(localReturnUrl.hash.slice(1));
+  const transferToken = hashParams.get("pbe_auth_token") || "";
+  assert.match(transferToken, /^[^.]+\.[^.]+$/);
+
+  const preflightResponse = await worker.fetch(new Request("https://worker.test/owner/session", {
+    method: "OPTIONS",
+    headers: {
+      origin: localOrigin,
+      "access-control-request-method": "GET",
+      "access-control-request-headers": "authorization",
+    },
+  }));
+  assert.equal(preflightResponse.status, 200);
+  assert.match(preflightResponse.headers.get("access-control-allow-headers") || "", /authorization/);
+
+  const sessionResponse = await worker.fetch(new Request("https://worker.test/owner/session", {
+    headers: {
+      authorization: `Bearer ${transferToken}`,
+      origin: localOrigin,
+    },
+  }));
+  assert.equal(sessionResponse.status, 200);
+  const session = await sessionResponse.json();
+  assert.equal(session.authenticated, true);
+  assert.equal(session.admin, true);
+  assert.equal(session.user.email, "ec92009@gmail.com");
+  assert.equal(session.user.provider, "google-oauth");
+  assert.ok(session.roles.includes("owner"));
 });
 
 test("checkout and download milestones record analytics without buyer identifiers", async () => {
@@ -2151,6 +2651,18 @@ test("real-estate cloud assembly jobs persist status and serve completed assets"
   assert.equal(queued.deliverables[0].deliveryEmail.status, "not_sent");
   assert.equal(queued.deliverables[1].assemblyJob.sourceVideoAudioPolicy, "duck-under-generated-guitar-bed");
   assert.equal(queued.deliverables[1].assemblyJob.sourceVideoAudioGainDb, -20);
+  assert.equal(queued.job.status, "pending");
+  assert.equal(queued.job.inputManifestBatchId, batch.batchId);
+  assert.equal(queued.job.inputManifest.projects[0].items[0].sourceVideoPrivateKey, "real-estate/corine-real-estate/masters/la-concha/source.mp4");
+
+  const jobStatusResponse = await worker.fetch(new Request(`https://worker.test/real-estate/deliverables/jobs/${queued.job.id}`, {
+    headers: { cookie },
+  }));
+  assert.equal(jobStatusResponse.status, 200);
+  const jobStatus = await jobStatusResponse.json();
+  assert.equal(jobStatus.job.id, queued.job.id);
+  assert.equal(jobStatus.job.status, "pending");
+  assert.equal(jobStatus.job.deliverables.length, 2);
 
   const pendingAsset = await worker.fetch(new Request(`https://worker.test/real-estate/deliverables/${queued.deliverables[0].id}/view`, {
     headers: { cookie },
@@ -2159,6 +2671,7 @@ test("real-estate cloud assembly jobs persist status and serve completed assets"
   assert.equal((await pendingAsset.json()).error.code, "real_estate_deliverable_pending");
 
   const pdfRecord = queued.deliverables.find((record) => record.type === "pdf");
+  const videoRecord = queued.deliverables.find((record) => record.type === "video");
   const pdfOutputKey = pdfRecord.outputs.pdf.key;
   await privateR2.put(pdfOutputKey, new TextEncoder().encode("%PDF-1.4 test"), {
     httpMetadata: { contentType: "application/pdf" },
@@ -2170,6 +2683,22 @@ test("real-estate cloud assembly jobs persist status and serve completed assets"
   })), {
     httpMetadata: { contentType: "application/json; charset=utf-8" },
   });
+  await privateR2.put(`real-estate/corine-real-estate/deliverables/${videoRecord.id}.json`, new TextEncoder().encode(JSON.stringify({
+    ...videoRecord,
+    status: "failed",
+    failureReason: "Cloud renderer could not read the source video.",
+  })), {
+    httpMetadata: { contentType: "application/json; charset=utf-8" },
+  });
+
+  const failedJobResponse = await worker.fetch(new Request(`https://worker.test/real-estate/deliverables/jobs/${queued.job.id}`, {
+    headers: { cookie },
+  }));
+  assert.equal(failedJobResponse.status, 200);
+  const failedJob = await failedJobResponse.json();
+  assert.equal(failedJob.job.status, "needs-attention");
+  assert.equal(failedJob.job.failureReason, "Cloud renderer could not read the source video.");
+  assert.equal(failedJob.job.deliverables.find((record) => record.type === "pdf").status, "ready");
 
   const listResponse = await worker.fetch(jsonRequest("https://worker.test/real-estate/deliverables/list", {
     galleryKey: "corine-real-estate",

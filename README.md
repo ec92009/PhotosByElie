@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v125.0`
+- Current visible version: `v132.1`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
 
 ## Structure
@@ -21,7 +21,8 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `support.html`: buyer-facing payment, delivery recovery, license, refund-expectation, and support notes for digital checkout
 - `real-estate.html`: private real-estate product workspace that loads a public-safe client context on GitHub Pages or an ignored local import bundle on localhost, starts with the saved PDF/video/selection shelf, supports create-new-selection and edit-existing-selection flows, click and Shift-click media selection from the full shared pool, selected-title cleanup, one-line drag ordering, preview/download PDF and video outputs, cloud-saved selection manifests, masked password entry, and selected-original ZIP delivery through the Worker
 - `slideshow-music.html`: public mini-app with normalized, country-tagged Pixabay audition candidates for Spain, Portugal, France, and USA, original subdued Spanish/classical guitar cues below, per-track play/pause, seeking, local star ratings, and local delete/hide controls for real estate slideshow use
-- `owner.html`: tabbed localhost-only owner controls for live review actions, Unknown classification, Waste Basket review, metadata sync, Real Estate client credential/import/publish/upload actions, commerce settings, POD supplier preview, and R2 maintenance
+- `owner.html`: compatibility entry point that redirects to the authenticated cloud Owner workspace
+- `new-owner.html`: production Owner control surface for cloud identity/access, Mac connector health, Apple Photos index refresh, Sidecar culling/metadata review, background decisions, guarded Upload Bridge execution, and Owner-only connector downloads
 - `owner-auth.js`: localhost helper/cloud Owner availability client for catalog and cloud maintenance actions
 - `basket-store.js`: shared basket source-of-truth helpers for detail and basket pages
 - `liked-store.js`: shared liked-photo source-of-truth helpers for detail and liked pages
@@ -56,6 +57,9 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `scripts/validate_publish.js`: pre-push SQLite catalog, asset-pair, resolution metadata, and publish-summary check
 - `scripts/build_photo_state_db.py`: builds ignored SQLite state database at `tmp/photo-state.sqlite` from the catalog, import cache, blocked/discarded tombstones, owner actions, sidecars, and R2 logs
 - `scripts/watch_photo_state_db.zsh`: optional local background refresher for the SQLite state database
+- `scripts/new_owner_connector.py`: background Mac connector that polls authenticated cloud Owner actions and performs PhotoKit/Owner SQLite work without serving a localhost web UI
+- `scripts/install_new_owner_connector.zsh`: per-Mac connector and LaunchAgent installer; credentials stay in a mode-600 user config outside git
+- `scripts/build_new_owner_connector_package.zsh`: builds the Owner-only downloadable Mac connector ZIP with the permission-bearing Photos Bridge app and credential-free installer
 - `AGENTS.md`: repo-level working preferences, versioning SOP, and timelog SOP
 - `SHOW_ME_SOP.md`: preview/reporting workflow
 - `SUMMARY.md`, `HANDOFF.md`, `TODO.md`, and `TIMELOG.md`: durable cross-thread context, handoff state, numbered backlog, and active collaboration clock

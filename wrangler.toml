@@ -1,6 +1,7 @@
 name = "photosbyelie-checkout-mock"
 main = "worker/deployed-worker.mjs"
-compatibility_date = "2026-05-08"
+compatibility_date = "2026-07-10"
+compatibility_flags = ["nodejs_compat"]
 workers_dev = true
 
 [vars]
@@ -12,11 +13,12 @@ DOWNLOAD_TOKEN_TTL_DAYS = "30"
 DOWNLOAD_TOKEN_MAX_DOWNLOADS = "100"
 STRIPE_STATEMENT_DESCRIPTOR_SUFFIX = "DOWNLOAD"
 WORKER_PUBLIC_URL = "https://photosbyelie-checkout-mock.ec92009.workers.dev"
-AUTH_ALLOWED_RETURN_ORIGINS = "http://localhost:8000 http://127.0.0.1:8000"
+AUTH_ALLOWED_RETURN_ORIGINS = "http://localhost:8000 http://127.0.0.1:8000 http://100.111.30.109:8000"
 ORDER_EMAIL_FROM = "Photos By Elie <orders@photos-by-elie.com>"
 ORDER_EMAIL_REPLY_TO = "orders@photos-by-elie.com"
 ORDER_EMAIL_INCLUDE_DIRECT_DOWNLOAD_LINKS = "true"
 ACCESS_ADMIN_EMAIL = "ec92009@gmail.com"
+OWNER_CONNECTOR_MAC_KEY = "owner-connectors/photosbyelie-mac-connector.zip"
 ACCESS_TEAM_NAME = "byelie"
 # Secret required to enable buyer delivery emails:
 #   npx wrangler secret put RESEND_API_KEY
@@ -28,11 +30,19 @@ ACCESS_TEAM_NAME = "byelie"
 #   npx wrangler secret put GOOGLE_OAUTH_SESSION_SECRET
 # The Google OAuth client must authorize:
 #   https://auth.photos-by-elie.com/auth/google/callback
-# User tier records are stored in ORDERS_KV under pbe:access-users:<email>.
+# Legacy user tier records are stored in ORDERS_KV under pbe:access-users:<email>.
+# Access Console Sandbox stores role state in D1:
+#   npx wrangler d1 migrations apply photosbyelie-access --remote
+# Auth/session reads use ACCESS_DB when this binding is present; legacy KV remains
+# a fallback only for deployments without this binding.
 # Public account profile records are stored in ORDERS_KV under
 # pbe:account-profiles:<email> and keep signed-in likes/basket state.
-# Owner action records are stored in ORDERS_KV under pbe:owner-actions:<id>
+# Owner action records are stored in ORDERS_KV under pbe:owner-actions:<id>,
+# with pbe:owner-action-head and pbe:owner-action-index:* for recent listing,
 # unless an OWNER_ACTIONS_KV binding is added later.
+# Background Mac connectors use per-machine bearer credentials stored only in:
+#   npx wrangler secret put OWNER_CONNECTOR_TOKENS_JSON
+# JSON shape: {"david":"<random-token>","max":"<different-random-token>"}
 # Optional owner-only live checkout rehearsal discount allowlist.
 # Store actual codes outside git, for example:
 #   npx wrangler secret put CHECKOUT_DISCOUNT_CODES_JSON
@@ -54,6 +64,11 @@ custom_domain = true
 binding = "ORDERS_KV"
 id = "0ea4d21c491246c986c2c0308bebc560"
 preview_id = "0896fcb030ac4f54b43756707a11a6e0"
+
+[[d1_databases]]
+binding = "ACCESS_DB"
+database_name = "photosbyelie-access"
+database_id = "f93ae9cc-ffd4-4e2b-8dbd-bc7f840cb61b"
 
 [[r2_buckets]]
 binding = "PRIVATE_MEDIA"

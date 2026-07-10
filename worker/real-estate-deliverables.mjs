@@ -261,6 +261,8 @@ export const createRealEstateDeliverables = ({
 
   const keyFor = (gallery, id) => `${prefixFor(gallery)}/${safeRecordId(id)}.json`;
 
+  const jobKeyFor = (gallery, id) => `${prefixFor(gallery)}/jobs/${safeRecordId(id)}.json`;
+
   const outputPrefixFor = (gallery) => normalizeKeyPrefix(`${prefixFor(gallery)}/outputs`);
 
   const outputKeyFor = (gallery, id, type) => {
@@ -347,6 +349,40 @@ export const createRealEstateDeliverables = ({
       galleryKey: gallery.key,
       count: records.length,
       deliverables: records.slice(0, limit).map(publicRecordFor),
+    };
+  };
+
+  const jobStatusFor = (records = []) => {
+    const statuses = records.map((record) => String(record?.status || "").toLowerCase().replace("_", "-"));
+    if (!statuses.length) return "pending";
+    if (statuses.some((status) => status === "failed" || status === "needs-attention")) return "needs-attention";
+    if (statuses.every((status) => status === "ready" || status === "complete" || status === "completed")) return "ready";
+    if (statuses.some((status) => status === "processing")) return "processing";
+    if (statuses.some((status) => status === "queued")) return "queued";
+    return "pending";
+  };
+
+  const jobFailureReasonFor = (records = []) =>
+    records.map((record) => String(record?.failureReason || record?.assemblyJob?.failureReason || "").trim()).find(Boolean) || "";
+
+  const readDeliverableRecords = async (gallery, ids = []) => {
+    const uniqueIds = [...new Set((Array.isArray(ids) ? ids : []).map((id) => String(id || "").trim()).filter(Boolean))];
+    return (await Promise.all(uniqueIds.map(async (id) => {
+      const record = await objectJson(await privateBucket.get(keyFor(gallery, id)));
+      return record && typeof record === "object" ? publicRecordFor(record) : null;
+    }))).filter(Boolean);
+  };
+
+  const publicJobFor = async (gallery, jobRecord = {}) => {
+    const records = await readDeliverableRecords(gallery, jobRecord.deliverableIds || []);
+    const status = jobStatusFor(records);
+    const failureReason = jobFailureReasonFor(records) || String(jobRecord.failureReason || "");
+    return {
+      ...jobRecord,
+      status,
+      failureReason,
+      updatedAt: now().toISOString(),
+      deliverables: records,
     };
   };
 
@@ -464,15 +500,63 @@ export const createRealEstateDeliverables = ({
         },
       });
     }));
+    const jobRecord = {
+      id: jobId,
+      galleryKey: gallery.key,
+      title,
+      status: "pending",
+      submittedAt: createdAt,
+      createdAt,
+      updatedAt: createdAt,
+      formats,
+      deliverableIds: records.map((record) => record.id),
+      failureReason: "",
+      inputManifest: batch,
+      inputManifestSchema: batch.schema || "",
+      inputManifestBatchId: batchId,
+      inputManifestStorage: "embedded-in-job-record",
+      outputStorage: "real-estate-deliverable-r2-records",
+      sourceVideoAudioPolicy: "duck-under-generated-guitar-bed",
+      sourceVideoAudioGainDb: Number(batch?.slideshowSettings?.audioPolicy?.sourceVideoAudioGainDb ?? -20),
+      generatedMusicGainDb: Number(batch?.slideshowSettings?.audioPolicy?.musicGainDb ?? 0),
+    };
+    const jobText = JSON.stringify(jobRecord, null, 2);
+    if (jobText.length > 1_000_000) {
+      throw Object.assign(new Error("Real-estate assembly job manifest is too large to save."), {
+        status: 413,
+        code: "real_estate_deliverable_too_large",
+      });
+    }
+    await privateBucket.put(jobKeyFor(gallery, jobId), new TextEncoder().encode(jobText), {
+      httpMetadata: { contentType: "application/json; charset=utf-8" },
+      customMetadata: {
+        galleryKey: gallery.key,
+        assemblyJobId: jobId,
+        status: jobRecord.status,
+      },
+    });
+    const publicJob = await publicJobFor(gallery, jobRecord);
     return {
       galleryKey: gallery.key,
-      job: {
-        id: jobId,
-        status: "pending",
-        submittedAt: createdAt,
-        formats,
-      },
+      job: publicJob,
       deliverables: records,
+    };
+  };
+
+  const getAssemblyJob = async (payload = {}) => {
+    const gallery = galleryFor(payload);
+    authorize(gallery, payload);
+    const jobId = safeRecordId(payload.jobId || payload.id || "");
+    const jobRecord = await objectJson(await privateBucket.get(jobKeyFor(gallery, jobId)));
+    if (!jobRecord) {
+      throw Object.assign(new Error("Real-estate assembly job was not found."), {
+        status: 404,
+        code: "unknown_real_estate_assembly_job",
+      });
+    }
+    return {
+      galleryKey: gallery.key,
+      job: await publicJobFor(gallery, jobRecord),
     };
   };
 
@@ -543,5 +627,5 @@ export const createRealEstateDeliverables = ({
     };
   };
 
-  return { listDeliverables, putDeliverable, submitAssemblyJob, getDeliverableAsset, deleteDeliverable };
+  return { listDeliverables, putDeliverable, submitAssemblyJob, getAssemblyJob, getDeliverableAsset, deleteDeliverable };
 };

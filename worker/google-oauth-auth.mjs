@@ -79,6 +79,12 @@ const parseCookies = (request) => {
   }).filter(([name]) => name));
 };
 
+const bearerTokenFromRequest = (request) => {
+  const header = request.headers.get("authorization") || request.headers.get("Authorization") || "";
+  const match = /^Bearer\s+(.+)$/i.exec(String(header || "").trim());
+  return match ? match[1] : "";
+};
+
 const responseError = (status, code, message) => Object.assign(new Error(message), { status, code });
 
 const positiveInt = (value, fallback) => {
@@ -266,7 +272,7 @@ export const createGoogleOAuthAuth = ({
     return url.protocol === "https:" ? "; SameSite=None; Secure" : "; SameSite=Lax";
   };
 
-  const cookieFor = async (identity, request) => {
+  const sessionTokenFor = async (identity) => {
     const createdAt = now();
     const expiresAt = new Date(createdAt.getTime() + ttlSeconds * 1000).toISOString();
     const session = {
@@ -275,13 +281,16 @@ export const createGoogleOAuthAuth = ({
       createdAt: createdAt.toISOString(),
       expiresAt,
     };
-    return `${cookieName}=${encodeURIComponent(await encodeSignedJson(cleanSessionSecret, session))}; Max-Age=${ttlSeconds}; Path=/; HttpOnly${sessionCookieSecurity(request)}`;
+    return encodeSignedJson(cleanSessionSecret, session);
   };
+
+  const cookieForToken = (token, request) =>
+    `${cookieName}=${encodeURIComponent(token)}; Max-Age=${ttlSeconds}; Path=/; HttpOnly${sessionCookieSecurity(request)}`;
 
   const clearCookieFor = (request) => `${cookieName}=; Max-Age=0; Path=/; HttpOnly${request ? sessionCookieSecurity(request) : "; SameSite=Lax"}`;
 
   const optionalSession = async (request) => {
-    const token = parseCookies(request).get(cookieName);
+    const token = bearerTokenFromRequest(request) || parseCookies(request).get(cookieName);
     if (!token) return null;
     return sessionFromPayload(await decodeSignedJson(cleanSessionSecret, token), now);
   };
@@ -302,10 +311,12 @@ export const createGoogleOAuthAuth = ({
     if (!code) throw responseError(400, "google_oauth_missing_code", "Google login callback did not include a code.");
     const tokenPayload = await exchangeCode(request, code);
     const identity = await verifyToken(tokenPayload.id_token);
-    const cookie = await cookieFor(identity, request);
+    const sessionToken = await sessionTokenFor(identity);
+    const cookie = cookieForToken(sessionToken, request);
     return {
       identity,
       cookie,
+      sessionToken,
       returnTo: state.returnTo || new URL(request.url).origin,
     };
   };

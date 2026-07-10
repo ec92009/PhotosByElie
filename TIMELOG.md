@@ -496,8 +496,73 @@ Clock state: running
 | 2026-07-05 | 11:40 CEST | 11:41 CEST | 0:01 | Final loose-end audit after version and Upload Bridge cleanup; confirmed queues clean and identified remaining review/commit/deploy work. |
 | 2026-07-05 | 11:42 CEST | 11:47 CEST | 0:02 | Pruned stale Git worktrees, verified changed surfaces, and committed the working tree cleanup; command/runtime excluded. |
 | 2026-07-05 | 17:44 CEST | 17:48 CEST | 0:04 | Refreshed summary, handoff, README, and numbered backlog docs for the Sidecar cleanup closeout, then committed and pushed the docs bundle; command/runtime excluded. |
+| 2026-07-05 | 17:56 CEST | 17:57 CEST | 0:01 | Started planning the Sidecar-back-into-Owner merge direction; repo-reading/background analysis excluded. |
+| 2026-07-05 | 18:02 CEST | 18:03 CEST | 0:01 | Scoped Plan B for a cloud-backed NewOwner app and created ticket PBE-20260705-9591; background source checks excluded. |
+| 2026-07-05 | 18:05 CEST | 18:10 CEST | 0:01 | Requested the Graphify architecture graph and reviewed the focused Owner/Sidecar graph output; extraction/runtime excluded. |
+| 2026-07-05 | 18:15 CEST | 18:16 CEST | 0:01 | Restarted the local Graphify graph server after the Built-in Browser tab could not load the stopped localhost page. |
+| 2026-07-05 | 18:17 CEST | 18:18 CEST | 0:01 | Moved the Graphify graph server into detached tmux so the Built-in Browser page stays available. |
+| 2026-07-05 | 18:22 CEST | 18:24 CEST | 0:01 | Corrected the Graphify preview from Max-local localhost to Max's Tailscale URL for David; remote fetch verification included. |
+| 2026-07-05 | 18:28 CEST | 18:30 CEST | 0:01 | Finished the Track B NewOwner planning outline from the focused Graphify map and updated ticket PBE-20260705-9591. |
+| 2026-07-05 | 18:31 CEST | 18:32 CEST | 0:01 | Mapped how the focused Graphify data also informs Track A merge-back planning and its highest-risk local integration points. |
+| 2026-07-05 | 18:33 CEST | 18:36 CEST | 0:02 | Assessed Google sign-in and role-readiness against Track A versus Track B planning; auth test/runtime excluded. |
+| 2026-07-05 | 18:39 CEST | 18:40 CEST | 0:01 | Chose role-management UI as the prudent first Track B readiness slice. |
+| 2026-07-05 | 18:46 CEST | 18:48 CEST | 0:02 | Expanded future access planning to family circles and event groups using shared audience grants rather than hard-coded roles. |
+| 2026-07-05 | 18:58 CEST | 19:00 CEST | 0:02 | Split the future access model into galleries, roles/capabilities, and role-to-gallery permissions for family/event/RE flows. |
+| 2026-07-05 | 19:03 CEST | 19:05 CEST | 0:02 | Clarified buyer re-download entitlements, additive RE/event public access, and Owner original-versus-public-preview viewing modes. |
+| 2026-07-05 | 19:08 CEST | 19:09 CEST | 0:01 | Chose a single-repo sandbox Access Console for the role-management pre-Track B slice. |
+| 2026-07-05 | 19:09 CEST | 19:10 CEST | 0:01 | Chose real role/access data rather than mock data for the sandbox Access Console. |
+| 2026-07-05 | 19:10 CEST | 19:11 CEST | 0:01 | Approved read/write Access Console behavior with reversible write safeguards. |
+| 2026-07-05 | 19:11 CEST | 19:12 CEST | 0:01 | Chose cloud-authoritative role/access writes for the sandbox Access Console. |
+| 2026-07-05 | 19:12 CEST | 19:13 CEST | 0:01 | Chose D1-first structured access storage to match the Track B NewOwner direction. |
+| 2026-07-05 | 19:14 CEST | 19:15 CEST | 0:01 | Chose immediate D1-backed auth/session reads instead of long-term KV mirroring. |
+| 2026-07-05 | 19:24 CEST | 19:25 CEST | 0:01 | Kept ec92009@gmail.com as bootstrap break-glass admin during D1 auth migration. |
+| 2026-07-05 | 19:26 CEST | 19:27 CEST | 0:01 | Deferred audience groups until after Access Console V1 and added the follow-up to the backlog. |
+| 2026-07-05 | 19:27 CEST | 19:29 CEST | 0:02 | Added fixture people and event records to the Access Console V1 backlog for safe role-assignment rehearsal. |
+| 2026-07-05 | 19:29 CEST | 19:30 CEST | 0:01 | Decided to start with the Access Console role/group sandbox as the pre-Track B development slice. |
+| 2026-07-05 | 19:30 CEST | 19:31 CEST | 0:01 | Confirmed ACS implementation kickoff; autonomous coding, testing, and browser QA excluded. |
+| 2026-07-05 | 20:05 CEST | 20:08 CEST | 0:02 | Updated Cloudflare token permissions with user approval, created/deployed the ACS D1 database, and seeded fixture access data; command/deploy runtime excluded. |
+| 2026-07-05 | 20:23 CEST | 20:24 CEST | 0:01 | Directed the ACS V2 audience-group slice and chose real fixture names for Agnes's B'day, RE La Concha, and Johnson-Palmer wedding; implementation/deploy/browser QA excluded. |
+| 2026-07-05 | 20:53 CEST | 20:54 CEST | 0:01 | Directed the ACS V3 group CRUD/archive slice; implementation/deploy/browser QA excluded. |
+| 2026-07-05 | 21:03 CEST | 21:04 CEST | 0:01 | Approved live ACS V3 browser rehearsal of create/edit/archive group management; browser/runtime excluded. |
+| 2026-07-05 | 21:10 CEST | 21:11 CEST | 0:01 | Approved ACS V4 group membership workbench implementation; implementation/browser QA excluded. |
+| 2026-07-05 | 21:22 CEST | 21:23 CEST | 0:01 | Directed the membership UI fix and ACS V5 gallery-permission preview; implementation/browser QA excluded. |
+| 2026-07-05 | 21:29 CEST | 21:30 CEST | 0:01 | Reported ACS textarea horizontal-resize overflow; implementation/browser QA excluded. |
+| 2026-07-05 | 21:30 CEST | 21:44 CEST | 0:01 | Approved ACS V6 real-gallery defaults implementation; implementation/deploy/browser QA excluded. |
+| 2026-07-06 | 01:09 CEST | 01:10 CEST | 0:01 | Reported ACS Clear button overflow and continued ACS V7 policy tester direction; implementation/deploy/browser QA excluded. |
+| 2026-07-06 | 01:57 CEST | 01:58 CEST | 0:01 | Continued Track B NewOwner connector direction and reviewed the local read-only Sidecar bridge result; implementation/browser QA excluded. |
+| 2026-07-06 | 10:40 CEST | 10:41 CEST | 0:01 | Directed the Track B NewOwner Sidecar review workspace slice and verified the built-in browser walkthrough; implementation/testing excluded. |
+| 2026-07-06 | 13:22 CEST | 13:23 CEST | 0:01 | Reported Safari sign-in failure from the Tailscale NewOwner URL and verified the local auth-transfer fix; implementation/deploy/testing excluded. |
+| 2026-07-06 | 13:46 CEST | 13:47 CEST | 0:01 | Requested David investigate the central Tickets API connection-refused blocker; handoff transport work included. |
+| 2026-07-06 | 13:47 CEST | 13:56 CEST | 0:09 | Replaced the obsolete MAX2DAVID handoff route with direct David Tailscale Tickets probes, confirmed the raw IP API works, recorded the inactive HTTPS Serve endpoint in ticket PBE-20260705-9591, and updated handoff/SOP docs to prefer direct Tailscale/mesh; command/runtime excluded. |
+| 2026-07-06 | 19:19 CEST | 19:28 CEST | 0:09 | Closed out ACS V8 audit/undo: confirmed D1 schema, Worker deploy, rendered ACS shell, mobile hero fix, and validation status; long implementation/test runtime excluded. |
+| 2026-07-06 | 20:08 CEST | 20:11 CEST | 0:03 | Live-tested ACS V8 from David through Max's Tailscale URL: confirmed admin session, reversible fixture undo, and fixture gallery policy decisions; browser/runtime excluded. |
+| 2026-07-07 | 05:11 CEST | 05:12 CEST | 0:01 | Ran the picked-only Sidecar AI metadata review automation direction; command/runtime excluded. |
+| 2026-07-07 | 09:06 CEST | 09:07 CEST | 0:01 | Added fixture invitation direction for email/link/QR access propagation with member invite but Owner/Admin-only revoke; implementation time excluded. |
+| 2026-07-08 | 05:11 CEST | 05:12 CEST | 0:01 | Ran the picked-only Sidecar AI metadata review automation direction; command/runtime excluded. |
+| 2026-07-08 | 07:55 CEST | 08:01 CEST | 0:06 | Resolved the 20 unknown-gallery Sidecar rework rows: approved 19 Benalmadena Aquarium videos, tombstoned one unsupported WhatsApp still, verified Upload Bridge stayed clean, and refreshed the backlog. |
+| 2026-07-08 | 08:04 CEST | 08:05 CEST | 0:01 | Reviewed the fresh numbered backlog and expanded the next source-export-failed cleanup item. |
+| 2026-07-08 | 08:05 CEST | 08:15 CEST | 0:06 | Repaired the 24 source-export-failed Sidecar rows from external picGen PNG originals, uploaded R2 masters/previews, approved/re-queued/unblocked them, and refreshed backlog/handoff notes; upload runtime excluded. |
+| 2026-07-08 | 08:16 CEST | 08:17 CEST | 0:01 | Reviewed the refreshed backlog and expanded the next catalog-registration item. |
+| 2026-07-08 | 08:18 CEST | 08:24 CEST | 0:06 | Registered 43 uploaded Sidecar rows into the public catalog, normalized 63 unpicked/proposed rows back to unreviewed, verified clean catalog/upload state, and refreshed backlog/handoff notes; command/runtime excluded. |
+| 2026-07-08 | 08:51 CEST | 09:00 CEST | 0:04 | Published the Sidecar catalog registration to `main`, waited for GitHub Pages to serve the new catalog, verified public counts/previews, and refreshed backlog/handoff notes; push and Pages wait time excluded. |
+| 2026-07-08 | 09:09 CEST | 09:10 CEST | 0:01 | Ran the Owner title/keyword localhost save smoke test and refreshed backlog/handoff notes; command/runtime excluded. |
+| 2026-07-08 | 09:17 CEST | 09:18 CEST | 0:01 | Directed the Real Estate cloud-side output assembly contract slice; implementation/test runtime excluded. |
+| 2026-07-08 | 09:20 CEST | 09:21 CEST | 0:01 | Made the Photos By Elie North Star official and reprioritized the backlog around commercial offer validation, with Apple Photos intake as the near-term inventory priority; implementation time excluded. |
+| 2026-07-08 | 09:45 CEST | 09:54 CEST | 0:09 | Prepared the Apple Photos intake starting point: audited Sidecar/catalog readiness, started the helper-backed Owner server, opened the Owner Imports page, identified the Photos Bridge macOS permission blocker, and refreshed handoff notes; command/runtime excluded. |
+| 2026-07-08 | 09:58 CEST | 10:06 CEST | 0:08 | Fixed Owner Apple Photos intake to use the permission-bearing Photos Bridge app bundle, verified 187 albums through the helper, and dry-ran the 2018 Paris album; command/runtime excluded. |
+| 2026-07-08 | 10:37 CEST | 10:40 CEST | 0:03 | Pivoted Apple Photos intake from direct Expo import to Sidecar sandbox culling, started the Sidecar helper, verified newest-first today-back batches, and refreshed handoff/backlog notes. |
+| 2026-07-08 | 14:18 CEST | 14:19 CEST | 0:01 | Reviewed the current fresh numbered backlog and expanded the Sidecar-first Apple Photos intake item. |
+| 2026-07-08 | 14:25 CEST | 14:26 CEST | 0:01 | Directed item #4 access-control hardening while away; implementation and test runtime excluded. |
+| 2026-07-08 | 16:14 CEST | 16:15 CEST | 0:01 | Directed continued item #4 hardening while away; implementation and test runtime excluded. |
+| 2026-07-09 | 04:11 CEST | 04:12 CEST | 0:01 | Ran the scheduled Sidecar Photos index sync with the bundled Photos Bridge app; scan/runtime excluded. |
+| 2026-07-09 | 10:15 CEST | 10:17 CEST | 0:02 | Added and browser-verified the Sidecar quick-view metadata panel for camera/location/format/size; implementation runtime excluded. |
+| 2026-07-09 | 12:58 CEST | 13:01 CEST | 0:03 | Fixed and browser-tested Sidecar culling selection so disappearing cards advance to the adjacent logical neighbor; QA decisions were cleaned from local state. |
+| 2026-07-09 | 19:44 CEST | 19:47 CEST | 0:03 | Reviewed highest-risk test coverage and added checkout authorization/webhook boundary tests; test runtime excluded. |
+| 2026-07-09 | 21:17 CEST | 21:20 CEST | 0:03 | Diagnosed and fixed the Sidecar RAW-origin preview color shift for `20221216 172145 01113.jpg`; rebuild/server test runtime excluded. |
+| 2026-07-09 | 22:29 CEST | 22:32 CEST | 0:03 | Diagnosed video poster preview failure and approved a local-video-frame fallback with truthful bridge errors; implementation/test runtime excluded. |
+| 2026-07-10 | 12:18 CEST | 12:19 CEST | 0:01 | Directed completion of Sidecar-to-main-site integration, retirement of the localhost Owner UI, and downloadable per-Mac connector support; background implementation/runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 26:15
+Active collaboration time used: 28:28
 Remaining budget: not set

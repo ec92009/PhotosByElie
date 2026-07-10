@@ -1745,6 +1745,21 @@
     return body;
   };
 
+  const fetchCloudAssemblyJobStatus = async (jobId) => {
+    const baseUrl = workerBaseUrl();
+    const cleanJobId = String(jobId || "").trim();
+    if (!cleanJobId || !state.gallery?.key || !baseUrl || !state.unlocked) return null;
+    const response = await fetch(`${baseUrl}/real-estate/deliverables/jobs/${encodeURIComponent(cleanJobId)}`, {
+      method: "GET",
+      credentials: "include",
+      headers: { "accept": "application/json" },
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw realEstateWorkerError(response, body);
+    mergeCloudDeliverables(body.job?.deliverables || []);
+    return body.job || null;
+  };
+
   const queueCloudOutputs = async ({ batch, formats = ["pdf", "video"], progressKind = "cloud-output" } = {}) => {
     startOutputProgress({
       title: "Sending output job to cloud",
@@ -1769,9 +1784,11 @@
         formats,
         title: selection?.title || activeDeliverableName(),
       });
+      const job = result?.job?.id ? await fetchCloudAssemblyJobStatus(result.job.id).catch(() => result.job) : result?.job;
       const formatLabel = formats.map((format) => format === "pdf" ? "PDF" : "video").join(" + ");
-      completeOutputProgress(`${formatLabel} job queued in the cloud. The shelf will show pending, ready, or needs-attention.`);
-      setStatus(`${formatLabel} job queued in the cloud. You can leave this browser; refresh the shelf for status.`);
+      const statusLabel = job?.status ? ` Status: ${job.status}.` : "";
+      completeOutputProgress(`${formatLabel} job queued in the cloud.${statusLabel} The shelf will show pending, ready, or needs-attention.`);
+      setStatus(`${formatLabel} job queued in the cloud.${statusLabel} You can leave this browser; refresh the shelf for status.`);
       return result;
     } catch (error) {
       const message = error?.message || "Cloud output job could not be queued.";

@@ -65,8 +65,11 @@ SOURCE_EDIT_IMPORT_ALL_PATH = "/__photosbyelie/source-edit-import-all"
 PUBLISH_PRICES_PATH = "/__photosbyelie/publish-prices"
 PUBLISH_PRICES_PROGRESS_PATH = "/__photosbyelie/publish-prices-progress"
 OWNER_BURST_CULL_PATH = "/__photosbyelie/owner-burst-cull"
+NEW_OWNER_CONNECTOR_PATH = "/__photosbyelie/new-owner-connector"
+NEW_OWNER_SIDECAR_DECISION_PATH = "/__photosbyelie/new-owner-sidecar-decision"
 MAX_BODY_BYTES = 5 * 1024 * 1024
 LOCAL_CLIENTS = {"127.0.0.1", "::1", "localhost"}
+TAILSCALE_CGNAT_NETWORK = ipaddress.ip_network("100.64.0.0/10")
 VISIBLE_VERSION_EPOCH = date(2026, 2, 28)
 DERIVATIVES = (("gallery", "gallerySrc"), ("detail", "imageSrc"))
 COUNTRY_ASSIGNMENT_TARGETS = {"france", "usa", "spain", "mexico", "italy", "portugal", "slovakia"}
@@ -95,6 +98,9 @@ REAL_ESTATE_SOURCE_ROOT = Path("/Volumes/Saturn/Pictures/RE")
 REAL_ESTATE_MEDIA_EXTENSIONS = {".jpg", ".jpeg", ".mov", ".mp4", ".m4v"}
 IMPORT_SOURCE_THUMB_ROOT = Path(".review-logs/import-source-thumbs")
 APPLE_PHOTOS_BRIDGE = Path("scripts/apple_photos_bridge.swift")
+APPLE_PHOTOS_BRIDGE_APP_INSTALLER = Path("scripts/install_sidecar_photos_bridge_app.zsh")
+APPLE_PHOTOS_BRIDGE_APP = Path.home() / "Applications" / "PhotosByElie Photos Bridge.app"
+APPLE_PHOTOS_BRIDGE_APP_EXECUTABLE = APPLE_PHOTOS_BRIDGE_APP / "Contents" / "MacOS" / "PhotosByElie Photos Bridge"
 APPLE_PHOTOS_IMPORT_ROOT = Path("tmp/apple-photos-import")
 APPLE_PHOTOS_ALBUM_CACHE_TTL_SECONDS = 12 * 60 * 60
 APPLE_PHOTOS_ALBUMS_CACHE: dict[str, object] = {"payload": None, "loaded_at": 0.0}
@@ -334,6 +340,8 @@ from owner_state_db import import_title_keyword_batch_file as import_title_keywo
 from owner_state_db import queue_title_keyword_review_photo as queue_title_keyword_review_photo_db  # noqa: E402
 from owner_state_db import queue_title_keyword_review_photos as queue_title_keyword_review_photos_db  # noqa: E402
 from owner_state_db import record_title_keyword_review_decisions as record_title_keyword_review_decisions_db  # noqa: E402
+from sidecar_state_db import record_decision as record_sidecar_decision_db  # noqa: E402
+from sidecar_state_db import summary as sidecar_summary_db  # noqa: E402
 
 
 COLLECTION_KEYWORD_TARGETS = {
@@ -505,6 +513,12 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             return
         if path == OWNER_BURST_CULL_PATH:
             self._handle_owner_burst_cull_run()
+            return
+        if path == NEW_OWNER_CONNECTOR_PATH:
+            self._handle_new_owner_connector()
+            return
+        if path == NEW_OWNER_SIDECAR_DECISION_PATH:
+            self._handle_new_owner_sidecar_decision()
             return
         if path == REAL_ESTATE_OWNER_PATH:
             self._handle_real_estate_owner()
@@ -730,6 +744,37 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
             return
         self._send_json(HTTPStatus.OK, {"ok": True, **result})
+
+    def _handle_new_owner_connector(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            result = new_owner_connector_result(Path.cwd(), self._read_json_body())
+        except ValueError as error:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
+            return
+        except FileNotFoundError as error:
+            self._send_json(HTTPStatus.NOT_FOUND, {"ok": False, "error": str(error)})
+            return
+        except sqlite3.Error as error:
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
+            return
+        self._send_json(HTTPStatus.OK, result)
+
+    def _handle_new_owner_sidecar_decision(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            result = new_owner_sidecar_decision_result(Path.cwd(), self._read_json_body())
+        except ValueError as error:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
+            return
+        except sqlite3.Error as error:
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
+            return
+        self._send_json(HTTPStatus.OK, result)
 
     def _handle_import_sources(self) -> None:
         if not self._is_loopback_request():
@@ -1298,6 +1343,271 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         self.wfile.write(body)
 
 
+def _clean_connector_id(value: object) -> str:
+    clean = re.sub(r"[^a-z0-9._-]+", "-", str(value or "").strip().lower()).strip("-")
+    return (clean[:80] or "local")
+
+
+def _new_owner_action_from_payload(payload: dict) -> dict:
+    action = payload.get("action")
+    if not isinstance(action, dict):
+        raise ValueError("action must be a JSON object")
+    return action
+
+
+def _new_owner_manifest(action: dict) -> dict:
+    action_payload = action.get("payload")
+    if not isinstance(action_payload, dict):
+        return {}
+    manifest = action_payload.get("manifest")
+    return manifest if isinstance(manifest, dict) else {}
+
+
+def _new_owner_manifest_limit(manifest: dict, default: int = 50) -> int:
+    try:
+        value = int(manifest.get("limit") or default)
+    except (TypeError, ValueError):
+        value = default
+    return max(1, min(value, 120))
+
+
+def _owner_sqlite_path(repo_root: Path) -> Path:
+    return repo_root / OWNER_ACTION_ROOT / "Owner.sqlite"
+
+
+def _connect_owner_sqlite_readonly(repo_root: Path) -> sqlite3.Connection:
+    path = _owner_sqlite_path(repo_root)
+    if not path.exists():
+        raise FileNotFoundError(f"{path} is missing")
+    conn = sqlite3.connect(f"{path.resolve().as_uri()}?mode=ro", uri=True)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def _require_sidecar_tables(conn: sqlite3.Connection) -> None:
+    required = {
+        "sidecar_assets",
+        "sidecar_decisions",
+        "sidecar_pending_sync",
+        "sidecar_tombstones",
+        "sidecar_mock_uploads",
+    }
+    rows = conn.execute(
+        f"""
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'table'
+          AND name IN ({", ".join("?" for _ in required)})
+        """,
+        sorted(required),
+    ).fetchall()
+    found = {str(row["name"]) for row in rows}
+    missing = sorted(required - found)
+    if missing:
+        raise ValueError(f"Owner.sqlite does not contain Sidecar state yet: missing {', '.join(missing)}")
+
+
+def _sidecar_state_counts(conn: sqlite3.Connection) -> list[dict]:
+    rows = conn.execute(
+        """
+        SELECT
+          COALESCE(d.pick_state, 'undecided') AS pick_state,
+          COALESCE(d.metadata_state, 'unreviewed') AS metadata_state,
+          count(*) AS total
+        FROM sidecar_assets AS a
+        LEFT JOIN sidecar_decisions AS d ON d.asset_id = a.asset_id
+        WHERE a.missing_at IS NULL OR a.missing_at = ''
+        GROUP BY COALESCE(d.pick_state, 'undecided'), COALESCE(d.metadata_state, 'unreviewed')
+        ORDER BY total DESC, pick_state, metadata_state
+        """
+    ).fetchall()
+    return [
+        {
+            "pickState": str(row["pick_state"] or "undecided"),
+            "metadataState": str(row["metadata_state"] or "unreviewed"),
+            "count": int(row["total"] or 0),
+        }
+        for row in rows
+    ]
+
+
+def _sidecar_culling_review_rows(conn: sqlite3.Connection, limit: int) -> tuple[int, int, list[dict]]:
+    indexed_count = conn.execute(
+        "SELECT count(*) AS total FROM sidecar_assets WHERE missing_at IS NULL OR missing_at = ''"
+    ).fetchone()["total"]
+    candidate_sql = """
+      FROM sidecar_assets AS a
+      LEFT JOIN sidecar_decisions AS d ON d.asset_id = a.asset_id
+      WHERE (a.missing_at IS NULL OR a.missing_at = '')
+        AND NOT EXISTS (
+          SELECT 1
+          FROM sidecar_tombstones AS t
+          WHERE t.asset_id = a.asset_id AND t.tombstone_state = 'active'
+        )
+        AND NOT EXISTS (
+          SELECT 1
+          FROM sidecar_mock_uploads AS m
+          WHERE m.asset_id = a.asset_id AND m.mock_state = 'active'
+        )
+    """
+    candidate_count = conn.execute(f"SELECT count(*) AS total {candidate_sql}").fetchone()["total"]
+    rows = conn.execute(
+        f"""
+        SELECT
+          a.asset_id,
+          a.filename,
+          a.media_type,
+          a.captured_at,
+          a.indexed_at,
+          a.photos_title,
+          a.photos_keywords_json,
+          a.metadata_seed_title,
+          a.metadata_seed_keywords_json,
+          COALESCE(d.rating, 0) AS rating,
+          COALESCE(d.color, '') AS color,
+          COALESCE(d.pick_state, 'undecided') AS pick_state,
+          COALESCE(d.metadata_state, 'unreviewed') AS metadata_state,
+          COALESCE(d.title, '') AS decision_title,
+          COALESCE(d.keywords_json, '[]') AS decision_keywords_json,
+          (
+            SELECT count(*) FROM sidecar_pending_sync AS p
+            WHERE p.asset_id = a.asset_id AND p.status = 'pending'
+          ) AS pending_sync_count
+        {candidate_sql}
+        ORDER BY
+          CASE WHEN a.captured_at IS NULL OR a.captured_at = '' THEN 1 ELSE 0 END,
+          a.captured_at DESC,
+          a.asset_id
+        LIMIT ?
+        """,
+        (limit,),
+    ).fetchall()
+    items = []
+    for position, row in enumerate(rows):
+        keyword_candidates = [
+            row["decision_keywords_json"],
+            row["photos_keywords_json"],
+            row["metadata_seed_keywords_json"],
+        ]
+        keywords = []
+        for value in keyword_candidates:
+            try:
+                parsed = json.loads(str(value or "[]"))
+            except json.JSONDecodeError:
+                parsed = []
+            if isinstance(parsed, list) and parsed:
+                keywords = [str(item).strip() for item in parsed if str(item).strip()]
+                break
+        items.append({
+            "assetId": str(row["asset_id"] or ""),
+            "filename": str(row["filename"] or ""),
+            "mediaType": str(row["media_type"] or ""),
+            "capturedAt": str(row["captured_at"] or ""),
+            "indexedAt": str(row["indexed_at"] or ""),
+            "rating": int(row["rating"] or 0),
+            "color": str(row["color"] or ""),
+            "pickState": str(row["pick_state"] or "undecided"),
+            "metadataState": str(row["metadata_state"] or "unreviewed"),
+            "title": str(row["decision_title"] or row["photos_title"] or row["metadata_seed_title"] or ""),
+            "keywords": keywords,
+            "pendingSyncCount": int(row["pending_sync_count"] or 0),
+            "sidecarPosition": position,
+        })
+    return int(indexed_count or 0), int(candidate_count or 0), items
+
+
+def _new_owner_sidecar_culling_review_result(repo_root: Path, action: dict, connector_id: str) -> dict:
+    manifest = _new_owner_manifest(action)
+    limit = _new_owner_manifest_limit(manifest)
+    owner_db = _owner_sqlite_path(repo_root)
+    with _connect_owner_sqlite_readonly(repo_root) as conn:
+        _require_sidecar_tables(conn)
+        indexed_count, candidate_count, items = _sidecar_culling_review_rows(conn, limit)
+        state_counts = _sidecar_state_counts(conn)
+        pending_sync_count = conn.execute(
+            "SELECT count(*) AS total FROM sidecar_pending_sync WHERE status = 'pending'"
+        ).fetchone()["total"]
+        tombstone_count = conn.execute(
+            "SELECT count(*) AS total FROM sidecar_tombstones WHERE tombstone_state = 'active'"
+        ).fetchone()["total"]
+        last_indexed_at = conn.execute(
+            "SELECT max(indexed_at) AS value FROM sidecar_assets WHERE missing_at IS NULL OR missing_at = ''"
+        ).fetchone()["value"]
+    completed_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    result = {
+        "connectorId": connector_id,
+        "surface": "new-owner-local-bridge",
+        "actionId": str(action.get("id") or ""),
+        "type": "sidecar-culling-review",
+        "readOnly": True,
+        "recordsPrepared": len(items),
+        "candidateCount": candidate_count,
+        "indexedCount": indexed_count,
+        "pendingSyncCount": int(pending_sync_count or 0),
+        "tombstoneCount": int(tombstone_count or 0),
+        "lastIndexedAt": str(last_indexed_at or ""),
+        "stateCounts": state_counts,
+        "reviewWindow": {
+            "mode": str(manifest.get("mode") or "review-window"),
+            "source": "owner-sqlite",
+            "limit": limit,
+            "count": len(items),
+        },
+        "sampleItems": items[:8],
+        "local": {
+            "machineNames": _local_machine_names(),
+            "ownerDb": str(owner_db.relative_to(repo_root) if owner_db.is_relative_to(repo_root) else owner_db),
+        },
+        "completedAt": completed_at,
+    }
+    return {
+        "ok": True,
+        "connector": {
+            "id": connector_id,
+            "type": "sidecar-culling-review",
+            "readOnly": True,
+            "completedAt": completed_at,
+        },
+        "result": result,
+        "preview": {
+            "items": items,
+            "stateCounts": state_counts,
+        },
+    }
+
+
+def new_owner_connector_result(repo_root: Path, payload: dict) -> dict:
+    action = _new_owner_action_from_payload(payload)
+    action_type = str(action.get("type") or action.get("action") or "").strip()
+    if action_type != "sidecar-culling-review":
+        raise ValueError(f"Unsupported NewOwner connector action: {action_type or 'missing'}")
+    if str(action.get("state") or "").strip() not in {"claimed", "completed"}:
+        raise ValueError("Sidecar culling connector actions must be claimed or completed before local review.")
+    claim = action.get("claim") if isinstance(action.get("claim"), dict) else {}
+    connector_id = _clean_connector_id(payload.get("connectorId") or claim.get("connectorId") or "local")
+    return _new_owner_sidecar_culling_review_result(repo_root, action, connector_id)
+
+
+def new_owner_sidecar_decision_result(repo_root: Path, payload: dict) -> dict:
+    asset_id = str(payload.get("assetId") or payload.get("asset_id") or "").strip()
+    action = str(payload.get("action") or "").strip().casefold()
+    if not asset_id:
+        raise ValueError("assetId is required")
+    if action not in {"pick", "unpick", "reject", "rating", "color", "approve", "metadata"}:
+        raise ValueError("unsupported Sidecar decision action")
+    decision_payload = {
+        "assetId": asset_id,
+        "action": action,
+    }
+    for key in ["rating", "color", "title", "keywords", "metadataState"]:
+        if key in payload:
+            decision_payload[key] = payload[key]
+    decision = record_sidecar_decision_db(repo_root, decision_payload)
+    decision["summary"] = sidecar_summary_db(repo_root)
+    decision["source"] = "new-owner-review"
+    return decision
+
+
 def _clean_price_value(value: object) -> float:
     try:
         amount = float(value)
@@ -1684,7 +1994,7 @@ def _is_private_lan_address(value: str) -> bool:
         address = ipaddress.ip_address(value)
     except ValueError:
         return False
-    return bool(address.is_private or address.is_loopback)
+    return bool(address.is_private or address.is_loopback or address in TAILSCALE_CGNAT_NETWORK)
 
 
 def _state_groups(repo_root: Path) -> tuple[dict[str, list[dict]], dict[str, list[dict]], dict[str, list[dict]]]:
@@ -8102,25 +8412,79 @@ def _run_apple_photos_bridge_streaming(repo_root: Path, command: list[str], prog
     return payload
 
 
+def _ensure_apple_photos_bridge_app(repo_root: Path) -> None:
+    installer = repo_root / APPLE_PHOTOS_BRIDGE_APP_INSTALLER
+    bridge_source = repo_root / APPLE_PHOTOS_BRIDGE
+    if not installer.exists():
+        raise RuntimeError(f"Photos Bridge app installer is missing: {installer}")
+    if not bridge_source.exists():
+        raise RuntimeError(f"Apple Photos bridge is missing: {bridge_source}")
+    needs_build = not APPLE_PHOTOS_BRIDGE_APP_EXECUTABLE.exists()
+    if not needs_build:
+        try:
+            needs_build = bridge_source.stat().st_mtime > APPLE_PHOTOS_BRIDGE_APP_EXECUTABLE.stat().st_mtime
+        except OSError:
+            needs_build = True
+    if not needs_build:
+        return
+    result = subprocess.run(
+        ["zsh", str(installer)],
+        cwd=repo_root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        message = (result.stderr or result.stdout or f"Photos Bridge installer exited {result.returncode}").strip()
+        raise RuntimeError(message)
+
+
 def _run_apple_photos_bridge(repo_root: Path, args: list[str], *, progress_id: str = "") -> dict:
-    bridge = repo_root / APPLE_PHOTOS_BRIDGE
-    if not bridge.exists():
-        raise RuntimeError(f"Apple Photos bridge is missing: {bridge}")
-    command = ["swift", str(bridge), *args]
+    _ensure_apple_photos_bridge_app(repo_root)
     progress_id = _clean_apple_photos_progress_id(progress_id)
-    if progress_id:
-        return _run_apple_photos_bridge_streaming(repo_root, command, progress_id)
-    try:
-        result = subprocess.run(command, cwd=repo_root, text=True, capture_output=True, timeout=900, check=False)
-    except FileNotFoundError as error:
-        raise RuntimeError("Swift is required for the Apple Photos PhotoKit bridge. Install Xcode Command Line Tools.") from error
-    output = (result.stdout or "").strip()
+    with tempfile.TemporaryDirectory(prefix="pbe-photos-bridge-result-") as result_dir:
+        result_path = Path(result_dir) / "result.json"
+        command = [
+            "open",
+            "-W",
+            "-n",
+            str(APPLE_PHOTOS_BRIDGE_APP),
+            "--args",
+            *args,
+            "--result-destination",
+            str(result_path),
+        ]
+        try:
+            result = subprocess.run(command, cwd=repo_root, text=True, capture_output=True, timeout=900, check=False)
+        except FileNotFoundError as error:
+            raise RuntimeError("macOS open is required to launch the bundled Apple Photos bridge.") from error
+        except subprocess.TimeoutExpired:
+            if progress_id:
+                _finish_apple_photos_import_progress(progress_id, "failed", {
+                    "error": "Photos Bridge app timed out while exporting assets.",
+                })
+            return {
+                "ok": False,
+                "error": "Photos Bridge app timed out while exporting assets.",
+                "code": "photos_bridge_timeout",
+            }
+        output = ""
+        if result_path.exists():
+            output = result_path.read_text(encoding="utf-8").strip()
+        elif result.stdout:
+            output = result.stdout.strip()
     payload = json.loads(output or "{}")
     if result.returncode != 0 and payload.get("ok") is not False:
-        message = (result.stderr or output or f"Apple Photos bridge exited {result.returncode}").strip()
+        message = (result.stderr or result.stdout or output or f"Photos Bridge app exited {result.returncode}").strip()
         return {"ok": False, "error": message, "code": "photos_bridge_error"}
     if result.stderr and payload.get("ok") is False:
         payload.setdefault("stderr", result.stderr.strip())
+    if not payload and not output:
+        return {
+            "ok": False,
+            "error": "Photos Bridge app did not write a result payload.",
+            "code": "photos_bridge_empty_result",
+        }
     return payload
 
 

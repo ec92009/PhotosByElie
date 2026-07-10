@@ -49,7 +49,7 @@ APPLE_PHOTOS_BRIDGE_APP_EXECUTABLE = APPLE_PHOTOS_BRIDGE_APP / "Contents" / "Mac
 SIDECAR_VERSION_FILE = Path("SIDECAR_VERSION")
 SIDECAR_DEFAULT_VERSION = "125.2"
 SIDECAR_PREVIEW_ROOT = Path("tmp/sidecar-previews")
-SIDECAR_PREVIEW_CACHE_VERSION = "v2"
+SIDECAR_PREVIEW_CACHE_VERSION = "v3"
 SIDECAR_VIDEO_ROOT = Path("tmp/sidecar-videos")
 SIDECAR_VIDEO_CACHE_VERSION = "v1"
 SIDECAR_LIBRARY_PATH = "/__sidecar/library"
@@ -257,9 +257,14 @@ def _run_apple_photos_bridge_app_index(repo_root: Path, args: list[str], destina
 
 def _run_apple_photos_bridge_app_task(repo_root: Path, args: list[str], timeout: int = 900) -> dict:
     _ensure_apple_photos_bridge_app(repo_root)
+    result_destination = repo_root / "tmp" / "sidecar-bridge-results" / f"{uuid.uuid4().hex}.json"
+    result_destination.parent.mkdir(parents=True, exist_ok=True)
     try:
         result = subprocess.run(
-            ["open", "-W", "-n", str(APPLE_PHOTOS_BRIDGE_APP), "--args", *args],
+            [
+                "open", "-W", "-n", str(APPLE_PHOTOS_BRIDGE_APP), "--args", *args,
+                "--result-destination", str(result_destination),
+            ],
             cwd=repo_root,
             text=True,
             capture_output=True,
@@ -274,7 +279,38 @@ def _run_apple_photos_bridge_app_task(repo_root: Path, args: list[str], timeout:
             "code": "photos_bridge_app_error",
             "error": (result.stderr or result.stdout or f"Apple Photos bridge app exited {result.returncode}").strip(),
         }
-    return {"ok": True}
+    try:
+        payload = json.loads(result_destination.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return {
+            "ok": False,
+            "code": "photos_bridge_result_missing",
+            "error": "Photos Bridge app exited without writing its result. Retry the preview.",
+        }
+    except (OSError, json.JSONDecodeError) as error:
+        return {
+            "ok": False,
+            "code": "photos_bridge_result_invalid",
+            "error": f"Photos Bridge app wrote an unreadable result: {error}",
+        }
+    finally:
+        try:
+            result_destination.unlink()
+        except FileNotFoundError:
+            pass
+    if not isinstance(payload, dict):
+        return {
+            "ok": False,
+            "code": "photos_bridge_result_invalid",
+            "error": "Photos Bridge app returned an invalid result payload.",
+        }
+    if payload.get("ok") is False:
+        return payload
+    return payload if payload.get("ok") is True else {
+        "ok": False,
+        "code": "photos_bridge_result_invalid",
+        "error": "Photos Bridge app returned a result without an outcome.",
+    }
 
 
 def _ensure_apple_photos_bridge_app(repo_root: Path) -> None:

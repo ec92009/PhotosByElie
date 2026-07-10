@@ -1,4 +1,4 @@
-import { createMemoryAccessUserRegistry } from "./access-user-registry.mjs";
+import { ACCESS_CAPABILITIES, createMemoryAccessUserRegistry } from "./access-user-registry.mjs";
 import { createMemoryStore } from "./memory-store.mjs";
 import { createMockStripeClient } from "./mock-stripe.mjs";
 import { createMemoryOwnerActionStore } from "./owner-action-store.mjs";
@@ -12,6 +12,36 @@ const DEFAULT_DOWNLOAD_TOKEN_MAX_DOWNLOADS = 100;
 const PURCHASE_ALLOWANCE_SOURCE = "photosbyelie-worker-order-ledger";
 const PURCHASE_ALLOWANCE_SOURCE_DETAIL = "PhotosByElie checkout Worker order records in ORDERS_KV";
 const SECONDS_PER_DAY = 60 * 60 * 24;
+const ACCESS_CONSOLE_ROLE_OPTIONS = [
+  {
+    id: "user",
+    label: "Regular user",
+    description: "Default Google-authenticated account with public browsing and account/order recovery.",
+    grantable: true,
+    capabilities: ["view_public", "buy_downloads", "redownload_purchases_30d"],
+  },
+  {
+    id: "re_client",
+    label: "RE client",
+    description: "Regular user plus assigned real-estate gallery permissions.",
+    grantable: true,
+    capabilities: ["view_gallery", "view_watermarked", "pdf", "video", "view_originals"],
+  },
+  {
+    id: "owner",
+    label: "Owner",
+    description: "Owner workflow access without bootstrap admin recovery powers.",
+    grantable: true,
+    capabilities: ["view_all_galleries", "view_originals", "manage_access"],
+  },
+  {
+    id: "admin",
+    label: "Bootstrap admin",
+    description: "Break-glass admin identity configured outside D1.",
+    grantable: false,
+    capabilities: ["view_all_galleries", "view_originals", "manage_access"],
+  },
+];
 
 const json = (body, status = 200, headers = {}) => new Response(JSON.stringify(body, null, 2), {
   status,
@@ -19,7 +49,7 @@ const json = (body, status = 200, headers = {}) => new Response(JSON.stringify(b
     "content-type": "application/json; charset=utf-8",
     "access-control-allow-origin": "*",
     "access-control-allow-methods": "GET,POST,PUT,PATCH,OPTIONS",
-    "access-control-allow-headers": "content-type,stripe-signature,x-mock-stripe-signature",
+    "access-control-allow-headers": "authorization,content-type,stripe-signature,x-mock-stripe-signature",
     ...headers,
   },
 });
@@ -31,7 +61,7 @@ const credentialedCorsHeaders = (request, extraHeaders = {}) => {
   return {
     "access-control-allow-origin": origin,
     "access-control-allow-methods": "GET,POST,PUT,PATCH,OPTIONS",
-    "access-control-allow-headers": "content-type,stripe-signature,x-mock-stripe-signature",
+    "access-control-allow-headers": "authorization,content-type,stripe-signature,x-mock-stripe-signature",
     "access-control-allow-credentials": "true",
     vary: "Origin",
     ...extraHeaders,
@@ -147,6 +177,38 @@ const normalizeEmailAllowlist = (emails) => {
     .filter(validEmail);
 };
 
+const normalizeAccessConsoleRoles = (roles = []) => {
+  const source = Array.isArray(roles) ? roles : String(roles || "").split(/[\s,;]+/);
+  const cleaned = new Set(source
+    .map((role) => String(role || "").trim().toLowerCase().replace(/[-\s]+/g, "_"))
+    .filter((role) => ["user", "re_client", "owner"].includes(role)));
+  cleaned.add("user");
+  return [...cleaned];
+};
+
+const ACCESS_CONSOLE_CAPABILITY_IDS = new Set(ACCESS_CAPABILITIES.map((capability) => capability.id));
+
+const normalizeAccessConsoleCapabilities = (capabilities = []) => {
+  const source = Array.isArray(capabilities) ? capabilities : String(capabilities || "").split(/[\s,;]+/);
+  return [...new Set(source
+    .map((capability) => String(capability || "").trim().toLowerCase().replace(/[-\s]+/g, "_"))
+    .filter((capability) => ACCESS_CONSOLE_CAPABILITY_IDS.has(capability)))];
+};
+
+const accessConsolePayloadRequestsAdmin = (roles = []) => {
+  const source = Array.isArray(roles) ? roles : String(roles || "").split(/[\s,;]+/);
+  return source
+    .map((role) => String(role || "").trim().toLowerCase().replace(/[-\s]+/g, "_"))
+    .includes("admin");
+};
+
+const tierFromAccessConsoleRoles = (roles = []) => {
+  const set = new Set(roles);
+  if (set.has("owner")) return "owner";
+  if (set.has("re_client")) return "re_client";
+  return "user";
+};
+
 const normalizeOriginList = (origins) => {
   const source = Array.isArray(origins) ? origins : String(origins || "").split(/[\s,;]+/);
   return source.map((origin) => {
@@ -175,8 +237,18 @@ const sessionForAccessIdentity = async (identity, { accessUserRegistry, adminEma
   const email = String(identity?.email || "").trim().toLowerCase();
   const record = email && accessUserRegistry?.getUser ? await accessUserRegistry.getUser(email) : null;
   const admin = Boolean(email && adminEmail && email === adminEmail);
-  const tier = admin ? "admin" : String(record?.tier || "user").trim().toLowerCase();
-  const realEstateClients = Array.isArray(record?.realEstateClients) ? record.realEstateClients : [];
+  const effectiveRealEstateClients = Array.isArray(record?.effectiveAccess?.scopes)
+    ? record.effectiveAccess.scopes
+      .filter((scope) => scope?.galleryKind === "real_estate" && scope.galleryKey)
+      .map((scope) => String(scope.galleryKey || "").trim())
+      .filter(Boolean)
+    : [];
+  const realEstateClients = [...new Set([
+    ...(Array.isArray(record?.realEstateClients) ? record.realEstateClients : []),
+    ...effectiveRealEstateClients,
+  ])];
+  const registryTier = String(record?.tier || "user").trim().toLowerCase();
+  const tier = admin ? "admin" : (registryTier === "user" && realEstateClients.length ? "re_client" : registryTier);
   const roles = rolesForTier(tier, admin);
   if (realEstateClients.length && !roles.includes("re_client")) roles.push("re_client");
   return {
@@ -187,8 +259,104 @@ const sessionForAccessIdentity = async (identity, { accessUserRegistry, adminEma
     tier,
     admin,
     realEstateClients,
+    accessRecord: record,
     expiresAt: identity?.expiresAt || null,
     sessionSeconds: Number(identity?.sessionSeconds || 0),
+  };
+};
+
+const accessConsoleRoleCapabilities = (roleId) =>
+  ACCESS_CONSOLE_ROLE_OPTIONS.find((role) => role.id === roleId)?.capabilities || [];
+
+const normalizePolicyGalleryKind = (value) => {
+  const kind = String(value || "public").trim().toLowerCase().replace(/[-\s]+/g, "_");
+  return ["event", "real_estate", "public", "custom"].includes(kind) ? kind : "custom";
+};
+
+const normalizePolicyGalleryKey = (value) => String(value || "").trim();
+
+const boolParam = (value) => ["1", "true", "yes", "on"].includes(String(value || "").trim().toLowerCase());
+
+const fallbackGalleryDefaultsFor = (galleryKind) => ({
+  watermarked: true,
+  saleEnabled: galleryKind !== "real_estate",
+  downloads: false,
+  pdf: galleryKind === "real_estate",
+  video: galleryKind === "real_estate",
+  memberOriginals: false,
+  ownerOriginals: false,
+});
+
+const accessScopeMatchesGallery = (scope, galleryKind, galleryKey) =>
+  scope?.galleryKind === galleryKind && String(scope.galleryKey || "") === galleryKey;
+
+const galleryDefaultsForPolicy = ({ galleryKind, galleryKey, scopes = [], audienceGroups = [] }) => {
+  const scope = scopes.find((item) => accessScopeMatchesGallery(item, galleryKind, galleryKey));
+  if (scope?.galleryDefaults) return scope.galleryDefaults;
+  const group = audienceGroups.find((item) => item.galleryKind === galleryKind && item.galleryKey === galleryKey);
+  return group?.galleryDefaults || fallbackGalleryDefaultsFor(galleryKind);
+};
+
+const galleryAccessDecisionFor = ({
+  viewer = null,
+  mode = "visitor",
+  galleryKind = "public",
+  galleryKey = "",
+  audienceGroups = [],
+  ownerOriginals = false,
+} = {}) => {
+  const roles = Array.isArray(viewer?.roles) && viewer.roles.length ? viewer.roles : ["user"];
+  const scopes = Array.isArray(viewer?.effectiveAccess?.scopes) ? viewer.effectiveAccess.scopes : [];
+  const matchingScopes = scopes.filter((scope) => accessScopeMatchesGallery(scope, galleryKind, galleryKey));
+  const scopeCapabilities = new Set(matchingScopes.flatMap((scope) => scope.capabilities || []));
+  const capabilities = new Set(accessConsoleRoleCapabilities("user"));
+  roles.forEach((role) => accessConsoleRoleCapabilities(role).forEach((capability) => capabilities.add(capability)));
+  scopes.forEach((scope) => (scope.capabilities || []).forEach((capability) => capabilities.add(capability)));
+  const defaults = galleryDefaultsForPolicy({ galleryKind, galleryKey, scopes, audienceGroups });
+  const canViewAll = capabilities.has("view_all_galleries") || roles.includes("admin");
+  const canViewPublic = galleryKind === "public" && capabilities.has("view_public");
+  const canViewAssigned = scopeCapabilities.has("view_gallery");
+  const canView = Boolean(canViewAll || canViewPublic || canViewAssigned);
+  const memberOriginals = canView && scopeCapabilities.has("view_originals") && defaults.memberOriginals === true;
+  const ownerOriginalsActive = canView && canViewAll && (ownerOriginals || defaults.ownerOriginals === true);
+  const originals = Boolean(memberOriginals || ownerOriginalsActive);
+  const watermarked = canView && !originals && (defaults.watermarked === true || scopeCapabilities.has("view_watermarked"));
+  const previewMode = !canView ? "blocked" : (originals ? "originals" : (watermarked ? "watermarked" : "compressed"));
+  const reasons = [];
+  if (canViewAll) reasons.push("view_all_galleries");
+  if (canViewPublic) reasons.push("view_public");
+  if (canViewAssigned) reasons.push("assigned_gallery");
+  if (!canView) reasons.push("no_matching_gallery_grant");
+  return {
+    mode,
+    email: viewer?.email || "",
+    label: mode === "visitor" ? "Regular visitor" : (viewer?.displayName || viewer?.email || mode),
+    allowed: canView,
+    gallery: { galleryKind, galleryKey },
+    access: {
+      previewMode,
+      watermarked,
+      saleEnabled: Boolean(canView && defaults.saleEnabled && capabilities.has("buy_downloads")),
+      checkout: Boolean(canView && defaults.saleEnabled && capabilities.has("buy_downloads")),
+      assignedDownloads: Boolean(canView && defaults.downloads && scopeCapabilities.has("download_items")),
+      purchasedRedownloads: Boolean(canView && capabilities.has("redownload_purchases_30d")),
+      pdf: Boolean(canView && defaults.pdf && scopeCapabilities.has("pdf")),
+      video: Boolean(canView && defaults.video && scopeCapabilities.has("video")),
+      originals,
+      memberOriginals,
+      ownerOriginals: ownerOriginalsActive,
+      manageAccess: Boolean(capabilities.has("manage_access")),
+    },
+    defaults,
+    matchingScopes: matchingScopes.map((scope) => ({
+      source: scope.source || "",
+      label: scope.label || scope.galleryKey || "",
+      role: scope.role || "",
+      groupId: scope.groupId || "",
+      capabilities: scope.capabilities || [],
+    })),
+    capabilities: [...capabilities].sort(),
+    reasons,
   };
 };
 
@@ -1076,6 +1244,8 @@ export const createPhotosByElieWorker = ({
   accessUserRegistry = createMemoryAccessUserRegistry(),
   accessAdminEmail = "",
   ownerActionStore = createMemoryOwnerActionStore(),
+  ownerConnectorAuth = null,
+  ownerConnectorPackage = null,
   authAllowedReturnOrigins = [],
   emailClient = null,
   downloadBaseUrl = ordersUrl,
@@ -1720,6 +1890,42 @@ export const createPhotosByElieWorker = ({
     }
   };
 
+  const isTailscaleHostname = (hostname) => {
+    const parts = String(hostname || "").split(".").map((part) => Number(part));
+    return parts.length === 4
+      && parts.every((part) => Number.isInteger(part) && part >= 0 && part <= 255)
+      && parts[0] === 100
+      && parts[1] >= 64
+      && parts[1] <= 127;
+  };
+
+  const isLocalAuthTransferReturn = (returnTo) => {
+    try {
+      const candidate = new URL(returnTo);
+      const hostname = candidate.hostname.replace(/^\[|\]$/g, "");
+      return candidate.protocol === "http:"
+        && (
+          hostname === "localhost"
+          || hostname === "127.0.0.1"
+          || hostname === "::1"
+          || isTailscaleHostname(hostname)
+        );
+    } catch {
+      return false;
+    }
+  };
+
+  const returnUrlWithLocalAuthTransfer = (returnTo, sessionToken = "") => {
+    if (!sessionToken || !isLocalAuthTransferReturn(returnTo)) return returnTo;
+    const url = new URL(returnTo);
+    const hash = url.hash ? url.hash.slice(1) : "";
+    const params = new URLSearchParams(hash.includes("=") ? hash : "");
+    if (hash && !hash.includes("=")) params.set("pbe_return_hash", hash);
+    params.set("pbe_auth_token", sessionToken);
+    url.hash = params.toString();
+    return url.href;
+  };
+
   const accessIdentityFor = async (request, { required = false } = {}) => {
     if (!accessAuth) {
       if (required) {
@@ -1840,7 +2046,7 @@ export const createPhotosByElieWorker = ({
       return credentialedErrorJson(request, 503, "google_auth_unavailable", "Google login is not configured.");
     }
     const result = await googleOAuthAuth.handleCallback(request);
-    return redirect(result.returnTo, 302, { "set-cookie": result.cookie });
+    return redirect(returnUrlWithLocalAuthTransfer(result.returnTo, result.sessionToken), 302, { "set-cookie": result.cookie });
   };
 
   const logoutAuth = async (request) => {
@@ -1858,6 +2064,31 @@ export const createPhotosByElieWorker = ({
   };
 
   const ownerActionId = () => `owner-action-${randomUUID().replace(/[^a-z0-9-]/gi, "").slice(0, 48)}`;
+  const ownerActionHistory = (action, event) => [
+    ...(Array.isArray(action.history) ? action.history : []),
+    event,
+  ].slice(-50);
+  const cleanOwnerConnectorId = (value) => {
+    const cleaned = String(value || "").trim().toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
+    return cleaned.slice(0, 80) || "manual-owner";
+  };
+  const ownerConnectorActionTypes = new Set([
+    "owner-connector-check",
+    "sidecar-culling-review",
+    "sidecar-photos-index-sync",
+    "sidecar-review-decision",
+    "sidecar-upload-publish",
+  ]);
+
+  const requireOwnerConnector = async (request) => {
+    if (!ownerConnectorAuth || typeof ownerConnectorAuth.requireConnector !== "function") {
+      throw Object.assign(new Error("Owner connector authentication is not configured."), {
+        status: 503,
+        code: "owner_connector_auth_unavailable",
+      });
+    }
+    return await ownerConnectorAuth.requireConnector(request);
+  };
 
   const createOwnerAction = async (request) => {
     const session = await authSessionFor(request, { requiredRole: "owner" });
@@ -1880,8 +2111,84 @@ export const createPhotosByElieWorker = ({
       createdBy: session.email,
       createdAt: timestamp,
       updatedAt: timestamp,
+      history: [{
+        event: "queued",
+        at: timestamp,
+        by: session.email,
+      }],
     });
     return credentialedJson(request, { ok: true, action }, 202);
+  };
+
+  const listOwnerActions = async (request) => {
+    await authSessionFor(request, { requiredRole: "owner" });
+    if (!ownerActionStore || typeof ownerActionStore.listActions !== "function") {
+      return credentialedErrorJson(request, 503, "owner_actions_unavailable", "Owner action queue listing is not configured.");
+    }
+    const url = new URL(request.url);
+    const requestedLimit = Number(url.searchParams.get("limit") || 25);
+    const limit = Math.max(1, Math.min(100, Number.isFinite(requestedLimit) ? Math.round(requestedLimit) : 25));
+    const actions = await ownerActionStore.listActions({ limit });
+    return credentialedJson(request, { ok: true, actions, limit });
+  };
+
+  const listOwnerConnectors = async (request) => {
+    await authSessionFor(request, { requiredRole: "owner" });
+    const connectors = typeof ownerActionStore?.listConnectors === "function"
+      ? await ownerActionStore.listConnectors()
+      : [];
+    return credentialedJson(request, { ok: true, connectors });
+  };
+
+  const downloadOwnerConnector = async (request) => {
+    await authSessionFor(request, { requiredRole: "owner" });
+    if (!ownerConnectorPackage || typeof ownerConnectorPackage.getMacPackage !== "function") {
+      return credentialedErrorJson(request, 503, "owner_connector_package_unavailable", "Mac connector download is not configured.");
+    }
+    const asset = await ownerConnectorPackage.getMacPackage();
+    if (!asset) return credentialedErrorJson(request, 404, "owner_connector_package_missing", "Mac connector package is not published yet.");
+    return new Response(asset.body, {
+      status: 200,
+      headers: credentialedCorsHeaders(request, asset.headers || {}),
+    });
+  };
+
+  const heartbeatOwnerConnector = async (request) => {
+    const connector = await requireOwnerConnector(request);
+    const payload = await parseJson(request);
+    const timestamp = now().toISOString();
+    const health = {
+      schema: "photosbyelie.ownerConnector.v1",
+      id: connector.connectorId,
+      state: "online",
+      hostname: String(payload.hostname || "").trim().slice(0, 120),
+      platform: String(payload.platform || "macos").trim().slice(0, 80),
+      version: String(payload.version || "").trim().slice(0, 80),
+      capabilities: Array.isArray(payload.capabilities)
+        ? payload.capabilities.map((item) => String(item || "").trim()).filter(Boolean).slice(0, 20)
+        : [],
+      lastSeenAt: timestamp,
+    };
+    const saved = typeof ownerActionStore?.putConnector === "function"
+      ? await ownerActionStore.putConnector(health)
+      : health;
+    return json({ ok: true, connector: saved });
+  };
+
+  const listConnectorActions = async (request) => {
+    const connector = await requireOwnerConnector(request);
+    if (!ownerActionStore || typeof ownerActionStore.listActions !== "function") {
+      return json({ ok: false, error: { code: "owner_actions_unavailable", message: "Owner action queue listing is not configured." } }, 503);
+    }
+    const actions = await ownerActionStore.listActions({ limit: 100 });
+    const available = actions.filter((action) => {
+      if (!ownerConnectorActionTypes.has(action.type)) return false;
+      if (action.state === "claimed") return action.claim?.connectorId === connector.connectorId;
+      if (action.state !== "queued") return false;
+      const requested = cleanOwnerConnectorId(action.payload?.requestedConnector || "");
+      return !action.payload?.requestedConnector || requested === connector.connectorId;
+    });
+    return json({ ok: true, connectorId: connector.connectorId, actions: available.slice(0, 25) });
   };
 
   const getOwnerAction = async (request, actionId) => {
@@ -1892,6 +2199,356 @@ export const createPhotosByElieWorker = ({
     const action = await ownerActionStore.getAction(actionId);
     if (!action) return credentialedErrorJson(request, 404, "owner_action_not_found", "Owner action was not found.");
     return credentialedJson(request, { ok: true, action });
+  };
+
+  const transitionOwnerAction = async (request, actionId, transition, connectorSession = null) => {
+    const session = connectorSession || await authSessionFor(request, { requiredRole: "owner" });
+    if (!ownerActionStore || typeof ownerActionStore.getAction !== "function" || typeof ownerActionStore.putAction !== "function") {
+      return credentialedErrorJson(request, 503, "owner_actions_unavailable", "Owner action queue is not configured.");
+    }
+    const action = await ownerActionStore.getAction(actionId);
+    if (!action) return credentialedErrorJson(request, 404, "owner_action_not_found", "Owner action was not found.");
+    const payload = await parseJson(request);
+    const nowDate = now();
+    const timestamp = nowDate.toISOString();
+    let next = null;
+
+    if (transition === "claim") {
+      if (action.state !== "queued") {
+        return credentialedErrorJson(request, 409, "owner_action_not_claimable", "Only queued Owner actions can be claimed.");
+      }
+      const connectorId = connectorSession?.connectorId
+        || cleanOwnerConnectorId(payload.connectorId || payload.connector || payload.machine);
+      const leaseExpiresAt = new Date(nowDate.getTime() + 4 * 60 * 60 * 1000).toISOString();
+      next = {
+        ...action,
+        state: "claimed",
+        claim: {
+          connectorId,
+          claimedBy: connectorSession ? `connector:${connectorId}` : session.email,
+          claimedAt: timestamp,
+          leaseExpiresAt,
+        },
+        updatedAt: timestamp,
+      };
+      next.history = ownerActionHistory(action, {
+        event: "claimed",
+        at: timestamp,
+        by: connectorSession ? `connector:${connectorId}` : session.email,
+        connectorId,
+        leaseExpiresAt,
+      });
+    } else if (transition === "complete") {
+      if (action.state !== "claimed") {
+        return credentialedErrorJson(request, 409, "owner_action_not_claimed", "Only claimed Owner actions can be completed.");
+      }
+      if (connectorSession && action.claim?.connectorId !== connectorSession.connectorId) {
+        return json({ ok: false, error: { code: "owner_action_connector_mismatch", message: "This action is claimed by another connector." } }, 409);
+      }
+      const result = payload.result && typeof payload.result === "object" ? payload.result : {};
+      next = {
+        ...action,
+        state: "completed",
+        result,
+        completedBy: connectorSession ? `connector:${connectorSession.connectorId}` : session.email,
+        completedAt: timestamp,
+        updatedAt: timestamp,
+      };
+      next.history = ownerActionHistory(action, {
+        event: "completed",
+        at: timestamp,
+        by: connectorSession ? `connector:${connectorSession.connectorId}` : session.email,
+      });
+    } else if (transition === "fail") {
+      if (!["queued", "claimed"].includes(action.state)) {
+        return credentialedErrorJson(request, 409, "owner_action_not_open", "Only queued or claimed Owner actions can be failed.");
+      }
+      if (connectorSession && action.state === "claimed" && action.claim?.connectorId !== connectorSession.connectorId) {
+        return json({ ok: false, error: { code: "owner_action_connector_mismatch", message: "This action is claimed by another connector." } }, 409);
+      }
+      const message = String(payload.message || payload.error?.message || payload.error || "Owner action failed.").trim().slice(0, 500);
+      next = {
+        ...action,
+        state: "failed",
+        error: {
+          message: message || "Owner action failed.",
+        },
+        failedBy: connectorSession ? `connector:${connectorSession.connectorId}` : session.email,
+        failedAt: timestamp,
+        updatedAt: timestamp,
+      };
+      next.history = ownerActionHistory(action, {
+        event: "failed",
+        at: timestamp,
+        by: connectorSession ? `connector:${connectorSession.connectorId}` : session.email,
+        message: next.error.message,
+      });
+    } else {
+      return credentialedErrorJson(request, 400, "invalid_owner_action_transition", "Owner action transition is not supported.");
+    }
+
+    const saved = await ownerActionStore.putAction(next);
+    return credentialedJson(request, { ok: true, action: saved });
+  };
+
+  const transitionConnectorAction = async (request, actionId, transition) => {
+    const connector = await requireOwnerConnector(request);
+    return await transitionOwnerAction(request, actionId, transition, connector);
+  };
+
+  const parseAuditJson = (value) => {
+    if (value == null || typeof value !== "string") return value ?? null;
+    try {
+      return JSON.parse(value);
+    } catch {
+      return null;
+    }
+  };
+
+  const publicAuditEvent = (event = {}) => ({
+    id: event.id || "",
+    eventType: event.eventType || event.event_type || "",
+    action: event.action || "",
+    summary: event.summary || "",
+    actorEmail: event.actorEmail || event.actor_email || "",
+    targetType: event.targetType || event.target_type || "",
+    targetId: event.targetId || event.target_id || "",
+    targetEmail: event.targetEmail || event.target_email || "",
+    before: event.before || parseAuditJson(event.beforeJson || event.before_json),
+    after: event.after || parseAuditJson(event.afterJson || event.after_json),
+    reversible: event.reversible === true || event.reversible === 1 || event.reversible === "1",
+    revertedAt: event.revertedAt || event.reverted_at || null,
+    revertedBy: event.revertedBy || event.reverted_by || "",
+    revertedEventId: event.revertedEventId || event.reverted_event_id || "",
+    createdAt: event.createdAt || event.created_at || "",
+  });
+
+  const accessConsoleRegistryRequired = () => {
+    if (!accessUserRegistry || typeof accessUserRegistry.listUsers !== "function" || typeof accessUserRegistry.putUser !== "function") {
+      throw Object.assign(new Error("Access Console registry is not configured."), {
+        status: 503,
+        code: "access_console_unavailable",
+      });
+    }
+    return accessUserRegistry;
+  };
+
+  const requireAccessConsoleAdmin = async (request) => authSessionFor(request, { requiredRole: "admin" });
+
+  const accessConsoleState = async (request) => {
+    const session = await requireAccessConsoleAdmin(request);
+    const registry = accessConsoleRegistryRequired();
+    const [people, fixtureEvents, auditEvents, audienceGroups, galleryOptions, capabilities] = await Promise.all([
+      registry.listUsers(),
+      typeof registry.listFixtureEvents === "function" ? registry.listFixtureEvents() : [],
+      typeof registry.listAuditEvents === "function" ? registry.listAuditEvents(30) : [],
+      typeof registry.listAudienceGroups === "function" ? registry.listAudienceGroups() : [],
+      typeof registry.listGalleryOptions === "function" ? registry.listGalleryOptions() : [],
+      typeof registry.listCapabilities === "function" ? registry.listCapabilities() : ACCESS_CAPABILITIES,
+    ]);
+    return credentialedJson(request, {
+      ok: true,
+      session: authSessionPayload(session),
+      roles: ACCESS_CONSOLE_ROLE_OPTIONS,
+      capabilities,
+      bootstrapAdminEmail: adminEmail,
+      people,
+      fixtureEvents,
+      audienceGroups,
+      galleryOptions,
+      auditEvents: auditEvents.map(publicAuditEvent),
+    });
+  };
+
+  const putAccessConsolePerson = async (request) => {
+    const session = await requireAccessConsoleAdmin(request);
+    const registry = accessConsoleRegistryRequired();
+    const payload = await parseJson(request);
+    const email = String(payload.email || "").trim().toLowerCase();
+    if (!validEmail(email)) {
+      return credentialedErrorJson(request, 400, "invalid_access_email", "A valid email address is required.");
+    }
+    const requestedRoles = payload.roles || payload.role || payload.tier;
+    if (accessConsolePayloadRequestsAdmin(requestedRoles)) {
+      return credentialedErrorJson(request, 400, "admin_not_grantable", "Admin is a bootstrap identity, not a grantable role.");
+    }
+    const roles = normalizeAccessConsoleRoles(requestedRoles);
+    const user = await registry.putUser({
+      email,
+      displayName: payload.displayName || payload.name || "",
+      tier: tierFromAccessConsoleRoles(roles),
+      roles,
+      realEstateClients: payload.realEstateClients || payload.realEstateGalleries || [],
+      groupIds: payload.groupIds || payload.audienceGroups || [],
+      notes: payload.notes || "",
+      fixture: payload.fixture === true,
+      source: payload.fixture === true ? "fixture" : "manual",
+    }, { actorEmail: session.email });
+    return credentialedJson(request, { ok: true, user });
+  };
+
+  const disableAccessConsolePerson = async (request, email) => {
+    const session = await requireAccessConsoleAdmin(request);
+    const registry = accessConsoleRegistryRequired();
+    if (typeof registry.disableUser !== "function") {
+      return credentialedErrorJson(request, 503, "access_console_disable_unavailable", "Access Console disable is not configured.");
+    }
+    const user = await registry.disableUser(email, { actorEmail: session.email });
+    if (!user) return credentialedErrorJson(request, 404, "access_person_not_found", "Access person was not found.");
+    return credentialedJson(request, { ok: true, user });
+  };
+
+  const seedAccessConsoleFixtures = async (request) => {
+    const session = await requireAccessConsoleAdmin(request);
+    const registry = accessConsoleRegistryRequired();
+    if (typeof registry.seedFixtureData !== "function") {
+      return credentialedErrorJson(request, 503, "access_console_fixtures_unavailable", "Access Console fixtures are not configured.");
+    }
+    const fixtures = await registry.seedFixtureData({ actorEmail: session.email });
+    return credentialedJson(request, { ok: true, fixtures });
+  };
+
+  const putAccessConsoleGroup = async (request) => {
+    const session = await requireAccessConsoleAdmin(request);
+    const registry = accessConsoleRegistryRequired();
+    if (typeof registry.putAudienceGroup !== "function") {
+      return credentialedErrorJson(request, 503, "access_console_groups_unavailable", "Access Console group writes are not configured.");
+    }
+    const payload = await parseJson(request);
+    try {
+      const group = await registry.putAudienceGroup({
+        id: payload.id || payload.groupId || payload.group_id || "",
+        label: payload.label || payload.name || "",
+        kind: payload.kind || "event",
+        galleryKind: payload.galleryKind || payload.gallery_kind || payload.kind || "event",
+        galleryKey: payload.galleryKey || payload.gallery_key || "",
+        accessPolicy: payload.accessPolicy || payload.access_policy || "",
+        capabilities: normalizeAccessConsoleCapabilities(payload.capabilities || payload.capabilityIds || []),
+        galleryDefaults: payload.galleryDefaults || payload.gallery_defaults || {},
+        fixture: payload.fixture === true,
+      }, { actorEmail: session.email });
+      return credentialedJson(request, { ok: true, group });
+    } catch (error) {
+      return credentialedErrorJson(request, 400, "invalid_access_group", error.message || "Audience group could not be saved.");
+    }
+  };
+
+  const archiveAccessConsoleGroup = async (request, groupId) => {
+    const session = await requireAccessConsoleAdmin(request);
+    const registry = accessConsoleRegistryRequired();
+    if (typeof registry.archiveAudienceGroup !== "function") {
+      return credentialedErrorJson(request, 503, "access_console_groups_unavailable", "Access Console group archiving is not configured.");
+    }
+    const group = await registry.archiveAudienceGroup(groupId, { actorEmail: session.email });
+    if (!group) return credentialedErrorJson(request, 404, "access_group_not_found", "Access group was not found.");
+    return credentialedJson(request, { ok: true, group });
+  };
+
+  const undoAccessConsoleAuditEvent = async (request, auditId) => {
+    const session = await requireAccessConsoleAdmin(request);
+    const registry = accessConsoleRegistryRequired();
+    if (typeof registry.undoAuditEvent !== "function") {
+      return credentialedErrorJson(request, 503, "access_console_undo_unavailable", "Access Console undo is not configured.");
+    }
+    try {
+      const result = await registry.undoAuditEvent(auditId, { actorEmail: session.email });
+      if (!result) return credentialedErrorJson(request, 404, "access_audit_not_found", "Access audit event was not found.");
+      return credentialedJson(request, {
+        ok: true,
+        event: publicAuditEvent(result.event),
+        undoEvent: publicAuditEvent(result.undoEvent),
+        restored: result.restored || null,
+      });
+    } catch (error) {
+      return credentialedErrorJson(
+        request,
+        error.status || 409,
+        error.code || "access_audit_undo_failed",
+        error.message || "Access change could not be undone."
+      );
+    }
+  };
+
+  const accessConsoleGalleryAccess = async (request) => {
+    const session = await requireAccessConsoleAdmin(request);
+    const registry = accessConsoleRegistryRequired();
+    const url = new URL(request.url);
+    const galleryKind = normalizePolicyGalleryKind(url.searchParams.get("galleryKind") || url.searchParams.get("gallery_kind"));
+    const galleryKey = normalizePolicyGalleryKey(url.searchParams.get("galleryKey") || url.searchParams.get("gallery_key"));
+    const email = String(url.searchParams.get("email") || "").trim().toLowerCase();
+    const ownerOriginals = boolParam(url.searchParams.get("ownerOriginals") || url.searchParams.get("owner_originals"));
+    if (!galleryKey) {
+      return credentialedErrorJson(request, 400, "missing_gallery_key", "A gallery key is required.");
+    }
+    if (email && !validEmail(email)) {
+      return credentialedErrorJson(request, 400, "invalid_access_email", "Policy testing requires a valid email address.");
+    }
+    const audienceGroups = typeof registry.listAudienceGroups === "function" ? await registry.listAudienceGroups() : [];
+    const activeAudienceGroups = audienceGroups.filter((group) => group?.state !== "archived");
+    const selectedUser = email && typeof registry.getUser === "function" ? await registry.getUser(email) : null;
+    const galleryGroup = activeAudienceGroups.find((group) =>
+      group.galleryKind === galleryKind && String(group.galleryKey || "") === galleryKey
+    );
+    const ownerViewer = {
+      email: session.email,
+      displayName: "Owner/admin",
+      roles: ["user", "owner", "admin"],
+      effectiveAccess: {
+        scopes: [],
+      },
+    };
+    const visitorViewer = {
+      email: "",
+      displayName: "Regular visitor",
+      roles: ["user"],
+      effectiveAccess: { scopes: [] },
+    };
+    return credentialedJson(request, {
+      ok: true,
+      gallery: {
+        galleryKind,
+        galleryKey,
+        label: galleryGroup?.label || galleryKey,
+        groupId: galleryGroup?.id || "",
+      },
+      requestedEmail: email,
+      selectedUser: selectedUser ? {
+        email: selectedUser.email,
+        displayName: selectedUser.displayName || "",
+        roles: selectedUser.roles || ["user"],
+        tier: selectedUser.tier || "user",
+        groupIds: selectedUser.groupIds || [],
+        disabledAt: selectedUser.disabledAt || null,
+        effectiveAccess: selectedUser.effectiveAccess || null,
+      } : null,
+      decisions: {
+        visitor: galleryAccessDecisionFor({
+          viewer: visitorViewer,
+          mode: "visitor",
+          galleryKind,
+          galleryKey,
+          audienceGroups: activeAudienceGroups,
+          ownerOriginals: false,
+        }),
+        selected: selectedUser ? galleryAccessDecisionFor({
+          viewer: selectedUser,
+          mode: "selected",
+          galleryKind,
+          galleryKey,
+          audienceGroups: activeAudienceGroups,
+          ownerOriginals: false,
+        }) : null,
+        owner: galleryAccessDecisionFor({
+          viewer: ownerViewer,
+          mode: "owner",
+          galleryKind,
+          galleryKey,
+          audienceGroups: activeAudienceGroups,
+          ownerOriginals,
+        }),
+      },
+      generatedAt: now().toISOString(),
+    });
   };
 
   const canUseRealEstateGallery = (session, galleryKey) =>
@@ -2007,6 +2664,21 @@ export const createPhotosByElieWorker = ({
     return credentialedJson(request, result, 202);
   };
 
+  const getRealEstateAssemblyJob = async (request, jobId) => {
+    if (!realEstateDeliverables || typeof realEstateDeliverables.getAssemblyJob !== "function") {
+      return errorJson(503, "real_estate_deliverables_unavailable", "Real-estate cloud assembly is not configured.");
+    }
+    const url = new URL(request.url);
+    const payload = {
+      galleryKey: url.searchParams.get("galleryKey") || "",
+      jobId,
+    };
+    payload.realEstateSession = await requireRealEstateSession(request, payload);
+    payload.galleryKey = payload.realEstateSession.galleryKey;
+    const result = await realEstateDeliverables.getAssemblyJob(payload);
+    return credentialedJson(request, result);
+  };
+
   const getRealEstateDeliverableAsset = async (request, id, action) => {
     if (!realEstateDeliverables || typeof realEstateDeliverables.getDeliverableAsset !== "function") {
       return errorJson(503, "real_estate_deliverables_unavailable", "Real-estate cloud products are not configured.");
@@ -2042,6 +2714,7 @@ export const createPhotosByElieWorker = ({
       || path.startsWith("/auth/")
       || path.startsWith("/owner/")
       || path.startsWith("/account/")
+      || path.startsWith("/access-console/")
       || path === "/checkout/account";
     if (request.method === "OPTIONS") {
       return usesCredentialedCors
@@ -2059,9 +2732,41 @@ export const createPhotosByElieWorker = ({
       if (request.method === "GET" && path === "/auth/google/callback") return await callbackGoogleAuth(request);
       if ((request.method === "GET" || request.method === "POST") && path === "/auth/logout") return await logoutAuth(request);
       if (request.method === "GET" && path === "/owner/session") return await getOwnerSession(request);
+      if (request.method === "GET" && path === "/owner/connectors") return await listOwnerConnectors(request);
+      if (request.method === "GET" && path === "/owner/connector/download/mac") return await downloadOwnerConnector(request);
+      if (request.method === "GET" && path === "/owner/actions") return await listOwnerActions(request);
       if (request.method === "POST" && path === "/owner/actions") return await createOwnerAction(request);
+      const ownerActionTransitionMatch = path.match(/^\/owner\/actions\/([^/]+)\/(claim|complete|fail)$/);
+      if ((request.method === "POST" || request.method === "PATCH") && ownerActionTransitionMatch) {
+        return await transitionOwnerAction(
+          request,
+          decodeURIComponent(ownerActionTransitionMatch[1]),
+          ownerActionTransitionMatch[2]
+        );
+      }
       const ownerActionMatch = path.match(/^\/owner\/actions\/([^/]+)$/);
       if (request.method === "GET" && ownerActionMatch) return await getOwnerAction(request, decodeURIComponent(ownerActionMatch[1]));
+      if (request.method === "POST" && path === "/owner/connector/heartbeat") return await heartbeatOwnerConnector(request);
+      if (request.method === "GET" && path === "/owner/connector/actions") return await listConnectorActions(request);
+      const connectorActionTransitionMatch = path.match(/^\/owner\/connector\/actions\/([^/]+)\/(claim|complete|fail)$/);
+      if (request.method === "POST" && connectorActionTransitionMatch) {
+        return await transitionConnectorAction(
+          request,
+          decodeURIComponent(connectorActionTransitionMatch[1]),
+          connectorActionTransitionMatch[2]
+        );
+      }
+      if (request.method === "GET" && path === "/access-console/state") return await accessConsoleState(request);
+      if (request.method === "GET" && path === "/access-console/gallery-access") return await accessConsoleGalleryAccess(request);
+      if ((request.method === "POST" || request.method === "PUT" || request.method === "PATCH") && path === "/access-console/people") return await putAccessConsolePerson(request);
+      if ((request.method === "POST" || request.method === "PUT" || request.method === "PATCH") && path === "/access-console/groups") return await putAccessConsoleGroup(request);
+      const accessPersonDisableMatch = path.match(/^\/access-console\/people\/([^/]+)\/disable$/);
+      if (request.method === "POST" && accessPersonDisableMatch) return await disableAccessConsolePerson(request, decodeURIComponent(accessPersonDisableMatch[1]));
+      const accessGroupArchiveMatch = path.match(/^\/access-console\/groups\/([^/]+)\/archive$/);
+      if (request.method === "POST" && accessGroupArchiveMatch) return await archiveAccessConsoleGroup(request, decodeURIComponent(accessGroupArchiveMatch[1]));
+      const accessAuditUndoMatch = path.match(/^\/access-console\/audit\/([^/]+)\/undo$/);
+      if (request.method === "POST" && accessAuditUndoMatch) return await undoAccessConsoleAuditEvent(request, decodeURIComponent(accessAuditUndoMatch[1]));
+      if (request.method === "POST" && path === "/access-console/fixtures/seed") return await seedAccessConsoleFixtures(request);
       if (request.method === "GET" && path === "/account/profile") return await getAccountProfile(request);
       if ((request.method === "POST" || request.method === "PUT" || request.method === "PATCH") && path === "/account/profile") return await putAccountProfile(request);
       const accountOrderMatch = path.match(/^\/account\/orders\/([^/]+)$/);
@@ -2082,6 +2787,10 @@ export const createPhotosByElieWorker = ({
       if (request.method === "POST" && path === "/real-estate/originals/session") return await createRealEstateOriginalsSession(request);
       if (request.method === "POST" && path === "/real-estate/deliverables/list") return await listRealEstateDeliverables(request);
       if (request.method === "POST" && path === "/real-estate/deliverables/jobs") return await submitRealEstateAssemblyJob(request);
+      const realEstateJobMatch = path.match(/^\/real-estate\/deliverables\/jobs\/([^/]+)$/);
+      if (request.method === "GET" && realEstateJobMatch) {
+        return await getRealEstateAssemblyJob(request, decodeURIComponent(realEstateJobMatch[1]));
+      }
       if (request.method === "POST" && path === "/real-estate/deliverables") return await putRealEstateDeliverable(request);
       if (request.method === "POST" && path === "/real-estate/deliverables/delete") return await deleteRealEstateDeliverable(request);
       const realEstateAssetMatch = path.match(/^\/real-estate\/deliverables\/([^/]+)\/(view|download)$/);

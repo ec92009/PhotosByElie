@@ -1,6 +1,12 @@
-# Max to David Automation Handoff
+# Max to David Automation Handoff (Legacy Fallback)
 
-Primary Max-to-David transport is Gmail self-email from `ec92009@gmail.com` to `ec92009@gmail.com` with exact subject `MAX2DAVID`. Use this file as durable reference/fallback for instructions prepared on Max for David, the always-on machine. David should report by Gmail self-email with exact subject `DAVID2MAX`; mirror durable summaries in `DAVID2MAX.md` only when useful or explicitly requested.
+As of 2026-07-06, primary Max-to-David coordination is direct Tailscale/mesh.
+Use the central Tickets API for routine ticket state, SSH/Codex Remote SSH for
+remote execution when available, and live mesh/remote channels for Codex-to-Codex
+delegation. This file is a legacy/manual fallback record; do not add new routine
+prompts here unless direct coordination is unavailable or the user explicitly
+asks for file-based handoff. Gmail self-email is retired for this workflow
+unless the user explicitly asks about a specific message.
 
 ## Operating Rules
 
@@ -16,12 +22,117 @@ git pull --ff-only origin main
 - Do not rewrite image/JPG metadata.
 - Do not use the keyword blacklist to filter photos. It only removes useless keyword strings from generated metadata.
 - If an automation creates tracked changes, run validation before committing.
-- Acknowledge Max/David handoff messages as soon as they are received by sending or queuing the matching `DAVID2MAX` email before starting substantial work.
-- Before starting a new Max task, send `David: starting <short task name>` by `DAVID2MAX` email so Max can see the task is in progress.
+- Acknowledge Max/David handoff messages as soon as they are received by writing the matching `DAVID2MAX.md` note before starting substantial work.
+- Before starting a new Max task, write `David: starting <short task name>` in `DAVID2MAX.md` so Max can see the task is in progress.
 - For jobs that take more than a few minutes, send `DAVID2MAX` progress reports at meaningful checkpoints and whenever blocked.
 - Use commit prefix `photosbyelie:`.
-- Push successful commits to `main`.
-- Record what happened by `DAVID2MAX` email; mirror to `DAVID2MAX.md` only when useful or requested.
+- Push successful commits to the active branch named in the handoff prompt.
+- Record what happened in `DAVID2MAX.md`.
+
+## 2026-07-06 David Tickets API Outage Check
+
+Superseded on 2026-07-06: Max reached David's Tickets API directly at
+`http://100.82.91.128:8765`, confirmed ticket `PBE-20260705-9591` loads, and
+recorded the inactive `https://david.tail7576f4.ts.net` Serve endpoint in the
+central ticket notes. This is historical context, not an active David task.
+
+Prompt for David:
+
+```text
+Please check why the central Tickets API is unreachable from Max.
+
+Symptom seen on Max during PhotosByElie Track B work:
+
+cd /Users/ecohen/Dev/PhotosByElie
+python3 /Users/ecohen/Dev/Tickets/scripts/tickets.py search --project PhotosByElie "Safari NewOwner sign in Tailscale"
+
+Result:
+
+Tickets API is unreachable at https://david.tail7576f4.ts.net: [Errno 61] Connection refused
+No local ticket JSON was changed. In normal operation, start the API on David with `python3 -m app.server --host 127.0.0.1 --port 8765` and `launcher/configure_tailscale_https.sh`.
+
+This blocked Max from updating ticket PBE-20260705-9591 after the NewOwner Safari/Tailscale auth fix.
+
+Please verify on David:
+- Whether the Tickets app/API is running locally.
+- Whether `http://127.0.0.1:8765/` answers from David.
+- Whether the private route Max should use is still `https://david.tail7576f4.ts.net`, or whether the expected route is `http://100.82.91.128:8765`.
+- Whether `launcher/configure_tailscale_https.sh`, LaunchAgent/launcher state, or firewall/Tailscale serving config needs repair.
+- Whether ticket PBE-20260705-9591 exists in David's canonical Tickets store.
+
+Useful checks:
+
+cd /Users/ecohen/Dev/Tickets
+git status --short
+python3 scripts/validate_tickets.py
+TICKETS_API_URL=http://127.0.0.1:8765 python3 scripts/tickets.py show PBE-20260705-9591
+TICKETS_API_URL=http://127.0.0.1:8765 python3 scripts/tickets.py list --project PhotosByElie
+
+If the API is not running, start it using the normal David-local path. If the
+Tailscale route or HTTPS route changed, record the exact Max-side URL and any
+environment/config update needed.
+
+Report in DAVID2MAX.md:
+- Root cause.
+- What was fixed or left blocked.
+- Exact Tickets API URL Max should use.
+- Proof command/output from David-local access.
+- Whether Max can retry updating PBE-20260705-9591.
+
+Do not use Gmail for this handoff. Do not edit PhotosByElie Owner.sqlite. If
+you make durable Tickets repo config changes, commit/push them from the Tickets
+repo; if you only report, commit/push DAVID2MAX.md in PhotosByElie.
+```
+
+## 2026-07-06 Track B NewOwner Sidecar Review Check
+
+Prompt for David:
+
+```text
+In /Users/ecohen/Dev/PhotosByElie, avoid mutating assets/owner-actions/Owner.sqlite
+unless you are intentionally testing a single explicit decision on a known row.
+The NewOwner connector open path is read-only; the Pick/Unpick/Reject buttons
+are the write path. If David does not have a local Owner.sqlite cache with
+Sidecar tables, report that as the expected current blocker instead of creating
+or syncing one.
+
+Run:
+
+cd /Users/ecohen/Dev/PhotosByElie
+git fetch origin
+git switch codex/new-owner-foundation || git switch -c codex/new-owner-foundation origin/codex/new-owner-foundation
+python3 scripts/local_server.py 8000
+
+Then open http://localhost:8000/new-owner.html while signed in with the Owner/Admin Google account.
+Safari on `http://100.111.30.109:8000/new-owner.html` should also sign in after
+the OAuth callback because NewOwner now consumes the local/Tailscale
+`#pbe_auth_token` transfer and sends it as a Bearer token.
+
+Verify:
+- Status says Cloud Owner session verified.
+- Counts show Owner open, 5 people, 3 groups, and fixture data from the cloud D1 access registry.
+- The recent Owner action list loads without local Owner files.
+- Queue check adds a new track-b-cloud-shell-check action.
+- Reloading the page keeps the new action visible from cloud state.
+- Set Connector to `david`, use Queue culling, then Claim next.
+- Confirm the new sidecar-culling-review action changes from queued to claimed
+  and shows connector `david`.
+- If the local read-only connector can see Sidecar state, use Run local on that
+  claimed action and confirm it completes with read-only, prepared-count, and
+  candidate-count chips. Reload; the completed state should stay visible from
+  cloud state.
+- On a completed sidecar-culling-review action, click Open review and confirm
+  the review workspace opens with 50 Sidecar records, candidate/indexed summary
+  chips, current pick/reject state chips, and Pick/Unpick/Reject controls.
+- Do not click Pick, Unpick, or Reject against real data for this check unless
+  Elie explicitly names the row and decision to stage.
+- If Run local reports that Owner.sqlite is missing or lacks Sidecar tables,
+  leave the action claimed or mark it failed with that exact blocker, then
+  report it. Do not create or sync Owner.sqlite for this check.
+- The page has no visible horizontal overflow on desktop or phone width.
+
+Report the result in DAVID2MAX.md, including the newest sidecar-culling-review owner-action id shown after reload, its final state, whether Run local/Open review completed or blocked, and any console/layout errors. Commit and push DAVID2MAX.md if you change it.
+```
 
 ## 2026-05-17 Install Max Instruction Poller
 

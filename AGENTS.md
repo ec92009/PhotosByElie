@@ -8,18 +8,16 @@ Repo-level working preferences for `/Users/ecohen/Dev/PhotosByElie`.
 
 - For Max/David machine handoff or ignored asset sync work, read [`HANDOFF.md`](./HANDOFF.md).
 - For "show me" requests, follow [`SHOW_ME_SOP.md`](./SHOW_ME_SOP.md).
+- Use [`docs/architecture/north-star.md`](./docs/architecture/north-star.md) as the Photos By Elie project compass; warn when requested work appears to deviate from it unless the deviation is explicit and intentional.
 - Keep the active collaboration timelog in [`TIMELOG.md`](./TIMELOG.md) current according to the timelog SOP.
 
 ## Max/David Handoff Direction
 
 - Gmail self-email is retired for Max/David handoff instructions and reports; do not search, send, or treat Gmail as authoritative for this workflow unless the user explicitly asks about a specific message.
-- Primary Max/David handoff transport is the repo/GitHub handoff files, with mesh, SSH, or Codex Remote SSH used for live coordination when available.
-- Max-to-David job prompts belong in `MAX2DAVID.md`; David-to-Max acknowledgements, progress, decisions, recommended prompt/spec changes, and final reports belong in `DAVID2MAX.md`.
-- Use `MAX_DAVID_CHAT.md` only for legacy/manual quick notes or when a conversational scratchpad is explicitly useful.
-- On machines whose `hostname` or ComputerName starts with `David`, treat `MAX2DAVID.md` as read-only inbound from Max and write outbound reports to `DAVID2MAX.md`.
-- On machines whose `hostname` or ComputerName starts with `Max`, treat `DAVID2MAX.md` as read-only inbound from David and write outbound instructions to `MAX2DAVID.md`.
-- Commit and push durable handoff-file updates when the other machine needs to receive them.
-- When unsure, run `hostname` and `scutil --get ComputerName` before editing either handoff file.
+- Primary Max/David coordination is direct Tailscale/mesh: use the central Tickets API for ticket state, SSH/Codex Remote SSH for remote execution when available, and live mesh/remote channels for Codex-to-Codex delegation.
+- `MAX2DAVID.md`, `DAVID2MAX.md`, and `MAX_DAVID_CHAT.md` are legacy/manual fallback records. Do not add new routine prompts there unless the direct Tailscale/mesh route is unavailable or the user explicitly asks for a file-based handoff.
+- Commit and push durable fallback handoff-file updates only when the other machine needs to receive that file-based fallback.
+- When unsure which machine you are on, run `hostname` and `scutil --get ComputerName` before using any machine-specific path.
 
 ## Defaults
 

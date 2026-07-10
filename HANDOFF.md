@@ -8,48 +8,102 @@ GitHub carries code, safe metadata, SOPs, and handoff notes; private Owner DB
 snapshots and client artifacts move through private R2; SSH/Codex Remote SSH is
 for remote execution.
 
-## Current Handoff: 2026-07-05 Sidecar Upload/Catalog Cleanup
+## Current Handoff: 2026-07-10 Cloud Owner / Sidecar Integration
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
-- Branch: `main`
+- Branch: `codex/sidecar-main-site`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Local preview: `http://localhost:8000/`
-- Current visible build: `v125.0`
-- Sidecar local build: `v126.2`
+- Owner intake URL: `https://photos-by-elie.com/owner.html`
+- Current visible build: `v132.1`
+- Sidecar local build: `v126.6`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
-- Current public catalog: `7,770` media rows.
-- Current gallery counts: AI `5,076`, France `379`, Italy `70`, Mexico `31`, Portugal `214`, Slovakia `2`, Spain `1,853`, USA `145`.
+- `owner.html` now redirects to the authenticated cloud Owner surface at
+  `new-owner.html`; the localhost Owner Python web UI is retired as the normal
+  control plane.
+- Background connector endpoints use a per-Mac bearer credential stored only in
+  the Worker secret `OWNER_CONNECTOR_TOKENS_JSON`; David and Max must receive
+  different revocable tokens.
+- `scripts/new_owner_connector.py` polls cloud actions without serving HTTP.
+  It refreshes the Apple Photos index, returns 24-item Sidecar preview windows,
+  applies stars/pick/reject/title/keywords/metadata approvals to local
+  `Owner.sqlite`, and supports a deliberate guarded Upload Bridge item followed
+  immediately by catalog registration.
+- Owner/Admin can download the credential-free Mac connector ZIP through
+  `/owner/connector/download/mac`; the package contains the stable
+  `com.photosbyelie.photos-bridge` app identity and prompts for the separate
+  per-Mac token at install time.
+- Max's private Owner snapshot was copied over the Tailscale mesh and restored
+  on David after checksum/integrity verification: `57,497` Sidecar assets and
+  `57,497` decision rows. David's previous empty DB is backed up at
+  `assets/owner-actions/Owner.sqlite-before-max-sync-20260710T104147Z`.
+- David still needs to grant Full Photos access to the bridge app in macOS
+  System Settings before cloud review windows can contain previews.
+- The v132.0 production rehearsal completed a harmless cloud connector check on
+  David and a 24-item culling window on Max with 24 previews and zero preview
+  errors. Both per-Mac LaunchAgents are installed and online; the authenticated
+  connector ZIP download was also exercised from the public Owner page.
+- Current uploaded-catalog dry-run after restoring Max's Owner snapshot reports
+  `3314` candidates: `2719` already cataloged and `595` that would register.
+  Do not bulk-register those rows without review. The cloud Upload action is
+  deliberately scoped to only asset IDs uploaded during that action.
+- Current public catalog: `7,813` media rows.
+- Current gallery counts: AI `5,100`, France `379`, Italy `70`, Mexico `31`, Portugal `214`, Slovakia `2`, Spain `1,872`, USA `145`.
+- Public GitHub Pages verification: `v125.0` gallery pages load, public catalog serves `7,813` rows, and repaired AI stained-glass plus Benalmadena Aquarium preview/video media URLs return HTTP 200.
 - Queue health after cleanup:
   - Upload Bridge uploadable count: `0`.
   - Upload Bridge active blocked approved rows: `0`.
   - Upload Bridge missing key count: `0`.
+  - Upload Bridge blocked export failures: `0`.
   - Picked AI metadata candidate count: `0`.
-  - Uploaded-catalog registration dry-run: `2,676` candidates, all `already_in_catalog`.
+  - Uploaded-catalog registration dry-run: `2,719` candidates, `0` would register, all `already_in_catalog`.
   - Public catalog SQLite integrity: `ok`.
+- Intake prep checkpoint:
+  - `python3 scripts/local_server.py 8001 --bind 127.0.0.1` is the correct local helper surface for Apple Photos intake; the plain LAN/static server on port `8000` can show Owner but cannot run the Apple Photos helper endpoints.
+  - The helper-backed Owner Imports page is open in the Built-in Browser at `http://localhost:8001/owner.html?tab=imports`.
+  - The installed permission-bearing app bundle exists at `~/Applications/PhotosByElie Photos Bridge.app`, version `126.2`, bundle id `com.photosbyelie.photos-bridge`.
+  - The current local Sidecar Apple Photos index has `57,497` available assets: `56,000` photos and `1,497` videos, ranging from `1947-05-09T20:09:49Z` to `2026-07-07T18:06:01Z`.
+  - Owner Apple Photos helper now launches `~/Applications/PhotosByElie Photos Bridge.app` through LaunchServices and reads a `--result-destination` JSON file; this fixes the previous false Photos-permission failure caused by raw `swift scripts/apple_photos_bridge.swift` using the wrong TCC identity.
+  - Apple Photos album scan is working through the Owner helper: `187` albums returned (`165` regular, `22` smart).
+  - The Owner Imports page proved Apple Photos album preflight with `2018 Paris` selected and dry-run complete: `318` assets checked, `263` import candidates, `55` burst-filtered, `0` blocked/unsupported. This direct Expo materialization path is now secondary; do not click `Import to Expo` for the North Star intake pass unless Elie explicitly chooses the legacy/direct path.
+  - The active intake direction is Sidecar sandbox culling first, newest-to-oldest from the indexed Apple Photos library. No album selector is needed for the first pass.
+  - Sidecar is running on this Mac in tmux session `photosbyelie-sidecar` at `http://localhost:8011/sidecar.html`; the Built-in Browser is parked on the Culling tab with `96` visible previews, `57,497` indexed assets, and the first batch sorted from `2026-07-07` backward.
+  - Sidecar v126.5 fixes RAW-origin preview color by preferring PhotoKit current rendered JPEG data before falling back to older image render/resource paths; verified on `20221216 172145 01113.jpg`.
+  - Sidecar v126.6 derives a JPEG poster from the same local video resource used for Quick Look whenever PhotoKit has no usable poster frame. The helper now reads a bridge result JSON file, preserving real preview errors rather than falsely reporting a missing cache file.
 - Review backlog created by this cleanup:
-  - `20` unknown-gallery/generic-title rows are back in unpicked rework with `gallery-signal` notes.
-  - `24` persistent Photos export failures are back in unpicked rework with `source-export-failed` notes.
-  - `63` unpicked/proposed rows are harmless but state-untidy; decide whether to keep proposals as context or normalize them.
+  - `20` unknown-gallery/generic-title rows are resolved: `19` Benalmadena Aquarium videos are approved/picked, and `1` unsupported WhatsApp still is tombstoned.
+  - `24` persistent Photos export failures are repaired from verified external picGen PNG originals, uploaded to R2 in run `ub-20260708T061127Z-325f39ae`, approved/picked, re-queued, unblocked, and registered in the public catalog.
+  - `63` unpicked/proposed rows are normalized back to `unreviewed`; their proposed title/keyword context remains available in Owner SQLite.
 - Latest closeout commits before this docs handoff:
   - `3c58fe88 photosbyelie: harden sidecar upload workflow`
   - `9154ef16 photosbyelie: refresh public catalog and owner surfaces`
   - `cc3bb953 photosbyelie: record working tree cleanup`
-- First action on another machine:
+- First action on Max/current working tree:
 
 ```bash
 cd /Users/ecohen/Dev/PhotosByElie
-git pull --ff-only origin main
+git status --short --branch
 python3 scripts/sidecar_maintenance.py picked-ai-plan
 python3 scripts/sidecar_state_db.py --upload-bridge-plan
 python3 scripts/sidecar_maintenance.py register-uploaded-catalog --dry-run
 ```
 
+- For another machine, the public catalog/docs bundle is on `main`; sync ignored/private `Owner.sqlite` through the private Owner-state path only if that machine needs the local Sidecar cleanup state.
+- North Star is official at `docs/architecture/north-star.md`: the project compass is to make money from Photos By Elie through tested offers, secure paid/private access, market research, and real public/RE/family/event workflows. The near-term priority is the `57K+` Apple Photos library intake-to-sellable-catalog path; Real Estate, family sharing, and private event sales are valuable but secondary unless a real opportunity appears. `AGENTS.md` now tells future Codex sessions to warn when work drifts from that compass.
+- Owner title/keyword save smoke passed on localhost helper port `8001`: row `001-0116ccd189` temporarily changed from `Benalmadena Aquarium` / `Spain` to `Benalmadena Aquarium Smoke Check` / `Spain, Aquarium`, SQLite and `worker/photos-catalog.generated.mjs` both reflected the edit, and the row was restored. The catalog DB and Worker catalog were restored byte-for-byte from the pre-smoke backup after verification.
+- Real Estate output assembly is now cloud-contract backed and deployed in Worker version `6f67bc40-8b92-4ded-aa68-defeb40a7ca7`: the client queues PDF/video jobs to the Worker, the Worker stores a durable R2 job record with the saved selection manifest, each pending deliverable records its output key and future view/download URLs, and `/real-estate/deliverables/jobs/<jobId>` reports current status plus failure detail from the deliverable records. The browser probes the job status after queueing so the shelf reflects pending/ready/needs-attention without local PDF/video rendering.
+- Paid/private access item #4 has central ticket `PBE-20260708-6FBE` and a stronger Worker regression pass in the current working tree: `publicOrder` hides delivery ZIP/storage keys by default, deployed checkout/order/session payloads expose only Worker download-token URLs and buyer-facing file details, and Real Estate deliverable/job/list payloads no longer expose output R2 keys, source-video private keys, private master fields, or cloud-source keys while internal R2 records retain the keys needed for authorized asset serving. `worker/local-server.mjs` opts into `exposeDeliveryStorageKeys: true` only for localhost ZIP inspection. Verified with `node --check worker/checkout-worker.mjs`, `node --check worker/local-server.mjs`, `node --check worker/real-estate-deliverables.mjs`, `node --test worker/checkout-worker.test.mjs`, full `npm test`, and `git diff --check`.
+- Next Apple Photos intake action: use `http://localhost:8011/sidecar.html` for Sidecar sandbox culling from today backward. Pick/reject/hide in reasonable visible-preview batches first; only reviewed/picked survivors should later flow toward Upload Bridge/catalog publishing. Treat Owner `Import to Expo` as a secondary direct path, not the default intake route.
+- Deferred hygiene action: add a supported retry/reset command for Upload Bridge export blocks so future block clearing uses a named maintenance path instead of ad hoc SQL.
+
 - Sidecar PhotoKit automation must launch through the permission-bearing app bundle, `~/Applications/PhotosByElie Photos Bridge.app`, via LaunchServices. Do not call `swift scripts/apple_photos_bridge.swift` or the bare bundle executable for scheduled Sidecar automation.
+- Sidecar quick view now includes a desktop side metadata panel for camera, location, resource format, and pixel size. Format/size and some location labels come from the current Apple Photos index; camera currently falls back to `not indexed` because the PhotoKit bridge does not yet persist EXIF camera make/model.
+- Sidecar culling selection now preserves direction of travel across disappearing cards. If the active card is picked/rejected/hidden/unpicked and stops matching the current filters, the next highlight lands on the adjacent visible neighbor rather than restoring a stale index after reload.
 - Approved Upload Bridge rows with generic titles and no country/gallery signal should be blocked from queueing until metadata is repaired.
 - Owner quick previews now fall back to the same public media URL a regular visitor receives when original source files cannot be resolved.
 - Owner title/keyword edits for SQLite-backed catalog rows should write through the localhost helper to `assets/catalog/photosbyelie.sqlite` and regenerate the Worker catalog; the old TSV writer path is not the authority.
-- Public deploy verification after GitHub Pages catches up: confirm public `v125.0`, Italy `70`, repaired portrait previews, and regular-user quick preview behavior.
+- Public deploy verification after the catalog publish is complete: public `v125.0` loads, AI `5,100`, Spain `1,872`, Italy `70`, repaired portrait previews, and Benalmadena Aquarium video previews are verified.
 
 ## Historical Handoff: 2026-06-21 Direct Google Auth / Max Testing
 
@@ -91,13 +145,10 @@ npm run validate
 ## Handoff Direction
 
 - Gmail self-email is retired for Max/David handoff instructions and reports. Do not search, send, or treat Gmail as authoritative for this workflow unless the user explicitly asks about a specific message.
-- Primary Max/David transport is the repo/GitHub handoff files, with mesh, SSH, or Codex Remote SSH used for live coordination when available.
-- Max-to-David prompts belong in `MAX2DAVID.md`; David-to-Max acknowledgements, progress, blocked states, decisions, recommended prompt/spec changes, and final reports belong in `DAVID2MAX.md`.
-- If `hostname` or ComputerName starts with `David`, read `MAX2DAVID.md` as inbound from Max and write outbound reports to `DAVID2MAX.md`.
-- If `hostname` or ComputerName starts with `Max`, read `DAVID2MAX.md` as inbound from David and write outbound instructions to `MAX2DAVID.md`.
-- Use `MAX_DAVID_CHAT.md` only for legacy/manual quick notes or when a conversational scratchpad is explicitly useful.
-- Before David starts acting on a new Max task, David should update `DAVID2MAX.md` with `David: starting <short task name>` and commit/push it, or send the same acknowledgement over mesh when that is the active live channel.
-- Do not edit the opposite-direction file unless the user explicitly asks; record requested prompt or spec changes in the outbound file instead.
+- Primary Max/David coordination is direct Tailscale/mesh. Use the central Tickets API for routine ticket updates, SSH/Codex Remote SSH for remote execution when available, and live mesh/remote channels for Codex-to-Codex delegation.
+- `MAX2DAVID.md`, `DAVID2MAX.md`, and `MAX_DAVID_CHAT.md` are legacy/manual fallback records. Do not add new routine prompts there unless direct Tailscale/mesh coordination is unavailable or the user explicitly asks for file-based handoff.
+- If a file-based fallback is active, keep the old directionality: Max-to-David prompts in `MAX2DAVID.md`, David-to-Max reports in `DAVID2MAX.md`, and commit/push durable handoff-file updates when the other machine needs to receive them.
+- When direct mesh is the active live channel, acknowledge and report there instead of writing a handoff file.
 
 ## Historical Handoff: 2026-05-22 Revenue Track
 

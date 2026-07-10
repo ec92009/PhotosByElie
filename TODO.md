@@ -1,123 +1,160 @@
 # Photos By Elie Backlog
 
-Last updated: 2026-07-05
+Last updated: 2026-07-10
 
 ## Current Facts
 
-- Public visible build: `v125.0`.
-- Sidecar local build: `v126.2`.
+- Public visible build: `v132.1`.
+- Sidecar local build: `v126.6`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`.
 - Local preview: `http://localhost:8000/`.
+- North Star: `docs/architecture/north-star.md`; the overarching goal is to make money from the enterprise by optimizing sellable offers, buyer/client trust, private access, and market learning.
+- Main near-term inventory: the Apple Photos library has `57K+` photos, many potentially usable for the public gallery/store; finishing intake-to-sellable-catalog flow takes priority over hypothetical Real Estate, family, and private event verticals.
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`.
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`.
+- Access Console Sandbox V8 cloud backend plus ACS9 local front-end rehearsal: deployed on `auth.photos-by-elie.com` with D1 database `photosbyelie-access`; local preview at `http://100.111.30.109:8000/access-console.html`; group manager creates/edits/archives audience groups, connects groups to real gallery records, persists per-gallery defaults, filters people, manages group memberships, previews gallery permissions for selected group/person/visitor/owner modes, runs cloud Worker policy tests for selected gallery access, shows a reversible audit/undo ledger for person/group access changes, and includes a selected-group invitation rehearsal for email/link/QR access propagation; audience fixtures are `Agnes's B'day`, `RE La Concha`, and `Johnson-Palmer wedding`.
+- Cloud Owner is promoted from the Track B shell: `owner.html` routes to the authenticated `new-owner.html` control surface; scoped background connectors provide health, full Apple Photos index refresh, Photos previews, Sidecar stars/pick/reject/title/keywords/approval decisions, guarded single-item Upload Bridge execution plus catalog registration, and an Owner-only credential-free Mac installer download.
 - Public catalog integrity: `ok`.
-- Public catalog scale: `7770` media rows.
-- Gallery counts: AI `5076`, France `379`, Italy `70`, Mexico `31`, Portugal `214`, Slovakia `2`, Spain `1853`, USA `145`.
-- Upload Bridge active approvals are clean: `0` uploadable items, `0` active blocked approved items, `0` missing keys.
+- Public catalog scale: `7813` media rows.
+- Gallery counts: AI `5100`, France `379`, Italy `70`, Mexico `31`, Portugal `214`, Slovakia `2`, Spain `1872`, USA `145`.
+- Public GitHub Pages verification: `v125.0` gallery pages load, public catalog serves `7813` rows, and repaired AI stained-glass plus Benalmadena Aquarium public media URLs return HTTP 200.
+- Upload Bridge active approvals are clean: `0` uploadable items, `0` active blocked approved items, `0` missing keys, `0` blocked export failures.
 - Picked-only Sidecar AI metadata queue is drained: `0` candidates.
-- Uploaded-catalog registration dry-run is clean: `2676` candidates, all `already_in_catalog`.
-- Sidecar review cleanup backlog: `20` unknown-gallery/generic-title rows are back in unpicked rework; `24` persistent Photos export failures are back in unpicked rework; `63` unpicked/proposed rows are harmless but state-untidy.
+- The restored Max Owner snapshot has `3314` uploaded/approved candidates: `2719` already in the public catalog and `595` older uploaded rows needing a separate catalog reconciliation decision. Cloud Upload next approved is scoped to only the asset IDs uploaded by that action, so it cannot publish this backlog accidentally.
+- Paid/private access regression slice: central ticket `PBE-20260708-6FBE` tracks backlog item #4. Public order JSON now hides delivery ZIP/storage keys by default; deployed checkout/order/session payloads expose only Worker download-token URLs and buyer-facing file details. Real Estate deliverable/job/list responses now keep R2 output keys and source-video private keys internal while returning only status, failure detail, metadata, and authorized view/download URLs. `npm test` passes with coverage for unpaid token guesses, paid deployed downloads, wrong-account order access, 30-day redownload boundaries, Real Estate client scoping, Owner/Admin gates, Access Console admin-only writes, private R2 delivery missing-file blocks, and Real Estate public-payload leak checks.
+- Sidecar review cleanup backlog: the `20` unknown-gallery/generic-title reset rows are resolved (`19` Benalmadena Aquarium videos approved/picked, `1` unsupported WhatsApp still tombstoned); the `24` persistent Photos export failures are repaired from verified external picGen PNG originals, uploaded to R2, approved/picked, re-queued, unblocked, and registered in the public catalog; the `63` unpicked/proposed rows are normalized back to `unreviewed` while preserving their proposed title/keyword context.
 - Sidecar automation must use `~/Applications/PhotosByElie Photos Bridge.app` through LaunchServices for PhotoKit work. Do not call raw Swift or the bare bundle executable for scheduled Sidecar automation.
+- Sidecar quick view now shows a desktop side metadata panel with camera, location, format, and pixel size. Current Apple Photos index data supplies location/format/size when available; camera shows `not indexed` until EXIF/camera enrichment is added to the PhotoKit bridge/index.
+- Sidecar culling selection keeps a direction of travel: when a pick/reject/hide/unpick decision makes the selected card disappear under the active filters, the next highlighted card is the adjacent logical neighbor in the current travel direction.
+- Sidecar Apple Photos previews now prefer PhotoKit current rendered image data for stills, which fixes RAW-origin JPEG previews such as `20221216 172145 01113.jpg` rendering blue from the older DNG/NSImage fallback path.
+- Sidecar video cards now fall back to deriving a cached JPEG poster from the same local video resource used by Quick Look when PhotoKit fails to return a poster frame. Bridge app results are read from a result file, so preview errors retain their real cause instead of becoming a generic missing-cache message.
 - Apple Photos with faces remains off limits.
 - Public pages use the shared visible site version; Sidecar has its own version in `SIDECAR_VERSION`.
 - `Owner.sqlite` remains ignored/local. Owner-action JSON files are compatibility views, audit files, or handoff artifacts, not primary workflow state when SQLite tables exist.
 
 ## Fresh Numbered Backlog
 
-1. **Review the 20 unknown-gallery reset rows.**
-   - Open Sidecar Culling/Review with unpicked/rework filters.
-   - Fix title, country/gallery, and keywords, or reject them.
-   - Do not requeue until each row has a clear public gallery signal.
+1. **Finish Apple Photos intake into a sellable public catalog.**
+   - Use the Sidecar sandbox as the default first intake surface: newest-to-oldest from the indexed Apple Photos library, no album selector for the first pass.
+   - Cull in reasonable visible-preview batches before any Expo materialization or R2 upload.
+   - Turn picked survivors into a repeatable cull, metadata-review, Upload Bridge, catalog publish, and protected-download pipeline.
+   - Prioritize photos and sets that can become public gallery/store inventory.
+   - Keep local connector work limited to source access/export; durable decisions should land in Owner/NewOwner cloud or SQLite-backed state.
+   - Track counts from library candidates to culled, picked, metadata-approved, uploaded, cataloged, protected, and purchasable items.
+   - Treat Owner direct `Import to Expo` as a secondary/legacy route unless Elie explicitly chooses it.
+   - Use this as the main revenue unlock before spending heavily on hypothetical RE/family/event workflows.
 
-2. **Resolve the 24 source-export-failed rows.**
-   - These are mostly AI stained-glass JPGs that Photos repeatedly failed to render/export.
-   - Reimport from an available source file, replace the Photos asset, or reject them.
-   - Clear their source-failure block only after the source path is actually repaired.
+2. **Validate commercial offers and market positioning.**
+   - Research comparable photo-download pricing, Real Estate media packages, private event gallery sales, and SEO/search demand.
+   - Decide the first offers to test, starting with the public download store and treating Real Estate, family/private sharing, and private paid event galleries as secondary future offers.
+   - Identify the likely buyer/client, price range, promise, proof path, and biggest conversion/security risk for each offer.
+   - Turn research into concrete offer copy, package names, pricing hypotheses, and testable next actions.
 
-3. **Decide what to do with the 63 unpicked/proposed rows.**
-   - They are not in active picked AI or upload lanes.
-   - Either keep their proposed metadata as context or normalize them back to unreviewed/rework for a cleaner review state.
+3. **Curate the first sellable storefront.**
+   - Apply strong title/keyword approvals.
+   - Block unsellable rows.
+   - Pick featured collections and hero images.
+   - Put the strongest commercial/travel/editorial sets first.
+   - Make the first purchasable path feel intentional on mobile and desktop.
+   - Use Apple Photos intake output as the main pool for storefront expansion.
 
-4. **Verify the pushed public deploy after GitHub Pages updates.**
-   - Confirm the public site shows `v125.0`.
-   - Confirm Italy shows `70` media items.
-   - Spot-check repaired portrait previews in Italy, Spain, France, and AI.
-   - Confirm public quick previews match regular visitor delivery.
+4. **Prove paid/private access cannot be bypassed.**
+   - Central ticket: `PBE-20260708-6FBE`.
+   - First Worker regression pass is complete: unpaid checkout/session/order state has no delivery object and guessed order/session/photo/`dl_`/`re_` tokens return `unknown_download`.
+   - Public checkout/order/session payloads now omit delivery storage keys, private object keys, render keys, source keys, mock signed URLs, and local ZIP paths by default; localhost local-server opt-in remains only for local ZIP workflow.
+   - Paid deployed Worker checkout still serves private R2 files only through `/download/<token>`; guessing the private R2 key as a token returns `404`.
+   - Real Estate deliverable save/list/job/status payloads now omit output storage keys, source-video private keys, private master fields, and cloud-source keys while the internal R2 job/deliverable records retain what the Worker needs to serve authorized ready assets.
+   - Existing coverage also verifies wrong-account order access, 30-day re-download boundaries, RE client scoping, Owner/Admin gates, Access Console admin-only writes, and private R2 missing-file checkout blocks.
+   - Remaining work: run a live/manual matrix before inviting real buyers or clients, including unpaid visitor, paid buyer, expired token, download-limit hit, RE client, event attendee, family member, Owner/Admin, and public watermarked-preview-only cases.
 
-5. **Run one Owner title/keyword save smoke test on localhost.**
-   - Edit a catalog-backed row title/keywords.
-   - Confirm the visible title does not revert.
-   - Confirm `worker/photos-catalog.generated.mjs` and `assets/catalog/photosbyelie.sqlite` stay in sync.
+5. **Review buyer support, refund, and license wording.**
+   - Use `docs/commerce/PRICE_OFFER_STRATEGY.md` as the current policy draft.
+   - Make delivery/recovery expectations explicit before heavier public traffic.
+   - Align license language with the offers selected in the North Star commercial pass.
 
-6. **Add a supported retry/reset command for Upload Bridge export blocks.**
+6. **Approve and deploy the real price and offer strategy.**
+   - Review camera and AI price ladders.
+   - After approval, update pricing, regenerate catalog/Worker artifacts, deploy the Worker, and run one low-value live proof purchase.
+   - Use live checkout rehearsal data to revise prices and offer copy.
+
+7. **Improve public discovery and SEO.**
+   - Add richer per-gallery/per-photo metadata, Open Graph images, canonical URLs, structured data, and focused campaign metadata.
+   - Keep Owner-only workflow details out of public page metadata.
+   - Let market research decide which galleries, subjects, and search terms get attention first.
+
+8. **Extend cloud Owner beyond the completed Sidecar foundation.**
+   - Add gallery/routing assignment and batch propagation to cloud Sidecar review.
+   - Add supported cloud action types for the remaining legacy Owner workflows.
+   - Apple-sign/notarize the Mac connector before distribution beyond David and Max.
+   - Keep Apple Photos intake, sellable storefront expansion, and protected download workflows ahead of hypothetical verticals.
+
+9. **Run a full Real Estate client rehearsal.**
+   - Import/publish/upload one client property set.
+   - Save a selection, generate PDF/video, reopen from mobile, rename, and delete a throwaway product.
+   - Confirm the client-facing offer feels coherent enough to sell as a service.
+   - Keep this behind the public photo-store intake priority unless a real RE client opportunity appears.
+
+10. **Extend audience groups into real gallery access flows.**
+   - Add production invitation flows described in `docs/architecture/access-invitations.md`: email invites, share links, and QR-code invite URLs.
+   - Let any authenticated person with active access to a given fixture/group invite others into that same scope when member invites are enabled.
+   - Do not let ordinary members un-invite, revoke, disable, or grant broader roles; Owner/Admin keeps pending-invite revocation, accepted-membership disable/revoke, expiry, and audit controls.
+   - Store invitation records in D1 with opaque token hashes, expiry, accept limits, inviter identity, invitee email when address-bound, and acceptance provenance on resulting memberships.
+   - Add a public `/invite/<token>` accept page that requires Google sign-in, validates email binding/link scope/group state, creates group membership, and redirects to the assigned gallery.
+   - Use ACS V8 gallery defaults and Worker policy decisions as the policy source for watermark, sale, download, PDF, video, member-original, and Owner-original preview behavior when public/event/RE gallery routes begin enforcing group access.
+   - Default family/event groups toward member invites; keep Real Estate groups Owner/Admin-only unless a specific client is intentionally allowed to propagate access.
+
+11. **Bring Etsy listing publishing online.**
+   - Etsy API access is approved and smoke-tested locally.
+   - Build the first listing-publisher pass as dry-run/draft payload generation from public catalog data and watermarked public previews only.
+   - Use it only where market research suggests Etsy can drive incremental revenue.
+
+12. **Add a guarded checkout discount code for low-cost live payment rehearsals.**
+   - Keep validation server-side in the checkout Worker.
+   - Preserve Stripe minimum-charge, stale-basket, and availability checks.
+   - Record original subtotal, discount, and paid total in order state.
+
+13. **Create a compact post-upload health dashboard.**
+   - Summarize picked approvals, covered R2 keys, uploadable rows, blocked rows, catalog registration candidates, and public catalog counts.
+   - Use Owner SQLite and public SQLite as the authoritative sources.
+   - Surface commercial readiness: sellable item count, protected download health, and gallery publication status.
+
+14. **Add a supported retry/reset command for Upload Bridge export blocks.**
    - Replace ad hoc SQL block clearing with a maintenance command.
    - It should clear selected active export blocks, retry through the normal bridge path, and optionally reset persistent failures to review.
    - Keep audit artifacts and Owner SQLite as the durable state path.
 
-7. **Improve Sidecar review visibility for source/export failures.**
+15. **Improve Sidecar review visibility for source/export failures.**
    - Surface `source-export-failed` rows with a clear status pill and review filter.
    - Show the last PhotoKit/local fallback error in the detail panel.
    - Provide a safe "ready to retry" action only after source repair.
 
-8. **Tighten Upload Bridge metadata guard UX.**
+16. **Tighten Upload Bridge metadata guard UX.**
    - Show why a row is metadata-blocked before queueing.
    - Keep the generic-title/no-gallery block list visible in the Upload Bridge rail.
    - Add a direct jump from a blocked row to metadata review.
 
-9. **Create a compact post-upload health dashboard.**
-   - Summarize picked approvals, covered R2 keys, uploadable rows, blocked rows, catalog registration candidates, and public catalog counts.
-   - Use Owner SQLite and public SQLite as the authoritative sources.
+17. **Finish source re-export de-duplication and cleanup.**
+   - Use full source pathname plus modified date as the import anchor.
+   - Same-path newer exports should overwrite previous generated masters, public previews, and private JPG triplets instead of creating duplicates.
+   - Audit duplicate candidates before deleting anything.
 
-10. **Finish source re-export de-duplication and cleanup.**
-    - Use full source pathname plus modified date as the import anchor.
-    - Same-path newer exports should overwrite previous generated masters, public previews, and private JPG triplets instead of creating duplicates.
-    - Audit duplicate candidates before deleting anything.
+18. **Add import source history management.**
+   - Let Owner remove stale remembered folders, pin favorites, and inspect last-used path/time.
+   - Keep `Owner.sqlite` authoritative; do not add another JSON state source.
 
-11. **Add import source history management.**
-    - Let Owner remove stale remembered folders, pin favorites, and inspect last-used path/time.
-    - Keep `Owner.sqlite` authoritative; do not add another JSON state source.
+19. **Keep repo/media cleanup deliberate.**
+   - Follow `docs/sops/REPO_MEDIA_CLEANUP_SOP.md`.
+   - Do not use GitHub as a media vault.
+   - Protect `assets/catalog/photosbyelie.sqlite` as the active public catalog artifact.
+   - Keep local Owner DB state out of git.
 
-12. **Review buyer support, refund, and license wording.**
-    - Use `docs/commerce/PRICE_OFFER_STRATEGY.md` as the current policy draft.
-    - Make delivery/recovery expectations explicit before heavier public traffic.
-
-13. **Approve and deploy the real price and offer strategy.**
-    - Review camera and AI price ladders.
-    - After approval, update pricing, regenerate catalog/Worker artifacts, deploy the Worker, and run one low-value live proof purchase.
-
-14. **Curate the first sellable storefront.**
-    - Apply strong title/keyword approvals.
-    - Block unsellable rows.
-    - Pick featured collections and hero images.
-    - Put the strongest commercial/travel/editorial sets first.
-
-15. **Improve public discovery and SEO.**
-    - Add richer per-gallery/per-photo metadata, Open Graph images, canonical URLs, structured data, and focused campaign metadata.
-    - Keep Owner-only workflow details out of public page metadata.
-
-16. **Move Real Estate PDF/video assembly fully cloud-side.**
-    - Use saved selection manifests as job inputs.
-    - Return durable view/download URLs plus job status and failure detail.
-    - Keep local browsers out of production output creation.
-
-17. **Run a full Real Estate client rehearsal.**
-    - Import/publish/upload one client property set.
-    - Save a selection, generate PDF/video, reopen from mobile, rename, and delete a throwaway product.
-
-18. **Bring Etsy listing publishing online.**
-    - Etsy API access is approved and smoke-tested locally.
-    - Build the first listing-publisher pass as dry-run/draft payload generation from public catalog data and watermarked public previews only.
-
-19. **Add a guarded checkout discount code for low-cost live payment rehearsals.**
-    - Keep validation server-side in the checkout Worker.
-    - Preserve Stripe minimum-charge, stale-basket, and availability checks.
-    - Record original subtotal, discount, and paid total in order state.
-
-20. **Keep repo/media cleanup deliberate.**
-    - Follow `docs/sops/REPO_MEDIA_CLEANUP_SOP.md`.
-    - Do not use GitHub as a media vault.
-    - Protect `assets/catalog/photosbyelie.sqlite` as the active public catalog artifact.
-    - Keep local Owner DB state out of git.
+20. **Exercise and harden the D1-backed sandbox Access Console V8.**
+   - Current V8 cloud backend is deployed with real cloud/D1 read-write paths, immediate D1-backed auth/session reads, audience groups, real-gallery picker/defaults, group create/edit/archive, group membership workbench, people filters, effective-access preview, gallery-permission preview, Worker policy testing, capability metadata, and audit/undo for reversible person/group access changes.
+   - ACS9 front-end rehearsal adds selected-group invitations for email, copyable link, and QR payloads; this is a UI/design rehearsal until the D1 invitation tables and public accept routes are implemented.
+   - Keep `ec92009@gmail.com` as the bootstrap break-glass admin during the D1 auth migration.
+   - Exercise people, roles, group create/edit/archive, bulk add/revoke memberships, and reversible writes from the browser before granting real non-fixture users.
+   - Keep clearly marked fixture people and event/group records with fake `.test` email addresses so role assignment and event access flows can be rehearsed without granting real people.
+   - Snapshot before mutations, append audit entries, and prefer disable/revoke over hard delete.
 
 ## Validation Before Publishing
 

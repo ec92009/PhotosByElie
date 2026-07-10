@@ -1,5 +1,6 @@
 #!/usr/bin/env swift
 import AppKit
+import AVFoundation
 import CoreLocation
 import Foundation
 import ImageIO
@@ -21,6 +22,22 @@ func jsonData(_ value: Any) -> Data {
 func printJSON(_ value: Any) {
     FileHandle.standardOutput.write(jsonData(value))
     FileHandle.standardOutput.write("\n".data(using: .utf8)!)
+}
+
+func writeResultJSON(_ value: Any) {
+    guard let resultDestination = argValue("--result-destination") else { return }
+    let resultURL = URL(fileURLWithPath: resultDestination)
+    do {
+        try FileManager.default.createDirectory(at: resultURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try jsonData(value).write(to: resultURL, options: .atomic)
+    } catch {
+        // stdout remains the fallback for direct development runs.
+    }
+}
+
+func outputJSON(_ value: Any) {
+    writeResultJSON(value)
+    printJSON(value)
 }
 
 let progressOutputLock = NSLock()
@@ -47,7 +64,7 @@ func normalizedProgress(_ progress: Double) -> Double {
 typealias AssetProgressHandler = (_ progress: Double, _ status: String, _ elapsedSeconds: Double?) -> Void
 
 func fail(_ code: String, _ message: String, status: Int32 = 1) -> Never {
-    printJSON(["ok": false, "code": code, "error": message])
+    outputJSON(["ok": false, "code": code, "error": message])
     exit(status)
 }
 
@@ -634,15 +651,28 @@ func writePreviewJPEG(asset: PHAsset, destination: URL, maxPixel: Int) throws ->
         throw BridgeError(code: "preview_unsupported", message: "Sidecar preview export currently supports still images and video poster frames.")
     }
     let pixel = max(256, min(maxPixel, 1800))
+    var imageDataPreviewFailure: String?
+    if asset.mediaType == .image {
+        switch writeImageDataPreviewJPEG(asset, to: destination, maxPixel: pixel) {
+        case .success(let payload):
+            return payload
+        case .failure(let error):
+            imageDataPreviewFailure = errorMessage(error)
+        }
+    }
     let target = CGSize(width: pixel, height: pixel)
     let options = PHImageRequestOptions()
     options.isNetworkAccessAllowed = false
-    options.deliveryMode = .opportunistic
-    options.resizeMode = .fast
+    options.deliveryMode = .highQualityFormat
+    options.resizeMode = .exact
     options.version = .current
+    options.isSynchronous = true
     let semaphore = DispatchSemaphore(value: 0)
     var capturedImage: NSImage?
     var capturedInfo: [AnyHashable: Any] = [:]
+    var degradedImage: NSImage?
+    var degradedInfo: [AnyHashable: Any] = [:]
+    var didSignal = false
     let requestId = PHImageManager.default().requestImage(
         for: asset,
         targetSize: target,
@@ -650,17 +680,30 @@ func writePreviewJPEG(asset: PHAsset, destination: URL, maxPixel: Int) throws ->
         options: options
     ) { image, info in
         if let info {
+            let isDegraded = info[PHImageResultIsDegradedKey] as? Bool == true
+            if isDegraded {
+                degradedInfo = info
+                if let image {
+                    degradedImage = image
+                }
+                return
+            }
             capturedInfo = info
         }
         if let image {
             capturedImage = image
         }
-        semaphore.signal()
+        if !didSignal {
+            didSignal = true
+            semaphore.signal()
+        }
     }
     var photoKitFailure: Error?
     if semaphore.wait(timeout: .now() + 6) == .timedOut {
         PHImageManager.default().cancelImageRequest(requestId)
-        photoKitFailure = BridgeError(code: "preview_timeout", message: "Timed out while asking Photos for a local preview.")
+        capturedImage = degradedImage
+        capturedInfo = degradedInfo
+        photoKitFailure = BridgeError(code: "preview_timeout", message: "Timed out while asking Photos for a non-degraded local preview.")
     } else if capturedInfo[PHImageResultIsInCloudKey] as? Bool == true && capturedImage == nil {
         photoKitFailure = BridgeError(code: "preview_needs_icloud", message: "Photos reports this preview is only available from iCloud; Sidecar preview did not download it.")
     }
@@ -675,7 +718,7 @@ func writePreviewJPEG(asset: PHAsset, destination: URL, maxPixel: Int) throws ->
         } else {
             try FileManager.default.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
             try data.write(to: destination, options: .atomic)
-            return [
+            var payload: [String: Any] = [
                 "ok": true,
                 "mode": "preview",
                 "localIdentifier": asset.localIdentifier,
@@ -686,6 +729,10 @@ func writePreviewJPEG(asset: PHAsset, destination: URL, maxPixel: Int) throws ->
                 "networkAccessAllowed": false,
                 "previewSource": asset.mediaType == .video ? "photokit_video_poster" : "photokit_render",
             ]
+            if let imageDataPreviewFailure {
+                payload["imageDataPreviewFailure"] = imageDataPreviewFailure
+            }
+            return payload
         }
     }
 
@@ -694,34 +741,71 @@ func writePreviewJPEG(asset: PHAsset, destination: URL, maxPixel: Int) throws ->
             ? "Photos did not provide a local preview image."
             : "Photos only provided a tiny degraded preview image.")
     if asset.mediaType == .video {
-        if let smallPhotoKitPreview {
-            try FileManager.default.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try smallPhotoKitPreview.data.write(to: destination, options: .atomic)
-            let bitmap = smallPhotoKitPreview.bitmap
-            return [
-                "ok": true,
-                "mode": "preview",
-                "localIdentifier": asset.localIdentifier,
-                "destination": destination.path,
-                "bytes": smallPhotoKitPreview.data.count,
-                "pixelWidth": bitmap.pixelsWide,
-                "pixelHeight": bitmap.pixelsHigh,
-                "networkAccessAllowed": false,
-                "previewSource": "photokit_degraded_video_poster",
-            ]
+        switch writeLocalVideoPosterPreviewJPEG(asset, to: destination, maxPixel: pixel) {
+        case .success(let payload):
+            return payload
+        case .failure(let localPosterError):
+            if let smallPhotoKitPreview {
+                try FileManager.default.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try smallPhotoKitPreview.data.write(to: destination, options: .atomic)
+                let bitmap = smallPhotoKitPreview.bitmap
+                return [
+                    "ok": true,
+                    "mode": "preview",
+                    "localIdentifier": asset.localIdentifier,
+                    "destination": destination.path,
+                    "bytes": smallPhotoKitPreview.data.count,
+                    "pixelWidth": bitmap.pixelsWide,
+                    "pixelHeight": bitmap.pixelsHigh,
+                    "networkAccessAllowed": false,
+                    "previewSource": "photokit_degraded_video_poster",
+                    "localVideoPosterFallbackError": errorMessage(localPosterError),
+                ]
+            }
+            throw BridgeError(
+                code: "video_poster_unavailable",
+                message: "\(fallbackReason) Sidecar also could not derive a poster from the local video resource: \(errorMessage(localPosterError))"
+            )
         }
-        throw BridgeError(code: "preview_unavailable", message: "\(fallbackReason) Sidecar did not download the video from iCloud.")
+    }
+    if let resource = localImageResourceForJPEGFallback(asset),
+       resourceFormat(resource) == "RAW",
+       let smallPhotoKitPreview {
+        try FileManager.default.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try smallPhotoKitPreview.data.write(to: destination, options: .atomic)
+        let bitmap = smallPhotoKitPreview.bitmap
+        var payload: [String: Any] = [
+            "ok": true,
+            "mode": "preview",
+            "localIdentifier": asset.localIdentifier,
+            "destination": destination.path,
+            "bytes": smallPhotoKitPreview.data.count,
+            "pixelWidth": bitmap.pixelsWide,
+            "pixelHeight": bitmap.pixelsHigh,
+            "networkAccessAllowed": false,
+            "previewSource": "photokit_degraded_raw_safety",
+            "photoKitFallbackReason": fallbackReason,
+            "fallbackResourceFilename": resource.originalFilename,
+            "fallbackResourceFormat": resourceFormat(resource),
+        ]
+        if let imageDataPreviewFailure {
+            payload["imageDataPreviewFailure"] = imageDataPreviewFailure
+        }
+        return payload
     }
     switch writeLocalImageResourcePreviewJPEG(asset, to: destination, maxPixel: pixel) {
     case .success(var payload):
         payload["photoKitFallbackReason"] = fallbackReason
+        if let imageDataPreviewFailure {
+            payload["imageDataPreviewFailure"] = imageDataPreviewFailure
+        }
         return payload
     case .failure(let fallbackError):
         if let smallPhotoKitPreview {
             try FileManager.default.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
             try smallPhotoKitPreview.data.write(to: destination, options: .atomic)
             let bitmap = smallPhotoKitPreview.bitmap
-            return [
+            var payload: [String: Any] = [
                 "ok": true,
                 "mode": "preview",
                 "localIdentifier": asset.localIdentifier,
@@ -733,12 +817,75 @@ func writePreviewJPEG(asset: PHAsset, destination: URL, maxPixel: Int) throws ->
                 "previewSource": "photokit_degraded",
                 "localPreviewFallbackError": errorMessage(fallbackError),
             ]
+            if let imageDataPreviewFailure {
+                payload["imageDataPreviewFailure"] = imageDataPreviewFailure
+            }
+            return payload
         }
         throw BridgeError(
             code: "preview_unavailable",
             message: "\(fallbackReason) Local preview fallback also failed: \(errorMessage(fallbackError))"
         )
     }
+}
+
+func writeLocalVideoPosterPreviewJPEG(_ asset: PHAsset, to destination: URL, maxPixel: Int) -> Result<[String: Any], Error> {
+    guard let resource = preferredResource(asset) else {
+        return .failure(BridgeError(code: "video_resource_unavailable", message: "Photos did not expose a local video resource for this asset."))
+    }
+    let sourceURL = temporaryResourceURL(for: destination, resource: resource)
+    defer { try? FileManager.default.removeItem(at: sourceURL) }
+    switch writeResource(resource, to: sourceURL, allowIcloudDownloads: false, timeoutSeconds: 90) {
+    case .failure(let error):
+        return .failure(BridgeError(code: "video_resource_export_failed", message: "Could not export the local video resource for its poster frame: \(errorMessage(error))"))
+    case .success:
+        break
+    }
+
+    let video = AVURLAsset(url: sourceURL)
+    let generator = AVAssetImageGenerator(asset: video)
+    generator.appliesPreferredTrackTransform = true
+    let pixel = max(256, min(maxPixel, 1800))
+    generator.maximumSize = CGSize(width: pixel, height: pixel)
+    let durationSeconds = CMTimeGetSeconds(video.duration)
+    let posterSeconds = durationSeconds.isFinite && durationSeconds > 0
+        ? min(0.5, durationSeconds * 0.1)
+        : 0
+    var actualTime = CMTime.zero
+    let requestedTime = CMTime(seconds: posterSeconds, preferredTimescale: 600)
+    let image: CGImage
+    do {
+        image = try generator.copyCGImage(at: requestedTime, actualTime: &actualTime)
+    } catch {
+        return .failure(BridgeError(code: "video_poster_frame_failed", message: "Could not decode a still frame from the local video resource: \(errorMessage(error))"))
+    }
+    do {
+        try FileManager.default.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
+    } catch {
+        return .failure(error)
+    }
+    guard let jpeg = CGImageDestinationCreateWithURL(destination as CFURL, "public.jpeg" as CFString, 1, nil) else {
+        return .failure(BridgeError(code: "jpeg_destination_failed", message: "Could not create the video poster JPEG destination."))
+    }
+    let properties: [CFString: Any] = [kCGImageDestinationLossyCompressionQuality: 0.86]
+    CGImageDestinationAddImage(jpeg, image, properties as CFDictionary)
+    guard CGImageDestinationFinalize(jpeg) else {
+        return .failure(BridgeError(code: "video_poster_write_failed", message: "Could not write the local video poster JPEG."))
+    }
+    return .success([
+        "ok": true,
+        "mode": "preview",
+        "localIdentifier": asset.localIdentifier,
+        "destination": destination.path,
+        "bytes": (try? Data(contentsOf: destination).count) ?? 0,
+        "pixelWidth": image.width,
+        "pixelHeight": image.height,
+        "networkAccessAllowed": false,
+        "previewSource": "local_video_resource",
+        "posterTimeSeconds": actualTime.isValid ? CMTimeGetSeconds(actualTime) : posterSeconds,
+        "resourceFilename": resource.originalFilename,
+        "resourceFormat": resourceFormat(resource),
+    ])
 }
 
 func videoMimeType(_ resource: PHAssetResource) -> String {
@@ -1129,6 +1276,98 @@ func writeLocalImageResourceAsJPEG(_ asset: PHAsset, to url: URL, allowIcloudDow
     case .failure(let error):
         return .failure(error)
     }
+}
+
+func isRawTypeIdentifier(_ identifier: String?) -> Bool {
+    let normalized = (identifier ?? "").lowercased()
+    if normalized.isEmpty { return false }
+    return normalized.contains("raw")
+        || normalized.contains("dng")
+        || normalized.contains("com.adobe")
+        || normalized.contains("com.nikon")
+        || normalized.contains("com.canon")
+        || normalized.contains("com.sony")
+        || normalized.contains("com.fuji")
+        || normalized.contains("com.panasonic")
+        || normalized.contains("com.olympus")
+}
+
+func writeImageDataPreviewJPEG(_ asset: PHAsset, to url: URL, maxPixel: Int) -> Result<[String: Any], Error> {
+    let pixel = max(256, min(maxPixel, 1800))
+    let options = PHImageRequestOptions()
+    options.version = .current
+    options.deliveryMode = .highQualityFormat
+    options.isNetworkAccessAllowed = false
+    options.isSynchronous = true
+
+    let semaphore = DispatchSemaphore(value: 0)
+    var imageData: Data?
+    var dataUTI = ""
+    var requestInfo: [AnyHashable: Any] = [:]
+    let requestId = PHImageManager.default().requestImageDataAndOrientation(for: asset, options: options) { data, uti, _, info in
+        requestInfo = info ?? [:]
+        imageData = data
+        dataUTI = uti ?? ""
+        semaphore.signal()
+    }
+    if semaphore.wait(timeout: .now() + 10) == .timedOut {
+        PHImageManager.default().cancelImageRequest(requestId)
+        return .failure(BridgeError(code: "image_data_timeout", message: "Timed out while asking Photos for current rendered image data."))
+    }
+    if let error = requestInfo[PHImageErrorKey] as? Error {
+        return .failure(error)
+    }
+    if requestInfo[PHImageCancelledKey] as? Bool == true {
+        return .failure(BridgeError(code: "image_data_cancelled", message: "Photos cancelled current rendered image data preview."))
+    }
+    if requestInfo[PHImageResultIsInCloudKey] as? Bool == true && imageData == nil {
+        return .failure(BridgeError(code: "image_data_in_icloud", message: "Photos reports current rendered image data is only available from iCloud."))
+    }
+    guard let imageData else {
+        return .failure(BridgeError(code: "image_data_unavailable", message: "Photos did not provide current rendered image data."))
+    }
+    if isRawTypeIdentifier(dataUTI) {
+        return .failure(BridgeError(code: "image_data_is_raw", message: "Photos returned RAW image data (\(dataUTI)) instead of a rendered preview."))
+    }
+    guard let source = CGImageSourceCreateWithData(imageData as CFData, nil),
+          CGImageSourceGetCount(source) > 0 else {
+        return .failure(BridgeError(code: "image_data_unreadable", message: "Could not read Photos current rendered image data."))
+    }
+    let thumbnailOptions: [CFString: Any] = [
+        kCGImageSourceCreateThumbnailFromImageAlways: true,
+        kCGImageSourceCreateThumbnailWithTransform: true,
+        kCGImageSourceThumbnailMaxPixelSize: pixel,
+    ]
+    guard let thumbnail = CGImageSourceCreateThumbnailAtIndex(source, 0, thumbnailOptions as CFDictionary) else {
+        return .failure(BridgeError(code: "image_data_thumbnail_failed", message: "Could not downsample Photos current rendered image data."))
+    }
+    do {
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+    } catch {
+        return .failure(error)
+    }
+    guard let destination = CGImageDestinationCreateWithURL(url as CFURL, "public.jpeg" as CFString, 1, nil) else {
+        return .failure(BridgeError(code: "jpeg_destination_failed", message: "Could not create the preview JPEG destination."))
+    }
+    let properties: [CFString: Any] = [
+        kCGImageDestinationLossyCompressionQuality: 0.86,
+    ]
+    CGImageDestinationAddImage(destination, thumbnail, properties as CFDictionary)
+    guard CGImageDestinationFinalize(destination) else {
+        return .failure(BridgeError(code: "image_data_preview_write_failed", message: "Could not write Photos current rendered image data preview."))
+    }
+    return .success([
+        "ok": true,
+        "mode": "preview",
+        "localIdentifier": asset.localIdentifier,
+        "destination": url.path,
+        "bytes": (try? Data(contentsOf: url).count) ?? 0,
+        "pixelWidth": thumbnail.width,
+        "pixelHeight": thumbnail.height,
+        "networkAccessAllowed": false,
+        "previewSource": "photokit_image_data",
+        "imageDataTypeIdentifier": dataUTI,
+    ])
 }
 
 func writeRenderedJPEG(_ asset: PHAsset, to url: URL, allowIcloudDownloads: Bool, progressHandler: AssetProgressHandler? = nil) -> Result<Void, Error> {
@@ -1843,7 +2082,7 @@ func materializeOne(asset: PHAsset, destination: URL, allowIcloudDownloads: Bool
 
 let command = CommandLine.arguments.dropFirst().first ?? ""
 if command.isEmpty || command == "--help" {
-    printJSON(["ok": true, "usage": "apple_photos_bridge.swift albums | library-index [--limit N] [--offset N] [--date-from YYYY-MM-DD] [--date-to YYYY-MM-DD] | library-index-file --destination PATH [--date-from YYYY-MM-DD] [--date-to YYYY-MM-DD] [--progress-every N] | preview --asset-id ID --destination PATH [--max-pixel N] | video --asset-id ID --destination PATH | preflight --album-id ID [--filter-bursts] [--allow-icloud-downloads] | export --album-id ID --destination PATH [--filter-bursts] [--allow-icloud-downloads] | materialize-one --asset-id ID --destination PATH [--allow-icloud-downloads] [--result-destination PATH]"])
+    outputJSON(["ok": true, "usage": "apple_photos_bridge.swift albums | library-index [--limit N] [--offset N] [--date-from YYYY-MM-DD] [--date-to YYYY-MM-DD] | library-index-file --destination PATH [--date-from YYYY-MM-DD] [--date-to YYYY-MM-DD] [--progress-every N] | preview --asset-id ID --destination PATH [--max-pixel N] | video --asset-id ID --destination PATH | preflight --album-id ID [--filter-bursts] [--allow-icloud-downloads] | export --album-id ID --destination PATH [--filter-bursts] [--allow-icloud-downloads] | materialize-one --asset-id ID --destination PATH [--allow-icloud-downloads] [--result-destination PATH]"])
     exit(0)
 }
 
@@ -1852,9 +2091,9 @@ requirePhotosAccess()
 do {
     switch command {
     case "albums":
-        printJSON(["ok": true, "albums": fetchAlbums().map(albumSummary)])
+        outputJSON(["ok": true, "albums": fetchAlbums().map(albumSummary)])
     case "library-index":
-        printJSON(libraryIndex(
+        outputJSON(libraryIndex(
             limit: intArg("--limit", default: 120),
             offset: intArg("--offset", default: 0),
             dateFrom: parseISODateArg(argValue("--date-from")),
@@ -1864,7 +2103,7 @@ do {
         guard let destination = argValue("--destination") else {
             fail("missing_destination", "Missing --destination for Apple Photos library index file.")
         }
-        printJSON(try writeLibraryIndexFile(
+        outputJSON(try writeLibraryIndexFile(
             destination: URL(fileURLWithPath: destination),
             dateFrom: parseISODateArg(argValue("--date-from")),
             dateTo: parseISODateArg(argValue("--date-to")),
@@ -1875,7 +2114,7 @@ do {
             fail("missing_destination", "Missing --destination for Apple Photos preview.")
         }
         let asset = try findAsset(id: argValue("--asset-id"))
-        printJSON(try writePreviewJPEG(
+        outputJSON(try writePreviewJPEG(
             asset: asset,
             destination: URL(fileURLWithPath: destination),
             maxPixel: intArg("--max-pixel", default: 900)
@@ -1885,31 +2124,26 @@ do {
             fail("missing_destination", "Missing --destination for Apple Photos video preview.")
         }
         let asset = try findAsset(id: argValue("--asset-id"))
-        printJSON(try writeVideoResource(
+        outputJSON(try writeVideoResource(
             asset: asset,
             destination: URL(fileURLWithPath: destination)
         ))
     case "preflight":
         let album = try findAlbum(id: argValue("--album-id"), name: argValue("--album-name"))
-        printJSON(preflight(album: album, limit: intArg("--limit"), filterBursts: boolArg("--filter-bursts"), allowIcloudDownloads: boolArg("--allow-icloud-downloads")))
+        outputJSON(preflight(album: album, limit: intArg("--limit"), filterBursts: boolArg("--filter-bursts"), allowIcloudDownloads: boolArg("--allow-icloud-downloads")))
     case "export":
         guard let destination = argValue("--destination") else {
             fail("missing_destination", "Missing --destination for Apple Photos export.")
         }
         let album = try findAlbum(id: argValue("--album-id"), name: argValue("--album-name"))
-        printJSON(try materialize(album: album, destination: URL(fileURLWithPath: destination), limit: intArg("--limit"), filterBursts: boolArg("--filter-bursts"), allowIcloudDownloads: boolArg("--allow-icloud-downloads")))
+        outputJSON(try materialize(album: album, destination: URL(fileURLWithPath: destination), limit: intArg("--limit"), filterBursts: boolArg("--filter-bursts"), allowIcloudDownloads: boolArg("--allow-icloud-downloads")))
     case "materialize-one":
         guard let destination = argValue("--destination") else {
             fail("missing_destination", "Missing --destination for Apple Photos single-asset materialization.")
         }
         let asset = try findAsset(id: argValue("--asset-id"))
         let payload = try materializeOne(asset: asset, destination: URL(fileURLWithPath: destination), allowIcloudDownloads: boolArg("--allow-icloud-downloads"))
-        if let resultDestination = argValue("--result-destination") {
-            let resultURL = URL(fileURLWithPath: resultDestination)
-            try FileManager.default.createDirectory(at: resultURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try jsonData(payload).write(to: resultURL, options: .atomic)
-        }
-        printJSON(payload)
+        outputJSON(payload)
     default:
         fail("bad_command", "Unknown Apple Photos bridge command: \(command)", status: 2)
     }

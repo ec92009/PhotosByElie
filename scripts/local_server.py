@@ -1472,21 +1472,18 @@ def _sidecar_culling_review_rows(conn: sqlite3.Connection, limit: int) -> tuple[
           (
             SELECT count(*) FROM sidecar_pending_sync AS p
             WHERE p.asset_id = a.asset_id AND p.status = 'pending'
-          ) AS pending_sync_count,
-          ROW_NUMBER() OVER (
-            ORDER BY
-              CASE WHEN a.captured_at IS NULL OR a.captured_at = '' THEN 1 ELSE 0 END,
-              a.captured_at DESC,
-              a.asset_id
-          ) - 1 AS sidecar_position
+          ) AS pending_sync_count
         {candidate_sql}
-        ORDER BY sidecar_position
+        ORDER BY
+          CASE WHEN a.captured_at IS NULL OR a.captured_at = '' THEN 1 ELSE 0 END,
+          a.captured_at DESC,
+          a.asset_id
         LIMIT ?
         """,
         (limit,),
     ).fetchall()
     items = []
-    for row in rows:
+    for position, row in enumerate(rows):
         keyword_candidates = [
             row["decision_keywords_json"],
             row["photos_keywords_json"],
@@ -1514,7 +1511,7 @@ def _sidecar_culling_review_rows(conn: sqlite3.Connection, limit: int) -> tuple[
             "title": str(row["decision_title"] or row["photos_title"] or row["metadata_seed_title"] or ""),
             "keywords": keywords,
             "pendingSyncCount": int(row["pending_sync_count"] or 0),
-            "sidecarPosition": int(row["sidecar_position"] or 0),
+            "sidecarPosition": position,
         })
     return int(indexed_count or 0), int(candidate_count or 0), items
 

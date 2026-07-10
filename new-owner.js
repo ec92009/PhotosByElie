@@ -11,6 +11,8 @@
     actions: [],
     connectors: [],
     review: null,
+    reviewPage: "culling",
+    reviewSelectedAssetId: "",
     busy: false,
   };
   const lanes = [
@@ -364,6 +366,79 @@
     >${rating || "×"}</button>
   `).join("");
 
+  const reviewItemById = (assetId) => (state.review?.items || []).find((item) => item.assetId === assetId) || null;
+
+  const selectedReviewItem = () => reviewItemById(state.reviewSelectedAssetId)
+    || state.review?.items?.[0]
+    || null;
+
+  const selectReviewItem = (assetId) => {
+    if (!reviewItemById(assetId)) return;
+    state.reviewSelectedAssetId = assetId;
+    renderReview();
+  };
+
+  const setReviewPage = (page) => {
+    state.reviewPage = page === "review" ? "review" : "culling";
+    renderReview();
+  };
+
+  const reviewTab = (page, label) => `
+    <button
+      class="btn secondary ${state.reviewPage === page ? "is-active" : ""}"
+      type="button"
+      data-new-owner-review-page="${page}"
+      aria-pressed="${state.reviewPage === page ? "true" : "false"}"
+    >${label}</button>
+  `;
+
+  const renderCullingCard = (item) => {
+    const selected = item.assetId === selectedReviewItem()?.assetId;
+    return `
+      <article class="new-owner-culling-card ${selected ? "is-selected" : ""}" data-review-asset-id="${escapeHtml(item.assetId)}" tabindex="0" aria-selected="${selected ? "true" : "false"}">
+        <div class="new-owner-culling-preview">
+          ${item.previewDataUrl
+            ? `<img src="${escapeHtml(item.previewDataUrl)}" alt="${escapeHtml(itemTitle(item))}" loading="lazy"/>`
+            : `<span>${escapeHtml(item.previewError || "Preview unavailable")}</span>`}
+        </div>
+        <div class="new-owner-culling-card-main">
+          <strong>${escapeHtml(itemTitle(item))}</strong>
+          <small>${escapeHtml([item.filename, item.capturedAt || item.indexedAt].filter(Boolean).join(" / "))}</small>
+          <div class="new-owner-chip-stack">${reviewItemChips(item)}</div>
+        </div>
+        <div class="new-owner-culling-card-controls">
+          <div class="new-owner-rating-row">${reviewRatingButtons(item)}</div>
+          ${reviewCommandButton(item, "pick", "Pick")}
+          ${reviewCommandButton(item, "unpick", "Unpick")}
+          ${reviewCommandButton(item, "reject", "Reject")}
+        </div>
+      </article>
+    `;
+  };
+
+  const renderMetadataReviewRow = (item) => `
+    <article class="new-owner-review-row ${item.assetId === selectedReviewItem()?.assetId ? "is-selected" : ""}" data-review-asset-id="${escapeHtml(item.assetId)}" tabindex="0" aria-selected="${item.assetId === selectedReviewItem()?.assetId ? "true" : "false"}">
+      <div class="new-owner-review-preview">
+        ${item.previewDataUrl
+          ? `<img src="${escapeHtml(item.previewDataUrl)}" alt="${escapeHtml(itemTitle(item))}" loading="lazy"/>`
+          : `<span>${escapeHtml(item.previewError || "Preview unavailable")}</span>`}
+      </div>
+      <div class="new-owner-review-row-main">
+        <strong>${escapeHtml(itemTitle(item))}</strong>
+        <small>${escapeHtml([item.filename, item.assetId].filter(Boolean).join(" / "))}</small>
+        <small>${escapeHtml(item.capturedAt || item.indexedAt || "")}</small>
+        <label><span>Title</span><input type="text" data-review-title value="${escapeHtml(item.title || "")}"/></label>
+        <label><span>Keywords</span><textarea rows="2" data-review-keywords>${escapeHtml((item.keywords || []).join(", "))}</textarea></label>
+      </div>
+      <div class="new-owner-chip-stack">${reviewItemChips(item)}</div>
+      <div class="new-owner-review-row-controls">
+        ${reviewCommandButton(item, "unpick", "Unpick")}
+        ${reviewCommandButton(item, "reject", "Reject")}
+        ${reviewCommandButton(item, "approve", "Approve metadata")}
+      </div>
+    </article>
+  `;
+
   const renderReview = () => {
     if (!reviewRoot) return;
     const review = state.review;
@@ -374,12 +449,15 @@
     }
     const items = Array.isArray(review.items) ? review.items : [];
     const result = review.result || {};
+    if (!reviewItemById(state.reviewSelectedAssetId)) state.reviewSelectedAssetId = items[0]?.assetId || "";
+    const pickedItems = items.filter((item) => item.pickState === "picked");
+    const showingReview = state.reviewPage === "review";
     reviewRoot.hidden = false;
     reviewRoot.innerHTML = `
       <div class="owner-card-titlebar">
         <div>
           <p class="eyebrow">Sidecar</p>
-          <h2>Review window</h2>
+          <h2>${showingReview ? "Title and keywords review" : "Culling gallery"}</h2>
         </div>
         <div class="new-owner-review-summary">
           ${chip(`${items.length} shown`, "live")}
@@ -392,32 +470,14 @@
         <strong>${escapeHtml(review.actionId || "sidecar-culling-review")}</strong>
         <span>${escapeHtml(result.local?.ownerDb || "Owner.sqlite")}</span>
       </div>
-      <div class="new-owner-review-list">
-        ${items.map((item) => `
-          <article class="new-owner-review-row" data-review-asset-id="${escapeHtml(item.assetId)}">
-            <div class="new-owner-review-preview">
-              ${item.previewDataUrl
-                ? `<img src="${escapeHtml(item.previewDataUrl)}" alt="${escapeHtml(itemTitle(item))}" loading="lazy"/>`
-                : `<span>${escapeHtml(item.previewError || "Preview unavailable")}</span>`}
-            </div>
-            <div class="new-owner-review-row-main">
-              <strong>${escapeHtml(itemTitle(item))}</strong>
-              <small>${escapeHtml([item.filename, item.assetId].filter(Boolean).join(" / "))}</small>
-              <small>${escapeHtml(item.capturedAt || item.indexedAt || "")}</small>
-              <label><span>Title</span><input type="text" data-review-title value="${escapeHtml(item.title || "")}"/></label>
-              <label><span>Keywords</span><textarea rows="2" data-review-keywords>${escapeHtml((item.keywords || []).join(", "))}</textarea></label>
-            </div>
-            <div class="new-owner-chip-stack">${reviewItemChips(item)}</div>
-            <div class="new-owner-review-row-controls">
-              <div class="new-owner-rating-row">${reviewRatingButtons(item)}</div>
-              ${reviewCommandButton(item, "pick", "Pick")}
-              ${reviewCommandButton(item, "unpick", "Unpick")}
-              ${reviewCommandButton(item, "reject", "Reject")}
-              ${reviewCommandButton(item, "approve", "Approve metadata")}
-            </div>
-          </article>
-        `).join("") || `<p class="new-owner-empty">No Sidecar records in this review window.</p>`}
+      <div class="new-owner-review-toolbar" aria-label="Sidecar workflow">
+        ${reviewTab("culling", "Culling")}
+        ${reviewTab("review", `Title & keywords (${pickedItems.length})`)}
+        <span>Press <kbd>C</kbd> to switch</span>
       </div>
+      ${showingReview
+        ? `<div class="new-owner-review-list">${pickedItems.map(renderMetadataReviewRow).join("") || `<p class="new-owner-empty">Pick photos in Culling before starting title and keywords review.</p>`}</div>`
+        : `<div class="new-owner-culling-grid">${items.map(renderCullingCard).join("") || `<p class="new-owner-empty">No Sidecar records in this culling window.</p>`}</div>`}
     `;
   };
 
@@ -651,8 +711,10 @@
     if (actionStatusRoot) actionStatusRoot.textContent = "Opening review...";
     try {
       state.review = reviewFromAction(action);
+      state.reviewPage = "culling";
+      state.reviewSelectedAssetId = state.review.items[0]?.assetId || "";
       if (actionStatusRoot) actionStatusRoot.textContent = "";
-      setStatus(`Opened ${state.review.items.length} Sidecar records.`);
+      setStatus(`Opened ${state.review.items.length} Sidecar records in Culling. Press C for Title and Keywords.`);
       render();
       reviewRoot?.scrollIntoView({ block: "start", behavior: "smooth" });
     } catch (error) {
@@ -752,10 +814,21 @@
     transitionAction(actionId, command);
   });
   reviewRoot?.addEventListener("click", (event) => {
+    const pageButton = event.target.closest("[data-new-owner-review-page]");
+    if (pageButton) {
+      setReviewPage(pageButton.getAttribute("data-new-owner-review-page"));
+      return;
+    }
     const button = event.target.closest("[data-new-owner-review-command]");
-    if (!button) return;
+    if (!button) {
+      const row = event.target.closest("[data-review-asset-id]");
+      if (row?.getAttribute("data-review-asset-id")) selectReviewItem(row.getAttribute("data-review-asset-id"));
+      return;
+    }
     const row = button.closest("[data-review-asset-id]");
     const command = button.getAttribute("data-new-owner-review-command");
+    const assetId = button.getAttribute("data-asset-id");
+    if (reviewItemById(assetId)) state.reviewSelectedAssetId = assetId;
     const details = command === "rating"
       ? { rating: Number(button.getAttribute("data-rating") || 0) }
       : command === "approve"
@@ -764,7 +837,49 @@
           keywords: String(row?.querySelector("[data-review-keywords]")?.value || "").split(",").map((item) => item.trim()).filter(Boolean),
         }
         : {};
-    recordReviewDecision(button.getAttribute("data-asset-id"), command, details);
+    recordReviewDecision(assetId, command, details);
+  });
+  document.addEventListener("keydown", (event) => {
+    if (!state.review || state.busy || event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
+    const tag = String(event.target?.tagName || "").toLowerCase();
+    if (tag === "input" || tag === "textarea" || tag === "select") return;
+    const key = event.key;
+    const selected = selectedReviewItem();
+    const claim = () => {
+      event.preventDefault();
+      event.stopPropagation();
+    };
+    if (key === "c" || key === "C") {
+      claim();
+      setReviewPage(state.reviewPage === "culling" ? "review" : "culling");
+      return;
+    }
+    if (!selected) return;
+    if (/^[1-5]$/.test(key)) {
+      claim();
+      recordReviewDecision(selected.assetId, "rating", { rating: Number(key) });
+    } else if (key === "0") {
+      claim();
+      recordReviewDecision(selected.assetId, "rating", { rating: 0 });
+    } else if (key === "p" || key === "P") {
+      claim();
+      recordReviewDecision(selected.assetId, "pick");
+    } else if (key === "u" || key === "U") {
+      claim();
+      recordReviewDecision(selected.assetId, "unpick");
+    } else if (key === "x" || key === "X") {
+      claim();
+      recordReviewDecision(selected.assetId, "reject");
+    } else if (key === "ArrowLeft" || key === "ArrowUp" || key === "ArrowRight" || key === "ArrowDown") {
+      claim();
+      const items = state.reviewPage === "review"
+        ? (state.review.items || []).filter((item) => item.pickState === "picked")
+        : (state.review.items || []);
+      const currentIndex = Math.max(0, items.findIndex((item) => item.assetId === selected.assetId));
+      const direction = key === "ArrowLeft" || key === "ArrowUp" ? -1 : 1;
+      const nextIndex = Math.min(items.length - 1, Math.max(0, currentIndex + direction));
+      selectReviewItem(items[nextIndex]?.assetId || selected.assetId);
+    }
   });
   absorbAuthTokenFromHash();
   hydrateConnector();

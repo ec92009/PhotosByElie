@@ -1,13 +1,13 @@
 # Daily Social Package - 2026-07-10
 
-Status: prepared
+Status: published_partial
 Visible version: v132.5
 
 ## Facebook: Paris Arts et Metiers Machines
 
-- Status: prepared
+- Status: published
 - Destination: https://photos-by-elie.com/campaign.html?c=facebook-paris-arts-metiers-machines-2026-07-10
-- Manual blockers: Publish pending: review socials/Facebook/2026-07-10/paris-arts-et-metiers-machines/manifest.json and use the Facebook browser/API workflow.
+- Published URL: https://www.facebook.com/122102168061334672/posts/122110181115334672
 
 | # | Media id | Source URL | Local image |
 | ---: | --- | --- | --- |
@@ -22,9 +22,9 @@ Visible version: v132.5
 
 ## Instagram: Seville Plaza de Espana Canal Light
 
-- Status: prepared
+- Status: published
 - Destination: https://photos-by-elie.com/campaign.html?c=instagram-seville-plaza-de-espana-canal-light-2026-07-10
-- Manual blockers: Publish pending: review socials/Instagram/2026-07-10/seville-plaza-de-espana-canal-light/manifest.json and use the Instagram browser/API workflow. | Instagram feed captions are not clickable; update the profile website link or use a Story link sticker before posting.
+- Published URL: https://www.instagram.com/p/DaneBU0jrKM/
 
 | # | Media id | Source URL | Local image |
 | ---: | --- | --- | --- |
@@ -53,9 +53,9 @@ Visible version: v132.5
 
 ## Threads: Seville Plaza de Espana Canal Light
 
-- Status: prepared
+- Status: published
 - Destination: https://photos-by-elie.com/campaign.html?c=instagram-seville-plaza-de-espana-canal-light-2026-07-10
-- Manual blockers: Publish pending: review socials/Threads/2026-07-10/seville-plaza-de-espana-canal-light/manifest.json and use the Threads browser/API workflow.
+- Published URL: https://www.threads.com/@ec92009/post/DaneFt9juIx
 
 | # | Media id | Source URL | Local image |
 | ---: | --- | --- | --- |

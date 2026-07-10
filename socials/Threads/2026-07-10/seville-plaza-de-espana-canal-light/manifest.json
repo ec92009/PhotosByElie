@@ -73,14 +73,35 @@
       "local_staged_path": "socials/Threads/2026-07-10/seville-plaza-de-espana-canal-light/images/04-img-1295-8edea483ea-seville-plaza-de-espana-canal-light.jpg"
     }
   ],
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "available_count": 4,
   "date": "2026-07-10",
   "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-seville-plaza-de-espana-canal-light-2026-07-10",
   "recommended_upload_set": "images",
-  "manual_blockers": [
-    "Publish pending: review socials/Threads/2026-07-10/seville-plaza-de-espana-canal-light/manifest.json and use the Threads browser/API workflow."
-  ]
+  "manual_blockers": [],
+  "published_url": "https://www.threads.com/@ec92009/post/DaneFt9juIx",
+  "published": {
+    "platform": "Threads",
+    "account": "ec92009",
+    "id": "18107710793069395",
+    "permalink": "https://www.threads.com/@ec92009/post/DaneFt9juIx",
+    "shortcode": "DaneFt9juIx",
+    "timestamp": "2026-07-10T15:04:23+0000",
+    "image_count": 4,
+    "media_type": "CAROUSEL_ALBUM",
+    "visible_verification": "Threads Graph readback returned permalink, shortcode, username ec92009, CAROUSEL_ALBUM, timestamp, text, and 4 child images. API flow had no browser link-preview removal step."
+  },
+  "verification": {
+    "platform": "Threads",
+    "account": "ec92009",
+    "id": "18107710793069395",
+    "permalink": "https://www.threads.com/@ec92009/post/DaneFt9juIx",
+    "shortcode": "DaneFt9juIx",
+    "timestamp": "2026-07-10T15:04:23+0000",
+    "image_count": 4,
+    "media_type": "CAROUSEL_ALBUM",
+    "visible_verification": "Threads Graph readback returned permalink, shortcode, username ec92009, CAROUSEL_ALBUM, timestamp, text, and 4 child images. API flow had no browser link-preview removal step."
+  }
 }

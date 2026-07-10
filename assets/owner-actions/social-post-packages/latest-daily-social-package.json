@@ -144,15 +144,32 @@
         }
       ],
       "date": "2026-07-10",
-      "status": "prepared",
+      "status": "published",
       "account": "Photos By Elie",
       "post_type": "multi_photo",
       "destination_url": "https://photos-by-elie.com/campaign.html?c=facebook-paris-arts-metiers-machines-2026-07-10",
       "recommended_upload_set": "images",
       "available_count": 8,
-      "manual_blockers": [
-        "Publish pending: review socials/Facebook/2026-07-10/paris-arts-et-metiers-machines/manifest.json and use the Facebook browser/API workflow."
-      ]
+      "manual_blockers": [],
+      "published_url": "https://www.facebook.com/122102168061334672/posts/122110181115334672",
+      "published": {
+        "platform": "Facebook",
+        "account": "Photos By Elie",
+        "id": "1146747141854670_122110181115334672",
+        "permalink": "https://www.facebook.com/122102168061334672/posts/122110181115334672",
+        "timestamp": "2026-07-10T15:02:47+0000",
+        "image_count": 8,
+        "visible_verification": "Facebook Graph readback returned the Page post permalink, created_time, and 8 photo subattachments."
+      },
+      "verification": {
+        "platform": "Facebook",
+        "account": "Photos By Elie",
+        "id": "1146747141854670_122110181115334672",
+        "permalink": "https://www.facebook.com/122102168061334672/posts/122110181115334672",
+        "timestamp": "2026-07-10T15:02:47+0000",
+        "image_count": 8,
+        "visible_verification": "Facebook Graph readback returned the Page post permalink, created_time, and 8 photo subattachments."
+      }
     },
     {
       "platform": "Instagram",
@@ -295,16 +312,34 @@
         }
       ],
       "date": "2026-07-10",
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-seville-plaza-de-espana-canal-light-2026-07-10",
       "recommended_upload_set": "images",
       "available_count": 8,
-      "manual_blockers": [
-        "Publish pending: review socials/Instagram/2026-07-10/seville-plaza-de-espana-canal-light/manifest.json and use the Instagram browser/API workflow.",
-        "Instagram feed captions are not clickable; update the profile website link or use a Story link sticker before posting."
-      ]
+      "manual_blockers": [],
+      "published_url": "https://www.instagram.com/p/DaneBU0jrKM/",
+      "published": {
+        "platform": "Instagram",
+        "account": "ec92009",
+        "id": "18407881258153371",
+        "permalink": "https://www.instagram.com/p/DaneBU0jrKM/",
+        "timestamp": "2026-07-10T15:03:42+0000",
+        "image_count": 8,
+        "media_type": "CAROUSEL_ALBUM",
+        "visible_verification": "Instagram Graph readback returned permalink, username ec92009, CAROUSEL_ALBUM, timestamp, caption, and 8 child images."
+      },
+      "verification": {
+        "platform": "Instagram",
+        "account": "ec92009",
+        "id": "18407881258153371",
+        "permalink": "https://www.instagram.com/p/DaneBU0jrKM/",
+        "timestamp": "2026-07-10T15:03:42+0000",
+        "image_count": 8,
+        "media_type": "CAROUSEL_ALBUM",
+        "visible_verification": "Instagram Graph readback returned permalink, username ec92009, CAROUSEL_ALBUM, timestamp, caption, and 8 child images."
+      }
     },
     {
       "platform": "Pinterest",
@@ -491,16 +526,37 @@
           "local_staged_path": "socials/Threads/2026-07-10/seville-plaza-de-espana-canal-light/images/04-img-1295-8edea483ea-seville-plaza-de-espana-canal-light.jpg"
         }
       ],
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "available_count": 4,
       "date": "2026-07-10",
       "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-seville-plaza-de-espana-canal-light-2026-07-10",
       "recommended_upload_set": "images",
-      "manual_blockers": [
-        "Publish pending: review socials/Threads/2026-07-10/seville-plaza-de-espana-canal-light/manifest.json and use the Threads browser/API workflow."
-      ]
+      "manual_blockers": [],
+      "published_url": "https://www.threads.com/@ec92009/post/DaneFt9juIx",
+      "published": {
+        "platform": "Threads",
+        "account": "ec92009",
+        "id": "18107710793069395",
+        "permalink": "https://www.threads.com/@ec92009/post/DaneFt9juIx",
+        "shortcode": "DaneFt9juIx",
+        "timestamp": "2026-07-10T15:04:23+0000",
+        "image_count": 4,
+        "media_type": "CAROUSEL_ALBUM",
+        "visible_verification": "Threads Graph readback returned permalink, shortcode, username ec92009, CAROUSEL_ALBUM, timestamp, text, and 4 child images. API flow had no browser link-preview removal step."
+      },
+      "verification": {
+        "platform": "Threads",
+        "account": "ec92009",
+        "id": "18107710793069395",
+        "permalink": "https://www.threads.com/@ec92009/post/DaneFt9juIx",
+        "shortcode": "DaneFt9juIx",
+        "timestamp": "2026-07-10T15:04:23+0000",
+        "image_count": 4,
+        "media_type": "CAROUSEL_ALBUM",
+        "visible_verification": "Threads Graph readback returned permalink, shortcode, username ec92009, CAROUSEL_ALBUM, timestamp, text, and 4 child images. API flow had no browser link-preview removal step."
+      }
     }
   ],
   "planning_notes": [
@@ -508,10 +564,56 @@
     "Themes avoid the exact recent July 7-9 themes and use only public catalog/R2 watermarked preview rows."
   ],
   "visible_version": "v132.5",
-  "status": "prepared",
+  "status": "published_partial",
   "themes": [
     "Paris Arts et Metiers Machines",
     "Seville Plaza de Espana Canal Light",
     "Nerja Caves Stone Forms"
-  ]
+  ],
+  "publishing": {
+    "facebook": {
+      "platform": "Facebook",
+      "account": "Photos By Elie",
+      "id": "1146747141854670_122110181115334672",
+      "permalink": "https://www.facebook.com/122102168061334672/posts/122110181115334672",
+      "timestamp": "2026-07-10T15:02:47+0000",
+      "image_count": 8,
+      "visible_verification": "Facebook Graph readback returned the Page post permalink, created_time, and 8 photo subattachments."
+    },
+    "instagram": {
+      "platform": "Instagram",
+      "account": "ec92009",
+      "id": "18407881258153371",
+      "permalink": "https://www.instagram.com/p/DaneBU0jrKM/",
+      "timestamp": "2026-07-10T15:03:42+0000",
+      "image_count": 8,
+      "media_type": "CAROUSEL_ALBUM",
+      "visible_verification": "Instagram Graph readback returned permalink, username ec92009, CAROUSEL_ALBUM, timestamp, caption, and 8 child images."
+    },
+    "threads": {
+      "platform": "Threads",
+      "account": "ec92009",
+      "id": "18107710793069395",
+      "permalink": "https://www.threads.com/@ec92009/post/DaneFt9juIx",
+      "shortcode": "DaneFt9juIx",
+      "timestamp": "2026-07-10T15:04:23+0000",
+      "image_count": 4,
+      "media_type": "CAROUSEL_ALBUM",
+      "visible_verification": "Threads Graph readback returned permalink, shortcode, username ec92009, CAROUSEL_ALBUM, timestamp, text, and 4 child images. API flow had no browser link-preview removal step."
+    },
+    "pinterest": {
+      "platform": "Pinterest",
+      "status": "prepared",
+      "blocker": "Pinterest token is missing at ~/.config/photosbyelie/pinterest-token.json and no board id mapping is configured.",
+      "manual_package": "socials/Pinterest/2026-07-10/nerja-caves-stone-forms/",
+      "board_recommendation": "Spain Travel Photography"
+    }
+  },
+  "validation": {
+    "public_r2_head_check": "21 selected public preview URLs returned HTTP 200.",
+    "platform_dry_runs": "Facebook, Instagram, Threads, and Pinterest dry runs passed before live publishing.",
+    "tests": "npm test passed: 65 Node tests and 29 Python tests.",
+    "springboards": "npm run social:springboards:validate passed for 3 distinct campaign springboards.",
+    "validate_publish": "npm run validate still fails on broad pre-existing Owner/catalog visibility/sourceOrigin/AI-origin mismatch unrelated to the posting mechanics."
+  }
 }

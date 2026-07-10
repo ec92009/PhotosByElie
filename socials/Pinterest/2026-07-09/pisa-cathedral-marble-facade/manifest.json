@@ -1,0 +1,110 @@
+{
+  "platform": "Pinterest",
+  "title": "Pisa Cathedral Marble Facade",
+  "campaign_id": "pinterest-pisa-cathedral-marble-facade-2026-07-09",
+  "caption": "Pisa's cathedral marble, lawn, and facade details in five Photos By Elie travel wall-art frames. Browse: https://photos-by-elie.com/campaign.html?c=pinterest-pisa-cathedral-marble-facade-2026-07-09",
+  "pinterest": {
+    "title": "Pisa Cathedral Marble Facade",
+    "description": "Five watermarked Photos By Elie views of Pisa Cathedral, marble detail, and Tuscan architectural rhythm for travel photography and wall-art inspiration.",
+    "destination_url": "https://photos-by-elie.com/campaign.html?c=pinterest-pisa-cathedral-marble-facade-2026-07-09",
+    "board_recommendation": "Italy Travel Photography",
+    "alt_text": "Pisa Cathedral marble facade and architectural details photographed in Tuscany."
+  },
+  "notes": [
+    "Pinterest package is capped at exactly five images.",
+    "Images are public watermarked R2 previews staged for upload/API publishing.",
+    "Pinterest package is exactly 5 images; publish is blocked only by missing Pinterest API token/board mapping."
+  ],
+  "items": [
+    {
+      "media_id": "001-b726a850c3",
+      "order": 1,
+      "id": "001-b726a850c3",
+      "title": "Pisa Cathedral and Baptistery",
+      "collection": "italy",
+      "location": "Pisa, Tuscany, Italy",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/001-b726a850c3_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/001-b726a850c3_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=001-b726a850c3",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=001-b726a850c3",
+      "image": "images/01-001-b726a850c3-pisa-cathedral-marble-facade.jpg",
+      "local_staged_path": "socials/Pinterest/2026-07-09/pisa-cathedral-marble-facade/images/01-001-b726a850c3-pisa-cathedral-marble-facade.jpg"
+    },
+    {
+      "media_id": "001-9648366ec4",
+      "order": 2,
+      "id": "001-9648366ec4",
+      "title": "Pisa Cathedral and Baptistery Lawn",
+      "collection": "italy",
+      "location": "Pisa, Tuscany, Italy",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/001-9648366ec4_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/001-9648366ec4_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=001-9648366ec4",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=001-9648366ec4",
+      "image": "images/02-001-9648366ec4-pisa-cathedral-marble-facade.jpg",
+      "local_staged_path": "socials/Pinterest/2026-07-09/pisa-cathedral-marble-facade/images/02-001-9648366ec4-pisa-cathedral-marble-facade.jpg"
+    },
+    {
+      "media_id": "001-862e1c98fe",
+      "order": 3,
+      "id": "001-862e1c98fe",
+      "title": "Pisa Cathedral Facade",
+      "collection": "italy",
+      "location": "Pisa, Tuscany, Italy",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/001-862e1c98fe_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/001-862e1c98fe_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=001-862e1c98fe",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=001-862e1c98fe",
+      "image": "images/03-001-862e1c98fe-pisa-cathedral-marble-facade.jpg",
+      "local_staged_path": "socials/Pinterest/2026-07-09/pisa-cathedral-marble-facade/images/03-001-862e1c98fe-pisa-cathedral-marble-facade.jpg"
+    },
+    {
+      "media_id": "001-b782c03bb8",
+      "order": 4,
+      "id": "001-b782c03bb8",
+      "title": "Pisa Cathedral Facade",
+      "collection": "italy",
+      "location": "Pisa, Tuscany, Italy",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/001-b782c03bb8_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/001-b782c03bb8_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=001-b782c03bb8",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=001-b782c03bb8",
+      "image": "images/04-001-b782c03bb8-pisa-cathedral-marble-facade.jpg",
+      "local_staged_path": "socials/Pinterest/2026-07-09/pisa-cathedral-marble-facade/images/04-001-b782c03bb8-pisa-cathedral-marble-facade.jpg"
+    },
+    {
+      "media_id": "001-ca3691704b",
+      "order": 5,
+      "id": "001-ca3691704b",
+      "title": "Pisa Cathedral Facade Detail",
+      "collection": "italy",
+      "location": "Pisa, Tuscany, Italy",
+      "width": 1260,
+      "height": 1800,
+      "source_url": "https://download.photos-by-elie.com/media/expo/001-ca3691704b_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/001-ca3691704b_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=001-ca3691704b",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=001-ca3691704b",
+      "image": "images/05-001-ca3691704b-pisa-cathedral-marble-facade.jpg",
+      "local_staged_path": "socials/Pinterest/2026-07-09/pisa-cathedral-marble-facade/images/05-001-ca3691704b-pisa-cathedral-marble-facade.jpg"
+    }
+  ],
+  "date": "2026-07-09",
+  "status": "prepared",
+  "account": "PhotosByElie Pinterest",
+  "post_type": "multi_pin_sequence",
+  "destination_url": "https://photos-by-elie.com/campaign.html?c=pinterest-pisa-cathedral-marble-facade-2026-07-09",
+  "recommended_upload_set": "images",
+  "available_count": 5,
+  "manual_blockers": [
+    "Pinterest remains prepared only: no ~/.config/photosbyelie/pinterest-token.json token file or board ID mapping is configured. Manual Pin Builder/API target should use this package and board recommendation Italy Travel Photography."
+  ]
+}

@@ -15,7 +15,9 @@ from dataclasses import dataclass
 import json
 from pathlib import Path
 import platform
+import shlex
 import socket
+import subprocess
 import sys
 import time
 from typing import Any
@@ -181,6 +183,73 @@ def _attach_previews(repo_root: Path, items: list[dict], preview_cache_path, run
     return enriched, errors
 
 
+def _run_repo_json(config: ConnectorConfig, arguments: list[str], timeout: int = 3600) -> dict:
+    command = "cd " + shlex.quote(str(config.repo_root)) + " && " + " ".join(shlex.quote(item) for item in arguments)
+    completed = subprocess.run(
+        ["/bin/zsh", "-lic", command],
+        text=True,
+        capture_output=True,
+        timeout=timeout,
+        check=False,
+    )
+    output = (completed.stdout or "").strip()
+    if completed.returncode != 0:
+        raise RuntimeError((completed.stderr or output or f"Command exited {completed.returncode}").strip())
+    try:
+        payload = json.loads(output or "{}")
+    except json.JSONDecodeError as error:
+        raise RuntimeError(f"Connector command returned invalid JSON: {output[-500:]}") from error
+    if payload.get("ok") is False:
+        raise RuntimeError(str(payload.get("error") or payload.get("result") or "Connector command failed."))
+    return payload
+
+
+def _upload_and_register(config: ConnectorConfig, action: dict) -> dict:
+    payload = action.get("payload") if isinstance(action.get("payload"), dict) else {}
+    requested = max(1, min(24, int(payload.get("limit") or 1)))
+    runs = []
+    for _index in range(requested):
+        run = _run_repo_json(config, [
+            sys.executable,
+            "scripts/sidecar_upload_bridge.py",
+            "--execute",
+            "--limit",
+            "1",
+            "--json",
+        ])
+        items = list(run.get("items") or [])
+        if not items:
+            break
+        runs.append({
+            "runId": run.get("runId"),
+            "status": run.get("status"),
+            "summary": run.get("summary") or {},
+            "items": [{
+                "assetId": item.get("assetId"),
+                "photoId": item.get("photoId"),
+                "filename": item.get("filename"),
+                "status": item.get("status") or item.get("upload", {}).get("status"),
+            } for item in items],
+        })
+        if run.get("status") == "failed":
+            break
+    registration = _run_repo_json(config, [
+        sys.executable,
+        "scripts/sidecar_maintenance.py",
+        "register-uploaded-catalog",
+    ])
+    return {
+        "connectorId": config.connector_id,
+        "type": "sidecar-upload-publish",
+        "requestedCount": requested,
+        "runCount": len(runs),
+        "runs": runs,
+        "registration": registration.get("result") or {},
+        "rebuild": registration.get("rebuild") or {},
+        "completedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+
+
 def execute_action(config: ConnectorConfig, action: dict) -> dict:
     connector_result, decision_result, preview_cache_path, run_bridge_task = _load_local_modules(config.repo_root)
     action_type = str(action.get("type") or "").strip()
@@ -220,6 +289,8 @@ def execute_action(config: ConnectorConfig, action: dict) -> dict:
             "decision": decision,
             "completedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         }
+    if action_type == "sidecar-upload-publish":
+        return _upload_and_register(config, action)
     raise RuntimeError(f"Unsupported connector action: {action_type or 'missing'}")
 
 

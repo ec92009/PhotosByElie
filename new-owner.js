@@ -186,6 +186,8 @@
     if (Number.isFinite(result.recordsPrepared)) chips.push(chip(`${result.recordsPrepared} prepared`, "live"));
     if (Number.isFinite(result.candidateCount)) chips.push(chip(`${result.candidateCount} candidates`));
     if (result.local?.machineNames?.length) chips.push(chip(result.local.machineNames[0], "planned"));
+    if (Number.isFinite(result.runCount)) chips.push(chip(`${result.runCount} uploaded`, "live"));
+    if (Number.isFinite(result.registration?.registeredCount)) chips.push(chip(`${result.registration.registeredCount} cataloged`, "live"));
     return chips.join("");
   };
 
@@ -546,6 +548,16 @@
     statusLabel: "Queueing culling...",
   });
 
+  const queueUploadPublish = () => queueAction({
+    action: "sidecar-upload-publish",
+    payload: {
+      requestedConnector: connectorId() || undefined,
+      limit: 1,
+      queuedAt: new Date().toISOString(),
+    },
+    statusLabel: "Queueing upload...",
+  });
+
   const transitionAction = async (actionId, command) => {
     if (state.busy || !actionId || !command) return;
     state.busy = true;
@@ -679,6 +691,7 @@
   $("[data-new-owner-logout]")?.addEventListener("click", logout);
   $("[data-new-owner-queue-check]")?.addEventListener("click", queueCheck);
   $("[data-new-owner-queue-sidecar]")?.addEventListener("click", queueSidecarCulling);
+  $("[data-new-owner-upload-publish]")?.addEventListener("click", queueUploadPublish);
   connectorInput?.addEventListener("change", rememberConnector);
   connectorInput?.addEventListener("blur", rememberConnector);
   actionRoot?.addEventListener("click", (event) => {

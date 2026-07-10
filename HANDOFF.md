@@ -8,17 +8,37 @@ GitHub carries code, safe metadata, SOPs, and handoff notes; private Owner DB
 snapshots and client artifacts move through private R2; SSH/Codex Remote SSH is
 for remote execution.
 
-## Current Handoff: 2026-07-08 Apple Photos Intake Prep
+## Current Handoff: 2026-07-10 Cloud Owner / Sidecar Integration
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
-- Branch: `codex/new-owner-foundation`
+- Branch: `codex/sidecar-main-site`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Local preview: `http://localhost:8000/`
-- Helper-backed Owner intake URL on this Mac: `http://localhost:8001/owner.html?tab=imports`
-- Current visible build: `v125.0`
+- Owner intake URL: `https://photos-by-elie.com/owner.html`
+- Current visible build prepared: `v132.0`
 - Sidecar local build: `v126.6`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
+- `owner.html` now redirects to the authenticated cloud Owner surface at
+  `new-owner.html`; the localhost Owner Python web UI is retired as the normal
+  control plane.
+- Background connector endpoints use a per-Mac bearer credential stored only in
+  the Worker secret `OWNER_CONNECTOR_TOKENS_JSON`; David and Max must receive
+  different revocable tokens.
+- `scripts/new_owner_connector.py` polls cloud actions without serving HTTP.
+  It returns 24-item Sidecar preview windows, applies stars/pick/reject/title/
+  keywords/metadata approvals to local `Owner.sqlite`, and supports a deliberate
+  guarded Upload Bridge item followed immediately by catalog registration.
+- Owner/Admin can download the credential-free Mac connector ZIP through
+  `/owner/connector/download/mac`; the package contains the stable
+  `com.photosbyelie.photos-bridge` app identity and prompts for the separate
+  per-Mac token at install time.
+- Max's private Owner snapshot was copied over the Tailscale mesh and restored
+  on David after checksum/integrity verification: `57,497` Sidecar assets and
+  `57,497` decision rows. David's previous empty DB is backed up at
+  `assets/owner-actions/Owner.sqlite-before-max-sync-20260710T104147Z`.
+- David still needs to grant Full Photos access to the bridge app in macOS
+  System Settings before cloud review windows can contain previews.
 - Current public catalog: `7,813` media rows.
 - Current gallery counts: AI `5,100`, France `379`, Italy `70`, Mexico `31`, Portugal `214`, Slovakia `2`, Spain `1,872`, USA `145`.
 - Public GitHub Pages verification: `v125.0` gallery pages load, public catalog serves `7,813` rows, and repaired AI stained-glass plus Benalmadena Aquarium preview/video media URLs return HTTP 200.

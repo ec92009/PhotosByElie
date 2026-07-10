@@ -560,8 +560,9 @@ Clock state: running
 | 2026-07-09 | 19:44 CEST | 19:47 CEST | 0:03 | Reviewed highest-risk test coverage and added checkout authorization/webhook boundary tests; test runtime excluded. |
 | 2026-07-09 | 21:17 CEST | 21:20 CEST | 0:03 | Diagnosed and fixed the Sidecar RAW-origin preview color shift for `20221216 172145 01113.jpg`; rebuild/server test runtime excluded. |
 | 2026-07-09 | 22:29 CEST | 22:32 CEST | 0:03 | Diagnosed video poster preview failure and approved a local-video-frame fallback with truthful bridge errors; implementation/test runtime excluded. |
+| 2026-07-10 | 12:18 CEST | 12:19 CEST | 0:01 | Directed completion of Sidecar-to-main-site integration, retirement of the localhost Owner UI, and downloadable per-Mac connector support; background implementation/runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 28:27
+Active collaboration time used: 28:28
 Remaining budget: not set

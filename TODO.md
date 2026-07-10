@@ -1,10 +1,10 @@
 # Photos By Elie Backlog
 
-Last updated: 2026-07-09
+Last updated: 2026-07-10
 
 ## Current Facts
 
-- Public visible build: `v125.0`.
+- Public visible build prepared: `v132.0`.
 - Sidecar local build: `v126.6`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`.
 - Local preview: `http://localhost:8000/`.
@@ -13,7 +13,7 @@ Last updated: 2026-07-09
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`.
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`.
 - Access Console Sandbox V8 cloud backend plus ACS9 local front-end rehearsal: deployed on `auth.photos-by-elie.com` with D1 database `photosbyelie-access`; local preview at `http://100.111.30.109:8000/access-console.html`; group manager creates/edits/archives audience groups, connects groups to real gallery records, persists per-gallery defaults, filters people, manages group memberships, previews gallery permissions for selected group/person/visitor/owner modes, runs cloud Worker policy tests for selected gallery access, shows a reversible audit/undo ledger for person/group access changes, and includes a selected-group invitation rehearsal for email/link/QR access propagation; audience fixtures are `Agnes's B'day`, `RE La Concha`, and `Johnson-Palmer wedding`.
-- Track B NewOwner shell: local preview at `http://100.111.30.109:8000/new-owner.html`; uses the deployed auth Worker for Google Owner/Admin session checks with Safari-compatible local/Tailscale token transfer, D1 access-state summary, a reload-persistent recent cloud Owner action queue, and a browser-mediated Sidecar review workspace for claimed/completed `sidecar-culling-review` actions with explicit local pick/unpick/reject writes.
+- Cloud Owner is promoted from the Track B shell: `owner.html` routes to the authenticated `new-owner.html` control surface; scoped background connectors provide health, Apple Photos previews, Sidecar stars/pick/reject/title/keywords/approval decisions, guarded single-item Upload Bridge execution plus catalog registration, and an Owner-only credential-free Mac installer download.
 - Public catalog integrity: `ok`.
 - Public catalog scale: `7813` media rows.
 - Gallery counts: AI `5100`, France `379`, Italy `70`, Mexico `31`, Portugal `214`, Slovakia `2`, Spain `1872`, USA `145`.
@@ -82,11 +82,11 @@ Last updated: 2026-07-09
    - Keep Owner-only workflow details out of public page metadata.
    - Let market research decide which galleries, subjects, and search terms get attention first.
 
-8. **Promote the Track B NewOwner shell into real cloud workflows.**
-   - Replace remaining `track-b-cloud-shell-check` probes with real queued action types; the cloud queue already supports recent-action listing for Max/David reload continuity.
-   - Enrich the `sidecar-culling-review` review workspace with thumbnails/previews, gallery/routing assignment, and clearer staged-decision audit feedback.
-   - Reuse the same browser-mediated connector pattern for Apple Photos import and Real Estate source operations without moving source files into the public repo.
-   - Prioritize Apple Photos intake, sellable storefront expansion, and protected download workflows ahead of hypothetical verticals.
+8. **Extend cloud Owner beyond the completed Sidecar foundation.**
+   - Add gallery/routing assignment and batch propagation to cloud Sidecar review.
+   - Add supported cloud action types for the remaining legacy Owner workflows.
+   - Apple-sign/notarize the Mac connector before distribution beyond David and Max.
+   - Keep Apple Photos intake, sellable storefront expansion, and protected download workflows ahead of hypothetical verticals.
 
 9. **Run a full Real Estate client rehearsal.**
    - Import/publish/upload one client property set.

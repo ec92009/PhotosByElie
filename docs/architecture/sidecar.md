@@ -2,9 +2,10 @@
 
 Date: 2026-07-04
 
-Sidecar is a local-only Apple Photos triage workstation that rides beside Owner.
-It is deliberately not the commercial app. Sidecar decides library fate and
-metadata; Owner decides publication and commerce.
+Sidecar is the Apple Photos triage engine behind the authenticated cloud Owner
+workspace. Its local fallback UI remains useful for recovery and high-speed Mac
+work, while Owner is the normal control surface. Sidecar decides library fate
+and metadata; Owner controls connector work, publication, and commerce.
 
 ## Version
 
@@ -383,8 +384,9 @@ Remaining near-term slices:
 - Incremental index refresh refinements, such as cheaper change detection and
   richer missing-asset reporting.
 - Album/smart-album source filters.
-- Upload Bridge Owner registration refinements, including UI surfacing and
-  batch status around `sidecar_maintenance.py register-uploaded-catalog`.
+- Broader Upload Bridge batch status and failure recovery in cloud Owner. The
+  first cloud action now runs catalog registration immediately after its guarded
+  bridge upload.
 - Private render cache pruning for existing `renders/<media_id>_<size>mp.jpg`
   objects, protecting sold media and leaving future Worker-created renders in
   place.

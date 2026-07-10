@@ -1,19 +1,19 @@
 # Conversation Summary
 
-Date: 2026-07-05
+Date: 2026-07-10
 
 ## Current State
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Branch: `main`
-- Public visible version: `v125.0`
+- Public visible version prepared: `v132.0`
 - Sidecar version: `v126.6`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Local preview: `http://localhost:8000/`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
-- Current public catalog: `7770` media rows.
-- Current key gallery counts: AI `5076`, France `379`, Italy `70`, Mexico `31`, Portugal `214`, Slovakia `2`, Spain `1853`, USA `145`.
+- Current public catalog: `7813` media rows.
+- Current key gallery counts: AI `5100`, France `379`, Italy `70`, Mexico `31`, Portugal `214`, Slovakia `2`, Spain `1872`, USA `145`.
 
 ## What Happened In This Thread
 

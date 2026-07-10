@@ -12,7 +12,7 @@ import { createLocalZipDelivery } from "./local-zip-delivery.mjs";
 import { createMemoryStore } from "./memory-store.mjs";
 import { createMockStripeClient } from "./mock-stripe.mjs";
 import { createOwnerAccessAuth } from "./owner-access-auth.mjs";
-import { createKvOwnerActionStore } from "./owner-action-store.mjs";
+import { createKvOwnerActionStore, createMemoryOwnerActionStore } from "./owner-action-store.mjs";
 import { createRealEstateAuth } from "./real-estate-auth.mjs";
 import { createRealEstateDeliverables } from "./real-estate-deliverables.mjs";
 import { createRealEstateOriginals } from "./real-estate-originals.mjs";
@@ -460,6 +460,82 @@ test("owner actions are queued behind Owner Google access", async () => {
     connectorId: "client-sidecar",
   }, { origin: "https://photos-by-elie.com" }));
   assert.equal(claimForbidden.status, 403);
+});
+
+test("background Owner connectors use scoped credentials and report health", async () => {
+  const ownerActionStore = createMemoryOwnerActionStore();
+  const registry = createMemoryAccessUserRegistry([{ email: "owner@example.com", tier: "owner" }]);
+  const ownerConnectorAuth = {
+    requireConnector: async (request) => {
+      if (request.headers.get("authorization") !== "Bearer connector-secret") {
+        throw Object.assign(new Error("Connector credential required."), {
+          status: 401,
+          code: "owner_connector_auth_required",
+        });
+      }
+      return { connectorId: "david" };
+    },
+  };
+  const worker = createPhotosByElieWorker({
+    catalog: loadCatalog(),
+    accessAuth: fakeAccessAuthFor("owner@example.com"),
+    accessUserRegistry: registry,
+    ownerActionStore,
+    ownerConnectorAuth,
+    randomUUID: deterministicIds(),
+  });
+
+  const queuedResponse = await worker.fetch(jsonRequest("https://worker.test/owner/actions", {
+    action: "sidecar-culling-review",
+    payload: { requestedConnector: "david", manifest: { limit: 24 } },
+  }, { origin: "https://photos-by-elie.com" }));
+  const queued = (await queuedResponse.json()).action;
+
+  const unauthorized = await worker.fetch(new Request("https://worker.test/owner/connector/actions"));
+  assert.equal(unauthorized.status, 401);
+
+  const connectorHeaders = { authorization: "Bearer connector-secret" };
+  const heartbeatResponse = await worker.fetch(jsonRequest("https://worker.test/owner/connector/heartbeat", {
+    hostname: "David-5.local",
+    platform: "macos",
+    version: "1.0",
+    capabilities: ["apple-photos", "sidecar"],
+  }, connectorHeaders));
+  assert.equal(heartbeatResponse.status, 200);
+  assert.equal((await heartbeatResponse.json()).connector.id, "david");
+
+  const connectorList = await worker.fetch(new Request("https://worker.test/owner/connector/actions", {
+    headers: connectorHeaders,
+  }));
+  const connectorListBody = await connectorList.json();
+  assert.equal(connectorListBody.actions.length, 1);
+  assert.equal(connectorListBody.actions[0].id, queued.id);
+
+  const claimResponse = await worker.fetch(jsonRequest(
+    `https://worker.test/owner/connector/actions/${queued.id}/claim`,
+    {},
+    connectorHeaders
+  ));
+  const claimed = (await claimResponse.json()).action;
+  assert.equal(claimed.claim.connectorId, "david");
+  assert.equal(claimed.claim.claimedBy, "connector:david");
+
+  const completeResponse = await worker.fetch(jsonRequest(
+    `https://worker.test/owner/connector/actions/${queued.id}/complete`,
+    { result: { recordsPrepared: 24 } },
+    connectorHeaders
+  ));
+  const completed = (await completeResponse.json()).action;
+  assert.equal(completed.state, "completed");
+  assert.equal(completed.completedBy, "connector:david");
+  assert.equal(completed.result.recordsPrepared, 24);
+
+  const ownerConnectorResponse = await worker.fetch(new Request("https://worker.test/owner/connectors", {
+    headers: { origin: "https://photos-by-elie.com" },
+  }));
+  assert.equal(ownerConnectorResponse.status, 200);
+  const ownerConnectors = await ownerConnectorResponse.json();
+  assert.equal(ownerConnectors.connectors[0].hostname, "David-5.local");
 });
 
 test("access console is admin-only and writes reversible role grants", async () => {

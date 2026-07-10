@@ -1244,6 +1244,7 @@ export const createPhotosByElieWorker = ({
   accessUserRegistry = createMemoryAccessUserRegistry(),
   accessAdminEmail = "",
   ownerActionStore = createMemoryOwnerActionStore(),
+  ownerConnectorAuth = null,
   authAllowedReturnOrigins = [],
   emailClient = null,
   downloadBaseUrl = ordersUrl,
@@ -2071,6 +2072,16 @@ export const createPhotosByElieWorker = ({
     return cleaned.slice(0, 80) || "manual-owner";
   };
 
+  const requireOwnerConnector = async (request) => {
+    if (!ownerConnectorAuth || typeof ownerConnectorAuth.requireConnector !== "function") {
+      throw Object.assign(new Error("Owner connector authentication is not configured."), {
+        status: 503,
+        code: "owner_connector_auth_unavailable",
+      });
+    }
+    return await ownerConnectorAuth.requireConnector(request);
+  };
+
   const createOwnerAction = async (request) => {
     const session = await authSessionFor(request, { requiredRole: "owner" });
     if (!ownerActionStore || typeof ownerActionStore.putAction !== "function") {
@@ -2113,6 +2124,51 @@ export const createPhotosByElieWorker = ({
     return credentialedJson(request, { ok: true, actions, limit });
   };
 
+  const listOwnerConnectors = async (request) => {
+    await authSessionFor(request, { requiredRole: "owner" });
+    const connectors = typeof ownerActionStore?.listConnectors === "function"
+      ? await ownerActionStore.listConnectors()
+      : [];
+    return credentialedJson(request, { ok: true, connectors });
+  };
+
+  const heartbeatOwnerConnector = async (request) => {
+    const connector = await requireOwnerConnector(request);
+    const payload = await parseJson(request);
+    const timestamp = now().toISOString();
+    const health = {
+      schema: "photosbyelie.ownerConnector.v1",
+      id: connector.connectorId,
+      state: "online",
+      hostname: String(payload.hostname || "").trim().slice(0, 120),
+      platform: String(payload.platform || "macos").trim().slice(0, 80),
+      version: String(payload.version || "").trim().slice(0, 80),
+      capabilities: Array.isArray(payload.capabilities)
+        ? payload.capabilities.map((item) => String(item || "").trim()).filter(Boolean).slice(0, 20)
+        : [],
+      lastSeenAt: timestamp,
+    };
+    const saved = typeof ownerActionStore?.putConnector === "function"
+      ? await ownerActionStore.putConnector(health)
+      : health;
+    return json({ ok: true, connector: saved });
+  };
+
+  const listConnectorActions = async (request) => {
+    const connector = await requireOwnerConnector(request);
+    if (!ownerActionStore || typeof ownerActionStore.listActions !== "function") {
+      return json({ ok: false, error: { code: "owner_actions_unavailable", message: "Owner action queue listing is not configured." } }, 503);
+    }
+    const actions = await ownerActionStore.listActions({ limit: 100 });
+    const available = actions.filter((action) => {
+      if (action.state === "claimed") return action.claim?.connectorId === connector.connectorId;
+      if (action.state !== "queued") return false;
+      const requested = cleanOwnerConnectorId(action.payload?.requestedConnector || "");
+      return !action.payload?.requestedConnector || requested === connector.connectorId;
+    });
+    return json({ ok: true, connectorId: connector.connectorId, actions: available.slice(0, 25) });
+  };
+
   const getOwnerAction = async (request, actionId) => {
     await authSessionFor(request, { requiredRole: "owner" });
     if (!ownerActionStore || typeof ownerActionStore.getAction !== "function") {
@@ -2123,8 +2179,8 @@ export const createPhotosByElieWorker = ({
     return credentialedJson(request, { ok: true, action });
   };
 
-  const transitionOwnerAction = async (request, actionId, transition) => {
-    const session = await authSessionFor(request, { requiredRole: "owner" });
+  const transitionOwnerAction = async (request, actionId, transition, connectorSession = null) => {
+    const session = connectorSession || await authSessionFor(request, { requiredRole: "owner" });
     if (!ownerActionStore || typeof ownerActionStore.getAction !== "function" || typeof ownerActionStore.putAction !== "function") {
       return credentialedErrorJson(request, 503, "owner_actions_unavailable", "Owner action queue is not configured.");
     }
@@ -2139,14 +2195,15 @@ export const createPhotosByElieWorker = ({
       if (action.state !== "queued") {
         return credentialedErrorJson(request, 409, "owner_action_not_claimable", "Only queued Owner actions can be claimed.");
       }
-      const connectorId = cleanOwnerConnectorId(payload.connectorId || payload.connector || payload.machine);
+      const connectorId = connectorSession?.connectorId
+        || cleanOwnerConnectorId(payload.connectorId || payload.connector || payload.machine);
       const leaseExpiresAt = new Date(nowDate.getTime() + 4 * 60 * 60 * 1000).toISOString();
       next = {
         ...action,
         state: "claimed",
         claim: {
           connectorId,
-          claimedBy: session.email,
+          claimedBy: connectorSession ? `connector:${connectorId}` : session.email,
           claimedAt: timestamp,
           leaseExpiresAt,
         },
@@ -2155,7 +2212,7 @@ export const createPhotosByElieWorker = ({
       next.history = ownerActionHistory(action, {
         event: "claimed",
         at: timestamp,
-        by: session.email,
+        by: connectorSession ? `connector:${connectorId}` : session.email,
         connectorId,
         leaseExpiresAt,
       });
@@ -2163,23 +2220,29 @@ export const createPhotosByElieWorker = ({
       if (action.state !== "claimed") {
         return credentialedErrorJson(request, 409, "owner_action_not_claimed", "Only claimed Owner actions can be completed.");
       }
+      if (connectorSession && action.claim?.connectorId !== connectorSession.connectorId) {
+        return json({ ok: false, error: { code: "owner_action_connector_mismatch", message: "This action is claimed by another connector." } }, 409);
+      }
       const result = payload.result && typeof payload.result === "object" ? payload.result : {};
       next = {
         ...action,
         state: "completed",
         result,
-        completedBy: session.email,
+        completedBy: connectorSession ? `connector:${connectorSession.connectorId}` : session.email,
         completedAt: timestamp,
         updatedAt: timestamp,
       };
       next.history = ownerActionHistory(action, {
         event: "completed",
         at: timestamp,
-        by: session.email,
+        by: connectorSession ? `connector:${connectorSession.connectorId}` : session.email,
       });
     } else if (transition === "fail") {
       if (!["queued", "claimed"].includes(action.state)) {
         return credentialedErrorJson(request, 409, "owner_action_not_open", "Only queued or claimed Owner actions can be failed.");
+      }
+      if (connectorSession && action.state === "claimed" && action.claim?.connectorId !== connectorSession.connectorId) {
+        return json({ ok: false, error: { code: "owner_action_connector_mismatch", message: "This action is claimed by another connector." } }, 409);
       }
       const message = String(payload.message || payload.error?.message || payload.error || "Owner action failed.").trim().slice(0, 500);
       next = {
@@ -2188,14 +2251,14 @@ export const createPhotosByElieWorker = ({
         error: {
           message: message || "Owner action failed.",
         },
-        failedBy: session.email,
+        failedBy: connectorSession ? `connector:${connectorSession.connectorId}` : session.email,
         failedAt: timestamp,
         updatedAt: timestamp,
       };
       next.history = ownerActionHistory(action, {
         event: "failed",
         at: timestamp,
-        by: session.email,
+        by: connectorSession ? `connector:${connectorSession.connectorId}` : session.email,
         message: next.error.message,
       });
     } else {
@@ -2204,6 +2267,11 @@ export const createPhotosByElieWorker = ({
 
     const saved = await ownerActionStore.putAction(next);
     return credentialedJson(request, { ok: true, action: saved });
+  };
+
+  const transitionConnectorAction = async (request, actionId, transition) => {
+    const connector = await requireOwnerConnector(request);
+    return await transitionOwnerAction(request, actionId, transition, connector);
   };
 
   const parseAuditJson = (value) => {
@@ -2642,6 +2710,7 @@ export const createPhotosByElieWorker = ({
       if (request.method === "GET" && path === "/auth/google/callback") return await callbackGoogleAuth(request);
       if ((request.method === "GET" || request.method === "POST") && path === "/auth/logout") return await logoutAuth(request);
       if (request.method === "GET" && path === "/owner/session") return await getOwnerSession(request);
+      if (request.method === "GET" && path === "/owner/connectors") return await listOwnerConnectors(request);
       if (request.method === "GET" && path === "/owner/actions") return await listOwnerActions(request);
       if (request.method === "POST" && path === "/owner/actions") return await createOwnerAction(request);
       const ownerActionTransitionMatch = path.match(/^\/owner\/actions\/([^/]+)\/(claim|complete|fail)$/);
@@ -2654,6 +2723,16 @@ export const createPhotosByElieWorker = ({
       }
       const ownerActionMatch = path.match(/^\/owner\/actions\/([^/]+)$/);
       if (request.method === "GET" && ownerActionMatch) return await getOwnerAction(request, decodeURIComponent(ownerActionMatch[1]));
+      if (request.method === "POST" && path === "/owner/connector/heartbeat") return await heartbeatOwnerConnector(request);
+      if (request.method === "GET" && path === "/owner/connector/actions") return await listConnectorActions(request);
+      const connectorActionTransitionMatch = path.match(/^\/owner\/connector\/actions\/([^/]+)\/(claim|complete|fail)$/);
+      if (request.method === "POST" && connectorActionTransitionMatch) {
+        return await transitionConnectorAction(
+          request,
+          decodeURIComponent(connectorActionTransitionMatch[1]),
+          connectorActionTransitionMatch[2]
+        );
+      }
       if (request.method === "GET" && path === "/access-console/state") return await accessConsoleState(request);
       if (request.method === "GET" && path === "/access-console/gallery-access") return await accessConsoleGalleryAccess(request);
       if ((request.method === "POST" || request.method === "PUT" || request.method === "PATCH") && path === "/access-console/people") return await putAccessConsolePerson(request);

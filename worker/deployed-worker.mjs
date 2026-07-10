@@ -6,6 +6,7 @@ import { createKvStore } from "./kv-store.mjs";
 import { createMockStripeClient } from "./mock-stripe.mjs";
 import { createGoogleOAuthAuth } from "./google-oauth-auth.mjs";
 import { createKvOwnerActionStore } from "./owner-action-store.mjs";
+import { createOwnerConnectorAuth } from "./owner-connector-auth.mjs";
 import { createOwnerAccessAuth } from "./owner-access-auth.mjs";
 import { createRealEstateAuth } from "./real-estate-auth.mjs";
 import { createRealEstateDeliverables } from "./real-estate-deliverables.mjs";
@@ -88,6 +89,17 @@ const accessUserRegistryFor = (env = {}) => env.ACCESS_DB
     namespace: env.ACCESS_USERS_KV || requiredBinding(env, "ORDERS_KV"),
     prefix: env.KV_PREFIX || "pbe",
   });
+
+const ownerConnectorAuthFor = (env = {}) => {
+  const raw = String(env.OWNER_CONNECTOR_TOKENS_JSON || "").trim();
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    return createOwnerConnectorAuth({ credentials: parsed });
+  } catch {
+    return null;
+  }
+};
 
 const cleanRealEstateGallery = (gallery = {}) => {
   const key = String(gallery.key || "").trim();
@@ -316,6 +328,7 @@ export default {
         namespace: env.OWNER_ACTIONS_KV || requiredBinding(env, "ORDERS_KV"),
         prefix: env.KV_PREFIX || "pbe",
       }),
+      ownerConnectorAuth: ownerConnectorAuthFor(env),
       authAllowedReturnOrigins: authAllowedReturnOriginsFor(env, publicSiteUrl),
       ordersUrl: `${publicSiteUrl}/order.html`,
       downloadBaseUrl: workerPublicUrl,

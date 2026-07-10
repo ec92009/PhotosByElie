@@ -38,6 +38,9 @@ ACCESS_TEAM_NAME = "byelie"
 # Owner action records are stored in ORDERS_KV under pbe:owner-actions:<id>,
 # with pbe:owner-action-head and pbe:owner-action-index:* for recent listing,
 # unless an OWNER_ACTIONS_KV binding is added later.
+# Background Mac connectors use per-machine bearer credentials stored only in:
+#   npx wrangler secret put OWNER_CONNECTOR_TOKENS_JSON
+# JSON shape: {"david":"<random-token>","max":"<different-random-token>"}
 # Optional owner-only live checkout rehearsal discount allowlist.
 # Store actual codes outside git, for example:
 #   npx wrangler secret put CHECKOUT_DISCOUNT_CODES_JSON

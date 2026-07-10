@@ -11,6 +11,7 @@ const byNewestAction = (left, right) => actionTime(right) - actionTime(left);
 
 export const createMemoryOwnerActionStore = () => {
   const actions = new Map();
+  const connectors = new Map();
 
   return {
     putAction: async (action) => {
@@ -23,7 +24,15 @@ export const createMemoryOwnerActionStore = () => {
       .map(clone)
       .sort(byNewestAction)
       .slice(0, Math.max(1, Math.min(100, Number(limit) || 25))),
-    _debug: { actions },
+    putConnector: async (connector) => {
+      if (!cleanId(connector?.id)) throw new Error("Owner connector requires an id.");
+      connectors.set(connector.id, clone(connector));
+      return clone(connector);
+    },
+    listConnectors: async () => [...connectors.values()].map(clone).sort((left, right) =>
+      String(right.lastSeenAt || "").localeCompare(String(left.lastSeenAt || ""))
+    ),
+    _debug: { actions, connectors },
   };
 };
 
@@ -35,6 +44,8 @@ export const createKvOwnerActionStore = ({
   const actionPrefix = `${prefix}:owner-actions:`;
   const indexPrefix = `${prefix}:owner-action-index:`;
   const headKey = `${prefix}:owner-action-head`;
+  const connectorPrefix = `${prefix}:owner-connectors:`;
+  const connectorHeadKey = `${prefix}:owner-connector-head`;
   const keyFor = (id) => `${actionPrefix}${cleanId(id)}`;
   const indexKeyFor = (action) => {
     const timestamp = Math.max(0, Math.min(Number.MAX_SAFE_INTEGER, actionTime(action)));
@@ -90,6 +101,25 @@ export const createKvOwnerActionStore = ({
       }
 
       return [...actionsById.values()].sort(byNewestAction).slice(0, boundedLimit).map(clone);
+    },
+    putConnector: async (connector) => {
+      const id = cleanId(connector?.id);
+      if (!id) throw new Error("Owner connector requires an id.");
+      await namespace.put(`${connectorPrefix}${id}`, JSON.stringify(connector), { expirationTtl: 24 * 60 * 60 });
+      const head = await namespace.get(connectorHeadKey, { type: "json" });
+      const ids = Array.isArray(head?.ids) ? head.ids.map(cleanId).filter(Boolean) : [];
+      await namespace.put(connectorHeadKey, JSON.stringify({ ids: [id, ...ids.filter((item) => item !== id)].slice(0, 25) }));
+      return clone(connector);
+    },
+    listConnectors: async () => {
+      const head = await namespace.get(connectorHeadKey, { type: "json" });
+      const ids = Array.isArray(head?.ids) ? head.ids.map(cleanId).filter(Boolean) : [];
+      const connectors = [];
+      for (const id of ids) {
+        const connector = await namespace.get(`${connectorPrefix}${id}`, { type: "json" });
+        if (connector) connectors.push(connector);
+      }
+      return connectors.sort((left, right) => String(right.lastSeenAt || "").localeCompare(String(left.lastSeenAt || ""))).map(clone);
     },
   };
 };

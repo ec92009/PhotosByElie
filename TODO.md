@@ -4,7 +4,7 @@ Last updated: 2026-07-10
 
 ## Current Facts
 
-- Public visible build prepared: `v132.0`.
+- Public visible build: `v132.1`.
 - Sidecar local build: `v126.6`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`.
 - Local preview: `http://localhost:8000/`.
@@ -13,14 +13,14 @@ Last updated: 2026-07-10
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`.
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`.
 - Access Console Sandbox V8 cloud backend plus ACS9 local front-end rehearsal: deployed on `auth.photos-by-elie.com` with D1 database `photosbyelie-access`; local preview at `http://100.111.30.109:8000/access-console.html`; group manager creates/edits/archives audience groups, connects groups to real gallery records, persists per-gallery defaults, filters people, manages group memberships, previews gallery permissions for selected group/person/visitor/owner modes, runs cloud Worker policy tests for selected gallery access, shows a reversible audit/undo ledger for person/group access changes, and includes a selected-group invitation rehearsal for email/link/QR access propagation; audience fixtures are `Agnes's B'day`, `RE La Concha`, and `Johnson-Palmer wedding`.
-- Cloud Owner is promoted from the Track B shell: `owner.html` routes to the authenticated `new-owner.html` control surface; scoped background connectors provide health, Apple Photos previews, Sidecar stars/pick/reject/title/keywords/approval decisions, guarded single-item Upload Bridge execution plus catalog registration, and an Owner-only credential-free Mac installer download.
+- Cloud Owner is promoted from the Track B shell: `owner.html` routes to the authenticated `new-owner.html` control surface; scoped background connectors provide health, full Apple Photos index refresh, Photos previews, Sidecar stars/pick/reject/title/keywords/approval decisions, guarded single-item Upload Bridge execution plus catalog registration, and an Owner-only credential-free Mac installer download.
 - Public catalog integrity: `ok`.
 - Public catalog scale: `7813` media rows.
 - Gallery counts: AI `5100`, France `379`, Italy `70`, Mexico `31`, Portugal `214`, Slovakia `2`, Spain `1872`, USA `145`.
 - Public GitHub Pages verification: `v125.0` gallery pages load, public catalog serves `7813` rows, and repaired AI stained-glass plus Benalmadena Aquarium public media URLs return HTTP 200.
 - Upload Bridge active approvals are clean: `0` uploadable items, `0` active blocked approved items, `0` missing keys, `0` blocked export failures.
 - Picked-only Sidecar AI metadata queue is drained: `0` candidates.
-- Uploaded-catalog registration dry-run is clean: `2719` candidates, `0` would register, all `already_in_catalog`.
+- The restored Max Owner snapshot has `3314` uploaded/approved candidates: `2719` already in the public catalog and `595` older uploaded rows needing a separate catalog reconciliation decision. Cloud Upload next approved is scoped to only the asset IDs uploaded by that action, so it cannot publish this backlog accidentally.
 - Paid/private access regression slice: central ticket `PBE-20260708-6FBE` tracks backlog item #4. Public order JSON now hides delivery ZIP/storage keys by default; deployed checkout/order/session payloads expose only Worker download-token URLs and buyer-facing file details. Real Estate deliverable/job/list responses now keep R2 output keys and source-video private keys internal while returning only status, failure detail, metadata, and authorized view/download URLs. `npm test` passes with coverage for unpaid token guesses, paid deployed downloads, wrong-account order access, 30-day redownload boundaries, Real Estate client scoping, Owner/Admin gates, Access Console admin-only writes, private R2 delivery missing-file blocks, and Real Estate public-payload leak checks.
 - Sidecar review cleanup backlog: the `20` unknown-gallery/generic-title reset rows are resolved (`19` Benalmadena Aquarium videos approved/picked, `1` unsupported WhatsApp still tombstoned); the `24` persistent Photos export failures are repaired from verified external picGen PNG originals, uploaded to R2, approved/picked, re-queued, unblocked, and registered in the public catalog; the `63` unpicked/proposed rows are normalized back to `unreviewed` while preserving their proposed title/keyword context.
 - Sidecar automation must use `~/Applications/PhotosByElie Photos Bridge.app` through LaunchServices for PhotoKit work. Do not call raw Swift or the bare bundle executable for scheduled Sidecar automation.

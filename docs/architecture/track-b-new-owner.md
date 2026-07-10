@@ -43,10 +43,13 @@ origins. `new-owner.js` removes that fragment immediately, stores the token in
 `sessionStorage`, and sends it as `Authorization: Bearer ...` for Owner API
 calls. Public same-site auth still uses the HttpOnly cookie path.
 
-The first action probe is `track-b-cloud-shell-check`. It writes a harmless
-queued Owner action to the existing cloud KV-backed Owner action store, reads
-the same action back, and refreshes the recent queue so a reload on Max or David
-shows the same cloud state.
+`owner-connector-check` is the harmless production probe. It is visible only to
+the supported connector feed, proves the browser-to-Mac-to-cloud round trip,
+and leaves the old Track B rehearsal actions untouched in the audit ledger.
+
+`sidecar-photos-index-sync` runs the full permission-bearing Apple Photos
+metadata scan on the selected Mac. The Owner site's Refresh Photos control is
+therefore the start of a new intake cycle; no localhost helper page is needed.
 
 `sidecar-culling-review` is connector-backed. The Owner site queues a 24-item
 window; an enrolled Mac reads local `Owner.sqlite`, asks the permission-bearing
@@ -92,7 +95,7 @@ Cloud-ready now:
 
 Still connector-backed later:
 
-- Apple Photos imports and source materialization.
+- Direct Apple Photos source materialization outside the Sidecar review path.
 - Sidecar gallery routing decisions, richer thumbnails/previews, and Upload
   Bridge exports.
 - Local cache warming and machine-specific file previews.

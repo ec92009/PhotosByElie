@@ -15,7 +15,7 @@ for remote execution.
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Local preview: `http://localhost:8000/`
 - Owner intake URL: `https://photos-by-elie.com/owner.html`
-- Current visible build prepared: `v132.0`
+- Current visible build: `v132.1`
 - Sidecar local build: `v126.6`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
@@ -26,9 +26,10 @@ for remote execution.
   the Worker secret `OWNER_CONNECTOR_TOKENS_JSON`; David and Max must receive
   different revocable tokens.
 - `scripts/new_owner_connector.py` polls cloud actions without serving HTTP.
-  It returns 24-item Sidecar preview windows, applies stars/pick/reject/title/
-  keywords/metadata approvals to local `Owner.sqlite`, and supports a deliberate
-  guarded Upload Bridge item followed immediately by catalog registration.
+  It refreshes the Apple Photos index, returns 24-item Sidecar preview windows,
+  applies stars/pick/reject/title/keywords/metadata approvals to local
+  `Owner.sqlite`, and supports a deliberate guarded Upload Bridge item followed
+  immediately by catalog registration.
 - Owner/Admin can download the credential-free Mac connector ZIP through
   `/owner/connector/download/mac`; the package contains the stable
   `com.photosbyelie.photos-bridge` app identity and prompts for the separate
@@ -39,6 +40,14 @@ for remote execution.
   `assets/owner-actions/Owner.sqlite-before-max-sync-20260710T104147Z`.
 - David still needs to grant Full Photos access to the bridge app in macOS
   System Settings before cloud review windows can contain previews.
+- The v132.0 production rehearsal completed a harmless cloud connector check on
+  David and a 24-item culling window on Max with 24 previews and zero preview
+  errors. Both per-Mac LaunchAgents are installed and online; the authenticated
+  connector ZIP download was also exercised from the public Owner page.
+- Current uploaded-catalog dry-run after restoring Max's Owner snapshot reports
+  `3314` candidates: `2719` already cataloged and `595` that would register.
+  Do not bulk-register those rows without review. The cloud Upload action is
+  deliberately scoped to only asset IDs uploaded during that action.
 - Current public catalog: `7,813` media rows.
 - Current gallery counts: AI `5,100`, France `379`, Italy `70`, Mexico `31`, Portugal `214`, Slovakia `2`, Spain `1,872`, USA `145`.
 - Public GitHub Pages verification: `v125.0` gallery pages load, public catalog serves `7,813` rows, and repaired AI stained-glass plus Benalmadena Aquarium preview/video media URLs return HTTP 200.

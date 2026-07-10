@@ -210,19 +210,9 @@
       return;
     }
     localConnectorRoot.innerHTML = state.localConnectorChecked
-      ? "<strong>This Mac connector not detected.</strong><small>Install or restart the Mac connector here before Photos or Sidecar actions.</small>"
+      ? "<strong>Mac connector will claim queued actions.</strong><small>This browser could not directly verify localhost, so the bridge will identify itself when it claims the cloud action.</small>"
       : "<strong>Detecting this Mac connector...</strong>";
-    localConnectorRoot.dataset.state = state.localConnectorChecked ? "missing" : "busy";
-  };
-
-  const requireLocalConnector = () => {
-    const connectorId = effectiveConnectorId();
-    if (connectorId) return connectorId;
-    const message = "This Mac connector is required before Photos or Sidecar actions.";
-    setActionStatus(message, "error");
-    setStatus(message);
-    renderLocalConnector();
-    return "";
+    localConnectorRoot.dataset.state = state.localConnectorChecked ? "live" : "busy";
   };
 
   const renderSession = () => {
@@ -448,12 +438,13 @@
   };
 
   const actionStatusLabel = (action, connectorId = effectiveConnectorId()) => {
-    const connectorName = connectorDisplayName(connectorId || action?.payload?.requestedConnector || action?.claim?.connectorId);
+    const resolvedConnectorId = connectorId || action?.claim?.connectorId || action?.payload?.requestedConnector;
+    const connectorName = resolvedConnectorId ? connectorDisplayName(resolvedConnectorId) : "a Mac connector";
     if (!action?.id) return "";
     if (action.state === "completed") return `Completed on ${connectorName}.`;
     if (action.state === "failed") return action.error?.message || `Failed on ${connectorName}.`;
     if (action.state === "claimed") return `${connectorName} is working...`;
-    return `Queued — waiting for ${connectorName} on this Mac.`;
+    return `Queued — waiting for ${connectorName}.`;
   };
 
   const monitorAction = async (actionId, connectorId) => {
@@ -463,7 +454,10 @@
       try {
         action = await readAction(actionId);
       } catch {
-        setActionStatus(`Queued — waiting for ${connectorDisplayName(connectorId)} on this Mac.`, "busy");
+        setActionStatus(
+          `Queued — waiting for ${connectorId ? connectorDisplayName(connectorId) : "a Mac connector"}.`,
+          "busy",
+        );
         await sleep(1_500);
         continue;
       }
@@ -552,8 +546,7 @@
 
   const queueAction = async ({ action, payload, statusLabel = "Queueing...", localConnectorRequired = true }) => {
     if (state.busy) return;
-    const connectorId = localConnectorRequired ? requireLocalConnector() : effectiveConnectorId();
-    if (localConnectorRequired && !connectorId) return;
+    const connectorId = localConnectorRequired ? effectiveConnectorId() : "";
     state.busy = true;
     setQueueControlsBusy(true);
     setActionStatus(statusLabel, "busy");

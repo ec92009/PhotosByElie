@@ -2,7 +2,13 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from scripts.new_owner_connector import ConnectorConfig, _upload_and_register, execute_action
+from scripts.new_owner_connector import (
+    ConnectorConfig,
+    _allowed_local_status_origin,
+    _local_status_payload,
+    _upload_and_register,
+    execute_action,
+)
 
 
 class UploadRegistrationScopeTest(unittest.TestCase):
@@ -48,6 +54,24 @@ class UploadRegistrationScopeTest(unittest.TestCase):
         self.assertEqual(arguments[1:3], ["scripts/sidecar_maintenance.py", "photos-index-sync"])
         self.assertEqual(result["job"]["status"], "done")
         self.assertEqual(result["job"]["indexedCount"], 57_500)
+
+    def test_local_status_payload_identifies_connector_without_token(self):
+        payload = _local_status_payload(self.config)
+
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["connectorId"], "david")
+        self.assertNotIn("token", payload)
+
+    def test_local_status_origin_allows_local_preview_ports(self):
+        self.assertEqual(
+            _allowed_local_status_origin("http://127.0.0.1:8131"),
+            "http://127.0.0.1:8131",
+        )
+        self.assertEqual(
+            _allowed_local_status_origin("https://photos-by-elie.com"),
+            "https://photos-by-elie.com",
+        )
+        self.assertEqual(_allowed_local_status_origin("https://example.com"), "")
 
     def test_culling_action_launches_the_canonical_local_sidecar_when_requested(self):
         local_result = {

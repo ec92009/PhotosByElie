@@ -11,6 +11,7 @@ the background PhotosByElie connector on a vetted Mac.
 5. Confirm the Mac appears as online on the authenticated Owner page.
 
 The download does not contain a connector token. Each Mac must use its own
-revocable credential. The first package is intended for Elie's David and Max
-Macs. Distribution beyond those vetted Macs should use an Apple-signed and
-notarized package.
+revocable credential. The connector also exposes this Mac's connector id on a
+localhost-only status endpoint so the Owner page can target the Mac you are
+using. The first package is intended for Elie's David and Max Macs. Distribution
+beyond those vetted Macs should use an Apple-signed and notarized package.

@@ -569,8 +569,9 @@ Clock state: running
 | 2026-07-10 | 18:06 CEST | 18:15 CEST | 0:09 | Recovered the intended two-phase Sidecar direction—keyboard-first Culling gallery with C-toggle into picked Title/Keywords review—and directed its reintegration into authenticated New Owner; implementation/runtime excluded. |
 | 2026-07-10 | 18:15 CEST | 18:25 CEST | 0:10 | Rejected the reduced cloud imitation and directed New Owner to launch the selected Mac’s canonical Sidecar workspace so the original controls and behaviors remain shared; implementation/runtime excluded. |
 | 2026-07-10 | 18:44 CEST | 18:49 CEST | 0:05 | Reported the sitewide empty product-choice panel and directed photo and video purchase choices be restored from the shared catalog; implementation/runtime excluded. |
+| 2026-07-10 | 19:50 CEST | 19:56 CEST | 0:06 | Clarified that Owner actions should always target the current Mac connector, confirmed the bridge owns local Photos readiness, and diagnosed the queued-status polling gap; implementation/test/upload runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 29:05
+Active collaboration time used: 29:11
 Remaining budget: not set

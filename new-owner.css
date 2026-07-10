@@ -58,7 +58,8 @@ body[data-gallery="new-owner"] main.new-owner-shell {
 .new-owner-toolbar span,
 .new-owner-card small,
 .new-owner-card-note,
-.new-owner-action-controls span {
+.new-owner-action-controls span,
+.new-owner-local-connector small {
   color: var(--muted);
 }
 
@@ -95,30 +96,6 @@ body[data-gallery="new-owner"] main.new-owner-shell {
   gap: .55rem;
   align-items: center;
   justify-content: flex-end;
-}
-
-.new-owner-connector-label {
-  display: flex;
-  align-items: center;
-  gap: .45rem;
-  min-width: min(100%, 13rem);
-  color: var(--muted);
-  font-size: .88rem;
-  font-weight: 700;
-}
-
-.new-owner-connector-label input,
-.new-owner-connector-label select {
-  min-width: 0;
-  width: 8rem;
-  max-width: 100%;
-  box-sizing: border-box;
-  border: 1px solid var(--new-owner-line);
-  border-radius: 8px;
-  padding: .45rem .55rem;
-  background: var(--surface);
-  color: var(--text);
-  font: inherit;
 }
 
 .new-owner-counts {
@@ -293,6 +270,22 @@ body[data-gallery="new-owner"] main.new-owner-shell {
   font-weight: 700;
 }
 
+.new-owner-local-connector {
+  display: grid;
+  flex: 1 0 100%;
+  gap: .1rem;
+  min-width: min(100%, 22rem);
+  padding: .65rem .8rem;
+  border: 1px solid var(--new-owner-line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--panel) 86%, var(--new-owner-teal) 14%);
+  font-size: .88rem;
+}
+
+.new-owner-local-connector[data-state="missing"] {
+  background: color-mix(in srgb, var(--panel) 84%, var(--new-owner-rust) 16%);
+}
+
 [data-new-owner-action-status][data-state="busy"] {
   color: var(--muted);
 }
@@ -453,15 +446,6 @@ body[data-gallery="new-owner"] main.new-owner-shell {
   .new-owner-toolbar-actions,
   .new-owner-action-controls {
     justify-content: flex-start;
-  }
-
-  .new-owner-connector-label {
-    width: 100%;
-  }
-
-  .new-owner-connector-label input,
-  .new-owner-connector-label select {
-    flex: 1 1 auto;
   }
 
   .new-owner-session {

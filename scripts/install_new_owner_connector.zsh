@@ -46,6 +46,7 @@ payload = {
     "token": os.environ["PBE_CONNECTOR_TOKEN"],
     "repoRoot": os.environ["PBE_REPO_ROOT"],
     "intervalSeconds": 5,
+    "localStatusPort": 8766,
 }
 path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 path.chmod(0o600)

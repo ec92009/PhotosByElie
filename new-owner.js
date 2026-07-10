@@ -4,12 +4,16 @@
   const workerBase = cleanBase(mediaConfig.authWorkerBaseUrl || mediaConfig.checkoutWorkerBaseUrl || "");
   const AUTH_TOKEN_HASH_PARAM = "pbe_auth_token";
   const AUTH_TOKEN_STORAGE_KEY = "pbe-new-owner-auth-token";
+  const LEGACY_CONNECTOR_STORAGE_KEY = "pbe-new-owner-connector";
+  const LOCAL_CONNECTOR_STATUS_URL = "http://127.0.0.1:8766/photosbyelie/connector-status";
   const state = {
     session: null,
     access: null,
     action: null,
     actions: [],
     connectors: [],
+    localConnector: null,
+    localConnectorChecked: false,
     busy: false,
   };
   const lanes = [
@@ -17,7 +21,7 @@
     { label: "Owner action queue", state: "live", detail: "Authenticated browser requests with connector claim/complete audit" },
     { label: "Real Estate outputs", state: "mixed", detail: "Cloud PDF/video storage with local source import still pending" },
     { label: "Apple Photos import", state: "mixed", detail: "Cloud controlled; PhotoKit work runs on an enrolled Mac connector" },
-    { label: "Sidecar culling", state: "live", detail: "The selected Mac opens the exact local Culling and Review workspace" },
+    { label: "Sidecar culling", state: "live", detail: "This Mac opens the exact local Culling and Review workspace" },
   ];
 
   const $ = (selector) => document.querySelector(selector);
@@ -29,7 +33,7 @@
   const connectorsRoot = $("[data-new-owner-connectors]");
   const actionRoot = $("[data-new-owner-action]");
   const actionStatusRoot = $("[data-new-owner-action-status]");
-  const connectorInput = $("[data-new-owner-connector]");
+  const localConnectorRoot = $("[data-new-owner-local-connector]");
   const workerBaseRoot = $("[data-new-owner-worker-base]");
   const connectorDownload = $("[data-new-owner-download-connector]");
 
@@ -58,6 +62,10 @@
     }
     return message;
   };
+
+  const sleep = (milliseconds) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+
+  const terminalActionStates = new Set(["completed", "failed", "cancelled"]);
 
   const escapeHtml = (value) => String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -137,16 +145,76 @@
     .replace(/^-+|-+$/g, "")
     .slice(0, 80);
 
-  const connectorId = () => cleanConnectorId(connectorInput?.value || "");
+  const connectorDisplayName = (value) => {
+    const id = cleanConnectorId(value);
+    if (!id) return "this Mac";
+    return id.split(/[-_.]+/g).filter(Boolean)
+      .map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
+      .join(" ") || id;
+  };
 
-  const rememberConnector = () => {
-    if (!connectorInput) return;
-    connectorInput.value = cleanConnectorId(connectorInput.value || "");
+  const localConnectorId = () => cleanConnectorId(state.localConnector?.connectorId || "");
+
+  const effectiveConnectorId = () => localConnectorId();
+
+  const forgetLegacyConnectorPreference = () => {
     try {
-      localStorage.setItem("pbe-new-owner-connector", connectorInput.value);
+      localStorage.removeItem(LEGACY_CONNECTOR_STORAGE_KEY);
     } catch {
-      // Connector naming is local UI convenience.
+      // Old Mac-selection memory is best-effort cleanup only.
     }
+  };
+
+  const detectLocalConnector = async () => {
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), 550);
+    try {
+      const response = await fetch(LOCAL_CONNECTOR_STATUS_URL, {
+        cache: "no-store",
+        credentials: "omit",
+        signal: controller.signal,
+      });
+      const payload = await response.json().catch(() => ({}));
+      const connectorId = cleanConnectorId(payload.connectorId);
+      state.localConnector = response.ok && payload.ok && connectorId
+        ? { ...payload, connectorId }
+        : null;
+    } catch {
+      state.localConnector = null;
+    } finally {
+      window.clearTimeout(timer);
+      state.localConnectorChecked = true;
+    }
+  };
+
+  const renderLocalConnector = () => {
+    if (!localConnectorRoot) return;
+    const connectorId = localConnectorId();
+    if (connectorId) {
+      const detail = [state.localConnector.hostname, state.localConnector.platform, state.localConnector.version]
+        .filter(Boolean)
+        .join(" / ");
+      localConnectorRoot.innerHTML = `
+        <strong>This Mac: ${escapeHtml(connectorDisplayName(connectorId))}</strong>
+        ${detail ? `<small>${escapeHtml(detail)}</small>` : ""}
+      `;
+      localConnectorRoot.dataset.state = "live";
+      return;
+    }
+    localConnectorRoot.innerHTML = state.localConnectorChecked
+      ? "<strong>This Mac connector not detected.</strong><small>Install or restart the Mac connector here before Photos or Sidecar actions.</small>"
+      : "<strong>Detecting this Mac connector...</strong>";
+    localConnectorRoot.dataset.state = state.localConnectorChecked ? "missing" : "busy";
+  };
+
+  const requireLocalConnector = () => {
+    const connectorId = effectiveConnectorId();
+    if (connectorId) return connectorId;
+    const message = "This Mac connector is required before Photos or Sidecar actions.";
+    setActionStatus(message, "error");
+    setStatus(message);
+    renderLocalConnector();
+    return "";
   };
 
   const renderSession = () => {
@@ -277,16 +345,21 @@
       connectorsRoot.innerHTML = `<p class="new-owner-empty">No Mac connector has checked in yet.</p>`;
       return;
     }
+    const thisMac = localConnectorId();
     connectorsRoot.innerHTML = state.connectors.map((connector) => {
       const age = Date.now() - Date.parse(connector.lastSeenAt || "");
       const online = Number.isFinite(age) && age < 2 * 60 * 1000;
+      const isLocal = cleanConnectorId(connector.id) === thisMac;
       return `
         <article class="new-owner-lane-row">
           <div>
             <strong>${escapeHtml(connector.id || "Mac connector")}</strong><br>
             <small>${escapeHtml([connector.hostname, connector.platform, connector.version].filter(Boolean).join(" / "))}</small>
           </div>
-          ${chip(online ? "online" : "last seen", online ? "live" : "planned")}
+          <div class="new-owner-chip-stack">
+            ${isLocal ? chip("this Mac", "live") : ""}
+            ${chip(online ? "online" : "last seen", online ? "live" : "planned")}
+          </div>
         </article>
       `;
     }).join("");
@@ -326,6 +399,7 @@
     renderAccess();
     renderLanes();
     renderConnectors();
+    renderLocalConnector();
     renderAction();
     prepareCollapsibleSections();
   };
@@ -359,6 +433,50 @@
     state.action = state.actions[0] || state.action;
   };
 
+  const readAction = async (actionId) => {
+    if (!actionId) return null;
+    const body = await apiFetch(`/owner/actions/${encodeURIComponent(actionId)}`);
+    return body.action || null;
+  };
+
+  const actionStatusLabel = (action, connectorId = effectiveConnectorId()) => {
+    const connectorName = connectorDisplayName(connectorId || action?.payload?.requestedConnector || action?.claim?.connectorId);
+    if (!action?.id) return "";
+    if (action.state === "completed") return `Completed on ${connectorName}.`;
+    if (action.state === "failed") return action.error?.message || `Failed on ${connectorName}.`;
+    if (action.state === "claimed") return `${connectorName} is working...`;
+    return `Queued — waiting for ${connectorName} on this Mac.`;
+  };
+
+  const monitorAction = async (actionId, connectorId) => {
+    const startedAt = Date.now();
+    while (Date.now() - startedAt < 90_000) {
+      let action = null;
+      try {
+        action = await readAction(actionId);
+      } catch {
+        setActionStatus(`Queued — waiting for ${connectorDisplayName(connectorId)} on this Mac.`, "busy");
+        await sleep(1_500);
+        continue;
+      }
+      if (action) {
+        state.action = action;
+        state.actions = mergeActions(state.actions, action);
+        setActionStatus(
+          actionStatusLabel(action, connectorId),
+          terminalActionStates.has(action.state)
+            ? (action.state === "failed" ? "error" : "success")
+            : "busy",
+        );
+        render();
+        if (terminalActionStates.has(action.state)) return action;
+      }
+      await sleep(1_500);
+    }
+    setActionStatus("Still waiting for this Mac connector. Refresh to check again.", "busy");
+    return state.action;
+  };
+
   const loadConnectors = async () => {
     const body = await apiFetch("/owner/connectors");
     state.connectors = Array.isArray(body.connectors) ? body.connectors : [];
@@ -368,6 +486,7 @@
     if (workerBaseRoot) workerBaseRoot.textContent = workerBase || "same-origin Worker";
     setStatus("Loading cloud Owner state...");
     root?.classList.add("is-loading");
+    const localConnectorPromise = detectLocalConnector();
     try {
       const session = await apiFetch("/owner/session");
       state.session = session;
@@ -388,6 +507,8 @@
           state.connectors = [];
         }
       }
+      await localConnectorPromise;
+      forgetLegacyConnectorPreference();
       setStatus(ownerAllowed() ? "Cloud Owner session verified." : "Owner role is required.");
       if (connectorDownload && ownerAllowed() && workerBase) {
         connectorDownload.href = `${workerBase}/owner/connector/download/mac`;
@@ -397,6 +518,7 @@
       state.session = null;
       state.access = null;
       state.actions = [];
+      await localConnectorPromise.catch(() => {});
       setStatus(error.message || "Cloud Owner is unavailable.");
     } finally {
       root?.classList.remove("is-loading");
@@ -420,8 +542,10 @@
     window.location.href = url.href;
   };
 
-  const queueAction = async ({ action, payload, statusLabel = "Queueing..." }) => {
+  const queueAction = async ({ action, payload, statusLabel = "Queueing...", localConnectorRequired = true }) => {
     if (state.busy) return;
+    const connectorId = localConnectorRequired ? requireLocalConnector() : effectiveConnectorId();
+    if (localConnectorRequired && !connectorId) return;
     state.busy = true;
     setQueueControlsBusy(true);
     setActionStatus(statusLabel, "busy");
@@ -430,18 +554,25 @@
         method: "POST",
         body: JSON.stringify({
           action,
-          payload,
+          payload: {
+            ...payload,
+            ...(connectorId ? { requestedConnector: connectorId } : {}),
+          },
         }),
       });
       state.action = body.action || null;
-      if (state.action?.id) {
-        const readback = await apiFetch(`/owner/actions/${encodeURIComponent(state.action.id)}`);
-        state.action = readback.action || state.action;
-      }
       await loadActions();
-      setActionStatus(state.action?.id ? "Queued — waiting for the selected Mac connector." : "", "success");
+      setActionStatus(
+        state.action?.id && connectorId
+          ? actionStatusLabel(state.action, connectorId)
+          : "",
+        "success",
+      );
       setStatus("Owner action queued.");
       render();
+      if (state.action?.id) {
+        await monitorAction(state.action.id, connectorId);
+      }
     } catch (error) {
       const message = queueErrorMessage(error);
       setActionStatus(message, "error");
@@ -455,7 +586,6 @@
   const queueCheck = () => queueAction({
     action: "owner-connector-check",
     payload: {
-      requestedConnector: connectorId() || undefined,
       surface: "owner",
       checkedAt: new Date().toISOString(),
     },
@@ -468,7 +598,6 @@
       surface: "new-owner",
       workflow: "sidecar-culling",
       connectorRequired: true,
-      requestedConnector: connectorId(),
       localFilesRequired: true,
       manifest: {
         mode: "local-sidecar-workspace",
@@ -485,7 +614,6 @@
   const queuePhotosIndexSync = () => queueAction({
     action: "sidecar-photos-index-sync",
     payload: {
-      requestedConnector: connectorId() || undefined,
       queuedAt: new Date().toISOString(),
     },
     statusLabel: "Queueing Photos refresh...",
@@ -494,7 +622,6 @@
   const queueUploadPublish = () => queueAction({
     action: "sidecar-upload-publish",
     payload: {
-      requestedConnector: connectorId() || undefined,
       limit: 1,
       queuedAt: new Date().toISOString(),
     },
@@ -506,11 +633,12 @@
     state.busy = true;
     if (actionStatusRoot) actionStatusRoot.textContent = `${command[0].toUpperCase()}${command.slice(1)}...`;
     try {
+      const connectorId = effectiveConnectorId();
       const payload = command === "claim"
-        ? { connectorId: connectorId() }
+        ? { connectorId }
         : command === "complete"
-          ? { result: { connectorId: connectorId(), surface: "new-owner", completedAt: new Date().toISOString() } }
-          : { message: `Marked failed from ${connectorId()} in NewOwner.` };
+          ? { result: { connectorId, surface: "new-owner", completedAt: new Date().toISOString() } }
+          : { message: "Marked failed from NewOwner." };
       const body = await apiFetch(`/owner/actions/${encodeURIComponent(actionId)}/${command}`, {
         method: "POST",
         body: JSON.stringify(payload),
@@ -528,15 +656,6 @@
     }
   };
 
-  const hydrateConnector = () => {
-    if (!connectorInput) return;
-    try {
-      connectorInput.value = cleanConnectorId(localStorage.getItem("pbe-new-owner-connector") || connectorInput.value || "");
-    } catch {
-      connectorInput.value = cleanConnectorId(connectorInput.value || "");
-    }
-  };
-
   $("[data-new-owner-refresh]")?.addEventListener("click", () => load());
   $("[data-new-owner-login]")?.addEventListener("click", login);
   $("[data-new-owner-logout]")?.addEventListener("click", logout);
@@ -544,8 +663,6 @@
   $("[data-new-owner-sync-photos]")?.addEventListener("click", queuePhotosIndexSync);
   $("[data-new-owner-queue-sidecar]")?.addEventListener("click", queueSidecarCulling);
   $("[data-new-owner-upload-publish]")?.addEventListener("click", queueUploadPublish);
-  connectorInput?.addEventListener("change", rememberConnector);
-  connectorInput?.addEventListener("blur", rememberConnector);
   actionRoot?.addEventListener("click", (event) => {
     const button = event.target.closest("[data-new-owner-action-command]");
     if (!button) return;
@@ -554,7 +671,7 @@
     transitionAction(actionId, command);
   });
   absorbAuthTokenFromHash();
-  hydrateConnector();
+  forgetLegacyConnectorPreference();
   renderLanes();
   load();
 })();

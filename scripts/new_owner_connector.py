@@ -12,6 +12,7 @@ import argparse
 import base64
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 from pathlib import Path
 import platform
@@ -19,8 +20,10 @@ import shlex
 import socket
 import subprocess
 import sys
+import threading
 import time
 from typing import Any
+from urllib.parse import urlparse
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
@@ -30,6 +33,13 @@ DEFAULT_CONFIG_PATH = Path.home() / ".config" / "photosbyelie" / "connector.json
 CONNECTOR_VERSION = "1.0"
 DEFAULT_INTERVAL_SECONDS = 5
 MAX_PREVIEW_BYTES = 250_000
+DEFAULT_LOCAL_STATUS_PORT = 8766
+LOCAL_STATUS_PATH = "/photosbyelie/connector-status"
+ALLOWED_LOCAL_STATUS_ORIGINS = {
+    "https://photos-by-elie.com",
+    "https://www.photos-by-elie.com",
+    "https://ec92009.github.io",
+}
 
 
 @dataclass(frozen=True)
@@ -39,6 +49,7 @@ class ConnectorConfig:
     token: str
     repo_root: Path
     interval_seconds: int = DEFAULT_INTERVAL_SECONDS
+    local_status_port: int = DEFAULT_LOCAL_STATUS_PORT
 
 
 def _clean_connector_id(value: object) -> str:
@@ -58,6 +69,7 @@ def load_config(path: Path) -> ConnectorConfig:
     token = str(payload.get("token") or "").strip()
     repo_root = Path(str(payload.get("repoRoot") or "")).expanduser().resolve()
     interval = max(2, min(300, int(payload.get("intervalSeconds") or DEFAULT_INTERVAL_SECONDS)))
+    local_status_port = max(0, min(65535, int(payload.get("localStatusPort") or DEFAULT_LOCAL_STATUS_PORT)))
     if not worker_base.startswith("https://"):
         raise RuntimeError("Connector workerBase must use HTTPS.")
     if not connector_id:
@@ -66,7 +78,83 @@ def load_config(path: Path) -> ConnectorConfig:
         raise RuntimeError("Connector token is missing or too short.")
     if not (repo_root / "scripts" / "sidecar_state_db.py").exists():
         raise RuntimeError(f"PhotosByElie repoRoot is invalid: {repo_root}")
-    return ConnectorConfig(worker_base, connector_id, token, repo_root, interval)
+    return ConnectorConfig(worker_base, connector_id, token, repo_root, interval, local_status_port)
+
+
+def _local_status_payload(config: ConnectorConfig) -> dict:
+    return {
+        "ok": True,
+        "schema": "photosbyelie.localOwnerConnector.v1",
+        "connectorId": config.connector_id,
+        "hostname": socket.gethostname(),
+        "platform": f"{platform.system()} {platform.machine()}",
+        "version": CONNECTOR_VERSION,
+    }
+
+
+def _allowed_local_status_origin(origin: str) -> str:
+    parsed = urlparse(origin)
+    if origin in ALLOWED_LOCAL_STATUS_ORIGINS:
+        return origin
+    if parsed.scheme in {"http", "https"} and parsed.hostname in {"localhost", "127.0.0.1", "::1"}:
+        return origin
+    return ""
+
+
+def start_local_status_server(config: ConnectorConfig) -> None:
+    """Expose this Mac's connector id to the local browser only."""
+    if config.local_status_port <= 0:
+        return
+
+    class LocalStatusHandler(BaseHTTPRequestHandler):
+        server_version = "PhotosByElieLocalConnector/1.0"
+
+        def log_message(self, _format: str, *_args: Any) -> None:
+            return
+
+        def _allowed_origin(self) -> str:
+            origin = self.headers.get("Origin", "")
+            return _allowed_local_status_origin(origin)
+
+        def _send_cors_headers(self) -> None:
+            allowed_origin = self._allowed_origin()
+            if allowed_origin:
+                self.send_header("Access-Control-Allow-Origin", allowed_origin)
+                self.send_header("Vary", "Origin")
+            self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type")
+            self.send_header("Access-Control-Allow-Private-Network", "true")
+            self.send_header("Cache-Control", "no-store")
+
+        def do_OPTIONS(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API.
+            if self.path != LOCAL_STATUS_PATH:
+                self.send_response(404)
+                self.end_headers()
+                return
+            self.send_response(204)
+            self._send_cors_headers()
+            self.end_headers()
+
+        def do_GET(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API.
+            if self.path != LOCAL_STATUS_PATH:
+                self.send_response(404)
+                self.end_headers()
+                return
+            body = json.dumps(_local_status_payload(config), separators=(",", ":")).encode("utf-8")
+            self.send_response(200)
+            self._send_cors_headers()
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+    try:
+        server = ThreadingHTTPServer(("127.0.0.1", config.local_status_port), LocalStatusHandler)
+    except OSError as error:
+        print(f"Local connector identity server unavailable: {error}", file=sys.stderr, flush=True)
+        return
+    thread = threading.Thread(target=server.serve_forever, name="pbe-local-connector-status", daemon=True)
+    thread.start()
 
 
 class WorkerClient:
@@ -382,6 +470,8 @@ def main() -> int:
     args = parser.parse_args()
     config = load_config(args.config.expanduser())
     client = WorkerClient(config)
+    if not args.once:
+        start_local_status_server(config)
     while True:
         try:
             processed = process_once(config, client)

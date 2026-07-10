@@ -147,6 +147,48 @@ body[data-gallery="new-owner"] main.new-owner-shell {
   grid-row: span 2;
 }
 
+.new-owner-card-details {
+  display: grid;
+  gap: .85rem;
+}
+
+.new-owner-card-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.new-owner-card-summary::-webkit-details-marker {
+  display: none;
+}
+
+.new-owner-card-summary .owner-card-titlebar {
+  flex: 1 1 auto;
+}
+
+.new-owner-card-toggle {
+  display: inline-flex;
+  width: .7rem;
+  height: .7rem;
+  flex: 0 0 auto;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg) translateY(-2px);
+  transition: transform .16s ease;
+}
+
+.new-owner-card-details[open] .new-owner-card-toggle {
+  transform: rotate(225deg) translateY(-2px);
+}
+
+.new-owner-card-content {
+  display: grid;
+  gap: .85rem;
+}
+
 .new-owner-access-list,
 .new-owner-lane-list {
   display: grid;
@@ -232,6 +274,35 @@ body[data-gallery="new-owner"] main.new-owner-shell {
 
 .new-owner-action-result:empty {
   display: none;
+}
+
+.new-owner-ready-review {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.new-owner-ready-review .btn {
+  background: var(--text);
+  color: var(--bg);
+}
+
+[data-new-owner-action-status] {
+  flex: 1 0 100%;
+  min-height: 1.3rem;
+  font-size: .88rem;
+  font-weight: 700;
+}
+
+[data-new-owner-action-status][data-state="busy"] {
+  color: var(--muted);
+}
+
+[data-new-owner-action-status][data-state="success"] {
+  color: var(--new-owner-teal);
+}
+
+[data-new-owner-action-status][data-state="error"] {
+  color: var(--new-owner-rust);
 }
 
 .new-owner-review-card {
@@ -403,6 +474,11 @@ body[data-gallery="new-owner"] main.new-owner-shell {
   .new-owner-lane-row,
   .new-owner-review-row {
     grid-template-columns: 1fr;
+  }
+
+  .new-owner-counts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .6rem;
   }
 
   .new-owner-review-row-controls {

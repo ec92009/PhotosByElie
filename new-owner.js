@@ -39,6 +39,28 @@
     if (statusRoot) statusRoot.textContent = message;
   };
 
+  const setActionStatus = (message, stateName = "") => {
+    if (!actionStatusRoot) return;
+    actionStatusRoot.textContent = message;
+    actionStatusRoot.dataset.state = stateName;
+  };
+
+  const setQueueControlsBusy = (busy) => {
+    document.querySelectorAll("[data-new-owner-queue-check], [data-new-owner-sync-photos], [data-new-owner-queue-sidecar], [data-new-owner-upload-publish]")
+      .forEach((button) => {
+        button.disabled = busy;
+        button.setAttribute("aria-busy", String(busy));
+      });
+  };
+
+  const queueErrorMessage = (error) => {
+    const message = String(error?.message || "Could not queue Owner action.");
+    if (/KV put\(\) limit exceeded/i.test(message)) {
+      return "Cloud queue unavailable: Cloudflare's KV write limit is exhausted. Try again after 00:00 UTC or enable Workers Paid.";
+    }
+    return message;
+  };
+
   const escapeHtml = (value) => String(value ?? "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -281,7 +303,10 @@
       actionRoot.innerHTML = `<p class="new-owner-empty">No recent cloud Owner actions.</p>`;
       return;
     }
-    actionRoot.innerHTML = actions.map((action) => `
+    const readyReview = actions.find((action) => action.state === "completed" && action.type === "sidecar-culling-review");
+    actionRoot.innerHTML = `
+      ${readyReview ? `<div class="new-owner-ready-review">${reviewAction(readyReview.id, "Open culling review")}</div>` : ""}
+      ${actions.map((action) => `
       <article class="new-owner-action-row" data-action-id="${escapeHtml(action.id)}">
         <strong>${escapeHtml(action.type || "owner action")}</strong>
         <small>${escapeHtml(action.id)}</small>
@@ -298,7 +323,8 @@
           ${["queued", "claimed"].includes(action.state) ? `<button class="btn secondary" type="button" data-new-owner-action-command="fail" data-action-id="${escapeHtml(action.id)}">Fail</button>` : ""}
         </div>
       </article>
-    `).join("");
+      `).join("")}
+    `;
   };
 
   const itemTitle = (item) => item.title || item.filename || item.assetId || "Sidecar item";
@@ -403,6 +429,31 @@
     renderConnectors();
     renderAction();
     renderReview();
+    prepareCollapsibleSections();
+  };
+
+  const prepareCollapsibleSections = () => {
+    document.querySelectorAll(".new-owner-card").forEach((card) => {
+      if (card.dataset.collapsibleReady === "true") return;
+      const titlebar = [...card.children].find((child) => child.classList.contains("owner-card-titlebar"));
+      if (!titlebar) return;
+      const details = document.createElement("details");
+      const summary = document.createElement("summary");
+      const content = document.createElement("div");
+      const isPrimaryAction = card.getAttribute("aria-label") === "Owner action queue";
+      const isReview = card.classList.contains("new-owner-review-card");
+
+      details.className = "new-owner-card-details";
+      details.open = !window.matchMedia("(max-width: 900px)").matches || isPrimaryAction || isReview;
+      summary.className = "new-owner-card-summary";
+      content.className = "new-owner-card-content";
+      summary.append(titlebar);
+      summary.insertAdjacentHTML("beforeend", '<span class="new-owner-card-toggle" aria-hidden="true"></span>');
+      [...card.children].forEach((child) => content.append(child));
+      details.append(summary, content);
+      card.append(details);
+      card.dataset.collapsibleReady = "true";
+    });
   };
 
   const loadActions = async () => {
@@ -475,7 +526,8 @@
   const queueAction = async ({ action, payload, statusLabel = "Queueing..." }) => {
     if (state.busy) return;
     state.busy = true;
-    if (actionStatusRoot) actionStatusRoot.textContent = statusLabel;
+    setQueueControlsBusy(true);
+    setActionStatus(statusLabel, "busy");
     try {
       const body = await apiFetch("/owner/actions", {
         method: "POST",
@@ -490,14 +542,16 @@
         state.action = readback.action || state.action;
       }
       await loadActions();
-      if (actionStatusRoot) actionStatusRoot.textContent = state.action?.id ? "Queued" : "";
+      setActionStatus(state.action?.id ? "Queued — waiting for the selected Mac connector." : "", "success");
       setStatus("Owner action queued.");
       render();
     } catch (error) {
-      if (actionStatusRoot) actionStatusRoot.textContent = "";
-      setStatus(error.message || "Could not queue Owner action.");
+      const message = queueErrorMessage(error);
+      setActionStatus(message, "error");
+      setStatus(message);
     } finally {
       state.busy = false;
+      setQueueControlsBusy(false);
     }
   };
 
@@ -527,7 +581,7 @@
       },
       queuedAt: new Date().toISOString(),
     },
-    statusLabel: "Queueing culling...",
+    statusLabel: "Starting culling...",
   });
 
   const queuePhotosIndexSync = () => queueAction({

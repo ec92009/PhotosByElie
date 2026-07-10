@@ -5,7 +5,10 @@
   const AUTH_TOKEN_HASH_PARAM = "pbe_auth_token";
   const AUTH_TOKEN_STORAGE_KEY = "pbe-new-owner-auth-token";
   const LEGACY_CONNECTOR_STORAGE_KEY = "pbe-new-owner-connector";
-  const LOCAL_CONNECTOR_STATUS_URL = "http://127.0.0.1:8766/photosbyelie/connector-status";
+  const LOCAL_CONNECTOR_STATUS_URLS = [
+    "http://localhost:8766/photosbyelie/connector-status",
+    "http://127.0.0.1:8766/photosbyelie/connector-status",
+  ];
   const state = {
     session: null,
     access: null,
@@ -166,25 +169,30 @@
   };
 
   const detectLocalConnector = async () => {
-    const controller = new AbortController();
-    const timer = window.setTimeout(() => controller.abort(), 3000);
-    try {
-      const response = await fetch(LOCAL_CONNECTOR_STATUS_URL, {
-        cache: "no-store",
-        credentials: "omit",
-        signal: controller.signal,
-      });
-      const payload = await response.json().catch(() => ({}));
-      const connectorId = cleanConnectorId(payload.connectorId);
-      state.localConnector = response.ok && payload.ok && connectorId
-        ? { ...payload, connectorId }
-        : null;
-    } catch {
-      state.localConnector = null;
-    } finally {
-      window.clearTimeout(timer);
-      state.localConnectorChecked = true;
+    state.localConnector = null;
+    for (const statusUrl of LOCAL_CONNECTOR_STATUS_URLS) {
+      const controller = new AbortController();
+      const timer = window.setTimeout(() => controller.abort(), 3000);
+      try {
+        const response = await fetch(statusUrl, {
+          cache: "no-store",
+          credentials: "omit",
+          signal: controller.signal,
+        });
+        const payload = await response.json().catch(() => ({}));
+        const connectorId = cleanConnectorId(payload.connectorId);
+        if (response.ok && payload.ok && connectorId) {
+          state.localConnector = { ...payload, connectorId };
+          state.localConnectorChecked = true;
+          return;
+        }
+      } catch {
+        state.localConnector = null;
+      } finally {
+        window.clearTimeout(timer);
+      }
     }
+    state.localConnectorChecked = true;
   };
 
   const renderLocalConnector = () => {

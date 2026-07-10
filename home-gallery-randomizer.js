@@ -70,12 +70,17 @@ const collectionForKey = (data, key) => (
   key === panoramaCollectionKey ? panoramaCollectionForData(data) : data[key]
 );
 
-const randomPhotoForCollection = (collection) => {
+const availablePhotosForCollection = (collection) => {
   const publicPhotos = window.photosByElieFilterPublicHidden?.(collection?.photos || []) || (collection?.photos || []);
   const photos = window.photosByElieHiddenActions?.filterPhotos
     ? window.photosByElieHiddenActions.filterPhotos(publicPhotos)
     : publicPhotos;
-  const availablePhotos = photos.filter((photo) => !isBlockedPhoto(photo));
+  return photos.filter((photo) => !isBlockedPhoto(photo));
+};
+
+const randomPhotoForCollection = (collection, excludedIds = new Set()) => {
+  const availablePhotos = availablePhotosForCollection(collection)
+    .filter((photo) => !excludedIds.has(photo?.id));
   if (!availablePhotos.length) return null;
   return availablePhotos[Math.floor(Math.random() * availablePhotos.length)];
 };
@@ -112,7 +117,7 @@ const buildHeroStack = () => {
     const title = escapeHtml(collectionTitleForKey(key, collection));
     const href = escapeHtml(galleryHrefForKey(key));
     const photoId = escapeHtml(photo?.id || "");
-    return `<a class="photo-print ${key} ${hasPhoto}" href="${href}" data-home-stack-card data-photo-id="${photoId}" aria-label="${title} gallery"${style}><span class="hand-label">${title}</span></a>`;
+    return `<a class="photo-print ${key} ${hasPhoto}" href="${href}" data-home-stack-card data-gallery-key="${key}" data-photo-id="${photoId}" aria-label="${title} gallery"${style}><span class="hand-label">${title}</span></a>`;
   }).join("");
   if (!markup.trim()) return;
   root.innerHTML = markup;
@@ -135,7 +140,20 @@ const refreshSamples = () => {
   applyCarouselPhotos();
 };
 
-window.photosByElieHomeRandomizer = { refreshSamples };
+const replaceHeroStackCardPhoto = (card) => {
+  const key = card?.dataset.galleryKey;
+  if (!key) return false;
+  const collection = collectionForKey(homeData(), key);
+  const previousId = card.dataset.photoId;
+  const excludedIds = new Set(previousId ? [previousId] : []);
+  const replacement = randomPhotoForCollection(collection, excludedIds)
+    || randomPhotoForCollection(collection);
+  if (!replacement) return false;
+  applyRepresentativePhoto(card, replacement);
+  return replacement.id !== previousId;
+};
+
+window.photosByElieHomeRandomizer = { refreshSamples, replaceHeroStackCardPhoto };
 window.addEventListener("photosbyelie:carouselturn", applyCarouselPhotos);
 window.addEventListener("photosbyelie:catalogloaded", refreshSamples);
 window.addEventListener("photosbyelie:hiddenblacklistchange", refreshSamples);

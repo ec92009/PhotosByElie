@@ -35,7 +35,173 @@
   };
   let activeSection = "";
   let stackShufflePlayed = false;
+  let stackDogTurnPlayed = false;
   let stackShuffleTimer = 0;
+  let stackDogTimer = 0;
+
+  const wait = (duration) => new Promise((resolve) => window.setTimeout(resolve, duration));
+
+  const topStackCard = () => {
+    const cards = [...stack.querySelectorAll("[data-home-stack-card]:not([data-home-stack-replacement])")];
+    return cards.reduce((top, card, index) => {
+      const zIndex = Number.parseInt(getComputedStyle(card).zIndex, 10) || 0;
+      const topZIndex = top ? (Number.parseInt(getComputedStyle(top.card).zIndex, 10) || 0) : -Infinity;
+      if (!top || zIndex > topZIndex || (zIndex === topZIndex && index > top.index)) {
+        return { card, index };
+      }
+      return top;
+    }, null)?.card || null;
+  };
+
+  const createStackSpaniel = () => {
+    const source = page.querySelector("[data-spaniel] .spaniel-figure.awake-pose");
+    if (!source) return null;
+    const companion = document.createElement("div");
+    companion.className = "home-stack-companion";
+    companion.setAttribute("aria-hidden", "true");
+    companion.append(source.cloneNode(true));
+    stack.append(companion);
+    return companion;
+  };
+
+  const turnTopStackCard = async () => {
+    if (stackDogTurnPlayed || reducedMotion || !stack?.children.length) return;
+    if (document.hidden) {
+      const playWhenVisible = () => {
+        if (document.hidden) return;
+        document.removeEventListener("visibilitychange", playWhenVisible);
+        turnTopStackCard();
+      };
+      document.addEventListener("visibilitychange", playWhenVisible);
+      return;
+    }
+
+    const outgoing = topStackCard();
+    const companion = createStackSpaniel();
+    if (!outgoing || !companion) {
+      companion?.remove();
+      return;
+    }
+
+    stackDogTurnPlayed = true;
+    stack.dataset.stackDogTurnPlayed = "true";
+    stack.classList.add("is-dog-turning");
+
+    const replacement = outgoing.cloneNode(true);
+    replacement.dataset.homeStackReplacement = "true";
+    replacement.style.zIndex = "1";
+    replacement.style.opacity = "0";
+    replacement.removeAttribute("aria-hidden");
+    replacement.removeAttribute("tabindex");
+    window.photosByElieHomeRandomizer?.replaceHeroStackCardPhoto?.(replacement);
+    stack.insertBefore(replacement, stack.firstChild);
+    const replacementLeft = replacement.offsetLeft;
+    const replacementTop = replacement.offsetTop;
+    const replacementRevealLeft = replacementLeft - replacement.offsetWidth * .12;
+    const replacementRevealTop = replacementTop + replacement.offsetHeight * .28;
+    replacement.style.left = `${Math.round(replacementRevealLeft)}px`;
+    replacement.style.top = `${Math.round(replacementRevealTop)}px`;
+
+    outgoing.setAttribute("aria-hidden", "true");
+    outgoing.setAttribute("tabindex", "-1");
+    outgoing.style.pointerEvents = "none";
+    outgoing.style.zIndex = "22";
+
+    const stackRect = stack.getBoundingClientRect();
+    const cardRect = outgoing.getBoundingClientRect();
+    const dogWidth = Math.min(168, Math.max(94, stackRect.width * .22));
+    const startX = stackRect.width + dogWidth * .28;
+    const startY = Math.max(0, stackRect.height - dogWidth * .92);
+    const grabX = cardRect.right - stackRect.left - dogWidth * .58;
+    const grabY = cardRect.top - stackRect.top + cardRect.height * .53;
+    const exitX = stackRect.width + cardRect.width * .72;
+    const exitY = Math.max(0, grabY - stackRect.height * .05);
+    const dogTransform = (x, y, rotate = 0, scale = 1) => (
+      `translate3d(${Math.round(x)}px,${Math.round(y)}px,0) rotate(${rotate}deg) scale(${scale})`
+    );
+    const outgoingLeft = outgoing.offsetLeft;
+    const outgoingTop = outgoing.offsetTop;
+    const exitDistance = stackRect.width - (cardRect.left - stackRect.left) + cardRect.width * .65;
+
+    companion.style.width = `${Math.round(dogWidth)}px`;
+    companion.style.transform = dogTransform(startX, startY, 7, .86);
+    companion.style.opacity = "0";
+    companion.classList.add("is-working");
+    outgoing.style.left = `${outgoingLeft}px`;
+    outgoing.style.top = `${outgoingTop}px`;
+
+    if (typeof companion.animate !== "function" || typeof outgoing.animate !== "function") {
+      outgoing.remove();
+      companion.remove();
+      replacement.style.left = `${replacementLeft}px`;
+      replacement.style.top = `${replacementTop}px`;
+      replacement.style.opacity = "1";
+      stack.classList.remove("is-dog-turning");
+      stack.classList.add("has-dog-turned-card");
+      return;
+    }
+
+    const approach = companion.animate([
+      { opacity: 0, transform: dogTransform(startX, startY, 7, .86) },
+      { opacity: 1, transform: dogTransform((startX + grabX) * .5, grabY + 18, -5, .96), offset: .52 },
+      { opacity: 1, transform: dogTransform(grabX, grabY, 2, 1) },
+    ], {
+      duration: 1050,
+      easing: "cubic-bezier(.2,.82,.24,1)",
+      fill: "forwards",
+    });
+    await approach.finished.catch(() => {});
+    await wait(180);
+
+    const replacementArrival = replacement.animate([
+      {
+        opacity: 0,
+        filter: "saturate(.82)",
+        left: `${Math.round(replacementRevealLeft)}px`,
+        top: `${Math.round(replacementRevealTop)}px`,
+      },
+      {
+        opacity: 1,
+        filter: "saturate(1)",
+        left: `${replacementLeft}px`,
+        top: `${replacementTop}px`,
+      },
+    ], {
+      duration: 720,
+      delay: 180,
+      easing: "ease-out",
+      fill: "forwards",
+    });
+
+    const carryDog = companion.animate([
+      { opacity: 1, transform: dogTransform(grabX, grabY, 2, 1) },
+      { opacity: 1, transform: dogTransform(grabX + exitDistance * .42, exitY + 12, -4, 1.03), offset: .5 },
+      { opacity: 0, transform: dogTransform(exitX, exitY, 5, .94) },
+    ], {
+      duration: 1180,
+      easing: "cubic-bezier(.46,.04,.72,.92)",
+      fill: "forwards",
+    });
+    const carryCard = outgoing.animate([
+      { opacity: 1, left: `${outgoingLeft}px`, top: `${outgoingTop}px` },
+      { opacity: 1, left: `${Math.round(outgoingLeft + exitDistance * .42)}px`, top: `${outgoingTop + 12}px`, offset: .5 },
+      { opacity: 0, left: `${Math.round(outgoingLeft + exitDistance)}px`, top: `${outgoingTop - 8}px` },
+    ], {
+      duration: 1180,
+      easing: "cubic-bezier(.46,.04,.72,.92)",
+      fill: "forwards",
+    });
+
+    await Promise.allSettled([carryDog.finished, carryCard.finished]);
+    replacement.style.left = `${replacementLeft}px`;
+    replacement.style.top = `${replacementTop}px`;
+    replacement.style.opacity = "1";
+    replacementArrival.cancel();
+    outgoing.remove();
+    companion.remove();
+    stack.classList.remove("is-dog-turning");
+    stack.classList.add("has-dog-turned-card");
+  };
 
   const removeHomeBasketRail = () => {
     page.querySelectorAll(".basket-rail").forEach((rail) => rail.remove());
@@ -64,6 +230,8 @@
         });
         stack.classList.remove("is-stack-shuffling");
         stack.classList.add("has-stack-shuffled");
+        window.clearTimeout(stackDogTimer);
+        stackDogTimer = window.setTimeout(turnTopStackCard, 520);
       }, 2600);
     });
   };

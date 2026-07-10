@@ -8662,6 +8662,53 @@ body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack
 body.best-mix-current-home [data-home-stack].has-stack-shuffled [data-home-stack-card]{
   will-change:auto;
 }
+body.best-mix-current-home [data-home-stack].is-dog-turning{
+  isolation:isolate;
+}
+body.best-mix-current-home [data-home-stack].is-dog-turning [data-home-stack-card]{
+  pointer-events:none;
+}
+body.best-mix-current-home [data-home-stack-replacement]{
+  z-index:1!important;
+}
+body.best-mix-current-home .home-stack-companion{
+  position:absolute;
+  left:0;
+  top:0;
+  z-index:32;
+  aspect-ratio:1;
+  opacity:0;
+  pointer-events:none;
+  transform-origin:50% 82%;
+  will-change:transform,opacity;
+  filter:drop-shadow(0 15px 14px rgba(40,24,10,.2));
+}
+body.best-mix-current-home .home-stack-companion .spaniel-figure{
+  display:block;
+  width:100%;
+  height:100%;
+  overflow:visible;
+}
+body.best-mix-current-home .home-stack-companion .spaniel-part{
+  transform-box:fill-box;
+  transform-origin:center;
+}
+body.best-mix-current-home .home-stack-companion.is-working .part-tail{
+  animation:best-mix-stack-dog-tail .34s ease-in-out infinite alternate;
+  transform-origin:18% 78%;
+}
+body.best-mix-current-home .home-stack-companion.is-working .part-ears{
+  animation:best-mix-stack-dog-ears .42s ease-in-out infinite alternate;
+  transform-origin:50% 32%;
+}
+@keyframes best-mix-stack-dog-tail{
+  from{transform:rotate(-8deg)}
+  to{transform:rotate(12deg)}
+}
+@keyframes best-mix-stack-dog-ears{
+  from{transform:translateY(0)}
+  to{transform:translateY(5px)}
+}
 body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack-card]:nth-child(1){--stack-shuffle-x:-110px;--stack-shuffle-y:42px;--stack-shuffle-rotate:-20deg;--stack-shuffle-delay:0ms}
 body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack-card]:nth-child(2){--stack-shuffle-x:66px;--stack-shuffle-y:-78px;--stack-shuffle-rotate:18deg;--stack-shuffle-delay:200ms}
 body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack-card]:nth-child(3){--stack-shuffle-x:124px;--stack-shuffle-y:38px;--stack-shuffle-rotate:14deg;--stack-shuffle-delay:400ms}
@@ -8724,6 +8771,9 @@ body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack
   body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack-card]{
     animation:none;
     opacity:1;
+  }
+  body.best-mix-current-home .home-stack-companion{
+    display:none;
   }
   body.best-mix-current-home .featured-campaign-card,
   body.best-mix-current-home .featured-campaign-card img{

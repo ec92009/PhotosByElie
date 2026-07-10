@@ -2,7 +2,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from scripts.new_owner_connector import ConnectorConfig, _upload_and_register
+from scripts.new_owner_connector import ConnectorConfig, _upload_and_register, execute_action
 
 
 class UploadRegistrationScopeTest(unittest.TestCase):
@@ -38,6 +38,16 @@ class UploadRegistrationScopeTest(unittest.TestCase):
         self.assertEqual(run.call_count, 1)
         self.assertEqual(result["registration"]["candidateCount"], 0)
         self.assertEqual(result["registration"]["registeredCount"], 0)
+
+    def test_photos_index_sync_runs_the_non_ui_maintenance_command(self):
+        payload = {"job": {"status": "done", "indexedCount": 57_500}, "sync": {"pendingCount": 3}}
+        with patch("scripts.new_owner_connector._run_repo_json", return_value=payload) as run:
+            result = execute_action(self.config, {"type": "sidecar-photos-index-sync"})
+
+        arguments = run.call_args.args[1]
+        self.assertEqual(arguments[1:3], ["scripts/sidecar_maintenance.py", "photos-index-sync"])
+        self.assertEqual(result["job"]["status"], "done")
+        self.assertEqual(result["job"]["indexedCount"], 57_500)
 
 
 if __name__ == "__main__":

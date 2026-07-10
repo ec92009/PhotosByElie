@@ -188,6 +188,8 @@
     if (result.local?.machineNames?.length) chips.push(chip(result.local.machineNames[0], "planned"));
     if (Number.isFinite(result.runCount)) chips.push(chip(`${result.runCount} uploaded`, "live"));
     if (Number.isFinite(result.registration?.registeredCount)) chips.push(chip(`${result.registration.registeredCount} cataloged`, "live"));
+    if (Number.isFinite(result.job?.indexedCount)) chips.push(chip(`${result.job.indexedCount} Photos indexed`, "live"));
+    if (result.job?.status) chips.push(chip(`Photos ${result.job.status}`, result.job.status === "done" ? "live" : "planned"));
     return chips.join("");
   };
 
@@ -548,6 +550,15 @@
     statusLabel: "Queueing culling...",
   });
 
+  const queuePhotosIndexSync = () => queueAction({
+    action: "sidecar-photos-index-sync",
+    payload: {
+      requestedConnector: connectorId() || undefined,
+      queuedAt: new Date().toISOString(),
+    },
+    statusLabel: "Queueing Photos refresh...",
+  });
+
   const queueUploadPublish = () => queueAction({
     action: "sidecar-upload-publish",
     payload: {
@@ -690,6 +701,7 @@
   $("[data-new-owner-login]")?.addEventListener("click", login);
   $("[data-new-owner-logout]")?.addEventListener("click", logout);
   $("[data-new-owner-queue-check]")?.addEventListener("click", queueCheck);
+  $("[data-new-owner-sync-photos]")?.addEventListener("click", queuePhotosIndexSync);
   $("[data-new-owner-queue-sidecar]")?.addEventListener("click", queueSidecarCulling);
   $("[data-new-owner-upload-publish]")?.addEventListener("click", queueUploadPublish);
   connectorInput?.addEventListener("change", rememberConnector);

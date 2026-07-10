@@ -109,7 +109,7 @@ class WorkerClient:
             "hostname": socket.gethostname(),
             "platform": f"{platform.system()} {platform.machine()}",
             "version": CONNECTOR_VERSION,
-            "capabilities": ["apple-photos", "sidecar", "owner-sqlite", "catalog-registration"],
+            "capabilities": ["apple-photos", "photos-index-sync", "sidecar", "owner-sqlite", "catalog-registration"],
         })
 
     def actions(self) -> list[dict]:
@@ -208,6 +208,7 @@ def _upload_and_register(config: ConnectorConfig, action: dict) -> dict:
     payload = action.get("payload") if isinstance(action.get("payload"), dict) else {}
     requested = max(1, min(24, int(payload.get("limit") or 1)))
     runs = []
+    uploaded_asset_ids: list[str] = []
     for _index in range(requested):
         run = _run_repo_json(config, [
             sys.executable,
@@ -231,13 +232,20 @@ def _upload_and_register(config: ConnectorConfig, action: dict) -> dict:
                 "status": item.get("status") or item.get("upload", {}).get("status"),
             } for item in items],
         })
+        for item in items:
+            asset_id = str(item.get("assetId") or "").strip()
+            if asset_id and asset_id not in uploaded_asset_ids:
+                uploaded_asset_ids.append(asset_id)
         if run.get("status") == "failed":
             break
-    registration = _run_repo_json(config, [
-        sys.executable,
-        "scripts/sidecar_maintenance.py",
-        "register-uploaded-catalog",
-    ])
+    registration = {"result": {"candidateCount": 0, "registeredCount": 0, "skippedCount": 0}, "rebuild": {}}
+    if uploaded_asset_ids:
+        registration = _run_repo_json(config, [
+            sys.executable,
+            "scripts/sidecar_maintenance.py",
+            "register-uploaded-catalog",
+            *[argument for asset_id in uploaded_asset_ids for argument in ("--asset-id", asset_id)],
+        ])
     return {
         "connectorId": config.connector_id,
         "type": "sidecar-upload-publish",
@@ -257,6 +265,21 @@ def execute_action(config: ConnectorConfig, action: dict) -> dict:
             "connectorId": config.connector_id,
             "type": action_type,
             "hostname": socket.gethostname(),
+            "completedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        }
+    if action_type == "sidecar-photos-index-sync":
+        indexed = _run_repo_json(config, [
+            sys.executable,
+            "scripts/sidecar_maintenance.py",
+            "photos-index-sync",
+            "--limit",
+            "24",
+        ])
+        return {
+            "connectorId": config.connector_id,
+            "type": action_type,
+            "job": indexed.get("job") or {},
+            "sync": indexed.get("sync") or {},
             "completedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         }
     connector_result, decision_result, preview_cache_path, run_bridge_task = _load_local_modules(config.repo_root)

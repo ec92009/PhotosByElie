@@ -2075,6 +2075,7 @@ export const createPhotosByElieWorker = ({
   const ownerConnectorActionTypes = new Set([
     "owner-connector-check",
     "sidecar-culling-review",
+    "sidecar-photos-index-sync",
     "sidecar-review-decision",
     "sidecar-upload-publish",
   ]);

@@ -139,14 +139,32 @@
     }
   ],
   "date": "2026-07-10",
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-seville-plaza-de-espana-canal-light-2026-07-10",
   "recommended_upload_set": "images",
   "available_count": 8,
-  "manual_blockers": [
-    "Publish pending: review socials/Instagram/2026-07-10/seville-plaza-de-espana-canal-light/manifest.json and use the Instagram browser/API workflow.",
-    "Instagram feed captions are not clickable; update the profile website link or use a Story link sticker before posting."
-  ]
+  "manual_blockers": [],
+  "published_url": "https://www.instagram.com/p/DaneBU0jrKM/",
+  "published": {
+    "platform": "Instagram",
+    "account": "ec92009",
+    "id": "18407881258153371",
+    "permalink": "https://www.instagram.com/p/DaneBU0jrKM/",
+    "timestamp": "2026-07-10T15:03:42+0000",
+    "image_count": 8,
+    "media_type": "CAROUSEL_ALBUM",
+    "visible_verification": "Instagram Graph readback returned permalink, username ec92009, CAROUSEL_ALBUM, timestamp, caption, and 8 child images."
+  },
+  "verification": {
+    "platform": "Instagram",
+    "account": "ec92009",
+    "id": "18407881258153371",
+    "permalink": "https://www.instagram.com/p/DaneBU0jrKM/",
+    "timestamp": "2026-07-10T15:03:42+0000",
+    "image_count": 8,
+    "media_type": "CAROUSEL_ALBUM",
+    "visible_verification": "Instagram Graph readback returned permalink, username ec92009, CAROUSEL_ALBUM, timestamp, caption, and 8 child images."
+  }
 }

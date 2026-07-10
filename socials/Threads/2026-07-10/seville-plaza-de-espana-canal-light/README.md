@@ -1,10 +1,8 @@
 # Threads - 2026-07-10 - Seville Plaza de Espana Canal Light
 
-Status: prepared
+Status: published
 Destination: https://photos-by-elie.com/campaign.html?c=instagram-seville-plaza-de-espana-canal-light-2026-07-10
-
-Manual blockers:
-- Publish pending: review socials/Threads/2026-07-10/seville-plaza-de-espana-canal-light/manifest.json and use the Threads browser/API workflow.
+Published URL: https://www.threads.com/@ec92009/post/DaneFt9juIx
 
 Caption:
 

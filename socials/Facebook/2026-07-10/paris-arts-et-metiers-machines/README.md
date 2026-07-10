@@ -1,10 +1,8 @@
 # Facebook - 2026-07-10 - Paris Arts et Metiers Machines
 
-Status: prepared
+Status: published
 Destination: https://photos-by-elie.com/campaign.html?c=facebook-paris-arts-metiers-machines-2026-07-10
-
-Manual blockers:
-- Publish pending: review socials/Facebook/2026-07-10/paris-arts-et-metiers-machines/manifest.json and use the Facebook browser/API workflow.
+Published URL: https://www.facebook.com/122102168061334672/posts/122110181115334672
 
 Caption:
 

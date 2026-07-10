@@ -138,13 +138,30 @@
     }
   ],
   "date": "2026-07-10",
-  "status": "prepared",
+  "status": "published",
   "account": "Photos By Elie",
   "post_type": "multi_photo",
   "destination_url": "https://photos-by-elie.com/campaign.html?c=facebook-paris-arts-metiers-machines-2026-07-10",
   "recommended_upload_set": "images",
   "available_count": 8,
-  "manual_blockers": [
-    "Publish pending: review socials/Facebook/2026-07-10/paris-arts-et-metiers-machines/manifest.json and use the Facebook browser/API workflow."
-  ]
+  "manual_blockers": [],
+  "published_url": "https://www.facebook.com/122102168061334672/posts/122110181115334672",
+  "published": {
+    "platform": "Facebook",
+    "account": "Photos By Elie",
+    "id": "1146747141854670_122110181115334672",
+    "permalink": "https://www.facebook.com/122102168061334672/posts/122110181115334672",
+    "timestamp": "2026-07-10T15:02:47+0000",
+    "image_count": 8,
+    "visible_verification": "Facebook Graph readback returned the Page post permalink, created_time, and 8 photo subattachments."
+  },
+  "verification": {
+    "platform": "Facebook",
+    "account": "Photos By Elie",
+    "id": "1146747141854670_122110181115334672",
+    "permalink": "https://www.facebook.com/122102168061334672/posts/122110181115334672",
+    "timestamp": "2026-07-10T15:02:47+0000",
+    "image_count": 8,
+    "visible_verification": "Facebook Graph readback returned the Page post permalink, created_time, and 8 photo subattachments."
+  }
 }

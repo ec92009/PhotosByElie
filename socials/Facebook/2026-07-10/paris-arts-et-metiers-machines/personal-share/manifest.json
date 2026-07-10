@@ -1,0 +1,28 @@
+{
+  "format": "photosbyelie-facebook-personal-share-assist",
+  "schema_version": 1,
+  "generated_at": "2026-07-10T15:24:03.815Z",
+  "date": "2026-07-10",
+  "status": "prepared_manual_final_click",
+  "expected_identity": "Elie Cohen",
+  "source_platform": "Facebook",
+  "source_page": "Photos By Elie",
+  "source_title": "Paris Arts et Metiers Machines",
+  "facebook_post_url": "https://www.facebook.com/122102168061334672/posts/122110181115334672",
+  "campaign_url": "https://photos-by-elie.com/campaign.html?c=facebook-paris-arts-metiers-machines-2026-07-10",
+  "share_url": "https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fwww.facebook.com%2F122102168061334672%2Fposts%2F122110181115334672",
+  "text_fr": "Je viens de publier quelques nouvelles photos sur Photos By Elie.\n\nLa série du jour, « Paris Arts et Metiers Machines », rassemble quelques images que j'aime beaucoup.\n\nÀ voir ici :\nhttps://www.facebook.com/122102168061334672/posts/122110181115334672",
+  "local_dir": "socials/Facebook/2026-07-10/paris-arts-et-metiers-machines/personal-share",
+  "local_files": {
+    "text": "socials/Facebook/2026-07-10/paris-arts-et-metiers-machines/personal-share/text-fr.txt",
+    "share_url": "socials/Facebook/2026-07-10/paris-arts-et-metiers-machines/personal-share/share-url.txt",
+    "manifest": "socials/Facebook/2026-07-10/paris-arts-et-metiers-machines/personal-share/manifest.json",
+    "readme": "socials/Facebook/2026-07-10/paris-arts-et-metiers-machines/personal-share/README.md"
+  },
+  "guardrails": [
+    "This is a user-mediated personal profile share assist.",
+    "Do not automate the final Facebook Post button.",
+    "Confirm the visible posting identity is Elie Cohen before posting.",
+    "Do not use private Facebook endpoints, cookies, passwords, or 2FA codes."
+  ]
+}

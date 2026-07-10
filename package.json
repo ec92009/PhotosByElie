@@ -17,6 +17,7 @@
     "social:pinterest-oauth": "node scripts/pinterest_oauth.mjs",
     "social:meta-api": "node scripts/meta_api_publish.mjs",
     "social:meta-oauth": "node scripts/meta_oauth.mjs",
+    "social:facebook-personal-share": "node scripts/facebook_personal_share_assist.mjs",
     "social:threads-api": "node scripts/threads_api_publish.mjs",
     "social:threads-oauth": "node scripts/threads_oauth.mjs",
     "etsy:api-check": "node scripts/etsy_api_check.mjs",

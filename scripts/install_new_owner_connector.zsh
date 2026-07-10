@@ -16,7 +16,9 @@ if [[ ! -f "$repo_root/scripts/new_owner_connector.py" ]]; then
   exit 1
 fi
 
-"$repo_root/scripts/install_sidecar_photos_bridge_app.zsh"
+if [[ "${PBE_SKIP_BRIDGE_BUILD:-0}" != "1" ]]; then
+  "$repo_root/scripts/install_sidecar_photos_bridge_app.zsh"
+fi
 
 mkdir -p "$config_dir" "$launch_agents" "$log_dir"
 chmod 700 "$config_dir"

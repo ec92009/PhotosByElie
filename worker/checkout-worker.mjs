@@ -1245,6 +1245,7 @@ export const createPhotosByElieWorker = ({
   accessAdminEmail = "",
   ownerActionStore = createMemoryOwnerActionStore(),
   ownerConnectorAuth = null,
+  ownerConnectorPackage = null,
   authAllowedReturnOrigins = [],
   emailClient = null,
   downloadBaseUrl = ordersUrl,
@@ -2132,6 +2133,19 @@ export const createPhotosByElieWorker = ({
     return credentialedJson(request, { ok: true, connectors });
   };
 
+  const downloadOwnerConnector = async (request) => {
+    await authSessionFor(request, { requiredRole: "owner" });
+    if (!ownerConnectorPackage || typeof ownerConnectorPackage.getMacPackage !== "function") {
+      return credentialedErrorJson(request, 503, "owner_connector_package_unavailable", "Mac connector download is not configured.");
+    }
+    const asset = await ownerConnectorPackage.getMacPackage();
+    if (!asset) return credentialedErrorJson(request, 404, "owner_connector_package_missing", "Mac connector package is not published yet.");
+    return new Response(asset.body, {
+      status: 200,
+      headers: credentialedCorsHeaders(request, asset.headers || {}),
+    });
+  };
+
   const heartbeatOwnerConnector = async (request) => {
     const connector = await requireOwnerConnector(request);
     const payload = await parseJson(request);
@@ -2711,6 +2725,7 @@ export const createPhotosByElieWorker = ({
       if ((request.method === "GET" || request.method === "POST") && path === "/auth/logout") return await logoutAuth(request);
       if (request.method === "GET" && path === "/owner/session") return await getOwnerSession(request);
       if (request.method === "GET" && path === "/owner/connectors") return await listOwnerConnectors(request);
+      if (request.method === "GET" && path === "/owner/connector/download/mac") return await downloadOwnerConnector(request);
       if (request.method === "GET" && path === "/owner/actions") return await listOwnerActions(request);
       if (request.method === "POST" && path === "/owner/actions") return await createOwnerAction(request);
       const ownerActionTransitionMatch = path.match(/^\/owner\/actions\/([^/]+)\/(claim|complete|fail)$/);

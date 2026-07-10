@@ -33,6 +33,7 @@
   const actionStatusRoot = $("[data-new-owner-action-status]");
   const connectorInput = $("[data-new-owner-connector]");
   const workerBaseRoot = $("[data-new-owner-worker-base]");
+  const connectorDownload = $("[data-new-owner-download-connector]");
   const themeToggle = $("[data-theme-toggle]");
 
   const setStatus = (message) => {
@@ -456,6 +457,10 @@
         }
       }
       setStatus(ownerAllowed() ? "Cloud Owner session verified." : "Owner role is required.");
+      if (connectorDownload && ownerAllowed() && workerBase) {
+        connectorDownload.href = `${workerBase}/owner/connector/download/mac`;
+        connectorDownload.hidden = false;
+      }
     } catch (error) {
       state.session = null;
       state.access = null;

@@ -17,6 +17,7 @@ ORDER_EMAIL_FROM = "Photos By Elie <orders@photos-by-elie.com>"
 ORDER_EMAIL_REPLY_TO = "orders@photos-by-elie.com"
 ORDER_EMAIL_INCLUDE_DIRECT_DOWNLOAD_LINKS = "true"
 ACCESS_ADMIN_EMAIL = "ec92009@gmail.com"
+OWNER_CONNECTOR_MAC_KEY = "owner-connectors/photosbyelie-mac-connector.zip"
 ACCESS_TEAM_NAME = "byelie"
 # Secret required to enable buyer delivery emails:
 #   npx wrangler secret put RESEND_API_KEY

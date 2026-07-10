@@ -482,6 +482,12 @@ test("background Owner connectors use scoped credentials and report health", asy
     accessUserRegistry: registry,
     ownerActionStore,
     ownerConnectorAuth,
+    ownerConnectorPackage: {
+      getMacPackage: async () => ({
+        body: "connector-zip",
+        headers: { "content-type": "application/zip", "content-disposition": "attachment; filename=connector.zip" },
+      }),
+    },
     randomUUID: deterministicIds(),
   });
 
@@ -536,6 +542,13 @@ test("background Owner connectors use scoped credentials and report health", asy
   assert.equal(ownerConnectorResponse.status, 200);
   const ownerConnectors = await ownerConnectorResponse.json();
   assert.equal(ownerConnectors.connectors[0].hostname, "David-5.local");
+
+  const packageResponse = await worker.fetch(new Request("https://worker.test/owner/connector/download/mac", {
+    headers: { origin: "https://photos-by-elie.com" },
+  }));
+  assert.equal(packageResponse.status, 200);
+  assert.equal(packageResponse.headers.get("content-type"), "application/zip");
+  assert.equal(await packageResponse.text(), "connector-zip");
 });
 
 test("access console is admin-only and writes reversible role grants", async () => {

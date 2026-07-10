@@ -35,14 +35,16 @@
   };
   let activeSection = "";
   let stackShufflePlayed = false;
-  let stackDogTurnPlayed = false;
+  let stackCycleStopped = false;
+  let stackCycleRunning = false;
+  let stackCycleCount = 0;
   let stackShuffleTimer = 0;
   let stackDogTimer = 0;
 
   const wait = (duration) => new Promise((resolve) => window.setTimeout(resolve, duration));
 
   const topStackCard = () => {
-    const cards = [...stack.querySelectorAll("[data-home-stack-card]:not([data-home-stack-replacement])")];
+    const cards = [...stack.querySelectorAll("[data-home-stack-card]")];
     return cards.reduce((top, card, index) => {
       const zIndex = Number.parseInt(getComputedStyle(card).zIndex, 10) || 0;
       const topZIndex = top ? (Number.parseInt(getComputedStyle(top.card).zIndex, 10) || 0) : -Infinity;
@@ -64,8 +66,22 @@
     return companion;
   };
 
+  const scheduleNextStackTurn = (delay = 1200) => {
+    stackCycleRunning = false;
+    window.clearTimeout(stackDogTimer);
+    if (stackCycleStopped || reducedMotion) return;
+    stackDogTimer = window.setTimeout(turnTopStackCard, delay);
+  };
+
+  const stopStackCycle = () => {
+    if (stackCycleStopped) return;
+    stackCycleStopped = true;
+    window.clearTimeout(stackDogTimer);
+    stack.dataset.stackCycleStopped = "true";
+  };
+
   const turnTopStackCard = async () => {
-    if (stackDogTurnPlayed || reducedMotion || !stack?.children.length) return;
+    if (stackCycleStopped || stackCycleRunning || reducedMotion || !stack?.children.length) return;
     if (document.hidden) {
       const playWhenVisible = () => {
         if (document.hidden) return;
@@ -75,16 +91,18 @@
       document.addEventListener("visibilitychange", playWhenVisible);
       return;
     }
+    stackCycleRunning = true;
 
     const outgoing = topStackCard();
     const companion = createStackSpaniel();
     if (!outgoing || !companion) {
       companion?.remove();
+      stackCycleRunning = false;
       return;
     }
 
-    stackDogTurnPlayed = true;
-    stack.dataset.stackDogTurnPlayed = "true";
+    stackCycleCount += 1;
+    stack.dataset.stackCycleCount = String(stackCycleCount);
     stack.classList.add("is-dog-turning");
 
     const replacement = outgoing.cloneNode(true);
@@ -139,6 +157,7 @@
       replacement.style.opacity = "1";
       stack.classList.remove("is-dog-turning");
       stack.classList.add("has-dog-turned-card");
+      scheduleNextStackTurn();
       return;
     }
 
@@ -211,6 +230,7 @@
     replacementArrival.cancel();
     stack.classList.remove("is-dog-turning");
     stack.classList.add("has-dog-turned-card");
+    scheduleNextStackTurn();
   };
 
   const removeHomeBasketRail = () => {
@@ -240,8 +260,7 @@
         });
         stack.classList.remove("is-stack-shuffling");
         stack.classList.add("has-stack-shuffled");
-        window.clearTimeout(stackDogTimer);
-        stackDogTimer = window.setTimeout(turnTopStackCard, 520);
+        scheduleNextStackTurn(520);
       }, 2600);
     });
   };
@@ -395,6 +414,9 @@
   window.addEventListener("photosbyelie:basketchange", removeHomeBasketRail);
 
   if (stack) {
+    document.addEventListener("click", (event) => {
+      if (event.isTrusted) stopStackCycle();
+    }, { capture: true });
     shuffleStackOnce();
     const stackObserver = new MutationObserver(() => {
       shuffleStackOnce();

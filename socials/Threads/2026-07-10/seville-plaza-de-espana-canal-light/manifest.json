@@ -1,0 +1,86 @@
+{
+  "platform": "Threads",
+  "title": "Seville Plaza de Espana Canal Light",
+  "campaign_id": "instagram-seville-plaza-de-espana-canal-light-2026-07-10",
+  "caption": "Seville Plaza de Espana Canal Light in four Photos By Elie frames. Browse: https://photos-by-elie.com/campaign.html?c=instagram-seville-plaza-de-espana-canal-light-2026-07-10",
+  "notes": [
+    "Derived from the Instagram package for a 3-4 image Threads carousel.",
+    "Images are public watermarked R2 previews staged for upload/API publishing."
+  ],
+  "items": [
+    {
+      "media_id": "img-1305-2d00c82f12",
+      "order": 1,
+      "id": "img-1305-2d00c82f12",
+      "title": "Plaza de España in Seville",
+      "collection": "spain",
+      "location": "Spain",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/img-1305-2d00c82f12_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/img-1305-2d00c82f12_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=img-1305-2d00c82f12",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=img-1305-2d00c82f12",
+      "image": "images/01-img-1305-2d00c82f12-seville-plaza-de-espana-canal-light.jpg",
+      "local_staged_path": "socials/Threads/2026-07-10/seville-plaza-de-espana-canal-light/images/01-img-1305-2d00c82f12-seville-plaza-de-espana-canal-light.jpg"
+    },
+    {
+      "media_id": "img-1285-7dc1335b5a",
+      "order": 2,
+      "id": "img-1285-7dc1335b5a",
+      "title": "Plaza de España in Seville",
+      "collection": "spain",
+      "location": "Spain",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/img-1285-7dc1335b5a_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/img-1285-7dc1335b5a_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=img-1285-7dc1335b5a",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=img-1285-7dc1335b5a",
+      "image": "images/02-img-1285-7dc1335b5a-seville-plaza-de-espana-canal-light.jpg",
+      "local_staged_path": "socials/Threads/2026-07-10/seville-plaza-de-espana-canal-light/images/02-img-1285-7dc1335b5a-seville-plaza-de-espana-canal-light.jpg"
+    },
+    {
+      "media_id": "img-1299-258452f505",
+      "order": 3,
+      "id": "img-1299-258452f505",
+      "title": "Plaza de España in Seville",
+      "collection": "spain",
+      "location": "Spain",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/img-1299-258452f505_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/img-1299-258452f505_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=img-1299-258452f505",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=img-1299-258452f505",
+      "image": "images/03-img-1299-258452f505-seville-plaza-de-espana-canal-light.jpg",
+      "local_staged_path": "socials/Threads/2026-07-10/seville-plaza-de-espana-canal-light/images/03-img-1299-258452f505-seville-plaza-de-espana-canal-light.jpg"
+    },
+    {
+      "media_id": "img-1295-8edea483ea",
+      "order": 4,
+      "id": "img-1295-8edea483ea",
+      "title": "Plaza de España, Seville",
+      "collection": "spain",
+      "location": "Spain",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/img-1295-8edea483ea_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/img-1295-8edea483ea_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=img-1295-8edea483ea",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=img-1295-8edea483ea",
+      "image": "images/04-img-1295-8edea483ea-seville-plaza-de-espana-canal-light.jpg",
+      "local_staged_path": "socials/Threads/2026-07-10/seville-plaza-de-espana-canal-light/images/04-img-1295-8edea483ea-seville-plaza-de-espana-canal-light.jpg"
+    }
+  ],
+  "status": "prepared",
+  "account": "ec92009",
+  "post_type": "carousel",
+  "available_count": 4,
+  "date": "2026-07-10",
+  "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-seville-plaza-de-espana-canal-light-2026-07-10",
+  "recommended_upload_set": "images",
+  "manual_blockers": [
+    "Publish pending: review socials/Threads/2026-07-10/seville-plaza-de-espana-canal-light/manifest.json and use the Threads browser/API workflow."
+  ]
+}

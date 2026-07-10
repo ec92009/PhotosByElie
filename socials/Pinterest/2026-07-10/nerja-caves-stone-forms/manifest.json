@@ -1,0 +1,110 @@
+{
+  "platform": "Pinterest",
+  "title": "Nerja Caves Stone Forms",
+  "campaign_id": "pinterest-nerja-caves-stone-forms-2026-07-10",
+  "caption": "Nerja Caves in five Photos By Elie wall-art frames: sculptural stone, shadow, and quiet underground scale. Browse: https://photos-by-elie.com/campaign.html?c=pinterest-nerja-caves-stone-forms-2026-07-10",
+  "pinterest": {
+    "title": "Nerja Caves Stone Forms",
+    "description": "Five curated Photos By Elie travel wall-art photographs from Nerja Caves, with sculptural stone forms, shadow, and natural underground texture.",
+    "destination_url": "https://photos-by-elie.com/campaign.html?c=pinterest-nerja-caves-stone-forms-2026-07-10",
+    "board_recommendation": "Spain Travel Photography",
+    "alt_text": "Nerja Caves stone formations photographed as a curated Photos By Elie travel wall-art set."
+  },
+  "notes": [
+    "Pinterest package is capped at exactly 5 images for Pin Builder/API compatibility.",
+    "Images are public watermarked R2 previews staged for upload/API publishing."
+  ],
+  "items": [
+    {
+      "media_id": "001-06519dafd6",
+      "order": 1,
+      "id": "001-06519dafd6",
+      "title": "Nerja Caves, Spain",
+      "collection": "spain",
+      "location": "Nerja, Andalusia, Spain",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/001-06519dafd6_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/001-06519dafd6_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=001-06519dafd6",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=001-06519dafd6",
+      "image": "images/01-001-06519dafd6-nerja-caves-stone-forms.jpg",
+      "local_staged_path": "socials/Pinterest/2026-07-10/nerja-caves-stone-forms/images/01-001-06519dafd6-nerja-caves-stone-forms.jpg"
+    },
+    {
+      "media_id": "001-3f183d6653",
+      "order": 2,
+      "id": "001-3f183d6653",
+      "title": "Nerja Caves, Spain",
+      "collection": "spain",
+      "location": "Nerja, Andalusia, Spain",
+      "width": 1350,
+      "height": 1800,
+      "source_url": "https://download.photos-by-elie.com/media/expo/001-3f183d6653_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/001-3f183d6653_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=001-3f183d6653",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=001-3f183d6653",
+      "image": "images/02-001-3f183d6653-nerja-caves-stone-forms.jpg",
+      "local_staged_path": "socials/Pinterest/2026-07-10/nerja-caves-stone-forms/images/02-001-3f183d6653-nerja-caves-stone-forms.jpg"
+    },
+    {
+      "media_id": "001-9018ca506d",
+      "order": 3,
+      "id": "001-9018ca506d",
+      "title": "Nerja Caves, Spain",
+      "collection": "spain",
+      "location": "Nerja, Andalusia, Spain",
+      "width": 1350,
+      "height": 1800,
+      "source_url": "https://download.photos-by-elie.com/media/expo/001-9018ca506d_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/001-9018ca506d_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=001-9018ca506d",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=001-9018ca506d",
+      "image": "images/03-001-9018ca506d-nerja-caves-stone-forms.jpg",
+      "local_staged_path": "socials/Pinterest/2026-07-10/nerja-caves-stone-forms/images/03-001-9018ca506d-nerja-caves-stone-forms.jpg"
+    },
+    {
+      "media_id": "001-9743f1d030",
+      "order": 4,
+      "id": "001-9743f1d030",
+      "title": "Nerja Caves, Spain",
+      "collection": "spain",
+      "location": "Nerja, Andalusia, Spain",
+      "width": 1350,
+      "height": 1800,
+      "source_url": "https://download.photos-by-elie.com/media/expo/001-9743f1d030_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/001-9743f1d030_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=001-9743f1d030",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=001-9743f1d030",
+      "image": "images/04-001-9743f1d030-nerja-caves-stone-forms.jpg",
+      "local_staged_path": "socials/Pinterest/2026-07-10/nerja-caves-stone-forms/images/04-001-9743f1d030-nerja-caves-stone-forms.jpg"
+    },
+    {
+      "media_id": "001-37515ebd6a",
+      "order": 5,
+      "id": "001-37515ebd6a",
+      "title": "Nerja Caves, Spain",
+      "collection": "spain",
+      "location": "Nerja, Andalusia, Spain",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/001-37515ebd6a_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/001-37515ebd6a_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=001-37515ebd6a",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=001-37515ebd6a",
+      "image": "images/05-001-37515ebd6a-nerja-caves-stone-forms.jpg",
+      "local_staged_path": "socials/Pinterest/2026-07-10/nerja-caves-stone-forms/images/05-001-37515ebd6a-nerja-caves-stone-forms.jpg"
+    }
+  ],
+  "date": "2026-07-10",
+  "status": "prepared",
+  "account": "PhotosByElie Pinterest",
+  "post_type": "multi_pin_sequence",
+  "destination_url": "https://photos-by-elie.com/campaign.html?c=pinterest-nerja-caves-stone-forms-2026-07-10",
+  "recommended_upload_set": "images",
+  "available_count": 5,
+  "manual_blockers": [
+    "Publish pending: review socials/Pinterest/2026-07-10/nerja-caves-stone-forms/manifest.json and use the Pinterest browser/API workflow.",
+    "Pinterest publish pending: choose the board and publish one Pin per staged image or use the prepared browser upload set."
+  ]
+}

@@ -33,7 +33,7 @@ from urllib.request import Request, urlopen
 
 
 DEFAULT_CONFIG_PATH = Path.home() / ".config" / "photosbyelie" / "connector.json"
-CONNECTOR_VERSION = "1.0"
+CONNECTOR_VERSION = "1.1"
 DEFAULT_INTERVAL_SECONDS = 5
 MAX_PREVIEW_BYTES = 250_000
 DEFAULT_LOCAL_STATUS_PORT = 8766
@@ -386,7 +386,7 @@ def start_local_status_server(config: ConnectorConfig) -> None:
     sidecar_jobs_lock = threading.Lock()
 
     class LocalStatusHandler(BaseHTTPRequestHandler):
-        server_version = "PhotosByElieLocalConnector/1.0"
+        server_version = f"PhotosByElieLocalConnector/{CONNECTOR_VERSION}"
 
         def log_message(self, _format: str, *_args: Any) -> None:
             return
@@ -464,12 +464,37 @@ def start_local_status_server(config: ConnectorConfig) -> None:
             self.end_headers()
             self.wfile.write(body)
 
-    try:
-        server = ThreadingHTTPServer(("127.0.0.1", config.local_status_port), LocalStatusHandler)
-    except OSError as error:
-        print(f"Local connector identity server unavailable: {error}", file=sys.stderr, flush=True)
-        return
-    thread = threading.Thread(target=server.serve_forever, name="pbe-local-connector-status", daemon=True)
+    class LocalStatusHTTPServer(ThreadingHTTPServer):
+        allow_reuse_address = True
+
+    def serve_forever_with_retry() -> None:
+        while True:
+            server = None
+            try:
+                server = LocalStatusHTTPServer(("127.0.0.1", config.local_status_port), LocalStatusHandler)
+                print(
+                    f"Local connector identity server listening on 127.0.0.1:{config.local_status_port}",
+                    flush=True,
+                )
+                server.serve_forever()
+            except OSError as error:
+                print(
+                    f"Local connector identity server unavailable: {error}; retrying in 10s",
+                    file=sys.stderr,
+                    flush=True,
+                )
+            except Exception as error:  # noqa: BLE001 - keep the connector's local browser bridge self-healing.
+                print(
+                    f"Local connector identity server stopped unexpectedly: {error}; retrying in 10s",
+                    file=sys.stderr,
+                    flush=True,
+                )
+            finally:
+                if server is not None:
+                    server.server_close()
+            time.sleep(10)
+
+    thread = threading.Thread(target=serve_forever_with_retry, name="pbe-local-connector-status", daemon=True)
     thread.start()
 
 

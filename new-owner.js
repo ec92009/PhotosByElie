@@ -51,10 +51,24 @@
     actionStatusRoot.dataset.state = stateName;
   };
 
+  function syncOpenSidecarControl() {
+    const button = $("[data-new-owner-queue-sidecar]");
+    if (!button) return;
+    const unavailable = state.localConnectorChecked && !localConnectorId();
+    button.disabled = state.busy || unavailable;
+    button.setAttribute("aria-disabled", String(unavailable));
+    button.title = unavailable
+      ? "Start or install the PhotosByElie Mac connector on this Mac, then refresh."
+      : "";
+  }
+
   const setQueueControlsBusy = (busy) => {
     document.querySelectorAll("[data-new-owner-queue-check], [data-new-owner-sync-photos], [data-new-owner-queue-sidecar], [data-new-owner-upload-publish]")
       .forEach((button) => {
-        button.disabled = busy;
+        const openSidecarUnavailable = button.matches("[data-new-owner-queue-sidecar]")
+          && state.localConnectorChecked
+          && !localConnectorId();
+        button.disabled = busy || openSidecarUnavailable;
         button.setAttribute("aria-busy", String(busy));
       });
   };
@@ -211,9 +225,9 @@
       return;
     }
     localConnectorRoot.innerHTML = state.localConnectorChecked
-      ? "<strong>Local Mac bridge not verified yet.</strong><small>Open Sidecar will still try this Mac directly; if it does not open, start or install the Mac connector.</small>"
+      ? "<strong>This Mac connector is not reachable.</strong><small>Start or install the PhotosByElie Mac connector on this Mac, then refresh. I will not open a dead localhost page.</small>"
       : "<strong>Detecting this Mac connector...</strong>";
-    localConnectorRoot.dataset.state = state.localConnectorChecked ? "live" : "busy";
+    localConnectorRoot.dataset.state = state.localConnectorChecked ? "missing" : "busy";
   };
 
   const renderSession = () => {
@@ -400,6 +414,7 @@
     renderConnectors();
     renderLocalConnector();
     renderAction();
+    syncOpenSidecarControl();
     prepareCollapsibleSections();
   };
 
@@ -594,17 +609,40 @@
     statusLabel: "Queueing...",
   });
 
-  const openLocalSidecar = () => {
+  const openLocalSidecar = async () => {
     if (state.busy) return;
     state.busy = true;
     setQueueControlsBusy(true);
-    setActionStatus("Opening this Mac’s local bridge...", "busy");
-    setStatus("Opening Sidecar on this Mac...");
-    const url = new URL(LOCAL_SIDECAR_OPEN_URL);
-    url.searchParams.set("source", "new-owner");
-    url.searchParams.set("returnTo", window.location.href);
-    url.searchParams.set("t", String(Date.now()));
-    window.location.href = url.href;
+    let navigating = false;
+    try {
+      setActionStatus("Checking this Mac’s local bridge...", "busy");
+      setStatus("Checking this Mac connector...");
+      if (!localConnectorId()) {
+        await detectLocalConnector();
+        render();
+      }
+      if (!localConnectorId()) {
+        const message = "This Mac connector is not reachable at 127.0.0.1:8766. Start or install the Mac connector on this Mac, then refresh Owner.";
+        setActionStatus(message, "error");
+        setStatus("Mac connector not reachable on this Mac.");
+        render();
+        return;
+      }
+      setActionStatus("Opening this Mac’s local bridge...", "busy");
+      setStatus("Opening Sidecar on this Mac...");
+      const url = new URL(LOCAL_SIDECAR_OPEN_URL);
+      url.searchParams.set("source", "new-owner");
+      url.searchParams.set("returnTo", window.location.href);
+      url.searchParams.set("t", String(Date.now()));
+      navigating = true;
+      window.location.href = url.href;
+    } finally {
+      if (!navigating) {
+        state.busy = false;
+        setQueueControlsBusy(false);
+        syncOpenSidecarControl();
+      }
+    }
   };
 
   const queuePhotosIndexSync = () => queueAction({

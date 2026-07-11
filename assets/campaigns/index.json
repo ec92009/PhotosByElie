@@ -1,9 +1,73 @@
 {
   "format": "photosbyelie-campaign-index",
   "schema_version": 1,
-  "generated_at": "2026-07-10T14:58:24.402Z",
-  "campaign_count": 161,
+  "generated_at": "2026-07-11T03:03:47.269Z",
+  "campaign_count": 164,
   "campaigns": [
+    {
+      "id": "pinterest-lisbon-carmo-convent-ruins-2026-07-11",
+      "source": "Pinterest",
+      "title": "Lisbon Carmo Convent Ruins",
+      "description": "A 5-photo Lisbon Carmo Convent Ruins edit prepared for Pinterest with public Photos By Elie previews and a first-party browsing destination.",
+      "date": "2026-07-11",
+      "href": "./campaign.html?c=pinterest-lisbon-carmo-convent-ruins-2026-07-11",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=pinterest-lisbon-carmo-convent-ruins-2026-07-11",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/20220519-150002-04473-673b0d617b_900.jpg",
+      "imageAlt": "Carmo Convent, Lisbon",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/20220519-150002-04473-673b0d617b_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20220519-144910-04396-092ac31b87_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20220519-145011-04398-926891f8aa_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20220519-145733-04458-46544e9a62_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20220519-150855-04494-23ca28ef26_900.jpg"
+      ],
+      "primaryPhotoCount": 5,
+      "relatedPhotoCount": 0,
+      "mtimeMs": 1783739021034
+    },
+    {
+      "id": "instagram-valencia-cathedral-stone-detail-2026-07-11",
+      "source": "Instagram",
+      "title": "Valencia Cathedral Stone Detail",
+      "description": "A 5-photo Valencia Cathedral Stone Detail edit prepared for Instagram with public Photos By Elie previews and a first-party browsing destination.",
+      "date": "2026-07-11",
+      "href": "./campaign.html?c=instagram-valencia-cathedral-stone-detail-2026-07-11",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=instagram-valencia-cathedral-stone-detail-2026-07-11",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/img-1549-471a28324d_900.jpg",
+      "imageAlt": "Valencia Cathedral",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/img-1549-471a28324d_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1548-bb4fc6c71a_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1547-d92a870c4f_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1546-7416feac97_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1545-fbf260c171_900.jpg"
+      ],
+      "primaryPhotoCount": 5,
+      "relatedPhotoCount": 0,
+      "mtimeMs": 1783739021033
+    },
+    {
+      "id": "facebook-toulouse-cloisters-brick-light-2026-07-11",
+      "source": "Facebook",
+      "title": "Toulouse Cloisters and Brick Light",
+      "description": "A 6-photo Toulouse Cloisters and Brick Light edit prepared for Facebook with public Photos By Elie previews and a first-party browsing destination.",
+      "date": "2026-07-11",
+      "href": "./campaign.html?c=facebook-toulouse-cloisters-brick-light-2026-07-11",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=facebook-toulouse-cloisters-brick-light-2026-07-11",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/20111102-1226-07867-136188a2c1_900.jpg",
+      "imageAlt": "Cloitre des Jacobins, Toulouse, France",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/20111102-1226-07867-136188a2c1_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180524-1746-00941-72deedae61_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20111106-0808-27995-c4cfb5f5c1_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20111102-1227-05325-ab56a019a3_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180524-1746-00940-636b34659d_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20111106-0808-28027-8a497c25e6_900.jpg"
+      ],
+      "primaryPhotoCount": 6,
+      "relatedPhotoCount": 0,
+      "mtimeMs": 1783739021032
+    },
     {
       "id": "pinterest-nerja-caves-stone-forms-2026-07-10",
       "source": "Pinterest",
@@ -23,7 +87,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695495778
+      "mtimeMs": 1783738872383
     },
     {
       "id": "facebook-paris-arts-metiers-machines-2026-07-10",
@@ -47,7 +111,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695495778
+      "mtimeMs": 1783738872383
     },
     {
       "id": "instagram-seville-plaza-de-espana-canal-light-2026-07-10",
@@ -71,31 +135,28 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695495778
+      "mtimeMs": 1783738872383
     },
     {
-      "id": "facebook-benalmadena-seaport-evening-color-2026-07-09",
-      "source": "Facebook",
-      "title": "Benalmadena Seaport Evening Color",
-      "description": "A 8-photo Benalmadena Seaport Evening Color edit prepared for Facebook with public Photos By Elie previews and a first-party browsing destination.",
+      "id": "pinterest-pisa-cathedral-marble-facade-2026-07-09",
+      "source": "Pinterest",
+      "title": "Pisa Cathedral Marble Facade",
+      "description": "A 5-photo Pisa Cathedral Marble Facade edit prepared for Pinterest with public Photos By Elie previews and a first-party browsing destination.",
       "date": "2026-07-09",
-      "href": "./campaign.html?c=facebook-benalmadena-seaport-evening-color-2026-07-09",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=facebook-benalmadena-seaport-evening-color-2026-07-09",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/001-0cd1b0212f_900.jpg",
-      "imageAlt": "Benalmadena Seaport",
+      "href": "./campaign.html?c=pinterest-pisa-cathedral-marble-facade-2026-07-09",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=pinterest-pisa-cathedral-marble-facade-2026-07-09",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/001-b726a850c3_900.jpg",
+      "imageAlt": "Pisa Cathedral and Baptistery",
       "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/001-0cd1b0212f_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/001-9661a2006b_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/001-283d863371_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/001-2ed4134f4d_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/001-d3e8e491c6_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/001-f917ca47a2_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/001-378ec96d03_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/001-27058dd9a8_900.jpg"
+        "https://download.photos-by-elie.com/media/expo/001-b726a850c3_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/001-9648366ec4_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/001-862e1c98fe_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/001-b782c03bb8_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/001-ca3691704b_900.jpg"
       ],
-      "primaryPhotoCount": 8,
+      "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695376394
+      "mtimeMs": 1783704631582
     },
     {
       "id": "instagram-cordoba-mezquita-arches-light-2026-07-09",
@@ -119,28 +180,31 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695376394
+      "mtimeMs": 1783704631581
     },
     {
-      "id": "pinterest-pisa-cathedral-marble-facade-2026-07-09",
-      "source": "Pinterest",
-      "title": "Pisa Cathedral Marble Facade",
-      "description": "A 5-photo Pisa Cathedral Marble Facade edit prepared for Pinterest with public Photos By Elie previews and a first-party browsing destination.",
+      "id": "facebook-benalmadena-seaport-evening-color-2026-07-09",
+      "source": "Facebook",
+      "title": "Benalmadena Seaport Evening Color",
+      "description": "A 8-photo Benalmadena Seaport Evening Color edit prepared for Facebook with public Photos By Elie previews and a first-party browsing destination.",
       "date": "2026-07-09",
-      "href": "./campaign.html?c=pinterest-pisa-cathedral-marble-facade-2026-07-09",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=pinterest-pisa-cathedral-marble-facade-2026-07-09",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/001-b726a850c3_900.jpg",
-      "imageAlt": "Pisa Cathedral and Baptistery",
+      "href": "./campaign.html?c=facebook-benalmadena-seaport-evening-color-2026-07-09",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=facebook-benalmadena-seaport-evening-color-2026-07-09",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/001-0cd1b0212f_900.jpg",
+      "imageAlt": "Benalmadena Seaport",
       "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/001-b726a850c3_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/001-9648366ec4_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/001-862e1c98fe_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/001-b782c03bb8_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/001-ca3691704b_900.jpg"
+        "https://download.photos-by-elie.com/media/expo/001-0cd1b0212f_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/001-9661a2006b_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/001-283d863371_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/001-2ed4134f4d_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/001-d3e8e491c6_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/001-f917ca47a2_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/001-378ec96d03_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/001-27058dd9a8_900.jpg"
       ],
-      "primaryPhotoCount": 5,
+      "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695376394
+      "mtimeMs": 1783704631579
     },
     {
       "id": "pinterest-gibraltar-rock-mediterranean-light-2026-07-08",
@@ -161,7 +225,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352402
+      "mtimeMs": 1783479967523
     },
     {
       "id": "instagram-madrid-royal-palace-courtyard-light-2026-07-08",
@@ -185,7 +249,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352394
+      "mtimeMs": 1783479967522
     },
     {
       "id": "facebook-ronda-white-town-gorge-light-2026-07-08",
@@ -209,7 +273,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352388
+      "mtimeMs": 1783479967515
     },
     {
       "id": "pinterest-cadiz-market-color-texture-2026-07-07",
@@ -230,7 +294,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352399
+      "mtimeMs": 1783393625518
     },
     {
       "id": "instagram-malaga-cathedral-stone-evening-light-2026-07-07",
@@ -254,7 +318,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352395
+      "mtimeMs": 1783393625515
     },
     {
       "id": "facebook-granada-alhambra-stone-garden-light-2026-07-07",
@@ -278,7 +342,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352382
+      "mtimeMs": 1783393625512
     },
     {
       "id": "pinterest-boulogne-musee-annees-30-interiors-2026-07-06",
@@ -299,7 +363,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352399
+      "mtimeMs": 1783307166484
     },
     {
       "id": "instagram-benalmadena-aquarium-blue-glass-2026-07-06",
@@ -323,7 +387,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352390
+      "mtimeMs": 1783307166483
     },
     {
       "id": "facebook-paris-musee-dorsay-gallery-light-2026-07-06",
@@ -347,7 +411,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352386
+      "mtimeMs": 1783307166480
     },
     {
       "id": "pinterest-carlsbad-garden-coast-light-2026-07-05",
@@ -368,7 +432,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352400
+      "mtimeMs": 1783306869671
     },
     {
       "id": "instagram-valencia-aquarium-blue-forms-2026-07-05",
@@ -392,7 +456,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352398
+      "mtimeMs": 1783306869670
     },
     {
       "id": "facebook-cascais-castle-stone-sea-2026-07-05",
@@ -416,28 +480,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352381
-    },
-    {
-      "id": "pinterest-nerja-mediterranean-beach-blues-2026-07-03",
-      "source": "Pinterest",
-      "title": "Nerja Mediterranean Beach Blues",
-      "description": "A 5-photo Nerja Mediterranean Beach Blues edit prepared for Pinterest with public Photos By Elie previews and a first-party browsing destination.",
-      "date": "2026-07-03",
-      "href": "./campaign.html?c=pinterest-nerja-mediterranean-beach-blues-2026-07-03",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=pinterest-nerja-mediterranean-beach-blues-2026-07-03",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/20180421-1533-13173-45d10d758d_900.jpg",
-      "imageAlt": "Nerja, beach",
-      "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/20180421-1533-13173-45d10d758d_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180421-1537-12617-c2d492125d_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180421-1535-11896-ead94a86da_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180421-1533-11883-ffd69b01d5_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180421-1536-12740-41ca079ecc_900.jpg"
-      ],
-      "primaryPhotoCount": 5,
-      "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352403
+      "mtimeMs": 1783306869669
     },
     {
       "id": "instagram-bilbao-guggenheim-metal-curves-2026-07-03",
@@ -461,7 +504,28 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352391
+      "mtimeMs": 1783048249382
+    },
+    {
+      "id": "pinterest-nerja-mediterranean-beach-blues-2026-07-03",
+      "source": "Pinterest",
+      "title": "Nerja Mediterranean Beach Blues",
+      "description": "A 5-photo Nerja Mediterranean Beach Blues edit prepared for Pinterest with public Photos By Elie previews and a first-party browsing destination.",
+      "date": "2026-07-03",
+      "href": "./campaign.html?c=pinterest-nerja-mediterranean-beach-blues-2026-07-03",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=pinterest-nerja-mediterranean-beach-blues-2026-07-03",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/20180421-1533-13173-45d10d758d_900.jpg",
+      "imageAlt": "Nerja, beach",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/20180421-1533-13173-45d10d758d_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180421-1537-12617-c2d492125d_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180421-1535-11896-ead94a86da_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180421-1533-11883-ffd69b01d5_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180421-1536-12740-41ca079ecc_900.jpg"
+      ],
+      "primaryPhotoCount": 5,
+      "relatedPhotoCount": 0,
+      "mtimeMs": 1783048249382
     },
     {
       "id": "facebook-pisa-marble-tower-light-2026-07-03",
@@ -483,7 +547,7 @@
       ],
       "primaryPhotoCount": 6,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352387
+      "mtimeMs": 1783048249381
     },
     {
       "id": "pinterest-del-mar-beach-sunset-layers-2026-07-02",
@@ -504,31 +568,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352400
-    },
-    {
-      "id": "instagram-seville-cathedral-golden-stone-2026-07-02",
-      "source": "Instagram",
-      "title": "Seville Cathedral Golden Stone",
-      "description": "A 8-photo Seville Cathedral Golden Stone edit prepared for Instagram with public Photos By Elie previews and a first-party browsing destination.",
-      "date": "2026-07-02",
-      "href": "./campaign.html?c=instagram-seville-cathedral-golden-stone-2026-07-02",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=instagram-seville-cathedral-golden-stone-2026-07-02",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/img-1315-3d319b8fdb_900.jpg",
-      "imageAlt": "Seville Cathedral",
-      "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/img-1315-3d319b8fdb_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1317-06e4d01f50_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1319-3cd3714815_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1320-415d5fa2c8_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1321-4c1ec8fc95_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1322-79081c04e0_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1316-e7917d1295_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1318-00395678a4_900.jpg"
-      ],
-      "primaryPhotoCount": 8,
-      "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352397
+      "mtimeMs": 1782961491425
     },
     {
       "id": "facebook-cascais-atlantic-shore-color-2026-07-02",
@@ -552,7 +592,31 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352381
+      "mtimeMs": 1782961491424
+    },
+    {
+      "id": "instagram-seville-cathedral-golden-stone-2026-07-02",
+      "source": "Instagram",
+      "title": "Seville Cathedral Golden Stone",
+      "description": "A 8-photo Seville Cathedral Golden Stone edit prepared for Instagram with public Photos By Elie previews and a first-party browsing destination.",
+      "date": "2026-07-02",
+      "href": "./campaign.html?c=instagram-seville-cathedral-golden-stone-2026-07-02",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=instagram-seville-cathedral-golden-stone-2026-07-02",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/img-1315-3d319b8fdb_900.jpg",
+      "imageAlt": "Seville Cathedral",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/img-1315-3d319b8fdb_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1317-06e4d01f50_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1319-3cd3714815_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1320-415d5fa2c8_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1321-4c1ec8fc95_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1322-79081c04e0_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1316-e7917d1295_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1318-00395678a4_900.jpg"
+      ],
+      "primaryPhotoCount": 8,
+      "relatedPhotoCount": 0,
+      "mtimeMs": 1782961491424
     },
     {
       "id": "pinterest-albi-tarn-old-town-light-2026-07-01",
@@ -573,29 +637,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352398
-    },
-    {
-      "id": "instagram-san-gimignano-tower-stone-2026-07-01",
-      "source": "Instagram",
-      "title": "San Gimignano Tower Stone",
-      "description": "A 6-photo San Gimignano Tower Stone edit prepared for Instagram with public Photos By Elie previews and a first-party browsing destination.",
-      "date": "2026-07-01",
-      "href": "./campaign.html?c=instagram-san-gimignano-tower-stone-2026-07-01",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=instagram-san-gimignano-tower-stone-2026-07-01",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/img-1184-adad54985d_900.jpg",
-      "imageAlt": "San Gimignano",
-      "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/img-1184-adad54985d_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1180-fe3d9faa8d_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1179-73dc1ce59c_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1182-5aa2cfd683_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1181-a12bca4639_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1177-ed6ca580f8_900.jpg"
-      ],
-      "primaryPhotoCount": 6,
-      "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352396
+      "mtimeMs": 1782875484990
     },
     {
       "id": "facebook-paris-arts-et-metiers-machines-2026-07-01",
@@ -619,7 +661,29 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352385
+      "mtimeMs": 1782875484989
+    },
+    {
+      "id": "instagram-san-gimignano-tower-stone-2026-07-01",
+      "source": "Instagram",
+      "title": "San Gimignano Tower Stone",
+      "description": "A 6-photo San Gimignano Tower Stone edit prepared for Instagram with public Photos By Elie previews and a first-party browsing destination.",
+      "date": "2026-07-01",
+      "href": "./campaign.html?c=instagram-san-gimignano-tower-stone-2026-07-01",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=instagram-san-gimignano-tower-stone-2026-07-01",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/img-1184-adad54985d_900.jpg",
+      "imageAlt": "San Gimignano",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/img-1184-adad54985d_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1180-fe3d9faa8d_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1179-73dc1ce59c_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1182-5aa2cfd683_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1181-a12bca4639_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1177-ed6ca580f8_900.jpg"
+      ],
+      "primaryPhotoCount": 6,
+      "relatedPhotoCount": 0,
+      "mtimeMs": 1782875484989
     },
     {
       "id": "pinterest-puerto-vallarta-marina-tropical-color-2026-06-30",
@@ -640,7 +704,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352405
+      "mtimeMs": 1782773283984
     },
     {
       "id": "instagram-sintra-moorish-castle-wall-paths-2026-06-30",
@@ -664,7 +728,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352397
+      "mtimeMs": 1782773283983
     },
     {
       "id": "facebook-paris-carnavalet-interior-color-2026-06-30",
@@ -688,7 +752,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352386
+      "mtimeMs": 1782773283982
     },
     {
       "id": "pinterest-la-jolla-coastal-blue-details-2026-06-21",
@@ -709,7 +773,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352402
+      "mtimeMs": 1782011026823
     },
     {
       "id": "instagram-cordoba-mezquita-arches-shadow-2026-06-21",
@@ -733,7 +797,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352392
+      "mtimeMs": 1782011026822
     },
     {
       "id": "facebook-lisbon-jeronimos-monastery-carved-stone-2026-06-21",
@@ -757,7 +821,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352383
+      "mtimeMs": 1782011026822
     },
     {
       "id": "pinterest-oceanside-harbor-pelican-light-2026-06-19",
@@ -778,7 +842,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352403
+      "mtimeMs": 1781838623930
     },
     {
       "id": "instagram-basque-country-street-light-2026-06-19",
@@ -802,7 +866,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352390
+      "mtimeMs": 1781838623929
     },
     {
       "id": "facebook-cabo-corrientes-pacific-color-2026-06-19",
@@ -826,28 +890,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352380
-    },
-    {
-      "id": "etsy-oceanside-harbor-wall-art-2026-06-19",
-      "source": "Etsy",
-      "title": "Oceanside Harbor Pelican Wall Art",
-      "description": "A 5-photo Oceanside Harbor Pelican Wall Art edit prepared from public Photos By Elie previews and first-party campaign data for draft digital wall-art listings.",
-      "date": "2026-06-19",
-      "href": "./campaign.html?c=etsy-oceanside-harbor-wall-art-2026-06-19",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=etsy-oceanside-harbor-wall-art-2026-06-19",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/20180505-1820-00243-439436be32_900.jpg",
-      "imageAlt": "Pelican",
-      "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/20180505-1820-00243-439436be32_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180420-1916-00220-eb332943fa_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180505-1815-00241-6a3a8e332e_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180505-1818-00242-09c3a7cdc4_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180505-1822-00245-6bb3eed50a_900.jpg"
-      ],
-      "primaryPhotoCount": 5,
-      "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352369
+      "mtimeMs": 1781838623929
     },
     {
       "id": "etsy-basque-country-street-wall-art-2026-06-19",
@@ -871,7 +914,28 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352361
+      "mtimeMs": 1781838296868
+    },
+    {
+      "id": "etsy-oceanside-harbor-wall-art-2026-06-19",
+      "source": "Etsy",
+      "title": "Oceanside Harbor Pelican Wall Art",
+      "description": "A 5-photo Oceanside Harbor Pelican Wall Art edit prepared from public Photos By Elie previews and first-party campaign data for draft digital wall-art listings.",
+      "date": "2026-06-19",
+      "href": "./campaign.html?c=etsy-oceanside-harbor-wall-art-2026-06-19",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=etsy-oceanside-harbor-wall-art-2026-06-19",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/20180505-1820-00243-439436be32_900.jpg",
+      "imageAlt": "Pelican",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/20180505-1820-00243-439436be32_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180420-1916-00220-eb332943fa_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180505-1815-00241-6a3a8e332e_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180505-1818-00242-09c3a7cdc4_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180505-1822-00245-6bb3eed50a_900.jpg"
+      ],
+      "primaryPhotoCount": 5,
+      "relatedPhotoCount": 0,
+      "mtimeMs": 1781838296868
     },
     {
       "id": "etsy-cabo-corrientes-wall-art-2026-06-19",
@@ -895,7 +959,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352361
+      "mtimeMs": 1781838296865
     },
     {
       "id": "pinterest-estepa-chocolate-museum-color-2026-06-18",
@@ -916,31 +980,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352401
-    },
-    {
-      "id": "instagram-madrid-imprenta-type-patterns-2026-06-18",
-      "source": "Instagram",
-      "title": "Madrid Imprenta Type Patterns",
-      "description": "An eight-photo Madrid Imprenta Municipal edit with letterpress machinery, metal type, paper texture, and graphic pattern as wall-art candidates.",
-      "date": "2026-06-18",
-      "href": "./campaign.html?c=instagram-madrid-imprenta-type-patterns-2026-06-18",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=instagram-madrid-imprenta-type-patterns-2026-06-18",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/20180522-1053-00829-6b0491a51f_900.jpg",
-      "imageAlt": "Imprenta Municipal, Madrid",
-      "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/20180522-1053-00829-6b0491a51f_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180522-1047-00822-a87196398e_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180522-1052-00827-35836a2a52_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180522-1047-00824-e31889ddcd_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180522-1042-00816-596de76b2b_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180522-1044-00819-c52a428a92_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180522-1042-00817-442053ee3d_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180522-1043-00818-26094a4b97_900.jpg"
-      ],
-      "primaryPhotoCount": 8,
-      "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352393
+      "mtimeMs": 1781789616245
     },
     {
       "id": "facebook-granada-alhambra-tile-light-2026-06-18",
@@ -964,16 +1004,16 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352382
+      "mtimeMs": 1781789616245
     },
     {
-      "id": "etsy-madrid-imprenta-wall-art-2026-06-18",
-      "source": "Etsy",
-      "title": "Madrid Imprenta Wall Art",
-      "description": "A curated Madrid Imprenta Municipal edit with letterpress machinery, metal type, paper texture, and graphic pattern as wall-art candidates.",
+      "id": "instagram-madrid-imprenta-type-patterns-2026-06-18",
+      "source": "Instagram",
+      "title": "Madrid Imprenta Type Patterns",
+      "description": "An eight-photo Madrid Imprenta Municipal edit with letterpress machinery, metal type, paper texture, and graphic pattern as wall-art candidates.",
       "date": "2026-06-18",
-      "href": "./campaign.html?c=etsy-madrid-imprenta-wall-art-2026-06-18",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=etsy-madrid-imprenta-wall-art-2026-06-18",
+      "href": "./campaign.html?c=instagram-madrid-imprenta-type-patterns-2026-06-18",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=instagram-madrid-imprenta-type-patterns-2026-06-18",
       "imageUrl": "https://download.photos-by-elie.com/media/expo/20180522-1053-00829-6b0491a51f_900.jpg",
       "imageAlt": "Imprenta Municipal, Madrid",
       "previewImageUrls": [
@@ -988,7 +1028,28 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352366
+      "mtimeMs": 1781789616245
+    },
+    {
+      "id": "etsy-estepa-chocolate-wall-art-2026-06-18",
+      "source": "Etsy",
+      "title": "Estepa Chocolate Museum Wall Art",
+      "description": "A curated Estepa Chocolate Museum edit with warm color, craft detail, and editorial still-life atmosphere for wall-art browsing.",
+      "date": "2026-06-18",
+      "href": "./campaign.html?c=etsy-estepa-chocolate-wall-art-2026-06-18",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=etsy-estepa-chocolate-wall-art-2026-06-18",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/img-5358-bd4d6e2f06_900.jpg",
+      "imageAlt": "Estepa, Spain, Chocolate Museum",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/img-5358-bd4d6e2f06_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20240308-125735-00219-e46fc0ee45_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20240308-125916-00223-b4400dc4f0_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20240308-125931-00227-697e5c0278_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20240308-125937-00229-179e49e125_900.jpg"
+      ],
+      "primaryPhotoCount": 5,
+      "relatedPhotoCount": 0,
+      "mtimeMs": 1781751875283
     },
     {
       "id": "etsy-granada-alhambra-wall-art-2026-06-18",
@@ -1012,28 +1073,31 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352364
+      "mtimeMs": 1781751875283
     },
     {
-      "id": "etsy-estepa-chocolate-wall-art-2026-06-18",
+      "id": "etsy-madrid-imprenta-wall-art-2026-06-18",
       "source": "Etsy",
-      "title": "Estepa Chocolate Museum Wall Art",
-      "description": "A curated Estepa Chocolate Museum edit with warm color, craft detail, and editorial still-life atmosphere for wall-art browsing.",
+      "title": "Madrid Imprenta Wall Art",
+      "description": "A curated Madrid Imprenta Municipal edit with letterpress machinery, metal type, paper texture, and graphic pattern as wall-art candidates.",
       "date": "2026-06-18",
-      "href": "./campaign.html?c=etsy-estepa-chocolate-wall-art-2026-06-18",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=etsy-estepa-chocolate-wall-art-2026-06-18",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/img-5358-bd4d6e2f06_900.jpg",
-      "imageAlt": "Estepa, Spain, Chocolate Museum",
+      "href": "./campaign.html?c=etsy-madrid-imprenta-wall-art-2026-06-18",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=etsy-madrid-imprenta-wall-art-2026-06-18",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/20180522-1053-00829-6b0491a51f_900.jpg",
+      "imageAlt": "Imprenta Municipal, Madrid",
       "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/img-5358-bd4d6e2f06_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20240308-125735-00219-e46fc0ee45_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20240308-125916-00223-b4400dc4f0_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20240308-125931-00227-697e5c0278_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20240308-125937-00229-179e49e125_900.jpg"
+        "https://download.photos-by-elie.com/media/expo/20180522-1053-00829-6b0491a51f_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180522-1047-00822-a87196398e_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180522-1052-00827-35836a2a52_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180522-1047-00824-e31889ddcd_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180522-1042-00816-596de76b2b_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180522-1044-00819-c52a428a92_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180522-1042-00817-442053ee3d_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180522-1043-00818-26094a4b97_900.jpg"
       ],
-      "primaryPhotoCount": 5,
+      "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352363
+      "mtimeMs": 1781751875283
     },
     {
       "id": "pinterest-del-mar-sunset-shoreline-2026-06-17",
@@ -1054,7 +1118,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352401
+      "mtimeMs": 1781705064275
     },
     {
       "id": "instagram-albert-kahn-garden-reflections-2026-06-17",
@@ -1078,7 +1142,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352390
+      "mtimeMs": 1781705064274
     },
     {
       "id": "facebook-malaga-costa-brava-shore-color-2026-06-17",
@@ -1101,7 +1165,28 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352384
+      "mtimeMs": 1781705064271
+    },
+    {
+      "id": "etsy-del-mar-sunset-wall-art-2026-06-17",
+      "source": "Etsy",
+      "title": "Del Mar Sunset Wall Art",
+      "description": "A five-photo Del Mar shoreline edit with soft sunset color, California beach atmosphere, and calm wall-art rhythm.",
+      "date": "2026-06-17",
+      "href": "./campaign.html?c=etsy-del-mar-sunset-wall-art-2026-06-17",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=etsy-del-mar-sunset-wall-art-2026-06-17",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/20180130-1807-00056-ce796ea795_900.jpg",
+      "imageAlt": "Del Mar Dog Beach at Sunset",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/20180130-1807-00056-ce796ea795_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180130-1810-00058-16dcf3e4ea_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180130-1813-00061-f38fd1051d_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180130-1809-00057-5d56be5106_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180130-1817-00064-419e83e6e6_900.jpg"
+      ],
+      "primaryPhotoCount": 5,
+      "relatedPhotoCount": 0,
+      "mtimeMs": 1781705064270
     },
     {
       "id": "etsy-malaga-costa-brava-shore-wall-art-2026-06-17",
@@ -1124,28 +1209,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352369
-    },
-    {
-      "id": "etsy-del-mar-sunset-wall-art-2026-06-17",
-      "source": "Etsy",
-      "title": "Del Mar Sunset Wall Art",
-      "description": "A five-photo Del Mar shoreline edit with soft sunset color, California beach atmosphere, and calm wall-art rhythm.",
-      "date": "2026-06-17",
-      "href": "./campaign.html?c=etsy-del-mar-sunset-wall-art-2026-06-17",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=etsy-del-mar-sunset-wall-art-2026-06-17",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/20180130-1807-00056-ce796ea795_900.jpg",
-      "imageAlt": "Del Mar Dog Beach at Sunset",
-      "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/20180130-1807-00056-ce796ea795_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180130-1810-00058-16dcf3e4ea_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180130-1813-00061-f38fd1051d_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180130-1809-00057-5d56be5106_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180130-1817-00064-419e83e6e6_900.jpg"
-      ],
-      "primaryPhotoCount": 5,
-      "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352362
+      "mtimeMs": 1781705064270
     },
     {
       "id": "etsy-albert-kahn-garden-wall-art-2026-06-17",
@@ -1169,27 +1233,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352359
-    },
-    {
-      "id": "pinterest-paris-invalides-church-light-2026-06-16",
-      "source": "Pinterest",
-      "title": "Paris Invalides Church Light",
-      "description": "A five-photo Paris Invalides church edit with gilded detail, stone rhythm, and quiet interior atmosphere curated for travel wall-art browsing.",
-      "date": "2026-06-16",
-      "href": "./campaign.html?c=pinterest-paris-invalides-church-light-2026-06-16",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=pinterest-paris-invalides-church-light-2026-06-16",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/20220506-060627-03224-86e5202fb1_900.jpg",
-      "imageAlt": "Church, Invalides",
-      "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/20220506-060627-03224-86e5202fb1_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20220506-141127-03238-6a809a3d2d_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20220506-145942-03357-6183b42671_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20220506-045942-03172-b368612e02_900.jpg"
-      ],
-      "primaryPhotoCount": 5,
-      "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352404
+      "mtimeMs": 1781705064269
     },
     {
       "id": "instagram-lisbon-ajuda-palace-rooms-2026-06-16",
@@ -1213,51 +1257,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352393
-    },
-    {
-      "id": "facebook-basque-country-bilbao-light-2026-06-16",
-      "source": "Facebook",
-      "title": "Basque Country Bilbao Light",
-      "description": "An eight-photo Basque Country edit with Bilbao architecture, river light, and northern Spain travel texture selected for polished wall-art browsing.",
-      "date": "2026-06-16",
-      "href": "./campaign.html?c=facebook-basque-country-bilbao-light-2026-06-16",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=facebook-basque-country-bilbao-light-2026-06-16",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/20220509-205254-03573-fd98e07ecc_900.jpg",
-      "imageAlt": "Basque Country, Bilbao",
-      "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/20220509-205254-03573-fd98e07ecc_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180523-1201-00911-eafaa28f50_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20220511-100959-04337-e5e7737c00_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180523-1842-00934-ac0d4c2359_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180523-1505-00933-be91168496_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180523-1227-00921-6e41710e47_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180523-1232-00922-a14269681d_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20220509-210128-03604-d9c7d7c228_900.jpg"
-      ],
-      "primaryPhotoCount": 8,
-      "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352379
-    },
-    {
-      "id": "etsy-paris-invalides-church-wall-art-2026-06-16",
-      "source": "Etsy",
-      "title": "Paris Invalides Church Wall Art",
-      "description": "A five-photo Paris Invalides church edit with gilded detail, stone rhythm, and quiet interior atmosphere curated for travel wall-art browsing.",
-      "date": "2026-06-16",
-      "href": "./campaign.html?c=etsy-paris-invalides-church-wall-art-2026-06-16",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=etsy-paris-invalides-church-wall-art-2026-06-16",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/20220506-060627-03224-86e5202fb1_900.jpg",
-      "imageAlt": "Church, Invalides",
-      "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/20220506-060627-03224-86e5202fb1_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20220506-141127-03238-6a809a3d2d_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20220506-145942-03357-6183b42671_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20220506-045942-03172-b368612e02_900.jpg"
-      ],
-      "primaryPhotoCount": 5,
-      "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352371
+      "mtimeMs": 1781579886412
     },
     {
       "id": "etsy-lisbon-ajuda-palace-rooms-wall-art-2026-06-16",
@@ -1281,7 +1281,71 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352365
+      "mtimeMs": 1781579886411
+    },
+    {
+      "id": "pinterest-paris-invalides-church-light-2026-06-16",
+      "source": "Pinterest",
+      "title": "Paris Invalides Church Light",
+      "description": "A five-photo Paris Invalides church edit with gilded detail, stone rhythm, and quiet interior atmosphere curated for travel wall-art browsing.",
+      "date": "2026-06-16",
+      "href": "./campaign.html?c=pinterest-paris-invalides-church-light-2026-06-16",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=pinterest-paris-invalides-church-light-2026-06-16",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/20220506-060627-03224-86e5202fb1_900.jpg",
+      "imageAlt": "Church, Invalides",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/20220506-060627-03224-86e5202fb1_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20220506-141127-03238-6a809a3d2d_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20220506-145942-03357-6183b42671_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20220506-045942-03172-b368612e02_900.jpg"
+      ],
+      "primaryPhotoCount": 5,
+      "relatedPhotoCount": 0,
+      "mtimeMs": 1781579347389
+    },
+    {
+      "id": "facebook-basque-country-bilbao-light-2026-06-16",
+      "source": "Facebook",
+      "title": "Basque Country Bilbao Light",
+      "description": "An eight-photo Basque Country edit with Bilbao architecture, river light, and northern Spain travel texture selected for polished wall-art browsing.",
+      "date": "2026-06-16",
+      "href": "./campaign.html?c=facebook-basque-country-bilbao-light-2026-06-16",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=facebook-basque-country-bilbao-light-2026-06-16",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/20220509-205254-03573-fd98e07ecc_900.jpg",
+      "imageAlt": "Basque Country, Bilbao",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/20220509-205254-03573-fd98e07ecc_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180523-1201-00911-eafaa28f50_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20220511-100959-04337-e5e7737c00_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180523-1842-00934-ac0d4c2359_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180523-1505-00933-be91168496_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180523-1227-00921-6e41710e47_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180523-1232-00922-a14269681d_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20220509-210128-03604-d9c7d7c228_900.jpg"
+      ],
+      "primaryPhotoCount": 8,
+      "relatedPhotoCount": 0,
+      "mtimeMs": 1781579347384
+    },
+    {
+      "id": "etsy-paris-invalides-church-wall-art-2026-06-16",
+      "source": "Etsy",
+      "title": "Paris Invalides Church Wall Art",
+      "description": "A five-photo Paris Invalides church edit with gilded detail, stone rhythm, and quiet interior atmosphere curated for travel wall-art browsing.",
+      "date": "2026-06-16",
+      "href": "./campaign.html?c=etsy-paris-invalides-church-wall-art-2026-06-16",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=etsy-paris-invalides-church-wall-art-2026-06-16",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/20220506-060627-03224-86e5202fb1_900.jpg",
+      "imageAlt": "Church, Invalides",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/20220506-060627-03224-86e5202fb1_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20220506-141127-03238-6a809a3d2d_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20220506-145942-03357-6183b42671_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20220506-045942-03172-b368612e02_900.jpg"
+      ],
+      "primaryPhotoCount": 5,
+      "relatedPhotoCount": 0,
+      "mtimeMs": 1781579347383
     },
     {
       "id": "etsy-basque-country-bilbao-wall-art-2026-06-16",
@@ -1305,7 +1369,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352360
+      "mtimeMs": 1781579347382
     },
     {
       "id": "pinterest-la-jolla-heights-sunset-2026-06-15",
@@ -1326,7 +1390,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352403
+      "mtimeMs": 1781493065352
     },
     {
       "id": "instagram-setenil-rock-streets-2026-06-15",
@@ -1350,7 +1414,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352396
+      "mtimeMs": 1781493065352
     },
     {
       "id": "facebook-malaga-city-evening-light-2026-06-15",
@@ -1374,31 +1438,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352384
-    },
-    {
-      "id": "etsy-setenil-rock-streets-wall-art-2026-06-15",
-      "source": "Etsy",
-      "title": "Setenil Rock Streets Wall Art",
-      "description": "An eight-photo Andalusia wall-art edit from Setenil de las Bodegas, focused on white streets pressed under rock, warm stone, and strong travel texture.",
-      "date": "2026-06-15",
-      "href": "./campaign.html?c=etsy-setenil-rock-streets-wall-art-2026-06-15",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=etsy-setenil-rock-streets-wall-art-2026-06-15",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/20230806-153055-00157-ca94c00662_900.jpg",
-      "imageAlt": "Setenil De Las Bodegas",
-      "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/20230806-153055-00157-ca94c00662_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20230806-153217-00158-4ae53ae586_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20230806-153218-00159-c3db4d8be2_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20230806-153446-00163-ebb8c976af_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20230806-153451-00164-ebd7e5284e_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20230806-153456-00166-ba1a5b2c69_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20230806-153503-00170-3441608fe6_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20230806-153505-00171-2cc9e07bc6_900.jpg"
-      ],
-      "primaryPhotoCount": 8,
-      "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352373
+      "mtimeMs": 1781493065309
     },
     {
       "id": "etsy-malaga-city-wall-art-2026-06-15",
@@ -1422,7 +1462,31 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352368
+      "mtimeMs": 1781493065308
+    },
+    {
+      "id": "etsy-setenil-rock-streets-wall-art-2026-06-15",
+      "source": "Etsy",
+      "title": "Setenil Rock Streets Wall Art",
+      "description": "An eight-photo Andalusia wall-art edit from Setenil de las Bodegas, focused on white streets pressed under rock, warm stone, and strong travel texture.",
+      "date": "2026-06-15",
+      "href": "./campaign.html?c=etsy-setenil-rock-streets-wall-art-2026-06-15",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=etsy-setenil-rock-streets-wall-art-2026-06-15",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/20230806-153055-00157-ca94c00662_900.jpg",
+      "imageAlt": "Setenil De Las Bodegas",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/20230806-153055-00157-ca94c00662_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20230806-153217-00158-4ae53ae586_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20230806-153218-00159-c3db4d8be2_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20230806-153446-00163-ebb8c976af_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20230806-153451-00164-ebd7e5284e_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20230806-153456-00166-ba1a5b2c69_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20230806-153503-00170-3441608fe6_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20230806-153505-00171-2cc9e07bc6_900.jpg"
+      ],
+      "primaryPhotoCount": 8,
+      "relatedPhotoCount": 0,
+      "mtimeMs": 1781493065308
     },
     {
       "id": "etsy-la-jolla-heights-sunset-wall-art-2026-06-15",
@@ -1443,7 +1507,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352365
+      "mtimeMs": 1781493065307
     },
     {
       "id": "pinterest-lisbon-ancient-art-museum-light-2026-06-14",
@@ -1464,7 +1528,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352403
+      "mtimeMs": 1781406546938
     },
     {
       "id": "instagram-porto-countryside-green-light-2026-06-14",
@@ -1486,7 +1550,7 @@
       ],
       "primaryPhotoCount": 6,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352396
+      "mtimeMs": 1781406546937
     },
     {
       "id": "facebook-paris-bateau-mouche-seine-light-2026-06-14",
@@ -1507,7 +1571,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352385
+      "mtimeMs": 1781406546935
     },
     {
       "id": "etsy-porto-countryside-wall-art-2026-06-14",
@@ -1529,7 +1593,7 @@
       ],
       "primaryPhotoCount": 6,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352372
+      "mtimeMs": 1781406546934
     },
     {
       "id": "etsy-paris-bateau-mouche-wall-art-2026-06-14",
@@ -1550,7 +1614,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352370
+      "mtimeMs": 1781406546933
     },
     {
       "id": "etsy-lisbon-ancient-art-wall-art-2026-06-14",
@@ -1571,27 +1635,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352366
-    },
-    {
-      "id": "pinterest-valencia-aquarium-blue-light-2026-06-13",
-      "source": "Pinterest",
-      "title": "Valencia Aquarium Blue Light",
-      "description": "A five-image Photos By Elie Valencia Aquarium edit selected for blue light, glassy water, marine texture, and calm modern wall-art color.",
-      "date": "2026-06-13",
-      "href": "./campaign.html?c=pinterest-valencia-aquarium-blue-light-2026-06-13",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=pinterest-valencia-aquarium-blue-light-2026-06-13",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/img-1558-54e7de1c27_900.jpg",
-      "imageAlt": "Aquarium, Valencia",
-      "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/img-1558-54e7de1c27_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1571-ef0911c97b_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1561-1ddef65695_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1570-10897d2d40_900.jpg"
-      ],
-      "primaryPhotoCount": 5,
-      "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352406
+      "mtimeMs": 1781406546932
     },
     {
       "id": "instagram-cabo-da-roca-atlantic-edge-2026-06-13",
@@ -1615,7 +1659,27 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352391
+      "mtimeMs": 1781320022852
+    },
+    {
+      "id": "pinterest-valencia-aquarium-blue-light-2026-06-13",
+      "source": "Pinterest",
+      "title": "Valencia Aquarium Blue Light",
+      "description": "A five-image Photos By Elie Valencia Aquarium edit selected for blue light, glassy water, marine texture, and calm modern wall-art color.",
+      "date": "2026-06-13",
+      "href": "./campaign.html?c=pinterest-valencia-aquarium-blue-light-2026-06-13",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=pinterest-valencia-aquarium-blue-light-2026-06-13",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/img-1558-54e7de1c27_900.jpg",
+      "imageAlt": "Aquarium, Valencia",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/img-1558-54e7de1c27_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1571-ef0911c97b_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1561-1ddef65695_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1570-10897d2d40_900.jpg"
+      ],
+      "primaryPhotoCount": 5,
+      "relatedPhotoCount": 0,
+      "mtimeMs": 1781320022852
     },
     {
       "id": "facebook-malaga-auto-museum-chrome-color-2026-06-13",
@@ -1639,27 +1703,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352383
-    },
-    {
-      "id": "etsy-valencia-aquarium-wall-art-2026-06-13",
-      "source": "Etsy",
-      "title": "Valencia Aquarium Wall Art",
-      "description": "A five-image Photos By Elie Valencia Aquarium edit selected for blue light, glassy water, marine texture, and calm modern wall-art color.",
-      "date": "2026-06-13",
-      "href": "./campaign.html?c=etsy-valencia-aquarium-wall-art-2026-06-13",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=etsy-valencia-aquarium-wall-art-2026-06-13",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/img-1558-54e7de1c27_900.jpg",
-      "imageAlt": "Aquarium, Valencia",
-      "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/img-1558-54e7de1c27_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1571-ef0911c97b_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1561-1ddef65695_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1570-10897d2d40_900.jpg"
-      ],
-      "primaryPhotoCount": 5,
-      "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352378
+      "mtimeMs": 1781320022849
     },
     {
       "id": "etsy-malaga-auto-museum-wall-art-2026-06-13",
@@ -1683,7 +1727,27 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352367
+      "mtimeMs": 1781320022848
+    },
+    {
+      "id": "etsy-valencia-aquarium-wall-art-2026-06-13",
+      "source": "Etsy",
+      "title": "Valencia Aquarium Wall Art",
+      "description": "A five-image Photos By Elie Valencia Aquarium edit selected for blue light, glassy water, marine texture, and calm modern wall-art color.",
+      "date": "2026-06-13",
+      "href": "./campaign.html?c=etsy-valencia-aquarium-wall-art-2026-06-13",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=etsy-valencia-aquarium-wall-art-2026-06-13",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/img-1558-54e7de1c27_900.jpg",
+      "imageAlt": "Aquarium, Valencia",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/img-1558-54e7de1c27_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1571-ef0911c97b_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1561-1ddef65695_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1570-10897d2d40_900.jpg"
+      ],
+      "primaryPhotoCount": 5,
+      "relatedPhotoCount": 0,
+      "mtimeMs": 1781320022848
     },
     {
       "id": "etsy-cabo-da-roca-atlantic-wall-art-2026-06-13",
@@ -1707,7 +1771,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352362
+      "mtimeMs": 1781320022847
     },
     {
       "id": "pinterest-castelo-dos-mouros-stone-paths-2026-06-12",
@@ -1728,7 +1792,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352400
+      "mtimeMs": 1781233742056
     },
     {
       "id": "instagram-fuengirola-moon-mediterranean-2026-06-12",
@@ -1751,7 +1815,7 @@
       ],
       "primaryPhotoCount": 7,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352392
+      "mtimeMs": 1781233742055
     },
     {
       "id": "facebook-alhaurin-sunset-hills-2026-06-12",
@@ -1775,7 +1839,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352379
+      "mtimeMs": 1781233742053
     },
     {
       "id": "etsy-fuengirola-moon-wall-art-2026-06-12",
@@ -1798,7 +1862,7 @@
       ],
       "primaryPhotoCount": 7,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352363
+      "mtimeMs": 1781233742011
     },
     {
       "id": "etsy-castelo-mouros-wall-art-2026-06-12",
@@ -1819,7 +1883,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352362
+      "mtimeMs": 1781233742010
     },
     {
       "id": "etsy-alhaurin-sunset-wall-art-2026-06-12",
@@ -1843,7 +1907,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352360
+      "mtimeMs": 1781233742009
     },
     {
       "id": "pinterest-paris-carnavalet-museum-rooms-2026-06-11",
@@ -1864,7 +1928,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352404
+      "mtimeMs": 1781157007218
     },
     {
       "id": "instagram-madrid-royal-palace-interiors-2026-06-11",
@@ -1888,7 +1952,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352394
+      "mtimeMs": 1781157007217
     },
     {
       "id": "facebook-ronda-gorge-white-town-light-2026-06-11",
@@ -1912,7 +1976,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352387
+      "mtimeMs": 1781157007213
     },
     {
       "id": "etsy-ronda-gorge-white-town-wall-art-2026-06-11",
@@ -1936,7 +2000,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352372
+      "mtimeMs": 1781157007213
     },
     {
       "id": "etsy-paris-carnavalet-rooms-wall-art-2026-06-11",
@@ -1957,7 +2021,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352370
+      "mtimeMs": 1781157007211
     },
     {
       "id": "etsy-madrid-royal-palace-wall-art-2026-06-11",
@@ -1981,7 +2045,71 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352367
+      "mtimeMs": 1781157007210
+    },
+    {
+      "id": "etsy-gibraltar-rock-bay-wall-art-2026-06-10",
+      "source": "Etsy",
+      "title": "Gibraltar Rock and Bay Wall Art",
+      "description": "A digital-download Photos By Elie Gibraltar edit selected for rock-and-bay views, Mediterranean light, and travel wall-art clarity.",
+      "date": "2026-06-10",
+      "href": "./campaign.html?c=etsy-gibraltar-rock-bay-wall-art-2026-06-10",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=etsy-gibraltar-rock-bay-wall-art-2026-06-10",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/img-5705-d13a56dbb8_900.jpg",
+      "imageAlt": "Gibraltar",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/img-5705-d13a56dbb8_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-5668-7d7e86442a_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-5688-774fc51bff_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-5703-d54eafb44c_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-5690-7733fd1086_900.jpg"
+      ],
+      "primaryPhotoCount": 5,
+      "relatedPhotoCount": 0,
+      "mtimeMs": 1781060674516
+    },
+    {
+      "id": "etsy-paris-montmartre-wall-art-2026-06-10",
+      "source": "Etsy",
+      "title": "Paris Montmartre Wall Art",
+      "description": "A digital-download Photos By Elie Montmartre edit selected for Paris facades, cafe corners, soft street light, and finished wall-art atmosphere.",
+      "date": "2026-06-10",
+      "href": "./campaign.html?c=etsy-paris-montmartre-wall-art-2026-06-10",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=etsy-paris-montmartre-wall-art-2026-06-10",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/20180510-1443-00277-536a6ae39b_900.jpg",
+      "imageAlt": "Montmartre, Paris",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/20180510-1443-00277-536a6ae39b_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180510-1434-00271-e2c5e5c2fd_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180510-1502-00287-cdb42e6e17_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180510-1519-00298-793ef096f2_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180510-1450-00283-0c7c1fb449_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180510-1447-00280-64b8687bb0_900.jpg"
+      ],
+      "primaryPhotoCount": 6,
+      "relatedPhotoCount": 0,
+      "mtimeMs": 1781060674515
+    },
+    {
+      "id": "etsy-seville-plaza-espana-wall-art-2026-06-10",
+      "source": "Etsy",
+      "title": "Seville Plaza de Espana Wall Art",
+      "description": "A digital-download Photos By Elie edit from Plaza de Espana in Seville, selected for ceramic detail, arches, color, and Andalusian wall-art presence.",
+      "date": "2026-06-10",
+      "href": "./campaign.html?c=etsy-seville-plaza-espana-wall-art-2026-06-10",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=etsy-seville-plaza-espana-wall-art-2026-06-10",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/img-1291-8ca48ed8d2_900.jpg",
+      "imageAlt": "Plaza de España in Seville",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/img-1291-8ca48ed8d2_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1305-2d00c82f12_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1299-258452f505_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1307-5123942639_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20220705-163205-00060-pano-8068d8fe3f_900.jpg"
+      ],
+      "primaryPhotoCount": 6,
+      "relatedPhotoCount": 0,
+      "mtimeMs": 1781060674515
     },
     {
       "id": "pinterest-gibraltar-rock-and-bay-light-2026-06-10",
@@ -2002,7 +2130,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352401
+      "mtimeMs": 1781060673964
     },
     {
       "id": "instagram-paris-montmartre-street-light-2026-06-10",
@@ -2026,7 +2154,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352395
+      "mtimeMs": 1781060672905
     },
     {
       "id": "facebook-seville-plaza-espana-tiles-and-arches-2026-06-10",
@@ -2049,71 +2177,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352388
-    },
-    {
-      "id": "etsy-seville-plaza-espana-wall-art-2026-06-10",
-      "source": "Etsy",
-      "title": "Seville Plaza de Espana Wall Art",
-      "description": "A digital-download Photos By Elie edit from Plaza de Espana in Seville, selected for ceramic detail, arches, color, and Andalusian wall-art presence.",
-      "date": "2026-06-10",
-      "href": "./campaign.html?c=etsy-seville-plaza-espana-wall-art-2026-06-10",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=etsy-seville-plaza-espana-wall-art-2026-06-10",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/img-1291-8ca48ed8d2_900.jpg",
-      "imageAlt": "Plaza de España in Seville",
-      "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/img-1291-8ca48ed8d2_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1305-2d00c82f12_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1299-258452f505_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1307-5123942639_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20220705-163205-00060-pano-8068d8fe3f_900.jpg"
-      ],
-      "primaryPhotoCount": 6,
-      "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352377
-    },
-    {
-      "id": "etsy-paris-montmartre-wall-art-2026-06-10",
-      "source": "Etsy",
-      "title": "Paris Montmartre Wall Art",
-      "description": "A digital-download Photos By Elie Montmartre edit selected for Paris facades, cafe corners, soft street light, and finished wall-art atmosphere.",
-      "date": "2026-06-10",
-      "href": "./campaign.html?c=etsy-paris-montmartre-wall-art-2026-06-10",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=etsy-paris-montmartre-wall-art-2026-06-10",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/20180510-1443-00277-536a6ae39b_900.jpg",
-      "imageAlt": "Montmartre, Paris",
-      "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/20180510-1443-00277-536a6ae39b_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180510-1434-00271-e2c5e5c2fd_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180510-1502-00287-cdb42e6e17_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180510-1519-00298-793ef096f2_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180510-1450-00283-0c7c1fb449_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180510-1447-00280-64b8687bb0_900.jpg"
-      ],
-      "primaryPhotoCount": 6,
-      "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352371
-    },
-    {
-      "id": "etsy-gibraltar-rock-bay-wall-art-2026-06-10",
-      "source": "Etsy",
-      "title": "Gibraltar Rock and Bay Wall Art",
-      "description": "A digital-download Photos By Elie Gibraltar edit selected for rock-and-bay views, Mediterranean light, and travel wall-art clarity.",
-      "date": "2026-06-10",
-      "href": "./campaign.html?c=etsy-gibraltar-rock-bay-wall-art-2026-06-10",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=etsy-gibraltar-rock-bay-wall-art-2026-06-10",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/img-5705-d13a56dbb8_900.jpg",
-      "imageAlt": "Gibraltar",
-      "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/img-5705-d13a56dbb8_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-5668-7d7e86442a_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-5688-774fc51bff_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-5703-d54eafb44c_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-5690-7733fd1086_900.jpg"
-      ],
-      "primaryPhotoCount": 5,
-      "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352364
+      "mtimeMs": 1781060671299
     },
     {
       "id": "pinterest-san-gimignano-towers-light-2026-06-09",
@@ -2134,7 +2198,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352406
+      "mtimeMs": 1780974425901
     },
     {
       "id": "instagram-nerja-caves-stone-light-2026-06-09",
@@ -2157,7 +2221,7 @@
       ],
       "primaryPhotoCount": 7,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352395
+      "mtimeMs": 1780974425900
     },
     {
       "id": "facebook-malaga-cathedral-la-manquita-2026-06-09",
@@ -2181,7 +2245,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352384
+      "mtimeMs": 1780974425898
     },
     {
       "id": "etsy-san-gimignano-wall-art-2026-06-09",
@@ -2202,7 +2266,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352373
+      "mtimeMs": 1780974425898
     },
     {
       "id": "etsy-nerja-caves-wall-art-2026-06-09",
@@ -2225,7 +2289,7 @@
       ],
       "primaryPhotoCount": 7,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352369
+      "mtimeMs": 1780974425897
     },
     {
       "id": "etsy-malaga-cathedral-wall-art-2026-06-09",
@@ -2249,7 +2313,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352368
+      "mtimeMs": 1780974425896
     },
     {
       "id": "pinterest-cadiz-fish-market-color-2026-06-07",
@@ -2270,7 +2334,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352399
+      "mtimeMs": 1780801926498
     },
     {
       "id": "instagram-malaga-museo-ruso-color-form-2026-06-07",
@@ -2288,31 +2352,7 @@
       ],
       "primaryPhotoCount": 7,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352395
-    },
-    {
-      "id": "facebook-sintra-castle-walls-and-hills-2026-06-07",
-      "source": "Facebook",
-      "title": "Sintra Castle Walls and Hills",
-      "description": "A focused Photos By Elie set from Sintra's Moorish Castle, selected for stone ramparts, green hills, Atlantic atmosphere, and quiet Portugal wall-art presence.",
-      "date": "2026-06-07",
-      "href": "./campaign.html?c=facebook-sintra-castle-walls-and-hills-2026-06-07",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=facebook-sintra-castle-walls-and-hills-2026-06-07",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/20180518-1340-00504-13096677a9_900.jpg",
-      "imageAlt": "Castelo Dos Mouros, Lisbon",
-      "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/20180518-1340-00504-13096677a9_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180518-1342-00506-7a25cd91e6_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180518-1343-00508-fe5541c766_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180518-1343-00509-788722bc52_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180518-1359-00513-759c490e7d_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180518-1402-00514-7b4f60aad8_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180518-1405-00520-cc9e8a8faf_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180518-1408-00521-560ec85707_900.jpg"
-      ],
-      "primaryPhotoCount": 8,
-      "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352389
+      "mtimeMs": 1780801926498
     },
     {
       "id": "etsy-sintra-castle-wall-art-2026-06-07",
@@ -2336,7 +2376,31 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352377
+      "mtimeMs": 1780801926497
+    },
+    {
+      "id": "facebook-sintra-castle-walls-and-hills-2026-06-07",
+      "source": "Facebook",
+      "title": "Sintra Castle Walls and Hills",
+      "description": "A focused Photos By Elie set from Sintra's Moorish Castle, selected for stone ramparts, green hills, Atlantic atmosphere, and quiet Portugal wall-art presence.",
+      "date": "2026-06-07",
+      "href": "./campaign.html?c=facebook-sintra-castle-walls-and-hills-2026-06-07",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=facebook-sintra-castle-walls-and-hills-2026-06-07",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/20180518-1340-00504-13096677a9_900.jpg",
+      "imageAlt": "Castelo Dos Mouros, Lisbon",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/20180518-1340-00504-13096677a9_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180518-1342-00506-7a25cd91e6_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180518-1343-00508-fe5541c766_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180518-1343-00509-788722bc52_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180518-1359-00513-759c490e7d_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180518-1402-00514-7b4f60aad8_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180518-1405-00520-cc9e8a8faf_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180518-1408-00521-560ec85707_900.jpg"
+      ],
+      "primaryPhotoCount": 8,
+      "relatedPhotoCount": 6,
+      "mtimeMs": 1780801926497
     },
     {
       "id": "etsy-malaga-museo-ruso-wall-art-2026-06-07",
@@ -2354,7 +2418,7 @@
       ],
       "primaryPhotoCount": 7,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352369
+      "mtimeMs": 1780801926496
     },
     {
       "id": "etsy-cadiz-fish-market-wall-art-2026-06-07",
@@ -2375,28 +2439,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352362
-    },
-    {
-      "id": "pinterest-paris-opera-galeries-light-2026-06-06",
-      "source": "Pinterest",
-      "title": "Paris Opera and Galeries Light",
-      "description": "Five Photos By Elie Paris photographs selected for Opera Garnier detail, Galeries Lafayette glass, soft interior light, and polished French travel wall-art presence.",
-      "date": "2026-06-06",
-      "href": "./campaign.html?c=pinterest-paris-opera-galeries-light-2026-06-06",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=pinterest-paris-opera-galeries-light-2026-06-06",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/20220505-135231-03007-a5d4711305_900.jpg",
-      "imageAlt": "Opera Garnier",
-      "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/20220505-135231-03007-a5d4711305_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20220505-153639-03083-3ded4343e5_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20220505-135707-03028-e58f913a2d_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20220505-135205-02993-c098de9740_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20220505-135009-02982-38775df02a_900.jpg"
-      ],
-      "primaryPhotoCount": 5,
-      "relatedPhotoCount": 5,
-      "mtimeMs": 1783695352404
+      "mtimeMs": 1780801926493
     },
     {
       "id": "instagram-madrid-mercado-san-miguel-light-2026-06-06",
@@ -2419,7 +2462,28 @@
       ],
       "primaryPhotoCount": 7,
       "relatedPhotoCount": 5,
-      "mtimeMs": 1783695352393
+      "mtimeMs": 1780775181722
+    },
+    {
+      "id": "pinterest-paris-opera-galeries-light-2026-06-06",
+      "source": "Pinterest",
+      "title": "Paris Opera and Galeries Light",
+      "description": "Five Photos By Elie Paris photographs selected for Opera Garnier detail, Galeries Lafayette glass, soft interior light, and polished French travel wall-art presence.",
+      "date": "2026-06-06",
+      "href": "./campaign.html?c=pinterest-paris-opera-galeries-light-2026-06-06",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=pinterest-paris-opera-galeries-light-2026-06-06",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/20220505-135231-03007-a5d4711305_900.jpg",
+      "imageAlt": "Opera Garnier",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/20220505-135231-03007-a5d4711305_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20220505-153639-03083-3ded4343e5_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20220505-135707-03028-e58f913a2d_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20220505-135205-02993-c098de9740_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20220505-135009-02982-38775df02a_900.jpg"
+      ],
+      "primaryPhotoCount": 5,
+      "relatedPhotoCount": 5,
+      "mtimeMs": 1780775181722
     },
     {
       "id": "facebook-lisbon-ajuda-palace-interiors-2026-06-06",
@@ -2443,28 +2507,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352382
-    },
-    {
-      "id": "etsy-paris-opera-galeries-wall-art-2026-06-06",
-      "source": "Etsy",
-      "title": "Paris Opera and Galeries Wall Art",
-      "description": "Five Photos By Elie Paris photographs selected for Opera Garnier ornament, Galeries Lafayette glass, interior light, and French travel wall-art confidence.",
-      "date": "2026-06-06",
-      "href": "./campaign.html?c=etsy-paris-opera-galeries-wall-art-2026-06-06",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=etsy-paris-opera-galeries-wall-art-2026-06-06",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/20220505-135231-03007-a5d4711305_900.jpg",
-      "imageAlt": "Opera Garnier",
-      "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/20220505-135231-03007-a5d4711305_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20220505-153639-03083-3ded4343e5_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20220505-135707-03028-e58f913a2d_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20220505-135205-02993-c098de9740_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20220505-135009-02982-38775df02a_900.jpg"
-      ],
-      "primaryPhotoCount": 5,
-      "relatedPhotoCount": 5,
-      "mtimeMs": 1783695352371
+      "mtimeMs": 1780775181720
     },
     {
       "id": "etsy-lisbon-ajuda-palace-wall-art-2026-06-06",
@@ -2488,7 +2531,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352366
+      "mtimeMs": 1780775181720
     },
     {
       "id": "etsy-madrid-mercado-san-miguel-wall-art-2026-06-06",
@@ -2511,7 +2554,28 @@
       ],
       "primaryPhotoCount": 7,
       "relatedPhotoCount": 5,
-      "mtimeMs": 1783695352366
+      "mtimeMs": 1780775181720
+    },
+    {
+      "id": "etsy-paris-opera-galeries-wall-art-2026-06-06",
+      "source": "Etsy",
+      "title": "Paris Opera and Galeries Wall Art",
+      "description": "Five Photos By Elie Paris photographs selected for Opera Garnier ornament, Galeries Lafayette glass, interior light, and French travel wall-art confidence.",
+      "date": "2026-06-06",
+      "href": "./campaign.html?c=etsy-paris-opera-galeries-wall-art-2026-06-06",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=etsy-paris-opera-galeries-wall-art-2026-06-06",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/20220505-135231-03007-a5d4711305_900.jpg",
+      "imageAlt": "Opera Garnier",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/20220505-135231-03007-a5d4711305_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20220505-153639-03083-3ded4343e5_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20220505-135707-03028-e58f913a2d_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20220505-135205-02993-c098de9740_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20220505-135009-02982-38775df02a_900.jpg"
+      ],
+      "primaryPhotoCount": 5,
+      "relatedPhotoCount": 5,
+      "mtimeMs": 1780775181720
     },
     {
       "id": "pinterest-valencia-cathedral-stone-detail-2026-06-05",
@@ -2532,7 +2596,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 5,
-      "mtimeMs": 1783695352406
+      "mtimeMs": 1780775181722
     },
     {
       "id": "instagram-florence-evening-walk-2026-06-05",
@@ -2549,7 +2613,7 @@
       ],
       "primaryPhotoCount": 6,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352392
+      "mtimeMs": 1780775181721
     },
     {
       "id": "facebook-puerto-vallarta-marina-light-2026-06-05",
@@ -2573,28 +2637,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352387
-    },
-    {
-      "id": "etsy-valencia-cathedral-wall-art-2026-06-05",
-      "source": "Etsy",
-      "title": "Valencia Cathedral Wall Art",
-      "description": "Five Photos By Elie Valencia Cathedral photographs selected for carved stone, ornament, measured facade rhythm, and Spain travel wall-art confidence.",
-      "date": "2026-06-05",
-      "href": "./campaign.html?c=etsy-valencia-cathedral-wall-art-2026-06-05",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=etsy-valencia-cathedral-wall-art-2026-06-05",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/img-1549-471a28324d_900.jpg",
-      "imageAlt": "Valencia Cathedral",
-      "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/img-1549-471a28324d_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1545-fbf260c171_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1546-7416feac97_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1547-d92a870c4f_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1548-bb4fc6c71a_900.jpg"
-      ],
-      "primaryPhotoCount": 5,
-      "relatedPhotoCount": 5,
-      "mtimeMs": 1783695352378
+      "mtimeMs": 1780775181720
     },
     {
       "id": "etsy-puerto-vallarta-marina-wall-art-2026-06-05",
@@ -2618,7 +2661,28 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352372
+      "mtimeMs": 1780775181720
+    },
+    {
+      "id": "etsy-valencia-cathedral-wall-art-2026-06-05",
+      "source": "Etsy",
+      "title": "Valencia Cathedral Wall Art",
+      "description": "Five Photos By Elie Valencia Cathedral photographs selected for carved stone, ornament, measured facade rhythm, and Spain travel wall-art confidence.",
+      "date": "2026-06-05",
+      "href": "./campaign.html?c=etsy-valencia-cathedral-wall-art-2026-06-05",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=etsy-valencia-cathedral-wall-art-2026-06-05",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/img-1549-471a28324d_900.jpg",
+      "imageAlt": "Valencia Cathedral",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/img-1549-471a28324d_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1545-fbf260c171_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1546-7416feac97_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1547-d92a870c4f_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1548-bb4fc6c71a_900.jpg"
+      ],
+      "primaryPhotoCount": 5,
+      "relatedPhotoCount": 5,
+      "mtimeMs": 1780775181720
     },
     {
       "id": "etsy-florence-evening-wall-art-2026-06-05",
@@ -2635,7 +2699,7 @@
       ],
       "primaryPhotoCount": 6,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352363
+      "mtimeMs": 1780775181719
     },
     {
       "id": "pinterest-paris-arts-metiers-machines-2026-06-04",
@@ -2656,52 +2720,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352404
-    },
-    {
-      "id": "instagram-lisbon-carmo-ruins-light-2026-06-04",
-      "source": "Instagram",
-      "title": "Lisbon Carmo Ruins Light",
-      "description": "A concise Photos By Elie edit from Lisbon's Carmo Convent ruins, selected for open Gothic arches, pale stone, elevated city light, and quiet Portugal wall-art atmosphere.",
-      "date": "2026-06-04",
-      "href": "./campaign.html?c=instagram-lisbon-carmo-ruins-light-2026-06-04",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=instagram-lisbon-carmo-ruins-light-2026-06-04",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/20220519-144910-04396-092ac31b87_900.jpg",
-      "imageAlt": "Carmo Convent, Santa Justa Lift",
-      "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/20220519-144910-04396-092ac31b87_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20220519-150855-04494-23ca28ef26_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20220519-150002-04473-673b0d617b_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20220519-145733-04458-46544e9a62_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20220519-145011-04398-926891f8aa_900.jpg"
-      ],
-      "primaryPhotoCount": 5,
-      "relatedPhotoCount": 5,
-      "mtimeMs": 1783695352393
-    },
-    {
-      "id": "facebook-cordoba-mezquita-detail-light-2026-06-04",
-      "source": "Facebook",
-      "title": "Cordoba Mezquita Detail Light",
-      "description": "A focused Photos By Elie set from Cordoba, Spain, selected for chapel light, gilded ornament, historic interior detail, and quiet Andalusian wall-art atmosphere.",
-      "date": "2026-06-04",
-      "href": "./campaign.html?c=facebook-cordoba-mezquita-detail-light-2026-06-04",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=facebook-cordoba-mezquita-detail-light-2026-06-04",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/img-1408-94456ca4fc_900.jpg",
-      "imageAlt": "Cordoba, La Mezquita",
-      "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/img-1408-94456ca4fc_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1416-ce14e9f776_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1415-a0898b65fc_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1414-a8d42b2515_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1413-96ea2c869f_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1412-dde0e52bcb_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1404-b704ed7a17_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1402-4c2c98e288_900.jpg"
-      ],
-      "primaryPhotoCount": 8,
-      "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352381
+      "mtimeMs": 1780542624172
     },
     {
       "id": "etsy-paris-arts-metiers-wall-art-2026-06-04",
@@ -2722,7 +2741,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352369
+      "mtimeMs": 1780542624172
     },
     {
       "id": "etsy-lisbon-carmo-wall-art-2026-06-04",
@@ -2743,7 +2762,28 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 5,
-      "mtimeMs": 1783695352366
+      "mtimeMs": 1780542616253
+    },
+    {
+      "id": "instagram-lisbon-carmo-ruins-light-2026-06-04",
+      "source": "Instagram",
+      "title": "Lisbon Carmo Ruins Light",
+      "description": "A concise Photos By Elie edit from Lisbon's Carmo Convent ruins, selected for open Gothic arches, pale stone, elevated city light, and quiet Portugal wall-art atmosphere.",
+      "date": "2026-06-04",
+      "href": "./campaign.html?c=instagram-lisbon-carmo-ruins-light-2026-06-04",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=instagram-lisbon-carmo-ruins-light-2026-06-04",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/20220519-144910-04396-092ac31b87_900.jpg",
+      "imageAlt": "Carmo Convent, Santa Justa Lift",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/20220519-144910-04396-092ac31b87_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20220519-150855-04494-23ca28ef26_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20220519-150002-04473-673b0d617b_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20220519-145733-04458-46544e9a62_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20220519-145011-04398-926891f8aa_900.jpg"
+      ],
+      "primaryPhotoCount": 5,
+      "relatedPhotoCount": 5,
+      "mtimeMs": 1780542616252
     },
     {
       "id": "etsy-cordoba-mezquita-wall-art-2026-06-04",
@@ -2767,7 +2807,97 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352362
+      "mtimeMs": 1780542607573
+    },
+    {
+      "id": "facebook-cordoba-mezquita-detail-light-2026-06-04",
+      "source": "Facebook",
+      "title": "Cordoba Mezquita Detail Light",
+      "description": "A focused Photos By Elie set from Cordoba, Spain, selected for chapel light, gilded ornament, historic interior detail, and quiet Andalusian wall-art atmosphere.",
+      "date": "2026-06-04",
+      "href": "./campaign.html?c=facebook-cordoba-mezquita-detail-light-2026-06-04",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=facebook-cordoba-mezquita-detail-light-2026-06-04",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/img-1408-94456ca4fc_900.jpg",
+      "imageAlt": "Cordoba, La Mezquita",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/img-1408-94456ca4fc_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1416-ce14e9f776_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1415-a0898b65fc_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1414-a8d42b2515_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1413-96ea2c869f_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1412-dde0e52bcb_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1404-b704ed7a17_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1402-4c2c98e288_900.jpg"
+      ],
+      "primaryPhotoCount": 8,
+      "relatedPhotoCount": 6,
+      "mtimeMs": 1780542607572
+    },
+    {
+      "id": "etsy-paris-eiffel-night-wall-art-2026-06-03",
+      "source": "Etsy",
+      "title": "Paris Eiffel Night Wall Art",
+      "description": "A five-image Photos By Elie set from Paris, selected for Eiffel Tower night light, Seine reflections, skyline glow, and refined French travel wall-art browsing.",
+      "date": "2026-06-03",
+      "href": "./campaign.html?c=etsy-paris-eiffel-night-wall-art-2026-06-03",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=etsy-paris-eiffel-night-wall-art-2026-06-03",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/20180509-2318-00262-6868c80bf7_900.jpg",
+      "imageAlt": "Eiffel Tower at Night from the Trocadéro",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/20180509-2318-00262-6868c80bf7_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180509-2311-00255-7474968431_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180509-2316-00256-fe59b63a1a_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180509-2319-00263-ada5a380a3_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180509-2326-00266-3402cc9833_900.jpg"
+      ],
+      "primaryPhotoCount": 5,
+      "relatedPhotoCount": 6,
+      "mtimeMs": 1780456589388
+    },
+    {
+      "id": "etsy-tuscany-arno-hill-wall-art-2026-06-03",
+      "source": "Etsy",
+      "title": "Tuscany Arno Hill Wall Art",
+      "description": "A Photos By Elie Tuscany wall-art set built around Arno reflections, hill-town silhouettes, olive paths, and clear Italian spring light.",
+      "date": "2026-06-03",
+      "href": "./campaign.html?c=etsy-tuscany-arno-hill-wall-art-2026-06-03",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=etsy-tuscany-arno-hill-wall-art-2026-06-03",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/img-1177-ed6ca580f8_900.jpg",
+      "imageAlt": "Tuscany Arno Hill Wall Art",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/img-1177-ed6ca580f8_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1179-73dc1ce59c_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1180-fe3d9faa8d_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1181-a12bca4639_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1182-5aa2cfd683_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1184-adad54985d_900.jpg"
+      ],
+      "primaryPhotoCount": 8,
+      "relatedPhotoCount": 6,
+      "mtimeMs": 1780456589388
+    },
+    {
+      "id": "etsy-albi-tarn-wall-art-2026-06-03",
+      "source": "Etsy",
+      "title": "Albi Tarn Wall Art",
+      "description": "A focused Photos By Elie set from Albi, France, selected for Tarn river views, cathedral brick, old-town texture, and calm Occitanie wall-art atmosphere.",
+      "date": "2026-06-03",
+      "href": "./campaign.html?c=etsy-albi-tarn-wall-art-2026-06-03",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=etsy-albi-tarn-wall-art-2026-06-03",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/20180525-1443-00956-a9e61b8dde_900.jpg",
+      "imageAlt": "Albi in Occitanie",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/20180525-1443-00956-a9e61b8dde_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180525-1419-00943-554228f741_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180525-1439-00946-d866163437_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180525-1440-00949-4323df4391_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180525-1440-00951-9d8859c6b7_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180525-1441-00952-0be82ccc8d_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180525-1442-00953-93073461ca_900.jpg"
+      ],
+      "primaryPhotoCount": 8,
+      "relatedPhotoCount": 6,
+      "mtimeMs": 1780456589387
     },
     {
       "id": "pinterest-paris-eiffel-night-light-2026-06-03",
@@ -2788,29 +2918,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352404
-    },
-    {
-      "id": "instagram-tuscany-arno-and-hill-light-2026-06-03",
-      "source": "Instagram",
-      "title": "Tuscany Arno and Hill Light",
-      "description": "A Photos By Elie carousel set from Tuscany, built around Arno reflections, hill-town silhouettes, olive paths, and clear Italian spring light for polished wall-art browsing.",
-      "date": "2026-06-03",
-      "href": "./campaign.html?c=instagram-tuscany-arno-and-hill-light-2026-06-03",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=instagram-tuscany-arno-and-hill-light-2026-06-03",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/img-1177-ed6ca580f8_900.jpg",
-      "imageAlt": "Tuscany Arno and Hill Light",
-      "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/img-1177-ed6ca580f8_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1179-73dc1ce59c_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1180-fe3d9faa8d_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1181-a12bca4639_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1182-5aa2cfd683_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1184-adad54985d_900.jpg"
-      ],
-      "primaryPhotoCount": 8,
-      "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352397
+      "mtimeMs": 1780456589387
     },
     {
       "id": "facebook-albi-tarn-river-brick-light-2026-06-03",
@@ -2833,7 +2941,29 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352378
+      "mtimeMs": 1780456589386
+    },
+    {
+      "id": "instagram-tuscany-arno-and-hill-light-2026-06-03",
+      "source": "Instagram",
+      "title": "Tuscany Arno and Hill Light",
+      "description": "A Photos By Elie carousel set from Tuscany, built around Arno reflections, hill-town silhouettes, olive paths, and clear Italian spring light for polished wall-art browsing.",
+      "date": "2026-06-03",
+      "href": "./campaign.html?c=instagram-tuscany-arno-and-hill-light-2026-06-03",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=instagram-tuscany-arno-and-hill-light-2026-06-03",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/img-1177-ed6ca580f8_900.jpg",
+      "imageAlt": "Tuscany Arno and Hill Light",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/img-1177-ed6ca580f8_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1179-73dc1ce59c_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1180-fe3d9faa8d_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1181-a12bca4639_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1182-5aa2cfd683_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1184-adad54985d_900.jpg"
+      ],
+      "primaryPhotoCount": 8,
+      "relatedPhotoCount": 6,
+      "mtimeMs": 1780456589386
     },
     {
       "id": "etsy-solana-beach-sunset-wall-art-2026-06-03",
@@ -2853,50 +2983,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352378
-    },
-    {
-      "id": "etsy-tuscany-arno-hill-wall-art-2026-06-03",
-      "source": "Etsy",
-      "title": "Tuscany Arno Hill Wall Art",
-      "description": "A Photos By Elie Tuscany wall-art set built around Arno reflections, hill-town silhouettes, olive paths, and clear Italian spring light.",
-      "date": "2026-06-03",
-      "href": "./campaign.html?c=etsy-tuscany-arno-hill-wall-art-2026-06-03",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=etsy-tuscany-arno-hill-wall-art-2026-06-03",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/img-1177-ed6ca580f8_900.jpg",
-      "imageAlt": "Tuscany Arno Hill Wall Art",
-      "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/img-1177-ed6ca580f8_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1179-73dc1ce59c_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1180-fe3d9faa8d_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1181-a12bca4639_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1182-5aa2cfd683_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1184-adad54985d_900.jpg"
-      ],
-      "primaryPhotoCount": 8,
-      "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352378
-    },
-    {
-      "id": "etsy-paris-eiffel-night-wall-art-2026-06-03",
-      "source": "Etsy",
-      "title": "Paris Eiffel Night Wall Art",
-      "description": "A five-image Photos By Elie set from Paris, selected for Eiffel Tower night light, Seine reflections, skyline glow, and refined French travel wall-art browsing.",
-      "date": "2026-06-03",
-      "href": "./campaign.html?c=etsy-paris-eiffel-night-wall-art-2026-06-03",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=etsy-paris-eiffel-night-wall-art-2026-06-03",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/20180509-2318-00262-6868c80bf7_900.jpg",
-      "imageAlt": "Eiffel Tower at Night from the Trocadéro",
-      "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/20180509-2318-00262-6868c80bf7_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180509-2311-00255-7474968431_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180509-2316-00256-fe59b63a1a_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180509-2319-00263-ada5a380a3_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180509-2326-00266-3402cc9833_900.jpg"
-      ],
-      "primaryPhotoCount": 5,
-      "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352370
+      "mtimeMs": 1780438627253
     },
     {
       "id": "etsy-nerja-mediterranean-wall-art-2026-06-03",
@@ -2920,50 +3007,29 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352369
+      "mtimeMs": 1780438333648
     },
     {
-      "id": "etsy-albi-tarn-wall-art-2026-06-03",
+      "id": "etsy-sevilla-after-dusk-wall-art-2026-06-02",
       "source": "Etsy",
-      "title": "Albi Tarn Wall Art",
-      "description": "A focused Photos By Elie set from Albi, France, selected for Tarn river views, cathedral brick, old-town texture, and calm Occitanie wall-art atmosphere.",
-      "date": "2026-06-03",
-      "href": "./campaign.html?c=etsy-albi-tarn-wall-art-2026-06-03",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=etsy-albi-tarn-wall-art-2026-06-03",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/20180525-1443-00956-a9e61b8dde_900.jpg",
-      "imageAlt": "Albi in Occitanie",
+      "title": "Sevilla After Dusk Wall Art",
+      "description": "A focused Photos By Elie set from Sevilla at dusk, selected for warm street light, facade color, tiled rhythm, and finished Spanish travel wall-art atmosphere.",
+      "date": "2026-06-02",
+      "href": "./campaign.html?c=etsy-sevilla-after-dusk-wall-art-2026-06-02",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=etsy-sevilla-after-dusk-wall-art-2026-06-02",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/img-5327-d0205aa8c7_900.jpg",
+      "imageAlt": "Sevilla After Dusk Wall Art",
       "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/20180525-1443-00956-a9e61b8dde_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180525-1419-00943-554228f741_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180525-1439-00946-d866163437_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180525-1440-00949-4323df4391_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180525-1440-00951-9d8859c6b7_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180525-1441-00952-0be82ccc8d_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180525-1442-00953-93073461ca_900.jpg"
+        "https://download.photos-by-elie.com/media/expo/img-5327-d0205aa8c7_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-5328-f741903c89_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-5330-e00571a87d_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-5331-5ba685f86b_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-5333-7a4e3e9954_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-5342-fcbde6047f_900.jpg"
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352359
-    },
-    {
-      "id": "pinterest-solana-beach-sunset-layers-2026-06-02",
-      "source": "Pinterest",
-      "title": "Solana Beach Sunset Layers",
-      "description": "A five-image Photos By Elie Pinterest set from Solana Beach, California, selected for sunset layers, Pacific color, coastal silhouettes, and calm wall-art browsing.",
-      "date": "2026-06-02",
-      "href": "./campaign.html?c=pinterest-solana-beach-sunset-layers-2026-06-02",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=pinterest-solana-beach-sunset-layers-2026-06-02",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/20180304-1736-00113-a4774c8167_900.jpg",
-      "imageAlt": "Solana Beach Sunset",
-      "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/20180304-1736-00113-a4774c8167_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180304-1733-00111-33314469b1_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180304-1741-00115-48e59a7d7a_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180304-1745-00116-f769538cfb_900.jpg"
-      ],
-      "primaryPhotoCount": 5,
-      "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352406
+      "mtimeMs": 1780436931972
     },
     {
       "id": "instagram-nerja-mediterranean-terraces-2026-06-02",
@@ -2987,7 +3053,27 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352395
+      "mtimeMs": 1780396524144
+    },
+    {
+      "id": "pinterest-solana-beach-sunset-layers-2026-06-02",
+      "source": "Pinterest",
+      "title": "Solana Beach Sunset Layers",
+      "description": "A five-image Photos By Elie Pinterest set from Solana Beach, California, selected for sunset layers, Pacific color, coastal silhouettes, and calm wall-art browsing.",
+      "date": "2026-06-02",
+      "href": "./campaign.html?c=pinterest-solana-beach-sunset-layers-2026-06-02",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=pinterest-solana-beach-sunset-layers-2026-06-02",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/20180304-1736-00113-a4774c8167_900.jpg",
+      "imageAlt": "Solana Beach Sunset",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/20180304-1736-00113-a4774c8167_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180304-1733-00111-33314469b1_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180304-1741-00115-48e59a7d7a_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180304-1745-00116-f769538cfb_900.jpg"
+      ],
+      "primaryPhotoCount": 5,
+      "relatedPhotoCount": 6,
+      "mtimeMs": 1780396524144
     },
     {
       "id": "facebook-evening-in-sevilla-street-light-2026-06-02",
@@ -3009,29 +3095,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352381
-    },
-    {
-      "id": "etsy-sevilla-after-dusk-wall-art-2026-06-02",
-      "source": "Etsy",
-      "title": "Sevilla After Dusk Wall Art",
-      "description": "A focused Photos By Elie set from Sevilla at dusk, selected for warm street light, facade color, tiled rhythm, and finished Spanish travel wall-art atmosphere.",
-      "date": "2026-06-02",
-      "href": "./campaign.html?c=etsy-sevilla-after-dusk-wall-art-2026-06-02",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=etsy-sevilla-after-dusk-wall-art-2026-06-02",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/img-5327-d0205aa8c7_900.jpg",
-      "imageAlt": "Sevilla After Dusk Wall Art",
-      "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/img-5327-d0205aa8c7_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-5328-f741903c89_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-5330-e00571a87d_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-5331-5ba685f86b_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-5333-7a4e3e9954_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-5342-fcbde6047f_900.jpg"
-      ],
-      "primaryPhotoCount": 8,
-      "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352373
+      "mtimeMs": 1780396524143
     },
     {
       "id": "pinterest-belem-river-stone-details-2026-06-01",
@@ -3052,7 +3116,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352398
+      "mtimeMs": 1780283163496
     },
     {
       "id": "instagram-madrid-royal-palace-stone-courtyards-2026-06-01",
@@ -3075,7 +3139,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352394
+      "mtimeMs": 1780283162162
     },
     {
       "id": "facebook-toulouse-cloisters-brick-light-2026-06-01",
@@ -3099,7 +3163,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352389
+      "mtimeMs": 1780283160356
     },
     {
       "id": "pinterest-oceanside-pier-golden-hour-2026-05-31",
@@ -3120,7 +3184,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352404
+      "mtimeMs": 1780196964044
     },
     {
       "id": "instagram-colares-atlantic-cliffs-2026-05-31",
@@ -3144,7 +3208,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352391
+      "mtimeMs": 1780196964043
     },
     {
       "id": "facebook-paris-seine-notre-dame-light-2026-05-31",
@@ -3167,7 +3231,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352386
+      "mtimeMs": 1780196964042
     },
     {
       "id": "pinterest-pisa-marble-and-leaning-tower-2026-05-30",
@@ -3188,7 +3252,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352405
+      "mtimeMs": 1780139721081
     },
     {
       "id": "instagram-lisbon-monastery-stone-and-light-2026-05-30",
@@ -3212,7 +3276,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352393
+      "mtimeMs": 1780139721080
     },
     {
       "id": "facebook-madrid-printing-presses-and-pattern-2026-05-30",
@@ -3236,52 +3300,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352383
-    },
-    {
-      "id": "pinterest-san-diego-aquarium-blue-reef-2026-05-29",
-      "source": "Pinterest",
-      "title": "San Diego Aquarium Blue Reef",
-      "description": "A focused Photos By Elie set from the San Diego aquarium, selected for luminous blue water, coral color, layered reef texture, and quiet aquatic wall-art browsing.",
-      "date": "2026-05-29",
-      "href": "./campaign.html?c=pinterest-san-diego-aquarium-blue-reef-2026-05-29",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=pinterest-san-diego-aquarium-blue-reef-2026-05-29",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/20180421-1301-13471-a2bc5324f5_900.jpg",
-      "imageAlt": "San Diego Aquarium",
-      "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/20180421-1301-13471-a2bc5324f5_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180421-1301-13630-2e7556e274_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180421-1302-13484-de314daaef_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180421-1302-13327-ede937ff43_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180421-1303-12279-a30f818e53_900.jpg"
-      ],
-      "primaryPhotoCount": 5,
-      "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352405
-    },
-    {
-      "id": "instagram-cascais-atlantic-evening-2026-05-29",
-      "source": "Instagram",
-      "title": "Cascais Atlantic Evening",
-      "description": "A focused Photos By Elie set from Cascais, Portugal, built around blue-hour marina light, patterned pavement, Atlantic boats, evening buildings, and calm coastal atmosphere for travel and wall-art browsing.",
-      "date": "2026-05-29",
-      "href": "./campaign.html?c=instagram-cascais-atlantic-evening-2026-05-29",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=instagram-cascais-atlantic-evening-2026-05-29",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/20180517-2126-00483-f23ed1e1e2_900.jpg",
-      "imageAlt": "Beach, Cascais",
-      "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/20180517-2126-00483-f23ed1e1e2_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180517-2132-00488-18ec1fa871_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180517-2134-00489-a3c2036451_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180517-2134-00490-dc7a915651_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180517-2135-00491-f90f6d821a_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180517-2135-00492-564b88a104_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180517-2138-00495-cd8355432a_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180517-2236-00501-42b08a2940_900.jpg"
-      ],
-      "primaryPhotoCount": 8,
-      "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352391
+      "mtimeMs": 1780139721080
     },
     {
       "id": "facebook-bilbao-guggenheim-titanium-river-2026-05-29",
@@ -3305,7 +3324,52 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352380
+      "mtimeMs": 1780023967846
+    },
+    {
+      "id": "instagram-cascais-atlantic-evening-2026-05-29",
+      "source": "Instagram",
+      "title": "Cascais Atlantic Evening",
+      "description": "A focused Photos By Elie set from Cascais, Portugal, built around blue-hour marina light, patterned pavement, Atlantic boats, evening buildings, and calm coastal atmosphere for travel and wall-art browsing.",
+      "date": "2026-05-29",
+      "href": "./campaign.html?c=instagram-cascais-atlantic-evening-2026-05-29",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=instagram-cascais-atlantic-evening-2026-05-29",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/20180517-2126-00483-f23ed1e1e2_900.jpg",
+      "imageAlt": "Beach, Cascais",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/20180517-2126-00483-f23ed1e1e2_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180517-2132-00488-18ec1fa871_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180517-2134-00489-a3c2036451_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180517-2134-00490-dc7a915651_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180517-2135-00491-f90f6d821a_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180517-2135-00492-564b88a104_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180517-2138-00495-cd8355432a_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180517-2236-00501-42b08a2940_900.jpg"
+      ],
+      "primaryPhotoCount": 8,
+      "relatedPhotoCount": 6,
+      "mtimeMs": 1780023967846
+    },
+    {
+      "id": "pinterest-san-diego-aquarium-blue-reef-2026-05-29",
+      "source": "Pinterest",
+      "title": "San Diego Aquarium Blue Reef",
+      "description": "A focused Photos By Elie set from the San Diego aquarium, selected for luminous blue water, coral color, layered reef texture, and quiet aquatic wall-art browsing.",
+      "date": "2026-05-29",
+      "href": "./campaign.html?c=pinterest-san-diego-aquarium-blue-reef-2026-05-29",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=pinterest-san-diego-aquarium-blue-reef-2026-05-29",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/20180421-1301-13471-a2bc5324f5_900.jpg",
+      "imageAlt": "San Diego Aquarium",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/20180421-1301-13471-a2bc5324f5_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180421-1301-13630-2e7556e274_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180421-1302-13484-de314daaef_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180421-1302-13327-ede937ff43_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180421-1303-12279-a30f818e53_900.jpg"
+      ],
+      "primaryPhotoCount": 5,
+      "relatedPhotoCount": 6,
+      "mtimeMs": 1780023967846
     },
     {
       "id": "pinterest-la-jolla-coastal-reserve-2026-05-28",
@@ -3326,7 +3390,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783695352402
+      "mtimeMs": 1779937525862
     },
     {
       "id": "instagram-seville-cathedral-stone-and-light-2026-05-28",
@@ -3341,7 +3405,7 @@
       "previewImageUrls": [],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352397
+      "mtimeMs": 1779937525859
     },
     {
       "id": "facebook-granada-alhambra-courtyards-2026-05-28",
@@ -3364,28 +3428,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352381
-    },
-    {
-      "id": "pinterest-del-mar-sunset-tide-colors-2026-05-27",
-      "source": "Pinterest",
-      "title": "Del Mar Sunset Tide Colors",
-      "description": "A focused California coast set from Del Mar Dog Beach, selected for saturated sunset color, tide reflections, and clean wall-art atmosphere from the public Photos By Elie catalog.",
-      "date": "2026-05-27",
-      "href": "./campaign.html?c=pinterest-del-mar-sunset-tide-colors-2026-05-27",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=pinterest-del-mar-sunset-tide-colors-2026-05-27",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/20180130-1830-10861-hdr-f722e85795_900.jpg",
-      "imageAlt": "Del Mar Dog Beach at Sunset",
-      "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/20180130-1830-10861-hdr-f722e85795_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180130-1829-00079-c928a918e4_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180130-1829-00078-c8a1e6c9ca_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180130-1826-00076-d2dfbc75f1_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180130-1824-00075-43302f0e18_900.jpg"
-      ],
-      "primaryPhotoCount": 5,
-      "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352401
+      "mtimeMs": 1779937525856
     },
     {
       "id": "pinterest-gibraltar-rock-and-bay-views-2026-05-27",
@@ -3406,28 +3449,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352401
-    },
-    {
-      "id": "instagram-ronda-gorge-white-town-views-2026-05-27",
-      "source": "Instagram",
-      "title": "Ronda Gorge and White Town Views",
-      "description": "A focused Ronda set from Spain, built around high gorge views, white buildings, cliff edges, and bright Andalusian atmosphere from the public Photos By Elie catalog.",
-      "date": "2026-05-27",
-      "href": "./campaign.html?c=instagram-ronda-gorge-white-town-views-2026-05-27",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=instagram-ronda-gorge-white-town-views-2026-05-27",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/d5h-2761-c86320d0bf_900.jpg",
-      "imageAlt": "Ronda",
-      "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/d5h-2761-c86320d0bf_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/d5h-2760-8ccdd9684c_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/d5h-2758-0c1491e3c3_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/d5h-2749-2f1d7f391b_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/d5h-2747-5e7d6bc190_900.jpg"
-      ],
-      "primaryPhotoCount": 9,
-      "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352396
+      "mtimeMs": 1779893671825
     },
     {
       "id": "instagram-setenil-rock-streets-2026-05-27",
@@ -3448,7 +3470,7 @@
       ],
       "primaryPhotoCount": 10,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352396
+      "mtimeMs": 1779893671821
     },
     {
       "id": "facebook-paris-arts-metiers-mechanical-details-2026-05-27",
@@ -3472,7 +3494,49 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352385
+      "mtimeMs": 1779893671820
+    },
+    {
+      "id": "pinterest-del-mar-sunset-tide-colors-2026-05-27",
+      "source": "Pinterest",
+      "title": "Del Mar Sunset Tide Colors",
+      "description": "A focused California coast set from Del Mar Dog Beach, selected for saturated sunset color, tide reflections, and clean wall-art atmosphere from the public Photos By Elie catalog.",
+      "date": "2026-05-27",
+      "href": "./campaign.html?c=pinterest-del-mar-sunset-tide-colors-2026-05-27",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=pinterest-del-mar-sunset-tide-colors-2026-05-27",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/20180130-1830-10861-hdr-f722e85795_900.jpg",
+      "imageAlt": "Del Mar Dog Beach at Sunset",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/20180130-1830-10861-hdr-f722e85795_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180130-1829-00079-c928a918e4_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180130-1829-00078-c8a1e6c9ca_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180130-1826-00076-d2dfbc75f1_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180130-1824-00075-43302f0e18_900.jpg"
+      ],
+      "primaryPhotoCount": 5,
+      "relatedPhotoCount": 6,
+      "mtimeMs": 1779865674263
+    },
+    {
+      "id": "instagram-ronda-gorge-white-town-views-2026-05-27",
+      "source": "Instagram",
+      "title": "Ronda Gorge and White Town Views",
+      "description": "A focused Ronda set from Spain, built around high gorge views, white buildings, cliff edges, and bright Andalusian atmosphere from the public Photos By Elie catalog.",
+      "date": "2026-05-27",
+      "href": "./campaign.html?c=instagram-ronda-gorge-white-town-views-2026-05-27",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=instagram-ronda-gorge-white-town-views-2026-05-27",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/d5h-2761-c86320d0bf_900.jpg",
+      "imageAlt": "Ronda",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/d5h-2761-c86320d0bf_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/d5h-2760-8ccdd9684c_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/d5h-2758-0c1491e3c3_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/d5h-2749-2f1d7f391b_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/d5h-2747-5e7d6bc190_900.jpg"
+      ],
+      "primaryPhotoCount": 9,
+      "relatedPhotoCount": 6,
+      "mtimeMs": 1779865674246
     },
     {
       "id": "facebook-albert-kahn-garden-paths-2026-05-27",
@@ -3496,7 +3560,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352378
+      "mtimeMs": 1779865674224
     },
     {
       "id": "pinterest-sintra-palaces-green-hills-2026-05-26",
@@ -3517,7 +3581,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352406
+      "mtimeMs": 1779779170016
     },
     {
       "id": "instagram-estepa-chocolate-museum-2026-05-26",
@@ -3541,7 +3605,7 @@
       ],
       "primaryPhotoCount": 10,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352392
+      "mtimeMs": 1779779169204
     },
     {
       "id": "facebook-rueil-malmaison-2026-05-26",
@@ -3556,7 +3620,7 @@
       "previewImageUrls": [],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352388
+      "mtimeMs": 1779779166835
     },
     {
       "id": "pinterest-valencia-aquarium-2026-05-16",
@@ -3571,7 +3635,7 @@
       "previewImageUrls": [],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 5,
-      "mtimeMs": 1783695352406
+      "mtimeMs": 1778884810526
     },
     {
       "id": "pinterest-invalides-2026-05-14",
@@ -3595,7 +3659,7 @@
       ],
       "primaryPhotoCount": 10,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783695352402
+      "mtimeMs": 1778884810524
     }
   ]
 }

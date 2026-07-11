@@ -1,0 +1,110 @@
+{
+  "platform": "Pinterest",
+  "title": "Lisbon Carmo Convent Ruins",
+  "campaign_id": "pinterest-lisbon-carmo-convent-ruins-2026-07-11",
+  "caption": "Lisbon's Carmo Convent in five textured stone-and-sky frames from Photos By Elie. Browse the edit: https://photos-by-elie.com/campaign.html?c=pinterest-lisbon-carmo-convent-ruins-2026-07-11",
+  "pinterest": {
+    "title": "Lisbon Carmo Convent Ruins",
+    "description": "Five public Photos By Elie travel-art frames from Lisbon's Carmo Convent and Santa Justa Lift area, curated for stone texture, vertical light, and wall-art browsing.",
+    "board_recommendation": "Portugal Travel Photography",
+    "alt_text": "Lisbon Carmo Convent ruins, Santa Justa Lift details, and historic stone architecture photographed for travel wall art."
+  },
+  "notes": [
+    "Pinterest package intentionally contains exactly five public watermarked JPEG previews.",
+    "Recommended board: Portugal Travel Photography.",
+    "Images are public watermarked R2 previews staged for upload/API publishing."
+  ],
+  "items": [
+    {
+      "media_id": "20220519-150002-04473-673b0d617b",
+      "order": 1,
+      "id": "20220519-150002-04473-673b0d617b",
+      "title": "Carmo Convent, Lisbon",
+      "collection": "portugal",
+      "location": "Portugal",
+      "width": 1033,
+      "height": 1800,
+      "source_url": "https://download.photos-by-elie.com/media/expo/20220519-150002-04473-673b0d617b_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/20220519-150002-04473-673b0d617b_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=20220519-150002-04473-673b0d617b",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=20220519-150002-04473-673b0d617b",
+      "image": "images/01-20220519-150002-04473-673b0d617b-lisbon-carmo-convent-ruins.jpg",
+      "local_staged_path": "socials/Pinterest/2026-07-11/lisbon-carmo-convent-ruins/images/01-20220519-150002-04473-673b0d617b-lisbon-carmo-convent-ruins.jpg"
+    },
+    {
+      "media_id": "20220519-144910-04396-092ac31b87",
+      "order": 2,
+      "id": "20220519-144910-04396-092ac31b87",
+      "title": "Carmo Convent, Santa Justa Lift",
+      "collection": "portugal",
+      "location": "Portugal",
+      "width": 1447,
+      "height": 1800,
+      "source_url": "https://download.photos-by-elie.com/media/expo/20220519-144910-04396-092ac31b87_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/20220519-144910-04396-092ac31b87_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=20220519-144910-04396-092ac31b87",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=20220519-144910-04396-092ac31b87",
+      "image": "images/02-20220519-144910-04396-092ac31b87-lisbon-carmo-convent-ruins.jpg",
+      "local_staged_path": "socials/Pinterest/2026-07-11/lisbon-carmo-convent-ruins/images/02-20220519-144910-04396-092ac31b87-lisbon-carmo-convent-ruins.jpg"
+    },
+    {
+      "media_id": "20220519-145011-04398-926891f8aa",
+      "order": 3,
+      "id": "20220519-145011-04398-926891f8aa",
+      "title": "Carmo Convent and Santa Justa Lift in Lisbon",
+      "collection": "portugal",
+      "location": "Portugal",
+      "width": 1800,
+      "height": 1133,
+      "source_url": "https://download.photos-by-elie.com/media/expo/20220519-145011-04398-926891f8aa_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/20220519-145011-04398-926891f8aa_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=20220519-145011-04398-926891f8aa",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=20220519-145011-04398-926891f8aa",
+      "image": "images/03-20220519-145011-04398-926891f8aa-lisbon-carmo-convent-ruins.jpg",
+      "local_staged_path": "socials/Pinterest/2026-07-11/lisbon-carmo-convent-ruins/images/03-20220519-145011-04398-926891f8aa-lisbon-carmo-convent-ruins.jpg"
+    },
+    {
+      "media_id": "20220519-145733-04458-46544e9a62",
+      "order": 4,
+      "id": "20220519-145733-04458-46544e9a62",
+      "title": "Ruins of Carmo Convent in Lisbon",
+      "collection": "portugal",
+      "location": "Portugal",
+      "width": 1028,
+      "height": 1800,
+      "source_url": "https://download.photos-by-elie.com/media/expo/20220519-145733-04458-46544e9a62_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/20220519-145733-04458-46544e9a62_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=20220519-145733-04458-46544e9a62",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=20220519-145733-04458-46544e9a62",
+      "image": "images/04-20220519-145733-04458-46544e9a62-lisbon-carmo-convent-ruins.jpg",
+      "local_staged_path": "socials/Pinterest/2026-07-11/lisbon-carmo-convent-ruins/images/04-20220519-145733-04458-46544e9a62-lisbon-carmo-convent-ruins.jpg"
+    },
+    {
+      "media_id": "20220519-150855-04494-23ca28ef26",
+      "order": 5,
+      "id": "20220519-150855-04494-23ca28ef26",
+      "title": "Carmo Convent Ruins, Lisbon",
+      "collection": "portugal",
+      "location": "Portugal",
+      "width": 1800,
+      "height": 1337,
+      "source_url": "https://download.photos-by-elie.com/media/expo/20220519-150855-04494-23ca28ef26_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/20220519-150855-04494-23ca28ef26_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=20220519-150855-04494-23ca28ef26",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=20220519-150855-04494-23ca28ef26",
+      "image": "images/05-20220519-150855-04494-23ca28ef26-lisbon-carmo-convent-ruins.jpg",
+      "local_staged_path": "socials/Pinterest/2026-07-11/lisbon-carmo-convent-ruins/images/05-20220519-150855-04494-23ca28ef26-lisbon-carmo-convent-ruins.jpg"
+    }
+  ],
+  "date": "2026-07-11",
+  "status": "prepared",
+  "account": "PhotosByElie Pinterest",
+  "post_type": "multi_pin_sequence",
+  "destination_url": "https://photos-by-elie.com/campaign.html?c=pinterest-lisbon-carmo-convent-ruins-2026-07-11",
+  "recommended_upload_set": "images",
+  "available_count": 5,
+  "manual_blockers": [
+    "Publish pending: review socials/Pinterest/2026-07-11/lisbon-carmo-convent-ruins/manifest.json and use the Pinterest browser/API workflow.",
+    "Pinterest publish pending: choose the board and publish one Pin per staged image or use the prepared browser upload set."
+  ]
+}

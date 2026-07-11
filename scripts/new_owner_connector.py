@@ -33,7 +33,7 @@ from urllib.request import Request, urlopen
 
 
 DEFAULT_CONFIG_PATH = Path.home() / ".config" / "photosbyelie" / "connector.json"
-CONNECTOR_VERSION = "1.1"
+CONNECTOR_VERSION = "1.2"
 DEFAULT_INTERVAL_SECONDS = 5
 MAX_PREVIEW_BYTES = 250_000
 DEFAULT_LOCAL_STATUS_PORT = 8766
@@ -347,13 +347,15 @@ def _run_local_sidecar_job(config: ConnectorConfig, jobs: dict[str, dict], jobs_
         with jobs_lock:
             jobs.setdefault(job_id, {}).update(values)
 
-    update(state="running", message="Preparing the Sidecar review window…")
+    update(state="running", message="Starting the local Sidecar helper…")
     try:
-        action = _local_sidecar_open_action(config, job_id)
-        result = execute_action(config, action)
-        update(message="Starting the local Sidecar helper…", result=result)
         workspace = _launch_sidecar_for_browser(config)
-        result = {**result, "workspace": {"launched": True, "surface": "sidecar.html", "connectorId": config.connector_id, **workspace}}
+        result = {
+            "connectorId": config.connector_id,
+            "type": "sidecar-culling-review",
+            "readOnly": False,
+            "workspace": {"launched": True, "surface": "sidecar.html", "connectorId": config.connector_id, **workspace},
+        }
         update(
             state="completed",
             message="Sidecar is ready; opening the Culling workspace…",

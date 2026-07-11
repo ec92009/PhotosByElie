@@ -142,7 +142,13 @@ def _index_job_snapshot(repo_root: Path) -> dict:
     with INDEX_JOB_LOCK:
         payload = dict(INDEX_JOB)
     try:
-        payload["sidecarSummary"] = summary(repo_root)
+        sidecar_summary = summary(repo_root)
+        payload["sidecarSummary"] = sidecar_summary
+        if payload.get("status") != "running":
+            payload["indexedCount"] = int(sidecar_summary.get("indexedCount") or 0)
+            payload["importedCount"] = int(sidecar_summary.get("indexedCount") or 0)
+            payload["totalCount"] = int(sidecar_summary.get("indexedCount") or 0)
+            payload["progress"] = 1 if sidecar_summary.get("indexedCount") else 0
     except sqlite3.Error as error:
         payload["summaryError"] = str(error)
     payload["version"] = sidecar_version(repo_root)

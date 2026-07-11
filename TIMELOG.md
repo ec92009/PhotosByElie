@@ -573,8 +573,9 @@ Clock state: running
 | 2026-07-11 | 08:39 CEST | 08:46 CEST | 0:01 | Diagnosed Google Drive's stale upload queue as disconnected TESLACAM1 and BlinkSync2 mirror roots; read-only inspection time excluded. |
 | 2026-07-11 | 09:10 CEST | 09:32 CEST | 0:14 | Diagnosed live Owner Sidecar launch behavior, found Max claiming David's cloud-queued open action, added the direct local bridge Sidecar open path with progress, and verified the local Culling workspace URL; command/test/runtime excluded. |
 | 2026-07-11 | 10:34 CEST | 11:09 CEST | 0:22 | Migrated Sidecar decisions into cloud-backed Owner state, remapped Max local IDs to Apple cloud IDs, refreshed David's Photos index, fixed bridge preview contention, and verified cloud-ID Sidecar previews; command/deploy/runtime excluded. |
+| 2026-07-11 | 11:18 CEST | 11:23 CEST | 0:04 | Diagnosed the Sidecar `0 indexed` idle-status display after helper restart and patched index status to publish DB-backed counts; command/runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 29:48
+Active collaboration time used: 29:52
 Remaining budget: not set

@@ -61,46 +61,20 @@
     return timestamp > 0 && Date.now() - timestamp < 2 * 60 * 1000;
   };
 
-  const recentActionConnectorId = () => {
-    const actions = mergeActions(state.actions, state.action);
-    for (const action of actions) {
-      const timestamp = actionTime(action);
-      const recent = timestamp > 0 && Date.now() - timestamp < 15 * 60 * 1000;
-      const connectorId = cleanConnectorId(action?.claim?.connectorId || action?.payload?.requestedConnector || "");
-      if (recent && connectorId) return connectorId;
-    }
-    return "";
-  };
-
-  const cloudFallbackConnectorId = () => {
-    const onlineConnectors = state.connectors
-      .filter(isConnectorOnline)
-      .map((connector) => cleanConnectorId(connector.id))
-      .filter(Boolean);
-    const recentConnectorId = recentActionConnectorId();
-    if (recentConnectorId && (!onlineConnectors.length || onlineConnectors.includes(recentConnectorId))) return recentConnectorId;
-    return onlineConnectors.length === 1 ? onlineConnectors[0] : "";
-  };
-
   function syncOpenSidecarControl() {
     const button = $("[data-new-owner-queue-sidecar]");
     if (!button) return;
-    const unavailable = state.localConnectorChecked && !localConnectorId() && !cloudFallbackConnectorId();
-    button.disabled = state.busy || unavailable;
-    button.setAttribute("aria-disabled", String(unavailable));
-    button.title = unavailable
-      ? "Start or install the PhotosByElie Mac connector on this Mac, then refresh."
+    button.disabled = state.busy;
+    button.setAttribute("aria-disabled", String(state.busy));
+    button.title = state.localConnectorChecked && !localConnectorId()
+      ? "This browser could not verify localhost; click to try this Mac's local bridge directly."
       : "";
   }
 
   const setQueueControlsBusy = (busy) => {
     document.querySelectorAll("[data-new-owner-queue-check], [data-new-owner-sync-photos], [data-new-owner-queue-sidecar], [data-new-owner-upload-publish]")
       .forEach((button) => {
-        const openSidecarUnavailable = button.matches("[data-new-owner-queue-sidecar]")
-          && state.localConnectorChecked
-          && !localConnectorId()
-          && !cloudFallbackConnectorId();
-        button.disabled = busy || openSidecarUnavailable;
+        button.disabled = busy;
         button.setAttribute("aria-busy", String(busy));
       });
   };
@@ -205,7 +179,7 @@
 
   const localConnectorId = () => cleanConnectorId(state.localConnector?.connectorId || "");
 
-  const effectiveConnectorId = () => localConnectorId() || cloudFallbackConnectorId();
+  const effectiveConnectorId = () => localConnectorId();
 
   const forgetLegacyConnectorPreference = () => {
     try {
@@ -256,17 +230,8 @@
       localConnectorRoot.dataset.state = "live";
       return;
     }
-    const fallbackConnectorId = cloudFallbackConnectorId();
-    if (state.localConnectorChecked && fallbackConnectorId) {
-      localConnectorRoot.innerHTML = `
-        <strong>This browser cannot verify localhost, but ${escapeHtml(connectorDisplayName(fallbackConnectorId))} is active in the cloud.</strong>
-        <small>Open Sidecar will ask ${escapeHtml(connectorDisplayName(fallbackConnectorId))} to launch the local Culling workspace.</small>
-      `;
-      localConnectorRoot.dataset.state = "live";
-      return;
-    }
     localConnectorRoot.innerHTML = state.localConnectorChecked
-      ? "<strong>This Mac connector is not reachable.</strong><small>Start or install the PhotosByElie Mac connector on this Mac, then refresh. I will not open a dead localhost page.</small>"
+      ? "<strong>This browser could not verify localhost.</strong><small>If the Mac connector is running, Open Sidecar will try this Mac’s local bridge directly. If that fails, start or reinstall the Mac connector and refresh.</small>"
       : "<strong>Detecting this Mac connector...</strong>";
     localConnectorRoot.dataset.state = state.localConnectorChecked ? "missing" : "busy";
   };
@@ -603,6 +568,12 @@
   const queueAction = async ({ action, payload, statusLabel = "Queueing...", localConnectorRequired = true, requestedConnectorId = "" }) => {
     if (state.busy) return;
     const connectorId = cleanConnectorId(requestedConnectorId) || (localConnectorRequired ? effectiveConnectorId() : "");
+    if (localConnectorRequired && !connectorId) {
+      const message = "This browser cannot identify this Mac connector. Refresh after starting the connector, or use Open Sidecar to try the local bridge directly.";
+      setActionStatus(message, "error");
+      setStatus("Mac connector not identified by this browser.");
+      return;
+    }
     state.busy = true;
     setQueueControlsBusy(true);
     setActionStatus(statusLabel, "busy");
@@ -649,27 +620,6 @@
     statusLabel: "Queueing...",
   });
 
-  const queueCloudSidecarLaunch = async (connectorId) => queueAction({
-    action: "sidecar-culling-review",
-    payload: {
-      surface: "new-owner",
-      workflow: "sidecar-culling",
-      connectorRequired: true,
-      localFilesRequired: true,
-      manifest: {
-        mode: "local-sidecar-workspace",
-        source: "owner-sqlite",
-        limit: 24,
-        includePreviews: false,
-        launchWorkspace: true,
-      },
-      queuedAt: new Date().toISOString(),
-      browserLocalhostProbe: "unavailable",
-    },
-    requestedConnectorId: connectorId,
-    statusLabel: `Queueing Sidecar launch on ${connectorDisplayName(connectorId)}...`,
-  });
-
   const openLocalSidecar = async () => {
     if (state.busy) return;
     state.busy = true;
@@ -683,18 +633,8 @@
         render();
       }
       if (!localConnectorId()) {
-        const fallbackConnectorId = cloudFallbackConnectorId();
-        if (fallbackConnectorId) {
-          state.busy = false;
-          setQueueControlsBusy(false);
-          await queueCloudSidecarLaunch(fallbackConnectorId);
-          return;
-        }
-        const message = "This Mac connector is not reachable at 127.0.0.1:8766. Start or install the Mac connector on this Mac, then refresh Owner.";
-        setActionStatus(message, "error");
-        setStatus("Mac connector not reachable on this Mac.");
-        render();
-        return;
+        setActionStatus("This browser could not verify localhost; trying this Mac’s local bridge directly...", "busy");
+        setStatus("Trying this Mac’s local bridge directly...");
       }
       setActionStatus("Opening this Mac’s local bridge...", "busy");
       setStatus("Opening Sidecar on this Mac...");

@@ -9,7 +9,10 @@ const formatMoney = (value) => {
     maximumFractionDigits: 2,
   }).format(amount);
 };
-const allCollections = window.photosByElieData || {};
+const catalogCollectionEntries = () => [
+  ...Object.values(window.photosByElieData || {}),
+  ...Object.values(window.photosByElieReserveData || {}),
+];
 window.photosByElieProductSettings?.applyPriceOverrides?.();
 const resolutionOptions = window.photosByElieResolutions || [];
 const basketStore = window.photosByElieBasket;
@@ -28,7 +31,7 @@ const escapeText = (value) => String(value || "").replace(/[&<>"']/g, (char) => 
 }[char]));
 
 const photoForLikedItem = (item) => {
-  const entry = Object.values(allCollections).find((collection) =>
+  const entry = catalogCollectionEntries().find((collection) =>
     collection.photos.some((photo) => photo.id === item.photoId)
   );
   const photo = entry?.photos.find((candidate) => candidate.id === item.photoId);
@@ -116,33 +119,18 @@ const deliveryAvailabilityFor = (photoId, option) => {
   }
   if (!deliveryAvailabilityLoaded || !deliveryManifest) return { available: true, reason: "" };
   const record = deliveryRecordFor(photoId);
-  if (!record) return { available: false, reason: "Private delivery coverage is not recorded for this photo." };
+  if (!record) return { available: true, reason: "" };
   if (option.id === "full") {
-    return record.privateMaster?.present === true
-      ? { available: true, reason: "" }
-      : { available: false, reason: "Full resolution master is missing from private storage." };
+    return record.privateMaster?.present === false
+      ? { available: false, reason: "Full resolution master is missing from private storage." }
+      : { available: true, reason: "" };
   }
   if (option.id === "jpg-6mp" || option.id === "jpg-3mp" || option.id === "jpg-1mp") {
-    return record.privateRenders?.[option.id]?.present === true || record.privateMaster?.present === true
-      ? { available: true, reason: "" }
-      : { available: false, reason: `${productLabel(option)} needs a private master or cached delivery file.` };
+    return record.privateMaster?.present === false && record.privateRenders?.[option.id]?.present === false
+      ? { available: false, reason: `${productLabel(option)} needs a private master or cached delivery file.` }
+      : { available: true, reason: "" };
   }
   return { available: true, reason: "" };
-};
-
-const pruneUnavailableBasketSelections = (items) => {
-  if (!deliveryAvailabilityLoaded) return items;
-  let changed = false;
-  const nextItems = items.map((item) => {
-    const options = (item.options || []).filter((option) => deliveryAvailabilityFor(item.photoId, option).available);
-    if (options.length !== (item.options || []).length) changed = true;
-    return { ...item, options };
-  }).filter((item) => (item.options || []).length);
-  if (changed) {
-    status.textContent = "Unavailable delivery choices were removed from the basket.";
-    return basketStore.write(nextItems);
-  }
-  return items;
 };
 
 const bulkOptionLabel = (resolutionId) => ({
@@ -170,7 +158,6 @@ const checkedLikedSelectionsFor = (itemIndex) => {
     .map((checkbox) => {
       const option = availableOptions.find((candidate) => candidate.id === checkbox.value);
       if (!option) return null;
-      if (!deliveryAvailabilityFor(item.photoId, option).available) return null;
       const selected = { id: option.id };
       if (option.type === "print") {
         selected.quantity = document.querySelector(`[data-liked-print-quantity="${itemIndex}"][data-option-id="${option.id}"]`)?.value || 1;
@@ -267,7 +254,7 @@ const optionPayload = (optionIds, photoId) => {
     .map((item) => {
       const optionId = typeof item === "string" ? item : item.id;
       const option = availableOptions.find((candidate) => candidate.id === optionId);
-      return option && deliveryAvailabilityFor(photoId, option).available ? { option, source: item } : null;
+      return option ? { option, source: item } : null;
     })
     .filter(Boolean)
     .map(({ option, source }) => {
@@ -287,7 +274,7 @@ const toggleResolutionForAllLiked = (resolutionId) => {
     return;
   }
 
-  const basketByPhoto = new Map(pruneUnavailableBasketSelections(basketStore.read()).map((item) => [item.photoId, item]));
+  const basketByPhoto = new Map(basketStore.read().map((item) => [item.photoId, item]));
   const state = bulkResolutionState(likedItems, basketByPhoto, resolutionId);
   const shouldSelect = !(state.eligible > 0 && state.selected === state.eligible);
   let changedCount = 0;
@@ -329,7 +316,7 @@ const toggleResolutionForAllLiked = (resolutionId) => {
 const renderLiked = () => {
   const likedItems = likedStore.write(likedStore.read());
   const visibleLikedItems = likedItems.slice(0, visibleLimit);
-  const basketItems = pruneUnavailableBasketSelections(basketStore.read());
+  const basketItems = basketStore.read();
   const basketByPhoto = new Map(basketItems.map((item) => [item.photoId, item]));
   const rowSelections = likedItems.map((item) => basketByPhoto.get(item.photoId)?.options || []);
   const total = rowSelections.flat().reduce((sum, option) => sum + optionTotal(option), 0);
@@ -396,10 +383,11 @@ const renderLiked = () => {
         <div class="basket-resolution-grid" aria-label="Resolution options for ${item.title}">
           ${availableOptions.map((option) => {
             const availability = deliveryAvailabilityFor(item.photoId, option);
+            const selected = selectedIds.has(option.id);
             return `
-            <div class="basket-product-row ${availability.available ? "" : "is-unavailable"}">
+            <div class="basket-product-row ${availability.available ? "" : "is-unavailable"} ${selected && !availability.available ? "is-unavailable-selected" : ""}">
             <label class="product-choice">
-              <input type="checkbox" data-liked-resolution="${index}" value="${option.id}" ${selectedIds.has(option.id) && availability.available ? "checked" : ""} ${availability.available ? "" : "disabled"}/>
+              <input type="checkbox" data-liked-resolution="${index}" value="${option.id}" ${selected ? "checked" : ""} ${!availability.available && !selected ? "disabled" : ""}/>
               <span><strong>${productLabel(option)}</strong>${resolutionDetail(option)}${availability.available ? "" : `<small class="basket-delivery-warning">${escapeText(availability.reason)}</small>`}</span>
               <b>${formatMoney(option.price)}</b>
             </label>

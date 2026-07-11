@@ -1,9 +1,12 @@
 (() => {
   const likedKey = "photosbyelie-liked";
-  const collections = () => window.photosByElieData || {};
+  const collectionEntries = () => [
+    ...Object.entries(window.photosByElieData || {}),
+    ...Object.entries(window.photosByElieReserveData || {}),
+  ];
 
   const photoEntryForId = (photoId) => {
-    const collectionEntry = Object.entries(collections()).find(([, collection]) =>
+    const collectionEntry = collectionEntries().find(([, collection]) =>
       collection.photos.some((photo) => photo.id === photoId)
     );
     if (!collectionEntry) return {};

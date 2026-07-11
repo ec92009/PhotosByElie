@@ -5,12 +5,15 @@
     return window.photosByElieResolutions || [];
   };
   const frameOptions = () => window.photosByElieFrameOptions || [];
-  const collections = () => window.photosByElieData || {};
+  const collectionEntries = () => [
+    ...Object.entries(window.photosByElieData || {}),
+    ...Object.entries(window.photosByElieReserveData || {}),
+  ];
   const framePriceFor = (frame, option) => window.photosByElieFramePrice?.(frame, option) || Number(frame?.price) || 0;
 
   const optionById = (id) => resolutions().find((option) => option.id === id);
   const photoEntryById = (photoId) => {
-    const collectionEntry = Object.entries(collections()).find(([, entry]) =>
+    const collectionEntry = collectionEntries().find(([, entry]) =>
       entry.photos.some((photo) => photo.id === photoId)
     );
     if (!collectionEntry) return {};

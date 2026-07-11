@@ -7534,8 +7534,11 @@ html[data-theme="light"] .detail-preview.has-image::after{
   background:var(--surface-2);
   opacity:.72;
 }
-.basket-product-row.is-unavailable .product-choice{
+.basket-product-row.is-unavailable:not(.is-unavailable-selected) .product-choice{
   cursor:not-allowed;
+}
+.basket-product-row.is-unavailable-selected{
+  opacity:1;
 }
 .basket-product-row.is-covered-by-allowance{
   border-color:color-mix(in srgb,var(--accent) 52%,var(--line));

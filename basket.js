@@ -18,13 +18,16 @@ const checkoutMinimumAdjustment = (total) => {
     ? dollarsForCents(CHECKOUT_MINIMUM_CENTS - subtotalCents)
     : 0;
 };
-const allCollections = window.photosByElieData || {};
+const catalogCollectionEntries = () => [
+  ...Object.values(window.photosByElieData || {}),
+  ...Object.values(window.photosByElieReserveData || {}),
+];
 window.photosByElieProductSettings?.applyPriceOverrides?.();
 const resolutionOptions = window.photosByElieResolutions || [];
 const basketStore = window.photosByElieBasket;
 
 const photoForItem = (item) => {
-  const entry = Object.values(allCollections).find((collection) =>
+  const entry = catalogCollectionEntries().find((collection) =>
     collection.photos.some((photo) => photo.id === item.photoId)
   );
   const photo = entry?.photos.find((candidate) => candidate.id === item.photoId);
@@ -236,40 +239,38 @@ const deliveryAvailabilityFor = (photoId, option) => {
   }
   if (!deliveryAvailabilityLoaded || !deliveryManifest) return { available: true, reason: "" };
   const record = deliveryRecordFor(photoId);
-  if (!record) return { available: false, reason: "Private delivery coverage is not recorded for this photo." };
+  if (!record) return { available: true, reason: "" };
   if (option.id === "full") {
-    return record.privateMaster?.present === true
-      ? { available: true, reason: "" }
-      : { available: false, reason: "Full resolution master is missing from private storage." };
+    return record.privateMaster?.present === false
+      ? { available: false, reason: "Full resolution master is missing from private storage." }
+      : { available: true, reason: "" };
   }
   if (option.id === "jpg-6mp" || option.id === "jpg-3mp" || option.id === "jpg-1mp") {
-    return record.privateRenders?.[option.id]?.present === true || record.privateMaster?.present === true
-      ? { available: true, reason: "" }
-      : { available: false, reason: `${productLabel(option)} needs a private master or cached delivery file.` };
+    return record.privateMaster?.present === false && record.privateRenders?.[option.id]?.present === false
+      ? { available: false, reason: `${productLabel(option)} needs a private master or cached delivery file.` }
+      : { available: true, reason: "" };
   }
   return { available: true, reason: "" };
 };
 
-const availableSelectedOptionIds = (item) => new Set((item.options || [])
-  .filter((option) => deliveryAvailabilityFor(item.photoId, option).available)
+const selectedOptionIds = (item) => new Set((item.options || [])
   .map((option) => option.id));
 
 const pruneUnavailableBasketSelections = (items) => {
   if (!deliveryAvailabilityLoaded) return items;
   let changed = false;
-  const nextItems = items.map((item, index) => {
+  const nextItems = items.map((item) => {
     const nextOptions = (item.options || []).filter((option) => deliveryAvailabilityFor(item.photoId, option).available);
     if (nextOptions.length !== (item.options || []).length) {
       changed = true;
-      basketStore.updateOptions(index, nextOptions.map((option) => ({ id: option.id, quantity: option.quantity, frameId: option.frame?.id || option.frameId })));
       return { ...item, options: nextOptions };
     }
     return item;
-  });
+  }).filter((item) => (item.options || []).length);
   if (changed) {
     clearCheckoutState();
     status.textContent = "Unavailable delivery choices were removed from the basket.";
-    return basketStore.write(basketStore.read());
+    return basketStore.write(nextItems);
   }
   return nextItems;
 };
@@ -824,7 +825,7 @@ orderEmail?.addEventListener("click", async (event) => {
 });
 
 const renderBasket = () => {
-  const items = pruneUnavailableBasketSelections(basketStore.write(basketStore.read()));
+  const items = basketStore.read();
   const visibleItems = items.slice(0, visibleLimit);
   const total = items.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
   const assetCount = items.reduce((sum, item) => sum + (item.options || []).reduce((count, option) => count + optionQuantity(option), 0), 0);
@@ -846,7 +847,7 @@ const renderBasket = () => {
     const panoClass = window.photosByEliePhotoIsPanorama?.(photo) ? "is-pano" : "";
     const thumbStyle = window.photosByEliePhotoAspectStyle?.(photo) || "";
     const imageSrc = window.photosByElieMediaUrl?.(photo, "gallery") || "";
-    const selectedIds = availableSelectedOptionIds(item);
+    const selectedIds = selectedOptionIds(item);
     const selectedOptionById = new Map((item.options || []).map((option) => [option.id, option]));
     const availableOptions = photo && window.photosByElieAvailableResolutions
       ? window.photosByElieAvailableResolutions(photo, resolutionOptions)
@@ -893,6 +894,7 @@ const renderBasket = () => {
         <div class="basket-resolution-grid" aria-label="Resolution options for ${item.title}">
           ${availableOptions.map((option) => {
             const availability = deliveryAvailabilityFor(item.photoId, option);
+            const selected = selectedIds.has(option.id);
             const recentPurchase = option.type === "digital" ? recentPurchaseFor(item.photoId, option.id) : null;
             const allowanceDays = recentPurchase?.allowanceDays || recentPurchaseMeta?.allowanceDays || 30;
             const allowanceNote = recentPurchase?.covered
@@ -903,9 +905,9 @@ const renderBasket = () => {
               }))}</small>`
               : "";
             return `
-            <div class="basket-product-row ${availability.available ? "" : "is-unavailable"} ${recentPurchase?.covered ? "is-covered-by-allowance" : ""}">
+            <div class="basket-product-row ${availability.available ? "" : "is-unavailable"} ${selected && !availability.available ? "is-unavailable-selected" : ""} ${recentPurchase?.covered ? "is-covered-by-allowance" : ""}">
             <label class="product-choice">
-              <input type="checkbox" data-basket-resolution="${index}" value="${option.id}" ${selectedIds.has(option.id) ? "checked" : ""} ${availability.available ? "" : "disabled"}/>
+              <input type="checkbox" data-basket-resolution="${index}" value="${option.id}" ${selected ? "checked" : ""} ${!availability.available && !selected ? "disabled" : ""}/>
               <span><strong>${productLabel(option)}</strong>${resolutionDetail(option)}${availability.available ? "" : `<small class="basket-delivery-warning">${escapeText(availability.reason)}</small>`}${allowanceNote}</span>
               <b>${formatMoney(option.price)}</b>
             </label>

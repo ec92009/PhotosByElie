@@ -73,7 +73,7 @@
       "local_staged_path": "socials/Threads/2026-07-11/valencia-cathedral-stone-detail/images/04-img-1546-7416feac97-valencia-cathedral-stone-detail.jpg"
     }
   ],
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "available_count": 4,
@@ -82,5 +82,29 @@
   "recommended_upload_set": "images",
   "manual_blockers": [
     "Publish pending: review socials/Threads/2026-07-11/valencia-cathedral-stone-detail/manifest.json and use the Threads browser/API workflow."
-  ]
+  ],
+  "slug": "valencia-cathedral-stone-detail",
+  "published_url": "https://www.threads.com/@ec92009/post/DaoxB9CjBrF",
+  "published": {
+    "platform": "Threads",
+    "account": "ec92009",
+    "id": "17928175659359372",
+    "permalink": "https://www.threads.com/@ec92009/post/DaoxB9CjBrF",
+    "shortcode": "DaoxB9CjBrF",
+    "timestamp": "2026-07-11T03:09:08+0000",
+    "image_count": 4,
+    "media_type": "CAROUSEL_ALBUM",
+    "visible_verification": "Threads Graph readback returned permalink, username, timestamp, shortcode, media type, and 4 child images. API flow had no browser link-preview removal step."
+  },
+  "verification": {
+    "platform": "Threads",
+    "account": "ec92009",
+    "id": "17928175659359372",
+    "permalink": "https://www.threads.com/@ec92009/post/DaoxB9CjBrF",
+    "shortcode": "DaoxB9CjBrF",
+    "timestamp": "2026-07-11T03:09:08+0000",
+    "image_count": 4,
+    "media_type": "CAROUSEL_ALBUM",
+    "visible_verification": "Threads Graph readback returned permalink, username, timestamp, shortcode, media type, and 4 child images. API flow had no browser link-preview removal step."
+  }
 }

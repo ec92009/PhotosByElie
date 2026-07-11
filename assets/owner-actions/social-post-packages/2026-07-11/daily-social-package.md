@@ -58,3 +58,34 @@ Visible version: v133.0
 | 2 | `img-1548-bb4fc6c71a` | https://download.photos-by-elie.com/media/expo/img-1548-bb4fc6c71a_1800.jpg | socials/Threads/2026-07-11/valencia-cathedral-stone-detail/images/02-img-1548-bb4fc6c71a-valencia-cathedral-stone-detail.jpg |
 | 3 | `img-1547-d92a870c4f` | https://download.photos-by-elie.com/media/expo/img-1547-d92a870c4f_1800.jpg | socials/Threads/2026-07-11/valencia-cathedral-stone-detail/images/03-img-1547-d92a870c4f-valencia-cathedral-stone-detail.jpg |
 | 4 | `img-1546-7416feac97` | https://download.photos-by-elie.com/media/expo/img-1546-7416feac97_1800.jpg | socials/Threads/2026-07-11/valencia-cathedral-stone-detail/images/04-img-1546-7416feac97-valencia-cathedral-stone-detail.jpg |
+
+
+## Publishing Status
+- Facebook: published, 6 images, https://www.facebook.com/122102168061334672/posts/122110234269334672
+- Instagram: published, 5 images, https://www.instagram.com/p/Daow8mxDAMW/
+- Threads: published, 4 images, https://www.threads.com/@ec92009/post/DaoxB9CjBrF
+- Pinterest: prepared only, exactly 5 images, board recommendation Portugal Travel Photography; no Pinterest token/board ID mapping configured.
+- Validation: public R2 HEAD checks passed; package dry-runs passed; npm test passed; npm run validate still fails on pre-existing Owner/catalog visibility/sourceOrigin issues.
+
+## Facebook Personal Share Assist
+
+- Status: prepared_manual_final_click
+- Expected identity: Elie Cohen
+- Source Page post: https://www.facebook.com/122102168061334672/posts/122110234269334672
+- Share URL: https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fwww.facebook.com%2F122102168061334672%2Fposts%2F122110234269334672
+- Local kit: socials/Facebook/2026-07-11/toulouse-cloisters-and-brick-light/personal-share
+
+French text:
+
+Je viens de publier quelques nouvelles photos sur Photos By Elie.
+
+La série du jour, « Toulouse Cloisters and Brick Light », rassemble quelques images que j'aime beaucoup.
+
+À voir ici :
+https://www.facebook.com/122102168061334672/posts/122110234269334672
+
+## Etsy Companion
+- Review packages generated: 16 jpg-6mp candidate listings.
+- Paths: assets/owner-actions/etsy-listing-packages/2026-07-11/facebook-toulouse-cloisters-brick-light-2026-07-11, assets/owner-actions/etsy-listing-packages/2026-07-11/instagram-valencia-cathedral-stone-detail-2026-07-11, assets/owner-actions/etsy-listing-packages/2026-07-11/pinterest-lisbon-carmo-convent-ruins-2026-07-11.
+- Draft status: no Etsy drafts created; ETSY_KEYSTRING unavailable and current etsy:outlet tooling does not attach/verify listing image plus buyer download file.
+- Fees: none incurred.

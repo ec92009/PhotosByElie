@@ -99,12 +99,12 @@
   "date": "2026-07-11",
   "status": "prepared",
   "account": "PhotosByElie Pinterest",
-  "post_type": "multi_pin_sequence",
+  "post_type": "standard_pin_sequence",
   "destination_url": "https://photos-by-elie.com/campaign.html?c=pinterest-lisbon-carmo-convent-ruins-2026-07-11",
   "recommended_upload_set": "images",
   "available_count": 5,
   "manual_blockers": [
-    "Publish pending: review socials/Pinterest/2026-07-11/lisbon-carmo-convent-ruins/manifest.json and use the Pinterest browser/API workflow.",
-    "Pinterest publish pending: choose the board and publish one Pin per staged image or use the prepared browser upload set."
-  ]
+    "Pinterest remains prepared only: no Pinterest token/board ID mapping is configured. Use Pin Builder/API target with board recommendation Portugal Travel Photography."
+  ],
+  "slug": "lisbon-carmo-convent-ruins"
 }

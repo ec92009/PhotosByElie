@@ -91,7 +91,7 @@
     }
   ],
   "date": "2026-07-11",
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-valencia-cathedral-stone-detail-2026-07-11",
@@ -100,5 +100,27 @@
   "manual_blockers": [
     "Publish pending: review socials/Instagram/2026-07-11/valencia-cathedral-stone-detail/manifest.json and use the Instagram browser/API workflow.",
     "Instagram feed captions are not clickable; update the profile website link or use a Story link sticker before posting."
-  ]
+  ],
+  "slug": "valencia-cathedral-stone-detail",
+  "published_url": "https://www.instagram.com/p/Daow8mxDAMW/",
+  "published": {
+    "platform": "Instagram",
+    "account": "ec92009",
+    "id": "18340849972223916",
+    "permalink": "https://www.instagram.com/p/Daow8mxDAMW/",
+    "timestamp": "2026-07-11T03:08:24+0000",
+    "image_count": 5,
+    "media_type": "CAROUSEL_ALBUM",
+    "visible_verification": "Instagram Graph readback returned permalink, username, timestamp, media type, and 5 child images. Caption has no raw URL."
+  },
+  "verification": {
+    "platform": "Instagram",
+    "account": "ec92009",
+    "id": "18340849972223916",
+    "permalink": "https://www.instagram.com/p/Daow8mxDAMW/",
+    "timestamp": "2026-07-11T03:08:24+0000",
+    "image_count": 5,
+    "media_type": "CAROUSEL_ALBUM",
+    "visible_verification": "Instagram Graph readback returned permalink, username, timestamp, media type, and 5 child images. Caption has no raw URL."
+  }
 }

@@ -19,3 +19,12 @@ Images:
 - 3. `img-1547-d92a870c4f` - https://download.photos-by-elie.com/media/expo/img-1547-d92a870c4f_1800.jpg - socials/Instagram/2026-07-11/valencia-cathedral-stone-detail/images/03-img-1547-d92a870c4f-valencia-cathedral-stone-detail.jpg
 - 4. `img-1546-7416feac97` - https://download.photos-by-elie.com/media/expo/img-1546-7416feac97_1800.jpg - socials/Instagram/2026-07-11/valencia-cathedral-stone-detail/images/04-img-1546-7416feac97-valencia-cathedral-stone-detail.jpg
 - 5. `img-1545-fbf260c171` - https://download.photos-by-elie.com/media/expo/img-1545-fbf260c171_1800.jpg - socials/Instagram/2026-07-11/valencia-cathedral-stone-detail/images/05-img-1545-fbf260c171-valencia-cathedral-stone-detail.jpg
+## Publishing status
+- Status: published
+- Account: ec92009
+- Destination: https://photos-by-elie.com/campaign.html?c=instagram-valencia-cathedral-stone-detail-2026-07-11
+- Published URL: https://www.instagram.com/p/Daow8mxDAMW/
+- Published ID: 18340849972223916
+- Timestamp: 2026-07-11T03:08:24+0000
+- Blocker: Publish pending: review socials/Instagram/2026-07-11/valencia-cathedral-stone-detail/manifest.json and use the Instagram browser/API workflow.
+- Blocker: Instagram feed captions are not clickable; update the profile website link or use a Story link sticker before posting.

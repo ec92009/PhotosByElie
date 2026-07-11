@@ -107,7 +107,7 @@
     }
   ],
   "date": "2026-07-11",
-  "status": "prepared",
+  "status": "published",
   "account": "Photos By Elie",
   "post_type": "multi_photo",
   "destination_url": "https://photos-by-elie.com/campaign.html?c=facebook-toulouse-cloisters-brick-light-2026-07-11",
@@ -115,5 +115,25 @@
   "available_count": 6,
   "manual_blockers": [
     "Publish pending: review socials/Facebook/2026-07-11/toulouse-cloisters-and-brick-light/manifest.json and use the Facebook browser/API workflow."
-  ]
+  ],
+  "slug": "toulouse-cloisters-and-brick-light",
+  "published_url": "https://www.facebook.com/122102168061334672/posts/122110234269334672",
+  "published": {
+    "platform": "Facebook",
+    "account": "Photos By Elie",
+    "id": "1146747141854670_122110234269334672",
+    "permalink": "https://www.facebook.com/122102168061334672/posts/122110234269334672",
+    "timestamp": "2026-07-11T03:07:23+0000",
+    "image_count": 6,
+    "visible_verification": "Facebook Graph readback returned the Page post permalink, created_time, and 6 photo subattachments."
+  },
+  "verification": {
+    "platform": "Facebook",
+    "account": "Photos By Elie",
+    "id": "1146747141854670_122110234269334672",
+    "permalink": "https://www.facebook.com/122102168061334672/posts/122110234269334672",
+    "timestamp": "2026-07-11T03:07:23+0000",
+    "image_count": 6,
+    "visible_verification": "Facebook Graph readback returned the Page post permalink, created_time, and 6 photo subattachments."
+  }
 }

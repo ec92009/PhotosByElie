@@ -576,8 +576,9 @@ Clock state: running
 | 2026-07-11 | 11:18 CEST | 11:23 CEST | 0:04 | Diagnosed the Sidecar `0 indexed` idle-status display after helper restart and patched index status to publish DB-backed counts; command/runtime excluded. |
 | 2026-07-11 | 15:26 CEST | 15:28 CEST | 0:02 | Reported basket/liked checkout selections not sticking and clarified that JPG sizes are generated on demand while Full depends on the private original; implementation/test runtime excluded. |
 | 2026-07-11 | 16:36 CEST | 16:41 CEST | 0:03 | Diagnosed Max's failed Open Sidecar button as a missing localhost connector listener, guarded the Owner page against dead-localhost navigation, and repaired connector status-server retry behavior; implementation/test runtime excluded. |
+| 2026-07-11 | 17:10 CEST | 17:13 CEST | 0:02 | Reported that Max's public Owner page still could not open Sidecar despite a healthy connector, so added a cloud-targeted launch fallback when browser localhost probing fails; implementation/test runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 29:57
+Active collaboration time used: 29:59
 Remaining budget: not set

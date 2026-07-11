@@ -51,10 +51,41 @@
     actionStatusRoot.dataset.state = stateName;
   };
 
+  const connectorLastSeenTime = (connector) => {
+    const timestamp = Date.parse(connector?.lastSeenAt || "");
+    return Number.isFinite(timestamp) ? timestamp : 0;
+  };
+
+  const isConnectorOnline = (connector) => {
+    const timestamp = connectorLastSeenTime(connector);
+    return timestamp > 0 && Date.now() - timestamp < 2 * 60 * 1000;
+  };
+
+  const recentActionConnectorId = () => {
+    const actions = mergeActions(state.actions, state.action);
+    for (const action of actions) {
+      const timestamp = actionTime(action);
+      const recent = timestamp > 0 && Date.now() - timestamp < 15 * 60 * 1000;
+      const connectorId = cleanConnectorId(action?.claim?.connectorId || action?.payload?.requestedConnector || "");
+      if (recent && connectorId) return connectorId;
+    }
+    return "";
+  };
+
+  const cloudFallbackConnectorId = () => {
+    const onlineConnectors = state.connectors
+      .filter(isConnectorOnline)
+      .map((connector) => cleanConnectorId(connector.id))
+      .filter(Boolean);
+    const recentConnectorId = recentActionConnectorId();
+    if (recentConnectorId && (!onlineConnectors.length || onlineConnectors.includes(recentConnectorId))) return recentConnectorId;
+    return onlineConnectors.length === 1 ? onlineConnectors[0] : "";
+  };
+
   function syncOpenSidecarControl() {
     const button = $("[data-new-owner-queue-sidecar]");
     if (!button) return;
-    const unavailable = state.localConnectorChecked && !localConnectorId();
+    const unavailable = state.localConnectorChecked && !localConnectorId() && !cloudFallbackConnectorId();
     button.disabled = state.busy || unavailable;
     button.setAttribute("aria-disabled", String(unavailable));
     button.title = unavailable
@@ -67,7 +98,8 @@
       .forEach((button) => {
         const openSidecarUnavailable = button.matches("[data-new-owner-queue-sidecar]")
           && state.localConnectorChecked
-          && !localConnectorId();
+          && !localConnectorId()
+          && !cloudFallbackConnectorId();
         button.disabled = busy || openSidecarUnavailable;
         button.setAttribute("aria-busy", String(busy));
       });
@@ -173,7 +205,7 @@
 
   const localConnectorId = () => cleanConnectorId(state.localConnector?.connectorId || "");
 
-  const effectiveConnectorId = () => localConnectorId();
+  const effectiveConnectorId = () => localConnectorId() || cloudFallbackConnectorId();
 
   const forgetLegacyConnectorPreference = () => {
     try {
@@ -220,6 +252,15 @@
       localConnectorRoot.innerHTML = `
         <strong>This Mac: ${escapeHtml(connectorDisplayName(connectorId))}</strong>
         ${detail ? `<small>${escapeHtml(detail)}</small>` : ""}
+      `;
+      localConnectorRoot.dataset.state = "live";
+      return;
+    }
+    const fallbackConnectorId = cloudFallbackConnectorId();
+    if (state.localConnectorChecked && fallbackConnectorId) {
+      localConnectorRoot.innerHTML = `
+        <strong>This browser cannot verify localhost, but ${escapeHtml(connectorDisplayName(fallbackConnectorId))} is active in the cloud.</strong>
+        <small>Open Sidecar will ask ${escapeHtml(connectorDisplayName(fallbackConnectorId))} to launch the local Culling workspace.</small>
       `;
       localConnectorRoot.dataset.state = "live";
       return;
@@ -360,8 +401,7 @@
     }
     const thisMac = localConnectorId();
     connectorsRoot.innerHTML = state.connectors.map((connector) => {
-      const age = Date.now() - Date.parse(connector.lastSeenAt || "");
-      const online = Number.isFinite(age) && age < 2 * 60 * 1000;
+      const online = isConnectorOnline(connector);
       const isLocal = cleanConnectorId(connector.id) === thisMac;
       return `
         <article class="new-owner-lane-row">
@@ -560,9 +600,9 @@
     window.location.href = url.href;
   };
 
-  const queueAction = async ({ action, payload, statusLabel = "Queueing...", localConnectorRequired = true }) => {
+  const queueAction = async ({ action, payload, statusLabel = "Queueing...", localConnectorRequired = true, requestedConnectorId = "" }) => {
     if (state.busy) return;
-    const connectorId = localConnectorRequired ? effectiveConnectorId() : "";
+    const connectorId = cleanConnectorId(requestedConnectorId) || (localConnectorRequired ? effectiveConnectorId() : "");
     state.busy = true;
     setQueueControlsBusy(true);
     setActionStatus(statusLabel, "busy");
@@ -609,6 +649,27 @@
     statusLabel: "Queueing...",
   });
 
+  const queueCloudSidecarLaunch = async (connectorId) => queueAction({
+    action: "sidecar-culling-review",
+    payload: {
+      surface: "new-owner",
+      workflow: "sidecar-culling",
+      connectorRequired: true,
+      localFilesRequired: true,
+      manifest: {
+        mode: "local-sidecar-workspace",
+        source: "owner-sqlite",
+        limit: 24,
+        includePreviews: false,
+        launchWorkspace: true,
+      },
+      queuedAt: new Date().toISOString(),
+      browserLocalhostProbe: "unavailable",
+    },
+    requestedConnectorId: connectorId,
+    statusLabel: `Queueing Sidecar launch on ${connectorDisplayName(connectorId)}...`,
+  });
+
   const openLocalSidecar = async () => {
     if (state.busy) return;
     state.busy = true;
@@ -622,6 +683,13 @@
         render();
       }
       if (!localConnectorId()) {
+        const fallbackConnectorId = cloudFallbackConnectorId();
+        if (fallbackConnectorId) {
+          state.busy = false;
+          setQueueControlsBusy(false);
+          await queueCloudSidecarLaunch(fallbackConnectorId);
+          return;
+        }
         const message = "This Mac connector is not reachable at 127.0.0.1:8766. Start or install the Mac connector on this Mac, then refresh Owner.";
         setActionStatus(message, "error");
         setStatus("Mac connector not reachable on this Mac.");

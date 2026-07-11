@@ -6,6 +6,8 @@ from scripts.new_owner_connector import (
     ConnectorConfig,
     _allowed_local_status_origin,
     _local_status_payload,
+    _local_sidecar_open_action,
+    _sidecar_job_public_payload,
     _upload_and_register,
     execute_action,
 )
@@ -72,6 +74,31 @@ class UploadRegistrationScopeTest(unittest.TestCase):
             "https://photos-by-elie.com",
         )
         self.assertEqual(_allowed_local_status_origin("https://example.com"), "")
+
+    def test_local_sidecar_open_action_is_claimed_for_this_connector(self):
+        action = _local_sidecar_open_action(self.config, "local-sidecar-test")
+
+        self.assertEqual(action["id"], "local-sidecar-test")
+        self.assertEqual(action["state"], "claimed")
+        self.assertEqual(action["claim"]["connectorId"], "david")
+        self.assertFalse(action["payload"]["manifest"]["includePreviews"])
+        self.assertFalse(action["payload"]["manifest"]["launchWorkspace"])
+
+    def test_sidecar_job_payload_surfaces_redirect_url(self):
+        payload = _sidecar_job_public_payload(self.config, "local-sidecar-test", {
+            "state": "completed",
+            "message": "ready",
+            "result": {
+                "recordsPrepared": 24,
+                "candidateCount": 52076,
+                "workspace": {"url": "http://127.0.0.1:8011/sidecar.html"},
+            },
+        })
+
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["url"], "http://127.0.0.1:8011/sidecar.html")
+        self.assertEqual(payload["recordsPrepared"], 24)
+        self.assertEqual(payload["connector"]["connectorId"], "david")
 
     def test_culling_action_launches_the_canonical_local_sidecar_when_requested(self):
         local_result = {

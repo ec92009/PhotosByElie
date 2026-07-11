@@ -9,6 +9,7 @@
     "http://localhost:8766/photosbyelie/connector-status",
     "http://127.0.0.1:8766/photosbyelie/connector-status",
   ];
+  const LOCAL_SIDECAR_OPEN_URL = "http://127.0.0.1:8766/photosbyelie/open-sidecar";
   const state = {
     session: null,
     access: null,
@@ -210,7 +211,7 @@
       return;
     }
     localConnectorRoot.innerHTML = state.localConnectorChecked
-      ? "<strong>Mac connector will claim queued actions.</strong><small>This browser could not directly verify localhost, so the bridge will identify itself when it claims the cloud action.</small>"
+      ? "<strong>Local Mac bridge not verified yet.</strong><small>Open Sidecar will still try this Mac directly; if it does not open, start or install the Mac connector.</small>"
       : "<strong>Detecting this Mac connector...</strong>";
     localConnectorRoot.dataset.state = state.localConnectorChecked ? "live" : "busy";
   };
@@ -593,24 +594,18 @@
     statusLabel: "Queueing...",
   });
 
-  const queueSidecarCulling = () => queueAction({
-    action: "sidecar-culling-review",
-    payload: {
-      surface: "new-owner",
-      workflow: "sidecar-culling",
-      connectorRequired: true,
-      localFilesRequired: true,
-      manifest: {
-        mode: "local-sidecar-workspace",
-        source: "owner-sqlite",
-        limit: 24,
-        includePreviews: false,
-        launchWorkspace: true,
-      },
-      queuedAt: new Date().toISOString(),
-    },
-    statusLabel: "Starting culling...",
-  });
+  const openLocalSidecar = () => {
+    if (state.busy) return;
+    state.busy = true;
+    setQueueControlsBusy(true);
+    setActionStatus("Opening this Mac’s local bridge...", "busy");
+    setStatus("Opening Sidecar on this Mac...");
+    const url = new URL(LOCAL_SIDECAR_OPEN_URL);
+    url.searchParams.set("source", "new-owner");
+    url.searchParams.set("returnTo", window.location.href);
+    url.searchParams.set("t", String(Date.now()));
+    window.location.href = url.href;
+  };
 
   const queuePhotosIndexSync = () => queueAction({
     action: "sidecar-photos-index-sync",
@@ -662,7 +657,7 @@
   $("[data-new-owner-logout]")?.addEventListener("click", logout);
   $("[data-new-owner-queue-check]")?.addEventListener("click", queueCheck);
   $("[data-new-owner-sync-photos]")?.addEventListener("click", queuePhotosIndexSync);
-  $("[data-new-owner-queue-sidecar]")?.addEventListener("click", queueSidecarCulling);
+  $("[data-new-owner-queue-sidecar]")?.addEventListener("click", openLocalSidecar);
   $("[data-new-owner-upload-publish]")?.addEventListener("click", queueUploadPublish);
   actionRoot?.addEventListener("click", (event) => {
     const button = event.target.closest("[data-new-owner-action-command]");

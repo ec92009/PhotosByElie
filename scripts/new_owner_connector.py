@@ -12,10 +12,13 @@ import argparse
 import base64
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
+import html
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
+import os
 from pathlib import Path
 import platform
+import shutil
 import shlex
 import socket
 import subprocess
@@ -23,7 +26,7 @@ import sys
 import threading
 import time
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
@@ -35,6 +38,18 @@ DEFAULT_INTERVAL_SECONDS = 5
 MAX_PREVIEW_BYTES = 250_000
 DEFAULT_LOCAL_STATUS_PORT = 8766
 LOCAL_STATUS_PATH = "/photosbyelie/connector-status"
+LOCAL_SIDECAR_OPEN_PATH = "/photosbyelie/open-sidecar"
+LOCAL_SIDECAR_STATUS_PATH = "/photosbyelie/open-sidecar/status"
+SIDECAR_HELPER_PORT_START = 8011
+SIDECAR_HELPER_PORT_LIMIT = 8111
+PATH_PREFIXES = (
+    "/opt/homebrew/bin",
+    "/usr/local/bin",
+    "/usr/bin",
+    "/bin",
+    "/usr/sbin",
+    "/sbin",
+)
 ALLOWED_LOCAL_STATUS_ORIGINS = {
     "https://photos-by-elie.com",
     "https://www.photos-by-elie.com",
@@ -92,6 +107,264 @@ def _local_status_payload(config: ConnectorConfig) -> dict:
     }
 
 
+def _local_sidecar_open_action(config: ConnectorConfig, job_id: str) -> dict:
+    now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    return {
+        "id": job_id,
+        "type": "sidecar-culling-review",
+        "state": "claimed",
+        "claim": {
+            "connectorId": config.connector_id,
+            "claimedAt": now,
+            "source": "local-mac-bridge",
+        },
+        "payload": {
+            "surface": "new-owner",
+            "workflow": "sidecar-culling",
+            "connectorRequired": True,
+            "localFilesRequired": True,
+            "manifest": {
+                "mode": "local-sidecar-workspace",
+                "source": "owner-sqlite",
+                "limit": 24,
+                "includePreviews": False,
+                "launchWorkspace": False,
+            },
+            "queuedAt": now,
+            "localBridge": True,
+        },
+    }
+
+
+def _sidecar_helper_url(port: int) -> str:
+    return f"http://127.0.0.1:{port}/sidecar.html"
+
+
+def _sidecar_helper_ready(port: int) -> bool:
+    try:
+        with urlopen(f"http://127.0.0.1:{port}/__sidecar/version", timeout=0.5) as response:
+            return 200 <= response.status < 500
+    except (OSError, URLError):
+        return False
+
+
+def _running_sidecar_helper() -> dict:
+    for port in range(SIDECAR_HELPER_PORT_START, SIDECAR_HELPER_PORT_LIMIT):
+        if _sidecar_helper_ready(port):
+            return {"url": _sidecar_helper_url(port), "port": port, "reused": True}
+    return {}
+
+
+def _sidecar_helper_env() -> dict[str, str]:
+    env = {**os.environ, "PYTHONUNBUFFERED": "1"}
+    current_path = env.get("PATH", "")
+    parts = [part for part in (*PATH_PREFIXES, *current_path.split(os.pathsep)) if part]
+    env["PATH"] = os.pathsep.join(dict.fromkeys(part for part in parts if part))
+    return env
+
+
+def _launch_sidecar_for_browser(config: ConnectorConfig) -> dict:
+    """Start the local Sidecar helper and return the URL for this browser."""
+    existing = _running_sidecar_helper()
+    if existing:
+        return existing
+
+    helper = config.repo_root / "scripts" / "sidecar_server.py"
+    if not helper.exists():
+        raise RuntimeError(f"Sidecar helper is missing: {helper}")
+
+    log_dir = Path.home() / "Library" / "Logs" / "PhotosByElie"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_path = log_dir / "new-owner-sidecar-browser.log"
+    env = _sidecar_helper_env()
+    python = shutil.which("python3", path=env["PATH"]) or sys.executable
+
+    for port in range(SIDECAR_HELPER_PORT_START, SIDECAR_HELPER_PORT_LIMIT):
+        with log_path.open("a", encoding="utf-8") as log:
+            log.write(f"\n--- New Owner local Sidecar browser launch {time.strftime('%Y-%m-%d %H:%M:%S')} port {port} ---\n")
+            log.flush()
+            process = subprocess.Popen(
+                [python, str(helper), str(port)],
+                cwd=config.repo_root,
+                stdout=log,
+                stderr=subprocess.STDOUT,
+                text=True,
+                env=env,
+                start_new_session=True,
+            )
+        for _attempt in range(40):
+            if process.poll() is not None:
+                break
+            if _sidecar_helper_ready(port):
+                return {"url": _sidecar_helper_url(port), "port": port, "reused": False}
+            time.sleep(0.25)
+        if process.poll() is None:
+            process.terminate()
+            try:
+                process.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                process.kill()
+
+    raise RuntimeError("Could not start the local Sidecar helper on ports 8011-8110.")
+
+
+def _sidecar_job_public_payload(config: ConnectorConfig, job_id: str, job: dict) -> dict:
+    result = job.get("result") if isinstance(job.get("result"), dict) else {}
+    workspace = result.get("workspace") if isinstance(result.get("workspace"), dict) else {}
+    return {
+        "ok": job.get("state") != "failed",
+        "jobId": job_id,
+        "state": job.get("state") or "missing",
+        "message": job.get("message") or "",
+        "error": job.get("error") or "",
+        "url": workspace.get("url") or "",
+        "connector": _local_status_payload(config),
+        "recordsPrepared": result.get("recordsPrepared"),
+        "candidateCount": result.get("candidateCount"),
+        "pendingSyncCount": result.get("pendingSyncCount"),
+        "startedAt": job.get("startedAt") or "",
+        "completedAt": job.get("completedAt") or "",
+    }
+
+
+def _local_sidecar_progress_html(job_id: str) -> bytes:
+    escaped_job = html.escape(job_id)
+    status_url = f"{LOCAL_SIDECAR_STATUS_PATH}?job={quote(job_id, safe='')}"
+    body = f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>Opening Sidecar · Photos By Elie</title>
+  <style>
+    :root {{
+      color-scheme: light dark;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
+      background: #101313;
+      color: #f7f7f2;
+    }}
+    body {{
+      min-height: 100vh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(205, 185, 137, .18), transparent 34rem),
+        linear-gradient(135deg, #0b0d0d, #1f2424);
+    }}
+    main {{
+      width: min(720px, 100%);
+      border: 1px solid rgba(255, 255, 255, .22);
+      border-radius: 28px;
+      padding: clamp(24px, 5vw, 48px);
+      background: rgba(255, 255, 255, .08);
+      box-shadow: 0 24px 80px rgba(0, 0, 0, .36);
+      backdrop-filter: blur(18px);
+    }}
+    p {{ color: rgba(247, 247, 242, .78); font-size: 1.08rem; line-height: 1.45; }}
+    .eyebrow {{ text-transform: uppercase; letter-spacing: .18em; font-weight: 800; font-size: .78rem; }}
+    h1 {{ margin: .25rem 0 1rem; font-size: clamp(2rem, 8vw, 4rem); line-height: .95; }}
+    a, button {{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 1rem;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.32);
+      padding: .9rem 1.25rem;
+      color: inherit;
+      text-decoration: none;
+      font-weight: 800;
+      background: rgba(255,255,255,.08);
+    }}
+    .status {{
+      margin-top: 1.5rem;
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,.18);
+      padding: 1rem;
+      background: rgba(0,0,0,.18);
+      font-weight: 700;
+    }}
+    small {{ display: block; margin-top: .8rem; opacity: .72; }}
+  </style>
+</head>
+<body>
+  <main>
+    <div class="eyebrow">Photos By Elie · Local Mac bridge</div>
+    <h1>Opening Culling</h1>
+    <p>The local bridge is preparing this Mac’s real Sidecar workspace: same Culling gallery, keyboard shortcuts, Quick Look, and <kbd>C</kbd> switch into Title/Keywords review.</p>
+    <div class="status" id="status" aria-live="polite">Starting bridge job {escaped_job}…</div>
+    <a href="https://photos-by-elie.com/new-owner.html">Back to Owner</a>
+    <a id="sidecar-link" href="#" hidden>Open Sidecar now</a>
+    <small>If this page does not move on after a few seconds, make sure the Photos By Elie Mac connector is running on this Mac.</small>
+  </main>
+  <script>
+    const statusNode = document.getElementById("status");
+    const sidecarLink = document.getElementById("sidecar-link");
+    const statusUrl = {json.dumps(status_url)};
+    let redirected = false;
+    async function poll() {{
+      try {{
+        const response = await fetch(statusUrl, {{ cache: "no-store" }});
+        const body = await response.json();
+        const counts = body.recordsPrepared ? ` Prepared ${{body.recordsPrepared.toLocaleString()}} item${{body.recordsPrepared === 1 ? "" : "s"}}.` : "";
+        statusNode.textContent = `${{body.message || body.state || "Working..."}}${{counts}}`;
+        if (body.state === "completed" && body.url) {{
+          sidecarLink.href = body.url;
+          sidecarLink.hidden = false;
+          sidecarLink.textContent = "Open Sidecar now";
+          if (!redirected) {{
+            redirected = true;
+            window.setTimeout(() => window.location.replace(body.url), 650);
+          }}
+          return;
+        }}
+        if (body.state === "failed") {{
+          statusNode.textContent = body.error || body.message || "The local bridge could not open Sidecar.";
+          return;
+        }}
+      }} catch (error) {{
+        statusNode.textContent = "Waiting for the local bridge…";
+      }}
+      window.setTimeout(poll, 900);
+    }}
+    poll();
+  </script>
+</body>
+</html>
+"""
+    return body.encode("utf-8")
+
+
+def _run_local_sidecar_job(config: ConnectorConfig, jobs: dict[str, dict], jobs_lock: threading.Lock, job_id: str) -> None:
+    def update(**values: Any) -> None:
+        with jobs_lock:
+            jobs.setdefault(job_id, {}).update(values)
+
+    update(state="running", message="Preparing the Sidecar review window…")
+    try:
+        action = _local_sidecar_open_action(config, job_id)
+        result = execute_action(config, action)
+        update(message="Starting the local Sidecar helper…", result=result)
+        workspace = _launch_sidecar_for_browser(config)
+        result = {**result, "workspace": {"launched": True, "surface": "sidecar.html", "connectorId": config.connector_id, **workspace}}
+        update(
+            state="completed",
+            message="Sidecar is ready; opening the Culling workspace…",
+            result=result,
+            completedAt=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        )
+    except Exception as error:  # noqa: BLE001 - surface any local bridge issue in the browser.
+        update(
+            state="failed",
+            message="The local bridge could not open Sidecar.",
+            error=str(error),
+            completedAt=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        )
+
+
 def _allowed_local_status_origin(origin: str) -> str:
     parsed = urlparse(origin)
     if origin in ALLOWED_LOCAL_STATUS_ORIGINS:
@@ -105,6 +378,8 @@ def start_local_status_server(config: ConnectorConfig) -> None:
     """Expose this Mac's connector id to the local browser only."""
     if config.local_status_port <= 0:
         return
+    sidecar_jobs: dict[str, dict] = {}
+    sidecar_jobs_lock = threading.Lock()
 
     class LocalStatusHandler(BaseHTTPRequestHandler):
         server_version = "PhotosByElieLocalConnector/1.0"
@@ -127,7 +402,8 @@ def start_local_status_server(config: ConnectorConfig) -> None:
             self.send_header("Cache-Control", "no-store")
 
         def do_OPTIONS(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API.
-            if self.path != LOCAL_STATUS_PATH:
+            parsed = urlparse(self.path)
+            if parsed.path not in {LOCAL_STATUS_PATH, LOCAL_SIDECAR_OPEN_PATH, LOCAL_SIDECAR_STATUS_PATH}:
                 self.send_response(404)
                 self.end_headers()
                 return
@@ -136,7 +412,43 @@ def start_local_status_server(config: ConnectorConfig) -> None:
             self.end_headers()
 
         def do_GET(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API.
-            if self.path != LOCAL_STATUS_PATH:
+            parsed = urlparse(self.path)
+            if parsed.path == LOCAL_SIDECAR_OPEN_PATH:
+                job_id = f"local-sidecar-{int(time.time() * 1000)}"
+                with sidecar_jobs_lock:
+                    sidecar_jobs[job_id] = {
+                        "state": "queued",
+                        "message": "Queued on this Mac’s local bridge…",
+                        "startedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                    }
+                thread = threading.Thread(
+                    target=_run_local_sidecar_job,
+                    args=(config, sidecar_jobs, sidecar_jobs_lock, job_id),
+                    name="pbe-local-sidecar-open",
+                    daemon=True,
+                )
+                thread.start()
+                body = _local_sidecar_progress_html(job_id)
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Content-Length", str(len(body)))
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                self.wfile.write(body)
+                return
+            if parsed.path == LOCAL_SIDECAR_STATUS_PATH:
+                job_id = str(parse_qs(parsed.query).get("job", [""])[0])
+                with sidecar_jobs_lock:
+                    job = dict(sidecar_jobs.get(job_id) or {"state": "missing", "message": "Sidecar job not found."})
+                body = json.dumps(_sidecar_job_public_payload(config, job_id, job), separators=(",", ":")).encode("utf-8")
+                self.send_response(200)
+                self._send_cors_headers()
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                return
+            if parsed.path != LOCAL_STATUS_PATH:
                 self.send_response(404)
                 self.end_headers()
                 return

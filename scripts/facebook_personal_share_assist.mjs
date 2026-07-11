@@ -32,7 +32,7 @@ function usage() {
 Options:
   --date YYYY-MM-DD   Use that daily social package. Defaults to latest.
   --package PATH      Use an explicit daily package JSON.
-  --copy              Copy the French personal-share text to the macOS clipboard.
+  --copy              Copy the French and English personal-share text to the macOS clipboard.
   --open              Open the Facebook share URL in the default browser.
   --no-write          Print the assist kit without writing files.
 
@@ -123,6 +123,28 @@ function frenchShareText(row, postUrl) {
   ].join("\n");
 }
 
+function englishShareText(row, postUrl) {
+  const title = String(row.title || "the new series").trim();
+  return [
+    "I just published a few new photos on Photos By Elie.",
+    "",
+    `Today's series, "${title}", brings together a few images I really like.`,
+    "",
+    "See it here:",
+    postUrl,
+  ].join("\n");
+}
+
+function clipboardText(assist) {
+  return [
+    "FR:",
+    assist.text_fr,
+    "",
+    "EN:",
+    assist.text_en,
+  ].join("\n");
+}
+
 function renderReadme(assist) {
   return `# Facebook Personal Share Assist - ${assist.date}
 
@@ -135,9 +157,13 @@ French text:
 
 ${assist.text_fr}
 
+English text:
+
+${assist.text_en}
+
 Manual final step:
 - Confirm the visible Facebook posting identity is ${assist.expected_identity}, not Photos By Elie.
-- Paste the French text if it is not already in the composer.
+- Paste either the French or English text, or both, if it is not already in the composer.
 - Click Facebook's final Post button yourself.
 `;
 }
@@ -154,6 +180,10 @@ function markdownSection(assist) {
 French text:
 
 ${assist.text_fr}
+
+English text:
+
+${assist.text_en}
 `;
 }
 
@@ -214,9 +244,11 @@ function main() {
     campaign_url: facebook.destination_url || "",
     share_url: facebookShareUrl(postUrl),
     text_fr: frenchShareText(facebook, postUrl),
+    text_en: englishShareText(facebook, postUrl),
     local_dir: repoRelative(assistDir),
     local_files: {
-      text: repoRelative(path.join(assistDir, "text-fr.txt")),
+      text_fr: repoRelative(path.join(assistDir, "text-fr.txt")),
+      text_en: repoRelative(path.join(assistDir, "text-en.txt")),
       share_url: repoRelative(path.join(assistDir, "share-url.txt")),
       manifest: repoRelative(path.join(assistDir, "manifest.json")),
       readme: repoRelative(path.join(assistDir, "README.md")),
@@ -232,6 +264,7 @@ function main() {
   if (!args.get("no-write")) {
     fs.mkdirSync(assistDir, { recursive: true });
     fs.writeFileSync(path.join(assistDir, "text-fr.txt"), `${assist.text_fr}\n`);
+    fs.writeFileSync(path.join(assistDir, "text-en.txt"), `${assist.text_en}\n`);
     fs.writeFileSync(path.join(assistDir, "share-url.txt"), `${assist.share_url}\n`);
     fs.writeFileSync(path.join(assistDir, "README.md"), renderReadme(assist));
     writeJson(path.join(assistDir, "manifest.json"), assist);
@@ -266,7 +299,7 @@ function main() {
     }
   }
 
-  if (args.get("copy")) copyToClipboard(assist.text_fr);
+  if (args.get("copy")) copyToClipboard(clipboardText(assist));
   if (args.get("open")) openUrl(assist.share_url);
 
   console.log(JSON.stringify({
@@ -279,6 +312,7 @@ function main() {
     opened: Boolean(args.get("open")),
     local_dir: assist.local_dir,
     text_fr: assist.text_fr,
+    text_en: assist.text_en,
   }, null, 2));
 }
 

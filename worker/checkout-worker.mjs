@@ -2201,13 +2201,22 @@ export const createPhotosByElieWorker = ({
     if (!decisions.length) return credentialedErrorJson(request, 400, "sidecar_decisions_required", "decisions must contain at least one Sidecar decision.");
     if (decisions.length > 500) return credentialedErrorJson(request, 400, "sidecar_decisions_limit", "Sidecar batch decisions are limited to 500 rows.");
     const timestamp = now().toISOString();
-    const items = [];
-    for (const decision of decisions) {
-      items.push(await sidecarStateStore.applyDecision(decision, {
-        actorKind: actor.actorKind,
-        actorId: actor.actorId,
-        timestamp,
-      }));
+    const context = {
+      actorKind: actor.actorKind,
+      actorId: actor.actorId,
+      timestamp,
+    };
+    const items = typeof sidecarStateStore.applyDecisions === "function"
+      ? await sidecarStateStore.applyDecisions(decisions, context)
+      : [];
+    if (!items.length && decisions.length) {
+      for (const decision of decisions) {
+        items.push(await sidecarStateStore.applyDecision(decision, {
+          actorKind: actor.actorKind,
+          actorId: actor.actorId,
+          timestamp,
+        }));
+      }
     }
     return credentialedJson(request, {
       ok: true,

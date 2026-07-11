@@ -1,0 +1,31 @@
+# Keep the reusable architecture graph focused on source, docs, migrations,
+# and Worker code. Generated media, delivery artifacts, caches, and private
+# workflow payloads overwhelm extraction without adding call-graph value.
+assets/
+tmp/
+socials/
+deliveries/
+Archive/
+node_modules/
+pixelmator.pro.edits/
+.curation-logs/
+.review-logs/
+.wrangler/
+.vscode/
+
+# Machine-to-machine transcripts and dated review dumps are historical records,
+# not active architecture inputs.
+MAX2DAVID.md
+DAVID2MAX.md
+MAX_DAVID_CHAT.md
+Codex-Daily_Review_*.md
+photosByElie Codex Review *.md
+
+# Generated catalog payloads are rebuilt from SQLite and dwarf the authored
+# source that consumes them.
+photos-data.js
+worker/photos-catalog.generated.mjs
+
+# The authored architecture docs stay included; rendered infographic exports do
+# not need separate OCR nodes in the code graph.
+docs/architecture/infographics/

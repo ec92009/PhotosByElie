@@ -608,6 +608,20 @@ test("sidecar cloud decisions are stored behind Owner or connector auth", async 
   assert.equal(query.decisions["apple-cloud-id-1"].rating, 4);
   assert.equal(query.decisions["apple-cloud-id-1"].pickState, "picked");
 
+  const batchResponse = await worker.fetch(jsonRequest("https://worker.test/owner/sidecar/decisions/apply-batch", {
+    decisions: [
+      { assetId: "apple-cloud-id-batch", action: "rating", rating: 5 },
+      { assetId: "apple-cloud-id-batch", action: "pick" },
+    ],
+  }, connectorHeaders));
+  assert.equal(batchResponse.status, 200);
+  const batch = await batchResponse.json();
+  assert.equal(batch.count, 2);
+  assert.equal(batch.items[0].state.rating, 5);
+  assert.equal(batch.items[0].state.pickState, "undecided");
+  assert.equal(batch.items[1].state.rating, 5);
+  assert.equal(batch.items[1].state.pickState, "picked");
+
   const clientWorker = createPhotosByElieWorker({
     catalog: loadCatalog(),
     accessAuth: fakeAccessAuthFor("client@example.com"),

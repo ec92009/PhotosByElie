@@ -369,6 +369,11 @@ export const createMemorySidecarStateStore = ({
     });
     return { ...result, state: decision };
   };
+  const applyDecisions = async (payloads = [], context = {}) => {
+    const items = [];
+    for (const payload of payloads) items.push(await applyDecision(payload, context));
+    return items;
+  };
 
   return {
     getDecision,
@@ -376,6 +381,7 @@ export const createMemorySidecarStateStore = ({
     putDecision,
     putDecisions,
     applyDecision,
+    applyDecisions,
     _debug: { decisions, events },
   };
 };
@@ -465,6 +471,54 @@ export const createD1SidecarStateStore = ({
     ).run();
     return { ...result, state: decision };
   };
+  const applyDecisions = async (payloads = [], context = {}) => {
+    const cleanPayloads = (Array.isArray(payloads) ? payloads : []).filter((payload) => payload && typeof payload === "object");
+    if (!cleanPayloads.length) return [];
+    if (typeof database.batch !== "function") {
+      const fallback = [];
+      for (const payload of cleanPayloads) fallback.push(await applyDecision(payload, context));
+      return fallback;
+    }
+
+    const timestamp = cleanTimestamp(context.timestamp, now().toISOString());
+    const assetIds = cleanPayloads.map((payload) => payload.assetId || payload.asset_id || payload.localIdentifier);
+    const currentByAssetId = new Map(Object.entries(await queryDecisions({ assetIds })));
+    const actor = actorForEvent(context);
+    const results = [];
+    for (const payload of cleanPayloads) {
+      const assetId = cleanAssetId(payload.assetId || payload.asset_id || payload.localIdentifier);
+      const result = applyDecisionAction(currentByAssetId.get(assetId) || null, payload, timestamp);
+      const decision = normalizeDecision({ assetId: result.assetId, state: result.state }, currentByAssetId.get(assetId) || null, timestamp);
+      currentByAssetId.set(result.assetId, decision);
+      results.push({ ...result, state: decision });
+    }
+
+    const finalByAssetId = new Map(results.map((result) => [result.assetId, result.state]));
+    const statements = [...finalByAssetId.values()].map((decision) => (
+      bindDecision(database.prepare(DECISION_UPSERT_SQL), decision, timestamp)
+    ));
+    for (const result of results) {
+      statements.push(database.prepare(`
+        INSERT INTO pbe_sidecar_decision_events (
+          id, asset_id, action, changed_families_json, actor_kind, actor_id, before_json, after_json, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        `sidecar-event-${randomUUID().replace(/[^a-z0-9-]/gi, "").slice(0, 48)}`,
+        result.assetId,
+        result.state.lastAction,
+        JSON.stringify(result.changedFamilies),
+        actor.actorKind,
+        actor.actorId,
+        JSON.stringify(result.before),
+        JSON.stringify(result.state),
+        timestamp
+      ));
+    }
+    for (let start = 0; start < statements.length; start += 100) {
+      await database.batch(statements.slice(start, start + 100));
+    }
+    return results;
+  };
 
   return {
     getDecision,
@@ -472,5 +526,6 @@ export const createD1SidecarStateStore = ({
     putDecision,
     putDecisions,
     applyDecision,
+    applyDecisions,
   };
 };

@@ -582,8 +582,9 @@ Clock state: running
 | 2026-07-11 | 18:00 CEST | 18:10 CEST | 0:03 | Fixed Sidecar filtered-window refill so cloud decision overlays continue loading matching assets until the visible window is full; implementation/browser/test runtime excluded. |
 | 2026-07-11 | 18:14 CEST | 18:23 CEST | 0:03 | Audited legacy Sidecar tombstones, verified all 1,906 Max-local IDs already had cloud tombstones, and hydrated the complete cloud protection set into Max's local cache; query/runtime excluded. |
 | 2026-07-11 | 18:36 CEST | 18:38 CEST | 0:02 | Reported intermittent stained-glass preview failures and Sidecar slowness; diagnosed bridge launch races and scoped preview/loading performance expectations; implementation/browser/test runtime excluded. |
+| 2026-07-11 | 18:38 CEST | 19:24 CEST | 0:02 | Reported picked cards remaining under the undecided filter and authorized a reusable repository graph; implementation, graph extraction, browser QA, tests, and deployment runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 30:09
+Active collaboration time used: 30:11
 Remaining budget: not set

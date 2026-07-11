@@ -1845,7 +1845,18 @@
       body: JSON.stringify(body),
     });
     const result = await response.json().catch(() => ({}));
-    if (!response.ok || !result.ok) throw new Error(result.error || "Could not stage Sidecar decision.");
+    if (!response.ok || !result.ok) {
+      const error = new Error(result.error || "Could not stage Sidecar decision.");
+      if (response.status >= 500 && state.hasWindow) {
+        setStatus(`The decision response was interrupted. Reconciling ${decisions.length.toLocaleString()} item${decisions.length === 1 ? "" : "s"} from Owner cloud...`);
+        const reconciled = await loadWindow();
+        if (reconciled?.sidecarCloud?.ok) {
+          setStatus(`Owner cloud state reconciled after an interrupted decision response. Accepted changes are reflected; retry only items that remain.`);
+          return;
+        }
+      }
+      throw error;
+    }
 
     const changedItems = decisions.length === 1 ? [result] : (result.items || []);
     if (recordUndo) pushUndoEntry(actionLabel(payload), changedItems, beforeStates, selectionBefore);
@@ -1897,7 +1908,18 @@
       body: JSON.stringify({ decisions }),
     });
     const result = await response.json().catch(() => ({}));
-    if (!response.ok || !result.ok) throw new Error(result.error || "Could not stage Sidecar decisions.");
+    if (!response.ok || !result.ok) {
+      const error = new Error(result.error || "Could not stage Sidecar decisions.");
+      if (response.status >= 500 && state.hasWindow) {
+        setStatus(`The bulk decision response was interrupted. Reconciling ${decisions.length.toLocaleString()} items from Owner cloud...`);
+        const reconciled = await loadWindow();
+        if (reconciled?.sidecarCloud?.ok) {
+          setStatus("Owner cloud state reconciled after an interrupted bulk response. Accepted changes are reflected; retry only items that remain.");
+          return;
+        }
+      }
+      throw error;
+    }
     const changedItems = result.items || [];
     if (recordUndo) pushUndoEntry(undoLabel, changedItems, beforeStates, selectionBefore);
     if (result.summary) state.summary = result.summary;
@@ -2117,8 +2139,7 @@
       && bridgeQueuedCountFromPayload(uploadRailPayload || {}) > 0;
     if (!keepEmptyReviewForBridge && switchToCullingIfReviewEmpty()) {
       await waitForStatusPaint();
-      await loadWindow();
-      return;
+      return loadWindow();
     }
     const sourceLabel = payload.source === "sidecar-index" ? "local Photos index" : "Apple Photos fallback";
     const currentFilteredCount = Number(payload.filteredIndexedCount || payload.indexedCount || 0);
@@ -2133,6 +2154,7 @@
     if (uploadRailError && isReviewPage()) {
       setStatus(`${loadedMessage} Upload Bridge unavailable: ${uploadRailError.message || "unknown error"}`);
     }
+    return payload;
   };
 
   const loadAndFillWindow = async () => {

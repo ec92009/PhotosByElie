@@ -161,6 +161,19 @@ python3 scripts/sidecar_maintenance.py picked-ai-plan
 python3 scripts/sidecar_maintenance.py picked-ai-preview-export
 ```
 
+After changing Sidecar durable identity from Mac-local PhotoKit identifiers to
+Apple cloud identifiers, verify and hydrate legacy tombstones with:
+
+```bash
+python3 scripts/migrate_sidecar_tombstones_to_cloud.py
+python3 scripts/migrate_sidecar_tombstones_to_cloud.py --apply
+```
+
+The command is dry-run by default, refuses to apply when any legacy tombstone
+lacks a cloud-ID mapping, checks cloud state before every small batch, and
+mirrors already-protected cloud tombstones into the local Owner cache. Its
+ignored audit report is written under `tmp/sidecar-tombstone-audit/`.
+
 The preview export writes
 `assets/owner-actions/sidecar-ai-metadata-previews.json` plus JPEG previews and,
 when Pillow is available, `tmp/sidecar-picked-ai-previews/contact-sheet.jpg`.

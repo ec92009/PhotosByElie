@@ -710,8 +710,12 @@ def _overlay_cloud_decisions(repo_root: Path, payload: dict) -> dict:
     asset_ids = [str(item.get("assetId") or item.get("localIdentifier") or "").strip() for item in items if isinstance(item, dict)]
     try:
         decisions = _query_cloud_decisions(asset_ids)
+        mirror_error = ""
         if decisions:
-            mirror_cloud_decisions(repo_root, decisions.values())
+            try:
+                mirror_cloud_decisions(repo_root, decisions.values())
+            except Exception as error:  # noqa: BLE001 - display should not depend on the cache write.
+                mirror_error = str(error)
         for item in items:
             if not isinstance(item, dict):
                 continue
@@ -722,7 +726,7 @@ def _overlay_cloud_decisions(repo_root: Path, payload: dict) -> dict:
             item["sidecarState"] = state
             item["tombstoneState"] = str(state.get("tombstoneState") or "")
             item["pendingSyncCount"] = int(state.get("pendingSyncCount") or 0)
-        payload["sidecarCloud"] = {"ok": True, "configured": True, "count": len(decisions)}
+        payload["sidecarCloud"] = {"ok": True, "configured": True, "count": len(decisions), **({"mirrorError": mirror_error} if mirror_error else {})}
     except Exception as error:  # noqa: BLE001 - window reads should still show the local index.
         payload["sidecarCloud"] = {"ok": False, "configured": True, "error": str(error)}
     return payload

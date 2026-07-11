@@ -212,8 +212,9 @@ def connect(repo_root: Path, db_path: Path | None = None) -> sqlite3.Connection:
     if not path.is_absolute():
         path = repo_root / path
     path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(path)
+    conn = sqlite3.connect(path, timeout=15)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA busy_timeout = 15000")
     conn.execute("PRAGMA foreign_keys = ON")
     ensure_schema(conn)
     return conn

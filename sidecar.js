@@ -80,6 +80,7 @@
   const refillMaxFetches = 120;
   const uploadBridgeMaxItems = 500;
   const previewFallbackMarkup = `<span class="sidecar-thumb-fallback">Preview unavailable</span>`;
+  const previewObservers = new WeakMap();
   let indexStatusTimer = null;
   let searchChangeTimer = null;
 
@@ -726,10 +727,13 @@
   };
 
   const previewFailureMessage = async (source = "") => {
-    if (!source) return { compact: "Preview unavailable", full: "" };
+    if (!source) return { compact: "Preview unavailable", full: "", recoveredUrl: "" };
     try {
       const response = await fetch(source, { cache: "no-store" });
-      if (response.ok) return { compact: "Preview unavailable", full: "" };
+      if (response.ok && (response.headers.get("Content-Type") || "").startsWith("image/")) {
+        const blob = await response.blob();
+        return { compact: "", full: "", recoveredUrl: URL.createObjectURL(blob) };
+      }
       let payload = null;
       try {
         payload = await response.clone().json();
@@ -737,19 +741,32 @@
         payload = null;
       }
       const full = payload?.error || response.statusText || "Preview unavailable";
-      return { compact: compactPreviewMessage(full), full };
+      return { compact: compactPreviewMessage(full), full, recoveredUrl: "" };
     } catch (_error) {
-      return { compact: "Preview unavailable", full: "" };
+      return { compact: "Preview unavailable", full: "", recoveredUrl: "" };
     }
   };
 
   const wirePreviewFallbacks = (root) => {
-    root?.querySelectorAll("img[data-sidecar-preview]").forEach((img) => {
+    if (!root) return;
+    previewObservers.get(root)?.disconnect();
+    const images = Array.from(root.querySelectorAll("img[data-sidecar-preview]"));
+    const startPreview = (img) => {
+      const source = img.dataset.sidecarPreviewSrc || "";
+      if (source && !img.getAttribute("src")) img.setAttribute("src", source);
+    };
+    images.forEach((img) => {
       const markMissing = async () => {
-        const source = img.currentSrc || img.src || "";
+        const source = img.currentSrc || img.src || img.dataset.sidecarPreviewSrc || "";
         const container = img.closest(".sidecar-thumb, .sidecar-editing-preview, .sidecar-quick-look-media, .sidecar-upload-plan-tile");
         const fallback = container?.querySelector(".sidecar-thumb-fallback");
         const message = await previewFailureMessage(source);
+        if (message.recoveredUrl) {
+          const recoveredUrl = message.recoveredUrl;
+          img.addEventListener("load", () => URL.revokeObjectURL(recoveredUrl), { once: true });
+          img.setAttribute("src", recoveredUrl);
+          return;
+        }
         if (fallback) {
           fallback.textContent = message.compact;
           fallback.title = message.full || message.compact;
@@ -758,8 +775,23 @@
         img.removeAttribute("src");
       };
       img.addEventListener("error", markMissing, { once: true });
-      if (img.complete && img.naturalWidth === 0) markMissing();
+      if (img.getAttribute("src") && img.complete && img.naturalWidth === 0) markMissing();
     });
+    const deferred = images.filter((img) => img.dataset.sidecarPreviewSrc && !img.getAttribute("src"));
+    if (!deferred.length) return;
+    if (!("IntersectionObserver" in window)) {
+      deferred.forEach(startPreview);
+      return;
+    }
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        observer.unobserve(entry.target);
+        startPreview(entry.target);
+      });
+    }, { rootMargin: "700px 0px" });
+    deferred.forEach((img) => observer.observe(img));
+    previewObservers.set(root, observer);
   };
 
   const sidecarBadges = (item) => {
@@ -1221,7 +1253,7 @@
       return `
         <article class="${decisionClasses("sidecar-card", item, selected)}" ${decisionAttrs(item)} data-sidecar-index="${index}" tabindex="0" aria-selected="${selected ? "true" : "false"}">
           <div class="sidecar-thumb ${isVideo(item) ? "sidecar-video-surface" : ""}" data-sidecar-video-shell data-sidecar-index="${index}">
-            <img data-sidecar-preview src="${escapeHtml(previewUrl(item))}" alt="${escapeHtml(label)}" loading="lazy"/>
+            <img data-sidecar-preview data-sidecar-preview-src="${escapeHtml(previewUrl(item))}" alt="${escapeHtml(label)}" loading="lazy"/>
             ${previewFallbackMarkup}
             ${videoBadge(item, index)}
             ${ratingStars(item)}
@@ -1288,7 +1320,7 @@
     return `
       <article class="${decisionClasses("sidecar-editing-row", item, selected)}" ${decisionAttrs(item)} data-sidecar-index="${index}" tabindex="0" aria-selected="${selected ? "true" : "false"}">
         <div class="sidecar-editing-preview ${isVideo(item) ? "sidecar-video-surface" : ""}" data-sidecar-video-shell data-sidecar-index="${index}">
-          <img data-sidecar-preview src="${escapeHtml(previewUrl(item))}" alt="${escapeHtml(label)}" loading="lazy"/>
+          <img data-sidecar-preview data-sidecar-preview-src="${escapeHtml(previewUrl(item))}" alt="${escapeHtml(label)}" loading="lazy"/>
           ${previewFallbackMarkup}
           ${videoBadge(item, index)}
           ${ratingStars(item)}
@@ -2250,7 +2282,7 @@
               <li class="sidecar-upload-progress-item">
                 ${entry.assetId ? `
                   <span class="sidecar-upload-progress-thumb">
-                    <img data-sidecar-preview src="${escapeHtml(previewUrl({ localIdentifier: entry.assetId }))}" alt="" loading="lazy"/>
+                    <img data-sidecar-preview data-sidecar-preview-src="${escapeHtml(previewUrl({ localIdentifier: entry.assetId }))}" alt="" loading="lazy"/>
                     ${previewFallbackMarkup}
                   </span>
                 ` : ""}
@@ -2385,7 +2417,7 @@
         <div class="sidecar-plan-list sidecar-upload-plan-list">
           ${items.slice(0, 80).map((item) => `
             <div class="sidecar-upload-plan-tile" title="${escapeHtml(item.filename || item.assetId || "")}" aria-label="${escapeHtml(item.filename || item.assetId || "Upload-ready item")}">
-              <img data-sidecar-preview src="${escapeHtml(previewUrl({ localIdentifier: item.assetId }))}" alt="" loading="lazy"/>
+              <img data-sidecar-preview data-sidecar-preview-src="${escapeHtml(previewUrl({ localIdentifier: item.assetId }))}" alt="" loading="lazy"/>
               ${previewFallbackMarkup}
             </div>
           `).join("") || `<p>${escapeHtml(emptyMessage)}</p>`}

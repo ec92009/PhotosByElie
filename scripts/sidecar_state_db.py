@@ -448,6 +448,20 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         if column not in asset_columns:
             conn.execute(f"ALTER TABLE sidecar_assets ADD COLUMN {column} {definition}")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_sidecar_assets_available ON sidecar_assets(missing_at, captured_at, asset_id)")
+    conn.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_sidecar_assets_active_id
+        ON sidecar_assets(asset_id)
+        WHERE missing_at IS NULL OR missing_at = ''
+        """
+    )
+    conn.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_sidecar_assets_active_captured
+        ON sidecar_assets(captured_at DESC, asset_id)
+        WHERE missing_at IS NULL OR missing_at = ''
+        """
+    )
     upload_item_columns = {
         str(row["name"])
         for row in conn.execute("PRAGMA table_info(sidecar_upload_bridge_run_items)").fetchall()
@@ -792,6 +806,7 @@ def indexed_library_window(
     pick_states: Iterable[Any] | None = None,
     media_types: Iterable[Any] | None = None,
     search: str = "",
+    include_summary: bool = True,
 ) -> dict[str, Any]:
     """Return a Sidecar window from the local metadata index."""
     safe_offset = max(0, int(offset or 0))
@@ -827,7 +842,7 @@ def indexed_library_window(
         if str(value).strip().isdigit()
     })
     if clean_ratings:
-        filter_predicates.append(f"COALESCE(a.decision_rating, 0) IN ({', '.join('?' for _ in clean_ratings)})")
+        filter_predicates.append(f"COALESCE(d.rating, 0) IN ({', '.join('?' for _ in clean_ratings)})")
         filter_params.extend(clean_ratings)
     clean_colors = []
     for value in colors or []:
@@ -837,7 +852,7 @@ def indexed_library_window(
         if color in COLOR_VALUES and color not in clean_colors:
             clean_colors.append(color)
     if clean_colors:
-        filter_predicates.append(f"COALESCE(a.decision_color, '') IN ({', '.join('?' for _ in clean_colors)})")
+        filter_predicates.append(f"COALESCE(d.color, '') IN ({', '.join('?' for _ in clean_colors)})")
         filter_params.extend(clean_colors)
     clean_media_types = []
     for value in media_types or []:
@@ -856,8 +871,8 @@ def indexed_library_window(
         "a.location_keywords_json",
         "a.metadata_seed_title",
         "a.metadata_seed_keywords_json",
-        "a.decision_title",
-        "a.decision_keywords_json",
+        "d.title",
+        "d.keywords_json",
     )
     for term in re.findall(r"[^\s,;]+", str(search or "").casefold())[:8]:
         escaped = term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
@@ -868,59 +883,39 @@ def indexed_library_window(
     clean_pick_states = {str(value or "").strip() for value in (pick_states or [])}
     pick_predicates: list[str] = []
     if "picked" in clean_pick_states:
-        pick_predicates.append("COALESCE(a.decision_pick_state, 'undecided') = 'picked'")
+        pick_predicates.append("COALESCE(d.pick_state, 'undecided') = 'picked'")
     if "undecided" in clean_pick_states:
-        pick_predicates.append("COALESCE(a.decision_pick_state, 'undecided') = 'undecided'")
+        pick_predicates.append("COALESCE(d.pick_state, 'undecided') = 'undecided'")
     if "rejected" in clean_pick_states:
-        pick_predicates.append("COALESCE(a.decision_pick_state, 'undecided') IN ('rejected', 'hidden')")
+        pick_predicates.append("COALESCE(d.pick_state, 'undecided') IN ('rejected', 'hidden')")
     if pick_predicates:
         filter_predicates.append(f"({' OR '.join(pick_predicates)})")
     filter_sql = " AND ".join(filter_predicates)
-    ordered_sql = f"""
-        WITH ordered AS (
-          SELECT
-            a.*,
-            d.rating AS decision_rating,
-            d.color AS decision_color,
-            d.pick_state AS decision_pick_state,
-            d.title AS decision_title,
-            d.keywords_json AS decision_keywords_json,
-            ROW_NUMBER() OVER (
-              ORDER BY
-                CASE WHEN a.captured_at IS NULL OR a.captured_at = '' THEN 1 ELSE 0 END,
-                a.captured_at DESC,
-                a.asset_id
-            ) - 1 AS sidecar_position
-          FROM sidecar_assets AS a
-          LEFT JOIN sidecar_decisions AS d ON d.asset_id = a.asset_id
-          WHERE {where_sql}
-        )
-    """
     with connect(repo_root) as conn:
         indexed_count = _active_asset_count(conn)
         filtered_count = conn.execute(
             f"""
-            {ordered_sql}
             SELECT count(*) AS total
-            FROM ordered AS a
-            WHERE {filter_sql}
+            FROM sidecar_assets AS a INDEXED BY idx_sidecar_assets_active_id
+            LEFT JOIN sidecar_decisions AS d ON d.asset_id = a.asset_id
+            WHERE {where_sql} AND {filter_sql}
             """,
             [*params, *filter_params],
         ).fetchone()["total"]
         rows = conn.execute(
             f"""
-            {ordered_sql}
             SELECT a.*
-            FROM ordered AS a
-            WHERE {filter_sql}
-            ORDER BY a.sidecar_position
+            FROM sidecar_assets AS a INDEXED BY idx_sidecar_assets_active_captured
+            LEFT JOIN sidecar_decisions AS d ON d.asset_id = a.asset_id
+            WHERE {where_sql} AND {filter_sql}
+            ORDER BY a.captured_at DESC, a.asset_id
             LIMIT ? OFFSET ?
             """,
             [*params, *filter_params, safe_limit, safe_offset],
         ).fetchall()
         next_offset = safe_offset + len(rows)
     items = merge_state(repo_root, [_indexed_asset_row(row) for row in rows])
-    return {
+    payload = {
         "ok": True,
         "mode": "sidecar-index-window",
         "source": "sidecar-index",
@@ -934,8 +929,10 @@ def indexed_library_window(
         "dateTo": date_to,
         "search": str(search or "").strip(),
         "items": items,
-        "sidecarSummary": summary(repo_root),
     }
+    if include_summary:
+        payload["sidecarSummary"] = summary(repo_root)
+    return payload
 
 
 def _decision_payload(row: sqlite3.Row | None) -> dict[str, Any]:
@@ -1623,8 +1620,8 @@ def summary(repo_root: Path) -> dict[str, Any]:
         rows = conn.execute(
             """
             SELECT d.pick_state, d.metadata_state, count(*) AS total
-            FROM sidecar_decisions AS d
-            JOIN sidecar_assets AS a ON a.asset_id = d.asset_id
+            FROM sidecar_assets AS a INDEXED BY idx_sidecar_assets_active_id
+            JOIN sidecar_decisions AS d ON d.asset_id = a.asset_id
             WHERE a.missing_at IS NULL OR a.missing_at = ''
             GROUP BY d.pick_state, d.metadata_state
             """

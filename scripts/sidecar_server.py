@@ -83,6 +83,10 @@ SIDECAR_UPLOAD_BRIDGE_EXECUTE_LIMIT = 500
 APPLE_PHOTOS_PROGRESS_PREFIX = "PBE_APPLE_PHOTOS_PROGRESS "
 UPLOAD_BRIDGE_CANCEL_LOCK = threading.Lock()
 UPLOAD_BRIDGE_CANCEL_REQUESTS: set[str] = set()
+APPLE_PHOTOS_BRIDGE_TASK_SLOTS = threading.BoundedSemaphore(12)
+SUMMARY_CACHE_LOCK = threading.Lock()
+SUMMARY_CACHE_TTL_SECONDS = 60.0
+SUMMARY_CACHE: dict[str, object] = {}
 INDEX_JOB_LOCK = threading.Lock()
 INDEX_JOB: dict = {
     "ok": True,
@@ -131,6 +135,28 @@ def _utc_now() -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
 
+def _invalidate_summary_cache() -> None:
+    with SUMMARY_CACHE_LOCK:
+        SUMMARY_CACHE.clear()
+
+
+def _summary_snapshot(repo_root: Path, force: bool = False) -> dict:
+    cache_key = str(repo_root.resolve())
+    now = time.monotonic()
+    with SUMMARY_CACHE_LOCK:
+        cached = SUMMARY_CACHE.get("payload")
+        if (
+            not force
+            and SUMMARY_CACHE.get("repoRoot") == cache_key
+            and isinstance(cached, dict)
+            and now - float(SUMMARY_CACHE.get("createdAt") or 0) < SUMMARY_CACHE_TTL_SECONDS
+        ):
+            return dict(cached)
+        payload = summary(repo_root)
+        SUMMARY_CACHE.update({"repoRoot": cache_key, "createdAt": now, "payload": dict(payload)})
+        return payload
+
+
 def _set_index_job(**updates: object) -> dict:
     with INDEX_JOB_LOCK:
         INDEX_JOB.update(updates)
@@ -142,7 +168,7 @@ def _index_job_snapshot(repo_root: Path) -> dict:
     with INDEX_JOB_LOCK:
         payload = dict(INDEX_JOB)
     try:
-        sidecar_summary = summary(repo_root)
+        sidecar_summary = _summary_snapshot(repo_root)
         payload["sidecarSummary"] = sidecar_summary
         if payload.get("status") != "running":
             payload["indexedCount"] = int(sidecar_summary.get("indexedCount") or 0)
@@ -338,41 +364,62 @@ def _run_apple_photos_bridge_app_task(repo_root: Path, args: list[str], timeout:
         return busy
     result_destination = repo_root / "tmp" / "sidecar-bridge-results" / f"{uuid.uuid4().hex}.json"
     result_destination.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        result = subprocess.run(
-            [
-                "open", "-W", "-n", str(APPLE_PHOTOS_BRIDGE_APP), "--args", *args,
-                "--result-destination", str(result_destination),
-            ],
-            cwd=repo_root,
-            text=True,
-            capture_output=True,
-            timeout=timeout,
-            check=False,
-        )
-    except FileNotFoundError as error:
-        raise RuntimeError("macOS open is required to launch the bundled Apple Photos bridge.") from error
-    if result.returncode != 0:
+    started_at = time.monotonic()
+    if not APPLE_PHOTOS_BRIDGE_TASK_SLOTS.acquire(timeout=max(0.1, float(timeout))):
         return {
             "ok": False,
-            "code": "photos_bridge_app_error",
-            "error": (result.stderr or result.stdout or f"Apple Photos bridge app exited {result.returncode}").strip(),
+            "code": "photos_bridge_queue_timeout",
+            "error": "Photos Bridge preview queue timed out. Retry the preview.",
         }
     try:
-        payload = json.loads(result_destination.read_text(encoding="utf-8"))
-    except FileNotFoundError:
-        return {
-            "ok": False,
-            "code": "photos_bridge_result_missing",
-            "error": "Photos Bridge app exited without writing its result. Retry the preview.",
-        }
-    except (OSError, json.JSONDecodeError) as error:
-        return {
-            "ok": False,
-            "code": "photos_bridge_result_invalid",
-            "error": f"Photos Bridge app wrote an unreadable result: {error}",
-        }
+        try:
+            result = subprocess.run(
+                [
+                    "open", "-n", str(APPLE_PHOTOS_BRIDGE_APP), "--args", *args,
+                    "--result-destination", str(result_destination),
+                ],
+                cwd=repo_root,
+                text=True,
+                capture_output=True,
+                timeout=max(0.1, float(timeout)),
+                check=False,
+            )
+        except FileNotFoundError as error:
+            raise RuntimeError("macOS open is required to launch the bundled Apple Photos bridge.") from error
+        except subprocess.TimeoutExpired:
+            return {
+                "ok": False,
+                "code": "photos_bridge_launch_timeout",
+                "error": "Photos Bridge app launch timed out. Retry the preview.",
+            }
+        if result.returncode != 0:
+            return {
+                "ok": False,
+                "code": "photos_bridge_app_error",
+                "error": (result.stderr or result.stdout or f"Apple Photos bridge app exited {result.returncode}").strip(),
+            }
+        deadline = started_at + max(0.1, float(timeout))
+        while True:
+            try:
+                payload = json.loads(result_destination.read_text(encoding="utf-8"))
+                break
+            except FileNotFoundError:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    return {
+                        "ok": False,
+                        "code": "photos_bridge_result_timeout",
+                        "error": "Photos Bridge app did not finish before the preview timed out. Retry the preview.",
+                    }
+                time.sleep(min(0.025, remaining))
+            except (OSError, json.JSONDecodeError) as error:
+                return {
+                    "ok": False,
+                    "code": "photos_bridge_result_invalid",
+                    "error": f"Photos Bridge app wrote an unreadable result: {error}",
+                }
     finally:
+        APPLE_PHOTOS_BRIDGE_TASK_SLOTS.release()
         try:
             result_destination.unlink()
         except FileNotFoundError:
@@ -565,6 +612,7 @@ def _run_index_job(repo_root: Path, job_id: str, date_from: str = "", date_to: s
         bridge_payload = _run_apple_photos_bridge_app_index(repo_root, args, index_path)
         total_count = int(bridge_payload.get("totalCount") or bridge_payload.get("count") or 0)
         imported, missing_count = _import_index_jsonl(repo_root, index_path, total_count, prune_missing=not date_from and not date_to)
+        _invalidate_summary_cache()
         _set_index_job(
             ok=True,
             status="done",
@@ -575,7 +623,7 @@ def _run_index_job(repo_root: Path, job_id: str, date_from: str = "", date_to: s
             progress=1,
             completedAt=_utc_now(),
             missingMarkedCount=missing_count,
-            sidecarSummary=summary(repo_root),
+            sidecarSummary=_summary_snapshot(repo_root, force=True),
         )
     except Exception as error:
         _set_index_job(
@@ -811,7 +859,8 @@ class SidecarHandler(SimpleHTTPRequestHandler):
 
     def end_headers(self) -> None:
         path = self.path.split("?", 1)[0]
-        if path in {"", "/", "/sidecar.html"} or path.startswith("/__sidecar/"):
+        immutable_media = path.startswith(SIDECAR_PREVIEW_PATH) or path.startswith(SIDECAR_VIDEO_PATH)
+        if not immutable_media and (path in {"", "/", "/sidecar.html"} or path.startswith("/__sidecar/")):
             self.send_header("Cache-Control", "no-cache, max-age=0, must-revalidate")
             self.send_header("Pragma", "no-cache")
             self.send_header("Expires", "0")
@@ -858,7 +907,7 @@ class SidecarHandler(SimpleHTTPRequestHandler):
 
     def _handle_summary(self) -> None:
         try:
-            payload = {**summary(Path.cwd()), "version": sidecar_version(Path.cwd())}
+            payload = {**_summary_snapshot(Path.cwd()), "version": sidecar_version(Path.cwd())}
         except sqlite3.Error as error:  # type: ignore[name-defined]
             self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
             return
@@ -910,8 +959,10 @@ class SidecarHandler(SimpleHTTPRequestHandler):
                 pick_states=pick_states,
                 media_types=media_types,
                 search=search,
+                include_summary=False,
             )
             payload = _overlay_cloud_decisions(Path.cwd(), payload)
+            payload["sidecarSummary"] = _summary_snapshot(Path.cwd())
             payload["version"] = sidecar_version(Path.cwd())
             payload["indexStatus"] = _index_job_snapshot(Path.cwd())
         except Exception as error:
@@ -938,9 +989,10 @@ class SidecarHandler(SimpleHTTPRequestHandler):
             if payload.get("ok"):
                 rows = [row for row in payload.get("items") or [] if isinstance(row, dict)]
                 upsert_assets(Path.cwd(), rows)
+                _invalidate_summary_cache()
                 payload["items"] = merge_state(Path.cwd(), rows)
                 payload = _overlay_cloud_decisions(Path.cwd(), payload)
-                payload["sidecarSummary"] = summary(Path.cwd())
+                payload["sidecarSummary"] = _summary_snapshot(Path.cwd(), force=True)
                 payload["version"] = sidecar_version(Path.cwd())
         except Exception as error:
             self._send_json(HTTPStatus.BAD_GATEWAY, {"ok": False, "error": str(error)})
@@ -982,6 +1034,7 @@ class SidecarHandler(SimpleHTTPRequestHandler):
         self.send_response(HTTPStatus.OK)
         self.send_header("Content-Type", "image/jpeg")
         self.send_header("Content-Length", str(len(data)))
+        self.send_header("Cache-Control", "private, max-age=31536000, immutable")
         self.end_headers()
         self.wfile.write(data)
 
@@ -1042,6 +1095,7 @@ class SidecarHandler(SimpleHTTPRequestHandler):
         self.send_header("Content-Type", content_type)
         self.send_header("Accept-Ranges", "bytes")
         self.send_header("Content-Length", str(length))
+        self.send_header("Cache-Control", "private, max-age=31536000, immutable")
         if status == HTTPStatus.PARTIAL_CONTENT:
             self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
         self.end_headers()
@@ -1078,8 +1132,9 @@ class SidecarHandler(SimpleHTTPRequestHandler):
             else:
                 result = record_decision(Path.cwd(), payload)
                 result["cloudSidecar"] = {"ok": False, "configured": False}
+            _invalidate_summary_cache()
             if self._include_summary(payload):
-                result["summary"] = summary(Path.cwd())
+                result["summary"] = _summary_snapshot(Path.cwd(), force=True)
         except ValueError as error:
             self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
             return
@@ -1133,8 +1188,9 @@ class SidecarHandler(SimpleHTTPRequestHandler):
             else:
                 result = record_decisions(Path.cwd(), decisions)
                 result["cloudSidecar"] = {"ok": False, "configured": False}
+            _invalidate_summary_cache()
             if self._include_summary(payload):
-                result["summary"] = summary(Path.cwd())
+                result["summary"] = _summary_snapshot(Path.cwd(), force=True)
         except ValueError as error:
             self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
             return
@@ -1149,6 +1205,7 @@ class SidecarHandler(SimpleHTTPRequestHandler):
             return
         try:
             result = empty_wastebasket(Path.cwd())
+            _invalidate_summary_cache()
         except Exception as error:
             self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
             return
@@ -1206,8 +1263,9 @@ class SidecarHandler(SimpleHTTPRequestHandler):
             max_rung = str(payload.get("maxRung") or payload.get("max_rung") or "filename-gps").strip()
             result = apply_ai_metadata_proposals(Path.cwd(), limit=limit, max_rung=max_rung, asset_ids=asset_ids)
             result["version"] = sidecar_version(Path.cwd())
+            _invalidate_summary_cache()
             if self._include_summary(payload):
-                result["summary"] = summary(Path.cwd())
+                result["summary"] = _summary_snapshot(Path.cwd(), force=True)
         except ValueError as error:
             self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
             return

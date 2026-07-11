@@ -581,8 +581,9 @@ Clock state: running
 | 2026-07-11 | 17:30 CEST | 17:31 CEST | 0:01 | Verified Max's local Sidecar launch reached the real Culling workspace and hardened the connector to open Sidecar directly without an unnecessary preflight; implementation/test runtime excluded. |
 | 2026-07-11 | 18:00 CEST | 18:10 CEST | 0:03 | Fixed Sidecar filtered-window refill so cloud decision overlays continue loading matching assets until the visible window is full; implementation/browser/test runtime excluded. |
 | 2026-07-11 | 18:14 CEST | 18:23 CEST | 0:03 | Audited legacy Sidecar tombstones, verified all 1,906 Max-local IDs already had cloud tombstones, and hydrated the complete cloud protection set into Max's local cache; query/runtime excluded. |
+| 2026-07-11 | 18:36 CEST | 18:38 CEST | 0:02 | Reported intermittent stained-glass preview failures and Sidecar slowness; diagnosed bridge launch races and scoped preview/loading performance expectations; implementation/browser/test runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 30:07
+Active collaboration time used: 30:09
 Remaining budget: not set

@@ -18,6 +18,8 @@ import threading
 import time
 import uuid
 from urllib.parse import parse_qs, unquote, urlparse
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 from sidecar_state_db import (
     ai_metadata_plan,
@@ -27,6 +29,7 @@ from sidecar_state_db import (
     indexed_library_window,
     mark_missing_assets,
     merge_state,
+    mirror_cloud_decisions,
     mock_upload,
     execute_upload_bridge_batch_item,
     finish_upload_bridge_execute_batch,
@@ -46,6 +49,7 @@ APPLE_PHOTOS_BRIDGE = Path("scripts/apple_photos_bridge.swift")
 APPLE_PHOTOS_BRIDGE_APP_INSTALLER = Path("scripts/install_sidecar_photos_bridge_app.zsh")
 APPLE_PHOTOS_BRIDGE_APP = Path.home() / "Applications" / "PhotosByElie Photos Bridge.app"
 APPLE_PHOTOS_BRIDGE_APP_EXECUTABLE = APPLE_PHOTOS_BRIDGE_APP / "Contents" / "MacOS" / "PhotosByElie Photos Bridge"
+DEFAULT_CONNECTOR_CONFIG_PATH = Path.home() / ".config" / "photosbyelie" / "connector.json"
 SIDECAR_VERSION_FILE = Path("SIDECAR_VERSION")
 SIDECAR_DEFAULT_VERSION = "125.2"
 SIDECAR_PREVIEW_ROOT = Path("tmp/sidecar-previews")
@@ -74,6 +78,7 @@ SIDECAR_COMMIT_PLAN_PATH = "/__sidecar/commit-plan"
 SIDECAR_VERSION_PATH = "/__sidecar/version"
 SIDECAR_EMPTY_WASTEBASKET_PATH = "/__sidecar/empty-wastebasket"
 SIDECAR_INDEX_ROOT = Path("tmp/sidecar-index")
+SIDECAR_BRIDGE_BUSY_PATH = Path("tmp/sidecar-bridge-results/bridge-busy.json")
 SIDECAR_UPLOAD_BRIDGE_EXECUTE_LIMIT = 500
 APPLE_PHOTOS_PROGRESS_PREFIX = "PBE_APPLE_PHOTOS_PROGRESS "
 UPLOAD_BRIDGE_CANCEL_LOCK = threading.Lock()
@@ -215,8 +220,71 @@ def _run_apple_photos_bridge_stream(
     return payload
 
 
+def _bridge_busy_path(repo_root: Path) -> Path:
+    return repo_root / SIDECAR_BRIDGE_BUSY_PATH
+
+
+def _read_bridge_busy(repo_root: Path) -> dict:
+    path = _bridge_busy_path(repo_root)
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(payload, dict):
+        return {}
+    started_at = float(payload.get("startedAtEpoch") or 0)
+    ttl = float(payload.get("ttlSeconds") or 0)
+    if started_at and ttl and time.time() - started_at > ttl:
+        try:
+            path.unlink()
+        except FileNotFoundError:
+            pass
+        return {}
+    return payload
+
+
+def _write_bridge_busy(repo_root: Path, mode: str, args: list[str], ttl_seconds: int) -> None:
+    path = _bridge_busy_path(repo_root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "ok": True,
+        "mode": mode,
+        "args": args[:12],
+        "pid": os.getpid(),
+        "startedAt": _utc_now(),
+        "startedAtEpoch": time.time(),
+        "ttlSeconds": ttl_seconds,
+    }
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def _clear_bridge_busy(repo_root: Path) -> None:
+    try:
+        _bridge_busy_path(repo_root).unlink()
+    except FileNotFoundError:
+        pass
+
+
+def _bridge_busy_response(repo_root: Path) -> dict | None:
+    busy = _read_bridge_busy(repo_root)
+    if not busy:
+        return None
+    mode = str(busy.get("mode") or "Photos Bridge task")
+    return {
+        "ok": False,
+        "code": "photos_bridge_busy",
+        "mode": mode,
+        "retryAfterSeconds": 20,
+        "error": f"Photos Bridge is busy running {mode}. Retry when the library refresh finishes.",
+    }
+
+
 def _run_apple_photos_bridge_app_index(repo_root: Path, args: list[str], destination: Path, timeout: int = 900) -> dict:
     _ensure_apple_photos_bridge_app(repo_root)
+    busy = _bridge_busy_response(repo_root)
+    if busy:
+        raise RuntimeError(busy["error"])
+    _write_bridge_busy(repo_root, "library-index-file", args, ttl_seconds=timeout + 120)
     try:
         result = subprocess.run(
             ["open", "-W", "-n", str(APPLE_PHOTOS_BRIDGE_APP), "--args", *args],
@@ -228,6 +296,8 @@ def _run_apple_photos_bridge_app_index(repo_root: Path, args: list[str], destina
         )
     except FileNotFoundError as error:
         raise RuntimeError("macOS open is required to launch the bundled Apple Photos bridge.") from error
+    finally:
+        _clear_bridge_busy(repo_root)
     if result.returncode != 0:
         message = (result.stderr or result.stdout or f"Apple Photos bridge app exited {result.returncode}").strip()
         raise RuntimeError(message)
@@ -257,6 +327,9 @@ def _run_apple_photos_bridge_app_index(repo_root: Path, args: list[str], destina
 
 def _run_apple_photos_bridge_app_task(repo_root: Path, args: list[str], timeout: int = 900) -> dict:
     _ensure_apple_photos_bridge_app(repo_root)
+    busy = _bridge_busy_response(repo_root)
+    if busy:
+        return busy
     result_destination = repo_root / "tmp" / "sidecar-bridge-results" / f"{uuid.uuid4().hex}.json"
     result_destination.parent.mkdir(parents=True, exist_ok=True)
     try:
@@ -377,7 +450,7 @@ def _list_query(query: dict[str, list[str]], *names: str) -> list[str]:
 
 
 def _asset_id_from_row(row: dict) -> str:
-    return str(row.get("localIdentifier") or row.get("asset_id") or row.get("assetId") or "").strip()
+    return str(row.get("assetId") or row.get("cloudIdentifier") or row.get("asset_id") or row.get("localIdentifier") or "").strip()
 
 
 def _handle_index_progress(payload: dict) -> None:
@@ -543,6 +616,116 @@ def _video_cache_stem(repo_root: Path, asset_id: str) -> Path:
 
 def _video_cache_candidates(stem: Path) -> list[Path]:
     return sorted(path for path in stem.parent.glob(f"{stem.name}.*") if path.is_file())
+
+
+def _sidecar_cloud_config() -> dict[str, str]:
+    worker_base = os.environ.get("PBE_OWNER_WORKER_BASE", "").strip().rstrip("/")
+    token = os.environ.get("PBE_OWNER_CONNECTOR_TOKEN", "").strip()
+    connector_id = os.environ.get("PBE_OWNER_CONNECTOR_ID", "").strip()
+    config_path = Path(os.environ.get("PBE_OWNER_CONNECTOR_CONFIG", "") or DEFAULT_CONNECTOR_CONFIG_PATH).expanduser()
+    if not (worker_base and token):
+        try:
+            payload = json.loads(config_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            payload = {}
+        worker_base = worker_base or str(payload.get("workerBase") or "").strip().rstrip("/")
+        token = token or str(payload.get("token") or "").strip()
+        connector_id = connector_id or str(payload.get("connectorId") or "").strip()
+    if not worker_base or not token:
+        return {}
+    return {
+        "workerBase": worker_base,
+        "token": token,
+        "connectorId": connector_id,
+    }
+
+
+def _sidecar_cloud_request(method: str, path: str, payload: dict | None = None, timeout: int = 30) -> dict:
+    config = _sidecar_cloud_config()
+    if not config:
+        raise RuntimeError("Sidecar cloud decision state is not configured on this Mac connector.")
+    data = None if payload is None else json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    request = Request(
+        f"{config['workerBase']}{path}",
+        data=data,
+        method=method,
+        headers={
+            "Authorization": f"Bearer {config['token']}",
+            "Accept": "application/json",
+            "User-Agent": f"PhotosByElie-Sidecar/{sidecar_version(Path.cwd())}",
+            **({"Content-Type": "application/json"} if data is not None else {}),
+        },
+    )
+    try:
+        with urlopen(request, timeout=timeout) as response:
+            body = json.loads(response.read().decode("utf-8") or "{}")
+    except HTTPError as error:
+        try:
+            detail = json.loads(error.read().decode("utf-8") or "{}")
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            detail = {}
+        message = detail.get("error", {}).get("message") if isinstance(detail.get("error"), dict) else detail.get("error")
+        raise RuntimeError(message or f"Owner Worker returned HTTP {error.code} for {path}.") from error
+    except (URLError, OSError, json.JSONDecodeError) as error:
+        raise RuntimeError(f"Owner Worker request failed for {path}: {error}") from error
+    if body.get("ok") is False or body.get("error"):
+        error = body.get("error")
+        message = error.get("message") if isinstance(error, dict) else str(error)
+        raise RuntimeError(message or "Owner Worker Sidecar request failed.")
+    return body
+
+
+def _sidecar_cloud_enabled() -> bool:
+    return bool(_sidecar_cloud_config())
+
+
+def _query_cloud_decisions(asset_ids: list[str]) -> dict[str, dict]:
+    clean_ids = [str(asset_id or "").strip() for asset_id in asset_ids if str(asset_id or "").strip()]
+    if not clean_ids or not _sidecar_cloud_enabled():
+        return {}
+    body = _sidecar_cloud_request("POST", "/owner/sidecar/decisions/query", {"assetIds": clean_ids})
+    decisions = body.get("decisions") if isinstance(body.get("decisions"), dict) else {}
+    return {str(asset_id): state for asset_id, state in decisions.items() if isinstance(state, dict)}
+
+
+def _cloud_state_item(result: dict) -> dict:
+    state = result.get("state") if isinstance(result.get("state"), dict) else {}
+    before = result.get("before") if isinstance(result.get("before"), dict) else {}
+    asset_id = str(result.get("assetId") or state.get("assetId") or "").strip()
+    return {
+        "ok": True,
+        "assetId": asset_id,
+        "state": state,
+        "before": before,
+        "changedFamilies": list(result.get("changedFamilies") or []),
+        "pendingSyncCount": int(result.get("pendingSyncCount") or state.get("pendingSyncCount") or 0),
+    }
+
+
+def _overlay_cloud_decisions(repo_root: Path, payload: dict) -> dict:
+    items = payload.get("items") if isinstance(payload.get("items"), list) else []
+    if not items or not _sidecar_cloud_enabled():
+        payload["sidecarCloud"] = {"ok": False, "configured": False}
+        return payload
+    asset_ids = [str(item.get("assetId") or item.get("localIdentifier") or "").strip() for item in items if isinstance(item, dict)]
+    try:
+        decisions = _query_cloud_decisions(asset_ids)
+        if decisions:
+            mirror_cloud_decisions(repo_root, decisions.values())
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            asset_id = str(item.get("assetId") or item.get("localIdentifier") or "").strip()
+            state = decisions.get(asset_id)
+            if not state:
+                continue
+            item["sidecarState"] = state
+            item["tombstoneState"] = str(state.get("tombstoneState") or "")
+            item["pendingSyncCount"] = int(state.get("pendingSyncCount") or 0)
+        payload["sidecarCloud"] = {"ok": True, "configured": True, "count": len(decisions)}
+    except Exception as error:  # noqa: BLE001 - window reads should still show the local index.
+        payload["sidecarCloud"] = {"ok": False, "configured": True, "error": str(error)}
+    return payload
 
 
 class SidecarHandler(SimpleHTTPRequestHandler):
@@ -718,6 +901,7 @@ class SidecarHandler(SimpleHTTPRequestHandler):
                 media_types=media_types,
                 search=search,
             )
+            payload = _overlay_cloud_decisions(Path.cwd(), payload)
             payload["version"] = sidecar_version(Path.cwd())
             payload["indexStatus"] = _index_job_snapshot(Path.cwd())
         except Exception as error:
@@ -745,6 +929,7 @@ class SidecarHandler(SimpleHTTPRequestHandler):
                 rows = [row for row in payload.get("items") or [] if isinstance(row, dict)]
                 upsert_assets(Path.cwd(), rows)
                 payload["items"] = merge_state(Path.cwd(), rows)
+                payload = _overlay_cloud_decisions(Path.cwd(), payload)
                 payload["sidecarSummary"] = summary(Path.cwd())
                 payload["version"] = sidecar_version(Path.cwd())
         except Exception as error:
@@ -866,7 +1051,23 @@ class SidecarHandler(SimpleHTTPRequestHandler):
             return
         try:
             payload = self._read_json_body()
-            result = record_decision(Path.cwd(), payload)
+            if _sidecar_cloud_enabled():
+                cloud = _sidecar_cloud_request("POST", "/owner/sidecar/decisions/apply", payload)
+                result = _cloud_state_item(cloud)
+                if result.get("before"):
+                    mirror_cloud_decisions(Path.cwd(), [{"assetId": result["assetId"], "state": result["before"]}])
+                local_result = record_decision(Path.cwd(), payload)
+                pending_count = int(local_result.get("pendingSyncCount") or 0)
+                result["pendingSyncCount"] = pending_count
+                result["state"] = {**result["state"], "pendingSyncCount": pending_count}
+                mirror_cloud_decisions(Path.cwd(), [{"assetId": result["assetId"], "state": result["state"]}])
+                _sidecar_cloud_request("POST", "/owner/sidecar/decisions/upsert", {
+                    "decisions": [{"assetId": result["assetId"], "state": result["state"]}],
+                })
+                result["cloudSidecar"] = {"ok": True, "canonical": True}
+            else:
+                result = record_decision(Path.cwd(), payload)
+                result["cloudSidecar"] = {"ok": False, "configured": False}
             if self._include_summary(payload):
                 result["summary"] = summary(Path.cwd())
         except ValueError as error:
@@ -888,7 +1089,40 @@ class SidecarHandler(SimpleHTTPRequestHandler):
                 raise ValueError("decisions must be a JSON array.")
             if len(decisions) > 500:
                 raise ValueError("Sidecar batch decisions are limited to 500 rows.")
-            result = record_decisions(Path.cwd(), decisions)
+            if _sidecar_cloud_enabled():
+                cloud = _sidecar_cloud_request("POST", "/owner/sidecar/decisions/apply-batch", {"decisions": decisions}, timeout=60)
+                items = [_cloud_state_item(item) for item in cloud.get("items") or [] if isinstance(item, dict)]
+                before_states = [
+                    {"assetId": item["assetId"], "state": item["before"]}
+                    for item in items
+                    if item.get("assetId") and item.get("before")
+                ]
+                if before_states:
+                    mirror_cloud_decisions(Path.cwd(), before_states)
+                local_result = record_decisions(Path.cwd(), decisions)
+                pending_by_asset_id = {
+                    str(item.get("assetId") or ""): int(item.get("pendingSyncCount") or 0)
+                    for item in local_result.get("items") or []
+                    if isinstance(item, dict)
+                }
+                for item in items:
+                    pending_count = pending_by_asset_id.get(str(item.get("assetId") or ""), int(item.get("pendingSyncCount") or 0))
+                    item["pendingSyncCount"] = pending_count
+                    item["state"] = {**item.get("state", {}), "pendingSyncCount": pending_count}
+                mirror_cloud_decisions(Path.cwd(), [{"assetId": item["assetId"], "state": item["state"]} for item in items])
+                if items:
+                    _sidecar_cloud_request("POST", "/owner/sidecar/decisions/upsert", {
+                        "decisions": [{"assetId": item["assetId"], "state": item["state"]} for item in items],
+                    }, timeout=60)
+                result = {
+                    "ok": True,
+                    "count": len(items),
+                    "items": items,
+                    "cloudSidecar": {"ok": True, "canonical": True},
+                }
+            else:
+                result = record_decisions(Path.cwd(), decisions)
+                result["cloudSidecar"] = {"ok": False, "configured": False}
             if self._include_summary(payload):
                 result["summary"] = summary(Path.cwd())
         except ValueError as error:

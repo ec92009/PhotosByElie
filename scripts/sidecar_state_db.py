@@ -463,7 +463,7 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
 
 
 def _asset_id(row: dict[str, Any]) -> str:
-    return str(row.get("localIdentifier") or row.get("asset_id") or row.get("assetId") or "").strip()
+    return str(row.get("assetId") or row.get("cloudIdentifier") or row.get("asset_id") or row.get("localIdentifier") or "").strip()
 
 
 def _number(value: Any) -> float | None:
@@ -1052,6 +1052,137 @@ def _current_decision(conn: sqlite3.Connection, asset_id: str) -> dict[str, Any]
     return _decision_payload(row)
 
 
+def _cloud_decision_state(payload: dict[str, Any]) -> dict[str, Any]:
+    state = payload.get("state") if isinstance(payload.get("state"), dict) else payload
+    asset_id = str(payload.get("assetId") or payload.get("asset_id") or state.get("assetId") or state.get("asset_id") or "").strip()
+    if not asset_id:
+        raise ValueError("Cloud Sidecar decision is missing assetId.")
+    return {
+        "assetId": asset_id,
+        "rating": max(0, min(5, int(state.get("rating") or 0))),
+        "color": str(state.get("color") or "").strip().casefold(),
+        "pickState": str(state.get("pickState") or state.get("pick_state") or "undecided").strip().casefold(),
+        "metadataState": str(state.get("metadataState") or state.get("metadata_state") or "unreviewed").strip().casefold(),
+        "title": str(state.get("title") or "").strip(),
+        "keywords": _clean_keywords(state.get("keywords") or _read_json_text(state.get("keywords_json"), []), set()),
+        "reworkCategory": str(state.get("reworkCategory") or state.get("rework_category") or "").strip(),
+        "reworkComment": str(state.get("reworkComment") or state.get("rework_comment") or "").strip(),
+        "metadataAiRung": str(state.get("metadataAiRung") or state.get("metadata_ai_rung") or "").strip(),
+        "metadataAiEvidence": _clean_keywords(
+            state.get("metadataAiEvidence") or state.get("metadata_ai_evidence") or _read_json_text(state.get("metadata_ai_evidence_json"), []),
+            set(),
+        ),
+        "metadataAiNote": str(state.get("metadataAiNote") or state.get("metadata_ai_note") or "").strip(),
+        "lastAction": str(state.get("lastAction") or state.get("last_action") or "").strip(),
+        "updatedAt": str(state.get("updatedAt") or state.get("updated_at") or now_iso()).strip(),
+        "tombstoneState": str(state.get("tombstoneState") or state.get("tombstone_state") or "").strip().casefold(),
+        "tombstoneReason": str(state.get("tombstoneReason") or state.get("tombstone_reason") or "").strip(),
+        "tombstonedAt": str(state.get("tombstonedAt") or state.get("tombstoned_at") or "").strip(),
+        "pendingSyncCount": max(0, int(state.get("pendingSyncCount") or state.get("pending_sync_count") or 0)),
+    }
+
+
+def mirror_cloud_decisions(repo_root: Path, decisions: Iterable[dict[str, Any]]) -> dict[str, Any]:
+    """Mirror cloud-canonical Sidecar decisions into the local cache tables.
+
+    The local SQLite remains useful for filtering, upload planning, and bridge
+    staging, but these rows are no longer treated as an independent source of
+    truth when the cloud Owner layer is available.
+    """
+    mirrored = 0
+    skipped = 0
+    with connect(repo_root) as conn:
+        for payload in decisions:
+            if not isinstance(payload, dict):
+                continue
+            state = _cloud_decision_state(payload)
+            asset_id = state["assetId"]
+            updated_at = state["updatedAt"] or now_iso()
+            asset_row = conn.execute(
+                """
+                SELECT 1
+                FROM sidecar_assets
+                WHERE asset_id = ?
+                  AND (missing_at IS NULL OR missing_at = '')
+                """,
+                (asset_id,),
+            ).fetchone()
+            if not asset_row:
+                skipped += 1
+                continue
+            if state["color"] not in COLOR_VALUES:
+                state["color"] = ""
+            if state["pickState"] not in PICK_STATES:
+                state["pickState"] = "undecided"
+            if state["metadataState"] not in METADATA_STATES:
+                state["metadataState"] = "unreviewed"
+            conn.execute(
+                """
+                INSERT INTO sidecar_decisions (
+                  asset_id, rating, color, pick_state, metadata_state,
+                  title, keywords_json, rework_category, rework_comment,
+                  metadata_ai_rung, metadata_ai_evidence_json, metadata_ai_note,
+                  last_action, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(asset_id) DO UPDATE SET
+                  rating = excluded.rating,
+                  color = excluded.color,
+                  pick_state = excluded.pick_state,
+                  metadata_state = excluded.metadata_state,
+                  title = excluded.title,
+                  keywords_json = excluded.keywords_json,
+                  rework_category = excluded.rework_category,
+                  rework_comment = excluded.rework_comment,
+                  metadata_ai_rung = excluded.metadata_ai_rung,
+                  metadata_ai_evidence_json = excluded.metadata_ai_evidence_json,
+                  metadata_ai_note = excluded.metadata_ai_note,
+                  last_action = excluded.last_action,
+                  updated_at = excluded.updated_at
+                """,
+                (
+                    asset_id,
+                    state["rating"],
+                    state["color"],
+                    state["pickState"],
+                    state["metadataState"],
+                    state["title"],
+                    _json_text(state["keywords"]),
+                    state["reworkCategory"],
+                    state["reworkComment"],
+                    state["metadataAiRung"],
+                    _json_text(state["metadataAiEvidence"]),
+                    state["metadataAiNote"],
+                    state["lastAction"],
+                    updated_at,
+                    updated_at,
+                ),
+            )
+            if state["tombstoneState"] == "active":
+                conn.execute(
+                    """
+                    INSERT INTO sidecar_tombstones (asset_id, tombstone_state, reason, tombstoned_at, updated_at)
+                    VALUES (?, 'active', ?, ?, ?)
+                    ON CONFLICT(asset_id) DO UPDATE SET
+                      tombstone_state = 'active',
+                      reason = excluded.reason,
+                      tombstoned_at = excluded.tombstoned_at,
+                      updated_at = excluded.updated_at
+                    """,
+                    (asset_id, state["tombstoneReason"], state["tombstonedAt"] or updated_at, updated_at),
+                )
+            elif state["tombstoneState"] in {"", "restored"}:
+                conn.execute(
+                    """
+                    UPDATE sidecar_tombstones
+                    SET tombstone_state = 'restored', updated_at = ?
+                    WHERE asset_id = ? AND tombstone_state = 'active'
+                    """,
+                    (updated_at, asset_id),
+                )
+            mirrored += 1
+    return {"ok": True, "mirroredCount": mirrored, "skippedCount": skipped}
+
+
 def _queue_pending_sync(
     conn: sqlite3.Connection,
     asset_id: str,
@@ -1490,20 +1621,34 @@ def summary(repo_root: Path) -> dict[str, Any]:
     with connect(repo_root) as conn:
         rows = conn.execute(
             """
-            SELECT pick_state, metadata_state, count(*) AS total
-            FROM sidecar_decisions
-            GROUP BY pick_state, metadata_state
+            SELECT d.pick_state, d.metadata_state, count(*) AS total
+            FROM sidecar_decisions AS d
+            JOIN sidecar_assets AS a ON a.asset_id = d.asset_id
+            WHERE a.missing_at IS NULL OR a.missing_at = ''
+            GROUP BY d.pick_state, d.metadata_state
             """
         ).fetchall()
         pending_count = conn.execute(
-            "SELECT count(*) AS total FROM sidecar_pending_sync WHERE status = 'pending'"
+            """
+            SELECT count(*) AS total
+            FROM sidecar_pending_sync AS p
+            JOIN sidecar_assets AS a ON a.asset_id = p.asset_id
+            WHERE p.status = 'pending'
+              AND (a.missing_at IS NULL OR a.missing_at = '')
+            """
         ).fetchone()["total"]
         total_assets = conn.execute("SELECT count(*) AS total FROM sidecar_assets").fetchone()["total"]
         missing_count = _missing_asset_count(conn)
         indexed_count = max(0, int(total_assets or 0) - missing_count)
         last_indexed_at = _last_active_indexed_at(conn)
         tombstone_count = conn.execute(
-            "SELECT count(*) AS total FROM sidecar_tombstones WHERE tombstone_state = 'active'"
+            """
+            SELECT count(*) AS total
+            FROM sidecar_tombstones AS t
+            JOIN sidecar_assets AS a ON a.asset_id = t.asset_id
+            WHERE t.tombstone_state = 'active'
+              AND (a.missing_at IS NULL OR a.missing_at = '')
+            """
         ).fetchone()["total"]
     return {
         "ok": True,
@@ -1528,7 +1673,9 @@ def empty_wastebasket(repo_root: Path) -> dict[str, Any]:
             """
             SELECT d.asset_id
             FROM sidecar_decisions AS d
+            JOIN sidecar_assets AS a ON a.asset_id = d.asset_id
             WHERE d.pick_state IN ('rejected', 'hidden')
+              AND (a.missing_at IS NULL OR a.missing_at = '')
               AND NOT EXISTS (
                 SELECT 1 FROM sidecar_tombstones AS t
                 WHERE t.asset_id = d.asset_id AND t.tombstone_state = 'active'

@@ -572,8 +572,9 @@ Clock state: running
 | 2026-07-10 | 19:50 CEST | 19:56 CEST | 0:06 | Clarified that Owner actions should always target the current Mac connector, confirmed the bridge owns local Photos readiness, and diagnosed the queued-status polling gap; implementation/test/upload runtime excluded. |
 | 2026-07-11 | 08:39 CEST | 08:46 CEST | 0:01 | Diagnosed Google Drive's stale upload queue as disconnected TESLACAM1 and BlinkSync2 mirror roots; read-only inspection time excluded. |
 | 2026-07-11 | 09:10 CEST | 09:32 CEST | 0:14 | Diagnosed live Owner Sidecar launch behavior, found Max claiming David's cloud-queued open action, added the direct local bridge Sidecar open path with progress, and verified the local Culling workspace URL; command/test/runtime excluded. |
+| 2026-07-11 | 10:34 CEST | 11:09 CEST | 0:22 | Migrated Sidecar decisions into cloud-backed Owner state, remapped Max local IDs to Apple cloud IDs, refreshed David's Photos index, fixed bridge preview contention, and verified cloud-ID Sidecar previews; command/deploy/runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 29:26
+Active collaboration time used: 29:48
 Remaining budget: not set

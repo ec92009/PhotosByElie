@@ -416,6 +416,75 @@ func assetPhotosMetadata(_ asset: PHAsset) -> [String: Any] {
     return row
 }
 
+var cloudIdentifierCache: [String: String] = [:]
+
+func chunks<T>(_ values: [T], size: Int) -> [[T]] {
+    guard size > 0 else { return [values] }
+    var result: [[T]] = []
+    var index = 0
+    while index < values.count {
+        result.append(Array(values[index..<min(values.count, index + size)]))
+        index += size
+    }
+    return result
+}
+
+func cloudIdentifierStrings(forLocalIdentifiers localIdentifiers: [String]) -> [String: String] {
+    if localIdentifiers.isEmpty { return [:] }
+    var mapped: [String: String] = [:]
+    if #available(macOS 12.0, *) {
+        for batch in chunks(Array(Set(localIdentifiers)).sorted(), size: 500) {
+            let results = PHPhotoLibrary.shared().cloudIdentifierMappings(forLocalIdentifiers: batch)
+            for localIdentifier in batch {
+                guard let result = results[localIdentifier] else { continue }
+                switch result {
+                case .success(let cloudIdentifier):
+                    mapped[localIdentifier] = cloudIdentifier.stringValue
+                case .failure:
+                    continue
+                }
+            }
+        }
+    }
+    return mapped
+}
+
+func primeCloudIdentifierCache(_ localIdentifiers: [String]) {
+    let missing = localIdentifiers.filter { cloudIdentifierCache[$0] == nil }
+    if missing.isEmpty { return }
+    let mapped = cloudIdentifierStrings(forLocalIdentifiers: missing)
+    for (localIdentifier, cloudIdentifier) in mapped {
+        cloudIdentifierCache[localIdentifier] = cloudIdentifier
+    }
+}
+
+func cloudIdentifierString(_ asset: PHAsset) -> String {
+    if let cached = cloudIdentifierCache[asset.localIdentifier] {
+        return cached
+    }
+    let mapped = cloudIdentifierStrings(forLocalIdentifiers: [asset.localIdentifier])
+    if let cloudIdentifier = mapped[asset.localIdentifier] {
+        cloudIdentifierCache[asset.localIdentifier] = cloudIdentifier
+        return cloudIdentifier
+    }
+    return ""
+}
+
+func localIdentifierForCloudIdentifier(_ value: String) -> String? {
+    if #available(macOS 12.0, *) {
+        let cloudIdentifier = PHCloudIdentifier(stringValue: value)
+        let results = PHPhotoLibrary.shared().localIdentifierMappings(for: [cloudIdentifier])
+        guard let result = results[cloudIdentifier] else { return nil }
+        switch result {
+        case .success(let localIdentifier):
+            return localIdentifier
+        case .failure:
+            return nil
+        }
+    }
+    return nil
+}
+
 struct AssetPlan {
     let asset: PHAsset
     let index: Int
@@ -466,14 +535,22 @@ func assetRow(_ asset: PHAsset, index: Int) -> [String: Any] {
     let filename = strategy == "rendered_jpeg"
         ? renderedJPEGFilename(asset: asset, index: index, resource: displayResource)
         : resource?.originalFilename ?? ""
+    let cloudIdentifier = cloudIdentifierString(asset)
+    let assetIdentifier = cloudIdentifier.isEmpty ? asset.localIdentifier : cloudIdentifier
+    let sourceAnchor = cloudIdentifier.isEmpty
+        ? "apple-photos://\(asset.localIdentifier)"
+        : "apple-photos-cloud://\(cloudIdentifier)"
     let summary = resourceFormatSummary(resources)
     let reason = eligible
         ? (mediaType == "photo" ? "Photos still image will import as the current rendered JPG from Photos." : "")
         : "No supported photo/video resource found."
     var row: [String: Any] = [
         "index": index,
+        "assetId": assetIdentifier,
+        "cloudIdentifier": cloudIdentifier,
         "localIdentifier": asset.localIdentifier,
-        "sourceAnchor": "apple-photos://\(asset.localIdentifier)",
+        "sourceAnchor": sourceAnchor,
+        "localSourceAnchor": "apple-photos://\(asset.localIdentifier)",
         "filename": filename,
         "mediaType": mediaType,
         "creationDate": isoDate(asset.creationDate),
@@ -542,6 +619,18 @@ func libraryIndex(limit: Int, offset: Int, dateFrom: Date?, dateTo: Date?) -> [S
     let assets = PHAsset.fetchAssets(with: options)
     var rows: [[String: Any]] = []
     var skipped = 0
+    var localIdentifiers: [String] = []
+    assets.enumerateObjects { asset, index, stop in
+        if index < safeOffset {
+            return
+        }
+        if localIdentifiers.count >= safeLimit {
+            stop.pointee = true
+            return
+        }
+        localIdentifiers.append(asset.localIdentifier)
+    }
+    primeCloudIdentifierCache(localIdentifiers)
     assets.enumerateObjects { asset, index, stop in
         if index < safeOffset {
             skipped += 1
@@ -581,6 +670,12 @@ func writeLibraryIndexFile(destination: URL, dateFrom: Date?, dateTo: Date?, pro
     defer { handle.closeFile() }
 
     let totalCount = assets.count
+    var localIdentifiers: [String] = []
+    localIdentifiers.reserveCapacity(totalCount)
+    assets.enumerateObjects { asset, _, _ in
+        localIdentifiers.append(asset.localIdentifier)
+    }
+    primeCloudIdentifierCache(localIdentifiers)
     emitProgress("library_index_start", [
         "destination": destination.path,
         "totalCount": totalCount,
@@ -639,11 +734,18 @@ func findAsset(id: String?) throws -> PHAsset {
     guard let id, !id.isEmpty else {
         throw BridgeError(code: "missing_asset_id", message: "Missing Apple Photos asset identifier.")
     }
-    let result = PHAsset.fetchAssets(withLocalIdentifiers: [id], options: nil)
-    guard let asset = result.firstObject else {
-        throw BridgeError(code: "asset_not_found", message: "Apple Photos asset not found.")
+    var result = PHAsset.fetchAssets(withLocalIdentifiers: [id], options: nil)
+    if let asset = result.firstObject {
+        return asset
     }
-    return asset
+    if let localIdentifier = localIdentifierForCloudIdentifier(id) {
+        result = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil)
+        if let asset = result.firstObject {
+            cloudIdentifierCache[localIdentifier] = id
+            return asset
+        }
+    }
+    throw BridgeError(code: "asset_not_found", message: "Apple Photos asset not found.")
 }
 
 func writePreviewJPEG(asset: PHAsset, destination: URL, maxPixel: Int) throws -> [String: Any] {

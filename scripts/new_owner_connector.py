@@ -155,11 +155,15 @@ def _running_sidecar_helper() -> dict:
     return {}
 
 
-def _sidecar_helper_env() -> dict[str, str]:
+def _sidecar_helper_env(config: ConnectorConfig | None = None) -> dict[str, str]:
     env = {**os.environ, "PYTHONUNBUFFERED": "1"}
     current_path = env.get("PATH", "")
     parts = [part for part in (*PATH_PREFIXES, *current_path.split(os.pathsep)) if part]
     env["PATH"] = os.pathsep.join(dict.fromkeys(part for part in parts if part))
+    if config:
+        env["PBE_OWNER_WORKER_BASE"] = config.worker_base
+        env["PBE_OWNER_CONNECTOR_ID"] = config.connector_id
+        env["PBE_OWNER_CONNECTOR_TOKEN"] = config.token
     return env
 
 
@@ -176,7 +180,7 @@ def _launch_sidecar_for_browser(config: ConnectorConfig) -> dict:
     log_dir = Path.home() / "Library" / "Logs" / "PhotosByElie"
     log_dir.mkdir(parents=True, exist_ok=True)
     log_path = log_dir / "new-owner-sidecar-browser.log"
-    env = _sidecar_helper_env()
+    env = _sidecar_helper_env(config)
     python = shutil.which("python3", path=env["PATH"]) or sys.executable
 
     for port in range(SIDECAR_HELPER_PORT_START, SIDECAR_HELPER_PORT_LIMIT):
@@ -673,6 +677,7 @@ def _launch_sidecar_workspace(config: ConnectorConfig) -> dict:
             stdout=log,
             stderr=subprocess.STDOUT,
             text=True,
+            env=_sidecar_helper_env(config),
             start_new_session=True,
         )
     return {

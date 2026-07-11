@@ -2,6 +2,7 @@ import { ACCESS_CAPABILITIES, createMemoryAccessUserRegistry } from "./access-us
 import { createMemoryStore } from "./memory-store.mjs";
 import { createMockStripeClient } from "./mock-stripe.mjs";
 import { createMemoryOwnerActionStore } from "./owner-action-store.mjs";
+import { createMemorySidecarStateStore } from "./sidecar-state-store.mjs";
 
 const ORDER_CURRENCY = "usd";
 const MINIMUM_CHARGE_AMOUNT = 50;
@@ -1244,6 +1245,7 @@ export const createPhotosByElieWorker = ({
   accessUserRegistry = createMemoryAccessUserRegistry(),
   accessAdminEmail = "",
   ownerActionStore = createMemoryOwnerActionStore(),
+  sidecarStateStore = createMemorySidecarStateStore({ now, randomUUID }),
   ownerConnectorAuth = null,
   ownerConnectorPackage = null,
   authAllowedReturnOrigins = [],
@@ -2090,6 +2092,32 @@ export const createPhotosByElieWorker = ({
     return await ownerConnectorAuth.requireConnector(request);
   };
 
+  const requireOwnerOrConnector = async (request) => {
+    const authorization = String(request.headers.get("authorization") || "").trim().toLowerCase();
+    if (authorization.startsWith("bearer ") && ownerConnectorAuth?.requireConnector) {
+      try {
+        const connector = await requireOwnerConnector(request);
+        return { actorKind: "connector", actorId: connector.connectorId, connector };
+      } catch (connectorError) {
+        if (!accessAuth && !googleOAuthAuth) throw connectorError;
+      }
+    }
+    try {
+      const session = await authSessionFor(request, { requiredRole: "owner" });
+      return { actorKind: "owner", actorId: session.email, session };
+    } catch (ownerError) {
+      if (ownerConnectorAuth?.requireConnector) {
+        try {
+          const connector = await requireOwnerConnector(request);
+          return { actorKind: "connector", actorId: connector.connectorId, connector };
+        } catch {
+          // Prefer the browser/Owner auth error when both mechanisms fail.
+        }
+      }
+      throw ownerError;
+    }
+  };
+
   const createOwnerAction = async (request) => {
     const session = await authSessionFor(request, { requiredRole: "owner" });
     if (!ownerActionStore || typeof ownerActionStore.putAction !== "function") {
@@ -2118,6 +2146,106 @@ export const createPhotosByElieWorker = ({
       }],
     });
     return credentialedJson(request, { ok: true, action }, 202);
+  };
+
+  const querySidecarDecisions = async (request) => {
+    const actor = await requireOwnerOrConnector(request);
+    if (!sidecarStateStore || typeof sidecarStateStore.queryDecisions !== "function") {
+      return credentialedErrorJson(request, 503, "sidecar_state_unavailable", "Sidecar cloud decision state is not configured.");
+    }
+    const payload = await parseJson(request);
+    const assetIds = Array.isArray(payload.assetIds)
+      ? payload.assetIds
+      : (Array.isArray(payload.assets) ? payload.assets : []);
+    const decisions = await sidecarStateStore.queryDecisions({ assetIds });
+    return credentialedJson(request, {
+      ok: true,
+      schema: "photosbyelie.sidecarDecisionQuery.v1",
+      actor: { kind: actor.actorKind, id: actor.actorId },
+      count: Object.keys(decisions || {}).length,
+      decisions,
+    });
+  };
+
+  const applySidecarDecision = async (request) => {
+    const actor = await requireOwnerOrConnector(request);
+    if (!sidecarStateStore || typeof sidecarStateStore.applyDecision !== "function") {
+      return credentialedErrorJson(request, 503, "sidecar_state_unavailable", "Sidecar cloud decision state is not configured.");
+    }
+    const payload = await parseJson(request);
+    const timestamp = now().toISOString();
+    const result = await sidecarStateStore.applyDecision(payload, {
+      actorKind: actor.actorKind,
+      actorId: actor.actorId,
+      timestamp,
+    });
+    return credentialedJson(request, {
+      ok: true,
+      schema: "photosbyelie.sidecarDecisionApply.v1",
+      actor: { kind: actor.actorKind, id: actor.actorId },
+      assetId: result.assetId,
+      state: result.state,
+      before: result.before,
+      changedFamilies: result.changedFamilies,
+      pendingSyncCount: result.state.pendingSyncCount || 0,
+    });
+  };
+
+  const applySidecarDecisions = async (request) => {
+    const actor = await requireOwnerOrConnector(request);
+    if (!sidecarStateStore || typeof sidecarStateStore.applyDecision !== "function") {
+      return credentialedErrorJson(request, 503, "sidecar_state_unavailable", "Sidecar cloud decision state is not configured.");
+    }
+    const payload = await parseJson(request);
+    const decisions = Array.isArray(payload.decisions) ? payload.decisions : [];
+    if (!decisions.length) return credentialedErrorJson(request, 400, "sidecar_decisions_required", "decisions must contain at least one Sidecar decision.");
+    if (decisions.length > 500) return credentialedErrorJson(request, 400, "sidecar_decisions_limit", "Sidecar batch decisions are limited to 500 rows.");
+    const timestamp = now().toISOString();
+    const items = [];
+    for (const decision of decisions) {
+      items.push(await sidecarStateStore.applyDecision(decision, {
+        actorKind: actor.actorKind,
+        actorId: actor.actorId,
+        timestamp,
+      }));
+    }
+    return credentialedJson(request, {
+      ok: true,
+      schema: "photosbyelie.sidecarDecisionApplyBatch.v1",
+      actor: { kind: actor.actorKind, id: actor.actorId },
+      count: items.length,
+      items: items.map((item) => ({
+        assetId: item.assetId,
+        state: item.state,
+        before: item.before,
+        changedFamilies: item.changedFamilies,
+        pendingSyncCount: item.state.pendingSyncCount || 0,
+      })),
+    });
+  };
+
+  const upsertSidecarDecisions = async (request) => {
+    const actor = await requireOwnerOrConnector(request);
+    if (!sidecarStateStore || typeof sidecarStateStore.putDecisions !== "function") {
+      return credentialedErrorJson(request, 503, "sidecar_state_unavailable", "Sidecar cloud decision state is not configured.");
+    }
+    const payload = await parseJson(request);
+    const decisions = Array.isArray(payload.decisions)
+      ? payload.decisions
+      : [payload.decision || payload.state || payload];
+    const timestamp = now().toISOString();
+    const items = await sidecarStateStore.putDecisions(decisions.filter((item) => item && typeof item === "object").slice(0, 500), {
+      actorKind: actor.actorKind,
+      actorId: actor.actorId,
+      timestamp,
+    });
+    return credentialedJson(request, {
+      ok: true,
+      schema: "photosbyelie.sidecarDecisionUpsert.v1",
+      actor: { kind: actor.actorKind, id: actor.actorId },
+      count: items.length,
+      items,
+    });
   };
 
   const listOwnerActions = async (request) => {
@@ -2734,6 +2862,10 @@ export const createPhotosByElieWorker = ({
       if (request.method === "GET" && path === "/owner/session") return await getOwnerSession(request);
       if (request.method === "GET" && path === "/owner/connectors") return await listOwnerConnectors(request);
       if (request.method === "GET" && path === "/owner/connector/download/mac") return await downloadOwnerConnector(request);
+      if (request.method === "POST" && path === "/owner/sidecar/decisions/query") return await querySidecarDecisions(request);
+      if (request.method === "POST" && path === "/owner/sidecar/decisions/apply") return await applySidecarDecision(request);
+      if (request.method === "POST" && path === "/owner/sidecar/decisions/apply-batch") return await applySidecarDecisions(request);
+      if (request.method === "POST" && path === "/owner/sidecar/decisions/upsert") return await upsertSidecarDecisions(request);
       if (request.method === "GET" && path === "/owner/actions") return await listOwnerActions(request);
       if (request.method === "POST" && path === "/owner/actions") return await createOwnerAction(request);
       const ownerActionTransitionMatch = path.match(/^\/owner\/actions\/([^/]+)\/(claim|complete|fail)$/);

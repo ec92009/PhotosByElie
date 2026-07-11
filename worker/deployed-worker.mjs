@@ -14,6 +14,7 @@ import { createRealEstateDeliverables } from "./real-estate-deliverables.mjs";
 import { createRealEstateOriginals } from "./real-estate-originals.mjs";
 import { createR2ZipDelivery } from "./r2-zip-delivery.mjs";
 import { createResendEmailClient } from "./resend-email-client.mjs";
+import { createD1SidecarStateStore } from "./sidecar-state-store.mjs";
 import { createStripeClient } from "./stripe-client.mjs";
 import { collections, frameOptions, resolutions, videoPriceTiers } from "./photos-catalog.generated.mjs";
 
@@ -329,6 +330,9 @@ export default {
         namespace: env.OWNER_ACTIONS_KV || requiredBinding(env, "ORDERS_KV"),
         prefix: env.KV_PREFIX || "pbe",
       }),
+      sidecarStateStore: env.ACCESS_DB ? createD1SidecarStateStore({
+        database: env.ACCESS_DB,
+      }) : undefined,
       ownerConnectorAuth: ownerConnectorAuthFor(env),
       ownerConnectorPackage: createR2OwnerConnectorPackage({
         bucket: privateBucket,

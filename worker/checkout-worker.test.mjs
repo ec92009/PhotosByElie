@@ -554,6 +554,72 @@ test("background Owner connectors use scoped credentials and report health", asy
   assert.equal(await packageResponse.text(), "connector-zip");
 });
 
+test("sidecar cloud decisions are stored behind Owner or connector auth", async () => {
+  const registry = createMemoryAccessUserRegistry([{ email: "owner@example.com", tier: "owner" }]);
+  const ownerConnectorAuth = {
+    requireConnector: async (request) => {
+      if (request.headers.get("authorization") !== "Bearer connector-secret") {
+        throw Object.assign(new Error("Connector credential required."), {
+          status: 401,
+          code: "owner_connector_auth_required",
+        });
+      }
+      return { connectorId: "david" };
+    },
+  };
+  const worker = createPhotosByElieWorker({
+    catalog: loadCatalog(),
+    accessAuth: fakeAccessAuthFor("owner@example.com"),
+    accessUserRegistry: registry,
+    ownerConnectorAuth,
+    now: () => new Date("2026-07-11T10:00:00.000Z"),
+    randomUUID: deterministicIds(),
+  });
+
+  const ownerApplyResponse = await worker.fetch(jsonRequest("https://worker.test/owner/sidecar/decisions/apply", {
+    assetId: "apple-cloud-id-1",
+    action: "rating",
+    rating: 4,
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(ownerApplyResponse.status, 200);
+  const ownerApply = await ownerApplyResponse.json();
+  assert.equal(ownerApply.actor.kind, "owner");
+  assert.equal(ownerApply.state.rating, 4);
+  assert.equal(ownerApply.state.pickState, "undecided");
+
+  const connectorHeaders = { authorization: "Bearer connector-secret" };
+  const connectorApplyResponse = await worker.fetch(jsonRequest("https://worker.test/owner/sidecar/decisions/apply", {
+    assetId: "apple-cloud-id-1",
+    action: "pick",
+  }, connectorHeaders));
+  assert.equal(connectorApplyResponse.status, 200);
+  const connectorApply = await connectorApplyResponse.json();
+  assert.equal(connectorApply.actor.kind, "connector");
+  assert.equal(connectorApply.actor.id, "david");
+  assert.equal(connectorApply.state.rating, 4);
+  assert.equal(connectorApply.state.pickState, "picked");
+
+  const queryResponse = await worker.fetch(jsonRequest("https://worker.test/owner/sidecar/decisions/query", {
+    assetIds: ["apple-cloud-id-1", "missing-asset"],
+  }, connectorHeaders));
+  assert.equal(queryResponse.status, 200);
+  const query = await queryResponse.json();
+  assert.equal(query.count, 1);
+  assert.equal(query.decisions["apple-cloud-id-1"].rating, 4);
+  assert.equal(query.decisions["apple-cloud-id-1"].pickState, "picked");
+
+  const clientWorker = createPhotosByElieWorker({
+    catalog: loadCatalog(),
+    accessAuth: fakeAccessAuthFor("client@example.com"),
+    accessUserRegistry: createMemoryAccessUserRegistry([{ email: "client@example.com", tier: "re_client" }]),
+  });
+  const forbidden = await clientWorker.fetch(jsonRequest("https://worker.test/owner/sidecar/decisions/apply", {
+    assetId: "apple-cloud-id-1",
+    action: "pick",
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(forbidden.status, 403);
+});
+
 test("access console is admin-only and writes reversible role grants", async () => {
   const registry = createMemoryAccessUserRegistry([
     { email: "owner@example.com", tier: "owner" },

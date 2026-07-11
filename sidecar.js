@@ -346,7 +346,7 @@
     return Number.isNaN(date.getTime()) ? value : date.toISOString().slice(0, 10);
   };
 
-  const itemId = (item) => String(item?.localIdentifier || item?.assetId || "").trim();
+  const itemId = (item) => String(item?.assetId || item?.cloudIdentifier || item?.localIdentifier || "").trim();
   const previewUrl = (item) => `/__sidecar/preview/${encodeURIComponent(itemId(item))}?maxPixel=900`;
   const videoUrl = (item) => `/__sidecar/video/${encodeURIComponent(itemId(item))}`;
   const uniqueItemsById = (items) => {
@@ -1840,12 +1840,12 @@
     if ((applyResult.visibilityChanged || applyResult.switchedToCulling) && state.hasWindow) {
       await loadWindow();
     }
-    setStatus(`Staged ${actionLabel(payload)} on ${decisions.length.toLocaleString()} item${decisions.length === 1 ? "" : "s"}. Photos write-back is pending commit.`);
+    setStatus(`Saved ${actionLabel(payload)} on ${decisions.length.toLocaleString()} item${decisions.length === 1 ? "" : "s"} to Owner cloud. Photos write-back is pending commit.`);
   };
 
   const postDecisions = async (decisions, message, completeMessage = "", {
     recordUndo = true,
-    undoLabel = "local decisions",
+    undoLabel = "cloud decisions",
     restoreSelection = null,
     preserveSelection = false,
   } = {}) => {
@@ -1857,7 +1857,7 @@
     const selectionBefore = selectionSnapshot();
     const beforeStates = beforeStatesForIndexes(targetIndexes);
     const visibilityBefore = visibilityForIndexes(targetIndexes);
-    setStatus(message || `Staging ${decisions.length.toLocaleString()} local decisions...`);
+    setStatus(message || `Saving ${decisions.length.toLocaleString()} cloud decisions...`);
     await waitForStatusPaint();
     const response = await fetch("/__sidecar/decisions?summary=0", {
       method: "POST",
@@ -1883,7 +1883,7 @@
     if ((applyResult.visibilityChanged || applyResult.switchedToCulling) && state.hasWindow) {
       await loadWindow();
     }
-    setStatus(completeMessage || `Staged ${Number(result.count || decisions.length).toLocaleString()} local decisions. Photos write-back is pending commit.`);
+    setStatus(completeMessage || `Saved ${Number(result.count || decisions.length).toLocaleString()} cloud decisions. Photos write-back is pending commit.`);
   };
 
   const undoLastDecision = async () => {

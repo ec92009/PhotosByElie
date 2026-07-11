@@ -2021,18 +2021,45 @@
     setStatus("Loading matching items from local Photos index...");
     let payload = await fetchLibrarySlice(offset, limit);
     let effectiveOffset = offset;
-    const filteredCount = Number(payload.filteredIndexedCount || payload.indexedCount || 0);
+    let filteredCount = Number(payload.filteredIndexedCount || payload.indexedCount || 0);
     const maxOffset = Math.max(0, filteredCount - limit);
     if (offset > maxOffset) {
       effectiveOffset = maxOffset;
       setOffset(effectiveOffset);
       payload = await fetchLibrarySlice(effectiveOffset, limit);
     }
-    state.items = uniqueItemsById(payload.items);
+    let windowItems = uniqueItemsById(payload.items);
+    let nextSourceOffset = Number(payload.nextOffset || (effectiveOffset + windowItems.length));
+    state.items = windowItems;
+    let refillFetches = 1;
+    while (
+      visibleIndexes().length < limit
+      && windowItems.length
+      && nextSourceOffset < filteredCount
+      && refillFetches < refillMaxFetches
+    ) {
+      const refillPayload = await fetchLibrarySlice(nextSourceOffset, refillBatchSize);
+      const refillItems = uniqueItemsById(refillPayload.items);
+      if (!refillItems.length) break;
+      const previousItemCount = windowItems.length;
+      const previousSourceOffset = nextSourceOffset;
+      windowItems = uniqueItemsById([...windowItems, ...refillItems]);
+      state.items = windowItems;
+      payload = {
+        ...payload,
+        ...refillPayload,
+        items: windowItems,
+        sidecarSummary: refillPayload.sidecarSummary || payload.sidecarSummary,
+      };
+      filteredCount = Number(refillPayload.filteredIndexedCount || refillPayload.indexedCount || filteredCount);
+      nextSourceOffset = Number(refillPayload.nextOffset || (nextSourceOffset + refillItems.length));
+      refillFetches += 1;
+      if (windowItems.length === previousItemCount && nextSourceOffset <= previousSourceOffset) break;
+    }
     state.summary = payload.sidecarSummary || state.summary;
     state.hasWindow = true;
-    state.filteredIndexedCount = Number(payload.filteredIndexedCount || payload.indexedCount || 0);
-    state.windowCursorOffset = Number(payload.nextOffset || (effectiveOffset + state.items.length));
+    state.filteredIndexedCount = filteredCount;
+    state.windowCursorOffset = nextSourceOffset;
     state.undoStack = [];
     if (applyPendingSelectionAfterLoad()) {
       // A decision made the previous card disappear; keep culling on its neighbor.

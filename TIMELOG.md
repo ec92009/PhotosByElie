@@ -579,8 +579,9 @@ Clock state: running
 | 2026-07-11 | 17:10 CEST | 17:13 CEST | 0:02 | Reported that Max's public Owner page still could not open Sidecar despite a healthy connector, so added a cloud-targeted launch fallback when browser localhost probing fails; implementation/test runtime excluded. |
 | 2026-07-11 | 17:20 CEST | 17:22 CEST | 0:01 | Corrected the Owner Open Sidecar fallback so a browser that cannot verify localhost never silently targets another cloud-active Mac; implementation/test runtime excluded. |
 | 2026-07-11 | 17:30 CEST | 17:31 CEST | 0:01 | Verified Max's local Sidecar launch reached the real Culling workspace and hardened the connector to open Sidecar directly without an unnecessary preflight; implementation/test runtime excluded. |
+| 2026-07-11 | 18:00 CEST | 18:10 CEST | 0:03 | Fixed Sidecar filtered-window refill so cloud decision overlays continue loading matching assets until the visible window is full; implementation/browser/test runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 30:01
+Active collaboration time used: 30:04
 Remaining budget: not set

@@ -1,0 +1,86 @@
+{
+  "platform": "Threads",
+  "title": "Malaga Automobile Museum Chrome Color",
+  "campaign_id": "instagram-malaga-automobile-museum-chrome-color-2026-07-12",
+  "caption": "Malaga Automobile Museum Chrome Color in four Photos By Elie frames. Browse: https://photos-by-elie.com/campaign.html?c=instagram-malaga-automobile-museum-chrome-color-2026-07-12",
+  "notes": [
+    "Derived from the Instagram package for a 3-4 image Threads carousel.",
+    "Images are public watermarked R2 previews staged for upload/API publishing."
+  ],
+  "items": [
+    {
+      "media_id": "20230812-163103-00031-782f0675d2",
+      "order": 1,
+      "id": "20230812-163103-00031-782f0675d2",
+      "title": "Malaga Auto Museum",
+      "collection": "spain",
+      "location": "Spain",
+      "width": 1800,
+      "height": 1200,
+      "source_url": "https://download.photos-by-elie.com/media/expo/20230812-163103-00031-782f0675d2_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/20230812-163103-00031-782f0675d2_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=20230812-163103-00031-782f0675d2",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=20230812-163103-00031-782f0675d2",
+      "image": "images/01-20230812-163103-00031-782f0675d2-malaga-automobile-museum-chrome-color.jpg",
+      "local_staged_path": "socials/Threads/2026-07-12/malaga-automobile-museum-chrome-color/images/01-20230812-163103-00031-782f0675d2-malaga-automobile-museum-chrome-color.jpg"
+    },
+    {
+      "media_id": "20230812-163122-00033-282b232c20",
+      "order": 2,
+      "id": "20230812-163122-00033-282b232c20",
+      "title": "Malaga Auto Museum",
+      "collection": "spain",
+      "location": "Spain",
+      "width": 1800,
+      "height": 1200,
+      "source_url": "https://download.photos-by-elie.com/media/expo/20230812-163122-00033-282b232c20_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/20230812-163122-00033-282b232c20_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=20230812-163122-00033-282b232c20",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=20230812-163122-00033-282b232c20",
+      "image": "images/02-20230812-163122-00033-282b232c20-malaga-automobile-museum-chrome-color.jpg",
+      "local_staged_path": "socials/Threads/2026-07-12/malaga-automobile-museum-chrome-color/images/02-20230812-163122-00033-282b232c20-malaga-automobile-museum-chrome-color.jpg"
+    },
+    {
+      "media_id": "20230812-163307-00041-f0ce7b4ca4",
+      "order": 3,
+      "id": "20230812-163307-00041-f0ce7b4ca4",
+      "title": "Malaga Auto Museum",
+      "collection": "spain",
+      "location": "Spain",
+      "width": 1800,
+      "height": 1200,
+      "source_url": "https://download.photos-by-elie.com/media/expo/20230812-163307-00041-f0ce7b4ca4_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/20230812-163307-00041-f0ce7b4ca4_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=20230812-163307-00041-f0ce7b4ca4",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=20230812-163307-00041-f0ce7b4ca4",
+      "image": "images/03-20230812-163307-00041-f0ce7b4ca4-malaga-automobile-museum-chrome-color.jpg",
+      "local_staged_path": "socials/Threads/2026-07-12/malaga-automobile-museum-chrome-color/images/03-20230812-163307-00041-f0ce7b4ca4-malaga-automobile-museum-chrome-color.jpg"
+    },
+    {
+      "media_id": "20230812-163409-00047-d8b9755685",
+      "order": 4,
+      "id": "20230812-163409-00047-d8b9755685",
+      "title": "Malaga Auto Museum",
+      "collection": "spain",
+      "location": "Spain",
+      "width": 1800,
+      "height": 1200,
+      "source_url": "https://download.photos-by-elie.com/media/expo/20230812-163409-00047-d8b9755685_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/20230812-163409-00047-d8b9755685_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=20230812-163409-00047-d8b9755685",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=20230812-163409-00047-d8b9755685",
+      "image": "images/04-20230812-163409-00047-d8b9755685-malaga-automobile-museum-chrome-color.jpg",
+      "local_staged_path": "socials/Threads/2026-07-12/malaga-automobile-museum-chrome-color/images/04-20230812-163409-00047-d8b9755685-malaga-automobile-museum-chrome-color.jpg"
+    }
+  ],
+  "status": "prepared",
+  "account": "ec92009",
+  "post_type": "carousel",
+  "available_count": 4,
+  "date": "2026-07-12",
+  "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-malaga-automobile-museum-chrome-color-2026-07-12",
+  "recommended_upload_set": "images",
+  "manual_blockers": [
+    "Publish pending: review socials/Threads/2026-07-12/malaga-automobile-museum-chrome-color/manifest.json and use the Threads browser/API workflow."
+  ]
+}

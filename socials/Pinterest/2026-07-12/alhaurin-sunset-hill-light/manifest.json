@@ -1,0 +1,110 @@
+{
+  "platform": "Pinterest",
+  "title": "Alhaurin Sunset Hill Light",
+  "campaign_id": "pinterest-alhaurin-sunset-hill-light-2026-07-12",
+  "caption": "Alhaurin de la Torre at sunset in five warm hill-light frames from Photos By Elie. Browse the edit: https://photos-by-elie.com/campaign.html?c=pinterest-alhaurin-sunset-hill-light-2026-07-12",
+  "pinterest": {
+    "title": "Alhaurin Sunset Hill Light",
+    "description": "Warm Andalusian sunset photography from Alhaurin de la Torre, curated as five Photos By Elie wall-art candidates.",
+    "destination_url": "https://photos-by-elie.com/campaign.html?c=pinterest-alhaurin-sunset-hill-light-2026-07-12",
+    "board_recommendation": "Spain Travel Photography",
+    "alt_text": "Five warm sunset hill-light photographs from Alhaurin de la Torre, Spain."
+  },
+  "notes": [
+    "Pinterest package is exactly five public watermarked sunset previews, suitable for a Spain travel or wall-art board.",
+    "Images are public watermarked R2 previews staged for upload/API publishing."
+  ],
+  "items": [
+    {
+      "media_id": "img-1981-eeff6a8f2a",
+      "order": 1,
+      "id": "img-1981-eeff6a8f2a",
+      "title": "Alhaurin De La Torre, Sunset",
+      "collection": "spain",
+      "location": "Spain",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/img-1981-eeff6a8f2a_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/img-1981-eeff6a8f2a_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=img-1981-eeff6a8f2a",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=img-1981-eeff6a8f2a",
+      "image": "images/01-img-1981-eeff6a8f2a-alhaurin-sunset-hill-light.jpg",
+      "local_staged_path": "socials/Pinterest/2026-07-12/alhaurin-sunset-hill-light/images/01-img-1981-eeff6a8f2a-alhaurin-sunset-hill-light.jpg"
+    },
+    {
+      "media_id": "img-1982-f8478730f4",
+      "order": 2,
+      "id": "img-1982-f8478730f4",
+      "title": "Alhaurin De La Torre, Sunset",
+      "collection": "spain",
+      "location": "Spain",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/img-1982-f8478730f4_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/img-1982-f8478730f4_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=img-1982-f8478730f4",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=img-1982-f8478730f4",
+      "image": "images/02-img-1982-f8478730f4-alhaurin-sunset-hill-light.jpg",
+      "local_staged_path": "socials/Pinterest/2026-07-12/alhaurin-sunset-hill-light/images/02-img-1982-f8478730f4-alhaurin-sunset-hill-light.jpg"
+    },
+    {
+      "media_id": "img-1983-29681bde15",
+      "order": 3,
+      "id": "img-1983-29681bde15",
+      "title": "Alhaurin De La Torre, Sunset",
+      "collection": "spain",
+      "location": "Spain",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/img-1983-29681bde15_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/img-1983-29681bde15_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=img-1983-29681bde15",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=img-1983-29681bde15",
+      "image": "images/03-img-1983-29681bde15-alhaurin-sunset-hill-light.jpg",
+      "local_staged_path": "socials/Pinterest/2026-07-12/alhaurin-sunset-hill-light/images/03-img-1983-29681bde15-alhaurin-sunset-hill-light.jpg"
+    },
+    {
+      "media_id": "img-1984-6af71ecaa1",
+      "order": 4,
+      "id": "img-1984-6af71ecaa1",
+      "title": "Alhaurin De La Torre, Sunset",
+      "collection": "spain",
+      "location": "Spain",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/img-1984-6af71ecaa1_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/img-1984-6af71ecaa1_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=img-1984-6af71ecaa1",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=img-1984-6af71ecaa1",
+      "image": "images/04-img-1984-6af71ecaa1-alhaurin-sunset-hill-light.jpg",
+      "local_staged_path": "socials/Pinterest/2026-07-12/alhaurin-sunset-hill-light/images/04-img-1984-6af71ecaa1-alhaurin-sunset-hill-light.jpg"
+    },
+    {
+      "media_id": "img-1985-ae65a693ca",
+      "order": 5,
+      "id": "img-1985-ae65a693ca",
+      "title": "Alhaurin De La Torre, Sunset",
+      "collection": "spain",
+      "location": "Spain",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/img-1985-ae65a693ca_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/img-1985-ae65a693ca_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=img-1985-ae65a693ca",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=img-1985-ae65a693ca",
+      "image": "images/05-img-1985-ae65a693ca-alhaurin-sunset-hill-light.jpg",
+      "local_staged_path": "socials/Pinterest/2026-07-12/alhaurin-sunset-hill-light/images/05-img-1985-ae65a693ca-alhaurin-sunset-hill-light.jpg"
+    }
+  ],
+  "date": "2026-07-12",
+  "status": "prepared",
+  "account": "PhotosByElie Pinterest",
+  "post_type": "multi_pin_sequence",
+  "destination_url": "https://photos-by-elie.com/campaign.html?c=pinterest-alhaurin-sunset-hill-light-2026-07-12",
+  "recommended_upload_set": "images",
+  "available_count": 5,
+  "manual_blockers": [
+    "Publish pending: review socials/Pinterest/2026-07-12/alhaurin-sunset-hill-light/manifest.json and use the Pinterest browser/API workflow.",
+    "Pinterest publish pending: choose the board and publish one Pin per staged image or use the prepared browser upload set."
+  ]
+}

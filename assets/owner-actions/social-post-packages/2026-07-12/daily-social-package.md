@@ -1,13 +1,13 @@
 # Daily Social Package - 2026-07-12
 
-Status: prepared
+Status: published_partial
 Visible version: v134.0
 
 ## Facebook: Setenil Rock Streets and White Stone
 
-- Status: prepared
+- Status: published
 - Destination: https://photos-by-elie.com/campaign.html?c=facebook-setenil-rock-streets-white-stone-2026-07-12
-- Manual blockers: Publish pending: review socials/Facebook/2026-07-12/setenil-rock-streets-and-white-stone/manifest.json and use the Facebook browser/API workflow.
+- Published URL: https://www.facebook.com/122102168061334672/posts/122110395441334672
 
 | # | Media id | Source URL | Local image |
 | ---: | --- | --- | --- |
@@ -22,9 +22,9 @@ Visible version: v134.0
 
 ## Instagram: Malaga Automobile Museum Chrome Color
 
-- Status: prepared
+- Status: published
 - Destination: https://photos-by-elie.com/campaign.html?c=instagram-malaga-automobile-museum-chrome-color-2026-07-12
-- Manual blockers: Publish pending: review socials/Instagram/2026-07-12/malaga-automobile-museum-chrome-color/manifest.json and use the Instagram browser/API workflow. | Instagram feed captions are not clickable; update the profile website link or use a Story link sticker before posting.
+- Published URL: https://www.instagram.com/p/DarV9KJildh/
 
 | # | Media id | Source URL | Local image |
 | ---: | --- | --- | --- |
@@ -41,7 +41,7 @@ Visible version: v134.0
 
 - Status: prepared
 - Destination: https://photos-by-elie.com/campaign.html?c=pinterest-alhaurin-sunset-hill-light-2026-07-12
-- Manual blockers: Publish pending: review socials/Pinterest/2026-07-12/alhaurin-sunset-hill-light/manifest.json and use the Pinterest browser/API workflow. | Pinterest publish pending: choose the board and publish one Pin per staged image or use the prepared browser upload set.
+- Manual blockers: Publish pending: review socials/Pinterest/2026-07-12/alhaurin-sunset-hill-light/manifest.json and use the Pinterest browser/API workflow. | Pinterest publish pending: choose the board and publish one Pin per staged image or use the prepared browser upload set. | Pinterest remains prepared only: no valid Pinterest token/board ID mapping was available in this run. Use Pin Builder/API with board recommendation Spain Travel Photography.
 
 | # | Media id | Source URL | Local image |
 | ---: | --- | --- | --- |
@@ -53,9 +53,9 @@ Visible version: v134.0
 
 ## Threads: Malaga Automobile Museum Chrome Color
 
-- Status: prepared
+- Status: published
 - Destination: https://photos-by-elie.com/campaign.html?c=instagram-malaga-automobile-museum-chrome-color-2026-07-12
-- Manual blockers: Publish pending: review socials/Threads/2026-07-12/malaga-automobile-museum-chrome-color/manifest.json and use the Threads browser/API workflow.
+- Published URL: https://www.threads.com/@ec92009/post/DarWE9xChhc
 
 | # | Media id | Source URL | Local image |
 | ---: | --- | --- | --- |
@@ -63,3 +63,13 @@ Visible version: v134.0
 | 2 | `20230812-163122-00033-282b232c20` | https://download.photos-by-elie.com/media/expo/20230812-163122-00033-282b232c20_1800.jpg | socials/Threads/2026-07-12/malaga-automobile-museum-chrome-color/images/02-20230812-163122-00033-282b232c20-malaga-automobile-museum-chrome-color.jpg |
 | 3 | `20230812-163307-00041-f0ce7b4ca4` | https://download.photos-by-elie.com/media/expo/20230812-163307-00041-f0ce7b4ca4_1800.jpg | socials/Threads/2026-07-12/malaga-automobile-museum-chrome-color/images/03-20230812-163307-00041-f0ce7b4ca4-malaga-automobile-museum-chrome-color.jpg |
 | 4 | `20230812-163409-00047-d8b9755685` | https://download.photos-by-elie.com/media/expo/20230812-163409-00047-d8b9755685_1800.jpg | socials/Threads/2026-07-12/malaga-automobile-museum-chrome-color/images/04-20230812-163409-00047-d8b9755685-malaga-automobile-museum-chrome-color.jpg |
+
+## Etsy Companion
+
+- Status: review packages generated; no Etsy drafts created.
+- Product: jpg-6mp digital download.
+- Ready for owner review: 20 listings (7 Facebook/Setenil, 8 Instagram/Malaga Auto Museum, 5 Pinterest/Alhaurin).
+- Paths: assets/owner-actions/etsy-listing-packages/2026-07-12/facebook-setenil-rock-streets-white-stone-2026-07-12, assets/owner-actions/etsy-listing-packages/2026-07-12/instagram-malaga-automobile-museum-chrome-color-2026-07-12, assets/owner-actions/etsy-listing-packages/2026-07-12/pinterest-alhaurin-sunset-hill-light-2026-07-12.
+- Blocker: Etsy API check returned invalid_token/access token expired; current etsy:outlet flow also requires explicit create-draft confirmation/setup ids before any draft write.
+- Fees incurred: false.
+

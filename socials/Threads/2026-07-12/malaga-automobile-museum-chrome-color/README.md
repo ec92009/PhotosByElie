@@ -1,10 +1,8 @@
 # Threads - 2026-07-12 - Malaga Automobile Museum Chrome Color
 
-Status: prepared
+Status: published
 Destination: https://photos-by-elie.com/campaign.html?c=instagram-malaga-automobile-museum-chrome-color-2026-07-12
-
-Manual blockers:
-- Publish pending: review socials/Threads/2026-07-12/malaga-automobile-museum-chrome-color/manifest.json and use the Threads browser/API workflow.
+Published URL: https://www.threads.com/@ec92009/post/DarWE9xChhc
 
 Caption:
 

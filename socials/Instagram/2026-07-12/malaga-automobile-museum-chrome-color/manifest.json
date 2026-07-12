@@ -138,14 +138,36 @@
     }
   ],
   "date": "2026-07-12",
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-malaga-automobile-museum-chrome-color-2026-07-12",
   "recommended_upload_set": "images",
   "available_count": 8,
-  "manual_blockers": [
-    "Publish pending: review socials/Instagram/2026-07-12/malaga-automobile-museum-chrome-color/manifest.json and use the Instagram browser/API workflow.",
-    "Instagram feed captions are not clickable; update the profile website link or use a Story link sticker before posting."
-  ]
+  "manual_blockers": [],
+  "published_url": "https://www.instagram.com/p/DarV9KJildh/",
+  "published": {
+    "platform": "Instagram",
+    "account": "ec92009",
+    "id": "18035318018635659",
+    "permalink": "https://www.instagram.com/p/DarV9KJildh/",
+    "timestamp": "2026-07-12T03:10:16+0000",
+    "username": "ec92009",
+    "media_type": "CAROUSEL_ALBUM",
+    "image_count": 8,
+    "child_count": 8,
+    "visible_verification": "Instagram Graph readback returned permalink, timestamp, CAROUSEL_ALBUM type, username, and 8 child images. Caption has no raw URL."
+  },
+  "verification": {
+    "platform": "Instagram",
+    "account": "ec92009",
+    "id": "18035318018635659",
+    "permalink": "https://www.instagram.com/p/DarV9KJildh/",
+    "timestamp": "2026-07-12T03:10:16+0000",
+    "username": "ec92009",
+    "media_type": "CAROUSEL_ALBUM",
+    "image_count": 8,
+    "child_count": 8,
+    "visible_verification": "Instagram Graph readback returned permalink, timestamp, CAROUSEL_ALBUM type, username, and 8 child images. Caption has no raw URL."
+  }
 }

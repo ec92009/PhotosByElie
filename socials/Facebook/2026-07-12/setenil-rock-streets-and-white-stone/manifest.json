@@ -138,13 +138,60 @@
     }
   ],
   "date": "2026-07-12",
-  "status": "prepared",
+  "status": "published",
   "account": "Photos By Elie",
   "post_type": "multi_photo",
   "destination_url": "https://photos-by-elie.com/campaign.html?c=facebook-setenil-rock-streets-white-stone-2026-07-12",
   "recommended_upload_set": "images",
   "available_count": 8,
-  "manual_blockers": [
-    "Publish pending: review socials/Facebook/2026-07-12/setenil-rock-streets-and-white-stone/manifest.json and use the Facebook browser/API workflow."
-  ]
+  "manual_blockers": [],
+  "published_url": "https://www.facebook.com/122102168061334672/posts/122110395441334672",
+  "published": {
+    "platform": "Facebook",
+    "account": "Photos By Elie",
+    "id": "1146747141854670_122110395441334672",
+    "permalink": "https://www.facebook.com/122102168061334672/posts/122110395441334672",
+    "timestamp": "2026-07-12T03:08:30+0000",
+    "image_count": 8,
+    "visible_verification": "Facebook Graph readback returned the Page post permalink, created_time, and 8 photo subattachments."
+  },
+  "verification": {
+    "platform": "Facebook",
+    "account": "Photos By Elie",
+    "id": "1146747141854670_122110395441334672",
+    "permalink": "https://www.facebook.com/122102168061334672/posts/122110395441334672",
+    "timestamp": "2026-07-12T03:08:30+0000",
+    "image_count": 8,
+    "visible_verification": "Facebook Graph readback returned the Page post permalink, created_time, and 8 photo subattachments."
+  },
+  "personal_share_assist": {
+    "format": "photosbyelie-facebook-personal-share-assist",
+    "schema_version": 1,
+    "generated_at": "2026-07-12T03:12:22.247Z",
+    "date": "2026-07-12",
+    "status": "prepared_manual_final_click",
+    "expected_identity": "Elie Cohen",
+    "source_platform": "Facebook",
+    "source_page": "Photos By Elie",
+    "source_title": "Setenil Rock Streets and White Stone",
+    "facebook_post_url": "https://www.facebook.com/122102168061334672/posts/122110395441334672",
+    "campaign_url": "https://photos-by-elie.com/campaign.html?c=facebook-setenil-rock-streets-white-stone-2026-07-12",
+    "share_url": "https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fwww.facebook.com%2F122102168061334672%2Fposts%2F122110395441334672",
+    "text_fr": "Je viens de publier quelques nouvelles photos sur Photos By Elie.\n\nLa série du jour, « Setenil Rock Streets and White Stone », rassemble quelques images que j'aime beaucoup.\n\nÀ voir ici :\nhttps://www.facebook.com/122102168061334672/posts/122110395441334672",
+    "text_en": "I just published a few new photos on Photos By Elie.\n\nToday's series, \"Setenil Rock Streets and White Stone\", brings together a few images I really like.\n\nSee it here:\nhttps://www.facebook.com/122102168061334672/posts/122110395441334672",
+    "local_dir": "socials/Facebook/2026-07-12/setenil-rock-streets-and-white-stone/personal-share",
+    "local_files": {
+      "text_fr": "socials/Facebook/2026-07-12/setenil-rock-streets-and-white-stone/personal-share/text-fr.txt",
+      "text_en": "socials/Facebook/2026-07-12/setenil-rock-streets-and-white-stone/personal-share/text-en.txt",
+      "share_url": "socials/Facebook/2026-07-12/setenil-rock-streets-and-white-stone/personal-share/share-url.txt",
+      "manifest": "socials/Facebook/2026-07-12/setenil-rock-streets-and-white-stone/personal-share/manifest.json",
+      "readme": "socials/Facebook/2026-07-12/setenil-rock-streets-and-white-stone/personal-share/README.md"
+    },
+    "guardrails": [
+      "This is a user-mediated personal profile share assist.",
+      "Do not automate the final Facebook Post button.",
+      "Confirm the visible posting identity is Elie Cohen before posting.",
+      "Do not use private Facebook endpoints, cookies, passwords, or 2FA codes."
+    ]
+  }
 }

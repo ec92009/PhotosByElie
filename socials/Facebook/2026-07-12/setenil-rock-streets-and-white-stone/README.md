@@ -1,10 +1,8 @@
 # Facebook - 2026-07-12 - Setenil Rock Streets and White Stone
 
-Status: prepared
+Status: published
 Destination: https://photos-by-elie.com/campaign.html?c=facebook-setenil-rock-streets-white-stone-2026-07-12
-
-Manual blockers:
-- Publish pending: review socials/Facebook/2026-07-12/setenil-rock-streets-and-white-stone/manifest.json and use the Facebook browser/API workflow.
+Published URL: https://www.facebook.com/122102168061334672/posts/122110395441334672
 
 Caption:
 

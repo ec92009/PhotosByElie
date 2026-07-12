@@ -73,14 +73,39 @@
       "local_staged_path": "socials/Threads/2026-07-12/malaga-automobile-museum-chrome-color/images/04-20230812-163409-00047-d8b9755685-malaga-automobile-museum-chrome-color.jpg"
     }
   ],
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "available_count": 4,
   "date": "2026-07-12",
   "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-malaga-automobile-museum-chrome-color-2026-07-12",
   "recommended_upload_set": "images",
-  "manual_blockers": [
-    "Publish pending: review socials/Threads/2026-07-12/malaga-automobile-museum-chrome-color/manifest.json and use the Threads browser/API workflow."
-  ]
+  "manual_blockers": [],
+  "published_url": "https://www.threads.com/@ec92009/post/DarWE9xChhc",
+  "published": {
+    "platform": "Threads",
+    "account": "ec92009",
+    "id": "18608332048018601",
+    "permalink": "https://www.threads.com/@ec92009/post/DarWE9xChhc",
+    "timestamp": "2026-07-12T03:11:23+0000",
+    "username": "ec92009",
+    "media_type": "CAROUSEL_ALBUM",
+    "shortcode": "DarWE9xChhc",
+    "image_count": 4,
+    "child_count": 4,
+    "visible_verification": "Threads Graph readback returned permalink, timestamp, CAROUSEL_ALBUM type, username, shortcode, and 4 child images. API flow had no browser link-preview removal step."
+  },
+  "verification": {
+    "platform": "Threads",
+    "account": "ec92009",
+    "id": "18608332048018601",
+    "permalink": "https://www.threads.com/@ec92009/post/DarWE9xChhc",
+    "timestamp": "2026-07-12T03:11:23+0000",
+    "username": "ec92009",
+    "media_type": "CAROUSEL_ALBUM",
+    "shortcode": "DarWE9xChhc",
+    "image_count": 4,
+    "child_count": 4,
+    "visible_verification": "Threads Graph readback returned permalink, timestamp, CAROUSEL_ALBUM type, username, shortcode, and 4 child images. API flow had no browser link-preview removal step."
+  }
 }

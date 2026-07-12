@@ -6,6 +6,7 @@ Destination: https://photos-by-elie.com/campaign.html?c=pinterest-alhaurin-sunse
 Manual blockers:
 - Publish pending: review socials/Pinterest/2026-07-12/alhaurin-sunset-hill-light/manifest.json and use the Pinterest browser/API workflow.
 - Pinterest publish pending: choose the board and publish one Pin per staged image or use the prepared browser upload set.
+- Pinterest remains prepared only: no valid Pinterest token/board ID mapping was available in this run. Use Pin Builder/API with board recommendation Spain Travel Photography.
 
 Caption:
 

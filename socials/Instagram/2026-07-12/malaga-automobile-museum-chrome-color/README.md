@@ -1,11 +1,8 @@
 # Instagram - 2026-07-12 - Malaga Automobile Museum Chrome Color
 
-Status: prepared
+Status: published
 Destination: https://photos-by-elie.com/campaign.html?c=instagram-malaga-automobile-museum-chrome-color-2026-07-12
-
-Manual blockers:
-- Publish pending: review socials/Instagram/2026-07-12/malaga-automobile-museum-chrome-color/manifest.json and use the Instagram browser/API workflow.
-- Instagram feed captions are not clickable; update the profile website link or use a Story link sticker before posting.
+Published URL: https://www.instagram.com/p/DarV9KJildh/
 
 Caption:
 

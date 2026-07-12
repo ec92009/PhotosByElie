@@ -2,7 +2,7 @@
   "format": "photosbyelie-daily-social-package",
   "schema_version": 1,
   "date": "2026-07-12",
-  "generated_at": "2026-07-12T03:04:38.853Z",
+  "generated_at": "2026-07-12T03:12:55.556Z",
   "platforms": [
     {
       "platform": "Facebook",
@@ -144,15 +144,62 @@
         }
       ],
       "date": "2026-07-12",
-      "status": "prepared",
+      "status": "published",
       "account": "Photos By Elie",
       "post_type": "multi_photo",
       "destination_url": "https://photos-by-elie.com/campaign.html?c=facebook-setenil-rock-streets-white-stone-2026-07-12",
       "recommended_upload_set": "images",
       "available_count": 8,
-      "manual_blockers": [
-        "Publish pending: review socials/Facebook/2026-07-12/setenil-rock-streets-and-white-stone/manifest.json and use the Facebook browser/API workflow."
-      ]
+      "manual_blockers": [],
+      "published_url": "https://www.facebook.com/122102168061334672/posts/122110395441334672",
+      "published": {
+        "platform": "Facebook",
+        "account": "Photos By Elie",
+        "id": "1146747141854670_122110395441334672",
+        "permalink": "https://www.facebook.com/122102168061334672/posts/122110395441334672",
+        "timestamp": "2026-07-12T03:08:30+0000",
+        "image_count": 8,
+        "visible_verification": "Facebook Graph readback returned the Page post permalink, created_time, and 8 photo subattachments."
+      },
+      "verification": {
+        "platform": "Facebook",
+        "account": "Photos By Elie",
+        "id": "1146747141854670_122110395441334672",
+        "permalink": "https://www.facebook.com/122102168061334672/posts/122110395441334672",
+        "timestamp": "2026-07-12T03:08:30+0000",
+        "image_count": 8,
+        "visible_verification": "Facebook Graph readback returned the Page post permalink, created_time, and 8 photo subattachments."
+      },
+      "personal_share_assist": {
+        "format": "photosbyelie-facebook-personal-share-assist",
+        "schema_version": 1,
+        "generated_at": "2026-07-12T03:12:22.247Z",
+        "date": "2026-07-12",
+        "status": "prepared_manual_final_click",
+        "expected_identity": "Elie Cohen",
+        "source_platform": "Facebook",
+        "source_page": "Photos By Elie",
+        "source_title": "Setenil Rock Streets and White Stone",
+        "facebook_post_url": "https://www.facebook.com/122102168061334672/posts/122110395441334672",
+        "campaign_url": "https://photos-by-elie.com/campaign.html?c=facebook-setenil-rock-streets-white-stone-2026-07-12",
+        "share_url": "https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fwww.facebook.com%2F122102168061334672%2Fposts%2F122110395441334672",
+        "text_fr": "Je viens de publier quelques nouvelles photos sur Photos By Elie.\n\nLa série du jour, « Setenil Rock Streets and White Stone », rassemble quelques images que j'aime beaucoup.\n\nÀ voir ici :\nhttps://www.facebook.com/122102168061334672/posts/122110395441334672",
+        "text_en": "I just published a few new photos on Photos By Elie.\n\nToday's series, \"Setenil Rock Streets and White Stone\", brings together a few images I really like.\n\nSee it here:\nhttps://www.facebook.com/122102168061334672/posts/122110395441334672",
+        "local_dir": "socials/Facebook/2026-07-12/setenil-rock-streets-and-white-stone/personal-share",
+        "local_files": {
+          "text_fr": "socials/Facebook/2026-07-12/setenil-rock-streets-and-white-stone/personal-share/text-fr.txt",
+          "text_en": "socials/Facebook/2026-07-12/setenil-rock-streets-and-white-stone/personal-share/text-en.txt",
+          "share_url": "socials/Facebook/2026-07-12/setenil-rock-streets-and-white-stone/personal-share/share-url.txt",
+          "manifest": "socials/Facebook/2026-07-12/setenil-rock-streets-and-white-stone/personal-share/manifest.json",
+          "readme": "socials/Facebook/2026-07-12/setenil-rock-streets-and-white-stone/personal-share/README.md"
+        },
+        "guardrails": [
+          "This is a user-mediated personal profile share assist.",
+          "Do not automate the final Facebook Post button.",
+          "Confirm the visible posting identity is Elie Cohen before posting.",
+          "Do not use private Facebook endpoints, cookies, passwords, or 2FA codes."
+        ]
+      }
     },
     {
       "platform": "Instagram",
@@ -294,16 +341,38 @@
         }
       ],
       "date": "2026-07-12",
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-malaga-automobile-museum-chrome-color-2026-07-12",
       "recommended_upload_set": "images",
       "available_count": 8,
-      "manual_blockers": [
-        "Publish pending: review socials/Instagram/2026-07-12/malaga-automobile-museum-chrome-color/manifest.json and use the Instagram browser/API workflow.",
-        "Instagram feed captions are not clickable; update the profile website link or use a Story link sticker before posting."
-      ]
+      "manual_blockers": [],
+      "published_url": "https://www.instagram.com/p/DarV9KJildh/",
+      "published": {
+        "platform": "Instagram",
+        "account": "ec92009",
+        "id": "18035318018635659",
+        "permalink": "https://www.instagram.com/p/DarV9KJildh/",
+        "timestamp": "2026-07-12T03:10:16+0000",
+        "username": "ec92009",
+        "media_type": "CAROUSEL_ALBUM",
+        "image_count": 8,
+        "child_count": 8,
+        "visible_verification": "Instagram Graph readback returned permalink, timestamp, CAROUSEL_ALBUM type, username, and 8 child images. Caption has no raw URL."
+      },
+      "verification": {
+        "platform": "Instagram",
+        "account": "ec92009",
+        "id": "18035318018635659",
+        "permalink": "https://www.instagram.com/p/DarV9KJildh/",
+        "timestamp": "2026-07-12T03:10:16+0000",
+        "username": "ec92009",
+        "media_type": "CAROUSEL_ALBUM",
+        "image_count": 8,
+        "child_count": 8,
+        "visible_verification": "Instagram Graph readback returned permalink, timestamp, CAROUSEL_ALBUM type, username, and 8 child images. Caption has no raw URL."
+      }
     },
     {
       "platform": "Pinterest",
@@ -412,7 +481,8 @@
       "available_count": 5,
       "manual_blockers": [
         "Publish pending: review socials/Pinterest/2026-07-12/alhaurin-sunset-hill-light/manifest.json and use the Pinterest browser/API workflow.",
-        "Pinterest publish pending: choose the board and publish one Pin per staged image or use the prepared browser upload set."
+        "Pinterest publish pending: choose the board and publish one Pin per staged image or use the prepared browser upload set.",
+        "Pinterest remains prepared only: no valid Pinterest token/board ID mapping was available in this run. Use Pin Builder/API with board recommendation Spain Travel Photography."
       ]
     },
     {
@@ -490,26 +560,109 @@
           "local_staged_path": "socials/Threads/2026-07-12/malaga-automobile-museum-chrome-color/images/04-20230812-163409-00047-d8b9755685-malaga-automobile-museum-chrome-color.jpg"
         }
       ],
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "available_count": 4,
       "date": "2026-07-12",
       "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-malaga-automobile-museum-chrome-color-2026-07-12",
       "recommended_upload_set": "images",
-      "manual_blockers": [
-        "Publish pending: review socials/Threads/2026-07-12/malaga-automobile-museum-chrome-color/manifest.json and use the Threads browser/API workflow."
-      ]
+      "manual_blockers": [],
+      "published_url": "https://www.threads.com/@ec92009/post/DarWE9xChhc",
+      "published": {
+        "platform": "Threads",
+        "account": "ec92009",
+        "id": "18608332048018601",
+        "permalink": "https://www.threads.com/@ec92009/post/DarWE9xChhc",
+        "timestamp": "2026-07-12T03:11:23+0000",
+        "username": "ec92009",
+        "media_type": "CAROUSEL_ALBUM",
+        "shortcode": "DarWE9xChhc",
+        "image_count": 4,
+        "child_count": 4,
+        "visible_verification": "Threads Graph readback returned permalink, timestamp, CAROUSEL_ALBUM type, username, shortcode, and 4 child images. API flow had no browser link-preview removal step."
+      },
+      "verification": {
+        "platform": "Threads",
+        "account": "ec92009",
+        "id": "18608332048018601",
+        "permalink": "https://www.threads.com/@ec92009/post/DarWE9xChhc",
+        "timestamp": "2026-07-12T03:11:23+0000",
+        "username": "ec92009",
+        "media_type": "CAROUSEL_ALBUM",
+        "shortcode": "DarWE9xChhc",
+        "image_count": 4,
+        "child_count": 4,
+        "visible_verification": "Threads Graph readback returned permalink, timestamp, CAROUSEL_ALBUM type, username, shortcode, and 4 child images. API flow had no browser link-preview removal step."
+      }
     }
   ],
   "notes": [
-    "Prepared for the 2026-07-12 daily automation run from public catalog data and watermarked public previews."
+    "Prepared for the 2026-07-12 daily automation run from public catalog data and watermarked public previews.",
+    "Facebook, Instagram, and Threads were published through authenticated API flows after the v134.0 campaign springboards were live. Pinterest remains prepared for manual/API board publishing."
   ],
   "visible_version": "v134.0",
-  "status": "prepared",
+  "status": "published_partial",
   "themes": [
     "Setenil Rock Streets and White Stone",
     "Malaga Automobile Museum Chrome Color",
     "Alhaurin Sunset Hill Light"
-  ]
+  ],
+  "personal_share_assist": {
+    "format": "photosbyelie-facebook-personal-share-assist",
+    "schema_version": 1,
+    "generated_at": "2026-07-12T03:12:22.247Z",
+    "date": "2026-07-12",
+    "status": "prepared_manual_final_click",
+    "expected_identity": "Elie Cohen",
+    "source_platform": "Facebook",
+    "source_page": "Photos By Elie",
+    "source_title": "Setenil Rock Streets and White Stone",
+    "facebook_post_url": "https://www.facebook.com/122102168061334672/posts/122110395441334672",
+    "campaign_url": "https://photos-by-elie.com/campaign.html?c=facebook-setenil-rock-streets-white-stone-2026-07-12",
+    "share_url": "https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fwww.facebook.com%2F122102168061334672%2Fposts%2F122110395441334672",
+    "text_fr": "Je viens de publier quelques nouvelles photos sur Photos By Elie.\n\nLa série du jour, « Setenil Rock Streets and White Stone », rassemble quelques images que j'aime beaucoup.\n\nÀ voir ici :\nhttps://www.facebook.com/122102168061334672/posts/122110395441334672",
+    "text_en": "I just published a few new photos on Photos By Elie.\n\nToday's series, \"Setenil Rock Streets and White Stone\", brings together a few images I really like.\n\nSee it here:\nhttps://www.facebook.com/122102168061334672/posts/122110395441334672",
+    "local_dir": "socials/Facebook/2026-07-12/setenil-rock-streets-and-white-stone/personal-share",
+    "local_files": {
+      "text_fr": "socials/Facebook/2026-07-12/setenil-rock-streets-and-white-stone/personal-share/text-fr.txt",
+      "text_en": "socials/Facebook/2026-07-12/setenil-rock-streets-and-white-stone/personal-share/text-en.txt",
+      "share_url": "socials/Facebook/2026-07-12/setenil-rock-streets-and-white-stone/personal-share/share-url.txt",
+      "manifest": "socials/Facebook/2026-07-12/setenil-rock-streets-and-white-stone/personal-share/manifest.json",
+      "readme": "socials/Facebook/2026-07-12/setenil-rock-streets-and-white-stone/personal-share/README.md"
+    },
+    "guardrails": [
+      "This is a user-mediated personal profile share assist.",
+      "Do not automate the final Facebook Post button.",
+      "Confirm the visible posting identity is Elie Cohen before posting.",
+      "Do not use private Facebook endpoints, cookies, passwords, or 2FA codes."
+    ]
+  },
+  "etsy_companion": {
+    "status": "review_packages_generated_no_drafts",
+    "package_root": "assets/owner-actions/etsy-listing-packages/2026-07-12/",
+    "total_ready_for_owner_review": 20,
+    "product": "jpg-6mp",
+    "draft_creation": "not_created",
+    "blocker": "Etsy API check returned invalid_token/access token expired; current etsy:outlet flow also requires explicit create-draft confirmation/setup ids before any draft write.",
+    "fees_incurred": false,
+    "packages": [
+      {
+        "campaign_id": "facebook-setenil-rock-streets-white-stone-2026-07-12",
+        "count": 7,
+        "path": "assets/owner-actions/etsy-listing-packages/2026-07-12/facebook-setenil-rock-streets-white-stone-2026-07-12"
+      },
+      {
+        "campaign_id": "instagram-malaga-automobile-museum-chrome-color-2026-07-12",
+        "count": 8,
+        "path": "assets/owner-actions/etsy-listing-packages/2026-07-12/instagram-malaga-automobile-museum-chrome-color-2026-07-12"
+      },
+      {
+        "campaign_id": "pinterest-alhaurin-sunset-hill-light-2026-07-12",
+        "count": 5,
+        "path": "assets/owner-actions/etsy-listing-packages/2026-07-12/pinterest-alhaurin-sunset-hill-light-2026-07-12"
+      }
+    ],
+    "drafts": []
+  }
 }

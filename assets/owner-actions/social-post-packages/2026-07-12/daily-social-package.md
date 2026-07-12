@@ -72,4 +72,3 @@ Visible version: v134.0
 - Paths: assets/owner-actions/etsy-listing-packages/2026-07-12/facebook-setenil-rock-streets-white-stone-2026-07-12, assets/owner-actions/etsy-listing-packages/2026-07-12/instagram-malaga-automobile-museum-chrome-color-2026-07-12, assets/owner-actions/etsy-listing-packages/2026-07-12/pinterest-alhaurin-sunset-hill-light-2026-07-12.
 - Blocker: Etsy API check returned invalid_token/access token expired; current etsy:outlet flow also requires explicit create-draft confirmation/setup ids before any draft write.
 - Fees incurred: false.
-

@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#7b4d26"/>
   <link rel="stylesheet" href="./shared.css"/>
   <link rel="stylesheet" href="./photos.css"/>
-  <link rel="stylesheet" href="./sidecar.css?v=133.2"/>
+  <link rel="stylesheet" href="./sidecar.css?v=134.0"/>
 </head>
 <body data-gallery="sidecar">
   <header class="site-header">
@@ -25,7 +25,7 @@
       <p class="eyebrow">Apple Photos workspace</p>
       <h1>Sidecar</h1>
       <p class="gallery-status" data-sidecar-status>Cloud-backed culling. This Mac handles Photos preview and export.</p>
-      <div class="sidecar-version" data-sidecar-version>v133.2</div>
+      <div class="sidecar-version" data-sidecar-version>v134.0</div>
     </section>
 
     <section class="panel sidecar-controls" aria-label="Sidecar source controls">
@@ -116,8 +116,16 @@
           </div>
           <dl class="sidecar-mini-counts" data-sidecar-counts></dl>
         </div>
+        <div class="sidecar-preview-progress" data-sidecar-preview-status hidden aria-live="polite">
+          <span data-sidecar-preview-label>Loading previews</span>
+          <progress max="1" value="0" data-sidecar-preview-progress></progress>
+          <strong data-sidecar-preview-count>0 / 0</strong>
+        </div>
         <div class="sidecar-grid" data-sidecar-grid>
-          <p class="empty-basket">Load a library slice to begin.</p>
+          <div class="sidecar-window-loading" role="status" aria-live="polite">
+            <span class="sidecar-loading-spinner" aria-hidden="true"></span>
+            <span><strong>Starting Sidecar</strong><small>Preparing the local Photos workspace</small></span>
+          </div>
         </div>
       </section>
 
@@ -134,6 +142,6 @@
   </main>
 
   <script src="./photos.js"></script>
-  <script src="./sidecar.js?v=133.5"></script>
+  <script src="./sidecar.js?v=134.0"></script>
 </body>
 </html>

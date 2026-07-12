@@ -777,9 +777,14 @@ def _overlay_cloud_decisions(repo_root: Path, payload: dict) -> dict:
             state = decisions.get(asset_id)
             if not state:
                 continue
-            item["sidecarState"] = state
+            local_pending_count = int(
+                item.get("pendingSyncCount")
+                or (item.get("sidecarState") or {}).get("pendingSyncCount")
+                or 0
+            )
+            item["sidecarState"] = {**state, "pendingSyncCount": local_pending_count}
             item["tombstoneState"] = str(state.get("tombstoneState") or "")
-            item["pendingSyncCount"] = int(state.get("pendingSyncCount") or 0)
+            item["pendingSyncCount"] = local_pending_count
         payload["sidecarCloud"] = {"ok": True, "configured": True, "count": len(decisions), **({"mirrorError": mirror_error} if mirror_error else {})}
     except Exception as error:  # noqa: BLE001 - window reads should still show the local index.
         payload["sidecarCloud"] = {"ok": False, "configured": True, "error": str(error)}
@@ -1125,9 +1130,6 @@ class SidecarHandler(SimpleHTTPRequestHandler):
                 result["pendingSyncCount"] = pending_count
                 result["state"] = {**result["state"], "pendingSyncCount": pending_count}
                 mirror_cloud_decisions(Path.cwd(), [{"assetId": result["assetId"], "state": result["state"]}])
-                _sidecar_cloud_request("POST", "/owner/sidecar/decisions/upsert", {
-                    "decisions": [{"assetId": result["assetId"], "state": result["state"]}],
-                })
                 result["cloudSidecar"] = {"ok": True, "canonical": True}
             else:
                 result = record_decision(Path.cwd(), payload)
@@ -1175,10 +1177,6 @@ class SidecarHandler(SimpleHTTPRequestHandler):
                     item["pendingSyncCount"] = pending_count
                     item["state"] = {**item.get("state", {}), "pendingSyncCount": pending_count}
                 mirror_cloud_decisions(Path.cwd(), [{"assetId": item["assetId"], "state": item["state"]} for item in items])
-                if items:
-                    _sidecar_cloud_request("POST", "/owner/sidecar/decisions/upsert", {
-                        "decisions": [{"assetId": item["assetId"], "state": item["state"]} for item in items],
-                    }, timeout=60)
                 result = {
                     "ok": True,
                     "count": len(items),

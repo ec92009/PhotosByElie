@@ -88,5 +88,98 @@ class SummaryCacheTest(unittest.TestCase):
         self.assertEqual(load.call_count, 2)
 
 
+class CloudDecisionOverlayTest(unittest.TestCase):
+    def test_local_pending_writeback_count_survives_cloud_overlay(self):
+        payload = {
+            "items": [{
+                "assetId": "cloud-1",
+                "sidecarState": {"metadataState": "unreviewed"},
+                "pendingSyncCount": 3,
+            }],
+        }
+        cloud_state = {
+            "cloud-1": {
+                "assetId": "cloud-1",
+                "metadataState": "approved",
+                "pendingSyncCount": 0,
+            },
+        }
+        with patch.object(sidecar_server, "_sidecar_cloud_enabled", return_value=True), \
+             patch.object(sidecar_server, "_query_cloud_decisions", return_value=cloud_state), \
+             patch.object(sidecar_server, "mirror_cloud_decisions"):
+            result = sidecar_server._overlay_cloud_decisions(Path("/tmp/sidecar-overlay-test"), payload)
+
+        self.assertEqual(result["items"][0]["sidecarState"]["metadataState"], "approved")
+        self.assertEqual(result["items"][0]["sidecarState"]["pendingSyncCount"], 3)
+        self.assertEqual(result["items"][0]["pendingSyncCount"], 3)
+
+    def test_single_decision_does_not_wait_for_redundant_cloud_upsert(self):
+        cloud_calls = []
+        response = {}
+        handler = type("HandlerStub", (), {})()
+        handler._is_loopback_request = lambda: True
+        handler._read_json_body = lambda: {"assetId": "cloud-1", "action": "approve"}
+        handler._include_summary = lambda _payload: False
+        handler._send_json = lambda status, payload: response.update({"status": status, "payload": payload})
+
+        def cloud_request(method, path, payload=None, timeout=30):
+            cloud_calls.append((method, path, payload, timeout))
+            return {
+                "ok": True,
+                "assetId": "cloud-1",
+                "state": {"assetId": "cloud-1", "metadataState": "approved"},
+                "before": {"assetId": "cloud-1", "metadataState": "unreviewed"},
+                "changedFamilies": ["metadata", "pick_state"],
+            }
+
+        with patch.object(sidecar_server, "_sidecar_cloud_enabled", return_value=True), \
+             patch.object(sidecar_server, "_sidecar_cloud_request", side_effect=cloud_request), \
+             patch.object(sidecar_server, "record_decision", return_value={"pendingSyncCount": 2}), \
+             patch.object(sidecar_server, "mirror_cloud_decisions"), \
+             patch.object(sidecar_server, "_invalidate_summary_cache"):
+            sidecar_server.SidecarHandler._handle_decision(handler)
+
+        self.assertEqual(response["status"], 200)
+        self.assertEqual([call[1] for call in cloud_calls], ["/owner/sidecar/decisions/apply"])
+
+    def test_batch_decisions_do_not_wait_for_redundant_cloud_upsert(self):
+        cloud_calls = []
+        response = {}
+        decisions = [
+            {"assetId": "cloud-1", "action": "approve"},
+            {"assetId": "cloud-2", "action": "approve"},
+        ]
+        handler = type("HandlerStub", (), {})()
+        handler._is_loopback_request = lambda: True
+        handler._read_json_body = lambda: {"decisions": decisions}
+        handler._include_summary = lambda _payload: False
+        handler._send_json = lambda status, payload: response.update({"status": status, "payload": payload})
+
+        def cloud_request(method, path, payload=None, timeout=30):
+            cloud_calls.append((method, path, payload, timeout))
+            return {
+                "ok": True,
+                "items": [{
+                    "assetId": decision["assetId"],
+                    "state": {"assetId": decision["assetId"], "metadataState": "approved"},
+                    "before": {"assetId": decision["assetId"], "metadataState": "unreviewed"},
+                    "changedFamilies": ["metadata", "pick_state"],
+                } for decision in decisions],
+            }
+
+        local_result = {
+            "items": [{"assetId": decision["assetId"], "pendingSyncCount": 2} for decision in decisions],
+        }
+        with patch.object(sidecar_server, "_sidecar_cloud_enabled", return_value=True), \
+             patch.object(sidecar_server, "_sidecar_cloud_request", side_effect=cloud_request), \
+             patch.object(sidecar_server, "record_decisions", return_value=local_result), \
+             patch.object(sidecar_server, "mirror_cloud_decisions"), \
+             patch.object(sidecar_server, "_invalidate_summary_cache"):
+            sidecar_server.SidecarHandler._handle_decisions(handler)
+
+        self.assertEqual(response["status"], 200)
+        self.assertEqual([call[1] for call in cloud_calls], ["/owner/sidecar/decisions/apply-batch"])
+
+
 if __name__ == "__main__":
     unittest.main()

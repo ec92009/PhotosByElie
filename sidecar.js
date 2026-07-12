@@ -6,6 +6,10 @@
   const surfaceEyebrow = $("[data-sidecar-grid-eyebrow]");
   const surfaceTitle = $("[data-sidecar-grid-title]");
   const countsRoot = $("[data-sidecar-counts]");
+  const previewStatusRoot = $("[data-sidecar-preview-status]");
+  const previewStatusLabel = $("[data-sidecar-preview-label]");
+  const previewStatusProgress = $("[data-sidecar-preview-progress]");
+  const previewStatusCount = $("[data-sidecar-preview-count]");
   const planPanel = $("[data-sidecar-plan-panel]");
   const planEyebrow = $("[data-sidecar-plan-eyebrow]");
   const planTitle = $("[data-sidecar-plan-title]");
@@ -79,7 +83,13 @@
   const refillBatchSize = 250;
   const refillMaxFetches = 120;
   const uploadBridgeMaxItems = 500;
-  const previewFallbackMarkup = `<span class="sidecar-thumb-fallback">Preview unavailable</span>`;
+  const previewFallbackMarkup = `
+    <span class="sidecar-preview-loading">
+      <span class="sidecar-loading-spinner" aria-hidden="true"></span>
+      <span>Loading preview</span>
+    </span>
+    <span class="sidecar-thumb-fallback">Preview unavailable</span>
+  `;
   const previewObservers = new WeakMap();
   let indexStatusTimer = null;
   let searchChangeTimer = null;
@@ -437,7 +447,7 @@
   const videoPlayerMarkup = (item, autoplay = true) => `
     <video class="sidecar-inline-video" controls playsinline preload="metadata" ${autoplay ? "autoplay" : ""} poster="${escapeHtml(previewUrl(item))}" src="${escapeHtml(videoUrl(item))}"></video>
   `;
-  const versionFallback = "126.6";
+  const versionFallback = "134.0";
   const versionFallbackLabel = `v${versionFallback}`;
   const videoBadge = (item, index, label) => isVideo(item)
     ? videoOverlay(item, index, label)
@@ -747,15 +757,52 @@
     }
   };
 
+  const renderPreviewStatus = (root) => {
+    if (!previewStatusRoot || !root || root !== surface) return;
+    const images = Array.from(root.querySelectorAll("img[data-sidecar-preview]"));
+    const total = images.length;
+    if (!total) {
+      previewStatusRoot.hidden = true;
+      return;
+    }
+    const ready = images.filter((img) => img.dataset.sidecarPreviewState === "ready").length;
+    const missing = images.filter((img) => img.dataset.sidecarPreviewState === "missing").length;
+    const settled = ready + missing;
+    previewStatusRoot.hidden = false;
+    previewStatusRoot.dataset.sidecarPreviewState = settled >= total ? "ready" : "loading";
+    if (previewStatusLabel) previewStatusLabel.textContent = settled >= total ? "Previews ready" : "Loading previews";
+    if (previewStatusProgress) {
+      previewStatusProgress.max = total;
+      previewStatusProgress.value = settled;
+    }
+    if (previewStatusCount) {
+      previewStatusCount.textContent = missing
+        ? `${ready.toLocaleString()} ready · ${missing.toLocaleString()} unavailable`
+        : `${ready.toLocaleString()} / ${total.toLocaleString()}`;
+    }
+  };
+
+  const setPreviewState = (img, nextState, root) => {
+    img.dataset.sidecarPreviewState = nextState;
+    const container = img.closest(".sidecar-thumb, .sidecar-editing-preview, .sidecar-quick-look-media, .sidecar-upload-plan-tile");
+    if (container) container.dataset.sidecarPreviewState = nextState;
+    renderPreviewStatus(root);
+  };
+
   const wirePreviewFallbacks = (root) => {
     if (!root) return;
     previewObservers.get(root)?.disconnect();
     const images = Array.from(root.querySelectorAll("img[data-sidecar-preview]"));
     const startPreview = (img) => {
       const source = img.dataset.sidecarPreviewSrc || "";
-      if (source && !img.getAttribute("src")) img.setAttribute("src", source);
+      if (source && !img.getAttribute("src")) {
+        setPreviewState(img, "loading", root);
+        img.setAttribute("src", source);
+      }
     };
     images.forEach((img) => {
+      setPreviewState(img, img.complete && img.naturalWidth > 0 ? "ready" : "queued", root);
+      img.addEventListener("load", () => setPreviewState(img, "ready", root));
       const markMissing = async () => {
         const source = img.currentSrc || img.src || img.dataset.sidecarPreviewSrc || "";
         const container = img.closest(".sidecar-thumb, .sidecar-editing-preview, .sidecar-quick-look-media, .sidecar-upload-plan-tile");
@@ -772,6 +819,7 @@
           fallback.title = message.full || message.compact;
         }
         container?.classList.add("is-missing");
+        setPreviewState(img, "missing", root);
         img.removeAttribute("src");
       };
       img.addEventListener("error", markMissing, { once: true });
@@ -792,6 +840,7 @@
     }, { rootMargin: "700px 0px" });
     deferred.forEach((img) => observer.observe(img));
     previewObservers.set(root, observer);
+    renderPreviewStatus(root);
   };
 
   const sidecarBadges = (item) => {
@@ -1371,6 +1420,7 @@
     surface.classList.toggle("is-culling-window", !isReviewPage());
     if (!state.items.length) {
       surface.innerHTML = `<p class="empty-basket">${escapeHtml(config.empty)}</p>`;
+      if (previewStatusRoot) previewStatusRoot.hidden = true;
       renderCounts();
       return;
     }
@@ -1378,6 +1428,7 @@
     const indexes = visibleIndexes();
     if (!indexes.length) {
       surface.innerHTML = `<p class="empty-basket">${escapeHtml(config.filteredEmpty)}</p>`;
+      if (previewStatusRoot) previewStatusRoot.hidden = true;
       renderCounts();
       return;
     }
@@ -1385,6 +1436,34 @@
     else renderCullingGrid(indexes);
     wirePreviewFallbacks(surface);
     renderCounts();
+  };
+
+  const renderWindowLoading = () => {
+    if (!surface || state.items.length) return;
+    surface.classList.remove("is-editing-list", "is-culling-window");
+    surface.innerHTML = `
+      <div class="sidecar-window-loading" role="status" aria-live="polite">
+        <span class="sidecar-loading-spinner" aria-hidden="true"></span>
+        <span><strong>Loading Sidecar window</strong><small>Reading the local Photos index and Owner decisions</small></span>
+      </div>
+      <div class="sidecar-loading-tiles" aria-hidden="true">
+        ${Array.from({ length: 12 }, () => '<span class="sidecar-loading-tile"></span>').join("")}
+      </div>
+    `;
+    surface.setAttribute("aria-busy", "true");
+    if (previewStatusRoot) previewStatusRoot.hidden = true;
+  };
+
+  const renderWindowFailure = (message = "Sidecar could not load this window.") => {
+    if (!surface) return;
+    surface.removeAttribute("aria-busy");
+    surface.innerHTML = `
+      <div class="sidecar-window-failure" role="alert">
+        <strong>Sidecar window unavailable</strong>
+        <span>${escapeHtml(message)}</span>
+      </div>
+    `;
+    if (previewStatusRoot) previewStatusRoot.hidden = true;
   };
 
   const cardForIndex = (index) => surface?.querySelector(`.sidecar-card[data-sidecar-index="${index}"], .sidecar-editing-row[data-sidecar-index="${index}"]`);
@@ -2073,6 +2152,8 @@
     const offset = getOffset();
     const selectionBeforeLoad = selectionSnapshot();
     setStatus("Loading matching items from local Photos index...");
+    renderWindowLoading();
+    await waitForStatusPaint();
     let payload = await fetchLibrarySlice(offset, limit);
     let effectiveOffset = offset;
     let filteredCount = Number(payload.filteredIndexedCount || payload.indexedCount || 0);
@@ -2085,6 +2166,22 @@
     let windowItems = uniqueItemsById(payload.items);
     let nextSourceOffset = Number(payload.nextOffset || (effectiveOffset + windowItems.length));
     state.items = windowItems;
+    state.summary = payload.sidecarSummary || state.summary;
+    state.hasWindow = true;
+    state.filteredIndexedCount = filteredCount;
+    if ((selectionBeforeLoad.selectedAssetIds || []).length || selectionBeforeLoad.selectedIndex >= 0) {
+      restoreSelectionSnapshot(selectionBeforeLoad);
+    } else {
+      setInitialSelection();
+    }
+    renderPageChrome();
+    renderSurface();
+    surface?.removeAttribute("aria-busy");
+    const firstVisibleCount = visibleIndexes().length;
+    if (firstVisibleCount < limit && nextSourceOffset < filteredCount) {
+      setStatus(`Loaded ${firstVisibleCount.toLocaleString()} matching item${firstVisibleCount === 1 ? "" : "s"}; scanning the local index for more...`);
+      await waitForStatusPaint();
+    }
     let refillFetches = 1;
     while (
       visibleIndexes().length < limit
@@ -2108,6 +2205,7 @@
       filteredCount = Number(refillPayload.filteredIndexedCount || refillPayload.indexedCount || filteredCount);
       nextSourceOffset = Number(refillPayload.nextOffset || (nextSourceOffset + refillItems.length));
       refillFetches += 1;
+      setStatus(`Loaded ${visibleIndexes().length.toLocaleString()} of ${limit.toLocaleString()} matching items; scanning the local index for more...`);
       if (windowItems.length === previousItemCount && nextSourceOffset <= previousSourceOffset) break;
     }
     state.summary = payload.sidecarSummary || state.summary;
@@ -2124,6 +2222,7 @@
     }
     renderPageChrome();
     renderSurface();
+    surface?.removeAttribute("aria-busy");
     saveWindowState();
     let uploadRailPayload = null;
     let uploadRailError = null;
@@ -3207,7 +3306,7 @@
   updateSearchClearState();
   syncPageUrl();
   renderPageChrome();
-  renderSurface();
+  renderWindowLoading();
   loadKeywordBlacklist();
   refreshIndexStatus({ silent: true }).catch(() => {});
   fetch("/__sidecar/version")
@@ -3220,6 +3319,7 @@
     });
   loadAndFillWindow().catch((error) => {
     setStatus(error.message);
+    renderWindowFailure(error.message);
     loadSummary().catch(() => {});
   });
 })();

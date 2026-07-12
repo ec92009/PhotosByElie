@@ -104,8 +104,11 @@ body[data-gallery="new-owner"] main.new-owner-shell {
 }
 
 .new-owner-grid {
+  --new-owner-masonry-row: 8px;
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(20rem, .9fr);
+  grid-auto-flow: dense;
+  grid-auto-rows: var(--new-owner-masonry-row);
   gap: 1rem;
   align-items: start;
 }
@@ -118,10 +121,21 @@ body[data-gallery="new-owner"] main.new-owner-shell {
   border-radius: 8px;
   padding: 1rem;
   background: color-mix(in srgb, var(--surface) 95%, var(--new-owner-teal) 5%);
+  grid-row-end: span var(--new-owner-masonry-span, 1);
 }
 
 .new-owner-card-wide {
-  grid-row: span 2;
+  grid-row-end: span var(--new-owner-masonry-span, 1);
+}
+
+.new-owner-card[aria-label="Cloud access snapshot"],
+.new-owner-card[aria-label="Mac connectors"] {
+  grid-column: 1;
+}
+
+.new-owner-card[aria-label="Owner action queue"],
+.new-owner-card[aria-label="Migration lanes"] {
+  grid-column: 2;
 }
 
 .new-owner-card-details {
@@ -458,6 +472,17 @@ body[data-gallery="new-owner"] main.new-owner-shell {
   .new-owner-lane-row,
   .new-owner-review-row {
     grid-template-columns: 1fr;
+  }
+
+  .new-owner-grid {
+    display: grid;
+    grid-auto-rows: auto;
+  }
+
+  .new-owner-card,
+  .new-owner-card-wide {
+    grid-column: auto;
+    grid-row-end: auto;
   }
 
   .new-owner-counts {

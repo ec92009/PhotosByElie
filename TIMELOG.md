@@ -585,8 +585,9 @@ Clock state: running
 | 2026-07-11 | 18:38 CEST | 19:24 CEST | 0:02 | Reported picked cards remaining under the undecided filter and authorized a reusable repository graph; implementation, graph extraction, browser QA, tests, and deployment runtime excluded. |
 | 2026-07-11 | 21:10 CEST | 21:15 CEST | 0:01 | Requested handoff back to David; recorded the pushed Sidecar state in the central ticket and delivered the continuation brief over the direct mesh; transport/runtime excluded. |
 | 2026-07-11 | 21:26 CEST | 21:44 CEST | 0:02 | Verified David's public Owner-to-local-Sidecar launch, preview loading, undecided-only pick disappearance/refill, Culling/Review shortcut, and Apple-cloud-ID decision storage; command/browser/test runtime excluded. |
+| 2026-07-12 | 21:01 CEST | 21:02 CEST | 0:01 | Requested a masonry-style New Owner layout for collapsed control cards; implementation/browser QA excluded. |
 
 ## Totals
 
-Active collaboration time used: 30:14
+Active collaboration time used: 30:15
 Remaining budget: not set

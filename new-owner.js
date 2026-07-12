@@ -421,6 +421,35 @@
     renderAction();
     syncOpenSidecarControl();
     prepareCollapsibleSections();
+    queueMasonryLayout();
+  };
+
+  const layoutMasonryCards = () => {
+    const grid = document.querySelector(".new-owner-grid");
+    if (!grid) return;
+    const cards = [...grid.querySelectorAll(".new-owner-card")];
+    const style = getComputedStyle(grid);
+    if (window.matchMedia("(max-width: 900px)").matches || style.gridAutoRows === "auto") {
+      cards.forEach((card) => card.style.removeProperty("--new-owner-masonry-span"));
+      return;
+    }
+    const rowHeight = Number.parseFloat(style.getPropertyValue("--new-owner-masonry-row")) || Number.parseFloat(style.gridAutoRows) || 8;
+    const rowGap = Number.parseFloat(style.rowGap) || 0;
+    cards.forEach((card) => {
+      card.style.removeProperty("--new-owner-masonry-span");
+      const height = card.getBoundingClientRect().height;
+      const span = Math.max(1, Math.ceil((height + rowGap) / (rowHeight + rowGap)));
+      card.style.setProperty("--new-owner-masonry-span", String(span));
+    });
+  };
+
+  let masonryFrame = 0;
+  const queueMasonryLayout = () => {
+    if (masonryFrame) cancelAnimationFrame(masonryFrame);
+    masonryFrame = requestAnimationFrame(() => {
+      masonryFrame = 0;
+      layoutMasonryCards();
+    });
   };
 
   const prepareCollapsibleSections = () => {
@@ -435,6 +464,7 @@
 
       details.className = "new-owner-card-details";
       details.open = !window.matchMedia("(max-width: 900px)").matches || isPrimaryAction;
+      details.addEventListener("toggle", queueMasonryLayout);
       summary.className = "new-owner-card-summary";
       content.className = "new-owner-card-content";
       summary.append(titlebar);
@@ -712,6 +742,7 @@
     const actionId = button.getAttribute("data-action-id");
     transitionAction(actionId, command);
   });
+  window.addEventListener("resize", queueMasonryLayout);
   absorbAuthTokenFromHash();
   forgetLegacyConnectorPreference();
   renderLanes();

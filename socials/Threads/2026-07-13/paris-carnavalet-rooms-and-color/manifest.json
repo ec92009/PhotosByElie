@@ -1,0 +1,87 @@
+{
+  "platform": "Threads",
+  "title": "Paris Carnavalet Rooms and Color",
+  "campaign_id": "instagram-paris-carnavalet-rooms-color-2026-07-13",
+  "caption": "Paris Carnavalet in four quiet rooms of color and museum light. Browse the Photos By Elie edit: https://photos-by-elie.com/campaign.html?c=instagram-paris-carnavalet-rooms-color-2026-07-13",
+  "notes": [
+    "Threads package is a four-image subset derived from the Instagram package.",
+    "Remove any automatic link preview before posting if it shows default/off-theme campaign metadata.",
+    "Images are public watermarked R2 previews staged for upload/API publishing."
+  ],
+  "items": [
+    {
+      "media_id": "20221219-155607-00136-8c488a1ba6",
+      "order": 1,
+      "id": "20221219-155607-00136-8c488a1ba6",
+      "title": "Paris, Musee Carnavalet",
+      "collection": "france",
+      "location": "France",
+      "width": 1800,
+      "height": 1200,
+      "source_url": "https://download.photos-by-elie.com/media/expo/20221219-155607-00136-8c488a1ba6_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/20221219-155607-00136-8c488a1ba6_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=20221219-155607-00136-8c488a1ba6",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=20221219-155607-00136-8c488a1ba6",
+      "image": "images/01-20221219-155607-00136-8c488a1ba6-paris-carnavalet-rooms-and-color.jpg",
+      "local_staged_path": "socials/Threads/2026-07-13/paris-carnavalet-rooms-and-color/images/01-20221219-155607-00136-8c488a1ba6-paris-carnavalet-rooms-and-color.jpg"
+    },
+    {
+      "media_id": "20221219-152540-00086-db2db72da2",
+      "order": 2,
+      "id": "20221219-152540-00086-db2db72da2",
+      "title": "Paris, Musee Carnavalet",
+      "collection": "france",
+      "location": "France",
+      "width": 1800,
+      "height": 1200,
+      "source_url": "https://download.photos-by-elie.com/media/expo/20221219-152540-00086-db2db72da2_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/20221219-152540-00086-db2db72da2_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=20221219-152540-00086-db2db72da2",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=20221219-152540-00086-db2db72da2",
+      "image": "images/02-20221219-152540-00086-db2db72da2-paris-carnavalet-rooms-and-color.jpg",
+      "local_staged_path": "socials/Threads/2026-07-13/paris-carnavalet-rooms-and-color/images/02-20221219-152540-00086-db2db72da2-paris-carnavalet-rooms-and-color.jpg"
+    },
+    {
+      "media_id": "20221219-155553-00134-9dd02882be",
+      "order": 3,
+      "id": "20221219-155553-00134-9dd02882be",
+      "title": "Paris, Musee Carnavalet",
+      "collection": "france",
+      "location": "France",
+      "width": 1800,
+      "height": 1200,
+      "source_url": "https://download.photos-by-elie.com/media/expo/20221219-155553-00134-9dd02882be_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/20221219-155553-00134-9dd02882be_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=20221219-155553-00134-9dd02882be",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=20221219-155553-00134-9dd02882be",
+      "image": "images/03-20221219-155553-00134-9dd02882be-paris-carnavalet-rooms-and-color.jpg",
+      "local_staged_path": "socials/Threads/2026-07-13/paris-carnavalet-rooms-and-color/images/03-20221219-155553-00134-9dd02882be-paris-carnavalet-rooms-and-color.jpg"
+    },
+    {
+      "media_id": "20221219-165333-03460-a83d1b36e7",
+      "order": 4,
+      "id": "20221219-165333-03460-a83d1b36e7",
+      "title": "Paris, Musee Carnavalet",
+      "collection": "france",
+      "location": "France",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/20221219-165333-03460-a83d1b36e7_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/20221219-165333-03460-a83d1b36e7_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=20221219-165333-03460-a83d1b36e7",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=20221219-165333-03460-a83d1b36e7",
+      "image": "images/04-20221219-165333-03460-a83d1b36e7-paris-carnavalet-rooms-and-color.jpg",
+      "local_staged_path": "socials/Threads/2026-07-13/paris-carnavalet-rooms-and-color/images/04-20221219-165333-03460-a83d1b36e7-paris-carnavalet-rooms-and-color.jpg"
+    }
+  ],
+  "date": "2026-07-13",
+  "status": "prepared",
+  "account": "ec92009",
+  "post_type": "carousel",
+  "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-paris-carnavalet-rooms-color-2026-07-13",
+  "recommended_upload_set": "images",
+  "available_count": 4,
+  "manual_blockers": [
+    "Publish pending: review socials/Threads/2026-07-13/paris-carnavalet-rooms-and-color/manifest.json and use the Threads browser/API workflow."
+  ]
+}

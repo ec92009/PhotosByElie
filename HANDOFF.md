@@ -15,7 +15,7 @@ for remote execution.
 - Public site: `https://photos-by-elie.com/`
 - Local preview: `http://localhost:8000/`
 - Owner intake URL: `https://photos-by-elie.com/owner.html`
-- Current visible build: `v135.1`
+- Current visible build: `v135.2`
 - Sidecar local build: `v126.6`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
@@ -51,7 +51,7 @@ for remote execution.
 - Current public commercial catalog: `2,713` media rows after retiring the `5,100`-row AI collection from storefront publication.
 - Current gallery counts: France `379`, Italy `70`, Mexico `31`, Portugal `214`, Slovakia `2`, Spain `1,872`, USA `145`.
 - AI/Leonardo source files and Owner records remain intact, while public generation, discovery, stale baskets, and Worker checkout exclude the `ai` collection and AI-origin rows.
-- Camera downloads now use the approved `$8 / $16 / $28 / $65` ladder for JPG 1 MP, JPG 3 MP, JPG 6 MP, and full resolution. The matching checkout catalog is deployed in Worker version `a82d01a3-f7f9-4dff-8bcf-a596a3532545`.
+- Camera downloads use the approved `$8 / $16 / $28 / $65` ladder for JPG 1 MP, JPG 3 MP, JPG 6 MP, and full resolution. Video duration tiers use `$12 / $20 / $28 / $35 / $50`. The matching checkout catalog is deployed in Worker version `65cc6417-b87e-48df-878d-a33bed7ea80a`.
 - Queue health after cleanup:
   - Upload Bridge uploadable count: `0`.
   - Upload Bridge active blocked approved rows: `0`.

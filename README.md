@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v135.1`
+- Current visible version: `v135.2`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
 
 ## Structure
@@ -82,6 +82,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 
 - Public collections are ordered France, USA, Spain, Mexico, Italy, Portugal, and Slovakia.
 - AI-generated images are retired from the commercial storefront. Public catalog generation excludes the `ai` collection and AI-origin rows, while the underlying source archive and Owner-side records remain intact.
+- Storefront downloads use real launch pricing: camera JPG/full-resolution tiers are `$8 / $16 / $28 / $65`, and video duration tiers are `$12 / $20 / $28 / $35 / $50`.
 - Catalog photos retain first-class `sourceOrigin` values for Owner classification and defensive storefront filtering. Checkout also excludes retired origins instead of trusting browser visibility alone.
 - Unknown photos are no longer presented as a public country-style collection; localhost Owner gets a dedicated classification queue.
 - Unknown classification assigns every loaded unknown photo from the same capture day when one photo is assigned to a country, then removes assigned photos from the visible queue.

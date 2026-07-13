@@ -1829,6 +1829,15 @@ test("published camera products use the approved whole-dollar ladder", () => {
   assert.equal(catalog.options.get("full").price, 65);
 });
 
+test("published video products use the approved duration ladder", () => {
+  const catalog = loadCatalog();
+  assert.equal(catalog.videoPriceTiers.video_short.price, 12);
+  assert.equal(catalog.videoPriceTiers.video_medium.price, 20);
+  assert.equal(catalog.videoPriceTiers.video_long.price, 28);
+  assert.equal(catalog.videoPriceTiers.video_extended.price, 35);
+  assert.equal(catalog.videoPriceTiers.video_premium.price, 50);
+});
+
 test("video checkout uses the shared flat video price tier", async () => {
   const catalog = createCatalogIndex({
     collections: {

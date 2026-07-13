@@ -214070,31 +214070,31 @@ export const frameOptions = [
 export const videoPriceTiers = {
   "video_short": {
     "label": "Video under 10s",
-    "price": 0.27,
+    "price": 12,
     "minDurationSeconds": 0,
     "maxDurationSeconds": 10
   },
   "video_medium": {
     "label": "Video 10-30s",
-    "price": 0.52,
+    "price": 20,
     "minDurationSeconds": 10,
     "maxDurationSeconds": 30
   },
   "video_long": {
     "label": "Video 30-60s",
-    "price": 0.77,
+    "price": 28,
     "minDurationSeconds": 30,
     "maxDurationSeconds": 60
   },
   "video_extended": {
     "label": "Video 1-3 min",
-    "price": 1.02,
+    "price": 35,
     "minDurationSeconds": 60,
     "maxDurationSeconds": 180
   },
   "video_premium": {
     "label": "Video 3+ min",
-    "price": 1.27,
+    "price": 50,
     "minDurationSeconds": 180,
     "maxDurationSeconds": null
   }

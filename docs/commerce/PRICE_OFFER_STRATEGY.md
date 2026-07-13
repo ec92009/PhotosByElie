@@ -40,7 +40,9 @@ Video:
 
 | Product | Price | Notes |
 | --- | ---: | --- |
-| Original video under 60s | $20 | Current simple default is acceptable for launch proof. |
+| Original video under 10s | $12 | Short social or motion-detail clip. |
+| Original video 10-30s | $20 | Standard short download tier. |
+| Original video 30-60s | $28 | Premium short download tier. |
 | Original video 1-3 min | $35 | Raise once video checkout gets real buyer interest. |
 | Original video 3+ min | $50 | Treat long clips as a premium/manual-support item. |
 

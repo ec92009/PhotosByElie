@@ -16,9 +16,9 @@ import { createR2ZipDelivery } from "./r2-zip-delivery.mjs";
 import { createResendEmailClient } from "./resend-email-client.mjs";
 import { createD1SidecarStateStore } from "./sidecar-state-store.mjs";
 import { createStripeClient } from "./stripe-client.mjs";
-import { collections, frameOptions, resolutions, videoPriceTiers } from "./photos-catalog.generated.mjs";
+import { collections, frameOptions, resolutions, storefrontPolicy, videoPriceTiers } from "./photos-catalog.generated.mjs";
 
-const catalog = createCatalogIndex({ collections, resolutions, frameOptions, videoPriceTiers });
+const catalog = createCatalogIndex({ collections, resolutions, frameOptions, videoPriceTiers, storefrontPolicy });
 
 const requiredBinding = (env, key) => {
   if (!env?.[key]) throw new Error(`Missing Worker binding: ${key}`);

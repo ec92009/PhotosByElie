@@ -30,7 +30,9 @@ LABELS = {
 }
 
 ORDER = ["france", "usa", "spain", "mexico", "ai", "italy", "portugal", "slovakia", "unknown"]
-PUBLIC_ORDER = [slug for slug in ORDER if slug != "unknown"]
+RETIRED_STOREFRONT_COLLECTIONS = {"ai"}
+RETIRED_STOREFRONT_ORIGINS = {"ai"}
+PUBLIC_ORDER = [slug for slug in ORDER if slug != "unknown" and slug not in RETIRED_STOREFRONT_COLLECTIONS]
 OWNER_ORDER = ["unknown"]
 COUNTRY_ASSIGNMENT_TARGETS = {"france", "usa", "spain", "mexico", "italy", "portugal", "slovakia"}
 AI_SOURCE_MODE_HINTS = {"ai", "leonardo"}
@@ -1010,6 +1012,12 @@ def write_photos_data(
         pinned_regular_ids=pinned_regular_ids,
         reserve_only_ids=reserve_only_ids,
     )
+    for slug in PUBLIC_ORDER:
+        regular_groups[slug] = [
+            item
+            for item in regular_groups.get(slug, [])
+            if source_origin_from_row(item[0], slug) not in RETIRED_STOREFRONT_ORIGINS
+        ]
     regular_rows = [item for slug in PUBLIC_ORDER for item in regular_groups.get(slug, [])]
     existing_catalog_count = existing_public_catalog_media_count(repo_root)
     existing_home_count = existing_home_data_photo_count(repo_root)
@@ -1101,6 +1109,7 @@ def write_photos_data(
         '};',
         'window.photosByElieApplyCollectionOrigins(window.photosByElieData);',
         'window.photosByElieApplyCollectionOrigins(window.photosByElieOwnerData);',
+        'window.photosByElieApplyStorefrontPolicy?.(window.photosByElieData);',
         'window.photosByElieResolutions = window.photosByElieResolutions || [];',
         'window.photosByEliePriceTiers = window.photosByEliePriceTiers || {};',
         'window.photosByElieFrameOptions = window.photosByElieFrameOptions || [];',
@@ -1144,6 +1153,7 @@ def write_photos_data(
         '};',
         "",
         'window.photosByElieAvailableResolutions = (photo, options = window.photosByElieResolutions || []) => {',
+        '  if (!window.photosByElieStorefrontAllowsPhoto?.(photo)) return [];',
         '  if (window.photosByElieIsVideo?.(photo)) return [window.photosByElieVideoDownloadOption(photo)];',
         '  const megapixels = window.photosByElieVerifiedMegapixels(photo);',
         '  if (!megapixels) return [];',

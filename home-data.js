@@ -4,7 +4,7 @@ window.photosByElieHomeData = {
     "title": "France",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "france-gallery",
-    "count": 264,
+    "count": 379,
     "href": "./gallery.html?gallery=france",
     "photos": [
       {
@@ -144,7 +144,7 @@ window.photosByElieHomeData = {
     "title": "Spain",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "spain-gallery",
-    "count": 996,
+    "count": 1872,
     "href": "./gallery.html?gallery=spain",
     "photos": [
       {
@@ -279,82 +279,12 @@ window.photosByElieHomeData = {
       }
     ]
   },
-  "ai": {
-    "number": "05",
-    "title": "AI",
-    "description": "Leonardo archive selections prepared from the Saturn Lightroom AI source.",
-    "accent": "ai-gallery",
-    "count": 3417,
-    "href": "./gallery.html?gallery=ai",
-    "photos": [
-      {
-        "id": "digital-communication-social-media-video-conferencing-mes-7-upscale-52961f6e-183f-4e35-bd3d-7f356568aca0-jpgx2-cb8ee150c6",
-        "title": "Digital communication- Social Media, Video Conferencing, Messagi",
-        "gallerySrc": "",
-        "imageSrc": "",
-        "media": {
-          "type": "photo",
-          "sourcePolicy": "developed-master",
-          "publicPreview": {
-            "allowed": true,
-            "galleryKey": "expo/digital-communication-social-media-video-conferencing-mes-7-upscale-52961f6e-183f-4e35-bd3d-7f356568aca0-jpgx2-cb8ee150c6_900.jpg",
-            "detailKey": "expo/digital-communication-social-media-video-conferencing-mes-7-upscale-52961f6e-183f-4e35-bd3d-7f356568aca0-jpgx2-cb8ee150c6_1800.jpg"
-          }
-        }
-      },
-      {
-        "id": "wavy-golden-and-purple-metallic-3d-background-low-saturatio-7-upscale-07a98eea-677e-4cfc-960b-d70dfefc1021-jpgx2-d6a9bc3fbc",
-        "title": "Wavy Golden and Purple Metallic 3D Background, low saturation, abstract, background, wavy, gold, texture, futuristic, de",
-        "gallerySrc": "",
-        "imageSrc": "",
-        "media": {
-          "type": "photo",
-          "sourcePolicy": "developed-master",
-          "publicPreview": {
-            "allowed": true,
-            "galleryKey": "expo/wavy-golden-and-purple-metallic-3d-background-low-saturatio-7-upscale-07a98eea-677e-4cfc-960b-d70dfefc1021-jpgx2-d6a9bc3fbc_900.jpg",
-            "detailKey": "expo/wavy-golden-and-purple-metallic-3d-background-low-saturatio-7-upscale-07a98eea-677e-4cfc-960b-d70dfefc1021-jpgx2-d6a9bc3fbc_1800.jpg"
-          }
-        }
-      },
-      {
-        "id": "wall-paper-motif-pastel-colors-symmetrical-fruits-autumn-0-upscale-79101fac-88b4-4d42-8c80-c94141cff2f8-jpgx2-f38b626d5e",
-        "title": "Wall paper motif, pastel colors, symmetrical, fruits, autumn col",
-        "gallerySrc": "",
-        "imageSrc": "",
-        "media": {
-          "type": "photo",
-          "sourcePolicy": "developed-master",
-          "publicPreview": {
-            "allowed": true,
-            "galleryKey": "expo/wall-paper-motif-pastel-colors-symmetrical-fruits-autumn-0-upscale-79101fac-88b4-4d42-8c80-c94141cff2f8-jpgx2-f38b626d5e_900.jpg",
-            "detailKey": "expo/wall-paper-motif-pastel-colors-symmetrical-fruits-autumn-0-upscale-79101fac-88b4-4d42-8c80-c94141cff2f8-jpgx2-f38b626d5e_1800.jpg"
-          }
-        }
-      },
-      {
-        "id": "eiffel-tower-prominent-in-the-foreground-abstract-backgrou-1-upscale-7cc466a9-17d2-4f4c-a862-ce5ee26604c7-jpgx2-1ee909b083",
-        "title": "Eiffel Tower, prominent in the foreground, Abstract background i",
-        "gallerySrc": "",
-        "imageSrc": "",
-        "media": {
-          "type": "photo",
-          "sourcePolicy": "developed-master",
-          "publicPreview": {
-            "allowed": true,
-            "galleryKey": "expo/eiffel-tower-prominent-in-the-foreground-abstract-backgrou-1-upscale-7cc466a9-17d2-4f4c-a862-ce5ee26604c7-jpgx2-1ee909b083_900.jpg",
-            "detailKey": "expo/eiffel-tower-prominent-in-the-foreground-abstract-backgrou-1-upscale-7cc466a9-17d2-4f4c-a862-ce5ee26604c7-jpgx2-1ee909b083_1800.jpg"
-          }
-        }
-      }
-    ]
-  },
   "italy": {
     "number": "06",
     "title": "Italy",
     "description": "Saturn and Apple Photos archive selections prepared from Italian sources.",
     "accent": "italy-gallery",
-    "count": 25,
+    "count": 70,
     "href": "./gallery.html?gallery=italy",
     "photos": [
       {
@@ -533,3 +463,4 @@ window.photosByElieHomeData = {
     ]
   }
 };
+window.photosByElieApplyStorefrontPolicy?.(window.photosByElieHomeData);

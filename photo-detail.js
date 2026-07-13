@@ -18,7 +18,8 @@ const formatMoney = (value) => {
   }).format(amount);
 };
 const params = new URLSearchParams(window.location.search);
-const photoId = params.get("id") || "france-1";
+const requestedPhotoId = params.get("id") || "";
+const photoId = requestedPhotoId || "france-1";
 const ownerReviewDetailPhotoStateKey = "photosbyelie-owner-review-detail-photo";
 const ownerReviewDetailPhotoMaxAgeMs = 1000 * 60 * 60 * 2;
 const readOwnerReviewDetailPhotoPayload = () => {
@@ -77,6 +78,11 @@ const ownerReviewSyntheticCollectionEntry = (
   },
 ] : null;
 const collectionEntry = regularCollectionEntry || reserveCollectionEntry || ownerCollectionEntry || hiddenCollectionEntry || ownerReviewSyntheticCollectionEntry;
+if (requestedPhotoId && !collectionEntry) {
+  const replacement = window.photosByElieVersionedHref?.("./gallery.html?gallery=selection") || "./gallery.html?gallery=selection";
+  window.location.replace(replacement);
+  return;
+}
 const isReserveCollection = Boolean(!regularCollectionEntry && reserveCollectionEntry);
 const isOwnerCollection = Boolean(!regularCollectionEntry && !reserveCollectionEntry && ownerCollectionEntry);
 const isHiddenCollection = Boolean(!regularCollectionEntry && !reserveCollectionEntry && !ownerCollectionEntry && hiddenCollectionEntry);

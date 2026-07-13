@@ -3,7 +3,6 @@ const baseHomeCollections = [
   "usa",
   "spain",
   "mexico",
-  "ai",
   "italy",
   "portugal",
   "slovakia",

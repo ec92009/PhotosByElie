@@ -26,6 +26,7 @@ const loadCatalog = () => {
     resolutions: catalogWindow.photosByElieResolutions,
     frameOptions: catalogWindow.photosByElieFrameOptions,
     videoPriceTiers: catalogWindow.photosByElieVideoPriceTiers,
+    storefrontPolicy: catalogWindow.photosByElieStorefrontPolicy,
   });
 };
 
@@ -1731,18 +1732,18 @@ test("guest checkout rejects stale browser subtotal before Stripe session creati
   const response = await worker.fetch(jsonRequest("https://worker.test/checkout/guest", {
     email: "buyer@example.com",
     items: [{ photoId, options: [{ id: "jpg-1mp" }] }],
-    expectedSubtotalAmount: 800,
+    expectedSubtotalAmount: 100,
   }));
   assert.equal(response.status, 409);
 
   const body = await response.json();
   assert.equal(body.error.code, "checkout_total_mismatch");
-  assert.equal(body.error.details.browserSubtotalAmount, 800);
+  assert.equal(body.error.details.browserSubtotalAmount, 100);
   assert.equal(body.error.details.workerSubtotalAmount, catalogOptionCents(catalog, photoId, "jpg-1mp"));
   assert.equal(stripe._debug.sessions.size, 0);
 });
 
-test("AI collection digital products use the AI price tier", async () => {
+test("AI collection items are retired from the checkout catalog", async () => {
   const catalog = createCatalogIndex({
     collections: {
       ai: {
@@ -1750,7 +1751,7 @@ test("AI collection digital products use the AI price tier", async () => {
         photos: [{
           id: "ai-gallery-test-image",
           title: "AI gallery test image",
-          sourceOrigin: "ai",
+          sourceOrigin: "camera",
           megapixels: 12,
           sourceFiles: [{ path: "ai-gallery-test.jpg", type: "JPG" }],
           metadata: [{ label: "Original size", value: "JPEG / 4000 x 3000 / 12 MP" }],
@@ -1758,8 +1759,8 @@ test("AI collection digital products use the AI price tier", async () => {
       },
     },
     resolutions: [
-      { id: "full", type: "digital", label: "Full resolution", price: 65, prices: { original: 65, ai: 25 } },
-      { id: "jpg-1mp", type: "digital", label: "JPG 1 MP", price: 0.1, prices: { original: 0.1, ai: 0.1 }, minMegapixels: 1 },
+      { id: "full", type: "digital", label: "Full resolution", price: 65, prices: { original: 65 } },
+      { id: "jpg-1mp", type: "digital", label: "JPG 1 MP", price: 8, prices: { original: 8 }, minMegapixels: 1 },
     ],
   });
   const randomUUID = deterministicIds();
@@ -1776,16 +1777,12 @@ test("AI collection digital products use the AI price tier", async () => {
     email: "buyer@example.com",
     items: [{ photoId: "ai-gallery-test-image", options: [{ id: "full" }, { id: "jpg-1mp" }] }],
   }));
-  assert.equal(response.status, 201);
-
-  const body = await response.json();
-  assert.equal(body.order.items[0].collection, "AI");
-  assert.equal(body.order.amountExpected, 2510);
-  assert.equal(body.order.items[0].products.find((item) => item.id === "full").amount, 2500);
-  assert.equal(body.order.items[0].products.find((item) => item.id === "jpg-1mp").amount, 10);
+  assert.equal(catalog.photos.has("ai-gallery-test-image"), false);
+  assert.equal(response.status, 400);
+  assert.equal((await response.json()).error.code, "unknown_photo");
 });
 
-test("sourceOrigin controls digital pricing independently of collection", async () => {
+test("AI sourceOrigin is retired even outside the former AI collection", async () => {
   const catalog = createCatalogIndex({
     collections: {
       france: {
@@ -1801,8 +1798,8 @@ test("sourceOrigin controls digital pricing independently of collection", async 
       },
     },
     resolutions: [
-      { id: "full", type: "digital", label: "Full resolution", price: 65, prices: { original: 65, ai: 25 } },
-      { id: "jpg-1mp", type: "digital", label: "JPG 1 MP", price: 0.1, prices: { original: 0.1, ai: 0.1 }, minMegapixels: 1 },
+      { id: "full", type: "digital", label: "Full resolution", price: 65, prices: { original: 65 } },
+      { id: "jpg-1mp", type: "digital", label: "JPG 1 MP", price: 8, prices: { original: 8 }, minMegapixels: 1 },
     ],
   });
   const randomUUID = deterministicIds();
@@ -1819,11 +1816,17 @@ test("sourceOrigin controls digital pricing independently of collection", async 
     email: "buyer@example.com",
     items: [{ photoId: "ai-origin-in-camera-gallery", options: [{ id: "full" }, { id: "jpg-1mp" }] }],
   }));
-  assert.equal(response.status, 201);
+  assert.equal(catalog.photos.has("ai-origin-in-camera-gallery"), false);
+  assert.equal(response.status, 400);
+  assert.equal((await response.json()).error.code, "unknown_photo");
+});
 
-  const body = await response.json();
-  assert.equal(body.order.items[0].collection, "France");
-  assert.equal(body.order.amountExpected, 2510);
+test("published camera products use the approved whole-dollar ladder", () => {
+  const catalog = loadCatalog();
+  assert.equal(catalog.options.get("jpg-1mp").price, 8);
+  assert.equal(catalog.options.get("jpg-3mp").price, 16);
+  assert.equal(catalog.options.get("jpg-6mp").price, 28);
+  assert.equal(catalog.options.get("full").price, 65);
 });
 
 test("video checkout uses the shared flat video price tier", async () => {

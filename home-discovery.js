@@ -113,27 +113,32 @@
       : publicPhotos;
   };
   const flattenCatalog = (collections = {}) => Object.entries(collections)
+    .filter(([collectionKey]) => !window.photosByElieCollectionIsRetired?.(collectionKey))
     .flatMap(([collectionKey, collection]) => {
       const collectionTitle = collectionTitleForKey(collectionKey, collection);
-      return visiblePhotosFor(collection?.photos || []).map((photo, index) => ({
+      return visiblePhotosFor(collection?.photos || [])
+        .filter((photo) => window.photosByElieStorefrontAllowsPhoto?.(photo, collectionKey) !== false)
+        .map((photo, index) => ({
         collection,
         collectionKey,
         collectionTitle,
         originalIndex: index,
         photo,
-      }));
+        }));
     });
   const populateCollectionOptions = (collections = {}) => {
     if (!collectionSelect) return;
     const selected = collectionSelect.value || "all";
     collectionSelect.innerHTML = `<option value="all" data-i18n="gallery.all">${escapeHtml(t("gallery.all"))}</option>`;
-    Object.entries(collections).forEach(([key, collection]) => {
+    Object.entries(collections)
+      .filter(([key]) => !window.photosByElieCollectionIsRetired?.(key))
+      .forEach(([key, collection]) => {
       const option = document.createElement("option");
       option.value = key;
       option.dataset.i18n = `collection.${key}`;
       option.textContent = collectionTitleForKey(key, collection);
       collectionSelect.append(option);
-    });
+      });
     collectionSelect.value = [...collectionSelect.options].some((option) => option.value === selected) ? selected : "all";
   };
   const writeDetailSequenceContext = (items) => {

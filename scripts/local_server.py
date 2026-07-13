@@ -1831,7 +1831,7 @@ def _publish_owner_prices(repo_root: Path, payload: dict, task_id: str | None = 
     })
     _finish_price_publish_step(task_id, write_index, "done", 0, elapsed_ms, str(pricing_path))
 
-    _run_publish_command(repo_root, ["node", "scripts/write_catalog_tsv.cjs"], steps, "Rebuild public SQLite catalog", task_id)
+    _run_publish_command(repo_root, ["node", "scripts/write_catalog_tsv.cjs", "--commerce-only"], steps, "Refresh public catalog commerce", task_id)
     _run_publish_command(repo_root, ["node", "scripts/write_worker_catalog.mjs"], steps, "Regenerate Worker catalog", task_id)
     version_index = _append_price_publish_step(task_id, "Bump visible version")
     started = time.perf_counter()

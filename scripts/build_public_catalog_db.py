@@ -8,6 +8,7 @@ import json
 import math
 import os
 import re
+import shutil
 import sqlite3
 import subprocess
 import sys
@@ -20,13 +21,14 @@ from owner_state_db import connect as owner_db_connect, media_lifecycle_snapshot
 DEFAULT_OUTPUT = Path("assets/catalog/photosbyelie.sqlite")
 DEFAULT_PRODUCT_PRICING = Path("assets/catalog/product-pricing.json")
 ALLOW_EMPTY_CATALOG_ENV = "PBE_ALLOW_EMPTY_PUBLIC_CATALOG"
-COLLECTION_ORDER = ["france", "usa", "spain", "mexico", "ai", "italy", "portugal", "slovakia", "unknown"]
+RETIRED_STOREFRONT_COLLECTIONS = {"ai"}
+RETIRED_STOREFRONT_ORIGINS = {"ai"}
+COLLECTION_ORDER = ["france", "usa", "spain", "mexico", "italy", "portugal", "slovakia", "unknown"]
 COLLECTION_DEFAULTS = {
     "france": ("France", "Saturn Lightroom archive selections prepared from the Camera source."),
     "usa": ("USA", "Saturn Lightroom archive selections prepared from the Camera source."),
     "spain": ("Spain", "Saturn Lightroom archive selections prepared from the Camera source."),
     "mexico": ("Mexico", "Saturn Lightroom archive selections prepared from the Camera source."),
-    "ai": ("AI", "Leonardo archive selections prepared from the Saturn Lightroom AI source."),
     "italy": ("Italy", "Saturn and Apple Photos archive selections prepared from Italian sources."),
     "portugal": ("Portugal", "Saturn Lightroom archive selections prepared from the Camera source."),
     "slovakia": ("Slovakia", "Saturn Lightroom archive selections prepared from the Camera source."),
@@ -727,7 +729,11 @@ def create_schema(conn: sqlite3.Connection) -> None:
 
 def ordered_collections(catalog: dict[str, Any]) -> list[tuple[str, dict[str, Any]]]:
     order = {slug: index for index, slug in enumerate(COLLECTION_ORDER)}
-    merged = dict(catalog)
+    merged = {
+        slug: collection
+        for slug, collection in catalog.items()
+        if slug not in RETIRED_STOREFRONT_COLLECTIONS
+    }
     for slug, (title, description) in COLLECTION_DEFAULTS.items():
         if slug == "unknown" and slug not in merged:
             continue
@@ -752,6 +758,10 @@ def write_db(repo_root: Path, output: Path, source: str = "auto", allow_empty: b
         for sort_index, photo in enumerate(collection.get("photos") or []):
             if photo.get("id"):
                 photo_id = str(photo["id"])
+                source_origin = str(photo.get("sourceOrigin") or photo.get("origin") or "").strip().lower()
+                pricing_tier = str(photo.get("pricingTier") or "").strip().lower()
+                if source_origin in RETIRED_STOREFRONT_ORIGINS or pricing_tier in RETIRED_STOREFRONT_ORIGINS:
+                    continue
                 if photo_id in blocked_lifecycle_ids:
                     continue
                 if photo_id not in applied_title_keyword_ids:
@@ -1245,12 +1255,111 @@ def write_db(repo_root: Path, output: Path, source: str = "auto", allow_empty: b
         raise
 
 
+COMMERCE_TABLES_DELETE_ORDER = [
+    "pod_options",
+    "pod_quality_tiers",
+    "pod_suppliers",
+    "pod_settings",
+    "frame_prices",
+    "shipping_handling_prices",
+    "product_prices",
+    "frame_options",
+    "video_price_tiers",
+    "products",
+    "price_tiers",
+]
+
+COMMERCE_TABLES_INSERT_ORDER = [
+    "price_tiers",
+    "products",
+    "product_prices",
+    "frame_options",
+    "frame_prices",
+    "shipping_handling_prices",
+    "video_price_tiers",
+    "pod_settings",
+    "pod_suppliers",
+    "pod_quality_tiers",
+    "pod_options",
+]
+
+
+def refresh_commerce(repo_root: Path, output: Path) -> dict[str, int]:
+    """Refresh commerce tables and storefront exclusions without rebuilding media."""
+    if not output.exists():
+        raise RuntimeError(f"cannot refresh commerce in missing catalog {output}")
+
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(prefix="commerce.", suffix=".sqlite", dir=output.parent, delete=False) as temp:
+        commerce_path = Path(temp.name)
+    with tempfile.NamedTemporaryFile(prefix=output.name, suffix=".tmp", dir=output.parent, delete=False) as temp:
+        temp_path = Path(temp.name)
+
+    try:
+        write_db(repo_root, commerce_path, source="auto", allow_empty=True)
+        shutil.copy2(output, temp_path)
+        conn = sqlite3.connect(temp_path)
+        try:
+            conn.execute("PRAGMA foreign_keys = ON")
+            before_media = int(conn.execute("SELECT COUNT(*) FROM media_items").fetchone()[0])
+            before_assets = int(conn.execute("SELECT COUNT(*) FROM media_assets").fetchone()[0])
+            conn.execute("ATTACH DATABASE ? AS commerce", (str(commerce_path),))
+            conn.execute("BEGIN IMMEDIATE")
+            for table in COMMERCE_TABLES_DELETE_ORDER:
+                conn.execute(f"DELETE FROM {table}")
+            for table in COMMERCE_TABLES_INSERT_ORDER:
+                conn.execute(f"INSERT INTO {table} SELECT * FROM commerce.{table}")
+            conn.execute(
+                """
+                DELETE FROM media_items
+                WHERE collection_id IN (
+                    SELECT collection_id FROM collections WHERE lower(slug) IN ('ai')
+                )
+                OR source_origin_id IN (
+                    SELECT source_origin_id FROM source_origins WHERE lower(code) IN ('ai')
+                )
+                """
+            )
+            conn.execute("DELETE FROM collections WHERE lower(slug) IN ('ai')")
+            foreign_key_errors = conn.execute("PRAGMA foreign_key_check").fetchall()
+            if foreign_key_errors:
+                raise RuntimeError(f"commerce refresh introduced foreign-key errors: {foreign_key_errors[:5]}")
+            conn.commit()
+            conn.execute("DETACH DATABASE commerce")
+            conn.execute("VACUUM")
+            after_media = int(conn.execute("SELECT COUNT(*) FROM media_items").fetchone()[0])
+            after_assets = int(conn.execute("SELECT COUNT(*) FROM media_assets").fetchone()[0])
+            product_count = int(conn.execute("SELECT COUNT(*) FROM products").fetchone()[0])
+            price_count = int(conn.execute("SELECT COUNT(*) FROM product_prices").fetchone()[0])
+        finally:
+            conn.close()
+        temp_path.replace(output)
+        return {
+            "media_items": after_media,
+            "media_items_retired": before_media - after_media,
+            "media_assets": after_assets,
+            "media_assets_retired": before_assets - after_assets,
+            "products": product_count,
+            "product_prices": price_count,
+        }
+    except Exception:
+        temp_path.unlink(missing_ok=True)
+        raise
+    finally:
+        commerce_path.unlink(missing_ok=True)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo-root", type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--source", choices=("auto", "photos-data"), default="auto")
+    parser.add_argument(
+        "--commerce-only",
+        action="store_true",
+        help="preserve existing media rows while refreshing product tables and storefront retirement rules",
+    )
     parser.add_argument(
         "--allow-empty",
         action="store_true",
@@ -1259,7 +1368,12 @@ def main() -> None:
     args = parser.parse_args()
     repo_root = args.repo_root.resolve()
     output = args.output if args.output.is_absolute() else repo_root / args.output
-    counts = write_db(repo_root, output, source=args.source, allow_empty=args.allow_empty)
+    counts = refresh_commerce(repo_root, output) if args.commerce_only else write_db(
+        repo_root,
+        output,
+        source=args.source,
+        allow_empty=args.allow_empty,
+    )
     if not args.quiet:
         print(f"Wrote {output}")
         print(", ".join(f"{table}={count}" for table, count in counts.items()))

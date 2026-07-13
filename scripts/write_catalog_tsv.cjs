@@ -3,7 +3,9 @@ const fs = require("node:fs");
 const childProcess = require("node:child_process");
 const path = require("node:path");
 const {
+  GENERATED_HELPER_MARKER,
   helperTailFromPhotosData,
+  loadCatalogBundleFromSqlite,
 } = require("./catalog_tsv.cjs");
 
 const repoRoot = path.resolve(__dirname, "..");
@@ -66,6 +68,7 @@ const runtimeParser = `(() => {
   const applyProductCatalog = (catalog = {}) => {
     const products = catalog.resolutions || catalog.products || [];
     window.photosByElieProductCatalog = catalog;
+    window.photosByElieStorefrontPolicy = { ...(catalog.storefrontPolicy || {}) };
     window.photosByElieResolutions = normalizeProducts(products);
     window.photosByEliePriceTiers = normalizePriceTiers(catalog.priceTiers || {});
     window.photosByElieFrameOptions = (catalog.frameOptions || catalog.frames || []).map((frame) => ({ ...frame }));
@@ -81,10 +84,12 @@ const runtimeParser = `(() => {
     const existingData = window.photosByElieData || {};
     window.photosByElieData = { ...(data || {}), ...existingData };
     window.photosByElieOwnerData = owner || {};
-    applyProductCatalog(productCatalog || readJson("./assets/catalog/product-pricing.json"));
+    const canonicalCatalog = readJson("./assets/catalog/product-pricing.json");
+    applyProductCatalog({ ...canonicalCatalog, ...(productCatalog || {}), storefrontPolicy: canonicalCatalog.storefrontPolicy || {} });
     window.photosByElieCatalogSource = source;
     window.photosByElieApplyCollectionOrigins?.(window.photosByElieData);
     window.photosByElieApplyCollectionOrigins?.(window.photosByElieOwnerData);
+    window.photosByElieApplyStorefrontPolicy?.(window.photosByElieData);
     window.dispatchEvent?.(new CustomEvent("photosbyelie:catalogready", { detail: { source } }));
     return window.photosByElieData;
   };
@@ -110,9 +115,36 @@ const writeBootstrap = () => {
     [
       "// Generated bootstrap: loads the plain SQLite catalog.",
       runtimeParser,
+      GENERATED_HELPER_MARKER,
       tail.trimEnd(),
       "",
     ].join("\n"),
+  );
+};
+
+const writeHomeData = () => {
+  const bundle = loadCatalogBundleFromSqlite(repoRoot);
+  const payload = Object.fromEntries(
+    Object.entries(bundle?.data || {}).map(([slug, collection]) => [slug, {
+      number: collection.number || "",
+      title: collection.title || slug,
+      description: collection.description || "",
+      accent: collection.accent || `${slug}-gallery`,
+      count: (collection.photos || []).length,
+      href: `./gallery.html?gallery=${slug}`,
+      photos: (collection.photos || []).slice(0, 4).map((photo) => ({
+        id: photo.id,
+        title: photo.title,
+        gallerySrc: photo.gallerySrc || "",
+        imageSrc: photo.imageSrc || "",
+        media: photo.media || {},
+      })),
+    }])
+  );
+  fs.writeFileSync(
+    path.join(repoRoot, "home-data.js"),
+    `window.photosByElieHomeData = ${JSON.stringify(payload, null, 2)};\n` +
+      "window.photosByElieApplyStorefrontPolicy?.(window.photosByElieHomeData);\n"
   );
 };
 
@@ -122,17 +154,25 @@ const hasFullGeneratedCatalog = () => {
   return source.includes("window.photosByElieData = {") && !source.startsWith("// Generated bootstrap:");
 };
 
-const buildSqlite = (source = "auto") => {
+const buildSqlite = (source = "auto", { commerceOnly = false } = {}) => {
   const args = ["scripts/build_public_catalog_db.py", "--quiet"];
+  if (commerceOnly) args.push("--commerce-only");
   if (source === "photos-data") args.push("--source", "photos-data");
   childProcess.execFileSync("python3", args, { cwd: repoRoot, stdio: "inherit" });
 };
 
-if (hasFullGeneratedCatalog()) {
+const commerceOnly = process.argv.includes("--commerce-only");
+if (commerceOnly) {
+  buildSqlite("auto", { commerceOnly: true });
+  writeHomeData();
+  writeBootstrap();
+} else if (hasFullGeneratedCatalog()) {
   buildSqlite("photos-data");
+  writeHomeData();
   writeBootstrap();
 } else {
   buildSqlite();
+  writeHomeData();
   writeBootstrap();
 }
 console.log("Wrote assets/catalog/photosbyelie.sqlite");

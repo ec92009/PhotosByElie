@@ -88,7 +88,7 @@ const translations = {
     'account.profile_saved': 'Liked and basket saved.',
     'account.profile_syncing': 'Updating account...',
     'account.profile_failed': 'Could not update account.',
-    'home.lead': 'A selected photo archive with country galleries, AI work kept separate, and fresh representative samples as the collection rail turns.',
+    'home.lead': 'A selected camera-photo archive with country galleries and fresh representative samples as the collection rail turns.',
     'home.view_collections': 'View collections',
     'home.collections': 'Collections',
     'home.discover': 'Find photos',
@@ -640,7 +640,7 @@ const translations = {
     'account.profile_saved': 'Photos aimees et panier enregistres.',
     'account.profile_syncing': 'Mise a jour du compte...',
     'account.profile_failed': 'Impossible de mettre le compte a jour.',
-    'home.lead': 'Une archive photo choisie, avec galeries par pays, images IA a part, et nouveaux apercus representatifs au fil du rail des collections.',
+    'home.lead': 'Une archive choisie de photos prises par Elie, avec galeries par pays et nouveaux apercus representatifs au fil du rail des collections.',
     'home.view_collections': 'Voir les collections',
     'home.collections': 'Collections',
     'home.discover': 'Rechercher des photos',
@@ -1192,7 +1192,7 @@ const translations = {
     'account.profile_saved': 'Favoritos y cesta guardados.',
     'account.profile_syncing': 'Actualizando cuenta...',
     'account.profile_failed': 'No se pudo actualizar la cuenta.',
-    'home.lead': 'Un archivo fotografico seleccionado, con galerias por pais, obra IA separada y muestras representativas nuevas mientras gira el carril de colecciones.',
+    'home.lead': 'Un archivo seleccionado de fotos tomadas por Elie, con galerias por pais y muestras representativas nuevas mientras gira el carril de colecciones.',
     'home.view_collections': 'Ver colecciones',
     'home.collections': 'Colecciones',
     'home.discover': 'Buscar fotos',
@@ -1987,10 +1987,41 @@ const productSettingsKey = 'photosbyelie-product-settings';
 const physicalProductsToggleKey = 'physicalGoodsEnabled';
 const physicalProductsAvailable = true;
 const productCatalogUrl = './assets/catalog/product-pricing.json';
+const normalizeStorefrontPolicy = (policy = {}) => ({
+  retiredCollectionKeys: [...new Set((policy.retiredCollectionKeys || ['ai']).map((value) => String(value).trim().toLowerCase()).filter(Boolean))],
+  retiredSourceOrigins: [...new Set((policy.retiredSourceOrigins || ['ai']).map((value) => String(value).trim().toLowerCase()).filter(Boolean))],
+});
+const storefrontPhotoOrigin = (photo, collectionKey = '') => {
+  const origin = String(photo?.sourceOrigin || photo?.origin || '').trim().toLowerCase();
+  if (origin) return origin;
+  if (String(photo?.pricingTier || '').trim().toLowerCase() === 'ai') return 'ai';
+  return String(collectionKey || '').trim().toLowerCase() === 'ai' ? 'ai' : 'camera';
+};
+window.photosByElieStorefrontPolicy = normalizeStorefrontPolicy(window.photosByElieStorefrontPolicy);
+window.photosByElieCollectionIsRetired = (collectionKey = '') => (
+  window.photosByElieStorefrontPolicy.retiredCollectionKeys.includes(String(collectionKey).trim().toLowerCase())
+);
+window.photosByElieStorefrontAllowsPhoto = (photo, collectionKey = '') => (
+  !window.photosByElieCollectionIsRetired(collectionKey)
+  && !window.photosByElieStorefrontPolicy.retiredSourceOrigins.includes(storefrontPhotoOrigin(photo, collectionKey))
+);
+window.photosByElieApplyStorefrontPolicy = (collections = {}) => {
+  Object.keys(collections || {}).forEach((collectionKey) => {
+    if (window.photosByElieCollectionIsRetired(collectionKey)) {
+      delete collections[collectionKey];
+      return;
+    }
+    const collection = collections[collectionKey];
+    if (!Array.isArray(collection?.photos)) return;
+    collection.photos = collection.photos.filter((photo) => window.photosByElieStorefrontAllowsPhoto(photo, collectionKey));
+  });
+  return collections;
+};
 const applyProductCatalog = (catalog = {}) => {
   const products = Array.isArray(catalog.products) ? catalog.products : [];
   if (!products.length) return false;
   window.photosByElieProductCatalog = catalog;
+  window.photosByElieStorefrontPolicy = normalizeStorefrontPolicy(catalog.storefrontPolicy || {});
   window.photosByElieResolutions = products.map((product) => ({
     ...product,
     prices: { ...(product.prices || {}) },
@@ -2004,6 +2035,8 @@ const applyProductCatalog = (catalog = {}) => {
   window.photosByElieVideoPriceTiers = Object.fromEntries(
     (Array.isArray(catalog.videoPriceTiers) ? catalog.videoPriceTiers : []).map((tier) => [tier.id, { ...tier }])
   );
+  window.photosByElieApplyStorefrontPolicy(window.photosByElieData || {});
+  window.photosByElieApplyStorefrontPolicy(window.photosByElieHomeData || {});
   return true;
 };
 const loadProductCatalog = async () => {

@@ -571,8 +571,12 @@ const verifiedMegapixels = (photo) => {
   return match ? Math.round((Number(match[1]) * Number(match[2]) / 1_000_000) * 10) / 10 : 0;
 };
 
-const publicCatalogOnly = (collections = {}) => Object.fromEntries(
-  Object.entries(collections).filter(([key]) => key !== "unknown")
+const normalizedPolicyValues = (values, fallback = ["ai"]) => [
+  ...new Set((values ?? fallback).map((value) => String(value).trim().toLowerCase()).filter(Boolean)),
+];
+
+const publicCatalogOnly = (collections = {}, retiredCollectionKeys = new Set(["ai"])) => Object.fromEntries(
+  Object.entries(collections).filter(([key]) => key !== "unknown" && !retiredCollectionKeys.has(String(key).toLowerCase()))
 );
 
 export const createCatalogIndex = ({
@@ -581,15 +585,19 @@ export const createCatalogIndex = ({
   frameOptions = [],
   videoPriceTiers = {},
   physicalProductsEnabled = false,
+  storefrontPolicy = {},
 } = {}) => {
+  const retiredCollectionKeys = new Set(normalizedPolicyValues(storefrontPolicy.retiredCollectionKeys));
+  const retiredSourceOrigins = new Set(normalizedPolicyValues(storefrontPolicy.retiredSourceOrigins));
   const photos = new Map();
   const options = new Map([
     ...resolutions.map((option) => [option.id, option]),
     ["video-original", { id: "video-original", type: "video", label: "Original video download" }],
   ]);
 
-  Object.entries(publicCatalogOnly(collections)).forEach(([collectionKey, collection]) => {
+  Object.entries(publicCatalogOnly(collections, retiredCollectionKeys)).forEach(([collectionKey, collection]) => {
     (collection.photos || []).forEach((photo) => {
+      if (retiredSourceOrigins.has(photoOriginFor(photo, collectionKey))) return;
       photos.set(photo.id, { photo, collectionKey, collectionTitle: collection.title || collectionKey });
     });
   });
@@ -609,6 +617,10 @@ export const createCatalogIndex = ({
     options,
     frameOptions,
     videoPriceTiers,
+    storefrontPolicy: {
+      retiredCollectionKeys: [...retiredCollectionKeys],
+      retiredSourceOrigins: [...retiredSourceOrigins],
+    },
     availableOptionsFor,
   };
 };

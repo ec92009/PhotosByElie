@@ -1,12 +1,12 @@
 # Photos By Elie Backlog
 
-Last updated: 2026-07-10
+Last updated: 2026-07-13
 
 ## Current Facts
 
-- Public visible build: `v132.16`.
+- Public visible build: `v135.1`.
 - Sidecar local build: `v126.6`.
-- Public site: `https://ec92009.github.io/PhotosByElie/`.
+- Public site: `https://photos-by-elie.com/`.
 - Local preview: `http://localhost:8000/`.
 - North Star: `docs/architecture/north-star.md`; the overarching goal is to make money from the enterprise by optimizing sellable offers, buyer/client trust, private access, and market learning.
 - Main near-term inventory: the Apple Photos library has `57K+` photos, many potentially usable for the public gallery/store; finishing intake-to-sellable-catalog flow takes priority over hypothetical Real Estate, family, and private event verticals.
@@ -15,9 +15,9 @@ Last updated: 2026-07-10
 - Access Console Sandbox V8 cloud backend plus ACS9 local front-end rehearsal: deployed on `auth.photos-by-elie.com` with D1 database `photosbyelie-access`; local preview at `http://100.111.30.109:8000/access-console.html`; group manager creates/edits/archives audience groups, connects groups to real gallery records, persists per-gallery defaults, filters people, manages group memberships, previews gallery permissions for selected group/person/visitor/owner modes, runs cloud Worker policy tests for selected gallery access, shows a reversible audit/undo ledger for person/group access changes, and includes a selected-group invitation rehearsal for email/link/QR access propagation; audience fixtures are `Agnes's B'day`, `RE La Concha`, and `Johnson-Palmer wedding`.
 - Cloud Owner is promoted from the Track B shell: `owner.html` routes to the authenticated `new-owner.html` control surface; scoped background connectors provide health, full Apple Photos index refresh, Photos previews, Sidecar stars/pick/reject/title/keywords/approval decisions, guarded single-item Upload Bridge execution plus catalog registration, and an Owner-only credential-free Mac installer download.
 - Public catalog integrity: `ok`.
-- Public catalog scale: `7813` media rows.
-- Gallery counts: AI `5100`, France `379`, Italy `70`, Mexico `31`, Portugal `214`, Slovakia `2`, Spain `1872`, USA `145`.
-- Public GitHub Pages verification: `v125.0` gallery pages load, public catalog serves `7813` rows, and repaired AI stained-glass plus Benalmadena Aquarium public media URLs return HTTP 200.
+- Public commercial catalog scale: `2713` media rows after retiring AI-generated images from storefront publication.
+- Gallery counts: France `379`, Italy `70`, Mexico `31`, Portugal `214`, Slovakia `2`, Spain `1872`, USA `145`.
+- AI/Leonardo source and Owner records remain preserved outside the public commercial catalog.
 - Upload Bridge active approvals are clean: `0` uploadable items, `0` active blocked approved items, `0` missing keys, `0` blocked export failures.
 - Picked-only Sidecar AI metadata queue is drained: `0` candidates.
 - The restored Max Owner snapshot has `3314` uploaded/approved candidates: `2719` already in the public catalog and `595` older uploaded rows needing a separate catalog reconciliation decision. Cloud Upload next approved is scoped to only the asset IDs uploaded by that action, so it cannot publish this backlog accidentally.
@@ -72,10 +72,9 @@ Last updated: 2026-07-10
    - Make delivery/recovery expectations explicit before heavier public traffic.
    - Align license language with the offers selected in the North Star commercial pass.
 
-6. **Approve and deploy the real price and offer strategy.**
-   - Review camera and AI price ladders.
-   - After approval, update pricing, regenerate catalog/Worker artifacts, deploy the Worker, and run one low-value live proof purchase.
-   - Use live checkout rehearsal data to revise prices and offer copy.
+6. **Validate the real camera price ladder with buyers.**
+   - The approved camera ladder is `$8 / $16 / $28 / $65`; AI-generated images are retired from the commercial storefront.
+   - Run a controlled live proof purchase after deployment, then use real buyer behavior to revise prices and offer copy.
 
 7. **Improve public discovery and SEO.**
    - Add richer per-gallery/per-photo metadata, Open Graph images, canonical URLs, structured data, and focused campaign metadata.

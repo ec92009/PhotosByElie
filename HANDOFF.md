@@ -8,14 +8,14 @@ GitHub carries code, safe metadata, SOPs, and handoff notes; private Owner DB
 snapshots and client artifacts move through private R2; SSH/Codex Remote SSH is
 for remote execution.
 
-## Current Handoff: 2026-07-10 Cloud Owner / Sidecar Integration
+## Current Handoff: 2026-07-13 Commercial Storefront Release
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
-- Branch: `codex/sidecar-main-site`
-- Public site: `https://ec92009.github.io/PhotosByElie/`
+- Branch: `main`
+- Public site: `https://photos-by-elie.com/`
 - Local preview: `http://localhost:8000/`
 - Owner intake URL: `https://photos-by-elie.com/owner.html`
-- Current visible build: `v132.16`
+- Current visible build: `v135.1`
 - Sidecar local build: `v126.6`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
@@ -48,9 +48,10 @@ for remote execution.
   `3314` candidates: `2719` already cataloged and `595` that would register.
   Do not bulk-register those rows without review. The cloud Upload action is
   deliberately scoped to only asset IDs uploaded during that action.
-- Current public catalog: `7,813` media rows.
-- Current gallery counts: AI `5,100`, France `379`, Italy `70`, Mexico `31`, Portugal `214`, Slovakia `2`, Spain `1,872`, USA `145`.
-- Public GitHub Pages verification: `v125.0` gallery pages load, public catalog serves `7,813` rows, and repaired AI stained-glass plus Benalmadena Aquarium preview/video media URLs return HTTP 200.
+- Current public commercial catalog: `2,713` media rows after retiring the `5,100`-row AI collection from storefront publication.
+- Current gallery counts: France `379`, Italy `70`, Mexico `31`, Portugal `214`, Slovakia `2`, Spain `1,872`, USA `145`.
+- AI/Leonardo source files and Owner records remain intact, while public generation, discovery, stale baskets, and Worker checkout exclude the `ai` collection and AI-origin rows.
+- Camera downloads now use the approved `$8 / $16 / $28 / $65` ladder for JPG 1 MP, JPG 3 MP, JPG 6 MP, and full resolution. The matching checkout catalog is deployed in Worker version `a82d01a3-f7f9-4dff-8bcf-a596a3532545`.
 - Queue health after cleanup:
   - Upload Bridge uploadable count: `0`.
   - Upload Bridge active blocked approved rows: `0`.
@@ -296,13 +297,13 @@ cd /Users/ecohen/Dev/PhotosByElie
    - Make receipt/order/download copy explicit and trustworthy.
 
 10. **Package the buyer offer.**
-   - Clarify usage rights, resolution labels, what Full resolution means, AI-origin handling, delivery expectations, refunds, and contact.
+   - Clarify usage rights, resolution labels, what Full resolution means, delivery expectations, refunds, and contact.
    - Decide first public offer: digital-only single assets, bundles, or collection packs.
    - Rephrase basket/order language around draft/review/availability so it builds confidence.
 
-11. **Approve and deploy the real price and offer strategy.**
-   - Review `docs/commerce/PRICE_OFFER_STRATEGY.md`.
-   - After approval, change `assets/catalog/product-pricing.json`, regenerate catalog and Worker artifacts, bump the visible version, deploy the Worker, and run one low-value live proof purchase.
+11. **Validate the real price and offer strategy.**
+   - The camera ladder is approved at `$8 / $16 / $28 / $65`; AI-generated images are retired from the commercial storefront.
+   - Keep catalog/browser/Worker prices aligned and run one controlled live proof purchase.
    - Defer bundles, collection packs, buy-all-liked, and promo-code hooks until single-photo launch behavior is proven.
 
 12. **Curate the first sellable storefront.**
@@ -452,7 +453,7 @@ npm run validate
 3. Make the Real Estate import control unmistakable and rehearse one full client lifecycle.
 4. Finish import dependency/status preflights so failures are actionable before photo queueing.
 5. Review and tune buyer support/refund/license wording.
-6. Approve and deploy the real price and offer strategy.
+6. Validate the deployed `$8 / $16 / $28 / $65` camera ladder with a controlled live purchase.
 7. Curate the first sellable storefront.
 8. Add conversion analytics.
 9. Improve public discovery and SEO beyond the first-pass `robots.txt` and `sitemap.xml`.

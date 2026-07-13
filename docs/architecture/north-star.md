@@ -92,7 +92,7 @@ Elie can photograph travel, art, Real Estate, family, or events; decide who may 
 
 ## Wish List
 
-- Sell travel/art/AI/camera downloads from a polished mobile-friendly public site.
+- Sell Elie's camera-made travel and art downloads from a polished mobile-friendly public site; keep AI-generated image archives outside the commercial storefront.
 - Finish Apple Photos intake so the 57K+ photo library becomes real sellable inventory, not a dormant archive.
 - Publish Real Estate client galleries with PDF/video deliverables.
 - Share family/private galleries safely.

@@ -6,6 +6,7 @@ const vm = require("node:vm");
 const CATALOG_DIR = path.join("assets", "catalog");
 const PRODUCT_PRICING_JSON = path.join(CATALOG_DIR, "product-pricing.json");
 const HELPER_MARKER = "window.photosByElieOriginTypes =";
+const GENERATED_HELPER_MARKER = "// Generated catalog helper boundary.";
 
 const loadCatalogBundleFromSqlite = (repoRoot) => {
   const dbPath = path.join(repoRoot, CATALOG_DIR, "photosbyelie.sqlite");
@@ -35,6 +36,7 @@ const loadProductCatalog = (repoRoot) => {
     }]))
     : (pricing.videoPriceTiers || {});
   return {
+    storefrontPolicy: { ...(pricing.storefrontPolicy || {}) },
     priceTiers,
     resolutions: (pricing.products || pricing.resolutions || []).map((product) => {
       const option = { ...product };
@@ -55,6 +57,7 @@ const loadProductCatalog = (repoRoot) => {
 
 const applyProductCatalog = (targetWindow, productCatalog) => {
   targetWindow.photosByElieProductCatalog = productCatalog;
+  targetWindow.photosByElieStorefrontPolicy = { ...(productCatalog.storefrontPolicy || {}) };
   targetWindow.photosByElieResolutions = (productCatalog.resolutions || []).map((product) => ({ ...product }));
   targetWindow.photosByEliePriceTiers = { ...(productCatalog.priceTiers || {}) };
   targetWindow.photosByElieFrameOptions = (productCatalog.frameOptions || []).map((frame) => ({ ...frame }));
@@ -64,6 +67,7 @@ const applyProductCatalog = (targetWindow, productCatalog) => {
   targetWindow.photosByEliePodSuppliers = (productCatalog.podSuppliers || []).map((supplier) => ({ ...supplier }));
   targetWindow.photosByEliePodQualityTiers = (productCatalog.podQualityTiers || []).map((tier) => ({ ...tier }));
   targetWindow.photosByEliePodOptions = (productCatalog.podOptions || []).map((option) => ({ ...option }));
+  targetWindow.photosByElieApplyStorefrontPolicy?.(targetWindow.photosByElieData);
 };
 
 const loadCatalogWindowFromPhotosData = (repoRoot) => {
@@ -80,6 +84,10 @@ const helperTailFromPhotosData = (repoRoot) => {
   const source = fs.existsSync(dataPath) ? fs.readFileSync(dataPath, "utf8") : "";
   const markerIndex = source.indexOf(HELPER_MARKER);
   if (markerIndex !== -1) return source.slice(markerIndex);
+  const generatedMarkerIndex = source.indexOf(GENERATED_HELPER_MARKER);
+  if (generatedMarkerIndex !== -1) {
+    return source.slice(generatedMarkerIndex + GENERATED_HELPER_MARKER.length).trimStart();
+  }
   try {
     const committed = childProcess.execFileSync("git", ["show", "HEAD:photos-data.js"], {
       cwd: repoRoot,
@@ -112,6 +120,7 @@ const loadCatalogWindow = (repoRoot) => {
 };
 
 module.exports = {
+  GENERATED_HELPER_MARKER,
   PRODUCT_PRICING_JSON,
   helperTailFromPhotosData,
   loadCatalogBundleFromSqlite,

@@ -5,8 +5,14 @@ const selectionGalleryKey = "selection";
 const selectionGalleryAliases = new Set([selectionGalleryKey, "make-selection", "make-your-selection"]);
 const panoramaGalleryKey = "panoramas";
 const panoramaGalleryAliases = new Set([panoramaGalleryKey, "pano", "panos", "panorama"]);
-const baseGalleryCollections = ["france", "usa", "spain", "mexico", "ai", "italy", "portugal", "slovakia"];
+const baseGalleryCollections = ["france", "usa", "spain", "mexico", "italy", "portugal", "slovakia"];
 const selectionGalleryCollections = baseGalleryCollections;
+const requestedGalleryKey = String(new URLSearchParams(window.location.search).get("gallery") || "").trim().toLowerCase();
+if (window.photosByElieCollectionIsRetired?.(requestedGalleryKey)) {
+  const replacement = window.photosByElieVersionedHref?.("./gallery.html?gallery=selection") || "./gallery.html?gallery=selection";
+  window.location.replace(replacement);
+  return;
+}
 const isSelectionGalleryKey = (key) => selectionGalleryAliases.has(key);
 const isPanoramaGalleryKey = (key) => panoramaGalleryAliases.has(key);
 const galleryKeyFromPage = () => {

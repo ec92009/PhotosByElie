@@ -1,12 +1,14 @@
 # PhotosByElie Price and Offer Strategy
 
-Last updated: 2026-05-22
+Last updated: 2026-07-13
 
 ## Status
 
-This strategy was approved for restoring the original digital ladder on 2026-06-02. The main site now uses the original public digital-download prices again after the proof-flow cents pricing test.
+The camera-photo launch ladder was reconfirmed on 2026-07-13 after the proof-flow cents prices resurfaced in the canonical product file. The commercial storefront now uses whole-dollar camera pricing and excludes AI-generated images.
 
 Current published prices are stored in `assets/catalog/product-pricing.json`, materialized into `assets/catalog/photosbyelie.sqlite`, exposed to the public basket by `photos-data.js`, and exported to the deployed Worker catalog through `worker/photos-catalog.generated.mjs`.
+
+AI/Leonardo source files and Owner records are preserved as an archive. Public catalog generation, discovery, saved-basket normalization, and Worker checkout exclude the `ai` collection and AI-origin items.
 
 ## Launch Offer
 
@@ -23,16 +25,16 @@ Default license language should stay conservative:
 - Commercial use, resale, redistribution, stock licensing, merchandise, and AI-training use require written approval first.
 - Stripe receipts are payment records; PhotosByElie order pages are delivery and recovery records.
 
-## Recommended Launch Prices
+## Launch Prices
 
 These are the restored public launch prices.
 
-| Product | Camera photo | AI image | Notes |
-| --- | ---: | ---: | --- |
-| JPG 1 MP | $8 | $4 | Small web/social download. Restored original public price. |
-| JPG 3 MP | $16 | $8 | Main casual buyer product for web, listing, and editorial use. Restored original public price. |
-| JPG 6 MP | $28 | $14 | Preserve the current premium camera tier; AI stays lower. |
-| Full resolution | $65 | $25 | Preserve current full-resolution values until market data says otherwise. |
+| Product | Camera photo | Notes |
+| --- | ---: | --- |
+| JPG 1 MP | $8 | Small web/social download. |
+| JPG 3 MP | $16 | Main casual buyer product for web, listing, and editorial use. |
+| JPG 6 MP | $28 | Premium web and moderate print use. |
+| Full resolution | $65 | Native-resolution source/developed file. |
 
 Video:
 
@@ -42,7 +44,7 @@ Video:
 | Original video 1-3 min | $35 | Raise once video checkout gets real buyer interest. |
 | Original video 3+ min | $50 | Treat long clips as a premium/manual-support item. |
 
-The temporary `$0.10` and `$0.30` low tiers were useful for proof-of-flow testing and very small promotion experiments, but they are no longer the public launch posture.
+The temporary cents-priced tiers were proof-of-flow fixtures and are not a commercial posture.
 
 ## Local POD Preview
 
@@ -99,18 +101,18 @@ Keep support language buyer-friendly but operationally safe:
 When changing the launch ladder again:
 
 1. Update `assets/catalog/product-pricing.json`.
-2. Regenerate public catalog artifacts and Worker catalog.
-3. Verify the browser basket shows the intended prices.
-4. Run `node --check photos.js basket.js order.js`, `npm test`, `npm run validate`, and `git diff --check`.
-5. Bump the visible version because public pricing is user-facing.
-6. Commit and push.
-7. Deploy the Worker so hosted Stripe Checkout validates the same price list.
-8. Run one live low-value proof purchase and confirm receipt, statement descriptor, webhook, order recovery, and download.
+2. Run `node scripts/write_catalog_tsv.cjs --commerce-only` to preserve media while refreshing commerce tables and retirement rules.
+3. Regenerate the Worker catalog.
+4. Verify the browser basket shows the intended prices.
+5. Run `node --check photos.js basket.js order.js`, `npm test`, `npm run validate`, and `git diff --check`.
+6. Bump the visible version because public pricing is user-facing.
+7. Commit and push.
+8. Deploy the Worker so hosted Stripe Checkout validates the same price list.
+9. Run one live proof purchase when a suitable controlled order is available and confirm receipt, statement descriptor, webhook, order recovery, and download.
 
 ## Open Owner Decisions
 
 - Monitor whether the restored `$8 / $16 / $28 / $65` camera ladder fits Etsy and direct-site buyer behavior.
-- Decide whether AI images should stay meaningfully cheaper than camera photos.
 - Decide whether full-resolution sales need an explicit commercial-use prompt before checkout.
 - Approve or revise the local POD starter sizes, quality-tier names, supplier route per tier, and margin before samples are ordered.
 - Confirm whether Prodigi's frame-it-yourself framed product is acceptable for customers or should be EU-only/testing-only.

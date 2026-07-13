@@ -587,8 +587,10 @@ Clock state: running
 | 2026-07-11 | 21:26 CEST | 21:44 CEST | 0:02 | Verified David's public Owner-to-local-Sidecar launch, preview loading, undecided-only pick disappearance/refill, Culling/Review shortcut, and Apple-cloud-ID decision storage; command/browser/test runtime excluded. |
 | 2026-07-12 | 21:01 CEST | 21:02 CEST | 0:01 | Requested a masonry-style New Owner layout for collapsed control cards; implementation/browser QA excluded. |
 | 2026-07-12 | 21:20 CEST | 21:23 CEST | 0:03 | Reported slow Sidecar startup, delayed previews, narrow Upload Bridge rail, and slower Review decisions; implementation/browser QA excluded. |
+| 2026-07-13 | 10:07 CEST | 10:08 CEST | 0:01 | Documented the first-month Real Estate revenue plan, role split, launch week, daily cadence, and scorecard. |
+| 2026-07-13 | 10:09 CEST | 10:10 CEST | 0:01 | Directed the Real Estate game plan documentation commit and push. |
 
 ## Totals
 
-Active collaboration time used: 30:18
+Active collaboration time used: 30:20
 Remaining budget: not set

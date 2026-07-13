@@ -1,13 +1,13 @@
 # Daily Social Package - 2026-07-13
 
-Status: prepared
+Status: published_partial
 Visible version: v135.0
 
 ## Facebook: Malaga Aerial City Light
 
-- Status: prepared
+- Status: published
 - Destination: https://photos-by-elie.com/campaign.html?c=facebook-malaga-aerial-city-light-2026-07-13
-- Manual blockers: Publish pending: review socials/Facebook/2026-07-13/malaga-aerial-city-light/manifest.json and use the Facebook browser/API workflow.
+- Published URL: https://www.facebook.com/122102168061334672/posts/122110529883334672
 
 | # | Media id | Source URL | Local image |
 | ---: | --- | --- | --- |
@@ -20,9 +20,9 @@ Visible version: v135.0
 
 ## Instagram: Paris Carnavalet Rooms and Color
 
-- Status: prepared
+- Status: published
 - Destination: https://photos-by-elie.com/campaign.html?c=instagram-paris-carnavalet-rooms-color-2026-07-13
-- Manual blockers: Publish pending: review socials/Instagram/2026-07-13/paris-carnavalet-rooms-and-color/manifest.json and use the Instagram browser/API workflow. | Instagram feed captions are not clickable; update the profile website link or use a Story link sticker before posting.
+- Published URL: https://www.instagram.com/p/Dat6-s2iLLw/
 
 | # | Media id | Source URL | Local image |
 | ---: | --- | --- | --- |
@@ -39,7 +39,7 @@ Visible version: v135.0
 
 - Status: prepared
 - Destination: https://photos-by-elie.com/campaign.html?c=pinterest-lisbon-ancient-art-museum-light-2026-07-13
-- Manual blockers: Publish pending: review socials/Pinterest/2026-07-13/lisbon-ancient-art-museum-light/manifest.json and use the Pinterest browser/API workflow. | Pinterest publish pending: choose the board and publish one Pin per staged image or use the prepared browser upload set.
+- Manual blockers: Publish pending: review socials/Pinterest/2026-07-13/lisbon-ancient-art-museum-light/manifest.json and use the Pinterest browser/API workflow. | Pinterest publish pending: choose the board and publish one Pin per staged image or use the prepared browser upload set. | Pinterest remains prepared only: no valid Pinterest token/board ID mapping was available in this run. Use Pin Builder/API with board recommendation Portugal Travel Photography.
 
 | # | Media id | Source URL | Local image |
 | ---: | --- | --- | --- |
@@ -51,9 +51,9 @@ Visible version: v135.0
 
 ## Threads: Paris Carnavalet Rooms and Color
 
-- Status: prepared
+- Status: published
 - Destination: https://photos-by-elie.com/campaign.html?c=instagram-paris-carnavalet-rooms-color-2026-07-13
-- Manual blockers: Publish pending: review socials/Threads/2026-07-13/paris-carnavalet-rooms-and-color/manifest.json and use the Threads browser/API workflow.
+- Published URL: https://www.threads.com/@ec92009/post/Dat7F_KCNdq
 
 | # | Media id | Source URL | Local image |
 | ---: | --- | --- | --- |
@@ -70,3 +70,29 @@ Visible version: v135.0
 - Paths: assets/owner-actions/etsy-listing-packages/2026-07-13/facebook-malaga-aerial-city-light-2026-07-13, assets/owner-actions/etsy-listing-packages/2026-07-13/instagram-paris-carnavalet-rooms-color-2026-07-13, assets/owner-actions/etsy-listing-packages/2026-07-13/pinterest-lisbon-ancient-art-museum-light-2026-07-13.
 - Blocker: Etsy token is expired and live draft creation still requires explicit taxonomy/setup IDs plus verified image/file attachments.
 - Fees incurred: false.
+
+## Facebook Personal Share Assist
+
+- Status: prepared_manual_final_click
+- Expected identity: Elie Cohen
+- Source Page post: https://www.facebook.com/122102168061334672/posts/122110529883334672
+- Share URL: https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fwww.facebook.com%2F122102168061334672%2Fposts%2F122110529883334672
+- Local kit: socials/Facebook/2026-07-13/malaga-aerial-city-light/personal-share
+
+French text:
+
+Je viens de publier quelques nouvelles photos sur Photos By Elie.
+
+La série du jour, « Malaga Aerial City Light », rassemble quelques images que j'aime beaucoup.
+
+À voir ici :
+https://www.facebook.com/122102168061334672/posts/122110529883334672
+
+English text:
+
+I just published a few new photos on Photos By Elie.
+
+Today's series, "Malaga Aerial City Light", brings together a few images I really like.
+
+See it here:
+https://www.facebook.com/122102168061334672/posts/122110529883334672

@@ -1,10 +1,9 @@
 # Facebook - 2026-07-13 - Malaga Aerial City Light
 
-Status: prepared
+Status: published
 Destination: https://photos-by-elie.com/campaign.html?c=facebook-malaga-aerial-city-light-2026-07-13
+Published URL: https://www.facebook.com/122102168061334672/posts/122110529883334672
 
-Manual blockers:
-- Publish pending: review socials/Facebook/2026-07-13/malaga-aerial-city-light/manifest.json and use the Facebook browser/API workflow.
 
 Caption:
 

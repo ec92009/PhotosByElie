@@ -107,13 +107,30 @@
     }
   ],
   "date": "2026-07-13",
-  "status": "prepared",
+  "status": "published",
   "account": "Photos By Elie",
   "post_type": "multi_photo",
   "destination_url": "https://photos-by-elie.com/campaign.html?c=facebook-malaga-aerial-city-light-2026-07-13",
   "recommended_upload_set": "images",
   "available_count": 6,
-  "manual_blockers": [
-    "Publish pending: review socials/Facebook/2026-07-13/malaga-aerial-city-light/manifest.json and use the Facebook browser/API workflow."
-  ]
+  "manual_blockers": [],
+  "published_url": "https://www.facebook.com/122102168061334672/posts/122110529883334672",
+  "published": {
+    "platform": "Facebook",
+    "account": "Photos By Elie",
+    "id": "1146747141854670_122110529883334672",
+    "permalink": "https://www.facebook.com/122102168061334672/posts/122110529883334672",
+    "timestamp": "2026-07-13T03:10:30+0000",
+    "image_count": 6,
+    "visible_verification": "Facebook Graph readback returned the Page post permalink, created_time, and 6 photo subattachments."
+  },
+  "verification": {
+    "platform": "Facebook",
+    "account": "Photos By Elie",
+    "id": "1146747141854670_122110529883334672",
+    "permalink": "https://www.facebook.com/122102168061334672/posts/122110529883334672",
+    "timestamp": "2026-07-13T03:10:30+0000",
+    "image_count": 6,
+    "visible_verification": "Facebook Graph readback returned the Page post permalink, created_time, and 6 photo subattachments."
+  }
 }

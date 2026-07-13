@@ -139,14 +139,34 @@
     }
   ],
   "date": "2026-07-13",
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-paris-carnavalet-rooms-color-2026-07-13",
   "recommended_upload_set": "images",
   "available_count": 8,
-  "manual_blockers": [
-    "Publish pending: review socials/Instagram/2026-07-13/paris-carnavalet-rooms-and-color/manifest.json and use the Instagram browser/API workflow.",
-    "Instagram feed captions are not clickable; update the profile website link or use a Story link sticker before posting."
-  ]
+  "manual_blockers": [],
+  "published_url": "https://www.instagram.com/p/Dat6-s2iLLw/",
+  "published": {
+    "platform": "Instagram",
+    "account": "ec92009",
+    "id": "18421144069176983",
+    "permalink": "https://www.instagram.com/p/Dat6-s2iLLw/",
+    "timestamp": "2026-07-13T03:12:16+0000",
+    "image_count": 8,
+    "media_type": "CAROUSEL_ALBUM",
+    "child_count": 8,
+    "visible_verification": "Instagram Graph readback returned username ec92009, CAROUSEL_ALBUM, permalink, timestamp, and 8 child images."
+  },
+  "verification": {
+    "platform": "Instagram",
+    "account": "ec92009",
+    "id": "18421144069176983",
+    "permalink": "https://www.instagram.com/p/Dat6-s2iLLw/",
+    "timestamp": "2026-07-13T03:12:16+0000",
+    "image_count": 8,
+    "media_type": "CAROUSEL_ALBUM",
+    "child_count": 8,
+    "visible_verification": "Instagram Graph readback returned username ec92009, CAROUSEL_ALBUM, permalink, timestamp, and 8 child images."
+  }
 }

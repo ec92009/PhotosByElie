@@ -1,10 +1,9 @@
 # Threads - 2026-07-13 - Paris Carnavalet Rooms and Color
 
-Status: prepared
+Status: published
 Destination: https://photos-by-elie.com/campaign.html?c=instagram-paris-carnavalet-rooms-color-2026-07-13
+Published URL: https://www.threads.com/@ec92009/post/Dat7F_KCNdq
 
-Manual blockers:
-- Publish pending: review socials/Threads/2026-07-13/paris-carnavalet-rooms-and-color/manifest.json and use the Threads browser/API workflow.
 
 Caption:
 

@@ -1,11 +1,9 @@
 # Instagram - 2026-07-13 - Paris Carnavalet Rooms and Color
 
-Status: prepared
+Status: published
 Destination: https://photos-by-elie.com/campaign.html?c=instagram-paris-carnavalet-rooms-color-2026-07-13
+Published URL: https://www.instagram.com/p/Dat6-s2iLLw/
 
-Manual blockers:
-- Publish pending: review socials/Instagram/2026-07-13/paris-carnavalet-rooms-and-color/manifest.json and use the Instagram browser/API workflow.
-- Instagram feed captions are not clickable; update the profile website link or use a Story link sticker before posting.
 
 Caption:
 

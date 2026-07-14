@@ -1,10 +1,8 @@
 # Threads - 2026-07-14 - Fuengirola Moon Over the Mediterranean
 
-Status: prepared
+Status: published
 Destination: https://photos-by-elie.com/campaign.html?c=instagram-fuengirola-moon-mediterranean-2026-07-14
-
-Manual blockers:
-- Publish pending: review socials/Threads/2026-07-14/fuengirola-moon-over-the-mediterranean/manifest.json and use the Threads browser/API workflow.
+Published URL: https://www.threads.com/@ec92009/post/Dawf3YKCBKp
 
 Caption:
 

@@ -69,18 +69,33 @@
       "local_staged_path": "socials/Threads/2026-07-14/fuengirola-moon-over-the-mediterranean/images/04-img-2450-18dd778c3d-fuengirola-moon-over-the-mediterranean.jpg"
     }
   ],
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "available_count": 4,
   "notes": [
     "Derived from the Instagram package for a 3-4 image Threads carousel.",
-    "Images are public watermarked R2 previews staged for upload/API publishing."
+    "Images are public watermarked R2 previews staged for upload/API publishing.",
+    "Threads published and verified by API readback on 2026-07-14."
   ],
   "date": "2026-07-14",
   "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-fuengirola-moon-mediterranean-2026-07-14",
   "recommended_upload_set": "images",
-  "manual_blockers": [
-    "Publish pending: review socials/Threads/2026-07-14/fuengirola-moon-over-the-mediterranean/manifest.json and use the Threads browser/API workflow."
-  ]
+  "manual_blockers": [],
+  "published_url": "https://www.threads.com/@ec92009/post/Dawf3YKCBKp",
+  "published": {
+    "id": "17873976666534631",
+    "permalink": "https://www.threads.com/@ec92009/post/Dawf3YKCBKp",
+    "shortcode": "Dawf3YKCBKp",
+    "timestamp": "2026-07-14T03:13:07+0000",
+    "username": "ec92009",
+    "media_type": "CAROUSEL_ALBUM",
+    "image_count": 4
+  },
+  "verification": {
+    "method": "Threads Graph API readback",
+    "children": 4,
+    "permalink": "https://www.threads.com/@ec92009/post/Dawf3YKCBKp",
+    "link_preview_note": "API publish flow had no browser link-preview removal step."
+  }
 }

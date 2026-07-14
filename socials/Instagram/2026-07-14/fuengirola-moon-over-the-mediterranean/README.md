@@ -1,11 +1,8 @@
 # Instagram - 2026-07-14 - Fuengirola Moon Over the Mediterranean
 
-Status: prepared
+Status: published
 Destination: https://photos-by-elie.com/campaign.html?c=instagram-fuengirola-moon-mediterranean-2026-07-14
-
-Manual blockers:
-- Publish pending: review socials/Instagram/2026-07-14/fuengirola-moon-over-the-mediterranean/manifest.json and use the Instagram browser/API workflow.
-- Instagram feed captions are not clickable; update the profile website link or use a Story link sticker before posting.
+Published URL: https://www.instagram.com/p/Dawfv-VCN50/
 
 Caption:
 

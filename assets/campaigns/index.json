@@ -1,9 +1,33 @@
 {
   "format": "photosbyelie-campaign-index",
   "schema_version": 1,
-  "generated_at": "2026-07-14T03:05:24.440Z",
+  "generated_at": "2026-07-14T03:14:15.430Z",
   "campaign_count": 173,
   "campaigns": [
+    {
+      "id": "instagram-fuengirola-moon-mediterranean-2026-07-14",
+      "source": "Instagram",
+      "title": "Fuengirola Moon Over the Mediterranean",
+      "description": "A 8-photo Fuengirola Moon Over the Mediterranean edit prepared for Instagram with public Photos By Elie previews and a first-party browsing destination.",
+      "date": "2026-07-14",
+      "href": "./campaign.html?c=instagram-fuengirola-moon-mediterranean-2026-07-14",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=instagram-fuengirola-moon-mediterranean-2026-07-14",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/img-2438-769d2c55da_900.jpg",
+      "imageAlt": "Fuengirola, Moon Over The Mediterranean",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/img-2438-769d2c55da_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-2448-d30fa46324_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-2439-acda9a345e_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-2450-18dd778c3d_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-2445-86fcda40d1_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-2436-914f008c28_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-2449-d8e7e22ab8_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-2437-230b62851d_900.jpg"
+      ],
+      "primaryPhotoCount": 8,
+      "relatedPhotoCount": 0,
+      "mtimeMs": 1783998855296
+    },
     {
       "id": "pinterest-san-diego-zoo-wildlife-portraits-2026-07-14",
       "source": "Pinterest",
@@ -23,7 +47,7 @@
       ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998321017
+      "mtimeMs": 1783998855296
     },
     {
       "id": "facebook-del-mar-dog-beach-sunset-2026-07-14",
@@ -47,31 +71,7 @@
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998321016
-    },
-    {
-      "id": "instagram-fuengirola-moon-mediterranean-2026-07-14",
-      "source": "Instagram",
-      "title": "Fuengirola Moon Over the Mediterranean",
-      "description": "A 8-photo Fuengirola Moon Over the Mediterranean edit prepared for Instagram with public Photos By Elie previews and a first-party browsing destination.",
-      "date": "2026-07-14",
-      "href": "./campaign.html?c=instagram-fuengirola-moon-mediterranean-2026-07-14",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=instagram-fuengirola-moon-mediterranean-2026-07-14",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/img-2438-769d2c55da_900.jpg",
-      "imageAlt": "Fuengirola, Moon Over The Mediterranean",
-      "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/img-2438-769d2c55da_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-2448-d30fa46324_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-2439-acda9a345e_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-2450-18dd778c3d_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-2445-86fcda40d1_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-2436-914f008c28_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-2449-d8e7e22ab8_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-2437-230b62851d_900.jpg"
-      ],
-      "primaryPhotoCount": 8,
-      "relatedPhotoCount": 0,
-      "mtimeMs": 1783998321016
+      "mtimeMs": 1783998855295
     },
     {
       "id": "pinterest-lisbon-ancient-art-museum-light-2026-07-13",

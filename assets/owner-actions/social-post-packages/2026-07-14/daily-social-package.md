@@ -1,13 +1,13 @@
 # Daily Social Package - 2026-07-14
 
-Status: prepared
+Status: published_partial
 Visible version: v136.0
 
 ## Facebook: Del Mar Dog Beach Sunset
 
-- Status: prepared
+- Status: published
 - Destination: https://photos-by-elie.com/campaign.html?c=facebook-del-mar-dog-beach-sunset-2026-07-14
-- Manual blockers: Publish pending: review socials/Facebook/2026-07-14/del-mar-dog-beach-sunset/manifest.json and use the Facebook browser/API workflow.
+- Published URL: https://www.facebook.com/122102168061334672/posts/122110659105334672
 
 | # | Media id | Source URL | Local image |
 | ---: | --- | --- | --- |
@@ -22,9 +22,9 @@ Visible version: v136.0
 
 ## Instagram: Fuengirola Moon Over the Mediterranean
 
-- Status: prepared
+- Status: published
 - Destination: https://photos-by-elie.com/campaign.html?c=instagram-fuengirola-moon-mediterranean-2026-07-14
-- Manual blockers: Publish pending: review socials/Instagram/2026-07-14/fuengirola-moon-over-the-mediterranean/manifest.json and use the Instagram browser/API workflow. | Instagram feed captions are not clickable; update the profile website link or use a Story link sticker before posting.
+- Published URL: https://www.instagram.com/p/Dawfv-VCN50/
 
 | # | Media id | Source URL | Local image |
 | ---: | --- | --- | --- |
@@ -53,9 +53,9 @@ Visible version: v136.0
 
 ## Threads: Fuengirola Moon Over the Mediterranean
 
-- Status: prepared
+- Status: published
 - Destination: https://photos-by-elie.com/campaign.html?c=instagram-fuengirola-moon-mediterranean-2026-07-14
-- Manual blockers: Publish pending: review socials/Threads/2026-07-14/fuengirola-moon-over-the-mediterranean/manifest.json and use the Threads browser/API workflow.
+- Published URL: https://www.threads.com/@ec92009/post/Dawf3YKCBKp
 
 | # | Media id | Source URL | Local image |
 | ---: | --- | --- | --- |
@@ -63,3 +63,29 @@ Visible version: v136.0
 | 2 | `img-2448-d30fa46324` | https://download.photos-by-elie.com/media/expo/img-2448-d30fa46324_1800.jpg | socials/Threads/2026-07-14/fuengirola-moon-over-the-mediterranean/images/02-img-2448-d30fa46324-fuengirola-moon-over-the-mediterranean.jpg |
 | 3 | `img-2439-acda9a345e` | https://download.photos-by-elie.com/media/expo/img-2439-acda9a345e_1800.jpg | socials/Threads/2026-07-14/fuengirola-moon-over-the-mediterranean/images/03-img-2439-acda9a345e-fuengirola-moon-over-the-mediterranean.jpg |
 | 4 | `img-2450-18dd778c3d` | https://download.photos-by-elie.com/media/expo/img-2450-18dd778c3d_1800.jpg | socials/Threads/2026-07-14/fuengirola-moon-over-the-mediterranean/images/04-img-2450-18dd778c3d-fuengirola-moon-over-the-mediterranean.jpg |
+
+## Facebook Personal Share Assist
+
+- Status: prepared_manual_final_click
+- Expected identity: Elie Cohen
+- Source Page post: https://www.facebook.com/122102168061334672/posts/122110659105334672
+- Share URL: https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fwww.facebook.com%2F122102168061334672%2Fposts%2F122110659105334672
+- Local kit: socials/Facebook/2026-07-14/del-mar-dog-beach-sunset/personal-share
+
+French text:
+
+Je viens de publier quelques nouvelles photos sur Photos By Elie.
+
+La série du jour, « Del Mar Dog Beach Sunset », rassemble quelques images que j'aime beaucoup.
+
+À voir ici :
+https://www.facebook.com/122102168061334672/posts/122110659105334672
+
+English text:
+
+I just published a few new photos on Photos By Elie.
+
+Today's series, "Del Mar Dog Beach Sunset", brings together a few images I really like.
+
+See it here:
+https://www.facebook.com/122102168061334672/posts/122110659105334672

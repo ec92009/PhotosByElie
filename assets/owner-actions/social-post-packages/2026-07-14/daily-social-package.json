@@ -2,8 +2,8 @@
   "format": "photosbyelie-daily-social-package",
   "schema_version": 1,
   "date": "2026-07-14",
-  "generated_at": "2026-07-14T03:05:21.014Z",
-  "status": "prepared",
+  "generated_at": "2026-07-14T03:14:15.293Z",
+  "status": "published_partial",
   "themes": [
     "Del Mar Dog Beach Sunset",
     "Fuengirola Moon Over the Mediterranean",
@@ -146,18 +146,60 @@
         }
       ],
       "date": "2026-07-14",
-      "status": "prepared",
+      "status": "published",
       "account": "Photos By Elie",
       "post_type": "multi_photo",
       "destination_url": "https://photos-by-elie.com/campaign.html?c=facebook-del-mar-dog-beach-sunset-2026-07-14",
       "recommended_upload_set": "images",
       "available_count": 8,
       "notes": [
-        "Images are public watermarked R2 previews staged for upload/API publishing."
+        "Images are public watermarked R2 previews staged for upload/API publishing.",
+        "Facebook published and verified by API readback on 2026-07-14."
       ],
-      "manual_blockers": [
-        "Publish pending: review socials/Facebook/2026-07-14/del-mar-dog-beach-sunset/manifest.json and use the Facebook browser/API workflow."
-      ]
+      "manual_blockers": [],
+      "published_url": "https://www.facebook.com/122102168061334672/posts/122110659105334672",
+      "published": {
+        "id": "1146747141854670_122110659105334672",
+        "permalink": "https://www.facebook.com/122102168061334672/posts/122110659105334672",
+        "timestamp": "2026-07-14T03:10:15+0000",
+        "account": "Photos By Elie",
+        "image_count": 8
+      },
+      "verification": {
+        "method": "Graph API readback with Page access token",
+        "subattachments": 8,
+        "permalink": "https://www.facebook.com/122102168061334672/posts/122110659105334672"
+      },
+      "personal_share_assist": {
+        "format": "photosbyelie-facebook-personal-share-assist",
+        "schema_version": 1,
+        "generated_at": "2026-07-14T03:14:15.568Z",
+        "date": "2026-07-14",
+        "status": "prepared_manual_final_click",
+        "expected_identity": "Elie Cohen",
+        "source_platform": "Facebook",
+        "source_page": "Photos By Elie",
+        "source_title": "Del Mar Dog Beach Sunset",
+        "facebook_post_url": "https://www.facebook.com/122102168061334672/posts/122110659105334672",
+        "campaign_url": "https://photos-by-elie.com/campaign.html?c=facebook-del-mar-dog-beach-sunset-2026-07-14",
+        "share_url": "https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fwww.facebook.com%2F122102168061334672%2Fposts%2F122110659105334672",
+        "text_fr": "Je viens de publier quelques nouvelles photos sur Photos By Elie.\n\nLa série du jour, « Del Mar Dog Beach Sunset », rassemble quelques images que j'aime beaucoup.\n\nÀ voir ici :\nhttps://www.facebook.com/122102168061334672/posts/122110659105334672",
+        "text_en": "I just published a few new photos on Photos By Elie.\n\nToday's series, \"Del Mar Dog Beach Sunset\", brings together a few images I really like.\n\nSee it here:\nhttps://www.facebook.com/122102168061334672/posts/122110659105334672",
+        "local_dir": "socials/Facebook/2026-07-14/del-mar-dog-beach-sunset/personal-share",
+        "local_files": {
+          "text_fr": "socials/Facebook/2026-07-14/del-mar-dog-beach-sunset/personal-share/text-fr.txt",
+          "text_en": "socials/Facebook/2026-07-14/del-mar-dog-beach-sunset/personal-share/text-en.txt",
+          "share_url": "socials/Facebook/2026-07-14/del-mar-dog-beach-sunset/personal-share/share-url.txt",
+          "manifest": "socials/Facebook/2026-07-14/del-mar-dog-beach-sunset/personal-share/manifest.json",
+          "readme": "socials/Facebook/2026-07-14/del-mar-dog-beach-sunset/personal-share/README.md"
+        },
+        "guardrails": [
+          "This is a user-mediated personal profile share assist.",
+          "Do not automate the final Facebook Post button.",
+          "Confirm the visible posting identity is Elie Cohen before posting.",
+          "Do not use private Facebook endpoints, cookies, passwords, or 2FA codes."
+        ]
+      }
     },
     {
       "platform": "Instagram",
@@ -295,19 +337,31 @@
         }
       ],
       "date": "2026-07-14",
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-fuengirola-moon-mediterranean-2026-07-14",
       "recommended_upload_set": "images",
       "available_count": 8,
       "notes": [
-        "Images are public watermarked R2 previews staged for upload/API publishing."
+        "Images are public watermarked R2 previews staged for upload/API publishing.",
+        "Instagram published and verified by API readback on 2026-07-14."
       ],
-      "manual_blockers": [
-        "Publish pending: review socials/Instagram/2026-07-14/fuengirola-moon-over-the-mediterranean/manifest.json and use the Instagram browser/API workflow.",
-        "Instagram feed captions are not clickable; update the profile website link or use a Story link sticker before posting."
-      ]
+      "manual_blockers": [],
+      "published_url": "https://www.instagram.com/p/Dawfv-VCN50/",
+      "published": {
+        "id": "17978227047053389",
+        "permalink": "https://www.instagram.com/p/Dawfv-VCN50/",
+        "timestamp": "2026-07-14T03:12:05+0000",
+        "username": "ec92009",
+        "media_type": "CAROUSEL_ALBUM",
+        "image_count": 8
+      },
+      "verification": {
+        "method": "Instagram Graph API readback",
+        "children": 8,
+        "permalink": "https://www.instagram.com/p/Dawfv-VCN50/"
+      }
     },
     {
       "platform": "Pinterest",
@@ -485,21 +539,66 @@
           "local_staged_path": "socials/Threads/2026-07-14/fuengirola-moon-over-the-mediterranean/images/04-img-2450-18dd778c3d-fuengirola-moon-over-the-mediterranean.jpg"
         }
       ],
-      "status": "prepared",
+      "status": "published",
       "account": "ec92009",
       "post_type": "carousel",
       "available_count": 4,
       "notes": [
         "Derived from the Instagram package for a 3-4 image Threads carousel.",
-        "Images are public watermarked R2 previews staged for upload/API publishing."
+        "Images are public watermarked R2 previews staged for upload/API publishing.",
+        "Threads published and verified by API readback on 2026-07-14."
       ],
       "date": "2026-07-14",
       "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-fuengirola-moon-mediterranean-2026-07-14",
       "recommended_upload_set": "images",
-      "manual_blockers": [
-        "Publish pending: review socials/Threads/2026-07-14/fuengirola-moon-over-the-mediterranean/manifest.json and use the Threads browser/API workflow."
-      ]
+      "manual_blockers": [],
+      "published_url": "https://www.threads.com/@ec92009/post/Dawf3YKCBKp",
+      "published": {
+        "id": "17873976666534631",
+        "permalink": "https://www.threads.com/@ec92009/post/Dawf3YKCBKp",
+        "shortcode": "Dawf3YKCBKp",
+        "timestamp": "2026-07-14T03:13:07+0000",
+        "username": "ec92009",
+        "media_type": "CAROUSEL_ALBUM",
+        "image_count": 4
+      },
+      "verification": {
+        "method": "Threads Graph API readback",
+        "children": 4,
+        "permalink": "https://www.threads.com/@ec92009/post/Dawf3YKCBKp",
+        "link_preview_note": "API publish flow had no browser link-preview removal step."
+      }
     }
   ],
-  "visible_version": "v136.0"
+  "visible_version": "v136.0",
+  "personal_share_assist": {
+    "format": "photosbyelie-facebook-personal-share-assist",
+    "schema_version": 1,
+    "generated_at": "2026-07-14T03:14:15.568Z",
+    "date": "2026-07-14",
+    "status": "prepared_manual_final_click",
+    "expected_identity": "Elie Cohen",
+    "source_platform": "Facebook",
+    "source_page": "Photos By Elie",
+    "source_title": "Del Mar Dog Beach Sunset",
+    "facebook_post_url": "https://www.facebook.com/122102168061334672/posts/122110659105334672",
+    "campaign_url": "https://photos-by-elie.com/campaign.html?c=facebook-del-mar-dog-beach-sunset-2026-07-14",
+    "share_url": "https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fwww.facebook.com%2F122102168061334672%2Fposts%2F122110659105334672",
+    "text_fr": "Je viens de publier quelques nouvelles photos sur Photos By Elie.\n\nLa série du jour, « Del Mar Dog Beach Sunset », rassemble quelques images que j'aime beaucoup.\n\nÀ voir ici :\nhttps://www.facebook.com/122102168061334672/posts/122110659105334672",
+    "text_en": "I just published a few new photos on Photos By Elie.\n\nToday's series, \"Del Mar Dog Beach Sunset\", brings together a few images I really like.\n\nSee it here:\nhttps://www.facebook.com/122102168061334672/posts/122110659105334672",
+    "local_dir": "socials/Facebook/2026-07-14/del-mar-dog-beach-sunset/personal-share",
+    "local_files": {
+      "text_fr": "socials/Facebook/2026-07-14/del-mar-dog-beach-sunset/personal-share/text-fr.txt",
+      "text_en": "socials/Facebook/2026-07-14/del-mar-dog-beach-sunset/personal-share/text-en.txt",
+      "share_url": "socials/Facebook/2026-07-14/del-mar-dog-beach-sunset/personal-share/share-url.txt",
+      "manifest": "socials/Facebook/2026-07-14/del-mar-dog-beach-sunset/personal-share/manifest.json",
+      "readme": "socials/Facebook/2026-07-14/del-mar-dog-beach-sunset/personal-share/README.md"
+    },
+    "guardrails": [
+      "This is a user-mediated personal profile share assist.",
+      "Do not automate the final Facebook Post button.",
+      "Confirm the visible posting identity is Elie Cohen before posting.",
+      "Do not use private Facebook endpoints, cookies, passwords, or 2FA codes."
+    ]
+  }
 }

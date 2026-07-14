@@ -134,17 +134,29 @@
     }
   ],
   "date": "2026-07-14",
-  "status": "prepared",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-fuengirola-moon-mediterranean-2026-07-14",
   "recommended_upload_set": "images",
   "available_count": 8,
   "notes": [
-    "Images are public watermarked R2 previews staged for upload/API publishing."
+    "Images are public watermarked R2 previews staged for upload/API publishing.",
+    "Instagram published and verified by API readback on 2026-07-14."
   ],
-  "manual_blockers": [
-    "Publish pending: review socials/Instagram/2026-07-14/fuengirola-moon-over-the-mediterranean/manifest.json and use the Instagram browser/API workflow.",
-    "Instagram feed captions are not clickable; update the profile website link or use a Story link sticker before posting."
-  ]
+  "manual_blockers": [],
+  "published_url": "https://www.instagram.com/p/Dawfv-VCN50/",
+  "published": {
+    "id": "17978227047053389",
+    "permalink": "https://www.instagram.com/p/Dawfv-VCN50/",
+    "timestamp": "2026-07-14T03:12:05+0000",
+    "username": "ec92009",
+    "media_type": "CAROUSEL_ALBUM",
+    "image_count": 8
+  },
+  "verification": {
+    "method": "Instagram Graph API readback",
+    "children": 8,
+    "permalink": "https://www.instagram.com/p/Dawfv-VCN50/"
+  }
 }

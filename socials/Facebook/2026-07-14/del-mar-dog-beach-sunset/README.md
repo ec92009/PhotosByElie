@@ -1,10 +1,8 @@
 # Facebook - 2026-07-14 - Del Mar Dog Beach Sunset
 
-Status: prepared
+Status: published
 Destination: https://photos-by-elie.com/campaign.html?c=facebook-del-mar-dog-beach-sunset-2026-07-14
-
-Manual blockers:
-- Publish pending: review socials/Facebook/2026-07-14/del-mar-dog-beach-sunset/manifest.json and use the Facebook browser/API workflow.
+Published URL: https://www.facebook.com/122102168061334672/posts/122110659105334672
 
 Caption:
 

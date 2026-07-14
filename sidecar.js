@@ -93,6 +93,12 @@
   const previewObservers = new WeakMap();
   let indexStatusTimer = null;
   let searchChangeTimer = null;
+  let summaryRefreshTimer = null;
+  let summaryRefreshPromise = null;
+  let summaryRefreshQueued = false;
+  let uploadRailRefreshTimer = null;
+  let uploadRailRefreshPromise = null;
+  let uploadRailRefreshQueued = false;
 
   const normalizePage = (value) => {
     if (value === "editing") return "review";
@@ -447,7 +453,7 @@
   const videoPlayerMarkup = (item, autoplay = true) => `
     <video class="sidecar-inline-video" controls playsinline preload="metadata" ${autoplay ? "autoplay" : ""} poster="${escapeHtml(previewUrl(item))}" src="${escapeHtml(videoUrl(item))}"></video>
   `;
-  const versionFallback = "134.0";
+  const versionFallback = "136.0";
   const versionFallbackLabel = `v${versionFallback}`;
   const videoBadge = (item, index, label) => isVideo(item)
     ? videoOverlay(item, index, label)
@@ -1286,6 +1292,7 @@
       uploadPlanButton.disabled = !reviewActive;
     }
     if (!reviewActive && planPanel?.dataset.sidecarPlanKind === "upload") hidePlanPanel();
+    if (reviewActive && planPanel?.hidden) renderUploadRailStatus();
     pageTabs.forEach((button) => {
       const selected = button.dataset.sidecarPage === state.page;
       button.setAttribute("aria-selected", selected ? "true" : "false");
@@ -2226,11 +2233,14 @@
     saveWindowState();
     let uploadRailPayload = null;
     let uploadRailError = null;
-    if (isReviewPage()) {
+    if (isReviewPage() && visibleIndexes().length) {
+      refreshUploadRailQuietly(0);
+    } else if (isReviewPage()) {
       try {
         uploadRailPayload = await refreshUploadRail({ silent: true });
       } catch (error) {
         uploadRailError = error;
+        renderUploadRailStatus(error.message || "Unknown error", true);
       }
     }
     const keepEmptyReviewForBridge = isReviewPage()
@@ -2284,10 +2294,31 @@
     if (!silent) setStatus(`${Number(payload.pendingSyncCount || 0).toLocaleString()} pending Photos write-back changes.`);
   };
 
-  const refreshSummaryQuietly = () => {
-    loadSummary({ silent: true }).catch((error) => {
-      setStatus(`Summary refresh failed: ${error.message || "unknown error"}`);
-    });
+  const runSummaryRefresh = async () => {
+    if (summaryRefreshPromise) {
+      summaryRefreshQueued = true;
+      return summaryRefreshPromise;
+    }
+    summaryRefreshPromise = loadSummary({ silent: true })
+      .catch((error) => {
+        setStatus(`Summary refresh failed: ${error.message || "unknown error"}`);
+      })
+      .finally(() => {
+        summaryRefreshPromise = null;
+        if (summaryRefreshQueued) {
+          summaryRefreshQueued = false;
+          refreshSummaryQuietly();
+        }
+      });
+    return summaryRefreshPromise;
+  };
+
+  const refreshSummaryQuietly = (delay = 400) => {
+    if (summaryRefreshTimer) window.clearTimeout(summaryRefreshTimer);
+    summaryRefreshTimer = window.setTimeout(() => {
+      summaryRefreshTimer = null;
+      runSummaryRefresh();
+    }, delay);
   };
 
   const currentWindowUploadReadiness = () => {
@@ -2572,12 +2603,29 @@
     `;
   };
 
+  const renderUploadRailStatus = (message = "Checking approved picked rows and upload readiness...", failed = false) => {
+    if (!planPanel || !planOutput || !isReviewPage()) return;
+    planPanel.hidden = false;
+    planPanel.classList.add("is-upload-plan");
+    planPanel.dataset.sidecarPlanKind = "upload";
+    document.body.classList.add("sidecar-has-plan");
+    if (planTitle) planTitle.textContent = failed ? "Upload Bridge unavailable" : "Upload Bridge";
+    if (planEyebrow) planEyebrow.textContent = "Review rail";
+    planOutput.innerHTML = `
+      <div class="sidecar-upload-bridge-progress ${failed ? "has-warning" : "is-running"}" role="${failed ? "alert" : "status"}">
+        <strong>${failed ? "Could not refresh the Review rail." : "Loading Review rail..."}</strong>
+        <span>${escapeHtml(message)}</span>
+      </div>
+    `;
+  };
+
   const loadPlan = async (kind, { silent = false } = {}) => {
     if (kind === "upload" && !isReviewPage()) {
       if (planPanel?.dataset.sidecarPlanKind === "upload") hidePlanPanel();
       if (!silent) setStatus("Upload Bridge is available from Review.");
       return null;
     }
+    if (kind === "upload") renderUploadRailStatus();
     const endpoint = kind === "upload" ? "/__sidecar/upload-plan" : "/__sidecar/commit-plan";
     const response = await fetch(endpoint);
     const payload = await response.json().catch(() => ({}));
@@ -2599,10 +2647,35 @@
     return loadPlan("upload", options);
   };
 
-  const refreshUploadRailQuietly = () => {
-    refreshUploadRail({ silent: true }).catch((error) => {
-      setStatus(`Upload Bridge refresh failed: ${error.message || "unknown error"}`);
-    });
+  const runUploadRailRefresh = async () => {
+    if (!isReviewPage()) return null;
+    if (uploadRailRefreshPromise) {
+      uploadRailRefreshQueued = true;
+      return uploadRailRefreshPromise;
+    }
+    uploadRailRefreshPromise = refreshUploadRail({ silent: true })
+      .catch((error) => {
+        renderUploadRailStatus(error.message || "Unknown error", true);
+        setStatus(`Upload Bridge refresh failed: ${error.message || "unknown error"}`);
+        return null;
+      })
+      .finally(() => {
+        uploadRailRefreshPromise = null;
+        if (uploadRailRefreshQueued) {
+          uploadRailRefreshQueued = false;
+          refreshUploadRailQuietly();
+        }
+      });
+    return uploadRailRefreshPromise;
+  };
+
+  const refreshUploadRailQuietly = (delay = 650) => {
+    if (!isReviewPage()) return;
+    if (uploadRailRefreshTimer) window.clearTimeout(uploadRailRefreshTimer);
+    uploadRailRefreshTimer = window.setTimeout(() => {
+      uploadRailRefreshTimer = null;
+      runUploadRailRefresh();
+    }, delay);
   };
 
   const queueUploadBridge = async (assetIds) => {

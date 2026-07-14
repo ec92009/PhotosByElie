@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from contextlib import nullcontext
 import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
@@ -12,6 +13,7 @@ import os
 import re
 import sqlite3
 import subprocess
+import threading
 import time
 import uuid
 from pathlib import Path
@@ -40,6 +42,8 @@ METADATA_STATES = {"unreviewed", "proposed", "approved", "rework", "blocked"}
 REWORK_CATEGORIES = {"", "incorrect", "generic", "placeholder", "keywords", "detail", "shoot", "other"}
 INTERNAL_TITLE_MARKERS = {"dontexport", "don't export", "do not export", "notmyphoto", "not my photo"}
 GENERIC_UPLOAD_TITLES = {"", "2025", "2026", "whatsapp", "img", "dji album", "untitled", "video", "photo"}
+_SCHEMA_READY: set[tuple[str, int, int]] = set()
+_SCHEMA_LOCK = threading.Lock()
 UPLOAD_BRIDGE_GALLERY_TERMS = {
     "italy": ("italy", "florence", "tuscany"),
     "france": ("france", "paris", "toulouse"),
@@ -207,16 +211,36 @@ def _read_json_text(value: str | None, fallback: Any) -> Any:
         return fallback
 
 
+class _ClosingConnection(sqlite3.Connection):
+    """Commit or roll back a context-managed connection, then close it."""
+
+    def __exit__(self, exc_type: object, exc_value: object, traceback: object) -> bool:
+        try:
+            return bool(super().__exit__(exc_type, exc_value, traceback))
+        finally:
+            self.close()
+
+
 def connect(repo_root: Path, db_path: Path | None = None) -> sqlite3.Connection:
     path = db_path or DEFAULT_DB
     if not path.is_absolute():
         path = repo_root / path
     path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(path, timeout=15)
+    conn = sqlite3.connect(path, timeout=15, factory=_ClosingConnection)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA busy_timeout = 15000")
     conn.execute("PRAGMA foreign_keys = ON")
-    ensure_schema(conn)
+    stat = path.stat()
+    schema_key = (str(path.resolve()), int(stat.st_dev), int(stat.st_ino))
+    with _SCHEMA_LOCK:
+        if schema_key not in _SCHEMA_READY:
+            try:
+                ensure_schema(conn)
+                conn.commit()
+            except Exception:
+                conn.close()
+                raise
+            _SCHEMA_READY.add(schema_key)
     return conn
 
 
@@ -274,6 +298,7 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         ) WITHOUT ROWID;
 
         CREATE INDEX IF NOT EXISTS idx_sidecar_decisions_pick ON sidecar_decisions(pick_state, metadata_state, updated_at);
+        CREATE INDEX IF NOT EXISTS idx_sidecar_decisions_pick_asset ON sidecar_decisions(pick_state, asset_id);
         CREATE INDEX IF NOT EXISTS idx_sidecar_decisions_rating ON sidecar_decisions(rating, color, updated_at);
 
         CREATE TABLE IF NOT EXISTS sidecar_pending_sync (
@@ -359,6 +384,8 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
           ON sidecar_upload_bridge_run_items(run_id, status);
         CREATE INDEX IF NOT EXISTS idx_sidecar_upload_bridge_run_items_asset
           ON sidecar_upload_bridge_run_items(asset_id, created_at);
+        CREATE INDEX IF NOT EXISTS idx_sidecar_upload_bridge_run_items_updated
+          ON sidecar_upload_bridge_run_items(updated_at DESC);
 
         CREATE TABLE IF NOT EXISTS sidecar_upload_bridge_asset_blocks (
           asset_id        TEXT PRIMARY KEY CHECK (trim(asset_id) <> ''),
@@ -841,7 +868,7 @@ def indexed_library_window(
         for value in (ratings or [])
         if str(value).strip().isdigit()
     })
-    if clean_ratings:
+    if clean_ratings and set(clean_ratings) != RATING_VALUES:
         filter_predicates.append(f"COALESCE(d.rating, 0) IN ({', '.join('?' for _ in clean_ratings)})")
         filter_params.extend(clean_ratings)
     clean_colors = []
@@ -851,7 +878,7 @@ def indexed_library_window(
             color = ""
         if color in COLOR_VALUES and color not in clean_colors:
             clean_colors.append(color)
-    if clean_colors:
+    if clean_colors and set(clean_colors) != COLOR_VALUES:
         filter_predicates.append(f"COALESCE(d.color, '') IN ({', '.join('?' for _ in clean_colors)})")
         filter_params.extend(clean_colors)
     clean_media_types = []
@@ -859,7 +886,7 @@ def indexed_library_window(
         media_type = str(value or "").strip()
         if media_type in {"photo", "video"} and media_type not in clean_media_types:
             clean_media_types.append(media_type)
-    if clean_media_types:
+    if clean_media_types and set(clean_media_types) != {"photo", "video"}:
         filter_predicates.append(f"COALESCE(a.media_type, '') IN ({', '.join('?' for _ in clean_media_types)})")
         filter_params.extend(clean_media_types)
     search_columns = (
@@ -891,13 +918,22 @@ def indexed_library_window(
     if pick_predicates:
         filter_predicates.append(f"({' OR '.join(pick_predicates)})")
     filter_sql = " AND ".join(filter_predicates)
+    if clean_pick_states == {"picked"}:
+        source_sql = """
+            sidecar_decisions AS d INDEXED BY idx_sidecar_decisions_pick_asset
+            JOIN sidecar_assets AS a ON a.asset_id = d.asset_id
+        """
+    else:
+        source_sql = """
+            sidecar_assets AS a INDEXED BY idx_sidecar_assets_active_id
+            LEFT JOIN sidecar_decisions AS d ON d.asset_id = a.asset_id
+        """
     with connect(repo_root) as conn:
         indexed_count = _active_asset_count(conn)
         filtered_count = conn.execute(
             f"""
             SELECT count(*) AS total
-            FROM sidecar_assets AS a INDEXED BY idx_sidecar_assets_active_id
-            LEFT JOIN sidecar_decisions AS d ON d.asset_id = a.asset_id
+            FROM {source_sql}
             WHERE {where_sql} AND {filter_sql}
             """,
             [*params, *filter_params],
@@ -905,8 +941,7 @@ def indexed_library_window(
         rows = conn.execute(
             f"""
             SELECT a.*
-            FROM sidecar_assets AS a INDEXED BY idx_sidecar_assets_active_captured
-            LEFT JOIN sidecar_decisions AS d ON d.asset_id = a.asset_id
+            FROM {source_sql}
             WHERE {where_sql} AND {filter_sql}
             ORDER BY a.captured_at DESC, a.asset_id
             LIMIT ? OFFSET ?
@@ -1416,13 +1451,19 @@ def _metadata_values_from_payload(
     return title, keywords
 
 
-def record_decision(repo_root: Path, payload: dict[str, Any]) -> dict[str, Any]:
+def record_decision(
+    repo_root: Path,
+    payload: dict[str, Any],
+    *,
+    conn: sqlite3.Connection | None = None,
+) -> dict[str, Any]:
     asset_id = str(payload.get("assetId") or payload.get("asset_id") or payload.get("localIdentifier") or "").strip()
     if not asset_id:
         raise ValueError("assetId is required")
     action = str(payload.get("action") or "").strip().casefold()
     now = now_iso()
-    with connect(repo_root) as conn:
+    connection_context = nullcontext(conn) if conn is not None else connect(repo_root)
+    with connection_context as conn:
         conn.execute(
             """
             INSERT OR IGNORE INTO sidecar_assets (asset_id, source_anchor, indexed_at, updated_at)
@@ -1608,10 +1649,11 @@ def record_decision(repo_root: Path, payload: dict[str, Any]) -> dict[str, Any]:
 
 def record_decisions(repo_root: Path, payloads: Iterable[dict[str, Any]]) -> dict[str, Any]:
     items: list[dict[str, Any]] = []
-    for payload in payloads:
-        if not isinstance(payload, dict):
-            raise ValueError("Each Sidecar decision must be a JSON object.")
-        items.append(record_decision(repo_root, payload))
+    with connect(repo_root) as conn:
+        for payload in payloads:
+            if not isinstance(payload, dict):
+                raise ValueError("Each Sidecar decision must be a JSON object.")
+            items.append(record_decision(repo_root, payload, conn=conn))
     return {"ok": True, "count": len(items), "items": items}
 
 
@@ -3933,18 +3975,28 @@ def _current_r2_objects_for_plan(conn: sqlite3.Connection, planned_keys: list[di
     if not planned_keys:
         return {}
     planned_pairs = {(str(item["bucket"]), str(item["key"])) for item in planned_keys}
-    conditions = " OR ".join("(bucket = ? AND object_key = ?)" for _ in planned_keys)
-    params: list[str] = []
-    for item in planned_keys:
-        params.extend([item["bucket"], item["key"]])
     try:
+        conn.execute(
+            """
+            CREATE TEMP TABLE IF NOT EXISTS sidecar_planned_r2_keys (
+              bucket TEXT NOT NULL,
+              object_key TEXT NOT NULL,
+              PRIMARY KEY (bucket, object_key)
+            ) WITHOUT ROWID
+            """
+        )
+        conn.execute("DELETE FROM sidecar_planned_r2_keys")
+        conn.executemany(
+            "INSERT OR IGNORE INTO sidecar_planned_r2_keys (bucket, object_key) VALUES (?, ?)",
+            planned_pairs,
+        )
         rows = conn.execute(
-            f"""
-            SELECT bucket, object_key, photo_id, object_kind, lifecycle_state, bytes, last_seen_at
-            FROM r2_objects
-            WHERE lifecycle_state = 'current' AND ({conditions})
+            """
+            SELECT r.bucket, r.object_key, r.photo_id, r.object_kind, r.lifecycle_state, r.bytes, r.last_seen_at
+            FROM sidecar_planned_r2_keys AS p
+            JOIN r2_objects AS r ON r.bucket = p.bucket AND r.object_key = p.object_key
+            WHERE r.lifecycle_state = 'current'
             """,
-            params,
         ).fetchall()
     except sqlite3.OperationalError:
         rows = []

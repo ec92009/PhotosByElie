@@ -1,4 +1,5 @@
 import json
+import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -14,6 +15,87 @@ import sidecar_state_db
 
 
 class IndexedWindowTest(unittest.TestCase):
+    def test_context_managed_connection_is_closed_after_use(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            with sidecar_state_db.connect(repo_root) as conn:
+                conn.execute("SELECT 1").fetchone()
+
+            with self.assertRaises(sqlite3.ProgrammingError):
+                conn.execute("SELECT 1")
+
+    def test_schema_is_initialized_once_per_database_file(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            with patch.object(sidecar_state_db, "ensure_schema", wraps=sidecar_state_db.ensure_schema) as ensure:
+                with sidecar_state_db.connect(repo_root):
+                    pass
+                with sidecar_state_db.connect(repo_root):
+                    pass
+
+            self.assertEqual(ensure.call_count, 1)
+
+    def test_batch_decisions_share_one_database_connection(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            rows = [
+                {
+                    "assetId": f"cloud-{index}",
+                    "sourceAnchor": f"apple-photos://cloud-{index}",
+                    "mediaType": "photo",
+                    "filename": f"Photo {index}.jpg",
+                }
+                for index in range(1, 4)
+            ]
+            sidecar_state_db.upsert_assets(repo_root, rows)
+            decisions = [
+                {"assetId": f"cloud-{index}", "action": "pick"}
+                for index in range(1, 4)
+            ]
+
+            with patch.object(sidecar_state_db, "connect", wraps=sidecar_state_db.connect) as open_connection:
+                result = sidecar_state_db.record_decisions(repo_root, decisions)
+
+            self.assertEqual(result["count"], 3)
+            self.assertEqual(open_connection.call_count, 1)
+
+    def test_large_r2_plan_lookup_uses_indexed_staging_table(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            with sidecar_state_db.connect(repo_root) as conn:
+                conn.execute(
+                    """
+                    CREATE TABLE r2_objects (
+                      bucket TEXT NOT NULL,
+                      object_key TEXT NOT NULL,
+                      photo_id TEXT,
+                      object_kind TEXT,
+                      lifecycle_state TEXT NOT NULL,
+                      bytes INTEGER,
+                      last_seen_at TEXT,
+                      PRIMARY KEY (bucket, object_key)
+                    ) WITHOUT ROWID
+                    """
+                )
+                conn.executemany(
+                    """
+                    INSERT INTO r2_objects
+                      (bucket, object_key, photo_id, object_kind, lifecycle_state, bytes, last_seen_at)
+                    VALUES (?, ?, ?, 'public-preview', ?, 10, '2026-07-14T00:00:00Z')
+                    """,
+                    [
+                        ("public", f"preview-{index}", f"photo-{index}", "current" if index == 1777 else "deleted_confirmed")
+                        for index in range(2500)
+                    ],
+                )
+                planned_keys = [
+                    {"bucket": "public", "key": f"preview-{index}"}
+                    for index in range(2500)
+                ]
+                result = sidecar_state_db._current_r2_objects_for_plan(conn, planned_keys)
+
+            self.assertEqual(set(result), {("public", "preview-1777")})
+
     def test_cloud_id_filters_and_order_do_not_require_legacy_positions(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             repo_root = Path(temp_dir)

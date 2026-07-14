@@ -590,8 +590,9 @@ Clock state: running
 | 2026-07-13 | 10:07 CEST | 10:08 CEST | 0:01 | Documented the first-month Real Estate revenue plan, role split, launch week, daily cadence, and scorecard. |
 | 2026-07-13 | 10:09 CEST | 10:10 CEST | 0:01 | Directed the Real Estate game plan documentation commit and push. |
 | 2026-07-13 | 10:34 CEST | 10:35 CEST | 0:01 | Approved real camera-storefront pricing and retirement of AI-generated images from commercial publication; implementation, rebuild, test, deploy, and browser runtime excluded. |
+| 2026-07-14 | 10:39 CEST | 10:40 CEST | 0:01 | Reported slow Sidecar Review approval/propagation and the missing review rail; diagnosis, implementation, and browser QA excluded. |
 
 ## Totals
 
-Active collaboration time used: 30:21
+Active collaboration time used: 30:22
 Remaining budget: not set

@@ -1,0 +1,86 @@
+{
+  "platform": "Threads",
+  "title": "Fuengirola Moon Over the Mediterranean",
+  "campaign_id": "instagram-fuengirola-moon-mediterranean-2026-07-14",
+  "caption": "Fuengirola Moon Over the Mediterranean in four Photos By Elie frames. Browse: https://photos-by-elie.com/campaign.html?c=instagram-fuengirola-moon-mediterranean-2026-07-14",
+  "items": [
+    {
+      "media_id": "img-2438-769d2c55da",
+      "order": 1,
+      "id": "img-2438-769d2c55da",
+      "title": "Fuengirola, Moon Over The Mediterranean",
+      "collection": "spain",
+      "location": "Spain",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/img-2438-769d2c55da_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/img-2438-769d2c55da_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=img-2438-769d2c55da",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=img-2438-769d2c55da",
+      "image": "images/01-img-2438-769d2c55da-fuengirola-moon-over-the-mediterranean.jpg",
+      "local_staged_path": "socials/Threads/2026-07-14/fuengirola-moon-over-the-mediterranean/images/01-img-2438-769d2c55da-fuengirola-moon-over-the-mediterranean.jpg"
+    },
+    {
+      "media_id": "img-2448-d30fa46324",
+      "order": 2,
+      "id": "img-2448-d30fa46324",
+      "title": "Fuengirola, Moon Over The Mediterranean",
+      "collection": "spain",
+      "location": "Spain",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/img-2448-d30fa46324_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/img-2448-d30fa46324_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=img-2448-d30fa46324",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=img-2448-d30fa46324",
+      "image": "images/02-img-2448-d30fa46324-fuengirola-moon-over-the-mediterranean.jpg",
+      "local_staged_path": "socials/Threads/2026-07-14/fuengirola-moon-over-the-mediterranean/images/02-img-2448-d30fa46324-fuengirola-moon-over-the-mediterranean.jpg"
+    },
+    {
+      "media_id": "img-2439-acda9a345e",
+      "order": 3,
+      "id": "img-2439-acda9a345e",
+      "title": "Fuengirola, Moon Over The Mediterranean",
+      "collection": "spain",
+      "location": "Spain",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/img-2439-acda9a345e_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/img-2439-acda9a345e_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=img-2439-acda9a345e",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=img-2439-acda9a345e",
+      "image": "images/03-img-2439-acda9a345e-fuengirola-moon-over-the-mediterranean.jpg",
+      "local_staged_path": "socials/Threads/2026-07-14/fuengirola-moon-over-the-mediterranean/images/03-img-2439-acda9a345e-fuengirola-moon-over-the-mediterranean.jpg"
+    },
+    {
+      "media_id": "img-2450-18dd778c3d",
+      "order": 4,
+      "id": "img-2450-18dd778c3d",
+      "title": "Fuengirola, Moon Over The Mediterranean",
+      "collection": "spain",
+      "location": "Spain",
+      "width": 1800,
+      "height": 1350,
+      "source_url": "https://download.photos-by-elie.com/media/expo/img-2450-18dd778c3d_1800.jpg",
+      "public_asset_url": "https://download.photos-by-elie.com/media/expo/img-2450-18dd778c3d_1800.jpg",
+      "photo_url": "https://photos-by-elie.com/photo.html?id=img-2450-18dd778c3d",
+      "public_photo_url": "https://photos-by-elie.com/photo.html?id=img-2450-18dd778c3d",
+      "image": "images/04-img-2450-18dd778c3d-fuengirola-moon-over-the-mediterranean.jpg",
+      "local_staged_path": "socials/Threads/2026-07-14/fuengirola-moon-over-the-mediterranean/images/04-img-2450-18dd778c3d-fuengirola-moon-over-the-mediterranean.jpg"
+    }
+  ],
+  "status": "prepared",
+  "account": "ec92009",
+  "post_type": "carousel",
+  "available_count": 4,
+  "notes": [
+    "Derived from the Instagram package for a 3-4 image Threads carousel.",
+    "Images are public watermarked R2 previews staged for upload/API publishing."
+  ],
+  "date": "2026-07-14",
+  "destination_url": "https://photos-by-elie.com/campaign.html?c=instagram-fuengirola-moon-mediterranean-2026-07-14",
+  "recommended_upload_set": "images",
+  "manual_blockers": [
+    "Publish pending: review socials/Threads/2026-07-14/fuengirola-moon-over-the-mediterranean/manifest.json and use the Threads browser/API workflow."
+  ]
+}

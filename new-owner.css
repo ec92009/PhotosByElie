@@ -516,7 +516,13 @@ body[data-gallery="new-owner"] main.new-owner-shell {
 .new-owner-re-albums {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  align-content: start;
   gap: .45rem;
+  max-height: 18rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: .25rem;
+  scrollbar-gutter: stable;
 }
 
 .new-owner-re-album,

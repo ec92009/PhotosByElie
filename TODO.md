@@ -4,7 +4,7 @@ Last updated: 2026-07-16
 
 ## Current Facts
 
-- Public visible build: `v138.5`.
+- Public visible build: `v138.6`.
 - Sidecar local build: `v126.6`.
 - Public site: `https://photos-by-elie.com/`.
 - Local preview: `http://localhost:8000/`.
@@ -14,7 +14,7 @@ Last updated: 2026-07-16
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`.
 - Access Console Sandbox V8 cloud backend plus ACS9 local front-end rehearsal: deployed on `auth.photos-by-elie.com` with D1 database `photosbyelie-access`; local preview at `http://100.111.30.109:8000/access-console.html`; group manager creates/edits/archives audience groups, connects groups to real gallery records, persists per-gallery defaults, filters people, manages group memberships, previews gallery permissions for selected group/person/visitor/owner modes, runs cloud Worker policy tests for selected gallery access, shows a reversible audit/undo ledger for person/group access changes, and includes a selected-group invitation rehearsal for email/link/QR access propagation; audience fixtures are `Agnes's B'day`, `RE La Concha`, and `Johnson-Palmer wedding`.
 - `owner.html` is the canonical authenticated cloud Owner control surface; `new-owner.html` redirects to it for compatibility. Scoped background connectors provide health, full Apple Photos index refresh, Photos previews, Sidecar stars/pick/reject/title/keywords/approval decisions, guarded single-item Upload Bridge execution plus catalog registration, and an Owner-only credential-free Mac installer download.
-- Owner has a private Apple Photos Real Estate intake that creates or reuses `RE / Fixture / Sub-fixture` routes and registers each fixture for the later RE import. Its explicit selector offers Apartment 1, Apartment 2, Street, Main lobby, Pool, Tennis court, and `New…` for any custom sub-fixture. The current Corine proof uses the named La Concha routes.
+- Owner has a private Apple Photos Real Estate intake that creates or reuses `RE / Fixture / Sub-fixture` routes and registers each fixture for the later RE import. Its explicit selector offers Apartment 1, Apartment 2, Street, Main lobby, Pool, Tennis court, and `New…` for any custom sub-fixture. Previews render immediately below the intake buttons/status while the full album chooser stays in a bounded scroll region; long-running connector work remains visibly waiting instead of being mislabeled as failed after 90 seconds. Assignment now requires an actual selected preview and cannot accidentally fall through to copying whole albums. The current Corine proof uses the named La Concha routes.
 - ACS can create, replace, and revoke gallery-scoped Real Estate password logins in D1. A single La Concha gallery grant covers the full sub-fixture tree. Do not send Corine access until the refreshed gallery, login, and downloads pass end-to-end verification.
 - Public catalog integrity: `ok`.
 - Public commercial catalog scale: `2713` media rows after retiring AI-generated images from storefront publication.

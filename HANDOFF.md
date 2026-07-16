@@ -15,7 +15,7 @@ for remote execution.
 - Public site: `https://photos-by-elie.com/`
 - Local preview: `http://localhost:8000/`
 - Owner intake URL: `https://photos-by-elie.com/owner.html`
-- Current visible build: `v138.5`
+- Current visible build: `v138.6`
 - Sidecar local build: `v126.6`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
@@ -26,9 +26,15 @@ for remote execution.
   of `RE / Fixture / Sub-fixture` (for example `RE / La Concha / Apartment 1`).
   The explicit sub-fixture selector offers Apartment 1, Apartment 2, Street,
   Main lobby, Pool, Tennis court, and `New…`; the last choice reveals a custom
-  name field. Free-text fixture names also create new folders. Assignment
-  remains local-only until the separate Real Estate import/publish workflow is
-  run.
+  name field. The preview grid sits directly below the intake actions/status;
+  the full Apple Photos album chooser is bounded to its own scroll region so it
+  cannot push previews down the page. Preview and assignment actions remain
+  monitored for up to 15 minutes, and a still-queued action is reported as
+  waiting rather than as a false failure. `Assign selected photos` stays
+  disabled until a preview exists and at least one preview is selected; it no
+  longer falls through to a whole-album assignment. Free-text fixture names
+  also create new folders. Assignment remains local-only until the separate
+  Real Estate import/publish workflow is run.
 - ACS now manages mutable Real Estate password credentials in D1. Owner/Admin
   can create, replace, or revoke a person's gallery-scoped login without
   storing or returning the plaintext password or password hash. A La Concha

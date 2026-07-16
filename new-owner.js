@@ -473,14 +473,16 @@
 
   const syncReControls = () => {
     const hasAlbums = selectedReAlbums().length > 0;
+    const hasSelectedPreviews = state.rePreviewItems.length > 0 && state.reSelectedAssetIds.size > 0;
     const preflightButton = $("[data-new-owner-re-preflight]");
     const assignButton = $("[data-new-owner-re-assign]");
     if (preflightButton) preflightButton.disabled = state.busy || !hasAlbums || !validReAssignment();
-    if (assignButton) assignButton.disabled = state.busy || !hasAlbums || !validReAssignment();
+    if (assignButton) assignButton.disabled = state.busy || !hasAlbums || !hasSelectedPreviews || !validReAssignment();
   };
 
   const renderRealEstateIntake = () => {
     if (reAlbumsRoot) {
+      const albumScrollTop = reAlbumsRoot.scrollTop;
       reAlbumsRoot.innerHTML = state.reAlbums.length
         ? state.reAlbums.map((album) => {
           const id = reAlbumId(album);
@@ -495,6 +497,7 @@
           `;
         }).join("")
         : "";
+      reAlbumsRoot.scrollTop = albumScrollTop;
     }
     if (rePreviewRoot) {
       rePreviewRoot.innerHTML = state.rePreviewItems.length
@@ -608,9 +611,9 @@
     return `Queued — waiting for ${connectorName}.`;
   };
 
-  const monitorAction = async (actionId, connectorId) => {
+  const monitorAction = async (actionId, connectorId, timeoutMs = 90_000) => {
     const startedAt = Date.now();
-    while (Date.now() - startedAt < 90_000) {
+    while (Date.now() - startedAt < timeoutMs) {
       let action = null;
       try {
         action = await readAction(actionId);
@@ -705,7 +708,14 @@
     window.location.href = url.href;
   };
 
-  const queueAction = async ({ action, payload, statusLabel = "Queueing...", localConnectorRequired = true, requestedConnectorId = "" }) => {
+  const queueAction = async ({
+    action,
+    payload,
+    statusLabel = "Queueing...",
+    localConnectorRequired = true,
+    requestedConnectorId = "",
+    monitorTimeoutMs = 90_000,
+  }) => {
     if (state.busy) return null;
     const connectorId = cleanConnectorId(requestedConnectorId) || (localConnectorRequired ? effectiveConnectorId() : "");
     if (localConnectorRequired && !connectorId) {
@@ -742,7 +752,7 @@
       setStatus("Owner action queued.");
       render();
       if (state.action?.id) {
-        completedAction = await monitorAction(state.action.id, connectorId);
+        completedAction = await monitorAction(state.action.id, connectorId, monitorTimeoutMs);
       }
     } catch (error) {
       const message = queueErrorMessage(error);
@@ -871,7 +881,12 @@
         queuedAt: new Date().toISOString(),
       },
       statusLabel: "Preparing private Apple Photos previews…",
+      monitorTimeoutMs: 15 * 60_000,
     });
+    if (completed?.state === "queued" || completed?.state === "claimed") {
+      setReStatus("Preview is still waiting behind another task on this Mac. Do not click again; leave this page open or refresh later to check the queue.", "busy");
+      return;
+    }
     if (completed?.state !== "completed") {
       setReStatus(completed?.error?.message || "The selected albums could not be previewed.", "error");
       return;
@@ -886,20 +901,19 @@
     );
     renderRealEstateIntake();
     queueMasonryLayout();
+    rePreviewRoot?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   };
 
   const assignRePhotos = async () => {
     const albums = selectedReAlbums();
     if (!albums.length || !validReAssignment(true)) return;
     const selectedAssetIds = state.rePreviewItems.length ? [...state.reSelectedAssetIds] : [];
-    if (state.rePreviewItems.length && !selectedAssetIds.length) {
-      setReStatus("Select at least one previewed photo, or reload the albums to assign complete albums.", "error");
+    if (!state.rePreviewItems.length || !selectedAssetIds.length) {
+      setReStatus("Preview the album and select at least one photo before assigning.", "error");
       return;
     }
     const assignment = reAssignment();
-    const countLabel = selectedAssetIds.length
-      ? `${selectedAssetIds.length} selected photo${selectedAssetIds.length === 1 ? "" : "s"}`
-      : `${albums.length} complete album${albums.length === 1 ? "" : "s"}`;
+    const countLabel = `${selectedAssetIds.length} selected photo${selectedAssetIds.length === 1 ? "" : "s"}`;
     if (!window.confirm(`Assign ${countLabel} to ${assignment.track} / ${assignment.fixture} / ${assignment.project}?\n\nThis stays local. Nothing will be published, uploaded, exposed, or messaged.`)) return;
     saveReRouting();
     setReStatus(`Assigning ${countLabel} to the persistent local RE intake…`, "busy");
@@ -915,7 +929,12 @@
         queuedAt: new Date().toISOString(),
       },
       statusLabel: "Assigning Apple Photos to local RE intake…",
+      monitorTimeoutMs: 15 * 60_000,
     });
+    if (completed?.state === "queued" || completed?.state === "claimed") {
+      setReStatus(`Assignment is still running on this Mac for ${assignment.track} / ${assignment.fixture} / ${assignment.project}. Do not start another assignment yet.`, "busy");
+      return;
+    }
     if (completed?.state !== "completed") {
       setReStatus(completed?.error?.message || "The Apple Photos assignment failed.", "error");
       return;

@@ -776,6 +776,13 @@ body[data-gallery="access-console"] .acs-hero h1 {
   margin-top: .3rem;
 }
 
+.acs-field-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
 .acs-effective {
   margin-top: 1rem;
   padding-top: 1rem;

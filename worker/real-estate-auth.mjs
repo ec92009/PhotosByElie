@@ -80,8 +80,32 @@ export const realEstateCredentialHash = async (accessCode, salt) => {
   return cleanSalt && cleanCode ? sha256Hex(`${cleanSalt}:${cleanCode}`) : "";
 };
 
+export const realEstatePasswordHash = async (accessCode, salt, iterations = 210_000) => {
+  const cleanSalt = String(salt || "").trim();
+  const cleanCode = String(accessCode || "");
+  const rounds = Math.max(100_000, Math.min(600_000, Number(iterations) || 210_000));
+  if (!cleanSalt || !cleanCode) return "";
+  const key = await crypto.subtle.importKey(
+    "raw",
+    textBytes(cleanCode),
+    "PBKDF2",
+    false,
+    ["deriveBits"]
+  );
+  const bits = await crypto.subtle.deriveBits({
+    name: "PBKDF2",
+    hash: "SHA-256",
+    salt: textBytes(cleanSalt),
+    iterations: rounds,
+  }, key, 256);
+  return [...new Uint8Array(bits)]
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+};
+
 export const createRealEstateAuth = ({
   galleries = [],
+  credentialStore = null,
   sessionSecret = "",
   sessionSeconds = DEFAULT_SESSION_SECONDS,
   now = () => new Date(),
@@ -126,6 +150,15 @@ export const createRealEstateAuth = ({
     return Boolean(expectedCode) && timingSafeEqual(enteredCode, expectedCode);
   };
 
+  const dynamicCredentialFor = async (gallery, username, accessCode) => {
+    if (!credentialStore || typeof credentialStore.verifyRealEstateCredential !== "function") return null;
+    return credentialStore.verifyRealEstateCredential({
+      galleryKey: gallery.key,
+      login: username,
+      password: accessCode,
+    });
+  };
+
   const encodeSession = async (session) => {
     const payload = b64urlEncode(textBytes(JSON.stringify(session)));
     return `${payload}.${await sign(secret, payload)}`;
@@ -144,7 +177,16 @@ export const createRealEstateAuth = ({
     if (!session?.galleryKey || !session?.username || !session?.expiresAt) throw sessionError();
     if (Date.parse(session.expiresAt) <= now().getTime()) throw sessionError("Real-estate login has expired.");
     const gallery = galleryFor(session.galleryKey);
-    if (!usernameMatches(gallery, session.username)) throw sessionError();
+    if (session.credentialEmail && credentialStore && typeof credentialStore.isRealEstateCredentialActive === "function") {
+      const active = await credentialStore.isRealEstateCredentialActive({
+        galleryKey: gallery.key,
+        email: session.credentialEmail,
+        loginName: session.username,
+      });
+      if (!active) throw sessionError("Real-estate access has been revoked.");
+    } else if (!usernameMatches(gallery, session.username)) {
+      throw sessionError();
+    }
     return session;
   };
 
@@ -158,13 +200,11 @@ export const createRealEstateAuth = ({
 
   const login = async (payload = {}, request) => {
     const gallery = galleryFor(payload.galleryKey);
-    if (!usernameMatches(gallery, payload.username || payload.customer || "")) {
-      throw Object.assign(new Error("Credentials do not match this review."), {
-        status: 403,
-        code: "real_estate_auth_required",
-      });
-    }
-    if (!await passwordMatches(gallery, payload.accessCode || payload.password || "")) {
+    const enteredUsername = payload.username || payload.customer || "";
+    const enteredPassword = payload.accessCode || payload.password || "";
+    const dynamicCredential = await dynamicCredentialFor(gallery, enteredUsername, enteredPassword);
+    const legacyMatches = usernameMatches(gallery, enteredUsername) && await passwordMatches(gallery, enteredPassword);
+    if (!dynamicCredential && !legacyMatches) {
       throw Object.assign(new Error("Credentials do not match this review."), {
         status: 403,
         code: "real_estate_auth_required",
@@ -173,9 +213,10 @@ export const createRealEstateAuth = ({
     const createdAt = now();
     const session = {
       galleryKey: gallery.key,
-      username: String(gallery.username || payload.username || payload.customer || "").trim(),
+      username: String(dynamicCredential?.loginName || gallery.username || enteredUsername).trim(),
       createdAt: createdAt.toISOString(),
       expiresAt: new Date(createdAt.getTime() + ttlSeconds * 1000).toISOString(),
+      ...(dynamicCredential?.email ? { credentialEmail: dynamicCredential.email } : {}),
     };
     return {
       session: publicSessionFor(session),

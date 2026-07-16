@@ -11,6 +11,7 @@
     galleryOptions: [],
     capabilities: [],
     auditEvents: [],
+    realEstateCredentials: [],
     roles: [],
     selectedEmail: "",
     selectedGroupId: "",
@@ -66,7 +67,7 @@
     { id: "public:spain", label: "Spain", kind: "custom", galleryKind: "public", galleryKey: "spain", count: 1853, defaults: PUBLIC_GALLERY_DEFAULTS },
     { id: "public:usa", label: "USA", kind: "custom", galleryKind: "public", galleryKey: "usa", count: 145, defaults: PUBLIC_GALLERY_DEFAULTS },
     { id: "event:agnes-bday", label: "Agnes's B'day", kind: "family", galleryKind: "event", galleryKey: "agnes-bday", defaults: EVENT_GALLERY_DEFAULTS },
-    { id: "real_estate:re-la-concha", label: "RE La Concha", kind: "real_estate", galleryKind: "real_estate", galleryKey: "re-la-concha", defaults: RE_GALLERY_DEFAULTS },
+    { id: "real_estate:corine-real-estate", label: "RE La Concha", kind: "real_estate", galleryKind: "real_estate", galleryKey: "corine-real-estate", defaults: RE_GALLERY_DEFAULTS },
     { id: "event:johnson-palmer-wedding", label: "Johnson-Palmer wedding", kind: "event", galleryKind: "event", galleryKey: "johnson-palmer-wedding", defaults: EVENT_GALLERY_DEFAULTS },
   ];
 
@@ -99,6 +100,9 @@
   const displayNameInput = $("[data-acs-display-name]");
   const realEstateInput = $("[data-acs-real-estate]");
   const notesInput = $("[data-acs-notes]");
+  const passwordLoginNameInput = $("[data-acs-password-login-name]");
+  const passwordLoginPasswordInput = $("[data-acs-password-login-password]");
+  const passwordLoginStatus = $("[data-acs-password-login-status]");
   const editorTitle = $("[data-acs-editor-title]");
   const peopleSearchInput = $("[data-acs-people-search]");
   const filterGroupInput = $("[data-acs-filter-group]");
@@ -432,8 +436,9 @@
       .filter((scope) => scope.galleryKind && !["public", "owner"].includes(scope.galleryKind))
       .map((scope) => scope.label || scope.galleryKey)
       .filter(Boolean);
-    if (!galleries.length) return `<span class="acs-person-meta">public only</span>`;
-    return `<span class="acs-gallery-stack">${galleries.map((key) => `<span class="acs-chip">${escapeHtml(key)}</span>`).join("")}</span>`;
+    const passwordCount = credentialsFor(user?.email || "").filter((credential) => credential.state === "active" && credential.passwordSet).length;
+    if (!galleries.length && !passwordCount) return `<span class="acs-person-meta">public only</span>`;
+    return `<span class="acs-gallery-stack">${galleries.map((key) => `<span class="acs-chip">${escapeHtml(key)}</span>`).join("")}${passwordCount ? `<span class="acs-chip is-ok">password login</span>` : ""}</span>`;
   };
 
   const renderChoiceList = (rootNode, items, inputName, dataName, emptyText) => {
@@ -533,6 +538,8 @@
 
   const selectedUser = () => state.people.find((user) => user.email === state.selectedEmail) || null;
 
+  const credentialsFor = (email) => state.realEstateCredentials.filter((credential) => credential.email === email);
+
   const hasRealEstateAccess = (user) => Boolean(
     (user?.roles || []).includes("re_client")
     || user?.realEstateClients?.length
@@ -552,6 +559,14 @@
         .join("\n");
     }
     if (notesInput) notesInput.value = item.notes || "";
+    const credentials = credentialsFor(item.email || "");
+    if (passwordLoginNameInput) passwordLoginNameInput.value = credentials[0]?.loginName || item.displayName || "";
+    if (passwordLoginPasswordInput) passwordLoginPasswordInput.value = "";
+    if (passwordLoginStatus) {
+      passwordLoginStatus.textContent = credentials.length
+        ? `Password set for ${credentials.map((credential) => credential.galleryKey).join(", ")}.`
+        : "No password login stored.";
+    }
     document.querySelectorAll("[data-acs-role]").forEach((input) => {
       const role = input.dataset.acsRole;
       input.checked = role === "user" || (item.roles || []).includes(role);
@@ -1204,6 +1219,7 @@
       state.audienceGroups = Array.isArray(body.audienceGroups) ? body.audienceGroups : [];
       state.galleryOptions = Array.isArray(body.galleryOptions) ? body.galleryOptions : [];
       state.auditEvents = Array.isArray(body.auditEvents) ? body.auditEvents : [];
+      state.realEstateCredentials = Array.isArray(body.realEstateCredentials) ? body.realEstateCredentials : [];
       state.policyResult = null;
       if (!state.selectedEmail || !state.people.some((user) => user.email === state.selectedEmail)) {
         state.selectedEmail = state.people[0]?.email || "";
@@ -1222,6 +1238,7 @@
       state.galleryOptions = [];
       state.capabilities = [];
       state.auditEvents = [];
+      state.realEstateCredentials = [];
       state.selectedGroupId = "";
       state.policyResult = null;
       render();
@@ -1235,17 +1252,34 @@
     document.querySelectorAll("[data-acs-role]").forEach((input) => {
       if (!input.disabled && input.checked) roles.push(input.dataset.acsRole);
     });
+    const directGalleryKeys = [...new Set([
+      ...checkedValues("[data-acs-gallery]", "acsGallery"),
+      ...parseLines(realEstateInput?.value || ""),
+    ])];
+    const selectedGroupIds = checkedValues("[data-acs-group]", "acsGroup");
+    const groupGalleryKeys = state.audienceGroups
+      .filter((group) => selectedGroupIds.includes(group.id) && group.galleryKind === "real_estate" && group.state !== "archived")
+      .map((group) => group.galleryKey)
+      .filter(Boolean);
+    const credentialGalleryKeys = [...new Set([...directGalleryKeys, ...groupGalleryKeys])];
+    const existingCredentials = credentialsFor(selectedUser()?.email || emailInput?.value || "");
+    const loginName = passwordLoginNameInput?.value || "";
+    const password = passwordLoginPasswordInput?.value || "";
     const payload = {
       email: emailInput?.value || "",
       displayName: displayNameInput?.value || "",
       roles,
-      realEstateClients: [...new Set([
-        ...checkedValues("[data-acs-gallery]", "acsGallery"),
-        ...parseLines(realEstateInput?.value || ""),
-      ])],
-      groupIds: checkedValues("[data-acs-group]", "acsGroup"),
+      realEstateClients: directGalleryKeys,
+      groupIds: selectedGroupIds,
       notes: notesInput?.value || "",
       fixture: selectedUser()?.fixture === true,
+      ...((loginName || password || existingCredentials.length) && credentialGalleryKeys.length ? {
+        passwordLogin: {
+          loginName: loginName || displayNameInput?.value || emailInput?.value || "",
+          password,
+          galleryKeys: credentialGalleryKeys,
+        },
+      } : {}),
     };
     setStatus(`Saving ${payload.email || "person"}...`);
     const body = await apiFetch("/access-console/people", {

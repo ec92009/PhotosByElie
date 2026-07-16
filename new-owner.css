@@ -129,6 +129,7 @@ body[data-gallery="new-owner"] main.new-owner-shell {
 }
 
 .new-owner-card[aria-label="Cloud access snapshot"],
+.new-owner-card[aria-label="Apple Photos Real Estate intake"],
 .new-owner-card[aria-label="Mac connectors"] {
   grid-column: 1;
 }
@@ -450,6 +451,124 @@ body[data-gallery="new-owner"] main.new-owner-shell {
   color: var(--muted);
 }
 
+.new-owner-re-routing {
+  display: grid;
+  grid-template-columns: minmax(7rem, .35fr) minmax(12rem, .8fr) minmax(12rem, 1fr);
+  gap: .65rem;
+}
+
+.new-owner-re-routing label {
+  display: grid;
+  gap: .25rem;
+  color: var(--muted);
+  font-size: .78rem;
+  font-weight: 800;
+}
+
+.new-owner-re-routing input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--new-owner-line);
+  border-radius: 7px;
+  padding: .55rem .65rem;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
+.new-owner-re-routing input[readonly] {
+  background: color-mix(in srgb, var(--surface) 84%, var(--new-owner-teal) 16%);
+  font-weight: 800;
+}
+
+.new-owner-re-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .55rem;
+}
+
+.new-owner-re-status {
+  min-height: 1.3rem;
+  color: var(--muted);
+  font-size: .9rem;
+  font-weight: 700;
+}
+
+.new-owner-re-status[data-state="success"] {
+  color: var(--new-owner-teal);
+}
+
+.new-owner-re-status[data-state="error"] {
+  color: var(--new-owner-rust);
+}
+
+.new-owner-re-albums {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: .45rem;
+}
+
+.new-owner-re-album,
+.new-owner-re-preview-item {
+  display: grid;
+  gap: .45rem;
+  min-width: 0;
+  border: 1px solid var(--new-owner-line);
+  border-radius: 8px;
+  padding: .65rem;
+  background: color-mix(in srgb, var(--surface) 94%, var(--new-owner-blue) 6%);
+}
+
+.new-owner-re-album {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+}
+
+.new-owner-re-album strong,
+.new-owner-re-album small,
+.new-owner-re-preview-item strong,
+.new-owner-re-preview-item small {
+  overflow-wrap: anywhere;
+}
+
+.new-owner-re-preview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: .55rem;
+}
+
+.new-owner-re-preview-item {
+  grid-template-rows: minmax(8rem, auto) auto;
+}
+
+.new-owner-re-preview-item label {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: .45rem;
+  align-items: start;
+}
+
+.new-owner-re-preview-item img {
+  display: block;
+  width: 100%;
+  height: 10rem;
+  object-fit: contain;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--panel) 72%, #111 28%);
+}
+
+.new-owner-re-preview-placeholder {
+  display: grid;
+  min-height: 10rem;
+  place-items: center;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--panel) 72%, #111 28%);
+  color: var(--muted);
+  text-align: center;
+  font-size: .8rem;
+}
+
 @media (max-width: 900px) {
   .new-owner-hero,
   .new-owner-toolbar {
@@ -477,6 +596,10 @@ body[data-gallery="new-owner"] main.new-owner-shell {
   .new-owner-grid {
     display: grid;
     grid-auto-rows: auto;
+  }
+
+  .new-owner-re-routing {
+    grid-template-columns: 1fr;
   }
 
   .new-owner-card,

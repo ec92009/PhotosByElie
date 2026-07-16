@@ -127,6 +127,11 @@
   const applePhotosRefreshButton = document.querySelector("[data-owner-apple-photos-refresh]");
   const applePhotosPreflightButton = document.querySelector("[data-owner-apple-photos-preflight]");
   const applePhotosImportButton = document.querySelector("[data-owner-apple-photos-import]");
+  const applePhotosDestinationSelect = document.querySelector("[data-owner-apple-photos-destination]");
+  const applePhotosRealEstateRouting = document.querySelector("[data-owner-apple-photos-re-routing]");
+  const applePhotosRealEstateTrackInput = document.querySelector("[data-owner-apple-photos-re-track]");
+  const applePhotosRealEstateFixtureInput = document.querySelector("[data-owner-apple-photos-re-fixture]");
+  const applePhotosRealEstateProjectInput = document.querySelector("[data-owner-apple-photos-re-project]");
   const applePhotosPreviewFolderButton = document.querySelector("[data-owner-apple-photos-preview-folder]");
   const applePhotosMarkReviewedButton = document.querySelector("[data-owner-apple-photos-mark-reviewed]");
   const applePhotosStartExpoButton = document.querySelector("[data-owner-apple-photos-start-expo]");
@@ -206,6 +211,7 @@
   let applePhotosAlbums = [];
   let applePhotosBusy = false;
   let applePhotosSelectedIds = new Set();
+  let applePhotosSelectedAssetIds = new Set();
   let applePhotosSelectionAnchorId = "";
   let applePhotosLastOperationsByAlbum = new Map();
   let applePhotosLogEntries = [];
@@ -275,6 +281,7 @@
     localHelperAvailable() || cloudOwnerAvailable(authState);
   const APPLE_PHOTOS_ALBUM_CACHE_KEY = "photosbyelie.applePhotos.albums.v1";
   const APPLE_PHOTOS_ALBUM_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
+  const APPLE_PHOTOS_DESTINATION_CACHE_KEY = "photosbyelie.applePhotos.destination.v1";
 
   const localHelperControls = () => [
     keywordBlacklistInput,
@@ -296,6 +303,9 @@
     applePhotosRefreshButton,
     applePhotosPreflightButton,
     applePhotosImportButton,
+    applePhotosDestinationSelect,
+    applePhotosRealEstateFixtureInput,
+    applePhotosRealEstateProjectInput,
     applePhotosPreviewFolderButton,
     applePhotosMarkReviewedButton,
     applePhotosStartExpoButton,
@@ -3261,6 +3271,7 @@
       applePhotosSelectedIds = new Set([albumId]);
       applePhotosSelectionAnchorId = albumId;
     }
+    applePhotosSelectedAssetIds = new Set();
     renderApplePhotosAlbumList();
     renderApplePhotosPreview(null);
     setApplePhotosStatus(
@@ -3372,6 +3383,71 @@
     applePhotosIcloudDownloadsToggle ? applePhotosIcloudDownloadsToggle.checked : true
   );
 
+  const applePhotosDestinationKind = () => (
+    applePhotosDestinationSelect?.value === "real_estate" ? "real_estate" : "expo"
+  );
+
+  const applePhotosRealEstateAssignment = () => ({
+    track: String(applePhotosRealEstateTrackInput?.value || "RE").trim() || "RE",
+    fixture: String(applePhotosRealEstateFixtureInput?.value || "").trim(),
+    project: String(applePhotosRealEstateProjectInput?.value || "").trim(),
+  });
+
+  const applePhotosRoutingPayload = () => {
+    if (applePhotosDestinationKind() !== "real_estate") return { destinationKind: "expo" };
+    const assignment = applePhotosRealEstateAssignment();
+    if (!assignment.fixture) throw new Error("Choose or enter a Real Estate fixture.");
+    if (!assignment.project) throw new Error("Choose or enter a Real Estate project.");
+    return {
+      destinationKind: "real_estate",
+      destination: {
+        kind: "real_estate",
+        clientId: assignment.fixture,
+        property: assignment.project,
+        ...assignment,
+      },
+      intakeAssignment: assignment,
+    };
+  };
+
+  const persistApplePhotosDestination = () => {
+    const assignment = applePhotosRealEstateAssignment();
+    try {
+      window.localStorage?.setItem(APPLE_PHOTOS_DESTINATION_CACHE_KEY, JSON.stringify({
+        destinationKind: applePhotosDestinationKind(),
+        ...assignment,
+      }));
+    } catch {
+      // Destination persistence is a convenience; Owner remains usable without storage.
+    }
+  };
+
+  const syncApplePhotosDestinationControls = () => {
+    const isRealEstate = applePhotosDestinationKind() === "real_estate";
+    if (applePhotosRealEstateRouting) applePhotosRealEstateRouting.hidden = !isRealEstate;
+    if (applePhotosImportButton && !applePhotosBusy && !applePhotosImportPhaseActive) {
+      applePhotosImportButton.textContent = isRealEstate ? "Assign to RE intake" : "Import to Expo";
+    }
+    persistApplePhotosDestination();
+    updateApplePhotosSelectionState();
+  };
+
+  const restoreApplePhotosDestination = () => {
+    try {
+      const saved = JSON.parse(window.localStorage?.getItem(APPLE_PHOTOS_DESTINATION_CACHE_KEY) || "null");
+      if (saved && typeof saved === "object") {
+        if (applePhotosDestinationSelect) {
+          applePhotosDestinationSelect.value = saved.destinationKind === "real_estate" ? "real_estate" : "expo";
+        }
+        if (applePhotosRealEstateFixtureInput && saved.fixture) applePhotosRealEstateFixtureInput.value = saved.fixture;
+        if (applePhotosRealEstateProjectInput && saved.project) applePhotosRealEstateProjectInput.value = saved.project;
+      }
+    } catch {
+      // Ignore stale or invalid browser-local routing preferences.
+    }
+    syncApplePhotosDestinationControls();
+  };
+
   const applePhotosCandidateDetail = (payload = {}, materializedLabel = "candidates") => {
     const parts = [
       `${formatCount(applePhotosPayloadCandidateCount(payload))} ${materializedLabel}`,
@@ -3384,6 +3460,35 @@
     if (burstSkipped) parts.push(`${formatCount(burstSkipped)} burst-filtered`);
     parts.push(`${formatCount(applePhotosPayloadBlockedUnsupportedCount(payload))} blocked or unsupported`);
     return parts.join("; ");
+  };
+
+  const applePhotosSelectableItems = (payloads = []) => payloads
+    .flatMap((payload) => Array.isArray(payload?.items) ? payload.items : [])
+    .filter((item) => (
+      item
+      && ["candidate", "materialized"].includes(String(item.status || ""))
+      && String(item.localIdentifier || "").trim()
+    ));
+
+  const applePhotosSelectableRowsHtml = (payloads = []) => {
+    const items = applePhotosSelectableItems(payloads).slice(0, 500);
+    if (!items.length) return "";
+    return `
+      <div class="owner-coverage-missing-row">
+        <strong>Optional asset selection</strong>
+        <span>Leave every box clear to route the complete selected album set, or check only the individual assets you want.</span>
+      </div>
+      ${items.map((item) => {
+        const assetId = String(item.localIdentifier || "").trim();
+        return `
+          <label class="owner-coverage-missing-row">
+            <strong><input type="checkbox" data-owner-apple-photos-asset-id="${escapeHtml(assetId)}"${applePhotosSelectedAssetIds.has(assetId) ? " checked" : ""}/> Select</strong>
+            <span>${escapeHtml(item.filename || assetId)}</span>
+            <small>${escapeHtml(String(item.resourceFormat || item.mediaType || "Apple Photos asset"))}</small>
+          </label>
+        `;
+      }).join("")}
+    `;
   };
 
   const renderApplePhotosBatchPreview = (payloads = []) => {
@@ -3420,7 +3525,7 @@
         </div>
       `;
     }).join("");
-    setHtml(applePhotosPreview, previewRows);
+    setHtml(applePhotosPreview, `${previewRows}${applePhotosSelectableRowsHtml(rows)}`);
     applePhotosPreview.hidden = false;
     syncApplePhotosPipelineButtons();
   };
@@ -3430,8 +3535,9 @@
     const reviewStage = payload.reviewStage || {};
     const materialized = payload.materialized || {};
     const materializedAlbums = Array.isArray(payload.materializedAlbums) ? payload.materializedAlbums : [];
+    const isRealEstateIntake = payload.destinationKind === "real_estate";
     const sourcePath = String(source.path || reviewStage.sourceRoot || materialized.destination || "").trim();
-    if (sourcePath) {
+    if (sourcePath && !isRealEstateIntake) {
       applePhotosCurrentStageSource = {
         path: sourcePath,
         label: String(source.label || reviewStage.id || folderNameFromPath(sourcePath)),
@@ -3457,6 +3563,30 @@
         ?? materializedAlbums.reduce((total, row) => total + (Number(row.materializedCount) || 0), 0),
     ) || 0;
     const albumCount = Number(reviewStage.completed || materializedAlbums.length || (materialized.album ? 1 : 0)) || 1;
+    if (isRealEstateIntake) {
+      const assignment = payload.intakeAssignment || reviewStage.intakeAssignment || source.intakeAssignment || {};
+      const routeLabel = [assignment.track || "RE", assignment.fixture, assignment.project].filter(Boolean).join(" / ");
+      setHtml(applePhotosCounts, ownerCountRowsHtml([
+        ["Assigned assets", formatCount(assetCount)],
+        ["Route", routeLabel || "Real Estate intake"],
+        ["Published", "No"],
+        ["Next", "Run RE import when ready"],
+      ], new Set(["Assigned assets"])));
+      setHtml(applePhotosPreview, `
+        <div class="owner-coverage-missing-row owner-apple-photos-source">
+          <strong>Persistent local RE source</strong>
+          <span>${escapeHtml(source.label || routeLabel || folderNameFromPath(sourcePath))}</span>
+          <small>${escapeHtml(sourcePath)}</small>
+        </div>
+        <div class="owner-coverage-missing-row">
+          <strong>Registered, not published</strong>
+          <span>The fixture is now available in the Real Estate source chooser. Nothing was messaged, uploaded, or exposed.</span>
+        </div>
+      `);
+      applePhotosPreview.hidden = false;
+      syncApplePhotosPipelineButtons();
+      return;
+    }
     setHtml(applePhotosCounts, ownerCountRowsHtml([
       ["Ready assets", formatCount(assetCount)],
       ["Albums", formatCount(albumCount)],
@@ -3611,7 +3741,7 @@
       ["Total checked", formatCount(payload.count || items.length || 0)],
     ];
     setHtml(applePhotosCounts, ownerCountRowsHtml(rows, new Set(["Album"])));
-    const previewRows = items.slice(0, 16).map((item) => {
+    const previewRows = items.slice(0, 500).map((item) => {
       const statusText = item.status === "candidate" ? "Candidate"
         : item.status === "materialized" ? "Ready"
           : applePhotosItemNeedsPhotosAttention(item) ? "Needs Photos/export attention"
@@ -3627,12 +3757,14 @@
           : "",
         item.reason || "",
       ].filter(Boolean).join(" · ");
+      const assetId = String(item.localIdentifier || "").trim();
+      const selectable = ["candidate", "materialized"].includes(String(item.status || "")) && assetId;
       return `
-        <div class="owner-coverage-missing-row">
-          <strong>${escapeHtml(statusText)}</strong>
+        <label class="owner-coverage-missing-row">
+          <strong>${selectable ? `<input type="checkbox" data-owner-apple-photos-asset-id="${escapeHtml(assetId)}"${applePhotosSelectedAssetIds.has(assetId) ? " checked" : ""}/> ` : ""}${escapeHtml(statusText)}</strong>
           <span>${escapeHtml(item.filename || item.localIdentifier || "Apple Photos asset")}</span>
           ${detail ? `<small>${escapeHtml(detail)}</small>` : ""}
-        </div>
+        </label>
       `;
     }).join("");
     setHtml(applePhotosPreview, previewRows || "<p>No Apple Photos assets returned.</p>");
@@ -3659,7 +3791,7 @@
       applePhotosImportButton.disabled = commandBusy || !selected.length;
       applePhotosImportButton.textContent = commandBusy
         ? (r2RepairActive ? "Importing..." : "Working...")
-        : "Import to Expo";
+        : (applePhotosDestinationKind() === "real_estate" ? "Assign to RE intake" : "Import to Expo");
     }
     if (applePhotosSelectVisibleButton) applePhotosSelectVisibleButton.disabled = commandBusy || !visibleCount;
     if (applePhotosClearButton) applePhotosClearButton.disabled = commandBusy || !selected.length;
@@ -3667,6 +3799,9 @@
     if (applePhotosFilterBurstsToggle) applePhotosFilterBurstsToggle.disabled = commandBusy;
     if (applePhotosIcloudDownloadsToggle) applePhotosIcloudDownloadsToggle.disabled = commandBusy;
     applePhotosAlbumList?.querySelectorAll("input[type='checkbox']").forEach((input) => {
+      input.disabled = commandBusy;
+    });
+    applePhotosPreview?.querySelectorAll("[data-owner-apple-photos-asset-id]").forEach((input) => {
       input.disabled = commandBusy;
     });
     syncApplePhotosPipelineButtons();
@@ -3831,6 +3966,14 @@
       setApplePhotosStatus("Select one or more Apple Photos albums first.");
       return;
     }
+    let routingPayload;
+    try {
+      routingPayload = applePhotosRoutingPayload();
+    } catch (error) {
+      setApplePhotosStatus(error?.message || "Choose the Apple Photos destination.");
+      return;
+    }
+    applePhotosSelectedAssetIds = new Set();
     setApplePhotosBusy(true);
     resetApplePhotosLog(albums, "Waiting for dry run...");
     renderApplePhotosPreview(null);
@@ -3844,7 +3987,7 @@
           const response = await fetch("/__photosbyelie/apple-photos/preflight", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(applePhotosRequestPayload(album)),
+            body: JSON.stringify(applePhotosRequestPayload(album, routingPayload)),
           });
           const payload = await response.json().catch(() => ({}));
           if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Apple Photos dry run failed.");
@@ -3882,6 +4025,14 @@
       setApplePhotosStatus("Select one or more Apple Photos albums first.");
       return;
     }
+    let routingPayload;
+    try {
+      routingPayload = applePhotosRoutingPayload();
+    } catch (error) {
+      setApplePhotosStatus(error?.message || "Choose the Apple Photos destination.");
+      return;
+    }
+    const isRealEstateIntake = routingPayload.destinationKind === "real_estate";
     let sourceForExpoImport = null;
     setApplePhotosBusy(true);
     applePhotosImportPhaseActive = true;
@@ -3917,12 +4068,20 @@
       })),
     });
     startApplePhotosProgressPolling(progressId);
-    setApplePhotosStatus(`Exporting Apple Photos assets for ${formatCount(albums.length)} album${albums.length === 1 ? "" : "s"} into a temporary import folder${iCloudMode}...`);
+    setApplePhotosStatus(
+      isRealEstateIntake
+        ? `Assigning Apple Photos assets to ${routingPayload.intakeAssignment.track} / ${routingPayload.intakeAssignment.fixture} / ${routingPayload.intakeAssignment.project}${iCloudMode}...`
+        : `Exporting Apple Photos assets for ${formatCount(albums.length)} album${albums.length === 1 ? "" : "s"} into a temporary import folder${iCloudMode}...`,
+    );
     try {
       const response = await fetch("/__photosbyelie/apple-photos/import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(applePhotosImportPayload(albums, { progressId })),
+        body: JSON.stringify(applePhotosImportPayload(albums, {
+          progressId,
+          ...routingPayload,
+          ...(applePhotosSelectedAssetIds.size ? { selectedAssetIds: [...applePhotosSelectedAssetIds] } : {}),
+        })),
       });
       stopApplePhotosProgressPolling();
       const payload = await response.json().catch(() => ({}));
@@ -3935,7 +4094,13 @@
         });
         const materializedAlbums = Array.isArray(payload.materializedAlbums) ? payload.materializedAlbums : [];
         const failedAlbums = Array.isArray(payload.failedAlbums) ? payload.failedAlbums : [];
-        albums.forEach((album) => {
+        if (payload.selectedAssets) {
+          const assignedCount = Number(payload.batchSidecar?.assetCount || 0);
+          albums.forEach((album) => updateApplePhotosLogEntry(album, {
+            state: "done",
+            detail: `${formatCount(assignedCount)} checked asset${assignedCount === 1 ? "" : "s"} routed from the selected album set.`,
+          }));
+        } else albums.forEach((album) => {
           const materialized = materializedAlbums.find((row) => applePhotosPayloadAlbum(row).localIdentifier === album.localIdentifier);
           const failed = failedAlbums.find((row) => applePhotosPayloadAlbum(row).localIdentifier === album.localIdentifier || row.albumLocalIdentifier === album.localIdentifier);
           if (materialized) {
@@ -3991,15 +4156,17 @@
       } else {
         applePhotosImportPhaseActive = false;
         applePhotosImportProgressByAlbum = new Map();
-        if (payload.reviewSource?.path) {
+        if (!isRealEstateIntake && payload.reviewSource?.path) {
           await loadImportSources();
           selectImportSourceFolder(payload.reviewSource);
           sourceForExpoImport = importSourceByPath(payload.reviewSource.path) || payload.reviewSource;
+        } else if (isRealEstateIntake) {
+          await loadRealEstateImportSources();
         }
         renderApplePhotosAlbumList();
       }
       setApplePhotosStatus(payload.message || "Apple Photos assets are ready in a temporary import folder.");
-      if (sourceForExpoImport?.path) {
+      if (!isRealEstateIntake && sourceForExpoImport?.path) {
         await startExpoImportFromSelection(sourceForExpoImport, { skipConfirm: true, fromApplePhotos: true });
       }
     } catch (error) {
@@ -5896,6 +6063,7 @@
   publishPricesButton?.addEventListener("click", publishOwnerPrices);
   renderPodCommerce();
   renderCostEstimate();
+  restoreApplePhotosDestination();
 
     window.addEventListener("photosbyelie:ownerauthchange", (event) => {
       renderOwnerAvailability(event.detail || ownerAuth?.state);
@@ -6274,6 +6442,22 @@
   });
 
   applePhotosRefreshButton?.addEventListener("click", () => loadApplePhotosAlbums({ forceRefresh: true }));
+  applePhotosDestinationSelect?.addEventListener("change", () => {
+    applePhotosSelectedAssetIds = new Set();
+    renderApplePhotosPreview(null);
+    syncApplePhotosDestinationControls();
+    const assignment = applePhotosRealEstateAssignment();
+    setApplePhotosStatus(applePhotosDestinationKind() === "real_estate"
+      ? `Real Estate intake selected: ${assignment.track} / ${assignment.fixture || "fixture"} / ${assignment.project || "project"}. Run dry run before assigning.`
+      : "Expo selected. Run dry run before importing the selected Apple Photos album batch.");
+  });
+  [applePhotosRealEstateFixtureInput, applePhotosRealEstateProjectInput].filter(Boolean).forEach((input) => {
+    input.addEventListener("change", () => {
+      applePhotosSelectedAssetIds = new Set();
+      renderApplePhotosPreview(null);
+      syncApplePhotosDestinationControls();
+    });
+  });
   applePhotosAlbumFilter?.addEventListener("input", () => {
     renderApplePhotosAlbumList();
   });
@@ -6319,12 +6503,14 @@
     const visible = visibleApplePhotosAlbums();
     visible.forEach((album) => applePhotosSelectedIds.add(album.localIdentifier));
     applePhotosSelectionAnchorId = visible.at(-1)?.localIdentifier || applePhotosSelectionAnchorId;
+    applePhotosSelectedAssetIds = new Set();
     renderApplePhotosAlbumList();
     renderApplePhotosPreview(null);
     setApplePhotosStatus("Run dry run before importing the selected Apple Photos album batch.");
   });
   applePhotosClearButton?.addEventListener("click", () => {
     applePhotosSelectedIds = new Set();
+    applePhotosSelectedAssetIds = new Set();
     applePhotosSelectionAnchorId = "";
     renderApplePhotosAlbumList();
     renderApplePhotosPreview(null);
@@ -6335,6 +6521,19 @@
     if (ownerAuth?.enabled && !authorized) return;
     runApplePhotosPreflight();
   });
+  applePhotosPreview?.addEventListener("change", (event) => {
+    const checkbox = event.target.closest("[data-owner-apple-photos-asset-id]");
+    if (!checkbox) return;
+    const assetId = String(checkbox.dataset.ownerApplePhotosAssetId || "").trim();
+    if (!assetId) return;
+    if (checkbox.checked) applePhotosSelectedAssetIds.add(assetId);
+    else applePhotosSelectedAssetIds.delete(assetId);
+    const selectionDetail = applePhotosSelectedAssetIds.size
+      ? `${formatCount(applePhotosSelectedAssetIds.size)} individual asset${applePhotosSelectedAssetIds.size === 1 ? "" : "s"} selected; only those will be routed.`
+      : "No individual assets selected; the complete selected album set will be routed.";
+    setApplePhotosStatus(selectionDetail);
+    updateApplePhotosSelectionState();
+  });
   applePhotosImportButton?.addEventListener("click", async () => {
     const authorized = await ownerAuth?.requireAuth?.("Start the local Photos By Elie server to import from Apple Photos.");
     if (ownerAuth?.enabled && !authorized) return;
@@ -6342,10 +6541,18 @@
     const albumLabel = albums.length === 1
       ? `Apple Photos album "${albums[0]?.title || "selected album"}"`
       : `${formatCount(albums.length)} Apple Photos albums`;
+    const isRealEstateIntake = applePhotosDestinationKind() === "real_estate";
+    const assignment = applePhotosRealEstateAssignment();
+    const individualSelection = applePhotosSelectedAssetIds.size
+      ? `${formatCount(applePhotosSelectedAssetIds.size)} checked asset${applePhotosSelectedAssetIds.size === 1 ? "" : "s"}`
+      : "all eligible assets in the selected album set";
     const iCloudNotice = applePhotosAllowIcloudDownloads()
-      ? "\n\niCloud download is ON. Photos may download missing originals or current renders to this Mac before writing the temporary folder."
+      ? "\n\niCloud download is ON. Photos may download missing originals or current renders to this Mac before writing the local folder."
       : "";
-    const ok = window.confirm(`Import eligible local assets from ${albumLabel} to Expo now?${iCloudNotice}\n\nOwner will write a temporary source folder, then immediately start the Expo import. Run Dry run first if you want to inspect what will be converted, burst-filtered, skipped, or blocked.`);
+    const confirmText = isRealEstateIntake
+      ? `Assign ${individualSelection} from ${albumLabel} to ${assignment.track} / ${assignment.fixture || "fixture"} / ${assignment.project || "project"}?${iCloudNotice}\n\nOwner will write a persistent local intake folder and register the fixture for RE import. It will not publish, upload, or message anyone.`
+      : `Import ${individualSelection} from ${albumLabel} to Expo now?${iCloudNotice}\n\nOwner will write a temporary source folder, then immediately start the Expo import. Run Dry run first if you want to inspect what will be converted, burst-filtered, skipped, or blocked.`;
+    const ok = window.confirm(confirmText);
     if (!ok) return;
     startApplePhotosImport();
   });

@@ -102,6 +102,12 @@ APPLE_PHOTOS_BRIDGE_APP_INSTALLER = Path("scripts/install_sidecar_photos_bridge_
 APPLE_PHOTOS_BRIDGE_APP = Path.home() / "Applications" / "PhotosByElie Photos Bridge.app"
 APPLE_PHOTOS_BRIDGE_APP_EXECUTABLE = APPLE_PHOTOS_BRIDGE_APP / "Contents" / "MacOS" / "PhotosByElie Photos Bridge"
 APPLE_PHOTOS_IMPORT_ROOT = Path("tmp/apple-photos-import")
+REAL_ESTATE_APPLE_PHOTOS_INTAKE_ROOT = Path(
+    os.environ.get(
+        "PBE_REAL_ESTATE_INTAKE_ROOT",
+        str(Path.home() / "Pictures" / "PhotosByElie" / "Real Estate Intake"),
+    )
+)
 APPLE_PHOTOS_ALBUM_CACHE_TTL_SECONDS = 12 * 60 * 60
 APPLE_PHOTOS_ALBUMS_CACHE: dict[str, object] = {"payload": None, "loaded_at": 0.0}
 APPLE_PHOTOS_ALBUMS_CACHE_LOCK = threading.Lock()
@@ -1576,6 +1582,137 @@ def _new_owner_sidecar_culling_review_result(repo_root: Path, action: dict, conn
     }
 
 
+def _new_owner_re_album_payload(item: dict, manifest: dict) -> dict:
+    return {
+        "albumLocalIdentifier": str(item.get("albumLocalIdentifier") or item.get("localIdentifier") or "").strip(),
+        "albumName": str(item.get("albumName") or item.get("title") or "").strip(),
+        "filterBursts": bool(item.get("filterBursts", manifest.get("filterBursts", True))),
+        "allowIcloudDownloads": bool(item.get("allowIcloudDownloads", manifest.get("allowIcloudDownloads", True))),
+        "destinationKind": "real_estate",
+        "intakeAssignment": manifest.get("intakeAssignment"),
+    }
+
+
+def _new_owner_apple_photos_real_estate_result(repo_root: Path, action: dict, connector_id: str) -> dict:
+    """Run private Apple Photos -> RE intake modes through NewOwner's existing Mac bridge."""
+    manifest = _new_owner_manifest(action)
+    mode = str(manifest.get("mode") or "").strip()
+    completed_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    base_result = {
+        "connectorId": connector_id,
+        "surface": "new-owner-local-bridge",
+        "actionId": str(action.get("id") or ""),
+        "type": "sidecar-culling-review",
+        "workflow": "apple-photos-real-estate-intake",
+        "mode": mode,
+        "readOnly": mode != "apple-photos-re-assign",
+        "published": False,
+        "completedAt": completed_at,
+    }
+
+    if mode == "apple-photos-re-albums":
+        bridge = _run_apple_photos_bridge(repo_root, ["albums"])
+        if not bridge.get("ok"):
+            raise RuntimeError(str(bridge.get("error") or "Apple Photos albums could not be loaded."))
+        albums = [item for item in bridge.get("albums", []) if isinstance(item, dict)]
+        result = {
+            **base_result,
+            "albums": albums,
+            "recordsPrepared": len(albums),
+            "message": f"Loaded {len(albums):,} Apple Photos album(s) from this Mac.",
+        }
+        return {
+            "ok": True,
+            "connector": {"id": connector_id, "type": "sidecar-culling-review", "completedAt": completed_at},
+            "result": result,
+            "preview": {"items": [], "stateCounts": []},
+        }
+
+    raw_albums = manifest.get("albums")
+    if not isinstance(raw_albums, list) or not raw_albums:
+        raise ValueError("Choose at least one Apple Photos album for Real Estate intake.")
+    if len(raw_albums) > 24:
+        raise ValueError("Choose no more than 24 Apple Photos albums at a time.")
+    albums = [_new_owner_re_album_payload(item, manifest) for item in raw_albums if isinstance(item, dict)]
+    albums = [item for item in albums if item["albumLocalIdentifier"] or item["albumName"]]
+    if not albums:
+        raise ValueError("The selected Apple Photos albums do not have valid identifiers.")
+    assignment = _apple_photos_real_estate_assignment({
+        "destinationKind": "real_estate",
+        "intakeAssignment": manifest.get("intakeAssignment"),
+    })
+
+    if mode == "apple-photos-re-preflight":
+        preflights = []
+        items = []
+        for album in albums:
+            preflight = _apple_photos_preflight(repo_root, album)
+            if not preflight.get("ok"):
+                raise RuntimeError(str(preflight.get("error") or f"Could not inspect {album['albumName'] or 'Apple Photos album'}."))
+            preflights.append(preflight)
+            album_row = preflight.get("album") if isinstance(preflight.get("album"), dict) else {}
+            album_id = str(album_row.get("localIdentifier") or album["albumLocalIdentifier"])
+            album_name = str(album_row.get("title") or album["albumName"] or "Apple Photos album")
+            for candidate in preflight.get("candidates", []):
+                if not isinstance(candidate, dict):
+                    continue
+                asset_id = str(candidate.get("localIdentifier") or "").strip()
+                if not asset_id:
+                    continue
+                items.append({
+                    **candidate,
+                    "assetId": asset_id,
+                    "albumLocalIdentifier": album_id,
+                    "albumName": album_name,
+                })
+        limit = _new_owner_manifest_limit(manifest, default=60)
+        items = items[:limit]
+        result = {
+            **base_result,
+            "intakeAssignment": assignment,
+            "albumCount": len(albums),
+            "candidateCount": sum(int(row.get("candidateCount") or 0) for row in preflights),
+            "recordsPrepared": len(items),
+            "preflights": preflights,
+            "message": (
+                f"Prepared {len(items):,} private Apple Photos candidate(s) for "
+                f"{assignment['track']} / {assignment['fixture']} / {assignment['project']}."
+            ),
+        }
+        return {
+            "ok": True,
+            "connector": {"id": connector_id, "type": "sidecar-culling-review", "completedAt": completed_at},
+            "result": result,
+            "preview": {"items": items, "stateCounts": []},
+        }
+
+    if mode == "apple-photos-re-assign":
+        import_payload = {
+            "albums": albums,
+            "selectedAssetIds": manifest.get("selectedAssetIds") or [],
+            "filterBursts": bool(manifest.get("filterBursts", True)),
+            "allowIcloudDownloads": bool(manifest.get("allowIcloudDownloads", True)),
+            "destinationKind": "real_estate",
+            "intakeAssignment": assignment,
+        }
+        imported = _start_apple_photos_import(repo_root, import_payload)
+        if not imported.get("ok"):
+            raise RuntimeError(str(imported.get("error") or "Apple Photos Real Estate assignment failed."))
+        return {
+            "ok": True,
+            "connector": {"id": connector_id, "type": "sidecar-culling-review", "completedAt": completed_at},
+            "result": {
+                **base_result,
+                **imported,
+                "intakeAssignment": imported.get("intakeAssignment") or assignment,
+                "published": False,
+            },
+            "preview": {"items": [], "stateCounts": []},
+        }
+
+    raise ValueError(f"Unsupported Apple Photos Real Estate intake mode: {mode or 'missing'}")
+
+
 def new_owner_connector_result(repo_root: Path, payload: dict) -> dict:
     action = _new_owner_action_from_payload(payload)
     action_type = str(action.get("type") or action.get("action") or "").strip()
@@ -1585,6 +1722,9 @@ def new_owner_connector_result(repo_root: Path, payload: dict) -> dict:
         raise ValueError("Sidecar culling connector actions must be claimed or completed before local review.")
     claim = action.get("claim") if isinstance(action.get("claim"), dict) else {}
     connector_id = _clean_connector_id(payload.get("connectorId") or claim.get("connectorId") or "local")
+    mode = str(_new_owner_manifest(action).get("mode") or "").strip()
+    if mode.startswith("apple-photos-re-"):
+        return _new_owner_apple_photos_real_estate_result(repo_root, action, connector_id)
     return _new_owner_sidecar_culling_review_result(repo_root, action, connector_id)
 
 
@@ -8587,13 +8727,75 @@ def _apple_photos_operation_source(payload: dict, preflight: dict | None = None)
         limit = int(payload.get("limit") or 0)
     except (TypeError, ValueError):
         limit = 0
+    selected_asset_ids = _apple_photos_selected_asset_ids(payload)
     return {
         "kind": "apple_photos",
-        "mode": "album",
+        "mode": "selected_assets" if selected_asset_ids else "album",
         "albumLocalIdentifier": album_id,
         "albumName": album_name,
         "albumAssetCount": int(album.get("assetCount") or 0) if album else 0,
+        "selectedAssetCount": len(selected_asset_ids),
         "limit": max(0, limit),
+    }
+
+
+def _apple_photos_selected_asset_ids(payload: dict) -> list[str]:
+    """Return a bounded, de-duplicated list of explicitly selected Photos assets."""
+    raw = payload.get("selectedAssetIds") or payload.get("selected_asset_ids") or []
+    if raw is None or raw == "":
+        return []
+    if not isinstance(raw, list):
+        raise ValueError("selectedAssetIds must be a list")
+    result: list[str] = []
+    seen: set[str] = set()
+    for value in raw:
+        asset_id = str(value or "").strip()
+        if not asset_id:
+            continue
+        if len(asset_id) > 512 or any(ord(char) < 32 for char in asset_id):
+            raise ValueError("selectedAssetIds contains an invalid Apple Photos identifier")
+        if asset_id in seen:
+            continue
+        seen.add(asset_id)
+        result.append(asset_id)
+    if len(result) > 500:
+        raise ValueError("Select no more than 500 Apple Photos assets at a time")
+    return result
+
+
+def _real_estate_intake_segment(value: object, label: str) -> str:
+    """Validate a human-readable hierarchy segment before it becomes a folder."""
+    segment = re.sub(r"\s+", " ", str(value or "").strip())
+    if not segment:
+        raise ValueError(f"{label} is required for Real Estate intake")
+    if segment in {".", ".."} or "/" in segment or "\\" in segment:
+        raise ValueError(f"{label} must be a single folder name")
+    if len(segment) > 80 or any(ord(char) < 32 for char in segment):
+        raise ValueError(f"{label} is not a valid Real Estate intake name")
+    return segment
+
+
+def _apple_photos_real_estate_assignment(payload: dict) -> dict | None:
+    """Read and validate the local Track / Fixture / Project intake assignment."""
+    destination_kind, destination = _apple_photos_operation_destination(payload)
+    if destination_kind != "real_estate":
+        return None
+    assignment = payload.get("intakeAssignment")
+    if not isinstance(assignment, dict):
+        assignment = destination
+    track = _real_estate_intake_segment(assignment.get("track") or "RE", "Track")
+    if track.casefold() != "re":
+        raise ValueError("The Real Estate intake track must be RE")
+    return {
+        "track": "RE",
+        "fixture": _real_estate_intake_segment(
+            assignment.get("fixture") or assignment.get("clientId"),
+            "Fixture",
+        ),
+        "project": _real_estate_intake_segment(
+            assignment.get("project") or assignment.get("property"),
+            "Project",
+        ),
     }
 
 
@@ -8609,10 +8811,14 @@ def _apple_photos_operation_destination(payload: dict) -> tuple[str, dict]:
             "publishMode": str(destination.get("publishMode") or "public_catalog"),
         }
     if raw == "real_estate":
+        assignment = payload.get("intakeAssignment") if isinstance(payload.get("intakeAssignment"), dict) else destination
         return "real_estate", {
             "kind": "real_estate",
             "clientId": str(destination.get("clientId") or ""),
             "property": str(destination.get("property") or ""),
+            "track": str(assignment.get("track") or "RE"),
+            "fixture": str(assignment.get("fixture") or destination.get("clientId") or ""),
+            "project": str(assignment.get("project") or destination.get("property") or ""),
         }
     return "reserve", {
         "kind": "reserve",
@@ -8622,6 +8828,9 @@ def _apple_photos_operation_destination(payload: dict) -> tuple[str, dict]:
 
 def _apple_photos_operation_blueprint(payload: dict, preflight: dict | None = None, *, state: str = "draft") -> dict:
     destination_kind, destination = _apple_photos_operation_destination(payload)
+    if destination_kind == "real_estate":
+        assignment = _apple_photos_real_estate_assignment(payload)
+        destination.update(assignment or {})
     source = _apple_photos_operation_source(payload, preflight)
     album_label = source.get("albumName") or "album"
     return {
@@ -8674,6 +8883,80 @@ def _apple_photos_import_destination(repo_root: Path, album_label: str = "") -> 
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     safe_label = re.sub(r"[^a-zA-Z0-9]+", "-", album_label).strip("-").lower()[:48] or "album"
     return repo_root / APPLE_PHOTOS_IMPORT_ROOT / f"{stamp}-{safe_label}"
+
+
+def _apple_photos_intake_destination(repo_root: Path, payload: dict, album_label: str = "") -> tuple[Path, dict | None]:
+    """Choose disposable Expo staging or a persistent, local-only RE intake folder."""
+    assignment = _apple_photos_real_estate_assignment(payload)
+    if not assignment:
+        return _apple_photos_import_destination(repo_root, album_label), None
+    intake_root = REAL_ESTATE_APPLE_PHOTOS_INTAKE_ROOT.expanduser().resolve()
+    fixture_root = (intake_root / assignment["track"] / assignment["fixture"]).resolve()
+    project_root = (fixture_root / assignment["project"]).resolve()
+    if intake_root not in fixture_root.parents or fixture_root not in project_root.parents:
+        raise ValueError("Real Estate intake assignment escaped the configured local intake root")
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    safe_label = re.sub(r"[^a-zA-Z0-9]+", "-", album_label).strip("-").lower()[:48] or "photos"
+    run_root = project_root / f"{stamp}-{safe_label}"
+    run_root.mkdir(parents=True, exist_ok=False)
+    return run_root, {
+        **assignment,
+        "intakeRoot": str(intake_root),
+        "fixtureRoot": str(fixture_root),
+        "projectRoot": str(project_root),
+        "runRoot": str(run_root),
+    }
+
+
+def _remember_apple_photos_real_estate_source(repo_root: Path, routing: dict) -> dict:
+    """Register a routed fixture as a selectable RE import source in Owner.sqlite."""
+    fixture_root = Path(str(routing.get("fixtureRoot") or "")).expanduser().resolve()
+    if not fixture_root.is_dir():
+        raise ValueError("Real Estate intake fixture folder was not created")
+    _remember_real_estate_import_source_root(repo_root, fixture_root)
+    sources = _real_estate_import_source_history(repo_root)
+    source = next((item for item in sources if item.get("path") == str(fixture_root)), None)
+    if not source:
+        source = _import_source_entry(fixture_root, last_used_at=datetime.now(timezone.utc).isoformat())
+    return {
+        **source,
+        "label": f"{routing['track']} / {routing['fixture']}",
+        "legacySource": "apple-photos-real-estate-intake",
+        "intakeAssignment": {
+            "track": routing["track"],
+            "fixture": routing["fixture"],
+            "project": routing["project"],
+        },
+    }
+
+
+def _apple_photos_real_estate_stage(source_root: Path, routing: dict, materialized_count: int) -> dict:
+    """Describe a completed local-only RE assignment without implying publication."""
+    now = datetime.now(timezone.utc).isoformat()
+    return {
+        "id": f"apple-photos-re-intake-{uuid.uuid4().hex[:16]}",
+        "kind": "apple-photos-real-estate-intake",
+        "operation": "apple-photos-real-estate-intake",
+        "state": "done",
+        "queued_at": now,
+        "started_at": now,
+        "completed_at": now,
+        "updated_at": now,
+        "total": max(1, int(materialized_count or 0)),
+        "completed": max(0, int(materialized_count or 0)),
+        "failed": 0,
+        "sourceKind": "apple-photos",
+        "sourceRoot": str(source_root),
+        "realEstateSourceRoot": str(routing["fixtureRoot"]),
+        "reviewRequired": False,
+        "published": False,
+        "intakeAssignment": {
+            "track": routing["track"],
+            "fixture": routing["fixture"],
+            "project": routing["project"],
+        },
+        "materializedCount": max(0, int(materialized_count or 0)),
+    }
 
 
 def _remember_apple_photos_review_source(repo_root: Path, source_root: Path, label: str) -> dict:
@@ -9005,7 +9288,7 @@ def _start_apple_photos_batch_import(repo_root: Path, payload: dict, album_paylo
         }
         _finish_apple_photos_import_progress(progress_id, "failed", result)
         return result
-    batch_root = _apple_photos_import_destination(repo_root, "batch")
+    batch_root, intake_routing = _apple_photos_intake_destination(repo_root, payload, "batch")
     materialized_albums: list[dict] = []
     for index, album_payload, preflight, operation in prepared_rows:
         album = preflight.get("album") if isinstance(preflight.get("album"), dict) else {}
@@ -9074,12 +9357,17 @@ def _start_apple_photos_batch_import(repo_root: Path, payload: dict, album_paylo
         }
         _finish_apple_photos_import_progress(progress_id, "failed", result)
         return result
-    review_source = _remember_apple_photos_review_source(
-        repo_root,
-        batch_root,
-        f"Apple Photos import: {len(materialized_albums):,} album(s)",
-    )
-    review_stage = _apple_photos_review_stage(batch_root, materialized_albums, batch_sidecar=batch_sidecar)
+    if intake_routing:
+        review_source = _remember_apple_photos_real_estate_source(repo_root, intake_routing)
+        review_stage = _apple_photos_real_estate_stage(batch_root, intake_routing, unique_materialized)
+        review_stage["batchSidecar"] = batch_sidecar
+    else:
+        review_source = _remember_apple_photos_review_source(
+            repo_root,
+            batch_root,
+            f"Apple Photos import: {len(materialized_albums):,} album(s)",
+        )
+        review_stage = _apple_photos_review_stage(batch_root, materialized_albums, batch_sidecar=batch_sidecar)
     updated_operations: list[dict] = []
     for row in materialized_albums:
         operation = row.get("operation") if isinstance(row.get("operation"), dict) else {}
@@ -9100,21 +9388,166 @@ def _start_apple_photos_batch_import(repo_root: Path, payload: dict, album_paylo
         "batchSidecar": batch_sidecar,
         "reviewStage": review_stage,
         "reviewSource": review_source,
+        "intakeAssignment": review_stage.get("intakeAssignment") or {},
+        "destinationKind": "real_estate" if intake_routing else "expo",
         "operations": updated_operations,
         "message": (
-            f"Apple Photos exported {unique_materialized:,} unique asset(s)"
-            f" from {len(materialized_albums):,} album(s) to a temporary import folder. Starting Expo import next."
+            (
+                f"Apple Photos assigned {unique_materialized:,} unique asset(s) to "
+                f"{intake_routing['track']} / {intake_routing['fixture']} / {intake_routing['project']}. "
+                "The local fixture is registered for RE import; nothing was published."
+            )
+            if intake_routing
+            else (
+                f"Apple Photos exported {unique_materialized:,} unique asset(s)"
+                f" from {len(materialized_albums):,} album(s) to a temporary import folder. Starting Expo import next."
+            )
         ),
     }
     _finish_apple_photos_import_progress(progress_id, "done", result)
     return result
 
 
+def _start_apple_photos_selected_asset_import(
+    repo_root: Path,
+    payload: dict,
+    album_payloads: list[dict],
+    selected_asset_ids: list[str],
+) -> dict:
+    """Materialize only checked PhotoKit assets and route them through the chosen intake lane."""
+    if _active_apple_photos_import_task(repo_root):
+        return _apple_photos_import_busy_response(repo_root)
+    if not album_payloads:
+        album_payloads = [payload]
+    preflights: list[dict] = []
+    allowed_asset_ids: set[str] = set()
+    for album_payload in album_payloads:
+        preflight = _apple_photos_preflight(repo_root, album_payload)
+        preflights.append(preflight)
+        for item in preflight.get("items") or []:
+            if not isinstance(item, dict):
+                continue
+            if str(item.get("status") or "") not in {"candidate", "materialized"}:
+                continue
+            asset_id = str(item.get("localIdentifier") or "").strip()
+            if asset_id:
+                allowed_asset_ids.add(asset_id)
+    unknown = [asset_id for asset_id in selected_asset_ids if asset_id not in allowed_asset_ids]
+    if unknown:
+        raise ValueError("Selected Apple Photos assets must belong to the selected albums and pass dry run")
+
+    destination, intake_routing = _apple_photos_intake_destination(repo_root, payload, "selected-assets")
+    materialized_rows: list[dict] = []
+    failures: list[dict] = []
+    for index, asset_id in enumerate(selected_asset_ids, start=1):
+        asset_root = destination / f"{index:04d}-{hashlib.sha256(asset_id.encode('utf-8')).hexdigest()[:10]}"
+        args = ["materialize-one", "--asset-id", asset_id, "--destination", str(asset_root)]
+        if _apple_photos_allow_icloud_downloads(payload):
+            args.append("--allow-icloud-downloads")
+        export_result = _run_apple_photos_bridge(repo_root, args)
+        if export_result.get("ok") and int(export_result.get("materializedCount") or 0) > 0:
+            materialized_rows.append(export_result)
+        else:
+            failures.append({
+                "assetLocalIdentifier": asset_id,
+                "error": str(export_result.get("error") or "Apple Photos asset was not materialized"),
+            })
+    if not materialized_rows:
+        return {
+            "ok": False,
+            "batch": True,
+            "code": "nothing_materialized",
+            "error": _apple_photos_nothing_materialized_message(payload),
+            "preflights": preflights,
+            "failedAssets": failures,
+        }
+
+    batch_sidecar = _merge_apple_photos_batch_sidecars(destination, materialized_rows)
+    materialized_count = int(batch_sidecar.get("assetCount") or 0)
+    if materialized_count <= 0:
+        return {
+            "ok": False,
+            "batch": True,
+            "code": "nothing_materialized",
+            "error": "The selected Apple Photos assets only produced duplicate or invalid local files.",
+            "preflights": preflights,
+            "failedAssets": failures,
+        }
+
+    operation_payload = {**payload, "selectedAssetIds": selected_asset_ids}
+    synthetic_preflight = {
+        "ok": True,
+        "candidateCount": len(selected_asset_ids),
+        "count": sum(int(row.get("count") or 0) for row in preflights),
+        "items": [
+            item
+            for row in preflights
+            for item in (row.get("items") or [])
+            if isinstance(item, dict) and str(item.get("localIdentifier") or "") in set(selected_asset_ids)
+        ],
+    }
+    operation = _record_apple_photos_import_operation(
+        repo_root,
+        operation_payload,
+        synthetic_preflight,
+        state="done",
+    )
+    if intake_routing:
+        review_source = _remember_apple_photos_real_estate_source(repo_root, intake_routing)
+        review_stage = _apple_photos_real_estate_stage(destination, intake_routing, materialized_count)
+        message = (
+            f"Apple Photos assigned {materialized_count:,} selected asset(s) to "
+            f"{intake_routing['track']} / {intake_routing['fixture']} / {intake_routing['project']}. "
+            "The local fixture is registered for RE import; nothing was published."
+        )
+    else:
+        review_source = _remember_apple_photos_review_source(
+            repo_root,
+            destination,
+            f"Apple Photos selection: {materialized_count:,} asset(s)",
+        )
+        review_stage = _apple_photos_review_stage(destination, materialized_rows, batch_sidecar=batch_sidecar)
+        message = (
+            f"Apple Photos exported {materialized_count:,} selected asset(s) to a temporary import folder. "
+            "Starting Expo import next."
+        )
+    review_stage["batchSidecar"] = batch_sidecar
+    operation = update_import_operation_db(
+        repo_root,
+        str(operation.get("operationId") or ""),
+        state="done",
+        task=review_stage,
+    )
+    return {
+        "ok": True,
+        "batch": True,
+        "selectedAssets": True,
+        "preflights": preflights,
+        "materializedAlbums": materialized_rows,
+        "failedAssets": failures,
+        "batchSidecar": batch_sidecar,
+        "reviewStage": review_stage,
+        "reviewSource": review_source,
+        "intakeAssignment": review_stage.get("intakeAssignment") or {},
+        "destinationKind": "real_estate" if intake_routing else "expo",
+        "operations": [operation],
+        "message": message,
+    }
+
+
 def _start_apple_photos_import(repo_root: Path, payload: dict) -> dict:
     album_payloads = _apple_photos_album_batch_payloads(payload)
+    selected_asset_ids = _apple_photos_selected_asset_ids(payload)
+    preflight_only = bool(payload.get("dryRun") or payload.get("dry_run"))
+    if selected_asset_ids and not preflight_only:
+        return _start_apple_photos_selected_asset_import(
+            repo_root,
+            payload,
+            album_payloads,
+            selected_asset_ids,
+        )
     if album_payloads:
         return _start_apple_photos_batch_import(repo_root, payload, album_payloads)
-    preflight_only = bool(payload.get("dryRun") or payload.get("dry_run"))
     if not preflight_only and _active_apple_photos_import_task(repo_root):
         return _apple_photos_import_busy_response(repo_root)
     progress_id = "" if preflight_only else _apple_photos_progress_id(payload)
@@ -9154,7 +9587,11 @@ def _start_apple_photos_import(repo_root: Path, payload: dict) -> dict:
         _finish_apple_photos_import_progress(progress_id, "failed", result)
         return result
     album = preflight.get("album") if isinstance(preflight.get("album"), dict) else {}
-    destination = _apple_photos_import_destination(repo_root, str(album.get("title") or "album"))
+    destination, intake_routing = _apple_photos_intake_destination(
+        repo_root,
+        payload,
+        str(album.get("title") or "album"),
+    )
     export_result = _run_apple_photos_bridge(
         repo_root,
         ["export", *_apple_photos_payload_args(payload), "--destination", str(destination)],
@@ -9188,12 +9625,16 @@ def _start_apple_photos_import(repo_root: Path, payload: dict) -> dict:
         }
         _finish_apple_photos_import_progress(progress_id, "failed", result)
         return result
-    review_source = _remember_apple_photos_review_source(
-        repo_root,
-        destination,
-        f"Apple Photos import: {album.get('title') or payload.get('albumName') or 'album'}",
-    )
-    review_stage = _apple_photos_review_stage(destination, [{**export_result, "preflight": preflight}])
+    if intake_routing:
+        review_source = _remember_apple_photos_real_estate_source(repo_root, intake_routing)
+        review_stage = _apple_photos_real_estate_stage(destination, intake_routing, materialized)
+    else:
+        review_source = _remember_apple_photos_review_source(
+            repo_root,
+            destination,
+            f"Apple Photos import: {album.get('title') or payload.get('albumName') or 'album'}",
+        )
+        review_stage = _apple_photos_review_stage(destination, [{**export_result, "preflight": preflight}])
     operation = update_import_operation_db(
         repo_root,
         str(operation.get("operationId") or ""),
@@ -9206,8 +9647,18 @@ def _start_apple_photos_import(repo_root: Path, payload: dict) -> dict:
         "materialized": export_result,
         "reviewStage": review_stage,
         "reviewSource": review_source,
+        "intakeAssignment": review_stage.get("intakeAssignment") or {},
+        "destinationKind": "real_estate" if intake_routing else "expo",
         "operation": operation,
-        "message": f"Apple Photos exported {materialized:,} asset(s) to a temporary import folder. Starting Expo import next.",
+        "message": (
+            (
+                f"Apple Photos assigned {materialized:,} asset(s) to "
+                f"{intake_routing['track']} / {intake_routing['fixture']} / {intake_routing['project']}. "
+                "The local fixture is registered for RE import; nothing was published."
+            )
+            if intake_routing
+            else f"Apple Photos exported {materialized:,} asset(s) to a temporary import folder. Starting Expo import next."
+        ),
     }
     _finish_apple_photos_import_progress(progress_id, "done", result)
     return result

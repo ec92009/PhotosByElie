@@ -37,7 +37,8 @@ Current ACS deployment:
   `migrations/0002_access_console_audience_groups.sql`,
   `migrations/0003_access_console_group_state.sql`,
   `migrations/0004_access_console_gallery_defaults.sql`,
-  `migrations/0005_access_console_audit_undo.sql`
+  `migrations/0005_access_console_audit_undo.sql`,
+  `migrations/0006_access_console_real_estate_credentials.sql`
 
 D1 tables:
 
@@ -52,6 +53,10 @@ D1 tables:
 - `pbe_access_group_memberships`: active/revoked email-to-group assignments.
 - `pbe_access_fixture_events`: clearly marked rehearsal family/event/RE records.
 - `pbe_access_audit_events`: before/after snapshots for role and disable changes.
+- `pbe_access_real_estate_credentials`: mutable gallery-scoped password logins.
+  ACS sends a new password over HTTPS and the Worker stores only a salted
+  PBKDF2-SHA256 verifier. Disabling the person invalidates both new logins and
+  existing password sessions.
 
 Planned invitation tables are described in
 [`access-invitations.md`](./access-invitations.md). Invitations are pending
@@ -74,7 +79,7 @@ Public registry record shape:
       "label": "RE La Concha",
       "kind": "real_estate",
       "galleryKind": "real_estate",
-      "galleryKey": "re-la-concha",
+      "galleryKey": "corine-real-estate",
       "capabilities": ["view_gallery", "view_watermarked", "pdf", "video", "view_originals"],
       "galleryDefaults": {
         "watermarked": true,
@@ -164,14 +169,16 @@ and cannot be granted through ACS.
   deliverables/originals APIs keep their object-prefix restrictions.
 - `GET /access-console/state`: requires Admin and returns session, people,
   audience groups, gallery options, fixture events, audit events, grantable role
-  metadata, and capability metadata.
+  metadata, capability metadata, and password-login status without password
+  hashes or salts.
 - `GET /access-console/gallery-access`: requires Admin and returns a read-only
   policy rehearsal for a gallery key: regular visitor, selected access person,
   and Owner/Admin decisions for view, watermark/original preview, checkout,
   assigned downloads, re-downloads, PDF, and video.
 - `POST|PUT|PATCH /access-console/people`: requires Admin and upserts one
-  person's non-admin roles, audience group memberships, Real Estate grants, name,
-  and notes.
+  person's non-admin roles, audience group memberships, Real Estate grants,
+  name, notes, and optional gallery-scoped password login. A blank password
+  preserves an existing verifier; a new value replaces it.
 - `POST|PUT|PATCH /access-console/groups`: requires Admin and creates or updates
   an audience group, gallery key, access policy, capability list, and
   per-gallery defaults.
@@ -183,9 +190,10 @@ and cannot be granted through ACS.
   people plus the `Agnes's B'day`, `RE La Concha`, and `Johnson-Palmer wedding`
   family/event/RE rehearsal records.
 
-The Real Estate page prefers Google login through `/auth/google/login` followed
-by `/real-estate/access-login`. The legacy `POST /real-estate/login` password
-flow remains for local fallback and older client links.
+The Real Estate page supports Google login through `/auth/google/login` followed
+by `/real-estate/access-login`, plus ACS-managed password login through
+`POST /real-estate/login`. Worker-held credentials remain only as a migration
+fallback for older client links.
 
 ## Access Console Grant Path
 

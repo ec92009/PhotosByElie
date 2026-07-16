@@ -42,7 +42,7 @@ All routes also work under `/api`, for example `/api/checkout/guest`.
 | `GET /auth/logout` or `POST /auth/logout` | Browser signs out of the Google-backed account session | Clears the direct OAuth cookie when configured, otherwise redirects through the Cloudflare Access logout endpoint |
 | `GET /owner/session` | Owner checks cloud role authorization | Requires `owner` tier or the configured Admin email |
 | `POST /real-estate/access-login` | Real Estate client logs in with Google | Requires a registry grant for the requested gallery key, then issues the existing short-lived signed HttpOnly session cookie |
-| `POST /real-estate/login` | Legacy Real Estate client username/password login | Verifies Worker-held credentials and issues a short-lived signed HttpOnly session cookie |
+| `POST /real-estate/login` | Real Estate client username/password login | Verifies an ACS-managed D1 password first, falls back to a Worker-held migration credential, and issues a short-lived signed HttpOnly session cookie |
 | `GET /real-estate/session` | Real Estate client checks current auth | Validates the signed session cookie |
 | `POST /real-estate/logout` | Real Estate client logs out | Clears the signed session cookie |
 | `POST /real-estate/originals/session` | Real Estate client requests selected originals | Requires the signed session cookie, checks private R2 originals, and returns per-file private download tokens |

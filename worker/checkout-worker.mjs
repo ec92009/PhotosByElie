@@ -2487,13 +2487,14 @@ export const createPhotosByElieWorker = ({
   const accessConsoleState = async (request) => {
     const session = await requireAccessConsoleAdmin(request);
     const registry = accessConsoleRegistryRequired();
-    const [people, fixtureEvents, auditEvents, audienceGroups, galleryOptions, capabilities] = await Promise.all([
+    const [people, fixtureEvents, auditEvents, audienceGroups, galleryOptions, capabilities, realEstateCredentials] = await Promise.all([
       registry.listUsers(),
       typeof registry.listFixtureEvents === "function" ? registry.listFixtureEvents() : [],
       typeof registry.listAuditEvents === "function" ? registry.listAuditEvents(30) : [],
       typeof registry.listAudienceGroups === "function" ? registry.listAudienceGroups() : [],
       typeof registry.listGalleryOptions === "function" ? registry.listGalleryOptions() : [],
       typeof registry.listCapabilities === "function" ? registry.listCapabilities() : ACCESS_CAPABILITIES,
+      typeof registry.listRealEstateCredentials === "function" ? registry.listRealEstateCredentials() : [],
     ]);
     return credentialedJson(request, {
       ok: true,
@@ -2506,6 +2507,7 @@ export const createPhotosByElieWorker = ({
       audienceGroups,
       galleryOptions,
       auditEvents: auditEvents.map(publicAuditEvent),
+      realEstateCredentials,
     });
   };
 
@@ -2533,7 +2535,37 @@ export const createPhotosByElieWorker = ({
       fixture: payload.fixture === true,
       source: payload.fixture === true ? "fixture" : "manual",
     }, { actorEmail: session.email });
-    return credentialedJson(request, { ok: true, user });
+    const passwordLogin = payload.passwordLogin && typeof payload.passwordLogin === "object"
+      ? payload.passwordLogin
+      : null;
+    const credentials = [];
+    if (passwordLogin && typeof registry.putRealEstateCredential === "function") {
+      const galleryKeys = [...new Set(
+        (Array.isArray(passwordLogin.galleryKeys) ? passwordLogin.galleryKeys : user.realEstateClients || [])
+          .map((key) => String(key || "").trim())
+          .filter(Boolean)
+      )];
+      const loginName = String(passwordLogin.loginName || payload.displayName || email).trim();
+      const password = String(passwordLogin.password || "");
+      for (const galleryKey of galleryKeys) {
+        try {
+          credentials.push(await registry.putRealEstateCredential({
+            email,
+            galleryKey,
+            loginName,
+            password,
+          }, { actorEmail: session.email }));
+        } catch (error) {
+          return credentialedErrorJson(
+            request,
+            400,
+            "invalid_real_estate_password_access",
+            error.message || "Real Estate password access could not be saved."
+          );
+        }
+      }
+    }
+    return credentialedJson(request, { ok: true, user, credentials });
   };
 
   const disableAccessConsolePerson = async (request, email) => {

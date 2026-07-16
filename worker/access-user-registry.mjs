@@ -1,3 +1,5 @@
+import { realEstatePasswordHash } from "./real-estate-auth.mjs";
+
 const SCHEMA = "photosbyelie.accessUser.v1";
 const VALID_TIERS = new Set(["user", "re_client", "owner"]);
 const VALID_GROUP_KINDS = new Set(["family", "event", "real_estate", "public", "custom"]);
@@ -58,7 +60,7 @@ const FIXTURE_GROUPS = [
     label: "RE La Concha",
     kind: "real_estate",
     galleryKind: "real_estate",
-    galleryKey: "re-la-concha",
+    galleryKey: "corine-real-estate",
     accessPolicy: "assigned Real Estate gallery with PDF, video, and original-deliverable access",
     capabilities: DEFAULT_REAL_ESTATE_CAPABILITIES,
     galleryDefaults: {
@@ -102,7 +104,7 @@ const FIXTURE_PEOPLE = [
     email: "morgan.lee@example.test",
     displayName: "Morgan Lee / La Concha client",
     tier: "re_client",
-    realEstateClients: ["re-la-concha"],
+    realEstateClients: ["corine-real-estate"],
     groupIds: ["re-la-concha"],
     notes: "Fixture RE client tied to the RE La Concha gallery.",
   },
@@ -143,6 +145,35 @@ const validEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeEmail(v
 const nowIso = () => new Date().toISOString();
 
 const randomId = (prefix) => `${prefix}-${crypto.randomUUID().replace(/[^a-z0-9]/gi, "").slice(0, 24)}`;
+
+const randomSecret = () => {
+  const bytes = crypto.getRandomValues(new Uint8Array(24));
+  return [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+};
+
+const normalizeLogin = (value) => String(value || "").trim().toLowerCase();
+
+const timingSafeStringEqual = (left, right) => {
+  const a = String(left || "");
+  const b = String(right || "");
+  let diff = a.length ^ b.length;
+  const length = Math.max(a.length, b.length);
+  for (let index = 0; index < length; index += 1) {
+    diff |= (a.charCodeAt(index) || 0) ^ (b.charCodeAt(index) || 0);
+  }
+  return diff === 0;
+};
+
+const publicRealEstateCredential = (record = {}) => ({
+  email: normalizeEmail(record.email),
+  loginName: String(record.loginName || record.login_name || "").trim(),
+  galleryKey: String(record.galleryKey || record.gallery_key || "").trim(),
+  state: String(record.state || "active"),
+  passwordSet: Boolean(record.passwordHash || record.password_hash),
+  createdAt: record.createdAt || record.created_at || "",
+  updatedAt: record.updatedAt || record.updated_at || "",
+  updatedBy: record.updatedBy || record.updated_by || "",
+});
 
 const normalizeTier = (value) => {
   const tier = String(value || "user").trim().toLowerCase().replace(/[-\s]+/g, "_");
@@ -571,6 +602,7 @@ const fixtureEvents = () => FIXTURE_EVENTS.map((event) => ({ ...event, fixture: 
 
 export const createMemoryAccessUserRegistry = (initialRecords = []) => {
   const users = new Map();
+  const realEstateCredentials = new Map();
   const auditEvents = [];
   const events = new Map();
   const groups = new Map();
@@ -703,6 +735,70 @@ export const createMemoryAccessUserRegistry = (initialRecords = []) => {
     return clone(await decorate(after));
   };
 
+  const realEstateCredentialKey = (email, galleryKey) => `${normalizeEmail(email)}::${String(galleryKey || "").trim()}`;
+
+  const listRealEstateCredentials = async () => [...realEstateCredentials.values()]
+    .map(publicRealEstateCredential)
+    .sort((left, right) => `${left.email}:${left.galleryKey}`.localeCompare(`${right.email}:${right.galleryKey}`));
+
+  const putRealEstateCredential = async (record, options = {}) => {
+    const email = normalizeEmail(record.email);
+    const galleryKey = String(record.galleryKey || "").trim();
+    const loginName = String(record.loginName || record.login || email).trim();
+    if (!validEmail(email)) throw new Error("Real Estate password access requires a valid person email.");
+    if (!galleryKey || !loginName) throw new Error("Real Estate password access requires a gallery and login name.");
+    const key = realEstateCredentialKey(email, galleryKey);
+    const before = realEstateCredentials.get(key) || null;
+    const password = String(record.password || "");
+    if (!before && !password) throw new Error("Set a password when creating Real Estate password access.");
+    const salt = password ? randomSecret() : before.passwordSalt;
+    const iterations = password ? 210_000 : before.passwordIterations;
+    const passwordHash = password ? await realEstatePasswordHash(password, salt, iterations) : before.passwordHash;
+    const timestamp = nowIso();
+    const after = {
+      email,
+      galleryKey,
+      loginName,
+      normalizedLogin: normalizeLogin(loginName),
+      passwordSalt: salt,
+      passwordHash,
+      passwordIterations: iterations,
+      state: "active",
+      createdAt: before?.createdAt || timestamp,
+      updatedAt: timestamp,
+      updatedBy: normalizeEmail(options.actorEmail || ""),
+    };
+    realEstateCredentials.set(key, after);
+    return publicRealEstateCredential(after);
+  };
+
+  const verifyRealEstateCredential = async ({ galleryKey, login, password } = {}) => {
+    const normalizedGallery = String(galleryKey || "").trim();
+    const normalizedLogin = normalizeLogin(login);
+    const candidate = [...realEstateCredentials.values()].find((record) =>
+      record.galleryKey === normalizedGallery
+      && record.state === "active"
+      && (record.normalizedLogin === normalizedLogin || normalizeEmail(record.email) === normalizedLogin)
+    );
+    if (!candidate) return null;
+    const user = users.get(normalizeEmail(candidate.email));
+    if (!user || user.disabledAt) return null;
+    const enteredHash = await realEstatePasswordHash(password, candidate.passwordSalt, candidate.passwordIterations);
+    if (!enteredHash || !timingSafeStringEqual(enteredHash, candidate.passwordHash)) return null;
+    return publicRealEstateCredential(candidate);
+  };
+
+  const isRealEstateCredentialActive = async ({ galleryKey, email, loginName } = {}) => {
+    const candidate = [...realEstateCredentials.values()].find((record) =>
+      record.galleryKey === String(galleryKey || "").trim()
+      && record.email === normalizeEmail(email)
+      && record.state === "active"
+      && (!loginName || record.normalizedLogin === normalizeLogin(loginName))
+    );
+    const user = candidate ? users.get(candidate.email) : null;
+    return Boolean(candidate && user && !user.disabledAt);
+  };
+
   const undoAuditEvent = async (auditId, options = {}) => {
     const event = auditEvents.find((item) => item.id === String(auditId || ""));
     if (!event) return null;
@@ -793,7 +889,11 @@ export const createMemoryAccessUserRegistry = (initialRecords = []) => {
     listCapabilities: async () => ACCESS_CAPABILITIES.map(clone),
     listAuditEvents: async (limit = 25) => auditEvents.slice(0, limit).map((event) => clone(enrichAuditEvent(event))),
     undoAuditEvent,
-    _debug: { users, events, groups, auditEvents },
+    listRealEstateCredentials,
+    putRealEstateCredential,
+    verifyRealEstateCredential,
+    isRealEstateCredentialActive,
+    _debug: { users, events, groups, auditEvents, realEstateCredentials },
   };
 };
 
@@ -1490,6 +1590,119 @@ export const createD1AccessUserRegistry = ({
   `).bind(Math.max(1, Math.min(100, Number(limit) || 25))))
     .then((rows) => rows.map(enrichAuditEvent));
 
+  const listRealEstateCredentials = async () => d1All(database.prepare(`
+    SELECT
+      email,
+      gallery_key AS galleryKey,
+      login_name AS loginName,
+      password_hash AS passwordHash,
+      state,
+      created_at AS createdAt,
+      updated_at AS updatedAt,
+      updated_by AS updatedBy
+    FROM pbe_access_real_estate_credentials
+    ORDER BY email, gallery_key
+  `)).then((rows) => rows.map(publicRealEstateCredential));
+
+  const putRealEstateCredential = async (record, options = {}) => {
+    const email = normalizeEmail(record.email);
+    const galleryKey = String(record.galleryKey || "").trim();
+    const loginName = String(record.loginName || record.login || email).trim();
+    const normalizedLogin = normalizeLogin(loginName);
+    if (!validEmail(email)) throw new Error("Real Estate password access requires a valid person email.");
+    if (!galleryKey || !loginName) throw new Error("Real Estate password access requires a gallery and login name.");
+    const person = await getUser(email);
+    if (!person) throw new Error("Create the access person before setting a Real Estate password.");
+    const before = await d1First(database.prepare(`
+      SELECT * FROM pbe_access_real_estate_credentials WHERE email = ? AND gallery_key = ?
+    `).bind(email, galleryKey));
+    const password = String(record.password || "");
+    if (!before && !password) throw new Error("Set a password when creating Real Estate password access.");
+    const salt = password ? randomSecret() : before.password_salt;
+    const iterations = password ? 210_000 : Number(before.password_iterations || 210_000);
+    const passwordHash = password
+      ? await realEstatePasswordHash(password, salt, iterations)
+      : before.password_hash;
+    const timestamp = nowIso();
+    const actorEmail = normalizeEmail(options.actorEmail || "");
+    await d1Run(database.prepare(`
+      INSERT INTO pbe_access_real_estate_credentials (
+        id, email, gallery_key, login_name, normalized_login,
+        password_hash, password_salt, password_iterations, state,
+        created_at, created_by, updated_at, updated_by, revoked_at, revoked_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, NULL, '')
+      ON CONFLICT(email, gallery_key) DO UPDATE SET
+        login_name = excluded.login_name,
+        normalized_login = excluded.normalized_login,
+        password_hash = excluded.password_hash,
+        password_salt = excluded.password_salt,
+        password_iterations = excluded.password_iterations,
+        state = 'active',
+        updated_at = excluded.updated_at,
+        updated_by = excluded.updated_by,
+        revoked_at = NULL,
+        revoked_by = ''
+    `).bind(
+      before?.id || randomId("re-credential"),
+      email,
+      galleryKey,
+      loginName,
+      normalizedLogin,
+      passwordHash,
+      salt,
+      iterations,
+      before?.created_at || timestamp,
+      before?.created_by || actorEmail,
+      timestamp,
+      actorEmail
+    ));
+    const after = await d1First(database.prepare(`
+      SELECT
+        email,
+        gallery_key AS galleryKey,
+        login_name AS loginName,
+        password_hash AS passwordHash,
+        state,
+        created_at AS createdAt,
+        updated_at AS updatedAt,
+        updated_by AS updatedBy
+      FROM pbe_access_real_estate_credentials
+      WHERE email = ? AND gallery_key = ?
+    `).bind(email, galleryKey));
+    return publicRealEstateCredential(after);
+  };
+
+  const verifyRealEstateCredential = async ({ galleryKey, login, password } = {}) => {
+    const row = await d1First(database.prepare(`
+      SELECT c.*, p.disabled_at AS person_disabled_at
+      FROM pbe_access_real_estate_credentials c
+      JOIN pbe_access_people p ON p.email = c.email
+      WHERE c.gallery_key = ?
+        AND (c.normalized_login = ? OR c.email = ?)
+        AND c.state = 'active'
+      LIMIT 1
+    `).bind(String(galleryKey || "").trim(), normalizeLogin(login), normalizeEmail(login)));
+    if (!row || row.person_disabled_at) return null;
+    const enteredHash = await realEstatePasswordHash(password, row.password_salt, row.password_iterations);
+    if (!enteredHash || !timingSafeStringEqual(enteredHash, row.password_hash)) return null;
+    return publicRealEstateCredential(row);
+  };
+
+  const isRealEstateCredentialActive = async ({ galleryKey, email, loginName } = {}) => {
+    const row = await d1First(database.prepare(`
+      SELECT c.id
+      FROM pbe_access_real_estate_credentials c
+      JOIN pbe_access_people p ON p.email = c.email
+      WHERE c.gallery_key = ?
+        AND c.email = ?
+        AND c.normalized_login = ?
+        AND c.state = 'active'
+        AND p.disabled_at IS NULL
+      LIMIT 1
+    `).bind(String(galleryKey || "").trim(), normalizeEmail(email), normalizeLogin(loginName || email)));
+    return Boolean(row?.id);
+  };
+
   return {
     getUser,
     putUser,
@@ -1504,5 +1717,9 @@ export const createD1AccessUserRegistry = ({
     listCapabilities: async () => ACCESS_CAPABILITIES.map(clone),
     listAuditEvents,
     undoAuditEvent,
+    listRealEstateCredentials,
+    putRealEstateCredential,
+    verifyRealEstateCredential,
+    isRealEstateCredentialActive,
   };
 };

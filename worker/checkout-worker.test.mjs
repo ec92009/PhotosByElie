@@ -797,7 +797,42 @@ test("access console is admin-only and writes reversible role grants", async () 
   assert.equal(reGroupSessionResponse.status, 200);
   const reGroupSession = await reGroupSessionResponse.json();
   assert.equal(reGroupSession.roles.includes("re_client"), true);
-  assert.deepEqual(reGroupSession.realEstateClients, ["re-la-concha"]);
+  assert.deepEqual(reGroupSession.realEstateClients, ["corine-real-estate"]);
+
+  const corinePasswordResponse = await adminWorker.fetch(jsonRequest("https://worker.test/access-console/people", {
+    email: "corine@example.test",
+    displayName: "Corine",
+    roles: ["user", "re_client"],
+    realEstateClients: ["corine-real-estate"],
+    groupIds: ["re-la-concha"],
+    passwordLogin: {
+      loginName: "Corine",
+      password: "fresh-private-password",
+      galleryKeys: ["corine-real-estate"],
+    },
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(corinePasswordResponse.status, 200);
+  const corinePasswordBody = await corinePasswordResponse.json();
+  assert.equal(corinePasswordBody.credentials[0].passwordSet, true);
+  assert.equal("passwordHash" in corinePasswordBody.credentials[0], false);
+
+  const passwordAuth = createRealEstateAuth({
+    galleries: [{ key: "corine-real-estate", username: "Corine", privateMasterPrefix: "real-estate/corine-real-estate/masters" }],
+    credentialStore: registry,
+    sessionSecret: "access-console-password-test-secret",
+  });
+  const passwordWorker = createPhotosByElieWorker({
+    catalog: loadCatalog(),
+    realEstateAuth: passwordAuth,
+  });
+  const passwordLoginResponse = await passwordWorker.fetch(jsonRequest("https://worker.test/real-estate/login", {
+    galleryKey: "corine-real-estate",
+    username: "Corine",
+    accessCode: "fresh-private-password",
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(passwordLoginResponse.status, 200);
+  const passwordSessionCookie = (passwordLoginResponse.headers.get("set-cookie") || "").split(";")[0];
+  assert.match(passwordSessionCookie, /^pbe_re_session=/);
 
   const archiveGroupResponse = await adminWorker.fetch(jsonRequest("https://worker.test/access-console/groups/cohen-cousins/archive", {}, {
     origin: "https://photos-by-elie.com",
@@ -837,7 +872,24 @@ test("access console is admin-only and writes reversible role grants", async () 
   assert.equal(finalState.audienceGroups.find((group) => group.id === "cohen-cousins")?.state, "archived");
   assert.equal(finalState.galleryOptions.some((option) => option.galleryKey === "cohen-cousins"), false);
   assert.deepEqual(finalState.people.find((user) => user.email === "cousin@example.test")?.groupIds, []);
-  assert.equal(finalState.galleryOptions.some((option) => option.galleryKey === "re-la-concha"), true);
+  assert.equal(finalState.galleryOptions.some((option) => option.galleryKey === "corine-real-estate"), true);
+  assert.equal(finalState.realEstateCredentials.find((credential) => credential.email === "corine@example.test")?.passwordSet, true);
+  assert.equal("passwordHash" in finalState.realEstateCredentials[0], false);
+
+  const disableCorineResponse = await adminWorker.fetch(jsonRequest("https://worker.test/access-console/people/corine%40example.test/disable", {}, {
+    origin: "https://photos-by-elie.com",
+  }));
+  assert.equal(disableCorineResponse.status, 200);
+  const revokedPasswordLogin = await passwordWorker.fetch(jsonRequest("https://worker.test/real-estate/login", {
+    galleryKey: "corine-real-estate",
+    username: "Corine",
+    accessCode: "fresh-private-password",
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(revokedPasswordLogin.status, 403);
+  const revokedPasswordSession = await passwordWorker.fetch(new Request("https://worker.test/real-estate/session?galleryKey=corine-real-estate", {
+    headers: { origin: "https://photos-by-elie.com", cookie: passwordSessionCookie },
+  }));
+  assert.equal(revokedPasswordSession.status, 401);
   assert.equal(finalState.capabilities.some((capability) => capability.id === "manage_access"), true);
   const archivedEvent = finalState.auditEvents.find((event) => event.eventType === "group_archived");
   const disabledEvent = finalState.auditEvents.find((event) => event.eventType === "user_disabled");

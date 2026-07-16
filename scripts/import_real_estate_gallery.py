@@ -25,6 +25,10 @@ RAW_EXTENSIONS = {".raw", ".dng", ".nef", ".cr2", ".cr3", ".arw", ".orf", ".raf"
 IMAGE_EXTENSIONS = {".jpg", ".jpeg"}
 VIDEO_EXTENSIONS = {".mov", ".mp4", ".m4v"}
 MEDIA_EXTENSIONS = IMAGE_EXTENSIONS | VIDEO_EXTENSIONS
+DISPLAY_OVERRIDE_IMAGE_EXTENSIONS = IMAGE_EXTENSIONS | {".png", ".tif", ".tiff", ".webp"}
+DISPLAY_OVERRIDE_SIDECAR = ".pbe-real-estate-display-overrides.json"
+DISPLAY_VARIANT_ORIGINAL = "original"
+DISPLAY_VARIANT_APPROVED_REWORK = "approved-rework"
 DEFAULT_SOURCE_ROOT = Path("/Volumes/Saturn/Pictures/RE/Corine")
 DEFAULT_OUTPUT_ROOT = Path("tmp/real-estate-import")
 PDF_BATCH_SCHEMA = "photosbyelie.realEstatePdfBatch.v1"
@@ -231,6 +235,100 @@ def scan_album_files(album_dir: Path) -> list[Path]:
     )
 
 
+def _display_override_key(album_name: str, filename: str) -> str:
+    """Return the case-insensitive lookup key used by display overrides."""
+    return f"{album_name.strip().casefold()}/{filename.strip().casefold()}"
+
+
+def _display_override_basename_key(filename: str) -> str:
+    """Return the case-insensitive lookup key for a gallery-wide basename override."""
+    return filename.strip().casefold()
+
+
+def _display_override_path(value: Any, key: str) -> str:
+    """Extract a path from a supported display-override entry."""
+    if isinstance(value, str):
+        path_value = value.strip()
+    elif isinstance(value, dict):
+        path_value = str(value.get("path") or "").strip()
+    else:
+        path_value = ""
+    if not path_value:
+        raise ValueError(f"Display override {key!r} must provide a non-empty image path.")
+    return path_value
+
+
+def load_display_overrides(source_root: Path) -> dict[str, Path]:
+    """Load and validate optional approved preview sources without publishing their paths."""
+    sidecar = source_root / DISPLAY_OVERRIDE_SIDECAR
+    if not sidecar.exists():
+        return {}
+
+    payload = json.loads(sidecar.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"Display override sidecar must contain a JSON object: {sidecar}")
+    entries = payload.get("overrides", payload)
+    if not isinstance(entries, dict):
+        raise ValueError(f"Display override 'overrides' value must be a JSON object: {sidecar}")
+
+    flattened: list[tuple[str, Any]] = []
+    for album_or_key, value in entries.items():
+        key_text = str(album_or_key).strip().replace("\\", "/")
+        if isinstance(value, dict) and "path" not in value:
+            for filename, nested_value in value.items():
+                flattened.append((f"{key_text}/{str(filename).strip()}", nested_value))
+        else:
+            flattened.append((key_text, value))
+
+    overrides: dict[str, Path] = {}
+    for configured_key, value in flattened:
+        if "/" in configured_key:
+            album_name, filename = configured_key.rsplit("/", 1)
+            if not album_name.strip() or not filename.strip():
+                raise ValueError(
+                    f"Display override key {configured_key!r} must name a project and filename."
+                )
+            normalized_key = _display_override_key(album_name, filename)
+        else:
+            if not configured_key.strip():
+                raise ValueError("Display override basename must not be empty.")
+            normalized_key = _display_override_basename_key(configured_key)
+        if normalized_key in overrides:
+            raise ValueError(f"Duplicate display override key after normalization: {configured_key!r}")
+
+        configured_path = Path(_display_override_path(value, configured_key)).expanduser()
+        override_path = configured_path if configured_path.is_absolute() else sidecar.parent / configured_path
+        override_path = override_path.resolve()
+        if not override_path.is_file():
+            raise ValueError(f"Display override image does not exist: {configured_key!r}")
+        if override_path.suffix.lower() not in DISPLAY_OVERRIDE_IMAGE_EXTENSIONS:
+            raise ValueError(f"Display override is not a supported image file: {configured_key!r}")
+        try:
+            with Image.open(override_path) as image:
+                image.verify()
+        except (OSError, ValueError) as error:
+            raise ValueError(f"Display override is not a readable image file: {configured_key!r}") from error
+        overrides[normalized_key] = override_path
+    return overrides
+
+
+def display_override_for(
+    overrides: dict[str, Path],
+    album_name: str,
+    source: Path,
+) -> Path | None:
+    """Resolve an approved display source by album plus filename or basename."""
+    for filename in (source.name, source.stem):
+        for key in (
+            _display_override_key(album_name, filename),
+            _display_override_basename_key(filename),
+        ):
+            override = overrides.get(key)
+            if override is not None:
+                return override
+    return None
+
+
 def raw_files(root: Path) -> list[Path]:
     return sorted(
         path
@@ -260,7 +358,31 @@ def album_dirs(source_root: Path, requested_albums: list[str]) -> list[Path]:
 
 
 def write_app_context(manifest: dict[str, Any], output_dir: Path) -> Path:
-    payload = json.dumps(manifest, indent=2, sort_keys=True)
+    public_manifest = json.loads(json.dumps(manifest))
+    public_manifest.pop("sourceRoot", None)
+    public_manifest.pop("outputRoot", None)
+    albums = public_manifest.get("albums")
+    if isinstance(albums, list):
+        for album in albums:
+            if isinstance(album, dict):
+                album.pop("sourcePath", None)
+    photo_collections = [public_manifest.get("photos")]
+    gallery = public_manifest.get("gallery")
+    if isinstance(gallery, dict):
+        photo_collections.append(gallery.get("photos"))
+    for collection in photo_collections:
+        if not isinstance(collection, list):
+            continue
+        for photo in collection:
+            if not isinstance(photo, dict):
+                continue
+            real_estate = photo.get("realEstate")
+            if not isinstance(real_estate, dict):
+                continue
+            real_estate.pop("sourcePath", None)
+            real_estate.pop("preview900Path", None)
+            real_estate.pop("preview1800Path", None)
+    payload = json.dumps(public_manifest, indent=2, sort_keys=True)
     context = f"""(() => {{
   const payload = {payload};
   const script = document.currentScript;
@@ -391,8 +513,10 @@ def build_manifest(
     preview_900_quality: int,
     preview_1800_quality: int,
     force: bool,
+    display_overrides: dict[str, Path] | None = None,
     progress_json: bool = False,
 ) -> dict[str, Any]:
+    display_overrides = display_overrides or {}
     photos: list[dict[str, Any]] = []
     album_entries: list[dict[str, Any]] = []
     total_source_bytes = 0
@@ -530,6 +654,17 @@ def build_manifest(
                 reason="Real Estate lane does not upload private JPG triplets",
             )
             video_info = video_metadata(source) if media_type == "video" else {}
+            display_source = (
+                display_override_for(display_overrides, album_name, source)
+                if media_type == "photo"
+                else None
+            )
+            preview_source = display_source or source
+            display_variant = (
+                DISPLAY_VARIANT_APPROVED_REWORK
+                if display_source is not None
+                else DISPLAY_VARIANT_ORIGINAL
+            )
             video_still_percent = 10
             preview_900_path = output_dir / "previews" / album_slug / f"{photo_id}_900.jpg"
             preview_1800_path = output_dir / "previews" / album_slug / f"{photo_id}_1800.jpg"
@@ -558,8 +693,21 @@ def build_manifest(
                     "height": int(video_info.get("height") or preview_1800_render["height"]),
                 }
             else:
-                preview_900_render = render_derivative(source, preview_900_path, preview_900_max_edge, preview_900_quality, force)
-                preview_1800_render = render_derivative(source, preview_1800_path, preview_1800_max_edge, preview_1800_quality, force)
+                preview_force = force or display_source is not None
+                preview_900_render = render_derivative(
+                    preview_source,
+                    preview_900_path,
+                    preview_900_max_edge,
+                    preview_900_quality,
+                    preview_force,
+                )
+                preview_1800_render = render_derivative(
+                    preview_source,
+                    preview_1800_path,
+                    preview_1800_max_edge,
+                    preview_1800_quality,
+                    preview_force,
+                )
                 original_dimensions = image_dimensions(source)
             rendered_preview_900 += 1 if preview_900_render["rendered"] else 0
             rendered_preview_1800 += 1 if preview_1800_render["rendered"] else 0
@@ -599,6 +747,7 @@ def build_manifest(
                 "id": photo_id,
                 "title": default_title,
                 "editableTitle": default_title,
+                "displayVariant": display_variant,
                 "caption": album_title,
                 "captionColor": title_color,
                 "className": "real-estate-photo" + (" real-estate-video" if media_type == "video" else ""),
@@ -837,6 +986,7 @@ def main() -> int:
             print(f"No album folders found in {source_root}", file=sys.stderr)
             return 1
 
+        display_overrides = load_display_overrides(source_root)
         manifest = build_manifest(
             repo_root=repo_root,
             source_root=source_root,
@@ -856,6 +1006,7 @@ def main() -> int:
             preview_900_quality=args.preview_900_quality,
             preview_1800_quality=args.preview_1800_quality,
             force=args.force,
+            display_overrides=display_overrides,
             progress_json=args.progress_json,
         )
     except (FileNotFoundError, ValueError, OSError) as error:

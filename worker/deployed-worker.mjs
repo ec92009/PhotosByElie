@@ -126,7 +126,7 @@ const realEstateGalleriesFor = (env = {}) => {
     try {
       const parsed = JSON.parse(rawJson);
       const source = Array.isArray(parsed) ? parsed : Array.isArray(parsed.galleries) ? parsed.galleries : [];
-      const galleries = source.map(cleanRealEstateGallery).filter((gallery) => gallery?.username && (gallery?.accessCode || (gallery?.accessCodeHash && gallery?.accessCodeSalt)));
+      const galleries = source.map(cleanRealEstateGallery).filter((gallery) => gallery?.username);
       if (galleries.length) return galleries;
     } catch {
       // Fall through to the legacy single-gallery environment variables.
@@ -138,7 +138,7 @@ const realEstateGalleriesFor = (env = {}) => {
     accessCode: env.REAL_ESTATE_CORINE_ACCESS_CODE || "",
     privateMasterPrefix: env.REAL_ESTATE_CORINE_PRIVATE_MASTER_PREFIX || "real-estate/corine-real-estate/masters",
   });
-  return legacy?.username && (legacy?.accessCode || (legacy?.accessCodeHash && legacy?.accessCodeSalt)) ? [legacy] : [];
+  return legacy?.username ? [legacy] : [];
 };
 
 const mediaHeaders = (object = null, extraHeaders = {}) => ({
@@ -286,6 +286,7 @@ export default {
       : null;
     const privateBucket = requiredBinding(env, "PRIVATE_MEDIA");
     const realEstateGalleries = realEstateGalleriesFor(env);
+    const accessUserRegistry = accessUserRegistryFor(env);
     const emailClient = env.RESEND_API_KEY && env.ORDER_EMAIL_FROM
       ? createResendEmailClient({
         apiKey: env.RESEND_API_KEY,
@@ -313,6 +314,7 @@ export default {
       }),
       realEstateAuth: realEstateGalleries.length && env.REAL_ESTATE_SESSION_SECRET ? createRealEstateAuth({
         galleries: realEstateGalleries,
+        credentialStore: accessUserRegistry,
         sessionSecret: env.REAL_ESTATE_SESSION_SECRET,
         sessionSeconds: positiveInt(env.REAL_ESTATE_SESSION_SECONDS, 2 * 60 * 60),
       }) : null,
@@ -324,7 +326,7 @@ export default {
       }),
       googleOAuthAuth: googleOAuthAuthFor(env),
       accessAuth: ownerAccessAuthFor(env),
-      accessUserRegistry: accessUserRegistryFor(env),
+      accessUserRegistry,
       accessAdminEmail: env.ACCESS_ADMIN_EMAIL || "ec92009@gmail.com",
       ownerActionStore: createKvOwnerActionStore({
         namespace: env.OWNER_ACTIONS_KV || requiredBinding(env, "ORDERS_KV"),

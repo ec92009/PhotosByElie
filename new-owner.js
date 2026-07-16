@@ -10,6 +10,8 @@
     "http://127.0.0.1:8766/photosbyelie/connector-status",
   ];
   const LOCAL_SIDECAR_OPEN_URL = "http://127.0.0.1:8766/photosbyelie/open-sidecar";
+  const RE_FIXTURE_STORAGE_KEY = "pbe-new-owner-re-fixture";
+  const RE_PROJECT_STORAGE_KEY = "pbe-new-owner-re-project";
   const state = {
     session: null,
     access: null,
@@ -18,6 +20,10 @@
     connectors: [],
     localConnector: null,
     localConnectorChecked: false,
+    reAlbums: [],
+    reSelectedAlbumIds: new Set(),
+    rePreviewItems: [],
+    reSelectedAssetIds: new Set(),
     busy: false,
   };
   const lanes = [
@@ -40,6 +46,11 @@
   const localConnectorRoot = $("[data-new-owner-local-connector]");
   const workerBaseRoot = $("[data-new-owner-worker-base]");
   const connectorDownload = $("[data-new-owner-download-connector]");
+  const reFixtureInput = $("[data-new-owner-re-fixture]");
+  const reProjectInput = $("[data-new-owner-re-project]");
+  const reStatusRoot = $("[data-new-owner-re-status]");
+  const reAlbumsRoot = $("[data-new-owner-re-albums]");
+  const rePreviewRoot = $("[data-new-owner-re-preview]");
 
   const setStatus = (message) => {
     if (statusRoot) statusRoot.textContent = message;
@@ -72,7 +83,7 @@
   }
 
   const setQueueControlsBusy = (busy) => {
-    document.querySelectorAll("[data-new-owner-queue-check], [data-new-owner-sync-photos], [data-new-owner-queue-sidecar], [data-new-owner-upload-publish]")
+    document.querySelectorAll("[data-new-owner-queue-check], [data-new-owner-sync-photos], [data-new-owner-queue-sidecar], [data-new-owner-upload-publish], [data-new-owner-re-load], [data-new-owner-re-preflight], [data-new-owner-re-assign]")
       .forEach((button) => {
         button.disabled = busy;
         button.setAttribute("aria-busy", String(busy));
@@ -411,6 +422,96 @@
     `;
   };
 
+  const setReStatus = (message, stateName = "") => {
+    if (!reStatusRoot) return;
+    reStatusRoot.textContent = message;
+    reStatusRoot.dataset.state = stateName;
+  };
+
+  const reAlbumId = (album) => String(album?.localIdentifier || album?.albumLocalIdentifier || "").trim();
+
+  const reAssignment = () => ({
+    track: "RE",
+    fixture: String(reFixtureInput?.value || "").trim(),
+    project: String(reProjectInput?.value || "").trim(),
+  });
+
+  const selectedReAlbums = () => state.reAlbums
+    .filter((album) => state.reSelectedAlbumIds.has(reAlbumId(album)))
+    .map((album) => ({
+      albumLocalIdentifier: reAlbumId(album),
+      albumName: String(album.title || album.albumName || "Apple Photos album"),
+      filterBursts: true,
+      allowIcloudDownloads: true,
+    }));
+
+  const saveReRouting = () => {
+    try {
+      localStorage.setItem(RE_FIXTURE_STORAGE_KEY, reFixtureInput?.value || "La Concha");
+      localStorage.setItem(RE_PROJECT_STORAGE_KEY, reProjectInput?.value || "Apartment 1");
+    } catch {
+      // Routing memory is a convenience; the action always carries the current values.
+    }
+  };
+
+  const validReAssignment = (showError = false) => {
+    const assignment = reAssignment();
+    const valid = assignment.fixture && assignment.project
+      && !/[\\/]/.test(assignment.fixture)
+      && !/[\\/]/.test(assignment.project);
+    if (!valid && showError) setReStatus("Fixture and sub-fixture are required and must each be one folder name.", "error");
+    return valid;
+  };
+
+  const syncReControls = () => {
+    const hasAlbums = selectedReAlbums().length > 0;
+    const preflightButton = $("[data-new-owner-re-preflight]");
+    const assignButton = $("[data-new-owner-re-assign]");
+    if (preflightButton) preflightButton.disabled = state.busy || !hasAlbums || !validReAssignment();
+    if (assignButton) assignButton.disabled = state.busy || !hasAlbums || !validReAssignment();
+  };
+
+  const renderRealEstateIntake = () => {
+    if (reAlbumsRoot) {
+      reAlbumsRoot.innerHTML = state.reAlbums.length
+        ? state.reAlbums.map((album) => {
+          const id = reAlbumId(album);
+          const checked = state.reSelectedAlbumIds.has(id) ? " checked" : "";
+          const title = album.title || album.albumName || "Apple Photos album";
+          const count = Number(album.assetCount || 0);
+          return `
+            <label class="new-owner-re-album">
+              <input type="checkbox" data-new-owner-re-album-id="${escapeHtml(id)}"${checked}>
+              <span><strong>${escapeHtml(title)}</strong><br><small>${count ? `${count.toLocaleString()} item${count === 1 ? "" : "s"}` : escapeHtml(id)}</small></span>
+            </label>
+          `;
+        }).join("")
+        : "";
+    }
+    if (rePreviewRoot) {
+      rePreviewRoot.innerHTML = state.rePreviewItems.length
+        ? state.rePreviewItems.map((item) => {
+          const assetId = String(item.assetId || item.localIdentifier || "");
+          const checked = state.reSelectedAssetIds.has(assetId) ? " checked" : "";
+          const filename = item.filename || item.originalFilename || "Apple Photos asset";
+          const preview = item.previewDataUrl
+            ? `<img src="${escapeHtml(item.previewDataUrl)}" alt="${escapeHtml(filename)} preview">`
+            : `<span class="new-owner-re-preview-placeholder">${escapeHtml(item.previewError || "Preview unavailable")}</span>`;
+          return `
+            <article class="new-owner-re-preview-item">
+              ${preview}
+              <label>
+                <input type="checkbox" data-new-owner-re-asset-id="${escapeHtml(assetId)}"${checked}>
+                <span><strong>${escapeHtml(filename)}</strong><br><small>${escapeHtml(item.albumName || "")}</small></span>
+              </label>
+            </article>
+          `;
+        }).join("")
+        : "";
+    }
+    syncReControls();
+  };
+
   const render = () => {
     renderSession();
     renderCounts();
@@ -419,6 +520,7 @@
     renderConnectors();
     renderLocalConnector();
     renderAction();
+    renderRealEstateIntake();
     syncOpenSidecarControl();
     prepareCollapsibleSections();
     queueMasonryLayout();
@@ -596,17 +698,19 @@
   };
 
   const queueAction = async ({ action, payload, statusLabel = "Queueing...", localConnectorRequired = true, requestedConnectorId = "" }) => {
-    if (state.busy) return;
+    if (state.busy) return null;
     const connectorId = cleanConnectorId(requestedConnectorId) || (localConnectorRequired ? effectiveConnectorId() : "");
     if (localConnectorRequired && !connectorId) {
       const message = "This browser cannot identify this Mac connector. Refresh after starting the connector, or use Open Sidecar to try the local bridge directly.";
       setActionStatus(message, "error");
       setStatus("Mac connector not identified by this browser.");
-      return;
+      return null;
     }
     state.busy = true;
     setQueueControlsBusy(true);
     setActionStatus(statusLabel, "busy");
+    let completedAction = null;
+    let queuedAction = null;
     try {
       const body = await apiFetch("/owner/actions", {
         method: "POST",
@@ -619,6 +723,7 @@
         }),
       });
       state.action = body.action || null;
+      queuedAction = state.action;
       await loadActions();
       setActionStatus(
         state.action?.id && connectorId
@@ -629,7 +734,7 @@
       setStatus("Owner action queued.");
       render();
       if (state.action?.id) {
-        await monitorAction(state.action.id, connectorId);
+        completedAction = await monitorAction(state.action.id, connectorId);
       }
     } catch (error) {
       const message = queueErrorMessage(error);
@@ -638,7 +743,9 @@
     } finally {
       state.busy = false;
       setQueueControlsBusy(false);
+      renderRealEstateIntake();
     }
+    return completedAction || queuedAction;
   };
 
   const queueCheck = () => queueAction({
@@ -700,6 +807,122 @@
     statusLabel: "Queueing upload...",
   });
 
+  const reActionManifest = (mode, extra = {}) => ({
+    mode,
+    workflow: "apple-photos-real-estate-intake",
+    source: "apple-photos",
+    destinationKind: "real_estate",
+    intakeAssignment: reAssignment(),
+    filterBursts: true,
+    allowIcloudDownloads: true,
+    ...extra,
+  });
+
+  const loadReAlbums = async () => {
+    if (!validReAssignment(true)) return;
+    saveReRouting();
+    setReStatus("Loading Apple Photos albums from this Mac…", "busy");
+    const completed = await queueAction({
+      action: "sidecar-culling-review",
+      payload: {
+        workflow: "apple-photos-real-estate-intake",
+        manifest: reActionManifest("apple-photos-re-albums", { includePreviews: false }),
+        queuedAt: new Date().toISOString(),
+      },
+      statusLabel: "Loading Apple Photos albums…",
+    });
+    if (completed?.state !== "completed") {
+      setReStatus(completed?.error?.message || "Apple Photos albums were not loaded.", "error");
+      return;
+    }
+    state.reAlbums = Array.isArray(completed.result?.albums) ? completed.result.albums : [];
+    state.reSelectedAlbumIds = new Set(
+      [...state.reSelectedAlbumIds].filter((id) => state.reAlbums.some((album) => reAlbumId(album) === id)),
+    );
+    state.rePreviewItems = [];
+    state.reSelectedAssetIds = new Set();
+    setReStatus(completed.result?.message || `Loaded ${state.reAlbums.length.toLocaleString()} album(s). Select one or more.`, "success");
+    renderRealEstateIntake();
+    queueMasonryLayout();
+  };
+
+  const previewReAlbums = async () => {
+    const albums = selectedReAlbums();
+    if (!albums.length || !validReAssignment(true)) return;
+    saveReRouting();
+    setReStatus(`Preparing private previews for ${albums.length} selected album${albums.length === 1 ? "" : "s"}…`, "busy");
+    const completed = await queueAction({
+      action: "sidecar-culling-review",
+      payload: {
+        workflow: "apple-photos-real-estate-intake",
+        manifest: reActionManifest("apple-photos-re-preflight", {
+          albums,
+          includePreviews: true,
+          limit: 60,
+        }),
+        queuedAt: new Date().toISOString(),
+      },
+      statusLabel: "Preparing private Apple Photos previews…",
+    });
+    if (completed?.state !== "completed") {
+      setReStatus(completed?.error?.message || "The selected albums could not be previewed.", "error");
+      return;
+    }
+    state.rePreviewItems = Array.isArray(completed.result?.previewItems) ? completed.result.previewItems : [];
+    state.reSelectedAssetIds = new Set(
+      state.rePreviewItems.map((item) => String(item.assetId || item.localIdentifier || "")).filter(Boolean),
+    );
+    setReStatus(
+      completed.result?.message || `Prepared ${state.rePreviewItems.length.toLocaleString()} private candidate(s).`,
+      "success",
+    );
+    renderRealEstateIntake();
+    queueMasonryLayout();
+  };
+
+  const assignRePhotos = async () => {
+    const albums = selectedReAlbums();
+    if (!albums.length || !validReAssignment(true)) return;
+    const selectedAssetIds = state.rePreviewItems.length ? [...state.reSelectedAssetIds] : [];
+    if (state.rePreviewItems.length && !selectedAssetIds.length) {
+      setReStatus("Select at least one previewed photo, or reload the albums to assign complete albums.", "error");
+      return;
+    }
+    const assignment = reAssignment();
+    const countLabel = selectedAssetIds.length
+      ? `${selectedAssetIds.length} selected photo${selectedAssetIds.length === 1 ? "" : "s"}`
+      : `${albums.length} complete album${albums.length === 1 ? "" : "s"}`;
+    if (!window.confirm(`Assign ${countLabel} to ${assignment.track} / ${assignment.fixture} / ${assignment.project}?\n\nThis stays local. Nothing will be published, uploaded, exposed, or messaged.`)) return;
+    saveReRouting();
+    setReStatus(`Assigning ${countLabel} to the persistent local RE intake…`, "busy");
+    const completed = await queueAction({
+      action: "sidecar-culling-review",
+      payload: {
+        workflow: "apple-photos-real-estate-intake",
+        manifest: reActionManifest("apple-photos-re-assign", {
+          albums,
+          selectedAssetIds,
+          includePreviews: false,
+        }),
+        queuedAt: new Date().toISOString(),
+      },
+      statusLabel: "Assigning Apple Photos to local RE intake…",
+    });
+    if (completed?.state !== "completed") {
+      setReStatus(completed?.error?.message || "The Apple Photos assignment failed.", "error");
+      return;
+    }
+    const result = completed.result || {};
+    setReStatus(
+      result.message || `Assigned privately to ${assignment.track} / ${assignment.fixture} / ${assignment.project}. Nothing was published.`,
+      "success",
+    );
+    state.rePreviewItems = [];
+    state.reSelectedAssetIds = new Set();
+    renderRealEstateIntake();
+    queueMasonryLayout();
+  };
+
   const transitionAction = async (actionId, command) => {
     if (state.busy || !actionId || !command) return;
     state.busy = true;
@@ -728,6 +951,13 @@
     }
   };
 
+  try {
+    if (reFixtureInput) reFixtureInput.value = localStorage.getItem(RE_FIXTURE_STORAGE_KEY) || reFixtureInput.value;
+    if (reProjectInput) reProjectInput.value = localStorage.getItem(RE_PROJECT_STORAGE_KEY) || reProjectInput.value;
+  } catch {
+    // Keep the HTML defaults when local storage is unavailable.
+  }
+
   $("[data-new-owner-refresh]")?.addEventListener("click", () => load());
   $("[data-new-owner-login]")?.addEventListener("click", login);
   $("[data-new-owner-logout]")?.addEventListener("click", logout);
@@ -735,6 +965,36 @@
   $("[data-new-owner-sync-photos]")?.addEventListener("click", queuePhotosIndexSync);
   $("[data-new-owner-queue-sidecar]")?.addEventListener("click", openLocalSidecar);
   $("[data-new-owner-upload-publish]")?.addEventListener("click", queueUploadPublish);
+  $("[data-new-owner-re-load]")?.addEventListener("click", loadReAlbums);
+  $("[data-new-owner-re-preflight]")?.addEventListener("click", previewReAlbums);
+  $("[data-new-owner-re-assign]")?.addEventListener("click", assignRePhotos);
+  [reFixtureInput, reProjectInput].filter(Boolean).forEach((input) => {
+    input.addEventListener("input", () => {
+      saveReRouting();
+      syncReControls();
+    });
+  });
+  reAlbumsRoot?.addEventListener("change", (event) => {
+    const checkbox = event.target.closest("[data-new-owner-re-album-id]");
+    if (!checkbox) return;
+    const id = checkbox.getAttribute("data-new-owner-re-album-id") || "";
+    if (checkbox.checked) state.reSelectedAlbumIds.add(id);
+    else state.reSelectedAlbumIds.delete(id);
+    state.rePreviewItems = [];
+    state.reSelectedAssetIds = new Set();
+    setReStatus(`${state.reSelectedAlbumIds.size} album${state.reSelectedAlbumIds.size === 1 ? "" : "s"} selected.`, "success");
+    renderRealEstateIntake();
+    queueMasonryLayout();
+  });
+  rePreviewRoot?.addEventListener("change", (event) => {
+    const checkbox = event.target.closest("[data-new-owner-re-asset-id]");
+    if (!checkbox) return;
+    const id = checkbox.getAttribute("data-new-owner-re-asset-id") || "";
+    if (checkbox.checked) state.reSelectedAssetIds.add(id);
+    else state.reSelectedAssetIds.delete(id);
+    setReStatus(`${state.reSelectedAssetIds.size} photo${state.reSelectedAssetIds.size === 1 ? "" : "s"} selected for private assignment.`, "success");
+    syncReControls();
+  });
   actionRoot?.addEventListener("click", (event) => {
     const button = event.target.closest("[data-new-owner-action-command]");
     if (!button) return;

@@ -8,20 +8,34 @@ GitHub carries code, safe metadata, SOPs, and handoff notes; private Owner DB
 snapshots and client artifacts move through private R2; SSH/Codex Remote SSH is
 for remote execution.
 
-## Current Handoff: 2026-07-13 Commercial Storefront Release
+## Current Handoff: 2026-07-16 Corine Real Estate Client Workflow
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Branch: `main`
 - Public site: `https://photos-by-elie.com/`
 - Local preview: `http://localhost:8000/`
 - Owner intake URL: `https://photos-by-elie.com/owner.html`
-- Current visible build: `v135.2`
+- Current visible build: `v138.0`
 - Sidecar local build: `v126.6`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
 - `owner.html` now redirects to the authenticated cloud Owner surface at
   `new-owner.html`; the localhost Owner Python web UI is retired as the normal
   control plane.
+- NewOwner now routes selected Apple Photos into a persistent local hierarchy
+  of `RE / Fixture / Sub-fixture` (for example `RE / La Concha / Apartment 1`).
+  Free-text names create new fixture/sub-fixture folders; the first datalist
+  suggestions are Apartment 1, Apartment 2, Street, Main lobby, Pool, and
+  Tennis court. Assignment remains local-only until the separate Real Estate
+  import/publish workflow is run.
+- ACS now manages mutable Real Estate password credentials in D1. Owner/Admin
+  can create, replace, or revoke a person's gallery-scoped login without
+  storing or returning the plaintext password or password hash. A La Concha
+  gallery grant covers all of its sub-fixtures; it does not require a separate
+  password for each apartment or amenity.
+- The Apple Photos album `RE 2026 La Concha 3 Shared Areas` contains the 31 new
+  July 15 frames for private routing into Street, Main lobby, Pool, and Tennis
+  court. Corine has not been messaged.
 - Background connector endpoints use a per-Mac bearer credential stored only in
   the Worker secret `OWNER_CONNECTOR_TOKENS_JSON`; David and Max must receive
   different revocable tokens.

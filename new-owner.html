@@ -8,10 +8,10 @@
   <link rel="icon" type="image/png" sizes="512x512" href="./assets/branding/photosbyelie-camera-tripod-logo-512.png"/>
   <meta name="theme-color" content="#263f4a"/>
   <script>(()=>{try{const saved=localStorage.getItem('byelie-theme');if(saved==='light'||saved==='dark')document.documentElement.dataset.theme=saved;localStorage.setItem('byelie-language','en');document.documentElement.lang='en';document.documentElement.dataset.language='en'}catch{}})();</script>
-  <link rel="stylesheet" href="./shared.css?v=135.2"/>
-  <link rel="stylesheet" href="./styles.css?v=135.2"/>
-  <link rel="stylesheet" href="./photos.css?v=135.2"/>
-  <link rel="stylesheet" href="./new-owner.css?v=135.2"/>
+  <link rel="stylesheet" href="./shared.css?v=138.0"/>
+  <link rel="stylesheet" href="./styles.css?v=138.0"/>
+  <link rel="stylesheet" href="./photos.css?v=138.0"/>
+  <link rel="stylesheet" href="./new-owner.css?v=138.0"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -26,7 +26,7 @@
       <a class="is-active" href="./new-owner.html">Owner</a> <span>|</span>
       <a href="./access-console.html">ACS</a>
     </nav>
-    <span class="site-version-badge">v135.2</span>
+    <span class="site-version-badge">v138.0</span>
   </header>
 
   <main id="main-content" class="shell new-owner-shell">
@@ -74,6 +74,34 @@
           <div data-new-owner-access class="new-owner-access-list"></div>
         </section>
 
+        <section class="new-owner-card new-owner-card-wide" aria-label="Apple Photos Real Estate intake">
+          <div class="owner-card-titlebar">
+            <div>
+              <p class="eyebrow">Private local intake</p>
+              <h2>Apple Photos → Real Estate</h2>
+            </div>
+          </div>
+          <div class="new-owner-re-routing">
+            <label>Track<input value="RE" readonly aria-label="Real Estate track"></label>
+            <label>Fixture<input value="La Concha" list="new-owner-re-fixtures" data-new-owner-re-fixture></label>
+            <label>Sub-fixture / project<input value="Apartment 1" list="new-owner-re-projects" data-new-owner-re-project></label>
+            <datalist id="new-owner-re-fixtures"><option value="La Concha"></datalist>
+            <datalist id="new-owner-re-projects">
+              <option value="Apartment 1"><option value="Apartment 2"><option value="Street">
+              <option value="Main lobby"><option value="Pool"><option value="Tennis court">
+            </datalist>
+          </div>
+          <div class="new-owner-re-actions">
+            <button class="btn secondary" type="button" data-new-owner-re-load>Load Apple Photos albums</button>
+            <button class="btn secondary" type="button" data-new-owner-re-preflight disabled>Preview selected albums</button>
+            <button class="btn" type="button" data-new-owner-re-assign disabled>Assign selected photos</button>
+          </div>
+          <p class="new-owner-card-note">Type a new fixture or sub-fixture name to create it on assignment. This builds a persistent local <strong>RE / Fixture / Sub-fixture</strong> intake and registers the fixture for Real Estate import. It does not publish, upload, expose a gallery, or message anyone.</p>
+          <div data-new-owner-re-status class="new-owner-re-status" aria-live="polite">Load albums from this Mac to begin.</div>
+          <div data-new-owner-re-albums class="new-owner-re-albums"></div>
+          <div data-new-owner-re-preview class="new-owner-re-preview"></div>
+        </section>
+
         <section class="new-owner-card" aria-label="Owner action queue">
           <div class="owner-card-titlebar">
             <div>
@@ -119,8 +147,8 @@
   </main>
 
   <script src="./media-config.js"></script>
-  <script src="./owner-account.js?v=135.2"></script>
-  <script src="./owner-settings.js?v=135.2"></script>
-  <script src="./new-owner.js?v=135.2"></script>
+  <script src="./owner-account.js?v=138.0"></script>
+  <script src="./owner-settings.js?v=138.0"></script>
+  <script src="./new-owner.js?v=138.0"></script>
 </body>
 </html>

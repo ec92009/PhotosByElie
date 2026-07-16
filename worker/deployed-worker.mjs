@@ -120,14 +120,38 @@ const cleanRealEstateGallery = (gallery = {}) => {
   };
 };
 
-const realEstateGalleriesFor = (env = {}) => {
+const AGNES_COMMON_GALLERY_KEY = "agnes-la-concha-common";
+
+const withScopedRealEstateGalleries = (galleries = []) => {
+  if (galleries.some((gallery) => gallery.key === AGNES_COMMON_GALLERY_KEY)) return galleries;
+  const source = galleries.find((gallery) => gallery.key === "Corine-gallery")
+    || galleries.find((gallery) => gallery.key === "corine-real-estate");
+  if (!source) return galleries;
+  return [
+    ...galleries,
+    {
+      ...source,
+      key: AGNES_COMMON_GALLERY_KEY,
+      username: "Agnes",
+      customer: "Agnes",
+      email: "",
+      accessCode: "",
+      accessCodeHash: "",
+      accessCodeSalt: "",
+      propertyTitle: "La Concha / Common",
+      maxItems: 14,
+    },
+  ];
+};
+
+export const realEstateGalleriesFor = (env = {}) => {
   const rawJson = String(env.REAL_ESTATE_GALLERIES_JSON || "").trim();
   if (rawJson) {
     try {
       const parsed = JSON.parse(rawJson);
       const source = Array.isArray(parsed) ? parsed : Array.isArray(parsed.galleries) ? parsed.galleries : [];
       const galleries = source.map(cleanRealEstateGallery).filter((gallery) => gallery?.username);
-      if (galleries.length) return galleries;
+      if (galleries.length) return withScopedRealEstateGalleries(galleries);
     } catch {
       // Fall through to the legacy single-gallery environment variables.
     }
@@ -138,7 +162,7 @@ const realEstateGalleriesFor = (env = {}) => {
     accessCode: env.REAL_ESTATE_CORINE_ACCESS_CODE || "",
     privateMasterPrefix: env.REAL_ESTATE_CORINE_PRIVATE_MASTER_PREFIX || "real-estate/corine-real-estate/masters",
   });
-  return legacy?.username ? [legacy] : [];
+  return legacy?.username ? withScopedRealEstateGalleries([legacy]) : [];
 };
 
 const mediaHeaders = (object = null, extraHeaders = {}) => ({

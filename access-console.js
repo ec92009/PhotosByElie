@@ -67,6 +67,7 @@
     { id: "public:spain", label: "Spain", kind: "custom", galleryKind: "public", galleryKey: "spain", count: 1853, defaults: PUBLIC_GALLERY_DEFAULTS },
     { id: "public:usa", label: "USA", kind: "custom", galleryKind: "public", galleryKey: "usa", count: 145, defaults: PUBLIC_GALLERY_DEFAULTS },
     { id: "event:agnes-bday", label: "Agnes's B'day", kind: "family", galleryKind: "event", galleryKey: "agnes-bday", defaults: EVENT_GALLERY_DEFAULTS },
+    { id: "real_estate:agnes-la-concha-common", label: "RE La Concha / Common", kind: "real_estate", galleryKind: "real_estate", galleryKey: "agnes-la-concha-common", defaults: RE_GALLERY_DEFAULTS },
     { id: "real_estate:corine-real-estate", label: "RE La Concha", kind: "real_estate", galleryKind: "real_estate", galleryKey: "corine-real-estate", defaults: RE_GALLERY_DEFAULTS },
     { id: "event:johnson-palmer-wedding", label: "Johnson-Palmer wedding", kind: "event", galleryKind: "event", galleryKey: "johnson-palmer-wedding", defaults: EVENT_GALLERY_DEFAULTS },
   ];

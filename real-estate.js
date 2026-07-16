@@ -6,7 +6,7 @@
   const isLocalHost = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname);
   const pageVersion = pageParams.get("v");
   const contextVersion = pageVersion ? `?v=${encodeURIComponent(pageVersion)}` : "";
-  const knownClientContexts = new Set(["corine", "elie"]);
+  const knownClientContexts = new Set(["agnes", "corine", "elie"]);
   const requestedClientContext = String(pageParams.get("client") || "elie").trim().toLowerCase();
   const defaultClientContext = knownClientContexts.has(requestedClientContext) ? requestedClientContext : "elie";
   const defaultLocalContext = `./tmp/real-estate-import/${defaultClientContext}/app-context.js${contextVersion}`;

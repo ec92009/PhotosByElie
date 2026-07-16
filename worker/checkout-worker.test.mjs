@@ -6,7 +6,7 @@ import catalogTsv from "../scripts/catalog_tsv.cjs";
 import { createMemoryAccessUserRegistry } from "./access-user-registry.mjs";
 import { createAnalyticsStore } from "./analytics-store.mjs";
 import { createCatalogIndex, createPhotosByElieWorker } from "./checkout-worker.mjs";
-import deployedWorker from "./deployed-worker.mjs";
+import deployedWorker, { realEstateGalleriesFor } from "./deployed-worker.mjs";
 import { createGoogleOAuthAuth } from "./google-oauth-auth.mjs";
 import { createLocalZipDelivery } from "./local-zip-delivery.mjs";
 import { createMemoryStore } from "./memory-store.mjs";
@@ -92,6 +92,28 @@ const fakeAccessAuthFor = (email) => ({
     };
   },
   logoutUrlFor: (baseUrl) => `${baseUrl}/cdn-cgi/access/logout`,
+});
+
+test("deployed Worker derives an Agnes Common-only gallery without a static password", () => {
+  const galleries = realEstateGalleriesFor({
+    REAL_ESTATE_GALLERIES_JSON: JSON.stringify({
+      galleries: [{
+        key: "Corine-gallery",
+        username: "Corine",
+        accessCode: "legacy-corine-password",
+        privateMasterPrefix: "RE/Corine/masters",
+      }],
+    }),
+  });
+  const agnes = galleries.find((gallery) => gallery.key === "agnes-la-concha-common");
+  assert.equal(galleries.length, 2);
+  assert.equal(agnes.username, "Agnes");
+  assert.equal(agnes.customer, "Agnes");
+  assert.equal(agnes.propertyTitle, "La Concha / Common");
+  assert.equal(agnes.maxItems, 14);
+  assert.equal(agnes.privateMasterPrefix, "RE/Corine/masters");
+  assert.equal(agnes.accessCode, "");
+  assert.equal(agnes.accessCodeHash, "");
 });
 
 test("Access logout targets the team-domain session cookie when configured", () => {

@@ -160,15 +160,35 @@ class ApplePhotosRealEstateIntakeTests(unittest.TestCase):
             return_value={
                 "ok": True,
                 "album": {"localIdentifier": "album-1", "title": "La Concha"},
+                "count": 2,
                 "candidateCount": 1,
-                "candidates": [{"localIdentifier": "asset-1", "filename": "pool.jpg"}],
+                "burstFilter": {"skippedCount": 1},
+                "items": [
+                    {
+                        "localIdentifier": "asset-1",
+                        "filename": "pool.jpg",
+                        "eligible": True,
+                        "status": "candidate",
+                    },
+                    {
+                        "localIdentifier": "asset-2",
+                        "filename": "pool-burst.jpg",
+                        "eligible": False,
+                        "status": "blocked_by_policy",
+                        "burstFilterOutcome": "waste-basket",
+                    },
+                ],
             },
         ):
             response = local_server.new_owner_connector_result(Path(temp_dir), payload)
 
+        self.assertEqual(len(response["preview"]["items"]), 1)
         item = response["preview"]["items"][0]
         self.assertEqual(item["assetId"], "asset-1")
         self.assertEqual(item["albumName"], "La Concha")
+        self.assertEqual(response["result"]["inspectedCount"], 2)
+        self.assertEqual(response["result"]["burstFilteredCount"], 1)
+        self.assertIn("1 burst frame(s) filtered", response["result"]["message"])
         self.assertEqual(response["result"]["intakeAssignment"]["project"], "Apartment 1")
         self.assertFalse(response["result"]["published"])
 

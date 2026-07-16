@@ -1653,8 +1653,14 @@ def _new_owner_apple_photos_real_estate_result(repo_root: Path, action: dict, co
             album_row = preflight.get("album") if isinstance(preflight.get("album"), dict) else {}
             album_id = str(album_row.get("localIdentifier") or album["albumLocalIdentifier"])
             album_name = str(album_row.get("title") or album["albumName"] or "Apple Photos album")
-            for candidate in preflight.get("candidates", []):
+            # The PhotoKit bridge returns its dry-run rows as ``items``.  Keep
+            # only rows that survived format checks and the conservative burst
+            # filter; blocked rows remain summarized by the preflight so the UI
+            # can explain why the album count is larger than the preview count.
+            for candidate in preflight.get("items", []):
                 if not isinstance(candidate, dict):
+                    continue
+                if candidate.get("eligible") is not True:
                     continue
                 asset_id = str(candidate.get("localIdentifier") or "").strip()
                 if not asset_id:
@@ -1667,16 +1673,32 @@ def _new_owner_apple_photos_real_estate_result(repo_root: Path, action: dict, co
                 })
         limit = _new_owner_manifest_limit(manifest, default=60)
         items = items[:limit]
+        inspected_count = sum(int(row.get("count") or 0) for row in preflights)
+        burst_filtered_count = sum(
+            int((row.get("burstFilter") or {}).get("skippedCount") or 0)
+            for row in preflights
+            if isinstance(row.get("burstFilter"), dict)
+        )
+        filter_note = (
+            f" from {inspected_count:,} item(s); {burst_filtered_count:,} burst frame(s) filtered"
+            if burst_filtered_count
+            else f" from {inspected_count:,} item(s)"
+            if inspected_count != len(items)
+            else ""
+        )
         result = {
             **base_result,
             "intakeAssignment": assignment,
             "albumCount": len(albums),
             "candidateCount": sum(int(row.get("candidateCount") or 0) for row in preflights),
             "recordsPrepared": len(items),
+            "inspectedCount": inspected_count,
+            "burstFilteredCount": burst_filtered_count,
             "preflights": preflights,
             "message": (
                 f"Prepared {len(items):,} private Apple Photos candidate(s) for "
-                f"{assignment['track']} / {assignment['fixture']} / {assignment['project']}."
+                f"{assignment['track']} / {assignment['fixture']} / {assignment['project']}"
+                f"{filter_note}."
             ),
         }
         return {

@@ -465,7 +465,13 @@ body[data-gallery="new-owner"] main.new-owner-shell {
   font-weight: 800;
 }
 
-.new-owner-re-routing input {
+.new-owner-re-field {
+  display: grid;
+  gap: .25rem;
+}
+
+.new-owner-re-routing input,
+.new-owner-re-routing select {
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
@@ -475,6 +481,10 @@ body[data-gallery="new-owner"] main.new-owner-shell {
   background: var(--surface);
   color: var(--text);
   font: inherit;
+}
+
+.new-owner-re-routing select {
+  cursor: pointer;
 }
 
 .new-owner-re-routing input[readonly] {

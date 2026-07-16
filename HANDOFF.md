@@ -15,7 +15,7 @@ for remote execution.
 - Public site: `https://photos-by-elie.com/`
 - Local preview: `http://localhost:8000/`
 - Owner intake URL: `https://photos-by-elie.com/owner.html`
-- Current visible build: `v138.4`
+- Current visible build: `v138.5`
 - Sidecar local build: `v126.6`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
@@ -24,10 +24,11 @@ for remote execution.
   Python web UI is retired as the normal control plane.
 - Owner routes selected Apple Photos into a persistent local hierarchy
   of `RE / Fixture / Sub-fixture` (for example `RE / La Concha / Apartment 1`).
-  Free-text names create new fixture/sub-fixture folders; the first datalist
-  suggestions are Apartment 1, Apartment 2, Street, Main lobby, Pool, and
-  Tennis court. Assignment remains local-only until the separate Real Estate
-  import/publish workflow is run.
+  The explicit sub-fixture selector offers Apartment 1, Apartment 2, Street,
+  Main lobby, Pool, Tennis court, and `New…`; the last choice reveals a custom
+  name field. Free-text fixture names also create new folders. Assignment
+  remains local-only until the separate Real Estate import/publish workflow is
+  run.
 - ACS now manages mutable Real Estate password credentials in D1. Owner/Admin
   can create, replace, or revoke a person's gallery-scoped login without
   storing or returning the plaintext password or password hash. A La Concha

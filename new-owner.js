@@ -12,6 +12,7 @@
   const LOCAL_SIDECAR_OPEN_URL = "http://127.0.0.1:8766/photosbyelie/open-sidecar";
   const RE_FIXTURE_STORAGE_KEY = "pbe-new-owner-re-fixture";
   const RE_PROJECT_STORAGE_KEY = "pbe-new-owner-re-project";
+  const RE_NEW_PROJECT_VALUE = "__new__";
   const state = {
     session: null,
     access: null,
@@ -48,6 +49,7 @@
   const connectorDownload = $("[data-new-owner-download-connector]");
   const reFixtureInput = $("[data-new-owner-re-fixture]");
   const reProjectInput = $("[data-new-owner-re-project]");
+  const reProjectNewInput = $("[data-new-owner-re-project-new]");
   const reStatusRoot = $("[data-new-owner-re-status]");
   const reAlbumsRoot = $("[data-new-owner-re-albums]");
   const rePreviewRoot = $("[data-new-owner-re-preview]");
@@ -430,10 +432,16 @@
 
   const reAlbumId = (album) => String(album?.localIdentifier || album?.albumLocalIdentifier || "").trim();
 
+  const reProjectValue = () => String(
+    reProjectInput?.value === RE_NEW_PROJECT_VALUE
+      ? reProjectNewInput?.value
+      : reProjectInput?.value,
+  ).trim();
+
   const reAssignment = () => ({
     track: "RE",
     fixture: String(reFixtureInput?.value || "").trim(),
-    project: String(reProjectInput?.value || "").trim(),
+    project: reProjectValue(),
   });
 
   const selectedReAlbums = () => state.reAlbums
@@ -448,7 +456,7 @@
   const saveReRouting = () => {
     try {
       localStorage.setItem(RE_FIXTURE_STORAGE_KEY, reFixtureInput?.value || "La Concha");
-      localStorage.setItem(RE_PROJECT_STORAGE_KEY, reProjectInput?.value || "Apartment 1");
+      localStorage.setItem(RE_PROJECT_STORAGE_KEY, reProjectValue() || "Apartment 1");
     } catch {
       // Routing memory is a convenience; the action always carries the current values.
     }
@@ -951,12 +959,29 @@
     }
   };
 
+  const showNewReProjectInput = () => {
+    if (!reProjectNewInput) return;
+    const isNew = reProjectInput?.value === RE_NEW_PROJECT_VALUE;
+    reProjectNewInput.hidden = !isNew;
+    reProjectNewInput.required = isNew;
+  };
+
   try {
     if (reFixtureInput) reFixtureInput.value = localStorage.getItem(RE_FIXTURE_STORAGE_KEY) || reFixtureInput.value;
-    if (reProjectInput) reProjectInput.value = localStorage.getItem(RE_PROJECT_STORAGE_KEY) || reProjectInput.value;
+    if (reProjectInput) {
+      const storedProject = localStorage.getItem(RE_PROJECT_STORAGE_KEY) || reProjectInput.value;
+      const knownProject = [...reProjectInput.options].some((option) => option.value === storedProject && option.value !== RE_NEW_PROJECT_VALUE);
+      if (knownProject) {
+        reProjectInput.value = storedProject;
+      } else if (storedProject) {
+        reProjectInput.value = RE_NEW_PROJECT_VALUE;
+        if (reProjectNewInput) reProjectNewInput.value = storedProject;
+      }
+    }
   } catch {
     // Keep the HTML defaults when local storage is unavailable.
   }
+  showNewReProjectInput();
 
   $("[data-new-owner-refresh]")?.addEventListener("click", () => load());
   $("[data-new-owner-login]")?.addEventListener("click", login);
@@ -968,11 +993,17 @@
   $("[data-new-owner-re-load]")?.addEventListener("click", loadReAlbums);
   $("[data-new-owner-re-preflight]")?.addEventListener("click", previewReAlbums);
   $("[data-new-owner-re-assign]")?.addEventListener("click", assignRePhotos);
-  [reFixtureInput, reProjectInput].filter(Boolean).forEach((input) => {
+  [reFixtureInput, reProjectNewInput].filter(Boolean).forEach((input) => {
     input.addEventListener("input", () => {
       saveReRouting();
       syncReControls();
     });
+  });
+  reProjectInput?.addEventListener("change", () => {
+    showNewReProjectInput();
+    saveReRouting();
+    syncReControls();
+    if (reProjectInput.value === RE_NEW_PROJECT_VALUE) reProjectNewInput?.focus();
   });
   reAlbumsRoot?.addEventListener("change", (event) => {
     const checkbox = event.target.closest("[data-new-owner-re-album-id]");

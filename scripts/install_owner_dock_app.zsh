@@ -86,7 +86,7 @@ cat > "$executable" <<LAUNCHER
 set -euo pipefail
 
 export PBE_REPO_ROOT="$repo_root"
-export PBE_OWNER_PATH="\${PBE_OWNER_PATH:-owner.html?tab=imports}"
+export PBE_OWNER_PATH="\${PBE_OWNER_PATH:-owner.html}"
 export PBE_OWNER_PREFER_OWN_HELPER=1
 export PBE_OWNER_CLEAN_START=1
 export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:\${PATH:-}"

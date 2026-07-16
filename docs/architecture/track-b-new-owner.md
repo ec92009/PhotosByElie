@@ -7,7 +7,8 @@ connectors because a browser cannot receive PhotoKit permissions.
 
 ## Production Surface
 
-- Entry point: `owner.html` redirects to `new-owner.html`
+- Canonical entry point: `owner.html`
+- Compatibility entry point: `new-owner.html` redirects to `owner.html`
 - Styles: `new-owner.css`
 - Runtime: `new-owner.js`
 - Production: `https://photos-by-elie.com/owner.html`
@@ -35,7 +36,7 @@ The cloud shell uses deployed Worker routes:
 - `GET /owner/connector/actions` and connector transition routes: let a
   background Mac claim and finish only connector work, without a browser login.
 
-For local/Tailscale previews such as `http://100.111.30.109:8000/new-owner.html`,
+For local/Tailscale previews such as `http://100.111.30.109:8000/owner.html`,
 Safari may not send the `auth.photos-by-elie.com` session cookie as a
 third-party credential. The auth Worker therefore adds a signed session token in
 the URL fragment only when Google OAuth returns to allowed local/Tailscale HTTP
@@ -83,7 +84,7 @@ Max/David sync process.
 Cloud-ready now:
 
 - Google Owner/Admin session.
-- Safari-compatible local/Tailscale OAuth transfer for NewOwner and ACS.
+- Safari-compatible local/Tailscale OAuth transfer for Owner and ACS.
 - D1-backed role, group, and access-policy visibility.
 - Cloud Owner action queue creation, readback, recent-action listing, and
   claim/complete/fail lifecycle.

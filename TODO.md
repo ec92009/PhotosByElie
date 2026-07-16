@@ -4,7 +4,7 @@ Last updated: 2026-07-16
 
 ## Current Facts
 
-- Public visible build: `v138.3`.
+- Public visible build: `v138.4`.
 - Sidecar local build: `v126.6`.
 - Public site: `https://photos-by-elie.com/`.
 - Local preview: `http://localhost:8000/`.
@@ -13,8 +13,8 @@ Last updated: 2026-07-16
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`.
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`.
 - Access Console Sandbox V8 cloud backend plus ACS9 local front-end rehearsal: deployed on `auth.photos-by-elie.com` with D1 database `photosbyelie-access`; local preview at `http://100.111.30.109:8000/access-console.html`; group manager creates/edits/archives audience groups, connects groups to real gallery records, persists per-gallery defaults, filters people, manages group memberships, previews gallery permissions for selected group/person/visitor/owner modes, runs cloud Worker policy tests for selected gallery access, shows a reversible audit/undo ledger for person/group access changes, and includes a selected-group invitation rehearsal for email/link/QR access propagation; audience fixtures are `Agnes's B'day`, `RE La Concha`, and `Johnson-Palmer wedding`.
-- Cloud Owner is promoted from the Track B shell: `owner.html` routes to the authenticated `new-owner.html` control surface; scoped background connectors provide health, full Apple Photos index refresh, Photos previews, Sidecar stars/pick/reject/title/keywords/approval decisions, guarded single-item Upload Bridge execution plus catalog registration, and an Owner-only credential-free Mac installer download.
-- NewOwner now has a private Apple Photos Real Estate intake that creates or reuses `RE / Fixture / Sub-fixture` routes and registers each fixture for the later RE import. The current Corine proof uses `RE / La Concha / Apartment 1`, `Apartment 2`, `Street`, `Main lobby`, `Pool`, and `Tennis court`.
+- `owner.html` is the canonical authenticated cloud Owner control surface; `new-owner.html` redirects to it for compatibility. Scoped background connectors provide health, full Apple Photos index refresh, Photos previews, Sidecar stars/pick/reject/title/keywords/approval decisions, guarded single-item Upload Bridge execution plus catalog registration, and an Owner-only credential-free Mac installer download.
+- Owner has a private Apple Photos Real Estate intake that creates or reuses `RE / Fixture / Sub-fixture` routes and registers each fixture for the later RE import. The current Corine proof uses `RE / La Concha / Apartment 1`, `Apartment 2`, `Street`, `Main lobby`, `Pool`, and `Tennis court`.
 - ACS can create, replace, and revoke gallery-scoped Real Estate password logins in D1. A single La Concha gallery grant covers the full sub-fixture tree. Do not send Corine access until the refreshed gallery, login, and downloads pass end-to-end verification.
 - Public catalog integrity: `ok`.
 - Public commercial catalog scale: `2713` media rows after retiring AI-generated images from storefront publication.
@@ -41,7 +41,7 @@ Last updated: 2026-07-16
    - Cull in reasonable visible-preview batches before any Expo materialization or R2 upload.
    - Turn picked survivors into a repeatable cull, metadata-review, Upload Bridge, catalog publish, and protected-download pipeline.
    - Prioritize photos and sets that can become public gallery/store inventory.
-   - Keep local connector work limited to source access/export; durable decisions should land in Owner/NewOwner cloud or SQLite-backed state.
+   - Keep local connector work limited to source access/export; durable decisions should land in cloud Owner or SQLite-backed state.
    - Track counts from library candidates to culled, picked, metadata-approved, uploaded, cataloged, protected, and purchasable items.
    - Treat Owner direct `Import to Expo` as a secondary/legacy route unless Elie explicitly chooses it.
    - Use this as the main revenue unlock before spending heavily on hypothetical RE/family/event workflows.

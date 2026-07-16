@@ -92,10 +92,10 @@ Owner direct Apple Photos import:
 
 ```bash
 python3 scripts/local_server.py 8000
-open http://localhost:8000/owner.html?tab=imports
+open http://localhost:8000/owner.html
 ```
 
-In Owner:
+In the legacy direct-import workflow only:
 
 1. Use **Import from Photos** to load albums through the local helper.
 2. Choose an album and run **Dry run**. Review import candidates, unsupported assets, iCloud-original-not-local reports, and already-known/skipped behavior before any write/upload step.

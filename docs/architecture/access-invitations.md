@@ -112,7 +112,7 @@ Planned public/member routes:
 Planned Owner/Admin routes:
 
 - `GET /access-console/invitations`: lists pending/accepted/revoked invite
-  state for ACS and NewOwner.
+  state for ACS and Owner.
 - `POST /access-console/invitations/<id>/revoke`: Owner/Admin-only revocation.
 - `POST /access-console/invitations/expire`: Owner/Admin maintenance route for
   stale invite cleanup.
@@ -140,7 +140,7 @@ Production surfaces should be:
 
 - Public invite accept page: `/invite/<token>`.
 - Fixture gallery invite button for signed-in members.
-- ACS/NewOwner invitation ledger for Owner/Admin revoke, expiry, and audit.
+- ACS/Owner invitation ledger for Owner/Admin revoke, expiry, and audit.
 - Optional organizer view for private event organizers that shows sent invites
   without exposing revoke controls.
 

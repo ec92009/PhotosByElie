@@ -59,7 +59,7 @@ Elie can photograph travel, art, Real Estate, family, or events; decide who may 
    - Event access does not leak into other galleries or admin powers.
 
 6. **Owner Anywhere**
-   - The Owner/NewOwner app works from Mac, Windows, Linux, or tablet.
+   - The Owner app works from Mac, Windows, Linux, or tablet.
    - Cloud auth identifies Owner/Admin access.
    - Max, David, and Curie can act as local connectors when source files or Apple Photos are needed.
    - Elie can switch computers without losing workflow state.
@@ -97,7 +97,7 @@ Elie can photograph travel, art, Real Estate, family, or events; decide who may 
 - Publish Real Estate client galleries with PDF/video deliverables.
 - Share family/private galleries safely.
 - Sell private event downloads with controlled access.
-- Manage access, roles, galleries, invites, and workflow state from NewOwner.
+- Manage access, roles, galleries, invites, and workflow state from Owner.
 - Use local connector machines only when hardware/local files are truly required.
 - Make every paid/private asset path security-reviewed.
 - Improve public discovery and SEO.

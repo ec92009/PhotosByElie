@@ -156,7 +156,7 @@
     });
     const body = await response.json().catch(() => ({}));
     if (!response.ok || body?.ok === false || body?.error) {
-      throw new Error(body?.error?.message || body?.error || `NewOwner request failed with HTTP ${response.status}.`);
+      throw new Error(body?.error?.message || body?.error || `Owner request failed with HTTP ${response.status}.`);
     }
     return body;
   };
@@ -933,7 +933,7 @@
         ? { connectorId }
         : command === "complete"
           ? { result: { connectorId, surface: "new-owner", completedAt: new Date().toISOString() } }
-          : { message: "Marked failed from NewOwner." };
+          : { message: "Marked failed from Owner." };
       const body = await apiFetch(`/owner/actions/${encodeURIComponent(actionId)}/${command}`, {
         method: "POST",
         body: JSON.stringify(payload),

@@ -139,7 +139,7 @@ and cannot be granted through ACS.
   `owner`, or the configured Admin email.
 - `GET /owner/actions`: requires an Owner/Admin Google session and lists recent
   queued cloud Owner actions from the KV recent-action head plus timestamp
-  index. New actions update the head key so the NewOwner app can reload across
+  index. New actions update the head key so the Owner app can reload across
   machines without depending only on KV prefix-list freshness.
 - `POST /owner/actions`: requires an Owner/Admin Google session and stores a
   queued cloud Owner action record. This is the protected mutation entrypoint
@@ -156,7 +156,7 @@ and cannot be granted through ACS.
 - Local helper `POST /__photosbyelie/new-owner-connector`: requires localhost
   or `--allow-lan-owner` private/Tailscale access, accepts a claimed or
   completed `sidecar-culling-review` action, reads Sidecar state from local
-  `Owner.sqlite`, and returns compact review-window details for the NewOwner UI
+  `Owner.sqlite`, and returns compact review-window details for the Owner UI
   and Worker `complete` route. The read/open path does not grant roles and does
   not mutate `Owner.sqlite`.
 - Local helper `POST /__photosbyelie/new-owner-sidecar-decision`: requires the
@@ -282,7 +282,7 @@ direct OAuth cookie is host-only to the auth Worker and is used by credentialed
 fetches from the public site.
 
 For local and Tailscale previews listed in `AUTH_ALLOWED_RETURN_ORIGINS`, the
-Worker also accepts the same signed Google session as a Bearer token. NewOwner
+Worker also accepts the same signed Google session as a Bearer token. Owner
 and ACS consume `#pbe_auth_token=...` from the OAuth return URL, remove it from
 the address bar, keep it in tab-scoped `sessionStorage`, and send it in the
 `Authorization` header. This path is intended for local Owner tooling where

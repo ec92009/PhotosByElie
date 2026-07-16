@@ -1124,7 +1124,7 @@ test("direct Google OAuth returns a local transfer token for Tailscale Owner pre
     authAllowedReturnOrigins: ["http://100.111.30.109:8000"],
   });
   const localOrigin = "http://100.111.30.109:8000";
-  const returnTo = `${localOrigin}/new-owner.html`;
+  const returnTo = `${localOrigin}/owner.html`;
 
   const loginResponse = await worker.fetch(new Request(
     `https://worker.test/auth/google/login?returnTo=${encodeURIComponent(returnTo)}`,
@@ -1140,7 +1140,7 @@ test("direct Google OAuth returns a local transfer token for Tailscale Owner pre
   assert.equal(callbackResponse.status, 302);
   const localReturnUrl = new URL(callbackResponse.headers.get("location"));
   assert.equal(localReturnUrl.origin, localOrigin);
-  assert.equal(localReturnUrl.pathname, "/new-owner.html");
+  assert.equal(localReturnUrl.pathname, "/owner.html");
   assert.equal(localReturnUrl.searchParams.has("pbe_auth_token"), false);
   const hashParams = new URLSearchParams(localReturnUrl.hash.slice(1));
   const transferToken = hashParams.get("pbe_auth_token") || "";

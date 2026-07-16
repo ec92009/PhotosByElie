@@ -22,7 +22,7 @@ LOG_DIR = Path.home() / "Library" / "Logs" / "PhotosByElie"
 LOG_PATH = LOG_DIR / "owner-helper.log"
 PORT_START = 8000
 PORT_LIMIT = 8100
-OWNER_PATH = os.environ.get("PBE_OWNER_PATH", "owner.html?tab=imports")
+OWNER_PATH = os.environ.get("PBE_OWNER_PATH", "owner.html")
 PREFER_OWN_HELPER = os.environ.get("PBE_OWNER_PREFER_OWN_HELPER", "").lower() in {"1", "true", "yes"}
 CLEAN_START = os.environ.get("PBE_OWNER_CLEAN_START", "1").lower() not in {"0", "false", "no", "off"}
 PATH_PREFIXES = (

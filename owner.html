@@ -5,23 +5,22 @@
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Photos By Elie | Owner</title>
   <meta name="description" content="Authenticated cloud Owner controls for Photos By Elie."/>
-  <script>
-    window.location.replace(`./new-owner.html${window.location.search}${window.location.hash}`);
-  </script>
+  <meta name="robots" content="noindex,nofollow"/>
   <link rel="icon" type="image/png" sizes="512x512" href="./assets/branding/photosbyelie-camera-tripod-logo-512.png"/>
-  <link rel="apple-touch-icon" sizes="180x180" href="./assets/branding/photosbyelie-touch-icon-180.png?v=138.2"/>
-  <link rel="manifest" href="./site.webmanifest?v=138.2"/>
-  <meta name="theme-color" content="#7b4d26"/>
+  <link rel="apple-touch-icon" sizes="180x180" href="./assets/branding/photosbyelie-touch-icon-180.png?v=138.4"/>
+  <link rel="manifest" href="./site.webmanifest?v=138.4"/>
+  <meta name="theme-color" content="#263f4a"/>
   <meta name="apple-mobile-web-app-title" content="Photos By Elie"/>
   <script>(()=>{try{const saved=localStorage.getItem('byelie-theme');if(saved==='light'||saved==='dark')document.documentElement.dataset.theme=saved;localStorage.setItem('byelie-language','en');document.documentElement.lang='en';document.documentElement.dataset.language='en'}catch{}})();</script>
-  <link rel="stylesheet" href="./shared.css?v=138.2"/>
-  <link rel="stylesheet" href="./styles.css?v=138.2"/>
-  <link rel="stylesheet" href="./photos.css?v=138.2"/>
+  <link rel="stylesheet" href="./shared.css?v=138.4"/>
+  <link rel="stylesheet" href="./styles.css?v=138.4"/>
+  <link rel="stylesheet" href="./photos.css?v=138.4"/>
+  <link rel="stylesheet" href="./new-owner.css?v=138.4"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
-<body>
+<body data-gallery="new-owner">
   <a class="skip-link" href="#main-content">Skip to content</a>
   <header class="topbar shell">
     <a class="header-back-button mobile-header-back" href="./" aria-label="Back to Photos"><span aria-hidden="true">&lt;</span></a>
@@ -29,649 +28,131 @@
     <nav class="version-switch" aria-label="Site navigation">
       <a href="./">Photos</a> <span>|</span>
       <a class="is-active" href="./owner.html">Owner</a> <span>|</span>
-      <a href="./new-owner.html">NewOwner</a> <span>|</span>
       <a href="./access-console.html">ACS</a>
     </nav>
-    <span class="site-version-badge">v138.3</span>
-    <div class="header-controls">
-      <button class="language-toggle" type="button" data-language-toggle data-owner-english-only title="Owner tools stay in English">English</button>
-      <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light">Night</span><span class="mode-dark">Day</span></button>
-    </div>
+    <span class="site-version-badge">v138.4</span>
   </header>
-  <main id="main-content" class="shell">
-    <section class="panel gallery-hero owner-hero">
-      <h1>Owner</h1>
-      <p class="gallery-status" data-owner-status aria-live="polite"></p>
+
+  <main id="main-content" class="shell new-owner-shell">
+    <section class="panel new-owner-hero">
+      <div>
+        <p class="eyebrow">Cloud workspace</p>
+        <h1>Owner</h1>
+        <p class="gallery-status" data-new-owner-status aria-live="polite">Connecting to cloud Owner state...</p>
+      </div>
+      <div class="new-owner-session" data-new-owner-session></div>
     </section>
-    <section class="panel owner-panel" data-owner-root>
-      <p class="empty-basket" data-owner-locked hidden>Owner access requires localhost or a Google Owner session.</p>
-      <div class="owner-workspace" data-owner-controls>
-        <div class="owner-tabs" aria-label="Owner sections">
-          <button class="owner-tab-button is-active" type="button" data-owner-tab-button="review" aria-pressed="true">Review</button>
-          <button class="owner-tab-button" type="button" data-owner-tab-button="imports" aria-pressed="false">Expo</button>
-          <button class="owner-tab-button" type="button" data-owner-tab-button="real-estate" aria-pressed="false">Real Estate</button>
-          <button class="owner-tab-button" type="button" data-owner-tab-button="catalog" aria-pressed="false">Catalog</button>
-          <button class="owner-tab-button" type="button" data-owner-tab-button="cloud" aria-pressed="false">Cloud</button>
-          <button class="owner-tab-button" type="button" data-owner-tab-button="commerce" aria-pressed="false">Commerce</button>
+
+    <section class="panel new-owner-panel" data-new-owner-root>
+      <div class="new-owner-toolbar">
+        <div>
+          <strong data-new-owner-worker-base>Worker pending</strong>
+          <span>authenticated cloud control</span>
         </div>
-        <div class="owner-grid">
-        <article class="owner-card" data-owner-tab="review">
-          <p class="eyebrow">Country Classification</p>
-          <h2>Unknown queue</h2>
-          <p><span data-owner-unknown-count>0</span> photos need a country assignment.</p>
-          <a class="btn secondary" href="./owner-review.html?view=unknown">Classify</a>
-        </article>
-        <article class="owner-card" data-owner-tab="review">
-          <p class="eyebrow">Metadata</p>
-          <h2>Title / keywords review</h2>
-          <p>Review pending title and keyword proposals, including nightly batches and rejected rows that need rework.</p>
-          <a class="btn secondary" href="./owner-review.html?view=title-keywords" data-owner-title-keyword-review-link>Review</a>
-        </article>
-        <article class="owner-card owner-card-wide owner-card-keyword-blacklist" data-owner-tab="review">
-          <div class="owner-card-titlebar">
-            <div>
-              <p class="eyebrow">Metadata</p>
-              <h2>Keyword blacklist</h2>
-            </div>
-          </div>
-          <p>Terms blocked from future title/keyword proposals.</p>
-          <form class="owner-keyword-blacklist-compact-form" data-owner-keyword-blacklist-form>
-            <label class="owner-keyword-blacklist-add">
-              <span>Comma-separated terms</span>
-              <textarea rows="3" data-owner-keyword-blacklist-input>Loading blacklist...</textarea>
-            </label>
-            <div class="owner-keyword-blacklist-actions">
-              <button class="btn secondary" type="submit">Save</button>
-              <a class="btn secondary" href="./owner-review.html?view=keyword-blacklist">Review</a>
-            </div>
-          </form>
-          <p class="owner-card-note" data-owner-keyword-blacklist-status>Loading blacklist...</p>
-        </article>
-        <article class="owner-card owner-card-real-estate" data-owner-real-estate-card data-owner-tab="real-estate">
-          <div class="owner-card-titlebar">
-            <div>
-              <p class="eyebrow">Real Estate</p>
-              <h2>Client galleries</h2>
-            </div>
-            <button class="owner-refresh-button" type="button" data-owner-refresh="real-estate" aria-label="Refresh real estate clients" title="Refresh real estate clients"><span aria-hidden="true">↻</span></button>
-          </div>
-          <p>Client name drives the source folder, username, slugs, gallery key, title, and R2 prefixes. Add the email and property folders; legacy local access codes are optional.</p>
-          <dl class="owner-counts owner-real-estate-counts">
-            <div>
-              <dt>Clients</dt>
-              <dd data-owner-re-client-count>0</dd>
-            </div>
-            <div>
-              <dt>Media</dt>
-              <dd data-owner-re-photo-count>0</dd>
-            </div>
-            <div>
-              <dt>Properties</dt>
-              <dd data-owner-re-album-count>0</dd>
-            </div>
-          </dl>
-          <div class="owner-real-estate-table-wrap">
-            <table class="owner-real-estate-table">
-              <thead>
-                <tr>
-                  <th>Client</th>
-                  <th>Email</th>
-                  <th>Legacy code</th>
-                  <th>Max ZIP</th>
-                  <th>Properties</th>
-                  <th>Media</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody data-owner-re-client-list>
-                <tr><td colspan="8">Loading real estate clients...</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="owner-real-estate-context" data-owner-re-form>
-            <dl class="owner-real-estate-computed" aria-label="Real estate naming conventions">
-              <div class="is-path">
-                <dt>Source</dt>
-                <dd data-owner-re-computed="sourceRoot">/Volumes/Saturn/Pictures/RE/&lt;Client&gt;</dd>
-              </div>
-              <div>
-                <dt>Login name</dt>
-                <dd data-owner-re-computed="username">&lt;Client&gt;</dd>
-              </div>
-              <div>
-                <dt>Slug</dt>
-                <dd data-owner-re-computed="slug">&lt;Client&gt;</dd>
-              </div>
-              <div>
-                <dt>Gallery key</dt>
-                <dd data-owner-re-computed="galleryKey">&lt;Client&gt;-gallery</dd>
-              </div>
-              <div>
-                <dt>Title</dt>
-                <dd data-owner-re-computed="galleryTitle">&lt;Client&gt;</dd>
-              </div>
-              <div class="is-path">
-                <dt>Public prefix</dt>
-                <dd data-owner-re-computed="publicKeyPrefix">RE/&lt;Client&gt;/previews</dd>
-              </div>
-              <div class="is-path">
-                <dt>Private prefix</dt>
-                <dd data-owner-re-computed="privateKeyPrefix">RE/&lt;Client&gt;/masters</dd>
-              </div>
-            </dl>
-            <div class="owner-real-estate-links">
-              <a class="btn secondary" href="./real-estate.html?logout=1" data-owner-re-local-link>Open local review</a>
-              <a class="btn secondary" href="./real-estate.html?logout=1" data-owner-re-public-link>Open public review</a>
-            </div>
-            <div class="owner-real-estate-actions">
-              <button class="btn secondary" type="button" data-owner-re-action="new-client">New client</button>
-              <button class="btn secondary" type="button" data-owner-re-action="discover-properties">Use discovered properties</button>
-              <label class="owner-import-source-control owner-real-estate-import-source-control">
-                <span>RE source</span>
-                <select data-owner-re-import-source-select aria-label="Real estate import source">
-                  <option value="new">New...</option>
-                </select>
-              </label>
-              <button class="btn secondary" type="button" data-owner-re-action="import-client">RE import</button>
-              <button class="btn secondary" type="button" data-owner-re-action="publish-client">Publish context</button>
-              <button class="btn secondary" type="button" data-owner-re-action="upload-dry-run">Upload dry run</button>
-              <button class="btn secondary danger" type="button" data-owner-re-action="upload-client">Upload masters/previews</button>
-              <button class="btn secondary" type="button" data-owner-re-action="worker-secret">Copy Worker secret</button>
-            </div>
-          </div>
-          <p class="owner-card-note" data-owner-re-status>Loading real estate clients...</p>
-          <pre class="owner-real-estate-output" data-owner-re-output hidden></pre>
-        </article>
-        <article class="owner-card" data-owner-tab="review">
-          <p class="eyebrow">Provenance</p>
-          <h2>Country metadata</h2>
-          <p>Write country assignments into the catalog, local metadata, and queued cloud updates.</p>
-          <button class="btn secondary" type="button" data-owner-sync-country-keywords>Sync country metadata</button>
-        </article>
-        <article class="owner-card owner-card-wide owner-card-overview" data-owner-tab="catalog">
-          <div class="owner-card-titlebar">
-            <div>
-              <p class="eyebrow">Counts</p>
-              <h2>Public catalog mix</h2>
-            </div>
-            <button class="owner-refresh-button" type="button" data-owner-refresh="counts" aria-label="Refresh catalog mix" title="Refresh catalog mix"><span aria-hidden="true">↻</span></button>
-          </div>
-          <p>Public Camera and AI photos currently visible in the catalog.</p>
-          <div class="owner-overview-layout">
-            <div class="owner-catalog-pie" data-owner-catalog-pie aria-label="Catalog split pie chart">
-              <div>
-                <strong data-owner-overview-analyzed-count>0</strong>
-                <span>public</span>
-              </div>
-            </div>
-            <dl class="owner-counts owner-overview-counts">
-              <div class="is-camera">
-                <dt>Camera</dt>
-                <dd data-owner-origin-camera-count>0</dd>
-              </div>
-              <div class="is-ai">
-                <dt>AI</dt>
-                <dd data-owner-origin-ai-count>0</dd>
-              </div>
-              <div class="is-basket">
-                <dt>In basket</dt>
-                <dd data-owner-overview-basket-count>0</dd>
-              </div>
-              <div class="is-expo">
-                <dt>Expo</dt>
-                <dd data-owner-overview-expo-count>0</dd>
-              </div>
-              <div>
-                <dt>AI share</dt>
-                <dd data-owner-origin-ai-share>0%</dd>
-              </div>
-            </dl>
-          </div>
-          <div class="owner-origin-actions">
-            <a class="btn secondary" href="./gallery.html?gallery=france">Camera galleries</a>
-            <a class="btn secondary" href="./gallery.html?gallery=ai">AI images</a>
-          </div>
-        </article>
-        <article class="owner-card owner-card-wide owner-card-visibility" data-owner-tab="catalog">
-          <div class="owner-card-titlebar">
-            <div>
-              <p class="eyebrow">Visibility</p>
-              <h2>R2 visibility gate</h2>
-            </div>
-            <button class="owner-refresh-button" type="button" data-owner-refresh="counts" aria-label="Refresh R2 visibility gate" title="Refresh R2 visibility gate"><span aria-hidden="true">↻</span></button>
-          </div>
-          <p>This card only counts media with public R2 previews. Public catalog totals above include AI images outside this gate.</p>
-          <dl class="owner-counts owner-visibility-counts">
-            <div class="is-public">
-              <dt>R2 public</dt>
-              <dd data-owner-visibility-public-count>0</dd>
-            </div>
-            <div class="is-limbo">
-              <dt>Needs review</dt>
-              <dd data-owner-visibility-limbo-count>0</dd>
-            </div>
-            <div>
-              <dt>R2 approved, pending export</dt>
-              <dd data-owner-visibility-approved-count>0</dd>
-            </div>
-            <div>
-              <dt>Parked / Waste ready</dt>
-              <dd data-owner-visibility-blocked-ready-count>0</dd>
-            </div>
-          </dl>
-          <div class="owner-visibility-bar" data-owner-visibility-limbo-bar aria-label="Needs-review split by origin">
-            <span class="is-camera" data-owner-visibility-limbo-camera-bar></span>
-            <span class="is-ai" data-owner-visibility-limbo-ai-bar></span>
-          </div>
-          <dl class="owner-counts owner-visibility-origin-counts">
-            <div class="is-camera">
-              <dt>Needs review camera</dt>
-              <dd data-owner-visibility-limbo-camera-count>0</dd>
-            </div>
-            <div class="is-ai">
-              <dt>Needs review AI</dt>
-              <dd data-owner-visibility-limbo-ai-count>0</dd>
-            </div>
-            <div>
-              <dt>R2 preview-ready</dt>
-              <dd data-owner-visibility-r2-ready-count>0</dd>
-            </div>
-          </dl>
-          <p class="owner-card-note" data-owner-visibility-note>Loading visibility state...</p>
-        </article>
-        <article class="owner-card" data-owner-tab="commerce">
-          <p class="eyebrow">Products</p>
-          <h2>Physical items</h2>
-          <label class="owner-toggle-control">
-            <input type="checkbox" data-owner-physical-products/>
-            <span>Show print and frame options locally</span>
-          </label>
-          <p data-owner-pod-store-state>Off by default; the public site stays digital-only.</p>
-        </article>
-        <article class="owner-card owner-card-wide owner-card-pod-suppliers" data-owner-tab="commerce">
-          <p class="eyebrow">POD automation</p>
-          <h2>Supplier API readiness</h2>
-          <p>Prodigi is primary for value, Printful is standard, theprintspace is a premium candidate, and Gelato is kept for API-key proof before pricing is trusted.</p>
-          <div class="owner-pod-supplier-list" data-owner-pod-suppliers></div>
-        </article>
-        <article class="owner-card owner-card-wide owner-card-pod-quality" data-owner-tab="commerce">
-          <p class="eyebrow">POD tiers</p>
-          <h2>Quality tier routing</h2>
-          <p>Future buyer-facing tiers pick one supplier route per tier while print sizes and frame choices stay shared.</p>
-          <div class="owner-price-list" data-owner-pod-quality-tiers></div>
-        </article>
-        <article class="owner-card owner-card-wide owner-card-pod-options" data-owner-tab="commerce">
-          <p class="eyebrow">POD options</p>
-          <h2>Print and frame supplier matrix</h2>
-          <p>Local catalog rows for API mapping, supplier SKUs, and supplier-side costs. These rows do not submit orders.</p>
-          <div class="owner-price-list" data-owner-pod-options></div>
-        </article>
-        <article class="owner-card owner-card-wide owner-card-pod-schema" data-owner-tab="commerce">
-          <p class="eyebrow">Catalog DB</p>
-          <h2>POD table shape</h2>
-          <p>Preview of the SQLite tables added for supplier automation without enabling the storefront.</p>
-          <div class="owner-price-list" data-owner-pod-schema></div>
-        </article>
-        <article class="owner-card owner-card-wide owner-card-cost" data-owner-cost-card data-owner-tab="cloud">
-          <div class="owner-card-titlebar">
-            <div>
-              <p class="eyebrow">Cost</p>
-              <h2>Cloud bill forecast ($)</h2>
-            </div>
-            <button class="owner-refresh-button" type="button" data-owner-refresh="cost" aria-label="Refresh cloud bill forecast" title="Refresh cloud bill forecast"><span aria-hidden="true">↻</span></button>
-          </div>
-          <p data-owner-cost-summary>Loading cloud cost estimate...</p>
-          <dl class="owner-counts owner-cost-counts">
-            <div>
-              <dt>Consumed MTD</dt>
-              <dd data-owner-cost-mtd>$0</dd>
-              <small class="owner-count-note" data-owner-cost-mtd-note>Storage only</small>
-            </div>
-            <div>
-              <dt>Expected bill</dt>
-              <dd data-owner-cost-month>$0</dd>
-              <small class="owner-count-note" data-owner-cost-month-note>This month</small>
-            </div>
-            <div>
-              <dt>Next month</dt>
-              <dd data-owner-cost-next>$0</dd>
-              <small class="owner-count-note" data-owner-cost-next-note>Current rate</small>
-            </div>
-            <div>
-              <dt>Stored now</dt>
-              <dd data-owner-cost-storage>0 B</dd>
-              <small class="owner-count-note" data-owner-cost-storage-note>R2 standard</small>
-            </div>
-          </dl>
-          <div class="owner-cost-breakdown" data-owner-cost-breakdown></div>
-          <p class="owner-card-note" data-owner-cost-note>Storage comes from the latest R2 estimate. Worker/request telemetry is not connected yet.</p>
-        </article>
-        <article class="owner-card owner-card-wide owner-card-access-users" data-owner-access-users-card data-owner-tab="cloud">
+        <div class="new-owner-toolbar-actions">
+          <button class="btn secondary" type="button" data-new-owner-refresh>Refresh</button>
+          <button class="btn secondary" type="button" data-new-owner-login>Google sign-in</button>
+          <button class="btn secondary" type="button" data-new-owner-logout>Sign out</button>
+          <a class="btn secondary" href="#" data-new-owner-download-connector hidden>Download Mac connector</a>
+          <a class="btn secondary" href="./access-console.html">ACS</a>
+        </div>
+      </div>
+
+      <dl class="owner-counts new-owner-counts">
+        <div><dt>Owner</dt><dd data-new-owner-count="owner">locked</dd></div>
+        <div><dt>People</dt><dd data-new-owner-count="people">0</dd></div>
+        <div><dt>Groups</dt><dd data-new-owner-count="groups">0</dd></div>
+        <div><dt>Fixtures</dt><dd data-new-owner-count="fixtures">0</dd></div>
+        <div><dt>Actions</dt><dd data-new-owner-count="action">0</dd></div>
+        <div><dt>Connectors</dt><dd data-new-owner-count="connector">0</dd></div>
+      </dl>
+
+      <div class="new-owner-grid">
+        <section class="new-owner-card new-owner-card-wide" aria-label="Cloud access snapshot">
           <div class="owner-card-titlebar">
             <div>
               <p class="eyebrow">Access</p>
-              <h2>Cloud roles</h2>
+              <h2>D1 role state</h2>
             </div>
-            <button class="owner-refresh-button" type="button" data-owner-refresh="access-users" aria-label="Refresh cloud roles" title="Refresh cloud roles"><span aria-hidden="true">↻</span></button>
           </div>
-          <dl class="owner-counts owner-access-user-counts">
-            <div>
-              <dt>Owners</dt>
-              <dd data-owner-access-owner-count>0</dd>
-            </div>
-            <div>
-              <dt>RE clients</dt>
-              <dd data-owner-access-re-count>0</dd>
-            </div>
-            <div>
-              <dt>Pending sync</dt>
-              <dd data-owner-access-pending-count>0</dd>
-            </div>
-          </dl>
-          <div class="owner-access-user-layout">
-            <div class="owner-real-estate-table-wrap owner-access-user-table-wrap">
-              <table class="owner-real-estate-table owner-access-user-table">
-                <thead>
-                  <tr>
-                    <th>Email</th>
-                    <th>Tier</th>
-                    <th>RE pools</th>
-                    <th>Sync</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody data-owner-access-user-list>
-                  <tr><td colspan="5">Loading cloud roles...</td></tr>
-                </tbody>
-              </table>
-            </div>
-            <form class="owner-access-user-form" data-owner-access-user-form>
-              <label>
-                <span>Email</span>
-                <input type="email" autocomplete="email" required data-owner-access-email/>
-              </label>
-              <label>
-                <span>Tier</span>
-                <select data-owner-access-tier>
-                  <option value="user">User</option>
-                  <option value="re_client">RE client</option>
-                  <option value="owner">Owner</option>
-                </select>
-              </label>
-              <label class="is-wide">
-                <span>RE gallery keys</span>
-                <textarea rows="3" data-owner-access-re-clients placeholder="Corine-gallery"></textarea>
-              </label>
-              <label class="is-wide">
-                <span>Notes</span>
-                <textarea rows="2" data-owner-access-notes></textarea>
-              </label>
-              <div class="owner-access-user-actions">
-                <button class="btn secondary" type="submit">Save</button>
-                <button class="btn secondary" type="button" data-owner-access-publish>Save + sync</button>
-              </div>
-            </form>
-          </div>
-          <p class="owner-card-note" data-owner-access-user-status>Loading cloud roles...</p>
-        </article>
-        <article class="owner-card" data-owner-tab="review">
+          <div data-new-owner-access class="new-owner-access-list"></div>
+        </section>
+
+        <section class="new-owner-card new-owner-card-wide" aria-label="Apple Photos Real Estate intake">
           <div class="owner-card-titlebar">
             <div>
-              <p class="eyebrow">Review</p>
-              <h2>Waste Basket</h2>
+              <p class="eyebrow">Private local intake</p>
+              <h2>Apple Photos → Real Estate</h2>
             </div>
           </div>
-          <p>Unwanted photos stay here until you put them back or purge their R2 copies. Basketed photos are live-blacklisted for undo; purging deletes R2 media artifacts and leaves permanent tombstones.</p>
-          <dl class="owner-counts owner-compact-counts">
-            <div>
-              <dt>In basket</dt>
-              <dd data-owner-hidden-count data-owner-blocked-local-count>0</dd>
-              <small class="owner-count-note" data-owner-basket-state-note>Undo queue</small>
-            </div>
-            <div>
-              <dt>R2 artifacts left</dt>
-              <dd data-owner-blocked-preview-count>0</dd>
-              <small class="owner-count-note" data-owner-blocked-preview-progress hidden></small>
-            </div>
-            <div>
-              <dt>Tombstones</dt>
-              <dd data-owner-discarded-count>0</dd>
-              <small class="owner-count-note">Permanent</small>
-            </div>
-          </dl>
-          <p class="owner-card-note" data-owner-blocked-preview-note>Each basketed photo can have up to 6 R2 artifacts: 2 public previews, 1 private master, and 3 private JPG renders.</p>
-          <div class="owner-card-actions">
-            <a class="btn secondary" href="./owner-review.html?view=blocked">Review</a>
-            <button class="btn secondary danger" type="button" data-owner-wipe-hidden-r2>Purge R2 copies</button>
+          <div class="new-owner-re-routing">
+            <label>Track<input value="RE" readonly aria-label="Real Estate track"></label>
+            <label>Fixture<input value="La Concha" list="new-owner-re-fixtures" data-new-owner-re-fixture></label>
+            <label>Sub-fixture / project<input value="Apartment 1" list="new-owner-re-projects" data-new-owner-re-project></label>
+            <datalist id="new-owner-re-fixtures"><option value="La Concha"></datalist>
+            <datalist id="new-owner-re-projects">
+              <option value="Apartment 1"><option value="Apartment 2"><option value="Street">
+              <option value="Main lobby"><option value="Pool"><option value="Tennis court">
+            </datalist>
           </div>
-        </article>
-        <article class="owner-card owner-card-wide owner-card-burst-cull" data-owner-tab="review">
+          <div class="new-owner-re-actions">
+            <button class="btn secondary" type="button" data-new-owner-re-load>Load Apple Photos albums</button>
+            <button class="btn secondary" type="button" data-new-owner-re-preflight disabled>Preview selected albums</button>
+            <button class="btn" type="button" data-new-owner-re-assign disabled>Assign selected photos</button>
+          </div>
+          <p class="new-owner-card-note">Type a new fixture or sub-fixture name to create it on assignment. This builds a persistent local <strong>RE / Fixture / Sub-fixture</strong> intake and registers the fixture for Real Estate import. It does not publish, upload, expose a gallery, or message anyone.</p>
+          <div data-new-owner-re-status class="new-owner-re-status" aria-live="polite">Load albums from this Mac to begin.</div>
+          <div data-new-owner-re-albums class="new-owner-re-albums"></div>
+          <div data-new-owner-re-preview class="new-owner-re-preview"></div>
+        </section>
+
+        <section class="new-owner-card" aria-label="Owner action queue">
           <div class="owner-card-titlebar">
             <div>
-              <p class="eyebrow">Cull</p>
-              <h2>Conservative burst cull</h2>
-            </div>
-            <div class="owner-card-title-actions">
-              <button class="owner-refresh-button" type="button" data-owner-burst-cull-preview aria-label="Preview conservative burst cull" title="Preview conservative burst cull"><span aria-hidden="true">↻</span></button>
+              <p class="eyebrow">Actions</p>
+              <h2>Owner queue</h2>
             </div>
           </div>
-          <p>Preview the existing unapproved Owner pool before moving burst rejects to Waste Basket. Phase 1 uses in-system rows only and does not import, delete, or tombstone source files.</p>
-          <dl class="owner-counts owner-burst-cull-counts">
-            <div>
-              <dt>Pool</dt>
-              <dd data-owner-burst-cull-pool>0</dd>
-              <small class="owner-count-note">Candidates + skips</small>
-            </div>
-            <div>
-              <dt>Bursts</dt>
-              <dd data-owner-burst-cull-bursts>0</dd>
-              <small class="owner-count-note">Timestamp runs</small>
-            </div>
-            <div>
-              <dt>Keep</dt>
-              <dd data-owner-burst-cull-kept>0</dd>
-              <small class="owner-count-note">Survivors + non-bursts</small>
-            </div>
-            <div>
-              <dt>Waste Basket</dt>
-              <dd data-owner-burst-cull-waste>0</dd>
-              <small class="owner-count-note">Proposed moves</small>
-            </div>
-          </dl>
-          <p class="owner-card-note" data-owner-burst-cull-status>Load a preview before running.</p>
-          <div class="owner-card-actions">
-            <button class="btn secondary" type="button" data-owner-burst-cull-load>Load preview</button>
-            <button class="btn secondary danger" type="button" data-owner-burst-cull-go disabled>Go: move rejects</button>
+          <div class="new-owner-action-controls">
+            <button class="btn secondary" type="button" data-new-owner-queue-check>Queue check</button>
+            <button class="btn secondary" type="button" data-new-owner-sync-photos>Refresh Photos</button>
+            <button class="btn secondary" type="button" data-new-owner-queue-sidecar>Open Sidecar on this Mac</button>
+            <button class="btn secondary" type="button" data-new-owner-upload-publish>Upload next approved</button>
+            <div class="new-owner-local-connector" data-new-owner-local-connector>Detecting this Mac connector...</div>
+            <span data-new-owner-action-status aria-live="polite"></span>
           </div>
-          <div class="owner-burst-cull-output" data-owner-burst-cull-output hidden></div>
-        </article>
-        <article class="owner-card owner-card-wide owner-card-cloud-coverage" data-owner-r2-coverage-card data-owner-tab="cloud">
+          <p class="new-owner-card-note">Open Sidecar starts this Mac’s actual Culling workspace—the same gallery, shortcuts, Quick Look, and <kbd>C</kbd> switch into picked Title and Keywords review. Upload next approved performs the guarded R2 bridge step, then registers successful uploads into the local public catalog artifacts.</p>
+          <div data-new-owner-action class="new-owner-action-result"></div>
+        </section>
+
+        <section class="new-owner-card" aria-label="Migration lanes">
           <div class="owner-card-titlebar">
             <div>
-              <p class="eyebrow">Cloud coverage</p>
-              <h2>R2 catalog coverage</h2>
-            </div>
-            <div class="owner-card-title-actions">
-              <button class="btn secondary" type="button" data-owner-r2-fill-gaps>Fill in gaps</button>
-              <button class="owner-refresh-button" type="button" data-owner-refresh="coverage" aria-label="Refresh R2 catalog coverage" title="Refresh R2 catalog coverage"><span aria-hidden="true">↻</span></button>
+              <p class="eyebrow">Cloud Owner</p>
+              <h2>Work lanes</h2>
             </div>
           </div>
-          <p data-owner-r2-coverage-summary>Checking R2 manifest coverage...</p>
-          <dl class="owner-counts owner-coverage-counts" data-owner-r2-coverage-counts></dl>
-          <div class="owner-coverage-missing" data-owner-r2-coverage-missing hidden></div>
-          <p data-owner-r2-coverage-note></p>
-        </article>
-        <article class="owner-card owner-card-wide" data-owner-apple-photos-card data-owner-tab="imports">
+          <div data-new-owner-lanes class="new-owner-lane-list"></div>
+        </section>
+
+        <section class="new-owner-card" aria-label="Mac connectors">
           <div class="owner-card-titlebar">
             <div>
-              <p class="eyebrow">Apple Photos</p>
-              <h2>Import from Photos</h2>
+              <p class="eyebrow">Hardware bridge</p>
+              <h2>Mac connectors</h2>
             </div>
           </div>
-          <div class="owner-apple-photos-layout">
-            <div class="owner-apple-photos-main">
-              <div class="owner-apple-photos-options">
-                <label class="owner-import-source-control">
-                  <span>Destination</span>
-                  <select data-owner-apple-photos-destination>
-                    <option value="expo">Expo</option>
-                    <option value="real_estate">Real Estate intake</option>
-                  </select>
-                </label>
-                <div class="owner-apple-photos-options" data-owner-apple-photos-re-routing hidden>
-                  <label class="owner-import-source-control">
-                    <span>Track</span>
-                    <input type="text" value="RE" data-owner-apple-photos-re-track readonly/>
-                  </label>
-                  <label class="owner-import-source-control">
-                    <span>Fixture</span>
-                    <input type="text" value="La Concha" list="owner-apple-photos-re-fixtures" data-owner-apple-photos-re-fixture autocomplete="off"/>
-                  </label>
-                  <label class="owner-import-source-control">
-                    <span>Project</span>
-                    <input type="text" value="Apartment 1" list="owner-apple-photos-re-projects" data-owner-apple-photos-re-project autocomplete="off"/>
-                  </label>
-                  <datalist id="owner-apple-photos-re-fixtures">
-                    <option value="La Concha"></option>
-                  </datalist>
-                  <datalist id="owner-apple-photos-re-projects">
-                    <option value="Apartment 1"></option>
-                    <option value="Apartment 2"></option>
-                    <option value="Street"></option>
-                    <option value="Main lobby"></option>
-                    <option value="Pool"></option>
-                    <option value="Tennis court"></option>
-                  </datalist>
-                </div>
-                <label class="owner-toggle-control owner-apple-photos-burst-filter">
-                  <input type="checkbox" data-owner-apple-photos-filter-bursts checked/>
-                  <span>Filter burst photos before converting</span>
-                </label>
-                <label class="owner-toggle-control owner-apple-photos-icloud-downloads">
-                  <input type="checkbox" data-owner-apple-photos-icloud-downloads checked/>
-                  <span>Download from iCloud if needed</span>
-                </label>
-              </div>
-              <div class="owner-apple-photos-log" data-owner-apple-photos-log hidden aria-live="polite"></div>
-              <dl class="owner-counts" data-owner-apple-photos-counts></dl>
-              <div class="owner-coverage-missing" data-owner-apple-photos-preview hidden></div>
-              <div class="owner-apple-photos-picker">
-                <div class="owner-apple-photos-picker-toolbar">
-                  <div class="owner-apple-photos-filter">
-                    <div class="owner-apple-photos-filter-heading">
-                      <span>Albums</span>
-                      <button class="owner-refresh-button owner-apple-photos-refresh-button" type="button" data-owner-apple-photos-refresh aria-label="Refresh Apple Photos albums" title="Refresh Apple Photos albums"><span aria-hidden="true">↻</span></button>
-                      <p class="owner-card-note owner-apple-photos-status" data-owner-apple-photos-status role="status" aria-live="polite">Uses the local Owner helper and macOS Photos permission. Expo uses a temporary source. Real Estate intake stays local under Track / Fixture / Project until you explicitly run RE import.</p>
-                    </div>
-                    <input type="search" data-owner-apple-photos-filter placeholder="Filter albums" autocomplete="off"/>
-                  </div>
-                  <p data-owner-apple-photos-selection>0 selected</p>
-                  <button class="btn secondary" type="button" data-owner-apple-photos-select-visible>Select visible</button>
-                  <button class="btn secondary" type="button" data-owner-apple-photos-clear>Clear</button>
-                </div>
-                <div class="owner-apple-photos-list" data-owner-apple-photos-list role="group" aria-label="Apple Photos albums">
-                  <p>Load albums to choose one or more imports.</p>
-                </div>
-              </div>
-            </div>
-            <div class="owner-apple-photos-actions" aria-label="Apple Photos import actions">
-              <button class="btn secondary" type="button" data-owner-apple-photos-preflight>Dry run</button>
-              <button class="btn secondary danger" type="button" data-owner-apple-photos-import>Import to Expo</button>
-            </div>
-          </div>
-        </article>
-        <article class="owner-card owner-card-wide owner-card-cloud-progress" data-owner-r2-card data-owner-tab="imports" hidden>
-          <div class="owner-card-titlebar">
-            <div>
-              <p class="eyebrow">Expo</p>
-              <h2>Expo maintenance</h2>
-            </div>
-            <div class="owner-card-title-actions">
-              <button class="btn secondary" type="button" data-owner-r2-fill-gaps>Fill in gaps</button>
-              <button class="owner-refresh-button" type="button" data-owner-refresh="progress" aria-label="Refresh import dashboard" title="Refresh import dashboard"><span aria-hidden="true">↻</span></button>
-            </div>
-          </div>
-          <details class="owner-manual-import-tools">
-            <summary>Manual Expo tools</summary>
-            <div class="owner-manual-import-toolbar">
-              <label class="owner-import-source-control">
-                <span>Expo source</span>
-                <select data-owner-import-source-select aria-label="Import source">
-                  <option value="all" selected>All</option>
-                  <option value="new">New...</option>
-                </select>
-              </label>
-              <button class="btn secondary" type="button" data-owner-import-source-pin disabled>Pin</button>
-              <button class="btn secondary" type="button" data-owner-import-source-review hidden>Mark reviewed</button>
-              <button class="btn secondary danger" type="button" data-owner-import-source-remove disabled>Remove</button>
-              <button class="btn secondary" type="button" data-owner-r2-fix>Start Expo import</button>
-            </div>
-          </details>
-          <dl class="owner-import-source-details" data-owner-import-source-details hidden>
-            <div>
-              <dt>Selected path</dt>
-              <dd data-owner-import-source-path></dd>
-            </div>
-            <div>
-              <dt>Last used</dt>
-              <dd data-owner-import-source-last-used></dd>
-            </div>
-            <div>
-              <dt>Status</dt>
-              <dd data-owner-import-source-state></dd>
-            </div>
-          </dl>
-          <p data-owner-r2-summary>Background imports, uploads, cleanup, and validation will appear here.</p>
-          <div class="owner-maintenance-actions" aria-label="Import maintenance tasks">
-            <button class="btn secondary" type="button" data-owner-r2-maintenance="banned-cleanup">Banned cleanup</button>
-            <button class="btn secondary" type="button" data-owner-r2-maintenance="final-cleanup">Final cleanup</button>
-            <button class="btn secondary" type="button" data-owner-r2-maintenance="storage">Storage estimate</button>
-            <button class="btn secondary" type="button" data-owner-r2-maintenance="validate">Validate publish</button>
-          </div>
-          <div class="owner-sweep-phases" data-owner-r2-phases></div>
-          <dl class="owner-counts" data-owner-r2-counts></dl>
-        </article>
-        <article class="owner-card owner-card-wide owner-card-price-list" data-owner-tab="commerce">
-          <p class="eyebrow">Products</p>
-          <h2>Price list ($)</h2>
-          <p>Current local digital, print, frame, and shipping mock prices in USD.</p>
-          <div class="owner-card-title-actions">
-            <button class="btn secondary" type="button" data-owner-publish-prices>Publish prices</button>
-          </div>
-          <p class="owner-card-note" data-owner-price-publish-status>Saved edits stay local until published.</p>
-          <div class="owner-sweep-phases" data-owner-price-publish-progress hidden></div>
-          <div class="owner-price-list" data-owner-price-list></div>
-        </article>
-        </div>
+          <div data-new-owner-connectors class="new-owner-lane-list"></div>
+          <p class="new-owner-card-note">Each Mac uses its own revocable credential and grants Photos access locally.</p>
+        </section>
       </div>
+
     </section>
   </main>
 
-  <footer class="site-footer">
-    <div class="shell">
-      <p class="footer-note">© 2026 Photos By Elie</p>
-      <p class="footer-credit"><span data-i18n="footer.credit_prefix">Site creation and ongoing maintenance by</span> <a href="https://web-by-elie.com/" rel="noopener">Web By Elie</a>.</p>
-      <nav class="footer-nav" aria-label="Footer navigation">
-        <a href="https://ec92009.github.io/byElie/">By Elie</a>
-        <a href="./#collections">Collections</a>
-        <span class="footer-owner-tools" data-owner-tools hidden>
-          <a href="./owner.html">Owner</a>
-        </span>
-      </nav>
-    </div>
-  </footer>
-
-  <script src="./media-config.js?v=138.2"></script>
-  <script src="./photos.js?v=138.2"></script>
-  <script src="./owner-auth.js?v=138.2"></script>
-  <script src="./owner-tools.js?v=138.2"></script>
-  <script src="./site-version.js?v=138.2"></script>
-  <script src="./analytics.js?v=138.2"></script>
-  <script src="./catalog-sqlite.js?v=138.2"></script>
-  <script src="./photos-data.js?v=138.2"></script>
-  <script src="./hidden-actions.js?v=138.2"></script>
-  <script src="./reserve-store.js?v=138.2"></script>
-  <script src="./owner.js?v=138.2"></script>
+  <script src="./media-config.js?v=138.4"></script>
+  <script src="./owner-account.js?v=138.4"></script>
+  <script src="./owner-settings.js?v=138.4"></script>
+  <script src="./new-owner.js?v=138.4"></script>
 </body>
 </html>

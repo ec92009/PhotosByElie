@@ -15,14 +15,14 @@ for remote execution.
 - Public site: `https://photos-by-elie.com/`
 - Local preview: `http://localhost:8000/`
 - Owner intake URL: `https://photos-by-elie.com/owner.html`
-- Current visible build: `v138.3`
+- Current visible build: `v138.4`
 - Sidecar local build: `v126.6`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
-- `owner.html` now redirects to the authenticated cloud Owner surface at
-  `new-owner.html`; the localhost Owner Python web UI is retired as the normal
-  control plane.
-- NewOwner now routes selected Apple Photos into a persistent local hierarchy
+- `owner.html` is the authenticated cloud Owner surface. `new-owner.html` is a
+  compatibility redirect back to the canonical Owner URL; the localhost Owner
+  Python web UI is retired as the normal control plane.
+- Owner routes selected Apple Photos into a persistent local hierarchy
   of `RE / Fixture / Sub-fixture` (for example `RE / La Concha / Apartment 1`).
   Free-text names create new fixture/sub-fixture folders; the first datalist
   suggestions are Apartment 1, Apartment 2, Street, Main lobby, Pool, and
@@ -76,7 +76,7 @@ for remote execution.
   - Public catalog SQLite integrity: `ok`.
 - Intake prep checkpoint:
   - `python3 scripts/local_server.py 8001 --bind 127.0.0.1` is the correct local helper surface for Apple Photos intake; the plain LAN/static server on port `8000` can show Owner but cannot run the Apple Photos helper endpoints.
-  - The helper-backed Owner Imports page is open in the Built-in Browser at `http://localhost:8001/owner.html?tab=imports`.
+  - The helper-backed cloud Owner page is available at `http://localhost:8001/owner.html`.
   - The installed permission-bearing app bundle exists at `~/Applications/PhotosByElie Photos Bridge.app`, version `126.2`, bundle id `com.photosbyelie.photos-bridge`.
   - The current local Sidecar Apple Photos index has `57,497` available assets: `56,000` photos and `1,497` videos, ranging from `1947-05-09T20:09:49Z` to `2026-07-07T18:06:01Z`.
   - Owner Apple Photos helper now launches `~/Applications/PhotosByElie Photos Bridge.app` through LaunchServices and reads a `--result-destination` JSON file; this fixes the previous false Photos-permission failure caused by raw `swift scripts/apple_photos_bridge.swift` using the wrong TCC identity.

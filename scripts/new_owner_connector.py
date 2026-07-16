@@ -300,7 +300,7 @@ def _local_sidecar_progress_html(job_id: str) -> bytes:
     <h1>Opening Culling</h1>
     <p>The local bridge is preparing this Mac’s real Sidecar workspace: same Culling gallery, keyboard shortcuts, Quick Look, and <kbd>C</kbd> switch into Title/Keywords review.</p>
     <div class="status" id="status" aria-live="polite">Starting bridge job {escaped_job}…</div>
-    <a href="https://photos-by-elie.com/new-owner.html">Back to Owner</a>
+    <a href="https://photos-by-elie.com/owner.html">Back to Owner</a>
     <a id="sidecar-link" href="#" hidden>Open Sidecar now</a>
     <small>If this page does not move on after a few seconds, make sure the Photos By Elie Mac connector is running on this Mac.</small>
   </main>

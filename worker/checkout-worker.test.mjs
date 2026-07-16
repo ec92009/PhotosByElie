@@ -13,7 +13,11 @@ import { createMemoryStore } from "./memory-store.mjs";
 import { createMockStripeClient } from "./mock-stripe.mjs";
 import { createOwnerAccessAuth } from "./owner-access-auth.mjs";
 import { createKvOwnerActionStore, createMemoryOwnerActionStore } from "./owner-action-store.mjs";
-import { createRealEstateAuth } from "./real-estate-auth.mjs";
+import {
+  REAL_ESTATE_PASSWORD_ITERATIONS,
+  createRealEstateAuth,
+  realEstatePasswordHash,
+} from "./real-estate-auth.mjs";
 import { createRealEstateDeliverables } from "./real-estate-deliverables.mjs";
 import { createRealEstateOriginals } from "./real-estate-originals.mjs";
 import { createR2ZipDelivery } from "./r2-zip-delivery.mjs";
@@ -803,16 +807,18 @@ test("access console is admin-only and writes reversible role grants", async () 
     email: "corine@example.test",
     displayName: "Corine",
     roles: ["user", "re_client"],
-    realEstateClients: ["corine-real-estate"],
+    realEstateClients: ["re-la-concha"],
     groupIds: ["re-la-concha"],
     passwordLogin: {
       loginName: "Corine",
       password: "fresh-private-password",
-      galleryKeys: ["corine-real-estate"],
+      galleryKeys: ["re-la-concha"],
     },
   }, { origin: "https://photos-by-elie.com" }));
   assert.equal(corinePasswordResponse.status, 200);
   const corinePasswordBody = await corinePasswordResponse.json();
+  assert.deepEqual(corinePasswordBody.user.realEstateClients, ["corine-real-estate"]);
+  assert.equal(corinePasswordBody.credentials[0].galleryKey, "corine-real-estate");
   assert.equal(corinePasswordBody.credentials[0].passwordSet, true);
   assert.equal("passwordHash" in corinePasswordBody.credentials[0], false);
 
@@ -833,6 +839,12 @@ test("access console is admin-only and writes reversible role grants", async () 
   assert.equal(passwordLoginResponse.status, 200);
   const passwordSessionCookie = (passwordLoginResponse.headers.get("set-cookie") || "").split(";")[0];
   assert.match(passwordSessionCookie, /^pbe_re_session=/);
+
+  assert.equal(REAL_ESTATE_PASSWORD_ITERATIONS, 100_000);
+  assert.equal(
+    await realEstatePasswordHash("fresh-private-password", "test-salt", 210_000),
+    await realEstatePasswordHash("fresh-private-password", "test-salt", 100_000)
+  );
 
   const archiveGroupResponse = await adminWorker.fetch(jsonRequest("https://worker.test/access-console/groups/cohen-cousins/archive", {}, {
     origin: "https://photos-by-elie.com",

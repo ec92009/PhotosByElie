@@ -1,5 +1,6 @@
 const DEFAULT_SESSION_SECONDS = 2 * 60 * 60;
 const SESSION_COOKIE_NAME = "pbe_re_session";
+export const REAL_ESTATE_PASSWORD_ITERATIONS = 100_000;
 
 const normalizeCredential = (value) => String(value || "").trim().toLowerCase();
 
@@ -80,10 +81,13 @@ export const realEstateCredentialHash = async (accessCode, salt) => {
   return cleanSalt && cleanCode ? sha256Hex(`${cleanSalt}:${cleanCode}`) : "";
 };
 
-export const realEstatePasswordHash = async (accessCode, salt, iterations = 210_000) => {
+export const realEstatePasswordHash = async (accessCode, salt, iterations = REAL_ESTATE_PASSWORD_ITERATIONS) => {
   const cleanSalt = String(salt || "").trim();
   const cleanCode = String(accessCode || "");
-  const rounds = Math.max(100_000, Math.min(600_000, Number(iterations) || 210_000));
+  const rounds = Math.max(1, Math.min(
+    REAL_ESTATE_PASSWORD_ITERATIONS,
+    Number(iterations) || REAL_ESTATE_PASSWORD_ITERATIONS
+  ));
   if (!cleanSalt || !cleanCode) return "";
   const key = await crypto.subtle.importKey(
     "raw",

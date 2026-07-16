@@ -463,15 +463,15 @@
     return `<span class="acs-gallery-stack">${galleries.map((key) => `<span class="acs-chip">${escapeHtml(key)}</span>`).join("")}${passwordCount ? `<span class="acs-chip is-ok">password login</span>` : ""}</span>`;
   };
 
-  const renderChoiceList = (rootNode, items, inputName, dataName, emptyText) => {
+  const renderChoiceList = (rootNode, items, inputName, dataName, emptyText, valueForItem = null) => {
     if (!rootNode) return;
     if (!items.length) {
       rootNode.innerHTML = `<p class="acs-empty">${escapeHtml(emptyText)}</p>`;
       return;
     }
     rootNode.innerHTML = items.map((item) => {
-      const id = `${inputName}-${item.id || item.galleryKey}`.replace(/[^a-z0-9_-]+/gi, "-");
-      const value = item.id || item.galleryKey;
+      const value = valueForItem ? valueForItem(item) : (item.id || item.galleryKey);
+      const id = `${inputName}-${value}`.replace(/[^a-z0-9_-]+/gi, "-");
       const meta = [
         item.kind || item.galleryKind,
         item.galleryKey && item.galleryKey !== item.id ? item.galleryKey : "",
@@ -495,7 +495,8 @@
       state.galleryOptions.filter((option) => option.galleryKind === "real_estate"),
       "acs-gallery",
       "data-acs-gallery",
-      "Seed fixtures to load RE gallery options."
+      "Seed fixtures to load RE gallery options.",
+      (item) => item.galleryKey
     );
     if (groupGalleryRecordInput) {
       const selectedValue = groupGalleryRecordInput.value;
@@ -1316,6 +1317,7 @@
       body: JSON.stringify(payload),
     });
     state.selectedEmail = body.user?.email || payload.email;
+    state.filters = { search: "", groupId: "", role: "", state: "" };
     await load();
   };
 

@@ -8,10 +8,10 @@
   <link rel="icon" type="image/png" sizes="512x512" href="./assets/branding/photosbyelie-camera-tripod-logo-512.png"/>
   <meta name="theme-color" content="#263f4a"/>
   <script>(()=>{try{const saved=localStorage.getItem('byelie-theme');if(saved==='light'||saved==='dark')document.documentElement.dataset.theme=saved;localStorage.setItem('byelie-language','en');document.documentElement.lang='en';document.documentElement.dataset.language='en'}catch{}})();</script>
-  <link rel="stylesheet" href="./shared.css?v=138.1"/>
-  <link rel="stylesheet" href="./styles.css?v=138.1"/>
-  <link rel="stylesheet" href="./photos.css?v=138.1"/>
-  <link rel="stylesheet" href="./access-console.css?v=138.1"/>
+  <link rel="stylesheet" href="./shared.css?v=138.2"/>
+  <link rel="stylesheet" href="./styles.css?v=138.2"/>
+  <link rel="stylesheet" href="./photos.css?v=138.2"/>
+  <link rel="stylesheet" href="./access-console.css?v=138.2"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -26,7 +26,7 @@
       <a href="./new-owner.html">Owner</a> <span>|</span>
       <a class="is-active" href="./access-console.html">ACS</a>
     </nav>
-    <span class="site-version-badge">v138.1</span>
+    <span class="site-version-badge">v138.2</span>
   </header>
 
   <main id="main-content" class="shell acs-shell">
@@ -61,7 +61,15 @@
         <div><dt>Disabled</dt><dd data-acs-count="disabled">0</dd></div>
       </dl>
 
-      <div class="acs-layout">
+      <nav class="acs-tabs" aria-label="Access Console sections" role="tablist">
+        <button type="button" role="tab" aria-selected="true" data-acs-tab="people">People</button>
+        <button type="button" role="tab" aria-selected="false" data-acs-tab="groups">Groups</button>
+        <button type="button" role="tab" aria-selected="false" data-acs-tab="fixtures">Fixtures</button>
+        <button type="button" role="tab" aria-selected="false" data-acs-tab="matrix">Matrix</button>
+        <button type="button" role="tab" aria-selected="false" data-acs-tab="audit">Audit</button>
+      </nav>
+
+      <div class="acs-layout" role="tabpanel" data-acs-tab-panel="people">
         <section class="acs-people-panel" aria-label="Access people">
           <div class="owner-card-titlebar">
             <div>
@@ -169,6 +177,8 @@
                 <span>New password</span>
                 <input type="password" autocomplete="new-password" data-acs-password-login-password placeholder="Set or replace password"/>
               </label>
+              <button class="btn secondary acs-password-reveal" type="button" aria-pressed="false" data-acs-password-login-reveal>Show password</button>
+              <p class="acs-field-note">Reveal shows only what you are entering now. Existing passwords cannot be displayed because ACS stores a one-way hash.</p>
               <p class="acs-field-note" data-acs-password-login-status>No password login stored.</p>
             </fieldset>
             <label>
@@ -189,7 +199,7 @@
       </div>
 
       <div class="acs-lower-grid">
-        <section class="acs-groups-panel" aria-label="Audience group manager">
+        <section class="acs-groups-panel" aria-label="Audience group manager" role="tabpanel" data-acs-tab-panel="groups" hidden>
           <div class="owner-card-titlebar">
             <div>
               <p class="eyebrow">Groups</p>
@@ -308,7 +318,7 @@
           </div>
           <div data-acs-events class="acs-event-list acs-event-list-compact"></div>
         </section>
-        <section class="acs-gallery-access" aria-label="Gallery access permissions">
+        <section class="acs-gallery-access" aria-label="Gallery access permissions" role="tabpanel" data-acs-tab-panel="fixtures" hidden>
           <div class="owner-card-titlebar">
             <div>
               <p class="eyebrow">Access</p>
@@ -338,7 +348,7 @@
           </div>
           <div data-acs-policy-result class="acs-policy-result"></div>
         </section>
-        <section class="acs-capabilities" aria-label="Capability matrix">
+        <section class="acs-capabilities" aria-label="Capability matrix" role="tabpanel" data-acs-tab-panel="matrix" hidden>
           <div class="owner-card-titlebar">
             <div>
               <p class="eyebrow">Capabilities</p>
@@ -347,7 +357,7 @@
           </div>
           <div data-acs-capabilities class="acs-capability-list"></div>
         </section>
-        <section class="acs-audit" aria-label="Access audit">
+        <section class="acs-audit" aria-label="Access audit" role="tabpanel" data-acs-tab-panel="audit" hidden>
           <div class="owner-card-titlebar">
             <div>
               <p class="eyebrow">Activity</p>
@@ -362,8 +372,8 @@
   </main>
 
   <script src="./media-config.js"></script>
-  <script src="./owner-account.js?v=138.1"></script>
-  <script src="./owner-settings.js?v=138.1"></script>
-  <script src="./access-console.js?v=138.1"></script>
+  <script src="./owner-account.js?v=138.2"></script>
+  <script src="./owner-settings.js?v=138.2"></script>
+  <script src="./access-console.js?v=138.2"></script>
 </body>
 </html>

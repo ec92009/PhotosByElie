@@ -150,6 +150,48 @@ body[data-gallery="access-console"] .acs-hero h1 {
   justify-content: flex-end;
 }
 
+.acs-tabs {
+  display: flex;
+  gap: .35rem;
+  margin: .8rem 0 1rem;
+  padding: .3rem;
+  overflow-x: auto;
+  border: 1px solid var(--acs-line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--panel) 92%, var(--acs-teal) 8%);
+}
+
+.acs-tabs button {
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 9px;
+  padding: .6rem .9rem;
+  background: transparent;
+  color: var(--muted, var(--acs-muted));
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.acs-tabs button[aria-selected="true"] {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 5px rgb(0 0 0 / 12%);
+}
+
+[data-acs-tab-panel][hidden] {
+  display: none !important;
+}
+
+.acs-lower-grid > [data-acs-tab-panel] {
+  grid-column: 1 / -1;
+}
+
+.acs-password-reveal {
+  justify-self: start;
+  width: auto;
+}
+
 .acs-filterbar {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.75rem), 1fr));

@@ -102,6 +102,7 @@
   const notesInput = $("[data-acs-notes]");
   const passwordLoginNameInput = $("[data-acs-password-login-name]");
   const passwordLoginPasswordInput = $("[data-acs-password-login-password]");
+  const passwordLoginRevealButton = $("[data-acs-password-login-reveal]");
   const passwordLoginStatus = $("[data-acs-password-login-status]");
   const editorTitle = $("[data-acs-editor-title]");
   const peopleSearchInput = $("[data-acs-people-search]");
@@ -128,11 +129,32 @@
   const showInviteQrButton = $("[data-acs-show-invite-qr]");
   const accessPreviewInput = $("[data-acs-access-preview]");
   const ownerOriginalsInput = $("[data-acs-owner-originals]");
+  const tabButtons = [...document.querySelectorAll("[data-acs-tab]")];
+  const tabPanels = [...document.querySelectorAll("[data-acs-tab-panel]")];
   let groupIdEdited = false;
   let groupGalleryKeyEdited = false;
+  let activeTab = "people";
 
   const setStatus = (message) => {
     if (statusRoot) statusRoot.textContent = message;
+  };
+
+  const setActiveTab = (requestedTab, { updateHash = true } = {}) => {
+    const nextTab = tabButtons.some((button) => button.dataset.acsTab === requestedTab)
+      ? requestedTab
+      : "people";
+    activeTab = nextTab;
+    tabButtons.forEach((button) => {
+      const selected = button.dataset.acsTab === activeTab;
+      button.setAttribute("aria-selected", String(selected));
+      button.tabIndex = selected ? 0 : -1;
+    });
+    tabPanels.forEach((panel) => {
+      panel.hidden = panel.dataset.acsTabPanel !== activeTab;
+    });
+    if (updateHash && window.location.hash !== `#${activeTab}`) {
+      window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}#${activeTab}`);
+    }
   };
 
   const escapeHtml = (value) => String(value ?? "")
@@ -561,7 +583,14 @@
     if (notesInput) notesInput.value = item.notes || "";
     const credentials = credentialsFor(item.email || "");
     if (passwordLoginNameInput) passwordLoginNameInput.value = credentials[0]?.loginName || item.displayName || "";
-    if (passwordLoginPasswordInput) passwordLoginPasswordInput.value = "";
+    if (passwordLoginPasswordInput) {
+      passwordLoginPasswordInput.value = "";
+      passwordLoginPasswordInput.type = "password";
+    }
+    if (passwordLoginRevealButton) {
+      passwordLoginRevealButton.textContent = "Show password";
+      passwordLoginRevealButton.setAttribute("aria-pressed", "false");
+    }
     if (passwordLoginStatus) {
       passwordLoginStatus.textContent = credentials.length
         ? `Password set for ${credentials.map((credential) => credential.galleryKey).join(", ")}.`
@@ -1462,6 +1491,7 @@
       role: "",
       state: "",
     };
+    setActiveTab("people");
     render();
   };
 
@@ -1611,6 +1641,7 @@
     const editButton = event.target.closest("[data-acs-edit-member]");
     if (editButton) {
       state.selectedEmail = editButton.dataset.acsEditMember || "";
+      setActiveTab("people");
       render();
       return;
     }
@@ -1693,6 +1724,30 @@
     if (groupGalleryKeyInput && !groupGalleryKeyEdited) groupGalleryKeyInput.value = generated;
   });
   $("[data-acs-disable-person]")?.addEventListener("click", () => disableSelected().catch((error) => setStatus(error.message || "Could not disable person.")));
+  passwordLoginRevealButton?.addEventListener("click", () => {
+    if (!passwordLoginPasswordInput) return;
+    const revealing = passwordLoginPasswordInput.type === "password";
+    passwordLoginPasswordInput.type = revealing ? "text" : "password";
+    passwordLoginRevealButton.textContent = revealing ? "Hide password" : "Show password";
+    passwordLoginRevealButton.setAttribute("aria-pressed", String(revealing));
+    passwordLoginPasswordInput.focus();
+  });
+  tabButtons.forEach((button) => {
+    button.addEventListener("click", () => setActiveTab(button.dataset.acsTab || "people"));
+    button.addEventListener("keydown", (event) => {
+      if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+      event.preventDefault();
+      const currentIndex = tabButtons.indexOf(button);
+      const nextIndex = event.key === "Home"
+        ? 0
+        : event.key === "End"
+          ? tabButtons.length - 1
+          : (currentIndex + (event.key === "ArrowRight" ? 1 : -1) + tabButtons.length) % tabButtons.length;
+      const nextButton = tabButtons[nextIndex];
+      setActiveTab(nextButton.dataset.acsTab || "people");
+      nextButton.focus();
+    });
+  });
   $("[data-acs-archive-group]")?.addEventListener("click", () => archiveSelectedGroup().catch((error) => setStatus(error.message || "Could not archive group.")));
   $("[data-acs-filter-selected-group]")?.addEventListener("click", showSelectedGroupMembers);
   copyInviteLinkButton?.addEventListener("click", () => copyInviteLink());
@@ -1713,6 +1768,8 @@
   $("[data-acs-seed-fixtures]")?.addEventListener("click", () => seedFixtures().catch((error) => setStatus(error.message || "Could not seed fixtures.")));
   $("[data-acs-login]")?.addEventListener("click", login);
   $("[data-acs-logout]")?.addEventListener("click", logout);
+  window.addEventListener("hashchange", () => setActiveTab(window.location.hash.slice(1), { updateHash: false }));
+  setActiveTab(window.location.hash.slice(1) || "people", { updateHash: false });
   absorbAuthTokenFromHash();
   load();
 })();

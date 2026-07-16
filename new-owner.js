@@ -858,7 +858,7 @@
         manifest: reActionManifest("apple-photos-re-preflight", {
           albums,
           includePreviews: true,
-          limit: 60,
+          limit: 100,
         }),
         queuedAt: new Date().toISOString(),
       },

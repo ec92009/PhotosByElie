@@ -1799,7 +1799,16 @@
   };
 
   const openDeliverableUrl = async (url, mode = "view") => {
-    const href = String(url || "");
+    const rawUrl = String(url || "").trim();
+    const baseUrl = String(workerBaseUrl() || "").replace(/\/+$/, "");
+    let href = rawUrl;
+    if (rawUrl && baseUrl) {
+      try {
+        href = new URL(rawUrl, `${baseUrl}/`).href;
+      } catch (_error) {
+        href = rawUrl;
+      }
+    }
     if (!href) throw new Error("This cloud output is not ready yet.");
     if (mode === "view") {
       window.open(href, "_blank", "noopener");

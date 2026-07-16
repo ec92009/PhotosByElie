@@ -287,6 +287,15 @@
     return [...records.values()];
   };
 
+  const realEstateGalleryOptions = () => {
+    const records = new Map();
+    [
+      ...knownGalleryRecords().filter((record) => record.galleryKind === "real_estate"),
+      ...state.galleryOptions.filter((option) => option.galleryKind === "real_estate"),
+    ].forEach((record) => records.set(record.galleryKey, record));
+    return [...records.values()];
+  };
+
   const galleryRecordKeyFor = (item = {}) =>
     item.galleryKind && item.galleryKey ? `${item.galleryKind}:${item.galleryKey}` : "";
 
@@ -493,7 +502,7 @@
     renderChoiceList(groupsRoot, activeAudienceGroups(), "acs-group", "data-acs-group", "Seed fixtures to load audience groups.");
     renderChoiceList(
       galleryOptionsRoot,
-      state.galleryOptions.filter((option) => option.galleryKind === "real_estate"),
+      realEstateGalleryOptions(),
       "acs-gallery",
       "data-acs-gallery",
       "Seed fixtures to load RE gallery options.",
@@ -575,9 +584,7 @@
     if (emailInput) emailInput.value = item.email || "";
     if (displayNameInput) displayNameInput.value = item.displayName || "";
     if (realEstateInput) {
-      const checkboxKeys = new Set(state.galleryOptions
-        .filter((option) => option.galleryKind === "real_estate")
-        .map((option) => option.galleryKey));
+      const checkboxKeys = new Set(realEstateGalleryOptions().map((option) => option.galleryKey));
       realEstateInput.value = (item.realEstateClients || [])
         .filter((galleryKey) => !checkboxKeys.has(galleryKey))
         .join("\n");

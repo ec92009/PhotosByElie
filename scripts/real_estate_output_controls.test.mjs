@@ -26,3 +26,9 @@ test("Cloud output controls upload prepared files without creating stray Selecti
   assert.match(script, /\/real-estate\/deliverables\/\$\{encodeURIComponent\(record\.id\)\}\/complete/);
   assert.match(script, /owner-review|finished-products shelf/i);
 });
+
+test("Finished-product shelf exposes one download action per ready format", () => {
+  assert.match(script, /data-re-download-output-url/);
+  assert.match(script, /Download \$\{label\}/);
+  assert.match(script, /filter\(\(item\) => item\.formats\.some\(\(format\) => format === "pdf" \|\| format === "video"\)\)/);
+});

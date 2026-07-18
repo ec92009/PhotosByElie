@@ -3992,6 +3992,15 @@ body[data-real-estate] .real-estate-deliverable-status[data-re-status-tone="need
   border-color:color-mix(in srgb,#b94343 58%,var(--line));
   color:#9f2f2f;
 }
+body[data-real-estate] button.real-estate-deliverable-status.is-action{
+  cursor:pointer;
+  font:inherit;
+}
+body[data-real-estate] button.real-estate-deliverable-status.is-action:hover,
+body[data-real-estate] button.real-estate-deliverable-status.is-action:focus-visible{
+  border-color:var(--re-accent);
+  color:var(--text);
+}
 .real-estate-deliverable-reason{
   display:block;
   margin-top:3px;

@@ -1354,13 +1354,22 @@
         : group.rows.some((item) => item.source === "local")
           ? "local"
           : (primary?.source || "");
-      const statusValues = group.rows.map((row) => String(row.status || "ready").toLowerCase());
-      const status = statusValues.some((value) => value === "needs-attention" || value === "failed")
-        ? "needs-attention"
-        : statusValues.some((value) => value === "pending" || value === "queued" || value === "processing")
-          ? "pending"
-          : "ready";
-      const failureReason = group.rows.map((row) => row.failureReason).find(Boolean) || "";
+      const outputFormats = formats.filter((format) => format === "pdf" || format === "video");
+      const outputStateFor = (format) => {
+        const matching = group.rows.filter((row) => deliverableFormatCode(row.type) === format);
+        if (matching.some((row) => row.status === "ready" && (row.viewUrl || row.downloadUrl))) return "ready";
+        if (matching.some((row) => row.status === "needs-attention" || row.status === "failed")) return "needs-attention";
+        return "pending";
+      };
+      const outputStates = outputFormats.map(outputStateFor);
+      const status = outputStates.length && outputStates.every((value) => value === "ready")
+        ? "ready"
+        : outputStates.includes("needs-attention")
+          ? "needs-attention"
+          : "pending";
+      const failureReason = status === "needs-attention"
+        ? group.rows.map((row) => row.failureReason).find(Boolean) || ""
+        : "";
       return {
         ...primary,
         id: group.id,
@@ -1377,7 +1386,7 @@
         relatedIds: group.relatedIds.filter(Boolean),
         records: group.rows,
       };
-    });
+    }).filter((item) => item.formats.some((format) => format === "pdf" || format === "video"));
   };
 
   const cloneBatch = (batch) => {
@@ -1558,11 +1567,37 @@
   const deliverableStatusBadgesFor = (item) => {
     const records = Array.isArray(item?.records) ? item.records : [item].filter(Boolean);
     const badges = [deliverableSourceBadgeFor(item)];
-    ["selection", "pdf", "video"].forEach((format) => {
+    ["selection"].forEach((format) => {
       const matching = records.filter((record) => deliverableFormatCode(record?.type) === format);
       if (matching.length) badges.push(formatStatusBadgeFor(format, matching));
     });
     return badges;
+  };
+
+  const formatDownloadActionsHtmlFor = (item) => {
+    const records = Array.isArray(item?.records) ? item.records : [item].filter(Boolean);
+    return ["pdf", "video"].map((format) => {
+      const matching = records.filter((record) => deliverableFormatCode(record?.type) === format);
+      if (!matching.length) return "";
+      const ready = matching.find((record) => (
+        record.status === "ready" && (record.downloadUrl || record.viewUrl)
+      ));
+      const label = format === "pdf" ? "PDF" : "Video";
+      if (ready) {
+        const url = ready.downloadUrl || ready.viewUrl;
+        return `
+          <button class="real-estate-deliverable-status is-action" type="button" data-re-status-tone="ready" data-re-download-output-url="${escapeHtml(url)}">
+            Download ${label}
+          </button>
+        `;
+      }
+      const needsAttention = matching.some((record) => record.status === "needs-attention" || record.status === "failed");
+      return `
+        <button class="real-estate-deliverable-status" type="button" data-re-status-tone="${needsAttention ? "needs-attention" : "pending"}" disabled>
+          ${label} ${needsAttention ? "needs attention" : "pending"}
+        </button>
+      `;
+    }).join("");
   };
 
   const cloudShelfStatusFor = () => {
@@ -2118,12 +2153,6 @@
       const editingName = state.editingDeliverableNameId === item.id;
       const thumbnail = deliverableThumbnailFor(item);
       const statusBadges = statusBadgesHtml(deliverableStatusBadgesFor(item));
-      const hasReadyOutput = (Array.isArray(item.records) ? item.records : [item]).some((record) => {
-        const format = deliverableFormatCode(record.type);
-        return (format === "pdf" || format === "video")
-          && record.status === "ready"
-          && (record.viewUrl || record.downloadUrl);
-      });
       return `
         <article class="real-estate-deliverable ${canOpen ? "is-openable" : ""} ${editingName ? "is-renaming" : ""}" data-re-status="${escapeHtml(item.status)}" ${canOpen ? `data-re-open-deliverable="${escapeHtml(item.id)}" role="button" tabindex="0"` : ""}>
           <button class="real-estate-deliverable-disclosure" type="button" ${canOpen ? `data-re-open-deliverable-button="${escapeHtml(item.id)}"` : "disabled"} aria-label="Open ${escapeHtml(displayTitle)}">
@@ -2137,13 +2166,12 @@
             <span>${escapeHtml(meta || item.label)}</span>
             <div class="real-estate-deliverable-statuses" aria-label="Product save status">
               ${statusBadges}
+              ${formatDownloadActionsHtmlFor(item)}
             </div>
             ${item.failureReason ? `<em class="real-estate-deliverable-reason">${escapeHtml(item.failureReason)}</em>` : ""}
           </div>
           ${canRename ? `
             <div class="real-estate-deliverable-tools">
-              <button class="real-estate-deliverable-output" type="button" data-re-view-deliverable="${escapeHtml(item.id)}" ${hasReadyOutput ? "" : "disabled"}>View</button>
-              <button class="real-estate-deliverable-output" type="button" data-re-download-deliverable="${escapeHtml(item.id)}" ${hasReadyOutput ? "" : "disabled"}>Download</button>
               <button class="real-estate-deliverable-rename" type="button" data-re-edit-name="${escapeHtml(item.id)}" aria-label="Rename ${escapeHtml(displayTitle)}">${reIcon("edit")}</button>
               <button class="real-estate-deliverable-delete" type="button" data-re-delete-deliverable="${escapeHtml(item.id)}" aria-label="Delete ${escapeHtml(displayTitle)}">${reIcon("trash")}</button>
             </div>
@@ -5984,10 +6012,15 @@
     document.querySelectorAll("[data-re-download-pdf]").forEach((button) => button.addEventListener("click", () => downloadPdf({ mode: "download" })));
     elements.deliverablesList?.addEventListener("click", (event) => {
       if (event.target?.closest?.("[data-re-rename-deliverable]")) return;
-      const button = event.target?.closest?.("[data-re-edit-name], [data-re-edit-deliverable], [data-re-view-deliverable], [data-re-download-deliverable], [data-re-delete-deliverable], [data-re-sync-deliverables]");
+      const button = event.target?.closest?.("[data-re-download-output-url], [data-re-edit-name], [data-re-edit-deliverable], [data-re-view-deliverable], [data-re-download-deliverable], [data-re-delete-deliverable], [data-re-sync-deliverables]");
       if (button) {
         event.preventDefault();
         event.stopPropagation();
+        if (button.matches("[data-re-download-output-url]")) {
+          openDeliverableUrl(button.getAttribute("data-re-download-output-url") || "", "download")
+            .catch(() => setStatus("Could not download this output"));
+          return;
+        }
         if (button.matches("[data-re-edit-name]")) {
           beginDeliverableNameEdit(button.getAttribute("data-re-edit-name") || "");
           return;

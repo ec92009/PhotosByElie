@@ -6,8 +6,9 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v140.19`
+- Current visible version: `v140.20`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
+- `v140.20` keeps browser-rendered Real Estate videos responsive by excluding music tracks longer than three minutes from the random country pool.
 - `v140.19` adds a 25 mm-equivalent scannable Photos By Elie QR code to the Real Estate video closing card.
 - `v140.18` gives Real Estate videos a restrained presentation finish: branded property intro and Photos By Elie outro cards, eased Ken Burns movement, and short fades through black between images while preserving the existing music and credit policy.
 

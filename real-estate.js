@@ -761,6 +761,7 @@
   const slideshowMusicGainDb = 0;
   const sourceVideoAudioGainDb = -20;
   const sourceVideoAudioLinearGain = 10 ** (sourceVideoAudioGainDb / 20);
+  const slideshowMusicMaxDecodeSeconds = 180;
   const slideshowVideoFps = 30;
   const slideshowIntroDurationMs = 2200;
   const slideshowOutroDurationMs = 2200;
@@ -826,7 +827,12 @@
     const countryTracks = state.slideshowMusicTracks.filter((track) => track.country === country);
     const fallbackTracks = state.slideshowMusicTracks.filter((track) => track.country === "Spain");
     const pool = countryTracks.length ? countryTracks : (fallbackTracks.length ? fallbackTracks : state.slideshowMusicTracks);
-    const track = pool[Math.floor(Math.random() * pool.length)] || null;
+    const practicalPool = pool.filter((track) => {
+      const duration = Number(track?.duration) || Number(track?.durationSeconds) || 0;
+      return duration > 0 && duration <= slideshowMusicMaxDecodeSeconds;
+    });
+    const eligiblePool = practicalPool.length ? practicalPool : pool;
+    const track = eligiblePool[Math.floor(Math.random() * eligiblePool.length)] || null;
     return withAbsoluteTrackUrl(track ? { ...track, selectedCountry: country } : null);
   };
   const slideshowMusicCreditFor = (track) => {

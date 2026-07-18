@@ -69,6 +69,8 @@ test("Generated videos include restrained branded presentation polish", () => {
   assert.match(script, /slideshowAssetTimeoutMs = 12000/);
   assert.match(script, /Timed out loading slideshow image/);
   assert.match(script, /Timed out loading slideshow music/);
+  assert.match(script, /slideshowMusicMaxDecodeSeconds = 180/);
+  assert.match(script, /duration <= slideshowMusicMaxDecodeSeconds/);
 });
 
 test("Video closing card carries a 25 mm-equivalent Photos By Elie QR code", () => {

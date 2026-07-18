@@ -26,6 +26,7 @@
   const contextUrl = contextParam || (isLocalHost ? defaultLocalContext : defaultPublicContext);
   const densityKey = "photosbyelie-real-estate-card-density";
   const pdfFormatKey = "photosbyelie-real-estate-pdf-format";
+  const pdfOrientationKey = "photosbyelie-real-estate-pdf-orientation";
   const slideshowPhotoSecondsKey = "photosbyelie-real-estate-slideshow-photo-seconds";
   const slideshowOrientationKey = "photosbyelie-real-estate-slideshow-orientation";
   const slideshowMusicCountryKey = "photosbyelie-real-estate-slideshow-music-country";
@@ -112,8 +113,6 @@
     mediaType: app.querySelector("[data-re-media-type]"),
     density: app.querySelector("[data-re-density]"),
     selectedOnly: app.querySelector("[data-re-selected-only]"),
-    pdfFormat: app.querySelector("[data-re-pdf-format]"),
-    slideshowPhotoSeconds: app.querySelector("[data-re-slideshow-photo-seconds]"),
     slideshowMusicCountry: app.querySelector("[data-re-slideshow-music-country]"),
     watermarkEnabled: app.querySelector("[data-re-watermark-enabled]"),
     watermarkText: app.querySelector("[data-re-watermark-text]"),
@@ -164,7 +163,10 @@
     sort: "album",
     density: localStorage.getItem(densityKey) || "balanced",
     pdfFormat: localStorage.getItem(pdfFormatKey) || "a4",
-    slideshowPhotoSeconds: Number(localStorage.getItem(slideshowPhotoSecondsKey)) || 4,
+    pdfOrientation: localStorage.getItem(pdfOrientationKey) || "portrait",
+    slideshowPhotoSeconds: [3, 4, 5].includes(Number(localStorage.getItem(slideshowPhotoSecondsKey)))
+      ? Number(localStorage.getItem(slideshowPhotoSecondsKey))
+      : 4,
     slideshowOrientation: localStorage.getItem(slideshowOrientationKey) || "landscape",
     slideshowMusicCountry: localStorage.getItem(slideshowMusicCountryKey) || "auto",
     slideshowMusicTracks: [],
@@ -761,7 +763,15 @@
     a4: { key: "a4", label: "A4", width: 595.28, height: 841.89 },
     letter: { key: "letter", label: "Letter", width: 612, height: 792 },
   };
-  const paperFormatFor = (key = state.pdfFormat) => paperFormats[key] || paperFormats.a4;
+  const pdfOrientationOptions = new Set(["landscape", "portrait"]);
+  const normalizePdfOrientation = (value) => pdfOrientationOptions.has(value) ? value : "portrait";
+  const paperFormatFor = (key = state.pdfFormat, orientation = state.pdfOrientation) => {
+    const paper = paperFormats[key] || paperFormats.a4;
+    const normalizedOrientation = normalizePdfOrientation(orientation);
+    return normalizedOrientation === "landscape"
+      ? { ...paper, label: `${paper.label} landscape`, width: paper.height, height: paper.width, orientation: normalizedOrientation }
+      : { ...paper, orientation: normalizedOrientation };
+  };
   const pdfWatermarkText = "\u00a9 2026 Photos By Elie";
   const densityOptions = new Set(["compact", "balanced", "large"]);
   const slideshowOrientationOptions = new Set(["landscape", "portrait"]);
@@ -1145,6 +1155,45 @@
     syncFileActionLabels();
   };
 
+  const readyCloudDownloadFor = (format) => {
+    const normalizedFormat = format === "video" ? "video" : "pdf";
+    const selected = activeSelectedPhotos();
+    if (!selected.length) return null;
+    const currentBatch = normalizedFormat === "video"
+      ? buildSlideshowManifest(selected, true)
+      : buildBatchManifest(selected, true);
+    const fingerprint = batchProductFingerprint(currentBatch);
+    const matchesSettings = (record) => {
+      const batch = record?.batch || {};
+      if (normalizedFormat === "pdf") {
+        return paperFormatFor(batch?.pdfSettings?.paperFormat).key === state.pdfFormat
+          && normalizePdfOrientation(batch?.pdfSettings?.pageOrientation || "portrait") === normalizePdfOrientation(state.pdfOrientation);
+      }
+      const settings = batch?.slideshowSettings || {};
+      return Number(settings.photoDurationSeconds || 4) === Number(state.slideshowPhotoSeconds)
+        && normalizeSlideshowOrientation(settings.outputOrientation || settings.orientation || "landscape") === normalizeSlideshowOrientation(state.slideshowOrientation)
+        && normalizeSlideshowMusicCountry(settings.audioPolicy?.requestedCountry || "auto") === normalizeSlideshowMusicCountry(state.slideshowMusicCountry)
+        && Boolean(settings.watermarkEnabled) === Boolean(state.watermarkEnabled)
+        && String(settings.watermarkText || "") === String(activeWatermarkText() || "");
+    };
+    return (Array.isArray(state.cloudDeliverables) ? state.cloudDeliverables : [])
+      .map(normalizeDeliverable)
+      .filter((record) => deliverableFormatCode(record.type) === normalizedFormat)
+      .filter((record) => record.status === "ready" && (record.downloadUrl || record.viewUrl))
+      .filter((record) => batchProductFingerprint(record.batch) === fingerprint)
+      .filter(matchesSettings)
+      .sort((left, right) => validDateFor(right.createdAt).getTime() - validDateFor(left.createdAt).getTime())[0] || null;
+  };
+
+  const syncDownloadAction = (button, { format, busy, busyLabel, queueLabel, queueTitle, downloadLabel }) => {
+    const ready = busy ? null : readyCloudDownloadFor(format);
+    const readyUrl = ready?.downloadUrl || ready?.viewUrl || "";
+    button.textContent = busy ? busyLabel : (readyUrl ? downloadLabel : queueLabel);
+    button.title = readyUrl ? downloadLabel : queueTitle;
+    button.dataset.reReadyDownloadUrl = readyUrl;
+    button.disabled = (state.outputBusy || state.pdfBusy) || activeSelectedPhotos().length === 0;
+  };
+
   const syncFileActionLabels = () => {
     const outputBusy = state.outputBusy || state.pdfBusy;
     const kind = state.outputBusyKind;
@@ -1171,11 +1220,14 @@
       button.disabled = outputBusy || noActiveSelection;
     });
     document.querySelectorAll("[data-re-download-pdf]").forEach((button) => {
-      button.textContent = outputBusy && kind === "pdf-download"
-        ? t("re.output.queueing_pdf", {}, "Queueing PDF...")
-        : t("re.output.queue_pdf", {}, "Queue PDF");
-      button.title = "Queue project PDFs for cloud assembly; download links appear on the shelf when ready";
-      button.disabled = outputBusy || noActiveSelection;
+      syncDownloadAction(button, {
+        format: "pdf",
+        busy: outputBusy && kind === "pdf-download",
+        busyLabel: t("re.output.queueing_pdf", {}, "Queueing PDF..."),
+        queueLabel: t("re.output.queue_pdf", {}, "Queue PDF"),
+        queueTitle: "Queue project PDFs for cloud assembly",
+        downloadLabel: t("re.output.download_pdf", {}, "Download PDF"),
+      });
     });
     document.querySelectorAll("[data-re-view-slideshow]").forEach((button) => {
       button.textContent = outputBusy && kind === "video-view"
@@ -1185,11 +1237,14 @@
       button.disabled = outputBusy || noActiveSelection;
     });
     document.querySelectorAll("[data-re-download-slideshow]").forEach((button) => {
-      button.textContent = outputBusy && kind === "video-download"
-        ? t("re.output.generating_video", {}, "Generating video...")
-        : t("re.output.queue_video", {}, "Queue video");
-      button.title = "Queue a true slideshow video file in the cloud with source audio ducked under the guitar bed";
-      button.disabled = outputBusy || noActiveSelection;
+      syncDownloadAction(button, {
+        format: "video",
+        busy: outputBusy && kind === "video-download",
+        busyLabel: t("re.output.generating_video", {}, "Generating video..."),
+        queueLabel: t("re.output.queue_video", {}, "Queue video"),
+        queueTitle: "Queue a true slideshow video file in the cloud with source audio ducked under the guitar bed",
+        downloadLabel: t("re.output.download_video", {}, "Download video"),
+      });
     });
     document.querySelectorAll("[data-re-download-batch]").forEach((button) => {
       button.textContent = outputBusy && kind === "selection"
@@ -1266,11 +1321,11 @@
         : description;
     }
     if (elements.total) elements.total.textContent = String(stillCount);
-    if (elements.total?.previousElementSibling) elements.total.previousElementSibling.textContent = t("re.stats.stills", {}, "Stills");
+    if (elements.total?.previousElementSibling) elements.total.previousElementSibling.textContent = t("re.stats.stills", {}, "Source photos");
     if (elements.videoTotal) elements.videoTotal.textContent = String(videoCount);
     if (elements.albumTotal) elements.albumTotal.textContent = String(albums.length);
     if (elements.selectedTotal) elements.selectedTotal.textContent = String(products.length);
-    if (elements.selectedTotal?.previousElementSibling) elements.selectedTotal.previousElementSibling.textContent = t("re.stats.selections", {}, "Selections");
+    if (elements.selectedTotal?.previousElementSibling) elements.selectedTotal.previousElementSibling.textContent = t("re.stats.selections", {}, "Saved products");
     syncActiveProductName();
     syncCreateProductButtons(products);
     renderProducedDeliverables();
@@ -2249,7 +2304,11 @@
   const renderProducedDeliverables = () => {
     if (!elements.deliverablesPanel || !elements.deliverablesList) return;
     const items = producedDeliverables();
-    if (elements.selectedTotal) elements.selectedTotal.textContent = String(items.length);
+    if (elements.selectedTotal) {
+      elements.selectedTotal.textContent = state.cloudDeliverablesBusy && !state.cloudDeliverablesLoaded
+        ? "…"
+        : String(items.length);
+    }
     elements.deliverablesPanel.hidden = items.length === 0;
     syncCreateProductButtons(items);
     if (!items.length) {
@@ -2496,13 +2555,58 @@
     renderGrid();
   };
 
+  const syncPdfFormatControls = () => {
+    state.pdfFormat = paperFormatFor(state.pdfFormat).key;
+    document.querySelectorAll("[data-re-pdf-format]").forEach((input) => {
+      input.checked = input.value === state.pdfFormat;
+    });
+  };
+
+  const setPdfFormat = (value) => {
+    state.pdfFormat = paperFormatFor(value).key;
+    localStorage.setItem(pdfFormatKey, state.pdfFormat);
+    syncPdfFormatControls();
+    syncFileActionLabels();
+  };
+
+  const syncPdfOrientationControls = () => {
+    state.pdfOrientation = normalizePdfOrientation(state.pdfOrientation);
+    document.querySelectorAll("[data-re-pdf-orientation]").forEach((input) => {
+      input.checked = input.value === state.pdfOrientation;
+    });
+  };
+
+  const setPdfOrientation = (value) => {
+    state.pdfOrientation = normalizePdfOrientation(value);
+    localStorage.setItem(pdfOrientationKey, state.pdfOrientation);
+    syncPdfOrientationControls();
+    syncFileActionLabels();
+  };
+
+  const syncSlideshowPhotoSecondsControls = () => {
+    state.slideshowPhotoSeconds = [3, 4, 5].includes(Number(state.slideshowPhotoSeconds))
+      ? Number(state.slideshowPhotoSeconds)
+      : 4;
+    document.querySelectorAll("[data-re-slideshow-photo-seconds]").forEach((input) => {
+      input.checked = Number(input.value) === state.slideshowPhotoSeconds;
+    });
+  };
+
+  const setSlideshowPhotoSeconds = (value) => {
+    const next = [3, 4, 5].includes(Number(value)) ? Number(value) : 4;
+    const changed = state.slideshowPhotoSeconds !== next;
+    state.slideshowPhotoSeconds = next;
+    localStorage.setItem(slideshowPhotoSecondsKey, String(next));
+    syncSlideshowPhotoSecondsControls();
+    syncFileActionLabels();
+    if (changed) invalidateVideoExportCache();
+  };
+
   const syncSlideshowOrientationControls = () => {
     const normalized = normalizeSlideshowOrientation(state.slideshowOrientation);
     state.slideshowOrientation = normalized;
-    document.querySelectorAll("[data-re-slideshow-orientation]").forEach((button) => {
-      const active = button.dataset.reSlideshowOrientation === normalized;
-      button.classList.toggle("is-active", active);
-      button.setAttribute("aria-pressed", active ? "true" : "false");
+    document.querySelectorAll("[data-re-slideshow-orientation]").forEach((input) => {
+      input.checked = input.dataset.reSlideshowOrientation === normalized;
     });
   };
 
@@ -2512,6 +2616,7 @@
     state.slideshowOrientation = normalized;
     localStorage.setItem(slideshowOrientationKey, normalized);
     syncSlideshowOrientationControls();
+    syncFileActionLabels();
     if (changed) invalidateVideoExportCache();
   };
 
@@ -2567,9 +2672,7 @@
   const render = () => {
     state.density = normalizeDensity(state.density);
     document.body.dataset.realEstateDensity = state.density;
-    if (elements.pdfFormat) elements.pdfFormat.value = paperFormatFor().key;
     if (elements.mediaType) elements.mediaType.value = state.mediaType;
-    if (elements.slideshowPhotoSeconds) elements.slideshowPhotoSeconds.value = String(state.slideshowPhotoSeconds);
     syncAuthUi();
     syncActiveProductName();
     syncCreateProductButtons();
@@ -2578,6 +2681,9 @@
     renderDraft();
     renderWizard();
     syncDensityControls();
+    syncPdfFormatControls();
+    syncPdfOrientationControls();
+    syncSlideshowPhotoSecondsControls();
     syncSlideshowOrientationControls();
     syncSlideshowMusicCountryControls();
     syncWatermarkControls();
@@ -2819,7 +2925,7 @@
       pdfSettings: {
         paperFormat: paperFormatFor().key,
         paperLabel: paperFormatFor().label,
-        pageOrientation: "portrait",
+        pageOrientation: normalizePdfOrientation(state.pdfOrientation),
         layout: "landscape-two-per-page-portrait-one-per-page",
         fitMode: "contain",
         videoTreatment: "still-from-video",
@@ -4587,7 +4693,7 @@
         });
         const ready = queued?.deliverables?.find((record) => deliverableFormatCode(record.type) === "video");
         setStatus(ready?.status === "ready"
-          ? t("re.status.video_ready_shelf", {}, "Video ready on the finished-products shelf. Choose Next to review or download it.")
+          ? t("re.status.video_ready_shelf", {}, "Video ready. Use Download video.")
           : t("re.status.video_generating_cloud", {}, "Video is generating in the cloud and will appear on the shelf when ready."));
       } catch (error) {
         const message = error?.message || "Cloud video could not be prepared.";
@@ -4637,7 +4743,7 @@
       updateOutputProgress({ title: "Generating video", detail: "Uploading video to the finished-products shelf...", current: 2, total: 3 });
       const saved = await completeCloudOutput({ record: cloudRecord, blob: recorded.blob, filename });
       updateOutputProgress({ title: "Generating video", detail: "Video ready on the shelf.", current: 3, total: 3 });
-      setStatus(`Video ready on the finished-products shelf (${formatBytes(saved.bytes || recorded.blob.size)}). Choose Next to review it.`);
+      setStatus(`Video ready (${formatBytes(saved.bytes || recorded.blob.size)}). Use Download video.`);
       completeOutputProgress(`Video ready: ${saved.filename || filename} (${formatBytes(saved.bytes || recorded.blob.size)})`);
     } catch (error) {
       if (cloudRecord) await failCloudOutput(cloudRecord, error);
@@ -5518,8 +5624,11 @@
     state.photos = photos;
     state.photosById = new Map(photos.map((photo) => [photo.id, photo]));
     state.pdfFormat = paperFormatFor(batch?.pdfSettings?.paperFormat || state.pdfFormat).key;
+    state.pdfOrientation = normalizePdfOrientation(batch?.pdfSettings?.pageOrientation || state.pdfOrientation);
     state.slideshowOrientation = normalizeSlideshowOrientation(batch?.slideshowSettings?.orientation || state.slideshowOrientation);
-    state.slideshowPhotoSeconds = Math.max(1, Number(batch?.slideshowSettings?.photoDurationSeconds || state.slideshowPhotoSeconds) || state.slideshowPhotoSeconds);
+    state.slideshowPhotoSeconds = [3, 4, 5].includes(Number(batch?.slideshowSettings?.photoDurationSeconds))
+      ? Number(batch.slideshowSettings.photoDurationSeconds)
+      : state.slideshowPhotoSeconds;
     state.slideshowMusicCountry = normalizeSlideshowMusicCountry(batch?.slideshowSettings?.musicCountry || state.slideshowMusicCountry);
     state.watermarkEnabled = Boolean(batch?.pdfSettings?.watermarkEnabled ?? batch?.slideshowSettings?.watermarkEnabled ?? state.watermarkEnabled);
     state.watermarkText = String(batch?.pdfSettings?.photoWatermark || batch?.slideshowSettings?.watermarkText || state.watermarkText || "");
@@ -5710,7 +5819,7 @@
         });
         const ready = queued?.deliverables?.find((record) => deliverableFormatCode(record.type) === "pdf");
         setStatus(ready?.status === "ready"
-          ? t("re.status.pdf_ready_shelf", {}, "PDF ready on the finished-products shelf. Choose Next to review or download it.")
+          ? t("re.status.pdf_ready_shelf", {}, "PDF ready. Use Download PDF.")
           : t("re.status.pdf_generating_cloud", {}, "PDF is generating in the cloud and will appear on the shelf when ready."));
       } catch (error) {
         const message = error?.message || "Cloud PDF could not be prepared.";
@@ -5765,7 +5874,7 @@
       const blob = buildPdfBlobFromRendered(combined);
       updateOutputProgress({ title: "Preparing PDF", detail: "Uploading PDF to the finished-products shelf...", current: totalSteps, total: totalSteps });
       const saved = await completeCloudOutput({ record: cloudRecord, blob, filename });
-      setStatus(`PDF ready on the finished-products shelf (${formatBytes(saved.bytes || blob.size)}). Choose Next to review it.`);
+      setStatus(`PDF ready (${formatBytes(saved.bytes || blob.size)}). Use Download PDF.`);
       completeOutputProgress(`PDF ready: ${saved.filename || filename} (${formatBytes(saved.bytes || blob.size)})`);
     } catch (error) {
       if (cloudRecord) await failCloudOutput(cloudRecord, error);
@@ -6139,6 +6248,20 @@
       state.pdfFormat = paperFormatFor(batch.pdfSettings.paperFormat).key;
       localStorage.setItem(pdfFormatKey, state.pdfFormat);
     }
+    if (batch?.pdfSettings?.pageOrientation) {
+      state.pdfOrientation = normalizePdfOrientation(batch.pdfSettings.pageOrientation);
+      localStorage.setItem(pdfOrientationKey, state.pdfOrientation);
+    }
+    if (batch?.slideshowSettings?.photoDurationSeconds) {
+      state.slideshowPhotoSeconds = [3, 4, 5].includes(Number(batch.slideshowSettings.photoDurationSeconds))
+        ? Number(batch.slideshowSettings.photoDurationSeconds)
+        : 4;
+      localStorage.setItem(slideshowPhotoSecondsKey, String(state.slideshowPhotoSeconds));
+    }
+    if (batch?.slideshowSettings?.orientation) {
+      state.slideshowOrientation = normalizeSlideshowOrientation(batch.slideshowSettings.orientation);
+      localStorage.setItem(slideshowOrientationKey, state.slideshowOrientation);
+    }
     const projectItems = Array.isArray(batch.projects)
       ? batch.projects.flatMap((project) => (Array.isArray(project.items) ? project.items : [])
         .map((item) => ({
@@ -6383,19 +6506,15 @@
     elements.density?.addEventListener("change", (event) => {
       setDensity(event.target.value);
     });
-    elements.pdfFormat?.addEventListener("change", (event) => {
-      state.pdfFormat = paperFormatFor(event.target.value).key;
-      localStorage.setItem(pdfFormatKey, state.pdfFormat);
-      event.target.value = state.pdfFormat;
-    });
-    elements.slideshowPhotoSeconds?.addEventListener("change", (event) => {
-      const next = Math.max(1, Math.min(30, Math.round(Number(event.target.value) || 4)));
-      const changed = state.slideshowPhotoSeconds !== next;
-      state.slideshowPhotoSeconds = next;
-      localStorage.setItem(slideshowPhotoSecondsKey, String(next));
-      event.target.value = String(next);
-      if (changed) invalidateVideoExportCache();
-    });
+    document.querySelectorAll("[data-re-pdf-format]").forEach((input) => input.addEventListener("change", () => {
+      if (input.checked) setPdfFormat(input.value);
+    }));
+    document.querySelectorAll("[data-re-pdf-orientation]").forEach((input) => input.addEventListener("change", () => {
+      if (input.checked) setPdfOrientation(input.value);
+    }));
+    document.querySelectorAll("[data-re-slideshow-photo-seconds]").forEach((input) => input.addEventListener("change", () => {
+      if (input.checked) setSlideshowPhotoSeconds(input.value);
+    }));
     elements.slideshowMusicCountry?.addEventListener("change", (event) => {
       setSlideshowMusicCountry(event.target.value);
     });
@@ -6568,8 +6687,8 @@
     document.querySelectorAll("[data-re-density-choice]").forEach((button) => button.addEventListener("click", () => {
       setDensity(button.dataset.reDensityChoice);
     }));
-    document.querySelectorAll("[data-re-slideshow-orientation]").forEach((button) => button.addEventListener("click", () => {
-      setSlideshowOrientation(button.dataset.reSlideshowOrientation);
+    document.querySelectorAll("[data-re-slideshow-orientation]").forEach((input) => input.addEventListener("change", () => {
+      if (input.checked) setSlideshowOrientation(input.dataset.reSlideshowOrientation);
     }));
     document.addEventListener("click", (event) => {
       const createProduct = event.target?.closest?.("[data-re-create-product]");
@@ -6605,13 +6724,25 @@
       shareSlideshowPlan({ mode: "view" }).catch(() => setStatus("Video output could not be viewed"));
     }));
     document.querySelectorAll("[data-re-download-slideshow]").forEach((button) => button.addEventListener("click", () => {
+      const readyUrl = button.dataset.reReadyDownloadUrl || "";
+      if (readyUrl) {
+        openDeliverableUrl(readyUrl, "download").catch(() => setStatus("Video output could not be downloaded"));
+        return;
+      }
       shareSlideshowPlan({ mode: "download" }).catch(() => setStatus("Video output could not be downloaded"));
     }));
     document.querySelectorAll("[data-re-download-originals]").forEach((button) => button.addEventListener("click", () => {
       shareOriginalsZip().catch(() => setStatus("Originals ZIP failed"));
     }));
     document.querySelectorAll("[data-re-view-pdf]").forEach((button) => button.addEventListener("click", () => downloadPdf({ mode: "view" })));
-    document.querySelectorAll("[data-re-download-pdf]").forEach((button) => button.addEventListener("click", () => downloadPdf({ mode: "download" })));
+    document.querySelectorAll("[data-re-download-pdf]").forEach((button) => button.addEventListener("click", () => {
+      const readyUrl = button.dataset.reReadyDownloadUrl || "";
+      if (readyUrl) {
+        openDeliverableUrl(readyUrl, "download").catch(() => setStatus("PDF output could not be downloaded"));
+        return;
+      }
+      downloadPdf({ mode: "download" });
+    }));
     elements.deliverablesList?.addEventListener("click", (event) => {
       if (event.target?.closest?.("[data-re-rename-deliverable]")) return;
       const button = event.target?.closest?.("[data-re-download-output-url], [data-re-edit-name], [data-re-edit-deliverable], [data-re-view-deliverable], [data-re-download-deliverable], [data-re-delete-deliverable]");
@@ -6771,7 +6902,10 @@
     state.density = normalizeDensity(state.density);
     if (elements.density) elements.density.value = state.density;
     state.pdfFormat = paperFormatFor(state.pdfFormat).key;
-    if (elements.pdfFormat) elements.pdfFormat.value = state.pdfFormat;
+    state.pdfOrientation = normalizePdfOrientation(state.pdfOrientation);
+    state.slideshowPhotoSeconds = [3, 4, 5].includes(Number(state.slideshowPhotoSeconds))
+      ? Number(state.slideshowPhotoSeconds)
+      : 4;
     state.slideshowOrientation = normalizeSlideshowOrientation(state.slideshowOrientation);
     state.slideshowMusicCountry = normalizeSlideshowMusicCountry(state.slideshowMusicCountry);
     if (!String(state.watermarkText || "").trim()) state.watermarkText = pdfWatermarkText;

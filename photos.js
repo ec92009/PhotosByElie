@@ -1,7 +1,9 @@
 const root = document.documentElement;
 const key = 'byelie-theme';
+let activeThemePreferenceKey = key;
 const btn = document.querySelector('[data-theme-toggle]');
 const languageKey = 'byelie-language';
+let activeLanguagePreferenceKey = languageKey;
 const languageBtn = document.querySelector('[data-language-toggle]');
 const displaySettingsKey = 'photosbyelie-display-settings';
 const languages = [
@@ -477,10 +479,10 @@ const translations = {
     're.hero.title': 'Real estate selection',
     're.hero.description': 'Private media review workspace for project PDFs and slideshow delivery.',
     're.stats.gallery_totals': 'Gallery totals',
-    're.stats.stills': 'Stills',
-    're.stats.videos': 'Videos',
-    're.stats.albums': 'Albums',
-    're.stats.selections': 'Selections',
+    're.stats.stills': 'Source photos',
+    're.stats.videos': 'Source videos',
+    're.stats.albums': 'Shoots',
+    're.stats.selections': 'Saved products',
     're.cta.create_selection': '+ Create new selection',
     're.cta.first_selection': 'Create your first selection',
     're.help.button': 'Help',
@@ -553,9 +555,10 @@ const translations = {
     're.output.download_video': 'Download video',
     're.output.share_originals': 'Share originals ZIP',
     're.output.eyebrow': 'Step 5',
-    're.output.title': 'Preview or download',
-    're.output.note': 'Each selection includes both PDF and video formats. Preview either one, or download true PDF and video files on phone or desktop.',
+    're.output.title': 'Create and download',
+    're.output.note': 'Choose the PDF and video settings, create either product in the cloud, then download it on phone or desktop.',
     're.output.paper_size': 'PDF paper size',
+    're.output.pdf_orientation': 'PDF orientation',
     're.output.photo_seconds': 'Photo seconds in video',
     're.output.video_format': 'Video format',
     're.output.video_landscape': 'Landscape',
@@ -588,9 +591,9 @@ const translations = {
     're.status.ready_output': 'Ready for output: {summary}. Prepare the PDF and video, then choose Next to review finished products.',
     're.status.select_before_output': 'Select at least one photo or video before creating outputs.',
     're.status.back_shelf': 'Back to the saved selection shelf.',
-    're.status.pdf_ready_shelf': 'PDF ready on the finished-products shelf. Choose Next to review or download it.',
+    're.status.pdf_ready_shelf': 'PDF ready. Use Download PDF.',
     're.status.pdf_generating_cloud': 'PDF is generating in the cloud and will appear on the shelf when ready.',
-    're.status.video_ready_shelf': 'Video ready on the finished-products shelf. Choose Next to review or download it.',
+    're.status.video_ready_shelf': 'Video ready. Use Download video.',
     're.status.video_generating_cloud': 'Video is generating in the cloud and will appear on the shelf when ready.',
     're.progress.working': 'Working...',
     're.progress.done': 'Done',
@@ -1107,10 +1110,10 @@ const translations = {
     're.hero.title': 'Selection immobiliere',
     're.hero.description': 'Espace prive de revue media pour livrer les PDF projet et diaporamas.',
     're.stats.gallery_totals': 'Totaux de galerie',
-    're.stats.stills': 'Photos',
-    're.stats.videos': 'Videos',
-    're.stats.albums': 'Albums',
-    're.stats.selections': 'Selections',
+    're.stats.stills': 'Photos source',
+    're.stats.videos': 'Videos source',
+    're.stats.albums': 'Seances',
+    're.stats.selections': 'Produits enregistres',
     're.cta.create_selection': '+ Creer une selection',
     're.cta.first_selection': 'Creer votre premiere selection',
     're.help.button': 'Aide',
@@ -1183,9 +1186,10 @@ const translations = {
     're.output.download_video': 'Telecharger video',
     're.output.share_originals': 'Partager ZIP originaux',
     're.output.eyebrow': 'Etape 5',
-    're.output.title': 'Previsualiser ou telecharger',
-    're.output.note': 'Chaque selection inclut les formats PDF et video. Previsualisez l un ou l autre, ou telechargez de vrais fichiers PDF et video sur telephone ou ordinateur.',
+    're.output.title': 'Creer et telecharger',
+    're.output.note': 'Choisissez les reglages PDF et video, creez chaque produit dans le cloud, puis telechargez-le sur telephone ou ordinateur.',
     're.output.paper_size': 'Format papier PDF',
+    're.output.pdf_orientation': 'Orientation PDF',
     're.output.photo_seconds': 'Secondes par photo en video',
     're.output.video_format': 'Format video',
     're.output.video_landscape': 'Horizontal',
@@ -1218,9 +1222,9 @@ const translations = {
     're.status.ready_output': 'Pret pour la sortie : {summary}. Preparez le PDF et la video, puis choisissez Suivant pour verifier les produits finis.',
     're.status.select_before_output': 'Selectionnez au moins une photo ou video avant de creer les sorties.',
     're.status.back_shelf': 'Retour au rayon des selections enregistrees.',
-    're.status.pdf_ready_shelf': 'Le PDF est disponible sur le rayon des produits termines. Choisissez Suivant pour le verifier ou le telecharger.',
+    're.status.pdf_ready_shelf': 'Le PDF est pret. Utilisez Telecharger PDF.',
     're.status.pdf_generating_cloud': 'Le PDF est en cours de generation dans le cloud et apparaitra sur le rayon une fois termine.',
-    're.status.video_ready_shelf': 'La video est disponible sur le rayon des produits termines. Choisissez Suivant pour la verifier ou la telecharger.',
+    're.status.video_ready_shelf': 'La video est prete. Utilisez Telecharger video.',
     're.status.video_generating_cloud': 'La video est en cours de generation dans le cloud et apparaitra sur le rayon une fois terminee.',
     're.progress.working': 'Travail en cours...',
     're.progress.done': 'Termine',
@@ -1731,10 +1735,10 @@ const translations = {
     're.hero.title': 'Seleccion inmobiliaria',
     're.hero.description': 'Espacio privado de revision de medios para entregar PDF de proyecto y presentaciones.',
     're.stats.gallery_totals': 'Totales de galeria',
-    're.stats.stills': 'Fotos',
-    're.stats.videos': 'Videos',
-    're.stats.albums': 'Albumes',
-    're.stats.selections': 'Selecciones',
+    're.stats.stills': 'Fotos de origen',
+    're.stats.videos': 'Videos de origen',
+    're.stats.albums': 'Sesiones',
+    're.stats.selections': 'Productos guardados',
     're.cta.create_selection': '+ Crear seleccion',
     're.cta.first_selection': 'Crea tu primera seleccion',
     're.help.button': 'Ayuda',
@@ -1807,9 +1811,10 @@ const translations = {
     're.output.download_video': 'Descargar video',
     're.output.share_originals': 'Compartir ZIP originales',
     're.output.eyebrow': 'Paso 5',
-    're.output.title': 'Previsualizar o descargar',
-    're.output.note': 'Cada seleccion incluye formatos PDF y video. Previsualiza cualquiera de los dos o descarga archivos PDF y video reales en el telefono o en el ordenador.',
+    're.output.title': 'Crear y descargar',
+    're.output.note': 'Elige los ajustes de PDF y video, crea cada producto en la nube y descargalo en el telefono o en el ordenador.',
     're.output.paper_size': 'Tamano de papel PDF',
+    're.output.pdf_orientation': 'Orientacion del PDF',
     're.output.photo_seconds': 'Segundos por foto en video',
     're.output.video_format': 'Formato de video',
     're.output.video_landscape': 'Horizontal',
@@ -1842,9 +1847,9 @@ const translations = {
     're.status.ready_output': 'Listo para salida: {summary}. Prepara el PDF y el video y elige Siguiente para revisar los productos terminados.',
     're.status.select_before_output': 'Selecciona al menos una foto o video antes de crear salidas.',
     're.status.back_shelf': 'De vuelta al estante de selecciones guardadas.',
-    're.status.pdf_ready_shelf': 'El PDF esta listo en el estante de productos terminados. Elige Siguiente para revisarlo o descargarlo.',
+    're.status.pdf_ready_shelf': 'El PDF esta listo. Usa Descargar PDF.',
     're.status.pdf_generating_cloud': 'El PDF se esta generando en la nube y aparecera en el estante cuando este listo.',
-    're.status.video_ready_shelf': 'El video esta listo en el estante de productos terminados. Elige Siguiente para revisarlo o descargarlo.',
+    're.status.video_ready_shelf': 'El video esta listo. Usa Descargar video.',
     're.status.video_generating_cloud': 'El video se esta generando en la nube y aparecera en el estante cuando este listo.',
     're.progress.working': 'Trabajando...',
     're.progress.done': 'Terminado',
@@ -3901,7 +3906,7 @@ const ensureSiteAccount = () => {
     realEstateClients: [],
     profileLoading: false,
     profileLoaded: false,
-    profile: { liked: [], basket: [] },
+    profile: { liked: [], basket: [], language: "", theme: "" },
     orders: [],
   };
   let accountProfileWriteTimer = null;
@@ -4043,7 +4048,7 @@ const ensureSiteAccount = () => {
     }
     state.profileLoading = false;
     state.profileLoaded = false;
-    state.profile = { liked: [], basket: [] };
+    state.profile = { liked: [], basket: [], language: "", theme: "" };
     state.orders = [];
     renderAccountMemory();
     window.dispatchEvent(new CustomEvent("photosbyelie:accountdatacleared"));
@@ -4058,8 +4063,10 @@ const ensureSiteAccount = () => {
   };
 
   const readLocalAccountState = () => ({
-    liked: accountStoresAvailable() ? window.photosByElieLiked.read() : [],
-    basket: accountStoresAvailable() ? window.photosByElieBasket.read() : [],
+    liked: accountStoresAvailable() ? window.photosByElieLiked.read() : (state.profile?.liked || []),
+    basket: accountStoresAvailable() ? window.photosByElieBasket.read() : (state.profile?.basket || []),
+    language: root.dataset.language || localStorage.getItem(activeLanguagePreferenceKey) || localStorage.getItem(languageKey) || "en",
+    theme: root.dataset.theme === "dark" ? "dark" : "light",
   });
 
   const mergeLikedItems = (...groups) => {
@@ -4203,18 +4210,22 @@ const ensureSiteAccount = () => {
   };
 
   const applyAccountProfileToStores = (profile) => {
-    if (!accountStoresAvailable() || !profile) return;
+    if (!profile) return;
     applyingAccountProfile = true;
     try {
-      window.photosByElieLiked.write(profile.liked || []);
-      window.photosByElieBasket.write(profile.basket || []);
+      if (accountStoresAvailable()) {
+        window.photosByElieLiked.write(profile.liked || []);
+        window.photosByElieBasket.write(profile.basket || []);
+      }
+      if (profile.language) setLanguage(profile.language);
+      if (profile.theme) setTheme(profile.theme);
     } finally {
       applyingAccountProfile = false;
     }
   };
 
   const saveAccountProfile = async ({ quiet = false } = {}) => {
-    if (!state.authenticated || !accountStoresAvailable()) return null;
+    if (!state.authenticated) return null;
     state.profileLoading = true;
     renderAccountMemory();
     if (!quiet) setMessage(translate('account.profile_syncing'));
@@ -4246,13 +4257,15 @@ const ensureSiteAccount = () => {
     if (!quiet) setMessage(translate('account.profile_syncing'));
     try {
       let payload = await accountApiFetch("/account/profile");
-      let profile = payload.profile || { liked: [], basket: [] };
-      if (mergeLocal && accountStoresAvailable()) {
-        await waitForAccountCatalog();
+      let profile = payload.profile || { liked: [], basket: [], language: "", theme: "" };
+      if (mergeLocal) {
+        if (accountStoresAvailable()) await waitForAccountCatalog();
         const local = readLocalAccountState();
         const merged = {
           liked: mergeLikedItems(profile.liked || [], local.liked || []),
           basket: mergeBasketItems(profile.basket || [], local.basket || []),
+          language: profile.language || local.language || "en",
+          theme: profile.theme || local.theme || "light",
         };
         payload = await accountApiFetch("/account/profile", {
           method: "PUT",
@@ -4277,7 +4290,7 @@ const ensureSiteAccount = () => {
   };
 
   const scheduleAccountProfileSave = () => {
-    if (applyingAccountProfile || !state.authenticated || !accountStoresAvailable()) return;
+    if (applyingAccountProfile || !state.authenticated) return;
     window.clearTimeout(accountProfileWriteTimer);
     accountProfileWriteTimer = window.setTimeout(() => {
       saveAccountProfile({ quiet: true });
@@ -4340,7 +4353,7 @@ const ensureSiteAccount = () => {
       state.tier = "user";
       state.realEstateClients = [];
       state.profileLoaded = false;
-      state.profile = { liked: [], basket: [] };
+      state.profile = { liked: [], basket: [], language: "", theme: "" };
       state.orders = [];
       updateAccountView();
       return { ...state };
@@ -4359,9 +4372,11 @@ const ensureSiteAccount = () => {
       state.email = user.email || payload.email || "";
       state.tier = payload.tier || user.tier || "user";
       state.realEstateClients = Array.isArray(payload.realEstateClients) ? payload.realEstateClients : [];
+      if (state.authenticated && state.email) activateLanguagePreference(state.email);
+      else if (!state.scopedAuthenticated) activateLanguagePreference("");
       if (!state.authenticated) {
         state.profileLoaded = false;
-        state.profile = { liked: [], basket: [] };
+        state.profile = { liked: [], basket: [], language: "", theme: "" };
         state.orders = [];
       }
       updateAccountView();
@@ -4388,7 +4403,7 @@ const ensureSiteAccount = () => {
       state.tier = "user";
       state.realEstateClients = [];
       state.profileLoaded = false;
-      state.profile = { liked: [], basket: [] };
+      state.profile = { liked: [], basket: [], language: "", theme: "" };
       state.orders = [];
       updateAccountView();
       if (!quiet) setMessage(translate('account.session_failed'), true);
@@ -4435,6 +4450,7 @@ const ensureSiteAccount = () => {
     const workerBase = accountWorkerBaseUrl();
     localStorage.setItem(accountPreferenceKey, 'visitor');
     clearAccountDataFromDevice();
+    activateLanguagePreference("");
     setMessage(translate('account.signing_out'));
     if (!workerBase) {
       state.authenticated = false;
@@ -4455,6 +4471,7 @@ const ensureSiteAccount = () => {
       state.scopedAuthenticated = false;
       state.scopedKind = "";
       state.scopedLabel = "";
+      activateLanguagePreference("");
       closeAccount();
       updateAccountView();
       window.dispatchEvent(new CustomEvent("photosbyelie:scopedaccountlogout", { detail: { kind } }));
@@ -4522,7 +4539,11 @@ const ensureSiteAccount = () => {
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && !modal.hidden) closeAccount();
   });
-  window.addEventListener('photosbyelie:languagechange', () => updateAccountView());
+  window.addEventListener('photosbyelie:languagechange', () => {
+    updateAccountView();
+    scheduleAccountProfileSave();
+  });
+  window.addEventListener('photosbyelie:themechange', scheduleAccountProfileSave);
   window.addEventListener('photosbyelie:likedchange', scheduleAccountProfileSave);
   window.addEventListener('photosbyelie:basketchange', scheduleAccountProfileSave);
   window.photosByElieAccount = {
@@ -4547,6 +4568,7 @@ const ensureSiteAccount = () => {
       state.scopedAuthenticated = true;
       state.scopedKind = String(kind || "");
       state.scopedLabel = String(label || "");
+      activateLanguagePreference(state.scopedLabel || state.scopedKind);
       updateAccountView();
     },
     clearScopedSession(kind = "") {
@@ -4554,6 +4576,7 @@ const ensureSiteAccount = () => {
       state.scopedAuthenticated = false;
       state.scopedKind = "";
       state.scopedLabel = "";
+      activateLanguagePreference(state.authenticated ? state.email : "");
       updateAccountView();
     },
   };
@@ -4693,11 +4716,18 @@ document.querySelectorAll("[data-header-back-to-top]").forEach((button) => {
   });
 });
 
-btn?.addEventListener('click', () => {
-  root.dataset.theme = root.dataset.theme === 'light' ? 'dark' : 'light';
-  localStorage.setItem(key, root.dataset.theme);
+const setTheme = (theme) => {
+  root.dataset.theme = theme === 'dark' ? 'dark' : 'light';
+  localStorage.setItem(activeThemePreferenceKey, root.dataset.theme);
   applyDisplaySettings();
   applyTranslations();
+  window.dispatchEvent(new CustomEvent('photosbyelie:themechange', {
+    detail: { theme: root.dataset.theme }
+  }));
+};
+
+btn?.addEventListener('click', () => {
+  setTheme(root.dataset.theme === 'light' ? 'dark' : 'light');
 });
 
 const setLanguage = (language) => {
@@ -4705,11 +4735,26 @@ const setLanguage = (language) => {
   root.dataset.language = next.code;
   root.lang = next.code;
   if (languageBtn) languageBtn.textContent = next.label;
-  localStorage.setItem(languageKey, next.code);
+  localStorage.setItem(activeLanguagePreferenceKey, next.code);
   applyTranslations();
   window.dispatchEvent(new CustomEvent('photosbyelie:languagechange', {
     detail: { language: next.code }
   }));
+};
+
+const languagePreferenceKeyFor = (identity = "") => {
+  const normalized = String(identity || "").trim().toLowerCase().replace(/[^a-z0-9@._+-]+/g, "-");
+  return normalized ? `${languageKey}:${normalized}` : languageKey;
+};
+
+const activateLanguagePreference = (identity = "") => {
+  const normalizedIdentity = String(identity || "").trim().toLowerCase().replace(/[^a-z0-9@._+-]+/g, "-");
+  activeThemePreferenceKey = normalizedIdentity ? `${key}:${normalizedIdentity}` : key;
+  activeLanguagePreferenceKey = languagePreferenceKeyFor(identity);
+  const savedTheme = localStorage.getItem(activeThemePreferenceKey) || localStorage.getItem(key) || "light";
+  const saved = localStorage.getItem(activeLanguagePreferenceKey) || localStorage.getItem(languageKey) || "en";
+  setTheme(savedTheme);
+  setLanguage(saved);
 };
 
 const beepUnavailableLanguage = () => {

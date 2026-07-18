@@ -1483,6 +1483,8 @@ test("signed-in account remembers likes, basket, orders, and redownload access",
   const saveProfileResponse = await worker.fetch(jsonRequest("https://worker.test/account/profile", {
     liked: [{ photoId }],
     basket: [{ photoId, options: [{ id: "full" }] }],
+    language: "fr",
+    theme: "dark",
   }, { origin }));
   assert.equal(saveProfileResponse.status, 200);
   const savedProfile = await saveProfileResponse.json();
@@ -1490,6 +1492,8 @@ test("signed-in account remembers likes, basket, orders, and redownload access",
   assert.equal(savedProfile.profile.liked[0].photoId, photoId);
   assert.equal(savedProfile.profile.basket[0].photoId, photoId);
   assert.equal(savedProfile.profile.basket[0].options[0].id, "full");
+  assert.equal(savedProfile.profile.language, "fr");
+  assert.equal(savedProfile.profile.theme, "dark");
 
   const mismatchResponse = await worker.fetch(jsonRequest("https://worker.test/checkout/account", {
     email: "other@example.com",

@@ -11,6 +11,7 @@ const basketScript = readFileSync(new URL("../basket.js", import.meta.url), "utf
 const likedScript = readFileSync(new URL("../liked.js", import.meta.url), "utf8");
 const home = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const cloudWorker = readFileSync(new URL("../worker/cloud-worker.mjs", import.meta.url), "utf8");
+const checkoutWorker = readFileSync(new URL("../worker/checkout-worker.mjs", import.meta.url), "utf8");
 const outputActions = html.match(/<div class="real-estate-output-actions">([\s\S]*?)<\/div>/)?.[1] || "";
 
 test("Real Estate output step has one control per cloud action", () => {
@@ -25,6 +26,57 @@ test("Real Estate output step has one control per cloud action", () => {
 
 test("Output Next returns to the finished-products shelf", () => {
   assert.match(outputActions, /data-re-shelf-back[^>]*data-i18n="common\.next"/);
+});
+
+test("Output settings use compact explicit radio choices", () => {
+  assert.equal((html.match(/data-re-pdf-format/g) || []).length, 2);
+  assert.equal((html.match(/data-re-slideshow-photo-seconds/g) || []).length, 3);
+  assert.equal((html.match(/data-re-pdf-orientation/g) || []).length, 2);
+  assert.equal((html.match(/data-re-slideshow-orientation=/g) || []).length, 2);
+  assert.doesNotMatch(html, /<select[^>]*data-re-pdf-format/);
+  assert.doesNotMatch(html, /<input[^>]*type="number"[^>]*data-re-slideshow-photo-seconds/);
+  assert.match(styles, /\.real-estate-radio-options input:checked \+ span/);
+  assert.match(styles, /body\[data-real-estate\] \.real-estate-wizard-head \.gallery-status/);
+});
+
+test("PDF orientation and video timing travel with saved and cloud-rendered products", () => {
+  assert.match(script, /pdfOrientationKey/);
+  assert.match(script, /pageOrientation: normalizePdfOrientation/);
+  assert.match(script, /paperFormatFor\(batch\?\.pdfSettings\?\.paperFormat \|\| state\.pdfFormat/);
+  assert.match(script, /state\.pdfOrientation = normalizePdfOrientation\(batch\?\.pdfSettings\?\.pageOrientation/);
+  assert.match(script, /\[3, 4, 5\]\.includes\(Number\(batch\?\.slideshowSettings\?\.photoDurationSeconds\)\)/);
+  assert.match(script, /batch\?\.slideshowSettings\?\.orientation/);
+});
+
+test("Ready output actions become direct PDF or video downloads", () => {
+  assert.match(script, /const readyCloudDownloadFor = \(format\) =>/);
+  assert.match(script, /button\.dataset\.reReadyDownloadUrl/);
+  assert.match(script, /downloadLabel: t\("re\.output\.download_pdf"/);
+  assert.match(script, /openDeliverableUrl\(readyUrl, "download"\)/);
+  assert.match(siteScript, /'re\.output\.title': 'Create and download'/);
+});
+
+test("Hero counters identify source media and live saved products truthfully", () => {
+  assert.match(siteScript, /'re\.stats\.stills': 'Source photos'/);
+  assert.match(siteScript, /'re\.stats\.videos': 'Source videos'/);
+  assert.match(siteScript, /'re\.stats\.albums': 'Shoots'/);
+  assert.match(siteScript, /'re\.stats\.selections': 'Saved products'/);
+  const shelfRender = script.match(/const renderProducedDeliverables = \(\) => \{[\s\S]*?\n  \};/)?.[0] || "";
+  assert.match(shelfRender, /state\.cloudDeliverablesBusy && !state\.cloudDeliverablesLoaded/);
+  assert.match(shelfRender, /String\(items\.length\)/);
+});
+
+test("Language preference follows the active account and syncs with account profiles", () => {
+  assert.match(siteScript, /activeLanguagePreferenceKey/);
+  assert.match(siteScript, /languagePreferenceKeyFor/);
+  assert.match(siteScript, /activateLanguagePreference\(state\.scopedLabel \|\| state\.scopedKind\)/);
+  assert.match(siteScript, /language: root\.dataset\.language/);
+  assert.match(siteScript, /if \(profile\.language\) setLanguage\(profile\.language\)/);
+  assert.match(siteScript, /activeThemePreferenceKey/);
+  assert.match(siteScript, /if \(profile\.theme\) setTheme\(profile\.theme\)/);
+  assert.match(siteScript, /photosbyelie:themechange/);
+  assert.match(checkoutWorker, /language: \["en", "fr", "es"\]/);
+  assert.match(checkoutWorker, /theme: \["light", "dark"\]/);
 });
 
 test("Cloud output controls upload prepared files without creating stray Selection rows", () => {

@@ -27,7 +27,7 @@ export class RealEstateRenderWorkflow extends WorkflowEntrypoint {
         const gallery = galleries.find((candidate) => candidate.key === galleryKey) || { key: galleryKey };
         const url = new URL("/real-estate.html", String(this.env.PUBLIC_SITE_URL || "https://photos-by-elie.com"));
         url.searchParams.set("client", realEstateClientContextFor(gallery));
-        url.searchParams.set("v", "140.25");
+        url.searchParams.set("v", "141.0");
         url.hash = new URLSearchParams({
           cloudRenderJob: jobId,
           cloudRenderToken: access.renderToken,

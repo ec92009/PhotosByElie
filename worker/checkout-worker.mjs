@@ -786,6 +786,12 @@ const normalizeAccountProfilePayload = (catalog, payload = {}, existing = {}, em
   email: String(email || existing.email || "").trim().toLowerCase(),
   liked: normalizeAccountLiked(catalog, payload.liked || payload.likes || existing.liked || []),
   basket: normalizeAccountBasket(catalog, payload.basket || existing.basket || []),
+  language: ["en", "fr", "es"].includes(String(payload.language || existing.language || "").trim().toLowerCase())
+    ? String(payload.language || existing.language).trim().toLowerCase()
+    : "",
+  theme: ["light", "dark"].includes(String(payload.theme || existing.theme || "").trim().toLowerCase())
+    ? String(payload.theme || existing.theme).trim().toLowerCase()
+    : "",
   createdAt: existing.createdAt || updatedAt,
   updatedAt,
 });

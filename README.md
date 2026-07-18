@@ -6,8 +6,9 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v140.25`
+- Current visible version: `v141.0`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
+- `v141.0` makes Real Estate output settings explicit radio choices for paper size, photo timing, PDF orientation, and video orientation; ready Queue actions become direct downloads, output status contrast is stronger, hero counters identify their live sources, and account language/theme preferences follow the active user.
 - `v140.25` removes the manual cloud-shelf sync banner from the Real Estate finished-products shelf; saved products continue loading automatically.
 - `v140.24` reduces the account panel to one Sign out control and makes sign-out remove account-synced basket, likes, order references, and profile data from the browser before returning to visitor mode; Basket and Liked redraw immediately.
 - `v140.23` makes a successful legacy Real Estate login a first-class signed-in state in the shared site header: Corine sees the face icon instead of visitor Sign Up / Sign In pills, while ACS remains the authority for what that scoped session may access.

@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v141.0`
+- Current visible version: `v141.1`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
 - `v141.0` makes Real Estate output settings explicit radio choices for paper size, photo timing, PDF orientation, and video orientation; ready Queue actions become direct downloads, output status contrast is stronger, hero counters identify their live sources, and account language/theme preferences follow the active user.
 - `v140.25` removes the manual cloud-shelf sync banner from the Real Estate finished-products shelf; saved products continue loading automatically.

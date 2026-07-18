@@ -90,8 +90,17 @@ test("Finished-product shelf exposes one download action per ready format", () =
   assert.match(script, /data-re-download-output-url/);
   assert.match(script, /Download \$\{label\}/);
   assert.match(script, /filter\(\(item\) => item\.formats\.some\(\(format\) => format === "pdf" \|\| format === "video"\)\)/);
-  assert.match(script, /link\.target = "_blank"/);
+  assert.match(script, /window\.open\(href, "_blank", "noopener"\)/);
   assert.match(styles, /button\.real-estate-deliverable-status\.is-action[\s\S]*font-family:"Space Grotesk"/);
+});
+
+test("Ready output downloads use one browser launch path and ignore duplicate clicks", () => {
+  const opener = script.match(/const recentDeliverableDownloads = new Map\(\);[\s\S]*?\n  const relatedDeliverableIdsFor/)?.[0] || "";
+  assert.match(opener, /deliverableDownloadCooldownMs = 2500/);
+  assert.match(opener, /if \(startedAt - previousStart < deliverableDownloadCooldownMs\) return/);
+  assert.match(opener, /if \(!sameOrigin\) \{[\s\S]*window\.open\(href, "_blank", "noopener"\);[\s\S]*return;/);
+  assert.match(opener, /link\.download = ""/);
+  assert.doesNotMatch(opener, /link\.target = "_blank"/);
 });
 
 test("Finished-product shelf stays automatic without a cloud-sync banner", () => {

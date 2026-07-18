@@ -2090,6 +2090,9 @@
     }
   };
 
+  const recentDeliverableDownloads = new Map();
+  const deliverableDownloadCooldownMs = 2500;
+
   const openDeliverableUrl = async (url, mode = "view") => {
     const rawUrl = String(url || "").trim();
     const baseUrl = String(workerBaseUrl() || "").replace(/\/+$/, "");
@@ -2106,11 +2109,27 @@
       window.open(href, "_blank", "noopener");
       return;
     }
+    const startedAt = Date.now();
+    const previousStart = recentDeliverableDownloads.get(href) || 0;
+    if (startedAt - previousStart < deliverableDownloadCooldownMs) return;
+    recentDeliverableDownloads.set(href, startedAt);
+    window.setTimeout(() => {
+      if (recentDeliverableDownloads.get(href) === startedAt) recentDeliverableDownloads.delete(href);
+    }, deliverableDownloadCooldownMs);
+
+    let sameOrigin = false;
+    try {
+      sameOrigin = new URL(href, window.location.href).origin === window.location.origin;
+    } catch (_error) {
+      sameOrigin = false;
+    }
+    if (!sameOrigin) {
+      window.open(href, "_blank", "noopener");
+      return;
+    }
     const link = document.createElement("a");
     link.href = href;
     link.download = "";
-    link.target = "_blank";
-    link.rel = "noopener";
     document.body.append(link);
     link.click();
     link.remove();

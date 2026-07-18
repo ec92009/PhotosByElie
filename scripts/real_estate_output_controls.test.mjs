@@ -4,6 +4,7 @@ import test from "node:test";
 
 const html = readFileSync(new URL("../real-estate.html", import.meta.url), "utf8");
 const script = readFileSync(new URL("../real-estate.js", import.meta.url), "utf8");
+const styles = readFileSync(new URL("../photos.css", import.meta.url), "utf8");
 const outputActions = html.match(/<div class="real-estate-output-actions">([\s\S]*?)<\/div>/)?.[1] || "";
 
 test("Real Estate output step has one control per cloud action", () => {
@@ -31,6 +32,8 @@ test("Finished-product shelf exposes one download action per ready format", () =
   assert.match(script, /data-re-download-output-url/);
   assert.match(script, /Download \$\{label\}/);
   assert.match(script, /filter\(\(item\) => item\.formats\.some\(\(format\) => format === "pdf" \|\| format === "video"\)\)/);
+  assert.match(script, /link\.target = "_blank"/);
+  assert.match(styles, /button\.real-estate-deliverable-status\.is-action[\s\S]*font-family:"Space Grotesk"/);
 });
 
 test("Video action describes browser rendering while it is busy", () => {

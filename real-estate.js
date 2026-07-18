@@ -3921,21 +3921,34 @@
     context.textBaseline = "middle";
     context.fillStyle = "rgba(255,255,255,0.72)";
     context.font = `900 ${eyebrowSize}px Arial, Helvetica, sans-serif`;
-    context.fillText(outro ? "PHOTOS BY ELIE" : "PROPERTY PRESENTATION", centerX, centerY - titleSize * 1.12);
+    context.fillText(
+      outro ? "PHOTOS BY ELIE" : "PROPERTY PRESENTATION",
+      centerX,
+      centerY - titleSize * (outro ? 1.48 : 1.12)
+    );
 
     context.fillStyle = "#d7b98b";
-    context.fillRect(centerX - (lineWidth / 2), centerY - (titleSize * 0.54), lineWidth, Math.max(3, Math.round(canvas.height / 240)));
+    context.fillRect(
+      centerX - (lineWidth / 2),
+      centerY - (titleSize * (outro ? 0.9 : 0.54)),
+      lineWidth,
+      Math.max(3, Math.round(canvas.height / 240))
+    );
 
     context.fillStyle = "#ffffff";
     context.font = `900 ${titleSize}px Arial, Helvetica, sans-serif`;
     const mainTitle = outro ? "Photos By Elie" : (String(title || "Property presentation").trim() || "Property presentation");
+    const mainTitleY = centerY - (outro ? titleSize * 0.24 : 0);
     canvasTextLines(context, mainTitle, canvas.width * 0.78).slice(0, 2).forEach((line, index) => {
-      context.fillText(line, centerX, centerY + (index * titleSize * 1.02));
+      context.fillText(line, centerX, mainTitleY + (index * titleSize * 1.02));
     });
 
     context.fillStyle = "rgba(255,255,255,0.68)";
     context.font = `700 ${detailSize}px Arial, Helvetica, sans-serif`;
-    context.fillText(outro ? "photos-by-elie.com" : "Photos By Elie", centerX, centerY + titleSize * (outro ? 1.18 : 1.55));
+    context.fillText(outro ? "photos-by-elie.com" : "Photos By Elie", centerX, centerY + titleSize * (outro ? 0.62 : 1.55));
+    if (outro) {
+      drawVideoClosingQr(context, canvas, centerY + titleSize);
+    }
     context.restore();
   };
 
@@ -5026,6 +5039,7 @@
   const PDF_FOOTER_BRAND = "Photos By Elie";
   const PDF_FOOTER_QR_SIZE_PT = 10 * 72 / 25.4;
   const PDF_FOOTER_QR_QUIET_MODULES = 4;
+  const VIDEO_CLOSING_QR_SIZE_PX = 25 * 96 / 25.4;
   const PDF_FOOTER_QR_MATRIX = [
     "1111111000101100001111111",
     "1000001010100011101000001",
@@ -5053,6 +5067,29 @@
     "1000001011111001111111001",
     "1111111010101110001111111",
   ];
+
+  const drawVideoClosingQr = (context, canvas, topY) => {
+    const qrSize = VIDEO_CLOSING_QR_SIZE_PX;
+    const matrixSize = PDF_FOOTER_QR_MATRIX.length;
+    const totalModules = matrixSize + (PDF_FOOTER_QR_QUIET_MODULES * 2);
+    const moduleSize = qrSize / totalModules;
+    const qrX = (canvas.width - qrSize) / 2;
+
+    context.save();
+    context.imageSmoothingEnabled = false;
+    context.fillStyle = "#ffffff";
+    context.fillRect(qrX, topY, qrSize, qrSize);
+    context.fillStyle = "#000000";
+    PDF_FOOTER_QR_MATRIX.forEach((row, rowIndex) => {
+      [...row].forEach((module, columnIndex) => {
+        if (module !== "1") return;
+        const x = qrX + ((PDF_FOOTER_QR_QUIET_MODULES + columnIndex) * moduleSize);
+        const y = topY + ((PDF_FOOTER_QR_QUIET_MODULES + rowIndex) * moduleSize);
+        context.fillRect(x, y, moduleSize + 0.15, moduleSize + 0.15);
+      });
+    });
+    context.restore();
+  };
 
   const pdfLiteralText = (value) => String(value || "")
     .replace(/\\/g, "\\\\")

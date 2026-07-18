@@ -71,6 +71,14 @@ test("Generated videos include restrained branded presentation polish", () => {
   assert.match(script, /Timed out loading slideshow music/);
 });
 
+test("Video closing card carries a 25 mm-equivalent Photos By Elie QR code", () => {
+  assert.match(script, /VIDEO_CLOSING_QR_SIZE_PX = 25 \* 96 \/ 25\.4/);
+  assert.match(script, /drawVideoClosingQr/);
+  assert.match(script, /if \(outro\) \{[\s\S]*drawVideoClosingQr/);
+  assert.match(script, /PDF_FOOTER_QR_MATRIX\.forEach/);
+  assert.match(script, /PDF_FOOTER_QR_URL = "https:\/\/photos-by-elie\.com\/"/);
+});
+
 test("Site account sign-in combines Google and legacy credentials without a special Real Estate form", () => {
   assert.doesNotMatch(html, /data-re-google-login|data-re-login-name|data-re-login-code|data-re-login-form/);
   assert.match(siteScript, /data-account-signin-form/);

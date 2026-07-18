@@ -150,6 +150,13 @@ body[data-gallery="access-console"] .acs-hero h1 {
   justify-content: flex-end;
 }
 
+.acs-save-feedback {
+  min-height: 1.35rem;
+  margin: .6rem 0 0;
+  color: color-mix(in srgb, var(--acs-teal) 86%, #103b37 14%);
+  font-weight: 700;
+}
+
 .acs-tabs {
   display: flex;
   gap: .35rem;

@@ -75,6 +75,7 @@
   const $ = (selector) => document.querySelector(selector);
   const root = $("[data-acs-root]");
   const statusRoot = $("[data-acs-status]");
+  const saveFeedbackRoot = $("[data-acs-save-feedback]");
   const sessionRoot = $("[data-acs-session]");
   const peopleRoot = $("[data-acs-people]");
   const eventsRoot = $("[data-acs-events]");
@@ -138,6 +139,10 @@
 
   const setStatus = (message) => {
     if (statusRoot) statusRoot.textContent = message;
+  };
+
+  const setSaveFeedback = (message = "") => {
+    if (saveFeedbackRoot) saveFeedbackRoot.textContent = message;
   };
 
   const setActiveTab = (requestedTab, { updateHash = true } = {}) => {
@@ -1303,6 +1308,7 @@
     const existingCredentials = credentialsFor(selectedUser()?.email || emailInput?.value || "");
     const loginName = passwordLoginNameInput?.value || "";
     const password = passwordLoginPasswordInput?.value || "";
+    const passwordChanged = Boolean(String(password).trim());
     const payload = {
       email: emailInput?.value || "",
       displayName: displayNameInput?.value || "",
@@ -1319,6 +1325,7 @@
         },
       } : {}),
     };
+    setSaveFeedback("");
     setStatus(`Saving ${payload.email || "person"}...`);
     const body = await apiFetch("/access-console/people", {
       method: "POST",
@@ -1327,6 +1334,13 @@
     state.selectedEmail = body.user?.email || payload.email;
     state.filters = { search: "", groupId: "", role: "", state: "" };
     await load();
+    const person = body.user?.displayName || body.user?.email || payload.email || "person";
+    if (passwordChanged) {
+      setSaveFeedback(`Saved — password updated for ${person}.`);
+      setStatus(`Saved ${person} and updated the password.`);
+    } else {
+      setSaveFeedback(`Saved — access updated for ${person}.`);
+    }
   };
 
   const disableSelected = async () => {

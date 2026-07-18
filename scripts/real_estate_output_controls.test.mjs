@@ -39,6 +39,15 @@ test("Finished-product shelf exposes one download action per ready format", () =
   assert.match(styles, /button\.real-estate-deliverable-status\.is-action[\s\S]*font-family:"Space Grotesk"/);
 });
 
+test("Every generated PDF page carries the numbered Photos By Elie QR footer", () => {
+  assert.match(script, /PDF_FOOTER_QR_SIZE_PT = 10 \* 72 \/ 25\.4/);
+  assert.match(script, /PDF_FOOTER_QR_URL = "https:\/\/photos-by-elie\.com\/"/);
+  assert.match(script, /Page \$\{pageIndex \+ 1\} \/ \$\{pageCount\}/);
+  assert.match(script, /PDF_FOOTER_BRAND = "Photos By Elie"/);
+  assert.match(script, /pdfFooterCommandsFor\(\{ pageIndex: index, pageCount: rendered\.pages\.length, pageWidth \}\)/);
+  assert.match(script, /\/Font << \/F1 \$\{footerFontId\} 0 R >>/);
+});
+
 test("Video action describes browser rendering while it is busy", () => {
   assert.match(script, /Generating video\.\.\./);
   assert.doesNotMatch(script, /Queueing video\.\.\./);

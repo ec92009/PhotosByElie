@@ -4877,6 +4877,75 @@
     context.restore();
   };
 
+  const PDF_FOOTER_QR_URL = "https://photos-by-elie.com/";
+  const PDF_FOOTER_BRAND = "Photos By Elie";
+  const PDF_FOOTER_QR_SIZE_PT = 10 * 72 / 25.4;
+  const PDF_FOOTER_QR_QUIET_MODULES = 4;
+  const PDF_FOOTER_QR_MATRIX = [
+    "1111111000101100001111111",
+    "1000001010100011101000001",
+    "1011101000001011001011101",
+    "1011101011101110101011101",
+    "1011101001000000101011101",
+    "1000001011011011001000001",
+    "1111111010101010101111111",
+    "0000000001110010000000000",
+    "1111101111011111010101010",
+    "0011000000101100100100010",
+    "1000111110100011100001011",
+    "1100000000010001101000001",
+    "1001101111111110011110111",
+    "1010000010011100000101010",
+    "1010111011000001110111011",
+    "1000010111100010010110001",
+    "1001101101011111111110100",
+    "0000000011110000100011000",
+    "1111111010100010101010111",
+    "1000001000110010100011010",
+    "1011101011011101111110100",
+    "1011101011010100111011111",
+    "1011101011000110110001101",
+    "1000001011111001111111001",
+    "1111111010101110001111111",
+  ];
+
+  const pdfLiteralText = (value) => String(value || "")
+    .replace(/\\/g, "\\\\")
+    .replace(/\(/g, "\\(")
+    .replace(/\)/g, "\\)");
+
+  const pdfFooterCommandsFor = ({ pageIndex, pageCount, pageWidth }) => {
+    const qrSize = PDF_FOOTER_QR_SIZE_PT;
+    const qrX = pageWidth - 30 - qrSize;
+    const qrY = 14;
+    const matrixSize = PDF_FOOTER_QR_MATRIX.length;
+    const totalModules = matrixSize + (PDF_FOOTER_QR_QUIET_MODULES * 2);
+    const moduleSize = qrSize / totalModules;
+    const brandX = qrX - 60;
+    const textY = qrY + (qrSize / 2) - 3;
+    const commands = [
+      "q",
+      "1 1 1 rg",
+      `${qrX.toFixed(3)} ${qrY.toFixed(3)} ${qrSize.toFixed(3)} ${qrSize.toFixed(3)} re f`,
+      "0 0 0 rg",
+    ];
+    PDF_FOOTER_QR_MATRIX.forEach((row, rowIndex) => {
+      [...row].forEach((module, columnIndex) => {
+        if (module !== "1") return;
+        const x = qrX + ((PDF_FOOTER_QR_QUIET_MODULES + columnIndex) * moduleSize);
+        const y = qrY + qrSize - ((PDF_FOOTER_QR_QUIET_MODULES + rowIndex + 1) * moduleSize);
+        commands.push(`${x.toFixed(3)} ${y.toFixed(3)} ${moduleSize.toFixed(3)} ${moduleSize.toFixed(3)} re f`);
+      });
+    });
+    commands.push(
+      "Q",
+      `BT /F1 8 Tf 30 ${textY.toFixed(3)} Td (${pdfLiteralText(`Page ${pageIndex + 1} / ${pageCount}`)}) Tj ET`,
+      `BT /F1 8 Tf ${brandX.toFixed(3)} ${textY.toFixed(3)} Td (${pdfLiteralText(PDF_FOOTER_BRAND)}) Tj ET`,
+      `% QR ${PDF_FOOTER_QR_URL}`
+    );
+    return `${commands.join("\n")}\n`;
+  };
+
   const renderPdfPages = async (images, onProgress = null) => {
     const pages = paginatePdfImages(images);
     const paper = paperFormatFor();
@@ -4886,7 +4955,7 @@
     const margin = 30;
     const captionArea = 30;
     const captionGap = 7;
-    const footerArea = 18;
+    const footerArea = 40;
     const rowGap = 18;
     const scale = 2;
     const renderedPages = [];
@@ -4957,14 +5026,6 @@
         } finally {
           loaded.cleanup();
         }
-      }
-
-      if (watermarkText) {
-        context.font = "700 8px Arial, Helvetica, sans-serif";
-        context.textAlign = "center";
-        context.textBaseline = "alphabetic";
-        context.fillStyle = "rgba(0, 0, 0, 0.42)";
-        context.fillText(watermarkText, pageWidth / 2, pageHeight - 10);
       }
 
       renderedPages.push({
@@ -5038,10 +5099,12 @@
     };
     const toBytes = (part) => part instanceof Uint8Array ? part : encoder.encode(String(part));
     const pageIds = [];
-    let nextId = 3;
+    const footerFontId = 3;
+    let nextId = 4;
     const { pageWidth, pageHeight } = rendered;
 
     setObject(1, ["<< /Type /Catalog /Pages 2 0 R >>"]);
+    setObject(footerFontId, ["<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>"]);
 
     rendered.pages.forEach((page, index) => {
       const imageId = nextId++;
@@ -5053,14 +5116,17 @@
       ]);
       const contentId = nextId++;
       const pageId = nextId++;
-      const content = `q\n${pageWidth.toFixed(2)} 0 0 ${pageHeight.toFixed(2)} 0 0 cm\n/${imageName} Do\nQ\n`;
+      const content = [
+        `q\n${pageWidth.toFixed(2)} 0 0 ${pageHeight.toFixed(2)} 0 0 cm\n/${imageName} Do\nQ\n`,
+        pdfFooterCommandsFor({ pageIndex: index, pageCount: rendered.pages.length, pageWidth }),
+      ].join("");
       setObject(contentId, [
         `<< /Length ${encoder.encode(content).byteLength} >>\nstream\n`,
         content,
         "endstream",
       ]);
       setObject(pageId, [
-        `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth.toFixed(2)} ${pageHeight.toFixed(2)}] /Resources << /XObject << /${imageName} ${imageId} 0 R >> >> /Contents ${contentId} 0 R >>`,
+        `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth.toFixed(2)} ${pageHeight.toFixed(2)}] /Resources << /XObject << /${imageName} ${imageId} 0 R >> /Font << /F1 ${footerFontId} 0 R >> >> /Contents ${contentId} 0 R >>`,
       ]);
       pageIds.push(pageId);
     });

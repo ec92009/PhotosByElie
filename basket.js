@@ -1033,6 +1033,11 @@ window.addEventListener("photosbyelie:languagechange", () => {
   renderBasket();
   syncCheckoutControls();
 });
+window.addEventListener("photosbyelie:accountdatacleared", () => {
+  clearCheckoutState();
+  renderBasket();
+  syncCheckoutControls();
+});
 })().catch((error) => {
   const status = document.querySelector("[data-basket-status]");
   if (status) status.textContent = error?.message || "Could not load basket.";

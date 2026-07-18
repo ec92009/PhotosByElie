@@ -3972,7 +3972,6 @@ const ensureSiteAccount = () => {
         <ol data-account-orders-list></ol>
       </div>
       <div class="site-account-actions">
-        <button class="site-account-action" type="button" data-account-signout data-i18n="account.sign_out" hidden>${translate('account.sign_out')}</button>
         <button class="site-account-action primary" type="button" data-account-signup data-i18n="account.sign_up_google">${translate('account.sign_up_google')}</button>
         <form class="site-account-signin-form" data-account-signin-form hidden>
           <button class="site-account-action primary" type="button" data-account-signin data-i18n="account.sign_in_google">${translate('account.sign_in_google')}</button>
@@ -4000,7 +3999,6 @@ const ensureSiteAccount = () => {
   const entrySignupButton = accountEntry.querySelector('[data-account-entry-signup]');
   const entrySigninButton = accountEntry.querySelector('[data-account-entry-signin]');
   const statusPanel = modal.querySelector('.site-account-status');
-  const signoutButton = modal.querySelector('[data-account-signout]');
   const signoutInlineButton = modal.querySelector('[data-account-signout-inline]');
   const signupButton = modal.querySelector('[data-account-signup]');
   const signinButton = modal.querySelector('[data-account-signin]');
@@ -4030,6 +4028,26 @@ const ensureSiteAccount = () => {
     && window.photosByElieBasket?.read
     && window.photosByElieBasket?.write
   );
+
+  const clearAccountDataFromDevice = () => {
+    window.clearTimeout(accountProfileWriteTimer);
+    accountProfileWriteTimer = null;
+    applyingAccountProfile = true;
+    try {
+      if (accountStoresAvailable()) {
+        window.photosByElieLiked.write([]);
+        window.photosByElieBasket.write([]);
+      }
+    } finally {
+      applyingAccountProfile = false;
+    }
+    state.profileLoading = false;
+    state.profileLoaded = false;
+    state.profile = { liked: [], basket: [] };
+    state.orders = [];
+    renderAccountMemory();
+    window.dispatchEvent(new CustomEvent("photosbyelie:accountdatacleared"));
+  };
 
   const waitForAccountCatalog = async () => {
     try {
@@ -4283,7 +4301,6 @@ const ensureSiteAccount = () => {
       if (statusDetail) statusDetail.textContent = state.authenticated
         ? state.email || translate('account.verified_email')
         : state.scopedLabel || translate('account.signed_in');
-      if (signoutButton) signoutButton.hidden = false;
       if (signoutInlineButton) signoutInlineButton.hidden = false;
       if (signupButton) signupButton.hidden = true;
       if (signinButton) signinButton.hidden = true;
@@ -4306,7 +4323,6 @@ const ensureSiteAccount = () => {
       signinButton.hidden = accountEntryMode !== 'signin';
     }
     if (signinForm) signinForm.hidden = accountEntryMode !== 'signin';
-    if (signoutButton) signoutButton.hidden = true;
     if (signoutInlineButton) signoutInlineButton.hidden = true;
     if (signupButton) signupButton.disabled = !state.available;
     if (signinButton) signinButton.disabled = !state.available;
@@ -4418,6 +4434,7 @@ const ensureSiteAccount = () => {
   const beginGoogleLogout = () => {
     const workerBase = accountWorkerBaseUrl();
     localStorage.setItem(accountPreferenceKey, 'visitor');
+    clearAccountDataFromDevice();
     setMessage(translate('account.signing_out'));
     if (!workerBase) {
       state.authenticated = false;
@@ -4434,6 +4451,7 @@ const ensureSiteAccount = () => {
   const beginAccountLogout = () => {
     if (!state.authenticated && state.scopedAuthenticated) {
       const kind = state.scopedKind;
+      clearAccountDataFromDevice();
       state.scopedAuthenticated = false;
       state.scopedKind = "";
       state.scopedLabel = "";
@@ -4491,7 +4509,6 @@ const ensureSiteAccount = () => {
       setMessage(error?.message || translate('account.password_failed'), true);
     }
   });
-  signoutButton?.addEventListener('click', beginAccountLogout);
   signoutInlineButton?.addEventListener('click', beginAccountLogout);
   syncButton?.addEventListener('click', () => saveAccountProfile());
   ordersList?.addEventListener('click', async (event) => {

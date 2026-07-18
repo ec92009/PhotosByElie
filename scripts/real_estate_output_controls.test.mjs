@@ -7,6 +7,8 @@ const script = readFileSync(new URL("../real-estate.js", import.meta.url), "utf8
 const styles = readFileSync(new URL("../photos.css", import.meta.url), "utf8");
 const sharedStyles = readFileSync(new URL("../shared.css", import.meta.url), "utf8");
 const siteScript = readFileSync(new URL("../photos.js", import.meta.url), "utf8");
+const basketScript = readFileSync(new URL("../basket.js", import.meta.url), "utf8");
+const likedScript = readFileSync(new URL("../liked.js", import.meta.url), "utf8");
 const home = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const cloudWorker = readFileSync(new URL("../worker/cloud-worker.mjs", import.meta.url), "utf8");
 const outputActions = html.match(/<div class="real-estate-output-actions">([\s\S]*?)<\/div>/)?.[1] || "";
@@ -137,6 +139,15 @@ test("Visitors see account pills and signed-in users return to the face menu", (
   assert.match(siteScript, /setScopedSession\(\{ kind = "", label = "" \} = \{\}\)/);
   assert.match(script, /setScopedSession\?\.\(\{[\s\S]*kind: "real-estate"/);
   assert.match(script, /photosbyelie:scopedaccountlogout/);
+  assert.equal((siteScript.match(/data-account-signout-inline/g) || []).length, 2);
+  assert.doesNotMatch(siteScript, /data-account-signout(?:\s|>)/);
+  assert.match(siteScript, /const clearAccountDataFromDevice = \(\) =>/);
+  assert.match(siteScript, /window\.photosByElieLiked\.write\(\[\]\)/);
+  assert.match(siteScript, /window\.photosByElieBasket\.write\(\[\]\)/);
+  assert.match(siteScript, /state\.orders = \[\]/);
+  assert.match(siteScript, /photosbyelie:accountdatacleared/);
+  assert.match(basketScript, /photosbyelie:accountdatacleared/);
+  assert.match(likedScript, /photosbyelie:accountdatacleared/);
   assert.match(sharedStyles, /\.account-entry-actions\{/);
   assert.doesNotMatch(home, /real-estate\.html\?logout=1&client=elie/);
 });

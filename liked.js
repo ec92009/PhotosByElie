@@ -490,6 +490,7 @@ bulkResolutionButtons.forEach((button) => {
 renderLiked();
 deliveryAvailabilityPromise = loadDeliveryAvailability();
 window.addEventListener("photosbyelie:languagechange", renderLiked);
+window.addEventListener("photosbyelie:accountdatacleared", renderLiked);
 })().catch((error) => {
   const status = document.querySelector("[data-liked-status]");
   if (status) status.textContent = error?.message || "Could not load liked photos.";

@@ -1692,24 +1692,6 @@
     }).join("");
   };
 
-  const cloudShelfStatusFor = () => {
-    if (!workerBaseUrl()) {
-      return { label: t("re.shelf.local_only", {}, "Saved products are stored on this device."), tone: "local" };
-    }
-    if (state.cloudDeliverablesBusy) {
-      return { label: t("re.shelf.syncing", {}, "Syncing cloud saved products..."), tone: "pending" };
-    }
-    if (state.cloudDeliverablesError) {
-      return { label: t("re.shelf.sync_issue", { message: state.cloudDeliverablesError }, `Cloud sync issue: ${state.cloudDeliverablesError}`), tone: "needs-attention" };
-    }
-    if (state.cloudDeliverablesLoaded) {
-      const count = Array.isArray(state.cloudDeliverables) ? state.cloudDeliverables.length : 0;
-      const records = t(count === 1 ? "re.shelf.record" : "re.shelf.records", {}, count === 1 ? "record" : "records");
-      return { label: t("re.shelf.synced", { count, records }, `Cloud shelf synced (${count} ${records}).`), tone: "ready" };
-    }
-    return { label: t("re.shelf.available", {}, "Cloud shelf available. Sync to check saved products."), tone: "pending" };
-  };
-
   const statusBadgesHtml = (badges = []) => (
     badges.map((badge) => `
       <span class="real-estate-deliverable-status" data-re-status-tone="${escapeHtml(badge.tone)}">
@@ -2276,18 +2258,6 @@
       return;
     }
     const generatedNames = generatedDeliverableNamesFor(items);
-    const shelfStatus = cloudShelfStatusFor();
-    const syncDisabled = state.cloudDeliverablesBusy || !workerBaseUrl();
-    const syncControl = `
-      <div class="real-estate-deliverable-sync-row" data-re-status-tone="${escapeHtml(shelfStatus.tone)}">
-        <span>${escapeHtml(shelfStatus.label)}</span>
-        <button class="real-estate-deliverable-sync" type="button" data-re-sync-deliverables ${syncDisabled ? "disabled" : ""}>
-          ${state.cloudDeliverablesBusy
-            ? t("re.shelf.syncing_action", {}, "Syncing...")
-            : t("re.shelf.sync", {}, "Sync")}
-        </button>
-      </div>
-    `;
     const rowsHtml = items.map((item) => {
       const date = item.createdAt ? new Date(item.createdAt) : null;
       const dateLabel = date && !Number.isNaN(date.getTime()) ? date.toLocaleString(document.documentElement.lang || undefined) : item.createdAt;
@@ -2330,7 +2300,7 @@
         </article>
       `;
     }).join("");
-    elements.deliverablesList.innerHTML = `${syncControl}${rowsHtml}`;
+    elements.deliverablesList.innerHTML = rowsHtml;
     syncFileActionLabels();
   };
 
@@ -6644,7 +6614,7 @@
     document.querySelectorAll("[data-re-download-pdf]").forEach((button) => button.addEventListener("click", () => downloadPdf({ mode: "download" })));
     elements.deliverablesList?.addEventListener("click", (event) => {
       if (event.target?.closest?.("[data-re-rename-deliverable]")) return;
-      const button = event.target?.closest?.("[data-re-download-output-url], [data-re-edit-name], [data-re-edit-deliverable], [data-re-view-deliverable], [data-re-download-deliverable], [data-re-delete-deliverable], [data-re-sync-deliverables]");
+      const button = event.target?.closest?.("[data-re-download-output-url], [data-re-edit-name], [data-re-edit-deliverable], [data-re-view-deliverable], [data-re-download-deliverable], [data-re-delete-deliverable]");
       if (button) {
         event.preventDefault();
         event.stopPropagation();
@@ -6655,10 +6625,6 @@
         }
         if (button.matches("[data-re-edit-name]")) {
           beginDeliverableNameEdit(button.getAttribute("data-re-edit-name") || "");
-          return;
-        }
-        if (button.matches("[data-re-sync-deliverables]")) {
-          fetchCloudDeliverables({ promptIfMissing: true, quiet: false }).catch(() => {});
           return;
         }
         if (button.matches("[data-re-edit-deliverable]")) {

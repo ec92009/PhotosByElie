@@ -42,6 +42,13 @@ test("Finished-product shelf exposes one download action per ready format", () =
   assert.match(styles, /button\.real-estate-deliverable-status\.is-action[\s\S]*font-family:"Space Grotesk"/);
 });
 
+test("Finished-product shelf stays automatic without a cloud-sync banner", () => {
+  assert.doesNotMatch(script, /data-re-sync-deliverables/);
+  assert.doesNotMatch(script, /real-estate-deliverable-sync-row/);
+  assert.doesNotMatch(styles, /\.real-estate-deliverable-sync-row/);
+  assert.match(script, /fetchCloudDeliverables\(\{ quiet: true \}\)/);
+});
+
 test("Every generated PDF page carries the numbered Photos By Elie QR footer", () => {
   assert.match(script, /PDF_FOOTER_QR_SIZE_PT = 10 \* 72 \/ 25\.4/);
   assert.match(script, /PDF_FOOTER_QR_URL = "https:\/\/photos-by-elie\.com\/"/);

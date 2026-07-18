@@ -564,6 +564,14 @@ export const createRealEstateDeliverables = ({
       sourceVideoAudioPolicy: "duck-under-generated-guitar-bed",
       sourceVideoAudioGainDb: Number(batch?.slideshowSettings?.audioPolicy?.sourceVideoAudioGainDb ?? -20),
       generatedMusicGainDb: Number(batch?.slideshowSettings?.audioPolicy?.musicGainDb ?? 0),
+      progress: {
+        phase: "queued",
+        percent: 1,
+        current: 0,
+        total: formats.length,
+        detail: "",
+        updatedAt: createdAt,
+      },
     };
     const jobText = JSON.stringify(jobRecord, null, 2);
     if (jobText.length > 1_000_000) {
@@ -946,6 +954,14 @@ export const createRealEstateDeliverables = ({
       status: "processing",
       updatedAt: startedAt,
       failureReason: "",
+      progress: {
+        phase: "starting",
+        percent: Math.max(2, Number(jobRecord?.progress?.percent) || 0),
+        current: 0,
+        total: processingRecords.length,
+        detail: "",
+        updatedAt: startedAt,
+      },
       renderAccess: {
         tokenHash: await sha256Hex(renderToken),
         createdAt: startedAt,
@@ -965,6 +981,33 @@ export const createRealEstateDeliverables = ({
       galleryKey: gallery.key,
       job: await publicJobFor(gallery, jobRecord),
     };
+  };
+
+  const updateCloudAssemblyRenderProgress = async (payload = {}) => {
+    const { gallery, jobId, jobRecord } = await requireCloudRenderAccess(payload);
+    const percent = Math.max(0, Math.min(99, Math.round(Number(payload.percent) || 0)));
+    const phase = String(payload.phase || "processing").trim().toLowerCase().replace(/[^a-z0-9-]+/g, "-").slice(0, 64) || "processing";
+    const detail = String(payload.detail || "").trim().slice(0, 240);
+    const updatedAt = now().toISOString();
+    const progress = {
+      phase,
+      percent,
+      current: Math.max(0, Math.round(Number(payload.current) || 0)),
+      total: Math.max(0, Math.round(Number(payload.total) || 0)),
+      detail,
+      updatedAt,
+    };
+    const updatedJob = {
+      ...jobRecord,
+      status: "processing",
+      updatedAt,
+      progress,
+    };
+    await privateBucket.put(jobKeyFor(gallery, jobId), textBytes(JSON.stringify(updatedJob, null, 2)), {
+      httpMetadata: { contentType: "application/json; charset=utf-8" },
+      customMetadata: { galleryKey: gallery.key, assemblyJobId: jobId, status: "processing", phase, percent: String(percent) },
+    });
+    return { galleryKey: gallery.key, jobId, progress };
   };
 
   const completeCloudAssemblyRenderOutput = async (payload = {}) => {
@@ -1000,6 +1043,7 @@ export const createRealEstateDeliverables = ({
     deleteDeliverable,
     beginCloudAssemblyRender,
     getCloudAssemblyRenderJob,
+    updateCloudAssemblyRenderProgress,
     completeCloudAssemblyRenderOutput,
     failCloudAssemblyRenderOutput,
   };

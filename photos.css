@@ -4735,9 +4735,28 @@ body[data-real-estate] button.real-estate-deliverable-status.is-action:focus-vis
 }
 .real-estate-output-progress progress{
   width:100%;
-  height:12px;
+  height:14px;
   border:0;
+  border-radius:999px;
+  overflow:hidden;
+  appearance:none;
+  -webkit-appearance:none;
+  background:color-mix(in srgb,var(--text) 14%,transparent);
   accent-color:var(--re-accent);
+}
+.real-estate-output-progress progress::-webkit-progress-bar{
+  background:color-mix(in srgb,var(--text) 14%,transparent);
+  border-radius:999px;
+}
+.real-estate-output-progress progress::-webkit-progress-value{
+  background:linear-gradient(90deg,var(--re-accent),color-mix(in srgb,var(--re-accent) 68%,#fff));
+  border-radius:999px;
+  transition:width .35s ease;
+}
+.real-estate-output-progress progress::-moz-progress-bar{
+  background:linear-gradient(90deg,var(--re-accent),color-mix(in srgb,var(--re-accent) 68%,#fff));
+  border-radius:999px;
+  transition:width .35s ease;
 }
 .real-estate-shell[data-re-step="0"] .real-estate-workbench,
 .real-estate-shell[data-re-step="1"] .real-estate-workbench,

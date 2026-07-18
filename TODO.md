@@ -4,7 +4,7 @@ Last updated: 2026-07-18
 
 ## Current Facts
 
-- Public visible build: `v140.21`.
+- Public visible build: `v140.22`.
 - Sidecar local build: `v126.6`.
 - Public site: `https://photos-by-elie.com/`.
 - Local preview: `http://localhost:8000/`.
@@ -16,7 +16,7 @@ Last updated: 2026-07-18
 - `owner.html` is the canonical authenticated cloud Owner control surface; `new-owner.html` redirects to it for compatibility. Scoped background connectors provide health, full Apple Photos index refresh, Photos previews, Sidecar stars/pick/reject/title/keywords/approval decisions, guarded single-item Upload Bridge execution plus catalog registration, and an Owner-only credential-free Mac installer download.
 - Owner has a private Apple Photos Real Estate intake that creates or reuses `RE / Fixture / Sub-fixture` routes and registers each fixture for the later RE import. Its explicit selector offers Apartment 1, Apartment 2, Street, Main lobby, Pool, Tennis court, and `New…` for any custom sub-fixture. Previews render immediately below the intake buttons/status while the full album chooser stays in a bounded scroll region; long-running connector work remains visibly waiting instead of being mislabeled as failed after 90 seconds. Candidate thumbnails now come from the PhotoKit preflight's actual item rows, and the status explains the inspected total plus conservative one-second burst filtering. Assignment requires an actual selected preview and cannot accidentally fall through to copying whole albums. The current Corine proof uses the named La Concha routes.
 - ACS can create, replace, and revoke gallery-scoped Real Estate password logins in D1. A single La Concha gallery grant covers the full sub-fixture tree. Do not send Corine access until the refreshed gallery, login, and downloads pass end-to-end verification.
-- Real Estate PDF/video production is now fully cloud-side: the browser queues and polls; a Cloudflare Workflow launches Browser Rendering, private expiring render tokens protect the internal handoff, Media Transformations converts the cloud WebM recording to MP4, and finished files land in private R2. The production music pool uses forty verified 60-second R2 clips and repeats the selected clip for longer videos without modifying the source MP3s.
+- Real Estate PDF/video production is fully cloud-side: the browser queues and polls; a Cloudflare Workflow launches Browser Rendering, private expiring render tokens protect the internal handoff, Media Transformations converts the cloud WebM recording to MP4, and finished files land in private R2. The Worker now persists real render phases and percentages for a determinate client progress bar with elapsed time/ETA, and the output/shelf flow is localized in English, French, and Spanish. The production music pool uses forty verified 60-second R2 clips and repeats the selected clip for longer videos without modifying the source MP3s.
 - Public catalog integrity: `ok`.
 - Public commercial catalog scale: `2713` media rows after retiring AI-generated images from storefront publication.
 - Gallery counts: France `379`, Italy `70`, Mexico `31`, Portugal `214`, Slovakia `2`, Spain `1872`, USA `145`.

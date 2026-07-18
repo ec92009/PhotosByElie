@@ -2935,6 +2935,25 @@ export const createPhotosByElieWorker = ({
     return credentialedJson(request, result);
   };
 
+  const updateInternalRealEstateRenderProgress = async (request, jobId) => {
+    if (!realEstateDeliverables || typeof realEstateDeliverables.updateCloudAssemblyRenderProgress !== "function") {
+      return errorJson(503, "real_estate_cloud_render_unavailable", "Real-estate cloud rendering is not configured.");
+    }
+    const url = new URL(request.url);
+    const body = await parseJson(request);
+    const result = await realEstateDeliverables.updateCloudAssemblyRenderProgress({
+      galleryKey: url.searchParams.get("galleryKey") || "",
+      jobId,
+      renderToken: url.searchParams.get("token") || "",
+      phase: body.phase,
+      percent: body.percent,
+      current: body.current,
+      total: body.total,
+      detail: body.detail,
+    });
+    return credentialedJson(request, result);
+  };
+
   const completeInternalRealEstateRenderOutput = async (request, jobId, deliverableId) => {
     if (!realEstateDeliverables || typeof realEstateDeliverables.completeCloudAssemblyRenderOutput !== "function") {
       return errorJson(503, "real_estate_cloud_render_unavailable", "Real-estate cloud rendering is not configured.");
@@ -3054,6 +3073,10 @@ export const createPhotosByElieWorker = ({
       const internalRealEstateRenderJobMatch = path.match(/^\/real-estate\/internal\/render-jobs\/([^/]+)$/);
       if (request.method === "GET" && internalRealEstateRenderJobMatch) {
         return await getInternalRealEstateRenderJob(request, decodeURIComponent(internalRealEstateRenderJobMatch[1]));
+      }
+      const internalRealEstateRenderProgressMatch = path.match(/^\/real-estate\/internal\/render-jobs\/([^/]+)\/progress$/);
+      if (request.method === "POST" && internalRealEstateRenderProgressMatch) {
+        return await updateInternalRealEstateRenderProgress(request, decodeURIComponent(internalRealEstateRenderProgressMatch[1]));
       }
       const internalRealEstateRenderOutputMatch = path.match(/^\/real-estate\/internal\/render-jobs\/([^/]+)\/deliverables\/([^/]+)\/(complete|fail)$/);
       if (request.method === "POST" && internalRealEstateRenderOutputMatch) {

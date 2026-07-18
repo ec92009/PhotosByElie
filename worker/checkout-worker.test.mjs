@@ -3004,6 +3004,27 @@ test("cloud render jobs use token-only internal routes and transcode WebM output
   assert.equal(renderJob.job.status, "processing");
   assert.equal(renderJob.job.inputManifest.batchId, batch.batchId);
   assert.equal("renderAccess" in renderJob.job, false);
+  assert.equal(renderJob.job.progress.phase, "starting");
+
+  const progressResponse = await worker.fetch(jsonRequest(
+    `https://worker.test/real-estate/internal/render-jobs/${queued.job.id}/progress?galleryKey=corine-real-estate&token=${access.renderToken}`,
+    { phase: "video-rendering", percent: 63, current: 5, total: 8 }
+  ));
+  assert.equal(progressResponse.status, 200);
+  assert.deepEqual((await progressResponse.json()).progress, {
+    phase: "video-rendering",
+    percent: 63,
+    current: 5,
+    total: 8,
+    detail: "",
+    updatedAt: "2026-06-10T12:00:00.000Z",
+  });
+
+  const clientProgressResponse = await worker.fetch(new Request(`https://worker.test/real-estate/deliverables/jobs/${queued.job.id}`, {
+    headers: { cookie },
+  }));
+  assert.equal(clientProgressResponse.status, 200);
+  assert.equal((await clientProgressResponse.json()).job.progress.percent, 63);
 
   const pdfRecord = renderJob.job.deliverables.find((record) => record.type === "pdf");
   const videoRecord = renderJob.job.deliverables.find((record) => record.type === "video");

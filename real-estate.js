@@ -1055,11 +1055,14 @@
   };
   const formatEta = (seconds) => {
     const value = Math.max(0, Math.round(Number(seconds) || 0));
-    if (!value) return "almost done";
-    if (value < 60) return `${value}s left`;
+    if (!value) return t("re.progress.almost_done", {}, "Almost done");
+    if (value < 60) return t("re.progress.seconds_left", { seconds: value }, `${value}s left`);
     const minutes = Math.floor(value / 60);
     const remainder = value % 60;
-    return `${minutes}m ${String(remainder).padStart(2, "0")}s left`;
+    return t("re.progress.minutes_left", {
+      minutes,
+      seconds: String(remainder).padStart(2, "0"),
+    }, `${minutes}m ${String(remainder).padStart(2, "0")}s left`);
   };
   const formatBytes = (bytes) => {
     const value = Number(bytes) || 0;
@@ -1087,7 +1090,11 @@
       ? t("re.progress.done", {}, "Done")
       : t("re.progress.working", {}, "Working..."));
     if (elements.outputProgressDetail) elements.outputProgressDetail.textContent = detail || "";
-    if (elements.outputProgressEta) elements.outputProgressEta.textContent = done ? "" : outputProgressEta(safeCurrent, safeTotal);
+    if (elements.outputProgressEta) {
+      const percent = safeTotal > 0 ? Math.round((safeCurrent / safeTotal) * 100) : 0;
+      const eta = done ? "" : outputProgressEta(safeCurrent, safeTotal);
+      elements.outputProgressEta.textContent = done ? "" : `${percent}%${eta ? ` · ${eta}` : ""}`;
+    }
     if (elements.outputProgressBar) {
       if (safeTotal > 0) {
         elements.outputProgressBar.max = 100;
@@ -1131,46 +1138,56 @@
     document.querySelectorAll("[data-re-open-outputs]").forEach((button) => {
       button.textContent = outputBusy && kind === "outputs-view"
         ? t("re.progress.working", {}, "Working...")
-        : "Queue all outputs";
+        : t("re.output.queue_all", {}, "Queue all outputs");
       button.title = "Queue selected PDF and video outputs for cloud assembly";
       button.disabled = outputBusy || noActiveSelection;
     });
     document.querySelectorAll("[data-re-download-outputs]").forEach((button) => {
       button.textContent = outputBusy && kind === "outputs-download"
         ? t("re.output.download_everything_busy", {}, "Queueing everything...")
-        : "Queue PDF + video";
+        : t("re.output.queue_both", {}, "Queue PDF + video");
       button.title = "Send selected PDF and video products to cloud assembly; download links appear on the shelf when ready";
       button.disabled = outputBusy || noActiveSelection;
     });
     document.querySelectorAll("[data-re-view-pdf]").forEach((button) => {
-      button.textContent = outputBusy && kind === "pdf-view" ? "Queueing PDF..." : "Queue PDF";
+      button.textContent = outputBusy && kind === "pdf-view"
+        ? t("re.output.queueing_pdf", {}, "Queueing PDF...")
+        : t("re.output.queue_pdf", {}, "Queue PDF");
       button.title = "Queue project PDFs for cloud assembly; selected videos appear as stills from 10% in";
       button.disabled = outputBusy || noActiveSelection;
     });
     document.querySelectorAll("[data-re-download-pdf]").forEach((button) => {
-      button.textContent = outputBusy && kind === "pdf-download" ? "Queueing PDF..." : "Queue PDF";
+      button.textContent = outputBusy && kind === "pdf-download"
+        ? t("re.output.queueing_pdf", {}, "Queueing PDF...")
+        : t("re.output.queue_pdf", {}, "Queue PDF");
       button.title = "Queue project PDFs for cloud assembly; download links appear on the shelf when ready";
       button.disabled = outputBusy || noActiveSelection;
     });
     document.querySelectorAll("[data-re-view-slideshow]").forEach((button) => {
-      button.textContent = outputBusy && kind === "video-view" ? "Generating video..." : "Queue video";
+      button.textContent = outputBusy && kind === "video-view"
+        ? t("re.output.generating_video", {}, "Generating video...")
+        : t("re.output.queue_video", {}, "Queue video");
       button.title = "Queue a cloud video with country-matched Pixabay guitar music";
       button.disabled = outputBusy || noActiveSelection;
     });
     document.querySelectorAll("[data-re-download-slideshow]").forEach((button) => {
       button.textContent = outputBusy && kind === "video-download"
-        ? "Generating video..."
-        : "Queue video";
+        ? t("re.output.generating_video", {}, "Generating video...")
+        : t("re.output.queue_video", {}, "Queue video");
       button.title = "Queue a true slideshow video file in the cloud with source audio ducked under the guitar bed";
       button.disabled = outputBusy || noActiveSelection;
     });
     document.querySelectorAll("[data-re-download-batch]").forEach((button) => {
-      button.textContent = outputBusy && kind === "selection" ? "Saving..." : t("re.action.save_selection", {}, "Save selection");
+      button.textContent = outputBusy && kind === "selection"
+        ? t("re.output.saving", {}, "Saving...")
+        : t("re.action.save_selection", {}, "Save selection");
       button.title = "Save the current selection to the cloud shelf; file sharing remains available as a fallback";
       button.disabled = outputBusy || noActiveSelection;
     });
     document.querySelectorAll("[data-re-download-originals]").forEach((button) => {
-      button.textContent = state.originalsBusy ? "Building originals ZIP..." : t("re.output.share_originals", {}, "Share originals ZIP");
+      button.textContent = state.originalsBusy
+        ? t("re.output.building_originals", {}, "Building originals ZIP...")
+        : t("re.output.share_originals", {}, "Share originals ZIP");
       button.title = "Prepare a ZIP of selected original source media from private delivery storage";
       button.disabled = state.originalsBusy || outputBusy || selectedPhotos().length === 0;
     });
@@ -1227,7 +1244,13 @@
       ? t("re.hero.customer_review", { name: payload.customer.name }, `${payload.customer.name} review`)
       : t("re.hero.client_review", {}, "Client review");
     if (elements.title) elements.title.textContent = gallery?.title || t("re.hero.title", {}, "Real estate selection");
-    if (elements.description) elements.description.textContent = gallery?.description || t("re.hero.description", {}, "Private media review workspace for project PDFs and slideshow delivery.");
+    if (elements.description) {
+      const description = String(gallery?.description || "");
+      const genericDescription = !description || /private real-estate (selection gallery|media review)/i.test(description);
+      elements.description.textContent = genericDescription
+        ? t("re.hero.description", {}, "Private media review workspace for project PDFs and slideshow delivery.")
+        : description;
+    }
     if (elements.total) elements.total.textContent = String(stillCount);
     if (elements.total?.previousElementSibling) elements.total.previousElementSibling.textContent = t("re.stats.stills", {}, "Stills");
     if (elements.videoTotal) elements.videoTotal.textContent = String(videoCount);
@@ -1354,10 +1377,10 @@
 
   const deliverableFormatsLabel = (formats = []) => {
     const ordered = ["pdf", "video", "selection"].filter((format) => formats.includes(format));
-    if (ordered.includes("pdf") && ordered.includes("video")) return "PDF + Video";
+    if (ordered.includes("pdf") && ordered.includes("video")) return `PDF + ${t("re.shelf.format_video", {}, "Video")}`;
     if (ordered.includes("pdf")) return "PDF";
-    if (ordered.includes("video")) return "Video";
-    return "PDF + Video";
+    if (ordered.includes("video")) return t("re.shelf.format_video", {}, "Video");
+    return `PDF + ${t("re.shelf.format_video", {}, "Video")}`;
   };
 
   const producedDeliverables = () => {
@@ -1570,8 +1593,8 @@
   const deliverableMediaSummaryLabelFor = (item) => {
     const summary = deliverableMediaSummaryFor(item);
     const parts = [];
-    if (summary.photos) parts.push(pluralizeMediaCount(summary.photos, "photo"));
-    if (summary.videos) parts.push(pluralizeMediaCount(summary.videos, "video"));
+    if (summary.photos) parts.push(t(summary.photos === 1 ? "re.shelf.photo" : "re.shelf.photos", { count: summary.photos }, pluralizeMediaCount(summary.photos, "photo")));
+    if (summary.videos) parts.push(t(summary.videos === 1 ? "re.shelf.video" : "re.shelf.videos", { count: summary.videos }, pluralizeMediaCount(summary.videos, "video")));
     return parts.join(" + ");
   };
 
@@ -1596,23 +1619,25 @@
     const hasCloud = records.some((record) => record?.source === "cloud");
     const hasLocal = records.some((record) => record?.source === "local");
     if (state.cloudDeliverablesError && hasLocal && !hasCloud) {
-      return { label: "Cloud save issue", tone: "needs-attention" };
+      return { label: t("re.shelf.cloud_save_issue", {}, "Cloud save issue"), tone: "needs-attention" };
     }
-    if (hasCloud) return { label: "Cloud saved", tone: "ready" };
-    if (hasLocal) return { label: "Saved on this device", tone: "local" };
-    return { label: "Gallery record", tone: "local" };
+    if (hasCloud) return { label: t("re.shelf.cloud_saved", {}, "Cloud saved"), tone: "ready" };
+    if (hasLocal) return { label: t("re.shelf.device_saved", {}, "Saved on this device"), tone: "local" };
+    return { label: t("re.shelf.gallery_record", {}, "Gallery record"), tone: "local" };
   };
 
   const formatStatusBadgeFor = (format, records = []) => {
-    const label = format === "pdf" ? "PDF" : format === "video" ? "Video" : "Selection";
+    const label = format === "pdf" ? "PDF" : format === "video"
+      ? t("re.shelf.format_video", {}, "Video")
+      : t("re.shelf.format_selection", {}, "Selection");
     const status = statusForDeliverableRecords(records);
-    if (status === "needs-attention") return { label: `${label} needs attention`, tone: "needs-attention" };
-    if (status === "pending") return { label: `${label} pending`, tone: "pending" };
-    if (format === "selection") return { label: "Selection saved", tone: "ready" };
+    if (status === "needs-attention") return { label: t("re.shelf.attention", { format: label }, `${label} needs attention`), tone: "needs-attention" };
+    if (status === "pending") return { label: t("re.shelf.pending", { format: label }, `${label} pending`), tone: "pending" };
+    if (format === "selection") return { label: t("re.shelf.selection_saved", {}, "Selection saved"), tone: "ready" };
     const hasOutputUrl = records.some((record) => record?.viewUrl || record?.downloadUrl);
     return hasOutputUrl
-      ? { label: `${label} ready`, tone: "ready" }
-      : { label: `${label} pending`, tone: "pending" };
+      ? { label: `${label} ${t("re.status.ready", {}, "Ready").toLowerCase()}`, tone: "ready" }
+      : { label: t("re.shelf.pending", { format: label }, `${label} pending`), tone: "pending" };
   };
 
   const deliverableStatusBadgesFor = (item) => {
@@ -1633,19 +1658,21 @@
       const ready = matching.find((record) => (
         record.status === "ready" && (record.downloadUrl || record.viewUrl)
       ));
-      const label = format === "pdf" ? "PDF" : "Video";
+      const label = format === "pdf" ? "PDF" : t("re.shelf.format_video", {}, "Video");
       if (ready) {
         const url = ready.downloadUrl || ready.viewUrl;
         return `
           <button class="real-estate-deliverable-status is-action" type="button" data-re-status-tone="ready" data-re-download-output-url="${escapeHtml(url)}">
-            Download ${label}
+            ${escapeHtml(t("re.shelf.download", { format: label }, `Download ${label}`))}
           </button>
         `;
       }
       const needsAttention = matching.some((record) => record.status === "needs-attention" || record.status === "failed");
       return `
         <button class="real-estate-deliverable-status" type="button" data-re-status-tone="${needsAttention ? "needs-attention" : "pending"}" disabled>
-          ${label} ${needsAttention ? "needs attention" : "pending"}
+          ${escapeHtml(needsAttention
+            ? t("re.shelf.attention", { format: label }, `${label} needs attention`)
+            : t("re.shelf.pending", { format: label }, `${label} pending`))}
         </button>
       `;
     }).join("");
@@ -1653,19 +1680,20 @@
 
   const cloudShelfStatusFor = () => {
     if (!workerBaseUrl()) {
-      return { label: "Saved products are stored on this device.", tone: "local" };
+      return { label: t("re.shelf.local_only", {}, "Saved products are stored on this device."), tone: "local" };
     }
     if (state.cloudDeliverablesBusy) {
-      return { label: "Syncing cloud saved products...", tone: "pending" };
+      return { label: t("re.shelf.syncing", {}, "Syncing cloud saved products..."), tone: "pending" };
     }
     if (state.cloudDeliverablesError) {
-      return { label: `Cloud sync issue: ${state.cloudDeliverablesError}`, tone: "needs-attention" };
+      return { label: t("re.shelf.sync_issue", { message: state.cloudDeliverablesError }, `Cloud sync issue: ${state.cloudDeliverablesError}`), tone: "needs-attention" };
     }
     if (state.cloudDeliverablesLoaded) {
       const count = Array.isArray(state.cloudDeliverables) ? state.cloudDeliverables.length : 0;
-      return { label: `Cloud shelf synced (${count} record${count === 1 ? "" : "s"}).`, tone: "ready" };
+      const records = t(count === 1 ? "re.shelf.record" : "re.shelf.records", {}, count === 1 ? "record" : "records");
+      return { label: t("re.shelf.synced", { count, records }, `Cloud shelf synced (${count} ${records}).`), tone: "ready" };
     }
-    return { label: "Cloud shelf available. Sync to check saved products.", tone: "pending" };
+    return { label: t("re.shelf.available", {}, "Cloud shelf available. Sync to check saved products."), tone: "pending" };
   };
 
   const statusBadgesHtml = (badges = []) => (
@@ -1853,13 +1881,25 @@
       const job = await fetchCloudAssemblyJobStatus(jobId);
       const status = String(job?.status || "pending").toLowerCase().replace("_", "-");
       const elapsedSeconds = Math.max(0, Math.round((Date.now() - startedAt) / 1000));
+      const progress = job?.progress && typeof job.progress === "object" ? job.progress : {};
+      const phase = String(progress.phase || (status === "pending" ? "queued" : "starting")).trim().toLowerCase();
+      const percent = status === "ready"
+        ? 100
+        : Math.max(1, Math.min(99, Math.round(Number(progress.percent) || (status === "processing" ? 3 : 1))));
+      const phaseLabel = t(`re.cloud.phase.${phase}`, {}, phase.replaceAll("-", " "));
       updateOutputProgress({
-        title: status === "ready" ? "Cloud output ready" : "Generating in the cloud",
+        title: status === "ready"
+          ? t("re.cloud.ready_title", {}, "Cloud output ready")
+          : t("re.cloud.generating_title", {}, "Generating in the cloud"),
         detail: status === "ready"
-          ? "The finished files are available on the shelf."
-          : `Cloud renderer: ${status}${elapsedSeconds ? ` (${elapsedSeconds}s)` : ""}`,
-        current: status === "ready" ? 1 : 0,
-        total: status === "ready" ? 1 : 0,
+          ? t("re.cloud.ready_detail", {}, "The finished files are available on the shelf.")
+          : t("re.cloud.progress_detail", {
+            phase: phaseLabel,
+            percent,
+            elapsed: elapsedSeconds,
+          }, `${phaseLabel} · ${percent}% · ${elapsedSeconds}s`),
+        current: percent,
+        total: 100,
         done: status === "ready",
       });
       if (status === "ready") return job;
@@ -1869,7 +1909,7 @@
       attempt += 1;
       await new Promise((resolve) => window.setTimeout(resolve, Math.min(5000, 1500 + (attempt * 250))));
     }
-    throw new Error("Cloud rendering is still running. It will remain on the shelf and can be refreshed later.");
+    throw new Error(t("re.cloud.timeout", {}, "Cloud rendering is still running. It will remain on the shelf and can be refreshed later."));
   };
 
   const pendingCloudOutputFor = (format, batch) => {
@@ -1935,9 +1975,9 @@
 
   const queueCloudOutputs = async ({ batch, formats = ["pdf", "video"], progressKind = "cloud-output" } = {}) => {
     startOutputProgress({
-      title: "Preparing cloud output",
-      detail: "Finding or creating the finished-product shelf entry...",
-      total: 2,
+      title: t("re.cloud.preparing_title", {}, "Preparing cloud output"),
+      detail: t("re.cloud.finding_entry", {}, "Finding or creating the finished-product shelf entry..."),
+      total: 100,
       kind: progressKind,
     });
     try {
@@ -1947,10 +1987,12 @@
       const reusedFormats = new Set(reused.map((record) => deliverableFormatCode(record.type)));
       const missingFormats = requestedFormats.filter((format) => !reusedFormats.has(format));
       updateOutputProgress({
-        title: "Preparing cloud output",
-        detail: missingFormats.length ? "Creating the shelf entry..." : "Reusing the pending shelf entry...",
+        title: t("re.cloud.preparing_title", {}, "Preparing cloud output"),
+        detail: missingFormats.length
+          ? t("re.cloud.creating_entry", {}, "Creating the shelf entry...")
+          : t("re.cloud.reusing_entry", {}, "Reusing the pending shelf entry..."),
         current: 1,
-        total: 2,
+        total: 100,
       });
       const result = missingFormats.length ? await submitCloudAssemblyJob({
         batch,
@@ -1971,20 +2013,26 @@
         state.activeDeliverableName = product.title;
         syncActiveProductName();
       }
-      const formatLabel = requestedFormats.map((format) => format === "pdf" ? "PDF" : "video").join(" + ");
+      const formatLabel = requestedFormats.map((format) => format === "pdf"
+        ? t("re.cloud.format.pdf", {}, "PDF")
+        : t("re.cloud.format.video", {}, "video")).join(" + ");
       const jobId = result?.job?.id || records.map((record) => record?.assemblyJob?.id).find(Boolean) || "";
       if (!jobId) throw new Error("Cloud assembly job id is missing.");
       updateOutputProgress({
-        title: "Generating in the cloud",
-        detail: `${formatLabel} assembly started. You can leave this tab open while the shelf updates.`,
-        current: 0,
-        total: 0,
+        title: t("re.cloud.generating_title", {}, "Generating in the cloud"),
+        detail: t("re.cloud.progress_detail", {
+          phase: t("re.cloud.phase.queued", {}, "Waiting for cloud renderer"),
+          percent: 1,
+          elapsed: 0,
+        }, "Waiting for cloud renderer · 1% · 0s"),
+        current: 1,
+        total: 100,
       });
       const completedJob = await waitForCloudAssemblyJob(jobId);
-      completeOutputProgress(`${formatLabel} ready on the finished-products shelf.`);
+      completeOutputProgress(t("re.cloud.ready_shelf", { formats: formatLabel }, `${formatLabel} ready on the finished-products shelf.`));
       return { ...(result || {}), job: completedJob, deliverables: completedJob?.deliverables || records, reused: reused.length };
     } catch (error) {
-      const message = error?.message || "Cloud output could not be prepared.";
+      const message = error?.message || t("re.cloud.failed", {}, "Cloud output could not be prepared.");
       setStatus(message);
       failOutputProgress(message);
       throw error;
@@ -2220,18 +2268,20 @@
       <div class="real-estate-deliverable-sync-row" data-re-status-tone="${escapeHtml(shelfStatus.tone)}">
         <span>${escapeHtml(shelfStatus.label)}</span>
         <button class="real-estate-deliverable-sync" type="button" data-re-sync-deliverables ${syncDisabled ? "disabled" : ""}>
-          ${state.cloudDeliverablesBusy ? "Syncing..." : "Sync"}
+          ${state.cloudDeliverablesBusy
+            ? t("re.shelf.syncing_action", {}, "Syncing...")
+            : t("re.shelf.sync", {}, "Sync")}
         </button>
       </div>
     `;
     const rowsHtml = items.map((item) => {
       const date = item.createdAt ? new Date(item.createdAt) : null;
-      const dateLabel = date && !Number.isNaN(date.getTime()) ? date.toLocaleString() : item.createdAt;
+      const dateLabel = date && !Number.isNaN(date.getTime()) ? date.toLocaleString(document.documentElement.lang || undefined) : item.createdAt;
       const displayTitle = displayDeliverableTitleFor(item, generatedNames);
       const canRename = ["cloud", "local"].includes(item.source);
       const mediaSummaryLabel = deliverableMediaSummaryLabelFor(item);
       const meta = [
-        item.label,
+        deliverableFormatsLabel(item.formats),
         mediaSummaryLabel,
         dateLabel,
         item.bytes ? formatBytes(item.bytes) : "",
@@ -2242,16 +2292,16 @@
       const statusBadges = statusBadgesHtml(deliverableStatusBadgesFor(item));
       return `
         <article class="real-estate-deliverable ${canOpen ? "is-openable" : ""} ${editingName ? "is-renaming" : ""}" data-re-status="${escapeHtml(item.status)}" ${canOpen ? `data-re-open-deliverable="${escapeHtml(item.id)}" role="button" tabindex="0"` : ""}>
-          <button class="real-estate-deliverable-disclosure" type="button" ${canOpen ? `data-re-open-deliverable-button="${escapeHtml(item.id)}"` : "disabled"} aria-label="Open ${escapeHtml(displayTitle)}">
+          <button class="real-estate-deliverable-disclosure" type="button" ${canOpen ? `data-re-open-deliverable-button="${escapeHtml(item.id)}"` : "disabled"} aria-label="${escapeHtml(t("re.shelf.open", { title: displayTitle }, `Open ${displayTitle}`))}">
             <span aria-hidden="true"></span>
           </button>
           ${thumbnail ? `<img class="real-estate-deliverable-thumb" src="${escapeHtml(thumbnail)}" alt=""/>` : `<span class="real-estate-deliverable-thumb is-empty" aria-hidden="true"></span>`}
           <div class="real-estate-deliverable-copy">
             ${canRename && editingName
-              ? `<input class="real-estate-deliverable-name" type="text" value="${escapeHtml(displayTitle)}" data-re-rename-deliverable="${escapeHtml(item.id)}" aria-label="Product name"/>`
+              ? `<input class="real-estate-deliverable-name" type="text" value="${escapeHtml(displayTitle)}" data-re-rename-deliverable="${escapeHtml(item.id)}" aria-label="${escapeHtml(t("re.shelf.product_name", {}, "Product name"))}"/>`
               : `<strong class="real-estate-deliverable-title">${escapeHtml(displayTitle)}</strong>`}
             <span>${escapeHtml(meta || item.label)}</span>
-            <div class="real-estate-deliverable-statuses" aria-label="Product save status">
+            <div class="real-estate-deliverable-statuses" aria-label="${escapeHtml(t("re.shelf.status_label", {}, "Product save status"))}">
               ${statusBadges}
               ${formatDownloadActionsHtmlFor(item)}
             </div>
@@ -2259,8 +2309,8 @@
           </div>
           ${canRename ? `
             <div class="real-estate-deliverable-tools">
-              <button class="real-estate-deliverable-rename" type="button" data-re-edit-name="${escapeHtml(item.id)}" aria-label="Rename ${escapeHtml(displayTitle)}">${reIcon("edit")}</button>
-              <button class="real-estate-deliverable-delete" type="button" data-re-delete-deliverable="${escapeHtml(item.id)}" aria-label="Delete ${escapeHtml(displayTitle)}">${reIcon("trash")}</button>
+              <button class="real-estate-deliverable-rename" type="button" data-re-edit-name="${escapeHtml(item.id)}" aria-label="${escapeHtml(t("re.shelf.rename", { title: displayTitle }, `Rename ${displayTitle}`))}">${reIcon("edit")}</button>
+              <button class="real-estate-deliverable-delete" type="button" data-re-delete-deliverable="${escapeHtml(item.id)}" aria-label="${escapeHtml(t("re.shelf.delete", { title: displayTitle }, `Delete ${displayTitle}`))}">${reIcon("trash")}</button>
             </div>
           ` : ""}
         </article>
@@ -4553,8 +4603,8 @@
         });
         const ready = queued?.deliverables?.find((record) => deliverableFormatCode(record.type) === "video");
         setStatus(ready?.status === "ready"
-          ? "Video ready on the finished-products shelf. Choose Next to review or download it."
-          : "Video is generating in the cloud and will appear on the shelf when ready.");
+          ? t("re.status.video_ready_shelf", {}, "Video ready on the finished-products shelf. Choose Next to review or download it.")
+          : t("re.status.video_generating_cloud", {}, "Video is generating in the cloud and will appear on the shelf when ready."));
       } catch (error) {
         const message = error?.message || "Cloud video could not be prepared.";
         setStatus(message);
@@ -5495,20 +5545,56 @@
     const baseUrl = workerBaseUrl();
     const path = deliverableId
       ? `/real-estate/internal/render-jobs/${encodeURIComponent(jobId)}/deliverables/${encodeURIComponent(deliverableId)}/${action}`
-      : `/real-estate/internal/render-jobs/${encodeURIComponent(jobId)}`;
+      : `/real-estate/internal/render-jobs/${encodeURIComponent(jobId)}${action ? `/${action}` : ""}`;
     const url = new URL(path, `${baseUrl}/`);
     url.searchParams.set("galleryKey", state.gallery?.key || "");
     url.searchParams.set("token", cloudRenderToken);
     return url;
   };
 
-  const renderCloudPdfOutput = async (batch) => {
+  let cloudRenderProgressLastAt = 0;
+  let cloudRenderProgressLastPercent = -1;
+  let cloudRenderProgressTail = Promise.resolve();
+  const postCloudRenderProgress = ({ phase, percent, current = 0, total = 0, detail = "" } = {}, { force = false } = {}) => {
+    const normalizedPercent = Math.max(0, Math.min(99, Math.round(Number(percent) || 0)));
+    const timestamp = Date.now();
+    if (!force && normalizedPercent === cloudRenderProgressLastPercent && timestamp - cloudRenderProgressLastAt < 1200) {
+      return cloudRenderProgressTail;
+    }
+    if (!force && normalizedPercent < cloudRenderProgressLastPercent + 2 && timestamp - cloudRenderProgressLastAt < 1200) {
+      return cloudRenderProgressTail;
+    }
+    cloudRenderProgressLastAt = timestamp;
+    cloudRenderProgressLastPercent = normalizedPercent;
+    const payload = { phase, percent: normalizedPercent, current, total, detail };
+    cloudRenderProgressTail = cloudRenderProgressTail.catch(() => {}).then(async () => {
+      const response = await fetch(cloudRenderEndpoint(cloudRenderJobId, "", "progress"), {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) throw new Error(`Cloud progress update failed: HTTP ${response.status}`);
+    });
+    return cloudRenderProgressTail;
+  };
+
+  const renderCloudPdfOutput = async (batch, reportProgress = () => {}) => {
     const projects = pdfProjectsForBatch(batch);
     const combined = { pages: [], pageWidth: paperFormatFor().width, pageHeight: paperFormatFor().height };
+    const totalPhotos = projects.reduce((sum, project) => sum + project.photos.length, 0);
+    let loadedPhotos = 0;
+    let renderedProjects = 0;
     for (const project of projects) {
-      const images = await fetchPdfImages(project.photos);
-      const rendered = await renderPdfPages(images);
+      const images = await fetchPdfImages(project.photos, () => {
+        loadedPhotos += 1;
+        reportProgress("pdf-loading", 0.05 + (0.40 * (loadedPhotos / Math.max(1, totalPhotos))), loadedPhotos, totalPhotos);
+      });
+      const rendered = await renderPdfPages(images, ({ pageIndex = 0, total = 1 } = {}) => {
+        const projectProgress = (renderedProjects + ((pageIndex + 1) / Math.max(1, total))) / Math.max(1, projects.length);
+        reportProgress("pdf-rendering", 0.45 + (0.43 * projectProgress), pageIndex + 1, total);
+      });
       combined.pages.push(...rendered.pages);
+      renderedProjects += 1;
     }
     const filename = projects.length === 1
       ? `${state.gallery?.key || "real-estate"}-${fileSlug(projects[0]?.projectTitle)}-${paperFormatFor().key}-${batch.batchId}.pdf`
@@ -5516,8 +5602,17 @@
     return { blob: buildPdfBlobFromRendered(combined), filename, contentType: "application/pdf" };
   };
 
-  const renderCloudVideoOutput = async (batch) => {
-    const recorded = await recordSlideshowVideoBlob(batch);
+  const renderCloudVideoOutput = async (batch, reportProgress = () => {}) => {
+    const recorded = await recordSlideshowVideoBlob(batch, ({ phase, index = 0, total = 1, progress = 0 } = {}) => {
+      let fraction = 0.02;
+      if (phase === "intro") fraction = 0.02 + (0.06 * progress);
+      else if (phase === "load") fraction = 0.08 + (0.78 * (index / Math.max(1, total)));
+      else if (phase === "render") fraction = 0.08 + (0.78 * ((index + progress) / Math.max(1, total)));
+      else if (phase === "outro") fraction = 0.87 + (0.05 * progress);
+      else if (phase === "credits") fraction = 0.92 + (0.05 * progress);
+      else if (phase === "finalize") fraction = 0.98;
+      reportProgress("video-rendering", fraction, Math.min(total, index + (progress >= 1 ? 1 : 0)), total);
+    });
     return {
       blob: recorded.blob,
       filename: `${state.gallery?.key || "real-estate"}-${batch.batchId}-slideshow.${recorded.extension}`,
@@ -5547,12 +5642,22 @@
     if (!batch?.batchId) throw new Error("Cloud render job is missing its selection manifest.");
     installCloudRenderBatch(batch);
     const pending = (job.deliverables || []).filter((record) => String(record.status || "").toLowerCase() !== "ready");
-    for (const record of pending) {
+    await postCloudRenderProgress({ phase: "loading", percent: 4, current: 0, total: pending.length }, { force: true });
+    for (const [recordIndex, record] of pending.entries()) {
+      const recordBase = 5 + ((recordIndex / Math.max(1, pending.length)) * 90);
+      const recordSpan = 90 / Math.max(1, pending.length);
+      const reportRecordProgress = (phase, fraction, current = 0, total = 0) => postCloudRenderProgress({
+        phase,
+        percent: recordBase + (Math.max(0, Math.min(1, fraction)) * recordSpan),
+        current,
+        total,
+      });
       setCloudRenderStatus("processing", `Rendering ${record.type === "pdf" ? "PDF" : "video"} in the cloud...`);
       try {
         const output = record.type === "pdf"
-          ? await renderCloudPdfOutput(batch)
-          : await renderCloudVideoOutput(batch);
+          ? await renderCloudPdfOutput(batch, reportRecordProgress)
+          : await renderCloudVideoOutput(batch, reportRecordProgress);
+        await reportRecordProgress(record.type === "video" ? "video-transcoding" : "pdf-uploading", 0.98, 1, 1);
         const completeUrl = cloudRenderEndpoint(cloudRenderJobId, record.id, "complete");
         completeUrl.searchParams.set("filename", output.filename);
         const completeResponse = await fetch(completeUrl, {
@@ -5562,11 +5667,14 @@
         });
         const completeBody = await completeResponse.json().catch(() => ({}));
         if (!completeResponse.ok) throw realEstateWorkerError(completeResponse, completeBody);
+        await reportRecordProgress("finalizing", 1, recordIndex + 1, pending.length);
       } catch (error) {
         await postCloudRenderFailure(record, error);
         throw error;
       }
     }
+    await postCloudRenderProgress({ phase: "complete", percent: 99, current: pending.length, total: pending.length }, { force: true });
+    await cloudRenderProgressTail.catch(() => {});
     setCloudRenderStatus("ready", `${pending.length || job.deliverables?.length || 0} cloud output${(pending.length || job.deliverables?.length || 0) === 1 ? "" : "s"} ready.`);
   };
 
@@ -5618,8 +5726,8 @@
         });
         const ready = queued?.deliverables?.find((record) => deliverableFormatCode(record.type) === "pdf");
         setStatus(ready?.status === "ready"
-          ? "PDF ready on the finished-products shelf. Choose Next to review or download it."
-          : "PDF is generating in the cloud and will appear on the shelf when ready.");
+          ? t("re.status.pdf_ready_shelf", {}, "PDF ready on the finished-products shelf. Choose Next to review or download it.")
+          : t("re.status.pdf_generating_cloud", {}, "PDF is generating in the cloud and will appear on the shelf when ready."));
       } catch (error) {
         const message = error?.message || "Cloud PDF could not be prepared.";
         setStatus(message);
@@ -5863,7 +5971,7 @@
     if (elements.selectedOnly) elements.selectedOnly.checked = false;
     render();
     elements.deliverablesPanel?.scrollIntoView({ behavior: "smooth", block: "start" });
-    setStatus("Back to the saved selection shelf.");
+    setStatus(t("re.status.back_shelf", {}, "Back to the saved selection shelf."));
   };
 
   const startNewProduct = () => {

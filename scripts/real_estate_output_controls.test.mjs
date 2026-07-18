@@ -60,6 +60,18 @@ test("Video action queues the cloud renderer while it is busy", () => {
   assert.match(script, /Generating in the cloud/);
 });
 
+test("Cloud output progress is determinate, phase-aware, and localized", () => {
+  assert.match(script, /job\?\.progress/);
+  assert.match(script, /re\.cloud\.progress_detail/);
+  assert.match(script, /current: percent/);
+  assert.match(script, /total: 100/);
+  assert.match(script, /cloudRenderEndpoint\(cloudRenderJobId, "", "progress"\)/);
+  assert.match(script, /phase === "render"/);
+  assert.match(styles, /progress::-webkit-progress-value/);
+  assert.match(siteScript, /'re\.cloud\.phase\.video-transcoding': 'Convirtiendo video a MP4'/);
+  assert.match(siteScript, /'re\.cloud\.generating_title': 'Generando en la nube'/);
+});
+
 test("Cloud render credentials stay out of the public page request URL", () => {
   assert.match(script, /cloudRenderParams = new URLSearchParams\(String\(window\.location\.hash/);
   assert.match(cloudWorker, /url\.hash = new URLSearchParams/);

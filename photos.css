@@ -3578,7 +3578,7 @@ body[data-real-estate] main.shell{
 }
 .real-estate-login{
   display:grid;
-  min-height:clamp(360px,calc(76dvh - var(--fixed-header-offset,86px)),620px);
+  min-height:clamp(280px,calc(58dvh - var(--fixed-header-offset,86px)),440px);
   place-items:center;
   padding-inline:max(var(--panel-inline),var(--page-gutter));
   background:
@@ -3587,20 +3587,26 @@ body[data-real-estate] main.shell{
 }
 .real-estate-login-card{
   display:grid;
-  gap:16px;
-  width:min(520px,100%);
+  gap:12px;
+  width:min(430px,100%);
   border:1px solid var(--line);
   background:var(--surface);
-  padding:clamp(18px,4vw,34px);
+  padding:clamp(18px,3vw,26px);
   box-shadow:0 18px 48px rgba(0,0,0,.12);
 }
 .real-estate-login-card h1{
-  max-width:12ch;
-  font-size:clamp(2.3rem,6vw,4.8rem);
+  max-width:none;
+  font-size:clamp(1.8rem,4vw,2.7rem);
 }
 .real-estate-login-form{
   display:grid;
-  gap:12px;
+  gap:10px;
+}
+.real-estate-login-note{
+  margin:0;
+  color:var(--muted);
+  font-size:.88rem;
+  line-height:1.45;
 }
 .real-estate-login-divider{
   display:grid;

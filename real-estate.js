@@ -7,7 +7,14 @@
   const pageVersion = pageParams.get("v");
   const contextVersion = pageVersion ? `?v=${encodeURIComponent(pageVersion)}` : "";
   const knownClientContexts = new Set(["agnes", "corine", "elie"]);
-  const requestedClientContext = String(pageParams.get("client") || "elie").trim().toLowerCase();
+  const requestedClientContext = String(pageParams.get("client") || "").trim().toLowerCase();
+  if (!isLocalHost && !requestedClientContext && !pageParams.get("context")) {
+    const accountLanding = new URL("./", window.location.href);
+    if (pageVersion) accountLanding.searchParams.set("v", pageVersion);
+    accountLanding.searchParams.set("account", "1");
+    window.location.replace(accountLanding.href);
+    return;
+  }
   const defaultClientContext = knownClientContexts.has(requestedClientContext) ? requestedClientContext : "elie";
   const defaultLocalContext = `./tmp/real-estate-import/${defaultClientContext}/app-context.js${contextVersion}`;
   const defaultPublicContext = `./assets/real-estate/${defaultClientContext}/app-context.js${contextVersion}`;

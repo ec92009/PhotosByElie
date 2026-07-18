@@ -215,7 +215,7 @@ a:hover{
   display:block;
   fill:currentColor;
 }
-.version-switch,.theme-toggle,.language-toggle,.account-toggle,.settings-toggle,.site-version-badge{
+.version-switch,.theme-toggle,.language-toggle,.account-toggle,.settings-toggle,.site-version-badge,.account-entry-action{
   min-height:38px;
   border:1px solid var(--glass-border);
   border-radius:999px;
@@ -258,6 +258,29 @@ html[data-theme="dark"] .mode-light { display: none; }
   gap:var(--header-control-gap);
   margin-left:auto;
 }
+.account-entry-actions{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+}
+.account-entry-action{
+  min-width:76px;
+  cursor:pointer;
+  font-weight:800;
+}
+.account-entry-action.primary{
+  border-color:var(--text);
+  background:var(--text);
+  color:var(--bg);
+}
+.account-entry-action:hover{
+  background:var(--glass-card-hover-bg);
+  color:var(--text);
+}
+.account-entry-action.primary:hover{
+  background:var(--brand-2);
+  color:var(--bg);
+}
 .topbar > .account-toggle{margin-left:auto}
 .topbar > .settings-toggle{margin-left:0}
 .header-utility-controls > .account-toggle,
@@ -285,7 +308,8 @@ html[data-theme="dark"] .theme-toggle,
 html[data-theme="dark"] .language-toggle,
 html[data-theme="dark"] .account-toggle,
 html[data-theme="dark"] .settings-toggle,
-html[data-theme="dark"] .site-version-badge{
+html[data-theme="dark"] .site-version-badge,
+html[data-theme="dark"] .account-entry-action:not(.primary){
   border-color:var(--glass-border);
   background:var(--glass-pill-bg);
 }
@@ -595,6 +619,9 @@ html[data-theme="light"] .site-account-message.is-error{
   .site-account-modal{place-items:start center}
   .site-settings-dialog,
   .site-account-dialog{margin-top:64px}
+}
+@media (max-width:420px){
+  .account-entry-action{min-width:0;padding-inline:10px}
 }
 
 main{padding:clamp(4px,1dvh,10px) 0 clamp(30px,5dvh,42px);display:grid;gap:clamp(8px,1.4dvh,14px)}

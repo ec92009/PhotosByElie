@@ -59,6 +59,8 @@ const translations = {
     'account.continue_browsing': 'Continue browsing',
     'account.sign_up_google': 'Sign up with Google',
     'account.sign_in_google': 'Sign in with Google',
+    'account.sign_up': 'Sign up',
+    'account.sign_in': 'Sign in',
     'account.sign_out': 'Sign out',
     'account.signed_in': 'Signed in',
     'account.verified_email': 'Email verified by Google.',
@@ -452,7 +454,8 @@ const translations = {
     'product.increase_count': 'Increase {label} count',
     'nav.real_estate': 'Real Estate',
     're.login.eyebrow': 'Private client access',
-    're.login.title': 'Client login',
+    're.login.title': 'Welcome',
+    're.login.google_hint': 'Sign in with Google to open the galleries you have been invited to.',
     're.login.username': 'Username',
     're.login.password': 'Password',
     're.login.legacy_password': 'Legacy password',
@@ -611,6 +614,8 @@ const translations = {
     'account.continue_browsing': 'Continuer',
     'account.sign_up_google': 'Creer un compte avec Google',
     'account.sign_in_google': 'Connexion avec Google',
+    'account.sign_up': 'Creer un compte',
+    'account.sign_in': 'Connexion',
     'account.sign_out': 'Deconnexion',
     'account.signed_in': 'Connecte',
     'account.verified_email': 'Email verifie par Google.',
@@ -1004,7 +1009,8 @@ const translations = {
     'product.increase_count': 'Augmenter la quantite {label}',
     'nav.real_estate': 'Immobilier',
     're.login.eyebrow': 'Acces client prive',
-    're.login.title': 'Connexion client',
+    're.login.title': 'Bienvenue',
+    're.login.google_hint': 'Connectez-vous avec Google pour ouvrir les galeries auxquelles vous avez ete invite.',
     're.login.username': 'Nom d utilisateur',
     're.login.password': 'Mot de passe',
     're.login.legacy_password': 'Ancien mot de passe',
@@ -1163,6 +1169,8 @@ const translations = {
     'account.continue_browsing': 'Continuar',
     'account.sign_up_google': 'Registrarse con Google',
     'account.sign_in_google': 'Iniciar sesion con Google',
+    'account.sign_up': 'Registrarse',
+    'account.sign_in': 'Iniciar sesion',
     'account.sign_out': 'Cerrar sesion',
     'account.signed_in': 'Sesion iniciada',
     'account.verified_email': 'Email verificado por Google.',
@@ -1550,7 +1558,8 @@ const translations = {
     'product.increase_count': 'Aumentar cantidad de {label}',
     'nav.real_estate': 'Inmobiliaria',
     're.login.eyebrow': 'Acceso privado de cliente',
-    're.login.title': 'Acceso de cliente',
+    're.login.title': 'Bienvenido',
+    're.login.google_hint': 'Inicia sesion con Google para abrir las galerias a las que has sido invitado.',
     're.login.username': 'Usuario',
     're.login.password': 'Contrasena',
     're.login.legacy_password': 'Contrasena anterior',
@@ -3683,6 +3692,14 @@ const ensureSiteAccount = () => {
   accountButton.dataset.i18nTitle = 'account.open';
   accountButton.innerHTML = window.photosByElieMdIcon('accountCircle');
 
+  const accountEntry = document.createElement('div');
+  accountEntry.className = 'account-entry-actions';
+  accountEntry.dataset.accountEntry = '';
+  accountEntry.innerHTML = `
+    <button class="account-entry-action" type="button" data-account-entry-signup data-i18n="account.sign_up">${translate('account.sign_up')}</button>
+    <button class="account-entry-action primary" type="button" data-account-entry-signin data-i18n="account.sign_in">${translate('account.sign_in')}</button>
+  `;
+
   const modal = document.createElement('div');
   modal.className = 'site-account-modal';
   modal.hidden = true;
@@ -3730,6 +3747,8 @@ const ensureSiteAccount = () => {
   `;
 
   const closeButton = modal.querySelector('[data-account-close]');
+  const entrySignupButton = accountEntry.querySelector('[data-account-entry-signup]');
+  const entrySigninButton = accountEntry.querySelector('[data-account-entry-signin]');
   const visitorButton = modal.querySelector('[data-account-visitor]');
   const signoutButton = modal.querySelector('[data-account-signout]');
   const signoutInlineButton = modal.querySelector('[data-account-signout-inline]');
@@ -3997,6 +4016,8 @@ const ensureSiteAccount = () => {
   const updateAccountView = () => {
     const workerBase = accountWorkerBaseUrl();
     state.available = Boolean(workerBase);
+    accountEntry.hidden = state.authenticated;
+    accountButton.hidden = !state.authenticated;
     accountButton.classList.toggle("is-authenticated", state.authenticated);
     if (state.authenticated) {
       if (statusTitle) statusTitle.textContent = translate('account.signed_in');
@@ -4084,7 +4105,8 @@ const ensureSiteAccount = () => {
     if (modal.hidden) return;
     modal.hidden = true;
     accountButton.setAttribute('aria-expanded', 'false');
-    accountButton.focus({ preventScroll: true });
+    const focusTarget = state.authenticated ? accountButton : entrySignupButton;
+    focusTarget?.focus({ preventScroll: true });
   };
 
   const openAccount = () => {
@@ -4128,12 +4150,14 @@ const ensureSiteAccount = () => {
   };
 
   document.body.append(modal);
-  headerUtilityControls(topbar)?.append(accountButton);
+  headerUtilityControls(topbar)?.append(accountEntry, accountButton);
 
   accountButton.addEventListener('click', () => {
     if (modal.hidden) openAccount();
     else closeAccount();
   });
+  entrySignupButton?.addEventListener('click', openAccount);
+  entrySigninButton?.addEventListener('click', openAccount);
   closeButton?.addEventListener('click', closeAccount);
   visitorButton?.addEventListener('click', () => {
     localStorage.setItem(accountPreferenceKey, 'visitor');

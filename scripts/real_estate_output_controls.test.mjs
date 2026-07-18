@@ -66,6 +66,8 @@ test("Visitors see account pills and signed-in users return to the face menu", (
   assert.match(siteScript, /data-account-entry-signup/);
   assert.match(siteScript, /accountEntry\.hidden = state\.authenticated/);
   assert.match(siteScript, /accountButton\.hidden = !state\.authenticated/);
+  assert.match(siteScript, /accountEntryMode === 'signin'/);
+  assert.match(siteScript, /signinButton\.classList\.toggle\('primary', accountEntryMode === 'signin'\)/);
   assert.match(sharedStyles, /\.account-entry-actions\{/);
   assert.doesNotMatch(home, /real-estate\.html\?logout=1&client=elie/);
 });

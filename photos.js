@@ -3674,6 +3674,8 @@ const ensureSiteAccount = () => {
   };
   let accountProfileWriteTimer = null;
   let applyingAccountProfile = false;
+  let accountEntryMode = 'signup';
+  let accountReturnControl = null;
   const escapeAccountHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
     "&": "&amp;",
     "<": "&lt;",
@@ -3747,6 +3749,7 @@ const ensureSiteAccount = () => {
   `;
 
   const closeButton = modal.querySelector('[data-account-close]');
+  const accountTitle = modal.querySelector('#site-account-title');
   const entrySignupButton = accountEntry.querySelector('[data-account-entry-signup]');
   const entrySigninButton = accountEntry.querySelector('[data-account-entry-signin]');
   const visitorButton = modal.querySelector('[data-account-visitor]');
@@ -4020,6 +4023,7 @@ const ensureSiteAccount = () => {
     accountButton.hidden = !state.authenticated;
     accountButton.classList.toggle("is-authenticated", state.authenticated);
     if (state.authenticated) {
+      if (accountTitle) accountTitle.textContent = translate('account.title');
       if (statusTitle) statusTitle.textContent = translate('account.signed_in');
       if (statusDetail) statusDetail.textContent = state.email || translate('account.verified_email');
       if (visitorButton) {
@@ -4036,12 +4040,17 @@ const ensureSiteAccount = () => {
     }
     if (statusTitle) statusTitle.textContent = translate('account.visitor_status');
     if (statusDetail) statusDetail.textContent = translate('account.choose');
+    if (accountTitle) accountTitle.textContent = accountEntryMode === 'signin'
+      ? translate('account.sign_in')
+      : translate('account.sign_up');
     if (visitorButton) {
       visitorButton.dataset.i18n = 'account.continue_visitor';
       visitorButton.textContent = translate('account.continue_visitor');
     }
     if (signupButton) signupButton.hidden = false;
     if (signinButton) signinButton.hidden = false;
+    if (signupButton) signupButton.classList.toggle('primary', accountEntryMode !== 'signin');
+    if (signinButton) signinButton.classList.toggle('primary', accountEntryMode === 'signin');
     if (signoutButton) signoutButton.hidden = true;
     if (signoutInlineButton) signoutInlineButton.hidden = true;
     if (signupButton) signupButton.disabled = !state.available;
@@ -4105,11 +4114,13 @@ const ensureSiteAccount = () => {
     if (modal.hidden) return;
     modal.hidden = true;
     accountButton.setAttribute('aria-expanded', 'false');
-    const focusTarget = state.authenticated ? accountButton : entrySignupButton;
+    const focusTarget = accountReturnControl || (state.authenticated ? accountButton : entrySignupButton);
     focusTarget?.focus({ preventScroll: true });
   };
 
-  const openAccount = () => {
+  const openAccount = (mode = 'signup', trigger = null) => {
+    accountEntryMode = mode === 'signin' ? 'signin' : 'signup';
+    accountReturnControl = trigger;
     modal.hidden = false;
     accountButton.setAttribute('aria-expanded', 'true');
     updateAccountView();
@@ -4153,11 +4164,11 @@ const ensureSiteAccount = () => {
   headerUtilityControls(topbar)?.append(accountEntry, accountButton);
 
   accountButton.addEventListener('click', () => {
-    if (modal.hidden) openAccount();
+    if (modal.hidden) openAccount('signup', accountButton);
     else closeAccount();
   });
-  entrySignupButton?.addEventListener('click', openAccount);
-  entrySigninButton?.addEventListener('click', openAccount);
+  entrySignupButton?.addEventListener('click', () => openAccount('signup', entrySignupButton));
+  entrySigninButton?.addEventListener('click', () => openAccount('signin', entrySigninButton));
   closeButton?.addEventListener('click', closeAccount);
   visitorButton?.addEventListener('click', () => {
     localStorage.setItem(accountPreferenceKey, 'visitor');

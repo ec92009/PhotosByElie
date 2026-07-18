@@ -59,6 +59,11 @@ const translations = {
     'account.continue_browsing': 'Continue browsing',
     'account.sign_up_google': 'Sign up with Google',
     'account.sign_in_google': 'Sign in with Google',
+    'account.legacy_login': 'Legacy log in with Username/Password',
+    'account.username': 'Username',
+    'account.password': 'Password',
+    'account.sign_in_password': 'Sign in',
+    'account.password_failed': 'Username/email or password is incorrect.',
     'account.sign_up': 'Sign up',
     'account.sign_in': 'Sign in',
     'account.sign_out': 'Sign out',
@@ -615,6 +620,11 @@ const translations = {
     'account.continue_browsing': 'Continuer',
     'account.sign_up_google': 'Creer un compte avec Google',
     'account.sign_in_google': 'Connexion avec Google',
+    'account.legacy_login': 'Connexion historique avec nom d utilisateur et mot de passe',
+    'account.username': 'Nom d utilisateur',
+    'account.password': 'Mot de passe',
+    'account.sign_in_password': 'Connexion',
+    'account.password_failed': 'Nom d utilisateur/email ou mot de passe incorrect.',
     'account.sign_up': 'Creer un compte',
     'account.sign_in': 'Connexion',
     'account.sign_out': 'Deconnexion',
@@ -1171,6 +1181,11 @@ const translations = {
     'account.continue_browsing': 'Continuar',
     'account.sign_up_google': 'Registrarse con Google',
     'account.sign_in_google': 'Iniciar sesion con Google',
+    'account.legacy_login': 'Acceso antiguo con usuario y contrasena',
+    'account.username': 'Usuario',
+    'account.password': 'Contrasena',
+    'account.sign_in_password': 'Iniciar sesion',
+    'account.password_failed': 'Usuario/email o contrasena incorrectos.',
     'account.sign_up': 'Registrarse',
     'account.sign_in': 'Iniciar sesion',
     'account.sign_out': 'Cerrar sesion',
@@ -3648,16 +3663,19 @@ const accountWorkerBaseUrl = () => {
 const accountReturnUrl = () => {
   const url = new URL(window.location.href);
   url.searchParams.set("account", "1");
+  url.searchParams.set("accountMode", "signin");
   return url.href;
 };
 
 const consumeAccountReturnFlag = () => {
   const url = new URL(window.location.href);
   if (url.searchParams.get("account") !== "1") return false;
-  if (/\/order\.html$/i.test(url.pathname)) return true;
+  const mode = url.searchParams.get("accountMode") === "signin" ? "signin" : "signup";
+  if (/\/order\.html$/i.test(url.pathname)) return mode;
   url.searchParams.delete("account");
+  url.searchParams.delete("accountMode");
   window.history.replaceState(window.history.state, document.title, url.href);
-  return true;
+  return mode;
 };
 
 const ensureSiteAccount = () => {
@@ -3670,6 +3688,7 @@ const ensureSiteAccount = () => {
     authenticated: false,
     email: "",
     tier: "user",
+    realEstateClients: [],
     profileLoading: false,
     profileLoaded: false,
     profile: { liked: [], basket: [] },
@@ -3678,6 +3697,7 @@ const ensureSiteAccount = () => {
   let accountProfileWriteTimer = null;
   let applyingAccountProfile = false;
   let accountEntryMode = 'signup';
+  const accountRouteAfterLoginKey = 'photosbyelie-route-after-login';
   let accountReturnControl = null;
   const escapeAccountHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
     "&": "&amp;",
@@ -3742,10 +3762,21 @@ const ensureSiteAccount = () => {
         <ol data-account-orders-list></ol>
       </div>
       <div class="site-account-actions">
-        <button class="site-account-action" type="button" data-account-visitor data-i18n="account.continue_visitor">${translate('account.continue_visitor')}</button>
         <button class="site-account-action" type="button" data-account-signout data-i18n="account.sign_out" hidden>${translate('account.sign_out')}</button>
         <button class="site-account-action primary" type="button" data-account-signup data-i18n="account.sign_up_google">${translate('account.sign_up_google')}</button>
-        <button class="site-account-action" type="button" data-account-signin data-i18n="account.sign_in_google">${translate('account.sign_in_google')}</button>
+        <form class="site-account-signin-form" data-account-signin-form hidden>
+          <button class="site-account-action primary" type="button" data-account-signin data-i18n="account.sign_in_google">${translate('account.sign_in_google')}</button>
+          <p class="site-account-signin-divider" data-i18n="account.legacy_login">${translate('account.legacy_login')}</p>
+          <label>
+            <span data-i18n="account.username">${translate('account.username')}</span>
+            <input type="text" autocomplete="username" data-account-login-name required/>
+          </label>
+          <label>
+            <span data-i18n="account.password">${translate('account.password')}</span>
+            <input type="password" autocomplete="current-password" data-account-login-password required/>
+          </label>
+          <button class="site-account-action" type="submit" data-i18n="account.sign_in_password">${translate('account.sign_in_password')}</button>
+        </form>
       </div>
       <p class="site-account-message" data-account-message aria-live="polite"></p>
     </section>
@@ -3756,11 +3787,13 @@ const ensureSiteAccount = () => {
   const entrySignupButton = accountEntry.querySelector('[data-account-entry-signup]');
   const entrySigninButton = accountEntry.querySelector('[data-account-entry-signin]');
   const statusPanel = modal.querySelector('.site-account-status');
-  const visitorButton = modal.querySelector('[data-account-visitor]');
   const signoutButton = modal.querySelector('[data-account-signout]');
   const signoutInlineButton = modal.querySelector('[data-account-signout-inline]');
   const signupButton = modal.querySelector('[data-account-signup]');
   const signinButton = modal.querySelector('[data-account-signin]');
+  const signinForm = modal.querySelector('[data-account-signin-form]');
+  const passwordLoginName = modal.querySelector('[data-account-login-name]');
+  const passwordLoginPassword = modal.querySelector('[data-account-login-password]');
   const statusTitle = modal.querySelector('[data-account-status-title]');
   const statusDetail = modal.querySelector('[data-account-status-detail]');
   const message = modal.querySelector('[data-account-message]');
@@ -4031,14 +4064,11 @@ const ensureSiteAccount = () => {
       if (accountTitle) accountTitle.textContent = translate('account.title');
       if (statusTitle) statusTitle.textContent = translate('account.signed_in');
       if (statusDetail) statusDetail.textContent = state.email || translate('account.verified_email');
-      if (visitorButton) {
-        visitorButton.dataset.i18n = 'account.continue_browsing';
-        visitorButton.textContent = translate('account.continue_browsing');
-      }
       if (signoutButton) signoutButton.hidden = false;
       if (signoutInlineButton) signoutInlineButton.hidden = false;
       if (signupButton) signupButton.hidden = true;
       if (signinButton) signinButton.hidden = true;
+      if (signinForm) signinForm.hidden = true;
       if (!state.profileLoaded && !state.profileLoading) setMessage(translate('account.verified_email'));
       renderAccountMemory();
       return;
@@ -4049,15 +4079,13 @@ const ensureSiteAccount = () => {
     if (accountTitle) accountTitle.textContent = accountEntryMode === 'signin'
       ? translate('account.sign_in')
       : translate('account.sign_up');
-    if (visitorButton) visitorButton.hidden = true;
     if (signupButton) {
       signupButton.hidden = accountEntryMode === 'signin';
-      signupButton.classList.toggle('primary', accountEntryMode !== 'signin');
     }
     if (signinButton) {
       signinButton.hidden = accountEntryMode !== 'signin';
-      signinButton.classList.toggle('primary', accountEntryMode === 'signin');
     }
+    if (signinForm) signinForm.hidden = accountEntryMode !== 'signin';
     if (signoutButton) signoutButton.hidden = true;
     if (signoutInlineButton) signoutInlineButton.hidden = true;
     if (signupButton) signupButton.disabled = !state.available;
@@ -4074,6 +4102,7 @@ const ensureSiteAccount = () => {
       state.authenticated = false;
       state.email = "";
       state.tier = "user";
+      state.realEstateClients = [];
       state.profileLoaded = false;
       state.profile = { liked: [], basket: [] };
       state.orders = [];
@@ -4093,12 +4122,25 @@ const ensureSiteAccount = () => {
       state.authenticated = payload.authenticated === true;
       state.email = user.email || payload.email || "";
       state.tier = payload.tier || user.tier || "user";
+      state.realEstateClients = Array.isArray(payload.realEstateClients) ? payload.realEstateClients : [];
       if (!state.authenticated) {
         state.profileLoaded = false;
         state.profile = { liked: [], basket: [] };
         state.orders = [];
       }
       updateAccountView();
+      const routeMode = sessionStorage.getItem(accountRouteAfterLoginKey);
+      const galleryKey = state.realEstateClients[0] || "";
+      if (state.authenticated && routeMode && galleryKey) {
+        sessionStorage.removeItem(accountRouteAfterLoginKey);
+        const client = String(galleryKey).replace(/-real-estate$/i, "").trim().toLowerCase();
+        const destination = new URL("./real-estate.html", window.location.href);
+        destination.searchParams.set("client", client);
+        destination.searchParams.set("access", "google");
+        window.location.assign(destination.href);
+        return { ...state };
+      }
+      if (routeMode) sessionStorage.removeItem(accountRouteAfterLoginKey);
       if (state.authenticated && syncProfile) {
         await loadAccountProfile({ mergeLocal, quiet });
       }
@@ -4108,6 +4150,7 @@ const ensureSiteAccount = () => {
       state.authenticated = false;
       state.email = "";
       state.tier = "user";
+      state.realEstateClients = [];
       state.profileLoaded = false;
       state.profile = { liked: [], basket: [] };
       state.orders = [];
@@ -4125,7 +4168,7 @@ const ensureSiteAccount = () => {
     focusTarget?.focus({ preventScroll: true });
   };
 
-  const openAccount = (mode = 'signup', trigger = null) => {
+  const openAccount = (mode = 'signin', trigger = null) => {
     accountEntryMode = mode === 'signin' ? 'signin' : 'signup';
     accountReturnControl = trigger;
     modal.hidden = false;
@@ -4143,6 +4186,7 @@ const ensureSiteAccount = () => {
       return;
     }
     localStorage.setItem(accountPreferenceKey, intent);
+    sessionStorage.setItem(accountRouteAfterLoginKey, 'google');
     const loginUrl = new URL(`${workerBase}/auth/google/login`);
     loginUrl.searchParams.set("returnTo", accountReturnUrl());
     loginUrl.searchParams.set("intent", intent);
@@ -4171,18 +4215,39 @@ const ensureSiteAccount = () => {
   headerUtilityControls(topbar)?.append(accountEntry, accountButton);
 
   accountButton.addEventListener('click', () => {
-    if (modal.hidden) openAccount('signup', accountButton);
+    if (modal.hidden) openAccount('signin', accountButton);
     else closeAccount();
   });
-  entrySignupButton?.addEventListener('click', () => openAccount('signup', entrySignupButton));
+  entrySignupButton?.addEventListener('click', () => beginGoogleLogin('signup'));
   entrySigninButton?.addEventListener('click', () => openAccount('signin', entrySigninButton));
   closeButton?.addEventListener('click', closeAccount);
-  visitorButton?.addEventListener('click', () => {
-    localStorage.setItem(accountPreferenceKey, 'visitor');
-    closeAccount();
-  });
   signupButton?.addEventListener('click', () => beginGoogleLogin('signup'));
   signinButton?.addEventListener('click', () => beginGoogleLogin('signin'));
+  signinForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const workerBase = accountWorkerBaseUrl();
+    const username = String(passwordLoginName?.value || '').trim();
+    const accessCode = String(passwordLoginPassword?.value || '');
+    if (!workerBase || !username || !accessCode) return;
+    setMessage(translate('account.loading'));
+    try {
+      const response = await fetch(`${workerBase}/real-estate/login`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ username, accessCode }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.session?.galleryKey) throw new Error(payload?.error?.message || translate('account.password_failed'));
+      const client = String(payload.session.galleryKey).replace(/-real-estate$/i, '').trim().toLowerCase();
+      const destination = new URL('./real-estate.html', window.location.href);
+      destination.searchParams.set('client', client);
+      destination.searchParams.set('access', 'password');
+      window.location.assign(destination.href);
+    } catch (error) {
+      setMessage(error?.message || translate('account.password_failed'), true);
+    }
+  });
   signoutButton?.addEventListener('click', beginGoogleLogout);
   signoutInlineButton?.addEventListener('click', beginGoogleLogout);
   syncButton?.addEventListener('click', () => saveAccountProfile());
@@ -4219,7 +4284,8 @@ const ensureSiteAccount = () => {
   };
   updateAccountView();
   applyTranslations();
-  if (consumeAccountReturnFlag()) window.setTimeout(openAccount, 0);
+  const accountReturnMode = consumeAccountReturnFlag();
+  if (accountReturnMode) window.setTimeout(() => openAccount(accountReturnMode), 0);
   else if (accountWorkerBaseUrl() && localStorage.getItem(accountPreferenceKey) !== 'visitor') {
     window.setTimeout(() => {
       refreshAccountSession({ syncProfile: true, mergeLocal: true, quiet: true });

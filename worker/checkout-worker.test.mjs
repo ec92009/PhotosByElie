@@ -869,6 +869,19 @@ test("access console is admin-only and writes reversible role grants", async () 
   }, { origin: "https://photos-by-elie.com" }));
   assert.equal(caseFoldedPasswordLoginResponse.status, 200);
 
+  const genericPasswordLoginResponse = await passwordWorker.fetch(jsonRequest("https://worker.test/real-estate/login", {
+    username: "CORINE",
+    accessCode: "fresh-private-password",
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(genericPasswordLoginResponse.status, 200);
+  assert.equal((await genericPasswordLoginResponse.json()).session.galleryKey, "corine-real-estate");
+
+  const wrongCasePasswordLoginResponse = await passwordWorker.fetch(jsonRequest("https://worker.test/real-estate/login", {
+    username: "Corine",
+    accessCode: "Fresh-private-password",
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(wrongCasePasswordLoginResponse.status, 403);
+
   assert.equal(REAL_ESTATE_PASSWORD_ITERATIONS, 100_000);
   assert.equal(
     await realEstatePasswordHash("fresh-private-password", "test-salt", 210_000),

@@ -538,6 +538,14 @@
     return url.href;
   };
 
+  const siteSignInUrl = () => {
+    const url = new URL("./", window.location.href);
+    if (pageVersion) url.searchParams.set("v", pageVersion);
+    url.searchParams.set("account", "1");
+    url.searchParams.set("accountMode", "signin");
+    return url.href;
+  };
+
   const redirectToAccessLogin = () => {
     const baseUrl = workerBaseUrl();
     if (!baseUrl) throw new Error("Google login needs the Photos By Elie Worker.");
@@ -6211,11 +6219,31 @@
     }
     bindEvents();
     if (initialized) {
-      if (!state.unlocked && pageParams.has("access")) {
-        if (elements.loginStatus) elements.loginStatus.textContent = "Completing Google sign-in...";
+      const accessMode = pageParams.get("access");
+      if (!state.unlocked && accessMode === "google") {
         unlockFromAccessLogin({ redirectOnUnauthorized: false }).catch((error) => {
-          if (elements.loginStatus) elements.loginStatus.textContent = error?.message || "Google login did not authorize this review.";
+          window.location.replace(siteSignInUrl());
         });
+      } else if (!state.unlocked && accessMode === "password") {
+        const sessionUrl = new URL(`${workerBaseUrl()}/real-estate/session`);
+        sessionUrl.searchParams.set("galleryKey", state.gallery?.key || "");
+        fetch(sessionUrl.href, { cache: "no-store", credentials: "include" })
+          .then(async (response) => {
+            const body = await response.json().catch(() => ({}));
+            if (!response.ok) throw realEstateWorkerError(response, body);
+            const username = body?.session?.username || state.payload?.customer?.username || "";
+            state.unlocked = true;
+            writeSessionCredentials(username);
+            writeSession(username);
+            syncAuthUi();
+            setStatus(`${state.photos.length} visible / ${state.photos.length} media`);
+            fetchCloudDeliverables({ quiet: true }).catch(() => {});
+            scheduleVideoExportSynthesis(1000);
+          })
+          .catch(() => window.location.replace(siteSignInUrl()));
+      } else if (!state.unlocked) {
+        window.location.replace(siteSignInUrl());
+        return;
       }
       window.setTimeout(() => showHelp(), 160);
     }

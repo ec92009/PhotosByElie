@@ -203,17 +203,28 @@ export const createRealEstateAuth = ({
   const clearCookieFor = () => `${cookieName}=; Max-Age=0; Path=/real-estate; HttpOnly; SameSite=Lax`;
 
   const login = async (payload = {}, request) => {
-    const gallery = galleryFor(payload.galleryKey);
     const enteredUsername = payload.username || payload.customer || "";
     const enteredPassword = payload.accessCode || payload.password || "";
-    const dynamicCredential = await dynamicCredentialFor(gallery, enteredUsername, enteredPassword);
-    const legacyMatches = usernameMatches(gallery, enteredUsername) && await passwordMatches(gallery, enteredPassword);
-    if (!dynamicCredential && !legacyMatches) {
+    const requestedGalleryKey = String(payload.galleryKey || "").trim();
+    const candidates = requestedGalleryKey
+      ? [galleryFor(requestedGalleryKey)]
+      : [...galleriesByKey.values()].sort((left, right) => String(left.key).localeCompare(String(right.key)));
+    let match = null;
+    for (const gallery of candidates) {
+      const dynamicCredential = await dynamicCredentialFor(gallery, enteredUsername, enteredPassword);
+      const legacyMatches = usernameMatches(gallery, enteredUsername) && await passwordMatches(gallery, enteredPassword);
+      if (dynamicCredential || legacyMatches) {
+        match = { gallery, dynamicCredential };
+        break;
+      }
+    }
+    if (!match) {
       throw Object.assign(new Error("Username/email or password is incorrect."), {
         status: 403,
         code: "real_estate_auth_required",
       });
     }
+    const { gallery, dynamicCredential } = match;
     const createdAt = now();
     const session = {
       galleryKey: gallery.key,

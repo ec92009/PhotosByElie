@@ -32,3 +32,11 @@ test("Finished-product shelf exposes one download action per ready format", () =
   assert.match(script, /Download \$\{label\}/);
   assert.match(script, /filter\(\(item\) => item\.formats\.some\(\(format\) => format === "pdf" \|\| format === "video"\)\)/);
 });
+
+test("Video action describes browser rendering while it is busy", () => {
+  assert.match(script, /Generating video\.\.\./);
+  assert.doesNotMatch(script, /Queueing video\.\.\./);
+  assert.match(script, /if \(batch\.slideshowSettings\?\.audioPolicy\?\.musicTrack\) return;/);
+  const slideshowShare = script.match(/const shareSlideshowPlan = async[\s\S]*?\n  let crcTable/)?.[0] || "";
+  assert.ok(slideshowShare.indexOf("ensureVideoExportReady") < slideshowShare.indexOf("queueCloudOutputs"));
+});

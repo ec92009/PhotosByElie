@@ -1102,13 +1102,13 @@
       button.disabled = outputBusy || noActiveSelection;
     });
     document.querySelectorAll("[data-re-view-slideshow]").forEach((button) => {
-      button.textContent = outputBusy && kind === "video-view" ? "Queueing video..." : "Queue video";
+      button.textContent = outputBusy && kind === "video-view" ? "Generating video..." : "Queue video";
       button.title = "Queue a cloud video with country-matched Pixabay guitar music";
       button.disabled = outputBusy || noActiveSelection;
     });
     document.querySelectorAll("[data-re-download-slideshow]").forEach((button) => {
       button.textContent = outputBusy && kind === "video-download"
-        ? "Queueing video..."
+        ? "Generating video..."
         : "Queue video";
       button.title = "Queue a true slideshow video file in the cloud with source audio ducked under the guitar bed";
       button.disabled = outputBusy || noActiveSelection;
@@ -4166,7 +4166,10 @@
 
   const scheduleVideoExportSynthesis = (delay = 700) => {
     clearVideoExportTimer();
-    if (!state.unlocked || !activeSelectedPhotos().length || !canRecordSlideshowVideo()) return;
+    const selected = activeSelectedPhotos();
+    if (!state.unlocked || !selected.length || !canRecordSlideshowVideo()) return;
+    const batch = buildSlideshowManifest(selected, true);
+    if (batch.slideshowSettings?.audioPolicy?.musicTrack) return;
     state.videoExportTimer = window.setTimeout(() => {
       state.videoExportTimer = 0;
       ensureVideoExportReady({ background: true }).catch(() => {});
@@ -4300,15 +4303,8 @@
     const cloudBatch = buildSlideshowManifest(selected, true, batchOverride);
     let cloudRecord = null;
     try {
-      const queued = await queueCloudOutputs({
-        batch: cloudBatch,
-        formats: ["video"],
-        progressKind: progressKind || (mode === "view" ? "video-view" : "video-download"),
-      });
-      cloudRecord = queued?.deliverables?.find((record) => deliverableFormatCode(record.type) === "video") || null;
-      if (!cloudRecord) throw new Error("The video shelf entry could not be created.");
       startOutputProgress({
-        title: "Preparing video",
+        title: "Generating video",
         detail: "Rendering the slideshow in this browser...",
         total: 3,
         kind: progressKind || (mode === "view" ? "video-view" : "video-download"),
@@ -4316,27 +4312,36 @@
       let recorded = null;
       let filename = "";
       if (!batchOverride) {
-        updateOutputProgress({ title: "Preparing video", detail: "Finishing the prepared video file...", current: 1, total: 3 });
+        if (state.videoExportStatus === "building") invalidateVideoExportCache({ schedule: false });
+        updateOutputProgress({ title: "Generating video", detail: "Recording the selected photos...", current: 1, total: 3 });
         const prepared = await ensureVideoExportReady({ background: false });
         recorded = prepared;
         filename = prepared.filename;
       } else {
         const slides = slideshowSlidesFor(cloudBatch);
-        updateOutputProgress({ title: "Preparing video", detail: `Recording ${slides.length} slide${slides.length === 1 ? "" : "s"}...`, current: 1, total: 3 });
+        updateOutputProgress({ title: "Generating video", detail: `Recording ${slides.length} slide${slides.length === 1 ? "" : "s"}...`, current: 1, total: 3 });
         recorded = await recordSlideshowVideoBlob(cloudBatch, ({ phase, index, total, slide }) => {
           const detail = phase === "finalize"
             ? "Finalizing video file..."
             : phase === "load"
               ? `Recording slide ${index + 1}/${total}: ${slide.title || "Untitled"}`
-              : "Preparing video...";
-          updateOutputProgress({ title: "Preparing video", detail, current: phase === "finalize" ? 2 : 1, total: 3 });
+              : "Generating video...";
+          updateOutputProgress({ title: "Generating video", detail, current: phase === "finalize" ? 2 : 1, total: 3 });
           setStatus(detail);
         });
         filename = `${state.gallery?.key || "real-estate"}-${cloudBatch.batchId}-slideshow.${recorded.extension}`;
       }
-      updateOutputProgress({ title: "Preparing video", detail: "Uploading video to the finished-products shelf...", current: 2, total: 3 });
+      updateOutputProgress({ title: "Generating video", detail: "Preparing the finished-products shelf entry...", current: 2, total: 3 });
+      const queued = await queueCloudOutputs({
+        batch: cloudBatch,
+        formats: ["video"],
+        progressKind: progressKind || (mode === "view" ? "video-view" : "video-download"),
+      });
+      cloudRecord = queued?.deliverables?.find((record) => deliverableFormatCode(record.type) === "video") || null;
+      if (!cloudRecord) throw new Error("The video shelf entry could not be created.");
+      updateOutputProgress({ title: "Generating video", detail: "Uploading video to the finished-products shelf...", current: 2, total: 3 });
       const saved = await completeCloudOutput({ record: cloudRecord, blob: recorded.blob, filename });
-      updateOutputProgress({ title: "Preparing video", detail: "Video ready on the shelf.", current: 3, total: 3 });
+      updateOutputProgress({ title: "Generating video", detail: "Video ready on the shelf.", current: 3, total: 3 });
       setStatus(`Video ready on the finished-products shelf (${formatBytes(saved.bytes || recorded.blob.size)}). Choose Next to review it.`);
       completeOutputProgress(`Video ready: ${saved.filename || filename} (${formatBytes(saved.bytes || recorded.blob.size)})`);
     } catch (error) {

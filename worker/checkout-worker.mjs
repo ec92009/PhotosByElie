@@ -3,6 +3,7 @@ import { createMemoryStore } from "./memory-store.mjs";
 import { createMockStripeClient } from "./mock-stripe.mjs";
 import { createMemoryOwnerActionStore } from "./owner-action-store.mjs";
 import { createMemorySidecarStateStore } from "./sidecar-state-store.mjs";
+import { canonicalRealEstateGalleryKey } from "./real-estate-gallery-key.mjs";
 
 const ORDER_CURRENCY = "usd";
 const MINIMUM_CHARGE_AMOUNT = 50;
@@ -2736,7 +2737,9 @@ export const createPhotosByElieWorker = ({
     Boolean(
       session?.roles?.includes("admin")
       || session?.roles?.includes("owner")
-      || session?.realEstateClients?.includes(galleryKey)
+      || session?.realEstateClients?.some((key) =>
+        canonicalRealEstateGalleryKey(key) === canonicalRealEstateGalleryKey(galleryKey)
+      )
     );
 
   const requireRealEstateSession = async (request, payload) => {

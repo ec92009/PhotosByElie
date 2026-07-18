@@ -2,6 +2,9 @@ import {
   REAL_ESTATE_PASSWORD_ITERATIONS,
   realEstatePasswordHash,
 } from "./real-estate-auth.mjs";
+import { canonicalRealEstateGalleryKey } from "./real-estate-gallery-key.mjs";
+
+export { canonicalRealEstateGalleryKey } from "./real-estate-gallery-key.mjs";
 
 const SCHEMA = "photosbyelie.accessUser.v1";
 const VALID_TIERS = new Set(["user", "re_client", "owner"]);
@@ -196,15 +199,6 @@ const normalizeGalleryKind = (value, fallback = "event") => {
 const normalizeGroupState = (value) => {
   const state = String(value || "active").trim().toLowerCase().replace(/[-\s]+/g, "_");
   return state === "archived" ? "archived" : "active";
-};
-
-const REAL_ESTATE_GALLERY_ALIASES = new Map([
-  ["re-la-concha", "corine-real-estate"],
-]);
-
-export const canonicalRealEstateGalleryKey = (value) => {
-  const key = String(value || "").trim();
-  return REAL_ESTATE_GALLERY_ALIASES.get(key) || key;
 };
 
 const normalizeGalleryKeys = (value) => {

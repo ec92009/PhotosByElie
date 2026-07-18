@@ -59,8 +59,13 @@ const parseCookies = (request) => {
 };
 
 const galleryMapFor = (galleries) => {
-  if (Array.isArray(galleries)) return new Map(galleries.map((gallery) => [gallery.key, gallery]));
-  return new Map(Object.entries(galleries || {}).map(([key, gallery]) => [key, { key, ...gallery }]));
+  const entries = Array.isArray(galleries)
+    ? galleries.map((gallery) => [gallery.key, gallery])
+    : Object.entries(galleries || {}).map(([key, gallery]) => [key, { key, ...gallery }]);
+  return new Map(entries.map(([key, gallery]) => {
+    const canonicalKey = canonicalRealEstateGalleryKey(key);
+    return [canonicalKey, { ...gallery, key: canonicalKey }];
+  }));
 };
 
 const publicSessionFor = (session) => ({
@@ -122,7 +127,7 @@ export const createRealEstateAuth = ({
   const ttlSeconds = Math.max(60, Math.min(24 * 60 * 60, Number(sessionSeconds) || DEFAULT_SESSION_SECONDS));
 
   const galleryFor = (galleryKey) => {
-    const key = String(galleryKey || "").trim();
+    const key = canonicalRealEstateGalleryKey(galleryKey);
     const gallery = galleriesByKey.get(key);
     if (!gallery) {
       throw Object.assign(new Error("Real-estate gallery is not configured for client login."), {
@@ -260,7 +265,7 @@ export const createRealEstateAuth = ({
 
   const requireSession = async (request, galleryKey = "") => {
     const session = await sessionFromRequest(request);
-    if (galleryKey && session.galleryKey !== String(galleryKey || "").trim()) throw sessionError();
+    if (galleryKey && session.galleryKey !== canonicalRealEstateGalleryKey(galleryKey)) throw sessionError();
     return session;
   };
 
@@ -272,3 +277,4 @@ export const createRealEstateAuth = ({
     publicSessionFor,
   };
 };
+import { canonicalRealEstateGalleryKey } from "./real-estate-gallery-key.mjs";

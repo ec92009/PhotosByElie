@@ -845,7 +845,7 @@ test("access console is admin-only and writes reversible role grants", async () 
   assert.equal("passwordHash" in corinePasswordBody.credentials[0], false);
 
   const passwordAuth = createRealEstateAuth({
-    galleries: [{ key: "corine-real-estate", username: "Corine", privateMasterPrefix: "real-estate/corine-real-estate/masters" }],
+    galleries: [{ key: "Corine-gallery", username: "Corine", privateMasterPrefix: "real-estate/corine-real-estate/masters" }],
     credentialStore: registry,
     sessionSecret: "access-console-password-test-secret",
   });

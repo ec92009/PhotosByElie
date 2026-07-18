@@ -6,9 +6,9 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v140.17`
+- Current visible version: `v140.18`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
-- `v140.17` gives Real Estate videos a restrained presentation finish: branded property intro and Photos By Elie outro cards, eased Ken Burns movement, and short fades through black between images while preserving the existing music and credit policy.
+- `v140.18` gives Real Estate videos a restrained presentation finish: branded property intro and Photos By Elie outro cards, eased Ken Burns movement, and short fades through black between images while preserving the existing music and credit policy.
 
 ## Structure
 

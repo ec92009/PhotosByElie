@@ -66,6 +66,9 @@ test("Generated videos include restrained branded presentation polish", () => {
   assert.match(script, /phase: "outro"/);
   assert.match(script, /slideshowTransitionFraction/);
   assert.match(script, /soft-fade-through-black/);
+  assert.match(script, /slideshowAssetTimeoutMs = 12000/);
+  assert.match(script, /Timed out loading slideshow image/);
+  assert.match(script, /Timed out loading slideshow music/);
 });
 
 test("Site account sign-in combines Google and legacy credentials without a special Real Estate form", () => {

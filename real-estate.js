@@ -765,6 +765,7 @@
   const slideshowIntroDurationMs = 2200;
   const slideshowOutroDurationMs = 2200;
   const slideshowTransitionFraction = 0.12;
+  const slideshowAssetTimeoutMs = 12000;
   const slideshowVideoMimeTypes = Object.freeze([
     "video/mp4;codecs=h264,aac",
     "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
@@ -3644,8 +3645,20 @@
   const loadSlideshowImageElement = (url, { crossOrigin = "anonymous" } = {}) => new Promise((resolve, reject) => {
     const image = new Image();
     if (crossOrigin) image.crossOrigin = crossOrigin;
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error(`Could not load slideshow image: ${url}`));
+    const timer = window.setTimeout(() => {
+      image.onload = null;
+      image.onerror = null;
+      image.src = "";
+      reject(new Error(`Timed out loading slideshow image: ${url}`));
+    }, slideshowAssetTimeoutMs);
+    image.onload = () => {
+      window.clearTimeout(timer);
+      resolve(image);
+    };
+    image.onerror = () => {
+      window.clearTimeout(timer);
+      reject(new Error(`Could not load slideshow image: ${url}`));
+    };
     image.decoding = "async";
     image.src = url;
   });
@@ -3662,17 +3675,23 @@
   };
 
   const loadSlideshowImageViaBlob = async (url) => {
-    const response = await fetch(url, { mode: "cors", cache: "force-cache" });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const blob = await response.blob();
-    const objectUrl = URL.createObjectURL(blob);
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), slideshowAssetTimeoutMs);
+    let objectUrl = "";
     try {
+      const response = await fetch(url, { mode: "cors", cache: "force-cache", signal: controller.signal });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const blob = await response.blob();
+      objectUrl = URL.createObjectURL(blob);
       const image = await loadSlideshowImageElement(objectUrl, { crossOrigin: "" });
       image._photosByElieObjectUrl = objectUrl;
       return image;
     } catch (error) {
-      URL.revokeObjectURL(objectUrl);
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      if (error?.name === "AbortError") throw new Error(`Timed out fetching slideshow image: ${url}`);
       throw error;
+    } finally {
+      window.clearTimeout(timer);
     }
   };
 
@@ -4021,9 +4040,20 @@
       throw new Error("Tap Download video once so this browser can add music to the video file.");
     }
     const destination = context.createMediaStreamDestination();
-    const response = await fetch(musicUrl, { mode: "cors" });
-    if (!response.ok) throw new Error(`Could not load slideshow music: HTTP ${response.status}`);
-    const buffer = await context.decodeAudioData(await response.arrayBuffer());
+    const musicController = new AbortController();
+    const musicTimer = window.setTimeout(() => musicController.abort(), slideshowAssetTimeoutMs);
+    let musicBytes;
+    try {
+      const response = await fetch(musicUrl, { mode: "cors", signal: musicController.signal });
+      if (!response.ok) throw new Error(`Could not load slideshow music: HTTP ${response.status}`);
+      musicBytes = await response.arrayBuffer();
+    } catch (error) {
+      if (error?.name === "AbortError") throw new Error("Timed out loading slideshow music.");
+      throw error;
+    } finally {
+      window.clearTimeout(musicTimer);
+    }
+    const buffer = await context.decodeAudioData(musicBytes);
     const source = context.createBufferSource();
     const gain = context.createGain();
     source.buffer = buffer;

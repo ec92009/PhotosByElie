@@ -67,6 +67,11 @@ class RealEstateDisplayOverrideTests(unittest.TestCase):
             preview_1800 = output_dir / photo["imageSrc"]
 
             self.assertEqual(photo["displayVariant"], "approved-rework")
+            fingerprint = import_real_estate_gallery.content_fingerprint(override)
+            self.assertIn(f"-rework-{fingerprint}_900.jpg", photo["gallerySrc"])
+            self.assertIn(f"-rework-{fingerprint}_1800.jpg", photo["imageSrc"])
+            self.assertIn(f"-rework-{fingerprint}_900.jpg", photo["media"]["publicPreview"]["galleryKey"])
+            self.assertIn(f"-rework-{fingerprint}_1800.jpg", photo["media"]["publicPreview"]["detailKey"])
             self.assertEqual(photo["realEstate"]["sourcePath"], str(original))
             self.assertEqual(photo["realEstate"]["sourceDimensions"], {"width": 120, "height": 80})
             self.assertTrue(photo["realEstate"]["privateMasterKey"].endswith("living-room.jpg"))

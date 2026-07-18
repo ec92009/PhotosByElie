@@ -58,6 +58,15 @@ def image_dimensions(path: Path) -> dict[str, int]:
         return {"width": int(image.width), "height": int(image.height)}
 
 
+def content_fingerprint(path: Path, length: int = 12) -> str:
+    """Return a short content hash for immutable derivative cache keys."""
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()[:length]
+
+
 def is_video(path: Path) -> bool:
     return path.suffix.lower() in VIDEO_EXTENSIONS
 
@@ -665,9 +674,15 @@ def build_manifest(
                 if display_source is not None
                 else DISPLAY_VARIANT_ORIGINAL
             )
+            preview_version = (
+                f"-rework-{content_fingerprint(display_source)}"
+                if display_source is not None
+                else ""
+            )
+            preview_id = f"{photo_id}{preview_version}"
             video_still_percent = 10
-            preview_900_path = output_dir / "previews" / album_slug / f"{photo_id}_900.jpg"
-            preview_1800_path = output_dir / "previews" / album_slug / f"{photo_id}_1800.jpg"
+            preview_900_path = output_dir / "previews" / album_slug / f"{preview_id}_900.jpg"
+            preview_1800_path = output_dir / "previews" / album_slug / f"{preview_id}_1800.jpg"
             if media_type == "video":
                 duration_seconds = float(video_info.get("durationSeconds") or 0)
                 preview_900_render = render_video_still_derivative(
@@ -728,8 +743,8 @@ def build_manifest(
 
             preview_900_rel = output_relative(preview_900_path, output_dir)
             preview_1800_rel = output_relative(preview_1800_path, output_dir)
-            preview_900_key = f"{public_key_prefix}/{album_slug}/{photo_id}_900.jpg"
-            preview_1800_key = f"{public_key_prefix}/{album_slug}/{photo_id}_1800.jpg"
+            preview_900_key = f"{public_key_prefix}/{album_slug}/{preview_id}_900.jpg"
+            preview_1800_key = f"{public_key_prefix}/{album_slug}/{preview_id}_1800.jpg"
             private_master_key = f"{private_key_prefix}/{album_slug}/{photo_id}{source.suffix.lower()}"
             metadata = [
                 {"label": "Client", "value": customer},

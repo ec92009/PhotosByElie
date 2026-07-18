@@ -2123,13 +2123,9 @@
     } catch (_error) {
       sameOrigin = false;
     }
-    if (!sameOrigin) {
-      window.open(href, "_blank", "noopener");
-      return;
-    }
     const link = document.createElement("a");
     link.href = href;
-    link.download = "";
+    if (sameOrigin) link.download = "";
     document.body.append(link);
     link.click();
     link.remove();

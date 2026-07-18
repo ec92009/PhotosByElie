@@ -1,3 +1,5 @@
+import { canonicalRealEstateGalleryKey } from "./real-estate-gallery-key.mjs";
+
 const safeName = (value, fallback = "file") => String(value || fallback)
   .replace(/[^A-Za-z0-9._-]+/g, "-")
   .replace(/^-+|-+$/g, "")
@@ -66,8 +68,10 @@ const objectBytes = (object) => {
 };
 
 const galleryMapFor = (galleries) => {
-  if (Array.isArray(galleries)) return new Map(galleries.map((gallery) => [gallery.key, gallery]));
-  return new Map(Object.entries(galleries || {}).map(([key, gallery]) => [key, { key, ...gallery }]));
+  const entries = Array.isArray(galleries)
+    ? galleries.map((gallery) => [gallery.key, gallery])
+    : Object.entries(galleries || {}).map(([key, gallery]) => [key, { key, ...gallery }]);
+  return new Map(entries.map(([key, gallery]) => [canonicalRealEstateGalleryKey(key), gallery]));
 };
 
 const uniqueName = (name, usedNames) => {
@@ -214,7 +218,10 @@ export const createRealEstateOriginals = ({
 
   const authorize = (gallery, payload) => {
     const session = payload.realEstateSession;
-    if (session?.galleryKey === gallery.key && normalizeCredential(session.username)) return;
+    if (
+      canonicalRealEstateGalleryKey(session?.galleryKey) === canonicalRealEstateGalleryKey(gallery.key)
+      && normalizeCredential(session?.username)
+    ) return;
     const expectedUsers = new Set([
       gallery.username,
       gallery.customer,
@@ -232,7 +239,7 @@ export const createRealEstateOriginals = ({
   };
 
   const createSession = async (payload = {}) => {
-    const galleryKey = String(payload.galleryKey || "").trim();
+    const galleryKey = canonicalRealEstateGalleryKey(payload.galleryKey);
     const gallery = galleriesByKey.get(galleryKey);
     if (!gallery) {
       throw Object.assign(new Error("Real-estate gallery is not configured for originals delivery."), {

@@ -1,3 +1,5 @@
+import { canonicalRealEstateGalleryKey } from "./real-estate-gallery-key.mjs";
+
 const normalizeCredential = (value) => String(value || "").trim().toLowerCase();
 
 const normalizeKeyPrefix = (value) => String(value || "")
@@ -63,8 +65,10 @@ const filenameFor = (record, output = {}) => String(
 ).replace(/["\r\n]+/g, "").trim();
 
 const galleryMapFor = (galleries) => {
-  if (Array.isArray(galleries)) return new Map(galleries.map((gallery) => [gallery.key, gallery]));
-  return new Map(Object.entries(galleries || {}).map(([key, gallery]) => [key, { key, ...gallery }]));
+  const entries = Array.isArray(galleries)
+    ? galleries.map((gallery) => [gallery.key, gallery])
+    : Object.entries(galleries || {}).map(([key, gallery]) => [key, { key, ...gallery }]);
+  return new Map(entries.map(([key, gallery]) => [canonicalRealEstateGalleryKey(key), gallery]));
 };
 
 const cloneJson = (value) => {
@@ -233,7 +237,7 @@ export const createRealEstateDeliverables = ({
   };
 
   const galleryFor = (payload = {}) => {
-    const galleryKey = String(payload.galleryKey || "").trim();
+    const galleryKey = canonicalRealEstateGalleryKey(payload.galleryKey);
     const gallery = galleriesByKey.get(galleryKey);
     if (!gallery) {
       throw Object.assign(new Error("Real-estate gallery is not configured for cloud products."), {
@@ -246,7 +250,10 @@ export const createRealEstateDeliverables = ({
 
   const authorize = (gallery, payload) => {
     const session = payload.realEstateSession;
-    if (session?.galleryKey === gallery.key && normalizeCredential(session.username)) return;
+    if (
+      canonicalRealEstateGalleryKey(session?.galleryKey) === canonicalRealEstateGalleryKey(gallery.key)
+      && normalizeCredential(session?.username)
+    ) return;
     const expectedUsers = new Set([
       gallery.username,
       gallery.customer,

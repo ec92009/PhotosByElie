@@ -2503,7 +2503,7 @@ test("real-estate originals endpoint creates private download tokens", async () 
   const store = createMemoryStore();
   const emailClient = createFakeEmailClient({ fail: true });
   const galleries = [{
-    key: "corine-real-estate",
+    key: "Corine-gallery",
     username: "Corine",
     email: "corine@example.com",
     propertyTitle: "La Concha 1 Apt 8AB1",
@@ -2798,7 +2798,7 @@ test("real-estate cloud assembly jobs persist status and serve completed assets"
   const randomUUID = deterministicIds();
   const privateR2 = createFakeR2();
   const galleries = [{
-    key: "corine-real-estate",
+    key: "Corine-gallery",
     username: "Corine",
     accessCode: "LaConcha",
   }];

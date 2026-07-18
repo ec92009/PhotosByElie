@@ -762,6 +762,9 @@
   const sourceVideoAudioGainDb = -20;
   const sourceVideoAudioLinearGain = 10 ** (sourceVideoAudioGainDb / 20);
   const slideshowVideoFps = 30;
+  const slideshowIntroDurationMs = 2200;
+  const slideshowOutroDurationMs = 2200;
+  const slideshowTransitionFraction = 0.12;
   const slideshowVideoMimeTypes = Object.freeze([
     "video/mp4;codecs=h264,aac",
     "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
@@ -883,7 +886,13 @@
     watermarkEnabled: Boolean(state.watermarkEnabled),
     watermarkText: activeWatermarkText(),
     transition: slideshowTransition,
-    effects: "subtle-centered-ken-burns",
+    effects: "branded-intro-outro-subtle-centered-ken-burns-soft-fades",
+    presentation: {
+      introDurationMs: slideshowIntroDurationMs,
+      outroDurationMs: slideshowOutroDurationMs,
+      transition: "soft-fade-through-black",
+      branding: "Photos By Elie",
+    },
     audioPolicy: slideshowAudioPolicyFor(musicTrack),
   });
   const normalizeSlideshowMusicTrack = (track) => {
@@ -3852,6 +3861,65 @@
     return lines.length ? lines : [""];
   };
 
+  const slideshowPresentationTitleFor = (manifest) => {
+    const projectTitle = (Array.isArray(manifest?.projects) ? manifest.projects : [])
+      .map((project) => String(project?.projectTitle || "").trim())
+      .find(Boolean);
+    return projectTitle || String(manifest?.title || state.gallery?.title || "Property presentation").trim();
+  };
+
+  const smoothVideoProgress = (progress) => {
+    const p = Math.max(0, Math.min(1, Number(progress) || 0));
+    return p * p * (3 - (2 * p));
+  };
+
+  const brandedCardOpacity = (progress) => {
+    const p = Math.max(0, Math.min(1, Number(progress) || 0));
+    const fade = 0.2;
+    return Math.max(0, Math.min(1, p / fade, (1 - p) / fade));
+  };
+
+  const drawRecordedBrandCard = (context, canvas, { title = "", outro = false, progress = 0 } = {}) => {
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    const background = context.createLinearGradient(0, 0, canvas.width, canvas.height);
+    background.addColorStop(0, "#050505");
+    background.addColorStop(0.58, "#111111");
+    background.addColorStop(1, "#1b1712");
+    context.fillStyle = background;
+    context.fillRect(0, 0, canvas.width, canvas.height);
+
+    const opacity = brandedCardOpacity(progress);
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const eyebrowSize = Math.max(20, Math.round(Math.min(canvas.width, canvas.height) / 31));
+    const titleSize = Math.max(38, Math.min(82, Math.round(canvas.width * 0.068)));
+    const detailSize = Math.max(19, Math.round(Math.min(canvas.width, canvas.height) / 33));
+    const lineWidth = Math.max(90, Math.round(canvas.width * 0.16));
+
+    context.save();
+    context.globalAlpha = opacity;
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillStyle = "rgba(255,255,255,0.72)";
+    context.font = `900 ${eyebrowSize}px Arial, Helvetica, sans-serif`;
+    context.fillText(outro ? "PHOTOS BY ELIE" : "PROPERTY PRESENTATION", centerX, centerY - titleSize * 1.12);
+
+    context.fillStyle = "#d7b98b";
+    context.fillRect(centerX - (lineWidth / 2), centerY - (titleSize * 0.54), lineWidth, Math.max(3, Math.round(canvas.height / 240)));
+
+    context.fillStyle = "#ffffff";
+    context.font = `900 ${titleSize}px Arial, Helvetica, sans-serif`;
+    const mainTitle = outro ? "Photos By Elie" : (String(title || "Property presentation").trim() || "Property presentation");
+    canvasTextLines(context, mainTitle, canvas.width * 0.78).slice(0, 2).forEach((line, index) => {
+      context.fillText(line, centerX, centerY + (index * titleSize * 1.02));
+    });
+
+    context.fillStyle = "rgba(255,255,255,0.68)";
+    context.font = `700 ${detailSize}px Arial, Helvetica, sans-serif`;
+    context.fillText(outro ? "photos-by-elie.com" : "Photos By Elie", centerX, centerY + titleSize * (outro ? 1.18 : 1.55));
+    context.restore();
+  };
+
   const drawRecordedCreditsFrame = (context, canvas, credits) => {
     context.clearRect(0, 0, canvas.width, canvas.height);
     context.fillStyle = "#050505";
@@ -3909,7 +3977,8 @@
     context.restore();
 
     const cardBox = objectFitBox(media.dimensions, { x: 0, y: 0, width: canvas.width, height: canvas.height }, "contain");
-    const transform = kenBurnsFrameTransform(slide.effect, progress, canvas);
+    const easedProgress = smoothVideoProgress(progress);
+    const transform = kenBurnsFrameTransform(slide.effect, easedProgress, canvas);
     context.save();
     context.translate(canvas.width / 2 + transform.x, canvas.height / 2 + transform.y);
     context.scale(transform.scale, transform.scale);
@@ -3924,6 +3993,16 @@
     drawVideoCounter(context, counterText, cardBox);
     context.restore();
     context.restore();
+
+    const visibleFraction = Math.max(0, Math.min(
+      1,
+      easedProgress / slideshowTransitionFraction,
+      (1 - easedProgress) / slideshowTransitionFraction,
+    ));
+    if (visibleFraction < 1) {
+      context.fillStyle = `rgba(5,5,5,${1 - visibleFraction})`;
+      context.fillRect(0, 0, canvas.width, canvas.height);
+    }
   };
 
   const nextAnimationFrame = () => new Promise((resolve) => window.requestAnimationFrame(resolve));
@@ -3985,7 +4064,14 @@
     if (!context) throw new Error("This browser cannot render the slideshow video.");
     const requiredCredits = slideshowRequiredCreditsFor(manifest);
     const creditDurationMs = slideshowCreditDurationMsFor(requiredCredits);
-    const totalDurationSeconds = slides.reduce((sum, slide) => sum + (Math.max(1000, Number(slide.durationMs) || 0) / 1000), 0) + (creditDurationMs / 1000);
+    const introDurationMs = Math.max(1000, Number(manifest?.slideshowSettings?.presentation?.introDurationMs) || slideshowIntroDurationMs);
+    const outroDurationMs = Math.max(1000, Number(manifest?.slideshowSettings?.presentation?.outroDurationMs) || slideshowOutroDurationMs);
+    const totalDurationSeconds = (
+      slides.reduce((sum, slide) => sum + (Math.max(1000, Number(slide.durationMs) || 0) / 1000), 0)
+      + (introDurationMs / 1000)
+      + (outroDurationMs / 1000)
+      + (creditDurationMs / 1000)
+    );
     let canvasStream = null;
     let audio = null;
     let stream = null;
@@ -4013,6 +4099,21 @@
       stopped = new Promise((resolve) => recorder.addEventListener("stop", resolve, { once: true }));
       recorder.start(1000);
       audio?.start?.();
+      const presentationTitle = slideshowPresentationTitleFor(manifest);
+      {
+        const startedAt = performance.now();
+        let elapsed = 0;
+        while (elapsed < introDurationMs) {
+          throwIfVideoExportAborted(signal);
+          elapsed = performance.now() - startedAt;
+          drawRecordedBrandCard(context, canvas, {
+            title: presentationTitle,
+            progress: Math.max(0, Math.min(1, elapsed / introDurationMs)),
+          });
+          onProgress?.({ phase: "intro", index: 0, total: slides.length + 2, progress: Math.max(0, Math.min(1, elapsed / introDurationMs)) });
+          await nextAnimationFrame();
+        }
+      }
       for (const [index, slide] of slides.entries()) {
         throwIfVideoExportAborted(signal);
         onProgress?.({ phase: "load", index, total: slides.length, slide });
@@ -4047,6 +4148,20 @@
             media.element.removeAttribute("src");
             media.element.load();
           }
+        }
+      }
+      {
+        const startedAt = performance.now();
+        let elapsed = 0;
+        while (elapsed < outroDurationMs) {
+          throwIfVideoExportAborted(signal);
+          elapsed = performance.now() - startedAt;
+          drawRecordedBrandCard(context, canvas, {
+            outro: true,
+            progress: Math.max(0, Math.min(1, elapsed / outroDurationMs)),
+          });
+          onProgress?.({ phase: "outro", index: slides.length + 1, total: slides.length + 2, progress: Math.max(0, Math.min(1, elapsed / outroDurationMs)) });
+          await nextAnimationFrame();
         }
       }
       if (requiredCredits.length) {

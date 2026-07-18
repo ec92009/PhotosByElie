@@ -56,6 +56,18 @@ test("Video action describes browser rendering while it is busy", () => {
   assert.ok(slideshowShare.indexOf("ensureVideoExportReady") < slideshowShare.indexOf("queueCloudOutputs"));
 });
 
+test("Generated videos include restrained branded presentation polish", () => {
+  assert.match(script, /slideshowIntroDurationMs = 2200/);
+  assert.match(script, /slideshowOutroDurationMs = 2200/);
+  assert.match(script, /drawRecordedBrandCard/);
+  assert.match(script, /PROPERTY PRESENTATION/);
+  assert.match(script, /photos-by-elie\.com/);
+  assert.match(script, /phase: "intro"/);
+  assert.match(script, /phase: "outro"/);
+  assert.match(script, /slideshowTransitionFraction/);
+  assert.match(script, /soft-fade-through-black/);
+});
+
 test("Site account sign-in combines Google and legacy credentials without a special Real Estate form", () => {
   assert.doesNotMatch(html, /data-re-google-login|data-re-login-name|data-re-login-code|data-re-login-form/);
   assert.match(siteScript, /data-account-signin-form/);

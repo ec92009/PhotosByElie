@@ -6,8 +6,9 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v140.22`
+- Current visible version: `v140.23`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
+- `v140.23` makes a successful legacy Real Estate login a first-class signed-in state in the shared site header: Corine sees the face icon instead of visitor Sign Up / Sign In pills, while ACS remains the authority for what that scoped session may access.
 - `v140.22` makes cloud Real Estate generation observable and client-ready: the Worker persists real render phases and percentages, the page displays a determinate progress bar with elapsed time and ETA, and the output/shelf flow is localized in English, French, and Spanish. The all-cloud PDF/video pipeline introduced in `v140.21` remains unchanged.
 - `v140.21` moves Real Estate PDF and video production fully into Cloudflare: a durable Workflow launches cloud Chrome, writes finished files to private R2, transcodes cloud-recorded WebM to MP4 with Media Transformations, and updates the finished-products shelf while the client only queues and polls. Production music uses verified 60-second R2 clips that repeat for longer slideshows; source tracks remain unchanged.
 - `v140.20` keeps browser-rendered Real Estate videos responsive by excluding music tracks longer than three minutes from the random country pool.

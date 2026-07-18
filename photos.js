@@ -3893,6 +3893,9 @@ const ensureSiteAccount = () => {
     checked: false,
     available: Boolean(accountWorkerBaseUrl()),
     authenticated: false,
+    scopedAuthenticated: false,
+    scopedKind: "",
+    scopedLabel: "",
     email: "",
     tier: "user",
     realEstateClients: [],
@@ -4264,23 +4267,29 @@ const ensureSiteAccount = () => {
     renderAccountMemory();
   };
 
+  const accountIsAuthenticated = () => state.authenticated || state.scopedAuthenticated;
+
   const updateAccountView = () => {
     const workerBase = accountWorkerBaseUrl();
     state.available = Boolean(workerBase);
-    accountEntry.hidden = state.authenticated;
-    accountButton.hidden = !state.authenticated;
-    accountButton.classList.toggle("is-authenticated", state.authenticated);
-    if (state.authenticated) {
+    const activeAuth = accountIsAuthenticated();
+    accountEntry.hidden = activeAuth;
+    accountButton.hidden = !activeAuth;
+    accountButton.classList.toggle("is-authenticated", activeAuth);
+    if (activeAuth) {
       if (statusPanel) statusPanel.hidden = false;
       if (accountTitle) accountTitle.textContent = translate('account.title');
       if (statusTitle) statusTitle.textContent = translate('account.signed_in');
-      if (statusDetail) statusDetail.textContent = state.email || translate('account.verified_email');
+      if (statusDetail) statusDetail.textContent = state.authenticated
+        ? state.email || translate('account.verified_email')
+        : state.scopedLabel || translate('account.signed_in');
       if (signoutButton) signoutButton.hidden = false;
       if (signoutInlineButton) signoutInlineButton.hidden = false;
       if (signupButton) signupButton.hidden = true;
       if (signinButton) signinButton.hidden = true;
       if (signinForm) signinForm.hidden = true;
-      if (!state.profileLoaded && !state.profileLoading) setMessage(translate('account.verified_email'));
+      if (state.authenticated && !state.profileLoaded && !state.profileLoading) setMessage(translate('account.verified_email'));
+      if (!state.authenticated) setMessage("");
       renderAccountMemory();
       return;
     }
@@ -4375,7 +4384,7 @@ const ensureSiteAccount = () => {
     if (modal.hidden) return;
     modal.hidden = true;
     accountButton.setAttribute('aria-expanded', 'false');
-    const focusTarget = accountReturnControl || (state.authenticated ? accountButton : entrySignupButton);
+    const focusTarget = accountReturnControl || (accountIsAuthenticated() ? accountButton : entrySignupButton);
     focusTarget?.focus({ preventScroll: true });
   };
 
@@ -4420,6 +4429,20 @@ const ensureSiteAccount = () => {
     const logoutUrl = new URL(`${workerBase}/auth/logout`);
     logoutUrl.searchParams.set("returnTo", accountReturnUrl());
     window.location.href = logoutUrl.href;
+  };
+
+  const beginAccountLogout = () => {
+    if (!state.authenticated && state.scopedAuthenticated) {
+      const kind = state.scopedKind;
+      state.scopedAuthenticated = false;
+      state.scopedKind = "";
+      state.scopedLabel = "";
+      closeAccount();
+      updateAccountView();
+      window.dispatchEvent(new CustomEvent("photosbyelie:scopedaccountlogout", { detail: { kind } }));
+      return;
+    }
+    beginGoogleLogout();
   };
 
   document.body.append(modal);
@@ -4468,8 +4491,8 @@ const ensureSiteAccount = () => {
       setMessage(error?.message || translate('account.password_failed'), true);
     }
   });
-  signoutButton?.addEventListener('click', beginGoogleLogout);
-  signoutInlineButton?.addEventListener('click', beginGoogleLogout);
+  signoutButton?.addEventListener('click', beginAccountLogout);
+  signoutInlineButton?.addEventListener('click', beginAccountLogout);
   syncButton?.addEventListener('click', () => saveAccountProfile());
   ordersList?.addEventListener('click', async (event) => {
     const resendButton = event.target.closest('[data-account-resend-order]');
@@ -4490,7 +4513,9 @@ const ensureSiteAccount = () => {
       return {
         checked: state.checked,
         available: state.available,
-        authenticated: state.authenticated,
+        authenticated: accountIsAuthenticated(),
+        siteAuthenticated: state.authenticated,
+        scopedKind: state.scopedKind,
         email: state.email,
         tier: state.tier,
         profileLoaded: state.profileLoaded,
@@ -4501,6 +4526,19 @@ const ensureSiteAccount = () => {
     refresh: refreshAccountSession,
     sync: saveAccountProfile,
     workerBaseUrl: accountWorkerBaseUrl,
+    setScopedSession({ kind = "", label = "" } = {}) {
+      state.scopedAuthenticated = true;
+      state.scopedKind = String(kind || "");
+      state.scopedLabel = String(label || "");
+      updateAccountView();
+    },
+    clearScopedSession(kind = "") {
+      if (kind && state.scopedKind && kind !== state.scopedKind) return;
+      state.scopedAuthenticated = false;
+      state.scopedKind = "";
+      state.scopedLabel = "";
+      updateAccountView();
+    },
   };
   updateAccountView();
   applyTranslations();

@@ -623,6 +623,19 @@
     }
   };
 
+  const syncSiteAccountSession = () => {
+    const account = window.photosByElieAccount;
+    if (!account) return;
+    if (state.unlocked) {
+      account.setScopedSession?.({
+        kind: "real-estate",
+        label: state.username || state.payload?.customer?.name || state.payload?.customer?.username || "",
+      });
+      return;
+    }
+    account.clearScopedSession?.("real-estate");
+  };
+
   const syncAuthUi = () => {
     app.classList.toggle("is-locked", !state.unlocked);
     app.classList.toggle("is-shelf-mode", state.unlocked && !state.detailMode);
@@ -634,6 +647,7 @@
       elements.loginCode.type = "password";
     }
     renderLoginCodeIcon();
+    syncSiteAccountSession();
   };
 
   const requireUnlocked = () => {
@@ -6702,7 +6716,7 @@
       if (state.originalsCredentialRequest) cancelOriginalsPassword();
     });
     document.querySelectorAll("[data-re-clear-selection]").forEach((button) => button.addEventListener("click", clearSelection));
-    document.querySelectorAll("[data-re-logout]").forEach((button) => button.addEventListener("click", () => {
+    const logoutRealEstateSession = () => {
       const baseUrl = workerBaseUrl();
       if (baseUrl) {
         fetch(`${baseUrl}/real-estate/logout`, {
@@ -6713,7 +6727,11 @@
       clearAuthState();
       syncAuthUi();
       window.scrollTo({ top: 0, behavior: "smooth" });
-    }));
+    };
+    document.querySelectorAll("[data-re-logout]").forEach((button) => button.addEventListener("click", logoutRealEstateSession));
+    window.addEventListener("photosbyelie:scopedaccountlogout", (event) => {
+      if (event.detail?.kind === "real-estate") logoutRealEstateSession();
+    });
     document.querySelector("[data-re-load-batch-input]")?.addEventListener("change", (event) => {
       loadBatchFile(event.target.files?.[0]).catch(() => setStatus("Selection file could not be loaded"));
       event.target.value = "";

@@ -126,13 +126,17 @@ test("A generic Real Estate URL returns to the public account entry", () => {
 test("Visitors see account pills and signed-in users return to the face menu", () => {
   assert.match(siteScript, /className = 'account-entry-actions'/);
   assert.match(siteScript, /data-account-entry-signup/);
-  assert.match(siteScript, /accountEntry\.hidden = state\.authenticated/);
-  assert.match(siteScript, /accountButton\.hidden = !state\.authenticated/);
+  assert.match(siteScript, /const accountIsAuthenticated = \(\) => state\.authenticated \|\| state\.scopedAuthenticated/);
+  assert.match(siteScript, /accountEntry\.hidden = activeAuth/);
+  assert.match(siteScript, /accountButton\.hidden = !activeAuth/);
   assert.match(siteScript, /accountEntryMode === 'signin'/);
   assert.match(siteScript, /signupButton\.hidden = accountEntryMode === 'signin'/);
   assert.match(siteScript, /signinButton\.hidden = accountEntryMode !== 'signin'/);
   assert.match(siteScript, /entrySignupButton\?\.addEventListener\('click', \(\) => beginGoogleLogin\('signup'\)\)/);
   assert.match(siteScript, /entrySigninButton\?\.addEventListener\('click', \(\) => openAccount\('signin', entrySigninButton\)\)/);
+  assert.match(siteScript, /setScopedSession\(\{ kind = "", label = "" \} = \{\}\)/);
+  assert.match(script, /setScopedSession\?\.\(\{[\s\S]*kind: "real-estate"/);
+  assert.match(script, /photosbyelie:scopedaccountlogout/);
   assert.match(sharedStyles, /\.account-entry-actions\{/);
   assert.doesNotMatch(home, /real-estate\.html\?logout=1&client=elie/);
 });

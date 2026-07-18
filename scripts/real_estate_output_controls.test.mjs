@@ -52,7 +52,9 @@ test("Site account sign-in combines Google and legacy credentials without a spec
   assert.match(siteScript, /data-account-signin-form/);
   assert.match(siteScript, /data-account-login-name/);
   assert.match(siteScript, /data-account-login-password/);
+  assert.match(siteScript, /data-account-login-reveal/);
   assert.match(siteScript, /account\.legacy_login/);
+  assert.match(siteScript, /account\.show_password/);
   assert.match(siteScript, /signinForm\.hidden = accountEntryMode !== 'signin'/);
   assert.match(siteScript, /body: JSON\.stringify\(\{ username, accessCode \}\)/);
   assert.doesNotMatch(siteScript, /data-account-visitor/);

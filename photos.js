@@ -62,6 +62,8 @@ const translations = {
     'account.legacy_login': 'Legacy log in with Username/Password',
     'account.username': 'Username',
     'account.password': 'Password',
+    'account.show_password': 'Show password',
+    'account.hide_password': 'Hide password',
     'account.sign_in_password': 'Sign in',
     'account.password_failed': 'Username/email or password is incorrect.',
     'account.sign_up': 'Sign up',
@@ -623,6 +625,8 @@ const translations = {
     'account.legacy_login': 'Connexion historique avec nom d utilisateur et mot de passe',
     'account.username': 'Nom d utilisateur',
     'account.password': 'Mot de passe',
+    'account.show_password': 'Afficher le mot de passe',
+    'account.hide_password': 'Masquer le mot de passe',
     'account.sign_in_password': 'Connexion',
     'account.password_failed': 'Nom d utilisateur/email ou mot de passe incorrect.',
     'account.sign_up': 'Creer un compte',
@@ -1184,6 +1188,8 @@ const translations = {
     'account.legacy_login': 'Acceso antiguo con usuario y contrasena',
     'account.username': 'Usuario',
     'account.password': 'Contrasena',
+    'account.show_password': 'Mostrar contrasena',
+    'account.hide_password': 'Ocultar contrasena',
     'account.sign_in_password': 'Iniciar sesion',
     'account.password_failed': 'Usuario/email o contrasena incorrectos.',
     'account.sign_up': 'Registrarse',
@@ -3773,7 +3779,10 @@ const ensureSiteAccount = () => {
           </label>
           <label>
             <span data-i18n="account.password">${translate('account.password')}</span>
-            <input type="password" autocomplete="current-password" data-account-login-password required/>
+            <span class="site-account-password-field">
+              <input type="password" autocomplete="current-password" data-account-login-password required/>
+              <button class="site-account-password-toggle" type="button" data-account-login-reveal aria-pressed="false" data-i18n="account.show_password">${translate('account.show_password')}</button>
+            </span>
           </label>
           <button class="site-account-action" type="submit" data-i18n="account.sign_in_password">${translate('account.sign_in_password')}</button>
         </form>
@@ -3794,6 +3803,7 @@ const ensureSiteAccount = () => {
   const signinForm = modal.querySelector('[data-account-signin-form]');
   const passwordLoginName = modal.querySelector('[data-account-login-name]');
   const passwordLoginPassword = modal.querySelector('[data-account-login-password]');
+  const passwordLoginReveal = modal.querySelector('[data-account-login-reveal]');
   const statusTitle = modal.querySelector('[data-account-status-title]');
   const statusDetail = modal.querySelector('[data-account-status-detail]');
   const message = modal.querySelector('[data-account-message]');
@@ -4223,6 +4233,15 @@ const ensureSiteAccount = () => {
   closeButton?.addEventListener('click', closeAccount);
   signupButton?.addEventListener('click', () => beginGoogleLogin('signup'));
   signinButton?.addEventListener('click', () => beginGoogleLogin('signin'));
+  passwordLoginReveal?.addEventListener('click', () => {
+    if (!passwordLoginPassword) return;
+    const revealing = passwordLoginPassword.type === 'password';
+    passwordLoginPassword.type = revealing ? 'text' : 'password';
+    passwordLoginReveal.textContent = translate(revealing ? 'account.hide_password' : 'account.show_password');
+    passwordLoginReveal.dataset.i18n = revealing ? 'account.hide_password' : 'account.show_password';
+    passwordLoginReveal.setAttribute('aria-pressed', String(revealing));
+    passwordLoginPassword.focus();
+  });
   signinForm?.addEventListener('submit', async (event) => {
     event.preventDefault();
     const workerBase = accountWorkerBaseUrl();

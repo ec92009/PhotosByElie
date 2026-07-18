@@ -91,7 +91,7 @@ Last updated: 2026-07-18
    - Keep Apple Photos intake, sellable storefront expansion, and protected download workflows ahead of hypothetical verticals.
 
 9. **Run a full Real Estate client rehearsal.**
-   - The cloud PDF/video implementation is complete; now exercise it live with Corine's La Concha selection.
+   - Live Corine rehearsal completed on 2026-07-18 with the eight-photo `La-Concha-1-Apt-8AB1-260718-1` selection: cloud PDF and MP4 both reached ready, both finished-product download controls enabled and ran without browser errors, and the temporary Cloudflare probe resources were removed.
    - Save a selection, generate PDF/video, verify PDF page/QR footers and the video closing QR, reopen from mobile, rename, and delete a throwaway product.
    - Confirm the client-facing offer feels coherent enough to sell as a service.
    - Keep this behind the public photo-store intake priority unless a real RE client opportunity appears.

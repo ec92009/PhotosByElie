@@ -7,6 +7,8 @@ const script = readFileSync(new URL("../real-estate.js", import.meta.url), "utf8
 const outputActions = html.match(/<div class="real-estate-output-actions">([\s\S]*?)<\/div>/)?.[1] || "";
 
 test("Real Estate output step has one control per cloud action", () => {
+  assert.equal((html.match(/data-re-download-pdf/g) || []).length, 1);
+  assert.equal((html.match(/data-re-download-slideshow/g) || []).length, 1);
   assert.equal((outputActions.match(/data-re-download-pdf/g) || []).length, 1);
   assert.equal((outputActions.match(/data-re-download-slideshow/g) || []).length, 1);
   assert.equal((outputActions.match(/data-re-shelf-back/g) || []).length, 1);

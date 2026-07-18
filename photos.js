@@ -456,12 +456,13 @@ const translations = {
     're.login.eyebrow': 'Private client access',
     're.login.title': 'Welcome',
     're.login.google_hint': 'Sign in with Google to open the galleries you have been invited to.',
+    're.login.or_password': 'or use an access password',
     're.login.username': 'Username',
     're.login.password': 'Password',
-    're.login.legacy_password': 'Legacy password',
+    're.login.legacy_password': 'Access password',
     're.login.show_password': 'Show password',
     're.login.hide_password': 'Hide password',
-    're.login.submit': 'Log in',
+    're.login.submit': 'Open gallery',
     're.selection.label': 'Selection',
     're.selection.name': 'Selection name',
     're.hero.customer_review': '{name} review',
@@ -1011,12 +1012,13 @@ const translations = {
     're.login.eyebrow': 'Acces client prive',
     're.login.title': 'Bienvenue',
     're.login.google_hint': 'Connectez-vous avec Google pour ouvrir les galeries auxquelles vous avez ete invite.',
+    're.login.or_password': 'ou utilisez un mot de passe d acces',
     're.login.username': 'Nom d utilisateur',
     're.login.password': 'Mot de passe',
-    're.login.legacy_password': 'Ancien mot de passe',
+    're.login.legacy_password': 'Mot de passe d acces',
     're.login.show_password': 'Afficher le mot de passe',
     're.login.hide_password': 'Masquer le mot de passe',
-    're.login.submit': 'Connexion',
+    're.login.submit': 'Ouvrir la galerie',
     're.selection.label': 'Selection',
     're.selection.name': 'Nom de la selection',
     're.hero.customer_review': 'Revue {name}',
@@ -1560,12 +1562,13 @@ const translations = {
     're.login.eyebrow': 'Acceso privado de cliente',
     're.login.title': 'Bienvenido',
     're.login.google_hint': 'Inicia sesion con Google para abrir las galerias a las que has sido invitado.',
+    're.login.or_password': 'o use una contrasena de acceso',
     're.login.username': 'Usuario',
     're.login.password': 'Contrasena',
-    're.login.legacy_password': 'Contrasena anterior',
+    're.login.legacy_password': 'Contrasena de acceso',
     're.login.show_password': 'Mostrar contrasena',
     're.login.hide_password': 'Ocultar contrasena',
-    're.login.submit': 'Entrar',
+    're.login.submit': 'Abrir galeria',
     're.selection.label': 'Seleccion',
     're.selection.name': 'Nombre de seleccion',
     're.hero.customer_review': 'Revision {name}',
@@ -3752,6 +3755,7 @@ const ensureSiteAccount = () => {
   const accountTitle = modal.querySelector('#site-account-title');
   const entrySignupButton = accountEntry.querySelector('[data-account-entry-signup]');
   const entrySigninButton = accountEntry.querySelector('[data-account-entry-signin]');
+  const statusPanel = modal.querySelector('.site-account-status');
   const visitorButton = modal.querySelector('[data-account-visitor]');
   const signoutButton = modal.querySelector('[data-account-signout]');
   const signoutInlineButton = modal.querySelector('[data-account-signout-inline]');
@@ -4023,6 +4027,7 @@ const ensureSiteAccount = () => {
     accountButton.hidden = !state.authenticated;
     accountButton.classList.toggle("is-authenticated", state.authenticated);
     if (state.authenticated) {
+      if (statusPanel) statusPanel.hidden = false;
       if (accountTitle) accountTitle.textContent = translate('account.title');
       if (statusTitle) statusTitle.textContent = translate('account.signed_in');
       if (statusDetail) statusDetail.textContent = state.email || translate('account.verified_email');
@@ -4038,19 +4043,21 @@ const ensureSiteAccount = () => {
       renderAccountMemory();
       return;
     }
+    if (statusPanel) statusPanel.hidden = true;
     if (statusTitle) statusTitle.textContent = translate('account.visitor_status');
     if (statusDetail) statusDetail.textContent = translate('account.choose');
     if (accountTitle) accountTitle.textContent = accountEntryMode === 'signin'
       ? translate('account.sign_in')
       : translate('account.sign_up');
-    if (visitorButton) {
-      visitorButton.dataset.i18n = 'account.continue_visitor';
-      visitorButton.textContent = translate('account.continue_visitor');
+    if (visitorButton) visitorButton.hidden = true;
+    if (signupButton) {
+      signupButton.hidden = accountEntryMode === 'signin';
+      signupButton.classList.toggle('primary', accountEntryMode !== 'signin');
     }
-    if (signupButton) signupButton.hidden = false;
-    if (signinButton) signinButton.hidden = false;
-    if (signupButton) signupButton.classList.toggle('primary', accountEntryMode !== 'signin');
-    if (signinButton) signinButton.classList.toggle('primary', accountEntryMode === 'signin');
+    if (signinButton) {
+      signinButton.hidden = accountEntryMode !== 'signin';
+      signinButton.classList.toggle('primary', accountEntryMode === 'signin');
+    }
     if (signoutButton) signoutButton.hidden = true;
     if (signoutInlineButton) signoutInlineButton.hidden = true;
     if (signupButton) signupButton.disabled = !state.available;

@@ -47,12 +47,15 @@ test("Video action describes browser rendering while it is busy", () => {
   assert.ok(slideshowShare.indexOf("ensureVideoExportReady") < slideshowShare.indexOf("queueCloudOutputs"));
 });
 
-test("Real Estate uses Google and ACS rather than a public password form", () => {
+test("Real Estate keeps Google and access-password sign-in in one compact form", () => {
   assert.match(html, /data-re-google-login/);
   assert.match(html, /re\.login\.google_hint/);
-  assert.doesNotMatch(html, /data-re-login-name/);
-  assert.doesNotMatch(html, /data-re-login-code/);
-  assert.doesNotMatch(html, /Private client access|Client login/);
+  assert.match(html, /re\.login\.or_password/);
+  assert.match(html, /data-re-login-name/);
+  assert.match(html, /data-re-login-code/);
+  assert.doesNotMatch(html, /data-re-password-login|data-re-password-panel/);
+  assert.doesNotMatch(script, /loginPasswordChoice|loginPasswordPanel/);
+  assert.doesNotMatch(html, /Private client access|Client login|or use legacy access/);
   assert.match(styles, /\.real-estate-login-card h1\{[\s\S]*?font-size:clamp\(1\.8rem,4vw,2\.7rem\)/);
 });
 
@@ -68,6 +71,9 @@ test("Visitors see account pills and signed-in users return to the face menu", (
   assert.match(siteScript, /accountButton\.hidden = !state\.authenticated/);
   assert.match(siteScript, /accountEntryMode === 'signin'/);
   assert.match(siteScript, /signinButton\.classList\.toggle\('primary', accountEntryMode === 'signin'\)/);
+  assert.match(siteScript, /visitorButton\) visitorButton\.hidden = true/);
+  assert.match(siteScript, /signupButton\.hidden = accountEntryMode === 'signin'/);
+  assert.match(siteScript, /signinButton\.hidden = accountEntryMode !== 'signin'/);
   assert.match(sharedStyles, /\.account-entry-actions\{/);
   assert.doesNotMatch(home, /real-estate\.html\?logout=1&client=elie/);
 });

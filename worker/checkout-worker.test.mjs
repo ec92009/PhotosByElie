@@ -1323,12 +1323,23 @@ const createFakeR2 = (initial = {}) => {
       };
     },
     put: async (key, body, options = {}) => {
-      const bytes = body instanceof Uint8Array ? body : new Uint8Array(body);
+      let bytes = null;
+      if (body instanceof Uint8Array) bytes = body;
+      else if (body instanceof ArrayBuffer) bytes = new Uint8Array(body);
+      else if (typeof body?.arrayBuffer === "function") bytes = new Uint8Array(await body.arrayBuffer());
+      else if (body && typeof body.getReader === "function") bytes = new Uint8Array(await new Response(body).arrayBuffer());
+      else bytes = new Uint8Array(body);
       values.set(key, {
         body: bytes,
         httpMetadata: options.httpMetadata || {},
         customMetadata: options.customMetadata || {},
       });
+      return {
+        key,
+        size: bytes.byteLength,
+        httpMetadata: options.httpMetadata || {},
+        customMetadata: options.customMetadata || {},
+      };
     },
     delete: async (key) => {
       values.delete(key);
@@ -2850,24 +2861,33 @@ test("real-estate cloud assembly jobs persist status and serve completed assets"
 
   const pdfRecord = queued.deliverables.find((record) => record.type === "pdf");
   const videoRecord = queued.deliverables.find((record) => record.type === "video");
-  const pdfOutputKey = pdfRecord.outputs.pdf.key;
-  await privateR2.put(pdfOutputKey, new TextEncoder().encode("%PDF-1.4 test"), {
-    httpMetadata: { contentType: "application/pdf" },
-  });
-  await privateR2.put(`real-estate/corine-real-estate/deliverables/${pdfRecord.id}.json`, new TextEncoder().encode(JSON.stringify({
-    ...pdfRecord,
-    status: "ready",
-    bytes: 13,
-  })), {
-    httpMetadata: { contentType: "application/json; charset=utf-8" },
-  });
-  await privateR2.put(`real-estate/corine-real-estate/deliverables/${videoRecord.id}.json`, new TextEncoder().encode(JSON.stringify({
-    ...videoRecord,
-    status: "failed",
-    failureReason: "Cloud renderer could not read the source video.",
-  })), {
-    httpMetadata: { contentType: "application/json; charset=utf-8" },
-  });
+  const pdfBytes = new TextEncoder().encode("%PDF-1.4 test");
+  const completePdfResponse = await worker.fetch(new Request(
+    `https://worker.test/real-estate/deliverables/${pdfRecord.id}/complete?galleryKey=corine-real-estate&filename=la-concha.pdf`,
+    {
+      method: "POST",
+      headers: { cookie, "content-type": "application/pdf" },
+      body: pdfBytes,
+    }
+  ));
+  assert.equal(completePdfResponse.status, 200);
+  const completedPdf = (await completePdfResponse.json()).deliverable;
+  assert.equal(completedPdf.status, "ready");
+  assert.equal(completedPdf.bytes, pdfBytes.byteLength);
+  assert.equal(completedPdf.filename, "la-concha.pdf");
+  assert.equal(completedPdf.assemblyJob.assembler, "browser-upload");
+  assert.equal(completedPdf.deliveryEmail.decision, "owner_review_before_client_notification");
+
+  const failVideoResponse = await worker.fetch(jsonRequest(
+    `https://worker.test/real-estate/deliverables/${videoRecord.id}/fail`,
+    {
+      galleryKey: "corine-real-estate",
+      failureReason: "Browser renderer could not read the source video.",
+    },
+    { cookie }
+  ));
+  assert.equal(failVideoResponse.status, 200);
+  assert.equal((await failVideoResponse.json()).deliverable.status, "needs-attention");
 
   const failedJobResponse = await worker.fetch(new Request(`https://worker.test/real-estate/deliverables/jobs/${queued.job.id}`, {
     headers: { cookie },
@@ -2875,7 +2895,7 @@ test("real-estate cloud assembly jobs persist status and serve completed assets"
   assert.equal(failedJobResponse.status, 200);
   const failedJob = await failedJobResponse.json();
   assert.equal(failedJob.job.status, "needs-attention");
-  assert.equal(failedJob.job.failureReason, "Cloud renderer could not read the source video.");
+  assert.equal(failedJob.job.failureReason, "Browser renderer could not read the source video.");
   assert.equal(failedJob.job.deliverables.find((record) => record.type === "pdf").status, "ready");
 
   const listResponse = await worker.fetch(jsonRequest("https://worker.test/real-estate/deliverables/list", {

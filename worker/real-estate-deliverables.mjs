@@ -42,9 +42,18 @@ const safeRecordId = (value) => {
 const contentTypeFor = (type, filename = "") => {
   const extension = String(filename || "").split(".").pop()?.toLowerCase();
   if (type === "pdf" || extension === "pdf") return "application/pdf";
-  if (type === "video" || ["mp4", "m4v"].includes(extension)) return "video/mp4";
   if (extension === "webm") return "video/webm";
+  if (type === "video" || ["mp4", "m4v"].includes(extension)) return "video/mp4";
   return "application/octet-stream";
+};
+
+const safeFilename = (value, fallback = "output.bin") => {
+  const filename = String(value || "")
+    .split(/[\\/]/)
+    .pop()
+    ?.replace(/["\r\n\0]+/g, "")
+    .trim();
+  return (filename || fallback).slice(0, 220);
 };
 
 const filenameFor = (record, output = {}) => String(
@@ -265,8 +274,13 @@ export const createRealEstateDeliverables = ({
 
   const outputPrefixFor = (gallery) => normalizeKeyPrefix(`${prefixFor(gallery)}/outputs`);
 
-  const outputKeyFor = (gallery, id, type) => {
-    const extension = type === "pdf" ? "pdf" : "mp4";
+  const outputKeyFor = (gallery, id, type, filename = "", contentType = "") => {
+    const normalizedContentType = String(contentType || "").split(";")[0].trim().toLowerCase();
+    const extension = type === "pdf"
+      ? "pdf"
+      : normalizedContentType === "video/webm" || /\.webm$/i.test(filename)
+        ? "webm"
+        : "mp4";
     return `${outputPrefixFor(gallery)}/${safeRecordId(id)}.${extension}`;
   };
 
@@ -560,6 +574,158 @@ export const createRealEstateDeliverables = ({
     };
   };
 
+  const completeAssemblyOutput = async (payload = {}) => {
+    const gallery = galleryFor(payload);
+    authorize(gallery, payload);
+    const id = safeRecordId(payload.id || payload.deliverableId || "");
+    const recordKey = keyFor(gallery, id);
+    const record = await objectJson(await privateBucket.get(recordKey));
+    if (!record) {
+      throw Object.assign(new Error("Real-estate product was not found."), {
+        status: 404,
+        code: "unknown_real_estate_deliverable",
+      });
+    }
+    const type = String(record.type || "").toLowerCase();
+    if (!["pdf", "video"].includes(type)) {
+      throw Object.assign(new Error("Only PDF and video products can receive assembled output."), {
+        status: 409,
+        code: "invalid_real_estate_assembly_output",
+      });
+    }
+    if (!payload.body) {
+      throw Object.assign(new Error("The assembled output file is empty."), {
+        status: 400,
+        code: "missing_real_estate_assembly_output",
+      });
+    }
+    const contentLength = Number(payload.contentLength || 0) || 0;
+    const maxBytes = 95 * 1024 * 1024;
+    if (contentLength > maxBytes) {
+      throw Object.assign(new Error("The assembled output exceeds the 95 MB browser-upload limit."), {
+        status: 413,
+        code: "real_estate_assembly_output_too_large",
+        details: { maxBytes },
+      });
+    }
+    const fallbackFilename = `${gallery.key}-${record.batch?.batchId || record.id}-${type === "pdf" ? "project.pdf" : "slideshow.mp4"}`;
+    const filename = safeFilename(payload.filename, fallbackFilename);
+    const contentType = String(payload.contentType || contentTypeFor(type, filename)).split(";")[0].trim().toLowerCase();
+    const validContentType = type === "pdf"
+      ? contentType === "application/pdf"
+      : contentType.startsWith("video/");
+    if (!validContentType) {
+      throw Object.assign(new Error(`The uploaded ${type} has an invalid content type.`), {
+        status: 415,
+        code: "invalid_real_estate_assembly_content_type",
+        details: { expected: type === "pdf" ? "application/pdf" : "video/*", received: contentType },
+      });
+    }
+
+    const outputKey = outputKeyFor(gallery, id, type, filename, contentType);
+    const stored = await privateBucket.put(outputKey, payload.body, {
+      httpMetadata: { contentType },
+      customMetadata: {
+        galleryKey: gallery.key,
+        deliverableId: id,
+        type,
+        assemblyJobId: String(record.assemblyJob?.id || ""),
+      },
+    });
+    const completedAt = now().toISOString();
+    const bytes = Number(stored?.size || contentLength || payload.bytes || 0) || 0;
+    const readyRecord = publicRecordFor({
+      ...record,
+      updatedAt: completedAt,
+      status: "ready",
+      bytes,
+      filename,
+      failureReason: "",
+      outputs: {
+        ...(record.outputs || {}),
+        [type]: {
+          ...(record.outputs?.[type] || {}),
+          key: outputKey,
+          filename,
+          contentType,
+        },
+      },
+      assemblyJob: {
+        ...(record.assemblyJob || {}),
+        status: "ready",
+        assembler: "browser-upload",
+        completedAt,
+        failureReason: "",
+      },
+      deliveryEmail: {
+        status: "not_sent",
+        decision: "owner_review_before_client_notification",
+        reason: "browser_assembled_output_waits_for_owner_review_on_shelf",
+        decidedAt: completedAt,
+      },
+    });
+    await privateBucket.put(recordKey, new TextEncoder().encode(JSON.stringify(readyRecord, null, 2)), {
+      httpMetadata: { contentType: "application/json; charset=utf-8" },
+      customMetadata: {
+        galleryKey: gallery.key,
+        deliverableId: id,
+        type,
+        assemblyJobId: String(readyRecord.assemblyJob?.id || ""),
+        status: "ready",
+      },
+    });
+    return readyRecord;
+  };
+
+  const failAssemblyOutput = async (payload = {}) => {
+    const gallery = galleryFor(payload);
+    authorize(gallery, payload);
+    const id = safeRecordId(payload.id || payload.deliverableId || "");
+    const recordKey = keyFor(gallery, id);
+    const record = await objectJson(await privateBucket.get(recordKey));
+    if (!record) {
+      throw Object.assign(new Error("Real-estate product was not found."), {
+        status: 404,
+        code: "unknown_real_estate_deliverable",
+      });
+    }
+    const failedAt = now().toISOString();
+    const failureReason = String(payload.failureReason || payload.error || "Browser output preparation failed.")
+      .replace(/[\r\n]+/g, " ")
+      .trim()
+      .slice(0, 500);
+    const failedRecord = {
+      ...record,
+      updatedAt: failedAt,
+      status: "needs-attention",
+      failureReason,
+      assemblyJob: {
+        ...(record.assemblyJob || {}),
+        status: "needs-attention",
+        assembler: "browser-upload",
+        failedAt,
+        failureReason,
+      },
+      deliveryEmail: {
+        status: "not_sent",
+        decision: "owner_review_required",
+        reason: "browser_assembly_failed",
+        decidedAt: failedAt,
+      },
+    };
+    await privateBucket.put(recordKey, new TextEncoder().encode(JSON.stringify(failedRecord, null, 2)), {
+      httpMetadata: { contentType: "application/json; charset=utf-8" },
+      customMetadata: {
+        galleryKey: gallery.key,
+        deliverableId: id,
+        type: String(record.type || ""),
+        assemblyJobId: String(record.assemblyJob?.id || ""),
+        status: "needs-attention",
+      },
+    });
+    return failedRecord;
+  };
+
   const getDeliverableAsset = async (payload = {}) => {
     const gallery = galleryFor(payload);
     authorize(gallery, payload);
@@ -627,5 +793,14 @@ export const createRealEstateDeliverables = ({
     };
   };
 
-  return { listDeliverables, putDeliverable, submitAssemblyJob, getAssemblyJob, getDeliverableAsset, deleteDeliverable };
+  return {
+    listDeliverables,
+    putDeliverable,
+    submitAssemblyJob,
+    getAssemblyJob,
+    completeAssemblyOutput,
+    failAssemblyOutput,
+    getDeliverableAsset,
+    deleteDeliverable,
+  };
 };

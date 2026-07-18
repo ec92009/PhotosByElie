@@ -1760,38 +1760,110 @@
     return body.job || null;
   };
 
+  const pendingCloudOutputFor = (format, batch) => {
+    const normalizedFormat = String(format || "").toLowerCase() === "mp4" ? "video" : String(format || "").toLowerCase();
+    const fingerprint = batchProductFingerprint(batch);
+    const activeProduct = producedDeliverables().find((item) => item.id === state.activeDeliverableId);
+    const activeIds = new Set(Array.isArray(activeProduct?.relatedIds) ? activeProduct.relatedIds.map(String) : []);
+    const candidates = (Array.isArray(state.cloudDeliverables) ? state.cloudDeliverables : [])
+      .map(normalizeDeliverable)
+      .filter((record) => deliverableFormatCode(record.type) === normalizedFormat)
+      .filter((record) => ["pending", "queued", "processing"].includes(String(record.status || "").toLowerCase()))
+      .filter((record) => batchProductFingerprint(record.batch) === fingerprint)
+      .sort((left, right) => (
+        Number(activeIds.has(String(right.id))) - Number(activeIds.has(String(left.id)))
+        || validDateFor(right.createdAt).getTime() - validDateFor(left.createdAt).getTime()
+      ));
+    return candidates[0] || null;
+  };
+
+  const completeCloudOutput = async ({ record, blob, filename }) => {
+    const baseUrl = workerBaseUrl();
+    if (!record?.id || !blob?.size || !baseUrl) throw new Error("The prepared cloud output is empty.");
+    const maxBytes = 95 * 1024 * 1024;
+    if (blob.size > maxBytes) throw new Error("The prepared output exceeds the 95 MB cloud-upload limit.");
+    const url = new URL(`${baseUrl}/real-estate/deliverables/${encodeURIComponent(record.id)}/complete`);
+    url.searchParams.set("galleryKey", state.gallery?.key || "");
+    url.searchParams.set("filename", filename || record.filename || "output.bin");
+    const response = await fetch(url.href, {
+      method: "POST",
+      credentials: "include",
+      headers: { "content-type": blob.type || (record.type === "pdf" ? "application/pdf" : "video/webm") },
+      body: blob,
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw realEstateWorkerError(response, body);
+    const saved = body.deliverable;
+    if (saved) mergeCloudDeliverables([saved]);
+    return saved || record;
+  };
+
+  const failCloudOutput = async (record, error) => {
+    const baseUrl = workerBaseUrl();
+    if (!record?.id || !baseUrl) return null;
+    try {
+      const response = await fetch(`${baseUrl}/real-estate/deliverables/${encodeURIComponent(record.id)}/fail`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          galleryKey: state.gallery?.key || "",
+          failureReason: error?.message || String(error || "Browser output preparation failed."),
+        }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw realEstateWorkerError(response, body);
+      if (body.deliverable) mergeCloudDeliverables([body.deliverable]);
+      return body.deliverable || null;
+    } catch (statusError) {
+      console.warn("Could not mark cloud output as needing attention", statusError);
+      return null;
+    }
+  };
+
   const queueCloudOutputs = async ({ batch, formats = ["pdf", "video"], progressKind = "cloud-output" } = {}) => {
     startOutputProgress({
-      title: "Sending output job to cloud",
-      detail: "Saving the selection manifest for cloud PDF/video assembly...",
+      title: "Preparing cloud output",
+      detail: "Finding or creating the finished-product shelf entry...",
       total: 2,
       kind: progressKind,
     });
     try {
-      const selection = saveLocalDeliverable({
-        type: "selection",
-        batch,
-        filename: `${state.gallery?.key || "real-estate"}-${batch.batchId}-selection.html`,
-      });
+      const requestedFormats = [...new Set(formats.map((format) => String(format || "").toLowerCase()))]
+        .filter((format) => format === "pdf" || format === "video");
+      const reused = requestedFormats.map((format) => pendingCloudOutputFor(format, batch)).filter(Boolean);
+      const reusedFormats = new Set(reused.map((record) => deliverableFormatCode(record.type)));
+      const missingFormats = requestedFormats.filter((format) => !reusedFormats.has(format));
       updateOutputProgress({
-        title: "Sending output job to cloud",
-        detail: "Queueing PDF/video assembly away from this browser...",
+        title: "Preparing cloud output",
+        detail: missingFormats.length ? "Creating the shelf entry..." : "Reusing the pending shelf entry...",
         current: 1,
         total: 2,
       });
-      const result = await submitCloudAssemblyJob({
+      const result = missingFormats.length ? await submitCloudAssemblyJob({
         batch,
-        formats,
-        title: selection?.title || activeDeliverableName(),
-      });
-      const job = result?.job?.id ? await fetchCloudAssemblyJobStatus(result.job.id).catch(() => result.job) : result?.job;
-      const formatLabel = formats.map((format) => format === "pdf" ? "PDF" : "video").join(" + ");
-      const statusLabel = job?.status ? ` Status: ${job.status}.` : "";
-      completeOutputProgress(`${formatLabel} job queued in the cloud.${statusLabel} The shelf will show pending, ready, or needs-attention.`);
-      setStatus(`${formatLabel} job queued in the cloud.${statusLabel} You can leave this browser; refresh the shelf for status.`);
-      return result;
+        formats: missingFormats,
+        title: activeDeliverableName(),
+      }) : null;
+      const submitted = Array.isArray(result?.deliverables) ? result.deliverables.map(normalizeDeliverable) : [];
+      const records = requestedFormats.map((format) => (
+        reused.find((record) => deliverableFormatCode(record.type) === format)
+        || submitted.find((record) => deliverableFormatCode(record.type) === format)
+      )).filter(Boolean);
+      const recordIds = new Set(records.map((record) => String(record.id)));
+      const product = producedDeliverables().find((item) => (
+        Array.isArray(item.relatedIds) && item.relatedIds.some((id) => recordIds.has(String(id)))
+      ));
+      if (product) {
+        state.activeDeliverableId = product.id;
+        state.activeDeliverableName = product.title;
+        syncActiveProductName();
+      }
+      const formatLabel = requestedFormats.map((format) => format === "pdf" ? "PDF" : "video").join(" + ");
+      completeOutputProgress(`${formatLabel} shelf entry ready. Preparing the actual file in this browser...`);
+      return { ...(result || {}), deliverables: records, reused: reused.length };
     } catch (error) {
-      const message = error?.message || "Cloud output job could not be queued.";
+      const message = error?.message || "Cloud output could not be prepared.";
       setStatus(message);
       failOutputProgress(message);
       throw error;
@@ -2207,7 +2279,7 @@
       ? t("re.status.drag_selected", { count: selected }, `Drag the ${selected} selected media items into the order you want.`)
       : t("re.status.select_before_order", {}, "Select at least one photo or video before ordering.");
     return selected
-      ? t("re.status.ready_output", { summary: activeOutputSummary() || `${selected} selected media` }, `Ready for output: ${activeOutputSummary() || `${selected} selected media`}. Preview either format, or download the PDF or video file.`)
+      ? t("re.status.ready_output", { summary: activeOutputSummary() || `${selected} selected media` }, `Ready for output: ${activeOutputSummary() || `${selected} selected media`}. Queue the PDF and video you want, then choose Next to follow them on the finished-products shelf.`)
       : t("re.status.select_before_output", {}, "Select at least one photo or video before creating outputs.");
   };
 
@@ -4198,77 +4270,49 @@
       return;
     }
     const cloudBatch = buildSlideshowManifest(selected, true, batchOverride);
-    await queueCloudOutputs({
-      batch: cloudBatch,
-      formats: ["video"],
-      progressKind: progressKind || (mode === "view" ? "video-view" : "video-download"),
-    });
-    return;
-    const openInBrowser = mode === "view";
-    const title = openInBrowser ? "Preparing video view" : "Preparing video file";
-    const fallbackWindow = openInBrowser ? (reservedWindow || reserveOutputWindow("Building video preview")) : null;
-    startOutputProgress({
-      title,
-      detail: "Building slideshow manifest...",
-      total: 3,
-      kind: progressKind || (mode === "view" ? "video-view" : "video-download"),
-    });
+    let cloudRecord = null;
     try {
-      let batch = buildSlideshowManifest(selected, true, batchOverride);
-      updateOutputProgress({ title, detail: "Adding music and Ken Burns motion...", current: 1, total: 3 });
-      let saved = null;
-      if (recordProduct) saveSelectionBeforeOutput(batch);
-      if (openInBrowser) {
-        const filename = `${state.gallery?.key || "real-estate"}-${batch.batchId}-slideshow.html`;
-        const html = slideshowHtmlFor(batch);
-        updateOutputProgress({ title, detail: "Opening browser video view...", current: 2, total: 3 });
-        saved = await openHtmlInBrowser(html, filename, fallbackWindow);
+      const queued = await queueCloudOutputs({
+        batch: cloudBatch,
+        formats: ["video"],
+        progressKind: progressKind || (mode === "view" ? "video-view" : "video-download"),
+      });
+      cloudRecord = queued?.deliverables?.find((record) => deliverableFormatCode(record.type) === "video") || null;
+      if (!cloudRecord) throw new Error("The video shelf entry could not be created.");
+      startOutputProgress({
+        title: "Preparing video",
+        detail: "Rendering the slideshow in this browser...",
+        total: 3,
+        kind: progressKind || (mode === "view" ? "video-view" : "video-download"),
+      });
+      let recorded = null;
+      let filename = "";
+      if (!batchOverride) {
+        updateOutputProgress({ title: "Preparing video", detail: "Finishing the prepared video file...", current: 1, total: 3 });
+        const prepared = await ensureVideoExportReady({ background: false });
+        recorded = prepared;
+        filename = prepared.filename;
       } else {
-        let recorded = null;
-        let filename = "";
-        if (!batchOverride) {
-          updateOutputProgress({ title, detail: "Finishing the prepared video file...", current: 2, total: 3 });
-          const prepared = await ensureVideoExportReady({ background: false });
-          batch = prepared.batch;
-          recorded = prepared;
-          filename = prepared.filename;
-        } else {
-          const slides = slideshowSlidesFor(batch);
-          updateOutputProgress({ title, detail: `Recording real video file from ${slides.length} slide${slides.length === 1 ? "" : "s"}...`, current: 2, total: 3 });
-          recorded = await recordSlideshowVideoBlob(batch, ({ phase, index, total, slide }) => {
-            if (phase === "finalize") {
-              const detail = "Finalizing video file...";
-              updateOutputProgress({ title, detail, current: 2, total: 3 });
-              setStatus(detail);
-              return;
-            }
-            if (phase !== "load") return;
-            const detail = `Recording slide ${index + 1}/${total}: ${slide.title || "Untitled"}`;
-            updateOutputProgress({ title, detail, current: 2, total: 3 });
-            setStatus(detail);
-          });
-          filename = `${state.gallery?.key || "real-estate"}-${batch.batchId}-slideshow.${recorded.extension}`;
-        }
-        updateOutputProgress({ title, detail: "Sending video file to your device...", current: 3, total: 3 });
-        saved = await shareOrOpenBlob({
-          blob: recorded.blob,
-          filename,
-          title: "Photos By Elie video",
-          text: "Photos By Elie slideshow video file",
-          openFallback: false,
-          allowNativeShare: shouldUseNativeFileShare(),
+        const slides = slideshowSlidesFor(cloudBatch);
+        updateOutputProgress({ title: "Preparing video", detail: `Recording ${slides.length} slide${slides.length === 1 ? "" : "s"}...`, current: 1, total: 3 });
+        recorded = await recordSlideshowVideoBlob(cloudBatch, ({ phase, index, total, slide }) => {
+          const detail = phase === "finalize"
+            ? "Finalizing video file..."
+            : phase === "load"
+              ? `Recording slide ${index + 1}/${total}: ${slide.title || "Untitled"}`
+              : "Preparing video...";
+          updateOutputProgress({ title: "Preparing video", detail, current: phase === "finalize" ? 2 : 1, total: 3 });
+          setStatus(detail);
         });
-        if (recordProduct) saveLocalDeliverable({ type: "video", batch, filename: saved.filename, bytes: saved.bytes });
+        filename = `${state.gallery?.key || "real-estate"}-${cloudBatch.batchId}-slideshow.${recorded.extension}`;
       }
-      if (saved.method === "share" || saved.method === "share-opened") {
-        setStatus(`Saved/shared ${saved.filename} (${formatBytes(saved.bytes)})`);
-      } else if (saved.method === "open" || saved.method === "open-current") {
-        setStatus(`Viewing ${saved.filename}. ${deliverableActionNote}`);
-      } else {
-        setStatus(`Downloaded ${saved.filename} to Downloads (${formatBytes(saved.bytes)})`);
-      }
-      completeOutputProgress(`Ready: ${saved.filename} (${formatBytes(saved.bytes)})`);
+      updateOutputProgress({ title: "Preparing video", detail: "Uploading video to the finished-products shelf...", current: 2, total: 3 });
+      const saved = await completeCloudOutput({ record: cloudRecord, blob: recorded.blob, filename });
+      updateOutputProgress({ title: "Preparing video", detail: "Video ready on the shelf.", current: 3, total: 3 });
+      setStatus(`Video ready on the finished-products shelf (${formatBytes(saved.bytes || recorded.blob.size)}). Choose Next to review it.`);
+      completeOutputProgress(`Video ready: ${saved.filename || filename} (${formatBytes(saved.bytes || recorded.blob.size)})`);
     } catch (error) {
+      if (cloudRecord) await failCloudOutput(cloudRecord, error);
       if (error?.name !== "AbortError") console.error("Real Estate video output failed", error);
       const message = error?.name === "AbortError"
         ? "Video output canceled"
@@ -5029,6 +5073,82 @@
   };
 
   const downloadPdf = async ({
+    mode = "download",
+    reservedWindows = [],
+    recordProduct = true,
+    progressKind = "",
+    batchOverride = null,
+    projectsOverride = null,
+  } = {}) => {
+    if (!requireUnlocked() || state.pdfBusy || state.outputBusy) return;
+    const photos = batchOverride ? [] : activeSelectedPhotos();
+    const batch = batchOverride || buildBatchManifest(photos, true);
+    const projects = Array.isArray(projectsOverride) ? projectsOverride : pdfProjectsForBatch(batch);
+    const selectedCount = projects.reduce((sum, project) => sum + project.photos.length, 0);
+    if (!selectedCount) {
+      setStatus("Select media before preparing a PDF");
+      return;
+    }
+    let cloudRecord = null;
+    try {
+      const queued = await queueCloudOutputs({
+        batch,
+        formats: ["pdf"],
+        progressKind: progressKind || (mode === "view" ? "pdf-view" : "pdf-download"),
+      });
+      cloudRecord = queued?.deliverables?.find((record) => deliverableFormatCode(record.type) === "pdf") || null;
+      if (!cloudRecord) throw new Error("The PDF shelf entry could not be created.");
+      const paper = paperFormatFor();
+      const filename = projects.length === 1
+        ? `${state.gallery?.key || "real-estate"}-${fileSlug(projects[0]?.projectTitle)}-${paper.key}-${batch.batchId}.pdf`
+        : `${state.gallery?.key || "real-estate"}-${batch.batchId}-project-pdfs.pdf`;
+      const plannedPages = projects.reduce((sum, project) => (
+        sum + paginatePdfImages(project.photos.map((entry) => ({
+          dimensions: pdfDimensionsFor(pdfPhotoFor(entry)),
+          photo: pdfPhotoFor(entry),
+        }))).length
+      ), 0);
+      const totalSteps = Math.max(1, selectedCount + plannedPages + 1);
+      let progressStep = 0;
+      const updatePdfStep = (detail) => {
+        progressStep += 1;
+        updateOutputProgress({ title: "Preparing PDF", detail, current: progressStep, total: totalSteps });
+        setStatus(detail);
+      };
+      state.pdfBusy = true;
+      startOutputProgress({
+        title: "Preparing PDF",
+        detail: `Building ${paper.label} PDF from ${selectedCount} selected media...`,
+        total: totalSteps,
+        kind: progressKind || (mode === "view" ? "pdf-view" : "pdf-download"),
+      });
+      const combined = { pages: [], pageWidth: paper.width, pageHeight: paper.height };
+      for (const project of projects) {
+        const images = await fetchPdfImages(project.photos, ({ index, total, photo, title }) => {
+          updatePdfStep(`Loaded image ${index + 1}/${total} for ${project.projectTitle}: ${title || titleFor(photo)}`);
+        });
+        const rendered = await renderPdfPages(images, ({ pageIndex, total }) => {
+          updatePdfStep(`Rendered PDF page ${pageIndex + 1}/${total} for ${project.projectTitle}`);
+        });
+        combined.pages.push(...rendered.pages);
+      }
+      const blob = buildPdfBlobFromRendered(combined);
+      updateOutputProgress({ title: "Preparing PDF", detail: "Uploading PDF to the finished-products shelf...", current: totalSteps, total: totalSteps });
+      const saved = await completeCloudOutput({ record: cloudRecord, blob, filename });
+      setStatus(`PDF ready on the finished-products shelf (${formatBytes(saved.bytes || blob.size)}). Choose Next to review it.`);
+      completeOutputProgress(`PDF ready: ${saved.filename || filename} (${formatBytes(saved.bytes || blob.size)})`);
+    } catch (error) {
+      if (cloudRecord) await failCloudOutput(cloudRecord, error);
+      const message = error?.name === "AbortError" ? "PDF output canceled" : (error?.message || "PDF output failed");
+      setStatus(message);
+      failOutputProgress(message);
+    } finally {
+      state.pdfBusy = false;
+      syncFileActionLabels();
+    }
+  };
+
+  const downloadPdfLegacy = async ({
     mode = "download",
     reservedWindows = [],
     recordProduct = true,

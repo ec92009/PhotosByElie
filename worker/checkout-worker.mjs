@@ -2860,6 +2860,37 @@ export const createPhotosByElieWorker = ({
     return credentialedJson(request, result);
   };
 
+  const completeRealEstateAssemblyOutput = async (request, deliverableId) => {
+    if (!realEstateDeliverables || typeof realEstateDeliverables.completeAssemblyOutput !== "function") {
+      return errorJson(503, "real_estate_deliverables_unavailable", "Real-estate cloud output upload is not configured.");
+    }
+    const url = new URL(request.url);
+    const payload = {
+      galleryKey: url.searchParams.get("galleryKey") || "",
+      id: deliverableId,
+      filename: url.searchParams.get("filename") || "",
+      contentType: request.headers.get("content-type") || "application/octet-stream",
+      contentLength: request.headers.get("content-length") || "",
+      body: request.body,
+    };
+    payload.realEstateSession = await requireRealEstateSession(request, payload);
+    payload.galleryKey = payload.realEstateSession.galleryKey;
+    const deliverable = await realEstateDeliverables.completeAssemblyOutput(payload);
+    return credentialedJson(request, { deliverable });
+  };
+
+  const failRealEstateAssemblyOutput = async (request, deliverableId) => {
+    if (!realEstateDeliverables || typeof realEstateDeliverables.failAssemblyOutput !== "function") {
+      return errorJson(503, "real_estate_deliverables_unavailable", "Real-estate cloud output status is not configured.");
+    }
+    const payload = await parseJson(request);
+    payload.id = deliverableId;
+    payload.realEstateSession = await requireRealEstateSession(request, payload);
+    payload.galleryKey = payload.realEstateSession.galleryKey;
+    const deliverable = await realEstateDeliverables.failAssemblyOutput(payload);
+    return credentialedJson(request, { deliverable });
+  };
+
   const getRealEstateDeliverableAsset = async (request, id, action) => {
     if (!realEstateDeliverables || typeof realEstateDeliverables.getDeliverableAsset !== "function") {
       return errorJson(503, "real_estate_deliverables_unavailable", "Real-estate cloud products are not configured.");
@@ -2978,6 +3009,13 @@ export const createPhotosByElieWorker = ({
       }
       if (request.method === "POST" && path === "/real-estate/deliverables") return await putRealEstateDeliverable(request);
       if (request.method === "POST" && path === "/real-estate/deliverables/delete") return await deleteRealEstateDeliverable(request);
+      const realEstateCompletionMatch = path.match(/^\/real-estate\/deliverables\/([^/]+)\/(complete|fail)$/);
+      if (request.method === "POST" && realEstateCompletionMatch) {
+        const id = decodeURIComponent(realEstateCompletionMatch[1]);
+        return realEstateCompletionMatch[2] === "complete"
+          ? await completeRealEstateAssemblyOutput(request, id)
+          : await failRealEstateAssemblyOutput(request, id);
+      }
       const realEstateAssetMatch = path.match(/^\/real-estate\/deliverables\/([^/]+)\/(view|download)$/);
       if ((request.method === "GET" || request.method === "HEAD") && realEstateAssetMatch) {
         return await getRealEstateDeliverableAsset(

@@ -209,7 +209,7 @@ export const createRealEstateAuth = ({
     const dynamicCredential = await dynamicCredentialFor(gallery, enteredUsername, enteredPassword);
     const legacyMatches = usernameMatches(gallery, enteredUsername) && await passwordMatches(gallery, enteredPassword);
     if (!dynamicCredential && !legacyMatches) {
-      throw Object.assign(new Error("Credentials do not match this review."), {
+      throw Object.assign(new Error("Username/email or password is incorrect."), {
         status: 403,
         code: "real_estate_auth_required",
       });

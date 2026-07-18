@@ -5740,7 +5740,7 @@
       try {
         await loginWithWorker(elements.loginName?.value || "", elements.loginCode?.value || "");
       } catch (error) {
-        if (elements.loginStatus) elements.loginStatus.textContent = error?.message || "Credentials do not match this review.";
+        if (elements.loginStatus) elements.loginStatus.textContent = error?.message || "Username/email or password is incorrect.";
         return;
       }
       state.unlocked = true;

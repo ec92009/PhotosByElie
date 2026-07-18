@@ -2,6 +2,7 @@ import { createCatalogIndex, createPhotosByElieWorker } from "./checkout-worker.
 import { createD1AccessUserRegistry, createKvAccessUserRegistry } from "./access-user-registry.mjs";
 import { createAnalyticsStore } from "./analytics-store.mjs";
 import { createCloudflareImagesRenderer } from "./cloudflare-images-renderer.mjs";
+import { createCloudflareMediaVideoTranscoder } from "./cloudflare-media-video-transcoder.mjs";
 import { createKvStore } from "./kv-store.mjs";
 import { createMockStripeClient } from "./mock-stripe.mjs";
 import { createGoogleOAuthAuth } from "./google-oauth-auth.mjs";
@@ -36,6 +37,14 @@ const enabledFlag = (value, defaultValue = true) => {
   const normalized = String(value ?? "").trim().toLowerCase();
   if (!normalized) return defaultValue;
   return !["0", "false", "no", "off"].includes(normalized);
+};
+
+export const realEstateClientContextFor = (gallery = {}) => {
+  const candidates = [gallery.clientContext, gallery.customer, gallery.username, gallery.key]
+    .map((value) => String(value || "").trim().toLowerCase());
+  if (candidates.some((value) => value.includes("corine"))) return "corine";
+  if (candidates.some((value) => value.includes("agnes"))) return "agnes";
+  return "elie";
 };
 
 const checkoutDiscountCodesFor = (env = {}) => {
@@ -164,6 +173,15 @@ export const realEstateGalleriesFor = (env = {}) => {
   });
   return legacy?.username ? withScopedRealEstateGalleries([legacy]) : [];
 };
+
+export const realEstateDeliverablesFor = (env = {}, { assemblyDispatcher = null } = {}) => createRealEstateDeliverables({
+  privateBucket: requiredBinding(env, "PRIVATE_MEDIA"),
+  galleries: realEstateGalleriesFor(env),
+  emailClient: null,
+  publicSiteUrl: String(env.PUBLIC_SITE_URL || "https://photos-by-elie.com").replace(/\/+$/, ""),
+  assemblyDispatcher,
+  videoTranscoder: createCloudflareMediaVideoTranscoder({ media: env.MEDIA }),
+});
 
 const mediaHeaders = (object = null, extraHeaders = {}) => ({
   "access-control-allow-origin": "*",
@@ -347,6 +365,13 @@ export default {
         galleries: realEstateGalleries,
         emailClient,
         publicSiteUrl,
+        assemblyDispatcher: env.REAL_ESTATE_RENDER_WORKFLOW ? {
+          dispatch: ({ galleryKey, jobId }) => env.REAL_ESTATE_RENDER_WORKFLOW.create({
+            id: jobId,
+            params: { galleryKey, jobId },
+          }),
+        } : null,
+        videoTranscoder: createCloudflareMediaVideoTranscoder({ media: env.MEDIA }),
       }),
       googleOAuthAuth: googleOAuthAuthFor(env),
       accessAuth: ownerAccessAuthFor(env),

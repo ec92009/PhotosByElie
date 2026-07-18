@@ -8,14 +8,14 @@ GitHub carries code, safe metadata, SOPs, and handoff notes; private Owner DB
 snapshots and client artifacts move through private R2; SSH/Codex Remote SSH is
 for remote execution.
 
-## Current Handoff: 2026-07-16 Corine Real Estate Client Workflow
+## Current Handoff: 2026-07-18 Corine Real Estate Client Workflow
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Branch: `main`
 - Public site: `https://photos-by-elie.com/`
 - Local preview: `http://localhost:8000/`
 - Owner intake URL: `https://photos-by-elie.com/owner.html`
-- Current visible build: `v138.7`
+- Current visible build: `v140.21`
 - Sidecar local build: `v126.6`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
@@ -117,7 +117,7 @@ python3 scripts/sidecar_maintenance.py register-uploaded-catalog --dry-run
 - For another machine, the public catalog/docs bundle is on `main`; sync ignored/private `Owner.sqlite` through the private Owner-state path only if that machine needs the local Sidecar cleanup state.
 - North Star is official at `docs/architecture/north-star.md`: the project compass is to make money from Photos By Elie through tested offers, secure paid/private access, market research, and real public/RE/family/event workflows. The near-term priority is the `57K+` Apple Photos library intake-to-sellable-catalog path; Real Estate, family sharing, and private event sales are valuable but secondary unless a real opportunity appears. `AGENTS.md` now tells future Codex sessions to warn when work drifts from that compass.
 - Owner title/keyword save smoke passed on localhost helper port `8001`: row `001-0116ccd189` temporarily changed from `Benalmadena Aquarium` / `Spain` to `Benalmadena Aquarium Smoke Check` / `Spain, Aquarium`, SQLite and `worker/photos-catalog.generated.mjs` both reflected the edit, and the row was restored. The catalog DB and Worker catalog were restored byte-for-byte from the pre-smoke backup after verification.
-- Real Estate output assembly is now cloud-contract backed and deployed in Worker version `6f67bc40-8b92-4ded-aa68-defeb40a7ca7`: the client queues PDF/video jobs to the Worker, the Worker stores a durable R2 job record with the saved selection manifest, each pending deliverable records its output key and future view/download URLs, and `/real-estate/deliverables/jobs/<jobId>` reports current status plus failure detail from the deliverable records. The browser probes the job status after queueing so the shelf reflects pending/ready/needs-attention without local PDF/video rendering.
+- Real Estate output creation is fully cloud-side in `v140.21`: the client queues a saved selection and polls only. A Cloudflare Workflow creates a private, expiring render token, launches Browser Rendering against the production Real Estate page, renders the PDF and slideshow in cloud Chrome, stores the PDF directly in private R2, converts cloud-recorded WebM to MP4 through Media Transformations, and updates the durable R2 job/deliverable records. Internal render routes require the hashed job token and never expose it in client job responses. Production slideshow music reads a separate R2 manifest of forty verified 60-second MP3 clips; longer videos repeat the selected clip, and the original source tracks remain untouched.
 - Paid/private access item #4 has central ticket `PBE-20260708-6FBE` and a stronger Worker regression pass in the current working tree: `publicOrder` hides delivery ZIP/storage keys by default, deployed checkout/order/session payloads expose only Worker download-token URLs and buyer-facing file details, and Real Estate deliverable/job/list payloads no longer expose output R2 keys, source-video private keys, private master fields, or cloud-source keys while internal R2 records retain the keys needed for authorized asset serving. `worker/local-server.mjs` opts into `exposeDeliveryStorageKeys: true` only for localhost ZIP inspection. Verified with `node --check worker/checkout-worker.mjs`, `node --check worker/local-server.mjs`, `node --check worker/real-estate-deliverables.mjs`, `node --test worker/checkout-worker.test.mjs`, full `npm test`, and `git diff --check`.
 - Next Apple Photos intake action: use `http://localhost:8011/sidecar.html` for Sidecar sandbox culling from today backward. Pick/reject/hide in reasonable visible-preview batches first; only reviewed/picked survivors should later flow toward Upload Bridge/catalog publishing. Treat Owner `Import to Expo` as a secondary direct path, not the default intake route.
 - Deferred hygiene action: add a supported retry/reset command for Upload Bridge export blocks so future block clearing uses a named maintenance path instead of ad hoc SQL.
@@ -279,27 +279,23 @@ cd /Users/ecohen/Dev/PhotosByElie
 
 ## Current Priority
 
-1. **Move Real Estate PDF/video assembly fully cloud-side.**
-   - Use saved selection manifests as job inputs and keep local machines out of production output creation.
-   - Return durable view/download URLs plus job status/failure detail back to the shelf.
-
-2. **Run a full Real Estate client rehearsal.**
+1. **Run a full Real Estate client rehearsal.**
    - Import/publish/upload one client property set, save a selection, generate PDF/video, reopen from mobile, rename, and delete a throwaway product.
 
-3. **Create first-party social springboards and a homepage latest-social shelf.**
+2. **Create first-party social springboards and a homepage latest-social shelf.**
    - Start with the 2026-05-27 social packages and use only public catalog data and watermarked public previews.
    - Apply the visible-site versioning SOP, validation, commit, and push before using any new URL in social posts.
 
-4. **Teach the daily social automation to prepare the target before posting.**
+3. **Teach the daily social automation to prepare the target before posting.**
    - Create or choose the first-party campaign/homepage target, stage platform upload trees, and record published URLs/manual blockers.
    - Keep Pinterest exactly five images; keep Facebook/Instagram at 5-10; add Threads 3-4 image variants only when useful.
 
-5. **Finish import re-export de-duplication and clean duplicates.**
+4. **Finish import re-export de-duplication and clean duplicates.**
    - Use full source pathname plus modified date as the source anchor.
    - Same-path re-exports with a newer modified date should overwrite the previous master, previews, and JPG triplets rather than creating a duplicate photo.
    - Audit today's imports and prepare a reversible duplicate cleanup before deleting anything. The Italy audit proved selected-root subfolder imports can derive duplicate IDs for already-known source files.
 
-6. **Add import source history management.**
+5. **Add import source history management.**
    - Let Owner remove missing or stale remembered folders, optionally pin favorites, and inspect the last-used time/source path before starting a run.
    - Include a one-time review of any legacy entries saved before `v83.24`, because log-discovered folders are no longer added automatically but older remembered rows may still exist locally.
    - Keep `Owner.sqlite` authoritative; do not introduce another JSON state file.

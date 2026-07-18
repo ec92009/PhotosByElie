@@ -1,5 +1,5 @@
 name = "photosbyelie-checkout-mock"
-main = "worker/deployed-worker.mjs"
+main = "worker/cloud-worker.mjs"
 compatibility_date = "2026-07-10"
 compatibility_flags = ["nodejs_compat"]
 workers_dev = true
@@ -51,6 +51,17 @@ ACCESS_TEAM_NAME = "byelie"
 
 [images]
 binding = "IMAGES"
+
+[browser]
+binding = "BROWSER"
+
+[media]
+binding = "MEDIA"
+
+[[workflows]]
+binding = "REAL_ESTATE_RENDER_WORKFLOW"
+name = "photosbyelie-real-estate-render"
+class_name = "RealEstateRenderWorkflow"
 
 [[routes]]
 pattern = "download.photos-by-elie.com"

@@ -2937,6 +2937,101 @@ test("real-estate cloud assembly jobs persist status and serve completed assets"
   assert.equal(Buffer.from(await downloadResponse.arrayBuffer()).toString(), "%PDF-1.4 test");
 });
 
+test("cloud render jobs use token-only internal routes and transcode WebM output", async () => {
+  const randomUUID = deterministicIds();
+  const privateR2 = createFakeR2();
+  const dispatched = [];
+  const transcoded = [];
+  const galleries = [{ key: "Corine-gallery", username: "Corine", accessCode: "LaConcha" }];
+  const deliverables = createRealEstateDeliverables({
+    privateBucket: privateR2,
+    randomUUID,
+    now: () => new Date("2026-06-10T12:00:00.000Z"),
+    galleries,
+    assemblyDispatcher: { dispatch: async (payload) => dispatched.push(payload) },
+    videoTranscoder: {
+      toMp4: async ({ body, contentType, filename }) => {
+        const input = new Uint8Array(await new Response(body).arrayBuffer());
+        transcoded.push({ contentType, filename, bytes: input.byteLength });
+        return {
+          body: new TextEncoder().encode("mp4-transcoded"),
+          contentType: "video/mp4",
+          filename: filename.replace(/\.webm$/i, ".mp4"),
+        };
+      },
+    },
+  });
+  const worker = createPhotosByElieWorker({
+    catalog: loadCatalog(),
+    store: createMemoryStore(),
+    stripe: createMockStripeClient({ randomUUID }),
+    randomUUID,
+    realEstateDeliverables: deliverables,
+    realEstateAuth: createRealEstateAuth({
+      galleries,
+      sessionSecret: "test-real-estate-session-secret",
+      now: () => new Date("2026-06-10T12:00:00.000Z"),
+    }),
+  });
+  const cookie = await realEstateSessionCookie(worker);
+  const batch = {
+    schema: "photosbyelie.realEstatePdfBatch.v1",
+    batchId: "cloud-render-test",
+    projects: [{ projectId: "apt-1", projectTitle: "Apartment 1", items: [{ photoId: "photo-1", title: "Terrace" }] }],
+  };
+  const queuedResponse = await worker.fetch(jsonRequest("https://worker.test/real-estate/deliverables/jobs", {
+    galleryKey: "corine-real-estate",
+    username: "Corine",
+    title: "Cloud product",
+    formats: ["pdf", "video"],
+    batch,
+  }, { cookie }));
+  assert.equal(queuedResponse.status, 202);
+  const queued = await queuedResponse.json();
+  assert.deepEqual(dispatched, [{ galleryKey: "Corine-gallery", jobId: queued.job.id }]);
+
+  const access = await deliverables.beginCloudAssemblyRender({ galleryKey: "corine-real-estate", jobId: queued.job.id });
+  const badTokenResponse = await worker.fetch(new Request(
+    `https://worker.test/real-estate/internal/render-jobs/${queued.job.id}?galleryKey=corine-real-estate&token=wrong`
+  ));
+  assert.equal(badTokenResponse.status, 403);
+
+  const renderJobResponse = await worker.fetch(new Request(
+    `https://worker.test/real-estate/internal/render-jobs/${queued.job.id}?galleryKey=corine-real-estate&token=${access.renderToken}`
+  ));
+  assert.equal(renderJobResponse.status, 200);
+  const renderJob = await renderJobResponse.json();
+  assert.equal(renderJob.job.status, "processing");
+  assert.equal(renderJob.job.inputManifest.batchId, batch.batchId);
+  assert.equal("renderAccess" in renderJob.job, false);
+
+  const pdfRecord = renderJob.job.deliverables.find((record) => record.type === "pdf");
+  const videoRecord = renderJob.job.deliverables.find((record) => record.type === "video");
+  const completePdf = await worker.fetch(new Request(
+    `https://worker.test/real-estate/internal/render-jobs/${queued.job.id}/deliverables/${pdfRecord.id}/complete?galleryKey=corine-real-estate&token=${access.renderToken}&filename=cloud.pdf`,
+    { method: "POST", headers: { "content-type": "application/pdf" }, body: "%PDF cloud" }
+  ));
+  assert.equal(completePdf.status, 200);
+  assert.equal((await completePdf.json()).deliverable.assemblyJob.assembler, "cloud-browser-workflow");
+
+  const completeVideo = await worker.fetch(new Request(
+    `https://worker.test/real-estate/internal/render-jobs/${queued.job.id}/deliverables/${videoRecord.id}/complete?galleryKey=corine-real-estate&token=${access.renderToken}&filename=cloud.webm`,
+    { method: "POST", headers: { "content-type": "video/webm" }, body: "webm-source" }
+  ));
+  assert.equal(completeVideo.status, 200);
+  const video = (await completeVideo.json()).deliverable;
+  assert.equal(video.status, "ready");
+  assert.equal(video.filename, "cloud.mp4");
+  assert.equal(video.outputs.video.contentType, "video/mp4");
+  assert.deepEqual(transcoded, [{ contentType: "video/webm", filename: "cloud.webm", bytes: 11 }]);
+
+  const readyResponse = await worker.fetch(new Request(`https://worker.test/real-estate/deliverables/jobs/${queued.job.id}`, {
+    headers: { cookie },
+  }));
+  assert.equal(readyResponse.status, 200);
+  assert.equal((await readyResponse.json()).job.status, "ready");
+});
+
 test("deployed Worker blocks checkout when private delivery files are missing", async () => {
   const catalog = loadCatalog();
   const photoId = firstDeliverablePhotoId(catalog);

@@ -1,5 +1,47 @@
 # Scripts
 
+## Cloud slideshow music clips
+
+`prepare_slideshow_music_clips.py` stages uniform cloud-renderer audio without
+changing the authoritative source music or manifest. It defaults to the live
+40-track Pixabay country pool and to a read-only dry run:
+
+```bash
+python3 scripts/prepare_slideshow_music_clips.py
+```
+
+After reviewing the plan, create separate 60-second MP3 clips with a one-second
+fade-out, SHA-256 hashes, ffprobe metadata, per-clip verification sidecars, a
+derived manifest, and an upload script under ignored
+`tmp/slideshow-music-clips/`:
+
+```bash
+python3 scripts/prepare_slideshow_music_clips.py --execute
+```
+
+The source is looped only when it is shorter than 60 seconds, so every prepared
+clip is the same length and a cloud renderer can chain clips for longer videos.
+Existing verified staging clips are reused. If a source or configuration has
+changed, the tool stops instead of overwriting; inspect the difference before
+using `--force` to replace generated staging files. No mode uploads anything.
+Run the generated `upload-commands.sh` explicitly only after reviewing its R2
+keys and the prepared manifest.
+
+Additional clean manifests with stable `id` and `src` fields can be staged in
+the same pass by repeating `--manifest`, for example:
+
+```bash
+python3 scripts/prepare_slideshow_music_clips.py \
+  --manifest assets/music/slideshow-guitar/pixabay/pixabay-guitar-candidates.json \
+  --manifest assets/music/slideshow-guitar/public-domain/commons-spanish-guitar.json
+```
+
+Focused verification:
+
+```bash
+python3 -m unittest scripts.prepare_slideshow_music_clips_test
+```
+
 ## Lightroom Thumbnail Builder
 
 `build_lightroom_thumbnails.py` scans developed photo/video exports, keeps Lightroom green label/rating 4+ files for Camera sources, infers a country bucket, and writes watermarked preview derivatives plus a resumable local import-cache manifest. RAW/DNG/NEF files are owner-local source material only; export developed JPG/TIFF/MOV/MP4/M4V masters before importing them. The direct Apple Photos bridge can now fill the retired Saturn/Lightroom developed-export role by rendering each Photos still image, including HEIC and RAW-backed assets, as Photos' current JPG into `tmp/apple-photos-import/`, then immediately running the normal selected-folder Expo import from that temporary folder. If Photos' rendered JPG callback stalls, the bridge can convert an alternate local JPEG/HEIC/RAW image resource, including DNG, into a temp JPG fallback. Videos are copied through as video resources. The Owner iCloud download switch is on by default so Photos can fetch missing originals or renders before writing that temp folder. The Apple Photos sidecar carries the stable asset anchor, album title, creation date, and PhotoKit GPS coordinates; the importer uses those as metadata fallbacks when rendered files do not retain EXIF.

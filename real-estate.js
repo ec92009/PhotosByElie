@@ -3,6 +3,10 @@
   if (!app) return;
 
   const pageParams = new URLSearchParams(window.location.search);
+  const cloudRenderParams = new URLSearchParams(String(window.location.hash || "").replace(/^#/, ""));
+  const cloudRenderJobId = String(cloudRenderParams.get("cloudRenderJob") || "").trim();
+  const cloudRenderToken = String(cloudRenderParams.get("cloudRenderToken") || "").trim();
+  const isCloudRenderMode = Boolean(cloudRenderJobId && cloudRenderToken);
   const isLocalHost = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname);
   const pageVersion = pageParams.get("v");
   const contextVersion = pageVersion ? `?v=${encodeURIComponent(pageVersion)}` : "";
@@ -757,11 +761,15 @@
   };
   const activeWatermarkText = () => state.watermarkEnabled ? (String(state.watermarkText || "").trim() || pdfWatermarkText) : "";
   const slideshowTransition = "subtle-centered-ken-burns";
-  const slideshowMusicManifestUrl = `./assets/music/slideshow-guitar/pixabay/pixabay-guitar-candidates.json${contextVersion}`;
+  const slideshowMusicSourceManifestPath = "assets/music/slideshow-guitar/pixabay/pixabay-guitar-candidates.json";
+  const slideshowMusicPreparedManifestKey = "assets/music/slideshow-guitar/pixabay/pixabay-guitar-candidates-prepared-060s.json";
+  const slideshowMusicManifestUrl = isLocalHost
+    ? `./${slideshowMusicSourceManifestPath}${contextVersion}`
+    : `${workerMediaUrl(slideshowMusicPreparedManifestKey)}${contextVersion}`;
   const slideshowMusicGainDb = 0;
   const sourceVideoAudioGainDb = -20;
   const sourceVideoAudioLinearGain = 10 ** (sourceVideoAudioGainDb / 20);
-  const slideshowMusicMaxDecodeSeconds = 180;
+  const slideshowMusicMaxDecodeSeconds = 60.25;
   const slideshowVideoFps = 30;
   const slideshowIntroDurationMs = 2200;
   const slideshowOutroDurationMs = 2200;
@@ -903,10 +911,22 @@
     audioPolicy: slideshowAudioPolicyFor(musicTrack),
   });
   const normalizeSlideshowMusicTrack = (track) => {
+    const preparedClip = track?.preparedClip && typeof track.preparedClip === "object"
+      ? track.preparedClip
+      : null;
+    const preparedR2Key = String(preparedClip?.r2Key || "").replace(/^\.?\//, "").trim();
     const src = String(track?.src || "").trim();
     if (!src) return null;
     return {
       ...track,
+      sourceSrc: src,
+      sourceR2Key: String(track?.r2Key || trackPublicKey(track)),
+      ...(preparedR2Key ? {
+        src: `./${preparedR2Key}`,
+        r2Key: preparedR2Key,
+        duration: Number(preparedClip?.duration || preparedClip?.clipSeconds || 60),
+        durationSeconds: Number(preparedClip?.duration || preparedClip?.clipSeconds || 60),
+      } : {}),
       bpm: Number(track?.bpm) || 0,
       country: slideshowMusicCountries.includes(track?.country) ? track.country : "Spain",
       source: track?.source || "Pixabay",
@@ -914,7 +934,7 @@
       licenseUrl: track?.licenseUrl || "https://pixabay.com/service/license-summary/",
       creditRequired: true,
       creditText: track?.creditText || `Music: "${track?.title || "Pixabay music"}" by ${track?.author || "Pixabay contributor"} via Pixabay`,
-      r2Key: trackPublicKey(track),
+      r2Key: preparedR2Key || trackPublicKey(track),
     };
   };
   const loadSlideshowMusicManifest = async () => {
@@ -1826,6 +1846,32 @@
     return body.job || null;
   };
 
+  const waitForCloudAssemblyJob = async (jobId, { timeoutMs = 20 * 60 * 1000 } = {}) => {
+    const startedAt = Date.now();
+    let attempt = 0;
+    while (Date.now() - startedAt < timeoutMs) {
+      const job = await fetchCloudAssemblyJobStatus(jobId);
+      const status = String(job?.status || "pending").toLowerCase().replace("_", "-");
+      const elapsedSeconds = Math.max(0, Math.round((Date.now() - startedAt) / 1000));
+      updateOutputProgress({
+        title: status === "ready" ? "Cloud output ready" : "Generating in the cloud",
+        detail: status === "ready"
+          ? "The finished files are available on the shelf."
+          : `Cloud renderer: ${status}${elapsedSeconds ? ` (${elapsedSeconds}s)` : ""}`,
+        current: status === "ready" ? 1 : 0,
+        total: status === "ready" ? 1 : 0,
+        done: status === "ready",
+      });
+      if (status === "ready") return job;
+      if (["failed", "needs-attention"].includes(status)) {
+        throw new Error(job?.failureReason || "Cloud output needs attention.");
+      }
+      attempt += 1;
+      await new Promise((resolve) => window.setTimeout(resolve, Math.min(5000, 1500 + (attempt * 250))));
+    }
+    throw new Error("Cloud rendering is still running. It will remain on the shelf and can be refreshed later.");
+  };
+
   const pendingCloudOutputFor = (format, batch) => {
     const normalizedFormat = String(format || "").toLowerCase() === "mp4" ? "video" : String(format || "").toLowerCase();
     const fingerprint = batchProductFingerprint(batch);
@@ -1926,8 +1972,17 @@
         syncActiveProductName();
       }
       const formatLabel = requestedFormats.map((format) => format === "pdf" ? "PDF" : "video").join(" + ");
-      completeOutputProgress(`${formatLabel} shelf entry ready. Preparing the actual file in this browser...`);
-      return { ...(result || {}), deliverables: records, reused: reused.length };
+      const jobId = result?.job?.id || records.map((record) => record?.assemblyJob?.id).find(Boolean) || "";
+      if (!jobId) throw new Error("Cloud assembly job id is missing.");
+      updateOutputProgress({
+        title: "Generating in the cloud",
+        detail: `${formatLabel} assembly started. You can leave this tab open while the shelf updates.`,
+        current: 0,
+        total: 0,
+      });
+      const completedJob = await waitForCloudAssemblyJob(jobId);
+      completeOutputProgress(`${formatLabel} ready on the finished-products shelf.`);
+      return { ...(result || {}), job: completedJob, deliverables: completedJob?.deliverables || records, reused: reused.length };
     } catch (error) {
       const message = error?.message || "Cloud output could not be prepared.";
       setStatus(message);
@@ -2681,25 +2736,32 @@
     });
   };
 
-  const batchItemsFor = (photos, project = null) => photos.map((photo, index) => ({
-    photoId: photo.id,
-    title: titleFor(photo),
-    sortIndex: index + 1,
-    mediaType: mediaTypeFor(photo),
-    durationSeconds: isVideo(photo) ? durationSecondsFor(photo) : null,
-    pdfTreatment: isVideo(photo) ? "still-from-video" : "photo",
-    pdfStillPercent: isVideo(photo) ? videoStillPercentFor(photo) : null,
-    slideshowDurationPolicy: isVideo(photo) ? "preserve-source-duration" : "fixed-photo-duration",
-    slideshowDurationSeconds: isVideo(photo) ? durationSecondsFor(photo) : state.slideshowPhotoSeconds,
-    transition: slideshowTransition,
-    cloudSourceKey: isVideo(photo) ? photo?.cloudPdfSource?.sourceVideoPrivateKey || photo?.realEstate?.privateMasterKey || "" : photo?.cloudPdfSource?.publicKey || "",
-    sourceVideoPrivateKey: isVideo(photo) ? photo?.cloudPdfSource?.sourceVideoPrivateKey || photo?.realEstate?.privateMasterKey || "" : "",
-    sourceDurationSeconds: isVideo(photo) ? durationSecondsFor(photo) : null,
-    publicStillKey: photo?.cloudPdfSource?.publicKey || photo?.media?.publicPreview?.detailKey || "",
-    projectId: project?.projectId || projectIdFor(photo),
-    projectTitle: project?.projectTitle || projectTitleFor(photo),
-    projectIds: project ? [project.projectId] : assignedProjectIdsFor(photo),
-  }));
+  const batchItemsFor = (photos, project = null) => photos.map((photo, index) => {
+    const preview = photo?.media?.publicPreview || {};
+    return {
+      photoId: photo.id,
+      title: titleFor(photo),
+      sortIndex: index + 1,
+      mediaType: mediaTypeFor(photo),
+      durationSeconds: isVideo(photo) ? durationSecondsFor(photo) : null,
+      dimensions: pdfDimensionsFor(photo),
+      pdfTreatment: isVideo(photo) ? "still-from-video" : "photo",
+      pdfStillPercent: isVideo(photo) ? videoStillPercentFor(photo) : null,
+      slideshowDurationPolicy: isVideo(photo) ? "preserve-source-duration" : "fixed-photo-duration",
+      slideshowDurationSeconds: isVideo(photo) ? durationSecondsFor(photo) : state.slideshowPhotoSeconds,
+      transition: slideshowTransition,
+      cloudSourceKey: isVideo(photo) ? photo?.cloudPdfSource?.sourceVideoPrivateKey || photo?.realEstate?.privateMasterKey || "" : photo?.cloudPdfSource?.publicKey || "",
+      sourceVideoPrivateKey: isVideo(photo) ? photo?.cloudPdfSource?.sourceVideoPrivateKey || photo?.realEstate?.privateMasterKey || "" : "",
+      sourceDurationSeconds: isVideo(photo) ? durationSecondsFor(photo) : null,
+      publicStillKey: photo?.cloudPdfSource?.publicKey || preview.detailKey || "",
+      publicDetailKey: preview.detailKey || photo?.cloudPdfSource?.publicKey || "",
+      publicGalleryKey: preview.galleryKey || "",
+      publicVideoKey: preview.detailVideoKey || preview.videoKey || preview.previewVideoKey || photo?.media?.video?.publicPreviewKey || "",
+      projectId: project?.projectId || projectIdFor(photo),
+      projectTitle: project?.projectTitle || projectTitleFor(photo),
+      projectIds: project ? [project.projectId] : assignedProjectIdsFor(photo),
+    };
+  });
 
   const buildBatchManifest = (photosOverride = selectedPhotos(), activeOnly = false) => {
     flushTitleInputs();
@@ -4346,6 +4408,7 @@
 
   const scheduleVideoExportSynthesis = (delay = 700) => {
     clearVideoExportTimer();
+    if (!isCloudRenderMode) return;
     const selected = activeSelectedPhotos();
     if (!state.unlocked || !selected.length || !canRecordSlideshowVideo()) return;
     const batch = buildSlideshowManifest(selected, true);
@@ -4481,6 +4544,24 @@
       return;
     }
     const cloudBatch = buildSlideshowManifest(selected, true, batchOverride);
+    if (!isCloudRenderMode) {
+      try {
+        const queued = await queueCloudOutputs({
+          batch: cloudBatch,
+          formats: ["video"],
+          progressKind: progressKind || (mode === "view" ? "video-view" : "video-download"),
+        });
+        const ready = queued?.deliverables?.find((record) => deliverableFormatCode(record.type) === "video");
+        setStatus(ready?.status === "ready"
+          ? "Video ready on the finished-products shelf. Choose Next to review or download it."
+          : "Video is generating in the cloud and will appear on the shelf when ready.");
+      } catch (error) {
+        const message = error?.message || "Cloud video could not be prepared.";
+        setStatus(message);
+        failOutputProgress(message);
+      }
+      return;
+    }
     let cloudRecord = null;
     try {
       startOutputProgress({
@@ -5353,6 +5434,142 @@
     return buildPdfBlobFromRendered(rendered);
   };
 
+  const setCloudRenderStatus = (status, detail = "") => {
+    document.documentElement.dataset.cloudRenderStatus = String(status || "");
+    document.documentElement.dataset.cloudRenderDetail = String(detail || "").slice(0, 500);
+    if (elements.status) elements.status.textContent = detail || status;
+  };
+
+  const cloudRenderSyntheticPhoto = (item = {}) => {
+    const dimensions = item.dimensions || { width: 1800, height: 1200 };
+    return {
+      id: item.photoId,
+      title: item.title || item.photoId,
+      mediaType: item.mediaType || "photo",
+      durationSeconds: item.durationSeconds || item.sourceDurationSeconds || 0,
+      cloudPdfSource: {
+        publicKey: item.publicStillKey || item.publicDetailKey || (item.mediaType === "video" ? "" : item.cloudSourceKey) || "",
+        sourceVideoPrivateKey: item.sourceVideoPrivateKey || "",
+        dimensions,
+        videoStillPercent: item.pdfStillPercent || 10,
+      },
+      realEstate: {
+        privateMasterKey: item.sourceVideoPrivateKey || "",
+        videoDurationSeconds: item.durationSeconds || item.sourceDurationSeconds || 0,
+      },
+      media: {
+        type: item.mediaType || "photo",
+        publicPreview: {
+          detailKey: item.publicDetailKey || item.publicStillKey || "",
+          galleryKey: item.publicGalleryKey || item.publicStillKey || "",
+          detailVideoKey: item.publicVideoKey || "",
+          detailDimensions: dimensions,
+        },
+        video: {
+          durationSeconds: item.durationSeconds || item.sourceDurationSeconds || 0,
+          publicPreviewKey: item.publicVideoKey || "",
+        },
+      },
+    };
+  };
+
+  const installCloudRenderBatch = (batch) => {
+    const rows = [
+      ...(Array.isArray(batch?.items) ? batch.items : []),
+      ...(Array.isArray(batch?.projects) ? batch.projects.flatMap((project) => Array.isArray(project?.items) ? project.items : []) : []),
+    ].filter((item) => item?.photoId);
+    const uniqueRows = [...new Map(rows.map((item) => [item.photoId, item])).values()];
+    const existing = new Map(state.photos.map((photo) => [photo.id, photo]));
+    const photos = uniqueRows.map((item) => existing.get(item.photoId) || cloudRenderSyntheticPhoto(item));
+    state.photos = photos;
+    state.photosById = new Map(photos.map((photo) => [photo.id, photo]));
+    state.pdfFormat = paperFormatFor(batch?.pdfSettings?.paperFormat || state.pdfFormat).key;
+    state.slideshowOrientation = normalizeSlideshowOrientation(batch?.slideshowSettings?.orientation || state.slideshowOrientation);
+    state.slideshowPhotoSeconds = Math.max(1, Number(batch?.slideshowSettings?.photoDurationSeconds || state.slideshowPhotoSeconds) || state.slideshowPhotoSeconds);
+    state.slideshowMusicCountry = normalizeSlideshowMusicCountry(batch?.slideshowSettings?.musicCountry || state.slideshowMusicCountry);
+    state.watermarkEnabled = Boolean(batch?.pdfSettings?.watermarkEnabled ?? batch?.slideshowSettings?.watermarkEnabled ?? state.watermarkEnabled);
+    state.watermarkText = String(batch?.pdfSettings?.photoWatermark || batch?.slideshowSettings?.watermarkText || state.watermarkText || "");
+  };
+
+  const cloudRenderEndpoint = (jobId, deliverableId = "", action = "") => {
+    const baseUrl = workerBaseUrl();
+    const path = deliverableId
+      ? `/real-estate/internal/render-jobs/${encodeURIComponent(jobId)}/deliverables/${encodeURIComponent(deliverableId)}/${action}`
+      : `/real-estate/internal/render-jobs/${encodeURIComponent(jobId)}`;
+    const url = new URL(path, `${baseUrl}/`);
+    url.searchParams.set("galleryKey", state.gallery?.key || "");
+    url.searchParams.set("token", cloudRenderToken);
+    return url;
+  };
+
+  const renderCloudPdfOutput = async (batch) => {
+    const projects = pdfProjectsForBatch(batch);
+    const combined = { pages: [], pageWidth: paperFormatFor().width, pageHeight: paperFormatFor().height };
+    for (const project of projects) {
+      const images = await fetchPdfImages(project.photos);
+      const rendered = await renderPdfPages(images);
+      combined.pages.push(...rendered.pages);
+    }
+    const filename = projects.length === 1
+      ? `${state.gallery?.key || "real-estate"}-${fileSlug(projects[0]?.projectTitle)}-${paperFormatFor().key}-${batch.batchId}.pdf`
+      : `${state.gallery?.key || "real-estate"}-${batch.batchId}-project-pdfs.pdf`;
+    return { blob: buildPdfBlobFromRendered(combined), filename, contentType: "application/pdf" };
+  };
+
+  const renderCloudVideoOutput = async (batch) => {
+    const recorded = await recordSlideshowVideoBlob(batch);
+    return {
+      blob: recorded.blob,
+      filename: `${state.gallery?.key || "real-estate"}-${batch.batchId}-slideshow.${recorded.extension}`,
+      contentType: recorded.mimeType,
+    };
+  };
+
+  const postCloudRenderFailure = async (record, error) => {
+    try {
+      await fetch(cloudRenderEndpoint(cloudRenderJobId, record.id, "fail"), {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ failureReason: error?.message || String(error || "Cloud render failed.") }),
+      });
+    } catch {
+      // The Workflow records any remaining failure if this best-effort update cannot be sent.
+    }
+  };
+
+  const runCloudRenderJob = async () => {
+    setCloudRenderStatus("processing", "Loading the private cloud render job...");
+    const response = await fetch(cloudRenderEndpoint(cloudRenderJobId), { cache: "no-store" });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw realEstateWorkerError(response, body);
+    const job = body.job || {};
+    const batch = job.inputManifest || job.deliverables?.[0]?.batch;
+    if (!batch?.batchId) throw new Error("Cloud render job is missing its selection manifest.");
+    installCloudRenderBatch(batch);
+    const pending = (job.deliverables || []).filter((record) => String(record.status || "").toLowerCase() !== "ready");
+    for (const record of pending) {
+      setCloudRenderStatus("processing", `Rendering ${record.type === "pdf" ? "PDF" : "video"} in the cloud...`);
+      try {
+        const output = record.type === "pdf"
+          ? await renderCloudPdfOutput(batch)
+          : await renderCloudVideoOutput(batch);
+        const completeUrl = cloudRenderEndpoint(cloudRenderJobId, record.id, "complete");
+        completeUrl.searchParams.set("filename", output.filename);
+        const completeResponse = await fetch(completeUrl, {
+          method: "POST",
+          headers: { "content-type": output.contentType },
+          body: output.blob,
+        });
+        const completeBody = await completeResponse.json().catch(() => ({}));
+        if (!completeResponse.ok) throw realEstateWorkerError(completeResponse, completeBody);
+      } catch (error) {
+        await postCloudRenderFailure(record, error);
+        throw error;
+      }
+    }
+    setCloudRenderStatus("ready", `${pending.length || job.deliverables?.length || 0} cloud output${(pending.length || job.deliverables?.length || 0) === 1 ? "" : "s"} ready.`);
+  };
+
   const pdfProjectsForBatch = (batch) => {
     const sourceProjects = Array.isArray(batch?.projects) && batch.projects.length
       ? batch.projects
@@ -5390,6 +5607,24 @@
     const selectedCount = projects.reduce((sum, project) => sum + project.photos.length, 0);
     if (!selectedCount) {
       setStatus("Select media before preparing a PDF");
+      return;
+    }
+    if (!isCloudRenderMode) {
+      try {
+        const queued = await queueCloudOutputs({
+          batch,
+          formats: ["pdf"],
+          progressKind: progressKind || (mode === "view" ? "pdf-view" : "pdf-download"),
+        });
+        const ready = queued?.deliverables?.find((record) => deliverableFormatCode(record.type) === "pdf");
+        setStatus(ready?.status === "ready"
+          ? "PDF ready on the finished-products shelf. Choose Next to review or download it."
+          : "PDF is generating in the cloud and will appear on the shelf when ready.");
+      } catch (error) {
+        const message = error?.message || "Cloud PDF could not be prepared.";
+        setStatus(message);
+        failOutputProgress(message);
+      }
       return;
     }
     let cloudRecord = null;
@@ -6473,6 +6708,15 @@
     }
     bindEvents();
     if (initialized) {
+      if (isCloudRenderMode) {
+        state.unlocked = true;
+        syncAuthUi();
+        runCloudRenderJob().catch((error) => {
+          console.error("Cloud render job failed", error);
+          setCloudRenderStatus("failed", error?.message || "Cloud render job failed.");
+        });
+        return;
+      }
       const accessMode = pageParams.get("access");
       if (!state.unlocked && accessMode === "google") {
         unlockFromAccessLogin({ redirectOnUnauthorized: false }).catch((error) => {

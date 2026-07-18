@@ -8,6 +8,7 @@ const styles = readFileSync(new URL("../photos.css", import.meta.url), "utf8");
 const sharedStyles = readFileSync(new URL("../shared.css", import.meta.url), "utf8");
 const siteScript = readFileSync(new URL("../photos.js", import.meta.url), "utf8");
 const home = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+const cloudWorker = readFileSync(new URL("../worker/cloud-worker.mjs", import.meta.url), "utf8");
 const outputActions = html.match(/<div class="real-estate-output-actions">([\s\S]*?)<\/div>/)?.[1] || "";
 
 test("Real Estate output step has one control per cloud action", () => {
@@ -48,12 +49,21 @@ test("Every generated PDF page carries the numbered Photos By Elie QR footer", (
   assert.match(script, /\/Font << \/F1 \$\{footerFontId\} 0 R >>/);
 });
 
-test("Video action describes browser rendering while it is busy", () => {
+test("Video action queues the cloud renderer while it is busy", () => {
   assert.match(script, /Generating video\.\.\./);
   assert.doesNotMatch(script, /Queueing video\.\.\./);
-  assert.match(script, /if \(batch\.slideshowSettings\?\.audioPolicy\?\.musicTrack\) return;/);
+  assert.match(script, /if \(!isCloudRenderMode\) return;/);
   const slideshowShare = script.match(/const shareSlideshowPlan = async[\s\S]*?\n  let crcTable/)?.[0] || "";
-  assert.ok(slideshowShare.indexOf("ensureVideoExportReady") < slideshowShare.indexOf("queueCloudOutputs"));
+  assert.ok(slideshowShare.indexOf("queueCloudOutputs") >= 0);
+  assert.ok(slideshowShare.indexOf("queueCloudOutputs") < slideshowShare.indexOf("ensureVideoExportReady"));
+  assert.match(script, /const waitForCloudAssemblyJob = async/);
+  assert.match(script, /Generating in the cloud/);
+});
+
+test("Cloud render credentials stay out of the public page request URL", () => {
+  assert.match(script, /cloudRenderParams = new URLSearchParams\(String\(window\.location\.hash/);
+  assert.match(cloudWorker, /url\.hash = new URLSearchParams/);
+  assert.doesNotMatch(cloudWorker, /url\.searchParams\.set\("cloudRenderToken"/);
 });
 
 test("Generated videos include restrained branded presentation polish", () => {
@@ -69,7 +79,9 @@ test("Generated videos include restrained branded presentation polish", () => {
   assert.match(script, /slideshowAssetTimeoutMs = 12000/);
   assert.match(script, /Timed out loading slideshow image/);
   assert.match(script, /Timed out loading slideshow music/);
-  assert.match(script, /slideshowMusicMaxDecodeSeconds = 180/);
+  assert.match(script, /slideshowMusicPreparedManifestKey = "assets\/music\/slideshow-guitar\/pixabay\/pixabay-guitar-candidates-prepared-060s\.json"/);
+  assert.match(script, /slideshowMusicMaxDecodeSeconds = 60\.25/);
+  assert.match(script, /preparedR2Key/);
   assert.match(script, /duration <= slideshowMusicMaxDecodeSeconds/);
 });
 

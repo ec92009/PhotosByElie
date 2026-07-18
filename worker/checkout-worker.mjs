@@ -2922,6 +2922,53 @@ export const createPhotosByElieWorker = ({
     return credentialedJson(request, result);
   };
 
+  const getInternalRealEstateRenderJob = async (request, jobId) => {
+    if (!realEstateDeliverables || typeof realEstateDeliverables.getCloudAssemblyRenderJob !== "function") {
+      return errorJson(503, "real_estate_cloud_render_unavailable", "Real-estate cloud rendering is not configured.");
+    }
+    const url = new URL(request.url);
+    const result = await realEstateDeliverables.getCloudAssemblyRenderJob({
+      galleryKey: url.searchParams.get("galleryKey") || "",
+      jobId,
+      renderToken: url.searchParams.get("token") || "",
+    });
+    return credentialedJson(request, result);
+  };
+
+  const completeInternalRealEstateRenderOutput = async (request, jobId, deliverableId) => {
+    if (!realEstateDeliverables || typeof realEstateDeliverables.completeCloudAssemblyRenderOutput !== "function") {
+      return errorJson(503, "real_estate_cloud_render_unavailable", "Real-estate cloud rendering is not configured.");
+    }
+    const url = new URL(request.url);
+    const deliverable = await realEstateDeliverables.completeCloudAssemblyRenderOutput({
+      galleryKey: url.searchParams.get("galleryKey") || "",
+      jobId,
+      id: deliverableId,
+      renderToken: url.searchParams.get("token") || "",
+      filename: url.searchParams.get("filename") || "",
+      contentType: request.headers.get("content-type") || "application/octet-stream",
+      contentLength: request.headers.get("content-length") || "",
+      body: request.body,
+    });
+    return credentialedJson(request, { deliverable });
+  };
+
+  const failInternalRealEstateRenderOutput = async (request, jobId, deliverableId) => {
+    if (!realEstateDeliverables || typeof realEstateDeliverables.failCloudAssemblyRenderOutput !== "function") {
+      return errorJson(503, "real_estate_cloud_render_unavailable", "Real-estate cloud rendering is not configured.");
+    }
+    const url = new URL(request.url);
+    const body = await parseJson(request);
+    const deliverable = await realEstateDeliverables.failCloudAssemblyRenderOutput({
+      galleryKey: url.searchParams.get("galleryKey") || "",
+      jobId,
+      id: deliverableId,
+      renderToken: url.searchParams.get("token") || "",
+      failureReason: body.failureReason || body.error || "Cloud browser render failed.",
+    });
+    return credentialedJson(request, { deliverable });
+  };
+
   const fetch = async (request) => {
     const url = new URL(request.url);
     const path = url.pathname.replace(/^\/api(?=\/)/, "");
@@ -3004,6 +3051,18 @@ export const createPhotosByElieWorker = ({
       if (request.method === "GET" && path === "/real-estate/session") return await getRealEstateSession(request);
       if (request.method === "POST" && path === "/real-estate/logout") return await logoutRealEstate(request);
       if (request.method === "POST" && path === "/real-estate/originals/session") return await createRealEstateOriginalsSession(request);
+      const internalRealEstateRenderJobMatch = path.match(/^\/real-estate\/internal\/render-jobs\/([^/]+)$/);
+      if (request.method === "GET" && internalRealEstateRenderJobMatch) {
+        return await getInternalRealEstateRenderJob(request, decodeURIComponent(internalRealEstateRenderJobMatch[1]));
+      }
+      const internalRealEstateRenderOutputMatch = path.match(/^\/real-estate\/internal\/render-jobs\/([^/]+)\/deliverables\/([^/]+)\/(complete|fail)$/);
+      if (request.method === "POST" && internalRealEstateRenderOutputMatch) {
+        const jobId = decodeURIComponent(internalRealEstateRenderOutputMatch[1]);
+        const deliverableId = decodeURIComponent(internalRealEstateRenderOutputMatch[2]);
+        return internalRealEstateRenderOutputMatch[3] === "complete"
+          ? await completeInternalRealEstateRenderOutput(request, jobId, deliverableId)
+          : await failInternalRealEstateRenderOutput(request, jobId, deliverableId);
+      }
       if (request.method === "POST" && path === "/real-estate/deliverables/list") return await listRealEstateDeliverables(request);
       if (request.method === "POST" && path === "/real-estate/deliverables/jobs") return await submitRealEstateAssemblyJob(request);
       const realEstateJobMatch = path.match(/^\/real-estate\/deliverables\/jobs\/([^/]+)$/);

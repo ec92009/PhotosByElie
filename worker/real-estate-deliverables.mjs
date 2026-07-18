@@ -79,6 +79,26 @@ const cloneJson = (value) => {
   }
 };
 
+const textBytes = (value) => new TextEncoder().encode(String(value || ""));
+
+const sha256Hex = async (value) => {
+  const digest = await crypto.subtle.digest("SHA-256", textBytes(value));
+  return [...new Uint8Array(digest)]
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+};
+
+const timingSafeEqual = (left, right) => {
+  const a = String(left || "");
+  const b = String(right || "");
+  let diff = a.length ^ b.length;
+  const max = Math.max(a.length, b.length);
+  for (let index = 0; index < max; index += 1) {
+    diff |= (a.charCodeAt(index) || 0) ^ (b.charCodeAt(index) || 0);
+  }
+  return diff === 0;
+};
+
 const objectText = async (object) => {
   if (!object) return "";
   if (typeof object.text === "function") return object.text();
@@ -112,6 +132,9 @@ export const createRealEstateDeliverables = ({
   galleries = defaultGalleries,
   emailClient = null,
   publicSiteUrl = "",
+  assemblyDispatcher = null,
+  videoTranscoder = null,
+  renderTokenTtlSeconds = 20 * 60,
   now = () => new Date(),
   randomUUID = () => crypto.randomUUID(),
 } = {}) => {
@@ -395,11 +418,12 @@ export const createRealEstateDeliverables = ({
   };
 
   const publicJobFor = async (gallery, jobRecord = {}) => {
+    const { renderAccess: _renderAccess, ...safeJobRecord } = jobRecord || {};
     const records = await readDeliverableRecords(gallery, jobRecord.deliverableIds || []);
     const status = jobStatusFor(records);
     const failureReason = jobFailureReasonFor(records) || String(jobRecord.failureReason || "");
     return {
-      ...jobRecord,
+      ...safeJobRecord,
       status,
       failureReason,
       updatedAt: now().toISOString(),
@@ -556,6 +580,52 @@ export const createRealEstateDeliverables = ({
         status: jobRecord.status,
       },
     });
+    if (assemblyDispatcher && typeof assemblyDispatcher.dispatch === "function") {
+      try {
+        await assemblyDispatcher.dispatch({ galleryKey: gallery.key, jobId });
+      } catch (error) {
+        const failureReason = `Cloud assembly could not be dispatched: ${error?.message || "unknown dispatcher error"}`.slice(0, 500);
+        const failedAt = now().toISOString();
+        await Promise.all(records.map(async (record) => {
+          const failedRecord = {
+            ...record,
+            status: "needs-attention",
+            updatedAt: failedAt,
+            failureReason,
+            assemblyJob: {
+              ...(record.assemblyJob || {}),
+              status: "needs-attention",
+              assembler: "cloud-browser-workflow",
+              failedAt,
+              failureReason,
+            },
+          };
+          await privateBucket.put(keyFor(gallery, record.id), textBytes(JSON.stringify(failedRecord, null, 2)), {
+            httpMetadata: { contentType: "application/json; charset=utf-8" },
+            customMetadata: {
+              galleryKey: gallery.key,
+              deliverableId: record.id,
+              type: record.type,
+              assemblyJobId: jobId,
+              status: "needs-attention",
+            },
+          });
+        }));
+        await privateBucket.put(jobKeyFor(gallery, jobId), textBytes(JSON.stringify({
+          ...jobRecord,
+          status: "needs-attention",
+          updatedAt: failedAt,
+          failureReason,
+        }, null, 2)), {
+          httpMetadata: { contentType: "application/json; charset=utf-8" },
+          customMetadata: { galleryKey: gallery.key, assemblyJobId: jobId, status: "needs-attention" },
+        });
+        throw Object.assign(new Error(failureReason), {
+          status: 503,
+          code: "real_estate_assembly_dispatch_failed",
+        });
+      }
+    }
     const publicJob = await publicJobFor(gallery, jobRecord);
     return {
       galleryKey: gallery.key,
@@ -617,7 +687,7 @@ export const createRealEstateDeliverables = ({
     }
     const fallbackFilename = `${gallery.key}-${record.batch?.batchId || record.id}-${type === "pdf" ? "project.pdf" : "slideshow.mp4"}`;
     const filename = safeFilename(payload.filename, fallbackFilename);
-    const contentType = String(payload.contentType || contentTypeFor(type, filename)).split(";")[0].trim().toLowerCase();
+    let contentType = String(payload.contentType || contentTypeFor(type, filename)).split(";")[0].trim().toLowerCase();
     const validContentType = type === "pdf"
       ? contentType === "application/pdf"
       : contentType.startsWith("video/");
@@ -629,8 +699,16 @@ export const createRealEstateDeliverables = ({
       });
     }
 
-    const outputKey = outputKeyFor(gallery, id, type, filename, contentType);
-    const stored = await privateBucket.put(outputKey, payload.body, {
+    let outputBody = payload.body;
+    let outputFilename = filename;
+    if (type === "video" && contentType !== "video/mp4" && videoTranscoder && typeof videoTranscoder.toMp4 === "function") {
+      const transformed = await videoTranscoder.toMp4({ body: outputBody, contentType, filename: outputFilename });
+      outputBody = transformed?.body || outputBody;
+      contentType = String(transformed?.contentType || "video/mp4").split(";")[0].trim().toLowerCase();
+      outputFilename = safeFilename(transformed?.filename || outputFilename.replace(/\.[^.]+$/i, ".mp4"), `${record.id}.mp4`);
+    }
+    const outputKey = outputKeyFor(gallery, id, type, outputFilename, contentType);
+    const stored = await privateBucket.put(outputKey, outputBody, {
       httpMetadata: { contentType },
       customMetadata: {
         galleryKey: gallery.key,
@@ -646,28 +724,28 @@ export const createRealEstateDeliverables = ({
       updatedAt: completedAt,
       status: "ready",
       bytes,
-      filename,
+      filename: outputFilename,
       failureReason: "",
       outputs: {
         ...(record.outputs || {}),
         [type]: {
           ...(record.outputs?.[type] || {}),
           key: outputKey,
-          filename,
+          filename: outputFilename,
           contentType,
         },
       },
       assemblyJob: {
         ...(record.assemblyJob || {}),
         status: "ready",
-        assembler: "browser-upload",
+        assembler: String(payload.assembler || "browser-upload"),
         completedAt,
         failureReason: "",
       },
       deliveryEmail: {
         status: "not_sent",
         decision: "owner_review_before_client_notification",
-        reason: "browser_assembled_output_waits_for_owner_review_on_shelf",
+        reason: `${String(payload.assembler || "browser-upload").replace(/[^a-z0-9]+/gi, "_").toLowerCase()}_output_waits_for_owner_review_on_shelf`,
         decidedAt: completedAt,
       },
     });
@@ -709,14 +787,14 @@ export const createRealEstateDeliverables = ({
       assemblyJob: {
         ...(record.assemblyJob || {}),
         status: "needs-attention",
-        assembler: "browser-upload",
+        assembler: String(payload.assembler || "browser-upload"),
         failedAt,
         failureReason,
       },
       deliveryEmail: {
         status: "not_sent",
         decision: "owner_review_required",
-        reason: "browser_assembly_failed",
+        reason: `${String(payload.assembler || "browser-upload").replace(/[^a-z0-9]+/gi, "_").toLowerCase()}_assembly_failed`,
         decidedAt: failedAt,
       },
     };
@@ -800,6 +878,117 @@ export const createRealEstateDeliverables = ({
     };
   };
 
+  const requireCloudRenderAccess = async (payload = {}) => {
+    const gallery = galleryFor(payload);
+    const jobId = safeRecordId(payload.jobId || payload.id || "");
+    const token = String(payload.renderToken || payload.token || "").trim();
+    const jobRecord = await objectJson(await privateBucket.get(jobKeyFor(gallery, jobId)));
+    const expiresAt = Date.parse(jobRecord?.renderAccess?.expiresAt || "");
+    const tokenHash = String(jobRecord?.renderAccess?.tokenHash || "");
+    if (!jobRecord || !token || !tokenHash || !Number.isFinite(expiresAt) || expiresAt <= now().getTime()) {
+      throw Object.assign(new Error("Cloud render access has expired or is unavailable."), {
+        status: 403,
+        code: "real_estate_cloud_render_forbidden",
+      });
+    }
+    if (!timingSafeEqual(await sha256Hex(token), tokenHash)) {
+      throw Object.assign(new Error("Cloud render access token is invalid."), {
+        status: 403,
+        code: "real_estate_cloud_render_forbidden",
+      });
+    }
+    return { gallery, jobId, jobRecord };
+  };
+
+  const beginCloudAssemblyRender = async (payload = {}) => {
+    const gallery = galleryFor(payload);
+    const jobId = safeRecordId(payload.jobId || payload.id || "");
+    const jobKey = jobKeyFor(gallery, jobId);
+    const jobRecord = await objectJson(await privateBucket.get(jobKey));
+    if (!jobRecord) {
+      throw Object.assign(new Error("Real-estate assembly job was not found."), {
+        status: 404,
+        code: "unknown_real_estate_assembly_job",
+      });
+    }
+    const renderToken = `${randomUUID()}${randomUUID()}`.replace(/-/g, "");
+    const startedAt = now().toISOString();
+    const expiresAt = new Date(now().getTime() + (Math.max(60, Number(renderTokenTtlSeconds) || 1200) * 1000)).toISOString();
+    const processingRecords = await readDeliverableRecords(gallery, jobRecord.deliverableIds || []);
+    await Promise.all(processingRecords.map(async (record) => {
+      if (String(record.status || "").toLowerCase() === "ready") return;
+      const processing = {
+        ...record,
+        status: "processing",
+        updatedAt: startedAt,
+        failureReason: "",
+        assemblyJob: {
+          ...(record.assemblyJob || {}),
+          status: "processing",
+          assembler: "cloud-browser-workflow",
+          startedAt,
+          failureReason: "",
+        },
+      };
+      await privateBucket.put(keyFor(gallery, record.id), textBytes(JSON.stringify(processing, null, 2)), {
+        httpMetadata: { contentType: "application/json; charset=utf-8" },
+        customMetadata: {
+          galleryKey: gallery.key,
+          deliverableId: record.id,
+          type: record.type,
+          assemblyJobId: jobId,
+          status: "processing",
+        },
+      });
+    }));
+    const processingJob = {
+      ...jobRecord,
+      status: "processing",
+      updatedAt: startedAt,
+      failureReason: "",
+      renderAccess: {
+        tokenHash: await sha256Hex(renderToken),
+        createdAt: startedAt,
+        expiresAt,
+      },
+    };
+    await privateBucket.put(jobKey, textBytes(JSON.stringify(processingJob, null, 2)), {
+      httpMetadata: { contentType: "application/json; charset=utf-8" },
+      customMetadata: { galleryKey: gallery.key, assemblyJobId: jobId, status: "processing" },
+    });
+    return { galleryKey: gallery.key, jobId, renderToken, expiresAt };
+  };
+
+  const getCloudAssemblyRenderJob = async (payload = {}) => {
+    const { gallery, jobRecord } = await requireCloudRenderAccess(payload);
+    return {
+      galleryKey: gallery.key,
+      job: await publicJobFor(gallery, jobRecord),
+    };
+  };
+
+  const completeCloudAssemblyRenderOutput = async (payload = {}) => {
+    const { gallery, jobId } = await requireCloudRenderAccess(payload);
+    return completeAssemblyOutput({
+      ...payload,
+      galleryKey: gallery.key,
+      realEstateSession: { galleryKey: gallery.key, username: "cloud-renderer" },
+      assembler: "cloud-browser-workflow",
+      jobId,
+    });
+  };
+
+  const failCloudAssemblyRenderOutput = async (payload = {}) => {
+    const { gallery, jobId } = await requireCloudRenderAccess(payload);
+    return failAssemblyOutput({
+      ...payload,
+      galleryKey: gallery.key,
+      realEstateSession: { galleryKey: gallery.key, username: "cloud-renderer" },
+      assembler: "cloud-browser-workflow",
+      jobId,
+    });
+  };
+
   return {
     listDeliverables,
     putDeliverable,
@@ -809,5 +998,9 @@ export const createRealEstateDeliverables = ({
     failAssemblyOutput,
     getDeliverableAsset,
     deleteDeliverable,
+    beginCloudAssemblyRender,
+    getCloudAssemblyRenderJob,
+    completeCloudAssemblyRenderOutput,
+    failCloudAssemblyRenderOutput,
   };
 };

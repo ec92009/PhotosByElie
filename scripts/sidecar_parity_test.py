@@ -49,6 +49,12 @@ class SidecarParityInventoryTest(unittest.TestCase):
         self.assertIn('data-fixture-upload-run-asset-id', owner)
         self.assertIn("Preview this exact run and fixture before adopting it.", owner)
 
+    def test_stale_browser_cannot_start_an_unscoped_real_upload(self):
+        server = (ROOT / "scripts" / "sidecar_server.py").read_text(encoding="utf-8")
+        drain = (ROOT / "scripts" / "sidecar_upload_bridge_drain.py").read_text(encoding="utf-8")
+        self.assertIn("This Sidecar page is stale or unscoped", server)
+        self.assertIn('"allowUnscoped": True', drain)
+
 
 if __name__ == "__main__":
     unittest.main()

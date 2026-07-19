@@ -200,6 +200,9 @@ the pool's fixture, performs a read-only Photos metadata preflight, commits and
 re-reads the Photos metadata, and only then starts the next asset. The progress
 rail reports separate R2 and Photos counts. Unscoped Sidecar keeps real upload
 disabled because a safe Photos give-back requires a real fixture destination.
+The server enforces the same rule, so an older cached browser page cannot start
+an unscoped real upload that bypasses the Photos stage. The maintenance drain
+must opt into its legacy unscoped mode explicitly.
 
 Upload Bridge does not generate private JPG render triplets. Private renders are
 an on-demand Worker cache: checkout/delivery can lazily create

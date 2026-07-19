@@ -1345,6 +1345,7 @@ class SidecarHandler(SimpleHTTPRequestHandler):
             upload_id = str(payload.get("uploadId") or payload.get("upload_id") or uuid.uuid4().hex)
             allow_overwrite = bool(payload.get("allowR2Overwrite") or payload.get("allow_r2_overwrite"))
             allow_icloud_downloads = payload.get("allowIcloudDownloads", payload.get("allow_icloud_downloads", True)) is not False
+            allow_unscoped = bool(payload.get("allowUnscoped") or payload.get("allow_unscoped"))
             pool_id = str(payload.get("poolId") or payload.get("pool_id") or "").strip()
             fixture_id = str(payload.get("fixtureId") or payload.get("fixture_id") or "").strip()
             scoped_asset_ids = None
@@ -1355,6 +1356,10 @@ class SidecarHandler(SimpleHTTPRequestHandler):
                     raise ValueError("fixtureId does not match the selected Sidecar pool.")
                 fixture_id = pool_fixture_id
                 scoped_asset_ids = pool_asset_ids(Path.cwd(), pool_id)
+            elif not allow_unscoped:
+                raise ValueError(
+                    "This Sidecar page is stale or unscoped. Reopen the batch from Build a Fixture before starting a real upload."
+                )
         except ValueError as error:
             self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
             return

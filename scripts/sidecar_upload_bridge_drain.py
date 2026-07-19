@@ -38,7 +38,11 @@ def bridge_counts(repo_root: Path) -> dict[str, int]:
 
 def post_batch(endpoint: str, batch_index: int, count: int, checkpoint_every: int, timeout: int) -> dict[str, Any]:
     upload_id = f"codex-drain-{datetime.utcnow().strftime('%Y%m%dT%H%M%SZ')}-{batch_index:03d}"
-    payload = json.dumps({"count": count, "uploadId": upload_id}).encode("utf-8")
+    payload = json.dumps({
+        "count": count,
+        "uploadId": upload_id,
+        "allowUnscoped": True,
+    }).encode("utf-8")
     request = urllib.request.Request(
         endpoint,
         data=payload,

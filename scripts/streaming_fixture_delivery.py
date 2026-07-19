@@ -10,9 +10,81 @@ from apple_photos_metadata_writer import (
     ApplePhotosAdapter,
     PhotosMetadataAccess,
     commit_writeback,
-    writeback_plan,
 )
 from fixture_pipeline import adopt_upload_run
+
+
+def _unique_asset_ids(asset_ids: list[str]) -> list[str]:
+    return list(dict.fromkeys(str(asset_id).strip() for asset_id in asset_ids if str(asset_id).strip()))
+
+
+def finalize_streamed_upload_batch(
+    repo_root: Path,
+    *,
+    run_id: str,
+    fixture_id: str,
+    asset_ids: list[str],
+    adapter: PhotosMetadataAccess | None = None,
+) -> dict[str, Any]:
+    """Adopt verified R2 items and give metadata back to Photos in one batch."""
+    selected_ids = _unique_asset_ids(asset_ids)
+    if not selected_ids:
+        return {
+            "ok": True,
+            "fixtureId": fixture_id,
+            "assetCount": 0,
+            "r2ReceiptCount": 0,
+            "photosWrittenCount": 0,
+            "photosFailedCount": 0,
+            "photosBlockedCount": 0,
+            "items": [],
+        }
+    adoption = adopt_upload_run(
+        repo_root,
+        run_id,
+        fixture_id,
+        asset_ids=selected_ids,
+    )
+    photos_adapter = adapter or ApplePhotosAdapter()
+    photos = commit_writeback(
+        repo_root,
+        fixture_id,
+        selected_ids,
+        adapter=photos_adapter,
+    )
+    written = {str(item.get("assetId") or "") for item in photos.get("written") or []}
+    failed = {
+        str(item.get("assetId") or ""): str(item.get("error") or "Apple Photos write failed")
+        for item in photos.get("failed") or []
+    }
+    blocked: dict[str, list[str]] = {}
+    for item in photos.get("blocked") or []:
+        blocked.setdefault(str(item.get("assetId") or ""), []).append(str(item.get("reason") or "blocked"))
+    items = []
+    for asset_id in selected_ids:
+        item_blocked = blocked.get(asset_id, [])
+        item_error = failed.get(asset_id, "")
+        items.append({
+            "ok": asset_id in written and not item_error and not item_blocked,
+            "assetId": asset_id,
+            "fixtureId": fixture_id,
+            "photosWrittenCount": 1 if asset_id in written else 0,
+            "photosFailedCount": 1 if item_error else 0,
+            "photosBlockedCount": len(item_blocked),
+            **({"error": item_error} if item_error else {}),
+            **({"blockedReasons": item_blocked} if item_blocked else {}),
+        })
+    return {
+        "ok": bool(photos.get("ok")) and all(item["ok"] for item in items),
+        "fixtureId": fixture_id,
+        "assetCount": len(selected_ids),
+        "r2ReceiptCount": int(adoption.get("r2ReceiptCount") or 0),
+        "photosWrittenCount": int(photos.get("writtenCount") or 0),
+        "photosFailedCount": int(photos.get("failedCount") or 0),
+        "photosBlockedCount": len(photos.get("blocked") or []),
+        "items": items,
+        "photos": photos,
+    }
 
 
 def finalize_streamed_upload(
@@ -24,38 +96,16 @@ def finalize_streamed_upload(
     adapter: PhotosMetadataAccess | None = None,
 ) -> dict[str, Any]:
     """Adopt one verified R2 item, then write and verify its Photos metadata."""
-    adoption = adopt_upload_run(
+    batch = finalize_streamed_upload_batch(
         repo_root,
-        run_id,
-        fixture_id,
+        run_id=run_id,
+        fixture_id=fixture_id,
         asset_ids=[asset_id],
+        adapter=adapter,
     )
-    photos_adapter = adapter or ApplePhotosAdapter()
-    preflight = writeback_plan(
-        repo_root,
-        fixture_id,
-        [asset_id],
-        adapter=photos_adapter,
-    )
-    read_errors = [item for item in preflight["items"] if item.get("currentReadError")]
-    if preflight["blockedCount"] or preflight["count"] != 1 or read_errors:
-        detail = preflight["blocked"] or read_errors or [{"reason": "expected exactly one Photos item"}]
-        raise RuntimeError(f"Apple Photos give-back preflight failed: {detail}")
-    photos = commit_writeback(
-        repo_root,
-        fixture_id,
-        [asset_id],
-        adapter=photos_adapter,
-    )
-    blocked = photos.get("blocked") or []
+    item = (batch.get("items") or [{}])[0]
     return {
-        "ok": bool(photos.get("ok")) and not blocked and photos.get("writtenCount") == 1,
-        "assetId": asset_id,
-        "fixtureId": fixture_id,
-        "r2ReceiptCount": int(adoption.get("r2ReceiptCount") or 0),
-        "photosWrittenCount": int(photos.get("writtenCount") or 0),
-        "photosFailedCount": int(photos.get("failedCount") or 0),
-        "photosBlockedCount": len(blocked),
-        "photosPreflightCount": int(preflight.get("count") or 0),
-        "photos": photos,
+        **item,
+        "r2ReceiptCount": int(batch.get("r2ReceiptCount") or 0),
+        "photos": batch.get("photos") or {},
     }

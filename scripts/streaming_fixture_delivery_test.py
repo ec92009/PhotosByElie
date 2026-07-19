@@ -15,13 +15,14 @@ from sidecar_state_db import (
     upload_plan,
     upsert_assets,
 )
-from streaming_fixture_delivery import finalize_streamed_upload
+from streaming_fixture_delivery import finalize_streamed_upload, finalize_streamed_upload_batch
 
 
 class FakePhotos:
     def __init__(self):
         self.values = {
             "asset-1": {"title": "Old", "caption": "", "keywords": ["Keep me"]},
+            "asset-2": {"title": "Old two", "caption": "", "keywords": ["Keep two"]},
         }
 
     def read(self, asset_id):
@@ -148,6 +149,59 @@ class StreamingFixtureDeliveryTest(unittest.TestCase):
         self.assertTrue(completed["ok"])
         self.assertEqual(completed["photosWrittenCount"], 1)
         self.assertIn("PBE-Approved", adapter.values["asset-1"]["keywords"])
+
+    def test_verified_items_are_returned_to_photos_in_one_batch(self):
+        fixture = create_fixture(self.root, "Paris")
+        run_id = "ub-stream-batch-test"
+        timestamp = "2026-07-19T12:00:00Z"
+        with connect(self.root) as conn:
+            conn.execute(
+                """INSERT INTO sidecar_upload_bridge_runs
+                   (run_id, mode, status, execute_upload, limit_count, started_at,
+                    summary_json, created_at, updated_at)
+                   VALUES (?, 'execute-batch', 'running', 1, 2, ?, '{}', ?, ?)""",
+                (run_id, timestamp, timestamp, timestamp),
+            )
+            for index, asset_id in enumerate(("asset-1", "asset-2"), 1):
+                result = {
+                    "status": "uploaded",
+                    "bucket": "photosbyelie-public",
+                    "key": f"expo/{asset_id}.jpg",
+                    "checksumSha256": str(index) * 64,
+                    "remoteChecksumSha256": str(index) * 64,
+                    "remoteVerified": True,
+                    "bytes": 10,
+                    "contentType": "image/jpeg",
+                }
+                conn.execute(
+                    """INSERT INTO sidecar_upload_bridge_run_items
+                       (run_item_id, run_id, asset_id, photo_id, filename, media_type,
+                        status, export_status, planned_keys_json, upload_status,
+                        upload_keys_json, editorial_version_hash, created_at, updated_at)
+                       VALUES (?, ?, ?, ?, ?, 'photo', 'uploaded', 'materialized', ?,
+                               'uploaded', ?, ?, ?, ?)""",
+                    (
+                        f"item-{index}", run_id, asset_id, asset_id, f"{asset_id}.jpg",
+                        json.dumps([{"bucket": result["bucket"], "key": result["key"]}]),
+                        json.dumps([result]), editorial_version_hash(conn, asset_id),
+                        timestamp, timestamp,
+                    ),
+                )
+            conn.commit()
+
+        adapter = FakePhotos()
+        completed = finalize_streamed_upload_batch(
+            self.root,
+            run_id=run_id,
+            fixture_id=fixture["fixtureId"],
+            asset_ids=["asset-1", "asset-2"],
+            adapter=adapter,
+        )
+        self.assertTrue(completed["ok"])
+        self.assertEqual(completed["photosWrittenCount"], 2)
+        self.assertEqual([item["assetId"] for item in completed["items"]], ["asset-1", "asset-2"])
+        self.assertIn("PBE-Approved", adapter.values["asset-1"]["keywords"])
+        self.assertIn("PBE-Approved", adapter.values["asset-2"]["keywords"])
         self.assertIn("Keep me", adapter.values["asset-1"]["keywords"])
 
 

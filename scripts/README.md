@@ -643,13 +643,15 @@ to R2. Planned key collisions are skipped by default; pass
 `--allow-r2-overwrite` only when you intentionally want to replace existing R2
 objects. Successful bridge-uploaded keys are remembered in the local bridge
 ledger, so retrying after a partial run skips already uploaded keys. The
-Sidecar Review UI uses a faster streamed
-batch executor: it selects the requested uploadable rows once, checks planned R2
-coverage once, then materializes each item and uploads that item's three planned
-R2 keys in a small parallel group. The rail has an item count field capped by
-the remaining R2-uploadable queue, streamed per-item progress feedback with
-uploaded-item thumbnails and timings, and a Stop upload control that interrupts
-the batch after the current item completes:
+Sidecar Review UI uses a faster streamed batch executor: it selects the
+requested uploadable rows once, checks planned R2 coverage once, then runs two
+items concurrently while each item uploads its three planned R2 keys in a small
+parallel group. Verified items return to Apple Photos in batches of ten, so the
+`PBE-Approved` smart album advances in visible bursts without repeating the
+Photos writer startup cost for every item. The rail has an item count field
+capped by the remaining R2-uploadable queue, streamed per-item progress feedback
+with uploaded-item thumbnails and timings, and a Stop upload control that flushes
+any completed give-back batch before stopping ahead of the next worker pair:
 
 ```bash
 python3 scripts/sidecar_upload_bridge.py --execute --limit 1

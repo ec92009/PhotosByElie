@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import hashlib
@@ -44,7 +45,7 @@ from sidecar_state_db import (
     upsert_assets,
 )
 from fixture_pipeline import get_pool, pool_asset_ids
-from streaming_fixture_delivery import finalize_streamed_upload
+from streaming_fixture_delivery import finalize_streamed_upload_batch
 
 
 APPLE_PHOTOS_BRIDGE = Path("scripts/apple_photos_bridge.swift")
@@ -1465,105 +1466,75 @@ class SidecarHandler(SimpleHTTPRequestHandler):
 
         canceled = False
         terminal_error = ""
-        for index, planned_item in enumerate(batch_items):
-            if _upload_bridge_cancel_requested(upload_id):
-                canceled = True
-                self._write_ndjson_event({
-                    "ok": True,
-                    "event": "cancelled",
-                    "uploadId": upload_id,
-                    "index": index + 1,
-                    "count": len(batch_items),
-                    "totals": totals,
-                    "message": "Upload Bridge interrupt requested; stopped before starting the next item.",
-                })
-                break
+        pending_giveback: list[dict] = []
+        giveback_batch_size = 10
+
+        def emit_item_complete(record: dict, fixture_delivery: dict | None = None) -> None:
+            result = record["result"]
+            item = record["item"]
             self._write_ndjson_event({
-                "ok": True,
-                "event": "item-start",
+                "ok": bool(result.get("ok")),
+                "event": "item-complete",
                 "uploadId": upload_id,
-                "index": index + 1,
+                "index": record["index"] + 1,
                 "count": len(batch_items),
+                "status": record["status"],
+                "runId": result.get("runId") or "",
                 "item": {
-                    "assetId": planned_item.get("assetId") or "",
-                    "photoId": planned_item.get("photoId") or "",
-                    "filename": planned_item.get("filename") or "",
-                    "mediaType": planned_item.get("mediaType") or "",
+                    "assetId": item.get("assetId") or "",
+                    "photoId": item.get("photoId") or "",
+                    "filename": item.get("filename") or "",
+                    "mediaType": item.get("mediaType") or "",
+                    "status": item.get("status") or record["status"],
+                    "export": item.get("export") or {},
+                    "upload": item.get("upload") or {},
+                    "timings": item.get("timings") or {},
+                    "fixtureDelivery": fixture_delivery or {},
                 },
-                "message": f"Uploading item {index + 1} of {len(batch_items)}.",
+                "summary": record["summary"],
+                "totals": totals,
+                "message": result.get("message") or "",
             })
+
+        def flush_giveback() -> None:
+            nonlocal pending_giveback
+            if not pending_giveback:
+                return
+            asset_ids = [str(record["item"].get("assetId") or "") for record in pending_giveback]
             try:
-                result = execute_upload_bridge_batch_item(
+                batch_delivery = finalize_streamed_upload_batch(
                     Path.cwd(),
                     run_id=batch_run_id,
-                    run_root=Path(str(batch.get("spoolRoot") or "")),
-                    export_root=Path(str(batch.get("exportRoot") or "")),
-                    item=planned_item,
-                    allow_icloud_downloads=allow_icloud_downloads,
-                    allow_r2_overwrite=allow_overwrite,
+                    fixture_id=fixture_id,
+                    asset_ids=asset_ids,
                 )
-            except Exception as error:  # noqa: BLE001 - stream the failure to the UI.
-                totals["failedItemCount"] += 1
-                totals["failedUploadCount"] += 1
-                terminal_error = str(error)
-                self._write_ndjson_event({
-                    "ok": False,
-                    "event": "error",
-                    "uploadId": upload_id,
-                    "index": index + 1,
-                    "count": len(batch_items),
-                    "error": str(error),
-                    "totals": totals,
-                })
-                break
-
-            summary_payload = result.get("summary") or {}
-            item = (result.get("items") or [{}])[0] if result.get("items") else {}
-            uploaded_keys = int(summary_payload.get("uploadedKeyCount") or 0)
-            skipped_keys = int(summary_payload.get("skippedCollisionCount") or 0)
-            failed_keys = int(summary_payload.get("failedUploadCount") or 0)
-            failed_items = int(summary_payload.get("failedCount") or 0)
-            status = str(result.get("status") or "")
-            item_failed = bool(item) and (failed_items > 0 or status in {"export_failed", "upload_failed"} or not result.get("ok"))
-            item_uploaded = bool(item) and status in {"uploaded", "uploaded_with_skips"} and not item_failed
-            totals["completedCount"] += 1 if item else 0
-            totals["uploadedItemCount"] += 1 if item_uploaded else 0
-            totals["failedItemCount"] += 1 if item_failed else 0
-            totals["uploadedKeyCount"] += uploaded_keys
-            totals["skippedCollisionCount"] += skipped_keys
-            totals["failedUploadCount"] += failed_keys
-            fixture_delivery = None
-            if item_uploaded and fixture_id:
-                self._write_ndjson_event({
-                    "ok": True,
-                    "event": "item-r2-verified",
-                    "uploadId": upload_id,
-                    "index": index + 1,
-                    "count": len(batch_items),
-                    "fixtureId": fixture_id,
-                    "item": {
-                        "assetId": item.get("assetId") or "",
-                        "filename": item.get("filename") or "",
-                    },
-                    "totals": totals,
-                    "message": f"R2 verified for item {index + 1}; returning it to Apple Photos.",
-                })
-                try:
-                    fixture_delivery = finalize_streamed_upload(
-                        Path.cwd(),
-                        run_id=batch_run_id,
-                        fixture_id=fixture_id,
-                        asset_id=str(item.get("assetId") or ""),
-                    )
-                except Exception as error:  # noqa: BLE001 - R2 remains verified and Photos stays retryable.
-                    fixture_delivery = {
+                deliveries = {
+                    str(item.get("assetId") or ""): item
+                    for item in batch_delivery.get("items") or []
+                }
+            except Exception as error:  # noqa: BLE001 - R2 remains verified and Photos stays retryable.
+                deliveries = {
+                    asset_id: {
                         "ok": False,
-                        "assetId": item.get("assetId") or "",
+                        "assetId": asset_id,
                         "fixtureId": fixture_id,
                         "photosWrittenCount": 0,
                         "photosFailedCount": 1,
                         "error": str(error),
                     }
+                    for asset_id in asset_ids
+                }
+            for record in pending_giveback:
+                item = record["item"]
+                asset_id = str(item.get("assetId") or "")
+                fixture_delivery = deliveries.get(asset_id) or {
+                    "ok": False,
+                    "assetId": asset_id,
+                    "fixtureId": fixture_id,
+                    "photosWrittenCount": 0,
+                    "photosFailedCount": 1,
+                    "error": "Apple Photos batch returned no result for this item.",
+                }
                 photos_verified = int(fixture_delivery.get("photosWrittenCount") or 0)
                 photos_failed = max(
                     int(fixture_delivery.get("photosFailedCount") or 0),
@@ -1576,50 +1547,134 @@ class SidecarHandler(SimpleHTTPRequestHandler):
                     "ok": bool(fixture_delivery.get("ok")),
                     "event": "item-photos-complete",
                     "uploadId": upload_id,
-                    "index": index + 1,
+                    "index": record["index"] + 1,
                     "count": len(batch_items),
                     "fixtureId": fixture_id,
-                    "item": {
-                        "assetId": item.get("assetId") or "",
-                        "filename": item.get("filename") or "",
-                    },
+                    "item": {"assetId": asset_id, "filename": item.get("filename") or ""},
                     "fixtureDelivery": fixture_delivery,
                     "totals": totals,
                     "message": (
-                        f"Apple Photos verified item {index + 1} of {len(batch_items)}."
+                        f"Apple Photos verified item {record['index'] + 1} of {len(batch_items)}."
                         if fixture_delivery.get("ok")
-                        else f"Apple Photos give-back needs attention for item {index + 1}; R2 is safe."
+                        else f"Apple Photos give-back needs attention for item {record['index'] + 1}; R2 is safe."
                     ),
                 })
-            self._write_ndjson_event({
-                "ok": bool(result.get("ok")),
-                "event": "item-complete",
-                "uploadId": upload_id,
-                "index": index + 1,
-                "count": len(batch_items),
-                "status": status,
-                "runId": result.get("runId") or "",
-                "item": {
-                    "assetId": item.get("assetId") or "",
-                    "photoId": item.get("photoId") or "",
-                    "filename": item.get("filename") or "",
-                    "mediaType": item.get("mediaType") or "",
-                    "status": item.get("status") or status,
-                    "export": item.get("export") or {},
-                    "upload": item.get("upload") or {},
-                    "timings": item.get("timings") or {},
-                    "fixtureDelivery": fixture_delivery or {},
-                },
-                "summary": summary_payload,
-                "totals": totals,
-                "message": result.get("message") or "",
-            })
-            if status == "upload_failed" or failed_keys:
-                terminal_error = str((item.get("upload") or {}).get("error") or "Upload Bridge R2 upload failed.")
-                break
-            if not result.get("ok") and status != "export_failed":
-                terminal_error = result.get("message") or f"Upload Bridge item failed with status {status}."
-                break
+                emit_item_complete(record, fixture_delivery)
+            pending_giveback = []
+
+        def execute_one(index_and_item: tuple[int, dict]) -> dict:
+            index, planned_item = index_and_item
+            try:
+                return {
+                    "index": index,
+                    "result": execute_upload_bridge_batch_item(
+                        Path.cwd(),
+                        run_id=batch_run_id,
+                        run_root=Path(str(batch.get("spoolRoot") or "")),
+                        export_root=Path(str(batch.get("exportRoot") or "")),
+                        item=planned_item,
+                        allow_icloud_downloads=allow_icloud_downloads,
+                        allow_r2_overwrite=allow_overwrite,
+                        r2_request_min_interval=0.25,
+                    ),
+                }
+            except Exception as error:  # noqa: BLE001 - stream the failure to the UI.
+                return {"index": index, "error": str(error)}
+
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            for pair_start in range(0, len(batch_items), 2):
+                if _upload_bridge_cancel_requested(upload_id):
+                    flush_giveback()
+                    canceled = True
+                    self._write_ndjson_event({
+                        "ok": True,
+                        "event": "cancelled",
+                        "uploadId": upload_id,
+                        "index": pair_start + 1,
+                        "count": len(batch_items),
+                        "totals": totals,
+                        "message": "Upload Bridge interrupt requested; stopped before starting the next worker pair.",
+                    })
+                    break
+                pair = list(enumerate(batch_items[pair_start:pair_start + 2], start=pair_start))
+                for index, planned_item in pair:
+                    self._write_ndjson_event({
+                        "ok": True,
+                        "event": "item-start",
+                        "uploadId": upload_id,
+                        "index": index + 1,
+                        "count": len(batch_items),
+                        "item": {
+                            "assetId": planned_item.get("assetId") or "",
+                            "photoId": planned_item.get("photoId") or "",
+                            "filename": planned_item.get("filename") or "",
+                            "mediaType": planned_item.get("mediaType") or "",
+                        },
+                        "message": f"Uploading item {index + 1} of {len(batch_items)} (two-wide pipeline).",
+                    })
+                for outcome in executor.map(execute_one, pair):
+                    index = int(outcome["index"])
+                    if outcome.get("error"):
+                        totals["failedItemCount"] += 1
+                        totals["failedUploadCount"] += 1
+                        terminal_error = str(outcome["error"])
+                        self._write_ndjson_event({
+                            "ok": False,
+                            "event": "error",
+                            "uploadId": upload_id,
+                            "index": index + 1,
+                            "count": len(batch_items),
+                            "error": terminal_error,
+                            "totals": totals,
+                        })
+                        continue
+                    result = outcome["result"]
+                    summary_payload = result.get("summary") or {}
+                    item = (result.get("items") or [{}])[0] if result.get("items") else {}
+                    uploaded_keys = int(summary_payload.get("uploadedKeyCount") or 0)
+                    skipped_keys = int(summary_payload.get("skippedCollisionCount") or 0)
+                    failed_keys = int(summary_payload.get("failedUploadCount") or 0)
+                    failed_items = int(summary_payload.get("failedCount") or 0)
+                    status = str(result.get("status") or "")
+                    item_failed = bool(item) and (failed_items > 0 or status in {"export_failed", "upload_failed"} or not result.get("ok"))
+                    item_uploaded = bool(item) and status in {"uploaded", "uploaded_with_skips"} and not item_failed
+                    totals["completedCount"] += 1 if item else 0
+                    totals["uploadedItemCount"] += 1 if item_uploaded else 0
+                    totals["failedItemCount"] += 1 if item_failed else 0
+                    totals["uploadedKeyCount"] += uploaded_keys
+                    totals["skippedCollisionCount"] += skipped_keys
+                    totals["failedUploadCount"] += failed_keys
+                    record = {
+                        "index": index,
+                        "result": result,
+                        "summary": summary_payload,
+                        "item": item,
+                        "status": status,
+                    }
+                    if item_uploaded and fixture_id:
+                        self._write_ndjson_event({
+                            "ok": True,
+                            "event": "item-r2-verified",
+                            "uploadId": upload_id,
+                            "index": index + 1,
+                            "count": len(batch_items),
+                            "fixtureId": fixture_id,
+                            "item": {"assetId": item.get("assetId") or "", "filename": item.get("filename") or ""},
+                            "totals": totals,
+                            "message": f"R2 verified for item {index + 1}; queued for batched Apple Photos give-back.",
+                        })
+                        pending_giveback.append(record)
+                    else:
+                        emit_item_complete(record)
+                    if status == "upload_failed" or failed_keys:
+                        terminal_error = str((item.get("upload") or {}).get("error") or "Upload Bridge R2 upload failed.")
+                    elif not result.get("ok") and status != "export_failed":
+                        terminal_error = result.get("message") or f"Upload Bridge item failed with status {status}."
+                if len(pending_giveback) >= giveback_batch_size or terminal_error:
+                    flush_giveback()
+                if terminal_error:
+                    break
+        flush_giveback()
 
         try:
             plan = upload_plan(Path.cwd(), limit=500)

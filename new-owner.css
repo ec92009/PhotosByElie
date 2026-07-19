@@ -129,9 +129,117 @@ body[data-gallery="new-owner"] main.new-owner-shell {
 }
 
 .new-owner-card[aria-label="Cloud access snapshot"],
+.new-owner-card[aria-label="Build a Fixture"],
 .new-owner-card[aria-label="Apple Photos Real Estate intake"],
 .new-owner-card[aria-label="Mac connectors"] {
   grid-column: 1;
+}
+
+.fixture-builder-steps {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: .4rem;
+}
+
+.fixture-builder-steps span {
+  padding: .55rem .6rem;
+  border: 1px solid var(--new-owner-line);
+  border-radius: 999px;
+  text-align: center;
+  font-size: .8rem;
+  font-weight: 700;
+}
+
+.fixture-builder-steps .is-current {
+  background: color-mix(in srgb, var(--panel) 70%, var(--new-owner-teal) 30%);
+}
+
+.fixture-builder-create,
+.fixture-builder-current,
+.fixture-builder-search,
+.fixture-builder-pool-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  gap: .65rem;
+  align-items: end;
+}
+
+.fixture-builder-current {
+  grid-template-columns: minmax(15rem, .7fr) minmax(0, 1.3fr);
+  align-items: center;
+}
+
+.fixture-builder-search {
+  margin: 0;
+  padding: .85rem;
+  border: 1px solid var(--new-owner-line);
+  border-radius: 8px;
+}
+
+.fixture-builder-search legend {
+  padding: 0 .35rem;
+  font-weight: 800;
+}
+
+.fixture-builder-create label,
+.fixture-builder-current label,
+.fixture-builder-search label,
+.fixture-builder-pool-actions label {
+  display: grid;
+  gap: .3rem;
+  font-size: .8rem;
+  font-weight: 700;
+}
+
+.fixture-builder-create input,
+.fixture-builder-create select,
+.fixture-builder-current select,
+.fixture-builder-search input,
+.fixture-builder-search select,
+.fixture-builder-pool-actions input {
+  width: 100%;
+  min-height: 2.75rem;
+  box-sizing: border-box;
+  border: 1px solid var(--new-owner-line);
+  border-radius: 6px;
+  padding: .55rem .65rem;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.fixture-builder-status,
+.fixture-builder-delivery {
+  padding: .7rem .8rem;
+  border-left: 4px solid var(--new-owner-teal);
+  background: color-mix(in srgb, var(--surface) 90%, var(--new-owner-teal) 10%);
+  font-weight: 700;
+}
+
+.fixture-builder-results {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: .55rem;
+  max-height: 32rem;
+  overflow: auto;
+}
+
+.fixture-builder-result {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: .55rem;
+  align-items: start;
+  padding: .65rem;
+  border: 1px solid var(--new-owner-line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 94%, var(--new-owner-blue) 6%);
+}
+
+@media (max-width: 900px) {
+  .fixture-builder-steps { grid-template-columns: 1fr; }
+  .fixture-builder-create,
+  .fixture-builder-current,
+  .fixture-builder-search,
+  .fixture-builder-pool-actions { grid-template-columns: 1fr; }
 }
 
 .new-owner-card[aria-label="Owner action queue"],

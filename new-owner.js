@@ -25,6 +25,13 @@
     reSelectedAlbumIds: new Set(),
     rePreviewItems: [],
     reSelectedAssetIds: new Set(),
+    fixtures: [],
+    fixtureTreeLoaded: false,
+    fixtureCurrentId: "",
+    fixtureSearchItems: [],
+    fixtureSelectedAssetIds: new Set(),
+    fixtureCriteria: {},
+    fixturePool: null,
     busy: false,
   };
   const lanes = [
@@ -53,6 +60,17 @@
   const reStatusRoot = $("[data-new-owner-re-status]");
   const reAlbumsRoot = $("[data-new-owner-re-albums]");
   const rePreviewRoot = $("[data-new-owner-re-preview]");
+  const fixtureParentInput = $("[data-fixture-parent]");
+  const fixtureNameInput = $("[data-fixture-name]");
+  const fixtureTemplateInput = $("[data-fixture-template]");
+  const fixtureCurrentInput = $("[data-fixture-current]");
+  const fixtureBreadcrumbsRoot = $("[data-fixture-breadcrumbs]");
+  const fixtureStatusRoot = $("[data-fixture-status]");
+  const fixtureResultsRoot = $("[data-fixture-results]");
+  const fixtureSidecarLink = $("[data-fixture-sidecar]");
+  const fixtureDeliveryRoot = $("[data-fixture-delivery-output]");
+  const fixturePhotosPlanButton = $("[data-fixture-photos-plan]");
+  const fixturePhotosCommitButton = $("[data-fixture-photos-commit]");
 
   const setStatus = (message) => {
     if (statusRoot) statusRoot.textContent = message;
@@ -523,6 +541,59 @@
     syncReControls();
   };
 
+  const flattenFixtures = (nodes = [], depth = 0, breadcrumbs = []) => nodes.flatMap((fixture) => {
+    const chain = [...breadcrumbs, fixture.name];
+    const item = { ...fixture, depth, breadcrumbLabel: chain.join(" / ") };
+    return [item, ...flattenFixtures(fixture.children || [], depth + 1, chain)];
+  });
+
+  const currentFixture = () => flattenFixtures(state.fixtures).find((fixture) => fixture.fixtureId === state.fixtureCurrentId) || null;
+
+  const setFixtureStatus = (message, stateName = "") => {
+    if (!fixtureStatusRoot) return;
+    fixtureStatusRoot.textContent = message;
+    fixtureStatusRoot.dataset.state = stateName;
+  };
+
+  const syncFixtureControls = () => {
+    const hasFixture = Boolean(state.fixtureCurrentId);
+    const hasSelection = state.fixtureSelectedAssetIds.size > 0;
+    const createPoolButton = $("[data-fixture-pool-create]");
+    const deliveryButton = $("[data-fixture-delivery]");
+    if (createPoolButton) createPoolButton.disabled = state.busy || !hasFixture || !hasSelection;
+    if (deliveryButton) deliveryButton.disabled = state.busy || !hasFixture;
+    if (fixturePhotosPlanButton) fixturePhotosPlanButton.disabled = state.busy || !hasFixture;
+    if (fixturePhotosCommitButton) fixturePhotosCommitButton.disabled = state.busy || !hasFixture;
+  };
+
+  const renderFixtureBuilder = () => {
+    const flat = flattenFixtures(state.fixtures);
+    const options = flat.map((fixture) => `<option value="${escapeHtml(fixture.fixtureId)}">${escapeHtml(`${"— ".repeat(fixture.depth)}${fixture.name}`)}</option>`).join("");
+    for (const select of [fixtureParentInput, fixtureCurrentInput]) {
+      if (!select) continue;
+      const selected = select === fixtureCurrentInput ? state.fixtureCurrentId : select.value;
+      const firstLabel = select === fixtureCurrentInput ? "Choose a fixture" : "New root fixture";
+      select.innerHTML = `<option value="">${firstLabel}</option>${options}`;
+      if ([...select.options].some((option) => option.value === selected)) select.value = selected;
+    }
+    const fixture = currentFixture();
+    if (fixtureBreadcrumbsRoot) fixtureBreadcrumbsRoot.textContent = fixture?.breadcrumbLabel || "No fixture selected";
+    if (fixtureResultsRoot) {
+      fixtureResultsRoot.innerHTML = state.fixtureSearchItems.length
+        ? state.fixtureSearchItems.map((item) => {
+          const checked = state.fixtureSelectedAssetIds.has(item.assetId) ? " checked" : "";
+          const fields = [item.mediaType, item.capturedAt?.slice(0, 10), `${item.rating || 0}★`, item.color].filter(Boolean).join(" · ");
+          return `<label class="fixture-builder-result"><input type="checkbox" data-fixture-asset-id="${escapeHtml(item.assetId)}"${checked}><span><strong>${escapeHtml(item.title || item.filename || item.assetId)}</strong><br><small>${escapeHtml(fields || item.sourceIdentity)}</small></span></label>`;
+        }).join("")
+        : "";
+    }
+    if (fixtureSidecarLink) {
+      fixtureSidecarLink.hidden = !state.fixturePool?.sidecarUrl;
+      fixtureSidecarLink.href = state.fixturePool?.sidecarUrl || "#";
+    }
+    syncFixtureControls();
+  };
+
   const render = () => {
     renderSession();
     renderCounts();
@@ -532,6 +603,7 @@
     renderLocalConnector();
     renderAction();
     renderRealEstateIntake();
+    renderFixtureBuilder();
     syncOpenSidecarControl();
     prepareCollapsibleSections();
     queueMasonryLayout();
@@ -574,9 +646,10 @@
       const summary = document.createElement("summary");
       const content = document.createElement("div");
       const isPrimaryAction = card.getAttribute("aria-label") === "Owner action queue";
+      const isLegacyIntake = card.hasAttribute("data-legacy-re-intake");
 
       details.className = "new-owner-card-details";
-      details.open = !window.matchMedia("(max-width: 900px)").matches || isPrimaryAction;
+      details.open = !isLegacyIntake && (!window.matchMedia("(max-width: 900px)").matches || isPrimaryAction);
       details.addEventListener("toggle", queueMasonryLayout);
       summary.className = "new-owner-card-summary";
       content.className = "new-owner-card-content";
@@ -689,6 +762,9 @@
     } finally {
       root?.classList.remove("is-loading");
       render();
+      if (ownerAllowed() && effectiveConnectorId() && !state.fixtureTreeLoaded && !state.busy) {
+        window.setTimeout(() => loadFixtureTree({ quiet: true }), 0);
+      }
     }
   };
 
@@ -824,6 +900,150 @@
     },
     statusLabel: "Queueing upload...",
   });
+
+  const fixtureAction = (mode, extra = {}) => queueAction({
+    action: "sidecar-culling-review",
+    payload: {
+      workflow: "universal-fixture-pipeline",
+      manifest: { mode, ...extra },
+      queuedAt: new Date().toISOString(),
+    },
+    statusLabel: "Working on the fixture pipeline…",
+    monitorTimeoutMs: 15 * 60_000,
+  });
+
+  const loadFixtureTree = async ({ quiet = false } = {}) => {
+    if (state.busy || !effectiveConnectorId()) return null;
+    if (!quiet) setFixtureStatus("Loading the recursive fixture tree…", "busy");
+    const completed = await fixtureAction("fixture-tree-list");
+    if (completed?.state !== "completed") {
+      setFixtureStatus(completed?.error?.message || "The fixture tree could not be loaded.", "error");
+      return completed;
+    }
+    state.fixtures = Array.isArray(completed.result?.fixtures) ? completed.result.fixtures : [];
+    state.fixtureTreeLoaded = true;
+    setFixtureStatus(`${flattenFixtures(state.fixtures).length.toLocaleString()} fixture node${flattenFixtures(state.fixtures).length === 1 ? "" : "s"} available. Choose one or create a root/child fixture.`, "success");
+    renderFixtureBuilder();
+    return completed;
+  };
+
+  const createFixtureFromForm = async () => {
+    const name = String(fixtureNameInput?.value || "").trim();
+    if (!name) {
+      setFixtureStatus("Enter a fixture name.", "error");
+      fixtureNameInput?.focus();
+      return;
+    }
+    setFixtureStatus("Creating the fixture with a stable ID…", "busy");
+    const completed = await fixtureAction("fixture-create", {
+      name,
+      parentFixtureId: fixtureParentInput?.value || "",
+      templateKey: fixtureTemplateInput?.value || "",
+      tags: fixtureTemplateInput?.value ? [fixtureTemplateInput.value] : [],
+      destinationDefaults: ["r2", "apple_photos"],
+    });
+    if (completed?.state !== "completed") {
+      setFixtureStatus(completed?.error?.message || "The fixture could not be created.", "error");
+      return;
+    }
+    state.fixtures = completed.result?.fixtures || state.fixtures;
+    state.fixtureCurrentId = completed.result?.fixture?.fixtureId || state.fixtureCurrentId;
+    if (fixtureNameInput) fixtureNameInput.value = "";
+    setFixtureStatus(`Created ${completed.result?.fixture?.name || "fixture"}. Source assets were not changed.`, "success");
+    renderFixtureBuilder();
+  };
+
+  const fixtureFiltersFromForm = () => {
+    const media = String($("[data-fixture-media]")?.value || "");
+    const pick = String($("[data-fixture-pick]")?.value || "");
+    const metadata = String($("[data-fixture-metadata]")?.value || "");
+    return {
+      query: String($("[data-fixture-query]")?.value || "").trim(),
+      ...(media ? { mediaTypes: [media] } : {}),
+      ...(pick ? { pickStates: [pick] } : {}),
+      ...(metadata ? { metadataStates: [metadata] } : {}),
+    };
+  };
+
+  const searchFixtureAssets = async () => {
+    if (!state.fixtureCurrentId) {
+      setFixtureStatus("Choose a fixture first; search results need a destination context.", "error");
+      return;
+    }
+    const filters = fixtureFiltersFromForm();
+    setFixtureStatus("Searching the indexed Apple Photos and PhotosByElie asset records without changing them…", "busy");
+    const completed = await fixtureAction("fixture-search", { filters, limit: 240 });
+    if (completed?.state !== "completed") {
+      setFixtureStatus(completed?.error?.message || "Asset search failed.", "error");
+      return;
+    }
+    state.fixtureCriteria = filters;
+    state.fixtureSearchItems = completed.result?.search?.items || [];
+    state.fixtureSelectedAssetIds = new Set();
+    setFixtureStatus(`Found ${Number(completed.result?.search?.totalCount || 0).toLocaleString()} matching asset${Number(completed.result?.search?.totalCount || 0) === 1 ? "" : "s"}; showing ${state.fixtureSearchItems.length.toLocaleString()}. Search was read-only.`, "success");
+    renderFixtureBuilder();
+    queueMasonryLayout();
+  };
+
+  const createFixturePool = async () => {
+    const assetIds = [...state.fixtureSelectedAssetIds];
+    if (!state.fixtureCurrentId || !assetIds.length) return;
+    const name = String($("[data-fixture-pool-name]")?.value || "").trim();
+    setFixtureStatus(`Snapshotting ${assetIds.length.toLocaleString()} selected candidate${assetIds.length === 1 ? "" : "s"}…`, "busy");
+    const completed = await fixtureAction("fixture-pool-create", {
+      fixtureId: state.fixtureCurrentId,
+      selectedAssetIds: assetIds,
+      name,
+      criteria: state.fixtureCriteria,
+    });
+    if (completed?.state !== "completed") {
+      setFixtureStatus(completed?.error?.message || "The culling pool could not be created.", "error");
+      return;
+    }
+    state.fixturePool = { ...(completed.result?.pool || {}), sidecarUrl: completed.result?.sidecarUrl || "" };
+    setFixtureStatus(`Created stable pool ${state.fixturePool.name || state.fixturePool.poolId}. Later source-album changes will not alter this snapshot.`, "success");
+    renderFixtureBuilder();
+  };
+
+  const reviewFixtureDelivery = async () => {
+    if (!state.fixtureCurrentId) return;
+    setFixtureStatus("Refreshing editorial versions and reading per-destination receipt state…", "busy");
+    const before = await fixtureAction("fixture-delivery-plan", { fixtureId: state.fixtureCurrentId });
+    const assetIds = (before.result?.delivery?.items || []).map((item) => item.assetId).filter(Boolean);
+    if (assetIds.length) {
+      const configured = await fixtureAction("fixture-destinations", { fixtureId: state.fixtureCurrentId, assetIds, destinations: ["r2", "apple_photos"] });
+      if (configured?.state !== "completed") {
+        setFixtureStatus(configured?.error?.message || "Delivery destinations could not be refreshed.", "error");
+        return;
+      }
+    }
+    const completed = await fixtureAction("fixture-delivery-plan", { fixtureId: state.fixtureCurrentId });
+    if (completed?.state !== "completed") {
+      setFixtureStatus(completed?.error?.message || "The delivery plan could not be loaded.", "error");
+      return;
+    }
+    const delivery = completed.result?.delivery || {};
+    if (fixtureDeliveryRoot) fixtureDeliveryRoot.textContent = `${Number(delivery.approvedCount || 0).toLocaleString()} approved / ${Number(delivery.completeCount || 0).toLocaleString()} fully delivered / ${Number(delivery.assetCount || 0).toLocaleString()} placed. No client message was sent.`;
+    setFixtureStatus("Delivery plan loaded. Partial failures remain independently retryable.", "success");
+  };
+
+  const fixturePhotosWriteback = async (commit = false) => {
+    if (!state.fixtureCurrentId) return;
+    if (commit && !window.confirm("Write the approved title, caption, and managed PBE keywords to Apple Photos now? Existing unrelated keywords will be preserved.")) return;
+    setFixtureStatus(commit ? "Writing eligible metadata to Apple Photos and verifying it…" : "Preparing a read-only Apple Photos give-back preview…", "busy");
+    const completed = await fixtureAction(commit ? "fixture-photos-writeback-commit" : "fixture-photos-writeback-plan", { fixtureId: state.fixtureCurrentId });
+    if (completed?.state !== "completed") {
+      setFixtureStatus(completed?.error?.message || "Apple Photos give-back could not be prepared.", "error");
+      return;
+    }
+    const result = completed.result?.photosWriteback || {};
+    if (fixtureDeliveryRoot) {
+      fixtureDeliveryRoot.textContent = commit
+        ? `${Number(result.writtenCount || 0)} written and verified; ${Number(result.failedCount || 0)} failed; ${(result.blocked || []).length} blocked.`
+        : `${Number(result.count || 0)} ready for Photos; ${Number(result.blockedCount || 0)} blocked. This was a dry run.`;
+    }
+    setFixtureStatus(commit ? "Apple Photos give-back finished. Receipts were recorded only after re-reading and verifying Photos." : "Dry run complete. Commit remains a separate explicit action.", result.failedCount ? "error" : "success");
+  };
 
   const reActionManifest = (mode, extra = {}) => ({
     mode,
@@ -1012,6 +1232,31 @@
   $("[data-new-owner-re-load]")?.addEventListener("click", loadReAlbums);
   $("[data-new-owner-re-preflight]")?.addEventListener("click", previewReAlbums);
   $("[data-new-owner-re-assign]")?.addEventListener("click", assignRePhotos);
+  $("[data-fixture-create]")?.addEventListener("click", createFixtureFromForm);
+  $("[data-fixture-search]")?.addEventListener("click", searchFixtureAssets);
+  $("[data-fixture-pool-create]")?.addEventListener("click", createFixturePool);
+  $("[data-fixture-delivery]")?.addEventListener("click", reviewFixtureDelivery);
+  fixturePhotosPlanButton?.addEventListener("click", () => fixturePhotosWriteback(false));
+  fixturePhotosCommitButton?.addEventListener("click", () => fixturePhotosWriteback(true));
+  fixtureCurrentInput?.addEventListener("change", () => {
+    state.fixtureCurrentId = fixtureCurrentInput.value;
+    state.fixtureSearchItems = [];
+    state.fixtureSelectedAssetIds = new Set();
+    state.fixturePool = null;
+    if (fixtureDeliveryRoot) fixtureDeliveryRoot.textContent = "";
+    const fixture = currentFixture();
+    setFixtureStatus(fixture ? `Opened ${fixture.breadcrumbLabel}. Search is read-only until you create a snapshot.` : "Choose or create a fixture.", fixture ? "success" : "");
+    renderFixtureBuilder();
+  });
+  fixtureResultsRoot?.addEventListener("change", (event) => {
+    const input = event.target.closest("[data-fixture-asset-id]");
+    if (!input) return;
+    const assetId = input.getAttribute("data-fixture-asset-id") || "";
+    if (input.checked) state.fixtureSelectedAssetIds.add(assetId);
+    else state.fixtureSelectedAssetIds.delete(assetId);
+    setFixtureStatus(`${state.fixtureSelectedAssetIds.size.toLocaleString()} candidate${state.fixtureSelectedAssetIds.size === 1 ? "" : "s"} selected for the immutable snapshot.`, "success");
+    syncFixtureControls();
+  });
   [reFixtureInput, reProjectNewInput].filter(Boolean).forEach((input) => {
     input.addEventListener("input", () => {
       saveReRouting();

@@ -7,6 +7,7 @@ from contextlib import nullcontext
 import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
+import hashlib
 import json
 import mimetypes
 import os
@@ -285,6 +286,7 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
           pick_state     TEXT NOT NULL DEFAULT 'undecided' CHECK (pick_state IN ('undecided', 'picked', 'rejected', 'hidden')),
           metadata_state TEXT NOT NULL DEFAULT 'unreviewed' CHECK (metadata_state IN ('unreviewed', 'proposed', 'approved', 'rework', 'blocked')),
           title          TEXT,
+          caption        TEXT,
           keywords_json  TEXT NOT NULL DEFAULT '[]',
           rework_category TEXT NOT NULL DEFAULT '',
           rework_comment TEXT,
@@ -450,6 +452,8 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
     }
     if "rework_category" not in decision_columns:
         conn.execute("ALTER TABLE sidecar_decisions ADD COLUMN rework_category TEXT NOT NULL DEFAULT ''")
+    if "caption" not in decision_columns:
+        conn.execute("ALTER TABLE sidecar_decisions ADD COLUMN caption TEXT")
     if "rework_comment" not in decision_columns:
         conn.execute("ALTER TABLE sidecar_decisions ADD COLUMN rework_comment TEXT")
     if "metadata_ai_rung" not in decision_columns:
@@ -833,6 +837,7 @@ def indexed_library_window(
     pick_states: Iterable[Any] | None = None,
     media_types: Iterable[Any] | None = None,
     search: str = "",
+    asset_ids: Iterable[Any] | None = None,
     include_summary: bool = True,
 ) -> dict[str, Any]:
     """Return a Sidecar window from the local metadata index."""
@@ -841,6 +846,10 @@ def indexed_library_window(
     start, end = _date_window_bounds(date_from, date_to)
     predicates = ["(a.missing_at IS NULL OR a.missing_at = '')"]
     params: list[Any] = []
+    scoped_asset_ids = _dedupe_text(str(value or "").strip() for value in (asset_ids or []))
+    if scoped_asset_ids:
+        predicates.append(f"a.asset_id IN ({', '.join('?' for _ in scoped_asset_ids)})")
+        params.extend(scoped_asset_ids)
     if start:
         predicates.append("a.captured_at >= ?")
         params.append(start)
@@ -963,6 +972,7 @@ def indexed_library_window(
         "dateFrom": date_from,
         "dateTo": date_to,
         "search": str(search or "").strip(),
+        "scopeAssetCount": len(scoped_asset_ids),
         "items": items,
     }
     if include_summary:
@@ -978,6 +988,7 @@ def _decision_payload(row: sqlite3.Row | None) -> dict[str, Any]:
             "pickState": "undecided",
             "metadataState": "unreviewed",
             "title": "",
+            "caption": "",
             "keywords": [],
             "reworkCategory": "",
             "reworkComment": "",
@@ -993,6 +1004,7 @@ def _decision_payload(row: sqlite3.Row | None) -> dict[str, Any]:
         "pickState": row["pick_state"] or "undecided",
         "metadataState": row["metadata_state"] or "unreviewed",
         "title": row["title"] or "",
+        "caption": row["caption"] or "",
         "keywords": _read_json_text(row["keywords_json"], []),
         "reworkCategory": row["rework_category"] or "",
         "reworkComment": row["rework_comment"] or "",
@@ -1439,16 +1451,20 @@ def _filename_metadata_seed(filename: Any, captured_at: Any, keyword_blacklist: 
 def _metadata_values_from_payload(
     payload: dict[str, Any],
     fallback_title: str,
+    fallback_caption: str,
     fallback_keywords: list[str],
     keyword_blacklist: set[str],
-) -> tuple[str, list[str]]:
+) -> tuple[str, str, list[str]]:
     title = fallback_title
+    caption = fallback_caption
     keywords = _clean_keywords(fallback_keywords, keyword_blacklist)
     if "title" in payload:
         title = str(payload.get("title") or "").strip()
+    if "caption" in payload:
+        caption = str(payload.get("caption") or "").strip()
     if "keywords" in payload:
         keywords = _clean_keywords(payload.get("keywords") or [], keyword_blacklist)
-    return title, keywords
+    return title, caption, keywords
 
 
 def record_decision(
@@ -1486,6 +1502,7 @@ def record_decision(
         pick_state = before["pickState"]
         metadata_state = before["metadataState"]
         title = before["title"]
+        caption = before["caption"]
         keywords = before["keywords"]
         rework_category = before["reworkCategory"]
         rework_comment = before["reworkComment"]
@@ -1537,7 +1554,7 @@ def record_decision(
         elif action == "approve":
             pick_state = "picked"
             metadata_state = "approved"
-            title, keywords = _metadata_values_from_payload(payload, title, keywords, keyword_blacklist)
+            title, caption, keywords = _metadata_values_from_payload(payload, title, caption, keywords, keyword_blacklist)
             rework_category = ""
             rework_comment = ""
             metadata_ai_rung = str(payload.get("metadataAiRung") or payload.get("metadata_ai_rung") or metadata_ai_rung or "").strip()
@@ -1548,7 +1565,7 @@ def record_decision(
             metadata_ai_note = str(payload.get("metadataAiNote") or payload.get("metadata_ai_note") or metadata_ai_note or "").strip()
             changed_families.update({"pick_state", "metadata"})
         elif action == "metadata":
-            title, keywords = _metadata_values_from_payload(payload, title, keywords, keyword_blacklist)
+            title, caption, keywords = _metadata_values_from_payload(payload, title, caption, keywords, keyword_blacklist)
             metadata_state = str(payload.get("metadataState") or "proposed").strip().casefold()
             if metadata_state not in METADATA_STATES:
                 raise ValueError("metadataState is invalid")
@@ -1570,7 +1587,7 @@ def record_decision(
             changed_families.add("metadata")
         elif action == "metadata-rework":
             metadata_state = "rework"
-            title, keywords = _metadata_values_from_payload(payload, title, keywords, keyword_blacklist)
+            title, caption, keywords = _metadata_values_from_payload(payload, title, caption, keywords, keyword_blacklist)
             rework_category = _normalize_rework_category(payload.get("reworkCategory") or payload.get("rework_category"))
             rework_comment = str(payload.get("reworkComment") or payload.get("rework_comment") or "").strip()
             if rework_comment and not rework_category:
@@ -1588,7 +1605,7 @@ def record_decision(
             """
             UPDATE sidecar_decisions
             SET rating = ?, color = ?, pick_state = ?, metadata_state = ?,
-                title = ?, keywords_json = ?, rework_category = ?, rework_comment = ?,
+                title = ?, caption = ?, keywords_json = ?, rework_category = ?, rework_comment = ?,
                 metadata_ai_rung = ?, metadata_ai_evidence_json = ?, metadata_ai_note = ?,
                 last_action = ?, updated_at = ?
             WHERE asset_id = ?
@@ -1599,6 +1616,7 @@ def record_decision(
                 pick_state,
                 metadata_state,
                 title,
+                caption,
                 _json_text(keywords),
                 rework_category,
                 rework_comment,
@@ -2256,6 +2274,7 @@ def _upload_bridge_execute_r2(
                 "status": "uploaded" if ok else "failed",
                 "sourcePath": str(source_path),
                 "bytes": source_path.stat().st_size if source_path.exists() else 0,
+                "checksumSha256": hashlib.sha256(source_path.read_bytes()).hexdigest() if ok and source_path.exists() else "",
                 "contentType": content_type,
                 "cacheControl": cache_control,
                 "timings": {
@@ -2594,6 +2613,8 @@ def execute_upload_bridge_batch_item(
                 s3_secret_access_key=r2_s3_secret_access_key,
                 s3_endpoint=r2_s3_endpoint,
             )
+            from fixture_pipeline import record_r2_upload_results  # noqa: PLC0415
+            record_r2_upload_results(repo_root, str(item.get("assetId") or ""), upload_results)
             timings["r2UploadSeconds"] = round(time.perf_counter() - upload_started, 3)
             failed_uploads = [result for result in upload_results if result.get("status") == "failed"]
             skipped_uploads = [result for result in upload_results if result.get("status") == "skipped_collision"]

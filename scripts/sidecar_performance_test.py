@@ -15,6 +15,17 @@ import sidecar_state_db
 
 
 class IndexedWindowTest(unittest.TestCase):
+    def test_fixture_pool_scope_limits_the_existing_index_window(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            sidecar_state_db.upsert_assets(repo_root, [
+                {"localIdentifier": "scope-a", "filename": "A.JPG", "mediaType": "photo"},
+                {"localIdentifier": "scope-b", "filename": "B.JPG", "mediaType": "photo"},
+            ])
+            payload = sidecar_state_db.indexed_library_window(repo_root, asset_ids=["scope-b"], include_summary=False)
+            self.assertEqual(payload["scopeAssetCount"], 1)
+            self.assertEqual([item["localIdentifier"] for item in payload["items"]], ["scope-b"])
+
     def test_context_managed_connection_is_closed_after_use(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             repo_root = Path(temp_dir)

@@ -6,8 +6,12 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v141.2`
+- Current visible version: `v141.3`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
+- `v141.3` introduces the universal Build a Fixture pipeline with recursive fixtures, read-only
+  asset search, immutable culling snapshots in the shared Sidecar, reversible
+  multi-fixture placement, versioned R2 receipts, and verified Apple Photos
+  metadata give-back. See `docs/architecture/universal-fixture-pipeline.md`.
 - `v141.0` makes Real Estate output settings explicit radio choices for paper size, photo timing, PDF orientation, and video orientation; ready Queue actions become direct downloads, output status contrast is stronger, hero counters identify their live sources, and account language/theme preferences follow the active user.
 - `v140.25` removes the manual cloud-shelf sync banner from the Real Estate finished-products shelf; saved products continue loading automatically.
 - `v140.24` reduces the account panel to one Sign out control and makes sign-out remove account-synced basket, likes, order references, and profile data from the browser before returning to visitor mode; Basket and Liked redraw immediately.
@@ -30,7 +34,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `support.html`: buyer-facing payment, delivery recovery, license, refund-expectation, and support notes for digital checkout
 - `real-estate.html`: private real-estate product workspace that loads a public-safe client context on GitHub Pages or an ignored local import bundle on localhost, starts with the saved PDF/video/selection shelf, supports create-new-selection and edit-existing-selection flows, click and Shift-click media selection from the full shared pool, selected-title cleanup, one-line drag ordering, preview/download PDF and video outputs, cloud-saved selection manifests, masked password entry, and selected-original ZIP delivery through the Worker
 - `slideshow-music.html`: public mini-app with normalized, country-tagged Pixabay audition candidates for Spain, Portugal, France, and USA, original subdued Spanish/classical guitar cues below, per-track play/pause, seeking, local star ratings, and local delete/hide controls for real estate slideshow use
-- `owner.html`: canonical production Owner control surface for cloud identity/access, Mac connector health, Apple Photos index refresh, private `RE / Fixture / Sub-fixture` routing, Sidecar culling/metadata review, background decisions, guarded Upload Bridge execution, and Owner-only connector downloads
+- `owner.html`: canonical production Owner control surface for cloud identity/access, Mac connector health, recursive fixture creation, universal indexed-asset search, immutable fixture-scoped Sidecar pools, destination/receipt review, explicit Apple Photos give-back, guarded Upload Bridge execution, and Owner-only connector downloads
 - `new-owner.html`: compatibility redirect to the canonical `owner.html` surface
 - `owner-auth.js`: localhost helper/cloud Owner availability client for catalog and cloud maintenance actions
 - `basket-store.js`: shared basket source-of-truth helpers for detail and basket pages

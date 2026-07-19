@@ -43,6 +43,7 @@ from sidecar_state_db import (
     upload_plan,
     upsert_assets,
 )
+from fixture_pipeline import get_pool, pool_asset_ids
 
 
 APPLE_PHOTOS_BRIDGE = Path("scripts/apple_photos_bridge.swift")
@@ -952,7 +953,13 @@ class SidecarHandler(SimpleHTTPRequestHandler):
         pick_states = _list_query(query, "pickState", "pick_state", "pickStates", "pick_states")
         media_types = _list_query(query, "mediaType", "media_type", "mediaTypes", "media_types")
         search = _text_query(query, "q", "search", "query")
+        pool_id = _text_query(query, "poolId", "pool_id", "pool")
         try:
+            fixture_scope = None
+            scoped_asset_ids = None
+            if pool_id:
+                fixture_scope = get_pool(Path.cwd(), pool_id)
+                scoped_asset_ids = pool_asset_ids(Path.cwd(), pool_id)
             payload = indexed_library_window(
                 Path.cwd(),
                 offset=offset,
@@ -964,12 +971,22 @@ class SidecarHandler(SimpleHTTPRequestHandler):
                 pick_states=pick_states,
                 media_types=media_types,
                 search=search,
+                asset_ids=scoped_asset_ids,
                 include_summary=False,
             )
             payload = _overlay_cloud_decisions(Path.cwd(), payload)
             payload["sidecarSummary"] = _summary_snapshot(Path.cwd())
             payload["version"] = sidecar_version(Path.cwd())
             payload["indexStatus"] = _index_job_snapshot(Path.cwd())
+            if fixture_scope:
+                payload["fixtureScope"] = {
+                    "poolId": fixture_scope["poolId"],
+                    "fixtureId": fixture_scope["fixtureId"],
+                    "name": fixture_scope["name"],
+                    "breadcrumbs": fixture_scope["breadcrumbs"],
+                    "snapshotAssetCount": fixture_scope["assetCount"],
+                    "createdAt": fixture_scope["createdAt"],
+                }
         except Exception as error:
             self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
             return

@@ -25,6 +25,7 @@ class FastFakePhotos(FakePhotos):
     def __init__(self):
         super().__init__()
         self.apply_count = 0
+        self.apply_many_count = 0
 
     def apply(self, asset_id, title, caption, keywords, managed_keywords):
         self.apply_count += 1
@@ -32,6 +33,16 @@ class FastFakePhotos(FakePhotos):
         merged = merge_keywords(before["keywords"], keywords, managed_keywords)
         self.write(asset_id, title, caption, merged)
         return {"before": before, "after": self.read(asset_id), "keywords": merged}
+
+    def apply_many(self, requests):
+        self.apply_many_count += 1
+        return [
+            {"assetId": item["assetId"], **self.apply(
+                item["assetId"], item["title"], item["caption"],
+                item["keywords"], item["managedKeywords"],
+            )}
+            for item in requests
+        ]
 
 
 class ApplePhotosMetadataWriterTest(unittest.TestCase):
@@ -82,6 +93,7 @@ class ApplePhotosMetadataWriterTest(unittest.TestCase):
         adapter = FastFakePhotos()
         result = commit_writeback(self.root, self.fixture["fixtureId"], adapter=adapter)
         self.assertTrue(result["ok"])
+        self.assertEqual(adapter.apply_many_count, 1)
         self.assertEqual(adapter.apply_count, 1)
         self.assertIn("Family", adapter.values["asset-1"]["keywords"])
         self.assertIn("PBE-Approved", adapter.values["asset-1"]["keywords"])

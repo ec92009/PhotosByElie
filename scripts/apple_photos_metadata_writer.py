@@ -106,6 +106,52 @@ function run(argv) {
   return JSON.stringify({before: before, after: after, keywords: keywords});
 }
 """
+    _APPLY_MANY = r"""
+function run(argv) {
+  const photos = Application('Photos');
+  const requests = JSON.parse(String(argv[0] || '[]'));
+  const managedPrefixes = ['PBE-Rating-', 'PBE-Color-', 'PBE-Fixture-ID:'];
+  const applyOne = payload => {
+    const id = String(payload.assetId || '');
+    try {
+      const matches = photos.mediaItems.whose({id: id})();
+      if (!matches.length) throw new Error(`Apple Photos asset not found: ${id}`);
+      const item = matches[0];
+      const before = {
+        title: item.name() || '',
+        caption: item.description() || '',
+        keywords: item.keywords() || [],
+      };
+      const desired = Array.isArray(payload.keywords) ? payload.keywords.map(String) : [];
+      const managed = Array.isArray(payload.managedKeywords) ? payload.managedKeywords.map(String) : [];
+      const managedSet = new Set(managed);
+      const isManaged = value =>
+        value === 'PBE-Approved' || managedPrefixes.some(prefix => value.startsWith(prefix));
+      const keywords = [];
+      const seen = new Set();
+      [...before.keywords.map(String), ...desired, ...managed].forEach(value => {
+        const clean = String(value || '').trim();
+        const key = clean.toLocaleLowerCase();
+        if (!clean || seen.has(key) || (isManaged(clean) && !managedSet.has(clean))) return;
+        seen.add(key);
+        keywords.push(clean);
+      });
+      item.name = String(payload.title || '');
+      item.description = String(payload.caption || '');
+      item.keywords = keywords;
+      const after = {
+        title: item.name() || '',
+        caption: item.description() || '',
+        keywords: item.keywords() || [],
+      };
+      return {assetId: id, before: before, after: after, keywords: keywords};
+    } catch (error) {
+      return {assetId: id, error: String(error)};
+    }
+  };
+  return JSON.stringify(requests.map(applyOne));
+}
+"""
 
     def read(self, asset_id: str) -> dict[str, Any]:
         payload = json.loads(_run_jxa(self._READ, asset_id) or "{}")
@@ -141,6 +187,11 @@ function run(argv) {
             "after": payload.get("after") or {},
             "keywords": [str(value) for value in payload.get("keywords") or []],
         }
+
+    def apply_many(self, requests: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Apply a verified metadata batch in one Photos automation process."""
+        payload = json.loads(_run_jxa(self._APPLY_MANY, json.dumps(requests, ensure_ascii=False)) or "[]")
+        return [dict(item) for item in payload]
 
 
 def _is_managed(keyword: str) -> bool:
@@ -272,10 +323,36 @@ def commit_writeback(
     plan = writeback_plan(repo_root, fixture_id, asset_ids)
     written: list[dict[str, Any]] = []
     failed: list[dict[str, Any]] = []
+    bulk_results: dict[str, dict[str, Any]] = {}
+    apply_many = getattr(adapter, "apply_many", None)
+    if callable(apply_many) and plan["items"]:
+        requests = [
+            {
+                "assetId": item["photosAssetId"],
+                "title": item["title"],
+                "caption": item["caption"],
+                "keywords": item["keywords"],
+                "managedKeywords": item["managedKeywords"],
+            }
+            for item in plan["items"]
+        ]
+        try:
+            bulk_results = {str(result.get("assetId") or ""): result for result in apply_many(requests)}
+        except Exception as error:  # noqa: BLE001 - all items remain independently retryable.
+            bulk_results = {
+                item["photosAssetId"]: {"assetId": item["photosAssetId"], "error": str(error)}
+                for item in plan["items"]
+            }
     for item in plan["items"]:
         try:
-            apply = getattr(adapter, "apply", None)
-            if callable(apply):
+            bulk = bulk_results.get(item["photosAssetId"])
+            if bulk is not None:
+                if bulk.get("error"):
+                    raise RuntimeError(str(bulk["error"]))
+                before = bulk.get("before") or {}
+                after = bulk.get("after") or {}
+                keywords = [str(value) for value in bulk.get("keywords") or []]
+            elif callable(apply := getattr(adapter, "apply", None)):
                 applied = apply(
                     item["photosAssetId"], item["title"], item["caption"],
                     item["keywords"], item["managedKeywords"],

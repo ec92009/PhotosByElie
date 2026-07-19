@@ -312,13 +312,12 @@ def global_verified_count(repo_root: Path) -> int:
     return int(row["total"] or 0)
 
 
-def process_candidate(
+def prepare_candidate(
     repo_root: Path,
     fixture_id: str,
     candidate: dict[str, Any],
-    adapter: ApplePhotosAdapter,
 ) -> dict[str, Any]:
-    """Complete one asset through R2 evidence, fixture adoption, and Photos reread."""
+    """Complete one asset through R2 evidence and fixture adoption."""
     asset_id = candidate["assetId"]
     presence: list[dict[str, Any]] = []
     if not candidate["alreadyPlaced"]:
@@ -346,10 +345,22 @@ def process_candidate(
     preflight = writeback_plan(repo_root, fixture_id, [asset_id])
     if preflight["count"] != 1 or preflight["blockedCount"]:
         raise RuntimeError(f"Apple Photos preflight blocked: {preflight['blocked']}")
+    return {"assetId": asset_id, "r2Presence": presence}
+
+
+def process_candidate(
+    repo_root: Path,
+    fixture_id: str,
+    candidate: dict[str, Any],
+    adapter: ApplePhotosAdapter,
+) -> dict[str, Any]:
+    """Complete one asset through R2 evidence, fixture adoption, and Photos reread."""
+    prepared = prepare_candidate(repo_root, fixture_id, candidate)
+    asset_id = candidate["assetId"]
     result = commit_writeback(repo_root, fixture_id, [asset_id], adapter=adapter)
     if not result["ok"] or result["writtenCount"] != 1:
         raise RuntimeError(f"Apple Photos give-back failed: {result['failed'] or result['blocked']}")
-    return {"assetId": asset_id, "r2Presence": presence, "photos": result["written"][0]}
+    return {**prepared, "photos": result["written"][0]}
 
 
 def main() -> int:
@@ -358,6 +369,7 @@ def main() -> int:
     parser.add_argument("--fixture-id", default=DEFAULT_FIXTURE_ID)
     parser.add_argument("--limit", type=int, default=0)
     parser.add_argument("--checkpoint-every", type=int, default=100)
+    parser.add_argument("--batch-size", type=int, default=1)
     parser.add_argument(
         "--global-checkpoint-every",
         type=int,
@@ -391,7 +403,89 @@ def main() -> int:
         if global_checkpoint_every
         else 0
     )
-    for index, candidate in enumerate(candidates, 1):
+    def checkpoint_if_needed() -> None:
+        nonlocal next_global_checkpoint
+        reached_local_checkpoint = completed and completed % checkpoint_every == 0
+        reached_global_checkpoint = bool(
+            global_checkpoint_every and baseline + completed >= next_global_checkpoint
+        )
+        if reached_local_checkpoint or reached_global_checkpoint:
+            global_count = global_verified_count(repo_root)
+            print(
+                f"{stamp()} MILESTONE verified={completed}/{len(candidates)} "
+                f"globalAppleVerified={global_count} failed={failed}",
+                flush=True,
+            )
+            append_event(log_path, {"event": "milestone", "completed": completed, "pendingAtStart": len(candidates), "globalAppleVerified": global_count, "failed": failed})
+            while global_checkpoint_every and next_global_checkpoint <= global_count:
+                next_global_checkpoint += global_checkpoint_every
+
+    batch_size = max(1, args.batch_size)
+    index = 0
+    while index < len(candidates):
+        target_size = batch_size
+        if global_checkpoint_every:
+            target_size = min(target_size, max(1, next_global_checkpoint - (baseline + completed)))
+        indexed_chunk = list(enumerate(candidates[index:index + target_size], index + 1))
+        index += len(indexed_chunk)
+        if batch_size > 1:
+            prepared: list[tuple[int, dict[str, Any], dict[str, Any]]] = []
+            for sequence, candidate in indexed_chunk:
+                started = time.monotonic()
+                try:
+                    state = prepare_candidate(repo_root, args.fixture_id, candidate)
+                    state["prepareElapsedSeconds"] = round(time.monotonic() - started, 3)
+                    prepared.append((sequence, candidate, state))
+                    consecutive_failures = 0
+                except Exception as error:  # noqa: BLE001 - each item stays independently retryable.
+                    failed += 1
+                    consecutive_failures += 1
+                    print(f"{stamp()} FAILED asset={candidate['assetId']} error={error}", flush=True)
+                    append_event(log_path, {"event": "asset-failed", "sequence": sequence, "assetId": candidate["assetId"], "filename": candidate["filename"], "error": str(error)})
+                    if consecutive_failures >= max(1, args.max_consecutive_failures):
+                        break
+            if consecutive_failures >= max(1, args.max_consecutive_failures):
+                print(f"{stamp()} STOP consecutiveFailures={consecutive_failures}", flush=True)
+                break
+            if prepared:
+                photos_started = time.monotonic()
+                result = commit_writeback(
+                    repo_root,
+                    args.fixture_id,
+                    [candidate["assetId"] for _, candidate, _ in prepared],
+                    adapter=adapter,
+                )
+                photos_elapsed = round(time.monotonic() - photos_started, 3)
+                written_by_asset = {item["assetId"]: item for item in result["written"]}
+                failed_by_asset = {item["assetId"]: item for item in result["failed"]}
+                for sequence, candidate, state in prepared:
+                    photo = written_by_asset.get(candidate["assetId"])
+                    if photo:
+                        completed += 1
+                        consecutive_failures = 0
+                        append_event(
+                            log_path,
+                            {
+                                "event": "asset-verified", "sequence": sequence, "completed": completed,
+                                "assetId": candidate["assetId"], "filename": candidate["filename"],
+                                "elapsedSeconds": state["prepareElapsedSeconds"],
+                                "batchPhotosElapsedSeconds": photos_elapsed,
+                                "result": {**state, "photos": photo},
+                            },
+                        )
+                    else:
+                        failed += 1
+                        consecutive_failures += 1
+                        error = (failed_by_asset.get(candidate["assetId"]) or {}).get("error") or "Apple Photos batch did not return a verified item"
+                        print(f"{stamp()} FAILED asset={candidate['assetId']} error={error}", flush=True)
+                        append_event(log_path, {"event": "asset-failed", "sequence": sequence, "assetId": candidate["assetId"], "filename": candidate["filename"], "error": str(error)})
+                checkpoint_if_needed()
+                if consecutive_failures >= max(1, args.max_consecutive_failures):
+                    print(f"{stamp()} STOP consecutiveFailures={consecutive_failures}", flush=True)
+                    break
+            continue
+
+        sequence, candidate = indexed_chunk[0]
         started = time.monotonic()
         try:
             result = process_candidate(repo_root, args.fixture_id, candidate, adapter)
@@ -401,7 +495,7 @@ def main() -> int:
                 log_path,
                 {
                     "event": "asset-verified",
-                    "sequence": index,
+                    "sequence": sequence,
                     "completed": completed,
                     "assetId": candidate["assetId"],
                     "filename": candidate["filename"],
@@ -409,25 +503,12 @@ def main() -> int:
                     "result": result,
                 },
             )
-            reached_local_checkpoint = completed % checkpoint_every == 0
-            reached_global_checkpoint = bool(
-                global_checkpoint_every and baseline + completed >= next_global_checkpoint
-            )
-            if reached_local_checkpoint or reached_global_checkpoint:
-                global_count = global_verified_count(repo_root)
-                print(
-                    f"{stamp()} MILESTONE verified={completed}/{len(candidates)} "
-                    f"globalAppleVerified={global_count} failed={failed}",
-                    flush=True,
-                )
-                append_event(log_path, {"event": "milestone", "completed": completed, "pendingAtStart": len(candidates), "globalAppleVerified": global_count, "failed": failed})
-                while global_checkpoint_every and next_global_checkpoint <= global_count:
-                    next_global_checkpoint += global_checkpoint_every
+            checkpoint_if_needed()
         except Exception as error:  # noqa: BLE001 - preserve the failed asset and keep the drain resumable.
             failed += 1
             consecutive_failures += 1
             print(f"{stamp()} FAILED asset={candidate['assetId']} error={error}", flush=True)
-            append_event(log_path, {"event": "asset-failed", "sequence": index, "assetId": candidate["assetId"], "filename": candidate["filename"], "error": str(error)})
+            append_event(log_path, {"event": "asset-failed", "sequence": sequence, "assetId": candidate["assetId"], "filename": candidate["filename"], "error": str(error)})
             if consecutive_failures >= max(1, args.max_consecutive_failures):
                 print(f"{stamp()} STOP consecutiveFailures={consecutive_failures}", flush=True)
                 break

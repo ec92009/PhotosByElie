@@ -8,14 +8,14 @@ GitHub carries code, safe metadata, SOPs, and handoff notes; private Owner DB
 snapshots and client artifacts move through private R2; SSH/Codex Remote SSH is
 for remote execution.
 
-## Current Handoff: 2026-07-18 Corine Real Estate Client Workflow
+## Current Handoff: 2026-07-19 Universal Fixture Access Control
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Branch: `main`
 - Public site: `https://photos-by-elie.com/`
 - Local preview: `http://localhost:8000/`
 - Owner intake URL: `https://photos-by-elie.com/owner.html`
-- Current visible build: `v141.3`
+- Current visible build: `v141.10`
 - Sidecar local build: `v126.6`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
@@ -65,6 +65,13 @@ for remote execution.
   storing or returning the plaintext password or password hash. A La Concha
   gallery grant covers all of its sub-fixtures; it does not require a separate
   password for each apartment or amenity.
+- ACS now renders the same universal fixture hierarchy used by Owner. Expo and
+  Travel are public to visitors and signed-in users. RE is a private root with
+  no client group or grant; owner/admin access is implicit. Corine is the sole
+  active member of `RE / La Concha`, and that access inherits through Apartment
+  1, Apartment 2, Common, Main lobby, Pool, Street, and Tennis court. Production
+  rehearsal identities are disabled and stripped of roles, groups, and gallery
+  grants; the old Agnes Common grant is revoked.
 - The Apple Photos album `RE 2026 La Concha 3 Shared Areas` contains the 31 new
   July 15 frames for private routing into Street, Main lobby, Pool, and Tennis
   court. Corine has not been messaged.

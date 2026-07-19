@@ -41,26 +41,10 @@ const LEGACY_FIXTURE_EVENT_IDS = [
   "fixture-family-direct-kin",
   "fixture-event-summer-portraits",
   "fixture-re-gallery",
+  "agnes-bday",
+  "johnson-palmer-wedding",
 ];
 const FIXTURE_GROUPS = [
-  {
-    id: "agnes-bday",
-    label: "Agnes's B'day",
-    kind: "family",
-    galleryKind: "event",
-    galleryKey: "agnes-bday",
-    accessPolicy: "family-circle previews, watermarked by default, downloads through normal purchase/re-download rules",
-    capabilities: ["view_gallery", "view_watermarked", "download_items"],
-    galleryDefaults: {
-      watermarked: true,
-      saleEnabled: true,
-      downloads: true,
-      pdf: false,
-      video: false,
-      memberOriginals: false,
-      ownerOriginals: true,
-    },
-  },
   {
     id: "re-la-concha",
     label: "RE La Concha",
@@ -79,68 +63,32 @@ const FIXTURE_GROUPS = [
       ownerOriginals: true,
     },
   },
-  {
-    id: "johnson-palmer-wedding",
-    label: "Johnson-Palmer wedding",
-    kind: "event",
-    galleryKind: "event",
-    galleryKey: "johnson-palmer-wedding",
-    accessPolicy: "event attendee previews with watermarks plus assigned item downloads",
-    capabilities: ["view_gallery", "view_watermarked", "download_items"],
-    galleryDefaults: {
-      watermarked: true,
-      saleEnabled: true,
-      downloads: true,
-      pdf: false,
-      video: false,
-      memberOriginals: false,
-      ownerOriginals: true,
-    },
-  },
 ];
-const FIXTURE_PEOPLE = [
-  {
-    email: "alex.rivera@example.test",
-    displayName: "Alex Rivera / Agnes guest",
-    tier: "user",
-    groupIds: ["agnes-bday"],
-    notes: "Fixture family-circle user for Agnes's B'day rehearsal.",
-  },
-  {
-    email: "morgan.lee@example.test",
-    displayName: "Morgan Lee / La Concha client",
-    tier: "re_client",
-    realEstateClients: ["corine-real-estate"],
-    groupIds: ["re-la-concha"],
-    notes: "Fixture RE client tied to the RE La Concha gallery.",
-  },
-  {
-    email: "sam.patel@example.test",
-    displayName: "Sam Patel",
-    tier: "owner",
-    notes: "Fixture owner-style helper account for permission testing.",
-  },
-  {
-    email: "jamie.martin@example.test",
-    displayName: "Jamie Martin / Johnson-Palmer guest",
-    tier: "user",
-    groupIds: ["johnson-palmer-wedding"],
-    notes: "Fixture event attendee for the Johnson-Palmer wedding.",
-  },
-  {
-    email: "palmer.family@example.test",
-    displayName: "Palmer Family",
-    tier: "user",
-    groupIds: ["johnson-palmer-wedding"],
-    notes: "Second fixture event attendee for role/group assignment rehearsal.",
-  },
+const FIXTURE_PEOPLE = [];
+const CORINE_ACCESS_EMAIL = "corine.bn2007@yahoo.fr";
+const FIXTURE_EVENTS = [
+  { id: "fixture-expo", label: "Expo", kind: "public", parentId: "", visibility: "public", galleryKey: "expo", groupId: "", accessPolicy: "Public: every visitor and signed-in user can browse." },
+  { id: "fixture-re", label: "RE", kind: "real_estate", parentId: "", visibility: "private", galleryKey: "", groupId: "", accessPolicy: "Private root: owner/admin only; client grants at child fixtures only." },
+  { id: "fixture-la-concha", label: "La Concha", kind: "real_estate", parentId: "fixture-re", visibility: "private", galleryKey: "corine-real-estate", groupId: "re-la-concha", accessPolicy: "Private: Corine only; access inherits to every descendant." },
+  { id: "fixture-la-concha-apartment-1", label: "Apartment 1", kind: "real_estate", parentId: "fixture-la-concha", visibility: "inherit", galleryKey: "corine-real-estate", groupId: "", accessPolicy: "Inherits La Concha access." },
+  { id: "fixture-la-concha-apartment-2", label: "Apartment 2", kind: "real_estate", parentId: "fixture-la-concha", visibility: "inherit", galleryKey: "corine-real-estate", groupId: "", accessPolicy: "Inherits La Concha access." },
+  { id: "fixture-la-concha-common", label: "Common", kind: "real_estate", parentId: "fixture-la-concha", visibility: "inherit", galleryKey: "corine-real-estate", groupId: "", accessPolicy: "Inherits La Concha access." },
+  { id: "fixture-la-concha-main-lobby", label: "Main lobby", kind: "real_estate", parentId: "fixture-la-concha-common", visibility: "inherit", galleryKey: "corine-real-estate", groupId: "", accessPolicy: "Inherits La Concha access." },
+  { id: "fixture-la-concha-pool", label: "Pool", kind: "real_estate", parentId: "fixture-la-concha-common", visibility: "inherit", galleryKey: "corine-real-estate", groupId: "", accessPolicy: "Inherits La Concha access." },
+  { id: "fixture-la-concha-street", label: "Street", kind: "real_estate", parentId: "fixture-la-concha-common", visibility: "inherit", galleryKey: "corine-real-estate", groupId: "", accessPolicy: "Inherits La Concha access." },
+  { id: "fixture-la-concha-tennis-court", label: "Tennis court", kind: "real_estate", parentId: "fixture-la-concha-common", visibility: "inherit", galleryKey: "corine-real-estate", groupId: "", accessPolicy: "Inherits La Concha access." },
+  { id: "fixture-travel", label: "Travel", kind: "public", parentId: "", visibility: "public", galleryKey: "travel", groupId: "", accessPolicy: "Public: every visitor and signed-in user can browse." },
+  ...["Gibraltar", "Granada", "Nerja", "Paris", "Ronda"].map((label) => ({
+    id: `fixture-travel-${label.toLowerCase()}`,
+    label,
+    kind: "public",
+    parentId: "fixture-travel",
+    visibility: "inherit",
+    galleryKey: label.toLowerCase(),
+    groupId: "",
+    accessPolicy: "Inherits public Travel access.",
+  })),
 ];
-const FIXTURE_EVENTS = FIXTURE_GROUPS.map(({ id, label, kind, accessPolicy }) => ({
-  id,
-  label,
-  kind,
-  accessPolicy,
-}));
 
 const clone = (value) => value == null ? value : JSON.parse(JSON.stringify(value));
 
@@ -867,9 +815,38 @@ export const createMemoryAccessUserRegistry = (initialRecords = []) => {
     for (const group of fixtureGroups()) {
       groups.set(group.id, group);
     }
+    for (const [email, record] of users.entries()) {
+      if (record.fixture) {
+        users.set(email, normalizeAccessUserRecord({
+          ...record,
+          roles: ["user"],
+          realEstateClients: [],
+          groupIds: [],
+          disabledAt: record.disabledAt || nowIso(),
+          disabledBy: options.actorEmail || "",
+        }));
+      } else if (email !== CORINE_ACCESS_EMAIL) {
+        users.set(email, normalizeAccessUserRecord({
+          ...record,
+          realEstateClients: (record.realEstateClients || []).filter((key) => !["corine-real-estate", "agnes-la-concha-common"].includes(key)),
+          groupIds: (record.groupIds || []).filter((groupId) => groupId !== "re-la-concha"),
+        }));
+      }
+    }
     for (const person of FIXTURE_PEOPLE) {
       await putUser({ ...person, fixture: true, source: "fixture" }, options);
     }
+    const existingCorine = users.get(CORINE_ACCESS_EMAIL);
+    await putUser({
+      email: CORINE_ACCESS_EMAIL,
+      displayName: existingCorine?.displayName || "Corine",
+      roles: ["user", "re_client"],
+      realEstateClients: ["corine-real-estate"],
+      groupIds: ["re-la-concha"],
+      notes: existingCorine?.notes || "La Concha client; access inherits to every La Concha sub-fixture.",
+      fixture: false,
+      source: existingCorine?.source || "manual",
+    }, options);
     for (const event of FIXTURE_EVENTS) {
       events.set(event.id, { ...event, fixture: true });
     }
@@ -1411,7 +1388,41 @@ export const createD1AccessUserRegistry = ({
     const actorEmail = normalizeEmail(options.actorEmail || "");
     for (const oldId of LEGACY_FIXTURE_EVENT_IDS) {
       await d1Run(database.prepare("DELETE FROM pbe_access_fixture_events WHERE id = ? AND fixture = 1").bind(oldId));
+      await d1Run(database.prepare(`
+        UPDATE pbe_access_group_memberships
+        SET state = 'revoked', revoked_at = ?, revoked_by = ?, updated_at = ?, updated_by = ?
+        WHERE group_id = ? AND state = 'active'
+          AND EXISTS (
+            SELECT 1 FROM pbe_access_audience_groups
+            WHERE id = ? AND fixture = 1
+          )
+      `).bind(timestamp, actorEmail, timestamp, actorEmail, oldId, oldId));
+      await d1Run(database.prepare(`
+        UPDATE pbe_access_audience_groups
+        SET state = 'archived', archived_at = ?, archived_by = ?, updated_at = ?, updated_by = ?
+        WHERE id = ? AND fixture = 1
+      `).bind(timestamp, actorEmail, timestamp, actorEmail, oldId));
     }
+    await d1Run(database.prepare(`
+      UPDATE pbe_access_role_grants
+      SET state = 'revoked', revoked_at = ?, revoked_by = ?, updated_at = ?, updated_by = ?
+      WHERE state = 'active' AND email IN (SELECT email FROM pbe_access_people WHERE fixture = 1)
+    `).bind(timestamp, actorEmail, timestamp, actorEmail));
+    await d1Run(database.prepare(`
+      UPDATE pbe_access_gallery_grants
+      SET state = 'revoked', revoked_at = ?, revoked_by = ?, updated_at = ?, updated_by = ?
+      WHERE state = 'active' AND email IN (SELECT email FROM pbe_access_people WHERE fixture = 1)
+    `).bind(timestamp, actorEmail, timestamp, actorEmail));
+    await d1Run(database.prepare(`
+      UPDATE pbe_access_group_memberships
+      SET state = 'revoked', revoked_at = ?, revoked_by = ?, updated_at = ?, updated_by = ?
+      WHERE state = 'active' AND email IN (SELECT email FROM pbe_access_people WHERE fixture = 1)
+    `).bind(timestamp, actorEmail, timestamp, actorEmail));
+    await d1Run(database.prepare(`
+      UPDATE pbe_access_people
+      SET disabled_at = COALESCE(disabled_at, ?), disabled_by = ?, updated_at = ?, updated_by = ?
+      WHERE fixture = 1
+    `).bind(timestamp, actorEmail, timestamp, actorEmail));
     for (const group of fixtureGroups()) {
       await d1Run(database.prepare(`
         INSERT INTO pbe_access_audience_groups (
@@ -1450,18 +1461,49 @@ export const createD1AccessUserRegistry = ({
     for (const person of FIXTURE_PEOPLE) {
       await putUser({ ...person, fixture: true, source: "fixture" }, options);
     }
+    await d1Run(database.prepare(`
+      UPDATE pbe_access_group_memberships
+      SET state = 'revoked', revoked_at = ?, revoked_by = ?, updated_at = ?, updated_by = ?
+      WHERE group_id = 're-la-concha' AND email <> ? AND state = 'active'
+    `).bind(timestamp, actorEmail, timestamp, actorEmail, CORINE_ACCESS_EMAIL));
+    await d1Run(database.prepare(`
+      UPDATE pbe_access_gallery_grants
+      SET state = 'revoked', revoked_at = ?, revoked_by = ?, updated_at = ?, updated_by = ?
+      WHERE gallery_kind = 'real_estate' AND gallery_key IN ('corine-real-estate', 'agnes-la-concha-common')
+        AND email <> ? AND state = 'active'
+    `).bind(timestamp, actorEmail, timestamp, actorEmail, CORINE_ACCESS_EMAIL));
+    const existingCorine = await getUser(CORINE_ACCESS_EMAIL);
+    await putUser({
+      email: CORINE_ACCESS_EMAIL,
+      displayName: existingCorine?.displayName || "Corine",
+      roles: ["user", "re_client"],
+      realEstateClients: ["corine-real-estate"],
+      groupIds: ["re-la-concha"],
+      notes: existingCorine?.notes || "La Concha client; access inherits to every La Concha sub-fixture.",
+      fixture: false,
+      source: existingCorine?.source || "manual",
+    }, { ...options, skipAudit: true });
     for (const event of FIXTURE_EVENTS) {
       await d1Run(database.prepare(`
         INSERT INTO pbe_access_fixture_events (
-          id, label, kind, access_policy, fixture, created_at, created_by, updated_at, updated_by
-        ) VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?)
+          id, label, kind, parent_id, visibility, gallery_key, group_id,
+          access_policy, fixture, created_at, created_by, updated_at, updated_by
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
           label = excluded.label,
           kind = excluded.kind,
+          parent_id = excluded.parent_id,
+          visibility = excluded.visibility,
+          gallery_key = excluded.gallery_key,
+          group_id = excluded.group_id,
           access_policy = excluded.access_policy,
           updated_at = excluded.updated_at,
           updated_by = excluded.updated_by
-      `).bind(event.id, event.label, event.kind, event.accessPolicy, timestamp, actorEmail, timestamp, actorEmail));
+      `).bind(
+        event.id, event.label, event.kind, event.parentId || "", event.visibility || "inherit",
+        event.galleryKey || "", event.groupId || "", event.accessPolicy,
+        timestamp, actorEmail, timestamp, actorEmail
+      ));
     }
     return {
       users: (await listUsers()).filter((user) => user.fixture),
@@ -1471,9 +1513,10 @@ export const createD1AccessUserRegistry = ({
   };
 
   const listFixtureEvents = async () => d1All(database.prepare(`
-    SELECT id, label, kind, access_policy AS accessPolicy, fixture
+    SELECT id, label, kind, parent_id AS parentId, visibility, gallery_key AS galleryKey,
+           group_id AS groupId, access_policy AS accessPolicy, fixture
     FROM pbe_access_fixture_events
-    ORDER BY kind, label
+    ORDER BY CASE WHEN parent_id = '' THEN 0 ELSE 1 END, parent_id, label
   `));
 
   const getAuditEvent = async (auditId) => d1First(database.prepare(`

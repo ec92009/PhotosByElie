@@ -16,6 +16,7 @@ from fixture_pipeline import (
     delivery_plan,
     fixture_tree,
     list_placements,
+    migrate_access_fixture_tree,
     migrate_la_concha_tree,
     move_fixture,
     move_placement,
@@ -158,6 +159,27 @@ class FixturePipelineTest(unittest.TestCase):
         self.assertEqual(second["accessGrant"]["externalIdentity"], "gallery:la-concha:client:corine")
         with connect(self.root) as conn:
             self.assertEqual(conn.execute("SELECT count(*) FROM fixture_access_grants").fetchone()[0], 1)
+
+    def test_access_fixture_migration_enforces_public_roots_and_corine_only_re(self):
+        create_fixture(self.root, "Universal Fixture Parity Rehearsal", fixture_id="fixture-universal-parity-rehearsal")
+        first = migrate_access_fixture_tree(self.root)
+        second = migrate_access_fixture_tree(self.root)
+        self.assertEqual([item["name"] for item in second["publicRoots"]], ["Expo", "Travel"])
+        self.assertEqual(second["privateRoot"]["fixtureId"], "fixture-re")
+        roots = {item["fixtureId"]: item for item in second["tree"]}
+        self.assertNotIn("fixture-universal-parity-rehearsal", roots)
+        self.assertIn("fixture-la-concha", {item["fixtureId"] for item in roots["fixture-re"]["children"]})
+        with connect(self.root) as conn:
+            grants = conn.execute(
+                "SELECT fixture_id, external_identity, state FROM fixture_access_grants WHERE state = 'active'"
+            ).fetchall()
+            self.assertEqual([(row["fixture_id"], row["external_identity"]) for row in grants], [
+                ("fixture-la-concha", "corine.bn2007@yahoo.fr")
+            ])
+            self.assertEqual(conn.execute(
+                "SELECT count(*) FROM fixture_access_grants WHERE fixture_id = 'fixture-re' AND state = 'active'"
+            ).fetchone()[0], 0)
+        self.assertEqual(first["accessGrant"]["externalIdentity"], second["accessGrant"]["externalIdentity"])
 
     def _insert_upload_run(self, *, captured_hash: bool, drift_hash: str = ""):
         record_decision(self.root, {"assetId": "asset-1", "action": "pick"})

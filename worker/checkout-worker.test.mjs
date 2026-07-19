@@ -731,13 +731,15 @@ test("access console is admin-only and writes reversible role grants", async () 
   }));
   assert.equal(seedResponse.status, 200);
   const seedBody = await seedResponse.json();
-  assert.equal(seedBody.fixtures.users.some((user) => user.email.endsWith(".test")), true);
-  assert.deepEqual(seedBody.fixtures.events.map((event) => event.label).sort(), [
-    "Agnes's B'day",
-    "Johnson-Palmer wedding",
-    "RE La Concha",
-  ].sort());
-  assert.equal(seedBody.fixtures.groups.some((group) => group.id === "johnson-palmer-wedding"), true);
+  assert.equal(seedBody.fixtures.users.some((user) => user.fixture && !user.disabledAt), false);
+  assert.equal(seedBody.fixtures.events.find((event) => event.id === "fixture-expo")?.visibility, "public");
+  assert.equal(seedBody.fixtures.events.find((event) => event.id === "fixture-travel")?.visibility, "public");
+  assert.equal(seedBody.fixtures.events.find((event) => event.id === "fixture-re")?.visibility, "private");
+  assert.equal(seedBody.fixtures.events.find((event) => event.id === "fixture-re")?.groupId, "");
+  assert.equal(seedBody.fixtures.events.find((event) => event.id === "fixture-la-concha")?.parentId, "fixture-re");
+  assert.equal(seedBody.fixtures.events.find((event) => event.id === "fixture-la-concha-apartment-1")?.visibility, "inherit");
+  assert.deepEqual(seedBody.fixtures.groups.filter((group) => group.state !== "archived").map((group) => group.id), ["re-la-concha"]);
+  assert.deepEqual((await registry.getUser("corine.bn2007@yahoo.fr")).groupIds, ["re-la-concha"]);
 
   const groupResponse = await adminWorker.fetch(jsonRequest("https://worker.test/access-console/groups", {
     id: "cohen-cousins",
@@ -778,22 +780,22 @@ test("access console is admin-only and writes reversible role grants", async () 
 
   const attendeeResponse = await adminWorker.fetch(jsonRequest("https://worker.test/access-console/people", {
     email: "attendee@example.test",
-    displayName: "Wedding Attendee",
+    displayName: "Cohen Cousin Two",
     roles: ["user"],
-    groupIds: ["johnson-palmer-wedding"],
+    groupIds: ["cohen-cousins"],
   }, { origin: "https://photos-by-elie.com" }));
   assert.equal(attendeeResponse.status, 200);
   const attendeeBody = await attendeeResponse.json();
-  assert.deepEqual(attendeeBody.user.groupIds, ["johnson-palmer-wedding"]);
-  assert.equal(attendeeBody.user.groups[0].label, "Johnson-Palmer wedding");
-  assert.equal(attendeeBody.user.effectiveAccess.scopes.some((scope) => scope.galleryKey === "johnson-palmer-wedding"), true);
+  assert.deepEqual(attendeeBody.user.groupIds, ["cohen-cousins"]);
+  assert.equal(attendeeBody.user.groups[0].label, "Cohen cousins");
+  assert.equal(attendeeBody.user.effectiveAccess.scopes.some((scope) => scope.galleryKey === "cohen-cousins"), true);
 
-  const policyResponse = await adminWorker.fetch(new Request("https://worker.test/access-console/gallery-access?galleryKind=event&galleryKey=johnson-palmer-wedding&email=attendee%40example.test&ownerOriginals=1", {
+  const policyResponse = await adminWorker.fetch(new Request("https://worker.test/access-console/gallery-access?galleryKind=event&galleryKey=cohen-cousins&email=attendee%40example.test&ownerOriginals=1", {
     headers: { origin: "https://photos-by-elie.com" },
   }));
   assert.equal(policyResponse.status, 200);
   const policyBody = await policyResponse.json();
-  assert.equal(policyBody.gallery.label, "Johnson-Palmer wedding");
+  assert.equal(policyBody.gallery.label, "Cohen cousins");
   assert.equal(policyBody.decisions.visitor.allowed, false);
   assert.equal(policyBody.decisions.visitor.access.previewMode, "blocked");
   assert.equal(policyBody.decisions.selected.allowed, true);
@@ -922,7 +924,7 @@ test("access console is admin-only and writes reversible role grants", async () 
     headers: { origin: "https://photos-by-elie.com" },
   }));
   const finalState = await finalStateResponse.json();
-  assert.equal(finalState.audienceGroups.some((group) => group.label === "Agnes's B'day"), true);
+  assert.equal(finalState.audienceGroups.some((group) => group.label === "RE La Concha"), true);
   assert.equal(finalState.audienceGroups.find((group) => group.id === "cohen-cousins")?.state, "archived");
   assert.equal(finalState.galleryOptions.some((option) => option.galleryKey === "cohen-cousins"), false);
   assert.deepEqual(finalState.people.find((user) => user.email === "cousin@example.test")?.groupIds, []);

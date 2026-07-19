@@ -44,11 +44,6 @@
     ...DEFAULT_GALLERY_DEFAULTS,
     ownerOriginals: true,
   };
-  const EVENT_GALLERY_DEFAULTS = {
-    ...DEFAULT_GALLERY_DEFAULTS,
-    downloads: true,
-    ownerOriginals: true,
-  };
   const RE_GALLERY_DEFAULTS = {
     ...DEFAULT_GALLERY_DEFAULTS,
     saleEnabled: false,
@@ -66,10 +61,7 @@
     { id: "public:slovakia", label: "Slovakia", kind: "custom", galleryKind: "public", galleryKey: "slovakia", count: 2, defaults: PUBLIC_GALLERY_DEFAULTS },
     { id: "public:spain", label: "Spain", kind: "custom", galleryKind: "public", galleryKey: "spain", count: 1853, defaults: PUBLIC_GALLERY_DEFAULTS },
     { id: "public:usa", label: "USA", kind: "custom", galleryKind: "public", galleryKey: "usa", count: 145, defaults: PUBLIC_GALLERY_DEFAULTS },
-    { id: "event:agnes-bday", label: "Agnes's B'day", kind: "family", galleryKind: "event", galleryKey: "agnes-bday", defaults: EVENT_GALLERY_DEFAULTS },
-    { id: "real_estate:agnes-la-concha-common", label: "RE La Concha / Common", kind: "real_estate", galleryKind: "real_estate", galleryKey: "agnes-la-concha-common", defaults: RE_GALLERY_DEFAULTS },
     { id: "real_estate:corine-real-estate", label: "RE La Concha", kind: "real_estate", galleryKind: "real_estate", galleryKey: "corine-real-estate", defaults: RE_GALLERY_DEFAULTS },
-    { id: "event:johnson-palmer-wedding", label: "Johnson-Palmer wedding", kind: "event", galleryKind: "event", galleryKey: "johnson-palmer-wedding", defaults: EVENT_GALLERY_DEFAULTS },
   ];
 
   const $ = (selector) => document.querySelector(selector);
@@ -79,6 +71,7 @@
   const sessionRoot = $("[data-acs-session]");
   const peopleRoot = $("[data-acs-people]");
   const eventsRoot = $("[data-acs-events]");
+  const fixtureTreeRoot = $("[data-acs-fixture-tree]");
   const auditRoot = $("[data-acs-audit]");
   const auditStatusRoot = $("[data-acs-audit-status]");
   const groupsRoot = $("[data-acs-groups]");
@@ -504,13 +497,13 @@
   };
 
   const renderPickers = () => {
-    renderChoiceList(groupsRoot, activeAudienceGroups(), "acs-group", "data-acs-group", "Seed fixtures to load audience groups.");
+    renderChoiceList(groupsRoot, activeAudienceGroups(), "acs-group", "data-acs-group", "Sync fixtures to load audience groups.");
     renderChoiceList(
       galleryOptionsRoot,
       realEstateGalleryOptions(),
       "acs-gallery",
       "data-acs-gallery",
-      "Seed fixtures to load RE gallery options.",
+      "Sync fixtures to load RE gallery options.",
       (item) => item.galleryKey
     );
     if (groupGalleryRecordInput) {
@@ -649,7 +642,7 @@
     setCount("owners", people.filter((user) => (user.roles || []).includes("owner") && !user.disabledAt).length);
     setCount("re", people.filter((user) => hasRealEstateAccess(user) && !user.disabledAt).length);
     setCount("groups", activeAudienceGroups().length);
-    setCount("fixtures", people.filter((user) => user.fixture).length);
+    setCount("fixtures", state.fixtureEvents.length);
     setCount("disabled", people.filter((user) => user.disabledAt).length);
   };
 
@@ -658,7 +651,7 @@
     const people = filteredPeople();
     renderFilterSummary(people);
     if (!state.people.length) {
-      peopleRoot.innerHTML = `<tr><td colspan="4" class="acs-empty">No people are stored yet. Seed fixtures or add a person.</td></tr>`;
+      peopleRoot.innerHTML = `<tr><td colspan="4" class="acs-empty">No people are stored yet. Sync fixtures or add a person.</td></tr>`;
       return;
     }
     if (!people.length) {
@@ -694,6 +687,58 @@
         <span class="acs-event-policy">${escapeHtml(event.accessPolicy || event.access_policy || "")}</span>
       </article>
     `).join("");
+  };
+
+  const renderFixtureTree = () => {
+    if (!fixtureTreeRoot) return;
+    const events = state.fixtureEvents || [];
+    if (!events.length) {
+      fixtureTreeRoot.innerHTML = `<p class="acs-empty">No universal fixtures are synchronized yet.</p>`;
+      return;
+    }
+    const byParent = new Map();
+    const byId = new Map(events.map((event) => [event.id, event]));
+    events.forEach((event) => {
+      const parentId = byId.has(event.parentId) ? event.parentId : "";
+      if (!byParent.has(parentId)) byParent.set(parentId, []);
+      byParent.get(parentId).push(event);
+    });
+    byParent.forEach((children) => children.sort((left, right) => String(left.label || left.id).localeCompare(String(right.label || right.id))));
+
+    const renderBranch = (parentId = "", inheritedVisibility = "private", inheritedGroupId = "") => {
+      const children = byParent.get(parentId) || [];
+      if (!children.length) return "";
+      return `<ul>${children.map((event) => {
+        const visibility = event.visibility === "inherit" || !event.visibility
+          ? inheritedVisibility
+          : event.visibility;
+        const groupId = event.groupId || inheritedGroupId;
+        const group = state.audienceGroups.find((item) => item.id === groupId && item.state !== "archived");
+        const members = groupId
+          ? groupMembers(groupId).filter((user) => !user.disabledAt && !user.fixture)
+          : [];
+        const accessLabel = visibility === "public"
+          ? "Everyone"
+          : (groupId
+            ? (members.length
+              ? members.map((user) => user.displayName || user.email).join(", ")
+              : `${group?.label || groupId} (no active members)`)
+            : "Owner/admin only — no client grants");
+        const inherited = event.visibility === "inherit";
+        return `
+          <li>
+            <article class="acs-fixture-node" data-visibility="${escapeHtml(visibility)}">
+              <span class="acs-fixture-name">${escapeHtml(event.label || event.id)}</span>
+              <span class="acs-chip ${visibility === "public" ? "is-public" : "is-private"}">${escapeHtml(inherited ? `${visibility} inherited` : visibility)}</span>
+              <span class="acs-fixture-access">${escapeHtml(accessLabel)}</span>
+              ${event.galleryKey ? `<code>${escapeHtml(event.galleryKey)}</code>` : ""}
+            </article>
+            ${renderBranch(event.id, visibility, groupId)}
+          </li>
+        `;
+      }).join("")}</ul>`;
+    };
+    fixtureTreeRoot.innerHTML = renderBranch();
   };
 
   const renderGroupCapabilities = () => {
@@ -761,7 +806,7 @@
   const renderGroupList = () => {
     if (!groupListRoot) return;
     if (!state.audienceGroups.length) {
-      groupListRoot.innerHTML = `<p class="acs-empty">No audience groups yet. Seed fixtures or save a group.</p>`;
+      groupListRoot.innerHTML = `<p class="acs-empty">No audience groups yet. Sync fixtures or save a group.</p>`;
       return;
     }
     groupListRoot.innerHTML = state.audienceGroups.map((group) => {
@@ -972,7 +1017,7 @@
     }));
     const rows = [...roleRows, ...groupRows];
     if (!rows.length) {
-      capabilitiesRoot.innerHTML = `<p class="acs-empty">Seed fixtures to load group capabilities.</p>`;
+      capabilitiesRoot.innerHTML = `<p class="acs-empty">Sync fixtures to load group capabilities.</p>`;
       return;
     }
     capabilitiesRoot.innerHTML = rows.map((row) => `
@@ -1235,6 +1280,7 @@
     renderPeopleFilters();
     renderPeople();
     renderEvents();
+    renderFixtureTree();
     renderGroupCapabilities();
     renderGroupList();
     renderMembership();
@@ -1359,7 +1405,7 @@
   };
 
   const seedFixtures = async () => {
-    setStatus("Seeding fixture people and events...");
+    setStatus("Synchronizing the universal fixture access tree...");
     await apiFetch("/access-console/fixtures/seed", {
       method: "POST",
       body: JSON.stringify({}),

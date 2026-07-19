@@ -1218,7 +1218,8 @@ def delivery_plan(repo_root: Path, fixture_id: str) -> dict[str, Any]:
 
 def migrate_la_concha_tree(repo_root: Path) -> dict[str, Any]:
     with connect(repo_root) as conn:
-        root = create_fixture(repo_root, "La Concha", fixture_id="fixture-la-concha", tags=["real-estate"], template_key="real-estate", access_gallery_key="la-concha", legacy_identity={"track": "RE", "fixture": "La Concha"}, conn=conn)
+        existing_root = conn.execute("SELECT * FROM fixtures WHERE fixture_id = ?", ("fixture-la-concha",)).fetchone()
+        root = _fixture_row(existing_root) if existing_root else create_fixture(repo_root, "La Concha", fixture_id="fixture-la-concha", tags=["real-estate"], template_key="real-estate", access_gallery_key="la-concha", legacy_identity={"track": "RE", "fixture": "La Concha"}, conn=conn)
         apartment_1 = create_fixture(repo_root, "Apartment 1", parent_fixture_id=root["fixtureId"], fixture_id="fixture-la-concha-apartment-1", conn=conn)
         apartment_2 = create_fixture(repo_root, "Apartment 2", parent_fixture_id=root["fixtureId"], fixture_id="fixture-la-concha-apartment-2", conn=conn)
         common = create_fixture(repo_root, "Common", parent_fixture_id=root["fixtureId"], fixture_id="fixture-la-concha-common", conn=conn)
@@ -1233,3 +1234,77 @@ def migrate_la_concha_tree(repo_root: Path) -> dict[str, Any]:
         recovery={"galleryKey": "la-concha", "livePolicyChanged": False, "clientMessageSent": False},
     )
     return {"ok": True, "root": root, "apartments": [apartment_1, apartment_2], "common": common, "commonChildren": children, "accessGrant": access_grant, "tree": fixture_tree(repo_root)}
+
+
+def migrate_access_fixture_tree(repo_root: Path) -> dict[str, Any]:
+    """Converge universal fixtures on the public Expo/Travel and private RE policy."""
+    with connect(repo_root) as conn:
+        expo = create_fixture(
+            repo_root,
+            "Expo",
+            fixture_id="fixture-expo",
+            tags=["public"],
+            access_gallery_key="expo",
+            legacy_identity={"track": "Expo"},
+            conn=conn,
+        )
+        real_estate = create_fixture(
+            repo_root,
+            "RE",
+            fixture_id="fixture-re",
+            tags=["real-estate", "private"],
+            template_key="real-estate",
+            legacy_identity={"track": "RE"},
+            conn=conn,
+        )
+        travel = create_fixture(
+            repo_root,
+            "Travel",
+            fixture_id="fixture-travel",
+            tags=["public", "travel"],
+            access_gallery_key="travel",
+            legacy_identity={"track": "Travel"},
+            conn=conn,
+        )
+        conn.commit()
+
+    la_concha = migrate_la_concha_tree(repo_root)["root"]
+    move_fixture(repo_root, la_concha["fixtureId"], real_estate["fixtureId"])
+    timestamp = now_iso()
+    corine_identity = "corine.bn2007@yahoo.fr"
+    with connect(repo_root) as conn:
+        conn.execute(
+            "UPDATE fixtures SET access_gallery_key = ?, updated_at = ? WHERE fixture_id = ?",
+            ("corine-real-estate", timestamp, la_concha["fixtureId"]),
+        )
+        conn.execute(
+            "UPDATE fixture_access_grants SET state = 'revoked', updated_at = ? WHERE fixture_id = ? AND external_identity <> ? AND state = 'active'",
+            (timestamp, la_concha["fixtureId"], corine_identity),
+        )
+        conn.execute(
+            "UPDATE fixtures SET archived_at = ?, updated_at = ? WHERE fixture_id = ? AND archived_at IS NULL",
+            (timestamp, timestamp, "fixture-universal-parity-rehearsal"),
+        )
+        conn.commit()
+    grant = link_access_grant(
+        repo_root,
+        la_concha["fixtureId"],
+        provider="acs",
+        external_identity=corine_identity,
+        subject_label="Corine",
+        recovery={
+            "galleryKey": "corine-real-estate",
+            "inheritToDescendants": True,
+            "rootReGrant": False,
+            "livePolicyChanged": True,
+            "clientMessageSent": False,
+        },
+    )
+    return {
+        "ok": True,
+        "publicRoots": [expo, travel],
+        "privateRoot": real_estate,
+        "exclusiveFixture": la_concha,
+        "accessGrant": grant,
+        "tree": fixture_tree(repo_root),
+    }

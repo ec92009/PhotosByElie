@@ -950,6 +950,69 @@ body[data-gallery="access-console"] .acs-hero h1 {
   color: var(--muted, var(--acs-muted));
 }
 
+.acs-fixture-tree {
+  margin: 1rem 0 1.5rem;
+}
+
+.acs-fixture-tree ul {
+  display: grid;
+  gap: .55rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.acs-fixture-tree ul ul {
+  margin-top: .55rem;
+  margin-left: 1.2rem;
+  padding-left: 1rem;
+  border-left: 2px solid var(--acs-line);
+}
+
+.acs-fixture-node {
+  display: grid;
+  grid-template-columns: minmax(8rem, .8fr) auto minmax(12rem, 1.2fr) minmax(8rem, auto);
+  align-items: center;
+  gap: .65rem;
+  padding: .7rem .8rem;
+  border: 1px solid var(--acs-line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 94%, var(--acs-teal) 6%);
+}
+
+.acs-fixture-node[data-visibility="private"] {
+  background: color-mix(in srgb, var(--surface) 94%, var(--acs-rust) 6%);
+}
+
+.acs-fixture-name,
+.acs-fixture-access {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.acs-fixture-name {
+  font-weight: 800;
+}
+
+.acs-fixture-node code {
+  color: var(--muted, var(--acs-muted));
+  overflow-wrap: anywhere;
+}
+
+.acs-chip.is-public {
+  border-color: color-mix(in srgb, var(--acs-teal) 70%, white 30%);
+  color: var(--acs-teal);
+}
+
+.acs-chip.is-private {
+  border-color: color-mix(in srgb, var(--acs-rust) 70%, white 30%);
+  color: var(--acs-rust);
+}
+
+.acs-policy-titlebar {
+  margin-top: 1.4rem;
+}
+
 body[data-gallery="access-console"] .gallery-view-controls,
 body[data-gallery="access-console"] .bottom-photo-actions {
   display: none;
@@ -992,6 +1055,10 @@ body[data-gallery="access-console"] .bottom-photo-actions {
   }
 
   .acs-group-row {
+    grid-template-columns: 1fr;
+  }
+
+  .acs-fixture-node {
     grid-template-columns: 1fr;
   }
 

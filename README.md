@@ -6,8 +6,12 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v141.9`
+- Current visible version: `v141.10`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
+- `v141.10` makes ACS fixture-native: it shows inherited access across the
+  universal Expo / RE / Travel tree, keeps RE owner/admin-only at the root,
+  grants Corine exclusive La Concha access through every descendant, and
+  retires the former fixture rehearsal accounts and grants in production D1.
 - `v141.3` introduces the universal Build a Fixture pipeline with recursive fixtures, read-only
   asset search, immutable culling snapshots in the shared Sidecar, reversible
   multi-fixture placement, versioned R2 receipts, and verified Apple Photos

@@ -208,6 +208,19 @@ body[data-gallery="new-owner"] main.new-owner-shell {
   color: var(--text);
 }
 
+.fixture-builder-search .fixture-builder-check {
+  align-items: center;
+  display: flex;
+  flex-direction: row;
+  gap: .55rem;
+  min-height: 3rem;
+}
+
+.fixture-builder-search .fixture-builder-check input {
+  inline-size: 1.15rem;
+  margin: 0;
+}
+
 .fixture-builder-status,
 .fixture-builder-delivery {
   padding: .7rem .8rem;

@@ -31,6 +31,12 @@ class FixtureConnectorTest(unittest.TestCase):
             ])
             created = local_server.new_owner_connector_result(root, action("fixture-create", name="La Concha", templateKey="real-estate"))
             fixture_id = created["result"]["fixture"]["fixtureId"]
+            archived = local_server.new_owner_connector_result(root, action("fixture-archive", fixtureId=fixture_id))
+            self.assertTrue(archived["result"]["fixture"]["archivedAt"])
+            listed = local_server.new_owner_connector_result(root, action("fixture-tree-list", includeArchived=True))
+            self.assertEqual(listed["result"]["fixtures"][0]["fixtureId"], fixture_id)
+            reopened = local_server.new_owner_connector_result(root, action("fixture-reopen", fixtureId=fixture_id))
+            self.assertFalse(reopened["result"]["fixture"]["archivedAt"])
             searched = local_server.new_owner_connector_result(root, action("fixture-search", filters={"query": "LaConcha"}))
             self.assertTrue(searched["result"]["readOnly"])
             self.assertEqual(searched["result"]["candidateCount"], 1)

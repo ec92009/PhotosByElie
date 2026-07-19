@@ -7,15 +7,15 @@
   <meta name="description" content="Authenticated cloud Owner controls for Photos By Elie."/>
   <meta name="robots" content="noindex,nofollow"/>
   <link rel="icon" type="image/png" sizes="512x512" href="./assets/branding/photosbyelie-camera-tripod-logo-512.png"/>
-  <link rel="apple-touch-icon" sizes="180x180" href="./assets/branding/photosbyelie-touch-icon-180.png?v=141.4"/>
-  <link rel="manifest" href="./site.webmanifest?v=141.4"/>
+  <link rel="apple-touch-icon" sizes="180x180" href="./assets/branding/photosbyelie-touch-icon-180.png?v=141.5"/>
+  <link rel="manifest" href="./site.webmanifest?v=141.5"/>
   <meta name="theme-color" content="#263f4a"/>
   <meta name="apple-mobile-web-app-title" content="Photos By Elie"/>
   <script>(()=>{try{const saved=localStorage.getItem('byelie-theme');if(saved==='light'||saved==='dark')document.documentElement.dataset.theme=saved;localStorage.setItem('byelie-language','en');document.documentElement.lang='en';document.documentElement.dataset.language='en'}catch{}})();</script>
-  <link rel="stylesheet" href="./shared.css?v=141.4"/>
-  <link rel="stylesheet" href="./styles.css?v=141.4"/>
-  <link rel="stylesheet" href="./photos.css?v=141.4"/>
-  <link rel="stylesheet" href="./new-owner.css?v=141.4"/>
+  <link rel="stylesheet" href="./shared.css?v=141.5"/>
+  <link rel="stylesheet" href="./styles.css?v=141.5"/>
+  <link rel="stylesheet" href="./photos.css?v=141.5"/>
+  <link rel="stylesheet" href="./new-owner.css?v=141.5"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -30,7 +30,7 @@
       <a class="is-active" href="./owner.html">Owner</a> <span>|</span>
       <a href="./access-console.html">ACS</a>
     </nav>
-    <span class="site-version-badge">v141.4</span>
+    <span class="site-version-badge">v141.5</span>
   </header>
 
   <main id="main-content" class="shell new-owner-shell">
@@ -95,6 +95,8 @@
             <button class="btn secondary" type="button" data-fixture-rename disabled>Rename</button>
             <label>Move under<select data-fixture-move-parent><option value="">Root level</option></select></label>
             <button class="btn secondary" type="button" data-fixture-move disabled>Move</button>
+            <button class="btn secondary" type="button" data-fixture-archive disabled>Archive</button>
+            <button class="btn secondary" type="button" data-fixture-reopen disabled>Reopen</button>
           </div>
           <fieldset class="fixture-builder-search">
             <legend>Universal asset search</legend>
@@ -102,6 +104,16 @@
             <label>Media<select data-fixture-media><option value="">Photos + videos</option><option value="photo">Photos</option><option value="video">Videos</option></select></label>
             <label>Decision<select data-fixture-pick><option value="">Any decision</option><option value="undecided">Undecided</option><option value="picked">Picked</option><option value="rejected">Rejected</option></select></label>
             <label>Editorial<select data-fixture-metadata><option value="">Any editorial state</option><option value="unreviewed">Unreviewed</option><option value="proposed">Proposed</option><option value="approved">Approved</option><option value="rework">Rework</option></select></label>
+            <label>Date from<input type="date" data-fixture-date-from></label>
+            <label>Date to<input type="date" data-fixture-date-to></label>
+            <label>Album IDs<input type="text" data-fixture-albums placeholder="Comma-separated IDs"></label>
+            <label>Camera<input type="text" data-fixture-camera placeholder="Camera model"></label>
+            <label>Lens<input type="text" data-fixture-lens placeholder="Lens model"></label>
+            <label>Rating<select data-fixture-rating><option value="">Any rating</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></label>
+            <label>Color<select data-fixture-color><option value="">Any color</option><option value="red">Red</option><option value="yellow">Yellow</option><option value="green">Green</option><option value="blue">Blue</option><option value="purple">Purple</option></select></label>
+            <label>Delivery<select data-fixture-delivery-state><option value="">Any delivery state</option><option value="verified">Verified</option><option value="failed">Failed</option><option value="pending">Pending</option></select></label>
+            <label>Already in fixture<select data-fixture-filter-parent><option value="">Any fixture</option></select></label>
+            <label class="fixture-builder-check"><input type="checkbox" data-fixture-dedupe-exact> Exact identity/checksum dedupe</label>
             <button class="btn secondary" type="button" data-fixture-search>Search without changing assets</button>
           </fieldset>
           <div class="fixture-builder-status" data-fixture-status aria-live="polite">Loading the recursive fixture tree from this Mac…</div>
@@ -210,9 +222,9 @@
     </section>
   </main>
 
-  <script src="./media-config.js?v=141.4"></script>
-  <script src="./owner-account.js?v=141.4"></script>
-  <script src="./owner-settings.js?v=141.4"></script>
-  <script src="./new-owner.js?v=141.4"></script>
+  <script src="./media-config.js?v=141.5"></script>
+  <script src="./owner-account.js?v=141.5"></script>
+  <script src="./owner-settings.js?v=141.5"></script>
+  <script src="./new-owner.js?v=141.5"></script>
 </body>
 </html>

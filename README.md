@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v141.4`
+- Current visible version: `v141.5`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
 - `v141.3` introduces the universal Build a Fixture pipeline with recursive fixtures, read-only
   asset search, immutable culling snapshots in the shared Sidecar, reversible

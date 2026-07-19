@@ -350,6 +350,7 @@ from sidecar_state_db import record_decision as record_sidecar_decision_db  # no
 from sidecar_state_db import summary as sidecar_summary_db  # noqa: E402
 from fixture_pipeline import (  # noqa: E402
     apply_pool_refresh,
+    archive_fixture,
     configure_asset_destinations,
     create_fixture,
     create_pool,
@@ -363,6 +364,7 @@ from fixture_pipeline import (  # noqa: E402
     preview_pool_refresh,
     remove_placement,
     rename_fixture,
+    reopen_fixture,
     restore_placement,
     search_assets,
 )
@@ -1773,7 +1775,7 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
     preview: dict = {"items": [], "stateCounts": []}
 
     if mode == "fixture-tree-list":
-        result.update({"readOnly": True, "fixtures": fixture_tree(repo_root)})
+        result.update({"readOnly": True, "fixtures": fixture_tree(repo_root, include_archived=bool(manifest.get("includeArchived")))})
     elif mode == "fixture-create":
         result.update({
             "readOnly": False,
@@ -1785,12 +1787,16 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
                 template_key=str(manifest.get("templateKey") or ""),
                 destination_defaults=manifest.get("destinationDefaults") or ["r2"],
             ),
-            "fixtures": fixture_tree(repo_root),
+            "fixtures": fixture_tree(repo_root, include_archived=True),
         })
     elif mode == "fixture-rename":
-        result.update({"readOnly": False, "fixture": rename_fixture(repo_root, str(manifest.get("fixtureId") or ""), str(manifest.get("name") or "")), "fixtures": fixture_tree(repo_root)})
+        result.update({"readOnly": False, "fixture": rename_fixture(repo_root, str(manifest.get("fixtureId") or ""), str(manifest.get("name") or "")), "fixtures": fixture_tree(repo_root, include_archived=True)})
     elif mode == "fixture-move":
-        result.update({"readOnly": False, "fixture": move_fixture(repo_root, str(manifest.get("fixtureId") or ""), str(manifest.get("parentFixtureId") or "")), "fixtures": fixture_tree(repo_root)})
+        result.update({"readOnly": False, "fixture": move_fixture(repo_root, str(manifest.get("fixtureId") or ""), str(manifest.get("parentFixtureId") or "")), "fixtures": fixture_tree(repo_root, include_archived=True)})
+    elif mode == "fixture-archive":
+        result.update({"readOnly": False, "fixture": archive_fixture(repo_root, str(manifest.get("fixtureId") or "")), "fixtures": fixture_tree(repo_root, include_archived=True)})
+    elif mode == "fixture-reopen":
+        result.update({"readOnly": False, "fixture": reopen_fixture(repo_root, str(manifest.get("fixtureId") or "")), "fixtures": fixture_tree(repo_root, include_archived=True)})
     elif mode == "fixture-search":
         search = search_assets(
             repo_root,
@@ -1854,6 +1860,8 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
         "fixture-create": "Created the fixture without changing source assets.",
         "fixture-rename": "Renamed the fixture while preserving its stable ID and relationships.",
         "fixture-move": "Moved the fixture without changing its stable ID or source assets.",
+        "fixture-archive": "Archived the fixture without deleting its attached state.",
+        "fixture-reopen": "Reopened the fixture with its attached state intact.",
         "fixture-search": "Search is read-only. Select candidates to snapshot a culling pool.",
         "fixture-pool-create": "Created a private fixture-scoped culling pool. Nothing was uploaded or messaged.",
         "fixture-pool-open": "Prepared the fixture-scoped Sidecar workspace.",

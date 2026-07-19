@@ -27,8 +27,16 @@ rating, color, pick state, editorial state, title, caption, keywords, and undo
 history. Renames and moves retain the fixture ID, grants, placements, pools,
 and deliverable recovery links.
 
+Owner can create roots and children, rename or move them, archive a complete
+subtree, and reopen it later. Archive/reopen never deletes source batches,
+pools, placements, grants, delivery destinations, or receipts.
+
 The Owner surface talks to this model through the enrolled per-Mac connector.
 Neither asset search nor pool creation publishes media or messages a client.
+Owner search filters can be combined across free text, dates, album identity,
+media type, camera, lens, fixture placement, rating, color, decision/editorial
+state, and delivery state. Exact dedupe uses only stable source identity or an
+explicit checksum; capture-time proximity is never treated as duplicate proof.
 
 ## Stable pools and reversible placement
 

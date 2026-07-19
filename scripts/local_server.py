@@ -350,6 +350,7 @@ from sidecar_state_db import record_decision as record_sidecar_decision_db  # no
 from sidecar_state_db import summary as sidecar_summary_db  # noqa: E402
 from fixture_pipeline import (  # noqa: E402
     apply_pool_refresh,
+    adopt_upload_run,
     archive_fixture,
     configure_asset_destinations,
     create_fixture,
@@ -362,6 +363,7 @@ from fixture_pipeline import (  # noqa: E402
     move_fixture,
     move_placement,
     place_assets,
+    plan_upload_run_adoption,
     preview_pool_refresh,
     remove_placement,
     rename_fixture,
@@ -1853,6 +1855,29 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
         result.update({"readOnly": False, "destinations": configure_asset_destinations(repo_root, str(manifest.get("fixtureId") or ""), manifest.get("assetIds") or [], manifest.get("destinations") or [])})
     elif mode == "fixture-delivery-plan":
         result.update({"readOnly": True, "delivery": delivery_plan(repo_root, str(manifest.get("fixtureId") or ""))})
+    elif mode == "fixture-upload-run-adoption-plan":
+        result.update({
+            "readOnly": True,
+            "uploadRunAdoption": plan_upload_run_adoption(
+                repo_root,
+                str(manifest.get("runId") or ""),
+                str(manifest.get("fixtureId") or ""),
+                historical_backfill=bool(manifest.get("historicalBackfill")),
+                asset_ids=manifest.get("assetIds") or [],
+            ),
+        })
+    elif mode == "fixture-upload-run-adoption-commit":
+        result.update({
+            "readOnly": False,
+            "uploadRunAdoption": adopt_upload_run(
+                repo_root,
+                str(manifest.get("runId") or ""),
+                str(manifest.get("fixtureId") or ""),
+                historical_backfill=bool(manifest.get("historicalBackfill")),
+                asset_ids=manifest.get("assetIds") or [],
+                actor="owner-connector",
+            ),
+        })
     elif mode == "fixture-photos-writeback-plan":
         result.update({"readOnly": True, "photosWriteback": writeback_plan(
             repo_root,
@@ -1887,6 +1912,8 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
         "fixture-placement-restore": "Restored the placement relationship without reimporting the source asset.",
         "fixture-destinations": "Configured per-asset delivery destinations.",
         "fixture-delivery-plan": "Prepared the delivery plan; no delivery or client message was triggered.",
+        "fixture-upload-run-adoption-plan": "Previewed the exact completed Upload Bridge items eligible for fixture adoption; nothing changed.",
+        "fixture-upload-run-adoption-commit": "Adopted checksum-verified completed upload items into the chosen fixture and reconstructed their R2 receipts.",
         "fixture-photos-writeback-plan": "Prepared the Apple Photos metadata give-back plan without changing Photos.",
         "fixture-photos-writeback-commit": "Committed and verified eligible metadata in Apple Photos. No client message was sent.",
         "fixture-la-concha-migrate": "Created the La Concha target fixture tree without moving source assets.",

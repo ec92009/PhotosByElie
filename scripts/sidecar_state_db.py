@@ -203,6 +203,25 @@ def _json_text(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True)
 
 
+def editorial_version_hash(conn: sqlite3.Connection, asset_id: str) -> str:
+    """Bind an upload or receipt to the asset's exact editorial state."""
+    row = conn.execute(
+        """
+        SELECT a.asset_id, a.source_anchor, a.modified_at, COALESCE(d.rating, 0) rating,
+               COALESCE(d.color, '') color, COALESCE(d.pick_state, 'undecided') pick_state,
+               COALESCE(d.metadata_state, 'unreviewed') metadata_state,
+               COALESCE(d.title, '') title, COALESCE(d.caption, '') caption,
+               COALESCE(d.keywords_json, '[]') keywords_json
+        FROM sidecar_assets a LEFT JOIN sidecar_decisions d ON d.asset_id = a.asset_id
+        WHERE a.asset_id = ?
+        """,
+        (asset_id,),
+    ).fetchone()
+    if not row:
+        raise ValueError("asset is not indexed")
+    return hashlib.sha256(_json_text(dict(row)).encode("utf-8")).hexdigest()
+
+
 def _read_json_text(value: str | None, fallback: Any) -> Any:
     if not value:
         return fallback
@@ -375,6 +394,7 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
           upload_status     TEXT NOT NULL DEFAULT 'not_requested' CHECK (trim(upload_status) <> ''),
           upload_keys_json  TEXT NOT NULL DEFAULT '[]',
           upload_error_text TEXT,
+          editorial_version_hash TEXT NOT NULL DEFAULT '',
           error_text        TEXT,
           created_at        TEXT,
           updated_at        TEXT,
@@ -502,6 +522,7 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         "upload_keys_json": "TEXT NOT NULL DEFAULT '[]'",
         "upload_error_text": "TEXT",
         "timings_json": "TEXT NOT NULL DEFAULT '{}'",
+        "editorial_version_hash": "TEXT NOT NULL DEFAULT ''",
     }
     for column, definition in upload_item_column_defaults.items():
         if column not in upload_item_columns:
@@ -2532,8 +2553,9 @@ def prepare_upload_bridge_execute_batch(
                 """
                 INSERT INTO sidecar_upload_bridge_run_items
                   (run_item_id, run_id, asset_id, photo_id, filename, media_type, queued_at,
-                   status, export_status, planned_keys_json, timings_json, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, 'planned', 'planned', ?, '{}', ?, ?)
+                   status, export_status, planned_keys_json, timings_json, editorial_version_hash,
+                   created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'planned', 'planned', ?, '{}', ?, ?, ?)
                 """,
                 (
                     run_item_id,
@@ -2544,6 +2566,7 @@ def prepare_upload_bridge_execute_batch(
                     row["media_type"] or "",
                     row["uploaded_at"] or "",
                     _json_text(planned_keys),
+                    editorial_version_hash(conn, asset_id),
                     now,
                     now,
                 ),
@@ -2557,6 +2580,7 @@ def prepare_upload_bridge_execute_batch(
                 "mediaType": row["media_type"] or "",
                 "queuedAt": row["uploaded_at"] or "",
                 "collisionCount": item_collision_count,
+                "editorialVersionHash": editorial_version_hash(conn, asset_id),
                 "plannedKeys": planned_keys,
             })
 
@@ -3000,8 +3024,8 @@ def run_upload_bridge_export_dry_run(
                 """
                 INSERT INTO sidecar_upload_bridge_run_items
                   (run_item_id, run_id, asset_id, photo_id, filename, media_type, queued_at,
-                   status, export_status, planned_keys_json, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, 'planned', 'planned', ?, ?, ?)
+                   status, export_status, planned_keys_json, editorial_version_hash, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'planned', 'planned', ?, ?, ?, ?)
                 """,
                 (
                     run_item_id,
@@ -3012,6 +3036,7 @@ def run_upload_bridge_export_dry_run(
                     row["media_type"] or "",
                     row["uploaded_at"] or "",
                     _json_text(planned_keys),
+                    editorial_version_hash(conn, asset_id),
                     now,
                     now,
                 ),
@@ -3025,6 +3050,7 @@ def run_upload_bridge_export_dry_run(
                 "mediaType": row["media_type"] or "",
                 "queuedAt": row["uploaded_at"] or "",
                 "collisionCount": item_collision_count,
+                "editorialVersionHash": editorial_version_hash(conn, asset_id),
                 "plannedKeys": planned_keys,
             })
 

@@ -2447,6 +2447,7 @@
         <strong>${escapeHtml(progress.message || (progress.running ? "Real upload running..." : "Real upload finished."))}</strong>
         <span>${completed.toLocaleString()} of ${requested.toLocaleString()} item${requested === 1 ? "" : "s"} processed.</span>
         <span>${uploadedKeys.toLocaleString()} uploaded key${uploadedKeys === 1 ? "" : "s"} · ${skipped.toLocaleString()} skipped collision key${skipped === 1 ? "" : "s"} · ${failedItems.toLocaleString()} failed item${failedItems === 1 ? "" : "s"} · ${failedKeys.toLocaleString()} failed key${failedKeys === 1 ? "" : "s"}</span>
+        ${!progress.running && progress.runId && uploadedItems ? `<a class="btn secondary" href="./owner.html?uploadRun=${encodeURIComponent(progress.runId)}#build-a-fixture">Route ${uploadedItems.toLocaleString()} uploaded item${uploadedItems === 1 ? "" : "s"} to a fixture</a>` : ""}
         ${entries.length ? `
           <ol class="sidecar-upload-progress-list">
             ${entries.map((entry) => `
@@ -2737,6 +2738,7 @@
         running: true,
         requestedCount: Number(event.count || 1),
         uploadId: event.uploadId || "",
+        runId: event.runId || "",
         cancelRequested: false,
         initialQueuedCount: Number(planStats.uploadable || event.count || 1),
         initialCollisionCount: Number(planStats.collisions || 0),
@@ -2747,6 +2749,7 @@
       };
     }
     const progress = state.uploadBridgeRun;
+    if (event.runId) progress.runId = event.runId;
     if (event.event === "start") {
       progress.running = true;
       progress.uploadId = event.uploadId || progress.uploadId || "";
@@ -2881,6 +2884,7 @@
     state.uploadBridgeRun = {
       running: true,
       uploadId,
+      runId: "",
       cancelRequested: false,
       requestedCount,
       initialQueuedCount: Number(planStats.uploadable || requestedCount),

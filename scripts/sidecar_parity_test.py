@@ -35,8 +35,19 @@ class SidecarParityInventoryTest(unittest.TestCase):
             "data-fixture-lens", "data-fixture-rating", "data-fixture-color",
             "data-fixture-delivery-state", "data-fixture-filter-parent", "data-fixture-dedupe-exact",
             "data-fixture-placement-targets", "data-fixture-place-selected", "data-fixture-placement-list",
+            "data-fixture-upload-run-id", "data-fixture-upload-run-plan",
+            "data-fixture-upload-run-commit",
         ):
             self.assertIn(marker, html)
+
+    def test_upload_run_handoff_requires_fixture_preview_before_commit(self):
+        sidecar = (ROOT / "sidecar.js").read_text(encoding="utf-8")
+        owner = (ROOT / "new-owner.js").read_text(encoding="utf-8")
+        self.assertIn("Route ${uploadedItems.toLocaleString()} uploaded item", sidecar)
+        self.assertIn('fixture-upload-run-adoption-plan', owner)
+        self.assertIn('fixture-upload-run-adoption-commit', owner)
+        self.assertIn('data-fixture-upload-run-asset-id', owner)
+        self.assertIn("Preview this exact run and fixture before adopting it.", owner)
 
 
 if __name__ == "__main__":

@@ -65,6 +65,19 @@ downloads each remote object, hashes the returned bytes, and records a verified
 receipt only when that checksum matches the local upload. Apple Photos
 write-back is blocked until the asset is picked, metadata-approved, and
 R2-verified for that same version.
+
+When Sidecar uploads before fixture routing, the completed run is not silently
+written back or assigned. Its ledger captures the editorial version at planning
+time. Sidecar links the completed run to Owner, where an operator chooses a real
+fixture, previews the exact checksum-verified completed rows, selects only the
+items belonging to that fixture, and commits adoption separately. Cancelled
+runs adopt completed uploads only; unprocessed planned rows are excluded. The
+adoption creates reversible placements, configures `r2` plus `apple_photos`, and
+reconstructs verified R2 receipts from the run ledger. The older July 19 run
+predates version capture, so it additionally requires an explicit historical
+backfill acknowledgement and is eligible only when the indexed asset and
+editorial decision timestamps both predate the run.
+
 Photos is then written, re-read, and verified before its receipt becomes
 verified. Partial failures remain independently retryable.
 
@@ -98,5 +111,7 @@ the recovery path while the fixture delivery receipts are built forward.
 - Fixture mode changes only Sidecar scope; it does not fork Sidecar behavior.
 - Pick and Approved are distinct.
 - Apple Photos commit is explicit and preceded by a dry run.
+- Upload-run adoption is explicit, fixture-scoped, subset-selectable, and
+  preceded by a dry run.
 - Unrelated Apple Photos keywords are preserved.
 - Corine must not be messaged until the migrated gallery is live and tested.

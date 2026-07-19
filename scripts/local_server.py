@@ -348,6 +348,18 @@ from owner_state_db import queue_title_keyword_review_photos as queue_title_keyw
 from owner_state_db import record_title_keyword_review_decisions as record_title_keyword_review_decisions_db  # noqa: E402
 from sidecar_state_db import record_decision as record_sidecar_decision_db  # noqa: E402
 from sidecar_state_db import summary as sidecar_summary_db  # noqa: E402
+from fixture_pipeline import (  # noqa: E402
+    configure_asset_destinations,
+    create_fixture,
+    create_pool,
+    delivery_plan,
+    fixture_tree,
+    get_pool,
+    migrate_la_concha_tree,
+    place_assets,
+    search_assets,
+)
+from apple_photos_metadata_writer import commit_writeback, writeback_plan  # noqa: E402
 
 
 COLLECTION_KEYWORD_TARGETS = {
@@ -1735,6 +1747,103 @@ def _new_owner_apple_photos_real_estate_result(repo_root: Path, action: dict, co
     raise ValueError(f"Unsupported Apple Photos Real Estate intake mode: {mode or 'missing'}")
 
 
+def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_id: str) -> dict:
+    """Run universal fixture orchestration through the enrolled local connector."""
+    manifest = _new_owner_manifest(action)
+    mode = str(manifest.get("mode") or "").strip()
+    completed_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    result: dict = {
+        "connectorId": connector_id,
+        "surface": "new-owner-local-bridge",
+        "actionId": str(action.get("id") or ""),
+        "type": "sidecar-culling-review",
+        "workflow": "universal-fixture-pipeline",
+        "mode": mode,
+        "published": False,
+        "clientMessageSent": False,
+        "completedAt": completed_at,
+    }
+    preview: dict = {"items": [], "stateCounts": []}
+
+    if mode == "fixture-tree-list":
+        result.update({"readOnly": True, "fixtures": fixture_tree(repo_root)})
+    elif mode == "fixture-create":
+        result.update({
+            "readOnly": False,
+            "fixture": create_fixture(
+                repo_root,
+                str(manifest.get("name") or ""),
+                parent_fixture_id=str(manifest.get("parentFixtureId") or ""),
+                tags=manifest.get("tags") or [],
+                template_key=str(manifest.get("templateKey") or ""),
+                destination_defaults=manifest.get("destinationDefaults") or ["r2"],
+            ),
+            "fixtures": fixture_tree(repo_root),
+        })
+    elif mode == "fixture-search":
+        search = search_assets(
+            repo_root,
+            manifest.get("filters") if isinstance(manifest.get("filters"), dict) else {},
+            limit=_new_owner_manifest_limit(manifest, default=120),
+        )
+        result.update({"readOnly": True, "search": search, "recordsPrepared": search["count"], "candidateCount": search["totalCount"]})
+        preview = {"items": search["items"], "stateCounts": []}
+    elif mode == "fixture-pool-create":
+        pool = create_pool(
+            repo_root,
+            str(manifest.get("fixtureId") or ""),
+            manifest.get("selectedAssetIds") or [],
+            name=str(manifest.get("name") or ""),
+            criteria=manifest.get("criteria") if isinstance(manifest.get("criteria"), dict) else {},
+        )
+        placement = place_assets(
+            repo_root,
+            pool["fixtureId"],
+            [item["assetId"] for item in pool["assets"]],
+            source_pool_id=pool["poolId"],
+            actor="owner-connector",
+            reason="fixture culling pool snapshot",
+        )
+        result.update({"readOnly": False, "pool": pool, "placement": placement, "sidecarUrl": f"http://127.0.0.1:8011/sidecar.html?pool={quote(pool['poolId'])}"})
+    elif mode == "fixture-pool-open":
+        pool = get_pool(repo_root, str(manifest.get("poolId") or ""))
+        result.update({"readOnly": True, "pool": pool, "sidecarUrl": f"http://127.0.0.1:8011/sidecar.html?pool={quote(pool['poolId'])}"})
+    elif mode == "fixture-place":
+        result.update({"readOnly": False, "placement": place_assets(repo_root, str(manifest.get("fixtureId") or ""), manifest.get("assetIds") or [], source_pool_id=str(manifest.get("poolId") or ""), actor="owner-connector", reason=str(manifest.get("reason") or "manual fixture routing"))})
+    elif mode == "fixture-destinations":
+        result.update({"readOnly": False, "destinations": configure_asset_destinations(repo_root, str(manifest.get("fixtureId") or ""), manifest.get("assetIds") or [], manifest.get("destinations") or [])})
+    elif mode == "fixture-delivery-plan":
+        result.update({"readOnly": True, "delivery": delivery_plan(repo_root, str(manifest.get("fixtureId") or ""))})
+    elif mode == "fixture-photos-writeback-plan":
+        result.update({"readOnly": True, "photosWriteback": writeback_plan(repo_root, str(manifest.get("fixtureId") or ""), manifest.get("assetIds") or [])})
+    elif mode == "fixture-photos-writeback-commit":
+        result.update({"readOnly": False, "photosWriteback": commit_writeback(repo_root, str(manifest.get("fixtureId") or ""), manifest.get("assetIds") or [])})
+    elif mode == "fixture-la-concha-migrate":
+        result.update({"readOnly": False, "migration": migrate_la_concha_tree(repo_root)})
+    else:
+        raise ValueError(f"Unsupported universal fixture mode: {mode or 'missing'}")
+
+    result.setdefault("message", {
+        "fixture-tree-list": "Loaded the recursive fixture tree.",
+        "fixture-create": "Created the fixture without changing source assets.",
+        "fixture-search": "Search is read-only. Select candidates to snapshot a culling pool.",
+        "fixture-pool-create": "Created a private fixture-scoped culling pool. Nothing was uploaded or messaged.",
+        "fixture-pool-open": "Prepared the fixture-scoped Sidecar workspace.",
+        "fixture-place": "Recorded reversible fixture placement without copying or deleting source assets.",
+        "fixture-destinations": "Configured per-asset delivery destinations.",
+        "fixture-delivery-plan": "Prepared the delivery plan; no delivery or client message was triggered.",
+        "fixture-photos-writeback-plan": "Prepared the Apple Photos metadata give-back plan without changing Photos.",
+        "fixture-photos-writeback-commit": "Committed and verified eligible metadata in Apple Photos. No client message was sent.",
+        "fixture-la-concha-migrate": "Created the La Concha target fixture tree without moving source assets.",
+    }.get(mode, "Fixture operation completed."))
+    return {
+        "ok": True,
+        "connector": {"id": connector_id, "type": "sidecar-culling-review", "completedAt": completed_at},
+        "result": result,
+        "preview": preview,
+    }
+
+
 def new_owner_connector_result(repo_root: Path, payload: dict) -> dict:
     action = _new_owner_action_from_payload(payload)
     action_type = str(action.get("type") or action.get("action") or "").strip()
@@ -1745,6 +1854,8 @@ def new_owner_connector_result(repo_root: Path, payload: dict) -> dict:
     claim = action.get("claim") if isinstance(action.get("claim"), dict) else {}
     connector_id = _clean_connector_id(payload.get("connectorId") or claim.get("connectorId") or "local")
     mode = str(_new_owner_manifest(action).get("mode") or "").strip()
+    if mode.startswith("fixture-"):
+        return _new_owner_fixture_pipeline_result(repo_root, action, connector_id)
     if mode.startswith("apple-photos-re-"):
         return _new_owner_apple_photos_real_estate_result(repo_root, action, connector_id)
     return _new_owner_sidecar_culling_review_result(repo_root, action, connector_id)

@@ -1,0 +1,702 @@
+#!/usr/bin/env python3
+"""Universal fixture tree, culling-pool, placement, and delivery state.
+
+This module is deliberately additive to Sidecar.  It owns fixture scope and
+delivery orchestration, while ``sidecar_state_db`` remains the supported writer
+for culling and editorial decisions.
+"""
+
+from __future__ import annotations
+
+from datetime import datetime, timezone
+import hashlib
+import json
+from pathlib import Path
+import re
+import sqlite3
+from typing import Any, Iterable
+import uuid
+
+from sidecar_state_db import connect as connect_owner
+
+
+DESTINATIONS = {"r2", "apple_photos", "archive"}
+
+
+def now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _json(value: Any) -> str:
+    return json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+
+
+def _read_json(value: Any, fallback: Any) -> Any:
+    try:
+        return json.loads(str(value or ""))
+    except json.JSONDecodeError:
+        return fallback
+
+
+def _clean_name(value: Any) -> str:
+    name = re.sub(r"\s+", " ", str(value or "").strip())
+    if not name:
+        raise ValueError("fixture name is required")
+    if len(name) > 160:
+        raise ValueError("fixture name must be 160 characters or fewer")
+    return name
+
+
+def _slug(value: Any) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", str(value or "").casefold()).strip("-")
+    return slug[:120] or "fixture"
+
+
+def _unique(values: Iterable[Any]) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+    for value in values:
+        text = str(value or "").strip()
+        if text and text not in seen:
+            seen.add(text)
+            result.append(text)
+    return result
+
+
+def ensure_schema(conn: sqlite3.Connection) -> None:
+    conn.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS fixtures (
+          fixture_id TEXT PRIMARY KEY CHECK (trim(fixture_id) <> ''),
+          parent_fixture_id TEXT,
+          name TEXT NOT NULL CHECK (trim(name) <> ''),
+          slug TEXT NOT NULL CHECK (trim(slug) <> ''),
+          template_key TEXT,
+          tags_json TEXT NOT NULL DEFAULT '[]',
+          destination_defaults_json TEXT NOT NULL DEFAULT '["r2"]',
+          access_gallery_key TEXT,
+          legacy_identity_json TEXT NOT NULL DEFAULT '{}',
+          archived_at TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (parent_fixture_id) REFERENCES fixtures(fixture_id),
+          UNIQUE (parent_fixture_id, name COLLATE NOCASE)
+        );
+
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_fixtures_root_name
+          ON fixtures(name COLLATE NOCASE) WHERE parent_fixture_id IS NULL;
+        CREATE INDEX IF NOT EXISTS idx_fixtures_parent ON fixtures(parent_fixture_id, archived_at, name);
+
+        CREATE TABLE IF NOT EXISTS fixture_source_batches (
+          batch_id TEXT PRIMARY KEY,
+          fixture_id TEXT NOT NULL,
+          source_kind TEXT NOT NULL,
+          source_identity TEXT NOT NULL,
+          provenance_json TEXT NOT NULL DEFAULT '{}',
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (fixture_id) REFERENCES fixtures(fixture_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS fixture_culling_pools (
+          pool_id TEXT PRIMARY KEY,
+          fixture_id TEXT NOT NULL,
+          name TEXT NOT NULL,
+          criteria_json TEXT NOT NULL DEFAULT '{}',
+          snapshot_hash TEXT NOT NULL,
+          asset_count INTEGER NOT NULL DEFAULT 0,
+          state TEXT NOT NULL DEFAULT 'active' CHECK (state IN ('active', 'archived')),
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (fixture_id) REFERENCES fixtures(fixture_id),
+          UNIQUE (fixture_id, snapshot_hash)
+        );
+
+        CREATE TABLE IF NOT EXISTS fixture_pool_assets (
+          pool_id TEXT NOT NULL,
+          asset_id TEXT NOT NULL,
+          source_kind TEXT NOT NULL,
+          source_identity TEXT NOT NULL,
+          source_batch_id TEXT,
+          snapshot_position INTEGER NOT NULL,
+          provenance_json TEXT NOT NULL DEFAULT '{}',
+          added_at TEXT NOT NULL,
+          removed_at TEXT,
+          PRIMARY KEY (pool_id, asset_id),
+          FOREIGN KEY (pool_id) REFERENCES fixture_culling_pools(pool_id) ON DELETE CASCADE,
+          FOREIGN KEY (asset_id) REFERENCES sidecar_assets(asset_id),
+          FOREIGN KEY (source_batch_id) REFERENCES fixture_source_batches(batch_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_fixture_pool_assets_asset ON fixture_pool_assets(asset_id, removed_at);
+
+        CREATE TABLE IF NOT EXISTS fixture_asset_placements (
+          placement_id TEXT PRIMARY KEY,
+          fixture_id TEXT NOT NULL,
+          asset_id TEXT NOT NULL,
+          source_pool_id TEXT,
+          state TEXT NOT NULL DEFAULT 'active' CHECK (state IN ('active', 'removed')),
+          placed_at TEXT NOT NULL,
+          removed_at TEXT,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (fixture_id) REFERENCES fixtures(fixture_id),
+          FOREIGN KEY (asset_id) REFERENCES sidecar_assets(asset_id),
+          FOREIGN KEY (source_pool_id) REFERENCES fixture_culling_pools(pool_id)
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_fixture_asset_placement_active
+          ON fixture_asset_placements(fixture_id, asset_id) WHERE state = 'active';
+        CREATE INDEX IF NOT EXISTS idx_fixture_asset_placements_asset ON fixture_asset_placements(asset_id, state);
+
+        CREATE TABLE IF NOT EXISTS fixture_placement_events (
+          event_id TEXT PRIMARY KEY,
+          placement_id TEXT NOT NULL,
+          asset_id TEXT NOT NULL,
+          from_fixture_id TEXT,
+          to_fixture_id TEXT,
+          action TEXT NOT NULL CHECK (action IN ('place', 'move', 'remove', 'restore')),
+          actor TEXT,
+          reason TEXT,
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (placement_id) REFERENCES fixture_asset_placements(placement_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS fixture_asset_destinations (
+          fixture_id TEXT NOT NULL,
+          asset_id TEXT NOT NULL,
+          destinations_json TEXT NOT NULL,
+          version_hash TEXT NOT NULL,
+          configured_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          PRIMARY KEY (fixture_id, asset_id),
+          FOREIGN KEY (fixture_id) REFERENCES fixtures(fixture_id),
+          FOREIGN KEY (asset_id) REFERENCES sidecar_assets(asset_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS fixture_delivery_receipts (
+          receipt_id TEXT PRIMARY KEY,
+          fixture_id TEXT NOT NULL,
+          asset_id TEXT NOT NULL,
+          destination TEXT NOT NULL CHECK (destination IN ('r2', 'apple_photos', 'archive')),
+          version_hash TEXT NOT NULL,
+          status TEXT NOT NULL CHECK (status IN ('pending', 'running', 'verified', 'failed')),
+          object_key TEXT,
+          checksum_sha256 TEXT,
+          visibility_policy TEXT,
+          verification_json TEXT NOT NULL DEFAULT '{}',
+          attempted_at TEXT,
+          verified_at TEXT,
+          error_text TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (fixture_id) REFERENCES fixtures(fixture_id),
+          FOREIGN KEY (asset_id) REFERENCES sidecar_assets(asset_id),
+          UNIQUE (fixture_id, asset_id, destination, version_hash, object_key)
+        );
+        CREATE INDEX IF NOT EXISTS idx_fixture_delivery_receipts_state
+          ON fixture_delivery_receipts(fixture_id, destination, status, updated_at);
+        """
+    )
+
+
+def connect(repo_root: Path, db_path: Path | None = None) -> sqlite3.Connection:
+    conn = connect_owner(repo_root, db_path)
+    ensure_schema(conn)
+    conn.commit()
+    return conn
+
+
+def _fixture_row(row: sqlite3.Row) -> dict[str, Any]:
+    return {
+        "fixtureId": row["fixture_id"],
+        "parentFixtureId": row["parent_fixture_id"] or "",
+        "name": row["name"],
+        "slug": row["slug"],
+        "templateKey": row["template_key"] or "",
+        "tags": _read_json(row["tags_json"], []),
+        "destinationDefaults": _read_json(row["destination_defaults_json"], ["r2"]),
+        "accessGalleryKey": row["access_gallery_key"] or "",
+        "legacyIdentity": _read_json(row["legacy_identity_json"], {}),
+        "archivedAt": row["archived_at"] or "",
+        "createdAt": row["created_at"],
+        "updatedAt": row["updated_at"],
+    }
+
+
+def create_fixture(
+    repo_root: Path,
+    name: str,
+    *,
+    parent_fixture_id: str = "",
+    fixture_id: str = "",
+    tags: Iterable[str] = (),
+    template_key: str = "",
+    destination_defaults: Iterable[str] = ("r2",),
+    access_gallery_key: str = "",
+    legacy_identity: dict[str, Any] | None = None,
+    conn: sqlite3.Connection | None = None,
+) -> dict[str, Any]:
+    owns = conn is None
+    conn = conn or connect(repo_root)
+    timestamp = now_iso()
+    clean_name = _clean_name(name)
+    parent = str(parent_fixture_id or "").strip() or None
+    destinations = _unique(destination_defaults)
+    if not destinations or any(item not in DESTINATIONS for item in destinations):
+        raise ValueError("destination defaults must use r2, apple_photos, or archive")
+    try:
+        if parent and not conn.execute("SELECT 1 FROM fixtures WHERE fixture_id = ? AND archived_at IS NULL", (parent,)).fetchone():
+            raise ValueError("parent fixture does not exist")
+        existing = conn.execute(
+            "SELECT * FROM fixtures WHERE parent_fixture_id IS ? AND name = ? COLLATE NOCASE AND archived_at IS NULL",
+            (parent, clean_name),
+        ).fetchone()
+        if existing:
+            return _fixture_row(existing)
+        clean_id = str(fixture_id or "").strip() or f"fxt-{uuid.uuid4().hex[:16]}"
+        conn.execute(
+            """
+            INSERT INTO fixtures (
+              fixture_id, parent_fixture_id, name, slug, template_key, tags_json,
+              destination_defaults_json, access_gallery_key, legacy_identity_json,
+              created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                clean_id, parent, clean_name, _slug(clean_name), str(template_key or "").strip() or None,
+                _json(_unique(tags)), _json(destinations), str(access_gallery_key or "").strip() or None,
+                _json(legacy_identity or {}), timestamp, timestamp,
+            ),
+        )
+        if owns:
+            conn.commit()
+        return _fixture_row(conn.execute("SELECT * FROM fixtures WHERE fixture_id = ?", (clean_id,)).fetchone())
+    finally:
+        if owns:
+            conn.close()
+
+
+def fixture_tree(repo_root: Path, *, include_archived: bool = False) -> list[dict[str, Any]]:
+    with connect(repo_root) as conn:
+        rows = conn.execute(
+            f"SELECT * FROM fixtures {'WHERE archived_at IS NULL' if not include_archived else ''} ORDER BY name COLLATE NOCASE"
+        ).fetchall()
+    by_parent: dict[str, list[dict[str, Any]]] = {}
+    for row in rows:
+        item = _fixture_row(row)
+        item["children"] = []
+        by_parent.setdefault(item["parentFixtureId"], []).append(item)
+    def attach(item: dict[str, Any], ancestors: tuple[str, ...]) -> dict[str, Any]:
+        if item["fixtureId"] in ancestors:
+            raise ValueError("fixture tree contains a cycle")
+        item["children"] = [attach(child, (*ancestors, item["fixtureId"])) for child in by_parent.get(item["fixtureId"], [])]
+        return item
+    return [attach(root, ()) for root in by_parent.get("", [])]
+
+
+def fixture_breadcrumbs(conn: sqlite3.Connection, fixture_id: str) -> list[dict[str, str]]:
+    chain: list[dict[str, str]] = []
+    seen: set[str] = set()
+    current = str(fixture_id or "").strip()
+    while current:
+        if current in seen:
+            raise ValueError("fixture tree contains a cycle")
+        seen.add(current)
+        row = conn.execute("SELECT fixture_id, parent_fixture_id, name FROM fixtures WHERE fixture_id = ?", (current,)).fetchone()
+        if not row:
+            raise ValueError("fixture does not exist")
+        chain.append({"fixtureId": row["fixture_id"], "name": row["name"]})
+        current = row["parent_fixture_id"] or ""
+    return list(reversed(chain))
+
+
+def move_fixture(repo_root: Path, fixture_id: str, parent_fixture_id: str = "") -> dict[str, Any]:
+    with connect(repo_root) as conn:
+        fixture = conn.execute("SELECT * FROM fixtures WHERE fixture_id = ?", (fixture_id,)).fetchone()
+        if not fixture:
+            raise ValueError("fixture does not exist")
+        parent = str(parent_fixture_id or "").strip() or None
+        if parent == fixture_id:
+            raise ValueError("fixture cannot be its own parent")
+        if parent:
+            ancestors = {item["fixtureId"] for item in fixture_breadcrumbs(conn, parent)}
+            if fixture_id in ancestors:
+                raise ValueError("fixture cannot be moved below one of its descendants")
+        conn.execute("UPDATE fixtures SET parent_fixture_id = ?, updated_at = ? WHERE fixture_id = ?", (parent, now_iso(), fixture_id))
+        conn.commit()
+        return _fixture_row(conn.execute("SELECT * FROM fixtures WHERE fixture_id = ?", (fixture_id,)).fetchone())
+
+
+def search_assets(repo_root: Path, filters: dict[str, Any] | None = None, *, limit: int = 500, offset: int = 0) -> dict[str, Any]:
+    filters = filters or {}
+    predicates = ["(a.missing_at IS NULL OR a.missing_at = '')"]
+    params: list[Any] = []
+    exact_ids = _unique(filters.get("assetIds") or filters.get("albumAssetIds") or [])
+    if exact_ids:
+        predicates.append(f"a.asset_id IN ({','.join('?' for _ in exact_ids)})")
+        params.extend(exact_ids)
+    for key, column in (("dateFrom", "a.captured_at"), ("dateTo", "a.captured_at")):
+        value = str(filters.get(key) or "").strip()
+        if value:
+            predicates.append(f"{column} {'>=' if key == 'dateFrom' else '<='} ?")
+            params.append(value)
+    for key, column in (("mediaTypes", "a.media_type"), ("ratings", "COALESCE(d.rating, 0)"), ("colors", "COALESCE(d.color, '')"), ("pickStates", "COALESCE(d.pick_state, 'undecided')"), ("metadataStates", "COALESCE(d.metadata_state, 'unreviewed')")):
+        values = _unique(filters.get(key) or [])
+        if values:
+            predicates.append(f"{column} IN ({','.join('?' for _ in values)})")
+            params.extend(values)
+    fixture_id = str(filters.get("fixtureId") or "").strip()
+    if fixture_id:
+        predicates.append("EXISTS (SELECT 1 FROM fixture_asset_placements p WHERE p.asset_id = a.asset_id AND p.fixture_id = ? AND p.state = 'active')")
+        params.append(fixture_id)
+    query = str(filters.get("query") or filters.get("q") or "").strip().casefold()
+    for term in re.findall(r"[^\s,;]+", query)[:8]:
+        like = f"%{term.replace('%', '\\%').replace('_', '\\_')}%"
+        columns = ["a.asset_id", "a.filename", "a.photos_title", "a.photos_keywords_json", "a.location_label", "a.metadata_seed_title", "a.metadata_seed_keywords_json", "d.title", "d.keywords_json"]
+        predicates.append("(" + " OR ".join(f"lower(COALESCE({column}, '')) LIKE ? ESCAPE '\\'" for column in columns) + ")")
+        params.extend([like] * len(columns))
+    where = " AND ".join(predicates)
+    safe_limit = max(1, min(int(limit or 500), 5000))
+    safe_offset = max(0, int(offset or 0))
+    with connect(repo_root) as conn:
+        count = int(conn.execute(f"SELECT count(*) FROM sidecar_assets a LEFT JOIN sidecar_decisions d ON d.asset_id = a.asset_id WHERE {where}", params).fetchone()[0])
+        rows = conn.execute(
+            f"""
+            SELECT a.asset_id, a.source_anchor, a.filename, a.media_type, a.captured_at,
+                   a.pixel_width, a.pixel_height, a.photos_title, a.photos_keywords_json,
+                   a.location_label, COALESCE(d.rating, 0) rating, COALESCE(d.color, '') color,
+                   COALESCE(d.pick_state, 'undecided') pick_state,
+                   COALESCE(d.metadata_state, 'unreviewed') metadata_state,
+                   COALESCE(d.title, '') decision_title, COALESCE(d.keywords_json, '[]') decision_keywords
+            FROM sidecar_assets a LEFT JOIN sidecar_decisions d ON d.asset_id = a.asset_id
+            WHERE {where}
+            ORDER BY a.captured_at DESC, a.asset_id
+            LIMIT ? OFFSET ?
+            """,
+            [*params, safe_limit, safe_offset],
+        ).fetchall()
+    items = [{
+        "assetId": row["asset_id"], "sourceKind": "apple_photos", "sourceIdentity": row["source_anchor"],
+        "filename": row["filename"] or "", "mediaType": row["media_type"] or "", "capturedAt": row["captured_at"] or "",
+        "pixelWidth": int(row["pixel_width"] or 0), "pixelHeight": int(row["pixel_height"] or 0),
+        "title": row["decision_title"] or row["photos_title"] or "", "keywords": _read_json(row["decision_keywords"], []) or _read_json(row["photos_keywords_json"], []),
+        "locationLabel": row["location_label"] or "", "rating": int(row["rating"] or 0), "color": row["color"] or "",
+        "pickState": row["pick_state"], "metadataState": row["metadata_state"],
+        "missingFields": [field for field, value in (("camera", None), ("lens", None)) if not value],
+    } for row in rows]
+    return {"ok": True, "count": len(items), "totalCount": count, "offset": safe_offset, "limit": safe_limit, "filters": filters, "items": items, "readOnly": True}
+
+
+def _snapshot_hash(asset_ids: Iterable[str], criteria: dict[str, Any]) -> str:
+    payload = {"assetIds": sorted(_unique(asset_ids)), "criteria": criteria}
+    return hashlib.sha256(_json(payload).encode("utf-8")).hexdigest()
+
+
+def create_pool(repo_root: Path, fixture_id: str, asset_ids: Iterable[str], *, name: str = "", criteria: dict[str, Any] | None = None) -> dict[str, Any]:
+    clean_ids = _unique(asset_ids)
+    if not clean_ids:
+        raise ValueError("select at least one asset")
+    criteria = criteria or {}
+    timestamp = now_iso()
+    snapshot_hash = _snapshot_hash(clean_ids, criteria)
+    with connect(repo_root) as conn:
+        breadcrumbs = fixture_breadcrumbs(conn, fixture_id)
+        existing = conn.execute("SELECT pool_id FROM fixture_culling_pools WHERE fixture_id = ? AND snapshot_hash = ?", (fixture_id, snapshot_hash)).fetchone()
+        if existing:
+            return get_pool(repo_root, existing["pool_id"], conn=conn)
+        placeholders = ",".join("?" for _ in clean_ids)
+        rows = conn.execute(f"SELECT asset_id, source_anchor, raw_json FROM sidecar_assets WHERE asset_id IN ({placeholders})", clean_ids).fetchall()
+        by_id = {row["asset_id"]: row for row in rows}
+        missing = [asset_id for asset_id in clean_ids if asset_id not in by_id]
+        if missing:
+            raise ValueError(f"{len(missing)} selected asset(s) are not indexed")
+        pool_id = f"pool-{uuid.uuid4().hex[:16]}"
+        pool_name = _clean_name(name or f"{' / '.join(item['name'] for item in breadcrumbs)} pool")
+        conn.execute("INSERT INTO fixture_culling_pools (pool_id, fixture_id, name, criteria_json, snapshot_hash, asset_count, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (pool_id, fixture_id, pool_name, _json(criteria), snapshot_hash, len(clean_ids), timestamp, timestamp))
+        for position, asset_id in enumerate(clean_ids):
+            row = by_id[asset_id]
+            raw = _read_json(row["raw_json"], {})
+            provenance = {"sourceAnchor": row["source_anchor"], "albums": raw.get("albums") or raw.get("albumLocalIdentifiers") or []}
+            conn.execute("INSERT INTO fixture_pool_assets (pool_id, asset_id, source_kind, source_identity, snapshot_position, provenance_json, added_at) VALUES (?, ?, 'apple_photos', ?, ?, ?, ?)", (pool_id, asset_id, row["source_anchor"], position, _json(provenance), timestamp))
+        conn.commit()
+        return get_pool(repo_root, pool_id, conn=conn)
+
+
+def get_pool(repo_root: Path, pool_id: str, *, conn: sqlite3.Connection | None = None) -> dict[str, Any]:
+    owns = conn is None
+    conn = conn or connect(repo_root)
+    try:
+        row = conn.execute("SELECT * FROM fixture_culling_pools WHERE pool_id = ?", (pool_id,)).fetchone()
+        if not row:
+            raise ValueError("culling pool does not exist")
+        assets = conn.execute("SELECT asset_id, source_kind, source_identity, source_batch_id, snapshot_position, provenance_json, added_at FROM fixture_pool_assets WHERE pool_id = ? AND removed_at IS NULL ORDER BY snapshot_position", (pool_id,)).fetchall()
+        return {
+            "poolId": row["pool_id"], "fixtureId": row["fixture_id"], "name": row["name"], "criteria": _read_json(row["criteria_json"], {}),
+            "snapshotHash": row["snapshot_hash"], "assetCount": len(assets), "state": row["state"], "createdAt": row["created_at"], "updatedAt": row["updated_at"],
+            "breadcrumbs": fixture_breadcrumbs(conn, row["fixture_id"]),
+            "assets": [{"assetId": item["asset_id"], "sourceKind": item["source_kind"], "sourceIdentity": item["source_identity"], "sourceBatchId": item["source_batch_id"] or "", "position": item["snapshot_position"], "provenance": _read_json(item["provenance_json"], {}), "addedAt": item["added_at"]} for item in assets],
+        }
+    finally:
+        if owns:
+            conn.close()
+
+
+def pool_asset_ids(repo_root: Path, pool_id: str) -> list[str]:
+    return [item["assetId"] for item in get_pool(repo_root, pool_id)["assets"]]
+
+
+def preview_pool_refresh(repo_root: Path, pool_id: str) -> dict[str, Any]:
+    pool = get_pool(repo_root, pool_id)
+    search = search_assets(repo_root, pool["criteria"], limit=5000)
+    before = [item["assetId"] for item in pool["assets"]]
+    after = [item["assetId"] for item in search["items"]]
+    return {"ok": True, "poolId": pool_id, "beforeCount": len(before), "afterCount": len(after), "additions": [item for item in after if item not in set(before)], "removals": [item for item in before if item not in set(after)], "applied": False}
+
+
+def place_assets(repo_root: Path, fixture_id: str, asset_ids: Iterable[str], *, source_pool_id: str = "", actor: str = "owner", reason: str = "") -> dict[str, Any]:
+    timestamp = now_iso()
+    clean_ids = _unique(asset_ids)
+    with connect(repo_root) as conn:
+        fixture_breadcrumbs(conn, fixture_id)
+        placed = []
+        for asset_id in clean_ids:
+            if not conn.execute("SELECT 1 FROM sidecar_assets WHERE asset_id = ?", (asset_id,)).fetchone():
+                raise ValueError(f"asset is not indexed: {asset_id}")
+            existing = conn.execute("SELECT placement_id FROM fixture_asset_placements WHERE fixture_id = ? AND asset_id = ? AND state = 'active'", (fixture_id, asset_id)).fetchone()
+            if existing:
+                placed.append(existing["placement_id"])
+                continue
+            placement_id = f"plc-{uuid.uuid4().hex[:16]}"
+            conn.execute("INSERT INTO fixture_asset_placements (placement_id, fixture_id, asset_id, source_pool_id, placed_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)", (placement_id, fixture_id, asset_id, source_pool_id or None, timestamp, timestamp))
+            conn.execute("INSERT INTO fixture_placement_events (event_id, placement_id, asset_id, to_fixture_id, action, actor, reason, created_at) VALUES (?, ?, ?, ?, 'place', ?, ?, ?)", (f"evt-{uuid.uuid4().hex[:16]}", placement_id, asset_id, fixture_id, actor, reason, timestamp))
+            placed.append(placement_id)
+        conn.commit()
+    return {"ok": True, "fixtureId": fixture_id, "assetCount": len(clean_ids), "placementIds": placed}
+
+
+def move_placement(repo_root: Path, placement_id: str, to_fixture_id: str, *, actor: str = "owner", reason: str = "") -> dict[str, Any]:
+    timestamp = now_iso()
+    with connect(repo_root) as conn:
+        fixture_breadcrumbs(conn, to_fixture_id)
+        row = conn.execute("SELECT * FROM fixture_asset_placements WHERE placement_id = ? AND state = 'active'", (placement_id,)).fetchone()
+        if not row:
+            raise ValueError("active placement does not exist")
+        existing = conn.execute("SELECT placement_id FROM fixture_asset_placements WHERE fixture_id = ? AND asset_id = ? AND state = 'active'", (to_fixture_id, row["asset_id"])).fetchone()
+        if existing:
+            raise ValueError("asset is already placed in the destination fixture")
+        conn.execute("UPDATE fixture_asset_placements SET fixture_id = ?, updated_at = ? WHERE placement_id = ?", (to_fixture_id, timestamp, placement_id))
+        conn.execute("INSERT INTO fixture_placement_events (event_id, placement_id, asset_id, from_fixture_id, to_fixture_id, action, actor, reason, created_at) VALUES (?, ?, ?, ?, ?, 'move', ?, ?, ?)", (f"evt-{uuid.uuid4().hex[:16]}", placement_id, row["asset_id"], row["fixture_id"], to_fixture_id, actor, reason, timestamp))
+        conn.commit()
+        return {"ok": True, "placementId": placement_id, "assetId": row["asset_id"], "fromFixtureId": row["fixture_id"], "toFixtureId": to_fixture_id}
+
+
+def editorial_version_hash(conn: sqlite3.Connection, asset_id: str) -> str:
+    row = conn.execute("""
+      SELECT a.asset_id, a.source_anchor, a.modified_at, COALESCE(d.rating, 0) rating,
+             COALESCE(d.color, '') color, COALESCE(d.pick_state, 'undecided') pick_state,
+             COALESCE(d.metadata_state, 'unreviewed') metadata_state,
+             COALESCE(d.title, '') title, COALESCE(d.caption, '') caption,
+             COALESCE(d.keywords_json, '[]') keywords_json
+      FROM sidecar_assets a LEFT JOIN sidecar_decisions d ON d.asset_id = a.asset_id
+      WHERE a.asset_id = ?
+    """, (asset_id,)).fetchone()
+    if not row:
+        raise ValueError("asset is not indexed")
+    return hashlib.sha256(_json(dict(row)).encode("utf-8")).hexdigest()
+
+
+def configure_asset_destinations(repo_root: Path, fixture_id: str, asset_ids: Iterable[str], destinations: Iterable[str]) -> dict[str, Any]:
+    selected = _unique(destinations)
+    if not selected or any(item not in DESTINATIONS for item in selected):
+        raise ValueError("destinations must use r2, apple_photos, or archive")
+    timestamp = now_iso()
+    clean_ids = _unique(asset_ids)
+    with connect(repo_root) as conn:
+        fixture_breadcrumbs(conn, fixture_id)
+        for asset_id in clean_ids:
+            version_hash = editorial_version_hash(conn, asset_id)
+            conn.execute("""
+              INSERT INTO fixture_asset_destinations (fixture_id, asset_id, destinations_json, version_hash, configured_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, ?)
+              ON CONFLICT(fixture_id, asset_id) DO UPDATE SET destinations_json = excluded.destinations_json,
+                version_hash = excluded.version_hash, updated_at = excluded.updated_at
+            """, (fixture_id, asset_id, _json(selected), version_hash, timestamp, timestamp))
+            for destination in selected:
+                conn.execute("""
+                  INSERT OR IGNORE INTO fixture_delivery_receipts
+                    (receipt_id, fixture_id, asset_id, destination, version_hash, status, object_key, created_at, updated_at)
+                  VALUES (?, ?, ?, ?, ?, 'pending', '', ?, ?)
+                """, (f"rcp-{uuid.uuid4().hex[:16]}", fixture_id, asset_id, destination, version_hash, timestamp, timestamp))
+        conn.commit()
+    return {"ok": True, "fixtureId": fixture_id, "assetCount": len(clean_ids), "destinations": selected}
+
+
+def record_delivery_receipt(
+    repo_root: Path,
+    *,
+    fixture_id: str,
+    asset_id: str,
+    destination: str,
+    version_hash: str,
+    status: str,
+    object_key: str = "",
+    checksum_sha256: str = "",
+    visibility_policy: str = "",
+    verification: dict[str, Any] | None = None,
+    error_text: str = "",
+    conn: sqlite3.Connection | None = None,
+) -> dict[str, Any]:
+    if destination not in DESTINATIONS:
+        raise ValueError("destination must use r2, apple_photos, or archive")
+    if status not in {"pending", "running", "verified", "failed"}:
+        raise ValueError("receipt status is invalid")
+    if status == "verified" and not checksum_sha256:
+        raise ValueError("verified receipts require a checksum")
+    timestamp = now_iso()
+    owns = conn is None
+    conn = conn or connect(repo_root)
+    try:
+        if object_key:
+            conn.execute(
+                """DELETE FROM fixture_delivery_receipts
+                   WHERE fixture_id = ? AND asset_id = ? AND destination = ?
+                     AND version_hash = ? AND COALESCE(object_key, '') = ''""",
+                (fixture_id, asset_id, destination, version_hash),
+            )
+        existing = conn.execute(
+            """SELECT receipt_id FROM fixture_delivery_receipts
+               WHERE fixture_id = ? AND asset_id = ? AND destination = ?
+                 AND version_hash = ? AND COALESCE(object_key, '') = ?""",
+            (fixture_id, asset_id, destination, version_hash, object_key),
+        ).fetchone()
+        receipt_id = existing["receipt_id"] if existing else f"rcp-{uuid.uuid4().hex[:16]}"
+        conn.execute(
+            """
+            INSERT INTO fixture_delivery_receipts (
+              receipt_id, fixture_id, asset_id, destination, version_hash, status,
+              object_key, checksum_sha256, visibility_policy, verification_json,
+              attempted_at, verified_at, error_text, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(fixture_id, asset_id, destination, version_hash, object_key)
+            DO UPDATE SET status = excluded.status, checksum_sha256 = excluded.checksum_sha256,
+              visibility_policy = excluded.visibility_policy,
+              verification_json = excluded.verification_json,
+              attempted_at = excluded.attempted_at, verified_at = excluded.verified_at,
+              error_text = excluded.error_text, updated_at = excluded.updated_at
+            """,
+            (
+                receipt_id, fixture_id, asset_id, destination, version_hash, status,
+                object_key, checksum_sha256, visibility_policy, _json(verification or {}),
+                timestamp, timestamp if status == "verified" else None, error_text,
+                timestamp, timestamp,
+            ),
+        )
+        if owns:
+            conn.commit()
+        return {
+            "receiptId": receipt_id,
+            "fixtureId": fixture_id,
+            "assetId": asset_id,
+            "destination": destination,
+            "versionHash": version_hash,
+            "status": status,
+            "objectKey": object_key,
+            "checksumSha256": checksum_sha256,
+        }
+    finally:
+        if owns:
+            conn.close()
+
+
+def record_r2_upload_results(repo_root: Path, asset_id: str, upload_results: Iterable[dict[str, Any]]) -> dict[str, Any]:
+    """Attach R2 results to active, R2-enabled placements at the configured editorial version."""
+    results = [item for item in upload_results if isinstance(item, dict)]
+    receipts: list[dict[str, Any]] = []
+    with connect(repo_root) as conn:
+        current_version = editorial_version_hash(conn, asset_id)
+        rows = conn.execute(
+            """
+            SELECT p.fixture_id, x.version_hash, x.destinations_json
+            FROM fixture_asset_placements p
+            JOIN fixture_asset_destinations x
+              ON x.fixture_id = p.fixture_id AND x.asset_id = p.asset_id
+            WHERE p.asset_id = ? AND p.state = 'active'
+            """,
+            (asset_id,),
+        ).fetchall()
+        for row in rows:
+            if "r2" not in _read_json(row["destinations_json"], []):
+                continue
+            if row["version_hash"] != current_version:
+                continue
+            for result in results:
+                upload_status = str(result.get("status") or "failed")
+                checksum = str(result.get("checksumSha256") or "")
+                verified = upload_status == "uploaded" and bool(checksum)
+                receipts.append(record_delivery_receipt(
+                    repo_root,
+                    fixture_id=row["fixture_id"],
+                    asset_id=asset_id,
+                    destination="r2",
+                    version_hash=current_version,
+                    status="verified" if verified else "failed",
+                    object_key=str(result.get("key") or ""),
+                    checksum_sha256=checksum,
+                    visibility_policy="public" if str(result.get("bucket") or "").endswith("public") else "private",
+                    verification={
+                        "backend": result.get("backend"),
+                        "bucket": result.get("bucket"),
+                        "bytes": result.get("bytes"),
+                        "contentType": result.get("contentType"),
+                        "uploadStatus": upload_status,
+                    },
+                    error_text=str(result.get("error") or "") if not verified else "",
+                    conn=conn,
+                ))
+        conn.commit()
+    return {"ok": True, "assetId": asset_id, "receiptCount": len(receipts), "receipts": receipts}
+
+
+def delivery_plan(repo_root: Path, fixture_id: str) -> dict[str, Any]:
+    with connect(repo_root) as conn:
+        breadcrumbs = fixture_breadcrumbs(conn, fixture_id)
+        fixture = conn.execute("SELECT destination_defaults_json FROM fixtures WHERE fixture_id = ?", (fixture_id,)).fetchone()
+        defaults = _read_json(fixture["destination_defaults_json"], ["r2"])
+        rows = conn.execute("""
+          SELECT p.asset_id, COALESCE(d.pick_state, 'undecided') pick_state,
+                 COALESCE(d.metadata_state, 'unreviewed') metadata_state, x.destinations_json,
+                 x.version_hash
+          FROM fixture_asset_placements p
+          LEFT JOIN sidecar_decisions d ON d.asset_id = p.asset_id
+          LEFT JOIN fixture_asset_destinations x ON x.fixture_id = p.fixture_id AND x.asset_id = p.asset_id
+          WHERE p.fixture_id = ? AND p.state = 'active'
+          ORDER BY p.placed_at, p.asset_id
+        """, (fixture_id,)).fetchall()
+        items = []
+        for row in rows:
+            destinations = _read_json(row["destinations_json"], defaults)
+            version_hash = row["version_hash"] or editorial_version_hash(conn, row["asset_id"])
+            receipts = conn.execute("SELECT destination, status, object_key, checksum_sha256, verified_at, error_text FROM fixture_delivery_receipts WHERE fixture_id = ? AND asset_id = ? AND version_hash = ? ORDER BY updated_at", (fixture_id, row["asset_id"], version_hash)).fetchall()
+            receipt_map: dict[str, dict[str, Any]] = {}
+            for destination in destinations:
+                destination_receipts = [dict(item) for item in receipts if item["destination"] == destination]
+                actual = [item for item in destination_receipts if item.get("object_key")]
+                destination_verified = bool(actual) and all(item.get("status") == "verified" for item in actual)
+                errors = [str(item.get("error_text") or "") for item in destination_receipts if item.get("error_text")]
+                receipt_map[destination] = {
+                    "status": "verified" if destination_verified else ("failed" if errors else "pending"),
+                    "items": destination_receipts,
+                    "errorText": "; ".join(errors),
+                }
+            approved = row["pick_state"] == "picked" and row["metadata_state"] == "approved"
+            complete = approved and all(receipt_map.get(destination, {}).get("status") == "verified" for destination in destinations)
+            items.append({"assetId": row["asset_id"], "pickState": row["pick_state"], "metadataState": row["metadata_state"], "approved": approved, "destinations": destinations, "versionHash": version_hash, "receipts": receipt_map, "complete": complete})
+    return {"ok": True, "fixtureId": fixture_id, "breadcrumbs": breadcrumbs, "assetCount": len(items), "approvedCount": sum(item["approved"] for item in items), "completeCount": sum(item["complete"] for item in items), "items": items, "clientMessageSent": False}
+
+
+def migrate_la_concha_tree(repo_root: Path) -> dict[str, Any]:
+    with connect(repo_root) as conn:
+        root = create_fixture(repo_root, "La Concha", fixture_id="fixture-la-concha", tags=["real-estate"], template_key="real-estate", access_gallery_key="la-concha", legacy_identity={"track": "RE", "fixture": "La Concha"}, conn=conn)
+        apartment_1 = create_fixture(repo_root, "Apartment 1", parent_fixture_id=root["fixtureId"], fixture_id="fixture-la-concha-apartment-1", conn=conn)
+        apartment_2 = create_fixture(repo_root, "Apartment 2", parent_fixture_id=root["fixtureId"], fixture_id="fixture-la-concha-apartment-2", conn=conn)
+        common = create_fixture(repo_root, "Common", parent_fixture_id=root["fixtureId"], fixture_id="fixture-la-concha-common", conn=conn)
+        children = [create_fixture(repo_root, name, parent_fixture_id=common["fixtureId"], fixture_id=f"fixture-la-concha-{_slug(name)}", conn=conn) for name in ("Street", "Main lobby", "Pool", "Tennis court")]
+        conn.commit()
+    return {"ok": True, "root": root, "apartments": [apartment_1, apartment_2], "common": common, "commonChildren": children, "tree": fixture_tree(repo_root)}

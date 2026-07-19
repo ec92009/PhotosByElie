@@ -28,6 +28,7 @@
   const clearSearchButton = $("[data-sidecar-search-clear]");
 
   const storageKey = "photosByElie.sidecar.window.v4";
+  const fixturePoolId = new URL(window.location.href).searchParams.get("pool") || "";
   const pageConfigs = {
     culling: {
       eyebrow: "Culling",
@@ -540,6 +541,7 @@
       pickState: sidecar.pickState || "undecided",
       metadataState: sidecar.metadataState || "unreviewed",
       title: sidecar.title || "",
+      caption: sidecar.caption || "",
       keywords: Array.isArray(sidecar.keywords) ? sidecar.keywords.map(String) : [],
       reworkCategory: sidecar.reworkCategory || "",
       reworkComment: sidecar.reworkComment || "",
@@ -1000,6 +1002,7 @@
     const metadata = item?.applePhotosMetadata || {};
     return {
       title: metadata.seedTitle || metadata.title || "",
+      caption: metadata.caption || "",
       keywords: cleanKeywordList(metadata.seedKeywords?.length ? metadata.seedKeywords : metadata.keywords || []),
       locationLabel: metadata.locationLabel || "",
       locationKeywords: cleanKeywordList(metadata.locationKeywords || []),
@@ -1011,6 +1014,7 @@
     if (hasLocalMetadataDecision(sidecar)) {
       return {
         title: sidecar.title || "",
+        caption: sidecar.caption || "",
         keywords: cleanKeywordList(Array.isArray(sidecar.keywords) ? sidecar.keywords : []),
       };
     }
@@ -1021,6 +1025,7 @@
     const values = effectiveMetadataForItem(state.items[index]);
     return {
       title: values.title || "",
+      caption: values.caption || "",
       keywords: cleanKeywordList(values.keywords || []),
     };
   };
@@ -1097,6 +1102,7 @@
     const data = new FormData(form);
     return {
       title: String(data.get("title") || "").trim(),
+      caption: String(data.get("caption") || "").trim(),
       keywords: parseKeywords(data.get("keywords") || ""),
       reworkCategory: reworkCategoryValue(checkedReworkCategories(form)),
       reworkComment: String(data.get("reworkComment") || "").trim(),
@@ -1121,6 +1127,7 @@
       assetId: itemId(state.items[index]),
       action: "metadata-rework",
       title: values.title,
+      caption: values.caption,
       keywords: values.keywords,
       reworkCategory: overrides.reworkCategory ?? values.reworkCategory,
       reworkComment: overrides.reworkComment ?? values.reworkComment,
@@ -1393,6 +1400,7 @@
               <button class="sidecar-propagate-field" type="button" data-sidecar-propagate-field="title" data-sidecar-index="${index}" title="Propagate this title to current and following picked rows in the same two-hour shoot window" aria-label="Propagate title">↓</button>
             </span>
             <input type="text" name="title" value="${escapeHtml(metadataValues.title || "")}" placeholder="Title for Photos and future catalog"/>
+            <textarea name="caption" placeholder="Caption / description for Photos and delivery">${escapeHtml(metadataValues.caption || "")}</textarea>
           </label>
           <label class="sidecar-editing-field">
             <span class="sidecar-editing-field-heading">
@@ -1514,6 +1522,8 @@
       const metadataValues = effectiveMetadataForItem(item);
       const titleInput = form.querySelector('[name="title"]');
       if (titleInput && document.activeElement !== titleInput) titleInput.value = metadataValues.title || "";
+      const captionInput = form.querySelector('[name="caption"]');
+      if (captionInput && document.activeElement !== captionInput) captionInput.value = metadataValues.caption || "";
       const keywordsInput = form.querySelector('[name="keywords"]');
       if (keywordsInput && document.activeElement !== keywordsInput) keywordsInput.value = (metadataValues.keywords || []).join(", ");
       const note = form.querySelector("[data-sidecar-rework-comment]");
@@ -1898,6 +1908,7 @@
         assetId: item.assetId,
         action: "metadata",
         title: previous.title || "",
+        caption: previous.caption || "",
         keywords: Array.isArray(previous.keywords) ? previous.keywords : [],
         metadataState: previous.metadataState || "unreviewed",
         reworkCategory: previous.reworkCategory || "",
@@ -2059,8 +2070,8 @@
     const indexes = selectedIndexes();
     if (!indexes.length) return;
     if (indexes.length === 1) {
-      const { title, keywords } = rowMetadataValues(indexes[0]);
-      await postDecision({ action: "approve", title, keywords });
+      const { title, caption, keywords } = rowMetadataValues(indexes[0]);
+      await postDecision({ action: "approve", title, caption, keywords });
       return;
     }
     const decisions = indexes.map((index) => ({
@@ -2123,6 +2134,7 @@
     const pickStates = isReviewPage() ? ["picked"] : (filters.pickStates || []);
     pickStates.forEach((value) => params.append("pickState", value));
     if (state.searchQuery) params.set("q", state.searchQuery);
+    if (fixturePoolId) params.set("poolId", fixturePoolId);
     return params;
   };
 
@@ -2174,6 +2186,13 @@
     let nextSourceOffset = Number(payload.nextOffset || (effectiveOffset + windowItems.length));
     state.items = windowItems;
     state.summary = payload.sidecarSummary || state.summary;
+    if (payload.fixtureScope) {
+      state.fixtureScope = payload.fixtureScope;
+      const breadcrumbs = (payload.fixtureScope.breadcrumbs || []).map((item) => item.name).filter(Boolean);
+      if (surfaceEyebrow) surfaceEyebrow.textContent = "Fixture pool";
+      if (surfaceTitle) surfaceTitle.textContent = breadcrumbs.join(" / ") || payload.fixtureScope.name || "Fixture pool";
+      setStatus(`Fixture-scoped Sidecar: ${Number(payload.fixtureScope.snapshotAssetCount || 0).toLocaleString()} snapshotted candidate${Number(payload.fixtureScope.snapshotAssetCount || 0) === 1 ? "" : "s"}. Existing Sidecar controls and decisions are unchanged.`);
+    }
     state.hasWindow = true;
     state.filteredIndexedCount = filteredCount;
     if ((selectionBeforeLoad.selectedAssetIds || []).length || selectionBeforeLoad.selectedIndex >= 0) {

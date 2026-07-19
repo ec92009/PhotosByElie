@@ -15,13 +15,35 @@ for remote execution.
 - Public site: `https://photos-by-elie.com/`
 - Local preview: `http://localhost:8000/`
 - Owner intake URL: `https://photos-by-elie.com/owner.html`
-- Current visible build: `v141.0`
+- Current visible build: `v141.3`
 - Sidecar local build: `v126.6`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
 - `owner.html` is the authenticated cloud Owner surface. `new-owner.html` is a
   compatibility redirect back to the canonical Owner URL; the localhost Owner
   Python web UI is retired as the normal control plane.
+- The new Build a Fixture card is the canonical intake/orchestration surface.
+  It creates recursive root/child fixtures, searches the indexed library without
+  mutation, snapshots stable culling pools, opens the existing Sidecar with only
+  its candidate scope changed, and reviews versioned R2/Apple Photos receipts.
+  The old Apple Photos to Real Estate card is collapsed as a compatibility lane.
+  Architecture and safety boundaries are in
+  `docs/architecture/universal-fixture-pipeline.md`.
+- The live La Concha migration now has Apartment 1 (70 sources), Apartment 2
+  (66), and Common children Street (3), Main lobby (3), Pool (5), and Tennis
+  court (3). Those are immutable local snapshot pools backed by the supported
+  Apple Photos bridge refresh. Corine's existing gallery/access were not changed
+  and she was not messaged.
+- Apple Photos write-back now carries approved title, caption, natural keywords,
+  `PBE-Rating-N`, optional `PBE-Color-X`, `PBE-Approved`, and each
+  `PBE-Fixture-ID:<id>`. Commit requires picked plus metadata-approved plus a
+  same-editorial-version verified R2 receipt; Photos is re-read before its own
+  receipt is verified. A live read-only JXA rehearsal successfully resolved the
+  July La Concha asset `D5H_3429.jpg` by its Photos local identifier.
+- PBE-117 parity rehearsal used one live photo and one live video in a two-item
+  fixture pool. The scoped endpoint returned exactly those two media types while
+  the shared page, shortcuts, preview, decision writer, and upload bridge stayed
+  unchanged. Full regression: 91 Node tests and 66 Python tests passed.
 - Owner routes selected Apple Photos into a persistent local hierarchy
   of `RE / Fixture / Sub-fixture` (for example `RE / La Concha / Apartment 1`).
   The explicit sub-fixture selector offers Apartment 1, Apartment 2, Street,

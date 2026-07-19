@@ -45,9 +45,8 @@ class ApplePhotosAdapter:
 function run(argv) {
   const photos = Application('Photos');
   const id = String(argv[0] || '');
-  const matches = photos.mediaItems.whose({id: id})();
-  if (!matches.length) throw new Error(`Apple Photos asset not found: ${id}`);
-  const item = matches[0];
+  const item = photos.mediaItems.byId(id);
+  if (item.id() !== id) throw new Error(`Apple Photos asset not found: ${id}`);
   return JSON.stringify({title: item.name() || '', caption: item.description() || '', keywords: item.keywords() || []});
 }
 """
@@ -56,9 +55,8 @@ function run(argv) {
   const photos = Application('Photos');
   const id = String(argv[0] || '');
   const payload = JSON.parse(String(argv[1] || '{}'));
-  const matches = photos.mediaItems.whose({id: id})();
-  if (!matches.length) throw new Error(`Apple Photos asset not found: ${id}`);
-  const item = matches[0];
+  const item = photos.mediaItems.byId(id);
+  if (item.id() !== id) throw new Error(`Apple Photos asset not found: ${id}`);
   item.name = String(payload.title || '');
   item.description = String(payload.caption || '');
   item.keywords = Array.isArray(payload.keywords) ? payload.keywords.map(String) : [];
@@ -70,9 +68,8 @@ function run(argv) {
   const photos = Application('Photos');
   const id = String(argv[0] || '');
   const payload = JSON.parse(String(argv[1] || '{}'));
-  const matches = photos.mediaItems.whose({id: id})();
-  if (!matches.length) throw new Error(`Apple Photos asset not found: ${id}`);
-  const item = matches[0];
+  const item = photos.mediaItems.byId(id);
+  if (item.id() !== id) throw new Error(`Apple Photos asset not found: ${id}`);
   const before = {
     title: item.name() || '',
     caption: item.description() || '',
@@ -114,9 +111,8 @@ function run(argv) {
   const applyOne = payload => {
     const id = String(payload.assetId || '');
     try {
-      const matches = photos.mediaItems.whose({id: id})();
-      if (!matches.length) throw new Error(`Apple Photos asset not found: ${id}`);
-      const item = matches[0];
+      const item = photos.mediaItems.byId(id);
+      if (item.id() !== id) throw new Error(`Apple Photos asset not found: ${id}`);
       const before = {
         title: item.name() || '',
         caption: item.description() || '',

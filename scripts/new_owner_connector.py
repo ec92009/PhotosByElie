@@ -559,10 +559,10 @@ def _load_local_modules(repo_root: Path):
     scripts_path = str(repo_root / "scripts")
     if scripts_path not in sys.path:
         sys.path.insert(0, scripts_path)
-    from local_server import apply_photo_action, new_owner_connector_result, new_owner_sidecar_decision_result
+    from local_server import apply_public_photo_moderation, new_owner_connector_result, new_owner_sidecar_decision_result
     from sidecar_server import _preview_cache_path, _run_apple_photos_bridge_app_task
 
-    return new_owner_connector_result, new_owner_sidecar_decision_result, _preview_cache_path, _run_apple_photos_bridge_app_task, apply_photo_action
+    return new_owner_connector_result, new_owner_sidecar_decision_result, _preview_cache_path, _run_apple_photos_bridge_app_task, apply_public_photo_moderation
 
 
 def _preview_data_url(repo_root: Path, item: dict, preview_cache_path, run_bridge_task) -> tuple[str, str]:
@@ -739,7 +739,7 @@ def execute_action(config: ConnectorConfig, action: dict) -> dict:
             "sync": indexed.get("sync") or {},
             "completedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         }
-    connector_result, decision_result, preview_cache_path, run_bridge_task, apply_photo_action = _load_local_modules(config.repo_root)
+    connector_result, decision_result, preview_cache_path, run_bridge_task, apply_public_photo_moderation = _load_local_modules(config.repo_root)
     if action_type == "photo-moderation":
         payload = action.get("payload") if isinstance(action.get("payload"), dict) else {}
         operation = str(payload.get("operation") or "").strip().lower()
@@ -753,19 +753,10 @@ def execute_action(config: ConnectorConfig, action: dict) -> dict:
             photo_ids.insert(0, single_photo_id)
         if not photo_ids or len(photo_ids) > 500:
             raise RuntimeError("photo-moderation requires 1 to 500 photo IDs")
-        if operation == "hide":
-            result = apply_photo_action(config.repo_root, {"action": "hide", "photo_id": photo_ids[0]})
-        elif operation == "hide-many":
-            result = apply_photo_action(config.repo_root, {"action": "hide-many", "photo_ids": photo_ids})
-        elif operation == "undo-hide":
-            result = apply_photo_action(config.repo_root, {"action": "undo-hide", "photo_id": photo_ids[0]})
-        elif operation == "undo-hide-many":
-            items = []
-            for photo_id in photo_ids:
-                items.append(apply_photo_action(config.repo_root, {"action": "undo-hide", "photo_id": photo_id}))
-            result = {"ok": True, "action": operation, "photo_ids": photo_ids, "items": items}
-        else:
-            raise RuntimeError(f"Unsupported photo moderation operation: {operation or 'missing'}")
+        result = apply_public_photo_moderation(
+            config.repo_root,
+            {"operation": operation, "photo_ids": photo_ids},
+        )
         return {
             "connectorId": config.connector_id,
             "type": action_type,
@@ -846,6 +837,9 @@ def main() -> int:
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG_PATH)
     parser.add_argument("--once", action="store_true", help="Poll once and exit.")
     args = parser.parse_args()
+    # launchd starts with a deliberately small PATH. Keep the normal local
+    # toolchain discoverable to child Sidecar and maintenance processes.
+    os.environ["PATH"] = _sidecar_helper_env()["PATH"]
     config = load_config(args.config.expanduser())
     client = WorkerClient(config)
     if not args.once:

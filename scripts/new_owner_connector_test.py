@@ -124,42 +124,39 @@ class UploadRegistrationScopeTest(unittest.TestCase):
     def test_photo_moderation_batches_public_photo_ids(self):
         calls = []
 
-        def apply_photo_action(_repo_root, payload):
+        def apply_public_photo_moderation(_repo_root, payload):
             calls.append(payload)
-            return {"ok": True, "action": payload["action"], "photo_ids": payload.get("photo_ids", [])}
+            return {"ok": True, "action": payload["operation"], "photo_ids": payload.get("photo_ids", [])}
 
         with patch(
             "scripts.new_owner_connector._load_local_modules",
-            return_value=(None, None, None, None, apply_photo_action),
+            return_value=(None, None, None, None, apply_public_photo_moderation),
         ):
             result = execute_action(self.config, {
                 "type": "photo-moderation",
                 "payload": {"operation": "hide-many", "photoIds": ["photo-a", "photo-b"]},
             })
 
-        self.assertEqual(calls, [{"action": "hide-many", "photo_ids": ["photo-a", "photo-b"]}])
+        self.assertEqual(calls, [{"operation": "hide-many", "photo_ids": ["photo-a", "photo-b"]}])
         self.assertEqual(result["photoIds"], ["photo-a", "photo-b"])
 
     def test_photo_moderation_group_undo_restores_each_photo(self):
         calls = []
 
-        def apply_photo_action(_repo_root, payload):
+        def apply_public_photo_moderation(_repo_root, payload):
             calls.append(payload)
-            return {"ok": True, "action": payload["action"], "photo_id": payload["photo_id"]}
+            return {"ok": True, "action": payload["operation"], "photo_ids": payload["photo_ids"]}
 
         with patch(
             "scripts.new_owner_connector._load_local_modules",
-            return_value=(None, None, None, None, apply_photo_action),
+            return_value=(None, None, None, None, apply_public_photo_moderation),
         ):
             result = execute_action(self.config, {
                 "type": "photo-moderation",
                 "payload": {"operation": "undo-hide-many", "photoIds": ["photo-a", "photo-b"]},
             })
 
-        self.assertEqual(calls, [
-            {"action": "undo-hide", "photo_id": "photo-a"},
-            {"action": "undo-hide", "photo_id": "photo-b"},
-        ])
+        self.assertEqual(calls, [{"operation": "undo-hide-many", "photo_ids": ["photo-a", "photo-b"]}])
         self.assertEqual(result["result"]["action"], "undo-hide-many")
 
 

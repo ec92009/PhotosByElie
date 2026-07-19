@@ -11061,6 +11061,77 @@ def apply_real_estate_owner_action(repo_root: Path, payload: dict) -> dict:
     raise ValueError("unsupported real-estate owner action")
 
 
+def apply_public_photo_moderation(repo_root: Path, payload: dict) -> dict:
+    """Record public Owner hide/undo decisions without rebuilding static output.
+
+    GitHub Pages cannot be mutated by the Max connector. Public Owner culling
+    therefore records the durable lifecycle decision immediately; the normal
+    catalog publication pipeline consumes that state on its next publish.
+    """
+    operation = str(payload.get("operation") or payload.get("action") or "").strip().lower()
+    photo_ids = _normalized_photo_ids(payload.get("photo_ids") or payload.get("photoIds") or payload.get("photo_id"))
+    if operation not in {"hide", "hide-many", "undo-hide", "undo-hide-many"}:
+        raise ValueError("unsupported public photo moderation operation")
+    if not photo_ids or len(photo_ids) > 500:
+        raise ValueError("public photo moderation requires 1 to 500 photo ids")
+
+    hidden_before = _lifecycle_hidden_ids(repo_root)
+    if operation in {"hide", "hide-many"}:
+        hidden_at = datetime.now(timezone.utc).isoformat()
+        entries = []
+        already_hidden = []
+        not_found = []
+        manifest_source_paths = _source_paths_from_manifest_rows_for_ids(repo_root, set(photo_ids))
+        for photo_id in photo_ids:
+            if photo_id in hidden_before:
+                already_hidden.append(photo_id)
+                continue
+            fallback = _catalog_photo_for_hidden(repo_root, photo_id)
+            if not fallback:
+                not_found.append(photo_id)
+                continue
+            source_slug, source_photo = fallback
+            entries.append(
+                _hidden_lifecycle_entry(
+                    repo_root,
+                    source_photo,
+                    photo_id,
+                    "expo",
+                    source_slug,
+                    hidden_at,
+                    manifest_source_paths.get(photo_id, []),
+                )
+            )
+        if not entries and not already_hidden:
+            raise ValueError(f"photo not found in SQLite catalog: {photo_ids[0]}")
+        lifecycle = _record_hidden_lifecycle(repo_root, entries)
+        hidden_ids = sorted(hidden_before | {entry["id"] for entry in entries})
+        return {
+            "ok": True,
+            "action": operation,
+            "photo_ids": photo_ids,
+            "hidden_ids": hidden_ids,
+            "already_hidden": already_hidden,
+            "not_found": not_found,
+            "lifecycle": lifecycle,
+            "catalog_publish_pending": True,
+        }
+
+    restored_ids = [photo_id for photo_id in photo_ids if photo_id in hidden_before]
+    already_active = [photo_id for photo_id in photo_ids if photo_id not in hidden_before]
+    lifecycle = _record_active_lifecycle(repo_root, restored_ids)
+    return {
+        "ok": True,
+        "action": operation,
+        "photo_ids": photo_ids,
+        "restored_ids": restored_ids,
+        "already_active": already_active,
+        "hidden_ids": sorted(hidden_before - set(restored_ids)),
+        "lifecycle": lifecycle,
+        "catalog_publish_pending": True,
+    }
+
+
 def apply_photo_action(repo_root: Path, payload: dict) -> dict:
     action = payload.get("action")
     photo_id = payload.get("photo_id")

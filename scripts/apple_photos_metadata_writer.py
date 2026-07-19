@@ -27,13 +27,13 @@ class PhotosMetadataAccess(Protocol):
     def write(self, asset_id: str, title: str, caption: str, keywords: list[str]) -> None: ...
 
 
-def _run_jxa(source: str, *args: str) -> str:
+def _run_jxa(source: str, *args: str, timeout: float = 60) -> str:
     result = subprocess.run(
         ["osascript", "-l", "JavaScript", "-e", source, *args],
         check=False,
         capture_output=True,
         text=True,
-        timeout=60,
+        timeout=timeout,
     )
     if result.returncode:
         raise RuntimeError((result.stderr or result.stdout or "Apple Photos automation failed").strip())
@@ -190,7 +190,14 @@ function run(argv) {
 
     def apply_many(self, requests: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Apply a verified metadata batch in one Photos automation process."""
-        payload = json.loads(_run_jxa(self._APPLY_MANY, json.dumps(requests, ensure_ascii=False)) or "[]")
+        payload = json.loads(
+            _run_jxa(
+                self._APPLY_MANY,
+                json.dumps(requests, ensure_ascii=False),
+                timeout=max(60, len(requests) * 6),
+            )
+            or "[]"
+        )
         return [dict(item) for item in payload]
 
 

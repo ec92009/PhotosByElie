@@ -757,11 +757,20 @@ def _verified_upload_results(value: Any) -> tuple[list[dict[str, Any]], str]:
             return [], "an R2 upload result is malformed"
         checksum = str(result.get("checksumSha256") or "")
         remote_checksum = str(result.get("remoteChecksumSha256") or "")
+        local_md5 = str(result.get("checksumMd5") or "").strip().lower()
+        remote_etag_md5 = str(result.get("remoteEtagMd5") or "").strip().lower()
+        verification_method = str(result.get("verificationMethod") or "")
+        checksum_verified = bool(checksum and remote_checksum == checksum)
+        etag_verified = bool(
+            verification_method == "etag-md5-content-length"
+            and checksum
+            and local_md5
+            and remote_etag_md5 == local_md5
+        )
         if (
             str(result.get("status") or "") != "uploaded"
             or not bool(result.get("remoteVerified"))
-            or not checksum
-            or remote_checksum != checksum
+            or not (checksum_verified or etag_verified)
             or not str(result.get("key") or "")
         ):
             return [], "not every R2 upload result is checksum-verified"
@@ -775,6 +784,7 @@ def plan_upload_run_adoption(
     fixture_id: str,
     *,
     historical_backfill: bool = False,
+    revalidate_recorded_content: bool = False,
     asset_ids: Iterable[str] = (),
 ) -> dict[str, Any]:
     """Dry-run adoption of completed Upload Bridge rows into one explicit fixture."""
@@ -866,10 +876,21 @@ def plan_upload_run_adoption(
                 not run_started_at
                 or str(row["asset_updated_at"] or "") > run_started_at
                 or str(row["decision_updated_at"] or "") > run_started_at
-            ):
+            ) and not revalidate_recorded_content:
                 reason = "editorial state changed after this historical run started"
-            elif not historical and row["captured_version_hash"] != current_version:
+            elif (
+                not historical
+                and row["captured_version_hash"] != current_version
+                and not revalidate_recorded_content
+            ):
                 reason = "editorial state changed after upload planning"
+            recorded_content_revalidated = bool(
+                revalidate_recorded_content
+                and (
+                    historical
+                    or row["captured_version_hash"] != current_version
+                )
+            )
             item = {
                 "runItemId": row["run_item_id"],
                 "assetId": row["asset_id"],
@@ -878,6 +899,8 @@ def plan_upload_run_adoption(
                 "title": row["title"] or "",
                 "versionHash": current_version,
                 "historicalBackfill": historical,
+                "recordedContentRevalidated": recorded_content_revalidated,
+                "capturedVersionHash": row["captured_version_hash"] or "",
                 "uploadResults": results,
             }
             if reason:
@@ -898,6 +921,7 @@ def plan_upload_run_adoption(
         "eligibleCount": len(eligible),
         "blockedCount": len(blocked),
         "historicalBackfill": historical_backfill,
+        "revalidateRecordedContent": revalidate_recorded_content,
         "items": eligible,
         "blocked": blocked,
         "applied": False,
@@ -910,6 +934,7 @@ def adopt_upload_run(
     fixture_id: str,
     *,
     historical_backfill: bool = False,
+    revalidate_recorded_content: bool = False,
     asset_ids: Iterable[str] = (),
     actor: str = "owner",
 ) -> dict[str, Any]:
@@ -919,6 +944,7 @@ def adopt_upload_run(
         run_id,
         fixture_id,
         historical_backfill=historical_backfill,
+        revalidate_recorded_content=revalidate_recorded_content,
         asset_ids=asset_ids,
     )
     if plan["blockedCount"]:
@@ -993,11 +1019,17 @@ def adopt_upload_run(
                         "runId": run_id,
                         "runItemId": item["runItemId"],
                         "historicalBackfill": bool(item["historicalBackfill"]),
+                        "recordedContentRevalidated": bool(item["recordedContentRevalidated"]),
+                        "capturedVersionHash": item["capturedVersionHash"],
+                        "adoptedVersionHash": item["versionHash"],
                         "bucket": result.get("bucket"),
                         "bytes": result.get("bytes"),
                         "contentType": result.get("contentType"),
                         "remoteVerified": True,
                         "remoteChecksumSha256": result.get("remoteChecksumSha256"),
+                        "verificationMethod": result.get("verificationMethod") or "sha256-download",
+                        "checksumMd5": result.get("checksumMd5") or "",
+                        "remoteEtagMd5": result.get("remoteEtagMd5") or "",
                     },
                     conn=conn,
                 )

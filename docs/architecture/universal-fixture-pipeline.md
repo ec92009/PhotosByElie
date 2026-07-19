@@ -73,13 +73,31 @@ fixture, previews the exact checksum-verified completed rows, selects only the
 items belonging to that fixture, and commits adoption separately. Cancelled
 runs adopt completed uploads only; unprocessed planned rows are excluded. The
 adoption creates reversible placements, configures `r2` plus `apple_photos`, and
-reconstructs verified R2 receipts from the run ledger. The older July 19 run
-predates version capture, so it additionally requires an explicit historical
-backfill acknowledgement and is eligible only when the indexed asset and
-editorial decision timestamps both predate the run.
+reconstructs verified R2 receipts from the run ledger. Historical runs that
+predate version capture require an explicit historical-backfill acknowledgement.
+If editorial state changed after upload, the normal path stays blocked. The
+supported recovery drain may accept the current version only after matching
+every immutable R2 object to the exact retained local upload artifact. It uses
+a fresh signed R2 HEAD plus content length and single-PUT ETag/MD5, falling back
+to a fresh R2 download and SHA-256 comparison when needed. That evidence is
+persisted in the upload ledger before fixture adoption; the guard is not simply
+disabled.
 
 Photos is then written, re-read, and verified before its receipt becomes
 verified. Partial failures remain independently retryable.
+
+For the existing public Expo backlog, the resumable connector command is:
+
+```bash
+PYTHONPATH=scripts python3 scripts/fixture_r2_apple_giveback_drain.py \
+  --commit --checkpoint-every 100
+```
+
+It adopts only unplaced, picked, metadata-approved `expo/` uploads into the
+public Expo fixture, works one asset at a time so the `PBE Approved` Smart Album
+shows real progress, skips same-version Apple receipts, and stops after repeated
+failures. Each 100-photo milestone and each independently retryable failure is
+written to an ignored append-only JSONL log under `.review-logs/`.
 
 When Sidecar is opened from an immutable fixture pool, the destination is
 already known. Its guarded batch executor therefore streams one asset at a

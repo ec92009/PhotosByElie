@@ -1863,6 +1863,7 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
                 str(manifest.get("runId") or ""),
                 str(manifest.get("fixtureId") or ""),
                 historical_backfill=bool(manifest.get("historicalBackfill")),
+                revalidate_recorded_content=bool(manifest.get("revalidateRecordedContent")),
                 asset_ids=manifest.get("assetIds") or [],
             ),
         })
@@ -1874,6 +1875,7 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
                 str(manifest.get("runId") or ""),
                 str(manifest.get("fixtureId") or ""),
                 historical_backfill=bool(manifest.get("historicalBackfill")),
+                revalidate_recorded_content=bool(manifest.get("revalidateRecordedContent")),
                 asset_ids=manifest.get("assetIds") or [],
                 actor="owner-connector",
             ),

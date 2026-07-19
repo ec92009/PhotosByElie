@@ -605,6 +605,15 @@ title. Rows with titles such as `2026`, `WhatsApp`, `DJI Album`, or blank titles
 and no gallery signal are blocked from bridge queueing/upload and surfaced as
 metadata-blocked in the Upload Bridge panel.
 
+Historical public Upload Bridge rows can be resumed through fixture adoption
+and verified Apple Photos give-back with
+`PYTHONPATH=scripts python3 scripts/fixture_r2_apple_giveback_drain.py --commit --checkpoint-every 100`.
+The drain does not trust legacy status alone: it matches each retained local
+upload artifact to the live immutable R2 object, persists the checksum evidence,
+adopts the asset into `fixture-expo`, then writes and rereads Apple Photos before
+counting the item. It is idempotent and reports verified milestones, not
+attempted writes.
+
 ```bash
 python3 scripts/sidecar_upload_bridge.py --limit 20
 python3 scripts/sidecar_upload_bridge.py --json --output assets/owner-actions/sidecar-upload-runs/dry-run.json

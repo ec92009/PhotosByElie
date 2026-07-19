@@ -587,6 +587,7 @@ def s3_signed_request(
     extra_headers: dict[str, str] | None = None,
     timeout: float = 120.0,
     download_path: Path | None = None,
+    response_headers: dict[str, str] | None = None,
 ) -> tuple[bool, int, str]:
     host = normalize_s3_host(endpoint, account_id)
     canonical_uri = quote_s3_path(path.strip("/"))
@@ -638,6 +639,8 @@ def s3_signed_request(
         request_body = body if body or method in {"POST", "PUT"} else None
         request = urllib.request.Request(url, data=request_body, headers=request_headers, method=method)
         with urllib.request.urlopen(request, timeout=timeout) as response:
+            if response_headers is not None:
+                response_headers.update({str(name).lower(): str(value) for name, value in response.headers.items()})
             if download_path is not None:
                 download_path.parent.mkdir(parents=True, exist_ok=True)
                 with download_path.open("wb") as output_file:

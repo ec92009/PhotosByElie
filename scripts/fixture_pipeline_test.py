@@ -260,6 +260,43 @@ class FixturePipelineTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "archived"):
             plan_upload_run_adoption(self.root, run_id, fixture["fixtureId"])
 
+    def test_upload_run_adoption_can_accept_recorded_checksum_evidence_after_drift(self):
+        fixture = create_fixture(self.root, "Upload destination")
+        run_id = self._insert_upload_run(captured_hash=True)
+        record_decision(
+            self.root,
+            {
+                "assetId": "asset-1",
+                "action": "metadata",
+                "metadataState": "approved",
+                "caption": "Changed after planning",
+            },
+        )
+        plan = plan_upload_run_adoption(
+            self.root,
+            run_id,
+            fixture["fixtureId"],
+            revalidate_recorded_content=True,
+            asset_ids=["asset-1"],
+        )
+        self.assertEqual(plan["eligibleCount"], 1)
+        self.assertTrue(plan["items"][0]["recordedContentRevalidated"])
+        adopted = adopt_upload_run(
+            self.root,
+            run_id,
+            fixture["fixtureId"],
+            revalidate_recorded_content=True,
+            asset_ids=["asset-1"],
+        )
+        self.assertEqual(adopted["r2ReceiptCount"], 1)
+        with connect(self.root) as conn:
+            receipt = conn.execute(
+                """SELECT verification_json FROM fixture_delivery_receipts
+                   WHERE fixture_id = ? AND asset_id = 'asset-1' AND destination = 'r2'""",
+                (fixture["fixtureId"],),
+            ).fetchone()
+        self.assertTrue(json.loads(receipt["verification_json"])["recordedContentRevalidated"])
+
 
 if __name__ == "__main__":
     unittest.main()

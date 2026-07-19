@@ -81,6 +81,15 @@ editorial decision timestamps both predate the run.
 Photos is then written, re-read, and verified before its receipt becomes
 verified. Partial failures remain independently retryable.
 
+When Sidecar is opened from an immutable fixture pool, the destination is
+already known. Its guarded batch executor therefore streams one asset at a
+time: materialize, upload and checksum-verify R2, adopt the exact run item into
+the pool's fixture, preflight the Photos metadata change, write and re-read
+Photos, then begin the next asset. The `PBE Approved` Smart Album can grow while
+the run is active. A generic unscoped Sidecar cannot start this composite
+delivery because it would have to guess a fixture; its already-uploaded runs
+continue to use explicit Owner adoption.
+
 The Photos dry-run reads the current Photos title, caption, and keywords and
 reports exact before/after changes. It never writes. Commit is a separate,
 explicit operation.

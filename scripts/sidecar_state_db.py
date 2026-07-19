@@ -1773,10 +1773,17 @@ def empty_wastebasket(repo_root: Path) -> dict[str, Any]:
     return {"ok": True, "count": len(items), "items": items, "summary": summary(repo_root)}
 
 
-def _upload_bridge_rows(conn: sqlite3.Connection, limit: int | None = None, *, include_blocked: bool = False) -> list[sqlite3.Row]:
+def _upload_bridge_rows(
+    conn: sqlite3.Connection,
+    limit: int | None = None,
+    *,
+    include_blocked: bool = False,
+    asset_ids: Iterable[str] | None = None,
+) -> list[sqlite3.Row]:
+    scoped_ids = None if asset_ids is None else {str(asset_id) for asset_id in asset_ids if str(asset_id)}
     limit_sql = ""
     params: tuple[Any, ...] = ()
-    if limit is not None:
+    if limit is not None and scoped_ids is None:
         limit_sql = "LIMIT ?"
         params = (max(1, min(int(limit or 500), 5000)),)
     blocked_sql = "" if include_blocked else """
@@ -1805,14 +1812,30 @@ def _upload_bridge_rows(conn: sqlite3.Connection, limit: int | None = None, *, i
         """,
         params,
     ).fetchall()
-    if include_blocked:
-        return rows
-    return [row for row in rows if _upload_bridge_metadata_ready(row)]
+    if scoped_ids is not None:
+        rows = [row for row in rows if str(row["asset_id"]) in scoped_ids]
+    if not include_blocked:
+        rows = [row for row in rows if _upload_bridge_metadata_ready(row)]
+    return rows[:limit] if limit is not None else rows
 
 
-def _upload_bridge_block_summary(conn: sqlite3.Connection) -> dict[str, Any]:
+def _upload_bridge_block_summary(
+    conn: sqlite3.Connection,
+    asset_ids: Iterable[str] | None = None,
+) -> dict[str, Any]:
+    scoped_ids = None if asset_ids is None else [
+        str(asset_id) for asset_id in asset_ids if str(asset_id)
+    ]
+    scope_sql = ""
+    params: list[Any] = []
+    if scoped_ids is not None:
+        if scoped_ids:
+            scope_sql = f"AND b.asset_id IN ({','.join('?' for _ in scoped_ids)})"
+            params.extend(scoped_ids)
+        else:
+            scope_sql = "AND 0"
     row = conn.execute(
-        """
+        f"""
         SELECT
           COUNT(*) AS blocked_count,
           COALESCE(SUM(b.failure_count), 0) AS failure_count,
@@ -1825,7 +1848,9 @@ def _upload_bridge_block_summary(conn: sqlite3.Connection) -> dict[str, Any]:
           AND d.pick_state = 'picked'
           AND d.metadata_state = 'approved'
           AND t.asset_id IS NULL
-        """
+          {scope_sql}
+        """,
+        params,
     ).fetchone()
     return {
         "blockedExportFailureCount": int(row["blocked_count"] or 0),
@@ -1904,12 +1929,12 @@ def _upload_bridge_metadata_ready(row: sqlite3.Row) -> bool:
     return _upload_bridge_metadata_block_reason(row) == ""
 
 
-def _mock_upload_summary(conn: sqlite3.Connection) -> dict[str, Any]:
+def _mock_upload_summary(conn: sqlite3.Connection, asset_ids: Iterable[str] | None = None) -> dict[str, Any]:
     """Summarize rows queued across the Sidecar upload bridge."""
-    rows = _upload_bridge_rows(conn)
-    all_rows = _upload_bridge_rows(conn, include_blocked=True)
+    rows = _upload_bridge_rows(conn, asset_ids=asset_ids)
+    all_rows = _upload_bridge_rows(conn, include_blocked=True, asset_ids=asset_ids)
     metadata_blocked_rows = [row for row in all_rows if not _upload_bridge_metadata_ready(row)]
-    block_summary = _upload_bridge_block_summary(conn)
+    block_summary = _upload_bridge_block_summary(conn, asset_ids=asset_ids)
     planned_key_sets: dict[str, list[dict[str, str]]] = {}
     all_planned_keys: list[dict[str, str]] = []
     for row in rows:
@@ -1960,11 +1985,15 @@ def _mock_upload_summary(conn: sqlite3.Connection) -> dict[str, Any]:
     }
 
 
-def upload_bridge_plan(repo_root: Path, limit: int = 500) -> dict[str, Any]:
+def upload_bridge_plan(
+    repo_root: Path,
+    limit: int = 500,
+    asset_ids: Iterable[str] | None = None,
+) -> dict[str, Any]:
     """Return the dry-run plan for rows already queued across the upload bridge."""
     safe_limit = max(1, min(int(limit or 500), 5000))
     with connect(repo_root) as conn:
-        rows = _upload_bridge_rows(conn, safe_limit)
+        rows = _upload_bridge_rows(conn, safe_limit, asset_ids=asset_ids)
         planned_key_sets: dict[str, list[dict[str, str]]] = {}
         photo_ids: dict[str, str] = {}
         all_planned_keys: list[dict[str, str]] = []
@@ -1975,19 +2004,22 @@ def upload_bridge_plan(repo_root: Path, limit: int = 500) -> dict[str, Any]:
             planned_key_sets[asset_id] = keys
             all_planned_keys.extend(keys)
         current_r2 = _current_r2_objects_for_plan(conn, all_planned_keys)
-        total_queued = conn.execute(
-            """
-            SELECT count(*) AS total
-            FROM sidecar_mock_uploads AS m
-            JOIN sidecar_decisions AS d ON d.asset_id = m.asset_id
-            LEFT JOIN sidecar_tombstones AS t ON t.asset_id = m.asset_id AND t.tombstone_state = 'active'
-            WHERE m.mock_state = 'active'
-              AND d.pick_state = 'picked'
-              AND d.metadata_state = 'approved'
-              AND t.asset_id IS NULL
-            """
-        ).fetchone()["total"]
-        mock_upload_summary = _mock_upload_summary(conn)
+        if asset_ids is not None:
+            total_queued = len(_upload_bridge_rows(conn, asset_ids=asset_ids))
+        else:
+            total_queued = conn.execute(
+                """
+                SELECT count(*) AS total
+                FROM sidecar_mock_uploads AS m
+                JOIN sidecar_decisions AS d ON d.asset_id = m.asset_id
+                LEFT JOIN sidecar_tombstones AS t ON t.asset_id = m.asset_id AND t.tombstone_state = 'active'
+                WHERE m.mock_state = 'active'
+                  AND d.pick_state = 'picked'
+                  AND d.metadata_state = 'approved'
+                  AND t.asset_id IS NULL
+                """
+            ).fetchone()["total"]
+        mock_upload_summary = _mock_upload_summary(conn, asset_ids=asset_ids)
     items = []
     collision_count = 0
     covered_key_count = 0
@@ -2371,6 +2403,7 @@ def prepare_upload_bridge_execute_batch(
     limit: int = 500,
     spool_root: Path | None = None,
     allow_r2_overwrite: bool = False,
+    asset_ids: Iterable[str] | None = None,
     exclude_asset_ids: Iterable[str] | None = None,
 ) -> dict[str, Any]:
     """Plan a multi-item Upload Bridge execute run with one queue/R2 coverage pass."""
@@ -2387,15 +2420,21 @@ def prepare_upload_bridge_execute_batch(
     run_root = base_root / run_id
     export_root = run_root / "export"
     export_root.mkdir(parents=True, exist_ok=True)
+    included_asset_ids = None if asset_ids is None else {
+        str(asset_id) for asset_id in asset_ids if str(asset_id)
+    }
     excluded_asset_ids = {str(asset_id) for asset_id in (exclude_asset_ids or []) if str(asset_id)}
 
     with connect(repo_root) as conn:
         rows = _upload_bridge_rows(conn, scan_limit)
+        if included_asset_ids is not None:
+            rows = [row for row in rows if str(row["asset_id"]) in included_asset_ids]
         if excluded_asset_ids:
             rows = [row for row in rows if str(row["asset_id"]) not in excluded_asset_ids]
         if not rows:
             summary_payload = {
                 "bridgeQueuedCount": 0,
+                "scopedAssetCount": len(included_asset_ids or ()),
                 "excludedAssetCount": len(excluded_asset_ids),
                 "requestedCount": requested_limit,
                 "r2UploadPerformed": False,
@@ -2506,6 +2545,7 @@ def prepare_upload_bridge_execute_batch(
 
         summary_payload = {
             "bridgeQueuedCount": len(rows),
+            "scopedAssetCount": len(included_asset_ids or ()),
             "scannedCount": len(rows),
             "selectedCount": len(selected_rows),
             "skippedCoveredCount": skipped_covered,
@@ -3237,11 +3277,25 @@ def run_upload_bridge_export_dry_run(
     }
 
 
-def upload_plan(repo_root: Path, limit: int = 500) -> dict[str, Any]:
+def upload_plan(
+    repo_root: Path,
+    limit: int = 500,
+    asset_ids: Iterable[str] | None = None,
+) -> dict[str, Any]:
     safe_limit = max(1, min(int(limit or 500), 5000))
+    requested_ids = list(dict.fromkeys(str(asset_id) for asset_id in (asset_ids or ()) if str(asset_id)))
+    scoped = asset_ids is not None
+    scope_sql = ""
+    scope_params: list[Any] = []
+    if scoped:
+        if requested_ids:
+            scope_sql = f"AND d.asset_id IN ({','.join('?' for _ in requested_ids)})"
+            scope_params = requested_ids
+        else:
+            scope_sql = "AND 0"
     with connect(repo_root) as conn:
         readiness = conn.execute(
-            """
+            f"""
             SELECT
               COUNT(*) AS picked_count,
               COUNT(CASE WHEN d.metadata_state = 'approved' AND m.asset_id IS NULL THEN 1 END) AS approved_picked_count,
@@ -3255,14 +3309,17 @@ def upload_plan(repo_root: Path, limit: int = 500) -> dict[str, Any]:
             LEFT JOIN sidecar_mock_uploads AS m ON m.asset_id = d.asset_id AND m.mock_state = 'active'
             LEFT JOIN sidecar_tombstones AS t ON t.asset_id = d.asset_id AND t.tombstone_state = 'active'
             WHERE d.pick_state = 'picked' AND t.asset_id IS NULL
-            """
+              {scope_sql}
+            """,
+            scope_params,
         ).fetchone()
         raw_rows = conn.execute(
-            """
+            f"""
             SELECT a.*, d.rating, d.color, d.pick_state, d.metadata_state, d.title, d.keywords_json
             FROM sidecar_decisions AS d
             JOIN sidecar_assets AS a ON a.asset_id = d.asset_id
             WHERE d.pick_state = 'picked' AND d.metadata_state = 'approved'
+              {scope_sql}
               AND NOT EXISTS (
                 SELECT 1 FROM sidecar_tombstones AS t
                 WHERE t.asset_id = d.asset_id AND t.tombstone_state = 'active'
@@ -3273,10 +3330,11 @@ def upload_plan(repo_root: Path, limit: int = 500) -> dict[str, Any]:
               )
             ORDER BY a.captured_at DESC, a.asset_id
             """,
+            scope_params,
         ).fetchall()
         metadata_blocked_rows = [row for row in raw_rows if not _upload_bridge_metadata_ready(row)]
         rows = [row for row in raw_rows if _upload_bridge_metadata_ready(row)][:safe_limit]
-        mock_upload_summary = _mock_upload_summary(conn)
+        mock_upload_summary = _mock_upload_summary(conn, asset_ids=requested_ids if scoped else None)
     items = []
     for row in rows:
         items.append({
@@ -4229,14 +4287,18 @@ def mock_upload(repo_root: Path, asset_ids: Iterable[str] | None = None, limit: 
         "collisionCount": collision_count,
         "coveredKeyCount": covered_key_count,
         "items": items,
-        "remainingPlan": upload_plan(repo_root, limit=safe_limit),
+        "remainingPlan": upload_plan(
+            repo_root,
+            limit=safe_limit,
+            asset_ids=requested_ids if asset_ids is not None else None,
+        ),
     }
 
 
 def queue_upload_bridge(repo_root: Path, asset_ids: Iterable[str] | None = None, limit: int = 500) -> dict[str, Any]:
     """Queue upload-ready Sidecar items for the bridge using the legacy mock table."""
     result = mock_upload(repo_root, asset_ids=asset_ids, limit=limit)
-    result["uploadBridgePlan"] = upload_bridge_plan(repo_root, limit=limit)
+    result["uploadBridgePlan"] = upload_bridge_plan(repo_root, limit=limit, asset_ids=asset_ids)
     return result
 
 

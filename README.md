@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v141.7`
+- Current visible version: `v141.8`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
 - `v141.3` introduces the universal Build a Fixture pipeline with recursive fixtures, read-only
   asset search, immutable culling snapshots in the shared Sidecar, reversible
@@ -34,7 +34,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `support.html`: buyer-facing payment, delivery recovery, license, refund-expectation, and support notes for digital checkout
 - `real-estate.html`: private real-estate product workspace that loads a public-safe client context on GitHub Pages or an ignored local import bundle on localhost, starts with the saved PDF/video/selection shelf, supports create-new-selection and edit-existing-selection flows, click and Shift-click media selection from the full shared pool, selected-title cleanup, one-line drag ordering, preview/download PDF and video outputs, cloud-saved selection manifests, masked password entry, and selected-original ZIP delivery through the Worker
 - `slideshow-music.html`: public mini-app with normalized, country-tagged Pixabay audition candidates for Spain, Portugal, France, and USA, original subdued Spanish/classical guitar cues below, per-track play/pause, seeking, local star ratings, and local delete/hide controls for real estate slideshow use
-- `owner.html`: canonical production Owner control surface for cloud identity/access, Mac connector health, recursive fixture creation, universal indexed-asset search, immutable fixture-scoped Sidecar pools, destination/receipt review, explicit Apple Photos give-back, guarded Upload Bridge execution, and Owner-only connector downloads
+- `owner.html`: canonical production Owner control surface for cloud identity/access, Mac connector health, recursive fixture creation, universal indexed-asset search, immutable fixture-scoped Sidecar pools, destination/receipt review, guarded per-asset R2-to-Apple-Photos delivery, explicit retryable Apple Photos give-back, and Owner-only connector downloads
 - `new-owner.html`: compatibility redirect to the canonical `owner.html` surface
 - `owner-auth.js`: localhost helper/cloud Owner availability client for catalog and cloud maintenance actions
 - `basket-store.js`: shared basket source-of-truth helpers for detail and basket pages

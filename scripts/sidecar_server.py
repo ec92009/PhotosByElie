@@ -44,6 +44,7 @@ from sidecar_state_db import (
     upsert_assets,
 )
 from fixture_pipeline import get_pool, pool_asset_ids
+from streaming_fixture_delivery import finalize_streamed_upload
 
 
 APPLE_PHOTOS_BRIDGE = Path("scripts/apple_photos_bridge.swift")
@@ -1230,7 +1231,9 @@ class SidecarHandler(SimpleHTTPRequestHandler):
         query = parse_qs(urlparse(self.path).query)
         limit = _int_query(query, "limit", 500, 1, 5000)
         try:
-            result = upload_plan(Path.cwd(), limit=limit)
+            pool_id = _text_query(query, "poolId", "pool_id", "pool")
+            scoped_asset_ids = pool_asset_ids(Path.cwd(), pool_id) if pool_id else None
+            result = upload_plan(Path.cwd(), limit=limit, asset_ids=scoped_asset_ids)
         except Exception as error:
             self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
             return
@@ -1243,7 +1246,9 @@ class SidecarHandler(SimpleHTTPRequestHandler):
         query = parse_qs(urlparse(self.path).query)
         limit = _int_query(query, "limit", 500, 1, 5000)
         try:
-            result = upload_bridge_plan(Path.cwd(), limit=limit)
+            pool_id = _text_query(query, "poolId", "pool_id", "pool")
+            scoped_asset_ids = pool_asset_ids(Path.cwd(), pool_id) if pool_id else None
+            result = upload_bridge_plan(Path.cwd(), limit=limit, asset_ids=scoped_asset_ids)
         except Exception as error:
             self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
             return
@@ -1340,6 +1345,16 @@ class SidecarHandler(SimpleHTTPRequestHandler):
             upload_id = str(payload.get("uploadId") or payload.get("upload_id") or uuid.uuid4().hex)
             allow_overwrite = bool(payload.get("allowR2Overwrite") or payload.get("allow_r2_overwrite"))
             allow_icloud_downloads = payload.get("allowIcloudDownloads", payload.get("allow_icloud_downloads", True)) is not False
+            pool_id = str(payload.get("poolId") or payload.get("pool_id") or "").strip()
+            fixture_id = str(payload.get("fixtureId") or payload.get("fixture_id") or "").strip()
+            scoped_asset_ids = None
+            if pool_id:
+                pool = get_pool(Path.cwd(), pool_id)
+                pool_fixture_id = str(pool.get("fixtureId") or "")
+                if fixture_id and fixture_id != pool_fixture_id:
+                    raise ValueError("fixtureId does not match the selected Sidecar pool.")
+                fixture_id = pool_fixture_id
+                scoped_asset_ids = pool_asset_ids(Path.cwd(), pool_id)
         except ValueError as error:
             self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
             return
@@ -1361,12 +1376,15 @@ class SidecarHandler(SimpleHTTPRequestHandler):
             "uploadedKeyCount": 0,
             "skippedCollisionCount": 0,
             "failedUploadCount": 0,
+            "photosVerifiedCount": 0,
+            "photosFailedCount": 0,
         }
         _clear_upload_bridge_cancel_requested(upload_id)
         self._write_ndjson_event({
             "ok": True,
             "event": "start",
             "uploadId": upload_id,
+            "fixtureId": fixture_id,
             "count": requested_count,
             "message": f"Starting Upload Bridge real upload for up to {requested_count} item(s).",
         })
@@ -1382,6 +1400,7 @@ class SidecarHandler(SimpleHTTPRequestHandler):
                 Path.cwd(),
                 limit=requested_count,
                 allow_r2_overwrite=allow_overwrite,
+                asset_ids=scoped_asset_ids,
             )
         except Exception as error:  # noqa: BLE001 - stream setup failure to the UI.
             totals["failedItemCount"] += 1
@@ -1508,6 +1527,65 @@ class SidecarHandler(SimpleHTTPRequestHandler):
             totals["uploadedKeyCount"] += uploaded_keys
             totals["skippedCollisionCount"] += skipped_keys
             totals["failedUploadCount"] += failed_keys
+            fixture_delivery = None
+            if item_uploaded and fixture_id:
+                self._write_ndjson_event({
+                    "ok": True,
+                    "event": "item-r2-verified",
+                    "uploadId": upload_id,
+                    "index": index + 1,
+                    "count": len(batch_items),
+                    "fixtureId": fixture_id,
+                    "item": {
+                        "assetId": item.get("assetId") or "",
+                        "filename": item.get("filename") or "",
+                    },
+                    "totals": totals,
+                    "message": f"R2 verified for item {index + 1}; returning it to Apple Photos.",
+                })
+                try:
+                    fixture_delivery = finalize_streamed_upload(
+                        Path.cwd(),
+                        run_id=batch_run_id,
+                        fixture_id=fixture_id,
+                        asset_id=str(item.get("assetId") or ""),
+                    )
+                except Exception as error:  # noqa: BLE001 - R2 remains verified and Photos stays retryable.
+                    fixture_delivery = {
+                        "ok": False,
+                        "assetId": item.get("assetId") or "",
+                        "fixtureId": fixture_id,
+                        "photosWrittenCount": 0,
+                        "photosFailedCount": 1,
+                        "error": str(error),
+                    }
+                photos_verified = int(fixture_delivery.get("photosWrittenCount") or 0)
+                photos_failed = max(
+                    int(fixture_delivery.get("photosFailedCount") or 0),
+                    int(fixture_delivery.get("photosBlockedCount") or 0),
+                    0 if fixture_delivery.get("ok") else 1,
+                )
+                totals["photosVerifiedCount"] += photos_verified
+                totals["photosFailedCount"] += photos_failed
+                self._write_ndjson_event({
+                    "ok": bool(fixture_delivery.get("ok")),
+                    "event": "item-photos-complete",
+                    "uploadId": upload_id,
+                    "index": index + 1,
+                    "count": len(batch_items),
+                    "fixtureId": fixture_id,
+                    "item": {
+                        "assetId": item.get("assetId") or "",
+                        "filename": item.get("filename") or "",
+                    },
+                    "fixtureDelivery": fixture_delivery,
+                    "totals": totals,
+                    "message": (
+                        f"Apple Photos verified item {index + 1} of {len(batch_items)}."
+                        if fixture_delivery.get("ok")
+                        else f"Apple Photos give-back needs attention for item {index + 1}; R2 is safe."
+                    ),
+                })
             self._write_ndjson_event({
                 "ok": bool(result.get("ok")),
                 "event": "item-complete",
@@ -1525,6 +1603,7 @@ class SidecarHandler(SimpleHTTPRequestHandler):
                     "export": item.get("export") or {},
                     "upload": item.get("upload") or {},
                     "timings": item.get("timings") or {},
+                    "fixtureDelivery": fixture_delivery or {},
                 },
                 "summary": summary_payload,
                 "totals": totals,
@@ -1542,7 +1621,11 @@ class SidecarHandler(SimpleHTTPRequestHandler):
         except Exception as error:  # noqa: BLE001 - progress is more important than final plan refresh.
             plan = {"ok": False, "error": str(error)}
         final_verb = "interrupted" if canceled else "finished"
-        batch_status = "cancelled" if canceled else ("completed_with_failures" if terminal_error or totals["failedItemCount"] else "completed")
+        batch_status = "cancelled" if canceled else (
+            "completed_with_failures"
+            if terminal_error or totals["failedItemCount"] or totals["photosFailedCount"]
+            else "completed"
+        )
         final_summary = {
             **batch_summary,
             **totals,
@@ -1567,10 +1650,12 @@ class SidecarHandler(SimpleHTTPRequestHandler):
             f"{totals['uploadedKeyCount']} uploaded key(s), "
             f"{totals['skippedCollisionCount']} skipped collision key(s), "
             f"{totals['failedItemCount']} failed item(s), "
-            f"{totals['failedUploadCount']} failed key(s)."
+            f"{totals['failedUploadCount']} failed key(s), "
+            f"{totals['photosVerifiedCount']} Apple Photos item(s) verified, "
+            f"{totals['photosFailedCount']} Apple Photos item(s) needing attention."
         )
         self._write_ndjson_event({
-            "ok": canceled or not terminal_error,
+            "ok": canceled or (not terminal_error and not totals["photosFailedCount"]),
             "event": "done",
             "uploadId": upload_id,
             "runId": batch_run_id,

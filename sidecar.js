@@ -2429,6 +2429,8 @@
     const skipped = Number(totals.skippedCollisionCount || 0);
     const failedItems = Number(totals.failedItemCount || 0);
     const failedKeys = Number(totals.failedUploadCount || 0);
+    const photosVerified = Number(totals.photosVerifiedCount || 0);
+    const photosFailed = Number(totals.photosFailedCount || 0);
     const initialQueue = Number(progress.initialQueuedCount ?? progress.requestedCount ?? requested);
     const queueRemaining = Math.max(0, initialQueue - uploadedItems);
     const uploadingValue = progress.running
@@ -2442,12 +2444,13 @@
           { label: "Queue", value: queueRemaining.toLocaleString(), note: "remaining" },
           { label: "Uploading", value: uploadingValue, note: progress.running ? "current run" : "complete" },
           { label: "Uploaded", value: uploadedItems.toLocaleString(), note: `${uploadedKeys.toLocaleString()} key${uploadedKeys === 1 ? "" : "s"}` },
+          { label: "Photos", value: photosVerified.toLocaleString(), note: photosFailed ? `${photosFailed.toLocaleString()} need attention` : "verified" },
           { label: "Collisions", value: skipped.toLocaleString(), note: "skipped keys", tone: skipped ? "warning" : "" },
         ])}
         <strong>${escapeHtml(progress.message || (progress.running ? "Real upload running..." : "Real upload finished."))}</strong>
         <span>${completed.toLocaleString()} of ${requested.toLocaleString()} item${requested === 1 ? "" : "s"} processed.</span>
-        <span>${uploadedKeys.toLocaleString()} uploaded key${uploadedKeys === 1 ? "" : "s"} · ${skipped.toLocaleString()} skipped collision key${skipped === 1 ? "" : "s"} · ${failedItems.toLocaleString()} failed item${failedItems === 1 ? "" : "s"} · ${failedKeys.toLocaleString()} failed key${failedKeys === 1 ? "" : "s"}</span>
-        ${!progress.running && progress.runId && uploadedItems ? `<a class="btn secondary" href="./owner.html?uploadRun=${encodeURIComponent(progress.runId)}#build-a-fixture">Route ${uploadedItems.toLocaleString()} uploaded item${uploadedItems === 1 ? "" : "s"} to a fixture</a>` : ""}
+        <span>${uploadedKeys.toLocaleString()} uploaded key${uploadedKeys === 1 ? "" : "s"} · ${photosVerified.toLocaleString()} returned to Photos · ${skipped.toLocaleString()} skipped collision key${skipped === 1 ? "" : "s"} · ${failedItems.toLocaleString()} failed item${failedItems === 1 ? "" : "s"} · ${failedKeys.toLocaleString()} failed key${failedKeys === 1 ? "" : "s"}</span>
+        ${!progress.running && progress.runId && uploadedItems && !progress.fixtureId ? `<a class="btn secondary" href="./owner.html?uploadRun=${encodeURIComponent(progress.runId)}#build-a-fixture">Route ${uploadedItems.toLocaleString()} uploaded item${uploadedItems === 1 ? "" : "s"} to a fixture</a>` : ""}
         ${entries.length ? `
           <ol class="sidecar-upload-progress-list">
             ${entries.map((entry) => `
@@ -2565,7 +2568,8 @@
       const uploadableCount = bridgeUploadableCountFromPayload(payload);
       const uploadMax = Math.max(1, Math.min(uploadBridgeMaxItems, uploadableCount || uploadBridgeMaxItems));
       const uploadValue = Math.max(1, Math.min(uploadMax, Number(state.uploadBridgeRequestedCount || 1)));
-      const uploadDisabled = state.uploadBridgeUploading || uploadableCount <= 0;
+      const fixtureStreamingReady = Boolean(state.fixtureScope?.fixtureId && fixturePoolId);
+      const uploadDisabled = state.uploadBridgeUploading || uploadableCount <= 0 || !fixtureStreamingReady;
       if (planTitle) planTitle.textContent = `Upload Bridge${items.length ? ` (${items.length.toLocaleString()})` : ""}`;
       planOutput.innerHTML = `
         <div class="sidecar-plan-actions">
@@ -2581,6 +2585,9 @@
             <button class="btn secondary sidecar-stop-upload-action" type="button" data-sidecar-real-upload-cancel ${state.uploadBridgeUploading ? "" : "disabled"}>${state.uploadBridgeCancelRequested ? "Stopping..." : "Stop upload"}</button>
           </div>
         </div>
+        ${fixtureStreamingReady
+          ? `<p>Each item will be verified in R2, returned to Apple Photos, and then the next item will begin.</p>`
+          : `<p><strong>Open this batch from a fixture-scoped Sidecar before uploading.</strong> A fixture is required so R2 receipts and Apple Photos give-back stay auditable.</p>`}
         <div data-sidecar-upload-bridge-progress>
           ${uploadBridgeProgressMarkup()}
         </div>
@@ -2646,7 +2653,9 @@
       return null;
     }
     if (kind === "upload") renderUploadRailStatus();
-    const endpoint = kind === "upload" ? "/__sidecar/upload-plan" : "/__sidecar/commit-plan";
+    const endpoint = kind === "upload"
+      ? `/__sidecar/upload-plan${fixturePoolId ? `?poolId=${encodeURIComponent(fixturePoolId)}` : ""}`
+      : "/__sidecar/commit-plan";
     const response = await fetch(endpoint);
     const payload = await response.json().catch(() => ({}));
     if (!response.ok || !payload.ok) throw new Error(payload.error || "Could not load Sidecar plan.");
@@ -2750,6 +2759,7 @@
     }
     const progress = state.uploadBridgeRun;
     if (event.runId) progress.runId = event.runId;
+    if (event.fixtureId) progress.fixtureId = event.fixtureId;
     if (event.event === "start") {
       progress.running = true;
       progress.uploadId = event.uploadId || progress.uploadId || "";
@@ -2783,6 +2793,14 @@
     } else if (event.event === "item-start") {
       progress.running = true;
       progress.message = event.message || `Uploading item ${event.index || ""}...`;
+    } else if (event.event === "item-r2-verified") {
+      progress.running = true;
+      progress.totals = event.totals || progress.totals || {};
+      progress.message = event.message || "R2 verified; returning this item to Apple Photos...";
+    } else if (event.event === "item-photos-complete") {
+      progress.running = true;
+      progress.totals = event.totals || progress.totals || {};
+      progress.message = event.message || "Apple Photos give-back finished.";
     } else if (event.event === "item-complete") {
       progress.totals = event.totals || progress.totals || {};
       const item = event.item || {};
@@ -2797,16 +2815,17 @@
         ? ` · ${Number(timings.totalSeconds).toFixed(1)}s`
         : "";
       const detail = `${event.status || item.status || "done"} (${uploaded} uploaded, ${skipped} skipped, ${failedItems || failedKeys} failed)${timingDetail}`;
+      const photosStatus = item.fixtureDelivery?.ok ? " · Photos verified" : (item.fixtureDelivery ? " · Photos needs attention" : "");
       progress.entries = [
         ...(progress.entries || []),
         {
           assetId: item.assetId || "",
           photoId: item.photoId || "",
           filename: name,
-          detail,
+          detail: `${detail}${photosStatus}`,
         },
       ].slice(-12);
-      progress.lines = [...(progress.lines || []), `${name}: ${detail}`].slice(-12);
+      progress.lines = [...(progress.lines || []), `${name}: ${detail}${photosStatus}`].slice(-12);
       progress.message = failedItems || failedKeys
         ? `Real upload skipped failed item ${name}.`
         : `Real upload processed ${name}.`;
@@ -2885,6 +2904,7 @@
       running: true,
       uploadId,
       runId: "",
+      fixtureId: state.fixtureScope?.fixtureId || "",
       cancelRequested: false,
       requestedCount,
       initialQueuedCount: Number(planStats.uploadable || requestedCount),
@@ -2913,7 +2933,12 @@
       const response = await fetch("/__sidecar/upload-bridge-execute", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ count: requestedCount, uploadId }),
+        body: JSON.stringify({
+          count: requestedCount,
+          uploadId,
+          poolId: fixturePoolId,
+          fixtureId: state.fixtureScope?.fixtureId || "",
+        }),
       });
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
@@ -2928,7 +2953,7 @@
       else await refreshUploadRail({ silent: true });
       const totals = finalEvent?.totals || state.uploadBridgeRun?.totals || {};
       const finishedLabel = finalEvent?.cancelled ? "Real upload interrupted" : "Real upload complete";
-      setStatus(`${finishedLabel}: ${Number(totals.completedCount || 0).toLocaleString()} processed item${Number(totals.completedCount || 0) === 1 ? "" : "s"}, ${Number(totals.uploadedItemCount || 0).toLocaleString()} uploaded item${Number(totals.uploadedItemCount || 0) === 1 ? "" : "s"}, ${Number(totals.uploadedKeyCount || 0).toLocaleString()} uploaded key${Number(totals.uploadedKeyCount || 0) === 1 ? "" : "s"}, ${Number(totals.failedItemCount || 0).toLocaleString()} failed item${Number(totals.failedItemCount || 0) === 1 ? "" : "s"}.`);
+      setStatus(`${finishedLabel}: ${Number(totals.completedCount || 0).toLocaleString()} processed item${Number(totals.completedCount || 0) === 1 ? "" : "s"}, ${Number(totals.uploadedItemCount || 0).toLocaleString()} uploaded item${Number(totals.uploadedItemCount || 0) === 1 ? "" : "s"}, ${Number(totals.photosVerifiedCount || 0).toLocaleString()} returned to Apple Photos, ${Number(totals.failedItemCount || 0).toLocaleString()} failed item${Number(totals.failedItemCount || 0) === 1 ? "" : "s"}.`);
     } finally {
       state.uploadBridgeUploading = false;
       state.uploadBridgeCancelRequested = false;

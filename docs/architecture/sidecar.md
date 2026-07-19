@@ -194,6 +194,13 @@ Apple Photos export failures are remembered per asset and skipped by later
 bridge selection until a retry/clear path is used, so repeated PhotoKit
 materialization failures do not burn time on every batch.
 
+Fixture-scoped Sidecar runs add a second sequential gate inside each item. Once
+all planned R2 keys are checksum-verified, the run adopts that exact asset into
+the pool's fixture, performs a read-only Photos metadata preflight, commits and
+re-reads the Photos metadata, and only then starts the next asset. The progress
+rail reports separate R2 and Photos counts. Unscoped Sidecar keeps real upload
+disabled because a safe Photos give-back requires a real fixture destination.
+
 Upload Bridge does not generate private JPG render triplets. Private renders are
 an on-demand Worker cache: checkout/delivery can lazily create
 `renders/<media_id>_1mp.jpg`, `renders/<media_id>_3mp.jpg`, and

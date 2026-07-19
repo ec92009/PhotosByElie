@@ -47,6 +47,13 @@ class FixtureConnectorTest(unittest.TestCase):
                 criteria={"query": "LaConcha"},
             ))
             self.assertIn("?pool=pool-", pooled["result"]["sidecarUrl"])
+            second = local_server.new_owner_connector_result(root, action("fixture-create", name="Apartment 2"))
+            routed = local_server.new_owner_connector_result(root, action(
+                "fixture-place-multi",
+                fixtureIds=[second["result"]["fixture"]["fixtureId"]],
+                assetIds=["asset-1"],
+            ))
+            self.assertEqual(routed["result"]["ledger"]["count"], 2)
             planned = local_server.new_owner_connector_result(root, action("fixture-delivery-plan", fixtureId=fixture_id))
             self.assertEqual(planned["result"]["delivery"]["assetCount"], 1)
             self.assertFalse(planned["result"]["clientMessageSent"])

@@ -357,6 +357,7 @@ from fixture_pipeline import (  # noqa: E402
     delivery_plan,
     fixture_tree,
     get_pool,
+    list_placements,
     migrate_la_concha_tree,
     move_fixture,
     move_placement,
@@ -1831,6 +1832,17 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
         result.update({"readOnly": False, "refresh": apply_pool_refresh(repo_root, str(manifest.get("poolId") or ""))})
     elif mode == "fixture-place":
         result.update({"readOnly": False, "placement": place_assets(repo_root, str(manifest.get("fixtureId") or ""), manifest.get("assetIds") or [], source_pool_id=str(manifest.get("poolId") or ""), actor="owner-connector", reason=str(manifest.get("reason") or "manual fixture routing"))})
+    elif mode == "fixture-place-multi":
+        targets = list(dict.fromkeys(str(item or "").strip() for item in (manifest.get("fixtureIds") or []) if str(item or "").strip()))
+        if not targets:
+            raise ValueError("choose at least one destination fixture")
+        result.update({
+            "readOnly": False,
+            "placements": [place_assets(repo_root, target, manifest.get("assetIds") or [], source_pool_id=str(manifest.get("poolId") or ""), actor="owner-connector", reason=str(manifest.get("reason") or "multi-fixture routing")) for target in targets],
+            "ledger": list_placements(repo_root, manifest.get("assetIds") or []),
+        })
+    elif mode == "fixture-placement-list":
+        result.update({"readOnly": True, "ledger": list_placements(repo_root, manifest.get("assetIds") or [], fixture_id=str(manifest.get("fixtureId") or ""))})
     elif mode == "fixture-placement-move":
         result.update({"readOnly": False, "placement": move_placement(repo_root, str(manifest.get("placementId") or ""), str(manifest.get("fixtureId") or ""), actor="owner-connector", reason=str(manifest.get("reason") or "manual fixture reroute"))})
     elif mode == "fixture-placement-remove":
@@ -1868,6 +1880,8 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
         "fixture-pool-refresh-preview": "Previewed source-search drift without changing the stable pool.",
         "fixture-pool-refresh-apply": "Created or reused an idempotent refreshed snapshot after explicit preview.",
         "fixture-place": "Recorded reversible fixture placement without copying or deleting source assets.",
+        "fixture-place-multi": "Recorded reversible placement in every selected fixture without copying source assets.",
+        "fixture-placement-list": "Loaded the placement ledger without changing relationships.",
         "fixture-placement-move": "Rerouted the placement and recorded an auditable move event.",
         "fixture-placement-remove": "Removed the placement relationship without deleting the source asset.",
         "fixture-placement-restore": "Restored the placement relationship without reimporting the source asset.",

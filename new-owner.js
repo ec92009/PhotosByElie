@@ -30,6 +30,7 @@
     fixtureCurrentId: "",
     fixtureSearchItems: [],
     fixtureSelectedAssetIds: new Set(),
+    fixturePlacements: [],
     fixtureCriteria: {},
     fixturePool: null,
     busy: false,
@@ -70,6 +71,8 @@
   const fixtureBreadcrumbsRoot = $("[data-fixture-breadcrumbs]");
   const fixtureStatusRoot = $("[data-fixture-status]");
   const fixtureResultsRoot = $("[data-fixture-results]");
+  const fixturePlacementTargetsInput = $("[data-fixture-placement-targets]");
+  const fixturePlacementsRoot = $("[data-fixture-placements]");
   const fixtureSidecarLink = $("[data-fixture-sidecar]");
   const fixtureDeliveryRoot = $("[data-fixture-delivery-output]");
   const fixturePhotosPlanButton = $("[data-fixture-photos-plan]");
@@ -570,6 +573,8 @@
     const searchButton = $("[data-fixture-search]");
     const refreshPreviewButton = $("[data-fixture-pool-refresh-preview]");
     const refreshApplyButton = $("[data-fixture-pool-refresh-apply]");
+    const placeSelectedButton = $("[data-fixture-place-selected]");
+    const placementListButton = $("[data-fixture-placement-list]");
     const archived = Boolean(currentFixture()?.archivedAt);
     if (createPoolButton) createPoolButton.disabled = state.busy || !hasFixture || !hasSelection || archived;
     if (deliveryButton) deliveryButton.disabled = state.busy || !hasFixture || archived;
@@ -580,6 +585,8 @@
     if (searchButton) searchButton.disabled = state.busy || !hasFixture || archived;
     if (refreshPreviewButton) refreshPreviewButton.disabled = state.busy || !state.fixturePool?.poolId;
     if (refreshApplyButton) refreshApplyButton.disabled = state.busy || !state.fixturePool?.poolId;
+    if (placeSelectedButton) placeSelectedButton.disabled = state.busy || !hasSelection || archived;
+    if (placementListButton) placementListButton.disabled = state.busy || !hasSelection;
     if (fixturePhotosPlanButton) fixturePhotosPlanButton.disabled = state.busy || !hasFixture || archived;
     if (fixturePhotosCommitButton) fixturePhotosCommitButton.disabled = state.busy || !hasFixture || archived;
   };
@@ -596,6 +603,11 @@
       select.innerHTML = `<option value="">${firstLabel}</option>${select === fixtureCurrentInput || select === fixtureFilterParentInput ? allOptions : activeOptions}`;
       if ([...select.options].some((option) => option.value === selected)) select.value = selected;
     }
+    if (fixturePlacementTargetsInput) {
+      const selectedTargets = new Set([...fixturePlacementTargetsInput.selectedOptions].map((option) => option.value));
+      fixturePlacementTargetsInput.innerHTML = activeOptions;
+      for (const option of fixturePlacementTargetsInput.options) option.selected = selectedTargets.has(option.value);
+    }
     const fixture = currentFixture();
     if (fixtureBreadcrumbsRoot) fixtureBreadcrumbsRoot.textContent = fixture?.breadcrumbLabel || "No fixture selected";
     if (fixtureResultsRoot) {
@@ -610,6 +622,17 @@
     if (fixtureSidecarLink) {
       fixtureSidecarLink.hidden = !state.fixturePool?.sidecarUrl;
       fixtureSidecarLink.href = state.fixturePool?.sidecarUrl || "#";
+    }
+    if (fixturePlacementsRoot) {
+      fixturePlacementsRoot.innerHTML = state.fixturePlacements.length
+        ? state.fixturePlacements.map((placement) => `
+          <article class="fixture-builder-placement" data-fixture-placement-id="${escapeHtml(placement.placementId)}" data-fixture-placement-state="${escapeHtml(placement.state)}">
+            <span><strong>${escapeHtml(placement.assetId)}</strong><br><small>${escapeHtml(placement.breadcrumbLabel)} · ${escapeHtml(placement.state)}</small></span>
+            <select data-fixture-placement-move aria-label="Move placement"><option value="">Move to…</option>${activeOptions}</select>
+            <button class="btn secondary" type="button" data-fixture-placement-action="${placement.state === "active" ? "remove" : "restore"}">${placement.state === "active" ? "Remove" : "Restore"}</button>
+          </article>
+        `).join("")
+        : "";
     }
     syncFixtureControls();
   };
@@ -1095,6 +1118,54 @@
     renderFixtureBuilder();
   };
 
+  const selectedPlacementAssetIds = () => [...state.fixtureSelectedAssetIds];
+
+  const loadFixturePlacements = async () => {
+    const assetIds = selectedPlacementAssetIds();
+    if (!assetIds.length) return;
+    const completed = await fixtureAction("fixture-placement-list", { assetIds });
+    if (completed?.state !== "completed") {
+      setFixtureStatus(completed?.error?.message || "Placement ledger could not be loaded.", "error");
+      return;
+    }
+    state.fixturePlacements = completed.result?.ledger?.items || [];
+    setFixtureStatus(`Loaded ${state.fixturePlacements.length.toLocaleString()} reversible placement relationship${state.fixturePlacements.length === 1 ? "" : "s"}.`, "success");
+    renderFixtureBuilder();
+  };
+
+  const placeSelectedInFixtures = async () => {
+    const assetIds = selectedPlacementAssetIds();
+    const fixtureIds = [...(fixturePlacementTargetsInput?.selectedOptions || [])].map((option) => option.value).filter(Boolean);
+    if (!assetIds.length || !fixtureIds.length) {
+      setFixtureStatus("Select assets and one or more destination fixtures.", "error");
+      return;
+    }
+    const completed = await fixtureAction("fixture-place-multi", { assetIds, fixtureIds, poolId: state.fixturePool?.poolId || "" });
+    if (completed?.state !== "completed") {
+      setFixtureStatus(completed?.error?.message || "Assets could not be placed.", "error");
+      return;
+    }
+    state.fixturePlacements = completed.result?.ledger?.items || [];
+    setFixtureStatus(`Placed ${assetIds.length.toLocaleString()} selected asset${assetIds.length === 1 ? "" : "s"} in ${fixtureIds.length.toLocaleString()} fixture${fixtureIds.length === 1 ? "" : "s"}; source assets were not copied.`, "success");
+    renderFixtureBuilder();
+  };
+
+  const changePlacement = async (row, action) => {
+    const placementId = row?.getAttribute("data-fixture-placement-id") || "";
+    const targetFixtureId = row?.querySelector("[data-fixture-placement-move]")?.value || "";
+    const mode = action === "move" ? "fixture-placement-move" : (action === "restore" ? "fixture-placement-restore" : "fixture-placement-remove");
+    if (action === "move" && !targetFixtureId) {
+      setFixtureStatus("Choose the destination fixture before moving the placement.", "error");
+      return;
+    }
+    const completed = await fixtureAction(mode, { placementId, ...(targetFixtureId ? { fixtureId: targetFixtureId } : {}) });
+    if (completed?.state !== "completed") {
+      setFixtureStatus(completed?.error?.message || "Placement relationship could not be changed.", "error");
+      return;
+    }
+    await loadFixturePlacements();
+  };
+
   const reviewFixtureDelivery = async () => {
     if (!state.fixtureCurrentId) return;
     setFixtureStatus("Refreshing editorial versions and reading per-destination receipt state…", "busy");
@@ -1331,6 +1402,8 @@
   $("[data-fixture-pool-create]")?.addEventListener("click", createFixturePool);
   $("[data-fixture-pool-refresh-preview]")?.addEventListener("click", () => refreshFixturePool(false));
   $("[data-fixture-pool-refresh-apply]")?.addEventListener("click", () => refreshFixturePool(true));
+  $("[data-fixture-place-selected]")?.addEventListener("click", placeSelectedInFixtures);
+  $("[data-fixture-placement-list]")?.addEventListener("click", loadFixturePlacements);
   $("[data-fixture-delivery]")?.addEventListener("click", reviewFixtureDelivery);
   fixturePhotosPlanButton?.addEventListener("click", () => fixturePhotosWriteback(false));
   fixturePhotosCommitButton?.addEventListener("click", () => fixturePhotosWriteback(true));
@@ -1338,6 +1411,7 @@
     state.fixtureCurrentId = fixtureCurrentInput.value;
     state.fixtureSearchItems = [];
     state.fixtureSelectedAssetIds = new Set();
+    state.fixturePlacements = [];
     state.fixturePool = null;
     if (fixtureDeliveryRoot) fixtureDeliveryRoot.textContent = "";
     const fixture = currentFixture();
@@ -1352,6 +1426,17 @@
     else state.fixtureSelectedAssetIds.delete(assetId);
     setFixtureStatus(`${state.fixtureSelectedAssetIds.size.toLocaleString()} candidate${state.fixtureSelectedAssetIds.size === 1 ? "" : "s"} selected for the immutable snapshot.`, "success");
     syncFixtureControls();
+  });
+  fixturePlacementsRoot?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-fixture-placement-action]");
+    if (!button) return;
+    const row = button.closest("[data-fixture-placement-id]");
+    changePlacement(row, button.getAttribute("data-fixture-placement-action") || "remove");
+  });
+  fixturePlacementsRoot?.addEventListener("change", (event) => {
+    const select = event.target.closest("[data-fixture-placement-move]");
+    if (!select?.value) return;
+    changePlacement(select.closest("[data-fixture-placement-id]"), "move");
   });
   [reFixtureInput, reProjectNewInput].filter(Boolean).forEach((input) => {
     input.addEventListener("input", () => {

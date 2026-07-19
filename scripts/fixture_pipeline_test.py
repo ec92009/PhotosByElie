@@ -13,6 +13,7 @@ from fixture_pipeline import (
     create_pool,
     delivery_plan,
     fixture_tree,
+    list_placements,
     migrate_la_concha_tree,
     move_fixture,
     move_placement,
@@ -96,6 +97,7 @@ class FixturePipelineTest(unittest.TestCase):
         third = create_fixture(self.root, "Third")
         one = place_assets(self.root, first["fixtureId"], ["asset-1"])
         place_assets(self.root, second["fixtureId"], ["asset-1"])
+        self.assertEqual(list_placements(self.root, ["asset-1"])["count"], 2)
         moved = move_placement(self.root, one["placementIds"][0], third["fixtureId"], reason="correct route")
         self.assertEqual(moved["fromFixtureId"], first["fixtureId"])
         self.assertEqual(moved["toFixtureId"], third["fixtureId"])

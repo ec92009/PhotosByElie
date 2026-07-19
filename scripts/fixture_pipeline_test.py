@@ -1,5 +1,6 @@
 import tempfile
 import unittest
+import json
 from pathlib import Path
 import sys
 
@@ -7,6 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from fixture_pipeline import (
     apply_pool_refresh,
+    adopt_upload_run,
     archive_fixture,
     configure_asset_destinations,
     create_fixture,
@@ -18,6 +20,7 @@ from fixture_pipeline import (
     move_fixture,
     move_placement,
     place_assets,
+    plan_upload_run_adoption,
     preview_pool_refresh,
     remove_placement,
     rename_fixture,
@@ -26,6 +29,7 @@ from fixture_pipeline import (
     reopen_fixture,
     restore_placement,
     search_assets,
+    editorial_version_hash,
 )
 from sidecar_state_db import connect, record_decision, upsert_assets
 
@@ -154,6 +158,85 @@ class FixturePipelineTest(unittest.TestCase):
         self.assertEqual(second["accessGrant"]["externalIdentity"], "gallery:la-concha:client:corine")
         with connect(self.root) as conn:
             self.assertEqual(conn.execute("SELECT count(*) FROM fixture_access_grants").fetchone()[0], 1)
+
+    def _insert_upload_run(self, *, captured_hash: bool, drift_hash: str = ""):
+        record_decision(self.root, {"assetId": "asset-1", "action": "pick"})
+        record_decision(self.root, {"assetId": "asset-1", "action": "approve", "title": "A", "caption": "Ready", "keywords": ["Fixture"]})
+        record_decision(self.root, {"assetId": "asset-2", "action": "pick"})
+        record_decision(self.root, {"assetId": "asset-2", "action": "approve", "title": "B", "caption": "Ready", "keywords": ["Fixture"]})
+        run_id = "ub-test-run"
+        timestamp = "2099-01-01T00:00:00Z"
+        with connect(self.root) as conn:
+            conn.execute(
+                """INSERT INTO sidecar_upload_bridge_runs
+                   (run_id, mode, status, execute_upload, limit_count, started_at, completed_at,
+                    summary_json, created_at, updated_at)
+                   VALUES (?, 'execute-batch', 'cancelled', 1, 3, ?, ?, '{}', ?, ?)""",
+                (run_id, timestamp, timestamp, timestamp, timestamp),
+            )
+            for index, asset_id in enumerate(("asset-1", "asset-2", "asset-3"), 1):
+                result = {
+                    "status": "uploaded", "bucket": "photosbyelie-public", "key": f"expo/{asset_id}.jpg",
+                    "checksumSha256": str(index) * 64, "remoteChecksumSha256": str(index) * 64,
+                    "remoteVerified": True, "bytes": 10, "contentType": "image/jpeg",
+                }
+                version_hash = editorial_version_hash(conn, asset_id) if captured_hash else ""
+                if asset_id == "asset-1" and drift_hash:
+                    version_hash = drift_hash
+                uploaded = asset_id != "asset-3"
+                conn.execute(
+                    """INSERT INTO sidecar_upload_bridge_run_items
+                       (run_item_id, run_id, asset_id, photo_id, filename, media_type, status,
+                        export_status, planned_keys_json, upload_status, upload_keys_json,
+                        editorial_version_hash, created_at, updated_at)
+                       VALUES (?, ?, ?, ?, ?, 'photo', ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (
+                        f"item-{index}", run_id, asset_id, asset_id, f"{asset_id}.jpg",
+                        "uploaded" if uploaded else "planned",
+                        "materialized" if uploaded else "planned",
+                        json.dumps([{"bucket": result["bucket"], "key": result["key"]}]),
+                        "uploaded" if uploaded else "not_requested",
+                        json.dumps([result]) if uploaded else "[]",
+                        version_hash, timestamp, timestamp,
+                    ),
+                )
+            conn.commit()
+        return run_id
+
+    def test_cancelled_upload_run_adopts_only_verified_completed_items(self):
+        fixture = create_fixture(self.root, "Upload destination")
+        run_id = self._insert_upload_run(captured_hash=False)
+        blocked = plan_upload_run_adoption(self.root, run_id, fixture["fixtureId"])
+        self.assertEqual(blocked["totalRunItemCount"], 3)
+        self.assertEqual(blocked["completedUploadCount"], 2)
+        self.assertEqual(blocked["eligibleCount"], 0)
+        self.assertEqual(blocked["blockedCount"], 2)
+        planned = plan_upload_run_adoption(self.root, run_id, fixture["fixtureId"], historical_backfill=True)
+        self.assertEqual(planned["eligibleCount"], 2)
+        subset = plan_upload_run_adoption(self.root, run_id, fixture["fixtureId"], historical_backfill=True, asset_ids=["asset-2"])
+        self.assertEqual(subset["eligibleCount"], 1)
+        self.assertEqual(subset["items"][0]["assetId"], "asset-2")
+        adopted = adopt_upload_run(self.root, run_id, fixture["fixtureId"], historical_backfill=True)
+        self.assertEqual(adopted["placementCount"], 2)
+        self.assertEqual(adopted["r2ReceiptCount"], 2)
+        self.assertEqual(list_placements(self.root, fixture_id=fixture["fixtureId"])["count"], 2)
+        self.assertEqual(delivery_plan(self.root, fixture["fixtureId"])["items"][0]["receipts"]["r2"]["status"], "verified")
+        adopt_upload_run(self.root, run_id, fixture["fixtureId"])
+        with connect(self.root) as conn:
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM fixture_asset_placements WHERE fixture_id = ? AND state = 'active'", (fixture["fixtureId"],)).fetchone()[0], 2)
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM fixture_delivery_receipts WHERE fixture_id = ? AND destination = 'r2'", (fixture["fixtureId"],)).fetchone()[0], 2)
+
+    def test_upload_run_adoption_rejects_editorial_drift_and_archived_fixture(self):
+        fixture = create_fixture(self.root, "Upload destination")
+        run_id = self._insert_upload_run(captured_hash=True)
+        record_decision(self.root, {"assetId": "asset-1", "action": "metadata", "metadataState": "approved", "caption": "Changed after planning"})
+        plan = plan_upload_run_adoption(self.root, run_id, fixture["fixtureId"])
+        self.assertEqual(plan["eligibleCount"], 1)
+        self.assertEqual(plan["blockedCount"], 1)
+        self.assertIn("changed after upload planning", plan["blocked"][0]["reason"])
+        archive_fixture(self.root, fixture["fixtureId"])
+        with self.assertRaisesRegex(ValueError, "archived"):
+            plan_upload_run_adoption(self.root, run_id, fixture["fixtureId"])
 
 
 if __name__ == "__main__":

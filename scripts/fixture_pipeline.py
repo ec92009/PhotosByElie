@@ -17,7 +17,7 @@ import sqlite3
 from typing import Any, Iterable
 import uuid
 
-from sidecar_state_db import connect as connect_owner
+from sidecar_state_db import connect as connect_owner, editorial_version_hash as sidecar_editorial_version_hash
 
 
 DESTINATIONS = {"r2", "apple_photos", "archive"}
@@ -744,18 +744,279 @@ def restore_placement(repo_root: Path, placement_id: str, *, actor: str = "owner
 
 
 def editorial_version_hash(conn: sqlite3.Connection, asset_id: str) -> str:
-    row = conn.execute("""
-      SELECT a.asset_id, a.source_anchor, a.modified_at, COALESCE(d.rating, 0) rating,
-             COALESCE(d.color, '') color, COALESCE(d.pick_state, 'undecided') pick_state,
-             COALESCE(d.metadata_state, 'unreviewed') metadata_state,
-             COALESCE(d.title, '') title, COALESCE(d.caption, '') caption,
-             COALESCE(d.keywords_json, '[]') keywords_json
-      FROM sidecar_assets a LEFT JOIN sidecar_decisions d ON d.asset_id = a.asset_id
-      WHERE a.asset_id = ?
-    """, (asset_id,)).fetchone()
-    if not row:
-        raise ValueError("asset is not indexed")
-    return hashlib.sha256(_json(dict(row)).encode("utf-8")).hexdigest()
+    return sidecar_editorial_version_hash(conn, asset_id)
+
+
+def _verified_upload_results(value: Any) -> tuple[list[dict[str, Any]], str]:
+    results = _read_json(value, [])
+    if not isinstance(results, list) or not results:
+        return [], "no R2 upload results were recorded"
+    verified: list[dict[str, Any]] = []
+    for result in results:
+        if not isinstance(result, dict):
+            return [], "an R2 upload result is malformed"
+        checksum = str(result.get("checksumSha256") or "")
+        remote_checksum = str(result.get("remoteChecksumSha256") or "")
+        if (
+            str(result.get("status") or "") != "uploaded"
+            or not bool(result.get("remoteVerified"))
+            or not checksum
+            or remote_checksum != checksum
+            or not str(result.get("key") or "")
+        ):
+            return [], "not every R2 upload result is checksum-verified"
+        verified.append(result)
+    return verified, ""
+
+
+def plan_upload_run_adoption(
+    repo_root: Path,
+    run_id: str,
+    fixture_id: str,
+    *,
+    historical_backfill: bool = False,
+    asset_ids: Iterable[str] = (),
+) -> dict[str, Any]:
+    """Dry-run adoption of completed Upload Bridge rows into one explicit fixture."""
+    selected_run_id = str(run_id or "").strip()
+    selected_fixture_id = str(fixture_id or "").strip()
+    if not selected_run_id:
+        raise ValueError("upload run id is required")
+    if not selected_fixture_id:
+        raise ValueError("fixture id is required")
+    selected_asset_ids = _unique(asset_ids)
+    with connect(repo_root) as conn:
+        run = conn.execute(
+            "SELECT run_id, execute_upload, status, started_at, created_at FROM sidecar_upload_bridge_runs WHERE run_id = ?",
+            (selected_run_id,),
+        ).fetchone()
+        if not run:
+            raise ValueError("upload run does not exist")
+        if not int(run["execute_upload"] or 0):
+            raise ValueError("only a real upload run can be adopted")
+        fixture = conn.execute(
+            "SELECT fixture_id, name FROM fixtures WHERE fixture_id = ? AND archived_at IS NULL",
+            (selected_fixture_id,),
+        ).fetchone()
+        if not fixture:
+            raise ValueError("destination fixture does not exist or is archived")
+        breadcrumbs = fixture_breadcrumbs(conn, selected_fixture_id)
+        run_started_at = str(run["started_at"] or run["created_at"] or "")
+        asset_filter = ""
+        params: list[Any] = [selected_run_id]
+        if selected_asset_ids:
+            asset_filter = f" AND i.asset_id IN ({','.join('?' for _ in selected_asset_ids)})"
+            params.extend(selected_asset_ids)
+        rows = conn.execute(
+            f"""
+            SELECT i.run_item_id, i.asset_id, i.photo_id, i.filename, i.status,
+                   i.export_status, i.upload_status, i.planned_keys_json, i.upload_keys_json,
+                   COALESCE(i.editorial_version_hash, '') captured_version_hash,
+                   COALESCE(a.updated_at, '') asset_updated_at,
+                   COALESCE(d.updated_at, '') decision_updated_at,
+                   COALESCE(d.title, '') title,
+                   COALESCE(d.pick_state, 'undecided') pick_state,
+                   COALESCE(d.metadata_state, 'unreviewed') metadata_state,
+                   COALESCE(t.tombstone_state, '') tombstone_state
+            FROM sidecar_upload_bridge_run_items i
+            JOIN sidecar_assets a ON a.asset_id = i.asset_id
+            LEFT JOIN sidecar_decisions d ON d.asset_id = i.asset_id
+            LEFT JOIN sidecar_tombstones t
+              ON t.asset_id = i.asset_id AND t.tombstone_state = 'active'
+            WHERE i.run_id = ?
+              AND i.status = 'uploaded'
+              AND i.export_status = 'materialized'
+              AND i.upload_status IN ('uploaded', 'uploaded_with_skips')
+              {asset_filter}
+            ORDER BY i.updated_at, i.run_item_id
+            """,
+            params,
+        ).fetchall()
+        total_row = conn.execute(
+            "SELECT COUNT(*) total FROM sidecar_upload_bridge_run_items WHERE run_id = ?",
+            (selected_run_id,),
+        ).fetchone()
+        eligible: list[dict[str, Any]] = []
+        blocked: list[dict[str, Any]] = []
+        for row in rows:
+            reason = ""
+            results, verification_error = _verified_upload_results(row["upload_keys_json"])
+            planned = _read_json(row["planned_keys_json"], [])
+            planned_pairs = {
+                (str(item.get("bucket") or ""), str(item.get("key") or ""))
+                for item in planned if isinstance(item, dict)
+            }
+            result_pairs = {
+                (str(item.get("bucket") or ""), str(item.get("key") or ""))
+                for item in results
+            }
+            current_version = editorial_version_hash(conn, row["asset_id"])
+            historical = not bool(row["captured_version_hash"])
+            if verification_error:
+                reason = verification_error
+            elif not planned_pairs or not planned_pairs.issubset(result_pairs):
+                reason = "the uploaded R2 objects do not cover every planned key"
+            elif row["pick_state"] != "picked" or row["metadata_state"] != "approved":
+                reason = "asset is not both picked and metadata-approved"
+            elif row["tombstone_state"] == "active":
+                reason = "asset is tombstoned"
+            elif historical and not historical_backfill:
+                reason = "historical run requires explicit backfill acknowledgement"
+            elif historical and (
+                not run_started_at
+                or str(row["asset_updated_at"] or "") > run_started_at
+                or str(row["decision_updated_at"] or "") > run_started_at
+            ):
+                reason = "editorial state changed after this historical run started"
+            elif not historical and row["captured_version_hash"] != current_version:
+                reason = "editorial state changed after upload planning"
+            item = {
+                "runItemId": row["run_item_id"],
+                "assetId": row["asset_id"],
+                "photoId": row["photo_id"] or "",
+                "filename": row["filename"] or "",
+                "title": row["title"] or "",
+                "versionHash": current_version,
+                "historicalBackfill": historical,
+                "uploadResults": results,
+            }
+            if reason:
+                blocked.append({**item, "reason": reason})
+            else:
+                eligible.append(item)
+    return {
+        "ok": True,
+        "mode": "dry-run",
+        "runId": selected_run_id,
+        "runStatus": str(run["status"] or ""),
+        "fixtureId": selected_fixture_id,
+        "fixtureName": fixture["name"],
+        "fixtureBreadcrumbs": breadcrumbs,
+        "totalRunItemCount": int(total_row["total"] or 0),
+        "completedUploadCount": len(rows),
+        "selectedAssetCount": len(selected_asset_ids) if selected_asset_ids else len(rows),
+        "eligibleCount": len(eligible),
+        "blockedCount": len(blocked),
+        "historicalBackfill": historical_backfill,
+        "items": eligible,
+        "blocked": blocked,
+        "applied": False,
+    }
+
+
+def adopt_upload_run(
+    repo_root: Path,
+    run_id: str,
+    fixture_id: str,
+    *,
+    historical_backfill: bool = False,
+    asset_ids: Iterable[str] = (),
+    actor: str = "owner",
+) -> dict[str, Any]:
+    """Adopt only verified completed run items, then reconstruct their R2 receipts."""
+    plan = plan_upload_run_adoption(
+        repo_root,
+        run_id,
+        fixture_id,
+        historical_backfill=historical_backfill,
+        asset_ids=asset_ids,
+    )
+    if plan["blockedCount"]:
+        raise ValueError("upload run adoption is blocked; review the dry-run details")
+    if not plan["eligibleCount"]:
+        raise ValueError("upload run has no completed eligible items to adopt")
+    timestamp = now_iso()
+    placements: list[str] = []
+    receipt_count = 0
+    with connect(repo_root) as conn:
+        fixture = conn.execute(
+            "SELECT fixture_id FROM fixtures WHERE fixture_id = ? AND archived_at IS NULL",
+            (fixture_id,),
+        ).fetchone()
+        if not fixture:
+            raise ValueError("destination fixture does not exist or is archived")
+        for item in plan["items"]:
+            existing = conn.execute(
+                "SELECT placement_id FROM fixture_asset_placements WHERE fixture_id = ? AND asset_id = ? AND state = 'active'",
+                (fixture_id, item["assetId"]),
+            ).fetchone()
+            if existing:
+                placement_id = existing["placement_id"]
+            else:
+                placement_id = f"plc-{uuid.uuid4().hex[:16]}"
+                conn.execute(
+                    "INSERT INTO fixture_asset_placements (placement_id, fixture_id, asset_id, placed_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+                    (placement_id, fixture_id, item["assetId"], timestamp, timestamp),
+                )
+                conn.execute(
+                    """INSERT INTO fixture_placement_events
+                       (event_id, placement_id, asset_id, to_fixture_id, action, actor, reason, created_at)
+                       VALUES (?, ?, ?, ?, 'place', ?, ?, ?)""",
+                    (
+                        f"evt-{uuid.uuid4().hex[:16]}", placement_id, item["assetId"], fixture_id,
+                        actor, f"Adopt verified Upload Bridge run {run_id}", timestamp,
+                    ),
+                )
+            placements.append(placement_id)
+            conn.execute(
+                """
+                INSERT INTO fixture_asset_destinations
+                  (fixture_id, asset_id, destinations_json, version_hash, configured_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                ON CONFLICT(fixture_id, asset_id) DO UPDATE SET
+                  destinations_json = excluded.destinations_json,
+                  version_hash = excluded.version_hash,
+                  updated_at = excluded.updated_at
+                """,
+                (fixture_id, item["assetId"], _json(["r2", "apple_photos"]), item["versionHash"], timestamp, timestamp),
+            )
+            conn.execute(
+                """INSERT OR IGNORE INTO fixture_delivery_receipts
+                   (receipt_id, fixture_id, asset_id, destination, version_hash, status,
+                    object_key, created_at, updated_at)
+                   VALUES (?, ?, ?, 'apple_photos', ?, 'pending', '', ?, ?)""",
+                (f"rcp-{uuid.uuid4().hex[:16]}", fixture_id, item["assetId"], item["versionHash"], timestamp, timestamp),
+            )
+            for result in item["uploadResults"]:
+                record_delivery_receipt(
+                    repo_root,
+                    fixture_id=fixture_id,
+                    asset_id=item["assetId"],
+                    destination="r2",
+                    version_hash=item["versionHash"],
+                    status="verified",
+                    object_key=str(result.get("key") or ""),
+                    checksum_sha256=str(result.get("checksumSha256") or ""),
+                    visibility_policy="public" if str(result.get("bucket") or "").endswith("public") else "private",
+                    verification={
+                        "source": "upload-bridge-adoption",
+                        "runId": run_id,
+                        "runItemId": item["runItemId"],
+                        "historicalBackfill": bool(item["historicalBackfill"]),
+                        "bucket": result.get("bucket"),
+                        "bytes": result.get("bytes"),
+                        "contentType": result.get("contentType"),
+                        "remoteVerified": True,
+                        "remoteChecksumSha256": result.get("remoteChecksumSha256"),
+                    },
+                    conn=conn,
+                )
+                receipt_count += 1
+            if item["historicalBackfill"]:
+                conn.execute(
+                    "UPDATE sidecar_upload_bridge_run_items SET editorial_version_hash = ?, updated_at = ? WHERE run_item_id = ?",
+                    (item["versionHash"], timestamp, item["runItemId"]),
+                )
+        conn.commit()
+    return {
+        **plan,
+        "mode": "commit",
+        "applied": True,
+        "placementCount": len(placements),
+        "placementIds": placements,
+        "r2ReceiptCount": receipt_count,
+        "destinations": ["r2", "apple_photos"],
+    }
 
 
 def configure_asset_destinations(repo_root: Path, fixture_id: str, asset_ids: Iterable[str], destinations: Iterable[str]) -> dict[str, Any]:

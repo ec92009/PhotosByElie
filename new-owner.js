@@ -33,6 +33,8 @@
     fixturePlacements: [],
     fixtureCriteria: {},
     fixturePool: null,
+    fixtureUploadRunPlan: null,
+    fixtureUploadRunSelectedAssetIds: new Set(),
     busy: false,
   };
   const lanes = [
@@ -77,6 +79,13 @@
   const fixtureDeliveryRoot = $("[data-fixture-delivery-output]");
   const fixturePhotosPlanButton = $("[data-fixture-photos-plan]");
   const fixturePhotosCommitButton = $("[data-fixture-photos-commit]");
+  const fixtureUploadRunInput = $("[data-fixture-upload-run-id]");
+  const fixtureUploadRunHistoricalInput = $("[data-fixture-upload-run-historical]");
+  const fixtureUploadRunPlanButton = $("[data-fixture-upload-run-plan]");
+  const fixtureUploadRunCommitButton = $("[data-fixture-upload-run-commit]");
+  const fixtureUploadRunOutput = $("[data-fixture-upload-run-output]");
+  const requestedUploadRunId = new URLSearchParams(window.location.search).get("uploadRun") || "";
+  if (fixtureUploadRunInput && requestedUploadRunId) fixtureUploadRunInput.value = requestedUploadRunId;
 
   const setStatus = (message) => {
     if (statusRoot) statusRoot.textContent = message;
@@ -589,6 +598,15 @@
     if (placementListButton) placementListButton.disabled = state.busy || !hasSelection;
     if (fixturePhotosPlanButton) fixturePhotosPlanButton.disabled = state.busy || !hasFixture || archived;
     if (fixturePhotosCommitButton) fixturePhotosCommitButton.disabled = state.busy || !hasFixture || archived;
+    const hasUploadRun = Boolean(String(fixtureUploadRunInput?.value || "").trim());
+    if (fixtureUploadRunPlanButton) fixtureUploadRunPlanButton.disabled = state.busy || !hasFixture || archived || !hasUploadRun;
+    if (fixtureUploadRunCommitButton) {
+      const plan = state.fixtureUploadRunPlan;
+      fixtureUploadRunCommitButton.disabled = state.busy || !hasFixture || archived || !plan
+        || plan.fixtureId !== state.fixtureCurrentId
+        || plan.runId !== String(fixtureUploadRunInput?.value || "").trim()
+        || plan.blockedCount > 0 || state.fixtureUploadRunSelectedAssetIds.size < 1;
+    }
   };
 
   const renderFixtureBuilder = () => {
@@ -1188,6 +1206,51 @@
     setFixtureStatus("Delivery plan loaded. Partial failures remain independently retryable.", "success");
   };
 
+  const adoptFixtureUploadRun = async (commit = false) => {
+    if (!state.fixtureCurrentId) return;
+    const runId = String(fixtureUploadRunInput?.value || "").trim();
+    if (!runId) {
+      setFixtureStatus("Enter the exact Upload Bridge run ID.", "error");
+      fixtureUploadRunInput?.focus();
+      return;
+    }
+    const historicalBackfill = Boolean(fixtureUploadRunHistoricalInput?.checked);
+    const selectedAssetIds = commit ? [...state.fixtureUploadRunSelectedAssetIds] : [];
+    if (commit) {
+      const plan = state.fixtureUploadRunPlan;
+      if (!plan || plan.runId !== runId || plan.fixtureId !== state.fixtureCurrentId || plan.blockedCount || !plan.eligibleCount) {
+        setFixtureStatus("Preview this exact run and fixture before adopting it.", "error");
+        return;
+      }
+      if (!window.confirm(`Adopt ${selectedAssetIds.length} selected checksum-verified upload item${selectedAssetIds.length === 1 ? "" : "s"} into ${plan.fixtureName}? This records fixture placements and receipts, but does not write to Apple Photos yet.`)) return;
+    }
+    setFixtureStatus(commit ? "Adopting verified completed uploads into this fixture…" : "Checking the exact run ledger without changing anything…", "busy");
+    const completed = await fixtureAction(
+      commit ? "fixture-upload-run-adoption-commit" : "fixture-upload-run-adoption-plan",
+      { fixtureId: state.fixtureCurrentId, runId, historicalBackfill, ...(selectedAssetIds.length ? { assetIds: selectedAssetIds } : {}) },
+    );
+    if (completed?.state !== "completed") {
+      setFixtureStatus(completed?.error?.message || "The Upload Bridge run could not be inspected.", "error");
+      return;
+    }
+    const result = completed.result?.uploadRunAdoption || {};
+    if (!commit) {
+      state.fixtureUploadRunPlan = result;
+      state.fixtureUploadRunSelectedAssetIds = new Set((result.items || []).map((item) => item.assetId).filter(Boolean));
+    }
+    if (fixtureUploadRunOutput) {
+      fixtureUploadRunOutput.innerHTML = commit
+        ? `${Number(result.placementCount || 0)} placed; ${Number(result.r2ReceiptCount || 0)} verified R2 receipts recorded. Apple Photos is still unchanged—preview Photos give-back next.`
+        : `<p>${Number(result.completedUploadCount || 0)} completed of ${Number(result.totalRunItemCount || 0)} planned; ${Number(result.eligibleCount || 0)} eligible; ${Number(result.blockedCount || 0)} blocked. Select only the items that belong in <strong>${escapeHtml(result.fixtureName || "this fixture")}</strong>.</p>
+           <div class="fixture-builder-results">${(result.items || []).map((item) => `<label class="fixture-builder-result"><input type="checkbox" data-fixture-upload-run-asset-id="${escapeHtml(item.assetId)}" checked><span><strong>${escapeHtml(item.title || item.filename || item.assetId)}</strong><br><small>${escapeHtml(item.filename || item.assetId)}</small></span></label>`).join("")}</div>`;
+    }
+    setFixtureStatus(
+      commit ? "Upload run adopted. Use Preview Photos give-back, then the separate verified commit." : "Adoption preview complete. Nothing changed.",
+      Number(result.blockedCount || 0) ? "error" : "success",
+    );
+    syncFixtureControls();
+  };
+
   const fixturePhotosWriteback = async (commit = false) => {
     if (!state.fixtureCurrentId) return;
     if (commit && !window.confirm("Write the approved title, caption, and managed PBE keywords to Apple Photos now? Existing unrelated keywords will be preserved.")) return;
@@ -1405,6 +1468,26 @@
   $("[data-fixture-place-selected]")?.addEventListener("click", placeSelectedInFixtures);
   $("[data-fixture-placement-list]")?.addEventListener("click", loadFixturePlacements);
   $("[data-fixture-delivery]")?.addEventListener("click", reviewFixtureDelivery);
+  fixtureUploadRunPlanButton?.addEventListener("click", () => adoptFixtureUploadRun(false));
+  fixtureUploadRunCommitButton?.addEventListener("click", () => adoptFixtureUploadRun(true));
+  fixtureUploadRunInput?.addEventListener("input", () => {
+    state.fixtureUploadRunPlan = null;
+    state.fixtureUploadRunSelectedAssetIds = new Set();
+    syncFixtureControls();
+  });
+  fixtureUploadRunHistoricalInput?.addEventListener("change", () => {
+    state.fixtureUploadRunPlan = null;
+    state.fixtureUploadRunSelectedAssetIds = new Set();
+    syncFixtureControls();
+  });
+  fixtureUploadRunOutput?.addEventListener("change", (event) => {
+    const input = event.target.closest("[data-fixture-upload-run-asset-id]");
+    if (!input) return;
+    const assetId = input.getAttribute("data-fixture-upload-run-asset-id") || "";
+    if (input.checked) state.fixtureUploadRunSelectedAssetIds.add(assetId);
+    else state.fixtureUploadRunSelectedAssetIds.delete(assetId);
+    syncFixtureControls();
+  });
   fixturePhotosPlanButton?.addEventListener("click", () => fixturePhotosWriteback(false));
   fixturePhotosCommitButton?.addEventListener("click", () => fixturePhotosWriteback(true));
   fixtureCurrentInput?.addEventListener("change", () => {
@@ -1413,6 +1496,8 @@
     state.fixtureSelectedAssetIds = new Set();
     state.fixturePlacements = [];
     state.fixturePool = null;
+    state.fixtureUploadRunPlan = null;
+    state.fixtureUploadRunSelectedAssetIds = new Set();
     if (fixtureDeliveryRoot) fixtureDeliveryRoot.textContent = "";
     const fixture = currentFixture();
     setFixtureStatus(fixture ? `Opened ${fixture.breadcrumbLabel}. Search is read-only until you create a snapshot.` : "Choose or create a fixture.", fixture ? "success" : "");

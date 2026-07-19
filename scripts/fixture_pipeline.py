@@ -385,6 +385,50 @@ def rename_fixture(repo_root: Path, fixture_id: str, name: str) -> dict[str, Any
         return _fixture_row(conn.execute("SELECT * FROM fixtures WHERE fixture_id = ?", (fixture_id,)).fetchone())
 
 
+def archive_fixture(repo_root: Path, fixture_id: str) -> dict[str, Any]:
+    """Hide a fixture tree without deleting its stable IDs or relationships."""
+    timestamp = now_iso()
+    with connect(repo_root) as conn:
+        row = conn.execute("SELECT * FROM fixtures WHERE fixture_id = ?", (fixture_id,)).fetchone()
+        if not row:
+            raise ValueError("fixture does not exist")
+        conn.execute(
+            """WITH RECURSIVE subtree(fixture_id) AS (
+                 SELECT fixture_id FROM fixtures WHERE fixture_id = ?
+                 UNION ALL
+                 SELECT f.fixture_id FROM fixtures f JOIN subtree s ON f.parent_fixture_id = s.fixture_id
+               )
+               UPDATE fixtures SET archived_at = ?, updated_at = ? WHERE fixture_id IN (SELECT fixture_id FROM subtree)""",
+            (fixture_id, timestamp, timestamp),
+        )
+        conn.commit()
+        return _fixture_row(conn.execute("SELECT * FROM fixtures WHERE fixture_id = ?", (fixture_id,)).fetchone())
+
+
+def reopen_fixture(repo_root: Path, fixture_id: str) -> dict[str, Any]:
+    """Restore an archived fixture while preserving all attached state."""
+    with connect(repo_root) as conn:
+        row = conn.execute("SELECT * FROM fixtures WHERE fixture_id = ?", (fixture_id,)).fetchone()
+        if not row:
+            raise ValueError("fixture does not exist")
+        parent = row["parent_fixture_id"] or ""
+        if parent:
+            parent_row = conn.execute("SELECT archived_at FROM fixtures WHERE fixture_id = ?", (parent,)).fetchone()
+            if parent_row and parent_row["archived_at"]:
+                raise ValueError("reopen the archived parent fixture first")
+        conn.execute(
+            """WITH RECURSIVE subtree(fixture_id) AS (
+                 SELECT fixture_id FROM fixtures WHERE fixture_id = ?
+                 UNION ALL
+                 SELECT f.fixture_id FROM fixtures f JOIN subtree s ON f.parent_fixture_id = s.fixture_id
+               )
+               UPDATE fixtures SET archived_at = NULL, updated_at = ? WHERE fixture_id IN (SELECT fixture_id FROM subtree)""",
+            (fixture_id, now_iso()),
+        )
+        conn.commit()
+        return _fixture_row(conn.execute("SELECT * FROM fixtures WHERE fixture_id = ?", (fixture_id,)).fetchone())
+
+
 def link_access_grant(repo_root: Path, fixture_id: str, *, provider: str, external_identity: str, subject_label: str = "", recovery: dict[str, Any] | None = None) -> dict[str, Any]:
     timestamp = now_iso()
     clean_provider = _clean_name(provider)
@@ -462,8 +506,14 @@ def search_assets(repo_root: Path, filters: dict[str, Any] | None = None, *, lim
     if bool(filters.get("dedupeExact")):
         predicates.append(
             """a.asset_id = (SELECT min(a2.asset_id) FROM sidecar_assets a2
-               WHERE COALESCE(json_extract(a2.raw_json, '$.localIdentifier'), a2.source_anchor) =
-                     COALESCE(json_extract(a.raw_json, '$.localIdentifier'), a.source_anchor)
+               WHERE (
+                   COALESCE(NULLIF(json_extract(a2.raw_json, '$.localIdentifier'), ''), NULLIF(a2.source_anchor, ''), a2.asset_id) =
+                   COALESCE(NULLIF(json_extract(a.raw_json, '$.localIdentifier'), ''), NULLIF(a.source_anchor, ''), a.asset_id)
+                   OR (
+                     COALESCE(json_extract(a.raw_json, '$.checksumSha256'), '') <> ''
+                     AND json_extract(a2.raw_json, '$.checksumSha256') = json_extract(a.raw_json, '$.checksumSha256')
+                   )
+               )
                  AND (a2.missing_at IS NULL OR a2.missing_at = ''))"""
         )
     query = str(filters.get("query") or filters.get("q") or "").strip().casefold()

@@ -7,6 +7,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from fixture_pipeline import (
     apply_pool_refresh,
+    archive_fixture,
     configure_asset_destinations,
     create_fixture,
     create_pool,
@@ -21,6 +22,7 @@ from fixture_pipeline import (
     rename_fixture,
     record_r2_upload_results,
     record_source_batch,
+    reopen_fixture,
     restore_placement,
     search_assets,
 )
@@ -50,6 +52,8 @@ class FixturePipelineTest(unittest.TestCase):
         renamed = rename_fixture(self.root, fixture["fixtureId"], "La Concha renamed")
         self.assertEqual(renamed["fixtureId"], "la-concha")
         self.assertEqual(renamed["name"], "La Concha renamed")
+        self.assertTrue(archive_fixture(self.root, fixture["fixtureId"])["archivedAt"])
+        self.assertFalse(reopen_fixture(self.root, fixture["fixtureId"])["archivedAt"])
 
     def test_search_and_pool_are_read_only_stable_and_idempotent(self):
         fixture = create_fixture(self.root, "Fixture")
@@ -74,6 +78,11 @@ class FixturePipelineTest(unittest.TestCase):
         upsert_assets(self.root, [{"cloudIdentifier": "cloud-asset-1", "localIdentifier": "asset-1", "filename": "A copy.JPG", "mediaType": "photo", "creationDate": "2026-07-15T10:00:00Z"}])
         self.assertEqual(search_assets(self.root, {"mediaTypes": ["photo"], "dedupeExact": True})["totalCount"], 2)
         self.assertEqual(search_assets(self.root, {"dateFrom": "2026-07-15T10:00:00Z", "dateTo": "2026-07-15T10:00:00Z", "dedupeExact": True})["totalCount"], 1)
+        upsert_assets(self.root, [
+            {"localIdentifier": "checksum-a", "filename": "checksum-a.jpg", "mediaType": "photo", "checksumSha256": "c" * 64},
+            {"localIdentifier": "checksum-b", "filename": "checksum-b.jpg", "mediaType": "photo", "checksumSha256": "c" * 64},
+        ])
+        self.assertEqual(search_assets(self.root, {"assetIds": ["checksum-a", "checksum-b"], "dedupeExact": True})["totalCount"], 1)
 
     def test_pool_preserves_registered_source_batch(self):
         fixture = create_fixture(self.root, "Batch fixture")

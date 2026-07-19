@@ -66,6 +66,7 @@
   const fixtureCurrentInput = $("[data-fixture-current]");
   const fixtureRenameNameInput = $("[data-fixture-rename-name]");
   const fixtureMoveParentInput = $("[data-fixture-move-parent]");
+  const fixtureFilterParentInput = $("[data-fixture-filter-parent]");
   const fixtureBreadcrumbsRoot = $("[data-fixture-breadcrumbs]");
   const fixtureStatusRoot = $("[data-fixture-status]");
   const fixtureResultsRoot = $("[data-fixture-results]");
@@ -564,26 +565,35 @@
     const deliveryButton = $("[data-fixture-delivery]");
     const renameButton = $("[data-fixture-rename]");
     const moveButton = $("[data-fixture-move]");
+    const archiveButton = $("[data-fixture-archive]");
+    const reopenButton = $("[data-fixture-reopen]");
+    const searchButton = $("[data-fixture-search]");
     const refreshPreviewButton = $("[data-fixture-pool-refresh-preview]");
     const refreshApplyButton = $("[data-fixture-pool-refresh-apply]");
-    if (createPoolButton) createPoolButton.disabled = state.busy || !hasFixture || !hasSelection;
-    if (deliveryButton) deliveryButton.disabled = state.busy || !hasFixture;
-    if (renameButton) renameButton.disabled = state.busy || !hasFixture;
-    if (moveButton) moveButton.disabled = state.busy || !hasFixture;
+    const archived = Boolean(currentFixture()?.archivedAt);
+    if (createPoolButton) createPoolButton.disabled = state.busy || !hasFixture || !hasSelection || archived;
+    if (deliveryButton) deliveryButton.disabled = state.busy || !hasFixture || archived;
+    if (renameButton) renameButton.disabled = state.busy || !hasFixture || archived;
+    if (moveButton) moveButton.disabled = state.busy || !hasFixture || archived;
+    if (archiveButton) archiveButton.disabled = state.busy || !hasFixture || archived;
+    if (reopenButton) reopenButton.disabled = state.busy || !hasFixture || !archived;
+    if (searchButton) searchButton.disabled = state.busy || !hasFixture || archived;
     if (refreshPreviewButton) refreshPreviewButton.disabled = state.busy || !state.fixturePool?.poolId;
     if (refreshApplyButton) refreshApplyButton.disabled = state.busy || !state.fixturePool?.poolId;
-    if (fixturePhotosPlanButton) fixturePhotosPlanButton.disabled = state.busy || !hasFixture;
-    if (fixturePhotosCommitButton) fixturePhotosCommitButton.disabled = state.busy || !hasFixture;
+    if (fixturePhotosPlanButton) fixturePhotosPlanButton.disabled = state.busy || !hasFixture || archived;
+    if (fixturePhotosCommitButton) fixturePhotosCommitButton.disabled = state.busy || !hasFixture || archived;
   };
 
   const renderFixtureBuilder = () => {
     const flat = flattenFixtures(state.fixtures);
-    const options = flat.map((fixture) => `<option value="${escapeHtml(fixture.fixtureId)}">${escapeHtml(`${"— ".repeat(fixture.depth)}${fixture.name}`)}</option>`).join("");
-    for (const select of [fixtureParentInput, fixtureCurrentInput, fixtureMoveParentInput]) {
+    const optionsFor = (fixtures) => fixtures.map((fixture) => `<option value="${escapeHtml(fixture.fixtureId)}">${escapeHtml(`${"— ".repeat(fixture.depth)}${fixture.name}${fixture.archivedAt ? " [Archived]" : ""}`)}</option>`).join("");
+    const allOptions = optionsFor(flat);
+    const activeOptions = optionsFor(flat.filter((fixture) => !fixture.archivedAt));
+    for (const select of [fixtureParentInput, fixtureCurrentInput, fixtureMoveParentInput, fixtureFilterParentInput]) {
       if (!select) continue;
       const selected = select === fixtureCurrentInput ? state.fixtureCurrentId : select.value;
-      const firstLabel = select === fixtureCurrentInput ? "Choose a fixture" : (select === fixtureMoveParentInput ? "Root level" : "New root fixture");
-      select.innerHTML = `<option value="">${firstLabel}</option>${options}`;
+      const firstLabel = select === fixtureCurrentInput ? "Choose a fixture" : (select === fixtureMoveParentInput ? "Root level" : (select === fixtureFilterParentInput ? "Any fixture" : "New root fixture"));
+      select.innerHTML = `<option value="">${firstLabel}</option>${select === fixtureCurrentInput || select === fixtureFilterParentInput ? allOptions : activeOptions}`;
       if ([...select.options].some((option) => option.value === selected)) select.value = selected;
     }
     const fixture = currentFixture();
@@ -925,7 +935,7 @@
   const loadFixtureTree = async ({ quiet = false } = {}) => {
     if (state.busy || !effectiveConnectorId()) return null;
     if (!quiet) setFixtureStatus("Loading the recursive fixture tree…", "busy");
-    const completed = await fixtureAction("fixture-tree-list");
+    const completed = await fixtureAction("fixture-tree-list", { includeArchived: true });
     if (completed?.state !== "completed") {
       setFixtureStatus(completed?.error?.message || "The fixture tree could not be loaded.", "error");
       return completed;
@@ -993,15 +1003,42 @@
     renderFixtureBuilder();
   };
 
+  const setCurrentFixtureArchived = async (reopen = false) => {
+    if (!state.fixtureCurrentId) return;
+    const completed = await fixtureAction(reopen ? "fixture-reopen" : "fixture-archive", { fixtureId: state.fixtureCurrentId });
+    if (completed?.state !== "completed") {
+      setFixtureStatus(completed?.error?.message || `The fixture could not be ${reopen ? "reopened" : "archived"}.`, "error");
+      return;
+    }
+    state.fixtures = completed.result?.fixtures || state.fixtures;
+    setFixtureStatus(`${reopen ? "Reopened" : "Archived"} the fixture with its stable ID, placements, grants, and deliverables intact.`, "success");
+    renderFixtureBuilder();
+  };
+
   const fixtureFiltersFromForm = () => {
     const media = String($("[data-fixture-media]")?.value || "");
     const pick = String($("[data-fixture-pick]")?.value || "");
     const metadata = String($("[data-fixture-metadata]")?.value || "");
+    const rating = String($("[data-fixture-rating]")?.value || "");
+    const color = String($("[data-fixture-color]")?.value || "");
+    const delivery = String($("[data-fixture-delivery-state]")?.value || "");
+    const fixtureId = String(fixtureFilterParentInput?.value || "");
+    const albums = String($("[data-fixture-albums]")?.value || "").split(",").map((value) => value.trim()).filter(Boolean);
     return {
       query: String($("[data-fixture-query]")?.value || "").trim(),
+      dateFrom: String($("[data-fixture-date-from]")?.value || ""),
+      dateTo: String($("[data-fixture-date-to]")?.value || ""),
+      camera: String($("[data-fixture-camera]")?.value || "").trim(),
+      lens: String($("[data-fixture-lens]")?.value || "").trim(),
+      dedupeExact: Boolean($("[data-fixture-dedupe-exact]")?.checked),
       ...(media ? { mediaTypes: [media] } : {}),
       ...(pick ? { pickStates: [pick] } : {}),
       ...(metadata ? { metadataStates: [metadata] } : {}),
+      ...(rating ? { ratings: [Number(rating)] } : {}),
+      ...(color ? { colors: [color] } : {}),
+      ...(delivery ? { deliveryStates: [delivery] } : {}),
+      ...(fixtureId ? { fixtureId } : {}),
+      ...(albums.length ? { albumIds: albums } : {}),
     };
   };
 
@@ -1288,6 +1325,8 @@
   $("[data-fixture-create]")?.addEventListener("click", createFixtureFromForm);
   $("[data-fixture-rename]")?.addEventListener("click", renameCurrentFixture);
   $("[data-fixture-move]")?.addEventListener("click", moveCurrentFixture);
+  $("[data-fixture-archive]")?.addEventListener("click", () => setCurrentFixtureArchived(false));
+  $("[data-fixture-reopen]")?.addEventListener("click", () => setCurrentFixtureArchived(true));
   $("[data-fixture-search]")?.addEventListener("click", searchFixtureAssets);
   $("[data-fixture-pool-create]")?.addEventListener("click", createFixturePool);
   $("[data-fixture-pool-refresh-preview]")?.addEventListener("click", () => refreshFixturePool(false));

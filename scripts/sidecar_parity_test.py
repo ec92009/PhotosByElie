@@ -27,6 +27,16 @@ class SidecarParityInventoryTest(unittest.TestCase):
         for key in ('"ArrowLeft"', '"ArrowRight"', '" "'):
             self.assertIn(key, source)
 
+    def test_owner_exposes_universal_fixture_search_and_recovery_controls(self):
+        html = (ROOT / "owner.html").read_text(encoding="utf-8")
+        for marker in (
+            "data-fixture-archive", "data-fixture-reopen", "data-fixture-date-from",
+            "data-fixture-date-to", "data-fixture-albums", "data-fixture-camera",
+            "data-fixture-lens", "data-fixture-rating", "data-fixture-color",
+            "data-fixture-delivery-state", "data-fixture-filter-parent", "data-fixture-dedupe-exact",
+        ):
+            self.assertIn(marker, html)
+
 
 if __name__ == "__main__":
     unittest.main()

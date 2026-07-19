@@ -21,9 +21,11 @@ The canonical flow is:
 
 Ignored `assets/owner-actions/Owner.sqlite` remains the private workflow store.
 `fixture_pipeline.py` adds recursive fixture, source-batch, culling-pool,
-placement, destination, and receipt tables alongside the existing Sidecar
-tables. Sidecar remains authoritative for rating, color, pick state, editorial
-state, title, caption, keywords, and undo history.
+placement, destination, receipt, deliverable-link, and access-grant tables
+alongside the existing Sidecar tables. Sidecar remains authoritative for
+rating, color, pick state, editorial state, title, caption, keywords, and undo
+history. Renames and moves retain the fixture ID, grants, placements, pools,
+and deliverable recovery links.
 
 The Owner surface talks to this model through the enrolled per-Mac connector.
 Neither asset search nor pool creation publishes media or messages a client.
@@ -48,10 +50,17 @@ visibility policy, verification evidence, and error detail. A changed editorial
 version does not inherit a previous version's receipt.
 
 R2 Upload Bridge results are attached only to active R2-enabled placements for
-the exact configured version. Apple Photos write-back is blocked until the
-asset is picked, metadata-approved, and R2-verified for that same version.
+the exact configured version. A successful PUT is not enough: the bridge
+downloads each remote object, hashes the returned bytes, and records a verified
+receipt only when that checksum matches the local upload. Apple Photos
+write-back is blocked until the asset is picked, metadata-approved, and
+R2-verified for that same version.
 Photos is then written, re-read, and verified before its receipt becomes
 verified. Partial failures remain independently retryable.
+
+The Photos dry-run reads the current Photos title, caption, and keywords and
+reports exact before/after changes. It never writes. Commit is a separate,
+explicit operation.
 
 ## La Concha migration checkpoint
 

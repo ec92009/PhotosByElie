@@ -106,7 +106,13 @@ def _r2_verified(conn, fixture_id: str, asset_id: str, version_hash: str) -> boo
     return bool(actual) and all(row["status"] == "verified" for row in actual)
 
 
-def writeback_plan(repo_root: Path, fixture_id: str = "", asset_ids: Iterable[str] = ()) -> dict[str, Any]:
+def writeback_plan(
+    repo_root: Path,
+    fixture_id: str = "",
+    asset_ids: Iterable[str] = (),
+    *,
+    adapter: PhotosMetadataAccess | None = None,
+) -> dict[str, Any]:
     requested_ids = [str(item).strip() for item in asset_ids if str(item).strip()]
     params: list[Any] = []
     where = ["p.state = 'active'", "instr(x.destinations_json, '\"apple_photos\"') > 0"]
@@ -167,6 +173,26 @@ def writeback_plan(repo_root: Path, fixture_id: str = "", asset_ids: Iterable[st
                 managed.append(f"PBE-Color-{item['color'].title()}")
             managed.append("PBE-Approved")
             item["managedKeywords"] = managed
+            item["intendedMetadata"] = {
+                "title": item["title"],
+                "caption": item["caption"],
+                "keywords": [*item["keywords"], *managed],
+            }
+            if adapter is not None:
+                try:
+                    before = adapter.read(item["photosAssetId"])
+                    after_keywords = merge_keywords(before.get("keywords") or [], item["keywords"], managed)
+                    after = {"title": item["title"], "caption": item["caption"], "keywords": after_keywords}
+                    item["currentMetadata"] = before
+                    item["intendedMetadata"] = after
+                    item["changes"] = {
+                        field: {"before": before.get(field), "after": after.get(field)}
+                        for field in ("title", "caption", "keywords")
+                        if before.get(field) != after.get(field)
+                    }
+                    item["changedFields"] = list(item["changes"])
+                except Exception as error:  # noqa: BLE001 - dry-run remains non-mutating and auditable.
+                    item["currentReadError"] = str(error)
     return {"ok": True, "mode": "dry-run", "count": len(grouped), "blockedCount": len(blocked), "items": list(grouped.values()), "blocked": blocked}
 
 
@@ -226,7 +252,12 @@ def main() -> None:
     parser.add_argument("--asset-id", action="append", default=[])
     parser.add_argument("--commit", action="store_true")
     args = parser.parse_args()
-    result = commit_writeback(args.repo_root, args.fixture_id, args.asset_id) if args.commit else writeback_plan(args.repo_root, args.fixture_id, args.asset_id)
+    result = commit_writeback(args.repo_root, args.fixture_id, args.asset_id) if args.commit else writeback_plan(
+        args.repo_root,
+        args.fixture_id,
+        args.asset_id,
+        adapter=ApplePhotosAdapter(),
+    )
     print(json.dumps(result, ensure_ascii=False, indent=2))
 
 

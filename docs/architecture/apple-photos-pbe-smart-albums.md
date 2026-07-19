@@ -5,7 +5,9 @@
 Sidecar is authoritative for culling and editorial state. Apple Photos receives
 metadata only through the explicit fixture give-back commit, and only after R2
 delivery for the same editorial version is verified. A dry-run is always
-available first. Source media and unrelated Photos keywords are never removed.
+available first and lists current values, intended values, and the exact fields
+that would change. Source media and unrelated Photos keywords are never
+removed.
 
 ## Managed fields
 

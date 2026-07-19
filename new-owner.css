@@ -165,7 +165,7 @@ body[data-gallery="new-owner"] main.new-owner-shell {
 }
 
 .fixture-builder-current {
-  grid-template-columns: minmax(15rem, .7fr) minmax(0, 1.3fr);
+  grid-template-columns: repeat(2, minmax(15rem, 1fr)) auto;
   align-items: center;
 }
 
@@ -194,6 +194,7 @@ body[data-gallery="new-owner"] main.new-owner-shell {
 .fixture-builder-create input,
 .fixture-builder-create select,
 .fixture-builder-current select,
+.fixture-builder-current input,
 .fixture-builder-search input,
 .fixture-builder-search select,
 .fixture-builder-pool-actions input {

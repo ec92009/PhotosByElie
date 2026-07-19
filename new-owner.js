@@ -64,6 +64,8 @@
   const fixtureNameInput = $("[data-fixture-name]");
   const fixtureTemplateInput = $("[data-fixture-template]");
   const fixtureCurrentInput = $("[data-fixture-current]");
+  const fixtureRenameNameInput = $("[data-fixture-rename-name]");
+  const fixtureMoveParentInput = $("[data-fixture-move-parent]");
   const fixtureBreadcrumbsRoot = $("[data-fixture-breadcrumbs]");
   const fixtureStatusRoot = $("[data-fixture-status]");
   const fixtureResultsRoot = $("[data-fixture-results]");
@@ -560,8 +562,16 @@
     const hasSelection = state.fixtureSelectedAssetIds.size > 0;
     const createPoolButton = $("[data-fixture-pool-create]");
     const deliveryButton = $("[data-fixture-delivery]");
+    const renameButton = $("[data-fixture-rename]");
+    const moveButton = $("[data-fixture-move]");
+    const refreshPreviewButton = $("[data-fixture-pool-refresh-preview]");
+    const refreshApplyButton = $("[data-fixture-pool-refresh-apply]");
     if (createPoolButton) createPoolButton.disabled = state.busy || !hasFixture || !hasSelection;
     if (deliveryButton) deliveryButton.disabled = state.busy || !hasFixture;
+    if (renameButton) renameButton.disabled = state.busy || !hasFixture;
+    if (moveButton) moveButton.disabled = state.busy || !hasFixture;
+    if (refreshPreviewButton) refreshPreviewButton.disabled = state.busy || !state.fixturePool?.poolId;
+    if (refreshApplyButton) refreshApplyButton.disabled = state.busy || !state.fixturePool?.poolId;
     if (fixturePhotosPlanButton) fixturePhotosPlanButton.disabled = state.busy || !hasFixture;
     if (fixturePhotosCommitButton) fixturePhotosCommitButton.disabled = state.busy || !hasFixture;
   };
@@ -569,10 +579,10 @@
   const renderFixtureBuilder = () => {
     const flat = flattenFixtures(state.fixtures);
     const options = flat.map((fixture) => `<option value="${escapeHtml(fixture.fixtureId)}">${escapeHtml(`${"— ".repeat(fixture.depth)}${fixture.name}`)}</option>`).join("");
-    for (const select of [fixtureParentInput, fixtureCurrentInput]) {
+    for (const select of [fixtureParentInput, fixtureCurrentInput, fixtureMoveParentInput]) {
       if (!select) continue;
       const selected = select === fixtureCurrentInput ? state.fixtureCurrentId : select.value;
-      const firstLabel = select === fixtureCurrentInput ? "Choose a fixture" : "New root fixture";
+      const firstLabel = select === fixtureCurrentInput ? "Choose a fixture" : (select === fixtureMoveParentInput ? "Root level" : "New root fixture");
       select.innerHTML = `<option value="">${firstLabel}</option>${options}`;
       if ([...select.options].some((option) => option.value === selected)) select.value = selected;
     }
@@ -953,6 +963,36 @@
     renderFixtureBuilder();
   };
 
+  const renameCurrentFixture = async () => {
+    const name = String(fixtureRenameNameInput?.value || "").trim();
+    if (!state.fixtureCurrentId || !name) {
+      setFixtureStatus("Choose a fixture and enter its new name.", "error");
+      return;
+    }
+    const completed = await fixtureAction("fixture-rename", { fixtureId: state.fixtureCurrentId, name });
+    if (completed?.state !== "completed") {
+      setFixtureStatus(completed?.error?.message || "The fixture could not be renamed.", "error");
+      return;
+    }
+    state.fixtures = completed.result?.fixtures || state.fixtures;
+    if (fixtureRenameNameInput) fixtureRenameNameInput.value = "";
+    setFixtureStatus(`Renamed the fixture to ${completed.result?.fixture?.name || name}; its stable ID and relationships were preserved.`, "success");
+    renderFixtureBuilder();
+  };
+
+  const moveCurrentFixture = async () => {
+    if (!state.fixtureCurrentId) return;
+    const parentFixtureId = fixtureMoveParentInput?.value || "";
+    const completed = await fixtureAction("fixture-move", { fixtureId: state.fixtureCurrentId, parentFixtureId });
+    if (completed?.state !== "completed") {
+      setFixtureStatus(completed?.error?.message || "The fixture could not be moved.", "error");
+      return;
+    }
+    state.fixtures = completed.result?.fixtures || state.fixtures;
+    setFixtureStatus("Moved the fixture without changing its stable ID or source placements.", "success");
+    renderFixtureBuilder();
+  };
+
   const fixtureFiltersFromForm = () => {
     const media = String($("[data-fixture-media]")?.value || "");
     const pick = String($("[data-fixture-pick]")?.value || "");
@@ -1002,6 +1042,19 @@
     }
     state.fixturePool = { ...(completed.result?.pool || {}), sidecarUrl: completed.result?.sidecarUrl || "" };
     setFixtureStatus(`Created stable pool ${state.fixturePool.name || state.fixturePool.poolId}. Later source-album changes will not alter this snapshot.`, "success");
+    renderFixtureBuilder();
+  };
+
+  const refreshFixturePool = async (apply = false) => {
+    if (!state.fixturePool?.poolId) return;
+    const completed = await fixtureAction(apply ? "fixture-pool-refresh-apply" : "fixture-pool-refresh-preview", { poolId: state.fixturePool.poolId });
+    if (completed?.state !== "completed") {
+      setFixtureStatus(completed?.error?.message || "The pool refresh could not be prepared.", "error");
+      return;
+    }
+    const refresh = completed.result?.refresh || {};
+    if (apply && refresh.pool) state.fixturePool = { ...refresh.pool, sidecarUrl: `http://127.0.0.1:8011/sidecar.html?pool=${encodeURIComponent(refresh.pool.poolId)}` };
+    setFixtureStatus(`${apply ? "Applied" : "Previewed"} refresh: ${Number(refresh.additions?.length || 0)} addition(s), ${Number(refresh.removals?.length || 0)} removal(s). ${apply ? "The original snapshot remains intact." : "Nothing changed."}`, "success");
     renderFixtureBuilder();
   };
 
@@ -1233,8 +1286,12 @@
   $("[data-new-owner-re-preflight]")?.addEventListener("click", previewReAlbums);
   $("[data-new-owner-re-assign]")?.addEventListener("click", assignRePhotos);
   $("[data-fixture-create]")?.addEventListener("click", createFixtureFromForm);
+  $("[data-fixture-rename]")?.addEventListener("click", renameCurrentFixture);
+  $("[data-fixture-move]")?.addEventListener("click", moveCurrentFixture);
   $("[data-fixture-search]")?.addEventListener("click", searchFixtureAssets);
   $("[data-fixture-pool-create]")?.addEventListener("click", createFixturePool);
+  $("[data-fixture-pool-refresh-preview]")?.addEventListener("click", () => refreshFixturePool(false));
+  $("[data-fixture-pool-refresh-apply]")?.addEventListener("click", () => refreshFixturePool(true));
   $("[data-fixture-delivery]")?.addEventListener("click", reviewFixtureDelivery);
   fixturePhotosPlanButton?.addEventListener("click", () => fixturePhotosWriteback(false));
   fixturePhotosCommitButton?.addEventListener("click", () => fixturePhotosWriteback(true));

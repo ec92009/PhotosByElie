@@ -97,6 +97,34 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
           FOREIGN KEY (fixture_id) REFERENCES fixtures(fixture_id)
         );
 
+        CREATE TABLE IF NOT EXISTS fixture_access_grants (
+          grant_id TEXT PRIMARY KEY,
+          fixture_id TEXT NOT NULL,
+          provider TEXT NOT NULL,
+          external_identity TEXT NOT NULL,
+          subject_label TEXT,
+          state TEXT NOT NULL DEFAULT 'active' CHECK (state IN ('active', 'revoked')),
+          recovery_json TEXT NOT NULL DEFAULT '{}',
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (fixture_id) REFERENCES fixtures(fixture_id),
+          UNIQUE (fixture_id, provider, external_identity)
+        );
+
+        CREATE TABLE IF NOT EXISTS fixture_deliverables (
+          deliverable_id TEXT PRIMARY KEY,
+          fixture_id TEXT NOT NULL,
+          provider TEXT NOT NULL,
+          external_identity TEXT NOT NULL,
+          kind TEXT NOT NULL,
+          state TEXT NOT NULL,
+          recovery_json TEXT NOT NULL DEFAULT '{}',
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (fixture_id) REFERENCES fixtures(fixture_id),
+          UNIQUE (fixture_id, provider, external_identity)
+        );
+
         CREATE TABLE IF NOT EXISTS fixture_culling_pools (
           pool_id TEXT PRIMARY KEY,
           fixture_id TEXT NOT NULL,
@@ -307,6 +335,21 @@ def fixture_breadcrumbs(conn: sqlite3.Connection, fixture_id: str) -> list[dict[
     return list(reversed(chain))
 
 
+def record_source_batch(repo_root: Path, fixture_id: str, *, source_kind: str, source_identity: str, provenance: dict[str, Any] | None = None, batch_id: str = "") -> dict[str, Any]:
+    timestamp = now_iso()
+    stable_id = str(batch_id or "").strip() or f"batch-{hashlib.sha256(f'{fixture_id}|{source_kind}|{source_identity}'.encode()).hexdigest()[:16]}"
+    with connect(repo_root) as conn:
+        fixture_breadcrumbs(conn, fixture_id)
+        conn.execute(
+            """INSERT INTO fixture_source_batches (batch_id, fixture_id, source_kind, source_identity, provenance_json, created_at)
+               VALUES (?, ?, ?, ?, ?, ?)
+               ON CONFLICT(batch_id) DO UPDATE SET provenance_json = excluded.provenance_json""",
+            (stable_id, fixture_id, _clean_name(source_kind), _clean_name(source_identity), _json(provenance or {}), timestamp),
+        )
+        conn.commit()
+    return {"batchId": stable_id, "fixtureId": fixture_id, "sourceKind": source_kind, "sourceIdentity": source_identity, "provenance": provenance or {}}
+
+
 def move_fixture(repo_root: Path, fixture_id: str, parent_fixture_id: str = "") -> dict[str, Any]:
     with connect(repo_root) as conn:
         fixture = conn.execute("SELECT * FROM fixtures WHERE fixture_id = ?", (fixture_id,)).fetchone()
@@ -322,6 +365,64 @@ def move_fixture(repo_root: Path, fixture_id: str, parent_fixture_id: str = "") 
         conn.execute("UPDATE fixtures SET parent_fixture_id = ?, updated_at = ? WHERE fixture_id = ?", (parent, now_iso(), fixture_id))
         conn.commit()
         return _fixture_row(conn.execute("SELECT * FROM fixtures WHERE fixture_id = ?", (fixture_id,)).fetchone())
+
+
+def rename_fixture(repo_root: Path, fixture_id: str, name: str) -> dict[str, Any]:
+    """Rename a fixture while retaining its stable identity and relationships."""
+    clean_name = _clean_name(name)
+    with connect(repo_root) as conn:
+        row = conn.execute("SELECT parent_fixture_id FROM fixtures WHERE fixture_id = ? AND archived_at IS NULL", (fixture_id,)).fetchone()
+        if not row:
+            raise ValueError("fixture does not exist")
+        duplicate = conn.execute(
+            "SELECT fixture_id FROM fixtures WHERE parent_fixture_id IS ? AND name = ? COLLATE NOCASE AND archived_at IS NULL AND fixture_id <> ?",
+            (row["parent_fixture_id"], clean_name, fixture_id),
+        ).fetchone()
+        if duplicate:
+            raise ValueError("a sibling fixture already uses that name")
+        conn.execute("UPDATE fixtures SET name = ?, slug = ?, updated_at = ? WHERE fixture_id = ?", (clean_name, _slug(clean_name), now_iso(), fixture_id))
+        conn.commit()
+        return _fixture_row(conn.execute("SELECT * FROM fixtures WHERE fixture_id = ?", (fixture_id,)).fetchone())
+
+
+def link_access_grant(repo_root: Path, fixture_id: str, *, provider: str, external_identity: str, subject_label: str = "", recovery: dict[str, Any] | None = None) -> dict[str, Any]:
+    timestamp = now_iso()
+    clean_provider = _clean_name(provider)
+    clean_identity = _clean_name(external_identity)
+    with connect(repo_root) as conn:
+        fixture_breadcrumbs(conn, fixture_id)
+        existing = conn.execute("SELECT grant_id FROM fixture_access_grants WHERE fixture_id = ? AND provider = ? AND external_identity = ?", (fixture_id, clean_provider, clean_identity)).fetchone()
+        grant_id = existing["grant_id"] if existing else f"grant-{uuid.uuid4().hex[:16]}"
+        conn.execute(
+            """INSERT INTO fixture_access_grants (grant_id, fixture_id, provider, external_identity, subject_label, state, recovery_json, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?)
+               ON CONFLICT(fixture_id, provider, external_identity) DO UPDATE SET subject_label = excluded.subject_label,
+                 state = 'active', recovery_json = excluded.recovery_json, updated_at = excluded.updated_at""",
+            (grant_id, fixture_id, clean_provider, clean_identity, str(subject_label or "").strip(), _json(recovery or {}), timestamp, timestamp),
+        )
+        conn.commit()
+    return {"grantId": grant_id, "fixtureId": fixture_id, "provider": clean_provider, "externalIdentity": clean_identity, "state": "active"}
+
+
+def link_deliverable(repo_root: Path, fixture_id: str, *, provider: str, external_identity: str, kind: str, state: str, recovery: dict[str, Any] | None = None) -> dict[str, Any]:
+    timestamp = now_iso()
+    clean_provider = _clean_name(provider)
+    clean_identity = _clean_name(external_identity)
+    clean_kind = _clean_name(kind)
+    clean_state = _clean_name(state)
+    with connect(repo_root) as conn:
+        fixture_breadcrumbs(conn, fixture_id)
+        existing = conn.execute("SELECT deliverable_id FROM fixture_deliverables WHERE fixture_id = ? AND provider = ? AND external_identity = ?", (fixture_id, clean_provider, clean_identity)).fetchone()
+        deliverable_id = existing["deliverable_id"] if existing else f"dlv-{uuid.uuid4().hex[:16]}"
+        conn.execute(
+            """INSERT INTO fixture_deliverables (deliverable_id, fixture_id, provider, external_identity, kind, state, recovery_json, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+               ON CONFLICT(fixture_id, provider, external_identity) DO UPDATE SET kind = excluded.kind,
+                 state = excluded.state, recovery_json = excluded.recovery_json, updated_at = excluded.updated_at""",
+            (deliverable_id, fixture_id, clean_provider, clean_identity, clean_kind, clean_state, _json(recovery or {}), timestamp, timestamp),
+        )
+        conn.commit()
+    return {"deliverableId": deliverable_id, "fixtureId": fixture_id, "provider": clean_provider, "externalIdentity": clean_identity, "kind": clean_kind, "state": clean_state}
 
 
 def search_assets(repo_root: Path, filters: dict[str, Any] | None = None, *, limit: int = 500, offset: int = 0) -> dict[str, Any]:
@@ -346,10 +447,29 @@ def search_assets(repo_root: Path, filters: dict[str, Any] | None = None, *, lim
     if fixture_id:
         predicates.append("EXISTS (SELECT 1 FROM fixture_asset_placements p WHERE p.asset_id = a.asset_id AND p.fixture_id = ? AND p.state = 'active')")
         params.append(fixture_id)
+    for album_id in _unique(filters.get("albumIds") or []):
+        predicates.append("lower(COALESCE(a.raw_json, '')) LIKE ? ESCAPE '\\'")
+        params.append(f"%{album_id.casefold().replace('%', '\\%').replace('_', '\\_')}%")
+    for key in ("camera", "lens"):
+        value = str(filters.get(key) or "").strip().casefold()
+        if value:
+            predicates.append("lower(COALESCE(a.raw_json, '')) LIKE ? ESCAPE '\\'")
+            params.append(f"%{value.replace('%', '\\%').replace('_', '\\_')}%")
+    delivery_states = _unique(filters.get("deliveryStates") or [])
+    if delivery_states:
+        predicates.append(f"EXISTS (SELECT 1 FROM fixture_delivery_receipts r WHERE r.asset_id = a.asset_id AND r.status IN ({','.join('?' for _ in delivery_states)}))")
+        params.extend(delivery_states)
+    if bool(filters.get("dedupeExact")):
+        predicates.append(
+            """a.asset_id = (SELECT min(a2.asset_id) FROM sidecar_assets a2
+               WHERE COALESCE(json_extract(a2.raw_json, '$.localIdentifier'), a2.source_anchor) =
+                     COALESCE(json_extract(a.raw_json, '$.localIdentifier'), a.source_anchor)
+                 AND (a2.missing_at IS NULL OR a2.missing_at = ''))"""
+        )
     query = str(filters.get("query") or filters.get("q") or "").strip().casefold()
     for term in re.findall(r"[^\s,;]+", query)[:8]:
         like = f"%{term.replace('%', '\\%').replace('_', '\\_')}%"
-        columns = ["a.asset_id", "a.filename", "a.photos_title", "a.photos_keywords_json", "a.location_label", "a.metadata_seed_title", "a.metadata_seed_keywords_json", "d.title", "d.keywords_json"]
+        columns = ["a.asset_id", "a.filename", "a.photos_title", "a.photos_keywords_json", "a.location_label", "a.metadata_seed_title", "a.metadata_seed_keywords_json", "d.title", "d.caption", "d.keywords_json"]
         predicates.append("(" + " OR ".join(f"lower(COALESCE({column}, '')) LIKE ? ESCAPE '\\'" for column in columns) + ")")
         params.extend([like] * len(columns))
     where = " AND ".join(predicates)
@@ -364,7 +484,8 @@ def search_assets(repo_root: Path, filters: dict[str, Any] | None = None, *, lim
                    a.location_label, COALESCE(d.rating, 0) rating, COALESCE(d.color, '') color,
                    COALESCE(d.pick_state, 'undecided') pick_state,
                    COALESCE(d.metadata_state, 'unreviewed') metadata_state,
-                   COALESCE(d.title, '') decision_title, COALESCE(d.keywords_json, '[]') decision_keywords
+                   COALESCE(d.title, '') decision_title, COALESCE(d.caption, '') decision_caption,
+                   COALESCE(d.keywords_json, '[]') decision_keywords, COALESCE(a.raw_json, '{{}}') raw_json
             FROM sidecar_assets a LEFT JOIN sidecar_decisions d ON d.asset_id = a.asset_id
             WHERE {where}
             ORDER BY a.captured_at DESC, a.asset_id
@@ -372,15 +493,25 @@ def search_assets(repo_root: Path, filters: dict[str, Any] | None = None, *, lim
             """,
             [*params, safe_limit, safe_offset],
         ).fetchall()
-    items = [{
-        "assetId": row["asset_id"], "sourceKind": "apple_photos", "sourceIdentity": row["source_anchor"],
+    items = []
+    for row in rows:
+        raw = _read_json(row["raw_json"], {})
+        camera = raw.get("cameraMetadata") or raw.get("camera") or {}
+        lens = raw.get("lensMetadata") or raw.get("lens") or camera.get("lensModel") or ""
+        source_anchor = str(row["source_anchor"] or "")
+        source_kind = "apple_photos" if source_anchor.startswith(("apple-photos", "ph://")) or raw.get("localIdentifier") else "photosbyelie"
+        items.append({
+        "assetId": row["asset_id"], "sourceKind": source_kind, "sourceIdentity": source_anchor,
         "filename": row["filename"] or "", "mediaType": row["media_type"] or "", "capturedAt": row["captured_at"] or "",
         "pixelWidth": int(row["pixel_width"] or 0), "pixelHeight": int(row["pixel_height"] or 0),
         "title": row["decision_title"] or row["photos_title"] or "", "keywords": _read_json(row["decision_keywords"], []) or _read_json(row["photos_keywords_json"], []),
+        "caption": row["decision_caption"] or "", "camera": camera, "lens": lens,
         "locationLabel": row["location_label"] or "", "rating": int(row["rating"] or 0), "color": row["color"] or "",
         "pickState": row["pick_state"], "metadataState": row["metadata_state"],
-        "missingFields": [field for field, value in (("camera", None), ("lens", None)) if not value],
-    } for row in rows]
+        "missingFields": [field for field, value in (("camera", camera), ("lens", lens)) if not value],
+        "exactIdentity": raw.get("localIdentifier") or source_anchor,
+        "checksumSha256": raw.get("checksumSha256") or raw.get("sha256") or "",
+    })
     return {"ok": True, "count": len(items), "totalCount": count, "offset": safe_offset, "limit": safe_limit, "filters": filters, "items": items, "readOnly": True}
 
 
@@ -414,7 +545,11 @@ def create_pool(repo_root: Path, fixture_id: str, asset_ids: Iterable[str], *, n
             row = by_id[asset_id]
             raw = _read_json(row["raw_json"], {})
             provenance = {"sourceAnchor": row["source_anchor"], "albums": raw.get("albums") or raw.get("albumLocalIdentifiers") or []}
-            conn.execute("INSERT INTO fixture_pool_assets (pool_id, asset_id, source_kind, source_identity, snapshot_position, provenance_json, added_at) VALUES (?, ?, 'apple_photos', ?, ?, ?, ?)", (pool_id, asset_id, row["source_anchor"], position, _json(provenance), timestamp))
+            source_kind = str(raw.get("sourceKind") or ("apple_photos" if raw.get("localIdentifier") or str(row["source_anchor"] or "").startswith("apple-photos") else "photosbyelie"))
+            source_batch_id = str(raw.get("sourceBatchId") or (criteria.get("sourceBatchIdsByAsset") or {}).get(asset_id) or "").strip() or None
+            if source_batch_id and not conn.execute("SELECT 1 FROM fixture_source_batches WHERE batch_id = ?", (source_batch_id,)).fetchone():
+                raise ValueError(f"source batch is not registered: {source_batch_id}")
+            conn.execute("INSERT INTO fixture_pool_assets (pool_id, asset_id, source_kind, source_identity, source_batch_id, snapshot_position, provenance_json, added_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (pool_id, asset_id, source_kind, row["source_anchor"], source_batch_id, position, _json(provenance), timestamp))
         conn.commit()
         return get_pool(repo_root, pool_id, conn=conn)
 
@@ -448,6 +583,21 @@ def preview_pool_refresh(repo_root: Path, pool_id: str) -> dict[str, Any]:
     before = [item["assetId"] for item in pool["assets"]]
     after = [item["assetId"] for item in search["items"]]
     return {"ok": True, "poolId": pool_id, "beforeCount": len(before), "afterCount": len(after), "additions": [item for item in after if item not in set(before)], "removals": [item for item in before if item not in set(after)], "applied": False}
+
+
+def apply_pool_refresh(repo_root: Path, pool_id: str) -> dict[str, Any]:
+    """Create a new idempotent snapshot after an explicit refresh preview."""
+    preview = preview_pool_refresh(repo_root, pool_id)
+    original = get_pool(repo_root, pool_id)
+    search = search_assets(repo_root, original["criteria"], limit=5000)
+    refreshed = create_pool(
+        repo_root,
+        original["fixtureId"],
+        [item["assetId"] for item in search["items"]],
+        name=f"{original['name']} refresh",
+        criteria=original["criteria"],
+    )
+    return {**preview, "applied": True, "originalPoolId": pool_id, "pool": refreshed}
 
 
 def place_assets(repo_root: Path, fixture_id: str, asset_ids: Iterable[str], *, source_pool_id: str = "", actor: str = "owner", reason: str = "") -> dict[str, Any]:
@@ -485,6 +635,32 @@ def move_placement(repo_root: Path, placement_id: str, to_fixture_id: str, *, ac
         conn.execute("INSERT INTO fixture_placement_events (event_id, placement_id, asset_id, from_fixture_id, to_fixture_id, action, actor, reason, created_at) VALUES (?, ?, ?, ?, ?, 'move', ?, ?, ?)", (f"evt-{uuid.uuid4().hex[:16]}", placement_id, row["asset_id"], row["fixture_id"], to_fixture_id, actor, reason, timestamp))
         conn.commit()
         return {"ok": True, "placementId": placement_id, "assetId": row["asset_id"], "fromFixtureId": row["fixture_id"], "toFixtureId": to_fixture_id}
+
+
+def remove_placement(repo_root: Path, placement_id: str, *, actor: str = "owner", reason: str = "") -> dict[str, Any]:
+    timestamp = now_iso()
+    with connect(repo_root) as conn:
+        row = conn.execute("SELECT * FROM fixture_asset_placements WHERE placement_id = ? AND state = 'active'", (placement_id,)).fetchone()
+        if not row:
+            raise ValueError("active placement does not exist")
+        conn.execute("UPDATE fixture_asset_placements SET state = 'removed', removed_at = ?, updated_at = ? WHERE placement_id = ?", (timestamp, timestamp, placement_id))
+        conn.execute("INSERT INTO fixture_placement_events (event_id, placement_id, asset_id, from_fixture_id, action, actor, reason, created_at) VALUES (?, ?, ?, ?, 'remove', ?, ?, ?)", (f"evt-{uuid.uuid4().hex[:16]}", placement_id, row["asset_id"], row["fixture_id"], actor, reason, timestamp))
+        conn.commit()
+        return {"ok": True, "placementId": placement_id, "assetId": row["asset_id"], "fixtureId": row["fixture_id"], "state": "removed"}
+
+
+def restore_placement(repo_root: Path, placement_id: str, *, actor: str = "owner", reason: str = "") -> dict[str, Any]:
+    timestamp = now_iso()
+    with connect(repo_root) as conn:
+        row = conn.execute("SELECT * FROM fixture_asset_placements WHERE placement_id = ? AND state = 'removed'", (placement_id,)).fetchone()
+        if not row:
+            raise ValueError("removed placement does not exist")
+        if conn.execute("SELECT 1 FROM fixture_asset_placements WHERE fixture_id = ? AND asset_id = ? AND state = 'active'", (row["fixture_id"], row["asset_id"])).fetchone():
+            raise ValueError("an active placement already exists for this asset and fixture")
+        conn.execute("UPDATE fixture_asset_placements SET state = 'active', removed_at = NULL, updated_at = ? WHERE placement_id = ?", (timestamp, placement_id))
+        conn.execute("INSERT INTO fixture_placement_events (event_id, placement_id, asset_id, to_fixture_id, action, actor, reason, created_at) VALUES (?, ?, ?, ?, 'restore', ?, ?, ?)", (f"evt-{uuid.uuid4().hex[:16]}", placement_id, row["asset_id"], row["fixture_id"], actor, reason, timestamp))
+        conn.commit()
+        return {"ok": True, "placementId": placement_id, "assetId": row["asset_id"], "fixtureId": row["fixture_id"], "state": "active"}
 
 
 def editorial_version_hash(conn: sqlite3.Connection, asset_id: str) -> str:
@@ -629,7 +805,13 @@ def record_r2_upload_results(repo_root: Path, asset_id: str, upload_results: Ite
             for result in results:
                 upload_status = str(result.get("status") or "failed")
                 checksum = str(result.get("checksumSha256") or "")
-                verified = upload_status == "uploaded" and bool(checksum)
+                remote_checksum = str(result.get("remoteChecksumSha256") or "")
+                verified = (
+                    upload_status == "uploaded"
+                    and bool(result.get("remoteVerified"))
+                    and bool(checksum)
+                    and remote_checksum == checksum
+                )
                 receipts.append(record_delivery_receipt(
                     repo_root,
                     fixture_id=row["fixture_id"],
@@ -646,8 +828,10 @@ def record_r2_upload_results(repo_root: Path, asset_id: str, upload_results: Ite
                         "bytes": result.get("bytes"),
                         "contentType": result.get("contentType"),
                         "uploadStatus": upload_status,
+                        "remoteVerified": bool(result.get("remoteVerified")),
+                        "remoteChecksumSha256": remote_checksum,
                     },
-                    error_text=str(result.get("error") or "") if not verified else "",
+                    error_text=str(result.get("error") or result.get("verificationError") or "remote R2 object was not checksum-verified") if not verified else "",
                     conn=conn,
                 ))
         conn.commit()
@@ -699,4 +883,12 @@ def migrate_la_concha_tree(repo_root: Path) -> dict[str, Any]:
         common = create_fixture(repo_root, "Common", parent_fixture_id=root["fixtureId"], fixture_id="fixture-la-concha-common", conn=conn)
         children = [create_fixture(repo_root, name, parent_fixture_id=common["fixtureId"], fixture_id=f"fixture-la-concha-{_slug(name)}", conn=conn) for name in ("Street", "Main lobby", "Pool", "Tennis court")]
         conn.commit()
-    return {"ok": True, "root": root, "apartments": [apartment_1, apartment_2], "common": common, "commonChildren": children, "tree": fixture_tree(repo_root)}
+    access_grant = link_access_grant(
+        repo_root,
+        root["fixtureId"],
+        provider="acs",
+        external_identity="gallery:la-concha:client:corine",
+        subject_label="Corine",
+        recovery={"galleryKey": "la-concha", "livePolicyChanged": False, "clientMessageSent": False},
+    )
+    return {"ok": True, "root": root, "apartments": [apartment_1, apartment_2], "common": common, "commonChildren": children, "accessGrant": access_grant, "tree": fixture_tree(repo_root)}

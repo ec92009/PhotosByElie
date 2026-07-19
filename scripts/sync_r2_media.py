@@ -13,6 +13,7 @@ import random
 import shutil
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import urllib.error
@@ -475,6 +476,43 @@ def wrangler_put(
     return item, False, output
 
 
+def wrangler_get(
+    item: UploadItem,
+    target_path: Path,
+    retries: int,
+    throttle_file: Path = DEFAULT_THROTTLE_FILE,
+    request_min_interval: float = 0.75,
+    retry_max_delay: float = 900,
+) -> tuple[UploadItem, bool, str]:
+    """Download a remote R2 object so callers can verify the stored bytes."""
+    command = [
+        *wrangler_command(),
+        "r2",
+        "object",
+        "get",
+        f"{item.bucket}/{item.key}",
+        "--file",
+        str(target_path),
+        "--remote",
+    ]
+    output = ""
+    for attempt in range(retries + 1):
+        target_path.unlink(missing_ok=True)
+        throttle_wrangler_request(throttle_file, request_min_interval)
+        result = subprocess.run(command, text=True, capture_output=True, check=False)
+        output = "\n".join(part.strip() for part in (result.stdout, result.stderr) if part and part.strip())
+        if result.returncode == 0 and target_path.is_file():
+            return item, True, output
+        if terminal_auth_error(output):
+            return item, False, output
+        if attempt < retries:
+            if transient_wrangler_error(output):
+                time.sleep(retry_delay(output, attempt, retry_max_delay))
+            else:
+                time.sleep(min(retry_max_delay, 8 * (2 ** attempt)))
+    return item, False, output
+
+
 def wrangler_delete(
     item: UploadItem,
     retries: int,
@@ -548,6 +586,7 @@ def s3_signed_request(
     endpoint: str,
     extra_headers: dict[str, str] | None = None,
     timeout: float = 120.0,
+    download_path: Path | None = None,
 ) -> tuple[bool, int, str]:
     host = normalize_s3_host(endpoint, account_id)
     canonical_uri = quote_s3_path(path.strip("/"))
@@ -599,6 +638,11 @@ def s3_signed_request(
         request_body = body if body or method in {"POST", "PUT"} else None
         request = urllib.request.Request(url, data=request_body, headers=request_headers, method=method)
         with urllib.request.urlopen(request, timeout=timeout) as response:
+            if download_path is not None:
+                download_path.parent.mkdir(parents=True, exist_ok=True)
+                with download_path.open("wb") as output_file:
+                    shutil.copyfileobj(response, output_file)
+                return 200 <= response.status < 300, response.status, f"downloaded {download_path.stat().st_size} bytes"
             response_body = response.read(65536).decode("utf-8", errors="replace")
             return 200 <= response.status < 300, response.status, response_body
     except urllib.error.HTTPError as exc:
@@ -748,6 +792,44 @@ def s3_put(
         throttle_wrangler_request(throttle_file, request_min_interval)
         ok, output = s3_request("PUT", item, body, account_id, access_key_id, secret_access_key, endpoint)
         if ok:
+            return item, True, output
+        if attempt < retries:
+            time.sleep(min(retry_max_delay, 4.0 * (attempt + 1)))
+    return item, False, output
+
+
+def s3_get(
+    item: UploadItem,
+    target_path: Path,
+    retries: int,
+    throttle_file: Path,
+    request_min_interval: float,
+    retry_max_delay: float,
+    account_id: str,
+    access_key_id: str,
+    secret_access_key: str,
+    endpoint: str,
+) -> tuple[UploadItem, bool, str]:
+    """Download an R2 object through the S3 endpoint for checksum verification."""
+    output = ""
+    for attempt in range(retries + 1):
+        target_path.unlink(missing_ok=True)
+        throttle_wrangler_request(throttle_file, request_min_interval)
+        ok, status, response_body = s3_signed_request(
+            "GET",
+            item.bucket + "/" + item.key,
+            [],
+            b"",
+            account_id,
+            access_key_id,
+            secret_access_key,
+            endpoint,
+            timeout=120.0,
+            download_path=target_path,
+        )
+        status_label = f"HTTP {status}" if status else "request failed"
+        output = f"GET {item.bucket}/{item.key}: {status_label} {response_body}".strip()
+        if ok and target_path.is_file():
             return item, True, output
         if attempt < retries:
             time.sleep(min(retry_max_delay, 4.0 * (attempt + 1)))

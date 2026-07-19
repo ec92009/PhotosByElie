@@ -43,8 +43,13 @@ class ApplePhotosMetadataWriterTest(unittest.TestCase):
         record_r2_upload_results(self.root, "asset-1", [{
             "status": "uploaded", "bucket": "photosbyelie-private", "key": "masters/one.jpg",
             "checksumSha256": "b" * 64, "backend": "s3", "bytes": 42, "contentType": "image/jpeg",
+            "remoteChecksumSha256": "b" * 64, "remoteVerified": True,
         }])
         adapter = FakePhotos()
+        plan = writeback_plan(self.root, self.fixture["fixtureId"], adapter=adapter)
+        self.assertEqual(plan["items"][0]["changedFields"], ["title", "caption", "keywords"])
+        self.assertEqual(plan["items"][0]["changes"]["title"]["before"], "Old")
+        self.assertEqual(adapter.values["asset-1"]["title"], "Old")
         result = commit_writeback(self.root, self.fixture["fixtureId"], adapter=adapter)
         self.assertTrue(result["ok"])
         self.assertEqual(adapter.values["asset-1"]["title"], "Sea view")

@@ -349,6 +349,7 @@ from owner_state_db import record_title_keyword_review_decisions as record_title
 from sidecar_state_db import record_decision as record_sidecar_decision_db  # noqa: E402
 from sidecar_state_db import summary as sidecar_summary_db  # noqa: E402
 from fixture_pipeline import (  # noqa: E402
+    apply_pool_refresh,
     configure_asset_destinations,
     create_fixture,
     create_pool,
@@ -356,10 +357,16 @@ from fixture_pipeline import (  # noqa: E402
     fixture_tree,
     get_pool,
     migrate_la_concha_tree,
+    move_fixture,
+    move_placement,
     place_assets,
+    preview_pool_refresh,
+    remove_placement,
+    rename_fixture,
+    restore_placement,
     search_assets,
 )
-from apple_photos_metadata_writer import commit_writeback, writeback_plan  # noqa: E402
+from apple_photos_metadata_writer import ApplePhotosAdapter, commit_writeback, writeback_plan  # noqa: E402
 
 
 COLLECTION_KEYWORD_TARGETS = {
@@ -1780,6 +1787,10 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
             ),
             "fixtures": fixture_tree(repo_root),
         })
+    elif mode == "fixture-rename":
+        result.update({"readOnly": False, "fixture": rename_fixture(repo_root, str(manifest.get("fixtureId") or ""), str(manifest.get("name") or "")), "fixtures": fixture_tree(repo_root)})
+    elif mode == "fixture-move":
+        result.update({"readOnly": False, "fixture": move_fixture(repo_root, str(manifest.get("fixtureId") or ""), str(manifest.get("parentFixtureId") or "")), "fixtures": fixture_tree(repo_root)})
     elif mode == "fixture-search":
         search = search_assets(
             repo_root,
@@ -1808,14 +1819,29 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
     elif mode == "fixture-pool-open":
         pool = get_pool(repo_root, str(manifest.get("poolId") or ""))
         result.update({"readOnly": True, "pool": pool, "sidecarUrl": f"http://127.0.0.1:8011/sidecar.html?pool={quote(pool['poolId'])}"})
+    elif mode == "fixture-pool-refresh-preview":
+        result.update({"readOnly": True, "refresh": preview_pool_refresh(repo_root, str(manifest.get("poolId") or ""))})
+    elif mode == "fixture-pool-refresh-apply":
+        result.update({"readOnly": False, "refresh": apply_pool_refresh(repo_root, str(manifest.get("poolId") or ""))})
     elif mode == "fixture-place":
         result.update({"readOnly": False, "placement": place_assets(repo_root, str(manifest.get("fixtureId") or ""), manifest.get("assetIds") or [], source_pool_id=str(manifest.get("poolId") or ""), actor="owner-connector", reason=str(manifest.get("reason") or "manual fixture routing"))})
+    elif mode == "fixture-placement-move":
+        result.update({"readOnly": False, "placement": move_placement(repo_root, str(manifest.get("placementId") or ""), str(manifest.get("fixtureId") or ""), actor="owner-connector", reason=str(manifest.get("reason") or "manual fixture reroute"))})
+    elif mode == "fixture-placement-remove":
+        result.update({"readOnly": False, "placement": remove_placement(repo_root, str(manifest.get("placementId") or ""), actor="owner-connector", reason=str(manifest.get("reason") or "manual fixture removal"))})
+    elif mode == "fixture-placement-restore":
+        result.update({"readOnly": False, "placement": restore_placement(repo_root, str(manifest.get("placementId") or ""), actor="owner-connector", reason=str(manifest.get("reason") or "manual fixture restore"))})
     elif mode == "fixture-destinations":
         result.update({"readOnly": False, "destinations": configure_asset_destinations(repo_root, str(manifest.get("fixtureId") or ""), manifest.get("assetIds") or [], manifest.get("destinations") or [])})
     elif mode == "fixture-delivery-plan":
         result.update({"readOnly": True, "delivery": delivery_plan(repo_root, str(manifest.get("fixtureId") or ""))})
     elif mode == "fixture-photos-writeback-plan":
-        result.update({"readOnly": True, "photosWriteback": writeback_plan(repo_root, str(manifest.get("fixtureId") or ""), manifest.get("assetIds") or [])})
+        result.update({"readOnly": True, "photosWriteback": writeback_plan(
+            repo_root,
+            str(manifest.get("fixtureId") or ""),
+            manifest.get("assetIds") or [],
+            adapter=ApplePhotosAdapter(),
+        )})
     elif mode == "fixture-photos-writeback-commit":
         result.update({"readOnly": False, "photosWriteback": commit_writeback(repo_root, str(manifest.get("fixtureId") or ""), manifest.get("assetIds") or [])})
     elif mode == "fixture-la-concha-migrate":
@@ -1826,10 +1852,17 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
     result.setdefault("message", {
         "fixture-tree-list": "Loaded the recursive fixture tree.",
         "fixture-create": "Created the fixture without changing source assets.",
+        "fixture-rename": "Renamed the fixture while preserving its stable ID and relationships.",
+        "fixture-move": "Moved the fixture without changing its stable ID or source assets.",
         "fixture-search": "Search is read-only. Select candidates to snapshot a culling pool.",
         "fixture-pool-create": "Created a private fixture-scoped culling pool. Nothing was uploaded or messaged.",
         "fixture-pool-open": "Prepared the fixture-scoped Sidecar workspace.",
+        "fixture-pool-refresh-preview": "Previewed source-search drift without changing the stable pool.",
+        "fixture-pool-refresh-apply": "Created or reused an idempotent refreshed snapshot after explicit preview.",
         "fixture-place": "Recorded reversible fixture placement without copying or deleting source assets.",
+        "fixture-placement-move": "Rerouted the placement and recorded an auditable move event.",
+        "fixture-placement-remove": "Removed the placement relationship without deleting the source asset.",
+        "fixture-placement-restore": "Restored the placement relationship without reimporting the source asset.",
         "fixture-destinations": "Configured per-asset delivery destinations.",
         "fixture-delivery-plan": "Prepared the delivery plan; no delivery or client message was triggered.",
         "fixture-photos-writeback-plan": "Prepared the Apple Photos metadata give-back plan without changing Photos.",

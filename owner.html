@@ -7,15 +7,15 @@
   <meta name="description" content="Authenticated cloud Owner controls for Photos By Elie."/>
   <meta name="robots" content="noindex,nofollow"/>
   <link rel="icon" type="image/png" sizes="512x512" href="./assets/branding/photosbyelie-camera-tripod-logo-512.png"/>
-  <link rel="apple-touch-icon" sizes="180x180" href="./assets/branding/photosbyelie-touch-icon-180.png?v=141.3"/>
-  <link rel="manifest" href="./site.webmanifest?v=141.3"/>
+  <link rel="apple-touch-icon" sizes="180x180" href="./assets/branding/photosbyelie-touch-icon-180.png?v=141.4"/>
+  <link rel="manifest" href="./site.webmanifest?v=141.4"/>
   <meta name="theme-color" content="#263f4a"/>
   <meta name="apple-mobile-web-app-title" content="Photos By Elie"/>
   <script>(()=>{try{const saved=localStorage.getItem('byelie-theme');if(saved==='light'||saved==='dark')document.documentElement.dataset.theme=saved;localStorage.setItem('byelie-language','en');document.documentElement.lang='en';document.documentElement.dataset.language='en'}catch{}})();</script>
-  <link rel="stylesheet" href="./shared.css?v=141.3"/>
-  <link rel="stylesheet" href="./styles.css?v=141.3"/>
-  <link rel="stylesheet" href="./photos.css?v=141.3"/>
-  <link rel="stylesheet" href="./new-owner.css?v=141.3"/>
+  <link rel="stylesheet" href="./shared.css?v=141.4"/>
+  <link rel="stylesheet" href="./styles.css?v=141.4"/>
+  <link rel="stylesheet" href="./photos.css?v=141.4"/>
+  <link rel="stylesheet" href="./new-owner.css?v=141.4"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -30,7 +30,7 @@
       <a class="is-active" href="./owner.html">Owner</a> <span>|</span>
       <a href="./access-console.html">ACS</a>
     </nav>
-    <span class="site-version-badge">v141.3</span>
+    <span class="site-version-badge">v141.4</span>
   </header>
 
   <main id="main-content" class="shell new-owner-shell">
@@ -91,6 +91,10 @@
           <div class="fixture-builder-current">
             <label>Open fixture<select data-fixture-current><option value="">Choose a fixture</option></select></label>
             <strong data-fixture-breadcrumbs>No fixture selected</strong>
+            <label>Rename to<input type="text" data-fixture-rename-name placeholder="Keep the stable fixture ID"></label>
+            <button class="btn secondary" type="button" data-fixture-rename disabled>Rename</button>
+            <label>Move under<select data-fixture-move-parent><option value="">Root level</option></select></label>
+            <button class="btn secondary" type="button" data-fixture-move disabled>Move</button>
           </div>
           <fieldset class="fixture-builder-search">
             <legend>Universal asset search</legend>
@@ -106,6 +110,8 @@
             <label>Pool name<input type="text" data-fixture-pool-name placeholder="Stable culling snapshot"></label>
             <button class="btn" type="button" data-fixture-pool-create disabled>Create snapshot pool</button>
             <a class="btn secondary" data-fixture-sidecar hidden>Open scoped Sidecar</a>
+            <button class="btn secondary" type="button" data-fixture-pool-refresh-preview disabled>Preview pool refresh</button>
+            <button class="btn secondary" type="button" data-fixture-pool-refresh-apply disabled>Apply as new snapshot</button>
             <button class="btn secondary" type="button" data-fixture-delivery disabled>Review delivery plan</button>
             <button class="btn secondary" type="button" data-fixture-photos-plan disabled>Preview Photos give-back</button>
             <button class="btn secondary" type="button" data-fixture-photos-commit disabled>Commit verified Photos metadata</button>
@@ -204,9 +210,9 @@
     </section>
   </main>
 
-  <script src="./media-config.js?v=141.3"></script>
-  <script src="./owner-account.js?v=141.3"></script>
-  <script src="./owner-settings.js?v=141.3"></script>
-  <script src="./new-owner.js?v=141.3"></script>
+  <script src="./media-config.js?v=141.4"></script>
+  <script src="./owner-account.js?v=141.4"></script>
+  <script src="./owner-settings.js?v=141.4"></script>
+  <script src="./new-owner.js?v=141.4"></script>
 </body>
 </html>

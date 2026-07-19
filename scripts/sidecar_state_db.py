@@ -2192,7 +2192,9 @@ def _upload_bridge_execute_r2(
     from sync_r2_media import (  # noqa: PLC0415
         DEFAULT_THROTTLE_FILE,
         UploadItem,
+        s3_get,
         s3_put,
+        wrangler_get,
         wrangler_put,
     )
 
@@ -2269,12 +2271,46 @@ def _upload_bridge_execute_r2(
                 )
             else:
                 _, ok, output = wrangler_put(upload_item, retries, DEFAULT_THROTTLE_FILE, request_min_interval, retry_max_delay)
+            local_checksum = hashlib.sha256(source_path.read_bytes()).hexdigest() if ok and source_path.exists() else ""
+            remote_checksum = ""
+            verification_output = ""
+            if ok:
+                verification_path = artifact_root / ".r2-verification" / bucket / object_key
+                verification_path.parent.mkdir(parents=True, exist_ok=True)
+                if selected_backend == "s3":
+                    _, remote_ok, verification_output = s3_get(
+                        upload_item,
+                        verification_path,
+                        retries,
+                        DEFAULT_THROTTLE_FILE,
+                        request_min_interval,
+                        retry_max_delay,
+                        account_id,
+                        access_key_id,
+                        secret_access_key,
+                        endpoint,
+                    )
+                else:
+                    _, remote_ok, verification_output = wrangler_get(
+                        upload_item,
+                        verification_path,
+                        retries,
+                        DEFAULT_THROTTLE_FILE,
+                        request_min_interval,
+                        retry_max_delay,
+                    )
+                if remote_ok and verification_path.is_file():
+                    remote_checksum = hashlib.sha256(verification_path.read_bytes()).hexdigest()
+                verification_path.unlink(missing_ok=True)
+            remote_verified = bool(ok and local_checksum and remote_checksum == local_checksum)
             return position, {
                 **base_result,
                 "status": "uploaded" if ok else "failed",
                 "sourcePath": str(source_path),
                 "bytes": source_path.stat().st_size if source_path.exists() else 0,
-                "checksumSha256": hashlib.sha256(source_path.read_bytes()).hexdigest() if ok and source_path.exists() else "",
+                "checksumSha256": local_checksum,
+                "remoteChecksumSha256": remote_checksum,
+                "remoteVerified": remote_verified,
                 "contentType": content_type,
                 "cacheControl": cache_control,
                 "timings": {
@@ -2283,7 +2319,9 @@ def _upload_bridge_execute_r2(
                     "totalSeconds": round(time.perf_counter() - key_started, 3),
                 },
                 "output": output[-4000:] if output else "",
+                "verificationOutput": verification_output[-4000:] if verification_output else "",
                 **({"error": output[-4000:]} if not ok and output else {}),
+                **({"verificationError": verification_output[-4000:] or "remote checksum did not match local upload"} if ok and not remote_verified else {}),
             }
         except Exception as error:  # noqa: BLE001 - keep remaining planned keys auditable.
             return position, {

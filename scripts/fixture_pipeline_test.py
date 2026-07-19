@@ -6,6 +6,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from fixture_pipeline import (
+    apply_pool_refresh,
     configure_asset_destinations,
     create_fixture,
     create_pool,
@@ -16,7 +17,11 @@ from fixture_pipeline import (
     move_placement,
     place_assets,
     preview_pool_refresh,
+    remove_placement,
+    rename_fixture,
     record_r2_upload_results,
+    record_source_batch,
+    restore_placement,
     search_assets,
 )
 from sidecar_state_db import connect, record_decision, upsert_assets
@@ -42,9 +47,14 @@ class FixturePipelineTest(unittest.TestCase):
         self.assertEqual(fixture_tree(self.root)[0]["children"][0]["children"][0]["fixtureId"], child["fixtureId"])
         with self.assertRaisesRegex(ValueError, "descendants"):
             move_fixture(self.root, root["fixtureId"], child["fixtureId"])
+        renamed = rename_fixture(self.root, fixture["fixtureId"], "La Concha renamed")
+        self.assertEqual(renamed["fixtureId"], "la-concha")
+        self.assertEqual(renamed["name"], "La Concha renamed")
 
     def test_search_and_pool_are_read_only_stable_and_idempotent(self):
         fixture = create_fixture(self.root, "Fixture")
+        record_decision(self.root, {"assetId": "asset-1", "action": "metadata", "caption": "Mediterranean terrace", "metadataState": "proposed"})
+        self.assertEqual(search_assets(self.root, {"query": "Mediterranean"})["totalCount"], 1)
         result = search_assets(self.root, {"mediaTypes": ["photo"], "query": ".jpg"})
         self.assertEqual(result["totalCount"], 2)
         pool = create_pool(self.root, fixture["fixtureId"], [item["assetId"] for item in result["items"]], criteria=result["filters"])
@@ -55,6 +65,21 @@ class FixturePipelineTest(unittest.TestCase):
         refresh = preview_pool_refresh(self.root, pool["poolId"])
         self.assertEqual(refresh["afterCount"], 3)
         self.assertFalse(refresh["applied"])
+        applied = apply_pool_refresh(self.root, pool["poolId"])
+        self.assertTrue(applied["applied"])
+        self.assertEqual(applied["pool"]["assetCount"], 3)
+        self.assertEqual(apply_pool_refresh(self.root, pool["poolId"])["pool"]["poolId"], applied["pool"]["poolId"])
+
+    def test_exact_identity_dedupe_never_uses_capture_time(self):
+        upsert_assets(self.root, [{"cloudIdentifier": "cloud-asset-1", "localIdentifier": "asset-1", "filename": "A copy.JPG", "mediaType": "photo", "creationDate": "2026-07-15T10:00:00Z"}])
+        self.assertEqual(search_assets(self.root, {"mediaTypes": ["photo"], "dedupeExact": True})["totalCount"], 2)
+        self.assertEqual(search_assets(self.root, {"dateFrom": "2026-07-15T10:00:00Z", "dateTo": "2026-07-15T10:00:00Z", "dedupeExact": True})["totalCount"], 1)
+
+    def test_pool_preserves_registered_source_batch(self):
+        fixture = create_fixture(self.root, "Batch fixture")
+        batch = record_source_batch(self.root, fixture["fixtureId"], source_kind="apple_photos_album", source_identity="album-123", provenance={"albumName": "July intake"})
+        pool = create_pool(self.root, fixture["fixtureId"], ["asset-1"], criteria={"sourceBatchIdsByAsset": {"asset-1": batch["batchId"]}})
+        self.assertEqual(pool["assets"][0]["sourceBatchId"], batch["batchId"])
 
     def test_placement_is_reversible_and_multi_fixture(self):
         first = create_fixture(self.root, "First")
@@ -65,6 +90,8 @@ class FixturePipelineTest(unittest.TestCase):
         moved = move_placement(self.root, one["placementIds"][0], third["fixtureId"], reason="correct route")
         self.assertEqual(moved["fromFixtureId"], first["fixtureId"])
         self.assertEqual(moved["toFixtureId"], third["fixtureId"])
+        self.assertEqual(remove_placement(self.root, one["placementIds"][0])["state"], "removed")
+        self.assertEqual(restore_placement(self.root, one["placementIds"][0])["state"], "active")
 
     def test_delivery_defaults_keep_pick_and_approval_distinct(self):
         fixture = create_fixture(self.root, "Delivery", destination_defaults=["r2", "apple_photos"])
@@ -86,7 +113,11 @@ class FixturePipelineTest(unittest.TestCase):
         uploaded = {
             "status": "uploaded", "bucket": "photosbyelie-public", "key": "fixture/asset-1.jpg",
             "backend": "s3", "bytes": 123, "contentType": "image/jpeg", "checksumSha256": "a" * 64,
+            "remoteChecksumSha256": "a" * 64, "remoteVerified": True,
         }
+        unverified = {**uploaded, "remoteChecksumSha256": "", "remoteVerified": False}
+        failed_receipts = record_r2_upload_results(self.root, "asset-1", [unverified])
+        self.assertEqual(failed_receipts["receipts"][0]["status"], "failed")
         self.assertEqual(record_r2_upload_results(self.root, "asset-1", [uploaded])["receiptCount"], 1)
         r2_only = create_fixture(self.root, "R2 only")
         place_assets(self.root, r2_only["fixtureId"], ["asset-1"])
@@ -109,6 +140,9 @@ class FixturePipelineTest(unittest.TestCase):
         second = migrate_la_concha_tree(self.root)
         self.assertEqual(first["root"]["fixtureId"], second["root"]["fixtureId"])
         self.assertEqual([item["name"] for item in second["commonChildren"]], ["Street", "Main lobby", "Pool", "Tennis court"])
+        self.assertEqual(second["accessGrant"]["externalIdentity"], "gallery:la-concha:client:corine")
+        with connect(self.root) as conn:
+            self.assertEqual(conn.execute("SELECT count(*) FROM fixture_access_grants").fetchone()[0], 1)
 
 
 if __name__ == "__main__":

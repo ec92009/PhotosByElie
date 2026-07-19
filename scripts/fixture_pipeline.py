@@ -671,6 +671,36 @@ def place_assets(repo_root: Path, fixture_id: str, asset_ids: Iterable[str], *, 
     return {"ok": True, "fixtureId": fixture_id, "assetCount": len(clean_ids), "placementIds": placed}
 
 
+def list_placements(repo_root: Path, asset_ids: Iterable[str] = (), *, fixture_id: str = "") -> dict[str, Any]:
+    clean_ids = _unique(asset_ids)
+    predicates = ["1 = 1"]
+    params: list[Any] = []
+    if clean_ids:
+        predicates.append(f"p.asset_id IN ({','.join('?' for _ in clean_ids)})")
+        params.extend(clean_ids)
+    if fixture_id:
+        predicates.append("p.fixture_id = ?")
+        params.append(fixture_id)
+    with connect(repo_root) as conn:
+        rows = conn.execute(
+            f"""SELECT p.*, f.name fixture_name
+                FROM fixture_asset_placements p JOIN fixtures f ON f.fixture_id = p.fixture_id
+                WHERE {' AND '.join(predicates)}
+                ORDER BY p.asset_id, p.state, p.updated_at DESC""",
+            params,
+        ).fetchall()
+        items = []
+        for row in rows:
+            items.append({
+                "placementId": row["placement_id"], "fixtureId": row["fixture_id"],
+                "fixtureName": row["fixture_name"], "breadcrumbLabel": " / ".join(item["name"] for item in fixture_breadcrumbs(conn, row["fixture_id"])),
+                "assetId": row["asset_id"], "sourcePoolId": row["source_pool_id"] or "",
+                "state": row["state"], "placedAt": row["placed_at"], "removedAt": row["removed_at"] or "",
+                "updatedAt": row["updated_at"],
+            })
+    return {"ok": True, "count": len(items), "items": items}
+
+
 def move_placement(repo_root: Path, placement_id: str, to_fixture_id: str, *, actor: str = "owner", reason: str = "") -> dict[str, Any]:
     timestamp = now_iso()
     with connect(repo_root) as conn:

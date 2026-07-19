@@ -34,6 +34,7 @@ class SidecarParityInventoryTest(unittest.TestCase):
             "data-fixture-date-to", "data-fixture-albums", "data-fixture-camera",
             "data-fixture-lens", "data-fixture-rating", "data-fixture-color",
             "data-fixture-delivery-state", "data-fixture-filter-parent", "data-fixture-dedupe-exact",
+            "data-fixture-placement-targets", "data-fixture-place-selected", "data-fixture-placement-list",
         ):
             self.assertIn(marker, html)
 

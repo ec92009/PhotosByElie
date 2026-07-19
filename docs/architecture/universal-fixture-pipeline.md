@@ -47,7 +47,9 @@ Photos album cannot silently change an existing pool.
 
 Placements are separate from pools and record an event ledger for place, move,
 remove, and restore. A single asset can have active placements in multiple
-fixtures. Fixture moves reject cycles.
+fixtures. Owner can bulk-place selected search/pool assets into several
+fixtures, review their placement ledger, and move, remove, or restore each
+relationship without touching the source asset. Fixture moves reject cycles.
 
 ## Delivery and verification
 

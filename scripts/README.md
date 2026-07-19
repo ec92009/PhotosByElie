@@ -605,6 +605,14 @@ title. Rows with titles such as `2026`, `WhatsApp`, `DJI Album`, or blank titles
 and no gallery signal are blocked from bridge queueing/upload and surfaced as
 metadata-blocked in the Upload Bridge panel.
 
+AI-generated rows (explicit `AI generated*`, `Generative AI`, or `AI artwork`
+keywords) and the full `Stained*` keyword family are retired from Expo and
+excluded from new Upload Bridge work. The daily sweep preserves the local
+Leonardo source archive but no longer imports it to public or private R2. Use
+`scripts/retire_ai_expo_assets.py --selection ai`, `--selection stained-glass`,
+or `--selection stained` for the audited, batch-delete-and-revoke lifecycle;
+it is dry-run unless `--commit` is provided.
+
 Historical public Upload Bridge rows can be resumed through fixture adoption
 and verified Apple Photos give-back with
 `PYTHONPATH=scripts python3 scripts/fixture_r2_apple_giveback_drain.py --commit --checkpoint-every 100`.

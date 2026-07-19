@@ -336,15 +336,9 @@ else
       --discarded-tombstone assets/discarded/discarded-photo-ids.json
   fi
 
-  run_skippable_phase leonardo "Import Leonardo sources" \
-    "${PYTHON_CMD[@]}" scripts/build_lightroom_thumbnails.py \
-    --source-root "/Volumes/Saturn/Pictures/LR/_All Leonardo" \
-    --output-root "$IMPORT_CACHE_ROOT" \
-    --select all \
-    --force-country ai \
-    --r2-upload both \
-    --hidden-blacklist assets/hidden/hidden-blacklist.json \
-    --discarded-tombstone assets/discarded/discarded-photo-ids.json
+  phase leonardo "Keep Leonardo sources retired from cloud Expo"
+  echo "Leonardo/AI source imports are disabled by policy; local source archives remain untouched."
+  done_phase leonardo
 fi
 
 if [[ -n "$SELECTED_IMPORT_SOURCE_ROOT" ]]; then

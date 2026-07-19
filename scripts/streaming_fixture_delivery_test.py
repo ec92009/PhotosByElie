@@ -69,6 +69,34 @@ class StreamingFixtureDeliveryTest(unittest.TestCase):
         self.assertEqual(batch["count"], 0)
         self.assertEqual(batch["summary"]["scopedAssetCount"], 0)
 
+    def test_upload_bridge_permanently_excludes_explicit_ai_assets(self):
+        record_decision(
+            self.root,
+            {
+                "assetId": "asset-2",
+                "action": "metadata",
+                "metadataState": "approved",
+                "keywords": ["Paris", "AI generated illustration"],
+            },
+        )
+        batch = prepare_upload_bridge_execute_batch(self.root, limit=30)
+        self.assertEqual(batch["count"], 1)
+        self.assertEqual(batch["items"][0]["assetId"], "asset-1")
+
+    def test_upload_bridge_permanently_excludes_stained_glass_assets(self):
+        record_decision(
+            self.root,
+            {
+                "assetId": "asset-2",
+                "action": "metadata",
+                "metadataState": "approved",
+                "keywords": ["Paris", "Stained"],
+            },
+        )
+        batch = prepare_upload_bridge_execute_batch(self.root, limit=30)
+        self.assertEqual(batch["count"], 1)
+        self.assertEqual(batch["items"][0]["assetId"], "asset-1")
+
     def test_verified_item_is_adopted_then_returned_to_photos(self):
         fixture = create_fixture(self.root, "Paris")
         run_id = "ub-stream-test"

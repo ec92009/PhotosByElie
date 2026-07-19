@@ -825,6 +825,7 @@ def plan_upload_run_adoption(
                    COALESCE(a.updated_at, '') asset_updated_at,
                    COALESCE(d.updated_at, '') decision_updated_at,
                    COALESCE(d.title, '') title,
+                   COALESCE(d.keywords_json, '[]') keywords_json,
                    COALESCE(d.pick_state, 'undecided') pick_state,
                    COALESCE(d.metadata_state, 'unreviewed') metadata_state,
                    COALESCE(t.tombstone_state, '') tombstone_state
@@ -862,7 +863,22 @@ def plan_upload_run_adoption(
             }
             current_version = editorial_version_hash(conn, row["asset_id"])
             historical = not bool(row["captured_version_hash"])
-            if verification_error:
+            retirement_keywords = {
+                str(value).strip().casefold()
+                for value in _read_json(row["keywords_json"], [])
+                if str(value).strip()
+            }
+            ai_retired = any(value.startswith("ai generated") for value in retirement_keywords) or bool(
+                retirement_keywords & {"generative ai", "ai artwork"}
+            )
+            stained_retired = any(value.startswith("stained") for value in retirement_keywords)
+            if selected_fixture_id == "fixture-expo" and (ai_retired or stained_retired):
+                reason = (
+                    "AI-generated assets are retired from Expo"
+                    if ai_retired
+                    else "Stained assets are retired from Expo"
+                )
+            elif verification_error:
                 reason = verification_error
             elif not planned_pairs or not planned_pairs.issubset(result_pairs):
                 reason = "the uploaded R2 objects do not cover every planned key"

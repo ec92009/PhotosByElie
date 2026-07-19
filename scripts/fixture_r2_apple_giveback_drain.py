@@ -66,6 +66,12 @@ def candidate_rows(repo_root: Path, fixture_id: str, limit: int = 0) -> list[dic
             JOIN sidecar_decisions d ON d.asset_id = u.asset_id
             WHERE d.pick_state = 'picked'
               AND d.metadata_state = 'approved'
+              AND NOT EXISTS (
+                SELECT 1 FROM json_each(d.keywords_json) AS keyword
+                WHERE lower(trim(keyword.value)) LIKE 'ai generated%'
+                   OR lower(trim(keyword.value)) IN ('generative ai', 'ai artwork')
+                   OR lower(trim(keyword.value)) LIKE 'stained%'
+              )
               AND NOT EXISTS(
                 SELECT 1 FROM sidecar_tombstones t
                 WHERE t.asset_id = u.asset_id AND t.tombstone_state = 'active'

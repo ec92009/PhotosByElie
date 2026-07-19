@@ -297,6 +297,42 @@ class FixturePipelineTest(unittest.TestCase):
             ).fetchone()
         self.assertTrue(json.loads(receipt["verification_json"])["recordedContentRevalidated"])
 
+    def test_expo_adoption_blocks_explicit_ai_assets(self):
+        fixture = create_fixture(self.root, "Expo", fixture_id="fixture-expo")
+        run_id = self._insert_upload_run(captured_hash=True)
+        record_decision(
+            self.root,
+            {
+                "assetId": "asset-1",
+                "action": "metadata",
+                "metadataState": "approved",
+                "keywords": ["Fixture", "Generative AI"],
+            },
+        )
+        plan = plan_upload_run_adoption(self.root, run_id, fixture["fixtureId"])
+        self.assertEqual(plan["eligibleCount"], 1)
+        self.assertEqual(plan["blockedCount"], 1)
+        self.assertEqual(plan["blocked"][0]["assetId"], "asset-1")
+        self.assertEqual(plan["blocked"][0]["reason"], "AI-generated assets are retired from Expo")
+
+    def test_expo_adoption_blocks_stained_glass_assets(self):
+        fixture = create_fixture(self.root, "Expo", fixture_id="fixture-expo")
+        run_id = self._insert_upload_run(captured_hash=True)
+        record_decision(
+            self.root,
+            {
+                "assetId": "asset-1",
+                "action": "metadata",
+                "metadataState": "approved",
+                "keywords": ["Fixture", "Stained"],
+            },
+        )
+        plan = plan_upload_run_adoption(self.root, run_id, fixture["fixtureId"])
+        self.assertEqual(plan["eligibleCount"], 1)
+        self.assertEqual(plan["blockedCount"], 1)
+        self.assertEqual(plan["blocked"][0]["assetId"], "asset-1")
+        self.assertEqual(plan["blocked"][0]["reason"], "Stained assets are retired from Expo")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -581,6 +581,49 @@ test("background Owner connectors use scoped credentials and report health", asy
   assert.equal(await packageResponse.text(), "connector-zip");
 });
 
+test("public photo moderation is routed only to the requested Owner connector", async () => {
+  const ownerActionStore = createMemoryOwnerActionStore();
+  const ownerConnectorAuth = {
+    requireConnector: async (request) => {
+      const token = request.headers.get("authorization");
+      if (token === "Bearer max-secret") return { connectorId: "max" };
+      if (token === "Bearer david-secret") return { connectorId: "david" };
+      throw Object.assign(new Error("Connector credential required."), { status: 401, code: "owner_connector_auth_required" });
+    },
+  };
+  const worker = createPhotosByElieWorker({
+    catalog: loadCatalog(),
+    accessAuth: fakeAccessAuthFor("owner@example.com"),
+    accessUserRegistry: createMemoryAccessUserRegistry([{ email: "owner@example.com", tier: "owner" }]),
+    ownerActionStore,
+    ownerConnectorAuth,
+    randomUUID: deterministicIds(),
+  });
+
+  const queuedResponse = await worker.fetch(jsonRequest("https://worker.test/owner/actions", {
+    action: "photo-moderation",
+    payload: {
+      operation: "hide-many",
+      photoIds: ["photo-a", "photo-b"],
+      requestedConnector: "max",
+    },
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(queuedResponse.status, 202);
+
+  const maxResponse = await worker.fetch(new Request("https://worker.test/owner/connector/actions", {
+    headers: { authorization: "Bearer max-secret" },
+  }));
+  const maxBody = await maxResponse.json();
+  assert.equal(maxBody.actions.length, 1);
+  assert.equal(maxBody.actions[0].type, "photo-moderation");
+  assert.deepEqual(maxBody.actions[0].payload.photoIds, ["photo-a", "photo-b"]);
+
+  const davidResponse = await worker.fetch(new Request("https://worker.test/owner/connector/actions", {
+    headers: { authorization: "Bearer david-secret" },
+  }));
+  assert.equal((await davidResponse.json()).actions.length, 0);
+});
+
 test("sidecar cloud decisions are stored behind Owner or connector auth", async () => {
   const registry = createMemoryAccessUserRegistry([{ email: "owner@example.com", tier: "owner" }]);
   const ownerConnectorAuth = {

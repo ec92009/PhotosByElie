@@ -2099,6 +2099,7 @@ export const createPhotosByElieWorker = ({
     "sidecar-photos-index-sync",
     "sidecar-review-decision",
     "sidecar-upload-publish",
+    "photo-moderation",
   ]);
 
   const requireOwnerConnector = async (request) => {

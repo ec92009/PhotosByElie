@@ -2835,11 +2835,7 @@ window.photosByElieVideoDurationLabel = (photo) => (
       window.setTimeout(centerPanoStage, 80);
       window.setTimeout(() => panoPan?.refresh?.(), 120);
     };
-    const metadataRows = (extraRows = []) => [
-      ["Media id", targetPhoto.id],
-      ["Kind", isVideo ? "Video" : "Photo"],
-      ...extraRows,
-    ].filter(([, value]) => String(value ?? "").trim());
+    const metadataRows = () => [];
     const renderInfo = ({ eyebrow = owner ? "Owner source preview" : "Preview", state = "", rows = [], note = "" } = {}) => {
       if (!infoPanel) return;
       infoPanel.classList.toggle("is-error", state === "error");
@@ -2847,11 +2843,11 @@ window.photosByElieVideoDurationLabel = (photo) => (
       infoPanel.innerHTML = `
         <p class="eyebrow">${escapePreviewHtml(eyebrow)}</p>
         <h2>${escapePreviewHtml(title)}</h2>
-        <dl>
+        ${metadataRows(rows).length ? `<dl>
           ${metadataRows(rows).map(([label, value]) => `
             <div><dt>${escapePreviewHtml(label)}</dt><dd>${escapePreviewHtml(value)}</dd></div>
           `).join("")}
-        </dl>
+        </dl>` : ""}
         ${note ? `<p class="finder-preview-note">${escapePreviewHtml(note)}</p>` : ""}
       `;
     };

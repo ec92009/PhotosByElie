@@ -1,5 +1,6 @@
 ((async () => {
 await window.photosByElieCatalogReady;
+await window.photosByElieHiddenActionsReady;
 const galleryHrefForKey = (key) => `./gallery.html?gallery=${encodeURIComponent(key)}`;
 const selectionGalleryKey = "selection";
 const selectionGalleryAliases = new Set([selectionGalleryKey, "make-selection", "make-your-selection"]);
@@ -70,10 +71,14 @@ const hiddenActions = window.photosByElieHiddenActions;
 const reserveStore = window.photosByElieReserve;
 const likedStore = window.photosByElieLiked;
 const localModerationEnabled = Boolean(hiddenActions?.enabled);
+const ownerCullingEnabled = Boolean(hiddenActions?.cullingEnabled);
 const reserveFillEnabled = false;
 const galleryActions = document.querySelector("[data-gallery-actions]");
 const versionedHref = (href) => window.photosByElieVersionedHref?.(href) || href;
 let selectedIndex = 0;
+const selectedPhotoIds = new Set();
+let lastCulledPhotoIds = [];
+let ownerCullToolbar = null;
 const pageSize = 24;
 const showAllChunkSize = pageSize * 4;
 const showAllChunkDelayMs = 16;
@@ -113,6 +118,66 @@ let ownerSuperSearchIndex = new Map();
 let ownerSuperSearchPromise = null;
 
 const shortcutKey = (label) => `<kbd>${label}</kbd>`;
+
+const syncOwnerCullToolbar = () => {
+  if (!ownerCullToolbar) return;
+  const count = selectedPhotoIds.size;
+  ownerCullToolbar.querySelector("[data-owner-cull-count]").textContent = `${count} selected`;
+  ownerCullToolbar.querySelector("[data-owner-cull-hide]").disabled = count === 0;
+  ownerCullToolbar.querySelector("[data-owner-cull-clear]").disabled = count === 0;
+  ownerCullToolbar.querySelector("[data-owner-cull-undo]").disabled = lastCulledPhotoIds.length === 0;
+};
+
+const ensureOwnerCullToolbar = () => {
+  if (!ownerCullingEnabled || !galleryActions || ownerCullToolbar) return;
+  ownerCullToolbar = document.createElement("div");
+  ownerCullToolbar.className = "owner-cull-toolbar";
+  ownerCullToolbar.setAttribute("aria-label", "Owner culling controls");
+  ownerCullToolbar.innerHTML = `
+    <strong data-owner-cull-count>0 selected</strong>
+    <button class="btn secondary" type="button" data-owner-cull-select-visible>Select visible</button>
+    <button class="btn" type="button" data-owner-cull-hide disabled>Move to Waste Basket</button>
+    <button class="btn secondary" type="button" data-owner-cull-clear disabled>Clear</button>
+    <button class="btn secondary" type="button" data-owner-cull-undo disabled>Undo</button>
+  `;
+  galleryActions.prepend(ownerCullToolbar);
+  ownerCullToolbar.querySelector("[data-owner-cull-select-visible]").addEventListener("click", () => {
+    renderedGalleryPhotos.slice(0, 500).forEach((photo) => selectedPhotoIds.add(photo.id));
+    renderGallery();
+  });
+  ownerCullToolbar.querySelector("[data-owner-cull-clear]").addEventListener("click", () => {
+    selectedPhotoIds.clear();
+    renderGallery();
+  });
+  ownerCullToolbar.querySelector("[data-owner-cull-hide]").addEventListener("click", async () => {
+    const ids = [...selectedPhotoIds].slice(0, 500);
+    if (!ids.length) return;
+    try {
+      setGalleryStatus(`Moving ${ids.length} photo${ids.length === 1 ? "" : "s"} to Waste Basket...`);
+      await hiddenActions.markMany(ids);
+      lastCulledPhotoIds = ids;
+      selectedPhotoIds.clear();
+      renderGallery();
+      setGalleryStatus(`${ids.length} photo${ids.length === 1 ? "" : "s"} moved to Waste Basket.`);
+    } catch (error) {
+      setGalleryStatus(error?.message || "Could not move the selected photos to Waste Basket.");
+    }
+  });
+  ownerCullToolbar.querySelector("[data-owner-cull-undo]").addEventListener("click", async () => {
+    if (!lastCulledPhotoIds.length) return;
+    const ids = [...lastCulledPhotoIds];
+    try {
+      setGalleryStatus(`Restoring ${ids.length} photo${ids.length === 1 ? "" : "s"}...`);
+      await hiddenActions.undoMany(ids);
+      lastCulledPhotoIds = [];
+      renderGallery();
+      setGalleryStatus(`${ids.length} photo${ids.length === 1 ? "" : "s"} restored.`);
+    } catch (error) {
+      setGalleryStatus(error?.message || "Could not undo the last basket move.");
+    }
+  });
+  syncOwnerCullToolbar();
+};
 const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({
   "&": "&amp;",
   "<": "&lt;",
@@ -157,19 +222,21 @@ const localizedCollectionTitle = () => {
 const likedPhotoIds = () => new Set(likedStore?.read?.().map((item) => item.photoId) || []);
 const shouldShowKeyboardHints = () => window.photosByElieInputMode?.shouldShowKeyboardHints?.() ?? true;
 const ensureGalleryKeyboardHint = () => {
-  if (!galleryRoot || !localModerationEnabled || document.querySelector("[data-gallery-shortcut-hint]")) return;
+  if (!galleryRoot || !ownerCullingEnabled || document.querySelector("[data-gallery-shortcut-hint]")) return;
   const hint = document.createElement("p");
   hint.className = "keyboard-hint gallery-keyboard-hint";
   hint.dataset.galleryShortcutHint = "";
   hint.innerHTML = [
     "Owner shortcuts:",
     `${shortcutKey("X")} block`,
-    `${shortcutKey("D")} discard`,
     `${shortcutKey("L")} like`,
     `${shortcutKey("U")} undo`,
-    `${shortcutKey("T")} title`,
-    `${shortcutKey("K")} keywords`,
-    `${shortcutKey("R")} review`,
+    ...(localModerationEnabled ? [
+      `${shortcutKey("D")} discard`,
+      `${shortcutKey("T")} title`,
+      `${shortcutKey("K")} keywords`,
+      `${shortcutKey("R")} review`
+    ] : []),
     `${shortcutKey("Z")} view`,
     `${shortcutKey("Arrows")} select`,
     `${shortcutKey("Enter")} detail`,
@@ -180,7 +247,7 @@ const ensureGalleryKeyboardHint = () => {
 };
 window.addEventListener("photosbyelie:inputmodechange", () => {
   const hint = document.querySelector("[data-gallery-shortcut-hint]");
-  if (hint) hint.hidden = !localModerationEnabled || !shouldShowKeyboardHints();
+  if (hint) hint.hidden = !ownerCullingEnabled || !shouldShowKeyboardHints();
 });
 
 const readFilterState = () => {
@@ -763,7 +830,7 @@ const reserveReplacementPhoto = (selected, selectedIds) => {
 
 const visiblePhotos = () => {
   const basePhotos = gallery?.photos || [];
-  if (!localModerationEnabled) return window.photosByElieFilterPublicHidden?.(basePhotos) || basePhotos;
+  if (!ownerCullingEnabled) return window.photosByElieFilterPublicHidden?.(basePhotos) || basePhotos;
 
   const selected = hiddenActions
     .filterPhotos(basePhotos)
@@ -785,7 +852,9 @@ const updateSelection = ({ scroll = true } = {}) => {
   selectedIndex = Math.max(0, Math.min(selectedIndex, cards.length - 1));
   cards.forEach((card, index) => {
     card.classList.toggle("is-selected", index === selectedIndex);
+    card.classList.toggle("is-batch-selected", selectedPhotoIds.has(renderedGalleryPhotos[index]?.id));
   });
+  syncOwnerCullToolbar();
   if (scroll) cards[selectedIndex]?.scrollIntoView({ block: "nearest", inline: "nearest" });
 };
 
@@ -1141,8 +1210,8 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
   galleryRoot.innerHTML = visibleSubset.map((photo, index) => {
     const href = versionedHref(`./photo.html?id=${encodeURIComponent(photo.id)}`);
     const isLiked = likedIds.has(photo.id);
-    const actionHtml = likedStore ? `
-        <div class="gallery-card-actions">
+    const actionButtons = [];
+    if (likedStore) actionButtons.push(`
           <button
             class="gallery-action-toggle gallery-like-toggle${isLiked ? " is-liked" : ""}"
             type="button"
@@ -1153,8 +1222,18 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
           >
             ${window.photosByElieMdIcon?.(isLiked ? "favorite" : "favoriteBorder") || "<span aria-hidden=\"true\"></span>"}
           </button>
-        </div>
-      ` : "";
+      `);
+    if (ownerCullingEnabled) actionButtons.push(`
+          <button
+            class="gallery-action-toggle gallery-select-toggle${selectedPhotoIds.has(photo.id) ? " is-selected" : ""}"
+            type="button"
+            data-owner-select-photo
+            data-photo-id="${escapeHtml(photo.id)}"
+            aria-label="${selectedPhotoIds.has(photo.id) ? "Remove from selection" : "Add to selection"}"
+            aria-pressed="${selectedPhotoIds.has(photo.id) ? "true" : "false"}"
+          >${selectedPhotoIds.has(photo.id) ? "✓" : "+"}</button>
+      `);
+    const actionHtml = actionButtons.length ? `<div class="gallery-card-actions">${actionButtons.join("")}</div>` : "";
     return renderSharedPhotoCard({
       photo,
       index,
@@ -1170,6 +1249,16 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
       event.stopPropagation();
       const photo = visibleSubset.find((candidate) => candidate.id === button.dataset.photoId);
       toggleGalleryLike(photo);
+    });
+  });
+  galleryRoot.querySelectorAll("[data-owner-select-photo]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const photoId = button.dataset.photoId;
+      if (selectedPhotoIds.has(photoId)) selectedPhotoIds.delete(photoId);
+      else if (selectedPhotoIds.size < 500) selectedPhotoIds.add(photoId);
+      renderGallery();
     });
   });
   galleryRoot.querySelectorAll("[data-photo-index]").forEach((card) => {
@@ -1209,6 +1298,20 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
       });
     });
   }
+  if (ownerCullingEnabled && !localModerationEnabled) {
+    galleryRoot.querySelectorAll("[data-photo-index]").forEach((card) => {
+      card.addEventListener("click", (event) => {
+        if (event.target.closest("button")) return;
+        event.preventDefault();
+        selectedIndex = Number(card.dataset.photoIndex || 0);
+        updateSelection({ scroll: false });
+      });
+      card.addEventListener("dblclick", (event) => {
+        event.preventDefault();
+        window.location.assign(versionedHref(card.dataset.photoHref || card.querySelector("[data-photo-link]")?.getAttribute("href")));
+      });
+    });
+  }
   window.photosByElieVersionInternalLinks?.(galleryRoot);
   syncGalleryImageDimensions(visibleSubset);
   applyGalleryDensity();
@@ -1233,12 +1336,13 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
     showAllButton.textContent = seeAllLabel(remaining);
   }
   syncReviewVisibleButton(visibleSubset, photos.length);
+  syncOwnerCullToolbar();
   const paginated = photos.length > visibleSubset.length;
   const mediaNoun = photoFilter.statusNoun(filterState, t);
   const filterStatus = activeFilterCount() || paginated
     ? t("gallery.showing_filtered_items", { count: visibleSubset.length, total: photos.length, items: mediaNoun })
     : t("gallery.showing_count_items", { count: visibleSubset.length, items: mediaNoun });
-  if (localModerationEnabled) {
+  if (ownerCullingEnabled) {
     const reserveCount = reserveFillEnabled ? reserveStore.photosFor(galleryKey).length : 0;
     setGalleryStatus(reserveCount
       ? t("gallery.reserve_available", { status: filterStatus })
@@ -1287,6 +1391,7 @@ if (galleryRoot && gallery) {
   galleryRoot.classList.add(gallery.accent);
   galleryRoot.setAttribute("aria-label", `${localizedCollectionTitle()} ${t("nav.photos").toLowerCase()}`);
   ensureGalleryFilterControls();
+  ensureOwnerCullToolbar();
   ensureGalleryMoreButton();
   ensureGalleryKeyboardHint();
   renderGallery();
@@ -1409,7 +1514,7 @@ if (galleryRoot && gallery) {
     setGalleryStatus(event.detail?.message || "Owner action failed.");
   });
 
-  if (localModerationEnabled) {
+  if (ownerCullingEnabled) {
     window.addEventListener("keydown", async (event) => {
       if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
       const target = event.target;
@@ -1447,6 +1552,7 @@ if (galleryRoot && gallery) {
         return;
       }
       if (event.key.toLowerCase() === "t" || event.key.toLowerCase() === "k") {
+        if (!localModerationEnabled) return;
         const selected = photos[selectedIndex];
         if (!selected) return;
         openOwnerMetadataModal(selected, event.key.toLowerCase() === "k" ? "keywords" : "title");
@@ -1454,6 +1560,7 @@ if (galleryRoot && gallery) {
         return;
       }
       if (event.key.toLowerCase() === "r") {
+        if (!localModerationEnabled) return;
         const selected = photos[selectedIndex];
         if (!selected) return;
         try {
@@ -1467,23 +1574,27 @@ if (galleryRoot && gallery) {
       }
       if (event.key.toLowerCase() === "x" || event.key.toLowerCase() === "b" || event.key.toLowerCase() === "h") {
         const selected = photos[selectedIndex];
-        if (!selected) return;
+        const ids = selectedPhotoIds.size ? [...selectedPhotoIds].slice(0, 500) : [selected?.id].filter(Boolean);
+        if (!ids.length) return;
         try {
-          setGalleryBlockedVisual(selected.id, "blocking");
-          setGalleryStatus(`${selected.title} moving to Waste Basket...`);
-          await hiddenActions.mark(selected.id);
-          setGalleryBlockedVisual(selected.id, "blocked");
+          ids.forEach((photoId) => setGalleryBlockedVisual(photoId, "blocking"));
+          setGalleryStatus(`${ids.length} photo${ids.length === 1 ? "" : "s"} moving to Waste Basket...`);
+          if (ids.length === 1) await hiddenActions.mark(ids[0]);
+          else await hiddenActions.markMany(ids);
+          lastCulledPhotoIds = ids;
+          selectedPhotoIds.clear();
           selectedIndex = Math.min(selectedIndex, Math.max(0, photos.length - 2));
           renderGallery();
-          setGalleryStatus(`${selected.title} moved to Waste Basket.`);
+          setGalleryStatus(`${ids.length} photo${ids.length === 1 ? "" : "s"} moved to Waste Basket.`);
         } catch (error) {
-          setGalleryBlockedVisual(selected.id, "");
+          ids.forEach((photoId) => setGalleryBlockedVisual(photoId, ""));
           setGalleryStatus(error?.message || "Could not move photo to Waste Basket.");
         }
         event.preventDefault();
         return;
       }
       if (event.key.toLowerCase() === "d") {
+        if (!localModerationEnabled) return;
         const selected = photos[selectedIndex];
         if (!selected) return;
         const confirmed = window.confirm(`Discard "${selected.title}"?\n\nThis removes it from the catalog and keeps a tombstone so imports do not bring it back.`);
@@ -1505,7 +1616,13 @@ if (galleryRoot && gallery) {
       if (event.key.toLowerCase() !== "u") return;
       let undoneId = null;
       try {
-        undoneId = await hiddenActions.undo();
+        if (lastCulledPhotoIds.length > 1) {
+          const restored = await hiddenActions.undoMany(lastCulledPhotoIds);
+          undoneId = restored[0] || null;
+        } else {
+          undoneId = await hiddenActions.undo(lastCulledPhotoIds[0] || null);
+        }
+        lastCulledPhotoIds = [];
       } catch (error) {
         setGalleryStatus(error?.message || "Could not undo the last basket move.");
         event.preventDefault();

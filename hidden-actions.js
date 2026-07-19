@@ -1,6 +1,9 @@
 (() => {
-  const enabled = ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
+  const localEnabled = ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
   const ownerAuth = window.photosByElieOwnerAuth;
+  const cloudBaseUrl = String(window.photosByElieMediaConfig?.authWorkerBaseUrl || "").trim().replace(/\/+$/, "");
+  let remoteCullingEnabled = false;
+  const cullingEnabled = () => localEnabled || remoteCullingEnabled;
   const key = "photosbyelie-hidden";
   const historyKey = "photosbyelie-hidden-history";
   const reservePromotionsKey = "photosbyelie-reserve-promotions";
@@ -56,7 +59,7 @@
   };
 
   const read = () => {
-    if (!enabled) return [];
+    if (!cullingEnabled()) return [];
     const loadedHiddenIds = hiddenIdsFromLoadedData();
     const storedHiddenIds = readStoredHiddenIds();
     return normalize([
@@ -67,7 +70,7 @@
   };
 
   const readHistory = () => {
-    if (!enabled) return [];
+    if (!cullingEnabled()) return [];
     try {
       return normalize(JSON.parse(localStorage.getItem(historyKey) || "[]"));
     } catch {
@@ -76,7 +79,7 @@
   };
 
   const readReserveOnly = () => {
-    if (!enabled) return [];
+    if (!localEnabled) return [];
     try {
       return normalize(JSON.parse(localStorage.getItem(reserveOnlyKey) || "[]"));
     } catch {
@@ -103,7 +106,7 @@
   };
 
   const readPromotions = () => {
-    if (!enabled) return {};
+    if (!localEnabled) return {};
     const fromStore = window.photosByElieReserve?.readPromotions?.();
     if (fromStore) return normalizePromotionState(fromStore);
     try {
@@ -115,14 +118,14 @@
 
   const writePromotions = (state) => {
     const normalized = normalizePromotionState(state);
-    if (enabled) localStorage.setItem(reservePromotionsKey, JSON.stringify(normalized));
+    if (localEnabled) localStorage.setItem(reservePromotionsKey, JSON.stringify(normalized));
     return normalized;
   };
 
   const writeLoadedHiddenIds = () => {
     const ids = hiddenIdsFromLoadedData() || [];
     const mergedIds = normalize([...ids, ...pendingHiddenIds]);
-    if (enabled) localStorage.setItem(key, JSON.stringify(mergedIds));
+    if (cullingEnabled()) localStorage.setItem(key, JSON.stringify(mergedIds));
     return mergedIds;
   };
 
@@ -228,8 +231,52 @@
 
   window.photosByElieSetOwnerBusy = setOwnerBusy;
 
+  const remoteOwnerAction = async (operation, photoId, extra = {}) => {
+    if (!cloudBaseUrl) throw new Error("Owner action service is unavailable.");
+    const photoIds = normalize(extra.photo_ids || (photoId ? [photoId] : []));
+    const response = await fetch(`${cloudBaseUrl}/owner/actions`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "photo-moderation",
+        payload: {
+          operation,
+          photoId: photoId || photoIds[0] || "",
+          photoIds,
+          requestedConnector: "max",
+        },
+      }),
+    });
+    const queued = await response.json().catch(() => ({}));
+    if (!response.ok || !queued?.action?.id) {
+      if (response.status === 401) ownerAuth?.markSignedOut?.();
+      throw new Error(queued?.error?.message || queued?.error || `Could not queue ${operation}.`);
+    }
+    const deadline = Date.now() + 120000;
+    while (Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      const poll = await fetch(`${cloudBaseUrl}/owner/actions/${encodeURIComponent(queued.action.id)}`, {
+        cache: "no-store",
+        credentials: "include",
+      });
+      const payload = await poll.json().catch(() => ({}));
+      if (!poll.ok) throw new Error(payload?.error?.message || payload?.error || `Could not check ${operation}.`);
+      const state = payload?.action?.state;
+      if (state === "completed") {
+        const result = payload.action.result?.result || payload.action.result || {};
+        return applyServerState(result);
+      }
+      if (state === "failed" || state === "cancelled") {
+        throw new Error(payload?.action?.error?.message || payload?.action?.message || `${operation} failed.`);
+      }
+      updateOwnerBusy(`${ownerActionBusyMessages[operation] || "Owner action is running..."} (${state || "queued"})`);
+    }
+    throw new Error(`${operation} is still queued on Max. Try again in a moment.`);
+  };
+
   const photoAction = async (action, photoId, extra = {}) => {
-    if (!enabled) return null;
+    if (!localEnabled && !cullingEnabled()) return null;
     const authorized = await ownerAuth?.requireAuth?.(`Start the local Photos By Elie server for ${action}.`);
     if (ownerAuth?.enabled && !authorized) {
       throw new Error("Owner helper server required.");
@@ -240,6 +287,12 @@
     if (!photoOptionalActions.includes(action) && !requestPayload.photo_id && !normalize(requestPayload.photo_ids).length) return null;
     setOwnerBusy(true, ownerActionBusyMessages[action] || "Owner action is running...");
     try {
+      if (!localEnabled) {
+        if (!["hide", "hide-many", "undo-hide", "undo-hide-many"].includes(action)) {
+          throw new Error("This Owner action is available from Sidecar on Max.");
+        }
+        return await remoteOwnerAction(action, photoId, extra);
+      }
       const response = await fetch(photoActionEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -269,7 +322,7 @@
   };
 
   const readCountryAssignments = () => {
-    if (!enabled) return {};
+    if (!localEnabled) return {};
     try {
       return normalizeCountryAssignments(JSON.parse(localStorage.getItem(countryAssignmentsKey) || "{}"));
     } catch {
@@ -279,13 +332,13 @@
 
   const writeCountryAssignments = (state) => {
     const normalized = normalizeCountryAssignments(state);
-    if (enabled) localStorage.setItem(countryAssignmentsKey, JSON.stringify(normalized));
+    if (localEnabled) localStorage.setItem(countryAssignmentsKey, JSON.stringify(normalized));
     window.dispatchEvent(new CustomEvent("photosbyelie:hiddenchange", { detail: { items: read() } }));
     return normalized;
   };
 
   const setCountryAssignment = (photoId, galleryKey) => {
-    if (!enabled || !photoId) return readCountryAssignments();
+    if (!localEnabled || !photoId) return readCountryAssignments();
     const assignments = readCountryAssignments();
     if (countryAssignmentTargets.includes(galleryKey)) {
       assignments[photoId] = galleryKey;
@@ -296,7 +349,7 @@
   };
 
   const setCountryAssignments = (photoIds = [], galleryKey) => {
-    if (!enabled) return readCountryAssignments();
+    if (!localEnabled) return readCountryAssignments();
     const assignments = readCountryAssignments();
     normalize(photoIds).forEach((photoId) => {
       if (countryAssignmentTargets.includes(galleryKey)) {
@@ -309,7 +362,7 @@
   };
 
   const clearCountryAssignments = (photoIds = []) => {
-    if (!enabled) return readCountryAssignments();
+    if (!localEnabled) return readCountryAssignments();
     const ids = new Set(normalize(photoIds));
     if (!ids.size) return readCountryAssignments();
     const assignments = readCountryAssignments();
@@ -324,13 +377,13 @@
 
   const write = (items) => {
     const normalized = normalize(items);
-    if (enabled) localStorage.setItem(key, JSON.stringify(normalized));
+    if (cullingEnabled()) localStorage.setItem(key, JSON.stringify(normalized));
     window.dispatchEvent(new CustomEvent("photosbyelie:hiddenchange", { detail: { items: normalized } }));
     return normalized;
   };
 
   const syncFromPublishedBlacklist = async () => {
-    if (!enabled) return read();
+    if (!localEnabled) return read();
     const href = window.photosByElieVersionedHref?.("./assets/hidden/hidden-blacklist.json") || "./assets/hidden/hidden-blacklist.json";
     const response = await fetch(href, { cache: "no-store" });
     if (!response.ok) throw new Error(`Blocked list ${response.status}`);
@@ -340,13 +393,13 @@
 
   const writeHistory = (items) => {
     const normalized = normalize(items);
-    if (enabled) localStorage.setItem(historyKey, JSON.stringify(normalized));
+    if (cullingEnabled()) localStorage.setItem(historyKey, JSON.stringify(normalized));
     return normalized;
   };
 
   const writeReserveOnly = (items) => {
     const normalized = normalize(items);
-    if (enabled) localStorage.setItem(reserveOnlyKey, JSON.stringify(normalized));
+    if (localEnabled) localStorage.setItem(reserveOnlyKey, JSON.stringify(normalized));
     window.dispatchEvent(new CustomEvent("photosbyelie:hiddenchange", { detail: { items: read() } }));
     return normalized;
   };
@@ -370,10 +423,10 @@
   };
 
   const mark = async (photoId) => {
-    if (!enabled || !photoId) return read();
+    if (!cullingEnabled() || !photoId) return read();
     const current = read();
     const queueHideAction = (options = {}) => {
-      enqueuePhotoAction("hide", photoId).then(() => {
+      return enqueuePhotoAction("hide", photoId).then(() => {
         pendingHiddenIds.delete(photoId);
       }).catch((error) => {
         pendingHiddenIds.delete(photoId);
@@ -392,12 +445,31 @@
     pendingHiddenIds.add(photoId);
     const nextItems = write([...current, photoId]);
     writeHistory([...readHistory(), photoId]);
-    queueHideAction({ revertOnError: true });
+    const queued = queueHideAction({ revertOnError: true });
+    if (!localEnabled) await queued;
     return nextItems;
   };
 
+  const markMany = async (photoIds = []) => {
+    const ids = normalize(photoIds).filter((photoId) => !read().includes(photoId));
+    if (!cullingEnabled() || !ids.length) return read();
+    ids.forEach((photoId) => pendingHiddenIds.add(photoId));
+    const current = read();
+    const nextItems = write([...current, ...ids]);
+    writeHistory([...readHistory(), ...ids]);
+    try {
+      await enqueuePhotoAction("hide-many", ids[0], { photo_ids: ids });
+      ids.forEach((photoId) => pendingHiddenIds.delete(photoId));
+      return nextItems;
+    } catch (error) {
+      ids.forEach((photoId) => pendingHiddenIds.delete(photoId));
+      unmarkMany(ids);
+      throw error;
+    }
+  };
+
   const discard = async (photoId) => {
-    if (!enabled || !photoId) return null;
+    if (!localEnabled || !photoId) return null;
     forgetReserveOnly([photoId]);
     removePromotionEverywhere(photoId);
     const result = await photoAction("discard", photoId);
@@ -406,14 +478,14 @@
   };
 
   const unmark = (photoId) => {
-    if (!enabled || !photoId) return read();
+    if (!cullingEnabled() || !photoId) return read();
     forgetReserveOnly([photoId]);
     const items = read().filter((item) => item !== photoId);
     return write(items);
   };
 
   const unmarkMany = (photoIds = []) => {
-    if (!enabled) return read();
+    if (!cullingEnabled()) return read();
     const wanted = new Set(normalize(photoIds));
     if (!wanted.size) return read();
     forgetReserveOnly([...wanted]);
@@ -421,7 +493,7 @@
   };
 
   const promoteHidden = async (photoId) => {
-    if (!enabled || !photoId) return read();
+    if (!localEnabled || !photoId) return read();
     removePromotionEverywhere(photoId);
     await photoAction("promote-hidden", photoId);
     return read();
@@ -431,7 +503,7 @@
 
   const assignUnknownsToCountry = async (photoIds = [], galleryKey, options = {}) => {
     const ids = normalize(photoIds);
-    if (!enabled || !ids.length || !countryAssignmentTargets.includes(galleryKey)) return null;
+    if (!localEnabled || !ids.length || !countryAssignmentTargets.includes(galleryKey)) return null;
     const result = await photoAction("assign-country", ids[0], {
       photo_ids: ids,
       gallery_key: galleryKey,
@@ -447,7 +519,7 @@
   };
 
   const updatePhotoMetadata = async (photoId, updates = {}) => {
-    if (!enabled || !photoId) return null;
+    if (!localEnabled || !photoId) return null;
     return photoAction("update-photo-metadata", photoId, {
       title: updates.title,
       keywords: updates.keywords,
@@ -455,7 +527,7 @@
   };
 
   const queueTitleKeywordReview = async (photoId, options = {}) => {
-    if (!enabled || !photoId) return null;
+    if (!localEnabled || !photoId) return null;
     return photoAction("queue-title-keyword-review", photoId, {
       source: options.source,
       requested_by: options.requestedBy || "owner",
@@ -465,7 +537,7 @@
 
   const queueTitleKeywordReviewMany = async (photoIds = [], options = {}) => {
     const ids = normalize(photoIds);
-    if (!enabled || !ids.length) return null;
+    if (!localEnabled || !ids.length) return null;
     return photoAction("queue-title-keyword-review-many", ids[0], {
       photo_ids: ids,
       source: options.source,
@@ -475,12 +547,12 @@
   };
 
   const syncCountryKeywords = async () => {
-    if (!enabled) return null;
+    if (!localEnabled) return null;
     return photoAction("sync-country-keywords", null);
   };
 
   const removeCollectionKeyword = async (galleryKey, keyword) => {
-    if (!enabled || !galleryKey || !String(keyword || "").trim()) return null;
+    if (!localEnabled || !galleryKey || !String(keyword || "").trim()) return null;
     return photoAction("remove-collection-keyword", null, {
       gallery_key: galleryKey,
       keyword,
@@ -488,17 +560,17 @@
   };
 
   const publishHiddenBlacklist = async () => {
-    if (!enabled) return null;
+    if (!localEnabled) return null;
     return photoAction("publish-hidden-blacklist", null);
   };
 
   const wipeHiddenR2 = async () => {
-    if (!enabled) return null;
+    if (!localEnabled) return null;
     return photoAction("wipe-hidden-r2", null);
   };
 
   const undo = async (preferredPhotoId = null) => {
-    if (!enabled) return null;
+    if (!cullingEnabled()) return null;
     const items = read();
     if (preferredPhotoId && items.includes(preferredPhotoId)) {
       await photoAction("undo-hide", preferredPhotoId);
@@ -517,10 +589,20 @@
     return null;
   };
 
+  const undoMany = async (photoIds = []) => {
+    const ids = normalize(photoIds).filter((photoId) => read().includes(photoId));
+    if (!cullingEnabled() || !ids.length) return [];
+    await photoAction("undo-hide-many", ids[0], { photo_ids: ids });
+    unmarkMany(ids);
+    const restored = new Set(ids);
+    writeHistory(readHistory().filter((photoId) => !restored.has(photoId)));
+    return ids;
+  };
+
   const has = (photoId) => read().includes(photoId);
 
   const filterPhotos = (photos = [], options = {}) => {
-    if (!enabled) return photos;
+    if (!cullingEnabled()) return photos;
     const hidden = new Set(read());
     const reserveOnly = new Set(readReserveOnly());
     return photos.filter((photo) =>
@@ -530,10 +612,14 @@
   };
 
   window.photosByElieHiddenActions = {
-    enabled,
+    enabled: localEnabled,
+    get cullingEnabled() {
+      return cullingEnabled();
+    },
     filterPhotos,
     has,
     mark,
+    markMany,
     read,
     readCountryAssignments,
     readReserveOnly,
@@ -552,12 +638,22 @@
     syncFromPublishedBlacklist,
     syncCountryKeywords,
     undo,
+    undoMany,
     unmark,
     unmarkMany,
     updatePhotoMetadata,
     wipeHiddenR2,
   };
-  window.photosByElieHiddenActionsReady = enabled
-    ? syncFromPublishedBlacklist().catch(() => read())
-    : Promise.resolve([]);
+  window.photosByElieHiddenActionsReady = (async () => {
+    if (localEnabled) return syncFromPublishedBlacklist().catch(() => read());
+    const state = ownerAuth?.state?.checked ? ownerAuth.state : await ownerAuth?.refresh?.();
+    remoteCullingEnabled = Boolean(state?.authenticated && (state?.tier === "owner" || state?.roles?.includes?.("owner")));
+    return read();
+  })();
+  window.addEventListener("photosbyelie:ownerauthchange", (event) => {
+    if (localEnabled) return;
+    const state = event.detail || {};
+    remoteCullingEnabled = Boolean(state.authenticated && (state.tier === "owner" || state.roles?.includes?.("owner")));
+    window.dispatchEvent(new CustomEvent("photosbyelie:moderationchange", { detail: { enabled: remoteCullingEnabled } }));
+  });
 })();

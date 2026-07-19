@@ -1,5 +1,6 @@
 ((async () => {
 await window.photosByElieCatalogReady;
+await window.photosByElieHiddenActionsReady;
 if (window.photosByElieReserve?.enabled) {
   await window.photosByElieReserve.load();
 }
@@ -107,6 +108,7 @@ const basketStore = window.photosByElieBasket;
 const likedStore = window.photosByElieLiked;
 const hiddenActions = window.photosByElieHiddenActions;
 const localModerationEnabled = Boolean(hiddenActions?.enabled);
+const ownerCullingEnabled = Boolean(hiddenActions?.cullingEnabled);
 const ownerDetailPurchaseHidden = isOwnerCollection || isHiddenCollection || isOwnerReviewSyntheticCollection;
 const versionedHref = (href) => window.photosByElieVersionedHref?.(href) || href;
 const galleryHrefForKey = (key) => `./gallery.html?gallery=${encodeURIComponent(key)}`;
@@ -209,13 +211,15 @@ const renderDetailShortcutHint = () => {
     detailShortcutHint.hidden = true;
     return;
   }
-  const ownerShortcuts = localModerationEnabled
+  const ownerShortcuts = ownerCullingEnabled
     ? [
       `${detailShortcutKey("X")} block`,
       `${detailShortcutKey("U")} undo`,
-      `${detailShortcutKey("T")} title`,
-      `${detailShortcutKey("K")} keywords`,
-      `${detailShortcutKey("R")} review`
+      ...(localModerationEnabled ? [
+        `${detailShortcutKey("T")} title`,
+        `${detailShortcutKey("K")} keywords`,
+        `${detailShortcutKey("R")} review`
+      ] : [])
     ]
     : [];
   detailShortcutHint.innerHTML = [
@@ -597,13 +601,12 @@ metadataToggle?.addEventListener("click", () => {
   if (metadataRoot) metadataRoot.hidden = !expanded;
 });
 const renderMetadataRows = () => {
-  const hiddenLabels = new Set(["preview file", "software", "color profile"]);
+  const hiddenLabels = new Set(["preview file", "software", "color profile", "metadata title", "origin"]);
   const metadata = Array.isArray(photo.metadata)
     ? photo.metadata.filter((item) => item.label && item.value && !hiddenLabels.has(String(item.label).toLowerCase()))
     : [];
   const hasDurationRow = metadata.some((item) => String(item.label).toLowerCase() === "duration");
   const rows = [
-    { label: "Origin", value: photoOriginLabel },
     ...(!hasDurationRow && videoDurationLabel ? [{ label: "Duration", value: videoDurationLabel }] : []),
     ...metadata,
   ].filter((item) => item.label && item.value);
@@ -957,16 +960,18 @@ swipeTarget?.addEventListener("touchend", (event) => {
   navigateToPhotoHref(previousPhotoHref);
 }, { passive: true });
 
-if (localModerationEnabled) {
+if (ownerCullingEnabled) {
   window.addEventListener("keydown", async (event) => {
     if (shouldIgnoreShortcut(event)) return;
     const key = event.key.toLowerCase();
     if (key === "t" || key === "k") {
+      if (!localModerationEnabled) return;
       openOwnerMetadataModal(key === "k" ? "keywords" : "title");
       event.preventDefault();
       return;
     }
     if (key === "r") {
+      if (!localModerationEnabled) return;
       event.preventDefault();
       try {
         if (!hiddenActions.queueTitleKeywordReview) {

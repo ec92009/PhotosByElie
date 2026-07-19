@@ -5925,6 +5925,30 @@ html[data-theme="light"] .mock-photo.has-image::after{
 .gallery-like-toggle.is-liked{
   color:#ff4d64;
 }
+.gallery-select-toggle.is-selected{
+  background:var(--selected-frame-ink);
+  color:#fffaf3;
+  font-size:1.2rem;
+  font-weight:900;
+}
+.owner-cull-toolbar{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:10px;
+  width:100%;
+  padding:12px;
+  border:1px solid var(--line);
+  border-radius:18px;
+  background:var(--panel);
+}
+.owner-cull-toolbar strong{min-width:88px}
+.owner-cull-toolbar .btn{min-height:42px;padding:9px 14px}
+.mock-photo-card.is-batch-selected .mock-photo{
+  outline:6px solid var(--selected-frame);
+  outline-offset:2px;
+  box-shadow:inset 0 0 0 5px var(--selected-frame),inset 0 0 0 999px var(--selected-tint),0 0 0 8px var(--selected-halo),0 18px 38px var(--selected-halo-soft);
+}
 .gallery-action-toggle:focus-visible{
   outline:3px solid rgba(255,255,255,.72);
   outline-offset:3px;

@@ -107,7 +107,7 @@ class UploadRegistrationScopeTest(unittest.TestCase):
         }
         with patch(
             "scripts.new_owner_connector._load_local_modules",
-            return_value=(lambda *_args, **_kwargs: local_result, None, None, None),
+            return_value=(lambda *_args, **_kwargs: local_result, None, None, None, None),
         ), patch(
             "scripts.new_owner_connector._launch_sidecar_workspace",
             return_value={"launched": True, "surface": "sidecar.html", "connectorId": "david"},
@@ -120,6 +120,47 @@ class UploadRegistrationScopeTest(unittest.TestCase):
         launch.assert_called_once_with(self.config)
         self.assertTrue(result["workspace"]["launched"])
         self.assertEqual(result["workspace"]["surface"], "sidecar.html")
+
+    def test_photo_moderation_batches_public_photo_ids(self):
+        calls = []
+
+        def apply_photo_action(_repo_root, payload):
+            calls.append(payload)
+            return {"ok": True, "action": payload["action"], "photo_ids": payload.get("photo_ids", [])}
+
+        with patch(
+            "scripts.new_owner_connector._load_local_modules",
+            return_value=(None, None, None, None, apply_photo_action),
+        ):
+            result = execute_action(self.config, {
+                "type": "photo-moderation",
+                "payload": {"operation": "hide-many", "photoIds": ["photo-a", "photo-b"]},
+            })
+
+        self.assertEqual(calls, [{"action": "hide-many", "photo_ids": ["photo-a", "photo-b"]}])
+        self.assertEqual(result["photoIds"], ["photo-a", "photo-b"])
+
+    def test_photo_moderation_group_undo_restores_each_photo(self):
+        calls = []
+
+        def apply_photo_action(_repo_root, payload):
+            calls.append(payload)
+            return {"ok": True, "action": payload["action"], "photo_id": payload["photo_id"]}
+
+        with patch(
+            "scripts.new_owner_connector._load_local_modules",
+            return_value=(None, None, None, None, apply_photo_action),
+        ):
+            result = execute_action(self.config, {
+                "type": "photo-moderation",
+                "payload": {"operation": "undo-hide-many", "photoIds": ["photo-a", "photo-b"]},
+            })
+
+        self.assertEqual(calls, [
+            {"action": "undo-hide", "photo_id": "photo-a"},
+            {"action": "undo-hide", "photo_id": "photo-b"},
+        ])
+        self.assertEqual(result["result"]["action"], "undo-hide-many")
 
 
 if __name__ == "__main__":

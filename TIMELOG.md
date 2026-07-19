@@ -591,8 +591,24 @@ Clock state: running
 | 2026-07-13 | 10:09 CEST | 10:10 CEST | 0:01 | Directed the Real Estate game plan documentation commit and push. |
 | 2026-07-13 | 10:34 CEST | 10:35 CEST | 0:01 | Approved real camera-storefront pricing and retirement of AI-generated images from commercial publication; implementation, rebuild, test, deploy, and browser runtime excluded. |
 | 2026-07-14 | 10:39 CEST | 10:40 CEST | 0:01 | Reported slow Sidecar Review approval/propagation and the missing review rail; diagnosis, implementation, and browser QA excluded. |
+| 2026-07-14 | 15:29 CEST | 15:30 CEST | 0:01 | Reviewed and prioritized the current backlog against the North Star and Real Estate launch game plan. |
+| 2026-07-14 | 15:30 CEST | 15:31 CEST | 0:01 | Approved the Real Estate launch direction and started the Corine 12-image proof-set review. |
+| 2026-07-14 | 15:31 CEST | 15:32 CEST | 0:01 | Clarified that the Corine material should lead as one photography-skills showcase rather than two forced apartment case studies. |
+| 2026-07-14 | 15:32 CEST | 15:33 CEST | 0:01 | Approved local panorama tooling; installed an isolated OpenCV toolchain and produced a five-frame Corine sea-view stitch. |
+| 2026-07-14 | 15:33 CEST | 15:34 CEST | 0:01 | Approved the five-frame sea panorama for the Corine photography showcase. |
+| 2026-07-14 | 15:34 CEST | 15:35 CEST | 0:01 | Directed the panorama horizon correction and upper-third sky crop. |
+| 2026-07-14 | 15:35 CEST | 15:36 CEST | 0:01 | Requested a tighter panorama variant with the horizon at one-fifth from the top. |
+| 2026-07-14 | 15:36 CEST | 15:37 CEST | 0:01 | Approved the one-fifth horizon crop as the final showcase panorama. |
+| 2026-07-14 | 15:37 CEST | 15:38 CEST | 0:01 | Approved the final eight-image showcase cut by removing the weak media-wall frame and redundant vertical sea view. |
+| 2026-07-14 | 16:27 CEST | 16:44 CEST | 0:05 | Reviewed and refined three showcase bedroom edits, including window recovery, wardrobe alignment, bedding contrast, exposure, perspective, and white balance; cloud render waits excluded. |
+| 2026-07-14 | 17:54 CEST | 18:16 CEST | 0:12 | Finalized the Corine showcase interiors, perspective/crop corrections, optional moon image, and seven-image pre-reshoot sequence; cloud render waits and background photo search excluded. |
+| 2026-07-14 | 19:58 CEST | 19:59 CEST | 0:01 | Requested a fresh North-Star-aware numbered backlog and detailed the top commercial priority. |
+| 2026-07-16 | 17:20 CEST | 17:27 CEST | 0:01 | Reviewed the La Concha intake preview failure and directed a compact preview-first album layout; implementation and diagnostic runtime excluded. |
+| 2026-07-19 | 12:08 CEST | 12:36 CEST | 0:02 | Reopened PBE-104, confirmed the missing post-upload Apple Photos give-back, and directed continued autonomous implementation; coding, tests, and browser runtime excluded. |
+| 2026-07-19 | 16:19 CEST | 16:20 CEST | 0:01 | Directed the long-running verified R2-to-Apple Photos give-back and requested 100-photo milestone updates; autonomous processing excluded. |
+| 2026-07-19 | 22:35 CEST | 22:37 CEST | 0:02 | Defined public Owner culling parity: multi-select, Waste Basket shortcuts, grouped undo, and a simplified photo detail/preview surface; implementation and test runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 30:22
+Active collaboration time used: 30:55
 Remaining budget: not set

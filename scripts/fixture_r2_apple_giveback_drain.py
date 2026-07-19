@@ -343,10 +343,9 @@ def process_candidate(
             asset_ids=[asset_id],
             actor="fixture-r2-apple-giveback-drain",
         )
-    preflight = writeback_plan(repo_root, fixture_id, [asset_id], adapter=adapter)
-    read_errors = [item for item in preflight["items"] if item.get("currentReadError")]
-    if preflight["count"] != 1 or preflight["blockedCount"] or read_errors:
-        raise RuntimeError(f"Apple Photos preflight blocked: {preflight['blocked'] or read_errors}")
+    preflight = writeback_plan(repo_root, fixture_id, [asset_id])
+    if preflight["count"] != 1 or preflight["blockedCount"]:
+        raise RuntimeError(f"Apple Photos preflight blocked: {preflight['blocked']}")
     result = commit_writeback(repo_root, fixture_id, [asset_id], adapter=adapter)
     if not result["ok"] or result["writtenCount"] != 1:
         raise RuntimeError(f"Apple Photos give-back failed: {result['failed'] or result['blocked']}")
@@ -359,6 +358,12 @@ def main() -> int:
     parser.add_argument("--fixture-id", default=DEFAULT_FIXTURE_ID)
     parser.add_argument("--limit", type=int, default=0)
     parser.add_argument("--checkpoint-every", type=int, default=100)
+    parser.add_argument(
+        "--global-checkpoint-every",
+        type=int,
+        default=0,
+        help="Report when the repository-wide verified count reaches each multiple.",
+    )
     parser.add_argument("--max-consecutive-failures", type=int, default=5)
     parser.add_argument("--commit", action="store_true")
     parser.add_argument("--log", type=Path)
@@ -380,6 +385,12 @@ def main() -> int:
     failed = 0
     consecutive_failures = 0
     checkpoint_every = max(1, args.checkpoint_every)
+    global_checkpoint_every = max(0, args.global_checkpoint_every)
+    next_global_checkpoint = (
+        ((baseline // global_checkpoint_every) + 1) * global_checkpoint_every
+        if global_checkpoint_every
+        else 0
+    )
     for index, candidate in enumerate(candidates, 1):
         started = time.monotonic()
         try:
@@ -398,7 +409,11 @@ def main() -> int:
                     "result": result,
                 },
             )
-            if completed % checkpoint_every == 0:
+            reached_local_checkpoint = completed % checkpoint_every == 0
+            reached_global_checkpoint = bool(
+                global_checkpoint_every and baseline + completed >= next_global_checkpoint
+            )
+            if reached_local_checkpoint or reached_global_checkpoint:
                 global_count = global_verified_count(repo_root)
                 print(
                     f"{stamp()} MILESTONE verified={completed}/{len(candidates)} "
@@ -406,6 +421,8 @@ def main() -> int:
                     flush=True,
                 )
                 append_event(log_path, {"event": "milestone", "completed": completed, "pendingAtStart": len(candidates), "globalAppleVerified": global_count, "failed": failed})
+                while global_checkpoint_every and next_global_checkpoint <= global_count:
+                    next_global_checkpoint += global_checkpoint_every
         except Exception as error:  # noqa: BLE001 - preserve the failed asset and keep the drain resumable.
             failed += 1
             consecutive_failures += 1

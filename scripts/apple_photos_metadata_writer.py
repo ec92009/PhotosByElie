@@ -65,6 +65,47 @@ function run(argv) {
   return 'ok';
 }
 """
+    _APPLY = r"""
+function run(argv) {
+  const photos = Application('Photos');
+  const id = String(argv[0] || '');
+  const payload = JSON.parse(String(argv[1] || '{}'));
+  const matches = photos.mediaItems.whose({id: id})();
+  if (!matches.length) throw new Error(`Apple Photos asset not found: ${id}`);
+  const item = matches[0];
+  const before = {
+    title: item.name() || '',
+    caption: item.description() || '',
+    keywords: item.keywords() || [],
+  };
+  const desired = Array.isArray(payload.keywords) ? payload.keywords.map(String) : [];
+  const managed = Array.isArray(payload.managedKeywords) ? payload.managedKeywords.map(String) : [];
+  const managedSet = new Set(managed);
+  const isManaged = value =>
+    value === 'PBE-Approved' ||
+    value.startsWith('PBE-Rating-') ||
+    value.startsWith('PBE-Color-') ||
+    value.startsWith('PBE-Fixture-ID:');
+  const keywords = [];
+  const seen = new Set();
+  [...before.keywords.map(String), ...desired, ...managed].forEach(value => {
+    const clean = String(value || '').trim();
+    const key = clean.toLocaleLowerCase();
+    if (!clean || seen.has(key) || (isManaged(clean) && !managedSet.has(clean))) return;
+    seen.add(key);
+    keywords.push(clean);
+  });
+  item.name = String(payload.title || '');
+  item.description = String(payload.caption || '');
+  item.keywords = keywords;
+  const after = {
+    title: item.name() || '',
+    caption: item.description() || '',
+    keywords: item.keywords() || [],
+  };
+  return JSON.stringify({before: before, after: after, keywords: keywords});
+}
+"""
 
     def read(self, asset_id: str) -> dict[str, Any]:
         payload = json.loads(_run_jxa(self._READ, asset_id) or "{}")
@@ -76,6 +117,30 @@ function run(argv) {
 
     def write(self, asset_id: str, title: str, caption: str, keywords: list[str]) -> None:
         _run_jxa(self._WRITE, asset_id, json.dumps({"title": title, "caption": caption, "keywords": keywords}, ensure_ascii=False))
+
+    def apply(self, asset_id: str, title: str, caption: str, keywords: list[str], managed_keywords: list[str]) -> dict[str, Any]:
+        """Write and reread one Photos item in a single automation transaction."""
+        payload = json.loads(
+            _run_jxa(
+                self._APPLY,
+                asset_id,
+                json.dumps(
+                    {
+                        "title": title,
+                        "caption": caption,
+                        "keywords": keywords,
+                        "managedKeywords": managed_keywords,
+                    },
+                    ensure_ascii=False,
+                ),
+            )
+            or "{}"
+        )
+        return {
+            "before": payload.get("before") or {},
+            "after": payload.get("after") or {},
+            "keywords": [str(value) for value in payload.get("keywords") or []],
+        }
 
 
 def _is_managed(keyword: str) -> bool:
@@ -209,10 +274,20 @@ def commit_writeback(
     failed: list[dict[str, Any]] = []
     for item in plan["items"]:
         try:
-            before = adapter.read(item["photosAssetId"])
-            keywords = merge_keywords(before.get("keywords") or [], item["keywords"], item["managedKeywords"])
-            adapter.write(item["photosAssetId"], item["title"], item["caption"], keywords)
-            after = adapter.read(item["photosAssetId"])
+            apply = getattr(adapter, "apply", None)
+            if callable(apply):
+                applied = apply(
+                    item["photosAssetId"], item["title"], item["caption"],
+                    item["keywords"], item["managedKeywords"],
+                )
+                before = applied["before"]
+                after = applied["after"]
+                keywords = applied["keywords"]
+            else:
+                before = adapter.read(item["photosAssetId"])
+                keywords = merge_keywords(before.get("keywords") or [], item["keywords"], item["managedKeywords"])
+                adapter.write(item["photosAssetId"], item["title"], item["caption"], keywords)
+                after = adapter.read(item["photosAssetId"])
             expected = {value.casefold() for value in keywords}
             actual = {str(value).casefold() for value in after.get("keywords") or []}
             if after.get("title") != item["title"] or after.get("caption") != item["caption"] or not expected.issubset(actual):

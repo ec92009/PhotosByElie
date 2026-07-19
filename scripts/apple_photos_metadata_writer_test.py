@@ -21,6 +21,19 @@ class FakePhotos:
         self.values[asset_id] = {"title": title, "caption": caption, "keywords": list(keywords)}
 
 
+class FastFakePhotos(FakePhotos):
+    def __init__(self):
+        super().__init__()
+        self.apply_count = 0
+
+    def apply(self, asset_id, title, caption, keywords, managed_keywords):
+        self.apply_count += 1
+        before = self.read(asset_id)
+        merged = merge_keywords(before["keywords"], keywords, managed_keywords)
+        self.write(asset_id, title, caption, merged)
+        return {"before": before, "after": self.read(asset_id), "keywords": merged}
+
+
 class ApplePhotosMetadataWriterTest(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -59,6 +72,19 @@ class ApplePhotosMetadataWriterTest(unittest.TestCase):
         with connect(self.root) as conn:
             receipt = conn.execute("SELECT status FROM fixture_delivery_receipts WHERE destination = 'apple_photos' AND object_key <> ''").fetchone()
             self.assertEqual(receipt["status"], "verified")
+
+    def test_commit_uses_atomic_apply_when_adapter_supports_it(self):
+        record_r2_upload_results(self.root, "asset-1", [{
+            "status": "uploaded", "bucket": "photosbyelie-private", "key": "masters/one.jpg",
+            "checksumSha256": "b" * 64, "backend": "s3", "bytes": 42, "contentType": "image/jpeg",
+            "remoteChecksumSha256": "b" * 64, "remoteVerified": True,
+        }])
+        adapter = FastFakePhotos()
+        result = commit_writeback(self.root, self.fixture["fixtureId"], adapter=adapter)
+        self.assertTrue(result["ok"])
+        self.assertEqual(adapter.apply_count, 1)
+        self.assertIn("Family", adapter.values["asset-1"]["keywords"])
+        self.assertIn("PBE-Approved", adapter.values["asset-1"]["keywords"])
 
 
 if __name__ == "__main__":

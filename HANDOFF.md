@@ -550,11 +550,12 @@ npm run validate
   clean display derivatives. Spain uses the Plaza de España panorama whose
   catalog metadata confirms Seville; Paris now uses the Louvre courtyard at
   night and Nerja uses a sunny coastal cove.
-- France, USA, Spain, Mexico, Italy, and Portugal reuse their country image as
-  a full-width, slowly panning hero behind the title and filters. Portugal now
-  uses the clean Cascais waterfront master. Slovakia is deliberately deferred
-  until its collection is deeper; Search, Panoramas, and other utility gallery
-  views retain the neutral header.
+- France, USA, Spain, Mexico, Italy, and Portugal replace the site's fixed
+  Nerja-caves backdrop with their own slowly panning country image. The country
+  title and filters remain in the normal frosted-glass header above that moving
+  page background. Portugal uses the clean Cascais waterfront master. Slovakia
+  is deliberately deferred until its collection is deeper; Search, Panoramas,
+  and other utility gallery views retain the neutral Nerja-caves backdrop.
 - Desktop and 390 x 844 mobile layouts, slideshow controls, settings dialog,
   country-fan interaction, French preference persistence, and reduced-motion
   declarations are covered by the browser/test pass.

@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v143.1`
+- Current visible version: `v143.2`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
 - `v143.1` applies the animated country-background treatment to the six
   well-stocked country galleries, replaces Portugal's convent scene with a

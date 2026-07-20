@@ -1,9 +1,9 @@
 (() => {
-  const hero = document.querySelector("[data-gallery-hero]");
-  const image = document.querySelector("[data-gallery-hero-image]");
-  if (!hero || !image) return;
+  const background = document.querySelector("[data-gallery-background]");
+  const image = document.querySelector("[data-gallery-background-image]");
+  if (!background || !image) return;
 
-  const countryHeroes = {
+  const countryBackgrounds = {
     france: { src: "./assets/gallery-heroes/france.jpg", panoramic: true },
     usa: { src: "./assets/gallery-heroes/usa.jpg", panoramic: true },
     spain: { src: "./assets/gallery-heroes/spain.jpg", panoramic: true },
@@ -13,13 +13,13 @@
   };
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   const requested = String(new URLSearchParams(window.location.search).get("gallery") || "").trim().toLowerCase();
-  const entry = countryHeroes[requested];
+  const entry = countryBackgrounds[requested];
   let activePan = null;
   let resizeTimer = null;
 
   if (!entry) return;
 
-  hero.classList.add("has-country-panorama");
+  document.body.classList.add("has-country-background");
   image.classList.toggle("is-wide-source", entry.panoramic);
   image.classList.toggle("is-standard-source", !entry.panoramic);
   image.src = entry.src;
@@ -30,7 +30,7 @@
     image.style.transform = "translate3d(0, 0, 0)";
     if (reducedMotion.matches || !image.complete) return;
 
-    const overflow = Math.max(0, image.getBoundingClientRect().width - hero.clientWidth);
+    const overflow = Math.max(0, image.getBoundingClientRect().width - background.clientWidth);
     if (overflow < 8) return;
     const duration = Math.min(52000, Math.max(30000, overflow * 42));
     activePan = image.animate([

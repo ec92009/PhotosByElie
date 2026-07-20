@@ -10,10 +10,11 @@ const css = fs.readFileSync(path.join(root, "photos.css"), "utf8");
 const js = fs.readFileSync(path.join(root, "gallery-hero.js"), "utf8");
 const countries = ["france", "usa", "spain", "mexico", "italy", "portugal"];
 
-test("country galleries expose a layered panorama hero", () => {
+test("country galleries expose a page-wide animated background layer", () => {
   assert.match(html, /data-gallery-hero/);
-  assert.match(html, /data-gallery-hero-image/);
-  assert.match(html, /gallery-hero-shade/);
+  assert.match(html, /data-gallery-background/);
+  assert.match(html, /data-gallery-background-image/);
+  assert.doesNotMatch(html, /data-gallery-hero-image/);
   assert.match(html, /gallery-hero\.js/);
 });
 
@@ -24,7 +25,7 @@ test("every selected country receives a shared hero asset", () => {
   });
 });
 
-test("gallery hero motion is slow, linear, reversible, and reduced-motion safe", () => {
+test("country background motion is slow, linear, reversible, and reduced-motion safe", () => {
   assert.match(js, /Math\.min\(52000, Math\.max\(30000/);
   assert.match(js, /easing: "linear"/);
   assert.match(js, /direction: "alternate"/);
@@ -35,4 +36,9 @@ test("gallery hero motion is slow, linear, reversible, and reduced-motion safe",
 test("utility galleries retain the neutral hero", () => {
   assert.match(js, /if \(!entry\) return/);
   assert.doesNotMatch(js, /slovakia: \{ src:/);
+});
+
+test("country header remains a frosted glass panel", () => {
+  assert.match(css, /\.gallery-hero\{[\s\S]*background:var\(--glass-panel-bg\)/);
+  assert.doesNotMatch(css, /\.gallery-hero\.has-country-panorama/);
 });

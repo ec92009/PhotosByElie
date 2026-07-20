@@ -6,8 +6,12 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v143.0`
+- Current visible version: `v143.1`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
+- `v143.1` applies the animated country-background treatment to the six
+  well-stocked country galleries, replaces Portugal's convent scene with a
+  clean Cascais Bay panorama, and deliberately leaves Slovakia and utility
+  collections on the neutral header.
 - `v143.0` gives each country gallery a cinematic, slowly panning hero drawn
   from its own collection while preserving the neutral utility header for
   Search and Panoramas. The isolated landing concept now uses outdoor scenes

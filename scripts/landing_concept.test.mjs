@@ -11,7 +11,7 @@ const js = fs.readFileSync(path.join(root, "landing-concept", "landing.js"), "ut
 
 test("landing concept remains isolated and search-engine private", () => {
   assert.match(html, /noindex, nofollow, noarchive/);
-  assert.match(html, /Review concept · v143\.0/);
+  assert.match(html, /Review concept · v143\.1/);
   assert.doesNotMatch(html, /_1800|masters\//);
 });
 

@@ -616,8 +616,9 @@ Clock state: running
 | 2026-07-20 | 22:58 CEST | 23:03 CEST | 0:02 | Simplified the landing panorama sequence to a slow linear left-to-right traverse and selected a clean Malmaison replacement; image rendering, implementation, browser QA, tests, and deployment runtime excluded. |
 | 2026-07-20 | 23:28 CEST | 23:43 CEST | 0:03 | Expanded the landing concept into seven country destinations, selected replacement Paris/Nerja panoramas and a Plaza de España Spain lead, and reviewed the responsive country interaction; asset retrieval, image rendering, implementation, browser QA, tests, and deployment runtime excluded. |
 | 2026-07-21 | 00:00 CEST | 00:03 CEST | 0:02 | Chose an all-outdoor landing rotation and approved reusing the moving country panoramas as gallery hero backgrounds; implementation, browser QA, tests, and deployment runtime excluded. |
+| 2026-07-21 | 00:33 CEST | 00:41 CEST | 0:03 | Clarified animated country-gallery backgrounds, selected Cascais Bay for Portugal, and deferred Slovakia until its catalog is deeper; implementation, asset rendering, browser QA, tests, and deployment runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 31:15
+Active collaboration time used: 31:18
 Remaining budget: not set

@@ -10,7 +10,6 @@
     mexico: { src: "./assets/gallery-heroes/mexico.jpg", panoramic: true },
     italy: { src: "./assets/gallery-heroes/italy.jpg", panoramic: false },
     portugal: { src: "./assets/gallery-heroes/portugal.jpg", panoramic: true },
-    slovakia: { src: "./assets/gallery-heroes/slovakia.jpg", panoramic: false },
   };
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   const requested = String(new URLSearchParams(window.location.search).get("gallery") || "").trim().toLowerCase();

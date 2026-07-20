@@ -525,7 +525,7 @@ npm run validate
 
 ## Fresh Backlog
 
-### Landing-page concept and country heroes (v143.0)
+### Landing-page concept and country heroes (v143.1)
 
 - Review route: `https://photos-by-elie.com/landing-concept/`.
 - The concept is deliberately isolated and `noindex`; the production root is
@@ -536,8 +536,8 @@ npm run validate
   edge, travels to the right edge at a constant speed over 32 seconds, and
   then crossfades into the next panorama. Pause and reduced-motion states
   suppress that background motion. The indoor Madrid, Orsay, and Malmaison
-  scenes were replaced with Solana Beach, Puerto Vallarta, and the roofless
-  Carmo Convent; France now uses the outdoor Louvre courtyard. These derivatives are
+  scenes were replaced with Solana Beach, Puerto Vallarta, and Cascais Bay;
+  France now uses the outdoor Louvre courtyard. These derivatives are
   suitable for edge-to-edge presentation but are not the private
   sale/download masters.
 - The concept header intentionally exposes only Photos, Sign in, and display
@@ -550,9 +550,11 @@ npm run validate
   clean display derivatives. Spain uses the Plaza de España panorama whose
   catalog metadata confirms Seville; Paris now uses the Louvre courtyard at
   night and Nerja uses a sunny coastal cove.
-- Each of the seven country galleries now reuses its country image as a
-  full-width, slowly panning hero behind the title and filters. Search,
-  Panoramas, and other utility gallery views retain the neutral header.
+- France, USA, Spain, Mexico, Italy, and Portugal reuse their country image as
+  a full-width, slowly panning hero behind the title and filters. Portugal now
+  uses the clean Cascais waterfront master. Slovakia is deliberately deferred
+  until its collection is deeper; Search, Panoramas, and other utility gallery
+  views retain the neutral header.
 - Desktop and 390 x 844 mobile layouts, slideshow controls, settings dialog,
   country-fan interaction, French preference persistence, and reduced-motion
   declarations are covered by the browser/test pass.

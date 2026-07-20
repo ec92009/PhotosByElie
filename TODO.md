@@ -58,6 +58,11 @@ Last updated: 2026-07-18
    - Turn research into concrete offer copy, package names, pricing hypotheses, and testable next actions.
 
 3. **Curate the first sellable storefront.**
+   - Current catalog reconciliation is complete at `3,554` camera-made items;
+     Sidecar-approved uploads are registered, explicit tombstones and
+     hidden/discarded rows are excluded, and publish validation passes.
+   - Cloud Owner title/keyword editing and keyword-blacklist management are
+     restored for the next curation pass.
    - Apply strong title/keyword approvals.
    - Block unsellable rows.
    - Pick featured collections and hero images.

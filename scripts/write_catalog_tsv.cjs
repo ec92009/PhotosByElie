@@ -162,7 +162,11 @@ const buildSqlite = (source = "auto", { commerceOnly = false } = {}) => {
 };
 
 const commerceOnly = process.argv.includes("--commerce-only");
-if (commerceOnly) {
+const bootstrapOnly = process.argv.includes("--bootstrap-only");
+if (bootstrapOnly) {
+  writeHomeData();
+  writeBootstrap();
+} else if (commerceOnly) {
   buildSqlite("auto", { commerceOnly: true });
   writeHomeData();
   writeBootstrap();

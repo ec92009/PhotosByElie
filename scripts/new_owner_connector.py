@@ -751,11 +751,19 @@ def execute_action(config: ConnectorConfig, action: dict) -> dict:
         single_photo_id = str(payload.get("photoId") or "").strip()
         if single_photo_id and single_photo_id not in photo_ids:
             photo_ids.insert(0, single_photo_id)
-        if not photo_ids or len(photo_ids) > 500:
+        photo_optional_operations = {"save-keyword-blacklist"}
+        if (not photo_ids and operation not in photo_optional_operations) or len(photo_ids) > 500:
             raise RuntimeError("photo-moderation requires 1 to 500 photo IDs")
+        moderation_payload = {
+            "operation": operation,
+            "photo_ids": photo_ids,
+        }
+        for key in ("title", "keywords", "mode"):
+            if key in payload:
+                moderation_payload[key] = payload[key]
         result = apply_public_photo_moderation(
             config.repo_root,
-            {"operation": operation, "photo_ids": photo_ids},
+            moderation_payload,
         )
         return {
             "connectorId": config.connector_id,

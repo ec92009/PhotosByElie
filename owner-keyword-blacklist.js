@@ -1,5 +1,6 @@
 (() => {
   const ownerAuth = window.photosByElieOwnerAuth;
+  const hiddenActions = window.photosByElieHiddenActions;
   const form = document.querySelector("[data-owner-keyword-blacklist-page-form]");
   const input = document.querySelector("[data-owner-keyword-blacklist-page-input]");
   const list = document.querySelector("[data-owner-keyword-blacklist-page-list]");
@@ -56,20 +57,10 @@
     const authorized = await ownerAuth?.requireAuth?.("Start the local Photos By Elie server to save the keyword blacklist.");
     if (ownerAuth?.enabled && !authorized) throw new Error("Owner helper server required.");
     setStatus("Saving keyword blacklist...");
-    const response = await fetch("/__photosbyelie/photo-action", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "save-keyword-blacklist",
-        keywords: normalizeTerms(nextTerms),
-        mode: "replace",
-      }),
-    });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok || !payload?.ok) {
-      if (response.status === 401) ownerAuth?.markSignedOut?.();
-      throw new Error(payload?.error || "Could not save keyword blacklist.");
-    }
+    const payload = hiddenActions?.saveKeywordBlacklist
+      ? await hiddenActions.saveKeywordBlacklist(normalizeTerms(nextTerms))
+      : null;
+    if (!payload?.ok) throw new Error(payload?.error || "Could not save keyword blacklist.");
     render(payload.keywords || []);
     setStatus(`Keyword blacklist saved: ${(payload.keyword_count || terms.length).toLocaleString()} terms.`);
   };

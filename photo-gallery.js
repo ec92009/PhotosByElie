@@ -1055,7 +1055,7 @@ const toggleGalleryLike = (photo) => {
 };
 
 const openOwnerMetadataModal = (photo, field) => {
-  if (!localModerationEnabled || !photo) return;
+  if (!ownerCullingEnabled || !photo) return;
   const dialog = document.createElement("dialog");
   dialog.className = "owner-metadata-modal";
   const title = "Edit title and keywords";
@@ -1240,7 +1240,7 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
       href,
       collectionKey: galleryKey,
       actionHtml,
-      ownerEditable: localModerationEnabled,
+      ownerEditable: ownerCullingEnabled,
     });
   }).join("");
   galleryRoot.querySelectorAll("[data-gallery-like]").forEach((button) => {
@@ -1274,7 +1274,7 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
       });
     });
   });
-  if (localModerationEnabled) {
+  if (ownerCullingEnabled) {
     galleryRoot.querySelectorAll("[data-owner-title-edit]").forEach((caption) => {
       caption.addEventListener("click", (event) => {
         event.preventDefault();
@@ -1286,6 +1286,8 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
         if (selected) openOwnerMetadataModal(selected, "title");
       });
     });
+  }
+  if (localModerationEnabled) {
     galleryRoot.querySelectorAll("[data-photo-index]").forEach((card) => {
       card.addEventListener("click", (event) => {
         event.preventDefault();
@@ -1552,7 +1554,6 @@ if (galleryRoot && gallery) {
         return;
       }
       if (event.key.toLowerCase() === "t" || event.key.toLowerCase() === "k") {
-        if (!localModerationEnabled) return;
         const selected = photos[selectedIndex];
         if (!selected) return;
         openOwnerMetadataModal(selected, event.key.toLowerCase() === "k" ? "keywords" : "title");

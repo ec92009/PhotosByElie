@@ -4,7 +4,7 @@ window.photosByElieHomeData = {
     "title": "France",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "france-gallery",
-    "count": 379,
+    "count": 691,
     "href": "./gallery.html?gallery=france",
     "photos": [
       {
@@ -74,7 +74,7 @@ window.photosByElieHomeData = {
     "title": "USA",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "usa-gallery",
-    "count": 145,
+    "count": 148,
     "href": "./gallery.html?gallery=usa",
     "photos": [
       {
@@ -144,7 +144,7 @@ window.photosByElieHomeData = {
     "title": "Spain",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "spain-gallery",
-    "count": 1872,
+    "count": 2291,
     "href": "./gallery.html?gallery=spain",
     "photos": [
       {
@@ -214,7 +214,7 @@ window.photosByElieHomeData = {
     "title": "Mexico",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "mexico-gallery",
-    "count": 31,
+    "count": 117,
     "href": "./gallery.html?gallery=mexico",
     "photos": [
       {
@@ -284,7 +284,7 @@ window.photosByElieHomeData = {
     "title": "Italy",
     "description": "Saturn and Apple Photos archive selections prepared from Italian sources.",
     "accent": "italy-gallery",
-    "count": 70,
+    "count": 91,
     "href": "./gallery.html?gallery=italy",
     "photos": [
       {

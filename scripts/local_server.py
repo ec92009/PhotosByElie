@@ -11062,7 +11062,7 @@ def apply_real_estate_owner_action(repo_root: Path, payload: dict) -> dict:
 
 
 def apply_public_photo_moderation(repo_root: Path, payload: dict) -> dict:
-    """Record public Owner hide/undo decisions without rebuilding static output.
+    """Apply a supported public Owner action through the local connector.
 
     GitHub Pages cannot be mutated by the Max connector. Public Owner culling
     therefore records the durable lifecycle decision immediately; the normal
@@ -11070,6 +11070,23 @@ def apply_public_photo_moderation(repo_root: Path, payload: dict) -> dict:
     """
     operation = str(payload.get("operation") or payload.get("action") or "").strip().lower()
     photo_ids = _normalized_photo_ids(payload.get("photo_ids") or payload.get("photoIds") or payload.get("photo_id"))
+    if operation == "save-keyword-blacklist":
+        result = apply_photo_action(repo_root, {
+            "action": operation,
+            "keywords": payload.get("keywords") or [],
+            "mode": payload.get("mode") or "replace",
+        })
+        return {**result, "catalog_publish_pending": True}
+    if operation == "update-photo-metadata":
+        if len(photo_ids) != 1:
+            raise ValueError("public metadata update requires exactly one photo id")
+        result = apply_photo_action(repo_root, {
+            "action": operation,
+            "photo_id": photo_ids[0],
+            "title": payload.get("title"),
+            "keywords": payload.get("keywords") or [],
+        })
+        return {**result, "catalog_publish_pending": True}
     if operation not in {"hide", "hide-many", "undo-hide", "undo-hide-many"}:
         raise ValueError("unsupported public photo moderation operation")
     if not photo_ids or len(photo_ids) > 500:

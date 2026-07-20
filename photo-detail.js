@@ -639,7 +639,7 @@ const syncTitleUi = () => {
 };
 
 const openOwnerMetadataModal = (field) => {
-  if (!localModerationEnabled || !photo) return;
+  if (!ownerCullingEnabled || !photo) return;
   const isKeywords = field === "keywords";
   const dialog = document.createElement("dialog");
   dialog.className = "owner-metadata-modal";
@@ -965,7 +965,6 @@ if (ownerCullingEnabled) {
     if (shouldIgnoreShortcut(event)) return;
     const key = event.key.toLowerCase();
     if (key === "t" || key === "k") {
-      if (!localModerationEnabled) return;
       openOwnerMetadataModal(key === "k" ? "keywords" : "title");
       event.preventDefault();
       return;

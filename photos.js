@@ -2835,16 +2835,31 @@ window.photosByElieVideoDurationLabel = (photo) => (
       window.setTimeout(centerPanoStage, 80);
       window.setTimeout(() => panoPan?.refresh?.(), 120);
     };
-    const metadataRows = () => [];
-    const renderInfo = ({ eyebrow = owner ? "Owner source preview" : "Preview", state = "", rows = [], note = "" } = {}) => {
+    const metadataRows = () => {
+      const desiredLabels = [
+        "Keywords",
+        "Captured",
+        "Camera",
+        "Lens",
+        "Exposure",
+        "Focal length",
+        "Original file",
+        "Original size",
+        "Location",
+      ];
+      return desiredLabels
+        .map((label) => [label, window.photosByElieMetadataValue?.(targetPhoto, label) || ""])
+        .filter(([, value]) => String(value || "").trim());
+    };
+    const renderInfo = ({ eyebrow = owner ? "Owner source preview" : "Preview", state = "", rows = metadataRows(), note = "" } = {}) => {
       if (!infoPanel) return;
       infoPanel.classList.toggle("is-error", state === "error");
       infoPanel.classList.toggle("is-warning", state === "warning");
       infoPanel.innerHTML = `
         <p class="eyebrow">${escapePreviewHtml(eyebrow)}</p>
         <h2>${escapePreviewHtml(title)}</h2>
-        ${metadataRows(rows).length ? `<dl>
-          ${metadataRows(rows).map(([label, value]) => `
+        ${rows.length ? `<dl>
+          ${rows.map(([label, value]) => `
             <div><dt>${escapePreviewHtml(label)}</dt><dd>${escapePreviewHtml(value)}</dd></div>
           `).join("")}
         </dl>` : ""}
@@ -2978,7 +2993,7 @@ window.photosByElieVideoDurationLabel = (photo) => (
 
     if (owner) {
       const infoUrl = window.photosByElieSourcePreviewUrl(targetPhoto, "info");
-      renderInfo({ rows: [["Attempted source", "original/source"], ["Path label", sourceLabel], ["Status", "Loading"]] });
+      renderInfo();
       if (!infoUrl) {
         showOwnerFailure({ reason: "Owner source previews are only available from localhost." });
         return true;
@@ -2996,14 +3011,7 @@ window.photosByElieVideoDurationLabel = (photo) => (
         }
         const previewUrl = payload.previewUrl || window.photosByElieSourcePreviewUrl(targetPhoto);
         const isPublicFallback = payload.isOriginal === false;
-        renderInfo({
-          eyebrow: isPublicFallback ? "Public preview" : "Owner original preview",
-          rows: [
-            ["Source", payload.sourceType || "original/source"],
-            ["Path", payload.sourceLabel || sourceLabel],
-            ["Status", isPublicFallback ? "Loaded public media, matching regular visitor delivery" : "Loaded original from localhost source"],
-          ],
-        });
+        renderInfo({ eyebrow: isPublicFallback ? "Public preview" : "Owner original preview" });
         const handleSourceLoadError = ({ sourceType, attemptedSourceLabel, reason }) => {
           showOwnerFailure({
             attemptedSourceType: sourceType,
@@ -3039,12 +3047,7 @@ window.photosByElieVideoDurationLabel = (photo) => (
       });
       return true;
     }
-    renderInfo({
-      rows: [
-        ["Source", isVideo ? "public short MP4" : "public _1800"],
-        ["Path", contextUrl],
-      ],
-    });
+    renderInfo();
     if (isVideo) appendVideo(contextUrl, contextPoster, { sourceType: "public short MP4", attemptedSourceLabel: contextUrl });
     else appendPhoto(contextUrl, { sourceType: "public _1800", attemptedSourceLabel: contextUrl });
     return true;

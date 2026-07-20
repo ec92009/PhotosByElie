@@ -200,7 +200,12 @@ def _extension_from_key_or_filename(key: object, filename: object) -> str:
     return "jpg"
 
 
-def _register_uploaded_catalog_rows(repo_root: Path, *, asset_ids: list[str] | None = None, dry_run: bool = False) -> dict:
+def _register_uploaded_catalog_rows(
+    repo_root: Path,
+    *,
+    asset_ids: list[str] | None = None,
+    dry_run: bool = False,
+) -> dict:
     owner_path = repo_root / "assets/owner-actions/Owner.sqlite"
     catalog_path = repo_root / "assets/catalog/photosbyelie.sqlite"
     if not owner_path.exists():
@@ -245,6 +250,19 @@ def _register_uploaded_catalog_rows(repo_root: Path, *, asset_ids: list[str] | N
         for row in rows:
             latest_by_asset.setdefault(str(row["asset_id"]), row)
 
+        tombstoned_identities: set[str] = set()
+        for row in owner.execute(
+            """
+            SELECT a.asset_id, a.raw_json
+            FROM sidecar_tombstones AS t
+            JOIN sidecar_assets AS a ON a.asset_id = t.asset_id
+            WHERE t.tombstone_state = 'active'
+            """
+        ).fetchall():
+            raw = _read_json_text(row["raw_json"], {})
+            local_identifier = str(raw.get("localIdentifier") or "").strip() if isinstance(raw, dict) else ""
+            tombstoned_identities.add(local_identifier or str(row["asset_id"]))
+
         # One physical Photos item can have both a retired local identifier and
         # a current cloud identifier. Prefer an already-published media id, then
         # the stable local-identifier upload family, so registration never
@@ -254,6 +272,8 @@ def _register_uploaded_catalog_rows(repo_root: Path, *, asset_ids: list[str] | N
             raw = _read_json_text(row["raw_json"], {})
             local_identifier = str(raw.get("localIdentifier") or "").strip() if isinstance(raw, dict) else ""
             identity = local_identifier or str(row["asset_id"])
+            if identity in tombstoned_identities:
+                continue
             candidates_by_identity.setdefault(identity, []).append(row)
 
         latest_by_identity: dict[str, sqlite3.Row] = {}
@@ -273,9 +293,55 @@ def _register_uploaded_catalog_rows(repo_root: Path, *, asset_ids: list[str] | N
         skipped: list[dict] = []
         r2_upserts = 0
         now = now_iso()
+        source_origin_backfill_count = int(
+            catalog.execute("SELECT COUNT(*) FROM media_items WHERE source_origin_id IS NULL").fetchone()[0]
+        )
+        if source_origin_backfill_count and not dry_run:
+            camera_origin_id = _catalog_id(catalog, "source_origins", "source_origin_id", "code", "camera")
+            catalog.execute(
+                "UPDATE media_items SET source_origin_id = ?, updated_at = ? WHERE source_origin_id IS NULL",
+                (camera_origin_id, now),
+            )
+
+        blocked_media_ids: set[str] = set()
+        lifecycle_blocked_media_ids = {
+            str(row["media_id"])
+            for row in owner.execute(
+                """
+                SELECT media_id
+                FROM media_lifecycle
+                WHERE lifecycle_state IN ('hidden', 'discarded')
+                """
+            ).fetchall()
+        }
+        blocked_media_ids.update(lifecycle_blocked_media_ids)
+        if tombstoned_identities:
+            for row in owner.execute(
+                """
+                SELECT a.asset_id, a.raw_json, i.photo_id
+                FROM sidecar_assets AS a
+                JOIN sidecar_upload_bridge_run_items AS i ON i.asset_id = a.asset_id
+                WHERE COALESCE(i.photo_id, '') <> ''
+                """
+            ).fetchall():
+                raw = _read_json_text(row["raw_json"], {})
+                local_identifier = str(raw.get("localIdentifier") or "").strip() if isinstance(raw, dict) else ""
+                identity = local_identifier or str(row["asset_id"])
+                if identity in tombstoned_identities:
+                    blocked_media_ids.add(str(row["photo_id"]))
+        removed_blocked_ids = sorted(
+            media_id
+            for media_id in blocked_media_ids
+            if catalog.execute("SELECT 1 FROM media_items WHERE media_id = ?", (media_id,)).fetchone()
+        )
+        if removed_blocked_ids and not dry_run:
+            catalog.executemany("DELETE FROM media_items WHERE media_id = ?", [(media_id,) for media_id in removed_blocked_ids])
         for row in latest_by_identity.values():
             media_id = str(row["photo_id"] or "").strip()
             asset_id = str(row["asset_id"] or "").strip()
+            if media_id in lifecycle_blocked_media_ids:
+                skipped.append({"assetId": asset_id, "photoId": media_id, "reason": "hidden_or_discarded"})
+                continue
             upload_keys = _uploaded_keys(row)
             media_type = str(row["media_type"] or "").strip().lower()
             if media_type not in {"photo", "video"}:
@@ -308,7 +374,7 @@ def _register_uploaded_catalog_rows(repo_root: Path, *, asset_ids: list[str] | N
                 skipped.append({"assetId": asset_id, "photoId": media_id, "reason": "missing_media_dimensions"})
                 continue
             gallery_slug = _gallery_slug(row)
-            collection_row = catalog.execute("SELECT collection_id FROM collections WHERE slug = ?", (gallery_slug,)).fetchone()
+            collection_row = catalog.execute("SELECT collection_id, title FROM collections WHERE slug = ?", (gallery_slug,)).fetchone()
             if collection_row is None:
                 skipped.append({"assetId": asset_id, "photoId": media_id, "reason": "unsupported_gallery", "collection": gallery_slug})
                 continue
@@ -333,7 +399,7 @@ def _register_uploaded_catalog_rows(repo_root: Path, *, asset_ids: list[str] | N
                 ).fetchone()[0]
             )
             title = str(row["title"] or media_id).strip() or media_id
-            location = str(row["location_label"] or "Italy").strip() or "Italy"
+            location = str(row["location_label"] or collection_row["title"] or gallery_slug).strip() or gallery_slug
             preview_dims = _image_dimensions(str(still_900.get("sourcePath") or "")) if still_900 else None
             preview_dims = preview_dims or _scale_to_max(width, height, 900)
             if not dry_run:
@@ -459,9 +525,12 @@ def _register_uploaded_catalog_rows(repo_root: Path, *, asset_ids: list[str] | N
             "dryRun": dry_run,
             "candidateCount": len(latest_by_identity),
             "registeredCount": len(inserted),
+            "removedBlockedCount": len(removed_blocked_ids),
             "skippedCount": len(skipped),
+            "sourceOriginBackfillCount": source_origin_backfill_count,
             "r2ObjectUpsertCount": r2_upserts,
             "registered": inserted,
+            "removedBlocked": removed_blocked_ids,
             "skipped": skipped,
         }
     finally:
@@ -683,7 +752,11 @@ def register_uploaded_catalog(args: argparse.Namespace) -> int:
         dry_run=args.dry_run,
     )
     rebuild: dict[str, object] = {}
-    if result.get("registeredCount") and not args.dry_run and not args.no_rebuild:
+    if (
+        result.get("registeredCount")
+        or result.get("removedBlockedCount")
+        or result.get("sourceOriginBackfillCount")
+    ) and not args.dry_run and not args.no_rebuild:
         completed = subprocess.run(
             ["node", "scripts/write_worker_catalog.mjs"],
             cwd=repo_root,

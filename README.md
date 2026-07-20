@@ -6,8 +6,13 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v141.11`
+- Current visible version: `v142.0`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
+- `v142.0` restores cloud Owner title/keyword editing and keyword-blacklist
+  management, adds useful camera/file/location metadata to the spacebar preview
+  without exposing storage paths or internal ids, and reconciles the public
+  catalog with Sidecar approval, hidden/discarded lifecycle, and tombstone
+  state. The validated camera-made storefront now contains `3,554` items.
 - `v141.10` makes ACS fixture-native: it shows inherited access across the
   universal Expo / RE / Travel tree, keeps RE owner/admin-only at the root,
   grants Corine exclusive La Concha access through every descendant, and
@@ -69,7 +74,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `robots.txt` / `sitemap.xml`: public crawl guidance and first-pass sitemap for homepage, core galleries, campaign pages, and support
 - `socials/`: platform-specific, drag-ready social upload packages with watermarked public images, captions, READMEs, and manifests; current daily trees cover Facebook, Instagram, Pinterest, and Threads
 - `scripts/catalog_tsv.cjs`: legacy-named shared Node catalog loader that now reads the public SQLite catalog for tools and tests
-- `scripts/write_catalog_tsv.cjs`: legacy wrapper that rewrites the browser bootstrap and rebuilds the public SQLite catalog artifacts; `--commerce-only` preserves media while refreshing products and storefront retirement rules
+- `scripts/write_catalog_tsv.cjs`: legacy wrapper that rewrites the browser bootstrap and rebuilds the public SQLite catalog artifacts; `--commerce-only` preserves media while refreshing products and storefront retirement rules, while `--bootstrap-only` refreshes browser/home bootstrap files from the authoritative SQLite catalog without rebuilding it from stale JavaScript data
 - `scripts/build_public_catalog_db.py`: rebuilds the compact public SQLite catalog at `assets/catalog/photosbyelie.sqlite`
 - `scripts/validate_publish.js`: pre-push SQLite catalog, asset-pair, resolution metadata, and publish-summary check
 - `scripts/build_photo_state_db.py`: builds ignored SQLite state database at `tmp/photo-state.sqlite` from the catalog, import cache, blocked/discarded tombstones, owner actions, sidecars, and R2 logs
@@ -108,7 +113,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - The homepage includes a Latest social shelf. It filters the generated campaign index to Facebook, Instagram, Pinterest, and Threads targets, shows the newest social springboards first, and keeps static fallback cards for the 2026-06-15 themes plus the 2026-05-27 acceptance-criteria package themes.
 - `robots.txt` points crawlers at `sitemap.xml` and keeps owner, basket, order, real-estate, experiments, and raw social working pages out of search results.
 - Campaign pages reuse the same shared gallery masonry controller as regular collections, so Grid density plus Fit/Fill behavior stay consistent.
-- The full public catalog loads plain `assets/catalog/photosbyelie.sqlite` directly. Normal catalog rebuilds no longer generate or prefer Brotli-compressed SQLite; the retained `.sqlite.br` artifact is legacy-only. The SQLite catalog uses compact integer lookup ids for controlled vocabulary fields. Current active commercial catalog count is `2,713` media rows: France `379`, Italy `70`, Mexico `31`, Portugal `214`, Slovakia `2`, Spain `1,872`, USA `145`.
+- The full public catalog loads plain `assets/catalog/photosbyelie.sqlite` directly. Normal catalog rebuilds no longer generate or prefer Brotli-compressed SQLite; the retained `.sqlite.br` artifact is legacy-only. The SQLite catalog uses compact integer lookup ids for controlled vocabulary fields. Current active commercial catalog count is `3,554` media rows: France `691`, Italy `91`, Mexico `117`, Portugal `214`, Slovakia `2`, Spain `2,291`, USA `148`.
 - The homepage hides the decorative hero photo stack on narrow or short viewports so the collection carousel stays visible instead of competing for vertical space.
 - The homepage now has shared global discovery controls before Collections, including search, collection, media type, date from/to, orientation, adaptive size/duration, color mood, subject, and sort. Filtered results render 24 at a time with a full-match count and gallery-style hearts, keyboard selection, detail navigation, and localhost Owner shortcuts.
 - Every page exposes a top-right Settings control that opens a modal for language, Day/Night mode, glass transparency, and glass translucency. The visual sliders persist in `localStorage` and update shared glass CSS variables across pages.

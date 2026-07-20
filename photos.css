@@ -6174,7 +6174,7 @@ body.detail-fullscreen-active{
   padding:8px;
 }
 .detail-fullscreen-preview.has-info-panel.is-owner-preview{
-  grid-template-columns:minmax(0,1fr) minmax(260px,20vw);
+  grid-template-columns:minmax(0,1fr) minmax(340px,30vw);
 }
 .detail-fullscreen-preview.has-info-panel.is-panorama-preview:not(.is-owner-preview){
   grid-template-columns:1fr;
@@ -6330,7 +6330,7 @@ body.detail-fullscreen-active{
   right:10px;
 }
 .detail-fullscreen-preview.is-owner-preview .finder-preview-nav.is-next{
-  right:calc(max(260px,20vw) + 22px);
+  right:calc(max(340px,30vw) + 22px);
 }
 .finder-preview-pano-toggle{
   position:absolute;

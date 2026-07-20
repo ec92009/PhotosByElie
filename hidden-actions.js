@@ -170,6 +170,15 @@
       const items = write(result.hidden_ids);
       window.dispatchEvent(new CustomEvent("photosbyelie:hiddenchange", { detail: { items, result } }));
     }
+    if (result?.metadata) {
+      applyMetadataEditToSite({
+        data: window.photosByElieData,
+        owner: window.photosByElieOwnerData,
+        reserve: window.photosByElieReserveData,
+        hidden: window.photosByElieHiddenData,
+      }, result.metadata);
+      window.dispatchEvent(new CustomEvent("photosbyelie:metadatachange", { detail: result.metadata }));
+    }
     if (!result?.site) return result;
     applyMetadataEditToSite(result.site, result.metadata);
     window.photosByElieData = result.site.data || {};
@@ -281,14 +290,14 @@
     if (ownerAuth?.enabled && !authorized) {
       throw new Error("Owner helper server required.");
     }
-    const photoOptionalActions = ["sync-country-keywords", "remove-collection-keyword", "publish-hidden-blacklist", "wipe-hidden-r2"];
+    const photoOptionalActions = ["sync-country-keywords", "remove-collection-keyword", "publish-hidden-blacklist", "wipe-hidden-r2", "save-keyword-blacklist"];
     const requestPayload = { action, ...extra };
     if (photoId) requestPayload.photo_id = photoId;
     if (!photoOptionalActions.includes(action) && !requestPayload.photo_id && !normalize(requestPayload.photo_ids).length) return null;
     setOwnerBusy(true, ownerActionBusyMessages[action] || "Owner action is running...");
     try {
       if (!localEnabled) {
-        if (!["hide", "hide-many", "undo-hide", "undo-hide-many"].includes(action)) {
+        if (!["hide", "hide-many", "undo-hide", "undo-hide-many", "update-photo-metadata", "save-keyword-blacklist"].includes(action)) {
           throw new Error("This Owner action is available from Sidecar on Max.");
         }
         return await remoteOwnerAction(action, photoId, extra);
@@ -519,10 +528,18 @@
   };
 
   const updatePhotoMetadata = async (photoId, updates = {}) => {
-    if (!localEnabled || !photoId) return null;
+    if (!cullingEnabled() || !photoId) return null;
     return photoAction("update-photo-metadata", photoId, {
       title: updates.title,
       keywords: updates.keywords,
+    });
+  };
+
+  const saveKeywordBlacklist = async (keywords = []) => {
+    if (!cullingEnabled()) return null;
+    return photoAction("save-keyword-blacklist", null, {
+      keywords: normalize(keywords.map((keyword) => String(keyword || "").trim()).filter(Boolean)),
+      mode: "replace",
     });
   };
 
@@ -629,6 +646,7 @@
     publishHiddenBlacklist,
     removeCollectionKeyword,
     returnToReserve,
+    saveKeywordBlacklist,
     setOwnerBusy,
     updateOwnerBusy,
     setCountryAssignment,

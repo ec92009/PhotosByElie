@@ -159,6 +159,61 @@ class UploadRegistrationScopeTest(unittest.TestCase):
         self.assertEqual(calls, [{"operation": "undo-hide-many", "photo_ids": ["photo-a", "photo-b"]}])
         self.assertEqual(result["result"]["action"], "undo-hide-many")
 
+    def test_photo_moderation_forwards_metadata_edit_fields(self):
+        calls = []
+
+        def apply_public_photo_moderation(_repo_root, payload):
+            calls.append(payload)
+            return {"ok": True, "action": payload["operation"], "metadata": {"photo_id": payload["photo_ids"][0]}}
+
+        with patch(
+            "scripts.new_owner_connector._load_local_modules",
+            return_value=(None, None, None, None, apply_public_photo_moderation),
+        ):
+            execute_action(self.config, {
+                "type": "photo-moderation",
+                "payload": {
+                    "operation": "update-photo-metadata",
+                    "photoId": "photo-a",
+                    "title": "A better title",
+                    "keywords": ["Paris", "Clock"],
+                },
+            })
+
+        self.assertEqual(calls, [{
+            "operation": "update-photo-metadata",
+            "photo_ids": ["photo-a"],
+            "title": "A better title",
+            "keywords": ["Paris", "Clock"],
+        }])
+
+    def test_photo_moderation_allows_keyword_blacklist_without_photo_ids(self):
+        calls = []
+
+        def apply_public_photo_moderation(_repo_root, payload):
+            calls.append(payload)
+            return {"ok": True, "action": payload["operation"], "keywords": payload["keywords"]}
+
+        with patch(
+            "scripts.new_owner_connector._load_local_modules",
+            return_value=(None, None, None, None, apply_public_photo_moderation),
+        ):
+            execute_action(self.config, {
+                "type": "photo-moderation",
+                "payload": {
+                    "operation": "save-keyword-blacklist",
+                    "keywords": ["camera photo", "travel photography"],
+                    "mode": "replace",
+                },
+            })
+
+        self.assertEqual(calls, [{
+            "operation": "save-keyword-blacklist",
+            "photo_ids": [],
+            "keywords": ["camera photo", "travel photography"],
+            "mode": "replace",
+        }])
+
 
 if __name__ == "__main__":
     unittest.main()

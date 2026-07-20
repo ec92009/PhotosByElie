@@ -118,7 +118,6 @@ window.photosByElieVerifiedMegapixels = (photo) => {
 };
 
 window.photosByElieAvailableResolutions = (photo, options = window.photosByElieResolutions || []) => {
-  if (window.photosByElieStorefrontAllowsPhoto?.(photo) === false) return [];
   const megapixels = window.photosByElieVerifiedMegapixels(photo);
   if (!megapixels) return [];
   const physicalProductsEnabled = window.photosByElieProductSettings?.physicalProductsEnabled?.() === true;

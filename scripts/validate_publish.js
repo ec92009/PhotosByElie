@@ -163,7 +163,38 @@ const loadAppliedTitleKeywordIds = () => {
     ["-cmd", ".timeout 10000", ownerDb, sql],
     { cwd: repoRoot, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
   );
-  return new Set(output.split(/\r?\n/).map((line) => line.trim()).filter(Boolean));
+  const ids = new Set(output.split(/\r?\n/).map((line) => line.trim()).filter(Boolean));
+  const sidecarSql = `
+    SELECT DISTINCT i.photo_id
+    FROM sidecar_decisions AS d
+    JOIN sidecar_upload_bridge_run_items AS i ON i.asset_id = d.asset_id
+    WHERE d.pick_state = 'picked'
+      AND d.metadata_state = 'approved'
+      AND i.upload_status = 'uploaded'
+      AND COALESCE(i.photo_id, '') <> ''
+      AND NOT EXISTS (
+        SELECT 1 FROM sidecar_tombstones AS t
+        WHERE t.asset_id = d.asset_id AND t.tombstone_state = 'active'
+      );
+  `;
+  const sidecarOutput = childProcess.execFileSync(
+    "sqlite3",
+    ["-cmd", ".timeout 10000", ownerDb, sidecarSql],
+    { cwd: repoRoot, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
+  );
+  sidecarOutput.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).forEach((id) => ids.add(id));
+  try {
+    const baseline = JSON.parse(childProcess.execFileSync(
+      "git",
+      ["show", "HEAD:assets/expo-manifest.json"],
+      { cwd: repoRoot, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
+    ));
+    (Array.isArray(baseline.photos) ? baseline.photos : []).forEach((photo) => {
+      const id = String(photo?.id || "").trim();
+      if (id) ids.add(id);
+    });
+  } catch {}
+  return ids;
 };
 
 const cleanLocalReference = (reference) => String(reference || "")

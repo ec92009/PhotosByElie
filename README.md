@@ -6,8 +6,12 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v142.6`
+- Current visible version: `v143.0`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
+- `v143.0` gives each country gallery a cinematic, slowly panning hero drawn
+  from its own collection while preserving the neutral utility header for
+  Search and Panoramas. The isolated landing concept now uses outdoor scenes
+  exclusively across both its six-image rotation and country grid.
 - `v142.6` turns the landing concept's Explore control into an animated,
   keyboard- and touch-accessible seven-country pill fan, expands the page into
   a complete country grid, and replaces the Paris and Nerja hero scenes with

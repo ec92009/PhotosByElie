@@ -383,11 +383,75 @@ html[data-theme="light"] .photo-art.has-photo::after{
   margin-top:18px;
 }
 .gallery-hero{
+  position:relative;
   min-height:clamp(300px,42dvh,520px);
   display:flex;
   flex-direction:column;
   justify-content:center;
+  overflow:hidden;
   background:var(--bg);
+}
+.gallery-hero-panorama,
+.gallery-hero-shade{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+}
+.gallery-hero-panorama{
+  display:none;
+  overflow:hidden;
+  background:#171711;
+}
+.gallery-hero.has-country-panorama .gallery-hero-panorama{
+  display:block;
+}
+.gallery-hero-panorama img{
+  display:block;
+  height:100%;
+  max-width:none;
+  transform:translate3d(0,0,0);
+  will-change:transform;
+}
+.gallery-hero-panorama img.is-wide-source{
+  width:auto;
+  min-width:100%;
+  object-fit:cover;
+}
+.gallery-hero-panorama img.is-standard-source{
+  width:124%;
+  object-fit:cover;
+  object-position:center;
+}
+.gallery-hero-shade{
+  display:none;
+  background:
+    linear-gradient(90deg,rgba(8,8,7,.78) 0%,rgba(8,8,7,.38) 48%,rgba(8,8,7,.18) 100%),
+    linear-gradient(0deg,rgba(8,8,7,.38),transparent 58%);
+}
+.gallery-hero.has-country-panorama .gallery-hero-shade{
+  display:block;
+}
+.gallery-hero-copy{
+  position:relative;
+  z-index:1;
+}
+.gallery-hero.has-country-panorama,
+html[data-theme="light"] body[data-gallery] .gallery-hero.has-country-panorama{
+  background:#171711;
+  color:#fff;
+}
+.gallery-hero.has-country-panorama h1,
+.gallery-hero.has-country-panorama .gallery-status{
+  color:#fff;
+  text-shadow:0 2px 28px rgba(0,0,0,.58);
+}
+.gallery-hero.has-country-panorama .gallery-filter-toggle,
+.gallery-hero.has-country-panorama .btn{
+  border-color:rgba(255,255,255,.48);
+  background:rgba(16,16,14,.54);
+  color:#fff;
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
 }
 .gallery-hero h1{
   font-size:clamp(2.8rem,7vw,6.5rem);
@@ -5193,6 +5257,11 @@ body[data-gallery] .gallery-hero{
 html[data-theme="light"] body[data-gallery] .gallery-hero{
   --glass-panel-alpha:.304;
   background:rgb(var(--glass-surface-rgb) / var(--glass-panel-alpha));
+}
+@media (prefers-reduced-motion: reduce){
+  .gallery-hero-panorama img{
+    will-change:auto;
+  }
 }
 .gallery-view-controls{
   position:fixed;

@@ -11,7 +11,7 @@ const js = fs.readFileSync(path.join(root, "landing-concept", "landing.js"), "ut
 
 test("landing concept remains isolated and search-engine private", () => {
   assert.match(html, /noindex, nofollow, noarchive/);
-  assert.match(html, /Review concept · v142\.6/);
+  assert.match(html, /Review concept · v143\.0/);
   assert.doesNotMatch(html, /_1800|masters\//);
 });
 
@@ -54,15 +54,29 @@ test("landing concept has keyboard, autoplay, and reduced-motion behavior", () =
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
+test("the featured rotation remains entirely outdoors", () => {
+  const slides = (html.match(/<figure class="hero-slide[\s\S]*?<\/figure>/g) || []).join("\n");
+  assert.doesNotMatch(slides, /pano-madrid|pano-orsay|pano-malmaison/);
+  assert.match(slides, /gallery-heroes\/france\.jpg/);
+  assert.match(slides, /gallery-heroes\/usa\.jpg/);
+  assert.match(slides, /gallery-heroes\/mexico\.jpg/);
+  assert.match(slides, /gallery-heroes\/portugal\.jpg/);
+});
+
 test("landing concept ships only tracked, display-sized clean derivatives", () => {
   const assetsDir = path.join(root, "landing-concept", "assets");
+  const sharedDir = path.join(root, "assets", "gallery-heroes");
   const images = fs.readdirSync(assetsDir).filter((name) => name.endsWith(".jpg"));
-  const panoramas = images.filter((name) => name.startsWith("pano-"));
-  assert.equal(images.length, 14);
-  assert.equal(panoramas.length, 6);
+  const sharedImages = fs.readdirSync(sharedDir).filter((name) => name.endsWith(".jpg"));
+  assert.equal(images.length + sharedImages.length, 13);
+  assert.equal(sharedImages.length, 7);
   assert.equal((html.match(/class="hero-slide(?:\s|\")/g) || []).length, 6);
   for (const image of images) {
     const bytes = fs.statSync(path.join(assetsDir, image)).size;
     assert.ok(bytes < 1_300_000, `${image} is too large for the landing sequence`);
+  }
+  for (const image of sharedImages) {
+    const bytes = fs.statSync(path.join(sharedDir, image)).size;
+    assert.ok(bytes < 1_300_000, `${image} is too large for the shared gallery hero`);
   }
 });

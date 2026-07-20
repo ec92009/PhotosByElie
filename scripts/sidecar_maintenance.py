@@ -222,7 +222,8 @@ def _register_uploaded_catalog_rows(repo_root: Path, *, asset_ids: list[str] | N
             params.extend(requested_ids)
         rows = owner.execute(
             f"""
-            SELECT a.asset_id, a.filename, a.media_type, a.captured_at, a.pixel_width, a.pixel_height,
+            SELECT a.asset_id, a.source_anchor, a.raw_json, a.missing_at,
+                   a.filename, a.media_type, a.captured_at, a.pixel_width, a.pixel_height,
                    a.duration, a.location_label, a.location_keywords_json,
                    d.title, d.keywords_json,
                    i.photo_id, i.upload_keys_json, i.updated_at
@@ -244,11 +245,35 @@ def _register_uploaded_catalog_rows(repo_root: Path, *, asset_ids: list[str] | N
         for row in rows:
             latest_by_asset.setdefault(str(row["asset_id"]), row)
 
+        # One physical Photos item can have both a retired local identifier and
+        # a current cloud identifier. Prefer an already-published media id, then
+        # the stable local-identifier upload family, so registration never
+        # creates a second public item for the same Photos asset.
+        candidates_by_identity: dict[str, list[sqlite3.Row]] = {}
+        for row in latest_by_asset.values():
+            raw = _read_json_text(row["raw_json"], {})
+            local_identifier = str(raw.get("localIdentifier") or "").strip() if isinstance(raw, dict) else ""
+            identity = local_identifier or str(row["asset_id"])
+            candidates_by_identity.setdefault(identity, []).append(row)
+
+        latest_by_identity: dict[str, sqlite3.Row] = {}
+        for identity, candidates in candidates_by_identity.items():
+            latest_by_identity[identity] = max(
+                candidates,
+                key=lambda row: (
+                    int(bool(catalog.execute("SELECT 1 FROM media_items WHERE media_id = ?", (row["photo_id"],)).fetchone())),
+                    int(str(row["asset_id"] or "") == identity),
+                    int(str(row["source_anchor"] or "").startswith("apple-photos://")),
+                    str(row["updated_at"] or ""),
+                    str(row["asset_id"] or ""),
+                ),
+            )
+
         inserted: list[dict] = []
         skipped: list[dict] = []
         r2_upserts = 0
         now = now_iso()
-        for row in latest_by_asset.values():
+        for row in latest_by_identity.values():
             media_id = str(row["photo_id"] or "").strip()
             asset_id = str(row["asset_id"] or "").strip()
             upload_keys = _uploaded_keys(row)
@@ -432,7 +457,7 @@ def _register_uploaded_catalog_rows(repo_root: Path, *, asset_ids: list[str] | N
             "ok": True,
             "mode": "sidecar-uploaded-catalog-registration",
             "dryRun": dry_run,
-            "candidateCount": len(latest_by_asset),
+            "candidateCount": len(latest_by_identity),
             "registeredCount": len(inserted),
             "skippedCount": len(skipped),
             "r2ObjectUpsertCount": r2_upserts,

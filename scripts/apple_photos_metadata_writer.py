@@ -11,6 +11,7 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+import sqlite3
 import subprocess
 from typing import Any, Iterable, Protocol
 
@@ -215,12 +216,30 @@ def merge_keywords(existing: Iterable[str], desired: Iterable[str], managed: Ite
 
 
 def _r2_verified(conn, fixture_id: str, asset_id: str, version_hash: str) -> bool:
-    rows = conn.execute(
-        """SELECT status, COALESCE(object_key, '') object_key
-           FROM fixture_delivery_receipts
-           WHERE fixture_id = ? AND asset_id = ? AND destination = 'r2' AND version_hash = ?""",
-        (fixture_id, asset_id, version_hash),
-    ).fetchall()
+    params = (fixture_id, asset_id, version_hash)
+    try:
+        rows = conn.execute(
+            """SELECT receipt.status, COALESCE(receipt.object_key, '') object_key
+               FROM fixture_delivery_receipts AS receipt
+               JOIN r2_objects AS object
+                 ON object.object_key = receipt.object_key
+                AND object.lifecycle_state = 'current'
+               WHERE receipt.fixture_id = ? AND receipt.asset_id = ?
+                 AND receipt.destination = 'r2' AND receipt.version_hash = ?""",
+            params,
+        ).fetchall()
+    except sqlite3.OperationalError as error:
+        if "no such table: r2_objects" not in str(error):
+            raise
+        # Lightweight fixture-only stores predate the Owner R2 ledger. Their
+        # receipt rows remain the best available gate until that schema exists.
+        rows = conn.execute(
+            """SELECT status, COALESCE(object_key, '') object_key
+               FROM fixture_delivery_receipts
+               WHERE fixture_id = ? AND asset_id = ?
+                 AND destination = 'r2' AND version_hash = ?""",
+            params,
+        ).fetchall()
     actual = [row for row in rows if row["object_key"]]
     return bool(actual) and all(row["status"] == "verified" for row in actual)
 

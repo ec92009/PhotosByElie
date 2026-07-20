@@ -141,6 +141,57 @@ class IndexedWindowTest(unittest.TestCase):
             self.assertNotIn("sidecarSummary", payload)
             self.assertEqual(payload["items"][0]["localIdentifier"], "local-4/L0/001")
 
+    def test_mock_upload_queues_one_current_identity_for_one_photos_item(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            local_id = "0042A239-9AEA-46EE-BA3A-ED3EE17D0332/L0/001"
+            cloud_id = "0042A239-9AEA-46EE-BA3A-ED3EE17D0332:001:cloud"
+            sidecar_state_db.upsert_assets(repo_root, [
+                {
+                    "assetId": local_id,
+                    "localIdentifier": local_id,
+                    "sourceAnchor": f"apple-photos://{local_id}",
+                    "mediaType": "photo",
+                    "filename": "Legacy.JPG",
+                    "creationDate": "2026-01-01T10:00:00Z",
+                    "locationLabel": "Spain",
+                },
+                {
+                    "assetId": cloud_id,
+                    "cloudIdentifier": cloud_id,
+                    "localIdentifier": local_id,
+                    "sourceAnchor": f"apple-photos://{cloud_id}",
+                    "mediaType": "photo",
+                    "filename": "Current.JPG",
+                    "creationDate": "2026-01-01T10:00:00Z",
+                    "locationLabel": "Spain",
+                },
+            ])
+            sidecar_state_db.record_decision(repo_root, {
+                "assetId": local_id,
+                "action": "approve",
+                "title": "Alicante coast",
+                "keywords": ["Spain"],
+            })
+            sidecar_state_db.record_decision(repo_root, {
+                "assetId": cloud_id,
+                "action": "approve",
+                "title": "Alicante coast",
+                "keywords": ["Spain"],
+            })
+            with sidecar_state_db.connect(repo_root) as conn:
+                conn.execute(
+                    "UPDATE sidecar_assets SET missing_at = '2026-07-20T00:00:00Z' WHERE asset_id = ?",
+                    (local_id,),
+                )
+                conn.commit()
+
+            payload = sidecar_state_db.mock_upload(repo_root, limit=20)
+
+            self.assertEqual(payload["mockUploadedCount"], 1)
+            self.assertEqual(payload["bridgeQueuedCount"], 1)
+            self.assertEqual([item["assetId"] for item in payload["items"]], [cloud_id])
+
 
 class PhotosBridgeLaunchTest(unittest.TestCase):
     def test_app_task_waits_for_unique_result_file_without_open_wait_mode(self):

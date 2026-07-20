@@ -1794,26 +1794,60 @@ def _upload_bridge_rows(
     """
     rows = conn.execute(
         f"""
-        SELECT a.asset_id, a.source_anchor, a.media_type, a.filename, a.captured_at, m.uploaded_at,
-               a.location_label, a.location_keywords_json, d.title, d.keywords_json
-        FROM sidecar_mock_uploads AS m
-        JOIN sidecar_assets AS a ON a.asset_id = m.asset_id
-        JOIN sidecar_decisions AS d ON d.asset_id = m.asset_id
-        WHERE m.mock_state = 'active'
-          AND d.pick_state = 'picked'
-          AND d.metadata_state = 'approved'
-          AND NOT EXISTS (
-            SELECT 1 FROM json_each(d.keywords_json) AS keyword
-            WHERE lower(trim(keyword.value)) LIKE 'ai generated%'
-               OR lower(trim(keyword.value)) IN ('generative ai', 'ai artwork')
-               OR lower(trim(keyword.value)) LIKE 'stained%'
-          )
-          AND NOT EXISTS (
-            SELECT 1 FROM sidecar_tombstones AS t
-            WHERE t.asset_id = m.asset_id AND t.tombstone_state = 'active'
-          )
-          {blocked_sql}
-        ORDER BY m.uploaded_at DESC, a.captured_at DESC, a.asset_id
+        WITH ranked AS (
+          SELECT a.asset_id, a.source_anchor, a.raw_json, a.media_type, a.filename,
+                 a.captured_at, a.indexed_at, a.updated_at AS asset_updated_at, a.missing_at,
+                 m.uploaded_at, a.location_label, a.location_keywords_json,
+                 d.title, d.keywords_json,
+                 COALESCE(NULLIF(json_extract(a.raw_json, '$.localIdentifier'), ''), a.asset_id)
+                   AS photos_identity,
+                 CASE
+                   WHEN COALESCE(NULLIF(json_extract(a.raw_json, '$.localIdentifier'), ''), '') <> ''
+                    AND EXISTS (
+                      SELECT 1
+                      FROM sidecar_upload_bridge_run_items AS legacy_item
+                      JOIN sidecar_upload_bridge_runs AS legacy_run
+                        ON legacy_run.run_id = legacy_item.run_id
+                      WHERE legacy_item.asset_id = json_extract(a.raw_json, '$.localIdentifier')
+                        AND legacy_item.asset_id <> a.asset_id
+                        AND legacy_run.execute_upload = 1
+                        AND legacy_item.status = 'uploaded'
+                        AND legacy_item.upload_status IN ('uploaded', 'uploaded_with_skips')
+                    )
+                   THEN 'apple-photos://' || json_extract(a.raw_json, '$.localIdentifier')
+                   ELSE a.source_anchor
+                 END AS r2_source_anchor,
+                 ROW_NUMBER() OVER (
+                   PARTITION BY COALESCE(
+                     NULLIF(json_extract(a.raw_json, '$.localIdentifier'), ''), a.asset_id
+                   )
+                   ORDER BY
+                     CASE WHEN a.missing_at IS NULL OR a.missing_at = '' THEN 0 ELSE 1 END,
+                     COALESCE(a.indexed_at, '') DESC,
+                     COALESCE(a.updated_at, '') DESC,
+                     a.asset_id DESC
+                 ) AS identity_rank
+          FROM sidecar_mock_uploads AS m
+          JOIN sidecar_assets AS a ON a.asset_id = m.asset_id
+          JOIN sidecar_decisions AS d ON d.asset_id = m.asset_id
+          WHERE m.mock_state = 'active'
+            AND d.pick_state = 'picked'
+            AND d.metadata_state = 'approved'
+            AND NOT EXISTS (
+              SELECT 1 FROM json_each(d.keywords_json) AS keyword
+              WHERE lower(trim(keyword.value)) LIKE 'ai generated%'
+                 OR lower(trim(keyword.value)) IN ('generative ai', 'ai artwork')
+                 OR lower(trim(keyword.value)) LIKE 'stained%'
+            )
+            AND NOT EXISTS (
+              SELECT 1 FROM sidecar_tombstones AS t
+              WHERE t.asset_id = m.asset_id AND t.tombstone_state = 'active'
+            )
+            {blocked_sql}
+        )
+        SELECT * FROM ranked
+        WHERE identity_rank = 1
+        ORDER BY uploaded_at DESC, captured_at DESC, asset_id
         {limit_sql}
         """,
         params,
@@ -2010,21 +2044,7 @@ def upload_bridge_plan(
             planned_key_sets[asset_id] = keys
             all_planned_keys.extend(keys)
         current_r2 = _current_r2_objects_for_plan(conn, all_planned_keys)
-        if asset_ids is not None:
-            total_queued = len(_upload_bridge_rows(conn, asset_ids=asset_ids))
-        else:
-            total_queued = conn.execute(
-                """
-                SELECT count(*) AS total
-                FROM sidecar_mock_uploads AS m
-                JOIN sidecar_decisions AS d ON d.asset_id = m.asset_id
-                LEFT JOIN sidecar_tombstones AS t ON t.asset_id = m.asset_id AND t.tombstone_state = 'active'
-                WHERE m.mock_state = 'active'
-                  AND d.pick_state = 'picked'
-                  AND d.metadata_state = 'approved'
-                  AND t.asset_id IS NULL
-                """
-            ).fetchone()["total"]
+        total_queued = len(_upload_bridge_rows(conn, asset_ids=asset_ids))
         mock_upload_summary = _mock_upload_summary(conn, asset_ids=asset_ids)
     items = []
     collision_count = 0
@@ -4085,7 +4105,9 @@ def sidecar_sync_status(repo_root: Path, limit: int = 80) -> dict[str, Any]:
 
 
 def _planned_r2_keys(row: sqlite3.Row, *, include_private_renders: bool = False) -> tuple[str, list[dict[str, str]]]:
-    source_anchor = str(row["source_anchor"] or f"apple-photos://{row['asset_id']}")
+    row_keys = set(row.keys())
+    canonical_anchor = row["r2_source_anchor"] if "r2_source_anchor" in row_keys else ""
+    source_anchor = str(canonical_anchor or row["source_anchor"] or f"apple-photos://{row['asset_id']}")
     photo_id = photo_id_for_source_path(source_anchor)
     filename = str(row["filename"] or "")
     media_type = str(row["media_type"] or "").casefold()
@@ -4204,7 +4226,9 @@ def mock_upload(repo_root: Path, asset_ids: Iterable[str] | None = None, limit: 
             params.extend(requested_ids)
         raw_rows = conn.execute(
             f"""
-            SELECT a.asset_id, a.source_anchor, a.media_type, a.filename, a.captured_at,
+            SELECT a.asset_id, a.source_anchor, a.raw_json, a.missing_at,
+                   a.indexed_at, a.updated_at AS asset_updated_at,
+                   a.media_type, a.filename, a.captured_at,
                    a.location_label, a.location_keywords_json, d.title, d.keywords_json
             FROM sidecar_decisions AS d
             JOIN sidecar_assets AS a ON a.asset_id = d.asset_id
@@ -4222,17 +4246,36 @@ def mock_upload(repo_root: Path, asset_ids: Iterable[str] | None = None, limit: 
             """,
             params,
         ).fetchall()
-        metadata_blocked_rows = [row for row in raw_rows if not _upload_bridge_metadata_ready(row)]
-        rows = [row for row in raw_rows if _upload_bridge_metadata_ready(row)][:safe_limit]
-        planned_key_sets: dict[str, list[dict[str, str]]] = {}
-        photo_ids: dict[str, str] = {}
-        all_planned_keys: list[dict[str, str]] = []
-        for row in rows:
-            photo_id, keys = _planned_r2_keys(row)
-            photo_ids[str(row["asset_id"])] = photo_id
-            planned_key_sets[str(row["asset_id"])] = keys
-            all_planned_keys.extend(keys)
-        current_r2 = _current_r2_objects_for_plan(conn, all_planned_keys)
+        # The Photos index can retain both a retired local asset id and the
+        # current cloud id for one physical item. Queue only the current owner
+        # identity so a mock/real upload can never recreate two R2 families.
+        by_photos_identity: dict[str, sqlite3.Row] = {}
+        for row in raw_rows:
+            raw = _read_json_text(row["raw_json"], {})
+            local_identifier = str(raw.get("localIdentifier") or "").strip() if isinstance(raw, dict) else ""
+            identity = local_identifier or str(row["asset_id"])
+            current = by_photos_identity.get(identity)
+            rank = (
+                int(not str(row["missing_at"] or "").strip()),
+                str(row["indexed_at"] or ""),
+                str(row["asset_updated_at"] or ""),
+                str(row["asset_id"]),
+            )
+            current_rank = (
+                int(not str(current["missing_at"] or "").strip()),
+                str(current["indexed_at"] or ""),
+                str(current["asset_updated_at"] or ""),
+                str(current["asset_id"]),
+            ) if current is not None else None
+            if current is None or rank > current_rank:
+                by_photos_identity[identity] = row
+        physical_rows = sorted(
+            by_photos_identity.values(),
+            key=lambda row: (str(row["captured_at"] or ""), str(row["asset_id"])),
+            reverse=True,
+        )
+        metadata_blocked_rows = [row for row in physical_rows if not _upload_bridge_metadata_ready(row)]
+        rows = [row for row in physical_rows if _upload_bridge_metadata_ready(row)][:safe_limit]
         for row in rows:
             conn.execute(
                 """
@@ -4246,6 +4289,16 @@ def mock_upload(repo_root: Path, asset_ids: Iterable[str] | None = None, limit: 
                 """,
                 (row["asset_id"], run_id, now, now),
             )
+        rows = _upload_bridge_rows(conn, asset_ids=[str(row["asset_id"]) for row in rows])
+        planned_key_sets: dict[str, list[dict[str, str]]] = {}
+        photo_ids: dict[str, str] = {}
+        all_planned_keys: list[dict[str, str]] = []
+        for row in rows:
+            photo_id, keys = _planned_r2_keys(row)
+            photo_ids[str(row["asset_id"])] = photo_id
+            planned_key_sets[str(row["asset_id"])] = keys
+            all_planned_keys.extend(keys)
+        current_r2 = _current_r2_objects_for_plan(conn, all_planned_keys)
     items = []
     collision_count = 0
     covered_key_count = 0

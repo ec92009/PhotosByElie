@@ -11,6 +11,9 @@
   const settingsDialog = document.querySelector("#settings-dialog");
   const languageSelect = document.querySelector("#language-select");
   const transparencyRange = document.querySelector("#transparency-range");
+  const exploreMenu = document.querySelector("#explore-menu");
+  const exploreTrigger = document.querySelector("#explore-trigger");
+  const countryLinks = [...document.querySelectorAll("#country-links a")];
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   const storageKey = "photos-by-elie-landing-concept";
   const slideDuration = 32000;
@@ -27,7 +30,8 @@
       discover: "Discover", selectedWork: "Selected work",
       introTitle: "Photography that lets a place breathe.",
       introBody: "Travel, architecture, coastlines, and lived-in spaces—observed patiently and presented without getting between you and the image.",
-      series: "Series", services: "Services", spain: "Spain", italy: "Italy",
+      series: "Series", france: "France", usa: "USA", spain: "Spain", mexico: "Mexico",
+      italy: "Italy", portugal: "Portugal", slovakia: "Slovakia",
       spaces: "Spaces & Real Estate", footerLine: "A quieter way to see more.", support: "Support",
       display: "Display", language: "Language", theme: "Theme", night: "Night", day: "Day",
       surface: "Surface", glass: "Glass", solid: "Solid", transparency: "Overlay transparency"
@@ -38,7 +42,8 @@
       discover: "Découvrir", selectedWork: "Sélection",
       introTitle: "Des photographies qui laissent respirer les lieux.",
       introBody: "Voyages, architecture, littoral et espaces habités — observés patiemment, sans jamais s'interposer entre vous et l'image.",
-      series: "Série", services: "Services", spain: "Espagne", italy: "Italie",
+      series: "Série", france: "France", usa: "États-Unis", spain: "Espagne", mexico: "Mexique",
+      italy: "Italie", portugal: "Portugal", slovakia: "Slovaquie",
       spaces: "Espaces & Immobilier", footerLine: "Une autre façon de mieux voir.", support: "Assistance",
       display: "Affichage", language: "Langue", theme: "Thème", night: "Nuit", day: "Jour",
       surface: "Surface", glass: "Verre", solid: "Opaque", transparency: "Transparence des panneaux"
@@ -49,7 +54,8 @@
       discover: "Descubrir", selectedWork: "Selección",
       introTitle: "Fotografía que deja respirar cada lugar.",
       introBody: "Viajes, arquitectura, costas y espacios vividos — observados con paciencia y presentados sin interponerse entre tú y la imagen.",
-      series: "Serie", services: "Servicios", spain: "España", italy: "Italia",
+      series: "Serie", france: "Francia", usa: "EE. UU.", spain: "España", mexico: "México",
+      italy: "Italia", portugal: "Portugal", slovakia: "Eslovaquia",
       spaces: "Espacios e Inmobiliaria", footerLine: "Una forma más serena de ver más.", support: "Ayuda",
       display: "Pantalla", language: "Idioma", theme: "Tema", night: "Noche", day: "Día",
       surface: "Superficie", glass: "Cristal", solid: "Sólida", transparency: "Transparencia de los paneles"
@@ -117,6 +123,13 @@
     pauseButton.textContent = paused ? "▶" : "Ⅱ";
   };
 
+  const setExploreOpen = (open, { focusFirst = false, restoreFocus = false } = {}) => {
+    exploreMenu.classList.toggle("is-open", open);
+    exploreTrigger.setAttribute("aria-expanded", String(open));
+    if (focusFirst) countryLinks[0]?.focus();
+    if (restoreFocus) exploreTrigger.focus();
+  };
+
   const setLanguage = (language) => {
     const selected = translations[language] ? language : "en";
     document.documentElement.lang = selected;
@@ -177,8 +190,35 @@
     startTimer();
   });
 
+  exploreTrigger.addEventListener("click", () => {
+    const open = !exploreMenu.classList.contains("is-open");
+    setExploreOpen(open, { focusFirst: open });
+  });
+
+  exploreMenu.addEventListener("pointerenter", () => exploreTrigger.setAttribute("aria-expanded", "true"));
+  exploreMenu.addEventListener("pointerleave", () => {
+    if (!exploreMenu.classList.contains("is-open")) exploreTrigger.setAttribute("aria-expanded", "false");
+  });
+  exploreMenu.addEventListener("focusin", () => exploreTrigger.setAttribute("aria-expanded", "true"));
+  exploreMenu.addEventListener("focusout", () => {
+    window.requestAnimationFrame(() => {
+      if (!exploreMenu.contains(document.activeElement) && !exploreMenu.classList.contains("is-open")) {
+        exploreTrigger.setAttribute("aria-expanded", "false");
+      }
+    });
+  });
+
+  document.addEventListener("pointerdown", (event) => {
+    if (!exploreMenu.contains(event.target)) setExploreOpen(false);
+  });
+
   document.addEventListener("keydown", (event) => {
     if (settingsDialog.open) return;
+    if (event.key === "Escape" && exploreMenu.classList.contains("is-open")) {
+      event.preventDefault();
+      setExploreOpen(false, { restoreFocus: true });
+      return;
+    }
     if (event.key === "ArrowLeft") showSlide(activeIndex - 1);
     if (event.key === "ArrowRight") showSlide(activeIndex + 1);
     if (event.key === " ") {

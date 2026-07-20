@@ -6,8 +6,13 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v142.5`
+- Current visible version: `v142.6`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
+- `v142.6` turns the landing concept's Explore control into an animated,
+  keyboard- and touch-accessible seven-country pill fan, expands the page into
+  a complete country grid, and replaces the Paris and Nerja hero scenes with
+  the clean Louvre-at-night and sunny-cove panoramas. Spain now leads with the
+  catalogued Plaza de España panorama from Seville.
 - `v142.5` simplifies the landing-page panorama motion into one slow,
   32-second linear traverse from the left edge to the right edge, followed by
   a gentle crossfade into the next scene. It also replaces the defective

@@ -11,7 +11,7 @@ const js = fs.readFileSync(path.join(root, "landing-concept", "landing.js"), "ut
 
 test("landing concept remains isolated and search-engine private", () => {
   assert.match(html, /noindex, nofollow, noarchive/);
-  assert.match(html, /Review concept · v142\.5/);
+  assert.match(html, /Review concept · v142\.6/);
   assert.doesNotMatch(html, /_1800|masters\//);
 });
 
@@ -30,6 +30,18 @@ test("landing concept exposes complete review controls", () => {
   assert.match(html, /class="version-pill"/);
 });
 
+test("landing concept exposes all live country collections", () => {
+  assert.equal((html.match(/id="country-links"[\s\S]*?<\/nav>/) || [""])[0].match(/gallery=/g)?.length, 7);
+  assert.equal((html.match(/class="story-card(?:\s|\")/g) || []).length, 7);
+  for (const slug of ["france", "usa", "spain", "mexico", "italy", "portugal", "slovakia"]) {
+    assert.match(html, new RegExp(`gallery=${slug}`));
+    assert.match(js, new RegExp(`${slug}:`));
+  }
+  assert.match(js, /aria-expanded/);
+  assert.match(js, /Escape/);
+  assert.match(css, /\.explore-menu\.is-open/);
+});
+
 test("landing concept has keyboard, autoplay, and reduced-motion behavior", () => {
   assert.match(js, /ArrowLeft/);
   assert.match(js, /ArrowRight/);
@@ -46,7 +58,7 @@ test("landing concept ships only tracked, display-sized clean derivatives", () =
   const assetsDir = path.join(root, "landing-concept", "assets");
   const images = fs.readdirSync(assetsDir).filter((name) => name.endsWith(".jpg"));
   const panoramas = images.filter((name) => name.startsWith("pano-"));
-  assert.equal(images.length, 9);
+  assert.equal(images.length, 14);
   assert.equal(panoramas.length, 6);
   assert.equal((html.match(/class="hero-slide(?:\s|\")/g) || []).length, 6);
   for (const image of images) {

@@ -525,7 +525,7 @@ npm run validate
 
 ## Fresh Backlog
 
-### Landing-page concept (v142.5)
+### Landing-page concept (v142.6)
 
 - Review route: `https://photos-by-elie.com/landing-concept/`.
 - The concept is deliberately isolated and `noindex`; the production root is
@@ -540,11 +540,20 @@ npm run validate
   sale/download masters.
 - The concept header intentionally exposes only Photos, Sign in, and display
   settings; the prior Real Estate navigation item was removed as unnecessary.
+- Explore now transforms into compact country pills for every live public
+  collection: France, USA, Spain, Mexico, Italy, Portugal, and Slovakia. Hover,
+  keyboard focus, touch/click, outside-click dismissal, and Escape are covered;
+  the mobile fan is horizontally swipeable rather than growing over the hero.
+- The continuation below the fold is a seven-country editorial grid using
+  clean display derivatives. Spain uses the Plaza de España panorama whose
+  catalog metadata confirms Seville; Paris now uses the Louvre courtyard at
+  night and Nerja uses a sunny coastal cove.
 - Desktop and 390 x 844 mobile layouts, slideshow controls, settings dialog,
-  French preference persistence, and reduced-motion declarations are covered
-  by the browser/test pass. `scripts/landing_concept.test.mjs` guards privacy,
-  the simplified header, settings/version affordances, panorama motion, and
-  image payload size.
+  country-fan interaction, French preference persistence, and reduced-motion
+  declarations are covered by the browser/test pass.
+  `scripts/landing_concept.test.mjs` guards privacy, the simplified header,
+  all seven country destinations, settings/version affordances, panorama
+  motion, and image payload size.
 
 1. Finish full-path plus modified-date re-export overwrite behavior, then audit and clean today's duplicate imports reversibly.
 2. Add import source history management for stale/missing remembered folders.

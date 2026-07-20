@@ -525,6 +525,19 @@ npm run validate
 
 ## Fresh Backlog
 
+### Landing-page concept (v142.3)
+
+- Review route: `https://photos-by-elie.com/landing-concept/`.
+- The concept is deliberately isolated and `noindex`; the production root is
+  unchanged until Elie explicitly approves a cutover.
+- Six approved camera-photo sources were rendered into clean, display-sized
+  JPEG derivatives under `landing-concept/assets/`. These are suitable for
+  edge-to-edge presentation but are not the private sale/download masters.
+- Desktop and 390 x 844 mobile layouts, slideshow controls, settings dialog,
+  French preference persistence, and reduced-motion declarations were checked
+  with Playwright. `scripts/landing_concept.test.mjs` guards privacy,
+  settings/version affordances, motion behavior, and image payload size.
+
 1. Finish full-path plus modified-date re-export overwrite behavior, then audit and clean today's duplicate imports reversibly.
 2. Add import source history management for stale/missing remembered folders.
 3. Make the Real Estate import control unmistakable and rehearse one full client lifecycle.

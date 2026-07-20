@@ -128,7 +128,7 @@ input { font: inherit; }
   margin: 0;
   opacity: 0;
   overflow: hidden;
-  transition: opacity 1.35s ease;
+  transition: opacity 1.8s ease;
 }
 
 .hero-slide.is-active {

@@ -6,8 +6,12 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v142.4`
+- Current visible version: `v142.5`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
+- `v142.5` simplifies the landing-page panorama motion into one slow,
+  32-second linear traverse from the left edge to the right edge, followed by
+  a gentle crossfade into the next scene. It also replaces the defective
+  Rueil-Malmaison frame with a clean panorama of Napoleon's bedchamber.
 - `v142.4` keeps the isolated landing-page slideshow but replaces every hero
   background with an approved, clean panorama. Each scene begins centered,
   glides to the left edge, traverses the full frame, and returns toward center

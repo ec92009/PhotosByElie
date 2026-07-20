@@ -13,7 +13,7 @@
   const transparencyRange = document.querySelector("#transparency-range");
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   const storageKey = "photos-by-elie-landing-concept";
-  const slideDuration = 14000;
+  const slideDuration = 32000;
   let activeIndex = 0;
   let timer = null;
   let activePan = null;
@@ -58,11 +58,11 @@
 
   const pad = (number) => String(number).padStart(2, "0");
 
-  const centerPanorama = (slide) => {
+  const placePanoramaAtStart = (slide) => {
     const image = slide?.querySelector("img");
     if (!image) return { image: null, overflow: 0 };
     const overflow = Math.max(0, image.getBoundingClientRect().width - slide.clientWidth);
-    image.style.transform = `translate3d(${-overflow / 2}px, 0, 0)`;
+    image.style.transform = "translate3d(0, 0, 0)";
     return { image, overflow };
   };
 
@@ -72,16 +72,14 @@
 
     const run = () => {
       if (slide !== slides[activeIndex]) return;
-      const { image, overflow } = centerPanorama(slide);
+      const { image, overflow } = placePanoramaAtStart(slide);
       if (!image || overflow < 8 || paused || reducedMotion.matches) return;
       activePan = image.animate([
-        { transform: `translate3d(${-overflow / 2}px, 0, 0)`, offset: 0 },
-        { transform: "translate3d(0, 0, 0)", offset: 0.28 },
-        { transform: `translate3d(${-overflow}px, 0, 0)`, offset: 0.78 },
-        { transform: `translate3d(${-overflow / 2}px, 0, 0)`, offset: 1 }
+        { transform: "translate3d(0, 0, 0)" },
+        { transform: `translate3d(${-overflow}px, 0, 0)` }
       ], {
-        duration: slideDuration + 1200,
-        easing: "ease-in-out",
+        duration: slideDuration,
+        easing: "linear",
         fill: "both"
       });
     };
@@ -225,7 +223,7 @@
     if (reducedMotion.matches) {
       activePan?.cancel();
       activePan = null;
-      centerPanorama(slides[activeIndex]);
+      placePanoramaAtStart(slides[activeIndex]);
     } else if (!paused) {
       animatePanorama(slides[activeIndex]);
     }

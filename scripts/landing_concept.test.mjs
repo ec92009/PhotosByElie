@@ -11,7 +11,7 @@ const js = fs.readFileSync(path.join(root, "landing-concept", "landing.js"), "ut
 
 test("landing concept remains isolated and search-engine private", () => {
   assert.match(html, /noindex, nofollow, noarchive/);
-  assert.match(html, /Review concept · v142\.4/);
+  assert.match(html, /Review concept · v142\.5/);
   assert.doesNotMatch(html, /_1800|masters\//);
 });
 
@@ -33,10 +33,12 @@ test("landing concept exposes complete review controls", () => {
 test("landing concept has keyboard, autoplay, and reduced-motion behavior", () => {
   assert.match(js, /ArrowLeft/);
   assert.match(js, /ArrowRight/);
-  assert.match(js, /slideDuration = 14000/);
+  assert.match(js, /slideDuration = 32000/);
   assert.match(js, /prefers-reduced-motion/);
   assert.match(js, /animatePanorama/);
   assert.match(js, /translate3d/);
+  assert.match(js, /easing: "linear"/);
+  assert.doesNotMatch(js, /offset: 0\.28|ease-in-out/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
 });
 

@@ -525,17 +525,19 @@ npm run validate
 
 ## Fresh Backlog
 
-### Landing-page concept (v142.4)
+### Landing-page concept (v142.5)
 
 - Review route: `https://photos-by-elie.com/landing-concept/`.
 - The concept is deliberately isolated and `noindex`; the production root is
   unchanged until Elie explicitly approves a cutover.
 - Six approved camera panoramas were rendered into clean, display-sized JPEG
-  derivatives under `landing-concept/assets/`. The hero starts each panorama
-  centered, moves to the left edge, traverses the full width, and returns
-  toward center before crossfading. Pause and reduced-motion states suppress
-  that background motion. These derivatives are suitable for edge-to-edge
-  presentation but are not the private sale/download masters.
+  derivatives under `landing-concept/assets/`. Each hero begins at the left
+  edge, travels to the right edge at a constant speed over 32 seconds, and
+  then crossfades into the next panorama. Pause and reduced-motion states
+  suppress that background motion. The defective Malmaison billiard-room
+  frame was replaced with a clean bedchamber panorama. These derivatives are
+  suitable for edge-to-edge presentation but are not the private
+  sale/download masters.
 - The concept header intentionally exposes only Photos, Sign in, and display
   settings; the prior Real Estate navigation item was removed as unnecessary.
 - Desktop and 390 x 844 mobile layouts, slideshow controls, settings dialog,

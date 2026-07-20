@@ -613,8 +613,9 @@ Clock state: running
 | 2026-07-20 | 21:48 CEST | 21:54 CEST | 0:02 | Refined panorama motion to begin centered, traverse edge-to-edge when idle, and coast naturally after a visitor releases a drag; implementation, browser QA, tests, and deployment runtime excluded. |
 | 2026-07-20 | 22:08 CEST | 22:19 CEST | 0:06 | Directed and reviewed an isolated full-screen landing-page concept using clean display derivatives, responsive editorial layout, slideshow controls, and persisted display preferences; image rendering, implementation, and browser/test runtime excluded. |
 | 2026-07-20 | 22:35 CEST | 22:42 CEST | 0:02 | Refined the landing concept to retain the slideshow while replacing all hero backgrounds with horizontally scrolling approved panoramas and removing the unnecessary Real Estate header link; image rendering, implementation, browser QA, tests, and deployment runtime excluded. |
+| 2026-07-20 | 22:58 CEST | 23:03 CEST | 0:02 | Simplified the landing panorama sequence to a slow linear left-to-right traverse and selected a clean Malmaison replacement; image rendering, implementation, browser QA, tests, and deployment runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 31:08
+Active collaboration time used: 31:10
 Remaining budget: not set

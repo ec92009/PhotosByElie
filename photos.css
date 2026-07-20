@@ -6403,9 +6403,12 @@ body.detail-fullscreen-active{
 .detail-preview.is-panorama.is-pano-scroll.is-pan-draggable,
 .detail-fullscreen-preview.is-panorama-preview.is-pano-scroll .finder-preview-stage.is-pan-draggable{
   cursor:grab;
+  touch-action:pan-y;
 }
 .detail-preview.is-panorama.is-panning,
-.detail-fullscreen-preview.is-panorama-preview .finder-preview-stage.is-panning{
+.detail-preview.is-panorama.is-momentum-panning,
+.detail-fullscreen-preview.is-panorama-preview .finder-preview-stage.is-panning,
+.detail-fullscreen-preview.is-panorama-preview .finder-preview-stage.is-momentum-panning{
   cursor:grabbing;
   scroll-snap-type:none;
   user-select:none;

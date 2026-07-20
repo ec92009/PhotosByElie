@@ -6,8 +6,14 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v142.1`
+- Current visible version: `v142.2`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
+- `v142.2` makes panorama motion feel physical: idle full-height views begin
+  centered, glide first toward the left edge, and then travel continuously
+  edge-to-edge. A visitor drag takes over immediately and keeps coasting after
+  release with gentle friction; a new pointer, wheel, or keyboard gesture stops
+  the coast. Reduced-motion preferences disable both automatic and inertial
+  movement.
 - `v142.1` makes panorama full-height viewing self-explanatory and hands-off:
   the exit control stays visible, spacebar previews have an explicit close
   button, and a slow left-to-right pan begins after a short idle but stops as

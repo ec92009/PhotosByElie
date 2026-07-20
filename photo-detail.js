@@ -825,8 +825,8 @@ if (isPanorama) {
     window.setTimeout(syncScroll, 80);
     window.setTimeout(() => {
       panoPan?.refresh?.();
-      if (scrollMode) panoPan?.startAutoPan?.({ delayMs: 1100, pixelsPerSecond: 22, fromStart: true });
-      else panoPan?.stopAutoPan?.();
+      if (scrollMode) panoPan?.startAutoPan?.({ delayMs: 1100, pixelsPerSecond: 22, fromCenter: true });
+      else panoPan?.stopMotion?.();
     }, 120);
   };
   panoToggle.addEventListener("click", (event) => {

@@ -2648,6 +2648,12 @@ window.photosByElieVideoDurationLabel = (photo) => (
     let autoPanFrame = 0;
     let autoPanLastTime = 0;
     let autoPanPosition = 0;
+    let autoPanDirection = -1;
+    let momentumFrame = 0;
+    let momentumLastTime = 0;
+    let momentumVelocity = 0;
+    let lastPointerX = 0;
+    let lastPointerTime = 0;
     let userHasTakenOver = false;
     const minDrag = 4;
 
@@ -2669,16 +2675,58 @@ window.photosByElieVideoDurationLabel = (photo) => (
       if (user) userHasTakenOver = true;
       scroller.classList.remove("is-auto-panning");
     };
-    const takeOver = () => stopAutoPan({ user: true });
-    const startAutoPan = ({ delayMs = 1100, pixelsPerSecond = 22, fromStart = true } = {}) => {
+    const stopMomentum = () => {
+      if (momentumFrame) window.cancelAnimationFrame(momentumFrame);
+      momentumFrame = 0;
+      momentumLastTime = 0;
+      momentumVelocity = 0;
+      scroller.classList.remove("is-momentum-panning");
+    };
+    const takeOver = () => {
+      stopAutoPan({ user: true });
+      stopMomentum();
+    };
+    const startMomentum = () => {
+      const releaseVelocity = momentumVelocity;
+      stopMomentum();
+      momentumVelocity = releaseVelocity;
+      if (window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) return false;
+      if (!canScroll() || Math.abs(momentumVelocity) < 0.04) return false;
+      scroller.classList.add("is-momentum-panning");
+      const step = (time) => {
+        if (!momentumLastTime) {
+          momentumLastTime = time;
+          momentumFrame = window.requestAnimationFrame(step);
+          return;
+        }
+        const elapsed = Math.min(40, Math.max(0, time - momentumLastTime));
+        momentumLastTime = time;
+        const maximum = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
+        const previous = Number(scroller.scrollLeft) || 0;
+        const next = Math.max(0, Math.min(maximum, previous + momentumVelocity * elapsed));
+        scroller.scrollLeft = next;
+        momentumVelocity *= Math.pow(0.94, elapsed / 16.67);
+        if (next === previous || next <= 0 || next >= maximum || Math.abs(momentumVelocity) < 0.015) {
+          stopMomentum();
+          return;
+        }
+        momentumFrame = window.requestAnimationFrame(step);
+      };
+      momentumFrame = window.requestAnimationFrame(step);
+      return true;
+    };
+    const startAutoPan = ({ delayMs = 1100, pixelsPerSecond = 22, fromCenter = true } = {}) => {
       stopAutoPan();
+      stopMomentum();
       userHasTakenOver = false;
       if (window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) return false;
       const begin = () => {
         refresh();
         if (userHasTakenOver || !canScroll()) return;
-        if (fromStart) scroller.scrollLeft = 0;
+        const maximum = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
+        if (fromCenter) scroller.scrollLeft = maximum / 2;
         autoPanPosition = Number(scroller.scrollLeft) || 0;
+        autoPanDirection = -1;
         scroller.classList.add("is-auto-panning");
         const step = (time) => {
           if (userHasTakenOver || !canScroll()) {
@@ -2689,12 +2737,15 @@ window.photosByElieVideoDurationLabel = (photo) => (
           const elapsed = Math.min(64, Math.max(0, time - autoPanLastTime));
           autoPanLastTime = time;
           const maximum = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
-          autoPanPosition = Math.min(maximum, autoPanPosition + (pixelsPerSecond * elapsed / 1000));
-          scroller.scrollLeft = autoPanPosition;
-          if (autoPanPosition >= maximum - 1) {
-            stopAutoPan();
-            return;
+          autoPanPosition += autoPanDirection * pixelsPerSecond * elapsed / 1000;
+          if (autoPanPosition <= 0) {
+            autoPanPosition = 0;
+            autoPanDirection = 1;
+          } else if (autoPanPosition >= maximum) {
+            autoPanPosition = maximum;
+            autoPanDirection = -1;
           }
+          scroller.scrollLeft = autoPanPosition;
           autoPanFrame = window.requestAnimationFrame(step);
         };
         autoPanFrame = window.requestAnimationFrame(step);
@@ -2702,7 +2753,7 @@ window.photosByElieVideoDurationLabel = (photo) => (
       autoPanTimer = window.setTimeout(begin, Math.max(0, delayMs));
       return true;
     };
-    const stopDrag = () => {
+    const stopDrag = ({ allowMomentum = true } = {}) => {
       if (!isDragging) return;
       isDragging = false;
       scroller.classList.remove("is-panning");
@@ -2714,6 +2765,7 @@ window.photosByElieVideoDurationLabel = (photo) => (
       pointerId = null;
       if (moved) {
         suppressClick = true;
+        if (allowMomentum) startMomentum();
         window.setTimeout(() => {
           suppressClick = false;
         }, 0);
@@ -2729,6 +2781,9 @@ window.photosByElieVideoDurationLabel = (photo) => (
       pointerId = event.pointerId;
       startX = event.clientX;
       startScrollLeft = scroller.scrollLeft;
+      lastPointerX = event.clientX;
+      lastPointerTime = event.timeStamp || performance.now();
+      momentumVelocity = 0;
       scroller.classList.add("is-panning");
       scroller.setPointerCapture?.(pointerId);
       event.preventDefault();
@@ -2738,8 +2793,16 @@ window.photosByElieVideoDurationLabel = (photo) => (
       const deltaX = event.clientX - startX;
       if (Math.abs(deltaX) >= minDrag) moved = true;
       scroller.scrollLeft = startScrollLeft - deltaX;
+      const currentTime = event.timeStamp || performance.now();
+      const elapsed = Math.max(1, currentTime - lastPointerTime);
+      const instantVelocity = -(event.clientX - lastPointerX) / elapsed;
+      momentumVelocity = momentumVelocity * 0.55 + instantVelocity * 0.45;
+      lastPointerX = event.clientX;
+      lastPointerTime = currentTime;
       event.preventDefault();
     };
+    const onPointerUp = () => stopDrag({ allowMomentum: true });
+    const onPointerCancel = () => stopDrag({ allowMomentum: false });
     const onClick = (event) => {
       if (!suppressClick) return;
       event.preventDefault();
@@ -2752,9 +2815,9 @@ window.photosByElieVideoDurationLabel = (photo) => (
 
     scroller.addEventListener("pointerdown", onPointerDown);
     scroller.addEventListener("pointermove", onPointerMove);
-    scroller.addEventListener("pointerup", stopDrag);
-    scroller.addEventListener("pointercancel", stopDrag);
-    scroller.addEventListener("lostpointercapture", stopDrag);
+    scroller.addEventListener("pointerup", onPointerUp);
+    scroller.addEventListener("pointercancel", onPointerCancel);
+    scroller.addEventListener("lostpointercapture", onPointerCancel);
     scroller.addEventListener("click", onClick, true);
     scroller.addEventListener("wheel", onWheel, { passive: true });
     scroller.addEventListener("keydown", onKeydown);
@@ -2768,21 +2831,27 @@ window.photosByElieVideoDurationLabel = (photo) => (
       refresh,
       startAutoPan,
       stopAutoPan,
+      stopMomentum,
+      stopMotion: () => {
+        stopAutoPan();
+        stopMomentum();
+      },
       destroy: () => {
         stopAutoPan();
-        stopDrag();
+        stopMomentum();
+        stopDrag({ allowMomentum: false });
         resizeObserver?.disconnect();
         window.removeEventListener("resize", refresh);
         scroller.removeEventListener("pointerdown", onPointerDown);
         scroller.removeEventListener("pointermove", onPointerMove);
-        scroller.removeEventListener("pointerup", stopDrag);
-        scroller.removeEventListener("pointercancel", stopDrag);
-        scroller.removeEventListener("lostpointercapture", stopDrag);
+        scroller.removeEventListener("pointerup", onPointerUp);
+        scroller.removeEventListener("pointercancel", onPointerCancel);
+        scroller.removeEventListener("lostpointercapture", onPointerCancel);
         scroller.removeEventListener("click", onClick, true);
         scroller.removeEventListener("wheel", onWheel);
         scroller.removeEventListener("keydown", onKeydown);
         scroller.removeEventListener("scroll", refresh);
-        scroller.classList.remove("is-pan-draggable", "is-panning");
+        scroller.classList.remove("is-pan-draggable", "is-panning", "is-momentum-panning");
         horizontalPanInstances.delete(scroller);
       },
     };
@@ -2902,8 +2971,8 @@ window.photosByElieVideoDurationLabel = (photo) => (
       window.setTimeout(centerPanoStage, 80);
       window.setTimeout(() => {
         panoPan?.refresh?.();
-        if (scrollMode) panoPan?.startAutoPan?.({ delayMs: 1100, pixelsPerSecond: 22, fromStart: true });
-        else panoPan?.stopAutoPan?.();
+        if (scrollMode) panoPan?.startAutoPan?.({ delayMs: 1100, pixelsPerSecond: 22, fromCenter: true });
+        else panoPan?.stopMotion?.();
       }, 120);
     };
     const metadataRows = () => {

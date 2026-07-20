@@ -13,13 +13,16 @@
   const transparencyRange = document.querySelector("#transparency-range");
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   const storageKey = "photos-by-elie-landing-concept";
+  const slideDuration = 14000;
   let activeIndex = 0;
   let timer = null;
+  let activePan = null;
+  let resizeTimer = null;
   let paused = reducedMotion.matches;
 
   const translations = {
     en: {
-      photos: "Photos", realEstate: "Real Estate", signIn: "Sign in",
+      photos: "Photos", signIn: "Sign in",
       eyebrow: "Places, light, and the moment between", explore: "Explore the collection",
       discover: "Discover", selectedWork: "Selected work",
       introTitle: "Photography that lets a place breathe.",
@@ -30,7 +33,7 @@
       surface: "Surface", glass: "Glass", solid: "Solid", transparency: "Overlay transparency"
     },
     fr: {
-      photos: "Photos", realEstate: "Immobilier", signIn: "Se connecter",
+      photos: "Photos", signIn: "Se connecter",
       eyebrow: "Les lieux, la lumière et l'instant entre les deux", explore: "Explorer la collection",
       discover: "Découvrir", selectedWork: "Sélection",
       introTitle: "Des photographies qui laissent respirer les lieux.",
@@ -41,7 +44,7 @@
       surface: "Surface", glass: "Verre", solid: "Opaque", transparency: "Transparence des panneaux"
     },
     es: {
-      photos: "Fotos", realEstate: "Inmobiliaria", signIn: "Iniciar sesión",
+      photos: "Fotos", signIn: "Iniciar sesión",
       eyebrow: "Lugares, luz y el instante intermedio", explore: "Explorar la colección",
       discover: "Descubrir", selectedWork: "Selección",
       introTitle: "Fotografía que deja respirar cada lugar.",
@@ -55,6 +58,39 @@
 
   const pad = (number) => String(number).padStart(2, "0");
 
+  const centerPanorama = (slide) => {
+    const image = slide?.querySelector("img");
+    if (!image) return { image: null, overflow: 0 };
+    const overflow = Math.max(0, image.getBoundingClientRect().width - slide.clientWidth);
+    image.style.transform = `translate3d(${-overflow / 2}px, 0, 0)`;
+    return { image, overflow };
+  };
+
+  const animatePanorama = (slide) => {
+    activePan?.cancel();
+    activePan = null;
+
+    const run = () => {
+      if (slide !== slides[activeIndex]) return;
+      const { image, overflow } = centerPanorama(slide);
+      if (!image || overflow < 8 || paused || reducedMotion.matches) return;
+      activePan = image.animate([
+        { transform: `translate3d(${-overflow / 2}px, 0, 0)`, offset: 0 },
+        { transform: "translate3d(0, 0, 0)", offset: 0.28 },
+        { transform: `translate3d(${-overflow}px, 0, 0)`, offset: 0.78 },
+        { transform: `translate3d(${-overflow / 2}px, 0, 0)`, offset: 1 }
+      ], {
+        duration: slideDuration + 1200,
+        easing: "ease-in-out",
+        fill: "both"
+      });
+    };
+
+    const image = slide.querySelector("img");
+    if (image?.complete) window.requestAnimationFrame(run);
+    else image?.addEventListener("load", () => window.requestAnimationFrame(run), { once: true });
+  };
+
   const showSlide = (index, { restart = true } = {}) => {
     activeIndex = (index + slides.length) % slides.length;
     slides.forEach((slide, slideIndex) => {
@@ -66,6 +102,7 @@
     title.textContent = activeSlide.dataset.title;
     location.textContent = activeSlide.dataset.location;
     currentLabel.textContent = pad(activeIndex + 1);
+    animatePanorama(activeSlide);
     if (restart) startTimer();
   };
 
@@ -73,7 +110,7 @@
     window.clearInterval(timer);
     timer = null;
     if (paused || reducedMotion.matches) return;
-    timer = window.setInterval(() => showSlide(activeIndex + 1, { restart: false }), 8500);
+    timer = window.setInterval(() => showSlide(activeIndex + 1, { restart: false }), slideDuration);
   };
 
   const syncPauseButton = () => {
@@ -137,6 +174,8 @@
   pauseButton.addEventListener("click", () => {
     paused = !paused;
     syncPauseButton();
+    if (paused) activePan?.pause();
+    else animatePanorama(slides[activeIndex]);
     startTimer();
   });
 
@@ -148,6 +187,8 @@
       event.preventDefault();
       paused = !paused;
       syncPauseButton();
+      if (paused) activePan?.pause();
+      else animatePanorama(slides[activeIndex]);
       startTimer();
     }
   });
@@ -175,5 +216,19 @@
     savePreferences();
   });
 
-  reducedMotion.addEventListener?.("change", () => startTimer());
+  window.addEventListener("resize", () => {
+    window.clearTimeout(resizeTimer);
+    resizeTimer = window.setTimeout(() => animatePanorama(slides[activeIndex]), 140);
+  });
+
+  reducedMotion.addEventListener?.("change", () => {
+    if (reducedMotion.matches) {
+      activePan?.cancel();
+      activePan = null;
+      centerPanorama(slides[activeIndex]);
+    } else if (!paused) {
+      animatePanorama(slides[activeIndex]);
+    }
+    startTimer();
+  });
 })();

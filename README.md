@@ -6,8 +6,13 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v142.3`
+- Current visible version: `v142.4`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
+- `v142.4` keeps the isolated landing-page slideshow but replaces every hero
+  background with an approved, clean panorama. Each scene begins centered,
+  glides to the left edge, traverses the full frame, and returns toward center
+  before the crossfade; pause and reduced-motion controls stop that movement.
+  The unnecessary Real Estate link is also removed from the concept header.
 - `v142.3` adds a production-isolated landing-page concept at
   `/landing-concept/`: six full-screen, unwatermarked display derivatives,
   an automatic crossfade sequence with manual and reduced-motion controls,

@@ -11,8 +11,14 @@ const js = fs.readFileSync(path.join(root, "landing-concept", "landing.js"), "ut
 
 test("landing concept remains isolated and search-engine private", () => {
   assert.match(html, /noindex, nofollow, noarchive/);
-  assert.match(html, /Review concept · v142\.3/);
+  assert.match(html, /Review concept · v142\.4/);
   assert.doesNotMatch(html, /_1800|masters\//);
+});
+
+test("landing concept keeps the primary header universal", () => {
+  assert.match(html, /data-i18n="photos"/);
+  assert.match(html, /data-i18n="signIn"/);
+  assert.doesNotMatch(html, /data-i18n="realEstate"/);
 });
 
 test("landing concept exposes complete review controls", () => {
@@ -27,15 +33,20 @@ test("landing concept exposes complete review controls", () => {
 test("landing concept has keyboard, autoplay, and reduced-motion behavior", () => {
   assert.match(js, /ArrowLeft/);
   assert.match(js, /ArrowRight/);
-  assert.match(js, /8500/);
+  assert.match(js, /slideDuration = 14000/);
   assert.match(js, /prefers-reduced-motion/);
+  assert.match(js, /animatePanorama/);
+  assert.match(js, /translate3d/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
 test("landing concept ships only tracked, display-sized clean derivatives", () => {
   const assetsDir = path.join(root, "landing-concept", "assets");
   const images = fs.readdirSync(assetsDir).filter((name) => name.endsWith(".jpg"));
-  assert.equal(images.length, 6);
+  const panoramas = images.filter((name) => name.startsWith("pano-"));
+  assert.equal(images.length, 9);
+  assert.equal(panoramas.length, 6);
+  assert.equal((html.match(/class="hero-slide(?:\s|\")/g) || []).length, 6);
   for (const image of images) {
     const bytes = fs.statSync(path.join(assetsDir, image)).size;
     assert.ok(bytes < 1_300_000, `${image} is too large for the landing sequence`);

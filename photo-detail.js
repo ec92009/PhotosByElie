@@ -811,8 +811,11 @@ if (isPanorama) {
   });
   const setPanoMode = (scrollMode) => {
     preview.classList.toggle("is-pano-scroll", scrollMode);
-    panoToggle.textContent = t(scrollMode ? "preview.fit_width" : "preview.full_height");
-    panoToggle.setAttribute("aria-label", t(scrollMode ? "preview.fit_width" : "preview.full_height"));
+    panoToggle.classList.toggle("is-full-height-exit", scrollMode);
+    if (scrollMode) document.body.append(panoToggle);
+    else preview.append(panoToggle);
+    panoToggle.textContent = t(scrollMode ? "preview.exit_full_height" : "preview.full_height");
+    panoToggle.setAttribute("aria-label", t(scrollMode ? "preview.exit_full_height" : "preview.full_height"));
     panoToggle.setAttribute("aria-pressed", String(scrollMode));
     const syncScroll = () => {
       preview.scrollLeft = scrollMode ? Math.max(0, (preview.scrollWidth - preview.clientWidth) / 2) : 0;
@@ -820,7 +823,11 @@ if (isPanorama) {
     };
     window.requestAnimationFrame(syncScroll);
     window.setTimeout(syncScroll, 80);
-    window.setTimeout(() => panoPan?.refresh?.(), 120);
+    window.setTimeout(() => {
+      panoPan?.refresh?.();
+      if (scrollMode) panoPan?.startAutoPan?.({ delayMs: 1100, pixelsPerSecond: 22, fromStart: true });
+      else panoPan?.stopAutoPan?.();
+    }, 120);
   };
   panoToggle.addEventListener("click", (event) => {
     event.stopPropagation();

@@ -36,3 +36,19 @@ test("photo detail and preview omit debugging-only metadata", () => {
   assert.doesNotMatch(photos, /\["Path", contextUrl\]/);
   assert.doesNotMatch(photos, /\["Source", isVideo/);
 });
+
+test("panorama full-height mode stays escapable and yields autoplay to the visitor", () => {
+  const detail = read("photo-detail.js");
+  const photos = read("photos.js");
+  const styles = read("photos.css");
+  assert.match(photos, /const startAutoPan = \(\{ delayMs = 1100, pixelsPerSecond = 22, fromStart = true \} = \{\}\)/);
+  assert.match(photos, /scroller\.addEventListener\("pointerdown", onPointerDown\)/);
+  assert.match(photos, /scroller\.addEventListener\("wheel", onWheel/);
+  assert.match(photos, /panoPan\?\.stopAutoPan\?\.\(\{ user: true \}\)/);
+  assert.match(photos, /data-finder-preview-close/);
+  assert.match(photos, /preview\.exit_full_height/);
+  assert.match(detail, /panoPan\?\.startAutoPan/);
+  assert.match(detail, /document\.body\.append\(panoToggle\)/);
+  assert.match(styles, /\.pano-scroll-toggle\.is-full-height-exit\{[\s\S]*position:fixed/);
+  assert.match(styles, /\.finder-preview-close\{/);
+});

@@ -15,7 +15,7 @@ for remote execution.
 - Public site: `https://photos-by-elie.com/`
 - Local preview: `http://localhost:8000/`
 - Owner intake URL: `https://photos-by-elie.com/owner.html`
-- Current visible build: `v142.0`
+- Current visible build: `v142.1`
 - Sidecar local build: `v126.6`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
@@ -160,6 +160,13 @@ python3 scripts/sidecar_maintenance.py register-uploaded-catalog --dry-run
   legacy source origins, and supports a SQLite-to-browser `--bootstrap-only`
   refresh. The validated public catalog contains 3,554 camera-made items; the
   exact media-sidecar and Expo manifest no longer contain the removed rows.
+- In `v142.1`, panorama full-height mode keeps a viewport-fixed `Exit full
+  height` control visible on desktop and mobile. Panorama motion begins slowly
+  from the left after 1.1 seconds, stops permanently for that view on pointer,
+  wheel, or keyboard takeover, and is disabled by reduced-motion preferences.
+  The spacebar preview also exposes a fixed close button. Headless Chrome
+  interaction checks passed at desktop and 390 x 844 mobile viewports; the full
+  regression suite passed with 95 JavaScript and 91 Python tests.
 - Paid/private access item #4 has central ticket `PBE-20260708-6FBE` and a stronger Worker regression pass in the current working tree: `publicOrder` hides delivery ZIP/storage keys by default, deployed checkout/order/session payloads expose only Worker download-token URLs and buyer-facing file details, and Real Estate deliverable/job/list payloads no longer expose output R2 keys, source-video private keys, private master fields, or cloud-source keys while internal R2 records retain the keys needed for authorized asset serving. `worker/local-server.mjs` opts into `exposeDeliveryStorageKeys: true` only for localhost ZIP inspection. Verified with `node --check worker/checkout-worker.mjs`, `node --check worker/local-server.mjs`, `node --check worker/real-estate-deliverables.mjs`, `node --test worker/checkout-worker.test.mjs`, full `npm test`, and `git diff --check`.
 - Next Apple Photos intake action: use `http://localhost:8011/sidecar.html` for Sidecar sandbox culling from today backward. Pick/reject/hide in reasonable visible-preview batches first; only reviewed/picked survivors should later flow toward Upload Bridge/catalog publishing. Treat Owner `Import to Expo` as a secondary direct path, not the default intake route.
 - Deferred hygiene action: add a supported retry/reset command for Upload Bridge export blocks so future block clearing uses a named maintenance path instead of ad hoc SQL.

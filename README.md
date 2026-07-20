@@ -6,8 +6,13 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v142.0`
+- Current visible version: `v142.1`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
+- `v142.1` makes panorama full-height viewing self-explanatory and hands-off:
+  the exit control stays visible, spacebar previews have an explicit close
+  button, and a slow left-to-right pan begins after a short idle but stops as
+  soon as the visitor drags, scrolls, taps, or uses the arrow keys. Reduced
+  motion preferences disable the automatic movement.
 - `v142.0` restores cloud Owner title/keyword editing and keyword-blacklist
   management, adds useful camera/file/location metadata to the spacebar preview
   without exposing storage paths or internal ids, and reconciles the public

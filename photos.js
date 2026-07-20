@@ -164,6 +164,8 @@ const translations = {
     'common.photo_detail': 'Photo detail',
     'preview.full_height': 'Full height',
     'preview.fit_width': 'Fit width',
+    'preview.exit_full_height': 'Exit full height',
+    'preview.close': 'Close preview',
     'gallery.grid': 'Grid',
     'gallery.fit': 'Fit',
     'gallery.fill': 'Fill',
@@ -795,6 +797,8 @@ const translations = {
     'common.photo_detail': 'Detail de la photo',
     'preview.full_height': 'Pleine hauteur',
     'preview.fit_width': 'Ajuster largeur',
+    'preview.exit_full_height': 'Quitter la pleine hauteur',
+    'preview.close': 'Fermer l apercu',
     'gallery.grid': 'Grille',
     'gallery.fit': 'Ajuster',
     'gallery.fill': 'Remplir',
@@ -1426,6 +1430,8 @@ const translations = {
     'common.photo_detail': 'Detalle de foto',
     'preview.full_height': 'Altura maxima',
     'preview.fit_width': 'Ajustar ancho',
+    'preview.exit_full_height': 'Salir de altura maxima',
+    'preview.close': 'Cerrar vista previa',
     'gallery.grid': 'Cuadricula',
     'gallery.fit': 'Ajustar',
     'gallery.fill': 'Rellenar',
@@ -2638,6 +2644,11 @@ window.photosByElieVideoDurationLabel = (photo) => (
     let startScrollLeft = 0;
     let moved = false;
     let suppressClick = false;
+    let autoPanTimer = 0;
+    let autoPanFrame = 0;
+    let autoPanLastTime = 0;
+    let autoPanPosition = 0;
+    let userHasTakenOver = false;
     const minDrag = 4;
 
     const canScroll = () => scroller.scrollWidth > scroller.clientWidth + 2;
@@ -2648,6 +2659,49 @@ window.photosByElieVideoDurationLabel = (photo) => (
       target instanceof Element
       && Boolean(target.closest(interactiveSelector))
     );
+    const stopAutoPan = ({ user = false } = {}) => {
+      if (autoPanTimer) window.clearTimeout(autoPanTimer);
+      if (autoPanFrame) window.cancelAnimationFrame(autoPanFrame);
+      autoPanTimer = 0;
+      autoPanFrame = 0;
+      autoPanLastTime = 0;
+      autoPanPosition = Number(scroller.scrollLeft) || 0;
+      if (user) userHasTakenOver = true;
+      scroller.classList.remove("is-auto-panning");
+    };
+    const takeOver = () => stopAutoPan({ user: true });
+    const startAutoPan = ({ delayMs = 1100, pixelsPerSecond = 22, fromStart = true } = {}) => {
+      stopAutoPan();
+      userHasTakenOver = false;
+      if (window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) return false;
+      const begin = () => {
+        refresh();
+        if (userHasTakenOver || !canScroll()) return;
+        if (fromStart) scroller.scrollLeft = 0;
+        autoPanPosition = Number(scroller.scrollLeft) || 0;
+        scroller.classList.add("is-auto-panning");
+        const step = (time) => {
+          if (userHasTakenOver || !canScroll()) {
+            stopAutoPan();
+            return;
+          }
+          if (!autoPanLastTime) autoPanLastTime = time;
+          const elapsed = Math.min(64, Math.max(0, time - autoPanLastTime));
+          autoPanLastTime = time;
+          const maximum = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
+          autoPanPosition = Math.min(maximum, autoPanPosition + (pixelsPerSecond * elapsed / 1000));
+          scroller.scrollLeft = autoPanPosition;
+          if (autoPanPosition >= maximum - 1) {
+            stopAutoPan();
+            return;
+          }
+          autoPanFrame = window.requestAnimationFrame(step);
+        };
+        autoPanFrame = window.requestAnimationFrame(step);
+      };
+      autoPanTimer = window.setTimeout(begin, Math.max(0, delayMs));
+      return true;
+    };
     const stopDrag = () => {
       if (!isDragging) return;
       isDragging = false;
@@ -2669,6 +2723,7 @@ window.photosByElieVideoDurationLabel = (photo) => (
     const onPointerDown = (event) => {
       refresh();
       if (event.button !== 0 || !canScroll() || isInteractiveTarget(event.target)) return;
+      takeOver();
       isDragging = true;
       moved = false;
       pointerId = event.pointerId;
@@ -2690,6 +2745,10 @@ window.photosByElieVideoDurationLabel = (photo) => (
       event.preventDefault();
       event.stopImmediatePropagation();
     };
+    const onWheel = () => takeOver();
+    const onKeydown = (event) => {
+      if (["ArrowLeft", "ArrowRight", "Home", "End", "PageUp", "PageDown"].includes(event.key)) takeOver();
+    };
 
     scroller.addEventListener("pointerdown", onPointerDown);
     scroller.addEventListener("pointermove", onPointerMove);
@@ -2697,6 +2756,8 @@ window.photosByElieVideoDurationLabel = (photo) => (
     scroller.addEventListener("pointercancel", stopDrag);
     scroller.addEventListener("lostpointercapture", stopDrag);
     scroller.addEventListener("click", onClick, true);
+    scroller.addEventListener("wheel", onWheel, { passive: true });
+    scroller.addEventListener("keydown", onKeydown);
     scroller.addEventListener("scroll", refresh, { passive: true });
     const resizeObserver = typeof ResizeObserver === "function" ? new ResizeObserver(refresh) : null;
     resizeObserver?.observe(scroller);
@@ -2705,7 +2766,10 @@ window.photosByElieVideoDurationLabel = (photo) => (
 
     const api = {
       refresh,
+      startAutoPan,
+      stopAutoPan,
       destroy: () => {
+        stopAutoPan();
         stopDrag();
         resizeObserver?.disconnect();
         window.removeEventListener("resize", refresh);
@@ -2715,6 +2779,8 @@ window.photosByElieVideoDurationLabel = (photo) => (
         scroller.removeEventListener("pointercancel", stopDrag);
         scroller.removeEventListener("lostpointercapture", stopDrag);
         scroller.removeEventListener("click", onClick, true);
+        scroller.removeEventListener("wheel", onWheel);
+        scroller.removeEventListener("keydown", onKeydown);
         scroller.removeEventListener("scroll", refresh);
         scroller.classList.remove("is-pan-draggable", "is-panning");
         horizontalPanInstances.delete(scroller);
@@ -2777,6 +2843,7 @@ window.photosByElieVideoDurationLabel = (photo) => (
     modal.setAttribute("aria-label", `${isVideo ? "Video" : "Photo"} preview: ${title}`);
     modal.dataset.mediaType = isVideo ? "video" : "photo";
     modal.innerHTML = `
+      <button class="finder-preview-close" type="button" data-finder-preview-close aria-label="${translate("preview.close")}">&times;</button>
       <div class="finder-preview-stage" data-finder-preview-stage>
         <div class="finder-preview-loading">Loading preview</div>
         ${isPanoramaPreview ? `<button class="finder-preview-pano-toggle" type="button" data-finder-preview-pano-toggle aria-pressed="false">${translate("preview.full_height")}</button>` : ""}
@@ -2828,12 +2895,16 @@ window.photosByElieVideoDurationLabel = (photo) => (
     const setPanoPreviewMode = (scrollMode) => {
       if (!panoToggle) return;
       modal.classList.toggle("is-pano-scroll", scrollMode);
-      panoToggle.textContent = translate(scrollMode ? "preview.fit_width" : "preview.full_height");
-      panoToggle.setAttribute("aria-label", translate(scrollMode ? "preview.fit_width" : "preview.full_height"));
+      panoToggle.textContent = translate(scrollMode ? "preview.exit_full_height" : "preview.full_height");
+      panoToggle.setAttribute("aria-label", translate(scrollMode ? "preview.exit_full_height" : "preview.full_height"));
       panoToggle.setAttribute("aria-pressed", String(scrollMode));
       window.requestAnimationFrame(centerPanoStage);
       window.setTimeout(centerPanoStage, 80);
-      window.setTimeout(() => panoPan?.refresh?.(), 120);
+      window.setTimeout(() => {
+        panoPan?.refresh?.();
+        if (scrollMode) panoPan?.startAutoPan?.({ delayMs: 1100, pixelsPerSecond: 22, fromStart: true });
+        else panoPan?.stopAutoPan?.();
+      }, 120);
     };
     const metadataRows = () => {
       const desiredLabels = [
@@ -2869,6 +2940,15 @@ window.photosByElieVideoDurationLabel = (photo) => (
     function onKeydown(event) {
       if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
         if (event.target instanceof HTMLElement && event.target.closest("video")) return;
+        if (isPanoramaPreview && modal.classList.contains("is-pano-scroll")) {
+          panoPan?.stopAutoPan?.({ user: true });
+          stage?.scrollBy?.({
+            left: (event.key === "ArrowRight" ? 1 : -1) * Math.max(80, (stage.clientWidth || 0) * 0.14),
+            behavior: "smooth",
+          });
+          event.preventDefault();
+          return;
+        }
         if (openAdjacent(event.key === "ArrowRight" ? 1 : -1)) event.preventDefault();
         return;
       }
@@ -2975,6 +3055,10 @@ window.photosByElieVideoDurationLabel = (photo) => (
       event.preventDefault();
       close();
     }, { passive: false });
+    modal.querySelector("[data-finder-preview-close]")?.addEventListener("click", (event) => {
+      event.stopPropagation();
+      close();
+    });
     modal.querySelector("[data-finder-preview-prev]")?.addEventListener("click", (event) => {
       event.stopPropagation();
       openAdjacent(-1);

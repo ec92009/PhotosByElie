@@ -95,9 +95,13 @@ test("Owner exposes a contained fixture builder and recoverable Waste Basket man
   assert.match(review, /data-hidden-empty/);
   assert.match(review, /Shift[\s\S]*Arrows[\s\S]*select range/);
   assert.match(hidden, /const restorePhotoIds = async/);
+  assert.match(hidden, /await restorePhotoIds\(\[selected\.id\]\)/);
+  assert.match(hidden, /galleryKey: `expo\/\$\{photoId\}_900\.jpg`/);
+  assert.match(hidden, /detailKey: `expo\/\$\{photoId\}_1800\.jpg`/);
   assert.match(hidden, /const discardPhotoIds = async/);
   assert.match(hidden, /const extendKeyboardSelection =/);
   assert.match(hidden, /moveKeyboardFocus\(selectedIndex \+ 1, \{ extend: event\.shiftKey \}\)/);
+  assert.match(hiddenActions, /if \(localEnabled\) \{[\s\S]*for \(const photoId of ids\) await photoAction\("undo-hide", photoId\);[\s\S]*photoAction\("undo-hide-many"/);
   assert.match(ownerScript, /grid\.prepend\(wasteBasketCard\)/);
   assert.match(ownerScript, /details\.open = isPrimaryAction \|\| isWasteBasket/);
   assert.match(ownerStyles, /\.new-owner-card\[aria-label="Waste Basket"\]\s*\{[\s\S]*grid-column:\s*1\s*\/\s*-1;/);

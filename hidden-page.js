@@ -167,6 +167,14 @@
       collectionAccent: "unknown-gallery",
       className: "p1",
       source: "missing",
+      media: {
+        type: "photo",
+        publicPreview: {
+          allowed: true,
+          galleryKey: `expo/${photoId}_900.jpg`,
+          detailKey: `expo/${photoId}_1800.jpg`,
+        },
+      },
     });
   };
 
@@ -531,10 +539,9 @@
     }
     if (event.key.toLowerCase() !== "p") return;
     try {
-      await hiddenActions.promoteHidden(selected.id);
+      await restorePhotoIds([selected.id]);
       selectedIndex = Math.min(selectedIndex, Math.max(0, photos.length - 2));
-      render();
-      setStatus(`${selected.title} put back.`);
+      setStatus(`${selected.title} restored.`);
     } catch (error) {
       setStatus(error?.message || "Could not put photo back.");
     }

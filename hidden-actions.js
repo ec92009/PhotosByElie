@@ -622,7 +622,11 @@
   const undoMany = async (photoIds = []) => {
     const ids = normalize(photoIds).filter((photoId) => read().includes(photoId));
     if (!cullingEnabled() || !ids.length) return [];
-    await photoAction("undo-hide-many", ids[0], { photo_ids: ids });
+    if (localEnabled) {
+      for (const photoId of ids) await photoAction("undo-hide", photoId);
+    } else {
+      await photoAction("undo-hide-many", ids[0], { photo_ids: ids });
+    }
     unmarkMany(ids);
     const restored = new Set(ids);
     writeHistory(readHistory().filter((photoId) => !restored.has(photoId)));

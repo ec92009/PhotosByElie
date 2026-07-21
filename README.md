@@ -6,8 +6,11 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v143.15`
+- Current visible version: `v144.0`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
+- `v144.0` repairs Waste Basket restore behavior on both public and local Owner
+  pages and reconstructs watermarked previews for blocked IDs missing from the
+  deployed hidden-photo catalog.
 - `v143.15` simplifies Latest social to three quiet text links and prevents the
   shelf from colliding with the footer.
 - `v143.14` restores the three newest social campaign collections in the open

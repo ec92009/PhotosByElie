@@ -229,6 +229,9 @@ const createFakeKv = () => {
     put: async (key, value) => {
       values.set(key, String(value));
     },
+    delete: async (key) => {
+      values.delete(key);
+    },
     list: async ({ prefix = "", limit = 1000, cursor = "" } = {}) => {
       const keys = [...values.keys()]
         .filter((key) => key.startsWith(prefix))
@@ -314,6 +317,37 @@ test("KV owner action store lists newest actions through its time index", async 
     "zzz-newest",
     "000-old-11",
   ]);
+});
+
+test("KV owner action store keeps a cheap pending-action index", async () => {
+  const kv = createFakeKv();
+  const store = createKvOwnerActionStore({ namespace: kv, prefix: "test" });
+
+  await store.putAction({
+    id: "queued-action",
+    type: "sidecar-culling-review",
+    state: "queued",
+    createdAt: "2026-05-17T12:00:00.000Z",
+  });
+  await store.putAction({
+    id: "completed-action",
+    type: "sidecar-culling-review",
+    state: "completed",
+    createdAt: "2026-05-17T12:01:00.000Z",
+  });
+
+  assert.deepEqual(JSON.parse(kv._debug.get("test:owner-action-pending:queued-action")), { id: "queued-action" });
+  assert.deepEqual((await store.listPendingActions()).map((action) => action.id), ["queued-action"]);
+
+  await store.putAction({
+    id: "queued-action",
+    type: "sidecar-culling-review",
+    state: "completed",
+    createdAt: "2026-05-17T12:00:00.000Z",
+    updatedAt: "2026-05-17T12:02:00.000Z",
+  });
+  assert.equal(kv._debug.has("test:owner-action-pending:queued-action"), false);
+  assert.deepEqual(await store.listPendingActions(), []);
 });
 
 test("auth session treats configured Google admin as admin and owner", async () => {

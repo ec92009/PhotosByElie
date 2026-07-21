@@ -2337,7 +2337,9 @@ export const createPhotosByElieWorker = ({
     if (!ownerActionStore || typeof ownerActionStore.listActions !== "function") {
       return json({ ok: false, error: { code: "owner_actions_unavailable", message: "Owner action queue listing is not configured." } }, 503);
     }
-    const actions = await ownerActionStore.listActions({ limit: 100 });
+    const actions = typeof ownerActionStore.listPendingActions === "function"
+      ? await ownerActionStore.listPendingActions({ limit: 100 })
+      : await ownerActionStore.listActions({ limit: 100 });
     const available = actions.filter((action) => {
       if (!ownerConnectorActionTypes.has(action.type)) return false;
       if (action.state === "claimed") return action.claim?.connectorId === connector.connectorId;

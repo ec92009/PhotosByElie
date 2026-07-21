@@ -9,6 +9,8 @@ const actionTime = (action) => {
 
 const byNewestAction = (left, right) => actionTime(right) - actionTime(left);
 
+const isPendingAction = (action) => ["queued", "claimed"].includes(String(action?.state || ""));
+
 export const createMemoryOwnerActionStore = () => {
   const actions = new Map();
   const connectors = new Map();
@@ -24,6 +26,11 @@ export const createMemoryOwnerActionStore = () => {
       .map(clone)
       .sort(byNewestAction)
       .slice(0, Math.max(1, Math.min(100, Number(limit) || 25))),
+    listPendingActions: async ({ limit = 100 } = {}) => [...actions.values()]
+      .filter(isPendingAction)
+      .map(clone)
+      .sort(byNewestAction)
+      .slice(0, Math.max(1, Math.min(100, Number(limit) || 100))),
     putConnector: async (connector) => {
       if (!cleanId(connector?.id)) throw new Error("Owner connector requires an id.");
       connectors.set(connector.id, clone(connector));
@@ -44,6 +51,8 @@ export const createKvOwnerActionStore = ({
   const actionPrefix = `${prefix}:owner-actions:`;
   const indexPrefix = `${prefix}:owner-action-index:`;
   const headKey = `${prefix}:owner-action-head`;
+  const pendingIndexPrefix = `${prefix}:owner-action-pending:`;
+  const pendingIndexReadyKey = `${prefix}:owner-action-pending-ready`;
   const connectorPrefix = `${prefix}:owner-connectors:`;
   const connectorHeadKey = `${prefix}:owner-connector-head`;
   const keyFor = (id) => `${actionPrefix}${cleanId(id)}`;
@@ -59,6 +68,7 @@ export const createKvOwnerActionStore = ({
     if (Array.isArray(head)) return head.map(cleanId).filter(Boolean);
     return [];
   };
+  const pendingKeyFor = (id) => `${pendingIndexPrefix}${cleanId(id)}`;
 
   return {
     putAction: async (action) => {
@@ -68,6 +78,11 @@ export const createKvOwnerActionStore = ({
       const headIds = await readHeadIds();
       const nextHeadIds = [cleanId(action.id), ...headIds.filter((id) => id !== cleanId(action.id))].slice(0, 100);
       await namespace.put(headKey, JSON.stringify({ ids: nextHeadIds }));
+      if (isPendingAction(action)) {
+        await namespace.put(pendingKeyFor(action.id), JSON.stringify({ id: cleanId(action.id) }));
+      } else if (typeof namespace.delete === "function") {
+        await namespace.delete(pendingKeyFor(action.id));
+      }
       return clone(action);
     },
     getAction: async (id) => {
@@ -101,6 +116,31 @@ export const createKvOwnerActionStore = ({
       }
 
       return [...actionsById.values()].sort(byNewestAction).slice(0, boundedLimit).map(clone);
+    },
+    listPendingActions: async ({ limit = 100 } = {}) => {
+      const boundedLimit = Math.max(1, Math.min(100, Number(limit) || 100));
+      const pendingIndexReady = await namespace.get(pendingIndexReadyKey);
+      if (!pendingIndexReady) {
+        const legacyActions = await createKvOwnerActionStore({ namespace, prefix }).listActions({ limit: 100 });
+        const pendingActions = legacyActions.filter(isPendingAction).slice(0, 100);
+        for (const action of pendingActions) {
+          await namespace.put(pendingKeyFor(action.id), JSON.stringify({ id: cleanId(action.id) }));
+        }
+        await namespace.put(pendingIndexReadyKey, "1");
+        return pendingActions.slice(0, boundedLimit).map(clone);
+      }
+      const page = await namespace.list({ prefix: pendingIndexPrefix, limit: 100 });
+      const pendingActions = [];
+      for (const key of page.keys || []) {
+        const id = String(key.name || "").slice(pendingIndexPrefix.length);
+        const action = await namespace.get(keyFor(id), { type: "json" });
+        if (action && isPendingAction(action)) {
+          pendingActions.push(action);
+        } else if (typeof namespace.delete === "function") {
+          await namespace.delete(pendingKeyFor(id));
+        }
+      }
+      return pendingActions.sort(byNewestAction).slice(0, boundedLimit).map(clone);
     },
     putConnector: async (connector) => {
       const id = cleanId(connector?.id);

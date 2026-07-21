@@ -33,8 +33,9 @@ from urllib.request import Request, urlopen
 
 
 DEFAULT_CONFIG_PATH = Path.home() / ".config" / "photosbyelie" / "connector.json"
-CONNECTOR_VERSION = "1.2"
+CONNECTOR_VERSION = "1.3"
 DEFAULT_INTERVAL_SECONDS = 5
+DEFAULT_IDLE_MAX_INTERVAL_SECONDS = 60
 MAX_PREVIEW_BYTES = 250_000
 DEFAULT_LOCAL_STATUS_PORT = 8766
 LOCAL_STATUS_PATH = "/photosbyelie/connector-status"
@@ -923,6 +924,14 @@ def process_once(config: ConnectorConfig, client: WorkerClient) -> int:
     return processed
 
 
+def next_poll_interval(base_interval: int, current_interval: int, processed: int) -> int:
+    """Return quickly to active polling, but exponentially back off while idle."""
+    base = max(2, min(300, int(base_interval)))
+    if processed:
+        return base
+    return min(DEFAULT_IDLE_MAX_INTERVAL_SECONDS, max(base, int(current_interval) * 2))
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run the PhotosByElie background Mac connector.")
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG_PATH)
@@ -935,18 +944,21 @@ def main() -> int:
     client = WorkerClient(config)
     if not args.once:
         start_local_status_server(config)
+    poll_interval = config.interval_seconds
     while True:
         try:
             processed = process_once(config, client)
             if processed:
                 print(f"Processed {processed} Owner action(s).", flush=True)
+            poll_interval = next_poll_interval(config.interval_seconds, poll_interval, processed)
         except Exception as error:  # noqa: BLE001 - daemon retries transient network/auth failures.
             print(str(error), file=sys.stderr, flush=True)
+            poll_interval = next_poll_interval(config.interval_seconds, poll_interval, 0)
             if args.once:
                 return 1
         if args.once:
             return 0
-        time.sleep(config.interval_seconds)
+        time.sleep(poll_interval)
 
 
 if __name__ == "__main__":

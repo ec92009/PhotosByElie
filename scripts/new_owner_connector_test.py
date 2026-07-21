@@ -11,6 +11,7 @@ from scripts.new_owner_connector import (
     _sidecar_job_public_payload,
     _upload_and_register,
     execute_action,
+    next_poll_interval,
 )
 
 
@@ -39,6 +40,13 @@ class UploadRegistrationScopeTest(unittest.TestCase):
 
         self.assertEqual(result["registration"]["registeredCount"], 2)
         self.assertEqual(calls[1][-4:], ["--asset-id", "asset-a", "--asset-id", "asset-b"])
+
+    def test_idle_polling_backs_off_and_active_work_resets_it(self):
+        self.assertEqual(next_poll_interval(5, 5, 0), 10)
+        self.assertEqual(next_poll_interval(5, 10, 0), 20)
+        self.assertEqual(next_poll_interval(5, 40, 0), 60)
+        self.assertEqual(next_poll_interval(5, 60, 0), 60)
+        self.assertEqual(next_poll_interval(5, 60, 1), 5)
 
     def test_empty_upload_does_not_run_global_registration(self):
         with patch("scripts.new_owner_connector._run_repo_json", return_value={"status": "done", "items": []}) as run:

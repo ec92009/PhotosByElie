@@ -6,8 +6,9 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v143.11`
+- Current visible version: `v143.12`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
+- `v143.12` restores strong day-mode contrast in the homepage image-use guide.
 - `v143.11` opens the public homepage on the Louvre, moves Ronda to the second
   hero position, and adds concise wall-art, licensing, and provenance guidance.
 - `v143.10` opens Waste Basket as an authenticated same-origin Owner review,

@@ -762,6 +762,20 @@ input { font: inherit; }
 }
 
 [data-theme="day"] .collection-intro { background: #faf7f0; }
+[data-theme="day"] .usage-guide {
+  background: #f3efe6;
+  color: #1b1b18;
+  border-color: rgba(27, 27, 24, 0.2);
+}
+[data-theme="day"] .usage-guide .eyebrow { color: #1b1b18; }
+[data-theme="day"] .usage-guide-heading p,
+[data-theme="day"] .usage-guide-grid p { color: rgba(27, 27, 24, 0.74); }
+[data-theme="day"] .usage-guide-grid {
+  background: rgba(27, 27, 24, 0.2);
+  border-color: rgba(27, 27, 24, 0.2);
+}
+[data-theme="day"] .usage-guide-grid article { background: #e7e1d5; }
+[data-theme="day"] .usage-guide-action { border-color: rgba(27, 27, 24, 0.4); }
 [data-theme="day"] .site-footer { background: #e8e2d6; color: #1b1b18; }
 [data-theme="day"] .footer-brand { color: #1b1b18; }
 [data-theme="day"] .site-footer p { color: rgba(27, 27, 24, 0.68); }

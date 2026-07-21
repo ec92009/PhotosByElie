@@ -137,6 +137,8 @@ test("the production landing opens on the Louvre and explains image use", () => 
   assert.match(productionHtml, /data-i18n="provenanceTitle"/);
   assert.match(js, /usageAction: "Explore photographs"/);
   assert.match(css, /\.usage-guide-grid/);
+  assert.match(css, /\[data-theme="day"\] \.usage-guide/);
+  assert.match(css, /color: rgba\(27, 27, 24, 0\.74\)/);
 });
 
 test("each production country card fans into catalog-backed destinations", () => {

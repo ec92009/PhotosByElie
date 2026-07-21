@@ -5,6 +5,7 @@ from unittest.mock import patch
 from scripts.new_owner_connector import (
     ConnectorConfig,
     InteractivePollingLease,
+    WorkerClient,
     _allowed_local_status_origin,
     _local_status_payload,
     _local_sidecar_open_action,
@@ -56,6 +57,12 @@ class UploadRegistrationScopeTest(unittest.TestCase):
         self.assertFalse(lease.active())
         lease.touch(5)
         self.assertTrue(lease.active())
+
+    def test_connector_uses_lightweight_interactive_probe(self):
+        client = WorkerClient(self.config)
+        with patch.object(client, "request", return_value={"interactivePolling": True}) as request:
+            self.assertTrue(client.interactive())
+        request.assert_called_once_with("GET", "/owner/connector/interactive")
 
     def test_empty_upload_does_not_run_global_registration(self):
         with patch("scripts.new_owner_connector._run_repo_json", return_value={"status": "done", "items": []}) as run:

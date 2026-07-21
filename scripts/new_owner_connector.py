@@ -44,7 +44,6 @@ LOCAL_STATUS_PATH = "/photosbyelie/connector-status"
 LOCAL_SIDECAR_OPEN_PATH = "/photosbyelie/open-sidecar"
 LOCAL_SIDECAR_STATUS_PATH = "/photosbyelie/open-sidecar/status"
 LOCAL_WASTE_BASKET_OPEN_PATH = "/photosbyelie/open-wastebasket"
-LOCAL_OWNER_ACTIVE_PATH = "/photosbyelie/owner-active"
 OWNER_HELPER_PORT_START = 8000
 OWNER_HELPER_PORT_LIMIT = 8100
 SIDECAR_HELPER_PORT_START = 8011
@@ -505,7 +504,7 @@ def start_local_status_server(config: ConnectorConfig, polling_lease: Interactiv
 
         def do_OPTIONS(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API.
             parsed = urlparse(self.path)
-            if parsed.path not in {LOCAL_STATUS_PATH, LOCAL_SIDECAR_OPEN_PATH, LOCAL_SIDECAR_STATUS_PATH, LOCAL_WASTE_BASKET_OPEN_PATH, LOCAL_OWNER_ACTIVE_PATH}:
+            if parsed.path not in {LOCAL_STATUS_PATH, LOCAL_SIDECAR_OPEN_PATH, LOCAL_SIDECAR_STATUS_PATH, LOCAL_WASTE_BASKET_OPEN_PATH}:
                 self.send_response(404)
                 self.end_headers()
                 return
@@ -515,24 +514,6 @@ def start_local_status_server(config: ConnectorConfig, polling_lease: Interactiv
 
         def do_GET(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API.
             parsed = urlparse(self.path)
-            if parsed.path == LOCAL_OWNER_ACTIVE_PATH:
-                if not self._allowed_origin():
-                    self.send_response(403)
-                    self.end_headers()
-                    return
-                polling_lease.touch()
-                body = json.dumps({
-                    "ok": True,
-                    "interactivePolling": True,
-                    "leaseSeconds": INTERACTIVE_POLL_LEASE_SECONDS,
-                }, separators=(",", ":")).encode("utf-8")
-                self.send_response(200)
-                self._send_cors_headers()
-                self.send_header("Content-Type", "application/json")
-                self.send_header("Content-Length", str(len(body)))
-                self.end_headers()
-                self.wfile.write(body)
-                return
             if parsed.path == LOCAL_WASTE_BASKET_OPEN_PATH:
                 try:
                     workspace = _launch_waste_basket_for_browser(config)
@@ -679,6 +660,10 @@ class WorkerClient:
     def actions(self) -> list[dict]:
         body = self.request("GET", "/owner/connector/actions")
         return [action for action in body.get("actions", []) if isinstance(action, dict)]
+
+    def interactive(self) -> bool:
+        body = self.request("GET", "/owner/connector/interactive")
+        return bool(body.get("interactivePolling"))
 
     def transition(self, action_id: str, transition: str, payload: dict | None = None) -> dict:
         return self.request(
@@ -997,30 +982,45 @@ def main() -> int:
     if not args.once:
         start_local_status_server(config, polling_lease)
     poll_interval = config.interval_seconds
+    next_full_poll_at = 0.0
     while True:
-        try:
-            processed = process_once(config, client)
-            if processed:
-                print(f"Processed {processed} Owner action(s).", flush=True)
-            poll_interval = next_poll_interval(
-                config.interval_seconds,
-                poll_interval,
-                processed,
-                interactive=polling_lease.active(),
-            )
-        except Exception as error:  # noqa: BLE001 - daemon retries transient network/auth failures.
-            print(str(error), file=sys.stderr, flush=True)
-            poll_interval = next_poll_interval(
-                config.interval_seconds,
-                poll_interval,
-                0,
-                interactive=polling_lease.active(),
-            )
-            if args.once:
-                return 1
+        interactive = polling_lease.active()
+        if not args.once and not interactive:
+            try:
+                if client.interactive():
+                    polling_lease.touch()
+                    interactive = True
+            except Exception:
+                pass
+        if args.once or interactive or time.monotonic() >= next_full_poll_at:
+            try:
+                processed = process_once(config, client)
+                if processed:
+                    print(f"Processed {processed} Owner action(s).", flush=True)
+                poll_interval = next_poll_interval(
+                    config.interval_seconds,
+                    poll_interval,
+                    processed,
+                    interactive=interactive,
+                )
+            except Exception as error:  # noqa: BLE001 - daemon retries transient network/auth failures.
+                print(str(error), file=sys.stderr, flush=True)
+                poll_interval = next_poll_interval(
+                    config.interval_seconds,
+                    poll_interval,
+                    0,
+                    interactive=interactive,
+                )
+                if args.once:
+                    return 1
+            next_full_poll_at = time.monotonic() + poll_interval
         if args.once:
             return 0
-        polling_lease.wait(poll_interval)
+        wait_seconds = min(
+            INTERACTIVE_POLL_INTERVAL_SECONDS,
+            max(0.1, next_full_poll_at - time.monotonic()),
+        )
+        polling_lease.wait(wait_seconds)
 
 
 if __name__ == "__main__":

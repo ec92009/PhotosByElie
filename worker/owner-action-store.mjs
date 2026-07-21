@@ -14,6 +14,7 @@ const isPendingAction = (action) => ["queued", "claimed"].includes(String(action
 export const createMemoryOwnerActionStore = () => {
   const actions = new Map();
   const connectors = new Map();
+  const interactiveLeases = new Map();
 
   return {
     putAction: async (action) => {
@@ -39,7 +40,14 @@ export const createMemoryOwnerActionStore = () => {
     listConnectors: async () => [...connectors.values()].map(clone).sort((left, right) =>
       String(right.lastSeenAt || "").localeCompare(String(left.lastSeenAt || ""))
     ),
-    _debug: { actions, connectors },
+    putInteractiveLease: async (connectorId, lease) => {
+      const id = cleanId(connectorId);
+      if (!id) throw new Error("Interactive Owner lease requires a connector id.");
+      interactiveLeases.set(id, clone(lease));
+      return clone(lease);
+    },
+    getInteractiveLease: async (connectorId) => clone(interactiveLeases.get(cleanId(connectorId))) || null,
+    _debug: { actions, connectors, interactiveLeases },
   };
 };
 
@@ -55,6 +63,7 @@ export const createKvOwnerActionStore = ({
   const pendingIndexReadyKey = `${prefix}:owner-action-pending-ready`;
   const connectorPrefix = `${prefix}:owner-connectors:`;
   const connectorHeadKey = `${prefix}:owner-connector-head`;
+  const interactiveLeasePrefix = `${prefix}:owner-interactive:`;
   const keyFor = (id) => `${actionPrefix}${cleanId(id)}`;
   const indexKeyFor = (action) => {
     const timestamp = Math.max(0, Math.min(Number.MAX_SAFE_INTEGER, actionTime(action)));
@@ -160,6 +169,17 @@ export const createKvOwnerActionStore = ({
         if (connector) connectors.push(connector);
       }
       return connectors.sort((left, right) => String(right.lastSeenAt || "").localeCompare(String(left.lastSeenAt || ""))).map(clone);
+    },
+    putInteractiveLease: async (connectorId, lease) => {
+      const id = cleanId(connectorId);
+      if (!id) throw new Error("Interactive Owner lease requires a connector id.");
+      await namespace.put(`${interactiveLeasePrefix}${id}`, JSON.stringify(lease), { expirationTtl: 60 });
+      return clone(lease);
+    },
+    getInteractiveLease: async (connectorId) => {
+      const id = cleanId(connectorId);
+      if (!id) return null;
+      return await namespace.get(`${interactiveLeasePrefix}${id}`, { type: "json" });
     },
   };
 };

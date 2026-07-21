@@ -882,7 +882,7 @@
       return null;
     }
     state.busy = true;
-    const releaseInteractivePolling = window.photosByElieOwnerActivity?.hold?.("owner-job");
+    const releaseInteractivePolling = window.photosByElieOwnerActivity?.hold?.("owner-job", connectorId);
     setQueueControlsBusy(true);
     setActionStatus(statusLabel, "busy");
     let completedAction = null;

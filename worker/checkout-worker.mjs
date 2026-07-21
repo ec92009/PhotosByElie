@@ -2297,6 +2297,34 @@ export const createPhotosByElieWorker = ({
     return credentialedJson(request, { ok: true, connectors });
   };
 
+  const touchOwnerInteractiveLease = async (request) => {
+    await authSessionFor(request, { requiredRole: "owner" });
+    if (!ownerActionStore || typeof ownerActionStore.putInteractiveLease !== "function") {
+      return credentialedErrorJson(request, 503, "owner_interactive_unavailable", "Interactive Owner polling is not configured.");
+    }
+    const payload = await parseJson(request);
+    const connectorId = cleanOwnerConnectorId(payload.connectorId || payload.requestedConnector || "max");
+    const timestamp = now();
+    const lease = {
+      connectorId,
+      surface: String(payload.surface || "owner").trim().slice(0, 80),
+      updatedAt: timestamp.toISOString(),
+      activeUntil: new Date(timestamp.getTime() + 25_000).toISOString(),
+    };
+    await ownerActionStore.putInteractiveLease(connectorId, lease);
+    return credentialedJson(request, { ok: true, interactivePolling: true, lease });
+  };
+
+  const getConnectorInteractiveLease = async (request) => {
+    const connector = await requireOwnerConnector(request);
+    const lease = typeof ownerActionStore?.getInteractiveLease === "function"
+      ? await ownerActionStore.getInteractiveLease(connector.connectorId)
+      : null;
+    const activeUntil = Date.parse(lease?.activeUntil || "");
+    const interactivePolling = Number.isFinite(activeUntil) && activeUntil > now().getTime();
+    return json({ ok: true, connectorId: connector.connectorId, interactivePolling, activeUntil: lease?.activeUntil || "" });
+  };
+
   const downloadOwnerConnector = async (request) => {
     await authSessionFor(request, { requiredRole: "owner" });
     if (!ownerConnectorPackage || typeof ownerConnectorPackage.getMacPackage !== "function") {
@@ -3023,6 +3051,7 @@ export const createPhotosByElieWorker = ({
       if ((request.method === "GET" || request.method === "POST") && path === "/auth/logout") return await logoutAuth(request);
       if (request.method === "GET" && path === "/owner/session") return await getOwnerSession(request);
       if (request.method === "GET" && path === "/owner/connectors") return await listOwnerConnectors(request);
+      if (request.method === "POST" && path === "/owner/interactive") return await touchOwnerInteractiveLease(request);
       if (request.method === "GET" && path === "/owner/connector/download/mac") return await downloadOwnerConnector(request);
       if (request.method === "POST" && path === "/owner/sidecar/decisions/query") return await querySidecarDecisions(request);
       if (request.method === "POST" && path === "/owner/sidecar/decisions/apply") return await applySidecarDecision(request);
@@ -3041,6 +3070,7 @@ export const createPhotosByElieWorker = ({
       const ownerActionMatch = path.match(/^\/owner\/actions\/([^/]+)$/);
       if (request.method === "GET" && ownerActionMatch) return await getOwnerAction(request, decodeURIComponent(ownerActionMatch[1]));
       if (request.method === "POST" && path === "/owner/connector/heartbeat") return await heartbeatOwnerConnector(request);
+      if (request.method === "GET" && path === "/owner/connector/interactive") return await getConnectorInteractiveLease(request);
       if (request.method === "GET" && path === "/owner/connector/actions") return await listConnectorActions(request);
       const connectorActionTransitionMatch = path.match(/^\/owner\/connector\/actions\/([^/]+)\/(claim|complete|fail)$/);
       if (request.method === "POST" && connectorActionTransitionMatch) {

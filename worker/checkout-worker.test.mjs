@@ -574,6 +574,19 @@ test("background Owner connectors use scoped credentials and report health", asy
   assert.equal(heartbeatResponse.status, 200);
   assert.equal((await heartbeatResponse.json()).connector.id, "david");
 
+  const interactiveResponse = await worker.fetch(jsonRequest("https://worker.test/owner/interactive", {
+    connectorId: "david",
+    surface: "waste-basket",
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(interactiveResponse.status, 200);
+  assert.equal((await interactiveResponse.json()).interactivePolling, true);
+
+  const connectorInteractiveResponse = await worker.fetch(new Request("https://worker.test/owner/connector/interactive", {
+    headers: connectorHeaders,
+  }));
+  assert.equal(connectorInteractiveResponse.status, 200);
+  assert.equal((await connectorInteractiveResponse.json()).interactivePolling, true);
+
   const connectorList = await worker.fetch(new Request("https://worker.test/owner/connector/actions", {
     headers: connectorHeaders,
   }));

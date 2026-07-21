@@ -99,9 +99,10 @@ test("Owner exposes a contained fixture builder and recoverable Waste Basket man
   assert.match(hidden, /const restorePhotoIds = async/);
   assert.match(hidden, /await restorePhotoIds\(\[selected\.id\]\)/);
   assert.match(hidden, /photosByElieOwnerActivity\?\.hold\?\.\("waste-basket"\)/);
-  assert.match(ownerScript, /photosByElieOwnerActivity\?\.hold\?\.\("owner-job"\)/);
+  assert.match(ownerScript, /photosByElieOwnerActivity\?\.hold\?\.\("owner-job", connectorId\)/);
   assert.match(ownerActivity, /document\.visibilityState === "hidden"/);
-  assert.match(ownerActivity, /setInterval\(touch, 4000\)/);
+  assert.match(ownerActivity, /\/owner\/interactive/);
+  assert.match(ownerActivity, /setInterval\(touch, 10000\)/);
   assert.match(owner, /owner-activity\.js/);
   assert.match(reviewHtml, /owner-activity\.js/);
   assert.match(hidden, /galleryKey: `expo\/\$\{photoId\}_900\.jpg`/);

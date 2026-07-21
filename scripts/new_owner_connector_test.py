@@ -41,11 +41,11 @@ class UploadRegistrationScopeTest(unittest.TestCase):
         self.assertEqual(result["registration"]["registeredCount"], 2)
         self.assertEqual(calls[1][-4:], ["--asset-id", "asset-a", "--asset-id", "asset-b"])
 
-    def test_idle_polling_backs_off_and_active_work_resets_it(self):
-        self.assertEqual(next_poll_interval(5, 5, 0), 10)
-        self.assertEqual(next_poll_interval(5, 10, 0), 20)
-        self.assertEqual(next_poll_interval(5, 40, 0), 60)
-        self.assertEqual(next_poll_interval(5, 60, 0), 60)
+    def test_interactive_polling_stays_responsive_while_idle(self):
+        self.assertEqual(next_poll_interval(5, 5, 0), 5)
+        self.assertEqual(next_poll_interval(5, 10, 0), 5)
+        self.assertEqual(next_poll_interval(5, 40, 0), 5)
+        self.assertEqual(next_poll_interval(5, 60, 0), 5)
         self.assertEqual(next_poll_interval(5, 60, 1), 5)
 
     def test_empty_upload_does_not_run_global_registration(self):

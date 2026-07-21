@@ -35,7 +35,9 @@ from urllib.request import Request, urlopen
 DEFAULT_CONFIG_PATH = Path.home() / ".config" / "photosbyelie" / "connector.json"
 CONNECTOR_VERSION = "1.3"
 DEFAULT_INTERVAL_SECONDS = 5
-DEFAULT_IDLE_MAX_INTERVAL_SECONDS = 60
+# Owner actions are interactive. Keep the daemon warm enough that a newly
+# queued restore or discard is picked up promptly even after a long idle spell.
+DEFAULT_IDLE_MAX_INTERVAL_SECONDS = DEFAULT_INTERVAL_SECONDS
 MAX_PREVIEW_BYTES = 250_000
 DEFAULT_LOCAL_STATUS_PORT = 8766
 LOCAL_STATUS_PATH = "/photosbyelie/connector-status"
@@ -925,11 +927,9 @@ def process_once(config: ConnectorConfig, client: WorkerClient) -> int:
 
 
 def next_poll_interval(base_interval: int, current_interval: int, processed: int) -> int:
-    """Return quickly to active polling, but exponentially back off while idle."""
+    """Keep interactive Owner actions on the configured short poll interval."""
     base = max(2, min(300, int(base_interval)))
-    if processed:
-        return base
-    return min(DEFAULT_IDLE_MAX_INTERVAL_SECONDS, max(base, int(current_interval) * 2))
+    return min(DEFAULT_IDLE_MAX_INTERVAL_SECONDS, base)
 
 
 def main() -> int:

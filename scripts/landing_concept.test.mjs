@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const html = fs.readFileSync(path.join(root, "landing-concept", "index.html"), "utf8");
 const productionHtml = fs.readFileSync(path.join(root, "index.html"), "utf8");
+const productionVersion = fs.readFileSync(path.join(root, "VERSION"), "utf8").trim();
 const css = fs.readFileSync(path.join(root, "landing-concept", "landing.css"), "utf8");
 const js = fs.readFileSync(path.join(root, "landing-concept", "landing.js"), "utf8");
 
@@ -94,9 +95,9 @@ test("the production root uses the approved landing experience with discovery me
   assert.match(productionHtml, /<link rel="canonical" href="https:\/\/photos-by-elie\.com\/">/);
   assert.match(productionHtml, /property="og:image"/);
   assert.match(productionHtml, /application\/ld\+json/);
-  assert.match(productionHtml, /landing-concept\/landing\.css\?v=143\.4/);
-  assert.match(productionHtml, /landing-concept\/landing\.js\?v=143\.4/);
-  assert.match(productionHtml, /analytics\.js\?v=143\.4/);
+  assert.ok(productionHtml.includes(`landing-concept/landing.css?v=${productionVersion}`));
+  assert.ok(productionHtml.includes(`landing-concept/landing.js?v=${productionVersion}`));
+  assert.ok(productionHtml.includes(`analytics.js?v=${productionVersion}`));
 });
 
 test("the production landing keeps real account entry and ACS routing plumbing", () => {

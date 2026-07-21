@@ -515,6 +515,11 @@ def _register_uploaded_catalog_rows(
             if fk_violations:
                 raise RuntimeError(f"catalog foreign_key_check failed: {fk_violations[:5]}")
             catalog.commit()
+            if removed_blocked_ids:
+                # The catalog is a public downloadable artifact. Compact it
+                # after lifecycle removals so deleted identifiers do not remain
+                # recoverable from SQLite freelist pages.
+                catalog.execute("VACUUM")
             owner.commit()
         else:
             catalog.rollback()

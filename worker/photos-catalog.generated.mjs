@@ -42460,69 +42460,6 @@ export const collections = {
         "duration": 11.303333333333333
       },
       {
-        "id": "001-87f0bfdea3",
-        "className": "p1",
-        "title": "Rueil Malmaison, Musee de la Malmaison",
-        "caption": "France / 2024-09-22",
-        "captionColor": "",
-        "full": "JPG master",
-        "megapixels": 44.6,
-        "sourceOrigin": "camera",
-        "gallerySrc": "",
-        "imageSrc": "",
-        "metadata": [
-          {
-            "label": "Metadata title",
-            "value": "Rueil Malmaison, Musee de la Malmaison"
-          },
-          {
-            "label": "Keywords",
-            "value": "Rueil Malmaison, Musee de la Malmaison, France"
-          },
-          {
-            "label": "Captured",
-            "value": "2024:09:22 14:42:11Z"
-          },
-          {
-            "label": "Original file",
-            "value": "IMG_6181.jpg"
-          },
-          {
-            "label": "Original size",
-            "value": "JPEG / 11612 x 3844 / 44.6 MP"
-          },
-          {
-            "label": "Location",
-            "value": "France"
-          },
-          {
-            "label": "Preview file",
-            "value": "001-87f0bfdea3_1800.jpg / 5437 x 1800 / JPEG"
-          }
-        ],
-        "media": {
-          "type": "photo",
-          "sourcePolicy": "developed-master",
-          "publicPreview": {
-            "allowed": true,
-            "galleryKey": "expo/001-87f0bfdea3_900.jpg",
-            "detailKey": "expo/001-87f0bfdea3_1800.jpg"
-          }
-        },
-        "sourceFiles": [
-          {
-            "path": "Apple Photos Sidecar Uploads/IMG_6181.jpg",
-            "type": "JPG",
-            "bytes": 14768421
-          }
-        ],
-        "keywords": [
-          "Rueil Malmaison",
-          "Musee de la Malmaison",
-          "France"
-        ]
-      },
-      {
         "id": "001-9d6f82def7",
         "className": "p2",
         "title": "Rueil Malmaison, Musee de la Malmaison",
@@ -42714,69 +42651,6 @@ export const collections = {
           "France"
         ],
         "duration": 51.922
-      },
-      {
-        "id": "001-3f15265af4",
-        "className": "p5",
-        "title": "Rueil Malmaison, Musee de la Malmaison",
-        "caption": "France / 2024-09-22",
-        "captionColor": "",
-        "full": "JPG master",
-        "megapixels": 48.6,
-        "sourceOrigin": "camera",
-        "gallerySrc": "",
-        "imageSrc": "",
-        "metadata": [
-          {
-            "label": "Metadata title",
-            "value": "Rueil Malmaison, Musee de la Malmaison"
-          },
-          {
-            "label": "Keywords",
-            "value": "Rueil Malmaison, Musee de la Malmaison, France"
-          },
-          {
-            "label": "Captured",
-            "value": "2024:09:22 14:45:58Z"
-          },
-          {
-            "label": "Original file",
-            "value": "IMG_6185.jpg"
-          },
-          {
-            "label": "Original size",
-            "value": "JPEG / 12442 x 3906 / 48.6 MP"
-          },
-          {
-            "label": "Location",
-            "value": "France"
-          },
-          {
-            "label": "Preview file",
-            "value": "001-3f15265af4_1800.jpg / 5733 x 1800 / JPEG"
-          }
-        ],
-        "media": {
-          "type": "photo",
-          "sourcePolicy": "developed-master",
-          "publicPreview": {
-            "allowed": true,
-            "galleryKey": "expo/001-3f15265af4_900.jpg",
-            "detailKey": "expo/001-3f15265af4_1800.jpg"
-          }
-        },
-        "sourceFiles": [
-          {
-            "path": "Apple Photos Sidecar Uploads/IMG_6185.jpg",
-            "type": "JPG",
-            "bytes": 14565979
-          }
-        ],
-        "keywords": [
-          "Rueil Malmaison",
-          "Musee de la Malmaison",
-          "France"
-        ]
       },
       {
         "id": "001-3265ebd3d7",
@@ -240126,67 +240000,6 @@ export const collections = {
             "path": "Apple Photos Sidecar Uploads/IMG_5036.jpg",
             "type": "JPG",
             "bytes": 4076540
-          }
-        ],
-        "keywords": [
-          "Mexico"
-        ]
-      },
-      {
-        "id": "001-eddc9ddb4b",
-        "className": "p2",
-        "title": "2023 Mexico",
-        "caption": "Mexico / 2023-12-08",
-        "captionColor": "",
-        "full": "JPG master",
-        "megapixels": 12.2,
-        "sourceOrigin": "camera",
-        "gallerySrc": "",
-        "imageSrc": "",
-        "metadata": [
-          {
-            "label": "Metadata title",
-            "value": "2023 Mexico"
-          },
-          {
-            "label": "Keywords",
-            "value": "Mexico"
-          },
-          {
-            "label": "Captured",
-            "value": "2023:12:08 01:31:34Z"
-          },
-          {
-            "label": "Original file",
-            "value": "IMG_5037.jpg"
-          },
-          {
-            "label": "Original size",
-            "value": "JPEG / 3024 x 4032 / 12.2 MP"
-          },
-          {
-            "label": "Location",
-            "value": "Mexico"
-          },
-          {
-            "label": "Preview file",
-            "value": "001-eddc9ddb4b_1800.jpg / 1350 x 1800 / JPEG"
-          }
-        ],
-        "media": {
-          "type": "photo",
-          "sourcePolicy": "developed-master",
-          "publicPreview": {
-            "allowed": true,
-            "galleryKey": "expo/001-eddc9ddb4b_900.jpg",
-            "detailKey": "expo/001-eddc9ddb4b_1800.jpg"
-          }
-        },
-        "sourceFiles": [
-          {
-            "path": "Apple Photos Sidecar Uploads/IMG_5037.jpg",
-            "type": "JPG",
-            "bytes": 4158012
           }
         ],
         "keywords": [

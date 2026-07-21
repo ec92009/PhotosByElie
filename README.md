@@ -6,8 +6,12 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v143.5`
+- Current visible version: `v143.6`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
+- `v143.6` reconciles the deployable static catalog with the durable Owner
+  lifecycle ledger. Three newly hidden rows are removed from public SQLite,
+  the Worker catalog, homepage counts, and the media sidecar; publication
+  validation now passes with `3,551` public camera-made items.
 - `v143.4` gives the Portugal landing frame its own place-specific identity:
   “Cascais meets the Atlantic.” Each production country card now fans into
   three or four catalog-backed destinations plus the full “Others…” collection.

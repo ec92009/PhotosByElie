@@ -1,10 +1,10 @@
 # Photos By Elie Backlog
 
-Last updated: 2026-07-18
+Last updated: 2026-07-21
 
 ## Current Facts
 
-- Public visible build: `v141.3`.
+- Public visible build: `v143.6`.
 - Sidecar local build: `v126.6`.
 - Public site: `https://photos-by-elie.com/`.
 - Local preview: `http://localhost:8000/`.
@@ -21,7 +21,8 @@ Last updated: 2026-07-18
 - Account sign-out has one visible control and clears the account-synced basket, likes, order references, and profile cache from the browser before visitor mode resumes; Basket and Liked listen for the clear event and redraw immediately instead of exposing the departed account's local data.
 - Real Estate PDF/video production is fully cloud-side: the browser queues and polls; a Cloudflare Workflow launches Browser Rendering, private expiring render tokens protect the internal handoff, Media Transformations converts the cloud WebM recording to MP4, and finished files land in private R2. The Worker now persists real render phases and percentages for a determinate client progress bar with elapsed time/ETA, and the output/shelf flow is localized in English, French, and Spanish. The production music pool uses forty verified 60-second R2 clips and repeats the selected clip for longer videos without modifying the source MP3s.
 - The Real Estate finished-products shelf loads cloud records automatically without exposing the old manual sync banner or Sync button.
-- Public catalog integrity: `ok`.
+- Public catalog integrity: `ok`; public SQLite, Worker catalog, homepage data,
+  Expo manifest, and media sidecar agree at `3,551` lifecycle-active rows.
 - Public commercial catalog scale: `2713` media rows after retiring AI-generated images from storefront publication.
 - Gallery counts: France `379`, Italy `70`, Mexico `31`, Portugal `214`, Slovakia `2`, Spain `1872`, USA `145`.
 - AI/Leonardo source and Owner records remain preserved outside the public commercial catalog.
@@ -58,7 +59,7 @@ Last updated: 2026-07-18
    - Turn research into concrete offer copy, package names, pricing hypotheses, and testable next actions.
 
 3. **Curate the first sellable storefront.**
-   - Current catalog reconciliation is complete at `3,554` camera-made items;
+   - Current catalog reconciliation is complete at `3,551` camera-made items;
      Sidecar-approved uploads are registered, explicit tombstones and
      hidden/discarded rows are excluded, and publish validation passes.
    - Cloud Owner title/keyword editing and keyword-blacklist management are

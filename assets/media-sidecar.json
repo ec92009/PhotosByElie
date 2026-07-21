@@ -3,7 +3,7 @@
   "publicPreviewKeyScheme": "expo/<photo-id>_900.jpg and expo/<photo-id>_1800.jpg for photos or expo/<photo-id>_short_5s_720p.mp4 for videos",
   "privateMasterKeyScheme": "masters/<photo-id>.<original-format>",
   "privateRenderKeyScheme": "renders/<photo-id>_<1|3|6>mp.jpg",
-  "photosCount": 3554,
+  "photosCount": 3551,
   "photos": {
     "20160714-1357-07255-pano-735b2de8ed": {
       "id": "20160714-1357-07255-pano-735b2de8ed",
@@ -15679,35 +15679,6 @@
         "renderKeys": {}
       }
     },
-    "001-87f0bfdea3": {
-      "id": "001-87f0bfdea3",
-      "collectionKey": "france",
-      "collectionTitle": "France",
-      "sourcePath": "Apple Photos Sidecar Uploads/IMG_6181.jpg",
-      "sourceFile": {
-        "path": "Apple Photos Sidecar Uploads/IMG_6181.jpg",
-        "type": "JPG",
-        "bytes": 14768421
-      },
-      "sourceMode": "",
-      "originalGalleryCountry": {
-        "slug": "france",
-        "label": "France",
-        "source": ""
-      },
-      "publicPreview": {
-        "galleryKey": "expo/001-87f0bfdea3_900.jpg",
-        "detailKey": "expo/001-87f0bfdea3_1800.jpg"
-      },
-      "privateDelivery": {
-        "masterKey": "masters/001-87f0bfdea3.jpg",
-        "renderKeys": {
-          "jpg-6mp": "renders/001-87f0bfdea3_6mp.jpg",
-          "jpg-3mp": "renders/001-87f0bfdea3_3mp.jpg",
-          "jpg-1mp": "renders/001-87f0bfdea3_1mp.jpg"
-        }
-      }
-    },
     "001-9d6f82def7": {
       "id": "001-9d6f82def7",
       "collectionKey": "france",
@@ -15789,35 +15760,6 @@
       "privateDelivery": {
         "masterKey": "masters/001-ed367bf5a6.mov",
         "renderKeys": {}
-      }
-    },
-    "001-3f15265af4": {
-      "id": "001-3f15265af4",
-      "collectionKey": "france",
-      "collectionTitle": "France",
-      "sourcePath": "Apple Photos Sidecar Uploads/IMG_6185.jpg",
-      "sourceFile": {
-        "path": "Apple Photos Sidecar Uploads/IMG_6185.jpg",
-        "type": "JPG",
-        "bytes": 14565979
-      },
-      "sourceMode": "",
-      "originalGalleryCountry": {
-        "slug": "france",
-        "label": "France",
-        "source": ""
-      },
-      "publicPreview": {
-        "galleryKey": "expo/001-3f15265af4_900.jpg",
-        "detailKey": "expo/001-3f15265af4_1800.jpg"
-      },
-      "privateDelivery": {
-        "masterKey": "masters/001-3f15265af4.jpg",
-        "renderKeys": {
-          "jpg-6mp": "renders/001-3f15265af4_6mp.jpg",
-          "jpg-3mp": "renders/001-3f15265af4_3mp.jpg",
-          "jpg-1mp": "renders/001-3f15265af4_1mp.jpg"
-        }
       }
     },
     "001-3265ebd3d7": {
@@ -91148,35 +91090,6 @@
           "jpg-6mp": "renders/001-2513d574b1_6mp.jpg",
           "jpg-3mp": "renders/001-2513d574b1_3mp.jpg",
           "jpg-1mp": "renders/001-2513d574b1_1mp.jpg"
-        }
-      }
-    },
-    "001-eddc9ddb4b": {
-      "id": "001-eddc9ddb4b",
-      "collectionKey": "mexico",
-      "collectionTitle": "Mexico",
-      "sourcePath": "Apple Photos Sidecar Uploads/IMG_5037.jpg",
-      "sourceFile": {
-        "path": "Apple Photos Sidecar Uploads/IMG_5037.jpg",
-        "type": "JPG",
-        "bytes": 4158012
-      },
-      "sourceMode": "",
-      "originalGalleryCountry": {
-        "slug": "mexico",
-        "label": "Mexico",
-        "source": ""
-      },
-      "publicPreview": {
-        "galleryKey": "expo/001-eddc9ddb4b_900.jpg",
-        "detailKey": "expo/001-eddc9ddb4b_1800.jpg"
-      },
-      "privateDelivery": {
-        "masterKey": "masters/001-eddc9ddb4b.jpg",
-        "renderKeys": {
-          "jpg-6mp": "renders/001-eddc9ddb4b_6mp.jpg",
-          "jpg-3mp": "renders/001-eddc9ddb4b_3mp.jpg",
-          "jpg-1mp": "renders/001-eddc9ddb4b_1mp.jpg"
         }
       }
     },

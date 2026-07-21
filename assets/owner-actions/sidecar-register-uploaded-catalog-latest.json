@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-20T18:25:23.205647Z",
+  "generatedAt": "2026-07-21T10:51:35.252580Z",
   "ok": true,
   "rebuild": {
     "command": "node scripts/write_worker_catalog.mjs",
@@ -16,9 +16,11 @@
     "registered": [],
     "registeredCount": 0,
     "removedBlocked": [
-      "001-ef335584c1"
+      "001-3f15265af4",
+      "001-87f0bfdea3",
+      "001-eddc9ddb4b"
     ],
-    "removedBlockedCount": 1,
+    "removedBlockedCount": 3,
     "skipped": [
       {
         "assetId": "9419B98E-1807-477F-A4BB-C202212B44AA/L0/001",
@@ -5008,7 +5010,7 @@
       {
         "assetId": "8FA96D13-1B73-4A3E-A513-22033AF4A755/L0/001",
         "photoId": "001-87f0bfdea3",
-        "reason": "already_in_catalog"
+        "reason": "hidden_or_discarded"
       },
       {
         "assetId": "2519BE88-DBB7-4947-B00E-AC2D17727C27/L0/001",
@@ -5028,7 +5030,7 @@
       {
         "assetId": "E0355EA2-26AA-41F0-B247-949D12B372D0/L0/001",
         "photoId": "001-3f15265af4",
-        "reason": "already_in_catalog"
+        "reason": "hidden_or_discarded"
       },
       {
         "assetId": "E1794720-8903-482C-9891-3E3C4E68BAA5/L0/001",
@@ -6998,7 +7000,7 @@
       {
         "assetId": "EAAAB356-1069-4C84-A91F-B70365A05133/L0/001",
         "photoId": "001-eddc9ddb4b",
-        "reason": "already_in_catalog"
+        "reason": "hidden_or_discarded"
       },
       {
         "assetId": "ED583D0B-A71C-443C-AB93-549A58161302/L0/001",

@@ -15,10 +15,15 @@ for remote execution.
 - Public site: `https://photos-by-elie.com/`
 - Local preview: `http://localhost:8000/`
 - Owner intake URL: `https://photos-by-elie.com/owner.html`
-- Current visible build: `v143.5`
+- Current visible build: `v143.6`
 - Sidecar local build: `v126.6`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
+- Static catalog publication is reconciled through `v143.6`: lifecycle-hidden
+  rows `001-3f15265af4`, `001-87f0bfdea3`, and `001-eddc9ddb4b` are absent from
+  public SQLite, the generated Worker catalog, homepage data, Expo manifest,
+  and media sidecar. The public catalog and sidecar now agree at `3,551` rows,
+  and `node scripts/validate_publish.js --external-media` passes.
 - `owner.html` is the authenticated cloud Owner surface. `new-owner.html` is a
   compatibility redirect back to the canonical Owner URL; the localhost Owner
   Python web UI is retired as the normal control plane.

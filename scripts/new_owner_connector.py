@@ -691,58 +691,86 @@ def _owner_hidden_metadata(repo_root: Path, photo_ids: list[str]) -> dict[str, d
         return {}
     registration_path = repo_root / "assets" / "owner-actions" / "sidecar-register-uploaded-catalog-latest.json"
     database_path = repo_root / "assets" / "owner-actions" / "Owner.sqlite"
-    if not registration_path.exists() or not database_path.exists():
-        return {}
-    try:
-        registration = json.loads(registration_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+    if not database_path.exists():
         return {}
     wanted_set = set(wanted)
-    asset_by_photo: dict[str, str] = {}
+    result: dict[str, dict[str, str]] = {}
 
-    def visit(value: Any) -> None:
-        if isinstance(value, dict):
-            photo_id = str(value.get("photoId") or "").strip()
-            asset_id = str(value.get("assetId") or "").strip()
-            if photo_id in wanted_set and asset_id:
-                asset_by_photo[photo_id] = asset_id
-            for child in value.values():
-                visit(child)
-        elif isinstance(value, list):
-            for child in value:
-                visit(child)
-
-    visit(registration)
-    if not asset_by_photo:
-        return {}
-    photo_by_asset = {asset_id: photo_id for photo_id, asset_id in asset_by_photo.items()}
-    placeholders = ",".join("?" for _value in photo_by_asset)
     connection = sqlite3.connect(f"file:{database_path}?mode=ro", uri=True)
     try:
-        rows = connection.execute(
-            f"""
-            SELECT a.asset_id,
-                   COALESCE(NULLIF(TRIM(d.title), ''), NULLIF(TRIM(a.photos_title), ''),
-                            NULLIF(TRIM(a.metadata_seed_title), '')) AS display_title,
-                   COALESCE(NULLIF(TRIM(a.location_label), ''), 'Unknown') AS collection_title
-              FROM sidecar_assets a
-              LEFT JOIN sidecar_decisions d USING(asset_id)
-             WHERE a.asset_id IN ({placeholders})
-            """,
-            list(photo_by_asset),
-        ).fetchall()
+        placeholders = ",".join("?" for _value in wanted)
+        try:
+            lifecycle_rows = connection.execute(
+                f"""
+                SELECT media_id, title, COALESCE(NULLIF(TRIM(previous_slug), ''),
+                                                 NULLIF(TRIM(source_slug), ''), 'Unknown')
+                  FROM media_lifecycle
+                 WHERE media_id IN ({placeholders})
+                """,
+                wanted,
+            ).fetchall()
+        except sqlite3.OperationalError:
+            lifecycle_rows = []
+        for photo_id, title, collection_title in lifecycle_rows:
+            clean_title = str(title or "").strip()
+            if clean_title:
+                result[str(photo_id)] = {
+                    "title": clean_title,
+                    "collectionTitle": str(collection_title or "Unknown").strip() or "Unknown",
+                }
+
+        if not registration_path.exists():
+            return result
+        try:
+            registration = json.loads(registration_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return result
+
+        asset_by_photo: dict[str, str] = {}
+
+        def visit(value: Any) -> None:
+            if isinstance(value, dict):
+                photo_id = str(value.get("photoId") or "").strip()
+                asset_id = str(value.get("assetId") or "").strip()
+                if photo_id in wanted_set and asset_id:
+                    asset_by_photo[photo_id] = asset_id
+                for child in value.values():
+                    visit(child)
+            elif isinstance(value, list):
+                for child in value:
+                    visit(child)
+
+        visit(registration)
+        if not asset_by_photo:
+            return result
+        photo_by_asset = {asset_id: photo_id for photo_id, asset_id in asset_by_photo.items()}
+        asset_placeholders = ",".join("?" for _value in photo_by_asset)
+        try:
+            rows = connection.execute(
+                f"""
+                SELECT a.asset_id,
+                       COALESCE(NULLIF(TRIM(d.title), ''), NULLIF(TRIM(a.photos_title), ''),
+                                NULLIF(TRIM(a.metadata_seed_title), '')) AS display_title,
+                       COALESCE(NULLIF(TRIM(a.location_label), ''), 'Unknown') AS collection_title
+                  FROM sidecar_assets a
+                  LEFT JOIN sidecar_decisions d USING(asset_id)
+                 WHERE a.asset_id IN ({asset_placeholders})
+                """,
+                list(photo_by_asset),
+            ).fetchall()
+        except sqlite3.OperationalError:
+            rows = []
+        for asset_id, title, collection_title in rows:
+            photo_id = photo_by_asset.get(str(asset_id))
+            if not photo_id or not str(title or "").strip():
+                continue
+            result[photo_id] = {
+                "title": str(title).strip(),
+                "collectionTitle": str(collection_title or "Unknown").strip() or "Unknown",
+            }
+        return result
     finally:
         connection.close()
-    result: dict[str, dict[str, str]] = {}
-    for asset_id, title, collection_title in rows:
-        photo_id = photo_by_asset.get(str(asset_id))
-        if not photo_id or not str(title or "").strip():
-            continue
-        result[photo_id] = {
-            "title": str(title).strip(),
-            "collectionTitle": str(collection_title or "Unknown").strip() or "Unknown",
-        }
-    return result
 
 
 def _preview_data_url(repo_root: Path, item: dict, preview_cache_path, run_bridge_task) -> tuple[str, str]:
@@ -949,7 +977,7 @@ def execute_action(config: ConnectorConfig, action: dict) -> dict:
             "operation": operation,
             "photo_ids": photo_ids,
         }
-        for key in ("title", "keywords", "mode"):
+        for key in ("title", "keywords", "mode", "restoreTitles"):
             if key in payload:
                 moderation_payload[key] = payload[key]
         result = apply_public_photo_moderation(

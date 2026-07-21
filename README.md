@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v145.1`
+- Current visible version: `v145.2`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
 - `v145.0` repairs Waste Basket restore behavior on both public and local Owner
   pages and reconstructs watermarked previews for blocked IDs missing from the

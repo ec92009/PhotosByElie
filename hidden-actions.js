@@ -301,7 +301,7 @@
       photoIds,
       requestedConnector: "max",
     };
-    ["title", "keywords", "mode"].forEach((key) => {
+    ["title", "keywords", "mode", "restoreTitles"].forEach((key) => {
       if (Object.prototype.hasOwnProperty.call(extra, key)) moderationPayload[key] = extra[key];
     });
     const response = await fetch(`${cloudBaseUrl}/owner/actions`, {
@@ -670,7 +670,18 @@
     if (localEnabled) {
       for (const photoId of ids) await photoAction("undo-hide", photoId);
     } else {
-      await photoAction("undo-hide-many", ids[0], { photo_ids: ids });
+      if (ids.some((photoId) => !String(metadataFor(photoId)?.title || "").trim())) {
+        await refreshRemoteHiddenMetadata();
+      }
+      const restoreTitles = Object.fromEntries(ids.flatMap((photoId) => {
+        const title = String(metadataFor(photoId)?.title || "").trim();
+        return title ? [[photoId, title]] : [];
+      }));
+      const missingTitles = ids.filter((photoId) => !restoreTitles[photoId]);
+      if (missingTitles.length) {
+        throw new Error("Put back was cancelled because the original title could not be recovered.");
+      }
+      await photoAction("undo-hide-many", ids[0], { photo_ids: ids, restoreTitles });
     }
     unmarkMany(ids);
     const restored = new Set(ids);

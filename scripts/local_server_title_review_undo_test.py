@@ -1008,6 +1008,50 @@ class TitleReviewUndoTests(unittest.TestCase):
             finally:
                 conn.close()
 
+    def test_public_waste_basket_restore_preserves_private_title(self):
+        photo_id = "pbe-private-title-restore"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            local_server._record_hidden_lifecycle(repo_root, [{
+                "id": photo_id,
+                "title": "Original private title",
+                "from_state": "expo",
+                "from_slug": "usa",
+            }])
+
+            result = local_server.apply_public_photo_moderation(repo_root, {
+                "operation": "undo-hide-many",
+                "photo_ids": [photo_id],
+                "restoreTitles": {photo_id: "Original private title"},
+            })
+
+            self.assertEqual(result["restored_ids"], [photo_id])
+            self.assertEqual(result["lifecycle"]["title_restored"], 1)
+            conn = sqlite3.connect(repo_root / "assets/owner-actions/Owner.sqlite")
+            conn.row_factory = sqlite3.Row
+            try:
+                lifecycle = conn.execute(
+                    "SELECT lifecycle_state, title FROM media_lifecycle WHERE media_id = ?",
+                    (photo_id,),
+                ).fetchone()
+                self.assertEqual(lifecycle["lifecycle_state"], "active")
+                self.assertEqual(lifecycle["title"], "Original private title")
+                decision = conn.execute(
+                    """
+                    SELECT d.decision_state, d.decided_title, d.applied_at
+                    FROM title_keyword_queue q
+                    JOIN title_keyword_decisions d
+                      ON d.media_id = q.media_id AND d.attempt = q.latest_attempt
+                    WHERE q.media_id = ?
+                    """,
+                    (photo_id,),
+                ).fetchone()
+                self.assertEqual(decision["decision_state"], "accepted")
+                self.assertEqual(decision["decided_title"], "Original private title")
+                self.assertTrue(decision["applied_at"])
+            finally:
+                conn.close()
+
     def test_discard_records_durable_lifecycle_and_tombstone(self):
         photo_id = "pbe-discard-lifecycle"
         fallback_photo = {

@@ -1261,6 +1261,102 @@ def record_media_lifecycle_active(
             conn.close()
 
 
+def record_media_lifecycle_restored(
+    repo_root: Path,
+    media_ids: Iterable[str],
+    titles: dict[str, str],
+    db_path: Path | None = None,
+    conn: sqlite3.Connection | None = None,
+) -> dict[str, Any]:
+    """Restore lifecycle rows and preserve their private pre-restore titles."""
+    owns_conn = conn is None
+    conn = conn or connect(repo_root, db_path)
+    timestamp = now_iso()
+    normalized = _unique_texts(media_ids)
+    clean_titles = {
+        str(media_id).strip(): str(title).strip()
+        for media_id, title in (titles or {}).items()
+        if str(media_id or "").strip() and str(title or "").strip()
+    }
+    restored = 0
+    skipped_discarded = 0
+    title_restored = 0
+    try:
+        for media_id in normalized:
+            existing = conn.execute("SELECT lifecycle_state FROM media_lifecycle WHERE media_id = ?", (media_id,)).fetchone()
+            if existing and existing["lifecycle_state"] == "discarded":
+                skipped_discarded += 1
+                continue
+            title = clean_titles.get(media_id, "")
+            entry = {"id": media_id, "restored_at": timestamp, "title": title}
+            if _upsert_media_lifecycle(conn, entry, "active", timestamp):
+                restored += 1
+            if not title:
+                continue
+
+            attempt = _latest_attempt(conn, media_id)
+            keyword_row = conn.execute(
+                """
+                SELECT COALESCE(NULLIF(TRIM(d.decided_keywords), ''),
+                                NULLIF(TRIM(p.proposed_keywords), ''),
+                                NULLIF(TRIM(p.previous_keywords), ''), '') AS keywords
+                  FROM title_keyword_proposals p
+                  LEFT JOIN title_keyword_decisions d
+                    ON d.media_id = p.media_id AND d.attempt = p.attempt
+                 WHERE p.media_id = ? AND p.attempt = ?
+                """,
+                (media_id, attempt),
+            ).fetchone()
+            keywords = str(keyword_row["keywords"] or "") if keyword_row else ""
+            batch_id = "waste-basket-restore"
+            _ensure_placeholder_proposal(conn, media_id, attempt, batch_id, timestamp, title, keywords, "waste-basket-title-restore")
+            proposal = conn.execute(
+                "SELECT batch_id FROM title_keyword_proposals WHERE media_id = ? AND attempt = ?",
+                (media_id, attempt),
+            ).fetchone()
+            proposal_batch_id = str(proposal["batch_id"] or batch_id) if proposal else batch_id
+            conn.execute(
+                """
+                INSERT INTO title_keyword_decisions
+                  (media_id, attempt, decision_state, decided_title, decided_keywords,
+                   owner_comment, decided_at, applied_at)
+                VALUES (?, ?, 'accepted', ?, ?, 'Title restored with photo from Waste Basket.', ?, ?)
+                ON CONFLICT(media_id, attempt) DO UPDATE SET
+                  decision_state = 'accepted',
+                  decided_title = excluded.decided_title,
+                  decided_keywords = excluded.decided_keywords,
+                  owner_comment = excluded.owner_comment,
+                  decided_at = excluded.decided_at,
+                  applied_at = excluded.applied_at
+                """,
+                (media_id, attempt, title, keywords, timestamp, timestamp),
+            )
+            _upsert_queue(
+                conn,
+                media_id=media_id,
+                review_state="approved",
+                latest_attempt=attempt,
+                batch_id=proposal_batch_id,
+                reviewed_at=timestamp,
+                applied_at=timestamp,
+                rework_priority=False,
+                rejected_count=0,
+                owner_comment="Title restored with photo from Waste Basket.",
+            )
+            title_restored += 1
+        _set_setting(conn, "media_lifecycle_sqlite", "true")
+        conn.commit()
+        return {
+            "db": (db_path or DEFAULT_DB).as_posix(),
+            "active": restored,
+            "title_restored": title_restored,
+            "skipped_discarded": skipped_discarded,
+        }
+    finally:
+        if owns_conn:
+            conn.close()
+
+
 def media_lifecycle_snapshot(
     repo_root: Path,
     db_path: Path | None = None,

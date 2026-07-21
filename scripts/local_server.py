@@ -339,6 +339,7 @@ from owner_state_db import keyword_blacklist_terms as keyword_blacklist_terms_db
 from owner_state_db import record_country_assignments as record_country_assignments_db  # noqa: E402
 from owner_state_db import record_keyword_blacklist as record_keyword_blacklist_db  # noqa: E402
 from owner_state_db import record_media_lifecycle_active as record_media_lifecycle_active_db  # noqa: E402
+from owner_state_db import record_media_lifecycle_restored as record_media_lifecycle_restored_db  # noqa: E402
 from owner_state_db import record_media_lifecycle_discarded as record_media_lifecycle_discarded_db  # noqa: E402
 from owner_state_db import record_media_lifecycle_hidden as record_media_lifecycle_hidden_db  # noqa: E402
 from owner_state_db import clear_title_keyword_review_blocks as clear_title_keyword_review_blocks_db  # noqa: E402
@@ -11143,9 +11144,22 @@ def apply_public_photo_moderation(repo_root: Path, payload: dict) -> dict:
             "catalog_publish_pending": True,
         }
 
+    restore_titles_payload = payload.get("restore_titles") or payload.get("restoreTitles") or {}
+    restore_titles = {}
+    if isinstance(restore_titles_payload, dict):
+        restore_titles = {
+            str(photo_id).strip(): str(title).strip()
+            for photo_id, title in restore_titles_payload.items()
+            if str(photo_id or "").strip() in photo_ids and str(title or "").strip()
+        }
     restored_ids = [photo_id for photo_id in photo_ids if photo_id in hidden_before]
     already_active = [photo_id for photo_id in photo_ids if photo_id not in hidden_before]
-    lifecycle = _record_active_lifecycle(repo_root, restored_ids)
+    restored_titles = {photo_id: restore_titles[photo_id] for photo_id in restored_ids if photo_id in restore_titles}
+    lifecycle = (
+        record_media_lifecycle_restored_db(repo_root, restored_ids, restored_titles)
+        if restored_titles
+        else _record_active_lifecycle(repo_root, restored_ids)
+    )
     return {
         "ok": True,
         "action": operation,

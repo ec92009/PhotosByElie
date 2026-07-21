@@ -632,8 +632,9 @@ Clock state: running
 | 2026-07-22 | 00:07 CEST | 00:12 CEST | 0:01 | Clarified that Waste Basket restores were completing but became progressively slower, identifying the idle polling cadence as the usability defect; implementation, tests, and service restart runtime excluded. |
 | 2026-07-22 | 00:13 CEST | 00:19 CEST | 0:01 | Preserved the one-minute idle backoff and selected a five-second cadence only for visible Waste Basket use and actively monitored Owner connector jobs; implementation, tests, and deployment runtime excluded. |
 | 2026-07-22 | 00:36 CEST | 00:37 CEST | 0:01 | Flagged raw photo IDs as unsuitable Waste Basket titles and confirmed that private Owner metadata should supply the display names; implementation, tests, and deployment runtime excluded. |
+| 2026-07-22 | 00:52 CEST | 00:53 CEST | 0:01 | Required Waste Basket restoration to carry each photo's recovered private title back into the active catalog; implementation, tests, and deployment runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 31:39
+Active collaboration time used: 31:40
 Remaining budget: not set

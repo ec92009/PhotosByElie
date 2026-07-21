@@ -117,6 +117,33 @@ class UploadRegistrationScopeTest(unittest.TestCase):
         self.assertEqual(result["hiddenMetadata"]["001-private"]["title"], "Puerto Vallarta, Mexico")
         self.assertEqual(result["hiddenMetadata"]["001-private"]["collectionTitle"], "Mexico")
 
+    def test_owner_hidden_metadata_falls_back_to_lifecycle_title(self):
+        with TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            actions_dir = root / "assets" / "owner-actions"
+            actions_dir.mkdir(parents=True)
+            connection = sqlite3.connect(actions_dir / "Owner.sqlite")
+            connection.executescript("""
+                CREATE TABLE media_lifecycle (
+                  media_id TEXT PRIMARY KEY,
+                  title TEXT,
+                  previous_slug TEXT,
+                  source_slug TEXT
+                );
+                INSERT INTO media_lifecycle VALUES ('001-legacy', 'Original private title', 'unknown', 'unknown');
+            """)
+            connection.commit()
+            connection.close()
+            config = ConnectorConfig("https://worker.test", "max", "x" * 32, root)
+
+            result = execute_action(config, {
+                "type": "owner-hidden-metadata",
+                "payload": {"photoIds": ["001-legacy"]},
+            })
+
+        self.assertEqual(result["hiddenMetadata"]["001-legacy"]["title"], "Original private title")
+        self.assertEqual(result["hiddenMetadata"]["001-legacy"]["collectionTitle"], "unknown")
+
     def test_local_status_payload_identifies_connector_without_token(self):
         payload = _local_status_payload(self.config)
 

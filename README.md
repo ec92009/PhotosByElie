@@ -6,8 +6,12 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v143.8`
+- Current visible version: `v143.9`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
+- `v143.9` keeps Manage Waste Basket actionable when a browser cannot verify
+  localhost. The control now uses the installed Max connector as a direct
+  top-level fallback and opens the private local basket instead of presenting
+  a false disabled state.
 - `v143.8` extends Owner multi-selection from the original photo with
   Shift + Arrow in country galleries and the Waste Basket. The Owner page now
   promotes the recoverable Waste Basket, keeps secondary workspaces collapsed

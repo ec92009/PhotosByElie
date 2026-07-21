@@ -83,6 +83,10 @@ test("Owner exposes a contained fixture builder and recoverable Waste Basket man
   assert.match(owner, /aria-label="Waste Basket"/);
   assert.match(owner, /\/photosbyelie\/open-wastebasket/);
   assert.match(ownerScript, /syncWasteBasketControl/);
+  assert.match(ownerScript, /wasteBasketLink\.classList\.remove\("is-disabled"\)/);
+  assert.match(ownerScript, /could not verify localhost; click to try this Mac's local bridge directly/);
+  assert.match(ownerScript, /wasteBasketLink\?\.addEventListener\("click", openLocalWasteBasket\)/);
+  assert.doesNotMatch(ownerScript, /wasteBasketLink\.classList\.toggle\("is-disabled"/);
   assert.match(review, /data-hidden-restore-selected/);
   assert.match(review, /data-hidden-discard-selected/);
   assert.match(review, /data-hidden-empty/);

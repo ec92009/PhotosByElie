@@ -15,7 +15,7 @@ for remote execution.
 - Public site: `https://photos-by-elie.com/`
 - Local preview: `http://localhost:8000/`
 - Owner intake URL: `https://photos-by-elie.com/owner.html`
-- Current visible build: `v143.8`
+- Current visible build: `v143.9`
 - Sidecar local build: `v126.6`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
@@ -27,6 +27,14 @@ for remote execution.
 - `owner.html` is the authenticated cloud Owner surface. `new-owner.html` is a
   compatibility redirect back to the canonical Owner URL; the localhost Owner
   Python web UI is retired as the normal control plane.
+- `v143.9` keeps Manage Waste Basket clickable even when the browser's
+  localhost discovery probe is blocked. The click tries Max's local connector
+  directly and was verified to reach the seven-item private Waste Basket;
+  nothing was restored or discarded during proof.
+- The v143.9 regression suite passes. Publish validation separately reports 11
+  newer hidden/discarded rows still present in the public catalog and Expo
+  manifest; that existing lifecycle-publication drift was not folded into this
+  button repair.
 - `v143.8` puts the Waste Basket first on Owner and opens only the Waste Basket
   and Owner queue by default. Country galleries and the local Waste Basket now
   extend the original selection with Shift + Arrow; the basket also separates

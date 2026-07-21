@@ -21,6 +21,10 @@ test("public Owner culling waits for cloud auth and uses the Max connector queue
   assert.match(gallery, /const selectOwnerPhotoFromPointer =/);
   assert.match(gallery, /event\.shiftKey && anchorIndex >= 0/);
   assert.match(gallery, /event\.metaKey \|\| event\.ctrlKey/);
+  assert.match(gallery, /const extendOwnerKeyboardSelection =/);
+  assert.match(gallery, /if \(extend\) extendOwnerKeyboardSelection\(photos, nextIndex\)/);
+  assert.match(gallery, /stepGallerySelection\(1, false, \{ extend: event\.shiftKey \}\)/);
+  assert.match(gallery, /stepGallerySelection\(-1, true, \{ extend: event\.shiftKey \}\)/);
   assert.match(gallery, /syncOwnerSelectionButtons\(\)/);
   assert.match(gallery, /await window\.photosByElieHiddenActionsReady/);
   assert.match(detail, /await window\.photosByElieHiddenActionsReady/);
@@ -82,6 +86,12 @@ test("Owner exposes a contained fixture builder and recoverable Waste Basket man
   assert.match(review, /data-hidden-restore-selected/);
   assert.match(review, /data-hidden-discard-selected/);
   assert.match(review, /data-hidden-empty/);
+  assert.match(review, /Shift[\s\S]*Arrows[\s\S]*select range/);
   assert.match(hidden, /const restorePhotoIds = async/);
   assert.match(hidden, /const discardPhotoIds = async/);
+  assert.match(hidden, /const extendKeyboardSelection =/);
+  assert.match(hidden, /moveKeyboardFocus\(selectedIndex \+ 1, \{ extend: event\.shiftKey \}\)/);
+  assert.match(ownerScript, /grid\.prepend\(wasteBasketCard\)/);
+  assert.match(ownerScript, /details\.open = isPrimaryAction \|\| isWasteBasket/);
+  assert.match(ownerStyles, /\.new-owner-card\[aria-label="Waste Basket"\]\s*\{[\s\S]*grid-column:\s*1\s*\/\s*-1;/);
 });

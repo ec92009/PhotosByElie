@@ -78,7 +78,9 @@
 
   const syncManagerControls = () => {
     const count = selectedIds.size;
-    if (selectionCount) selectionCount.textContent = `${count.toLocaleString()} selected`;
+    if (selectionCount) {
+      selectionCount.textContent = `${count.toLocaleString()} selected · ${allHiddenPhotos.length.toLocaleString()} in Waste Basket`;
+    }
     [clearSelectionButton, restoreSelectedButton, discardSelectedButton].forEach((button) => {
       if (button) button.disabled = managerBusy || count === 0;
     });
@@ -294,6 +296,27 @@
     galleryLayout.applyPreviewLayout(renderedPhotos);
   };
 
+  const extendKeyboardSelection = (destinationIndex) => {
+    if (!renderedPhotos.length) return;
+    let anchorIndex = Number.isInteger(lastSelectionIndex) ? lastSelectionIndex : -1;
+    if (anchorIndex < 0 && selectedIds.size === 1) {
+      const [onlySelectedId] = selectedIds;
+      anchorIndex = renderedPhotos.findIndex((photo) => photo.id === onlySelectedId);
+    }
+    if (anchorIndex < 0) anchorIndex = Math.max(0, Math.min(selectedIndex, renderedPhotos.length - 1));
+    lastSelectionIndex = anchorIndex;
+    selectedIds.clear();
+    const start = Math.min(anchorIndex, destinationIndex);
+    const end = Math.max(anchorIndex, destinationIndex);
+    renderedPhotos.slice(start, end + 1).forEach((photo) => selectedIds.add(photo.id));
+  };
+
+  const moveKeyboardFocus = (destinationIndex, { extend = false } = {}) => {
+    selectedIndex = Math.max(0, Math.min(destinationIndex, renderedPhotos.length - 1));
+    if (extend) extendKeyboardSelection(selectedIndex);
+    updateSelection();
+  };
+
   const render = ({ scrollSelection = true } = {}) => {
     if (!galleryRoot) return;
     if (shortcutHint) shortcutHint.hidden = !hiddenActions?.enabled || !shouldShowKeyboardHints();
@@ -449,14 +472,12 @@
     const photos = renderedPhotos.length ? renderedPhotos : hiddenPhotos();
     if (!photos.length) return;
     if (event.key === "ArrowRight") {
-      selectedIndex = Math.min(selectedIndex + 1, photos.length - 1);
-      updateSelection();
+      moveKeyboardFocus(selectedIndex + 1, { extend: event.shiftKey });
       event.preventDefault();
       return;
     }
     if (event.key === "ArrowLeft") {
-      selectedIndex = Math.max(selectedIndex - 1, 0);
-      updateSelection();
+      moveKeyboardFocus(selectedIndex - 1, { extend: event.shiftKey });
       event.preventDefault();
       return;
     }
@@ -466,14 +487,12 @@
         visibleLimit = Math.min(allHiddenPhotos.length, visibleLimit + pageSize);
         render({ scrollSelection: false });
       }
-      selectedIndex = Math.min(nextIndex, renderedPhotos.length - 1);
-      updateSelection();
+      moveKeyboardFocus(nextIndex, { extend: event.shiftKey });
       event.preventDefault();
       return;
     }
     if (event.key === "ArrowUp") {
-      selectedIndex = Math.max(selectedIndex - visibleColumnCount(), 0);
-      updateSelection();
+      moveKeyboardFocus(selectedIndex - visibleColumnCount(), { extend: event.shiftKey });
       event.preventDefault();
       return;
     }

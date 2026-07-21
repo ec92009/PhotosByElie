@@ -718,6 +718,9 @@
   };
 
   const prepareCollapsibleSections = () => {
+    const grid = document.querySelector(".new-owner-grid");
+    const wasteBasketCard = grid?.querySelector('.new-owner-card[aria-label="Waste Basket"]');
+    if (grid && wasteBasketCard && grid.firstElementChild !== wasteBasketCard) grid.prepend(wasteBasketCard);
     document.querySelectorAll(".new-owner-card").forEach((card) => {
       if (card.dataset.collapsibleReady === "true") return;
       const titlebar = [...card.children].find((child) => child.classList.contains("owner-card-titlebar"));
@@ -726,10 +729,10 @@
       const summary = document.createElement("summary");
       const content = document.createElement("div");
       const isPrimaryAction = card.getAttribute("aria-label") === "Owner action queue";
-      const isLegacyIntake = card.hasAttribute("data-legacy-re-intake");
+      const isWasteBasket = card.getAttribute("aria-label") === "Waste Basket";
 
       details.className = "new-owner-card-details";
-      details.open = !isLegacyIntake && (!window.matchMedia("(max-width: 900px)").matches || isPrimaryAction);
+      details.open = isPrimaryAction || isWasteBasket;
       details.addEventListener("toggle", queueMasonryLayout);
       summary.className = "new-owner-card-summary";
       content.className = "new-owner-card-content";

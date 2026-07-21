@@ -31,9 +31,11 @@
         <span aria-hidden="true">|</span>
         <kbd>D</kbd> discard
         <span aria-hidden="true">|</span>
-        <kbd>Z</kbd> view
+        <kbd>Z</kbd> fit / fill
         <span aria-hidden="true">|</span>
-        <kbd>Arrows</kbd> select
+        <kbd>Arrows</kbd> move
+        <span aria-hidden="true">|</span>
+        <kbd>Shift</kbd> + <kbd>Arrows</kbd> select range
         <span aria-hidden="true">|</span>
         <kbd>Enter</kbd> detail
         <span aria-hidden="true">|</span>
@@ -42,8 +44,8 @@
       root: `
         <section class="panel waste-basket-manager" data-waste-basket-manager>
           <div class="waste-basket-manager-summary">
-            <strong data-hidden-selection-count>0 selected</strong>
-            <span>Select with click, Shift-click, or Command-click.</span>
+            <strong data-hidden-selection-count>0 selected · 0 in Waste Basket</strong>
+            <span>Click selects one. Shift-click or Shift + Arrow selects a range. Command-click toggles.</span>
           </div>
           <div class="waste-basket-manager-actions">
             <button class="btn secondary" type="button" data-hidden-select-all>All visible</button>

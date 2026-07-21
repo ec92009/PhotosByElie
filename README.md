@@ -6,8 +6,13 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v143.7`
+- Current visible version: `v143.8`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
+- `v143.8` extends Owner multi-selection from the original photo with
+  Shift + Arrow in country galleries and the Waste Basket. The Owner page now
+  promotes the recoverable Waste Basket, keeps secondary workspaces collapsed
+  until needed, distinguishes keyboard focus from actual batch selection, and
+  shows both selected and total basket counts with accurate shortcut guidance.
 - `v143.7` makes Build a Fixture a contained full-width Owner workspace and
   adds a local Waste Basket manager for multi-select restore, permanent
   discard, and confirmed empty-basket operations. The catalog-prefix R2

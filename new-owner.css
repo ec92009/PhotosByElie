@@ -138,6 +138,11 @@ body[data-gallery="new-owner"] main.new-owner-shell {
   grid-column: 1 / -1;
 }
 
+.new-owner-card[aria-label="Waste Basket"] {
+  grid-column: 1 / -1;
+  background: color-mix(in srgb, var(--surface) 90%, var(--new-owner-rust) 10%);
+}
+
 .new-owner-action-controls-start {
   justify-content: flex-start;
 }

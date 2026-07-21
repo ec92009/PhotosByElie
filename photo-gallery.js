@@ -985,11 +985,29 @@ const stepGalleryDensity = (direction) => {
   return setGalleryDensityColumns(currentColumns + direction);
 };
 
-const stepGallerySelection = (delta, columnJump = false) => {
+const extendOwnerKeyboardSelection = (photos, destinationIndex) => {
+  if (!ownerCullingEnabled || !photos.length) return;
+  let anchorIndex = photos.findIndex((photo) => photo.id === selectionAnchorPhotoId);
+  if (anchorIndex < 0 && selectedPhotoIds.size === 1) {
+    const [onlySelectedId] = selectedPhotoIds;
+    anchorIndex = photos.findIndex((photo) => photo.id === onlySelectedId);
+  }
+  if (anchorIndex < 0) anchorIndex = Math.max(0, Math.min(selectedIndex, photos.length - 1));
+  selectionAnchorPhotoId = photos[anchorIndex]?.id || "";
+  selectedPhotoIds.clear();
+  const start = Math.min(anchorIndex, destinationIndex);
+  const end = Math.max(anchorIndex, destinationIndex);
+  photos.slice(start, end + 1).forEach((photo) => {
+    if (selectedPhotoIds.size < 500) selectedPhotoIds.add(photo.id);
+  });
+};
+
+const stepGallerySelection = (delta, columnJump = false, { extend = false } = {}) => {
   const photos = filteredVisiblePhotos();
   if (!photos.length) return;
   const step = columnJump ? visibleColumnCount() * delta : delta;
   const nextIndex = Math.max(0, Math.min(selectedIndex + step, photos.length - 1));
+  if (extend) extendOwnerKeyboardSelection(photos, nextIndex);
   if (nextIndex >= visibleLimit && visibleLimit < photos.length) {
     selectedIndex = nextIndex;
     expandGalleryToIncludeIndex(nextIndex);
@@ -1552,22 +1570,22 @@ if (galleryRoot && gallery) {
       const photos = filteredVisiblePhotos();
       if (!photos.length) return;
       if (event.key === "ArrowRight") {
-        stepGallerySelection(1);
+        stepGallerySelection(1, false, { extend: event.shiftKey });
         event.preventDefault();
         return;
       }
       if (event.key === "ArrowLeft") {
-        stepGallerySelection(-1);
+        stepGallerySelection(-1, false, { extend: event.shiftKey });
         event.preventDefault();
         return;
       }
       if (event.key === "ArrowDown") {
-        stepGallerySelection(1, true);
+        stepGallerySelection(1, true, { extend: event.shiftKey });
         event.preventDefault();
         return;
       }
       if (event.key === "ArrowUp") {
-        stepGallerySelection(-1, true);
+        stepGallerySelection(-1, true, { extend: event.shiftKey });
         event.preventDefault();
         return;
       }

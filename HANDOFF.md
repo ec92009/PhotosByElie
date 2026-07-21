@@ -15,7 +15,7 @@ for remote execution.
 - Public site: `https://photos-by-elie.com/`
 - Local preview: `http://localhost:8000/`
 - Owner intake URL: `https://photos-by-elie.com/owner.html`
-- Current visible build: `v143.7`
+- Current visible build: `v143.8`
 - Sidecar local build: `v126.6`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
@@ -27,6 +27,10 @@ for remote execution.
 - `owner.html` is the authenticated cloud Owner surface. `new-owner.html` is a
   compatibility redirect back to the canonical Owner URL; the localhost Owner
   Python web UI is retired as the normal control plane.
+- `v143.8` puts the Waste Basket first on Owner and opens only the Waste Basket
+  and Owner queue by default. Country galleries and the local Waste Basket now
+  extend the original selection with Shift + Arrow; the basket also separates
+  keyboard focus from selected photos and reports selected and total counts.
 - The new Build a Fixture card is the canonical intake/orchestration surface.
   It creates recursive root/child fixtures, searches the indexed library without
   mutation, snapshots stable culling pools, opens the existing Sidecar with only

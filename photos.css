@@ -5743,6 +5743,14 @@ body[data-gallery="selection"] .gallery-hero .cta:empty{
   background:#8f2020;
   color:#fff !important;
 }
+.waste-basket-manager + .mock-gallery .mock-photo-card.is-selected:not(.is-batch-selected) .mock-photo{
+  outline:3px dashed color-mix(in srgb,var(--selected-frame) 64%,var(--text) 36%);
+  outline-offset:2px;
+  box-shadow:0 0 0 5px var(--selected-halo-soft);
+}
+.waste-basket-manager + .mock-gallery .mock-photo-card.is-selected:not(.is-batch-selected) .mock-photo::before{
+  display:none;
+}
 @media (max-width:840px){
   .waste-basket-manager{grid-template-columns:1fr}
   .waste-basket-manager-actions{justify-content:flex-start}

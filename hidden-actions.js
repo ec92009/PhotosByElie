@@ -14,6 +14,7 @@
   let ownerBusyCount = 0;
   let ownerBusyMessage = "";
   let queuedPhotoAction = Promise.resolve();
+  let remoteHiddenOverride = null;
   const pendingHiddenIds = new Set();
 
   const ownerActionBusyMessages = {
@@ -60,6 +61,9 @@
 
   const read = () => {
     if (!cullingEnabled()) return [];
+    if (!localEnabled && Array.isArray(remoteHiddenOverride)) {
+      return normalize([...remoteHiddenOverride, ...pendingHiddenIds]);
+    }
     const loadedHiddenIds = hiddenIdsFromLoadedData();
     const storedHiddenIds = readStoredHiddenIds();
     return normalize([
@@ -165,6 +169,9 @@
   };
 
   const applyServerState = (result) => {
+    if (!localEnabled && Array.isArray(result?.hidden_ids)) {
+      remoteHiddenOverride = normalize(result.hidden_ids);
+    }
     if (result?.action === "wipe-hidden-r2" && Array.isArray(result.hidden_ids)) {
       window.photosByElieHiddenData = {};
       const items = write(result.hidden_ids);
@@ -302,7 +309,7 @@
     if (blocksPage) setOwnerBusy(true, ownerActionBusyMessages[action] || "Owner action is running...");
     try {
       if (!localEnabled) {
-        if (!["hide", "hide-many", "undo-hide", "undo-hide-many", "update-photo-metadata", "save-keyword-blacklist"].includes(action)) {
+        if (!["hide", "hide-many", "undo-hide", "undo-hide-many", "discard", "update-photo-metadata", "save-keyword-blacklist"].includes(action)) {
           throw new Error("This Owner action is available from Sidecar on Max.");
         }
         return await remoteOwnerAction(action, photoId, extra);
@@ -484,7 +491,7 @@
   };
 
   const discard = async (photoId) => {
-    if (!localEnabled || !photoId) return null;
+    if (!cullingEnabled() || !photoId) return null;
     forgetReserveOnly([photoId]);
     removePromotionEverywhere(photoId);
     const result = await photoAction("discard", photoId);
@@ -635,7 +642,9 @@
   };
 
   window.photosByElieHiddenActions = {
-    enabled: localEnabled,
+    get enabled() {
+      return cullingEnabled();
+    },
     get cullingEnabled() {
       return cullingEnabled();
     },

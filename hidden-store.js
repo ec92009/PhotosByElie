@@ -1,6 +1,13 @@
 (() => {
   const enabled = ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
+  const ownerAuth = window.photosByElieOwnerAuth;
   let loadPromise = null;
+
+  const ownerAllowed = async () => {
+    if (enabled) return true;
+    const state = ownerAuth?.state?.checked ? ownerAuth.state : await ownerAuth?.refresh?.();
+    return Boolean(state?.authenticated && (state?.tier === "owner" || state?.roles?.includes?.("owner")));
+  };
 
   const currentVersionQuery = () => {
     const script = [...document.scripts].find((item) => item.src.includes("hidden-store.js"));
@@ -10,8 +17,8 @@
     return query ? `?${query}` : "";
   };
 
-  const load = () => {
-    if (!enabled) return Promise.resolve({});
+  const load = async () => {
+    if (!await ownerAllowed()) return {};
     if (window.photosByElieHiddenData) return Promise.resolve(window.photosByElieHiddenData);
     if (loadPromise) return loadPromise;
     loadPromise = fetch(`./assets/hidden/hidden-data.json${currentVersionQuery()}`)

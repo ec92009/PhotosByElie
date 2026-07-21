@@ -10,7 +10,6 @@
     "http://127.0.0.1:8766/photosbyelie/connector-status",
   ];
   const LOCAL_SIDECAR_OPEN_URL = "http://127.0.0.1:8766/photosbyelie/open-sidecar";
-  const LOCAL_WASTE_BASKET_OPEN_URL = "http://127.0.0.1:8766/photosbyelie/open-wastebasket";
   const RE_FIXTURE_STORAGE_KEY = "pbe-new-owner-re-fixture";
   const RE_PROJECT_STORAGE_KEY = "pbe-new-owner-re-project";
   const RE_NEW_PROJECT_VALUE = "__new__";
@@ -123,20 +122,13 @@
   function syncWasteBasketControl() {
     if (!wasteBasketLink) return;
     const localReady = Boolean(localConnectorId());
-    // Localhost discovery can be blocked by the browser even though a top-level
-    // navigation to the installed Max connector works. Keep the direct bridge
-    // fallback actionable, just like Open Sidecar.
     wasteBasketLink.removeAttribute("aria-disabled");
     wasteBasketLink.classList.remove("is-disabled");
-    wasteBasketLink.title = state.localConnectorChecked && !localReady
-      ? "This browser could not verify localhost; click to try this Mac's local bridge directly."
-      : "Open the recoverable Waste Basket on this Mac.";
+    wasteBasketLink.title = "Open the recoverable Waste Basket.";
     if (wasteBasketStatus) {
       wasteBasketStatus.textContent = localReady
-        ? `Ready on ${connectorDisplayName(localConnectorId())}. Restores are reversible; permanent discard and empty-basket actions require confirmation.`
-        : state.localConnectorChecked
-          ? "This browser could not verify localhost. Manage Waste Basket will try this Mac's local bridge directly; nothing in the basket is public."
-          : "Checking this Mac's local bridge…";
+        ? `Ready through ${connectorDisplayName(localConnectorId())}. Restores are reversible; permanent discard and empty-basket actions require confirmation.`
+        : "The authenticated Owner review opens here; changes are applied privately through the Max connector.";
     }
   }
 
@@ -973,14 +965,12 @@
     }
   };
 
-  const openLocalWasteBasket = (event) => {
+  const openWasteBasket = (event) => {
     if (event?.button !== 0 || event?.metaKey || event?.ctrlKey || event?.shiftKey || event?.altKey) return;
     event?.preventDefault();
-    if (wasteBasketStatus) wasteBasketStatus.textContent = "Opening the recoverable Waste Basket on this Mac…";
-    const url = new URL(LOCAL_WASTE_BASKET_OPEN_URL);
-    url.searchParams.set("source", "new-owner");
-    url.searchParams.set("returnTo", window.location.href);
-    url.searchParams.set("t", String(Date.now()));
+    if (wasteBasketStatus) wasteBasketStatus.textContent = "Opening the recoverable Waste Basket…";
+    const url = new URL(wasteBasketLink?.getAttribute("href") || "./owner-review.html?view=blocked", window.location.href);
+    url.searchParams.set("v", document.querySelector(".site-version-badge")?.textContent?.replace(/^v/, "") || "");
     window.location.href = url.href;
   };
 
@@ -1491,7 +1481,7 @@
   $("[data-new-owner-queue-check]")?.addEventListener("click", queueCheck);
   $("[data-new-owner-sync-photos]")?.addEventListener("click", queuePhotosIndexSync);
   $("[data-new-owner-queue-sidecar]")?.addEventListener("click", openLocalSidecar);
-  wasteBasketLink?.addEventListener("click", openLocalWasteBasket);
+  wasteBasketLink?.addEventListener("click", openWasteBasket);
   $("[data-new-owner-upload-publish]")?.addEventListener("click", queueUploadPublish);
   $("[data-new-owner-re-load]")?.addEventListener("click", loadReAlbums);
   $("[data-new-owner-re-preflight]")?.addEventListener("click", previewReAlbums);

@@ -6,8 +6,12 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v143.9`
+- Current visible version: `v143.10`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
+- `v143.10` opens Waste Basket as an authenticated same-origin Owner review,
+  avoiding the in-app browser's blocked HTTPS-to-localhost navigation. The
+  review loads its recoverable catalog only for Owner and routes restores and
+  confirmed permanent discards through the Max connector.
 - `v143.9` keeps Manage Waste Basket actionable when a browser cannot verify
   localhost. The control now uses the installed Max connector as a direct
   top-level fallback and opens the private local basket instead of presenting

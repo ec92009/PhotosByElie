@@ -11087,6 +11087,15 @@ def apply_public_photo_moderation(repo_root: Path, payload: dict) -> dict:
             "keywords": payload.get("keywords") or [],
         })
         return {**result, "catalog_publish_pending": True}
+    if operation == "discard":
+        if len(photo_ids) != 1:
+            raise ValueError("public discard requires exactly one photo id")
+        result = apply_photo_action(repo_root, {
+            "action": operation,
+            "photo_id": photo_ids[0],
+        })
+        hidden_ids = sorted(_lifecycle_hidden_ids(repo_root))
+        return {**result, "hidden_ids": hidden_ids, "catalog_publish_pending": True}
     if operation not in {"hide", "hide-many", "undo-hide", "undo-hide-many"}:
         raise ValueError("unsupported public photo moderation operation")
     if not photo_ids or len(photo_ids) > 500:

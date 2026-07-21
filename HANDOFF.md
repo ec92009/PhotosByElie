@@ -15,7 +15,7 @@ for remote execution.
 - Public site: `https://photos-by-elie.com/`
 - Local preview: `http://localhost:8000/`
 - Owner intake URL: `https://photos-by-elie.com/owner.html`
-- Current visible build: `v143.9`
+- Current visible build: `v143.10`
 - Sidecar local build: `v126.6`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
@@ -27,6 +27,10 @@ for remote execution.
 - `owner.html` is the authenticated cloud Owner surface. `new-owner.html` is a
   compatibility redirect back to the canonical Owner URL; the localhost Owner
   Python web UI is retired as the normal control plane.
+- `v143.10` removes the in-app browser's blocked HTTPS-to-localhost Waste
+  Basket hop. Manage Waste Basket opens the authenticated same-origin Owner
+  review; recoverable items load only for Owner, and restore or confirmed
+  permanent-discard mutations run through the Max connector.
 - `v143.9` keeps Manage Waste Basket clickable even when the browser's
   localhost discovery probe is blocked. The click tries Max's local connector
   directly and was verified to reach the seven-item private Waste Basket;

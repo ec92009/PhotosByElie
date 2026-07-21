@@ -545,6 +545,7 @@
   window.addEventListener("photosbyelie:inputmodechange", render);
 
   Promise.all([
+    window.photosByElieHiddenActionsReady || Promise.resolve(),
     reserveStore?.load?.() || Promise.resolve({}),
     hiddenStore?.load?.() || Promise.resolve({}),
   ]).then(() => {

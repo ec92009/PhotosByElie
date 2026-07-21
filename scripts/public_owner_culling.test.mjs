@@ -75,18 +75,21 @@ test("Owner exposes a contained fixture builder and recoverable Waste Basket man
   const ownerScript = read("new-owner.js");
   const review = read("owner-review.js");
   const hidden = read("hidden-page.js");
+  const hiddenActions = read("hidden-actions.js");
 
   assert.match(owner, /aria-label="Build a Fixture"/);
   assert.match(ownerStyles, /\.new-owner-card\[aria-label="Build a Fixture"\]\s*\{\s*grid-column:\s*1\s*\/\s*-1;/);
   assert.match(ownerStyles, /@media \(max-width: 900px\)[\s\S]*\.fixture-builder-create,[\s\S]*grid-template-columns:\s*1fr;/);
   assert.match(ownerStyles, /\.new-owner-grid > \.new-owner-card,[\s\S]*grid-column:\s*1\s*\/\s*-1;/);
   assert.match(owner, /aria-label="Waste Basket"/);
-  assert.match(owner, /\/photosbyelie\/open-wastebasket/);
+  assert.match(owner, /\.\/owner-review\.html\?view=blocked/);
   assert.match(ownerScript, /syncWasteBasketControl/);
   assert.match(ownerScript, /wasteBasketLink\.classList\.remove\("is-disabled"\)/);
-  assert.match(ownerScript, /could not verify localhost; click to try this Mac's local bridge directly/);
-  assert.match(ownerScript, /wasteBasketLink\?\.addEventListener\("click", openLocalWasteBasket\)/);
   assert.doesNotMatch(ownerScript, /wasteBasketLink\.classList\.toggle\("is-disabled"/);
+  assert.match(ownerScript, /wasteBasketLink\?\.addEventListener\("click", openWasteBasket\)/);
+  assert.match(hiddenActions, /\["hide", "hide-many", "undo-hide", "undo-hide-many", "discard",/);
+  assert.match(hiddenActions, /get enabled\(\) \{[\s\S]*return cullingEnabled\(\)/);
+  assert.match(hidden, /window\.photosByElieHiddenActionsReady/);
   assert.match(review, /data-hidden-restore-selected/);
   assert.match(review, /data-hidden-discard-selected/);
   assert.match(review, /data-hidden-empty/);

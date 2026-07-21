@@ -619,8 +619,9 @@ Clock state: running
 | 2026-07-21 | 00:33 CEST | 00:41 CEST | 0:03 | Clarified animated country-gallery backgrounds, selected Cascais Bay for Portugal, and deferred Slovakia until its catalog is deeper; implementation, asset rendering, browser QA, tests, and deployment runtime excluded. |
 | 2026-07-21 | 00:49 CEST | 00:50 CEST | 0:01 | Clarified that country panoramas belong in the page-wide Nerja-caves background layer while the gallery header remains frosted glass; implementation, tests, and deployment runtime excluded. |
 | 2026-07-21 | 10:24 CEST | 10:25 CEST | 0:01 | Approved the panorama landing-page production cutover; implementation, browser QA, tests, and deployment runtime excluded. |
+| 2026-07-21 | 11:05 CEST | 11:07 CEST | 0:02 | Renamed the Cascais frame and directed catalog-backed destination fans for all six production country cards; implementation, browser QA, tests, and deployment runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 31:20
+Active collaboration time used: 31:22
 Remaining budget: not set

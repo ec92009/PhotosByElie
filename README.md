@@ -6,8 +6,11 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v143.3`
+- Current visible version: `v143.4`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
+- `v143.4` gives the Portugal landing frame its own place-specific identity:
+  “Cascais meets the Atlantic.” Each production country card now fans into
+  three or four catalog-backed destinations plus the full “Others…” collection.
 - `v143.3` promotes the approved panorama concept to the production homepage.
   It keeps the six substantial country collections, real Google and legacy
   account entry, ACS-driven client routing, account-backed language/theme

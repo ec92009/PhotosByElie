@@ -15,7 +15,7 @@ for remote execution.
 - Public site: `https://photos-by-elie.com/`
 - Local preview: `http://localhost:8000/`
 - Owner intake URL: `https://photos-by-elie.com/owner.html`
-- Current visible build: `v143.3`
+- Current visible build: `v143.4`
 - Sidecar local build: `v126.6`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
@@ -525,7 +525,13 @@ npm run validate
 
 ## Fresh Backlog
 
-### Production panorama landing and country heroes (v143.3)
+### Production panorama landing and country heroes (v143.4)
+
+- The Portugal landing frame is now titled “Cascais meets the Atlantic,” so it
+  no longer repeats the Puerto Vallarta frame's “The bay…” opening.
+- Each production country card now reveals a responsive destination fan. The
+  named choices open that country gallery with its existing search filter; the
+  localized “Others…” choice opens the complete country collection.
 
 - Production route: `https://photos-by-elie.com/`. The original review route
   remains available and `noindex` at `/landing-concept/`.

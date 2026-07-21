@@ -12,7 +12,7 @@ const js = fs.readFileSync(path.join(root, "landing-concept", "landing.js"), "ut
 
 test("landing concept remains isolated and search-engine private", () => {
   assert.match(html, /noindex, nofollow, noarchive/);
-  assert.match(html, /Review concept · v143\.3/);
+  assert.match(html, /Review concept · v143\.4/);
   assert.doesNotMatch(html, /_1800|masters\//);
 });
 
@@ -64,6 +64,13 @@ test("the featured rotation remains entirely outdoors", () => {
   assert.match(slides, /gallery-heroes\/portugal\.jpg/);
 });
 
+test("the featured rotation gives Cascais a distinct Atlantic title", () => {
+  const titles = [...productionHtml.matchAll(/<figure class="hero-slide[^>]*data-title="([^"]+)"/g)]
+    .map((match) => match[1]);
+  assert.match(productionHtml, /data-title="Cascais meets the Atlantic"/);
+  assert.equal(titles.filter((title) => title.startsWith("The bay")).length, 1);
+});
+
 test("landing concept ships only tracked, display-sized clean derivatives", () => {
   const assetsDir = path.join(root, "landing-concept", "assets");
   const sharedDir = path.join(root, "assets", "gallery-heroes");
@@ -87,9 +94,9 @@ test("the production root uses the approved landing experience with discovery me
   assert.match(productionHtml, /<link rel="canonical" href="https:\/\/photos-by-elie\.com\/">/);
   assert.match(productionHtml, /property="og:image"/);
   assert.match(productionHtml, /application\/ld\+json/);
-  assert.match(productionHtml, /landing-concept\/landing\.css\?v=143\.3/);
-  assert.match(productionHtml, /landing-concept\/landing\.js\?v=143\.3/);
-  assert.match(productionHtml, /analytics\.js\?v=143\.3/);
+  assert.match(productionHtml, /landing-concept\/landing\.css\?v=143\.4/);
+  assert.match(productionHtml, /landing-concept\/landing\.js\?v=143\.4/);
+  assert.match(productionHtml, /analytics\.js\?v=143\.4/);
 });
 
 test("the production landing keeps real account entry and ACS routing plumbing", () => {
@@ -117,6 +124,16 @@ test("the production landing presents the six substantial country collections", 
     assert.match(countryNav, new RegExp(`gallery=${slug}`));
   }
   assert.doesNotMatch(countryNav, /gallery=slovakia|gallery=panoramas/);
+});
+
+test("each production country card fans into catalog-backed destinations", () => {
+  assert.equal((productionHtml.match(/class="story-card-fan"/g) || []).length, 6);
+  for (const query of ["Versailles", "Giverny", "Louvre", "Madrid", "Andalusia", "Pisa", "San%20Diego", "Puerto%20Vallarta", "Lisbon", "Cascais"]) {
+    assert.match(productionHtml, new RegExp(`(?:q=${query}|q=${query.replace(/%20/g, " ")})`));
+  }
+  assert.equal((productionHtml.match(/data-i18n="others"/g) || []).length, 6);
+  assert.match(css, /\.story-card:hover \.story-card-fan/);
+  assert.match(css, /@media \(max-width: 760px\)[\s\S]*?\.story-card \.story-card-fan/);
 });
 
 test("the production footer and settings keep required public controls", () => {

@@ -6,8 +6,10 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v143.13`
+- Current visible version: `v143.14`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
+- `v143.14` restores the three newest social campaign collections in the open
+  homepage grid slot beside Portugal.
 - `v143.13` replaces the malformed account and settings glyphs with consistent line icons.
 - `v143.12` restores strong day-mode contrast in the homepage image-use guide.
 - `v143.11` opens the public homepage on the Louvre, moves Ronda to the second

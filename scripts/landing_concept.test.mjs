@@ -131,6 +131,22 @@ test("the production landing presents the six substantial country collections", 
   assert.doesNotMatch(countryNav, /gallery=slovakia|gallery=panoramas/);
 });
 
+test("the production landing restores the latest social shelf in the open grid slot", () => {
+  assert.match(productionHtml, /class="social-shelf"/);
+  assert.equal((productionHtml.match(/class="social-shelf-item"/g) || []).length, 3);
+  for (const campaign of [
+    "facebook-del-mar-dog-beach-sunset-2026-07-14",
+    "instagram-fuengirola-moon-mediterranean-2026-07-14",
+    "pinterest-san-diego-zoo-wildlife-portraits-2026-07-14",
+  ]) {
+    assert.match(productionHtml, new RegExp(`campaign\\.html\\?c=${campaign}`));
+  }
+  assert.match(productionHtml, /data-i18n="latestSocial"/);
+  assert.match(js, /latestSocialTitle: "New edits, ready to browse\."/);
+  assert.match(css, /\.social-shelf \{[\s\S]*?grid-column: span 5/);
+  assert.match(css, /\[data-theme="day"\] \.social-shelf/);
+});
+
 test("the production landing opens on the Louvre and explains image use", () => {
   const slides = [...productionHtml.matchAll(/<figure class="hero-slide([^>]*)data-title="([^"]+)"/g)];
   assert.equal(slides[0]?.[2], "Paris after the crowds");

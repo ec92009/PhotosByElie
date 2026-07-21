@@ -749,6 +749,7 @@
     if (localEnabled) return;
     const state = event.detail || {};
     remoteCullingEnabled = Boolean(state.authenticated && (state.tier === "owner" || state.roles?.includes?.("owner")));
+    if (remoteCullingEnabled) refreshRemoteHiddenMetadata().catch(() => {});
     window.dispatchEvent(new CustomEvent("photosbyelie:moderationchange", { detail: { enabled: remoteCullingEnabled } }));
   });
 })();

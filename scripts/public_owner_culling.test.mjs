@@ -92,6 +92,7 @@ test("Owner exposes a contained fixture builder and recoverable Waste Basket man
   assert.match(hiddenActions, /\["hide", "hide-many", "undo-hide", "undo-hide-many", "discard",/);
   assert.match(hiddenActions, /get enabled\(\) \{[\s\S]*return cullingEnabled\(\)/);
   assert.match(hiddenActions, /action: "owner-hidden-metadata"/);
+  assert.match(hiddenActions, /if \(remoteCullingEnabled\) refreshRemoteHiddenMetadata\(\)\.catch/);
   assert.match(hiddenActions, /metadataFor/);
   assert.match(hiddenActions, /restoreTitles = Object\.fromEntries/);
   assert.match(hiddenActions, /Put back was cancelled because the original title could not be recovered/);

@@ -6,6 +6,12 @@
   const galleryRoot = document.querySelector("[data-hidden-root]");
   const status = document.querySelector("[data-hidden-status]");
   const shortcutHint = document.querySelector("[data-hidden-shortcut-hint]");
+  const selectionCount = document.querySelector("[data-hidden-selection-count]");
+  const selectAllButton = document.querySelector("[data-hidden-select-all]");
+  const clearSelectionButton = document.querySelector("[data-hidden-clear-selection]");
+  const restoreSelectedButton = document.querySelector("[data-hidden-restore-selected]");
+  const discardSelectedButton = document.querySelector("[data-hidden-discard-selected]");
+  const emptyWasteBasketButton = document.querySelector("[data-hidden-empty]");
   const versionedHref = (href) => window.photosByElieVersionedHref?.(href) || href;
   const t = (key, replacements = {}) => window.photosByElieI18n?.t?.(key, replacements) || key;
   const seeMoreLabel = (count) => t("home.see_more_count", { count });
@@ -27,6 +33,9 @@
   let moreButton = null;
   let moreDoubleButton = null;
   let showAllButton = null;
+  let lastSelectionIndex = null;
+  let managerBusy = false;
+  const selectedIds = new Set();
   const galleryLayout = window.photosByElieGalleryLayout.createMasonryController({
     root: galleryRoot,
     getPhotos: () => renderedPhotos,
@@ -60,11 +69,68 @@
 
   const renderSharedPhotoCard = (options) => window.photosByElieGalleryCard?.renderPhotoCard?.(options) || "";
 
-  const photoActionHtml = () => `
+  const photoActionHtml = (photo) => `
     <div class="waste-basket-card-actions">
+      <input type="checkbox" data-hidden-card-checkbox aria-label="Select ${escapeHtml(photo.title || photo.id)}" ${selectedIds.has(photo.id) ? "checked" : ""}/>
       <span class="waste-basket-state">Blacklisted master</span>
     </div>
   `;
+
+  const syncManagerControls = () => {
+    const count = selectedIds.size;
+    if (selectionCount) selectionCount.textContent = `${count.toLocaleString()} selected`;
+    [clearSelectionButton, restoreSelectedButton, discardSelectedButton].forEach((button) => {
+      if (button) button.disabled = managerBusy || count === 0;
+    });
+    if (selectAllButton) selectAllButton.disabled = managerBusy || renderedPhotos.length === 0;
+    if (emptyWasteBasketButton) emptyWasteBasketButton.disabled = managerBusy || allHiddenPhotos.length === 0;
+  };
+
+  const setManagerBusy = (busy) => {
+    managerBusy = busy;
+    syncManagerControls();
+  };
+
+  const selectedPhotoIds = () => [...selectedIds].filter((photoId) => allHiddenPhotos.some((photo) => photo.id === photoId));
+
+  const restorePhotoIds = async (photoIds) => {
+    const ids = [...new Set(photoIds)].filter(Boolean);
+    if (!ids.length) return;
+    setManagerBusy(true);
+    setStatus(`Restoring ${ids.length.toLocaleString()} photo${ids.length === 1 ? "" : "s"}...`);
+    try {
+      const restored = await hiddenActions.undoMany(ids);
+      restored.forEach((photoId) => selectedIds.delete(photoId));
+      render({ scrollSelection: false });
+      setStatus(`${restored.length.toLocaleString()} photo${restored.length === 1 ? "" : "s"} restored.`);
+    } finally {
+      setManagerBusy(false);
+    }
+  };
+
+  const discardPhotoIds = async (photoIds, { empty = false } = {}) => {
+    const ids = [...new Set(photoIds)].filter(Boolean);
+    if (!ids.length) return;
+    const label = empty ? "the entire Waste Basket" : `${ids.length.toLocaleString()} selected photo${ids.length === 1 ? "" : "s"}`;
+    if (!window.confirm(`Permanently discard ${label}?\n\nThis writes durable tombstones and queues deletion of matching R2 media. It cannot be undone from the Waste Basket.`)) return;
+    setManagerBusy(true);
+    let completed = 0;
+    try {
+      for (const photoId of ids) {
+        setStatus(`Permanently discarding ${completed + 1} of ${ids.length}...`);
+        await hiddenActions.discard(photoId);
+        selectedIds.delete(photoId);
+        completed += 1;
+      }
+      render({ scrollSelection: false });
+      setStatus(`${completed.toLocaleString()} photo${completed === 1 ? "" : "s"} permanently discarded; R2 deletion is queued.`);
+    } catch (error) {
+      render({ scrollSelection: false });
+      throw new Error(`${completed.toLocaleString()} completed before the operation stopped. ${error?.message || "Could not finish permanent discard."}`);
+    } finally {
+      setManagerBusy(false);
+    }
+  };
 
   const allPhotoIndex = () => {
     if (photoIndexCache) return photoIndexCache;
@@ -204,8 +270,14 @@
     selectedIndex = Math.max(0, Math.min(selectedIndex, cards.length - 1));
     cards.forEach((card, index) => {
       card.classList.toggle("is-selected", index === selectedIndex);
+      const photo = renderedPhotos[index];
+      const batchSelected = Boolean(photo && selectedIds.has(photo.id));
+      card.classList.toggle("is-batch-selected", batchSelected);
+      const checkbox = card.querySelector("[data-hidden-card-checkbox]");
+      if (checkbox) checkbox.checked = batchSelected;
     });
     if (scroll) cards[selectedIndex]?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    syncManagerControls();
   };
 
   const visibleColumnCount = () => {
@@ -238,6 +310,10 @@
     ensureViewControls();
     ensurePagingControls();
     allHiddenPhotos = hiddenPhotos();
+    const liveIds = new Set(allHiddenPhotos.map((photo) => photo.id));
+    [...selectedIds].forEach((photoId) => {
+      if (!liveIds.has(photoId)) selectedIds.delete(photoId);
+    });
     if (!catalogsLoaded) {
       galleryRoot.innerHTML = `
         <article class="mock-photo empty-gallery-card" aria-label="Loading Waste Basket photos">
@@ -271,7 +347,7 @@
         href,
         collectionKey: photo.galleryKey,
         collectionAccent: photo.collectionAccent,
-        actionHtml: photoActionHtml(),
+        actionHtml: photoActionHtml(photo),
         missingLabel: photo.title,
       });
     }).join("");
@@ -279,7 +355,23 @@
     galleryRoot.querySelectorAll("[data-photo-index]").forEach((card) => {
       card.addEventListener("click", (event) => {
         event.preventDefault();
-        selectedIndex = Number(card.dataset.photoIndex || 0);
+        const nextIndex = Number(card.dataset.photoIndex || 0);
+        const photo = renderedPhotos[nextIndex];
+        if (!photo) return;
+        if (event.shiftKey && Number.isInteger(lastSelectionIndex)) {
+          const start = Math.min(lastSelectionIndex, nextIndex);
+          const end = Math.max(lastSelectionIndex, nextIndex);
+          if (!event.metaKey && !event.ctrlKey) selectedIds.clear();
+          renderedPhotos.slice(start, end + 1).forEach((item) => selectedIds.add(item.id));
+        } else if (event.metaKey || event.ctrlKey || event.target.closest("[data-hidden-card-checkbox]")) {
+          if (selectedIds.has(photo.id)) selectedIds.delete(photo.id);
+          else selectedIds.add(photo.id);
+        } else {
+          selectedIds.clear();
+          selectedIds.add(photo.id);
+        }
+        selectedIndex = nextIndex;
+        lastSelectionIndex = nextIndex;
         updateSelection();
       });
       card.addEventListener("dblclick", (event) => {
@@ -320,13 +412,40 @@
     applyPreviewLayout();
   });
 
+  selectAllButton?.addEventListener("click", () => {
+    renderedPhotos.forEach((photo) => selectedIds.add(photo.id));
+    updateSelection({ scroll: false });
+  });
+  clearSelectionButton?.addEventListener("click", () => {
+    selectedIds.clear();
+    lastSelectionIndex = null;
+    updateSelection({ scroll: false });
+  });
+  restoreSelectedButton?.addEventListener("click", () => {
+    restorePhotoIds(selectedPhotoIds()).catch((error) => setStatus(error?.message || "Could not restore selected photos."));
+  });
+  discardSelectedButton?.addEventListener("click", () => {
+    discardPhotoIds(selectedPhotoIds()).catch((error) => setStatus(error?.message || "Could not discard selected photos."));
+  });
+  emptyWasteBasketButton?.addEventListener("click", () => {
+    discardPhotoIds(allHiddenPhotos.map((photo) => photo.id), { empty: true })
+      .catch((error) => setStatus(error?.message || "Could not empty the Waste Basket."));
+  });
+
   window.addEventListener("keydown", async (event) => {
-    if (!hiddenActions?.enabled || event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
+    if (!hiddenActions?.enabled || event.defaultPrevented || event.altKey) return;
     const target = event.target;
     if (target instanceof HTMLElement) {
       if (target.isContentEditable) return;
       if (["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(target.tagName)) return;
     }
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "a") {
+      renderedPhotos.forEach((photo) => selectedIds.add(photo.id));
+      updateSelection({ scroll: false });
+      event.preventDefault();
+      return;
+    }
+    if (event.metaKey || event.ctrlKey) return;
     const photos = renderedPhotos.length ? renderedPhotos : hiddenPhotos();
     if (!photos.length) return;
     if (event.key === "ArrowRight") {

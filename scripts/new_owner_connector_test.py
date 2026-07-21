@@ -7,6 +7,7 @@ from scripts.new_owner_connector import (
     _allowed_local_status_origin,
     _local_status_payload,
     _local_sidecar_open_action,
+    _owner_waste_basket_url,
     _sidecar_job_public_payload,
     _upload_and_register,
     execute_action,
@@ -83,6 +84,12 @@ class UploadRegistrationScopeTest(unittest.TestCase):
         self.assertEqual(action["claim"]["connectorId"], "david")
         self.assertFalse(action["payload"]["manifest"]["includePreviews"])
         self.assertFalse(action["payload"]["manifest"]["launchWorkspace"])
+
+    def test_owner_waste_basket_url_targets_local_owner_review(self):
+        self.assertEqual(
+            _owner_waste_basket_url(8007),
+            "http://127.0.0.1:8007/owner-review.html?view=blocked",
+        )
 
     def test_sidecar_job_payload_surfaces_redirect_url(self):
         payload = _sidecar_job_public_payload(self.config, "local-sidecar-test", {

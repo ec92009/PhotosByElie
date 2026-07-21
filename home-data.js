@@ -214,7 +214,7 @@ window.photosByElieHomeData = {
     "title": "Mexico",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "mexico-gallery",
-    "count": 116,
+    "count": 96,
     "href": "./gallery.html?gallery=mexico",
     "photos": [
       {

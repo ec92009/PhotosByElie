@@ -5686,7 +5686,15 @@ body[data-gallery="selection"] .gallery-hero .cta:empty{
 .waste-basket-card-actions{
   display:flex;
   align-items:center;
+  gap:7px;
   min-height:24px;
+}
+.waste-basket-card-actions input{
+  width:20px;
+  height:20px;
+  flex:0 0 20px;
+  margin:0;
+  accent-color:var(--selected-frame-ink);
 }
 .waste-basket-state{
   display:inline-flex;
@@ -5700,6 +5708,44 @@ body[data-gallery="selection"] .gallery-hero .cta:empty{
   letter-spacing:.08em;
   line-height:1.15;
   text-transform:uppercase;
+}
+.waste-basket-manager{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:14px;
+  align-items:center;
+  margin-bottom:16px;
+  padding:16px;
+}
+.waste-basket-manager-summary{
+  display:grid;
+  gap:3px;
+}
+.waste-basket-manager-summary span{
+  color:var(--muted);
+  font-size:.82rem;
+}
+.waste-basket-manager-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  justify-content:flex-end;
+}
+.waste-basket-manager-actions .btn{
+  min-height:42px;
+  padding:9px 14px;
+}
+.waste-basket-danger{
+  border-color:color-mix(in srgb,#b62828 68%,var(--line) 32%) !important;
+  color:color-mix(in srgb,#b62828 82%,var(--text) 18%) !important;
+}
+.waste-basket-manager-actions .waste-basket-danger:not(.secondary){
+  background:#8f2020;
+  color:#fff !important;
+}
+@media (max-width:840px){
+  .waste-basket-manager{grid-template-columns:1fr}
+  .waste-basket-manager-actions{justify-content:flex-start}
 }
 .mock-photo img{
   display:block;

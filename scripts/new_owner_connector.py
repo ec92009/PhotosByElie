@@ -40,6 +40,9 @@ DEFAULT_LOCAL_STATUS_PORT = 8766
 LOCAL_STATUS_PATH = "/photosbyelie/connector-status"
 LOCAL_SIDECAR_OPEN_PATH = "/photosbyelie/open-sidecar"
 LOCAL_SIDECAR_STATUS_PATH = "/photosbyelie/open-sidecar/status"
+LOCAL_WASTE_BASKET_OPEN_PATH = "/photosbyelie/open-wastebasket"
+OWNER_HELPER_PORT_START = 8000
+OWNER_HELPER_PORT_LIMIT = 8100
 SIDECAR_HELPER_PORT_START = 8011
 SIDECAR_HELPER_PORT_LIMIT = 8111
 PATH_PREFIXES = (
@@ -140,6 +143,25 @@ def _sidecar_helper_url(port: int) -> str:
     return f"http://127.0.0.1:{port}/sidecar.html"
 
 
+def _owner_waste_basket_url(port: int) -> str:
+    return f"http://127.0.0.1:{port}/owner-review.html?view=blocked"
+
+
+def _owner_helper_ready(port: int) -> bool:
+    try:
+        with urlopen(f"http://127.0.0.1:{port}/__photosbyelie/owner-session", timeout=0.5) as response:
+            return 200 <= response.status < 500
+    except (OSError, URLError):
+        return False
+
+
+def _running_owner_helper() -> dict:
+    for port in range(OWNER_HELPER_PORT_START, OWNER_HELPER_PORT_LIMIT):
+        if _owner_helper_ready(port):
+            return {"url": _owner_waste_basket_url(port), "port": port, "reused": True}
+    return {}
+
+
 def _sidecar_helper_ready(port: int) -> bool:
     try:
         with urlopen(f"http://127.0.0.1:{port}/__sidecar/version", timeout=0.5) as response:
@@ -210,6 +232,51 @@ def _launch_sidecar_for_browser(config: ConnectorConfig) -> dict:
                 process.kill()
 
     raise RuntimeError("Could not start the local Sidecar helper on ports 8011-8110.")
+
+
+def _launch_waste_basket_for_browser(config: ConnectorConfig) -> dict:
+    """Start the local Owner helper and return its Waste Basket URL."""
+    existing = _running_owner_helper()
+    if existing:
+        return existing
+
+    helper = config.repo_root / "scripts" / "local_server.py"
+    if not helper.exists():
+        raise RuntimeError(f"Owner helper is missing: {helper}")
+
+    log_dir = Path.home() / "Library" / "Logs" / "PhotosByElie"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_path = log_dir / "new-owner-waste-basket-browser.log"
+    env = _sidecar_helper_env(config)
+    python = shutil.which("python3", path=env["PATH"]) or sys.executable
+
+    for port in range(OWNER_HELPER_PORT_START, OWNER_HELPER_PORT_LIMIT):
+        with log_path.open("a", encoding="utf-8") as log:
+            log.write(f"\n--- New Owner Waste Basket launch {time.strftime('%Y-%m-%d %H:%M:%S')} port {port} ---\n")
+            log.flush()
+            process = subprocess.Popen(
+                [python, str(helper), str(port)],
+                cwd=config.repo_root,
+                stdout=log,
+                stderr=subprocess.STDOUT,
+                text=True,
+                env=env,
+                start_new_session=True,
+            )
+        for _attempt in range(40):
+            if process.poll() is not None:
+                break
+            if _owner_helper_ready(port):
+                return {"url": _owner_waste_basket_url(port), "port": port, "reused": False}
+            time.sleep(0.25)
+        if process.poll() is None:
+            process.terminate()
+            try:
+                process.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                process.kill()
+
+    raise RuntimeError("Could not start the local Owner helper on ports 8000-8099.")
 
 
 def _sidecar_job_public_payload(config: ConnectorConfig, job_id: str, job: dict) -> dict:
@@ -409,7 +476,7 @@ def start_local_status_server(config: ConnectorConfig) -> None:
 
         def do_OPTIONS(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API.
             parsed = urlparse(self.path)
-            if parsed.path not in {LOCAL_STATUS_PATH, LOCAL_SIDECAR_OPEN_PATH, LOCAL_SIDECAR_STATUS_PATH}:
+            if parsed.path not in {LOCAL_STATUS_PATH, LOCAL_SIDECAR_OPEN_PATH, LOCAL_SIDECAR_STATUS_PATH, LOCAL_WASTE_BASKET_OPEN_PATH}:
                 self.send_response(404)
                 self.end_headers()
                 return
@@ -419,6 +486,22 @@ def start_local_status_server(config: ConnectorConfig) -> None:
 
         def do_GET(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API.
             parsed = urlparse(self.path)
+            if parsed.path == LOCAL_WASTE_BASKET_OPEN_PATH:
+                try:
+                    workspace = _launch_waste_basket_for_browser(config)
+                    self.send_response(302)
+                    self.send_header("Location", str(workspace["url"]))
+                    self.send_header("Cache-Control", "no-store")
+                    self.end_headers()
+                except Exception as error:  # noqa: BLE001 - surface launch failure in the browser.
+                    body = f"Could not open the local Waste Basket: {error}".encode("utf-8")
+                    self.send_response(500)
+                    self.send_header("Content-Type", "text/plain; charset=utf-8")
+                    self.send_header("Content-Length", str(len(body)))
+                    self.send_header("Cache-Control", "no-store")
+                    self.end_headers()
+                    self.wfile.write(body)
+                return
             if parsed.path == LOCAL_SIDECAR_OPEN_PATH:
                 job_id = f"local-sidecar-{int(time.time() * 1000)}"
                 with sidecar_jobs_lock:

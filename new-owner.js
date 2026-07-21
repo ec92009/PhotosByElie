@@ -84,6 +84,8 @@
   const fixtureUploadRunPlanButton = $("[data-fixture-upload-run-plan]");
   const fixtureUploadRunCommitButton = $("[data-fixture-upload-run-commit]");
   const fixtureUploadRunOutput = $("[data-fixture-upload-run-output]");
+  const wasteBasketLink = $("[data-new-owner-waste-basket]");
+  const wasteBasketStatus = $("[data-new-owner-waste-basket-status]");
   const requestedUploadRunId = new URLSearchParams(window.location.search).get("uploadRun") || "";
   if (fixtureUploadRunInput && requestedUploadRunId) fixtureUploadRunInput.value = requestedUploadRunId;
 
@@ -115,6 +117,21 @@
     button.title = state.localConnectorChecked && !localConnectorId()
       ? "This browser could not verify localhost; click to try this Mac's local bridge directly."
       : "";
+  }
+
+  function syncWasteBasketControl() {
+    if (!wasteBasketLink) return;
+    const localReady = Boolean(localConnectorId());
+    wasteBasketLink.toggleAttribute("aria-disabled", state.localConnectorChecked && !localReady);
+    wasteBasketLink.classList.toggle("is-disabled", state.localConnectorChecked && !localReady);
+    wasteBasketLink.title = state.localConnectorChecked && !localReady
+      ? "Start or reinstall the Photos By Elie Mac connector, then refresh Owner."
+      : "Open the recoverable Waste Basket on this Mac.";
+    if (wasteBasketStatus) {
+      wasteBasketStatus.textContent = localReady
+        ? `Ready on ${connectorDisplayName(localConnectorId())}. Restores are reversible; permanent discard and empty-basket actions require confirmation.`
+        : "The Mac connector opens the private local review surface; nothing in the Waste Basket is public.";
+    }
   }
 
   const setQueueControlsBusy = (busy) => {
@@ -251,6 +268,7 @@
         if (response.ok && payload.ok && connectorId) {
           state.localConnector = { ...payload, connectorId };
           state.localConnectorChecked = true;
+          syncWasteBasketControl();
           return;
         }
       } catch {
@@ -260,6 +278,7 @@
       }
     }
     state.localConnectorChecked = true;
+    syncWasteBasketControl();
   };
 
   const renderLocalConnector = () => {

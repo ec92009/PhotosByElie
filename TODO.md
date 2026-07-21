@@ -4,7 +4,7 @@ Last updated: 2026-07-21
 
 ## Current Facts
 
-- Public visible build: `v143.6`.
+- Public visible build: `v143.7`.
 - Sidecar local build: `v126.6`.
 - Public site: `https://photos-by-elie.com/`.
 - Local preview: `http://localhost:8000/`.
@@ -22,7 +22,7 @@ Last updated: 2026-07-21
 - Real Estate PDF/video production is fully cloud-side: the browser queues and polls; a Cloudflare Workflow launches Browser Rendering, private expiring render tokens protect the internal handoff, Media Transformations converts the cloud WebM recording to MP4, and finished files land in private R2. The Worker now persists real render phases and percentages for a determinate client progress bar with elapsed time/ETA, and the output/shelf flow is localized in English, French, and Spanish. The production music pool uses forty verified 60-second R2 clips and repeats the selected clip for longer videos without modifying the source MP3s.
 - The Real Estate finished-products shelf loads cloud records automatically without exposing the old manual sync banner or Sync button.
 - Public catalog integrity: `ok`; public SQLite, Worker catalog, homepage data,
-  Expo manifest, and media sidecar agree at `3,551` lifecycle-active rows.
+  Expo manifest, and media sidecar agree at `3,531` lifecycle-active rows.
 - Public commercial catalog scale: `2713` media rows after retiring AI-generated images from storefront publication.
 - Gallery counts: France `379`, Italy `70`, Mexico `31`, Portugal `214`, Slovakia `2`, Spain `1872`, USA `145`.
 - AI/Leonardo source and Owner records remain preserved outside the public commercial catalog.
@@ -59,7 +59,7 @@ Last updated: 2026-07-21
    - Turn research into concrete offer copy, package names, pricing hypotheses, and testable next actions.
 
 3. **Curate the first sellable storefront.**
-   - Current catalog reconciliation is complete at `3,551` camera-made items;
+   - Current catalog reconciliation is complete at `3,531` camera-made items;
      Sidecar-approved uploads are registered, explicit tombstones and
      hidden/discarded rows are excluded, and publish validation passes.
    - Cloud Owner title/keyword editing and keyword-blacklist management are
@@ -167,6 +167,12 @@ Last updated: 2026-07-21
    - Exercise people, roles, group create/edit/archive, bulk add/revoke memberships, and reversible writes from the browser before granting real non-fixture users.
    - Keep clearly marked fixture people and event/group records with fake `.test` email addresses so role assignment and event access flows can be rehearsed without granting real people.
    - Snapshot before mutations, append audit entries, and prefer disable/revoke over hard delete.
+
+21. **Repair three catalog source-master gaps when source storage is mounted.**
+   - Recover `img-5988-fe9bda0bdb`, `img-6157-40f428f4db`, and
+     `img-6174-8674aea1e3` through the normal verified upload path.
+   - Until then, describe the catalog as `3,528` fully deliverable items plus
+     three blocked source repairs; do not claim all `3,531` are sale-ready.
 
 ## Validation Before Publishing
 

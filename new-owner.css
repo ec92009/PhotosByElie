@@ -129,10 +129,22 @@ body[data-gallery="new-owner"] main.new-owner-shell {
 }
 
 .new-owner-card[aria-label="Cloud access snapshot"],
-.new-owner-card[aria-label="Build a Fixture"],
 .new-owner-card[aria-label="Apple Photos Real Estate intake"],
 .new-owner-card[aria-label="Mac connectors"] {
   grid-column: 1;
+}
+
+.new-owner-card[aria-label="Build a Fixture"] {
+  grid-column: 1 / -1;
+}
+
+.new-owner-action-controls-start {
+  justify-content: flex-start;
+}
+
+.new-owner-action-controls .is-disabled {
+  opacity: .55;
+  pointer-events: none;
 }
 
 .fixture-builder-steps {
@@ -763,9 +775,9 @@ body[data-gallery="new-owner"] main.new-owner-shell {
     grid-template-columns: 1fr;
   }
 
-  .new-owner-card,
-  .new-owner-card-wide {
-    grid-column: auto;
+  .new-owner-grid > .new-owner-card,
+  .new-owner-grid > .new-owner-card-wide {
+    grid-column: 1 / -1;
     grid-row-end: auto;
   }
 

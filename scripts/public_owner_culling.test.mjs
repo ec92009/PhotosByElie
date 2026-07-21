@@ -64,3 +64,24 @@ test("panorama full-height mode stays escapable and yields autoplay to the visit
   assert.match(styles, /\.pano-scroll-toggle\.is-full-height-exit\{[\s\S]*position:fixed/);
   assert.match(styles, /\.finder-preview-close\{/);
 });
+
+test("Owner exposes a contained fixture builder and recoverable Waste Basket manager", () => {
+  const owner = read("owner.html");
+  const ownerStyles = read("new-owner.css");
+  const ownerScript = read("new-owner.js");
+  const review = read("owner-review.js");
+  const hidden = read("hidden-page.js");
+
+  assert.match(owner, /aria-label="Build a Fixture"/);
+  assert.match(ownerStyles, /\.new-owner-card\[aria-label="Build a Fixture"\]\s*\{\s*grid-column:\s*1\s*\/\s*-1;/);
+  assert.match(ownerStyles, /@media \(max-width: 900px\)[\s\S]*\.fixture-builder-create,[\s\S]*grid-template-columns:\s*1fr;/);
+  assert.match(ownerStyles, /\.new-owner-grid > \.new-owner-card,[\s\S]*grid-column:\s*1\s*\/\s*-1;/);
+  assert.match(owner, /aria-label="Waste Basket"/);
+  assert.match(owner, /\/photosbyelie\/open-wastebasket/);
+  assert.match(ownerScript, /syncWasteBasketControl/);
+  assert.match(review, /data-hidden-restore-selected/);
+  assert.match(review, /data-hidden-discard-selected/);
+  assert.match(review, /data-hidden-empty/);
+  assert.match(hidden, /const restorePhotoIds = async/);
+  assert.match(hidden, /const discardPhotoIds = async/);
+});

@@ -15,7 +15,7 @@ for remote execution.
 - Public site: `https://photos-by-elie.com/`
 - Local preview: `http://localhost:8000/`
 - Owner intake URL: `https://photos-by-elie.com/owner.html`
-- Current visible build: `v143.6`
+- Current visible build: `v143.7`
 - Sidecar local build: `v126.6`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
@@ -191,6 +191,20 @@ python3 scripts/sidecar_maintenance.py register-uploaded-catalog --dry-run
   single-photo move is surfaced to the caller instead of being overwritten by
   a false success message. Full regression suite: 113 JavaScript tests plus 91
   Python tests passed.
+- In `v143.7`, Build a Fixture spans the Owner workspace so its step rail,
+  fixture controls, and responsive fields cannot overlap the neighboring
+  masonry cards. Owner also exposes a connector-backed Waste Basket manager
+  with multi-select restore, permanent discard, and confirmed empty-basket
+  operations through the supported lifecycle writer. A signed, paginated R2
+  cleanup removed `69,960` unreferenced catalog-prefix objects totaling
+  `362,526,753,985` bytes; the independent post-cleanup dry-run preserved
+  `10,764` catalog/active/hidden objects and found zero further candidates.
+  Real Estate, deliveries, music, shared, and root prefixes were out of scope.
+  The visible catalog has `3,531` items; `3,528` have private masters in R2,
+  while `img-5988-fe9bda0bdb`, `img-6157-40f428f4db`, and
+  `img-6174-8674aea1e3` need source-master repair when their source volume is
+  available. Missing cached JPG sizes are not blockers because the Worker
+  derives them from a present master on demand.
 - Paid/private access item #4 has central ticket `PBE-20260708-6FBE` and a stronger Worker regression pass in the current working tree: `publicOrder` hides delivery ZIP/storage keys by default, deployed checkout/order/session payloads expose only Worker download-token URLs and buyer-facing file details, and Real Estate deliverable/job/list payloads no longer expose output R2 keys, source-video private keys, private master fields, or cloud-source keys while internal R2 records retain the keys needed for authorized asset serving. `worker/local-server.mjs` opts into `exposeDeliveryStorageKeys: true` only for localhost ZIP inspection. Verified with `node --check worker/checkout-worker.mjs`, `node --check worker/local-server.mjs`, `node --check worker/real-estate-deliverables.mjs`, `node --test worker/checkout-worker.test.mjs`, full `npm test`, and `git diff --check`.
 - Next Apple Photos intake action: use `http://localhost:8011/sidecar.html` for Sidecar sandbox culling from today backward. Pick/reject/hide in reasonable visible-preview batches first; only reviewed/picked survivors should later flow toward Upload Bridge/catalog publishing. Treat Owner `Import to Expo` as a secondary direct path, not the default intake route.
 - Deferred hygiene action: add a supported retry/reset command for Upload Bridge export blocks so future block clearing uses a named maintenance path instead of ad hoc SQL.

@@ -39,7 +39,22 @@
         <span aria-hidden="true">|</span>
         <kbd>Double-click</kbd> detail
       `,
-      root: `<section class="panel mock-gallery" data-hidden-root></section>`,
+      root: `
+        <section class="panel waste-basket-manager" data-waste-basket-manager>
+          <div class="waste-basket-manager-summary">
+            <strong data-hidden-selection-count>0 selected</strong>
+            <span>Select with click, Shift-click, or Command-click.</span>
+          </div>
+          <div class="waste-basket-manager-actions">
+            <button class="btn secondary" type="button" data-hidden-select-all>All visible</button>
+            <button class="btn secondary" type="button" data-hidden-clear-selection disabled>Clear</button>
+            <button class="btn secondary" type="button" data-hidden-restore-selected disabled>Restore selected</button>
+            <button class="btn secondary waste-basket-danger" type="button" data-hidden-discard-selected disabled>Delete selected permanently</button>
+            <button class="btn waste-basket-danger" type="button" data-hidden-empty>Empty Waste Basket</button>
+          </div>
+        </section>
+        <section class="panel mock-gallery" data-hidden-root></section>
+      `,
       scripts: ["hidden-store.js", "gallery-card.js", "hidden-page.js"],
     },
     unknown: {

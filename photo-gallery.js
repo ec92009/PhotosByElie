@@ -77,6 +77,7 @@ const galleryActions = document.querySelector("[data-gallery-actions]");
 const versionedHref = (href) => window.photosByElieVersionedHref?.(href) || href;
 let selectedIndex = 0;
 const selectedPhotoIds = new Set();
+let selectionAnchorPhotoId = "";
 let lastCulledPhotoIds = [];
 let ownerCullToolbar = null;
 const pageSize = 24;
@@ -143,10 +144,12 @@ const ensureOwnerCullToolbar = () => {
   galleryActions.prepend(ownerCullToolbar);
   ownerCullToolbar.querySelector("[data-owner-cull-select-visible]").addEventListener("click", () => {
     renderedGalleryPhotos.slice(0, 500).forEach((photo) => selectedPhotoIds.add(photo.id));
+    selectionAnchorPhotoId = renderedGalleryPhotos[0]?.id || "";
     renderGallery();
   });
   ownerCullToolbar.querySelector("[data-owner-cull-clear]").addEventListener("click", () => {
     selectedPhotoIds.clear();
+    selectionAnchorPhotoId = "";
     renderGallery();
   });
   ownerCullToolbar.querySelector("[data-owner-cull-hide]").addEventListener("click", async () => {
@@ -157,6 +160,7 @@ const ensureOwnerCullToolbar = () => {
       await hiddenActions.markMany(ids);
       lastCulledPhotoIds = ids;
       selectedPhotoIds.clear();
+      selectionAnchorPhotoId = "";
       renderGallery();
       setGalleryStatus(`${ids.length} photo${ids.length === 1 ? "" : "s"} moved to Waste Basket.`);
     } catch (error) {
@@ -858,6 +862,42 @@ const updateSelection = ({ scroll = true } = {}) => {
   if (scroll) cards[selectedIndex]?.scrollIntoView({ block: "nearest", inline: "nearest" });
 };
 
+const syncOwnerSelectionButtons = () => {
+  galleryRoot.querySelectorAll("[data-owner-select-photo]").forEach((button) => {
+    const selected = selectedPhotoIds.has(button.dataset.photoId);
+    button.classList.toggle("is-selected", selected);
+    button.setAttribute("aria-label", selected ? "Remove from selection" : "Add to selection");
+    button.setAttribute("aria-pressed", selected ? "true" : "false");
+    button.textContent = selected ? "✓" : "+";
+  });
+};
+
+const selectOwnerPhotoFromPointer = (photoId, photos, event = {}) => {
+  const index = photos.findIndex((photo) => photo.id === photoId);
+  if (index < 0) return;
+  const toggle = Boolean(event.metaKey || event.ctrlKey);
+  const anchorIndex = photos.findIndex((photo) => photo.id === selectionAnchorPhotoId);
+  if (event.shiftKey && anchorIndex >= 0) {
+    if (!toggle) selectedPhotoIds.clear();
+    const start = Math.min(anchorIndex, index);
+    const end = Math.max(anchorIndex, index);
+    photos.slice(start, end + 1).forEach((photo) => {
+      if (selectedPhotoIds.size < 500) selectedPhotoIds.add(photo.id);
+    });
+  } else if (toggle) {
+    if (selectedPhotoIds.has(photoId)) selectedPhotoIds.delete(photoId);
+    else if (selectedPhotoIds.size < 500) selectedPhotoIds.add(photoId);
+    selectionAnchorPhotoId = photoId;
+  } else {
+    selectedPhotoIds.clear();
+    selectedPhotoIds.add(photoId);
+    selectionAnchorPhotoId = photoId;
+  }
+  selectedIndex = index;
+  updateSelection({ scroll: false });
+  syncOwnerSelectionButtons();
+};
+
 const visibleColumnCount = () => {
   const cards = [...galleryRoot.querySelectorAll("[data-photo-index]")];
   if (!cards.length) return 1;
@@ -1255,10 +1295,7 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
     button.addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();
-      const photoId = button.dataset.photoId;
-      if (selectedPhotoIds.has(photoId)) selectedPhotoIds.delete(photoId);
-      else if (selectedPhotoIds.size < 500) selectedPhotoIds.add(photoId);
-      renderGallery();
+      selectOwnerPhotoFromPointer(button.dataset.photoId, visibleSubset, event);
     });
   });
   galleryRoot.querySelectorAll("[data-photo-index]").forEach((card) => {
@@ -1287,26 +1324,14 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
       });
     });
   }
-  if (localModerationEnabled) {
+  if (ownerCullingEnabled) {
     galleryRoot.querySelectorAll("[data-photo-index]").forEach((card) => {
       card.addEventListener("click", (event) => {
+        if (event.target.closest("button, [data-owner-title-edit]")) return;
         event.preventDefault();
-        selectedIndex = Number(card.dataset.photoIndex || 0);
-        updateSelection();
-      });
-      card.addEventListener("dblclick", (event) => {
-        event.preventDefault();
-        window.location.assign(versionedHref(card.dataset.photoHref || card.querySelector("[data-photo-link]")?.getAttribute("href")));
-      });
-    });
-  }
-  if (ownerCullingEnabled && !localModerationEnabled) {
-    galleryRoot.querySelectorAll("[data-photo-index]").forEach((card) => {
-      card.addEventListener("click", (event) => {
-        if (event.target.closest("button")) return;
-        event.preventDefault();
-        selectedIndex = Number(card.dataset.photoIndex || 0);
-        updateSelection({ scroll: false });
+        const index = Number(card.dataset.photoIndex || 0);
+        const photo = visibleSubset[index];
+        if (photo) selectOwnerPhotoFromPointer(photo.id, visibleSubset, event);
       });
       card.addEventListener("dblclick", (event) => {
         event.preventDefault();
@@ -1584,6 +1609,7 @@ if (galleryRoot && gallery) {
           else await hiddenActions.markMany(ids);
           lastCulledPhotoIds = ids;
           selectedPhotoIds.clear();
+          selectionAnchorPhotoId = "";
           selectedIndex = Math.min(selectedIndex, Math.max(0, photos.length - 2));
           renderGallery();
           setGalleryStatus(`${ids.length} photo${ids.length === 1 ? "" : "s"} moved to Waste Basket.`);

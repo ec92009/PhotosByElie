@@ -14,7 +14,14 @@ test("public Owner culling waits for cloud auth and uses the Max connector queue
   assert.match(hidden, /const undoMany = async/);
   assert.match(hidden, /"update-photo-metadata", "save-keyword-blacklist"/);
   assert.match(hidden, /const saveKeywordBlacklist = async/);
+  assert.match(hidden, /moderationPayload\[key\] = extra\[key\]/);
+  assert.match(hidden, /\["title", "keywords", "mode"\]/);
+  assert.match(hidden, /throw error;\s*\n\s*\}\);/);
   assert.match(gallery, /ownerEditable: ownerCullingEnabled/);
+  assert.match(gallery, /const selectOwnerPhotoFromPointer =/);
+  assert.match(gallery, /event\.shiftKey && anchorIndex >= 0/);
+  assert.match(gallery, /event\.metaKey \|\| event\.ctrlKey/);
+  assert.match(gallery, /syncOwnerSelectionButtons\(\)/);
   assert.match(gallery, /await window\.photosByElieHiddenActionsReady/);
   assert.match(detail, /await window\.photosByElieHiddenActionsReady/);
   assert.match(gallery, /data-owner-cull-select-visible/);

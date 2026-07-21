@@ -243,18 +243,22 @@
   const remoteOwnerAction = async (operation, photoId, extra = {}) => {
     if (!cloudBaseUrl) throw new Error("Owner action service is unavailable.");
     const photoIds = normalize(extra.photo_ids || (photoId ? [photoId] : []));
+    const moderationPayload = {
+      operation,
+      photoId: photoId || photoIds[0] || "",
+      photoIds,
+      requestedConnector: "max",
+    };
+    ["title", "keywords", "mode"].forEach((key) => {
+      if (Object.prototype.hasOwnProperty.call(extra, key)) moderationPayload[key] = extra[key];
+    });
     const response = await fetch(`${cloudBaseUrl}/owner/actions`, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         action: "photo-moderation",
-        payload: {
-          operation,
-          photoId: photoId || photoIds[0] || "",
-          photoIds,
-          requestedConnector: "max",
-        },
+        payload: moderationPayload,
       }),
     });
     const queued = await response.json().catch(() => ({}));
@@ -294,7 +298,8 @@
     const requestPayload = { action, ...extra };
     if (photoId) requestPayload.photo_id = photoId;
     if (!photoOptionalActions.includes(action) && !requestPayload.photo_id && !normalize(requestPayload.photo_ids).length) return null;
-    setOwnerBusy(true, ownerActionBusyMessages[action] || "Owner action is running...");
+    const blocksPage = localEnabled || !["hide", "hide-many", "update-photo-metadata"].includes(action);
+    if (blocksPage) setOwnerBusy(true, ownerActionBusyMessages[action] || "Owner action is running...");
     try {
       if (!localEnabled) {
         if (!["hide", "hide-many", "undo-hide", "undo-hide-many", "update-photo-metadata", "save-keyword-blacklist"].includes(action)) {
@@ -321,7 +326,7 @@
       }
       return applyServerState(payload);
     } finally {
-      setOwnerBusy(false);
+      if (blocksPage) setOwnerBusy(false);
     }
   };
 
@@ -444,10 +449,11 @@
         window.dispatchEvent(new CustomEvent("photosbyelie:owneractionerror", {
           detail: { action: "hide", photoId, message: error?.message || "Could not move photo to Waste Basket." },
         }));
+        throw error;
       });
     };
     if (current.includes(photoId)) {
-      queueHideAction();
+      queueHideAction().catch(() => {});
       return current;
     }
     forgetReserveOnly([photoId]);

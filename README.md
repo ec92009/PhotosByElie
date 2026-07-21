@@ -6,9 +6,9 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v144.0`
+- Current visible version: `v145.0`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
-- `v144.0` repairs Waste Basket restore behavior on both public and local Owner
+- `v145.0` repairs Waste Basket restore behavior on both public and local Owner
   pages and reconstructs watermarked previews for blocked IDs missing from the
   deployed hidden-photo catalog.
 - `v143.15` simplifies Latest social to three quiet text links and prevents the
@@ -160,7 +160,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `scripts/validate_publish.js`: pre-push SQLite catalog, asset-pair, resolution metadata, and publish-summary check
 - `scripts/build_photo_state_db.py`: builds ignored SQLite state database at `tmp/photo-state.sqlite` from the catalog, import cache, blocked/discarded tombstones, owner actions, sidecars, and R2 logs
 - `scripts/watch_photo_state_db.zsh`: optional local background refresher for the SQLite state database
-- `scripts/new_owner_connector.py`: background Mac connector that polls authenticated cloud Owner actions and performs PhotoKit/Owner SQLite work without serving a localhost web UI; interactive Owner actions remain on the configured short poll interval even while idle. The Worker maintains a pending-action KV index so these frequent checks do not scan historical actions.
+- `scripts/new_owner_connector.py`: background Mac connector that polls authenticated cloud Owner actions and performs PhotoKit/Owner SQLite work without serving a localhost web UI; it backs off to one poll per minute while idle, while a visible Waste Basket or actively monitored Owner job holds a short-lived five-second interactive polling lease through the local bridge. The Worker maintains a pending-action KV index so active polling does not scan historical actions.
 - `scripts/install_new_owner_connector.zsh`: per-Mac connector and LaunchAgent installer; credentials stay in a mode-600 user config outside git
 - `scripts/build_new_owner_connector_package.zsh`: builds the Owner-only downloadable Mac connector ZIP with the permission-bearing Photos Bridge app and credential-free installer
 - `AGENTS.md`: repo-level working preferences, versioning SOP, and timelog SOP

@@ -76,6 +76,8 @@ test("Owner exposes a contained fixture builder and recoverable Waste Basket man
   const review = read("owner-review.js");
   const hidden = read("hidden-page.js");
   const hiddenActions = read("hidden-actions.js");
+  const ownerActivity = read("owner-activity.js");
+  const reviewHtml = read("owner-review.html");
 
   assert.match(owner, /aria-label="Build a Fixture"/);
   assert.match(ownerStyles, /\.new-owner-card\[aria-label="Build a Fixture"\]\s*\{\s*grid-column:\s*1\s*\/\s*-1;/);
@@ -96,6 +98,12 @@ test("Owner exposes a contained fixture builder and recoverable Waste Basket man
   assert.match(review, /Shift[\s\S]*Arrows[\s\S]*select range/);
   assert.match(hidden, /const restorePhotoIds = async/);
   assert.match(hidden, /await restorePhotoIds\(\[selected\.id\]\)/);
+  assert.match(hidden, /photosByElieOwnerActivity\?\.hold\?\.\("waste-basket"\)/);
+  assert.match(ownerScript, /photosByElieOwnerActivity\?\.hold\?\.\("owner-job"\)/);
+  assert.match(ownerActivity, /document\.visibilityState === "hidden"/);
+  assert.match(ownerActivity, /setInterval\(touch, 4000\)/);
+  assert.match(owner, /owner-activity\.js/);
+  assert.match(reviewHtml, /owner-activity\.js/);
   assert.match(hidden, /galleryKey: `expo\/\$\{photoId\}_900\.jpg`/);
   assert.match(hidden, /detailKey: `expo\/\$\{photoId\}_1800\.jpg`/);
   assert.match(hidden, /const discardPhotoIds = async/);

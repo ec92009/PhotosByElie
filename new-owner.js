@@ -882,6 +882,7 @@
       return null;
     }
     state.busy = true;
+    const releaseInteractivePolling = window.photosByElieOwnerActivity?.hold?.("owner-job");
     setQueueControlsBusy(true);
     setActionStatus(statusLabel, "busy");
     let completedAction = null;
@@ -916,6 +917,7 @@
       setActionStatus(message, "error");
       setStatus(message);
     } finally {
+      releaseInteractivePolling?.();
       state.busy = false;
       setQueueControlsBusy(false);
       renderRealEstateIntake();

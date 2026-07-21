@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 from scripts.new_owner_connector import (
     ConnectorConfig,
+    InteractivePollingLease,
     _allowed_local_status_origin,
     _local_status_payload,
     _local_sidecar_open_action,
@@ -41,12 +42,20 @@ class UploadRegistrationScopeTest(unittest.TestCase):
         self.assertEqual(result["registration"]["registeredCount"], 2)
         self.assertEqual(calls[1][-4:], ["--asset-id", "asset-a", "--asset-id", "asset-b"])
 
-    def test_interactive_polling_stays_responsive_while_idle(self):
-        self.assertEqual(next_poll_interval(5, 5, 0), 5)
-        self.assertEqual(next_poll_interval(5, 10, 0), 5)
-        self.assertEqual(next_poll_interval(5, 40, 0), 5)
-        self.assertEqual(next_poll_interval(5, 60, 0), 5)
+    def test_idle_polling_backs_off_and_active_work_resets_it(self):
+        self.assertEqual(next_poll_interval(5, 5, 0), 10)
+        self.assertEqual(next_poll_interval(5, 10, 0), 20)
+        self.assertEqual(next_poll_interval(5, 40, 0), 60)
+        self.assertEqual(next_poll_interval(5, 60, 0), 60)
         self.assertEqual(next_poll_interval(5, 60, 1), 5)
+
+    def test_interactive_gallery_lease_holds_short_polling(self):
+        self.assertEqual(next_poll_interval(5, 60, 0, interactive=True), 5)
+        self.assertEqual(next_poll_interval(30, 60, 0, interactive=True), 5)
+        lease = InteractivePollingLease()
+        self.assertFalse(lease.active())
+        lease.touch(5)
+        self.assertTrue(lease.active())
 
     def test_empty_upload_does_not_run_global_registration(self):
         with patch("scripts.new_owner_connector._run_repo_json", return_value={"status": "done", "items": []}) as run:

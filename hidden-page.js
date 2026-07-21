@@ -36,6 +36,8 @@
   let lastSelectionIndex = null;
   let managerBusy = false;
   const selectedIds = new Set();
+
+  window.photosByElieOwnerActivity?.hold?.("waste-basket");
   const galleryLayout = window.photosByElieGalleryLayout.createMasonryController({
     root: galleryRoot,
     getPhotos: () => renderedPhotos,

@@ -630,8 +630,9 @@ Clock state: running
 | 2026-07-21 | 23:47 CEST | 23:48 CEST | 0:01 | Rejected the dense social shelf and requested a simpler treatment without footer overlap; implementation, browser QA, tests, and deployment runtime excluded. |
 | 2026-07-21 | 23:58 CEST | 23:59 CEST | 0:01 | Reported a failed Solana Beach Waste Basket restore and multiple missing blocked-photo previews; implementation, browser QA, tests, and deployment runtime excluded. |
 | 2026-07-22 | 00:07 CEST | 00:12 CEST | 0:01 | Clarified that Waste Basket restores were completing but became progressively slower, identifying the idle polling cadence as the usability defect; implementation, tests, and service restart runtime excluded. |
+| 2026-07-22 | 00:13 CEST | 00:19 CEST | 0:01 | Preserved the one-minute idle backoff and selected a five-second cadence only for visible Waste Basket use and actively monitored Owner connector jobs; implementation, tests, and deployment runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 31:37
+Active collaboration time used: 31:38
 Remaining budget: not set

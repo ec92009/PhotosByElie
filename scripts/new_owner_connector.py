@@ -33,17 +33,18 @@ from urllib.request import Request, urlopen
 
 
 DEFAULT_CONFIG_PATH = Path.home() / ".config" / "photosbyelie" / "connector.json"
-CONNECTOR_VERSION = "1.3"
+CONNECTOR_VERSION = "1.4"
 DEFAULT_INTERVAL_SECONDS = 5
-# Owner actions are interactive. Keep the daemon warm enough that a newly
-# queued restore or discard is picked up promptly even after a long idle spell.
-DEFAULT_IDLE_MAX_INTERVAL_SECONDS = DEFAULT_INTERVAL_SECONDS
+DEFAULT_IDLE_MAX_INTERVAL_SECONDS = 60
+INTERACTIVE_POLL_INTERVAL_SECONDS = 5
+INTERACTIVE_POLL_LEASE_SECONDS = 15
 MAX_PREVIEW_BYTES = 250_000
 DEFAULT_LOCAL_STATUS_PORT = 8766
 LOCAL_STATUS_PATH = "/photosbyelie/connector-status"
 LOCAL_SIDECAR_OPEN_PATH = "/photosbyelie/open-sidecar"
 LOCAL_SIDECAR_STATUS_PATH = "/photosbyelie/open-sidecar/status"
 LOCAL_WASTE_BASKET_OPEN_PATH = "/photosbyelie/open-wastebasket"
+LOCAL_OWNER_ACTIVE_PATH = "/photosbyelie/owner-active"
 OWNER_HELPER_PORT_START = 8000
 OWNER_HELPER_PORT_LIMIT = 8100
 SIDECAR_HELPER_PORT_START = 8011
@@ -71,6 +72,31 @@ class ConnectorConfig:
     repo_root: Path
     interval_seconds: int = DEFAULT_INTERVAL_SECONDS
     local_status_port: int = DEFAULT_LOCAL_STATUS_PORT
+
+
+class InteractivePollingLease:
+    """Wake idle polling and hold the short cadence while an Owner UI is active."""
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._active_until = 0.0
+        self._wakeup = threading.Event()
+
+    def touch(self, duration_seconds: int = INTERACTIVE_POLL_LEASE_SECONDS) -> None:
+        now = time.monotonic()
+        with self._lock:
+            was_active = now < self._active_until
+            self._active_until = max(self._active_until, now + max(1, duration_seconds))
+        if not was_active:
+            self._wakeup.set()
+
+    def active(self) -> bool:
+        with self._lock:
+            return time.monotonic() < self._active_until
+
+    def wait(self, timeout_seconds: int) -> None:
+        self._wakeup.wait(max(0, timeout_seconds))
+        self._wakeup.clear()
 
 
 def _clean_connector_id(value: object) -> str:
@@ -450,7 +476,7 @@ def _allowed_local_status_origin(origin: str) -> str:
     return ""
 
 
-def start_local_status_server(config: ConnectorConfig) -> None:
+def start_local_status_server(config: ConnectorConfig, polling_lease: InteractivePollingLease) -> None:
     """Expose this Mac's connector id to the local browser only."""
     if config.local_status_port <= 0:
         return
@@ -479,7 +505,7 @@ def start_local_status_server(config: ConnectorConfig) -> None:
 
         def do_OPTIONS(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API.
             parsed = urlparse(self.path)
-            if parsed.path not in {LOCAL_STATUS_PATH, LOCAL_SIDECAR_OPEN_PATH, LOCAL_SIDECAR_STATUS_PATH, LOCAL_WASTE_BASKET_OPEN_PATH}:
+            if parsed.path not in {LOCAL_STATUS_PATH, LOCAL_SIDECAR_OPEN_PATH, LOCAL_SIDECAR_STATUS_PATH, LOCAL_WASTE_BASKET_OPEN_PATH, LOCAL_OWNER_ACTIVE_PATH}:
                 self.send_response(404)
                 self.end_headers()
                 return
@@ -489,6 +515,24 @@ def start_local_status_server(config: ConnectorConfig) -> None:
 
         def do_GET(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API.
             parsed = urlparse(self.path)
+            if parsed.path == LOCAL_OWNER_ACTIVE_PATH:
+                if not self._allowed_origin():
+                    self.send_response(403)
+                    self.end_headers()
+                    return
+                polling_lease.touch()
+                body = json.dumps({
+                    "ok": True,
+                    "interactivePolling": True,
+                    "leaseSeconds": INTERACTIVE_POLL_LEASE_SECONDS,
+                }, separators=(",", ":")).encode("utf-8")
+                self.send_response(200)
+                self._send_cors_headers()
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                return
             if parsed.path == LOCAL_WASTE_BASKET_OPEN_PATH:
                 try:
                     workspace = _launch_waste_basket_for_browser(config)
@@ -926,10 +970,14 @@ def process_once(config: ConnectorConfig, client: WorkerClient) -> int:
     return processed
 
 
-def next_poll_interval(base_interval: int, current_interval: int, processed: int) -> int:
-    """Keep interactive Owner actions on the configured short poll interval."""
+def next_poll_interval(base_interval: int, current_interval: int, processed: int, *, interactive: bool = False) -> int:
+    """Back off while idle, but stay responsive during an interactive Owner lease."""
     base = max(2, min(300, int(base_interval)))
-    return min(DEFAULT_IDLE_MAX_INTERVAL_SECONDS, base)
+    if interactive:
+        return min(base, INTERACTIVE_POLL_INTERVAL_SECONDS)
+    if processed:
+        return base
+    return min(DEFAULT_IDLE_MAX_INTERVAL_SECONDS, max(base, int(current_interval) * 2))
 
 
 def main() -> int:
@@ -942,23 +990,34 @@ def main() -> int:
     os.environ["PATH"] = _sidecar_helper_env()["PATH"]
     config = load_config(args.config.expanduser())
     client = WorkerClient(config)
+    polling_lease = InteractivePollingLease()
     if not args.once:
-        start_local_status_server(config)
+        start_local_status_server(config, polling_lease)
     poll_interval = config.interval_seconds
     while True:
         try:
             processed = process_once(config, client)
             if processed:
                 print(f"Processed {processed} Owner action(s).", flush=True)
-            poll_interval = next_poll_interval(config.interval_seconds, poll_interval, processed)
+            poll_interval = next_poll_interval(
+                config.interval_seconds,
+                poll_interval,
+                processed,
+                interactive=polling_lease.active(),
+            )
         except Exception as error:  # noqa: BLE001 - daemon retries transient network/auth failures.
             print(str(error), file=sys.stderr, flush=True)
-            poll_interval = next_poll_interval(config.interval_seconds, poll_interval, 0)
+            poll_interval = next_poll_interval(
+                config.interval_seconds,
+                poll_interval,
+                0,
+                interactive=polling_lease.active(),
+            )
             if args.once:
                 return 1
         if args.once:
             return 0
-        time.sleep(poll_interval)
+        polling_lease.wait(poll_interval)
 
 
 if __name__ == "__main__":

@@ -162,21 +162,24 @@
 
   const hiddenPhotos = () => {
     const index = allPhotoIndex();
-    return hiddenActions.read().map((photoId) => index.get(photoId) || {
-      id: photoId,
-      title: photoId,
-      collectionTitle: "Unknown",
-      collectionAccent: "unknown-gallery",
-      className: "p1",
-      source: "missing",
-      media: {
-        type: "photo",
-        publicPreview: {
-          allowed: true,
-          galleryKey: `expo/${photoId}_900.jpg`,
-          detailKey: `expo/${photoId}_1800.jpg`,
+    return hiddenActions.read().map((photoId) => {
+      const metadata = hiddenActions.metadataFor?.(photoId) || {};
+      return index.get(photoId) || {
+        id: photoId,
+        title: metadata.title || "Untitled photo",
+        collectionTitle: metadata.collectionTitle || "Unknown",
+        collectionAccent: "unknown-gallery",
+        className: "p1",
+        source: "missing",
+        media: {
+          type: "photo",
+          publicPreview: {
+            allowed: true,
+            galleryKey: `expo/${photoId}_900.jpg`,
+            detailKey: `expo/${photoId}_1800.jpg`,
+          },
         },
-      },
+      };
     });
   };
 

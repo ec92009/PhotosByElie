@@ -669,6 +669,20 @@ test("public photo moderation is routed only to the requested Owner connector", 
     headers: { authorization: "Bearer david-secret" },
   }));
   assert.equal((await davidResponse.json()).actions.length, 0);
+
+  const metadataResponse = await worker.fetch(jsonRequest("https://worker.test/owner/actions", {
+    action: "owner-hidden-metadata",
+    payload: {
+      photoIds: ["001-private"],
+      requestedConnector: "max",
+    },
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(metadataResponse.status, 202);
+  const maxMetadataResponse = await worker.fetch(new Request("https://worker.test/owner/connector/actions", {
+    headers: { authorization: "Bearer max-secret" },
+  }));
+  const maxMetadataBody = await maxMetadataResponse.json();
+  assert.equal(maxMetadataBody.actions.some((action) => action.type === "owner-hidden-metadata"), true);
 });
 
 test("sidecar cloud decisions are stored behind Owner or connector auth", async () => {

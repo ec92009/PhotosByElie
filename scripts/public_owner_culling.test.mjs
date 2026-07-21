@@ -91,6 +91,8 @@ test("Owner exposes a contained fixture builder and recoverable Waste Basket man
   assert.match(ownerScript, /wasteBasketLink\?\.addEventListener\("click", openWasteBasket\)/);
   assert.match(hiddenActions, /\["hide", "hide-many", "undo-hide", "undo-hide-many", "discard",/);
   assert.match(hiddenActions, /get enabled\(\) \{[\s\S]*return cullingEnabled\(\)/);
+  assert.match(hiddenActions, /action: "owner-hidden-metadata"/);
+  assert.match(hiddenActions, /metadataFor/);
   assert.match(hidden, /window\.photosByElieHiddenActionsReady/);
   assert.match(review, /data-hidden-restore-selected/);
   assert.match(review, /data-hidden-discard-selected/);
@@ -107,6 +109,7 @@ test("Owner exposes a contained fixture builder and recoverable Waste Basket man
   assert.match(reviewHtml, /owner-activity\.js/);
   assert.match(hidden, /galleryKey: `expo\/\$\{photoId\}_900\.jpg`/);
   assert.match(hidden, /detailKey: `expo\/\$\{photoId\}_1800\.jpg`/);
+  assert.match(hidden, /metadata\.title \|\| "Untitled photo"/);
   assert.match(hidden, /const discardPhotoIds = async/);
   assert.match(hidden, /const extendKeyboardSelection =/);
   assert.match(hidden, /moveKeyboardFocus\(selectedIndex \+ 1, \{ extend: event\.shiftKey \}\)/);

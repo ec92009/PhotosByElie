@@ -2100,6 +2100,7 @@ export const createPhotosByElieWorker = ({
     "sidecar-review-decision",
     "sidecar-upload-publish",
     "photo-moderation",
+    "owner-hidden-metadata",
   ]);
 
   const requireOwnerConnector = async (request) => {

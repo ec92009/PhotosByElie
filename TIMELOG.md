@@ -631,8 +631,9 @@ Clock state: running
 | 2026-07-21 | 23:58 CEST | 23:59 CEST | 0:01 | Reported a failed Solana Beach Waste Basket restore and multiple missing blocked-photo previews; implementation, browser QA, tests, and deployment runtime excluded. |
 | 2026-07-22 | 00:07 CEST | 00:12 CEST | 0:01 | Clarified that Waste Basket restores were completing but became progressively slower, identifying the idle polling cadence as the usability defect; implementation, tests, and service restart runtime excluded. |
 | 2026-07-22 | 00:13 CEST | 00:19 CEST | 0:01 | Preserved the one-minute idle backoff and selected a five-second cadence only for visible Waste Basket use and actively monitored Owner connector jobs; implementation, tests, and deployment runtime excluded. |
+| 2026-07-22 | 00:36 CEST | 00:37 CEST | 0:01 | Flagged raw photo IDs as unsuitable Waste Basket titles and confirmed that private Owner metadata should supply the display names; implementation, tests, and deployment runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 31:38
+Active collaboration time used: 31:39
 Remaining budget: not set

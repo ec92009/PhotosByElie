@@ -15,6 +15,7 @@
   let ownerBusyMessage = "";
   let queuedPhotoAction = Promise.resolve();
   let remoteHiddenOverride = null;
+  let remoteHiddenMetadata = {};
   const pendingHiddenIds = new Set();
 
   const ownerActionBusyMessages = {
@@ -200,6 +201,50 @@
     const items = writeLoadedHiddenIds();
     window.dispatchEvent(new CustomEvent("photosbyelie:hiddenchange", { detail: { items, result } }));
     return result;
+  };
+
+  const metadataFor = (photoId) => {
+    const metadata = remoteHiddenMetadata?.[photoId];
+    return metadata && typeof metadata === "object" ? metadata : null;
+  };
+
+  const refreshRemoteHiddenMetadata = async () => {
+    if (localEnabled || !remoteCullingEnabled || !cloudBaseUrl) return remoteHiddenMetadata;
+    const photoIds = read().slice(0, 500);
+    if (!photoIds.length) return remoteHiddenMetadata;
+    const response = await fetch(`${cloudBaseUrl}/owner/actions`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "owner-hidden-metadata",
+        payload: { photoIds, requestedConnector: "max" },
+      }),
+    });
+    const queued = await response.json().catch(() => ({}));
+    if (!response.ok || !queued?.action?.id) return remoteHiddenMetadata;
+    const deadline = Date.now() + 45000;
+    while (Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      const poll = await fetch(`${cloudBaseUrl}/owner/actions/${encodeURIComponent(queued.action.id)}`, {
+        cache: "no-store",
+        credentials: "include",
+      });
+      const payload = await poll.json().catch(() => ({}));
+      if (!poll.ok) return remoteHiddenMetadata;
+      const state = payload?.action?.state;
+      if (state === "completed") {
+        const result = payload.action.result?.result || payload.action.result || {};
+        const metadata = result.hiddenMetadata;
+        if (metadata && typeof metadata === "object" && !Array.isArray(metadata)) {
+          remoteHiddenMetadata = metadata;
+          window.dispatchEvent(new CustomEvent("photosbyelie:hiddenchange", { detail: { items: read(), metadata: true } }));
+        }
+        return remoteHiddenMetadata;
+      }
+      if (state === "failed" || state === "cancelled") return remoteHiddenMetadata;
+    }
+    return remoteHiddenMetadata;
   };
 
   const ensureOwnerBusyIndicator = () => {
@@ -656,6 +701,7 @@
     has,
     mark,
     markMany,
+    metadataFor,
     read,
     readCountryAssignments,
     readReserveOnly,
@@ -685,6 +731,7 @@
     if (localEnabled) return syncFromPublishedBlacklist().catch(() => read());
     const state = ownerAuth?.state?.checked ? ownerAuth.state : await ownerAuth?.refresh?.();
     remoteCullingEnabled = Boolean(state?.authenticated && (state?.tier === "owner" || state?.roles?.includes?.("owner")));
+    if (remoteCullingEnabled) setTimeout(() => refreshRemoteHiddenMetadata().catch(() => {}), 0);
     return read();
   })();
   window.addEventListener("photosbyelie:ownerauthchange", (event) => {

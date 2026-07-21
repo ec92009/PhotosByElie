@@ -21,6 +21,7 @@ import platform
 import shutil
 import shlex
 import socket
+import sqlite3
 import subprocess
 import sys
 import threading
@@ -683,6 +684,67 @@ def _load_local_modules(repo_root: Path):
     return new_owner_connector_result, new_owner_sidecar_decision_result, _preview_cache_path, _run_apple_photos_bridge_app_task, apply_public_photo_moderation
 
 
+def _owner_hidden_metadata(repo_root: Path, photo_ids: list[str]) -> dict[str, dict[str, str]]:
+    """Resolve Waste Basket display titles without republishing blocked catalog rows."""
+    wanted = list(dict.fromkeys(str(value or "").strip() for value in photo_ids if str(value or "").strip()))[:500]
+    if not wanted:
+        return {}
+    registration_path = repo_root / "assets" / "owner-actions" / "sidecar-register-uploaded-catalog-latest.json"
+    database_path = repo_root / "assets" / "owner-actions" / "Owner.sqlite"
+    if not registration_path.exists() or not database_path.exists():
+        return {}
+    try:
+        registration = json.loads(registration_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    wanted_set = set(wanted)
+    asset_by_photo: dict[str, str] = {}
+
+    def visit(value: Any) -> None:
+        if isinstance(value, dict):
+            photo_id = str(value.get("photoId") or "").strip()
+            asset_id = str(value.get("assetId") or "").strip()
+            if photo_id in wanted_set and asset_id:
+                asset_by_photo[photo_id] = asset_id
+            for child in value.values():
+                visit(child)
+        elif isinstance(value, list):
+            for child in value:
+                visit(child)
+
+    visit(registration)
+    if not asset_by_photo:
+        return {}
+    photo_by_asset = {asset_id: photo_id for photo_id, asset_id in asset_by_photo.items()}
+    placeholders = ",".join("?" for _value in photo_by_asset)
+    connection = sqlite3.connect(f"file:{database_path}?mode=ro", uri=True)
+    try:
+        rows = connection.execute(
+            f"""
+            SELECT a.asset_id,
+                   COALESCE(NULLIF(TRIM(d.title), ''), NULLIF(TRIM(a.photos_title), ''),
+                            NULLIF(TRIM(a.metadata_seed_title), '')) AS display_title,
+                   COALESCE(NULLIF(TRIM(a.location_label), ''), 'Unknown') AS collection_title
+              FROM sidecar_assets a
+              LEFT JOIN sidecar_decisions d USING(asset_id)
+             WHERE a.asset_id IN ({placeholders})
+            """,
+            list(photo_by_asset),
+        ).fetchall()
+    finally:
+        connection.close()
+    result: dict[str, dict[str, str]] = {}
+    for asset_id, title, collection_title in rows:
+        photo_id = photo_by_asset.get(str(asset_id))
+        if not photo_id or not str(title or "").strip():
+            continue
+        result[photo_id] = {
+            "title": str(title).strip(),
+            "collectionTitle": str(collection_title or "Unknown").strip() or "Unknown",
+        }
+    return result
+
+
 def _preview_data_url(repo_root: Path, item: dict, preview_cache_path, run_bridge_task) -> tuple[str, str]:
     asset_id = str(item.get("assetId") or "").strip()
     if not asset_id:
@@ -855,6 +917,17 @@ def execute_action(config: ConnectorConfig, action: dict) -> dict:
             "type": action_type,
             "job": indexed.get("job") or {},
             "sync": indexed.get("sync") or {},
+            "completedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        }
+    if action_type == "owner-hidden-metadata":
+        payload = action.get("payload") if isinstance(action.get("payload"), dict) else {}
+        photo_ids = list(payload.get("photoIds") or [])
+        if not photo_ids or len(photo_ids) > 500:
+            raise RuntimeError("owner-hidden-metadata requires 1 to 500 photo IDs")
+        return {
+            "connectorId": config.connector_id,
+            "type": action_type,
+            "hiddenMetadata": _owner_hidden_metadata(config.repo_root, photo_ids),
             "completedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         }
     connector_result, decision_result, preview_cache_path, run_bridge_task, apply_public_photo_moderation = _load_local_modules(config.repo_root)

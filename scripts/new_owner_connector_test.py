@@ -1,5 +1,8 @@
 import unittest
+import json
 from pathlib import Path
+import sqlite3
+from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from scripts.new_owner_connector import (
@@ -81,6 +84,38 @@ class UploadRegistrationScopeTest(unittest.TestCase):
         self.assertEqual(arguments[1:3], ["scripts/sidecar_maintenance.py", "photos-index-sync"])
         self.assertEqual(result["job"]["status"], "done")
         self.assertEqual(result["job"]["indexedCount"], 57_500)
+
+    def test_owner_hidden_metadata_resolves_private_title_without_public_catalog(self):
+        with TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            actions_dir = root / "assets" / "owner-actions"
+            actions_dir.mkdir(parents=True)
+            (actions_dir / "sidecar-register-uploaded-catalog-latest.json").write_text(json.dumps({
+                "result": {"skipped": [{"photoId": "001-private", "assetId": "asset-private"}]},
+            }), encoding="utf-8")
+            connection = sqlite3.connect(actions_dir / "Owner.sqlite")
+            connection.executescript("""
+                CREATE TABLE sidecar_assets (
+                  asset_id TEXT PRIMARY KEY,
+                  photos_title TEXT,
+                  metadata_seed_title TEXT,
+                  location_label TEXT
+                );
+                CREATE TABLE sidecar_decisions (asset_id TEXT PRIMARY KEY, title TEXT);
+                INSERT INTO sidecar_assets VALUES ('asset-private', '', '2023 Mexico', 'Mexico');
+                INSERT INTO sidecar_decisions VALUES ('asset-private', 'Puerto Vallarta, Mexico');
+            """)
+            connection.commit()
+            connection.close()
+            config = ConnectorConfig("https://worker.test", "max", "x" * 32, root)
+
+            result = execute_action(config, {
+                "type": "owner-hidden-metadata",
+                "payload": {"photoIds": ["001-private"]},
+            })
+
+        self.assertEqual(result["hiddenMetadata"]["001-private"]["title"], "Puerto Vallarta, Mexico")
+        self.assertEqual(result["hiddenMetadata"]["001-private"]["collectionTitle"], "Mexico")
 
     def test_local_status_payload_identifies_connector_without_token(self):
         payload = _local_status_payload(self.config)

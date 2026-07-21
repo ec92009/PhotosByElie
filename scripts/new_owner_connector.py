@@ -588,7 +588,10 @@ def start_local_status_server(config: ConnectorConfig, polling_lease: Interactiv
                 self.send_response(404)
                 self.end_headers()
                 return
-            body = json.dumps(_local_status_payload(config), separators=(",", ":")).encode("utf-8")
+            body = json.dumps({
+                **_local_status_payload(config),
+                "interactivePolling": polling_lease.active(),
+            }, separators=(",", ":")).encode("utf-8")
             self.send_response(200)
             self._send_cors_headers()
             self.send_header("Content-Type", "application/json")

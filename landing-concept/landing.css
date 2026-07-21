@@ -399,6 +399,47 @@ input { font: inherit; }
   line-height: 1.6;
 }
 
+.usage-guide {
+  padding: clamp(4rem, 8vw, 7.5rem) clamp(1.2rem, 6vw, 7rem);
+  background: var(--paper);
+  color: var(--ink);
+  border-top: 1px solid var(--line);
+}
+
+.usage-guide-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(260px, 0.85fr);
+  gap: clamp(2rem, 7vw, 8rem);
+  align-items: end;
+}
+
+.usage-guide-heading h2 {
+  margin: 0;
+  max-width: 15ch;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2.4rem, 5.6vw, 5.4rem);
+  font-weight: 500;
+  line-height: 0.98;
+  letter-spacing: -0.04em;
+}
+
+.usage-guide-heading p { margin: 0; color: var(--muted); font-size: 1.08rem; line-height: 1.65; }
+
+.usage-guide-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  margin-top: clamp(2.4rem, 5vw, 4.5rem);
+  background: var(--line);
+  border: 1px solid var(--line);
+}
+
+.usage-guide-grid article { min-height: 210px; padding: clamp(1.4rem, 3vw, 2.4rem); background: var(--paper-soft); }
+.usage-guide-grid h3 { margin: 0 0 1rem; font-family: Georgia, "Times New Roman", serif; font-size: 1.45rem; font-weight: 500; }
+.usage-guide-grid p { margin: 0; color: var(--muted); line-height: 1.65; }
+.usage-guide-action { display: inline-flex; margin-top: 1.5rem; padding: 0.8rem 1rem; border: 1px solid var(--line); border-radius: 999px; text-decoration: none; font-weight: 720; }
+.usage-guide-action:hover,.usage-guide-action:focus-visible { background: var(--accent); color: #11110f; }
+
 .story-grid {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -740,6 +781,8 @@ input { font: inherit; }
   .hero-controls { right: auto; left: 1rem; bottom: 5.5rem; }
   .scroll-cue { bottom: 2rem; }
   .intro-grid { grid-template-columns: 1fr; }
+  .usage-guide-heading,.usage-guide-grid { grid-template-columns: 1fr; }
+  .usage-guide-grid article { min-height: 0; }
   .explore-menu { width: 100%; }
   .country-links {
     width: calc(100vw - 2rem);

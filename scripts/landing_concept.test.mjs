@@ -127,6 +127,18 @@ test("the production landing presents the six substantial country collections", 
   assert.doesNotMatch(countryNav, /gallery=slovakia|gallery=panoramas/);
 });
 
+test("the production landing opens on the Louvre and explains image use", () => {
+  const slides = [...productionHtml.matchAll(/<figure class="hero-slide([^>]*)data-title="([^"]+)"/g)];
+  assert.equal(slides[0]?.[2], "Paris after the crowds");
+  assert.match(slides[0]?.[1] || "", /is-active/);
+  assert.match(productionHtml, /<h1 id="hero-title">Paris after the crowds<\/h1>/);
+  assert.match(productionHtml, /class="usage-guide"/);
+  assert.match(productionHtml, /data-i18n="licensingTitle"/);
+  assert.match(productionHtml, /data-i18n="provenanceTitle"/);
+  assert.match(js, /usageAction: "Explore photographs"/);
+  assert.match(css, /\.usage-guide-grid/);
+});
+
 test("each production country card fans into catalog-backed destinations", () => {
   assert.equal((productionHtml.match(/class="story-card-fan"/g) || []).length, 6);
   for (const query of ["Versailles", "Giverny", "Louvre", "Madrid", "Andalusia", "Pisa", "San%20Diego", "Puerto%20Vallarta", "Lisbon", "Cascais"]) {

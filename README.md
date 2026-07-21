@@ -6,8 +6,10 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v143.14`
+- Current visible version: `v143.15`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
+- `v143.15` simplifies Latest social to three quiet text links and prevents the
+  shelf from colliding with the footer.
 - `v143.14` restores the three newest social campaign collections in the open
   homepage grid slot beside Portugal.
 - `v143.13` replaces the malformed account and settings glyphs with consistent line icons.

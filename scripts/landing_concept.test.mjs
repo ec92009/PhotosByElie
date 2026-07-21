@@ -142,8 +142,11 @@ test("the production landing restores the latest social shelf in the open grid s
     assert.match(productionHtml, new RegExp(`campaign\\.html\\?c=${campaign}`));
   }
   assert.match(productionHtml, /data-i18n="latestSocial"/);
-  assert.match(js, /latestSocialTitle: "New edits, ready to browse\."/);
+  const socialShelf = (productionHtml.match(/<aside class="social-shelf"[\s\S]*?<\/aside>/) || [""])[0];
+  assert.doesNotMatch(socialShelf, /<img|latestSocialTitle/);
+  assert.match(js, /latestSocial: "Latest social"/);
   assert.match(css, /\.social-shelf \{[\s\S]*?grid-column: span 5/);
+  assert.match(css, /\.social-shelf \{[\s\S]*?overflow: hidden/);
   assert.match(css, /\[data-theme="day"\] \.social-shelf/);
 });
 

@@ -15,7 +15,7 @@ for remote execution.
 - Public site: `https://photos-by-elie.com/`
 - Local preview: `http://localhost:8000/`
 - Owner intake URL: `https://photos-by-elie.com/owner.html`
-- Current visible build: `v142.2`
+- Current visible build: `v143.3`
 - Sidecar local build: `v126.6`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
@@ -525,11 +525,13 @@ npm run validate
 
 ## Fresh Backlog
 
-### Landing-page concept and country heroes (v143.1)
+### Production panorama landing and country heroes (v143.3)
 
-- Review route: `https://photos-by-elie.com/landing-concept/`.
-- The concept is deliberately isolated and `noindex`; the production root is
-  unchanged until Elie explicitly approves a cutover.
+- Production route: `https://photos-by-elie.com/`. The original review route
+  remains available and `noindex` at `/landing-concept/`.
+- Elie approved the cutover on July 21. The production root now carries the
+  cinematic panorama slideshow, editorial continuation, discovery metadata,
+  analytics, policy links, and the normal version surface.
 - Six approved outdoor camera panoramas were rendered into clean,
   display-sized JPEG derivatives under `landing-concept/assets/` and the
   shared `assets/gallery-heroes/` directory. Each hero begins at the left
@@ -540,13 +542,15 @@ npm run validate
   France now uses the outdoor Louvre courtyard. These derivatives are
   suitable for edge-to-edge presentation but are not the private
   sale/download masters.
-- The concept header intentionally exposes only Photos, Sign in, and display
-  settings; the prior Real Estate navigation item was removed as unnecessary.
-- Explore now transforms into compact country pills for every live public
-  collection: France, USA, Spain, Mexico, Italy, Portugal, and Slovakia. Hover,
+- The production header exposes Photos plus Sign up and Sign in for visitors;
+  authenticated accounts see the face icon instead. Google account entry,
+  legacy username/password access, password reveal, logout, ACS-driven Real
+  Estate routing, and account-backed language/theme preferences are preserved.
+- Explore transforms into compact country pills for the six substantial public
+  collections: France, USA, Spain, Mexico, Italy, and Portugal. Hover,
   keyboard focus, touch/click, outside-click dismissal, and Escape are covered;
   the mobile fan is horizontally swipeable rather than growing over the hero.
-- The continuation below the fold is a seven-country editorial grid using
+- The continuation below the fold is a six-country editorial grid using
   clean display derivatives. Spain uses the Plaza de España panorama whose
   catalog metadata confirms Seville; Paris now uses the Louvre courtyard at
   night and Nerja uses a sunny coastal cove.
@@ -556,12 +560,10 @@ npm run validate
   page background. Portugal uses the clean Cascais waterfront master. Slovakia
   is deliberately deferred until its collection is deeper; Search, Panoramas,
   and other utility gallery views retain the neutral Nerja-caves backdrop.
-- Desktop and 390 x 844 mobile layouts, slideshow controls, settings dialog,
-  country-fan interaction, French preference persistence, and reduced-motion
-  declarations are covered by the browser/test pass.
-  `scripts/landing_concept.test.mjs` guards privacy, the simplified header,
-  all seven country destinations, settings/version affordances, panorama
-  motion, and image payload size.
+- Desktop and compact mobile layouts, visitor/authenticated account states,
+  password reveal, slideshow controls, settings, country navigation, saved
+  account preferences, and reduced-motion declarations are covered by browser
+  QA and `scripts/landing_concept.test.mjs`.
 
 1. Finish full-path plus modified-date re-export overwrite behavior, then audit and clean today's duplicate imports reversibly.
 2. Add import source history management for stale/missing remembered folders.

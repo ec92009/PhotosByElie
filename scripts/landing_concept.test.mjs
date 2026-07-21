@@ -6,12 +6,13 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const html = fs.readFileSync(path.join(root, "landing-concept", "index.html"), "utf8");
+const productionHtml = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const css = fs.readFileSync(path.join(root, "landing-concept", "landing.css"), "utf8");
 const js = fs.readFileSync(path.join(root, "landing-concept", "landing.js"), "utf8");
 
 test("landing concept remains isolated and search-engine private", () => {
   assert.match(html, /noindex, nofollow, noarchive/);
-  assert.match(html, /Review concept · v143\.1/);
+  assert.match(html, /Review concept · v143\.3/);
   assert.doesNotMatch(html, /_1800|masters\//);
 });
 
@@ -79,4 +80,53 @@ test("landing concept ships only tracked, display-sized clean derivatives", () =
     const bytes = fs.statSync(path.join(sharedDir, image)).size;
     assert.ok(bytes < 1_300_000, `${image} is too large for the shared gallery hero`);
   }
+});
+
+test("the production root uses the approved landing experience with discovery metadata", () => {
+  assert.doesNotMatch(productionHtml, /noindex|Review concept/);
+  assert.match(productionHtml, /<link rel="canonical" href="https:\/\/photos-by-elie\.com\/">/);
+  assert.match(productionHtml, /property="og:image"/);
+  assert.match(productionHtml, /application\/ld\+json/);
+  assert.match(productionHtml, /landing-concept\/landing\.css\?v=143\.3/);
+  assert.match(productionHtml, /landing-concept\/landing\.js\?v=143\.3/);
+  assert.match(productionHtml, /analytics\.js\?v=143\.3/);
+});
+
+test("the production landing keeps real account entry and ACS routing plumbing", () => {
+  assert.match(productionHtml, /id="account-signup"/);
+  assert.match(productionHtml, /id="account-signin"/);
+  assert.match(productionHtml, /id="account-face"[^>]*hidden/);
+  assert.match(productionHtml, /id="account-google-signin"/);
+  assert.match(productionHtml, /id="account-username"/);
+  assert.match(productionHtml, /id="account-password"/);
+  assert.match(productionHtml, /id="account-password-reveal"/);
+  assert.match(js, /\/auth\/session/);
+  assert.match(js, /\/auth\/google\/login/);
+  assert.match(js, /\/real-estate\/login/);
+  assert.match(js, /realEstateClients/);
+  assert.match(js, /destination\.searchParams\.set\("access", "google"\)/);
+  assert.match(js, /\/account\/profile/);
+  assert.match(js, /photosbyelie:landingpreferenceschange/);
+});
+
+test("the production landing presents the six substantial country collections", () => {
+  const countryNav = (productionHtml.match(/id="country-links"[\s\S]*?<\/nav>/) || [""])[0];
+  assert.equal(countryNav.match(/gallery=/g)?.length, 6);
+  assert.equal((productionHtml.match(/class="story-card(?:\s|\")/g) || []).length, 6);
+  for (const slug of ["france", "usa", "spain", "mexico", "italy", "portugal"]) {
+    assert.match(countryNav, new RegExp(`gallery=${slug}`));
+  }
+  assert.doesNotMatch(countryNav, /gallery=slovakia|gallery=panoramas/);
+});
+
+test("the production footer and settings keep required public controls", () => {
+  for (const page of ["support.html", "privacy.html", "terms.html", "data-deletion.html"]) {
+    assert.match(productionHtml, new RegExp(page.replace(".", "\\.")));
+  }
+  assert.match(productionHtml, /id="language-select"/);
+  assert.match(productionHtml, /name="theme"/);
+  assert.match(productionHtml, /id="transparency-range"/);
+  assert.match(productionHtml, /id="translucency-range"/);
+  assert.match(productionHtml, /class="version-pill site-version-badge"/);
+  assert.match(css, /--glass-blur/);
 });

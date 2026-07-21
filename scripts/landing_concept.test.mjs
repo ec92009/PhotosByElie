@@ -104,6 +104,10 @@ test("the production landing keeps real account entry and ACS routing plumbing",
   assert.match(productionHtml, /id="account-signup"/);
   assert.match(productionHtml, /id="account-signin"/);
   assert.match(productionHtml, /id="account-face"[^>]*hidden/);
+  assert.match(productionHtml, /id="account-face"[\s\S]*?class="header-icon"/);
+  assert.match(productionHtml, /id="settings-open"[\s\S]*?class="header-icon"/);
+  assert.doesNotMatch(productionHtml, /<span aria-hidden="true">[●⚙]<\/span>/);
+  assert.match(css, /\.header-icon/);
   assert.match(productionHtml, /id="account-google-signin"/);
   assert.match(productionHtml, /id="account-username"/);
   assert.match(productionHtml, /id="account-password"/);

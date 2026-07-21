@@ -120,24 +120,15 @@ input { font: inherit; }
   color: var(--paper);
 }
 
-.account-face span {
-  width: 18px;
-  height: 18px;
-  display: grid;
-  place-items: center;
-  border: 3px solid currentColor;
-  border-radius: 50%;
-  font-size: 0;
-}
-
-.account-face span::after {
-  content: "";
-  width: 11px;
-  height: 6px;
-  margin-top: 15px;
-  border: 3px solid currentColor;
-  border-top: 0;
-  border-radius: 0 0 999px 999px;
+.header-icon {
+  width: 20px;
+  height: 20px;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .icon-button,

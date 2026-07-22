@@ -1022,7 +1022,7 @@ class TitleReviewUndoTests(unittest.TestCase):
             result = local_server.apply_public_photo_moderation(repo_root, {
                 "operation": "undo-hide-many",
                 "photo_ids": [photo_id],
-                "restoreTitles": {photo_id: "Original private title"},
+                "restoreTitles": {photo_id: "Browser supplied title must be ignored"},
             })
 
             self.assertEqual(result["restored_ids"], [photo_id])
@@ -1049,6 +1049,33 @@ class TitleReviewUndoTests(unittest.TestCase):
                 self.assertEqual(decision["decision_state"], "accepted")
                 self.assertEqual(decision["decided_title"], "Original private title")
                 self.assertTrue(decision["applied_at"])
+            finally:
+                conn.close()
+
+    def test_public_waste_basket_restore_cancels_atomically_without_private_title(self):
+        missing_title_id = "pbe-private-title-missing"
+        valid_title_id = "pbe-private-title-valid"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            local_server._record_hidden_lifecycle(repo_root, [
+                {"id": missing_title_id, "title": "", "from_state": "expo", "from_slug": "usa"},
+                {"id": valid_title_id, "title": "Valid private title", "from_state": "expo", "from_slug": "usa"},
+            ])
+
+            with self.assertRaisesRegex(ValueError, "private title could not be recovered"):
+                local_server.apply_public_photo_moderation(repo_root, {
+                    "operation": "undo-hide-many",
+                    "photo_ids": [valid_title_id, missing_title_id],
+                    "restoreTitles": {missing_title_id: "Untrusted browser fallback"},
+                })
+
+            conn = sqlite3.connect(repo_root / "assets/owner-actions/Owner.sqlite")
+            try:
+                states = dict(conn.execute(
+                    "SELECT media_id, lifecycle_state FROM media_lifecycle ORDER BY media_id"
+                ).fetchall())
+                self.assertEqual(states[missing_title_id], "hidden")
+                self.assertEqual(states[valid_title_id], "hidden")
             finally:
                 conn.close()
 

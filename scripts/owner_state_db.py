@@ -1264,30 +1264,52 @@ def record_media_lifecycle_active(
 def record_media_lifecycle_restored(
     repo_root: Path,
     media_ids: Iterable[str],
-    titles: dict[str, str],
     db_path: Path | None = None,
     conn: sqlite3.Connection | None = None,
 ) -> dict[str, Any]:
-    """Restore lifecycle rows and preserve their private pre-restore titles."""
+    """Atomically restore hidden rows and their private pre-restore titles.
+
+    The title is deliberately recovered from ``media_lifecycle`` inside the
+    same SQLite transaction. A browser/Worker payload is never an authority
+    for restore metadata.
+    """
     owns_conn = conn is None
     conn = conn or connect(repo_root, db_path)
     timestamp = now_iso()
     normalized = _unique_texts(media_ids)
-    clean_titles = {
-        str(media_id).strip(): str(title).strip()
-        for media_id, title in (titles or {}).items()
-        if str(media_id or "").strip() and str(title or "").strip()
-    }
     restored = 0
     skipped_discarded = 0
     title_restored = 0
     try:
+        conn.execute("BEGIN IMMEDIATE")
+        rows = {
+            str(row["media_id"]): row
+            for row in conn.execute(
+                f"""
+                SELECT media_id, lifecycle_state, TRIM(COALESCE(title, '')) AS title
+                  FROM media_lifecycle
+                 WHERE media_id IN ({','.join('?' for _value in normalized)})
+                """,
+                normalized,
+            ).fetchall()
+        } if normalized else {}
+        missing_titles = [
+            media_id
+            for media_id in normalized
+            if media_id not in rows or not str(rows[media_id]["title"] or "").strip()
+        ]
+        if missing_titles:
+            raise ValueError(
+                "Put back was cancelled because the private title could not be recovered for: "
+                + ", ".join(missing_titles[:10])
+            )
+
         for media_id in normalized:
-            existing = conn.execute("SELECT lifecycle_state FROM media_lifecycle WHERE media_id = ?", (media_id,)).fetchone()
+            existing = rows.get(media_id)
             if existing and existing["lifecycle_state"] == "discarded":
                 skipped_discarded += 1
                 continue
-            title = clean_titles.get(media_id, "")
+            title = str(existing["title"] or "").strip()
             entry = {"id": media_id, "restored_at": timestamp, "title": title}
             if _upsert_media_lifecycle(conn, entry, "active", timestamp):
                 restored += 1
@@ -1352,6 +1374,9 @@ def record_media_lifecycle_restored(
             "title_restored": title_restored,
             "skipped_discarded": skipped_discarded,
         }
+    except Exception:
+        conn.rollback()
+        raise
     finally:
         if owns_conn:
             conn.close()

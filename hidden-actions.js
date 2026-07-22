@@ -2,6 +2,10 @@
   const localEnabled = ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
   const ownerAuth = window.photosByElieOwnerAuth;
   const cloudBaseUrl = String(window.photosByElieMediaConfig?.authWorkerBaseUrl || "").trim().replace(/\/+$/, "");
+  const localActionWakeUrls = [
+    "http://localhost:8766/photosbyelie/wake-owner-action",
+    "http://127.0.0.1:8766/photosbyelie/wake-owner-action",
+  ];
   let remoteCullingEnabled = false;
   const cullingEnabled = () => localEnabled || remoteCullingEnabled;
   const key = "photosbyelie-hidden";
@@ -208,6 +212,32 @@
     return metadata && typeof metadata === "object" ? metadata : null;
   };
 
+  const tryLocalActionWake = async (actionId) => {
+    if (!actionId || typeof Promise.any !== "function") return null;
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), 900);
+    try {
+      return await Promise.any(localActionWakeUrls.map(async (url) => {
+        const response = await fetch(url, {
+          method: "POST",
+          cache: "no-store",
+          credentials: "omit",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ actionId }),
+          signal: controller.signal,
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload?.action) throw new Error("Local wake unavailable.");
+        return payload.action;
+      }));
+    } catch {
+      return null;
+    } finally {
+      window.clearTimeout(timer);
+      controller.abort();
+    }
+  };
+
   const refreshRemoteHiddenMetadata = async () => {
     if (localEnabled || !remoteCullingEnabled || !cloudBaseUrl) return remoteHiddenMetadata;
     const photoIds = read().slice(0, 500);
@@ -223,6 +253,16 @@
     });
     const queued = await response.json().catch(() => ({}));
     if (!response.ok || !queued?.action?.id) return remoteHiddenMetadata;
+    const awakened = await tryLocalActionWake(queued.action.id);
+    if (awakened?.state === "completed") {
+      const result = awakened.result?.result || awakened.result || {};
+      const metadata = result.hiddenMetadata;
+      if (metadata && typeof metadata === "object" && !Array.isArray(metadata)) {
+        remoteHiddenMetadata = metadata;
+        window.dispatchEvent(new CustomEvent("photosbyelie:hiddenchange", { detail: { items: read(), metadata: true } }));
+      }
+      return remoteHiddenMetadata;
+    }
     const deadline = Date.now() + 45000;
     while (Date.now() < deadline) {
       await new Promise((resolve) => setTimeout(resolve, 800));
@@ -301,7 +341,7 @@
       photoIds,
       requestedConnector: "max",
     };
-    ["title", "keywords", "mode", "restoreTitles"].forEach((key) => {
+    ["title", "keywords", "mode"].forEach((key) => {
       if (Object.prototype.hasOwnProperty.call(extra, key)) moderationPayload[key] = extra[key];
     });
     const response = await fetch(`${cloudBaseUrl}/owner/actions`, {
@@ -317,6 +357,14 @@
     if (!response.ok || !queued?.action?.id) {
       if (response.status === 401) ownerAuth?.markSignedOut?.();
       throw new Error(queued?.error?.message || queued?.error || `Could not queue ${operation}.`);
+    }
+    const awakened = await tryLocalActionWake(queued.action.id);
+    if (awakened?.state === "completed") {
+      const result = awakened.result?.result || awakened.result || {};
+      return applyServerState(result);
+    }
+    if (["failed", "cancelled"].includes(awakened?.state)) {
+      throw new Error(awakened?.error?.message || awakened?.message || `${operation} failed.`);
     }
     const deadline = Date.now() + 120000;
     while (Date.now() < deadline) {
@@ -670,18 +718,7 @@
     if (localEnabled) {
       for (const photoId of ids) await photoAction("undo-hide", photoId);
     } else {
-      if (ids.some((photoId) => !String(metadataFor(photoId)?.title || "").trim())) {
-        await refreshRemoteHiddenMetadata();
-      }
-      const restoreTitles = Object.fromEntries(ids.flatMap((photoId) => {
-        const title = String(metadataFor(photoId)?.title || "").trim();
-        return title ? [[photoId, title]] : [];
-      }));
-      const missingTitles = ids.filter((photoId) => !restoreTitles[photoId]);
-      if (missingTitles.length) {
-        throw new Error("Put back was cancelled because the original title could not be recovered.");
-      }
-      await photoAction("undo-hide-many", ids[0], { photo_ids: ids, restoreTitles });
+      await photoAction("undo-hide-many", ids[0], { photo_ids: ids });
     }
     unmarkMany(ids);
     const restored = new Set(ids);

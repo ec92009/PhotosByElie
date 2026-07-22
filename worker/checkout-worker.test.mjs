@@ -594,24 +594,36 @@ test("background Owner connectors use scoped credentials and report health", asy
   assert.equal(connectorListBody.actions.length, 1);
   assert.equal(connectorListBody.actions[0].id, queued.id);
 
+  const exactResponse = await worker.fetch(new Request(
+    `https://worker.test/owner/connector/actions/${queued.id}`,
+    { headers: connectorHeaders }
+  ));
+  assert.equal(exactResponse.status, 200);
+  assert.equal((await exactResponse.json()).action.id, queued.id);
+
   const claimResponse = await worker.fetch(jsonRequest(
     `https://worker.test/owner/connector/actions/${queued.id}/claim`,
-    {},
+    { locallyAwakenedAt: "2026-07-22T10:00:00.000Z" },
     connectorHeaders
   ));
   const claimed = (await claimResponse.json()).action;
   assert.equal(claimed.claim.connectorId, "david");
   assert.equal(claimed.claim.claimedBy, "connector:david");
+  assert.equal(claimed.timing.locallyAwakenedAt, "2026-07-22T10:00:00.000Z");
+  assert.ok(claimed.timing.claimedAt);
+  assert.equal(claimed.history.at(-2).event, "locally-awakened");
 
   const completeResponse = await worker.fetch(jsonRequest(
     `https://worker.test/owner/connector/actions/${queued.id}/complete`,
-    { result: { recordsPrepared: 24 } },
+    { result: { recordsPrepared: 24 }, timing: { executedAt: "2026-07-22T10:00:01.000Z" } },
     connectorHeaders
   ));
   const completed = (await completeResponse.json()).action;
   assert.equal(completed.state, "completed");
   assert.equal(completed.completedBy, "connector:david");
   assert.equal(completed.result.recordsPrepared, 24);
+  assert.equal(completed.timing.executedAt, "2026-07-22T10:00:01.000Z");
+  assert.ok(completed.timing.completedAt);
 
   const ownerConnectorResponse = await worker.fetch(new Request("https://worker.test/owner/connectors", {
     headers: { origin: "https://photos-by-elie.com" },
@@ -669,6 +681,17 @@ test("public photo moderation is routed only to the requested Owner connector", 
     headers: { authorization: "Bearer david-secret" },
   }));
   assert.equal((await davidResponse.json()).actions.length, 0);
+  const davidExactResponse = await worker.fetch(new Request(
+    `https://worker.test/owner/connector/actions/${maxBody.actions[0].id}`,
+    { headers: { authorization: "Bearer david-secret" } }
+  ));
+  assert.equal(davidExactResponse.status, 404);
+  const davidClaimResponse = await worker.fetch(jsonRequest(
+    `https://worker.test/owner/connector/actions/${maxBody.actions[0].id}/claim`,
+    {},
+    { authorization: "Bearer david-secret" }
+  ));
+  assert.equal(davidClaimResponse.status, 409);
 
   const metadataResponse = await worker.fetch(jsonRequest("https://worker.test/owner/actions", {
     action: "owner-hidden-metadata",

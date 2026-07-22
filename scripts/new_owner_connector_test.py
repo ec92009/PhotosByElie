@@ -2,8 +2,12 @@ import unittest
 import json
 from pathlib import Path
 import sqlite3
+import socket
+import time
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
+from urllib.error import HTTPError
+from urllib.request import Request, urlopen
 
 from scripts.new_owner_connector import (
     ConnectorConfig,
@@ -17,6 +21,8 @@ from scripts.new_owner_connector import (
     _upload_and_register,
     execute_action,
     next_poll_interval,
+    process_exact_action,
+    start_local_status_server,
 )
 
 
@@ -66,6 +72,54 @@ class UploadRegistrationScopeTest(unittest.TestCase):
         with patch.object(client, "request", return_value={"interactivePolling": True}) as request:
             self.assertTrue(client.interactive())
         request.assert_called_once_with("GET", "/owner/connector/interactive")
+
+    def test_connector_fetches_one_exact_worker_action(self):
+        client = WorkerClient(self.config)
+        with patch.object(client, "request", return_value={"action": {"id": "owner-action-1"}}) as request:
+            self.assertEqual(client.action("owner-action-1")["id"], "owner-action-1")
+        request.assert_called_once_with("GET", "/owner/connector/actions/owner-action-1")
+
+    def test_local_wake_claims_executes_and_completes_exact_action_with_timings(self):
+        config = ConnectorConfig("https://worker.test", "david", "x" * 32, Path("/tmp/repo"))
+
+        class FakeClient:
+            def __init__(self):
+                self.action_record = {
+                    "id": "owner-action-test",
+                    "type": "owner-connector-check",
+                    "state": "queued",
+                    "payload": {"requestedConnector": "david"},
+                }
+                self.transitions = []
+
+            def action(self, action_id):
+                self.assert_action_id = action_id
+                return dict(self.action_record)
+
+            def transition(self, action_id, transition, payload=None):
+                self.transitions.append((action_id, transition, payload or {}))
+                if transition == "claim":
+                    self.action_record = {
+                        **self.action_record,
+                        "state": "claimed",
+                        "claim": {"connectorId": "david"},
+                    }
+                elif transition == "complete":
+                    self.action_record = {
+                        **self.action_record,
+                        "state": "completed",
+                        "result": (payload or {}).get("result", {}),
+                    }
+                return {"action": dict(self.action_record)}
+
+        client = FakeClient()
+        action, processed = process_exact_action(config, client, "owner-action-test", local_wake=True)
+
+        self.assertTrue(processed)
+        self.assertEqual(action["state"], "completed")
+        self.assertEqual([item[1] for item in client.transitions], ["claim", "complete"])
+        self.assertTrue(client.transitions[0][2]["locallyAwakenedAt"])
+        self.assertTrue(client.transitions[1][2]["timing"]["executedAt"])
 
     def test_empty_upload_does_not_run_global_registration(self):
         with patch("scripts.new_owner_connector._run_repo_json", return_value={"status": "done", "items": []}) as run:
@@ -161,6 +215,61 @@ class UploadRegistrationScopeTest(unittest.TestCase):
             "https://photos-by-elie.com",
         )
         self.assertEqual(_allowed_local_status_origin("https://example.com"), "")
+
+    def test_local_wake_endpoint_accepts_only_an_opaque_action_id_from_trusted_origin(self):
+        with socket.socket() as probe:
+            probe.bind(("127.0.0.1", 0))
+            port = probe.getsockname()[1]
+        config = ConnectorConfig("https://worker.test", "david", "x" * 32, Path("/tmp/repo"), local_status_port=port)
+        client = object()
+        lease = InteractivePollingLease()
+        with patch("scripts.new_owner_connector.process_exact_action", return_value=({
+            "id": "owner-action-test",
+            "state": "completed",
+        }, True)) as process:
+            start_local_status_server(config, lease, client)
+            deadline = time.time() + 2
+            while True:
+                try:
+                    with urlopen(f"http://127.0.0.1:{port}/photosbyelie/connector-status", timeout=0.2):
+                        break
+                except OSError:
+                    if time.time() >= deadline:
+                        self.fail("local connector test server did not start")
+                    time.sleep(0.02)
+
+            request = Request(
+                f"http://127.0.0.1:{port}/photosbyelie/wake-owner-action",
+                data=json.dumps({"actionId": "owner-action-test"}).encode("utf-8"),
+                method="POST",
+                headers={"Content-Type": "application/json", "Origin": "https://photos-by-elie.com"},
+            )
+            with urlopen(request, timeout=1) as response:
+                body = json.loads(response.read())
+            self.assertTrue(body["ok"])
+            process.assert_called_once_with(config, client, "owner-action-test", local_wake=True)
+
+            bad_request = Request(
+                f"http://127.0.0.1:{port}/photosbyelie/wake-owner-action",
+                data=json.dumps({"actionId": "owner-action-test", "operation": "undo-hide-many"}).encode("utf-8"),
+                method="POST",
+                headers={"Content-Type": "application/json", "Origin": "https://photos-by-elie.com"},
+            )
+            with self.assertRaises(HTTPError) as rejected:
+                urlopen(bad_request, timeout=1)
+            self.assertEqual(rejected.exception.code, 400)
+            rejected.exception.close()
+
+            untrusted_request = Request(
+                f"http://127.0.0.1:{port}/photosbyelie/wake-owner-action",
+                data=json.dumps({"actionId": "owner-action-test"}).encode("utf-8"),
+                method="POST",
+                headers={"Content-Type": "application/json", "Origin": "https://example.com"},
+            )
+            with self.assertRaises(HTTPError) as rejected_origin:
+                urlopen(untrusted_request, timeout=1)
+            self.assertEqual(rejected_origin.exception.code, 403)
+            rejected_origin.exception.close()
 
     def test_local_sidecar_open_action_is_claimed_for_this_connector(self):
         action = _local_sidecar_open_action(self.config, "local-sidecar-test")

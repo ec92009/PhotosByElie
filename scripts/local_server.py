@@ -11144,22 +11144,13 @@ def apply_public_photo_moderation(repo_root: Path, payload: dict) -> dict:
             "catalog_publish_pending": True,
         }
 
-    restore_titles_payload = payload.get("restore_titles") or payload.get("restoreTitles") or {}
-    restore_titles = {}
-    if isinstance(restore_titles_payload, dict):
-        restore_titles = {
-            str(photo_id).strip(): str(title).strip()
-            for photo_id, title in restore_titles_payload.items()
-            if str(photo_id or "").strip() in photo_ids and str(title or "").strip()
-        }
     restored_ids = [photo_id for photo_id in photo_ids if photo_id in hidden_before]
     already_active = [photo_id for photo_id in photo_ids if photo_id not in hidden_before]
-    restored_titles = {photo_id: restore_titles[photo_id] for photo_id in restored_ids if photo_id in restore_titles}
-    lifecycle = (
-        record_media_lifecycle_restored_db(repo_root, restored_ids, restored_titles)
-        if restored_titles
-        else _record_active_lifecycle(repo_root, restored_ids)
-    )
+    lifecycle = record_media_lifecycle_restored_db(repo_root, restored_ids) if restored_ids else {
+        "active": 0,
+        "title_restored": 0,
+        "skipped_discarded": 0,
+    }
     return {
         "ok": True,
         "action": operation,

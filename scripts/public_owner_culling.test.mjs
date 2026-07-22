@@ -15,7 +15,11 @@ test("public Owner culling waits for cloud auth and uses the Max connector queue
   assert.match(hidden, /"update-photo-metadata", "save-keyword-blacklist"/);
   assert.match(hidden, /const saveKeywordBlacklist = async/);
   assert.match(hidden, /moderationPayload\[key\] = extra\[key\]/);
-  assert.match(hidden, /\["title", "keywords", "mode", "restoreTitles"\]/);
+  assert.match(hidden, /\["title", "keywords", "mode"\]/);
+  assert.doesNotMatch(hidden, /moderationPayload\["restoreTitles"\]/);
+  assert.match(hidden, /\/photosbyelie\/wake-owner-action/);
+  assert.match(hidden, /body: JSON\.stringify\(\{ actionId \}\)/);
+  assert.match(hidden, /const awakened = await tryLocalActionWake\(queued\.action\.id\)/);
   assert.match(hidden, /throw error;\s*\n\s*\}\);/);
   assert.match(gallery, /ownerEditable: ownerCullingEnabled/);
   assert.match(gallery, /const selectOwnerPhotoFromPointer =/);
@@ -94,9 +98,8 @@ test("Owner exposes a contained fixture builder and recoverable Waste Basket man
   assert.match(hiddenActions, /action: "owner-hidden-metadata"/);
   assert.match(hiddenActions, /if \(remoteCullingEnabled\) refreshRemoteHiddenMetadata\(\)\.catch/);
   assert.match(hiddenActions, /metadataFor/);
-  assert.match(hiddenActions, /restoreTitles = Object\.fromEntries/);
-  assert.match(hiddenActions, /Put back was cancelled because the original title could not be recovered/);
-  assert.match(hiddenActions, /\{ photo_ids: ids, restoreTitles \}/);
+  assert.doesNotMatch(hiddenActions, /restoreTitles = Object\.fromEntries/);
+  assert.match(hiddenActions, /photoAction\("undo-hide-many", ids\[0\], \{ photo_ids: ids \}\)/);
   assert.match(hidden, /window\.photosByElieHiddenActionsReady/);
   assert.match(review, /data-hidden-restore-selected/);
   assert.match(review, /data-hidden-discard-selected/);

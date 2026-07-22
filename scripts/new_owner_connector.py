@@ -12,6 +12,7 @@ import argparse
 import base64
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
+from datetime import datetime, timezone
 import html
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
@@ -34,7 +35,7 @@ from urllib.request import Request, urlopen
 
 
 DEFAULT_CONFIG_PATH = Path.home() / ".config" / "photosbyelie" / "connector.json"
-CONNECTOR_VERSION = "1.4"
+CONNECTOR_VERSION = "1.5"
 DEFAULT_INTERVAL_SECONDS = 5
 DEFAULT_IDLE_MAX_INTERVAL_SECONDS = 60
 INTERACTIVE_POLL_INTERVAL_SECONDS = 5
@@ -45,6 +46,7 @@ LOCAL_STATUS_PATH = "/photosbyelie/connector-status"
 LOCAL_SIDECAR_OPEN_PATH = "/photosbyelie/open-sidecar"
 LOCAL_SIDECAR_STATUS_PATH = "/photosbyelie/open-sidecar/status"
 LOCAL_WASTE_BASKET_OPEN_PATH = "/photosbyelie/open-wastebasket"
+LOCAL_ACTION_WAKE_PATH = "/photosbyelie/wake-owner-action"
 OWNER_HELPER_PORT_START = 8000
 OWNER_HELPER_PORT_LIMIT = 8100
 SIDECAR_HELPER_PORT_START = 8011
@@ -62,6 +64,11 @@ ALLOWED_LOCAL_STATUS_ORIGINS = {
     "https://www.photos-by-elie.com",
     "https://ec92009.github.io",
 }
+ACTION_EXECUTION_LOCK = threading.Lock()
+
+
+def _utc_iso_now() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
 
 @dataclass(frozen=True)
@@ -476,7 +483,11 @@ def _allowed_local_status_origin(origin: str) -> str:
     return ""
 
 
-def start_local_status_server(config: ConnectorConfig, polling_lease: InteractivePollingLease) -> None:
+def start_local_status_server(
+    config: ConnectorConfig,
+    polling_lease: InteractivePollingLease,
+    client: "WorkerClient",
+) -> None:
     """Expose this Mac's connector id to the local browser only."""
     if config.local_status_port <= 0:
         return
@@ -498,20 +509,77 @@ def start_local_status_server(config: ConnectorConfig, polling_lease: Interactiv
             if allowed_origin:
                 self.send_header("Access-Control-Allow-Origin", allowed_origin)
                 self.send_header("Vary", "Origin")
-            self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
             self.send_header("Access-Control-Allow-Headers", "Content-Type")
             self.send_header("Access-Control-Allow-Private-Network", "true")
             self.send_header("Cache-Control", "no-store")
 
         def do_OPTIONS(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API.
             parsed = urlparse(self.path)
-            if parsed.path not in {LOCAL_STATUS_PATH, LOCAL_SIDECAR_OPEN_PATH, LOCAL_SIDECAR_STATUS_PATH, LOCAL_WASTE_BASKET_OPEN_PATH}:
+            if parsed.path not in {
+                LOCAL_STATUS_PATH,
+                LOCAL_SIDECAR_OPEN_PATH,
+                LOCAL_SIDECAR_STATUS_PATH,
+                LOCAL_WASTE_BASKET_OPEN_PATH,
+                LOCAL_ACTION_WAKE_PATH,
+            }:
                 self.send_response(404)
                 self.end_headers()
                 return
             self.send_response(204)
             self._send_cors_headers()
             self.end_headers()
+
+        def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API.
+            parsed = urlparse(self.path)
+            if parsed.path != LOCAL_ACTION_WAKE_PATH:
+                self.send_response(404)
+                self.end_headers()
+                return
+            if not self._allowed_origin():
+                self.send_response(403)
+                self._send_cors_headers()
+                self.end_headers()
+                return
+            try:
+                content_length = int(self.headers.get("Content-Length") or 0)
+            except ValueError:
+                content_length = 0
+            if content_length <= 0 or content_length > 512:
+                self.send_response(400)
+                self._send_cors_headers()
+                self.end_headers()
+                return
+            try:
+                wake_started = time.perf_counter()
+                payload = json.loads(self.rfile.read(content_length).decode("utf-8"))
+                if not isinstance(payload, dict) or set(payload) != {"actionId"}:
+                    raise ValueError("Only actionId is accepted.")
+                action_id = str(payload.get("actionId") or "").strip()
+                if not action_id.startswith("owner-action-") or len(action_id) > 96:
+                    raise ValueError("A valid opaque actionId is required.")
+                action, _processed = process_exact_action(config, client, action_id, local_wake=True)
+                body = json.dumps({
+                    "ok": True,
+                    "action": action,
+                    "diagnostics": {
+                        "fastPath": True,
+                        "localWakeMs": round((time.perf_counter() - wake_started) * 1000, 1),
+                    },
+                }, separators=(",", ":")).encode("utf-8")
+                status = 200
+            except ValueError as error:
+                body = json.dumps({"ok": False, "error": str(error)}, separators=(",", ":")).encode("utf-8")
+                status = 400
+            except Exception as error:  # noqa: BLE001 - cloud ledger records the durable failure.
+                body = json.dumps({"ok": False, "error": str(error)}, separators=(",", ":")).encode("utf-8")
+                status = 502
+            self.send_response(status)
+            self._send_cors_headers()
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
 
         def do_GET(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API.
             parsed = urlparse(self.path)
@@ -661,6 +729,13 @@ class WorkerClient:
     def actions(self) -> list[dict]:
         body = self.request("GET", "/owner/connector/actions")
         return [action for action in body.get("actions", []) if isinstance(action, dict)]
+
+    def action(self, action_id: str) -> dict:
+        body = self.request("GET", f"/owner/connector/actions/{quote(action_id, safe='')}")
+        action = body.get("action")
+        if not isinstance(action, dict):
+            raise RuntimeError("Worker did not return the requested Owner action.")
+        return action
 
     def interactive(self) -> bool:
         body = self.request("GET", "/owner/connector/interactive")
@@ -1035,6 +1110,44 @@ def execute_action(config: ConnectorConfig, action: dict) -> dict:
     raise RuntimeError(f"Unsupported connector action: {action_type or 'missing'}")
 
 
+def process_exact_action(
+    config: ConnectorConfig,
+    client: WorkerClient,
+    action_id: str,
+    *,
+    local_wake: bool = False,
+) -> tuple[dict, bool]:
+    """Claim and execute one Worker-authorized action exactly once on this Mac."""
+    with ACTION_EXECUTION_LOCK:
+        action = client.action(action_id)
+        if action.get("state") in {"completed", "failed", "cancelled"}:
+            return action, False
+        locally_awakened_at = _utc_iso_now() if local_wake else ""
+        try:
+            if action.get("state") == "queued":
+                claim_payload = {"locallyAwakenedAt": locally_awakened_at} if locally_awakened_at else {}
+                action = client.transition(action_id, "claim", claim_payload).get("action") or action
+            if action.get("state") != "claimed":
+                return action, False
+            if action.get("claim", {}).get("connectorId") != config.connector_id:
+                raise RuntimeError("Worker action is not claimed by this connector.")
+            result = execute_action(config, action)
+            executed_at = _utc_iso_now()
+            completed = client.transition(
+                action_id,
+                "complete",
+                {"result": result, "timing": {"executedAt": executed_at}},
+            ).get("action") or action
+            return completed, True
+        except Exception as error:  # noqa: BLE001 - failure must be recorded in the cloud ledger.
+            try:
+                client.transition(action_id, "fail", {"message": str(error)[:500]})
+            except Exception:
+                pass
+            print(f"{action_id}: {error}", file=sys.stderr, flush=True)
+            raise
+
+
 def process_once(config: ConnectorConfig, client: WorkerClient) -> int:
     client.heartbeat()
     processed = 0
@@ -1043,19 +1156,10 @@ def process_once(config: ConnectorConfig, client: WorkerClient) -> int:
         if not action_id:
             continue
         try:
-            if action.get("state") == "queued":
-                action = client.transition(action_id, "claim").get("action") or action
-            if action.get("state") != "claimed":
-                continue
-            result = execute_action(config, action)
-            client.transition(action_id, "complete", {"result": result})
-            processed += 1
-        except Exception as error:  # noqa: BLE001 - failure must be recorded in the cloud ledger.
-            try:
-                client.transition(action_id, "fail", {"message": str(error)[:500]})
-            except Exception:
-                pass
-            print(f"{action_id}: {error}", file=sys.stderr, flush=True)
+            _action, did_process = process_exact_action(config, client, action_id)
+            processed += int(did_process)
+        except Exception:
+            continue
     return processed
 
 
@@ -1081,7 +1185,7 @@ def main() -> int:
     client = WorkerClient(config)
     polling_lease = InteractivePollingLease()
     if not args.once:
-        start_local_status_server(config, polling_lease)
+        start_local_status_server(config, polling_lease, client)
     poll_interval = config.interval_seconds
     next_full_poll_at = 0.0
     while True:

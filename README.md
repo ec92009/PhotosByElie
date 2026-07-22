@@ -6,8 +6,11 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v145.13`
+- Current visible version: `v145.14`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
+- `v145.14` makes opening a saved Real Estate product and returning to its
+  shelf lightweight: neither transition rebuilds the full source-photo grid,
+  and previously loaded product manifests are reused during the session.
 - `v145.13` forces cloud slideshow videos through an explicit H.264/AAC
   transformation for iPhone playback and turns a finished JPEG ZIP action into
   a direct Download JPEGs action while its prepared archive remains available.

@@ -117,6 +117,20 @@ test("Phone language and theme switches avoid rebuilding the full Real Estate ph
   assert.doesNotMatch(languageListener, /renderGrid\(\)/);
 });
 
+test("Saved-product shelf navigation avoids rebuilding the full photo grid", () => {
+  const shelfRenderer = script.match(/const renderShelf = \(\) => \{[\s\S]*?\n  \};/)?.[0] || "";
+  const outputRenderer = script.match(/const renderOutputDetail = \(\) => \{[\s\S]*?\n  \};/)?.[0] || "";
+  const returnHandler = script.match(/const returnToShelf = \(\) => \{[\s\S]*?\n  \};/)?.[0] || "";
+  const batchLoader = script.match(/const deliverableBatchFor = async \(item\) => \{[\s\S]*?\n  \};/)?.[0] || "";
+  assert.match(returnHandler, /renderShelf\(\)/);
+  assert.doesNotMatch(shelfRenderer, /renderGrid\(\)|renderDraft\(\)|renderWizard\(\)/);
+  assert.match(outputRenderer, /renderDraft\(\)/);
+  assert.match(outputRenderer, /renderWizard\(\)/);
+  assert.doesNotMatch(outputRenderer, /renderGrid\(\)|renderAlbums\(\)/);
+  assert.match(batchLoader, /state\.deliverableBatches\.has\(cacheKey\)/);
+  assert.match(batchLoader, /state\.deliverableBatches\.set\(cacheKey, batch\)/);
+});
+
 test("Cloud output controls upload prepared files without creating stray Selection rows", () => {
   const queueBody = script.match(/const queueCloudOutputs = async[\s\S]*?\n  const openDeliverableUrl/)?.[0] || "";
   assert.doesNotMatch(queueBody, /saveLocalDeliverable\s*\(/);

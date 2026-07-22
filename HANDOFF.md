@@ -15,10 +15,13 @@ for remote execution.
 - Public site: `https://photos-by-elie.com/`
 - Local preview: `http://localhost:8000/`
 - Owner intake URL: `https://photos-by-elie.com/owner.html`
-- Current visible build: `v145.13`
+- Current visible build: `v145.14`
 - Sidecar local build: `v126.6`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
+- `v145.14` removes the full source-photo-grid rebuild from saved-product shelf
+  entry/return navigation, renders only the active surface, and caches loaded
+  product manifests for repeat opens during the session.
 - `v145.13` normalizes every cloud slideshow video through an explicit
   orientation-aware Media transform before MP4 output, preventing VP9/Opus
   browser recordings from masquerading as iPhone-incompatible MP4 files. A

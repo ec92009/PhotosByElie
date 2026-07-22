@@ -186,6 +186,7 @@
     cloudDeliverablesBusy: false,
     cloudDeliverablesLoaded: false,
     cloudDeliverablesError: "",
+    deliverableBatches: new Map(),
     activePhotoId: "",
     lastRangePhotoId: "",
     dragDraftId: "",
@@ -2688,6 +2689,31 @@
     syncCreateProductButtons();
     renderAlbums();
     renderGrid();
+    renderDraft();
+    renderWizard();
+    syncPdfFormatControls();
+    syncPdfOrientationControls();
+    syncSlideshowPhotoSecondsControls();
+    syncSlideshowOrientationControls();
+    syncSlideshowMusicCountryControls();
+    syncWatermarkControls();
+    syncFileActionLabels();
+    window.photosByElieVersionInternalLinks?.(app);
+  };
+
+  const renderShelf = () => {
+    syncAuthUi();
+    syncActiveProductName();
+    syncCreateProductButtons();
+    renderProducedDeliverables();
+    syncFileActionLabels();
+    window.photosByElieVersionInternalLinks?.(app);
+  };
+
+  const renderOutputDetail = () => {
+    syncAuthUi();
+    syncActiveProductName();
+    syncCreateProductButtons();
     renderDraft();
     renderWizard();
     syncPdfFormatControls();
@@ -6113,8 +6139,8 @@
     state.editingDeliverableNameId = "";
     state.selectedOnly = false;
     if (elements.selectedOnly) elements.selectedOnly.checked = false;
-    render();
-    elements.deliverablesPanel?.scrollIntoView({ behavior: "smooth", block: "start" });
+    renderShelf();
+    elements.deliverablesPanel?.scrollIntoView({ behavior: "auto", block: "start" });
     setStatus(t("re.status.back_shelf", {}, "Back to the saved selection shelf."));
   };
 
@@ -6352,16 +6378,24 @@
     persistTitles();
     persistProjectAssignments();
     invalidateVideoExportCache();
-    if (editMode) state.wizardStep = 4;
-    render();
+    if (editMode) {
+      state.wizardStep = 4;
+      renderOutputDetail();
+    } else {
+      render();
+    }
     setStatus(`${statusPrefix} ${activeSelectedPhotos().length} selected media for ${selectedPropertyTitle()}${editMode ? "; output is ready to view or adjust" : ""}`);
   };
 
   const deliverableBatchFor = async (item) => {
     if (item?.batch) return item.batch;
+    const cacheKey = String(item?.id || item?.editUrl || "");
+    if (cacheKey && state.deliverableBatches.has(cacheKey)) return state.deliverableBatches.get(cacheKey);
     const response = await fetch(item.editUrl);
     if (!response.ok) throw new Error(`Could not load product manifest (${response.status})`);
-    return parseBatchFileText(await response.text());
+    const batch = parseBatchFileText(await response.text());
+    if (cacheKey) state.deliverableBatches.set(cacheKey, batch);
+    return batch;
   };
 
   const photosForDeliverableBatch = (batch) => {
@@ -6403,7 +6437,7 @@
       state.editingDeliverableNameId = "";
       const batch = await deliverableBatchFor(item);
       applyBatchManifest(batch, { statusPrefix: "Editing", editMode: true });
-      document.querySelector("#real-estate-wizard")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      document.querySelector("#real-estate-wizard")?.scrollIntoView({ behavior: "auto", block: "start" });
     } catch (error) {
       setStatus(error?.message || "Could not load this product for editing");
     }

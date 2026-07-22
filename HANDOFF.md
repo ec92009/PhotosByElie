@@ -19,6 +19,11 @@ for remote execution.
 - Sidecar local build: `v126.6`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
+- Worker v115 (`3ce5d7d3-f246-4f45-8381-1284e6f8c476`) keeps long Real
+  Estate video renders alive by giving Browser Rendering a ten-minute keepalive
+  and polling render status every ten seconds instead of leaving one inactive
+  wait open. Production replay of Corine's 15-photo `Multiple-260722-1`
+  completed through finalization and exposed `Download video`.
 - `v145.17` routes every ready Real Estate PDF, video, and Originals action
   through one Mac-aware download helper. Supported Mac browsers open the native
   Save dialog before transfer and stream to the chosen file; phones and browsers

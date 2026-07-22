@@ -6,8 +6,11 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v145.16`
+- Current visible version: `v145.17`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
+- `v145.17` opens the native Save dialog before ready PDF, video, and Originals
+  downloads on supported Mac browsers, streams each file to the chosen location,
+  and preserves the existing phone and unsupported-browser download paths.
 - `v145.16` makes Originals a persistent third Real Estate output beside PDF
   and Video, with the same Queue, pending, and Download lifecycle on both the
   Output page and finished-products shelf.

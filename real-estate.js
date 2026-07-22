@@ -3586,6 +3586,73 @@
     window.setTimeout(() => URL.revokeObjectURL(link.href), 60000);
   };
 
+  const macDesktopSavePickerAvailable = () => {
+    const platform = String(navigator.userAgentData?.platform || navigator.platform || "");
+    const userAgent = String(navigator.userAgent || "");
+    const isMac = /mac/i.test(platform) || /Macintosh|Mac OS X/i.test(userAgent);
+    const isTouchDevice = Number(navigator.maxTouchPoints || 0) > 1;
+    return isMac && !isTouchDevice && typeof window.showSaveFilePicker === "function";
+  };
+
+  const readyOutputFileDetails = (format = "", filename = "") => {
+    const normalizedFormat = format === "video" ? "video" : format === "originals" ? "originals" : "pdf";
+    const details = normalizedFormat === "video"
+      ? { description: "MP4 video", mimeType: "video/mp4", extension: ".mp4", fallback: "photos-by-elie-video.mp4" }
+      : normalizedFormat === "originals"
+        ? { description: "Original photos", mimeType: "application/zip", extension: ".zip", fallback: "photos-by-elie-originals.zip" }
+        : { description: "PDF document", mimeType: "application/pdf", extension: ".pdf", fallback: "photos-by-elie.pdf" };
+    const cleanFilename = String(filename || details.fallback).split(/[\\/]/).pop() || details.fallback;
+    return {
+      ...details,
+      format: normalizedFormat,
+      filename: cleanFilename.toLowerCase().endsWith(details.extension) ? cleanFilename : `${cleanFilename}${details.extension}`,
+    };
+  };
+
+  const saveReadyOutputWithPicker = async ({ href, format = "", filename = "" } = {}) => {
+    if (!macDesktopSavePickerAvailable()) return { handled: false };
+    const details = readyOutputFileDetails(format, filename);
+    let fileHandle;
+    try {
+      fileHandle = await window.showSaveFilePicker({
+        id: `photos-by-elie-real-estate-${details.format}`,
+        suggestedName: details.filename,
+        types: [{
+          description: details.description,
+          accept: { [details.mimeType]: [details.extension] },
+        }],
+      });
+    } catch (error) {
+      if (error?.name === "AbortError") {
+        setStatus("Save canceled");
+        return { handled: true, canceled: true };
+      }
+      return { handled: false };
+    }
+
+    setStatus(`Downloading ${details.filename}...`);
+    const response = await fetch(href, { credentials: "include" });
+    if (!response.ok) throw new Error(`${details.description} download failed (${response.status})`);
+    const writable = await fileHandle.createWritable();
+    try {
+      if (response.body?.pipeTo) {
+        await response.body.pipeTo(writable);
+      } else {
+        await writable.write(await response.blob());
+        await writable.close();
+      }
+    } catch (error) {
+      try {
+        await writable.abort?.();
+      } catch {}
+      throw error;
+    }
+    const savedFilename = fileHandle.name || details.filename;
+    const bytes = Number(response.headers.get("content-length")) || 0;
+    setStatus(`Saved ${savedFilename}${bytes ? ` (${formatBytes(bytes)})` : ""}`);
+    return { handled: true, filename: savedFilename, bytes };
+  };
+
   const downloadBlob = async (blob, filename) => {
     triggerDownload(blob, filename);
     return { filename, pickedLocation: false, bytes: Number(blob.size) || 0 };
@@ -3751,13 +3818,15 @@
   };
 
   const downloadReadyOutputUrl = async ({ url, format = "", filename = "" } = {}) => {
-    if (format !== "pdf" || !shouldUseNativeFileShare()) {
-      await openDeliverableUrl(url, "download");
-      return;
-    }
     const rawUrl = String(url || "").trim();
     const baseUrl = String(workerBaseUrl() || "").replace(/\/+$/, "");
     const href = new URL(rawUrl, baseUrl ? `${baseUrl}/` : window.location.href).href;
+    const pickerResult = await saveReadyOutputWithPicker({ href, format, filename });
+    if (pickerResult.handled) return pickerResult;
+    if (format !== "pdf" || !shouldUseNativeFileShare()) {
+      await openDeliverableUrl(href, "download");
+      return { handled: true };
+    }
     const response = await fetch(href, { credentials: "include" });
     if (!response.ok) throw new Error(`PDF download failed (${response.status})`);
     const resolvedFilename = filenameFromDisposition(
@@ -6485,7 +6554,16 @@
         .filter((record) => record.status === "ready" && (mode === "view" ? record.viewUrl || record.downloadUrl : record.downloadUrl || record.viewUrl));
       if (outputRecords.length) {
         for (const record of outputRecords) {
-          await openDeliverableUrl(mode === "view" ? (record.viewUrl || record.downloadUrl) : (record.downloadUrl || record.viewUrl), mode);
+          const readyUrl = mode === "view" ? (record.viewUrl || record.downloadUrl) : (record.downloadUrl || record.viewUrl);
+          if (mode === "view") {
+            await openDeliverableUrl(readyUrl, "view");
+          } else {
+            await downloadReadyOutputUrl({
+              url: readyUrl,
+              format: deliverableFormatCode(record.type),
+              filename: record.filename || "",
+            });
+          }
         }
         setStatus(`${mode === "view" ? "Opened" : "Started download for"} ${outputRecords.length} ready cloud output${outputRecords.length === 1 ? "" : "s"}.`);
         return;
@@ -6861,7 +6939,11 @@
     document.querySelectorAll("[data-re-download-slideshow]").forEach((button) => button.addEventListener("click", () => {
       const readyUrl = button.dataset.reReadyDownloadUrl || "";
       if (readyUrl) {
-        openDeliverableUrl(readyUrl, "download").catch(() => setStatus("Video output could not be downloaded"));
+        downloadReadyOutputUrl({
+          url: readyUrl,
+          format: "video",
+          filename: button.dataset.reReadyDownloadFilename || "",
+        }).catch(() => setStatus("Video output could not be downloaded"));
         return;
       }
       shareSlideshowPlan({ mode: "download" }).catch(() => setStatus("Video output could not be downloaded"));

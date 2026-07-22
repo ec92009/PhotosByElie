@@ -80,7 +80,7 @@ test("Ready output actions become direct PDF or video downloads", () => {
   assert.match(script, /const readyCloudDownloadFor = \(format\) =>/);
   assert.match(script, /button\.dataset\.reReadyDownloadUrl/);
   assert.match(script, /downloadLabel: t\("re\.output\.download_pdf"/);
-  assert.match(script, /openDeliverableUrl\(readyUrl, "download"\)/);
+  assert.match(script, /downloadReadyOutputUrl\(\{/);
   assert.match(siteScript, /'re\.output\.title': 'Create and download'/);
 });
 
@@ -186,11 +186,25 @@ test("Ready output downloads use one browser launch path and ignore duplicate cl
 
 test("Phone PDF downloads bypass Safari preview and save like video files", () => {
   assert.match(script, /const downloadReadyOutputUrl = async \(\{ url, format = "", filename = "" \} = \{\}\) =>/);
-  assert.match(script, /if \(format !== "pdf" \|\| !shouldUseNativeFileShare\(\)\) \{\s*await openDeliverableUrl\(url, "download"\);/);
+  assert.match(script, /if \(format !== "pdf" \|\| !shouldUseNativeFileShare\(\)\) \{\s*await openDeliverableUrl\(href, "download"\);/);
   assert.match(script, /fetch\(href, \{ credentials: "include" \}\)/);
   assert.match(script, /new Blob\(\[bytes\], \{ type: "application\/octet-stream" \}\)/);
   assert.match(script, /data-re-download-output-format="\$\{escapeHtml\(format\)\}"/);
   assert.match(script, /downloadReadyOutputUrl\(\{\s*url: readyUrl,\s*format: "pdf"/);
+});
+
+test("Mac ready-output downloads ask where to save PDF, video, and Originals", () => {
+  const pickerHelper = script.match(/const saveReadyOutputWithPicker = async[\s\S]*?\n  const downloadBlob/)?.[0] || "";
+  assert.match(script, /const macDesktopSavePickerAvailable = \(\) =>/);
+  assert.match(script, /typeof window\.showSaveFilePicker === "function"/);
+  assert.match(pickerHelper, /fileHandle = await window\.showSaveFilePicker\(\{/);
+  assert.match(pickerHelper, /suggestedName: details\.filename/);
+  assert.ok(pickerHelper.indexOf("showSaveFilePicker") < pickerHelper.indexOf("fetch(href"));
+  assert.match(pickerHelper, /error\?\.name === "AbortError"/);
+  assert.match(pickerHelper, /await response\.body\.pipeTo\(writable\)/);
+  assert.match(script, /const pickerResult = await saveReadyOutputWithPicker\(\{ href, format, filename \}\)/);
+  assert.match(script, /format: "video",\s*filename: button\.dataset\.reReadyDownloadFilename/);
+  assert.match(script, /format: "originals",\s*filename: button\.dataset\.reReadyDownloadFilename/);
 });
 
 test("Finished-product shelf stays automatic without a cloud-sync banner", () => {

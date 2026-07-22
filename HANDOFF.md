@@ -15,10 +15,14 @@ for remote execution.
 - Public site: `https://photos-by-elie.com/`
 - Local preview: `http://localhost:8000/`
 - Owner intake URL: `https://photos-by-elie.com/owner.html`
-- Current visible build: `v145.16`
+- Current visible build: `v145.17`
 - Sidecar local build: `v126.6`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
+- `v145.17` routes every ready Real Estate PDF, video, and Originals action
+  through one Mac-aware download helper. Supported Mac browsers open the native
+  Save dialog before transfer and stream to the chosen file; phones and browsers
+  without `showSaveFilePicker` retain their existing download behavior.
 - `v145.16` promotes Originals to a persistent R2-backed third output beside
   PDF and Video. Output and shelf controls share Queue, pending, and Download
   states; the ZIP container remains an implementation detail rather than the

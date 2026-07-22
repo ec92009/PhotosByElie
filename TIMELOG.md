@@ -643,8 +643,9 @@ Clock state: running
 | 2026-07-22 | 22:15 CEST | 22:16 CEST | 0:01 | Reported slow saved-product shelf entry and return navigation; diagnosis, implementation, tests, and deployment runtime excluded. |
 | 2026-07-22 | 22:20 CEST | 22:21 CEST | 0:01 | Reported that one saved-product JPEG ZIP action made all shelf rows appear busy; diagnosis, implementation, tests, and deployment runtime excluded. |
 | 2026-07-22 | 22:25 CEST | 22:32 CEST | 0:02 | Defined Originals as the persistent third Real Estate output beside PDF and Video, with matching Queue and Download lifecycle on Output and shelf; implementation, tests, and deployment runtime excluded. |
+| 2026-07-22 | 23:15 CEST | 23:16 CEST | 0:01 | Requested native Mac save-location prompts before Real Estate PDF, video, and Originals downloads; implementation, tests, and deployment runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 31:54
+Active collaboration time used: 31:55
 Remaining budget: not set

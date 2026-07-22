@@ -8449,12 +8449,46 @@ html[data-theme="light"] .detail-preview.has-image::after{
     display:none;
   }
   .real-estate-stats,
-  .real-estate-sidebar,
-  .real-estate-stepper{
+  .real-estate-sidebar{
     grid-template-columns:1fr;
   }
+  .real-estate-wizard-head{
+    grid-template-columns:minmax(0,1fr);
+  }
+  .real-estate-shelf-back{
+    width:100%;
+  }
+  .real-estate-stepper{
+    grid-template-columns:repeat(5,minmax(0,1fr));
+    gap:4px;
+  }
   .real-estate-stepper button{
-    min-height:40px;
+    flex-direction:column;
+    justify-content:center;
+    gap:4px;
+    min-width:0;
+    min-height:62px;
+    padding:6px 2px;
+    font-size:.68rem;
+    text-align:center;
+  }
+  .real-estate-stepper button b{
+    width:24px;
+    height:24px;
+  }
+  .real-estate-wizard-actions{
+    display:grid;
+    grid-template-columns:minmax(0,1fr);
+    width:100%;
+  }
+  .real-estate-density-quick,
+  .real-estate-wizard-actions .btn{
+    min-width:0;
+    width:100%;
+  }
+  .real-estate-density-quick .real-estate-segmented{
+    grid-auto-columns:minmax(0,1fr);
+    width:100%;
   }
   .real-estate-gallery-toolbar{
     display:grid;

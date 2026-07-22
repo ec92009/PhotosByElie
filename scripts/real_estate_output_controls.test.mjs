@@ -19,6 +19,8 @@ test("Real Estate output step has one control per cloud action", () => {
   assert.equal((html.match(/data-re-download-slideshow/g) || []).length, 1);
   assert.equal((outputActions.match(/data-re-download-pdf/g) || []).length, 1);
   assert.equal((outputActions.match(/data-re-download-slideshow/g) || []).length, 1);
+  assert.equal((html.match(/data-re-download-originals/g) || []).length, 1);
+  assert.equal((outputActions.match(/data-re-download-originals/g) || []).length, 1);
   assert.equal((outputActions.match(/data-re-shelf-back/g) || []).length, 1);
   assert.equal((outputActions.match(/data-re-view-pdf/g) || []).length, 0);
   assert.equal((outputActions.match(/data-re-view-slideshow/g) || []).length, 0);
@@ -37,6 +39,16 @@ test("Output settings use compact explicit radio choices", () => {
   assert.doesNotMatch(html, /<input[^>]*type="number"[^>]*data-re-slideshow-photo-seconds/);
   assert.match(styles, /\.real-estate-radio-options input:checked \+ span/);
   assert.match(styles, /body\[data-real-estate\] \.real-estate-wizard-head \.gallery-status/);
+});
+
+test("Phone wizard actions stack without overlapping card-size controls", () => {
+  const phoneStyles = styles.match(/@media \(max-width:680px\)\{[\s\S]*?\n\}/)?.[0] || "";
+  assert.match(phoneStyles, /\.real-estate-wizard-head\{\s*grid-template-columns:minmax\(0,1fr\);/);
+  assert.match(phoneStyles, /\.real-estate-stepper\{\s*grid-template-columns:repeat\(5,minmax\(0,1fr\)\);/);
+  assert.match(phoneStyles, /\.real-estate-stepper button\{[\s\S]*?flex-direction:column;[\s\S]*?min-height:62px;/);
+  assert.match(phoneStyles, /\.real-estate-wizard-actions\{\s*display:grid;\s*grid-template-columns:minmax\(0,1fr\);\s*width:100%;/);
+  assert.match(phoneStyles, /\.real-estate-density-quick,\s*\.real-estate-wizard-actions \.btn\{\s*min-width:0;\s*width:100%;/);
+  assert.match(phoneStyles, /\.real-estate-density-quick \.real-estate-segmented\{\s*grid-auto-columns:minmax\(0,1fr\);\s*width:100%;/);
 });
 
 test("PDF orientation and video timing travel with saved and cloud-rendered products", () => {

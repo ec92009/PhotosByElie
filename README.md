@@ -6,8 +6,11 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v145.4`
+- Current visible version: `v145.5`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
+- `v145.5` keeps phone-sized Real Estate wizard actions in separate full-width
+  rows so the Next button cannot cover the card-size choices, and moves the
+  selected-originals ZIP control onto the reachable Output step.
 - `v145.4` keeps the Worker action ledger as the Waste Basket authorization and
   audit gate, then wakes Max's localhost connector with only the opaque action
   ID for sub-second restoration when the local bridge is reachable. Restore

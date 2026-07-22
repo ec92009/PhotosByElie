@@ -4670,6 +4670,9 @@ body[data-real-estate] .real-estate-wizard-head .gallery-status{
   background:var(--bg);
   padding:clamp(16px,3vw,28px);
 }
+.real-estate-bottom-next{
+  display:none;
+}
 .real-estate-step-head{
   display:grid;
   gap:8px;
@@ -8441,6 +8444,19 @@ html[data-theme="light"] .detail-preview.has-image::after{
   .real-estate-wizard-actions .btn{
     min-width:0;
     width:100%;
+  }
+  .real-estate-bottom-next{
+    display:flex;
+    justify-content:center;
+    padding:14px max(var(--panel-inline),var(--page-gutter)) 22px;
+    background:var(--surface);
+  }
+  .real-estate-bottom-next[hidden]{
+    display:none;
+  }
+  .real-estate-bottom-next .btn{
+    width:100%;
+    justify-content:center;
   }
   .real-estate-gallery-toolbar{
     display:grid;

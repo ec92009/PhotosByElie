@@ -50,6 +50,14 @@ test("Phone wizard actions stack without overlapping card-size controls", () => 
   assert.match(phoneStyles, /\.real-estate-stepper button\{[\s\S]*?flex-direction:column;[\s\S]*?min-height:62px;/);
   assert.match(phoneStyles, /\.real-estate-wizard-actions\{\s*display:grid;\s*grid-template-columns:minmax\(0,1fr\);\s*width:100%;/);
   assert.match(phoneStyles, /\.real-estate-wizard-actions \.btn\{\s*min-width:0;\s*width:100%;/);
+  assert.match(html, /class="real-estate-bottom-next"[\s\S]*?data-re-step-next/);
+  assert.match(phoneStyles, /\.real-estate-bottom-next\{[\s\S]*?display:flex;/);
+  assert.match(phoneStyles, /\.real-estate-bottom-next \.btn\{\s*width:100%;/);
+});
+
+test("Title and order phases prioritize their visible phone previews", () => {
+  assert.match(script, /loading="\$\{state\.wizardStep >= 2 \? "eager" : "lazy"\}" decoding="async"/);
+  assert.match(script, /<img loading="eager" decoding="async" src="\$\{escapeHtml\(imageFor\(photo\)\)\}" alt="" draggable="false"\/>/);
 });
 
 test("Real Estate cards use one forced balanced density", () => {

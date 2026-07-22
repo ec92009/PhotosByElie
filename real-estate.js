@@ -2423,7 +2423,7 @@
         <article class="real-estate-photo-card ${selected ? "is-selected" : ""} ${video ? "is-video" : ""}" data-photo-id="${escapeHtml(photo.id)}">
           <div class="real-estate-photo-media-shell">
             <button class="real-estate-photo-media" type="button" data-open-photo="${escapeHtml(photo.id)}" aria-label="Open ${escapeHtml(titleFor(photo))}">
-              <img loading="lazy" src="${escapeHtml(imageFor(photo))}" alt="${escapeHtml(titleFor(photo))}"/>
+              <img loading="${state.wizardStep >= 2 ? "eager" : "lazy"}" decoding="async" src="${escapeHtml(imageFor(photo))}" alt="${escapeHtml(titleFor(photo))}"/>
               <span>${escapeHtml(originalProperty ? `${originalProperty} / shared` : albumTitleFor(photo))}</span>
               ${video ? `<b class="real-estate-media-type-badge">${escapeHtml(duration ? `${mediaLabel} ${duration}` : mediaLabel)}</b>` : ""}
             </button>
@@ -2467,7 +2467,7 @@
           <span aria-hidden="true"></span>
         </span>
         <strong class="real-estate-draft-position">${index + 1}</strong>
-        <img src="${escapeHtml(imageFor(photo))}" alt="" draggable="false"/>
+        <img loading="eager" decoding="async" src="${escapeHtml(imageFor(photo))}" alt="" draggable="false"/>
         <div>
           <strong>${escapeHtml(titleFor(photo))}</strong>
           <small>${escapeHtml([mediaLabelFor(photo), selectedProjectIdsFor(photo).map((projectId) => projectOptionFor(projectId, photo).projectTitle).join(" + ")].filter(Boolean).join(" / "))}</small>

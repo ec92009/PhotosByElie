@@ -1187,6 +1187,7 @@
     button.textContent = busy ? busyLabel : (readyUrl ? downloadLabel : queueLabel);
     button.title = readyUrl ? downloadLabel : queueTitle;
     button.dataset.reReadyDownloadUrl = readyUrl;
+    button.dataset.reReadyDownloadFilename = ready?.filename || "";
     button.disabled = (state.outputBusy || state.pdfBusy) || activeSelectedPhotos().length === 0;
   };
 
@@ -1727,7 +1728,7 @@
       if (ready) {
         const url = ready.downloadUrl || ready.viewUrl;
         return `
-          <button class="real-estate-deliverable-status is-action" type="button" data-re-status-tone="ready" data-re-download-output-url="${escapeHtml(url)}">
+          <button class="real-estate-deliverable-status is-action" type="button" data-re-status-tone="ready" data-re-download-output-url="${escapeHtml(url)}" data-re-download-output-format="${escapeHtml(format)}" data-re-download-output-filename="${escapeHtml(ready.filename || "")}">
             ${escapeHtml(t("re.shelf.download", { format: label }, `Download ${label}`))}
           </button>
         `;
@@ -3677,6 +3678,39 @@
       return openBlobInBrowser(blob, filename, reservedWindow);
     }
     return { method: "download", ...(await downloadBlob(blob, filename)) };
+  };
+
+  const filenameFromDisposition = (headerValue, fallback = "photos-by-elie.pdf") => {
+    const encoded = String(headerValue || "").match(/filename\*=UTF-8''([^;]+)/i)?.[1];
+    const plain = String(headerValue || "").match(/filename="?([^";]+)"?/i)?.[1];
+    let candidate = plain;
+    if (encoded) {
+      try {
+        candidate = decodeURIComponent(encoded);
+      } catch {
+        candidate = encoded;
+      }
+    }
+    return String(candidate || fallback).split(/[\\/]/).pop() || fallback;
+  };
+
+  const downloadReadyOutputUrl = async ({ url, format = "", filename = "" } = {}) => {
+    if (format !== "pdf" || !shouldUseNativeFileShare()) {
+      await openDeliverableUrl(url, "download");
+      return;
+    }
+    const rawUrl = String(url || "").trim();
+    const baseUrl = String(workerBaseUrl() || "").replace(/\/+$/, "");
+    const href = new URL(rawUrl, baseUrl ? `${baseUrl}/` : window.location.href).href;
+    const response = await fetch(href, { credentials: "include" });
+    if (!response.ok) throw new Error(`PDF download failed (${response.status})`);
+    const resolvedFilename = filenameFromDisposition(
+      response.headers.get("content-disposition"),
+      filename || "photos-by-elie.pdf"
+    );
+    const bytes = await response.arrayBuffer();
+    const saved = await downloadBlob(new Blob([bytes], { type: "application/octet-stream" }), resolvedFilename);
+    setStatus(`Downloaded ${saved.filename} to Downloads (${formatBytes(saved.bytes)})`);
   };
 
   const shareSelectionTable = async () => {
@@ -6716,7 +6750,11 @@
     document.querySelectorAll("[data-re-download-pdf]").forEach((button) => button.addEventListener("click", () => {
       const readyUrl = button.dataset.reReadyDownloadUrl || "";
       if (readyUrl) {
-        openDeliverableUrl(readyUrl, "download").catch(() => setStatus("PDF output could not be downloaded"));
+        downloadReadyOutputUrl({
+          url: readyUrl,
+          format: "pdf",
+          filename: button.dataset.reReadyDownloadFilename || "",
+        }).catch(() => setStatus("PDF output could not be downloaded"));
         return;
       }
       downloadPdf({ mode: "download" });
@@ -6728,7 +6766,11 @@
         event.preventDefault();
         event.stopPropagation();
         if (button.matches("[data-re-download-output-url]")) {
-          openDeliverableUrl(button.getAttribute("data-re-download-output-url") || "", "download")
+          downloadReadyOutputUrl({
+            url: button.getAttribute("data-re-download-output-url") || "",
+            format: button.getAttribute("data-re-download-output-format") || "",
+            filename: button.getAttribute("data-re-download-output-filename") || "",
+          })
             .catch(() => setStatus("Could not download this output"));
           return;
         }

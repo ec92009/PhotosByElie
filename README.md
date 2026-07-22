@@ -6,8 +6,10 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v145.8`
+- Current visible version: `v145.9`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
+- `v145.9` makes ready PDFs download directly on touch devices instead of
+  opening Safari's multi-tap PDF preview, matching the ready-video experience.
 - `v145.8` makes the selected previews in Real Estate Titles and Order eager on
   mobile Safari and adds a phone-only Next action after the active list.
 - `v145.7` hides Real Estate source/shoot/product inventory statistics on phone

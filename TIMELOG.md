@@ -635,8 +635,9 @@ Clock state: running
 | 2026-07-22 | 00:52 CEST | 00:53 CEST | 0:01 | Required Waste Basket restoration to carry each photo's recovered private title back into the active catalog; implementation, tests, and deployment runtime excluded. |
 | 2026-07-22 | 01:00 CEST | 01:01 CEST | 0:01 | Directed the Worker-authorized direct local wake fast path for Waste Basket restoration while retaining the connector poll fallback and private atomic title recovery; implementation, tests, and deployment runtime excluded. |
 | 2026-07-22 | 18:15 CEST | 18:20 CEST | 0:02 | Reported missing iPhone previews in the Real Estate Titles and Order phases, requested a bottom-of-list Next action, and clarified the originals ZIP control; implementation, tests, and deployment runtime excluded. |
+| 2026-07-22 | 18:31 CEST | 18:32 CEST | 0:01 | Clarified that the PDF download should match the simpler video-download experience on iPhone; implementation, tests, and deployment runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 31:43
+Active collaboration time used: 31:44
 Remaining budget: not set

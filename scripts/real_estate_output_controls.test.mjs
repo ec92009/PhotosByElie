@@ -131,6 +131,15 @@ test("Ready output downloads use one browser launch path and ignore duplicate cl
   assert.doesNotMatch(opener, /if \(!sameOrigin\) \{[\s\S]*window\.open/);
 });
 
+test("Phone PDF downloads bypass Safari preview and save like video files", () => {
+  assert.match(script, /const downloadReadyOutputUrl = async \(\{ url, format = "", filename = "" \} = \{\}\) =>/);
+  assert.match(script, /if \(format !== "pdf" \|\| !shouldUseNativeFileShare\(\)\) \{\s*await openDeliverableUrl\(url, "download"\);/);
+  assert.match(script, /fetch\(href, \{ credentials: "include" \}\)/);
+  assert.match(script, /new Blob\(\[bytes\], \{ type: "application\/octet-stream" \}\)/);
+  assert.match(script, /data-re-download-output-format="\$\{escapeHtml\(format\)\}"/);
+  assert.match(script, /downloadReadyOutputUrl\(\{\s*url: readyUrl,\s*format: "pdf"/);
+});
+
 test("Finished-product shelf stays automatic without a cloud-sync banner", () => {
   assert.doesNotMatch(script, /data-re-sync-deliverables/);
   assert.doesNotMatch(script, /real-estate-deliverable-sync-row/);

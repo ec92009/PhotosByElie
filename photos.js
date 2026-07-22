@@ -4053,6 +4053,7 @@ const ensureSiteAccount = () => {
     scopedAuthenticated: false,
     scopedKind: "",
     scopedLabel: "",
+    displayName: "",
     email: "",
     tier: "user",
     realEstateClients: [],
@@ -4073,6 +4074,12 @@ const ensureSiteAccount = () => {
     "\"": "&quot;",
     "'": "&#39;",
   }[char]));
+
+  const accountInitialFor = (value = "") => {
+    const identity = String(value || "").trim();
+    const first = Array.from(identity)[0] || "?";
+    return first.toLocaleUpperCase(document.documentElement.lang || undefined);
+  };
 
   const accountButton = document.createElement('button');
   accountButton.className = 'account-toggle';
@@ -4460,6 +4467,14 @@ const ensureSiteAccount = () => {
     accountButton.hidden = !activeAuth;
     accountButton.classList.toggle("is-authenticated", activeAuth);
     if (activeAuth) {
+      const identity = state.authenticated
+        ? state.displayName || state.email
+        : state.scopedLabel || state.scopedKind;
+      accountButton.innerHTML = `<span class="account-initial" aria-hidden="true">${escapeAccountHtml(accountInitialFor(identity))}</span>`;
+    } else {
+      accountButton.innerHTML = window.photosByElieMdIcon('accountCircle');
+    }
+    if (activeAuth) {
       if (statusPanel) statusPanel.hidden = false;
       if (accountTitle) accountTitle.textContent = translate('account.title');
       if (statusTitle) statusTitle.textContent = translate('account.signed_in');
@@ -4501,6 +4516,7 @@ const ensureSiteAccount = () => {
     if (!workerBase) {
       state.checked = true;
       state.authenticated = false;
+      state.displayName = "";
       state.email = "";
       state.tier = "user";
       state.realEstateClients = [];
@@ -4521,6 +4537,7 @@ const ensureSiteAccount = () => {
       state.checked = true;
       state.available = true;
       state.authenticated = payload.authenticated === true;
+      state.displayName = user.displayName || user.name || "";
       state.email = user.email || payload.email || "";
       state.tier = payload.tier || user.tier || "user";
       state.realEstateClients = Array.isArray(payload.realEstateClients) ? payload.realEstateClients : [];
@@ -4551,6 +4568,7 @@ const ensureSiteAccount = () => {
       state.checked = true;
       state.available = false;
       state.authenticated = false;
+      state.displayName = "";
       state.email = "";
       state.tier = "user";
       state.realEstateClients = [];
@@ -4606,6 +4624,7 @@ const ensureSiteAccount = () => {
     setMessage(translate('account.signing_out'));
     if (!workerBase) {
       state.authenticated = false;
+      state.displayName = "";
       state.email = "";
       state.tier = "user";
       updateAccountView();
@@ -4706,6 +4725,7 @@ const ensureSiteAccount = () => {
         authenticated: accountIsAuthenticated(),
         siteAuthenticated: state.authenticated,
         scopedKind: state.scopedKind,
+        displayName: state.displayName,
         email: state.email,
         tier: state.tier,
         profileLoaded: state.profileLoaded,

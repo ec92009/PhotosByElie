@@ -261,6 +261,8 @@ test("Visitors see account pills and signed-in users return to the face menu", (
   assert.match(siteScript, /const accountIsAuthenticated = \(\) => state\.authenticated \|\| state\.scopedAuthenticated/);
   assert.match(siteScript, /accountEntry\.hidden = activeAuth/);
   assert.match(siteScript, /accountButton\.hidden = !activeAuth/);
+  assert.match(siteScript, /state\.displayName \|\| state\.email/);
+  assert.match(siteScript, /class="account-initial"/);
   assert.match(siteScript, /accountEntryMode === 'signin'/);
   assert.match(siteScript, /signupButton\.hidden = accountEntryMode === 'signin'/);
   assert.match(siteScript, /signinButton\.hidden = accountEntryMode !== 'signin'/);
@@ -279,6 +281,7 @@ test("Visitors see account pills and signed-in users return to the face menu", (
   assert.match(basketScript, /photosbyelie:accountdatacleared/);
   assert.match(likedScript, /photosbyelie:accountdatacleared/);
   assert.match(sharedStyles, /\.account-entry-actions\{/);
+  assert.match(sharedStyles, /\.account-initial\{/);
   assert.doesNotMatch(home, /real-estate\.html\?logout=1&client=elie/);
 });
 

@@ -131,6 +131,16 @@ input { font: inherit; }
   stroke-linejoin: round;
 }
 
+.account-initial {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1ch;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
 .icon-button,
 .round-button {
   width: 44px;

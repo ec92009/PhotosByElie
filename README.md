@@ -6,8 +6,11 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v145.11`
+- Current visible version: `v145.12`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
+- `v145.12` replaces the signed-in account face icon with the first letter of
+  the user's name or email address across the production landing and shared
+  account controls.
 - `v145.11` adds a product-specific JPEG ZIP action to each finished-product
   shelf row, removes the redundant Cloud saved badge, and makes phone
   language/theme switches avoid rebuilding the full Real Estate photo grid.

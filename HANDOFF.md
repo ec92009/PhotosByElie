@@ -15,10 +15,12 @@ for remote execution.
 - Public site: `https://photos-by-elie.com/`
 - Local preview: `http://localhost:8000/`
 - Owner intake URL: `https://photos-by-elie.com/owner.html`
-- Current visible build: `v145.11`
+- Current visible build: `v145.12`
 - Sidecar local build: `v126.6`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
+- `v145.12` replaces the generic signed-in face icon with the account's first
+  initial, preferring the available name and falling back to the email address.
 - `v145.11` gives every Real Estate finished product its own ZIP JPEGs action
   using the product's saved manifest, removes the redundant Cloud saved badge,
   and avoids the full 99-card rebuild when switching language or theme on a

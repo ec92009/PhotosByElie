@@ -250,6 +250,11 @@
     let applyingAccountProfile = false;
     let accountProfileWriteTimer = null;
 
+    const accountInitialFor = (value = "") => {
+      const first = Array.from(String(value || "").trim())[0] || "?";
+      return first.toLocaleUpperCase(document.documentElement.lang || undefined);
+    };
+
     const setMessage = (value = "", error = false) => {
       message.textContent = value;
       message.classList.toggle("is-error", error);
@@ -258,6 +263,13 @@
     const render = () => {
       entry.hidden = authenticated;
       face.hidden = !authenticated;
+      if (authenticated) {
+        const initial = document.createElement("span");
+        initial.className = "account-initial";
+        initial.setAttribute("aria-hidden", "true");
+        initial.textContent = accountInitialFor(email);
+        face.replaceChildren(initial);
+      }
       signedOut.hidden = authenticated;
       signedIn.hidden = !authenticated;
       identity.textContent = email;

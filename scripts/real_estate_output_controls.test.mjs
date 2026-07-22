@@ -158,6 +158,14 @@ test("Finished-product shelf offers the saved product's JPEG ZIP without changin
   assert.doesNotMatch(helper, /applyBatchManifest|state\.selectedOrder|persistSelection/);
 });
 
+test("Only the clicked saved product shows JPEG ZIP preparation", () => {
+  const labels = script.match(/const syncFileActionLabels = \(\) => \{[\s\S]*?\n  \};/)?.[0] || "";
+  assert.match(script, /originalsBusyKey: ""/);
+  assert.match(labels, /state\.originalsBusyKey === productCacheKey/);
+  assert.match(script, /state\.originalsBusyKey = resolvedCacheKey/);
+  assert.match(script, /state\.originalsBusyKey = ""/);
+});
+
 test("Cloud persistence is silent when a finished product is safely saved", () => {
   assert.match(script, /if \(hasCloud\) return null;/);
   assert.doesNotMatch(script, /if \(hasCloud\) return \{ label: t\("re\.shelf\.cloud_saved"/);

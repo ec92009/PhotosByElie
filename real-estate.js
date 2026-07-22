@@ -209,6 +209,7 @@
     videoExportTimer: 0,
     videoExportToken: 0,
     originalsBusy: false,
+    originalsBusyKey: "",
     originalsDownloads: new Map(),
     originalsCredentialRequest: null,
     username: "",
@@ -1255,8 +1256,10 @@
       button.disabled = outputBusy || noActiveSelection;
     });
     document.querySelectorAll("[data-re-download-originals]").forEach((button) => {
-      const ready = state.originalsDownloads.has(originalsSelectionCacheKey());
-      button.textContent = state.originalsBusy
+      const selectionCacheKey = originalsSelectionCacheKey();
+      const ready = state.originalsDownloads.has(selectionCacheKey);
+      const building = state.originalsBusy && state.originalsBusyKey === selectionCacheKey;
+      button.textContent = building
         ? t("re.output.building_originals", {}, "Building originals ZIP...")
         : ready
           ? "Download JPEGs"
@@ -1265,8 +1268,10 @@
       button.disabled = state.originalsBusy || outputBusy || selectedPhotos().length === 0;
     });
     document.querySelectorAll("[data-re-download-originals-deliverable]").forEach((button) => {
-      const ready = state.originalsDownloads.has(button.getAttribute("data-re-download-originals-deliverable") || "");
-      button.textContent = state.originalsBusy
+      const productCacheKey = button.getAttribute("data-re-download-originals-deliverable") || "";
+      const ready = state.originalsDownloads.has(productCacheKey);
+      const building = state.originalsBusy && state.originalsBusyKey === productCacheKey;
+      button.textContent = building
         ? t("re.output.building_originals", {}, "Building originals ZIP...")
         : ready
           ? "Download JPEGs"
@@ -5048,6 +5053,7 @@
       return;
     }
     state.originalsBusy = true;
+    state.originalsBusyKey = resolvedCacheKey;
     startOutputProgress({
       title: "Preparing originals ZIP",
       detail: "Requesting private original links...",
@@ -5127,6 +5133,7 @@
       }
     } finally {
       state.originalsBusy = false;
+      state.originalsBusyKey = "";
       syncFileActionLabels();
     }
   };

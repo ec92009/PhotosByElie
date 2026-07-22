@@ -6,8 +6,10 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v145.14`
+- Current visible version: `v145.15`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
+- `v145.15` scopes JPEG ZIP preparation feedback to the saved product whose
+  button was pressed, instead of making every shelf row appear to start work.
 - `v145.14` makes opening a saved Real Estate product and returning to its
   shelf lightweight: neither transition rebuilds the full source-photo grid,
   and previously loaded product manifests are reused during the session.

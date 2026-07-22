@@ -24,7 +24,6 @@
   const defaultPublicContext = `./assets/real-estate/${defaultClientContext}/app-context.js${contextVersion}`;
   const contextParam = pageParams.get("context");
   const contextUrl = contextParam || (isLocalHost ? defaultLocalContext : defaultPublicContext);
-  const densityKey = "photosbyelie-real-estate-card-density";
   const pdfFormatKey = "photosbyelie-real-estate-pdf-format";
   const pdfOrientationKey = "photosbyelie-real-estate-pdf-orientation";
   const slideshowPhotoSecondsKey = "photosbyelie-real-estate-slideshow-photo-seconds";
@@ -111,7 +110,6 @@
     search: app.querySelector("[data-re-search]"),
     sort: app.querySelector("[data-re-sort]"),
     mediaType: app.querySelector("[data-re-media-type]"),
-    density: app.querySelector("[data-re-density]"),
     selectedOnly: app.querySelector("[data-re-selected-only]"),
     slideshowMusicCountry: app.querySelector("[data-re-slideshow-music-country]"),
     watermarkEnabled: app.querySelector("[data-re-watermark-enabled]"),
@@ -161,7 +159,7 @@
     query: "",
     mediaType: "all",
     sort: "album",
-    density: localStorage.getItem(densityKey) || "balanced",
+    density: "balanced",
     pdfFormat: localStorage.getItem(pdfFormatKey) || "a4",
     pdfOrientation: localStorage.getItem(pdfOrientationKey) || "portrait",
     slideshowPhotoSeconds: [3, 4, 5].includes(Number(localStorage.getItem(slideshowPhotoSecondsKey)))
@@ -773,11 +771,9 @@
       : { ...paper, orientation: normalizedOrientation };
   };
   const pdfWatermarkText = "\u00a9 2026 Photos By Elie";
-  const densityOptions = new Set(["compact", "balanced", "large"]);
   const slideshowOrientationOptions = new Set(["landscape", "portrait"]);
   const slideshowMusicCountries = Object.freeze(["Spain", "Portugal", "France", "USA"]);
   const slideshowMusicCountryOptions = new Set(["auto", ...slideshowMusicCountries]);
-  const normalizeDensity = (value) => densityOptions.has(value) ? value : "balanced";
   const normalizeSlideshowOrientation = (value) => slideshowOrientationOptions.has(value) ? value : "landscape";
   const normalizeSlideshowMusicCountry = (value) => {
     const raw = String(value || "").trim();
@@ -2544,32 +2540,6 @@
     });
   };
 
-  const syncDensityControls = () => {
-    const normalized = normalizeDensity(state.density);
-    state.density = normalized;
-    if (elements.density) elements.density.value = normalized;
-    document.querySelectorAll("[data-re-density-quick]").forEach((control) => {
-      control.hidden = state.wizardStep !== 1 && state.wizardStep !== 2;
-    });
-    document.querySelectorAll("[data-re-density-choice]").forEach((button) => {
-      const active = button.dataset.reDensityChoice === normalized;
-      button.classList.toggle("is-active", active);
-      button.setAttribute("aria-pressed", active ? "true" : "false");
-    });
-  };
-
-  const setDensity = (value) => {
-    const normalized = normalizeDensity(value);
-    if (state.density === normalized) {
-      syncDensityControls();
-      return;
-    }
-    state.density = normalized;
-    localStorage.setItem(densityKey, normalized);
-    syncDensityControls();
-    renderGrid();
-  };
-
   const syncPdfFormatControls = () => {
     state.pdfFormat = paperFormatFor(state.pdfFormat).key;
     document.querySelectorAll("[data-re-pdf-format]").forEach((input) => {
@@ -2685,7 +2655,7 @@
   };
 
   const render = () => {
-    state.density = normalizeDensity(state.density);
+    state.density = "balanced";
     document.body.dataset.realEstateDensity = state.density;
     if (elements.mediaType) elements.mediaType.value = state.mediaType;
     syncAuthUi();
@@ -2695,7 +2665,6 @@
     renderGrid();
     renderDraft();
     renderWizard();
-    syncDensityControls();
     syncPdfFormatControls();
     syncPdfOrientationControls();
     syncSlideshowPhotoSecondsControls();
@@ -6518,9 +6487,6 @@
       state.mediaType = event.target.value || "all";
       renderGrid();
     });
-    elements.density?.addEventListener("change", (event) => {
-      setDensity(event.target.value);
-    });
     document.querySelectorAll("[data-re-pdf-format]").forEach((input) => input.addEventListener("change", () => {
       if (input.checked) setPdfFormat(input.value);
     }));
@@ -6698,9 +6664,6 @@
     }));
     document.querySelectorAll("[data-re-step-next]").forEach((button) => button.addEventListener("click", () => {
       setWizardStep(state.wizardStep + 1);
-    }));
-    document.querySelectorAll("[data-re-density-choice]").forEach((button) => button.addEventListener("click", () => {
-      setDensity(button.dataset.reDensityChoice);
     }));
     document.querySelectorAll("[data-re-slideshow-orientation]").forEach((input) => input.addEventListener("change", () => {
       if (input.checked) setSlideshowOrientation(input.dataset.reSlideshowOrientation);
@@ -6914,8 +6877,7 @@
     const savedSession = readJson(authStoreKey(), {});
     state.username = savedCredentials.username || savedSession.username || state.payload?.customer?.username || state.payload?.customer?.name || "";
     state.accessCode = "";
-    state.density = normalizeDensity(state.density);
-    if (elements.density) elements.density.value = state.density;
+    state.density = "balanced";
     state.pdfFormat = paperFormatFor(state.pdfFormat).key;
     state.pdfOrientation = normalizePdfOrientation(state.pdfOrientation);
     state.slideshowPhotoSeconds = [3, 4, 5].includes(Number(state.slideshowPhotoSeconds))

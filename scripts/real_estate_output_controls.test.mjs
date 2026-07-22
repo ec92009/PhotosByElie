@@ -47,8 +47,14 @@ test("Phone wizard actions stack without overlapping card-size controls", () => 
   assert.match(phoneStyles, /\.real-estate-stepper\{\s*grid-template-columns:repeat\(5,minmax\(0,1fr\)\);/);
   assert.match(phoneStyles, /\.real-estate-stepper button\{[\s\S]*?flex-direction:column;[\s\S]*?min-height:62px;/);
   assert.match(phoneStyles, /\.real-estate-wizard-actions\{\s*display:grid;\s*grid-template-columns:minmax\(0,1fr\);\s*width:100%;/);
-  assert.match(phoneStyles, /\.real-estate-density-quick,\s*\.real-estate-wizard-actions \.btn\{\s*min-width:0;\s*width:100%;/);
-  assert.match(phoneStyles, /\.real-estate-density-quick \.real-estate-segmented\{\s*grid-auto-columns:minmax\(0,1fr\);\s*width:100%;/);
+  assert.match(phoneStyles, /\.real-estate-wizard-actions \.btn\{\s*min-width:0;\s*width:100%;/);
+});
+
+test("Real Estate cards use one forced balanced density", () => {
+  assert.doesNotMatch(html, /data-re-density(?:-choice|-quick)?/);
+  assert.doesNotMatch(script, /photosbyelie-real-estate-card-density|normalizeDensity|setDensity|syncDensityControls/);
+  assert.match(script, /density: "balanced"/);
+  assert.match(script, /state\.density = "balanced";/);
 });
 
 test("PDF orientation and video timing travel with saved and cloud-rendered products", () => {

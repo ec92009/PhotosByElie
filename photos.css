@@ -4111,53 +4111,6 @@ body[data-real-estate] button.real-estate-deliverable-status.is-action:focus-vis
   justify-content:flex-end;
   gap:8px;
 }
-.real-estate-density-quick{
-  display:flex;
-  flex:1 1 320px;
-  flex-wrap:wrap;
-  align-items:center;
-  gap:8px 10px;
-  color:var(--muted);
-  font-size:.72rem;
-  font-weight:850;
-  letter-spacing:.08em;
-  text-transform:uppercase;
-}
-.real-estate-density-quick[hidden]{
-  display:none!important;
-}
-.real-estate-segmented{
-  display:inline-grid;
-  grid-auto-flow:column;
-  grid-auto-columns:minmax(78px,1fr);
-  gap:0;
-  overflow:hidden;
-  max-width:100%;
-  border:1px solid var(--line);
-  border-radius:999px;
-  background:var(--surface);
-}
-.real-estate-segmented button{
-  min-height:38px;
-  border:0;
-  border-right:1px solid var(--line);
-  border-radius:0;
-  background:transparent;
-  color:var(--text);
-  padding:7px 12px;
-  cursor:pointer;
-  font:inherit;
-  font-size:.78rem;
-  font-weight:850;
-  line-height:1.1;
-}
-.real-estate-segmented button:last-child{
-  border-right:0;
-}
-.real-estate-segmented button.is-active{
-  background:var(--re-accent);
-  color:#fff;
-}
 .real-estate-workbench{
   display:grid;
   grid-template-columns:minmax(260px,320px) minmax(0,1fr);
@@ -8401,17 +8354,9 @@ html[data-theme="light"] .detail-preview.has-image::after{
   .real-estate-wizard-actions{
     justify-content:stretch;
   }
-  .real-estate-density-quick,
   .real-estate-wizard-actions .btn{
     flex:1 1 150px;
     justify-content:center;
-  }
-  .real-estate-density-quick{
-    display:grid;
-    justify-items:stretch;
-  }
-  .real-estate-density-quick > span{
-    text-align:center;
   }
   .real-estate-workbench{
     grid-template-columns:1fr;
@@ -8481,13 +8426,8 @@ html[data-theme="light"] .detail-preview.has-image::after{
     grid-template-columns:minmax(0,1fr);
     width:100%;
   }
-  .real-estate-density-quick,
   .real-estate-wizard-actions .btn{
     min-width:0;
-    width:100%;
-  }
-  .real-estate-density-quick .real-estate-segmented{
-    grid-auto-columns:minmax(0,1fr);
     width:100%;
   }
   .real-estate-gallery-toolbar{

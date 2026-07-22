@@ -15,10 +15,18 @@ for remote execution.
 - Public site: `https://photos-by-elie.com/`
 - Local preview: `http://localhost:8000/`
 - Owner intake URL: `https://photos-by-elie.com/owner.html`
-- Current visible build: `v145.12`
+- Current visible build: `v145.13`
 - Sidecar local build: `v126.6`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
+- `v145.13` normalizes every cloud slideshow video through an explicit
+  orientation-aware Media transform before MP4 output, preventing VP9/Opus
+  browser recordings from masquerading as iPhone-incompatible MP4 files. A
+  prepared product JPEG ZIP now becomes a direct Download JPEGs action for
+  repeat downloads in the current session. Worker version
+  `5c6dda2b-e7fb-4028-a67a-5fb07ad719bb` is deployed; fresh Corine output
+  `assembly-20260722T181605Z-070956180e-video` was downloaded directly from R2
+  and verified as H.264 High / AAC-LC / 1280x720.
 - `v145.12` replaces the generic signed-in face icon with the account's first
   initial, preferring the available name and falling back to the email address.
 - `v145.11` gives every Real Estate finished product its own ZIP JPEGs action

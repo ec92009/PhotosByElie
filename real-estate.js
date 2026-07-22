@@ -208,6 +208,7 @@
     videoExportTimer: 0,
     videoExportToken: 0,
     originalsBusy: false,
+    originalsDownloads: new Map(),
     originalsCredentialRequest: null,
     username: "",
     accessCode: "",
@@ -1191,6 +1192,8 @@
     button.disabled = (state.outputBusy || state.pdfBusy) || activeSelectedPhotos().length === 0;
   };
 
+  const originalsSelectionCacheKey = () => `selection:${selectedPhotos().map((photo) => photo.id).sort().join("|")}`;
+
   const syncFileActionLabels = () => {
     const outputBusy = state.outputBusy || state.pdfBusy;
     const kind = state.outputBusyKind;
@@ -1251,16 +1254,22 @@
       button.disabled = outputBusy || noActiveSelection;
     });
     document.querySelectorAll("[data-re-download-originals]").forEach((button) => {
+      const ready = state.originalsDownloads.has(originalsSelectionCacheKey());
       button.textContent = state.originalsBusy
         ? t("re.output.building_originals", {}, "Building originals ZIP...")
-        : t("re.output.share_originals", {}, "ZIP JPEGs");
+        : ready
+          ? "Download JPEGs"
+          : t("re.output.share_originals", {}, "ZIP JPEGs");
       button.title = "Prepare a ZIP of selected original source media from private delivery storage";
       button.disabled = state.originalsBusy || outputBusy || selectedPhotos().length === 0;
     });
     document.querySelectorAll("[data-re-download-originals-deliverable]").forEach((button) => {
+      const ready = state.originalsDownloads.has(button.getAttribute("data-re-download-originals-deliverable") || "");
       button.textContent = state.originalsBusy
         ? t("re.output.building_originals", {}, "Building originals ZIP...")
-        : t("re.output.share_originals", {}, "ZIP JPEGs");
+        : ready
+          ? "Download JPEGs"
+          : t("re.output.share_originals", {}, "ZIP JPEGs");
       button.title = "Prepare a ZIP of this saved product's original source media";
       button.disabled = state.originalsBusy || outputBusy;
     });
@@ -4998,8 +5007,15 @@
     }));
   };
 
-  const shareOriginalsZip = async ({ photosOverride = null } = {}) => {
+  const shareOriginalsZip = async ({ photosOverride = null, cacheKey = "" } = {}) => {
     if (!requireUnlocked() || state.originalsBusy || state.outputBusy) return;
+    const resolvedCacheKey = cacheKey || originalsSelectionCacheKey();
+    const cached = state.originalsDownloads.get(resolvedCacheKey);
+    if (cached?.blob && cached?.filename) {
+      const saved = await downloadBlob(cached.blob, cached.filename);
+      setStatus(`Downloaded ${saved.filename} to Downloads (${formatBytes(saved.bytes)})`);
+      return;
+    }
     const photos = Array.isArray(photosOverride) ? photosOverride : selectedPhotos();
     if (!photos.length) {
       setStatus("Select media before preparing originals ZIP");
@@ -5056,6 +5072,8 @@
         }
       });
       const filename = session.zipFilename || `${state.gallery?.key || "real-estate"}-originals-${timestampId()}.zip`;
+      state.originalsDownloads.set(resolvedCacheKey, { blob, filename });
+      syncFileActionLabels();
       updateOutputProgress({
         title: "Preparing originals ZIP",
         detail: "Sending ZIP to your device...",
@@ -6367,7 +6385,7 @@
     const batch = await deliverableBatchFor(item);
     const photos = photosForDeliverableBatch(batch);
     if (!photos.length) throw new Error("This product has no original photos to ZIP.");
-    await shareOriginalsZip({ photosOverride: photos });
+    await shareOriginalsZip({ photosOverride: photos, cacheKey: deliverableId });
   };
 
   const editProducedDeliverable = async (deliverableId) => {

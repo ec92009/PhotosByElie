@@ -6,8 +6,11 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v145.12`
+- Current visible version: `v145.13`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
+- `v145.13` forces cloud slideshow videos through an explicit H.264/AAC
+  transformation for iPhone playback and turns a finished JPEG ZIP action into
+  a direct Download JPEGs action while its prepared archive remains available.
 - `v145.12` replaces the signed-in account face icon with the first letter of
   the user's name or email address across the production landing and shared
   account controls.

@@ -137,7 +137,9 @@ test("Finished-product shelf offers the saved product's JPEG ZIP without changin
   assert.match(script, /const photosForDeliverableBatch = \(batch\) =>/);
   assert.match(script, /seen\.has\(photoId\)/);
   assert.match(script, /const shareProducedDeliverableOriginals = async \(deliverableId\) =>/);
-  assert.match(script, /await shareOriginalsZip\(\{ photosOverride: photos \}\)/);
+  assert.match(script, /await shareOriginalsZip\(\{ photosOverride: photos, cacheKey: deliverableId \}\)/);
+  assert.match(script, /originalsDownloads: new Map\(\)/);
+  assert.match(script, /Download JPEGs/);
   const helper = script.match(/const shareProducedDeliverableOriginals = async[\s\S]*?\n  \};/)?.[0] || "";
   assert.doesNotMatch(helper, /applyBatchManifest|state\.selectedOrder|persistSelection/);
 });

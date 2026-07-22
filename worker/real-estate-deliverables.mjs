@@ -709,8 +709,15 @@ export const createRealEstateDeliverables = ({
 
     let outputBody = payload.body;
     let outputFilename = filename;
-    if (type === "video" && contentType !== "video/mp4" && videoTranscoder && typeof videoTranscoder.toMp4 === "function") {
-      const transformed = await videoTranscoder.toMp4({ body: outputBody, contentType, filename: outputFilename });
+    if (type === "video" && videoTranscoder && typeof videoTranscoder.toMp4 === "function") {
+      const portrait = record.batch?.slideshowSettings?.outputOrientation === "portrait";
+      const transformed = await videoTranscoder.toMp4({
+        body: outputBody,
+        contentType,
+        filename: outputFilename,
+        width: portrait ? 576 : 1280,
+        height: portrait ? 1024 : 720,
+      });
       outputBody = transformed?.body || outputBody;
       contentType = String(transformed?.contentType || "video/mp4").split(";")[0].trim().toLowerCase();
       outputFilename = safeFilename(transformed?.filename || outputFilename.replace(/\.[^.]+$/i, ".mp4"), `${record.id}.mp4`);

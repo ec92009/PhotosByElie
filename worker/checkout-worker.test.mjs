@@ -6,6 +6,7 @@ import catalogTsv from "../scripts/catalog_tsv.cjs";
 import { createMemoryAccessUserRegistry } from "./access-user-registry.mjs";
 import { createAnalyticsStore } from "./analytics-store.mjs";
 import { createCatalogIndex, createPhotosByElieWorker } from "./checkout-worker.mjs";
+import { createCloudflareMediaVideoTranscoder } from "./cloudflare-media-video-transcoder.mjs";
 import deployedWorker, { realEstateGalleriesFor } from "./deployed-worker.mjs";
 import { createGoogleOAuthAuth } from "./google-oauth-auth.mjs";
 import { createLocalZipDelivery } from "./local-zip-delivery.mjs";
@@ -3070,6 +3071,51 @@ test("real-estate cloud assembly jobs persist status and serve completed assets"
   assert.equal(Buffer.from(await downloadResponse.arrayBuffer()).toString(), "%PDF-1.4 test");
 });
 
+test("Cloudflare video transcoder forces a real iPhone-compatible transform", async () => {
+  const calls = [];
+  const outputBytes = new TextEncoder().encode("h264-aac-mp4");
+  const media = {
+    input(body) {
+      calls.push({ method: "input", body });
+      return {
+        transform(options) {
+          calls.push({ method: "transform", options });
+          return {
+            output(outputOptions) {
+              calls.push({ method: "output", options: outputOptions });
+              return {
+                media: async () => outputBytes,
+                contentType: async () => "video/mp4; codecs=avc1,mp4a",
+              };
+            },
+          };
+        },
+      };
+    },
+  };
+  const source = new TextEncoder().encode("vp9-opus-webm");
+  const transcoder = createCloudflareMediaVideoTranscoder({ media });
+  const result = await transcoder.toMp4({
+    body: source,
+    filename: "portrait.webm",
+    width: 576,
+    height: 1024,
+  });
+
+  assert.equal(calls[0].method, "input");
+  assert.deepEqual(calls[1], {
+    method: "transform",
+    options: { width: 576, height: 1024, fit: "contain" },
+  });
+  assert.deepEqual(calls[2], {
+    method: "output",
+    options: { mode: "video", audio: true },
+  });
+  assert.equal(result.contentType, "video/mp4");
+  assert.equal(result.filename, "portrait.mp4");
+  assert.equal(Buffer.from(result.body).toString(), "h264-aac-mp4");
+});
+
 test("cloud render jobs use token-only internal routes and transcode WebM output", async () => {
   const randomUUID = deterministicIds();
   const privateR2 = createFakeR2();
@@ -3083,9 +3129,9 @@ test("cloud render jobs use token-only internal routes and transcode WebM output
     galleries,
     assemblyDispatcher: { dispatch: async (payload) => dispatched.push(payload) },
     videoTranscoder: {
-      toMp4: async ({ body, contentType, filename }) => {
+      toMp4: async ({ body, contentType, filename, width, height }) => {
         const input = new Uint8Array(await new Response(body).arrayBuffer());
-        transcoded.push({ contentType, filename, bytes: input.byteLength });
+        transcoded.push({ contentType, filename, width, height, bytes: input.byteLength });
         return {
           body: new TextEncoder().encode("mp4-transcoded"),
           contentType: "video/mp4",
@@ -3177,7 +3223,13 @@ test("cloud render jobs use token-only internal routes and transcode WebM output
   assert.equal(video.status, "ready");
   assert.equal(video.filename, "cloud.mp4");
   assert.equal(video.outputs.video.contentType, "video/mp4");
-  assert.deepEqual(transcoded, [{ contentType: "video/webm", filename: "cloud.webm", bytes: 11 }]);
+  assert.deepEqual(transcoded, [{
+    contentType: "video/webm",
+    filename: "cloud.webm",
+    width: 1280,
+    height: 720,
+    bytes: 11,
+  }]);
 
   const readyResponse = await worker.fetch(new Request(`https://worker.test/real-estate/deliverables/jobs/${queued.job.id}`, {
     headers: { cookie },

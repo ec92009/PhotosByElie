@@ -1,5 +1,6 @@
 import { launch } from "@cloudflare/playwright";
 import { WorkflowEntrypoint } from "cloudflare:workers";
+import { waitForCloudRenderCompletion } from "./cloud-render-browser.mjs";
 import worker, {
   realEstateClientContextFor,
   realEstateDeliverablesFor,
@@ -32,16 +33,12 @@ export class RealEstateRenderWorkflow extends WorkflowEntrypoint {
           cloudRenderJob: jobId,
           cloudRenderToken: access.renderToken,
         }).toString();
-        const browser = await launch(this.env.BROWSER);
+        const browser = await launch(this.env.BROWSER, { keep_alive: 10 * 60 * 1000 });
         try {
           const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
           const page = await context.newPage();
           await page.goto(url.href, { waitUntil: "networkidle", timeout: 60_000 });
-          await page.waitForFunction(() => ["ready", "failed"].includes(document.documentElement.dataset.cloudRenderStatus || ""), null, { timeout: 18 * 60 * 1000 });
-          const result = await page.evaluate(() => ({
-            status: document.documentElement.dataset.cloudRenderStatus || "",
-            detail: document.documentElement.dataset.cloudRenderDetail || "",
-          }));
+          const result = await waitForCloudRenderCompletion(page);
           if (result.status !== "ready") throw new Error(result.detail || "Cloud browser render failed.");
           return { status: result.status, detail: result.detail };
         } finally {

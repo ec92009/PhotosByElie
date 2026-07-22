@@ -210,7 +210,6 @@
     videoExportToken: 0,
     originalsBusy: false,
     originalsBusyKey: "",
-    originalsDownloads: new Map(),
     originalsCredentialRequest: null,
     username: "",
     accessCode: "",
@@ -437,11 +436,11 @@
   const promptOriginalsPassword = (message = "") => new Promise((resolve, reject) => {
     if (!elements.originalsDialog || !elements.originalsCode || !elements.originalsForm) {
       const accessCode = "";
-      reject(abortError("Originals ZIP canceled"));
+      reject(abortError("Originals preparation canceled"));
       return accessCode;
     }
     if (state.originalsCredentialRequest?.reject) {
-      state.originalsCredentialRequest.reject(abortError("Originals ZIP canceled"));
+      state.originalsCredentialRequest.reject(abortError("Originals preparation canceled"));
     }
     state.originalsCredentialRequest = { resolve, reject };
     elements.originalsCode.value = "";
@@ -470,7 +469,7 @@
     const request = state.originalsCredentialRequest;
     state.originalsCredentialRequest = null;
     closeDialog(elements.originalsDialog);
-    if (request?.reject) request.reject(abortError("Originals ZIP canceled"));
+    if (request?.reject) request.reject(abortError("Originals preparation canceled"));
   };
 
   const normalizeCredential = (value) => String(value || "").trim().toLowerCase();
@@ -1155,7 +1154,7 @@
   };
 
   const readyCloudDownloadFor = (format) => {
-    const normalizedFormat = format === "video" ? "video" : "pdf";
+    const normalizedFormat = format === "video" ? "video" : format === "originals" ? "originals" : "pdf";
     const selected = activeSelectedPhotos();
     if (!selected.length) return null;
     const currentBatch = normalizedFormat === "video"
@@ -1168,6 +1167,7 @@
         return paperFormatFor(batch?.pdfSettings?.paperFormat).key === state.pdfFormat
           && normalizePdfOrientation(batch?.pdfSettings?.pageOrientation || "portrait") === normalizePdfOrientation(state.pdfOrientation);
       }
+      if (normalizedFormat === "originals") return true;
       const settings = batch?.slideshowSettings || {};
       return Number(settings.photoDurationSeconds || 4) === Number(state.slideshowPhotoSeconds)
         && normalizeSlideshowOrientation(settings.outputOrientation || settings.orientation || "landscape") === normalizeSlideshowOrientation(state.slideshowOrientation)
@@ -1256,27 +1256,22 @@
       button.disabled = outputBusy || noActiveSelection;
     });
     document.querySelectorAll("[data-re-download-originals]").forEach((button) => {
-      const selectionCacheKey = originalsSelectionCacheKey();
-      const ready = state.originalsDownloads.has(selectionCacheKey);
-      const building = state.originalsBusy && state.originalsBusyKey === selectionCacheKey;
-      button.textContent = building
-        ? t("re.output.building_originals", {}, "Building originals ZIP...")
-        : ready
-          ? "Download JPEGs"
-          : t("re.output.share_originals", {}, "ZIP JPEGs");
-      button.title = "Prepare a ZIP of selected original source media from private delivery storage";
-      button.disabled = state.originalsBusy || outputBusy || selectedPhotos().length === 0;
+      syncDownloadAction(button, {
+        format: "originals",
+        busy: state.originalsBusy,
+        busyLabel: t("re.output.building_originals", {}, "Preparing originals..."),
+        queueLabel: t("re.output.share_originals", {}, "Queue originals"),
+        queueTitle: "Queue the selected original files as a cloud product",
+        downloadLabel: t("re.output.download_originals", {}, "Download originals"),
+      });
     });
     document.querySelectorAll("[data-re-download-originals-deliverable]").forEach((button) => {
       const productCacheKey = button.getAttribute("data-re-download-originals-deliverable") || "";
-      const ready = state.originalsDownloads.has(productCacheKey);
       const building = state.originalsBusy && state.originalsBusyKey === productCacheKey;
       button.textContent = building
-        ? t("re.output.building_originals", {}, "Building originals ZIP...")
-        : ready
-          ? "Download JPEGs"
-          : t("re.output.share_originals", {}, "ZIP JPEGs");
-      button.title = "Prepare a ZIP of this saved product's original source media";
+        ? t("re.output.building_originals", {}, "Preparing originals...")
+        : t("re.output.share_originals", {}, "Queue originals");
+      button.title = "Queue this saved product's original files";
       button.disabled = state.originalsBusy || outputBusy;
     });
     document.querySelectorAll("[data-re-view-deliverable], [data-re-download-deliverable], [data-re-edit-deliverable]").forEach((button) => {
@@ -1401,7 +1396,7 @@
     return {
       id: String(row?.id || row?.deliverableId || `${type}-${index + 1}`),
       type,
-      label: type === "pdf" ? "PDF" : type === "selection" ? "Selection" : type === "video" || type === "mp4" ? "Video" : "File",
+      label: type === "pdf" ? "PDF" : type === "selection" ? "Selection" : type === "video" || type === "mp4" ? "Video" : type === "originals" ? "Originals" : "File",
       title: String(row?.title || row?.projectTitle || row?.name || `Deliverable ${index + 1}`),
       createdAt: String(row?.createdAt || row?.generatedAt || row?.updatedAt || ""),
       bytes: Number(row?.bytes || row?.size || 0) || 0,
@@ -1460,15 +1455,17 @@
     const normalized = String(type || "").toLowerCase();
     if (normalized === "pdf") return "pdf";
     if (normalized === "video" || normalized === "mp4" || normalized === "slideshow") return "video";
+    if (normalized === "originals" || normalized === "zip") return "originals";
     return "selection";
   };
 
   const deliverableFormatsLabel = (formats = []) => {
-    const ordered = ["pdf", "video", "selection"].filter((format) => formats.includes(format));
-    if (ordered.includes("pdf") && ordered.includes("video")) return `PDF + ${t("re.shelf.format_video", {}, "Video")}`;
-    if (ordered.includes("pdf")) return "PDF";
-    if (ordered.includes("video")) return t("re.shelf.format_video", {}, "Video");
-    return `PDF + ${t("re.shelf.format_video", {}, "Video")}`;
+    const labels = [
+      formats.includes("pdf") ? "PDF" : "",
+      formats.includes("video") ? t("re.shelf.format_video", {}, "Video") : "",
+      formats.includes("originals") ? "Originals" : "",
+    ].filter(Boolean);
+    return labels.join(" + ") || "Selection";
   };
 
   const producedDeliverables = () => {
@@ -1516,7 +1513,7 @@
         : group.rows.some((item) => item.source === "local")
           ? "local"
           : (primary?.source || "");
-      const outputFormats = formats.filter((format) => format === "pdf" || format === "video");
+      const outputFormats = formats.filter((format) => format === "pdf" || format === "video" || format === "originals");
       const outputStateFor = (format) => {
         const matching = group.rows.filter((row) => deliverableFormatCode(row.type) === format);
         if (matching.some((row) => row.status === "ready" && (row.viewUrl || row.downloadUrl))) return "ready";
@@ -1548,7 +1545,7 @@
         relatedIds: group.relatedIds.filter(Boolean),
         records: group.rows,
       };
-    }).filter((item) => item.formats.some((format) => format === "pdf" || format === "video"));
+    }).filter((item) => item.formats.some((format) => format === "pdf" || format === "video" || format === "originals"));
   };
 
   const cloneBatch = (batch) => {
@@ -1717,6 +1714,8 @@
   const formatStatusBadgeFor = (format, records = []) => {
     const label = format === "pdf" ? "PDF" : format === "video"
       ? t("re.shelf.format_video", {}, "Video")
+      : format === "originals"
+        ? "Originals"
       : t("re.shelf.format_selection", {}, "Selection");
     const status = statusForDeliverableRecords(records);
     if (status === "needs-attention") return { label: t("re.shelf.attention", { format: label }, `${label} needs attention`), tone: "needs-attention" };
@@ -1740,13 +1739,21 @@
 
   const formatDownloadActionsHtmlFor = (item) => {
     const records = Array.isArray(item?.records) ? item.records : [item].filter(Boolean);
-    const outputActions = ["pdf", "video"].map((format) => {
+    const outputActions = ["pdf", "video", "originals"].map((format) => {
       const matching = records.filter((record) => deliverableFormatCode(record?.type) === format);
-      if (!matching.length) return "";
+      if (!matching.length) {
+        return format === "originals" && (item?.batch || item?.editUrl)
+          ? `
+            <button class="real-estate-deliverable-status is-action" type="button" data-re-status-tone="ready" data-re-download-originals-deliverable="${escapeHtml(item.id)}">
+              Queue originals
+            </button>
+          `
+          : "";
+      }
       const ready = matching.find((record) => (
         record.status === "ready" && (record.downloadUrl || record.viewUrl)
       ));
-      const label = format === "pdf" ? "PDF" : t("re.shelf.format_video", {}, "Video");
+      const label = format === "pdf" ? "PDF" : format === "video" ? t("re.shelf.format_video", {}, "Video") : "Originals";
       if (ready) {
         const url = ready.downloadUrl || ready.viewUrl;
         return `
@@ -1764,14 +1771,7 @@
         </button>
       `;
     }).join("");
-    const originalsAction = item?.batch || item?.editUrl
-      ? `
-        <button class="real-estate-deliverable-status is-action" type="button" data-re-status-tone="ready" data-re-download-originals-deliverable="${escapeHtml(item.id)}">
-          ${escapeHtml(t("re.output.share_originals", {}, "ZIP JPEGs"))}
-        </button>
-      `
-      : "";
-    return `${outputActions}${originalsAction}`;
+    return outputActions;
   };
 
   const statusBadgesHtml = (badges = []) => (
@@ -1991,7 +1991,8 @@
   };
 
   const pendingCloudOutputFor = (format, batch) => {
-    const normalizedFormat = String(format || "").toLowerCase() === "mp4" ? "video" : String(format || "").toLowerCase();
+    const requestedFormat = String(format || "").toLowerCase();
+    const normalizedFormat = requestedFormat === "mp4" ? "video" : requestedFormat === "zip" ? "originals" : requestedFormat;
     const fingerprint = batchProductFingerprint(batch);
     const activeProduct = producedDeliverables().find((item) => item.id === state.activeDeliverableId);
     const activeIds = new Set(Array.isArray(activeProduct?.relatedIds) ? activeProduct.relatedIds.map(String) : []);
@@ -5005,7 +5006,7 @@
 
   const requestOriginalsSession = async (photos, passwordMessage = "") => {
     const baseUrl = workerBaseUrl();
-    if (!baseUrl) throw new Error("Originals ZIP needs the Photos By Elie Worker.");
+    if (!baseUrl) throw new Error("Originals need the Photos By Elie Worker.");
     const credentials = await credentialsForOriginals(passwordMessage);
     const response = await fetch(`${baseUrl}/real-estate/originals/session`, {
       method: "POST",
@@ -5019,7 +5020,7 @@
     });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) {
-      const message = body?.error?.message || "Originals ZIP could not be prepared.";
+      const message = body?.error?.message || "Originals could not be prepared.";
       const error = new Error(message);
       error.status = response.status;
       error.code = body?.error?.code || "originals_session_failed";
@@ -5038,65 +5039,95 @@
     }));
   };
 
-  const shareOriginalsZip = async ({ photosOverride = null, cacheKey = "" } = {}) => {
+  const shareOriginalsZip = async ({ photosOverride = null, batchOverride = null, productTitle = "", cacheKey = "" } = {}) => {
     if (!requireUnlocked() || state.originalsBusy || state.outputBusy) return;
     const resolvedCacheKey = cacheKey || originalsSelectionCacheKey();
-    const cached = state.originalsDownloads.get(resolvedCacheKey);
-    if (cached?.blob && cached?.filename) {
-      const saved = await downloadBlob(cached.blob, cached.filename);
-      setStatus(`Downloaded ${saved.filename} to Downloads (${formatBytes(saved.bytes)})`);
-      return;
-    }
     const photos = Array.isArray(photosOverride) ? photosOverride : selectedPhotos();
     if (!photos.length) {
-      setStatus("Select media before preparing originals ZIP");
+      setStatus("Select media before queueing originals");
+      return;
+    }
+    const batch = batchOverride || buildBatchManifest(photos, true);
+    const ready = (Array.isArray(state.cloudDeliverables) ? state.cloudDeliverables : [])
+      .map(normalizeDeliverable)
+      .filter((record) => deliverableFormatCode(record.type) === "originals")
+      .filter((record) => record.status === "ready" && (record.downloadUrl || record.viewUrl))
+      .find((record) => batchProductFingerprint(record.batch) === batchProductFingerprint(batch));
+    if (ready) {
+      await downloadReadyOutputUrl({
+        url: ready.downloadUrl || ready.viewUrl,
+        format: "originals",
+        filename: ready.filename || "",
+      });
       return;
     }
     state.originalsBusy = true;
     state.originalsBusyKey = resolvedCacheKey;
     startOutputProgress({
-      title: "Preparing originals ZIP",
+      title: "Preparing originals",
       detail: "Requesting private original links...",
       kind: "originals",
     });
     syncFileActionLabels();
+    let cloudRecord = null;
     try {
+      cloudRecord = pendingCloudOutputFor("originals", batch);
+      if (!cloudRecord) {
+        const filename = `${state.gallery?.key || "real-estate"}-${batch.batchId}-originals.zip`;
+        cloudRecord = await saveCloudDeliverable({
+          id: `originals-${batch.batchId}-${hashString(batchProductFingerprint(batch))}`,
+          type: "originals",
+          title: productTitle || activeDeliverableName(),
+          createdAt: new Date().toISOString(),
+          status: "pending",
+          filename,
+          batch,
+          outputs: {
+            originals: { filename, contentType: "application/zip" },
+          },
+          assemblyJob: {
+            status: "pending",
+            assembler: "client-browser",
+            submittedAt: new Date().toISOString(),
+          },
+        });
+      }
       setStatus(`Preparing private original links for ${photos.length} selected media item${photos.length === 1 ? "" : "s"}...`);
       updateOutputProgress({
-        title: "Preparing originals ZIP",
+        title: "Preparing originals",
         detail: `Requesting private links for ${photos.length} selected media item${photos.length === 1 ? "" : "s"}...`,
       });
       const session = await requestOriginalsSession(photos);
-      if (!session) throw new Error("Originals ZIP could not be prepared.");
+      if (!session) throw new Error("Originals could not be prepared.");
       const files = originalZipFilesFor(session);
       const totalBytes = Number(session.totalBytes) || files.reduce((sum, file) => sum + (Number(file.bytes) || 0), 0);
       const totalSteps = Math.max(2, (files.length * 3) + 2);
       let currentStep = 1;
       updateOutputProgress({
-        title: "Preparing originals ZIP",
-        detail: `Building ZIP from ${files.length} file${files.length === 1 ? "" : "s"}${totalBytes ? ` (${formatBytes(totalBytes)})` : ""}...`,
+        title: "Preparing originals",
+        detail: `Packaging ${files.length} original${files.length === 1 ? "" : "s"}${totalBytes ? ` (${formatBytes(totalBytes)})` : ""}...`,
         current: currentStep,
         total: totalSteps,
       });
-      setStatus(`Building originals ZIP from ${files.length} file${files.length === 1 ? "" : "s"}${totalBytes ? ` (${formatBytes(totalBytes)})` : ""}...`);
+      setStatus(`Packaging ${files.length} original${files.length === 1 ? "" : "s"}${totalBytes ? ` (${formatBytes(totalBytes)})` : ""}...`);
       const blob = await buildStoredZipBlob(files, ({ index, file, phase }) => {
         const number = index + 1;
         if (phase === "fetch") {
           currentStep += 1;
           const detail = `Fetching original ${number}/${files.length}: ${file.name}`;
           setStatus(detail);
-          updateOutputProgress({ title: "Preparing originals ZIP", detail, current: currentStep, total: totalSteps });
+          updateOutputProgress({ title: "Preparing originals", detail, current: currentStep, total: totalSteps });
         }
         if (phase === "zip") {
           currentStep += 1;
-          const detail = `Adding original ${number}/${files.length} to ZIP: ${file.name}`;
+          const detail = `Packaging original ${number}/${files.length}: ${file.name}`;
           setStatus(detail);
-          updateOutputProgress({ title: "Preparing originals ZIP", detail, current: currentStep, total: totalSteps });
+          updateOutputProgress({ title: "Preparing originals", detail, current: currentStep, total: totalSteps });
         }
         if (phase === "done") {
           currentStep += 1;
           updateOutputProgress({
-            title: "Preparing originals ZIP",
+            title: "Preparing originals",
             detail: `Finished original ${number}/${files.length}: ${file.name}`,
             current: currentStep,
             total: totalSteps,
@@ -5104,29 +5135,18 @@
         }
       });
       const filename = session.zipFilename || `${state.gallery?.key || "real-estate"}-originals-${timestampId()}.zip`;
-      state.originalsDownloads.set(resolvedCacheKey, { blob, filename });
-      syncFileActionLabels();
       updateOutputProgress({
-        title: "Preparing originals ZIP",
-        detail: "Sending ZIP to your device...",
+        title: "Preparing originals",
+        detail: "Saving originals to the finished-products shelf...",
         current: totalSteps - 1,
         total: totalSteps,
       });
-      const saved = await shareOrOpenBlob({
-        blob,
-        filename,
-        title: "Photos By Elie originals",
-        text: `${state.payload?.customer?.name || "Client"} selected original media`,
-        openFallback: false,
-      });
-      if (saved.method === "share" || saved.method === "share-opened") {
-        setStatus(`Shared ${saved.filename} (${formatBytes(saved.bytes)})`);
-      } else {
-        setStatus(`Downloaded ${saved.filename} to Downloads (${formatBytes(saved.bytes)})`);
-      }
-      completeOutputProgress(`Ready: ${saved.filename} (${formatBytes(saved.bytes)})`);
+      const saved = await completeCloudOutput({ record: cloudRecord, blob, filename });
+      setStatus(`Originals ready (${formatBytes(saved.bytes || blob.size)}). Use Download originals.`);
+      completeOutputProgress(`Originals ready: ${saved.filename || filename} (${formatBytes(saved.bytes || blob.size)})`);
     } catch (error) {
-      const message = error?.name === "AbortError" ? "Originals ZIP canceled" : (error?.message || "Originals ZIP failed");
+      if (cloudRecord) await failCloudOutput(cloudRecord, error);
+      const message = error?.name === "AbortError" ? "Originals preparation canceled" : (error?.message || "Originals preparation failed");
       if (!handleAuthFailure(error)) {
         setStatus(message);
         failOutputProgress(message);
@@ -6426,7 +6446,12 @@
     const batch = await deliverableBatchFor(item);
     const photos = photosForDeliverableBatch(batch);
     if (!photos.length) throw new Error("This product has no original photos to ZIP.");
-    await shareOriginalsZip({ photosOverride: photos, cacheKey: deliverableId });
+    await shareOriginalsZip({
+      photosOverride: photos,
+      batchOverride: batch,
+      productTitle: displayDeliverableTitleFor(item),
+      cacheKey: deliverableId,
+    });
   };
 
   const editProducedDeliverable = async (deliverableId) => {
@@ -6842,7 +6867,16 @@
       shareSlideshowPlan({ mode: "download" }).catch(() => setStatus("Video output could not be downloaded"));
     }));
     document.querySelectorAll("[data-re-download-originals]").forEach((button) => button.addEventListener("click", () => {
-      shareOriginalsZip().catch(() => setStatus("Originals ZIP failed"));
+      const readyUrl = button.dataset.reReadyDownloadUrl || "";
+      if (readyUrl) {
+        downloadReadyOutputUrl({
+          url: readyUrl,
+          format: "originals",
+          filename: button.dataset.reReadyDownloadFilename || "",
+        }).catch(() => setStatus("Originals could not be downloaded"));
+        return;
+      }
+      shareOriginalsZip().catch(() => setStatus("Originals preparation failed"));
     }));
     document.querySelectorAll("[data-re-view-pdf]").forEach((button) => button.addEventListener("click", () => downloadPdf({ mode: "view" })));
     document.querySelectorAll("[data-re-download-pdf]").forEach((button) => button.addEventListener("click", () => {
@@ -6874,7 +6908,7 @@
         }
         if (button.matches("[data-re-download-originals-deliverable]")) {
           shareProducedDeliverableOriginals(button.getAttribute("data-re-download-originals-deliverable") || "")
-            .catch((error) => setStatus(error?.message || "Originals ZIP failed"));
+            .catch((error) => setStatus(error?.message || "Originals preparation failed"));
           return;
         }
         if (button.matches("[data-re-edit-name]")) {

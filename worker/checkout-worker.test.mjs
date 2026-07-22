@@ -3032,6 +3032,41 @@ test("real-estate cloud assembly jobs persist status and serve completed assets"
   assert.equal(completedPdf.assemblyJob.assembler, "browser-upload");
   assert.equal(completedPdf.deliveryEmail.decision, "owner_review_before_client_notification");
 
+  const originalsRecordResponse = await worker.fetch(jsonRequest("https://worker.test/real-estate/deliverables", {
+    galleryKey: "corine-real-estate",
+    username: "Corine",
+    deliverable: {
+      id: "originals-20260610T120000Z",
+      type: "originals",
+      title: "La Concha product",
+      status: "pending",
+      filename: "la-concha-originals.zip",
+      batch,
+      outputs: { originals: { filename: "la-concha-originals.zip", contentType: "application/zip" } },
+    },
+  }, { cookie }));
+  assert.equal(originalsRecordResponse.status, 201);
+  const originalsRecord = (await originalsRecordResponse.json()).deliverable;
+  const originalsBytes = new Uint8Array([0x50, 0x4b, 0x03, 0x04, 0x00]);
+  const completeOriginalsResponse = await worker.fetch(new Request(
+    `https://worker.test/real-estate/deliverables/${originalsRecord.id}/complete?galleryKey=corine-real-estate&filename=la-concha-originals.zip`,
+    {
+      method: "POST",
+      headers: { cookie, "content-type": "application/zip" },
+      body: originalsBytes,
+    }
+  ));
+  assert.equal(completeOriginalsResponse.status, 200);
+  const completedOriginals = (await completeOriginalsResponse.json()).deliverable;
+  assert.equal(completedOriginals.status, "ready");
+  assert.match(completedOriginals.downloadUrl, /^\/real-estate\/deliverables\//);
+  const originalsDownloadResponse = await worker.fetch(new Request(`https://worker.test${completedOriginals.downloadUrl}`, {
+    headers: { cookie },
+  }));
+  assert.equal(originalsDownloadResponse.status, 200);
+  assert.equal(originalsDownloadResponse.headers.get("content-type"), "application/zip");
+  assert.equal(Buffer.from(await originalsDownloadResponse.arrayBuffer()).toString("hex"), Buffer.from(originalsBytes).toString("hex"));
+
   const failVideoResponse = await worker.fetch(jsonRequest(
     `https://worker.test/real-estate/deliverables/${videoRecord.id}/fail`,
     {

@@ -15,10 +15,14 @@ for remote execution.
 - Public site: `https://photos-by-elie.com/`
 - Local preview: `http://localhost:8000/`
 - Owner intake URL: `https://photos-by-elie.com/owner.html`
-- Current visible build: `v145.15`
+- Current visible build: `v145.16`
 - Sidecar local build: `v126.6`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
+- `v145.16` promotes Originals to a persistent R2-backed third output beside
+  PDF and Video. Output and shelf controls share Queue, pending, and Download
+  states; the ZIP container remains an implementation detail rather than the
+  client-facing product name.
 - `v145.15` tracks JPEG ZIP activity by saved-product ID so only the pressed
   shelf action shows preparation and becomes that product's download.
 - `v145.14` removes the full source-photo-grid rebuild from saved-product shelf

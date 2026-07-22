@@ -642,8 +642,9 @@ Clock state: running
 | 2026-07-22 | 20:04 CEST | 20:13 CEST | 0:02 | Diagnosed the phone's sound-only Real Estate video as VP9/Opus inside an MP4 wrapper and requested a prepared JPEG ZIP become a direct download action; transcoding, implementation, R2 verification, tests, and deployment runtime excluded. |
 | 2026-07-22 | 22:15 CEST | 22:16 CEST | 0:01 | Reported slow saved-product shelf entry and return navigation; diagnosis, implementation, tests, and deployment runtime excluded. |
 | 2026-07-22 | 22:20 CEST | 22:21 CEST | 0:01 | Reported that one saved-product JPEG ZIP action made all shelf rows appear busy; diagnosis, implementation, tests, and deployment runtime excluded. |
+| 2026-07-22 | 22:25 CEST | 22:32 CEST | 0:02 | Defined Originals as the persistent third Real Estate output beside PDF and Video, with matching Queue and Download lifecycle on Output and shelf; implementation, tests, and deployment runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 31:52
+Active collaboration time used: 31:54
 Remaining budget: not set

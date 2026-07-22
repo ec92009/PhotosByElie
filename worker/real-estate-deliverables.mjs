@@ -44,6 +44,7 @@ const safeRecordId = (value) => {
 const contentTypeFor = (type, filename = "") => {
   const extension = String(filename || "").split(".").pop()?.toLowerCase();
   if (type === "pdf" || extension === "pdf") return "application/pdf";
+  if (type === "originals" || extension === "zip") return "application/zip";
   if (extension === "webm") return "video/webm";
   if (type === "video" || ["mp4", "m4v"].includes(extension)) return "video/mp4";
   return "application/octet-stream";
@@ -61,7 +62,7 @@ const safeFilename = (value, fallback = "output.bin") => {
 const filenameFor = (record, output = {}) => String(
   output.filename
   || record.filename
-  || `${record.id}.${record.type === "pdf" ? "pdf" : record.type === "video" ? "mp4" : "bin"}`
+  || `${record.id}.${record.type === "pdf" ? "pdf" : record.type === "video" ? "mp4" : record.type === "originals" ? "zip" : "bin"}`
 ).replace(/["\r\n]+/g, "").trim();
 
 const galleryMapFor = (galleries) => {
@@ -308,6 +309,8 @@ export const createRealEstateDeliverables = ({
     const normalizedContentType = String(contentType || "").split(";")[0].trim().toLowerCase();
     const extension = type === "pdf"
       ? "pdf"
+      : type === "originals" || normalizedContentType === "application/zip" || /\.zip$/i.test(filename)
+        ? "zip"
       : normalizedContentType === "video/webm" || /\.webm$/i.test(filename)
         ? "webm"
         : "mp4";
@@ -319,7 +322,7 @@ export const createRealEstateDeliverables = ({
   const publicRecordFor = (record) => {
     const ready = String(record?.status || "").toLowerCase() === "ready";
     const type = String(record?.type || "").toLowerCase();
-    if (!ready || !["pdf", "video"].includes(type)) return record;
+    if (!ready || !["pdf", "video", "originals"].includes(type)) return record;
     const output = record.outputs?.[record.type] || record.output || {};
     return {
       ...record,
@@ -347,7 +350,7 @@ export const createRealEstateDeliverables = ({
     return publicRecordFor({
       id,
       type,
-      title: String(incoming.title || incoming.projectTitle || incoming.name || `${type === "pdf" ? "PDF" : type === "video" ? "Video" : "File"}: ${gallery.key}`),
+      title: String(incoming.title || incoming.projectTitle || incoming.name || `${type === "pdf" ? "PDF" : type === "video" ? "Video" : type === "originals" ? "Originals" : "File"}: ${gallery.key}`),
       createdAt,
       updatedAt: now().toISOString(),
       status: ["pending", "queued", "processing", "ready", "failed", "needs-attention", "needs_attention"].includes(status)
@@ -672,8 +675,8 @@ export const createRealEstateDeliverables = ({
       });
     }
     const type = String(record.type || "").toLowerCase();
-    if (!["pdf", "video"].includes(type)) {
-      throw Object.assign(new Error("Only PDF and video products can receive assembled output."), {
+    if (!["pdf", "video", "originals"].includes(type)) {
+      throw Object.assign(new Error("Only PDF, video, and originals products can receive assembled output."), {
         status: 409,
         code: "invalid_real_estate_assembly_output",
       });
@@ -693,17 +696,19 @@ export const createRealEstateDeliverables = ({
         details: { maxBytes },
       });
     }
-    const fallbackFilename = `${gallery.key}-${record.batch?.batchId || record.id}-${type === "pdf" ? "project.pdf" : "slideshow.mp4"}`;
+    const fallbackFilename = `${gallery.key}-${record.batch?.batchId || record.id}-${type === "pdf" ? "project.pdf" : type === "video" ? "slideshow.mp4" : "originals.zip"}`;
     const filename = safeFilename(payload.filename, fallbackFilename);
     let contentType = String(payload.contentType || contentTypeFor(type, filename)).split(";")[0].trim().toLowerCase();
     const validContentType = type === "pdf"
       ? contentType === "application/pdf"
-      : contentType.startsWith("video/");
+      : type === "video"
+        ? contentType.startsWith("video/")
+        : contentType === "application/zip";
     if (!validContentType) {
       throw Object.assign(new Error(`The uploaded ${type} has an invalid content type.`), {
         status: 415,
         code: "invalid_real_estate_assembly_content_type",
-        details: { expected: type === "pdf" ? "application/pdf" : "video/*", received: contentType },
+        details: { expected: type === "pdf" ? "application/pdf" : type === "video" ? "video/*" : "application/zip", received: contentType },
       });
     }
 

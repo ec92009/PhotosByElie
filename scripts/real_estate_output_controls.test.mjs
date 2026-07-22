@@ -141,24 +141,28 @@ test("Cloud output controls upload prepared files without creating stray Selecti
 test("Finished-product shelf exposes one download action per ready format", () => {
   assert.match(script, /data-re-download-output-url/);
   assert.match(script, /Download \$\{label\}/);
-  assert.match(script, /filter\(\(item\) => item\.formats\.some\(\(format\) => format === "pdf" \|\| format === "video"\)\)/);
+  assert.match(script, /format === "pdf" \|\| format === "video" \|\| format === "originals"/);
   assert.match(script, /const link = document\.createElement\("a"\)/);
   assert.match(styles, /button\.real-estate-deliverable-status\.is-action[\s\S]*font-family:"Space Grotesk"/);
 });
 
-test("Finished-product shelf offers the saved product's JPEG ZIP without changing the active selection", () => {
+test("Originals are a persistent third product without changing the active selection", () => {
   assert.match(script, /data-re-download-originals-deliverable="\$\{escapeHtml\(item\.id\)\}"/);
   assert.match(script, /const photosForDeliverableBatch = \(batch\) =>/);
   assert.match(script, /seen\.has\(photoId\)/);
   assert.match(script, /const shareProducedDeliverableOriginals = async \(deliverableId\) =>/);
-  assert.match(script, /await shareOriginalsZip\(\{ photosOverride: photos, cacheKey: deliverableId \}\)/);
-  assert.match(script, /originalsDownloads: new Map\(\)/);
-  assert.match(script, /Download JPEGs/);
+  assert.match(script, /batchOverride: batch/);
+  assert.match(script, /type: "originals"/);
+  assert.match(script, /completeCloudOutput\(\{ record: cloudRecord, blob, filename \}\)/);
+  assert.match(script, /format: "originals"/);
+  assert.match(script, /readyCloudDownloadFor\(format\)/);
+  assert.match(script, /Queue originals/);
+  assert.match(script, /Download originals/);
   const helper = script.match(/const shareProducedDeliverableOriginals = async[\s\S]*?\n  \};/)?.[0] || "";
   assert.doesNotMatch(helper, /applyBatchManifest|state\.selectedOrder|persistSelection/);
 });
 
-test("Only the clicked saved product shows JPEG ZIP preparation", () => {
+test("Only the clicked saved product shows originals preparation", () => {
   const labels = script.match(/const syncFileActionLabels = \(\) => \{[\s\S]*?\n  \};/)?.[0] || "";
   assert.match(script, /originalsBusyKey: ""/);
   assert.match(labels, /state\.originalsBusyKey === productCacheKey/);

@@ -6,8 +6,13 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v145.3`
+- Current visible version: `v145.4`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
+- `v145.4` keeps the Worker action ledger as the Waste Basket authorization and
+  audit gate, then wakes Max's localhost connector with only the opaque action
+  ID for sub-second restoration when the local bridge is reachable. Restore
+  titles now come atomically from private Owner SQLite state; the existing
+  five-second connector poll remains the silent fallback.
 - `v145.0` repairs Waste Basket restore behavior on both public and local Owner
   pages and reconstructs watermarked previews for blocked IDs missing from the
   deployed hidden-photo catalog.

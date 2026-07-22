@@ -6,8 +6,10 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v145.9`
+- Current visible version: `v145.10`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
+- `v145.10` removes the public Likes and Basket header actions from the private
+  Real Estate workspace while retaining Account and Settings.
 - `v145.9` makes ready PDFs download directly on touch devices instead of
   opening Safari's multi-tap PDF preview, matching the ready-video experience.
 - `v145.8` makes the selected previews in Real Estate Titles and Order eager on

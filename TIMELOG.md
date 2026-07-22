@@ -636,8 +636,9 @@ Clock state: running
 | 2026-07-22 | 01:00 CEST | 01:01 CEST | 0:01 | Directed the Worker-authorized direct local wake fast path for Waste Basket restoration while retaining the connector poll fallback and private atomic title recovery; implementation, tests, and deployment runtime excluded. |
 | 2026-07-22 | 18:15 CEST | 18:20 CEST | 0:02 | Reported missing iPhone previews in the Real Estate Titles and Order phases, requested a bottom-of-list Next action, and clarified the originals ZIP control; implementation, tests, and deployment runtime excluded. |
 | 2026-07-22 | 18:31 CEST | 18:32 CEST | 0:01 | Clarified that the PDF download should match the simpler video-download experience on iPhone; implementation, tests, and deployment runtime excluded. |
+| 2026-07-22 | 18:34 CEST | 18:35 CEST | 0:01 | Removed the public Likes and Basket actions from the private Real Estate header; implementation, tests, and deployment runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 31:44
+Active collaboration time used: 31:45
 Remaining budget: not set

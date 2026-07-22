@@ -3966,7 +3966,7 @@ window.photosByEliePositionGalleryViewControls = (viewControls) => {
 
 const ensureHeaderActionLinks = () => {
   const controls = document.querySelector('.header-controls');
-  if (!controls || controls.querySelector('[data-header-actions]')) return;
+  if (!controls || document.body?.hasAttribute('data-real-estate') || controls.querySelector('[data-header-actions]')) return;
   const showBuyAction = document.body?.classList.contains('commerce-page');
   const buyHref = window.location.pathname.endsWith('/basket.html') || window.location.pathname.endsWith('basket.html')
     ? '#checkout'

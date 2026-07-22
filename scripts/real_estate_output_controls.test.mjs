@@ -256,3 +256,7 @@ test("Visitors see account pills and signed-in users return to the face menu", (
   assert.match(sharedStyles, /\.account-entry-actions\{/);
   assert.doesNotMatch(home, /real-estate\.html\?logout=1&client=elie/);
 });
+
+test("Real Estate mode omits public Likes and Basket header actions", () => {
+  assert.match(siteScript, /if \(!controls \|\| document\.body\?\.hasAttribute\('data-real-estate'\) \|\| controls\.querySelector\('\[data-header-actions\]'\)\) return;/);
+});

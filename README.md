@@ -6,8 +6,11 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v145.10`
+- Current visible version: `v145.11`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
+- `v145.11` adds a product-specific JPEG ZIP action to each finished-product
+  shelf row, removes the redundant Cloud saved badge, and makes phone
+  language/theme switches avoid rebuilding the full Real Estate photo grid.
 - `v145.10` removes the public Likes and Basket header actions from the private
   Real Estate workspace while retaining Account and Settings.
 - `v145.9` makes ready PDFs download directly on touch devices instead of

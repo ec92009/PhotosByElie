@@ -637,8 +637,9 @@ Clock state: running
 | 2026-07-22 | 18:15 CEST | 18:20 CEST | 0:02 | Reported missing iPhone previews in the Real Estate Titles and Order phases, requested a bottom-of-list Next action, and clarified the originals ZIP control; implementation, tests, and deployment runtime excluded. |
 | 2026-07-22 | 18:31 CEST | 18:32 CEST | 0:01 | Clarified that the PDF download should match the simpler video-download experience on iPhone; implementation, tests, and deployment runtime excluded. |
 | 2026-07-22 | 18:34 CEST | 18:35 CEST | 0:01 | Removed the public Likes and Basket actions from the private Real Estate header; implementation, tests, and deployment runtime excluded. |
+| 2026-07-22 | 18:36 CEST | 18:38 CEST | 0:02 | Added per-product JPEG ZIP access, removed the redundant cloud-save badge, and identified the unnecessary phone language/theme rerenders; implementation, tests, and deployment runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 31:45
+Active collaboration time used: 31:47
 Remaining budget: not set

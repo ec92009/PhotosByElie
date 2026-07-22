@@ -555,7 +555,7 @@ const translations = {
     're.action.choose_output': 'Choose output',
     're.output.download_pdf': 'Download PDF',
     're.output.download_video': 'Download video',
-    're.output.share_originals': 'Share originals ZIP',
+    're.output.share_originals': 'ZIP JPEGs',
     're.output.eyebrow': 'Step 5',
     're.output.title': 'Create and download',
     're.output.note': 'Choose the PDF and video settings, create either product in the cloud, then download it on phone or desktop.',
@@ -1188,7 +1188,7 @@ const translations = {
     're.action.choose_output': 'Choisir sortie',
     're.output.download_pdf': 'Telecharger PDF',
     're.output.download_video': 'Telecharger video',
-    're.output.share_originals': 'Partager ZIP originaux',
+    're.output.share_originals': 'ZIP de JPEG',
     're.output.eyebrow': 'Etape 5',
     're.output.title': 'Creer et telecharger',
     're.output.note': 'Choisissez les reglages PDF et video, creez chaque produit dans le cloud, puis telechargez-le sur telephone ou ordinateur.',
@@ -1815,7 +1815,7 @@ const translations = {
     're.action.choose_output': 'Elegir salida',
     're.output.download_pdf': 'Descargar PDF',
     're.output.download_video': 'Descargar video',
-    're.output.share_originals': 'Compartir ZIP originales',
+    're.output.share_originals': 'ZIP de JPEG',
     're.output.eyebrow': 'Paso 5',
     're.output.title': 'Crear y descargar',
     're.output.note': 'Elige los ajustes de PDF y video, crea cada producto en la nube y descargalo en el telefono o en el ordenador.',
@@ -4872,7 +4872,6 @@ const setTheme = (theme) => {
   root.dataset.theme = theme === 'dark' ? 'dark' : 'light';
   localStorage.setItem(activeThemePreferenceKey, root.dataset.theme);
   applyDisplaySettings();
-  applyTranslations();
   window.dispatchEvent(new CustomEvent('photosbyelie:themechange', {
     detail: { theme: root.dataset.theme }
   }));

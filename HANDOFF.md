@@ -15,10 +15,14 @@ for remote execution.
 - Public site: `https://photos-by-elie.com/`
 - Local preview: `http://localhost:8000/`
 - Owner intake URL: `https://photos-by-elie.com/owner.html`
-- Current visible build: `v143.10`
+- Current visible build: `v145.11`
 - Sidecar local build: `v126.6`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
+- `v145.11` gives every Real Estate finished product its own ZIP JPEGs action
+  using the product's saved manifest, removes the redundant Cloud saved badge,
+  and avoids the full 99-card rebuild when switching language or theme on a
+  phone.
 - Static catalog publication is reconciled through `v143.6`: lifecycle-hidden
   rows `001-3f15265af4`, `001-87f0bfdea3`, and `001-eddc9ddb4b` are absent from
   public SQLite, the generated Worker catalog, homepage data, Expo manifest,

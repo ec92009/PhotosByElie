@@ -1253,9 +1253,16 @@
     document.querySelectorAll("[data-re-download-originals]").forEach((button) => {
       button.textContent = state.originalsBusy
         ? t("re.output.building_originals", {}, "Building originals ZIP...")
-        : t("re.output.share_originals", {}, "Share originals ZIP");
+        : t("re.output.share_originals", {}, "ZIP JPEGs");
       button.title = "Prepare a ZIP of selected original source media from private delivery storage";
       button.disabled = state.originalsBusy || outputBusy || selectedPhotos().length === 0;
+    });
+    document.querySelectorAll("[data-re-download-originals-deliverable]").forEach((button) => {
+      button.textContent = state.originalsBusy
+        ? t("re.output.building_originals", {}, "Building originals ZIP...")
+        : t("re.output.share_originals", {}, "ZIP JPEGs");
+      button.title = "Prepare a ZIP of this saved product's original source media";
+      button.disabled = state.originalsBusy || outputBusy;
     });
     document.querySelectorAll("[data-re-view-deliverable], [data-re-download-deliverable], [data-re-edit-deliverable]").forEach((button) => {
       if (button.matches("[data-re-view-deliverable], [data-re-download-deliverable]") && button.hasAttribute("disabled")) return;
@@ -1687,7 +1694,7 @@
     if (state.cloudDeliverablesError && hasLocal && !hasCloud) {
       return { label: t("re.shelf.cloud_save_issue", {}, "Cloud save issue"), tone: "needs-attention" };
     }
-    if (hasCloud) return { label: t("re.shelf.cloud_saved", {}, "Cloud saved"), tone: "ready" };
+    if (hasCloud) return null;
     if (hasLocal) return { label: t("re.shelf.device_saved", {}, "Saved on this device"), tone: "local" };
     return { label: t("re.shelf.gallery_record", {}, "Gallery record"), tone: "local" };
   };
@@ -1708,7 +1715,7 @@
 
   const deliverableStatusBadgesFor = (item) => {
     const records = Array.isArray(item?.records) ? item.records : [item].filter(Boolean);
-    const badges = [deliverableSourceBadgeFor(item)];
+    const badges = [deliverableSourceBadgeFor(item)].filter(Boolean);
     ["selection"].forEach((format) => {
       const matching = records.filter((record) => deliverableFormatCode(record?.type) === format);
       if (matching.length) badges.push(formatStatusBadgeFor(format, matching));
@@ -1718,7 +1725,7 @@
 
   const formatDownloadActionsHtmlFor = (item) => {
     const records = Array.isArray(item?.records) ? item.records : [item].filter(Boolean);
-    return ["pdf", "video"].map((format) => {
+    const outputActions = ["pdf", "video"].map((format) => {
       const matching = records.filter((record) => deliverableFormatCode(record?.type) === format);
       if (!matching.length) return "";
       const ready = matching.find((record) => (
@@ -1742,6 +1749,14 @@
         </button>
       `;
     }).join("");
+    const originalsAction = item?.batch || item?.editUrl
+      ? `
+        <button class="real-estate-deliverable-status is-action" type="button" data-re-status-tone="ready" data-re-download-originals-deliverable="${escapeHtml(item.id)}">
+          ${escapeHtml(t("re.output.share_originals", {}, "ZIP JPEGs"))}
+        </button>
+      `
+      : "";
+    return `${outputActions}${originalsAction}`;
   };
 
   const statusBadgesHtml = (badges = []) => (
@@ -4983,9 +4998,9 @@
     }));
   };
 
-  const shareOriginalsZip = async () => {
+  const shareOriginalsZip = async ({ photosOverride = null } = {}) => {
     if (!requireUnlocked() || state.originalsBusy || state.outputBusy) return;
-    const photos = selectedPhotos();
+    const photos = Array.isArray(photosOverride) ? photosOverride : selectedPhotos();
     if (!photos.length) {
       setStatus("Select media before preparing originals ZIP");
       return;
@@ -6331,6 +6346,30 @@
     return parseBatchFileText(await response.text());
   };
 
+  const photosForDeliverableBatch = (batch) => {
+    const projectItems = Array.isArray(batch?.projects)
+      ? batch.projects.flatMap((project) => (Array.isArray(project?.items) ? project.items : []))
+      : [];
+    const items = projectItems.length ? projectItems : (Array.isArray(batch?.items) ? batch.items : []);
+    const seen = new Set();
+    return items.map((row) => {
+      const photoId = String(row?.photoId || "");
+      if (!photoId || seen.has(photoId)) return null;
+      seen.add(photoId);
+      return state.photosById.get(photoId) || null;
+    }).filter(Boolean);
+  };
+
+  const shareProducedDeliverableOriginals = async (deliverableId) => {
+    const item = producedDeliverables().find((deliverable) => deliverable.id === deliverableId);
+    if (!item) return;
+    setStatus(`Loading ${displayDeliverableTitleFor(item)} originals...`);
+    const batch = await deliverableBatchFor(item);
+    const photos = photosForDeliverableBatch(batch);
+    if (!photos.length) throw new Error("This product has no original photos to ZIP.");
+    await shareOriginalsZip({ photosOverride: photos });
+  };
+
   const editProducedDeliverable = async (deliverableId) => {
     if (!requireUnlocked()) return;
     const items = producedDeliverables();
@@ -6761,7 +6800,7 @@
     }));
     elements.deliverablesList?.addEventListener("click", (event) => {
       if (event.target?.closest?.("[data-re-rename-deliverable]")) return;
-      const button = event.target?.closest?.("[data-re-download-output-url], [data-re-edit-name], [data-re-edit-deliverable], [data-re-view-deliverable], [data-re-download-deliverable], [data-re-delete-deliverable]");
+      const button = event.target?.closest?.("[data-re-download-output-url], [data-re-download-originals-deliverable], [data-re-edit-name], [data-re-edit-deliverable], [data-re-view-deliverable], [data-re-download-deliverable], [data-re-delete-deliverable]");
       if (button) {
         event.preventDefault();
         event.stopPropagation();
@@ -6772,6 +6811,11 @@
             filename: button.getAttribute("data-re-download-output-filename") || "",
           })
             .catch(() => setStatus("Could not download this output"));
+          return;
+        }
+        if (button.matches("[data-re-download-originals-deliverable]")) {
+          shareProducedDeliverableOriginals(button.getAttribute("data-re-download-originals-deliverable") || "")
+            .catch((error) => setStatus(error?.message || "Originals ZIP failed"));
           return;
         }
         if (button.matches("[data-re-edit-name]")) {
@@ -6875,7 +6919,19 @@
       if (event.key === "ArrowLeft") stepDialog(-1);
       if (event.key === "ArrowRight") stepDialog(1);
     });
-    window.addEventListener("photosbyelie:languagechange", () => render());
+    window.addEventListener("photosbyelie:languagechange", () => {
+      syncAuthUi();
+      syncActiveProductName();
+      syncCreateProductButtons();
+      if (state.detailMode) {
+        renderDraft();
+        renderWizard();
+      } else {
+        renderProducedDeliverables();
+      }
+      syncFileActionLabels();
+      window.photosByElieVersionInternalLinks?.(app);
+    });
   };
 
   const initializeFromPayload = (payload) => {

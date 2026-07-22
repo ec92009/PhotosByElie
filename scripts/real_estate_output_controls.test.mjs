@@ -107,6 +107,16 @@ test("Language preference follows the active account and syncs with account prof
   assert.match(checkoutWorker, /theme: \["light", "dark"\]/);
 });
 
+test("Phone language and theme switches avoid rebuilding the full Real Estate photo grid", () => {
+  const themeSetter = siteScript.match(/const setTheme = \(theme\) => \{[\s\S]*?\n\};/)?.[0] || "";
+  assert.doesNotMatch(themeSetter, /applyTranslations\(\)/);
+  const languageListener = script.match(/window\.addEventListener\("photosbyelie:languagechange"[\s\S]*?\n    \}\);/)?.[0] || "";
+  assert.match(languageListener, /renderProducedDeliverables\(\)/);
+  assert.match(languageListener, /renderWizard\(\)/);
+  assert.doesNotMatch(languageListener, /\brender\(\)/);
+  assert.doesNotMatch(languageListener, /renderGrid\(\)/);
+});
+
 test("Cloud output controls upload prepared files without creating stray Selection rows", () => {
   const queueBody = script.match(/const queueCloudOutputs = async[\s\S]*?\n  const openDeliverableUrl/)?.[0] || "";
   assert.doesNotMatch(queueBody, /saveLocalDeliverable\s*\(/);
@@ -120,6 +130,21 @@ test("Finished-product shelf exposes one download action per ready format", () =
   assert.match(script, /filter\(\(item\) => item\.formats\.some\(\(format\) => format === "pdf" \|\| format === "video"\)\)/);
   assert.match(script, /const link = document\.createElement\("a"\)/);
   assert.match(styles, /button\.real-estate-deliverable-status\.is-action[\s\S]*font-family:"Space Grotesk"/);
+});
+
+test("Finished-product shelf offers the saved product's JPEG ZIP without changing the active selection", () => {
+  assert.match(script, /data-re-download-originals-deliverable="\$\{escapeHtml\(item\.id\)\}"/);
+  assert.match(script, /const photosForDeliverableBatch = \(batch\) =>/);
+  assert.match(script, /seen\.has\(photoId\)/);
+  assert.match(script, /const shareProducedDeliverableOriginals = async \(deliverableId\) =>/);
+  assert.match(script, /await shareOriginalsZip\(\{ photosOverride: photos \}\)/);
+  const helper = script.match(/const shareProducedDeliverableOriginals = async[\s\S]*?\n  \};/)?.[0] || "";
+  assert.doesNotMatch(helper, /applyBatchManifest|state\.selectedOrder|persistSelection/);
+});
+
+test("Cloud persistence is silent when a finished product is safely saved", () => {
+  assert.match(script, /if \(hasCloud\) return null;/);
+  assert.doesNotMatch(script, /if \(hasCloud\) return \{ label: t\("re\.shelf\.cloud_saved"/);
 });
 
 test("Ready output downloads use one browser launch path and ignore duplicate clicks", () => {

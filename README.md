@@ -6,8 +6,10 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v145.6`
+- Current visible version: `v145.7`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
+- `v145.7` hides Real Estate source/shoot/product inventory statistics on phone
+  layouts so clients reach their saved products or selection flow sooner.
 - `v145.6` removes the Real Estate Card size controls and forces the consistent
   Balanced card layout, leaving the narrow wizard with one clear action.
 - `v145.5` keeps phone-sized Real Estate wizard actions in separate full-width

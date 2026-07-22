@@ -43,8 +43,10 @@ test("Output settings use compact explicit radio choices", () => {
 
 test("Phone wizard actions stack without overlapping card-size controls", () => {
   const phoneStyles = styles.match(/@media \(max-width:680px\)\{[\s\S]*?\n\}/)?.[0] || "";
+  assert.match(phoneStyles, /body\[data-real-estate\] \.real-estate-stats\{\s*display:none;/);
   assert.match(phoneStyles, /\.real-estate-wizard-head\{\s*grid-template-columns:minmax\(0,1fr\);/);
-  assert.match(phoneStyles, /\.real-estate-stepper\{\s*grid-template-columns:repeat\(5,minmax\(0,1fr\)\);/);
+  assert.match(phoneStyles, /\.real-estate-stepper\{[\s\S]*?grid-template-columns:repeat\(5,minmax\(0,1fr\)\);[\s\S]*?width:100%;[\s\S]*?min-width:0;/);
+  assert.match(phoneStyles, /\.real-estate-stepper > li\{\s*min-width:0;/);
   assert.match(phoneStyles, /\.real-estate-stepper button\{[\s\S]*?flex-direction:column;[\s\S]*?min-height:62px;/);
   assert.match(phoneStyles, /\.real-estate-wizard-actions\{\s*display:grid;\s*grid-template-columns:minmax\(0,1fr\);\s*width:100%;/);
   assert.match(phoneStyles, /\.real-estate-wizard-actions \.btn\{\s*min-width:0;\s*width:100%;/);

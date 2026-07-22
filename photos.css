@@ -8386,6 +8386,9 @@ html[data-theme="light"] .detail-preview.has-image::after{
   body[data-real-estate]{
     --re-action-bar-clearance:0px;
   }
+  body[data-real-estate] .real-estate-stats{
+    display:none;
+  }
   body[data-real-estate] main.shell{
     padding-bottom:clamp(12px,2dvh,22px);
   }
@@ -8406,6 +8409,11 @@ html[data-theme="light"] .detail-preview.has-image::after{
   .real-estate-stepper{
     grid-template-columns:repeat(5,minmax(0,1fr));
     gap:4px;
+    width:100%;
+    min-width:0;
+  }
+  .real-estate-stepper > li{
+    min-width:0;
   }
   .real-estate-stepper button{
     flex-direction:column;
@@ -8416,6 +8424,10 @@ html[data-theme="light"] .detail-preview.has-image::after{
     padding:6px 2px;
     font-size:.68rem;
     text-align:center;
+  }
+  .real-estate-wizard-head .gallery-status{
+    min-width:0;
+    overflow-wrap:anywhere;
   }
   .real-estate-stepper button b{
     width:24px;

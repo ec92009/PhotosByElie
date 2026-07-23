@@ -23,7 +23,9 @@ for remote execution.
   private R2 objects. The Output page and each ready shelf product can mint and
   copy fresh PDF, video, and Originals bearer links with the standard 30-day /
   100-download policy. Link creation still requires the gallery session;
-  recipients need only the opaque links.
+  recipients need only the opaque links. Production Worker version
+  `d3daa92e-8af7-4fc1-a2dc-10a8a543c98a` serves the authenticated mint route
+  and the existing public bearer-download route.
 - Worker v115 (`3ce5d7d3-f246-4f45-8381-1284e6f8c476`) keeps long Real
   Estate video renders alive by giving Browser Rendering a ten-minute keepalive
   and polling render status every ten seconds instead of leaving one inactive

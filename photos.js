@@ -4757,10 +4757,15 @@ const ensureSiteAccount = () => {
     sync: saveAccountProfile,
     workerBaseUrl: accountWorkerBaseUrl,
     setScopedSession({ kind = "", label = "" } = {}) {
+      const nextKind = String(kind || "");
+      const nextLabel = String(label || "");
+      const scopedChanged = !state.scopedAuthenticated
+        || state.scopedKind !== nextKind
+        || state.scopedLabel !== nextLabel;
       state.scopedAuthenticated = true;
-      state.scopedKind = String(kind || "");
-      state.scopedLabel = String(label || "");
-      activateLanguagePreference(state.scopedLabel || state.scopedKind);
+      state.scopedKind = nextKind;
+      state.scopedLabel = nextLabel;
+      if (scopedChanged) activateLanguagePreference(state.scopedLabel || state.scopedKind);
       updateAccountView();
     },
     clearScopedSession(kind = "") {

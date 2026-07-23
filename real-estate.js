@@ -2462,6 +2462,57 @@
     }
   };
 
+  const handleProducedDeliverablesClick = (event) => {
+    const target = event.target instanceof Element ? event.target : event.target?.parentElement;
+    if (!target || target.closest("[data-re-rename-deliverable]")) return;
+    const button = target.closest("[data-re-download-output-url], [data-re-download-originals-deliverable], [data-re-copy-client-links-deliverable], [data-re-edit-name], [data-re-edit-deliverable], [data-re-view-deliverable], [data-re-download-deliverable], [data-re-delete-deliverable]");
+    if (button) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (button.matches("[data-re-download-output-url]")) {
+        const format = button.getAttribute("data-re-download-output-format") || "output";
+        setStatus(`Opening ${format === "originals" ? "originals" : format.toUpperCase()} download...`);
+        downloadReadyOutputUrl({
+          url: button.getAttribute("data-re-download-output-url") || "",
+          format,
+          filename: button.getAttribute("data-re-download-output-filename") || "",
+        })
+          .catch((error) => setStatus(error?.message || "Could not download this output"));
+        return;
+      }
+      if (button.matches("[data-re-download-originals-deliverable]")) {
+        shareProducedDeliverableOriginals(button.getAttribute("data-re-download-originals-deliverable") || "")
+          .catch((error) => setStatus(error?.message || "Originals preparation failed"));
+        return;
+      }
+      if (button.matches("[data-re-copy-client-links-deliverable]")) {
+        copyClientDeliveryLinksForProduct(button.getAttribute("data-re-copy-client-links-deliverable") || "")
+          .catch((error) => setStatus(error?.message || "Could not create client links"));
+        return;
+      }
+      if (button.matches("[data-re-edit-name]")) {
+        beginDeliverableNameEdit(button.getAttribute("data-re-edit-name") || "");
+        return;
+      }
+      if (button.matches("[data-re-edit-deliverable]")) {
+        editProducedDeliverable(button.getAttribute("data-re-edit-deliverable") || "").catch(() => setStatus("Could not edit this product"));
+        return;
+      }
+      if (button.matches("[data-re-delete-deliverable]")) {
+        deleteProducedDeliverable(button.getAttribute("data-re-delete-deliverable") || "").catch((error) => setStatus(error?.message || "Could not delete this product"));
+        return;
+      }
+      const mode = button.matches("[data-re-view-deliverable]") ? "view" : "download";
+      const id = button.getAttribute(mode === "view" ? "data-re-view-deliverable" : "data-re-download-deliverable") || "";
+      runProducedDeliverable(id, mode).catch(() => setStatus("Could not prepare this product"));
+      return;
+    }
+    const row = target.closest("[data-re-open-deliverable]");
+    if (row) {
+      editProducedDeliverable(row.getAttribute("data-re-open-deliverable") || "").catch(() => setStatus("Could not edit this selection"));
+    }
+  };
+
   const renderProducedDeliverables = () => {
     if (!elements.deliverablesPanel || !elements.deliverablesList) return;
     const items = producedDeliverables();
@@ -2521,6 +2572,7 @@
       `;
     }).join("");
     elements.deliverablesList.innerHTML = rowsHtml;
+    elements.deliverablesList.onclick = handleProducedDeliverablesClick;
     syncFileActionLabels();
   };
 
@@ -7094,53 +7146,6 @@
       }
       downloadPdf({ mode: "download" });
     }));
-    elements.deliverablesList?.addEventListener("click", (event) => {
-      if (event.target?.closest?.("[data-re-rename-deliverable]")) return;
-      const button = event.target?.closest?.("[data-re-download-output-url], [data-re-download-originals-deliverable], [data-re-copy-client-links-deliverable], [data-re-edit-name], [data-re-edit-deliverable], [data-re-view-deliverable], [data-re-download-deliverable], [data-re-delete-deliverable]");
-      if (button) {
-        event.preventDefault();
-        event.stopPropagation();
-        if (button.matches("[data-re-download-output-url]")) {
-          downloadReadyOutputUrl({
-            url: button.getAttribute("data-re-download-output-url") || "",
-            format: button.getAttribute("data-re-download-output-format") || "",
-            filename: button.getAttribute("data-re-download-output-filename") || "",
-          })
-            .catch(() => setStatus("Could not download this output"));
-          return;
-        }
-        if (button.matches("[data-re-download-originals-deliverable]")) {
-          shareProducedDeliverableOriginals(button.getAttribute("data-re-download-originals-deliverable") || "")
-            .catch((error) => setStatus(error?.message || "Originals preparation failed"));
-          return;
-        }
-        if (button.matches("[data-re-copy-client-links-deliverable]")) {
-          copyClientDeliveryLinksForProduct(button.getAttribute("data-re-copy-client-links-deliverable") || "")
-            .catch((error) => setStatus(error?.message || "Could not create client links"));
-          return;
-        }
-        if (button.matches("[data-re-edit-name]")) {
-          beginDeliverableNameEdit(button.getAttribute("data-re-edit-name") || "");
-          return;
-        }
-        if (button.matches("[data-re-edit-deliverable]")) {
-          editProducedDeliverable(button.getAttribute("data-re-edit-deliverable") || "").catch(() => setStatus("Could not edit this product"));
-          return;
-        }
-        if (button.matches("[data-re-delete-deliverable]")) {
-          deleteProducedDeliverable(button.getAttribute("data-re-delete-deliverable") || "").catch((error) => setStatus(error?.message || "Could not delete this product"));
-          return;
-        }
-        const mode = button.matches("[data-re-view-deliverable]") ? "view" : "download";
-        const id = button.getAttribute(mode === "view" ? "data-re-view-deliverable" : "data-re-download-deliverable") || "";
-        runProducedDeliverable(id, mode).catch(() => setStatus("Could not prepare this product"));
-        return;
-      }
-      const row = event.target?.closest?.("[data-re-open-deliverable]");
-      if (row) {
-        editProducedDeliverable(row.getAttribute("data-re-open-deliverable") || "").catch(() => setStatus("Could not edit this selection"));
-      }
-    });
     elements.deliverablesList?.addEventListener("change", (event) => {
       const input = event.target?.closest?.("[data-re-rename-deliverable]");
       if (!input) return;

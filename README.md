@@ -6,8 +6,12 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v145.19`
+- Current visible version: `v145.20`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
+- `v145.20` restores every finished-product shelf control after eliminating a
+  recursive Account/language synchronization loop that could exhaust the page
+  call stack when a product was opened. Shelf actions now bind when their rows
+  render and show immediate download feedback.
 - `v145.19` makes Account sign-out clear both the Google account and any active
   Real Estate gallery session in one action. A dual-session sign-out returns
   to the public account screen instead of silently reopening the private

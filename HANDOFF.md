@@ -15,10 +15,17 @@ for remote execution.
 - Public site: `https://photos-by-elie.com/`
 - Local preview: `http://localhost:8000/`
 - Owner intake URL: `https://photos-by-elie.com/owner.html`
-- Current visible build: `v145.19`
+- Current visible build: `v145.20`
 - Sidecar local build: `v126.6`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
+- `v145.20` fixes the apparently inert Real Estate finished-product shelf. A
+  repeated scoped-account sync had been reapplying language/theme preferences,
+  redispatching the language event, and overflowing the browser call stack when
+  opening a product. Scoped session updates are now idempotent; the shelf also
+  owns its click handler as soon as rows render and reports download startup
+  immediately. A headed browser rehearsal opened the mock Corine product
+  directly on Output without a new recursion error. No Worker change is needed.
 - `v145.19` fixes the shared Account sign-out path when Google and Real Estate
   sessions are both active. The browser clears its scoped gallery state before
   leaving, `/auth/logout` expires both Worker cookies, and the user returns to

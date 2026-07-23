@@ -107,6 +107,8 @@ test("Language preference follows the active account and syncs with account prof
   assert.match(siteScript, /activeLanguagePreferenceKey/);
   assert.match(siteScript, /languagePreferenceKeyFor/);
   assert.match(siteScript, /activateLanguagePreference\(state\.scopedLabel \|\| state\.scopedKind\)/);
+  assert.match(siteScript, /const scopedChanged = !state\.scopedAuthenticated/);
+  assert.match(siteScript, /if \(scopedChanged\) activateLanguagePreference/);
   assert.match(siteScript, /language: root\.dataset\.language/);
   assert.match(siteScript, /if \(profile\.language\) setLanguage\(profile\.language\)/);
   assert.match(siteScript, /activeThemePreferenceKey/);
@@ -153,6 +155,17 @@ test("Finished-product shelf exposes one download action per ready format", () =
   assert.match(script, /format === "pdf" \|\| format === "video" \|\| format === "originals"/);
   assert.match(script, /const link = document\.createElement\("a"\)/);
   assert.match(styles, /button\.real-estate-deliverable-status\.is-action[\s\S]*font-family:"Space Grotesk"/);
+});
+
+test("Finished-product shelf binds its controls as soon as the rows render", () => {
+  const renderer = script.match(/const renderProducedDeliverables = \(\) => \{[\s\S]*?\n  \};/)?.[0] || "";
+  const clickHandler = script.match(/const handleProducedDeliverablesClick = \(event\) => \{[\s\S]*?\n  \};/)?.[0] || "";
+  assert.match(renderer, /elements\.deliverablesList\.onclick = handleProducedDeliverablesClick/);
+  assert.match(clickHandler, /data-re-download-output-url/);
+  assert.match(clickHandler, /data-re-download-originals-deliverable/);
+  assert.match(clickHandler, /data-re-copy-client-links-deliverable/);
+  assert.match(clickHandler, /data-re-open-deliverable/);
+  assert.match(clickHandler, /Opening \$\{format === "originals"/);
 });
 
 test("Originals are a persistent third product without changing the active selection", () => {

@@ -22,7 +22,10 @@ for remote execution.
 - `v145.19` fixes the shared Account sign-out path when Google and Real Estate
   sessions are both active. The browser clears its scoped gallery state before
   leaving, `/auth/logout` expires both Worker cookies, and the user returns to
-  the public account screen rather than appearing to stay signed in.
+  the public account screen rather than appearing to stay signed in. Production
+  Worker version `de33a8a0-59d9-4c5d-976c-c937b59f818e` is live; its logout
+  response was verified to emit separate expired Google and Real Estate
+  cookies before redirecting to the public account screen.
 - `v145.18` adds reusable no-login Real Estate delivery links without exposing
   private R2 objects. The Output page and each ready shelf product can mint and
   copy fresh PDF, video, and Originals bearer links with the standard 30-day /

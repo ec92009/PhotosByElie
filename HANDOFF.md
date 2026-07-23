@@ -15,10 +15,14 @@ for remote execution.
 - Public site: `https://photos-by-elie.com/`
 - Local preview: `http://localhost:8000/`
 - Owner intake URL: `https://photos-by-elie.com/owner.html`
-- Current visible build: `v145.18`
+- Current visible build: `v145.19`
 - Sidecar local build: `v126.6`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
+- `v145.19` fixes the shared Account sign-out path when Google and Real Estate
+  sessions are both active. The browser clears its scoped gallery state before
+  leaving, `/auth/logout` expires both Worker cookies, and the user returns to
+  the public account screen rather than appearing to stay signed in.
 - `v145.18` adds reusable no-login Real Estate delivery links without exposing
   private R2 objects. The Output page and each ready shelf product can mint and
   copy fresh PDF, video, and Originals bearer links with the standard 30-day /

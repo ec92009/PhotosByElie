@@ -4034,6 +4034,15 @@ const accountReturnUrl = () => {
   return url.href;
 };
 
+const publicAccountReturnUrl = () => {
+  const url = new URL("./", window.location.href);
+  url.search = "";
+  url.hash = "";
+  url.searchParams.set("account", "1");
+  url.searchParams.set("accountMode", "signin");
+  return url.href;
+};
+
 const consumeAccountReturnFlag = () => {
   const url = new URL(window.location.href);
   if (url.searchParams.get("account") !== "1") return false;
@@ -4619,7 +4628,7 @@ const ensureSiteAccount = () => {
     window.location.href = loginUrl.href;
   };
 
-  const beginGoogleLogout = () => {
+  const beginGoogleLogout = (returnTo = accountReturnUrl()) => {
     const workerBase = accountWorkerBaseUrl();
     localStorage.setItem(accountPreferenceKey, 'visitor');
     clearAccountDataFromDevice();
@@ -4634,24 +4643,32 @@ const ensureSiteAccount = () => {
       return;
     }
     const logoutUrl = new URL(`${workerBase}/auth/logout`);
-    logoutUrl.searchParams.set("returnTo", accountReturnUrl());
+    logoutUrl.searchParams.set("returnTo", returnTo);
     window.location.href = logoutUrl.href;
   };
 
   const beginAccountLogout = () => {
-    if (!state.authenticated && state.scopedAuthenticated) {
+    const hadSiteSession = state.authenticated;
+    const scopedKind = state.scopedAuthenticated ? state.scopedKind : "";
+    if (signoutInlineButton) {
+      signoutInlineButton.disabled = true;
+      signoutInlineButton.textContent = translate('account.signing_out');
+    }
+    if (state.scopedAuthenticated) {
       const kind = state.scopedKind;
-      clearAccountDataFromDevice();
       state.scopedAuthenticated = false;
       state.scopedKind = "";
       state.scopedLabel = "";
-      activateLanguagePreference("");
-      closeAccount();
-      updateAccountView();
       window.dispatchEvent(new CustomEvent("photosbyelie:scopedaccountlogout", { detail: { kind } }));
+    }
+    if (hadSiteSession) {
+      beginGoogleLogout(scopedKind ? publicAccountReturnUrl() : accountReturnUrl());
       return;
     }
-    beginGoogleLogout();
+    clearAccountDataFromDevice();
+    activateLanguagePreference("");
+    closeAccount();
+    updateAccountView();
   };
 
   document.body.append(modal);

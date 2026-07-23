@@ -646,8 +646,9 @@ Clock state: running
 | 2026-07-22 | 23:15 CEST | 23:16 CEST | 0:01 | Requested native Mac save-location prompts before Real Estate PDF, video, and Originals downloads; implementation, tests, and deployment runtime excluded. |
 | 2026-07-22 | 23:39 CEST | 23:40 CEST | 0:01 | Reported that a queued Real Estate video appeared to render but failed during finalization; diagnosis, implementation, tests, deployment, and replay runtime excluded. |
 | 2026-07-23 | 12:26 CEST | 12:27 CEST | 0:01 | Replaced Corine's planned gallery login with a reusable owner-created, no-login artifact-link delivery workflow for current and future Real Estate clients; implementation, tests, deployment, and rehearsal runtime excluded. |
+| 2026-07-23 | 12:50 CEST | 12:51 CEST | 0:01 | Reported that Account sign-out appeared ineffective from the Real Estate workspace, exposing the dual Google/gallery session defect; diagnosis, implementation, tests, and deployment runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 31:57
+Active collaboration time used: 31:58
 Remaining budget: not set

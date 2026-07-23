@@ -81,6 +81,12 @@ const redirect = (location, status = 302, headers = {}) => new Response(null, {
   headers: { location, ...headers },
 });
 
+const redirectWithCookies = (location, cookies = [], status = 302) => {
+  const headers = new Headers({ location });
+  cookies.filter(Boolean).forEach((cookie) => headers.append("set-cookie", cookie));
+  return new Response(null, { status, headers });
+};
+
 const parseJson = async (request) => {
   try {
     return await request.json();
@@ -2072,11 +2078,20 @@ export const createPhotosByElieWorker = ({
 
   const logoutAuth = async (request) => {
     const baseUrl = new URL(request.url).origin;
+    const realEstateCookie = realEstateAuth?.clearCookieFor?.() || "";
     if (googleOAuthAuth?.clearCookieFor) {
-      return redirect(safeAuthReturnUrl(request), 302, { "set-cookie": googleOAuthAuth.clearCookieFor(request) });
+      return redirectWithCookies(safeAuthReturnUrl(request), [
+        googleOAuthAuth.clearCookieFor(request),
+        realEstateCookie,
+      ]);
     }
-    if (accessAuth?.logoutUrlFor) return redirect(accessAuth.logoutUrlFor(baseUrl, { returnTo: safeAuthReturnUrl(request) }));
-    return credentialedJson(request, { ok: true });
+    if (accessAuth?.logoutUrlFor) {
+      return redirectWithCookies(
+        accessAuth.logoutUrlFor(baseUrl, { returnTo: safeAuthReturnUrl(request) }),
+        [realEstateCookie]
+      );
+    }
+    return credentialedJson(request, { ok: true }, 200, realEstateCookie ? { "set-cookie": realEstateCookie } : {});
   };
 
   const getOwnerSession = async (request) => {

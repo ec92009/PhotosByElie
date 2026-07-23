@@ -310,6 +310,7 @@ test("Visitors see account pills and signed-in users return to the face menu", (
   assert.match(siteScript, /className = 'account-entry-actions'/);
   assert.match(siteScript, /data-account-entry-signup/);
   assert.match(siteScript, /const accountIsAuthenticated = \(\) => state\.authenticated \|\| state\.scopedAuthenticated/);
+  assert.match(siteScript, /const publicAccountReturnUrl = \(\) =>/);
   assert.match(siteScript, /accountEntry\.hidden = activeAuth/);
   assert.match(siteScript, /accountButton\.hidden = !activeAuth/);
   assert.match(siteScript, /state\.displayName \|\| state\.email/);
@@ -322,6 +323,8 @@ test("Visitors see account pills and signed-in users return to the face menu", (
   assert.match(siteScript, /setScopedSession\(\{ kind = "", label = "" \} = \{\}\)/);
   assert.match(script, /setScopedSession\?\.\(\{[\s\S]*kind: "real-estate"/);
   assert.match(script, /photosbyelie:scopedaccountlogout/);
+  assert.match(siteScript, /if \(state\.scopedAuthenticated\) \{[\s\S]*photosbyelie:scopedaccountlogout[\s\S]*if \(hadSiteSession\)/);
+  assert.match(siteScript, /beginGoogleLogout\(scopedKind \? publicAccountReturnUrl\(\) : accountReturnUrl\(\)\)/);
   assert.equal((siteScript.match(/data-account-signout-inline/g) || []).length, 2);
   assert.doesNotMatch(siteScript, /data-account-signout(?:\s|>)/);
   assert.match(siteScript, /const clearAccountDataFromDevice = \(\) =>/);

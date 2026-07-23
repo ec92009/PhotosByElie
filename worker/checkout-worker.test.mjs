@@ -1265,9 +1265,13 @@ test("direct Google OAuth session feeds account roles, RE login, and logout", as
   ));
   assert.equal(logoutResponse.status, 302);
   assert.equal(logoutResponse.headers.get("location"), "https://photos-by-elie.com/?account=1");
-  assert.match(logoutResponse.headers.get("set-cookie") || "", /^pbe_google_session=; Max-Age=0/);
-  assert.match(logoutResponse.headers.get("set-cookie") || "", /SameSite=None/);
-  assert.match(logoutResponse.headers.get("set-cookie") || "", /Secure/);
+  const logoutCookies = logoutResponse.headers.getSetCookie();
+  assert.equal(logoutCookies.length, 2);
+  assert.match(logoutCookies[0], /^pbe_google_session=; Max-Age=0/);
+  assert.match(logoutCookies[0], /SameSite=None/);
+  assert.match(logoutCookies[0], /Secure/);
+  assert.match(logoutCookies[1], /^pbe_re_session=; Max-Age=0/);
+  assert.match(logoutCookies[1], /Path=\/real-estate/);
 });
 
 test("direct Google OAuth returns a local transfer token for Tailscale Owner previews", async () => {

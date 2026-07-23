@@ -1274,6 +1274,19 @@
       button.title = "Queue this saved product's original files";
       button.disabled = state.originalsBusy || outputBusy;
     });
+    document.querySelectorAll("[data-re-copy-client-links]").forEach((button) => {
+      const selected = activeSelectedPhotos();
+      const fingerprint = selected.length ? batchProductFingerprint(buildBatchManifest(selected, true)) : "";
+      const item = fingerprint ? producedDeliverables().find((deliverable) => (
+        deliverable?.batch && batchProductFingerprint(deliverable.batch) === fingerprint
+      )) : null;
+      const readyCount = item ? readyCloudRecordsForClientDelivery(item).length : 0;
+      button.textContent = readyCount ? "Copy client links" : "Links after queueing";
+      button.title = readyCount
+        ? "Create fresh private links that work without a gallery login"
+        : "Queue a PDF, video, or originals product first";
+      button.disabled = outputBusy || state.originalsBusy || readyCount === 0;
+    });
     document.querySelectorAll("[data-re-view-deliverable], [data-re-download-deliverable], [data-re-edit-deliverable]").forEach((button) => {
       if (button.matches("[data-re-view-deliverable], [data-re-download-deliverable]") && button.hasAttribute("disabled")) return;
       button.disabled = outputBusy && !button.matches("[data-re-edit-deliverable]");
@@ -1771,7 +1784,18 @@
         </button>
       `;
     }).join("");
-    return outputActions;
+    const readyCloudRecords = records
+      .filter((record) => record?.source === "cloud")
+      .filter((record) => ["pdf", "video", "originals"].includes(deliverableFormatCode(record?.type)))
+      .filter((record) => record?.status === "ready" && (record?.downloadUrl || record?.viewUrl));
+    const clientLinksAction = readyCloudRecords.length
+      ? `
+        <button class="real-estate-deliverable-status is-action" type="button" data-re-status-tone="ready" data-re-copy-client-links-deliverable="${escapeHtml(item.id)}" title="Create fresh private links that work without a gallery login">
+          Copy client links
+        </button>
+      `
+      : "";
+    return `${outputActions}${clientLinksAction}`;
   };
 
   const statusBadgesHtml = (badges = []) => (
@@ -1872,6 +1896,100 @@
       state.cloudDeliverablesBusy = false;
       renderProducedDeliverables();
     }
+  };
+
+  const readyCloudRecordsForClientDelivery = (item) => {
+    const records = (Array.isArray(item?.records) ? item.records : [item].filter(Boolean))
+      .filter((record) => record?.source === "cloud")
+      .filter((record) => ["pdf", "video", "originals"].includes(deliverableFormatCode(record?.type)))
+      .filter((record) => record?.status === "ready" && (record?.downloadUrl || record?.viewUrl))
+      .sort((left, right) => validDateFor(right.createdAt).getTime() - validDateFor(left.createdAt).getTime());
+    const byFormat = new Map();
+    records.forEach((record) => {
+      const format = deliverableFormatCode(record.type);
+      if (!byFormat.has(format)) byFormat.set(format, record);
+    });
+    return ["pdf", "video", "originals"].map((format) => byFormat.get(format)).filter(Boolean);
+  };
+
+  const writeClientDeliveryText = async (value) => {
+    const text = String(value || "");
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.append(textarea);
+    textarea.select();
+    const copied = document.execCommand("copy");
+    textarea.remove();
+    if (!copied) throw new Error("Clipboard unavailable.");
+  };
+
+  const createClientDeliveryLinks = async (item) => {
+    const records = readyCloudRecordsForClientDelivery(item);
+    if (!records.length) throw new Error("Queue at least one finished product before creating client links.");
+    const baseUrl = workerBaseUrl();
+    if (!baseUrl) throw new Error("Client delivery links need the Photos By Elie Worker.");
+    const credentials = await credentialsForCloudDeliverables({ promptIfMissing: false });
+    if (!credentials) throw new Error("Your gallery session is needed to create client links.");
+    const items = producedDeliverables();
+    const title = displayDeliverableTitleFor(item, generatedDeliverableNamesFor(items));
+    const response = await fetch(`${baseUrl}/real-estate/deliverables/delivery-links`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        galleryKey: state.gallery?.key || "",
+        username: credentials.username,
+        title,
+        deliverableIds: records.map((record) => record.id),
+      }),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw realEstateWorkerError(response, body);
+    const delivery = body.delivery || {};
+    const links = Array.isArray(delivery.links) ? delivery.links : [];
+    if (!links.length) throw new Error("No client links were created.");
+    const expiry = delivery.expiresAt
+      ? new Date(delivery.expiresAt).toLocaleDateString(document.documentElement.lang || undefined, {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
+      : "";
+    const text = [
+      title,
+      "",
+      ...links.map((link) => `${link.label || link.type}: ${link.url}`),
+      "",
+      "No login is required.",
+      expiry ? `Links expire ${expiry}.` : "",
+    ].filter(Boolean).join("\n");
+    await writeClientDeliveryText(text);
+    setStatus(`Copied ${links.length} private client link${links.length === 1 ? "" : "s"}${expiry ? ` (expires ${expiry})` : ""}.`);
+    return delivery;
+  };
+
+  const copyClientDeliveryLinksForProduct = async (deliverableId) => {
+    const item = producedDeliverables().find((deliverable) => deliverable.id === deliverableId);
+    if (!item) throw new Error("This saved product could not be found.");
+    return createClientDeliveryLinks(item);
+  };
+
+  const copyActiveClientDeliveryLinks = async () => {
+    const selected = activeSelectedPhotos();
+    if (!selected.length) throw new Error("Select media before creating client links.");
+    const fingerprint = batchProductFingerprint(buildBatchManifest(selected, true));
+    const item = producedDeliverables().find((deliverable) => (
+      deliverable?.batch && batchProductFingerprint(deliverable.batch) === fingerprint
+    ));
+    if (!item) throw new Error("Queue a finished product before creating client links.");
+    return createClientDeliveryLinks(item);
   };
 
   const saveCloudDeliverable = async (record) => {
@@ -6930,6 +7048,9 @@
       event.target.blur();
     });
     document.querySelectorAll("[data-re-copy-batch]").forEach((button) => button.addEventListener("click", copyBatch));
+    document.querySelectorAll("[data-re-copy-client-links]").forEach((button) => button.addEventListener("click", () => {
+      copyActiveClientDeliveryLinks().catch((error) => setStatus(error?.message || "Could not create client links"));
+    }));
     document.querySelectorAll("[data-re-download-batch]").forEach((button) => button.addEventListener("click", () => {
       shareSelectionTable().catch(() => setStatus("Selection could not be saved"));
     }));
@@ -6975,7 +7096,7 @@
     }));
     elements.deliverablesList?.addEventListener("click", (event) => {
       if (event.target?.closest?.("[data-re-rename-deliverable]")) return;
-      const button = event.target?.closest?.("[data-re-download-output-url], [data-re-download-originals-deliverable], [data-re-edit-name], [data-re-edit-deliverable], [data-re-view-deliverable], [data-re-download-deliverable], [data-re-delete-deliverable]");
+      const button = event.target?.closest?.("[data-re-download-output-url], [data-re-download-originals-deliverable], [data-re-copy-client-links-deliverable], [data-re-edit-name], [data-re-edit-deliverable], [data-re-view-deliverable], [data-re-download-deliverable], [data-re-delete-deliverable]");
       if (button) {
         event.preventDefault();
         event.stopPropagation();
@@ -6991,6 +7112,11 @@
         if (button.matches("[data-re-download-originals-deliverable]")) {
           shareProducedDeliverableOriginals(button.getAttribute("data-re-download-originals-deliverable") || "")
             .catch((error) => setStatus(error?.message || "Originals preparation failed"));
+          return;
+        }
+        if (button.matches("[data-re-copy-client-links-deliverable]")) {
+          copyClientDeliveryLinksForProduct(button.getAttribute("data-re-copy-client-links-deliverable") || "")
+            .catch((error) => setStatus(error?.message || "Could not create client links"));
           return;
         }
         if (button.matches("[data-re-edit-name]")) {

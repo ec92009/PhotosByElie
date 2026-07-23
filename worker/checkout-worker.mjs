@@ -2929,6 +2929,17 @@ export const createPhotosByElieWorker = ({
     return credentialedJson(request, { deliverable }, 201);
   };
 
+  const createRealEstateDeliveryLinks = async (request) => {
+    if (!realEstateDeliverables || typeof realEstateDeliverables.createDeliveryLinks !== "function") {
+      return errorJson(503, "real_estate_delivery_links_unavailable", "Private client delivery links are not configured.");
+    }
+    const payload = await parseJson(request);
+    payload.realEstateSession = await requireRealEstateSession(request, payload);
+    payload.galleryKey = payload.realEstateSession.galleryKey;
+    const delivery = await realEstateDeliverables.createDeliveryLinks(payload);
+    return credentialedJson(request, { delivery }, 201);
+  };
+
   const submitRealEstateAssemblyJob = async (request) => {
     if (!realEstateDeliverables || typeof realEstateDeliverables.submitAssemblyJob !== "function") {
       return errorJson(503, "real_estate_deliverables_unavailable", "Real-estate cloud assembly is not configured.");
@@ -3184,6 +3195,7 @@ export const createPhotosByElieWorker = ({
           : await failInternalRealEstateRenderOutput(request, jobId, deliverableId);
       }
       if (request.method === "POST" && path === "/real-estate/deliverables/list") return await listRealEstateDeliverables(request);
+      if (request.method === "POST" && path === "/real-estate/deliverables/delivery-links") return await createRealEstateDeliveryLinks(request);
       if (request.method === "POST" && path === "/real-estate/deliverables/jobs") return await submitRealEstateAssemblyJob(request);
       const realEstateJobMatch = path.match(/^\/real-estate\/deliverables\/jobs\/([^/]+)$/);
       if (request.method === "GET" && realEstateJobMatch) {

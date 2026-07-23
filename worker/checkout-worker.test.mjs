@@ -3106,6 +3106,115 @@ test("real-estate cloud assembly jobs persist status and serve completed assets"
   assert.equal(Buffer.from(await downloadResponse.arrayBuffer()).toString(), "%PDF-1.4 test");
 });
 
+test("real-estate delivery links provide expiring no-login access to private finished products", async () => {
+  const randomUUID = deterministicIds();
+  const privateR2 = createFakeR2();
+  const store = createMemoryStore();
+  const now = () => new Date("2026-07-23T09:00:00.000Z");
+  const galleries = [{
+    key: "corine-real-estate",
+    username: "Corine",
+    accessCode: "LaConcha",
+  }];
+  const worker = createPhotosByElieWorker({
+    catalog: loadCatalog(),
+    store,
+    stripe: createMockStripeClient({ randomUUID }),
+    delivery: createR2ZipDelivery({ privateBucket: privateR2 }),
+    randomUUID,
+    now,
+    realEstateDeliverables: createRealEstateDeliverables({
+      privateBucket: privateR2,
+      store,
+      randomUUID,
+      now,
+      galleries,
+      downloadBaseUrl: "https://worker.test",
+      deliveryLinkTtlSeconds: 7 * 24 * 60 * 60,
+      deliveryLinkMaxDownloads: 12,
+    }),
+    realEstateAuth: createRealEstateAuth({
+      galleries,
+      sessionSecret: "test-real-estate-session-secret",
+      now,
+    }),
+  });
+  const cookie = await realEstateSessionCookie(worker);
+  const batch = {
+    batchId: "corine-links-20260723",
+    galleryKey: "corine-real-estate",
+    projects: [{ projectTitle: "La Concha", items: [{ photoId: "photo-1", title: "Terrace" }] }],
+  };
+  const ready = [];
+  for (const [type, filename, contentType, bytes] of [
+    ["pdf", "la-concha.pdf", "application/pdf", new TextEncoder().encode("%PDF-link-test")],
+    ["video", "la-concha.mp4", "video/mp4", new TextEncoder().encode("mp4-link-test")],
+    ["originals", "la-concha-originals.zip", "application/zip", new Uint8Array([0x50, 0x4b, 0x03, 0x04])],
+  ]) {
+    const savedResponse = await worker.fetch(jsonRequest("https://worker.test/real-estate/deliverables", {
+      galleryKey: "corine-real-estate",
+      username: "Corine",
+      deliverable: {
+        id: `corine-${type}-ready`,
+        type,
+        title: "La Concha delivery",
+        status: "pending",
+        filename,
+        batch,
+        outputs: { [type]: { filename, contentType } },
+      },
+    }, { cookie }));
+    assert.equal(savedResponse.status, 201);
+    const saved = (await savedResponse.json()).deliverable;
+    const completedResponse = await worker.fetch(new Request(
+      `https://worker.test/real-estate/deliverables/${saved.id}/complete?galleryKey=corine-real-estate&filename=${encodeURIComponent(filename)}`,
+      {
+        method: "POST",
+        headers: { cookie, "content-type": contentType },
+        body: bytes,
+      }
+    ));
+    assert.equal(completedResponse.status, 200);
+    ready.push((await completedResponse.json()).deliverable);
+  }
+
+  const unauthenticated = await worker.fetch(jsonRequest(
+    "https://worker.test/real-estate/deliverables/delivery-links",
+    { galleryKey: "corine-real-estate", deliverableIds: ready.map((record) => record.id) }
+  ));
+  assert.equal(unauthenticated.status, 401);
+
+  const createLinksResponse = await worker.fetch(jsonRequest(
+    "https://worker.test/real-estate/deliverables/delivery-links",
+    {
+      galleryKey: "corine-real-estate",
+      title: "La Concha delivery",
+      deliverableIds: ready.map((record) => record.id),
+    },
+    { cookie }
+  ));
+  assert.equal(createLinksResponse.status, 201);
+  const delivery = (await createLinksResponse.json()).delivery;
+  assert.equal(delivery.links.length, 3);
+  assert.equal(delivery.expiresAt, "2026-07-30T09:00:00.000Z");
+  assert.equal(delivery.downloadLimit, 12);
+  assert.deepEqual(delivery.links.map((link) => link.label), ["PDF", "Video", "Originals"]);
+  assert.ok(delivery.links.every((link) => /^https:\/\/worker\.test\/download\/relink_/.test(link.url)));
+
+  const pdfLink = delivery.links.find((link) => link.type === "pdf");
+  const publicDownload = await worker.fetch(new Request(pdfLink.url));
+  assert.equal(publicDownload.status, 200);
+  assert.equal(publicDownload.headers.get("content-type"), "application/pdf");
+  assert.match(publicDownload.headers.get("content-disposition"), /la-concha\.pdf/);
+  assert.equal(Buffer.from(await publicDownload.arrayBuffer()).toString(), "%PDF-link-test");
+
+  const token = new URL(pdfLink.url).pathname.split("/").pop();
+  const stored = await store.getDownload(token);
+  assert.equal(stored.realEstateGalleryKey, "corine-real-estate");
+  assert.equal(stored.realEstateDeliverableId, "corine-pdf-ready");
+  assert.equal(stored.downloadCount, 1);
+});
+
 test("Cloudflare video transcoder forces a real iPhone-compatible transform", async () => {
   const calls = [];
   const outputBytes = new TextEncoder().encode("h264-aac-mp4");

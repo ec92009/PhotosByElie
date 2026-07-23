@@ -362,9 +362,13 @@ export default {
       }) : null,
       realEstateDeliverables: createRealEstateDeliverables({
         privateBucket,
+        store,
         galleries: realEstateGalleries,
         emailClient,
         publicSiteUrl,
+        downloadBaseUrl: workerPublicUrl,
+        deliveryLinkTtlSeconds: downloadTokenTtlSeconds,
+        deliveryLinkMaxDownloads: downloadTokenMaxDownloads,
         assemblyDispatcher: env.REAL_ESTATE_RENDER_WORKFLOW ? {
           dispatch: ({ galleryKey, jobId }) => env.REAL_ESTATE_RENDER_WORKFLOW.create({
             id: jobId,

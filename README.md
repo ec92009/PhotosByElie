@@ -6,8 +6,12 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v145.17`
+- Current visible version: `v145.18`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
+- `v145.18` creates fresh, expiring private links for any ready Real Estate
+  PDF, video, and Originals product. The Output page and finished-products
+  shelf copy a client-ready link set that works without gallery login while
+  the source files remain private in R2.
 - `v145.17` opens the native Save dialog before ready PDF, video, and Originals
   downloads on supported Mac browsers, streams each file to the chosen location,
   and preserves the existing phone and unsupported-browser download paths.

@@ -130,9 +130,13 @@ const defaultGalleries = [{
 
 export const createRealEstateDeliverables = ({
   privateBucket,
+  store = null,
   galleries = defaultGalleries,
   emailClient = null,
   publicSiteUrl = "",
+  downloadBaseUrl = "",
+  deliveryLinkTtlSeconds = 60 * 60 * 24 * 30,
+  deliveryLinkMaxDownloads = 100,
   assemblyDispatcher = null,
   videoTranscoder = null,
   renderTokenTtlSeconds = 20 * 60,
@@ -142,6 +146,12 @@ export const createRealEstateDeliverables = ({
   if (!privateBucket) throw new Error("createRealEstateDeliverables requires a privateBucket R2 binding.");
 
   const galleriesByKey = galleryMapFor(galleries);
+
+  const deliveryUrlFor = (token) => {
+    const base = String(downloadBaseUrl || publicSiteUrl || "").replace(/\/+$/, "");
+    const path = `/download/${encodeURIComponent(token)}`;
+    return base ? `${base}${path}` : path;
+  };
 
   const workspaceUrlFor = (gallery) => {
     const base = String(publicSiteUrl || "").replace(/\/+$/, "");
@@ -418,6 +428,115 @@ export const createRealEstateDeliverables = ({
       const record = await objectJson(await privateBucket.get(keyFor(gallery, id)));
       return record && typeof record === "object" ? publicRecordFor(record) : null;
     }))).filter(Boolean);
+  };
+
+  const createDeliveryLinks = async (payload = {}) => {
+    const gallery = galleryFor(payload);
+    authorize(gallery, payload);
+    if (!store || typeof store.putDownload !== "function") {
+      throw Object.assign(new Error("Private client delivery links are not configured."), {
+        status: 503,
+        code: "real_estate_delivery_links_unavailable",
+      });
+    }
+    const ids = [...new Set((Array.isArray(payload.deliverableIds) ? payload.deliverableIds : [])
+      .map((id) => String(id || "").trim())
+      .filter(Boolean))];
+    if (!ids.length || ids.length > 12) {
+      throw Object.assign(new Error("Choose between 1 and 12 ready products to create client links."), {
+        status: 400,
+        code: "invalid_real_estate_delivery_link_request",
+      });
+    }
+    const records = await readDeliverableRecords(gallery, ids);
+    if (records.length !== ids.length) {
+      throw Object.assign(new Error("One or more selected products could not be found."), {
+        status: 404,
+        code: "unknown_real_estate_deliverable",
+      });
+    }
+    const selected = records.filter((record) => ["pdf", "video", "originals"].includes(String(record.type || "").toLowerCase()));
+    if (selected.length !== records.length) {
+      throw Object.assign(new Error("Only PDF, video, and originals products can receive client delivery links."), {
+        status: 409,
+        code: "invalid_real_estate_delivery_link_product",
+      });
+    }
+    const notReady = selected.find((record) => String(record.status || "").toLowerCase() !== "ready");
+    if (notReady) {
+      throw Object.assign(new Error(`${String(notReady.type || "Product")} is not ready for client delivery yet.`), {
+        status: 409,
+        code: "real_estate_deliverable_pending",
+        details: { id: notReady.id, status: notReady.status },
+      });
+    }
+
+    const createdAtDate = now();
+    const createdAt = createdAtDate.toISOString();
+    const ttlSeconds = Math.max(60, Math.floor(Number(deliveryLinkTtlSeconds) || (60 * 60 * 24 * 30)));
+    const expiresAt = new Date(createdAtDate.getTime() + (ttlSeconds * 1000)).toISOString();
+    const downloadLimit = Math.max(1, Math.floor(Number(deliveryLinkMaxDownloads) || 100));
+    const deliveryId = `RE-LINK-${createdAt.slice(0, 10).replace(/-/g, "")}-${randomUUID().replace(/-/g, "").slice(0, 10).toUpperCase()}`;
+    const links = [];
+
+    for (const record of selected) {
+      const output = record.outputs?.[record.type] || record.output || {};
+      const objectKey = String(output.key || record.outputKey || "").replace(/^\/+/, "");
+      if (!objectKey) {
+        throw Object.assign(new Error(`${String(record.type || "Product")} is ready but has no private output key.`), {
+          status: 409,
+          code: "real_estate_deliverable_needs_attention",
+          details: { id: record.id },
+        });
+      }
+      const object = await privateBucket.get(objectKey);
+      if (!object) {
+        throw Object.assign(new Error(`${String(record.type || "Product")} is missing from private storage.`), {
+          status: 404,
+          code: "missing_real_estate_deliverable_asset",
+          details: { id: record.id },
+        });
+      }
+      const token = `relink_${randomUUID().replace(/-/g, "").slice(0, 28)}`;
+      const filename = filenameFor(record, output);
+      const type = String(record.type || "").toLowerCase();
+      const contentType = output.contentType || object.httpMetadata?.contentType || contentTypeFor(type, filename);
+      const bytes = Number(record.bytes || object.size || 0) || 0;
+      await store.putDownload({
+        token,
+        orderId: deliveryId,
+        bucket: "private",
+        objectKey,
+        filename,
+        contentType,
+        bytes,
+        productId: `real-estate-${type}`,
+        realEstateGalleryKey: gallery.key,
+        realEstateDeliverableId: record.id,
+        createdAt,
+        expiresAt,
+        downloadLimit,
+        downloadCount: 0,
+      });
+      links.push({
+        id: record.id,
+        type,
+        label: type === "pdf" ? "PDF" : type === "video" ? "Video" : "Originals",
+        filename,
+        bytes,
+        url: deliveryUrlFor(token),
+      });
+    }
+
+    return {
+      deliveryId,
+      galleryKey: gallery.key,
+      title: String(payload.title || selected.find((record) => record.title)?.title || "Real Estate delivery").trim(),
+      createdAt,
+      expiresAt,
+      downloadLimit,
+      links,
+    };
   };
 
   const publicJobFor = async (gallery, jobRecord = {}) => {
@@ -1051,6 +1170,7 @@ export const createRealEstateDeliverables = ({
     getAssemblyJob,
     completeAssemblyOutput,
     failAssemblyOutput,
+    createDeliveryLinks,
     getDeliverableAsset,
     deleteDeliverable,
     beginCloudAssemblyRender,

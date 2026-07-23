@@ -645,8 +645,9 @@ Clock state: running
 | 2026-07-22 | 22:25 CEST | 22:32 CEST | 0:02 | Defined Originals as the persistent third Real Estate output beside PDF and Video, with matching Queue and Download lifecycle on Output and shelf; implementation, tests, and deployment runtime excluded. |
 | 2026-07-22 | 23:15 CEST | 23:16 CEST | 0:01 | Requested native Mac save-location prompts before Real Estate PDF, video, and Originals downloads; implementation, tests, and deployment runtime excluded. |
 | 2026-07-22 | 23:39 CEST | 23:40 CEST | 0:01 | Reported that a queued Real Estate video appeared to render but failed during finalization; diagnosis, implementation, tests, deployment, and replay runtime excluded. |
+| 2026-07-23 | 12:26 CEST | 12:27 CEST | 0:01 | Replaced Corine's planned gallery login with a reusable owner-created, no-login artifact-link delivery workflow for current and future Real Estate clients; implementation, tests, deployment, and rehearsal runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 31:56
+Active collaboration time used: 31:57
 Remaining budget: not set

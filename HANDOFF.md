@@ -15,10 +15,15 @@ for remote execution.
 - Public site: `https://photos-by-elie.com/`
 - Local preview: `http://localhost:8000/`
 - Owner intake URL: `https://photos-by-elie.com/owner.html`
-- Current visible build: `v145.17`
+- Current visible build: `v145.18`
 - Sidecar local build: `v126.6`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
+- `v145.18` adds reusable no-login Real Estate delivery links without exposing
+  private R2 objects. The Output page and each ready shelf product can mint and
+  copy fresh PDF, video, and Originals bearer links with the standard 30-day /
+  100-download policy. Link creation still requires the gallery session;
+  recipients need only the opaque links.
 - Worker v115 (`3ce5d7d3-f246-4f45-8381-1284e6f8c476`) keeps long Real
   Estate video renders alive by giving Browser Rendering a ten-minute keepalive
   and polling render status every ten seconds instead of leaving one inactive

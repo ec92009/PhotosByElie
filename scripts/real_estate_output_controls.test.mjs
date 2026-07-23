@@ -84,6 +84,15 @@ test("Ready output actions become direct PDF or video downloads", () => {
   assert.match(siteScript, /'re\.output\.title': 'Create and download'/);
 });
 
+test("Ready Real Estate products can create no-login client delivery links", () => {
+  assert.equal((outputActions.match(/data-re-copy-client-links/g) || []).length, 1);
+  assert.match(script, /const createClientDeliveryLinks = async \(item\) =>/);
+  assert.match(script, /\/real-estate\/deliverables\/delivery-links/);
+  assert.match(script, /data-re-copy-client-links-deliverable/);
+  assert.match(script, /No login is required\./);
+  assert.match(script, /Links expire \$\{expiry\}\./);
+});
+
 test("Hero counters identify source media and live saved products truthfully", () => {
   assert.match(siteScript, /'re\.stats\.stills': 'Source photos'/);
   assert.match(siteScript, /'re\.stats\.videos': 'Source videos'/);

@@ -3585,8 +3585,12 @@ window.photosByEliePhotoFilter = (() => {
     const maxDistance = term.length >= 7 ? 2 : 1;
     return tokens.some((token) => (
       token.startsWith(term)
-      || (token.length >= 4 && term.startsWith(token) && term.length - token.length <= 2)
-      || (token.length <= 24 && editDistanceWithin(term, token, maxDistance))
+      || (token.length >= 4 && term.startsWith(token) && term.length - token.length <= 1)
+      || (
+        token.length <= 24
+        && Math.abs(term.length - token.length) <= 1
+        && editDistanceWithin(term, token, maxDistance)
+      )
     ));
   };
   const searchText = (photo, context = {}) => [

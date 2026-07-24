@@ -15,10 +15,13 @@ for remote execution.
 - Public site: `https://photos-by-elie.com/`
 - Local preview: `http://localhost:8000/`
 - Owner intake URL: `https://photos-by-elie.com/owner.html`
-- Current visible build: `v147.1`
+- Current visible build: `v147.2`
 - Sidecar local build: `v126.6`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
+- `v147.2` tightens fuzzy place search so Seville/Sevilla and small typos
+  still match, while Paris “Hôtel de Ville” photos no longer leak into
+  Seville results.
 - `v147.1` keeps Search and all gallery filter controls in place while results
   update. Typing ordinary letters such as `P` no longer scrolls the first
   matching photo into view and makes the filter panel appear to disappear.

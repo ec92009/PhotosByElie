@@ -656,8 +656,9 @@ Clock state: running
 | 2026-07-24 | 22:44 CEST | 22:46 CEST | 0:01 | Replaced the gallery density slider with a minus/plus split pill and matched Fit/Fill to the same segmented control treatment; implementation, tests, and browser verification runtime excluded. |
 | 2026-07-25 | 00:44 CEST | 00:45 CEST | 0:01 | Approved moving the final illustrated image-use guide from the mock into the production homepage; implementation, tests, and deployment runtime excluded. |
 | 2026-07-25 | 01:01 CEST | 01:02 CEST | 0:01 | Reported that typing an ordinary search character made the Search controls appear to disappear and authorized the in-place filter fix; implementation, tests, and deployment runtime excluded. |
+| 2026-07-25 | 01:13 CEST | 01:14 CEST | 0:01 | Reported two Paris Hôtel de Ville panoramas leaking into Seville search and authorized the relevance fix; implementation, tests, and deployment runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 32:08
+Active collaboration time used: 32:09
 Remaining budget: not set

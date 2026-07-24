@@ -6,8 +6,11 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v147.1`
+- Current visible version: `v147.2`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
+- `v147.2` tightens fuzzy place search so Seville/Sevilla and small typos
+  still match, while Paris “Hôtel de Ville” photos no longer leak into
+  Seville results.
 - `v147.1` keeps Search and every gallery filter control in place while
   matching results update, rather than scrolling the first result into view
   after each keystroke or filter change.

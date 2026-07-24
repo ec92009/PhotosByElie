@@ -20,8 +20,9 @@
 
   const render = (payload) => {
     const fixtures = Array.isArray(payload.fixtures) ? payload.fixtures : [];
+    const circleLabel = fixtures.length === 1 ? "circle" : "circles";
     status.textContent = fixtures.length
-      ? `${payload.user.displayName}, you have ${payload.uniquePhotoCount} unique photos in ${fixtures.length} circles.`
+      ? `${payload.user.displayName}, you have ${payload.uniquePhotoCount} unique photos in ${fixtures.length} ${circleLabel}.`
       : "Nothing has been shared with this account yet.";
     root.innerHTML = fixtures.map((fixture) => `
       <section class="shared-fixture" data-fixture-id="${escapeHtml(fixture.id)}">

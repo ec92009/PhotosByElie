@@ -15,11 +15,17 @@ for remote execution.
 - Public site: `https://photos-by-elie.com/`
 - Local preview: `http://localhost:8000/`
 - Owner intake URL: `https://photos-by-elie.com/owner.html`
-- Current visible build: `v146.0`
+- Current visible build: `v146.1`
 - Sidecar local build: `v126.6`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
-- `v146.0` completes the Friends and Family fixture rehearsal as a real
+- `v146.1` respects hierarchical photo subsets in authenticated shared
+  delivery. Avery's Family and Blood memberships remain in ACS, but their
+  10- and 5-photo sets are wholly contained by Friends and Family and therefore
+  no longer render as duplicate galleries; the real Avery alias sees one
+  Friends and Family circle with 20 unique photos. A nested fixture that adds
+  any unique photo remains visible.
+- `v146.0` completed the Friends and Family fixture rehearsal as a real
   authenticated delivery path. The three private circles contain 20 / 10 / 5
   cloud-addressable, watermarked photos; `ec92009pt@gmail.com` is the Avery
   Morgan test alias and belongs to all three groups. `shared-galleries.html`

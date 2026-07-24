@@ -586,6 +586,32 @@ const publicCatalogOnly = (collections = {}, retiredCollectionKeys = new Set(["a
   Object.entries(collections).filter(([key]) => key !== "unknown" && !retiredCollectionKeys.has(String(key).toLowerCase()))
 );
 
+const collapseSharedFixtureSubsets = (fixtures = []) => {
+  const fixturesById = new Map(fixtures.map((fixture) => [fixture.id, fixture]));
+  const photoIdsByFixture = new Map(fixtures.map((fixture) => [
+    fixture.id,
+    new Set(fixture.photos.map((photo) => photo.id)),
+  ]));
+
+  return fixtures.filter((fixture) => {
+    const fixturePhotoIds = photoIdsByFixture.get(fixture.id) || new Set();
+    const visited = new Set([fixture.id]);
+    let ancestorId = fixture.parentId || "";
+
+    while (ancestorId && !visited.has(ancestorId)) {
+      visited.add(ancestorId);
+      const ancestor = fixturesById.get(ancestorId);
+      if (!ancestor) break;
+      const ancestorPhotoIds = photoIdsByFixture.get(ancestor.id) || new Set();
+      if ([...fixturePhotoIds].every((photoId) => ancestorPhotoIds.has(photoId))) {
+        return false;
+      }
+      ancestorId = ancestor.parentId || "";
+    }
+    return true;
+  });
+};
+
 export const createCatalogIndex = ({
   collections = {},
   resolutions = [],
@@ -2079,7 +2105,7 @@ export const createPhotosByElieWorker = ({
         previewUrl: `https://download.photos-by-elie.com/media/${preview.detailKey}`,
       });
     }
-    const fixtures = [...fixturesById.values()];
+    const fixtures = collapseSharedFixtureSubsets([...fixturesById.values()]);
     return credentialedJson(request, {
       ok: true,
       user: {

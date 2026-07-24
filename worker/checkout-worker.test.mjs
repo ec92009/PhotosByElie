@@ -459,7 +459,8 @@ test("shared galleries expose only assigned watermarked catalog previews", async
   assert.equal(response.headers.get("access-control-allow-credentials"), "true");
   const body = await response.json();
   assert.equal(body.user.displayName, "Avery Morgan");
-  assert.deepEqual(body.fixtures.map((fixture) => fixture.photos.length), [20, 10, 5]);
+  assert.deepEqual(body.fixtures.map((fixture) => fixture.photos.length), [20]);
+  assert.equal(body.fixtureCount, 1);
   assert.equal(body.uniquePhotoCount, 20);
   assert.equal(JSON.stringify(body).includes("sourceFiles"), false);
   assert.equal(JSON.stringify(body).includes("privateMaster"), false);
@@ -474,6 +475,60 @@ test("shared galleries expose only assigned watermarked catalog previews", async
     headers: { origin: "https://photos-by-elie.com" },
   }));
   assert.equal(denied.status, 401);
+});
+
+test("shared galleries retain a nested fixture when it adds photos not present in its ancestor", async () => {
+  const catalog = loadCatalog();
+  const photoIds = [...catalog.photos.keys()].slice(0, 21);
+  const fixtureRows = [
+    ...photoIds.slice(0, 20).map((photoId, index) => ({
+      id: "root",
+      label: "Friends and Family",
+      parentId: "",
+      groupId: "root-group",
+      photoId,
+      ordinal: index + 1,
+    })),
+    ...[...photoIds.slice(0, 10), photoIds[20]].map((photoId, index) => ({
+      id: "family",
+      label: "Family",
+      parentId: "root",
+      groupId: "family-group",
+      photoId,
+      ordinal: index + 1,
+    })),
+    ...photoIds.slice(0, 5).map((photoId, index) => ({
+      id: "blood",
+      label: "Blood",
+      parentId: "family",
+      groupId: "blood-group",
+      photoId,
+      ordinal: index + 1,
+    })),
+  ];
+  const registry = {
+    getUser: async (email) => ({
+      email,
+      displayName: "Avery Morgan",
+      tier: "user",
+      roles: ["user"],
+      groups: [],
+      effectiveAccess: { scopes: [] },
+    }),
+    listSharedFixturesForUser: async () => fixtureRows,
+  };
+  const worker = createPhotosByElieWorker({
+    catalog,
+    accessAuth: fakeAccessAuthFor("ec92009pt@gmail.com"),
+    accessUserRegistry: registry,
+  });
+
+  const response = await worker.fetch(new Request("https://worker.test/shared-galleries", {
+    headers: { origin: "https://photos-by-elie.com" },
+  }));
+  const body = await response.json();
+  assert.deepEqual(body.fixtures.map((fixture) => fixture.photos.length), [20, 11]);
+  assert.equal(body.uniquePhotoCount, 21);
 });
 
 test("owner actions are queued behind Owner Google access", async () => {

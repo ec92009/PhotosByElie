@@ -94,8 +94,7 @@ const showAllChunkSize = pageSize * 4;
 const showAllChunkDelayMs = 16;
 const densityKey = "photosbyelie-gallery-columns";
 const fitModeKey = "photosbyelie-gallery-fit-mode";
-let densityInput = null;
-let densityValue = null;
+let densityButtons = [];
 let fitModeButtons = [];
 let viewControls = null;
 let renderedGalleryPhotos = [];
@@ -979,7 +978,14 @@ const maxDensityColumns = () => galleryLayout.maxDensityColumns();
 const preferredDensityColumns = () => galleryLayout.preferredDensityColumns();
 
 const applyGalleryDensity = () => {
-  galleryLayout.applyDensityControls({ input: densityInput, value: densityValue });
+  galleryLayout.applyDensityControls();
+  const columns = preferredDensityColumns();
+  densityButtons.forEach((button) => {
+    const direction = Number(button.dataset.galleryDensityStep || 0);
+    button.disabled = direction < 0 ? columns <= 1 : columns >= maxDensityColumns();
+  });
+  const densityControl = densityButtons[0]?.closest(".gallery-density-control");
+  densityControl?.setAttribute("aria-label", `${t("a11y.gallery_density")}: ${columns}`);
 };
 
 const setGalleryDensityColumns = (columns) => {
@@ -1468,17 +1474,20 @@ if (galleryRoot && gallery) {
     viewControls = document.createElement("div");
     viewControls.className = "gallery-view-controls";
     viewControls.setAttribute("aria-label", t("a11y.gallery_view_controls"));
-    const densityControl = document.createElement("label");
-    densityControl.className = "gallery-density-control";
+    viewControls.dataset.i18nAriaLabel = "a11y.gallery_view_controls";
+    const densityControl = document.createElement("div");
+    densityControl.className = "gallery-density-control gallery-density-stepper";
+    densityControl.setAttribute("role", "group");
+    densityControl.setAttribute("aria-label", t("a11y.gallery_density"));
     densityControl.innerHTML = `
-      <span data-i18n="gallery.grid">Grid</span>
-      <input type="range" min="1" max="${maxDensityColumns()}" step="1" value="${preferredDensityColumns()}" data-gallery-density/>
-      <b data-gallery-density-value>${preferredDensityColumns()}</b>
+      <button type="button" data-gallery-density-step="-1" data-i18n-aria-label="a11y.gallery_density_decrease" aria-label="${t("a11y.gallery_density_decrease")}"><span aria-hidden="true">−</span></button>
+      <button type="button" data-gallery-density-step="1" data-i18n-aria-label="a11y.gallery_density_increase" aria-label="${t("a11y.gallery_density_increase")}"><span aria-hidden="true">+</span></button>
     `;
     const fitControl = document.createElement("div");
-    fitControl.className = "gallery-fit-control";
+    fitControl.className = "gallery-fit-control gallery-fit-split";
     fitControl.setAttribute("role", "group");
     fitControl.setAttribute("aria-label", t("a11y.gallery_image_fit"));
+    fitControl.dataset.i18nAriaLabel = "a11y.gallery_image_fit";
     fitControl.innerHTML = `
       <button type="button" data-gallery-fit-mode="fit" aria-pressed="true" data-i18n="gallery.fit">Fit</button>
       <button type="button" data-gallery-fit-mode="fill" aria-pressed="false" data-i18n="gallery.fill">Fill</button>
@@ -1497,15 +1506,17 @@ if (galleryRoot && gallery) {
     } else {
       document.body.append(viewControls);
     }
-    densityInput = densityControl.querySelector("[data-gallery-density]");
-    densityValue = densityControl.querySelector("[data-gallery-density-value]");
+    densityButtons = [...densityControl.querySelectorAll("[data-gallery-density-step]")];
     fitModeButtons = [...fitControl.querySelectorAll("[data-gallery-fit-mode]")];
     topButton.addEventListener("click", () => {
       const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
       window.scrollTo({ top: 0, behavior: prefersReducedMotion ? "auto" : "smooth" });
     });
-    densityInput.addEventListener("input", () => {
-      setGalleryDensityColumns(densityInput.value);
+    densityControl.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-gallery-density-step]");
+      if (!button || button.disabled) return;
+      const nextColumns = stepGalleryDensity(Number(button.dataset.galleryDensityStep || 0));
+      setGalleryStatus(`${t("gallery.grid")} ${nextColumns}.`);
     });
     fitControl.addEventListener("click", (event) => {
       const button = event.target.closest("[data-gallery-fit-mode]");
@@ -1735,6 +1746,7 @@ if (galleryRoot && gallery) {
       document.querySelector("[data-gallery-title]").textContent = localizedCollectionTitle();
       syncFilterControls();
       renderGallery();
+      applyGalleryDensity();
     }
   });
 window.addEventListener("photosbyelie:likedchange", updateGalleryLikeButtons);

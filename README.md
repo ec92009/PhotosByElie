@@ -6,8 +6,10 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v146.2`
+- Current visible version: `v146.3`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
+- `v146.3` replaces the gallery density slider with a compact minus/plus split
+  pill and gives Fit/Fill the same segmented treatment.
 - `v145.20` restores every finished-product shelf control after eliminating a
   recursive Account/language synchronization loop that could exhaust the page
   call stack when a product was opened. Shelf actions now bind when their rows

@@ -5313,6 +5313,56 @@ html[data-theme="light"] body[data-gallery] .gallery-hero{
   background:var(--text);
   color:var(--bg);
 }
+.gallery-density-stepper,
+.gallery-fit-control.gallery-fit-split{
+  gap:0;
+  padding:0;
+  overflow:hidden;
+}
+.gallery-density-stepper button,
+.gallery-fit-control.gallery-fit-split button{
+  min-width:40px;
+  min-height:38px;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  color:var(--muted);
+  padding:6px 11px;
+  font:inherit;
+  font-size:.82rem;
+  font-weight:850;
+  cursor:pointer;
+}
+.gallery-density-stepper button{
+  font-size:1.1rem;
+  line-height:1;
+}
+.gallery-density-stepper button + button,
+.gallery-fit-control.gallery-fit-split button + button{
+  border-left:1px solid var(--line);
+}
+.gallery-density-stepper button:hover:not(:disabled),
+.gallery-density-stepper button:focus-visible,
+.gallery-fit-control.gallery-fit-split button:hover,
+.gallery-fit-control.gallery-fit-split button:focus-visible{
+  background:color-mix(in srgb,var(--text) 12%,transparent);
+  color:var(--text);
+}
+.gallery-density-stepper button:disabled{
+  cursor:not-allowed;
+  opacity:.35;
+}
+.gallery-fit-control.gallery-fit-split button[aria-pressed="true"]{
+  background:var(--text);
+  color:var(--bg);
+}
+.topbar .gallery-density-control.gallery-density-stepper,
+.gallery-view-controls.is-header-mounted .gallery-density-control.gallery-density-stepper,
+.topbar .gallery-fit-control.gallery-fit-split,
+.gallery-view-controls.is-header-mounted .gallery-fit-control.gallery-fit-split{
+  min-height:38px;
+  padding:0;
+}
 body[data-gallery] .topbar > .header-back-button,
 body[data-fixed-header] .topbar > .header-back-button{
   order:1;
@@ -5408,10 +5458,8 @@ body[data-fixed-header] .header-action-links{
   }
   .topbar .gallery-density-control,
   .gallery-view-controls.is-header-mounted .gallery-density-control{
-    flex:1 1 auto;
+    flex:0 0 auto;
     min-width:0;
-    gap:5px;
-    padding-inline:8px;
   }
   .topbar .gallery-density-control input,
   .gallery-view-controls.is-header-mounted .gallery-density-control input{

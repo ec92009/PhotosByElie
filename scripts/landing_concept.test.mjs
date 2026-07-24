@@ -160,8 +160,18 @@ test("the production landing opens on the Louvre and explains image use", () => 
   assert.match(productionHtml, /class="usage-guide"/);
   assert.match(productionHtml, /data-i18n="licensingTitle"/);
   assert.match(productionHtml, /data-i18n="provenanceTitle"/);
+  assert.match(productionHtml, /assets\/usage-guide\/wall-art-notre-dame\.webp/);
+  assert.match(productionHtml, /assets\/usage-guide\/licensing-contexts\.webp/);
+  assert.match(productionHtml, /assets\/usage-guide\/location-provenance\.webp/);
+  assert.equal((productionHtml.match(/class="usage-guide-visual"/g) || []).length, 3);
+  assert.doesNotMatch(productionHtml, /data-i18n="(?:wallArtBody|licensingBody|provenanceBody)"/);
+  assert.match(js, /usageTitle: "Find the image\. Know what you can do with it\."/);
+  assert.match(js, /licensingTitle: "Personal, editorial, or commercial"/);
+  assert.match(js, /provenanceTitle: "Location"/);
   assert.match(js, /usageAction: "Explore photographs"/);
   assert.match(css, /\.usage-guide-grid/);
+  assert.match(css, /\.usage-guide-grid \{[\s\S]*?gap: 20px/);
+  assert.match(css, /\.usage-guide-visual/);
   assert.match(css, /\[data-theme="day"\] \.usage-guide/);
   assert.match(css, /color: rgba\(27, 27, 24, 0\.74\)/);
 });

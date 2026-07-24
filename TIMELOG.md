@@ -654,8 +654,9 @@ Clock state: running
 | 2026-07-24 | 21:39 CEST | 21:40 CEST | 0:01 | Corrected the expected hierarchical delivery result: Avery should see only the 20-photo parent because Family and Blood are subsets; implementation, tests, deployment, and browser verification runtime excluded. |
 | 2026-07-24 | 22:14 CEST | 22:15 CEST | 0:01 | Chose an accented but ordinary Shared with me gallery entry, retaining normal Expo likes, basket, and detail behavior; implementation, tests, deployment, and browser verification runtime excluded. |
 | 2026-07-24 | 22:44 CEST | 22:46 CEST | 0:01 | Replaced the gallery density slider with a minus/plus split pill and matched Fit/Fill to the same segmented control treatment; implementation, tests, and browser verification runtime excluded. |
+| 2026-07-25 | 00:44 CEST | 00:45 CEST | 0:01 | Approved moving the final illustrated image-use guide from the mock into the production homepage; implementation, tests, and deployment runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 32:06
+Active collaboration time used: 32:07
 Remaining budget: not set

@@ -15,10 +15,14 @@ for remote execution.
 - Public site: `https://photos-by-elie.com/`
 - Local preview: `http://localhost:8000/`
 - Owner intake URL: `https://photos-by-elie.com/owner.html`
-- Current visible build: `v146.3`
+- Current visible build: `v147.0`
 - Sidecar local build: `v126.6`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
+- `v147.0` turns the homepage image-use guide into three illustrated cards
+  using the approved PhotosByElie compositions for wall art, licensing
+  contexts, and location provenance. Generic card copy is removed and the
+  useful provenance note now sits in the section heading.
 - `v146.3` replaces the public gallery density slider with a compact segmented
   minus/plus control and presents Fit/Fill as a matching split pill. Density,
   URL persistence, image-fit persistence, keyboard shortcuts, translations,

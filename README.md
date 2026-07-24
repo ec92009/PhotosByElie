@@ -6,8 +6,12 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v146.3`
+- Current visible version: `v147.0`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
+- `v147.0` turns the homepage image-use guide into three illustrated cards for
+  wall art, licensing contexts, and location provenance. The approved imagery
+  now carries the section while the useful provenance note moves into the
+  heading and the generic explanatory card copy is removed.
 - `v146.3` replaces the gallery density slider with a compact minus/plus split
   pill and gives Fit/Fill the same segmented treatment.
 - `v145.20` restores every finished-product shelf control after eliminating a

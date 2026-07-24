@@ -84,6 +84,7 @@ const translations = {
     'account.sync_now': 'Save liked/basket',
     'account.sync_help': 'Saves liked photos and basket choices from this browser. Orders and download links are attached automatically to your checkout email.',
     'account.open_liked': 'Open liked',
+    'account.open_shared': 'Shared with me',
     'account.open_basket': 'Open basket',
     'account.orders_title': 'Orders and downloads',
     'account.no_orders': 'No orders saved to this account yet.',
@@ -153,6 +154,7 @@ const translations = {
     'collection.portugal': 'Portugal',
     'collection.slovakia': 'Slovakia',
     'collection.panoramas': 'Panoramas',
+    'collection.shared': 'Shared with me',
     'collection.video-trial': 'Cordoba Video Trial',
     'common.back_to_collections': 'Back to collections',
     'common.back_to_gallery': 'Back to gallery',
@@ -718,6 +720,7 @@ const translations = {
     'account.sync_now': 'Enregistrer aimees/panier',
     'account.sync_help': 'Enregistre les photos aimees et le panier de ce navigateur. Les commandes et liens de telechargement sont rattaches automatiquement a l email de paiement.',
     'account.open_liked': 'Voir les aimees',
+    'account.open_shared': 'Partage avec moi',
     'account.open_basket': 'Voir le panier',
     'account.orders_title': 'Commandes et telechargements',
     'account.no_orders': 'Aucune commande n est encore enregistree pour ce compte.',
@@ -787,6 +790,7 @@ const translations = {
     'collection.portugal': 'Portugal',
     'collection.slovakia': 'Slovaquie',
     'collection.panoramas': 'Panoramas',
+    'collection.shared': 'Partage avec moi',
     'collection.video-trial': 'Essai video Cordoue',
     'common.back_to_collections': 'Retour aux collections',
     'common.back_to_gallery': 'Retour a la galerie',
@@ -1352,6 +1356,7 @@ const translations = {
     'account.sync_now': 'Guardar favoritos/cesta',
     'account.sync_help': 'Guarda favoritos y cesta de este navegador. Los pedidos y enlaces de descarga se conectan automaticamente al email de pago.',
     'account.open_liked': 'Ver favoritas',
+    'account.open_shared': 'Compartido conmigo',
     'account.open_basket': 'Ver cesta',
     'account.orders_title': 'Pedidos y descargas',
     'account.no_orders': 'Aun no hay pedidos guardados en esta cuenta.',
@@ -1421,6 +1426,7 @@ const translations = {
     'collection.portugal': 'Portugal',
     'collection.slovakia': 'Eslovaquia',
     'collection.panoramas': 'Panoramas',
+    'collection.shared': 'Compartido conmigo',
     'collection.video-trial': 'Prueba de video Cordoba',
     'common.back_to_collections': 'Volver a colecciones',
     'common.back_to_gallery': 'Volver a la galeria',
@@ -4111,6 +4117,13 @@ const ensureSiteAccount = () => {
     <button class="account-entry-action primary" type="button" data-account-entry-signin data-i18n="account.sign_in">${translate('account.sign_in')}</button>
   `;
 
+  const sharedGalleryEntry = document.createElement('a');
+  sharedGalleryEntry.className = 'account-shared-entry';
+  sharedGalleryEntry.href = './gallery.html?gallery=shared';
+  sharedGalleryEntry.dataset.i18n = 'account.open_shared';
+  sharedGalleryEntry.textContent = translate('account.open_shared');
+  sharedGalleryEntry.hidden = true;
+
   const modal = document.createElement('div');
   modal.className = 'site-account-modal';
   modal.hidden = true;
@@ -4137,7 +4150,7 @@ const ensureSiteAccount = () => {
           <span data-i18n="account.memory_body">${translate('account.memory_body')}</span>
         </div>
         <div class="site-account-memory-actions">
-          <a class="site-account-mini-action" href="./shared-galleries.html">Shared with me</a>
+          <a class="site-account-mini-action is-shared-gallery" href="./gallery.html?gallery=shared" data-i18n="account.open_shared">${translate('account.open_shared')}</a>
           <a class="site-account-mini-action" href="./liked.html" data-i18n="account.open_liked">${translate('account.open_liked')}</a>
           <a class="site-account-mini-action" href="./basket.html" data-i18n="account.open_basket">${translate('account.open_basket')}</a>
           <button class="site-account-mini-action" type="button" data-account-sync data-i18n-title="account.sync_help" title="${translate('account.sync_help')}">${translate('account.sync_now')}</button>
@@ -4478,6 +4491,7 @@ const ensureSiteAccount = () => {
     const activeAuth = accountIsAuthenticated();
     accountEntry.hidden = activeAuth;
     accountButton.hidden = !activeAuth;
+    sharedGalleryEntry.hidden = !state.authenticated;
     accountButton.classList.toggle("is-authenticated", activeAuth);
     if (activeAuth) {
       const identity = state.authenticated
@@ -4673,7 +4687,7 @@ const ensureSiteAccount = () => {
   };
 
   document.body.append(modal);
-  headerUtilityControls(topbar)?.append(accountEntry, accountButton);
+  headerUtilityControls(topbar)?.append(accountEntry, sharedGalleryEntry, accountButton);
 
   accountButton.addEventListener('click', () => {
     if (modal.hidden) openAccount('signin', accountButton);

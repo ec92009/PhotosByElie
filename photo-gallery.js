@@ -1,10 +1,12 @@
 ((async () => {
 await window.photosByElieCatalogReady;
+await window.photosByElieSharedGalleryReady;
 await window.photosByElieHiddenActionsReady;
 const galleryHrefForKey = (key) => `./gallery.html?gallery=${encodeURIComponent(key)}`;
 const selectionGalleryKey = "selection";
 const selectionGalleryAliases = new Set([selectionGalleryKey, "make-selection", "make-your-selection"]);
 const panoramaGalleryKey = "panoramas";
+const sharedGalleryKey = "shared";
 const panoramaGalleryAliases = new Set([panoramaGalleryKey, "pano", "panos", "panorama"]);
 const baseGalleryCollections = ["france", "usa", "spain", "mexico", "italy", "portugal", "slovakia"];
 const selectionGalleryCollections = baseGalleryCollections;
@@ -63,7 +65,14 @@ const galleryForKey = (key) => {
 const galleryKey = galleryKeyFromPage();
 const isSelectionGallery = galleryKey === selectionGalleryKey;
 const isPanoramaGallery = galleryKey === panoramaGalleryKey;
+const isSharedGallery = galleryKey === sharedGalleryKey;
 document.body.dataset.gallery = galleryKey;
+if (isSharedGallery) {
+  const robots = document.createElement("meta");
+  robots.name = "robots";
+  robots.content = "noindex,nofollow";
+  document.head.append(robots);
+}
 let gallery = galleryForKey(galleryKey);
 const galleryRoot = document.querySelector("[data-gallery-root]");
 const galleryStatus = document.querySelector("[data-gallery-status]");
@@ -219,6 +228,7 @@ const seeAllLabel = (count) => t("home.see_all_count", { count });
 const localizedCollectionTitle = () => {
   if (isSelectionGallery) return t("gallery.make_selection");
   if (isPanoramaGallery) return t("collection.panoramas");
+  if (isSharedGallery) return t("collection.shared");
   const key = `collection.${galleryKey}`;
   const translated = t(key);
   return translated && translated !== key ? translated : gallery?.title || "";
@@ -1241,9 +1251,19 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
   if (returnPhotoId && returnIndex < 0) clearPendingGalleryReturn();
   if (!photos.length) {
     const filteredOut = allPhotos.length > 0 && activeFilterCount() > 0;
+    const sharedState = window.photosByElieSharedGalleryState;
+    const sharedSignedOut = isSharedGallery && sharedState?.status === "signed-out";
+    const emptyMessage = sharedSignedOut
+      ? sharedState.message
+      : isSharedGallery && sharedState?.message
+        ? sharedState.message
+        : filteredOut
+          ? t("gallery.no_filter_matches")
+          : t("gallery.no_visible");
     galleryRoot.innerHTML = `
       <article class="mock-photo empty-gallery-card" aria-label="${gallery.title} gallery empty state">
-        <span>${filteredOut ? t("gallery.no_filter_matches") : t("gallery.no_visible")}</span>
+        <span>${escapeHtml(emptyMessage)}</span>
+        ${sharedSignedOut && sharedState.loginUrl ? `<a class="btn primary" href="${escapeHtml(sharedState.loginUrl)}">${t("account.sign_in_google")}</a>` : ""}
         ${filteredOut ? `<button class="btn secondary" type="button" data-clear-gallery-empty>${t("gallery.clear_filters")}</button>` : ""}
       </article>
     `;
@@ -1266,7 +1286,9 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
   }
   selectedIndex = Math.max(0, Math.min(selectedIndex, visibleSubset.length - 1));
   galleryRoot.innerHTML = visibleSubset.map((photo, index) => {
-    const href = versionedHref(`./photo.html?id=${encodeURIComponent(photo.id)}`);
+    const detailParams = new URLSearchParams({ id: photo.id });
+    if (isSharedGallery) detailParams.set("gallery", sharedGalleryKey);
+    const href = versionedHref(`./photo.html?${detailParams.toString()}`);
     const isLiked = likedIds.has(photo.id);
     const actionButtons = [];
     if (likedStore) actionButtons.push(`

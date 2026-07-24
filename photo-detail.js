@@ -1,5 +1,6 @@
 ((async () => {
 await window.photosByElieCatalogReady;
+await window.photosByElieSharedGalleryReady;
 await window.photosByElieHiddenActionsReady;
 if (window.photosByElieReserve?.enabled) {
   await window.photosByElieReserve.load();
@@ -45,7 +46,11 @@ const hiddenCollections = window.photosByElieHiddenData || {};
 const fallbackCollection = Object.values(collections).find((collection) => Array.isArray(collection.photos) && collection.photos.length)
   || collections.france
   || { title: "Gallery", accent: "", photos: [] };
-const originalRegularCollectionEntry = Object.entries(collections).find(([, collection]) =>
+const requestedCollectionKey = String(params.get("gallery") || "").trim().toLowerCase();
+const requestedCollectionEntry = requestedCollectionKey && collections[requestedCollectionKey]?.photos?.some((photo) => photo.id === photoId)
+  ? [requestedCollectionKey, collections[requestedCollectionKey]]
+  : null;
+const originalRegularCollectionEntry = requestedCollectionEntry || Object.entries(collections).find(([, collection]) =>
   collection.photos.some((photo) => photo.id === photoId)
 );
 const promotedCollectionEntry = originalRegularCollectionEntry ? null : Object.entries(collections).find(([galleryKey]) =>
@@ -538,6 +543,7 @@ let previousPhotoHref = "";
 let nextPhotoHref = "";
 const detailPhotoHref = (targetPhotoId) => {
   const detailParams = new URLSearchParams({ id: targetPhotoId });
+  if (galleryReturnCollectionKey() === "shared") detailParams.set("gallery", "shared");
   if (ownerReviewReturnContext) {
     detailParams.set("from", "owner-review");
     detailParams.set("returnView", ownerReviewReturnContext.view);

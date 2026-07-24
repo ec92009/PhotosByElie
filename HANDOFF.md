@@ -11,14 +11,21 @@ for remote execution.
 ## Current Handoff: 2026-07-19 Universal Fixture Access Control
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
-- Branch: `main`
+- Branch: `codex/universal-fixture-pipeline`
 - Public site: `https://photos-by-elie.com/`
 - Local preview: `http://localhost:8000/`
 - Owner intake URL: `https://photos-by-elie.com/owner.html`
-- Current visible build: `v146.1`
+- Current visible build: `v146.2`
 - Sidecar local build: `v126.6`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
+- `v146.2` integrates authenticated `Shared with me` access into the standard
+  Expo gallery and photo-detail path. Authorized fixture IDs resolve to the
+  canonical public catalog objects, so Avery's 20-photo parent set now has the
+  same filters, metadata, resolutions, likes, basket, and detail navigation as
+  every country gallery. Signed-in account headers expose a subtly accented
+  `Shared with me` pill; the old stripped viewer redirects to the canonical
+  gallery route.
 - `v146.1` respects hierarchical photo subsets in authenticated shared
   delivery. Avery's Family and Blood memberships remain in ACS, but their
   10- and 5-photo sets are wholly contained by Friends and Family and therefore

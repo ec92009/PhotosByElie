@@ -103,7 +103,31 @@ input { font: inherit; }
 }
 
 .account-entry-actions[hidden],
-.account-face[hidden] { display: none !important; }
+.account-face[hidden],
+.account-shared-link[hidden] { display: none !important; }
+
+.account-shared-link {
+  border-color: color-mix(in srgb, var(--accent) 65%, var(--line));
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--accent) 18%, transparent);
+  text-decoration: none;
+  transform: translateY(-1px);
+  transition: transform 180ms ease, background 180ms ease, box-shadow 180ms ease;
+}
+
+.account-shared-link::before {
+  content: "★";
+  margin-right: 0.45rem;
+  color: var(--accent);
+  font-size: 0.72em;
+}
+
+.account-shared-link:hover,
+.account-shared-link:focus-visible {
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+  box-shadow: 0 10px 22px color-mix(in srgb, var(--accent) 24%, transparent);
+  transform: translateY(-3px);
+}
 
 .account-pill {
   background: rgba(10, 10, 9, calc(var(--glass-alpha) * 0.55));

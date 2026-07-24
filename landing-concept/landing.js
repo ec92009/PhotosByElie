@@ -46,7 +46,7 @@
       surface: "Surface", glass: "Glass", solid: "Solid", transparency: "Overlay transparency", translucency: "Frosted blur",
       continueGoogle: "Continue with Google", legacyLogin: "Or use legacy access", username: "Username or email",
       password: "Password", showPassword: "Show", hidePassword: "Hide", continueVisitor: "Continue as visitor",
-      signedIn: "Signed in", signOut: "Sign out", checkingSession: "Checking account…", signingIn: "Signing in…",
+      signedIn: "Signed in", signOut: "Sign out", sharedWithMe: "Shared with me", checkingSession: "Checking account…", signingIn: "Signing in…",
       redirecting: "Opening Google sign-in…", signingOut: "Signing out…", loginFailed: "Username/email or password is incorrect.",
       sessionFailed: "Account status is temporarily unavailable. You can continue as a visitor."
     },
@@ -70,7 +70,7 @@
       surface: "Surface", glass: "Verre", solid: "Opaque", transparency: "Transparence des panneaux", translucency: "Flou du verre",
       continueGoogle: "Continuer avec Google", legacyLogin: "Ou utiliser l'acces classique", username: "Nom d'utilisateur ou e-mail",
       password: "Mot de passe", showPassword: "Afficher", hidePassword: "Masquer", continueVisitor: "Continuer comme visiteur",
-      signedIn: "Connecte", signOut: "Se deconnecter", checkingSession: "Verification du compte…", signingIn: "Connexion…",
+      signedIn: "Connecte", signOut: "Se deconnecter", sharedWithMe: "Partage avec moi", checkingSession: "Verification du compte…", signingIn: "Connexion…",
       redirecting: "Ouverture de Google…", signingOut: "Deconnexion…", loginFailed: "Nom d'utilisateur/e-mail ou mot de passe incorrect.",
       sessionFailed: "Le compte est temporairement indisponible. Vous pouvez continuer comme visiteur."
     },
@@ -94,7 +94,7 @@
       surface: "Superficie", glass: "Cristal", solid: "Solida", transparency: "Transparencia de los paneles", translucency: "Desenfoque del cristal",
       continueGoogle: "Continuar con Google", legacyLogin: "O usar el acceso clasico", username: "Usuario o correo",
       password: "Contrasena", showPassword: "Mostrar", hidePassword: "Ocultar", continueVisitor: "Continuar como visitante",
-      signedIn: "Sesion iniciada", signOut: "Cerrar sesion", checkingSession: "Comprobando la cuenta…", signingIn: "Iniciando sesion…",
+      signedIn: "Sesion iniciada", signOut: "Cerrar sesion", sharedWithMe: "Compartido conmigo", checkingSession: "Comprobando la cuenta…", signingIn: "Iniciando sesion…",
       redirecting: "Abriendo Google…", signingOut: "Cerrando sesion…", loginFailed: "El usuario/correo o la contrasena no son correctos.",
       sessionFailed: "La cuenta no esta disponible temporalmente. Puedes continuar como visitante."
     }
@@ -230,6 +230,7 @@
     const signup = document.querySelector("#account-signup");
     const signin = document.querySelector("#account-signin");
     const face = document.querySelector("#account-face");
+    const sharedEntry = document.querySelector("#account-shared-entry");
     const dialog = document.querySelector("#account-dialog");
     const close = document.querySelector("#account-close");
     const visitor = document.querySelector("#account-visitor");
@@ -263,6 +264,7 @@
     const render = () => {
       entry.hidden = authenticated;
       face.hidden = !authenticated;
+      if (sharedEntry) sharedEntry.hidden = !authenticated;
       if (authenticated) {
         const initial = document.createElement("span");
         initial.className = "account-initial";

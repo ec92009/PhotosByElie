@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v145.20`
+- Current visible version: `v146.0`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
 - `v145.20` restores every finished-product shelf control after eliminating a
   recursive Account/language synchronization loop that could exhaust the page

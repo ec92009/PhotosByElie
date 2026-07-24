@@ -424,6 +424,58 @@ test("auth session reads Owner and Real Estate client tiers from the user regist
   assert.equal(clientOwnerResponse.status, 403);
 });
 
+test("shared galleries expose only assigned watermarked catalog previews", async () => {
+  const catalog = loadCatalog();
+  const photoIds = [...catalog.photos.keys()].slice(0, 20);
+  const fixtureRows = [
+    ...photoIds.map((photoId, index) => ({ id: "root", label: "Friends and Family", parentId: "", groupId: "root-group", photoId, ordinal: index + 1 })),
+    ...photoIds.slice(0, 10).map((photoId, index) => ({ id: "family", label: "Family", parentId: "root", groupId: "family-group", photoId, ordinal: index + 1 })),
+    ...photoIds.slice(0, 5).map((photoId, index) => ({ id: "blood", label: "Blood", parentId: "family", groupId: "blood-group", photoId, ordinal: index + 1 })),
+  ];
+  const registry = {
+    getUser: async (email) => ({
+      email,
+      displayName: "Avery Morgan",
+      tier: "user",
+      roles: ["user"],
+      groups: [
+        { id: "root-group", label: "Friends and Family" },
+        { id: "family-group", label: "Family" },
+        { id: "blood-group", label: "Blood" },
+      ],
+      effectiveAccess: { scopes: [] },
+    }),
+    listSharedFixturesForUser: async () => fixtureRows,
+  };
+  const worker = createPhotosByElieWorker({
+    catalog,
+    accessAuth: fakeAccessAuthFor("ec92009pt@gmail.com"),
+    accessUserRegistry: registry,
+  });
+  const response = await worker.fetch(new Request("https://worker.test/shared-galleries", {
+    headers: { origin: "https://photos-by-elie.com" },
+  }));
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("access-control-allow-credentials"), "true");
+  const body = await response.json();
+  assert.equal(body.user.displayName, "Avery Morgan");
+  assert.deepEqual(body.fixtures.map((fixture) => fixture.photos.length), [20, 10, 5]);
+  assert.equal(body.uniquePhotoCount, 20);
+  assert.equal(JSON.stringify(body).includes("sourceFiles"), false);
+  assert.equal(JSON.stringify(body).includes("privateMaster"), false);
+  assert.match(body.fixtures[0].photos[0].previewUrl, /^https:\/\/download\.photos-by-elie\.com\/media\//);
+
+  const anonymous = createPhotosByElieWorker({
+    catalog,
+    accessAuth: fakeAccessAuthFor(""),
+    accessUserRegistry: registry,
+  });
+  const denied = await anonymous.fetch(new Request("https://worker.test/shared-galleries", {
+    headers: { origin: "https://photos-by-elie.com" },
+  }));
+  assert.equal(denied.status, 401);
+});
+
 test("owner actions are queued behind Owner Google access", async () => {
   const registry = createMemoryAccessUserRegistry([
     { email: "owner@example.com", tier: "owner" },

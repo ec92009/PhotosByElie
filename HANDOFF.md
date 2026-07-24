@@ -15,10 +15,16 @@ for remote execution.
 - Public site: `https://photos-by-elie.com/`
 - Local preview: `http://localhost:8000/`
 - Owner intake URL: `https://photos-by-elie.com/owner.html`
-- Current visible build: `v145.20`
+- Current visible build: `v146.0`
 - Sidecar local build: `v126.6`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
+- `v146.0` completes the Friends and Family fixture rehearsal as a real
+  authenticated delivery path. The three private circles contain 20 / 10 / 5
+  cloud-addressable, watermarked photos; `ec92009pt@gmail.com` is the Avery
+  Morgan test alias and belongs to all three groups. `shared-galleries.html`
+  exposes only assigned catalog previews after Google login; anonymous users
+  receive no fixture data. Migrations 0010 and 0011 are applied remotely.
 - `v145.20` fixes the apparently inert Real Estate finished-product shelf. A
   repeated scoped-account sync had been reapplying language/theme preferences,
   redispatching the language event, and overflowing the browser call stack when

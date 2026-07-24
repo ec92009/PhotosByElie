@@ -4137,6 +4137,7 @@ const ensureSiteAccount = () => {
           <span data-i18n="account.memory_body">${translate('account.memory_body')}</span>
         </div>
         <div class="site-account-memory-actions">
+          <a class="site-account-mini-action" href="./shared-galleries.html">Shared with me</a>
           <a class="site-account-mini-action" href="./liked.html" data-i18n="account.open_liked">${translate('account.open_liked')}</a>
           <a class="site-account-mini-action" href="./basket.html" data-i18n="account.open_basket">${translate('account.open_basket')}</a>
           <button class="site-account-mini-action" type="button" data-account-sync data-i18n-title="account.sync_help" title="${translate('account.sync_help')}">${translate('account.sync_now')}</button>

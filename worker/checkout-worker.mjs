@@ -2034,12 +2034,62 @@ export const createPhotosByElieWorker = ({
     tier: session.tier,
     admin: session.admin,
     realEstateClients: session.realEstateClients,
+    sharedGroups: Array.isArray(session.accessRecord?.groups)
+      ? session.accessRecord.groups.map((group) => ({
+        id: group.id,
+        label: group.label,
+        galleryKey: group.galleryKey,
+      }))
+      : [],
     sessionSeconds: session.sessionSeconds,
   });
 
   const getAuthSession = async (request) => {
     const session = await authSessionFor(request);
     return credentialedJson(request, authSessionPayload(session));
+  };
+
+  const getSharedGalleries = async (request) => {
+    const session = await authSessionFor(request, { required: true });
+    if (!accessUserRegistry || typeof accessUserRegistry.listSharedFixturesForUser !== "function") {
+      return credentialedErrorJson(request, 503, "shared_galleries_unavailable", "Shared galleries are not configured.");
+    }
+    const rows = await accessUserRegistry.listSharedFixturesForUser(session.email);
+    const fixturesById = new Map();
+    for (const row of rows) {
+      const entry = catalog.photos.get(String(row.photoId || ""));
+      const preview = entry?.photo?.media?.publicPreview;
+      if (!entry || !preview?.allowed || !preview.detailKey) continue;
+      if (!fixturesById.has(row.id)) {
+        fixturesById.set(row.id, {
+          id: row.id,
+          label: row.label,
+          kind: row.kind,
+          parentId: row.parentId || "",
+          galleryKey: row.galleryKey || "",
+          groupId: row.groupId || "",
+          photos: [],
+        });
+      }
+      fixturesById.get(row.id).photos.push({
+        id: entry.photo.id,
+        title: entry.photo.title || entry.photo.id,
+        collectionKey: entry.collectionKey,
+        collectionTitle: entry.collectionTitle,
+        previewUrl: `https://download.photos-by-elie.com/media/${preview.detailKey}`,
+      });
+    }
+    const fixtures = [...fixturesById.values()];
+    return credentialedJson(request, {
+      ok: true,
+      user: {
+        email: session.email,
+        displayName: session.accessRecord?.displayName || session.email,
+      },
+      fixtures,
+      fixtureCount: fixtures.length,
+      uniquePhotoCount: new Set(fixtures.flatMap((fixture) => fixture.photos.map((photo) => photo.id))).size,
+    });
   };
 
   const loginAuth = async (request) => {
@@ -3113,6 +3163,7 @@ export const createPhotosByElieWorker = ({
       || path.startsWith("/owner/")
       || path.startsWith("/account/")
       || path.startsWith("/access-console/")
+      || path === "/shared-galleries"
       || path === "/checkout/account";
     if (request.method === "OPTIONS") {
       return usesCredentialedCors
@@ -3125,6 +3176,7 @@ export const createPhotosByElieWorker = ({
         return json({ ok: true, service: "photosbyelie-worker", stripe: stripeProvider, currency: ORDER_CURRENCY });
       }
       if (request.method === "GET" && path === "/auth/session") return await getAuthSession(request);
+      if (request.method === "GET" && path === "/shared-galleries") return await getSharedGalleries(request);
       if (request.method === "GET" && path === "/auth/login") return await loginAuth(request);
       if (request.method === "GET" && path === "/auth/google/login") return await loginGoogleAuth(request);
       if (request.method === "GET" && path === "/auth/google/callback") return await callbackGoogleAuth(request);

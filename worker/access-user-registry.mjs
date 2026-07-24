@@ -1519,6 +1519,36 @@ export const createD1AccessUserRegistry = ({
     ORDER BY CASE WHEN parent_id = '' THEN 0 ELSE 1 END, parent_id, label
   `));
 
+  const listSharedFixturesForUser = async (email) => {
+    const normalizedEmail = normalizeEmail(email);
+    if (!validEmail(normalizedEmail)) return [];
+    return d1All(database.prepare(`
+      SELECT
+        event.id,
+        event.label,
+        event.kind,
+        event.parent_id AS parentId,
+        event.gallery_key AS galleryKey,
+        event.group_id AS groupId,
+        asset.photo_id AS photoId,
+        asset.ordinal
+      FROM pbe_access_fixture_events event
+      JOIN pbe_access_group_memberships membership
+        ON membership.group_id = event.group_id
+       AND membership.email = ?
+       AND membership.state = 'active'
+      JOIN pbe_access_fixture_assets asset
+        ON asset.fixture_id = event.id
+       AND asset.state = 'active'
+      JOIN pbe_access_people person
+        ON person.email = membership.email
+       AND person.disabled_at IS NULL
+      WHERE event.fixture = 1
+        AND event.visibility = 'private'
+      ORDER BY event.parent_id, event.label, asset.ordinal, asset.photo_id
+    `).bind(normalizedEmail));
+  };
+
   const getAuditEvent = async (auditId) => d1First(database.prepare(`
     SELECT
       id,
@@ -1766,6 +1796,7 @@ export const createD1AccessUserRegistry = ({
     archiveAudienceGroup,
     seedFixtureData,
     listFixtureEvents,
+    listSharedFixturesForUser,
     listAudienceGroups,
     listGalleryOptions,
     listCapabilities: async () => ACCESS_CAPABILITIES.map(clone),

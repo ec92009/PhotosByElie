@@ -31,3 +31,20 @@ test("density buttons expose localized accessible names and boundary states", ()
   assert.match(galleryJs, /columns <= 1/);
   assert.match(galleryJs, /columns >= maxDensityColumns\(\)/);
 });
+
+test("search and filter changes keep the filter controls in view", () => {
+  const filterControls = galleryJs.slice(
+    galleryJs.indexOf("filterBar.addEventListener(\"change\""),
+    galleryJs.indexOf("reviewVisibleButton = filterBar.querySelector"),
+  );
+  assert.equal(
+    filterControls.match(/renderGallery\(\{ scrollSelection: false \}\);/g)?.length,
+    3,
+  );
+
+  const emptyFilterReset = galleryJs.slice(
+    galleryJs.indexOf("data-clear-gallery-empty"),
+    galleryJs.indexOf("if (moreButton) moreButton.hidden = true", galleryJs.indexOf("data-clear-gallery-empty")),
+  );
+  assert.match(emptyFilterReset, /renderGallery\(\{ scrollSelection: false \}\);/);
+});

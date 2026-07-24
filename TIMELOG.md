@@ -655,8 +655,9 @@ Clock state: running
 | 2026-07-24 | 22:14 CEST | 22:15 CEST | 0:01 | Chose an accented but ordinary Shared with me gallery entry, retaining normal Expo likes, basket, and detail behavior; implementation, tests, deployment, and browser verification runtime excluded. |
 | 2026-07-24 | 22:44 CEST | 22:46 CEST | 0:01 | Replaced the gallery density slider with a minus/plus split pill and matched Fit/Fill to the same segmented control treatment; implementation, tests, and browser verification runtime excluded. |
 | 2026-07-25 | 00:44 CEST | 00:45 CEST | 0:01 | Approved moving the final illustrated image-use guide from the mock into the production homepage; implementation, tests, and deployment runtime excluded. |
+| 2026-07-25 | 01:01 CEST | 01:02 CEST | 0:01 | Reported that typing an ordinary search character made the Search controls appear to disappear and authorized the in-place filter fix; implementation, tests, and deployment runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 32:07
+Active collaboration time used: 32:08
 Remaining budget: not set

@@ -667,14 +667,14 @@ const ensureGalleryFilterControls = () => {
     writeFilterState();
     visibleLimit = pageSize;
     selectedIndex = 0;
-    renderGallery();
+    renderGallery({ scrollSelection: false });
   });
   filterBar.querySelector("[data-gallery-search]")?.addEventListener("input", (event) => {
     filterState = { ...filterState, query: event.target.value };
     syncFilterToggle();
     visibleLimit = pageSize;
     selectedIndex = 0;
-    renderGallery();
+    renderGallery({ scrollSelection: false });
   });
   filterBar.querySelector("[data-clear-gallery-filters]")?.addEventListener("click", () => {
     filterState = { ...defaultFilterState };
@@ -682,7 +682,7 @@ const ensureGalleryFilterControls = () => {
     syncFilterControls();
     visibleLimit = pageSize;
     selectedIndex = 0;
-    renderGallery();
+    renderGallery({ scrollSelection: false });
   });
   reviewVisibleButton = filterBar.querySelector("[data-owner-review-visible]");
   reviewVisibleButton?.addEventListener("click", async () => {
@@ -1279,7 +1279,7 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
       syncFilterControls();
       visibleLimit = pageSize;
       selectedIndex = 0;
-      renderGallery();
+      renderGallery({ scrollSelection: false });
     });
     if (moreButton) moreButton.hidden = true;
     if (moreDoubleButton) moreDoubleButton.hidden = true;

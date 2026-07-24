@@ -15,10 +15,13 @@ for remote execution.
 - Public site: `https://photos-by-elie.com/`
 - Local preview: `http://localhost:8000/`
 - Owner intake URL: `https://photos-by-elie.com/owner.html`
-- Current visible build: `v147.2`
+- Current visible build: `v147.3`
 - Sidecar local build: `v126.6`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
+- `v147.3` corrects the 12-photo April 2018 La Jolla Cove cohort that had
+  inherited the title `Nerja, beach` and Spain keywords. The photos remain in
+  USA with corrected La Jolla, San Diego, California metadata.
 - `v147.2` tightens fuzzy place search so Seville/Sevilla and small typos
   still match, while Paris “Hôtel de Ville” photos no longer leak into
   Seville results.

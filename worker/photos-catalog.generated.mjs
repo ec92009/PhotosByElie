@@ -51927,7 +51927,7 @@ export const collections = {
       {
         "id": "20180421-1533-13173-45d10d758d",
         "className": "p3",
-        "title": "Nerja, beach",
+        "title": "La Jolla Cove, San Diego",
         "caption": "USA / 2018-04-21",
         "captionColor": "",
         "full": "JPG master",
@@ -51938,11 +51938,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "Nerja, beach"
+            "value": "La Jolla Cove, San Diego"
           },
           {
             "label": "Keywords",
-            "value": "Spain, travel, spring, outdoors, documentary, candid, camera original, location based, original, Spain travel, European travel, April travel, Spring travel, Documentary travel, Candid travel, Location based metadata"
+            "value": "USA, United States, American travel, travel, spring, April, outdoors, documentary, candid, camera original, location based, original, La Jolla, San Diego, California, beach, ocean, coast, USA travel, April travel, Spring travel, Documentary travel, Candid travel, Location based metadata"
           },
           {
             "label": "Captured",
@@ -51998,17 +51998,25 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Spain",
+          "USA",
+          "United States",
+          "American travel",
           "travel",
           "spring",
+          "April",
           "outdoors",
           "documentary",
           "candid",
           "camera original",
           "location based",
           "original",
-          "Spain travel",
-          "European travel",
+          "La Jolla",
+          "San Diego",
+          "California",
+          "beach",
+          "ocean",
+          "coast",
+          "USA travel",
           "April travel",
           "Spring travel",
           "Documentary travel",
@@ -57031,7 +57039,7 @@ export const collections = {
       {
         "id": "20180421-1537-12617-c2d492125d",
         "className": "p5",
-        "title": "Nerja, beach",
+        "title": "La Jolla Cove, San Diego",
         "caption": "USA / 2018-04-21",
         "captionColor": "",
         "full": "JPG master",
@@ -57042,11 +57050,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "Nerja, beach"
+            "value": "La Jolla Cove, San Diego"
           },
           {
             "label": "Keywords",
-            "value": "Spain, travel, spring, outdoors, documentary, candid, camera original, location based, original, Spain travel, European travel, April travel, Spring travel, Documentary travel, Candid travel, Location based metadata"
+            "value": "USA, United States, American travel, travel, spring, April, outdoors, documentary, candid, camera original, location based, original, La Jolla, San Diego, California, beach, ocean, coast, USA travel, April travel, Spring travel, Documentary travel, Candid travel, Location based metadata"
           },
           {
             "label": "Captured",
@@ -57102,17 +57110,25 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Spain",
+          "USA",
+          "United States",
+          "American travel",
           "travel",
           "spring",
+          "April",
           "outdoors",
           "documentary",
           "candid",
           "camera original",
           "location based",
           "original",
-          "Spain travel",
-          "European travel",
+          "La Jolla",
+          "San Diego",
+          "California",
+          "beach",
+          "ocean",
+          "coast",
+          "USA travel",
           "April travel",
           "Spring travel",
           "Documentary travel",
@@ -59242,7 +59258,7 @@ export const collections = {
       {
         "id": "20180421-1535-11896-ead94a86da",
         "className": "p4",
-        "title": "Nerja, beach",
+        "title": "La Jolla Cove, San Diego",
         "caption": "USA / 2018-04-21",
         "captionColor": "",
         "full": "JPG master",
@@ -59253,11 +59269,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "Nerja, beach"
+            "value": "La Jolla Cove, San Diego"
           },
           {
             "label": "Keywords",
-            "value": "Spain, travel, spring, outdoors, documentary, candid, camera original, location based, original, Spain travel, European travel, April travel, Spring travel, Documentary travel, Candid travel, Location based metadata"
+            "value": "USA, United States, American travel, travel, spring, April, outdoors, documentary, candid, camera original, location based, original, La Jolla, San Diego, California, beach, ocean, coast, USA travel, April travel, Spring travel, Documentary travel, Candid travel, Location based metadata"
           },
           {
             "label": "Captured",
@@ -59313,17 +59329,25 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Spain",
+          "USA",
+          "United States",
+          "American travel",
           "travel",
           "spring",
+          "April",
           "outdoors",
           "documentary",
           "candid",
           "camera original",
           "location based",
           "original",
-          "Spain travel",
-          "European travel",
+          "La Jolla",
+          "San Diego",
+          "California",
+          "beach",
+          "ocean",
+          "coast",
+          "USA travel",
           "April travel",
           "Spring travel",
           "Documentary travel",
@@ -60977,7 +61001,7 @@ export const collections = {
       {
         "id": "20180421-1533-11883-ffd69b01d5",
         "className": "p3",
-        "title": "Nerja, beach",
+        "title": "La Jolla Cove, San Diego",
         "caption": "USA / 2018-04-21",
         "captionColor": "",
         "full": "JPG master",
@@ -60988,11 +61012,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "Nerja, beach"
+            "value": "La Jolla Cove, San Diego"
           },
           {
             "label": "Keywords",
-            "value": "Spain, travel, spring, outdoors, documentary, candid, camera original, location based, original, Spain travel, European travel, April travel, Spring travel, Documentary travel, Candid travel, Location based metadata"
+            "value": "USA, United States, American travel, travel, spring, April, outdoors, documentary, candid, camera original, location based, original, La Jolla, San Diego, California, beach, ocean, coast, USA travel, April travel, Spring travel, Documentary travel, Candid travel, Location based metadata"
           },
           {
             "label": "Captured",
@@ -61048,17 +61072,25 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Spain",
+          "USA",
+          "United States",
+          "American travel",
           "travel",
           "spring",
+          "April",
           "outdoors",
           "documentary",
           "candid",
           "camera original",
           "location based",
           "original",
-          "Spain travel",
-          "European travel",
+          "La Jolla",
+          "San Diego",
+          "California",
+          "beach",
+          "ocean",
+          "coast",
+          "USA travel",
           "April travel",
           "Spring travel",
           "Documentary travel",
@@ -61610,7 +61642,7 @@ export const collections = {
       {
         "id": "20180421-1536-12740-41ca079ecc",
         "className": "p5",
-        "title": "Nerja, beach",
+        "title": "La Jolla Cove, San Diego",
         "caption": "USA / 2018-04-21",
         "captionColor": "",
         "full": "JPG master",
@@ -61621,11 +61653,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "Nerja, beach"
+            "value": "La Jolla Cove, San Diego"
           },
           {
             "label": "Keywords",
-            "value": "Spain, travel, spring, outdoors, documentary, candid, camera original, location based, original, Spain travel, European travel, April travel, Spring travel, Documentary travel, Candid travel, Location based metadata"
+            "value": "USA, United States, American travel, travel, spring, April, outdoors, documentary, candid, camera original, location based, original, La Jolla, San Diego, California, beach, ocean, coast, USA travel, April travel, Spring travel, Documentary travel, Candid travel, Location based metadata"
           },
           {
             "label": "Captured",
@@ -61681,17 +61713,25 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Spain",
+          "USA",
+          "United States",
+          "American travel",
           "travel",
           "spring",
+          "April",
           "outdoors",
           "documentary",
           "candid",
           "camera original",
           "location based",
           "original",
-          "Spain travel",
-          "European travel",
+          "La Jolla",
+          "San Diego",
+          "California",
+          "beach",
+          "ocean",
+          "coast",
+          "USA travel",
           "April travel",
           "Spring travel",
           "Documentary travel",
@@ -62500,7 +62540,7 @@ export const collections = {
       {
         "id": "20180421-1534-13389-fa1275c3e3",
         "className": "p5",
-        "title": "Nerja, beach",
+        "title": "La Jolla Cove, San Diego",
         "caption": "USA / 2018-04-21",
         "captionColor": "",
         "full": "JPG master",
@@ -62511,11 +62551,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "Nerja, beach"
+            "value": "La Jolla Cove, San Diego"
           },
           {
             "label": "Keywords",
-            "value": "Spain, travel, spring, outdoors, documentary, candid, camera original, location based, original, Spain travel, European travel, April travel, Spring travel, Documentary travel, Candid travel, Location based metadata"
+            "value": "USA, United States, American travel, travel, spring, April, outdoors, documentary, candid, camera original, location based, original, La Jolla, San Diego, California, beach, ocean, coast, USA travel, April travel, Spring travel, Documentary travel, Candid travel, Location based metadata"
           },
           {
             "label": "Captured",
@@ -62571,17 +62611,25 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Spain",
+          "USA",
+          "United States",
+          "American travel",
           "travel",
           "spring",
+          "April",
           "outdoors",
           "documentary",
           "candid",
           "camera original",
           "location based",
           "original",
-          "Spain travel",
-          "European travel",
+          "La Jolla",
+          "San Diego",
+          "California",
+          "beach",
+          "ocean",
+          "coast",
+          "USA travel",
           "April travel",
           "Spring travel",
           "Documentary travel",
@@ -62592,7 +62640,7 @@ export const collections = {
       {
         "id": "20180421-1533-12811-2986b315ce",
         "className": "p1",
-        "title": "Nerja, beach",
+        "title": "La Jolla Cove, San Diego",
         "caption": "USA / 2018-04-21",
         "captionColor": "",
         "full": "JPG master",
@@ -62603,11 +62651,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "Nerja, beach"
+            "value": "La Jolla Cove, San Diego"
           },
           {
             "label": "Keywords",
-            "value": "Spain, travel, spring, outdoors, documentary, candid, camera original, location based, original, Spain travel, European travel, April travel, Spring travel, Documentary travel, Candid travel, Location based metadata"
+            "value": "USA, United States, American travel, travel, spring, April, outdoors, documentary, candid, camera original, location based, original, La Jolla, San Diego, California, beach, ocean, coast, USA travel, April travel, Spring travel, Documentary travel, Candid travel, Location based metadata"
           },
           {
             "label": "Captured",
@@ -62663,17 +62711,25 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Spain",
+          "USA",
+          "United States",
+          "American travel",
           "travel",
           "spring",
+          "April",
           "outdoors",
           "documentary",
           "candid",
           "camera original",
           "location based",
           "original",
-          "Spain travel",
-          "European travel",
+          "La Jolla",
+          "San Diego",
+          "California",
+          "beach",
+          "ocean",
+          "coast",
+          "USA travel",
           "April travel",
           "Spring travel",
           "Documentary travel",
@@ -63214,7 +63270,7 @@ export const collections = {
       {
         "id": "20180421-1537-12260-3168497f02",
         "className": "p3",
-        "title": "Nerja, beach",
+        "title": "La Jolla Cove, San Diego",
         "caption": "USA / 2018-04-21",
         "captionColor": "",
         "full": "JPG master",
@@ -63225,11 +63281,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "Nerja, beach"
+            "value": "La Jolla Cove, San Diego"
           },
           {
             "label": "Keywords",
-            "value": "Spain, travel, spring, outdoors, documentary, candid, camera original, location based, original, Spain travel, European travel, April travel, Spring travel, Documentary travel, Candid travel, Location based metadata"
+            "value": "USA, United States, American travel, travel, spring, April, outdoors, documentary, candid, camera original, location based, original, La Jolla, San Diego, California, beach, ocean, coast, USA travel, April travel, Spring travel, Documentary travel, Candid travel, Location based metadata"
           },
           {
             "label": "Captured",
@@ -63285,17 +63341,25 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Spain",
+          "USA",
+          "United States",
+          "American travel",
           "travel",
           "spring",
+          "April",
           "outdoors",
           "documentary",
           "candid",
           "camera original",
           "location based",
           "original",
-          "Spain travel",
-          "European travel",
+          "La Jolla",
+          "San Diego",
+          "California",
+          "beach",
+          "ocean",
+          "coast",
+          "USA travel",
           "April travel",
           "Spring travel",
           "Documentary travel",
@@ -63482,7 +63546,7 @@ export const collections = {
       {
         "id": "20180421-1535-12902-a23ae50fc8",
         "className": "p1",
-        "title": "Nerja, beach",
+        "title": "La Jolla Cove, San Diego",
         "caption": "USA / 2018-04-21",
         "captionColor": "",
         "full": "JPG master",
@@ -63493,11 +63557,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "Nerja, beach"
+            "value": "La Jolla Cove, San Diego"
           },
           {
             "label": "Keywords",
-            "value": "Spain, travel, spring, outdoors, documentary, candid, camera original, location based, original, Spain travel, European travel, April travel, Spring travel, Documentary travel, Candid travel, Location based metadata"
+            "value": "USA, United States, American travel, travel, spring, April, outdoors, documentary, candid, camera original, location based, original, La Jolla, San Diego, California, beach, ocean, coast, USA travel, April travel, Spring travel, Documentary travel, Candid travel, Location based metadata"
           },
           {
             "label": "Captured",
@@ -63553,17 +63617,25 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Spain",
+          "USA",
+          "United States",
+          "American travel",
           "travel",
           "spring",
+          "April",
           "outdoors",
           "documentary",
           "candid",
           "camera original",
           "location based",
           "original",
-          "Spain travel",
-          "European travel",
+          "La Jolla",
+          "San Diego",
+          "California",
+          "beach",
+          "ocean",
+          "coast",
+          "USA travel",
           "April travel",
           "Spring travel",
           "Documentary travel",
@@ -63574,7 +63646,7 @@ export const collections = {
       {
         "id": "20180421-1536-12027-a75b38956b",
         "className": "p2",
-        "title": "Nerja, beach",
+        "title": "La Jolla Cove, San Diego",
         "caption": "USA / 2018-04-21",
         "captionColor": "",
         "full": "JPG master",
@@ -63585,11 +63657,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "Nerja, beach"
+            "value": "La Jolla Cove, San Diego"
           },
           {
             "label": "Keywords",
-            "value": "Spain, travel, spring, outdoors, documentary, candid, camera original, location based, original, Spain travel, European travel, April travel, Spring travel, Documentary travel, Candid travel, Location based metadata"
+            "value": "USA, United States, American travel, travel, spring, April, outdoors, documentary, candid, camera original, location based, original, La Jolla, San Diego, California, beach, ocean, coast, USA travel, April travel, Spring travel, Documentary travel, Candid travel, Location based metadata"
           },
           {
             "label": "Captured",
@@ -63645,17 +63717,25 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Spain",
+          "USA",
+          "United States",
+          "American travel",
           "travel",
           "spring",
+          "April",
           "outdoors",
           "documentary",
           "candid",
           "camera original",
           "location based",
           "original",
-          "Spain travel",
-          "European travel",
+          "La Jolla",
+          "San Diego",
+          "California",
+          "beach",
+          "ocean",
+          "coast",
+          "USA travel",
           "April travel",
           "Spring travel",
           "Documentary travel",
@@ -63842,7 +63922,7 @@ export const collections = {
       {
         "id": "20180421-1534-13312-33eb4527dd",
         "className": "p5",
-        "title": "Nerja, beach",
+        "title": "La Jolla Cove, San Diego",
         "caption": "USA / 2018-04-21",
         "captionColor": "",
         "full": "JPG master",
@@ -63853,11 +63933,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "Nerja, beach"
+            "value": "La Jolla Cove, San Diego"
           },
           {
             "label": "Keywords",
-            "value": "Spain, travel, spring, outdoors, documentary, candid, camera original, location based, original, Spain travel, European travel, April travel, Spring travel, Documentary travel, Candid travel, Location based metadata"
+            "value": "USA, United States, American travel, travel, spring, April, outdoors, documentary, candid, camera original, location based, original, La Jolla, San Diego, California, beach, ocean, coast, USA travel, April travel, Spring travel, Documentary travel, Candid travel, Location based metadata"
           },
           {
             "label": "Captured",
@@ -63913,17 +63993,25 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Spain",
+          "USA",
+          "United States",
+          "American travel",
           "travel",
           "spring",
+          "April",
           "outdoors",
           "documentary",
           "candid",
           "camera original",
           "location based",
           "original",
-          "Spain travel",
-          "European travel",
+          "La Jolla",
+          "San Diego",
+          "California",
+          "beach",
+          "ocean",
+          "coast",
+          "USA travel",
           "April travel",
           "Spring travel",
           "Documentary travel",
@@ -63934,7 +64022,7 @@ export const collections = {
       {
         "id": "20180421-1535-11998-60ef2ba3cc",
         "className": "p1",
-        "title": "Nerja, beach",
+        "title": "La Jolla Cove, San Diego",
         "caption": "USA / 2018-04-21",
         "captionColor": "",
         "full": "JPG master",
@@ -63945,11 +64033,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "Nerja, beach"
+            "value": "La Jolla Cove, San Diego"
           },
           {
             "label": "Keywords",
-            "value": "Spain, travel, spring, outdoors, documentary, candid, camera original, location based, original, Spain travel, European travel, April travel, Spring travel, Documentary travel, Candid travel, Location based metadata"
+            "value": "USA, United States, American travel, travel, spring, April, outdoors, documentary, candid, camera original, location based, original, La Jolla, San Diego, California, beach, ocean, coast, USA travel, April travel, Spring travel, Documentary travel, Candid travel, Location based metadata"
           },
           {
             "label": "Captured",
@@ -64005,17 +64093,25 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Spain",
+          "USA",
+          "United States",
+          "American travel",
           "travel",
           "spring",
+          "April",
           "outdoors",
           "documentary",
           "candid",
           "camera original",
           "location based",
           "original",
-          "Spain travel",
-          "European travel",
+          "La Jolla",
+          "San Diego",
+          "California",
+          "beach",
+          "ocean",
+          "coast",
+          "USA travel",
           "April travel",
           "Spring travel",
           "Documentary travel",

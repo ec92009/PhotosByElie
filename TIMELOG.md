@@ -648,8 +648,10 @@ Clock state: running
 | 2026-07-23 | 12:26 CEST | 12:27 CEST | 0:01 | Replaced Corine's planned gallery login with a reusable owner-created, no-login artifact-link delivery workflow for current and future Real Estate clients; implementation, tests, deployment, and rehearsal runtime excluded. |
 | 2026-07-23 | 12:50 CEST | 12:51 CEST | 0:01 | Reported that Account sign-out appeared ineffective from the Real Estate workspace, exposing the dual Google/gallery session defect; diagnosis, implementation, tests, and deployment runtime excluded. |
 | 2026-07-23 | 13:04 CEST | 13:13 CEST | 0:02 | Reported that the finished-product shelf open and download controls appeared inert, then confirmed the problem affected multiple controls; diagnosis, implementation, browser rehearsal, tests, and deployment runtime excluded. |
+| 2026-07-24 | 19:55 CEST | 19:56 CEST | 0:01 | Directed and reviewed an end-to-end nested Friends and Family fixture, photo-subset, and audience-membership rehearsal; autonomous setup and audit runtime excluded. |
+| 2026-07-24 | 20:03 CEST | 20:04 CEST | 0:01 | Requested Git synchronization cleanup and preservation of valid Owner workflow state; repository inspection, validation, and commit runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 32:00
+Active collaboration time used: 32:02
 Remaining budget: not set

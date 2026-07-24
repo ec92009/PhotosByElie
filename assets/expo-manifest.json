@@ -4942,48 +4942,6 @@
       }
     },
     {
-      "id": "001-ca8392b787",
-      "relative_path": "Apple Photos Sidecar Uploads/IMG_4260.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "apple-photo-albums",
-      "derivatives": {
-        "gallery": "expo/001-ca8392b787_900.jpg",
-        "detail": "expo/001-ca8392b787_1800.jpg"
-      }
-    },
-    {
-      "id": "001-6c10be90bb",
-      "relative_path": "Apple Photos Sidecar Uploads/IMG_4262.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "apple-photo-albums",
-      "derivatives": {
-        "gallery": "expo/001-6c10be90bb_900.jpg",
-        "detail": "expo/001-6c10be90bb_1800.jpg"
-      }
-    },
-    {
-      "id": "001-b120ff5fa7",
-      "relative_path": "Apple Photos Sidecar Uploads/IMG_4263.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "apple-photo-albums",
-      "derivatives": {
-        "gallery": "expo/001-b120ff5fa7_900.jpg",
-        "detail": "expo/001-b120ff5fa7_1800.jpg"
-      }
-    },
-    {
       "id": "001-10e03e7ec8",
       "relative_path": "Apple Photos Sidecar Uploads/IMG_4265.jpg",
       "gallery_country": {
@@ -5023,34 +4981,6 @@
       "derivatives": {
         "gallery": "expo/001-b401d2437e_900.jpg",
         "detail": "expo/001-b401d2437e_1800.jpg"
-      }
-    },
-    {
-      "id": "001-19d87a8a82",
-      "relative_path": "Apple Photos Sidecar Uploads/IMG_4284.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "apple-photo-albums",
-      "derivatives": {
-        "gallery": "expo/001-19d87a8a82_900.jpg",
-        "detail": "expo/001-19d87a8a82_1800.jpg"
-      }
-    },
-    {
-      "id": "001-b1d8f053f0",
-      "relative_path": "Apple Photos Sidecar Uploads/IMG_4285.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "apple-photo-albums",
-      "derivatives": {
-        "gallery": "expo/001-b1d8f053f0_900.jpg",
-        "detail": "expo/001-b1d8f053f0_1800.jpg"
       }
     },
     {
@@ -24973,34 +24903,6 @@
       "derivatives": {
         "gallery": "expo/001-3e8e4ebfd5_900.jpg",
         "detail": "expo/001-3e8e4ebfd5_1800.jpg"
-      }
-    },
-    {
-      "id": "001-dd8a914169",
-      "relative_path": "Apple Photos Sidecar Uploads/IMG_4053.jpg",
-      "gallery_country": {
-        "slug": "spain",
-        "label": "Spain",
-        "source": "review-snapshot"
-      },
-      "source_mode": "apple-photo-albums",
-      "derivatives": {
-        "gallery": "expo/001-dd8a914169_900.jpg",
-        "detail": "expo/001-dd8a914169_1800.jpg"
-      }
-    },
-    {
-      "id": "001-3d7795e702",
-      "relative_path": "Apple Photos Sidecar Uploads/IMG_4054.jpg",
-      "gallery_country": {
-        "slug": "spain",
-        "label": "Spain",
-        "source": "review-snapshot"
-      },
-      "source_mode": "apple-photo-albums",
-      "derivatives": {
-        "gallery": "expo/001-3d7795e702_900.jpg",
-        "detail": "expo/001-3d7795e702_1800.jpg"
       }
     },
     {

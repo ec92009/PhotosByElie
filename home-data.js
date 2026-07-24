@@ -4,7 +4,7 @@ window.photosByElieHomeData = {
     "title": "France",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "france-gallery",
-    "count": 689,
+    "count": 684,
     "href": "./gallery.html?gallery=france",
     "photos": [
       {
@@ -144,7 +144,7 @@ window.photosByElieHomeData = {
     "title": "Spain",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "spain-gallery",
-    "count": 2291,
+    "count": 2289,
     "href": "./gallery.html?gallery=spain",
     "photos": [
       {

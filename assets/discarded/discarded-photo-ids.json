@@ -1,9 +1,16 @@
 {
   "format": "photosbyelie-discarded-photo-ids",
   "version": 1,
-  "updated_at": "2026-06-22T16:21:43.948597+00:00",
+  "updated_at": "2026-07-22T09:07:27.265352+00:00",
   "photo_ids": [
+    "001-01763d7b74",
+    "001-04c7293f68",
+    "001-46fc7464b7",
     "001-5eee93ad03",
+    "001-8e972f180e",
+    "001-b0648bc9c1",
+    "001-b6b4579c4a",
+    "001-ef335584c1",
     "1-enchanted-forest-create-a-picture-that-captures-the-mysti-0-upscale-bb8bcad4-29ef-4642-afda-c7132dd3a420-59a0e14d4c",
     "1-enchanted-forest-create-a-picture-that-captures-the-mysti-1-upscale-c8c4bd2f-49b8-4c9f-9c47-ab38973d051e-c7ed38c1ab",
     "1-enchanted-forest-create-a-picture-that-captures-the-mysti-3-upscale-e51496af-0c49-4a85-a21e-d8f552f70cff-5d1eca6a04",
@@ -6198,6 +6205,13 @@
     "/20240307 144311 00209.JPG",
     "/20240307 144322 00211.JPG",
     "/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260622T160454Z-batch/001-2022-la-celle-saint-cloud-marche/0024-20221211 123538 00759.jpg",
+    "/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260622T172728Z-batch/002-2025-san-gimignano/0007-IMG_1175.jpg",
+    "/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260626T094835Z-batch/001-2023-san-diego-ca-usa/0007-IMG_4931.jpg",
+    "/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260626T094835Z-batch/001-2023-san-diego-ca-usa/0008-IMG_4933.jpg",
+    "/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260626T094835Z-batch/003-palomar-mountain/0001-EC8_2518.jpg",
+    "/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260626T094835Z-batch/003-palomar-mountain/0002-EC8_2530.jpg",
+    "/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260626T094835Z-batch/003-palomar-mountain/0003-EC8_2533.jpg",
+    "/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260626T094835Z-batch/003-palomar-mountain/0004-EC8_2537.jpg",
     "/Volumes/Saturn/Pictures/LR/Apple Photo Albums/2022/2015-2019/20180427 1527 00227.jpg",
     "/Volumes/Saturn/Pictures/LR/Apple Photo Albums/2022/2015-2019/20180427 1528 00228.jpg",
     "/Volumes/Saturn/Pictures/LR/Apple Photo Albums/2022/2015-2019/20180731 1512 42012.jpg",
@@ -7638,6 +7652,13 @@
     "/Volumes/Saturn/Pictures/LR/_All Leonardo/2023/05/29/UPSCALE/Scaled/champion black and white male cocker spaniel-0-UPSCALE_fd9f1972-c90c-434b-bc42-30b9857d0cf7.jpgx2.jpg",
     "/Volumes/Saturn/Pictures/LR/_All Leonardo/Beyrouth.mp4",
     "001-2022-la-celle-saint-cloud-marche/0024-20221211 123538 00759.jpg",
+    "001-2023-san-diego-ca-usa/0007-IMG_4931.jpg",
+    "001-2023-san-diego-ca-usa/0008-IMG_4933.jpg",
+    "002-2025-san-gimignano/0007-IMG_1175.jpg",
+    "003-palomar-mountain/0001-EC8_2518.jpg",
+    "003-palomar-mountain/0002-EC8_2530.jpg",
+    "003-palomar-mountain/0003-EC8_2533.jpg",
+    "003-palomar-mountain/0004-EC8_2537.jpg",
     "13 August 2023/20230812 162617 00006.jpeg",
     "15 January 2023/20230114 173550 00171.jpeg",
     "15 January 2023/20230114 173905 00195.jpeg",
@@ -9027,11 +9048,32 @@
     "{'name': '20221215 170959 03374.jpeg', 'extension': 'jpeg', 'bytes': 13960564, 'mtime': '2026-06-06T16:57:25+00:00'}",
     "{'name': '20221215 171001 03375.jpeg', 'extension': 'jpeg', 'bytes': 12323180, 'mtime': '2026-06-06T16:57:25+00:00'}",
     "{'name': '20221215 171009 03376.jpeg', 'extension': 'jpeg', 'bytes': 10067665, 'mtime': '2026-06-06T16:57:25+00:00'}",
-    "{'path': '/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260622T160454Z-batch/001-2022-la-celle-saint-cloud-marche/0024-20221211 123538 00759.jpg', 'name': '0024-20221211 123538 00759.jpg', 'extension': 'jpg', 'bytes': 949968, 'mtime': '2026-06-22T16:07:27+00:00', 'mtime_ns': 1782144447943982324, 'apple_photos': {'burstFilterOutcome': 'non-burst-keep', 'creationDate': '2022-12-11T20:35:38Z', 'eligible': True, 'exportStrategy': 'rendered_jpeg', 'filename': '20221211 123538 00759.jpg', 'index': 24, 'localIdentifier': 'E2034294-7C15-4ABC-9C96-80292CF0C4F9/L0/001', 'mediaType': 'photo', 'modificationDate': '2025-03-31T18:36:07Z', 'path': '/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260622T160454Z-batch/001-2022-la-celle-saint-cloud-marche/0024-20221211 123538 00759.jpg', 'pixelHeight': 2048, 'pixelWidth': 1151, 'reason': 'Photos still image will import as the current rendered JPG from Photos.', 'relative_path': '0024-20221211 123538 00759.jpg', 'renderAttemptError': 'Photos reported the rendered asset at 100% but did not provide the JPEG callback after 6 seconds. Owner will try the local HEIC/source fallback next.', 'renderFallback': 'local-resource-jpeg', 'renderFallbackReason': 'Photos reported the rendered asset at 100% but did not provide the JPEG callback after 6 seconds. Owner will try the local HEIC/source fallback next.', 'resources': [{'originalFilename': '20221211 123538 00759.jpg', 'type': 1, 'uniformTypeIdentifier': 'public.jpeg'}], 'sourceAnchor': 'apple-photos://E2034294-7C15-4ABC-9C96-80292CF0C4F9/L0/001', 'status': 'materialized'}, 'source_anchor_path': 'apple-photos://E2034294-7C15-4ABC-9C96-80292CF0C4F9/L0/001'}"
+    "{'path': '/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260622T160454Z-batch/001-2022-la-celle-saint-cloud-marche/0024-20221211 123538 00759.jpg', 'name': '0024-20221211 123538 00759.jpg', 'extension': 'jpg', 'bytes': 949968, 'mtime': '2026-06-22T16:07:27+00:00', 'mtime_ns': 1782144447943982324, 'apple_photos': {'burstFilterOutcome': 'non-burst-keep', 'creationDate': '2022-12-11T20:35:38Z', 'eligible': True, 'exportStrategy': 'rendered_jpeg', 'filename': '20221211 123538 00759.jpg', 'index': 24, 'localIdentifier': 'E2034294-7C15-4ABC-9C96-80292CF0C4F9/L0/001', 'mediaType': 'photo', 'modificationDate': '2025-03-31T18:36:07Z', 'path': '/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260622T160454Z-batch/001-2022-la-celle-saint-cloud-marche/0024-20221211 123538 00759.jpg', 'pixelHeight': 2048, 'pixelWidth': 1151, 'reason': 'Photos still image will import as the current rendered JPG from Photos.', 'relative_path': '0024-20221211 123538 00759.jpg', 'renderAttemptError': 'Photos reported the rendered asset at 100% but did not provide the JPEG callback after 6 seconds. Owner will try the local HEIC/source fallback next.', 'renderFallback': 'local-resource-jpeg', 'renderFallbackReason': 'Photos reported the rendered asset at 100% but did not provide the JPEG callback after 6 seconds. Owner will try the local HEIC/source fallback next.', 'resources': [{'originalFilename': '20221211 123538 00759.jpg', 'type': 1, 'uniformTypeIdentifier': 'public.jpeg'}], 'sourceAnchor': 'apple-photos://E2034294-7C15-4ABC-9C96-80292CF0C4F9/L0/001', 'status': 'materialized'}, 'source_anchor_path': 'apple-photos://E2034294-7C15-4ABC-9C96-80292CF0C4F9/L0/001'}",
+    "{'path': '/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260622T172728Z-batch/002-2025-san-gimignano/0007-IMG_1175.jpg', 'name': '0007-IMG_1175.jpg', 'extension': 'jpg', 'bytes': 1952394, 'mtime': '2026-06-22T17:39:21+00:00', 'mtime_ns': 1782149961421232623, 'apple_photos': {'album': {'assetCount': 16, 'kind': 'album', 'localIdentifier': '7DB66449-0D49-4BFA-B61D-66DE46297F45/L0/040', 'subtype': 2, 'title': '2025 San Gimignano', 'type': 1}, 'burstFilterOutcome': 'non-burst-keep', 'creationDate': '2025-05-12T11:38:13Z', 'eligible': True, 'exportStrategy': 'rendered_jpeg', 'fallbackResourceFilename': 'IMG_1175.HEIC', 'fallbackResourceFormat': 'HEIC', 'filename': 'IMG_1175.jpg', 'index': 7, 'localIdentifier': '268204F7-173D-4D53-B614-C39AFFDC4809/L0/001', 'localJPEGFallbackAvailable': True, 'location': {'altitude': 250.7321434441048, 'horizontalAccuracy': 4.7338264517553545, 'latitude': 43.481741666666665, 'longitude': 11.0307055, 'timestamp': '2025-05-12T11:38:13Z', 'verticalAccuracy': 0}, 'mediaType': 'photo', 'modificationDate': '2026-05-03T13:00:53Z', 'path': '/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260622T172728Z-batch/002-2025-san-gimignano/0007-IMG_1175.jpg', 'pixelHeight': 3024, 'pixelWidth': 4032, 'preferredResourceFilename': 'IMG_1175.HEIC', 'preferredResourceFormat': 'HEIC', 'reason': 'Photos still image will import as the current rendered JPG from Photos.', 'relative_path': '0007-IMG_1175.jpg', 'renderAttemptError': 'Photos reported the rendered asset at 100% but did not provide the JPEG callback after 6 seconds. Owner will try the local HEIC/source fallback next.', 'renderFallback': 'local-resource-jpeg', 'renderFallbackReason': 'Photos reported the rendered asset at 100% but did not provide the JPEG callback after 6 seconds. Owner will try the local HEIC/source fallback next.', 'resourceFormat': 'HEIC', 'resourceFormatCounts': {'HEIC': 1}, 'resourceFormats': ['HEIC'], 'resources': [{'fileExtension': 'HEIC', 'format': 'HEIC', 'jpegFallbackCompatible': True, 'originalFilename': 'IMG_1175.HEIC', 'type': 1, 'uniformTypeIdentifier': 'public.heic'}], 'sourceAnchor': 'apple-photos://268204F7-173D-4D53-B614-C39AFFDC4809/L0/001', 'status': 'materialized'}, 'apple_photos_album': {'assetCount': 16, 'kind': 'album', 'localIdentifier': '7DB66449-0D49-4BFA-B61D-66DE46297F45/L0/040', 'subtype': 2, 'title': '2025 San Gimignano', 'type': 1}, 'gps': {'altitude': 250.7321434441048, 'horizontalAccuracy': 4.7338264517553545, 'latitude': 43.481741666666665, 'longitude': 11.0307055, 'timestamp': '2025-05-12T11:38:13Z', 'verticalAccuracy': 0, 'GPSLatitudeDecimal': 43.481741666666665, 'GPSLongitudeDecimal': 11.0307055, 'source': 'apple_photos'}, 'source_anchor_path': 'apple-photos://268204F7-173D-4D53-B614-C39AFFDC4809/L0/001'}",
+    "{'path': '/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260626T094835Z-batch/001-2023-san-diego-ca-usa/0007-IMG_4931.jpg', 'name': '0007-IMG_4931.jpg', 'extension': 'jpg', 'bytes': 4076361, 'mtime': '2026-06-26T09:49:23+00:00', 'mtime_ns': 1782467363230195989, 'apple_photos': {'album': {'assetCount': 8, 'kind': 'album', 'localIdentifier': '0E8E3B45-DBBB-4E07-A09C-14BA10B8EBE0/L0/040', 'subtype': 2, 'title': '2023 San Diego, CA, USA', 'type': 1}, 'burstFilterOutcome': 'non-burst-keep', 'creationDate': '2023-11-25T21:00:49Z', 'eligible': True, 'exportStrategy': 'rendered_jpeg', 'fallbackResourceFilename': 'IMG_4931.HEIC', 'fallbackResourceFormat': 'HEIC', 'filename': 'IMG_4931.jpg', 'index': 7, 'localIdentifier': '4B07E059-35E9-49C9-A3FD-16C52125F62C/L0/001', 'localJPEGFallbackAvailable': True, 'location': {'altitude': 2.626257672861322, 'horizontalAccuracy': 8.571854440789474, 'latitude': 32.713905, 'longitude': -117.175675, 'timestamp': '2023-11-25T21:00:48Z', 'verticalAccuracy': 0}, 'mediaType': 'photo', 'modificationDate': '2025-10-22T00:08:59Z', 'path': '/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260626T094835Z-batch/001-2023-san-diego-ca-usa/0007-IMG_4931.jpg', 'pixelHeight': 4032, 'pixelWidth': 3024, 'preferredResourceFilename': 'IMG_4931.HEIC', 'preferredResourceFormat': 'HEIC', 'reason': 'Photos still image will import as the current rendered JPG from Photos.', 'relative_path': '0007-IMG_4931.jpg', 'renderAttemptError': 'Photos reported the rendered asset at 100% but did not provide the JPEG callback after 6 seconds. Owner will try the local image-source fallback next.', 'renderFallback': 'local-resource-jpeg', 'renderFallbackReason': 'Photos reported the rendered asset at 100% but did not provide the JPEG callback after 6 seconds. Owner will try the local image-source fallback next.', 'resourceFormat': 'HEIC', 'resourceFormatCounts': {'HEIC': 1}, 'resourceFormats': ['HEIC'], 'resources': [{'fileExtension': 'HEIC', 'format': 'HEIC', 'jpegFallbackCompatible': True, 'originalFilename': 'IMG_4931.HEIC', 'type': 1, 'uniformTypeIdentifier': 'public.heic'}], 'sourceAnchor': 'apple-photos://4B07E059-35E9-49C9-A3FD-16C52125F62C/L0/001', 'status': 'materialized'}, 'apple_photos_album': {'assetCount': 8, 'kind': 'album', 'localIdentifier': '0E8E3B45-DBBB-4E07-A09C-14BA10B8EBE0/L0/040', 'subtype': 2, 'title': '2023 San Diego, CA, USA', 'type': 1}, 'gps': {'altitude': 2.626257672861322, 'horizontalAccuracy': 8.571854440789474, 'latitude': 32.713905, 'longitude': -117.175675, 'timestamp': '2023-11-25T21:00:48Z', 'verticalAccuracy': 0, 'GPSLatitudeDecimal': 32.713905, 'GPSLongitudeDecimal': -117.175675, 'source': 'apple_photos'}, 'source_anchor_path': 'apple-photos://4B07E059-35E9-49C9-A3FD-16C52125F62C/L0/001'}",
+    "{'path': '/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260626T094835Z-batch/001-2023-san-diego-ca-usa/0008-IMG_4933.jpg', 'name': '0008-IMG_4933.jpg', 'extension': 'jpg', 'bytes': 4150824, 'mtime': '2026-06-26T09:49:29+00:00', 'mtime_ns': 1782467369392288682, 'apple_photos': {'album': {'assetCount': 8, 'kind': 'album', 'localIdentifier': '0E8E3B45-DBBB-4E07-A09C-14BA10B8EBE0/L0/040', 'subtype': 2, 'title': '2023 San Diego, CA, USA', 'type': 1}, 'burstFilterOutcome': 'non-burst-keep', 'creationDate': '2023-11-25T21:00:51Z', 'eligible': True, 'exportStrategy': 'rendered_jpeg', 'fallbackResourceFilename': 'IMG_4933.HEIC', 'fallbackResourceFormat': 'HEIC', 'filename': 'IMG_4933.jpg', 'index': 8, 'localIdentifier': 'ECB8E289-1FCF-4903-98F3-75D138C3C861/L0/001', 'localJPEGFallbackAvailable': True, 'location': {'altitude': 2.7035846267553585, 'horizontalAccuracy': 9.433462296517995, 'latitude': 32.713908333333336, 'longitude': -117.17566666666667, 'timestamp': '2023-11-25T21:00:49Z', 'verticalAccuracy': 0}, 'mediaType': 'photo', 'modificationDate': '2026-06-02T09:35:03Z', 'path': '/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260626T094835Z-batch/001-2023-san-diego-ca-usa/0008-IMG_4933.jpg', 'pixelHeight': 4032, 'pixelWidth': 3024, 'preferredResourceFilename': 'IMG_4933.HEIC', 'preferredResourceFormat': 'HEIC', 'reason': 'Photos still image will import as the current rendered JPG from Photos.', 'relative_path': '0008-IMG_4933.jpg', 'renderAttemptError': 'Photos reported the rendered asset at 100% but did not provide the JPEG callback after 6 seconds. Owner will try the local image-source fallback next.', 'renderFallback': 'local-resource-jpeg', 'renderFallbackReason': 'Photos reported the rendered asset at 100% but did not provide the JPEG callback after 6 seconds. Owner will try the local image-source fallback next.', 'resourceFormat': 'HEIC', 'resourceFormatCounts': {'HEIC': 1}, 'resourceFormats': ['HEIC'], 'resources': [{'fileExtension': 'HEIC', 'format': 'HEIC', 'jpegFallbackCompatible': True, 'originalFilename': 'IMG_4933.HEIC', 'type': 1, 'uniformTypeIdentifier': 'public.heic'}], 'sourceAnchor': 'apple-photos://ECB8E289-1FCF-4903-98F3-75D138C3C861/L0/001', 'status': 'materialized'}, 'apple_photos_album': {'assetCount': 8, 'kind': 'album', 'localIdentifier': '0E8E3B45-DBBB-4E07-A09C-14BA10B8EBE0/L0/040', 'subtype': 2, 'title': '2023 San Diego, CA, USA', 'type': 1}, 'gps': {'altitude': 2.7035846267553585, 'horizontalAccuracy': 9.433462296517995, 'latitude': 32.713908333333336, 'longitude': -117.17566666666667, 'timestamp': '2023-11-25T21:00:49Z', 'verticalAccuracy': 0, 'GPSLatitudeDecimal': 32.713908333333336, 'GPSLongitudeDecimal': -117.17566666666667, 'source': 'apple_photos'}, 'source_anchor_path': 'apple-photos://ECB8E289-1FCF-4903-98F3-75D138C3C861/L0/001'}",
+    "{'path': '/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260626T094835Z-batch/003-palomar-mountain/0001-EC8_2518.jpg', 'name': '0001-EC8_2518.jpg', 'extension': 'jpg', 'bytes': 1911168, 'mtime': '2026-06-26T09:50:17+00:00', 'mtime_ns': 1782467417872418408, 'apple_photos': {'album': {'assetCount': 8, 'kind': 'album', 'localIdentifier': 'BE927847-0BE0-41F7-9DAF-8820A8191E20/L0/260', 'subtype': 101, 'title': 'Palomar Mountain ', 'type': 1}, 'burstFilterOutcome': 'non-burst-keep', 'creationDate': '2019-05-19T05:02:29Z', 'eligible': True, 'exportStrategy': 'rendered_jpeg', 'fallbackResourceFilename': 'EC8_2518.jpg', 'fallbackResourceFormat': 'JPEG', 'filename': 'EC8_2518.jpg', 'index': 1, 'localIdentifier': 'DAF460D1-C664-4AD7-8C22-0D5D586422B3/L0/001', 'localJPEGFallbackAvailable': True, 'mediaType': 'photo', 'modificationDate': '2025-11-06T19:01:56Z', 'path': '/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260626T094835Z-batch/003-palomar-mountain/0001-EC8_2518.jpg', 'pixelHeight': 1536, 'pixelWidth': 2303, 'preferredResourceFilename': 'EC8_2518.jpg', 'preferredResourceFormat': 'JPEG', 'reason': 'Photos still image will import as the current rendered JPG from Photos.', 'relative_path': '0001-EC8_2518.jpg', 'renderAttemptError': 'Photos reported the rendered asset at 100% but did not provide the JPEG callback after 6 seconds. Owner will try the local image-source fallback next.', 'renderFallback': 'local-resource-jpeg', 'renderFallbackReason': 'Photos reported the rendered asset at 100% but did not provide the JPEG callback after 6 seconds. Owner will try the local image-source fallback next.', 'resourceFormat': 'JPEG', 'resourceFormatCounts': {'JPEG': 1}, 'resourceFormats': ['JPEG'], 'resources': [{'fileExtension': 'JPG', 'format': 'JPEG', 'jpegFallbackCompatible': True, 'originalFilename': 'EC8_2518.jpg', 'type': 1, 'uniformTypeIdentifier': 'public.jpeg'}], 'sourceAnchor': 'apple-photos://DAF460D1-C664-4AD7-8C22-0D5D586422B3/L0/001', 'status': 'materialized'}, 'apple_photos_album': {'assetCount': 8, 'kind': 'album', 'localIdentifier': 'BE927847-0BE0-41F7-9DAF-8820A8191E20/L0/260', 'subtype': 101, 'title': 'Palomar Mountain ', 'type': 1}, 'source_anchor_path': 'apple-photos://DAF460D1-C664-4AD7-8C22-0D5D586422B3/L0/001'}",
+    "{'path': '/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260626T094835Z-batch/003-palomar-mountain/0002-EC8_2530.jpg', 'name': '0002-EC8_2530.jpg', 'extension': 'jpg', 'bytes': 1906604, 'mtime': '2026-06-26T09:50:24+00:00', 'mtime_ns': 1782467424065599104, 'apple_photos': {'album': {'assetCount': 8, 'kind': 'album', 'localIdentifier': 'BE927847-0BE0-41F7-9DAF-8820A8191E20/L0/260', 'subtype': 101, 'title': 'Palomar Mountain ', 'type': 1}, 'burstFilterOutcome': 'non-burst-keep', 'creationDate': '2019-05-19T05:04:29Z', 'eligible': True, 'exportStrategy': 'rendered_jpeg', 'fallbackResourceFilename': 'EC8_2530.jpg', 'fallbackResourceFormat': 'JPEG', 'filename': 'EC8_2530.jpg', 'index': 2, 'localIdentifier': 'BB5CD9F2-49E5-430F-B6E4-B19D28212E24/L0/001', 'localJPEGFallbackAvailable': True, 'mediaType': 'photo', 'modificationDate': '2025-11-06T19:02:03Z', 'path': '/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260626T094835Z-batch/003-palomar-mountain/0002-EC8_2530.jpg', 'pixelHeight': 1536, 'pixelWidth': 2304, 'preferredResourceFilename': 'EC8_2530.jpg', 'preferredResourceFormat': 'JPEG', 'reason': 'Photos still image will import as the current rendered JPG from Photos.', 'relative_path': '0002-EC8_2530.jpg', 'renderAttemptError': 'Photos reported the rendered asset at 100% but did not provide the JPEG callback after 6 seconds. Owner will try the local image-source fallback next.', 'renderFallback': 'local-resource-jpeg', 'renderFallbackReason': 'Photos reported the rendered asset at 100% but did not provide the JPEG callback after 6 seconds. Owner will try the local image-source fallback next.', 'resourceFormat': 'JPEG', 'resourceFormatCounts': {'JPEG': 1}, 'resourceFormats': ['JPEG'], 'resources': [{'fileExtension': 'JPG', 'format': 'JPEG', 'jpegFallbackCompatible': True, 'originalFilename': 'EC8_2530.jpg', 'type': 1, 'uniformTypeIdentifier': 'public.jpeg'}], 'sourceAnchor': 'apple-photos://BB5CD9F2-49E5-430F-B6E4-B19D28212E24/L0/001', 'status': 'materialized'}, 'apple_photos_album': {'assetCount': 8, 'kind': 'album', 'localIdentifier': 'BE927847-0BE0-41F7-9DAF-8820A8191E20/L0/260', 'subtype': 101, 'title': 'Palomar Mountain ', 'type': 1}, 'source_anchor_path': 'apple-photos://BB5CD9F2-49E5-430F-B6E4-B19D28212E24/L0/001'}",
+    "{'path': '/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260626T094835Z-batch/003-palomar-mountain/0003-EC8_2533.jpg', 'name': '0003-EC8_2533.jpg', 'extension': 'jpg', 'bytes': 1802742, 'mtime': '2026-06-26T09:50:30+00:00', 'mtime_ns': 1782467430249121751, 'apple_photos': {'album': {'assetCount': 8, 'kind': 'album', 'localIdentifier': 'BE927847-0BE0-41F7-9DAF-8820A8191E20/L0/260', 'subtype': 101, 'title': 'Palomar Mountain ', 'type': 1}, 'burstFilterOutcome': 'non-burst-keep', 'creationDate': '2019-05-19T05:04:32Z', 'eligible': True, 'exportStrategy': 'rendered_jpeg', 'fallbackResourceFilename': 'EC8_2533.jpg', 'fallbackResourceFormat': 'JPEG', 'filename': 'EC8_2533.jpg', 'index': 3, 'localIdentifier': 'A19732BB-67D0-41C3-82F4-2B158BBAC445/L0/001', 'localJPEGFallbackAvailable': True, 'mediaType': 'photo', 'modificationDate': '2025-11-06T19:01:55Z', 'path': '/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260626T094835Z-batch/003-palomar-mountain/0003-EC8_2533.jpg', 'pixelHeight': 1769, 'pixelWidth': 2048, 'preferredResourceFilename': 'EC8_2533.jpg', 'preferredResourceFormat': 'JPEG', 'reason': 'Photos still image will import as the current rendered JPG from Photos.', 'relative_path': '0003-EC8_2533.jpg', 'renderAttemptError': 'Photos reported the rendered asset at 100% but did not provide the JPEG callback after 6 seconds. Owner will try the local image-source fallback next.', 'renderFallback': 'local-resource-jpeg', 'renderFallbackReason': 'Photos reported the rendered asset at 100% but did not provide the JPEG callback after 6 seconds. Owner will try the local image-source fallback next.', 'resourceFormat': 'JPEG', 'resourceFormatCounts': {'JPEG': 1}, 'resourceFormats': ['JPEG'], 'resources': [{'fileExtension': 'JPG', 'format': 'JPEG', 'jpegFallbackCompatible': True, 'originalFilename': 'EC8_2533.jpg', 'type': 1, 'uniformTypeIdentifier': 'public.jpeg'}], 'sourceAnchor': 'apple-photos://A19732BB-67D0-41C3-82F4-2B158BBAC445/L0/001', 'status': 'materialized'}, 'apple_photos_album': {'assetCount': 8, 'kind': 'album', 'localIdentifier': 'BE927847-0BE0-41F7-9DAF-8820A8191E20/L0/260', 'subtype': 101, 'title': 'Palomar Mountain ', 'type': 1}, 'source_anchor_path': 'apple-photos://A19732BB-67D0-41C3-82F4-2B158BBAC445/L0/001'}",
+    "{'path': '/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260626T094835Z-batch/003-palomar-mountain/0004-EC8_2537.jpg', 'name': '0004-EC8_2537.jpg', 'extension': 'jpg', 'bytes': 1931109, 'mtime': '2026-06-26T09:50:36+00:00', 'mtime_ns': 1782467436445839148, 'apple_photos': {'album': {'assetCount': 8, 'kind': 'album', 'localIdentifier': 'BE927847-0BE0-41F7-9DAF-8820A8191E20/L0/260', 'subtype': 101, 'title': 'Palomar Mountain ', 'type': 1}, 'burstFilterOutcome': 'non-burst-keep', 'creationDate': '2019-05-19T05:04:47Z', 'eligible': True, 'exportStrategy': 'rendered_jpeg', 'fallbackResourceFilename': 'EC8_2537.jpg', 'fallbackResourceFormat': 'JPEG', 'filename': 'EC8_2537.jpg', 'index': 4, 'localIdentifier': 'BAC454DE-0928-4E53-93F7-0DA6B0A3D100/L0/001', 'localJPEGFallbackAvailable': True, 'mediaType': 'photo', 'modificationDate': '2025-11-06T19:01:59Z', 'path': '/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260626T094835Z-batch/003-palomar-mountain/0004-EC8_2537.jpg', 'pixelHeight': 1536, 'pixelWidth': 2304, 'preferredResourceFilename': 'EC8_2537.jpg', 'preferredResourceFormat': 'JPEG', 'reason': 'Photos still image will import as the current rendered JPG from Photos.', 'relative_path': '0004-EC8_2537.jpg', 'renderAttemptError': 'Photos reported the rendered asset at 100% but did not provide the JPEG callback after 6 seconds. Owner will try the local image-source fallback next.', 'renderFallback': 'local-resource-jpeg', 'renderFallbackReason': 'Photos reported the rendered asset at 100% but did not provide the JPEG callback after 6 seconds. Owner will try the local image-source fallback next.', 'resourceFormat': 'JPEG', 'resourceFormatCounts': {'JPEG': 1}, 'resourceFormats': ['JPEG'], 'resources': [{'fileExtension': 'JPG', 'format': 'JPEG', 'jpegFallbackCompatible': True, 'originalFilename': 'EC8_2537.jpg', 'type': 1, 'uniformTypeIdentifier': 'public.jpeg'}], 'sourceAnchor': 'apple-photos://BAC454DE-0928-4E53-93F7-0DA6B0A3D100/L0/001', 'status': 'materialized'}, 'apple_photos_album': {'assetCount': 8, 'kind': 'album', 'localIdentifier': 'BE927847-0BE0-41F7-9DAF-8820A8191E20/L0/260', 'subtype': 101, 'title': 'Palomar Mountain ', 'type': 1}, 'source_anchor_path': 'apple-photos://BAC454DE-0928-4E53-93F7-0DA6B0A3D100/L0/001'}"
   ],
   "public_preview_keys": [
+    "expo/001-01763d7b74_1800.jpg",
+    "expo/001-01763d7b74_900.jpg",
+    "expo/001-04c7293f68_1800.jpg",
+    "expo/001-04c7293f68_900.jpg",
+    "expo/001-46fc7464b7_1800.jpg",
+    "expo/001-46fc7464b7_900.jpg",
     "expo/001-5eee93ad03_1800.jpg",
     "expo/001-5eee93ad03_900.jpg",
+    "expo/001-8e972f180e_1800.jpg",
+    "expo/001-8e972f180e_900.jpg",
+    "expo/001-b0648bc9c1_1800.jpg",
+    "expo/001-b0648bc9c1_900.jpg",
+    "expo/001-b6b4579c4a_1800.jpg",
+    "expo/001-b6b4579c4a_900.jpg",
+    "expo/001-ef335584c1_1800.jpg",
+    "expo/001-ef335584c1_900.jpg",
     "expo/20161106-1622-03567-edit-edit-fd53d9a73d_1800.jpg",
     "expo/20161106-1622-03567-edit-edit-fd53d9a73d_900.jpg",
     "expo/20161106-1622-27069-edit-edit-6600df7daa_1800.jpg",
@@ -12430,7 +12472,14 @@
     "expo/usa/img-6598-66bfa401b3_900.jpg"
   ],
   "private_keys": [
+    "masters/001-01763d7b74.jpg",
+    "masters/001-04c7293f68.jpg",
+    "masters/001-46fc7464b7.jpg",
     "masters/001-5eee93ad03.jpg",
+    "masters/001-8e972f180e.jpg",
+    "masters/001-b0648bc9c1.jpg",
+    "masters/001-b6b4579c4a.jpg",
+    "masters/001-ef335584c1.jpg",
     "masters/20110103-0616-15770-639b853c2d.jpg",
     "masters/20110103-0616-15770-639b853c2d/20110103 0616 15770.jpg",
     "masters/20110103-0617-15824-b5b45b29da.jpg",
@@ -14530,9 +14579,30 @@
     "masters/tulips-prominent-in-the-foreground-abstract-background-ink-0-upscale-97302596-138d-445d-aa54-2e7a623de0f8-jpgx2-427afb6009.jpg",
     "masters/tulips-prominent-in-the-foreground-abstract-background-ink-1-upscale-c9a5bc37-fa85-4748-96ab-b2d94409fffa-jpgx2-e4f3f5b2fe.jpg",
     "masters/tulips-prominent-in-the-foreground-abstract-background-ink-1-upscale-cfcd1f2d-4889-4a36-99c6-d22ad06fece0-jpgx2-dbf7252c63.jpg",
+    "renders/001-01763d7b74_1mp.jpg",
+    "renders/001-01763d7b74_3mp.jpg",
+    "renders/001-01763d7b74_6mp.jpg",
+    "renders/001-04c7293f68_1mp.jpg",
+    "renders/001-04c7293f68_3mp.jpg",
+    "renders/001-04c7293f68_6mp.jpg",
+    "renders/001-46fc7464b7_1mp.jpg",
+    "renders/001-46fc7464b7_3mp.jpg",
+    "renders/001-46fc7464b7_6mp.jpg",
     "renders/001-5eee93ad03_1mp.jpg",
     "renders/001-5eee93ad03_3mp.jpg",
     "renders/001-5eee93ad03_6mp.jpg",
+    "renders/001-8e972f180e_1mp.jpg",
+    "renders/001-8e972f180e_3mp.jpg",
+    "renders/001-8e972f180e_6mp.jpg",
+    "renders/001-b0648bc9c1_1mp.jpg",
+    "renders/001-b0648bc9c1_3mp.jpg",
+    "renders/001-b0648bc9c1_6mp.jpg",
+    "renders/001-b6b4579c4a_1mp.jpg",
+    "renders/001-b6b4579c4a_3mp.jpg",
+    "renders/001-b6b4579c4a_6mp.jpg",
+    "renders/001-ef335584c1_1mp.jpg",
+    "renders/001-ef335584c1_3mp.jpg",
+    "renders/001-ef335584c1_6mp.jpg",
     "renders/20110103-0616-15770-639b853c2d/20110103-0616-15770.jpg-jpg-1mp.jpg",
     "renders/20110103-0616-15770-639b853c2d/20110103-0616-15770.jpg-jpg-3mp.jpg",
     "renders/20110103-0616-15770-639b853c2d/20110103-0616-15770.jpg-jpg-6mp.jpg",
@@ -20803,6 +20873,81 @@
   ],
   "photos": [
     {
+      "id": "001-01763d7b74",
+      "title": "0008 IMG 4933",
+      "discarded_at": "2026-07-22T09:00:45.723855+00:00",
+      "from_state": "hidden",
+      "from_slug": "usa",
+      "source_slug": "usa",
+      "media_type": "photo",
+      "asset_paths": {},
+      "source_paths": [
+        "001-2023-san-diego-ca-usa/0008-IMG_4933.jpg",
+        "/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260626T094835Z-batch/001-2023-san-diego-ca-usa/0008-IMG_4933.jpg",
+        "{'path': '/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260626T094835Z-batch/001-2023-san-diego-ca-usa/0008-IMG_4933.jpg', 'name': '0008-IMG_4933.jpg', 'extension': 'jpg', 'bytes': 4150824, 'mtime': '2026-06-26T09:49:29+00:00', 'mtime_ns': 1782467369392288682, 'apple_photos': {'album': {'assetCount': 8, 'kind': 'album', 'localIdentifier': '0E8E3B45-DBBB-4E07-A09C-14BA10B8EBE0/L0/040', 'subtype': 2, 'title': '2023 San Diego, CA, USA', 'type': 1}, 'burstFilterOutcome': 'non-burst-keep', 'creationDate': '2023-11-25T21:00:51Z', 'eligible': True, 'exportStrategy': 'rendered_jpeg', 'fallbackResourceFilename': 'IMG_4933.HEIC', 'fallbackResourceFormat': 'HEIC', 'filename': 'IMG_4933.jpg', 'index': 8, 'localIdentifier': 'ECB8E289-1FCF-4903-98F3-75D138C3C861/L0/001', 'localJPEGFallbackAvailable': True, 'location': {'altitude': 2.7035846267553585, 'horizontalAccuracy': 9.433462296517995, 'latitude': 32.713908333333336, 'longitude': -117.17566666666667, 'timestamp': '2023-11-25T21:00:49Z', 'verticalAccuracy': 0}, 'mediaType': 'photo', 'modificationDate': '2026-06-02T09:35:03Z', 'path': '/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260626T094835Z-batch/001-2023-san-diego-ca-usa/0008-IMG_4933.jpg', 'pixelHeight': 4032, 'pixelWidth': 3024, 'preferredResourceFilename': 'IMG_4933.HEIC', 'preferredResourceFormat': 'HEIC', 'reason': 'Photos still image will import as the current rendered JPG from Photos.', 'relative_path': '0008-IMG_4933.jpg', 'renderAttemptError': 'Photos reported the rendered asset at 100% but did not provide the JPEG callback after 6 seconds. Owner will try the local image-source fallback next.', 'renderFallback': 'local-resource-jpeg', 'renderFallbackReason': 'Photos reported the rendered asset at 100% but did not provide the JPEG callback after 6 seconds. Owner will try the local image-source fallback next.', 'resourceFormat': 'HEIC', 'resourceFormatCounts': {'HEIC': 1}, 'resourceFormats': ['HEIC'], 'resources': [{'fileExtension': 'HEIC', 'format': 'HEIC', 'jpegFallbackCompatible': True, 'originalFilename': 'IMG_4933.HEIC', 'type': 1, 'uniformTypeIdentifier': 'public.heic'}], 'sourceAnchor': 'apple-photos://ECB8E289-1FCF-4903-98F3-75D138C3C861/L0/001', 'status': 'materialized'}, 'apple_photos_album': {'assetCount': 8, 'kind': 'album', 'localIdentifier': '0E8E3B45-DBBB-4E07-A09C-14BA10B8EBE0/L0/040', 'subtype': 2, 'title': '2023 San Diego, CA, USA', 'type': 1}, 'gps': {'altitude': 2.7035846267553585, 'horizontalAccuracy': 9.433462296517995, 'latitude': 32.713908333333336, 'longitude': -117.17566666666667, 'timestamp': '2023-11-25T21:00:49Z', 'verticalAccuracy': 0, 'GPSLatitudeDecimal': 32.713908333333336, 'GPSLongitudeDecimal': -117.17566666666667, 'source': 'apple_photos'}, 'source_anchor_path': 'apple-photos://ECB8E289-1FCF-4903-98F3-75D138C3C861/L0/001'}"
+      ],
+      "public_preview_keys": [
+        "expo/001-01763d7b74_900.jpg",
+        "expo/001-01763d7b74_1800.jpg"
+      ],
+      "private_keys": [
+        "masters/001-01763d7b74.jpg",
+        "renders/001-01763d7b74_1mp.jpg",
+        "renders/001-01763d7b74_3mp.jpg",
+        "renders/001-01763d7b74_6mp.jpg"
+      ]
+    },
+    {
+      "id": "001-04c7293f68",
+      "title": "0003 EC8 2533",
+      "discarded_at": "2026-07-22T09:05:35.483074+00:00",
+      "from_state": "hidden",
+      "from_slug": "unknown",
+      "source_slug": "unknown",
+      "media_type": "photo",
+      "asset_paths": {},
+      "source_paths": [
+        "003-palomar-mountain/0003-EC8_2533.jpg",
+        "/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260626T094835Z-batch/003-palomar-mountain/0003-EC8_2533.jpg",
+        "{'path': '/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260626T094835Z-batch/003-palomar-mountain/0003-EC8_2533.jpg', 'name': '0003-EC8_2533.jpg', 'extension': 'jpg', 'bytes': 1802742, 'mtime': '2026-06-26T09:50:30+00:00', 'mtime_ns': 1782467430249121751, 'apple_photos': {'album': {'assetCount': 8, 'kind': 'album', 'localIdentifier': 'BE927847-0BE0-41F7-9DAF-8820A8191E20/L0/260', 'subtype': 101, 'title': 'Palomar Mountain ', 'type': 1}, 'burstFilterOutcome': 'non-burst-keep', 'creationDate': '2019-05-19T05:04:32Z', 'eligible': True, 'exportStrategy': 'rendered_jpeg', 'fallbackResourceFilename': 'EC8_2533.jpg', 'fallbackResourceFormat': 'JPEG', 'filename': 'EC8_2533.jpg', 'index': 3, 'localIdentifier': 'A19732BB-67D0-41C3-82F4-2B158BBAC445/L0/001', 'localJPEGFallbackAvailable': True, 'mediaType': 'photo', 'modificationDate': '2025-11-06T19:01:55Z', 'path': '/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260626T094835Z-batch/003-palomar-mountain/0003-EC8_2533.jpg', 'pixelHeight': 1769, 'pixelWidth': 2048, 'preferredResourceFilename': 'EC8_2533.jpg', 'preferredResourceFormat': 'JPEG', 'reason': 'Photos still image will import as the current rendered JPG from Photos.', 'relative_path': '0003-EC8_2533.jpg', 'renderAttemptError': 'Photos reported the rendered asset at 100% but did not provide the JPEG callback after 6 seconds. Owner will try the local image-source fallback next.', 'renderFallback': 'local-resource-jpeg', 'renderFallbackReason': 'Photos reported the rendered asset at 100% but did not provide the JPEG callback after 6 seconds. Owner will try the local image-source fallback next.', 'resourceFormat': 'JPEG', 'resourceFormatCounts': {'JPEG': 1}, 'resourceFormats': ['JPEG'], 'resources': [{'fileExtension': 'JPG', 'format': 'JPEG', 'jpegFallbackCompatible': True, 'originalFilename': 'EC8_2533.jpg', 'type': 1, 'uniformTypeIdentifier': 'public.jpeg'}], 'sourceAnchor': 'apple-photos://A19732BB-67D0-41C3-82F4-2B158BBAC445/L0/001', 'status': 'materialized'}, 'apple_photos_album': {'assetCount': 8, 'kind': 'album', 'localIdentifier': 'BE927847-0BE0-41F7-9DAF-8820A8191E20/L0/260', 'subtype': 101, 'title': 'Palomar Mountain ', 'type': 1}, 'source_anchor_path': 'apple-photos://A19732BB-67D0-41C3-82F4-2B158BBAC445/L0/001'}"
+      ],
+      "public_preview_keys": [
+        "expo/001-04c7293f68_900.jpg",
+        "expo/001-04c7293f68_1800.jpg"
+      ],
+      "private_keys": [
+        "masters/001-04c7293f68.jpg",
+        "renders/001-04c7293f68_1mp.jpg",
+        "renders/001-04c7293f68_3mp.jpg",
+        "renders/001-04c7293f68_6mp.jpg"
+      ]
+    },
+    {
+      "id": "001-46fc7464b7",
+      "title": "0004 EC8 2537",
+      "discarded_at": "2026-07-22T09:07:24.532354+00:00",
+      "from_state": "hidden",
+      "from_slug": "unknown",
+      "source_slug": "unknown",
+      "media_type": "photo",
+      "asset_paths": {},
+      "source_paths": [
+        "003-palomar-mountain/0004-EC8_2537.jpg",
+        "/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260626T094835Z-batch/003-palomar-mountain/0004-EC8_2537.jpg",
+        "{'path': '/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260626T094835Z-batch/003-palomar-mountain/0004-EC8_2537.jpg', 'name': '0004-EC8_2537.jpg', 'extension': 'jpg', 'bytes': 1931109, 'mtime': '2026-06-26T09:50:36+00:00', 'mtime_ns': 1782467436445839148, 'apple_photos': {'album': {'assetCount': 8, 'kind': 'album', 'localIdentifier': 'BE927847-0BE0-41F7-9DAF-8820A8191E20/L0/260', 'subtype': 101, 'title': 'Palomar Mountain ', 'type': 1}, 'burstFilterOutcome': 'non-burst-keep', 'creationDate': '2019-05-19T05:04:47Z', 'eligible': True, 'exportStrategy': 'rendered_jpeg', 'fallbackResourceFilename': 'EC8_2537.jpg', 'fallbackResourceFormat': 'JPEG', 'filename': 'EC8_2537.jpg', 'index': 4, 'localIdentifier': 'BAC454DE-0928-4E53-93F7-0DA6B0A3D100/L0/001', 'localJPEGFallbackAvailable': True, 'mediaType': 'photo', 'modificationDate': '2025-11-06T19:01:59Z', 'path': '/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260626T094835Z-batch/003-palomar-mountain/0004-EC8_2537.jpg', 'pixelHeight': 1536, 'pixelWidth': 2304, 'preferredResourceFilename': 'EC8_2537.jpg', 'preferredResourceFormat': 'JPEG', 'reason': 'Photos still image will import as the current rendered JPG from Photos.', 'relative_path': '0004-EC8_2537.jpg', 'renderAttemptError': 'Photos reported the rendered asset at 100% but did not provide the JPEG callback after 6 seconds. Owner will try the local image-source fallback next.', 'renderFallback': 'local-resource-jpeg', 'renderFallbackReason': 'Photos reported the rendered asset at 100% but did not provide the JPEG callback after 6 seconds. Owner will try the local image-source fallback next.', 'resourceFormat': 'JPEG', 'resourceFormatCounts': {'JPEG': 1}, 'resourceFormats': ['JPEG'], 'resources': [{'fileExtension': 'JPG', 'format': 'JPEG', 'jpegFallbackCompatible': True, 'originalFilename': 'EC8_2537.jpg', 'type': 1, 'uniformTypeIdentifier': 'public.jpeg'}], 'sourceAnchor': 'apple-photos://BAC454DE-0928-4E53-93F7-0DA6B0A3D100/L0/001', 'status': 'materialized'}, 'apple_photos_album': {'assetCount': 8, 'kind': 'album', 'localIdentifier': 'BE927847-0BE0-41F7-9DAF-8820A8191E20/L0/260', 'subtype': 101, 'title': 'Palomar Mountain ', 'type': 1}, 'source_anchor_path': 'apple-photos://BAC454DE-0928-4E53-93F7-0DA6B0A3D100/L0/001'}"
+      ],
+      "public_preview_keys": [
+        "expo/001-46fc7464b7_900.jpg",
+        "expo/001-46fc7464b7_1800.jpg"
+      ],
+      "private_keys": [
+        "masters/001-46fc7464b7.jpg",
+        "renders/001-46fc7464b7_1mp.jpg",
+        "renders/001-46fc7464b7_3mp.jpg",
+        "renders/001-46fc7464b7_6mp.jpg"
+      ]
+    },
+    {
       "id": "001-5eee93ad03",
       "title": "0024 20221211 123538 00759",
       "discarded_at": "2026-06-22T16:21:43.909393+00:00",
@@ -20825,6 +20970,106 @@
         "renders/001-5eee93ad03_1mp.jpg",
         "renders/001-5eee93ad03_3mp.jpg",
         "renders/001-5eee93ad03_6mp.jpg"
+      ]
+    },
+    {
+      "id": "001-8e972f180e",
+      "title": "0001 EC8 2518",
+      "discarded_at": "2026-07-22T09:03:18.146929+00:00",
+      "from_state": "hidden",
+      "from_slug": "unknown",
+      "source_slug": "unknown",
+      "media_type": "photo",
+      "asset_paths": {},
+      "source_paths": [
+        "003-palomar-mountain/0001-EC8_2518.jpg",
+        "/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260626T094835Z-batch/003-palomar-mountain/0001-EC8_2518.jpg",
+        "{'path': '/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260626T094835Z-batch/003-palomar-mountain/0001-EC8_2518.jpg', 'name': '0001-EC8_2518.jpg', 'extension': 'jpg', 'bytes': 1911168, 'mtime': '2026-06-26T09:50:17+00:00', 'mtime_ns': 1782467417872418408, 'apple_photos': {'album': {'assetCount': 8, 'kind': 'album', 'localIdentifier': 'BE927847-0BE0-41F7-9DAF-8820A8191E20/L0/260', 'subtype': 101, 'title': 'Palomar Mountain ', 'type': 1}, 'burstFilterOutcome': 'non-burst-keep', 'creationDate': '2019-05-19T05:02:29Z', 'eligible': True, 'exportStrategy': 'rendered_jpeg', 'fallbackResourceFilename': 'EC8_2518.jpg', 'fallbackResourceFormat': 'JPEG', 'filename': 'EC8_2518.jpg', 'index': 1, 'localIdentifier': 'DAF460D1-C664-4AD7-8C22-0D5D586422B3/L0/001', 'localJPEGFallbackAvailable': True, 'mediaType': 'photo', 'modificationDate': '2025-11-06T19:01:56Z', 'path': '/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260626T094835Z-batch/003-palomar-mountain/0001-EC8_2518.jpg', 'pixelHeight': 1536, 'pixelWidth': 2303, 'preferredResourceFilename': 'EC8_2518.jpg', 'preferredResourceFormat': 'JPEG', 'reason': 'Photos still image will import as the current rendered JPG from Photos.', 'relative_path': '0001-EC8_2518.jpg', 'renderAttemptError': 'Photos reported the rendered asset at 100% but did not provide the JPEG callback after 6 seconds. Owner will try the local image-source fallback next.', 'renderFallback': 'local-resource-jpeg', 'renderFallbackReason': 'Photos reported the rendered asset at 100% but did not provide the JPEG callback after 6 seconds. Owner will try the local image-source fallback next.', 'resourceFormat': 'JPEG', 'resourceFormatCounts': {'JPEG': 1}, 'resourceFormats': ['JPEG'], 'resources': [{'fileExtension': 'JPG', 'format': 'JPEG', 'jpegFallbackCompatible': True, 'originalFilename': 'EC8_2518.jpg', 'type': 1, 'uniformTypeIdentifier': 'public.jpeg'}], 'sourceAnchor': 'apple-photos://DAF460D1-C664-4AD7-8C22-0D5D586422B3/L0/001', 'status': 'materialized'}, 'apple_photos_album': {'assetCount': 8, 'kind': 'album', 'localIdentifier': 'BE927847-0BE0-41F7-9DAF-8820A8191E20/L0/260', 'subtype': 101, 'title': 'Palomar Mountain ', 'type': 1}, 'source_anchor_path': 'apple-photos://DAF460D1-C664-4AD7-8C22-0D5D586422B3/L0/001'}"
+      ],
+      "public_preview_keys": [
+        "expo/001-8e972f180e_900.jpg",
+        "expo/001-8e972f180e_1800.jpg"
+      ],
+      "private_keys": [
+        "masters/001-8e972f180e.jpg",
+        "renders/001-8e972f180e_1mp.jpg",
+        "renders/001-8e972f180e_3mp.jpg",
+        "renders/001-8e972f180e_6mp.jpg"
+      ]
+    },
+    {
+      "id": "001-b0648bc9c1",
+      "title": "0002 EC8 2530",
+      "discarded_at": "2026-07-22T09:04:29.299991+00:00",
+      "from_state": "hidden",
+      "from_slug": "unknown",
+      "source_slug": "unknown",
+      "media_type": "photo",
+      "asset_paths": {},
+      "source_paths": [
+        "003-palomar-mountain/0002-EC8_2530.jpg",
+        "/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260626T094835Z-batch/003-palomar-mountain/0002-EC8_2530.jpg",
+        "{'path': '/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260626T094835Z-batch/003-palomar-mountain/0002-EC8_2530.jpg', 'name': '0002-EC8_2530.jpg', 'extension': 'jpg', 'bytes': 1906604, 'mtime': '2026-06-26T09:50:24+00:00', 'mtime_ns': 1782467424065599104, 'apple_photos': {'album': {'assetCount': 8, 'kind': 'album', 'localIdentifier': 'BE927847-0BE0-41F7-9DAF-8820A8191E20/L0/260', 'subtype': 101, 'title': 'Palomar Mountain ', 'type': 1}, 'burstFilterOutcome': 'non-burst-keep', 'creationDate': '2019-05-19T05:04:29Z', 'eligible': True, 'exportStrategy': 'rendered_jpeg', 'fallbackResourceFilename': 'EC8_2530.jpg', 'fallbackResourceFormat': 'JPEG', 'filename': 'EC8_2530.jpg', 'index': 2, 'localIdentifier': 'BB5CD9F2-49E5-430F-B6E4-B19D28212E24/L0/001', 'localJPEGFallbackAvailable': True, 'mediaType': 'photo', 'modificationDate': '2025-11-06T19:02:03Z', 'path': '/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260626T094835Z-batch/003-palomar-mountain/0002-EC8_2530.jpg', 'pixelHeight': 1536, 'pixelWidth': 2304, 'preferredResourceFilename': 'EC8_2530.jpg', 'preferredResourceFormat': 'JPEG', 'reason': 'Photos still image will import as the current rendered JPG from Photos.', 'relative_path': '0002-EC8_2530.jpg', 'renderAttemptError': 'Photos reported the rendered asset at 100% but did not provide the JPEG callback after 6 seconds. Owner will try the local image-source fallback next.', 'renderFallback': 'local-resource-jpeg', 'renderFallbackReason': 'Photos reported the rendered asset at 100% but did not provide the JPEG callback after 6 seconds. Owner will try the local image-source fallback next.', 'resourceFormat': 'JPEG', 'resourceFormatCounts': {'JPEG': 1}, 'resourceFormats': ['JPEG'], 'resources': [{'fileExtension': 'JPG', 'format': 'JPEG', 'jpegFallbackCompatible': True, 'originalFilename': 'EC8_2530.jpg', 'type': 1, 'uniformTypeIdentifier': 'public.jpeg'}], 'sourceAnchor': 'apple-photos://BB5CD9F2-49E5-430F-B6E4-B19D28212E24/L0/001', 'status': 'materialized'}, 'apple_photos_album': {'assetCount': 8, 'kind': 'album', 'localIdentifier': 'BE927847-0BE0-41F7-9DAF-8820A8191E20/L0/260', 'subtype': 101, 'title': 'Palomar Mountain ', 'type': 1}, 'source_anchor_path': 'apple-photos://BB5CD9F2-49E5-430F-B6E4-B19D28212E24/L0/001'}"
+      ],
+      "public_preview_keys": [
+        "expo/001-b0648bc9c1_900.jpg",
+        "expo/001-b0648bc9c1_1800.jpg"
+      ],
+      "private_keys": [
+        "masters/001-b0648bc9c1.jpg",
+        "renders/001-b0648bc9c1_1mp.jpg",
+        "renders/001-b0648bc9c1_3mp.jpg",
+        "renders/001-b0648bc9c1_6mp.jpg"
+      ]
+    },
+    {
+      "id": "001-b6b4579c4a",
+      "title": "0007 IMG 4931",
+      "discarded_at": "2026-07-22T09:00:04.608244+00:00",
+      "from_state": "hidden",
+      "from_slug": "usa",
+      "source_slug": "usa",
+      "media_type": "photo",
+      "asset_paths": {},
+      "source_paths": [
+        "001-2023-san-diego-ca-usa/0007-IMG_4931.jpg",
+        "/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260626T094835Z-batch/001-2023-san-diego-ca-usa/0007-IMG_4931.jpg",
+        "{'path': '/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260626T094835Z-batch/001-2023-san-diego-ca-usa/0007-IMG_4931.jpg', 'name': '0007-IMG_4931.jpg', 'extension': 'jpg', 'bytes': 4076361, 'mtime': '2026-06-26T09:49:23+00:00', 'mtime_ns': 1782467363230195989, 'apple_photos': {'album': {'assetCount': 8, 'kind': 'album', 'localIdentifier': '0E8E3B45-DBBB-4E07-A09C-14BA10B8EBE0/L0/040', 'subtype': 2, 'title': '2023 San Diego, CA, USA', 'type': 1}, 'burstFilterOutcome': 'non-burst-keep', 'creationDate': '2023-11-25T21:00:49Z', 'eligible': True, 'exportStrategy': 'rendered_jpeg', 'fallbackResourceFilename': 'IMG_4931.HEIC', 'fallbackResourceFormat': 'HEIC', 'filename': 'IMG_4931.jpg', 'index': 7, 'localIdentifier': '4B07E059-35E9-49C9-A3FD-16C52125F62C/L0/001', 'localJPEGFallbackAvailable': True, 'location': {'altitude': 2.626257672861322, 'horizontalAccuracy': 8.571854440789474, 'latitude': 32.713905, 'longitude': -117.175675, 'timestamp': '2023-11-25T21:00:48Z', 'verticalAccuracy': 0}, 'mediaType': 'photo', 'modificationDate': '2025-10-22T00:08:59Z', 'path': '/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260626T094835Z-batch/001-2023-san-diego-ca-usa/0007-IMG_4931.jpg', 'pixelHeight': 4032, 'pixelWidth': 3024, 'preferredResourceFilename': 'IMG_4931.HEIC', 'preferredResourceFormat': 'HEIC', 'reason': 'Photos still image will import as the current rendered JPG from Photos.', 'relative_path': '0007-IMG_4931.jpg', 'renderAttemptError': 'Photos reported the rendered asset at 100% but did not provide the JPEG callback after 6 seconds. Owner will try the local image-source fallback next.', 'renderFallback': 'local-resource-jpeg', 'renderFallbackReason': 'Photos reported the rendered asset at 100% but did not provide the JPEG callback after 6 seconds. Owner will try the local image-source fallback next.', 'resourceFormat': 'HEIC', 'resourceFormatCounts': {'HEIC': 1}, 'resourceFormats': ['HEIC'], 'resources': [{'fileExtension': 'HEIC', 'format': 'HEIC', 'jpegFallbackCompatible': True, 'originalFilename': 'IMG_4931.HEIC', 'type': 1, 'uniformTypeIdentifier': 'public.heic'}], 'sourceAnchor': 'apple-photos://4B07E059-35E9-49C9-A3FD-16C52125F62C/L0/001', 'status': 'materialized'}, 'apple_photos_album': {'assetCount': 8, 'kind': 'album', 'localIdentifier': '0E8E3B45-DBBB-4E07-A09C-14BA10B8EBE0/L0/040', 'subtype': 2, 'title': '2023 San Diego, CA, USA', 'type': 1}, 'gps': {'altitude': 2.626257672861322, 'horizontalAccuracy': 8.571854440789474, 'latitude': 32.713905, 'longitude': -117.175675, 'timestamp': '2023-11-25T21:00:48Z', 'verticalAccuracy': 0, 'GPSLatitudeDecimal': 32.713905, 'GPSLongitudeDecimal': -117.175675, 'source': 'apple_photos'}, 'source_anchor_path': 'apple-photos://4B07E059-35E9-49C9-A3FD-16C52125F62C/L0/001'}"
+      ],
+      "public_preview_keys": [
+        "expo/001-b6b4579c4a_900.jpg",
+        "expo/001-b6b4579c4a_1800.jpg"
+      ],
+      "private_keys": [
+        "masters/001-b6b4579c4a.jpg",
+        "renders/001-b6b4579c4a_1mp.jpg",
+        "renders/001-b6b4579c4a_3mp.jpg",
+        "renders/001-b6b4579c4a_6mp.jpg"
+      ]
+    },
+    {
+      "id": "001-ef335584c1",
+      "title": "0007 IMG 1175",
+      "discarded_at": "2026-07-22T09:01:33.452864+00:00",
+      "from_state": "hidden",
+      "from_slug": "italy",
+      "source_slug": "italy",
+      "media_type": "photo",
+      "asset_paths": {},
+      "source_paths": [
+        "002-2025-san-gimignano/0007-IMG_1175.jpg",
+        "/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260622T172728Z-batch/002-2025-san-gimignano/0007-IMG_1175.jpg",
+        "{'path': '/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260622T172728Z-batch/002-2025-san-gimignano/0007-IMG_1175.jpg', 'name': '0007-IMG_1175.jpg', 'extension': 'jpg', 'bytes': 1952394, 'mtime': '2026-06-22T17:39:21+00:00', 'mtime_ns': 1782149961421232623, 'apple_photos': {'album': {'assetCount': 16, 'kind': 'album', 'localIdentifier': '7DB66449-0D49-4BFA-B61D-66DE46297F45/L0/040', 'subtype': 2, 'title': '2025 San Gimignano', 'type': 1}, 'burstFilterOutcome': 'non-burst-keep', 'creationDate': '2025-05-12T11:38:13Z', 'eligible': True, 'exportStrategy': 'rendered_jpeg', 'fallbackResourceFilename': 'IMG_1175.HEIC', 'fallbackResourceFormat': 'HEIC', 'filename': 'IMG_1175.jpg', 'index': 7, 'localIdentifier': '268204F7-173D-4D53-B614-C39AFFDC4809/L0/001', 'localJPEGFallbackAvailable': True, 'location': {'altitude': 250.7321434441048, 'horizontalAccuracy': 4.7338264517553545, 'latitude': 43.481741666666665, 'longitude': 11.0307055, 'timestamp': '2025-05-12T11:38:13Z', 'verticalAccuracy': 0}, 'mediaType': 'photo', 'modificationDate': '2026-05-03T13:00:53Z', 'path': '/Users/ecohen/Dev/PhotosByElie/tmp/apple-photos-import/20260622T172728Z-batch/002-2025-san-gimignano/0007-IMG_1175.jpg', 'pixelHeight': 3024, 'pixelWidth': 4032, 'preferredResourceFilename': 'IMG_1175.HEIC', 'preferredResourceFormat': 'HEIC', 'reason': 'Photos still image will import as the current rendered JPG from Photos.', 'relative_path': '0007-IMG_1175.jpg', 'renderAttemptError': 'Photos reported the rendered asset at 100% but did not provide the JPEG callback after 6 seconds. Owner will try the local HEIC/source fallback next.', 'renderFallback': 'local-resource-jpeg', 'renderFallbackReason': 'Photos reported the rendered asset at 100% but did not provide the JPEG callback after 6 seconds. Owner will try the local HEIC/source fallback next.', 'resourceFormat': 'HEIC', 'resourceFormatCounts': {'HEIC': 1}, 'resourceFormats': ['HEIC'], 'resources': [{'fileExtension': 'HEIC', 'format': 'HEIC', 'jpegFallbackCompatible': True, 'originalFilename': 'IMG_1175.HEIC', 'type': 1, 'uniformTypeIdentifier': 'public.heic'}], 'sourceAnchor': 'apple-photos://268204F7-173D-4D53-B614-C39AFFDC4809/L0/001', 'status': 'materialized'}, 'apple_photos_album': {'assetCount': 16, 'kind': 'album', 'localIdentifier': '7DB66449-0D49-4BFA-B61D-66DE46297F45/L0/040', 'subtype': 2, 'title': '2025 San Gimignano', 'type': 1}, 'gps': {'altitude': 250.7321434441048, 'horizontalAccuracy': 4.7338264517553545, 'latitude': 43.481741666666665, 'longitude': 11.0307055, 'timestamp': '2025-05-12T11:38:13Z', 'verticalAccuracy': 0, 'GPSLatitudeDecimal': 43.481741666666665, 'GPSLongitudeDecimal': 11.0307055, 'source': 'apple_photos'}, 'source_anchor_path': 'apple-photos://268204F7-173D-4D53-B614-C39AFFDC4809/L0/001'}"
+      ],
+      "public_preview_keys": [
+        "expo/001-ef335584c1_900.jpg",
+        "expo/001-ef335584c1_1800.jpg"
+      ],
+      "private_keys": [
+        "masters/001-ef335584c1.jpg",
+        "renders/001-ef335584c1_1mp.jpg",
+        "renders/001-ef335584c1_3mp.jpg",
+        "renders/001-ef335584c1_6mp.jpg"
       ]
     },
     {

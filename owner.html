@@ -20,7 +20,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
-<body data-gallery="new-owner">
+<body data-gallery="new-owner" data-owner-writer="browser">
   <a class="skip-link" href="#main-content">Skip to content</a>
   <header class="topbar shell">
     <a class="header-back-button mobile-header-back" href="./" aria-label="Back to Photos"><span aria-hidden="true">&lt;</span></a>
@@ -67,8 +67,17 @@
         <div><dt>Connectors</dt><dd data-new-owner-count="connector">0</dd></div>
       </dl>
 
+      <section class="new-owner-cutover-notice" aria-label="Backstage writer status">
+        <div>
+          <p class="eyebrow">Native single writer</p>
+          <h2>Backstage is the active Owner workspace</h2>
+          <p>Browser Owner remains available for authentication, enrollment, access review, connector health, and audit. Catalog and workflow mutations now run only through the signed Backstage app on this Mac.</p>
+        </div>
+        <span class="new-owner-chip is-live">Reversible cutover</span>
+      </section>
+
       <div class="new-owner-grid">
-        <section class="new-owner-card new-owner-card-wide" id="build-a-fixture" aria-label="Build a Fixture">
+        <section class="new-owner-card new-owner-card-wide" id="build-a-fixture" aria-label="Build a Fixture" data-web-owner-mutation-surface>
           <div class="owner-card-titlebar">
             <div>
               <p class="eyebrow">Universal intake</p>
@@ -146,7 +155,7 @@
           <p class="new-owner-card-note">Search and snapshot are private. Source assets are never copied, deleted, uploaded, or messaged. The snapshot opens the existing Sidecar with only candidate scope changed.</p>
         </section>
 
-        <section class="new-owner-card" aria-label="Waste Basket">
+        <section class="new-owner-card" aria-label="Waste Basket" data-web-owner-mutation-surface>
           <div class="owner-card-titlebar">
             <div>
               <p class="eyebrow">Recoverable rejects</p>
@@ -170,7 +179,7 @@
           <div data-new-owner-access class="new-owner-access-list"></div>
         </section>
 
-        <section class="new-owner-card new-owner-card-wide" aria-label="Apple Photos Real Estate intake" data-legacy-re-intake>
+        <section class="new-owner-card new-owner-card-wide" aria-label="Apple Photos Real Estate intake" data-legacy-re-intake data-web-owner-mutation-surface>
           <div class="owner-card-titlebar">
             <div>
               <p class="eyebrow">Compatibility intake</p>
@@ -206,7 +215,7 @@
           <p class="new-owner-card-note">Choose an existing sub-fixture or select <strong>New…</strong> to name another one. You can also type a new fixture name. Assignment builds a persistent local <strong>RE / Fixture / Sub-fixture</strong> intake and registers the fixture for Real Estate import. It does not publish, upload, expose a gallery, or message anyone.</p>
         </section>
 
-        <section class="new-owner-card" aria-label="Owner action queue">
+        <section class="new-owner-card" aria-label="Owner action queue" data-web-owner-mutation-surface>
           <div class="owner-card-titlebar">
             <div>
               <p class="eyebrow">Actions</p>

@@ -23,6 +23,31 @@ body[data-gallery="new-owner"] main.new-owner-shell {
   gap: 1rem;
 }
 
+.new-owner-cutover-notice {
+  display: none;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: center;
+  margin-block: 1rem;
+  padding: 1rem;
+  border: 1px solid color-mix(in srgb, var(--new-owner-teal) 52%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 86%, var(--new-owner-teal) 14%);
+}
+
+.new-owner-cutover-notice h2,
+.new-owner-cutover-notice p {
+  margin: 0;
+}
+
+body[data-owner-writer="backstage"] .new-owner-cutover-notice {
+  display: grid;
+}
+
+body[data-owner-writer="backstage"] [data-web-owner-mutation-surface] {
+  display: none !important;
+}
+
 .new-owner-hero {
   display: flex;
   min-height: auto;
@@ -287,6 +312,7 @@ body[data-gallery="new-owner"] main.new-owner-shell {
 }
 
 @media (max-width: 900px) {
+  .new-owner-cutover-notice { grid-template-columns: 1fr; }
   .fixture-builder-steps { grid-template-columns: 1fr; }
   .fixture-builder-create,
   .fixture-builder-current,

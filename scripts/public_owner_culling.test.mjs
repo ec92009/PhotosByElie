@@ -131,9 +131,16 @@ test("Owner exposes a contained fixture builder and recoverable Waste Basket man
   assert.match(ownerScript, /details\.open = isPrimaryAction \|\| isWasteBasket/);
   assert.match(ownerStyles, /\.new-owner-card\[aria-label="Waste Basket"\]\s*\{[\s\S]*grid-column:\s*1\s*\/\s*-1;/);
   assert.match(owner, /aria-label="Backstage enrollment"/);
+  assert.match(owner, /data-owner-writer="browser"/);
+  assert.match(owner, /aria-label="Backstage writer status"/);
+  assert.match(owner, /data-web-owner-mutation-surface/);
   assert.match(owner, /data-backstage-enroll-create/);
   assert.match(owner, /data-backstage-enroll-code/);
   assert.match(ownerScript, /ownerApiPath\("\/devices"\)/);
   assert.match(ownerScript, /encodeBackstageEnrollment/);
   assert.match(ownerScript, /navigator\.clipboard\.writeText\(code\)/);
+  assert.match(ownerScript, /const nativeOwnerCutover = document\.body\.dataset\.ownerWriter === "backstage"/);
+  assert.match(ownerScript, /if \(!nativeOwnerCutover && ownerAllowed\(\) && effectiveConnectorId\(\)/);
+  assert.match(ownerScript, /if \(!nativeOwnerCutover\) \{[\s\S]*data-fixture-create/);
+  assert.match(ownerStyles, /body\[data-owner-writer="backstage"\] \[data-web-owner-mutation-surface\]\s*\{[\s\S]*display:\s*none !important;/);
 });

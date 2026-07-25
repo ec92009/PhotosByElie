@@ -13,6 +13,7 @@
   const RE_FIXTURE_STORAGE_KEY = "pbe-new-owner-re-fixture";
   const RE_PROJECT_STORAGE_KEY = "pbe-new-owner-re-project";
   const RE_NEW_PROJECT_VALUE = "__new__";
+  const nativeOwnerCutover = document.body.dataset.ownerWriter === "backstage";
   const state = {
     session: null,
     access: null,
@@ -702,9 +703,11 @@
     renderConnectors();
     renderLocalConnector();
     renderAction();
-    renderRealEstateIntake();
-    renderFixtureBuilder();
-    syncOpenSidecarControl();
+    if (!nativeOwnerCutover) {
+      renderRealEstateIntake();
+      renderFixtureBuilder();
+      syncOpenSidecarControl();
+    }
     prepareCollapsibleSections();
     queueMasonryLayout();
   };
@@ -851,7 +854,11 @@
       }
       await localConnectorPromise;
       forgetLegacyConnectorPreference();
-      setStatus(ownerAllowed() ? "Cloud Owner session verified." : "Owner role is required.");
+      setStatus(ownerAllowed()
+        ? (nativeOwnerCutover
+          ? "Backstage is the active writer. Browser Owner is read-only."
+          : "Cloud Owner session verified.")
+        : "Owner role is required.");
       if (connectorDownload && ownerAllowed() && workerBase) {
         connectorDownload.href = `${workerBase}${ownerApiPath("/owner/connector/download/mac")}`;
         connectorDownload.hidden = false;
@@ -865,7 +872,7 @@
     } finally {
       root?.classList.remove("is-loading");
       render();
-      if (ownerAllowed() && effectiveConnectorId() && !state.fixtureTreeLoaded && !state.busy) {
+      if (!nativeOwnerCutover && ownerAllowed() && effectiveConnectorId() && !state.fixtureTreeLoaded && !state.busy) {
         window.setTimeout(() => loadFixtureTree({ quiet: true }), 0);
       }
     }
@@ -1551,123 +1558,125 @@
   $("[data-new-owner-refresh]")?.addEventListener("click", () => load());
   $("[data-new-owner-login]")?.addEventListener("click", login);
   $("[data-new-owner-logout]")?.addEventListener("click", logout);
-  $("[data-new-owner-queue-check]")?.addEventListener("click", queueCheck);
-  $("[data-new-owner-sync-photos]")?.addEventListener("click", queuePhotosIndexSync);
-  $("[data-new-owner-queue-sidecar]")?.addEventListener("click", openLocalSidecar);
-  wasteBasketLink?.addEventListener("click", openWasteBasket);
-  $("[data-new-owner-upload-publish]")?.addEventListener("click", queueUploadPublish);
   backstageEnrollCreateButton?.addEventListener("click", createBackstageEnrollment);
   backstageEnrollCopyButton?.addEventListener("click", copyBackstageEnrollment);
-  $("[data-new-owner-re-load]")?.addEventListener("click", loadReAlbums);
-  $("[data-new-owner-re-preflight]")?.addEventListener("click", previewReAlbums);
-  $("[data-new-owner-re-assign]")?.addEventListener("click", assignRePhotos);
-  $("[data-fixture-create]")?.addEventListener("click", createFixtureFromForm);
-  $("[data-fixture-rename]")?.addEventListener("click", renameCurrentFixture);
-  $("[data-fixture-move]")?.addEventListener("click", moveCurrentFixture);
-  $("[data-fixture-archive]")?.addEventListener("click", () => setCurrentFixtureArchived(false));
-  $("[data-fixture-reopen]")?.addEventListener("click", () => setCurrentFixtureArchived(true));
-  $("[data-fixture-search]")?.addEventListener("click", searchFixtureAssets);
-  $("[data-fixture-pool-create]")?.addEventListener("click", createFixturePool);
-  $("[data-fixture-pool-refresh-preview]")?.addEventListener("click", () => refreshFixturePool(false));
-  $("[data-fixture-pool-refresh-apply]")?.addEventListener("click", () => refreshFixturePool(true));
-  $("[data-fixture-place-selected]")?.addEventListener("click", placeSelectedInFixtures);
-  $("[data-fixture-placement-list]")?.addEventListener("click", loadFixturePlacements);
-  $("[data-fixture-delivery]")?.addEventListener("click", reviewFixtureDelivery);
-  fixtureUploadRunPlanButton?.addEventListener("click", () => adoptFixtureUploadRun(false));
-  fixtureUploadRunCommitButton?.addEventListener("click", () => adoptFixtureUploadRun(true));
-  fixtureUploadRunInput?.addEventListener("input", () => {
-    state.fixtureUploadRunPlan = null;
-    state.fixtureUploadRunSelectedAssetIds = new Set();
-    syncFixtureControls();
-  });
-  fixtureUploadRunHistoricalInput?.addEventListener("change", () => {
-    state.fixtureUploadRunPlan = null;
-    state.fixtureUploadRunSelectedAssetIds = new Set();
-    syncFixtureControls();
-  });
-  fixtureUploadRunOutput?.addEventListener("change", (event) => {
-    const input = event.target.closest("[data-fixture-upload-run-asset-id]");
-    if (!input) return;
-    const assetId = input.getAttribute("data-fixture-upload-run-asset-id") || "";
-    if (input.checked) state.fixtureUploadRunSelectedAssetIds.add(assetId);
-    else state.fixtureUploadRunSelectedAssetIds.delete(assetId);
-    syncFixtureControls();
-  });
-  fixturePhotosPlanButton?.addEventListener("click", () => fixturePhotosWriteback(false));
-  fixturePhotosCommitButton?.addEventListener("click", () => fixturePhotosWriteback(true));
-  fixtureCurrentInput?.addEventListener("change", () => {
-    state.fixtureCurrentId = fixtureCurrentInput.value;
-    state.fixtureSearchItems = [];
-    state.fixtureSelectedAssetIds = new Set();
-    state.fixturePlacements = [];
-    state.fixturePool = null;
-    state.fixtureUploadRunPlan = null;
-    state.fixtureUploadRunSelectedAssetIds = new Set();
-    if (fixtureDeliveryRoot) fixtureDeliveryRoot.textContent = "";
-    const fixture = currentFixture();
-    setFixtureStatus(fixture ? `Opened ${fixture.breadcrumbLabel}. Search is read-only until you create a snapshot.` : "Choose or create a fixture.", fixture ? "success" : "");
-    renderFixtureBuilder();
-  });
-  fixtureResultsRoot?.addEventListener("change", (event) => {
-    const input = event.target.closest("[data-fixture-asset-id]");
-    if (!input) return;
-    const assetId = input.getAttribute("data-fixture-asset-id") || "";
-    if (input.checked) state.fixtureSelectedAssetIds.add(assetId);
-    else state.fixtureSelectedAssetIds.delete(assetId);
-    setFixtureStatus(`${state.fixtureSelectedAssetIds.size.toLocaleString()} candidate${state.fixtureSelectedAssetIds.size === 1 ? "" : "s"} selected for the immutable snapshot.`, "success");
-    syncFixtureControls();
-  });
-  fixturePlacementsRoot?.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-fixture-placement-action]");
-    if (!button) return;
-    const row = button.closest("[data-fixture-placement-id]");
-    changePlacement(row, button.getAttribute("data-fixture-placement-action") || "remove");
-  });
-  fixturePlacementsRoot?.addEventListener("change", (event) => {
-    const select = event.target.closest("[data-fixture-placement-move]");
-    if (!select?.value) return;
-    changePlacement(select.closest("[data-fixture-placement-id]"), "move");
-  });
-  [reFixtureInput, reProjectNewInput].filter(Boolean).forEach((input) => {
-    input.addEventListener("input", () => {
+  if (!nativeOwnerCutover) {
+    $("[data-new-owner-queue-check]")?.addEventListener("click", queueCheck);
+    $("[data-new-owner-sync-photos]")?.addEventListener("click", queuePhotosIndexSync);
+    $("[data-new-owner-queue-sidecar]")?.addEventListener("click", openLocalSidecar);
+    wasteBasketLink?.addEventListener("click", openWasteBasket);
+    $("[data-new-owner-upload-publish]")?.addEventListener("click", queueUploadPublish);
+    $("[data-new-owner-re-load]")?.addEventListener("click", loadReAlbums);
+    $("[data-new-owner-re-preflight]")?.addEventListener("click", previewReAlbums);
+    $("[data-new-owner-re-assign]")?.addEventListener("click", assignRePhotos);
+    $("[data-fixture-create]")?.addEventListener("click", createFixtureFromForm);
+    $("[data-fixture-rename]")?.addEventListener("click", renameCurrentFixture);
+    $("[data-fixture-move]")?.addEventListener("click", moveCurrentFixture);
+    $("[data-fixture-archive]")?.addEventListener("click", () => setCurrentFixtureArchived(false));
+    $("[data-fixture-reopen]")?.addEventListener("click", () => setCurrentFixtureArchived(true));
+    $("[data-fixture-search]")?.addEventListener("click", searchFixtureAssets);
+    $("[data-fixture-pool-create]")?.addEventListener("click", createFixturePool);
+    $("[data-fixture-pool-refresh-preview]")?.addEventListener("click", () => refreshFixturePool(false));
+    $("[data-fixture-pool-refresh-apply]")?.addEventListener("click", () => refreshFixturePool(true));
+    $("[data-fixture-place-selected]")?.addEventListener("click", placeSelectedInFixtures);
+    $("[data-fixture-placement-list]")?.addEventListener("click", loadFixturePlacements);
+    $("[data-fixture-delivery]")?.addEventListener("click", reviewFixtureDelivery);
+    fixtureUploadRunPlanButton?.addEventListener("click", () => adoptFixtureUploadRun(false));
+    fixtureUploadRunCommitButton?.addEventListener("click", () => adoptFixtureUploadRun(true));
+    fixtureUploadRunInput?.addEventListener("input", () => {
+      state.fixtureUploadRunPlan = null;
+      state.fixtureUploadRunSelectedAssetIds = new Set();
+      syncFixtureControls();
+    });
+    fixtureUploadRunHistoricalInput?.addEventListener("change", () => {
+      state.fixtureUploadRunPlan = null;
+      state.fixtureUploadRunSelectedAssetIds = new Set();
+      syncFixtureControls();
+    });
+    fixtureUploadRunOutput?.addEventListener("change", (event) => {
+      const input = event.target.closest("[data-fixture-upload-run-asset-id]");
+      if (!input) return;
+      const assetId = input.getAttribute("data-fixture-upload-run-asset-id") || "";
+      if (input.checked) state.fixtureUploadRunSelectedAssetIds.add(assetId);
+      else state.fixtureUploadRunSelectedAssetIds.delete(assetId);
+      syncFixtureControls();
+    });
+    fixturePhotosPlanButton?.addEventListener("click", () => fixturePhotosWriteback(false));
+    fixturePhotosCommitButton?.addEventListener("click", () => fixturePhotosWriteback(true));
+    fixtureCurrentInput?.addEventListener("change", () => {
+      state.fixtureCurrentId = fixtureCurrentInput.value;
+      state.fixtureSearchItems = [];
+      state.fixtureSelectedAssetIds = new Set();
+      state.fixturePlacements = [];
+      state.fixturePool = null;
+      state.fixtureUploadRunPlan = null;
+      state.fixtureUploadRunSelectedAssetIds = new Set();
+      if (fixtureDeliveryRoot) fixtureDeliveryRoot.textContent = "";
+      const fixture = currentFixture();
+      setFixtureStatus(fixture ? `Opened ${fixture.breadcrumbLabel}. Search is read-only until you create a snapshot.` : "Choose or create a fixture.", fixture ? "success" : "");
+      renderFixtureBuilder();
+    });
+    fixtureResultsRoot?.addEventListener("change", (event) => {
+      const input = event.target.closest("[data-fixture-asset-id]");
+      if (!input) return;
+      const assetId = input.getAttribute("data-fixture-asset-id") || "";
+      if (input.checked) state.fixtureSelectedAssetIds.add(assetId);
+      else state.fixtureSelectedAssetIds.delete(assetId);
+      setFixtureStatus(`${state.fixtureSelectedAssetIds.size.toLocaleString()} candidate${state.fixtureSelectedAssetIds.size === 1 ? "" : "s"} selected for the immutable snapshot.`, "success");
+      syncFixtureControls();
+    });
+    fixturePlacementsRoot?.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-fixture-placement-action]");
+      if (!button) return;
+      const row = button.closest("[data-fixture-placement-id]");
+      changePlacement(row, button.getAttribute("data-fixture-placement-action") || "remove");
+    });
+    fixturePlacementsRoot?.addEventListener("change", (event) => {
+      const select = event.target.closest("[data-fixture-placement-move]");
+      if (!select?.value) return;
+      changePlacement(select.closest("[data-fixture-placement-id]"), "move");
+    });
+    [reFixtureInput, reProjectNewInput].filter(Boolean).forEach((input) => {
+      input.addEventListener("input", () => {
+        saveReRouting();
+        syncReControls();
+      });
+    });
+    reProjectInput?.addEventListener("change", () => {
+      showNewReProjectInput();
       saveReRouting();
       syncReControls();
+      if (reProjectInput.value === RE_NEW_PROJECT_VALUE) reProjectNewInput?.focus();
     });
-  });
-  reProjectInput?.addEventListener("change", () => {
-    showNewReProjectInput();
-    saveReRouting();
-    syncReControls();
-    if (reProjectInput.value === RE_NEW_PROJECT_VALUE) reProjectNewInput?.focus();
-  });
-  reAlbumsRoot?.addEventListener("change", (event) => {
-    const checkbox = event.target.closest("[data-new-owner-re-album-id]");
-    if (!checkbox) return;
-    const id = checkbox.getAttribute("data-new-owner-re-album-id") || "";
-    if (checkbox.checked) state.reSelectedAlbumIds.add(id);
-    else state.reSelectedAlbumIds.delete(id);
-    state.rePreviewItems = [];
-    state.reSelectedAssetIds = new Set();
-    setReStatus(`${state.reSelectedAlbumIds.size} album${state.reSelectedAlbumIds.size === 1 ? "" : "s"} selected.`, "success");
-    renderRealEstateIntake();
-    queueMasonryLayout();
-  });
-  rePreviewRoot?.addEventListener("change", (event) => {
-    const checkbox = event.target.closest("[data-new-owner-re-asset-id]");
-    if (!checkbox) return;
-    const id = checkbox.getAttribute("data-new-owner-re-asset-id") || "";
-    if (checkbox.checked) state.reSelectedAssetIds.add(id);
-    else state.reSelectedAssetIds.delete(id);
-    setReStatus(`${state.reSelectedAssetIds.size} photo${state.reSelectedAssetIds.size === 1 ? "" : "s"} selected for private assignment.`, "success");
-    syncReControls();
-  });
-  actionRoot?.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-new-owner-action-command]");
-    if (!button) return;
-    const command = button.getAttribute("data-new-owner-action-command");
-    const actionId = button.getAttribute("data-action-id");
-    transitionAction(actionId, command);
-  });
+    reAlbumsRoot?.addEventListener("change", (event) => {
+      const checkbox = event.target.closest("[data-new-owner-re-album-id]");
+      if (!checkbox) return;
+      const id = checkbox.getAttribute("data-new-owner-re-album-id") || "";
+      if (checkbox.checked) state.reSelectedAlbumIds.add(id);
+      else state.reSelectedAlbumIds.delete(id);
+      state.rePreviewItems = [];
+      state.reSelectedAssetIds = new Set();
+      setReStatus(`${state.reSelectedAlbumIds.size} album${state.reSelectedAlbumIds.size === 1 ? "" : "s"} selected.`, "success");
+      renderRealEstateIntake();
+      queueMasonryLayout();
+    });
+    rePreviewRoot?.addEventListener("change", (event) => {
+      const checkbox = event.target.closest("[data-new-owner-re-asset-id]");
+      if (!checkbox) return;
+      const id = checkbox.getAttribute("data-new-owner-re-asset-id") || "";
+      if (checkbox.checked) state.reSelectedAssetIds.add(id);
+      else state.reSelectedAssetIds.delete(id);
+      setReStatus(`${state.reSelectedAssetIds.size} photo${state.reSelectedAssetIds.size === 1 ? "" : "s"} selected for private assignment.`, "success");
+      syncReControls();
+    });
+    actionRoot?.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-new-owner-action-command]");
+      if (!button) return;
+      const command = button.getAttribute("data-new-owner-action-command");
+      const actionId = button.getAttribute("data-action-id");
+      transitionAction(actionId, command);
+    });
+  }
   window.addEventListener("resize", queueMasonryLayout);
   absorbAuthTokenFromHash();
   forgetLegacyConnectorPreference();

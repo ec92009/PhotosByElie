@@ -85,6 +85,7 @@ public actor MetadataGiveBackService {
         var manifest: [String: JSONValue] = [
             "mode": .string(mode),
             "fixtureId": .string(fixtureID),
+            "includePreviews": .bool(false),
         ]
         if !cleanIDs.isEmpty {
             manifest["assetIds"] = .array(cleanIDs.map(JSONValue.string))

@@ -6,13 +6,15 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v147.4`
+- Current visible version: `v147.5`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
-- `v147.4` publishes the Owner-only Backstage enrollment panel and the
-  reversible writer gate while deliberately retaining the browser Owner as the
-  active writer. Max is now enrolled and can restore its native session from
-  Keychain; the remaining gate is explicit Photos approval plus the read-only
-  installed-build readiness check before cutover.
+- `v147.5` makes the signed Backstage app the active Owner writer on Max after
+  native enrollment, a cold Keychain session restore, explicit Photos
+  approval, and a Worker-audited read-only metadata check. Browser Owner keeps
+  authentication, enrollment, access, connector-health, and audit surfaces;
+  one reviewed `data-owner-writer` change remains the rollback.
+- `v147.4` published the Owner-only Backstage enrollment panel and reversible
+  writer gate while retaining the browser Owner as the active writer.
 - `v147.3` corrects a 12-photo La Jolla Cove cohort that had inherited the
   title `Nerja, beach` and Spain keywords. The valid USA images now identify
   La Jolla, San Diego, California.

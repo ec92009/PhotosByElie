@@ -288,6 +288,10 @@ struct OwnerCoreTests {
             request.payload["manifest"]?.objectValue?["mode"]?.stringValue
                 == "fixture-photos-writeback-plan"
         )
+        #expect(
+            request.payload["manifest"]?.objectValue?["includePreviews"]?.boolValue
+                == false
+        )
     }
 
     @Test("Metadata give-back retries only independently failed asset IDs")

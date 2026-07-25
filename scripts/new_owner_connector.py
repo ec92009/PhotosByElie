@@ -1173,7 +1173,7 @@ def execute_action(config: ConnectorConfig, action: dict) -> dict:
         result["previewItems"] = items
         result["stateCounts"] = list(local.get("preview", {}).get("stateCounts") or [])
         result["previewErrors"] = preview_errors
-        result["readOnly"] = False
+        result.setdefault("readOnly", False)
         if manifest.get("launchWorkspace"):
             result["workspace"] = _launch_sidecar_workspace(config)
         return result

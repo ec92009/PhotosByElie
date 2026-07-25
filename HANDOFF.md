@@ -15,15 +15,15 @@ for remote execution.
 - Public site: `https://photos-by-elie.com/`
 - Local preview: `http://localhost:8000/`
 - Owner intake URL: `https://photos-by-elie.com/owner.html`
-- Current visible build: `v147.4`
+- Current visible build: `v147.5`
 - Sidecar local build: `v126.6`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
-- The PBB-1 API and PBB-11 native Backstage implementation are at the final
-  operational gate. Web/Python tests (155 Node + 117 Python), 22 Swift tests,
+- The PBB-1 API and PBB-11 native Backstage implementation have completed the
+  production cutover. Web/Python tests (155 Node + 118 Python), 22 Swift tests,
   API contract generation, and publication validation pass. The reversible
-  PBB-18 parity rehearsal is checked in and the Owner page has a staged
-  `data-owner-writer` cutover; production deliberately remains `browser`.
+  PBB-18 parity rehearsal is checked in and the Owner page now declares
+  `data-owner-writer="backstage"`.
 - `/Users/ecohen/Applications/PhotosByElie Backstage.app` is built and
   codesigned. Elie explicitly approved enrolling Max on 2026-07-25, and Max is
   now enrolled with an independently revocable device credential stored in
@@ -36,11 +36,19 @@ for remote execution.
   permanently discarded records separately, avoiding the former 6,139-row
   SwiftUI payload. No lifecycle item was restored or discarded during this
   rehearsal.
-  `v147.4` keeps the browser as the active writer. The remaining operational
-  gate is explicit macOS Photos approval for the final installed build,
-  followed by a read-only `metadata-read-many` check. After that non-mutating
-  proof, flip the active writer, publish the next visible version, and close
-  the verified PBB children/epics.
+  Max granted explicit Photos access and the installed app indexed 2,000
+  recent Photos items. Worker action
+  `owner-action-a8171125-babf-48e4-bc9d-deafec16b699` then completed a
+  read-only `metadata-read-many` dry-run for two eligible items with no read
+  errors, no previews, no publication or client message, and no byte change to
+  `Owner.sqlite`. `v147.5` therefore makes Backstage the active writer.
+- The audited dry-run also exposed and fixed a connector reporting bug that
+  overwrote `readOnly: true`; the connector now preserves the operation result.
+  Metadata-only reads explicitly suppress PhotoKit preview generation.
+- `v147.5` makes the signed Backstage app the active Owner writer. Browser
+  Owner retains authentication, enrollment, access review, connector health,
+  and audit. Rollback remains one reviewed `data-owner-writer="browser"`
+  change followed by normal versioned publication.
 - `v147.4` publishes the Owner-only Backstage enrollment panel and the
   reversible writer gate while deliberately retaining the browser Owner as the
   active writer until native enrollment and read-only readiness checks pass.

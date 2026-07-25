@@ -341,6 +341,22 @@ class UploadRegistrationScopeTest(unittest.TestCase):
         self.assertTrue(result["workspace"]["launched"])
         self.assertEqual(result["workspace"]["surface"], "sidecar.html")
 
+    def test_culling_action_preserves_read_only_connector_result(self):
+        local_result = {
+            "result": {"recordsPrepared": 2, "readOnly": True},
+            "preview": {"items": [], "stateCounts": []},
+        }
+        with patch(
+            "scripts.new_owner_connector._load_local_modules",
+            return_value=(lambda *_args, **_kwargs: local_result, None, None, None, None),
+        ):
+            result = execute_action(self.config, {
+                "type": "sidecar-culling-review",
+                "payload": {"manifest": {"includePreviews": False}},
+            })
+
+        self.assertTrue(result["readOnly"])
+
     def test_photo_moderation_batches_public_photo_ids(self):
         calls = []
 

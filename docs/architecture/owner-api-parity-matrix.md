@@ -59,12 +59,12 @@ parity, atomic failed-move behavior in both implementations, native SQLite
 backup recovery, and no change to the live Owner database or public/client
 artifacts. The public Owner page also has a one-attribute active-writer gate:
 `data-owner-writer="backstage"` removes browser mutation surfaces while
-retaining enrollment, access, connectors, and audit views. Production remains
-`data-owner-writer="browser"`. Max completed one-time native enrollment on
+retaining enrollment, access, connectors, and audit views. Production now uses
+that Backstage writer mode. Max completed one-time native enrollment on
 2026-07-25, refreshed its native session from Keychain after a cold relaunch,
-and loaded the current fixture hierarchy without mutation. The final installed
-build still needs explicit macOS Photos approval and the read-only
-`metadata-read-many` launch check before the writer attribute is flipped.
+loaded the current fixture hierarchy without mutation, received explicit
+Photos approval, and completed a Worker-audited read-only
+`metadata-read-many` check without changing `Owner.sqlite`.
 
 ## Action kinds
 

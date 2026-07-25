@@ -154,10 +154,14 @@ The public Owner page declares its active writer on the `body` element:
 Backstage mode leaves enrollment, authentication, access state, connector
 health, and audit views available. It does not delete compatibility routes or
 browser code. Rolling back is therefore one reviewed attribute change followed
-by the normal versioned publication process. The switch must not be activated
-until the installed app has completed one-time device enrollment, refreshed a
-native session from Keychain, opened `Owner.sqlite` read-only, and passed the
-non-mutating connector/PhotoKit readiness checks.
+by the normal versioned publication process.
+
+Max completed the gate on 2026-07-25: one-time device enrollment, cold
+Keychain session restoration, read-only `Owner.sqlite` access, explicit Photos
+approval, a 2,000-item PhotoKit index, and a Worker-audited two-item
+`metadata-read-many` dry-run. The action completed with zero read errors, no
+previews, no publication or client message, and an unchanged Owner database.
+The production attribute is therefore `data-owner-writer="backstage"`.
 
 ## Extension seams
 

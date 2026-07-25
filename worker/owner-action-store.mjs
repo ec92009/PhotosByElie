@@ -43,7 +43,7 @@ export const createMemoryOwnerActionStore = () => {
     listActions: async ({ limit = 25 } = {}) => [...actions.values()]
       .map(clone)
       .sort(byNewestAction)
-      .slice(0, Math.max(1, Math.min(100, Number(limit) || 25))),
+      .slice(0, Math.max(1, Math.min(200, Number(limit) || 25))),
     listPendingActions: async ({ limit = 100 } = {}) => [...actions.values()]
       .filter(isPendingAction)
       .map(clone)
@@ -140,7 +140,7 @@ export const createKvOwnerActionStore = ({
     },
     listActions: async ({ limit = 25 } = {}) => {
       if (typeof namespace.list !== "function") return [];
-      const boundedLimit = Math.max(1, Math.min(100, Number(limit) || 25));
+      const boundedLimit = Math.max(1, Math.min(200, Number(limit) || 25));
       const actionsById = new Map();
       const addAction = async (id) => {
         const clean = cleanId(id);

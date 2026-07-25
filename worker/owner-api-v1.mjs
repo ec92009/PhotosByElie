@@ -7,7 +7,10 @@ const exactRoutes = new Map([
   ["/auth/login", "/api/auth/login"],
   ["/auth/google/login", "/api/auth/google/login"],
   ["/auth/google/callback", "/api/auth/google/callback"],
-  ["/auth/logout", "/api/auth/logout"],
+  ["/auth/tokens", "/api/owner/auth/tokens"],
+  ["/auth/refresh", "/api/owner/auth/refresh"],
+  ["/auth/logout", "/api/owner/auth/logout"],
+  ["/devices", "/api/owner/devices"],
   ["/owner/session", "/api/owner/session"],
   ["/owner/connectors", "/api/owner/connectors"],
   ["/owner/interactive", "/api/owner/interactive"],
@@ -42,6 +45,10 @@ const dynamicRoutes = [
   {
     pattern: /^\/actions\/([^/]+)(?:\/(claim|complete|fail))?$/,
     destination: (match) => `/api/owner/actions/${match[1]}${match[2] ? `/${match[2]}` : ""}`,
+  },
+  {
+    pattern: /^\/devices\/([^/]+)\/revoke$/,
+    destination: (match) => `/api/owner/devices/${match[1]}/revoke`,
   },
   {
     pattern: /^\/connectors\/actions\/([^/]+)(?:\/(claim|complete|fail))?$/,

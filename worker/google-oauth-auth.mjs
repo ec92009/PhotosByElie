@@ -272,9 +272,10 @@ export const createGoogleOAuthAuth = ({
     return url.protocol === "https:" ? "; SameSite=None; Secure" : "; SameSite=Lax";
   };
 
-  const sessionTokenFor = async (identity) => {
+  const sessionTokenFor = async (identity, tokenSeconds = ttlSeconds) => {
     const createdAt = now();
-    const expiresAt = new Date(createdAt.getTime() + ttlSeconds * 1000).toISOString();
+    const boundedTokenSeconds = boundedSeconds(tokenSeconds, ttlSeconds, 30 * 24 * 60 * 60);
+    const expiresAt = new Date(createdAt.getTime() + boundedTokenSeconds * 1000).toISOString();
     const session = {
       email: String(identity?.email || "").trim().toLowerCase(),
       provider: "google-oauth",
@@ -325,6 +326,7 @@ export const createGoogleOAuthAuth = ({
     provider: "google-oauth",
     loginUrlFor,
     handleCallback,
+    issueSessionToken: sessionTokenFor,
     optionalSession,
     requireSession,
     clearCookieFor,

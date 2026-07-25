@@ -54,13 +54,122 @@ paths:
       responses:
         "302":
           description: Google OAuth redirect
+  /auth/tokens:
+    post:
+      tags: [Authentication]
+      operationId: createOwnerTokens
+      description: >
+        Issues a short-lived bearer token and rotating refresh token. The
+        initial request uses an Owner session or an enrolled device credential.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                deviceId: { type: string }
+                deviceCredential: { type: string, writeOnly: true }
+      responses:
+        "201":
+          description: Native Owner token pair
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OwnerTokenBundle" }
+        "401":
+          $ref: "#/components/responses/Error"
+  /auth/refresh:
+    post:
+      tags: [Authentication]
+      security: []
+      operationId: refreshOwnerTokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string, writeOnly: true }
+      responses:
+        "200":
+          description: Rotated native Owner token pair
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OwnerTokenBundle" }
+        "401":
+          $ref: "#/components/responses/Error"
   /auth/logout:
     post:
       tags: [Authentication]
       operationId: logout
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken: { type: string, writeOnly: true }
       responses:
         "200":
           description: Signed out
+  /devices:
+    get:
+      tags: [Authentication]
+      operationId: listOwnerDevices
+      responses:
+        "200":
+          description: Enrolled native Owner devices
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  devices:
+                    type: array
+                    items: { $ref: "#/components/schemas/OwnerDevice" }
+    post:
+      tags: [Authentication]
+      operationId: enrollOwnerDevice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                platform: { type: string }
+      responses:
+        "201":
+          description: Device enrollment; the credential is returned once
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  device: { $ref: "#/components/schemas/OwnerDevice" }
+                  deviceCredential: { type: string, writeOnly: true }
+  /devices/{deviceId}/revoke:
+    parameters:
+      - in: path
+        name: deviceId
+        required: true
+        schema: { type: string }
+    post:
+      tags: [Authentication]
+      operationId: revokeOwnerDevice
+      responses:
+        "200":
+          description: Device and its refresh tokens revoked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  device: { $ref: "#/components/schemas/OwnerDevice" }
+        "404":
+          $ref: "#/components/responses/Error"
   /owner/session:
     get:
       tags: [Authentication]
@@ -114,8 +223,8 @@ paths:
           application/json:
             schema: { $ref: "#/components/schemas/ActionCreate" }
       responses:
-        "201":
-          description: Action created
+        "202":
+          description: Action queued
           content:
             application/json:
               schema:
@@ -442,6 +551,28 @@ components:
       properties:
         ok: { type: boolean }
         service: { type: string }
+    OwnerTokenBundle:
+      type: object
+      required:
+        [ok, tokenType, accessToken, expiresIn, accessExpiresAt, refreshToken, refreshExpiresAt]
+      properties:
+        ok: { type: boolean }
+        tokenType: { type: string, const: Bearer }
+        accessToken: { type: string, writeOnly: true }
+        expiresIn: { type: integer, const: 900 }
+        accessExpiresAt: { type: string, format: date-time }
+        refreshToken: { type: string, writeOnly: true }
+        refreshExpiresAt: { type: string, format: date-time }
+    OwnerDevice:
+      type: object
+      required: [id, name, platform, createdAt]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        platform: { type: string }
+        createdAt: { type: string, format: date-time }
+        lastUsedAt: { type: string }
+        revokedAt: { type: string }
     ErrorEnvelope:
       type: object
       required: [error]

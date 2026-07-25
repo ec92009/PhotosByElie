@@ -2,6 +2,7 @@ import { ACCESS_CAPABILITIES, createMemoryAccessUserRegistry } from "./access-us
 import { createMemoryStore } from "./memory-store.mjs";
 import { createMockStripeClient } from "./mock-stripe.mjs";
 import { createMemoryOwnerActionStore } from "./owner-action-store.mjs";
+import { createMemoryOwnerDeviceAuthStore } from "./owner-device-auth-store.mjs";
 import { createMemorySidecarStateStore } from "./sidecar-state-store.mjs";
 import { canonicalRealEstateGalleryKey } from "./real-estate-gallery-key.mjs";
 import { ownerApiV1Response, resolveOwnerApiV1Route } from "./owner-api-v1.mjs";
@@ -12,6 +13,8 @@ const MINIMUM_CHARGE_PRODUCT_ID = "minimum-charge-adjustment";
 const RAW_SOURCE_TYPES = new Set(["DNG", "NEF", "CR2", "CR3", "ARW", "RAF", "ORF", "RW2", "RAW", "PEF", "SRW", "RWL"]);
 const DEFAULT_DOWNLOAD_TOKEN_TTL_SECONDS = 60 * 60 * 24 * 30;
 const DEFAULT_DOWNLOAD_TOKEN_MAX_DOWNLOADS = 100;
+const OWNER_ACCESS_TOKEN_SECONDS = 15 * 60;
+const OWNER_REFRESH_TOKEN_SECONDS = 30 * 24 * 60 * 60;
 const PURCHASE_ALLOWANCE_SOURCE = "photosbyelie-worker-order-ledger";
 const PURCHASE_ALLOWANCE_SOURCE_DETAIL = "PhotosByElie checkout Worker order records in ORDERS_KV";
 const SECONDS_PER_DAY = 60 * 60 * 24;
@@ -93,6 +96,35 @@ const parseJson = async (request) => {
     return await request.json();
   } catch {
     throw Object.assign(new Error("Request body must be valid JSON."), { status: 400, code: "invalid_json" });
+  }
+};
+
+const opaqueToken = (byteCount = 32) => {
+  const bytes = crypto.getRandomValues(new Uint8Array(byteCount));
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+};
+
+const encodeCursor = (offset) =>
+  btoa(JSON.stringify({ offset: Math.max(0, Number(offset) || 0) }))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+
+const decodeCursor = (cursor) => {
+  if (!cursor) return 0;
+  try {
+    const normalized = String(cursor).replace(/-/g, "+").replace(/_/g, "/");
+    const decoded = atob(normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "="));
+    const offset = Number(JSON.parse(decoded)?.offset);
+    if (!Number.isInteger(offset) || offset < 0) throw new Error("invalid offset");
+    return offset;
+  } catch {
+    throw Object.assign(new Error("The pagination cursor is invalid."), {
+      status: 400,
+      code: "invalid_cursor",
+    });
   }
 };
 
@@ -1297,6 +1329,7 @@ export const createPhotosByElieWorker = ({
   accessUserRegistry = createMemoryAccessUserRegistry(),
   accessAdminEmail = "",
   ownerActionStore = createMemoryOwnerActionStore(),
+  ownerDeviceAuthStore = createMemoryOwnerDeviceAuthStore({ now }),
   sidecarStateStore = createMemorySidecarStateStore({ now, randomUUID }),
   ownerConnectorAuth = null,
   ownerConnectorPackage = null,
@@ -2176,6 +2209,171 @@ export const createPhotosByElieWorker = ({
     return credentialedJson(request, authSessionPayload(session));
   };
 
+  const publicOwnerDevice = (device) => device ? {
+    id: device.id,
+    name: device.name,
+    platform: device.platform,
+    createdAt: device.createdAt,
+    lastUsedAt: device.lastUsedAt || "",
+    revokedAt: device.revokedAt || "",
+  } : null;
+
+  const ownerSessionForEmail = async (email, provider = "backstage-device") => {
+    const session = await sessionForAccessIdentity({
+      email: String(email || "").trim().toLowerCase(),
+      provider,
+      expiresAt: new Date(now().getTime() + OWNER_ACCESS_TOKEN_SECONDS * 1000).toISOString(),
+      sessionSeconds: OWNER_ACCESS_TOKEN_SECONDS,
+    }, { accessUserRegistry, adminEmail });
+    if (!session.roles.includes("owner")) {
+      throw Object.assign(new Error("This account is no longer authorized for Owner access."), {
+        status: 403,
+        code: "owner_role_required",
+      });
+    }
+    return session;
+  };
+
+  const issueOwnerTokenBundle = async ({ email, deviceId = "" }) => {
+    if (!googleOAuthAuth?.issueSessionToken || !ownerDeviceAuthStore?.putRefreshToken) {
+      throw Object.assign(new Error("Native Owner token issuance is not configured."), {
+        status: 503,
+        code: "owner_token_auth_unavailable",
+      });
+    }
+    const issuedAt = now();
+    const accessExpiresAt = new Date(issuedAt.getTime() + OWNER_ACCESS_TOKEN_SECONDS * 1000).toISOString();
+    const refreshExpiresAt = new Date(issuedAt.getTime() + OWNER_REFRESH_TOKEN_SECONDS * 1000).toISOString();
+    const refreshToken = opaqueToken();
+    const accessToken = await googleOAuthAuth.issueSessionToken(
+      { email },
+      OWNER_ACCESS_TOKEN_SECONDS
+    );
+    await ownerDeviceAuthStore.putRefreshToken({
+      id: `owner-refresh-${randomUUID().replace(/[^a-z0-9-]/gi, "").slice(0, 48)}`,
+      email,
+      deviceId: String(deviceId || "").trim(),
+      createdAt: issuedAt.toISOString(),
+      expiresAt: refreshExpiresAt,
+    }, refreshToken);
+    return {
+      tokenType: "Bearer",
+      accessToken,
+      expiresIn: OWNER_ACCESS_TOKEN_SECONDS,
+      accessExpiresAt,
+      refreshToken,
+      refreshExpiresAt,
+    };
+  };
+
+  const createOwnerTokens = async (request) => {
+    const payload = await request.clone().json().catch(() => ({}));
+    let session;
+    let deviceId = String(payload.deviceId || "").trim();
+    if (deviceId || payload.deviceCredential) {
+      if (!deviceId || !payload.deviceCredential || !ownerDeviceAuthStore?.authenticateDevice) {
+        return credentialedErrorJson(request, 401, "owner_device_credential_required", "A valid device id and credential are required.");
+      }
+      const device = await ownerDeviceAuthStore.authenticateDevice({
+        deviceId,
+        credential: String(payload.deviceCredential),
+      });
+      if (!device) {
+        return credentialedErrorJson(request, 401, "owner_device_credential_invalid", "The device credential is invalid or revoked.");
+      }
+      session = await ownerSessionForEmail(device.email);
+    } else {
+      session = await authSessionFor(request, { requiredRole: "owner" });
+    }
+    return credentialedJson(request, {
+      ok: true,
+      ...await issueOwnerTokenBundle({ email: session.email, deviceId }),
+    }, 201);
+  };
+
+  const refreshOwnerTokens = async (request) => {
+    const payload = await parseJson(request);
+    const refreshToken = String(payload.refreshToken || "").trim();
+    if (!refreshToken || !ownerDeviceAuthStore?.getRefreshToken) {
+      return credentialedErrorJson(request, 401, "owner_refresh_token_required", "A refresh token is required.");
+    }
+    const record = await ownerDeviceAuthStore.getRefreshToken(refreshToken);
+    if (!record) {
+      return credentialedErrorJson(request, 401, "owner_refresh_token_invalid", "The refresh token is invalid, expired or revoked.");
+    }
+    const session = await ownerSessionForEmail(record.email);
+    await ownerDeviceAuthStore.revokeRefreshToken(refreshToken, now().toISOString());
+    return credentialedJson(request, {
+      ok: true,
+      ...await issueOwnerTokenBundle({ email: session.email, deviceId: record.deviceId }),
+    });
+  };
+
+  const logoutOwnerTokens = async (request) => {
+    const payload = await request.clone().json().catch(() => ({}));
+    if (payload.refreshToken && ownerDeviceAuthStore?.revokeRefreshToken) {
+      await ownerDeviceAuthStore.revokeRefreshToken(String(payload.refreshToken), now().toISOString());
+    }
+    const headers = new Headers(credentialedCorsHeaders(request));
+    if (googleOAuthAuth?.clearCookieFor) headers.append("set-cookie", googleOAuthAuth.clearCookieFor(request));
+    if (realEstateAuth?.clearCookieFor) headers.append("set-cookie", realEstateAuth.clearCookieFor());
+    headers.set("content-type", "application/json; charset=utf-8");
+    return new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers,
+    });
+  };
+
+  const listOwnerDevices = async (request) => {
+    const session = await authSessionFor(request, { requiredRole: "owner" });
+    const devices = ownerDeviceAuthStore?.listDevices
+      ? await ownerDeviceAuthStore.listDevices(session.email)
+      : [];
+    return credentialedJson(request, {
+      ok: true,
+      devices: devices.map(publicOwnerDevice),
+    });
+  };
+
+  const enrollOwnerDevice = async (request) => {
+    const session = await authSessionFor(request, { requiredRole: "owner" });
+    if (!ownerDeviceAuthStore?.putDevice) {
+      return credentialedErrorJson(request, 503, "owner_device_auth_unavailable", "Owner device enrollment is not configured.");
+    }
+    const payload = await parseJson(request);
+    const createdAt = now().toISOString();
+    const deviceCredential = opaqueToken();
+    const device = await ownerDeviceAuthStore.putDevice({
+      id: `owner-device-${randomUUID().replace(/[^a-z0-9-]/gi, "").slice(0, 48)}`,
+      email: session.email,
+      name: String(payload.name || "PhotosByElie Backstage").trim().slice(0, 120),
+      platform: String(payload.platform || "macOS").trim().slice(0, 80),
+      createdAt,
+      lastUsedAt: "",
+      revokedAt: "",
+    }, deviceCredential);
+    return credentialedJson(request, {
+      ok: true,
+      device: publicOwnerDevice(device),
+      deviceCredential,
+    }, 201);
+  };
+
+  const revokeOwnerDevice = async (request, deviceId) => {
+    const session = await authSessionFor(request, { requiredRole: "owner" });
+    const device = ownerDeviceAuthStore?.revokeDevice
+      ? await ownerDeviceAuthStore.revokeDevice({
+        email: session.email,
+        deviceId,
+        revokedAt: now().toISOString(),
+      })
+      : null;
+    if (!device) {
+      return credentialedErrorJson(request, 404, "owner_device_not_found", "Owner device was not found.");
+    }
+    return credentialedJson(request, { ok: true, device: publicOwnerDevice(device) });
+  };
+
   const ownerActionId = () => `owner-action-${randomUUID().replace(/[^a-z0-9-]/gi, "").slice(0, 48)}`;
   const ownerActionHistory = (action, event) => [
     ...(Array.isArray(action.history) ? action.history : []),
@@ -2269,9 +2467,21 @@ export const createPhotosByElieWorker = ({
       }
     }
     const payload = await parseJson(request);
-    const actionType = String(payload.action || payload.type || "").trim().toLowerCase().replace(/[\s_]+/g, "-");
+    const actionType = String(payload.actionKind || payload.action || payload.type || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[\s_]+/g, "-");
     if (!/^[a-z0-9][a-z0-9-]{1,80}$/.test(actionType)) {
       return credentialedErrorJson(request, 400, "invalid_owner_action", "Owner action type is required.");
+    }
+    const target = String(
+      payload.target
+      || payload.payload?.requestedConnector
+      || payload.payload?.connectorId
+      || "cloud"
+    ).trim().toLowerCase().replace(/[^a-z0-9._-]+/g, "-").slice(0, 80);
+    if (apiVersion === "1" && !String(payload.target || "").trim()) {
+      return credentialedErrorJson(request, 400, "owner_action_target_required", "target is required for Owner API v1 actions.");
     }
     const timestamp = now().toISOString();
     const actionPayload = payload.payload && typeof payload.payload === "object" ? payload.payload : {};
@@ -2279,6 +2489,8 @@ export const createPhotosByElieWorker = ({
       schema: "photosbyelie.ownerAction.v1",
       id: ownerActionId(),
       type: actionType,
+      actionKind: actionType,
+      target,
       state: "queued",
       payload: actionPayload,
       createdBy: session.email,
@@ -2412,10 +2624,39 @@ export const createPhotosByElieWorker = ({
       return credentialedErrorJson(request, 503, "owner_actions_unavailable", "Owner action queue listing is not configured.");
     }
     const url = new URL(request.url);
-    const requestedLimit = Number(url.searchParams.get("limit") || 25);
-    const limit = Math.max(1, Math.min(100, Number.isFinite(requestedLimit) ? Math.round(requestedLimit) : 25));
-    const actions = await ownerActionStore.listActions({ limit });
-    return credentialedJson(request, { ok: true, actions, limit });
+    const apiVersion = String(request.headers.get("x-pbe-internal-api-version") || "").trim();
+    const requestedLimit = Number(url.searchParams.get("limit") || (apiVersion === "1" ? 50 : 25));
+    const limit = Math.max(1, Math.min(apiVersion === "1" ? 200 : 100, Number.isFinite(requestedLimit) ? Math.round(requestedLimit) : 25));
+    const offset = apiVersion === "1" ? decodeCursor(url.searchParams.get("cursor") || "") : 0;
+    const state = String(url.searchParams.get("state") || "").trim().toLowerCase();
+    const target = String(url.searchParams.get("target") || "").trim().toLowerCase();
+    const actionKind = String(url.searchParams.get("actionKind") || "").trim().toLowerCase();
+    const createdAfter = Date.parse(url.searchParams.get("createdAfter") || "");
+    const createdBefore = Date.parse(url.searchParams.get("createdBefore") || "");
+    const allActions = await ownerActionStore.listActions({ limit: 200 });
+    const filtered = allActions.filter((action) => {
+      if (state && String(action.state || "").toLowerCase() !== state) return false;
+      if (target && String(action.target || action.payload?.requestedConnector || "cloud").toLowerCase() !== target) return false;
+      if (actionKind && String(action.actionKind || action.type || "").toLowerCase() !== actionKind) return false;
+      const createdAt = Date.parse(action.createdAt || "");
+      if (Number.isFinite(createdAfter) && (!Number.isFinite(createdAt) || createdAt <= createdAfter)) return false;
+      if (Number.isFinite(createdBefore) && (!Number.isFinite(createdAt) || createdAt >= createdBefore)) return false;
+      return true;
+    });
+    const actions = filtered.slice(offset, offset + limit);
+    if (apiVersion !== "1") return credentialedJson(request, { ok: true, actions, limit });
+    const nextOffset = offset + actions.length;
+    const hasMore = nextOffset < filtered.length;
+    return credentialedJson(request, {
+      ok: true,
+      actions,
+      items: actions,
+      limit,
+      page: {
+        nextCursor: hasMore ? encodeCursor(nextOffset) : null,
+        hasMore,
+      },
+    });
   };
 
   const listOwnerConnectors = async (request) => {
@@ -3260,6 +3501,15 @@ export const createPhotosByElieWorker = ({
       if (request.method === "GET" && path === "/auth/google/login") return await loginGoogleAuth(request);
       if (request.method === "GET" && path === "/auth/google/callback") return await callbackGoogleAuth(request);
       if ((request.method === "GET" || request.method === "POST") && path === "/auth/logout") return await logoutAuth(request);
+      if (request.method === "POST" && path === "/owner/auth/tokens") return await createOwnerTokens(request);
+      if (request.method === "POST" && path === "/owner/auth/refresh") return await refreshOwnerTokens(request);
+      if (request.method === "POST" && path === "/owner/auth/logout") return await logoutOwnerTokens(request);
+      if (request.method === "GET" && path === "/owner/devices") return await listOwnerDevices(request);
+      if (request.method === "POST" && path === "/owner/devices") return await enrollOwnerDevice(request);
+      const ownerDeviceRevokeMatch = path.match(/^\/owner\/devices\/([^/]+)\/revoke$/);
+      if (request.method === "POST" && ownerDeviceRevokeMatch) {
+        return await revokeOwnerDevice(request, decodeURIComponent(ownerDeviceRevokeMatch[1]));
+      }
       if (request.method === "GET" && path === "/owner/session") return await getOwnerSession(request);
       if (request.method === "GET" && path === "/owner/connectors") return await listOwnerConnectors(request);
       if (request.method === "POST" && path === "/owner/interactive") return await touchOwnerInteractiveLease(request);

@@ -15,6 +15,10 @@ import { createMockStripeClient } from "./mock-stripe.mjs";
 import { createOwnerAccessAuth } from "./owner-access-auth.mjs";
 import { createKvOwnerActionStore, createMemoryOwnerActionStore } from "./owner-action-store.mjs";
 import {
+  createKvOwnerDeviceAuthStore,
+  createMemoryOwnerDeviceAuthStore,
+} from "./owner-device-auth-store.mjs";
+import {
   REAL_ESTATE_PASSWORD_ITERATIONS,
   createRealEstateAuth,
   realEstatePasswordHash,
@@ -193,6 +197,16 @@ test("Google OAuth auth requests account choice and stores a signed session cook
   }));
   assert.equal(bearerSession.email, "ec92009@gmail.com");
   assert.equal(bearerSession.provider, "google-oauth");
+
+  const shortAccessToken = await auth.issueSessionToken(
+    { email: "ec92009@gmail.com" },
+    15 * 60
+  );
+  const shortAccessSession = await auth.optionalSession(new Request("https://worker.test/auth/session", {
+    headers: { authorization: `Bearer ${shortAccessToken}` },
+  }));
+  assert.equal(shortAccessSession.email, "ec92009@gmail.com");
+  assert.equal(shortAccessSession.sessionSeconds, 15 * 60);
 });
 
 const firstDeliverablePhotoId = (catalog, collectionKey = null) => {
@@ -249,6 +263,44 @@ const createFakeKv = () => {
     _debug: values,
   };
 };
+
+test("KV owner device store revokes credentials and indexed refresh tokens together", async () => {
+  const now = () => new Date("2026-07-25T12:00:00.000Z");
+  const store = createKvOwnerDeviceAuthStore({
+    namespace: createFakeKv(),
+    prefix: "test",
+    now,
+  });
+  const device = await store.putDevice({
+    id: "device-max",
+    email: "Owner@Example.com",
+    name: "Max Backstage",
+    createdAt: now().toISOString(),
+  }, "device-secret");
+  assert.equal(device.email, "owner@example.com");
+  assert.ok(await store.authenticateDevice({
+    deviceId: device.id,
+    credential: "device-secret",
+  }));
+
+  await store.putRefreshToken({
+    email: device.email,
+    deviceId: device.id,
+    expiresAt: "2026-08-24T12:00:00.000Z",
+  }, "refresh-secret");
+  assert.ok(await store.getRefreshToken("refresh-secret"));
+
+  await store.revokeDevice({
+    email: "OWNER@example.com",
+    deviceId: device.id,
+    revokedAt: "2026-07-25T12:01:00.000Z",
+  });
+  assert.equal(await store.authenticateDevice({
+    deviceId: device.id,
+    credential: "device-secret",
+  }), null);
+  assert.equal(await store.getRefreshToken("refresh-secret"), null);
+});
 
 test("analytics endpoint stores sanitized public funnel events", async () => {
   const kv = createFakeKv();
@@ -665,7 +717,8 @@ test("Owner API v1 preserves legacy authorization and action behavior", async ()
   });
 
   const response = await worker.fetch(jsonRequest("https://worker.test/api/v1/actions", {
-    action: "fixture-operation",
+    actionKind: "fixture-operation",
+    target: "max",
     payload: { operation: "list" },
   }, {
     origin: "https://photos-by-elie.com",
@@ -678,10 +731,13 @@ test("Owner API v1 preserves legacy authorization and action behavior", async ()
   assert.match(response.headers.get("access-control-allow-headers") || "", /idempotency-key/);
   const body = await response.json();
   assert.equal(body.action.type, "fixture-operation");
+  assert.equal(body.action.actionKind, "fixture-operation");
+  assert.equal(body.action.target, "max");
   assert.equal(body.idempotencyReplayed, undefined);
 
   const replayResponse = await worker.fetch(jsonRequest("https://worker.test/api/v1/actions", {
-    action: "fixture-operation",
+    actionKind: "fixture-operation",
+    target: "max",
     payload: { operation: "create", name: "This must not be queued" },
   }, {
     origin: "https://photos-by-elie.com",
@@ -694,11 +750,61 @@ test("Owner API v1 preserves legacy authorization and action behavior", async ()
   assert.deepEqual(replayBody.action.payload, { operation: "list" });
 
   const missingKeyResponse = await worker.fetch(jsonRequest("https://worker.test/api/v1/actions", {
-    action: "fixture-operation",
+    actionKind: "fixture-operation",
+    target: "max",
     payload: { operation: "list" },
   }, { origin: "https://photos-by-elie.com" }));
   assert.equal(missingKeyResponse.status, 400);
   assert.equal((await missingKeyResponse.json()).error.code, "idempotency_key_required");
+
+  const missingTargetResponse = await worker.fetch(jsonRequest("https://worker.test/api/v1/actions", {
+    actionKind: "fixture-operation",
+    payload: { operation: "list" },
+  }, {
+    origin: "https://photos-by-elie.com",
+    "idempotency-key": "fixture-missing-target-20260725",
+  }));
+  assert.equal(missingTargetResponse.status, 400);
+  assert.equal((await missingTargetResponse.json()).error.code, "owner_action_target_required");
+
+  const secondActionResponse = await worker.fetch(jsonRequest("https://worker.test/api/v1/actions", {
+    actionKind: "sidecar-culling-review",
+    target: "david",
+    payload: { operation: "open" },
+  }, {
+    origin: "https://photos-by-elie.com",
+    "idempotency-key": "sidecar-open-20260725",
+  }));
+  assert.equal(secondActionResponse.status, 202);
+  const thirdActionResponse = await worker.fetch(jsonRequest("https://worker.test/api/v1/actions", {
+    actionKind: "sidecar-culling-review",
+    target: "david",
+    payload: { operation: "resume" },
+  }, {
+    origin: "https://photos-by-elie.com",
+    "idempotency-key": "sidecar-resume-20260725",
+  }));
+  assert.equal(thirdActionResponse.status, 202);
+
+  const firstPageResponse = await worker.fetch(new Request(
+    "https://worker.test/api/v1/actions?limit=1&target=david&actionKind=sidecar-culling-review",
+    { headers: { origin: "https://photos-by-elie.com" } }
+  ));
+  assert.equal(firstPageResponse.status, 200);
+  const firstPage = await firstPageResponse.json();
+  assert.equal(firstPage.items.length, 1);
+  assert.equal(firstPage.items[0].target, "david");
+  assert.equal(firstPage.page.hasMore, true);
+  assert.match(firstPage.page.nextCursor, /^[A-Za-z0-9_-]+$/);
+  const secondPageResponse = await worker.fetch(new Request(
+    `https://worker.test/api/v1/actions?limit=1&target=david&actionKind=sidecar-culling-review&cursor=${encodeURIComponent(firstPage.page.nextCursor)}`,
+    { headers: { origin: "https://photos-by-elie.com" } }
+  ));
+  const secondPage = await secondPageResponse.json();
+  assert.equal(secondPage.items.length, 1);
+  assert.notEqual(secondPage.items[0].id, firstPage.items[0].id);
+  assert.equal(secondPage.page.hasMore, false);
+  assert.equal(secondPage.page.nextCursor, null);
 
   const readback = await worker.fetch(new Request(
     `https://worker.test/api/v1/actions/${encodeURIComponent(body.action.id)}`,
@@ -710,6 +816,105 @@ test("Owner API v1 preserves legacy authorization and action behavior", async ()
   const unknown = await worker.fetch(new Request("https://worker.test/api/v1/private-sqlite"));
   assert.equal(unknown.status, 404);
   assert.equal((await unknown.json()).error.code, "not_found");
+});
+
+test("Owner API v1 enrolls, refreshes and independently revokes native devices", async () => {
+  const now = () => new Date("2026-07-25T09:00:00.000Z");
+  const ownerDeviceAuthStore = createMemoryOwnerDeviceAuthStore({ now });
+  let accessTokenCount = 0;
+  const googleOAuthAuth = {
+    optionalSession: async () => ({
+      email: "owner@example.com",
+      provider: "google-oauth",
+      expiresAt: "2026-07-25T10:00:00.000Z",
+      sessionSeconds: 3600,
+    }),
+    requireSession: async () => ({
+      email: "owner@example.com",
+      provider: "google-oauth",
+      expiresAt: "2026-07-25T10:00:00.000Z",
+      sessionSeconds: 3600,
+    }),
+    issueSessionToken: async (identity, seconds) => {
+      accessTokenCount += 1;
+      return `access-${identity.email}-${seconds}-${accessTokenCount}`;
+    },
+    clearCookieFor: () => "pbe_google_session=; Max-Age=0; Path=/; HttpOnly",
+  };
+  const worker = createPhotosByElieWorker({
+    catalog: loadCatalog(),
+    googleOAuthAuth,
+    accessUserRegistry: createMemoryAccessUserRegistry([
+      { email: "owner@example.com", tier: "owner" },
+    ]),
+    ownerDeviceAuthStore,
+    randomUUID: deterministicIds(),
+    now,
+  });
+
+  const enrollResponse = await worker.fetch(jsonRequest("https://worker.test/api/v1/devices", {
+    name: "Max Backstage",
+    platform: "macOS",
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(enrollResponse.status, 201);
+  const enrollment = await enrollResponse.json();
+  assert.match(enrollment.device.id, /^owner-device-/);
+  assert.equal(enrollment.device.name, "Max Backstage");
+  assert.match(enrollment.deviceCredential, /^[A-Za-z0-9_-]{40,}$/);
+  assert.equal(enrollment.device.credentialHash, undefined);
+
+  const listResponse = await worker.fetch(new Request("https://worker.test/api/v1/devices", {
+    headers: { origin: "https://photos-by-elie.com" },
+  }));
+  assert.equal(listResponse.status, 200);
+  assert.deepEqual((await listResponse.json()).devices.map((device) => device.id), [enrollment.device.id]);
+
+  const tokenResponse = await worker.fetch(jsonRequest("https://worker.test/api/v1/auth/tokens", {
+    deviceId: enrollment.device.id,
+    deviceCredential: enrollment.deviceCredential,
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(tokenResponse.status, 201);
+  const tokens = await tokenResponse.json();
+  assert.equal(tokens.tokenType, "Bearer");
+  assert.equal(tokens.expiresIn, 15 * 60);
+  assert.match(tokens.accessToken, /^access-owner@example\.com-900-1$/);
+  assert.match(tokens.refreshToken, /^[A-Za-z0-9_-]{40,}$/);
+
+  const refreshResponse = await worker.fetch(jsonRequest("https://worker.test/api/v1/auth/refresh", {
+    refreshToken: tokens.refreshToken,
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(refreshResponse.status, 200);
+  const refreshed = await refreshResponse.json();
+  assert.notEqual(refreshed.refreshToken, tokens.refreshToken);
+  assert.match(refreshed.accessToken, /^access-owner@example\.com-900-2$/);
+
+  const replayRefresh = await worker.fetch(jsonRequest("https://worker.test/api/v1/auth/refresh", {
+    refreshToken: tokens.refreshToken,
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(replayRefresh.status, 401);
+
+  const logoutResponse = await worker.fetch(jsonRequest("https://worker.test/api/v1/auth/logout", {
+    refreshToken: refreshed.refreshToken,
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(logoutResponse.status, 200);
+  assert.match(logoutResponse.headers.get("set-cookie") || "", /Max-Age=0/);
+  const loggedOutRefresh = await worker.fetch(jsonRequest("https://worker.test/api/v1/auth/refresh", {
+    refreshToken: refreshed.refreshToken,
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(loggedOutRefresh.status, 401);
+
+  const revokeResponse = await worker.fetch(jsonRequest(
+    `https://worker.test/api/v1/devices/${encodeURIComponent(enrollment.device.id)}/revoke`,
+    {},
+    { origin: "https://photos-by-elie.com" }
+  ));
+  assert.equal(revokeResponse.status, 200);
+  assert.match((await revokeResponse.json()).device.revokedAt, /^2026-07-25T09:00:00/);
+  const revokedDeviceTokens = await worker.fetch(jsonRequest("https://worker.test/api/v1/auth/tokens", {
+    deviceId: enrollment.device.id,
+    deviceCredential: enrollment.deviceCredential,
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(revokedDeviceTokens.status, 401);
 });
 
 test("background Owner connectors use scoped credentials and report health", async () => {

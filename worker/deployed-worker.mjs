@@ -7,6 +7,7 @@ import { createKvStore } from "./kv-store.mjs";
 import { createMockStripeClient } from "./mock-stripe.mjs";
 import { createGoogleOAuthAuth } from "./google-oauth-auth.mjs";
 import { createKvOwnerActionStore } from "./owner-action-store.mjs";
+import { createKvOwnerDeviceAuthStore } from "./owner-device-auth-store.mjs";
 import { createOwnerConnectorAuth } from "./owner-connector-auth.mjs";
 import { createR2OwnerConnectorPackage } from "./owner-connector-package.mjs";
 import { createOwnerAccessAuth } from "./owner-access-auth.mjs";
@@ -382,6 +383,10 @@ export default {
       accessUserRegistry,
       accessAdminEmail: env.ACCESS_ADMIN_EMAIL || "ec92009@gmail.com",
       ownerActionStore: createKvOwnerActionStore({
+        namespace: env.OWNER_ACTIONS_KV || requiredBinding(env, "ORDERS_KV"),
+        prefix: env.KV_PREFIX || "pbe",
+      }),
+      ownerDeviceAuthStore: createKvOwnerDeviceAuthStore({
         namespace: env.OWNER_ACTIONS_KV || requiredBinding(env, "ORDERS_KV"),
         prefix: env.KV_PREFIX || "pbe",
       }),

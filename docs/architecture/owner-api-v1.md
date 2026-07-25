@@ -17,6 +17,13 @@ action ledger, D1, R2, and delivery implementation.
 - Authentication accepts the existing signed owner session cookie or its
   bearer representation. Connector routes require the distinct connector
   credential.
+- Native Backstage enrollment is bootstrapped by a human Owner session.
+  Enrollment returns a device credential once; the application stores it in
+  Keychain and exchanges it for a 15-minute bearer token plus a rotating
+  30-day refresh token. The Worker stores only credential/token hashes.
+- Each native device is independently listable and revocable. Revoking a
+  device also revokes its indexed refresh tokens. Connector credentials remain
+  a separate authentication class and cannot be exchanged for human tokens.
 - Mutation clients send `Idempotency-Key`; the Worker accepts the
   `X-Idempotency-Key` compatibility spelling during migration.
 - Opaque identifiers are URL encoded. Clients do not infer meaning from an

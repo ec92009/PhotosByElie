@@ -1,0 +1,65 @@
+{
+  "checks": {
+    "allGuardedArtifactsUnchanged": true,
+    "legacyFailedMoveAtomic": true,
+    "liveOwnerDatabaseUnchanged": true,
+    "nativeFailedMoveAtomic": true,
+    "nativeSqliteBackupRecovery": true,
+    "publicClientArtifactsUnchanged": true,
+    "semanticParity": true
+  },
+  "generatedAt": "2026-07-25T03:35:39.324242Z",
+  "guardedArtifacts": {
+    "count": 14,
+    "sha256After": {
+      "assets/catalog/photosbyelie.sqlite": "33fd99c43f2fd9ca68934577b8dfd178128181d437d55b5e16d3a056eb1afcc9",
+      "assets/owner-actions/Owner.sqlite": "b2d0ff1723f0af628ccd1033e3e3fbe6d5c0e87a5e6cf51f8dd7c670d6e4a628",
+      "basket.html": "c8e5fe8726b926297cdc1e3c7a6e610cdc57c6d209fd5c321080b5d34935cc06",
+      "gallery.html": "78f708a940ee2b7237b819412bcfa377b7a9d209d7fe4913215b58ed3cee93be",
+      "index.html": "6f221fee35abf6f31ebc1f7215f622becc5a7cd940ac3153f49141b5b80fcd27",
+      "liked.html": "952656c6387486b32ada9246faefde6feb1d306226a2e98cfc8fa1417d4a4c06",
+      "order.html": "2a59bcfd36b413f1ee2101ee4167789f82a982e598d76f8896971e9403229711",
+      "photo-detail.js": "899272d201698c6efc516ec0d082e80df2280994062de6a7e41a2f01a92b8c31",
+      "photo-gallery.js": "5ae4cc2b439a79f54e0be8953897ff5b59cb59fc0ce456e0edbb09c6c09b2e23",
+      "photo.html": "01ca043e9934b3d127b0374674320a2acc4a3e5e7803e43190c771ee5b94175b",
+      "photos-data.js": "4762aeabc80d927ee16e8aea81d3d04684f3490eb66b365bdc8777442336c5bf",
+      "real-estate.html": "2c2dca8dbbfafd10c077996f4826823947ae7017a9451e277473205227913e0e",
+      "shared-auth.js": "missing",
+      "worker/photos-catalog.generated.mjs": "69dae8cdd9655d96ff2a4961a8c4c2ea05be99a5f6b4cbd7bd68bb162ac3daf3"
+    },
+    "sha256Before": {
+      "assets/catalog/photosbyelie.sqlite": "33fd99c43f2fd9ca68934577b8dfd178128181d437d55b5e16d3a056eb1afcc9",
+      "assets/owner-actions/Owner.sqlite": "b2d0ff1723f0af628ccd1033e3e3fbe6d5c0e87a5e6cf51f8dd7c670d6e4a628",
+      "basket.html": "c8e5fe8726b926297cdc1e3c7a6e610cdc57c6d209fd5c321080b5d34935cc06",
+      "gallery.html": "78f708a940ee2b7237b819412bcfa377b7a9d209d7fe4913215b58ed3cee93be",
+      "index.html": "6f221fee35abf6f31ebc1f7215f622becc5a7cd940ac3153f49141b5b80fcd27",
+      "liked.html": "952656c6387486b32ada9246faefde6feb1d306226a2e98cfc8fa1417d4a4c06",
+      "order.html": "2a59bcfd36b413f1ee2101ee4167789f82a982e598d76f8896971e9403229711",
+      "photo-detail.js": "899272d201698c6efc516ec0d082e80df2280994062de6a7e41a2f01a92b8c31",
+      "photo-gallery.js": "5ae4cc2b439a79f54e0be8953897ff5b59cb59fc0ce456e0edbb09c6c09b2e23",
+      "photo.html": "01ca043e9934b3d127b0374674320a2acc4a3e5e7803e43190c771ee5b94175b",
+      "photos-data.js": "4762aeabc80d927ee16e8aea81d3d04684f3490eb66b365bdc8777442336c5bf",
+      "real-estate.html": "2c2dca8dbbfafd10c077996f4826823947ae7017a9451e277473205227913e0e",
+      "shared-auth.js": "missing",
+      "worker/photos-catalog.generated.mjs": "69dae8cdd9655d96ff2a4961a8c4c2ea05be99a5f6b4cbd7bd68bb162ac3daf3"
+    }
+  },
+  "passed": true,
+  "scenario": {
+    "fixtureOperations": [
+      "create",
+      "rename",
+      "archive",
+      "reopen",
+      "pool",
+      "place",
+      "move",
+      "remove",
+      "restore",
+      "destinations",
+      "deliverable"
+    ],
+    "syntheticAssetCount": 2
+  },
+  "schema": "photosbyelie.ownerNativeParityRehearsal.v1"
+}

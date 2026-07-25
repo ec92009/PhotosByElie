@@ -78,6 +78,17 @@ class SidecarParityInventoryTest(unittest.TestCase):
         self.assertIn("This Sidecar page is stale or unscoped", server)
         self.assertIn('"allowUnscoped": True', drain)
 
+    def test_legacy_sidecar_requires_the_deliberate_rollback_switch(self):
+        connector = (ROOT / "scripts" / "new_owner_connector.py").read_text(encoding="utf-8")
+        installer = (ROOT / "scripts" / "install_sidecar_dock_app.zsh").read_text(encoding="utf-8")
+        owner_html = (ROOT / "owner.html").read_text(encoding="utf-8")
+        owner_js = (ROOT / "new-owner.js").read_text(encoding="utf-8")
+        self.assertIn("PBE_ENABLE_LEGACY_SIDECAR", connector)
+        self.assertIn("PBE_ENABLE_LEGACY_SIDECAR", installer)
+        self.assertNotIn("Open scoped Sidecar", owner_html)
+        self.assertNotIn("Open Sidecar on this Mac", owner_html)
+        self.assertNotIn("LOCAL_SIDECAR_OPEN_URL", owner_js)
+
 
 if __name__ == "__main__":
     unittest.main()

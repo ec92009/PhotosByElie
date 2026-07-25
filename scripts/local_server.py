@@ -1829,10 +1829,14 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
             actor="owner-connector",
             reason="fixture culling pool snapshot",
         )
-        result.update({"readOnly": False, "pool": pool, "placement": placement, "sidecarUrl": f"http://127.0.0.1:8011/sidecar.html?pool={quote(pool['poolId'])}"})
+        result.update({"readOnly": False, "pool": pool, "placement": placement})
+        if os.environ.get("PBE_ENABLE_LEGACY_SIDECAR", "").strip() == "1":
+            result["sidecarUrl"] = f"http://127.0.0.1:8011/sidecar.html?pool={quote(pool['poolId'])}"
     elif mode == "fixture-pool-open":
         pool = get_pool(repo_root, str(manifest.get("poolId") or ""))
-        result.update({"readOnly": True, "pool": pool, "sidecarUrl": f"http://127.0.0.1:8011/sidecar.html?pool={quote(pool['poolId'])}"})
+        result.update({"readOnly": True, "pool": pool})
+        if os.environ.get("PBE_ENABLE_LEGACY_SIDECAR", "").strip() == "1":
+            result["sidecarUrl"] = f"http://127.0.0.1:8011/sidecar.html?pool={quote(pool['poolId'])}"
     elif mode == "fixture-pool-refresh-preview":
         result.update({"readOnly": True, "refresh": preview_pool_refresh(repo_root, str(manifest.get("poolId") or ""))})
     elif mode == "fixture-pool-refresh-apply":

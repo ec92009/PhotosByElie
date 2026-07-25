@@ -85,7 +85,7 @@
             </div>
           </div>
           <div class="fixture-builder-steps" aria-label="Fixture workflow">
-            <span class="is-current">1 Fixture</span><span>2 Search</span><span>3 Snapshot</span><span>4 Sidecar</span><span>5 Deliver</span>
+            <span class="is-current">1 Fixture</span><span>2 Search</span><span>3 Snapshot</span><span>4 Cull</span><span>5 Deliver</span>
           </div>
           <div class="fixture-builder-create">
             <label>Parent
@@ -144,7 +144,6 @@
           <div class="fixture-builder-pool-actions">
             <label>Pool name<input type="text" data-fixture-pool-name placeholder="Stable culling snapshot"></label>
             <button class="btn" type="button" data-fixture-pool-create disabled>Create snapshot pool</button>
-            <a class="btn secondary" data-fixture-sidecar hidden>Open scoped Sidecar</a>
             <button class="btn secondary" type="button" data-fixture-pool-refresh-preview disabled>Preview pool refresh</button>
             <button class="btn secondary" type="button" data-fixture-pool-refresh-apply disabled>Apply as new snapshot</button>
             <button class="btn secondary" type="button" data-fixture-delivery disabled>Review delivery plan</button>
@@ -152,7 +151,7 @@
             <button class="btn secondary" type="button" data-fixture-photos-commit disabled>Commit verified Photos metadata</button>
           </div>
           <div class="fixture-builder-delivery" data-fixture-delivery-output></div>
-          <p class="new-owner-card-note">Search and snapshot are private. Source assets are never copied, deleted, uploaded, or messaged. The snapshot opens the existing Sidecar with only candidate scope changed.</p>
+          <p class="new-owner-card-note">Search and snapshot are private. Source assets are never copied, deleted, uploaded, or messaged. Open the snapshot in native Backstage Culling; browser Owner no longer launches a second operator app.</p>
         </section>
 
         <section class="new-owner-card" aria-label="Waste Basket" data-web-owner-mutation-surface>
@@ -225,12 +224,11 @@
           <div class="new-owner-action-controls">
             <button class="btn secondary" type="button" data-new-owner-queue-check>Queue check</button>
             <button class="btn secondary" type="button" data-new-owner-sync-photos>Refresh Photos</button>
-            <button class="btn secondary" type="button" data-new-owner-queue-sidecar>Open Sidecar on this Mac</button>
             <button class="btn secondary" type="button" data-new-owner-upload-publish>Upload next approved</button>
             <div class="new-owner-local-connector" data-new-owner-local-connector>Detecting this Mac connector...</div>
             <span data-new-owner-action-status aria-live="polite"></span>
           </div>
-          <p class="new-owner-card-note">Open Sidecar starts this Mac’s actual Culling workspace—the same gallery, shortcuts, Quick Look, and <kbd>C</kbd> switch into picked Title and Keywords review. Upload next approved performs the guarded R2 bridge step, then registers successful uploads into the local public catalog artifacts.</p>
+          <p class="new-owner-card-note">Culling, metadata and uploads now live in native Backstage. Browser Owner retains authentication, enrollment, health and audit only.</p>
           <div data-new-owner-action class="new-owner-action-result"></div>
         </section>
 

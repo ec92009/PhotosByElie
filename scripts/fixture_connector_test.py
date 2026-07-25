@@ -3,6 +3,7 @@ import tempfile
 import unittest
 import hashlib
 from pathlib import Path
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -90,7 +91,13 @@ class FixtureConnectorTest(unittest.TestCase):
                 selectedAssetIds=["asset-1"],
                 criteria={"query": "LaConcha"},
             ))
-            self.assertIn("?pool=pool-", pooled["result"]["sidecarUrl"])
+            self.assertNotIn("sidecarUrl", pooled["result"])
+            with patch.dict("os.environ", {"PBE_ENABLE_LEGACY_SIDECAR": "1"}):
+                legacy_open = local_server.new_owner_connector_result(root, action(
+                    "fixture-pool-open",
+                    poolId=pooled["result"]["pool"]["poolId"],
+                ))
+            self.assertIn("?pool=pool-", legacy_open["result"]["sidecarUrl"])
             self.assertEqual(
                 pooled["result"]["pool"]["assets"],
                 [{

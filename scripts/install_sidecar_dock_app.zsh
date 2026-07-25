@@ -1,6 +1,12 @@
 #!/usr/bin/env zsh
 set -euo pipefail
 
+if [[ "${PBE_ENABLE_LEGACY_SIDECAR:-}" != "1" ]]; then
+  printf 'Legacy Sidecar launcher installation is disabled. Use PhotosByElie Backstage.\n' >&2
+  printf 'For a deliberate rehearsal rollback only, set PBE_ENABLE_LEGACY_SIDECAR=1.\n' >&2
+  exit 2
+fi
+
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 app_dir="$HOME/Applications/PhotosByElie Sidecar.app"
 add_to_dock=0

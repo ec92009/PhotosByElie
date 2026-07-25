@@ -9,7 +9,6 @@
     "http://localhost:8766/photosbyelie/connector-status",
     "http://127.0.0.1:8766/photosbyelie/connector-status",
   ];
-  const LOCAL_SIDECAR_OPEN_URL = "http://127.0.0.1:8766/photosbyelie/open-sidecar";
   const RE_FIXTURE_STORAGE_KEY = "pbe-new-owner-re-fixture";
   const RE_PROJECT_STORAGE_KEY = "pbe-new-owner-re-project";
   const RE_NEW_PROJECT_VALUE = "__new__";
@@ -43,7 +42,7 @@
     { label: "Owner action queue", state: "live", detail: "Authenticated browser requests with connector claim/complete audit" },
     { label: "Real Estate outputs", state: "mixed", detail: "Cloud PDF/video storage with local source import still pending" },
     { label: "Apple Photos import", state: "mixed", detail: "Cloud controlled; PhotoKit work runs on an enrolled Mac connector" },
-    { label: "Sidecar culling", state: "live", detail: "This Mac opens the exact local Culling and Review workspace" },
+    { label: "Native culling", state: "live", detail: "Backstage owns Culling and Review on this Mac" },
   ];
 
   const $ = (selector) => document.querySelector(selector);
@@ -76,7 +75,6 @@
   const fixtureResultsRoot = $("[data-fixture-results]");
   const fixturePlacementTargetsInput = $("[data-fixture-placement-targets]");
   const fixturePlacementsRoot = $("[data-fixture-placements]");
-  const fixtureSidecarLink = $("[data-fixture-sidecar]");
   const fixtureDeliveryRoot = $("[data-fixture-delivery-output]");
   const fixturePhotosPlanButton = $("[data-fixture-photos-plan]");
   const fixturePhotosCommitButton = $("[data-fixture-photos-commit]");
@@ -115,16 +113,6 @@
     return timestamp > 0 && Date.now() - timestamp < 2 * 60 * 1000;
   };
 
-  function syncOpenSidecarControl() {
-    const button = $("[data-new-owner-queue-sidecar]");
-    if (!button) return;
-    button.disabled = state.busy;
-    button.setAttribute("aria-disabled", String(state.busy));
-    button.title = state.localConnectorChecked && !localConnectorId()
-      ? "This browser could not verify localhost; click to try this Mac's local bridge directly."
-      : "";
-  }
-
   function syncWasteBasketControl() {
     if (!wasteBasketLink) return;
     const localReady = Boolean(localConnectorId());
@@ -139,7 +127,7 @@
   }
 
   const setQueueControlsBusy = (busy) => {
-    document.querySelectorAll("[data-new-owner-queue-check], [data-new-owner-sync-photos], [data-new-owner-queue-sidecar], [data-new-owner-upload-publish], [data-new-owner-re-load], [data-new-owner-re-preflight], [data-new-owner-re-assign]")
+    document.querySelectorAll("[data-new-owner-queue-check], [data-new-owner-sync-photos], [data-new-owner-upload-publish], [data-new-owner-re-load], [data-new-owner-re-preflight], [data-new-owner-re-assign]")
       .forEach((button) => {
         button.disabled = busy;
         button.setAttribute("aria-busy", String(busy));
@@ -317,7 +305,7 @@
       return;
     }
     localConnectorRoot.innerHTML = state.localConnectorChecked
-      ? "<strong>This browser could not verify localhost.</strong><small>If the Mac connector is running, Open Sidecar will try this Mac’s local bridge directly. If that fails, start or reinstall the Mac connector and refresh.</small>"
+      ? "<strong>This browser could not verify localhost.</strong><small>Open PhotosByElie Backstage on this Mac, then start or reinstall the Mac connector and refresh if Backstage still shows disconnected.</small>"
       : "<strong>Detecting this Mac connector...</strong>";
     localConnectorRoot.dataset.state = state.localConnectorChecked ? "missing" : "busy";
   };
@@ -677,10 +665,6 @@
         }).join("")
         : "";
     }
-    if (fixtureSidecarLink) {
-      fixtureSidecarLink.hidden = !state.fixturePool?.sidecarUrl;
-      fixtureSidecarLink.href = state.fixturePool?.sidecarUrl || "#";
-    }
     if (fixturePlacementsRoot) {
       fixturePlacementsRoot.innerHTML = state.fixturePlacements.length
         ? state.fixturePlacements.map((placement) => `
@@ -706,7 +690,6 @@
     if (!nativeOwnerCutover) {
       renderRealEstateIntake();
       renderFixtureBuilder();
-      syncOpenSidecarControl();
     }
     prepareCollapsibleSections();
     queueMasonryLayout();
@@ -905,7 +888,7 @@
     if (state.busy) return null;
     const connectorId = cleanConnectorId(requestedConnectorId) || (localConnectorRequired ? effectiveConnectorId() : "");
     if (localConnectorRequired && !connectorId) {
-      const message = "This browser cannot identify this Mac connector. Refresh after starting the connector, or use Open Sidecar to try the local bridge directly.";
+      const message = "This browser cannot identify this Mac connector. Open PhotosByElie Backstage, start the connector if needed, and refresh.";
       setActionStatus(message, "error");
       setStatus("Mac connector not identified by this browser.");
       return null;
@@ -963,39 +946,6 @@
     },
     statusLabel: "Queueing...",
   });
-
-  const openLocalSidecar = async () => {
-    if (state.busy) return;
-    state.busy = true;
-    setQueueControlsBusy(true);
-    let navigating = false;
-    try {
-      setActionStatus("Checking this Mac’s local bridge...", "busy");
-      setStatus("Checking this Mac connector...");
-      if (!localConnectorId()) {
-        await detectLocalConnector();
-        render();
-      }
-      if (!localConnectorId()) {
-        setActionStatus("This browser could not verify localhost; trying this Mac’s local bridge directly...", "busy");
-        setStatus("Trying this Mac’s local bridge directly...");
-      }
-      setActionStatus("Opening this Mac’s local bridge...", "busy");
-      setStatus("Opening Sidecar on this Mac...");
-      const url = new URL(LOCAL_SIDECAR_OPEN_URL);
-      url.searchParams.set("source", "new-owner");
-      url.searchParams.set("returnTo", window.location.href);
-      url.searchParams.set("t", String(Date.now()));
-      navigating = true;
-      window.location.href = url.href;
-    } finally {
-      if (!navigating) {
-        state.busy = false;
-        setQueueControlsBusy(false);
-        syncOpenSidecarControl();
-      }
-    }
-  };
 
   const openWasteBasket = (event) => {
     if (event?.button !== 0 || event?.metaKey || event?.ctrlKey || event?.shiftKey || event?.altKey) return;
@@ -1179,7 +1129,7 @@
       setFixtureStatus(completed?.error?.message || "The culling pool could not be created.", "error");
       return;
     }
-    state.fixturePool = { ...(completed.result?.pool || {}), sidecarUrl: completed.result?.sidecarUrl || "" };
+    state.fixturePool = { ...(completed.result?.pool || {}) };
     setFixtureStatus(`Created stable pool ${state.fixturePool.name || state.fixturePool.poolId}. Later source-album changes will not alter this snapshot.`, "success");
     renderFixtureBuilder();
   };
@@ -1192,7 +1142,7 @@
       return;
     }
     const refresh = completed.result?.refresh || {};
-    if (apply && refresh.pool) state.fixturePool = { ...refresh.pool, sidecarUrl: `http://127.0.0.1:8011/sidecar.html?pool=${encodeURIComponent(refresh.pool.poolId)}` };
+    if (apply && refresh.pool) state.fixturePool = { ...refresh.pool };
     setFixtureStatus(`${apply ? "Applied" : "Previewed"} refresh: ${Number(refresh.additions?.length || 0)} addition(s), ${Number(refresh.removals?.length || 0)} removal(s). ${apply ? "The original snapshot remains intact." : "Nothing changed."}`, "success");
     renderFixtureBuilder();
   };
@@ -1563,7 +1513,6 @@
   if (!nativeOwnerCutover) {
     $("[data-new-owner-queue-check]")?.addEventListener("click", queueCheck);
     $("[data-new-owner-sync-photos]")?.addEventListener("click", queuePhotosIndexSync);
-    $("[data-new-owner-queue-sidecar]")?.addEventListener("click", openLocalSidecar);
     wasteBasketLink?.addEventListener("click", openWasteBasket);
     $("[data-new-owner-upload-publish]")?.addEventListener("click", queueUploadPublish);
     $("[data-new-owner-re-load]")?.addEventListener("click", loadReAlbums);

@@ -14,6 +14,7 @@ from scripts.new_owner_connector import (
     InteractivePollingLease,
     WorkerClient,
     _allowed_local_status_origin,
+    _launch_sidecar_workspace,
     _local_status_payload,
     _local_sidecar_open_action,
     _owner_waste_basket_url,
@@ -329,6 +330,9 @@ class UploadRegistrationScopeTest(unittest.TestCase):
             "scripts.new_owner_connector._load_local_modules",
             return_value=(lambda *_args, **_kwargs: local_result, None, None, None, None),
         ), patch(
+            "scripts.new_owner_connector.LEGACY_SIDECAR_ENABLED",
+            True,
+        ), patch(
             "scripts.new_owner_connector._launch_sidecar_workspace",
             return_value={"launched": True, "surface": "sidecar.html", "connectorId": "david"},
         ) as launch:
@@ -340,6 +344,11 @@ class UploadRegistrationScopeTest(unittest.TestCase):
         launch.assert_called_once_with(self.config)
         self.assertTrue(result["workspace"]["launched"])
         self.assertEqual(result["workspace"]["surface"], "sidecar.html")
+
+    def test_culling_action_refuses_legacy_workspace_without_explicit_kill_switch(self):
+        with patch("scripts.new_owner_connector.LEGACY_SIDECAR_ENABLED", False):
+            with self.assertRaisesRegex(RuntimeError, "Legacy Sidecar is disabled"):
+                _launch_sidecar_workspace(self.config)
 
     def test_culling_action_preserves_read_only_connector_result(self):
         local_result = {

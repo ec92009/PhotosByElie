@@ -67,6 +67,7 @@ ALLOWED_LOCAL_STATUS_ORIGINS = {
     "https://ec92009.github.io",
 }
 ACTION_EXECUTION_LOCK = threading.Lock()
+LEGACY_SIDECAR_ENABLED = os.environ.get("PBE_ENABLE_LEGACY_SIDECAR", "").strip() == "1"
 
 
 def _utc_iso_now() -> str:
@@ -229,6 +230,11 @@ def _sidecar_helper_env(config: ConnectorConfig | None = None) -> dict[str, str]
 
 def _launch_sidecar_for_browser(config: ConnectorConfig) -> dict:
     """Start the local Sidecar helper and return the URL for this browser."""
+    if not LEGACY_SIDECAR_ENABLED:
+        raise RuntimeError(
+            "Legacy Sidecar is disabled. Use native PhotosByElie Backstage, "
+            "or set PBE_ENABLE_LEGACY_SIDECAR=1 for a deliberate rehearsal rollback."
+        )
     existing = _running_sidecar_helper()
     if existing:
         return existing
@@ -608,6 +614,19 @@ def start_local_status_server(
                     self.wfile.write(body)
                 return
             if parsed.path == LOCAL_SIDECAR_OPEN_PATH:
+                if not LEGACY_SIDECAR_ENABLED:
+                    body = (
+                        "Legacy Sidecar is disabled. Use native PhotosByElie Backstage. "
+                        "For a deliberate rehearsal rollback, restart the connector with "
+                        "PBE_ENABLE_LEGACY_SIDECAR=1."
+                    ).encode("utf-8")
+                    self.send_response(410)
+                    self.send_header("Content-Type", "text/plain; charset=utf-8")
+                    self.send_header("Content-Length", str(len(body)))
+                    self.send_header("Cache-Control", "no-store")
+                    self.end_headers()
+                    self.wfile.write(body)
+                    return
                 job_id = f"local-sidecar-{int(time.time() * 1000)}"
                 with sidecar_jobs_lock:
                     sidecar_jobs[job_id] = {
@@ -1048,6 +1067,11 @@ def _upload_and_register(config: ConnectorConfig, action: dict) -> dict:
 
 def _launch_sidecar_workspace(config: ConnectorConfig) -> dict:
     """Open the canonical local Sidecar UI on this connector Mac."""
+    if not LEGACY_SIDECAR_ENABLED:
+        raise RuntimeError(
+            "Legacy Sidecar is disabled. Use native PhotosByElie Backstage, "
+            "or set PBE_ENABLE_LEGACY_SIDECAR=1 for a deliberate rehearsal rollback."
+        )
     launcher = config.repo_root / "scripts" / "open_sidecar_main.py"
     if not launcher.exists():
         raise RuntimeError(f"Sidecar launcher is missing: {launcher}")

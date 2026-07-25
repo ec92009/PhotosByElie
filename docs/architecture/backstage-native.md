@@ -44,6 +44,11 @@ flowchart LR
 read-only for inspection unless running a named, transactional schema
 migration after a verified backup. Normal mutations travel through the Worker
 ledger and Max connector; no native screen writes business rows directly.
+Native migrations record portable identifiers in GRDB's
+`grdb_migrations(identifier)` convention while retaining `PRAGMA user_version`
+for compatibility with the existing connector. A migration starts only after
+a SQLite backup passes `integrity_check`; schema, migration history and version
+advance in one `BEGIN IMMEDIATE` transaction and roll back together on error.
 
 ## Authentication and secrets
 

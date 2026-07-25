@@ -46,8 +46,13 @@ public final class OwnerDatabaseGate: OwnerDatabaseReading, @unchecked Sendable 
     public func migrate(
         to version: Int,
         statements: [String],
-        expectedCurrentVersion: Int
+        expectedCurrentVersion: Int,
+        identifier: String? = nil
     ) throws -> URL {
+        let migrationIdentifier = identifier ?? "owner-v\(version)"
+        guard migrationIdentifier.range(of: #"^[A-Za-z0-9._-]+$"#, options: .regularExpression) != nil else {
+            throw OwnerDatabaseError.migrationFailed("Migration identifier is not portable.")
+        }
         try FileManager.default.createDirectory(at: backupDirectory, withIntermediateDirectories: true)
         let stamp = ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "-")
         let backupURL = backupDirectory.appendingPathComponent("Owner-\(stamp).sqlite")
@@ -65,7 +70,25 @@ public final class OwnerDatabaseGate: OwnerDatabaseReading, @unchecked Sendable 
                 throw OwnerDatabaseError.migrationFailed("Schema changed before migration.")
             }
             try execute(database, sql: "BEGIN IMMEDIATE")
+            try execute(
+                database,
+                sql: """
+                CREATE TABLE IF NOT EXISTS grdb_migrations (
+                    identifier TEXT PRIMARY KEY NOT NULL
+                )
+                """
+            )
+            guard try scalarInt(
+                database,
+                sql: "SELECT COUNT(*) FROM grdb_migrations WHERE identifier = '\(migrationIdentifier)'"
+            ) == 0 else {
+                throw OwnerDatabaseError.migrationFailed("Migration was already applied.")
+            }
             for statement in statements { try execute(database, sql: statement) }
+            try execute(
+                database,
+                sql: "INSERT INTO grdb_migrations(identifier) VALUES ('\(migrationIdentifier)')"
+            )
             try execute(database, sql: "PRAGMA user_version = \(version)")
             try execute(database, sql: "COMMIT")
         } catch {

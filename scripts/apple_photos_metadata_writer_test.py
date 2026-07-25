@@ -1,11 +1,18 @@
+import json
 import tempfile
 import unittest
 from pathlib import Path
 import sys
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from apple_photos_metadata_writer import commit_writeback, merge_keywords, writeback_plan
+from apple_photos_metadata_writer import (
+    SignedPhotosBridgeAdapter,
+    commit_writeback,
+    merge_keywords,
+    writeback_plan,
+)
 from fixture_pipeline import configure_asset_destinations, create_fixture, place_assets, record_r2_upload_results
 from sidecar_state_db import connect, record_decision, upsert_assets
 
@@ -97,6 +104,32 @@ class ApplePhotosMetadataWriterTest(unittest.TestCase):
         self.assertEqual(adapter.apply_count, 1)
         self.assertIn("Family", adapter.values["asset-1"]["keywords"])
         self.assertIn("PBE-Approved", adapter.values["asset-1"]["keywords"])
+
+    def test_signed_adapter_batches_through_app_and_removes_private_input(self):
+        calls = []
+
+        def bridge(_root, args, timeout):
+            calls.append((args, timeout))
+            request = json.loads(Path(args[2]).read_text(encoding="utf-8"))
+            return {
+                "ok": True,
+                "items": [
+                    {
+                        "assetId": item["assetId"],
+                        "title": "Read title",
+                        "caption": "",
+                        "keywords": ["PBE-Approved"],
+                    }
+                    for item in request
+                ],
+            }
+
+        adapter = SignedPhotosBridgeAdapter(self.root)
+        with mock.patch("sidecar_server._run_apple_photos_bridge_app_task", side_effect=bridge):
+            rows = adapter.read_many([{"assetId": "asset-1"}])
+        self.assertEqual(rows[0]["title"], "Read title")
+        self.assertEqual(calls[0][0][0], "metadata-read-many")
+        self.assertFalse(Path(calls[0][0][2]).exists())
 
 
 if __name__ == "__main__":

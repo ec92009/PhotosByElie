@@ -26,6 +26,33 @@ migration is rehearsed.
   and receipt give-back. Backstage may read, select, preview, and export
   through PhotoKit; it does not create a second metadata writer.
 
+## Native media and Photos give-back
+
+`PhotoKitLibraryService` is read/export-only:
+
+- it requests the app's Photos permission, indexes stable local identifiers,
+  filename, capture date and media kind;
+- it prepares bounded JPEG previews without exporting originals;
+- it exports the preferred original resource only after an explicit folder
+  choice and returns byte count, UTI and a streamed SHA-256 receipt.
+
+The Metadata screen never calls an Apple Photos mutation API. It creates a
+`sidecar-culling-review` action containing the existing
+`fixture-photos-writeback-plan` or `fixture-photos-writeback-commit` manifest.
+The Worker is the authorization, idempotency and audit gate. Backstage then
+posts only the opaque action ID to the allowlisted Max localhost wake endpoint;
+if the endpoint is unavailable, the durable connector poller picks up the same
+action.
+
+The connector invokes `PhotosByElie Photos Bridge.app` for both the batch
+read used by the dry run and the batch write. JavaScript for Automation runs
+inside that stable signed app identity. The bridge preserves unrelated
+keywords, returns per-item before/after values, and the connector records an
+Apple Photos receipt only after a re-read verifies title, caption and managed
+keywords. Failed item IDs remain independently retryable; retry submits only
+those IDs. No production give-back path invokes the legacy in-process JXA
+adapter.
+
 ## Authority and data flow
 
 ```mermaid
@@ -90,7 +117,7 @@ advance in one `BEGIN IMMEDIATE` transaction and roll back together on error.
 - `OwnerAPITransport` allows URLSession now and test/offline transports.
 - `OwnerDatabaseReading` keeps UI use cases independent of SQLite details.
 - `PhotoLibraryServing` isolates PhotoKit authorization and export.
-- `OwnerActionSubmitting` allows future Macs and mobile devices to submit
+- `OwnerActionServing` and `OwnerActionRunner` allow future Macs and mobile devices to submit
   actions without becoming writers.
 - Server-declared capabilities hide unsupported workflows on non-authoritative
   devices.

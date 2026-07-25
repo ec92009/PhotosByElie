@@ -14,6 +14,7 @@ from pathlib import Path
 import sqlite3
 import subprocess
 from typing import Any, Iterable, Protocol
+import uuid
 
 from fixture_pipeline import editorial_version_hash, record_delivery_receipt
 from sidecar_state_db import connect
@@ -42,6 +43,7 @@ def _run_jxa(source: str, *args: str, timeout: float = 60) -> str:
 
 
 class ApplePhotosAdapter:
+    """Legacy in-process adapter retained only for isolated compatibility tests."""
     _READ = r"""
 function run(argv) {
   const photos = Application('Photos');
@@ -198,6 +200,63 @@ function run(argv) {
         return [dict(item) for item in payload]
 
 
+class SignedPhotosBridgeAdapter:
+    """Read and write metadata through the stable signed Photos Bridge app."""
+
+    def __init__(self, repo_root: Path):
+        self.repo_root = repo_root.resolve()
+
+    def _run(self, command: str, requests: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        from sidecar_server import _run_apple_photos_bridge_app_task
+
+        input_path = (
+            self.repo_root
+            / "tmp"
+            / "sidecar-bridge-input"
+            / f"metadata-{uuid.uuid4().hex}.json"
+        )
+        input_path.parent.mkdir(parents=True, exist_ok=True)
+        input_path.write_text(json.dumps(requests, ensure_ascii=False), encoding="utf-8")
+        try:
+            result = _run_apple_photos_bridge_app_task(
+                self.repo_root,
+                [command, "--input", str(input_path)],
+                timeout=max(60, len(requests) * 6),
+            )
+        finally:
+            input_path.unlink(missing_ok=True)
+        if not result.get("ok"):
+            raise RuntimeError(
+                str(result.get("error") or result.get("code") or "Signed Photos Bridge failed.")
+            )
+        items = result.get("items")
+        if not isinstance(items, list):
+            raise RuntimeError("Signed Photos Bridge returned no metadata item receipts.")
+        return [dict(item) for item in items if isinstance(item, dict)]
+
+    def read_many(self, requests: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        return self._run("metadata-read-many", requests)
+
+    def read(self, asset_id: str) -> dict[str, Any]:
+        rows = self.read_many([{"assetId": asset_id}])
+        if not rows:
+            raise RuntimeError(f"Signed Photos Bridge returned no metadata for {asset_id}")
+        row = rows[0]
+        if row.get("error"):
+            raise RuntimeError(str(row["error"]))
+        return {
+            "title": str(row.get("title") or ""),
+            "caption": str(row.get("caption") or ""),
+            "keywords": [str(item) for item in row.get("keywords") or [] if str(item).strip()],
+        }
+
+    def write(self, asset_id: str, title: str, caption: str, keywords: list[str]) -> None:
+        raise RuntimeError("Single-item direct writes are disabled; use signed batch apply.")
+
+    def apply_many(self, requests: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        return self._run("metadata-apply-many", requests)
+
+
 def _is_managed(keyword: str) -> bool:
     return keyword in MANAGED_EXACT or keyword.startswith(MANAGED_PREFIXES)
 
@@ -316,10 +375,38 @@ def writeback_plan(
                 "caption": item["caption"],
                 "keywords": [*item["keywords"], *managed],
             }
+        current_rows: dict[str, dict[str, Any]] = {}
+        if adapter is not None and callable(read_many := getattr(adapter, "read_many", None)) and grouped:
+            try:
+                current_rows = {
+                    str(row.get("assetId") or ""): row
+                    for row in read_many([
+                        {"assetId": item["photosAssetId"]}
+                        for item in grouped.values()
+                    ])
+                    if isinstance(row, dict)
+                }
+            except Exception as error:  # noqa: BLE001 - the dry-run remains non-mutating.
+                current_rows = {
+                    item["photosAssetId"]: {"error": str(error)}
+                    for item in grouped.values()
+                }
+        for item in grouped.values():
             if adapter is not None:
                 try:
-                    before = adapter.read(item["photosAssetId"])
-                    after_keywords = merge_keywords(before.get("keywords") or [], item["keywords"], managed)
+                    current = current_rows.get(item["photosAssetId"])
+                    if current and current.get("error"):
+                        raise RuntimeError(str(current["error"]))
+                    before = {
+                        "title": str(current.get("title") or ""),
+                        "caption": str(current.get("caption") or ""),
+                        "keywords": [str(value) for value in current.get("keywords") or []],
+                    } if current is not None else adapter.read(item["photosAssetId"])
+                    after_keywords = merge_keywords(
+                        before.get("keywords") or [],
+                        item["keywords"],
+                        item["managedKeywords"],
+                    )
                     after = {"title": item["title"], "caption": item["caption"], "keywords": after_keywords}
                     item["currentMetadata"] = before
                     item["intendedMetadata"] = after
@@ -341,7 +428,7 @@ def commit_writeback(
     *,
     adapter: PhotosMetadataAccess | None = None,
 ) -> dict[str, Any]:
-    adapter = adapter or ApplePhotosAdapter()
+    adapter = adapter or SignedPhotosBridgeAdapter(repo_root)
     plan = writeback_plan(repo_root, fixture_id, asset_ids)
     written: list[dict[str, Any]] = []
     failed: list[dict[str, Any]] = []
@@ -430,7 +517,7 @@ def main() -> None:
         args.repo_root,
         args.fixture_id,
         args.asset_id,
-        adapter=ApplePhotosAdapter(),
+        adapter=SignedPhotosBridgeAdapter(args.repo_root),
     )
     print(json.dumps(result, ensure_ascii=False, indent=2))
 

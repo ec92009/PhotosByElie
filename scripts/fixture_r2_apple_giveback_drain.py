@@ -20,7 +20,7 @@ import tempfile
 import time
 from typing import Any
 
-from apple_photos_metadata_writer import ApplePhotosAdapter, commit_writeback, writeback_plan
+from apple_photos_metadata_writer import SignedPhotosBridgeAdapter, commit_writeback, writeback_plan
 from fixture_pipeline import adopt_upload_run, editorial_version_hash, plan_upload_run_adoption
 from sidecar_state_db import connect
 from sync_r2_media import s3_signed_request
@@ -398,7 +398,7 @@ def main() -> int:
     append_event(log_path, {"event": "start", "mode": "commit" if args.commit else "dry-run", "pending": len(candidates), "baselineVerified": baseline})
     if not args.commit:
         return 0
-    adapter = ApplePhotosAdapter()
+    adapter = SignedPhotosBridgeAdapter(repo_root)
     completed = 0
     failed = 0
     consecutive_failures = 0

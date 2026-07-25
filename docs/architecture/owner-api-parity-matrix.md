@@ -38,7 +38,7 @@ the authoritative store for every mutation.
 | Metadata review | Title/keyword proposals, accept/undo, blacklist | `Owner.sqlite`; Photos Bridge give-back | `/actions` | Compare, edit, approve, undo, blacklist |
 | Waste Basket | Hide, restore, discard, empty; recover saved title | `Owner.sqlite` lifecycle state | `/actions` | Multi-select lifecycle workspace |
 | Upload bridge | Queue, R2 upload, collision/receipt accounting | `Owner.sqlite`, private/public R2 | `/actions` | Upload queue with progress and cancellation |
-| Apple Photos give-back | Keyword/title mutation and verified receipt | Signed Photos Bridge app | `/actions` | Progress and verified/failed receipts |
+| Apple Photos give-back | Signed-app batch read, explicit batch mutation, re-read verification and independently retryable receipts | Signed Photos Bridge app | `/actions` | Native dry run, explicit commit, verified/failed receipts and failed-only retry |
 | Delivery | PDF/video assembly, status, view/download | Worker + R2 | `/deliverables*`, `/jobs*` | Delivery builder and download/share view |
 | Sharing | Delivery links and fixture/gallery access | Worker + D1/R2 | `/delivery-links`, `/acs/*` | Share sheet and access assignment |
 | Publication | Static catalog generation, validation, deploy | Max connector and GitHub Pages | `/actions` | Rehearsal report and explicit publish action |

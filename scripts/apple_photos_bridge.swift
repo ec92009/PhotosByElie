@@ -4,6 +4,7 @@ import AVFoundation
 import CoreLocation
 import Foundation
 import ImageIO
+import OSAKit
 import Photos
 
 struct BridgeError: Error {
@@ -90,22 +91,143 @@ func boolArg(_ name: String) -> Bool {
     return CommandLine.arguments.contains(name)
 }
 
+func metadataAutomation(input: URL, commit: Bool) throws -> [String: Any] {
+    // The first Apple Events request can require a one-time macOS Automation
+    // decision. Bring the otherwise background-only bridge forward long enough
+    // for that system sheet to be visible instead of leaving the caller waiting
+    // behind an invisible TCC prompt.
+    NSApplication.shared.setActivationPolicy(.regular)
+    NSApplication.shared.activate(ignoringOtherApps: true)
+    let inputData = try Data(contentsOf: input)
+    let requestValue = try JSONSerialization.jsonObject(with: inputData)
+    guard let requests = requestValue as? [[String: Any]] else {
+        throw BridgeError(code: "metadata_input_invalid", message: "Metadata bridge input must be a JSON array.")
+    }
+    let payload = try JSONSerialization.data(withJSONObject: requests).base64EncodedString()
+    let operation = commit ? "apply" : "read"
+    let source = """
+ObjC.import('Foundation');
+function decode(value) {
+  const data = $.NSData.alloc.initWithBase64EncodedStringOptions(value, 0);
+  const text = $.NSString.alloc.initWithDataEncoding(data, $.NSUTF8StringEncoding).js;
+  return JSON.parse(text);
+}
+function run() {
+  const requests = decode('\(payload)');
+  const photos = Application('Photos');
+  const managedPrefixes = ['PBE-Rating-', 'PBE-Color-', 'PBE-Fixture-ID:'];
+  const isManaged = value =>
+    value === 'PBE-Approved' || managedPrefixes.some(prefix => value.startsWith(prefix));
+  const readOne = request => {
+    const id = String(request.assetId || '');
+    const item = photos.mediaItems.byId(id);
+    if (item.id() !== id) throw new Error(`Apple Photos asset not found: ${id}`);
+    return {
+      assetId: id,
+      title: item.name() || '',
+      caption: item.description() || '',
+      keywords: item.keywords() || [],
+    };
+  };
+  const applyOne = request => {
+    const id = String(request.assetId || '');
+    try {
+      const item = photos.mediaItems.byId(id);
+      if (item.id() !== id) throw new Error(`Apple Photos asset not found: ${id}`);
+      const before = {
+        title: item.name() || '',
+        caption: item.description() || '',
+        keywords: item.keywords() || [],
+      };
+      const desired = Array.isArray(request.keywords) ? request.keywords.map(String) : [];
+      const managed = Array.isArray(request.managedKeywords) ? request.managedKeywords.map(String) : [];
+      const managedSet = new Set(managed);
+      const keywords = [];
+      const seen = new Set();
+      [...before.keywords.map(String), ...desired, ...managed].forEach(value => {
+        const clean = String(value || '').trim();
+        const key = clean.toLocaleLowerCase();
+        if (!clean || seen.has(key) || (isManaged(clean) && !managedSet.has(clean))) return;
+        seen.add(key);
+        keywords.push(clean);
+      });
+      item.name = String(request.title || '');
+      item.description = String(request.caption || '');
+      item.keywords = keywords;
+      const after = {
+        title: item.name() || '',
+        caption: item.description() || '',
+        keywords: item.keywords() || [],
+      };
+      return {assetId: id, before, after, keywords};
+    } catch (error) {
+      return {assetId: id, error: String(error)};
+    }
+  };
+  const items = requests.map(request => '\(operation)' === 'apply' ? applyOne(request) : readOne(request));
+  return JSON.stringify(items);
+}
+"""
+    guard let language = OSALanguage(forName: "JavaScript") else {
+        throw BridgeError(code: "metadata_automation_unavailable", message: "JavaScript for Automation is unavailable.")
+    }
+    let script = OSAScript(source: source, language: language)
+    var errorInfo: NSDictionary?
+    guard let descriptor = script.executeAndReturnError(&errorInfo),
+          let resultString = descriptor.stringValue,
+          let resultData = resultString.data(using: .utf8),
+          let items = try JSONSerialization.jsonObject(with: resultData) as? [[String: Any]] else {
+        let message = (errorInfo?[NSLocalizedDescriptionKey] as? String)
+            ?? "The signed Photos Bridge could not run the metadata automation."
+        throw BridgeError(code: "metadata_automation_failed", message: message)
+    }
+    return [
+        "ok": true,
+        "mode": commit ? "metadata-apply-many" : "metadata-read-many",
+        "count": items.count,
+        "items": items,
+    ]
+}
+
 func requirePhotosAccess() {
-    let status = PHPhotoLibrary.authorizationStatus()
+    let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
     if status == .authorized || status == .limited {
         return
     }
     if status == .denied || status == .restricted {
         fail("permission_denied", "macOS is blocking Apple Photos access for this helper. Enable Photos access for PhotosByElie Photos Bridge in System Settings > Privacy & Security > Photos, then retry.")
     }
-    let semaphore = DispatchSemaphore(value: 0)
-    var granted = false
-    PHPhotoLibrary.requestAuthorization { nextStatus in
-        granted = nextStatus == .authorized || nextStatus == .limited
-        semaphore.signal()
+    // PhotoKit authorization is UI-mediated. The bridge is normally a
+    // command-shaped app, but it must be visible for its one-time system grant.
+    NSApplication.shared.setActivationPolicy(.regular)
+    NSApplication.shared.finishLaunching()
+    NSApplication.shared.activate(ignoringOtherApps: true)
+    let lock = NSLock()
+    var resolvedStatus: PHAuthorizationStatus?
+    PHPhotoLibrary.requestAuthorization(for: .readWrite) { nextStatus in
+        lock.lock()
+        resolvedStatus = nextStatus
+        lock.unlock()
+        CFRunLoopWakeUp(CFRunLoopGetMain())
     }
-    _ = semaphore.wait(timeout: .now() + 120)
-    if !granted {
+
+    // Authorization can require main-run-loop work even when macOS already
+    // shows Full Access for the signed app. Blocking the main thread on a
+    // semaphore makes that callback deadlock and leaves Sidecar waiting.
+    let deadline = Date().addingTimeInterval(120)
+    while Date() < deadline {
+        lock.lock()
+        let nextStatus = resolvedStatus
+        lock.unlock()
+        if let nextStatus {
+            if nextStatus == .authorized || nextStatus == .limited {
+                return
+            }
+            break
+        }
+        _ = RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.05))
+    }
+    if resolvedStatus != .authorized && resolvedStatus != .limited {
         fail("permission_missing", "Apple Photos permission was not granted. Enable Photos access for PhotosByElie Photos Bridge in System Settings > Privacy & Security > Photos, then retry.")
     }
 }
@@ -2184,7 +2306,7 @@ func materializeOne(asset: PHAsset, destination: URL, allowIcloudDownloads: Bool
 
 let command = CommandLine.arguments.dropFirst().first ?? ""
 if command.isEmpty || command == "--help" {
-    outputJSON(["ok": true, "usage": "apple_photos_bridge.swift albums | library-index [--limit N] [--offset N] [--date-from YYYY-MM-DD] [--date-to YYYY-MM-DD] | library-index-file --destination PATH [--date-from YYYY-MM-DD] [--date-to YYYY-MM-DD] [--progress-every N] | preview --asset-id ID --destination PATH [--max-pixel N] | video --asset-id ID --destination PATH | preflight --album-id ID [--filter-bursts] [--allow-icloud-downloads] | export --album-id ID --destination PATH [--filter-bursts] [--allow-icloud-downloads] | materialize-one --asset-id ID --destination PATH [--allow-icloud-downloads] [--result-destination PATH]"])
+    outputJSON(["ok": true, "usage": "apple_photos_bridge.swift albums | library-index [--limit N] [--offset N] [--date-from YYYY-MM-DD] [--date-to YYYY-MM-DD] | library-index-file --destination PATH [--date-from YYYY-MM-DD] [--date-to YYYY-MM-DD] [--progress-every N] | preview --asset-id ID --destination PATH [--max-pixel N] | video --asset-id ID --destination PATH | preflight --album-id ID [--filter-bursts] [--allow-icloud-downloads] | export --album-id ID --destination PATH [--filter-bursts] [--allow-icloud-downloads] | materialize-one --asset-id ID --destination PATH [--allow-icloud-downloads] [--result-destination PATH] | metadata-read-many --input PATH | metadata-apply-many --input PATH"])
     exit(0)
 }
 
@@ -2246,6 +2368,14 @@ do {
         let asset = try findAsset(id: argValue("--asset-id"))
         let payload = try materializeOne(asset: asset, destination: URL(fileURLWithPath: destination), allowIcloudDownloads: boolArg("--allow-icloud-downloads"))
         outputJSON(payload)
+    case "metadata-read-many", "metadata-apply-many":
+        guard let input = argValue("--input") else {
+            fail("missing_input", "Missing --input for Apple Photos metadata batch.")
+        }
+        outputJSON(try metadataAutomation(
+            input: URL(fileURLWithPath: input),
+            commit: command == "metadata-apply-many"
+        ))
     default:
         fail("bad_command", "Unknown Apple Photos bridge command: \(command)", status: 2)
     }

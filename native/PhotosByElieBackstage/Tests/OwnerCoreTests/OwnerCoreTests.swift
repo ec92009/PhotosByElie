@@ -141,6 +141,124 @@ struct OwnerCoreTests {
         try await session.clear()
         #expect(try await session.load() == nil)
     }
+
+    @Test("Metadata give-back uses Worker action, dry-run gate, and verified receipts")
+    func metadataGiveBackDryRun() async throws {
+        let completed = OwnerAction(
+            id: "owner-action-1",
+            actionKind: "sidecar-culling-review",
+            target: "max",
+            state: .completed,
+            result: [
+                "photosWriteback": [
+                    "mode": "dry-run",
+                    "count": 2,
+                    "blockedCount": 1,
+                    "items": [],
+                    "blocked": [[
+                        "fixtureId": "fixture-family",
+                        "assetId": "asset-3",
+                        "reason": "same-version R2 delivery is not verified",
+                    ]],
+                ],
+            ]
+        )
+        let api = ScriptedOwnerActionAPI(completed: [completed])
+        let runner = OwnerActionRunner(
+            api: api,
+            waker: UnavailableWaker(),
+            pollInterval: .milliseconds(1),
+            timeout: .seconds(1)
+        )
+        let service = MetadataGiveBackService(runner: runner)
+
+        let report = try await service.plan(fixtureID: "fixture-family")
+
+        #expect(report.isDryRun)
+        #expect(report.readyCount == 2)
+        #expect(report.blocked.map(\.assetID) == ["asset-3"])
+        let request = try #require(await api.requests().first)
+        #expect(request.actionKind == "sidecar-culling-review")
+        #expect(request.target == "max")
+        #expect(request.payload["requestedConnector"]?.stringValue == "max")
+        #expect(
+            request.payload["manifest"]?.objectValue?["mode"]?.stringValue
+                == "fixture-photos-writeback-plan"
+        )
+    }
+
+    @Test("Metadata give-back retries only independently failed asset IDs")
+    func metadataGiveBackRetriesFailuresOnly() async throws {
+        let first = OwnerAction(
+            id: "owner-action-1",
+            actionKind: "sidecar-culling-review",
+            target: "max",
+            state: .completed,
+            result: [
+                "photosWriteback": [
+                    "mode": "commit",
+                    "writtenCount": 1,
+                    "failedCount": 1,
+                    "written": [[
+                        "assetId": "asset-ok",
+                        "fixtureIds": ["fixture-family"],
+                        "checksumSha256": "abc123",
+                    ]],
+                    "failed": [[
+                        "assetId": "asset-retry",
+                        "error": "Photos verification failed",
+                    ]],
+                    "blocked": [],
+                ],
+            ]
+        )
+        let second = OwnerAction(
+            id: "owner-action-2",
+            actionKind: "sidecar-culling-review",
+            target: "max",
+            state: .completed,
+            result: [
+                "photosWriteback": [
+                    "mode": "commit",
+                    "writtenCount": 1,
+                    "failedCount": 0,
+                    "written": [[
+                        "assetId": "asset-retry",
+                        "fixtureIds": ["fixture-family"],
+                        "checksumSha256": "def456",
+                    ]],
+                    "failed": [],
+                    "blocked": [],
+                ],
+            ]
+        )
+        let api = ScriptedOwnerActionAPI(completed: [first, second])
+        let runner = OwnerActionRunner(
+            api: api,
+            waker: UnavailableWaker(),
+            pollInterval: .milliseconds(1),
+            timeout: .seconds(1)
+        )
+        let service = MetadataGiveBackService(runner: runner)
+
+        let initial = try await service.commit(fixtureID: "fixture-family")
+        #expect(initial.verifiedCount == 1)
+        #expect(initial.failedAssetIDs == ["asset-retry"])
+        let retried = try await service.retryFailures(
+            from: initial,
+            fixtureID: "fixture-family"
+        )
+        #expect(retried.verifiedCount == 1)
+        #expect(retried.failed.isEmpty)
+
+        let requests = await api.requests()
+        #expect(requests.count == 2)
+        let retryManifest = requests[1].payload["manifest"]?.objectValue
+        #expect(
+            retryManifest?["assetIds"]?.arrayValue?.compactMap(\.stringValue)
+                == ["asset-retry"]
+        )
+    }
 }
 
 private func scalar(_ databaseURL: URL, _ sql: String) throws -> String {
@@ -196,4 +314,46 @@ private actor RecordingTransport: OwnerAPITransport {
     }
 
     func lastRequest() -> URLRequest? { request }
+}
+
+private struct UnavailableWaker: OwnerActionWaking {
+    func wake(actionID: String) async throws -> OwnerAction? {
+        throw URLError(.cannotConnectToHost)
+    }
+}
+
+private actor ScriptedOwnerActionAPI: OwnerActionServing {
+    private var completed: [OwnerAction]
+    private var created: [OwnerActionCreate] = []
+
+    init(completed: [OwnerAction]) {
+        self.completed = completed
+    }
+
+    func createAction(
+        _ action: OwnerActionCreate,
+        idempotencyKey: String
+    ) async throws -> OwnerActionEnvelope {
+        created.append(action)
+        let index = created.count - 1
+        let terminal = completed[index]
+        return OwnerActionEnvelope(
+            action: OwnerAction(
+                id: terminal.id,
+                actionKind: action.actionKind,
+                target: action.target,
+                state: .queued
+            ),
+            idempotencyReplayed: false
+        )
+    }
+
+    func getAction(id: String) async throws -> OwnerAction {
+        guard let action = completed.first(where: { $0.id == id }) else {
+            throw URLError(.resourceUnavailable)
+        }
+        return action
+    }
+
+    func requests() -> [OwnerActionCreate] { created }
 }

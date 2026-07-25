@@ -70,12 +70,12 @@ cat > "$app_contents/Info.plist" <<PLIST
   <string>1</string>
   <key>LSMinimumSystemVersion</key>
   <string>13.0</string>
-  <key>LSUIElement</key>
-  <true/>
   <key>NSHighResolutionCapable</key>
   <true/>
   <key>NSPhotoLibraryUsageDescription</key>
   <string>PhotosByElie Sidecar indexes Apple Photos metadata locally for culling and review.</string>
+  <key>NSAppleEventsUsageDescription</key>
+  <string>PhotosByElie writes explicitly approved titles and keywords to Apple Photos and verifies the result.</string>
 </dict>
 </plist>
 PLIST
@@ -97,4 +97,10 @@ if [[ -f "$source_icon" ]]; then
 fi
 
 touch "$app_dir"
+# Seal the whole bundle rather than relying on swiftc's linker-only signature.
+# A Developer ID may be supplied in production; local builds retain a stable
+# bundle identifier under an explicit ad-hoc app signature.
+identity="${PBE_CODESIGN_IDENTITY:--}"
+codesign --force --deep --sign "$identity" "$app_dir"
+codesign --verify --deep --strict "$app_dir"
 printf 'Installed %s\n' "$app_dir"

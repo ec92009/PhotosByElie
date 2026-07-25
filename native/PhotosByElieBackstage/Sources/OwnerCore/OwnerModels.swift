@@ -1,5 +1,103 @@
 import Foundation
 
+public enum JSONValue: Codable, Sendable, Equatable {
+    case string(String)
+    case number(Double)
+    case bool(Bool)
+    case object([String: JSONValue])
+    case array([JSONValue])
+    case null
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if container.decodeNil() {
+            self = .null
+        } else if let value = try? container.decode(Bool.self) {
+            self = .bool(value)
+        } else if let value = try? container.decode(Double.self) {
+            self = .number(value)
+        } else if let value = try? container.decode(String.self) {
+            self = .string(value)
+        } else if let value = try? container.decode([String: JSONValue].self) {
+            self = .object(value)
+        } else if let value = try? container.decode([JSONValue].self) {
+            self = .array(value)
+        } else {
+            throw DecodingError.dataCorruptedError(
+                in: container,
+                debugDescription: "Unsupported JSON value."
+            )
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case let .string(value): try container.encode(value)
+        case let .number(value): try container.encode(value)
+        case let .bool(value): try container.encode(value)
+        case let .object(value): try container.encode(value)
+        case let .array(value): try container.encode(value)
+        case .null: try container.encodeNil()
+        }
+    }
+
+    public var stringValue: String? {
+        guard case let .string(value) = self else { return nil }
+        return value
+    }
+
+    public var intValue: Int? {
+        guard case let .number(value) = self else { return nil }
+        return Int(exactly: value)
+    }
+
+    public var boolValue: Bool? {
+        guard case let .bool(value) = self else { return nil }
+        return value
+    }
+
+    public var objectValue: [String: JSONValue]? {
+        guard case let .object(value) = self else { return nil }
+        return value
+    }
+
+    public var arrayValue: [JSONValue]? {
+        guard case let .array(value) = self else { return nil }
+        return value
+    }
+}
+
+extension JSONValue: ExpressibleByStringLiteral {
+    public init(stringLiteral value: String) { self = .string(value) }
+}
+
+extension JSONValue: ExpressibleByIntegerLiteral {
+    public init(integerLiteral value: Int) { self = .number(Double(value)) }
+}
+
+extension JSONValue: ExpressibleByFloatLiteral {
+    public init(floatLiteral value: Double) { self = .number(value) }
+}
+
+extension JSONValue: ExpressibleByBooleanLiteral {
+    public init(booleanLiteral value: Bool) { self = .bool(value) }
+}
+
+extension JSONValue: ExpressibleByArrayLiteral {
+    public init(arrayLiteral elements: JSONValue...) { self = .array(elements) }
+}
+
+extension JSONValue: ExpressibleByDictionaryLiteral {
+    public init(dictionaryLiteral elements: (String, JSONValue)...) {
+        self = .object(Dictionary(uniqueKeysWithValues: elements))
+    }
+}
+
+extension JSONValue: ExpressibleByNilLiteral {
+    public init(nilLiteral: ()) { self = .null }
+}
+
 public struct APIErrorEnvelope: Codable, Error, Sendable, Equatable {
     public struct Detail: Codable, Sendable, Equatable {
         public var code: String
@@ -80,6 +178,11 @@ public struct OwnerAction: Codable, Identifiable, Sendable, Equatable {
     public var createdBy: String?
     public var createdAt: Date?
     public var updatedAt: Date?
+    public var claimedAt: Date?
+    public var completedAt: Date?
+    public var payload: [String: JSONValue]?
+    public var result: [String: JSONValue]?
+    public var error: [String: JSONValue]?
     public var progress: OwnerProgress?
     public var timing: OwnerActionTiming?
 
@@ -91,6 +194,11 @@ public struct OwnerAction: Codable, Identifiable, Sendable, Equatable {
         createdBy: String? = nil,
         createdAt: Date? = nil,
         updatedAt: Date? = nil,
+        claimedAt: Date? = nil,
+        completedAt: Date? = nil,
+        payload: [String: JSONValue]? = nil,
+        result: [String: JSONValue]? = nil,
+        error: [String: JSONValue]? = nil,
         progress: OwnerProgress? = nil,
         timing: OwnerActionTiming? = nil
     ) {
@@ -101,6 +209,11 @@ public struct OwnerAction: Codable, Identifiable, Sendable, Equatable {
         self.createdBy = createdBy
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+        self.claimedAt = claimedAt
+        self.completedAt = completedAt
+        self.payload = payload
+        self.result = result
+        self.error = error
         self.progress = progress
         self.timing = timing
     }
@@ -149,9 +262,9 @@ public struct OwnerJob: Codable, Identifiable, Sendable, Equatable {
 public struct OwnerActionCreate: Codable, Sendable, Equatable {
     public var actionKind: String
     public var target: String
-    public var payload: [String: String]
+    public var payload: [String: JSONValue]
 
-    public init(actionKind: String, target: String, payload: [String: String] = [:]) {
+    public init(actionKind: String, target: String, payload: [String: JSONValue] = [:]) {
         self.actionKind = actionKind
         self.target = target
         self.payload = payload
@@ -162,4 +275,3 @@ public struct OwnerActionEnvelope: Codable, Sendable, Equatable {
     public var action: OwnerAction
     public var idempotencyReplayed: Bool?
 }
-

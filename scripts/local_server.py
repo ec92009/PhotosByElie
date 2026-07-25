@@ -372,7 +372,7 @@ from fixture_pipeline import (  # noqa: E402
     restore_placement,
     search_assets,
 )
-from apple_photos_metadata_writer import ApplePhotosAdapter, commit_writeback, writeback_plan  # noqa: E402
+from apple_photos_metadata_writer import SignedPhotosBridgeAdapter, commit_writeback, writeback_plan  # noqa: E402
 
 
 COLLECTION_KEYWORD_TARGETS = {
@@ -1886,7 +1886,7 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
             repo_root,
             str(manifest.get("fixtureId") or ""),
             manifest.get("assetIds") or [],
-            adapter=ApplePhotosAdapter(),
+            adapter=SignedPhotosBridgeAdapter(repo_root),
         )})
     elif mode == "fixture-photos-writeback-commit":
         result.update({"readOnly": False, "photosWriteback": commit_writeback(repo_root, str(manifest.get("fixtureId") or ""), manifest.get("assetIds") or [])})

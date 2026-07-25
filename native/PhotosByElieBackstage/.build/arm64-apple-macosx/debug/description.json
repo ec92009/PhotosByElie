@@ -1,0 +1,953 @@
+{
+  "builtTestProducts" : [
+    {
+      "binaryPath" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/PhotosByElieBackstagePackageTests.xctest/Contents/MacOS/PhotosByElieBackstagePackageTests",
+      "packagePath" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage",
+      "productName" : "PhotosByElieBackstagePackageTests"
+    }
+  ],
+  "copyCommands" : {
+    "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/PhotosByElieBackstage_OwnerCoreTests.bundle/Fixtures" : {
+      "inputs" : [
+        {
+          "kind" : "directory",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/Tests/OwnerCoreTests/Fixtures"
+        }
+      ],
+      "outputs" : [
+        {
+          "kind" : "directory",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/PhotosByElieBackstage_OwnerCoreTests.bundle/Fixtures"
+        }
+      ]
+    }
+  },
+  "explicitTargetDependencyImportCheckingMode" : {
+    "none" : {
+
+    }
+  },
+  "generatedSourceTargetSet" : [
+
+  ],
+  "pluginDescriptions" : [
+
+  ],
+  "swiftCommands" : {
+    "C.BackstageApp-arm64-apple-macosx-debug.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/BackstageApp.build/sources",
+      "importPath" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/Sources/BackstageApp/BackstageViewModel.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/Sources/BackstageApp/PhotosByElieBackstageApp.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/Modules/OwnerCore.swiftmodule"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/BackstageApp.build/sources"
+        }
+      ],
+      "isLibrary" : false,
+      "moduleName" : "BackstageApp",
+      "moduleOutputPath" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/Modules/BackstageApp.swiftmodule",
+      "objects" : [
+        "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/BackstageApp.build/BackstageViewModel.swift.o",
+        "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/BackstageApp.build/PhotosByElieBackstageApp.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx14.0",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-j10",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-Xfrontend",
+        "-entry-point-function-name",
+        "-Xfrontend",
+        "BackstageApp_main",
+        "-swift-version",
+        "6",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "photosbyeliebackstage"
+      ],
+      "outputFileMapPath" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/BackstageApp.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/BackstageApp.build/BackstageViewModel.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/BackstageApp.build/PhotosByElieBackstageApp.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/Modules/BackstageApp.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/Sources/BackstageApp/BackstageViewModel.swift",
+        "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/Sources/BackstageApp/PhotosByElieBackstageApp.swift"
+      ],
+      "tempsPath" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/BackstageApp.build",
+      "wholeModuleOptimization" : false
+    },
+    "C.OwnerCore-arm64-apple-macosx-debug.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/sources",
+      "importPath" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/Sources/OwnerCore/KeychainVault.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/Sources/OwnerCore/OwnerAPIClient.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/Sources/OwnerCore/OwnerDatabase.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/Sources/OwnerCore/OwnerModels.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/Sources/OwnerCore/PhotoLibraryService.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "OwnerCore",
+      "moduleOutputPath" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/Modules/OwnerCore.swiftmodule",
+      "objects" : [
+        "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/KeychainVault.swift.o",
+        "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/OwnerAPIClient.swift.o",
+        "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/OwnerDatabase.swift.o",
+        "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/OwnerModels.swift.o",
+        "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/PhotoLibraryService.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx14.0",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-j10",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-emit-objc-header",
+        "-emit-objc-header-path",
+        "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/include/OwnerCore-Swift.h",
+        "-swift-version",
+        "6",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "photosbyeliebackstage"
+      ],
+      "outputFileMapPath" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/KeychainVault.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/OwnerAPIClient.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/OwnerDatabase.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/OwnerModels.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/PhotoLibraryService.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/Modules/OwnerCore.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/Sources/OwnerCore/KeychainVault.swift",
+        "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/Sources/OwnerCore/OwnerAPIClient.swift",
+        "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/Sources/OwnerCore/OwnerDatabase.swift",
+        "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/Sources/OwnerCore/OwnerModels.swift",
+        "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/Sources/OwnerCore/PhotoLibraryService.swift"
+      ],
+      "tempsPath" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build",
+      "wholeModuleOptimization" : false
+    },
+    "C.OwnerCoreTests-arm64-apple-macosx-debug.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCoreTests.build/sources",
+      "importPath" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/Tests/OwnerCoreTests/OwnerCoreTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCoreTests.build/DerivedSources/resource_bundle_accessor.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "virtual",
+          "name" : "<OwnerCoreTests-arm64-apple-macosx-debug.module-resources>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/Modules/OwnerCore.swiftmodule"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCoreTests.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "OwnerCoreTests",
+      "moduleOutputPath" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/Modules/OwnerCoreTests.swiftmodule",
+      "objects" : [
+        "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCoreTests.build/OwnerCoreTests.swift.o",
+        "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCoreTests.build/resource_bundle_accessor.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx14.0",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-Xfrontend",
+        "-enable-cross-import-overlays",
+        "-j10",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_AVAILABLE",
+        "-module-cache-path",
+        "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-swift-version",
+        "6",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "photosbyeliebackstage"
+      ],
+      "outputFileMapPath" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCoreTests.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCoreTests.build/OwnerCoreTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCoreTests.build/resource_bundle_accessor.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/Modules/OwnerCoreTests.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/Tests/OwnerCoreTests/OwnerCoreTests.swift",
+        "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCoreTests.build/DerivedSources/resource_bundle_accessor.swift"
+      ],
+      "tempsPath" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCoreTests.build",
+      "wholeModuleOptimization" : false
+    },
+    "C.PhotosByElieBackstagePackageTests-arm64-apple-macosx-debug.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/PhotosByElieBackstagePackageTests.build/sources",
+      "importPath" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/PhotosByElieBackstagePackageTests.derived/runner.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/Modules/OwnerCoreTests.swiftmodule"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/PhotosByElieBackstagePackageTests.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "PhotosByElieBackstagePackageTests",
+      "moduleOutputPath" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/Modules/PhotosByElieBackstagePackageTests.swiftmodule",
+      "objects" : [
+        "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/PhotosByElieBackstagePackageTests.build/runner.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx14.0",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-Xfrontend",
+        "-enable-cross-import-overlays",
+        "-j10",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-emit-objc-header",
+        "-emit-objc-header-path",
+        "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/PhotosByElieBackstagePackageTests.build/include/PhotosByElieBackstagePackageTests-Swift.h",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "photosbyeliebackstage"
+      ],
+      "outputFileMapPath" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/PhotosByElieBackstagePackageTests.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/PhotosByElieBackstagePackageTests.build/runner.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/Modules/PhotosByElieBackstagePackageTests.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/PhotosByElieBackstagePackageTests.derived/runner.swift"
+      ],
+      "tempsPath" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/PhotosByElieBackstagePackageTests.build",
+      "wholeModuleOptimization" : false
+    }
+  },
+  "swiftFrontendCommands" : {
+
+  },
+  "swiftTargetScanArgs" : {
+    "BackstageApp" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "BackstageApp",
+      "-package-name",
+      "photosbyeliebackstage",
+      "-c",
+      "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/Sources/BackstageApp/BackstageViewModel.swift",
+      "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/Sources/BackstageApp/PhotosByElieBackstageApp.swift",
+      "-I",
+      "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx14.0",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-j10",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-Xfrontend",
+      "-entry-point-function-name",
+      "-Xfrontend",
+      "BackstageApp_main",
+      "-swift-version",
+      "6",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "photosbyeliebackstage",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ],
+    "OwnerCore" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "OwnerCore",
+      "-package-name",
+      "photosbyeliebackstage",
+      "-c",
+      "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/Sources/OwnerCore/KeychainVault.swift",
+      "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/Sources/OwnerCore/OwnerAPIClient.swift",
+      "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/Sources/OwnerCore/OwnerDatabase.swift",
+      "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/Sources/OwnerCore/OwnerModels.swift",
+      "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/Sources/OwnerCore/PhotoLibraryService.swift",
+      "-I",
+      "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx14.0",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-j10",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-emit-objc-header",
+      "-emit-objc-header-path",
+      "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/include/OwnerCore-Swift.h",
+      "-swift-version",
+      "6",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "photosbyeliebackstage",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ],
+    "OwnerCoreTests" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "OwnerCoreTests",
+      "-package-name",
+      "photosbyeliebackstage",
+      "-c",
+      "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/Tests/OwnerCoreTests/OwnerCoreTests.swift",
+      "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCoreTests.build/DerivedSources/resource_bundle_accessor.swift",
+      "-I",
+      "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx14.0",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-Xfrontend",
+      "-enable-cross-import-overlays",
+      "-j10",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_AVAILABLE",
+      "-module-cache-path",
+      "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-swift-version",
+      "6",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "photosbyeliebackstage",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ],
+    "PhotosByElieBackstagePackageTests" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "PhotosByElieBackstagePackageTests",
+      "-package-name",
+      "photosbyeliebackstage",
+      "-c",
+      "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/PhotosByElieBackstagePackageTests.derived/runner.swift",
+      "-I",
+      "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx14.0",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-Xfrontend",
+      "-enable-cross-import-overlays",
+      "-j10",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-emit-objc-header",
+      "-emit-objc-header-path",
+      "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/PhotosByElieBackstagePackageTests.build/include/PhotosByElieBackstagePackageTests-Swift.h",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "photosbyeliebackstage",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ]
+  },
+  "targetDependencyMap" : {
+    "BackstageApp" : [
+      "OwnerCore"
+    ],
+    "OwnerCore" : [
+
+    ],
+    "OwnerCoreTests" : [
+      "OwnerCore"
+    ],
+    "PhotosByElieBackstagePackageTests" : [
+      "OwnerCoreTests",
+      "OwnerCore"
+    ]
+  },
+  "testDiscoveryCommands" : {
+
+  },
+  "testEntryPointCommands" : {
+    "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/PhotosByElieBackstagePackageTests.derived/runner.swift" : {
+      "inputs" : [
+
+      ],
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/PhotosByElieBackstagePackageTests.derived/runner.swift"
+        }
+      ]
+    }
+  },
+  "traitConfiguration" : {
+    "default" : {
+
+    }
+  },
+  "writeCommands" : {
+    "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/BackstageApp.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/Sources/BackstageApp/BackstageViewModel.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/Sources/BackstageApp/PhotosByElieBackstageApp.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/BackstageApp.build/sources"
+    },
+    "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/Sources/OwnerCore/KeychainVault.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/Sources/OwnerCore/OwnerAPIClient.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/Sources/OwnerCore/OwnerDatabase.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/Sources/OwnerCore/OwnerModels.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/Sources/OwnerCore/PhotoLibraryService.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/sources"
+    },
+    "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCoreTests.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/Tests/OwnerCoreTests/OwnerCoreTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCoreTests.build/DerivedSources/resource_bundle_accessor.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCoreTests.build/sources"
+    },
+    "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/PhotosByElieBackstage-entitlement.plist" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<entitlement-plist>"
+        },
+        {
+          "kind" : "virtual",
+          "name" : "<com.apple.security.get-task-allow>"
+        }
+      ],
+      "outputFilePath" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/PhotosByElieBackstage-entitlement.plist"
+    },
+    "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/PhotosByElieBackstage.product/Objects.LinkFileList" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<link-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/BackstageApp.build/BackstageViewModel.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/BackstageApp.build/PhotosByElieBackstageApp.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/KeychainVault.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/OwnerAPIClient.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/OwnerDatabase.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/OwnerModels.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/PhotoLibraryService.swift.o"
+        }
+      ],
+      "outputFilePath" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/PhotosByElieBackstage.product/Objects.LinkFileList"
+    },
+    "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/PhotosByElieBackstagePackageTests.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/PhotosByElieBackstagePackageTests.derived/runner.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/PhotosByElieBackstagePackageTests.build/sources"
+    },
+    "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/PhotosByElieBackstagePackageTests.product/Objects.LinkFileList" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<link-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/KeychainVault.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/OwnerAPIClient.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/OwnerDatabase.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/OwnerModels.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/PhotoLibraryService.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCoreTests.build/OwnerCoreTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCoreTests.build/resource_bundle_accessor.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/PhotosByElieBackstagePackageTests.build/runner.swift.o"
+        }
+      ],
+      "outputFilePath" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/PhotosByElieBackstagePackageTests.product/Objects.LinkFileList"
+    },
+    "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt" : {
+      "alwaysOutOfDate" : true,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<swift-get-version>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+        }
+      ],
+      "outputFilePath" : "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+    }
+  }
+}

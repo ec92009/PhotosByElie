@@ -1,0 +1,40 @@
+{
+  "": {
+    "swift-dependencies": "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/primary.swiftdeps"
+  },
+  "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/Sources/OwnerCore/KeychainVault.swift": {
+    "dependencies": "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/KeychainVault.d",
+    "object": "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/KeychainVault.swift.o",
+    "swiftmodule": "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/KeychainVault~partial.swiftmodule",
+    "swift-dependencies": "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/KeychainVault.swiftdeps",
+    "diagnostics": "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/KeychainVault.dia"
+  },
+  "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/Sources/OwnerCore/OwnerAPIClient.swift": {
+    "dependencies": "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/OwnerAPIClient.d",
+    "object": "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/OwnerAPIClient.swift.o",
+    "swiftmodule": "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/OwnerAPIClient~partial.swiftmodule",
+    "swift-dependencies": "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/OwnerAPIClient.swiftdeps",
+    "diagnostics": "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/OwnerAPIClient.dia"
+  },
+  "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/Sources/OwnerCore/OwnerDatabase.swift": {
+    "dependencies": "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/OwnerDatabase.d",
+    "object": "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/OwnerDatabase.swift.o",
+    "swiftmodule": "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/OwnerDatabase~partial.swiftmodule",
+    "swift-dependencies": "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/OwnerDatabase.swiftdeps",
+    "diagnostics": "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/OwnerDatabase.dia"
+  },
+  "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/Sources/OwnerCore/OwnerModels.swift": {
+    "dependencies": "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/OwnerModels.d",
+    "object": "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/OwnerModels.swift.o",
+    "swiftmodule": "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/OwnerModels~partial.swiftmodule",
+    "swift-dependencies": "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/OwnerModels.swiftdeps",
+    "diagnostics": "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/OwnerModels.dia"
+  },
+  "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/Sources/OwnerCore/PhotoLibraryService.swift": {
+    "dependencies": "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/PhotoLibraryService.d",
+    "object": "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/PhotoLibraryService.swift.o",
+    "swiftmodule": "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/PhotoLibraryService~partial.swiftmodule",
+    "swift-dependencies": "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/PhotoLibraryService.swiftdeps",
+    "diagnostics": "/Users/ecohen/MDev/PhotosByElie/native/PhotosByElieBackstage/.build/arm64-apple-macosx/debug/OwnerCore.build/PhotoLibraryService.dia"
+  }
+}

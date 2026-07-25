@@ -20,7 +20,7 @@ for remote execution.
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
 - The PBB-1 API and PBB-11 native Backstage implementation are at the final
-  operational gate. Web/Python tests (155 Node + 117 Python), 20 Swift tests,
+  operational gate. Web/Python tests (155 Node + 117 Python), 22 Swift tests,
   API contract generation, and publication validation pass. The reversible
   PBB-18 parity rehearsal is checked in and the Owner page has a staged
   `data-owner-writer` cutover; production deliberately remains `browser`.
@@ -29,6 +29,13 @@ for remote execution.
   now enrolled with an independently revocable device credential stored in
   Keychain. A cold relaunch refreshed the native session from Keychain and the
   Fixtures screen loaded the current 20-node hierarchy without mutation.
+  Read-only native rehearsals also loaded 18 people, 8 groups, 50 completed
+  activity rows, and the Uploads, Delivery, and Publication workspaces without
+  starting a job. Waste Basket now requests only recoverable hidden rows: the
+  installed app loaded all 29 recoverable items while reporting 6,110
+  permanently discarded records separately, avoiding the former 6,139-row
+  SwiftUI payload. No lifecycle item was restored or discarded during this
+  rehearsal.
   `v147.4` keeps the browser as the active writer. The remaining operational
   gate is explicit macOS Photos approval for the final installed build,
   followed by a read-only `metadata-read-many` check. After that non-mutating

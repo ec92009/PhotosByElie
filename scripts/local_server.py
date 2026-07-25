@@ -1909,7 +1909,11 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
             ),
         })
     elif mode == "fixture-lifecycle-list":
-        lifecycle = media_lifecycle_snapshot(repo_root)
+        # Backstage lifecycle browsing is a read-only operation. Compatibility
+        # JSON is imported by the explicit migration/write paths; refreshing it
+        # here rewrites every discarded row and Owner settings on each list
+        # request, which makes a native read mutate the live Owner database.
+        lifecycle = media_lifecycle_snapshot(repo_root, sync_compat=False)
         all_states = [
             {
                 "mediaId": str(item.get("media_id") or ""),

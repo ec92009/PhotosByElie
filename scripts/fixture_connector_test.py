@@ -1,6 +1,7 @@
 import sys
 import tempfile
 import unittest
+import hashlib
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -48,12 +49,16 @@ class FixtureConnectorTest(unittest.TestCase):
                 )
                 connection.commit()
 
+            database = root / "assets/owner-actions/Owner.sqlite"
+            before = hashlib.sha256(database.read_bytes()).hexdigest()
             listed = local_server.new_owner_connector_result(
                 root,
                 action("fixture-lifecycle-list", states=["hidden"]),
             )
+            after = hashlib.sha256(database.read_bytes()).hexdigest()
 
         self.assertTrue(listed["result"]["readOnly"])
+        self.assertEqual(after, before)
         self.assertEqual(listed["result"]["lifecycle"]["hiddenCount"], 1)
         self.assertEqual(listed["result"]["lifecycle"]["discardedCount"], 1)
         self.assertEqual(len(listed["result"]["lifecycle"]["items"]), 1)

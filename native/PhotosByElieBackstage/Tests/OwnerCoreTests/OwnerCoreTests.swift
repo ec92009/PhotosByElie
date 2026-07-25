@@ -633,6 +633,10 @@ struct OwnerCoreTests {
 
         let requests = await api.requests()
         #expect(requests[0].payload["manifest"]?.objectValue?["mode"]?.stringValue == "fixture-lifecycle-list")
+        #expect(
+            requests[0].payload["manifest"]?.objectValue?["states"]?.arrayValue?.compactMap(\.stringValue)
+                == ["hidden"]
+        )
         #expect(requests[1].actionKind == "photo-moderation")
         #expect(requests[1].payload["operation"]?.stringValue == "undo-hide-many")
         #expect(requests[1].payload["photoIds"]?.arrayValue?.compactMap(\.stringValue) == ["photo-hidden"])

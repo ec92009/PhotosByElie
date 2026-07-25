@@ -80,7 +80,10 @@ public actor LifecycleService {
             target: connectorID,
             payload: [
                 "workflow": "universal-fixture-pipeline",
-                "manifest": ["mode": .string(mode)],
+                "manifest": [
+                    "mode": .string(mode),
+                    "states": .array([.string("hidden")]),
+                ],
                 "requestedConnector": .string(connectorID),
                 "queuedAt": .string(ISO8601DateFormatter().string(from: Date())),
             ]

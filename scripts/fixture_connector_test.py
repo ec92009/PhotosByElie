@@ -37,15 +37,26 @@ class FixtureConnectorTest(unittest.TestCase):
                                '[]', '[]', '[]', ?)""",
                     ("photo-hidden", "2026-07-25T00:00:00Z"),
                 )
+                connection.execute(
+                    """INSERT INTO media_lifecycle
+                       (media_id, lifecycle_state, source_slug, title, media_type,
+                        source_paths_json, public_preview_keys_json, private_keys_json,
+                        updated_at)
+                       VALUES (?, 'discarded', 'spain', 'Discarded audit title', 'photo',
+                               '[]', '[]', '[]', ?)""",
+                    ("photo-discarded", "2026-07-25T00:00:01Z"),
+                )
                 connection.commit()
 
             listed = local_server.new_owner_connector_result(
                 root,
-                action("fixture-lifecycle-list"),
+                action("fixture-lifecycle-list", states=["hidden"]),
             )
 
         self.assertTrue(listed["result"]["readOnly"])
         self.assertEqual(listed["result"]["lifecycle"]["hiddenCount"], 1)
+        self.assertEqual(listed["result"]["lifecycle"]["discardedCount"], 1)
+        self.assertEqual(len(listed["result"]["lifecycle"]["items"]), 1)
         self.assertEqual(
             listed["result"]["lifecycle"]["items"][0]["title"],
             "Private saved title",

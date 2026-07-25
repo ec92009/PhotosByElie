@@ -1910,7 +1910,7 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
         })
     elif mode == "fixture-lifecycle-list":
         lifecycle = media_lifecycle_snapshot(repo_root)
-        states = [
+        all_states = [
             {
                 "mediaId": str(item.get("media_id") or ""),
                 "state": str(item.get("lifecycle_state") or ""),
@@ -1925,12 +1925,21 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
             for item in lifecycle.get("states") or []
             if str(item.get("lifecycle_state") or "") in {"hidden", "discarded"}
         ]
+        requested_states = {
+            str(value or "").strip()
+            for value in (manifest.get("states") or [])
+            if str(value or "").strip() in {"hidden", "discarded"}
+        }
+        states = [
+            item for item in all_states
+            if not requested_states or item["state"] in requested_states
+        ]
         result.update({
             "readOnly": True,
             "lifecycle": {
                 "items": states,
-                "hiddenCount": sum(item["state"] == "hidden" for item in states),
-                "discardedCount": sum(item["state"] == "discarded" for item in states),
+                "hiddenCount": sum(item["state"] == "hidden" for item in all_states),
+                "discardedCount": sum(item["state"] == "discarded" for item in all_states),
             },
         })
     elif mode == "fixture-upload-run-adoption-plan":

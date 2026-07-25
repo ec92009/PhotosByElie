@@ -69,6 +69,8 @@ public actor OwnerAuthenticationService {
     private let api: OwnerAPIClient
     private let session: OwnerCredentialSession
     private let renewalLeeway: TimeInterval
+    private var recoveryTask: Task<OwnerAuthenticationSnapshot, Never>?
+    private var recoveryHandlerInstalled = false
 
     public init(
         api: OwnerAPIClient,
@@ -81,11 +83,60 @@ public actor OwnerAuthenticationService {
     }
 
     public func bootstrap(now: Date = Date()) async -> OwnerAuthenticationSnapshot {
+        await installRecoveryHandlerIfNeeded()
+        return await restore(now: now, forceRenewal: false)
+    }
+
+    public func currentSnapshot(now: Date = Date()) async -> OwnerAuthenticationSnapshot {
+        guard let credentials = try? await session.load() else {
+            return OwnerAuthenticationSnapshot(phase: .needsEnrollment)
+        }
+        guard credentials.accessToken != nil,
+              let accessExpiresAt = credentials.accessExpiresAt,
+              accessExpiresAt > now else {
+            return OwnerAuthenticationSnapshot(
+                phase: .needsEnrollment,
+                deviceId: credentials.deviceId
+            )
+        }
+        return snapshot(for: credentials)
+    }
+
+    private func installRecoveryHandlerIfNeeded() async {
+        guard !recoveryHandlerInstalled else { return }
+        recoveryHandlerInstalled = true
+        await api.setAuthenticationRecoveryHandler { [weak self] in
+            guard let self else { return false }
+            return await self.recoverRejectedSession()
+        }
+    }
+
+    private func recoverRejectedSession() async -> Bool {
+        if let recoveryTask {
+            return await recoveryTask.value.phase == .authenticated
+        }
+        let task = Task { [weak self] in
+            guard let self else {
+                return OwnerAuthenticationSnapshot(phase: .needsEnrollment)
+            }
+            return await self.restore(now: Date(), forceRenewal: true)
+        }
+        recoveryTask = task
+        let snapshot = await task.value
+        recoveryTask = nil
+        return snapshot.phase == .authenticated
+    }
+
+    private func restore(
+        now: Date,
+        forceRenewal: Bool
+    ) async -> OwnerAuthenticationSnapshot {
         guard var credentials = try? await session.load() else {
             await api.setAccessToken(nil)
             return OwnerAuthenticationSnapshot(phase: .needsEnrollment)
         }
-        if let accessToken = credentials.accessToken,
+        if !forceRenewal,
+           let accessToken = credentials.accessToken,
            let accessExpiresAt = credentials.accessExpiresAt,
            accessExpiresAt.timeIntervalSince(now) > renewalLeeway {
             await api.setAccessToken(accessToken)

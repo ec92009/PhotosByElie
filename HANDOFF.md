@@ -25,7 +25,10 @@ for remote execution.
   PBB-18 parity rehearsal is checked in and the Owner page now declares
   `data-owner-writer="backstage"`.
 - `/Users/ecohen/Applications/PhotosByElie Backstage.app` is built and
-  codesigned. Elie explicitly approved enrolling Max on 2026-07-25, and Max is
+  codesigned. Native app version `0.1.1` coalesces startup authentication with
+  saved-workspace loading, automatically renews an expired access token once,
+  retries the rejected request, and replaces raw API envelopes with readable
+  errors. Elie explicitly approved enrolling Max on 2026-07-25, and Max is
   now enrolled with an independently revocable device credential stored in
   Keychain. A cold relaunch refreshed the native session from Keychain and the
   Fixtures screen loaded the current 20-node hierarchy without mutation.

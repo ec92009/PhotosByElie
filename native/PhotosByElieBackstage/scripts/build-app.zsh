@@ -37,9 +37,9 @@ cat > "${contents}/Info.plist" <<'PLIST'
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>
-  <string>0.1.0</string>
+  <string>0.1.1</string>
   <key>CFBundleVersion</key>
-  <string>1</string>
+  <string>2</string>
   <key>LSMinimumSystemVersion</key>
   <string>14.0</string>
   <key>NSPhotoLibraryUsageDescription</key>
@@ -56,4 +56,3 @@ identity="${PBE_CODESIGN_IDENTITY:--}"
 codesign --force --deep --sign "$identity" "$app"
 codesign --verify --deep --strict "$app"
 echo "$app"
-

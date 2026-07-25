@@ -660,8 +660,9 @@ Clock state: running
 | 2026-07-25 | 01:24 CEST | 01:25 CEST | 0:01 | Reported a Nerja-labeled photo in the USA gallery and authorized correction of the affected La Jolla Cove metadata cohort; implementation, tests, and deployment runtime excluded. |
 | 2026-07-25 | 09:03 CEST | 09:04 CEST | 0:01 | Authorized one-time enrollment of Max in the signed Backstage app; enrollment, Keychain verification, relaunch, and ticket-audit runtime excluded. |
 | 2026-07-25 | 12:39 CEST | 12:40 CEST | 0:01 | Requested a practical owner-facing Getting Started guide for the newly active Backstage app; independent writing and verification runtime excluded. |
+| 2026-07-25 | 12:52 CEST | 12:53 CEST | 0:01 | Reported the contradictory Connected/expired-session Fixtures screen in Backstage; diagnosis, implementation, tests, and installation runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 32:12
+Active collaboration time used: 32:13
 Remaining budget: not set

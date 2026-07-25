@@ -99,6 +99,7 @@ final class BackstageViewModel: ObservableObject {
     let metadataReviewService: MetadataReviewService
     let lifecycleService: LifecycleService
     let deliveryService: FixtureDeliveryService
+    private var authenticationTask: Task<OwnerAuthenticationSnapshot, Never>?
 
     init(
         api: OwnerAPIClient = OwnerAPIClient(),
@@ -121,7 +122,7 @@ final class BackstageViewModel: ObservableObject {
     func bootstrapAuthentication() async {
         isAuthenticating = true
         defer { isAuthenticating = false }
-        authentication = await authenticationService.bootstrap()
+        authentication = await ensuredAuthentication()
         switch authentication.phase {
         case .authenticated:
             authenticationStatus = "Authenticated with this Mac's revocable device credential."
@@ -170,11 +171,16 @@ final class BackstageViewModel: ObservableObject {
     func refreshActions() async {
         isRefreshing = true
         defer { isRefreshing = false }
+        guard await prepareAuthenticatedOperation() else { return }
         do {
             actions = try await api.listActions(limit: 50).actions
+            authentication = await authenticationService.currentSnapshot()
             status = "Connected"
         } catch {
-            status = String(describing: error)
+            await presentAuthenticationFailureIfNeeded(error)
+            if status != "Sign in again" {
+                status = userFacingMessage(for: error)
+            }
         }
     }
 
@@ -806,21 +812,76 @@ final class BackstageViewModel: ObservableObject {
     private func fixtureOperation(_ operation: () async throws -> Void) async {
         isRunningFixture = true
         defer { isRunningFixture = false }
+        guard await prepareAuthenticatedOperation() else {
+            fixtureStatus = "Backstage needs this Mac to be enrolled again. Open Overview to continue."
+            return
+        }
         do {
             try await operation()
+            authentication = await authenticationService.currentSnapshot()
+            status = "Connected"
         } catch {
-            fixtureStatus = String(describing: error)
+            await presentAuthenticationFailureIfNeeded(error)
+            fixtureStatus = userFacingMessage(for: error)
         }
     }
 
     private func accessOperation(_ operation: () async throws -> Void) async {
         isRunningAccess = true
         defer { isRunningAccess = false }
+        guard await prepareAuthenticatedOperation() else {
+            accessStatus = "Backstage needs this Mac to be enrolled again. Open Overview to continue."
+            return
+        }
         do {
             try await operation()
+            authentication = await authenticationService.currentSnapshot()
+            status = "Connected"
         } catch {
-            accessStatus = String(describing: error)
+            await presentAuthenticationFailureIfNeeded(error)
+            accessStatus = userFacingMessage(for: error)
         }
+    }
+
+    private func ensuredAuthentication() async -> OwnerAuthenticationSnapshot {
+        if let authenticationTask {
+            return await authenticationTask.value
+        }
+        let task = Task { [authenticationService] in
+            await authenticationService.bootstrap()
+        }
+        authenticationTask = task
+        let snapshot = await task.value
+        authenticationTask = nil
+        return snapshot
+    }
+
+    private func prepareAuthenticatedOperation() async -> Bool {
+        authentication = await ensuredAuthentication()
+        guard authentication.phase == .authenticated else {
+            authenticationStatus = "This Mac's Backstage enrollment must be renewed from Owner."
+            status = "Sign in again"
+            return false
+        }
+        return true
+    }
+
+    private func presentAuthenticationFailureIfNeeded(_ error: Error) async {
+        guard let envelope = error as? APIErrorEnvelope,
+              envelope.error.code == "google_login_required" else { return }
+        authentication = await authenticationService.currentSnapshot()
+        authenticationStatus = "This Mac's Backstage session could not be renewed automatically."
+        status = "Sign in again"
+    }
+
+    private func userFacingMessage(for error: Error) -> String {
+        if let envelope = error as? APIErrorEnvelope {
+            if envelope.error.code == "google_login_required" {
+                return "Backstage could not renew this Mac's Owner session. Open Overview and enroll this Mac again."
+            }
+            return envelope.error.message
+        }
+        return error.localizedDescription
     }
 
     private func runMetadata(commit: Bool) async {

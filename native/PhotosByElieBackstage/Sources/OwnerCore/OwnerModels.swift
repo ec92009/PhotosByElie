@@ -98,7 +98,7 @@ extension JSONValue: ExpressibleByNilLiteral {
     public init(nilLiteral: ()) { self = .null }
 }
 
-public struct APIErrorEnvelope: Codable, Error, Sendable, Equatable {
+public struct APIErrorEnvelope: Codable, Error, LocalizedError, CustomStringConvertible, Sendable, Equatable {
     public struct Detail: Codable, Sendable, Equatable {
         public var code: String
         public var message: String
@@ -113,6 +113,9 @@ public struct APIErrorEnvelope: Codable, Error, Sendable, Equatable {
 
     public var error: Detail
     public init(error: Detail) { self.error = error }
+
+    public var errorDescription: String? { error.message }
+    public var description: String { error.message }
 }
 
 public struct OwnerPage: Codable, Sendable, Equatable {

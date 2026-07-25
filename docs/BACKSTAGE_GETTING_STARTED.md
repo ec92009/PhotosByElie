@@ -72,6 +72,10 @@ Use **Overview** to check this Mac's authentication.
 - **Connected** with a green dot means the app has a working session.
 - **Refresh session** reloads the session from the credential stored in
   Keychain.
+- Backstage renews its short-lived access token automatically. If a workspace
+  request and startup authentication happen together, the request waits for
+  the same authentication result instead of showing a stale Google-login
+  error.
 - **Sign out** revokes the local session and removes the Backstage credentials
   from Keychain.
 

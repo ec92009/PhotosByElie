@@ -21,6 +21,8 @@ public struct URLSessionOwnerTransport: OwnerAPITransport {
 }
 
 public actor OwnerAPIClient {
+    public typealias AuthenticationRecoveryHandler = @Sendable () async -> Bool
+
     public static let productionBaseURL = URL(string: "https://auth.photos-by-elie.com/api/v1")!
 
     private let baseURL: URL
@@ -28,6 +30,7 @@ public actor OwnerAPIClient {
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
     private var accessToken: String?
+    private var authenticationRecoveryHandler: AuthenticationRecoveryHandler?
 
     public init(
         baseURL: URL = OwnerAPIClient.productionBaseURL,
@@ -41,6 +44,12 @@ public actor OwnerAPIClient {
 
     public func setAccessToken(_ token: String?) {
         accessToken = token
+    }
+
+    public func setAuthenticationRecoveryHandler(
+        _ handler: AuthenticationRecoveryHandler?
+    ) {
+        authenticationRecoveryHandler = handler
     }
 
     public func listActions(
@@ -178,7 +187,18 @@ public actor OwnerAPIClient {
         if authenticated, let accessToken {
             request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         }
-        let (data, response) = try await transport.data(for: request)
+        var (data, response) = try await transport.data(for: request)
+        if authenticated,
+           response.statusCode == 401,
+           let authenticationRecoveryHandler,
+           await authenticationRecoveryHandler() {
+            if let accessToken {
+                request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+            } else {
+                request.setValue(nil, forHTTPHeaderField: "Authorization")
+            }
+            (data, response) = try await transport.data(for: request)
+        }
         guard (200..<300).contains(response.statusCode) else {
             if let envelope = try? decoder.decode(APIErrorEnvelope.self, from: data) {
                 throw envelope

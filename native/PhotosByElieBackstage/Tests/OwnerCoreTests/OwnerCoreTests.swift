@@ -245,6 +245,64 @@ struct OwnerCoreTests {
         #expect(await transport.requests().map(\.url?.path) == ["/api/v1/auth/refresh"])
     }
 
+    @Test("Expired native access recovers once and retries the original request")
+    func credentialRequestRecovery() async throws {
+        let vault = MemoryCredentialVault()
+        let session = OwnerCredentialSession(vault: vault)
+        try await session.save(OwnerCredentialSet(
+            deviceId: "owner-device-max",
+            deviceCredential: String(repeating: "d", count: 48),
+            accessToken: "access-one",
+            accessExpiresAt: Date(timeIntervalSince1970: 1_900_000_000),
+            refreshToken: "refresh-one",
+            refreshExpiresAt: Date(timeIntervalSince1970: 1_900_000_000)
+        ))
+        let transport = SequencedRoutingTransport(responses: [
+            "/api/v1/actions": [
+                .init(status: 401, body: """
+                {"error":{"code":"google_login_required","message":"Google login has expired."}}
+                """),
+                .init(status: 200, body: """
+                {"actions":[],"page":{"hasMore":false}}
+                """),
+            ],
+            "/api/v1/auth/refresh": [
+                .init(status: 200, body: """
+                {
+                  "tokenType":"Bearer",
+                  "accessToken":"access-two",
+                  "expiresIn":900,
+                  "accessExpiresAt":"2030-03-17T17:46:40Z",
+                  "refreshToken":"refresh-two",
+                  "refreshExpiresAt":"2030-03-17T17:46:40Z"
+                }
+                """),
+            ],
+        ])
+        let client = OwnerAPIClient(
+            baseURL: URL(string: "https://example.test/api/v1")!,
+            transport: transport
+        )
+        let service = OwnerAuthenticationService(api: client, session: session)
+
+        #expect(await service.bootstrap(now: Date(timeIntervalSince1970: 1_800_000_000)).phase == .authenticated)
+        let page = try await client.listActions()
+        #expect(page.actions.isEmpty)
+
+        let requests = await transport.requests()
+        #expect(requests.map(\.url?.path) == [
+            "/api/v1/actions",
+            "/api/v1/auth/refresh",
+            "/api/v1/actions",
+        ])
+        #expect(requests[0].value(forHTTPHeaderField: "Authorization") == "Bearer access-one")
+        #expect(requests[1].value(forHTTPHeaderField: "Authorization") == nil)
+        #expect(requests[2].value(forHTTPHeaderField: "Authorization") == "Bearer access-two")
+        let saved = try #require(try await session.load())
+        #expect(saved.accessToken == "access-two")
+        #expect(saved.refreshToken == "refresh-two")
+    }
+
     @Test("Metadata give-back uses Worker action, dry-run gate, and verified receipts")
     func metadataGiveBackDryRun() async throws {
         let completed = OwnerAction(
@@ -857,6 +915,36 @@ private actor RoutingTransport: OwnerAPITransport {
         return (
             data,
             HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+        )
+    }
+
+    func requests() -> [URLRequest] { recorded }
+}
+
+private struct SequencedTransportResponse: Sendable {
+    let status: Int
+    let body: String
+}
+
+private actor SequencedRoutingTransport: OwnerAPITransport {
+    private var responses: [String: [SequencedTransportResponse]]
+    private var recorded: [URLRequest] = []
+
+    init(responses: [String: [SequencedTransportResponse]]) {
+        self.responses = responses
+    }
+
+    func data(for request: URLRequest) async throws -> (Data, HTTPURLResponse) {
+        recorded.append(request)
+        let path = request.url?.path ?? ""
+        guard var routeResponses = responses[path], !routeResponses.isEmpty else {
+            throw URLError(.resourceUnavailable)
+        }
+        let response = routeResponses.removeFirst()
+        responses[path] = routeResponses
+        return (
+            Data(response.body.utf8),
+            HTTPURLResponse(url: request.url!, statusCode: response.status, httpVersion: nil, headerFields: nil)!
         )
     }
 

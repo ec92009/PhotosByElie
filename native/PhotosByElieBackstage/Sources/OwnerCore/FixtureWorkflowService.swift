@@ -9,6 +9,7 @@ public struct FixtureNode: Identifiable, Sendable, Equatable {
     public var children: [FixtureNode]
 
     public var isArchived: Bool { state == "archived" }
+    public var outlineChildren: [FixtureNode]? { children.isEmpty ? nil : children }
 
     init(json: [String: JSONValue]) {
         id = json["fixtureId"]?.stringValue ?? json["id"]?.stringValue ?? ""

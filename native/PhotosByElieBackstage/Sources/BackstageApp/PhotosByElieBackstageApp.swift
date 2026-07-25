@@ -482,15 +482,64 @@ private struct MediaLibraryView: View {
                 }
                 Text(model.photoStatus)
                     .foregroundStyle(.secondary)
+                HStack(spacing: 8) {
+                    TextField("Search title, file, or keyword", text: $model.cullingSearch)
+                        .textFieldStyle(.roundedBorder)
+                        .onSubmit { model.applyCullingFilters() }
+                    Picker("Media", selection: $model.cullingMediaFilter) {
+                        ForEach(CullingMediaFilter.allCases, id: \.self) {
+                            Text($0.label).tag($0)
+                        }
+                    }
+                    Picker("Decision", selection: $model.cullingPickFilter) {
+                        ForEach(CullingPickFilter.allCases, id: \.self) {
+                            Text($0.label).tag($0)
+                        }
+                    }
+                    Picker("Rating", selection: $model.cullingRatingFilter) {
+                        Text("All ratings").tag(-1)
+                        ForEach(0...5, id: \.self) { value in
+                            Text(value == 0 ? "No rating" : "\(value) star\(value == 1 ? "" : "s")")
+                                .tag(value)
+                        }
+                    }
+                    Picker("Color", selection: $model.cullingColorFilter) {
+                        ForEach(CullingColorFilter.allCases, id: \.self) {
+                            Text($0.label).tag($0)
+                        }
+                    }
+                    Button("Apply") { model.applyCullingFilters() }
+                    Button("Clear") { model.clearCullingFilters() }
+                    Button("Review picked") { model.showPickedReview() }
+                }
+                .labelsHidden()
+                .onChange(of: model.cullingMediaFilter) { _, _ in model.applyCullingFilters() }
+                .onChange(of: model.cullingPickFilter) { _, _ in model.applyCullingFilters() }
+                .onChange(of: model.cullingRatingFilter) { _, _ in model.applyCullingFilters() }
+                .onChange(of: model.cullingColorFilter) { _, _ in model.applyCullingFilters() }
+                let workspace = model.cullingWorkspace
+                HStack {
+                    Text("\(workspace.summary.filtered.formatted()) match • \(workspace.summary.total.formatted()) in scope")
+                    Text("• \(workspace.summary.undecided.formatted()) undecided")
+                    Text("• \(workspace.summary.picked.formatted()) picked")
+                    Text("• \(workspace.summary.rejected.formatted()) rejected")
+                    Spacer()
+                    if let range = workspace.visibleRange {
+                        Text("\(range.lowerBound.formatted())–\(range.upperBound.formatted())")
+                    }
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(spacing: 2) {
-                            ForEach(model.cullingAssets) { asset in
+                            ForEach(model.visibleCullingAssets) { asset in
                                 CullingAssetRow(
                                     asset: asset,
                                     position: model.cullingPool?.assets
                                         .first(where: { $0.id == asset.id })?.position,
                                     state: model.cullingStates[asset.id],
+                                    thumbnail: model.cullingThumbnails[asset.id],
                                     isSelected: model.cullingSelection.selectedIDs.contains(asset.id),
                                     isFocused: model.cullingSelection.focusedID == asset.id
                                 )
@@ -500,6 +549,7 @@ private struct MediaLibraryView: View {
                                     model.clickCullingAsset(asset.id, modifiers: NSEvent.modifierFlags)
                                     Task { await model.loadPreview() }
                                 }
+                                .task { await model.loadThumbnail(for: asset.id) }
                             }
                         }
                         .padding(.vertical, 2)
@@ -531,18 +581,54 @@ private struct MediaLibraryView: View {
                         }
                         return .handled
                     }
+                    .onKeyPress("p") {
+                        Task { await model.applyPickShortcut(.pick) }
+                        return .handled
+                    }
+                    .onKeyPress("x") {
+                        Task { await model.applyPickShortcut(.reject) }
+                        return .handled
+                    }
+                    .onKeyPress("u") {
+                        Task { await model.applyPickShortcut(.unpick) }
+                        return .handled
+                    }
+                    .onKeyPress(characters: .decimalDigits) { press in
+                        guard let rating = Int(press.characters), (0...5).contains(rating) else {
+                            return .ignored
+                        }
+                        Task { await model.applyRatingShortcut(rating) }
+                        return .handled
+                    }
                     .overlay {
-                        if model.cullingAssets.isEmpty {
+                        if model.visibleCullingAssets.isEmpty {
                             ContentUnavailableView(
-                                "No culling items",
+                                model.cullingAssets.isEmpty ? "No culling items" : "No matching items",
                                 systemImage: "photo.stack",
-                                description: Text("Open a fixture snapshot or load Photos.")
+                                description: Text(model.cullingAssets.isEmpty
+                                    ? "Open a fixture snapshot or load Photos."
+                                    : "Change or clear the current filters.")
                             )
                         }
                     }
                 }
                 .frame(minHeight: 280, maxHeight: .infinity)
                 .layoutPriority(1)
+                HStack {
+                    Button("Previous \(workspace.limit)") {
+                        model.moveCullingWindow(forward: false)
+                    }
+                    .disabled(!workspace.hasPrevious)
+                    Button("Next \(workspace.limit)") {
+                        model.moveCullingWindow(forward: true)
+                    }
+                    .disabled(!workspace.hasNext)
+                    Spacer()
+                    Button("Send to Metadata") { model.sendCullingSelection(to: .metadata) }
+                        .disabled(model.cullingSelection.selectedIDs.isEmpty)
+                    Button("Send to Uploads") { model.sendCullingSelection(to: .uploads) }
+                        .disabled(model.cullingSelection.selectedIDs.isEmpty)
+                }
                 HStack {
                     Text("\(model.cullingSelection.selectedIDs.count) selected")
                     Picker("Pick state", selection: $model.cullingPickAction) {
@@ -554,7 +640,7 @@ private struct MediaLibraryView: View {
                     Button("Apply pick state") {
                         Task { await model.applyPickDecision() }
                     }
-                    .disabled(model.cullingSelection.selectedIDs.isEmpty)
+                    .disabled(model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision)
                     Picker("Rating", selection: $model.cullingRating) {
                         ForEach(0...5, id: \.self) { rating in
                             Text(rating == 0 ? "No rating" : "\(rating) star\(rating == 1 ? "" : "s")")
@@ -565,7 +651,7 @@ private struct MediaLibraryView: View {
                     Button("Apply rating") {
                         Task { await model.applyRating() }
                     }
-                    .disabled(model.cullingSelection.selectedIDs.isEmpty)
+                    .disabled(model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision)
                     Picker("Color", selection: $model.cullingColor) {
                         ForEach(SidecarColor.allCases, id: \.self) {
                             Text($0.label).tag($0)
@@ -575,7 +661,7 @@ private struct MediaLibraryView: View {
                     Button("Apply color") {
                         Task { await model.applyColor() }
                     }
-                    .disabled(model.cullingSelection.selectedIDs.isEmpty)
+                    .disabled(model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision)
                     Spacer()
                     Button("Quick Look") {
                         Task {
@@ -612,11 +698,19 @@ private struct MediaLibraryView: View {
                 Text(model.cullingStatus)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                if model.isLoadingCullingDecisions || model.isApplyingCullingDecision {
+                    ProgressView(
+                        value: Double(model.cullingDecisionProgress),
+                        total: Double(max(1, model.cullingDecisionTotal))
+                    )
+                }
             }
             .padding()
 
             Group {
-                if let preview = model.photoPreview,
+                if model.isLoadingPreview {
+                    ProgressView("Loading preview…")
+                } else if let preview = model.photoPreview,
                    let image = NSImage(data: preview.jpegData) {
                     VStack(alignment: .leading, spacing: 8) {
                         Image(nsImage: image)
@@ -660,6 +754,7 @@ private struct CullingAssetRow: View {
     var asset: FixtureAsset
     var position: Int?
     var state: SidecarDecisionState?
+    var thumbnail: NSImage?
     var isSelected: Bool
     var isFocused: Bool
 
@@ -668,8 +763,19 @@ private struct CullingAssetRow: View {
             Text(position.map { "\($0 + 1)" } ?? "—")
                 .frame(width: 36, alignment: .trailing)
                 .foregroundStyle(.secondary)
-            Image(systemName: asset.mediaType == "video" ? "video" : "photo")
-                .frame(width: 20)
+            Group {
+                if let thumbnail {
+                    Image(nsImage: thumbnail)
+                        .resizable()
+                        .scaledToFill()
+                } else {
+                    Image(systemName: asset.mediaType == "video" ? "video" : "photo")
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .frame(width: 64, height: 48)
+            .background(.quaternary.opacity(0.4))
+            .clipShape(RoundedRectangle(cornerRadius: 4))
             VStack(alignment: .leading, spacing: 1) {
                 Text(asset.title.isEmpty ? asset.filename : asset.title)
                     .lineLimit(1)
@@ -741,15 +847,23 @@ private struct FixtureWorkflowView: View {
             Text(model.fixtureStatus).foregroundStyle(.secondary)
             HSplitView {
                 VStack(alignment: .leading, spacing: 10) {
-                    List(model.flatFixtures, selection: $model.selectedFixtureID) { fixture in
-                        HStack {
-                            Image(systemName: fixture.isArchived ? "archivebox" : "folder")
-                            VStack(alignment: .leading) {
-                                Text(fixture.name)
-                                Text(fixture.id).font(.caption).foregroundStyle(.secondary)
+                    List(selection: $model.selectedFixtureID) {
+                        OutlineGroup(model.fixtures, children: \.outlineChildren) { fixture in
+                            HStack {
+                                Image(systemName: fixture.isArchived ? "archivebox" : "folder")
+                                VStack(alignment: .leading) {
+                                    Text(fixture.name)
+                                    Text(fixture.id).font(.caption).foregroundStyle(.secondary)
+                                }
                             }
+                            .tag(fixture.id)
                         }
-                        .tag(fixture.id)
+                    }
+                    if !model.selectedFixturePath.isEmpty {
+                        Text(model.selectedFixturePath.map(\.name).joined(separator: "  ›  "))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
                     }
                     HStack {
                         TextField("New fixture or new name", text: $model.fixtureName)
@@ -791,8 +905,12 @@ private struct FixtureWorkflowView: View {
                     }
                     DisclosureGroup("Reversible fixture placements") {
                         HStack(alignment: .top) {
-                            List(model.flatFixtures.filter { !$0.isArchived }, selection: $model.placementTargetFixtureIDs) { fixture in
-                                Text(fixture.name).tag(fixture.id)
+                            List(selection: $model.placementTargetFixtureIDs) {
+                                OutlineGroup(model.fixtures, children: \.outlineChildren) { fixture in
+                                    if !fixture.isArchived {
+                                        Text(fixture.name).tag(fixture.id)
+                                    }
+                                }
                             }
                             .frame(minHeight: 90, maxHeight: 130)
                             VStack(alignment: .leading) {
@@ -854,27 +972,47 @@ private struct FixtureWorkflowView: View {
                                     .frame(minHeight: 72, maxHeight: 130)
                                 }
                                 HStack {
-                                    Button("Reload snapshots") {
+                                    Button(model.isReloadingFixturePools ? "Reloading…" : "Reload snapshots") {
                                         Task { await model.loadFixturePools() }
                                     }
-                                    Button("Open selected in Culling") {
+                                    .disabled(model.isRunningFixtureSnapshotOperation)
+                                    Button(model.isOpeningFixturePool ? "Opening…" : "Open selected in Culling") {
                                         Task { await model.openSelectedFixturePool() }
                                     }
-                                    .disabled(model.selectedFixturePoolID.isEmpty)
+                                    .disabled(
+                                        model.selectedFixturePoolID.isEmpty
+                                            || model.isRunningFixtureSnapshotOperation
+                                    )
+                                    if model.isRunningFixtureSnapshotOperation {
+                                        ProgressView()
+                                            .controlSize(.small)
+                                    }
+                                }
+                                if !model.fixtureSnapshotStatus.isEmpty {
+                                    Text(model.fixtureSnapshotStatus)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
                                 }
                             }
                         }
                     }
-                    if let pool = model.fixturePool {
-                        GroupBox("Latest snapshot") {
+                    if let pool = model.selectedFixturePoolSummary {
+                        GroupBox("Selected snapshot") {
                             LabeledContent("Pool", value: pool.name)
                             LabeledContent("Assets", value: pool.assetCount.formatted())
                             LabeledContent("Pool ID", value: pool.id)
                             if !pool.snapshotHash.isEmpty {
                                 LabeledContent("Snapshot", value: String(pool.snapshotHash.prefix(12)))
                             }
-                            Button("Open in Culling") {
-                                model.openFixturePoolInCulling()
+                            HStack {
+                                Button(model.isOpeningFixturePool ? "Opening…" : "Open in Culling") {
+                                    Task { await model.openSelectedFixturePool() }
+                                }
+                                .disabled(model.isRunningFixtureSnapshotOperation)
+                                if model.isOpeningFixturePool {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                }
                             }
                         }
                     }

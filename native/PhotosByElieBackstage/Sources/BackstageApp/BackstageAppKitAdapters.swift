@@ -32,7 +32,7 @@ final class BackstageSelectionController: ObservableObject {
 }
 
 @MainActor
-final class BackstageQuickLookCoordinator: NSObject, @preconcurrency QLPreviewPanelDataSource {
+final class BackstageQuickLookCoordinator: NSObject, ObservableObject, @preconcurrency QLPreviewPanelDataSource {
     private var items: [NSURL] = []
 
     func present(urls: [URL], startingAt index: Int = 0) {

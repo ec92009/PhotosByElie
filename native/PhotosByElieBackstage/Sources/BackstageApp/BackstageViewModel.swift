@@ -1,5 +1,13 @@
+import AppKit
 import Foundation
 import OwnerCore
+
+struct CullingHistoryEntry: Identifiable, Sendable {
+    var id = UUID()
+    var label: String
+    var changes: [SidecarDecisionChange]
+    var selectedIDs: Set<String>
+}
 
 @MainActor
 final class BackstageViewModel: ObservableObject {
@@ -60,6 +68,10 @@ final class BackstageViewModel: ObservableObject {
     @Published var isRunningAccess = false
     @Published var cullingPickAction: SidecarPickAction = .pick
     @Published var cullingRating = 0
+    @Published var cullingColor: SidecarColor = .none
+    @Published var cullingSelection = OwnerSelectionModel<String>()
+    @Published var cullingStates: [String: SidecarDecisionState] = [:]
+    @Published var cullingHistory: [CullingHistoryEntry] = []
     @Published var cullingStatus = "Select indexed Photos and apply a culling decision."
     @Published var metadataAssetID = ""
     @Published var metadataTitle = ""
@@ -203,12 +215,12 @@ final class BackstageViewModel: ObservableObject {
         isLoadingPhotos = true
         defer { isLoadingPhotos = false }
         libraryItems = await photoLibrary.fetch(limit: 2_000)
-        selectedPhotoIDs.formIntersection(Set(cullingAssets.map(\.id)))
+        replaceCullingItems()
         photoStatus = "\(libraryItems.count.formatted()) recent Photos items indexed."
     }
 
     func loadPreview() async {
-        guard let id = selectedPhotoIDs.first else {
+        guard let id = focusedCullingAssetID else {
             photoStatus = "Select one item to preview."
             return
         }
@@ -292,23 +304,60 @@ final class BackstageViewModel: ObservableObject {
     }
 
     var selectedCullingAssetIDs: [String] {
-        cullingAssets.map(\.id).filter(selectedPhotoIDs.contains)
+        cullingAssets.map(\.id).filter(cullingSelection.selectedIDs.contains)
+    }
+
+    var focusedCullingAssetID: String? {
+        cullingSelection.focusedID ?? selectedCullingAssetIDs.first
+    }
+
+    func replaceCullingItems() {
+        cullingSelection.replaceItems(cullingAssets.map(\.id))
+        selectedPhotoIDs = cullingSelection.selectedIDs
+    }
+
+    func clickCullingAsset(_ id: String, modifiers: NSEvent.ModifierFlags) {
+        cullingSelection.click(
+            id,
+            extending: modifiers.contains(.shift),
+            toggling: modifiers.contains(.command)
+        )
+        selectedPhotoIDs = cullingSelection.selectedIDs
+    }
+
+    func moveCullingSelection(_ direction: OwnerSelectionDirection, extending: Bool) {
+        cullingSelection.move(direction, extending: extending)
+        selectedPhotoIDs = cullingSelection.selectedIDs
+    }
+
+    func selectAllCullingAssets() {
+        cullingSelection.selectAll()
+        selectedPhotoIDs = cullingSelection.selectedIDs
+    }
+
+    func clearCullingSelection() {
+        cullingSelection.clear()
+        selectedPhotoIDs = []
     }
 
     func openFixturePoolInCulling() {
         guard let fixturePool else { return }
         cullingPool = fixturePool
+        cullingSelection = OwnerSelectionModel(orderedIDs: fixturePool.assets.map(\.id))
         selectedPhotoIDs = []
         photoPreview = nil
         cullingStatus = "Fixture pool \(fixturePool.id) loaded in immutable snapshot order."
         selection = .culling
+        Task { await refreshCullingDecisions() }
     }
 
     func showAllPhotosInCulling() {
         cullingPool = nil
+        cullingSelection = OwnerSelectionModel(orderedIDs: libraryItems.map(\.id))
         selectedPhotoIDs = []
         photoPreview = nil
         cullingStatus = "Showing the recent Photos index."
+        Task { await refreshCullingDecisions() }
     }
 
     func loadFixtures() async {
@@ -519,16 +568,10 @@ final class BackstageViewModel: ObservableObject {
             cullingStatus = "Select one or more Photos items."
             return
         }
-        do {
-            let decisions = ids.map { SidecarDecision.pick($0, action: cullingPickAction) }
-            _ = try await decisionService.apply(
-                decisions,
-                idempotencyKey: "native-culling-\(UUID().uuidString)"
-            )
-            cullingStatus = "\(ids.count) \(cullingPickAction.label.lowercased()) decision\(ids.count == 1 ? "" : "s") recorded in the cloud ledger."
-        } catch {
-            cullingStatus = String(describing: error)
-        }
+        await applyCullingDecisions(
+            ids.map { SidecarDecision.pick($0, action: cullingPickAction) },
+            label: cullingPickAction.label
+        )
     }
 
     func applyRating() async {
@@ -537,14 +580,150 @@ final class BackstageViewModel: ObservableObject {
             cullingStatus = "Select one or more Photos items."
             return
         }
+        await applyCullingDecisions(
+            ids.map { SidecarDecision.rating($0, value: cullingRating) },
+            label: cullingRating == 0 ? "Clear rating" : "Rate \(cullingRating)"
+        )
+    }
+
+    func applyColor() async {
+        let ids = selectedCullingAssetIDs
+        guard !ids.isEmpty else {
+            cullingStatus = "Select one or more Photos items."
+            return
+        }
+        await applyCullingDecisions(
+            ids.map { SidecarDecision.color($0, value: cullingColor) },
+            label: cullingColor == .none ? "Clear color" : "\(cullingColor.label) color"
+        )
+    }
+
+    func refreshCullingDecisions() async {
+        let ids = cullingAssets.map(\.id)
+        guard !ids.isEmpty else {
+            cullingStates = [:]
+            return
+        }
         do {
-            _ = try await decisionService.apply(
-                ids.map { SidecarDecision.rating($0, value: cullingRating) },
-                idempotencyKey: "native-rating-\(UUID().uuidString)"
-            )
-            cullingStatus = "\(ids.count) rating\(ids.count == 1 ? "" : "s") set to \(cullingRating)."
+            var states: [String: SidecarDecisionState] = [:]
+            for start in stride(from: 0, to: ids.count, by: 500) {
+                let end = min(ids.count, start + 500)
+                states.merge(
+                    try await decisionService.queryStates(assetIDs: Array(ids[start..<end])),
+                    uniquingKeysWith: { _, latest in latest }
+                )
+            }
+            cullingStates = states
+            cullingStatus = "Loaded \(states.count) preserved decision\(states.count == 1 ? "" : "s") for this culling scope."
         } catch {
             cullingStatus = String(describing: error)
+        }
+    }
+
+    func undoLastCullingDecision() async {
+        guard let entry = cullingHistory.last else {
+            cullingStatus = "Nothing to undo in this Backstage session."
+            return
+        }
+        let decisions = entry.changes.flatMap(undoDecisions)
+        guard !decisions.isEmpty else {
+            cullingHistory.removeLast()
+            cullingStatus = "Nothing to undo in the last culling step."
+            return
+        }
+        do {
+            let changes = try await decisionService.applyDetailed(
+                decisions,
+                idempotencyKey: "native-culling-undo-\(entry.id.uuidString)"
+            )
+            for change in changes { cullingStates[change.assetID] = change.state }
+            cullingHistory.removeLast()
+            cullingSelection = OwnerSelectionModel(
+                orderedIDs: cullingAssets.map(\.id),
+                selectedIDs: entry.selectedIDs,
+                anchorID: entry.selectedIDs.first,
+                focusedID: entry.selectedIDs.first
+            )
+            selectedPhotoIDs = entry.selectedIDs
+            cullingStatus = "Undid \(entry.label). \(cullingHistory.count) reversible step\(cullingHistory.count == 1 ? "" : "s") remain."
+        } catch {
+            cullingStatus = "Undo failed; the history step was preserved. \(error)"
+        }
+    }
+
+    func prepareQuickLookURLs() async -> [URL] {
+        let ids = selectedCullingAssetIDs
+        guard !ids.isEmpty else {
+            cullingStatus = "Select one or more items to preview."
+            return []
+        }
+        let directory = FileManager.default.urls(
+            for: .cachesDirectory,
+            in: .userDomainMask
+        )[0].appendingPathComponent("com.photosbyelie.backstage/QuickLook", isDirectory: true)
+        do {
+            try? FileManager.default.removeItem(at: directory)
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            var urls: [URL] = []
+            for id in ids {
+                let receipt = try await photoLibrary.exportOriginal(
+                    localIdentifier: photoLibraryIdentifier(for: id),
+                    to: directory
+                )
+                urls.append(receipt.destination)
+            }
+            cullingStatus = "Prepared \(urls.count) private Quick Look item\(urls.count == 1 ? "" : "s") from Photos."
+            return urls
+        } catch {
+            cullingStatus = String(describing: error)
+            return []
+        }
+    }
+
+    private func applyCullingDecisions(_ decisions: [SidecarDecision], label: String) async {
+        let selectedBefore = cullingSelection.selectedIDs
+        do {
+            let changes = try await decisionService.applyDetailed(
+                decisions,
+                idempotencyKey: "native-culling-\(UUID().uuidString)"
+            )
+            for change in changes { cullingStates[change.assetID] = change.state }
+            if !changes.isEmpty {
+                cullingHistory.append(CullingHistoryEntry(
+                    label: label,
+                    changes: changes,
+                    selectedIDs: selectedBefore
+                ))
+                if cullingHistory.count > 100 {
+                    cullingHistory.removeFirst(cullingHistory.count - 100)
+                }
+            }
+            cullingStatus = "\(label) saved for \(changes.count) item\(changes.count == 1 ? "" : "s") in the cloud ledger."
+        } catch {
+            cullingStatus = String(describing: error)
+        }
+    }
+
+    private func undoDecisions(_ change: SidecarDecisionChange) -> [SidecarDecision] {
+        change.changedFamilies.compactMap { family in
+            switch family {
+            case "rating":
+                return .rating(change.assetID, value: change.before.rating)
+            case "color":
+                return .color(
+                    change.assetID,
+                    value: SidecarColor(rawValue: change.before.color) ?? .none
+                )
+            case "pick_state":
+                let action: SidecarPickAction = switch change.before.pickState {
+                case "picked": .pick
+                case "rejected": .reject
+                default: .unpick
+                }
+                return .pick(change.assetID, action: action)
+            default:
+                return nil
+            }
         }
     }
 

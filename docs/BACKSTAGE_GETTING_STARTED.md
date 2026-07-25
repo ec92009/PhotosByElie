@@ -155,11 +155,22 @@ audited Owner action path.
 
 1. Choose **Allow Photos** on the first run, or **Refresh** to update the
    index.
-2. Select one or more rows. Standard macOS Command-click and Shift-click
-   selection apply.
+2. Select one or more rows. Command-click toggles individual items, Shift-click
+   extends from the selection anchor, arrows move focus, Shift-arrows extend
+   the range, and Command-A selects the entire current scope.
 3. Use **Pick state** and **Apply pick state** for Pick, Reject, or Clear.
 4. Use **Rating** and **Apply rating** for zero to five stars.
-5. Select one item and choose **Preview** for a bounded JPEG preview.
+5. Use **Color** and **Apply color** for the five labels or to clear a label.
+6. Choose **Quick Look** or press Space to inspect photos, videos, and
+   panoramas without leaving Backstage. Temporary preview files stay in the
+   app cache and are replaced on the next preview.
+7. Choose **Undo** or press Command-Z to reverse the latest decision batch.
+   Backstage keeps up to 100 session steps and restores the earlier cloud
+   decision state and selection.
+
+Opening a pool or choosing **Reload decisions** rehydrates pick, rating, and
+color state from the canonical cloud ledger. The pool order and scope remain
+unchanged.
 
 **Export originals…** asks for a destination folder and exports verified
 original resources. It is separate from fixture upload and catalog

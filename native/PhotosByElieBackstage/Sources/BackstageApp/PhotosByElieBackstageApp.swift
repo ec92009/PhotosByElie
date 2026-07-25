@@ -416,6 +416,7 @@ private struct ActivityView: View {
 
 private struct MediaLibraryView: View {
     @ObservedObject var model: BackstageViewModel
+    @StateObject private var quickLook = BackstageQuickLookCoordinator()
 
     var body: some View {
         HSplitView {
@@ -446,18 +447,67 @@ private struct MediaLibraryView: View {
                 }
                 Text(model.photoStatus)
                     .foregroundStyle(.secondary)
-                Table(model.cullingAssets, selection: $model.selectedPhotoIDs) {
-                    TableColumn("#") { asset in
-                        Text(model.cullingPool?.assets.first(where: { $0.id == asset.id })
-                            .map { "\($0.position + 1)" } ?? "—")
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(spacing: 2) {
+                            ForEach(model.cullingAssets) { asset in
+                                CullingAssetRow(
+                                    asset: asset,
+                                    position: model.cullingPool?.assets
+                                        .first(where: { $0.id == asset.id })?.position,
+                                    state: model.cullingStates[asset.id],
+                                    isSelected: model.cullingSelection.selectedIDs.contains(asset.id),
+                                    isFocused: model.cullingSelection.focusedID == asset.id
+                                )
+                                .id(asset.id)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    model.clickCullingAsset(asset.id, modifiers: NSEvent.modifierFlags)
+                                    Task { await model.loadPreview() }
+                                }
+                            }
+                        }
+                        .padding(.vertical, 2)
                     }
-                    .width(35)
-                    TableColumn("Title", value: \.title)
-                    TableColumn("File", value: \.filename)
-                    TableColumn("Kind", value: \.mediaType)
+                    .focusable()
+                    .onMoveCommand { direction in
+                        let extending = NSEvent.modifierFlags.contains(.shift)
+                        switch direction {
+                        case .up, .left:
+                            model.moveCullingSelection(.previous, extending: extending)
+                        case .down, .right:
+                            model.moveCullingSelection(.next, extending: extending)
+                        default:
+                            return
+                        }
+                        if let focused = model.focusedCullingAssetID {
+                            proxy.scrollTo(focused, anchor: .center)
+                        }
+                    }
+                    .onKeyPress("a", phases: .down) { press in
+                        guard press.modifiers.contains(.command) else { return .ignored }
+                        model.selectAllCullingAssets()
+                        return .handled
+                    }
+                    .onKeyPress(.space) {
+                        Task {
+                            let urls = await model.prepareQuickLookURLs()
+                            if !urls.isEmpty { quickLook.present(urls: urls) }
+                        }
+                        return .handled
+                    }
+                    .overlay {
+                        if model.cullingAssets.isEmpty {
+                            ContentUnavailableView(
+                                "No culling items",
+                                systemImage: "photo.stack",
+                                description: Text("Open a fixture snapshot or load Photos.")
+                            )
+                        }
+                    }
                 }
                 HStack {
-                    Text("\(model.selectedPhotoIDs.count) selected")
+                    Text("\(model.cullingSelection.selectedIDs.count) selected")
                     Picker("Pick state", selection: $model.cullingPickAction) {
                         ForEach(SidecarPickAction.allCases, id: \.self) {
                             Text($0.label).tag($0)
@@ -467,7 +517,7 @@ private struct MediaLibraryView: View {
                     Button("Apply pick state") {
                         Task { await model.applyPickDecision() }
                     }
-                    .disabled(model.selectedPhotoIDs.isEmpty)
+                    .disabled(model.cullingSelection.selectedIDs.isEmpty)
                     Picker("Rating", selection: $model.cullingRating) {
                         ForEach(0...5, id: \.self) { rating in
                             Text(rating == 0 ? "No rating" : "\(rating) star\(rating == 1 ? "" : "s")")
@@ -478,16 +528,49 @@ private struct MediaLibraryView: View {
                     Button("Apply rating") {
                         Task { await model.applyRating() }
                     }
-                    .disabled(model.selectedPhotoIDs.isEmpty)
-                    Spacer()
-                    Button("Preview") {
-                        Task { await model.loadPreview() }
+                    .disabled(model.cullingSelection.selectedIDs.isEmpty)
+                    Picker("Color", selection: $model.cullingColor) {
+                        ForEach(SidecarColor.allCases, id: \.self) {
+                            Text($0.label).tag($0)
+                        }
                     }
+                    .frame(width: 145)
+                    Button("Apply color") {
+                        Task { await model.applyColor() }
+                    }
+                    .disabled(model.cullingSelection.selectedIDs.isEmpty)
+                    Spacer()
+                    Button("Quick Look") {
+                        Task {
+                            let urls = await model.prepareQuickLookURLs()
+                            if !urls.isEmpty { quickLook.present(urls: urls) }
+                        }
+                    }
+                    .keyboardShortcut(.space, modifiers: [])
+                    .disabled(model.cullingSelection.selectedIDs.isEmpty)
                     Button("Export originals…") {
                         guard let directory = chooseExportDirectory() else { return }
                         Task { await model.exportSelected(to: directory) }
                     }
-                    .disabled(model.selectedPhotoIDs.isEmpty)
+                    .disabled(model.cullingSelection.selectedIDs.isEmpty)
+                }
+                HStack {
+                    Button("Undo") { Task { await model.undoLastCullingDecision() } }
+                        .keyboardShortcut("z", modifiers: .command)
+                        .disabled(model.cullingHistory.isEmpty)
+                    if let last = model.cullingHistory.last {
+                        Text("Last: \(last.label) • \(model.cullingHistory.count) reversible step\(model.cullingHistory.count == 1 ? "" : "s")")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text("No culling changes in this session.")
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Button("Reload decisions") {
+                        Task { await model.refreshCullingDecisions() }
+                    }
+                    Button("Clear selection") { model.clearCullingSelection() }
+                        .disabled(model.cullingSelection.selectedIDs.isEmpty)
                 }
                 Text(model.cullingStatus)
                     .font(.caption)
@@ -510,7 +593,7 @@ private struct MediaLibraryView: View {
                     ContentUnavailableView(
                         "No preview",
                         systemImage: "photo",
-                        description: Text("Select one Photos item and choose Preview.")
+                        description: Text("Select a photo for an inline preview, or use Quick Look for photos, videos, and panoramas.")
                     )
                 }
             }
@@ -520,6 +603,7 @@ private struct MediaLibraryView: View {
             if model.libraryItems.isEmpty {
                 await model.refreshPhotos()
             }
+            await model.refreshCullingDecisions()
         }
     }
 
@@ -532,6 +616,77 @@ private struct MediaLibraryView: View {
         panel.allowsMultipleSelection = false
         panel.canCreateDirectories = true
         return panel.runModal() == .OK ? panel.url : nil
+    }
+}
+
+private struct CullingAssetRow: View {
+    var asset: FixtureAsset
+    var position: Int?
+    var state: SidecarDecisionState?
+    var isSelected: Bool
+    var isFocused: Bool
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Text(position.map { "\($0 + 1)" } ?? "—")
+                .frame(width: 36, alignment: .trailing)
+                .foregroundStyle(.secondary)
+            Image(systemName: asset.mediaType == "video" ? "video" : "photo")
+                .frame(width: 20)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(asset.title.isEmpty ? asset.filename : asset.title)
+                    .lineLimit(1)
+                if !asset.title.isEmpty {
+                    Text(asset.filename)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Spacer()
+            if let state {
+                Text(state.pickState.capitalized)
+                    .foregroundStyle(state.pickState == "picked" ? .green : (state.pickState == "rejected" ? .red : .secondary))
+                Text(state.rating > 0 ? "\(state.rating)★" : "—")
+                    .frame(width: 34)
+                Circle()
+                    .fill(color(state.color))
+                    .overlay(Circle().stroke(.secondary.opacity(0.5)))
+                    .frame(width: 12, height: 12)
+            } else {
+                Text("Undecided")
+                    .foregroundStyle(.secondary)
+                Text("—").frame(width: 34)
+                Circle()
+                    .stroke(.secondary.opacity(0.5))
+                    .frame(width: 12, height: 12)
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(
+            RoundedRectangle(cornerRadius: 5)
+                .fill(isSelected ? Color.accentColor.opacity(0.22) : Color.clear)
+        )
+        .overlay(alignment: .leading) {
+            if isFocused {
+                Rectangle()
+                    .fill(Color.accentColor)
+                    .frame(width: 3)
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private func color(_ value: String) -> Color {
+        switch value {
+        case "red": .red
+        case "yellow": .yellow
+        case "green": .green
+        case "blue": .blue
+        case "purple": .purple
+        default: .clear
+        }
     }
 }
 

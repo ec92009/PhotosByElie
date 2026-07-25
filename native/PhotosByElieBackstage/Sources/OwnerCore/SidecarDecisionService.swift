@@ -12,6 +12,56 @@ public enum SidecarPickAction: String, Codable, Sendable, CaseIterable {
     }
 }
 
+public enum SidecarColor: String, Codable, Sendable, CaseIterable {
+    case none = ""
+    case red, yellow, green, blue, purple
+
+    public var label: String {
+        self == .none ? "No color" : rawValue.capitalized
+    }
+}
+
+public struct SidecarDecisionState: Codable, Sendable, Equatable {
+    public var assetId: String
+    public var rating: Int
+    public var color: String
+    public var pickState: String
+    public var metadataState: String
+    public var title: String
+    public var keywords: [String]
+    public var tombstoneState: String
+    public var updatedAt: String
+
+    public init(
+        assetId: String,
+        rating: Int = 0,
+        color: String = "",
+        pickState: String = "undecided",
+        metadataState: String = "unreviewed",
+        title: String = "",
+        keywords: [String] = [],
+        tombstoneState: String = "",
+        updatedAt: String = ""
+    ) {
+        self.assetId = assetId
+        self.rating = rating
+        self.color = color
+        self.pickState = pickState
+        self.metadataState = metadataState
+        self.title = title
+        self.keywords = keywords
+        self.tombstoneState = tombstoneState
+        self.updatedAt = updatedAt
+    }
+}
+
+public struct SidecarDecisionChange: Sendable, Equatable {
+    public var assetID: String
+    public var state: SidecarDecisionState
+    public var before: SidecarDecisionState
+    public var changedFamilies: [String]
+}
+
 /// Canonical Sidecar decision payload. This deliberately mirrors the web
 /// Sidecar ledger rather than inventing a second native decision vocabulary.
 public struct SidecarDecision: Codable, Identifiable, Sendable, Equatable {
@@ -23,6 +73,7 @@ public struct SidecarDecision: Codable, Identifiable, Sendable, Equatable {
     public var keywords: [String]?
     public var metadataState: String?
     public var reason: String?
+    public var color: String?
 
     public var id: String { "\(assetId):\(action)" }
 
@@ -32,6 +83,10 @@ public struct SidecarDecision: Codable, Identifiable, Sendable, Equatable {
 
     public static func rating(_ assetID: String, value: Int) -> Self {
         Self(assetId: assetID, action: "rating", rating: min(5, max(0, value)))
+    }
+
+    public static func color(_ assetID: String, value: SidecarColor) -> Self {
+        Self(assetId: assetID, action: "color", color: value.rawValue)
     }
 
     public static func metadata(
@@ -85,6 +140,50 @@ public actor SidecarDecisionService {
             path: "/sidecar/decisions/query",
             body: DecisionQuery(assetIds: assetIDs)
         )
+    }
+
+    public func applyDetailed(
+        _ decisions: [SidecarDecision],
+        idempotencyKey: String = UUID().uuidString
+    ) async throws -> [SidecarDecisionChange] {
+        try parseChanges(try await apply(decisions, idempotencyKey: idempotencyKey))
+    }
+
+    public func queryStates(assetIDs: [String]) async throws -> [String: SidecarDecisionState] {
+        let response = try await query(assetIDs: assetIDs)
+        guard let decisions = response["decisions"]?.objectValue else { return [:] }
+        return try decisions.reduce(into: [:]) { result, item in
+            result[item.key] = try decode(SidecarDecisionState.self, from: item.value)
+        }
+    }
+
+    private func parseChanges(_ response: [String: JSONValue]) throws -> [SidecarDecisionChange] {
+        if let items = response["items"]?.arrayValue {
+            return try items.compactMap { try parseChange($0.objectValue) }
+        }
+        if let change = try parseChange(response) {
+            return [change]
+        }
+        return []
+    }
+
+    private func parseChange(_ object: [String: JSONValue]?) throws -> SidecarDecisionChange? {
+        guard let object,
+              let assetID = object["assetId"]?.stringValue,
+              let stateValue = object["state"],
+              let beforeValue = object["before"] else {
+            return nil
+        }
+        return SidecarDecisionChange(
+            assetID: assetID,
+            state: try decode(SidecarDecisionState.self, from: stateValue),
+            before: try decode(SidecarDecisionState.self, from: beforeValue),
+            changedFamilies: object["changedFamilies"]?.arrayValue?.compactMap(\.stringValue) ?? []
+        )
+    }
+
+    private func decode<T: Decodable>(_ type: T.Type, from value: JSONValue) throws -> T {
+        try JSONDecoder.ownerAPI.decode(type, from: JSONEncoder.ownerAPI.encode(value))
     }
 
     private func encodeObject<T: Encodable>(_ value: T) throws -> [String: JSONValue] {

@@ -610,6 +610,85 @@ struct OwnerCoreTests {
         #expect(decisions.last?["rating"] as? Int == 5)
     }
 
+    @Test("Native culling reloads preserved decisions and captures reversible before state")
+    func nativeCullingStateAndUndoEvidence() async throws {
+        let applyTransport = RecordingTransport(response: """
+        {
+          "ok": true,
+          "items": [{
+            "assetId": "asset-1",
+            "state": {
+              "assetId": "asset-1",
+              "rating": 4,
+              "color": "purple",
+              "pickState": "picked",
+              "metadataState": "unreviewed",
+              "title": "",
+              "keywords": [],
+              "tombstoneState": "",
+              "updatedAt": "2026-07-25T14:00:00Z"
+            },
+            "before": {
+              "assetId": "asset-1",
+              "rating": 0,
+              "color": "",
+              "pickState": "undecided",
+              "metadataState": "unreviewed",
+              "title": "",
+              "keywords": [],
+              "tombstoneState": "",
+              "updatedAt": ""
+            },
+            "changedFamilies": ["color"]
+          }]
+        }
+        """)
+        let applyService = SidecarDecisionService(api: OwnerAPIClient(
+            baseURL: URL(string: "https://example.test/api/v1")!,
+            transport: applyTransport
+        ))
+
+        let changes = try await applyService.applyDetailed([
+            .color("asset-1", value: .purple),
+        ], idempotencyKey: "native-color")
+
+        #expect(changes.first?.state.color == "purple")
+        #expect(changes.first?.before.color == "")
+        #expect(changes.first?.changedFamilies == ["color"])
+        let applyRequest = try #require(await applyTransport.lastRequest())
+        let applyBody = try #require(applyRequest.httpBody)
+        let applyPayload = try JSONSerialization.jsonObject(with: applyBody) as? [String: Any]
+        #expect(applyPayload?["action"] as? String == "color")
+        #expect(applyPayload?["color"] as? String == "purple")
+
+        let queryTransport = RecordingTransport(response: """
+        {
+          "ok": true,
+          "decisions": {
+            "asset-1": {
+              "assetId": "asset-1",
+              "rating": 4,
+              "color": "purple",
+              "pickState": "picked",
+              "metadataState": "unreviewed",
+              "title": "",
+              "keywords": [],
+              "tombstoneState": "",
+              "updatedAt": "2026-07-25T14:00:00Z"
+            }
+          }
+        }
+        """)
+        let queryService = SidecarDecisionService(api: OwnerAPIClient(
+            baseURL: URL(string: "https://example.test/api/v1")!,
+            transport: queryTransport
+        ))
+
+        let states = try await queryService.queryStates(assetIDs: ["asset-1"])
+        #expect(states["asset-1"]?.pickState == "picked")
+        #expect(states["asset-1"]?.rating == 4)
+    }
+
     @Test("Native metadata edits retain the Worker and Max authority gate")
     func nativeMetadataEdit() async throws {
         let terminal = OwnerAction(

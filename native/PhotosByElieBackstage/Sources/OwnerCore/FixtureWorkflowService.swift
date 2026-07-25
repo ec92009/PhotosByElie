@@ -33,6 +33,13 @@ public struct FixtureAsset: Identifiable, Sendable, Equatable {
     public var filename: String
     public var mediaType: String
 
+    public init(id: String, title: String, filename: String, mediaType: String) {
+        self.id = id
+        self.title = title
+        self.filename = filename
+        self.mediaType = mediaType
+    }
+
     init(json: [String: JSONValue]) {
         id = json["assetId"]?.stringValue ?? json["id"]?.stringValue ?? ""
         title = json["title"]?.stringValue ?? ""
@@ -41,12 +48,35 @@ public struct FixtureAsset: Identifiable, Sendable, Equatable {
     }
 }
 
+public struct FixturePoolAsset: Identifiable, Sendable, Equatable {
+    public var id: String
+    public var sourceIdentity: String
+    public var photoLibraryIdentifier: String
+    public var sourceKind: String
+    public var position: Int
+    public var title: String
+    public var filename: String
+    public var mediaType: String
+
+    init(json: [String: JSONValue]) {
+        id = json["assetId"]?.stringValue ?? ""
+        sourceIdentity = json["sourceIdentity"]?.stringValue ?? ""
+        photoLibraryIdentifier = json["photoLibraryIdentifier"]?.stringValue ?? ""
+        sourceKind = json["sourceKind"]?.stringValue ?? ""
+        position = json["position"]?.intValue ?? 0
+        title = json["title"]?.stringValue ?? ""
+        filename = json["filename"]?.stringValue ?? ""
+        mediaType = json["mediaType"]?.stringValue ?? ""
+    }
+}
+
 public struct FixturePool: Sendable, Equatable {
     public var id: String
     public var name: String
     public var fixtureID: String
     public var assetCount: Int
-    public var sidecarURL: URL?
+    public var snapshotHash: String
+    public var assets: [FixturePoolAsset]
 }
 
 public struct FixturePlacement: Identifiable, Sendable, Equatable {
@@ -149,7 +179,23 @@ public actor FixtureWorkflowService {
             name: pool["name"]?.stringValue ?? name,
             fixtureID: pool["fixtureId"]?.stringValue ?? fixtureID,
             assetCount: pool["assetCount"]?.intValue ?? assetIDs.count,
-            sidecarURL: result["sidecarUrl"]?.stringValue.flatMap(URL.init(string:))
+            snapshotHash: pool["snapshotHash"]?.stringValue ?? "",
+            assets: parsePoolAssets(pool["assets"])
+        )
+    }
+
+    public func openPool(id: String) async throws -> FixturePool {
+        let result = try await run("fixture-pool-open", extra: [
+            "poolId": .string(id),
+        ])
+        let pool = result["pool"]?.objectValue ?? [:]
+        return FixturePool(
+            id: pool["poolId"]?.stringValue ?? id,
+            name: pool["name"]?.stringValue ?? id,
+            fixtureID: pool["fixtureId"]?.stringValue ?? "",
+            assetCount: pool["assetCount"]?.intValue ?? 0,
+            snapshotHash: pool["snapshotHash"]?.stringValue ?? "",
+            assets: parsePoolAssets(pool["assets"])
         )
     }
 
@@ -233,5 +279,12 @@ public actor FixtureWorkflowService {
             guard let object = $0.objectValue else { return nil }
             return FixturePlacement(json: object)
         }
+    }
+
+    private func parsePoolAssets(_ value: JSONValue?) -> [FixturePoolAsset] {
+        (value?.arrayValue ?? [])
+            .compactMap { $0.objectValue }
+            .map(FixturePoolAsset.init(json:))
+            .sorted { $0.position < $1.position }
     }
 }

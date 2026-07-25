@@ -421,8 +421,21 @@ private struct MediaLibraryView: View {
         HSplitView {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
-                    Text("Photos index & export").font(.largeTitle.bold())
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(model.cullingPool?.name ?? "Photos index & export")
+                            .font(.largeTitle.bold())
+                        if let pool = model.cullingPool {
+                            Text("Fixture pool \(pool.id) • \(pool.assetCount) immutable ordered assets")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                     Spacer()
+                    if model.cullingPool != nil {
+                        Button("All Photos") {
+                            model.showAllPhotosInCulling()
+                        }
+                    }
                     Button("Allow Photos") {
                         Task { await model.authorizeAndLoadPhotos() }
                     }
@@ -433,12 +446,15 @@ private struct MediaLibraryView: View {
                 }
                 Text(model.photoStatus)
                     .foregroundStyle(.secondary)
-                Table(model.libraryItems, selection: $model.selectedPhotoIDs) {
+                Table(model.cullingAssets, selection: $model.selectedPhotoIDs) {
+                    TableColumn("#") { asset in
+                        Text(model.cullingPool?.assets.first(where: { $0.id == asset.id })
+                            .map { "\($0.position + 1)" } ?? "—")
+                    }
+                    .width(35)
+                    TableColumn("Title", value: \.title)
                     TableColumn("File", value: \.filename)
                     TableColumn("Kind", value: \.mediaType)
-                    TableColumn("Captured") { item in
-                        Text(item.creationDate?.formatted(date: .numeric, time: .shortened) ?? "—")
-                    }
                 }
                 HStack {
                     Text("\(model.selectedPhotoIDs.count) selected")
@@ -626,8 +642,12 @@ private struct FixtureWorkflowView: View {
                         GroupBox("Latest snapshot") {
                             LabeledContent("Pool", value: pool.name)
                             LabeledContent("Assets", value: pool.assetCount.formatted())
-                            if let url = pool.sidecarURL {
-                                Link("Open in Sidecar", destination: url)
+                            LabeledContent("Pool ID", value: pool.id)
+                            if !pool.snapshotHash.isEmpty {
+                                LabeledContent("Snapshot", value: String(pool.snapshotHash.prefix(12)))
+                            }
+                            Button("Open in Culling") {
+                                model.openFixturePoolInCulling()
                             }
                         }
                     }

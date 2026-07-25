@@ -116,8 +116,10 @@ moved, removed, or restored without deleting the asset.
 ### Create a culling snapshot
 
 After selecting search results, choose **Create stable culling snapshot**.
-The snapshot freezes that candidate set for review and provides an
-**Open in Sidecar** link. It does not publish or upload the selected files.
+The snapshot freezes that candidate set for review. Choose **Open in Culling**
+to switch Backstage to the exact immutable pool in its saved order. It does
+not open Safari or localhost, and it does not publish or upload the selected
+files.
 
 ## People & Access
 

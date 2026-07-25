@@ -697,12 +697,41 @@ def get_pool(repo_root: Path, pool_id: str, *, conn: sqlite3.Connection | None =
         row = conn.execute("SELECT * FROM fixture_culling_pools WHERE pool_id = ?", (pool_id,)).fetchone()
         if not row:
             raise ValueError("culling pool does not exist")
-        assets = conn.execute("SELECT asset_id, source_kind, source_identity, source_batch_id, snapshot_position, provenance_json, added_at FROM fixture_pool_assets WHERE pool_id = ? AND removed_at IS NULL ORDER BY snapshot_position", (pool_id,)).fetchall()
+        assets = conn.execute(
+            """
+            SELECT p.asset_id, p.source_kind, p.source_identity, p.source_batch_id,
+                   p.snapshot_position, p.provenance_json, p.added_at,
+                   COALESCE(d.title, a.photos_title, '') AS title,
+                   COALESCE(a.filename, '') AS filename,
+                   COALESCE(a.media_type, '') AS media_type,
+                   COALESCE(a.raw_json, '{}') AS raw_json
+            FROM fixture_pool_assets p
+            LEFT JOIN sidecar_assets a ON a.asset_id = p.asset_id
+            LEFT JOIN sidecar_decisions d ON d.asset_id = p.asset_id
+            WHERE p.pool_id = ? AND p.removed_at IS NULL
+            ORDER BY p.snapshot_position
+            """,
+            (pool_id,),
+        ).fetchall()
         return {
             "poolId": row["pool_id"], "fixtureId": row["fixture_id"], "name": row["name"], "criteria": _read_json(row["criteria_json"], {}),
             "snapshotHash": row["snapshot_hash"], "assetCount": len(assets), "state": row["state"], "createdAt": row["created_at"], "updatedAt": row["updated_at"],
             "breadcrumbs": fixture_breadcrumbs(conn, row["fixture_id"]),
-            "assets": [{"assetId": item["asset_id"], "sourceKind": item["source_kind"], "sourceIdentity": item["source_identity"], "sourceBatchId": item["source_batch_id"] or "", "position": item["snapshot_position"], "provenance": _read_json(item["provenance_json"], {}), "addedAt": item["added_at"]} for item in assets],
+            "assets": [{
+                "assetId": item["asset_id"],
+                "sourceKind": item["source_kind"],
+                "sourceIdentity": item["source_identity"],
+                "photoLibraryIdentifier": str(
+                    _read_json(item["raw_json"], {}).get("localIdentifier") or ""
+                ),
+                "sourceBatchId": item["source_batch_id"] or "",
+                "position": item["snapshot_position"],
+                "title": item["title"],
+                "filename": item["filename"],
+                "mediaType": item["media_type"],
+                "provenance": _read_json(item["provenance_json"], {}),
+                "addedAt": item["added_at"],
+            } for item in assets],
         }
     finally:
         if owns:

@@ -519,6 +519,70 @@ struct OwnerCoreTests {
         #expect(manifest?["destinationDefaults"]?.arrayValue?.compactMap(\.stringValue) == ["r2", "apple_photos"])
     }
 
+    @Test("Fixture snapshot preserves its immutable native culling order")
+    func nativeFixtureSnapshotOrder() async throws {
+        let terminal = OwnerAction(
+            id: "owner-action-pool",
+            actionKind: "sidecar-culling-review",
+            target: "max",
+            state: .completed,
+            result: [
+                "pool": .object([
+                    "poolId": "pool-ordered",
+                    "fixtureId": "fixture-family",
+                    "name": "Family selects",
+                    "assetCount": 2,
+                    "snapshotHash": "stable-hash",
+                    "assets": .array([
+                        .object([
+                            "assetId": "asset-b",
+                            "sourceIdentity": "photos-b",
+                            "photoLibraryIdentifier": "photos-b",
+                            "sourceKind": "apple_photos",
+                            "position": 0,
+                            "title": "Second captured, first selected",
+                            "filename": "B.JPG",
+                            "mediaType": "photo",
+                        ]),
+                        .object([
+                            "assetId": "asset-a",
+                            "sourceIdentity": "photos-a",
+                            "photoLibraryIdentifier": "photos-a",
+                            "sourceKind": "apple_photos",
+                            "position": 1,
+                            "title": "First captured, second selected",
+                            "filename": "A.MOV",
+                            "mediaType": "video",
+                        ]),
+                    ]),
+                ]),
+            ]
+        )
+        let api = ScriptedOwnerActionAPI(completed: [terminal])
+        let service = FixtureWorkflowService(runner: OwnerActionRunner(
+            api: api,
+            waker: UnavailableWaker(),
+            pollInterval: .milliseconds(1),
+            timeout: .seconds(1)
+        ))
+
+        let pool = try await service.snapshot(
+            fixtureID: "fixture-family",
+            assetIDs: ["asset-b", "asset-a"],
+            name: "Family selects"
+        )
+
+        #expect(pool.id == "pool-ordered")
+        #expect(pool.fixtureID == "fixture-family")
+        #expect(pool.snapshotHash == "stable-hash")
+        #expect(pool.assets.map(\.id) == ["asset-b", "asset-a"])
+        #expect(pool.assets.map(\.position) == [0, 1])
+        #expect(pool.assets.map(\.mediaType) == ["photo", "video"])
+        let request = try #require(await api.requests().first)
+        let manifest = request.payload["manifest"]?.objectValue
+        #expect(manifest?["selectedAssetIds"]?.arrayValue?.compactMap(\.stringValue) == ["asset-b", "asset-a"])
+    }
+
     @Test("Native culling batches decisions through the canonical API")
     func nativeCullingBatch() async throws {
         let transport = RecordingTransport(response: """

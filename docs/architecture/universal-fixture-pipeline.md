@@ -12,7 +12,7 @@ The canonical flow is:
 1. create or choose a fixture;
 2. search the indexed asset library without changing it;
 3. snapshot selected candidates into an immutable culling pool;
-4. open that pool in the existing Sidecar UI;
+4. open that exact pool directly in native Backstage Culling;
 5. pick and approve independently, then configure per-asset destinations;
 6. deliver to R2 and, after same-version verification, give approved metadata
    back to Apple Photos.
@@ -22,10 +22,11 @@ The canonical flow is:
 Ignored `assets/owner-actions/Owner.sqlite` remains the private workflow store.
 `fixture_pipeline.py` adds recursive fixture, source-batch, culling-pool,
 placement, destination, receipt, deliverable-link, and access-grant tables
-alongside the existing Sidecar tables. Sidecar remains authoritative for
-rating, color, pick state, editorial state, title, caption, keywords, and undo
-history. Renames and moves retain the fixture ID, grants, placements, pools,
-and deliverable recovery links.
+alongside the existing decision tables. Those durable tables remain
+authoritative for rating, color, pick state, editorial state, title, caption,
+keywords, and undo history; native Backstage is the operator UI. Renames and
+moves retain the fixture ID, grants, placements, pools, and deliverable
+recovery links.
 
 Owner can create roots and children, rename or move them, archive a complete
 subtree, and reopen it later. Archive/reopen never deletes source batches,
@@ -135,7 +136,8 @@ the recovery path while the fixture delivery receipts are built forward.
 
 - Search is read-only.
 - Pool creation does not mutate source media.
-- Fixture mode changes only Sidecar scope; it does not fork Sidecar behavior.
+- Fixture mode changes native Culling scope to the pool's immutable ordered
+  asset IDs; it does not fork decision authority or copy source media.
 - Pick and Approved are distinct.
 - Apple Photos commit is explicit and preceded by a dry run.
 - Upload-run adoption is explicit, fixture-scoped, subset-selectable, and

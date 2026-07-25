@@ -45,6 +45,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var fixtureStatus = "Load the fixture tree to begin."
     @Published var isRunningFixture = false
     @Published var fixturePool: FixturePool?
+    @Published var cullingPool: FixturePool?
     @Published var fixturePlacements: [FixturePlacement] = []
     @Published var placementTargetFixtureIDs: Set<String> = []
     @Published var accessState = AccessControlState()
@@ -202,7 +203,7 @@ final class BackstageViewModel: ObservableObject {
         isLoadingPhotos = true
         defer { isLoadingPhotos = false }
         libraryItems = await photoLibrary.fetch(limit: 2_000)
-        selectedPhotoIDs.formIntersection(Set(libraryItems.map(\.id)))
+        selectedPhotoIDs.formIntersection(Set(cullingAssets.map(\.id)))
         photoStatus = "\(libraryItems.count.formatted()) recent Photos items indexed."
     }
 
@@ -212,7 +213,10 @@ final class BackstageViewModel: ObservableObject {
             return
         }
         do {
-            photoPreview = try await photoLibrary.preview(localIdentifier: id, maxPixelSize: 1_600)
+            photoPreview = try await photoLibrary.preview(
+                localIdentifier: photoLibraryIdentifier(for: id),
+                maxPixelSize: 1_600
+            )
             photoStatus = "Preview prepared from Photos without exporting the original."
         } catch {
             photoStatus = String(describing: error)
@@ -220,7 +224,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func exportSelected(to directory: URL) async {
-        let ids = libraryItems.map(\.id).filter(selectedPhotoIDs.contains)
+        let ids = selectedCullingAssetIDs
         guard !ids.isEmpty else {
             photoStatus = "Select one or more items to export."
             return
@@ -231,7 +235,10 @@ final class BackstageViewModel: ObservableObject {
         var failures: [String] = []
         for id in ids {
             do {
-                receipts.append(try await photoLibrary.exportOriginal(localIdentifier: id, to: directory))
+                receipts.append(try await photoLibrary.exportOriginal(
+                    localIdentifier: photoLibraryIdentifier(for: id),
+                    to: directory
+                ))
             } catch {
                 failures.append("\(id): \(error)")
             }
@@ -266,6 +273,42 @@ final class BackstageViewModel: ObservableObject {
 
     var flatFixtures: [FixtureNode] {
         fixtures.flatMap(\.flattened)
+    }
+
+    var cullingAssets: [FixtureAsset] {
+        if let cullingPool {
+            return cullingPool.assets.map {
+                FixtureAsset(
+                    id: $0.id,
+                    title: $0.title,
+                    filename: $0.filename,
+                    mediaType: $0.mediaType
+                )
+            }
+        }
+        return libraryItems.map {
+            FixtureAsset(id: $0.id, title: "", filename: $0.filename, mediaType: $0.mediaType)
+        }
+    }
+
+    var selectedCullingAssetIDs: [String] {
+        cullingAssets.map(\.id).filter(selectedPhotoIDs.contains)
+    }
+
+    func openFixturePoolInCulling() {
+        guard let fixturePool else { return }
+        cullingPool = fixturePool
+        selectedPhotoIDs = []
+        photoPreview = nil
+        cullingStatus = "Fixture pool \(fixturePool.id) loaded in immutable snapshot order."
+        selection = .culling
+    }
+
+    func showAllPhotosInCulling() {
+        cullingPool = nil
+        selectedPhotoIDs = []
+        photoPreview = nil
+        cullingStatus = "Showing the recent Photos index."
     }
 
     func loadFixtures() async {
@@ -471,7 +514,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func applyPickDecision() async {
-        let ids = libraryItems.map(\.id).filter(selectedPhotoIDs.contains)
+        let ids = selectedCullingAssetIDs
         guard !ids.isEmpty else {
             cullingStatus = "Select one or more Photos items."
             return
@@ -489,7 +532,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func applyRating() async {
-        let ids = libraryItems.map(\.id).filter(selectedPhotoIDs.contains)
+        let ids = selectedCullingAssetIDs
         guard !ids.isEmpty else {
             cullingStatus = "Select one or more Photos items."
             return
@@ -531,7 +574,7 @@ final class BackstageViewModel: ObservableObject {
     func queueMetadataReview() async {
         let ids = selectedPhotoIDs.isEmpty
             ? [metadataAssetID].filter { !$0.isEmpty }
-            : libraryItems.map(\.id).filter(selectedPhotoIDs.contains)
+            : selectedCullingAssetIDs
         do {
             let action = try await metadataReviewService.queueReview(assetIDs: ids)
             metadataReviewStatus = "\(ids.count) item\(ids.count == 1 ? "" : "s") queued for review by action \(action.id)."
@@ -908,5 +951,14 @@ final class BackstageViewModel: ObservableObject {
             return "\(report.readyCount) ready; \(report.blocked.count) blocked. Photos is unchanged."
         }
         return "\(report.verifiedCount) written and re-read as verified; \(report.failed.count) failed; \(report.blocked.count) blocked."
+    }
+
+    private func photoLibraryIdentifier(for assetID: String) -> String {
+        guard let poolAsset = cullingPool?.assets.first(where: { $0.id == assetID }) else {
+            return assetID
+        }
+        return poolAsset.sourceKind == "apple_photos" && !poolAsset.photoLibraryIdentifier.isEmpty
+            ? poolAsset.photoLibraryIdentifier
+            : assetID
     }
 }

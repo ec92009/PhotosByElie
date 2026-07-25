@@ -91,6 +91,22 @@ class FixtureConnectorTest(unittest.TestCase):
                 criteria={"query": "LaConcha"},
             ))
             self.assertIn("?pool=pool-", pooled["result"]["sidecarUrl"])
+            self.assertEqual(
+                pooled["result"]["pool"]["assets"],
+                [{
+                    "assetId": "asset-1",
+                    "sourceKind": "apple_photos",
+                    "sourceIdentity": "apple-photos://asset-1",
+                    "photoLibraryIdentifier": "asset-1",
+                    "sourceBatchId": "",
+                    "position": 0,
+                    "title": "",
+                    "filename": "LaConcha.JPG",
+                    "mediaType": "photo",
+                    "provenance": {"sourceAnchor": "apple-photos://asset-1", "albums": []},
+                    "addedAt": pooled["result"]["pool"]["assets"][0]["addedAt"],
+                }],
+            )
             second = local_server.new_owner_connector_result(root, action("fixture-create", name="Apartment 2"))
             routed = local_server.new_owner_connector_result(root, action(
                 "fixture-place-multi",

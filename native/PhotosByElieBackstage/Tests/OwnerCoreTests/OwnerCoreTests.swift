@@ -519,6 +519,23 @@ struct OwnerCoreTests {
         #expect(manifest?["destinationDefaults"]?.arrayValue?.compactMap(\.stringValue) == ["r2", "apple_photos"])
     }
 
+    @Test("Fixture archive state follows the connector archivedAt contract")
+    func nativeFixtureArchiveState() {
+        let active = FixtureNode(json: [
+            "fixtureId": "fixture-active",
+            "name": "Active",
+            "archivedAt": "",
+        ])
+        let archived = FixtureNode(json: [
+            "fixtureId": "fixture-archived",
+            "name": "Archived",
+            "archivedAt": "2026-07-25T15:25:59Z",
+        ])
+
+        #expect(!active.isArchived)
+        #expect(archived.isArchived)
+    }
+
     @Test("Fixture snapshot preserves its immutable native culling order")
     func nativeFixtureSnapshotOrder() async throws {
         let terminal = OwnerAction(

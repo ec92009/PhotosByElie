@@ -87,13 +87,14 @@ private struct OverviewView: View {
     @ObservedObject var model: BackstageViewModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            Label("PhotosByElie Backstage", systemImage: "photo.on.rectangle.angled")
-                .font(.largeTitle.bold())
-            Text("Max-first Owner workspace. Public and client sites remain independent.")
-                .foregroundStyle(.secondary)
-            GroupBox("This Mac") {
-                VStack(alignment: .leading, spacing: 12) {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                Label("PhotosByElie Backstage", systemImage: "photo.on.rectangle.angled")
+                    .font(.largeTitle.bold())
+                Text("Max-first Owner workspace. Public and client sites remain independent.")
+                    .foregroundStyle(.secondary)
+                GroupBox("This Mac") {
+                    VStack(alignment: .leading, spacing: 12) {
                     LabeledContent("Authentication", value: model.authentication.phase.rawValue)
                     if let deviceID = model.authentication.deviceId {
                         LabeledContent("Device", value: deviceID)
@@ -133,11 +134,11 @@ private struct OverviewView: View {
                             .disabled(model.isAuthenticating)
                         }
                     }
+                    }
+                    .padding(6)
                 }
-                .padding(6)
-            }
-            GroupBox("Signed Photos helper") {
-                VStack(alignment: .leading, spacing: 10) {
+                GroupBox("Signed Photos helper") {
+                    VStack(alignment: .leading, spacing: 10) {
                     LabeledContent("Installed", value: model.photosBridgeHealth.installed ? "Yes" : "No")
                     LabeledContent("Background-only", value: model.photosBridgeHealth.headless ? "Yes" : "No")
                     LabeledContent("Photos access", value: model.photosBridgeHealth.photoAccess)
@@ -150,12 +151,13 @@ private struct OverviewView: View {
                     Button("Check helper") {
                         Task { await model.refreshPhotosBridgeHealth() }
                     }
+                    }
+                    .padding(6)
                 }
-                .padding(6)
+                Spacer()
             }
-            Spacer()
+            .padding(24)
         }
-        .padding(24)
     }
 }
 

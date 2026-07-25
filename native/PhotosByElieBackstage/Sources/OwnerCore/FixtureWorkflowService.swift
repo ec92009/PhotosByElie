@@ -14,7 +14,9 @@ public struct FixtureNode: Identifiable, Sendable, Equatable {
         id = json["fixtureId"]?.stringValue ?? json["id"]?.stringValue ?? ""
         name = json["name"]?.stringValue ?? id
         parentID = json["parentFixtureId"]?.stringValue
-        state = json["state"]?.stringValue ?? "active"
+        let archivedAt = json["archivedAt"]?.stringValue?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        state = json["state"]?.stringValue ?? (archivedAt.isEmpty ? "active" : "archived")
         templateKey = json["templateKey"]?.stringValue ?? ""
         children = (json["children"]?.arrayValue ?? []).compactMap {
             guard let object = $0.objectValue else { return nil }

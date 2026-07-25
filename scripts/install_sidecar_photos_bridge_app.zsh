@@ -70,6 +70,8 @@ cat > "$app_contents/Info.plist" <<PLIST
   <string>1</string>
   <key>LSMinimumSystemVersion</key>
   <string>13.0</string>
+  <key>LSUIElement</key>
+  <true/>
   <key>NSHighResolutionCapable</key>
   <true/>
   <key>NSPhotoLibraryUsageDescription</key>
@@ -101,6 +103,16 @@ touch "$app_dir"
 # A Developer ID may be supplied in production; local builds retain a stable
 # bundle identifier under an explicit ad-hoc app signature.
 identity="${PBE_CODESIGN_IDENTITY:--}"
-codesign --force --deep --sign "$identity" "$app_dir"
+if [[ "$identity" == "-" ]]; then
+  # Ad-hoc signatures normally use the changing binary cdhash as their
+  # designated requirement, which makes every rebuild look like a new app to
+  # TCC. Embed a stable local requirement so Photos/Automation grants continue
+  # to identify this bundle across local upgrades.
+  codesign --force --deep --sign - \
+    --requirements '=designated => identifier "com.photosbyelie.photos-bridge"' \
+    "$app_dir"
+else
+  codesign --force --deep --sign "$identity" "$app_dir"
+fi
 codesign --verify --deep --strict "$app_dir"
 printf 'Installed %s\n' "$app_dir"

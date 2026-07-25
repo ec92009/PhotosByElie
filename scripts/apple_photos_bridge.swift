@@ -7,6 +7,12 @@ import ImageIO
 import OSAKit
 import Photos
 
+// Photos Bridge is a permission-bearing helper, not an operator application.
+// LSUIElement keeps it out of the Dock and menu bar; accessory activation still
+// permits a one-time macOS TCC prompt when Photos or Automation access has not
+// yet been decided.
+NSApplication.shared.setActivationPolicy(.accessory)
+
 struct BridgeError: Error {
     let code: String
     let message: String
@@ -92,12 +98,6 @@ func boolArg(_ name: String) -> Bool {
 }
 
 func metadataAutomation(input: URL, commit: Bool) throws -> [String: Any] {
-    // The first Apple Events request can require a one-time macOS Automation
-    // decision. Bring the otherwise background-only bridge forward long enough
-    // for that system sheet to be visible instead of leaving the caller waiting
-    // behind an invisible TCC prompt.
-    NSApplication.shared.setActivationPolicy(.regular)
-    NSApplication.shared.activate(ignoringOtherApps: true)
     let inputData = try Data(contentsOf: input)
     let requestValue = try JSONSerialization.jsonObject(with: inputData)
     guard let requests = requestValue as? [[String: Any]] else {
@@ -199,7 +199,6 @@ func requirePhotosAccess() {
     }
     // PhotoKit authorization is UI-mediated. The bridge is normally a
     // command-shaped app, but it must be visible for its one-time system grant.
-    NSApplication.shared.setActivationPolicy(.regular)
     NSApplication.shared.finishLaunching()
     NSApplication.shared.activate(ignoringOtherApps: true)
     let lock = NSLock()
@@ -2306,7 +2305,28 @@ func materializeOne(asset: PHAsset, destination: URL, allowIcloudDownloads: Bool
 
 let command = CommandLine.arguments.dropFirst().first ?? ""
 if command.isEmpty || command == "--help" {
-    outputJSON(["ok": true, "usage": "apple_photos_bridge.swift albums | library-index [--limit N] [--offset N] [--date-from YYYY-MM-DD] [--date-to YYYY-MM-DD] | library-index-file --destination PATH [--date-from YYYY-MM-DD] [--date-to YYYY-MM-DD] [--progress-every N] | preview --asset-id ID --destination PATH [--max-pixel N] | video --asset-id ID --destination PATH | preflight --album-id ID [--filter-bursts] [--allow-icloud-downloads] | export --album-id ID --destination PATH [--filter-bursts] [--allow-icloud-downloads] | materialize-one --asset-id ID --destination PATH [--allow-icloud-downloads] [--result-destination PATH] | metadata-read-many --input PATH | metadata-apply-many --input PATH"])
+    outputJSON(["ok": true, "usage": "apple_photos_bridge.swift health | albums | library-index [--limit N] [--offset N] [--date-from YYYY-MM-DD] [--date-to YYYY-MM-DD] | library-index-file --destination PATH [--date-from YYYY-MM-DD] [--date-to YYYY-MM-DD] [--progress-every N] | preview --asset-id ID --destination PATH [--max-pixel N] | video --asset-id ID --destination PATH | preflight --album-id ID [--filter-bursts] [--allow-icloud-downloads] | export --album-id ID --destination PATH [--filter-bursts] [--allow-icloud-downloads] | materialize-one --asset-id ID --destination PATH [--allow-icloud-downloads] [--result-destination PATH] | metadata-read-many --input PATH | metadata-apply-many --input PATH"])
+    exit(0)
+}
+
+if command == "health" {
+    let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+    let statusName: String
+    switch status {
+    case .authorized: statusName = "authorized"
+    case .limited: statusName = "limited"
+    case .denied: statusName = "denied"
+    case .restricted: statusName = "restricted"
+    case .notDetermined: statusName = "not_determined"
+    @unknown default: statusName = "unknown"
+    }
+    outputJSON([
+        "ok": status == .authorized || status == .limited,
+        "mode": "health",
+        "bundleIdentifier": Bundle.main.bundleIdentifier ?? "",
+        "photoAccess": statusName,
+        "headless": true,
+    ])
     exit(0)
 }
 

@@ -113,6 +113,14 @@ final class BackstageViewModel: ObservableObject {
     @Published var deliverableShareLink = ""
     @Published var publicationPlan: FixturePublicationPlan?
     @Published var publicationStatus = "Publication is a separate, explicit public-fixture gate."
+    @Published var photosBridgeHealth = PhotosBridgeHealth(
+        installed: false,
+        headless: false,
+        bundleIdentifier: "",
+        version: "",
+        photoAccess: "checking",
+        message: "Checking the signed Photos helper…"
+    )
 
     let api: OwnerAPIClient
     let authenticationService: OwnerAuthenticationService
@@ -124,6 +132,7 @@ final class BackstageViewModel: ObservableObject {
     let metadataReviewService: MetadataReviewService
     let lifecycleService: LifecycleService
     let deliveryService: FixtureDeliveryService
+    let photosBridgeHealthService: PhotosBridgeHealthService
     private var authenticationTask: Task<OwnerAuthenticationSnapshot, Never>?
 
     init(
@@ -142,9 +151,11 @@ final class BackstageViewModel: ObservableObject {
         self.metadataReviewService = MetadataReviewService(runner: runner)
         self.lifecycleService = LifecycleService(runner: runner)
         self.deliveryService = FixtureDeliveryService(runner: runner)
+        self.photosBridgeHealthService = PhotosBridgeHealthService()
     }
 
     func bootstrapAuthentication() async {
+        photosBridgeHealth = await photosBridgeHealthService.probe()
         isAuthenticating = true
         defer { isAuthenticating = false }
         authentication = await ensuredAuthentication()
@@ -159,6 +170,10 @@ final class BackstageViewModel: ObservableObject {
             authenticationStatus = "Signed out on this Mac."
             status = "Signed out"
         }
+    }
+
+    func refreshPhotosBridgeHealth() async {
+        photosBridgeHealth = await photosBridgeHealthService.probe()
     }
 
     func enroll() async {

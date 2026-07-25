@@ -1062,6 +1062,44 @@ struct OwnerCoreTests {
         #expect(requests[0].payload["manifest"]?.objectValue?["mode"]?.stringValue == "fixture-upload-health")
         #expect(requests[1].payload["manifest"]?.objectValue?["mode"]?.stringValue == "fixture-upload-run-adoption-plan")
     }
+
+    @Test("Backstage reports signed Photos helper identity and headless health")
+    func signedPhotosBridgeHealth() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbe-bridge-health-\(UUID().uuidString)")
+        let app = root.appendingPathComponent("PhotosByElie Photos Bridge.app")
+        let contents = app.appendingPathComponent("Contents")
+        try FileManager.default.createDirectory(at: contents, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let plist: [String: Any] = [
+            "CFBundleIdentifier": "com.photosbyelie.photos-bridge",
+            "CFBundleShortVersionString": "148.0",
+            "LSUIElement": true,
+        ]
+        let plistData = try PropertyListSerialization.data(
+            fromPropertyList: plist,
+            format: .xml,
+            options: 0
+        )
+        try plistData.write(to: contents.appendingPathComponent("Info.plist"))
+        let service = PhotosBridgeHealthService(appURL: app) { _, resultURL in
+            let result: [String: Any] = [
+                "ok": true,
+                "headless": true,
+                "bundleIdentifier": "com.photosbyelie.photos-bridge",
+                "photoAccess": "authorized",
+            ]
+            let data = try JSONSerialization.data(withJSONObject: result)
+            try data.write(to: resultURL)
+        }
+
+        let health = await service.probe()
+        #expect(health.installed)
+        #expect(health.headless)
+        #expect(health.bundleIdentifier == "com.photosbyelie.photos-bridge")
+        #expect(health.version == "148.0")
+        #expect(health.photoAccess == "authorized")
+    }
 }
 
 private func scalar(_ databaseURL: URL, _ sql: String) throws -> String {

@@ -182,6 +182,11 @@ The upper Metadata sections manage Owner metadata and review decisions. The
 final section writes approved metadata back to Apple Photos through the signed
 Photos Bridge.
 
+Photos Bridge runs as a background-only helper. It should not appear in the
+Dock or as a second operator application. On **Overview**, the **Signed Photos
+helper** card reports whether it is installed, background-only, and authorized
+for Photos. Use **Check helper** after an upgrade or permissions change.
+
 ### Edit metadata
 
 1. Select an item in **Culling**.
@@ -309,6 +314,11 @@ Stop before confirming. Preview or reload the relevant plan, verify the
 fixture and item counts, and inspect **Activity**. The browser Owner remains
 available for authentication, enrollment, connector health, access review,
 and audit, but Backstage is the active mutation workspace.
+
+Browser Owner and fixture pages do not launch Sidecar. During the native
+rehearsal window only, the compatibility UI can be enabled deliberately by
+starting the connector with `PBE_ENABLE_LEGACY_SIDECAR=1`; ordinary operation
+leaves this switch unset and exposes only Backstage as the operator app.
 
 ## Safety summary
 

@@ -53,6 +53,19 @@ The final helper:
 6. is always invoked through LaunchServices as the installed signed app, never
    through raw Swift or a bare executable.
 
+The installed bundle is an `LSUIElement` background helper. It has no Dock
+presence, menu bar, or operator window. Its read-only `health` command reports
+the stable bundle identity and current Photos authorization; Backstage surfaces
+that result on Overview. A permission request can still present a macOS-owned
+TCC prompt when access has never been decided, but the helper itself does not
+become a visible application.
+
+Local ad-hoc builds embed a stable designated requirement for
+`com.photosbyelie.photos-bridge` instead of accepting the default changing
+binary cdhash. A Developer ID can replace the local identity through
+`PBE_CODESIGN_IDENTITY`; either route keeps the permission-bearing identity
+stable across upgrades.
+
 ## Rollback contract
 
 Cutover is reversible until PBB-27 rehearsal and the PBB-28 soak window both
@@ -65,6 +78,10 @@ pass.
   state.
 - A failed native operation may fall back to connector polling, but must not
   silently open a browser UI.
+- During rehearsal only, an operator may set
+  `PBE_ENABLE_LEGACY_SIDECAR=1` before starting the connector or legacy Dock
+  installer. Without that explicit switch the local Sidecar launch route
+  returns HTTP 410 and no Owner or fixture page exposes a Sidecar launcher.
 - Retirement deletes launchers and obsolete services only after the same
   fixture pool passes the native rehearsal from snapshot through delivery.
 

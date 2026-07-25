@@ -179,13 +179,23 @@ The Dock launcher starts from a clean Owner helper state: it stops stale localho
 ### Apple Photos Bridge Permissions
 
 macOS Photos access is granted to the process or app bundle that touches
-PhotoKit. For Sidecar, use the installed app bundle:
-`~/Applications/PhotosByElie Photos Bridge.app`. The Sidecar helper launches it
-with `open -W -n ... --args` for index refreshes, previews, and local video
-resources. Do not replace that with `swift scripts/apple_photos_bridge.swift`
-from Sidecar UI code, LaunchAgents, or Codex Scheduled prompts; direct Swift
-uses the caller identity and can show `Photos access needed` even when the app
-bundle already has Full Access.
+PhotoKit. Use the installed permission-bearing bundle:
+`~/Applications/PhotosByElie Photos Bridge.app`. Backstage and the trusted
+local connector launch it with `open -W -n ... --args` for index refreshes,
+previews, and local video resources. Do not replace that with
+`swift scripts/apple_photos_bridge.swift` from UI code, LaunchAgents, or Codex
+Scheduled prompts; direct Swift uses the caller identity and can show
+`Photos access needed` even when the app bundle already has Full Access.
+
+The installed bundle is an `LSUIElement` helper: it has no user-facing window,
+menu bar, or Dock icon. Its read-only `health` command reports the stable bundle
+identifier and current PhotoKit authorization. Native Backstage shows this
+health on Overview; operational workflows continue to invoke the signed bundle
+through LaunchServices.
+
+The local installer embeds a stable designated requirement for the bridge
+bundle identifier so an ad-hoc rebuild does not change its TCC identity. Set
+`PBE_CODESIGN_IDENTITY` when a Developer ID is available.
 
 Correct scheduled entrypoint:
 

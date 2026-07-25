@@ -136,6 +136,23 @@ private struct OverviewView: View {
                 }
                 .padding(6)
             }
+            GroupBox("Signed Photos helper") {
+                VStack(alignment: .leading, spacing: 10) {
+                    LabeledContent("Installed", value: model.photosBridgeHealth.installed ? "Yes" : "No")
+                    LabeledContent("Background-only", value: model.photosBridgeHealth.headless ? "Yes" : "No")
+                    LabeledContent("Photos access", value: model.photosBridgeHealth.photoAccess)
+                    if !model.photosBridgeHealth.version.isEmpty {
+                        LabeledContent("Version", value: model.photosBridgeHealth.version)
+                    }
+                    Text(model.photosBridgeHealth.message)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                    Button("Check helper") {
+                        Task { await model.refreshPhotosBridgeHealth() }
+                    }
+                }
+                .padding(6)
+            }
             Spacer()
         }
         .padding(24)

@@ -84,6 +84,11 @@
   const fixtureUploadRunPlanButton = $("[data-fixture-upload-run-plan]");
   const fixtureUploadRunCommitButton = $("[data-fixture-upload-run-commit]");
   const fixtureUploadRunOutput = $("[data-fixture-upload-run-output]");
+  const backstageEnrollCreateButton = $("[data-backstage-enroll-create]");
+  const backstageEnrollCopyButton = $("[data-backstage-enroll-copy]");
+  const backstageEnrollCodeWrap = $("[data-backstage-enroll-code-wrap]");
+  const backstageEnrollCode = $("[data-backstage-enroll-code]");
+  const backstageEnrollStatus = $("[data-backstage-enroll-status]");
   const wasteBasketLink = $("[data-new-owner-waste-basket]");
   const wasteBasketStatus = $("[data-new-owner-waste-basket-status]");
   const requestedUploadRunId = new URLSearchParams(window.location.search).get("uploadRun") || "";
@@ -162,6 +167,16 @@
     .replace(/"/g, "&quot;");
 
   const apiUrl = (path) => workerBase ? `${workerBase}${path}` : path;
+
+  const encodeBackstageEnrollment = ({ deviceId, deviceCredential }) => {
+    const bytes = new TextEncoder().encode(JSON.stringify({ deviceId, deviceCredential }));
+    let binary = "";
+    bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
+    return window.btoa(binary)
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/g, "");
+  };
 
   const storedAuthToken = () => {
     try {
@@ -1461,6 +1476,54 @@
     }
   };
 
+  const createBackstageEnrollment = async () => {
+    if (!ownerAllowed()) {
+      if (backstageEnrollStatus) backstageEnrollStatus.textContent = "Sign in as Owner before enrolling a native device.";
+      return;
+    }
+    if (!window.confirm("Create a revocable Backstage credential for this Mac? The secret is shown once and must be pasted into the native app.")) return;
+    if (backstageEnrollCreateButton) backstageEnrollCreateButton.disabled = true;
+    if (backstageEnrollStatus) backstageEnrollStatus.textContent = "Creating the one-time device credential…";
+    try {
+      const connectorName = connectorDisplayName(localConnectorId() || "Max");
+      const body = await apiFetch(ownerApiPath("/devices"), {
+        method: "POST",
+        body: JSON.stringify({
+          name: `${connectorName} Backstage`,
+          platform: navigator.platform || "macOS",
+        }),
+      });
+      const code = encodeBackstageEnrollment({
+        deviceId: body.device?.id || "",
+        deviceCredential: body.deviceCredential || "",
+      });
+      if (!body.device?.id || !body.deviceCredential || !code) {
+        throw new Error("The Worker did not return a complete enrollment credential.");
+      }
+      if (backstageEnrollCode) backstageEnrollCode.value = code;
+      if (backstageEnrollCodeWrap) backstageEnrollCodeWrap.hidden = false;
+      if (backstageEnrollCopyButton) backstageEnrollCopyButton.disabled = false;
+      if (backstageEnrollStatus) backstageEnrollStatus.textContent = "Code created once. Paste it into Backstage, then clear the clipboard.";
+    } catch (error) {
+      if (backstageEnrollStatus) backstageEnrollStatus.textContent = error.message || "Could not create the Backstage enrollment code.";
+    } finally {
+      if (backstageEnrollCreateButton) backstageEnrollCreateButton.disabled = false;
+    }
+  };
+
+  const copyBackstageEnrollment = async () => {
+    const code = String(backstageEnrollCode?.value || "");
+    if (!code) return;
+    try {
+      await navigator.clipboard.writeText(code);
+      if (backstageEnrollStatus) backstageEnrollStatus.textContent = "Copied. Paste into Backstage now; the app stores it in Keychain.";
+    } catch {
+      backstageEnrollCode?.focus();
+      backstageEnrollCode?.select();
+      if (backstageEnrollStatus) backstageEnrollStatus.textContent = "Clipboard access was blocked. The code is selected for a manual copy.";
+    }
+  };
+
   const showNewReProjectInput = () => {
     if (!reProjectNewInput) return;
     const isNew = reProjectInput?.value === RE_NEW_PROJECT_VALUE;
@@ -1493,6 +1556,8 @@
   $("[data-new-owner-queue-sidecar]")?.addEventListener("click", openLocalSidecar);
   wasteBasketLink?.addEventListener("click", openWasteBasket);
   $("[data-new-owner-upload-publish]")?.addEventListener("click", queueUploadPublish);
+  backstageEnrollCreateButton?.addEventListener("click", createBackstageEnrollment);
+  backstageEnrollCopyButton?.addEventListener("click", copyBackstageEnrollment);
   $("[data-new-owner-re-load]")?.addEventListener("click", loadReAlbums);
   $("[data-new-owner-re-preflight]")?.addEventListener("click", previewReAlbums);
   $("[data-new-owner-re-assign]")?.addEventListener("click", assignRePhotos);

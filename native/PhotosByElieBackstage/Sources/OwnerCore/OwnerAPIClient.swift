@@ -96,12 +96,32 @@ public actor OwnerAPIClient {
         )
     }
 
+    public func exchangeDeviceCredential(
+        deviceId: String,
+        deviceCredential: String
+    ) async throws -> OwnerTokenBundle {
+        struct Exchange: Codable {
+            let deviceId: String
+            let deviceCredential: String
+        }
+        return try await send(
+            path: "/auth/tokens",
+            method: "POST",
+            body: Exchange(
+                deviceId: deviceId,
+                deviceCredential: deviceCredential
+            ),
+            authenticated: false
+        )
+    }
+
     public func logout(refreshToken: String?) async throws {
         struct Logout: Codable { let refreshToken: String? }
         let _: EmptyResponse = try await send(
             path: "/auth/logout",
             method: "POST",
-            body: Logout(refreshToken: refreshToken)
+            body: Logout(refreshToken: refreshToken),
+            authenticated: false
         )
         accessToken = nil
     }

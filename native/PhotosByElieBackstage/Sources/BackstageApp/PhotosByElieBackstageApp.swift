@@ -29,7 +29,7 @@ struct PhotosByElieBackstageApp: App {
                         }
                     }
             }
-            .task { await model.refreshActions() }
+            .task { await model.bootstrapAuthentication() }
         }
         .commands {
             CommandMenu("Backstage") {
@@ -45,11 +45,7 @@ struct PhotosByElieBackstageApp: App {
     private var detail: some View {
         switch model.selection ?? .overview {
         case .overview:
-            ContentUnavailableView(
-                "PhotosByElie Backstage",
-                systemImage: "photo.on.rectangle.angled",
-                description: Text("Max-first Owner workspace. Public and client sites remain independent.")
-            )
+            OverviewView(model: model)
         case .activity:
             ActivityView(model: model)
         case .fixtures:
@@ -84,6 +80,65 @@ struct PhotosByElieBackstageApp: App {
         case .delivery: "shippingbox"
         case .publication: "globe"
         }
+    }
+}
+
+private struct OverviewView: View {
+    @ObservedObject var model: BackstageViewModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Label("PhotosByElie Backstage", systemImage: "photo.on.rectangle.angled")
+                .font(.largeTitle.bold())
+            Text("Max-first Owner workspace. Public and client sites remain independent.")
+                .foregroundStyle(.secondary)
+            GroupBox("This Mac") {
+                VStack(alignment: .leading, spacing: 12) {
+                    LabeledContent("Authentication", value: model.authentication.phase.rawValue)
+                    if let deviceID = model.authentication.deviceId {
+                        LabeledContent("Device", value: deviceID)
+                            .textSelection(.enabled)
+                    }
+                    if let expiresAt = model.authentication.accessExpiresAt {
+                        LabeledContent("Access token", value: expiresAt.formatted())
+                    }
+                    Text(model.authenticationStatus)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                    if model.authentication.phase != .authenticated {
+                        SecureField("One-time enrollment code", text: $model.enrollmentCode)
+                            .textFieldStyle(.roundedBorder)
+                        HStack {
+                            Button("Enroll this Mac") {
+                                Task { await model.enroll() }
+                            }
+                            .disabled(model.isAuthenticating || model.enrollmentCode.isEmpty)
+                            Button("Check Keychain again") {
+                                Task { await model.bootstrapAuthentication() }
+                            }
+                            .disabled(model.isAuthenticating)
+                        }
+                        Text("Create the code from Owner in a currently authenticated browser. It is exchanged immediately and stored only in this Mac's Keychain.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        HStack {
+                            Button("Refresh session") {
+                                Task { await model.bootstrapAuthentication() }
+                            }
+                            .disabled(model.isAuthenticating)
+                            Button("Sign out", role: .destructive) {
+                                Task { await model.signOut() }
+                            }
+                            .disabled(model.isAuthenticating)
+                        }
+                    }
+                }
+                .padding(6)
+            }
+            Spacer()
+        }
+        .padding(24)
     }
 }
 

@@ -130,4 +130,10 @@ test("Owner exposes a contained fixture builder and recoverable Waste Basket man
   assert.match(ownerScript, /grid\.prepend\(wasteBasketCard\)/);
   assert.match(ownerScript, /details\.open = isPrimaryAction \|\| isWasteBasket/);
   assert.match(ownerStyles, /\.new-owner-card\[aria-label="Waste Basket"\]\s*\{[\s\S]*grid-column:\s*1\s*\/\s*-1;/);
+  assert.match(owner, /aria-label="Backstage enrollment"/);
+  assert.match(owner, /data-backstage-enroll-create/);
+  assert.match(owner, /data-backstage-enroll-code/);
+  assert.match(ownerScript, /ownerApiPath\("\/devices"\)/);
+  assert.match(ownerScript, /encodeBackstageEnrollment/);
+  assert.match(ownerScript, /navigator\.clipboard\.writeText\(code\)/);
 });

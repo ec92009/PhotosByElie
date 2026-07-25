@@ -142,6 +142,87 @@ struct OwnerCoreTests {
         #expect(try await session.load() == nil)
     }
 
+    @Test("One-time enrollment exchanges the device secret and persists rotating tokens")
+    func credentialEnrollment() async throws {
+        let vault = MemoryCredentialVault()
+        let session = OwnerCredentialSession(vault: vault)
+        let transport = RoutingTransport(responses: [
+            "/api/v1/auth/tokens": """
+            {
+              "tokenType":"Bearer",
+              "accessToken":"access-one",
+              "expiresIn":900,
+              "accessExpiresAt":"2026-07-25T10:15:00Z",
+              "refreshToken":"refresh-one",
+              "refreshExpiresAt":"2026-08-24T10:00:00Z"
+            }
+            """,
+        ])
+        let client = OwnerAPIClient(
+            baseURL: URL(string: "https://example.test/api/v1")!,
+            transport: transport
+        )
+        let service = OwnerAuthenticationService(api: client, session: session)
+        let enrollment = OwnerEnrollmentCode(
+            deviceId: "owner-device-max",
+            deviceCredential: String(repeating: "s", count: 48)
+        )
+        let encoded = try JSONEncoder.ownerAPI.encode(enrollment)
+            .base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
+
+        let snapshot = try await service.enroll(code: encoded)
+        #expect(snapshot.phase == .authenticated)
+        #expect(snapshot.deviceId == "owner-device-max")
+        let saved = try #require(try await session.load())
+        #expect(saved.deviceCredential == String(repeating: "s", count: 48))
+        #expect(saved.accessToken == "access-one")
+        #expect(saved.refreshToken == "refresh-one")
+        let request = try #require(await transport.requests().first)
+        #expect(request.url?.path == "/api/v1/auth/tokens")
+        #expect(request.value(forHTTPHeaderField: "Authorization") == nil)
+    }
+
+    @Test("Launch bootstrap rotates an expiring Keychain session")
+    func credentialBootstrapRefresh() async throws {
+        let vault = MemoryCredentialVault()
+        let session = OwnerCredentialSession(vault: vault)
+        try await session.save(OwnerCredentialSet(
+            deviceId: "owner-device-max",
+            deviceCredential: String(repeating: "d", count: 48),
+            accessToken: "expired-access",
+            accessExpiresAt: Date(timeIntervalSince1970: 1_700_000_000),
+            refreshToken: "refresh-old",
+            refreshExpiresAt: Date(timeIntervalSince1970: 1_900_000_000)
+        ))
+        let transport = RoutingTransport(responses: [
+            "/api/v1/auth/refresh": """
+            {
+              "tokenType":"Bearer",
+              "accessToken":"access-two",
+              "expiresIn":900,
+              "accessExpiresAt":"2026-07-25T10:15:00Z",
+              "refreshToken":"refresh-two",
+              "refreshExpiresAt":"2026-08-24T10:00:00Z"
+            }
+            """,
+        ])
+        let client = OwnerAPIClient(
+            baseURL: URL(string: "https://example.test/api/v1")!,
+            transport: transport
+        )
+        let service = OwnerAuthenticationService(api: client, session: session)
+
+        let snapshot = await service.bootstrap(now: Date(timeIntervalSince1970: 1_800_000_000))
+        #expect(snapshot.phase == .authenticated)
+        let saved = try #require(try await session.load())
+        #expect(saved.accessToken == "access-two")
+        #expect(saved.refreshToken == "refresh-two")
+        #expect(await transport.requests().map(\.url?.path) == ["/api/v1/auth/refresh"])
+    }
+
     @Test("Metadata give-back uses Worker action, dry-run gate, and verified receipts")
     func metadataGiveBackDryRun() async throws {
         let completed = OwnerAction(
@@ -703,6 +784,29 @@ private actor RecordingTransport: OwnerAPITransport {
     }
 
     func lastRequest() -> URLRequest? { request }
+}
+
+private actor RoutingTransport: OwnerAPITransport {
+    private let responses: [String: Data]
+    private var recorded: [URLRequest] = []
+
+    init(responses: [String: String]) {
+        self.responses = responses.mapValues { Data($0.utf8) }
+    }
+
+    func data(for request: URLRequest) async throws -> (Data, HTTPURLResponse) {
+        recorded.append(request)
+        let path = request.url?.path ?? ""
+        guard let data = responses[path] else {
+            throw URLError(.resourceUnavailable)
+        }
+        return (
+            data,
+            HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+        )
+    }
+
+    func requests() -> [URLRequest] { recorded }
 }
 
 private struct UnavailableWaker: OwnerActionWaking {

@@ -21,6 +21,10 @@ final class BackstageViewModel: ObservableObject {
     @Published var actions: [OwnerAction] = []
     @Published var status = "Not connected"
     @Published var isRefreshing = false
+    @Published var authentication = OwnerAuthenticationSnapshot(phase: .needsEnrollment)
+    @Published var enrollmentCode = ""
+    @Published var authenticationStatus = "Checking this Mac's Keychain session…"
+    @Published var isAuthenticating = false
     @Published var photoAccess: PhotoLibraryAccess
     @Published var libraryItems: [PhotoLibraryItem] = []
     @Published var selectedPhotoIDs: Set<String> = []
@@ -86,6 +90,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var publicationStatus = "Publication is a separate, explicit public-fixture gate."
 
     let api: OwnerAPIClient
+    let authenticationService: OwnerAuthenticationService
     let photoLibrary: any PhotoLibraryServing
     let metadataService: MetadataGiveBackService
     let fixtureService: FixtureWorkflowService
@@ -100,6 +105,7 @@ final class BackstageViewModel: ObservableObject {
         photoLibrary: any PhotoLibraryServing = PhotoKitLibraryService()
     ) {
         self.api = api
+        self.authenticationService = OwnerAuthenticationService(api: api)
         self.photoLibrary = photoLibrary
         self.photoAccess = photoLibrary.authorization()
         let runner = OwnerActionRunner(api: api)
@@ -110,6 +116,55 @@ final class BackstageViewModel: ObservableObject {
         self.metadataReviewService = MetadataReviewService(runner: runner)
         self.lifecycleService = LifecycleService(runner: runner)
         self.deliveryService = FixtureDeliveryService(runner: runner)
+    }
+
+    func bootstrapAuthentication() async {
+        isAuthenticating = true
+        defer { isAuthenticating = false }
+        authentication = await authenticationService.bootstrap()
+        switch authentication.phase {
+        case .authenticated:
+            authenticationStatus = "Authenticated with this Mac's revocable device credential."
+            await refreshActions()
+        case .needsEnrollment:
+            authenticationStatus = "Enroll Backstage from a signed-in Owner browser session."
+            status = "Enrollment required"
+        case .signedOut:
+            authenticationStatus = "Signed out on this Mac."
+            status = "Signed out"
+        }
+    }
+
+    func enroll() async {
+        let code = enrollmentCode.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !code.isEmpty else {
+            authenticationStatus = "Paste the one-time enrollment code from Owner."
+            return
+        }
+        isAuthenticating = true
+        defer { isAuthenticating = false }
+        do {
+            authentication = try await authenticationService.enroll(code: code)
+            enrollmentCode = ""
+            authenticationStatus = "Enrollment verified and stored in this Mac's Keychain."
+            await refreshActions()
+        } catch {
+            authenticationStatus = "Enrollment failed: \(error)"
+            status = "Enrollment failed"
+        }
+    }
+
+    func signOut() async {
+        isAuthenticating = true
+        defer { isAuthenticating = false }
+        do {
+            authentication = try await authenticationService.signOut()
+            actions = []
+            authenticationStatus = "Signed out; local tokens were removed from Keychain."
+            status = "Signed out"
+        } catch {
+            authenticationStatus = "Sign-out failed: \(error)"
+        }
     }
 
     func refreshActions() async {

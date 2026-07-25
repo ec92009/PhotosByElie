@@ -245,6 +245,25 @@
           <div data-new-owner-connectors class="new-owner-lane-list"></div>
           <p class="new-owner-card-note">Each Mac uses its own revocable credential and grants Photos access locally.</p>
         </section>
+
+        <section class="new-owner-card" aria-label="Backstage enrollment">
+          <div class="owner-card-titlebar">
+            <div>
+              <p class="eyebrow">Native authentication</p>
+              <h2>Backstage enrollment</h2>
+            </div>
+          </div>
+          <p class="new-owner-card-note">Create a one-time, independently revocable device code for the PhotosByElie Backstage app on this Mac. Creating a code does not grant Photos access or change any catalog data.</p>
+          <div class="new-owner-action-controls new-owner-action-controls-start">
+            <button class="btn secondary" type="button" data-backstage-enroll-create>Create one-time code…</button>
+            <button class="btn secondary" type="button" data-backstage-enroll-copy disabled>Copy code</button>
+          </div>
+          <label class="backstage-enrollment-code" hidden data-backstage-enroll-code-wrap>
+            One-time code
+            <textarea rows="3" readonly spellcheck="false" data-backstage-enroll-code></textarea>
+          </label>
+          <p class="new-owner-card-note" data-backstage-enroll-status aria-live="polite">No device credential has been created in this browser session.</p>
+        </section>
       </div>
 
     </section>

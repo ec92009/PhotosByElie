@@ -101,3 +101,22 @@ pass.
 9. The rollback control is exercised once before the soak begins.
 10. After the soak, Sidecar launchers, browser entry points, and obsolete local
     services are removed and their absence is tested.
+
+## Native culling parity scenarios
+
+PBB-34 uses executable OwnerCore scenarios rather than visual resemblance as
+the culling acceptance gate.
+
+- The **10-item rehearsal** proves ordered scope, search, media/decision/rating/
+  color filters, counts, and fixture breadcrumbs without a network dependency.
+- The **1,140-item rehearsal** proves deterministic bounded windows, navigation
+  at page boundaries, and picked-only Review without constructing every row in
+  SwiftUI at once.
+- Selection is always evaluated against the visible filtered order. The
+  immutable fixture-pool membership and order remain unchanged.
+- Search covers title, filename, accepted title, and accepted keywords with
+  case- and diacritic-insensitive matching.
+- Counts distinguish total scope from matching items and the visible bounded
+  window. A filter must never silently widen a fixture pool.
+- Photos Bridge remains the sole Photos writer. These pure scenarios neither
+  mutate Photos nor create a second decision ledger.

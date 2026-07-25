@@ -76,6 +76,111 @@ struct OwnerCoreTests {
         #expect(selection.selectedIDs == ["b", "d", "e"])
     }
 
+    @Test("Ten-item culling rehearsal preserves scope and composes filters")
+    func tenItemCullingRehearsal() {
+        let candidates = (0..<10).map { index in
+            CullingCandidate(
+                id: "asset-\(index)",
+                title: index == 7 ? "Séville Plaza" : "Travel \(index)",
+                filename: "IMG_\(index).\(index == 8 ? "MOV" : "JPG")",
+                mediaType: index == 8 ? "video" : "photo",
+                decision: SidecarDecisionState(
+                    assetId: "asset-\(index)",
+                    rating: index == 7 ? 4 : 0,
+                    color: index == 7 ? "green" : "",
+                    pickState: index == 7 || index == 8 ? "picked" : "undecided",
+                    keywords: index == 7 ? ["Seville", "Spain"] : []
+                )
+            )
+        }
+        let result = CullingWorkspace.evaluate(
+            candidates,
+            query: CullingQuery(
+                search: "seville",
+                media: .photos,
+                pick: .picked,
+                rating: 4,
+                color: .green
+            )
+        )
+
+        #expect(result.items.map(\.id) == ["asset-7"])
+        #expect(result.summary.total == 10)
+        #expect(result.summary.filtered == 1)
+        #expect(result.summary.picked == 2)
+        #expect(result.summary.photos == 9)
+        #expect(result.summary.videos == 1)
+    }
+
+    @Test("Large culling rehearsal uses deterministic bounded windows")
+    func largeCullingRehearsal() {
+        let candidates = (0..<1_140).map { index in
+            CullingCandidate(
+                id: "asset-\(index)",
+                filename: "IMG_\(index).JPG",
+                mediaType: "photo",
+                decision: SidecarDecisionState(
+                    assetId: "asset-\(index)",
+                    pickState: index.isMultiple(of: 3) ? "picked" : "undecided"
+                )
+            )
+        }
+        let first = CullingWorkspace.evaluate(
+            candidates,
+            query: CullingQuery(pick: .picked),
+            offset: 0,
+            limit: 200
+        )
+        let second = CullingWorkspace.evaluate(
+            candidates,
+            query: CullingQuery(pick: .picked),
+            offset: 200,
+            limit: 200
+        )
+
+        #expect(first.summary.total == 1_140)
+        #expect(first.summary.filtered == 380)
+        #expect(first.items.count == 200)
+        #expect(first.visibleRange == 1...200)
+        #expect(first.hasNext)
+        #expect(!first.hasPrevious)
+        #expect(second.items.count == 180)
+        #expect(second.visibleRange == 201...380)
+        #expect(!second.hasNext)
+        #expect(second.hasPrevious)
+        #expect(Set(first.items.map(\.id)).isDisjoint(with: second.items.map(\.id)))
+    }
+
+    @Test("Fixture paths preserve the source hierarchy")
+    func fixturePaths() {
+        let tree = [
+            FixtureNode(json: [
+                "fixtureId": .string("expo"),
+                "name": .string("Expo"),
+                "children": .array([]),
+            ]),
+            FixtureNode(json: [
+                "fixtureId": .string("re"),
+                "name": .string("RE"),
+                "children": .array([
+                    .object([
+                        "fixtureId": .string("la-concha"),
+                        "name": .string("La Concha"),
+                        "children": .array([
+                            .object([
+                                "fixtureId": .string("apartment-1"),
+                                "name": .string("Apartment 1"),
+                            ]),
+                        ]),
+                    ]),
+                ]),
+            ]),
+        ]
+
+        #expect(tree.path(to: "apartment-1").map(\.name) == ["RE", "La Concha", "Apartment 1"])
+        #expect(tree.path(to: "missing").isEmpty)
+    }
+
     @Test("Creates canonical v1 requests with actor token and idempotency")
     func createsCanonicalRequest() async throws {
         let transport = RecordingTransport(response: """

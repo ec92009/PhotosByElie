@@ -68,6 +68,18 @@ final class BackstageViewModel: ObservableObject {
     @Published var selectedLifecycleIDs: Set<String> = []
     @Published var lifecycleStatus = "Load the private lifecycle ledger to review recoverable rejects."
     @Published var isRunningLifecycle = false
+    @Published var deliveryPlan: FixtureDeliveryPlan?
+    @Published var selectedDeliveryIDs: Set<String> = []
+    @Published var deliveryStatus = "Choose a fixture and load its delivery plan."
+    @Published var deliveryCompleted = 0
+    @Published var deliveryTotal = 0
+    @Published var deliveryFailedIDs: [String] = []
+    @Published var isRunningDelivery = false
+    @Published var deliverables: [FixtureDeliverable] = []
+    @Published var deliverableKind = "pdf"
+    @Published var deliverableShareLink = ""
+    @Published var publicationPlan: FixturePublicationPlan?
+    @Published var publicationStatus = "Publication is a separate, explicit public-fixture gate."
 
     let api: OwnerAPIClient
     let photoLibrary: any PhotoLibraryServing
@@ -77,6 +89,7 @@ final class BackstageViewModel: ObservableObject {
     let decisionService: SidecarDecisionService
     let metadataReviewService: MetadataReviewService
     let lifecycleService: LifecycleService
+    let deliveryService: FixtureDeliveryService
 
     init(
         api: OwnerAPIClient = OwnerAPIClient(),
@@ -92,6 +105,7 @@ final class BackstageViewModel: ObservableObject {
         self.decisionService = SidecarDecisionService(api: api)
         self.metadataReviewService = MetadataReviewService(runner: runner)
         self.lifecycleService = LifecycleService(runner: runner)
+        self.deliveryService = FixtureDeliveryService(runner: runner)
     }
 
     func refreshActions() async {
@@ -539,6 +553,140 @@ final class BackstageViewModel: ObservableObject {
             await loadLifecycle()
         } catch {
             lifecycleStatus = String(describing: error)
+        }
+    }
+
+    func loadDeliveryPlan() async {
+        guard !selectedFixtureID.isEmpty else {
+            deliveryStatus = "Choose a fixture first."
+            return
+        }
+        isRunningDelivery = true
+        defer { isRunningDelivery = false }
+        do {
+            let plan = try await deliveryService.plan(fixtureID: selectedFixtureID)
+            deliveryPlan = plan
+            selectedDeliveryIDs.formIntersection(Set(plan.items.map(\.id)))
+            deliveryStatus = "\(plan.completeCount) of \(plan.items.count) complete; \(plan.retryableIDs.count) approved items remain."
+        } catch {
+            deliveryStatus = String(describing: error)
+        }
+    }
+
+    func deliverSelected() async {
+        await deliver(ids: Array(selectedDeliveryIDs).sorted())
+    }
+
+    func retryDeliveryFailures() async {
+        await deliver(ids: deliveryFailedIDs)
+    }
+
+    private func deliver(ids: [String]) async {
+        guard !selectedFixtureID.isEmpty, !ids.isEmpty else {
+            deliveryStatus = "Choose a fixture and one or more approved items."
+            return
+        }
+        isRunningDelivery = true
+        deliveryCompleted = 0
+        deliveryTotal = ids.count
+        deliveryFailedIDs = []
+        defer { isRunningDelivery = false }
+        do {
+            try await deliveryService.configure(
+                fixtureID: selectedFixtureID,
+                assetIDs: ids
+            )
+            for id in ids {
+                do {
+                    let report = try await deliveryService.deliver(
+                        fixtureID: selectedFixtureID,
+                        assetIDs: [id]
+                    )
+                    if !report.ok || report.failedCount > 0 {
+                        deliveryFailedIDs.append(id)
+                    }
+                } catch {
+                    deliveryFailedIDs.append(id)
+                }
+                deliveryCompleted += 1
+                deliveryStatus = "Processed \(deliveryCompleted) of \(deliveryTotal); \(deliveryFailedIDs.count) independently retryable failure\(deliveryFailedIDs.count == 1 ? "" : "s")."
+            }
+            deliveryPlan = try await deliveryService.plan(fixtureID: selectedFixtureID)
+        } catch {
+            deliveryStatus = String(describing: error)
+        }
+    }
+
+    func loadDeliverables() async {
+        guard !selectedFixtureID.isEmpty else {
+            deliveryStatus = "Choose a fixture first."
+            return
+        }
+        isRunningDelivery = true
+        defer { isRunningDelivery = false }
+        do {
+            deliverables = try await deliveryService.deliverables(fixtureID: selectedFixtureID)
+            deliveryStatus = "\(deliverables.count) PDF, video, originals, or share-link record\(deliverables.count == 1 ? "" : "s") loaded."
+        } catch {
+            deliveryStatus = String(describing: error)
+        }
+    }
+
+    func linkDeliverable() async {
+        let link = deliverableShareLink.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !selectedFixtureID.isEmpty, URL(string: link) != nil else {
+            deliveryStatus = "Choose a fixture and enter a complete share URL."
+            return
+        }
+        isRunningDelivery = true
+        defer { isRunningDelivery = false }
+        do {
+            deliverables = try await deliveryService.linkDeliverable(
+                fixtureID: selectedFixtureID,
+                kind: deliverableKind,
+                shareLink: link
+            )
+            deliverableShareLink = ""
+            deliveryStatus = "\(deliverableKind.uppercased()) share link recorded; no message was sent."
+        } catch {
+            deliveryStatus = String(describing: error)
+        }
+    }
+
+    func loadPublicationPlan() async {
+        guard !selectedFixtureID.isEmpty else {
+            publicationStatus = "Choose a public fixture first."
+            return
+        }
+        do {
+            let plan = try await deliveryService.publicationPlan(
+                fixtureID: selectedFixtureID,
+                assetIDs: Array(selectedDeliveryIDs)
+            )
+            publicationPlan = plan
+            publicationStatus = "\(plan.eligibleIDs.count) eligible; \(plan.blocked.count) blocked. Nothing was rebuilt or deployed."
+        } catch {
+            publicationStatus = String(describing: error)
+        }
+    }
+
+    func publishEligible() async {
+        guard let publicationPlan, !publicationPlan.eligibleIDs.isEmpty else {
+            publicationStatus = "Run the publication preview and select eligible assets first."
+            return
+        }
+        isRunningDelivery = true
+        defer { isRunningDelivery = false }
+        do {
+            let report = try await deliveryService.publish(
+                fixtureID: publicationPlan.fixtureID,
+                assetIDs: publicationPlan.eligibleIDs
+            )
+            publicationStatus = report.ok
+                ? "Catalog registration and static rebuild completed through action \(report.actionID). Deployment remains explicit."
+                : "\(report.failedCount) publication item\(report.failedCount == 1 ? "" : "s") failed."
+        } catch {
+            publicationStatus = String(describing: error)
         }
     }
 

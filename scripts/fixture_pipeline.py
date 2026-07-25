@@ -469,6 +469,92 @@ def link_deliverable(repo_root: Path, fixture_id: str, *, provider: str, externa
     return {"deliverableId": deliverable_id, "fixtureId": fixture_id, "provider": clean_provider, "externalIdentity": clean_identity, "kind": clean_kind, "state": clean_state}
 
 
+def list_deliverables(repo_root: Path, fixture_id: str) -> dict[str, Any]:
+    with connect(repo_root) as conn:
+        breadcrumbs = fixture_breadcrumbs(conn, fixture_id)
+        rows = conn.execute(
+            """SELECT deliverable_id, provider, external_identity, kind, state,
+                      recovery_json, created_at, updated_at
+               FROM fixture_deliverables
+               WHERE fixture_id = ?
+               ORDER BY updated_at DESC, deliverable_id""",
+            (fixture_id,),
+        ).fetchall()
+    items = [{
+        "deliverableId": row["deliverable_id"],
+        "fixtureId": fixture_id,
+        "provider": row["provider"],
+        "externalIdentity": row["external_identity"],
+        "kind": row["kind"],
+        "state": row["state"],
+        "recovery": _read_json(row["recovery_json"], {}),
+        "createdAt": row["created_at"],
+        "updatedAt": row["updated_at"],
+    } for row in rows]
+    return {
+        "ok": True,
+        "fixtureId": fixture_id,
+        "breadcrumbs": breadcrumbs,
+        "count": len(items),
+        "items": items,
+    }
+
+
+def publication_plan(
+    repo_root: Path,
+    fixture_id: str,
+    asset_ids: Iterable[str] = (),
+) -> dict[str, Any]:
+    """Return exact public-fixture assets whose current R2 receipts are verified."""
+    selected_ids = _unique(asset_ids)
+    with connect(repo_root) as conn:
+        fixture = conn.execute(
+            "SELECT fixture_id, name, tags_json, archived_at FROM fixtures WHERE fixture_id = ?",
+            (fixture_id,),
+        ).fetchone()
+        if not fixture or fixture["archived_at"]:
+            raise ValueError("publication fixture does not exist or is archived")
+        tags = _read_json(fixture["tags_json"], [])
+        if "public" not in tags:
+            raise ValueError("only a fixture tagged public can enter catalog publication")
+        fixture_name = str(fixture["name"])
+    delivery = delivery_plan(repo_root, fixture_id)
+    eligible: list[dict[str, Any]] = []
+    blocked: list[dict[str, Any]] = []
+    selected = set(selected_ids)
+    found: set[str] = set()
+    for item in delivery["items"]:
+        asset_id = str(item["assetId"])
+        if selected and asset_id not in selected:
+            continue
+        found.add(asset_id)
+        r2 = item.get("receipts", {}).get("r2", {})
+        reason = ""
+        if not item.get("approved"):
+            reason = "asset is not both picked and metadata-approved"
+        elif r2.get("status") != "verified":
+            reason = "same-version R2 delivery is not verified"
+        target = {
+            "assetId": asset_id,
+            "versionHash": item.get("versionHash") or "",
+            "r2Status": r2.get("status") or "pending",
+        }
+        (blocked if reason else eligible).append({**target, **({"reason": reason} if reason else {})})
+    for missing in selected - found:
+        blocked.append({"assetId": missing, "reason": "asset is not actively placed in this fixture"})
+    return {
+        "ok": not blocked,
+        "fixtureId": fixture_id,
+        "fixtureName": fixture_name,
+        "tags": tags,
+        "eligibleCount": len(eligible),
+        "blockedCount": len(blocked),
+        "eligible": eligible,
+        "blocked": blocked,
+        "published": False,
+    }
+
+
 def search_assets(repo_root: Path, filters: dict[str, Any] | None = None, *, limit: int = 500, offset: int = 0) -> dict[str, Any]:
     filters = filters or {}
     predicates = ["(a.missing_at IS NULL OR a.missing_at = '')"]

@@ -359,6 +359,8 @@ from fixture_pipeline import (  # noqa: E402
     delivery_plan,
     fixture_tree,
     get_pool,
+    link_deliverable,
+    list_deliverables,
     list_placements,
     migrate_la_concha_tree,
     move_fixture,
@@ -366,6 +368,7 @@ from fixture_pipeline import (  # noqa: E402
     place_assets,
     plan_upload_run_adoption,
     preview_pool_refresh,
+    publication_plan,
     remove_placement,
     rename_fixture,
     reopen_fixture,
@@ -1856,6 +1859,34 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
         result.update({"readOnly": False, "destinations": configure_asset_destinations(repo_root, str(manifest.get("fixtureId") or ""), manifest.get("assetIds") or [], manifest.get("destinations") or [])})
     elif mode == "fixture-delivery-plan":
         result.update({"readOnly": True, "delivery": delivery_plan(repo_root, str(manifest.get("fixtureId") or ""))})
+    elif mode == "fixture-deliverable-list":
+        result.update({"readOnly": True, "deliverables": list_deliverables(repo_root, str(manifest.get("fixtureId") or ""))})
+    elif mode == "fixture-deliverable-link":
+        kind = str(manifest.get("kind") or "").strip().lower()
+        if kind not in {"pdf", "video", "originals"}:
+            raise ValueError("deliverable kind must be pdf, video, or originals")
+        result.update({
+            "readOnly": False,
+            "deliverable": link_deliverable(
+                repo_root,
+                str(manifest.get("fixtureId") or ""),
+                provider=str(manifest.get("provider") or "share-link"),
+                external_identity=str(manifest.get("externalIdentity") or ""),
+                kind=kind,
+                state=str(manifest.get("state") or "ready"),
+                recovery=manifest.get("recovery") if isinstance(manifest.get("recovery"), dict) else {},
+            ),
+            "deliverables": list_deliverables(repo_root, str(manifest.get("fixtureId") or "")),
+        })
+    elif mode == "fixture-publication-plan":
+        result.update({
+            "readOnly": True,
+            "publication": publication_plan(
+                repo_root,
+                str(manifest.get("fixtureId") or ""),
+                manifest.get("assetIds") or [],
+            ),
+        })
     elif mode == "fixture-lifecycle-list":
         lifecycle = media_lifecycle_snapshot(repo_root)
         states = [
@@ -1940,6 +1971,9 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
         "fixture-placement-restore": "Restored the placement relationship without reimporting the source asset.",
         "fixture-destinations": "Configured per-asset delivery destinations.",
         "fixture-delivery-plan": "Prepared the delivery plan; no delivery or client message was triggered.",
+        "fixture-deliverable-list": "Loaded fixture PDF, video, originals, and share-link records without changing them.",
+        "fixture-deliverable-link": "Linked a ready fixture deliverable without sending a client message.",
+        "fixture-publication-plan": "Prepared exact public-catalog eligibility without rebuilding or deploying the site.",
         "fixture-lifecycle-list": "Loaded the private lifecycle ledger without changing any media.",
         "fixture-upload-run-adoption-plan": "Previewed the exact completed Upload Bridge items eligible for fixture adoption; nothing changed.",
         "fixture-upload-run-adoption-commit": "Adopted checksum-verified completed upload items into the chosen fixture and reconstructed their R2 receipts.",

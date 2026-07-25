@@ -85,6 +85,23 @@ class FixtureConnectorTest(unittest.TestCase):
             planned = local_server.new_owner_connector_result(root, action("fixture-delivery-plan", fixtureId=fixture_id))
             self.assertEqual(planned["result"]["delivery"]["assetCount"], 1)
             self.assertFalse(planned["result"]["clientMessageSent"])
+            linked = local_server.new_owner_connector_result(root, action(
+                "fixture-deliverable-link",
+                fixtureId=fixture_id,
+                kind="pdf",
+                provider="share-link",
+                externalIdentity="https://example.invalid/private.pdf",
+            ))
+            self.assertEqual(linked["result"]["deliverables"]["count"], 1)
+            listed_deliverables = local_server.new_owner_connector_result(
+                root,
+                action("fixture-deliverable-list", fixtureId=fixture_id),
+            )
+            self.assertTrue(listed_deliverables["result"]["readOnly"])
+            self.assertEqual(
+                listed_deliverables["result"]["deliverables"]["items"][0]["kind"],
+                "pdf",
+            )
             local_server.new_owner_connector_result(root, action("fixture-destinations", fixtureId=fixture_id, assetIds=["asset-1"], destinations=["r2", "apple_photos"]))
             photos_plan = local_server.new_owner_connector_result(root, action("fixture-photos-writeback-plan", fixtureId=fixture_id))
             self.assertTrue(photos_plan["result"]["readOnly"])

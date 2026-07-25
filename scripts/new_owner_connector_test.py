@@ -129,6 +129,24 @@ class UploadRegistrationScopeTest(unittest.TestCase):
         self.assertEqual(result["registration"]["candidateCount"], 0)
         self.assertEqual(result["registration"]["registeredCount"], 0)
 
+    def test_fixture_delivery_uses_only_the_exact_fixture_asset_ids(self):
+        with patch("scripts.new_owner_connector._run_repo_json", return_value={
+            "ok": True,
+            "fixtureId": "fixture-family",
+            "status": "completed",
+        }) as run:
+            result = _upload_and_register(self.config, {"payload": {
+                "workflow": "fixture-delivery",
+                "fixtureId": "fixture-family",
+                "assetIds": ["asset-b", "asset-a", "asset-b"],
+            }})
+
+        arguments = run.call_args.args[1]
+        self.assertEqual(arguments[1], "scripts/native_fixture_delivery.py")
+        self.assertEqual(arguments[-4:], ["--asset-id", "asset-b", "--asset-id", "asset-a"])
+        self.assertEqual(result["assetIds"], ["asset-b", "asset-a"])
+
+
     def test_photos_index_sync_runs_the_non_ui_maintenance_command(self):
         payload = {"job": {"status": "done", "indexedCount": 57_500}, "sync": {"pendingCount": 3}}
         with patch("scripts.new_owner_connector._run_repo_json", return_value=payload) as run:

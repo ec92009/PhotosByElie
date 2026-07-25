@@ -62,8 +62,12 @@ struct PhotosByElieBackstageApp: App {
             MetadataGiveBackView(model: model)
         case .wasteBasket:
             LifecycleView(model: model)
-        default:
-            WorkflowPlaceholder(section: model.selection ?? .overview)
+        case .uploads:
+            UploadWorkflowView(model: model)
+        case .delivery:
+            DeliverablesView(model: model)
+        case .publication:
+            PublicationView(model: model)
         }
     }
 
@@ -79,6 +83,149 @@ struct PhotosByElieBackstageApp: App {
         case .uploads: "arrow.up.circle"
         case .delivery: "shippingbox"
         case .publication: "globe"
+        }
+    }
+}
+
+private struct FixturePicker: View {
+    @ObservedObject var model: BackstageViewModel
+
+    var body: some View {
+        Picker("Fixture", selection: $model.selectedFixtureID) {
+            Text("Choose a fixture").tag("")
+            ForEach(model.flatFixtures) { fixture in
+                Text(fixture.name).tag(fixture.id)
+            }
+        }
+        .frame(minWidth: 240)
+        Button("Refresh fixtures") { Task { await model.loadFixtures() } }
+            .disabled(model.isRunningFixture)
+    }
+}
+
+private struct UploadWorkflowView: View {
+    @ObservedObject var model: BackstageViewModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Verified upload").font(.largeTitle.bold())
+                Spacer()
+                FixturePicker(model: model)
+                Button("Load plan") { Task { await model.loadDeliveryPlan() } }
+                Button("Upload selected") { Task { await model.deliverSelected() } }
+                    .disabled(model.isRunningDelivery || model.selectedDeliveryIDs.isEmpty)
+                Button("Retry failed") { Task { await model.retryDeliveryFailures() } }
+                    .disabled(model.isRunningDelivery || model.deliveryFailedIDs.isEmpty)
+            }
+            Text("R2 upload and Apple Photos give-back stay fixture-scoped. Every failed asset remains independently retryable.")
+                .foregroundStyle(.secondary)
+            if model.deliveryTotal > 0 {
+                ProgressView(
+                    value: Double(model.deliveryCompleted),
+                    total: Double(model.deliveryTotal)
+                ) {
+                    Text("\(model.deliveryCompleted) of \(model.deliveryTotal)")
+                }
+            }
+            Text(model.deliveryStatus).font(.callout).foregroundStyle(.secondary)
+            Table(
+                model.deliveryPlan?.items ?? [],
+                selection: $model.selectedDeliveryIDs
+            ) {
+                TableColumn("Asset", value: \.assetID)
+                TableColumn("Approved") { Text($0.approved ? "Yes" : "No") }
+                TableColumn("R2", value: \.r2Status)
+                TableColumn("Photos", value: \.photosStatus)
+                TableColumn("Complete") { Text($0.complete ? "Verified" : "Pending") }
+                TableColumn("Error", value: \.errorText)
+            }
+        }
+        .padding()
+        .task {
+            if model.fixtures.isEmpty { await model.loadFixtures() }
+        }
+    }
+}
+
+private struct DeliverablesView: View {
+    @ObservedObject var model: BackstageViewModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Delivery & share links").font(.largeTitle.bold())
+                Spacer()
+                FixturePicker(model: model)
+                Button("Load") { Task { await model.loadDeliverables() } }
+            }
+            Text("Attach completed PDF, video, or originals products to their fixture. Recording a link never messages a client.")
+                .foregroundStyle(.secondary)
+            HStack {
+                Picker("Product", selection: $model.deliverableKind) {
+                    Text("PDF").tag("pdf")
+                    Text("Video").tag("video")
+                    Text("Originals").tag("originals")
+                }
+                .frame(width: 180)
+                TextField("Authenticated share URL", text: $model.deliverableShareLink)
+                Button("Record ready link") { Task { await model.linkDeliverable() } }
+                    .disabled(model.isRunningDelivery)
+            }
+            Text(model.deliveryStatus).font(.callout).foregroundStyle(.secondary)
+            Table(model.deliverables) {
+                TableColumn("Kind", value: \.kind)
+                TableColumn("State", value: \.state)
+                TableColumn("Provider", value: \.provider)
+                TableColumn("Share link", value: \.externalIdentity)
+            }
+        }
+        .padding()
+        .task {
+            if model.fixtures.isEmpty { await model.loadFixtures() }
+        }
+    }
+}
+
+private struct PublicationView: View {
+    @ObservedObject var model: BackstageViewModel
+    @State private var confirming = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Publication").font(.largeTitle.bold())
+                Spacer()
+                FixturePicker(model: model)
+                Button("Preview gate") { Task { await model.loadPublicationPlan() } }
+                Button("Register eligible…") { confirming = true }
+                    .disabled(model.isRunningDelivery || (model.publicationPlan?.eligibleIDs.isEmpty ?? true))
+            }
+            Text("Only fixtures tagged public can cross this gate. Upload, catalog registration, deployment, and client messaging remain separate decisions.")
+                .foregroundStyle(.secondary)
+            Text(model.publicationStatus).font(.callout).foregroundStyle(.secondary)
+            if let plan = model.publicationPlan {
+                LabeledContent("Eligible", value: "\(plan.eligibleIDs.count)")
+                LabeledContent("Blocked", value: "\(plan.blocked.count)")
+                List(plan.blocked.sorted(by: { $0.key < $1.key }), id: \.key) { entry in
+                    VStack(alignment: .leading) {
+                        Text(entry.key).font(.headline)
+                        Text(entry.value).foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
+        .padding()
+        .task {
+            if model.fixtures.isEmpty { await model.loadFixtures() }
+        }
+        .confirmationDialog("Register eligible assets in the static catalog?", isPresented: $confirming) {
+            Button("Register and rebuild", role: .destructive) {
+                Task { await model.publishEligible() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This changes catalog source files. It does not deploy, push, or message anyone.")
         }
     }
 }
@@ -616,17 +763,5 @@ private struct MetadataGiveBackView: View {
         } message: {
             Text("The signed Max connector will preserve unrelated keywords, write only eligible same-version assets, then re-read every item before recording a verified receipt.")
         }
-    }
-}
-
-private struct WorkflowPlaceholder: View {
-    let section: BackstageViewModel.Section
-
-    var body: some View {
-        ContentUnavailableView(
-            section.rawValue,
-            systemImage: "hammer",
-            description: Text("OwnerCore service boundary ready; native workflow screen pending parity implementation.")
-        )
     }
 }

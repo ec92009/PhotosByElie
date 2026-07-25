@@ -956,6 +956,39 @@ def _run_repo_json(config: ConnectorConfig, arguments: list[str], timeout: int =
 
 def _upload_and_register(config: ConnectorConfig, action: dict) -> dict:
     payload = action.get("payload") if isinstance(action.get("payload"), dict) else {}
+    workflow = str(payload.get("workflow") or "").strip()
+    if workflow in {"fixture-delivery", "fixture-publication"}:
+        fixture_id = str(payload.get("fixtureId") or "").strip()
+        asset_ids = list(dict.fromkeys(
+            str(value or "").strip()
+            for value in (payload.get("assetIds") or [])
+            if str(value or "").strip()
+        ))
+        if not fixture_id:
+            raise RuntimeError("fixture-scoped upload actions require fixtureId")
+        if not asset_ids or len(asset_ids) > 24:
+            raise RuntimeError("fixture-scoped upload actions require 1 to 24 exact assetIds")
+        script = (
+            "scripts/native_fixture_delivery.py"
+            if workflow == "fixture-delivery"
+            else "scripts/native_fixture_publication.py"
+        )
+        result = _run_repo_json(config, [
+            sys.executable,
+            script,
+            "--fixture-id",
+            fixture_id,
+            *[argument for asset_id in asset_ids for argument in ("--asset-id", asset_id)],
+        ])
+        return {
+            "connectorId": config.connector_id,
+            "type": "sidecar-upload-publish",
+            "workflow": workflow,
+            "fixtureId": fixture_id,
+            "assetIds": asset_ids,
+            "result": result,
+            "completedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        }
     requested = max(1, min(24, int(payload.get("limit") or 1)))
     runs = []
     uploaded_asset_ids: list[str] = []

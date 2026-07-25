@@ -510,6 +510,85 @@ struct OwnerCoreTests {
         #expect(requests[1].payload["operation"]?.stringValue == "undo-hide-many")
         #expect(requests[1].payload["photoIds"]?.arrayValue?.compactMap(\.stringValue) == ["photo-hidden"])
     }
+
+    @Test("Native delivery keeps fixture upload and publication as separate actions")
+    func nativeFixtureDeliveryAndPublication() async throws {
+        let deliveryPlan = OwnerAction(
+            id: "owner-action-delivery-plan",
+            actionKind: "sidecar-culling-review",
+            target: "max",
+            state: .completed,
+            result: [
+                "delivery": [
+                    "fixtureId": "fixture-expo",
+                    "approvedCount": 1,
+                    "completeCount": 0,
+                    "items": [[
+                        "assetId": "asset-1",
+                        "approved": true,
+                        "complete": false,
+                        "destinations": ["r2", "apple_photos"],
+                        "receipts": [
+                            "r2": ["status": "pending"],
+                            "apple_photos": ["status": "pending"],
+                        ],
+                    ]],
+                ],
+            ]
+        )
+        let delivered = OwnerAction(
+            id: "owner-action-delivery",
+            actionKind: "sidecar-upload-publish",
+            target: "max",
+            state: .completed,
+            result: [
+                "result": [
+                    "ok": true,
+                    "status": "completed",
+                    "summary": ["processedCount": 1, "failedCount": 0],
+                ],
+            ]
+        )
+        let publication = OwnerAction(
+            id: "owner-action-publication-plan",
+            actionKind: "sidecar-culling-review",
+            target: "max",
+            state: .completed,
+            result: [
+                "publication": [
+                    "fixtureId": "fixture-expo",
+                    "eligible": [["assetId": "asset-1"]],
+                    "blocked": [],
+                ],
+            ]
+        )
+        let api = ScriptedOwnerActionAPI(completed: [deliveryPlan, delivered, publication])
+        let service = FixtureDeliveryService(runner: OwnerActionRunner(
+            api: api,
+            waker: UnavailableWaker(),
+            pollInterval: .milliseconds(1),
+            timeout: .seconds(1)
+        ))
+
+        let plan = try await service.plan(fixtureID: "fixture-expo")
+        #expect(plan.retryableIDs == ["asset-1"])
+        let report = try await service.deliver(
+            fixtureID: "fixture-expo",
+            assetIDs: ["asset-1"]
+        )
+        #expect(report.ok)
+        let gate = try await service.publicationPlan(
+            fixtureID: "fixture-expo",
+            assetIDs: ["asset-1"]
+        )
+        #expect(gate.eligibleIDs == ["asset-1"])
+
+        let requests = await api.requests()
+        #expect(requests[0].payload["manifest"]?.objectValue?["mode"]?.stringValue == "fixture-delivery-plan")
+        #expect(requests[1].actionKind == "sidecar-upload-publish")
+        #expect(requests[1].payload["workflow"]?.stringValue == "fixture-delivery")
+        #expect(requests[2].payload["manifest"]?.objectValue?["mode"]?.stringValue == "fixture-publication-plan")
+    }
 }
 
 private func scalar(_ databaseURL: URL, _ sql: String) throws -> String {

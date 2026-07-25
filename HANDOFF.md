@@ -2,7 +2,7 @@
 
 ## 2026-07-25 — PBB-19 native Backstage cutover
 
-- Release candidate: `v147.6`; Backstage `0.2.0` build `3`.
+- Release candidate: `v147.6`; Backstage `0.2.3` build `6`.
 - Branch: `codex/pbb-19-native-backstage`.
 - Backstage is the sole visible operator app on Max. Photos Bridge remains a
   signed headless helper; visible Owner and Sidecar apps were moved to the
@@ -14,6 +14,23 @@
 - Verification at this checkpoint: 278 repository tests, 28 Swift tests,
   native parity rehearsal, contract validation, and read-only cutover audit
   all pass.
+- Backstage `0.2.3` build `6` makes the detail workspace fill its navigation
+  pane and gives the Culling scroll region explicit flexible height. This
+  prevents both fixture-pool and full-library culling rows from collapsing.
+- Fixtures now reload saved immutable culling snapshots from Owner SQLite
+  after an app restart and can open the selected snapshot directly in native
+  Culling. Snapshot recovery no longer depends on in-memory UI state.
+- Live native proof reopened Expo snapshot `pool-4ef5c086edc741dd` as
+  `Native selection` with exactly 3 immutable assets and 3 preserved decisions.
+  The first row was selected for preview only; no decision was changed.
+- Worker version `3b6d56c8-2347-4d0d-969b-b0b61e21c7c5` fixes Backstage's
+  full-library `D1_ERROR: too many SQL variables` by keeping D1 decision
+  queries to 80 bound IDs per statement. The 65-test Worker regression pass,
+  15 fixture pipeline/connector tests, and 29 Swift tests pass.
+- Local ad-hoc Backstage builds now carry the stable designated requirement
+  `identifier "com.photosbyelie.backstage"` instead of a per-build cdhash.
+  Max needs one Photos re-approval after this transition; later local updates
+  retain the same TCC identity.
 - Signed Photos Bridge health reports `photoAccess=authorized`; a read-only
   LaunchServices album inventory succeeded. Never substitute a raw helper
   executable or a second writer.

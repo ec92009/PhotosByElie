@@ -92,6 +92,15 @@ class FixtureConnectorTest(unittest.TestCase):
                 criteria={"query": "LaConcha"},
             ))
             self.assertNotIn("sidecarUrl", pooled["result"])
+            pools = local_server.new_owner_connector_result(root, action(
+                "fixture-pool-list",
+                fixtureId=fixture_id,
+            ))
+            self.assertTrue(pools["result"]["readOnly"])
+            self.assertEqual(
+                [item["poolId"] for item in pools["result"]["pools"]],
+                [pooled["result"]["pool"]["poolId"]],
+            )
             with patch.dict("os.environ", {"PBE_ENABLE_LEGACY_SIDECAR": "1"}):
                 legacy_open = local_server.new_owner_connector_result(root, action(
                     "fixture-pool-open",

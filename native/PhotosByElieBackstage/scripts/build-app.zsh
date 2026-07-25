@@ -37,9 +37,9 @@ cat > "${contents}/Info.plist" <<'PLIST'
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>
-  <string>0.2.0</string>
+  <string>0.2.3</string>
   <key>CFBundleVersion</key>
-  <string>3</string>
+  <string>6</string>
   <key>LSMinimumSystemVersion</key>
   <string>14.0</string>
   <key>NSPhotoLibraryUsageDescription</key>
@@ -53,6 +53,15 @@ PLIST
 # Ad-hoc signing gives local builds a stable application identity. A named
 # Developer ID may be supplied by setting PBE_CODESIGN_IDENTITY.
 identity="${PBE_CODESIGN_IDENTITY:--}"
-codesign --force --deep --sign "$identity" "$app"
+if [[ "$identity" == "-" ]]; then
+  codesign \
+    --force \
+    --deep \
+    --sign "$identity" \
+    --requirements '=designated => identifier "com.photosbyelie.backstage"' \
+    "$app"
+else
+  codesign --force --deep --sign "$identity" "$app"
+fi
 codesign --verify --deep --strict "$app"
 echo "$app"

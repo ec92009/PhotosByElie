@@ -64,6 +64,8 @@ final class BackstageViewModel: ObservableObject {
     @Published var fixtureStatus = "Load the fixture tree to begin."
     @Published var isRunningFixture = false
     @Published var fixturePool: FixturePool?
+    @Published var fixturePools: [FixturePoolSummary] = []
+    @Published var selectedFixturePoolID = ""
     @Published var cullingPool: FixturePool?
     @Published var fixturePlacements: [FixturePlacement] = []
     @Published var placementTargetFixtureIDs: Set<String> = []
@@ -452,6 +454,42 @@ final class BackstageViewModel: ObservableObject {
                 name: fixtureName.isEmpty ? "Native selection" : fixtureName
             )
             fixtureStatus = "Stable culling snapshot created; source assets were not copied."
+        }
+        if let fixturePool {
+            selectedFixturePoolID = fixturePool.id
+            await loadFixturePools()
+        }
+    }
+
+    func loadFixturePools() async {
+        guard !selectedFixtureID.isEmpty else {
+            fixturePools = []
+            selectedFixturePoolID = ""
+            return
+        }
+        await fixtureOperation {
+            fixturePools = try await fixtureService.pools(fixtureID: selectedFixtureID)
+            if !fixturePools.contains(where: { $0.id == selectedFixturePoolID }) {
+                selectedFixturePoolID = fixturePools.first?.id ?? ""
+            }
+            fixtureStatus = fixturePools.isEmpty
+                ? "No saved culling snapshots for this fixture."
+                : "\(fixturePools.count) saved culling snapshot\(fixturePools.count == 1 ? "" : "s") loaded."
+        }
+    }
+
+    func openSelectedFixturePool() async {
+        let poolID = selectedFixturePoolID
+        guard !poolID.isEmpty else {
+            fixtureStatus = "Choose a saved snapshot."
+            return
+        }
+        await fixtureOperation {
+            fixturePool = try await fixtureService.openPool(id: poolID)
+            fixtureStatus = "Saved snapshot opened without changing its assets."
+        }
+        if fixturePool?.id == poolID {
+            openFixturePoolInCulling()
         }
     }
 

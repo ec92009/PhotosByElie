@@ -600,6 +600,45 @@ struct OwnerCoreTests {
         #expect(manifest?["selectedAssetIds"]?.arrayValue?.compactMap(\.stringValue) == ["asset-b", "asset-a"])
     }
 
+    @Test("Native fixtures reopen saved culling snapshots after an app restart")
+    func nativeFixtureSavedSnapshots() async throws {
+        let listed = OwnerAction(
+            id: "owner-action-pool-list",
+            actionKind: "sidecar-culling-review",
+            target: "max",
+            state: .completed,
+            result: [
+                "pools": .array([
+                    .object([
+                        "poolId": "pool-recent",
+                        "fixtureId": "fixture-expo",
+                        "name": "Native selection",
+                        "assetCount": 3,
+                        "snapshotHash": "snapshot-hash",
+                        "state": "active",
+                        "createdAt": "2026-07-25T18:00:00Z",
+                    ]),
+                ]),
+            ]
+        )
+        let api = ScriptedOwnerActionAPI(completed: [listed])
+        let service = FixtureWorkflowService(runner: OwnerActionRunner(
+            api: api,
+            waker: UnavailableWaker(),
+            pollInterval: .milliseconds(1),
+            timeout: .seconds(1)
+        ))
+
+        let pools = try await service.pools(fixtureID: "fixture-expo")
+
+        #expect(pools.map(\.id) == ["pool-recent"])
+        #expect(pools.first?.assetCount == 3)
+        let request = try #require(await api.requests().first)
+        let manifest = request.payload["manifest"]?.objectValue
+        #expect(manifest?["mode"]?.stringValue == "fixture-pool-list")
+        #expect(manifest?["fixtureId"]?.stringValue == "fixture-expo")
+    }
+
     @Test("Native culling batches decisions through the canonical API")
     func nativeCullingBatch() async throws {
         let transport = RecordingTransport(response: """

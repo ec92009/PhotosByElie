@@ -17,7 +17,13 @@ struct PhotosByElieBackstageApp: App {
                 .frame(minWidth: 210)
             } detail: {
                 detail
-                    .frame(minWidth: 760, minHeight: 560)
+                    .frame(
+                        minWidth: 760,
+                        maxWidth: .infinity,
+                        minHeight: 560,
+                        maxHeight: .infinity,
+                        alignment: .topLeading
+                    )
                     .toolbar {
                         ToolbarItem {
                             HStack(spacing: 8) {
@@ -535,6 +541,8 @@ private struct MediaLibraryView: View {
                         }
                     }
                 }
+                .frame(minHeight: 280, maxHeight: .infinity)
+                .layoutPriority(1)
                 HStack {
                     Text("\(model.cullingSelection.selectedIDs.count) selected")
                     Picker("Pick state", selection: $model.cullingPickAction) {
@@ -822,6 +830,41 @@ private struct FixtureWorkflowView: View {
                         }
                         .frame(minHeight: 140)
                     }
+                    if !model.selectedFixtureID.isEmpty {
+                        GroupBox("Saved culling snapshots") {
+                            VStack(alignment: .leading, spacing: 8) {
+                                if model.fixturePools.isEmpty {
+                                    Text("No saved snapshots loaded.")
+                                        .foregroundStyle(.secondary)
+                                } else {
+                                    List(model.fixturePools, selection: $model.selectedFixturePoolID) { pool in
+                                        HStack {
+                                            VStack(alignment: .leading, spacing: 2) {
+                                                Text(pool.name)
+                                                Text("\(pool.assetCount) assets • \(String(pool.snapshotHash.prefix(12)))")
+                                                    .font(.caption)
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                            Spacer()
+                                            Text(pool.state.capitalized)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                        .tag(pool.id)
+                                    }
+                                    .frame(minHeight: 72, maxHeight: 130)
+                                }
+                                HStack {
+                                    Button("Reload snapshots") {
+                                        Task { await model.loadFixturePools() }
+                                    }
+                                    Button("Open selected in Culling") {
+                                        Task { await model.openSelectedFixturePool() }
+                                    }
+                                    .disabled(model.selectedFixturePoolID.isEmpty)
+                                }
+                            }
+                        }
+                    }
                     if let pool = model.fixturePool {
                         GroupBox("Latest snapshot") {
                             LabeledContent("Pool", value: pool.name)
@@ -841,6 +884,9 @@ private struct FixtureWorkflowView: View {
         }
         .task {
             if model.fixtures.isEmpty { await model.loadFixtures() }
+        }
+        .onChange(of: model.selectedFixtureID) { _, _ in
+            Task { await model.loadFixturePools() }
         }
     }
 }

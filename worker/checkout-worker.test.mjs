@@ -26,6 +26,7 @@ import {
 import { createRealEstateDeliverables } from "./real-estate-deliverables.mjs";
 import { createRealEstateOriginals } from "./real-estate-originals.mjs";
 import { createR2ZipDelivery } from "./r2-zip-delivery.mjs";
+import { createD1SidecarStateStore } from "./sidecar-state-store.mjs";
 import { createStripeClient, createStripeWebhookSignature } from "./stripe-client.mjs";
 
 const loadCatalog = () => {
@@ -1196,6 +1197,32 @@ test("sidecar cloud decisions are stored behind Owner or connector auth", async 
     action: "pick",
   }, { origin: "https://photos-by-elie.com" }));
   assert.equal(forbidden.status, 403);
+});
+
+test("D1 sidecar decision queries stay below the bound-variable ceiling", async () => {
+  const boundCounts = [];
+  const database = {
+    prepare() {
+      return {
+        bind(...values) {
+          boundCounts.push(values.length);
+          return {
+            async all() {
+              if (values.length > 100) throw new Error("too many SQL variables");
+              return { results: [] };
+            },
+          };
+        },
+      };
+    },
+  };
+  const store = createD1SidecarStateStore({ database });
+
+  await store.queryDecisions({
+    assetIds: Array.from({ length: 205 }, (_, index) => `asset-${index}`),
+  });
+
+  assert.deepEqual(boundCounts, [80, 80, 45]);
 });
 
 test("access console is admin-only and writes reversible role grants", async () => {

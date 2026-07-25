@@ -2,6 +2,7 @@ const SCHEMA = "photosbyelie.sidecarDecision.v1";
 const VALID_COLORS = new Set(["", "red", "yellow", "green", "blue", "purple"]);
 const VALID_PICK_STATES = new Set(["undecided", "picked", "rejected", "hidden"]);
 const VALID_METADATA_STATES = new Set(["unreviewed", "proposed", "approved", "rework", "blocked"]);
+const D1_QUERY_BIND_CHUNK = 80;
 
 const clone = (value) => value == null ? value : JSON.parse(JSON.stringify(value));
 
@@ -412,8 +413,8 @@ export const createD1SidecarStateStore = ({
   const queryDecisions = async ({ assetIds = [] } = {}) => {
     const rowsByAssetId = {};
     const cleanIds = uniqueCleanAssetIds(assetIds);
-    for (let start = 0; start < cleanIds.length; start += 400) {
-      const chunk = cleanIds.slice(start, start + 400);
+    for (let start = 0; start < cleanIds.length; start += D1_QUERY_BIND_CHUNK) {
+      const chunk = cleanIds.slice(start, start + D1_QUERY_BIND_CHUNK);
       if (!chunk.length) continue;
       const placeholders = chunk.map(() => "?").join(",");
       const rows = await d1All(database.prepare(`

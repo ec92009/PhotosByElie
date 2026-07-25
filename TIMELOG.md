@@ -663,8 +663,9 @@ Clock state: running
 | 2026-07-25 | 12:52 CEST | 12:53 CEST | 0:01 | Reported the contradictory Connected/expired-session Fixtures screen in Backstage; diagnosis, implementation, tests, and installation runtime excluded. |
 | 2026-07-25 | 13:23 CEST | 13:40 CEST | 0:10 | Defined the single-app, headless-bridge consolidation epic and opened the native-only drain window on Max; independent implementation, build, test, deployment, and ticket-maintenance runtime excluded. |
 | 2026-07-25 | 18:15 CEST | 18:17 CEST | 0:02 | Approved the signed Photos Bridge permission check and continuation through final cutover closeout; automated verification and publication runtime excluded. |
+| 2026-07-25 | 20:27 CEST | 20:35 CEST | 0:02 | Requested reopening the latest native culling snapshot and reported the D1 decision-load failure; implementation, deployment, and UI verification runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 32:25
+Active collaboration time used: 32:27
 Remaining budget: not set

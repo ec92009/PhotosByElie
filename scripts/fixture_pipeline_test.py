@@ -15,6 +15,7 @@ from fixture_pipeline import (
     create_pool,
     delivery_plan,
     fixture_tree,
+    list_pools,
     list_placements,
     migrate_access_fixture_tree,
     migrate_la_concha_tree,
@@ -70,6 +71,11 @@ class FixturePipelineTest(unittest.TestCase):
         pool = create_pool(self.root, fixture["fixtureId"], [item["assetId"] for item in result["items"]], criteria=result["filters"])
         again = create_pool(self.root, fixture["fixtureId"], [item["assetId"] for item in result["items"]], criteria=result["filters"])
         self.assertEqual(pool["poolId"], again["poolId"])
+        self.assertEqual(
+            [item["poolId"] for item in list_pools(self.root, fixture_id=fixture["fixtureId"])],
+            [pool["poolId"]],
+        )
+        self.assertEqual(list_pools(self.root, fixture_id="missing"), [])
         upsert_assets(self.root, [{"localIdentifier": "asset-4", "filename": "D.JPG", "mediaType": "photo", "creationDate": "2026-07-17T10:00:00Z"}])
         self.assertEqual(pool["assetCount"], 2)
         refresh = preview_pool_refresh(self.root, pool["poolId"])

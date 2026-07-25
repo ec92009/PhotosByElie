@@ -81,6 +81,26 @@ public struct FixturePool: Sendable, Equatable {
     public var assets: [FixturePoolAsset]
 }
 
+public struct FixturePoolSummary: Identifiable, Sendable, Equatable {
+    public var id: String
+    public var fixtureID: String
+    public var name: String
+    public var assetCount: Int
+    public var snapshotHash: String
+    public var state: String
+    public var createdAt: String
+
+    init(json: [String: JSONValue]) {
+        id = json["poolId"]?.stringValue ?? ""
+        fixtureID = json["fixtureId"]?.stringValue ?? ""
+        name = json["name"]?.stringValue ?? id
+        assetCount = json["assetCount"]?.intValue ?? 0
+        snapshotHash = json["snapshotHash"]?.stringValue ?? ""
+        state = json["state"]?.stringValue ?? "active"
+        createdAt = json["createdAt"]?.stringValue ?? ""
+    }
+}
+
 public struct FixturePlacement: Identifiable, Sendable, Equatable {
     public var id: String
     public var assetID: String
@@ -199,6 +219,17 @@ public actor FixtureWorkflowService {
             snapshotHash: pool["snapshotHash"]?.stringValue ?? "",
             assets: parsePoolAssets(pool["assets"])
         )
+    }
+
+    public func pools(fixtureID: String, limit: Int = 50) async throws -> [FixturePoolSummary] {
+        let result = try await run("fixture-pool-list", extra: [
+            "fixtureId": .string(fixtureID),
+            "limit": .number(Double(max(1, min(250, limit)))),
+        ])
+        return (result["pools"]?.arrayValue ?? []).compactMap {
+            guard let object = $0.objectValue else { return nil }
+            return FixturePoolSummary(json: object)
+        }
     }
 
     public func place(assetIDs: [String], fixtureIDs: [String], poolID: String = "") async throws -> [FixturePlacement] {

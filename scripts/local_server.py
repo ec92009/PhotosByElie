@@ -362,6 +362,7 @@ from fixture_pipeline import (  # noqa: E402
     get_pool,
     link_deliverable,
     list_deliverables,
+    list_pools,
     list_placements,
     migrate_la_concha_tree,
     move_fixture,
@@ -1837,6 +1838,15 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
         result.update({"readOnly": True, "pool": pool})
         if os.environ.get("PBE_ENABLE_LEGACY_SIDECAR", "").strip() == "1":
             result["sidecarUrl"] = f"http://127.0.0.1:8011/sidecar.html?pool={quote(pool['poolId'])}"
+    elif mode == "fixture-pool-list":
+        result.update({
+            "readOnly": True,
+            "pools": list_pools(
+                repo_root,
+                fixture_id=str(manifest.get("fixtureId") or ""),
+                limit=_new_owner_manifest_limit(manifest, default=50),
+            ),
+        })
     elif mode == "fixture-pool-refresh-preview":
         result.update({"readOnly": True, "refresh": preview_pool_refresh(repo_root, str(manifest.get("poolId") or ""))})
     elif mode == "fixture-pool-refresh-apply":

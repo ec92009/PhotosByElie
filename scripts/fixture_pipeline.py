@@ -738,6 +738,39 @@ def get_pool(repo_root: Path, pool_id: str, *, conn: sqlite3.Connection | None =
             conn.close()
 
 
+def list_pools(
+    repo_root: Path,
+    *,
+    fixture_id: str = "",
+    limit: int = 50,
+) -> list[dict[str, Any]]:
+    """List recent immutable culling snapshots without loading their assets."""
+    safe_limit = max(1, min(250, int(limit or 50)))
+    query = """
+        SELECT pool_id, fixture_id, name, snapshot_hash, asset_count, state,
+               created_at, updated_at
+        FROM fixture_culling_pools
+    """
+    params: list[Any] = []
+    if fixture_id.strip():
+        query += " WHERE fixture_id = ?"
+        params.append(fixture_id.strip())
+    query += " ORDER BY created_at DESC, pool_id DESC LIMIT ?"
+    params.append(safe_limit)
+    with connect(repo_root) as conn:
+        rows = conn.execute(query, params).fetchall()
+    return [{
+        "poolId": row["pool_id"],
+        "fixtureId": row["fixture_id"],
+        "name": row["name"],
+        "snapshotHash": row["snapshot_hash"],
+        "assetCount": int(row["asset_count"] or 0),
+        "state": row["state"],
+        "createdAt": row["created_at"],
+        "updatedAt": row["updated_at"],
+    } for row in rows]
+
+
 def pool_asset_ids(repo_root: Path, pool_id: str) -> list[str]:
     return [item["assetId"] for item in get_pool(repo_root, pool_id)["assets"]]
 

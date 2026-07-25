@@ -1,0 +1,78 @@
+{
+  "authentication": {
+    "request": {
+      "deviceCredential": "<keychain-device-credential>",
+      "deviceId": "owner-device-max"
+    },
+    "response": {
+      "accessExpiresAt": "2026-07-25T15:15:00Z",
+      "accessToken": "<short-lived-access-token>",
+      "expiresIn": 900,
+      "ok": true,
+      "refreshExpiresAt": "2026-08-24T15:00:00Z",
+      "refreshToken": "<rotating-refresh-token>",
+      "tokenType": "Bearer"
+    }
+  },
+  "error": {
+    "error": {
+      "code": "idempotency_key_required",
+      "details": {
+        "header": "Idempotency-Key"
+      },
+      "message": "Idempotency-Key is required for this mutation."
+    }
+  },
+  "idempotency": {
+    "firstStatus": 202,
+    "replayStatus": 200,
+    "requestHeader": {
+      "Idempotency-Key": "fixture-create-example-001"
+    },
+    "response": {
+      "action": {
+        "actionKind": "fixture-operation",
+        "createdAt": "2026-07-25T15:00:00Z",
+        "id": "owner-action-example-2",
+        "state": "queued",
+        "target": "max"
+      },
+      "idempotencyReplayed": true
+    }
+  },
+  "pagination": {
+    "actions": [
+      {
+        "actionKind": "fixture-operation",
+        "createdAt": "2026-07-25T15:00:00Z",
+        "id": "owner-action-example-1",
+        "progress": {
+          "completed": 8,
+          "detail": "Assigning selected photos",
+          "percent": 40,
+          "phase": "assigning",
+          "total": 20
+        },
+        "state": "running",
+        "target": "max"
+      }
+    ],
+    "page": {
+      "hasMore": true,
+      "nextCursor": "opaque-next-page"
+    }
+  },
+  "progress": {
+    "job": {
+      "id": "render-job-example-1",
+      "progress": {
+        "completed": 18,
+        "detail": "Rendering slideshow",
+        "percent": 30,
+        "phase": "rendering",
+        "total": 60
+      },
+      "state": "running"
+    }
+  }
+}

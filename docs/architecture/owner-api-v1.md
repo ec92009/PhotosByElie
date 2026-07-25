@@ -1,5 +1,15 @@
 # Owner API v1
 
+The canonical machine-readable contract is
+[`docs/api/owner-v1.openapi.yaml`](../api/owner-v1.openapi.yaml). Reproducible
+authentication, pagination, structured-error, idempotency, and progress
+examples live in
+[`docs/api/owner-v1.examples.json`](../api/owner-v1.examples.json).
+`python3 scripts/generate_owner_swift_contract.py` produces the native Swift
+endpoint manifest and test fixture. `npm run contract:check` (also the first
+step of `npm run validate`) fails when either generated artifact drifts from
+the published contract.
+
 `/api/v1` is the formal cloud boundary for PhotosByElie Backstage. During
 migration, its handlers delegate to the production-tested Worker routes, so
 the legacy web Owner and the native client exercise the same authorization,

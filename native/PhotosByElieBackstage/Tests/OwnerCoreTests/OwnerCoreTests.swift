@@ -15,6 +15,29 @@ struct OwnerCoreTests {
         #expect(page.page.hasMore)
     }
 
+    @Test("Generated endpoints and examples match the published contract")
+    func generatedContractAndExamples() throws {
+        #expect(OwnerContract.endpoints[.createAction]?.method == "POST")
+        #expect(OwnerContract.endpoints[.listActions]?.path == "/actions")
+        #expect(OwnerContract.endpoints[.refreshOwnerTokens]?.path == "/auth/refresh")
+        #expect(OwnerContract.schemaNames.contains("ErrorEnvelope"))
+        #expect(Set(OwnerContract.exampleSections) == [
+            "authentication", "pagination", "error", "idempotency", "progress",
+        ])
+
+        let url = try #require(Bundle.module.url(
+            forResource: "owner-api-examples",
+            withExtension: "json",
+            subdirectory: "Fixtures"
+        ))
+        let payload = try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any]
+        #expect(payload?["authentication"] != nil)
+        #expect(payload?["pagination"] != nil)
+        #expect(payload?["error"] != nil)
+        #expect(payload?["idempotency"] != nil)
+        #expect(payload?["progress"] != nil)
+    }
+
     @Test("Creates canonical v1 requests with actor token and idempotency")
     func createsCanonicalRequest() async throws {
         let transport = RecordingTransport(response: """

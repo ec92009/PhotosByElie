@@ -1,0 +1,78 @@
+{
+  "authentication": {
+    "request": {
+      "deviceId": "owner-device-max",
+      "deviceCredential": "<keychain-device-credential>"
+    },
+    "response": {
+      "ok": true,
+      "tokenType": "Bearer",
+      "accessToken": "<short-lived-access-token>",
+      "expiresIn": 900,
+      "accessExpiresAt": "2026-07-25T15:15:00Z",
+      "refreshToken": "<rotating-refresh-token>",
+      "refreshExpiresAt": "2026-08-24T15:00:00Z"
+    }
+  },
+  "pagination": {
+    "actions": [
+      {
+        "id": "owner-action-example-1",
+        "target": "max",
+        "actionKind": "fixture-operation",
+        "state": "running",
+        "createdAt": "2026-07-25T15:00:00Z",
+        "progress": {
+          "phase": "assigning",
+          "completed": 8,
+          "total": 20,
+          "percent": 40,
+          "detail": "Assigning selected photos"
+        }
+      }
+    ],
+    "page": {
+      "nextCursor": "opaque-next-page",
+      "hasMore": true
+    }
+  },
+  "error": {
+    "error": {
+      "code": "idempotency_key_required",
+      "message": "Idempotency-Key is required for this mutation.",
+      "details": {
+        "header": "Idempotency-Key"
+      }
+    }
+  },
+  "idempotency": {
+    "requestHeader": {
+      "Idempotency-Key": "fixture-create-example-001"
+    },
+    "firstStatus": 202,
+    "replayStatus": 200,
+    "response": {
+      "action": {
+        "id": "owner-action-example-2",
+        "target": "max",
+        "actionKind": "fixture-operation",
+        "state": "queued",
+        "createdAt": "2026-07-25T15:00:00Z"
+      },
+      "idempotencyReplayed": true
+    }
+  },
+  "progress": {
+    "job": {
+      "id": "render-job-example-1",
+      "state": "running",
+      "progress": {
+        "phase": "rendering",
+        "completed": 18,
+        "total": 60,
+        "percent": 30,
+        "detail": "Rendering slideshow"
+      }
+    }
+  }
+}

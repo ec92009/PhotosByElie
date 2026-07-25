@@ -3370,6 +3370,7 @@ def _save_keyword_blacklist(repo_root: Path, payload: dict) -> dict:
         "db": db_result.get("db"),
         "keyword_count": len(keywords),
         "keywords": keywords,
+        "previous_keywords": current,
     }
 
 
@@ -3617,9 +3618,18 @@ def _update_public_catalog_metadata(
     conn = sqlite3.connect(catalog_path)
     conn.row_factory = sqlite3.Row
     try:
-        row = conn.execute("SELECT media_id FROM media_items WHERE media_id = ?", (clean_id,)).fetchone()
+        row = conn.execute(
+            "SELECT media_id, title, description, keyword_ids FROM media_items WHERE media_id = ?",
+            (clean_id,),
+        ).fetchone()
         if not row:
             return {"updated": 0, "path": str(catalog_path)}
+        previous = {
+            "photo_id": clean_id,
+            "title": str(row["title"] or ""),
+            "caption": str(row["description"] or ""),
+            "keywords": _catalog_keywords(row["keyword_ids"], _catalog_keyword_lookup(conn)),
+        }
         keyword_ids = _ensure_catalog_keyword_ids(conn, keywords)
         updated_at = datetime.now(timezone.utc).isoformat()
         conn.execute(
@@ -3630,7 +3640,12 @@ def _update_public_catalog_metadata(
         if integrity != "ok":
             raise RuntimeError(f"catalog integrity_check failed: {integrity}")
         conn.commit()
-        return {"updated": 1, "path": str(catalog_path), "keyword_ids": keyword_ids}
+        return {
+            "updated": 1,
+            "path": str(catalog_path),
+            "keyword_ids": keyword_ids,
+            "previous": previous,
+        }
     except Exception:
         conn.rollback()
         raise
@@ -11753,6 +11768,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
                     "caption": caption,
                     "keywords": keywords,
                 },
+                "previous_metadata": catalog_update.get("previous") or {},
                 "catalog": catalog_update,
                 "worker_catalog": worker_catalog,
             }
@@ -11763,6 +11779,16 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         )
         if not matches:
             raise ValueError(f"photo not found: {photo_id}")
+        previous_photo = matches[0][2]
+        previous_metadata = {
+            "photo_id": photo_id,
+            "title": str(previous_photo.get("title") or "").strip(),
+            "caption": str(previous_photo.get("caption") or _metadata_label_value(previous_photo, "Caption") or "").strip(),
+            "keywords": _unique_keywords(
+                previous_photo.get("keywords")
+                or _split_keyword_text(_metadata_label_value(previous_photo, "Keywords"))
+            ),
+        }
         metadata_changed = 0
         for _state, _slug, photo in matches:
             title_changed = _set_photo_title(photo, title)
@@ -11793,6 +11819,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
                 "caption": caption,
                 "keywords": keywords,
             },
+            "previous_metadata": previous_metadata,
             "worker_catalog": worker_catalog,
             "site": site_state,
         }

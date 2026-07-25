@@ -722,6 +722,66 @@ struct OwnerCoreTests {
         #expect(request.payload["keywords"]?.arrayValue?.compactMap(\.stringValue) == ["Paris", "museum"])
     }
 
+    @Test("Native metadata edits and blacklist replacements return reversible before state")
+    func nativeMetadataHistory() async throws {
+        let metadata = OwnerAction(
+            id: "owner-action-metadata-history",
+            actionKind: "photo-moderation",
+            target: "max",
+            state: .completed,
+            result: [
+                "result": [
+                    "previous_metadata": [
+                        "photo_id": "asset-1",
+                        "title": "Before",
+                        "caption": "Original caption",
+                        "keywords": ["Paris", "Museum"],
+                    ],
+                    "metadata": [
+                        "photo_id": "asset-1",
+                        "title": "After",
+                        "caption": "New caption",
+                        "keywords": ["Paris", "Architecture"],
+                    ],
+                ],
+            ]
+        )
+        let blacklist = OwnerAction(
+            id: "owner-action-blacklist-history",
+            actionKind: "photo-moderation",
+            target: "max",
+            state: .completed,
+            result: [
+                "result": [
+                    "previous_keywords": ["AI"],
+                    "keywords": ["AI", "Stained"],
+                ],
+            ]
+        )
+        let api = ScriptedOwnerActionAPI(completed: [metadata, blacklist])
+        let service = MetadataReviewService(runner: OwnerActionRunner(
+            api: api,
+            waker: UnavailableWaker(),
+            pollInterval: .milliseconds(1),
+            timeout: .seconds(1)
+        ))
+
+        let edit = try await service.updateDetailed(
+            assetID: "asset-1",
+            title: "After",
+            caption: "New caption",
+            keywords: ["Paris", "Architecture"]
+        )
+        #expect(edit.before.title == "Before")
+        #expect(edit.before.caption == "Original caption")
+        #expect(edit.before.keywords == ["Paris", "Museum"])
+        #expect(edit.after.title == "After")
+
+        let terms = try await service.replaceBlacklistDetailed(["AI", "Stained"])
+        #expect(terms.before == ["AI"])
+        #expect(terms.after == ["AI", "Stained"])
+    }
+
     @Test("Native fixture placements stay reversible and audited")
     func nativeFixturePlacements() async throws {
         let terminal = OwnerAction(

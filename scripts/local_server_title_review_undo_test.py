@@ -74,8 +74,10 @@ class TitleReviewUndoTests(unittest.TestCase):
                       keyword_ids TEXT,
                       updated_at TEXT
                     );
-                    INSERT INTO media_items(media_id, title)
-                    VALUES ('photo-a', 'Old title');
+                    INSERT INTO keyword_terms(keyword_id, keyword)
+                    VALUES (1, 'Existing');
+                    INSERT INTO media_items(media_id, title, description, keyword_ids)
+                    VALUES ('photo-a', 'Old title', 'Old caption', '1');
                     """
                 )
                 conn.commit()
@@ -91,6 +93,15 @@ class TitleReviewUndoTests(unittest.TestCase):
             )
 
             self.assertEqual(result["updated"], 1)
+            self.assertEqual(
+                result["previous"],
+                {
+                    "photo_id": "photo-a",
+                    "title": "Old title",
+                    "caption": "Old caption",
+                    "keywords": ["Existing"],
+                },
+            )
             conn = sqlite3.connect(catalog_path)
             try:
                 row = conn.execute(
@@ -98,7 +109,7 @@ class TitleReviewUndoTests(unittest.TestCase):
                 ).fetchone()
                 self.assertEqual(row[0], "New title")
                 self.assertEqual(row[1], "A complete caption")
-                self.assertEqual(row[2], "1,2")
+                self.assertEqual(row[2], "2,3")
             finally:
                 conn.close()
 

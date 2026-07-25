@@ -189,6 +189,12 @@ Photos Bridge.
 3. Edit the title, caption, or comma-separated keywords.
 4. Choose **Save title, caption & keywords**.
 
+Backstage records the connector-returned private values that existed before
+each direct metadata or blacklist change. Choose **Undo last change** (or press
+Command-Z while Metadata is active) to restore that exact prior state through
+another audited Max action. The last 100 changes in the current Backstage
+session remain reversible; a failed undo keeps its history entry for retry.
+
 **Queue selected for review** sends the selected item or items to the existing
 metadata review queue. The keyword blacklist is replaced as one managed set;
 review it carefully before choosing **Replace blacklist**.

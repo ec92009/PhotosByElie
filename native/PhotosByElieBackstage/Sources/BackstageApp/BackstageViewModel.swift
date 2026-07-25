@@ -9,6 +9,17 @@ struct CullingHistoryEntry: Identifiable, Sendable {
     var selectedIDs: Set<String>
 }
 
+enum MetadataHistoryKind: Sendable {
+    case edit(MetadataEditChange)
+    case blacklist(MetadataBlacklistChange)
+}
+
+struct MetadataHistoryEntry: Identifiable, Sendable {
+    var id = UUID()
+    var label: String
+    var kind: MetadataHistoryKind
+}
+
 @MainActor
 final class BackstageViewModel: ObservableObject {
     enum Section: String, CaseIterable, Identifiable {
@@ -79,6 +90,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var metadataKeywords = ""
     @Published var metadataBlacklist = ""
     @Published var metadataReviewStatus = "Metadata changes use audited Max actions."
+    @Published var metadataHistory: [MetadataHistoryEntry] = []
     @Published var metadataProposals: [MetadataProposal] = []
     @Published var metadataProposalStatus = "Load the local AI proposal queue to review it."
     @Published var lifecycleItems: [LifecycleItem] = []
@@ -738,13 +750,19 @@ final class BackstageViewModel: ObservableObject {
             return
         }
         do {
-            let action = try await metadataReviewService.update(
+            let change = try await metadataReviewService.updateDetailed(
                 assetID: id,
                 title: metadataTitle,
                 caption: metadataCaption,
                 keywords: metadataKeywords.components(separatedBy: ",")
             )
-            metadataReviewStatus = "Title, caption, and keywords saved by action \(action.id). Publication remains separate."
+            recordMetadataHistory(
+                MetadataHistoryEntry(
+                    label: "Metadata for \(id)",
+                    kind: .edit(change)
+                )
+            )
+            metadataReviewStatus = "Title, caption, and keywords saved by action \(change.actionID). Publication remains separate."
         } catch {
             metadataReviewStatus = String(describing: error)
         }
@@ -765,10 +783,47 @@ final class BackstageViewModel: ObservableObject {
     func saveMetadataBlacklist() async {
         do {
             let terms = metadataBlacklist.components(separatedBy: ",")
-            let action = try await metadataReviewService.replaceBlacklist(terms)
-            metadataReviewStatus = "Keyword blacklist replaced through action \(action.id)."
+            let change = try await metadataReviewService.replaceBlacklistDetailed(terms)
+            recordMetadataHistory(
+                MetadataHistoryEntry(
+                    label: "Keyword blacklist",
+                    kind: .blacklist(change)
+                )
+            )
+            metadataBlacklist = change.after.joined(separator: ", ")
+            metadataReviewStatus = "Keyword blacklist replaced through action \(change.actionID)."
         } catch {
             metadataReviewStatus = String(describing: error)
+        }
+    }
+
+    func undoLastMetadataChange() async {
+        guard let entry = metadataHistory.last else {
+            metadataReviewStatus = "Nothing to undo in this Backstage session."
+            return
+        }
+        do {
+            switch entry.kind {
+            case .edit(let change):
+                let action = try await metadataReviewService.update(
+                    assetID: change.assetID,
+                    title: change.before.title,
+                    caption: change.before.caption,
+                    keywords: change.before.keywords
+                )
+                metadataAssetID = change.assetID
+                metadataTitle = change.before.title
+                metadataCaption = change.before.caption
+                metadataKeywords = change.before.keywords.joined(separator: ", ")
+                metadataReviewStatus = "Undid \(entry.label) through audited action \(action.id)."
+            case .blacklist(let change):
+                let action = try await metadataReviewService.replaceBlacklist(change.before)
+                metadataBlacklist = change.before.joined(separator: ", ")
+                metadataReviewStatus = "Restored the previous keyword blacklist through audited action \(action.id)."
+            }
+            metadataHistory.removeLast()
+        } catch {
+            metadataReviewStatus = "Undo failed; the history entry was retained. \(String(describing: error))"
         }
     }
 
@@ -796,6 +851,13 @@ final class BackstageViewModel: ObservableObject {
             metadataProposalStatus = "\(disposition.rawValue.capitalized) saved by audited action \(action.id)."
         } catch {
             metadataProposalStatus = String(describing: error)
+        }
+    }
+
+    private func recordMetadataHistory(_ entry: MetadataHistoryEntry) {
+        metadataHistory.append(entry)
+        if metadataHistory.count > 100 {
+            metadataHistory.removeFirst(metadataHistory.count - 100)
         }
     }
 

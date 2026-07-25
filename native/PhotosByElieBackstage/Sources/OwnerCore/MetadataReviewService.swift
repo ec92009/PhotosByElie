@@ -78,6 +78,31 @@ public enum MetadataProposalDisposition: String, Sendable, CaseIterable {
     case approve, reject, block
 }
 
+public struct MetadataValues: Sendable, Equatable {
+    public var title: String
+    public var caption: String
+    public var keywords: [String]
+
+    public init(title: String, caption: String, keywords: [String]) {
+        self.title = title
+        self.caption = caption
+        self.keywords = keywords
+    }
+}
+
+public struct MetadataEditChange: Sendable, Equatable {
+    public var actionID: String
+    public var assetID: String
+    public var before: MetadataValues
+    public var after: MetadataValues
+}
+
+public struct MetadataBlacklistChange: Sendable, Equatable {
+    public var actionID: String
+    public var before: [String]
+    public var after: [String]
+}
+
 public actor MetadataReviewService {
     private let runner: OwnerActionRunner
     private let proposalURLs: [URL]
@@ -108,6 +133,35 @@ public actor MetadataReviewService {
             "caption": .string(caption),
             "keywords": .array(normalize(keywords).map(JSONValue.string)),
         ])
+    }
+
+    public func updateDetailed(
+        assetID: String,
+        title: String,
+        caption: String,
+        keywords: [String]
+    ) async throws -> MetadataEditChange {
+        let normalizedKeywords = normalize(keywords)
+        let action = try await update(
+            assetID: assetID,
+            title: title,
+            caption: caption,
+            keywords: normalizedKeywords
+        )
+        let result = action.result?["result"]?.objectValue ?? action.result ?? [:]
+        let previous = result["previous_metadata"]?.objectValue ?? [:]
+        let applied = result["metadata"]?.objectValue ?? [:]
+        return MetadataEditChange(
+            actionID: action.id,
+            assetID: applied["photo_id"]?.stringValue ?? assetID,
+            before: values(from: previous),
+            after: MetadataValues(
+                title: applied["title"]?.stringValue ?? title,
+                caption: applied["caption"]?.stringValue ?? caption,
+                keywords: applied["keywords"]?.arrayValue?.compactMap(\.stringValue)
+                    ?? normalizedKeywords
+            )
+        )
     }
 
     public func proposals() async throws -> MetadataProposalQueue {
@@ -194,6 +248,16 @@ public actor MetadataReviewService {
         ])
     }
 
+    public func replaceBlacklistDetailed(_ terms: [String]) async throws -> MetadataBlacklistChange {
+        let action = try await replaceBlacklist(terms)
+        let result = action.result?["result"]?.objectValue ?? action.result ?? [:]
+        return MetadataBlacklistChange(
+            actionID: action.id,
+            before: result["previous_keywords"]?.arrayValue?.compactMap(\.stringValue) ?? [],
+            after: result["keywords"]?.arrayValue?.compactMap(\.stringValue) ?? normalize(terms)
+        )
+    }
+
     private func submit(
         operation: String,
         payload: [String: JSONValue]
@@ -223,5 +287,13 @@ public actor MetadataReviewService {
                 let key = $0.lowercased()
                 return !$0.isEmpty && seen.insert(key).inserted
             }
+    }
+
+    private func values(from object: [String: JSONValue]) -> MetadataValues {
+        MetadataValues(
+            title: object["title"]?.stringValue ?? "",
+            caption: object["caption"]?.stringValue ?? "",
+            keywords: object["keywords"]?.arrayValue?.compactMap(\.stringValue) ?? []
+        )
     }
 }

@@ -926,6 +926,16 @@ private struct MetadataGiveBackView: View {
                     Button("Queue selected for review") {
                         Task { await model.queueMetadataReview() }
                     }
+                    Button("Undo last change") {
+                        Task { await model.undoLastMetadataChange() }
+                    }
+                    .keyboardShortcut("z", modifiers: .command)
+                    .disabled(model.metadataHistory.isEmpty)
+                    if !model.metadataHistory.isEmpty {
+                        Text("\(model.metadataHistory.count) reversible change\(model.metadataHistory.count == 1 ? "" : "s")")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 HStack {
                     TextField("Keyword blacklist (comma-separated)", text: $model.metadataBlacklist)

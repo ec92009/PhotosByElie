@@ -60,17 +60,21 @@ placeholders:
 
 - **Fixtures** loads the recursive tree, creates root or child fixtures,
   renames and archives/reopens stable IDs, performs read-only universal search,
-  and creates immutable fixture-scoped culling snapshots.
+  creates immutable fixture-scoped culling snapshots, and manages reversible
+  place/move/remove/restore relationships without copying source assets.
 - **People & Access** reads D1 ACS state, creates or updates people and groups,
   assigns inherited group membership, and disables people or archives groups
   without deleting audit history. Email addresses are normalized by the
   Worker; passwords remain case-sensitive and are never returned to the app.
 - **Culling** uses PhotoKit only to index and select local assets, then applies
-  one or many decisions through the canonical `/sidecar/decisions/*` API with
-  idempotency keys.
-- **Metadata** can save one title/keyword set, queue one or many items for the
-  existing title/keyword review, replace the managed keyword blacklist, and
-  run the separate verified Apple Photos give-back workflow.
+  the same pick, reject, clear-pick and 0–5 rating payloads as Sidecar through
+  the canonical `/sidecar/decisions/*` API with idempotency keys.
+- **Metadata** can save title, caption and keyword sets, queue one or many items
+  for the existing title/keyword review, replace the managed keyword
+  blacklist, review pending AI proposals, and run the separate verified Apple
+  Photos give-back workflow. Proposal rows are read from `Owner.sqlite` through
+  the connector's read-only localhost endpoint; approve, reject and block
+  remain Worker-authorized Max actions.
 
 Fixture and metadata mutations create `sidecar-culling-review` or
 `photo-moderation` actions targeted to Max. The native app posts only the

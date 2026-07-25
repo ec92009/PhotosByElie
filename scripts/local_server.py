@@ -3508,7 +3508,13 @@ def _ensure_catalog_keyword_ids(conn: sqlite3.Connection, keywords: list[str]) -
     return ",".join(ids)
 
 
-def _update_public_catalog_metadata(repo_root: Path, media_id: str, title: str, keywords: list[str]) -> dict:
+def _update_public_catalog_metadata(
+    repo_root: Path,
+    media_id: str,
+    title: str,
+    caption: str,
+    keywords: list[str],
+) -> dict:
     clean_id = str(media_id or "").strip()
     catalog_path = repo_root / "assets/catalog/photosbyelie.sqlite"
     if not clean_id or not catalog_path.exists():
@@ -3522,8 +3528,8 @@ def _update_public_catalog_metadata(repo_root: Path, media_id: str, title: str, 
         keyword_ids = _ensure_catalog_keyword_ids(conn, keywords)
         updated_at = datetime.now(timezone.utc).isoformat()
         conn.execute(
-            "UPDATE media_items SET title = ?, keyword_ids = ?, updated_at = ? WHERE media_id = ?",
-            (title, keyword_ids or None, updated_at, clean_id),
+            "UPDATE media_items SET title = ?, description = ?, keyword_ids = ?, updated_at = ? WHERE media_id = ?",
+            (title, caption or None, keyword_ids or None, updated_at, clean_id),
         )
         integrity = conn.execute("PRAGMA integrity_check").fetchone()[0]
         if integrity != "ok":
@@ -4469,10 +4475,19 @@ def queue_import_cache_title_keyword_review(
     }
 
 
-def title_keyword_review_queue_payload(repo_root: Path) -> dict:
+def title_keyword_review_queue_payload(
+    repo_root: Path,
+    *,
+    include_backlog: bool = True,
+    run_maintenance: bool = True,
+) -> dict:
     conn = owner_db_connect(repo_root)
     try:
-        stale_cleanup = _clear_stale_title_keyword_review_rows(repo_root, conn)
+        stale_cleanup = (
+            _clear_stale_title_keyword_review_rows(repo_root, conn)
+            if run_maintenance
+            else {"blocked": 0, "not_found": 0}
+        )
         pending_batches = _pending_title_keyword_batches(conn)
         all_photos = []
         all_pending_rows = []
@@ -4494,7 +4509,11 @@ def title_keyword_review_queue_payload(repo_root: Path) -> dict:
                 payload = _title_keyword_payload_from_sqlite(repo_root, batch_id, pending_rows, pending_batches)
                 all_photos.extend(payload.get("photos") or [])
         covered_ids = {_review_photo_id(item) for item in all_photos if isinstance(item, dict)}
-        backlog_photos, backlog_total_count = _incomplete_title_keyword_backlog_photos(repo_root, conn, covered_ids)
+        backlog_photos, backlog_total_count = (
+            _incomplete_title_keyword_backlog_photos(repo_root, conn, covered_ids)
+            if include_backlog
+            else ([], 0)
+        )
         if backlog_photos:
             pending_batches = [
                 *pending_batches,
@@ -5601,6 +5620,14 @@ def _set_photo_keywords(photo: dict, keywords: list[str]) -> bool:
         photo["keywords"] = keywords
         changed = True
     changed = _set_metadata_value(photo, "Keywords", value) or changed
+    return changed
+
+
+def _set_photo_caption(photo: dict, caption: str) -> bool:
+    caption = str(caption or "").strip()
+    changed = str(photo.get("caption") or "") != caption
+    photo["caption"] = caption
+    changed = _set_metadata_value(photo, "Caption", caption) or changed
     return changed
 
 
@@ -11078,6 +11105,20 @@ def apply_public_photo_moderation(repo_root: Path, payload: dict) -> dict:
             "mode": payload.get("mode") or "replace",
         })
         return {**result, "catalog_publish_pending": True}
+    if operation in {
+        "save-title-keyword-review-approvals",
+        "apply-title-keyword-review-approvals",
+        "apply-approved-title-keyword-review-approvals",
+    }:
+        result = apply_photo_action(repo_root, {
+            "action": operation,
+            "batch_id": payload.get("batch_id"),
+            "approvals": payload.get("approvals") or [],
+            "rejections": payload.get("rejections") or [],
+            "blocked": payload.get("blocked") or [],
+            "reason": payload.get("reason") or "native-backstage",
+        })
+        return {**result, "catalog_publish_pending": True}
     if operation == "update-photo-metadata":
         if len(photo_ids) != 1:
             raise ValueError("public metadata update requires exactly one photo id")
@@ -11085,6 +11126,7 @@ def apply_public_photo_moderation(repo_root: Path, payload: dict) -> dict:
             "action": operation,
             "photo_id": photo_ids[0],
             "title": payload.get("title"),
+            "caption": payload.get("caption"),
             "keywords": payload.get("keywords") or [],
         })
         return {**result, "catalog_publish_pending": True}
@@ -11592,8 +11634,9 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         title = str(payload.get("title") or "").strip()
         if not title:
             raise ValueError("title must be a non-empty string")
+        caption = str(payload.get("caption") or "").strip()
         keywords = _unique_keywords(_split_keyword_text(payload.get("keywords")))
-        catalog_update = _update_public_catalog_metadata(repo_root, photo_id, title, keywords)
+        catalog_update = _update_public_catalog_metadata(repo_root, photo_id, title, caption, keywords)
         if int(catalog_update.get("updated") or 0) > 0:
             worker_catalog = _write_worker_catalog(repo_root)
             return {
@@ -11612,6 +11655,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
                 "metadata": {
                     "photo_id": photo_id,
                     "title": title,
+                    "caption": caption,
                     "keywords": keywords,
                 },
                 "catalog": catalog_update,
@@ -11627,8 +11671,9 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         metadata_changed = 0
         for _state, _slug, photo in matches:
             title_changed = _set_photo_title(photo, title)
+            caption_changed = _set_photo_caption(photo, caption)
             keywords_changed = _set_photo_keywords(photo, keywords)
-            if title_changed or keywords_changed:
+            if title_changed or caption_changed or keywords_changed:
                 metadata_changed += 1
         site_state, worker_catalog = _write_catalog_state(repo_root, expo_groups, reserve_groups, hidden_groups)
         return {
@@ -11650,6 +11695,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             "metadata": {
                 "photo_id": photo_id,
                 "title": title,
+                "caption": caption,
                 "keywords": keywords,
             },
             "worker_catalog": worker_catalog,

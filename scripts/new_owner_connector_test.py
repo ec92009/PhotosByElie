@@ -378,6 +378,7 @@ class UploadRegistrationScopeTest(unittest.TestCase):
                     "operation": "update-photo-metadata",
                     "photoId": "photo-a",
                     "title": "A better title",
+                    "caption": "A museum clock in Paris",
                     "keywords": ["Paris", "Clock"],
                 },
             })
@@ -386,8 +387,41 @@ class UploadRegistrationScopeTest(unittest.TestCase):
             "operation": "update-photo-metadata",
             "photo_ids": ["photo-a"],
             "title": "A better title",
+            "caption": "A museum clock in Paris",
             "keywords": ["Paris", "Clock"],
         }])
+
+    def test_photo_moderation_forwards_native_ai_review_without_photo_ids(self):
+        calls = []
+
+        def apply_public_photo_moderation(_repo_root, payload):
+            calls.append(payload)
+            return {"ok": True, "action": payload["operation"], "approved_count": 1}
+
+        with patch(
+            "scripts.new_owner_connector._load_local_modules",
+            return_value=(None, None, None, None, apply_public_photo_moderation),
+        ):
+            execute_action(self.config, {
+                "type": "photo-moderation",
+                "payload": {
+                    "operation": "save-title-keyword-review-approvals",
+                    "batch_id": "batch-1",
+                    "approvals": [{
+                        "photo_id": "photo-a",
+                        "batch_id": "batch-1",
+                        "approved": True,
+                        "title": "Paris clock",
+                        "keywords": ["Paris", "Clock"],
+                    }],
+                    "rejections": [],
+                    "blocked": [],
+                },
+            })
+
+        self.assertEqual(calls[0]["operation"], "save-title-keyword-review-approvals")
+        self.assertEqual(calls[0]["batch_id"], "batch-1")
+        self.assertEqual(calls[0]["approvals"][0]["photo_id"], "photo-a")
 
     def test_photo_moderation_allows_keyword_blacklist_without_photo_ids(self):
         calls = []

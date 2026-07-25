@@ -11,6 +11,7 @@ struct PhotosByElieBackstageApp: App {
             NavigationSplitView {
                 List(BackstageViewModel.Section.allCases, selection: $model.selection) { section in
                     Label(section.rawValue, systemImage: icon(for: section))
+                        .tag(section)
                 }
                 .navigationTitle("Backstage")
                 .frame(minWidth: 210)
@@ -136,14 +137,25 @@ private struct MediaLibraryView: View {
                 }
                 HStack {
                     Text("\(model.selectedPhotoIDs.count) selected")
-                    Picker("Decision", selection: $model.cullingState) {
-                        ForEach(SidecarDecisionState.allCases, id: \.self) {
-                            Text($0.rawValue.capitalized).tag($0)
+                    Picker("Pick state", selection: $model.cullingPickAction) {
+                        ForEach(SidecarPickAction.allCases, id: \.self) {
+                            Text($0.label).tag($0)
                         }
                     }
                     .frame(width: 180)
-                    Button("Apply decision") {
-                        Task { await model.applyCullingDecision() }
+                    Button("Apply pick state") {
+                        Task { await model.applyPickDecision() }
+                    }
+                    .disabled(model.selectedPhotoIDs.isEmpty)
+                    Picker("Rating", selection: $model.cullingRating) {
+                        ForEach(0...5, id: \.self) { rating in
+                            Text(rating == 0 ? "No rating" : "\(rating) star\(rating == 1 ? "" : "s")")
+                                .tag(rating)
+                        }
+                    }
+                    .frame(width: 170)
+                    Button("Apply rating") {
+                        Task { await model.applyRating() }
                     }
                     .disabled(model.selectedPhotoIDs.isEmpty)
                     Spacer()
@@ -263,6 +275,47 @@ private struct FixtureWorkflowView: View {
                             Task { await model.snapshotFixtureAssets() }
                         }
                         .disabled(model.selectedFixtureAssetIDs.isEmpty || model.selectedFixtureID.isEmpty)
+                    }
+                    DisclosureGroup("Reversible fixture placements") {
+                        HStack(alignment: .top) {
+                            List(model.flatFixtures.filter { !$0.isArchived }, selection: $model.placementTargetFixtureIDs) { fixture in
+                                Text(fixture.name).tag(fixture.id)
+                            }
+                            .frame(minHeight: 90, maxHeight: 130)
+                            VStack(alignment: .leading) {
+                                Button("Place selected assets") {
+                                    Task { await model.placeFixtureAssets() }
+                                }
+                                .disabled(
+                                    model.selectedFixtureAssetIDs.isEmpty
+                                        || model.placementTargetFixtureIDs.isEmpty
+                                )
+                                Button("Review placements") {
+                                    Task { await model.loadFixturePlacements() }
+                                }
+                                .disabled(model.selectedFixtureAssetIDs.isEmpty)
+                            }
+                        }
+                        Table(model.fixturePlacements) {
+                            TableColumn("Asset") { Text($0.assetID) }
+                            TableColumn("Fixture") { Text($0.breadcrumbLabel) }
+                            TableColumn("State") { Text($0.state.capitalized) }
+                            TableColumn("Move") { placement in
+                                Menu("Move to…") {
+                                    ForEach(model.flatFixtures.filter { !$0.isArchived && $0.id != placement.fixtureID }) { fixture in
+                                        Button(fixture.name) {
+                                            Task { await model.movePlacement(placement.id, to: fixture.id) }
+                                        }
+                                    }
+                                }
+                            }
+                            TableColumn("Relationship") { placement in
+                                Button(placement.isActive ? "Remove" : "Restore") {
+                                    Task { await model.togglePlacement(placement) }
+                                }
+                            }
+                        }
+                        .frame(minHeight: 140)
                     }
                     if let pool = model.fixturePool {
                         GroupBox("Latest snapshot") {
@@ -384,9 +437,10 @@ private struct MetadataGiveBackView: View {
                         .disabled(model.selectedPhotoIDs.isEmpty)
                 }
                 TextField("Title", text: $model.metadataTitle)
+                TextField("Caption", text: $model.metadataCaption)
                 TextField("Comma-separated keywords", text: $model.metadataKeywords)
                 HStack {
-                    Button("Save title & keywords") {
+                    Button("Save title, caption & keywords") {
                         Task { await model.updatePhotoMetadata() }
                     }
                     Button("Queue selected for review") {
@@ -400,6 +454,53 @@ private struct MetadataGiveBackView: View {
                     }
                 }
                 Text(model.metadataReviewStatus)
+                    .foregroundStyle(.secondary)
+            }
+            Section("AI proposal review") {
+                HStack {
+                    Button("Load proposals") {
+                        Task { await model.loadMetadataProposals() }
+                    }
+                    Text(model.metadataProposalStatus)
+                        .foregroundStyle(.secondary)
+                }
+                Table(model.metadataProposals) {
+                    TableColumn("Current") { proposal in
+                        VStack(alignment: .leading) {
+                            Text(proposal.current.title)
+                            Text(proposal.current.keywords.joined(separator: ", "))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    TableColumn("AI proposal") { proposal in
+                        VStack(alignment: .leading) {
+                            Text(proposal.proposed.title)
+                            Text(proposal.proposed.keywords.joined(separator: ", "))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            if let reason = proposal.proposed.reason, !reason.isEmpty {
+                                Text(reason).font(.caption2).foregroundStyle(.tertiary)
+                            }
+                        }
+                    }
+                    TableColumn("Decision") { proposal in
+                        HStack {
+                            Button("Approve") {
+                                Task { await model.decideProposal(proposal, disposition: .approve) }
+                            }
+                            Button("Reject") {
+                                Task { await model.decideProposal(proposal, disposition: .reject) }
+                            }
+                            Button("Block", role: .destructive) {
+                                Task { await model.decideProposal(proposal, disposition: .block) }
+                            }
+                        }
+                    }
+                }
+                .frame(minHeight: 180)
+                Text("Proposals are read from Owner.sqlite through the local read-only helper. Every approval, rejection, or block remains a Worker-authorized Max action.")
+                    .font(.caption)
                     .foregroundStyle(.secondary)
             }
             Section("Verified Apple Photos give-back") {

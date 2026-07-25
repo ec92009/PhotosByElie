@@ -1,23 +1,54 @@
 import Foundation
 
-public enum SidecarDecisionState: String, Codable, Sendable, CaseIterable {
-    case picked, rejected, approved, blocked, clear
+public enum SidecarPickAction: String, Codable, Sendable, CaseIterable {
+    case pick, reject, unpick
+
+    public var label: String {
+        switch self {
+        case .pick: "Pick"
+        case .reject: "Reject"
+        case .unpick: "Clear pick"
+        }
+    }
 }
 
+/// Canonical Sidecar decision payload. This deliberately mirrors the web
+/// Sidecar ledger rather than inventing a second native decision vocabulary.
 public struct SidecarDecision: Codable, Identifiable, Sendable, Equatable {
     public var assetId: String
-    public var decision: String
-    public var fixtureId: String?
+    public var action: String
+    public var rating: Int?
+    public var title: String?
+    public var caption: String?
+    public var keywords: [String]?
+    public var metadataState: String?
     public var reason: String?
-    public var updatedAt: String?
 
-    public var id: String { assetId }
+    public var id: String { "\(assetId):\(action)" }
 
-    public init(assetID: String, state: SidecarDecisionState, fixtureID: String? = nil, reason: String = "") {
-        assetId = assetID
-        decision = state.rawValue
-        fixtureId = fixtureID
-        self.reason = reason
+    public static func pick(_ assetID: String, action: SidecarPickAction) -> Self {
+        Self(assetId: assetID, action: action.rawValue)
+    }
+
+    public static func rating(_ assetID: String, value: Int) -> Self {
+        Self(assetId: assetID, action: "rating", rating: min(5, max(0, value)))
+    }
+
+    public static func metadata(
+        _ assetID: String,
+        title: String,
+        caption: String,
+        keywords: [String],
+        state: String
+    ) -> Self {
+        Self(
+            assetId: assetID,
+            action: "metadata",
+            title: title,
+            caption: caption,
+            keywords: keywords,
+            metadataState: state
+        )
     }
 }
 

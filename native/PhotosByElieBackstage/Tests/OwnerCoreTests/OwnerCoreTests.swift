@@ -342,13 +342,19 @@ struct OwnerCoreTests {
         let service = SidecarDecisionService(api: client)
 
         _ = try await service.apply([
-            SidecarDecision(assetID: "asset-1", state: .picked, fixtureID: "fixture-family"),
-            SidecarDecision(assetID: "asset-2", state: .rejected, fixtureID: "fixture-family"),
+            .pick("asset-1", action: .pick),
+            .pick("asset-2", action: .reject),
+            .rating("asset-3", value: 5),
         ], idempotencyKey: "culling-batch-1")
 
         let request = try #require(await transport.lastRequest())
         #expect(request.url?.path == "/api/v1/sidecar/decisions/apply-batch")
         #expect(request.value(forHTTPHeaderField: "Idempotency-Key") == "culling-batch-1")
+        let body = try #require(request.httpBody)
+        let payload = try JSONSerialization.jsonObject(with: body) as? [String: Any]
+        let decisions = try #require(payload?["decisions"] as? [[String: Any]])
+        #expect(decisions.map { $0["action"] as? String } == ["pick", "reject", "rating"])
+        #expect(decisions.last?["rating"] as? Int == 5)
     }
 
     @Test("Native metadata edits retain the Worker and Max authority gate")
@@ -371,6 +377,7 @@ struct OwnerCoreTests {
         _ = try await service.update(
             assetID: "asset-1",
             title: "Verified title",
+            caption: "Morning at the museum",
             keywords: ["Paris", "paris", "museum"]
         )
 
@@ -379,7 +386,81 @@ struct OwnerCoreTests {
         #expect(request.target == "max")
         #expect(request.payload["operation"]?.stringValue == "update-photo-metadata")
         #expect(request.payload["photo_id"]?.stringValue == "asset-1")
+        #expect(request.payload["caption"]?.stringValue == "Morning at the museum")
         #expect(request.payload["keywords"]?.arrayValue?.compactMap(\.stringValue) == ["Paris", "museum"])
+    }
+
+    @Test("Native fixture placements stay reversible and audited")
+    func nativeFixturePlacements() async throws {
+        let terminal = OwnerAction(
+            id: "owner-action-placement",
+            actionKind: "sidecar-culling-review",
+            target: "max",
+            state: .completed,
+            result: [
+                "ledger": .object([
+                    "items": .array([.object([
+                        "placementId": "placement-1",
+                        "assetId": "asset-1",
+                        "fixtureId": "fixture-family",
+                        "breadcrumbLabel": "Friends / Family",
+                        "state": "active",
+                    ])]),
+                ]),
+            ]
+        )
+        let api = ScriptedOwnerActionAPI(completed: [terminal])
+        let service = FixtureWorkflowService(runner: OwnerActionRunner(
+            api: api,
+            waker: UnavailableWaker(),
+            pollInterval: .milliseconds(1),
+            timeout: .seconds(1)
+        ))
+
+        let placements = try await service.place(
+            assetIDs: ["asset-1"],
+            fixtureIDs: ["fixture-family"]
+        )
+
+        #expect(placements.map(\.id) == ["placement-1"])
+        #expect(placements.first?.breadcrumbLabel == "Friends / Family")
+        let request = try #require(await api.requests().first)
+        let manifest = request.payload["manifest"]?.objectValue
+        #expect(manifest?["mode"]?.stringValue == "fixture-place-multi")
+        #expect(manifest?["assetIds"]?.arrayValue?.compactMap(\.stringValue) == ["asset-1"])
+    }
+
+    @Test("Native AI proposal decisions use the audited review action")
+    func nativeProposalDecision() async throws {
+        let terminal = OwnerAction(
+            id: "owner-action-proposal",
+            actionKind: "photo-moderation",
+            target: "max",
+            state: .completed,
+            result: ["ok": true]
+        )
+        let api = ScriptedOwnerActionAPI(completed: [terminal])
+        let service = MetadataReviewService(runner: OwnerActionRunner(
+            api: api,
+            waker: UnavailableWaker(),
+            pollInterval: .milliseconds(1),
+            timeout: .seconds(1)
+        ))
+        let proposal = MetadataProposal(
+            photoID: "asset-1",
+            batchID: "batch-1",
+            current: .init(title: "Old", keywords: ["Paris"]),
+            proposed: .init(title: "New", keywords: ["Paris", "Museum"])
+        )
+
+        _ = try await service.decide(proposal, disposition: .approve)
+
+        let request = try #require(await api.requests().first)
+        #expect(request.payload["operation"]?.stringValue == "save-title-keyword-review-approvals")
+        let approval = request.payload["approvals"]?.arrayValue?.first?.objectValue
+        #expect(approval?["photo_id"]?.stringValue == "asset-1")
+        #expect(approval?["approved"]?.boolValue == true)
+        #expect(approval?["title"]?.stringValue == "New")
     }
 }
 

@@ -41,6 +41,8 @@ final class BackstageViewModel: ObservableObject {
     @Published var fixtureStatus = "Load the fixture tree to begin."
     @Published var isRunningFixture = false
     @Published var fixturePool: FixturePool?
+    @Published var fixturePlacements: [FixturePlacement] = []
+    @Published var placementTargetFixtureIDs: Set<String> = []
     @Published var accessState = AccessControlState()
     @Published var selectedPersonID = ""
     @Published var personEmail = ""
@@ -51,13 +53,17 @@ final class BackstageViewModel: ObservableObject {
     @Published var groupKind = "event"
     @Published var accessStatus = "Load people and groups to begin."
     @Published var isRunningAccess = false
-    @Published var cullingState: SidecarDecisionState = .picked
+    @Published var cullingPickAction: SidecarPickAction = .pick
+    @Published var cullingRating = 0
     @Published var cullingStatus = "Select indexed Photos and apply a culling decision."
     @Published var metadataAssetID = ""
     @Published var metadataTitle = ""
+    @Published var metadataCaption = ""
     @Published var metadataKeywords = ""
     @Published var metadataBlacklist = ""
     @Published var metadataReviewStatus = "Metadata changes use audited Max actions."
+    @Published var metadataProposals: [MetadataProposal] = []
+    @Published var metadataProposalStatus = "Load the local AI proposal queue to review it."
 
     let api: OwnerAPIClient
     let photoLibrary: any PhotoLibraryServing
@@ -245,6 +251,59 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
+    func placeFixtureAssets() async {
+        let assetIDs = fixtureAssets.map(\.id).filter(selectedFixtureAssetIDs.contains)
+        let targets = Array(placementTargetFixtureIDs).sorted()
+        guard !assetIDs.isEmpty, !targets.isEmpty else {
+            fixtureStatus = "Select assets and at least one destination fixture."
+            return
+        }
+        await fixtureOperation {
+            fixturePlacements = try await fixtureService.place(
+                assetIDs: assetIDs,
+                fixtureIDs: targets,
+                poolID: fixturePool?.id ?? ""
+            )
+            fixtureStatus = "Placed \(assetIDs.count) assets in \(targets.count) fixtures without copying source files."
+        }
+    }
+
+    func loadFixturePlacements() async {
+        let assetIDs = fixtureAssets.map(\.id).filter(selectedFixtureAssetIDs.contains)
+        guard !assetIDs.isEmpty else {
+            fixtureStatus = "Select assets before reviewing placements."
+            return
+        }
+        await fixtureOperation {
+            fixturePlacements = try await fixtureService.placements(assetIDs: assetIDs)
+            fixtureStatus = "\(fixturePlacements.count) reversible placement relationships loaded."
+        }
+    }
+
+    func movePlacement(_ id: String, to fixtureID: String) async {
+        await fixtureOperation {
+            try await fixtureService.movePlacement(id: id, to: fixtureID)
+            fixturePlacements = try await fixtureService.placements(
+                assetIDs: fixtureAssets.map(\.id).filter(selectedFixtureAssetIDs.contains)
+            )
+            fixtureStatus = "Placement moved; source assets and history were preserved."
+        }
+    }
+
+    func togglePlacement(_ placement: FixturePlacement) async {
+        await fixtureOperation {
+            if placement.isActive {
+                try await fixtureService.removePlacement(id: placement.id)
+            } else {
+                try await fixtureService.restorePlacement(id: placement.id)
+            }
+            fixturePlacements = try await fixtureService.placements(
+                assetIDs: fixtureAssets.map(\.id).filter(selectedFixtureAssetIDs.contains)
+            )
+            fixtureStatus = placement.isActive ? "Placement removed reversibly." : "Placement restored."
+        }
+    }
+
     func loadAccess() async {
         isRunningAccess = true
         defer { isRunningAccess = false }
@@ -326,26 +385,36 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
-    func applyCullingDecision() async {
+    func applyPickDecision() async {
         let ids = libraryItems.map(\.id).filter(selectedPhotoIDs.contains)
         guard !ids.isEmpty else {
             cullingStatus = "Select one or more Photos items."
             return
         }
         do {
-            let decisions = ids.map {
-                SidecarDecision(
-                    assetID: $0,
-                    state: cullingState,
-                    fixtureID: selectedFixtureID.isEmpty ? nil : selectedFixtureID,
-                    reason: "native Backstage culling"
-                )
-            }
+            let decisions = ids.map { SidecarDecision.pick($0, action: cullingPickAction) }
             _ = try await decisionService.apply(
                 decisions,
                 idempotencyKey: "native-culling-\(UUID().uuidString)"
             )
-            cullingStatus = "\(ids.count) \(cullingState.rawValue) decision\(ids.count == 1 ? "" : "s") recorded in the cloud ledger."
+            cullingStatus = "\(ids.count) \(cullingPickAction.label.lowercased()) decision\(ids.count == 1 ? "" : "s") recorded in the cloud ledger."
+        } catch {
+            cullingStatus = String(describing: error)
+        }
+    }
+
+    func applyRating() async {
+        let ids = libraryItems.map(\.id).filter(selectedPhotoIDs.contains)
+        guard !ids.isEmpty else {
+            cullingStatus = "Select one or more Photos items."
+            return
+        }
+        do {
+            _ = try await decisionService.apply(
+                ids.map { SidecarDecision.rating($0, value: cullingRating) },
+                idempotencyKey: "native-rating-\(UUID().uuidString)"
+            )
+            cullingStatus = "\(ids.count) rating\(ids.count == 1 ? "" : "s") set to \(cullingRating)."
         } catch {
             cullingStatus = String(describing: error)
         }
@@ -365,9 +434,10 @@ final class BackstageViewModel: ObservableObject {
             let action = try await metadataReviewService.update(
                 assetID: id,
                 title: metadataTitle,
+                caption: metadataCaption,
                 keywords: metadataKeywords.components(separatedBy: ",")
             )
-            metadataReviewStatus = "Title and keywords saved by action \(action.id). Publication remains separate."
+            metadataReviewStatus = "Title, caption, and keywords saved by action \(action.id). Publication remains separate."
         } catch {
             metadataReviewStatus = String(describing: error)
         }
@@ -392,6 +462,33 @@ final class BackstageViewModel: ObservableObject {
             metadataReviewStatus = "Keyword blacklist replaced through action \(action.id)."
         } catch {
             metadataReviewStatus = String(describing: error)
+        }
+    }
+
+    func loadMetadataProposals() async {
+        do {
+            let queue = try await metadataReviewService.proposals()
+            metadataProposals = queue.photos
+            metadataProposalStatus = "\(queue.photos.count) pending proposal\(queue.photos.count == 1 ? "" : "s") loaded from Owner.sqlite."
+        } catch {
+            metadataProposalStatus = String(describing: error)
+        }
+    }
+
+    func decideProposal(
+        _ proposal: MetadataProposal,
+        disposition: MetadataProposalDisposition
+    ) async {
+        do {
+            let action = try await metadataReviewService.decide(
+                proposal,
+                disposition: disposition,
+                comment: disposition == .reject ? "Rejected in native Backstage" : ""
+            )
+            metadataProposals.removeAll { $0.id == proposal.id }
+            metadataProposalStatus = "\(disposition.rawValue.capitalized) saved by audited action \(action.id)."
+        } catch {
+            metadataProposalStatus = String(describing: error)
         }
     }
 

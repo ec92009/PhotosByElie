@@ -648,6 +648,7 @@
     if (!cullingEnabled() || !photoId) return null;
     return photoAction("update-photo-metadata", photoId, {
       title: updates.title,
+      caption: updates.caption,
       keywords: updates.keywords,
     });
   };

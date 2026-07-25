@@ -48,6 +48,7 @@ LOCAL_SIDECAR_OPEN_PATH = "/photosbyelie/open-sidecar"
 LOCAL_SIDECAR_STATUS_PATH = "/photosbyelie/open-sidecar/status"
 LOCAL_WASTE_BASKET_OPEN_PATH = "/photosbyelie/open-wastebasket"
 LOCAL_ACTION_WAKE_PATH = "/photosbyelie/wake-owner-action"
+LOCAL_TITLE_KEYWORD_REVIEW_PATH = "/photosbyelie/title-keyword-review-queue"
 OWNER_HELPER_PORT_START = 8000
 OWNER_HELPER_PORT_LIMIT = 8100
 SIDECAR_HELPER_PORT_START = 8011
@@ -523,6 +524,7 @@ def start_local_status_server(
                 LOCAL_SIDECAR_STATUS_PATH,
                 LOCAL_WASTE_BASKET_OPEN_PATH,
                 LOCAL_ACTION_WAKE_PATH,
+                LOCAL_TITLE_KEYWORD_REVIEW_PATH,
             }:
                 self.send_response(404)
                 self.end_headers()
@@ -629,6 +631,33 @@ def start_local_status_server(
                     job = dict(sidecar_jobs.get(job_id) or {"state": "missing", "message": "Sidecar job not found."})
                 body = json.dumps(_sidecar_job_public_payload(config, job_id, job), separators=(",", ":")).encode("utf-8")
                 self.send_response(200)
+                self._send_cors_headers()
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                return
+            if parsed.path == LOCAL_TITLE_KEYWORD_REVIEW_PATH:
+                try:
+                    scripts_path = str(config.repo_root / "scripts")
+                    if scripts_path not in sys.path:
+                        sys.path.insert(0, scripts_path)
+                    from local_server import title_keyword_review_queue_payload
+
+                    # The native proposal pane needs the actionable queue, not the
+                    # browser review surface's expensive 500-item incomplete backlog
+                    # synthesis or maintenance pass.
+                    payload = title_keyword_review_queue_payload(
+                        config.repo_root,
+                        include_backlog=False,
+                        run_maintenance=False,
+                    )
+                    body = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+                    status = 200
+                except Exception as error:  # noqa: BLE001 - native UI must receive the local read failure.
+                    body = json.dumps({"ok": False, "error": str(error)}, separators=(",", ":")).encode("utf-8")
+                    status = 500
+                self.send_response(status)
                 self._send_cors_headers()
                 self.send_header("Content-Type", "application/json")
                 self.send_header("Content-Length", str(len(body)))
@@ -1052,14 +1081,30 @@ def execute_action(config: ConnectorConfig, action: dict) -> dict:
         single_photo_id = str(payload.get("photoId") or "").strip()
         if single_photo_id and single_photo_id not in photo_ids:
             photo_ids.insert(0, single_photo_id)
-        photo_optional_operations = {"save-keyword-blacklist"}
+        photo_optional_operations = {
+            "save-keyword-blacklist",
+            "save-title-keyword-review-approvals",
+            "apply-title-keyword-review-approvals",
+            "apply-approved-title-keyword-review-approvals",
+        }
         if (not photo_ids and operation not in photo_optional_operations) or len(photo_ids) > 500:
             raise RuntimeError("photo-moderation requires 1 to 500 photo IDs")
         moderation_payload = {
             "operation": operation,
             "photo_ids": photo_ids,
         }
-        for key in ("title", "keywords", "mode", "restoreTitles"):
+        for key in (
+            "title",
+            "caption",
+            "keywords",
+            "mode",
+            "restoreTitles",
+            "batch_id",
+            "approvals",
+            "rejections",
+            "blocked",
+            "reason",
+        ):
             if key in payload:
                 moderation_payload[key] = payload[key]
         result = apply_public_photo_moderation(
@@ -1102,6 +1147,7 @@ def execute_action(config: ConnectorConfig, action: dict) -> dict:
             "rating": payload.get("rating"),
             "color": payload.get("color"),
             "title": payload.get("title"),
+            "caption": payload.get("caption"),
             "keywords": payload.get("keywords"),
             "metadataState": payload.get("metadataState"),
         })

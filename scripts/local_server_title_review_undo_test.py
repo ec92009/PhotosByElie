@@ -54,6 +54,54 @@ def patched_server_state(state, fallback_photo):
 
 
 class TitleReviewUndoTests(unittest.TestCase):
+    def test_public_catalog_metadata_preserves_caption(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            catalog_path = repo_root / "assets/catalog/photosbyelie.sqlite"
+            catalog_path.parent.mkdir(parents=True)
+            conn = sqlite3.connect(catalog_path)
+            try:
+                conn.executescript(
+                    """
+                    CREATE TABLE keyword_terms (
+                      keyword_id INTEGER PRIMARY KEY,
+                      keyword TEXT NOT NULL
+                    );
+                    CREATE TABLE media_items (
+                      media_id TEXT PRIMARY KEY,
+                      title TEXT NOT NULL,
+                      description TEXT,
+                      keyword_ids TEXT,
+                      updated_at TEXT
+                    );
+                    INSERT INTO media_items(media_id, title)
+                    VALUES ('photo-a', 'Old title');
+                    """
+                )
+                conn.commit()
+            finally:
+                conn.close()
+
+            result = local_server._update_public_catalog_metadata(
+                repo_root,
+                "photo-a",
+                "New title",
+                "A complete caption",
+                ["Paris", "Museum"],
+            )
+
+            self.assertEqual(result["updated"], 1)
+            conn = sqlite3.connect(catalog_path)
+            try:
+                row = conn.execute(
+                    "SELECT title, description, keyword_ids FROM media_items WHERE media_id = 'photo-a'"
+                ).fetchone()
+                self.assertEqual(row[0], "New title")
+                self.assertEqual(row[1], "A complete caption")
+                self.assertEqual(row[2], "1,2")
+            finally:
+                conn.close()
+
     def _seed_title_keyword_row(self, conn, media_id, state="proposed", batch_id="batch-review-test", attempt=1, applied_at=""):
         timestamp = "2026-06-14T08:00:00Z"
         owner_state_db._upsert_batch(

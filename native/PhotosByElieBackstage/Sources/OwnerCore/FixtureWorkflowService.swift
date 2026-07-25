@@ -49,6 +49,26 @@ public struct FixturePool: Sendable, Equatable {
     public var sidecarURL: URL?
 }
 
+public struct FixturePlacement: Identifiable, Sendable, Equatable {
+    public var id: String
+    public var assetID: String
+    public var fixtureID: String
+    public var breadcrumbLabel: String
+    public var state: String
+    public var sourcePoolID: String
+
+    public var isActive: Bool { state == "active" }
+
+    init(json: [String: JSONValue]) {
+        id = json["placementId"]?.stringValue ?? json["id"]?.stringValue ?? ""
+        assetID = json["assetId"]?.stringValue ?? ""
+        fixtureID = json["fixtureId"]?.stringValue ?? ""
+        breadcrumbLabel = json["breadcrumbLabel"]?.stringValue ?? fixtureID
+        state = json["state"]?.stringValue ?? "active"
+        sourcePoolID = json["sourcePoolId"]?.stringValue ?? ""
+    }
+}
+
 public actor FixtureWorkflowService {
     private let runner: OwnerActionRunner
 
@@ -133,11 +153,39 @@ public actor FixtureWorkflowService {
         )
     }
 
-    public func place(assetIDs: [String], fixtureIDs: [String], poolID: String = "") async throws {
-        _ = try await run("fixture-place-multi", extra: [
+    public func place(assetIDs: [String], fixtureIDs: [String], poolID: String = "") async throws -> [FixturePlacement] {
+        let result = try await run("fixture-place-multi", extra: [
             "assetIds": .array(assetIDs.map(JSONValue.string)),
             "fixtureIds": .array(fixtureIDs.map(JSONValue.string)),
             "poolId": .string(poolID),
+        ])
+        return parsePlacements(result["ledger"])
+    }
+
+    public func placements(assetIDs: [String], fixtureID: String = "") async throws -> [FixturePlacement] {
+        let result = try await run("fixture-placement-list", extra: [
+            "assetIds": .array(assetIDs.map(JSONValue.string)),
+            "fixtureId": .string(fixtureID),
+        ])
+        return parsePlacements(result["ledger"])
+    }
+
+    public func movePlacement(id: String, to fixtureID: String) async throws {
+        _ = try await run("fixture-placement-move", extra: [
+            "placementId": .string(id),
+            "fixtureId": .string(fixtureID),
+        ])
+    }
+
+    public func removePlacement(id: String) async throws {
+        _ = try await run("fixture-placement-remove", extra: [
+            "placementId": .string(id),
+        ])
+    }
+
+    public func restorePlacement(id: String) async throws {
+        _ = try await run("fixture-placement-restore", extra: [
+            "placementId": .string(id),
         ])
     }
 
@@ -176,6 +224,14 @@ public actor FixtureWorkflowService {
         (value?.arrayValue ?? []).compactMap {
             guard let object = $0.objectValue else { return nil }
             return FixtureNode(json: object)
+        }
+    }
+
+    private func parsePlacements(_ value: JSONValue?) -> [FixturePlacement] {
+        let rows = value?.objectValue?["items"]?.arrayValue ?? value?.arrayValue ?? []
+        return rows.compactMap {
+            guard let object = $0.objectValue else { return nil }
+            return FixturePlacement(json: object)
         }
     }
 }

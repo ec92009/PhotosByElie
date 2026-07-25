@@ -1,5 +1,26 @@
 # PhotosByElie Handoff
 
+## 2026-07-25 — PBB-19 native Backstage cutover
+
+- Release candidate: `v147.6`; Backstage `0.2.0` build `3`.
+- Branch: `codex/pbb-19-native-backstage`.
+- Backstage is the sole visible operator app on Max. Photos Bridge remains a
+  signed headless helper; visible Owner and Sidecar apps were moved to the
+  reversible archive documented in
+  `docs/architecture/backstage-native-cutover-2026-07-25.md`.
+- Port `8011` is retired. The connector remains healthy on `8766`, and its
+  legacy Sidecar launch route returns `410` unless
+  `PBE_ENABLE_LEGACY_SIDECAR=1` is set for a controlled rollback rehearsal.
+- Verification at this checkpoint: 278 repository tests, 28 Swift tests,
+  native parity rehearsal, contract validation, and read-only cutover audit
+  all pass.
+- One-time signed Photos Bridge permission must be `authorized` or `limited`
+  before PBB-25 and the epic are closed. Never substitute a raw helper
+  executable or a second writer.
+- After publication, verify the exact `v147.6` badge on the public home,
+  gallery, photo, Owner, ACS, and Real Estate surfaces before closing PBB-27,
+  PBB-28, and PBB-19.
+
 Use this when moving work between Max, David, or the laptop.
 
 For Owner DB state and other sensitive Max/David handoffs, follow

@@ -176,3 +176,7 @@ The production attribute is therefore `data-owner-writer="backstage"`.
 Multi-Mac writer election and mobile Owner UI remain outside this architecture.
 Browser Owner retirement is implemented as the reversible active-writer gate
 above rather than deletion of the compatibility surface.
+
+The completed `v147.6` native-only cutover, verification evidence, reversible
+legacy-app archive, and rollback procedure are recorded in
+[`backstage-native-cutover-2026-07-25.md`](backstage-native-cutover-2026-07-25.md).

@@ -15,7 +15,7 @@ for remote execution.
 - Public site: `https://photos-by-elie.com/`
 - Local preview: `http://localhost:8000/`
 - Owner intake URL: `https://photos-by-elie.com/owner.html`
-- Current visible build: `v147.3`
+- Current visible build: `v147.4`
 - Sidecar local build: `v126.6`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
@@ -25,12 +25,14 @@ for remote execution.
   PBB-18 parity rehearsal is checked in and the Owner page has a staged
   `data-owner-writer` cutover; production deliberately remains `browser`.
 - `/Users/ecohen/Applications/PhotosByElie Backstage.app` is built and
-  codesigned. It currently shows `needsEnrollment`. Creating the one-time
-  Backstage device credential and enrolling Max requires Elie's explicit
-  confirmation because it stores independently revocable persistent access in
-  this Mac's Keychain. After enrollment, verify the read-only launch and Photos
-  readiness without mutating real photos, then flip the active writer,
-  publish the next visible version, and close the verified PBB children/epics.
+  codesigned. Elie explicitly approved enrolling Max on 2026-07-25. `v147.4`
+  exposes the one-time enrollment panel while the browser remains the active
+  writer. After enrollment, verify the read-only launch and Photos readiness
+  without mutating real photos, then flip the active writer, publish the next
+  visible version, and close the verified PBB children/epics.
+- `v147.4` publishes the Owner-only Backstage enrollment panel and the
+  reversible writer gate while deliberately retaining the browser Owner as the
+  active writer until native enrollment and read-only readiness checks pass.
 - `v147.3` corrects the 12-photo April 2018 La Jolla Cove cohort that had
   inherited the title `Nerja, beach` and Spain keywords. The photos remain in
   USA with corrected La Jolla, San Diego, California metadata.

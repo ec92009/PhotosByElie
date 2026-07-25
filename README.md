@@ -6,8 +6,11 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v147.3`
+- Current visible version: `v147.4`
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
+- `v147.4` publishes the Owner-only Backstage enrollment panel and the
+  reversible writer gate while deliberately retaining the browser Owner as the
+  active writer until native enrollment and read-only readiness checks pass.
 - `v147.3` corrects a 12-photo La Jolla Cove cohort that had inherited the
   title `Nerja, beach` and Spain keywords. The valid USA images now identify
   La Jolla, San Diego, California.

@@ -43,6 +43,17 @@ the authoritative store for every mutation.
 | Sharing | Delivery links and fixture/gallery access | Worker + D1/R2 | `/delivery-links`, `/acs/*` | Share sheet and access assignment |
 | Publication | Static catalog generation, validation, deploy | Max connector and GitHub Pages | `/actions` | Rehearsal report and explicit publish action |
 
+### Native implementation status
+
+As of the PBB-16 checkpoint, the People, Groups, Fixtures, Universal search,
+Sidecar culling, Metadata review, and Apple Photos give-back rows have native
+OwnerCore services and SwiftUI workflow screens. Their mutation boundaries are
+covered by native request/action tests: ACS uses canonical authenticated API
+requests, culling uses the batch decision endpoint, and fixture/metadata
+operations remain opaque audited Max actions. Waste Basket, upload, delivery,
+sharing, publication, and the final reversible parity rehearsal remain later
+PBB-11 children; this checkpoint does not retire any web Owner surface.
+
 ## Action kinds
 
 The action ledger is intentionally extensible. The currently supported owner

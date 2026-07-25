@@ -53,6 +53,31 @@ keywords. Failed item IDs remain independently retryable; retry submits only
 those IDs. No production give-back path invokes the legacy in-process JXA
 adapter.
 
+## Native fixture, ACS, culling, and metadata workflows
+
+The PBB-16 screens are real workflow surfaces rather than navigation
+placeholders:
+
+- **Fixtures** loads the recursive tree, creates root or child fixtures,
+  renames and archives/reopens stable IDs, performs read-only universal search,
+  and creates immutable fixture-scoped culling snapshots.
+- **People & Access** reads D1 ACS state, creates or updates people and groups,
+  assigns inherited group membership, and disables people or archives groups
+  without deleting audit history. Email addresses are normalized by the
+  Worker; passwords remain case-sensitive and are never returned to the app.
+- **Culling** uses PhotoKit only to index and select local assets, then applies
+  one or many decisions through the canonical `/sidecar/decisions/*` API with
+  idempotency keys.
+- **Metadata** can save one title/keyword set, queue one or many items for the
+  existing title/keyword review, replace the managed keyword blacklist, and
+  run the separate verified Apple Photos give-back workflow.
+
+Fixture and metadata mutations create `sidecar-culling-review` or
+`photo-moderation` actions targeted to Max. The native app posts only the
+resulting opaque action ID to the localhost wake endpoint. ACS writes remain
+Worker-authorized D1 mutations. None of these screens writes an Owner SQLite
+business row directly.
+
 ## Authority and data flow
 
 ```mermaid

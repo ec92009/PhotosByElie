@@ -259,6 +259,128 @@ struct OwnerCoreTests {
                 == ["asset-retry"]
         )
     }
+
+    @Test("Native ACS saves normalized people with inherited groups")
+    func nativeAccessControlSave() async throws {
+        let transport = RecordingTransport(response: """
+        {"user":{"email":"avery@example.test","displayName":"Avery","roles":["user"],"groupIds":["family"]}}
+        """)
+        let client = OwnerAPIClient(
+            baseURL: URL(string: "https://example.test/api/v1")!,
+            transport: transport
+        )
+        let service = AccessControlService(api: client)
+
+        let saved = try await service.save(person: AccessPerson(
+            email: "AVERY@EXAMPLE.TEST",
+            displayName: "Avery",
+            groupIds: ["family"]
+        ))
+
+        #expect(saved.email == "avery@example.test")
+        #expect(saved.groupIds == ["family"])
+        let request = try #require(await transport.lastRequest())
+        #expect(request.url?.path == "/api/v1/acs/people")
+        #expect(request.value(forHTTPHeaderField: "Idempotency-Key")?.hasPrefix("person-avery@example.test-") == true)
+    }
+
+    @Test("Native fixture creation stays behind an opaque audited action")
+    func nativeFixtureCreation() async throws {
+        let terminal = OwnerAction(
+            id: "owner-action-fixture",
+            actionKind: "sidecar-culling-review",
+            target: "max",
+            state: .completed,
+            result: [
+                "fixtures": [[
+                    "fixtureId": "fixture-family",
+                    "name": "Family",
+                    "state": "active",
+                    "children": [[
+                        "fixtureId": "fixture-blood",
+                        "name": "Blood",
+                        "parentFixtureId": "fixture-family",
+                        "state": "active",
+                        "children": [],
+                    ]],
+                ]],
+            ]
+        )
+        let api = ScriptedOwnerActionAPI(completed: [terminal])
+        let service = FixtureWorkflowService(runner: OwnerActionRunner(
+            api: api,
+            waker: UnavailableWaker(),
+            pollInterval: .milliseconds(1),
+            timeout: .seconds(1)
+        ))
+
+        let tree = try await service.create(
+            name: "Blood",
+            parentID: "fixture-family",
+            templateKey: "family"
+        )
+
+        #expect(tree.flatMap(\.flattened).map(\.id) == ["fixture-family", "fixture-blood"])
+        let request = try #require(await api.requests().first)
+        #expect(request.actionKind == "sidecar-culling-review")
+        #expect(request.target == "max")
+        let manifest = request.payload["manifest"]?.objectValue
+        #expect(manifest?["mode"]?.stringValue == "fixture-create")
+        #expect(manifest?["parentFixtureId"]?.stringValue == "fixture-family")
+        #expect(manifest?["destinationDefaults"]?.arrayValue?.compactMap(\.stringValue) == ["r2", "apple_photos"])
+    }
+
+    @Test("Native culling batches decisions through the canonical API")
+    func nativeCullingBatch() async throws {
+        let transport = RecordingTransport(response: """
+        {"ok":true,"appliedCount":2}
+        """)
+        let client = OwnerAPIClient(
+            baseURL: URL(string: "https://example.test/api/v1")!,
+            transport: transport
+        )
+        let service = SidecarDecisionService(api: client)
+
+        _ = try await service.apply([
+            SidecarDecision(assetID: "asset-1", state: .picked, fixtureID: "fixture-family"),
+            SidecarDecision(assetID: "asset-2", state: .rejected, fixtureID: "fixture-family"),
+        ], idempotencyKey: "culling-batch-1")
+
+        let request = try #require(await transport.lastRequest())
+        #expect(request.url?.path == "/api/v1/sidecar/decisions/apply-batch")
+        #expect(request.value(forHTTPHeaderField: "Idempotency-Key") == "culling-batch-1")
+    }
+
+    @Test("Native metadata edits retain the Worker and Max authority gate")
+    func nativeMetadataEdit() async throws {
+        let terminal = OwnerAction(
+            id: "owner-action-metadata",
+            actionKind: "photo-moderation",
+            target: "max",
+            state: .completed,
+            result: ["ok": true]
+        )
+        let api = ScriptedOwnerActionAPI(completed: [terminal])
+        let service = MetadataReviewService(runner: OwnerActionRunner(
+            api: api,
+            waker: UnavailableWaker(),
+            pollInterval: .milliseconds(1),
+            timeout: .seconds(1)
+        ))
+
+        _ = try await service.update(
+            assetID: "asset-1",
+            title: "Verified title",
+            keywords: ["Paris", "paris", "museum"]
+        )
+
+        let request = try #require(await api.requests().first)
+        #expect(request.actionKind == "photo-moderation")
+        #expect(request.target == "max")
+        #expect(request.payload["operation"]?.stringValue == "update-photo-metadata")
+        #expect(request.payload["photo_id"]?.stringValue == "asset-1")
+        #expect(request.payload["keywords"]?.arrayValue?.compactMap(\.stringValue) == ["Paris", "museum"])
+    }
 }
 
 private func scalar(_ databaseURL: URL, _ sql: String) throws -> String {

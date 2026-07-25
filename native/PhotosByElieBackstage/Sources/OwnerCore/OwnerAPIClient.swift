@@ -106,6 +106,27 @@ public actor OwnerAPIClient {
         accessToken = nil
     }
 
+    public func request<Response: Decodable>(
+        path: String,
+        query: [URLQueryItem] = []
+    ) async throws -> Response {
+        try await send(path: path, query: query)
+    }
+
+    public func request<Body: Encodable, Response: Decodable>(
+        path: String,
+        method: String = "POST",
+        body: Body,
+        idempotencyKey: String? = nil
+    ) async throws -> Response {
+        try await send(
+            path: path,
+            method: method,
+            body: body,
+            idempotencyKey: idempotencyKey
+        )
+    }
+
     private func send<Response: Decodable>(
         path: String,
         query: [URLQueryItem] = [],
@@ -174,4 +195,3 @@ public extension JSONEncoder {
         return encoder
     }
 }
-

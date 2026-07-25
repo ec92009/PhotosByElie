@@ -31,10 +31,41 @@ final class BackstageViewModel: ObservableObject {
     @Published var metadataReport: MetadataGiveBackReport?
     @Published var metadataStatus = "Choose a fixture, then run the read-only preview."
     @Published var isRunningMetadata = false
+    @Published var fixtures: [FixtureNode] = []
+    @Published var selectedFixtureID = ""
+    @Published var fixtureName = ""
+    @Published var fixtureTemplate = ""
+    @Published var fixtureSearch = ""
+    @Published var fixtureAssets: [FixtureAsset] = []
+    @Published var selectedFixtureAssetIDs: Set<String> = []
+    @Published var fixtureStatus = "Load the fixture tree to begin."
+    @Published var isRunningFixture = false
+    @Published var fixturePool: FixturePool?
+    @Published var accessState = AccessControlState()
+    @Published var selectedPersonID = ""
+    @Published var personEmail = ""
+    @Published var personName = ""
+    @Published var personGroupIDs: Set<String> = []
+    @Published var groupID = ""
+    @Published var groupName = ""
+    @Published var groupKind = "event"
+    @Published var accessStatus = "Load people and groups to begin."
+    @Published var isRunningAccess = false
+    @Published var cullingState: SidecarDecisionState = .picked
+    @Published var cullingStatus = "Select indexed Photos and apply a culling decision."
+    @Published var metadataAssetID = ""
+    @Published var metadataTitle = ""
+    @Published var metadataKeywords = ""
+    @Published var metadataBlacklist = ""
+    @Published var metadataReviewStatus = "Metadata changes use audited Max actions."
 
     let api: OwnerAPIClient
     let photoLibrary: any PhotoLibraryServing
     let metadataService: MetadataGiveBackService
+    let fixtureService: FixtureWorkflowService
+    let accessService: AccessControlService
+    let decisionService: SidecarDecisionService
+    let metadataReviewService: MetadataReviewService
 
     init(
         api: OwnerAPIClient = OwnerAPIClient(),
@@ -43,7 +74,12 @@ final class BackstageViewModel: ObservableObject {
         self.api = api
         self.photoLibrary = photoLibrary
         self.photoAccess = photoLibrary.authorization()
-        self.metadataService = MetadataGiveBackService(runner: OwnerActionRunner(api: api))
+        let runner = OwnerActionRunner(api: api)
+        self.metadataService = MetadataGiveBackService(runner: runner)
+        self.fixtureService = FixtureWorkflowService(runner: runner)
+        self.accessService = AccessControlService(api: api)
+        self.decisionService = SidecarDecisionService(api: api)
+        self.metadataReviewService = MetadataReviewService(runner: runner)
     }
 
     func refreshActions() async {
@@ -134,6 +170,248 @@ final class BackstageViewModel: ObservableObject {
             metadataStatus = reportStatus(retried)
         } catch {
             metadataStatus = String(describing: error)
+        }
+    }
+
+    var flatFixtures: [FixtureNode] {
+        fixtures.flatMap(\.flattened)
+    }
+
+    func loadFixtures() async {
+        await fixtureOperation {
+            fixtures = try await fixtureService.tree()
+            fixtureStatus = "\(flatFixtures.count) fixture nodes loaded."
+        }
+    }
+
+    func createFixture() async {
+        let name = fixtureName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else {
+            fixtureStatus = "Enter a fixture name."
+            return
+        }
+        await fixtureOperation {
+            fixtures = try await fixtureService.create(
+                name: name,
+                parentID: selectedFixtureID.isEmpty ? nil : selectedFixtureID,
+                templateKey: fixtureTemplate
+            )
+            fixtureName = ""
+            fixtureStatus = "Fixture created through an audited Max action."
+        }
+    }
+
+    func renameFixture() async {
+        guard !selectedFixtureID.isEmpty, !fixtureName.isEmpty else { return }
+        await fixtureOperation {
+            fixtures = try await fixtureService.rename(id: selectedFixtureID, name: fixtureName)
+            fixtureStatus = "Fixture renamed; its stable ID and relationships were preserved."
+        }
+    }
+
+    func toggleFixtureArchive() async {
+        guard let fixture = flatFixtures.first(where: { $0.id == selectedFixtureID }) else { return }
+        await fixtureOperation {
+            fixtures = try await fixtureService.setArchived(id: fixture.id, archived: !fixture.isArchived)
+            fixtureStatus = fixture.isArchived ? "Fixture reopened." : "Fixture archived without deleting attached state."
+        }
+    }
+
+    func searchFixtureAssets() async {
+        guard !selectedFixtureID.isEmpty else {
+            fixtureStatus = "Choose a fixture before searching."
+            return
+        }
+        await fixtureOperation {
+            fixtureAssets = try await fixtureService.search(
+                fixtureID: selectedFixtureID,
+                query: fixtureSearch
+            )
+            selectedFixtureAssetIDs = []
+            fixtureStatus = "\(fixtureAssets.count) candidates loaded. Search was read-only."
+        }
+    }
+
+    func snapshotFixtureAssets() async {
+        let ordered = fixtureAssets.map(\.id).filter(selectedFixtureAssetIDs.contains)
+        guard !selectedFixtureID.isEmpty, !ordered.isEmpty else { return }
+        await fixtureOperation {
+            fixturePool = try await fixtureService.snapshot(
+                fixtureID: selectedFixtureID,
+                assetIDs: ordered,
+                name: fixtureName.isEmpty ? "Native selection" : fixtureName
+            )
+            fixtureStatus = "Stable culling snapshot created; source assets were not copied."
+        }
+    }
+
+    func loadAccess() async {
+        isRunningAccess = true
+        defer { isRunningAccess = false }
+        do {
+            accessState = try await accessService.load()
+            accessStatus = "\(accessState.allPeople.count) people and \(accessState.allGroups.count) groups loaded."
+        } catch {
+            accessStatus = String(describing: error)
+        }
+    }
+
+    func selectPerson(_ id: String) {
+        selectedPersonID = id
+        guard let person = accessState.allPeople.first(where: { $0.id == id }) else { return }
+        personEmail = person.email
+        personName = person.displayName ?? ""
+        personGroupIDs = Set(person.groupIds ?? [])
+    }
+
+    func newPerson() {
+        selectedPersonID = ""
+        personEmail = ""
+        personName = ""
+        personGroupIDs = []
+    }
+
+    func savePerson() async {
+        let email = personEmail.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard email.contains("@") else {
+            accessStatus = "Enter a valid email address."
+            return
+        }
+        await accessOperation {
+            _ = try await accessService.save(person: AccessPerson(
+                email: email,
+                displayName: personName,
+                groupIds: Array(personGroupIDs).sorted()
+            ))
+            accessState = try await accessService.load()
+            selectPerson(email)
+            accessStatus = "Person and inherited group access saved."
+        }
+    }
+
+    func disablePerson() async {
+        guard !selectedPersonID.isEmpty else { return }
+        await accessOperation {
+            _ = try await accessService.disable(personID: selectedPersonID)
+            accessState = try await accessService.load()
+            accessStatus = "Person disabled; audit history was preserved."
+        }
+    }
+
+    func saveGroup() async {
+        let id = groupID.trimmingCharacters(in: .whitespacesAndNewlines)
+        let name = groupName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !id.isEmpty, !name.isEmpty else {
+            accessStatus = "Enter a stable group ID and label."
+            return
+        }
+        await accessOperation {
+            _ = try await accessService.save(group: AccessGroup(
+                id: id,
+                label: name,
+                kind: groupKind,
+                galleryKind: groupKind == "real_estate" ? "real_estate" : "event",
+                fixture: groupKind == "fixture"
+            ))
+            accessState = try await accessService.load()
+            accessStatus = "Group and policy defaults saved."
+        }
+    }
+
+    func archiveGroup(_ id: String) async {
+        await accessOperation {
+            _ = try await accessService.archive(groupID: id)
+            accessState = try await accessService.load()
+            accessStatus = "Group archived; memberships and audit history remain recoverable."
+        }
+    }
+
+    func applyCullingDecision() async {
+        let ids = libraryItems.map(\.id).filter(selectedPhotoIDs.contains)
+        guard !ids.isEmpty else {
+            cullingStatus = "Select one or more Photos items."
+            return
+        }
+        do {
+            let decisions = ids.map {
+                SidecarDecision(
+                    assetID: $0,
+                    state: cullingState,
+                    fixtureID: selectedFixtureID.isEmpty ? nil : selectedFixtureID,
+                    reason: "native Backstage culling"
+                )
+            }
+            _ = try await decisionService.apply(
+                decisions,
+                idempotencyKey: "native-culling-\(UUID().uuidString)"
+            )
+            cullingStatus = "\(ids.count) \(cullingState.rawValue) decision\(ids.count == 1 ? "" : "s") recorded in the cloud ledger."
+        } catch {
+            cullingStatus = String(describing: error)
+        }
+    }
+
+    func useSelectedPhotoForMetadata() {
+        metadataAssetID = selectedPhotoIDs.first ?? metadataAssetID
+    }
+
+    func updatePhotoMetadata() async {
+        let id = metadataAssetID.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !id.isEmpty, !metadataTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            metadataReviewStatus = "Choose one asset and enter a non-empty title."
+            return
+        }
+        do {
+            let action = try await metadataReviewService.update(
+                assetID: id,
+                title: metadataTitle,
+                keywords: metadataKeywords.components(separatedBy: ",")
+            )
+            metadataReviewStatus = "Title and keywords saved by action \(action.id). Publication remains separate."
+        } catch {
+            metadataReviewStatus = String(describing: error)
+        }
+    }
+
+    func queueMetadataReview() async {
+        let ids = selectedPhotoIDs.isEmpty
+            ? [metadataAssetID].filter { !$0.isEmpty }
+            : libraryItems.map(\.id).filter(selectedPhotoIDs.contains)
+        do {
+            let action = try await metadataReviewService.queueReview(assetIDs: ids)
+            metadataReviewStatus = "\(ids.count) item\(ids.count == 1 ? "" : "s") queued for review by action \(action.id)."
+        } catch {
+            metadataReviewStatus = String(describing: error)
+        }
+    }
+
+    func saveMetadataBlacklist() async {
+        do {
+            let terms = metadataBlacklist.components(separatedBy: ",")
+            let action = try await metadataReviewService.replaceBlacklist(terms)
+            metadataReviewStatus = "Keyword blacklist replaced through action \(action.id)."
+        } catch {
+            metadataReviewStatus = String(describing: error)
+        }
+    }
+
+    private func fixtureOperation(_ operation: () async throws -> Void) async {
+        isRunningFixture = true
+        defer { isRunningFixture = false }
+        do {
+            try await operation()
+        } catch {
+            fixtureStatus = String(describing: error)
+        }
+    }
+
+    private func accessOperation(_ operation: () async throws -> Void) async {
+        isRunningAccess = true
+        defer { isRunningAccess = false }
+        do {
+            try await operation()
+        } catch {
+            accessStatus = String(describing: error)
         }
     }
 

@@ -1,4 +1,5 @@
 import Foundation
+import SQLite3
 import Testing
 @testable import OwnerCore
 
@@ -30,6 +31,31 @@ struct OwnerCoreTests {
         #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer short-lived")
         #expect(request.value(forHTTPHeaderField: "Idempotency-Key") == "fixture-create-1234")
     }
+
+    @Test("Inspects read-only Owner SQLite and backs up before migration")
+    func databaseGateBackupAndMigration() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("owner-core-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let databaseURL = root.appendingPathComponent("Owner.sqlite")
+        var database: OpaquePointer?
+        #expect(sqlite3_open(databaseURL.path, &database) == SQLITE_OK)
+        #expect(sqlite3_exec(database, "CREATE TABLE sample(id TEXT PRIMARY KEY); PRAGMA user_version = 1;", nil, nil, nil) == SQLITE_OK)
+        sqlite3_close(database)
+
+        let gate = OwnerDatabaseGate(databaseURL: databaseURL)
+        let before = try gate.inspect()
+        #expect(before.readOnly)
+        #expect(before.schemaVersion == 1)
+        let backup = try gate.migrate(
+            to: 2,
+            statements: ["ALTER TABLE sample ADD COLUMN title TEXT NOT NULL DEFAULT '';"],
+            expectedCurrentVersion: 1
+        )
+        #expect(FileManager.default.fileExists(atPath: backup.path))
+        #expect(try gate.inspect().schemaVersion == 2)
+    }
 }
 
 private actor RecordingTransport: OwnerAPITransport {
@@ -50,4 +76,3 @@ private actor RecordingTransport: OwnerAPITransport {
 
     func lastRequest() -> URLRequest? { request }
 }
-

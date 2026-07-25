@@ -68,6 +68,11 @@ Creation returns `202 Accepted` when execution is asynchronous. Repeating a
 mutation with the same idempotency key returns the original resource and does
 not enqueue duplicate work.
 
+Queued actions may be cancelled by an authenticated Owner. Connectors cannot
+cancel actions, and cancellation never interrupts a claimed local mutation:
+claimed work must finish as `completed` or `failed`. This keeps
+`Owner.sqlite` mutation boundaries atomic and auditable.
+
 ## Compatibility policy
 
 The v1 router is an explicit allowlist. Unknown v1 routes fail closed with

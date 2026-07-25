@@ -2868,6 +2868,32 @@ export const createPhotosByElieWorker = ({
         at: timestamp,
         by: connectorSession ? `connector:${connectorSession.connectorId}` : session.email,
       });
+    } else if (transition === "cancel") {
+      if (connectorSession) {
+        return json({ ok: false, error: { code: "owner_action_cancel_forbidden", message: "Connectors cannot cancel Owner actions." } }, 403);
+      }
+      if (action.state !== "queued") {
+        return credentialedErrorJson(request, 409, "owner_action_not_cancellable", "Only queued Owner actions can be cancelled.");
+      }
+      const reason = String(payload.reason || "Cancelled by Owner.").trim().slice(0, 500) || "Cancelled by Owner.";
+      next = {
+        ...action,
+        state: "cancelled",
+        cancelledBy: session.email,
+        cancelledAt: timestamp,
+        cancellation: { reason },
+        timing: {
+          ...(action.timing && typeof action.timing === "object" ? action.timing : {}),
+          cancelledAt: timestamp,
+        },
+        updatedAt: timestamp,
+      };
+      next.history = ownerActionHistory(action, {
+        event: "cancelled",
+        at: timestamp,
+        by: session.email,
+        reason,
+      });
     } else if (transition === "fail") {
       if (!["queued", "claimed"].includes(action.state)) {
         return credentialedErrorJson(request, 409, "owner_action_not_open", "Only queued or claimed Owner actions can be failed.");
@@ -3520,7 +3546,7 @@ export const createPhotosByElieWorker = ({
       if (request.method === "POST" && path === "/owner/sidecar/decisions/upsert") return await upsertSidecarDecisions(request);
       if (request.method === "GET" && path === "/owner/actions") return await listOwnerActions(request);
       if (request.method === "POST" && path === "/owner/actions") return await createOwnerAction(request);
-      const ownerActionTransitionMatch = path.match(/^\/owner\/actions\/([^/]+)\/(claim|complete|fail)$/);
+      const ownerActionTransitionMatch = path.match(/^\/owner\/actions\/([^/]+)\/(claim|complete|fail|cancel)$/);
       if ((request.method === "POST" || request.method === "PATCH") && ownerActionTransitionMatch) {
         return await transitionOwnerAction(
           request,

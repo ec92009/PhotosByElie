@@ -260,10 +260,14 @@ paths:
         required: true
         schema:
           type: string
-          enum: [claim, complete, fail]
+          enum: [claim, complete, fail, cancel]
     post:
       tags: [Actions]
       operationId: transitionAction
+      description: >
+        Owner cancellation is accepted only while an action is queued.
+        Connectors cannot cancel actions, and claimed work must reach a
+        completed or failed terminal state.
       requestBody:
         content:
           application/json:

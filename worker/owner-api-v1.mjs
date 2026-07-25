@@ -43,7 +43,7 @@ const exactRoutes = new Map([
 
 const dynamicRoutes = [
   {
-    pattern: /^\/actions\/([^/]+)(?:\/(claim|complete|fail))?$/,
+    pattern: /^\/actions\/([^/]+)(?:\/(claim|complete|fail|cancel))?$/,
     destination: (match) => `/api/owner/actions/${match[1]}${match[2] ? `/${match[2]}` : ""}`,
   },
   {

@@ -686,6 +686,22 @@ test("owner actions are queued behind Owner Google access", async () => {
   assert.equal(listBody.actions.length, 1);
   assert.equal(listBody.actions[0].id, secondBody.action.id);
 
+  const cancelResponse = await worker.fetch(jsonRequest(`https://worker.test/owner/actions/${secondBody.action.id}/cancel`, {
+    reason: "Owner changed plans.",
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(cancelResponse.status, 200);
+  const cancelled = (await cancelResponse.json()).action;
+  assert.equal(cancelled.state, "cancelled");
+  assert.equal(cancelled.cancelledBy, "owner@example.com");
+  assert.equal(cancelled.cancellation.reason, "Owner changed plans.");
+  assert.ok(cancelled.timing.cancelledAt);
+  assert.equal(cancelled.history.at(-1).event, "cancelled");
+
+  const cancelAgainResponse = await worker.fetch(jsonRequest(`https://worker.test/owner/actions/${secondBody.action.id}/cancel`, {
+    reason: "Duplicate cancellation.",
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(cancelAgainResponse.status, 409);
+
   const clientWorker = createPhotosByElieWorker({
     catalog: loadCatalog(),
     accessAuth: fakeAccessAuthFor("client@example.com"),

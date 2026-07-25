@@ -6,6 +6,7 @@ graphify-out/
 __pycache__/
 *.pyc
 node_modules/
+**/.build/
 tmp/
 output/
 facebook-built-in-*.md

@@ -4,6 +4,7 @@ import { createMockStripeClient } from "./mock-stripe.mjs";
 import { createMemoryOwnerActionStore } from "./owner-action-store.mjs";
 import { createMemorySidecarStateStore } from "./sidecar-state-store.mjs";
 import { canonicalRealEstateGalleryKey } from "./real-estate-gallery-key.mjs";
+import { ownerApiV1Response, resolveOwnerApiV1Route } from "./owner-api-v1.mjs";
 
 const ORDER_CURRENCY = "usd";
 const MINIMUM_CHARGE_AMOUNT = 50;
@@ -51,7 +52,7 @@ const json = (body, status = 200, headers = {}) => new Response(JSON.stringify(b
     "content-type": "application/json; charset=utf-8",
     "access-control-allow-origin": "*",
     "access-control-allow-methods": "GET,POST,PUT,PATCH,OPTIONS",
-    "access-control-allow-headers": "authorization,content-type,stripe-signature,x-mock-stripe-signature",
+    "access-control-allow-headers": "authorization,content-type,idempotency-key,x-idempotency-key,stripe-signature,x-mock-stripe-signature",
     ...headers,
   },
 });
@@ -63,7 +64,7 @@ const credentialedCorsHeaders = (request, extraHeaders = {}) => {
   return {
     "access-control-allow-origin": origin,
     "access-control-allow-methods": "GET,POST,PUT,PATCH,OPTIONS",
-    "access-control-allow-headers": "authorization,content-type,stripe-signature,x-mock-stripe-signature",
+    "access-control-allow-headers": "authorization,content-type,idempotency-key,x-idempotency-key,stripe-signature,x-mock-stripe-signature",
     "access-control-allow-credentials": "true",
     vary: "Origin",
     ...extraHeaders,
@@ -3183,6 +3184,18 @@ export const createPhotosByElieWorker = ({
 
   const fetch = async (request) => {
     const url = new URL(request.url);
+    const compatibilityPath = resolveOwnerApiV1Route(url.pathname);
+    if (compatibilityPath !== null) {
+      if (!compatibilityPath) {
+        return ownerApiV1Response(
+          credentialedErrorJson(request, 404, "not_found", "Owner API v1 route was not found.")
+        );
+      }
+      const compatibilityUrl = new URL(request.url);
+      compatibilityUrl.pathname = compatibilityPath;
+      const compatibilityResponse = await fetch(new Request(compatibilityUrl, request));
+      return ownerApiV1Response(compatibilityResponse);
+    }
     const path = url.pathname.replace(/^\/api(?=\/)/, "");
     const usesCredentialedCors = path.startsWith("/real-estate/")
       || path.startsWith("/auth/")

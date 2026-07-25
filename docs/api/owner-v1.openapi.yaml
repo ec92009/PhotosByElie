@@ -1,0 +1,505 @@
+openapi: 3.1.0
+info:
+  title: PhotosByElie Owner API
+  version: 1.0.0
+  description: >
+    Versioned cloud boundary used by PhotosByElie Backstage. Owner.sqlite and
+    Apple Photos remain behind the Max connector; this API authorizes and
+    audits opaque actions rather than exposing local persistence directly.
+servers:
+  - url: https://auth.photos-by-elie.com/api/v1
+security:
+  - ownerSession: []
+tags:
+  - name: Authentication
+  - name: Actions
+  - name: Connectors
+  - name: Access
+  - name: Sidecar
+  - name: Delivery
+paths:
+  /health:
+    get:
+      security: []
+      operationId: getHealth
+      responses:
+        "200":
+          description: Service health
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+  /auth/session:
+    get:
+      tags: [Authentication]
+      operationId: getAuthSession
+      responses:
+        "200":
+          description: Current signed session
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "401":
+          $ref: "#/components/responses/Error"
+  /auth/google/login:
+    get:
+      tags: [Authentication]
+      operationId: beginGoogleLogin
+      parameters:
+        - in: query
+          name: returnTo
+          schema: { type: string, format: uri }
+      responses:
+        "302":
+          description: Google OAuth redirect
+  /auth/logout:
+    post:
+      tags: [Authentication]
+      operationId: logout
+      responses:
+        "200":
+          description: Signed out
+  /owner/session:
+    get:
+      tags: [Authentication]
+      operationId: getOwnerSession
+      responses:
+        "200":
+          description: Owner identity and capabilities
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "403":
+          $ref: "#/components/responses/Error"
+  /actions:
+    get:
+      tags: [Actions]
+      operationId: listActions
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+        - in: query
+          name: state
+          schema: { $ref: "#/components/schemas/ActionState" }
+        - in: query
+          name: target
+          schema: { type: string }
+        - in: query
+          name: actionKind
+          schema: { type: string }
+      responses:
+        "200":
+          description: Owner action page
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  actions:
+                    type: array
+                    items: { $ref: "#/components/schemas/OwnerAction" }
+                  page: { $ref: "#/components/schemas/Page" }
+    post:
+      tags: [Actions]
+      operationId: createAction
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ActionCreate" }
+      responses:
+        "201":
+          description: Action created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  action: { $ref: "#/components/schemas/OwnerAction" }
+        "200":
+          description: Existing action replayed for the idempotency key
+        "400":
+          $ref: "#/components/responses/Error"
+  /actions/{actionId}:
+    parameters:
+      - $ref: "#/components/parameters/ActionId"
+    get:
+      tags: [Actions]
+      operationId: getAction
+      responses:
+        "200":
+          description: Owner action
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  action: { $ref: "#/components/schemas/OwnerAction" }
+        "404":
+          $ref: "#/components/responses/Error"
+  /actions/{actionId}/{transition}:
+    parameters:
+      - $ref: "#/components/parameters/ActionId"
+      - in: path
+        name: transition
+        required: true
+        schema:
+          type: string
+          enum: [claim, complete, fail]
+    post:
+      tags: [Actions]
+      operationId: transitionAction
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Updated action
+  /connectors:
+    get:
+      tags: [Connectors]
+      operationId: listConnectors
+      responses:
+        "200":
+          description: Connector summaries
+  /connectors/heartbeat:
+    post:
+      tags: [Connectors]
+      security: [{ connectorCredential: [] }]
+      operationId: heartbeatConnector
+      responses:
+        "200":
+          description: Heartbeat accepted
+  /connectors/actions:
+    get:
+      tags: [Connectors]
+      security: [{ connectorCredential: [] }]
+      operationId: listConnectorActions
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Claimable actions for this connector
+  /connectors/actions/{actionId}:
+    parameters:
+      - $ref: "#/components/parameters/ActionId"
+    get:
+      tags: [Connectors]
+      security: [{ connectorCredential: [] }]
+      operationId: getConnectorAction
+      responses:
+        "200":
+          description: Exact connector action
+  /connectors/actions/{actionId}/{transition}:
+    parameters:
+      - $ref: "#/components/parameters/ActionId"
+      - in: path
+        name: transition
+        required: true
+        schema:
+          type: string
+          enum: [claim, complete, fail]
+    post:
+      tags: [Connectors]
+      security: [{ connectorCredential: [] }]
+      operationId: transitionConnectorAction
+      responses:
+        "200":
+          description: Updated connector action
+  /acs/state:
+    get:
+      tags: [Access]
+      operationId: getAccessState
+      responses:
+        "200":
+          description: People, groups, assignments, roles, fixtures, and audit
+  /acs/gallery-access:
+    get:
+      tags: [Access]
+      operationId: getGalleryAccess
+      responses:
+        "200":
+          description: Effective gallery access
+  /acs/people:
+    post:
+      tags: [Access]
+      operationId: savePerson
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Saved person and effective access
+  /acs/people/{personId}/disable:
+    parameters:
+      - in: path
+        name: personId
+        required: true
+        schema: { type: string }
+    post:
+      tags: [Access]
+      operationId: disablePerson
+      responses:
+        "200":
+          description: Disabled person
+  /acs/groups:
+    post:
+      tags: [Access]
+      operationId: saveGroup
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Saved group and effective access
+  /acs/groups/{groupId}/archive:
+    parameters:
+      - in: path
+        name: groupId
+        required: true
+        schema: { type: string }
+    post:
+      tags: [Access]
+      operationId: archiveGroup
+      responses:
+        "200":
+          description: Archived group
+  /sidecar/decisions/query:
+    post:
+      tags: [Sidecar]
+      operationId: querySidecarDecisions
+      responses:
+        "200":
+          description: Decision page
+  /sidecar/decisions/apply:
+    post:
+      tags: [Sidecar]
+      operationId: applySidecarDecision
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: Applied decision
+  /sidecar/decisions/apply-batch:
+    post:
+      tags: [Sidecar]
+      operationId: applySidecarDecisionBatch
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: Applied decisions
+  /deliverables:
+    post:
+      tags: [Delivery]
+      operationId: saveDeliverable
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: Saved deliverable
+  /deliverables/list:
+    post:
+      tags: [Delivery]
+      operationId: listDeliverables
+      responses:
+        "200":
+          description: Deliverables visible to the session
+  /deliverables/{deliverableId}/{action}:
+    parameters:
+      - in: path
+        name: deliverableId
+        required: true
+        schema: { type: string }
+      - in: path
+        name: action
+        required: true
+        schema:
+          type: string
+          enum: [view, download, complete, fail]
+    get:
+      tags: [Delivery]
+      operationId: getDeliverableAsset
+      responses:
+        "200":
+          description: Streamed deliverable asset
+    post:
+      tags: [Delivery]
+      operationId: transitionDeliverable
+      responses:
+        "200":
+          description: Updated deliverable
+  /delivery-links:
+    post:
+      tags: [Delivery]
+      operationId: createDeliveryLinks
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: Opaque share links
+  /jobs:
+    post:
+      tags: [Delivery]
+      operationId: submitRenderJob
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "202":
+          description: Render job queued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  job: { $ref: "#/components/schemas/Job" }
+  /jobs/{jobId}:
+    parameters:
+      - in: path
+        name: jobId
+        required: true
+        schema: { type: string }
+    get:
+      tags: [Delivery]
+      operationId: getRenderJob
+      responses:
+        "200":
+          description: Render job and progress
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  job: { $ref: "#/components/schemas/Job" }
+components:
+  securitySchemes:
+    ownerSession:
+      type: http
+      scheme: bearer
+      bearerFormat: PBE signed owner session
+    connectorCredential:
+      type: http
+      scheme: bearer
+      bearerFormat: PBE connector credential
+  parameters:
+    ActionId:
+      in: path
+      name: actionId
+      required: true
+      schema: { type: string }
+    Limit:
+      in: query
+      name: limit
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+    Cursor:
+      in: query
+      name: cursor
+      schema: { type: string }
+    IdempotencyKey:
+      in: header
+      name: Idempotency-Key
+      required: true
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 160
+  responses:
+    Error:
+      description: Structured API error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+  schemas:
+    Health:
+      type: object
+      required: [ok, service]
+      properties:
+        ok: { type: boolean }
+        service: { type: string }
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string }
+            message: { type: string }
+            details: {}
+    Page:
+      type: object
+      required: [hasMore]
+      properties:
+        nextCursor: { type: [string, "null"] }
+        hasMore: { type: boolean }
+    ActionState:
+      type: string
+      enum: [queued, claimed, running, completed, failed, cancelled]
+    ActionCreate:
+      type: object
+      required: [target, actionKind]
+      properties:
+        target: { type: string }
+        actionKind: { type: string }
+        payload:
+          type: object
+          additionalProperties: true
+    OwnerAction:
+      type: object
+      required: [id, target, actionKind, state, createdAt]
+      properties:
+        id: { type: string }
+        target: { type: string }
+        actionKind: { type: string }
+        state: { $ref: "#/components/schemas/ActionState" }
+        payload:
+          type: object
+          additionalProperties: true
+        result:
+          type: object
+          additionalProperties: true
+        createdAt: { type: string, format: date-time }
+        claimedAt: { type: [string, "null"], format: date-time }
+        completedAt: { type: [string, "null"], format: date-time }
+    Progress:
+      type: object
+      properties:
+        phase: { type: string }
+        completed: { type: integer, minimum: 0 }
+        total: { type: integer, minimum: 0 }
+        percent: { type: number, minimum: 0, maximum: 100 }
+        detail: { type: string }
+    Job:
+      type: object
+      required: [id, state]
+      properties:
+        id: { type: string }
+        state: { $ref: "#/components/schemas/ActionState" }
+        progress: { $ref: "#/components/schemas/Progress" }

@@ -631,6 +631,43 @@ test("owner actions are queued behind Owner Google access", async () => {
   assert.equal(claimForbidden.status, 403);
 });
 
+test("Owner API v1 preserves legacy authorization and action behavior", async () => {
+  const worker = createPhotosByElieWorker({
+    catalog: loadCatalog(),
+    accessAuth: fakeAccessAuthFor("owner@example.com"),
+    accessUserRegistry: createMemoryAccessUserRegistry([
+      { email: "owner@example.com", tier: "owner" },
+    ]),
+    randomUUID: deterministicIds(),
+  });
+
+  const response = await worker.fetch(jsonRequest("https://worker.test/api/v1/actions", {
+    action: "fixture-operation",
+    payload: { operation: "list" },
+  }, {
+    origin: "https://photos-by-elie.com",
+    "idempotency-key": "fixture-list-20260725",
+  }));
+  assert.equal(response.status, 202);
+  assert.equal(response.headers.get("x-pbe-api-version"), "1");
+  assert.match(response.headers.get("x-pbe-request-id") || "", /\S+/);
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  assert.match(response.headers.get("access-control-allow-headers") || "", /idempotency-key/);
+  const body = await response.json();
+  assert.equal(body.action.type, "fixture-operation");
+
+  const readback = await worker.fetch(new Request(
+    `https://worker.test/api/v1/actions/${encodeURIComponent(body.action.id)}`,
+    { headers: { origin: "https://photos-by-elie.com" } }
+  ));
+  assert.equal(readback.status, 200);
+  assert.equal((await readback.json()).action.id, body.action.id);
+
+  const unknown = await worker.fetch(new Request("https://worker.test/api/v1/private-sqlite"));
+  assert.equal(unknown.status, 404);
+  assert.equal((await unknown.json()).error.code, "not_found");
+});
+
 test("background Owner connectors use scoped credentials and report health", async () => {
   const ownerActionStore = createMemoryOwnerActionStore();
   const registry = createMemoryAccessUserRegistry([{ email: "owner@example.com", tier: "owner" }]);

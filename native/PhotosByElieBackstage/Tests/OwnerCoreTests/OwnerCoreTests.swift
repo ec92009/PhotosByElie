@@ -38,6 +38,22 @@ struct OwnerCoreTests {
         #expect(payload?["progress"] != nil)
     }
 
+    @Test("Dense selection preserves anchor for shift click and keyboard ranges")
+    func denseSelectionRanges() {
+        var selection = OwnerSelectionModel(orderedIDs: ["a", "b", "c", "d", "e"])
+        selection.click("b", extending: false, toggling: false)
+        selection.click("d", extending: true, toggling: false)
+        #expect(selection.selectedIDs == ["b", "c", "d"])
+        #expect(selection.anchorID == "b")
+
+        selection.move(.next, extending: true)
+        #expect(selection.selectedIDs == ["b", "c", "d", "e"])
+        #expect(selection.anchorID == "b")
+
+        selection.click("c", extending: false, toggling: true)
+        #expect(selection.selectedIDs == ["b", "d", "e"])
+    }
+
     @Test("Creates canonical v1 requests with actor token and idempotency")
     func createsCanonicalRequest() async throws {
         let transport = RecordingTransport(response: """

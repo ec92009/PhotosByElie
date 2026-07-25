@@ -20,7 +20,8 @@ let package = Package(
         ),
         .executableTarget(
             name: "BackstageApp",
-            dependencies: ["OwnerCore"]
+            dependencies: ["OwnerCore"],
+            linkerSettings: [.linkedFramework("Quartz")]
         ),
         .testTarget(
             name: "OwnerCoreTests",
@@ -29,4 +30,3 @@ let package = Package(
         ),
     ]
 )
-

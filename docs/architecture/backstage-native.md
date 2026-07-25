@@ -12,7 +12,9 @@ migration is rehearsed.
 
 - **BackstageApp** — SwiftUI navigation, window lifecycle, commands, status,
   and AppKit adapters for dense grids, Quick Look, keyboard selection, and
-  menus.
+  menus. `BackstageSelectionController`, `BackstageQuickLookCoordinator`, and
+  `BackstageContextMenuFactory` are the initial adapters; selection range
+  semantics live in the independently tested OwnerCore model.
 - **OwnerCore** — value types, use cases, API client, authentication session,
   Keychain vault, database gate, PhotoKit service, action/job progress, and
   dependency protocols. It contains no view code.
@@ -90,4 +92,3 @@ ledger and Max connector; no native screen writes business rows directly.
 
 Multi-Mac writer election, mobile Owner UI, and browser Owner retirement are
 deliberately not implemented by this architecture.
-

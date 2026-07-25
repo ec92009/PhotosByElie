@@ -14,12 +14,12 @@
 - Verification at this checkpoint: 278 repository tests, 28 Swift tests,
   native parity rehearsal, contract validation, and read-only cutover audit
   all pass.
-- One-time signed Photos Bridge permission must be `authorized` or `limited`
-  before PBB-25 and the epic are closed. Never substitute a raw helper
+- Signed Photos Bridge health reports `photoAccess=authorized`; a read-only
+  LaunchServices album inventory succeeded. Never substitute a raw helper
   executable or a second writer.
-- After publication, verify the exact `v147.6` badge on the public home,
-  gallery, photo, Owner, ACS, and Real Estate surfaces before closing PBB-27,
-  PBB-28, and PBB-19.
+- GitHub Pages published commit `42e9bc07`; the public home, gallery, photo,
+  Owner, ACS, and Real Estate surfaces all returned HTTP 200 with the exact
+  `v147.6` badge.
 
 Use this when moving work between Max, David, or the laptop.
 

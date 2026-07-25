@@ -38,10 +38,15 @@ web applications. `Owner.sqlite` remains the private curation source of truth.
 - `swift test`: 28 tests pass.
 - `npm run validate`: passes with the generated Swift contract current at
   35 operations and 10 schemas.
+- GitHub Pages published the exact `v147.6` commit, and direct production
+  smokes returned HTTP 200 with the `v147.6` badge for home, gallery, photo,
+  Owner, ACS, and Real Estate.
 
-Photos Bridge permission is verified separately through its signed
-LaunchServices identity. A missing or revoked permission is surfaced as a
-blocking health result; no raw helper executable or alternate writer is used.
+Photos Bridge permission was verified through its signed LaunchServices
+identity after the cutover. The installed headless helper reported
+`photoAccess=authorized`, and a read-only album inventory completed
+successfully. A missing or revoked permission remains a blocking health result;
+no raw helper executable or alternate writer is used.
 
 ## Reversible retirement
 

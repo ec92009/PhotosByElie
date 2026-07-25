@@ -45,14 +45,23 @@ the authoritative store for every mutation.
 
 ### Native implementation status
 
-As of the PBB-16 checkpoint, the People, Groups, Fixtures, Universal search,
-Sidecar culling, Metadata review, and Apple Photos give-back rows have native
-OwnerCore services and SwiftUI workflow screens. Their mutation boundaries are
-covered by native request/action tests: ACS uses canonical authenticated API
-requests, culling uses the batch decision endpoint, and fixture/metadata
-operations remain opaque audited Max actions. Waste Basket, upload, delivery,
-sharing, publication, and the final reversible parity rehearsal remain later
-PBB-11 children; this checkpoint does not retire any web Owner surface.
+The PBB-16 and PBB-17 workflow rows now have native OwnerCore services and
+SwiftUI screens. People, groups, fixtures, universal search, culling, metadata,
+Waste Basket, upload recovery, Apple Photos give-back, delivery, sharing, and
+publication preserve the same Worker/Max authority boundaries as the browser
+Owner implementation. Native tests cover authenticated canonical requests,
+opaque audited actions, independently retryable receipts, and durable job
+recovery.
+
+PBB-18 has a checked-in, reversible parity rehearsal at
+`docs/rehearsals/pbb-18-native-owner-parity.json`. It proves semantic fixture
+parity, atomic failed-move behavior in both implementations, native SQLite
+backup recovery, and no change to the live Owner database or public/client
+artifacts. The public Owner page also has a one-attribute active-writer gate:
+`data-owner-writer="backstage"` removes browser mutation surfaces while
+retaining enrollment, access, connectors, and audit views. Production remains
+`data-owner-writer="browser"` until this Mac completes one-time native
+enrollment and the read-only launch checks.
 
 ## Action kinds
 
@@ -73,5 +82,6 @@ Each row is complete only when all of these exist:
 5. a reversible end-to-end rehearsal that leaves public/client behavior
    unchanged.
 
-Web Owner retirement is out of scope until the PBB-18 rehearsal proves every
-row and an explicit rollback path.
+Web Owner retirement is a reversible final switch, not a code deletion. The
+PBB-18 rehearsal and rollback path are present; native enrollment and the
+production writer flip remain the final operational gates.

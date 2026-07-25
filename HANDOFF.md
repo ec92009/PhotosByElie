@@ -19,6 +19,18 @@ for remote execution.
 - Sidecar local build: `v126.6`
 - Public catalog source of truth: `assets/catalog/photosbyelie.sqlite`
 - Owner workflow source of truth: ignored local `assets/owner-actions/Owner.sqlite`
+- The PBB-1 API and PBB-11 native Backstage implementation are at the final
+  operational gate. Web/Python tests (155 Node + 117 Python), 20 Swift tests,
+  API contract generation, and publication validation pass. The reversible
+  PBB-18 parity rehearsal is checked in and the Owner page has a staged
+  `data-owner-writer` cutover; production deliberately remains `browser`.
+- `/Users/ecohen/Applications/PhotosByElie Backstage.app` is built and
+  codesigned. It currently shows `needsEnrollment`. Creating the one-time
+  Backstage device credential and enrolling Max requires Elie's explicit
+  confirmation because it stores independently revocable persistent access in
+  this Mac's Keychain. After enrollment, verify the read-only launch and Photos
+  readiness without mutating real photos, then flip the active writer,
+  publish the next visible version, and close the verified PBB children/epics.
 - `v147.3` corrects the 12-photo April 2018 La Jolla Cove cohort that had
   inherited the title `Nerja, beach` and Spain keywords. The photos remain in
   USA with corrected La Jolla, San Diego, California metadata.

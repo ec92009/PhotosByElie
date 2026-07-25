@@ -141,6 +141,24 @@ advance in one `BEGIN IMMEDIATE` transaction and roll back together on error.
 7. On sign-out, revoke refresh state, clear Keychain, close the database, and
    discard cached private previews.
 
+## Reversible browser cutover
+
+The public Owner page declares its active writer on the `body` element:
+
+- `data-owner-writer="browser"` keeps the existing mutation cards and listeners
+  active.
+- `data-owner-writer="backstage"` hides Build a Fixture, Waste Basket, the
+  legacy Apple Photos intake, and the Owner action queue; it also skips their
+  data loads and mutation listeners.
+
+Backstage mode leaves enrollment, authentication, access state, connector
+health, and audit views available. It does not delete compatibility routes or
+browser code. Rolling back is therefore one reviewed attribute change followed
+by the normal versioned publication process. The switch must not be activated
+until the installed app has completed one-time device enrollment, refreshed a
+native session from Keychain, opened `Owner.sqlite` read-only, and passed the
+non-mutating connector/PhotoKit readiness checks.
+
 ## Extension seams
 
 - `OwnerAPITransport` allows URLSession now and test/offline transports.
@@ -151,5 +169,6 @@ advance in one `BEGIN IMMEDIATE` transaction and roll back together on error.
 - Server-declared capabilities hide unsupported workflows on non-authoritative
   devices.
 
-Multi-Mac writer election, mobile Owner UI, and browser Owner retirement are
-deliberately not implemented by this architecture.
+Multi-Mac writer election and mobile Owner UI remain outside this architecture.
+Browser Owner retirement is implemented as the reversible active-writer gate
+above rather than deletion of the compatibility surface.

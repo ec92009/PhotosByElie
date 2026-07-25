@@ -589,6 +589,65 @@ struct OwnerCoreTests {
         #expect(requests[1].payload["workflow"]?.stringValue == "fixture-delivery")
         #expect(requests[2].payload["manifest"]?.objectValue?["mode"]?.stringValue == "fixture-publication-plan")
     }
+
+    @Test("Native upload recovery previews queue health before exact run adoption")
+    func nativeFixtureUploadRecovery() async throws {
+        let health = OwnerAction(
+            id: "owner-action-upload-health",
+            actionKind: "sidecar-culling-review",
+            target: "max",
+            state: .completed,
+            result: [
+                "uploadHealth": [
+                    "fixtureId": "fixture-expo",
+                    "activeAssetCount": 3,
+                    "bridgeQueuedCount": 2,
+                    "uploadableItemCount": 1,
+                    "fullyCoveredItemCount": 1,
+                    "partiallyCoveredItemCount": 0,
+                    "metadataBlockedQueuedCount": 0,
+                ],
+            ]
+        )
+        let adoption = OwnerAction(
+            id: "owner-action-adoption-plan",
+            actionKind: "sidecar-culling-review",
+            target: "max",
+            state: .completed,
+            result: [
+                "uploadRunAdoption": [
+                    "runId": "ub-1",
+                    "fixtureId": "fixture-expo",
+                    "items": [["assetId": "asset-1"]],
+                    "blocked": [["assetId": "asset-2", "reason": "editorial state changed"]],
+                    "applied": false,
+                ],
+            ]
+        )
+        let api = ScriptedOwnerActionAPI(completed: [health, adoption])
+        let service = FixtureDeliveryService(runner: OwnerActionRunner(
+            api: api,
+            waker: UnavailableWaker(),
+            pollInterval: .milliseconds(1),
+            timeout: .seconds(1)
+        ))
+
+        let queue = try await service.uploadHealth(fixtureID: "fixture-expo")
+        #expect(queue.uploadableCount == 1)
+        #expect(queue.coveredCount == 1)
+        let plan = try await service.adoptionPlan(
+            runID: "ub-1",
+            fixtureID: "fixture-expo",
+            assetIDs: ["asset-1", "asset-2"]
+        )
+        #expect(plan.eligibleIDs == ["asset-1"])
+        #expect(plan.blocked["asset-2"] == "editorial state changed")
+        #expect(!plan.applied)
+
+        let requests = await api.requests()
+        #expect(requests[0].payload["manifest"]?.objectValue?["mode"]?.stringValue == "fixture-upload-health")
+        #expect(requests[1].payload["manifest"]?.objectValue?["mode"]?.stringValue == "fixture-upload-run-adoption-plan")
+    }
 }
 
 private func scalar(_ databaseURL: URL, _ sql: String) throws -> String {

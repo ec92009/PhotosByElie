@@ -349,6 +349,7 @@ from owner_state_db import queue_title_keyword_review_photos as queue_title_keyw
 from owner_state_db import record_title_keyword_review_decisions as record_title_keyword_review_decisions_db  # noqa: E402
 from sidecar_state_db import record_decision as record_sidecar_decision_db  # noqa: E402
 from sidecar_state_db import summary as sidecar_summary_db  # noqa: E402
+from sidecar_state_db import upload_bridge_plan as upload_bridge_plan_db  # noqa: E402
 from fixture_pipeline import (  # noqa: E402
     apply_pool_refresh,
     adopt_upload_run,
@@ -1859,6 +1860,26 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
         result.update({"readOnly": False, "destinations": configure_asset_destinations(repo_root, str(manifest.get("fixtureId") or ""), manifest.get("assetIds") or [], manifest.get("destinations") or [])})
     elif mode == "fixture-delivery-plan":
         result.update({"readOnly": True, "delivery": delivery_plan(repo_root, str(manifest.get("fixtureId") or ""))})
+    elif mode == "fixture-upload-health":
+        fixture_id = str(manifest.get("fixtureId") or "")
+        ledger = list_placements(repo_root, fixture_id=fixture_id)
+        asset_ids = list(dict.fromkeys(
+            str(item.get("assetId") or "")
+            for item in ledger.get("items") or []
+            if item.get("state") == "active" and str(item.get("assetId") or "")
+        ))
+        result.update({
+            "readOnly": True,
+            "uploadHealth": {
+                "fixtureId": fixture_id,
+                "activeAssetCount": len(asset_ids),
+                **upload_bridge_plan_db(
+                    repo_root,
+                    limit=max(1, len(asset_ids)),
+                    asset_ids=asset_ids,
+                ),
+            },
+        })
     elif mode == "fixture-deliverable-list":
         result.update({"readOnly": True, "deliverables": list_deliverables(repo_root, str(manifest.get("fixtureId") or ""))})
     elif mode == "fixture-deliverable-link":
@@ -1971,6 +1992,7 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
         "fixture-placement-restore": "Restored the placement relationship without reimporting the source asset.",
         "fixture-destinations": "Configured per-asset delivery destinations.",
         "fixture-delivery-plan": "Prepared the delivery plan; no delivery or client message was triggered.",
+        "fixture-upload-health": "Loaded fixture-scoped Upload Bridge queue and R2 coverage health without changing either.",
         "fixture-deliverable-list": "Loaded fixture PDF, video, originals, and share-link records without changing them.",
         "fixture-deliverable-link": "Linked a ready fixture deliverable without sending a client message.",
         "fixture-publication-plan": "Prepared exact public-catalog eligibility without rebuilding or deploying the site.",

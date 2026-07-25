@@ -105,6 +105,7 @@ private struct FixturePicker: View {
 
 private struct UploadWorkflowView: View {
     @ObservedObject var model: BackstageViewModel
+    @State private var confirmingAdoption = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -113,6 +114,7 @@ private struct UploadWorkflowView: View {
                 Spacer()
                 FixturePicker(model: model)
                 Button("Load plan") { Task { await model.loadDeliveryPlan() } }
+                Button("Queue health") { Task { await model.loadUploadHealth() } }
                 Button("Upload selected") { Task { await model.deliverSelected() } }
                     .disabled(model.isRunningDelivery || model.selectedDeliveryIDs.isEmpty)
                 Button("Retry failed") { Task { await model.retryDeliveryFailures() } }
@@ -129,6 +131,33 @@ private struct UploadWorkflowView: View {
                 }
             }
             Text(model.deliveryStatus).font(.callout).foregroundStyle(.secondary)
+            GroupBox("Recovery and prior-run adoption") {
+                VStack(alignment: .leading, spacing: 8) {
+                    if let health = model.uploadHealth {
+                        HStack {
+                            LabeledContent("Fixture assets", value: "\(health.activeAssetCount)")
+                            LabeledContent("Queued", value: "\(health.queuedCount)")
+                            LabeledContent("Uploadable", value: "\(health.uploadableCount)")
+                            LabeledContent("Covered", value: "\(health.coveredCount)")
+                            LabeledContent("Partial", value: "\(health.partiallyCoveredCount)")
+                        }
+                    }
+                    HStack {
+                        TextField("Upload Bridge run ID", text: $model.uploadRunID)
+                        Button("Preview adoption") {
+                            Task { await model.previewUploadRunAdoption() }
+                        }
+                        Button("Adopt verified run…") { confirmingAdoption = true }
+                            .disabled(
+                                model.isRunningDelivery
+                                || (model.uploadAdoptionPlan?.eligibleIDs.isEmpty ?? true)
+                            )
+                    }
+                    Text(model.uploadRecoveryStatus)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+            }
             Table(
                 model.deliveryPlan?.items ?? [],
                 selection: $model.selectedDeliveryIDs
@@ -144,6 +173,17 @@ private struct UploadWorkflowView: View {
         .padding()
         .task {
             if model.fixtures.isEmpty { await model.loadFixtures() }
+        }
+        .confirmationDialog(
+            "Adopt this verified upload run into the selected fixture?",
+            isPresented: $confirmingAdoption
+        ) {
+            Button("Adopt exact eligible items", role: .destructive) {
+                Task { await model.commitUploadRunAdoption() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("The existing R2 objects are checksum-verified before fixture receipts are reconstructed. No client message or publication is triggered.")
         }
     }
 }

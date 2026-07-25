@@ -75,6 +75,10 @@ final class BackstageViewModel: ObservableObject {
     @Published var deliveryTotal = 0
     @Published var deliveryFailedIDs: [String] = []
     @Published var isRunningDelivery = false
+    @Published var uploadHealth: FixtureUploadHealth?
+    @Published var uploadRunID = ""
+    @Published var uploadAdoptionPlan: FixtureUploadRunAdoptionPlan?
+    @Published var uploadRecoveryStatus = "Existing verified upload runs can be adopted explicitly."
     @Published var deliverables: [FixtureDeliverable] = []
     @Published var deliverableKind = "pdf"
     @Published var deliverableShareLink = ""
@@ -570,6 +574,60 @@ final class BackstageViewModel: ObservableObject {
             deliveryStatus = "\(plan.completeCount) of \(plan.items.count) complete; \(plan.retryableIDs.count) approved items remain."
         } catch {
             deliveryStatus = String(describing: error)
+        }
+    }
+
+    func loadUploadHealth() async {
+        guard !selectedFixtureID.isEmpty else {
+            uploadRecoveryStatus = "Choose a fixture first."
+            return
+        }
+        isRunningDelivery = true
+        defer { isRunningDelivery = false }
+        do {
+            uploadHealth = try await deliveryService.uploadHealth(fixtureID: selectedFixtureID)
+            if let uploadHealth {
+                uploadRecoveryStatus = "\(uploadHealth.uploadableCount) uploadable; \(uploadHealth.coveredCount) already covered; \(uploadHealth.blockedCount) metadata-blocked."
+            }
+        } catch {
+            uploadRecoveryStatus = String(describing: error)
+        }
+    }
+
+    func previewUploadRunAdoption() async {
+        await runUploadAdoption(commit: false)
+    }
+
+    func commitUploadRunAdoption() async {
+        await runUploadAdoption(commit: true)
+    }
+
+    private func runUploadAdoption(commit: Bool) async {
+        guard !selectedFixtureID.isEmpty, !uploadRunID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            uploadRecoveryStatus = "Choose a fixture and enter an Upload Bridge run ID."
+            return
+        }
+        isRunningDelivery = true
+        defer { isRunningDelivery = false }
+        do {
+            let plan = try await (commit
+                ? deliveryService.adopt(
+                    runID: uploadRunID,
+                    fixtureID: selectedFixtureID,
+                    assetIDs: Array(selectedDeliveryIDs)
+                )
+                : deliveryService.adoptionPlan(
+                    runID: uploadRunID,
+                    fixtureID: selectedFixtureID,
+                    assetIDs: Array(selectedDeliveryIDs)
+                ))
+            uploadAdoptionPlan = plan
+            uploadRecoveryStatus = commit
+                ? "Adopted \(plan.eligibleIDs.count) exact verified item\(plan.eligibleIDs.count == 1 ? "" : "s"); Apple Photos give-back remains visible in the delivery plan."
+                : "\(plan.eligibleIDs.count) eligible; \(plan.blocked.count) blocked. No state changed."
+            if commit { await loadDeliveryPlan() }
+        } catch {
+            uploadRecoveryStatus = String(describing: error)
         }
     }
 

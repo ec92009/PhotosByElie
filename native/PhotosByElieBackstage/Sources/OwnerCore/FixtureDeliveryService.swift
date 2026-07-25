@@ -60,6 +60,24 @@ public struct FixturePublicationPlan: Sendable, Equatable {
     public var blocked: [String: String]
 }
 
+public struct FixtureUploadHealth: Sendable, Equatable {
+    public var fixtureID: String
+    public var activeAssetCount: Int
+    public var queuedCount: Int
+    public var uploadableCount: Int
+    public var coveredCount: Int
+    public var partiallyCoveredCount: Int
+    public var blockedCount: Int
+}
+
+public struct FixtureUploadRunAdoptionPlan: Sendable, Equatable {
+    public var runID: String
+    public var fixtureID: String
+    public var eligibleIDs: [String]
+    public var blocked: [String: String]
+    public var applied: Bool
+}
+
 public struct FixtureOperationReport: Sendable, Equatable {
     public var actionID: String
     public var ok: Bool
@@ -100,6 +118,51 @@ public actor FixtureDeliveryService {
             items: items,
             approvedCount: delivery["approvedCount"]?.intValue ?? items.filter(\.approved).count,
             completeCount: delivery["completeCount"]?.intValue ?? items.filter(\.complete).count
+        )
+    }
+
+    public func uploadHealth(fixtureID: String) async throws -> FixtureUploadHealth {
+        let action = try await fixtureAction(
+            mode: "fixture-upload-health",
+            fixtureID: fixtureID
+        )
+        guard let health = action.result?["uploadHealth"]?.objectValue else {
+            throw FixtureDeliveryError.missingResult("uploadHealth")
+        }
+        return FixtureUploadHealth(
+            fixtureID: health["fixtureId"]?.stringValue ?? fixtureID,
+            activeAssetCount: health["activeAssetCount"]?.intValue ?? 0,
+            queuedCount: health["bridgeQueuedCount"]?.intValue ?? 0,
+            uploadableCount: health["uploadableItemCount"]?.intValue ?? 0,
+            coveredCount: health["fullyCoveredItemCount"]?.intValue ?? 0,
+            partiallyCoveredCount: health["partiallyCoveredItemCount"]?.intValue ?? 0,
+            blockedCount: health["metadataBlockedQueuedCount"]?.intValue ?? 0
+        )
+    }
+
+    public func adoptionPlan(
+        runID: String,
+        fixtureID: String,
+        assetIDs: [String] = []
+    ) async throws -> FixtureUploadRunAdoptionPlan {
+        try await adoption(
+            mode: "fixture-upload-run-adoption-plan",
+            runID: runID,
+            fixtureID: fixtureID,
+            assetIDs: assetIDs
+        )
+    }
+
+    public func adopt(
+        runID: String,
+        fixtureID: String,
+        assetIDs: [String] = []
+    ) async throws -> FixtureUploadRunAdoptionPlan {
+        try await adoption(
+            mode: "fixture-upload-run-adoption-commit",
+            runID: runID,
+            fixtureID: fixtureID,
+            assetIDs: assetIDs
         )
     }
 
@@ -252,6 +315,44 @@ public actor FixtureDeliveryService {
             ),
             idempotencyKey: ["native-delivery", mode, fixtureID, UUID().uuidString]
                 .joined(separator: ":")
+        )
+    }
+
+    private func adoption(
+        mode: String,
+        runID: String,
+        fixtureID: String,
+        assetIDs: [String]
+    ) async throws -> FixtureUploadRunAdoptionPlan {
+        let cleanedRunID = runID.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanedRunID.isEmpty else {
+            throw FixtureDeliveryError.missingResult("runID")
+        }
+        let action = try await fixtureAction(
+            mode: mode,
+            fixtureID: fixtureID,
+            extra: [
+                "runId": .string(cleanedRunID),
+                "assetIds": .array(clean(assetIDs).map(JSONValue.string)),
+            ]
+        )
+        guard let plan = action.result?["uploadRunAdoption"]?.objectValue else {
+            throw FixtureDeliveryError.missingResult("uploadRunAdoption")
+        }
+        let eligible = (plan["items"]?.arrayValue ?? []).compactMap {
+            $0.objectValue?["assetId"]?.stringValue
+        }
+        var blocked: [String: String] = [:]
+        for value in plan["blocked"]?.arrayValue ?? [] {
+            guard let row = value.objectValue, let id = row["assetId"]?.stringValue else { continue }
+            blocked[id] = row["reason"]?.stringValue ?? "blocked"
+        }
+        return FixtureUploadRunAdoptionPlan(
+            runID: plan["runId"]?.stringValue ?? cleanedRunID,
+            fixtureID: plan["fixtureId"]?.stringValue ?? fixtureID,
+            eligibleIDs: eligible,
+            blocked: blocked,
+            applied: plan["applied"]?.boolValue ?? false
         )
     }
 

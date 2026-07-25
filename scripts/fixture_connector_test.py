@@ -85,6 +85,13 @@ class FixtureConnectorTest(unittest.TestCase):
             planned = local_server.new_owner_connector_result(root, action("fixture-delivery-plan", fixtureId=fixture_id))
             self.assertEqual(planned["result"]["delivery"]["assetCount"], 1)
             self.assertFalse(planned["result"]["clientMessageSent"])
+            health = local_server.new_owner_connector_result(
+                root,
+                action("fixture-upload-health", fixtureId=fixture_id),
+            )
+            self.assertTrue(health["result"]["readOnly"])
+            self.assertEqual(health["result"]["uploadHealth"]["activeAssetCount"], 1)
+            self.assertEqual(health["result"]["uploadHealth"]["fixtureId"], fixture_id)
             linked = local_server.new_owner_connector_result(root, action(
                 "fixture-deliverable-link",
                 fixtureId=fixture_id,

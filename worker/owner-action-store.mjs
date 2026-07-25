@@ -2,6 +2,12 @@ const clone = (value) => value == null ? value : JSON.parse(JSON.stringify(value
 
 const cleanId = (value) => String(value || "").trim();
 
+const sha256Hex = async (value) => {
+  const bytes = new TextEncoder().encode(String(value || ""));
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+};
+
 const actionTime = (action) => {
   const timestamp = Date.parse(action?.createdAt || action?.updatedAt || "");
   return Number.isFinite(timestamp) ? timestamp : 0;
@@ -14,6 +20,7 @@ const isPendingAction = (action) => ["queued", "claimed"].includes(String(action
 export const createMemoryOwnerActionStore = () => {
   const actions = new Map();
   const connectors = new Map();
+  const idempotency = new Map();
   const interactiveLeases = new Map();
 
   return {
@@ -23,6 +30,16 @@ export const createMemoryOwnerActionStore = () => {
       return clone(action);
     },
     getAction: async (id) => clone(actions.get(cleanId(id))) || null,
+    getIdempotentAction: async (key) => {
+      const actionId = idempotency.get(await sha256Hex(key));
+      return actionId ? clone(actions.get(actionId)) || null : null;
+    },
+    putIdempotentAction: async (key, actionId) => {
+      const cleanActionId = cleanId(actionId);
+      if (!cleanActionId) throw new Error("Idempotent Owner action requires an action id.");
+      idempotency.set(await sha256Hex(key), cleanActionId);
+      return clone(actions.get(cleanActionId)) || null;
+    },
     listActions: async ({ limit = 25 } = {}) => [...actions.values()]
       .map(clone)
       .sort(byNewestAction)
@@ -47,7 +64,7 @@ export const createMemoryOwnerActionStore = () => {
       return clone(lease);
     },
     getInteractiveLease: async (connectorId) => clone(interactiveLeases.get(cleanId(connectorId))) || null,
-    _debug: { actions, connectors, interactiveLeases },
+    _debug: { actions, connectors, idempotency, interactiveLeases },
   };
 };
 
@@ -63,6 +80,7 @@ export const createKvOwnerActionStore = ({
   const pendingIndexReadyKey = `${prefix}:owner-action-pending-ready`;
   const connectorPrefix = `${prefix}:owner-connectors:`;
   const connectorHeadKey = `${prefix}:owner-connector-head`;
+  const idempotencyPrefix = `${prefix}:owner-action-idempotency:`;
   const interactiveLeasePrefix = `${prefix}:owner-interactive:`;
   const keyFor = (id) => `${actionPrefix}${cleanId(id)}`;
   const indexKeyFor = (action) => {
@@ -98,6 +116,27 @@ export const createKvOwnerActionStore = ({
       const clean = cleanId(id);
       if (!clean) return null;
       return await namespace.get(keyFor(clean), { type: "json" });
+    },
+    getIdempotentAction: async (key) => {
+      const mappingKey = `${idempotencyPrefix}${await sha256Hex(key)}`;
+      const mapping = await namespace.get(mappingKey, { type: "json" });
+      const actionId = cleanId(mapping?.actionId);
+      if (!actionId) return null;
+      const action = await namespace.get(keyFor(actionId), { type: "json" });
+      if (!action && typeof namespace.delete === "function") {
+        await namespace.delete(mappingKey);
+      }
+      return action || null;
+    },
+    putIdempotentAction: async (key, actionId, { expirationTtl = 24 * 60 * 60 } = {}) => {
+      const cleanActionId = cleanId(actionId);
+      if (!cleanActionId) throw new Error("Idempotent Owner action requires an action id.");
+      await namespace.put(
+        `${idempotencyPrefix}${await sha256Hex(key)}`,
+        JSON.stringify({ actionId: cleanActionId }),
+        { expirationTtl: Math.max(60, Number(expirationTtl) || 24 * 60 * 60) }
+      );
+      return await namespace.get(keyFor(cleanActionId), { type: "json" });
     },
     listActions: async ({ limit = 25 } = {}) => {
       if (typeof namespace.list !== "function") return [];

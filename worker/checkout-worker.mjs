@@ -2236,6 +2236,38 @@ export const createPhotosByElieWorker = ({
     if (!ownerActionStore || typeof ownerActionStore.putAction !== "function") {
       return credentialedErrorJson(request, 503, "owner_actions_unavailable", "Owner action queue is not configured.");
     }
+    const apiVersion = String(request.headers.get("x-pbe-internal-api-version") || "").trim();
+    const idempotencyKey = String(
+      request.headers.get("idempotency-key")
+      || request.headers.get("x-idempotency-key")
+      || ""
+    ).trim();
+    if (apiVersion === "1" && !idempotencyKey) {
+      return credentialedErrorJson(
+        request,
+        400,
+        "idempotency_key_required",
+        "Idempotency-Key is required for Owner API v1 mutations."
+      );
+    }
+    if (idempotencyKey && !/^[\x21-\x7e]{8,160}$/.test(idempotencyKey)) {
+      return credentialedErrorJson(
+        request,
+        400,
+        "invalid_idempotency_key",
+        "Idempotency-Key must contain 8 to 160 visible ASCII characters."
+      );
+    }
+    if (idempotencyKey && typeof ownerActionStore.getIdempotentAction === "function") {
+      const existingAction = await ownerActionStore.getIdempotentAction(idempotencyKey);
+      if (existingAction) {
+        return credentialedJson(request, {
+          ok: true,
+          action: existingAction,
+          idempotencyReplayed: true,
+        });
+      }
+    }
     const payload = await parseJson(request);
     const actionType = String(payload.action || payload.type || "").trim().toLowerCase().replace(/[\s_]+/g, "-");
     if (!/^[a-z0-9][a-z0-9-]{1,80}$/.test(actionType)) {
@@ -2259,6 +2291,9 @@ export const createPhotosByElieWorker = ({
         by: session.email,
       }],
     });
+    if (idempotencyKey && typeof ownerActionStore.putIdempotentAction === "function") {
+      await ownerActionStore.putIdempotentAction(idempotencyKey, action.id);
+    }
     return credentialedJson(request, { ok: true, action }, 202);
   };
 
@@ -3193,7 +3228,12 @@ export const createPhotosByElieWorker = ({
       }
       const compatibilityUrl = new URL(request.url);
       compatibilityUrl.pathname = compatibilityPath;
-      const compatibilityResponse = await fetch(new Request(compatibilityUrl, request));
+      const compatibilityRequest = new Request(compatibilityUrl, request);
+      const compatibilityHeaders = new Headers(compatibilityRequest.headers);
+      compatibilityHeaders.set("x-pbe-internal-api-version", "1");
+      const compatibilityResponse = await fetch(new Request(compatibilityRequest, {
+        headers: compatibilityHeaders,
+      }));
       return ownerApiV1Response(compatibilityResponse);
     }
     const path = url.pathname.replace(/^\/api(?=\/)/, "");

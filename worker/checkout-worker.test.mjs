@@ -351,6 +351,29 @@ test("KV owner action store keeps a cheap pending-action index", async () => {
   assert.deepEqual(await store.listPendingActions(), []);
 });
 
+test("Owner action stores replay idempotent actions", async () => {
+  for (const store of [
+    createMemoryOwnerActionStore(),
+    createKvOwnerActionStore({ namespace: createFakeKv(), prefix: "test" }),
+  ]) {
+    const action = await store.putAction({
+      id: "action-idempotent",
+      type: "fixture-operation",
+      state: "queued",
+      createdAt: "2026-05-17T12:00:00.000Z",
+    });
+    assert.equal(await store.getIdempotentAction("fixture-create-20260725"), null);
+    assert.equal(
+      (await store.putIdempotentAction("fixture-create-20260725", action.id)).id,
+      action.id
+    );
+    assert.equal(
+      (await store.getIdempotentAction("fixture-create-20260725")).id,
+      action.id
+    );
+  }
+});
+
 test("auth session treats configured Google admin as admin and owner", async () => {
   const worker = createPhotosByElieWorker({
     catalog: loadCatalog(),
@@ -655,6 +678,27 @@ test("Owner API v1 preserves legacy authorization and action behavior", async ()
   assert.match(response.headers.get("access-control-allow-headers") || "", /idempotency-key/);
   const body = await response.json();
   assert.equal(body.action.type, "fixture-operation");
+  assert.equal(body.idempotencyReplayed, undefined);
+
+  const replayResponse = await worker.fetch(jsonRequest("https://worker.test/api/v1/actions", {
+    action: "fixture-operation",
+    payload: { operation: "create", name: "This must not be queued" },
+  }, {
+    origin: "https://photos-by-elie.com",
+    "idempotency-key": "fixture-list-20260725",
+  }));
+  assert.equal(replayResponse.status, 200);
+  const replayBody = await replayResponse.json();
+  assert.equal(replayBody.idempotencyReplayed, true);
+  assert.equal(replayBody.action.id, body.action.id);
+  assert.deepEqual(replayBody.action.payload, { operation: "list" });
+
+  const missingKeyResponse = await worker.fetch(jsonRequest("https://worker.test/api/v1/actions", {
+    action: "fixture-operation",
+    payload: { operation: "list" },
+  }, { origin: "https://photos-by-elie.com" }));
+  assert.equal(missingKeyResponse.status, 400);
+  assert.equal((await missingKeyResponse.json()).error.code, "idempotency_key_required");
 
   const readback = await worker.fetch(new Request(
     `https://worker.test/api/v1/actions/${encodeURIComponent(body.action.id)}`,

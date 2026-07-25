@@ -161,6 +161,9 @@
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+  const acsApiPath = (path) => `/api/v1/acs${path.startsWith("/") ? path : `/${path}`}`;
+  const idempotencyKey = (scope) =>
+    `web-acs-${String(scope || "mutation").replace(/[^a-z0-9-]+/gi, "-")}-${Date.now().toString(36)}-${crypto.randomUUID()}`;
 
   const apiUrl = (path) => {
     if (!workerBase) return path;
@@ -201,6 +204,7 @@
 
   const apiFetch = async (path, options = {}) => {
     const token = storedAuthToken();
+    const method = String(options.method || "GET").toUpperCase();
     const response = await fetch(apiUrl(path), {
       credentials: "include",
       cache: "no-store",
@@ -208,6 +212,9 @@
       headers: {
         ...(token ? { authorization: `Bearer ${token}` } : {}),
         ...(options.body ? { "content-type": "application/json" } : {}),
+        ...(method !== "GET" && method !== "HEAD" && method !== "OPTIONS"
+          ? { "idempotency-key": options.idempotencyKey || idempotencyKey(path) }
+          : {}),
         ...(options.headers || {}),
       },
     });
@@ -1299,7 +1306,7 @@
     setStatus("Loading ACS state...");
     root?.classList.add("is-loading");
     try {
-      const body = await apiFetch("/access-console/state");
+      const body = await apiFetch(acsApiPath("/state"));
       state.session = body.session;
       state.roles = Array.isArray(body.roles) ? body.roles : [];
       state.capabilities = Array.isArray(body.capabilities) ? body.capabilities : [];
@@ -1373,7 +1380,7 @@
     };
     setSaveFeedback("");
     setStatus(`Saving ${payload.email || "person"}...`);
-    const body = await apiFetch("/access-console/people", {
+    const body = await apiFetch(acsApiPath("/people"), {
       method: "POST",
       body: JSON.stringify(payload),
     });
@@ -1397,7 +1404,7 @@
     }
     if (!window.confirm?.(`Disable ${user.email}? This revokes active roles and grants but keeps audit history.`)) return;
     setStatus(`Disabling ${user.email}...`);
-    await apiFetch(`/access-console/people/${encodeURIComponent(user.email)}/disable`, {
+    await apiFetch(acsApiPath(`/people/${encodeURIComponent(user.email)}/disable`), {
       method: "POST",
       body: JSON.stringify({}),
     });
@@ -1406,7 +1413,7 @@
 
   const seedFixtures = async () => {
     setStatus("Synchronizing the universal fixture access tree...");
-    await apiFetch("/access-console/fixtures/seed", {
+    await apiFetch("/api/v1/fixtures/seed", {
       method: "POST",
       body: JSON.stringify({}),
     });
@@ -1429,7 +1436,7 @@
       fixture: existing?.fixture === true,
     };
     setStatus(`Saving group ${payload.label || payload.id || ""}...`);
-    const body = await apiFetch("/access-console/groups", {
+    const body = await apiFetch(acsApiPath("/groups"), {
       method: "POST",
       body: JSON.stringify(payload),
     });
@@ -1449,7 +1456,7 @@
     }
     if (!window.confirm?.(`Archive ${group.label || group.id}? Active memberships will be revoked, but the audit record stays visible.`)) return;
     setStatus(`Archiving group ${group.label || group.id}...`);
-    await apiFetch(`/access-console/groups/${encodeURIComponent(group.id)}/archive`, {
+    await apiFetch(acsApiPath(`/groups/${encodeURIComponent(group.id)}/archive`), {
       method: "POST",
       body: JSON.stringify({}),
     });
@@ -1481,7 +1488,7 @@
         continue;
       }
       groupIds.add(group.id);
-      await apiFetch("/access-console/people", {
+      await apiFetch(acsApiPath("/people"), {
         method: "POST",
         body: JSON.stringify(personPayloadFor(existing || {}, {
           email: entry.email,
@@ -1511,7 +1518,7 @@
     if (!window.confirm?.(`Revoke ${group.label || group.id} access for ${user.email}?`)) return;
     const groupIds = (user.groupIds || []).filter((groupId) => groupId !== group.id);
     setStatus(`Revoking ${group.label || group.id} access for ${user.email}...`);
-    await apiFetch("/access-console/people", {
+    await apiFetch(acsApiPath("/people"), {
       method: "POST",
       body: JSON.stringify(personPayloadFor(user, { groupIds })),
     });
@@ -1537,7 +1544,7 @@
     if (auditStatusRoot) auditStatusRoot.textContent = "Undoing access change...";
     renderAudit();
     try {
-      await apiFetch(`/access-console/audit/${encodeURIComponent(auditId)}/undo`, {
+      await apiFetch(acsApiPath(`/audit/${encodeURIComponent(auditId)}/undo`), {
         method: "POST",
         body: JSON.stringify({}),
       });
@@ -1631,7 +1638,7 @@
     if (policyStatusRoot) policyStatusRoot.textContent = "Testing...";
     renderPolicyResult();
     try {
-      const body = await apiFetch(`/access-console/gallery-access?${params.toString()}`);
+      const body = await apiFetch(acsApiPath(`/gallery-access?${params.toString()}`));
       state.policyResult = body;
       if (policyStatusRoot) policyStatusRoot.textContent = `${body.gallery?.label || group.label || group.id} tested`;
       setStatus("Worker policy test complete.");

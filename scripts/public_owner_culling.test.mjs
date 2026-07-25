@@ -8,7 +8,7 @@ test("public Owner culling waits for cloud auth and uses the Max connector queue
   const hidden = read("hidden-actions.js");
   const gallery = read("photo-gallery.js");
   const detail = read("photo-detail.js");
-  assert.match(hidden, /action:\s*"photo-moderation"/);
+  assert.match(hidden, /actionKind:\s*"photo-moderation"/);
   assert.match(hidden, /requestedConnector:\s*"max"/);
   assert.match(hidden, /const markMany = async/);
   assert.match(hidden, /const undoMany = async/);
@@ -77,6 +77,7 @@ test("Owner exposes a contained fixture builder and recoverable Waste Basket man
   const owner = read("owner.html");
   const ownerStyles = read("new-owner.css");
   const ownerScript = read("new-owner.js");
+  const accessConsole = read("access-console.js");
   const review = read("owner-review.js");
   const hidden = read("hidden-page.js");
   const hiddenActions = read("hidden-actions.js");
@@ -95,7 +96,7 @@ test("Owner exposes a contained fixture builder and recoverable Waste Basket man
   assert.match(ownerScript, /wasteBasketLink\?\.addEventListener\("click", openWasteBasket\)/);
   assert.match(hiddenActions, /\["hide", "hide-many", "undo-hide", "undo-hide-many", "discard",/);
   assert.match(hiddenActions, /get enabled\(\) \{[\s\S]*return cullingEnabled\(\)/);
-  assert.match(hiddenActions, /action: "owner-hidden-metadata"/);
+  assert.match(hiddenActions, /actionKind: "owner-hidden-metadata"/);
   assert.match(hiddenActions, /if \(remoteCullingEnabled\) refreshRemoteHiddenMetadata\(\)\.catch/);
   assert.match(hiddenActions, /metadataFor/);
   assert.doesNotMatch(hiddenActions, /restoreTitles = Object\.fromEntries/);
@@ -109,8 +110,13 @@ test("Owner exposes a contained fixture builder and recoverable Waste Basket man
   assert.match(hidden, /await restorePhotoIds\(\[selected\.id\]\)/);
   assert.match(hidden, /photosByElieOwnerActivity\?\.hold\?\.\("waste-basket"\)/);
   assert.match(ownerScript, /photosByElieOwnerActivity\?\.hold\?\.\("owner-job", connectorId\)/);
+  assert.match(ownerScript, /ownerApiPath\("\/actions"\)/);
+  assert.match(ownerScript, /actionKind:\s*action/);
+  assert.match(ownerScript, /"idempotency-key"/);
+  assert.match(accessConsole, /\/api\/v1\/acs/);
+  assert.match(accessConsole, /"idempotency-key"/);
   assert.match(ownerActivity, /document\.visibilityState === "hidden"/);
-  assert.match(ownerActivity, /\/owner\/interactive/);
+  assert.match(ownerActivity, /\/api\/v1\/owner\/interactive/);
   assert.match(ownerActivity, /setInterval\(touch, 10000\)/);
   assert.match(owner, /owner-activity\.js/);
   assert.match(reviewHtml, /owner-activity\.js/);

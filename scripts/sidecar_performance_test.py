@@ -284,7 +284,7 @@ class CloudDecisionOverlayTest(unittest.TestCase):
             sidecar_server.SidecarHandler._handle_decision(handler)
 
         self.assertEqual(response["status"], 200)
-        self.assertEqual([call[1] for call in cloud_calls], ["/owner/sidecar/decisions/apply"])
+        self.assertEqual([call[1] for call in cloud_calls], ["/api/v1/sidecar/decisions/apply"])
 
     def test_batch_decisions_do_not_wait_for_redundant_cloud_upsert(self):
         cloud_calls = []
@@ -322,7 +322,7 @@ class CloudDecisionOverlayTest(unittest.TestCase):
             sidecar_server.SidecarHandler._handle_decisions(handler)
 
         self.assertEqual(response["status"], 200)
-        self.assertEqual([call[1] for call in cloud_calls], ["/owner/sidecar/decisions/apply-batch"])
+        self.assertEqual([call[1] for call in cloud_calls], ["/api/v1/sidecar/decisions/apply-batch"])
 
 
 if __name__ == "__main__":

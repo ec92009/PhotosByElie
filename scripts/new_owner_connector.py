@@ -28,6 +28,7 @@ import sys
 import threading
 import time
 from typing import Any
+import uuid
 from urllib.parse import parse_qs, urlparse
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote
@@ -689,6 +690,11 @@ class WorkerClient:
 
     def request(self, method: str, path: str, payload: dict | None = None) -> dict:
         data = None if payload is None else json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        mutation_headers = (
+            {"Idempotency-Key": f"connector-{self.config.connector_id}-{uuid.uuid4().hex}"}
+            if method.upper() not in {"GET", "HEAD", "OPTIONS"} and path.startswith("/api/v1/")
+            else {}
+        )
         request = Request(
             f"{self.config.worker_base}{path}",
             data=data,
@@ -698,6 +704,7 @@ class WorkerClient:
                 "Accept": "application/json",
                 "User-Agent": f"PhotosByElie-Mac-Connector/{CONNECTOR_VERSION}",
                 **({"Content-Type": "application/json"} if data is not None else {}),
+                **mutation_headers,
             },
         )
         try:
@@ -719,7 +726,7 @@ class WorkerClient:
         return body
 
     def heartbeat(self) -> dict:
-        return self.request("POST", "/owner/connector/heartbeat", {
+        return self.request("POST", "/api/v1/connectors/heartbeat", {
             "hostname": socket.gethostname(),
             "platform": f"{platform.system()} {platform.machine()}",
             "version": CONNECTOR_VERSION,
@@ -727,24 +734,24 @@ class WorkerClient:
         })
 
     def actions(self) -> list[dict]:
-        body = self.request("GET", "/owner/connector/actions")
+        body = self.request("GET", "/api/v1/connectors/actions")
         return [action for action in body.get("actions", []) if isinstance(action, dict)]
 
     def action(self, action_id: str) -> dict:
-        body = self.request("GET", f"/owner/connector/actions/{quote(action_id, safe='')}")
+        body = self.request("GET", f"/api/v1/connectors/actions/{quote(action_id, safe='')}")
         action = body.get("action")
         if not isinstance(action, dict):
             raise RuntimeError("Worker did not return the requested Owner action.")
         return action
 
     def interactive(self) -> bool:
-        body = self.request("GET", "/owner/connector/interactive")
+        body = self.request("GET", "/api/v1/connectors/interactive")
         return bool(body.get("interactivePolling"))
 
     def transition(self, action_id: str, transition: str, payload: dict | None = None) -> dict:
         return self.request(
             "POST",
-            f"/owner/connector/actions/{quote(action_id, safe='')}/{transition}",
+            f"/api/v1/connectors/actions/{quote(action_id, safe='')}/{transition}",
             payload or {},
         )
 

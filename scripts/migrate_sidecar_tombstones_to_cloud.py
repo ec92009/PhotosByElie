@@ -107,7 +107,7 @@ def apply_migration(rows: list[MigrationRow], batch_size: int) -> tuple[list[dic
         batch = rows[start:start + batch_size]
         query = _sidecar_cloud_request(
             "POST",
-            "/owner/sidecar/decisions/query",
+            "/api/v1/sidecar/decisions/query",
             {"assetIds": [row.cloud_identifier for row in batch]},
             timeout=60,
         )
@@ -126,7 +126,7 @@ def apply_migration(rows: list[MigrationRow], batch_size: int) -> tuple[list[dic
             continue
         applied = _sidecar_cloud_request(
             "POST",
-            "/owner/sidecar/decisions/apply-batch",
+            "/api/v1/sidecar/decisions/apply-batch",
             {
                 "decisions": [
                     {

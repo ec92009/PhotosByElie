@@ -8,7 +8,7 @@
     if (isLocal || !workerBase || holders.length === 0 || document.visibilityState === "hidden") return;
     const active = holders[holders.length - 1];
     try {
-      await fetch(`${workerBase}/owner/interactive`, {
+      await fetch(`${workerBase}/api/v1/owner/interactive`, {
         method: "POST",
         cache: "no-store",
         credentials: "include",

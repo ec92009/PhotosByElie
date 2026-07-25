@@ -8,9 +8,9 @@
   const mode = localEnabled ? "local" : cloudBaseUrl ? "cloud" : "unavailable";
   const enabled = mode !== "unavailable";
   const endpointFor = (localPath, cloudPath) => mode === "cloud" ? `${cloudBaseUrl}${cloudPath}` : localPath;
-  const sessionEndpoint = endpointFor("/__photosbyelie/owner-session", config.ownerSessionPath || "/owner/session");
-  const loginEndpoint = endpointFor("/__photosbyelie/owner-session", config.loginPath || "/auth/login");
-  const logoutEndpoint = endpointFor("/__photosbyelie/owner-logout", config.logoutPath || "/auth/logout");
+  const sessionEndpoint = endpointFor("/__photosbyelie/owner-session", config.ownerSessionPath || "/api/v1/owner/session");
+  const loginEndpoint = endpointFor("/__photosbyelie/owner-session", config.loginPath || "/api/v1/auth/login");
+  const logoutEndpoint = endpointFor("/__photosbyelie/owner-logout", config.logoutPath || "/api/v1/auth/logout");
   const credentialsMode = mode === "cloud" ? "include" : "same-origin";
   let state = {
     checked: false,

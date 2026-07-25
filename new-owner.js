@@ -151,6 +151,9 @@
   const sleep = (milliseconds) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 
   const terminalActionStates = new Set(["completed", "failed", "cancelled"]);
+  const ownerApiPath = (path) => `/api/v1${path.startsWith("/") ? path : `/${path}`}`;
+  const idempotencyKey = (scope) =>
+    `web-${String(scope || "owner").replace(/[^a-z0-9-]+/gi, "-")}-${Date.now().toString(36)}-${crypto.randomUUID()}`;
 
   const escapeHtml = (value) => String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -194,6 +197,7 @@
 
   const apiFetch = async (path, options = {}) => {
     const token = storedAuthToken();
+    const method = String(options.method || "GET").toUpperCase();
     const response = await fetch(apiUrl(path), {
       credentials: "include",
       cache: "no-store",
@@ -201,6 +205,9 @@
       headers: {
         ...(token ? { authorization: `Bearer ${token}` } : {}),
         ...(options.body ? { "content-type": "application/json" } : {}),
+        ...(method !== "GET" && method !== "HEAD" && method !== "OPTIONS"
+          ? { "idempotency-key": options.idempotencyKey || idempotencyKey(path) }
+          : {}),
         ...(options.headers || {}),
       },
     });
@@ -744,14 +751,14 @@
   };
 
   const loadActions = async () => {
-    const body = await apiFetch("/owner/actions?limit=8");
+    const body = await apiFetch(ownerApiPath("/actions?limit=8"));
     state.actions = mergeActions(Array.isArray(body.actions) ? body.actions : []);
     state.action = state.actions[0] || state.action;
   };
 
   const readAction = async (actionId) => {
     if (!actionId) return null;
-    const body = await apiFetch(`/owner/actions/${encodeURIComponent(actionId)}`);
+    const body = await apiFetch(ownerApiPath(`/actions/${encodeURIComponent(actionId)}`));
     return body.action || null;
   };
 
@@ -798,7 +805,7 @@
   };
 
   const loadConnectors = async () => {
-    const body = await apiFetch("/owner/connectors");
+    const body = await apiFetch(ownerApiPath("/connectors"));
     state.connectors = Array.isArray(body.connectors) ? body.connectors : [];
   };
 
@@ -808,7 +815,7 @@
     root?.classList.add("is-loading");
     const localConnectorPromise = detectLocalConnector();
     try {
-      const session = await apiFetch("/owner/session");
+      const session = await apiFetch(ownerApiPath("/owner/session"));
       state.session = session;
       if (ownerAllowed()) {
         try {
@@ -831,7 +838,7 @@
       forgetLegacyConnectorPreference();
       setStatus(ownerAllowed() ? "Cloud Owner session verified." : "Owner role is required.");
       if (connectorDownload && ownerAllowed() && workerBase) {
-        connectorDownload.href = `${workerBase}/owner/connector/download/mac`;
+        connectorDownload.href = `${workerBase}${ownerApiPath("/owner/connector/download/mac")}`;
         connectorDownload.hidden = false;
       }
     } catch (error) {
@@ -888,10 +895,11 @@
     let completedAction = null;
     let queuedAction = null;
     try {
-      const body = await apiFetch("/owner/actions", {
+      const body = await apiFetch(ownerApiPath("/actions"), {
         method: "POST",
         body: JSON.stringify({
-          action,
+          actionKind: action,
+          target: connectorId || "cloud",
           payload: {
             ...payload,
             ...(connectorId ? { requestedConnector: connectorId } : {}),
@@ -1436,7 +1444,7 @@
         : command === "complete"
           ? { result: { connectorId, surface: "new-owner", completedAt: new Date().toISOString() } }
           : { message: "Marked failed from Owner." };
-      const body = await apiFetch(`/owner/actions/${encodeURIComponent(actionId)}/${command}`, {
+      const body = await apiFetch(ownerApiPath(`/actions/${encodeURIComponent(actionId)}/${command}`), {
         method: "POST",
         body: JSON.stringify(payload),
       });

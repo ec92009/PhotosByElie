@@ -294,7 +294,7 @@ def main() -> int:
             body = worker_request_with_retries(
                 worker_base,
                 token,
-                "/owner/sidecar/decisions/upsert",
+                "/api/v1/sidecar/decisions/upsert",
                 {"decisions": batch},
                 timeout=max(1, args.request_timeout),
                 retries=max(0, args.retries),

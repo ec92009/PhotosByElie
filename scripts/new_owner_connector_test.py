@@ -71,13 +71,13 @@ class UploadRegistrationScopeTest(unittest.TestCase):
         client = WorkerClient(self.config)
         with patch.object(client, "request", return_value={"interactivePolling": True}) as request:
             self.assertTrue(client.interactive())
-        request.assert_called_once_with("GET", "/owner/connector/interactive")
+        request.assert_called_once_with("GET", "/api/v1/connectors/interactive")
 
     def test_connector_fetches_one_exact_worker_action(self):
         client = WorkerClient(self.config)
         with patch.object(client, "request", return_value={"action": {"id": "owner-action-1"}}) as request:
             self.assertEqual(client.action("owner-action-1")["id"], "owner-action-1")
-        request.assert_called_once_with("GET", "/owner/connector/actions/owner-action-1")
+        request.assert_called_once_with("GET", "/api/v1/connectors/actions/owner-action-1")
 
     def test_local_wake_claims_executes_and_completes_exact_action_with_timings(self):
         config = ConnectorConfig("https://worker.test", "david", "x" * 32, Path("/tmp/repo"))

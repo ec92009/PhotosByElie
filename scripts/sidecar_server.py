@@ -702,6 +702,11 @@ def _sidecar_cloud_request(method: str, path: str, payload: dict | None = None, 
     if not config:
         raise RuntimeError("Sidecar cloud decision state is not configured on this Mac connector.")
     data = None if payload is None else json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    mutation_headers = (
+        {"Idempotency-Key": f"sidecar-{uuid.uuid4().hex}"}
+        if method.upper() not in {"GET", "HEAD", "OPTIONS"} and path.startswith("/api/v1/")
+        else {}
+    )
     request = Request(
         f"{config['workerBase']}{path}",
         data=data,
@@ -711,6 +716,7 @@ def _sidecar_cloud_request(method: str, path: str, payload: dict | None = None, 
             "Accept": "application/json",
             "User-Agent": f"PhotosByElie-Sidecar/{sidecar_version(Path.cwd())}",
             **({"Content-Type": "application/json"} if data is not None else {}),
+            **mutation_headers,
         },
     )
     try:
@@ -740,7 +746,7 @@ def _query_cloud_decisions(asset_ids: list[str]) -> dict[str, dict]:
     clean_ids = [str(asset_id or "").strip() for asset_id in asset_ids if str(asset_id or "").strip()]
     if not clean_ids or not _sidecar_cloud_enabled():
         return {}
-    body = _sidecar_cloud_request("POST", "/owner/sidecar/decisions/query", {"assetIds": clean_ids})
+    body = _sidecar_cloud_request("POST", "/api/v1/sidecar/decisions/query", {"assetIds": clean_ids})
     decisions = body.get("decisions") if isinstance(body.get("decisions"), dict) else {}
     return {str(asset_id): state for asset_id, state in decisions.items() if isinstance(state, dict)}
 
@@ -1140,7 +1146,7 @@ class SidecarHandler(SimpleHTTPRequestHandler):
         try:
             payload = self._read_json_body()
             if _sidecar_cloud_enabled():
-                cloud = _sidecar_cloud_request("POST", "/owner/sidecar/decisions/apply", payload)
+                cloud = _sidecar_cloud_request("POST", "/api/v1/sidecar/decisions/apply", payload)
                 result = _cloud_state_item(cloud)
                 if result.get("before"):
                     mirror_cloud_decisions(Path.cwd(), [{"assetId": result["assetId"], "state": result["before"]}])
@@ -1176,7 +1182,7 @@ class SidecarHandler(SimpleHTTPRequestHandler):
             if len(decisions) > 500:
                 raise ValueError("Sidecar batch decisions are limited to 500 rows.")
             if _sidecar_cloud_enabled():
-                cloud = _sidecar_cloud_request("POST", "/owner/sidecar/decisions/apply-batch", {"decisions": decisions}, timeout=60)
+                cloud = _sidecar_cloud_request("POST", "/api/v1/sidecar/decisions/apply-batch", {"decisions": decisions}, timeout=60)
                 items = [_cloud_state_item(item) for item in cloud.get("items") or [] if isinstance(item, dict)]
                 before_states = [
                     {"assetId": item["assetId"], "state": item["before"]}

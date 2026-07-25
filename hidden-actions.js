@@ -2,6 +2,7 @@
   const localEnabled = ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
   const ownerAuth = window.photosByElieOwnerAuth;
   const cloudBaseUrl = String(window.photosByElieMediaConfig?.authWorkerBaseUrl || "").trim().replace(/\/+$/, "");
+  const ownerApiBaseUrl = cloudBaseUrl ? `${cloudBaseUrl}/api/v1` : "";
   const localActionWakeUrls = [
     "http://localhost:8766/photosbyelie/wake-owner-action",
     "http://127.0.0.1:8766/photosbyelie/wake-owner-action",
@@ -21,6 +22,8 @@
   let remoteHiddenOverride = null;
   let remoteHiddenMetadata = {};
   const pendingHiddenIds = new Set();
+  const idempotencyKey = (scope) =>
+    `web-${String(scope || "owner").replace(/[^a-z0-9-]+/gi, "-")}-${Date.now().toString(36)}-${crypto.randomUUID()}`;
 
   const ownerActionBusyMessages = {
     hide: "Moving master to Waste Basket...",
@@ -242,12 +245,16 @@
     if (localEnabled || !remoteCullingEnabled || !cloudBaseUrl) return remoteHiddenMetadata;
     const photoIds = read().slice(0, 500);
     if (!photoIds.length) return remoteHiddenMetadata;
-    const response = await fetch(`${cloudBaseUrl}/owner/actions`, {
+    const response = await fetch(`${ownerApiBaseUrl}/actions`, {
       method: "POST",
       credentials: "include",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": idempotencyKey("hidden-metadata"),
+      },
       body: JSON.stringify({
-        action: "owner-hidden-metadata",
+        actionKind: "owner-hidden-metadata",
+        target: "max",
         payload: { photoIds, requestedConnector: "max" },
       }),
     });
@@ -266,7 +273,7 @@
     const deadline = Date.now() + 45000;
     while (Date.now() < deadline) {
       await new Promise((resolve) => setTimeout(resolve, 800));
-      const poll = await fetch(`${cloudBaseUrl}/owner/actions/${encodeURIComponent(queued.action.id)}`, {
+      const poll = await fetch(`${ownerApiBaseUrl}/actions/${encodeURIComponent(queued.action.id)}`, {
         cache: "no-store",
         credentials: "include",
       });
@@ -344,12 +351,16 @@
     ["title", "keywords", "mode"].forEach((key) => {
       if (Object.prototype.hasOwnProperty.call(extra, key)) moderationPayload[key] = extra[key];
     });
-    const response = await fetch(`${cloudBaseUrl}/owner/actions`, {
+    const response = await fetch(`${ownerApiBaseUrl}/actions`, {
       method: "POST",
       credentials: "include",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": idempotencyKey(operation),
+      },
       body: JSON.stringify({
-        action: "photo-moderation",
+        actionKind: "photo-moderation",
+        target: "max",
         payload: moderationPayload,
       }),
     });
@@ -369,7 +380,7 @@
     const deadline = Date.now() + 120000;
     while (Date.now() < deadline) {
       await new Promise((resolve) => setTimeout(resolve, 800));
-      const poll = await fetch(`${cloudBaseUrl}/owner/actions/${encodeURIComponent(queued.action.id)}`, {
+      const poll = await fetch(`${ownerApiBaseUrl}/actions/${encodeURIComponent(queued.action.id)}`, {
         cache: "no-store",
         credentials: "include",
       });

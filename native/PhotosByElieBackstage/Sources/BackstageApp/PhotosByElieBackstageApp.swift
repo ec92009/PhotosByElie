@@ -60,6 +60,8 @@ struct PhotosByElieBackstageApp: App {
             MediaLibraryView(model: model)
         case .metadata:
             MetadataGiveBackView(model: model)
+        case .wasteBasket:
+            LifecycleView(model: model)
         default:
             WorkflowPlaceholder(section: model.selection ?? .overview)
         }
@@ -77,6 +79,67 @@ struct PhotosByElieBackstageApp: App {
         case .uploads: "arrow.up.circle"
         case .delivery: "shippingbox"
         case .publication: "globe"
+        }
+    }
+}
+
+private struct LifecycleView: View {
+    @ObservedObject var model: BackstageViewModel
+    @State private var pendingDiscard: LifecycleItem?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Waste Basket").font(.largeTitle.bold())
+                    Text("Restore is recoverable. Permanent discard is deliberately one item at a time.")
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Button("Refresh") { Task { await model.loadLifecycle() } }
+                    .disabled(model.isRunningLifecycle)
+                Button("Put back") { Task { await model.restoreLifecycleSelection() } }
+                    .disabled(model.isRunningLifecycle || model.selectedLifecycleIDs.isEmpty)
+            }
+            Text(model.lifecycleStatus)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+            Table(model.lifecycleItems, selection: $model.selectedLifecycleIDs) {
+                TableColumn("Title") { item in
+                    Text(item.title.isEmpty ? item.mediaID : item.title)
+                }
+                TableColumn("State") { item in
+                    Text(item.state == "hidden" ? "Recoverable" : "Discarded")
+                        .foregroundStyle(item.state == "hidden" ? .primary : .secondary)
+                }
+                TableColumn("Collection", value: \.sourceSlug)
+                TableColumn("Kind", value: \.mediaType)
+                TableColumn("Updated", value: \.updatedAt)
+                TableColumn("") { item in
+                    if item.state == "hidden" {
+                        Button("Discard", role: .destructive) { pendingDiscard = item }
+                    }
+                }
+                .width(90)
+            }
+        }
+        .padding()
+        .task { await model.loadLifecycle() }
+        .confirmationDialog(
+            "Permanently discard this item?",
+            isPresented: Binding(
+                get: { pendingDiscard != nil },
+                set: { if !$0 { pendingDiscard = nil } }
+            ),
+            presenting: pendingDiscard
+        ) { item in
+            Button("Discard permanently", role: .destructive) {
+                pendingDiscard = nil
+                Task { await model.discardLifecycleItem(item.id) }
+            }
+            Button("Cancel", role: .cancel) { pendingDiscard = nil }
+        } message: { item in
+            Text(item.title.isEmpty ? item.mediaID : item.title)
         }
     }
 }

@@ -1396,7 +1396,8 @@ def media_lifecycle_snapshot(
             sync_media_lifecycle_from_compat(repo_root, conn=conn, db_path=db_path)
         rows = conn.execute(
             """
-            SELECT media_id, lifecycle_state, source_paths_json,
+            SELECT media_id, lifecycle_state, previous_slug, source_slug, title,
+                   media_type, source_paths_json,
                    public_preview_keys_json, private_keys_json, hidden_at,
                    discarded_at, restored_at, updated_at
             FROM media_lifecycle
@@ -1433,6 +1434,10 @@ def media_lifecycle_snapshot(
             states.append({
                 "media_id": media_id,
                 "lifecycle_state": state,
+                "previous_slug": row["previous_slug"] or "",
+                "source_slug": row["source_slug"] or "",
+                "title": row["title"] or "",
+                "media_type": row["media_type"] or "",
                 "hidden_at": row["hidden_at"] or "",
                 "discarded_at": row["discarded_at"] or "",
                 "restored_at": row["restored_at"] or "",

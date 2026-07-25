@@ -462,6 +462,54 @@ struct OwnerCoreTests {
         #expect(approval?["approved"]?.boolValue == true)
         #expect(approval?["title"]?.stringValue == "New")
     }
+
+    @Test("Native lifecycle loads private titles and restores through moderation")
+    func nativeLifecycleRestore() async throws {
+        let ledger = OwnerAction(
+            id: "owner-action-lifecycle-list",
+            actionKind: "sidecar-culling-review",
+            target: "max",
+            state: .completed,
+            result: [
+                "lifecycle": [
+                    "hiddenCount": 1,
+                    "discardedCount": 1,
+                    "items": [[
+                        "mediaId": "photo-hidden",
+                        "state": "hidden",
+                        "title": "Private saved title",
+                        "mediaType": "photo",
+                        "sourceSlug": "france",
+                        "updatedAt": "2026-07-25T00:00:00Z",
+                    ]],
+                ],
+            ]
+        )
+        let restored = OwnerAction(
+            id: "owner-action-lifecycle-restore",
+            actionKind: "photo-moderation",
+            target: "max",
+            state: .completed,
+            result: ["ok": true]
+        )
+        let api = ScriptedOwnerActionAPI(completed: [ledger, restored])
+        let service = LifecycleService(runner: OwnerActionRunner(
+            api: api,
+            waker: UnavailableWaker(),
+            pollInterval: .milliseconds(1),
+            timeout: .seconds(1)
+        ))
+
+        let state = try await service.ledger()
+        #expect(state.items.map(\.title) == ["Private saved title"])
+        _ = try await service.restore(mediaIDs: ["photo-hidden"])
+
+        let requests = await api.requests()
+        #expect(requests[0].payload["manifest"]?.objectValue?["mode"]?.stringValue == "fixture-lifecycle-list")
+        #expect(requests[1].actionKind == "photo-moderation")
+        #expect(requests[1].payload["operation"]?.stringValue == "undo-hide-many")
+        #expect(requests[1].payload["photoIds"]?.arrayValue?.compactMap(\.stringValue) == ["photo-hidden"])
+    }
 }
 
 private func scalar(_ databaseURL: URL, _ sql: String) throws -> String {

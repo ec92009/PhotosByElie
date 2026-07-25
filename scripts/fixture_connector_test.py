@@ -6,6 +6,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import local_server
+import owner_state_db
 import sidecar_state_db
 
 
@@ -23,6 +24,33 @@ def action(mode, **manifest):
 
 
 class FixtureConnectorTest(unittest.TestCase):
+    def test_connector_lists_private_lifecycle_titles_without_mutation(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            with owner_state_db.connect(root) as connection:
+                connection.execute(
+                    """INSERT INTO media_lifecycle
+                       (media_id, lifecycle_state, source_slug, title, media_type,
+                        source_paths_json, public_preview_keys_json, private_keys_json,
+                        updated_at)
+                       VALUES (?, 'hidden', 'france', 'Private saved title', 'photo',
+                               '[]', '[]', '[]', ?)""",
+                    ("photo-hidden", "2026-07-25T00:00:00Z"),
+                )
+                connection.commit()
+
+            listed = local_server.new_owner_connector_result(
+                root,
+                action("fixture-lifecycle-list"),
+            )
+
+        self.assertTrue(listed["result"]["readOnly"])
+        self.assertEqual(listed["result"]["lifecycle"]["hiddenCount"], 1)
+        self.assertEqual(
+            listed["result"]["lifecycle"]["items"][0]["title"],
+            "Private saved title",
+        )
+
     def test_connector_supports_tree_search_pool_and_delivery_plan(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

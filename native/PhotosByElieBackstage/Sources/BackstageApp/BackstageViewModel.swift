@@ -64,6 +64,10 @@ final class BackstageViewModel: ObservableObject {
     @Published var metadataReviewStatus = "Metadata changes use audited Max actions."
     @Published var metadataProposals: [MetadataProposal] = []
     @Published var metadataProposalStatus = "Load the local AI proposal queue to review it."
+    @Published var lifecycleItems: [LifecycleItem] = []
+    @Published var selectedLifecycleIDs: Set<String> = []
+    @Published var lifecycleStatus = "Load the private lifecycle ledger to review recoverable rejects."
+    @Published var isRunningLifecycle = false
 
     let api: OwnerAPIClient
     let photoLibrary: any PhotoLibraryServing
@@ -72,6 +76,7 @@ final class BackstageViewModel: ObservableObject {
     let accessService: AccessControlService
     let decisionService: SidecarDecisionService
     let metadataReviewService: MetadataReviewService
+    let lifecycleService: LifecycleService
 
     init(
         api: OwnerAPIClient = OwnerAPIClient(),
@@ -86,6 +91,7 @@ final class BackstageViewModel: ObservableObject {
         self.accessService = AccessControlService(api: api)
         self.decisionService = SidecarDecisionService(api: api)
         self.metadataReviewService = MetadataReviewService(runner: runner)
+        self.lifecycleService = LifecycleService(runner: runner)
     }
 
     func refreshActions() async {
@@ -489,6 +495,50 @@ final class BackstageViewModel: ObservableObject {
             metadataProposalStatus = "\(disposition.rawValue.capitalized) saved by audited action \(action.id)."
         } catch {
             metadataProposalStatus = String(describing: error)
+        }
+    }
+
+    func loadLifecycle() async {
+        isRunningLifecycle = true
+        defer { isRunningLifecycle = false }
+        do {
+            let ledger = try await lifecycleService.ledger()
+            lifecycleItems = ledger.items
+            selectedLifecycleIDs.formIntersection(Set(ledger.items.map(\.id)))
+            lifecycleStatus = "\(ledger.hiddenCount) recoverable and \(ledger.discardedCount) permanently discarded item\(ledger.items.count == 1 ? "" : "s")."
+        } catch {
+            lifecycleStatus = String(describing: error)
+        }
+    }
+
+    func restoreLifecycleSelection() async {
+        let ids = lifecycleItems
+            .filter { selectedLifecycleIDs.contains($0.id) && $0.state == "hidden" }
+            .map(\.id)
+        guard !ids.isEmpty else {
+            lifecycleStatus = "Select one or more recoverable items."
+            return
+        }
+        isRunningLifecycle = true
+        defer { isRunningLifecycle = false }
+        do {
+            let action = try await lifecycleService.restore(mediaIDs: ids)
+            lifecycleStatus = "Restored \(ids.count) item\(ids.count == 1 ? "" : "s") with saved private titles through action \(action.id)."
+            await loadLifecycle()
+        } catch {
+            lifecycleStatus = String(describing: error)
+        }
+    }
+
+    func discardLifecycleItem(_ id: String) async {
+        isRunningLifecycle = true
+        defer { isRunningLifecycle = false }
+        do {
+            let action = try await lifecycleService.discard(mediaID: id)
+            lifecycleStatus = "Permanently discarded one item through action \(action.id)."
+            await loadLifecycle()
+        } catch {
+            lifecycleStatus = String(describing: error)
         }
     }
 

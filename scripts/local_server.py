@@ -1856,6 +1856,31 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
         result.update({"readOnly": False, "destinations": configure_asset_destinations(repo_root, str(manifest.get("fixtureId") or ""), manifest.get("assetIds") or [], manifest.get("destinations") or [])})
     elif mode == "fixture-delivery-plan":
         result.update({"readOnly": True, "delivery": delivery_plan(repo_root, str(manifest.get("fixtureId") or ""))})
+    elif mode == "fixture-lifecycle-list":
+        lifecycle = media_lifecycle_snapshot(repo_root)
+        states = [
+            {
+                "mediaId": str(item.get("media_id") or ""),
+                "state": str(item.get("lifecycle_state") or ""),
+                "title": str(item.get("title") or ""),
+                "mediaType": str(item.get("media_type") or ""),
+                "sourceSlug": str(item.get("source_slug") or item.get("previous_slug") or ""),
+                "hiddenAt": str(item.get("hidden_at") or ""),
+                "discardedAt": str(item.get("discarded_at") or ""),
+                "restoredAt": str(item.get("restored_at") or ""),
+                "updatedAt": str(item.get("updated_at") or ""),
+            }
+            for item in lifecycle.get("states") or []
+            if str(item.get("lifecycle_state") or "") in {"hidden", "discarded"}
+        ]
+        result.update({
+            "readOnly": True,
+            "lifecycle": {
+                "items": states,
+                "hiddenCount": sum(item["state"] == "hidden" for item in states),
+                "discardedCount": sum(item["state"] == "discarded" for item in states),
+            },
+        })
     elif mode == "fixture-upload-run-adoption-plan":
         result.update({
             "readOnly": True,
@@ -1915,6 +1940,7 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
         "fixture-placement-restore": "Restored the placement relationship without reimporting the source asset.",
         "fixture-destinations": "Configured per-asset delivery destinations.",
         "fixture-delivery-plan": "Prepared the delivery plan; no delivery or client message was triggered.",
+        "fixture-lifecycle-list": "Loaded the private lifecycle ledger without changing any media.",
         "fixture-upload-run-adoption-plan": "Previewed the exact completed Upload Bridge items eligible for fixture adoption; nothing changed.",
         "fixture-upload-run-adoption-commit": "Adopted checksum-verified completed upload items into the chosen fixture and reconstructed their R2 receipts.",
         "fixture-photos-writeback-plan": "Prepared the Apple Photos metadata give-back plan without changing Photos.",

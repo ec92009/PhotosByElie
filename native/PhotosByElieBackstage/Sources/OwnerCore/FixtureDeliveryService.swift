@@ -8,6 +8,8 @@ public struct FixtureDeliveryItem: Identifiable, Sendable, Equatable {
     public var destinations: [String]
     public var r2Status: String
     public var photosStatus: String
+    public var r2Evidence: String
+    public var photosEvidence: String
     public var errorText: String
 
     init(json: [String: JSONValue]) {
@@ -20,10 +22,27 @@ public struct FixtureDeliveryItem: Identifiable, Sendable, Equatable {
         let photos = receipts["apple_photos"]?.objectValue ?? [:]
         r2Status = r2["status"]?.stringValue ?? "pending"
         photosStatus = photos["status"]?.stringValue ?? "pending"
+        r2Evidence = Self.receiptEvidence(r2)
+        photosEvidence = Self.receiptEvidence(photos)
         errorText = [r2["errorText"]?.stringValue, photos["errorText"]?.stringValue]
             .compactMap { $0 }
             .filter { !$0.isEmpty }
             .joined(separator: "; ")
+    }
+
+    private static func receiptEvidence(_ receipt: [String: JSONValue]) -> String {
+        let rows = receipt["items"]?.arrayValue ?? []
+        if rows.isEmpty { return "No receipt" }
+        return rows.compactMap { value in
+            guard let item = value.objectValue else { return nil }
+            let key = item["object_key"]?.stringValue ?? ""
+            let checksum = item["checksum_sha256"]?.stringValue ?? ""
+            let verifiedAt = item["verified_at"]?.stringValue ?? ""
+            let identity = key.isEmpty ? "local item" : key
+            let digest = checksum.isEmpty ? "" : " sha256:\(checksum.prefix(12))"
+            let verified = verifiedAt.isEmpty ? "" : " verified \(verifiedAt)"
+            return "\(identity)\(digest)\(verified)"
+        }.joined(separator: " • ")
     }
 }
 

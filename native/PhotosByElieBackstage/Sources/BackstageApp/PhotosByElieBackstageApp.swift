@@ -221,6 +221,16 @@ private struct UploadWorkflowView: View {
                 TableColumn("Approved") { Text($0.approved ? "Yes" : "No") }
                 TableColumn("R2", value: \.r2Status)
                 TableColumn("Photos", value: \.photosStatus)
+                TableColumn("R2 receipt") {
+                    Text($0.r2Evidence)
+                        .lineLimit(1)
+                        .help($0.r2Evidence)
+                }
+                TableColumn("Photos receipt") {
+                    Text($0.photosEvidence)
+                        .lineLimit(1)
+                        .help($0.photosEvidence)
+                }
                 TableColumn("Complete") { Text($0.complete ? "Verified" : "Pending") }
                 TableColumn("Error", value: \.errorText)
             }

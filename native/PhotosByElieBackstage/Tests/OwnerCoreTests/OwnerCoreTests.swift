@@ -925,8 +925,22 @@ struct OwnerCoreTests {
                         "complete": false,
                         "destinations": ["r2", "apple_photos"],
                         "receipts": [
-                            "r2": ["status": "pending"],
-                            "apple_photos": ["status": "pending"],
+                            "r2": [
+                                "status": "verified",
+                                "items": [[
+                                    "object_key": "private/fixture-expo/asset-1.jpg",
+                                    "checksum_sha256": "1234567890abcdef",
+                                    "verified_at": "2026-07-25T10:00:00Z",
+                                ]],
+                            ],
+                            "apple_photos": [
+                                "status": "verified",
+                                "items": [[
+                                    "object_key": "local://asset-1",
+                                    "checksum_sha256": "fedcba0987654321",
+                                    "verified_at": "2026-07-25T10:00:01Z",
+                                ]],
+                            ],
                         ],
                     ]],
                 ],
@@ -968,6 +982,10 @@ struct OwnerCoreTests {
 
         let plan = try await service.plan(fixtureID: "fixture-expo")
         #expect(plan.retryableIDs == ["asset-1"])
+        #expect(plan.items[0].r2Evidence.contains("private/fixture-expo/asset-1.jpg"))
+        #expect(plan.items[0].r2Evidence.contains("sha256:1234567890ab"))
+        #expect(plan.items[0].photosEvidence.contains("local://asset-1"))
+        #expect(plan.items[0].photosEvidence.contains("verified 2026-07-25T10:00:01Z"))
         let report = try await service.deliver(
             fixtureID: "fixture-expo",
             assetIDs: ["asset-1"]

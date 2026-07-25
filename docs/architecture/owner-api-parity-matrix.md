@@ -60,8 +60,11 @@ backup recovery, and no change to the live Owner database or public/client
 artifacts. The public Owner page also has a one-attribute active-writer gate:
 `data-owner-writer="backstage"` removes browser mutation surfaces while
 retaining enrollment, access, connectors, and audit views. Production remains
-`data-owner-writer="browser"` until this Mac completes one-time native
-enrollment and the read-only launch checks.
+`data-owner-writer="browser"`. Max completed one-time native enrollment on
+2026-07-25, refreshed its native session from Keychain after a cold relaunch,
+and loaded the current fixture hierarchy without mutation. The final installed
+build still needs explicit macOS Photos approval and the read-only
+`metadata-read-many` launch check before the writer attribute is flipped.
 
 ## Action kinds
 
@@ -83,5 +86,5 @@ Each row is complete only when all of these exist:
    unchanged.
 
 Web Owner retirement is a reversible final switch, not a code deletion. The
-PBB-18 rehearsal and rollback path are present; native enrollment and the
-production writer flip remain the final operational gates.
+PBB-18 rehearsal and rollback path are present; the read-only PhotoKit launch
+check and production writer flip remain the final operational gates.

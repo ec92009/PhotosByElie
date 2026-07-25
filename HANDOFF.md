@@ -25,11 +25,15 @@ for remote execution.
   PBB-18 parity rehearsal is checked in and the Owner page has a staged
   `data-owner-writer` cutover; production deliberately remains `browser`.
 - `/Users/ecohen/Applications/PhotosByElie Backstage.app` is built and
-  codesigned. Elie explicitly approved enrolling Max on 2026-07-25. `v147.4`
-  exposes the one-time enrollment panel while the browser remains the active
-  writer. After enrollment, verify the read-only launch and Photos readiness
-  without mutating real photos, then flip the active writer, publish the next
-  visible version, and close the verified PBB children/epics.
+  codesigned. Elie explicitly approved enrolling Max on 2026-07-25, and Max is
+  now enrolled with an independently revocable device credential stored in
+  Keychain. A cold relaunch refreshed the native session from Keychain and the
+  Fixtures screen loaded the current 20-node hierarchy without mutation.
+  `v147.4` keeps the browser as the active writer. The remaining operational
+  gate is explicit macOS Photos approval for the final installed build,
+  followed by a read-only `metadata-read-many` check. After that non-mutating
+  proof, flip the active writer, publish the next visible version, and close
+  the verified PBB children/epics.
 - `v147.4` publishes the Owner-only Backstage enrollment panel and the
   reversible writer gate while deliberately retaining the browser Owner as the
   active writer until native enrollment and read-only readiness checks pass.

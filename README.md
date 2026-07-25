@@ -10,7 +10,9 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
 - `v147.4` publishes the Owner-only Backstage enrollment panel and the
   reversible writer gate while deliberately retaining the browser Owner as the
-  active writer until native enrollment and read-only readiness checks pass.
+  active writer. Max is now enrolled and can restore its native session from
+  Keychain; the remaining gate is explicit Photos approval plus the read-only
+  installed-build readiness check before cutover.
 - `v147.3` corrects a 12-photo La Jolla Cove cohort that had inherited the
   title `Nerja, beach` and Spain keywords. The valid USA images now identify
   La Jolla, San Diego, California.

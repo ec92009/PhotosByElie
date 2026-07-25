@@ -217,6 +217,64 @@ public struct OwnerAction: Codable, Identifiable, Sendable, Equatable {
         self.progress = progress
         self.timing = timing
     }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case actionKind
+        case type
+        case target
+        case state
+        case createdBy
+        case createdAt
+        case updatedAt
+        case claimedAt
+        case completedAt
+        case payload
+        case result
+        case error
+        case progress
+        case timing
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        actionKind = try container.decodeIfPresent(String.self, forKey: .actionKind)
+            ?? container.decodeIfPresent(String.self, forKey: .type)
+            ?? "unknown"
+        state = try container.decode(OwnerActionState.self, forKey: .state)
+        payload = try container.decodeIfPresent([String: JSONValue].self, forKey: .payload)
+        target = try container.decodeIfPresent(String.self, forKey: .target)
+            ?? payload?["requestedConnector"]?.stringValue
+            ?? "cloud"
+        createdBy = try container.decodeIfPresent(String.self, forKey: .createdBy)
+        createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt)
+        updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt)
+        claimedAt = try container.decodeIfPresent(Date.self, forKey: .claimedAt)
+        completedAt = try container.decodeIfPresent(Date.self, forKey: .completedAt)
+        result = try container.decodeIfPresent([String: JSONValue].self, forKey: .result)
+        error = try container.decodeIfPresent([String: JSONValue].self, forKey: .error)
+        progress = try container.decodeIfPresent(OwnerProgress.self, forKey: .progress)
+        timing = try container.decodeIfPresent(OwnerActionTiming.self, forKey: .timing)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(actionKind, forKey: .actionKind)
+        try container.encode(target, forKey: .target)
+        try container.encode(state, forKey: .state)
+        try container.encodeIfPresent(createdBy, forKey: .createdBy)
+        try container.encodeIfPresent(createdAt, forKey: .createdAt)
+        try container.encodeIfPresent(updatedAt, forKey: .updatedAt)
+        try container.encodeIfPresent(claimedAt, forKey: .claimedAt)
+        try container.encodeIfPresent(completedAt, forKey: .completedAt)
+        try container.encodeIfPresent(payload, forKey: .payload)
+        try container.encodeIfPresent(result, forKey: .result)
+        try container.encodeIfPresent(error, forKey: .error)
+        try container.encodeIfPresent(progress, forKey: .progress)
+        try container.encodeIfPresent(timing, forKey: .timing)
+    }
 }
 
 public struct OwnerActionPage: Codable, Sendable, Equatable {

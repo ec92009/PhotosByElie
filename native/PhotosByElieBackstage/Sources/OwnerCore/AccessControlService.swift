@@ -100,8 +100,12 @@ public struct AccessGroup: Codable, Identifiable, Sendable, Equatable {
 public struct AccessControlState: Codable, Sendable, Equatable {
     public var people: [AccessPerson]?
     public var audienceGroups: [AccessGroup]?
-    public var capabilities: [String]?
-    public var roles: [String]?
+    // The ACS state endpoint returns option descriptors here (for example
+    // {"id":"manage_access","label":"Manage access"}), not only stable IDs.
+    // Keep the payload lossless because Backstage does not currently render
+    // these option catalogs.
+    public var capabilities: [JSONValue]?
+    public var roles: [JSONValue]?
     public var fixtureEvents: [JSONValue]?
     public var auditEvents: [JSONValue]?
 
@@ -111,8 +115,8 @@ public struct AccessControlState: Codable, Sendable, Equatable {
     public init(
         people: [AccessPerson] = [],
         audienceGroups: [AccessGroup] = [],
-        capabilities: [String] = [],
-        roles: [String] = [],
+        capabilities: [JSONValue] = [],
+        roles: [JSONValue] = [],
         fixtureEvents: [JSONValue] = [],
         auditEvents: [JSONValue] = []
     ) {

@@ -15,6 +15,28 @@ struct OwnerCoreTests {
         #expect(page.page.hasMore)
     }
 
+    @Test("Decodes legacy queued actions without canonical v1 aliases")
+    func decodesLegacyActionPage() throws {
+        let page = try JSONDecoder.ownerAPI.decode(
+            OwnerActionPage.self,
+            from: Data("""
+            {
+              "actions":[{
+                "id":"legacy-action-1",
+                "type":"photo-moderation",
+                "state":"completed",
+                "payload":{"requestedConnector":"max"}
+              }],
+              "page":{"hasMore":false}
+            }
+            """.utf8)
+        )
+
+        #expect(page.actions[0].actionKind == "photo-moderation")
+        #expect(page.actions[0].target == "max")
+        #expect(page.actions[0].state == .completed)
+    }
+
     @Test("Generated endpoints and examples match the published contract")
     func generatedContractAndExamples() throws {
         #expect(OwnerContract.endpoints[.createAction]?.method == "POST")
@@ -363,6 +385,30 @@ struct OwnerCoreTests {
         let request = try #require(await transport.lastRequest())
         #expect(request.url?.path == "/api/v1/acs/people")
         #expect(request.value(forHTTPHeaderField: "Idempotency-Key")?.hasPrefix("person-avery@example.test-") == true)
+    }
+
+    @Test("Native ACS accepts structured role and capability catalogs")
+    func nativeAccessControlLoadStructuredOptions() async throws {
+        let transport = RecordingTransport(response: """
+        {
+          "people":[{"email":"avery@example.test","displayName":"Avery","roles":["user"],"groupIds":["family"]}],
+          "audienceGroups":[{"id":"family","label":"Family","kind":"family","capabilities":["view_gallery"]}],
+          "roles":[{"id":"user","label":"User","capabilities":["view_public"]}],
+          "capabilities":[{"id":"manage_access","label":"Manage access"}],
+          "fixtureEvents":[],
+          "auditEvents":[]
+        }
+        """)
+        let client = OwnerAPIClient(
+            baseURL: URL(string: "https://example.test/api/v1")!,
+            transport: transport
+        )
+        let state = try await AccessControlService(api: client).load()
+
+        #expect(state.allPeople.map(\.email) == ["avery@example.test"])
+        #expect(state.allGroups.map(\.id) == ["family"])
+        #expect(state.roles?.first?.objectValue?["id"]?.stringValue == "user")
+        #expect(state.capabilities?.first?.objectValue?["id"]?.stringValue == "manage_access")
     }
 
     @Test("Native fixture creation stays behind an opaque audited action")

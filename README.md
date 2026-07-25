@@ -7,6 +7,8 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 ## Version
 
 - Current visible version: `v147.5`
+- Owner guide:
+  [`Getting started with PhotosByElie Backstage`](docs/BACKSTAGE_GETTING_STARTED.md)
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
 - `v147.5` makes the signed Backstage app the active Owner writer on Max after
   native enrollment, a cold Keychain session restore, explicit Photos

@@ -659,8 +659,9 @@ Clock state: running
 | 2026-07-25 | 01:13 CEST | 01:14 CEST | 0:01 | Reported two Paris Hôtel de Ville panoramas leaking into Seville search and authorized the relevance fix; implementation, tests, and deployment runtime excluded. |
 | 2026-07-25 | 01:24 CEST | 01:25 CEST | 0:01 | Reported a Nerja-labeled photo in the USA gallery and authorized correction of the affected La Jolla Cove metadata cohort; implementation, tests, and deployment runtime excluded. |
 | 2026-07-25 | 09:03 CEST | 09:04 CEST | 0:01 | Authorized one-time enrollment of Max in the signed Backstage app; enrollment, Keychain verification, relaunch, and ticket-audit runtime excluded. |
+| 2026-07-25 | 12:39 CEST | 12:40 CEST | 0:01 | Requested a practical owner-facing Getting Started guide for the newly active Backstage app; independent writing and verification runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 32:11
+Active collaboration time used: 32:12
 Remaining budget: not set

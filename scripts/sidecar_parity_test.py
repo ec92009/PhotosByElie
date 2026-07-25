@@ -6,6 +6,29 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class SidecarParityInventoryTest(unittest.TestCase):
+    def test_native_retirement_contract_has_no_ambiguous_second_ui(self):
+        contract = (
+            ROOT / "docs" / "architecture" / "sidecar-parity-inventory.md"
+        ).read_text(encoding="utf-8")
+        for marker in (
+            "PhotosByElie Backstage",
+            "only operator UI",
+            "Photos Bridge",
+            "headless",
+            "Owner.sqlite",
+            "Immutable fixture snapshot",
+            "Selection and navigation",
+            "Editorial metadata",
+            "Upload plan and execution",
+            "Rollback contract",
+            "Evidence required to close the epic",
+        ):
+            self.assertIn(marker, contract)
+        self.assertIn(
+            "No ticket may call a capability complete merely because the browser Sidecar can",
+            contract,
+        )
+
     def test_shared_page_keeps_global_culling_controls(self):
         html = (ROOT / "sidecar.html").read_text(encoding="utf-8")
         for marker in (

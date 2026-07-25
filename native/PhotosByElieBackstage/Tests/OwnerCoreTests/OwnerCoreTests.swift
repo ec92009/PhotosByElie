@@ -181,6 +181,21 @@ struct OwnerCoreTests {
         #expect(tree.path(to: "missing").isEmpty)
     }
 
+    @Test("Burst selection stays contiguous around the focused frame")
+    func burstSelection() {
+        let base = Date(timeIntervalSince1970: 1_800_000_000)
+        let items = [
+            CullingTimedItem(id: "a", capturedAt: base),
+            CullingTimedItem(id: "b", capturedAt: base.addingTimeInterval(10)),
+            CullingTimedItem(id: "c", capturedAt: base.addingTimeInterval(11)),
+            CullingTimedItem(id: "d", capturedAt: base.addingTimeInterval(12.5)),
+            CullingTimedItem(id: "e", capturedAt: base.addingTimeInterval(30)),
+        ]
+
+        #expect(CullingWorkspace.burst(containing: "c", in: items) == ["b", "c", "d"])
+        #expect(CullingWorkspace.burst(containing: "missing", in: items).isEmpty)
+    }
+
     @Test("Creates canonical v1 requests with actor token and idempotency")
     func createsCanonicalRequest() async throws {
         let transport = RecordingTransport(response: """

@@ -511,6 +511,8 @@ private struct MediaLibraryView: View {
                     Button("Apply") { model.applyCullingFilters() }
                     Button("Clear") { model.clearCullingFilters() }
                     Button("Review picked") { model.showPickedReview() }
+                    Button("Select burst") { model.selectFocusedBurst() }
+                        .disabled(model.focusedCullingAssetID == nil)
                 }
                 .labelsHidden()
                 .onChange(of: model.cullingMediaFilter) { _, _ in model.applyCullingFilters() }
@@ -591,6 +593,10 @@ private struct MediaLibraryView: View {
                     }
                     .onKeyPress("u") {
                         Task { await model.applyPickShortcut(.unpick) }
+                        return .handled
+                    }
+                    .onKeyPress("b") {
+                        model.selectFocusedBurst()
                         return .handled
                     }
                     .onKeyPress(characters: .decimalDigits) { press in
@@ -699,11 +705,18 @@ private struct MediaLibraryView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 if model.isLoadingCullingDecisions || model.isApplyingCullingDecision {
-                    ProgressView(
-                        value: Double(model.cullingDecisionProgress),
-                        total: Double(max(1, model.cullingDecisionTotal))
-                    )
+                    HStack {
+                        ProgressView(
+                            value: Double(model.cullingDecisionProgress),
+                            total: Double(max(1, model.cullingDecisionTotal))
+                        )
+                        Button("Stop") { model.cancelCullingOperation() }
+                            .disabled(model.cullingCancellationRequested)
+                    }
                 }
+                Text("Shortcuts: P pick • X reject • U clear • 0–5 rating • B burst • Space Quick Look • ⌘Z undo")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
             }
             .padding()
 

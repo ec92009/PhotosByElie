@@ -102,6 +102,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var cullingDecisionProgress = 0
     @Published var cullingDecisionTotal = 0
     @Published var isApplyingCullingDecision = false
+    @Published var cullingCancellationRequested = false
     @Published var metadataAssetID = ""
     @Published var metadataTitle = ""
     @Published var metadataCaption = ""
@@ -485,6 +486,36 @@ final class BackstageViewModel: ObservableObject {
         selectedPhotoIDs = []
     }
 
+    func selectFocusedBurst() {
+        guard let focusedID = focusedCullingAssetID else {
+            cullingStatus = "Focus one item before selecting its burst."
+            return
+        }
+        let libraryByID = Dictionary(uniqueKeysWithValues: libraryItems.map { ($0.id, $0) })
+        let timed = visibleCullingAssets.map { asset in
+            CullingTimedItem(
+                id: asset.id,
+                capturedAt: libraryByID[photoLibraryIdentifier(for: asset.id)]?.creationDate
+            )
+        }
+        let ids = CullingWorkspace.burst(containing: focusedID, in: timed)
+        cullingSelection = OwnerSelectionModel(
+            orderedIDs: visibleCullingAssets.map(\.id),
+            selectedIDs: Set(ids),
+            anchorID: ids.first,
+            focusedID: focusedID
+        )
+        selectedPhotoIDs = Set(ids)
+        cullingStatus = ids.count > 1
+            ? "Selected a contiguous \(ids.count)-item burst."
+            : "No neighboring frames within two seconds; selected the focused item."
+    }
+
+    func cancelCullingOperation() {
+        cullingCancellationRequested = true
+        cullingStatus = "Stopping after the current audited batch…"
+    }
+
     func openFixturePoolInCulling() {
         guard let fixturePool else { return }
         cullingPool = fixturePool
@@ -834,6 +865,7 @@ final class BackstageViewModel: ObservableObject {
             return
         }
         isLoadingCullingDecisions = true
+        cullingCancellationRequested = false
         cullingDecisionProgress = 0
         cullingDecisionTotal = ids.count
         cullingStatus = "Loading decisions for \(ids.count.formatted()) items…"
@@ -841,6 +873,12 @@ final class BackstageViewModel: ObservableObject {
         do {
             var states: [String: SidecarDecisionState] = [:]
             for start in stride(from: 0, to: ids.count, by: 500) {
+                if cullingCancellationRequested || Task.isCancelled {
+                    cullingStates = states
+                    replaceCullingItems()
+                    cullingStatus = "Decision reload stopped after \(cullingDecisionProgress.formatted()) of \(ids.count.formatted()) items."
+                    return
+                }
                 let end = min(ids.count, start + 500)
                 states.merge(
                     try await decisionService.queryStates(assetIDs: Array(ids[start..<end])),
@@ -894,6 +932,12 @@ final class BackstageViewModel: ObservableObject {
             cullingStatus = "Select one or more items to preview."
             return []
         }
+        isApplyingCullingDecision = true
+        cullingCancellationRequested = false
+        cullingDecisionProgress = 0
+        cullingDecisionTotal = ids.count
+        cullingStatus = "Preparing Quick Look 0 / \(ids.count.formatted())…"
+        defer { isApplyingCullingDecision = false }
         let directory = FileManager.default.urls(
             for: .cachesDirectory,
             in: .userDomainMask
@@ -903,11 +947,17 @@ final class BackstageViewModel: ObservableObject {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             var urls: [URL] = []
             for id in ids {
+                if cullingCancellationRequested || Task.isCancelled {
+                    cullingStatus = "Quick Look preparation stopped after \(urls.count.formatted()) of \(ids.count.formatted()) items."
+                    return urls
+                }
                 let receipt = try await photoLibrary.exportOriginal(
                     localIdentifier: photoLibraryIdentifier(for: id),
                     to: directory
                 )
                 urls.append(receipt.destination)
+                cullingDecisionProgress = urls.count
+                cullingStatus = "Preparing Quick Look \(urls.count.formatted()) / \(ids.count.formatted())…"
             }
             cullingStatus = "Prepared \(urls.count) private Quick Look item\(urls.count == 1 ? "" : "s") from Photos."
             return urls
@@ -920,6 +970,7 @@ final class BackstageViewModel: ObservableObject {
     private func applyCullingDecisions(_ decisions: [SidecarDecision], label: String) async {
         let selectedBefore = cullingSelection.selectedIDs
         isApplyingCullingDecision = true
+        cullingCancellationRequested = false
         cullingDecisionProgress = 0
         cullingDecisionTotal = decisions.count
         cullingStatus = "Applying \(label.lowercased()) to \(decisions.count.formatted()) items…"
@@ -927,6 +978,18 @@ final class BackstageViewModel: ObservableObject {
         do {
             var changes: [SidecarDecisionChange] = []
             for start in stride(from: 0, to: decisions.count, by: 200) {
+                if cullingCancellationRequested || Task.isCancelled {
+                    if !changes.isEmpty {
+                        cullingHistory.append(CullingHistoryEntry(
+                            label: label,
+                            changes: changes,
+                            selectedIDs: selectedBefore
+                        ))
+                    }
+                    replaceCullingItems()
+                    cullingStatus = "Stopped after \(cullingDecisionProgress.formatted()) of \(decisions.count.formatted()) items; completed batches remain audited and undoable."
+                    return
+                }
                 let end = min(decisions.count, start + 200)
                 let batch = try await decisionService.applyDetailed(
                     Array(decisions[start..<end]),

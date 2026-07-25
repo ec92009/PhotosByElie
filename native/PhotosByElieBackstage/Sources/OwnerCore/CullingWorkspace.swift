@@ -116,6 +116,16 @@ public struct CullingWorkspaceResult: Sendable, Equatable {
     }
 }
 
+public struct CullingTimedItem: Identifiable, Sendable, Equatable {
+    public var id: String
+    public var capturedAt: Date?
+
+    public init(id: String, capturedAt: Date?) {
+        self.id = id
+        self.capturedAt = capturedAt
+    }
+}
+
 public enum CullingWorkspace {
     public static func evaluate(
         _ candidates: [CullingCandidate],
@@ -175,6 +185,32 @@ public enum CullingWorkspace {
 
     private static func normalizedMedia(_ value: String) -> String {
         value.lowercased().contains("video") ? "video" : "photo"
+    }
+
+    public static func burst(
+        containing focusedID: String,
+        in orderedItems: [CullingTimedItem],
+        maximumGap: TimeInterval = 2
+    ) -> [String] {
+        guard let focusedIndex = orderedItems.firstIndex(where: { $0.id == focusedID }),
+              orderedItems[focusedIndex].capturedAt != nil else {
+            return orderedItems.contains(where: { $0.id == focusedID }) ? [focusedID] : []
+        }
+        var lower = focusedIndex
+        while lower > 0,
+              let current = orderedItems[lower].capturedAt,
+              let previous = orderedItems[lower - 1].capturedAt,
+              abs(current.timeIntervalSince(previous)) <= maximumGap {
+            lower -= 1
+        }
+        var upper = focusedIndex
+        while upper + 1 < orderedItems.count,
+              let current = orderedItems[upper].capturedAt,
+              let next = orderedItems[upper + 1].capturedAt,
+              abs(next.timeIntervalSince(current)) <= maximumGap {
+            upper += 1
+        }
+        return orderedItems[lower...upper].map(\.id)
     }
 }
 

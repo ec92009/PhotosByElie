@@ -867,6 +867,105 @@ struct OwnerCoreTests {
         #expect(applyManifest?["propagate"]?.boolValue == true)
     }
 
+    @Test("Native requested AI proposals remain draft-only and connector-audited")
+    func nativeRequestedAIProposalWorkflow() async throws {
+        let statusAction = OwnerAction(
+            id: "owner-action-fixture-ai-status",
+            actionKind: "sidecar-culling-review",
+            target: "max",
+            state: .completed,
+            result: [
+                "ai": .object([
+                    "active": false,
+                    "requested": 2,
+                    "ready": 1,
+                    "run": .object([
+                        "runId": "airun-1",
+                        "trigger": "scheduled",
+                        "status": "completed-with-errors",
+                        "requested": 2,
+                        "processed": 2,
+                        "proposed": 1,
+                        "skipped": 0,
+                        "failed": 1,
+                        "remaining": 0,
+                        "elapsedSeconds": 8.5,
+                    ]),
+                ]),
+            ]
+        )
+        let proposalAction = OwnerAction(
+            id: "owner-action-fixture-ai-proposals",
+            actionKind: "sidecar-culling-review",
+            target: "max",
+            state: .completed,
+            result: [
+                "aiProposals": .object([
+                    "items": .array([.object([
+                        "proposalId": "aip-1",
+                        "status": "ready",
+                        "assetId": "asset-1",
+                        "runId": "airun-1",
+                        "attempt": 1,
+                        "canonicalTitle": "Manual title",
+                        "canonicalKeywords": ["Paris"],
+                        "proposedTitle": "Evening in Paris",
+                        "proposedKeywords": ["Paris", "Evening"],
+                        "confidence": "high",
+                        "reason": "Visible city landmark.",
+                        "needsOwnerContext": false,
+                        "requestReasons": ["weak title"],
+                        "requestNote": "Name the landmark.",
+                    ])]),
+                ]),
+            ]
+        )
+        let loadedAction = OwnerAction(
+            id: "owner-action-fixture-ai-load",
+            actionKind: "sidecar-culling-review",
+            target: "max",
+            state: .completed,
+            result: [
+                "aiProposals": .object([
+                    "count": 1,
+                    "proposalIds": ["aip-1"],
+                ]),
+            ]
+        )
+        let api = ScriptedOwnerActionAPI(completed: [
+            statusAction,
+            proposalAction,
+            loadedAction,
+        ])
+        let service = FixtureWorkflowService(runner: OwnerActionRunner(
+            api: api,
+            waker: UnavailableWaker(),
+            pollInterval: .milliseconds(1),
+            timeout: .seconds(1)
+        ))
+
+        let status = try await service.aiStatus()
+        #expect(!status.active)
+        #expect(status.ready == 1)
+        #expect(status.run?.failed == 1)
+        let proposals = try await service.aiProposals(includeLoaded: true)
+        #expect(proposals.count == 1)
+        #expect(proposals[0].canonicalTitle == "Manual title")
+        #expect(proposals[0].proposedTitle == "Evening in Paris")
+        #expect(try await service.markAIProposalsLoaded(["aip-1"]) == 1)
+
+        let requests = await api.requests()
+        #expect(requests.count == 3)
+        let statusManifest = requests[0].payload["manifest"]?.objectValue
+        #expect(statusManifest?["mode"]?.stringValue == "fixture-ai-status")
+        let proposalManifest = requests[1].payload["manifest"]?.objectValue
+        #expect(proposalManifest?["mode"]?.stringValue == "fixture-ai-proposals-ready")
+        #expect(proposalManifest?["includeLoaded"]?.boolValue == true)
+        let loadManifest = requests[2].payload["manifest"]?.objectValue
+        #expect(loadManifest?["mode"]?.stringValue == "fixture-ai-proposals-load")
+        #expect(loadManifest?["proposalIds"]?.arrayValue?.compactMap(\.stringValue) == ["aip-1"])
+    }
+
     @Test("Fixture archive state follows the connector archivedAt contract")
     func nativeFixtureArchiveState() {
         let active = FixtureNode(json: [

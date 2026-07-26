@@ -277,6 +277,73 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS idx_asset_editorial_events_asset
           ON asset_editorial_events(asset_id, created_at);
 
+        CREATE TABLE IF NOT EXISTS asset_ai_proposals (
+          proposal_id TEXT PRIMARY KEY,
+          asset_id TEXT NOT NULL,
+          run_id TEXT NOT NULL,
+          attempt INTEGER NOT NULL,
+          status TEXT NOT NULL DEFAULT 'ready'
+            CHECK (status IN ('ready', 'loaded', 'accepted', 'rejected', 'superseded')),
+          previous_title TEXT NOT NULL DEFAULT '',
+          previous_keywords_json TEXT NOT NULL DEFAULT '[]',
+          proposed_title TEXT NOT NULL,
+          proposed_keywords_json TEXT NOT NULL DEFAULT '[]',
+          confidence TEXT NOT NULL DEFAULT '',
+          reason TEXT NOT NULL DEFAULT '',
+          needs_owner_context INTEGER NOT NULL DEFAULT 0,
+          request_reasons_json TEXT NOT NULL DEFAULT '[]',
+          request_note TEXT NOT NULL DEFAULT '',
+          preview_sha256 TEXT NOT NULL DEFAULT '',
+          generator TEXT NOT NULL DEFAULT 'codex',
+          generator_model TEXT NOT NULL DEFAULT '',
+          created_at TEXT NOT NULL,
+          loaded_at TEXT,
+          decided_at TEXT,
+          FOREIGN KEY (asset_id) REFERENCES sidecar_assets(asset_id)
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_asset_ai_proposals_attempt
+          ON asset_ai_proposals(asset_id, attempt);
+        CREATE INDEX IF NOT EXISTS idx_asset_ai_proposals_ready
+          ON asset_ai_proposals(status, created_at, asset_id);
+
+        CREATE TABLE IF NOT EXISTS asset_ai_runs (
+          run_id TEXT PRIMARY KEY,
+          trigger TEXT NOT NULL CHECK (trigger IN ('scheduled', 'manual', 'test')),
+          status TEXT NOT NULL
+            CHECK (status IN ('queued', 'running', 'completed', 'completed-with-errors', 'cancelled', 'failed')),
+          requested_count INTEGER NOT NULL DEFAULT 0,
+          processed_count INTEGER NOT NULL DEFAULT 0,
+          proposed_count INTEGER NOT NULL DEFAULT 0,
+          skipped_count INTEGER NOT NULL DEFAULT 0,
+          failed_count INTEGER NOT NULL DEFAULT 0,
+          remaining_count INTEGER NOT NULL DEFAULT 0,
+          cancel_requested INTEGER NOT NULL DEFAULT 0,
+          owner_pid INTEGER,
+          last_error TEXT NOT NULL DEFAULT '',
+          started_at TEXT,
+          completed_at TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_asset_ai_runs_status
+          ON asset_ai_runs(status, updated_at);
+
+        CREATE TABLE IF NOT EXISTS asset_ai_run_items (
+          run_id TEXT NOT NULL,
+          asset_id TEXT NOT NULL,
+          status TEXT NOT NULL
+            CHECK (status IN ('queued', 'running', 'proposed', 'skipped', 'failed')),
+          attempt INTEGER NOT NULL DEFAULT 0,
+          error_text TEXT NOT NULL DEFAULT '',
+          started_at TEXT,
+          completed_at TEXT,
+          PRIMARY KEY (run_id, asset_id),
+          FOREIGN KEY (run_id) REFERENCES asset_ai_runs(run_id) ON DELETE CASCADE,
+          FOREIGN KEY (asset_id) REFERENCES sidecar_assets(asset_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_asset_ai_run_items_status
+          ON asset_ai_run_items(run_id, status, asset_id);
+
         CREATE TABLE IF NOT EXISTS workflow_migration_receipts (
           migration_id TEXT PRIMARY KEY,
           state TEXT NOT NULL CHECK (state IN ('planned', 'applied', 'reverted', 'failed')),
@@ -358,6 +425,18 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         conn.execute(
             "ALTER TABLE fixture_access_grants ADD COLUMN inherit_descendants INTEGER NOT NULL DEFAULT 1"
         )
+    editorial_columns = {
+        str(row["name"])
+        for row in conn.execute("PRAGMA table_info(asset_editorial_state)").fetchall()
+    }
+    if "ai_preview_path" not in editorial_columns:
+        conn.execute(
+            "ALTER TABLE asset_editorial_state ADD COLUMN ai_preview_path TEXT NOT NULL DEFAULT ''"
+        )
+    if "ai_preview_sha256" not in editorial_columns:
+        conn.execute(
+            "ALTER TABLE asset_editorial_state ADD COLUMN ai_preview_sha256 TEXT NOT NULL DEFAULT ''"
+        )
     conn.execute(
         "UPDATE fixtures SET candidate_mode = CASE WHEN parent_fixture_id IS NULL THEN 'photos-library' ELSE 'inherited' END"
     )
@@ -402,6 +481,21 @@ def connect(repo_root: Path, db_path: Path | None = None) -> sqlite3.Connection:
     ensure_schema(conn)
     conn.commit()
     return conn
+
+
+def connect_read_only(repo_root: Path, db_path: Path | None = None) -> sqlite3.Connection:
+    """Open the existing Owner database without schema writes or writer-lock waits."""
+    selected = db_path or OWNER_DB
+    path = selected if selected.is_absolute() else repo_root / selected
+    connection = sqlite3.connect(
+        f"{path.resolve().as_uri()}?mode=ro",
+        uri=True,
+        timeout=2,
+    )
+    connection.row_factory = sqlite3.Row
+    connection.execute("PRAGMA busy_timeout = 2000")
+    connection.execute("PRAGMA query_only = ON")
+    return connection
 
 
 def _fixture_row(row: sqlite3.Row) -> dict[str, Any]:
@@ -1260,6 +1354,8 @@ def _review_item(row: sqlite3.Row) -> dict[str, Any]:
         "aiNote": str(row["ai_note"] or ""),
         "aiAttemptCount": int(row["ai_attempt_count"] or 0),
         "aiLastError": str(row["ai_last_error"] or ""),
+        "aiPreviewReady": bool(str(row["ai_preview_path"] or "")),
+        "proposalReady": bool(int(row["proposal_ready"] or 0)),
         "deliveryState": str(row["delivery_state"] or "not-ready"),
     }
 
@@ -1324,6 +1420,12 @@ def fixture_review_window(
                    COALESCE(decision.color, '') color,
                    editorial.editorial_state, editorial.ai_reasons_json, editorial.ai_note,
                    editorial.ai_attempt_count, editorial.ai_last_error,
+                   editorial.ai_preview_path,
+                   EXISTS (
+                     SELECT 1 FROM asset_ai_proposals AS proposal
+                     WHERE proposal.asset_id = a.asset_id
+                       AND proposal.status = 'ready'
+                   ) proposal_ready,
                    delivery.delivery_state
             FROM {from_sql}
             {joins}
@@ -1616,6 +1718,14 @@ def apply_fixture_review_action(
                 after_state = "requesting-ai" if reasons else "unreviewed"
                 after_reasons = reasons
                 after_note = str(ai_note or "").strip() if reasons else ""
+                conn.execute(
+                    """
+                    UPDATE asset_ai_proposals
+                    SET status = 'superseded', decided_at = ?
+                    WHERE asset_id = ? AND status IN ('ready', 'loaded')
+                    """,
+                    (timestamp, asset_id),
+                )
                 _set_fixture_review_placement(
                     conn,
                     fixture_id,
@@ -1638,6 +1748,16 @@ def apply_fixture_review_action(
                     )
                 if after_state == "approved":
                     _set_delivery_state(conn, asset_id, "needs-upload", timestamp)
+                elif after_state == "proposed":
+                    after_state = "unreviewed"
+                    conn.execute(
+                        """
+                        UPDATE asset_ai_proposals
+                        SET status = 'accepted', decided_at = ?
+                        WHERE asset_id = ? AND status IN ('ready', 'loaded')
+                        """,
+                        (timestamp, asset_id),
+                    )
             elif clean_action == "propagate-title":
                 conn.execute(
                     "UPDATE sidecar_decisions SET title = ?, last_action = 'metadata', updated_at = ? WHERE asset_id = ?",
@@ -1655,6 +1775,15 @@ def apply_fixture_review_action(
 
             approved_at = timestamp if after_state == "approved" else before_editorial["approved_at"]
             requested_at = timestamp if after_state == "requesting-ai" else None
+            if clean_action in {"approve", "hide"}:
+                conn.execute(
+                    """
+                    UPDATE asset_ai_proposals
+                    SET status = 'superseded', decided_at = ?
+                    WHERE asset_id = ? AND status IN ('ready', 'loaded')
+                    """,
+                    (timestamp, asset_id),
+                )
             conn.execute(
                 """
                 UPDATE asset_editorial_state
@@ -1714,6 +1843,239 @@ def apply_fixture_review_action(
         "count": len(items),
         "items": items,
     }
+
+
+def ai_preview_targets(
+    repo_root: Path,
+    asset_ids: Iterable[str],
+) -> list[dict[str, str]]:
+    """Return exact PhotoKit identifiers for requested items missing a bounded preview."""
+    selected = _unique(asset_ids)
+    if not selected:
+        return []
+    with connect(repo_root) as conn:
+        rows = conn.execute(
+            f"""
+            SELECT a.asset_id, a.source_anchor, editorial.ai_preview_path
+            FROM sidecar_assets AS a
+            JOIN asset_editorial_state AS editorial
+              ON editorial.asset_id = a.asset_id
+            WHERE a.asset_id IN ({','.join('?' for _ in selected)})
+              AND editorial.editorial_state = 'requesting-ai'
+            ORDER BY a.asset_id
+            """,
+            selected,
+        ).fetchall()
+    targets: list[dict[str, str]] = []
+    for row in rows:
+        existing = Path(str(row["ai_preview_path"] or ""))
+        if existing.is_file():
+            continue
+        anchor = str(row["source_anchor"] or "")
+        photo_id = (
+            anchor.removeprefix("apple-photos://")
+            if anchor.startswith("apple-photos://")
+            else str(row["asset_id"])
+        )
+        targets.append({"assetId": str(row["asset_id"]), "photoLibraryIdentifier": photo_id})
+    return targets
+
+
+def record_ai_preview(
+    repo_root: Path,
+    asset_id: str,
+    preview_path: Path,
+) -> dict[str, Any]:
+    """Attach one bounded local JPEG to an existing explicit AI request."""
+    resolved = preview_path.expanduser().resolve()
+    if not resolved.is_file():
+        raise ValueError("AI request preview does not exist")
+    digest = hashlib.sha256(resolved.read_bytes()).hexdigest()
+    timestamp = now_iso()
+    with connect(repo_root) as conn:
+        row = conn.execute(
+            "SELECT editorial_state FROM asset_editorial_state WHERE asset_id = ?",
+            (asset_id,),
+        ).fetchone()
+        if not row or row["editorial_state"] != "requesting-ai":
+            raise ValueError("AI preview can only be attached to a requested item")
+        conn.execute(
+            """
+            UPDATE asset_editorial_state
+            SET ai_preview_path = ?, ai_preview_sha256 = ?, updated_at = ?
+            WHERE asset_id = ?
+            """,
+            (str(resolved), digest, timestamp, asset_id),
+        )
+        conn.commit()
+    return {
+        "ok": True,
+        "assetId": asset_id,
+        "previewPath": str(resolved),
+        "previewSha256": digest,
+    }
+
+
+def ready_ai_proposals(
+    repo_root: Path,
+    *,
+    asset_ids: Iterable[str] = (),
+    include_loaded: bool = False,
+) -> dict[str, Any]:
+    """Read proposal drafts without changing canonical editorial metadata."""
+    selected = _unique(asset_ids)
+    statuses = ("ready", "loaded") if include_loaded else ("ready",)
+    where = [f"proposal.status IN ({','.join('?' for _ in statuses)})"]
+    params: list[Any] = list(statuses)
+    if selected:
+        where.append(f"proposal.asset_id IN ({','.join('?' for _ in selected)})")
+        params.extend(selected)
+    with connect(repo_root) as conn:
+        rows = conn.execute(
+            f"""
+            SELECT proposal.*, editorial.editorial_state,
+                   COALESCE(decision.title, '') canonical_title,
+                   COALESCE(decision.keywords_json, '[]') canonical_keywords_json
+            FROM asset_ai_proposals AS proposal
+            JOIN asset_editorial_state AS editorial
+              ON editorial.asset_id = proposal.asset_id
+            LEFT JOIN sidecar_decisions AS decision
+              ON decision.asset_id = proposal.asset_id
+            WHERE {' AND '.join(where)}
+            ORDER BY proposal.created_at, proposal.asset_id
+            """,
+            params,
+        ).fetchall()
+    items = [{
+        "proposalId": str(row["proposal_id"]),
+        "status": str(row["status"]),
+        "assetId": str(row["asset_id"]),
+        "runId": str(row["run_id"]),
+        "attempt": int(row["attempt"]),
+        "previousTitle": str(row["previous_title"] or ""),
+        "previousKeywords": _read_json(row["previous_keywords_json"], []),
+        "canonicalTitle": str(row["canonical_title"] or ""),
+        "canonicalKeywords": _read_json(row["canonical_keywords_json"], []),
+        "proposedTitle": str(row["proposed_title"] or ""),
+        "proposedKeywords": _read_json(row["proposed_keywords_json"], []),
+        "confidence": str(row["confidence"] or ""),
+        "reason": str(row["reason"] or ""),
+        "needsOwnerContext": bool(row["needs_owner_context"]),
+        "requestReasons": _read_json(row["request_reasons_json"], []),
+        "requestNote": str(row["request_note"] or ""),
+        "createdAt": str(row["created_at"]),
+    } for row in rows]
+    return {"ok": True, "count": len(items), "items": items}
+
+
+def mark_ai_proposals_loaded(
+    repo_root: Path,
+    proposal_ids: Iterable[str],
+) -> dict[str, Any]:
+    """Audit that ready proposals were loaded as drafts; never alter canonical T/K."""
+    selected = _unique(proposal_ids)
+    if not selected:
+        return {"ok": True, "count": 0, "proposalIds": []}
+    timestamp = now_iso()
+    with connect(repo_root) as conn:
+        cursor = conn.execute(
+            f"""
+            UPDATE asset_ai_proposals
+            SET status = 'loaded', loaded_at = ?
+            WHERE proposal_id IN ({','.join('?' for _ in selected)})
+              AND status = 'ready'
+            """,
+            [timestamp, *selected],
+        )
+        changed = max(0, int(cursor.rowcount))
+        conn.commit()
+    return {"ok": True, "count": changed, "proposalIds": selected}
+
+
+def ai_run_status(repo_root: Path) -> dict[str, Any]:
+    """Return the active/latest AI pass and the durable ready-proposal count."""
+    conn = connect_read_only(repo_root)
+    try:
+        active = conn.execute(
+            """
+            SELECT * FROM asset_ai_runs
+            WHERE status IN ('queued', 'running')
+            ORDER BY created_at DESC LIMIT 1
+            """
+        ).fetchone()
+        latest = active or conn.execute(
+            "SELECT * FROM asset_ai_runs ORDER BY created_at DESC LIMIT 1"
+        ).fetchone()
+        requested = int(conn.execute(
+            "SELECT count(*) FROM asset_editorial_state WHERE editorial_state = 'requesting-ai'"
+        ).fetchone()[0])
+        ready = int(conn.execute(
+            "SELECT count(*) FROM asset_ai_proposals WHERE status = 'ready'"
+        ).fetchone()[0])
+    finally:
+        conn.close()
+    if not latest:
+        return {
+            "ok": True,
+            "active": False,
+            "requested": requested,
+            "ready": ready,
+            "run": {},
+        }
+    started = str(latest["started_at"] or latest["created_at"])
+    elapsed = 0.0
+    try:
+        elapsed = max(
+            0.0,
+            (
+                datetime.now(timezone.utc)
+                - datetime.fromisoformat(started.replace("Z", "+00:00"))
+            ).total_seconds(),
+        )
+    except ValueError:
+        pass
+    return {
+        "ok": True,
+        "active": str(latest["status"]) in {"queued", "running"},
+        "requested": requested,
+        "ready": ready,
+        "run": {
+            "runId": str(latest["run_id"]),
+            "trigger": str(latest["trigger"]),
+            "status": str(latest["status"]),
+            "requested": int(latest["requested_count"]),
+            "processed": int(latest["processed_count"]),
+            "proposed": int(latest["proposed_count"]),
+            "skipped": int(latest["skipped_count"]),
+            "failed": int(latest["failed_count"]),
+            "remaining": int(latest["remaining_count"]),
+            "cancelRequested": bool(latest["cancel_requested"]),
+            "elapsedSeconds": round(elapsed, 1),
+            "lastError": str(latest["last_error"] or ""),
+            "startedAt": str(latest["started_at"] or ""),
+            "completedAt": str(latest["completed_at"] or ""),
+        },
+    }
+
+
+def request_ai_run_cancel(repo_root: Path) -> dict[str, Any]:
+    timestamp = now_iso()
+    with connect(repo_root) as conn:
+        row = conn.execute(
+            """
+            SELECT run_id FROM asset_ai_runs
+            WHERE status IN ('queued', 'running')
+            ORDER BY created_at DESC LIMIT 1
+            """
+        ).fetchone()
+        if not row:
+            return {"ok": True, "active": False, "runId": ""}
+        conn.execute(
+            "UPDATE asset_ai_runs SET cancel_requested = 1, updated_at = ? WHERE run_id = ?",
+            (timestamp, row["run_id"]),
+        )
+        conn.commit()
+    return {"ok": True, "active": True, "runId": str(row["run_id"])}
 
 
 def effective_fixture_access_grants(repo_root: Path, fixture_id: str) -> list[dict[str, Any]]:

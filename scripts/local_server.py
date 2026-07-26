@@ -116,6 +116,7 @@ APPLE_PHOTOS_IMPORT_PROGRESS_LOCK = threading.Lock()
 APPLE_PHOTOS_PROGRESS_PREFIX = "PBE_APPLE_PHOTOS_PROGRESS "
 APPLE_PHOTOS_PROGRESS_ITEM_LIMIT = 60
 SOURCE_PREVIEW_CACHE_ROOT = Path(".review-logs/source-previews")
+REQUESTED_AI_PREVIEW_ROOT = Path(".review-logs/requested-ai-previews")
 IMPORT_SOURCE_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tif", ".tiff", ".heic", ".heif", ".webp"}
 SOURCE_PREVIEW_BROWSER_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 SOURCE_PREVIEW_GENERATABLE_IMAGE_EXTENSIONS = {".heic", ".heif", ".tif", ".tiff", ".png", ".webp"}
@@ -364,12 +365,15 @@ from fixture_pipeline import (  # noqa: E402
     fixture_culling_window,
     fixture_review_window,
     apply_fixture_review_action,
+    ai_preview_targets,
+    ai_run_status,
     effective_fixture_access_grants,
     get_pool,
     link_deliverable,
     list_deliverables,
     list_pools,
     list_placements,
+    mark_ai_proposals_loaded,
     migrate_la_concha_tree,
     move_fixture,
     move_placement,
@@ -378,12 +382,15 @@ from fixture_pipeline import (  # noqa: E402
     plan_fixture_state_migration,
     preview_pool_refresh,
     publication_plan,
+    ready_ai_proposals,
+    record_ai_preview,
     remove_placement,
     rename_fixture,
     reopen_fixture,
     restore_placement,
     search_assets,
     set_fixture_asset_state,
+    request_ai_run_cancel,
 )
 from apple_photos_metadata_writer import SignedPhotosBridgeAdapter, commit_writeback, writeback_plan  # noqa: E402
 
@@ -1773,6 +1780,90 @@ def _new_owner_apple_photos_real_estate_result(repo_root: Path, action: dict, co
     raise ValueError(f"Unsupported Apple Photos Real Estate intake mode: {mode or 'missing'}")
 
 
+def _capture_requested_ai_previews(
+    repo_root: Path,
+    asset_ids: list[str],
+) -> dict:
+    """Materialize bounded JPEGs while the explicit request action is in hand."""
+    targets = ai_preview_targets(repo_root, asset_ids)
+    root = repo_root / REQUESTED_AI_PREVIEW_ROOT
+    root.mkdir(parents=True, exist_ok=True)
+    captured: list[dict] = []
+    failed: list[dict] = []
+    for target in targets:
+        asset_id = str(target["assetId"])
+        destination = root / f"{hashlib.sha256(asset_id.encode()).hexdigest()[:24]}.jpg"
+        try:
+            bridge = _run_apple_photos_bridge(
+                repo_root,
+                [
+                    "preview",
+                    "--asset-id",
+                    str(target["photoLibraryIdentifier"]),
+                    "--destination",
+                    str(destination),
+                    "--max-pixel",
+                    "1600",
+                ],
+            )
+        except Exception as error:
+            failed.append({
+                "assetId": asset_id,
+                "error": f"AI preview capture unavailable: {error}",
+            })
+            continue
+        if not bridge.get("ok") or not destination.is_file():
+            failed.append({
+                "assetId": asset_id,
+                "error": str(bridge.get("error") or "Photos Bridge did not create the AI preview."),
+            })
+            continue
+        captured.append(record_ai_preview(repo_root, asset_id, destination))
+    return {
+        "requested": len(targets),
+        "captured": len(captured),
+        "failed": len(failed),
+        "items": captured,
+        "failures": failed,
+    }
+
+
+def _start_requested_ai_pass(repo_root: Path) -> dict:
+    status = ai_run_status(repo_root)
+    if status.get("active"):
+        return {**status, "attached": True, "started": False}
+    log_root = repo_root / ".review-logs" / "requested-ai-runs"
+    log_root.mkdir(parents=True, exist_ok=True)
+    log_path = log_root / f"manual-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}.log"
+    log_handle = log_path.open("ab")
+    try:
+        process = subprocess.Popen(
+            [
+                sys.executable,
+                str(repo_root / "scripts" / "requested_ai_proposal_pass.py"),
+                "--repo-root",
+                str(repo_root),
+                "--trigger",
+                "manual",
+            ],
+            cwd=repo_root,
+            stdin=subprocess.DEVNULL,
+            stdout=log_handle,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+        )
+    finally:
+        log_handle.close()
+    return {
+        "ok": True,
+        "active": True,
+        "attached": False,
+        "started": True,
+        "pid": process.pid,
+        "logPath": str(log_path),
+    }
+
+
 def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_id: str) -> dict:
     """Run universal fixture orchestration through the enrolled local connector."""
     manifest = _new_owner_manifest(action)
@@ -1853,22 +1944,51 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
             ),
         })
     elif mode == "fixture-review-apply":
-        result.update({
-            "readOnly": False,
-            "reviewAction": apply_fixture_review_action(
+        review_action = apply_fixture_review_action(
+            repo_root,
+            str(manifest.get("fixtureId") or ""),
+            manifest.get("assetIds") or [],
+            str(manifest.get("reviewAction") or ""),
+            anchor_asset_id=str(manifest.get("anchorAssetId") or ""),
+            propagate=bool(manifest.get("propagate")),
+            title=manifest.get("title") if "title" in manifest else None,
+            keywords=manifest.get("keywords") if "keywords" in manifest else None,
+            ai_reasons=manifest.get("aiReasons") or [],
+            ai_note=str(manifest.get("aiNote") or ""),
+            actor="owner-connector",
+        )
+        if (
+            str(manifest.get("reviewAction") or "").strip().casefold() == "request-ai"
+            and manifest.get("aiReasons")
+        ):
+            review_action["previewCapture"] = _capture_requested_ai_previews(
                 repo_root,
-                str(manifest.get("fixtureId") or ""),
-                manifest.get("assetIds") or [],
-                str(manifest.get("reviewAction") or ""),
-                anchor_asset_id=str(manifest.get("anchorAssetId") or ""),
-                propagate=bool(manifest.get("propagate")),
-                title=manifest.get("title") if "title" in manifest else None,
-                keywords=manifest.get("keywords") if "keywords" in manifest else None,
-                ai_reasons=manifest.get("aiReasons") or [],
-                ai_note=str(manifest.get("aiNote") or ""),
-                actor="owner-connector",
+                [str(item["assetId"]) for item in review_action.get("items") or []],
+            )
+        result.update({"readOnly": False, "reviewAction": review_action})
+    elif mode == "fixture-ai-status":
+        result.update({"readOnly": True, "ai": ai_run_status(repo_root)})
+    elif mode == "fixture-ai-proposals-ready":
+        result.update({
+            "readOnly": True,
+            "aiProposals": ready_ai_proposals(
+                repo_root,
+                asset_ids=manifest.get("assetIds") or [],
+                include_loaded=bool(manifest.get("includeLoaded")),
             ),
         })
+    elif mode == "fixture-ai-proposals-load":
+        result.update({
+            "readOnly": False,
+            "aiProposals": mark_ai_proposals_loaded(
+                repo_root,
+                manifest.get("proposalIds") or [],
+            ),
+        })
+    elif mode == "fixture-ai-pass-start":
+        result.update({"readOnly": False, "ai": _start_requested_ai_pass(repo_root)})
+    elif mode == "fixture-ai-pass-cancel":
+        result.update({"readOnly": False, "ai": request_ai_run_cancel(repo_root)})
     elif mode == "fixture-access-effective":
         fixture_id = str(manifest.get("fixtureId") or "")
         grants = effective_fixture_access_grants(repo_root, fixture_id)

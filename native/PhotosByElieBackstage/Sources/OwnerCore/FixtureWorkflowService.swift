@@ -343,6 +343,95 @@ public struct FixtureReviewResult: Sendable, Equatable {
     }
 }
 
+public struct FixtureAIProposal: Identifiable, Sendable, Equatable {
+    public var id: String
+    public var status: String
+    public var assetID: String
+    public var runID: String
+    public var attempt: Int
+    public var previousTitle: String
+    public var previousKeywords: [String]
+    public var canonicalTitle: String
+    public var canonicalKeywords: [String]
+    public var proposedTitle: String
+    public var proposedKeywords: [String]
+    public var confidence: String
+    public var reason: String
+    public var needsOwnerContext: Bool
+    public var requestReasons: [String]
+    public var requestNote: String
+    public var createdAt: String
+
+    init(json: [String: JSONValue]) {
+        id = json["proposalId"]?.stringValue ?? ""
+        status = json["status"]?.stringValue ?? "ready"
+        assetID = json["assetId"]?.stringValue ?? ""
+        runID = json["runId"]?.stringValue ?? ""
+        attempt = json["attempt"]?.intValue ?? 0
+        previousTitle = json["previousTitle"]?.stringValue ?? ""
+        previousKeywords = json["previousKeywords"]?.arrayValue?.compactMap(\.stringValue) ?? []
+        canonicalTitle = json["canonicalTitle"]?.stringValue ?? ""
+        canonicalKeywords = json["canonicalKeywords"]?.arrayValue?.compactMap(\.stringValue) ?? []
+        proposedTitle = json["proposedTitle"]?.stringValue ?? ""
+        proposedKeywords = json["proposedKeywords"]?.arrayValue?.compactMap(\.stringValue) ?? []
+        confidence = json["confidence"]?.stringValue ?? ""
+        reason = json["reason"]?.stringValue ?? ""
+        needsOwnerContext = json["needsOwnerContext"]?.boolValue ?? false
+        requestReasons = json["requestReasons"]?.arrayValue?.compactMap(\.stringValue) ?? []
+        requestNote = json["requestNote"]?.stringValue ?? ""
+        createdAt = json["createdAt"]?.stringValue ?? ""
+    }
+}
+
+public struct FixtureAIRun: Sendable, Equatable {
+    public var id: String
+    public var trigger: String
+    public var status: String
+    public var requested: Int
+    public var processed: Int
+    public var proposed: Int
+    public var skipped: Int
+    public var failed: Int
+    public var remaining: Int
+    public var cancelRequested: Bool
+    public var elapsedSeconds: Double
+    public var lastError: String
+
+    init(json: [String: JSONValue]) {
+        id = json["runId"]?.stringValue ?? ""
+        trigger = json["trigger"]?.stringValue ?? ""
+        status = json["status"]?.stringValue ?? ""
+        requested = json["requested"]?.intValue ?? 0
+        processed = json["processed"]?.intValue ?? 0
+        proposed = json["proposed"]?.intValue ?? 0
+        skipped = json["skipped"]?.intValue ?? 0
+        failed = json["failed"]?.intValue ?? 0
+        remaining = json["remaining"]?.intValue ?? 0
+        cancelRequested = json["cancelRequested"]?.boolValue ?? false
+        if case let .number(value)? = json["elapsedSeconds"] {
+            elapsedSeconds = value
+        } else {
+            elapsedSeconds = 0
+        }
+        lastError = json["lastError"]?.stringValue ?? ""
+    }
+}
+
+public struct FixtureAIStatus: Sendable, Equatable {
+    public var active: Bool
+    public var requested: Int
+    public var ready: Int
+    public var run: FixtureAIRun?
+
+    init(json: [String: JSONValue]) {
+        active = json["active"]?.boolValue ?? false
+        requested = json["requested"]?.intValue ?? 0
+        ready = json["ready"]?.intValue ?? 0
+        let runJSON = json["run"]?.objectValue ?? [:]
+        run = runJSON.isEmpty ? nil : FixtureAIRun(json: runJSON)
+    }
+}
+
 public struct FixtureStateMigrationReport: Sendable, Equatable {
     public var migrationID: String
     public var mode: String
@@ -550,6 +639,41 @@ public actor FixtureWorkflowService {
         return FixtureReviewResult(
             json: result["reviewAction"]?.objectValue ?? [:]
         )
+    }
+
+    public func aiStatus() async throws -> FixtureAIStatus {
+        let result = try await run("fixture-ai-status", extra: [:])
+        return FixtureAIStatus(json: result["ai"]?.objectValue ?? [:])
+    }
+
+    public func aiProposals(
+        assetIDs: [String] = [],
+        includeLoaded: Bool = true
+    ) async throws -> [FixtureAIProposal] {
+        let result = try await run("fixture-ai-proposals-ready", extra: [
+            "assetIds": .array(assetIDs.map(JSONValue.string)),
+            "includeLoaded": .bool(includeLoaded),
+        ])
+        return result["aiProposals"]?.objectValue?["items"]?.arrayValue?
+            .compactMap(\.objectValue)
+            .map(FixtureAIProposal.init(json:)) ?? []
+    }
+
+    public func markAIProposalsLoaded(_ proposalIDs: [String]) async throws -> Int {
+        let result = try await run("fixture-ai-proposals-load", extra: [
+            "proposalIds": .array(proposalIDs.map(JSONValue.string)),
+        ])
+        return result["aiProposals"]?.objectValue?["count"]?.intValue ?? 0
+    }
+
+    public func startAIPass() async throws -> FixtureAIStatus {
+        _ = try await run("fixture-ai-pass-start", extra: [:])
+        return try await aiStatus()
+    }
+
+    public func cancelAIPass() async throws -> FixtureAIStatus {
+        _ = try await run("fixture-ai-pass-cancel", extra: [:])
+        return try await aiStatus()
     }
 
     public func effectiveAccess(fixtureID: String) async throws -> [EffectiveFixtureAccess] {

@@ -1255,6 +1255,44 @@ private struct FixtureReviewView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 }
+                HStack(spacing: 10) {
+                    if model.readyAIProposalCount > 0 {
+                        Label(
+                            "\(model.readyAIProposalCount.formatted()) new proposal\(model.readyAIProposalCount == 1 ? "" : "s") ready",
+                            systemImage: "sparkles"
+                        )
+                        .font(.callout.weight(.semibold))
+                        .foregroundStyle(.orange)
+                        Button("Load proposals") {
+                            Task { await model.loadAIProposals() }
+                        }
+                    }
+                    if !model.reviewProposalConflictIDs.isEmpty {
+                        Button("Replace \(model.reviewProposalConflictIDs.count) conflicting draft\(model.reviewProposalConflictIDs.count == 1 ? "" : "s")") {
+                            Task { await model.loadAIProposals(replacingConflicts: true) }
+                        }
+                        .tint(.orange)
+                    }
+                    Spacer()
+                    Button(model.isRunningAIPass ? "AI pass running…" : "Run AI pass now") {
+                        Task { await model.runAIProposalPass() }
+                    }
+                    .disabled(model.isRunningAIPass || (model.fixtureAIStatus?.requested ?? 0) == 0)
+                    if model.fixtureAIStatus?.active == true {
+                        Button("Cancel") {
+                            Task { await model.cancelAIProposalPass() }
+                        }
+                    }
+                }
+                Text(model.aiProposalStatus)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                if let run = model.fixtureAIStatus?.run, model.fixtureAIStatus?.active == true {
+                    ProgressView(
+                        value: Double(run.processed),
+                        total: Double(max(1, run.requested))
+                    )
+                }
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(spacing: 10) {
@@ -1263,7 +1301,9 @@ private struct FixtureReviewView: View {
                                     item: item,
                                     thumbnail: model.reviewThumbnails[item.id],
                                     isSelected: model.reviewSelection.selectedIDs.contains(item.id),
-                                    isFocused: model.reviewSelection.focusedID == item.id
+                                    isFocused: model.reviewSelection.focusedID == item.id,
+                                    hasProposalDraft: model.hasProposalDraft(for: item.id),
+                                    hasProposalConflict: model.reviewProposalConflictIDs.contains(item.id)
                                 )
                                 .id(item.id)
                                 .contentShape(Rectangle())
@@ -1353,6 +1393,13 @@ private struct FixtureReviewView: View {
                 model.reviewFixtureID = model.cullingFixtureID
             }
             await model.loadFixtureReviewWindow()
+            await model.restoreLoadedAIProposalDrafts()
+            await model.refreshAIStatus()
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(10))
+                guard !Task.isCancelled else { break }
+                await model.refreshAIStatus()
+            }
         }
     }
 }
@@ -1362,6 +1409,8 @@ private struct ReviewAssetRow: View {
     var thumbnail: NSImage?
     var isSelected: Bool
     var isFocused: Bool
+    var hasProposalDraft: Bool
+    var hasProposalConflict: Bool
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -1407,9 +1456,19 @@ private struct ReviewAssetRow: View {
                     if item.editorialState == "requesting-ai" {
                         Text("• \(item.aiReasons.count) reason\(item.aiReasons.count == 1 ? "" : "s")")
                     }
+                    if hasProposalDraft {
+                        Label("Proposal draft", systemImage: "sparkles")
+                    }
+                    if hasProposalConflict {
+                        Label("Manual draft kept", systemImage: "exclamationmark.triangle.fill")
+                    }
                 }
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(item.editorialState == "requesting-ai" ? .orange : .secondary)
+                .foregroundStyle(
+                    item.editorialState == "requesting-ai" || hasProposalDraft || hasProposalConflict
+                        ? .orange
+                        : .secondary
+                )
             }
         }
         .padding(10)
@@ -1463,6 +1522,16 @@ private struct ReviewInspector: View {
                     TextField("Keywords, comma separated", text: $model.reviewKeywords, axis: .vertical)
                         .textFieldStyle(.roundedBorder)
                         .lineLimit(3...7)
+                    if let proposal = model.reviewProposalDrafts[item.id], proposal.isProposal {
+                        Label(
+                            proposal.proposalReason.isEmpty
+                                ? "AI proposal loaded as an editable draft"
+                                : proposal.proposalReason,
+                            systemImage: "sparkles"
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                    }
                     HStack {
                         Button("Save T/K") {
                             Task { await model.saveReviewMetadata() }

@@ -21,6 +21,8 @@ from fixture_pipeline import (
     fixture_culling_window,
     fixture_review_window,
     apply_fixture_review_action,
+    ai_preview_targets,
+    ai_run_status,
     effective_fixture_access_grants,
     list_pools,
     list_placements,
@@ -36,6 +38,9 @@ from fixture_pipeline import (
     remove_placement,
     rename_fixture,
     record_r2_upload_results,
+    ready_ai_proposals,
+    mark_ai_proposals_loaded,
+    record_ai_preview,
     record_source_batch,
     reopen_fixture,
     restore_placement,
@@ -43,6 +48,7 @@ from fixture_pipeline import (
     set_fixture_asset_state,
     editorial_version_hash,
 )
+from requested_ai_proposal_pass import run_requested_ai_pass
 from sidecar_state_db import connect, record_decision, upsert_assets
 
 
@@ -329,6 +335,112 @@ class FixturePipelineTest(unittest.TestCase):
             ai_reasons=[],
         )
         self.assertEqual(cleared["items"][0]["after"]["editorialState"], "unreviewed")
+
+    def test_requested_ai_pass_keeps_proposals_separate_and_is_one_attempt_per_pass(self):
+        root = create_fixture(self.root, "Root", fixture_id="root")
+        set_fixture_asset_state(self.root, root["fixtureId"], ["asset-1", "asset-2"], "picked")
+        apply_fixture_review_action(
+            self.root,
+            root["fixtureId"],
+            ["asset-1", "asset-2"],
+            "request-ai",
+            ai_reasons=["weak title"],
+            ai_note="Use the visible subject.",
+        )
+        targets = ai_preview_targets(self.root, ["asset-1", "asset-2"])
+        self.assertEqual({item["assetId"] for item in targets}, {"asset-1", "asset-2"})
+        for target in targets:
+            preview = self.root / f"{target['assetId']}.jpg"
+            preview.write_bytes(f"preview-{target['assetId']}".encode())
+            record_ai_preview(self.root, target["assetId"], preview)
+
+        attempts = []
+        def fake_proposer(item):
+            attempts.append(item["assetId"])
+            if item["assetId"] == "asset-2":
+                raise RuntimeError("temporary model failure")
+            return {
+                "title": "Visible family scene",
+                "keywords": ["Family", "Portrait"],
+                "confidence": "high",
+                "reason": "Visible people support the proposal.",
+                "needs_owner_context": False,
+            }
+
+        result = run_requested_ai_pass(
+            self.root,
+            trigger="test",
+            proposer=fake_proposer,
+        )
+        self.assertEqual(result["proposed"], 1)
+        self.assertEqual(result["failed"], 1)
+        self.assertEqual(attempts, ["asset-1", "asset-2"])
+        proposals = ready_ai_proposals(self.root)
+        self.assertEqual(proposals["count"], 1)
+        self.assertEqual(proposals["items"][0]["proposedTitle"], "Visible family scene")
+        self.assertEqual(proposals["items"][0]["canonicalTitle"], "")
+        proposal_id = proposals["items"][0]["proposalId"]
+        loaded = mark_ai_proposals_loaded(self.root, [proposal_id])
+        self.assertEqual(loaded["count"], 1)
+        self.assertEqual(ready_ai_proposals(self.root)["count"], 0)
+        durable_drafts = ready_ai_proposals(self.root, include_loaded=True)
+        self.assertEqual(durable_drafts["count"], 1)
+        self.assertEqual(durable_drafts["items"][0]["status"], "loaded")
+        with connect(self.root) as conn:
+            states = {
+                row["asset_id"]: (
+                    row["editorial_state"],
+                    row["ai_attempt_count"],
+                    row["ai_last_error"],
+                )
+                for row in conn.execute(
+                    """
+                    SELECT asset_id, editorial_state, ai_attempt_count, ai_last_error
+                    FROM asset_editorial_state
+                    WHERE asset_id IN ('asset-1', 'asset-2')
+                    """
+                ).fetchall()
+            }
+        self.assertEqual(states["asset-1"][:2], ("proposed", 1))
+        self.assertEqual(states["asset-2"][:2], ("requesting-ai", 1))
+        self.assertIn("temporary model failure", states["asset-2"][2])
+        status = ai_run_status(self.root)
+        self.assertFalse(status["active"])
+        self.assertEqual(status["ready"], 0)
+
+        retried = run_requested_ai_pass(
+            self.root,
+            trigger="test",
+            proposer=lambda item: {
+                "title": "Recovered proposal",
+                "keywords": ["Recovered"],
+                "confidence": "medium",
+                "reason": "Retry succeeded.",
+                "needs_owner_context": False,
+            },
+        )
+        self.assertEqual(retried["requested"], 1)
+        self.assertEqual(retried["proposed"], 1)
+        apply_fixture_review_action(
+            self.root,
+            root["fixtureId"],
+            ["asset-1"],
+            "edit-metadata",
+            title="Owner accepted draft",
+            keywords=["Accepted"],
+        )
+        with connect(self.root) as conn:
+            self.assertEqual(
+                conn.execute(
+                    "SELECT ai_attempt_count FROM asset_editorial_state WHERE asset_id = 'asset-2'"
+                ).fetchone()[0],
+                2,
+            )
+            accepted = conn.execute(
+                "SELECT status FROM asset_ai_proposals WHERE proposal_id = ?",
+                (proposal_id,),
+            ).fetchone()[0]
+        self.assertEqual(accepted, "accepted")
 
     def test_review_propagation_crosses_visible_page_with_two_hour_boundary(self):
         upsert_assets(self.root, [

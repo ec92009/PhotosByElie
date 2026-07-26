@@ -21,6 +21,15 @@ struct MetadataHistoryEntry: Identifiable, Sendable {
     var kind: MetadataHistoryKind
 }
 
+struct ReviewMetadataDraft: Sendable, Equatable {
+    var title: String
+    var keywords: [String]
+    var proposalID: String = ""
+    var proposalReason: String = ""
+
+    var isProposal: Bool { !proposalID.isEmpty }
+}
+
 @MainActor
 final class BackstageViewModel: ObservableObject {
     enum Section: String, CaseIterable, Identifiable {
@@ -126,6 +135,11 @@ final class BackstageViewModel: ObservableObject {
     @Published var reviewStatus = "Choose a fixture to load its unresolved picked photos."
     @Published var isRunningReview = false
     @Published var reviewScrollTargetID: String?
+    @Published var fixtureAIStatus: FixtureAIStatus?
+    @Published var reviewProposalDrafts: [String: ReviewMetadataDraft] = [:]
+    @Published var reviewProposalConflictIDs: Set<String> = []
+    @Published var aiProposalStatus = "AI runs only for explicitly requested photos."
+    @Published var isRunningAIPass = false
     @Published var metadataAssetID = ""
     @Published var metadataTitle = ""
     @Published var metadataCaption = ""
@@ -488,6 +502,14 @@ final class BackstageViewModel: ObservableObject {
     var focusedReviewItem: FixtureReviewItem? {
         let id = reviewSelection.focusedID ?? selectedReviewAssetIDs.first
         return reviewItems.first(where: { $0.id == id })
+    }
+
+    var readyAIProposalCount: Int {
+        fixtureAIStatus?.ready ?? 0
+    }
+
+    func hasProposalDraft(for assetID: String) -> Bool {
+        reviewProposalDrafts[assetID]?.isProposal ?? false
     }
 
     var reviewAIReasonChoices: [String] {
@@ -1078,6 +1100,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func selectReviewFixture(_ fixtureID: String) {
+        preserveCurrentReviewDraft()
         reviewFixtureID = fixtureID
         reviewWindowOffset = 0
         reviewSearch = ""
@@ -1105,6 +1128,7 @@ final class BackstageViewModel: ObservableObject {
         let currentID = preferredAssetID
             ?? reviewSelection.focusedID
             ?? selectedReviewAssetIDs.first
+        preserveCurrentReviewDraft()
         isRunningReview = true
         reviewStatus = "Loading the oldest unresolved picked photos…"
         defer { isRunningReview = false }
@@ -1128,12 +1152,14 @@ final class BackstageViewModel: ObservableObject {
             reviewScrollTargetID = replacementID
             syncReviewDraft()
             reviewStatus = "\(window.summary.total.formatted()) unresolved picked photo\(window.summary.total == 1 ? "" : "s") • oldest first."
+            await refreshAIStatus()
         } catch {
             reviewStatus = String(describing: error)
         }
     }
 
     func clickReviewItem(_ id: String, modifiers: NSEvent.ModifierFlags) {
+        preserveCurrentReviewDraft()
         reviewSelection.click(
             id,
             extending: modifiers.contains(.shift),
@@ -1143,6 +1169,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func moveReviewSelection(by delta: Int, extending: Bool) {
+        preserveCurrentReviewDraft()
         reviewSelection.move(by: delta, extending: extending)
         reviewScrollTargetID = reviewSelection.focusedID
         syncReviewDraft()
@@ -1154,6 +1181,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func clearReviewSelection() {
+        preserveCurrentReviewDraft()
         reviewSelection.clear()
         clearReviewDraft()
     }
@@ -1200,6 +1228,12 @@ final class BackstageViewModel: ObservableObject {
                 reviewAIReasons = []
                 reviewAINote = ""
             }
+            if [.approve, .hide, .editMetadata].contains(action) {
+                ids.forEach {
+                    reviewProposalDrafts.removeValue(forKey: $0)
+                    reviewProposalConflictIDs.remove($0)
+                }
+            }
             let window = try await fixtureService.reviewWindow(
                 fixtureID: reviewFixtureID,
                 offset: reviewWindowOffset,
@@ -1223,6 +1257,7 @@ final class BackstageViewModel: ObservableObject {
             reviewScrollTargetID = replacementID
             syncReviewDraft()
             reviewStatus = "\(reviewActionLabel(action)) affected \(result.changes.count.formatted()) item\(result.changes.count == 1 ? "" : "s")."
+            await refreshAIStatus()
         } catch {
             reviewStatus = "\(reviewActionLabel(action)) failed: \(error)"
         }
@@ -1246,6 +1281,121 @@ final class BackstageViewModel: ObservableObject {
             return
         }
         await applyReviewAction(reviewLastAction, propagate: true)
+    }
+
+    func refreshAIStatus() async {
+        do {
+            fixtureAIStatus = try await fixtureService.aiStatus()
+            guard let status = fixtureAIStatus else { return }
+            if let run = status.run, status.active {
+                aiProposalStatus = [
+                    "\(run.processed.formatted()) of \(run.requested.formatted()) processed",
+                    "\(run.proposed.formatted()) proposed",
+                    "\(run.failed.formatted()) failed",
+                    "\(run.remaining.formatted()) remaining",
+                    "\(Int(run.elapsedSeconds).formatted())s elapsed",
+                ].joined(separator: " • ")
+            } else if status.ready > 0 {
+                aiProposalStatus = "\(status.ready.formatted()) new proposal\(status.ready == 1 ? "" : "s") ready."
+            } else if status.requested > 0 {
+                aiProposalStatus = "\(status.requested.formatted()) requested item\(status.requested == 1 ? "" : "s") waiting for the next AI pass."
+            } else {
+                aiProposalStatus = "No requested AI work is waiting."
+            }
+        } catch {
+            aiProposalStatus = "AI status unavailable: \(error)"
+        }
+    }
+
+    func runAIProposalPass() async {
+        if isRunningAIPass {
+            await refreshAIStatus()
+            return
+        }
+        isRunningAIPass = true
+        aiProposalStatus = "Starting or attaching to the requested AI pass…"
+        defer { isRunningAIPass = false }
+        do {
+            fixtureAIStatus = try await fixtureService.startAIPass()
+            repeat {
+                try await Task.sleep(for: .seconds(2))
+                fixtureAIStatus = try await fixtureService.aiStatus()
+                await refreshAIStatus()
+            } while fixtureAIStatus?.active == true
+            await loadFixtureReviewWindow(preferredAssetID: reviewSelection.focusedID)
+        } catch {
+            aiProposalStatus = "AI pass failed to start: \(error)"
+        }
+    }
+
+    func cancelAIProposalPass() async {
+        do {
+            fixtureAIStatus = try await fixtureService.cancelAIPass()
+            aiProposalStatus = "Cancellation requested; the current item may finish first."
+        } catch {
+            aiProposalStatus = "Could not request cancellation: \(error)"
+        }
+    }
+
+    func loadAIProposals(replacingConflicts: Bool = false) async {
+        preserveCurrentReviewDraft()
+        do {
+            let proposals = try await fixtureService.aiProposals(includeLoaded: false)
+            var loadedProposalIDs: [String] = []
+            var conflicts: Set<String> = []
+            for proposal in proposals {
+                let existing = reviewProposalDrafts[proposal.assetID]
+                let hasManualConflict = existing.map { !$0.isProposal } ?? false
+                if hasManualConflict, !replacingConflicts {
+                    conflicts.insert(proposal.assetID)
+                    continue
+                }
+                reviewProposalDrafts[proposal.assetID] = ReviewMetadataDraft(
+                    title: proposal.proposedTitle,
+                    keywords: proposal.proposedKeywords,
+                    proposalID: proposal.id,
+                    proposalReason: proposal.reason
+                )
+                loadedProposalIDs.append(proposal.id)
+            }
+            if !loadedProposalIDs.isEmpty {
+                _ = try await fixtureService.markAIProposalsLoaded(loadedProposalIDs)
+            }
+            reviewProposalConflictIDs = conflicts
+            syncReviewDraft()
+            await refreshAIStatus()
+            if conflicts.isEmpty {
+                aiProposalStatus = "Loaded \(loadedProposalIDs.count.formatted()) proposal draft\(loadedProposalIDs.count == 1 ? "" : "s"); nothing was approved."
+            } else {
+                aiProposalStatus = "Loaded \(loadedProposalIDs.count.formatted()) clean draft\(loadedProposalIDs.count == 1 ? "" : "s"). \(conflicts.count.formatted()) conflict\(conflicts.count == 1 ? "" : "s") kept the manual draft."
+            }
+        } catch {
+            aiProposalStatus = "Could not load AI proposals: \(error)"
+        }
+    }
+
+    func restoreLoadedAIProposalDrafts() async {
+        preserveCurrentReviewDraft()
+        do {
+            let proposals = try await fixtureService.aiProposals(includeLoaded: true)
+                .filter { $0.status == "loaded" }
+            var restored = 0
+            for proposal in proposals where reviewProposalDrafts[proposal.assetID] == nil {
+                reviewProposalDrafts[proposal.assetID] = ReviewMetadataDraft(
+                    title: proposal.proposedTitle,
+                    keywords: proposal.proposedKeywords,
+                    proposalID: proposal.id,
+                    proposalReason: proposal.reason
+                )
+                restored += 1
+            }
+            syncReviewDraft()
+            if restored > 0 {
+                aiProposalStatus = "Restored \(restored.formatted()) loaded proposal draft\(restored == 1 ? "" : "s"); nothing was approved."
+            }
+        } catch {
+            aiProposalStatus = "Could not restore loaded proposal drafts: \(error)"
+        }
     }
 
     func loadReviewThumbnail(for item: FixtureReviewItem) async {
@@ -1313,8 +1463,9 @@ final class BackstageViewModel: ObservableObject {
             clearReviewDraft()
             return
         }
-        reviewTitle = item.title
-        reviewKeywords = item.keywords.joined(separator: ", ")
+        let draft = reviewProposalDrafts[item.id]
+        reviewTitle = draft?.title ?? item.title
+        reviewKeywords = (draft?.keywords ?? item.keywords).joined(separator: ", ")
         reviewAIReasons = Set(item.aiReasons)
         reviewAINote = item.aiNote
         if item.editorialState == "requesting-ai" {
@@ -1327,6 +1478,27 @@ final class BackstageViewModel: ObservableObject {
         reviewKeywords = ""
         reviewAIReasons = []
         reviewAINote = ""
+    }
+
+    private func preserveCurrentReviewDraft() {
+        guard let item = focusedReviewItem else { return }
+        let title = reviewTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        let keywords = parsedReviewKeywords()
+        if let existing = reviewProposalDrafts[item.id], existing.isProposal {
+            reviewProposalDrafts[item.id] = ReviewMetadataDraft(
+                title: title,
+                keywords: keywords,
+                proposalID: existing.proposalID,
+                proposalReason: existing.proposalReason
+            )
+        } else if title != item.title || keywords != item.keywords {
+            reviewProposalDrafts[item.id] = ReviewMetadataDraft(
+                title: title,
+                keywords: keywords
+            )
+        } else {
+            reviewProposalDrafts.removeValue(forKey: item.id)
+        }
     }
 
     private func parsedReviewKeywords() -> [String] {

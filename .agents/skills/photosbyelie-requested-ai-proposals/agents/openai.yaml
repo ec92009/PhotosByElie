@@ -1,0 +1,4 @@
+interface:
+  display_name: "PhotosByElie Requested AI Proposals"
+  short_description: "Generate requested photo title and keyword proposals safely"
+  default_prompt: "Run the requested PhotosByElie AI title and keyword proposal pass, resume any active run, and report progress without approving or publishing anything."

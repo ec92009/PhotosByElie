@@ -1,12 +1,14 @@
 import tempfile
 import unittest
 import json
+import hashlib
 from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from fixture_pipeline import (
+    apply_fixture_state_migration,
     apply_pool_refresh,
     adopt_upload_run,
     archive_fixture,
@@ -15,13 +17,17 @@ from fixture_pipeline import (
     create_pool,
     delivery_plan,
     fixture_tree,
+    fixture_candidate_asset_ids,
+    effective_fixture_access_grants,
     list_pools,
     list_placements,
+    link_access_grant,
     migrate_access_fixture_tree,
     migrate_la_concha_tree,
     move_fixture,
     move_placement,
     place_assets,
+    plan_fixture_state_migration,
     plan_upload_run_adoption,
     preview_pool_refresh,
     remove_placement,
@@ -31,6 +37,7 @@ from fixture_pipeline import (
     reopen_fixture,
     restore_placement,
     search_assets,
+    set_fixture_asset_state,
     editorial_version_hash,
 )
 from sidecar_state_db import connect, record_decision, upsert_assets
@@ -61,6 +68,141 @@ class FixturePipelineTest(unittest.TestCase):
         self.assertEqual(renamed["name"], "La Concha renamed")
         self.assertTrue(archive_fixture(self.root, fixture["fixtureId"])["archivedAt"])
         self.assertFalse(reopen_fixture(self.root, fixture["fixtureId"])["archivedAt"])
+
+    def test_fixture_state_migration_is_read_only_then_backed_up_and_reversible(self):
+        expo = create_fixture(self.root, "Expo", fixture_id="fixture-expo")
+        parent = create_fixture(self.root, "RE", fixture_id="fixture-re")
+        child = create_fixture(
+            self.root,
+            "La Concha",
+            parent_fixture_id=parent["fixtureId"],
+            fixture_id="fixture-la-concha",
+        )
+        record_decision(self.root, {"assetId": "asset-1", "action": "pick"})
+        record_decision(self.root, {"assetId": "asset-2", "action": "reject"})
+        place_assets(self.root, child["fixtureId"], ["asset-3"])
+        database = self.root / "assets/owner-actions/Owner.sqlite"
+        before_hash = hashlib.sha256(database.read_bytes()).hexdigest()
+
+        plan = plan_fixture_state_migration(self.root)
+        self.assertEqual(hashlib.sha256(database.read_bytes()).hexdigest(), before_hash)
+        self.assertEqual(plan["legacyExpoPicked"], 1)
+        self.assertEqual(plan["legacyExpoHidden"], 1)
+        self.assertEqual(plan["explicitPlacementCount"], 1)
+        self.assertEqual(plan["ancestorClosureCount"], 2)
+        self.assertFalse(plan["applied"])
+
+        receipt = apply_fixture_state_migration(self.root)
+        self.assertTrue(receipt["applied"])
+        self.assertTrue(Path(receipt["backupPath"]).exists())
+        self.assertTrue(Path(receipt["receiptPath"]).exists())
+        self.assertEqual(receipt["globalEditorialMutationCount"], 0)
+        with connect(self.root) as conn:
+            rows = {
+                (row["fixture_id"], row["asset_id"]): (
+                    row["placement_state"],
+                    row["eligibility_state"],
+                )
+                for row in conn.execute(
+                    """
+                    SELECT fixture_id, asset_id, placement_state, eligibility_state
+                    FROM fixture_asset_decisions
+                    """
+                ).fetchall()
+            }
+            self.assertEqual(rows[(expo["fixtureId"], "asset-1")], ("picked", "active"))
+            self.assertEqual(rows[(expo["fixtureId"], "asset-2")], ("hidden", "active"))
+            self.assertEqual(rows[(parent["fixtureId"], "asset-3")], ("picked", "active"))
+            self.assertEqual(rows[(child["fixtureId"], "asset-3")], ("picked", "active"))
+            self.assertEqual(
+                conn.execute(
+                    "SELECT metadata_state FROM sidecar_decisions WHERE asset_id = 'asset-1'"
+                ).fetchone()[0],
+                "unreviewed",
+            )
+        replayed = apply_fixture_state_migration(self.root)
+        self.assertTrue(replayed["idempotencyReplayed"])
+
+    def test_fixture_universes_preserve_dormant_child_decisions(self):
+        parent = create_fixture(self.root, "Root", fixture_id="root")
+        child = create_fixture(
+            self.root,
+            "Child",
+            parent_fixture_id=parent["fixtureId"],
+            fixture_id="child",
+        )
+        set_fixture_asset_state(self.root, parent["fixtureId"], ["asset-1"], "picked")
+        set_fixture_asset_state(self.root, child["fixtureId"], ["asset-1"], "picked")
+        self.assertIn("asset-1", fixture_candidate_asset_ids(self.root, child["fixtureId"]))
+
+        set_fixture_asset_state(self.root, parent["fixtureId"], ["asset-1"], "hidden")
+        self.assertNotIn("asset-1", fixture_candidate_asset_ids(self.root, child["fixtureId"]))
+        with connect(self.root) as conn:
+            child_state = conn.execute(
+                """
+                SELECT placement_state, eligibility_state
+                FROM fixture_asset_decisions
+                WHERE fixture_id = 'child' AND asset_id = 'asset-1'
+                """
+            ).fetchone()
+            self.assertEqual(tuple(child_state), ("picked", "dormant"))
+
+        set_fixture_asset_state(self.root, parent["fixtureId"], ["asset-1"], "picked")
+        self.assertIn("asset-1", fixture_candidate_asset_ids(self.root, child["fixtureId"]))
+        self.assertEqual(
+            fixture_candidate_asset_ids(self.root, parent["fixtureId"]),
+            ["asset-3", "asset-2", "asset-1"],
+        )
+
+    def test_access_grants_inherit_downward_only_and_new_roots_are_owner_only(self):
+        root = create_fixture(self.root, "Root", fixture_id="root")
+        child = create_fixture(
+            self.root,
+            "Child",
+            parent_fixture_id=root["fixtureId"],
+            fixture_id="child",
+        )
+        sibling = create_fixture(
+            self.root,
+            "Sibling",
+            parent_fixture_id=root["fixtureId"],
+            fixture_id="sibling",
+        )
+        grandchild = create_fixture(
+            self.root,
+            "Grandchild",
+            parent_fixture_id=child["fixtureId"],
+            fixture_id="grandchild",
+        )
+        with connect(self.root) as conn:
+            self.assertEqual(
+                conn.execute("SELECT owner_only FROM fixtures WHERE fixture_id = 'root'").fetchone()[0],
+                1,
+            )
+        link_access_grant(
+            self.root,
+            root["fixtureId"],
+            provider="acs",
+            external_identity="root@example.com",
+        )
+        link_access_grant(
+            self.root,
+            child["fixtureId"],
+            provider="acs",
+            external_identity="child@example.com",
+        )
+        self.assertEqual(
+            {item["externalIdentity"] for item in effective_fixture_access_grants(self.root, grandchild["fixtureId"])},
+            {"root@example.com", "child@example.com"},
+        )
+        self.assertEqual(
+            {item["externalIdentity"] for item in effective_fixture_access_grants(self.root, sibling["fixtureId"])},
+            {"root@example.com"},
+        )
+        self.assertEqual(
+            {item["externalIdentity"] for item in effective_fixture_access_grants(self.root, root["fixtureId"])},
+            {"root@example.com"},
+        )
 
     def test_search_and_pool_are_read_only_stable_and_idempotent(self):
         fixture = create_fixture(self.root, "Fixture")

@@ -639,6 +639,47 @@ struct OwnerCoreTests {
         #expect(manifest?["destinationDefaults"]?.arrayValue?.compactMap(\.stringValue) == ["r2", "apple_photos"])
     }
 
+    @Test("Native fixture state migration remains an explicit audited action")
+    func nativeFixtureStateMigrationPlan() async throws {
+        let terminal = OwnerAction(
+            id: "owner-action-fixture-migration-plan",
+            actionKind: "sidecar-culling-review",
+            target: "max",
+            state: .completed,
+            result: [
+                "migration": .object([
+                    "migrationId": "fixture-state-v1",
+                    "mode": "dry-run",
+                    "plannedDecisionInsertCount": 42,
+                    "plannedPickedCount": 30,
+                    "plannedHiddenCount": 12,
+                    "explicitPlacementCount": 7,
+                    "ancestorClosureCount": 11,
+                    "applied": false,
+                ]),
+            ]
+        )
+        let api = ScriptedOwnerActionAPI(completed: [terminal])
+        let service = FixtureWorkflowService(runner: OwnerActionRunner(
+            api: api,
+            waker: UnavailableWaker(),
+            pollInterval: .milliseconds(1),
+            timeout: .seconds(1)
+        ))
+
+        let report = try await service.fixtureStateMigrationPlan()
+
+        #expect(report.migrationID == "fixture-state-v1")
+        #expect(report.mode == "dry-run")
+        #expect(report.plannedDecisionInsertCount == 42)
+        #expect(report.plannedPickedCount == 30)
+        #expect(report.plannedHiddenCount == 12)
+        #expect(!report.applied)
+        let request = try #require(await api.requests().first)
+        let manifest = request.payload["manifest"]?.objectValue
+        #expect(manifest?["mode"]?.stringValue == "fixture-state-migration-plan")
+    }
+
     @Test("Fixture archive state follows the connector archivedAt contract")
     func nativeFixtureArchiveState() {
         let active = FixtureNode(json: [

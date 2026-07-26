@@ -17,10 +17,17 @@ import sqlite3
 from typing import Any, Iterable
 import uuid
 
-from sidecar_state_db import connect as connect_owner, editorial_version_hash as sidecar_editorial_version_hash
+from sidecar_state_db import (
+    DEFAULT_DB as OWNER_DB,
+    connect as connect_owner,
+    editorial_version_hash as sidecar_editorial_version_hash,
+)
 
 
 DESTINATIONS = {"r2", "apple_photos", "archive"}
+FIXTURE_PLACEMENT_STATES = {"undecided", "picked", "hidden"}
+FIXTURE_ELIGIBILITY_STATES = {"active", "dormant"}
+FIXTURE_STATE_MIGRATION_ID = "fixture-state-v1"
 
 
 def now_iso() -> str:
@@ -173,6 +180,56 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
           ON fixture_asset_placements(fixture_id, asset_id) WHERE state = 'active';
         CREATE INDEX IF NOT EXISTS idx_fixture_asset_placements_asset ON fixture_asset_placements(asset_id, state);
 
+        CREATE TABLE IF NOT EXISTS fixture_asset_decisions (
+          fixture_id TEXT NOT NULL,
+          asset_id TEXT NOT NULL,
+          placement_state TEXT NOT NULL DEFAULT 'undecided'
+            CHECK (placement_state IN ('undecided', 'picked', 'hidden')),
+          eligibility_state TEXT NOT NULL DEFAULT 'active'
+            CHECK (eligibility_state IN ('active', 'dormant')),
+          source TEXT NOT NULL DEFAULT 'native',
+          last_action TEXT NOT NULL DEFAULT '',
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          PRIMARY KEY (fixture_id, asset_id),
+          FOREIGN KEY (fixture_id) REFERENCES fixtures(fixture_id),
+          FOREIGN KEY (asset_id) REFERENCES sidecar_assets(asset_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_fixture_asset_decisions_queue
+          ON fixture_asset_decisions(fixture_id, eligibility_state, placement_state, updated_at);
+        CREATE INDEX IF NOT EXISTS idx_fixture_asset_decisions_asset
+          ON fixture_asset_decisions(asset_id, eligibility_state, placement_state);
+
+        CREATE TABLE IF NOT EXISTS fixture_asset_decision_events (
+          event_id TEXT PRIMARY KEY,
+          fixture_id TEXT NOT NULL,
+          asset_id TEXT NOT NULL,
+          before_state TEXT NOT NULL,
+          after_state TEXT NOT NULL,
+          before_eligibility TEXT NOT NULL,
+          after_eligibility TEXT NOT NULL,
+          action TEXT NOT NULL,
+          actor TEXT NOT NULL,
+          reason TEXT NOT NULL DEFAULT '',
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (fixture_id) REFERENCES fixtures(fixture_id),
+          FOREIGN KEY (asset_id) REFERENCES sidecar_assets(asset_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_fixture_asset_decision_events_asset
+          ON fixture_asset_decision_events(fixture_id, asset_id, created_at);
+
+        CREATE TABLE IF NOT EXISTS workflow_migration_receipts (
+          migration_id TEXT PRIMARY KEY,
+          state TEXT NOT NULL CHECK (state IN ('planned', 'applied', 'reverted', 'failed')),
+          backup_path TEXT NOT NULL DEFAULT '',
+          before_json TEXT NOT NULL,
+          after_json TEXT NOT NULL DEFAULT '{}',
+          receipt_json TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          applied_at TEXT,
+          reverted_at TEXT
+        );
+
         CREATE TABLE IF NOT EXISTS fixture_placement_events (
           event_id TEXT PRIMARY KEY,
           placement_id TEXT NOT NULL,
@@ -222,6 +279,29 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
           ON fixture_delivery_receipts(fixture_id, destination, status, updated_at);
         """
     )
+    fixture_columns = {
+        str(row["name"])
+        for row in conn.execute("PRAGMA table_info(fixtures)").fetchall()
+    }
+    if "candidate_mode" not in fixture_columns:
+        conn.execute(
+            "ALTER TABLE fixtures ADD COLUMN candidate_mode TEXT NOT NULL DEFAULT 'inherited'"
+        )
+    if "owner_only" not in fixture_columns:
+        conn.execute(
+            "ALTER TABLE fixtures ADD COLUMN owner_only INTEGER NOT NULL DEFAULT 1"
+        )
+    grant_columns = {
+        str(row["name"])
+        for row in conn.execute("PRAGMA table_info(fixture_access_grants)").fetchall()
+    }
+    if "inherit_descendants" not in grant_columns:
+        conn.execute(
+            "ALTER TABLE fixture_access_grants ADD COLUMN inherit_descendants INTEGER NOT NULL DEFAULT 1"
+        )
+    conn.execute(
+        "UPDATE fixtures SET candidate_mode = CASE WHEN parent_fixture_id IS NULL THEN 'photos-library' ELSE 'inherited' END"
+    )
 
 
 def connect(repo_root: Path, db_path: Path | None = None) -> sqlite3.Connection:
@@ -242,6 +322,10 @@ def _fixture_row(row: sqlite3.Row) -> dict[str, Any]:
         "destinationDefaults": _read_json(row["destination_defaults_json"], ["r2"]),
         "accessGalleryKey": row["access_gallery_key"] or "",
         "legacyIdentity": _read_json(row["legacy_identity_json"], {}),
+        "candidateMode": row["candidate_mode"] if "candidate_mode" in row.keys() else (
+            "photos-library" if not row["parent_fixture_id"] else "inherited"
+        ),
+        "ownerOnly": bool(row["owner_only"]) if "owner_only" in row.keys() else True,
         "archivedAt": row["archived_at"] or "",
         "createdAt": row["created_at"],
         "updatedAt": row["updated_at"],
@@ -284,13 +368,16 @@ def create_fixture(
             INSERT INTO fixtures (
               fixture_id, parent_fixture_id, name, slug, template_key, tags_json,
               destination_defaults_json, access_gallery_key, legacy_identity_json,
-              created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              candidate_mode, owner_only, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
             """,
             (
                 clean_id, parent, clean_name, _slug(clean_name), str(template_key or "").strip() or None,
                 _json(_unique(tags)), _json(destinations), str(access_gallery_key or "").strip() or None,
-                _json(legacy_identity or {}), timestamp, timestamp,
+                _json(legacy_identity or {}),
+                "inherited" if parent else "photos-library",
+                timestamp,
+                timestamp,
             ),
         )
         if owns:
@@ -335,6 +422,493 @@ def fixture_breadcrumbs(conn: sqlite3.Connection, fixture_id: str) -> list[dict[
     return list(reversed(chain))
 
 
+def _owner_db_path(repo_root: Path, db_path: Path | None = None) -> Path:
+    selected = db_path or OWNER_DB
+    return selected if selected.is_absolute() else repo_root / selected
+
+
+def _read_only_connection(repo_root: Path, db_path: Path | None = None) -> sqlite3.Connection:
+    path = _owner_db_path(repo_root, db_path)
+    if not path.exists():
+        raise ValueError("Owner database does not exist")
+    connection = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+    connection.row_factory = sqlite3.Row
+    connection.execute("PRAGMA foreign_keys = ON")
+    return connection
+
+
+def _table_exists(conn: sqlite3.Connection, name: str) -> bool:
+    return bool(conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
+        (name,),
+    ).fetchone())
+
+
+def _count(conn: sqlite3.Connection, sql: str, params: Iterable[Any] = ()) -> int:
+    return int(conn.execute(sql, tuple(params)).fetchone()[0])
+
+
+def _fixture_state_parity(conn: sqlite3.Connection) -> dict[str, int]:
+    tables = {
+        str(row[0])
+        for row in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type = 'table'"
+        ).fetchall()
+    }
+    def total(table: str, where: str = "1 = 1") -> int:
+        return _count(conn, f"SELECT count(*) FROM {table} WHERE {where}") if table in tables else 0
+    return {
+        "assetCount": total("sidecar_assets"),
+        "globalDecisionCount": total("sidecar_decisions"),
+        "globalPickedCount": total("sidecar_decisions", "pick_state = 'picked'"),
+        "globalRejectedCount": total("sidecar_decisions", "pick_state IN ('rejected', 'hidden')"),
+        "globalApprovedCount": total("sidecar_decisions", "metadata_state = 'approved'"),
+        "globalTombstoneCount": total("sidecar_tombstones", "tombstone_state = 'active'"),
+        "fixtureCount": total("fixtures"),
+        "activeLegacyPlacementCount": total("fixture_asset_placements", "state = 'active'"),
+        "normalizedFixtureDecisionCount": total("fixture_asset_decisions"),
+        "deliveryReceiptCount": total("fixture_delivery_receipts"),
+    }
+
+
+def plan_fixture_state_migration(
+    repo_root: Path,
+    *,
+    db_path: Path | None = None,
+) -> dict[str, Any]:
+    """Read-only report for moving the overloaded global Pick/Hide state into Expo."""
+    with _read_only_connection(repo_root, db_path) as conn:
+        before = _fixture_state_parity(conn)
+        if not _table_exists(conn, "fixtures"):
+            raise ValueError("fixture schema is not initialized")
+        expo = conn.execute(
+            "SELECT fixture_id FROM fixtures WHERE fixture_id = 'fixture-expo'"
+        ).fetchone()
+        if not expo:
+            raise ValueError("Expo fixture does not exist")
+        legacy_rows = conn.execute(
+            """
+            SELECT asset_id,
+                   CASE WHEN pick_state = 'picked' THEN 'picked' ELSE 'hidden' END state
+            FROM sidecar_decisions
+            WHERE pick_state IN ('picked', 'rejected', 'hidden')
+            """
+        ).fetchall()
+        explicit_rows = conn.execute(
+            """
+            SELECT fixture_id, asset_id
+            FROM fixture_asset_placements
+            WHERE state = 'active'
+            """
+        ).fetchall()
+        fixture_parents = {
+            str(row["fixture_id"]): str(row["parent_fixture_id"] or "")
+            for row in conn.execute(
+                "SELECT fixture_id, parent_fixture_id FROM fixtures"
+            ).fetchall()
+        }
+        inferred: set[tuple[str, str]] = set()
+        for row in explicit_rows:
+            current = str(row["fixture_id"])
+            asset_id = str(row["asset_id"])
+            while current:
+                inferred.add((current, asset_id))
+                current = fixture_parents.get(current, "")
+        proposed: dict[tuple[str, str], str] = {
+            ("fixture-expo", str(row["asset_id"])): str(row["state"])
+            for row in legacy_rows
+        }
+        for key in inferred:
+            proposed.setdefault(key, "picked")
+        existing = set()
+        if _table_exists(conn, "fixture_asset_decisions"):
+            existing = {
+                (str(row["fixture_id"]), str(row["asset_id"]))
+                for row in conn.execute(
+                    "SELECT fixture_id, asset_id FROM fixture_asset_decisions"
+                ).fetchall()
+            }
+        insertions = set(proposed) - existing
+        planned_picked = sum(proposed[key] == "picked" for key in insertions)
+        planned_hidden = sum(proposed[key] == "hidden" for key in insertions)
+        return {
+            "ok": True,
+            "mode": "dry-run",
+            "migrationId": FIXTURE_STATE_MIGRATION_ID,
+            "before": before,
+            "legacyExpoPicked": sum(row["state"] == "picked" for row in legacy_rows),
+            "legacyExpoHidden": sum(row["state"] == "hidden" for row in legacy_rows),
+            "explicitPlacementCount": len(explicit_rows),
+            "ancestorClosureCount": len(inferred),
+            "plannedDecisionInsertCount": len(insertions),
+            "plannedPickedCount": planned_picked,
+            "plannedHiddenCount": planned_hidden,
+            "preservedExistingDecisionCount": len(existing & set(proposed)),
+            "globalEditorialMutationCount": 0,
+            "globalLifecycleMutationCount": 0,
+            "deliveryMutationCount": 0,
+            "applied": False,
+        }
+
+
+def _backup_owner_database(
+    repo_root: Path,
+    *,
+    db_path: Path | None = None,
+    migration_id: str,
+) -> Path:
+    source_path = _owner_db_path(repo_root, db_path)
+    backup_root = source_path.parent / "backups"
+    backup_root.mkdir(parents=True, exist_ok=True)
+    stamp = now_iso().replace(":", "-")
+    destination = backup_root / f"Owner-{stamp}-{migration_id}.sqlite"
+    source = sqlite3.connect(f"file:{source_path}?mode=ro", uri=True)
+    target = sqlite3.connect(destination)
+    try:
+        source.backup(target)
+        result = str(target.execute("PRAGMA integrity_check").fetchone()[0])
+        if result != "ok":
+            raise ValueError(f"Owner backup integrity failed: {result}")
+    finally:
+        target.close()
+        source.close()
+    return destination
+
+
+def _recompute_fixture_eligibility(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        """
+        UPDATE fixture_asset_decisions
+        SET eligibility_state = CASE
+          WHEN (SELECT parent_fixture_id FROM fixtures WHERE fixture_id = fixture_asset_decisions.fixture_id) IS NULL
+            THEN 'active'
+          ELSE 'dormant'
+        END
+        """
+    )
+    changed = True
+    while changed:
+        before = conn.total_changes
+        conn.execute(
+            """
+            UPDATE fixture_asset_decisions AS child
+            SET eligibility_state = 'active'
+            WHERE child.eligibility_state = 'dormant'
+              AND EXISTS (
+                SELECT 1
+                FROM fixtures AS fixture
+                JOIN fixture_asset_decisions AS parent
+                  ON parent.fixture_id = fixture.parent_fixture_id
+                 AND parent.asset_id = child.asset_id
+                WHERE fixture.fixture_id = child.fixture_id
+                  AND parent.placement_state = 'picked'
+                  AND parent.eligibility_state = 'active'
+              )
+            """
+        )
+        changed = conn.total_changes > before
+
+
+def apply_fixture_state_migration(
+    repo_root: Path,
+    *,
+    db_path: Path | None = None,
+) -> dict[str, Any]:
+    """Apply the additive fixture-state migration with a verified backup and receipt."""
+    plan = plan_fixture_state_migration(repo_root, db_path=db_path)
+    backup = _backup_owner_database(
+        repo_root,
+        db_path=db_path,
+        migration_id=FIXTURE_STATE_MIGRATION_ID,
+    )
+    timestamp = now_iso()
+    with connect(repo_root, db_path) as conn:
+        existing_receipt = conn.execute(
+            "SELECT receipt_json FROM workflow_migration_receipts WHERE migration_id = ? AND state = 'applied'",
+            (FIXTURE_STATE_MIGRATION_ID,),
+        ).fetchone()
+        if existing_receipt:
+            backup.unlink(missing_ok=True)
+            return {**_read_json(existing_receipt["receipt_json"], {}), "idempotencyReplayed": True}
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            conn.execute(
+                """
+                INSERT OR IGNORE INTO fixture_asset_decisions (
+                  fixture_id, asset_id, placement_state, eligibility_state,
+                  source, last_action, created_at, updated_at
+                )
+                SELECT 'fixture-expo', asset_id,
+                       CASE WHEN pick_state = 'picked' THEN 'picked' ELSE 'hidden' END,
+                       'active', 'legacy-global-sidecar', 'migration', ?, ?
+                FROM sidecar_decisions
+                WHERE pick_state IN ('picked', 'rejected', 'hidden')
+                """,
+                (timestamp, timestamp),
+            )
+            active_placements = conn.execute(
+                """
+                SELECT fixture_id, asset_id
+                FROM fixture_asset_placements
+                WHERE state = 'active'
+                ORDER BY fixture_id, asset_id
+                """
+            ).fetchall()
+            for placement in active_placements:
+                current = str(placement["fixture_id"])
+                asset_id = str(placement["asset_id"])
+                source_fixture = current
+                while current:
+                    conn.execute(
+                        """
+                        INSERT OR IGNORE INTO fixture_asset_decisions (
+                          fixture_id, asset_id, placement_state, eligibility_state,
+                          source, last_action, created_at, updated_at
+                        ) VALUES (?, ?, 'picked', 'dormant', ?, 'migration', ?, ?)
+                        """,
+                        (
+                            current,
+                            asset_id,
+                            "legacy-explicit-placement" if current == source_fixture
+                            else "legacy-ancestor-inference",
+                            timestamp,
+                            timestamp,
+                        ),
+                    )
+                    parent = conn.execute(
+                        "SELECT parent_fixture_id FROM fixtures WHERE fixture_id = ?",
+                        (current,),
+                    ).fetchone()
+                    current = str(parent["parent_fixture_id"] or "") if parent else ""
+            _recompute_fixture_eligibility(conn)
+            after = _fixture_state_parity(conn)
+            receipt = {
+                **plan,
+                "mode": "commit",
+                "backupPath": str(backup),
+                "after": after,
+                "applied": True,
+                "appliedAt": timestamp,
+                "idempotencyReplayed": False,
+                "reversal": {
+                    "kind": "verified-sqlite-backup",
+                    "backupPath": str(backup),
+                    "requiresOfflineRestore": True,
+                },
+            }
+            conn.execute(
+                """
+                INSERT INTO workflow_migration_receipts (
+                  migration_id, state, backup_path, before_json, after_json,
+                  receipt_json, created_at, applied_at
+                ) VALUES (?, 'applied', ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    FIXTURE_STATE_MIGRATION_ID,
+                    str(backup),
+                    _json(plan["before"]),
+                    _json(after),
+                    _json(receipt),
+                    timestamp,
+                    timestamp,
+                ),
+            )
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+    receipt_path = (
+        _owner_db_path(repo_root, db_path).parent
+        / "migrations"
+        / f"{FIXTURE_STATE_MIGRATION_ID}.json"
+    )
+    receipt_path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = receipt_path.with_name(f".{receipt_path.name}.{uuid.uuid4().hex}.tmp")
+    temporary.write_text(json.dumps(receipt, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    temporary.replace(receipt_path)
+    return {**receipt, "receiptPath": str(receipt_path)}
+
+
+def set_fixture_asset_state(
+    repo_root: Path,
+    fixture_id: str,
+    asset_ids: Iterable[str],
+    placement_state: str,
+    *,
+    actor: str = "owner",
+    reason: str = "",
+) -> dict[str, Any]:
+    clean_state = str(placement_state or "").strip().casefold()
+    if clean_state not in FIXTURE_PLACEMENT_STATES:
+        raise ValueError("fixture placement state must be undecided, picked, or hidden")
+    clean_ids = _unique(asset_ids)
+    timestamp = now_iso()
+    with connect(repo_root) as conn:
+        fixture_breadcrumbs(conn, fixture_id)
+        before_by_asset: dict[str, tuple[str, str]] = {}
+        for asset_id in clean_ids:
+            if not conn.execute(
+                "SELECT 1 FROM sidecar_assets WHERE asset_id = ?",
+                (asset_id,),
+            ).fetchone():
+                raise ValueError(f"asset is not indexed: {asset_id}")
+            existing = conn.execute(
+                """
+                SELECT placement_state, eligibility_state
+                FROM fixture_asset_decisions
+                WHERE fixture_id = ? AND asset_id = ?
+                """,
+                (fixture_id, asset_id),
+            ).fetchone()
+            before_state = str(existing["placement_state"]) if existing else "undecided"
+            before_eligibility = str(existing["eligibility_state"]) if existing else "active"
+            before_by_asset[asset_id] = (before_state, before_eligibility)
+            conn.execute(
+                """
+                INSERT INTO fixture_asset_decisions (
+                  fixture_id, asset_id, placement_state, eligibility_state,
+                  source, last_action, created_at, updated_at
+                ) VALUES (?, ?, ?, 'dormant', 'native', ?, ?, ?)
+                ON CONFLICT(fixture_id, asset_id) DO UPDATE SET
+                  placement_state = excluded.placement_state,
+                  source = 'native',
+                  last_action = excluded.last_action,
+                  updated_at = excluded.updated_at
+                """,
+                (fixture_id, asset_id, clean_state, clean_state, timestamp, timestamp),
+            )
+        _recompute_fixture_eligibility(conn)
+        for asset_id in clean_ids:
+            after = conn.execute(
+                """
+                SELECT placement_state, eligibility_state
+                FROM fixture_asset_decisions
+                WHERE fixture_id = ? AND asset_id = ?
+                """,
+                (fixture_id, asset_id),
+            ).fetchone()
+            before_state, before_eligibility = before_by_asset[asset_id]
+            conn.execute(
+                """
+                INSERT INTO fixture_asset_decision_events (
+                  event_id, fixture_id, asset_id, before_state, after_state,
+                  before_eligibility, after_eligibility, action, actor, reason, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    f"fde-{uuid.uuid4().hex[:16]}",
+                    fixture_id,
+                    asset_id,
+                    before_state,
+                    clean_state,
+                    before_eligibility,
+                    str(after["eligibility_state"]),
+                    clean_state,
+                    actor,
+                    str(reason or ""),
+                    timestamp,
+                ),
+            )
+        conn.commit()
+        rows = conn.execute(
+            f"""
+            SELECT fixture_id, asset_id, placement_state, eligibility_state, source, updated_at
+            FROM fixture_asset_decisions
+            WHERE fixture_id = ? AND asset_id IN ({','.join('?' for _ in clean_ids)})
+            ORDER BY asset_id
+            """,
+            [fixture_id, *clean_ids],
+        ).fetchall() if clean_ids else []
+    return {
+        "ok": True,
+        "fixtureId": fixture_id,
+        "count": len(rows),
+        "items": [dict(row) for row in rows],
+    }
+
+
+def fixture_candidate_asset_ids(
+    repo_root: Path,
+    fixture_id: str,
+    *,
+    include_missing: bool = False,
+) -> list[str]:
+    """Return the complete effective universe; presentation windows are applied later."""
+    with connect(repo_root) as conn:
+        fixture = conn.execute(
+            "SELECT parent_fixture_id FROM fixtures WHERE fixture_id = ? AND archived_at IS NULL",
+            (fixture_id,),
+        ).fetchone()
+        if not fixture:
+            raise ValueError("fixture does not exist or is archived")
+        if not fixture["parent_fixture_id"]:
+            predicates = ["1 = 1"]
+            if not include_missing:
+                predicates.append("(a.missing_at IS NULL OR a.missing_at = '')")
+            predicates.append(
+                """NOT EXISTS (
+                     SELECT 1 FROM sidecar_tombstones t
+                     WHERE t.asset_id = a.asset_id AND t.tombstone_state = 'active'
+                   )"""
+            )
+            rows = conn.execute(
+                f"""
+                SELECT a.asset_id
+                FROM sidecar_assets a
+                WHERE {' AND '.join(predicates)}
+                ORDER BY a.captured_at DESC, a.asset_id
+                """
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                """
+                SELECT d.asset_id
+                FROM fixture_asset_decisions d
+                JOIN sidecar_assets a ON a.asset_id = d.asset_id
+                WHERE d.fixture_id = ?
+                  AND d.placement_state = 'picked'
+                  AND d.eligibility_state = 'active'
+                  AND (a.missing_at IS NULL OR a.missing_at = '')
+                  AND NOT EXISTS (
+                    SELECT 1 FROM sidecar_tombstones t
+                    WHERE t.asset_id = d.asset_id AND t.tombstone_state = 'active'
+                  )
+                ORDER BY a.captured_at DESC, d.asset_id
+                """,
+                (str(fixture["parent_fixture_id"]),),
+            ).fetchall()
+    return [str(row["asset_id"]) for row in rows]
+
+
+def effective_fixture_access_grants(repo_root: Path, fixture_id: str) -> list[dict[str, Any]]:
+    """Resolve direct plus inheritable ancestor grants; never include descendants."""
+    with connect(repo_root) as conn:
+        breadcrumbs = fixture_breadcrumbs(conn, fixture_id)
+        fixture_ids = [item["fixtureId"] for item in breadcrumbs]
+        placeholders = ",".join("?" for _ in fixture_ids)
+        rows = conn.execute(
+            f"""
+            SELECT g.*, f.name fixture_name
+            FROM fixture_access_grants g
+            JOIN fixtures f ON f.fixture_id = g.fixture_id
+            WHERE g.state = 'active'
+              AND g.fixture_id IN ({placeholders})
+              AND (g.fixture_id = ? OR g.inherit_descendants = 1)
+            ORDER BY g.created_at, g.grant_id
+            """,
+            [*fixture_ids, fixture_id],
+        ).fetchall()
+    return [{
+        "grantId": row["grant_id"],
+        "sourceFixtureId": row["fixture_id"],
+        "sourceFixtureName": row["fixture_name"],
+        "provider": row["provider"],
+        "externalIdentity": row["external_identity"],
+        "subjectLabel": row["subject_label"] or "",
+        "inherited": row["fixture_id"] != fixture_id,
+    } for row in rows]
+
+
 def record_source_batch(repo_root: Path, fixture_id: str, *, source_kind: str, source_identity: str, provenance: dict[str, Any] | None = None, batch_id: str = "") -> dict[str, Any]:
     timestamp = now_iso()
     stable_id = str(batch_id or "").strip() or f"batch-{hashlib.sha256(f'{fixture_id}|{source_kind}|{source_identity}'.encode()).hexdigest()[:16]}"
@@ -362,7 +936,18 @@ def move_fixture(repo_root: Path, fixture_id: str, parent_fixture_id: str = "") 
             ancestors = {item["fixtureId"] for item in fixture_breadcrumbs(conn, parent)}
             if fixture_id in ancestors:
                 raise ValueError("fixture cannot be moved below one of its descendants")
-        conn.execute("UPDATE fixtures SET parent_fixture_id = ?, updated_at = ? WHERE fixture_id = ?", (parent, now_iso(), fixture_id))
+        conn.execute(
+            """
+            UPDATE fixtures
+            SET parent_fixture_id = ?,
+                candidate_mode = ?,
+                owner_only = CASE WHEN ? IS NULL THEN 1 ELSE owner_only END,
+                updated_at = ?
+            WHERE fixture_id = ?
+            """,
+            (parent, "inherited" if parent else "photos-library", parent, now_iso(), fixture_id),
+        )
+        _recompute_fixture_eligibility(conn)
         conn.commit()
         return _fixture_row(conn.execute("SELECT * FROM fixtures WHERE fixture_id = ?", (fixture_id,)).fetchone())
 
@@ -429,7 +1014,16 @@ def reopen_fixture(repo_root: Path, fixture_id: str) -> dict[str, Any]:
         return _fixture_row(conn.execute("SELECT * FROM fixtures WHERE fixture_id = ?", (fixture_id,)).fetchone())
 
 
-def link_access_grant(repo_root: Path, fixture_id: str, *, provider: str, external_identity: str, subject_label: str = "", recovery: dict[str, Any] | None = None) -> dict[str, Any]:
+def link_access_grant(
+    repo_root: Path,
+    fixture_id: str,
+    *,
+    provider: str,
+    external_identity: str,
+    subject_label: str = "",
+    recovery: dict[str, Any] | None = None,
+    inherit_descendants: bool = True,
+) -> dict[str, Any]:
     timestamp = now_iso()
     clean_provider = _clean_name(provider)
     clean_identity = _clean_name(external_identity)
@@ -438,14 +1032,36 @@ def link_access_grant(repo_root: Path, fixture_id: str, *, provider: str, extern
         existing = conn.execute("SELECT grant_id FROM fixture_access_grants WHERE fixture_id = ? AND provider = ? AND external_identity = ?", (fixture_id, clean_provider, clean_identity)).fetchone()
         grant_id = existing["grant_id"] if existing else f"grant-{uuid.uuid4().hex[:16]}"
         conn.execute(
-            """INSERT INTO fixture_access_grants (grant_id, fixture_id, provider, external_identity, subject_label, state, recovery_json, created_at, updated_at)
-               VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?)
+            """INSERT INTO fixture_access_grants (grant_id, fixture_id, provider, external_identity, subject_label, state, recovery_json, inherit_descendants, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?, ?)
                ON CONFLICT(fixture_id, provider, external_identity) DO UPDATE SET subject_label = excluded.subject_label,
-                 state = 'active', recovery_json = excluded.recovery_json, updated_at = excluded.updated_at""",
-            (grant_id, fixture_id, clean_provider, clean_identity, str(subject_label or "").strip(), _json(recovery or {}), timestamp, timestamp),
+                 state = 'active', recovery_json = excluded.recovery_json,
+                 inherit_descendants = excluded.inherit_descendants, updated_at = excluded.updated_at""",
+            (
+                grant_id,
+                fixture_id,
+                clean_provider,
+                clean_identity,
+                str(subject_label or "").strip(),
+                _json(recovery or {}),
+                1 if inherit_descendants else 0,
+                timestamp,
+                timestamp,
+            ),
+        )
+        conn.execute(
+            "UPDATE fixtures SET owner_only = 0, updated_at = ? WHERE fixture_id = ?",
+            (timestamp, fixture_id),
         )
         conn.commit()
-    return {"grantId": grant_id, "fixtureId": fixture_id, "provider": clean_provider, "externalIdentity": clean_identity, "state": "active"}
+    return {
+        "grantId": grant_id,
+        "fixtureId": fixture_id,
+        "provider": clean_provider,
+        "externalIdentity": clean_identity,
+        "state": "active",
+        "inheritDescendants": inherit_descendants,
+    }
 
 
 def link_deliverable(repo_root: Path, fixture_id: str, *, provider: str, external_identity: str, kind: str, state: str, recovery: dict[str, Any] | None = None) -> dict[str, Any]:

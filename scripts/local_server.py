@@ -351,6 +351,7 @@ from sidecar_state_db import record_decision as record_sidecar_decision_db  # no
 from sidecar_state_db import summary as sidecar_summary_db  # noqa: E402
 from sidecar_state_db import upload_bridge_plan as upload_bridge_plan_db  # noqa: E402
 from fixture_pipeline import (  # noqa: E402
+    apply_fixture_state_migration,
     apply_pool_refresh,
     adopt_upload_run,
     archive_fixture,
@@ -359,6 +360,8 @@ from fixture_pipeline import (  # noqa: E402
     create_pool,
     delivery_plan,
     fixture_tree,
+    fixture_candidate_asset_ids,
+    effective_fixture_access_grants,
     get_pool,
     link_deliverable,
     list_deliverables,
@@ -369,6 +372,7 @@ from fixture_pipeline import (  # noqa: E402
     move_placement,
     place_assets,
     plan_upload_run_adoption,
+    plan_fixture_state_migration,
     preview_pool_refresh,
     publication_plan,
     remove_placement,
@@ -376,6 +380,7 @@ from fixture_pipeline import (  # noqa: E402
     reopen_fixture,
     restore_placement,
     search_assets,
+    set_fixture_asset_state,
 )
 from apple_photos_metadata_writer import SignedPhotosBridgeAdapter, commit_writeback, writeback_plan  # noqa: E402
 
@@ -1785,6 +1790,50 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
 
     if mode == "fixture-tree-list":
         result.update({"readOnly": True, "fixtures": fixture_tree(repo_root, include_archived=bool(manifest.get("includeArchived")))})
+    elif mode == "fixture-state-migration-plan":
+        result.update({
+            "readOnly": True,
+            "migration": plan_fixture_state_migration(repo_root),
+        })
+    elif mode == "fixture-state-migration-apply":
+        result.update({
+            "readOnly": False,
+            "migration": apply_fixture_state_migration(repo_root),
+        })
+    elif mode == "fixture-candidate-universe":
+        fixture_id = str(manifest.get("fixtureId") or "")
+        asset_ids = fixture_candidate_asset_ids(repo_root, fixture_id)
+        result.update({
+            "readOnly": True,
+            "candidateUniverse": {
+                "fixtureId": fixture_id,
+                "count": len(asset_ids),
+                "assetIds": asset_ids,
+            },
+        })
+    elif mode == "fixture-state-apply":
+        result.update({
+            "readOnly": False,
+            "fixtureState": set_fixture_asset_state(
+                repo_root,
+                str(manifest.get("fixtureId") or ""),
+                manifest.get("assetIds") or [],
+                str(manifest.get("placementState") or ""),
+                actor="owner-connector",
+                reason=str(manifest.get("reason") or "native fixture culling"),
+            ),
+        })
+    elif mode == "fixture-access-effective":
+        fixture_id = str(manifest.get("fixtureId") or "")
+        grants = effective_fixture_access_grants(repo_root, fixture_id)
+        result.update({
+            "readOnly": True,
+            "access": {
+                "fixtureId": fixture_id,
+                "count": len(grants),
+                "items": grants,
+            },
+        })
     elif mode == "fixture-create":
         result.update({
             "readOnly": False,

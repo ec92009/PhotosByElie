@@ -122,6 +122,88 @@ public struct FixturePlacement: Identifiable, Sendable, Equatable {
     }
 }
 
+public enum FixturePlacementState: String, Codable, Sendable, CaseIterable {
+    case undecided
+    case picked
+    case hidden
+}
+
+public struct FixtureStateMigrationReport: Sendable, Equatable {
+    public var migrationID: String
+    public var mode: String
+    public var plannedDecisionInsertCount: Int
+    public var plannedPickedCount: Int
+    public var plannedHiddenCount: Int
+    public var explicitPlacementCount: Int
+    public var ancestorClosureCount: Int
+    public var backupPath: String
+    public var receiptPath: String
+    public var applied: Bool
+    public var idempotencyReplayed: Bool
+
+    init(json: [String: JSONValue]) {
+        migrationID = json["migrationId"]?.stringValue ?? ""
+        mode = json["mode"]?.stringValue ?? ""
+        plannedDecisionInsertCount = json["plannedDecisionInsertCount"]?.intValue ?? 0
+        plannedPickedCount = json["plannedPickedCount"]?.intValue ?? 0
+        plannedHiddenCount = json["plannedHiddenCount"]?.intValue ?? 0
+        explicitPlacementCount = json["explicitPlacementCount"]?.intValue ?? 0
+        ancestorClosureCount = json["ancestorClosureCount"]?.intValue ?? 0
+        backupPath = json["backupPath"]?.stringValue ?? ""
+        receiptPath = json["receiptPath"]?.stringValue ?? ""
+        applied = json["applied"]?.boolValue ?? false
+        idempotencyReplayed = json["idempotencyReplayed"]?.boolValue ?? false
+    }
+}
+
+public struct FixtureAssetState: Identifiable, Sendable, Equatable {
+    public var fixtureID: String
+    public var assetID: String
+    public var placementState: FixturePlacementState
+    public var eligibilityState: String
+    public var source: String
+    public var updatedAt: String
+
+    public var id: String { "\(fixtureID):\(assetID)" }
+
+    init(json: [String: JSONValue]) {
+        fixtureID = json["fixture_id"]?.stringValue ?? json["fixtureId"]?.stringValue ?? ""
+        assetID = json["asset_id"]?.stringValue ?? json["assetId"]?.stringValue ?? ""
+        placementState = FixturePlacementState(
+            rawValue: json["placement_state"]?.stringValue
+                ?? json["placementState"]?.stringValue
+                ?? "undecided"
+        ) ?? .undecided
+        eligibilityState = json["eligibility_state"]?.stringValue
+            ?? json["eligibilityState"]?.stringValue
+            ?? "active"
+        source = json["source"]?.stringValue ?? ""
+        updatedAt = json["updated_at"]?.stringValue ?? json["updatedAt"]?.stringValue ?? ""
+    }
+}
+
+public struct EffectiveFixtureAccess: Identifiable, Sendable, Equatable {
+    public var grantID: String
+    public var sourceFixtureID: String
+    public var sourceFixtureName: String
+    public var provider: String
+    public var externalIdentity: String
+    public var subjectLabel: String
+    public var inherited: Bool
+
+    public var id: String { grantID }
+
+    init(json: [String: JSONValue]) {
+        grantID = json["grantId"]?.stringValue ?? ""
+        sourceFixtureID = json["sourceFixtureId"]?.stringValue ?? ""
+        sourceFixtureName = json["sourceFixtureName"]?.stringValue ?? ""
+        provider = json["provider"]?.stringValue ?? ""
+        externalIdentity = json["externalIdentity"]?.stringValue ?? ""
+        subjectLabel = json["subjectLabel"]?.stringValue ?? ""
+        inherited = json["inherited"]?.boolValue ?? false
+    }
+}
+
 public actor FixtureWorkflowService {
     private let runner: OwnerActionRunner
 
@@ -134,6 +216,50 @@ public actor FixtureWorkflowService {
             "includeArchived": .bool(includeArchived),
         ])
         return parseNodes(result["fixtures"])
+    }
+
+    public func fixtureStateMigrationPlan() async throws -> FixtureStateMigrationReport {
+        let result = try await run("fixture-state-migration-plan", extra: [:])
+        return FixtureStateMigrationReport(json: result["migration"]?.objectValue ?? [:])
+    }
+
+    public func applyFixtureStateMigration() async throws -> FixtureStateMigrationReport {
+        let result = try await run("fixture-state-migration-apply", extra: [:])
+        return FixtureStateMigrationReport(json: result["migration"]?.objectValue ?? [:])
+    }
+
+    public func candidateUniverse(fixtureID: String) async throws -> [String] {
+        let result = try await run("fixture-candidate-universe", extra: [
+            "fixtureId": .string(fixtureID),
+        ])
+        return result["candidateUniverse"]?.objectValue?["assetIds"]?.arrayValue?
+            .compactMap(\.stringValue) ?? []
+    }
+
+    public func applyState(
+        _ state: FixturePlacementState,
+        assetIDs: [String],
+        fixtureID: String,
+        reason: String = ""
+    ) async throws -> [FixtureAssetState] {
+        let result = try await run("fixture-state-apply", extra: [
+            "fixtureId": .string(fixtureID),
+            "assetIds": .array(assetIDs.map(JSONValue.string)),
+            "placementState": .string(state.rawValue),
+            "reason": .string(reason),
+        ])
+        return result["fixtureState"]?.objectValue?["items"]?.arrayValue?
+            .compactMap(\.objectValue)
+            .map(FixtureAssetState.init(json:)) ?? []
+    }
+
+    public func effectiveAccess(fixtureID: String) async throws -> [EffectiveFixtureAccess] {
+        let result = try await run("fixture-access-effective", extra: [
+            "fixtureId": .string(fixtureID),
+        ])
+        return result["access"]?.objectValue?["items"]?.arrayValue?
+            .compactMap(\.objectValue)
+            .map(EffectiveFixtureAccess.init(json:)) ?? []
     }
 
     public func create(

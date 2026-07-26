@@ -10,6 +10,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import local_server
 import owner_state_db
 import sidecar_state_db
+from fixture_pipeline import (
+    create_fixture,
+    link_access_grant,
+    set_fixture_asset_state,
+)
 
 
 def action(mode, **manifest):
@@ -26,6 +31,75 @@ def action(mode, **manifest):
 
 
 class FixtureConnectorTest(unittest.TestCase):
+    def test_connector_exposes_fixture_state_and_effective_access(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            sidecar_state_db.upsert_assets(root, [
+                {
+                    "localIdentifier": "asset-1",
+                    "filename": "One.JPG",
+                    "mediaType": "photo",
+                    "creationDate": "2026-07-15T10:00:00Z",
+                },
+            ])
+            expo = create_fixture(root, "Expo", fixture_id="fixture-expo")
+            child = create_fixture(
+                root,
+                "Child",
+                parent_fixture_id=expo["fixtureId"],
+                fixture_id="fixture-child",
+            )
+            link_access_grant(
+                root,
+                expo["fixtureId"],
+                provider="acs",
+                external_identity="family@example.test",
+            )
+
+            plan = local_server.new_owner_connector_result(
+                root,
+                action("fixture-state-migration-plan"),
+            )
+            self.assertTrue(plan["result"]["readOnly"])
+            self.assertEqual(
+                plan["result"]["migration"]["migrationId"],
+                "fixture-state-v1",
+            )
+
+            applied = local_server.new_owner_connector_result(
+                root,
+                action(
+                    "fixture-state-apply",
+                    fixtureId=expo["fixtureId"],
+                    assetIds=["asset-1"],
+                    placementState="picked",
+                ),
+            )
+            self.assertEqual(
+                applied["result"]["fixtureState"]["items"][0]["placement_state"],
+                "picked",
+            )
+            universe = local_server.new_owner_connector_result(
+                root,
+                action(
+                    "fixture-candidate-universe",
+                    fixtureId=child["fixtureId"],
+                ),
+            )
+            self.assertEqual(
+                universe["result"]["candidateUniverse"]["assetIds"],
+                ["asset-1"],
+            )
+            access = local_server.new_owner_connector_result(
+                root,
+                action(
+                    "fixture-access-effective",
+                    fixtureId=child["fixtureId"],
+                ),
+            )
+            self.assertEqual(access["result"]["access"]["count"], 1)
+            self.assertTrue(access["result"]["access"]["items"][0]["inherited"])
+
     def test_connector_lists_private_lifecycle_titles_without_mutation(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

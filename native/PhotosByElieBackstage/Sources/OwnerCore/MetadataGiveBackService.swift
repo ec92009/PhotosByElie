@@ -51,14 +51,14 @@ public actor MetadataGiveBackService {
     }
 
     public func plan(
-        fixtureID: String,
+        fixtureID: String = "",
         assetIDs: [String] = []
     ) async throws -> MetadataGiveBackReport {
         try await run(mode: "fixture-photos-writeback-plan", fixtureID: fixtureID, assetIDs: assetIDs)
     }
 
     public func commit(
-        fixtureID: String,
+        fixtureID: String = "",
         assetIDs: [String] = []
     ) async throws -> MetadataGiveBackReport {
         try await run(mode: "fixture-photos-writeback-commit", fixtureID: fixtureID, assetIDs: assetIDs)
@@ -66,7 +66,7 @@ public actor MetadataGiveBackService {
 
     public func retryFailures(
         from report: MetadataGiveBackReport,
-        fixtureID: String
+        fixtureID: String = ""
     ) async throws -> MetadataGiveBackReport {
         guard !report.failedAssetIDs.isEmpty else {
             throw MetadataGiveBackError.noFailedItemsToRetry
@@ -84,9 +84,11 @@ public actor MetadataGiveBackService {
             .sorted()
         var manifest: [String: JSONValue] = [
             "mode": .string(mode),
-            "fixtureId": .string(fixtureID),
             "includePreviews": .bool(false),
         ]
+        if !fixtureID.isEmpty {
+            manifest["fixtureId"] = .string(fixtureID)
+        }
         if !cleanIDs.isEmpty {
             manifest["assetIds"] = .array(cleanIDs.map(JSONValue.string))
         }
@@ -104,7 +106,7 @@ public actor MetadataGiveBackService {
         let idempotency = [
             "metadata-giveback",
             mode,
-            fixtureID,
+            fixtureID.isEmpty ? "global" : fixtureID,
             cleanIDs.joined(separator: ","),
             UUID().uuidString,
         ].joined(separator: ":")

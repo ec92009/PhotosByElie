@@ -1,5 +1,35 @@
 # PhotosByElie Handoff
 
+## 2026-07-27 — PBB-29 fixture policy release candidate
+
+- Release candidate: Backstage `0.3.0` build `9`; branch
+  `codex/pbb-19-native-backstage`.
+- Fixtures now carry an explicit population contract (`curated`,
+  `rule-based`, or `parent-subset`) and independent visibility, search,
+  retention, delivery, download, and commerce policies. Saved culling
+  snapshots freeze the effective policy revision alongside their immutable
+  asset order.
+- Backstage exposes those controls in the native Fixtures workspace. The
+  publication, R2 retention, Apple Photos give-back, delivery, and catalog
+  paths enforce the same effective policy and fail closed when a fixture has
+  no valid contract.
+- The live Owner database migration `fixture-policy-v1` was applied through
+  the supported migration path with a pre-mutation backup and durable receipt.
+  Thirteen existing fixtures were migrated. Verified examples: Expo remains
+  public/searchable/retail; RE and La Concha remain private/granted
+  paid-service fixtures; Friends and Family and Blood remain private/granted
+  free-sharing fixtures.
+- Verification passes: 156 Node tests, 142 Python tests, 40 Swift tests,
+  focused fixture-policy/publication/delivery tests, API contract validation,
+  publication validation, and the reversible native parity rehearsal. The
+  rehearsal left Owner SQLite and guarded public/client artifacts unchanged.
+- `/Users/ecohen/Applications/PhotosByElie Backstage.app` is signed,
+  installed, and running as `0.3.0` build `9`; the Max connector is healthy.
+  Automated and reversible acceptance is complete. Final hands-on visual
+  acceptance remains open because the Codex Mac-control channel repeatedly
+  closed before returning a Backstage screenshot; do not describe that visual
+  check as complete until it is performed.
+
 ## 2026-07-26 — PBB-34 native culling parity
 
 - Release candidate: public site `v147.6`; Backstage `0.2.5` build `8`.

@@ -468,7 +468,7 @@ struct OwnerCoreTests {
         )
         let service = MetadataGiveBackService(runner: runner)
 
-        let report = try await service.plan(fixtureID: "fixture-family")
+        let report = try await service.plan()
 
         #expect(report.isDryRun)
         #expect(report.readyCount == 2)
@@ -485,6 +485,7 @@ struct OwnerCoreTests {
             request.payload["manifest"]?.objectValue?["includePreviews"]?.boolValue
                 == false
         )
+        #expect(request.payload["manifest"]?.objectValue?["fixtureId"] == nil)
     }
 
     @Test("Metadata give-back retries only independently failed asset IDs")
@@ -693,6 +694,76 @@ struct OwnerCoreTests {
         let request = try #require(await api.requests().first)
         let manifest = request.payload["manifest"]?.objectValue
         #expect(manifest?["mode"]?.stringValue == "fixture-state-migration-plan")
+    }
+
+    @Test("Native fixture policy editor persists independent dimensions")
+    func nativeFixturePolicyConfiguration() async throws {
+        let terminal = OwnerAction(
+            id: "owner-action-fixture-policy",
+            actionKind: "sidecar-culling-review",
+            target: "max",
+            state: .completed,
+            result: [
+                "configuration": .object([
+                    "fixtureId": "fixture-expo",
+                    "populationMode": "rule-based",
+                    "candidateSource": ["kind": "photos-library"],
+                    "savedRule": ["query": "Paris"],
+                    "templateKey": "expo",
+                    "policy": [
+                        "configured": [
+                            "visibility": "public",
+                            "searchable": true,
+                            "retention": "public-preview",
+                            "delivery": "public",
+                            "download": false,
+                            "commerce": "retail",
+                        ],
+                        "effective": [
+                            "visibility": "public",
+                            "searchable": true,
+                            "retention": "public-preview",
+                            "delivery": "public",
+                            "download": false,
+                            "commerce": "retail",
+                        ],
+                        "revision": 3,
+                    ],
+                ]),
+            ]
+        )
+        let api = ScriptedOwnerActionAPI(completed: [terminal])
+        let service = FixtureWorkflowService(runner: OwnerActionRunner(
+            api: api,
+            waker: UnavailableWaker(),
+            pollInterval: .milliseconds(1),
+            timeout: .seconds(1)
+        ))
+
+        let configuration = try await service.configure(
+            fixtureID: "fixture-expo",
+            populationMode: "rule-based",
+            candidateSource: ["kind": "photos-library"],
+            savedRule: ["query": "Paris"],
+            policy: FixturePolicy(
+                visibility: "public",
+                searchable: true,
+                retention: "public-preview",
+                delivery: "public",
+                download: false,
+                commerce: "retail"
+            ),
+            templateKey: "expo",
+            reason: "test"
+        )
+
+        #expect(configuration.revision == 3)
+        #expect(configuration.effectivePolicy.commerce == "retail")
+        let request = try #require(await api.requests().first)
+        let manifest = request.payload["manifest"]?.objectValue
+        #expect(manifest?["mode"]?.stringValue == "fixture-configuration-set")
+        #expect(manifest?["populationMode"]?.stringValue == "rule-based")
+        #expect(manifest?["policyOverrides"]?.objectValue?["searchable"]?.boolValue == true)
     }
 
     @Test("Native fixture culling requests a bounded full-universe window")
@@ -1564,6 +1635,134 @@ struct OwnerCoreTests {
         let requests = await api.requests()
         #expect(requests[0].payload["manifest"]?.objectValue?["mode"]?.stringValue == "fixture-upload-health")
         #expect(requests[1].payload["manifest"]?.objectValue?["mode"]?.stringValue == "fixture-upload-run-adoption-plan")
+    }
+
+    @Test("Native upload publishes verified assets and exposes reconciliation progress")
+    func nativeUploadAndR2Safety() async throws {
+        let started = OwnerAction(
+            id: "owner-action-upload-start",
+            actionKind: "sidecar-culling-review",
+            target: "max",
+            state: .completed,
+            result: [
+                "uploadRun": [
+                    "runId": "uplrun-1",
+                    "status": "queued",
+                    "count": 2,
+                    "concurrency": 4,
+                    "started": true,
+                ],
+            ]
+        )
+        let status = OwnerAction(
+            id: "owner-action-upload-status",
+            actionKind: "sidecar-culling-review",
+            target: "max",
+            state: .completed,
+            result: [
+                "uploadRun": [
+                    "runId": "uplrun-1",
+                    "status": "completed-with-errors",
+                    "requested": 2,
+                    "processed": 2,
+                    "live": 1,
+                    "failed": 1,
+                    "remaining": 0,
+                    "concurrency": 4,
+                    "items": [
+                        ["asset_id": "asset-1", "status": "live", "error_text": ""],
+                        ["asset_id": "asset-2", "status": "failed", "error_text": "network"],
+                    ],
+                ],
+            ]
+        )
+        let reconciliation = OwnerAction(
+            id: "owner-action-r2-plan",
+            actionKind: "sidecar-culling-review",
+            target: "max",
+            state: .completed,
+            result: [
+                "reconciliation": [
+                    "runId": "r2rec-1",
+                    "mode": "plan",
+                    "scanned": 3,
+                    "protected": 1,
+                    "quarantined": 1,
+                    "restored": 0,
+                    "eligibleDelete": 1,
+                    "deleted": 0,
+                    "actions": [[
+                        "bucket": "photosbyelie-private",
+                        "key": "masters/sold.jpg",
+                        "assetId": "asset-1",
+                        "sold": true,
+                        "referenced": true,
+                        "action": "protected",
+                    ]],
+                ],
+            ]
+        )
+        let photosSync = OwnerAction(
+            id: "owner-action-photos-sync",
+            actionKind: "sidecar-culling-review",
+            target: "max",
+            state: .completed,
+            result: [
+                "photosSync": [
+                    "attached": false,
+                    "requested": 25,
+                    "scanned": 24,
+                    "elapsedSeconds": 2.5,
+                    "failures": [["assetId": "asset-failed", "error": "transient"]],
+                    "changes": [
+                        "baseline": 20,
+                        "unchanged": 1,
+                        "metadataOnly": 1,
+                        "appearance": 1,
+                        "sourceMissing": 1,
+                        "sourceReturned": 0,
+                    ],
+                ],
+            ]
+        )
+        let api = ScriptedOwnerActionAPI(completed: [started, status, reconciliation, photosSync])
+        let service = FixtureDeliveryService(runner: OwnerActionRunner(
+            api: api,
+            waker: UnavailableWaker(),
+            pollInterval: .milliseconds(1),
+            timeout: .seconds(1)
+        ))
+
+        let run = try await service.startNativeUpload(
+            assetIDs: ["asset-1", "asset-2"],
+            limit: 50,
+            concurrency: 4
+        )
+        #expect(run.runID == "uplrun-1")
+        #expect(run.requested == 2)
+        let completed = try await service.nativeUploadStatus(runID: run.runID)
+        #expect(completed.isFinished)
+        #expect(completed.live == 1)
+        #expect(completed.failed == 1)
+        #expect(completed.items[1].errorText == "network")
+        let safety = try await service.r2Reconciliation()
+        #expect(safety.protected == 1)
+        #expect(safety.eligibleDelete == 1)
+        #expect(safety.items.first?.sold == true)
+        let sync = try await service.syncPhotos(limit: 25)
+        #expect(sync.scanned == 24)
+        #expect(sync.metadataOnly == 1)
+        #expect(sync.appearance == 1)
+        #expect(sync.sourceMissing == 1)
+        #expect(sync.failed == 1)
+        #expect(sync.elapsedSeconds == 2.5)
+
+        let requests = await api.requests()
+        #expect(requests[0].payload["manifest"]?.objectValue?["mode"]?.stringValue == "asset-upload-run-start")
+        #expect(requests[1].payload["manifest"]?.objectValue?["mode"]?.stringValue == "asset-upload-run-status")
+        #expect(requests[2].payload["manifest"]?.objectValue?["mode"]?.stringValue == "r2-reconciliation-plan")
+        #expect(requests[3].payload["manifest"]?.objectValue?["mode"]?.stringValue == "photos-sync-run")
+        #expect(requests[3].payload["manifest"]?.objectValue?["limit"]?.intValue == 25)
     }
 
     @Test("Backstage reports signed Photos helper identity and headless health")

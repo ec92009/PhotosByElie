@@ -5,6 +5,7 @@ import SwiftUI
 @main
 struct PhotosByElieBackstageApp: App {
     @StateObject private var model = BackstageViewModel()
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
         WindowGroup("PhotosByElie Backstage") {
@@ -36,6 +37,11 @@ struct PhotosByElieBackstageApp: App {
                     }
             }
             .task { await model.bootstrapAuthentication() }
+            .task { await model.runPhotosSyncLoop() }
+            .onChange(of: scenePhase) { _, phase in
+                guard phase == .active else { return }
+                Task { await model.syncPhotosIncrementally() }
+            }
         }
         .commands {
             CommandMenu("Backstage") {
@@ -193,29 +199,41 @@ private struct UploadWorkflowView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Verified upload").font(.largeTitle.bold())
+                Text("Upload & publish").font(.largeTitle.bold())
                 Spacer()
-                FixturePicker(model: model)
-                Button("Load plan") { Task { await model.loadDeliveryPlan() } }
-                Button("Queue health") { Task { await model.loadUploadHealth() } }
-                Button("Upload selected") { Task { await model.deliverSelected() } }
+                Button("Publish selected") { Task { await model.publishSelectedNatively() } }
                     .disabled(model.isRunningDelivery || model.selectedDeliveryIDs.isEmpty)
-                Button("Retry failed") { Task { await model.retryDeliveryFailures() } }
-                    .disabled(model.isRunningDelivery || model.deliveryFailedIDs.isEmpty)
+                Button("Publish next 50") { Task { await model.publishNextNativeBatch() } }
+                    .disabled(model.isRunningDelivery)
             }
-            Text("R2 upload and Apple Photos give-back stay fixture-scoped. Every failed asset remains independently retryable.")
+            Text("Upload equals publication. Each verified source version becomes live immediately in every effective picked fixture; ACS alone determines who can see it. A failed asset remains Needs Upload without blocking the rest.")
                 .foregroundStyle(.secondary)
-            if model.deliveryTotal > 0 {
+            if let run = model.nativeUploadRun, run.requested > 0 {
                 ProgressView(
-                    value: Double(model.deliveryCompleted),
-                    total: Double(model.deliveryTotal)
+                    value: Double(run.processed),
+                    total: Double(run.requested)
                 ) {
-                    Text("\(model.deliveryCompleted) of \(model.deliveryTotal)")
+                    Text("\(run.processed) of \(run.requested) • \(run.live) live • \(run.failed) failed • \(run.remaining) remaining")
                 }
             }
-            Text(model.deliveryStatus).font(.callout).foregroundStyle(.secondary)
-            GroupBox("Recovery and prior-run adoption") {
+            Text(model.nativeUploadStatus).font(.callout).foregroundStyle(.secondary)
+            if let run = model.nativeUploadRun, !run.items.isEmpty {
+                Table(run.items) {
+                    TableColumn("Asset", value: \.assetID)
+                    TableColumn("State", value: \.status)
+                    TableColumn("Error", value: \.errorText)
+                }
+                .frame(minHeight: 180)
+            }
+            DisclosureGroup("Legacy recovery and fixture receipt inspection") {
                 VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        FixturePicker(model: model)
+                        Button("Load legacy plan") { Task { await model.loadDeliveryPlan() } }
+                        Button("Queue health") { Task { await model.loadUploadHealth() } }
+                        Button("Retry legacy failures") { Task { await model.retryDeliveryFailures() } }
+                            .disabled(model.isRunningDelivery || model.deliveryFailedIDs.isEmpty)
+                    }
                     if let health = model.uploadHealth {
                         HStack {
                             LabeledContent("Fixture assets", value: "\(health.activeAssetCount)")
@@ -239,28 +257,19 @@ private struct UploadWorkflowView: View {
                     Text(model.uploadRecoveryStatus)
                         .font(.callout)
                         .foregroundStyle(.secondary)
+                    Table(
+                        model.deliveryPlan?.items ?? [],
+                        selection: $model.selectedDeliveryIDs
+                    ) {
+                        TableColumn("Asset", value: \.assetID)
+                        TableColumn("Approved") { Text($0.approved ? "Yes" : "No") }
+                        TableColumn("R2", value: \.r2Status)
+                        TableColumn("Photos", value: \.photosStatus)
+                        TableColumn("Complete") { Text($0.complete ? "Verified" : "Pending") }
+                        TableColumn("Error", value: \.errorText)
+                    }
+                    .frame(minHeight: 180)
                 }
-            }
-            Table(
-                model.deliveryPlan?.items ?? [],
-                selection: $model.selectedDeliveryIDs
-            ) {
-                TableColumn("Asset", value: \.assetID)
-                TableColumn("Approved") { Text($0.approved ? "Yes" : "No") }
-                TableColumn("R2", value: \.r2Status)
-                TableColumn("Photos", value: \.photosStatus)
-                TableColumn("R2 receipt") {
-                    Text($0.r2Evidence)
-                        .lineLimit(1)
-                        .help($0.r2Evidence)
-                }
-                TableColumn("Photos receipt") {
-                    Text($0.photosEvidence)
-                        .lineLimit(1)
-                        .help($0.photosEvidence)
-                }
-                TableColumn("Complete") { Text($0.complete ? "Verified" : "Pending") }
-                TableColumn("Error", value: \.errorText)
             }
         }
         .padding()
@@ -327,24 +336,33 @@ private struct PublicationView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Publication").font(.largeTitle.bold())
+                Text("R2 safety").font(.largeTitle.bold())
                 Spacer()
-                FixturePicker(model: model)
-                Button("Preview gate") { Task { await model.loadPublicationPlan() } }
-                Button("Register eligible…") { confirming = true }
-                    .disabled(model.isRunningDelivery || (model.publicationPlan?.eligibleIDs.isEmpty ?? true))
+                Button("Preview reconciliation") {
+                    Task { await model.previewR2Reconciliation() }
+                }
+                .disabled(model.isRunningDelivery)
+                Button("Apply guarded reconciliation…") { confirming = true }
+                    .disabled(model.isRunningDelivery || model.r2Reconciliation == nil)
             }
-            Text("Only fixtures tagged public can cross this gate. Upload, catalog registration, deployment, and client messaging remain separate decisions.")
+            Text("Sold masters and sold derivatives are protected indefinitely. Other unreferenced objects enter a 30-day quarantine and can be deleted only after a second reconciliation still finds them unreferenced.")
                 .foregroundStyle(.secondary)
-            Text(model.publicationStatus).font(.callout).foregroundStyle(.secondary)
-            if let plan = model.publicationPlan {
-                LabeledContent("Eligible", value: "\(plan.eligibleIDs.count)")
-                LabeledContent("Blocked", value: "\(plan.blocked.count)")
-                List(plan.blocked.sorted(by: { $0.key < $1.key }), id: \.key) { entry in
-                    VStack(alignment: .leading) {
-                        Text(entry.key).font(.headline)
-                        Text(entry.value).foregroundStyle(.secondary)
-                    }
+            Text(model.r2ReconciliationStatus).font(.callout).foregroundStyle(.secondary)
+            if let report = model.r2Reconciliation {
+                HStack {
+                    LabeledContent("Scanned", value: "\(report.scanned)")
+                    LabeledContent("Sale protected", value: "\(report.protected)")
+                    LabeledContent("Quarantined", value: "\(report.quarantined)")
+                    LabeledContent("Restored", value: "\(report.restored)")
+                    LabeledContent("Eligible delete", value: "\(report.eligibleDelete)")
+                    LabeledContent("Deleted", value: "\(report.deleted)")
+                }
+                Table(report.items) {
+                    TableColumn("Object", value: \.key)
+                    TableColumn("Asset", value: \.assetID)
+                    TableColumn("Sold") { Text($0.sold ? "Protected" : "No") }
+                    TableColumn("Referenced") { Text($0.referenced ? "Yes" : "No") }
+                    TableColumn("Action", value: \.action)
                 }
             }
         }
@@ -352,13 +370,13 @@ private struct PublicationView: View {
         .task {
             if model.fixtures.isEmpty { await model.loadFixtures() }
         }
-        .confirmationDialog("Register eligible assets in the static catalog?", isPresented: $confirming) {
-            Button("Register and rebuild", role: .destructive) {
-                Task { await model.publishEligible() }
+        .confirmationDialog("Apply the guarded R2 reconciliation?", isPresented: $confirming) {
+            Button("Apply reconciliation", role: .destructive) {
+                Task { await model.commitR2Reconciliation() }
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This changes catalog source files. It does not deploy, push, or message anyone.")
+            Text("Referenced or sold objects cannot be removed here. Unreferenced objects first enter quarantine; only a later second pass after 30 days may delete them.")
         }
     }
 }
@@ -696,6 +714,8 @@ private struct MediaLibraryView: View {
                     Spacer()
                     Button("Open in Review") { model.sendCullingSelection(to: .review) }
                         .disabled(model.cullingSelection.selectedIDs.isEmpty)
+                    Button("Send to Metadata") { model.sendCullingSelection(to: .metadata) }
+                        .disabled(model.cullingSelection.selectedIDs.isEmpty)
                     Button("Send to Uploads") { model.sendCullingSelection(to: .uploads) }
                         .disabled(model.cullingSelection.selectedIDs.isEmpty)
                 }
@@ -985,6 +1005,71 @@ private struct FixtureWorkflowView: View {
                         }
                         .disabled(model.selectedFixtureAssetIDs.isEmpty || model.selectedFixtureID.isEmpty)
                     }
+                    if !model.selectedFixtureID.isEmpty {
+                        GroupBox("Population and policy") {
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    Picker("Population", selection: $model.fixturePopulationMode) {
+                                        Text("Curated").tag("curated")
+                                        Text("Rule-based").tag("rule-based")
+                                        Text("Parent subset").tag("parent-subset")
+                                    }
+                                    Picker("Source", selection: $model.fixtureCandidateSourceKind) {
+                                        Text("Photos library").tag("photos-library")
+                                        Text("Parent effective snapshot").tag("parent-effective")
+                                        Text("Saved snapshot").tag("saved-snapshot")
+                                    }
+                                }
+                                if model.fixturePopulationMode == "rule-based" {
+                                    TextField(
+                                        "Saved rule query",
+                                        text: $model.fixtureSavedRuleQuery
+                                    )
+                                }
+                                HStack {
+                                    Picker("Visibility", selection: $model.fixturePolicyVisibility) {
+                                        Text("Public").tag("public")
+                                        Text("Private").tag("private")
+                                        Text("Unlisted").tag("unlisted")
+                                    }
+                                    Toggle("Search", isOn: $model.fixturePolicySearchable)
+                                    Toggle("Download", isOn: $model.fixturePolicyDownload)
+                                }
+                                HStack {
+                                    Picker("Retention", selection: $model.fixturePolicyRetention) {
+                                        Text("Public preview").tag("public-preview")
+                                        Text("Private master").tag("private-master")
+                                        Text("Archive only").tag("archive-only")
+                                        Text("No cloud").tag("no-cloud")
+                                    }
+                                    Picker("Delivery", selection: $model.fixturePolicyDelivery) {
+                                        Text("Public").tag("public")
+                                        Text("Granted").tag("granted")
+                                        Text("Owner only").tag("owner-only")
+                                        Text("Disabled").tag("disabled")
+                                    }
+                                    Picker("Commerce", selection: $model.fixturePolicyCommerce) {
+                                        Text("Retail").tag("retail")
+                                        Text("Paid service").tag("paid-service")
+                                        Text("Free sharing").tag("free-sharing")
+                                        Text("Disabled").tag("disabled")
+                                    }
+                                }
+                                HStack {
+                                    Button("Save contract") {
+                                        Task { await model.saveFixtureConfiguration() }
+                                    }
+                                    .disabled(model.isLoadingFixturePolicy)
+                                    if model.isLoadingFixturePolicy {
+                                        ProgressView().controlSize(.small)
+                                    }
+                                    Text(model.fixturePolicyStatus)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                    }
                     DisclosureGroup("Reversible fixture placements") {
                         HStack(alignment: .top) {
                             List(selection: $model.placementTargetFixtureIDs) {
@@ -1106,7 +1191,10 @@ private struct FixtureWorkflowView: View {
             if model.fixtures.isEmpty { await model.loadFixtures() }
         }
         .onChange(of: model.selectedFixtureID) { _, _ in
-            Task { await model.loadFixturePools() }
+            Task {
+                await model.loadFixturePools()
+                await model.loadFixtureConfiguration()
+            }
         }
     }
 }
@@ -1665,6 +1753,32 @@ private struct MetadataGiveBackView: View {
 
     var body: some View {
         Form {
+            Section("Incremental Apple Photos sync") {
+                Text("A bounded low-priority pass runs at launch, whenever Backstage becomes active, and every 15 minutes. Metadata-only changes preserve approval and return to Needs Upload; rendered-image changes create a new source version and return to Review.")
+                    .foregroundStyle(.secondary)
+                HStack {
+                    Button("Sync now") {
+                        Task { await model.syncPhotosIncrementally() }
+                    }
+                    .disabled(model.isSyncingPhotos)
+                    if model.isSyncingPhotos {
+                        ProgressView().controlSize(.small)
+                    }
+                    Text(model.photosSyncStatus)
+                        .foregroundStyle(.secondary)
+                }
+                if let report = model.photosSyncReport {
+                    HStack(spacing: 18) {
+                        LabeledContent("Baseline", value: report.baseline.formatted())
+                        LabeledContent("Unchanged", value: report.unchanged.formatted())
+                        LabeledContent("Metadata", value: report.metadataOnly.formatted())
+                        LabeledContent("Appearance", value: report.appearance.formatted())
+                        LabeledContent("Missing", value: report.sourceMissing.formatted())
+                        LabeledContent("Returned", value: report.sourceReturned.formatted())
+                    }
+                    .font(.caption)
+                }
+            }
             Section("Title, keywords, and review queue") {
                 HStack {
                     TextField("Asset ID", text: $model.metadataAssetID)
@@ -1749,18 +1863,18 @@ private struct MetadataGiveBackView: View {
                     .foregroundStyle(.secondary)
             }
             Section("Verified Apple Photos give-back") {
-                TextField("Fixture ID", text: $model.fixtureID)
-                Text("Max remains the single writer. Preview is read-only; Commit is a separate, explicit Worker-authorized action through the signed connector.")
+                TextField("Optional fixture filter", text: $model.fixtureID)
+                Text("Approved canonical title, keywords, rating, color, and PBE:Approved are global. Tombstones receive PBE:Tombstone. Fixture Pick/Hide state is never written to Photos. Preview is read-only; Commit is a separate Worker-authorized action through the signed connector.")
                     .foregroundStyle(.secondary)
                 HStack {
                     Button("Preview changes") {
                         Task { await model.planMetadataGiveBack() }
                     }
-                    .disabled(model.isRunningMetadata || model.fixtureID.isEmpty)
+                    .disabled(model.isRunningMetadata)
                     Button("Commit & verify") {
                         showingCommitConfirmation = true
                     }
-                    .disabled(model.isRunningMetadata || model.fixtureID.isEmpty)
+                    .disabled(model.isRunningMetadata)
                     Button("Retry failed only") {
                         Task { await model.retryMetadataFailures() }
                     }

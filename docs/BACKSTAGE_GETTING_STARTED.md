@@ -103,6 +103,27 @@ source file.
 Use **Rename** to change the visible name without changing the fixture's stable
 identity. **Archive / reopen** is reversible.
 
+### Set the fixture contract
+
+Select the fixture and use its policy editor to describe what the fixture is
+allowed to do.
+
+- **Population** controls how membership is built: manually curated, produced
+  by a saved rule, or constrained to a parent fixture's assets.
+- **Visibility** and **Searchable** are separate. A private fixture must not
+  become public merely because it has catalog metadata.
+- **Retention** controls whether media may exist as public previews, private
+  masters, archive-only objects, or not in cloud storage at all.
+- **Delivery** and **Download** control who may receive or download the
+  fixture's products.
+- **Commerce** distinguishes retail sale, paid client service, free sharing,
+  and disabled commerce.
+
+Choose the closest template first, then change only the fields that differ.
+Child fixtures inherit the effective policy unless they explicitly override a
+field. Saving creates a new audited policy revision; existing culling
+snapshots retain the revision they were created with.
+
 ### Find and place assets
 
 1. Select the destination fixture.

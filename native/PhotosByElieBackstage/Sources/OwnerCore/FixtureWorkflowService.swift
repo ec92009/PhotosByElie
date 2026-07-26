@@ -141,6 +141,78 @@ public struct FixturePoolSummary: Identifiable, Sendable, Equatable {
     }
 }
 
+public struct FixturePolicy: Sendable, Equatable {
+    public var visibility: String
+    public var searchable: Bool
+    public var retention: String
+    public var delivery: String
+    public var download: Bool
+    public var commerce: String
+
+    public init(
+        visibility: String,
+        searchable: Bool,
+        retention: String,
+        delivery: String,
+        download: Bool,
+        commerce: String
+    ) {
+        self.visibility = visibility
+        self.searchable = searchable
+        self.retention = retention
+        self.delivery = delivery
+        self.download = download
+        self.commerce = commerce
+    }
+
+    init(json: [String: JSONValue]) {
+        visibility = json["visibility"]?.stringValue ?? "private"
+        searchable = json["searchable"]?.boolValue ?? false
+        retention = json["retention"]?.stringValue ?? "no-cloud"
+        delivery = json["delivery"]?.stringValue ?? "owner-only"
+        download = json["download"]?.boolValue ?? false
+        commerce = json["commerce"]?.stringValue ?? "disabled"
+    }
+
+    var json: [String: JSONValue] {
+        [
+            "visibility": .string(visibility),
+            "searchable": .bool(searchable),
+            "retention": .string(retention),
+            "delivery": .string(delivery),
+            "download": .bool(download),
+            "commerce": .string(commerce),
+        ]
+    }
+}
+
+public struct FixtureConfiguration: Sendable, Equatable {
+    public var fixtureID: String
+    public var populationMode: String
+    public var candidateSource: [String: JSONValue]
+    public var savedRule: [String: JSONValue]
+    public var templateKey: String
+    public var configuredPolicy: FixturePolicy
+    public var effectivePolicy: FixturePolicy
+    public var revision: Int
+
+    init(json: [String: JSONValue]) {
+        fixtureID = json["fixtureId"]?.stringValue ?? ""
+        populationMode = json["populationMode"]?.stringValue ?? "curated"
+        candidateSource = json["candidateSource"]?.objectValue ?? [:]
+        savedRule = json["savedRule"]?.objectValue ?? [:]
+        templateKey = json["templateKey"]?.stringValue ?? ""
+        let policy = json["policy"]?.objectValue ?? [:]
+        configuredPolicy = FixturePolicy(
+            json: policy["configured"]?.objectValue ?? [:]
+        )
+        effectivePolicy = FixturePolicy(
+            json: policy["effective"]?.objectValue ?? [:]
+        )
+        revision = policy["revision"]?.intValue ?? 0
+    }
+}
+
 public struct FixturePlacement: Identifiable, Sendable, Equatable {
     public var id: String
     public var assetID: String
@@ -683,6 +755,38 @@ public actor FixtureWorkflowService {
         return result["access"]?.objectValue?["items"]?.arrayValue?
             .compactMap(\.objectValue)
             .map(EffectiveFixtureAccess.init(json:)) ?? []
+    }
+
+    public func configuration(fixtureID: String) async throws -> FixtureConfiguration {
+        let result = try await run("fixture-configuration-get", extra: [
+            "fixtureId": .string(fixtureID),
+        ])
+        return FixtureConfiguration(
+            json: result["configuration"]?.objectValue ?? [:]
+        )
+    }
+
+    public func configure(
+        fixtureID: String,
+        populationMode: String,
+        candidateSource: [String: JSONValue],
+        savedRule: [String: JSONValue],
+        policy: FixturePolicy,
+        templateKey: String,
+        reason: String
+    ) async throws -> FixtureConfiguration {
+        let result = try await run("fixture-configuration-set", extra: [
+            "fixtureId": .string(fixtureID),
+            "populationMode": .string(populationMode),
+            "candidateSource": .object(candidateSource),
+            "savedRule": .object(savedRule),
+            "policyOverrides": .object(policy.json),
+            "templateKey": .string(templateKey),
+            "reason": .string(reason),
+        ])
+        return FixtureConfiguration(
+            json: result["configuration"]?.objectValue ?? [:]
+        )
     }
 
     public func create(

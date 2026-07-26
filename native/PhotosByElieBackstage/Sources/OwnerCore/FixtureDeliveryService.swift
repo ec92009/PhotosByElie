@@ -106,6 +106,67 @@ public struct FixtureOperationReport: Sendable, Equatable {
     public var detail: String
 }
 
+public struct NativeUploadRunItem: Identifiable, Sendable, Equatable {
+    public var id: String { assetID }
+    public var assetID: String
+    public var status: String
+    public var errorText: String
+}
+
+public struct NativeUploadRun: Sendable, Equatable {
+    public var runID: String
+    public var status: String
+    public var requested: Int
+    public var processed: Int
+    public var live: Int
+    public var failed: Int
+    public var remaining: Int
+    public var concurrency: Int
+    public var startedAt: String
+    public var completedAt: String
+    public var items: [NativeUploadRunItem]
+
+    public var isFinished: Bool {
+        ["completed", "completed-with-errors", "failed", "cancelled"].contains(status)
+    }
+}
+
+public struct R2ReconciliationItem: Identifiable, Sendable, Equatable {
+    public var id: String { "\(bucket):\(key)" }
+    public var bucket: String
+    public var key: String
+    public var assetID: String
+    public var sold: Bool
+    public var referenced: Bool
+    public var action: String
+}
+
+public struct R2ReconciliationReport: Sendable, Equatable {
+    public var runID: String
+    public var mode: String
+    public var scanned: Int
+    public var protected: Int
+    public var quarantined: Int
+    public var restored: Int
+    public var eligibleDelete: Int
+    public var deleted: Int
+    public var items: [R2ReconciliationItem]
+}
+
+public struct PhotosSyncReport: Sendable, Equatable {
+    public var attached: Bool
+    public var requested: Int
+    public var scanned: Int
+    public var baseline: Int
+    public var unchanged: Int
+    public var metadataOnly: Int
+    public var appearance: Int
+    public var sourceMissing: Int
+    public var sourceReturned: Int
+    public var failed: Int
+    public var elapsedSeconds: Double
+}
+
 public enum FixtureDeliveryError: Error, Sendable, Equatable {
     case missingResult(String)
     case emptySelection
@@ -156,6 +217,100 @@ public actor FixtureDeliveryService {
             coveredCount: health["fullyCoveredItemCount"]?.intValue ?? 0,
             partiallyCoveredCount: health["partiallyCoveredItemCount"]?.intValue ?? 0,
             blockedCount: health["metadataBlockedQueuedCount"]?.intValue ?? 0
+        )
+    }
+
+    public func startNativeUpload(
+        assetIDs: [String] = [],
+        limit: Int = 50,
+        concurrency: Int = 4
+    ) async throws -> NativeUploadRun {
+        let action = try await fixtureAction(
+            mode: "asset-upload-run-start",
+            fixtureID: "",
+            extra: [
+                "assetIds": .array(clean(assetIDs).map(JSONValue.string)),
+                "limit": .number(Double(limit)),
+                "concurrency": .number(Double(concurrency)),
+            ]
+        )
+        return try decodeNativeUploadRun(action)
+    }
+
+    public func nativeUploadStatus(runID: String) async throws -> NativeUploadRun {
+        let cleanRunID = runID.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanRunID.isEmpty else {
+            throw FixtureDeliveryError.missingResult("runID")
+        }
+        let action = try await fixtureAction(
+            mode: "asset-upload-run-status",
+            fixtureID: "",
+            extra: ["runId": .string(cleanRunID)]
+        )
+        return try decodeNativeUploadRun(action)
+    }
+
+    public func r2Reconciliation(commit: Bool = false) async throws -> R2ReconciliationReport {
+        let action = try await fixtureAction(
+            mode: commit ? "r2-reconciliation-commit" : "r2-reconciliation-plan",
+            fixtureID: ""
+        )
+        guard let result = action.result?["reconciliation"]?.objectValue else {
+            throw FixtureDeliveryError.missingResult("reconciliation")
+        }
+        let items = (result["actions"]?.arrayValue ?? []).compactMap { value -> R2ReconciliationItem? in
+            guard let item = value.objectValue,
+                  let key = item["key"]?.stringValue else { return nil }
+            return R2ReconciliationItem(
+                bucket: item["bucket"]?.stringValue ?? "",
+                key: key,
+                assetID: item["assetId"]?.stringValue ?? "",
+                sold: item["sold"]?.boolValue ?? false,
+                referenced: item["referenced"]?.boolValue ?? false,
+                action: item["action"]?.stringValue ?? ""
+            )
+        }
+        return R2ReconciliationReport(
+            runID: result["runId"]?.stringValue ?? "",
+            mode: result["mode"]?.stringValue ?? (commit ? "commit" : "plan"),
+            scanned: result["scanned"]?.intValue ?? items.count,
+            protected: result["protected"]?.intValue ?? 0,
+            quarantined: result["quarantined"]?.intValue ?? 0,
+            restored: result["restored"]?.intValue ?? 0,
+            eligibleDelete: result["eligibleDelete"]?.intValue ?? 0,
+            deleted: result["deleted"]?.intValue ?? 0,
+            items: items
+        )
+    }
+
+    public func syncPhotos(limit: Int = 25) async throws -> PhotosSyncReport {
+        let action = try await fixtureAction(
+            mode: "photos-sync-run",
+            fixtureID: "",
+            extra: ["limit": .number(Double(max(1, min(limit, 50))))]
+        )
+        guard let result = action.result?["photosSync"]?.objectValue else {
+            throw FixtureDeliveryError.missingResult("photosSync")
+        }
+        let changes = result["changes"]?.objectValue ?? [:]
+        let elapsedSeconds: Double
+        if case let .number(value) = result["elapsedSeconds"] {
+            elapsedSeconds = value
+        } else {
+            elapsedSeconds = 0
+        }
+        return PhotosSyncReport(
+            attached: result["attached"]?.boolValue ?? false,
+            requested: result["requested"]?.intValue ?? 0,
+            scanned: result["scanned"]?.intValue ?? 0,
+            baseline: changes["baseline"]?.intValue ?? 0,
+            unchanged: changes["unchanged"]?.intValue ?? 0,
+            metadataOnly: changes["metadataOnly"]?.intValue ?? 0,
+            appearance: changes["appearance"]?.intValue ?? 0,
+            sourceMissing: changes["sourceMissing"]?.intValue ?? 0,
+            sourceReturned: changes["sourceReturned"]?.intValue ?? 0,
+            failed: result["failures"]?.arrayValue?.count ?? 0,
+            elapsedSeconds: elapsedSeconds
         )
     }
 
@@ -310,6 +465,41 @@ public actor FixtureDeliveryService {
                 ?? (result["assetIds"]?.arrayValue?.count ?? ids.count),
             failedCount: summary["failedCount"]?.intValue ?? 0,
             detail: result["message"]?.stringValue ?? ""
+        )
+    }
+
+    private func decodeNativeUploadRun(_ action: OwnerAction) throws -> NativeUploadRun {
+        guard let result = action.result?["uploadRun"]?.objectValue else {
+            throw FixtureDeliveryError.missingResult("uploadRun")
+        }
+        let items = (result["items"]?.arrayValue ?? []).compactMap { value -> NativeUploadRunItem? in
+            guard let item = value.objectValue,
+                  let assetID = item["asset_id"]?.stringValue ?? item["assetId"]?.stringValue
+            else { return nil }
+            return NativeUploadRunItem(
+                assetID: assetID,
+                status: item["status"]?.stringValue ?? "",
+                errorText: item["error_text"]?.stringValue
+                    ?? item["errorText"]?.stringValue
+                    ?? ""
+            )
+        }
+        return NativeUploadRun(
+            runID: result["runId"]?.stringValue ?? "",
+            status: result["status"]?.stringValue ?? "queued",
+            requested: result["requested"]?.intValue
+                ?? result["count"]?.intValue
+                ?? items.count,
+            processed: result["processed"]?.intValue ?? 0,
+            live: result["live"]?.intValue ?? 0,
+            failed: result["failed"]?.intValue ?? 0,
+            remaining: result["remaining"]?.intValue
+                ?? result["count"]?.intValue
+                ?? items.count,
+            concurrency: result["concurrency"]?.intValue ?? 1,
+            startedAt: result["startedAt"]?.stringValue ?? "",
+            completedAt: result["completedAt"]?.stringValue ?? "",
+            items: items
         )
     }
 

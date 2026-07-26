@@ -63,7 +63,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var isLoadingPhotos = false
     @Published var fixtureID = ""
     @Published var metadataReport: MetadataGiveBackReport?
-    @Published var metadataStatus = "Choose a fixture, then run the read-only preview."
+    @Published var metadataStatus = "Preview approved global metadata before writing it to Photos."
     @Published var isRunningMetadata = false
     @Published var fixtures: [FixtureNode] = []
     @Published var selectedFixtureID = ""
@@ -80,6 +80,18 @@ final class BackstageViewModel: ObservableObject {
     @Published var fixtureSnapshotStatus = ""
     @Published var isReloadingFixturePools = false
     @Published var isOpeningFixturePool = false
+    @Published var fixturePopulationMode = "curated"
+    @Published var fixtureCandidateSourceKind = "photos-library"
+    @Published var fixtureSavedRuleQuery = ""
+    @Published var fixturePolicyVisibility = "private"
+    @Published var fixturePolicySearchable = false
+    @Published var fixturePolicyRetention = "no-cloud"
+    @Published var fixturePolicyDelivery = "owner-only"
+    @Published var fixturePolicyDownload = false
+    @Published var fixturePolicyCommerce = "disabled"
+    @Published var fixturePolicyRevision = 0
+    @Published var fixturePolicyStatus = ""
+    @Published var isLoadingFixturePolicy = false
     @Published var cullingPool: FixturePool?
     @Published var cullingFixtureID = ""
     @Published var fixtureCullingWindow: FixtureCullingWindow?
@@ -164,6 +176,13 @@ final class BackstageViewModel: ObservableObject {
     @Published var uploadRunID = ""
     @Published var uploadAdoptionPlan: FixtureUploadRunAdoptionPlan?
     @Published var uploadRecoveryStatus = "Existing verified upload runs can be adopted explicitly."
+    @Published var nativeUploadRun: NativeUploadRun?
+    @Published var nativeUploadStatus = "Approved items publish immediately after their R2 objects verify."
+    @Published var photosSyncReport: PhotosSyncReport?
+    @Published var photosSyncStatus = "Apple Photos sync runs incrementally in the background."
+    @Published var isSyncingPhotos = false
+    @Published var r2Reconciliation: R2ReconciliationReport?
+    @Published var r2ReconciliationStatus = "Preview protected sales and 30-day quarantine before committing cleanup."
     @Published var deliverables: [FixtureDeliverable] = []
     @Published var deliverableKind = "pdf"
     @Published var deliverableShareLink = ""
@@ -231,6 +250,7 @@ final class BackstageViewModel: ObservableObject {
         case .authenticated:
             authenticationStatus = "Authenticated with this Mac's revocable device credential."
             await refreshActions()
+            await syncPhotosIncrementally()
         case .needsEnrollment:
             authenticationStatus = "Enroll Backstage from a signed-in Owner browser session."
             status = "Enrollment required"
@@ -392,7 +412,7 @@ final class BackstageViewModel: ObservableObject {
         do {
             let retried = try await metadataService.retryFailures(
                 from: metadataReport,
-                fixtureID: fixtureID
+                fixtureID: fixtureID.trimmingCharacters(in: .whitespacesAndNewlines)
             )
             self.metadataReport = retried
             metadataStatus = reportStatus(retried)
@@ -838,6 +858,72 @@ final class BackstageViewModel: ObservableObject {
         }
         if fixtureSnapshotStatus == "Reloading saved snapshots…" {
             fixtureSnapshotStatus = fixtureStatus
+        }
+    }
+
+    func loadFixtureConfiguration() async {
+        guard !selectedFixtureID.isEmpty else {
+            fixturePolicyStatus = ""
+            return
+        }
+        isLoadingFixturePolicy = true
+        fixturePolicyStatus = "Loading fixture contract…"
+        defer { isLoadingFixturePolicy = false }
+        do {
+            let configuration = try await fixtureService.configuration(
+                fixtureID: selectedFixtureID
+            )
+            fixturePopulationMode = configuration.populationMode
+            fixtureCandidateSourceKind =
+                configuration.candidateSource["kind"]?.stringValue ?? "photos-library"
+            fixtureSavedRuleQuery =
+                configuration.savedRule["query"]?.stringValue ?? ""
+            fixtureTemplate = configuration.templateKey
+            let policy = configuration.effectivePolicy
+            fixturePolicyVisibility = policy.visibility
+            fixturePolicySearchable = policy.searchable
+            fixturePolicyRetention = policy.retention
+            fixturePolicyDelivery = policy.delivery
+            fixturePolicyDownload = policy.download
+            fixturePolicyCommerce = policy.commerce
+            fixturePolicyRevision = configuration.revision
+            fixturePolicyStatus = "Effective policy loaded at revision \(configuration.revision)."
+        } catch {
+            fixturePolicyStatus = String(describing: error)
+        }
+    }
+
+    func saveFixtureConfiguration() async {
+        guard !selectedFixtureID.isEmpty else { return }
+        isLoadingFixturePolicy = true
+        fixturePolicyStatus = "Saving revisioned fixture contract…"
+        defer { isLoadingFixturePolicy = false }
+        do {
+            var rule: [String: JSONValue] = [:]
+            let query = fixtureSavedRuleQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !query.isEmpty {
+                rule["query"] = .string(query)
+            }
+            let configuration = try await fixtureService.configure(
+                fixtureID: selectedFixtureID,
+                populationMode: fixturePopulationMode,
+                candidateSource: ["kind": .string(fixtureCandidateSourceKind)],
+                savedRule: rule,
+                policy: FixturePolicy(
+                    visibility: fixturePolicyVisibility,
+                    searchable: fixturePolicySearchable,
+                    retention: fixturePolicyRetention,
+                    delivery: fixturePolicyDelivery,
+                    download: fixturePolicyDownload,
+                    commerce: fixturePolicyCommerce
+                ),
+                templateKey: fixtureTemplate,
+                reason: "Backstage fixture policy editor"
+            )
+            fixturePolicyRevision = configuration.revision
+            fixturePolicyStatus = "Saved fixture contract revision \(configuration.revision)."
+        } catch {
+            fixturePolicyStatus = String(describing: error)
         }
     }
 
@@ -2010,6 +2096,94 @@ final class BackstageViewModel: ObservableObject {
         await deliver(ids: Array(selectedDeliveryIDs).sorted())
     }
 
+    func publishSelectedNatively() async {
+        await startNativePublication(assetIDs: Array(selectedDeliveryIDs).sorted())
+    }
+
+    func publishNextNativeBatch() async {
+        await startNativePublication(assetIDs: [])
+    }
+
+    func syncPhotosIncrementally(limit: Int = 25) async {
+        guard !isSyncingPhotos else { return }
+        guard authentication.phase == .authenticated else { return }
+        isSyncingPhotos = true
+        defer { isSyncingPhotos = false }
+        do {
+            let report = try await deliveryService.syncPhotos(limit: limit)
+            photosSyncReport = report
+            if report.attached {
+                photosSyncStatus = "An Apple Photos sync pass is already running."
+            } else {
+                photosSyncStatus = "Scanned \(report.scanned) of \(report.requested) in \(report.elapsedSeconds.formatted(.number.precision(.fractionLength(1))))s: \(report.metadataOnly) metadata, \(report.appearance) appearance, \(report.sourceMissing) missing, \(report.failed) failed."
+            }
+        } catch {
+            photosSyncStatus = userFacingMessage(for: error)
+        }
+    }
+
+    func runPhotosSyncLoop() async {
+        while !Task.isCancelled {
+            do {
+                try await Task.sleep(for: .seconds(15 * 60))
+            } catch {
+                return
+            }
+            await syncPhotosIncrementally()
+        }
+    }
+
+    private func startNativePublication(assetIDs: [String]) async {
+        isRunningDelivery = true
+        defer { isRunningDelivery = false }
+        do {
+            var run = try await deliveryService.startNativeUpload(
+                assetIDs: assetIDs,
+                limit: 50,
+                concurrency: 4
+            )
+            nativeUploadRun = run
+            if run.requested == 0 {
+                nativeUploadStatus = "No approved assets currently need upload."
+                return
+            }
+            nativeUploadStatus = "Queued \(run.requested) approved asset\(run.requested == 1 ? "" : "s") with concurrency \(run.concurrency)."
+            while !run.isFinished {
+                try await Task.sleep(nanoseconds: 1_000_000_000)
+                run = try await deliveryService.nativeUploadStatus(runID: run.runID)
+                nativeUploadRun = run
+                nativeUploadStatus = "Processed \(run.processed) of \(run.requested): \(run.live) live, \(run.failed) failed, \(run.remaining) remaining."
+            }
+            nativeUploadStatus = run.failed == 0
+                ? "Published \(run.live) verified asset\(run.live == 1 ? "" : "s"). Give Back completed for approved metadata."
+                : "Published \(run.live); \(run.failed) failed and remain independently retryable."
+        } catch {
+            nativeUploadStatus = userFacingMessage(for: error)
+        }
+    }
+
+    func previewR2Reconciliation() async {
+        await runR2Reconciliation(commit: false)
+    }
+
+    func commitR2Reconciliation() async {
+        await runR2Reconciliation(commit: true)
+    }
+
+    private func runR2Reconciliation(commit: Bool) async {
+        isRunningDelivery = true
+        defer { isRunningDelivery = false }
+        do {
+            let report = try await deliveryService.r2Reconciliation(commit: commit)
+            r2Reconciliation = report
+            r2ReconciliationStatus = commit
+                ? "Reconciled \(report.scanned): \(report.protected) sale-protected, \(report.quarantined) quarantined, \(report.restored) restored, \(report.deleted) deleted after the second pass."
+                : "Previewed \(report.scanned): \(report.protected) sale-protected, \(report.quarantined) would enter quarantine, \(report.eligibleDelete) eligible after a prior 30-day pass."
+        } catch {
+            r2ReconciliationStatus = userFacingMessage(for: error)
+        }
+    }
+
     func retryDeliveryFailures() async {
         await deliver(ids: deliveryFailedIDs)
     }
@@ -2200,10 +2374,6 @@ final class BackstageViewModel: ObservableObject {
 
     private func runMetadata(commit: Bool) async {
         let fixture = fixtureID.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !fixture.isEmpty else {
-            metadataStatus = "A fixture ID is required."
-            return
-        }
         isRunningMetadata = true
         defer { isRunningMetadata = false }
         do {

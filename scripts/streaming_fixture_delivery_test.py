@@ -148,7 +148,7 @@ class StreamingFixtureDeliveryTest(unittest.TestCase):
         )
         self.assertTrue(completed["ok"])
         self.assertEqual(completed["photosWrittenCount"], 1)
-        self.assertIn("PBE-Approved", adapter.values["asset-1"]["keywords"])
+        self.assertIn("PBE:Approved", adapter.values["asset-1"]["keywords"])
 
     def test_verified_items_are_returned_to_photos_in_one_batch(self):
         fixture = create_fixture(self.root, "Paris")
@@ -200,8 +200,8 @@ class StreamingFixtureDeliveryTest(unittest.TestCase):
         self.assertTrue(completed["ok"])
         self.assertEqual(completed["photosWrittenCount"], 2)
         self.assertEqual([item["assetId"] for item in completed["items"]], ["asset-1", "asset-2"])
-        self.assertIn("PBE-Approved", adapter.values["asset-1"]["keywords"])
-        self.assertIn("PBE-Approved", adapter.values["asset-2"]["keywords"])
+        self.assertIn("PBE:Approved", adapter.values["asset-1"]["keywords"])
+        self.assertIn("PBE:Approved", adapter.values["asset-2"]["keywords"])
         self.assertIn("Keep me", adapter.values["asset-1"]["keywords"])
 
 

@@ -158,6 +158,7 @@ REAL_ESTATE_IMPORT_PROGRESS_LOCK = threading.Lock()
 OWNER_ACTION_LOCK = threading.Lock()
 R2_BACKGROUND_TASKS: dict[str, dict] = {}
 R2_BACKGROUND_LOCK = threading.Lock()
+PHOTOS_INCREMENTAL_SYNC_LOCK = threading.Lock()
 PRICE_PUBLISH_TASKS: dict[str, dict] = {}
 PRICE_PUBLISH_LOCK = threading.Lock()
 R2_SWEEP_PHASES = {
@@ -356,6 +357,7 @@ from fixture_pipeline import (  # noqa: E402
     apply_pool_refresh,
     adopt_upload_run,
     archive_fixture,
+    connect as fixture_connect,
     configure_asset_destinations,
     create_fixture,
     create_pool,
@@ -392,7 +394,20 @@ from fixture_pipeline import (  # noqa: E402
     set_fixture_asset_state,
     request_ai_run_cancel,
 )
+from fixture_policy import (  # noqa: E402
+    apply_fixture_policy_migration,
+    configure_fixture as configure_fixture_policy,
+    fixture_configuration,
+    plan_fixture_policy_migration,
+)
 from apple_photos_metadata_writer import SignedPhotosBridgeAdapter, commit_writeback, writeback_plan  # noqa: E402
+from native_publication_pipeline import (  # noqa: E402
+    create_upload_run as create_native_upload_run,
+    record_photos_sync_snapshot,
+    record_sale_reference,
+    reconcile_r2_objects,
+    upload_run_status as native_upload_run_status,
+)
 
 
 COLLECTION_KEYWORD_TARGETS = {
@@ -1828,6 +1843,178 @@ def _capture_requested_ai_previews(
     }
 
 
+def _incremental_photos_sync(
+    repo_root: Path,
+    *,
+    limit: int = 25,
+    adapter: SignedPhotosBridgeAdapter | None = None,
+    preview_runner: Callable[..., dict] | None = None,
+) -> dict:
+    """Read a bounded least-recently-scanned PhotoKit slice and import fingerprints."""
+    bounded_limit = max(1, min(int(limit or 25), 50))
+    started = time.monotonic()
+    adapter = adapter or SignedPhotosBridgeAdapter(repo_root)
+    preview_runner = preview_runner or _run_apple_photos_bridge
+    with fixture_connect(repo_root) as connection:
+        rows = connection.execute(
+            """
+            SELECT asset.asset_id, asset.raw_json,
+                   COALESCE(sync.last_scanned_at, '') last_scanned_at
+            FROM sidecar_assets AS asset
+            LEFT JOIN asset_sync_state AS sync
+              ON sync.asset_id = asset.asset_id
+            ORDER BY
+              CASE WHEN sync.last_scanned_at IS NULL THEN 0 ELSE 1 END,
+              sync.last_scanned_at,
+              asset.captured_at DESC,
+              asset.asset_id
+            LIMIT ?
+            """,
+            (bounded_limit,),
+        ).fetchall()
+    targets: list[dict] = []
+    for row in rows:
+        raw = json.loads(str(row["raw_json"] or "{}"))
+        targets.append({
+            "assetId": str(row["asset_id"]),
+            "photosAssetId": str(raw.get("localIdentifier") or row["asset_id"]),
+        })
+    if not targets:
+        return {
+            "ok": True,
+            "requested": 0,
+            "scanned": 0,
+            "failures": [],
+            "changes": {},
+            "elapsedSeconds": 0.0,
+        }
+
+    metadata_rows = adapter.read_many([
+        {"assetId": target["photosAssetId"]}
+        for target in targets
+    ])
+    metadata_by_id = {
+        str(row.get("assetId") or ""): row
+        for row in metadata_rows
+        if isinstance(row, dict)
+    }
+    preview_by_id: dict[str, dict] = {}
+    with tempfile.TemporaryDirectory(prefix="pbe-incremental-photos-sync-") as temp_dir:
+        temp_root = Path(temp_dir)
+        preview_requests: list[dict] = []
+        destination_by_id: dict[str, Path] = {}
+        for target in targets:
+            photos_id = target["photosAssetId"]
+            destination = temp_root / f"{hashlib.sha256(photos_id.encode()).hexdigest()[:24]}.jpg"
+            destination_by_id[photos_id] = destination
+            preview_requests.append({
+                "assetId": photos_id,
+                "destination": str(destination),
+                "maxPixel": 1600,
+            })
+        preview_input = temp_root / "preview-requests.json"
+        preview_input.write_text(
+            json.dumps(preview_requests, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        preview_payload = preview_runner(
+            repo_root,
+            ["preview-many", "--input", str(preview_input)],
+        )
+        if preview_payload.get("ok"):
+            preview_by_id = {
+                str(row.get("assetId") or ""): row
+                for row in preview_payload.get("items") or []
+                if isinstance(row, dict)
+            }
+
+        snapshots: list[dict] = []
+        failures: list[dict] = []
+        transient_errors: list[tuple[str, str, str]] = []
+        for target in targets:
+            asset_id = target["assetId"]
+            photos_id = target["photosAssetId"]
+            metadata = metadata_by_id.get(photos_id) or {}
+            metadata_error = str(metadata.get("error") or "").strip()
+            preview = preview_by_id.get(photos_id) or {}
+            preview_error = str(
+                preview.get("error")
+                or (preview_payload.get("error") if not preview_payload.get("ok") else "")
+                or ""
+            ).strip()
+            combined_error = "; ".join(
+                value for value in [metadata_error, preview_error] if value
+            )
+            missing = (
+                bool(metadata_error)
+                and any(token in metadata_error.casefold() for token in ("not found", "missing"))
+            )
+            if metadata_error and not missing:
+                failures.append({"assetId": asset_id, "error": metadata_error})
+                transient_errors.append((asset_id, photos_id, combined_error))
+                continue
+            destination = destination_by_id[photos_id]
+            rendered = (
+                hashlib.sha256(destination.read_bytes()).hexdigest()
+                if destination.is_file()
+                else ""
+            )
+            if preview_error:
+                failures.append({"assetId": asset_id, "error": preview_error})
+            snapshots.append({
+                "assetId": asset_id,
+                "photosAssetId": photos_id,
+                "sourceExists": not missing,
+                "title": str(metadata.get("title") or ""),
+                "caption": str(metadata.get("caption") or ""),
+                "keywords": [
+                    str(value)
+                    for value in metadata.get("keywords") or []
+                    if str(value).strip()
+                ],
+                "renderedFingerprint": rendered,
+            })
+
+        imported = record_photos_sync_snapshot(repo_root, snapshots)
+        if transient_errors:
+            timestamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+            with fixture_connect(repo_root) as connection:
+                connection.executemany(
+                    """
+                    INSERT INTO asset_sync_state (
+                      asset_id, photos_asset_id, metadata_fingerprint,
+                      rendered_fingerprint, last_scanned_at, last_error,
+                      created_at, updated_at
+                    ) VALUES (?, ?, '', '', ?, ?, ?, ?)
+                    ON CONFLICT(asset_id) DO UPDATE SET
+                      photos_asset_id = excluded.photos_asset_id,
+                      last_scanned_at = excluded.last_scanned_at,
+                      last_error = excluded.last_error,
+                      updated_at = excluded.updated_at
+                    """,
+                    [
+                        (
+                            asset_id,
+                            photos_id,
+                            timestamp,
+                            error,
+                            timestamp,
+                            timestamp,
+                        )
+                        for asset_id, photos_id, error in transient_errors
+                    ],
+                )
+                connection.commit()
+    return {
+        "ok": not failures,
+        "requested": len(targets),
+        "scanned": imported["count"],
+        "failures": failures,
+        "changes": imported["changes"],
+        "elapsedSeconds": round(time.monotonic() - started, 3),
+    }
+
+
 def _start_requested_ai_pass(repo_root: Path) -> dict:
     status = ai_run_status(repo_root)
     if status.get("active"):
@@ -1862,6 +2049,43 @@ def _start_requested_ai_pass(repo_root: Path) -> dict:
         "pid": process.pid,
         "logPath": str(log_path),
     }
+
+
+def _start_native_publication_run(repo_root: Path, run_id: str) -> dict:
+    log_root = repo_root / ".review-logs" / "native-publication-runs"
+    log_root.mkdir(parents=True, exist_ok=True)
+    log_path = log_root / f"{run_id}.log"
+    log_handle = log_path.open("ab")
+    try:
+        process = subprocess.Popen(
+            [
+                sys.executable,
+                str(repo_root / "scripts" / "native_asset_publication.py"),
+                "--repo-root",
+                str(repo_root),
+                "--run-id",
+                run_id,
+            ],
+            cwd=repo_root,
+            stdin=subprocess.DEVNULL,
+            stdout=log_handle,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+        )
+    finally:
+        log_handle.close()
+    return {
+        "started": True,
+        "pid": process.pid,
+        "logPath": str(log_path),
+    }
+
+
+def _delete_reconciled_r2_object(bucket: str, key: str) -> None:
+    item = UploadItem(bucket=bucket, key=key, path=Path("/dev/null"), content_type="")
+    _item, ok, output = wrangler_delete(item, retries=3)
+    if not ok:
+        raise RuntimeError(output or f"R2 deletion failed for {bucket}/{key}")
 
 
 def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_id: str) -> dict:
@@ -1989,6 +2213,90 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
         result.update({"readOnly": False, "ai": _start_requested_ai_pass(repo_root)})
     elif mode == "fixture-ai-pass-cancel":
         result.update({"readOnly": False, "ai": request_ai_run_cancel(repo_root)})
+    elif mode == "photos-sync-snapshot":
+        result.update({
+            "readOnly": False,
+            "photosSync": record_photos_sync_snapshot(
+                repo_root,
+                manifest.get("items") or [],
+            ),
+        })
+    elif mode == "photos-sync-run":
+        if not PHOTOS_INCREMENTAL_SYNC_LOCK.acquire(blocking=False):
+            result.update({
+                "readOnly": False,
+                "photosSync": {
+                    "ok": True,
+                    "attached": True,
+                    "requested": 0,
+                    "scanned": 0,
+                    "failures": [],
+                    "changes": {},
+                    "elapsedSeconds": 0.0,
+                },
+            })
+        else:
+            try:
+                result.update({
+                    "readOnly": False,
+                    "photosSync": _incremental_photos_sync(
+                        repo_root,
+                        limit=int(manifest.get("limit") or 25),
+                    ),
+                })
+            finally:
+                PHOTOS_INCREMENTAL_SYNC_LOCK.release()
+    elif mode == "asset-upload-run-start":
+        upload_run = create_native_upload_run(
+            repo_root,
+            manifest.get("assetIds") or [],
+            limit=int(manifest.get("limit") or 50),
+            concurrency=int(manifest.get("concurrency") or 4),
+        )
+        background = (
+            _start_native_publication_run(repo_root, str(upload_run["runId"]))
+            if int(upload_run.get("count") or 0)
+            else {"started": False, "reason": "No approved assets need upload."}
+        )
+        result.update({
+            "readOnly": False,
+            "uploadRun": {**upload_run, **background},
+        })
+    elif mode == "asset-upload-run-status":
+        result.update({
+            "readOnly": True,
+            "uploadRun": native_upload_run_status(
+                repo_root,
+                str(manifest.get("runId") or ""),
+            ),
+        })
+    elif mode == "asset-sale-reference-record":
+        result.update({
+            "readOnly": False,
+            "saleReference": record_sale_reference(
+                repo_root,
+                order_id=str(manifest.get("orderId") or ""),
+                asset_id=str(manifest.get("assetId") or ""),
+                source_version_hash=str(manifest.get("sourceVersionHash") or ""),
+                checksum_sha256=str(manifest.get("checksumSha256") or ""),
+                master_key=str(manifest.get("masterKey") or ""),
+                derivative_keys=manifest.get("derivativeKeys") or [],
+            ),
+        })
+    elif mode == "r2-reconciliation-plan":
+        result.update({
+            "readOnly": True,
+            "reconciliation": reconcile_r2_objects(repo_root, commit=False),
+        })
+    elif mode == "r2-reconciliation-commit":
+        result.update({
+            "readOnly": False,
+            "reconciliation": reconcile_r2_objects(
+                repo_root,
+                commit=True,
+                delete_object=_delete_reconciled_r2_object,
+            ),
+        })
     elif mode == "fixture-access-effective":
         fixture_id = str(manifest.get("fixtureId") or "")
         grants = effective_fixture_access_grants(repo_root, fixture_id)
@@ -1999,6 +2307,57 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
                 "count": len(grants),
                 "items": grants,
             },
+        })
+    elif mode == "fixture-configuration-get":
+        result.update({
+            "readOnly": True,
+            "configuration": fixture_configuration(
+                repo_root,
+                str(manifest.get("fixtureId") or ""),
+            ),
+        })
+    elif mode == "fixture-configuration-set":
+        result.update({
+            "readOnly": False,
+            "configuration": configure_fixture_policy(
+                repo_root,
+                str(manifest.get("fixtureId") or ""),
+                population_mode=(
+                    str(manifest.get("populationMode") or "")
+                    if "populationMode" in manifest else None
+                ),
+                candidate_source=(
+                    manifest.get("candidateSource")
+                    if isinstance(manifest.get("candidateSource"), dict) else None
+                ),
+                saved_rule=(
+                    manifest.get("savedRule")
+                    if isinstance(manifest.get("savedRule"), dict) else None
+                ),
+                policy_overrides=(
+                    manifest.get("policyOverrides")
+                    if isinstance(manifest.get("policyOverrides"), dict) else None
+                ),
+                template_key=(
+                    str(manifest.get("templateKey") or "")
+                    if "templateKey" in manifest else None
+                ),
+                actor="owner-connector",
+                reason=str(manifest.get("reason") or "Backstage fixture configuration"),
+            ),
+        })
+    elif mode == "fixture-policy-migration-plan":
+        result.update({
+            "readOnly": True,
+            "migration": plan_fixture_policy_migration(repo_root),
+        })
+    elif mode == "fixture-policy-migration-apply":
+        result.update({
+            "readOnly": False,
+            "migration": apply_fixture_policy_migration(
+                repo_root,
+                actor="owner-connector",
+            ),
         })
     elif mode == "fixture-create":
         result.update({
@@ -2216,6 +2575,10 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
 
     result.setdefault("message", {
         "fixture-tree-list": "Loaded the recursive fixture tree.",
+        "fixture-configuration-get": "Loaded the fixture population and policy contract.",
+        "fixture-configuration-set": "Saved a revisioned fixture population and policy contract.",
+        "fixture-policy-migration-plan": "Prepared the reversible fixture policy migration without changing policy state.",
+        "fixture-policy-migration-apply": "Applied the backed-up fixture policy migration and wrote its durable receipt.",
         "fixture-create": "Created the fixture without changing source assets.",
         "fixture-rename": "Renamed the fixture while preserving its stable ID and relationships.",
         "fixture-move": "Moved the fixture without changing its stable ID or source assets.",
@@ -2244,6 +2607,13 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
         "fixture-photos-writeback-plan": "Prepared the Apple Photos metadata give-back plan without changing Photos.",
         "fixture-photos-writeback-commit": "Committed and verified eligible metadata in Apple Photos. No client message was sent.",
         "fixture-la-concha-migrate": "Created the La Concha target fixture tree without moving source assets.",
+        "photos-sync-snapshot": "Imported the incremental Apple Photos snapshot into the version ledger.",
+        "photos-sync-run": "Scanned a bounded Apple Photos slice and imported metadata and rendered-image fingerprints.",
+        "asset-upload-run-start": "Started a bounded verified upload run. Each successful asset publishes immediately.",
+        "asset-upload-run-status": "Loaded current upload and publication progress.",
+        "asset-sale-reference-record": "Protected the exact sold source version and object keys.",
+        "r2-reconciliation-plan": "Previewed protected, referenced, quarantined, and deletion-eligible R2 objects.",
+        "r2-reconciliation-commit": "Applied the guarded two-pass R2 reconciliation.",
     }.get(mode, "Fixture operation completed."))
     return {
         "ok": True,
@@ -2263,7 +2633,15 @@ def new_owner_connector_result(repo_root: Path, payload: dict) -> dict:
     claim = action.get("claim") if isinstance(action.get("claim"), dict) else {}
     connector_id = _clean_connector_id(payload.get("connectorId") or claim.get("connectorId") or "local")
     mode = str(_new_owner_manifest(action).get("mode") or "").strip()
-    if mode.startswith("fixture-"):
+    if mode.startswith("fixture-") or mode in {
+        "photos-sync-snapshot",
+        "photos-sync-run",
+        "asset-upload-run-start",
+        "asset-upload-run-status",
+        "asset-sale-reference-record",
+        "r2-reconciliation-plan",
+        "r2-reconciliation-commit",
+    }:
         return _new_owner_fixture_pipeline_result(repo_root, action, connector_id)
     if mode.startswith("apple-photos-re-"):
         return _new_owner_apple_photos_real_estate_result(repo_root, action, connector_id)

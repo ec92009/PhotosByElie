@@ -11,6 +11,8 @@ import local_server
 import owner_state_db
 import sidecar_state_db
 from fixture_pipeline import (
+    apply_fixture_review_action,
+    connect,
     create_fixture,
     link_access_grant,
     set_fixture_asset_state,
@@ -194,6 +196,57 @@ class FixtureConnectorTest(unittest.TestCase):
             ])
             created = local_server.new_owner_connector_result(root, action("fixture-create", name="La Concha", templateKey="real-estate"))
             fixture_id = created["result"]["fixture"]["fixtureId"]
+            configuration = local_server.new_owner_connector_result(
+                root,
+                action("fixture-configuration-get", fixtureId=fixture_id),
+            )
+            self.assertTrue(configuration["result"]["readOnly"])
+            self.assertEqual(
+                configuration["result"]["configuration"]["policy"]["effective"]["commerce"],
+                "paid-service",
+            )
+            configured = local_server.new_owner_connector_result(
+                root,
+                action(
+                    "fixture-configuration-set",
+                    fixtureId=fixture_id,
+                    populationMode="rule-based",
+                    candidateSource={"kind": "photos-library"},
+                    savedRule={"query": "LaConcha"},
+                    policyOverrides={"commerce": "free-sharing"},
+                    reason="connector policy test",
+                ),
+            )
+            self.assertFalse(configured["result"]["readOnly"])
+            self.assertEqual(
+                configured["result"]["configuration"]["populationMode"],
+                "rule-based",
+            )
+            self.assertEqual(
+                configured["result"]["configuration"]["policy"]["effective"]["commerce"],
+                "free-sharing",
+            )
+            migration_plan = local_server.new_owner_connector_result(
+                root,
+                action("fixture-policy-migration-plan"),
+            )
+            self.assertTrue(migration_plan["result"]["readOnly"])
+            self.assertEqual(
+                migration_plan["result"]["migration"]["migrationId"],
+                "fixture-policy-v1",
+            )
+            migration = local_server.new_owner_connector_result(
+                root,
+                action("fixture-policy-migration-apply"),
+            )
+            self.assertFalse(migration["result"]["readOnly"])
+            self.assertTrue(migration["result"]["migration"]["applied"])
+            replay = local_server.new_owner_connector_result(
+                root,
+                action("fixture-policy-migration-apply"),
+            )
+            self.assertFalse(replay["result"]["migration"]["applied"])
+            self.assertTrue(replay["result"]["migration"]["alreadyApplied"])
             archived = local_server.new_owner_connector_result(root, action("fixture-archive", fixtureId=fixture_id))
             self.assertTrue(archived["result"]["fixture"]["archivedAt"])
             listed = local_server.new_owner_connector_result(root, action("fixture-tree-list", includeArchived=True))
@@ -209,6 +262,10 @@ class FixtureConnectorTest(unittest.TestCase):
                 selectedAssetIds=["asset-1"],
                 criteria={"query": "LaConcha"},
             ))
+            self.assertEqual(
+                pooled["result"]["pool"]["contract"]["savedRule"],
+                {"query": "LaConcha"},
+            )
             self.assertNotIn("sidecarUrl", pooled["result"])
             pools = local_server.new_owner_connector_result(root, action(
                 "fixture-pool-list",
@@ -278,7 +335,182 @@ class FixtureConnectorTest(unittest.TestCase):
             local_server.new_owner_connector_result(root, action("fixture-destinations", fixtureId=fixture_id, assetIds=["asset-1"], destinations=["r2", "apple_photos"]))
             photos_plan = local_server.new_owner_connector_result(root, action("fixture-photos-writeback-plan", fixtureId=fixture_id))
             self.assertTrue(photos_plan["result"]["readOnly"])
-            self.assertEqual(photos_plan["result"]["photosWriteback"]["blockedCount"], 1)
+            self.assertEqual(photos_plan["result"]["photosWriteback"]["blockedCount"], 0)
+
+    def test_connector_starts_and_reports_bounded_native_publication(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            sidecar_state_db.upsert_assets(
+                root,
+                [{
+                    "localIdentifier": "asset-1",
+                    "filename": "One.JPG",
+                    "mediaType": "photo",
+                    "creationDate": "2026-07-15T10:00:00Z",
+                }],
+            )
+            fixture = create_fixture(root, "Expo", fixture_id="fixture-expo")
+            set_fixture_asset_state(root, fixture["fixtureId"], ["asset-1"], "picked")
+            apply_fixture_review_action(
+                root,
+                fixture["fixtureId"],
+                ["asset-1"],
+                "approve",
+            )
+
+            with patch.object(
+                local_server,
+                "_start_native_publication_run",
+                return_value={
+                    "started": True,
+                    "pid": 42,
+                    "logPath": "/tmp/native-publication.log",
+                },
+            ) as start:
+                created = local_server.new_owner_connector_result(
+                    root,
+                    action(
+                        "asset-upload-run-start",
+                        assetIds=["asset-1"],
+                        limit=100,
+                        concurrency=99,
+                    ),
+                )
+
+            run = created["result"]["uploadRun"]
+            self.assertFalse(created["result"]["readOnly"])
+            self.assertEqual(run["count"], 1)
+            self.assertEqual(run["limit"], 50)
+            self.assertEqual(run["concurrency"], 8)
+            self.assertTrue(run["started"])
+            start.assert_called_once_with(root, run["runId"])
+
+            status = local_server.new_owner_connector_result(
+                root,
+                action("asset-upload-run-status", runId=run["runId"]),
+            )
+            self.assertTrue(status["result"]["readOnly"])
+            self.assertEqual(status["result"]["uploadRun"]["requested"], 1)
+            self.assertEqual(status["result"]["uploadRun"]["remaining"], 1)
+
+    def test_connector_imports_photos_snapshot_and_previews_r2_reconciliation(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            sidecar_state_db.upsert_assets(
+                root,
+                [{
+                    "localIdentifier": "asset-1",
+                    "filename": "One.JPG",
+                    "mediaType": "photo",
+                    "creationDate": "2026-07-15T10:00:00Z",
+                }],
+            )
+            imported = local_server.new_owner_connector_result(
+                root,
+                action(
+                    "photos-sync-snapshot",
+                    items=[{
+                        "assetId": "asset-1",
+                        "photosAssetId": "asset-1",
+                        "title": "One",
+                        "keywords": ["Spain"],
+                        "renderedFingerprint": "render-one",
+                    }],
+                ),
+            )
+            self.assertEqual(imported["result"]["photosSync"]["changes"]["baseline"], 1)
+
+            with connect(root) as connection:
+                connection.execute(
+                    """
+                    INSERT INTO r2_objects (
+                      bucket, object_key, photo_id, object_kind, lifecycle_state,
+                      first_seen_at, updated_at
+                    ) VALUES (
+                      'photosbyelie-private', 'masters/orphan.jpg', 'asset-1',
+                      'master', 'current',
+                      '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z'
+                    )
+                    """
+                )
+                connection.commit()
+
+            preview = local_server.new_owner_connector_result(
+                root,
+                action("r2-reconciliation-plan"),
+            )
+            self.assertTrue(preview["result"]["readOnly"])
+            self.assertEqual(preview["result"]["reconciliation"]["scanned"], 1)
+            self.assertEqual(preview["result"]["reconciliation"]["quarantined"], 1)
+
+    def test_incremental_photos_sync_batches_metadata_and_rendered_previews(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            sidecar_state_db.upsert_assets(
+                root,
+                [{
+                    "localIdentifier": "photos-local-1",
+                    "assetId": "asset-1",
+                    "filename": "One.JPG",
+                    "mediaType": "photo",
+                    "creationDate": "2026-07-15T10:00:00Z",
+                }],
+            )
+
+            class FakeAdapter:
+                def read_many(self, requests):
+                    return [{
+                        "assetId": requests[0]["assetId"],
+                        "title": "One",
+                        "caption": "Caption",
+                        "keywords": ["Spain"],
+                    }]
+
+            def fake_preview(_repo_root, args):
+                input_path = Path(args[args.index("--input") + 1])
+                requests = local_server.json.loads(input_path.read_text(encoding="utf-8"))
+                items = []
+                for request in requests:
+                    Path(request["destination"]).write_bytes(b"rendered-current-jpeg")
+                    items.append({
+                        "assetId": request["assetId"],
+                        "ok": True,
+                        "destination": request["destination"],
+                    })
+                return {"ok": True, "items": items}
+
+            synced = local_server._incremental_photos_sync(
+                root,
+                limit=25,
+                adapter=FakeAdapter(),
+                preview_runner=fake_preview,
+            )
+            self.assertEqual(synced["requested"], 1)
+            self.assertEqual(synced["scanned"], 1)
+            self.assertEqual(synced["changes"]["baseline"], 1)
+            self.assertEqual(synced["failures"], [])
+            with connect(root) as connection:
+                state = connection.execute(
+                    "SELECT * FROM asset_sync_state WHERE asset_id = 'asset-1'"
+                ).fetchone()
+            self.assertEqual(state["photos_asset_id"], "photos-local-1")
+            self.assertEqual(
+                state["rendered_fingerprint"],
+                hashlib.sha256(b"rendered-current-jpeg").hexdigest(),
+            )
+
+            with patch.object(
+                local_server,
+                "_incremental_photos_sync",
+                return_value=synced,
+            ) as incremental:
+                routed = local_server.new_owner_connector_result(
+                    root,
+                    action("photos-sync-run", limit=25),
+                )
+            incremental.assert_called_once_with(root, limit=25)
+            self.assertFalse(routed["result"]["readOnly"])
+            self.assertEqual(routed["result"]["photosSync"]["scanned"], 1)
 
 
 if __name__ == "__main__":

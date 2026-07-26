@@ -1,27 +1,26 @@
 #!/usr/bin/env python3
-"""Verified Apple Photos metadata give-back for fixture-delivered assets.
+"""Verified Apple Photos metadata give-back for approved and tombstoned assets.
 
-The default operation is a dry-run.  Commit is explicit, preserves unrelated
-keywords, and is gated on verified R2 delivery for the same editorial version.
+The default operation is a dry-run. Commit is explicit and preserves unrelated
+keywords. Fixture-local placement never leaves Owner.sqlite: Photos receives
+only canonical approved metadata and the global PBE lifecycle markers.
 """
 
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 from pathlib import Path
-import sqlite3
 import subprocess
 from typing import Any, Iterable, Protocol
 import uuid
 
-from fixture_pipeline import editorial_version_hash, record_delivery_receipt
-from sidecar_state_db import connect
+from fixture_pipeline import connect, editorial_version_hash, now_iso, record_delivery_receipt
+from native_publication_pipeline import metadata_fingerprint
 
 
-MANAGED_PREFIXES = ("PBE-Rating-", "PBE-Color-", "PBE-Fixture-ID:")
-MANAGED_EXACT = {"PBE-Approved"}
+MANAGED_PREFIXES = ("PBE:Rating:", "PBE:Color:", "PBE-Rating-", "PBE-Color-", "PBE-Fixture-ID:")
+MANAGED_EXACT = {"PBE:Approved", "PBE:Tombstone", "PBE-Approved"}
 
 
 class PhotosMetadataAccess(Protocol):
@@ -82,7 +81,11 @@ function run(argv) {
   const managed = Array.isArray(payload.managedKeywords) ? payload.managedKeywords.map(String) : [];
   const managedSet = new Set(managed);
   const isManaged = value =>
+    value === 'PBE:Approved' ||
+    value === 'PBE:Tombstone' ||
     value === 'PBE-Approved' ||
+    value.startsWith('PBE:Rating:') ||
+    value.startsWith('PBE:Color:') ||
     value.startsWith('PBE-Rating-') ||
     value.startsWith('PBE-Color-') ||
     value.startsWith('PBE-Fixture-ID:');
@@ -110,7 +113,7 @@ function run(argv) {
 function run(argv) {
   const photos = Application('Photos');
   const requests = JSON.parse(String(argv[0] || '[]'));
-  const managedPrefixes = ['PBE-Rating-', 'PBE-Color-', 'PBE-Fixture-ID:'];
+  const managedPrefixes = ['PBE:Rating:', 'PBE:Color:', 'PBE-Rating-', 'PBE-Color-', 'PBE-Fixture-ID:'];
   const applyOne = payload => {
     const id = String(payload.assetId || '');
     try {
@@ -125,7 +128,10 @@ function run(argv) {
       const managed = Array.isArray(payload.managedKeywords) ? payload.managedKeywords.map(String) : [];
       const managedSet = new Set(managed);
       const isManaged = value =>
-        value === 'PBE-Approved' || managedPrefixes.some(prefix => value.startsWith(prefix));
+        value === 'PBE:Approved' ||
+        value === 'PBE:Tombstone' ||
+        value === 'PBE-Approved' ||
+        managedPrefixes.some(prefix => value.startsWith(prefix));
       const keywords = [];
       const seen = new Set();
       [...before.keywords.map(String), ...desired, ...managed].forEach(value => {
@@ -274,35 +280,6 @@ def merge_keywords(existing: Iterable[str], desired: Iterable[str], managed: Ite
     return result
 
 
-def _r2_verified(conn, fixture_id: str, asset_id: str, version_hash: str) -> bool:
-    params = (fixture_id, asset_id, version_hash)
-    try:
-        rows = conn.execute(
-            """SELECT receipt.status, COALESCE(receipt.object_key, '') object_key
-               FROM fixture_delivery_receipts AS receipt
-               JOIN r2_objects AS object
-                 ON object.object_key = receipt.object_key
-                AND object.lifecycle_state = 'current'
-               WHERE receipt.fixture_id = ? AND receipt.asset_id = ?
-                 AND receipt.destination = 'r2' AND receipt.version_hash = ?""",
-            params,
-        ).fetchall()
-    except sqlite3.OperationalError as error:
-        if "no such table: r2_objects" not in str(error):
-            raise
-        # Lightweight fixture-only stores predate the Owner R2 ledger. Their
-        # receipt rows remain the best available gate until that schema exists.
-        rows = conn.execute(
-            """SELECT status, COALESCE(object_key, '') object_key
-               FROM fixture_delivery_receipts
-               WHERE fixture_id = ? AND asset_id = ?
-                 AND destination = 'r2' AND version_hash = ?""",
-            params,
-        ).fetchall()
-    actual = [row for row in rows if row["object_key"]]
-    return bool(actual) and all(row["status"] == "verified" for row in actual)
-
-
 def writeback_plan(
     repo_root: Path,
     fixture_id: str = "",
@@ -312,30 +289,50 @@ def writeback_plan(
 ) -> dict[str, Any]:
     requested_ids = [str(item).strip() for item in asset_ids if str(item).strip()]
     params: list[Any] = []
-    where = ["p.state = 'active'", "instr(x.destinations_json, '\"apple_photos\"') > 0"]
+    where = [
+        """(
+          editorial.editorial_state = 'approved'
+          OR EXISTS (
+            SELECT 1 FROM sidecar_tombstones AS tombstone
+            WHERE tombstone.asset_id = a.asset_id
+              AND tombstone.tombstone_state = 'active'
+          )
+        )"""
+    ]
     if fixture_id:
-        where.append("p.fixture_id = ?")
+        where.append(
+            """EXISTS (
+              SELECT 1 FROM fixture_asset_decisions AS scoped
+              WHERE scoped.fixture_id = ?
+                AND scoped.asset_id = a.asset_id
+                AND scoped.eligibility_state = 'active'
+                AND scoped.placement_state = 'picked'
+            )"""
+        )
         params.append(fixture_id)
     if requested_ids:
-        where.append(f"p.asset_id IN ({','.join('?' for _ in requested_ids)})")
+        where.append(f"a.asset_id IN ({','.join('?' for _ in requested_ids)})")
         params.extend(requested_ids)
     with connect(repo_root) as conn:
         rows = conn.execute(
             f"""
-            SELECT p.fixture_id, p.asset_id, x.version_hash, f.name fixture_name,
-                   COALESCE(d.pick_state, 'undecided') pick_state,
-                   COALESCE(d.metadata_state, 'unreviewed') metadata_state,
+            SELECT a.asset_id,
+                   editorial.editorial_state,
+                   CASE WHEN EXISTS (
+                     SELECT 1 FROM sidecar_tombstones AS tombstone
+                     WHERE tombstone.asset_id = a.asset_id
+                       AND tombstone.tombstone_state = 'active'
+                   ) THEN 1 ELSE 0 END tombstoned,
                    COALESCE(d.title, '') title, COALESCE(d.caption, '') caption,
                    COALESCE(d.keywords_json, '[]') keywords_json,
                    COALESCE(d.rating, 0) rating, COALESCE(d.color, '') color,
                    COALESCE(a.raw_json, '{{}}') raw_json
-            FROM fixture_asset_placements p
-            JOIN fixture_asset_destinations x ON x.fixture_id = p.fixture_id AND x.asset_id = p.asset_id
-            JOIN fixtures f ON f.fixture_id = p.fixture_id
-            JOIN sidecar_assets a ON a.asset_id = p.asset_id
-            LEFT JOIN sidecar_decisions d ON d.asset_id = p.asset_id
+            FROM sidecar_assets AS a
+            JOIN asset_editorial_state AS editorial
+              ON editorial.asset_id = a.asset_id
+            LEFT JOIN sidecar_decisions d ON d.asset_id = a.asset_id
             WHERE {' AND '.join(where)}
-            ORDER BY p.asset_id, p.fixture_id
+            ORDER BY a.asset_id
             """,
             params,
         ).fetchall()
@@ -343,32 +340,43 @@ def writeback_plan(
         blocked: list[dict[str, Any]] = []
         for row in rows:
             current_version = editorial_version_hash(conn, row["asset_id"])
-            reason = ""
-            if row["version_hash"] != current_version:
-                reason = "editorial version changed after destination configuration"
-            elif row["pick_state"] != "picked" or row["metadata_state"] != "approved":
-                reason = "asset is not both picked and metadata-approved"
-            elif not _r2_verified(conn, row["fixture_id"], row["asset_id"], current_version):
-                reason = "same-version R2 delivery is not verified"
-            if reason:
-                blocked.append({"fixtureId": row["fixture_id"], "assetId": row["asset_id"], "reason": reason})
-                continue
+            fixture_rows = conn.execute(
+                """
+                SELECT decision.fixture_id, fixture.name
+                FROM fixture_asset_decisions AS decision
+                JOIN fixtures AS fixture ON fixture.fixture_id = decision.fixture_id
+                WHERE decision.asset_id = ?
+                  AND decision.eligibility_state = 'active'
+                  AND decision.placement_state = 'picked'
+                  AND fixture.archived_at IS NULL
+                ORDER BY fixture.fixture_id
+                """,
+                (row["asset_id"],),
+            ).fetchall()
+            approved = str(row["editorial_state"]) == "approved"
             item = grouped.setdefault(row["asset_id"], {
                 "assetId": row["asset_id"], "versionHash": current_version,
                 "photosAssetId": str(json.loads(row["raw_json"] or "{}").get("localIdentifier") or row["asset_id"]),
-                "title": row["title"], "caption": row["caption"],
-                "keywords": json.loads(row["keywords_json"] or "[]"),
+                "approved": approved,
+                "tombstoned": bool(row["tombstoned"]),
+                "title": row["title"] if approved else "",
+                "caption": row["caption"] if approved else "",
+                "keywords": json.loads(row["keywords_json"] or "[]") if approved else [],
                 "rating": int(row["rating"] or 0), "color": row["color"] or "",
-                "fixtureIds": [], "fixtureNames": [],
+                "fixtureIds": [str(value["fixture_id"]) for value in fixture_rows],
+                "fixtureNames": [str(value["name"]) for value in fixture_rows],
             })
-            item["fixtureIds"].append(row["fixture_id"])
-            item["fixtureNames"].append(row["fixture_name"])
         for item in grouped.values():
-            managed = [f"PBE-Fixture-ID:{value}" for value in item["fixtureIds"]]
-            managed.append(f"PBE-Rating-{item['rating']}")
-            if item["color"]:
-                managed.append(f"PBE-Color-{item['color'].title()}")
-            managed.append("PBE-Approved")
+            managed: list[str] = []
+            if item["approved"]:
+                managed.append("PBE:Approved")
+                if 1 <= item["rating"] <= 5:
+                    managed.append(f"PBE:Rating:{item['rating']}")
+                clean_color = str(item["color"] or "").strip().casefold()
+                if clean_color in {"red", "yellow", "green", "blue"}:
+                    managed.append(f"PBE:Color:{clean_color.title()}")
+            if item["tombstoned"]:
+                managed.append("PBE:Tombstone")
             item["managedKeywords"] = managed
             item["intendedMetadata"] = {
                 "title": item["title"],
@@ -402,6 +410,14 @@ def writeback_plan(
                         "caption": str(current.get("caption") or ""),
                         "keywords": [str(value) for value in current.get("keywords") or []],
                     } if current is not None else adapter.read(item["photosAssetId"])
+                    if not item["approved"]:
+                        item["title"] = str(before.get("title") or "")
+                        item["caption"] = str(before.get("caption") or "")
+                        item["keywords"] = [
+                            str(value)
+                            for value in before.get("keywords") or []
+                            if not _is_managed(str(value))
+                        ]
                     after_keywords = merge_keywords(
                         before.get("keywords") or [],
                         item["keywords"],
@@ -429,7 +445,7 @@ def commit_writeback(
     adapter: PhotosMetadataAccess | None = None,
 ) -> dict[str, Any]:
     adapter = adapter or SignedPhotosBridgeAdapter(repo_root)
-    plan = writeback_plan(repo_root, fixture_id, asset_ids)
+    plan = writeback_plan(repo_root, fixture_id, asset_ids, adapter=adapter)
     written: list[dict[str, Any]] = []
     failed: list[dict[str, Any]] = []
     bulk_results: dict[str, dict[str, Any]] = {}
@@ -478,7 +494,12 @@ def commit_writeback(
             actual = {str(value).casefold() for value in after.get("keywords") or []}
             if after.get("title") != item["title"] or after.get("caption") != item["caption"] or not expected.issubset(actual):
                 raise RuntimeError("Apple Photos metadata did not verify after write")
-            payload_hash = hashlib.sha256(json.dumps({"title": item["title"], "caption": item["caption"], "keywords": keywords}, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
+            payload_hash = metadata_fingerprint(
+                item["title"],
+                item["caption"],
+                keywords,
+            )
+            timestamp = now_iso()
             with connect(repo_root) as conn:
                 for target_fixture_id in item["fixtureIds"]:
                     record_delivery_receipt(
@@ -487,6 +508,28 @@ def commit_writeback(
                         object_key=f"apple-photos://{item['assetId']}", checksum_sha256=payload_hash,
                         visibility_policy="local-library", verification={"before": before, "after": after}, conn=conn,
                     )
+                conn.execute(
+                    """
+                    INSERT INTO asset_sync_state (
+                      asset_id, photos_asset_id, last_giveback_fingerprint,
+                      last_giveback_at, last_error, created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, '', ?, ?)
+                    ON CONFLICT(asset_id) DO UPDATE SET
+                      photos_asset_id = excluded.photos_asset_id,
+                      last_giveback_fingerprint = excluded.last_giveback_fingerprint,
+                      last_giveback_at = excluded.last_giveback_at,
+                      last_error = '',
+                      updated_at = excluded.updated_at
+                    """,
+                    (
+                        item["assetId"],
+                        item["photosAssetId"],
+                        payload_hash,
+                        timestamp,
+                        timestamp,
+                        timestamp,
+                    ),
+                )
                 conn.execute(
                     """UPDATE sidecar_pending_sync SET status = 'committed', error_text = NULL, updated_at = datetime('now')
                        WHERE asset_id = ? AND status = 'pending'""",
@@ -497,6 +540,25 @@ def commit_writeback(
         except Exception as error:  # noqa: BLE001 - each item stays independently retryable.
             failed.append({"assetId": item["assetId"], "error": str(error)})
             with connect(repo_root) as conn:
+                timestamp = now_iso()
+                conn.execute(
+                    """
+                    INSERT INTO asset_sync_state (
+                      asset_id, photos_asset_id, last_error, created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?)
+                    ON CONFLICT(asset_id) DO UPDATE SET
+                      photos_asset_id = excluded.photos_asset_id,
+                      last_error = excluded.last_error,
+                      updated_at = excluded.updated_at
+                    """,
+                    (
+                        item["assetId"],
+                        item.get("photosAssetId", ""),
+                        str(error),
+                        timestamp,
+                        timestamp,
+                    ),
+                )
                 conn.execute(
                     """UPDATE sidecar_pending_sync SET status = 'failed', error_text = ?, updated_at = datetime('now')
                        WHERE asset_id = ? AND status = 'pending'""",

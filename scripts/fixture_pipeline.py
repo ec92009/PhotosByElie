@@ -260,6 +260,169 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS idx_asset_delivery_state_queue
           ON asset_delivery_state(delivery_state, updated_at, asset_id);
 
+        CREATE TABLE IF NOT EXISTS r2_objects (
+          bucket TEXT NOT NULL,
+          object_key TEXT NOT NULL,
+          photo_id TEXT,
+          object_kind TEXT,
+          lifecycle_state TEXT NOT NULL
+            CHECK (lifecycle_state IN ('current', 'marked_for_delete', 'deleted_confirmed')),
+          first_seen_at TEXT,
+          last_seen_at TEXT,
+          marked_for_delete_at TEXT,
+          deleted_confirmed_at TEXT,
+          last_checked_at TEXT,
+          source TEXT,
+          bytes INTEGER CHECK (bytes IS NULL OR bytes >= 0),
+          updated_at TEXT,
+          PRIMARY KEY (bucket, object_key)
+        );
+        CREATE INDEX IF NOT EXISTS idx_r2_objects_state_bucket
+          ON r2_objects(lifecycle_state, bucket);
+        CREATE INDEX IF NOT EXISTS idx_r2_objects_photo
+          ON r2_objects(photo_id, lifecycle_state);
+
+        CREATE TABLE IF NOT EXISTS asset_source_versions (
+          version_id TEXT PRIMARY KEY,
+          asset_id TEXT NOT NULL,
+          metadata_fingerprint TEXT NOT NULL DEFAULT '',
+          rendered_fingerprint TEXT NOT NULL DEFAULT '',
+          source_exists INTEGER NOT NULL DEFAULT 1 CHECK (source_exists IN (0, 1)),
+          state TEXT NOT NULL DEFAULT 'candidate'
+            CHECK (state IN ('candidate', 'approved', 'live', 'superseded', 'source-missing')),
+          created_at TEXT NOT NULL,
+          approved_at TEXT,
+          live_at TEXT,
+          superseded_at TEXT,
+          FOREIGN KEY (asset_id) REFERENCES sidecar_assets(asset_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_asset_source_versions_asset
+          ON asset_source_versions(asset_id, created_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_asset_source_versions_state
+          ON asset_source_versions(state, created_at, asset_id);
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_asset_source_versions_fingerprints
+          ON asset_source_versions(asset_id, metadata_fingerprint, rendered_fingerprint);
+
+        CREATE TABLE IF NOT EXISTS asset_sync_state (
+          asset_id TEXT PRIMARY KEY,
+          photos_asset_id TEXT NOT NULL DEFAULT '',
+          metadata_fingerprint TEXT NOT NULL DEFAULT '',
+          rendered_fingerprint TEXT NOT NULL DEFAULT '',
+          last_giveback_fingerprint TEXT NOT NULL DEFAULT '',
+          last_scanned_at TEXT,
+          last_giveback_at TEXT,
+          last_error TEXT NOT NULL DEFAULT '',
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (asset_id) REFERENCES sidecar_assets(asset_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS asset_publications (
+          asset_id TEXT NOT NULL,
+          fixture_id TEXT NOT NULL,
+          source_version_hash TEXT NOT NULL,
+          state TEXT NOT NULL DEFAULT 'live'
+            CHECK (state IN ('live', 'withdrawn', 'superseded')),
+          published_at TEXT NOT NULL,
+          withdrawn_at TEXT,
+          updated_at TEXT NOT NULL,
+          PRIMARY KEY (asset_id, fixture_id, source_version_hash),
+          FOREIGN KEY (asset_id) REFERENCES sidecar_assets(asset_id),
+          FOREIGN KEY (fixture_id) REFERENCES fixtures(fixture_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_asset_publications_fixture
+          ON asset_publications(fixture_id, state, published_at, asset_id);
+        CREATE INDEX IF NOT EXISTS idx_asset_publications_asset
+          ON asset_publications(asset_id, state, published_at);
+
+        CREATE TABLE IF NOT EXISTS asset_sale_references (
+          order_id TEXT NOT NULL,
+          asset_id TEXT NOT NULL,
+          source_version_hash TEXT NOT NULL,
+          checksum_sha256 TEXT NOT NULL,
+          master_key TEXT NOT NULL,
+          derivative_keys_json TEXT NOT NULL DEFAULT '[]',
+          recorded_at TEXT NOT NULL,
+          PRIMARY KEY (order_id, asset_id, source_version_hash),
+          FOREIGN KEY (asset_id) REFERENCES sidecar_assets(asset_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_asset_sale_references_asset
+          ON asset_sale_references(asset_id, source_version_hash);
+
+        CREATE TABLE IF NOT EXISTS r2_quarantine (
+          bucket TEXT NOT NULL,
+          object_key TEXT NOT NULL,
+          asset_id TEXT NOT NULL DEFAULT '',
+          source_version_hash TEXT NOT NULL DEFAULT '',
+          reason TEXT NOT NULL,
+          state TEXT NOT NULL DEFAULT 'quarantined'
+            CHECK (state IN ('quarantined', 'restored', 'eligible-delete', 'deleted', 'protected')),
+          first_reconciled_at TEXT NOT NULL,
+          second_reconciled_at TEXT,
+          delete_after TEXT NOT NULL,
+          restored_at TEXT,
+          deleted_at TEXT,
+          last_run_id TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          PRIMARY KEY (bucket, object_key)
+        );
+        CREATE INDEX IF NOT EXISTS idx_r2_quarantine_state
+          ON r2_quarantine(state, delete_after, updated_at);
+
+        CREATE TABLE IF NOT EXISTS r2_reconciliation_runs (
+          run_id TEXT PRIMARY KEY,
+          mode TEXT NOT NULL CHECK (mode IN ('plan', 'commit', 'exceptional-sold-purge')),
+          status TEXT NOT NULL CHECK (status IN ('running', 'completed', 'failed', 'cancelled')),
+          scanned_count INTEGER NOT NULL DEFAULT 0,
+          protected_count INTEGER NOT NULL DEFAULT 0,
+          quarantined_count INTEGER NOT NULL DEFAULT 0,
+          restored_count INTEGER NOT NULL DEFAULT 0,
+          eligible_delete_count INTEGER NOT NULL DEFAULT 0,
+          deleted_count INTEGER NOT NULL DEFAULT 0,
+          error_text TEXT NOT NULL DEFAULT '',
+          created_at TEXT NOT NULL,
+          completed_at TEXT,
+          updated_at TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS asset_upload_runs (
+          run_id TEXT PRIMARY KEY,
+          status TEXT NOT NULL
+            CHECK (status IN ('queued', 'running', 'completed', 'completed-with-errors', 'cancelled', 'failed')),
+          requested_count INTEGER NOT NULL DEFAULT 0,
+          processed_count INTEGER NOT NULL DEFAULT 0,
+          live_count INTEGER NOT NULL DEFAULT 0,
+          failed_count INTEGER NOT NULL DEFAULT 0,
+          remaining_count INTEGER NOT NULL DEFAULT 0,
+          cancel_requested INTEGER NOT NULL DEFAULT 0,
+          concurrency INTEGER NOT NULL DEFAULT 1,
+          last_error TEXT NOT NULL DEFAULT '',
+          started_at TEXT,
+          completed_at TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_asset_upload_runs_status
+          ON asset_upload_runs(status, updated_at);
+
+        CREATE TABLE IF NOT EXISTS asset_upload_run_items (
+          run_id TEXT NOT NULL,
+          asset_id TEXT NOT NULL,
+          source_version_hash TEXT NOT NULL DEFAULT '',
+          status TEXT NOT NULL
+            CHECK (status IN ('queued', 'uploading', 'verified', 'live', 'failed', 'skipped')),
+          object_keys_json TEXT NOT NULL DEFAULT '[]',
+          error_text TEXT NOT NULL DEFAULT '',
+          started_at TEXT,
+          completed_at TEXT,
+          updated_at TEXT NOT NULL,
+          PRIMARY KEY (run_id, asset_id),
+          FOREIGN KEY (run_id) REFERENCES asset_upload_runs(run_id) ON DELETE CASCADE,
+          FOREIGN KEY (asset_id) REFERENCES sidecar_assets(asset_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_asset_upload_run_items_status
+          ON asset_upload_run_items(run_id, status, asset_id);
+
         CREATE TABLE IF NOT EXISTS asset_editorial_events (
           event_id TEXT PRIMARY KEY,
           asset_id TEXT NOT NULL,
@@ -2319,7 +2482,7 @@ def publication_plan(
     fixture_id: str,
     asset_ids: Iterable[str] = (),
 ) -> dict[str, Any]:
-    """Return exact public-fixture assets whose current R2 receipts are verified."""
+    """Return exact catalog-eligible assets with current verified R2 receipts."""
     selected_ids = _unique(asset_ids)
     with connect(repo_root) as conn:
         fixture = conn.execute(
@@ -2329,9 +2492,18 @@ def publication_plan(
         if not fixture or fixture["archived_at"]:
             raise ValueError("publication fixture does not exist or is archived")
         tags = _read_json(fixture["tags_json"], [])
-        if "public" not in tags:
-            raise ValueError("only a fixture tagged public can enter catalog publication")
         fixture_name = str(fixture["name"])
+        # Local import avoids a schema-bootstrap cycle with fixture_policy.
+        from fixture_policy import effective_fixture_policy, policy_allows_catalog
+        policy = effective_fixture_policy(
+            repo_root,
+            fixture_id,
+            conn=conn,
+        )["effective"]
+        if not policy_allows_catalog(policy):
+            raise ValueError(
+                "fixture policy does not permit public searchable catalog publication"
+            )
     delivery = delivery_plan(repo_root, fixture_id)
     eligible: list[dict[str, Any]] = []
     blocked: list[dict[str, Any]] = []
@@ -2361,6 +2533,7 @@ def publication_plan(
         "fixtureId": fixture_id,
         "fixtureName": fixture_name,
         "tags": tags,
+        "policy": policy,
         "eligibleCount": len(eligible),
         "blockedCount": len(blocked),
         "eligible": eligible,
@@ -2500,6 +2673,10 @@ def create_pool(repo_root: Path, fixture_id: str, asset_ids: Iterable[str], *, n
             if source_batch_id and not conn.execute("SELECT 1 FROM fixture_source_batches WHERE batch_id = ?", (source_batch_id,)).fetchone():
                 raise ValueError(f"source batch is not registered: {source_batch_id}")
             conn.execute("INSERT INTO fixture_pool_assets (pool_id, asset_id, source_kind, source_identity, source_batch_id, snapshot_position, provenance_json, added_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (pool_id, asset_id, source_kind, row["source_anchor"], source_batch_id, position, _json(provenance), timestamp))
+        # Freeze the fixture's population contract and effective policy with
+        # the immutable pool. The local import avoids a schema bootstrap cycle.
+        from fixture_policy import capture_snapshot_contract
+        capture_snapshot_contract(repo_root, pool_id, conn=conn)
         conn.commit()
         return get_pool(repo_root, pool_id, conn=conn)
 
@@ -2527,10 +2704,31 @@ def get_pool(repo_root: Path, pool_id: str, *, conn: sqlite3.Connection | None =
             """,
             (pool_id,),
         ).fetchall()
+        contract_row = None
+        if conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'fixture_snapshot_contracts'"
+        ).fetchone():
+            contract_row = conn.execute(
+                "SELECT * FROM fixture_snapshot_contracts WHERE pool_id = ?",
+                (pool_id,),
+            ).fetchone()
+        contract = None
+        if contract_row:
+            contract = {
+                "poolId": str(contract_row["pool_id"]),
+                "fixtureId": str(contract_row["fixture_id"]),
+                "populationMode": str(contract_row["population_mode"]),
+                "candidateSource": _read_json(contract_row["candidate_source_json"], {}),
+                "savedRule": _read_json(contract_row["saved_rule_json"], {}),
+                "policyRevision": int(contract_row["policy_revision"]),
+                "effectivePolicy": _read_json(contract_row["effective_policy_json"], {}),
+                "createdAt": str(contract_row["created_at"]),
+            }
         return {
             "poolId": row["pool_id"], "fixtureId": row["fixture_id"], "name": row["name"], "criteria": _read_json(row["criteria_json"], {}),
             "snapshotHash": row["snapshot_hash"], "assetCount": len(assets), "state": row["state"], "createdAt": row["created_at"], "updatedAt": row["updated_at"],
             "breadcrumbs": fixture_breadcrumbs(conn, row["fixture_id"]),
+            "contract": contract,
             "assets": [{
                 "assetId": item["asset_id"],
                 "sourceKind": item["source_kind"],
@@ -2940,6 +3138,15 @@ def adopt_upload_run(
         if not fixture:
             raise ValueError("destination fixture does not exist or is archived")
         for item in plan["items"]:
+            _set_fixture_review_placement(
+                conn,
+                fixture_id,
+                item["assetId"],
+                "picked",
+                actor=actor,
+                reason=f"Adopt verified Upload Bridge run {run_id}",
+                timestamp=timestamp,
+            )
             existing = conn.execute(
                 "SELECT placement_id FROM fixture_asset_placements WHERE fixture_id = ? AND asset_id = ? AND state = 'active'",
                 (fixture_id, item["assetId"]),
@@ -3194,6 +3401,22 @@ def delivery_plan(repo_root: Path, fixture_id: str) -> dict[str, Any]:
         breadcrumbs = fixture_breadcrumbs(conn, fixture_id)
         fixture = conn.execute("SELECT destination_defaults_json FROM fixtures WHERE fixture_id = ?", (fixture_id,)).fetchone()
         defaults = _read_json(fixture["destination_defaults_json"], ["r2"])
+        # The receipt plan remains useful for owner-local Apple Photos and
+        # archive work, while cloud/client delivery follows the fixture policy.
+        from fixture_policy import (
+            effective_fixture_policy,
+            policy_allows_cloud,
+            policy_allows_delivery,
+            policy_allows_download,
+        )
+        policy = effective_fixture_policy(
+            repo_root,
+            fixture_id,
+            conn=conn,
+        )["effective"]
+        cloud_allowed = policy_allows_cloud(policy)
+        delivery_allowed = policy_allows_delivery(policy)
+        download_allowed = policy_allows_download(policy)
         rows = conn.execute("""
           SELECT p.asset_id, COALESCE(d.pick_state, 'undecided') pick_state,
                  COALESCE(d.metadata_state, 'unreviewed') metadata_state, x.destinations_json,
@@ -3207,6 +3430,11 @@ def delivery_plan(repo_root: Path, fixture_id: str) -> dict[str, Any]:
         items = []
         for row in rows:
             destinations = _read_json(row["destinations_json"], defaults)
+            destinations = [
+                destination
+                for destination in destinations
+                if destination != "r2" or cloud_allowed
+            ]
             version_hash = row["version_hash"] or editorial_version_hash(conn, row["asset_id"])
             receipts = conn.execute("SELECT destination, status, object_key, checksum_sha256, verified_at, error_text FROM fixture_delivery_receipts WHERE fixture_id = ? AND asset_id = ? AND version_hash = ? ORDER BY updated_at", (fixture_id, row["asset_id"], version_hash)).fetchall()
             receipt_map: dict[str, dict[str, Any]] = {}
@@ -3223,7 +3451,20 @@ def delivery_plan(repo_root: Path, fixture_id: str) -> dict[str, Any]:
             approved = row["pick_state"] == "picked" and row["metadata_state"] == "approved"
             complete = approved and all(receipt_map.get(destination, {}).get("status") == "verified" for destination in destinations)
             items.append({"assetId": row["asset_id"], "pickState": row["pick_state"], "metadataState": row["metadata_state"], "approved": approved, "destinations": destinations, "versionHash": version_hash, "receipts": receipt_map, "complete": complete})
-    return {"ok": True, "fixtureId": fixture_id, "breadcrumbs": breadcrumbs, "assetCount": len(items), "approvedCount": sum(item["approved"] for item in items), "completeCount": sum(item["complete"] for item in items), "items": items, "clientMessageSent": False}
+    return {
+        "ok": True,
+        "fixtureId": fixture_id,
+        "breadcrumbs": breadcrumbs,
+        "policy": policy,
+        "cloudAllowed": cloud_allowed,
+        "deliveryAllowed": delivery_allowed,
+        "downloadAllowed": download_allowed,
+        "assetCount": len(items),
+        "approvedCount": sum(item["approved"] for item in items),
+        "completeCount": sum(item["complete"] for item in items),
+        "items": items,
+        "clientMessageSent": False,
+    }
 
 
 def migrate_la_concha_tree(repo_root: Path) -> dict[str, Any]:

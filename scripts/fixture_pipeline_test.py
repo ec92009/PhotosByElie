@@ -645,7 +645,12 @@ class FixturePipelineTest(unittest.TestCase):
         self.assertEqual(restore_placement(self.root, one["placementIds"][0])["state"], "active")
 
     def test_delivery_defaults_keep_pick_and_approval_distinct(self):
-        fixture = create_fixture(self.root, "Delivery", destination_defaults=["r2", "apple_photos"])
+        fixture = create_fixture(
+            self.root,
+            "Delivery",
+            template_key="real-estate",
+            destination_defaults=["r2", "apple_photos"],
+        )
         place_assets(self.root, fixture["fixtureId"], ["asset-1"])
         configure_asset_destinations(self.root, fixture["fixtureId"], ["asset-1"], ["r2", "apple_photos"])
         self.assertFalse(delivery_plan(self.root, fixture["fixtureId"])["items"][0]["approved"])
@@ -670,7 +675,11 @@ class FixturePipelineTest(unittest.TestCase):
         failed_receipts = record_r2_upload_results(self.root, "asset-1", [unverified])
         self.assertEqual(failed_receipts["receipts"][0]["status"], "failed")
         self.assertEqual(record_r2_upload_results(self.root, "asset-1", [uploaded])["receiptCount"], 1)
-        r2_only = create_fixture(self.root, "R2 only")
+        r2_only = create_fixture(
+            self.root,
+            "R2 only",
+            template_key="real-estate",
+        )
         place_assets(self.root, r2_only["fixtureId"], ["asset-1"])
         configure_asset_destinations(self.root, r2_only["fixtureId"], ["asset-1"], ["r2"])
         self.assertEqual(record_r2_upload_results(self.root, "asset-1", [uploaded])["receiptCount"], 2)
@@ -761,7 +770,11 @@ class FixturePipelineTest(unittest.TestCase):
         return run_id
 
     def test_cancelled_upload_run_adopts_only_verified_completed_items(self):
-        fixture = create_fixture(self.root, "Upload destination")
+        fixture = create_fixture(
+            self.root,
+            "Upload destination",
+            template_key="real-estate",
+        )
         run_id = self._insert_upload_run(captured_hash=False)
         blocked = plan_upload_run_adoption(self.root, run_id, fixture["fixtureId"])
         self.assertEqual(blocked["totalRunItemCount"], 3)

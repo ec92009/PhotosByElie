@@ -115,9 +115,12 @@ function decode(value) {
 function run() {
   const requests = decode('\(payload)');
   const photos = Application('Photos');
-  const managedPrefixes = ['PBE-Rating-', 'PBE-Color-', 'PBE-Fixture-ID:'];
+  const managedPrefixes = ['PBE:Rating:', 'PBE:Color:', 'PBE-Rating-', 'PBE-Color-', 'PBE-Fixture-ID:'];
   const isManaged = value =>
-    value === 'PBE-Approved' || managedPrefixes.some(prefix => value.startsWith(prefix));
+    value === 'PBE:Approved' ||
+    value === 'PBE:Tombstone' ||
+    value === 'PBE-Approved' ||
+    managedPrefixes.some(prefix => value.startsWith(prefix));
   const readOne = request => {
     const id = String(request.assetId || '');
     const item = photos.mediaItems.byId(id);
@@ -2305,7 +2308,7 @@ func materializeOne(asset: PHAsset, destination: URL, allowIcloudDownloads: Bool
 
 let command = CommandLine.arguments.dropFirst().first ?? ""
 if command.isEmpty || command == "--help" {
-    outputJSON(["ok": true, "usage": "apple_photos_bridge.swift health | albums | library-index [--limit N] [--offset N] [--date-from YYYY-MM-DD] [--date-to YYYY-MM-DD] | library-index-file --destination PATH [--date-from YYYY-MM-DD] [--date-to YYYY-MM-DD] [--progress-every N] | preview --asset-id ID --destination PATH [--max-pixel N] | video --asset-id ID --destination PATH | preflight --album-id ID [--filter-bursts] [--allow-icloud-downloads] | export --album-id ID --destination PATH [--filter-bursts] [--allow-icloud-downloads] | materialize-one --asset-id ID --destination PATH [--allow-icloud-downloads] [--result-destination PATH] | metadata-read-many --input PATH | metadata-apply-many --input PATH"])
+    outputJSON(["ok": true, "usage": "apple_photos_bridge.swift health | albums | library-index [--limit N] [--offset N] [--date-from YYYY-MM-DD] [--date-to YYYY-MM-DD] | library-index-file --destination PATH [--date-from YYYY-MM-DD] [--date-to YYYY-MM-DD] [--progress-every N] | preview --asset-id ID --destination PATH [--max-pixel N] | preview-many --input PATH | video --asset-id ID --destination PATH | preflight --album-id ID [--filter-bursts] [--allow-icloud-downloads] | export --album-id ID --destination PATH [--filter-bursts] [--allow-icloud-downloads] | materialize-one --asset-id ID --destination PATH [--allow-icloud-downloads] [--result-destination PATH] | metadata-read-many --input PATH | metadata-apply-many --input PATH"])
     exit(0)
 }
 
@@ -2363,6 +2366,55 @@ do {
             destination: URL(fileURLWithPath: destination),
             maxPixel: intArg("--max-pixel", default: 900)
         ))
+    case "preview-many":
+        guard let input = argValue("--input") else {
+            fail("missing_input", "Missing --input for Apple Photos preview batch.")
+        }
+        let inputData = try Data(contentsOf: URL(fileURLWithPath: input))
+        guard let requests = try JSONSerialization.jsonObject(with: inputData) as? [[String: Any]] else {
+            fail("bad_input", "Apple Photos preview batch input must be a JSON array.")
+        }
+        var items: [[String: Any]] = []
+        for request in requests {
+            let assetID = String(describing: request["assetId"] ?? "")
+            let destination = String(describing: request["destination"] ?? "")
+            guard !assetID.isEmpty, !destination.isEmpty else {
+                items.append([
+                    "assetId": assetID,
+                    "error": "Each preview request requires assetId and destination.",
+                    "code": "missing_preview_request_field",
+                ])
+                continue
+            }
+            do {
+                let asset = try findAsset(id: assetID)
+                var payload = try writePreviewJPEG(
+                    asset: asset,
+                    destination: URL(fileURLWithPath: destination),
+                    maxPixel: request["maxPixel"] as? Int ?? 900
+                )
+                payload["assetId"] = assetID
+                items.append(payload)
+            } catch let error as BridgeError {
+                items.append([
+                    "assetId": assetID,
+                    "error": error.message,
+                    "code": error.code,
+                ])
+            } catch {
+                items.append([
+                    "assetId": assetID,
+                    "error": error.localizedDescription,
+                    "code": "preview_error",
+                ])
+            }
+        }
+        outputJSON([
+            "ok": true,
+            "mode": "preview-many",
+            "count": items.count,
+            "items": items,
+        ])
     case "video":
         guard let destination = argValue("--destination") else {
             fail("missing_destination", "Missing --destination for Apple Photos video preview.")

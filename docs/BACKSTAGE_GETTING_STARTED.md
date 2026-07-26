@@ -20,7 +20,9 @@ directory.
    Grant full Photos access. Backstage should report how many recent Photos
    items it indexed.
 4. Open **Fixtures** and choose **Reload tree**. Confirm that the current
-   fixture hierarchy appears.
+   fixture hierarchy appears. Root fixtures such as Expo and RE expand to
+   reveal their children; the breadcrumb below the tree confirms the active
+   path.
 5. Open **Activity** and choose **Refresh**. This is the audit trail for
    Backstage actions.
 
@@ -155,18 +157,35 @@ audited Owner action path.
 
 1. Choose **Allow Photos** on the first run, or **Refresh** to update the
    index.
-2. Select one or more rows. Command-click toggles individual items, Shift-click
+2. When working from a saved fixture pool, confirm the pool name and immutable
+   asset count above the list. Search and the Media, Decision, Rating, and
+   Color filters only narrow that pool; the total and matching counts remain
+   visible.
+3. Backstage shows at most 200 matching rows at once. Use **Previous** and
+   **Next** to move through a large pool without changing its membership or
+   order.
+4. Select one or more thumbnail rows. Command-click toggles individual items, Shift-click
    extends from the selection anchor, arrows move focus, Shift-arrows extend
    the range, and Command-A selects the entire current scope.
-3. Use **Pick state** and **Apply pick state** for Pick, Reject, or Clear.
-4. Use **Rating** and **Apply rating** for zero to five stars.
-5. Use **Color** and **Apply color** for the five labels or to clear a label.
-6. Choose **Quick Look** or press Space to inspect photos, videos, and
+5. **Review picked** narrows the current scope to picked items. **Select
+   burst** selects contiguous frames captured within two seconds of the
+   focused item.
+6. Use **Pick state** and **Apply pick state** for Pick, Reject, or Clear.
+   P, X, and U are the matching keyboard shortcuts.
+7. Use **Rating** and **Apply rating** for zero to five stars. The number keys
+   0 through 5 apply the corresponding value.
+8. Use **Color** and **Apply color** for the five labels or to clear a label.
+9. Choose **Quick Look** or press Space to inspect photos, videos, and
    panoramas without leaving Backstage. Temporary preview files stay in the
-   app cache and are replaced on the next preview.
-7. Choose **Undo** or press Command-Z to reverse the latest decision batch.
+   app cache and are replaced on the next preview. Long preparation and
+   decision operations show progress and can stop after the current audited
+   batch.
+10. Choose **Undo** or press Command-Z to reverse the latest decision batch.
    Backstage keeps up to 100 session steps and restores the earlier cloud
    decision state and selection.
+11. **Send to Metadata** and **Send to Uploads** retain the current selection
+    while switching to that separate workspace. Neither button publishes or
+    uploads by itself.
 
 Opening a pool or choosing **Reload decisions** rehydrates pick, rating, and
 color state from the canonical cloud ledger. The pool order and scope remain

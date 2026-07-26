@@ -24,10 +24,14 @@ public struct LocalOwnerActionWaker: OwnerActionWaking {
             URL(string: "http://127.0.0.1:8766/photosbyelie/wake-owner-action")!,
             URL(string: "http://localhost:8766/photosbyelie/wake-owner-action")!,
         ],
-        timeout: TimeInterval = 0.9
+        timeout: TimeInterval = 20
     ) {
         self.endpoints = endpoints
         let configuration = URLSessionConfiguration.ephemeral
+        // Large immutable fixture snapshots can take several seconds to read
+        // and serialize locally. Keep the direct-wake request alive long
+        // enough to receive that result instead of abandoning it and falling
+        // back to a second cloud polling round trip.
         configuration.timeoutIntervalForRequest = timeout
         configuration.timeoutIntervalForResource = timeout
         configuration.waitsForConnectivity = false

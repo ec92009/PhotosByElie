@@ -1,5 +1,30 @@
 # PhotosByElie Handoff
 
+## 2026-07-26 — PBB-34 native culling parity
+
+- Release candidate: public site `v147.6`; Backstage `0.2.5` build `8`.
+- Branch: `codex/pbb-19-native-backstage`.
+- PBB-35 through PBB-42 complete the native Sidecar-parity contract:
+  hierarchical fixtures and breadcrumbs; thumbnails and inline previews;
+  immutable-pool search, filters, counts, picked-only review, and 200-item
+  paging; bounded audited decision batches with progress, cancellation, and
+  exact undo; burst selection; keyboard shortcuts; and explicit Metadata and
+  Upload handoffs.
+- The saved Expo pool opens as exactly 1,140 immutable ordered assets. A
+  read-only live rehearsal reported 1,005 picked, 132 undecided, and 3
+  rejected; filtered Ronda to 60 matches; paged to 201–400; switched to the
+  1,005-item picked-only review; prepared a thumbnail and 1,600 by 1,200
+  inline preview; and showed `RE / La Concha` in the native hierarchy. No
+  culling decision, upload, publication, or client action was performed.
+- Verification: 156 Node tests, 127 Python tests, 33 Swift tests, native owner
+  parity rehearsal, native cutover audit, API contract check, and publication
+  validation all pass. The production root's stale `v147.4` landing asset
+  cache keys were aligned with the existing `v147.6` release while clearing
+  the canonical test gate.
+- `/Users/ecohen/Applications/PhotosByElie Backstage.app` is signed, installed,
+  and running as version `0.2.5` build `8`. Photos Bridge remains the sole
+  signed headless Photos writer.
+
 ## 2026-07-25 — PBB-19 native Backstage cutover
 
 - Release candidate: `v147.6`; Backstage `0.2.3` build `6`.

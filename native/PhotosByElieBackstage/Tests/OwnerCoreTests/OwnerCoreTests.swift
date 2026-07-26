@@ -76,6 +76,21 @@ struct OwnerCoreTests {
         #expect(selection.selectedIDs == ["b", "d", "e"])
     }
 
+    @Test("Grid movement extends anchored selection by rows")
+    func gridSelectionRanges() {
+        let ids = (0..<20).map { "asset-\($0)" }
+        var selection = OwnerSelectionModel(orderedIDs: ids)
+        selection.click("asset-6", extending: false, toggling: false)
+        selection.move(by: 5, extending: true)
+        #expect(selection.selectedIDs == Set((6...11).map { "asset-\($0)" }))
+        #expect(selection.anchorID == "asset-6")
+        #expect(selection.focusedID == "asset-11")
+
+        selection.move(by: -5, extending: false)
+        #expect(selection.selectedIDs == ["asset-6"])
+        #expect(selection.anchorID == "asset-6")
+    }
+
     @Test("Ten-item culling rehearsal preserves scope and composes filters")
     func tenItemCullingRehearsal() {
         let candidates = (0..<10).map { index in

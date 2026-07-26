@@ -132,7 +132,16 @@ class FixturePipelineTest(unittest.TestCase):
             parent_fixture_id=parent["fixtureId"],
             fixture_id="child",
         )
-        set_fixture_asset_state(self.root, parent["fixtureId"], ["asset-1"], "picked")
+        changed = set_fixture_asset_state(
+            self.root,
+            parent["fixtureId"],
+            ["asset-1"],
+            "picked",
+        )
+        self.assertEqual(
+            changed["items"][0]["before_placement_state"],
+            "undecided",
+        )
         set_fixture_asset_state(self.root, child["fixtureId"], ["asset-1"], "picked")
         self.assertIn("asset-1", fixture_candidate_asset_ids(self.root, child["fixtureId"]))
 

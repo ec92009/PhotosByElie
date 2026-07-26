@@ -820,11 +820,18 @@ def set_fixture_asset_state(
             """,
             [fixture_id, *clean_ids],
         ).fetchall() if clean_ids else []
+    items = []
+    for row in rows:
+        item = dict(row)
+        before_state, before_eligibility = before_by_asset[str(row["asset_id"])]
+        item["before_placement_state"] = before_state
+        item["before_eligibility_state"] = before_eligibility
+        items.append(item)
     return {
         "ok": True,
         "fixtureId": fixture_id,
         "count": len(rows),
-        "items": [dict(row) for row in rows],
+        "items": items,
     }
 
 

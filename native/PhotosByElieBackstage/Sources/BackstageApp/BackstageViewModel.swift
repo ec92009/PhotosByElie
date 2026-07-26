@@ -5,7 +5,8 @@ import OwnerCore
 struct CullingHistoryEntry: Identifiable, Sendable {
     var id = UUID()
     var label: String
-    var changes: [SidecarDecisionChange]
+    var changes: [SidecarDecisionChange] = []
+    var fixtureChanges: [FixtureAssetState] = []
     var selectedIDs: Set<String>
 }
 
@@ -70,6 +71,12 @@ final class BackstageViewModel: ObservableObject {
     @Published var isReloadingFixturePools = false
     @Published var isOpeningFixturePool = false
     @Published var cullingPool: FixturePool?
+    @Published var cullingFixtureID = ""
+    @Published var fixtureCullingWindow: FixtureCullingWindow?
+    @Published var cullingView: FixtureCullingView = .undecided
+    @Published var isLoadingFixtureCulling = false
+    @Published var cullingGridDensity = 5
+    @Published var cullingUsesFill = true
     @Published var fixturePlacements: [FixturePlacement] = []
     @Published var placementTargetFixtureIDs: Set<String> = []
     @Published var accessState = AccessControlState()
@@ -369,6 +376,9 @@ final class BackstageViewModel: ObservableObject {
     }
 
     var cullingAssets: [FixtureAsset] {
+        if let fixtureCullingWindow, cullingPool == nil {
+            return fixtureCullingWindow.items
+        }
         if let cullingPool {
             return cullingPool.assets.map {
                 FixtureAsset(
@@ -395,7 +405,31 @@ final class BackstageViewModel: ObservableObject {
     }
 
     var cullingWorkspace: CullingWorkspaceResult {
-        CullingWorkspace.evaluate(
+        if let window = fixtureCullingWindow, cullingPool == nil {
+            return CullingWorkspaceResult(
+                items: window.items.map { asset in
+                    CullingCandidate(
+                        id: asset.id,
+                        title: asset.title,
+                        filename: asset.filename,
+                        mediaType: asset.mediaType,
+                        decision: cullingStates[asset.id]
+                    )
+                },
+                summary: CullingSummary(
+                    total: window.summary.universe,
+                    filtered: window.summary.filtered,
+                    undecided: window.summary.undecided,
+                    picked: window.summary.picked,
+                    rejected: window.summary.hidden,
+                    photos: window.items.count(where: { $0.mediaType != "video" }),
+                    videos: window.items.count(where: { $0.mediaType == "video" })
+                ),
+                offset: window.offset,
+                limit: window.limit
+            )
+        }
+        return CullingWorkspace.evaluate(
             cullingAssets.map { asset in
                 CullingCandidate(
                     id: asset.id,
@@ -412,6 +446,9 @@ final class BackstageViewModel: ObservableObject {
     }
 
     var visibleCullingAssets: [FixtureAsset] {
+        if fixtureCullingWindow != nil, cullingPool == nil {
+            return cullingAssets
+        }
         let assets = Dictionary(uniqueKeysWithValues: cullingAssets.map { ($0.id, $0) })
         return cullingWorkspace.items.compactMap { assets[$0.id] }
     }
@@ -431,6 +468,10 @@ final class BackstageViewModel: ObservableObject {
 
     func applyCullingFilters() {
         cullingWindowOffset = 0
+        if !cullingFixtureID.isEmpty, cullingPool == nil {
+            Task { await loadFixtureCullingWindow() }
+            return
+        }
         replaceCullingItems()
         photoPreview = nil
         cullingStatus = "\(cullingWorkspace.summary.filtered.formatted()) of \(cullingWorkspace.summary.total.formatted()) items match."
@@ -442,10 +483,22 @@ final class BackstageViewModel: ObservableObject {
         cullingPickFilter = .all
         cullingRatingFilter = -1
         cullingColorFilter = .all
-        applyCullingFilters()
+        if cullingView == .undecided {
+            applyCullingFilters()
+        } else {
+            cullingView = .undecided
+        }
     }
 
     func showPickedReview() {
+        if !cullingFixtureID.isEmpty, cullingPool == nil {
+            if cullingView == .picked {
+                applyCullingFilters()
+            } else {
+                cullingView = .picked
+            }
+            return
+        }
         cullingPickFilter = .picked
         applyCullingFilters()
         cullingStatus = "Reviewing \(cullingWorkspace.summary.filtered.formatted()) picked items in the current scope."
@@ -460,6 +513,9 @@ final class BackstageViewModel: ObservableObject {
         }
         replaceCullingItems()
         photoPreview = nil
+        if !cullingFixtureID.isEmpty, cullingPool == nil {
+            Task { await loadFixtureCullingWindow() }
+        }
     }
 
     func clickCullingAsset(_ id: String, modifiers: NSEvent.ModifierFlags) {
@@ -474,6 +530,19 @@ final class BackstageViewModel: ObservableObject {
     func moveCullingSelection(_ direction: OwnerSelectionDirection, extending: Bool) {
         cullingSelection.move(direction, extending: extending)
         selectedPhotoIDs = cullingSelection.selectedIDs
+    }
+
+    func moveCullingSelection(by delta: Int, extending: Bool) {
+        cullingSelection.move(by: delta, extending: extending)
+        selectedPhotoIDs = cullingSelection.selectedIDs
+    }
+
+    func changeCullingGridDensity(by delta: Int) {
+        cullingGridDensity = min(10, max(2, cullingGridDensity + delta))
+    }
+
+    func toggleCullingFitFill() {
+        cullingUsesFill.toggle()
     }
 
     func selectAllCullingAssets() {
@@ -532,17 +601,86 @@ final class BackstageViewModel: ObservableObject {
     func showAllPhotosInCulling() {
         cullingPool = nil
         cullingWindowOffset = 0
-        cullingSelection = OwnerSelectionModel(orderedIDs: libraryItems.map(\.id))
-        selectedPhotoIDs = []
+        if cullingFixtureID.isEmpty {
+            cullingFixtureID = flatFixtures.first(where: { $0.id == "fixture-expo" })?.id
+                ?? flatFixtures.first(where: { $0.parentID == nil && !$0.isArchived })?.id
+                ?? ""
+        }
+        Task { await loadFixtureCullingWindow() }
+    }
+
+    func selectCullingFixture(_ fixtureID: String) {
+        cullingFixtureID = fixtureID
+        cullingPool = nil
+        cullingView = .undecided
+        cullingWindowOffset = 0
+        cullingSearch = ""
+        clearCullingSelection()
         photoPreview = nil
         cullingThumbnails = [:]
-        cullingStatus = "Showing the recent Photos index."
-        Task { await refreshCullingDecisions() }
+        Task { await loadFixtureCullingWindow() }
+    }
+
+    func loadFixtureCullingWindow() async {
+        guard !cullingFixtureID.isEmpty else {
+            cullingStatus = "Choose a fixture to begin culling."
+            return
+        }
+        isLoadingFixtureCulling = true
+        cullingStatus = "Loading the \(cullingView.label.lowercased()) fixture window…"
+        defer { isLoadingFixtureCulling = false }
+        do {
+            let mediaTypes: [String] = switch cullingMediaFilter {
+            case .all: []
+            case .photos: ["photo"]
+            case .videos: ["video"]
+            }
+            let colors: [String] = switch cullingColorFilter {
+            case .all: []
+            case .none: ["none"]
+            default: [cullingColorFilter.rawValue]
+            }
+            let window = try await fixtureService.cullingWindow(
+                fixtureID: cullingFixtureID,
+                view: cullingView,
+                offset: cullingWindowOffset,
+                limit: cullingWindowLimit,
+                search: cullingSearch,
+                mediaTypes: mediaTypes,
+                ratings: cullingRatingFilter < 0 ? [] : [cullingRatingFilter],
+                colors: colors
+            )
+            fixtureCullingWindow = window
+            cullingStates = Dictionary(uniqueKeysWithValues: window.items.map { asset in
+                (
+                    asset.id,
+                    SidecarDecisionState(
+                        assetId: asset.id,
+                        rating: asset.rating,
+                        color: asset.color,
+                        pickState: asset.placementState.rawValue,
+                        metadataState: asset.editorialState,
+                        title: asset.title,
+                        keywords: asset.keywords
+                    )
+                )
+            })
+            replaceCullingItems()
+            photoPreview = nil
+            cullingStatus = "\(window.summary.filtered.formatted()) \(window.view.label.lowercased()) of \(window.summary.universe.formatted()) eligible items."
+        } catch {
+            cullingStatus = String(describing: error)
+        }
     }
 
     func loadFixtures() async {
         await fixtureOperation {
             fixtures = try await fixtureService.tree()
+            if cullingFixtureID.isEmpty {
+                cullingFixtureID = flatFixtures.first(where: { $0.id == "fixture-expo" })?.id
+                    ?? flatFixtures.first(where: { $0.parentID == nil && !$0.isArchived })?.id
+                    ?? ""
+            }
             fixtureStatus = "\(flatFixtures.count) fixture nodes loaded."
         }
     }
@@ -833,8 +971,39 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func applyPickShortcut(_ action: SidecarPickAction) async {
+        if !cullingFixtureID.isEmpty, cullingPool == nil {
+            switch action {
+            case .pick:
+                await applyFixturePlacement(.picked, label: "Pick")
+            case .reject:
+                await applyFixturePlacement(.hidden, label: "Hide")
+            case .unpick:
+                await applyFixturePlacement(.undecided, label: "Clear")
+            }
+            return
+        }
         cullingPickAction = action
         await applyPickDecision()
+    }
+
+    func tombstoneCullingSelection() async {
+        let ids = selectedCullingAssetIDs
+        guard !ids.isEmpty else {
+            cullingStatus = "Select one or more Photos items."
+            return
+        }
+        await applyCullingDecisions(
+            ids.map { .tombstone($0, reason: "Backstage culling") },
+            label: "Tombstone"
+        )
+        if !cullingFixtureID.isEmpty, cullingPool == nil {
+            await loadFixtureCullingWindow()
+        }
+    }
+
+    func applyColorShortcut(_ color: SidecarColor) async {
+        cullingColor = color
+        await applyColor()
     }
 
     func applyRatingShortcut(_ rating: Int) async {
@@ -900,7 +1069,30 @@ final class BackstageViewModel: ObservableObject {
             cullingStatus = "Nothing to undo in this Backstage session."
             return
         }
-        let decisions = entry.changes.flatMap(undoDecisions)
+        if !entry.fixtureChanges.isEmpty {
+            do {
+                let grouped = Dictionary(grouping: entry.fixtureChanges, by: \.beforePlacementState)
+                for (state, changes) in grouped {
+                    _ = try await fixtureService.applyState(
+                        state,
+                        assetIDs: changes.map(\.assetID),
+                        fixtureID: changes.first?.fixtureID ?? cullingFixtureID,
+                        reason: "Undo \(entry.label)"
+                    )
+                }
+                cullingHistory.removeLast()
+                await loadFixtureCullingWindow()
+                cullingStatus = "Undid \(entry.label)."
+            } catch {
+                cullingStatus = "Undo failed; the history step was preserved. \(error)"
+            }
+            return
+        }
+        let decisions = entry.changes.contains(where: {
+            $0.changedFamilies.contains("tombstone")
+        })
+            ? entry.changes.map { SidecarDecision.restore($0.assetID) }
+            : entry.changes.flatMap(undoDecisions)
         guard !decisions.isEmpty else {
             cullingHistory.removeLast()
             cullingStatus = "Nothing to undo in the last culling step."
@@ -951,11 +1143,24 @@ final class BackstageViewModel: ObservableObject {
                     cullingStatus = "Quick Look preparation stopped after \(urls.count.formatted()) of \(ids.count.formatted()) items."
                     return urls
                 }
-                let receipt = try await photoLibrary.exportOriginal(
-                    localIdentifier: photoLibraryIdentifier(for: id),
-                    to: directory
-                )
-                urls.append(receipt.destination)
+                let asset = cullingAssets.first(where: { $0.id == id })
+                if asset?.mediaType == "video" {
+                    let receipt = try await photoLibrary.exportOriginal(
+                        localIdentifier: photoLibraryIdentifier(for: id),
+                        to: directory
+                    )
+                    urls.append(receipt.destination)
+                } else {
+                    let preview = try await photoLibrary.preview(
+                        localIdentifier: photoLibraryIdentifier(for: id),
+                        maxPixelSize: 4_000
+                    )
+                    let destination = directory
+                        .appendingPathComponent(id.replacingOccurrences(of: "/", with: "_"))
+                        .appendingPathExtension("jpg")
+                    try preview.jpegData.write(to: destination, options: .atomic)
+                    urls.append(destination)
+                }
                 cullingDecisionProgress = urls.count
                 cullingStatus = "Preparing Quick Look \(urls.count.formatted()) / \(ids.count.formatted())…"
             }
@@ -1012,6 +1217,38 @@ final class BackstageViewModel: ObservableObject {
             }
             replaceCullingItems()
             cullingStatus = "\(label) saved for \(changes.count) item\(changes.count == 1 ? "" : "s") in the cloud ledger."
+        } catch {
+            cullingStatus = String(describing: error)
+        }
+    }
+
+    private func applyFixturePlacement(
+        _ state: FixturePlacementState,
+        label: String
+    ) async {
+        let ids = selectedCullingAssetIDs
+        guard !cullingFixtureID.isEmpty, !ids.isEmpty else {
+            cullingStatus = "Choose a fixture and select one or more Photos items."
+            return
+        }
+        let selectedBefore = cullingSelection.selectedIDs
+        isApplyingCullingDecision = true
+        cullingStatus = "Applying \(label.lowercased()) to \(ids.count.formatted()) items…"
+        defer { isApplyingCullingDecision = false }
+        do {
+            let changes = try await fixtureService.applyState(
+                state,
+                assetIDs: ids,
+                fixtureID: cullingFixtureID,
+                reason: "Native culling \(label.lowercased())"
+            )
+            cullingHistory.append(CullingHistoryEntry(
+                label: label,
+                fixtureChanges: changes,
+                selectedIDs: selectedBefore
+            ))
+            await loadFixtureCullingWindow()
+            cullingStatus = "\(label) saved for \(changes.count) fixture item\(changes.count == 1 ? "" : "s")."
         } catch {
             cullingStatus = String(describing: error)
         }
@@ -1496,6 +1733,12 @@ final class BackstageViewModel: ObservableObject {
     }
 
     private func photoLibraryIdentifier(for assetID: String) -> String {
+        if let identifier = fixtureCullingWindow?.items
+            .first(where: { $0.id == assetID })?
+            .photoLibraryIdentifier,
+           !identifier.isEmpty {
+            return identifier
+        }
         guard let poolAsset = cullingPool?.assets.first(where: { $0.id == assetID }) else {
             return assetID
         }

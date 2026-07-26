@@ -262,6 +262,8 @@ public struct FixtureAssetState: Identifiable, Sendable, Equatable {
     public var eligibilityState: String
     public var source: String
     public var updatedAt: String
+    public var beforePlacementState: FixturePlacementState
+    public var beforeEligibilityState: String
 
     public var id: String { "\(fixtureID):\(assetID)" }
 
@@ -278,6 +280,14 @@ public struct FixtureAssetState: Identifiable, Sendable, Equatable {
             ?? "active"
         source = json["source"]?.stringValue ?? ""
         updatedAt = json["updated_at"]?.stringValue ?? json["updatedAt"]?.stringValue ?? ""
+        beforePlacementState = FixturePlacementState(
+            rawValue: json["before_placement_state"]?.stringValue
+                ?? json["beforePlacementState"]?.stringValue
+                ?? "undecided"
+        ) ?? .undecided
+        beforeEligibilityState = json["before_eligibility_state"]?.stringValue
+            ?? json["beforeEligibilityState"]?.stringValue
+            ?? "active"
     }
 }
 

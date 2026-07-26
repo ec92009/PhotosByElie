@@ -458,7 +458,11 @@ private struct MediaLibraryView: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(model.cullingPool?.name ?? "Photos index & export")
+                        Text(
+                            model.cullingPool?.name
+                                ?? model.flatFixtures.first(where: { $0.id == model.cullingFixtureID })?.name
+                                ?? "Fixture Culling"
+                        )
                             .font(.largeTitle.bold())
                         if let pool = model.cullingPool {
                             Text("Fixture pool \(pool.id) • \(pool.assetCount) immutable ordered assets")
@@ -483,6 +487,20 @@ private struct MediaLibraryView: View {
                 Text(model.photoStatus)
                     .foregroundStyle(.secondary)
                 HStack(spacing: 8) {
+                    Picker(
+                        "Fixture",
+                        selection: Binding(
+                            get: { model.cullingFixtureID },
+                            set: { model.selectCullingFixture($0) }
+                        )
+                    ) {
+                        ForEach(model.flatFixtures.filter { !$0.isArchived }) { fixture in
+                            let depth = max(0, model.fixtures.path(to: fixture.id).count - 1)
+                            Text("\(String(repeating: "  ", count: depth))\(fixture.name)")
+                                .tag(fixture.id)
+                        }
+                    }
+                    .frame(width: 190)
                     TextField("Search title, file, or keyword", text: $model.cullingSearch)
                         .textFieldStyle(.roundedBorder)
                         .onSubmit { model.applyCullingFilters() }
@@ -491,8 +509,8 @@ private struct MediaLibraryView: View {
                             Text($0.label).tag($0)
                         }
                     }
-                    Picker("Decision", selection: $model.cullingPickFilter) {
-                        ForEach(CullingPickFilter.allCases, id: \.self) {
+                    Picker("View", selection: $model.cullingView) {
+                        ForEach(FixtureCullingView.allCases, id: \.self) {
                             Text($0.label).tag($0)
                         }
                     }
@@ -516,7 +534,7 @@ private struct MediaLibraryView: View {
                 }
                 .labelsHidden()
                 .onChange(of: model.cullingMediaFilter) { _, _ in model.applyCullingFilters() }
-                .onChange(of: model.cullingPickFilter) { _, _ in model.applyCullingFilters() }
+                .onChange(of: model.cullingView) { _, _ in model.applyCullingFilters() }
                 .onChange(of: model.cullingRatingFilter) { _, _ in model.applyCullingFilters() }
                 .onChange(of: model.cullingColorFilter) { _, _ in model.applyCullingFilters() }
                 let workspace = model.cullingWorkspace
@@ -524,8 +542,20 @@ private struct MediaLibraryView: View {
                     Text("\(workspace.summary.filtered.formatted()) match • \(workspace.summary.total.formatted()) in scope")
                     Text("• \(workspace.summary.undecided.formatted()) undecided")
                     Text("• \(workspace.summary.picked.formatted()) picked")
-                    Text("• \(workspace.summary.rejected.formatted()) rejected")
+                    Text("• \(workspace.summary.rejected.formatted()) hidden")
                     Spacer()
+                    HStack(spacing: 0) {
+                        Button("−") { model.changeCullingGridDensity(by: -1) }
+                            .help("Show fewer, larger thumbnails")
+                        Divider().frame(height: 18)
+                        Button("+") { model.changeCullingGridDensity(by: 1) }
+                            .help("Show more, smaller thumbnails")
+                    }
+                    .buttonStyle(.bordered)
+                    Button(model.cullingUsesFill ? "Fill" : "Fit") {
+                        model.toggleCullingFitFill()
+                    }
+                    .buttonStyle(.bordered)
                     if let range = workspace.visibleRange {
                         Text("\(range.lowerBound.formatted())–\(range.upperBound.formatted())")
                     }
@@ -534,16 +564,21 @@ private struct MediaLibraryView: View {
                 .foregroundStyle(.secondary)
                 ScrollViewReader { proxy in
                     ScrollView {
-                        LazyVStack(spacing: 2) {
+                        LazyVGrid(
+                            columns: Array(
+                                repeating: GridItem(.flexible(minimum: 84), spacing: 8),
+                                count: model.cullingGridDensity
+                            ),
+                            spacing: 8
+                        ) {
                             ForEach(model.visibleCullingAssets) { asset in
-                                CullingAssetRow(
+                                CullingAssetCard(
                                     asset: asset,
-                                    position: model.cullingPool?.assets
-                                        .first(where: { $0.id == asset.id })?.position,
                                     state: model.cullingStates[asset.id],
                                     thumbnail: model.cullingThumbnails[asset.id],
                                     isSelected: model.cullingSelection.selectedIDs.contains(asset.id),
-                                    isFocused: model.cullingSelection.focusedID == asset.id
+                                    isFocused: model.cullingSelection.focusedID == asset.id,
+                                    usesFill: model.cullingUsesFill
                                 )
                                 .id(asset.id)
                                 .contentShape(Rectangle())
@@ -554,16 +589,20 @@ private struct MediaLibraryView: View {
                                 .task { await model.loadThumbnail(for: asset.id) }
                             }
                         }
-                        .padding(.vertical, 2)
+                        .padding(6)
                     }
                     .focusable()
                     .onMoveCommand { direction in
                         let extending = NSEvent.modifierFlags.contains(.shift)
                         switch direction {
-                        case .up, .left:
-                            model.moveCullingSelection(.previous, extending: extending)
-                        case .down, .right:
-                            model.moveCullingSelection(.next, extending: extending)
+                        case .left:
+                            model.moveCullingSelection(by: -1, extending: extending)
+                        case .right:
+                            model.moveCullingSelection(by: 1, extending: extending)
+                        case .up:
+                            model.moveCullingSelection(by: -model.cullingGridDensity, extending: extending)
+                        case .down:
+                            model.moveCullingSelection(by: model.cullingGridDensity, extending: extending)
                         default:
                             return
                         }
@@ -587,8 +626,12 @@ private struct MediaLibraryView: View {
                         Task { await model.applyPickShortcut(.pick) }
                         return .handled
                     }
-                    .onKeyPress("x") {
+                    .onKeyPress("h") {
                         Task { await model.applyPickShortcut(.reject) }
+                        return .handled
+                    }
+                    .onKeyPress("x") {
+                        Task { await model.tombstoneCullingSelection() }
                         return .handled
                     }
                     .onKeyPress("u") {
@@ -599,11 +642,29 @@ private struct MediaLibraryView: View {
                         model.selectFocusedBurst()
                         return .handled
                     }
+                    .onKeyPress("+") {
+                        model.changeCullingGridDensity(by: 1)
+                        return .handled
+                    }
+                    .onKeyPress("-") {
+                        model.changeCullingGridDensity(by: -1)
+                        return .handled
+                    }
+                    .onKeyPress("z") {
+                        model.toggleCullingFitFill()
+                        return .handled
+                    }
                     .onKeyPress(characters: .decimalDigits) { press in
-                        guard let rating = Int(press.characters), (0...5).contains(rating) else {
-                            return .ignored
+                        guard let value = Int(press.characters) else { return .ignored }
+                        if (0...5).contains(value) {
+                            Task { await model.applyRatingShortcut(value) }
+                            return .handled
                         }
-                        Task { await model.applyRatingShortcut(rating) }
+                        let colors: [Int: SidecarColor] = [
+                            6: .red, 7: .yellow, 8: .green, 9: .blue,
+                        ]
+                        guard let color = colors[value] else { return .ignored }
+                        Task { await model.applyColorShortcut(color) }
                         return .handled
                     }
                     .overlay {
@@ -639,12 +700,12 @@ private struct MediaLibraryView: View {
                     Text("\(model.cullingSelection.selectedIDs.count) selected")
                     Picker("Pick state", selection: $model.cullingPickAction) {
                         ForEach(SidecarPickAction.allCases, id: \.self) {
-                            Text($0.label).tag($0)
+                            Text($0 == .reject ? "Hide" : $0.label).tag($0)
                         }
                     }
                     .frame(width: 180)
                     Button("Apply pick state") {
-                        Task { await model.applyPickDecision() }
+                        Task { await model.applyPickShortcut(model.cullingPickAction) }
                     }
                     .disabled(model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision)
                     Picker("Rating", selection: $model.cullingRating) {
@@ -714,7 +775,7 @@ private struct MediaLibraryView: View {
                             .disabled(model.cullingCancellationRequested)
                     }
                 }
-                Text("Shortcuts: P pick • X reject • U clear • 0–5 rating • B burst • Space Quick Look • ⌘Z undo")
+                Text("Shortcuts: P pick • H hide • X tombstone • U clear • 0–5 rating • 6–9 color • +/− density • Z fit/fill • Space Quick Look • ⌘Z undo")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
@@ -744,10 +805,17 @@ private struct MediaLibraryView: View {
             .frame(minWidth: 280)
         }
         .task {
+            if model.fixtures.isEmpty {
+                await model.loadFixtures()
+            }
             if model.libraryItems.isEmpty {
                 await model.refreshPhotos()
             }
-            await model.refreshCullingDecisions()
+            if !model.cullingFixtureID.isEmpty {
+                await model.loadFixtureCullingWindow()
+            } else {
+                await model.refreshCullingDecisions()
+            }
         }
     }
 
@@ -763,75 +831,73 @@ private struct MediaLibraryView: View {
     }
 }
 
-private struct CullingAssetRow: View {
+private struct CullingAssetCard: View {
     var asset: FixtureAsset
-    var position: Int?
     var state: SidecarDecisionState?
     var thumbnail: NSImage?
     var isSelected: Bool
     var isFocused: Bool
+    var usesFill: Bool
 
     var body: some View {
-        HStack(spacing: 10) {
-            Text(position.map { "\($0 + 1)" } ?? "—")
-                .frame(width: 36, alignment: .trailing)
-                .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 5) {
             Group {
                 if let thumbnail {
                     Image(nsImage: thumbnail)
                         .resizable()
-                        .scaledToFill()
+                        .aspectRatio(contentMode: usesFill ? .fill : .fit)
                 } else {
                     Image(systemName: asset.mediaType == "video" ? "video" : "photo")
+                        .font(.largeTitle)
                         .foregroundStyle(.secondary)
                 }
             }
-            .frame(width: 64, height: 48)
-            .background(.quaternary.opacity(0.4))
-            .clipShape(RoundedRectangle(cornerRadius: 4))
-            VStack(alignment: .leading, spacing: 1) {
-                Text(asset.title.isEmpty ? asset.filename : asset.title)
-                    .lineLimit(1)
-                if !asset.title.isEmpty {
-                    Text(asset.filename)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity)
+            .aspectRatio(4 / 3, contentMode: .fit)
+            .background(.quaternary.opacity(0.45))
+            .clipShape(RoundedRectangle(cornerRadius: 7))
+            .clipped()
+            HStack(spacing: 5) {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(asset.title.isEmpty ? asset.filename : asset.title)
+                        .lineLimit(1)
+                        .font(.caption.weight(.semibold))
+                    if !asset.title.isEmpty {
+                        Text(asset.filename)
+                            .lineLimit(1)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
                 }
-            }
-            Spacer()
-            if let state {
-                Text(state.pickState.capitalized)
-                    .foregroundStyle(state.pickState == "picked" ? .green : (state.pickState == "rejected" ? .red : .secondary))
-                Text(state.rating > 0 ? "\(state.rating)★" : "—")
-                    .frame(width: 34)
-                Circle()
-                    .fill(color(state.color))
-                    .overlay(Circle().stroke(.secondary.opacity(0.5)))
-                    .frame(width: 12, height: 12)
-            } else {
-                Text("Undecided")
+                Spacer(minLength: 2)
+                Text(starLabel)
+                    .font(.caption)
                     .foregroundStyle(.secondary)
-                Text("—").frame(width: 34)
                 Circle()
-                    .stroke(.secondary.opacity(0.5))
-                    .frame(width: 12, height: 12)
+                    .fill(color(state?.color ?? ""))
+                    .overlay(Circle().stroke(.secondary.opacity(0.5)))
+                    .frame(width: 11, height: 11)
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 5)
+        .padding(6)
         .background(
-            RoundedRectangle(cornerRadius: 5)
-                .fill(isSelected ? Color.accentColor.opacity(0.22) : Color.clear)
+            RoundedRectangle(cornerRadius: 9)
+                .fill(isSelected ? Color.accentColor.opacity(0.22) : Color.secondary.opacity(0.06))
         )
-        .overlay(alignment: .leading) {
-            if isFocused {
-                Rectangle()
-                    .fill(Color.accentColor)
-                    .frame(width: 3)
-            }
-        }
+        .overlay(
+            RoundedRectangle(cornerRadius: 9)
+                .stroke(
+                    isFocused ? Color.accentColor : (isSelected ? Color.accentColor.opacity(0.65) : .clear),
+                    lineWidth: isFocused ? 3 : 1
+                )
+        )
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private var starLabel: String {
+        let rating = state?.rating ?? asset.rating
+        return rating > 0 ? String(repeating: "★", count: rating) : "☆"
     }
 
     private func color(_ value: String) -> Color {

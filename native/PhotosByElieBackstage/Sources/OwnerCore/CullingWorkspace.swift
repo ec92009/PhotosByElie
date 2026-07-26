@@ -100,6 +100,24 @@ public struct CullingSummary: Sendable, Equatable {
     public var rejected: Int
     public var photos: Int
     public var videos: Int
+
+    public init(
+        total: Int,
+        filtered: Int,
+        undecided: Int,
+        picked: Int,
+        rejected: Int,
+        photos: Int,
+        videos: Int
+    ) {
+        self.total = total
+        self.filtered = filtered
+        self.undecided = undecided
+        self.picked = picked
+        self.rejected = rejected
+        self.photos = photos
+        self.videos = videos
+    }
 }
 
 public struct CullingWorkspaceResult: Sendable, Equatable {
@@ -107,6 +125,18 @@ public struct CullingWorkspaceResult: Sendable, Equatable {
     public var summary: CullingSummary
     public var offset: Int
     public var limit: Int
+
+    public init(
+        items: [CullingCandidate],
+        summary: CullingSummary,
+        offset: Int,
+        limit: Int
+    ) {
+        self.items = items
+        self.summary = summary
+        self.offset = offset
+        self.limit = limit
+    }
 
     public var hasPrevious: Bool { offset > 0 }
     public var hasNext: Bool { offset + items.count < summary.filtered }

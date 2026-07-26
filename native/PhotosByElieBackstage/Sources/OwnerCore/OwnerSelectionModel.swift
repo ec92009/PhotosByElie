@@ -49,15 +49,15 @@ public struct OwnerSelectionModel<ID: Hashable & Sendable>: Sendable {
     }
 
     public mutating func move(_ direction: OwnerSelectionDirection, extending: Bool) {
+        move(by: direction == .previous ? -1 : 1, extending: extending)
+    }
+
+    public mutating func move(by delta: Int, extending: Bool) {
         guard !orderedIDs.isEmpty else { return }
         let currentIndex = focusedID.flatMap(orderedIDs.firstIndex(of:))
             ?? anchorID.flatMap(orderedIDs.firstIndex(of:))
             ?? 0
-        let nextIndex: Int
-        switch direction {
-        case .previous: nextIndex = max(0, currentIndex - 1)
-        case .next: nextIndex = min(orderedIDs.count - 1, currentIndex + 1)
-        }
+        let nextIndex = min(orderedIDs.count - 1, max(0, currentIndex + delta))
         let destination = orderedIDs[nextIndex]
         if extending, let anchorID {
             selectedIDs = range(from: anchorID, through: destination)

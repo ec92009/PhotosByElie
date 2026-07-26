@@ -89,6 +89,14 @@ public struct SidecarDecision: Codable, Identifiable, Sendable, Equatable {
         Self(assetId: assetID, action: "color", color: value.rawValue)
     }
 
+    public static func tombstone(_ assetID: String, reason: String = "") -> Self {
+        Self(assetId: assetID, action: "tombstone", reason: reason)
+    }
+
+    public static func restore(_ assetID: String) -> Self {
+        Self(assetId: assetID, action: "restore")
+    }
+
     public static func metadata(
         _ assetID: String,
         title: String,

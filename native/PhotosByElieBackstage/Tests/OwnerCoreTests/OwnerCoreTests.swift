@@ -769,6 +769,104 @@ struct OwnerCoreTests {
         #expect(manifest?["search"]?.stringValue == "Madrid")
     }
 
+    @Test("Native fixture Review is chronological and actions stay connector-audited")
+    func nativeFixtureReviewWorkflow() async throws {
+        let windowAction = OwnerAction(
+            id: "owner-action-fixture-review-window",
+            actionKind: "sidecar-culling-review",
+            target: "max",
+            state: .completed,
+            result: [
+                "reviewWindow": .object([
+                    "fixtureId": "fixture-expo",
+                    "offset": 0,
+                    "limit": 200,
+                    "nextOffset": 1,
+                    "hasNext": true,
+                    "summary": .object([
+                        "total": 420,
+                        "unreviewed": 300,
+                        "requestingAI": 100,
+                        "proposed": 20,
+                    ]),
+                    "items": .array([.object([
+                        "assetId": "asset-oldest",
+                        "photoLibraryIdentifier": "photos-oldest",
+                        "title": "Oldest",
+                        "caption": "",
+                        "keywords": ["Paris"],
+                        "filename": "OLDEST.HEIC",
+                        "mediaType": "photo",
+                        "capturedAt": "2025-01-01T12:00:00Z",
+                        "rating": 3,
+                        "color": "yellow",
+                        "editorialState": "requesting-ai",
+                        "aiReasons": ["weak title"],
+                        "aiNote": "Name the landmark.",
+                        "aiAttemptCount": 1,
+                        "aiLastError": "",
+                        "deliveryState": "not-ready",
+                    ])]),
+                ]),
+            ]
+        )
+        let applyAction = OwnerAction(
+            id: "owner-action-fixture-review-apply",
+            actionKind: "sidecar-culling-review",
+            target: "max",
+            state: .completed,
+            result: [
+                "reviewAction": .object([
+                    "fixtureId": "fixture-expo",
+                    "action": "request-ai",
+                    "anchorAssetId": "asset-oldest",
+                    "propagated": true,
+                    "items": .array([.object([
+                        "assetId": "asset-oldest",
+                        "before": .object(["editorialState": "unreviewed"]),
+                        "after": .object(["editorialState": "requesting-ai"]),
+                    ])]),
+                ]),
+            ]
+        )
+        let api = ScriptedOwnerActionAPI(completed: [windowAction, applyAction])
+        let service = FixtureWorkflowService(runner: OwnerActionRunner(
+            api: api,
+            waker: UnavailableWaker(),
+            pollInterval: .milliseconds(1),
+            timeout: .seconds(1)
+        ))
+
+        let window = try await service.reviewWindow(
+            fixtureID: "fixture-expo",
+            limit: 200
+        )
+        #expect(window.summary.total == 420)
+        #expect(window.items.first?.id == "asset-oldest")
+        #expect(window.items.first?.aiReasons == ["weak title"])
+
+        let result = try await service.applyReview(
+            .requestAI,
+            fixtureID: "fixture-expo",
+            assetIDs: ["asset-oldest"],
+            anchorAssetID: "asset-oldest",
+            propagate: true,
+            aiReasons: ["weak title"],
+            aiNote: "Name the landmark."
+        )
+        #expect(result.action == .requestAI)
+        #expect(result.propagated)
+        #expect(result.changes.map(\.assetID) == ["asset-oldest"])
+        let requests = await api.requests()
+        #expect(requests.count == 2)
+        let reviewManifest = requests[0].payload["manifest"]?.objectValue
+        #expect(reviewManifest?["mode"]?.stringValue == "fixture-review-window")
+        let applyManifest = requests[1].payload["manifest"]?.objectValue
+        #expect(applyManifest?["mode"]?.stringValue == "fixture-review-apply")
+        #expect(applyManifest?["reviewAction"]?.stringValue == "request-ai")
+        #expect(applyManifest?["propagate"]?.boolValue == true)
+    }
+
     @Test("Fixture archive state follows the connector archivedAt contract")
     func nativeFixtureArchiveState() {
         let active = FixtureNode(json: [

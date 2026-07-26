@@ -227,6 +227,122 @@ public struct FixtureCullingWindow: Sendable, Equatable {
     }
 }
 
+public enum FixtureReviewAction: String, Codable, Sendable, CaseIterable {
+    case approve
+    case hide
+    case requestAI = "request-ai"
+    case editMetadata = "edit-metadata"
+    case propagateTitle = "propagate-title"
+    case propagateKeywords = "propagate-keywords"
+}
+
+public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
+    public var id: String
+    public var photoLibraryIdentifier: String
+    public var title: String
+    public var caption: String
+    public var keywords: [String]
+    public var filename: String
+    public var mediaType: String
+    public var capturedAt: String
+    public var rating: Int
+    public var color: String
+    public var editorialState: String
+    public var aiReasons: [String]
+    public var aiNote: String
+    public var aiAttemptCount: Int
+    public var aiLastError: String
+    public var deliveryState: String
+
+    init(json: [String: JSONValue]) {
+        id = json["assetId"]?.stringValue ?? ""
+        photoLibraryIdentifier = json["photoLibraryIdentifier"]?.stringValue ?? id
+        title = json["title"]?.stringValue ?? ""
+        caption = json["caption"]?.stringValue ?? ""
+        keywords = json["keywords"]?.arrayValue?.compactMap(\.stringValue) ?? []
+        filename = json["filename"]?.stringValue ?? ""
+        mediaType = json["mediaType"]?.stringValue ?? "photo"
+        capturedAt = json["capturedAt"]?.stringValue ?? ""
+        rating = json["rating"]?.intValue ?? 0
+        color = json["color"]?.stringValue ?? ""
+        editorialState = json["editorialState"]?.stringValue ?? "unreviewed"
+        aiReasons = json["aiReasons"]?.arrayValue?.compactMap(\.stringValue) ?? []
+        aiNote = json["aiNote"]?.stringValue ?? ""
+        aiAttemptCount = json["aiAttemptCount"]?.intValue ?? 0
+        aiLastError = json["aiLastError"]?.stringValue ?? ""
+        deliveryState = json["deliveryState"]?.stringValue ?? "not-ready"
+    }
+}
+
+public struct FixtureReviewSummary: Sendable, Equatable {
+    public var total: Int
+    public var unreviewed: Int
+    public var requestingAI: Int
+    public var proposed: Int
+
+    init(json: [String: JSONValue]) {
+        total = json["total"]?.intValue ?? 0
+        unreviewed = json["unreviewed"]?.intValue ?? 0
+        requestingAI = json["requestingAI"]?.intValue ?? 0
+        proposed = json["proposed"]?.intValue ?? 0
+    }
+}
+
+public struct FixtureReviewWindow: Sendable, Equatable {
+    public var fixtureID: String
+    public var offset: Int
+    public var limit: Int
+    public var nextOffset: Int
+    public var hasNext: Bool
+    public var summary: FixtureReviewSummary
+    public var items: [FixtureReviewItem]
+
+    init(json: [String: JSONValue]) {
+        fixtureID = json["fixtureId"]?.stringValue ?? ""
+        offset = json["offset"]?.intValue ?? 0
+        limit = json["limit"]?.intValue ?? 200
+        nextOffset = json["nextOffset"]?.intValue ?? 0
+        hasNext = json["hasNext"]?.boolValue ?? false
+        summary = FixtureReviewSummary(json: json["summary"]?.objectValue ?? [:])
+        items = (json["items"]?.arrayValue ?? [])
+            .compactMap(\.objectValue)
+            .map(FixtureReviewItem.init(json:))
+    }
+}
+
+public struct FixtureReviewChange: Identifiable, Sendable, Equatable {
+    public var id: String { assetID }
+    public var assetID: String
+    public var before: [String: JSONValue]
+    public var after: [String: JSONValue]
+
+    init(json: [String: JSONValue]) {
+        assetID = json["assetId"]?.stringValue ?? ""
+        before = json["before"]?.objectValue ?? [:]
+        after = json["after"]?.objectValue ?? [:]
+    }
+}
+
+public struct FixtureReviewResult: Sendable, Equatable {
+    public var fixtureID: String
+    public var action: FixtureReviewAction
+    public var anchorAssetID: String
+    public var propagated: Bool
+    public var changes: [FixtureReviewChange]
+
+    init(json: [String: JSONValue]) {
+        fixtureID = json["fixtureId"]?.stringValue ?? ""
+        action = FixtureReviewAction(
+            rawValue: json["action"]?.stringValue ?? "edit-metadata"
+        ) ?? .editMetadata
+        anchorAssetID = json["anchorAssetId"]?.stringValue ?? ""
+        propagated = json["propagated"]?.boolValue ?? false
+        changes = (json["items"]?.arrayValue ?? [])
+            .compactMap(\.objectValue)
+            .map(FixtureReviewChange.init(json:))
+    }
+}
+
 public struct FixtureStateMigrationReport: Sendable, Equatable {
     public var migrationID: String
     public var mode: String
@@ -385,6 +501,55 @@ public actor FixtureWorkflowService {
         return result["fixtureState"]?.objectValue?["items"]?.arrayValue?
             .compactMap(\.objectValue)
             .map(FixtureAssetState.init(json:)) ?? []
+    }
+
+    public func reviewWindow(
+        fixtureID: String,
+        offset: Int = 0,
+        limit: Int = 200,
+        search: String = ""
+    ) async throws -> FixtureReviewWindow {
+        let result = try await run("fixture-review-window", extra: [
+            "fixtureId": .string(fixtureID),
+            "offset": .number(Double(max(0, offset))),
+            "limit": .number(Double(max(1, min(500, limit)))),
+            "search": .string(search),
+        ])
+        return FixtureReviewWindow(
+            json: result["reviewWindow"]?.objectValue ?? [:]
+        )
+    }
+
+    public func applyReview(
+        _ action: FixtureReviewAction,
+        fixtureID: String,
+        assetIDs: [String],
+        anchorAssetID: String,
+        propagate: Bool = false,
+        title: String? = nil,
+        keywords: [String]? = nil,
+        aiReasons: [String] = [],
+        aiNote: String = ""
+    ) async throws -> FixtureReviewResult {
+        var extra: [String: JSONValue] = [
+            "fixtureId": .string(fixtureID),
+            "assetIds": .array(assetIDs.map(JSONValue.string)),
+            "anchorAssetId": .string(anchorAssetID),
+            "reviewAction": .string(action.rawValue),
+            "propagate": .bool(propagate),
+            "aiReasons": .array(aiReasons.map(JSONValue.string)),
+            "aiNote": .string(aiNote),
+        ]
+        if let title {
+            extra["title"] = .string(title)
+        }
+        if let keywords {
+            extra["keywords"] = .array(keywords.map(JSONValue.string))
+        }
+        let result = try await run("fixture-review-apply", extra: extra)
+        return FixtureReviewResult(
+            json: result["reviewAction"]?.objectValue ?? [:]
+        )
     }
 
     public func effectiveAccess(fixtureID: String) async throws -> [EffectiveFixtureAccess] {

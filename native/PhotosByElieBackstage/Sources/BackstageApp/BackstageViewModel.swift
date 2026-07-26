@@ -29,6 +29,7 @@ final class BackstageViewModel: ObservableObject {
         case fixtures = "Fixtures"
         case access = "People & Access"
         case culling = "Culling"
+        case review = "Review"
         case metadata = "Metadata"
         case wasteBasket = "Waste Basket"
         case uploads = "Uploads"
@@ -110,6 +111,21 @@ final class BackstageViewModel: ObservableObject {
     @Published var cullingDecisionTotal = 0
     @Published var isApplyingCullingDecision = false
     @Published var cullingCancellationRequested = false
+    @Published var reviewFixtureID = ""
+    @Published var fixtureReviewWindow: FixtureReviewWindow?
+    @Published var reviewSearch = ""
+    @Published var reviewWindowOffset = 0
+    @Published var reviewWindowLimit = 200
+    @Published var reviewSelection = OwnerSelectionModel<String>()
+    @Published var reviewThumbnails: [String: NSImage] = [:]
+    @Published var reviewTitle = ""
+    @Published var reviewKeywords = ""
+    @Published var reviewAIReasons: Set<String> = []
+    @Published var reviewAINote = ""
+    @Published var reviewLastAction: FixtureReviewAction = .approve
+    @Published var reviewStatus = "Choose a fixture to load its unresolved picked photos."
+    @Published var isRunningReview = false
+    @Published var reviewScrollTargetID: String?
     @Published var metadataAssetID = ""
     @Published var metadataTitle = ""
     @Published var metadataCaption = ""
@@ -461,6 +477,31 @@ final class BackstageViewModel: ObservableObject {
         cullingSelection.focusedID ?? selectedCullingAssetIDs.first
     }
 
+    var reviewItems: [FixtureReviewItem] {
+        fixtureReviewWindow?.items ?? []
+    }
+
+    var selectedReviewAssetIDs: [String] {
+        reviewItems.map(\.id).filter(reviewSelection.selectedIDs.contains)
+    }
+
+    var focusedReviewItem: FixtureReviewItem? {
+        let id = reviewSelection.focusedID ?? selectedReviewAssetIDs.first
+        return reviewItems.first(where: { $0.id == id })
+    }
+
+    var reviewAIReasonChoices: [String] {
+        [
+            "Incorrect title",
+            "Too generic",
+            "Placeholder",
+            "Use keywords",
+            "Add details",
+            "Use shoot context",
+            "Other",
+        ]
+    }
+
     func replaceCullingItems() {
         cullingSelection.replaceItems(visibleCullingAssets.map(\.id))
         selectedPhotoIDs = cullingSelection.selectedIDs
@@ -680,6 +721,9 @@ final class BackstageViewModel: ObservableObject {
                 cullingFixtureID = flatFixtures.first(where: { $0.id == "fixture-expo" })?.id
                     ?? flatFixtures.first(where: { $0.parentID == nil && !$0.isArchived })?.id
                     ?? ""
+            }
+            if reviewFixtureID.isEmpty {
+                reviewFixtureID = cullingFixtureID
             }
             fixtureStatus = "\(flatFixtures.count) fixture nodes loaded."
         }
@@ -1018,13 +1062,289 @@ final class BackstageViewModel: ObservableObject {
             return
         }
         selectedPhotoIDs = Set(ids)
-        if destination == .metadata {
+        if destination == .review {
+            if reviewFixtureID.isEmpty {
+                reviewFixtureID = cullingFixtureID
+            }
+            reviewStatus = "\(ids.count) picked item\(ids.count == 1 ? "" : "s") handed to Review."
+            Task { await loadFixtureReviewWindow(preferredAssetID: ids.first) }
+        } else if destination == .metadata {
             metadataAssetID = ids.first ?? ""
             metadataReviewStatus = "\(ids.count) culling item\(ids.count == 1 ? "" : "s") handed to Metadata."
         } else if destination == .uploads {
             uploadRecoveryStatus = "\(ids.count) picked item\(ids.count == 1 ? "" : "s") retained for the fixture-scoped Uploads workflow."
         }
         selection = destination
+    }
+
+    func selectReviewFixture(_ fixtureID: String) {
+        reviewFixtureID = fixtureID
+        reviewWindowOffset = 0
+        reviewSearch = ""
+        reviewSelection.clear()
+        reviewThumbnails = [:]
+        clearReviewDraft()
+        Task { await loadFixtureReviewWindow() }
+    }
+
+    func moveReviewWindow(forward: Bool) {
+        guard let window = fixtureReviewWindow else { return }
+        if forward, window.hasNext {
+            reviewWindowOffset = window.nextOffset
+        } else if !forward, window.offset > 0 {
+            reviewWindowOffset = max(0, window.offset - window.limit)
+        }
+        Task { await loadFixtureReviewWindow() }
+    }
+
+    func loadFixtureReviewWindow(preferredAssetID: String? = nil) async {
+        guard !reviewFixtureID.isEmpty else {
+            reviewStatus = "Choose a fixture to load its Review queue."
+            return
+        }
+        let currentID = preferredAssetID
+            ?? reviewSelection.focusedID
+            ?? selectedReviewAssetIDs.first
+        isRunningReview = true
+        reviewStatus = "Loading the oldest unresolved picked photos…"
+        defer { isRunningReview = false }
+        do {
+            let window = try await fixtureService.reviewWindow(
+                fixtureID: reviewFixtureID,
+                offset: reviewWindowOffset,
+                limit: reviewWindowLimit,
+                search: reviewSearch
+            )
+            fixtureReviewWindow = window
+            let orderedIDs = window.items.map(\.id)
+            let replacementID = currentID.flatMap { orderedIDs.contains($0) ? $0 : nil }
+                ?? orderedIDs.first
+            reviewSelection = OwnerSelectionModel(
+                orderedIDs: orderedIDs,
+                selectedIDs: Set(replacementID.map { [$0] } ?? []),
+                anchorID: replacementID,
+                focusedID: replacementID
+            )
+            reviewScrollTargetID = replacementID
+            syncReviewDraft()
+            reviewStatus = "\(window.summary.total.formatted()) unresolved picked photo\(window.summary.total == 1 ? "" : "s") • oldest first."
+        } catch {
+            reviewStatus = String(describing: error)
+        }
+    }
+
+    func clickReviewItem(_ id: String, modifiers: NSEvent.ModifierFlags) {
+        reviewSelection.click(
+            id,
+            extending: modifiers.contains(.shift),
+            toggling: modifiers.contains(.command)
+        )
+        syncReviewDraft()
+    }
+
+    func moveReviewSelection(by delta: Int, extending: Bool) {
+        reviewSelection.move(by: delta, extending: extending)
+        reviewScrollTargetID = reviewSelection.focusedID
+        syncReviewDraft()
+    }
+
+    func selectAllReviewItems() {
+        reviewSelection.selectAll()
+        syncReviewDraft()
+    }
+
+    func clearReviewSelection() {
+        reviewSelection.clear()
+        clearReviewDraft()
+    }
+
+    func toggleReviewAIReason(_ reason: String) async {
+        if reviewAIReasons.contains(reason) {
+            reviewAIReasons.remove(reason)
+        } else {
+            reviewAIReasons.insert(reason)
+        }
+        reviewLastAction = .requestAI
+        await applyReviewAction(.requestAI)
+    }
+
+    func applyReviewAction(_ action: FixtureReviewAction, propagate: Bool = false) async {
+        let ids = selectedReviewAssetIDs
+        guard !ids.isEmpty, let anchor = reviewSelection.focusedID ?? ids.first else {
+            reviewStatus = "Select one or more Review items."
+            return
+        }
+        let oldItems = reviewItems
+        let oldIndex = oldItems.firstIndex(where: { $0.id == anchor }) ?? 0
+        reviewLastAction = action
+        isRunningReview = true
+        reviewStatus = propagate
+            ? "Propagating \(reviewActionLabel(action).lowercased()) through the two-hour shoot window…"
+            : "Applying \(reviewActionLabel(action).lowercased())…"
+        defer { isRunningReview = false }
+        do {
+            let result = try await fixtureService.applyReview(
+                action,
+                fixtureID: reviewFixtureID,
+                assetIDs: ids,
+                anchorAssetID: anchor,
+                propagate: propagate,
+                title: action == .editMetadata || action == .propagateTitle ? reviewTitle : nil,
+                keywords: action == .editMetadata || action == .propagateKeywords
+                    ? parsedReviewKeywords()
+                    : nil,
+                aiReasons: action == .requestAI ? Array(reviewAIReasons).sorted() : [],
+                aiNote: action == .requestAI ? reviewAINote : ""
+            )
+            if action == .approve || action == .hide {
+                reviewAIReasons = []
+                reviewAINote = ""
+            }
+            let window = try await fixtureService.reviewWindow(
+                fixtureID: reviewFixtureID,
+                offset: reviewWindowOffset,
+                limit: reviewWindowLimit,
+                search: reviewSearch
+            )
+            fixtureReviewWindow = window
+            let orderedIDs = window.items.map(\.id)
+            let keepsCurrent = orderedIDs.contains(anchor)
+            let replacementID = keepsCurrent
+                ? anchor
+                : orderedIDs.indices.contains(oldIndex)
+                    ? orderedIDs[oldIndex]
+                    : orderedIDs.last
+            reviewSelection = OwnerSelectionModel(
+                orderedIDs: orderedIDs,
+                selectedIDs: Set(replacementID.map { [$0] } ?? []),
+                anchorID: replacementID,
+                focusedID: replacementID
+            )
+            reviewScrollTargetID = replacementID
+            syncReviewDraft()
+            reviewStatus = "\(reviewActionLabel(action)) affected \(result.changes.count.formatted()) item\(result.changes.count == 1 ? "" : "s")."
+        } catch {
+            reviewStatus = "\(reviewActionLabel(action)) failed: \(error)"
+        }
+    }
+
+    func saveReviewMetadata() async {
+        await applyReviewAction(.editMetadata)
+    }
+
+    func propagateReviewTitle() async {
+        await applyReviewAction(.propagateTitle, propagate: true)
+    }
+
+    func propagateReviewKeywords() async {
+        await applyReviewAction(.propagateKeywords, propagate: true)
+    }
+
+    func propagateLastReviewAction() async {
+        guard [.approve, .hide, .requestAI].contains(reviewLastAction) else {
+            reviewStatus = "Choose Approve, Hide, or Request AI before using main Propagate."
+            return
+        }
+        await applyReviewAction(reviewLastAction, propagate: true)
+    }
+
+    func loadReviewThumbnail(for item: FixtureReviewItem) async {
+        guard reviewThumbnails[item.id] == nil else { return }
+        do {
+            let preview = try await photoLibrary.preview(
+                localIdentifier: item.photoLibraryIdentifier,
+                maxPixelSize: 420
+            )
+            guard let image = NSImage(data: preview.jpegData) else { return }
+            if reviewThumbnails.count >= 300, let oldest = reviewThumbnails.keys.first {
+                reviewThumbnails.removeValue(forKey: oldest)
+            }
+            reviewThumbnails[item.id] = image
+        } catch {
+            // A missing thumbnail must not block metadata review.
+        }
+    }
+
+    func prepareReviewQuickLookURLs() async -> [URL] {
+        let ids = selectedReviewAssetIDs
+        guard !ids.isEmpty else {
+            reviewStatus = "Select one or more Review items to preview."
+            return []
+        }
+        let directory = FileManager.default.urls(
+            for: .cachesDirectory,
+            in: .userDomainMask
+        )[0].appendingPathComponent("com.photosbyelie.backstage/ReviewQuickLook", isDirectory: true)
+        isRunningReview = true
+        defer { isRunningReview = false }
+        do {
+            try? FileManager.default.removeItem(at: directory)
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            var urls: [URL] = []
+            for id in ids {
+                guard let item = reviewItems.first(where: { $0.id == id }) else { continue }
+                if item.mediaType == "video" {
+                    urls.append(try await photoLibrary.exportOriginal(
+                        localIdentifier: item.photoLibraryIdentifier,
+                        to: directory
+                    ).destination)
+                } else {
+                    let preview = try await photoLibrary.preview(
+                        localIdentifier: item.photoLibraryIdentifier,
+                        maxPixelSize: 4_000
+                    )
+                    let destination = directory
+                        .appendingPathComponent(id.replacingOccurrences(of: "/", with: "_"))
+                        .appendingPathExtension("jpg")
+                    try preview.jpegData.write(to: destination, options: .atomic)
+                    urls.append(destination)
+                }
+            }
+            reviewStatus = "Prepared \(urls.count.formatted()) private Quick Look item\(urls.count == 1 ? "" : "s")."
+            return urls
+        } catch {
+            reviewStatus = String(describing: error)
+            return []
+        }
+    }
+
+    private func syncReviewDraft() {
+        guard let item = focusedReviewItem else {
+            clearReviewDraft()
+            return
+        }
+        reviewTitle = item.title
+        reviewKeywords = item.keywords.joined(separator: ", ")
+        reviewAIReasons = Set(item.aiReasons)
+        reviewAINote = item.aiNote
+        if item.editorialState == "requesting-ai" {
+            reviewLastAction = .requestAI
+        }
+    }
+
+    private func clearReviewDraft() {
+        reviewTitle = ""
+        reviewKeywords = ""
+        reviewAIReasons = []
+        reviewAINote = ""
+    }
+
+    private func parsedReviewKeywords() -> [String] {
+        reviewKeywords
+            .split(whereSeparator: { $0 == "," || $0 == "\n" })
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+    }
+
+    private func reviewActionLabel(_ action: FixtureReviewAction) -> String {
+        switch action {
+        case .approve: "Approve"
+        case .hide: "Hide"
+        case .requestAI: reviewAIReasons.isEmpty ? "Clear AI request" : "Request AI"
+        case .editMetadata: "Save title and keywords"
+        case .propagateTitle: "Propagate title"
+        case .propagateKeywords: "Propagate keywords"
+        }
     }
 
     func refreshCullingDecisions() async {
@@ -1733,6 +2053,12 @@ final class BackstageViewModel: ObservableObject {
     }
 
     private func photoLibraryIdentifier(for assetID: String) -> String {
+        if let identifier = fixtureReviewWindow?.items
+            .first(where: { $0.id == assetID })?
+            .photoLibraryIdentifier,
+           !identifier.isEmpty {
+            return identifier
+        }
         if let identifier = fixtureCullingWindow?.items
             .first(where: { $0.id == assetID })?
             .photoLibraryIdentifier,

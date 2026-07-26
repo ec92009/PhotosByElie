@@ -29,6 +29,16 @@ FIXTURE_PLACEMENT_STATES = {"undecided", "picked", "hidden"}
 FIXTURE_ELIGIBILITY_STATES = {"active", "dormant"}
 FIXTURE_STATE_MIGRATION_ID = "fixture-state-v1"
 CULLING_VIEWS = {"undecided", "picked", "hidden", "all-active"}
+EDITORIAL_STATES = {"unreviewed", "requesting-ai", "proposed", "approved"}
+DELIVERY_STATES = {"not-ready", "needs-upload", "uploading", "live", "failed"}
+REVIEW_ACTIONS = {
+    "approve",
+    "hide",
+    "request-ai",
+    "edit-metadata",
+    "propagate-title",
+    "propagate-keywords",
+}
 
 
 def now_iso() -> str:
@@ -219,6 +229,54 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS idx_fixture_asset_decision_events_asset
           ON fixture_asset_decision_events(fixture_id, asset_id, created_at);
 
+        CREATE TABLE IF NOT EXISTS asset_editorial_state (
+          asset_id TEXT PRIMARY KEY,
+          editorial_state TEXT NOT NULL DEFAULT 'unreviewed'
+            CHECK (editorial_state IN ('unreviewed', 'requesting-ai', 'proposed', 'approved')),
+          ai_reasons_json TEXT NOT NULL DEFAULT '[]',
+          ai_note TEXT NOT NULL DEFAULT '',
+          ai_attempt_count INTEGER NOT NULL DEFAULT 0,
+          ai_last_error TEXT NOT NULL DEFAULT '',
+          requested_at TEXT,
+          proposed_at TEXT,
+          approved_at TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (asset_id) REFERENCES sidecar_assets(asset_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_asset_editorial_state_queue
+          ON asset_editorial_state(editorial_state, updated_at, asset_id);
+
+        CREATE TABLE IF NOT EXISTS asset_delivery_state (
+          asset_id TEXT PRIMARY KEY,
+          delivery_state TEXT NOT NULL DEFAULT 'not-ready'
+            CHECK (delivery_state IN ('not-ready', 'needs-upload', 'uploading', 'live', 'failed')),
+          source_version_hash TEXT NOT NULL DEFAULT '',
+          last_error TEXT NOT NULL DEFAULT '',
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (asset_id) REFERENCES sidecar_assets(asset_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_asset_delivery_state_queue
+          ON asset_delivery_state(delivery_state, updated_at, asset_id);
+
+        CREATE TABLE IF NOT EXISTS asset_editorial_events (
+          event_id TEXT PRIMARY KEY,
+          asset_id TEXT NOT NULL,
+          fixture_id TEXT,
+          action TEXT NOT NULL,
+          before_state TEXT NOT NULL,
+          after_state TEXT NOT NULL,
+          before_json TEXT NOT NULL DEFAULT '{}',
+          after_json TEXT NOT NULL DEFAULT '{}',
+          actor TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (asset_id) REFERENCES sidecar_assets(asset_id),
+          FOREIGN KEY (fixture_id) REFERENCES fixtures(fixture_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_asset_editorial_events_asset
+          ON asset_editorial_events(asset_id, created_at);
+
         CREATE TABLE IF NOT EXISTS workflow_migration_receipts (
           migration_id TEXT PRIMARY KEY,
           state TEXT NOT NULL CHECK (state IN ('planned', 'applied', 'reverted', 'failed')),
@@ -302,6 +360,40 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         )
     conn.execute(
         "UPDATE fixtures SET candidate_mode = CASE WHEN parent_fixture_id IS NULL THEN 'photos-library' ELSE 'inherited' END"
+    )
+    timestamp = now_iso()
+    conn.execute(
+        """
+        INSERT OR IGNORE INTO asset_editorial_state (
+          asset_id, editorial_state, approved_at, created_at, updated_at
+        )
+        SELECT a.asset_id,
+               CASE COALESCE(d.metadata_state, 'unreviewed')
+                 WHEN 'approved' THEN 'approved'
+                 WHEN 'proposed' THEN 'proposed'
+                 ELSE 'unreviewed'
+               END,
+               CASE WHEN d.metadata_state = 'approved' THEN COALESCE(d.updated_at, ?) END,
+               COALESCE(d.created_at, a.indexed_at, ?),
+               COALESCE(d.updated_at, a.updated_at, ?)
+        FROM sidecar_assets AS a
+        LEFT JOIN sidecar_decisions AS d ON d.asset_id = a.asset_id
+        """,
+        (timestamp, timestamp, timestamp),
+    )
+    conn.execute(
+        """
+        INSERT OR IGNORE INTO asset_delivery_state (
+          asset_id, delivery_state, created_at, updated_at
+        )
+        SELECT a.asset_id,
+               CASE WHEN e.editorial_state = 'approved' THEN 'needs-upload' ELSE 'not-ready' END,
+               COALESCE(a.indexed_at, ?),
+               COALESCE(a.updated_at, ?)
+        FROM sidecar_assets AS a
+        JOIN asset_editorial_state AS e ON e.asset_id = a.asset_id
+        """,
+        (timestamp, timestamp),
     )
 
 
@@ -1079,6 +1171,547 @@ def fixture_culling_window(
             "picked": int(summary["picked"] or 0),
             "hidden": int(summary["hidden"] or 0),
         },
+        "items": items,
+    }
+
+
+def _fixture_review_from_sql(
+    fixture: sqlite3.Row,
+) -> tuple[str, list[Any]]:
+    if fixture["parent_fixture_id"]:
+        return (
+            """
+            sidecar_assets AS a
+            JOIN fixture_asset_decisions AS current_decision
+              ON current_decision.asset_id = a.asset_id
+             AND current_decision.fixture_id = ?
+             AND current_decision.placement_state = 'picked'
+             AND current_decision.eligibility_state = 'active'
+            """,
+            [str(fixture["fixture_id"])],
+        )
+    return (
+        """
+        sidecar_assets AS a
+        JOIN fixture_asset_decisions AS current_decision
+          ON current_decision.asset_id = a.asset_id
+         AND current_decision.fixture_id = ?
+         AND current_decision.placement_state = 'picked'
+         AND current_decision.eligibility_state = 'active'
+        """,
+        [str(fixture["fixture_id"])],
+    )
+
+
+def _fixture_review_predicates(search: str = "") -> tuple[list[str], list[Any]]:
+    predicates = [
+        "(a.missing_at IS NULL OR a.missing_at = '')",
+        "editorial.editorial_state != 'approved'",
+        """
+        NOT EXISTS (
+          SELECT 1 FROM sidecar_tombstones AS tombstone
+          WHERE tombstone.asset_id = a.asset_id
+            AND tombstone.tombstone_state = 'active'
+        )
+        """,
+    ]
+    params: list[Any] = []
+    columns = (
+        "a.asset_id",
+        "a.filename",
+        "a.photos_title",
+        "a.photos_keywords_json",
+        "a.location_label",
+        "decision.title",
+        "decision.keywords_json",
+    )
+    for term in re.findall(r"[^\s,;]+", str(search or "").casefold())[:8]:
+        escaped = term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        predicates.append(
+            "(" + " OR ".join(
+                f"lower(COALESCE({column}, '')) LIKE ? ESCAPE '\\'"
+                for column in columns
+            ) + ")"
+        )
+        params.extend([f"%{escaped}%"] * len(columns))
+    return predicates, params
+
+
+def _review_item(row: sqlite3.Row) -> dict[str, Any]:
+    source_anchor = str(row["source_anchor"] or "")
+    local_identifier = (
+        source_anchor.removeprefix("apple-photos://")
+        if source_anchor.startswith("apple-photos://")
+        else str(row["asset_id"])
+    )
+    return {
+        "assetId": str(row["asset_id"]),
+        "photoLibraryIdentifier": local_identifier,
+        "title": str(row["title"] or ""),
+        "caption": str(row["caption"] or ""),
+        "keywords": _read_json(row["keywords_json"], []),
+        "filename": str(row["filename"] or ""),
+        "mediaType": str(row["media_type"] or "photo"),
+        "capturedAt": str(row["captured_at"] or ""),
+        "rating": int(row["rating"] or 0),
+        "color": str(row["color"] or ""),
+        "editorialState": str(row["editorial_state"] or "unreviewed"),
+        "aiReasons": _read_json(row["ai_reasons_json"], []),
+        "aiNote": str(row["ai_note"] or ""),
+        "aiAttemptCount": int(row["ai_attempt_count"] or 0),
+        "aiLastError": str(row["ai_last_error"] or ""),
+        "deliveryState": str(row["delivery_state"] or "not-ready"),
+    }
+
+
+def fixture_review_window(
+    repo_root: Path,
+    fixture_id: str,
+    *,
+    offset: int = 0,
+    limit: int = 200,
+    search: str = "",
+) -> dict[str, Any]:
+    """Return the oldest unresolved effective picks for one fixture."""
+    safe_offset = max(0, int(offset or 0))
+    safe_limit = max(1, min(500, int(limit or 200)))
+    with connect(repo_root) as conn:
+        fixture = conn.execute(
+            """
+            SELECT fixture_id, parent_fixture_id
+            FROM fixtures
+            WHERE fixture_id = ? AND archived_at IS NULL
+            """,
+            (fixture_id,),
+        ).fetchone()
+        if not fixture:
+            raise ValueError("fixture does not exist or is archived")
+        from_sql, base_params = _fixture_review_from_sql(fixture)
+        predicates, search_params = _fixture_review_predicates(search)
+        joins = """
+            LEFT JOIN sidecar_decisions AS decision
+              ON decision.asset_id = a.asset_id
+            JOIN asset_editorial_state AS editorial
+              ON editorial.asset_id = a.asset_id
+            JOIN asset_delivery_state AS delivery
+              ON delivery.asset_id = a.asset_id
+        """
+        params = [*base_params, *search_params]
+        where_sql = " AND ".join(predicates)
+        summary = conn.execute(
+            f"""
+            SELECT count(*) total,
+                   sum(CASE WHEN editorial.editorial_state = 'unreviewed' THEN 1 ELSE 0 END) unreviewed,
+                   sum(CASE WHEN editorial.editorial_state = 'requesting-ai' THEN 1 ELSE 0 END) requesting_ai,
+                   sum(CASE WHEN editorial.editorial_state = 'proposed' THEN 1 ELSE 0 END) proposed
+            FROM {from_sql}
+            {joins}
+            WHERE {where_sql}
+            """,
+            params,
+        ).fetchone()
+        rows = conn.execute(
+            f"""
+            SELECT a.asset_id, a.source_anchor, a.filename, a.media_type, a.captured_at,
+                   COALESCE(NULLIF(decision.title, ''), NULLIF(a.photos_title, ''), '') title,
+                   COALESCE(decision.caption, '') caption,
+                   CASE
+                     WHEN decision.keywords_json IS NOT NULL AND decision.keywords_json != '[]'
+                       THEN decision.keywords_json
+                     ELSE COALESCE(a.photos_keywords_json, '[]')
+                   END keywords_json,
+                   COALESCE(decision.rating, 0) rating,
+                   COALESCE(decision.color, '') color,
+                   editorial.editorial_state, editorial.ai_reasons_json, editorial.ai_note,
+                   editorial.ai_attempt_count, editorial.ai_last_error,
+                   delivery.delivery_state
+            FROM {from_sql}
+            {joins}
+            WHERE {where_sql}
+            ORDER BY COALESCE(a.captured_at, '') ASC, a.asset_id ASC
+            LIMIT ? OFFSET ?
+            """,
+            [*params, safe_limit, safe_offset],
+        ).fetchall()
+    total = int(summary["total"] or 0)
+    return {
+        "ok": True,
+        "readOnly": True,
+        "fixtureId": fixture_id,
+        "offset": safe_offset,
+        "limit": safe_limit,
+        "count": len(rows),
+        "nextOffset": safe_offset + len(rows),
+        "hasNext": safe_offset + len(rows) < total,
+        "summary": {
+            "total": total,
+            "unreviewed": int(summary["unreviewed"] or 0),
+            "requestingAI": int(summary["requesting_ai"] or 0),
+            "proposed": int(summary["proposed"] or 0),
+        },
+        "items": [_review_item(row) for row in rows],
+    }
+
+
+def _ensure_global_decision(
+    conn: sqlite3.Connection,
+    asset_id: str,
+    timestamp: str,
+) -> sqlite3.Row:
+    conn.execute(
+        """
+        INSERT OR IGNORE INTO sidecar_decisions (asset_id, created_at, updated_at)
+        VALUES (?, ?, ?)
+        """,
+        (asset_id, timestamp, timestamp),
+    )
+    return conn.execute(
+        "SELECT * FROM sidecar_decisions WHERE asset_id = ?",
+        (asset_id,),
+    ).fetchone()
+
+
+def _review_target_ids(
+    conn: sqlite3.Connection,
+    fixture: sqlite3.Row,
+    anchor_asset_id: str,
+    *,
+    include_anchor: bool,
+) -> list[str]:
+    anchor = conn.execute(
+        "SELECT captured_at FROM sidecar_assets WHERE asset_id = ?",
+        (anchor_asset_id,),
+    ).fetchone()
+    if not anchor or not anchor["captured_at"]:
+        return [anchor_asset_id] if include_anchor else []
+    from_sql, base_params = _fixture_review_from_sql(fixture)
+    predicates, _ = _fixture_review_predicates("")
+    operator = ">=" if include_anchor else ">"
+    rows = conn.execute(
+        f"""
+        SELECT a.asset_id
+        FROM {from_sql}
+        LEFT JOIN sidecar_decisions AS decision ON decision.asset_id = a.asset_id
+        JOIN asset_editorial_state AS editorial ON editorial.asset_id = a.asset_id
+        WHERE {' AND '.join(predicates)}
+          AND datetime(a.captured_at) {operator} datetime(?)
+          AND datetime(a.captured_at) <= datetime(?, '+2 hours')
+        ORDER BY datetime(a.captured_at), a.asset_id
+        """,
+        [*base_params, anchor["captured_at"], anchor["captured_at"]],
+    ).fetchall()
+    return [str(row["asset_id"]) for row in rows]
+
+
+def _set_delivery_state(
+    conn: sqlite3.Connection,
+    asset_id: str,
+    state: str,
+    timestamp: str,
+) -> None:
+    if state not in DELIVERY_STATES:
+        raise ValueError("delivery state is invalid")
+    conn.execute(
+        """
+        INSERT INTO asset_delivery_state (
+          asset_id, delivery_state, created_at, updated_at
+        ) VALUES (?, ?, ?, ?)
+        ON CONFLICT(asset_id) DO UPDATE SET
+          delivery_state = excluded.delivery_state,
+          updated_at = excluded.updated_at
+        """,
+        (asset_id, state, timestamp, timestamp),
+    )
+
+
+def _set_fixture_review_placement(
+    conn: sqlite3.Connection,
+    fixture_id: str,
+    asset_id: str,
+    placement_state: str,
+    *,
+    actor: str,
+    reason: str,
+    timestamp: str,
+) -> None:
+    existing = conn.execute(
+        """
+        SELECT placement_state, eligibility_state
+        FROM fixture_asset_decisions
+        WHERE fixture_id = ? AND asset_id = ?
+        """,
+        (fixture_id, asset_id),
+    ).fetchone()
+    before_state = str(existing["placement_state"]) if existing else "undecided"
+    before_eligibility = str(existing["eligibility_state"]) if existing else "active"
+    conn.execute(
+        """
+        INSERT INTO fixture_asset_decisions (
+          fixture_id, asset_id, placement_state, eligibility_state,
+          source, last_action, created_at, updated_at
+        ) VALUES (?, ?, ?, 'dormant', 'native', ?, ?, ?)
+        ON CONFLICT(fixture_id, asset_id) DO UPDATE SET
+          placement_state = excluded.placement_state,
+          source = 'native',
+          last_action = excluded.last_action,
+          updated_at = excluded.updated_at
+        """,
+        (
+            fixture_id,
+            asset_id,
+            placement_state,
+            f"review-{placement_state}",
+            timestamp,
+            timestamp,
+        ),
+    )
+    _recompute_fixture_eligibility(conn)
+    after = conn.execute(
+        """
+        SELECT eligibility_state
+        FROM fixture_asset_decisions
+        WHERE fixture_id = ? AND asset_id = ?
+        """,
+        (fixture_id, asset_id),
+    ).fetchone()
+    conn.execute(
+        """
+        INSERT INTO fixture_asset_decision_events (
+          event_id, fixture_id, asset_id, before_state, after_state,
+          before_eligibility, after_eligibility, action, actor, reason, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            f"fde-{uuid.uuid4().hex[:16]}",
+            fixture_id,
+            asset_id,
+            before_state,
+            placement_state,
+            before_eligibility,
+            str(after["eligibility_state"]),
+            placement_state,
+            actor,
+            reason,
+            timestamp,
+        ),
+    )
+
+
+def apply_fixture_review_action(
+    repo_root: Path,
+    fixture_id: str,
+    asset_ids: Iterable[str],
+    action: str,
+    *,
+    anchor_asset_id: str = "",
+    propagate: bool = False,
+    title: str | None = None,
+    keywords: Iterable[Any] | None = None,
+    ai_reasons: Iterable[Any] | None = None,
+    ai_note: str = "",
+    actor: str = "owner",
+) -> dict[str, Any]:
+    """Apply one audited Review action, including server-side shoot propagation."""
+    clean_action = str(action or "").strip().casefold()
+    if clean_action not in REVIEW_ACTIONS:
+        raise ValueError("unsupported fixture review action")
+    clean_ids = _unique(asset_ids)
+    clean_anchor = str(anchor_asset_id or "").strip() or (clean_ids[-1] if clean_ids else "")
+    if not clean_anchor:
+        raise ValueError("at least one review asset is required")
+    timestamp = now_iso()
+    with connect(repo_root) as conn:
+        fixture = conn.execute(
+            """
+            SELECT fixture_id, parent_fixture_id
+            FROM fixtures
+            WHERE fixture_id = ? AND archived_at IS NULL
+            """,
+            (fixture_id,),
+        ).fetchone()
+        if not fixture:
+            raise ValueError("fixture does not exist or is archived")
+        if propagate or clean_action in {"propagate-title", "propagate-keywords"}:
+            propagated = _review_target_ids(
+                conn,
+                fixture,
+                clean_anchor,
+                include_anchor=clean_action not in {"propagate-title", "propagate-keywords"},
+            )
+            clean_ids = _unique([*clean_ids, *propagated])
+        if not clean_ids:
+            raise ValueError("review action has no eligible targets")
+
+        source_decision = _ensure_global_decision(conn, clean_anchor, timestamp)
+        source_title = (
+            str(title).strip()
+            if title is not None
+            else str(source_decision["title"] or "")
+        )
+        source_keywords = (
+            _unique(keywords or [])
+            if keywords is not None
+            else _read_json(source_decision["keywords_json"], [])
+        )
+        reasons = _unique(ai_reasons or [])
+        items: list[dict[str, Any]] = []
+        for asset_id in clean_ids:
+            if not conn.execute(
+                "SELECT 1 FROM sidecar_assets WHERE asset_id = ?",
+                (asset_id,),
+            ).fetchone():
+                raise ValueError(f"asset is not indexed: {asset_id}")
+            before_editorial = conn.execute(
+                "SELECT * FROM asset_editorial_state WHERE asset_id = ?",
+                (asset_id,),
+            ).fetchone()
+            if not before_editorial:
+                raise ValueError(f"editorial state is missing: {asset_id}")
+            decision = _ensure_global_decision(conn, asset_id, timestamp)
+            before = {
+                "editorialState": str(before_editorial["editorial_state"]),
+                "aiReasons": _read_json(before_editorial["ai_reasons_json"], []),
+                "aiNote": str(before_editorial["ai_note"] or ""),
+                "title": str(decision["title"] or ""),
+                "keywords": _read_json(decision["keywords_json"], []),
+            }
+            after_state = before["editorialState"]
+            after_reasons = before["aiReasons"]
+            after_note = before["aiNote"]
+
+            if clean_action == "hide":
+                _set_fixture_review_placement(
+                    conn,
+                    fixture_id,
+                    asset_id,
+                    "hidden",
+                    actor=actor,
+                    reason="native review hide",
+                    timestamp=timestamp,
+                )
+                after_state = "unreviewed"
+                after_reasons = []
+                after_note = ""
+            elif clean_action == "approve":
+                after_state = "approved"
+                after_reasons = []
+                after_note = ""
+                conn.execute(
+                    """
+                    UPDATE sidecar_decisions
+                    SET metadata_state = 'approved',
+                        title = ?, keywords_json = ?,
+                        last_action = 'approve', updated_at = ?
+                    WHERE asset_id = ?
+                    """,
+                    (
+                        str(title).strip() if title is not None else str(decision["title"] or ""),
+                        _json(_unique(keywords or [])) if keywords is not None else str(decision["keywords_json"] or "[]"),
+                        timestamp,
+                        asset_id,
+                    ),
+                )
+                _set_delivery_state(conn, asset_id, "needs-upload", timestamp)
+            elif clean_action == "request-ai":
+                after_state = "requesting-ai" if reasons else "unreviewed"
+                after_reasons = reasons
+                after_note = str(ai_note or "").strip() if reasons else ""
+                _set_fixture_review_placement(
+                    conn,
+                    fixture_id,
+                    asset_id,
+                    "picked",
+                    actor=actor,
+                    reason="native review AI request",
+                    timestamp=timestamp,
+                )
+            elif clean_action == "edit-metadata":
+                if title is not None:
+                    conn.execute(
+                        "UPDATE sidecar_decisions SET title = ?, last_action = 'metadata', updated_at = ? WHERE asset_id = ?",
+                        (str(title).strip(), timestamp, asset_id),
+                    )
+                if keywords is not None:
+                    conn.execute(
+                        "UPDATE sidecar_decisions SET keywords_json = ?, last_action = 'metadata', updated_at = ? WHERE asset_id = ?",
+                        (_json(_unique(keywords)), timestamp, asset_id),
+                    )
+                if after_state == "approved":
+                    _set_delivery_state(conn, asset_id, "needs-upload", timestamp)
+            elif clean_action == "propagate-title":
+                conn.execute(
+                    "UPDATE sidecar_decisions SET title = ?, last_action = 'metadata', updated_at = ? WHERE asset_id = ?",
+                    (source_title, timestamp, asset_id),
+                )
+                if after_state == "approved":
+                    _set_delivery_state(conn, asset_id, "needs-upload", timestamp)
+            elif clean_action == "propagate-keywords":
+                conn.execute(
+                    "UPDATE sidecar_decisions SET keywords_json = ?, last_action = 'metadata', updated_at = ? WHERE asset_id = ?",
+                    (_json(source_keywords), timestamp, asset_id),
+                )
+                if after_state == "approved":
+                    _set_delivery_state(conn, asset_id, "needs-upload", timestamp)
+
+            approved_at = timestamp if after_state == "approved" else before_editorial["approved_at"]
+            requested_at = timestamp if after_state == "requesting-ai" else None
+            conn.execute(
+                """
+                UPDATE asset_editorial_state
+                SET editorial_state = ?, ai_reasons_json = ?, ai_note = ?,
+                    requested_at = ?, approved_at = ?, updated_at = ?
+                WHERE asset_id = ?
+                """,
+                (
+                    after_state,
+                    _json(after_reasons),
+                    after_note,
+                    requested_at,
+                    approved_at,
+                    timestamp,
+                    asset_id,
+                ),
+            )
+            updated_decision = conn.execute(
+                "SELECT title, keywords_json FROM sidecar_decisions WHERE asset_id = ?",
+                (asset_id,),
+            ).fetchone()
+            after = {
+                "editorialState": after_state,
+                "aiReasons": after_reasons,
+                "aiNote": after_note,
+                "title": str(updated_decision["title"] or ""),
+                "keywords": _read_json(updated_decision["keywords_json"], []),
+            }
+            conn.execute(
+                """
+                INSERT INTO asset_editorial_events (
+                  event_id, asset_id, fixture_id, action, before_state, after_state,
+                  before_json, after_json, actor, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    f"aee-{uuid.uuid4().hex[:16]}",
+                    asset_id,
+                    fixture_id,
+                    clean_action,
+                    before["editorialState"],
+                    after_state,
+                    _json(before),
+                    _json(after),
+                    actor,
+                    timestamp,
+                ),
+            )
+            items.append({"assetId": asset_id, "before": before, "after": after})
+        conn.commit()
+    return {
+        "ok": True,
+        "fixtureId": fixture_id,
+        "action": clean_action,
+        "anchorAssetId": clean_anchor,
+        "propagated": bool(propagate or clean_action.startswith("propagate-")),
+        "count": len(items),
         "items": items,
     }
 

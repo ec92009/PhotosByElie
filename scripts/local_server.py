@@ -362,6 +362,8 @@ from fixture_pipeline import (  # noqa: E402
     fixture_tree,
     fixture_candidate_asset_ids,
     fixture_culling_window,
+    fixture_review_window,
+    apply_fixture_review_action,
     effective_fixture_access_grants,
     get_pool,
     link_deliverable,
@@ -1837,6 +1839,34 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
                 str(manifest.get("placementState") or ""),
                 actor="owner-connector",
                 reason=str(manifest.get("reason") or "native fixture culling"),
+            ),
+        })
+    elif mode == "fixture-review-window":
+        result.update({
+            "readOnly": True,
+            "reviewWindow": fixture_review_window(
+                repo_root,
+                str(manifest.get("fixtureId") or ""),
+                offset=int(manifest.get("offset") or 0),
+                limit=int(manifest.get("limit") or 200),
+                search=str(manifest.get("search") or ""),
+            ),
+        })
+    elif mode == "fixture-review-apply":
+        result.update({
+            "readOnly": False,
+            "reviewAction": apply_fixture_review_action(
+                repo_root,
+                str(manifest.get("fixtureId") or ""),
+                manifest.get("assetIds") or [],
+                str(manifest.get("reviewAction") or ""),
+                anchor_asset_id=str(manifest.get("anchorAssetId") or ""),
+                propagate=bool(manifest.get("propagate")),
+                title=manifest.get("title") if "title" in manifest else None,
+                keywords=manifest.get("keywords") if "keywords" in manifest else None,
+                ai_reasons=manifest.get("aiReasons") or [],
+                ai_note=str(manifest.get("aiNote") or ""),
+                actor="owner-connector",
             ),
         })
     elif mode == "fixture-access-effective":

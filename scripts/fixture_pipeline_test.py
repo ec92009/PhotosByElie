@@ -19,6 +19,8 @@ from fixture_pipeline import (
     fixture_tree,
     fixture_candidate_asset_ids,
     fixture_culling_window,
+    fixture_review_window,
+    apply_fixture_review_action,
     effective_fixture_access_grants,
     list_pools,
     list_placements,
@@ -233,6 +235,160 @@ class FixturePipelineTest(unittest.TestCase):
             )["items"],
             [],
         )
+
+    def test_review_is_oldest_first_and_global_approval_removes_every_queue(self):
+        root = create_fixture(self.root, "Root", fixture_id="root")
+        child = create_fixture(
+            self.root,
+            "Child",
+            parent_fixture_id=root["fixtureId"],
+            fixture_id="child",
+        )
+        set_fixture_asset_state(
+            self.root,
+            root["fixtureId"],
+            ["asset-1", "asset-2", "asset-3"],
+            "picked",
+        )
+        set_fixture_asset_state(
+            self.root,
+            child["fixtureId"],
+            ["asset-1", "asset-2"],
+            "picked",
+        )
+        self.assertEqual(
+            [item["assetId"] for item in fixture_review_window(self.root, root["fixtureId"])["items"]],
+            ["asset-1", "asset-2", "asset-3"],
+        )
+        apply_fixture_review_action(
+            self.root,
+            root["fixtureId"],
+            ["asset-1"],
+            "approve",
+            title="Approved globally",
+            keywords=["Family"],
+        )
+        self.assertEqual(
+            [item["assetId"] for item in fixture_review_window(self.root, root["fixtureId"])["items"]],
+            ["asset-2", "asset-3"],
+        )
+        self.assertEqual(
+            [item["assetId"] for item in fixture_review_window(self.root, child["fixtureId"])["items"]],
+            ["asset-2"],
+        )
+        with connect(self.root) as conn:
+            self.assertEqual(
+                conn.execute(
+                    "SELECT placement_state FROM fixture_asset_decisions WHERE fixture_id = 'root' AND asset_id = 'asset-1'"
+                ).fetchone()[0],
+                "picked",
+            )
+            self.assertEqual(
+                conn.execute(
+                    "SELECT delivery_state FROM asset_delivery_state WHERE asset_id = 'asset-1'"
+                ).fetchone()[0],
+                "needs-upload",
+            )
+
+    def test_review_hide_is_fixture_local_and_ai_request_is_mutually_exclusive(self):
+        root = create_fixture(self.root, "Root", fixture_id="root")
+        other = create_fixture(self.root, "Other", fixture_id="other")
+        for fixture_id in (root["fixtureId"], other["fixtureId"]):
+            set_fixture_asset_state(self.root, fixture_id, ["asset-1"], "picked")
+        requested = apply_fixture_review_action(
+            self.root,
+            root["fixtureId"],
+            ["asset-1"],
+            "request-ai",
+            ai_reasons=["weak title", "missing location"],
+            ai_note="Use the visible landmark.",
+        )
+        self.assertEqual(requested["items"][0]["after"]["editorialState"], "requesting-ai")
+        hidden = apply_fixture_review_action(
+            self.root,
+            root["fixtureId"],
+            ["asset-1"],
+            "hide",
+        )
+        self.assertEqual(hidden["items"][0]["after"]["editorialState"], "unreviewed")
+        self.assertEqual(hidden["items"][0]["after"]["aiReasons"], [])
+        with connect(self.root) as conn:
+            states = {
+                row["fixture_id"]: row["placement_state"]
+                for row in conn.execute(
+                    "SELECT fixture_id, placement_state FROM fixture_asset_decisions WHERE asset_id = 'asset-1'"
+                ).fetchall()
+            }
+        self.assertEqual(states["root"], "hidden")
+        self.assertEqual(states["other"], "picked")
+        cleared = apply_fixture_review_action(
+            self.root,
+            other["fixtureId"],
+            ["asset-1"],
+            "request-ai",
+            ai_reasons=[],
+        )
+        self.assertEqual(cleared["items"][0]["after"]["editorialState"], "unreviewed")
+
+    def test_review_propagation_crosses_visible_page_with_two_hour_boundary(self):
+        upsert_assets(self.root, [
+            {
+                "localIdentifier": "asset-4",
+                "filename": "D.JPG",
+                "mediaType": "photo",
+                "creationDate": "2026-07-15T11:59:00Z",
+            },
+            {
+                "localIdentifier": "asset-5",
+                "filename": "E.JPG",
+                "mediaType": "photo",
+                "creationDate": "2026-07-15T12:01:00Z",
+            },
+        ])
+        root = create_fixture(self.root, "Root", fixture_id="root")
+        set_fixture_asset_state(
+            self.root,
+            root["fixtureId"],
+            ["asset-1", "asset-2", "asset-4", "asset-5"],
+            "picked",
+        )
+        propagated = apply_fixture_review_action(
+            self.root,
+            root["fixtureId"],
+            ["asset-1"],
+            "approve",
+            anchor_asset_id="asset-1",
+            propagate=True,
+        )
+        self.assertEqual(
+            [item["assetId"] for item in propagated["items"]],
+            ["asset-1", "asset-2", "asset-4"],
+        )
+        self.assertEqual(
+            [item["assetId"] for item in fixture_review_window(self.root, root["fixtureId"])["items"]],
+            ["asset-5"],
+        )
+        apply_fixture_review_action(
+            self.root,
+            root["fixtureId"],
+            ["asset-4"],
+            "edit-metadata",
+            title="Shoot title",
+            keywords=["One", "Two"],
+        )
+        with connect(self.root) as conn:
+            self.assertEqual(
+                conn.execute(
+                    "SELECT editorial_state FROM asset_editorial_state WHERE asset_id = 'asset-4'"
+                ).fetchone()[0],
+                "approved",
+            )
+            self.assertEqual(
+                conn.execute(
+                    "SELECT delivery_state FROM asset_delivery_state WHERE asset_id = 'asset-4'"
+                ).fetchone()[0],
+                "needs-upload",
+            )
 
     def test_culling_views_keep_universe_counts_and_global_metadata(self):
         fixture = create_fixture(self.root, "Root", fixture_id="root")

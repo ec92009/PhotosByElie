@@ -60,6 +60,8 @@ struct PhotosByElieBackstageApp: App {
             AccessControlView(model: model)
         case .culling:
             MediaLibraryView(model: model)
+        case .review:
+            FixtureReviewView(model: model)
         case .metadata:
             MetadataGiveBackView(model: model)
         case .wasteBasket:
@@ -80,6 +82,7 @@ struct PhotosByElieBackstageApp: App {
         case .fixtures: "folder.badge.gearshape"
         case .access: "person.2"
         case .culling: "checkmark.rectangle.stack"
+        case .review: "checkmark.bubble"
         case .metadata: "tag"
         case .wasteBasket: "trash"
         case .uploads: "arrow.up.circle"
@@ -691,7 +694,7 @@ private struct MediaLibraryView: View {
                     }
                     .disabled(!workspace.hasNext)
                     Spacer()
-                    Button("Send to Metadata") { model.sendCullingSelection(to: .metadata) }
+                    Button("Open in Review") { model.sendCullingSelection(to: .review) }
                         .disabled(model.cullingSelection.selectedIDs.isEmpty)
                     Button("Send to Uploads") { model.sendCullingSelection(to: .uploads) }
                         .disabled(model.cullingSelection.selectedIDs.isEmpty)
@@ -1192,6 +1195,397 @@ private struct AccessControlView: View {
         }
         .task {
             if model.accessState.allPeople.isEmpty { await model.loadAccess() }
+        }
+    }
+}
+
+private struct FixtureReviewView: View {
+    @ObservedObject var model: BackstageViewModel
+    @StateObject private var quickLook = BackstageQuickLookCoordinator()
+
+    var body: some View {
+        HSplitView {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Review")
+                            .font(.largeTitle.bold())
+                        Text("Oldest unresolved picked photos first")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Picker(
+                        "Fixture",
+                        selection: Binding(
+                            get: { model.reviewFixtureID },
+                            set: { model.selectReviewFixture($0) }
+                        )
+                    ) {
+                        ForEach(model.flatFixtures.filter { !$0.isArchived }) { fixture in
+                            let depth = max(0, model.fixtures.path(to: fixture.id).count - 1)
+                            Text("\(String(repeating: "  ", count: depth))\(fixture.name)")
+                                .tag(fixture.id)
+                        }
+                    }
+                    .frame(width: 220)
+                    TextField("Search complete Review queue", text: $model.reviewSearch)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 260)
+                        .onSubmit {
+                            model.reviewWindowOffset = 0
+                            Task { await model.loadFixtureReviewWindow() }
+                        }
+                    Button("Search") {
+                        model.reviewWindowOffset = 0
+                        Task { await model.loadFixtureReviewWindow() }
+                    }
+                    Button("Refresh") {
+                        Task { await model.loadFixtureReviewWindow() }
+                    }
+                    .disabled(model.isRunningReview)
+                }
+                if let summary = model.fixtureReviewWindow?.summary {
+                    HStack(spacing: 12) {
+                        Text("\(summary.total.formatted()) unresolved")
+                        Text("\(summary.unreviewed.formatted()) unreviewed")
+                        Text("\(summary.requestingAI.formatted()) requesting AI")
+                        Text("\(summary.proposed.formatted()) proposed")
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                }
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(spacing: 10) {
+                            ForEach(model.reviewItems) { item in
+                                ReviewAssetRow(
+                                    item: item,
+                                    thumbnail: model.reviewThumbnails[item.id],
+                                    isSelected: model.reviewSelection.selectedIDs.contains(item.id),
+                                    isFocused: model.reviewSelection.focusedID == item.id
+                                )
+                                .id(item.id)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    model.clickReviewItem(item.id, modifiers: NSEvent.modifierFlags)
+                                }
+                                .task { await model.loadReviewThumbnail(for: item) }
+                            }
+                        }
+                        .padding(6)
+                    }
+                    .focusable()
+                    .onChange(of: model.reviewScrollTargetID) { _, target in
+                        guard let target else { return }
+                        proxy.scrollTo(target, anchor: .center)
+                    }
+                    .onMoveCommand { direction in
+                        let extending = NSEvent.modifierFlags.contains(.shift)
+                        switch direction {
+                        case .up, .left:
+                            model.moveReviewSelection(by: -1, extending: extending)
+                        case .down, .right:
+                            model.moveReviewSelection(by: 1, extending: extending)
+                        default:
+                            return
+                        }
+                    }
+                    .onKeyPress("a", phases: .down) { press in
+                        if press.modifiers.contains(.command) {
+                            model.selectAllReviewItems()
+                        } else {
+                            Task { await model.applyReviewAction(.approve) }
+                        }
+                        return .handled
+                    }
+                    .onKeyPress("h") {
+                        Task { await model.applyReviewAction(.hide) }
+                        return .handled
+                    }
+                    .onKeyPress(.space) {
+                        Task {
+                            let urls = await model.prepareReviewQuickLookURLs()
+                            if !urls.isEmpty { quickLook.present(urls: urls) }
+                        }
+                        return .handled
+                    }
+                    .overlay {
+                        if model.reviewItems.isEmpty {
+                            ContentUnavailableView(
+                                "Review queue is clear",
+                                systemImage: "checkmark.circle",
+                                description: Text("Picked photos appear here until approved or hidden.")
+                            )
+                        }
+                    }
+                }
+                .frame(minHeight: 360, maxHeight: .infinity)
+                HStack {
+                    Button("Previous \(model.reviewWindowLimit)") {
+                        model.moveReviewWindow(forward: false)
+                    }
+                    .disabled((model.fixtureReviewWindow?.offset ?? 0) == 0)
+                    Button("Next \(model.reviewWindowLimit)") {
+                        model.moveReviewWindow(forward: true)
+                    }
+                    .disabled(!(model.fixtureReviewWindow?.hasNext ?? false))
+                    Spacer()
+                    Text("\(model.reviewSelection.selectedIDs.count) selected")
+                    Button("Clear selection") { model.clearReviewSelection() }
+                        .disabled(model.reviewSelection.selectedIDs.isEmpty)
+                }
+                Text(model.reviewStatus)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding()
+            .frame(minWidth: 620)
+
+            ReviewInspector(model: model, quickLook: quickLook)
+                .frame(minWidth: 360, idealWidth: 420, maxWidth: 520)
+        }
+        .task {
+            if model.fixtures.isEmpty {
+                await model.loadFixtures()
+            }
+            if model.reviewFixtureID.isEmpty {
+                model.reviewFixtureID = model.cullingFixtureID
+            }
+            await model.loadFixtureReviewWindow()
+        }
+    }
+}
+
+private struct ReviewAssetRow: View {
+    var item: FixtureReviewItem
+    var thumbnail: NSImage?
+    var isSelected: Bool
+    var isFocused: Bool
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Group {
+                if let thumbnail {
+                    Image(nsImage: thumbnail)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                } else {
+                    Image(systemName: item.mediaType == "video" ? "video" : "photo")
+                        .font(.largeTitle)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .frame(width: 180, height: 126)
+            .background(.quaternary.opacity(0.4))
+            .clipShape(RoundedRectangle(cornerRadius: 7))
+            VStack(alignment: .leading, spacing: 7) {
+                HStack {
+                    Text(item.title.isEmpty ? item.filename : item.title)
+                        .font(.headline)
+                        .lineLimit(2)
+                    Spacer()
+                    Text(item.rating > 0 ? String(repeating: "★", count: item.rating) : "☆")
+                    Circle()
+                        .fill(reviewColor(item.color))
+                        .overlay(Circle().stroke(.secondary.opacity(0.5)))
+                        .frame(width: 12, height: 12)
+                }
+                if !item.title.isEmpty {
+                    Text(item.filename)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Text(item.capturedAt)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text(item.keywords.isEmpty ? "No keywords" : item.keywords.joined(separator: ", "))
+                    .font(.caption)
+                    .lineLimit(3)
+                HStack {
+                    Text(item.editorialState.replacingOccurrences(of: "-", with: " ").capitalized)
+                    if item.editorialState == "requesting-ai" {
+                        Text("• \(item.aiReasons.count) reason\(item.aiReasons.count == 1 ? "" : "s")")
+                    }
+                }
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(item.editorialState == "requesting-ai" ? .orange : .secondary)
+            }
+        }
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(isSelected ? Color.accentColor.opacity(0.18) : Color.secondary.opacity(0.06))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(isFocused ? Color.accentColor : .clear, lineWidth: 3)
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private func reviewColor(_ value: String) -> Color {
+        switch value {
+        case "red": .red
+        case "yellow": .yellow
+        case "green": .green
+        case "blue": .blue
+        default: .clear
+        }
+    }
+}
+
+private struct ReviewInspector: View {
+    @ObservedObject var model: BackstageViewModel
+    @ObservedObject var quickLook: BackstageQuickLookCoordinator
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                Text("Editorial")
+                    .font(.title2.bold())
+                if let item = model.focusedReviewItem {
+                    if let thumbnail = model.reviewThumbnails[item.id] {
+                        Image(nsImage: thumbnail)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(maxHeight: 240)
+                            .frame(maxWidth: .infinity)
+                            .background(.quaternary.opacity(0.35))
+                            .clipShape(RoundedRectangle(cornerRadius: 9))
+                    }
+                    Text(item.filename)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    TextField("Title", text: $model.reviewTitle, axis: .vertical)
+                        .textFieldStyle(.roundedBorder)
+                    TextField("Keywords, comma separated", text: $model.reviewKeywords, axis: .vertical)
+                        .textFieldStyle(.roundedBorder)
+                        .lineLimit(3...7)
+                    HStack {
+                        Button("Save T/K") {
+                            Task { await model.saveReviewMetadata() }
+                        }
+                        Button("Propagate title") {
+                            Task { await model.propagateReviewTitle() }
+                        }
+                        Button("Propagate keywords") {
+                            Task { await model.propagateReviewKeywords() }
+                        }
+                    }
+                    .disabled(model.isRunningReview)
+                    Divider()
+                    HStack {
+                        Button("Approve") {
+                            Task { await model.applyReviewAction(.approve) }
+                        }
+                        .keyboardShortcut("a", modifiers: [])
+                        Button("Hide") {
+                            Task { await model.applyReviewAction(.hide) }
+                        }
+                        .keyboardShortcut("h", modifiers: [])
+                        Button("Propagate") {
+                            Task { await model.propagateLastReviewAction() }
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(model.isRunningReview)
+                    Divider()
+                    Text("Request AI proposal")
+                        .font(.headline)
+                    FlowLayout(spacing: 6) {
+                        ForEach(model.reviewAIReasonChoices, id: \.self) { reason in
+                            Button {
+                                Task { await model.toggleReviewAIReason(reason) }
+                            } label: {
+                                Label(
+                                    reason,
+                                    systemImage: model.reviewAIReasons.contains(reason)
+                                        ? "checkmark.circle.fill"
+                                        : "circle"
+                                )
+                            }
+                            .buttonStyle(.bordered)
+                            .tint(model.reviewAIReasons.contains(reason) ? .orange : nil)
+                        }
+                    }
+                    TextField("Optional AI note", text: $model.reviewAINote, axis: .vertical)
+                        .textFieldStyle(.roundedBorder)
+                        .lineLimit(2...5)
+                    Button("Update AI request") {
+                        Task { await model.applyReviewAction(.requestAI) }
+                    }
+                    .disabled(model.isRunningReview)
+                    Divider()
+                    Button("Quick Look") {
+                        Task {
+                            let urls = await model.prepareReviewQuickLookURLs()
+                            if !urls.isEmpty { quickLook.present(urls: urls) }
+                        }
+                    }
+                    .keyboardShortcut(.space, modifiers: [])
+                } else {
+                    ContentUnavailableView(
+                        "No photo selected",
+                        systemImage: "photo",
+                        description: Text("Select a Review row to edit its title and keywords.")
+                    )
+                }
+            }
+            .padding()
+        }
+    }
+}
+
+private struct FlowLayout: Layout {
+    var spacing: CGFloat
+
+    func sizeThatFits(
+        proposal: ProposedViewSize,
+        subviews: Subviews,
+        cache: inout ()
+    ) -> CGSize {
+        let width = proposal.width ?? 0
+        var x: CGFloat = 0
+        var y: CGFloat = 0
+        var rowHeight: CGFloat = 0
+        for view in subviews {
+            let size = view.sizeThatFits(.unspecified)
+            if x > 0, x + size.width > width {
+                x = 0
+                y += rowHeight + spacing
+                rowHeight = 0
+            }
+            x += size.width + spacing
+            rowHeight = max(rowHeight, size.height)
+        }
+        return CGSize(width: width, height: y + rowHeight)
+    }
+
+    func placeSubviews(
+        in bounds: CGRect,
+        proposal: ProposedViewSize,
+        subviews: Subviews,
+        cache: inout ()
+    ) {
+        var x = bounds.minX
+        var y = bounds.minY
+        var rowHeight: CGFloat = 0
+        for view in subviews {
+            let size = view.sizeThatFits(.unspecified)
+            if x > bounds.minX, x + size.width > bounds.maxX {
+                x = bounds.minX
+                y += rowHeight + spacing
+                rowHeight = 0
+            }
+            view.place(
+                at: CGPoint(x: x, y: y),
+                anchor: .topLeading,
+                proposal: ProposedViewSize(size)
+            )
+            x += size.width + spacing
+            rowHeight = max(rowHeight, size.height)
         }
     }
 }

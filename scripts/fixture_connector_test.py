@@ -105,6 +105,35 @@ class FixtureConnectorTest(unittest.TestCase):
                 culling["result"]["cullingWindow"]["items"][0]["assetId"],
                 "asset-1",
             )
+            review = local_server.new_owner_connector_result(
+                root,
+                action(
+                    "fixture-review-window",
+                    fixtureId=expo["fixtureId"],
+                    limit=200,
+                ),
+            )
+            self.assertTrue(review["result"]["readOnly"])
+            self.assertEqual(
+                review["result"]["reviewWindow"]["items"][0]["assetId"],
+                "asset-1",
+            )
+            requested = local_server.new_owner_connector_result(
+                root,
+                action(
+                    "fixture-review-apply",
+                    fixtureId=expo["fixtureId"],
+                    assetIds=["asset-1"],
+                    anchorAssetId="asset-1",
+                    reviewAction="request-ai",
+                    aiReasons=["missing location"],
+                    aiNote="Use the visible landmark.",
+                ),
+            )
+            self.assertEqual(
+                requested["result"]["reviewAction"]["items"][0]["after"]["editorialState"],
+                "requesting-ai",
+            )
             access = local_server.new_owner_connector_result(
                 root,
                 action(

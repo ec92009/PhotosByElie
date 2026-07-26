@@ -28,6 +28,7 @@ DESTINATIONS = {"r2", "apple_photos", "archive"}
 FIXTURE_PLACEMENT_STATES = {"undecided", "picked", "hidden"}
 FIXTURE_ELIGIBILITY_STATES = {"active", "dormant"}
 FIXTURE_STATE_MIGRATION_ID = "fixture-state-v1"
+CULLING_VIEWS = {"undecided", "picked", "hidden", "all-active"}
 
 
 def now_iso() -> str:
@@ -878,6 +879,201 @@ def fixture_candidate_asset_ids(
                 (str(fixture["parent_fixture_id"]),),
             ).fetchall()
     return [str(row["asset_id"]) for row in rows]
+
+
+def fixture_culling_window(
+    repo_root: Path,
+    fixture_id: str,
+    *,
+    view: str = "undecided",
+    offset: int = 0,
+    limit: int = 200,
+    search: str = "",
+    media_types: Iterable[Any] | None = None,
+    ratings: Iterable[Any] | None = None,
+    colors: Iterable[Any] | None = None,
+) -> dict[str, Any]:
+    """Query one fixture's complete effective universe without materializing ID lists."""
+    clean_view = str(view or "undecided").strip().casefold()
+    if clean_view not in CULLING_VIEWS:
+        raise ValueError("culling view must be undecided, picked, hidden, or all-active")
+    safe_offset = max(0, int(offset or 0))
+    safe_limit = max(1, min(500, int(limit or 200)))
+    with connect(repo_root) as conn:
+        fixture = conn.execute(
+            """
+            SELECT fixture_id, parent_fixture_id, candidate_mode
+            FROM fixtures
+            WHERE fixture_id = ? AND archived_at IS NULL
+            """,
+            (fixture_id,),
+        ).fetchone()
+        if not fixture:
+            raise ValueError("fixture does not exist or is archived")
+
+        params: list[Any] = []
+        if fixture["parent_fixture_id"]:
+            universe_join = """
+                JOIN fixture_asset_decisions AS parent_decision
+                  ON parent_decision.asset_id = a.asset_id
+                 AND parent_decision.fixture_id = ?
+                 AND parent_decision.placement_state = 'picked'
+                 AND parent_decision.eligibility_state = 'active'
+            """
+            params.append(str(fixture["parent_fixture_id"]))
+        else:
+            universe_join = ""
+        params.append(fixture_id)
+        predicates = [
+            "(a.missing_at IS NULL OR a.missing_at = '')",
+            """
+            NOT EXISTS (
+              SELECT 1 FROM sidecar_tombstones AS tombstone
+              WHERE tombstone.asset_id = a.asset_id
+                AND tombstone.tombstone_state = 'active'
+            )
+            """,
+        ]
+        clean_media = {
+            str(value or "").strip().casefold()
+            for value in (media_types or [])
+            if str(value or "").strip().casefold() in {"photo", "video"}
+        }
+        if clean_media and clean_media != {"photo", "video"}:
+            placeholders = ",".join("?" for _ in clean_media)
+            predicates.append(f"COALESCE(a.media_type, 'photo') IN ({placeholders})")
+            params.extend(sorted(clean_media))
+        clean_ratings = sorted({
+            int(str(value).strip())
+            for value in (ratings or [])
+            if str(value).strip().isdigit() and 0 <= int(str(value).strip()) <= 5
+        })
+        if clean_ratings and set(clean_ratings) != set(range(6)):
+            placeholders = ",".join("?" for _ in clean_ratings)
+            predicates.append(f"COALESCE(global_decision.rating, 0) IN ({placeholders})")
+            params.extend(clean_ratings)
+        clean_colors = {
+            "" if str(value or "").strip().casefold() == "none"
+            else str(value or "").strip().casefold()
+            for value in (colors or [])
+        }
+        clean_colors &= {"", "red", "yellow", "green", "blue", "purple"}
+        if clean_colors and clean_colors != {"", "red", "yellow", "green", "blue", "purple"}:
+            placeholders = ",".join("?" for _ in clean_colors)
+            predicates.append(f"COALESCE(global_decision.color, '') IN ({placeholders})")
+            params.extend(sorted(clean_colors))
+        search_columns = (
+            "a.asset_id",
+            "a.filename",
+            "a.photos_title",
+            "a.photos_keywords_json",
+            "a.location_label",
+            "a.location_keywords_json",
+            "global_decision.title",
+            "global_decision.keywords_json",
+        )
+        for term in re.findall(r"[^\s,;]+", str(search or "").casefold())[:8]:
+            escaped = term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            predicates.append(
+                "(" + " OR ".join(
+                    f"lower(COALESCE({column}, '')) LIKE ? ESCAPE '\\'"
+                    for column in search_columns
+                ) + ")"
+            )
+            params.extend([f"%{escaped}%"] * len(search_columns))
+
+        from_sql = f"""
+            sidecar_assets AS a
+            {universe_join}
+            LEFT JOIN fixture_asset_decisions AS current_decision
+              ON current_decision.asset_id = a.asset_id
+             AND current_decision.fixture_id = ?
+            LEFT JOIN sidecar_decisions AS global_decision
+              ON global_decision.asset_id = a.asset_id
+        """
+        base_where_sql = " AND ".join(predicates)
+        summary = conn.execute(
+            f"""
+            SELECT count(*) total,
+                   sum(CASE WHEN COALESCE(current_decision.placement_state, 'undecided') = 'undecided'
+                            THEN 1 ELSE 0 END) undecided,
+                   sum(CASE WHEN current_decision.placement_state = 'picked' THEN 1 ELSE 0 END) picked,
+                   sum(CASE WHEN current_decision.placement_state = 'hidden' THEN 1 ELSE 0 END) hidden
+            FROM {from_sql}
+            WHERE {base_where_sql}
+            """,
+            params,
+        ).fetchone()
+        view_predicates = list(predicates)
+        view_params = list(params)
+        if clean_view != "all-active":
+            view_predicates.append("COALESCE(current_decision.placement_state, 'undecided') = ?")
+            view_params.append(clean_view)
+        view_where_sql = " AND ".join(view_predicates)
+        filtered_total = conn.execute(
+            f"SELECT count(*) FROM {from_sql} WHERE {view_where_sql}",
+            view_params,
+        ).fetchone()[0]
+        rows = conn.execute(
+            f"""
+            SELECT a.asset_id, a.source_anchor, a.filename, a.media_type, a.captured_at,
+                   COALESCE(NULLIF(a.photos_title, ''), NULLIF(global_decision.title, ''), '') title,
+                   COALESCE(current_decision.placement_state, 'undecided') placement_state,
+                   COALESCE(current_decision.eligibility_state, 'active') eligibility_state,
+                   COALESCE(global_decision.rating, 0) rating,
+                   COALESCE(global_decision.color, '') color,
+                   COALESCE(global_decision.metadata_state, 'unreviewed') editorial_state,
+                   COALESCE(global_decision.keywords_json, '[]') keywords_json
+            FROM {from_sql}
+            WHERE {view_where_sql}
+            ORDER BY a.captured_at DESC, a.asset_id
+            LIMIT ? OFFSET ?
+            """,
+            [*view_params, safe_limit, safe_offset],
+        ).fetchall()
+    items = []
+    for row in rows:
+        source_anchor = str(row["source_anchor"] or "")
+        local_identifier = (
+            source_anchor.removeprefix("apple-photos://")
+            if source_anchor.startswith("apple-photos://")
+            else str(row["asset_id"])
+        )
+        items.append({
+            "assetId": str(row["asset_id"]),
+            "photoLibraryIdentifier": local_identifier,
+            "title": str(row["title"] or ""),
+            "filename": str(row["filename"] or ""),
+            "mediaType": str(row["media_type"] or "photo"),
+            "capturedAt": str(row["captured_at"] or ""),
+            "placementState": str(row["placement_state"]),
+            "eligibilityState": str(row["eligibility_state"]),
+            "rating": int(row["rating"] or 0),
+            "color": str(row["color"] or ""),
+            "editorialState": str(row["editorial_state"]),
+            "keywords": _read_json(row["keywords_json"], []),
+        })
+    total = int(filtered_total or 0)
+    return {
+        "ok": True,
+        "readOnly": True,
+        "fixtureId": fixture_id,
+        "candidateMode": str(fixture["candidate_mode"] or ""),
+        "view": clean_view,
+        "offset": safe_offset,
+        "limit": safe_limit,
+        "count": len(items),
+        "nextOffset": safe_offset + len(items),
+        "hasNext": safe_offset + len(items) < total,
+        "summary": {
+            "filtered": total,
+            "universe": int(summary["total"] or 0),
+            "undecided": int(summary["undecided"] or 0),
+            "picked": int(summary["picked"] or 0),
+            "hidden": int(summary["hidden"] or 0),
+        },
+        "items": items,
+    }
 
 
 def effective_fixture_access_grants(repo_root: Path, fixture_id: str) -> list[dict[str, Any]]:

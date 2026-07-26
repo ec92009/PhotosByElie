@@ -361,6 +361,7 @@ from fixture_pipeline import (  # noqa: E402
     delivery_plan,
     fixture_tree,
     fixture_candidate_asset_ids,
+    fixture_culling_window,
     effective_fixture_access_grants,
     get_pool,
     link_deliverable,
@@ -1810,6 +1811,21 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
                 "count": len(asset_ids),
                 "assetIds": asset_ids,
             },
+        })
+    elif mode == "fixture-culling-window":
+        result.update({
+            "readOnly": True,
+            "cullingWindow": fixture_culling_window(
+                repo_root,
+                str(manifest.get("fixtureId") or ""),
+                view=str(manifest.get("view") or "undecided"),
+                offset=int(manifest.get("offset") or 0),
+                limit=int(manifest.get("limit") or 200),
+                search=str(manifest.get("search") or ""),
+                media_types=manifest.get("mediaTypes") or [],
+                ratings=manifest.get("ratings") or [],
+                colors=manifest.get("colors") or [],
+            ),
         })
     elif mode == "fixture-state-apply":
         result.update({

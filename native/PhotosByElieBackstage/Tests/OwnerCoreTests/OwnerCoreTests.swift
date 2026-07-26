@@ -680,6 +680,80 @@ struct OwnerCoreTests {
         #expect(manifest?["mode"]?.stringValue == "fixture-state-migration-plan")
     }
 
+    @Test("Native fixture culling requests a bounded full-universe window")
+    func nativeFixtureCullingWindow() async throws {
+        let terminal = OwnerAction(
+            id: "owner-action-fixture-culling-window",
+            actionKind: "sidecar-culling-review",
+            target: "max",
+            state: .completed,
+            result: [
+                "cullingWindow": .object([
+                    "fixtureId": "fixture-expo",
+                    "candidateMode": "photos-library",
+                    "view": "undecided",
+                    "offset": 0,
+                    "limit": 200,
+                    "nextOffset": 1,
+                    "hasNext": true,
+                    "summary": .object([
+                        "filtered": 1140,
+                        "universe": 3551,
+                        "undecided": 1140,
+                        "picked": 2200,
+                        "hidden": 211,
+                    ]),
+                    "items": .array([.object([
+                        "assetId": "asset-newest",
+                        "photoLibraryIdentifier": "photos-newest",
+                        "title": "Newest",
+                        "filename": "NEWEST.HEIC",
+                        "mediaType": "photo",
+                        "capturedAt": "2026-07-26T12:00:00Z",
+                        "placementState": "undecided",
+                        "eligibilityState": "active",
+                        "rating": 4,
+                        "color": "green",
+                        "editorialState": "unreviewed",
+                        "keywords": ["Madrid"],
+                    ])]),
+                ]),
+            ]
+        )
+        let api = ScriptedOwnerActionAPI(completed: [terminal])
+        let service = FixtureWorkflowService(runner: OwnerActionRunner(
+            api: api,
+            waker: UnavailableWaker(),
+            pollInterval: .milliseconds(1),
+            timeout: .seconds(1)
+        ))
+
+        let window = try await service.cullingWindow(
+            fixtureID: "fixture-expo",
+            view: .undecided,
+            offset: 0,
+            limit: 200,
+            search: "Madrid",
+            mediaTypes: ["photo"],
+            ratings: [4],
+            colors: ["green"]
+        )
+
+        #expect(window.fixtureID == "fixture-expo")
+        #expect(window.summary.universe == 3551)
+        #expect(window.summary.filtered == 1140)
+        #expect(window.items.map(\.id) == ["asset-newest"])
+        #expect(window.items.first?.photoLibraryIdentifier == "photos-newest")
+        #expect(window.items.first?.placementState == .undecided)
+        #expect(window.items.first?.rating == 4)
+        let request = try #require(await api.requests().first)
+        let manifest = request.payload["manifest"]?.objectValue
+        #expect(manifest?["mode"]?.stringValue == "fixture-culling-window")
+        #expect(manifest?["fixtureId"]?.stringValue == "fixture-expo")
+        #expect(manifest?["limit"]?.intValue == 200)
+        #expect(manifest?["search"]?.stringValue == "Madrid")
+    }
+
     @Test("Fixture archive state follows the connector archivedAt contract")
     func nativeFixtureArchiveState() {
         let active = FixtureNode(json: [

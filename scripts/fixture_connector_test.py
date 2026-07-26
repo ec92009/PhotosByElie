@@ -90,6 +90,21 @@ class FixtureConnectorTest(unittest.TestCase):
                 universe["result"]["candidateUniverse"]["assetIds"],
                 ["asset-1"],
             )
+            culling = local_server.new_owner_connector_result(
+                root,
+                action(
+                    "fixture-culling-window",
+                    fixtureId=expo["fixtureId"],
+                    view="picked",
+                    limit=200,
+                ),
+            )
+            self.assertTrue(culling["result"]["readOnly"])
+            self.assertEqual(culling["result"]["cullingWindow"]["count"], 1)
+            self.assertEqual(
+                culling["result"]["cullingWindow"]["items"][0]["assetId"],
+                "asset-1",
+            )
             access = local_server.new_owner_connector_result(
                 root,
                 action(

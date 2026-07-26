@@ -32,22 +32,61 @@ public struct FixtureNode: Identifiable, Sendable, Equatable {
 
 public struct FixtureAsset: Identifiable, Sendable, Equatable {
     public var id: String
+    public var photoLibraryIdentifier: String
     public var title: String
     public var filename: String
     public var mediaType: String
+    public var capturedAt: String
+    public var placementState: FixturePlacementState
+    public var eligibilityState: String
+    public var rating: Int
+    public var color: String
+    public var editorialState: String
+    public var keywords: [String]
 
-    public init(id: String, title: String, filename: String, mediaType: String) {
+    public init(
+        id: String,
+        photoLibraryIdentifier: String = "",
+        title: String,
+        filename: String,
+        mediaType: String,
+        capturedAt: String = "",
+        placementState: FixturePlacementState = .undecided,
+        eligibilityState: String = "active",
+        rating: Int = 0,
+        color: String = "",
+        editorialState: String = "unreviewed",
+        keywords: [String] = []
+    ) {
         self.id = id
+        self.photoLibraryIdentifier = photoLibraryIdentifier.isEmpty ? id : photoLibraryIdentifier
         self.title = title
         self.filename = filename
         self.mediaType = mediaType
+        self.capturedAt = capturedAt
+        self.placementState = placementState
+        self.eligibilityState = eligibilityState
+        self.rating = rating
+        self.color = color
+        self.editorialState = editorialState
+        self.keywords = keywords
     }
 
     init(json: [String: JSONValue]) {
         id = json["assetId"]?.stringValue ?? json["id"]?.stringValue ?? ""
+        photoLibraryIdentifier = json["photoLibraryIdentifier"]?.stringValue ?? id
         title = json["title"]?.stringValue ?? ""
         filename = json["filename"]?.stringValue ?? ""
         mediaType = json["mediaType"]?.stringValue ?? json["kind"]?.stringValue ?? ""
+        capturedAt = json["capturedAt"]?.stringValue ?? ""
+        placementState = FixturePlacementState(
+            rawValue: json["placementState"]?.stringValue ?? "undecided"
+        ) ?? .undecided
+        eligibilityState = json["eligibilityState"]?.stringValue ?? "active"
+        rating = json["rating"]?.intValue ?? 0
+        color = json["color"]?.stringValue ?? ""
+        editorialState = json["editorialState"]?.stringValue ?? "unreviewed"
+        keywords = json["keywords"]?.arrayValue?.compactMap(\.stringValue) ?? []
     }
 }
 
@@ -126,6 +165,66 @@ public enum FixturePlacementState: String, Codable, Sendable, CaseIterable {
     case undecided
     case picked
     case hidden
+}
+
+public enum FixtureCullingView: String, Codable, Sendable, CaseIterable {
+    case undecided
+    case hidden
+    case picked
+    case allActive = "all-active"
+
+    public var label: String {
+        switch self {
+        case .undecided: "Undecided"
+        case .hidden: "Hidden"
+        case .picked: "Picked"
+        case .allActive: "All Active"
+        }
+    }
+}
+
+public struct FixtureCullingSummary: Sendable, Equatable {
+    public var filtered: Int
+    public var universe: Int
+    public var undecided: Int
+    public var picked: Int
+    public var hidden: Int
+
+    init(json: [String: JSONValue]) {
+        filtered = json["filtered"]?.intValue ?? 0
+        universe = json["universe"]?.intValue ?? 0
+        undecided = json["undecided"]?.intValue ?? 0
+        picked = json["picked"]?.intValue ?? 0
+        hidden = json["hidden"]?.intValue ?? 0
+    }
+}
+
+public struct FixtureCullingWindow: Sendable, Equatable {
+    public var fixtureID: String
+    public var candidateMode: String
+    public var view: FixtureCullingView
+    public var offset: Int
+    public var limit: Int
+    public var nextOffset: Int
+    public var hasNext: Bool
+    public var summary: FixtureCullingSummary
+    public var items: [FixtureAsset]
+
+    init(json: [String: JSONValue]) {
+        fixtureID = json["fixtureId"]?.stringValue ?? ""
+        candidateMode = json["candidateMode"]?.stringValue ?? ""
+        view = FixtureCullingView(
+            rawValue: json["view"]?.stringValue ?? "undecided"
+        ) ?? .undecided
+        offset = json["offset"]?.intValue ?? 0
+        limit = json["limit"]?.intValue ?? 200
+        nextOffset = json["nextOffset"]?.intValue ?? 0
+        hasNext = json["hasNext"]?.boolValue ?? false
+        summary = FixtureCullingSummary(json: json["summary"]?.objectValue ?? [:])
+        items = (json["items"]?.arrayValue ?? [])
+            .compactMap(\.objectValue)
+            .map(FixtureAsset.init(json:))
+    }
 }
 
 public struct FixtureStateMigrationReport: Sendable, Equatable {
@@ -234,6 +333,31 @@ public actor FixtureWorkflowService {
         ])
         return result["candidateUniverse"]?.objectValue?["assetIds"]?.arrayValue?
             .compactMap(\.stringValue) ?? []
+    }
+
+    public func cullingWindow(
+        fixtureID: String,
+        view: FixtureCullingView = .undecided,
+        offset: Int = 0,
+        limit: Int = 200,
+        search: String = "",
+        mediaTypes: [String] = [],
+        ratings: [Int] = [],
+        colors: [String] = []
+    ) async throws -> FixtureCullingWindow {
+        let result = try await run("fixture-culling-window", extra: [
+            "fixtureId": .string(fixtureID),
+            "view": .string(view.rawValue),
+            "offset": .number(Double(max(0, offset))),
+            "limit": .number(Double(max(1, min(500, limit)))),
+            "search": .string(search),
+            "mediaTypes": .array(mediaTypes.map(JSONValue.string)),
+            "ratings": .array(ratings.map { .number(Double($0)) }),
+            "colors": .array(colors.map(JSONValue.string)),
+        ])
+        return FixtureCullingWindow(
+            json: result["cullingWindow"]?.objectValue ?? [:]
+        )
     }
 
     public func applyState(

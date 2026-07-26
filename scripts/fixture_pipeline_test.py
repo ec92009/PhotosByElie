@@ -18,6 +18,7 @@ from fixture_pipeline import (
     delivery_plan,
     fixture_tree,
     fixture_candidate_asset_ids,
+    fixture_culling_window,
     effective_fixture_access_grants,
     list_pools,
     list_placements,
@@ -153,6 +154,115 @@ class FixturePipelineTest(unittest.TestCase):
             fixture_candidate_asset_ids(self.root, parent["fixtureId"]),
             ["asset-3", "asset-2", "asset-1"],
         )
+
+    def test_root_culling_window_is_newest_first_and_backfills_after_decisions(self):
+        fixture = create_fixture(self.root, "Root", fixture_id="root")
+        first = fixture_culling_window(self.root, fixture["fixtureId"], limit=2)
+        self.assertEqual(
+            [item["assetId"] for item in first["items"]],
+            ["asset-3", "asset-2"],
+        )
+        self.assertEqual(first["summary"]["universe"], 3)
+        self.assertEqual(first["summary"]["undecided"], 3)
+        self.assertTrue(first["hasNext"])
+
+        set_fixture_asset_state(
+            self.root,
+            fixture["fixtureId"],
+            ["asset-3"],
+            "picked",
+        )
+        backfilled = fixture_culling_window(self.root, fixture["fixtureId"], limit=2)
+        self.assertEqual(
+            [item["assetId"] for item in backfilled["items"]],
+            ["asset-2", "asset-1"],
+        )
+        self.assertEqual(backfilled["summary"]["universe"], 3)
+        self.assertEqual(backfilled["summary"]["undecided"], 2)
+        self.assertEqual(backfilled["summary"]["picked"], 1)
+        self.assertFalse(backfilled["hasNext"])
+
+    def test_child_culling_window_uses_parent_picks_and_full_universe_search(self):
+        parent = create_fixture(self.root, "Root", fixture_id="root")
+        child = create_fixture(
+            self.root,
+            "Child",
+            parent_fixture_id=parent["fixtureId"],
+            fixture_id="child",
+        )
+        set_fixture_asset_state(
+            self.root,
+            parent["fixtureId"],
+            ["asset-1", "asset-2"],
+            "picked",
+        )
+        child_window = fixture_culling_window(self.root, child["fixtureId"])
+        self.assertEqual(
+            [item["assetId"] for item in child_window["items"]],
+            ["asset-2", "asset-1"],
+        )
+        self.assertEqual(child_window["candidateMode"], "inherited")
+
+        searched = fixture_culling_window(
+            self.root,
+            child["fixtureId"],
+            search="A.JPG",
+            limit=1,
+        )
+        self.assertEqual([item["assetId"] for item in searched["items"]], ["asset-1"])
+        set_fixture_asset_state(
+            self.root,
+            parent["fixtureId"],
+            ["asset-1"],
+            "hidden",
+        )
+        self.assertEqual(
+            fixture_culling_window(
+                self.root,
+                child["fixtureId"],
+                search="A.JPG",
+            )["items"],
+            [],
+        )
+
+    def test_culling_views_keep_universe_counts_and_global_metadata(self):
+        fixture = create_fixture(self.root, "Root", fixture_id="root")
+        record_decision(
+            self.root,
+            {
+                "assetId": "asset-1",
+                "action": "metadata",
+                "title": "Canonical title",
+                "keywords": ["museum"],
+                "metadataState": "proposed",
+            },
+        )
+        record_decision(
+            self.root,
+            {"assetId": "asset-1", "action": "rating", "rating": 4},
+        )
+        record_decision(
+            self.root,
+            {"assetId": "asset-1", "action": "color", "color": "green"},
+        )
+        set_fixture_asset_state(
+            self.root,
+            fixture["fixtureId"],
+            ["asset-1"],
+            "hidden",
+        )
+        hidden = fixture_culling_window(
+            self.root,
+            fixture["fixtureId"],
+            view="hidden",
+        )
+        self.assertEqual(hidden["summary"]["universe"], 3)
+        self.assertEqual(hidden["summary"]["hidden"], 1)
+        self.assertEqual(hidden["summary"]["undecided"], 2)
+        self.assertEqual(hidden["items"][0]["title"], "Canonical title")
+        self.assertEqual(hidden["items"][0]["rating"], 4)
+        self.assertEqual(hidden["items"][0]["color"], "green")
+        self.assertEqual(hidden["items"][0]["keywords"], ["museum"])
 
     def test_access_grants_inherit_downward_only_and_new_roots_are_owner_only(self):
         root = create_fixture(self.root, "Root", fixture_id="root")

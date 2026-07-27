@@ -101,6 +101,39 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIn(marker, source)
         self.assertNotIn("await applyPickDecision()", source)
 
+    def test_large_queue_pagers_stay_visible_above_scrolling_content(self):
+        source = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "PhotosByElieBackstageApp.swift"
+        ).read_text(encoding="utf-8")
+        culling = source.split("private struct MediaLibraryView", 1)[1].split(
+            "private struct CullingAssetCard", 1
+        )[0]
+        review = source.split("private struct FixtureReviewView", 1)[1].split(
+            "private struct ReviewAssetRow", 1
+        )[0]
+
+        self.assertLess(
+            culling.index('Button("Next \\(workspace.limit)")'),
+            culling.index("ScrollViewReader"),
+        )
+        self.assertIn(
+            "of \\(workspace.summary.filtered.formatted())",
+            culling,
+        )
+        self.assertLess(
+            review.index('Button("Next \\(model.reviewWindowLimit)")'),
+            review.index("ScrollViewReader"),
+        )
+        self.assertIn(
+            "of \\(window.summary.total.formatted())",
+            review,
+        )
+        self.assertIn("FlowLayout(spacing: 10)", review)
+        self.assertNotIn(".frame(minWidth: 620)", review)
+
     def test_getting_started_describes_the_native_large_pool_path(self):
         guide = (ROOT / "docs" / "BACKSTAGE_GETTING_STARTED.md").read_text(
             encoding="utf-8"

@@ -507,7 +507,7 @@ private struct MediaLibraryView: View {
                 }
                 Text(model.photoStatus)
                     .foregroundStyle(.secondary)
-                HStack(spacing: 8) {
+                FlowLayout(spacing: 8) {
                     Picker(
                         "Fixture",
                         selection: Binding(
@@ -521,20 +521,23 @@ private struct MediaLibraryView: View {
                                 .tag(fixture.id)
                         }
                     }
-                    .frame(width: 190)
+                    .frame(width: 180)
                     TextField("Search title, file, or keyword", text: $model.cullingSearch)
                         .textFieldStyle(.roundedBorder)
+                        .frame(width: 240)
                         .onSubmit { model.applyCullingFilters() }
                     Picker("Media", selection: $model.cullingMediaFilter) {
                         ForEach(CullingMediaFilter.allCases, id: \.self) {
                             Text($0.label).tag($0)
                         }
                     }
+                    .frame(width: 110)
                     Picker("View", selection: $model.cullingView) {
                         ForEach(FixtureCullingView.allCases, id: \.self) {
                             Text($0.label).tag($0)
                         }
                     }
+                    .frame(width: 120)
                     Picker("Rating", selection: $model.cullingRatingFilter) {
                         Text("All ratings").tag(-1)
                         ForEach(0...5, id: \.self) { value in
@@ -542,11 +545,13 @@ private struct MediaLibraryView: View {
                                 .tag(value)
                         }
                     }
+                    .frame(width: 120)
                     Picker("Color", selection: $model.cullingColorFilter) {
                         ForEach(CullingColorFilter.allCases, id: \.self) {
                             Text($0.label).tag($0)
                         }
                     }
+                    .frame(width: 110)
                     Button("Apply") { model.applyCullingFilters() }
                     Button("Clear") { model.clearCullingFilters() }
                     Button("Review picked") { model.showPickedReview() }
@@ -559,11 +564,31 @@ private struct MediaLibraryView: View {
                 .onChange(of: model.cullingRatingFilter) { _, _ in model.applyCullingFilters() }
                 .onChange(of: model.cullingColorFilter) { _, _ in model.applyCullingFilters() }
                 let workspace = model.cullingWorkspace
-                HStack {
+                FlowLayout(spacing: 8) {
                     Text("\(workspace.summary.filtered.formatted()) match • \(workspace.summary.total.formatted()) in scope")
                     Text("• \(workspace.summary.undecided.formatted()) undecided")
                     Text("• \(workspace.summary.picked.formatted()) picked")
                     Text("• \(workspace.summary.rejected.formatted()) hidden")
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                HStack {
+                    if let range = workspace.visibleRange {
+                        Text("\(range.lowerBound.formatted())–\(range.upperBound.formatted()) of \(workspace.summary.filtered.formatted())")
+                            .font(.callout.weight(.semibold))
+                            .monospacedDigit()
+                    } else {
+                        Text("0 of \(workspace.summary.filtered.formatted())")
+                            .font(.callout.weight(.semibold))
+                    }
+                    Button("Previous \(workspace.limit)") {
+                        model.moveCullingWindow(forward: false)
+                    }
+                    .disabled(!workspace.hasPrevious)
+                    Button("Next \(workspace.limit)") {
+                        model.moveCullingWindow(forward: true)
+                    }
+                    .disabled(!workspace.hasNext)
                     Spacer()
                     HStack(spacing: 0) {
                         Button("−") { model.changeCullingGridDensity(by: -1) }
@@ -577,12 +602,7 @@ private struct MediaLibraryView: View {
                         model.toggleCullingFitFill()
                     }
                     .buttonStyle(.bordered)
-                    if let range = workspace.visibleRange {
-                        Text("\(range.lowerBound.formatted())–\(range.upperBound.formatted())")
-                    }
                 }
-                .font(.caption)
-                .foregroundStyle(.secondary)
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVGrid(
@@ -703,23 +723,15 @@ private struct MediaLibraryView: View {
                 .frame(minHeight: 280, maxHeight: .infinity)
                 .layoutPriority(1)
                 HStack {
-                    Button("Previous \(workspace.limit)") {
-                        model.moveCullingWindow(forward: false)
-                    }
-                    .disabled(!workspace.hasPrevious)
-                    Button("Next \(workspace.limit)") {
-                        model.moveCullingWindow(forward: true)
-                    }
-                    .disabled(!workspace.hasNext)
-                    Spacer()
                     Button("Open in Review") { model.sendCullingSelection(to: .review) }
                         .disabled(model.cullingSelection.selectedIDs.isEmpty)
                     Button("Send to Metadata") { model.sendCullingSelection(to: .metadata) }
                         .disabled(model.cullingSelection.selectedIDs.isEmpty)
                     Button("Send to Uploads") { model.sendCullingSelection(to: .uploads) }
                         .disabled(model.cullingSelection.selectedIDs.isEmpty)
+                    Spacer()
                 }
-                HStack {
+                FlowLayout(spacing: 8) {
                     Text("\(model.cullingSelection.selectedIDs.count) selected")
                     Picker("Fixture decision", selection: $model.cullingPickAction) {
                         ForEach(SidecarPickAction.allCases, id: \.self) { action in
@@ -761,7 +773,6 @@ private struct MediaLibraryView: View {
                         Task { await model.applyColor() }
                     }
                     .disabled(model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision)
-                    Spacer()
                     Button("Quick Look") {
                         Task {
                             let urls = await model.prepareQuickLookURLs()
@@ -776,6 +787,7 @@ private struct MediaLibraryView: View {
                     }
                     .disabled(model.cullingSelection.selectedIDs.isEmpty)
                 }
+                .labelsHidden()
                 HStack {
                     Button("Undo") { Task { await model.undoLastCullingDecision() } }
                         .keyboardShortcut("z", modifiers: .command)
@@ -1476,60 +1488,63 @@ private struct FixtureReviewView: View {
     var body: some View {
         HSplitView {
             VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Review")
-                            .font(.largeTitle.bold())
-                        Text("Oldest picked photos first")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    Picker(
-                        "Fixture",
-                        selection: Binding(
-                            get: { model.reviewFixtureID },
-                            set: { model.selectReviewFixture($0) }
-                        )
-                    ) {
-                        ForEach(model.flatFixtures.filter { !$0.isArchived }) { fixture in
-                            let depth = max(0, model.fixtures.path(to: fixture.id).count - 1)
-                            Text("\(String(repeating: "  ", count: depth))\(fixture.name)")
-                                .tag(fixture.id)
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Review")
+                                .font(.largeTitle.bold())
+                            Text("Oldest picked photos first")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
                         }
-                    }
-                    .frame(width: 220)
-                    Picker(
-                        "Queue",
-                        selection: Binding(
-                            get: { model.reviewMode },
-                            set: { model.selectReviewMode($0) }
-                        )
-                    ) {
-                        ForEach(FixtureReviewMode.allCases) { mode in
-                            Text(mode.label).tag(mode)
+                        Spacer()
+                        Picker(
+                            "Fixture",
+                            selection: Binding(
+                                get: { model.reviewFixtureID },
+                                set: { model.selectReviewFixture($0) }
+                            )
+                        ) {
+                            ForEach(model.flatFixtures.filter { !$0.isArchived }) { fixture in
+                                let depth = max(0, model.fixtures.path(to: fixture.id).count - 1)
+                                Text("\(String(repeating: "  ", count: depth))\(fixture.name)")
+                                    .tag(fixture.id)
+                            }
                         }
+                        .frame(width: 180)
+                        Picker(
+                            "Queue",
+                            selection: Binding(
+                                get: { model.reviewMode },
+                                set: { model.selectReviewMode($0) }
+                            )
+                        ) {
+                            ForEach(FixtureReviewMode.allCases) { mode in
+                                Text(mode.label).tag(mode)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 170)
                     }
-                    .pickerStyle(.segmented)
-                    .frame(width: 190)
-                    TextField("Search complete Review queue", text: $model.reviewSearch)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(width: 260)
-                        .onSubmit {
+                    HStack {
+                        TextField("Search complete Review queue", text: $model.reviewSearch)
+                            .textFieldStyle(.roundedBorder)
+                            .onSubmit {
+                                model.reviewWindowOffset = 0
+                                Task { await model.loadFixtureReviewWindow() }
+                            }
+                        Button("Search") {
                             model.reviewWindowOffset = 0
                             Task { await model.loadFixtureReviewWindow() }
                         }
-                    Button("Search") {
-                        model.reviewWindowOffset = 0
-                        Task { await model.loadFixtureReviewWindow() }
+                        Button("Refresh") {
+                            Task { await model.loadFixtureReviewWindow() }
+                        }
+                        .disabled(model.isRunningReview)
                     }
-                    Button("Refresh") {
-                        Task { await model.loadFixtureReviewWindow() }
-                    }
-                    .disabled(model.isRunningReview)
                 }
                 if let summary = model.fixtureReviewWindow?.summary {
-                    HStack(spacing: 12) {
+                    FlowLayout(spacing: 10) {
                         Text("\(summary.total.formatted()) unresolved")
                         Text("\(summary.unreviewed.formatted()) unreviewed")
                         Text("\(summary.requestingAI.formatted()) requesting AI")
@@ -1578,6 +1593,27 @@ private struct FixtureReviewView: View {
                         value: Double(run.processed),
                         total: Double(max(1, run.requested))
                     )
+                }
+                HStack(spacing: 10) {
+                    if let window = model.fixtureReviewWindow {
+                        let first = window.items.isEmpty ? 0 : window.offset + 1
+                        let last = window.offset + window.items.count
+                        Text("\(first.formatted())–\(last.formatted()) of \(window.summary.total.formatted())")
+                            .font(.callout.weight(.semibold))
+                            .monospacedDigit()
+                    } else {
+                        Text("Loading Review queue…")
+                            .font(.callout.weight(.semibold))
+                    }
+                    Spacer()
+                    Button("Previous \(model.reviewWindowLimit)") {
+                        model.moveReviewWindow(forward: false)
+                    }
+                    .disabled((model.fixtureReviewWindow?.offset ?? 0) == 0)
+                    Button("Next \(model.reviewWindowLimit)") {
+                        model.moveReviewWindow(forward: true)
+                    }
+                    .disabled(!(model.fixtureReviewWindow?.hasNext ?? false))
                 }
                 ScrollViewReader { proxy in
                     ScrollView {
@@ -1648,16 +1684,8 @@ private struct FixtureReviewView: View {
                 }
                 .frame(minHeight: 360, maxHeight: .infinity)
                 HStack {
-                    Button("Previous \(model.reviewWindowLimit)") {
-                        model.moveReviewWindow(forward: false)
-                    }
-                    .disabled((model.fixtureReviewWindow?.offset ?? 0) == 0)
-                    Button("Next \(model.reviewWindowLimit)") {
-                        model.moveReviewWindow(forward: true)
-                    }
-                    .disabled(!(model.fixtureReviewWindow?.hasNext ?? false))
-                    Spacer()
                     Text("\(model.reviewSelection.selectedIDs.count) selected")
+                    Spacer()
                     Button("Undo") {
                         Task { await model.undoLastReviewAction() }
                     }
@@ -1671,10 +1699,10 @@ private struct FixtureReviewView: View {
                     .foregroundStyle(.secondary)
             }
             .padding()
-            .frame(minWidth: 620)
+            .frame(minWidth: 480)
 
             ReviewInspector(model: model, quickLook: quickLook)
-                .frame(minWidth: 360, idealWidth: 420, maxWidth: 520)
+                .frame(minWidth: 300, idealWidth: 380, maxWidth: 480)
         }
         .task {
             if model.fixtures.isEmpty {

@@ -553,6 +553,87 @@ class FixturePipelineTest(unittest.TestCase):
                 "needs-upload",
             )
 
+    def test_review_propagation_is_fully_audited_and_batch_actions_are_atomic(self):
+        root = create_fixture(self.root, "Root", fixture_id="root")
+        set_fixture_asset_state(
+            self.root,
+            root["fixtureId"],
+            ["asset-1", "asset-2"],
+            "picked",
+        )
+
+        propagated = apply_fixture_review_action(
+            self.root,
+            root["fixtureId"],
+            ["asset-1"],
+            "approve",
+            anchor_asset_id="asset-1",
+            propagate=True,
+        )
+        self.assertEqual(
+            [item["assetId"] for item in propagated["items"]],
+            ["asset-1", "asset-2"],
+        )
+        with connect(self.root) as conn:
+            audit_rows = conn.execute(
+                """
+                SELECT asset_id, action, before_state, after_state
+                FROM asset_editorial_events
+                WHERE fixture_id = ?
+                ORDER BY asset_id
+                """,
+                (root["fixtureId"],),
+            ).fetchall()
+        self.assertEqual(
+            [
+                (
+                    row["asset_id"],
+                    row["action"],
+                    row["before_state"],
+                    row["after_state"],
+                )
+                for row in audit_rows
+            ],
+            [
+                ("asset-1", "approve", "unreviewed", "approved"),
+                ("asset-2", "approve", "unreviewed", "approved"),
+            ],
+        )
+
+        other = create_fixture(self.root, "Other", fixture_id="other")
+        set_fixture_asset_state(
+            self.root,
+            other["fixtureId"],
+            ["asset-3"],
+            "picked",
+        )
+        with self.assertRaisesRegex(ValueError, "asset is not indexed"):
+            apply_fixture_review_action(
+                self.root,
+                other["fixtureId"],
+                ["asset-3", "missing-asset"],
+                "approve",
+                anchor_asset_id="asset-3",
+            )
+        with connect(self.root) as conn:
+            state = conn.execute(
+                """
+                SELECT editorial_state
+                FROM asset_editorial_state
+                WHERE asset_id = 'asset-3'
+                """
+            ).fetchone()[0]
+            event_count = conn.execute(
+                """
+                SELECT COUNT(*)
+                FROM asset_editorial_events
+                WHERE fixture_id = ? AND asset_id = 'asset-3'
+                """,
+                (other["fixtureId"],),
+            ).fetchone()[0]
+        self.assertEqual(state, "unreviewed")
+        self.assertEqual(event_count, 0)
+
     def test_culling_views_keep_universe_counts_and_global_metadata(self):
         fixture = create_fixture(self.root, "Root", fixture_id="root")
         record_decision(

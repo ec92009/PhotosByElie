@@ -36,6 +36,7 @@ struct PhotosByElieBackstageApp: App {
                         }
                     }
             }
+            .frame(minWidth: 1_120, minHeight: 720)
             .task { await model.bootstrapAuthentication() }
             .task { await model.runPhotosSyncLoop() }
             .onChange(of: scenePhase) { _, phase in
@@ -112,11 +113,11 @@ private struct OverviewView: View {
                     VStack(alignment: .leading, spacing: 12) {
                     LabeledContent("Authentication", value: model.authentication.phase.rawValue)
                     if let deviceID = model.authentication.deviceId {
-                        LabeledContent("Device", value: deviceID)
+                        LabeledContent("Device", value: abbreviatedDeviceID(deviceID))
                             .textSelection(.enabled)
                     }
                     if let expiresAt = model.authentication.accessExpiresAt {
-                        LabeledContent("Access token", value: expiresAt.formatted())
+                        LabeledContent("Session expires", value: expiresAt.formatted())
                     }
                     Text(model.authenticationStatus)
                         .font(.callout)
@@ -158,7 +159,7 @@ private struct OverviewView: View {
                     LabeledContent("Background-only", value: model.photosBridgeHealth.headless ? "Yes" : "No")
                     LabeledContent("Photos access", value: model.photosBridgeHealth.photoAccess)
                     if !model.photosBridgeHealth.version.isEmpty {
-                        LabeledContent("Version", value: model.photosBridgeHealth.version)
+                        LabeledContent("Helper protocol", value: model.photosBridgeHealth.version)
                     }
                     Text(model.photosBridgeHealth.message)
                         .font(.callout)
@@ -170,9 +171,14 @@ private struct OverviewView: View {
                     .padding(6)
                 }
                 Spacer()
-            }
-            .padding(24)
         }
+        .padding(24)
+    }
+    }
+
+    private func abbreviatedDeviceID(_ deviceID: String) -> String {
+        guard deviceID.count > 18 else { return deviceID }
+        return "\(deviceID.prefix(18))…"
     }
 }
 
@@ -195,15 +201,17 @@ private struct FixturePicker: View {
 private struct UploadWorkflowView: View {
     @ObservedObject var model: BackstageViewModel
     @State private var confirmingAdoption = false
+    @State private var confirmingSelectedPublication = false
+    @State private var confirmingNextPublication = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("Upload & publish").font(.largeTitle.bold())
                 Spacer()
-                Button("Publish selected") { Task { await model.publishSelectedNatively() } }
+                Button("Publish selected…") { confirmingSelectedPublication = true }
                     .disabled(model.isRunningDelivery || model.selectedDeliveryIDs.isEmpty)
-                Button("Publish next 50") { Task { await model.publishNextNativeBatch() } }
+                Button("Publish next eligible 50…") { confirmingNextPublication = true }
                     .disabled(model.isRunningDelivery)
             }
             Text("Upload equals publication. Each verified source version becomes live immediately in every effective picked fixture; ACS alone determines who can see it. A failed asset remains Needs Upload without blocking the rest.")
@@ -217,6 +225,14 @@ private struct UploadWorkflowView: View {
                 }
             }
             Text(model.nativeUploadStatus).font(.callout).foregroundStyle(.secondary)
+            if model.nativeUploadRun == nil {
+                ContentUnavailableView(
+                    "No upload run is active",
+                    systemImage: "arrow.up.circle",
+                    description: Text("Publishing is immediate. Review the eligibility scope before starting either guarded action.")
+                )
+                .frame(maxWidth: .infinity, minHeight: 180)
+            }
             if let run = model.nativeUploadRun, !run.items.isEmpty {
                 Table(run.items) {
                     TableColumn("Asset", value: \.assetID)
@@ -287,6 +303,28 @@ private struct UploadWorkflowView: View {
         } message: {
             Text("The existing R2 objects are checksum-verified before fixture receipts are reconstructed. No client message or publication is triggered.")
         }
+        .confirmationDialog(
+            "Publish the selected eligible assets now?",
+            isPresented: $confirmingSelectedPublication
+        ) {
+            Button("Publish selected assets") {
+                Task { await model.publishSelectedNatively() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Upload equals publication. Verified assets become live immediately in their effective picked fixtures.")
+        }
+        .confirmationDialog(
+            "Publish the next eligible batch now?",
+            isPresented: $confirmingNextPublication
+        ) {
+            Button("Publish up to 50 eligible assets") {
+                Task { await model.publishNextNativeBatch() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Backstage will select up to 50 approved assets that still need upload. Upload equals publication.")
+        }
     }
 }
 
@@ -312,7 +350,13 @@ private struct DeliverablesView: View {
                 .frame(width: 180)
                 TextField("Authenticated share URL", text: $model.deliverableShareLink)
                 Button("Record ready link") { Task { await model.linkDeliverable() } }
-                    .disabled(model.isRunningDelivery)
+                    .disabled(
+                        model.isRunningDelivery
+                            || model.selectedFixtureID.isEmpty
+                            || !model.deliverableShareLink
+                                .trimmingCharacters(in: .whitespacesAndNewlines)
+                                .hasPrefix("https://")
+                    )
             }
             Text(model.deliveryStatus).font(.callout).foregroundStyle(.secondary)
             Table(model.deliverables) {
@@ -320,6 +364,19 @@ private struct DeliverablesView: View {
                 TableColumn("State", value: \.state)
                 TableColumn("Provider", value: \.provider)
                 TableColumn("Share link", value: \.externalIdentity)
+            }
+            .overlay {
+                if model.deliverables.isEmpty {
+                    ContentUnavailableView(
+                        model.selectedFixtureID.isEmpty ? "Choose a fixture" : "No products loaded",
+                        systemImage: "shippingbox",
+                        description: Text(
+                            model.selectedFixtureID.isEmpty
+                                ? "Select a fixture, then load its existing delivery records."
+                                : "Load the fixture to inspect its PDF, video, originals, and share-link records."
+                        )
+                    )
+                }
             }
         }
         .padding()
@@ -348,6 +405,9 @@ private struct PublicationView: View {
             Text("Sold masters and sold derivatives are protected indefinitely. Other unreferenced objects enter a 30-day quarantine and can be deleted only after a second reconciliation still finds them unreferenced.")
                 .foregroundStyle(.secondary)
             Text(model.r2ReconciliationStatus).font(.callout).foregroundStyle(.secondary)
+            if model.isRunningDelivery {
+                ProgressView("Checking R2 references and sale protection…")
+            }
             if let report = model.r2Reconciliation {
                 HStack {
                     LabeledContent("Scanned", value: "\(report.scanned)")
@@ -364,6 +424,13 @@ private struct PublicationView: View {
                     TableColumn("Referenced") { Text($0.referenced ? "Yes" : "No") }
                     TableColumn("Action", value: \.action)
                 }
+            } else if !model.isRunningDelivery {
+                ContentUnavailableView(
+                    "No reconciliation preview",
+                    systemImage: "shield.checkered",
+                    description: Text("Preview the protected and quarantined objects before the guarded apply action becomes available.")
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .padding()
@@ -420,6 +487,17 @@ private struct LifecycleView: View {
                 }
                 .width(90)
             }
+            .overlay {
+                if model.isRunningLifecycle && model.lifecycleItems.isEmpty {
+                    ProgressView("Loading private lifecycle ledger…")
+                } else if model.lifecycleItems.isEmpty {
+                    ContentUnavailableView(
+                        "Waste Basket is empty",
+                        systemImage: "trash",
+                        description: Text("Recoverable and permanently discarded items will appear here.")
+                    )
+                }
+            }
         }
         .padding()
         .task { await model.loadLifecycle() }
@@ -458,12 +536,48 @@ private struct ActivityView: View {
                 TableColumn("Kind", value: \.actionKind)
                 TableColumn("Target", value: \.target)
                 TableColumn("State") { Text($0.state.rawValue.capitalized) }
+                TableColumn("Updated") { action in
+                    Text(
+                        (action.updatedAt ?? action.createdAt)?
+                            .formatted(date: .abbreviated, time: .shortened)
+                            ?? "—"
+                    )
+                    .monospacedDigit()
+                }
+                .width(min: 130, ideal: 160)
                 TableColumn("Progress") { action in
                     if let progress = action.progress {
-                        ProgressView(value: progress.percent, total: 100)
+                        VStack(alignment: .leading, spacing: 2) {
+                            ProgressView(value: progress.percent, total: 100)
+                            if let detail = progress.detail, !detail.isEmpty {
+                                Text(detail).font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
                     } else {
                         Text("—")
                     }
+                }
+                TableColumn("Detail") { action in
+                    Text(
+                        action.error?["message"]?.stringValue
+                            ?? action.error?["code"]?.stringValue
+                            ?? String(action.id.prefix(12))
+                    )
+                    .lineLimit(2)
+                    .foregroundStyle(action.state == .failed ? .red : .secondary)
+                    .textSelection(.enabled)
+                }
+                .width(min: 150, ideal: 260)
+            }
+            .overlay {
+                if model.isRefreshing && model.actions.isEmpty {
+                    ProgressView("Loading audited activity…")
+                } else if model.actions.isEmpty {
+                    ContentUnavailableView(
+                        "No recent activity",
+                        systemImage: "clock.arrow.circlepath",
+                        description: Text("The latest audited Owner actions will appear here.")
+                    )
                 }
             }
         }
@@ -477,33 +591,16 @@ private struct MediaLibraryView: View {
     var body: some View {
         HSplitView {
             VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(
-                            model.cullingPool?.name
-                                ?? model.flatFixtures.first(where: { $0.id == model.cullingFixtureID })?.name
-                                ?? "Fixture Culling"
-                        )
-                            .font(.largeTitle.bold())
-                        if let pool = model.cullingPool {
-                            Text("Fixture pool \(pool.id) • \(pool.assetCount) immutable ordered assets")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
+                ViewThatFits(in: .horizontal) {
+                    HStack {
+                        cullingHeading
+                        Spacer()
+                        cullingHeaderActions
                     }
-                    Spacer()
-                    if model.cullingPool != nil {
-                        Button("All Photos") {
-                            model.showAllPhotosInCulling()
-                        }
+                    VStack(alignment: .leading, spacing: 8) {
+                        cullingHeading
+                        cullingHeaderActions
                     }
-                    Button("Allow Photos") {
-                        Task { await model.authorizeAndLoadPhotos() }
-                    }
-                    Button("Refresh") {
-                        Task { await model.refreshPhotos() }
-                    }
-                    .disabled(model.isLoadingPhotos)
                 }
                 Text(model.photoStatus)
                     .foregroundStyle(.secondary)
@@ -863,6 +960,39 @@ private struct MediaLibraryView: View {
         }
     }
 
+    private var cullingHeading: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(
+                model.cullingPool?.name
+                    ?? model.flatFixtures.first(where: { $0.id == model.cullingFixtureID })?.name
+                    ?? "Fixture Culling"
+            )
+            .font(.largeTitle.bold())
+            if let pool = model.cullingPool {
+                Text("Fixture pool \(pool.id) • \(pool.assetCount) immutable ordered assets")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private var cullingHeaderActions: some View {
+        HStack {
+            if model.cullingPool != nil {
+                Button("All Photos") {
+                    model.showAllPhotosInCulling()
+                }
+            }
+            Button("Allow Photos") {
+                Task { await model.authorizeAndLoadPhotos() }
+            }
+            Button("Refresh") {
+                Task { await model.refreshPhotos() }
+            }
+            .disabled(model.isLoadingPhotos)
+        }
+    }
+
     private func chooseExportDirectory() -> URL? {
         let panel = NSOpenPanel()
         panel.title = "Export verified originals"
@@ -954,6 +1084,7 @@ private struct CullingAssetCard: View {
         default: .clear
         }
     }
+
 }
 
 private struct FixturePickerOption: Identifiable {
@@ -1120,6 +1251,17 @@ private struct FixtureWorkflowView: View {
                         TableColumn("Kind", value: \.mediaType)
                     }
                     .frame(minHeight: 140, idealHeight: 180, maxHeight: 220)
+                    .overlay {
+                        if model.isRunningFixture && model.fixtureAssets.isEmpty {
+                            ProgressView("Loading fixture candidates…")
+                        } else if model.fixtureAssets.isEmpty {
+                            ContentUnavailableView(
+                                "No candidates loaded",
+                                systemImage: "photo.stack",
+                                description: Text("Choose a fixture and search by title, keyword, file, or camera.")
+                            )
+                        }
+                    }
                     HStack {
                         Text("\(model.selectedFixtureAssetIDs.count) selected")
                         Spacer()
@@ -1451,12 +1593,18 @@ private struct AccessControlView: View {
                     Text("Groups & inherited grants").font(.title2.bold())
                     Table(model.accessState.allGroups) {
                         TableColumn("Group") { Text($0.label ?? $0.id) }
+                            .width(min: 150, ideal: 190)
                         TableColumn("Kind") { Text($0.kind ?? "event") }
+                            .width(min: 80, ideal: 100)
                         TableColumn("State") { Text($0.state ?? "active") }
+                            .width(min: 70, ideal: 85)
                         TableColumn("Actions") { group in
-                            Button("Archive") { Task { await model.archiveGroup(group.id) } }
+                            Button(group.isArchived ? "Archived" : "Archive") {
+                                Task { await model.archiveGroup(group.id) }
+                            }
                                 .disabled(group.isArchived)
                         }
+                        .width(min: 78, ideal: 90)
                     }
                     TextField("Stable group ID", text: $model.groupID)
                     TextField("Label", text: $model.groupName)
@@ -1489,42 +1637,16 @@ private struct FixtureReviewView: View {
         HSplitView {
             VStack(alignment: .leading, spacing: 12) {
                 VStack(alignment: .leading, spacing: 10) {
-                    HStack {
+                    ViewThatFits(in: .horizontal) {
+                        HStack {
+                            reviewHeading
+                            Spacer()
+                            reviewScopeControls
+                        }
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Review")
-                                .font(.largeTitle.bold())
-                            Text("Oldest picked photos first")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                            reviewHeading
+                            reviewScopeControls
                         }
-                        Spacer()
-                        Picker(
-                            "Fixture",
-                            selection: Binding(
-                                get: { model.reviewFixtureID },
-                                set: { model.selectReviewFixture($0) }
-                            )
-                        ) {
-                            ForEach(model.flatFixtures.filter { !$0.isArchived }) { fixture in
-                                let depth = max(0, model.fixtures.path(to: fixture.id).count - 1)
-                                Text("\(String(repeating: "  ", count: depth))\(fixture.name)")
-                                    .tag(fixture.id)
-                            }
-                        }
-                        .frame(width: 180)
-                        Picker(
-                            "Queue",
-                            selection: Binding(
-                                get: { model.reviewMode },
-                                set: { model.selectReviewMode($0) }
-                            )
-                        ) {
-                            ForEach(FixtureReviewMode.allCases) { mode in
-                                Text(mode.label).tag(mode)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-                        .frame(width: 170)
                     }
                     HStack {
                         TextField("Search complete Review queue", text: $model.reviewSearch)
@@ -1719,6 +1841,48 @@ private struct FixtureReviewView: View {
                 guard !Task.isCancelled else { break }
                 await model.refreshAIStatus()
             }
+        }
+    }
+
+    private var reviewHeading: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("Review")
+                .font(.largeTitle.bold())
+            Text("Oldest picked photos first")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var reviewScopeControls: some View {
+        HStack {
+            Picker(
+                "Fixture",
+                selection: Binding(
+                    get: { model.reviewFixtureID },
+                    set: { model.selectReviewFixture($0) }
+                )
+            ) {
+                ForEach(model.flatFixtures.filter { !$0.isArchived }) { fixture in
+                    let depth = max(0, model.fixtures.path(to: fixture.id).count - 1)
+                    Text("\(String(repeating: "  ", count: depth))\(fixture.name)")
+                        .tag(fixture.id)
+                }
+            }
+            .frame(width: 180)
+            Picker(
+                "Queue",
+                selection: Binding(
+                    get: { model.reviewMode },
+                    set: { model.selectReviewMode($0) }
+                )
+            ) {
+                ForEach(FixtureReviewMode.allCases) { mode in
+                    Text(mode.label).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+            .frame(width: 170)
         }
     }
 }

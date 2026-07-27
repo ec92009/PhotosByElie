@@ -389,7 +389,7 @@ final class BackstageViewModel: ObservableObject {
             photoPreview = preview
             photoStatus = "Preview prepared from Photos without exporting the original."
         } catch {
-            photoStatus = String(describing: error)
+            photoStatus = userFacingMessage(for: error)
         }
     }
 
@@ -455,7 +455,7 @@ final class BackstageViewModel: ObservableObject {
             self.metadataReport = retried
             metadataStatus = reportStatus(retried)
         } catch {
-            metadataStatus = String(describing: error)
+            metadataStatus = userFacingMessage(for: error)
         }
     }
 
@@ -794,7 +794,7 @@ final class BackstageViewModel: ObservableObject {
             photoPreview = nil
             cullingStatus = "\(window.summary.filtered.formatted()) \(window.view.label.lowercased()) of \(window.summary.universe.formatted()) eligible items."
         } catch {
-            cullingStatus = String(describing: error)
+            cullingStatus = userFacingMessage(for: error)
         }
     }
 
@@ -932,7 +932,7 @@ final class BackstageViewModel: ObservableObject {
             fixturePolicyRevision = configuration.revision
             fixturePolicyStatus = "Configured overrides and effective revision \(configuration.revision) loaded."
         } catch {
-            fixturePolicyStatus = String(describing: error)
+            fixturePolicyStatus = userFacingMessage(for: error)
         }
     }
 
@@ -973,7 +973,7 @@ final class BackstageViewModel: ObservableObject {
             fixturePolicyRevision = configuration.revision
             fixturePolicyStatus = "Saved overrides; effective revision \(configuration.revision) refreshed."
         } catch {
-            fixturePolicyStatus = String(describing: error)
+            fixturePolicyStatus = userFacingMessage(for: error)
         }
     }
 
@@ -1062,7 +1062,7 @@ final class BackstageViewModel: ObservableObject {
             accessState = try await accessService.load()
             accessStatus = "\(accessState.allPeople.count) people and \(accessState.allGroups.count) groups loaded."
         } catch {
-            accessStatus = String(describing: error)
+            accessStatus = userFacingMessage(for: error)
         }
     }
 
@@ -1309,7 +1309,7 @@ final class BackstageViewModel: ObservableObject {
             reviewStatus = "\(window.summary.total.formatted()) \(scope) photo\(window.summary.total == 1 ? "" : "s") • oldest first."
             await refreshAIStatus()
         } catch {
-            reviewStatus = String(describing: error)
+            reviewStatus = userFacingMessage(for: error)
         }
     }
 
@@ -1687,7 +1687,7 @@ final class BackstageViewModel: ObservableObject {
             reviewStatus = "Prepared \(urls.count.formatted()) private Quick Look item\(urls.count == 1 ? "" : "s")."
             return urls
         } catch {
-            reviewStatus = String(describing: error)
+            reviewStatus = userFacingMessage(for: error)
             return []
         }
     }
@@ -1786,7 +1786,7 @@ final class BackstageViewModel: ObservableObject {
             replaceCullingItems()
             cullingStatus = "Loaded \(states.count) preserved decision\(states.count == 1 ? "" : "s") for this culling scope."
         } catch {
-            cullingStatus = String(describing: error)
+            cullingStatus = userFacingMessage(for: error)
         }
     }
 
@@ -1893,7 +1893,7 @@ final class BackstageViewModel: ObservableObject {
             cullingStatus = "Prepared \(urls.count) private Quick Look item\(urls.count == 1 ? "" : "s") from Photos."
             return urls
         } catch {
-            cullingStatus = String(describing: error)
+            cullingStatus = userFacingMessage(for: error)
             return []
         }
     }
@@ -1944,7 +1944,7 @@ final class BackstageViewModel: ObservableObject {
             replaceCullingItems()
             cullingStatus = "\(label) saved for \(changes.count) item\(changes.count == 1 ? "" : "s") in the cloud ledger."
         } catch {
-            cullingStatus = String(describing: error)
+            cullingStatus = userFacingMessage(for: error)
         }
     }
 
@@ -1986,7 +1986,7 @@ final class BackstageViewModel: ObservableObject {
             }
             cullingStatus = "\(label) saved for \(changes.count) fixture item\(changes.count == 1 ? "" : "s")."
         } catch {
-            cullingStatus = String(describing: error)
+            cullingStatus = userFacingMessage(for: error)
         }
     }
 
@@ -2038,7 +2038,7 @@ final class BackstageViewModel: ObservableObject {
             )
             metadataReviewStatus = "Title, caption, and keywords saved by action \(change.actionID). Publication remains separate."
         } catch {
-            metadataReviewStatus = String(describing: error)
+            metadataReviewStatus = userFacingMessage(for: error)
         }
     }
 
@@ -2050,7 +2050,7 @@ final class BackstageViewModel: ObservableObject {
             let action = try await metadataReviewService.queueReview(assetIDs: ids)
             metadataReviewStatus = "\(ids.count) item\(ids.count == 1 ? "" : "s") queued for review by action \(action.id)."
         } catch {
-            metadataReviewStatus = String(describing: error)
+            metadataReviewStatus = userFacingMessage(for: error)
         }
     }
 
@@ -2067,7 +2067,7 @@ final class BackstageViewModel: ObservableObject {
             metadataBlacklist = change.after.joined(separator: ", ")
             metadataReviewStatus = "Keyword blacklist replaced through action \(change.actionID)."
         } catch {
-            metadataReviewStatus = String(describing: error)
+            metadataReviewStatus = userFacingMessage(for: error)
         }
     }
 
@@ -2097,7 +2097,7 @@ final class BackstageViewModel: ObservableObject {
             }
             metadataHistory.removeLast()
         } catch {
-            metadataReviewStatus = "Undo failed; the history entry was retained. \(String(describing: error))"
+            metadataReviewStatus = "Undo failed; the history entry was retained. \(userFacingMessage(for: error))"
         }
     }
 
@@ -2107,7 +2107,7 @@ final class BackstageViewModel: ObservableObject {
             metadataProposals = queue.photos
             metadataProposalStatus = "\(queue.photos.count) pending proposal\(queue.photos.count == 1 ? "" : "s") loaded from Owner.sqlite."
         } catch {
-            metadataProposalStatus = String(describing: error)
+            metadataProposalStatus = userFacingMessage(for: error)
         }
     }
 
@@ -2124,7 +2124,7 @@ final class BackstageViewModel: ObservableObject {
             metadataProposals.removeAll { $0.id == proposal.id }
             metadataProposalStatus = "\(disposition.rawValue.capitalized) saved by audited action \(action.id)."
         } catch {
-            metadataProposalStatus = String(describing: error)
+            metadataProposalStatus = userFacingMessage(for: error)
         }
     }
 
@@ -2137,6 +2137,7 @@ final class BackstageViewModel: ObservableObject {
 
     func loadLifecycle() async {
         isRunningLifecycle = true
+        lifecycleStatus = "Loading the private lifecycle ledger…"
         defer { isRunningLifecycle = false }
         do {
             let ledger = try await lifecycleService.ledger()
@@ -2144,7 +2145,7 @@ final class BackstageViewModel: ObservableObject {
             selectedLifecycleIDs.formIntersection(Set(ledger.items.map(\.id)))
             lifecycleStatus = "\(ledger.hiddenCount) recoverable and \(ledger.discardedCount) permanently discarded item\(ledger.items.count == 1 ? "" : "s")."
         } catch {
-            lifecycleStatus = String(describing: error)
+            lifecycleStatus = userFacingMessage(for: error)
         }
     }
 
@@ -2163,7 +2164,7 @@ final class BackstageViewModel: ObservableObject {
             lifecycleStatus = "Restored \(ids.count) item\(ids.count == 1 ? "" : "s") with saved private titles through action \(action.id)."
             await loadLifecycle()
         } catch {
-            lifecycleStatus = String(describing: error)
+            lifecycleStatus = userFacingMessage(for: error)
         }
     }
 
@@ -2175,7 +2176,7 @@ final class BackstageViewModel: ObservableObject {
             lifecycleStatus = "Permanently discarded one item through action \(action.id)."
             await loadLifecycle()
         } catch {
-            lifecycleStatus = String(describing: error)
+            lifecycleStatus = userFacingMessage(for: error)
         }
     }
 
@@ -2192,7 +2193,7 @@ final class BackstageViewModel: ObservableObject {
             selectedDeliveryIDs.formIntersection(Set(plan.items.map(\.id)))
             deliveryStatus = "\(plan.completeCount) of \(plan.items.count) complete; \(plan.retryableIDs.count) approved items remain."
         } catch {
-            deliveryStatus = String(describing: error)
+            deliveryStatus = userFacingMessage(for: error)
         }
     }
 
@@ -2209,7 +2210,7 @@ final class BackstageViewModel: ObservableObject {
                 uploadRecoveryStatus = "\(uploadHealth.uploadableCount) uploadable; \(uploadHealth.coveredCount) already covered; \(uploadHealth.blockedCount) metadata-blocked."
             }
         } catch {
-            uploadRecoveryStatus = String(describing: error)
+            uploadRecoveryStatus = userFacingMessage(for: error)
         }
     }
 
@@ -2246,7 +2247,7 @@ final class BackstageViewModel: ObservableObject {
                 : "\(plan.eligibleIDs.count) eligible; \(plan.blocked.count) blocked. No state changed."
             if commit { await loadDeliveryPlan() }
         } catch {
-            uploadRecoveryStatus = String(describing: error)
+            uploadRecoveryStatus = userFacingMessage(for: error)
         }
     }
 
@@ -2378,7 +2379,7 @@ final class BackstageViewModel: ObservableObject {
             }
             deliveryPlan = try await deliveryService.plan(fixtureID: selectedFixtureID)
         } catch {
-            deliveryStatus = String(describing: error)
+            deliveryStatus = userFacingMessage(for: error)
         }
     }
 
@@ -2393,7 +2394,7 @@ final class BackstageViewModel: ObservableObject {
             deliverables = try await deliveryService.deliverables(fixtureID: selectedFixtureID)
             deliveryStatus = "\(deliverables.count) PDF, video, originals, or share-link record\(deliverables.count == 1 ? "" : "s") loaded."
         } catch {
-            deliveryStatus = String(describing: error)
+            deliveryStatus = userFacingMessage(for: error)
         }
     }
 
@@ -2414,7 +2415,7 @@ final class BackstageViewModel: ObservableObject {
             deliverableShareLink = ""
             deliveryStatus = "\(deliverableKind.uppercased()) share link recorded; no message was sent."
         } catch {
-            deliveryStatus = String(describing: error)
+            deliveryStatus = userFacingMessage(for: error)
         }
     }
 
@@ -2431,7 +2432,7 @@ final class BackstageViewModel: ObservableObject {
             publicationPlan = plan
             publicationStatus = "\(plan.eligibleIDs.count) eligible; \(plan.blocked.count) blocked. Nothing was rebuilt or deployed."
         } catch {
-            publicationStatus = String(describing: error)
+            publicationStatus = userFacingMessage(for: error)
         }
     }
 
@@ -2451,7 +2452,7 @@ final class BackstageViewModel: ObservableObject {
                 ? "Catalog registration and static rebuild completed through action \(report.actionID). Deployment remains explicit."
                 : "\(report.failedCount) publication item\(report.failedCount == 1 ? "" : "s") failed."
         } catch {
-            publicationStatus = String(describing: error)
+            publicationStatus = userFacingMessage(for: error)
         }
     }
 
@@ -2528,6 +2529,9 @@ final class BackstageViewModel: ObservableObject {
             }
             return envelope.error.message
         }
+        if let ownerActionError = error as? OwnerActionRunError {
+            return ownerActionError.localizedDescription
+        }
         return error.localizedDescription
     }
 
@@ -2542,7 +2546,7 @@ final class BackstageViewModel: ObservableObject {
             metadataReport = report
             metadataStatus = reportStatus(report)
         } catch {
-            metadataStatus = String(describing: error)
+            metadataStatus = userFacingMessage(for: error)
         }
     }
 

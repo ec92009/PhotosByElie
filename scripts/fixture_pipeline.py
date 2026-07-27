@@ -1392,7 +1392,7 @@ def fixture_culling_window(
         ).fetchone()[0]
         rows = conn.execute(
             f"""
-            SELECT a.asset_id, a.source_anchor, a.filename, a.media_type, a.captured_at,
+            SELECT a.asset_id, a.source_anchor, a.raw_json, a.filename, a.media_type, a.captured_at,
                    COALESCE(NULLIF(a.photos_title, ''), NULLIF(global_decision.title, ''), '') title,
                    COALESCE(current_decision.placement_state, 'undecided') placement_state,
                    COALESCE(current_decision.eligibility_state, 'active') eligibility_state,
@@ -1409,15 +1409,9 @@ def fixture_culling_window(
         ).fetchall()
     items = []
     for row in rows:
-        source_anchor = str(row["source_anchor"] or "")
-        local_identifier = (
-            source_anchor.removeprefix("apple-photos://")
-            if source_anchor.startswith("apple-photos://")
-            else str(row["asset_id"])
-        )
         items.append({
             "assetId": str(row["asset_id"]),
-            "photoLibraryIdentifier": local_identifier,
+            "photoLibraryIdentifier": _photo_library_identifier(row),
             "title": str(row["title"] or ""),
             "filename": str(row["filename"] or ""),
             "mediaType": str(row["media_type"] or "photo"),
@@ -1519,16 +1513,23 @@ def _fixture_review_predicates(
     return predicates, params
 
 
-def _review_item(row: sqlite3.Row) -> dict[str, Any]:
+def _photo_library_identifier(row: sqlite3.Row) -> str:
+    raw = _read_json(row["raw_json"], {}) if "raw_json" in row.keys() else {}
+    local_identifier = str(raw.get("localIdentifier") or "")
+    if local_identifier:
+        return local_identifier
     source_anchor = str(row["source_anchor"] or "")
-    local_identifier = (
+    return (
         source_anchor.removeprefix("apple-photos://")
         if source_anchor.startswith("apple-photos://")
         else str(row["asset_id"])
     )
+
+
+def _review_item(row: sqlite3.Row) -> dict[str, Any]:
     return {
         "assetId": str(row["asset_id"]),
-        "photoLibraryIdentifier": local_identifier,
+        "photoLibraryIdentifier": _photo_library_identifier(row),
         "title": str(row["title"] or ""),
         "caption": str(row["caption"] or ""),
         "keywords": _read_json(row["keywords_json"], []),
@@ -1604,7 +1605,7 @@ def fixture_review_window(
         ).fetchone()
         rows = conn.execute(
             f"""
-            SELECT a.asset_id, a.source_anchor, a.filename, a.media_type, a.captured_at,
+            SELECT a.asset_id, a.source_anchor, a.raw_json, a.filename, a.media_type, a.captured_at,
                    COALESCE(NULLIF(decision.title, ''), NULLIF(a.photos_title, ''), '') title,
                    COALESCE(decision.caption, '') caption,
                    CASE

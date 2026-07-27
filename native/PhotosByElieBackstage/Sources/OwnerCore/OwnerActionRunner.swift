@@ -77,6 +77,21 @@ public enum OwnerActionRunError: Error, Sendable, Equatable {
     case timedOut
 }
 
+extension OwnerActionRunError: LocalizedError {
+    public var errorDescription: String? {
+        switch self {
+        case .invalidActionID:
+            "The audited Owner action did not return a valid action ID."
+        case let .failed(message):
+            message.isEmpty ? "The audited Owner action failed." : message
+        case .cancelled:
+            "The audited Owner action was cancelled."
+        case .timedOut:
+            "The audited Owner action is taking longer than expected. It remains durable and can be checked in Activity."
+        }
+    }
+}
+
 public actor OwnerActionRunner {
     private let api: any OwnerActionServing
     private let waker: any OwnerActionWaking

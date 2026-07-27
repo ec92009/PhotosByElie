@@ -1,5 +1,35 @@
 # PhotosByElie Handoff
 
+## 2026-07-28 — Max native Backstage all-screen polish
+
+- PBB-65 covers a read-only tour of all eleven Backstage workspaces and a
+  consolidated native usability pass. The release candidate is Backstage
+  `0.4.2` build `13` on `codex/david-pbb-43-review`.
+- The pass replaces raw action errors with useful operator messages, keeps
+  Culling and Review controls legible at the compact `1120 x 720` content
+  minimum, adds loading and empty-state guidance across long-running
+  workspaces, exposes Activity timing/detail, and guards Upload publication
+  actions with explicit confirmation. Overview now distinguishes the helper
+  protocol from the app version and abbreviates the device credential; People
+  & Access preserves readable group names and archived state.
+- Verification passes: 44 native OwnerCore contract tests, 7 native culling
+  parity tests, 30 fixture-pipeline tests, release signing, and a read-only
+  visual tour of every sidebar workspace. Acceptance selected sidebar
+  destinations only; it did not make a real Review/Culling decision, save
+  metadata or policy, change the Waste Basket, upload, publish, deliver, alter
+  access, or perform a client action.
+- Review and Culling thumbnails now resolve the real local PhotoKit identifier
+  from cloud-backed catalog records instead of passing their cloud asset ID to
+  Photos. The regression is covered for both native windows, and a real
+  `IMG_4849.jpg` preview was rendered read-only from Photos with the corrected
+  identifier.
+- During the first accessibility fallback, six AI-reason toggles were
+  accidentally generated for the already-selected `IMG_4849.jpg`. The final
+  semantic state was verified to match the initial state exactly:
+  `unreviewed`, no AI reasons, no request timestamp, and unchanged
+  title/keywords/approval. The audit records remain. Subsequent navigation used
+  only the sidebar row's `AXSelected` attribute and was read-only.
+
 ## 2026-07-27 — David to Max PBB-43 native Review handoff
 
 - PBB-29 and PBB-33 are Verified in YouTrack after David's completed native

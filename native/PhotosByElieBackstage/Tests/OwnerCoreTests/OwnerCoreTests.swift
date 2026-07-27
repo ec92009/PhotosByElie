@@ -37,6 +37,22 @@ struct OwnerCoreTests {
         #expect(page.actions[0].state == .completed)
     }
 
+    @Test("Owner action failures remain useful outside OwnerCore")
+    func ownerActionFailuresAreLocalized() {
+        #expect(
+            OwnerActionRunError.failed("The connector rejected this action.").localizedDescription
+                == "The connector rejected this action."
+        )
+        #expect(
+            OwnerActionRunError.timedOut.localizedDescription
+                == "The audited Owner action is taking longer than expected. It remains durable and can be checked in Activity."
+        )
+        #expect(
+            OwnerActionRunError.invalidActionID.localizedDescription
+                == "The audited Owner action did not return a valid action ID."
+        )
+    }
+
     @Test("Generated endpoints and examples match the published contract")
     func generatedContractAndExamples() throws {
         #expect(OwnerContract.endpoints[.createAction]?.method == "POST")

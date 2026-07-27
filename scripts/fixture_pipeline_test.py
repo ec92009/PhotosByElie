@@ -348,6 +348,31 @@ class FixturePipelineTest(unittest.TestCase):
                 mode="everything",
             )
 
+    def test_cloud_backed_items_keep_their_local_photos_identifier_for_previews(self):
+        upsert_assets(self.root, [{
+            "cloudIdentifier": "cloud-asset-1",
+            "localIdentifier": "asset-1",
+            "filename": "A cloud.JPG",
+            "mediaType": "photo",
+            "creationDate": "2026-07-15T10:00:00Z",
+        }])
+        fixture = create_fixture(self.root, "Root", fixture_id="root")
+        set_fixture_asset_state(
+            self.root,
+            fixture["fixtureId"],
+            ["cloud-asset-1"],
+            "picked",
+        )
+
+        culling = fixture_culling_window(
+            self.root,
+            fixture["fixtureId"],
+            view="picked",
+        )
+        review = fixture_review_window(self.root, fixture["fixtureId"])
+        self.assertEqual(culling["items"][0]["photoLibraryIdentifier"], "asset-1")
+        self.assertEqual(review["items"][0]["photoLibraryIdentifier"], "asset-1")
+
     def test_review_large_queue_pages_are_stable_oldest_first(self):
         assets = [
             {

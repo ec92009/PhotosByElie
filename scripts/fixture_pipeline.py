@@ -441,6 +441,25 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS idx_asset_editorial_events_asset
           ON asset_editorial_events(asset_id, created_at);
 
+        CREATE TABLE IF NOT EXISTS fixture_review_operations (
+          operation_id TEXT PRIMARY KEY,
+          fixture_id TEXT NOT NULL,
+          action TEXT NOT NULL,
+          anchor_asset_id TEXT NOT NULL,
+          propagated INTEGER NOT NULL DEFAULT 0 CHECK (propagated IN (0, 1)),
+          asset_ids_json TEXT NOT NULL,
+          before_json TEXT NOT NULL,
+          after_json TEXT NOT NULL,
+          state TEXT NOT NULL DEFAULT 'applied'
+            CHECK (state IN ('applied', 'undone')),
+          actor TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          undone_at TEXT,
+          FOREIGN KEY (fixture_id) REFERENCES fixtures(fixture_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_fixture_review_operations_fixture
+          ON fixture_review_operations(fixture_id, created_at DESC);
+
         CREATE TABLE IF NOT EXISTS asset_ai_proposals (
           proposal_id TEXT PRIMARY KEY,
           asset_id TEXT NOT NULL,
@@ -1778,6 +1797,164 @@ def _set_fixture_review_placement(
     )
 
 
+def _row_dict(row: sqlite3.Row | None) -> dict[str, Any] | None:
+    if row is None:
+        return None
+    return {str(key): row[key] for key in row.keys()}
+
+
+def _review_asset_snapshot(
+    conn: sqlite3.Connection,
+    asset_id: str,
+) -> dict[str, Any]:
+    return {
+        "assetId": asset_id,
+        "decision": _row_dict(
+            conn.execute(
+                "SELECT * FROM sidecar_decisions WHERE asset_id = ?",
+                (asset_id,),
+            ).fetchone()
+        ),
+        "editorial": _row_dict(
+            conn.execute(
+                "SELECT * FROM asset_editorial_state WHERE asset_id = ?",
+                (asset_id,),
+            ).fetchone()
+        ),
+        "delivery": _row_dict(
+            conn.execute(
+                "SELECT * FROM asset_delivery_state WHERE asset_id = ?",
+                (asset_id,),
+            ).fetchone()
+        ),
+        "fixtureDecisions": [
+            _row_dict(row)
+            for row in conn.execute(
+                """
+                SELECT *
+                FROM fixture_asset_decisions
+                WHERE asset_id = ?
+                ORDER BY fixture_id
+                """,
+                (asset_id,),
+            ).fetchall()
+        ],
+        "proposals": [
+            _row_dict(row)
+            for row in conn.execute(
+                """
+                SELECT *
+                FROM asset_ai_proposals
+                WHERE asset_id = ?
+                ORDER BY proposal_id
+                """,
+                (asset_id,),
+            ).fetchall()
+        ],
+    }
+
+
+def _upsert_snapshot_row(
+    conn: sqlite3.Connection,
+    table: str,
+    row: dict[str, Any],
+    conflict_columns: tuple[str, ...],
+) -> None:
+    allowed_tables = {
+        "sidecar_decisions",
+        "asset_editorial_state",
+        "asset_delivery_state",
+        "fixture_asset_decisions",
+        "asset_ai_proposals",
+    }
+    if table not in allowed_tables:
+        raise ValueError("review snapshot table is invalid")
+    schema_columns = {
+        str(item["name"])
+        for item in conn.execute(f"PRAGMA table_info({table})").fetchall()
+    }
+    columns = [column for column in row if column in schema_columns]
+    if not columns or any(column not in columns for column in conflict_columns):
+        raise ValueError(f"review snapshot is invalid for {table}")
+    update_columns = [column for column in columns if column not in conflict_columns]
+    column_sql = ", ".join(columns)
+    value_sql = ", ".join("?" for _ in columns)
+    conflict_sql = ", ".join(conflict_columns)
+    update_sql = ", ".join(f"{column} = excluded.{column}" for column in update_columns)
+    conn.execute(
+        f"""
+        INSERT INTO {table} ({column_sql})
+        VALUES ({value_sql})
+        ON CONFLICT({conflict_sql}) DO UPDATE SET {update_sql}
+        """,
+        [row[column] for column in columns],
+    )
+
+
+def _restore_review_asset_snapshot(
+    conn: sqlite3.Connection,
+    snapshot: dict[str, Any],
+) -> None:
+    asset_id = str(snapshot.get("assetId") or "").strip()
+    if not asset_id:
+        raise ValueError("review snapshot asset is missing")
+    decision = snapshot.get("decision")
+    editorial = snapshot.get("editorial")
+    delivery = snapshot.get("delivery")
+    if not isinstance(decision, dict) or not isinstance(editorial, dict):
+        raise ValueError(f"review snapshot is incomplete: {asset_id}")
+    _upsert_snapshot_row(
+        conn,
+        "sidecar_decisions",
+        decision,
+        ("asset_id",),
+    )
+    _upsert_snapshot_row(
+        conn,
+        "asset_editorial_state",
+        editorial,
+        ("asset_id",),
+    )
+    if isinstance(delivery, dict):
+        _upsert_snapshot_row(
+            conn,
+            "asset_delivery_state",
+            delivery,
+            ("asset_id",),
+        )
+    else:
+        conn.execute(
+            "DELETE FROM asset_delivery_state WHERE asset_id = ?",
+            (asset_id,),
+        )
+    conn.execute(
+        "DELETE FROM fixture_asset_decisions WHERE asset_id = ?",
+        (asset_id,),
+    )
+    for fixture_decision in snapshot.get("fixtureDecisions") or []:
+        if not isinstance(fixture_decision, dict):
+            raise ValueError(f"review fixture snapshot is invalid: {asset_id}")
+        _upsert_snapshot_row(
+            conn,
+            "fixture_asset_decisions",
+            fixture_decision,
+            ("fixture_id", "asset_id"),
+        )
+    conn.execute(
+        "DELETE FROM asset_ai_proposals WHERE asset_id = ?",
+        (asset_id,),
+    )
+    for proposal in snapshot.get("proposals") or []:
+        if not isinstance(proposal, dict):
+            raise ValueError(f"review proposal snapshot is invalid: {asset_id}")
+        _upsert_snapshot_row(
+            conn,
+            "asset_ai_proposals",
+            proposal,
+            ("proposal_id",),
+        )
+
+
 def apply_fixture_review_action(
     repo_root: Path,
     fixture_id: str,
@@ -1801,6 +1978,7 @@ def apply_fixture_review_action(
     if not clean_anchor:
         raise ValueError("at least one review asset is required")
     timestamp = now_iso()
+    operation_id = f"reviewop-{uuid.uuid4().hex[:20]}"
     with connect(repo_root) as conn:
         fixture = conn.execute(
             """
@@ -1823,7 +2001,20 @@ def apply_fixture_review_action(
         if not clean_ids:
             raise ValueError("review action has no eligible targets")
 
-        source_decision = _ensure_global_decision(conn, clean_anchor, timestamp)
+        decisions: dict[str, sqlite3.Row] = {}
+        for asset_id in clean_ids:
+            if not conn.execute(
+                "SELECT 1 FROM sidecar_assets WHERE asset_id = ?",
+                (asset_id,),
+            ).fetchone():
+                raise ValueError(f"asset is not indexed: {asset_id}")
+            if not conn.execute(
+                "SELECT 1 FROM asset_editorial_state WHERE asset_id = ?",
+                (asset_id,),
+            ).fetchone():
+                raise ValueError(f"editorial state is missing: {asset_id}")
+            decisions[asset_id] = _ensure_global_decision(conn, asset_id, timestamp)
+        source_decision = decisions[clean_anchor]
         source_title = (
             str(title).strip()
             if title is not None
@@ -1836,19 +2027,16 @@ def apply_fixture_review_action(
         )
         reasons = _unique(ai_reasons or [])
         items: list[dict[str, Any]] = []
+        before_snapshots = [
+            _review_asset_snapshot(conn, asset_id)
+            for asset_id in clean_ids
+        ]
         for asset_id in clean_ids:
-            if not conn.execute(
-                "SELECT 1 FROM sidecar_assets WHERE asset_id = ?",
-                (asset_id,),
-            ).fetchone():
-                raise ValueError(f"asset is not indexed: {asset_id}")
             before_editorial = conn.execute(
                 "SELECT * FROM asset_editorial_state WHERE asset_id = ?",
                 (asset_id,),
             ).fetchone()
-            if not before_editorial:
-                raise ValueError(f"editorial state is missing: {asset_id}")
-            decision = _ensure_global_decision(conn, asset_id, timestamp)
+            decision = decisions[asset_id]
             before = {
                 "editorialState": str(before_editorial["editorial_state"]),
                 "aiReasons": _read_json(before_editorial["ai_reasons_json"], []),
@@ -2012,14 +2200,188 @@ def apply_fixture_review_action(
                 ),
             )
             items.append({"assetId": asset_id, "before": before, "after": after})
+        after_snapshots = [
+            _review_asset_snapshot(conn, asset_id)
+            for asset_id in clean_ids
+        ]
+        conn.execute(
+            """
+            INSERT INTO fixture_review_operations (
+              operation_id, fixture_id, action, anchor_asset_id, propagated,
+              asset_ids_json, before_json, after_json, state, actor, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'applied', ?, ?)
+            """,
+            (
+                operation_id,
+                fixture_id,
+                clean_action,
+                clean_anchor,
+                int(bool(propagate or clean_action.startswith("propagate-"))),
+                _json(clean_ids),
+                _json(before_snapshots),
+                _json(after_snapshots),
+                actor,
+                timestamp,
+            ),
+        )
         conn.commit()
     return {
         "ok": True,
+        "operationId": operation_id,
         "fixtureId": fixture_id,
         "action": clean_action,
         "anchorAssetId": clean_anchor,
         "propagated": bool(propagate or clean_action.startswith("propagate-")),
         "count": len(items),
+        "items": items,
+    }
+
+
+def undo_fixture_review_action(
+    repo_root: Path,
+    operation_id: str,
+    *,
+    actor: str = "owner",
+) -> dict[str, Any]:
+    """Undo one exact Review operation when its resulting state is still current."""
+    clean_operation_id = str(operation_id or "").strip()
+    if not clean_operation_id:
+        raise ValueError("review operation ID is required")
+    timestamp = now_iso()
+    with connect(repo_root) as conn:
+        operation = conn.execute(
+            """
+            SELECT *
+            FROM fixture_review_operations
+            WHERE operation_id = ?
+            """,
+            (clean_operation_id,),
+        ).fetchone()
+        if not operation:
+            raise ValueError("review operation does not exist")
+        before_snapshots = _read_json(operation["before_json"], [])
+        after_snapshots = _read_json(operation["after_json"], [])
+        if not isinstance(before_snapshots, list) or not isinstance(after_snapshots, list):
+            raise ValueError("review operation snapshot is invalid")
+        if str(operation["state"]) == "undone":
+            return {
+                "ok": True,
+                "operationId": clean_operation_id,
+                "fixtureId": str(operation["fixture_id"]),
+                "action": str(operation["action"]),
+                "count": len(before_snapshots),
+                "alreadyUndone": True,
+                "items": [],
+            }
+        if str(operation["state"]) != "applied":
+            raise ValueError("review operation is not undoable")
+
+        current_snapshots = [
+            _review_asset_snapshot(conn, str(snapshot.get("assetId") or ""))
+            for snapshot in after_snapshots
+            if isinstance(snapshot, dict)
+        ]
+        if len(current_snapshots) != len(after_snapshots):
+            raise ValueError("review operation after snapshot is invalid")
+        if _json(current_snapshots) != _json(after_snapshots):
+            raise ValueError(
+                "review state changed after this operation; reload before undoing"
+            )
+
+        items: list[dict[str, Any]] = []
+        for before_snapshot, current_snapshot in zip(
+            before_snapshots,
+            current_snapshots,
+        ):
+            if not isinstance(before_snapshot, dict):
+                raise ValueError("review operation before snapshot is invalid")
+            asset_id = str(before_snapshot.get("assetId") or "")
+            current_editorial = current_snapshot.get("editorial") or {}
+            current_fixture_decisions = {
+                str(item.get("fixture_id") or ""): item
+                for item in current_snapshot.get("fixtureDecisions") or []
+                if isinstance(item, dict)
+            }
+            _restore_review_asset_snapshot(conn, before_snapshot)
+            restored_snapshot = _review_asset_snapshot(conn, asset_id)
+            restored_editorial = restored_snapshot.get("editorial") or {}
+            conn.execute(
+                """
+                INSERT INTO asset_editorial_events (
+                  event_id, asset_id, fixture_id, action, before_state, after_state,
+                  before_json, after_json, actor, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    f"aee-{uuid.uuid4().hex[:16]}",
+                    asset_id,
+                    str(operation["fixture_id"]),
+                    f"undo-{operation['action']}",
+                    str(current_editorial.get("editorial_state") or ""),
+                    str(restored_editorial.get("editorial_state") or ""),
+                    _json(current_snapshot),
+                    _json(restored_snapshot),
+                    actor,
+                    timestamp,
+                ),
+            )
+            restored_fixture_decisions = {
+                str(item.get("fixture_id") or ""): item
+                for item in restored_snapshot.get("fixtureDecisions") or []
+                if isinstance(item, dict)
+            }
+            for changed_fixture_id in sorted(
+                set(current_fixture_decisions) | set(restored_fixture_decisions)
+            ):
+                current_decision = current_fixture_decisions.get(changed_fixture_id) or {}
+                restored_decision = restored_fixture_decisions.get(changed_fixture_id) or {}
+                if _json(current_decision) == _json(restored_decision):
+                    continue
+                conn.execute(
+                    """
+                    INSERT INTO fixture_asset_decision_events (
+                      event_id, fixture_id, asset_id, before_state, after_state,
+                      before_eligibility, after_eligibility, action, actor, reason,
+                      created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        f"fde-{uuid.uuid4().hex[:16]}",
+                        changed_fixture_id,
+                        asset_id,
+                        str(current_decision.get("placement_state") or "undecided"),
+                        str(restored_decision.get("placement_state") or "undecided"),
+                        str(current_decision.get("eligibility_state") or "active"),
+                        str(restored_decision.get("eligibility_state") or "active"),
+                        f"undo-{operation['action']}",
+                        actor,
+                        f"undo Review operation {clean_operation_id}",
+                        timestamp,
+                    ),
+                )
+            items.append(
+                {
+                    "assetId": asset_id,
+                    "before": current_snapshot,
+                    "after": restored_snapshot,
+                }
+            )
+        conn.execute(
+            """
+            UPDATE fixture_review_operations
+            SET state = 'undone', undone_at = ?
+            WHERE operation_id = ? AND state = 'applied'
+            """,
+            (timestamp, clean_operation_id),
+        )
+        conn.commit()
+    return {
+        "ok": True,
+        "operationId": clean_operation_id,
+        "fixtureId": str(operation["fixture_id"]),
+        "action": str(operation["action"]),
+        "count": len(items),
+        "alreadyUndone": False,
         "items": items,
     }
 

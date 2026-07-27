@@ -367,6 +367,7 @@ from fixture_pipeline import (  # noqa: E402
     fixture_culling_window,
     fixture_review_window,
     apply_fixture_review_action,
+    undo_fixture_review_action,
     ai_preview_targets,
     ai_run_status,
     effective_fixture_access_grants,
@@ -2191,6 +2192,15 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
                 [str(item["assetId"]) for item in review_action.get("items") or []],
             )
         result.update({"readOnly": False, "reviewAction": review_action})
+    elif mode == "fixture-review-undo":
+        result.update({
+            "readOnly": False,
+            "reviewUndo": undo_fixture_review_action(
+                repo_root,
+                str(manifest.get("operationId") or ""),
+                actor="owner-connector",
+            ),
+        })
     elif mode == "fixture-ai-status":
         result.update({"readOnly": True, "ai": ai_run_status(repo_root)})
     elif mode == "fixture-ai-proposals-ready":

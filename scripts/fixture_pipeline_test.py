@@ -21,6 +21,7 @@ from fixture_pipeline import (
     fixture_culling_window,
     fixture_review_window,
     apply_fixture_review_action,
+    undo_fixture_review_action,
     ai_preview_targets,
     ai_run_status,
     effective_fixture_access_grants,
@@ -633,6 +634,218 @@ class FixturePipelineTest(unittest.TestCase):
             ).fetchone()[0]
         self.assertEqual(state, "unreviewed")
         self.assertEqual(event_count, 0)
+
+    def test_review_undo_restores_exact_editorial_delivery_placement_and_proposals(self):
+        root = create_fixture(self.root, "Root", fixture_id="root")
+        other = create_fixture(self.root, "Other", fixture_id="other")
+        for fixture_id in (root["fixtureId"], other["fixtureId"]):
+            set_fixture_asset_state(
+                self.root,
+                fixture_id,
+                ["asset-1"],
+                "picked",
+            )
+        timestamp = "2026-07-15T12:00:00Z"
+        with connect(self.root) as conn:
+            conn.execute(
+                """
+                UPDATE sidecar_decisions
+                SET metadata_state = 'proposed', title = 'Before title',
+                    keywords_json = '["Before"]', last_action = 'metadata',
+                    updated_at = ?
+                WHERE asset_id = 'asset-1'
+                """,
+                (timestamp,),
+            )
+            conn.execute(
+                """
+                UPDATE asset_editorial_state
+                SET editorial_state = 'proposed', proposed_at = ?, updated_at = ?
+                WHERE asset_id = 'asset-1'
+                """,
+                (timestamp, timestamp),
+            )
+            conn.execute(
+                """
+                UPDATE asset_delivery_state
+                SET delivery_state = 'failed', source_version_hash = 'before-hash',
+                    last_error = 'before error', updated_at = ?
+                WHERE asset_id = 'asset-1'
+                """,
+                (timestamp,),
+            )
+            conn.execute(
+                """
+                INSERT INTO asset_ai_proposals (
+                  proposal_id, asset_id, run_id, attempt, status,
+                  proposed_title, created_at
+                ) VALUES (
+                  'proposal-1', 'asset-1', 'run-1', 1, 'ready',
+                  'Draft title', ?
+                )
+                """,
+                (timestamp,),
+            )
+            conn.commit()
+            expected_before = {
+                "decision": dict(
+                    conn.execute(
+                        "SELECT * FROM sidecar_decisions WHERE asset_id = 'asset-1'"
+                    ).fetchone()
+                ),
+                "editorial": dict(
+                    conn.execute(
+                        "SELECT * FROM asset_editorial_state WHERE asset_id = 'asset-1'"
+                    ).fetchone()
+                ),
+                "delivery": dict(
+                    conn.execute(
+                        "SELECT * FROM asset_delivery_state WHERE asset_id = 'asset-1'"
+                    ).fetchone()
+                ),
+                "fixtureDecisions": [
+                    dict(row)
+                    for row in conn.execute(
+                        """
+                        SELECT *
+                        FROM fixture_asset_decisions
+                        WHERE asset_id = 'asset-1'
+                        ORDER BY fixture_id
+                        """
+                    ).fetchall()
+                ],
+                "proposals": [
+                    dict(row)
+                    for row in conn.execute(
+                        """
+                        SELECT *
+                        FROM asset_ai_proposals
+                        WHERE asset_id = 'asset-1'
+                        ORDER BY proposal_id
+                        """
+                    ).fetchall()
+                ],
+            }
+
+        applied = apply_fixture_review_action(
+            self.root,
+            root["fixtureId"],
+            ["asset-1"],
+            "approve",
+            title="Approved title",
+            keywords=["Approved"],
+        )
+        self.assertTrue(applied["operationId"].startswith("reviewop-"))
+        with connect(self.root) as conn:
+            self.assertEqual(
+                conn.execute(
+                    "SELECT status FROM asset_ai_proposals WHERE proposal_id = 'proposal-1'"
+                ).fetchone()[0],
+                "superseded",
+            )
+            self.assertEqual(
+                conn.execute(
+                    "SELECT delivery_state FROM asset_delivery_state WHERE asset_id = 'asset-1'"
+                ).fetchone()[0],
+                "needs-upload",
+            )
+
+        undone = undo_fixture_review_action(
+            self.root,
+            applied["operationId"],
+        )
+        self.assertFalse(undone["alreadyUndone"])
+        self.assertEqual(undone["count"], 1)
+        with connect(self.root) as conn:
+            actual_after = {
+                "decision": dict(
+                    conn.execute(
+                        "SELECT * FROM sidecar_decisions WHERE asset_id = 'asset-1'"
+                    ).fetchone()
+                ),
+                "editorial": dict(
+                    conn.execute(
+                        "SELECT * FROM asset_editorial_state WHERE asset_id = 'asset-1'"
+                    ).fetchone()
+                ),
+                "delivery": dict(
+                    conn.execute(
+                        "SELECT * FROM asset_delivery_state WHERE asset_id = 'asset-1'"
+                    ).fetchone()
+                ),
+                "fixtureDecisions": [
+                    dict(row)
+                    for row in conn.execute(
+                        """
+                        SELECT *
+                        FROM fixture_asset_decisions
+                        WHERE asset_id = 'asset-1'
+                        ORDER BY fixture_id
+                        """
+                    ).fetchall()
+                ],
+                "proposals": [
+                    dict(row)
+                    for row in conn.execute(
+                        """
+                        SELECT *
+                        FROM asset_ai_proposals
+                        WHERE asset_id = 'asset-1'
+                        ORDER BY proposal_id
+                        """
+                    ).fetchall()
+                ],
+            }
+            undo_events = conn.execute(
+                """
+                SELECT COUNT(*)
+                FROM asset_editorial_events
+                WHERE asset_id = 'asset-1' AND action = 'undo-approve'
+                """
+            ).fetchone()[0]
+        self.assertEqual(actual_after, expected_before)
+        self.assertEqual(undo_events, 1)
+        self.assertTrue(
+            undo_fixture_review_action(
+                self.root,
+                applied["operationId"],
+            )["alreadyUndone"]
+        )
+
+    def test_review_undo_refuses_to_overwrite_a_later_change(self):
+        root = create_fixture(self.root, "Root", fixture_id="root")
+        set_fixture_asset_state(
+            self.root,
+            root["fixtureId"],
+            ["asset-1"],
+            "picked",
+        )
+        applied = apply_fixture_review_action(
+            self.root,
+            root["fixtureId"],
+            ["asset-1"],
+            "edit-metadata",
+            title="First change",
+        )
+        apply_fixture_review_action(
+            self.root,
+            root["fixtureId"],
+            ["asset-1"],
+            "edit-metadata",
+            title="Later change",
+        )
+        with self.assertRaisesRegex(ValueError, "state changed"):
+            undo_fixture_review_action(
+                self.root,
+                applied["operationId"],
+            )
+        with connect(self.root) as conn:
+            self.assertEqual(
+                conn.execute(
+                    "SELECT title FROM sidecar_decisions WHERE asset_id = 'asset-1'"
+                ).fetchone()[0],
+                "Later change",
+            )
 
     def test_culling_views_keep_universe_counts_and_global_metadata(self):
         fixture = create_fixture(self.root, "Root", fixture_id="root")

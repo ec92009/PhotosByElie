@@ -119,8 +119,13 @@ fixture, action, before state, after state, complete before/after JSON, actor,
 and timestamp. Fixture-local placement changes also record a
 `fixture_asset_decision_events` row.
 
-An exact undo must be derived from those durable before values, never from the
-current UI fields. Undo restores, in one transaction:
+Each completed Review mutation also returns an opaque `operationId`. Max stores
+the complete before and after snapshots in `fixture_review_operations`; the app
+keeps only the opaque ID and its local selection/focus context. An exact undo
+must be derived from Max's durable before values, never from the current UI
+fields. Max refuses undo if the current state no longer matches the recorded
+after snapshot, so an older operation cannot overwrite a later change. Undo
+restores, in one transaction:
 
 - the affected fixture placement and eligibility inputs;
 - editorial state and AI request fields;
@@ -128,8 +133,9 @@ current UI fields. Undo restores, in one transaction:
 - delivery state when the action changed it;
 - unresolved AI proposal status when the action superseded or accepted it.
 
-Undo itself is a new audited action. Repeating the same action or retrying an
-already completed Worker action must be idempotent.
+Undo itself is a new audited action and marks the durable operation `undone`.
+Repeating the same undo or retrying an already completed Worker action is
+idempotent.
 
 ## UI continuity
 

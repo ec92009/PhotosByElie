@@ -1658,6 +1658,11 @@ private struct FixtureReviewView: View {
                     .disabled(!(model.fixtureReviewWindow?.hasNext ?? false))
                     Spacer()
                     Text("\(model.reviewSelection.selectedIDs.count) selected")
+                    Button("Undo") {
+                        Task { await model.undoLastReviewAction() }
+                    }
+                    .keyboardShortcut("z", modifiers: .command)
+                    .disabled(model.reviewHistory.isEmpty || model.isRunningReview)
                     Button("Clear selection") { model.clearReviewSelection() }
                         .disabled(model.reviewSelection.selectedIDs.isEmpty)
                 }

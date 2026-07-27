@@ -494,6 +494,7 @@ public struct FixtureReviewChange: Identifiable, Sendable, Equatable {
 }
 
 public struct FixtureReviewResult: Sendable, Equatable {
+    public var operationID: String
     public var fixtureID: String
     public var action: FixtureReviewAction
     public var anchorAssetID: String
@@ -501,12 +502,33 @@ public struct FixtureReviewResult: Sendable, Equatable {
     public var changes: [FixtureReviewChange]
 
     init(json: [String: JSONValue]) {
+        operationID = json["operationId"]?.stringValue ?? ""
         fixtureID = json["fixtureId"]?.stringValue ?? ""
         action = FixtureReviewAction(
             rawValue: json["action"]?.stringValue ?? "edit-metadata"
         ) ?? .editMetadata
         anchorAssetID = json["anchorAssetId"]?.stringValue ?? ""
         propagated = json["propagated"]?.boolValue ?? false
+        changes = (json["items"]?.arrayValue ?? [])
+            .compactMap(\.objectValue)
+            .map(FixtureReviewChange.init(json:))
+    }
+}
+
+public struct FixtureReviewUndoResult: Sendable, Equatable {
+    public var operationID: String
+    public var fixtureID: String
+    public var action: FixtureReviewAction
+    public var alreadyUndone: Bool
+    public var changes: [FixtureReviewChange]
+
+    init(json: [String: JSONValue]) {
+        operationID = json["operationId"]?.stringValue ?? ""
+        fixtureID = json["fixtureId"]?.stringValue ?? ""
+        action = FixtureReviewAction(
+            rawValue: json["action"]?.stringValue ?? "edit-metadata"
+        ) ?? .editMetadata
+        alreadyUndone = json["alreadyUndone"]?.boolValue ?? false
         changes = (json["items"]?.arrayValue ?? [])
             .compactMap(\.objectValue)
             .map(FixtureReviewChange.init(json:))
@@ -815,6 +837,15 @@ public actor FixtureWorkflowService {
         let result = try await run("fixture-review-apply", extra: extra)
         return FixtureReviewResult(
             json: result["reviewAction"]?.objectValue ?? [:]
+        )
+    }
+
+    public func undoReview(operationID: String) async throws -> FixtureReviewUndoResult {
+        let result = try await run("fixture-review-undo", extra: [
+            "operationId": .string(operationID),
+        ])
+        return FixtureReviewUndoResult(
+            json: result["reviewUndo"]?.objectValue ?? [:]
         )
     }
 

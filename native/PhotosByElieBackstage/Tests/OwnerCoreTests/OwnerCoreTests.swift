@@ -1011,6 +1011,7 @@ struct OwnerCoreTests {
             state: .completed,
             result: [
                 "reviewAction": .object([
+                    "operationId": "reviewop-test",
                     "fixtureId": "fixture-expo",
                     "action": "request-ai",
                     "anchorAssetId": "asset-oldest",
@@ -1023,7 +1024,26 @@ struct OwnerCoreTests {
                 ]),
             ]
         )
-        let api = ScriptedOwnerActionAPI(completed: [windowAction, applyAction])
+        let undoAction = OwnerAction(
+            id: "owner-action-fixture-review-undo",
+            actionKind: "sidecar-culling-review",
+            target: "max",
+            state: .completed,
+            result: [
+                "reviewUndo": .object([
+                    "operationId": "reviewop-test",
+                    "fixtureId": "fixture-expo",
+                    "action": "request-ai",
+                    "alreadyUndone": false,
+                    "items": .array([.object([
+                        "assetId": "asset-oldest",
+                        "before": .object(["editorialState": "requesting-ai"]),
+                        "after": .object(["editorialState": "unreviewed"]),
+                    ])]),
+                ]),
+            ]
+        )
+        let api = ScriptedOwnerActionAPI(completed: [windowAction, applyAction, undoAction])
         let service = FixtureWorkflowService(runner: OwnerActionRunner(
             api: api,
             waker: UnavailableWaker(),
@@ -1052,10 +1072,15 @@ struct OwnerCoreTests {
             aiNote: "Name the landmark."
         )
         #expect(result.action == .requestAI)
+        #expect(result.operationID == "reviewop-test")
         #expect(result.propagated)
         #expect(result.changes.map(\.assetID) == ["asset-oldest"])
+        let undone = try await service.undoReview(operationID: result.operationID)
+        #expect(undone.operationID == "reviewop-test")
+        #expect(!undone.alreadyUndone)
+        #expect(undone.changes.map(\.assetID) == ["asset-oldest"])
         let requests = await api.requests()
-        #expect(requests.count == 2)
+        #expect(requests.count == 3)
         let reviewManifest = requests[0].payload["manifest"]?.objectValue
         #expect(reviewManifest?["mode"]?.stringValue == "fixture-review-window")
         #expect(reviewManifest?["reviewMode"]?.stringValue == "full")
@@ -1063,6 +1088,9 @@ struct OwnerCoreTests {
         #expect(applyManifest?["mode"]?.stringValue == "fixture-review-apply")
         #expect(applyManifest?["reviewAction"]?.stringValue == "request-ai")
         #expect(applyManifest?["propagate"]?.boolValue == true)
+        let undoManifest = requests[2].payload["manifest"]?.objectValue
+        #expect(undoManifest?["mode"]?.stringValue == "fixture-review-undo")
+        #expect(undoManifest?["operationId"]?.stringValue == "reviewop-test")
     }
 
     @Test("Native requested AI proposals remain draft-only and connector-audited")

@@ -30,6 +30,19 @@ struct ReviewMetadataDraft: Sendable, Equatable {
     var isProposal: Bool { !proposalID.isEmpty }
 }
 
+struct ReviewHistoryEntry: Identifiable, Sendable {
+    var id: String { operationID }
+    var operationID: String
+    var label: String
+    var fixtureID: String
+    var mode: FixtureReviewMode
+    var search: String
+    var offset: Int
+    var selectedIDs: Set<String>
+    var anchorID: String?
+    var focusedID: String?
+}
+
 @MainActor
 final class BackstageViewModel: ObservableObject {
     enum Section: String, CaseIterable, Identifiable {
@@ -159,6 +172,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var fixtureAIStatus: FixtureAIStatus?
     @Published var reviewProposalDrafts: [String: ReviewMetadataDraft] = [:]
     @Published var reviewProposalConflictIDs: Set<String> = []
+    @Published var reviewHistory: [ReviewHistoryEntry] = []
     @Published var aiProposalStatus = "AI runs only for explicitly requested photos."
     @Published var isRunningAIPass = false
     @Published var metadataAssetID = ""
@@ -1345,6 +1359,17 @@ final class BackstageViewModel: ObservableObject {
         }
         let oldItems = reviewItems
         let oldIndex = oldItems.firstIndex(where: { $0.id == anchor }) ?? 0
+        let historyEntry = ReviewHistoryEntry(
+            operationID: "",
+            label: reviewActionLabel(action),
+            fixtureID: reviewFixtureID,
+            mode: reviewMode,
+            search: reviewSearch,
+            offset: reviewWindowOffset,
+            selectedIDs: reviewSelection.selectedIDs,
+            anchorID: reviewSelection.anchorID,
+            focusedID: reviewSelection.focusedID
+        )
         reviewLastAction = action
         isRunningReview = true
         reviewStatus = propagate
@@ -1375,6 +1400,21 @@ final class BackstageViewModel: ObservableObject {
                     reviewProposalConflictIDs.remove($0)
                 }
             }
+            if !result.operationID.isEmpty {
+                reviewHistory.append(
+                    ReviewHistoryEntry(
+                        operationID: result.operationID,
+                        label: historyEntry.label,
+                        fixtureID: historyEntry.fixtureID,
+                        mode: historyEntry.mode,
+                        search: historyEntry.search,
+                        offset: historyEntry.offset,
+                        selectedIDs: historyEntry.selectedIDs,
+                        anchorID: historyEntry.anchorID,
+                        focusedID: historyEntry.focusedID
+                    )
+                )
+            }
             let window = try await fixtureService.reviewWindow(
                 fixtureID: reviewFixtureID,
                 mode: reviewMode,
@@ -1402,6 +1442,58 @@ final class BackstageViewModel: ObservableObject {
             await refreshAIStatus()
         } catch {
             reviewStatus = "\(reviewActionLabel(action)) failed: \(error)"
+        }
+    }
+
+    func undoLastReviewAction() async {
+        guard let entry = reviewHistory.last else {
+            reviewStatus = "Nothing to undo in this Backstage session."
+            return
+        }
+        isRunningReview = true
+        reviewStatus = "Undoing \(entry.label.lowercased())…"
+        defer { isRunningReview = false }
+        do {
+            let result = try await fixtureService.undoReview(
+                operationID: entry.operationID
+            )
+            reviewHistory.removeLast()
+            reviewFixtureID = entry.fixtureID
+            reviewMode = entry.mode
+            reviewSearch = entry.search
+            reviewWindowOffset = entry.offset
+            let window = try await fixtureService.reviewWindow(
+                fixtureID: entry.fixtureID,
+                mode: entry.mode,
+                offset: entry.offset,
+                limit: reviewWindowLimit,
+                search: entry.search
+            )
+            fixtureReviewWindow = window
+            let orderedIDs = window.items.map(\.id)
+            let restoredSelectedIDs = entry.selectedIDs.intersection(orderedIDs)
+            let restoredFocusedID = entry.focusedID.flatMap {
+                orderedIDs.contains($0) ? $0 : nil
+            } ?? restoredSelectedIDs.first ?? orderedIDs.first
+            let restoredAnchorID = entry.anchorID.flatMap {
+                orderedIDs.contains($0) ? $0 : nil
+            } ?? restoredFocusedID
+            reviewSelection = OwnerSelectionModel(
+                orderedIDs: orderedIDs,
+                selectedIDs: restoredSelectedIDs.isEmpty
+                    ? Set(restoredFocusedID.map { [$0] } ?? [])
+                    : restoredSelectedIDs,
+                anchorID: restoredAnchorID,
+                focusedID: restoredFocusedID
+            )
+            reviewScrollTargetID = restoredFocusedID
+            syncReviewDraft()
+            reviewStatus = result.alreadyUndone
+                ? "The Review action was already undone; the queue was refreshed."
+                : "Undid \(entry.label.lowercased()) for \(result.changes.count.formatted()) item\(result.changes.count == 1 ? "" : "s")."
+            await refreshAIStatus()
+        } catch {
+            reviewStatus = "Undo failed: \(error)"
         }
     }
 

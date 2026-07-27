@@ -136,6 +136,20 @@ class FixtureConnectorTest(unittest.TestCase):
                 requested["result"]["reviewAction"]["items"][0]["after"]["editorialState"],
                 "requesting-ai",
             )
+            undone = local_server.new_owner_connector_result(
+                root,
+                action(
+                    "fixture-review-undo",
+                    operationId=requested["result"]["reviewAction"]["operationId"],
+                ),
+            )
+            self.assertFalse(undone["result"]["readOnly"])
+            self.assertEqual(
+                undone["result"]["reviewUndo"]["items"][0]["after"]["editorial"][
+                    "editorial_state"
+                ],
+                "unreviewed",
+            )
             access = local_server.new_owner_connector_result(
                 root,
                 action(

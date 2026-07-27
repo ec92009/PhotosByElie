@@ -16,7 +16,8 @@
   165 Python discovery tests, 42 Swift tests under Xcode 26.6, focused
   fixture-policy/culling tests, the reversible native parity rehearsal, Owner
   API contract generation, and publication validation.
-- Backstage `0.3.0` build `9` was rebuilt, ad-hoc signed, relaunched on David,
+- Backstage `0.3.0` build `10` was built from the corrected acceptance branch,
+  ad-hoc signed, relaunched on David,
   and retained its independently revocable Keychain enrollment. Codex's native
   Mac-control pipe still closes before returning a screenshot, so human Screen
   Sharing supplied the visual evidence. The first loaded editor exposed clipped

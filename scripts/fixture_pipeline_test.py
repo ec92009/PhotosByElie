@@ -348,6 +348,59 @@ class FixturePipelineTest(unittest.TestCase):
                 mode="everything",
             )
 
+    def test_review_large_queue_pages_are_stable_oldest_first(self):
+        assets = [
+            {
+                "localIdentifier": f"large-{index:03d}",
+                "filename": f"LARGE_{index:03d}.JPG",
+                "mediaType": "photo",
+                "creationDate": f"2026-07-{1 + index // 24:02d}T{index % 24:02d}:00:00Z",
+            }
+            for index in range(420)
+        ]
+        upsert_assets(self.root, assets)
+        root = create_fixture(self.root, "Root", fixture_id="root")
+        asset_ids = [asset["localIdentifier"] for asset in assets]
+        set_fixture_asset_state(
+            self.root,
+            root["fixtureId"],
+            asset_ids,
+            "picked",
+        )
+
+        first = fixture_review_window(
+            self.root,
+            root["fixtureId"],
+            offset=0,
+            limit=200,
+        )
+        second = fixture_review_window(
+            self.root,
+            root["fixtureId"],
+            offset=200,
+            limit=200,
+        )
+        third = fixture_review_window(
+            self.root,
+            root["fixtureId"],
+            offset=400,
+            limit=200,
+        )
+        self.assertEqual(first["summary"]["total"], 420)
+        self.assertEqual(first["count"], 200)
+        self.assertTrue(first["hasNext"])
+        self.assertEqual(second["count"], 200)
+        self.assertTrue(second["hasNext"])
+        self.assertEqual(third["count"], 20)
+        self.assertFalse(third["hasNext"])
+        paged_ids = [
+            item["assetId"]
+            for page in (first, second, third)
+            for item in page["items"]
+        ]
+        self.assertEqual(paged_ids, asset_ids)
+        self.assertEqual(len(set(paged_ids)), 420)
+
     def test_review_hide_is_fixture_local_and_ai_request_is_mutually_exclusive(self):
         root = create_fixture(self.root, "Root", fixture_id="root")
         other = create_fixture(self.root, "Other", fixture_id="other")

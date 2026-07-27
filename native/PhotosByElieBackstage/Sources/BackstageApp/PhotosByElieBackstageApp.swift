@@ -1020,35 +1020,32 @@ private struct FixtureWorkflowView: View {
                             if !model.selectedFixtureID.isEmpty {
                                 GroupBox("Population contract") {
                                     VStack(alignment: .leading, spacing: 8) {
-                                        Grid(horizontalSpacing: 24) {
-                                            GridRow {
-                                                HStack {
-                                                    Text("Population")
-                                                    Spacer(minLength: 12)
-                                                    Picker("Population", selection: $model.fixturePopulationMode) {
-                                                        Text("Curated").tag("curated")
-                                                        Text("Rule-based").tag("rule-based")
-                                                        Text("Parent subset").tag("parent-subset")
-                                                    }
-                                                    .labelsHidden()
-                                                    .frame(width: 210)
+                                        HStack(spacing: 24) {
+                                            HStack {
+                                                Text("Population")
+                                                Spacer(minLength: 12)
+                                                Picker("Population", selection: $model.fixturePopulationMode) {
+                                                    Text("Curated").tag("curated")
+                                                    Text("Rule-based").tag("rule-based")
+                                                    Text("Parent subset").tag("parent-subset")
                                                 }
-                                                .frame(maxWidth: .infinity)
-                                                HStack {
-                                                    Text("Source")
-                                                    Spacer(minLength: 12)
-                                                    Picker("Source", selection: $model.fixtureCandidateSourceKind) {
-                                                        Text("Photos library").tag("photos-library")
-                                                        Text("Parent effective snapshot").tag("parent-effective")
-                                                        Text("Saved snapshot").tag("saved-snapshot")
-                                                    }
-                                                    .labelsHidden()
-                                                    .frame(width: 260)
-                                                }
-                                                .frame(maxWidth: .infinity)
+                                                .labelsHidden()
+                                                .frame(width: 210)
                                             }
+                                            .frame(maxWidth: .infinity)
+                                            HStack {
+                                                Text("Source")
+                                                Spacer(minLength: 12)
+                                                Picker("Source", selection: $model.fixtureCandidateSourceKind) {
+                                                    Text("Photos library").tag("photos-library")
+                                                    Text("Parent effective snapshot").tag("parent-effective")
+                                                    Text("Saved snapshot").tag("saved-snapshot")
+                                                }
+                                                .labelsHidden()
+                                                .frame(width: 260)
+                                            }
+                                            .frame(maxWidth: .infinity)
                                         }
-                                        .frame(maxWidth: .infinity)
                                         if model.fixturePopulationMode == "rule-based" {
                                             TextField(
                                                 "Saved rule query",
@@ -1058,8 +1055,8 @@ private struct FixtureWorkflowView: View {
                                     }
                                 }
                                 GroupBox("Configured on this fixture") {
-                                    Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 8) {
-                                        GridRow {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        HStack(spacing: 24) {
                                             HStack {
                                                 Text("Visibility")
                                                 Spacer(minLength: 12)
@@ -1086,7 +1083,7 @@ private struct FixtureWorkflowView: View {
                                             }
                                             .frame(maxWidth: .infinity)
                                         }
-                                        GridRow {
+                                        HStack(spacing: 24) {
                                             HStack {
                                                 Text("Retention")
                                                 Spacer(minLength: 12)
@@ -1116,7 +1113,7 @@ private struct FixtureWorkflowView: View {
                                             }
                                             .frame(maxWidth: .infinity)
                                         }
-                                        GridRow {
+                                        HStack(spacing: 24) {
                                             HStack {
                                                 Text("Download")
                                                 Spacer(minLength: 12)

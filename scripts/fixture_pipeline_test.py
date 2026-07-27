@@ -69,7 +69,13 @@ class FixturePipelineTest(unittest.TestCase):
         root = create_fixture(self.root, "RE", fixture_id="root")
         fixture = create_fixture(self.root, "La Concha", parent_fixture_id=root["fixtureId"], fixture_id="la-concha")
         child = create_fixture(self.root, "Apartment 1", parent_fixture_id=fixture["fixtureId"], fixture_id="apt-1")
-        self.assertEqual(fixture_tree(self.root)[0]["children"][0]["children"][0]["fixtureId"], child["fixtureId"])
+        database = self.root / "assets/owner-actions/Owner.sqlite"
+        before = hashlib.sha256(database.read_bytes()).hexdigest()
+        self.assertEqual(
+            fixture_tree(self.root)[0]["children"][0]["children"][0]["fixtureId"],
+            child["fixtureId"],
+        )
+        self.assertEqual(hashlib.sha256(database.read_bytes()).hexdigest(), before)
         with self.assertRaisesRegex(ValueError, "descendants"):
             move_fixture(self.root, root["fixtureId"], child["fixtureId"])
         renamed = rename_fixture(self.root, fixture["fixtureId"], "La Concha renamed")

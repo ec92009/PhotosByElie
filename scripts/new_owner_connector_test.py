@@ -31,6 +31,13 @@ class UploadRegistrationScopeTest(unittest.TestCase):
     def setUp(self):
         self.config = ConnectorConfig("https://worker.test", "david", "x" * 32, Path("/tmp/repo"))
 
+    def test_launch_agent_does_not_throttle_interactive_owner_reads(self):
+        template = (
+            Path(__file__).with_name("new_owner_connector_launch_agent.plist.in")
+        ).read_text(encoding="utf-8")
+        self.assertIn("<key>ProcessType</key>\n  <string>Standard</string>", template)
+        self.assertNotIn("<string>Background</string>", template)
+
     def test_registration_is_limited_to_uploaded_action_assets(self):
         calls = []
 

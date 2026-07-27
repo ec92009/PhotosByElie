@@ -27,6 +27,6 @@
   <key>StandardErrorPath</key>
   <string>__STDERR__</string>
   <key>ProcessType</key>
-  <string>Background</string>
+  <string>Standard</string>
 </dict>
 </plist>

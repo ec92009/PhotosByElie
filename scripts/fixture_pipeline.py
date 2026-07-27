@@ -739,7 +739,7 @@ def create_fixture(
 
 
 def fixture_tree(repo_root: Path, *, include_archived: bool = False) -> list[dict[str, Any]]:
-    with connect(repo_root) as conn:
+    with connect_read_only(repo_root) as conn:
         rows = conn.execute(
             f"SELECT * FROM fixtures {'WHERE archived_at IS NULL' if not include_archived else ''} ORDER BY name COLLATE NOCASE"
         ).fetchall()

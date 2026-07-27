@@ -302,6 +302,51 @@ class FixturePipelineTest(unittest.TestCase):
                 "needs-upload",
             )
 
+    def test_review_modes_separate_unresolved_backfill_from_full_queue(self):
+        root = create_fixture(self.root, "Root", fixture_id="root")
+        set_fixture_asset_state(
+            self.root,
+            root["fixtureId"],
+            ["asset-1", "asset-2"],
+            "picked",
+        )
+        apply_fixture_review_action(
+            self.root,
+            root["fixtureId"],
+            ["asset-1"],
+            "approve",
+        )
+
+        backfill = fixture_review_window(
+            self.root,
+            root["fixtureId"],
+            mode="backfill",
+        )
+        self.assertEqual(backfill["mode"], "backfill")
+        self.assertEqual(
+            [item["assetId"] for item in backfill["items"]],
+            ["asset-2"],
+        )
+        self.assertEqual(backfill["summary"]["approved"], 0)
+
+        full = fixture_review_window(
+            self.root,
+            root["fixtureId"],
+            mode="full",
+        )
+        self.assertEqual(full["mode"], "full")
+        self.assertEqual(
+            [item["assetId"] for item in full["items"]],
+            ["asset-1", "asset-2"],
+        )
+        self.assertEqual(full["summary"]["approved"], 1)
+        with self.assertRaisesRegex(ValueError, "review mode is invalid"):
+            fixture_review_window(
+                self.root,
+                root["fixtureId"],
+                mode="everything",
+            )
+
     def test_review_hide_is_fixture_local_and_ai_request_is_mutually_exclusive(self):
         root = create_fixture(self.root, "Root", fixture_id="root")
         other = create_fixture(self.root, "Other", fixture_id="other")

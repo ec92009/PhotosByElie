@@ -28,10 +28,11 @@ Fixture membership is exact rather than inherited. A parent and child can both
 contain the same asset, but each has its own placement row. Hiding an asset in
 one fixture must not hide it in another fixture.
 
-The default queue is the complete unresolved universe for the selected
-fixture, ordered by capture time ascending and then stable asset ID ascending.
-The oldest unresolved item is therefore first. Search narrows that same
-universe; it does not create a different state model.
+The **Backfill** mode is the complete unresolved universe for the selected
+fixture. The **Full queue** mode uses the same fixture universe but includes
+approved assets for inspection and correction. Both modes are ordered by
+capture time ascending and then stable asset ID ascending. Search narrows the
+chosen mode; it does not create a different state model.
 
 ## Paging and identity
 
@@ -153,4 +154,3 @@ PBB-44 is satisfied when this contract and the existing state tests agree.
 PBB-45 through PBB-47 implement the UI and mutation clauses. PBB-48 must prove
 the complete contract with automated state, paging, propagation, retry, and
 undo tests plus a hands-on read-only or reversible rehearsal on Max.
-

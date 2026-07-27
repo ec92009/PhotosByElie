@@ -142,6 +142,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var cullingCancellationRequested = false
     @Published var reviewFixtureID = ""
     @Published var fixtureReviewWindow: FixtureReviewWindow?
+    @Published var reviewMode: FixtureReviewMode = .backfill
     @Published var reviewSearch = ""
     @Published var reviewWindowOffset = 0
     @Published var reviewWindowLimit = 200
@@ -1239,6 +1240,15 @@ final class BackstageViewModel: ObservableObject {
         Task { await loadFixtureReviewWindow() }
     }
 
+    func selectReviewMode(_ mode: FixtureReviewMode) {
+        preserveCurrentReviewDraft()
+        reviewMode = mode
+        reviewWindowOffset = 0
+        reviewSelection.clear()
+        clearReviewDraft()
+        Task { await loadFixtureReviewWindow() }
+    }
+
     func moveReviewWindow(forward: Bool) {
         guard let window = fixtureReviewWindow else { return }
         if forward, window.hasNext {
@@ -1264,6 +1274,7 @@ final class BackstageViewModel: ObservableObject {
         do {
             let window = try await fixtureService.reviewWindow(
                 fixtureID: reviewFixtureID,
+                mode: reviewMode,
                 offset: reviewWindowOffset,
                 limit: reviewWindowLimit,
                 search: reviewSearch
@@ -1280,7 +1291,8 @@ final class BackstageViewModel: ObservableObject {
             )
             reviewScrollTargetID = replacementID
             syncReviewDraft()
-            reviewStatus = "\(window.summary.total.formatted()) unresolved picked photo\(window.summary.total == 1 ? "" : "s") • oldest first."
+            let scope = reviewMode == .backfill ? "unresolved picked" : "picked"
+            reviewStatus = "\(window.summary.total.formatted()) \(scope) photo\(window.summary.total == 1 ? "" : "s") • oldest first."
             await refreshAIStatus()
         } catch {
             reviewStatus = String(describing: error)
@@ -1365,6 +1377,7 @@ final class BackstageViewModel: ObservableObject {
             }
             let window = try await fixtureService.reviewWindow(
                 fixtureID: reviewFixtureID,
+                mode: reviewMode,
                 offset: reviewWindowOffset,
                 limit: reviewWindowLimit,
                 search: reviewSearch

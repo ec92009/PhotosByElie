@@ -1480,7 +1480,7 @@ private struct FixtureReviewView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Review")
                             .font(.largeTitle.bold())
-                        Text("Oldest unresolved picked photos first")
+                        Text("Oldest picked photos first")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -1499,6 +1499,19 @@ private struct FixtureReviewView: View {
                         }
                     }
                     .frame(width: 220)
+                    Picker(
+                        "Queue",
+                        selection: Binding(
+                            get: { model.reviewMode },
+                            set: { model.selectReviewMode($0) }
+                        )
+                    ) {
+                        ForEach(FixtureReviewMode.allCases) { mode in
+                            Text(mode.label).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 190)
                     TextField("Search complete Review queue", text: $model.reviewSearch)
                         .textFieldStyle(.roundedBorder)
                         .frame(width: 260)
@@ -1521,6 +1534,9 @@ private struct FixtureReviewView: View {
                         Text("\(summary.unreviewed.formatted()) unreviewed")
                         Text("\(summary.requestingAI.formatted()) requesting AI")
                         Text("\(summary.proposed.formatted()) proposed")
+                        if model.reviewMode == .full {
+                            Text("\(summary.approved.formatted()) approved")
+                        }
                     }
                     .font(.caption)
                     .foregroundStyle(.secondary)

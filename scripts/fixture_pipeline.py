@@ -31,6 +31,7 @@ FIXTURE_STATE_MIGRATION_ID = "fixture-state-v1"
 CULLING_VIEWS = {"undecided", "picked", "hidden", "all-active"}
 EDITORIAL_STATES = {"unreviewed", "requesting-ai", "proposed", "approved"}
 DELIVERY_STATES = {"not-ready", "needs-upload", "uploading", "live", "failed"}
+REVIEW_MODES = {"backfill", "full"}
 REVIEW_ACTIONS = {
     "approve",
     "hide",
@@ -1460,10 +1461,13 @@ def _fixture_review_from_sql(
     )
 
 
-def _fixture_review_predicates(search: str = "") -> tuple[list[str], list[Any]]:
+def _fixture_review_predicates(
+    search: str = "",
+    *,
+    include_approved: bool = False,
+) -> tuple[list[str], list[Any]]:
     predicates = [
         "(a.missing_at IS NULL OR a.missing_at = '')",
-        "editorial.editorial_state != 'approved'",
         """
         NOT EXISTS (
           SELECT 1 FROM sidecar_tombstones AS tombstone
@@ -1472,6 +1476,8 @@ def _fixture_review_predicates(search: str = "") -> tuple[list[str], list[Any]]:
         )
         """,
     ]
+    if not include_approved:
+        predicates.append("editorial.editorial_state != 'approved'")
     params: list[Any] = []
     columns = (
         "a.asset_id",
@@ -1527,11 +1533,15 @@ def fixture_review_window(
     repo_root: Path,
     fixture_id: str,
     *,
+    mode: str = "backfill",
     offset: int = 0,
     limit: int = 200,
     search: str = "",
 ) -> dict[str, Any]:
-    """Return the oldest unresolved effective picks for one fixture."""
+    """Return a bounded chronological Review window for one fixture."""
+    clean_mode = str(mode or "backfill").strip().casefold()
+    if clean_mode not in REVIEW_MODES:
+        raise ValueError("review mode is invalid")
     safe_offset = max(0, int(offset or 0))
     safe_limit = max(1, min(500, int(limit or 200)))
     with connect(repo_root) as conn:
@@ -1546,7 +1556,10 @@ def fixture_review_window(
         if not fixture:
             raise ValueError("fixture does not exist or is archived")
         from_sql, base_params = _fixture_review_from_sql(fixture)
-        predicates, search_params = _fixture_review_predicates(search)
+        predicates, search_params = _fixture_review_predicates(
+            search,
+            include_approved=clean_mode == "full",
+        )
         joins = """
             LEFT JOIN sidecar_decisions AS decision
               ON decision.asset_id = a.asset_id
@@ -1562,7 +1575,8 @@ def fixture_review_window(
             SELECT count(*) total,
                    sum(CASE WHEN editorial.editorial_state = 'unreviewed' THEN 1 ELSE 0 END) unreviewed,
                    sum(CASE WHEN editorial.editorial_state = 'requesting-ai' THEN 1 ELSE 0 END) requesting_ai,
-                   sum(CASE WHEN editorial.editorial_state = 'proposed' THEN 1 ELSE 0 END) proposed
+                   sum(CASE WHEN editorial.editorial_state = 'proposed' THEN 1 ELSE 0 END) proposed,
+                   sum(CASE WHEN editorial.editorial_state = 'approved' THEN 1 ELSE 0 END) approved
             FROM {from_sql}
             {joins}
             WHERE {where_sql}
@@ -1603,6 +1617,7 @@ def fixture_review_window(
         "ok": True,
         "readOnly": True,
         "fixtureId": fixture_id,
+        "mode": clean_mode,
         "offset": safe_offset,
         "limit": safe_limit,
         "count": len(rows),
@@ -1613,6 +1628,7 @@ def fixture_review_window(
             "unreviewed": int(summary["unreviewed"] or 0),
             "requestingAI": int(summary["requesting_ai"] or 0),
             "proposed": int(summary["proposed"] or 0),
+            "approved": int(summary["approved"] or 0),
         },
         "items": [_review_item(row) for row in rows],
     }

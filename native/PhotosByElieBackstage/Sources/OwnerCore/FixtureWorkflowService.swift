@@ -386,6 +386,20 @@ public enum FixtureReviewAction: String, Codable, Sendable, CaseIterable {
     case propagateKeywords = "propagate-keywords"
 }
 
+public enum FixtureReviewMode: String, Codable, Sendable, CaseIterable, Identifiable {
+    case backfill
+    case full
+
+    public var id: String { rawValue }
+
+    public var label: String {
+        switch self {
+        case .backfill: "Backfill"
+        case .full: "Full queue"
+        }
+    }
+}
+
 public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
     public var id: String
     public var photoLibraryIdentifier: String
@@ -429,17 +443,20 @@ public struct FixtureReviewSummary: Sendable, Equatable {
     public var unreviewed: Int
     public var requestingAI: Int
     public var proposed: Int
+    public var approved: Int
 
     init(json: [String: JSONValue]) {
         total = json["total"]?.intValue ?? 0
         unreviewed = json["unreviewed"]?.intValue ?? 0
         requestingAI = json["requestingAI"]?.intValue ?? 0
         proposed = json["proposed"]?.intValue ?? 0
+        approved = json["approved"]?.intValue ?? 0
     }
 }
 
 public struct FixtureReviewWindow: Sendable, Equatable {
     public var fixtureID: String
+    public var mode: FixtureReviewMode
     public var offset: Int
     public var limit: Int
     public var nextOffset: Int
@@ -449,6 +466,9 @@ public struct FixtureReviewWindow: Sendable, Equatable {
 
     init(json: [String: JSONValue]) {
         fixtureID = json["fixtureId"]?.stringValue ?? ""
+        mode = FixtureReviewMode(
+            rawValue: json["mode"]?.stringValue ?? "backfill"
+        ) ?? .backfill
         offset = json["offset"]?.intValue ?? 0
         limit = json["limit"]?.intValue ?? 200
         nextOffset = json["nextOffset"]?.intValue ?? 0
@@ -749,12 +769,14 @@ public actor FixtureWorkflowService {
 
     public func reviewWindow(
         fixtureID: String,
+        mode: FixtureReviewMode = .backfill,
         offset: Int = 0,
         limit: Int = 200,
         search: String = ""
     ) async throws -> FixtureReviewWindow {
         let result = try await run("fixture-review-window", extra: [
             "fixtureId": .string(fixtureID),
+            "reviewMode": .string(mode.rawValue),
             "offset": .number(Double(max(0, offset))),
             "limit": .number(Double(max(1, min(500, limit)))),
             "search": .string(search),

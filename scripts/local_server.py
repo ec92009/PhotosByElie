@@ -2162,6 +2162,7 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
             "reviewWindow": fixture_review_window(
                 repo_root,
                 str(manifest.get("fixtureId") or ""),
+                mode=str(manifest.get("reviewMode") or "backfill"),
                 offset=int(manifest.get("offset") or 0),
                 limit=int(manifest.get("limit") or 200),
                 search=str(manifest.get("search") or ""),

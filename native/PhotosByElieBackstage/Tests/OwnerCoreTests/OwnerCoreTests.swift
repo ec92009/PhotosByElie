@@ -971,6 +971,7 @@ struct OwnerCoreTests {
             result: [
                 "reviewWindow": .object([
                     "fixtureId": "fixture-expo",
+                    "mode": "full",
                     "offset": 0,
                     "limit": 200,
                     "nextOffset": 1,
@@ -980,6 +981,7 @@ struct OwnerCoreTests {
                         "unreviewed": 300,
                         "requestingAI": 100,
                         "proposed": 20,
+                        "approved": 80,
                     ]),
                     "items": .array([.object([
                         "assetId": "asset-oldest",
@@ -1031,9 +1033,12 @@ struct OwnerCoreTests {
 
         let window = try await service.reviewWindow(
             fixtureID: "fixture-expo",
+            mode: .full,
             limit: 200
         )
+        #expect(window.mode == .full)
         #expect(window.summary.total == 420)
+        #expect(window.summary.approved == 80)
         #expect(window.items.first?.id == "asset-oldest")
         #expect(window.items.first?.aiReasons == ["weak title"])
 
@@ -1053,6 +1058,7 @@ struct OwnerCoreTests {
         #expect(requests.count == 2)
         let reviewManifest = requests[0].payload["manifest"]?.objectValue
         #expect(reviewManifest?["mode"]?.stringValue == "fixture-review-window")
+        #expect(reviewManifest?["reviewMode"]?.stringValue == "full")
         let applyManifest = requests[1].payload["manifest"]?.objectValue
         #expect(applyManifest?["mode"]?.stringValue == "fixture-review-apply")
         #expect(applyManifest?["reviewAction"]?.stringValue == "request-ai")

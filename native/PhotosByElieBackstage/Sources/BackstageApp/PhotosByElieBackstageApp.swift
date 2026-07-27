@@ -944,6 +944,107 @@ private struct CullingAssetCard: View {
     }
 }
 
+private struct FixturePickerOption: Identifiable {
+    let label: String
+    let value: String
+
+    var id: String { value }
+
+    init(_ label: String, _ value: String) {
+        self.label = label
+        self.value = value
+    }
+}
+
+private struct FixturePickerField: View {
+    let title: String
+    @Binding var selection: String
+    let options: [FixturePickerOption]
+
+    init(
+        _ title: String,
+        selection: Binding<String>,
+        options: [FixturePickerOption]
+    ) {
+        self.title = title
+        _selection = selection
+        self.options = options
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Text(title)
+                .lineLimit(1)
+                .layoutPriority(1)
+            Spacer(minLength: 8)
+            Menu {
+                ForEach(options) { option in
+                    Button {
+                        selection = option.value
+                    } label: {
+                        if option.value == selection {
+                            Label(option.label, systemImage: "checkmark")
+                        } else {
+                            Text(option.label)
+                        }
+                    }
+                }
+            } label: {
+                HStack {
+                    Text(options.first(where: { $0.value == selection })?.label ?? selection)
+                        .lineLimit(1)
+                    Spacer(minLength: 8)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 10)
+                .frame(width: 220, height: 28, alignment: .leading)
+                .background(
+                    Color.secondary.opacity(0.18),
+                    in: RoundedRectangle(cornerRadius: 7)
+                )
+                .contentShape(Rectangle())
+            }
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .fixedSize()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct AdaptiveFixtureFieldPair<Left: View, Right: View>: View {
+    let minimumColumnWidth: CGFloat
+    @ViewBuilder let left: Left
+    @ViewBuilder let right: Right
+
+    init(
+        minimumColumnWidth: CGFloat = 250,
+        @ViewBuilder left: () -> Left,
+        @ViewBuilder right: () -> Right
+    ) {
+        self.minimumColumnWidth = minimumColumnWidth
+        self.left = left()
+        self.right = right()
+    }
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 24) {
+                left
+                    .frame(minWidth: minimumColumnWidth, maxWidth: .infinity)
+                right
+                    .frame(minWidth: minimumColumnWidth, maxWidth: .infinity)
+            }
+            VStack(alignment: .leading, spacing: 8) {
+                left
+                right
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
 private struct FixtureWorkflowView: View {
     @ObservedObject var model: BackstageViewModel
 
@@ -1020,29 +1121,29 @@ private struct FixtureWorkflowView: View {
                             if !model.selectedFixtureID.isEmpty {
                                 GroupBox("Population contract") {
                                     VStack(alignment: .leading, spacing: 8) {
-                                        HStack(spacing: 28) {
-                                            HStack(spacing: 12) {
-                                                Text("Population")
-                                                    .frame(width: 100, alignment: .leading)
-                                                Picker("Population", selection: $model.fixturePopulationMode) {
-                                                    Text("Curated").tag("curated")
-                                                    Text("Rule-based").tag("rule-based")
-                                                    Text("Parent subset").tag("parent-subset")
-                                                }
-                                                .labelsHidden()
-                                                .frame(width: 210)
-                                            }
-                                            HStack(spacing: 12) {
-                                                Text("Source")
-                                                    .frame(width: 70, alignment: .leading)
-                                                Picker("Source", selection: $model.fixtureCandidateSourceKind) {
-                                                    Text("Photos library").tag("photos-library")
-                                                    Text("Parent effective snapshot").tag("parent-effective")
-                                                    Text("Saved snapshot").tag("saved-snapshot")
-                                                }
-                                                .labelsHidden()
-                                                .frame(width: 220)
-                                            }
+                                        AdaptiveFixtureFieldPair(minimumColumnWidth: 280) {
+                                            FixturePickerField(
+                                                "Population",
+                                                selection: $model.fixturePopulationMode,
+                                                options: [
+                                                    FixturePickerOption("Curated", "curated"),
+                                                    FixturePickerOption("Rule-based", "rule-based"),
+                                                    FixturePickerOption("Parent subset", "parent-subset"),
+                                                ]
+                                            )
+                                        } right: {
+                                            FixturePickerField(
+                                                "Source",
+                                                selection: $model.fixtureCandidateSourceKind,
+                                                options: [
+                                                    FixturePickerOption("Photos library", "photos-library"),
+                                                    FixturePickerOption(
+                                                        "Parent effective snapshot",
+                                                        "parent-effective"
+                                                    ),
+                                                    FixturePickerOption("Saved snapshot", "saved-snapshot"),
+                                                ]
+                                            )
                                         }
                                         if model.fixturePopulationMode == "rule-based" {
                                             TextField(
@@ -1054,84 +1155,75 @@ private struct FixtureWorkflowView: View {
                                 }
                                 GroupBox("Configured on this fixture") {
                                     VStack(alignment: .leading, spacing: 8) {
-                                        HStack(spacing: 28) {
-                                            HStack(spacing: 12) {
-                                                Text("Visibility")
-                                                    .frame(width: 90, alignment: .leading)
-                                                Picker("Visibility", selection: $model.fixturePolicyVisibility) {
-                                                    Text("Inherit").tag("inherit")
-                                                    Text("Public").tag("public")
-                                                    Text("Private").tag("private")
-                                                    Text("Unlisted").tag("unlisted")
-                                                }
-                                                .labelsHidden()
-                                                .frame(width: 165)
-                                            }
-                                            HStack(spacing: 12) {
-                                                Text("Search")
-                                                    .frame(width: 90, alignment: .leading)
-                                                Picker("Search", selection: $model.fixturePolicySearchable) {
-                                                    Text("Inherit").tag("inherit")
-                                                    Text("On").tag("on")
-                                                    Text("Off").tag("off")
-                                                }
-                                                .labelsHidden()
-                                                .frame(width: 165)
-                                            }
+                                        AdaptiveFixtureFieldPair {
+                                            FixturePickerField(
+                                                "Visibility",
+                                                selection: $model.fixturePolicyVisibility,
+                                                options: [
+                                                    FixturePickerOption("Inherit", "inherit"),
+                                                    FixturePickerOption("Public", "public"),
+                                                    FixturePickerOption("Private", "private"),
+                                                    FixturePickerOption("Unlisted", "unlisted"),
+                                                ]
+                                            )
+                                        } right: {
+                                            FixturePickerField(
+                                                "Search",
+                                                selection: $model.fixturePolicySearchable,
+                                                options: [
+                                                    FixturePickerOption("Inherit", "inherit"),
+                                                    FixturePickerOption("On", "on"),
+                                                    FixturePickerOption("Off", "off"),
+                                                ]
+                                            )
                                         }
-                                        HStack(spacing: 28) {
-                                            HStack(spacing: 12) {
-                                                Text("Retention")
-                                                    .frame(width: 90, alignment: .leading)
-                                                Picker("Retention", selection: $model.fixturePolicyRetention) {
-                                                    Text("Inherit").tag("inherit")
-                                                    Text("Public preview").tag("public-preview")
-                                                    Text("Private master").tag("private-master")
-                                                    Text("Archive only").tag("archive-only")
-                                                    Text("No cloud").tag("no-cloud")
-                                                }
-                                                .labelsHidden()
-                                                .frame(width: 165)
-                                            }
-                                            HStack(spacing: 12) {
-                                                Text("Delivery")
-                                                    .frame(width: 90, alignment: .leading)
-                                                Picker("Delivery", selection: $model.fixturePolicyDelivery) {
-                                                    Text("Inherit").tag("inherit")
-                                                    Text("Public").tag("public")
-                                                    Text("Granted").tag("granted")
-                                                    Text("Owner only").tag("owner-only")
-                                                    Text("Disabled").tag("disabled")
-                                                }
-                                                .labelsHidden()
-                                                .frame(width: 165)
-                                            }
+                                        AdaptiveFixtureFieldPair {
+                                            FixturePickerField(
+                                                "Retention",
+                                                selection: $model.fixturePolicyRetention,
+                                                options: [
+                                                    FixturePickerOption("Inherit", "inherit"),
+                                                    FixturePickerOption("Public preview", "public-preview"),
+                                                    FixturePickerOption("Private master", "private-master"),
+                                                    FixturePickerOption("Archive only", "archive-only"),
+                                                    FixturePickerOption("No cloud", "no-cloud"),
+                                                ]
+                                            )
+                                        } right: {
+                                            FixturePickerField(
+                                                "Delivery",
+                                                selection: $model.fixturePolicyDelivery,
+                                                options: [
+                                                    FixturePickerOption("Inherit", "inherit"),
+                                                    FixturePickerOption("Public", "public"),
+                                                    FixturePickerOption("Granted", "granted"),
+                                                    FixturePickerOption("Owner only", "owner-only"),
+                                                    FixturePickerOption("Disabled", "disabled"),
+                                                ]
+                                            )
                                         }
-                                        HStack(spacing: 28) {
-                                            HStack(spacing: 12) {
-                                                Text("Download")
-                                                    .frame(width: 90, alignment: .leading)
-                                                Picker("Download", selection: $model.fixturePolicyDownload) {
-                                                    Text("Inherit").tag("inherit")
-                                                    Text("On").tag("on")
-                                                    Text("Off").tag("off")
-                                                }
-                                                .labelsHidden()
-                                                .frame(width: 165)
-                                            }
-                                            HStack(spacing: 12) {
-                                                Text("Commerce")
-                                                    .frame(width: 90, alignment: .leading)
-                                                Picker("Commerce", selection: $model.fixturePolicyCommerce) {
-                                                    Text("Inherit").tag("inherit")
-                                                    Text("Retail").tag("retail")
-                                                    Text("Paid service").tag("paid-service")
-                                                    Text("Free sharing").tag("free-sharing")
-                                                    Text("Disabled").tag("disabled")
-                                                }
-                                                .labelsHidden()
-                                                .frame(width: 165)
-                                            }
+                                        AdaptiveFixtureFieldPair {
+                                            FixturePickerField(
+                                                "Download",
+                                                selection: $model.fixturePolicyDownload,
+                                                options: [
+                                                    FixturePickerOption("Inherit", "inherit"),
+                                                    FixturePickerOption("On", "on"),
+                                                    FixturePickerOption("Off", "off"),
+                                                ]
+                                            )
+                                        } right: {
+                                            FixturePickerField(
+                                                "Commerce",
+                                                selection: $model.fixturePolicyCommerce,
+                                                options: [
+                                                    FixturePickerOption("Inherit", "inherit"),
+                                                    FixturePickerOption("Retail", "retail"),
+                                                    FixturePickerOption("Paid service", "paid-service"),
+                                                    FixturePickerOption("Free sharing", "free-sharing"),
+                                                    FixturePickerOption("Disabled", "disabled"),
+                                                ]
+                                            )
                                         }
                                     }
                                     VStack(alignment: .leading, spacing: 6) {

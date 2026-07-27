@@ -66,6 +66,23 @@ class NativeCullingParityTest(unittest.TestCase):
             source,
         )
 
+    def test_fixture_policy_controls_adapt_to_the_available_width(self):
+        source = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "PhotosByElieBackstageApp.swift"
+        ).read_text(encoding="utf-8")
+        for marker in (
+            "AdaptiveFixtureFieldPair",
+            "ViewThatFits(in: .horizontal)",
+            "minimumColumnWidth",
+            "FixturePickerField",
+            ".frame(width: 220, height: 28",
+        ):
+            self.assertIn(marker, source)
+        self.assertNotIn(".frame(width: 165)", source)
+
     def test_large_pool_work_is_bounded_and_reports_progress(self):
         source = (
             NATIVE / "Sources" / "BackstageApp" / "BackstageViewModel.swift"

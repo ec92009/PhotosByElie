@@ -252,7 +252,10 @@ final class BackstageViewModel: ObservableObject {
         self.photoAccess = photoLibrary.authorization()
         let runner = OwnerActionRunner(api: api)
         self.metadataService = MetadataGiveBackService(runner: runner)
-        self.fixtureService = FixtureWorkflowService(runner: runner)
+        self.fixtureService = FixtureWorkflowService(
+            runner: runner,
+            connectorIdentity: LocalOwnerConnectorIdentity()
+        )
         self.accessService = AccessControlService(api: api)
         self.decisionService = SidecarDecisionService(api: api)
         self.metadataReviewService = MetadataReviewService(runner: runner)

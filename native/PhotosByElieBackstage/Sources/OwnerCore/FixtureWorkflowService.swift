@@ -670,9 +670,14 @@ public struct EffectiveFixtureAccess: Identifiable, Sendable, Equatable {
 
 public actor FixtureWorkflowService {
     private let runner: OwnerActionRunner
+    private let connectorIdentity: any OwnerConnectorIdentifying
 
-    public init(runner: OwnerActionRunner) {
+    public init(
+        runner: OwnerActionRunner,
+        connectorIdentity: any OwnerConnectorIdentifying = StaticOwnerConnectorIdentity("max")
+    ) {
         self.runner = runner
+        self.connectorIdentity = connectorIdentity
     }
 
     public func tree(includeArchived: Bool = true) async throws -> [FixtureNode] {
@@ -1008,13 +1013,14 @@ public actor FixtureWorkflowService {
     private func run(_ mode: String, extra: [String: JSONValue]) async throws -> [String: JSONValue] {
         var manifest = extra
         manifest["mode"] = .string(mode)
+        let connectorID = await connectorIdentity.connectorID()
         let action = OwnerActionCreate(
             actionKind: "sidecar-culling-review",
-            target: "max",
+            target: connectorID,
             payload: [
                 "workflow": "universal-fixture-pipeline",
                 "manifest": .object(manifest),
-                "requestedConnector": "max",
+                "requestedConnector": .string(connectorID),
                 "queuedAt": .string(ISO8601DateFormatter().string(from: Date())),
             ]
         )

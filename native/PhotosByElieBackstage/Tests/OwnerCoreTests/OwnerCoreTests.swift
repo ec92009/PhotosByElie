@@ -655,6 +655,34 @@ struct OwnerCoreTests {
         #expect(manifest?["destinationDefaults"]?.arrayValue?.compactMap(\.stringValue) == ["r2", "apple_photos"])
     }
 
+    @Test("Native fixture work targets the enrolled local connector")
+    func nativeFixtureUsesLocalConnectorIdentity() async throws {
+        let terminal = OwnerAction(
+            id: "owner-action-local-fixture-tree",
+            actionKind: "sidecar-culling-review",
+            target: "david",
+            state: .completed,
+            result: ["fixtures": []]
+        )
+        let api = ScriptedOwnerActionAPI(completed: [terminal])
+        let service = FixtureWorkflowService(
+            runner: OwnerActionRunner(
+                api: api,
+                waker: UnavailableWaker(),
+                pollInterval: .milliseconds(1),
+                timeout: .seconds(1)
+            ),
+            connectorIdentity: StaticOwnerConnectorIdentity("David")
+        )
+
+        _ = try await service.tree()
+
+        let request = try #require(await api.requests().first)
+        #expect(request.target == "david")
+        #expect(request.payload["requestedConnector"]?.stringValue == "david")
+        #expect(request.payload["manifest"]?.objectValue?["mode"]?.stringValue == "fixture-tree-list")
+    }
+
     @Test("Native fixture state migration remains an explicit audited action")
     func nativeFixtureStateMigrationPlan() async throws {
         let terminal = OwnerAction(

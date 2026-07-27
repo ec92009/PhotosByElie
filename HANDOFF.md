@@ -1,5 +1,34 @@
 # PhotosByElie Handoff
 
+## 2026-07-27 — David to Max PBB-43 native Review handoff
+
+- PBB-29 and PBB-33 are Verified in YouTrack after David's completed native
+  fixture-policy acceptance. The accepted UI is Backstage `0.3.0` build `10`;
+  the final implementation commit is `947d39cf6` and the durable closeout
+  commit is `80194c7d8`.
+- The next epic is PBB-43, `[EPIC] Complete native Backstage Review and
+  propagation workflow`, beginning with child PBB-44's fixture-aware Review
+  queue and editorial-state contract. David claimed PBB-43/PBB-44 only long
+  enough for read-only discovery, then stopped before implementation when Elie
+  moved the active COO session back to Max.
+- The clean transfer branch is `codex/david-pbb-43-review`. Max should fetch
+  that branch, verify the pushed handoff head, add its YouTrack claim note, and
+  reconcile PBB-44 against the existing Review machinery before changing code.
+  Continue one verified child at a time through PBB-45, PBB-46, PBB-47, and
+  PBB-48; PBB-48 explicitly requires hands-on proof on Max.
+- Existing Review behavior is concentrated in `scripts/fixture_pipeline.py`,
+  `native/PhotosByElieBackstage/Sources/OwnerCore/FixtureWorkflowService.swift`,
+  `native/PhotosByElieBackstage/Sources/OwnerCore/BackstageViewModel.swift`,
+  and
+  `native/PhotosByElieBackstage/Sources/PhotosByElieBackstage/PhotosByElieBackstageApp.swift`,
+  with coverage in `scripts/fixture_pipeline_test.py` and the Swift
+  `OwnerCoreTests`. Discovery found substantial queue, editorial-action, and
+  propagation support already present; treat the tickets as a contract and
+  evidence reconciliation exercise before assuming missing implementation.
+- David made no Review decision, propagation change, publication, delivery,
+  upload, or client-facing action during discovery. No blocker or unresolved
+  human decision is known at handoff.
+
 ## 2026-07-27 — David PBB-29 acceptance and Owner bootstrap
 
 - David accepted Max's exact `d2dbd6fbb` release-candidate head in the isolated

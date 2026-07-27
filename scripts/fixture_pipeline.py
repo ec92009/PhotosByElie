@@ -2566,12 +2566,14 @@ def search_assets(repo_root: Path, filters: dict[str, Any] | None = None, *, lim
         params.append(fixture_id)
     for album_id in _unique(filters.get("albumIds") or []):
         predicates.append("lower(COALESCE(a.raw_json, '')) LIKE ? ESCAPE '\\'")
-        params.append(f"%{album_id.casefold().replace('%', '\\%').replace('_', '\\_')}%")
+        escaped_album_id = album_id.casefold().replace("%", "\\%").replace("_", "\\_")
+        params.append(f"%{escaped_album_id}%")
     for key in ("camera", "lens"):
         value = str(filters.get(key) or "").strip().casefold()
         if value:
             predicates.append("lower(COALESCE(a.raw_json, '')) LIKE ? ESCAPE '\\'")
-            params.append(f"%{value.replace('%', '\\%').replace('_', '\\_')}%")
+            escaped_value = value.replace("%", "\\%").replace("_", "\\_")
+            params.append(f"%{escaped_value}%")
     delivery_states = _unique(filters.get("deliveryStates") or [])
     if delivery_states:
         predicates.append(f"EXISTS (SELECT 1 FROM fixture_delivery_receipts r WHERE r.asset_id = a.asset_id AND r.status IN ({','.join('?' for _ in delivery_states)}))")
@@ -2591,7 +2593,8 @@ def search_assets(repo_root: Path, filters: dict[str, Any] | None = None, *, lim
         )
     query = str(filters.get("query") or filters.get("q") or "").strip().casefold()
     for term in re.findall(r"[^\s,;]+", query)[:8]:
-        like = f"%{term.replace('%', '\\%').replace('_', '\\_')}%"
+        escaped_term = term.replace("%", "\\%").replace("_", "\\_")
+        like = f"%{escaped_term}%"
         columns = ["a.asset_id", "a.filename", "a.photos_title", "a.photos_keywords_json", "a.location_label", "a.metadata_seed_title", "a.metadata_seed_keywords_json", "d.title", "d.caption", "d.keywords_json"]
         predicates.append("(" + " OR ".join(f"lower(COALESCE({column}, '')) LIKE ? ESCAPE '\\'" for column in columns) + ")")
         params.extend([like] * len(columns))

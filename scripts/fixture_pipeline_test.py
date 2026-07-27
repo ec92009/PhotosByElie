@@ -615,6 +615,28 @@ class FixturePipelineTest(unittest.TestCase):
         self.assertEqual(applied["pool"]["assetCount"], 3)
         self.assertEqual(apply_pool_refresh(self.root, pool["poolId"])["pool"]["poolId"], applied["pool"]["poolId"])
 
+    def test_search_filters_escape_literal_like_wildcards(self):
+        upsert_assets(self.root, [{
+            "localIdentifier": "asset-like-wildcards",
+            "filename": "escape%_token.jpg",
+            "mediaType": "photo",
+            "albumIds": ["album%_one"],
+            "cameraMetadata": {"model": "Cam%_Body"},
+        }])
+
+        self.assertEqual(
+            search_assets(self.root, {"albumIds": ["album%_one"]})["totalCount"],
+            1,
+        )
+        self.assertEqual(
+            search_assets(self.root, {"camera": "Cam%_Body"})["totalCount"],
+            1,
+        )
+        self.assertEqual(
+            search_assets(self.root, {"query": "escape%_token"})["totalCount"],
+            1,
+        )
+
     def test_exact_identity_dedupe_never_uses_capture_time(self):
         upsert_assets(self.root, [{"cloudIdentifier": "cloud-asset-1", "localIdentifier": "asset-1", "filename": "A copy.JPG", "mediaType": "photo", "creationDate": "2026-07-15T10:00:00Z"}])
         self.assertEqual(search_assets(self.root, {"mediaTypes": ["photo"], "dedupeExact": True})["totalCount"], 2)

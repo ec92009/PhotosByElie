@@ -82,6 +82,12 @@ resulting opaque action ID to the localhost wake endpoint. ACS writes remain
 Worker-authorized D1 mutations. None of these screens writes an Owner SQLite
 business row directly.
 
+The fixture-aware editorial state, queue, propagation, audit, and undo
+invariants are defined in
+[`native-review-contract.md`](native-review-contract.md). That contract is the
+acceptance boundary for the native Review epic; UI behavior must not invent a
+second state model.
+
 ## Authority and data flow
 
 ```mermaid

@@ -1,5 +1,47 @@
 # PhotosByElie Handoff
 
+## 2026-07-27 — David PBB-29 acceptance and Owner bootstrap
+
+- David accepted Max's exact `d2dbd6fbb` release-candidate head in the isolated
+  `codex/david-pbb-29-acceptance` worktree. David's dirty/divergent primary
+  checkout and its untracked `GAMEPLAN.md` remain untouched.
+- David pushed three focused follow-ups: `16f8438a9` keeps fixture search
+  compatible with David's Python 3.9 runtime; `7fc3e48b5` makes P/H/U strictly
+  fixture-local in both live fixture windows and immutable fixture snapshots
+  while reserving X for the global reversible tombstone; `0d461bb46` gives the
+  native policy editor explicit inherited overrides and a separate effective
+  policy/revision preview without flattening inherited values into child
+  overrides.
+- Verification passes on David: the release candidate's 156 Node tests,
+  165 Python discovery tests, 42 Swift tests under Xcode 26.6, focused
+  fixture-policy/culling tests, the reversible native parity rehearsal, Owner
+  API contract generation, and publication validation.
+- Backstage `0.3.0` build `9` was rebuilt, ad-hoc signed, relaunched on David,
+  and retained its independently revocable Keychain enrollment. Codex's native
+  Mac-control pipe still closes before returning a screenshot, so human Screen
+  Sharing supplied the visual evidence. The first loaded editor exposed clipped
+  menu values and no configured-versus-effective distinction; `0d461bb46`
+  corrects both. Final no-save visual acceptance of that corrected build is
+  still required before closing PBB-33 and PBB-29.
+- David's stale 21-table, fixtureless Owner database was reconciled only through
+  the documented private-R2 Max-to-David path. Max created a consistent SQLite
+  `.backup`, uploaded
+  `photosbyelie-private/owner-sync/snapshots/max/Owner-latest.sqlite.gz`, and
+  reported gzip SHA-256
+  `195d0865c89e2b3f38a59b451058167303558e4900aabe195224f5cb868b8933`.
+  David independently verified that hash, `gzip -t`, decompressed integrity,
+  50 tables, and 20 fixtures before replacement.
+- The pre-restore David database remains recoverable as
+  `assets/owner-actions/Owner.sqlite-before-max-sync-20260727T070336Z` and the
+  original file is retained beside it with the
+  `Owner.sqlite-pre-max-sync-original-20260727T070336Z` prefix. The restored
+  database matches the verified snapshot byte-for-byte, passes integrity,
+  contains 20 fixtures, 15 culling snapshots, 20,229 fixture decisions, and the
+  applied `fixture-policy-v1` receipt. David's connector was restarted and its
+  local status endpoint reports `ok=true`.
+- No real culling decision, policy save, Waste Basket change, publication,
+  upload, delivery, or client communication occurred during acceptance.
+
 ## 2026-07-27 — PBB-29 fixture policy release candidate
 
 - Release candidate: Backstage `0.3.0` build `9`; branch

@@ -664,8 +664,9 @@ Clock state: running
 | 2026-07-25 | 13:23 CEST | 13:40 CEST | 0:10 | Defined the single-app, headless-bridge consolidation epic and opened the native-only drain window on Max; independent implementation, build, test, deployment, and ticket-maintenance runtime excluded. |
 | 2026-07-25 | 18:15 CEST | 18:17 CEST | 0:02 | Approved the signed Photos Bridge permission check and continuation through final cutover closeout; automated verification and publication runtime excluded. |
 | 2026-07-25 | 20:27 CEST | 20:35 CEST | 0:02 | Requested reopening the latest native culling snapshot and reported the D1 decision-load failure; implementation, deployment, and UI verification runtime excluded. |
+| 2026-07-27 | 08:34 CEST | 09:06 CEST | 0:04 | Directed the Max-to-David PBB-29 handoff, enrolled David Backstage, supplied two read-only visual checkpoints, and authorized the supported Owner-state reconciliation path; background implementation, testing, snapshot transfer, and validation runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 32:27
+Active collaboration time used: 32:31
 Remaining budget: not set

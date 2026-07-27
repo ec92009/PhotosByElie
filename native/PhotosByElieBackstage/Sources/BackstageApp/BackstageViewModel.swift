@@ -2359,6 +2359,7 @@ final class BackstageViewModel: ObservableObject {
             authentication = await authenticationService.currentSnapshot()
             status = "Connected"
         } catch {
+            guard !(error is CancellationError), !Task.isCancelled else { return }
             await presentAuthenticationFailureIfNeeded(error)
             fixtureStatus = userFacingMessage(for: error)
         }

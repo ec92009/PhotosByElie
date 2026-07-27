@@ -1006,6 +1006,7 @@ private struct FixtureWorkflowView: View {
                         TableColumn("File", value: \.filename)
                         TableColumn("Kind", value: \.mediaType)
                     }
+                    .frame(minHeight: 180, idealHeight: 240, maxHeight: 300)
                     HStack {
                         Text("\(model.selectedFixtureAssetIDs.count) selected")
                         Spacer()
@@ -1014,228 +1015,233 @@ private struct FixtureWorkflowView: View {
                         }
                         .disabled(model.selectedFixtureAssetIDs.isEmpty || model.selectedFixtureID.isEmpty)
                     }
-                    if !model.selectedFixtureID.isEmpty {
-                        GroupBox("Population contract") {
-                            VStack(alignment: .leading, spacing: 8) {
-                                HStack {
-                                    Picker("Population", selection: $model.fixturePopulationMode) {
-                                        Text("Curated").tag("curated")
-                                        Text("Rule-based").tag("rule-based")
-                                        Text("Parent subset").tag("parent-subset")
-                                    }
-                                    Picker("Source", selection: $model.fixtureCandidateSourceKind) {
-                                        Text("Photos library").tag("photos-library")
-                                        Text("Parent effective snapshot").tag("parent-effective")
-                                        Text("Saved snapshot").tag("saved-snapshot")
-                                    }
-                                }
-                                if model.fixturePopulationMode == "rule-based" {
-                                    TextField(
-                                        "Saved rule query",
-                                        text: $model.fixtureSavedRuleQuery
-                                    )
-                                }
-                            }
-                        }
-                        GroupBox("Configured on this fixture") {
-                            Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 8) {
-                                GridRow {
-                                    Text("Visibility")
-                                    Picker("Visibility", selection: $model.fixturePolicyVisibility) {
-                                        Text("Inherit").tag("inherit")
-                                        Text("Public").tag("public")
-                                        Text("Private").tag("private")
-                                        Text("Unlisted").tag("unlisted")
-                                    }
-                                    .labelsHidden()
-                                    .frame(minWidth: 135)
-                                    Text("Search")
-                                    Picker("Search", selection: $model.fixturePolicySearchable) {
-                                        Text("Inherit").tag("inherit")
-                                        Text("On").tag("on")
-                                        Text("Off").tag("off")
-                                    }
-                                    .labelsHidden()
-                                    .frame(minWidth: 120)
-                                }
-                                GridRow {
-                                    Text("Retention")
-                                    Picker("Retention", selection: $model.fixturePolicyRetention) {
-                                        Text("Inherit").tag("inherit")
-                                        Text("Public preview").tag("public-preview")
-                                        Text("Private master").tag("private-master")
-                                        Text("Archive only").tag("archive-only")
-                                        Text("No cloud").tag("no-cloud")
-                                    }
-                                    .labelsHidden()
-                                    .frame(minWidth: 135)
-                                    Text("Delivery")
-                                    Picker("Delivery", selection: $model.fixturePolicyDelivery) {
-                                        Text("Inherit").tag("inherit")
-                                        Text("Public").tag("public")
-                                        Text("Granted").tag("granted")
-                                        Text("Owner only").tag("owner-only")
-                                        Text("Disabled").tag("disabled")
-                                    }
-                                    .labelsHidden()
-                                    .frame(minWidth: 120)
-                                }
-                                GridRow {
-                                    Text("Download")
-                                    Picker("Download", selection: $model.fixturePolicyDownload) {
-                                        Text("Inherit").tag("inherit")
-                                        Text("On").tag("on")
-                                        Text("Off").tag("off")
-                                    }
-                                    .labelsHidden()
-                                    .frame(minWidth: 135)
-                                    Text("Commerce")
-                                    Picker("Commerce", selection: $model.fixturePolicyCommerce) {
-                                        Text("Inherit").tag("inherit")
-                                        Text("Retail").tag("retail")
-                                        Text("Paid service").tag("paid-service")
-                                        Text("Free sharing").tag("free-sharing")
-                                        Text("Disabled").tag("disabled")
-                                    }
-                                    .labelsHidden()
-                                    .frame(minWidth: 120)
-                                }
-                            }
-                            VStack(alignment: .leading, spacing: 6) {
-                                HStack {
-                                    Button("Save contract") {
-                                        Task { await model.saveFixtureConfiguration() }
-                                    }
-                                    .disabled(model.isLoadingFixturePolicy)
-                                    if model.isLoadingFixturePolicy {
-                                        ProgressView().controlSize(.small)
-                                    }
-                                    Text(model.fixturePolicyStatus)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                        }
-                        GroupBox("Effective policy • revision \(model.fixturePolicyRevision)") {
-                            Text(model.fixtureEffectivePolicySummary)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                    }
-                    DisclosureGroup("Reversible fixture placements") {
-                        HStack(alignment: .top) {
-                            List(selection: $model.placementTargetFixtureIDs) {
-                                OutlineGroup(model.fixtures, children: \.outlineChildren) { fixture in
-                                    if !fixture.isArchived {
-                                        Text(fixture.name).tag(fixture.id)
-                                    }
-                                }
-                            }
-                            .frame(minHeight: 90, maxHeight: 130)
-                            VStack(alignment: .leading) {
-                                Button("Place selected assets") {
-                                    Task { await model.placeFixtureAssets() }
-                                }
-                                .disabled(
-                                    model.selectedFixtureAssetIDs.isEmpty
-                                        || model.placementTargetFixtureIDs.isEmpty
-                                )
-                                Button("Review placements") {
-                                    Task { await model.loadFixturePlacements() }
-                                }
-                                .disabled(model.selectedFixtureAssetIDs.isEmpty)
-                            }
-                        }
-                        Table(model.fixturePlacements) {
-                            TableColumn("Asset") { Text($0.assetID) }
-                            TableColumn("Fixture") { Text($0.breadcrumbLabel) }
-                            TableColumn("State") { Text($0.state.capitalized) }
-                            TableColumn("Move") { placement in
-                                Menu("Move to…") {
-                                    ForEach(model.flatFixtures.filter { !$0.isArchived && $0.id != placement.fixtureID }) { fixture in
-                                        Button(fixture.name) {
-                                            Task { await model.movePlacement(placement.id, to: fixture.id) }
+                    ScrollView(.vertical) {
+                        VStack(alignment: .leading, spacing: 10) {
+                            if !model.selectedFixtureID.isEmpty {
+                                GroupBox("Population contract") {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        HStack {
+                                            Picker("Population", selection: $model.fixturePopulationMode) {
+                                                Text("Curated").tag("curated")
+                                                Text("Rule-based").tag("rule-based")
+                                                Text("Parent subset").tag("parent-subset")
+                                            }
+                                            Picker("Source", selection: $model.fixtureCandidateSourceKind) {
+                                                Text("Photos library").tag("photos-library")
+                                                Text("Parent effective snapshot").tag("parent-effective")
+                                                Text("Saved snapshot").tag("saved-snapshot")
+                                            }
+                                        }
+                                        if model.fixturePopulationMode == "rule-based" {
+                                            TextField(
+                                                "Saved rule query",
+                                                text: $model.fixtureSavedRuleQuery
+                                            )
                                         }
                                     }
                                 }
-                            }
-                            TableColumn("Relationship") { placement in
-                                Button(placement.isActive ? "Remove" : "Restore") {
-                                    Task { await model.togglePlacement(placement) }
-                                }
-                            }
-                        }
-                        .frame(minHeight: 140)
-                    }
-                    if !model.selectedFixtureID.isEmpty {
-                        GroupBox("Saved culling snapshots") {
-                            VStack(alignment: .leading, spacing: 8) {
-                                if model.fixturePools.isEmpty {
-                                    Text("No saved snapshots loaded.")
-                                        .foregroundStyle(.secondary)
-                                } else {
-                                    List(model.fixturePools, selection: $model.selectedFixturePoolID) { pool in
-                                        HStack {
-                                            VStack(alignment: .leading, spacing: 2) {
-                                                Text(pool.name)
-                                                Text("\(pool.assetCount) assets • \(String(pool.snapshotHash.prefix(12)))")
-                                                    .font(.caption)
-                                                    .foregroundStyle(.secondary)
+                                GroupBox("Configured on this fixture") {
+                                    Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 8) {
+                                        GridRow {
+                                            Text("Visibility")
+                                            Picker("Visibility", selection: $model.fixturePolicyVisibility) {
+                                                Text("Inherit").tag("inherit")
+                                                Text("Public").tag("public")
+                                                Text("Private").tag("private")
+                                                Text("Unlisted").tag("unlisted")
                                             }
-                                            Spacer()
-                                            Text(pool.state.capitalized)
+                                            .labelsHidden()
+                                            .frame(minWidth: 135)
+                                            Text("Search")
+                                            Picker("Search", selection: $model.fixturePolicySearchable) {
+                                                Text("Inherit").tag("inherit")
+                                                Text("On").tag("on")
+                                                Text("Off").tag("off")
+                                            }
+                                            .labelsHidden()
+                                            .frame(minWidth: 120)
+                                        }
+                                        GridRow {
+                                            Text("Retention")
+                                            Picker("Retention", selection: $model.fixturePolicyRetention) {
+                                                Text("Inherit").tag("inherit")
+                                                Text("Public preview").tag("public-preview")
+                                                Text("Private master").tag("private-master")
+                                                Text("Archive only").tag("archive-only")
+                                                Text("No cloud").tag("no-cloud")
+                                            }
+                                            .labelsHidden()
+                                            .frame(minWidth: 135)
+                                            Text("Delivery")
+                                            Picker("Delivery", selection: $model.fixturePolicyDelivery) {
+                                                Text("Inherit").tag("inherit")
+                                                Text("Public").tag("public")
+                                                Text("Granted").tag("granted")
+                                                Text("Owner only").tag("owner-only")
+                                                Text("Disabled").tag("disabled")
+                                            }
+                                            .labelsHidden()
+                                            .frame(minWidth: 120)
+                                        }
+                                        GridRow {
+                                            Text("Download")
+                                            Picker("Download", selection: $model.fixturePolicyDownload) {
+                                                Text("Inherit").tag("inherit")
+                                                Text("On").tag("on")
+                                                Text("Off").tag("off")
+                                            }
+                                            .labelsHidden()
+                                            .frame(minWidth: 135)
+                                            Text("Commerce")
+                                            Picker("Commerce", selection: $model.fixturePolicyCommerce) {
+                                                Text("Inherit").tag("inherit")
+                                                Text("Retail").tag("retail")
+                                                Text("Paid service").tag("paid-service")
+                                                Text("Free sharing").tag("free-sharing")
+                                                Text("Disabled").tag("disabled")
+                                            }
+                                            .labelsHidden()
+                                            .frame(minWidth: 120)
+                                        }
+                                    }
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        HStack {
+                                            Button("Save contract") {
+                                                Task { await model.saveFixtureConfiguration() }
+                                            }
+                                            .disabled(model.isLoadingFixturePolicy)
+                                            if model.isLoadingFixturePolicy {
+                                                ProgressView().controlSize(.small)
+                                            }
+                                            Text(model.fixturePolicyStatus)
+                                                .font(.caption)
                                                 .foregroundStyle(.secondary)
                                         }
-                                        .tag(pool.id)
-                                    }
-                                    .frame(minHeight: 72, maxHeight: 130)
-                                }
-                                HStack {
-                                    Button(model.isReloadingFixturePools ? "Reloading…" : "Reload snapshots") {
-                                        Task { await model.loadFixturePools() }
-                                    }
-                                    .disabled(model.isRunningFixtureSnapshotOperation)
-                                    Button(model.isOpeningFixturePool ? "Opening…" : "Open selected in Culling") {
-                                        Task { await model.openSelectedFixturePool() }
-                                    }
-                                    .disabled(
-                                        model.selectedFixturePoolID.isEmpty
-                                            || model.isRunningFixtureSnapshotOperation
-                                    )
-                                    if model.isRunningFixtureSnapshotOperation {
-                                        ProgressView()
-                                            .controlSize(.small)
                                     }
                                 }
-                                if !model.fixtureSnapshotStatus.isEmpty {
-                                    Text(model.fixtureSnapshotStatus)
+                                GroupBox("Effective policy • revision \(model.fixturePolicyRevision)") {
+                                    Text(model.fixtureEffectivePolicySummary)
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
+                            DisclosureGroup("Reversible fixture placements") {
+                                HStack(alignment: .top) {
+                                    List(selection: $model.placementTargetFixtureIDs) {
+                                        OutlineGroup(model.fixtures, children: \.outlineChildren) { fixture in
+                                            if !fixture.isArchived {
+                                                Text(fixture.name).tag(fixture.id)
+                                            }
+                                        }
+                                    }
+                                    .frame(minHeight: 90, maxHeight: 130)
+                                    VStack(alignment: .leading) {
+                                        Button("Place selected assets") {
+                                            Task { await model.placeFixtureAssets() }
+                                        }
+                                        .disabled(
+                                            model.selectedFixtureAssetIDs.isEmpty
+                                                || model.placementTargetFixtureIDs.isEmpty
+                                        )
+                                        Button("Review placements") {
+                                            Task { await model.loadFixturePlacements() }
+                                        }
+                                        .disabled(model.selectedFixtureAssetIDs.isEmpty)
+                                    }
+                                }
+                                Table(model.fixturePlacements) {
+                                    TableColumn("Asset") { Text($0.assetID) }
+                                    TableColumn("Fixture") { Text($0.breadcrumbLabel) }
+                                    TableColumn("State") { Text($0.state.capitalized) }
+                                    TableColumn("Move") { placement in
+                                        Menu("Move to…") {
+                                            ForEach(model.flatFixtures.filter { !$0.isArchived && $0.id != placement.fixtureID }) { fixture in
+                                                Button(fixture.name) {
+                                                    Task { await model.movePlacement(placement.id, to: fixture.id) }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    TableColumn("Relationship") { placement in
+                                        Button(placement.isActive ? "Remove" : "Restore") {
+                                            Task { await model.togglePlacement(placement) }
+                                        }
+                                    }
+                                }
+                                .frame(minHeight: 140)
+                            }
+                            if !model.selectedFixtureID.isEmpty {
+                                GroupBox("Saved culling snapshots") {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        if model.fixturePools.isEmpty {
+                                            Text("No saved snapshots loaded.")
+                                                .foregroundStyle(.secondary)
+                                        } else {
+                                            List(model.fixturePools, selection: $model.selectedFixturePoolID) { pool in
+                                                HStack {
+                                                    VStack(alignment: .leading, spacing: 2) {
+                                                        Text(pool.name)
+                                                        Text("\(pool.assetCount) assets • \(String(pool.snapshotHash.prefix(12)))")
+                                                            .font(.caption)
+                                                            .foregroundStyle(.secondary)
+                                                    }
+                                                    Spacer()
+                                                    Text(pool.state.capitalized)
+                                                        .foregroundStyle(.secondary)
+                                                }
+                                                .tag(pool.id)
+                                            }
+                                            .frame(minHeight: 72, maxHeight: 130)
+                                        }
+                                        HStack {
+                                            Button(model.isReloadingFixturePools ? "Reloading…" : "Reload snapshots") {
+                                                Task { await model.loadFixturePools() }
+                                            }
+                                            .disabled(model.isRunningFixtureSnapshotOperation)
+                                            Button(model.isOpeningFixturePool ? "Opening…" : "Open selected in Culling") {
+                                                Task { await model.openSelectedFixturePool() }
+                                            }
+                                            .disabled(
+                                                model.selectedFixturePoolID.isEmpty
+                                                    || model.isRunningFixtureSnapshotOperation
+                                            )
+                                            if model.isRunningFixtureSnapshotOperation {
+                                                ProgressView()
+                                                    .controlSize(.small)
+                                            }
+                                        }
+                                        if !model.fixtureSnapshotStatus.isEmpty {
+                                            Text(model.fixtureSnapshotStatus)
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                    }
+                                }
+                            }
+                            if let pool = model.selectedFixturePoolSummary {
+                                GroupBox("Selected snapshot") {
+                                    LabeledContent("Pool", value: pool.name)
+                                    LabeledContent("Assets", value: pool.assetCount.formatted())
+                                    LabeledContent("Pool ID", value: pool.id)
+                                    if !pool.snapshotHash.isEmpty {
+                                        LabeledContent("Snapshot", value: String(pool.snapshotHash.prefix(12)))
+                                    }
+                                    HStack {
+                                        Button(model.isOpeningFixturePool ? "Opening…" : "Open in Culling") {
+                                            Task { await model.openSelectedFixturePool() }
+                                        }
+                                        .disabled(model.isRunningFixtureSnapshotOperation)
+                                        if model.isOpeningFixturePool {
+                                            ProgressView()
+                                                .controlSize(.small)
+                                        }
+                                    }
                                 }
                             }
                         }
-                    }
-                    if let pool = model.selectedFixturePoolSummary {
-                        GroupBox("Selected snapshot") {
-                            LabeledContent("Pool", value: pool.name)
-                            LabeledContent("Assets", value: pool.assetCount.formatted())
-                            LabeledContent("Pool ID", value: pool.id)
-                            if !pool.snapshotHash.isEmpty {
-                                LabeledContent("Snapshot", value: String(pool.snapshotHash.prefix(12)))
-                            }
-                            HStack {
-                                Button(model.isOpeningFixturePool ? "Opening…" : "Open in Culling") {
-                                    Task { await model.openSelectedFixturePool() }
-                                }
-                                .disabled(model.isRunningFixtureSnapshotOperation)
-                                if model.isOpeningFixturePool {
-                                    ProgressView()
-                                        .controlSize(.small)
-                                }
-                            }
-                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
                 .padding()

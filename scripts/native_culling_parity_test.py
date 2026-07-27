@@ -48,9 +48,23 @@ class NativeCullingParityTest(unittest.TestCase):
             "H exclude from fixture",
             "X globally reject",
             "Button(\"Stop\")",
+            ".frame(minHeight: 180, idealHeight: 240, maxHeight: 300)",
+            "ScrollView(.vertical)",
         ):
             self.assertIn(marker, source)
         self.assertNotIn("127.0.0.1:8011", source)
+
+    def test_cancelled_fixture_reload_does_not_replace_loaded_state_with_an_error(self):
+        source = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "BackstageViewModel.swift"
+        ).read_text(encoding="utf-8")
+        self.assertIn(
+            "guard !(error is CancellationError), !Task.isCancelled else { return }",
+            source,
+        )
 
     def test_large_pool_work_is_bounded_and_reports_progress(self):
         source = (

@@ -40,9 +40,13 @@ class NativeCullingParityTest(unittest.TestCase):
             "Send to Uploads",
             "thumbnail: model.cullingThumbnails",
             'onKeyPress("p")',
+            'onKeyPress("h")',
             'onKeyPress("x")',
             'onKeyPress("u")',
             'onKeyPress("b")',
+            "P include in fixture",
+            "H exclude from fixture",
+            "X globally reject",
             "Button(\"Stop\")",
         ):
             self.assertIn(marker, source)
@@ -59,8 +63,12 @@ class NativeCullingParityTest(unittest.TestCase):
             "cullingDecisionProgress",
             "cullingCancellationRequested",
             "completed batches remain audited and undoable",
+            "FixtureCullingSemantics.mutation(",
+            "await applyFixturePlacement(state, label: label)",
+            "X remains the global reject action",
         ):
             self.assertIn(marker, source)
+        self.assertNotIn("await applyPickDecision()", source)
 
     def test_getting_started_describes_the_native_large_pool_path(self):
         guide = (ROOT / "docs" / "BACKSTAGE_GETTING_STARTED.md").read_text(

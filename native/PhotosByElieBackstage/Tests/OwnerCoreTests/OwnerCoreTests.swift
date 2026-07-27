@@ -840,6 +840,46 @@ struct OwnerCoreTests {
         #expect(manifest?["search"]?.stringValue == "Madrid")
     }
 
+    @Test("Fixture culling keeps H fixture-local and X globally scoped")
+    func fixtureCullingActionSemantics() {
+        #expect(
+            FixtureCullingSemantics.mutation(
+                for: .exclude,
+                currentFixtureID: ""
+            ) == .unavailable
+        )
+        #expect(
+            FixtureCullingSemantics.mutation(
+                for: .exclude,
+                currentFixtureID: "fixture-root"
+            ) == .fixtureState(.hidden)
+        )
+        #expect(
+            FixtureCullingSemantics.mutation(
+                for: .exclude,
+                currentFixtureID: "fixture-child"
+            ) == .fixtureState(.hidden)
+        )
+        #expect(
+            FixtureCullingSemantics.mutation(
+                for: .include,
+                currentFixtureID: "fixture-child"
+            ) == .fixtureState(.picked)
+        )
+        #expect(
+            FixtureCullingSemantics.mutation(
+                for: .clear,
+                currentFixtureID: "fixture-child"
+            ) == .fixtureState(.undecided)
+        )
+        #expect(
+            FixtureCullingSemantics.mutation(
+                for: .tombstone,
+                currentFixtureID: ""
+            ) == .globalTombstone
+        )
+    }
+
     @Test("Native fixture Review is chronological and actions stay connector-audited")
     func nativeFixtureReviewWorkflow() async throws {
         let windowAction = OwnerAction(

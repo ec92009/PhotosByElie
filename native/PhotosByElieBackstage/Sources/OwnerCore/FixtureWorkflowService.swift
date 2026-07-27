@@ -239,6 +239,39 @@ public enum FixturePlacementState: String, Codable, Sendable, CaseIterable {
     case hidden
 }
 
+public enum FixtureCullingAction: Sendable, Equatable {
+    case include
+    case exclude
+    case clear
+    case tombstone
+}
+
+public enum FixtureCullingMutation: Sendable, Equatable {
+    case unavailable
+    case fixtureState(FixturePlacementState)
+    case globalTombstone
+}
+
+public enum FixtureCullingSemantics {
+    public static func mutation(
+        for action: FixtureCullingAction,
+        currentFixtureID: String
+    ) -> FixtureCullingMutation {
+        if action == .tombstone {
+            return .globalTombstone
+        }
+        guard !currentFixtureID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return .unavailable
+        }
+        return switch action {
+        case .include: .fixtureState(.picked)
+        case .exclude: .fixtureState(.hidden)
+        case .clear: .fixtureState(.undecided)
+        case .tombstone: .globalTombstone
+        }
+    }
+}
+
 public enum FixtureCullingView: String, Codable, Sendable, CaseIterable {
     case undecided
     case hidden

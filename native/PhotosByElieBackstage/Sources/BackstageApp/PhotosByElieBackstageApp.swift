@@ -721,16 +721,25 @@ private struct MediaLibraryView: View {
                 }
                 HStack {
                     Text("\(model.cullingSelection.selectedIDs.count) selected")
-                    Picker("Pick state", selection: $model.cullingPickAction) {
-                        ForEach(SidecarPickAction.allCases, id: \.self) {
-                            Text($0 == .reject ? "Hide" : $0.label).tag($0)
+                    Picker("Fixture decision", selection: $model.cullingPickAction) {
+                        ForEach(SidecarPickAction.allCases, id: \.self) { action in
+                            let label: String = switch action {
+                            case .pick: "Include"
+                            case .reject: "Exclude"
+                            case .unpick: "Undecided"
+                            }
+                            Text(label).tag(action)
                         }
                     }
                     .frame(width: 180)
-                    Button("Apply pick state") {
+                    Button("Apply fixture decision") {
                         Task { await model.applyPickShortcut(model.cullingPickAction) }
                     }
-                    .disabled(model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision)
+                    .disabled(
+                        model.cullingSelection.selectedIDs.isEmpty
+                            || model.isApplyingCullingDecision
+                            || !model.hasCurrentCullingFixture
+                    )
                     Picker("Rating", selection: $model.cullingRating) {
                         ForEach(0...5, id: \.self) { rating in
                             Text(rating == 0 ? "No rating" : "\(rating) star\(rating == 1 ? "" : "s")")
@@ -798,7 +807,7 @@ private struct MediaLibraryView: View {
                             .disabled(model.cullingCancellationRequested)
                     }
                 }
-                Text("Shortcuts: P pick • H hide • X tombstone • U clear • 0–5 rating • 6–9 color • +/− density • Z fit/fill • Space Quick Look • ⌘Z undo")
+                Text("Shortcuts: P include in fixture • H exclude from fixture • X globally reject • U clear fixture decision • 0–5 rating • 6–9 color • +/− density • Z fit/fill • Space Quick Look • ⌘Z undo")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }

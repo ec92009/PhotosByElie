@@ -507,6 +507,10 @@ final class BackstageViewModel: ObservableObject {
         visibleCullingAssets.map(\.id).filter(cullingSelection.selectedIDs.contains)
     }
 
+    var hasCurrentCullingFixture: Bool {
+        !cullingFixtureID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
     var focusedCullingAssetID: String? {
         cullingSelection.focusedID ?? selectedCullingAssetIDs.first
     }
@@ -1123,19 +1127,27 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func applyPickShortcut(_ action: SidecarPickAction) async {
-        if !cullingFixtureID.isEmpty, cullingPool == nil {
-            switch action {
-            case .pick:
-                await applyFixturePlacement(.picked, label: "Pick")
-            case .reject:
-                await applyFixturePlacement(.hidden, label: "Hide")
-            case .unpick:
-                await applyFixturePlacement(.undecided, label: "Clear")
+        let semanticAction: FixtureCullingAction = switch action {
+        case .pick: .include
+        case .reject: .exclude
+        case .unpick: .clear
+        }
+        switch FixtureCullingSemantics.mutation(
+            for: semanticAction,
+            currentFixtureID: cullingFixtureID
+        ) {
+        case .unavailable:
+            cullingStatus = "Choose a current fixture before using P, H, or U. X remains the global reject action."
+        case let .fixtureState(state):
+            let label = switch state {
+            case .picked: "Include"
+            case .hidden: "Exclude"
+            case .undecided: "Clear fixture decision"
             }
+            await applyFixturePlacement(state, label: label)
+        case .globalTombstone:
             return
         }
-        cullingPickAction = action
-        await applyPickDecision()
     }
 
     func tombstoneCullingSelection() async {
@@ -1820,12 +1832,22 @@ final class BackstageViewModel: ObservableObject {
                 fixtureID: cullingFixtureID,
                 reason: "Native culling \(label.lowercased())"
             )
+            for change in changes {
+                var decision = cullingStates[change.assetID]
+                    ?? SidecarDecisionState(assetId: change.assetID)
+                decision.pickState = change.placementState.rawValue
+                cullingStates[change.assetID] = decision
+            }
             cullingHistory.append(CullingHistoryEntry(
                 label: label,
                 fixtureChanges: changes,
                 selectedIDs: selectedBefore
             ))
-            await loadFixtureCullingWindow()
+            if cullingPool == nil {
+                await loadFixtureCullingWindow()
+            } else {
+                replaceCullingItems()
+            }
             cullingStatus = "\(label) saved for \(changes.count) fixture item\(changes.count == 1 ? "" : "s")."
         } catch {
             cullingStatus = String(describing: error)

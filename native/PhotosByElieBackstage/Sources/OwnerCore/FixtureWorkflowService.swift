@@ -186,13 +186,58 @@ public struct FixturePolicy: Sendable, Equatable {
     }
 }
 
+public struct FixturePolicyOverrides: Sendable, Equatable {
+    public var visibility: String?
+    public var searchable: Bool?
+    public var retention: String?
+    public var delivery: String?
+    public var download: Bool?
+    public var commerce: String?
+
+    public init(
+        visibility: String? = nil,
+        searchable: Bool? = nil,
+        retention: String? = nil,
+        delivery: String? = nil,
+        download: Bool? = nil,
+        commerce: String? = nil
+    ) {
+        self.visibility = visibility
+        self.searchable = searchable
+        self.retention = retention
+        self.delivery = delivery
+        self.download = download
+        self.commerce = commerce
+    }
+
+    init(json: [String: JSONValue]) {
+        visibility = json["visibility"]?.stringValue
+        searchable = json["searchable"]?.boolValue
+        retention = json["retention"]?.stringValue
+        delivery = json["delivery"]?.stringValue
+        download = json["download"]?.boolValue
+        commerce = json["commerce"]?.stringValue
+    }
+
+    var json: [String: JSONValue] {
+        var result: [String: JSONValue] = [:]
+        if let visibility { result["visibility"] = .string(visibility) }
+        if let searchable { result["searchable"] = .bool(searchable) }
+        if let retention { result["retention"] = .string(retention) }
+        if let delivery { result["delivery"] = .string(delivery) }
+        if let download { result["download"] = .bool(download) }
+        if let commerce { result["commerce"] = .string(commerce) }
+        return result
+    }
+}
+
 public struct FixtureConfiguration: Sendable, Equatable {
     public var fixtureID: String
     public var populationMode: String
     public var candidateSource: [String: JSONValue]
     public var savedRule: [String: JSONValue]
     public var templateKey: String
-    public var configuredPolicy: FixturePolicy
+    public var configuredPolicy: FixturePolicyOverrides
     public var effectivePolicy: FixturePolicy
     public var revision: Int
 
@@ -203,7 +248,7 @@ public struct FixtureConfiguration: Sendable, Equatable {
         savedRule = json["savedRule"]?.objectValue ?? [:]
         templateKey = json["templateKey"]?.stringValue ?? ""
         let policy = json["policy"]?.objectValue ?? [:]
-        configuredPolicy = FixturePolicy(
+        configuredPolicy = FixturePolicyOverrides(
             json: policy["configured"]?.objectValue ?? [:]
         )
         effectivePolicy = FixturePolicy(
@@ -804,7 +849,7 @@ public actor FixtureWorkflowService {
         populationMode: String,
         candidateSource: [String: JSONValue],
         savedRule: [String: JSONValue],
-        policy: FixturePolicy,
+        policy: FixturePolicyOverrides,
         templateKey: String,
         reason: String
     ) async throws -> FixtureConfiguration {

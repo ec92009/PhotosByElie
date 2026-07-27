@@ -83,12 +83,20 @@ final class BackstageViewModel: ObservableObject {
     @Published var fixturePopulationMode = "curated"
     @Published var fixtureCandidateSourceKind = "photos-library"
     @Published var fixtureSavedRuleQuery = ""
-    @Published var fixturePolicyVisibility = "private"
-    @Published var fixturePolicySearchable = false
-    @Published var fixturePolicyRetention = "no-cloud"
-    @Published var fixturePolicyDelivery = "owner-only"
-    @Published var fixturePolicyDownload = false
-    @Published var fixturePolicyCommerce = "disabled"
+    @Published var fixturePolicyVisibility = "inherit"
+    @Published var fixturePolicySearchable = "inherit"
+    @Published var fixturePolicyRetention = "inherit"
+    @Published var fixturePolicyDelivery = "inherit"
+    @Published var fixturePolicyDownload = "inherit"
+    @Published var fixturePolicyCommerce = "inherit"
+    @Published var fixtureEffectivePolicy = FixturePolicy(
+        visibility: "private",
+        searchable: false,
+        retention: "no-cloud",
+        delivery: "owner-only",
+        download: false,
+        commerce: "disabled"
+    )
     @Published var fixturePolicyRevision = 0
     @Published var fixturePolicyStatus = ""
     @Published var isLoadingFixturePolicy = false
@@ -216,6 +224,18 @@ final class BackstageViewModel: ObservableObject {
 
     var selectedFixturePath: [FixtureNode] {
         fixtures.path(to: selectedFixtureID)
+    }
+
+    var fixtureEffectivePolicySummary: String {
+        let policy = fixtureEffectivePolicy
+        return [
+            "Visibility \(policy.visibility.replacingOccurrences(of: "-", with: " ").capitalized)",
+            "Search \(policy.searchable ? "On" : "Off")",
+            "Retention \(policy.retention.replacingOccurrences(of: "-", with: " ").capitalized)",
+            "Delivery \(policy.delivery.replacingOccurrences(of: "-", with: " ").capitalized)",
+            "Download \(policy.download ? "On" : "Off")",
+            "Commerce \(policy.commerce.replacingOccurrences(of: "-", with: " ").capitalized)",
+        ].joined(separator: "  •  ")
     }
 
     var isRunningFixtureSnapshotOperation: Bool {
@@ -883,15 +903,16 @@ final class BackstageViewModel: ObservableObject {
             fixtureSavedRuleQuery =
                 configuration.savedRule["query"]?.stringValue ?? ""
             fixtureTemplate = configuration.templateKey
-            let policy = configuration.effectivePolicy
-            fixturePolicyVisibility = policy.visibility
-            fixturePolicySearchable = policy.searchable
-            fixturePolicyRetention = policy.retention
-            fixturePolicyDelivery = policy.delivery
-            fixturePolicyDownload = policy.download
-            fixturePolicyCommerce = policy.commerce
+            let configured = configuration.configuredPolicy
+            fixturePolicyVisibility = configured.visibility ?? "inherit"
+            fixturePolicySearchable = configured.searchable.map { $0 ? "on" : "off" } ?? "inherit"
+            fixturePolicyRetention = configured.retention ?? "inherit"
+            fixturePolicyDelivery = configured.delivery ?? "inherit"
+            fixturePolicyDownload = configured.download.map { $0 ? "on" : "off" } ?? "inherit"
+            fixturePolicyCommerce = configured.commerce ?? "inherit"
+            fixtureEffectivePolicy = configuration.effectivePolicy
             fixturePolicyRevision = configuration.revision
-            fixturePolicyStatus = "Effective policy loaded at revision \(configuration.revision)."
+            fixturePolicyStatus = "Configured overrides and effective revision \(configuration.revision) loaded."
         } catch {
             fixturePolicyStatus = String(describing: error)
         }
@@ -913,19 +934,26 @@ final class BackstageViewModel: ObservableObject {
                 populationMode: fixturePopulationMode,
                 candidateSource: ["kind": .string(fixtureCandidateSourceKind)],
                 savedRule: rule,
-                policy: FixturePolicy(
-                    visibility: fixturePolicyVisibility,
-                    searchable: fixturePolicySearchable,
-                    retention: fixturePolicyRetention,
-                    delivery: fixturePolicyDelivery,
-                    download: fixturePolicyDownload,
-                    commerce: fixturePolicyCommerce
+                policy: FixturePolicyOverrides(
+                    visibility: fixturePolicyVisibility == "inherit"
+                        ? nil : fixturePolicyVisibility,
+                    searchable: fixturePolicySearchable == "inherit"
+                        ? nil : fixturePolicySearchable == "on",
+                    retention: fixturePolicyRetention == "inherit"
+                        ? nil : fixturePolicyRetention,
+                    delivery: fixturePolicyDelivery == "inherit"
+                        ? nil : fixturePolicyDelivery,
+                    download: fixturePolicyDownload == "inherit"
+                        ? nil : fixturePolicyDownload == "on",
+                    commerce: fixturePolicyCommerce == "inherit"
+                        ? nil : fixturePolicyCommerce
                 ),
                 templateKey: fixtureTemplate,
                 reason: "Backstage fixture policy editor"
             )
+            fixtureEffectivePolicy = configuration.effectivePolicy
             fixturePolicyRevision = configuration.revision
-            fixturePolicyStatus = "Saved fixture contract revision \(configuration.revision)."
+            fixturePolicyStatus = "Saved overrides; effective revision \(configuration.revision) refreshed."
         } catch {
             fixturePolicyStatus = String(describing: error)
         }

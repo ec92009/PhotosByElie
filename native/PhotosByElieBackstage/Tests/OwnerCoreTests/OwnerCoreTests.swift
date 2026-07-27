@@ -745,7 +745,7 @@ struct OwnerCoreTests {
             populationMode: "rule-based",
             candidateSource: ["kind": "photos-library"],
             savedRule: ["query": "Paris"],
-            policy: FixturePolicy(
+            policy: FixturePolicyOverrides(
                 visibility: "public",
                 searchable: true,
                 retention: "public-preview",
@@ -764,6 +764,59 @@ struct OwnerCoreTests {
         #expect(manifest?["mode"]?.stringValue == "fixture-configuration-set")
         #expect(manifest?["populationMode"]?.stringValue == "rule-based")
         #expect(manifest?["policyOverrides"]?.objectValue?["searchable"]?.boolValue == true)
+    }
+
+    @Test("Native fixture policy preserves inherited dimensions as unset overrides")
+    func nativeFixturePolicyInheritance() async throws {
+        let terminal = OwnerAction(
+            id: "owner-action-fixture-policy-inheritance",
+            actionKind: "sidecar-culling-review",
+            target: "max",
+            state: .completed,
+            result: [
+                "configuration": .object([
+                    "fixtureId": "fixture-child",
+                    "policy": [
+                        "configured": ["commerce": "free-sharing"],
+                        "effective": [
+                            "visibility": "private",
+                            "searchable": false,
+                            "retention": "private-master",
+                            "delivery": "granted",
+                            "download": true,
+                            "commerce": "free-sharing",
+                        ],
+                        "revision": 4,
+                    ],
+                ]),
+            ]
+        )
+        let api = ScriptedOwnerActionAPI(completed: [terminal])
+        let service = FixtureWorkflowService(runner: OwnerActionRunner(
+            api: api,
+            waker: UnavailableWaker(),
+            pollInterval: .milliseconds(1),
+            timeout: .seconds(1)
+        ))
+
+        let configuration = try await service.configure(
+            fixtureID: "fixture-child",
+            populationMode: "parent-subset",
+            candidateSource: ["kind": "parent-effective"],
+            savedRule: [:],
+            policy: FixturePolicyOverrides(commerce: "free-sharing"),
+            templateKey: "",
+            reason: "test inheritance"
+        )
+
+        #expect(configuration.configuredPolicy.visibility == nil)
+        #expect(configuration.configuredPolicy.delivery == nil)
+        #expect(configuration.configuredPolicy.commerce == "free-sharing")
+        #expect(configuration.effectivePolicy.delivery == "granted")
+        let request = try #require(await api.requests().first)
+        let overrides = request.payload["manifest"]?.objectValue?["policyOverrides"]?.objectValue
+        #expect(overrides?.count == 1)
+        #expect(overrides?["commerce"]?.stringValue == "free-sharing")
     }
 
     @Test("Native fixture culling requests a bounded full-universe window")

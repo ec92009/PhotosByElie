@@ -1015,7 +1015,7 @@ private struct FixtureWorkflowView: View {
                         .disabled(model.selectedFixtureAssetIDs.isEmpty || model.selectedFixtureID.isEmpty)
                     }
                     if !model.selectedFixtureID.isEmpty {
-                        GroupBox("Population and policy") {
+                        GroupBox("Population contract") {
                             VStack(alignment: .leading, spacing: 8) {
                                 HStack {
                                     Picker("Population", selection: $model.fixturePopulationMode) {
@@ -1035,35 +1035,73 @@ private struct FixtureWorkflowView: View {
                                         text: $model.fixtureSavedRuleQuery
                                     )
                                 }
-                                HStack {
+                            }
+                        }
+                        GroupBox("Configured on this fixture") {
+                            Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 8) {
+                                GridRow {
+                                    Text("Visibility")
                                     Picker("Visibility", selection: $model.fixturePolicyVisibility) {
+                                        Text("Inherit").tag("inherit")
                                         Text("Public").tag("public")
                                         Text("Private").tag("private")
                                         Text("Unlisted").tag("unlisted")
                                     }
-                                    Toggle("Search", isOn: $model.fixturePolicySearchable)
-                                    Toggle("Download", isOn: $model.fixturePolicyDownload)
+                                    .labelsHidden()
+                                    .frame(minWidth: 135)
+                                    Text("Search")
+                                    Picker("Search", selection: $model.fixturePolicySearchable) {
+                                        Text("Inherit").tag("inherit")
+                                        Text("On").tag("on")
+                                        Text("Off").tag("off")
+                                    }
+                                    .labelsHidden()
+                                    .frame(minWidth: 120)
                                 }
-                                HStack {
+                                GridRow {
+                                    Text("Retention")
                                     Picker("Retention", selection: $model.fixturePolicyRetention) {
+                                        Text("Inherit").tag("inherit")
                                         Text("Public preview").tag("public-preview")
                                         Text("Private master").tag("private-master")
                                         Text("Archive only").tag("archive-only")
                                         Text("No cloud").tag("no-cloud")
                                     }
+                                    .labelsHidden()
+                                    .frame(minWidth: 135)
+                                    Text("Delivery")
                                     Picker("Delivery", selection: $model.fixturePolicyDelivery) {
+                                        Text("Inherit").tag("inherit")
                                         Text("Public").tag("public")
                                         Text("Granted").tag("granted")
                                         Text("Owner only").tag("owner-only")
                                         Text("Disabled").tag("disabled")
                                     }
+                                    .labelsHidden()
+                                    .frame(minWidth: 120)
+                                }
+                                GridRow {
+                                    Text("Download")
+                                    Picker("Download", selection: $model.fixturePolicyDownload) {
+                                        Text("Inherit").tag("inherit")
+                                        Text("On").tag("on")
+                                        Text("Off").tag("off")
+                                    }
+                                    .labelsHidden()
+                                    .frame(minWidth: 135)
+                                    Text("Commerce")
                                     Picker("Commerce", selection: $model.fixturePolicyCommerce) {
+                                        Text("Inherit").tag("inherit")
                                         Text("Retail").tag("retail")
                                         Text("Paid service").tag("paid-service")
                                         Text("Free sharing").tag("free-sharing")
                                         Text("Disabled").tag("disabled")
                                     }
+                                    .labelsHidden()
+                                    .frame(minWidth: 120)
                                 }
+                            }
+                            VStack(alignment: .leading, spacing: 6) {
                                 HStack {
                                     Button("Save contract") {
                                         Task { await model.saveFixtureConfiguration() }
@@ -1077,6 +1115,13 @@ private struct FixtureWorkflowView: View {
                                         .foregroundStyle(.secondary)
                                 }
                             }
+                        }
+                        GroupBox("Effective policy • revision \(model.fixturePolicyRevision)") {
+                            Text(model.fixtureEffectivePolicySummary)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                     }
                     DisclosureGroup("Reversible fixture placements") {

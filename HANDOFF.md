@@ -5,25 +5,29 @@
 - David accepted Max's exact `d2dbd6fbb` release-candidate head in the isolated
   `codex/david-pbb-29-acceptance` worktree. David's dirty/divergent primary
   checkout and its untracked `GAMEPLAN.md` remain untouched.
-- David pushed three focused follow-ups: `16f8438a9` keeps fixture search
-  compatible with David's Python 3.9 runtime; `7fc3e48b5` makes P/H/U strictly
-  fixture-local in both live fixture windows and immutable fixture snapshots
-  while reserving X for the global reversible tombstone; `0d461bb46` gives the
-  native policy editor explicit inherited overrides and a separate effective
-  policy/revision preview without flattening inherited values into child
-  overrides.
+- David pushed focused acceptance follow-ups ending at `947d39cf6`:
+  `16f8438a9` keeps fixture search compatible with David's Python 3.9 runtime;
+  `7fc3e48b5` makes P/H/U strictly fixture-local while reserving X for the
+  global reversible tombstone; `0d461bb46` separates configured overrides from
+  effective inherited policy; later checkpoints route fixture actions through
+  the enrolled local connector, make fixture-tree reads non-mutating, remove
+  connector I/O throttling, bound the asset workspace, suppress harmless
+  cancellation noise, and give the policy editor adaptive one/two-column
+  geometry with fixed-width, spacer-aligned menu controls.
 - Verification passes on David: the release candidate's 156 Node tests,
-  165 Python discovery tests, 42 Swift tests under Xcode 26.6, focused
+  165 Python discovery tests, 43 Swift tests under Xcode 26.6, focused
   fixture-policy/culling tests, the reversible native parity rehearsal, Owner
   API contract generation, and publication validation.
 - Backstage `0.3.0` build `10` was built from the corrected acceptance branch,
   ad-hoc signed, relaunched on David,
   and retained its independently revocable Keychain enrollment. Codex's native
-  Mac-control pipe still closes before returning a screenshot, so human Screen
-  Sharing supplied the visual evidence. The first loaded editor exposed clipped
-  menu values and no configured-versus-effective distinction; `0d461bb46`
-  corrects both. Final no-save visual acceptance of that corrected build is
-  still required before closing PBB-33 and PBB-29.
+  Mac-control pipe still closes before returning a Backstage screenshot, so
+  human Screen Sharing and a local read-only desktop capture supplied the
+  visual evidence. The final build loaded the real 20-node fixture tree,
+  selected Expo, and presented the population contract, configured overrides,
+  effective revision/status, and all six policy dimensions legibly with
+  aligned pull-downs. No configuration was saved. PBB-33 and parent epic
+  PBB-29 are Verified in YouTrack.
 - David's stale 21-table, fixtureless Owner database was reconciled only through
   the documented private-R2 Max-to-David path. Max created a consistent SQLite
   `.backup`, uploaded

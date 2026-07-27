@@ -1020,10 +1020,10 @@ private struct FixtureWorkflowView: View {
                             if !model.selectedFixtureID.isEmpty {
                                 GroupBox("Population contract") {
                                     VStack(alignment: .leading, spacing: 8) {
-                                        HStack(spacing: 24) {
-                                            HStack {
+                                        HStack(spacing: 28) {
+                                            HStack(spacing: 12) {
                                                 Text("Population")
-                                                Spacer(minLength: 12)
+                                                    .frame(width: 100, alignment: .leading)
                                                 Picker("Population", selection: $model.fixturePopulationMode) {
                                                     Text("Curated").tag("curated")
                                                     Text("Rule-based").tag("rule-based")
@@ -1032,19 +1032,17 @@ private struct FixtureWorkflowView: View {
                                                 .labelsHidden()
                                                 .frame(width: 210)
                                             }
-                                            .frame(maxWidth: .infinity)
-                                            HStack {
+                                            HStack(spacing: 12) {
                                                 Text("Source")
-                                                Spacer(minLength: 12)
+                                                    .frame(width: 70, alignment: .leading)
                                                 Picker("Source", selection: $model.fixtureCandidateSourceKind) {
                                                     Text("Photos library").tag("photos-library")
                                                     Text("Parent effective snapshot").tag("parent-effective")
                                                     Text("Saved snapshot").tag("saved-snapshot")
                                                 }
                                                 .labelsHidden()
-                                                .frame(width: 260)
+                                                .frame(width: 220)
                                             }
-                                            .frame(maxWidth: .infinity)
                                         }
                                         if model.fixturePopulationMode == "rule-based" {
                                             TextField(
@@ -1056,10 +1054,10 @@ private struct FixtureWorkflowView: View {
                                 }
                                 GroupBox("Configured on this fixture") {
                                     VStack(alignment: .leading, spacing: 8) {
-                                        HStack(spacing: 24) {
-                                            HStack {
+                                        HStack(spacing: 28) {
+                                            HStack(spacing: 12) {
                                                 Text("Visibility")
-                                                Spacer(minLength: 12)
+                                                    .frame(width: 90, alignment: .leading)
                                                 Picker("Visibility", selection: $model.fixturePolicyVisibility) {
                                                     Text("Inherit").tag("inherit")
                                                     Text("Public").tag("public")
@@ -1069,10 +1067,9 @@ private struct FixtureWorkflowView: View {
                                                 .labelsHidden()
                                                 .frame(width: 165)
                                             }
-                                            .frame(maxWidth: .infinity)
-                                            HStack {
+                                            HStack(spacing: 12) {
                                                 Text("Search")
-                                                Spacer(minLength: 12)
+                                                    .frame(width: 90, alignment: .leading)
                                                 Picker("Search", selection: $model.fixturePolicySearchable) {
                                                     Text("Inherit").tag("inherit")
                                                     Text("On").tag("on")
@@ -1081,12 +1078,11 @@ private struct FixtureWorkflowView: View {
                                                 .labelsHidden()
                                                 .frame(width: 165)
                                             }
-                                            .frame(maxWidth: .infinity)
                                         }
-                                        HStack(spacing: 24) {
-                                            HStack {
+                                        HStack(spacing: 28) {
+                                            HStack(spacing: 12) {
                                                 Text("Retention")
-                                                Spacer(minLength: 12)
+                                                    .frame(width: 90, alignment: .leading)
                                                 Picker("Retention", selection: $model.fixturePolicyRetention) {
                                                     Text("Inherit").tag("inherit")
                                                     Text("Public preview").tag("public-preview")
@@ -1097,10 +1093,9 @@ private struct FixtureWorkflowView: View {
                                                 .labelsHidden()
                                                 .frame(width: 165)
                                             }
-                                            .frame(maxWidth: .infinity)
-                                            HStack {
+                                            HStack(spacing: 12) {
                                                 Text("Delivery")
-                                                Spacer(minLength: 12)
+                                                    .frame(width: 90, alignment: .leading)
                                                 Picker("Delivery", selection: $model.fixturePolicyDelivery) {
                                                     Text("Inherit").tag("inherit")
                                                     Text("Public").tag("public")
@@ -1111,12 +1106,11 @@ private struct FixtureWorkflowView: View {
                                                 .labelsHidden()
                                                 .frame(width: 165)
                                             }
-                                            .frame(maxWidth: .infinity)
                                         }
-                                        HStack(spacing: 24) {
-                                            HStack {
+                                        HStack(spacing: 28) {
+                                            HStack(spacing: 12) {
                                                 Text("Download")
-                                                Spacer(minLength: 12)
+                                                    .frame(width: 90, alignment: .leading)
                                                 Picker("Download", selection: $model.fixturePolicyDownload) {
                                                     Text("Inherit").tag("inherit")
                                                     Text("On").tag("on")
@@ -1125,10 +1119,9 @@ private struct FixtureWorkflowView: View {
                                                 .labelsHidden()
                                                 .frame(width: 165)
                                             }
-                                            .frame(maxWidth: .infinity)
-                                            HStack {
+                                            HStack(spacing: 12) {
                                                 Text("Commerce")
-                                                Spacer(minLength: 12)
+                                                    .frame(width: 90, alignment: .leading)
                                                 Picker("Commerce", selection: $model.fixturePolicyCommerce) {
                                                     Text("Inherit").tag("inherit")
                                                     Text("Retail").tag("retail")
@@ -1139,10 +1132,8 @@ private struct FixtureWorkflowView: View {
                                                 .labelsHidden()
                                                 .frame(width: 165)
                                             }
-                                            .frame(maxWidth: .infinity)
                                         }
                                     }
-                                    .frame(maxWidth: .infinity)
                                     VStack(alignment: .leading, spacing: 6) {
                                         HStack {
                                             Button("Save contract") {

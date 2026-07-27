@@ -48,7 +48,7 @@ class NativeCullingParityTest(unittest.TestCase):
             "H exclude from fixture",
             "X globally reject",
             "Button(\"Stop\")",
-            ".frame(minHeight: 180, idealHeight: 240, maxHeight: 300)",
+            ".frame(minHeight: 140, idealHeight: 180, maxHeight: 220)",
             "ScrollView(.vertical)",
         ):
             self.assertIn(marker, source)

@@ -1006,7 +1006,7 @@ private struct FixtureWorkflowView: View {
                         TableColumn("File", value: \.filename)
                         TableColumn("Kind", value: \.mediaType)
                     }
-                    .frame(minHeight: 180, idealHeight: 240, maxHeight: 300)
+                    .frame(minHeight: 140, idealHeight: 180, maxHeight: 220)
                     HStack {
                         Text("\(model.selectedFixtureAssetIDs.count) selected")
                         Spacer()
@@ -1026,11 +1026,13 @@ private struct FixtureWorkflowView: View {
                                                 Text("Rule-based").tag("rule-based")
                                                 Text("Parent subset").tag("parent-subset")
                                             }
+                                            .frame(width: 210)
                                             Picker("Source", selection: $model.fixtureCandidateSourceKind) {
                                                 Text("Photos library").tag("photos-library")
                                                 Text("Parent effective snapshot").tag("parent-effective")
                                                 Text("Saved snapshot").tag("saved-snapshot")
                                             }
+                                            .frame(width: 260)
                                         }
                                         if model.fixturePopulationMode == "rule-based" {
                                             TextField(
@@ -1044,6 +1046,8 @@ private struct FixtureWorkflowView: View {
                                     Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 8) {
                                         GridRow {
                                             Text("Visibility")
+                                                .frame(width: 82, alignment: .leading)
+                                                .fixedSize(horizontal: true, vertical: false)
                                             Picker("Visibility", selection: $model.fixturePolicyVisibility) {
                                                 Text("Inherit").tag("inherit")
                                                 Text("Public").tag("public")
@@ -1051,18 +1055,22 @@ private struct FixtureWorkflowView: View {
                                                 Text("Unlisted").tag("unlisted")
                                             }
                                             .labelsHidden()
-                                            .frame(minWidth: 135)
+                                            .frame(width: 165)
                                             Text("Search")
+                                                .frame(width: 82, alignment: .leading)
+                                                .fixedSize(horizontal: true, vertical: false)
                                             Picker("Search", selection: $model.fixturePolicySearchable) {
                                                 Text("Inherit").tag("inherit")
                                                 Text("On").tag("on")
                                                 Text("Off").tag("off")
                                             }
                                             .labelsHidden()
-                                            .frame(minWidth: 120)
+                                            .frame(width: 165)
                                         }
                                         GridRow {
                                             Text("Retention")
+                                                .frame(width: 82, alignment: .leading)
+                                                .fixedSize(horizontal: true, vertical: false)
                                             Picker("Retention", selection: $model.fixturePolicyRetention) {
                                                 Text("Inherit").tag("inherit")
                                                 Text("Public preview").tag("public-preview")
@@ -1071,8 +1079,10 @@ private struct FixtureWorkflowView: View {
                                                 Text("No cloud").tag("no-cloud")
                                             }
                                             .labelsHidden()
-                                            .frame(minWidth: 135)
+                                            .frame(width: 165)
                                             Text("Delivery")
+                                                .frame(width: 82, alignment: .leading)
+                                                .fixedSize(horizontal: true, vertical: false)
                                             Picker("Delivery", selection: $model.fixturePolicyDelivery) {
                                                 Text("Inherit").tag("inherit")
                                                 Text("Public").tag("public")
@@ -1081,18 +1091,22 @@ private struct FixtureWorkflowView: View {
                                                 Text("Disabled").tag("disabled")
                                             }
                                             .labelsHidden()
-                                            .frame(minWidth: 120)
+                                            .frame(width: 165)
                                         }
                                         GridRow {
                                             Text("Download")
+                                                .frame(width: 82, alignment: .leading)
+                                                .fixedSize(horizontal: true, vertical: false)
                                             Picker("Download", selection: $model.fixturePolicyDownload) {
                                                 Text("Inherit").tag("inherit")
                                                 Text("On").tag("on")
                                                 Text("Off").tag("off")
                                             }
                                             .labelsHidden()
-                                            .frame(minWidth: 135)
+                                            .frame(width: 165)
                                             Text("Commerce")
+                                                .frame(width: 82, alignment: .leading)
+                                                .fixedSize(horizontal: true, vertical: false)
                                             Picker("Commerce", selection: $model.fixturePolicyCommerce) {
                                                 Text("Inherit").tag("inherit")
                                                 Text("Retail").tag("retail")
@@ -1101,7 +1115,7 @@ private struct FixtureWorkflowView: View {
                                                 Text("Disabled").tag("disabled")
                                             }
                                             .labelsHidden()
-                                            .frame(minWidth: 120)
+                                            .frame(width: 165)
                                         }
                                     }
                                     VStack(alignment: .leading, spacing: 6) {

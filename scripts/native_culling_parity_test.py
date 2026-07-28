@@ -149,15 +149,80 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("GridItem(.flexible(minimum: 0), spacing: 8)", culling)
         self.assertNotIn("GridItem(.flexible(minimum: 84)", culling)
         self.assertIn("model.updateCullingGridWidth", culling)
-        self.assertIn("Button(\"−\") { model.decreaseCullingThumbnailSize() }", culling)
-        self.assertIn("Button(\"+\") { model.increaseCullingThumbnailSize() }", culling)
+        self.assertIn("Button(\"−\") { decreaseCullingThumbnailSize() }", culling)
+        self.assertIn("Button(\"+\") { increaseCullingThumbnailSize() }", culling)
         self.assertIn(".disabled(!model.canDecreaseCullingThumbnailSize)", culling)
         self.assertIn(".disabled(!model.canIncreaseCullingThumbnailSize)", culling)
+        self.assertIn(".animation(.snappy(duration: 0.24), value: model.cullingGridDensity)", culling)
         model = (
             NATIVE / "Sources" / "BackstageApp" / "BackstageViewModel.swift"
         ).read_text(encoding="utf-8")
         self.assertIn(
             "guard width >= CullingGridLayout.minimumColumnWidth else { return }",
+            model,
+        )
+
+    def test_culling_preview_is_bounded_and_collapsible(self):
+        source = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "PhotosByElieBackstageApp.swift"
+        ).read_text(encoding="utf-8")
+        culling = source.split("private struct MediaLibraryView", 1)[1].split(
+            "private struct CullingAssetCard", 1
+        )[0]
+
+        self.assertIn("@State private var isCullingPreviewVisible = true", culling)
+        self.assertIn('Image(systemName: "sidebar.right")', culling)
+        self.assertIn('help(isCullingPreviewVisible ? "Hide preview" : "Show preview")', culling)
+        self.assertIn("if isCullingPreviewVisible", culling)
+        self.assertIn(".frame(minWidth: 220, idealWidth: 300, maxWidth: 360)", culling)
+
+    def test_review_edits_autosave_and_propagation_controls_stay_compact(self):
+        ui = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "PhotosByElieBackstageApp.swift"
+        ).read_text(encoding="utf-8")
+        inspector = ui.split("private struct ReviewInspector", 1)[1]
+        model = (
+            NATIVE / "Sources" / "BackstageApp" / "BackstageViewModel.swift"
+        ).read_text(encoding="utf-8")
+        reason_toggle = model.split("func toggleReviewAIReason", 1)[1].split(
+            "func updateReviewTitle", 1
+        )[0]
+
+        self.assertNotIn('Button("Save T/K")', inspector)
+        self.assertIn("model.updateReviewTitle($0)", inspector)
+        self.assertIn("model.updateReviewKeywords($0)", inspector)
+        self.assertGreaterEqual(inspector.count('Image(systemName: "arrow.down")'), 2)
+        self.assertIn('.help("Propagate title")', inspector)
+        self.assertIn('.help("Propagate keywords")', inspector)
+        self.assertIn("scheduleReviewMetadataAutosave()", model)
+        self.assertIn("Task.sleep(for: .milliseconds(600))", model)
+        self.assertNotIn("applyReviewAction", reason_toggle)
+        self.assertNotIn("reviewLastAction", reason_toggle)
+        self.assertIn("model.toggleReviewAIReason(reason)", inspector)
+        self.assertNotIn("await model.toggleReviewAIReason(reason)", inspector)
+        self.assertIn('Text("Mark for AI review")', inspector)
+        self.assertIn('Button("Update AI review mark")', inspector)
+        self.assertIn('Button(model.isRunningAIPass ? "AI pass running…" : "Run AI pass now")', ui)
+        actions = inspector.split('Button("Approve")', 1)[1].split("Divider()", 1)[0]
+        self.assertIn('Button("Hide")', actions)
+        self.assertIn('Button("Propagate")', actions)
+        self.assertNotIn(".disabled(", actions)
+        self.assertIn('Image(systemName: "checkmark.circle.fill")', ui)
+        self.assertIn('Image(systemName: "questionmark.circle.fill")', ui)
+        self.assertIn(
+            "hasDraftAIReason: model.reviewSelection.selectedIDs.contains(item.id)",
+            ui,
+        )
+        self.assertIn('.saturation(item.placementState == "hidden" ? 0 : 1)', ui)
+        self.assertIn(".font(.system(size: 30, weight: .bold))", ui)
+        self.assertIn(
+            "if [.approve, .hide, .requestAI].contains(action)",
             model,
         )
 

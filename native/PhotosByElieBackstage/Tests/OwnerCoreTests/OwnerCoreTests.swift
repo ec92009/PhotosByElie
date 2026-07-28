@@ -1022,6 +1022,7 @@ struct OwnerCoreTests {
                         "capturedAt": "2025-01-01T12:00:00Z",
                         "rating": 3,
                         "color": "yellow",
+                        "placementState": "picked",
                         "editorialState": "requesting-ai",
                         "aiReasons": ["weak title"],
                         "aiNote": "Name the landmark.",
@@ -1088,6 +1089,7 @@ struct OwnerCoreTests {
         #expect(window.summary.total == 420)
         #expect(window.summary.approved == 80)
         #expect(window.items.first?.id == "asset-oldest")
+        #expect(window.items.first?.placementState == "picked")
         #expect(window.items.first?.aiReasons == ["weak title"])
 
         let result = try await service.applyReview(

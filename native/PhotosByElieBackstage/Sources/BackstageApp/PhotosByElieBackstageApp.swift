@@ -587,6 +587,7 @@ private struct ActivityView: View {
 private struct MediaLibraryView: View {
     @ObservedObject var model: BackstageViewModel
     @StateObject private var quickLook = BackstageQuickLookCoordinator()
+    @State private var isCullingPreviewVisible = true
 
     var body: some View {
         HSplitView {
@@ -688,11 +689,11 @@ private struct MediaLibraryView: View {
                     .disabled(!workspace.hasNext)
                     Spacer()
                     HStack(spacing: 0) {
-                        Button("−") { model.decreaseCullingThumbnailSize() }
+                        Button("−") { decreaseCullingThumbnailSize() }
                             .help("Show more, smaller thumbnails")
                             .disabled(!model.canDecreaseCullingThumbnailSize)
                         Divider().frame(height: 18)
-                        Button("+") { model.increaseCullingThumbnailSize() }
+                        Button("+") { increaseCullingThumbnailSize() }
                             .help("Show fewer, larger thumbnails")
                             .disabled(!model.canIncreaseCullingThumbnailSize)
                     }
@@ -701,6 +702,15 @@ private struct MediaLibraryView: View {
                         model.toggleCullingFitFill()
                     }
                     .buttonStyle(.bordered)
+                    Button {
+                        withAnimation(.snappy(duration: 0.24)) {
+                            isCullingPreviewVisible.toggle()
+                        }
+                    } label: {
+                        Image(systemName: "sidebar.right")
+                    }
+                    .buttonStyle(.bordered)
+                    .help(isCullingPreviewVisible ? "Hide preview" : "Show preview")
                 }
                 ScrollViewReader { proxy in
                     GeometryReader { geometry in
@@ -732,6 +742,7 @@ private struct MediaLibraryView: View {
                             }
                             .padding(6)
                             .frame(maxWidth: .infinity, alignment: .topLeading)
+                            .animation(.snappy(duration: 0.24), value: model.cullingGridDensity)
                         }
                         .onAppear {
                             model.updateCullingGridWidth(Double(geometry.size.width - 12))
@@ -792,11 +803,11 @@ private struct MediaLibraryView: View {
                         return .handled
                     }
                     .onKeyPress("+") {
-                        model.increaseCullingThumbnailSize()
+                        increaseCullingThumbnailSize()
                         return .handled
                     }
                     .onKeyPress("-") {
-                        model.decreaseCullingThumbnailSize()
+                        decreaseCullingThumbnailSize()
                         return .handled
                     }
                     .onKeyPress("z") {
@@ -933,29 +944,33 @@ private struct MediaLibraryView: View {
             }
             .padding()
 
-            Group {
-                if model.isLoadingPreview {
-                    ProgressView("Loading preview…")
-                } else if let preview = model.photoPreview,
-                   let image = NSImage(data: preview.jpegData) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Image(nsImage: image)
-                            .resizable()
-                            .scaledToFit()
-                        Text("\(preview.pixelWidth) × \(preview.pixelHeight) preview")
-                            .foregroundStyle(.secondary)
+            if isCullingPreviewVisible {
+                Group {
+                    if model.isLoadingPreview {
+                        ProgressView("Loading preview…")
+                    } else if let preview = model.photoPreview,
+                              let image = NSImage(data: preview.jpegData) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Image(nsImage: image)
+                                .resizable()
+                                .scaledToFit()
+                            Text("\(preview.pixelWidth) × \(preview.pixelHeight)")
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding()
+                    } else {
+                        ContentUnavailableView(
+                            "No preview",
+                            systemImage: "photo",
+                            description: Text("Select a photo, or press Space for Quick Look.")
+                        )
                     }
-                    .padding()
-                } else {
-                    ContentUnavailableView(
-                        "No preview",
-                        systemImage: "photo",
-                        description: Text("Select a photo for an inline preview, or use Quick Look for photos, videos, and panoramas.")
-                    )
                 }
+                .frame(minWidth: 220, idealWidth: 300, maxWidth: 360)
+                .transition(.move(edge: .trailing).combined(with: .opacity))
             }
-            .frame(minWidth: 280)
         }
+        .animation(.snappy(duration: 0.24), value: isCullingPreviewVisible)
         .task {
             if model.fixtures.isEmpty {
                 await model.loadFixtures()
@@ -1001,6 +1016,18 @@ private struct MediaLibraryView: View {
                 Task { await model.refreshPhotos() }
             }
             .disabled(model.isLoadingPhotos)
+        }
+    }
+
+    private func increaseCullingThumbnailSize() {
+        withAnimation(.snappy(duration: 0.24)) {
+            model.increaseCullingThumbnailSize()
+        }
+    }
+
+    private func decreaseCullingThumbnailSize() {
+        withAnimation(.snappy(duration: 0.24)) {
+            model.decreaseCullingThumbnailSize()
         }
     }
 
@@ -1757,6 +1784,8 @@ private struct FixtureReviewView: View {
                                     thumbnail: model.reviewThumbnails[item.id],
                                     isSelected: model.reviewSelection.selectedIDs.contains(item.id),
                                     isFocused: model.reviewSelection.focusedID == item.id,
+                                    hasDraftAIReason: model.reviewSelection.selectedIDs.contains(item.id)
+                                        && !model.reviewAIReasons.isEmpty,
                                     hasProposalDraft: model.hasProposalDraft(for: item.id),
                                     hasProposalConflict: model.reviewProposalConflictIDs.contains(item.id)
                                 )
@@ -1903,6 +1932,7 @@ private struct ReviewAssetRow: View {
     var thumbnail: NSImage?
     var isSelected: Bool
     var isFocused: Bool
+    var hasDraftAIReason: Bool
     var hasProposalDraft: Bool
     var hasProposalConflict: Bool
 
@@ -1913,6 +1943,7 @@ private struct ReviewAssetRow: View {
                     Image(nsImage: thumbnail)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
+                        .saturation(item.placementState == "hidden" ? 0 : 1)
                 } else {
                     Image(systemName: item.mediaType == "video" ? "video" : "photo")
                         .font(.largeTitle)
@@ -1922,6 +1953,10 @@ private struct ReviewAssetRow: View {
             .frame(width: 180, height: 126)
             .background(.quaternary.opacity(0.4))
             .clipShape(RoundedRectangle(cornerRadius: 7))
+            .overlay(alignment: .topTrailing) {
+                reviewStateBadge
+                    .padding(8)
+            }
             VStack(alignment: .leading, spacing: 7) {
                 HStack {
                     Text(item.title.isEmpty ? item.filename : item.title)
@@ -1978,6 +2013,23 @@ private struct ReviewAssetRow: View {
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
+    @ViewBuilder
+    private var reviewStateBadge: some View {
+        if hasDraftAIReason || !item.aiReasons.isEmpty || item.editorialState == "requesting-ai" {
+            Image(systemName: "questionmark.circle.fill")
+                .font(.system(size: 30, weight: .bold))
+                .symbolRenderingMode(.palette)
+                .foregroundStyle(.white, .orange)
+                .accessibilityLabel("Marked for AI review")
+        } else if item.editorialState == "approved" {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 30, weight: .bold))
+                .symbolRenderingMode(.palette)
+                .foregroundStyle(.white, .green)
+                .accessibilityLabel("Approved")
+        }
+    }
+
     private func reviewColor(_ value: String) -> Color {
         switch value {
         case "red": .red
@@ -2003,19 +2055,69 @@ private struct ReviewInspector: View {
                         Image(nsImage: thumbnail)
                             .resizable()
                             .aspectRatio(contentMode: .fit)
+                            .saturation(item.placementState == "hidden" ? 0 : 1)
                             .frame(maxHeight: 240)
                             .frame(maxWidth: .infinity)
                             .background(.quaternary.opacity(0.35))
                             .clipShape(RoundedRectangle(cornerRadius: 9))
+                            .overlay(alignment: .topTrailing) {
+                                if !model.reviewAIReasons.isEmpty
+                                    || !item.aiReasons.isEmpty
+                                    || item.editorialState == "requesting-ai" {
+                                    Image(systemName: "questionmark.circle.fill")
+                                        .font(.system(size: 30, weight: .bold))
+                                        .symbolRenderingMode(.palette)
+                                        .foregroundStyle(.white, .orange)
+                                        .padding(8)
+                                } else if item.editorialState == "approved" {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .font(.system(size: 30, weight: .bold))
+                                        .symbolRenderingMode(.palette)
+                                        .foregroundStyle(.white, .green)
+                                        .padding(8)
+                                }
+                            }
                     }
                     Text(item.filename)
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    TextField("Title", text: $model.reviewTitle, axis: .vertical)
+                    HStack(alignment: .top, spacing: 8) {
+                        TextField(
+                            "Title",
+                            text: Binding(
+                                get: { model.reviewTitle },
+                                set: { model.updateReviewTitle($0) }
+                            ),
+                            axis: .vertical
+                        )
                         .textFieldStyle(.roundedBorder)
-                    TextField("Keywords, comma separated", text: $model.reviewKeywords, axis: .vertical)
+                        Button {
+                            Task { await model.propagateReviewTitle() }
+                        } label: {
+                            Image(systemName: "arrow.down")
+                        }
+                        .help("Propagate title")
+                        .disabled(model.isRunningReview)
+                    }
+                    HStack(alignment: .top, spacing: 8) {
+                        TextField(
+                            "Keywords, comma separated",
+                            text: Binding(
+                                get: { model.reviewKeywords },
+                                set: { model.updateReviewKeywords($0) }
+                            ),
+                            axis: .vertical
+                        )
                         .textFieldStyle(.roundedBorder)
                         .lineLimit(3...7)
+                        Button {
+                            Task { await model.propagateReviewKeywords() }
+                        } label: {
+                            Image(systemName: "arrow.down")
+                        }
+                        .help("Propagate keywords")
+                        .disabled(model.isRunningReview)
+                    }
                     if let proposal = model.reviewProposalDrafts[item.id], proposal.isProposal {
                         Label(
                             proposal.proposalReason.isEmpty
@@ -2026,18 +2128,6 @@ private struct ReviewInspector: View {
                         .font(.caption)
                         .foregroundStyle(.orange)
                     }
-                    HStack {
-                        Button("Save T/K") {
-                            Task { await model.saveReviewMetadata() }
-                        }
-                        Button("Propagate title") {
-                            Task { await model.propagateReviewTitle() }
-                        }
-                        Button("Propagate keywords") {
-                            Task { await model.propagateReviewKeywords() }
-                        }
-                    }
-                    .disabled(model.isRunningReview)
                     Divider()
                     HStack {
                         Button("Approve") {
@@ -2053,14 +2143,13 @@ private struct ReviewInspector: View {
                         }
                     }
                     .buttonStyle(.borderedProminent)
-                    .disabled(model.isRunningReview)
                     Divider()
-                    Text("Request AI proposal")
+                    Text("Mark for AI review")
                         .font(.headline)
                     FlowLayout(spacing: 6) {
                         ForEach(model.reviewAIReasonChoices, id: \.self) { reason in
                             Button {
-                                Task { await model.toggleReviewAIReason(reason) }
+                                model.toggleReviewAIReason(reason)
                             } label: {
                                 Label(
                                     reason,
@@ -2076,10 +2165,9 @@ private struct ReviewInspector: View {
                     TextField("Optional AI note", text: $model.reviewAINote, axis: .vertical)
                         .textFieldStyle(.roundedBorder)
                         .lineLimit(2...5)
-                    Button("Update AI request") {
+                    Button("Update AI review mark") {
                         Task { await model.applyReviewAction(.requestAI) }
                     }
-                    .disabled(model.isRunningReview)
                     Divider()
                     Button("Quick Look") {
                         Task {

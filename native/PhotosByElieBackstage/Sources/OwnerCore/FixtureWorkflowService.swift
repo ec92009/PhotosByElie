@@ -411,6 +411,7 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
     public var capturedAt: String
     public var rating: Int
     public var color: String
+    public var placementState: String
     public var editorialState: String
     public var aiReasons: [String]
     public var aiNote: String
@@ -429,6 +430,7 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
         capturedAt = json["capturedAt"]?.stringValue ?? ""
         rating = json["rating"]?.intValue ?? 0
         color = json["color"]?.stringValue ?? ""
+        placementState = json["placementState"]?.stringValue ?? "picked"
         editorialState = json["editorialState"]?.stringValue ?? "unreviewed"
         aiReasons = json["aiReasons"]?.arrayValue?.compactMap(\.stringValue) ?? []
         aiNote = json["aiNote"]?.stringValue ?? ""

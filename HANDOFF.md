@@ -1,5 +1,27 @@
 # PhotosByElie Handoff
 
+## 2026-07-28 — Backstage Culling and Review interaction polish
+
+- Backstage `0.4.4` build `15` animates Culling density changes, bounds the
+  inline preview to a compact 220–360 point pane, and lets the owner collapse
+  or restore that pane without resizing the window.
+- Review title and keyword edits now autosave after a short pause. Each field
+  has its own compact down-arrow propagation control and the redundant
+  `Save T/K` button is gone.
+- AI reason checkboxes are local mark-form state until `Update AI review mark`
+  is chosen. That action only places the item in the deferred queue; AI work
+  runs separately in a scheduled batch or when `Run AI pass now` is chosen.
+  Clearing the last reason no longer leaves Approve, Hide, and Propagate
+  disabled. Metadata edits do not overwrite the last Approve, Hide, or Request
+  AI action, so the main Propagate action remains available after approval.
+- Full Review retains fixture-hidden items for inspection while Backfill
+  remains unresolved picked work. Approved thumbnails show a 30-point green
+  check, AI-marked thumbnails show a 30-point question mark, and hidden
+  thumbnails render in black and white. Propagating Approve, Hide, or the AI
+  mark applies the same durable state to the bounded two-hour shoot targets.
+- Acceptance remains read-only/no-save: do not change Culling/Review state,
+  metadata, Waste Basket, uploads, publication, delivery, access, or clients.
+
 ## 2026-07-28 — Backstage Culling density containment
 
 - Backstage `0.4.3` build `14` keeps Culling density changes inside the

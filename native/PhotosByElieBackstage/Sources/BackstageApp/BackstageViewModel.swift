@@ -233,6 +233,7 @@ final class BackstageViewModel: ObservableObject {
     let deliveryService: FixtureDeliveryService
     let photosBridgeHealthService: PhotosBridgeHealthService
     private var authenticationTask: Task<OwnerAuthenticationSnapshot, Never>?
+    private var reviewMetadataAutosaveTask: Task<Void, Never>?
 
     var selectedFixturePoolSummary: FixturePoolSummary? {
         fixturePools.first(where: { $0.id == selectedFixturePoolID })
@@ -1374,17 +1375,31 @@ final class BackstageViewModel: ObservableObject {
         clearReviewDraft()
     }
 
-    func toggleReviewAIReason(_ reason: String) async {
+    func toggleReviewAIReason(_ reason: String) {
         if reviewAIReasons.contains(reason) {
             reviewAIReasons.remove(reason)
         } else {
             reviewAIReasons.insert(reason)
         }
-        reviewLastAction = .requestAI
-        await applyReviewAction(.requestAI)
+    }
+
+    func updateReviewTitle(_ value: String) {
+        reviewTitle = value
+        scheduleReviewMetadataAutosave()
+    }
+
+    func updateReviewKeywords(_ value: String) {
+        reviewKeywords = value
+        scheduleReviewMetadataAutosave()
     }
 
     func applyReviewAction(_ action: FixtureReviewAction, propagate: Bool = false) async {
+        guard !isRunningReview else { return }
+        if action != .editMetadata {
+            reviewMetadataAutosaveTask?.cancel()
+            reviewMetadataAutosaveTask = nil
+            await saveReviewMetadataIfNeeded()
+        }
         let ids = selectedReviewAssetIDs
         guard !ids.isEmpty, let anchor = reviewSelection.focusedID ?? ids.first else {
             reviewStatus = "Select one or more Review items."
@@ -1403,7 +1418,9 @@ final class BackstageViewModel: ObservableObject {
             anchorID: reviewSelection.anchorID,
             focusedID: reviewSelection.focusedID
         )
-        reviewLastAction = action
+        if [.approve, .hide, .requestAI].contains(action) {
+            reviewLastAction = action
+        }
         isRunningReview = true
         reviewStatus = propagate
             ? "Propagating \(reviewActionLabel(action).lowercased()) through the two-hour shoot window…"
@@ -1531,7 +1548,9 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func saveReviewMetadata() async {
-        await applyReviewAction(.editMetadata)
+        reviewMetadataAutosaveTask?.cancel()
+        reviewMetadataAutosaveTask = nil
+        await saveReviewMetadataIfNeeded()
     }
 
     func propagateReviewTitle() async {
@@ -1735,8 +1754,12 @@ final class BackstageViewModel: ObservableObject {
         reviewKeywords = (draft?.keywords ?? item.keywords).joined(separator: ", ")
         reviewAIReasons = Set(item.aiReasons)
         reviewAINote = item.aiNote
-        if item.editorialState == "requesting-ai" {
+        if !item.aiReasons.isEmpty || item.editorialState == "requesting-ai" {
             reviewLastAction = .requestAI
+        } else if item.placementState == "hidden" {
+            reviewLastAction = .hide
+        } else if item.editorialState == "approved" {
+            reviewLastAction = .approve
         }
     }
 
@@ -1766,6 +1789,30 @@ final class BackstageViewModel: ObservableObject {
         } else {
             reviewProposalDrafts.removeValue(forKey: item.id)
         }
+    }
+
+    private func scheduleReviewMetadataAutosave() {
+        preserveCurrentReviewDraft()
+        reviewMetadataAutosaveTask?.cancel()
+        guard let assetID = focusedReviewItem?.id else { return }
+        reviewMetadataAutosaveTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(600))
+            guard !Task.isCancelled, let self else { return }
+            guard self.focusedReviewItem?.id == assetID else { return }
+            if self.isRunningReview {
+                self.scheduleReviewMetadataAutosave()
+                return
+            }
+            await self.saveReviewMetadataIfNeeded()
+        }
+    }
+
+    private func saveReviewMetadataIfNeeded() async {
+        guard let item = focusedReviewItem else { return }
+        let title = reviewTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        let keywords = parsedReviewKeywords()
+        guard title != item.title || keywords != item.keywords else { return }
+        await applyReviewAction(.editMetadata)
     }
 
     private func parsedReviewKeywords() -> [String] {

@@ -457,6 +457,26 @@ class FixturePipelineTest(unittest.TestCase):
             }
         self.assertEqual(states["root"], "hidden")
         self.assertEqual(states["other"], "picked")
+        self.assertEqual(
+            fixture_review_window(
+                self.root,
+                root["fixtureId"],
+                mode="backfill",
+            )["items"],
+            [],
+        )
+        hidden_full = fixture_review_window(
+            self.root,
+            root["fixtureId"],
+            mode="full",
+        )
+        self.assertEqual(
+            [
+                (item["assetId"], item["placementState"])
+                for item in hidden_full["items"]
+            ],
+            [("asset-1", "hidden")],
+        )
         cleared = apply_fixture_review_action(
             self.root,
             other["fixtureId"],
@@ -465,6 +485,90 @@ class FixturePipelineTest(unittest.TestCase):
             ai_reasons=[],
         )
         self.assertEqual(cleared["items"][0]["after"]["editorialState"], "unreviewed")
+
+    def test_review_propagates_hidden_ai_mark_and_approval_visual_states(self):
+        root = create_fixture(self.root, "Root", fixture_id="root")
+        set_fixture_asset_state(
+            self.root,
+            root["fixtureId"],
+            ["asset-1", "asset-2"],
+            "picked",
+        )
+
+        hidden = apply_fixture_review_action(
+            self.root,
+            root["fixtureId"],
+            ["asset-1"],
+            "hide",
+            anchor_asset_id="asset-1",
+            propagate=True,
+        )
+        self.assertEqual(
+            [item["assetId"] for item in hidden["items"]],
+            ["asset-1", "asset-2"],
+        )
+        self.assertEqual(
+            [
+                item["placementState"]
+                for item in fixture_review_window(
+                    self.root,
+                    root["fixtureId"],
+                    mode="full",
+                )["items"]
+            ],
+            ["hidden", "hidden"],
+        )
+
+        set_fixture_asset_state(
+            self.root,
+            root["fixtureId"],
+            ["asset-1", "asset-2"],
+            "picked",
+        )
+        marked = apply_fixture_review_action(
+            self.root,
+            root["fixtureId"],
+            ["asset-1"],
+            "request-ai",
+            anchor_asset_id="asset-1",
+            propagate=True,
+            ai_reasons=["too generic"],
+        )
+        self.assertEqual(
+            {
+                (item["after"]["editorialState"], tuple(item["after"]["aiReasons"]))
+                for item in marked["items"]
+            },
+            {("requesting-ai", ("too generic",))},
+        )
+
+        approved = apply_fixture_review_action(
+            self.root,
+            root["fixtureId"],
+            ["asset-1"],
+            "approve",
+            anchor_asset_id="asset-1",
+            propagate=True,
+        )
+        self.assertEqual(
+            {item["after"]["editorialState"] for item in approved["items"]},
+            {"approved"},
+        )
+        full = fixture_review_window(
+            self.root,
+            root["fixtureId"],
+            mode="full",
+        )
+        self.assertEqual(
+            [
+                (item["editorialState"], item["placementState"], item["aiReasons"])
+                for item in full["items"]
+            ],
+            [
+                ("approved", "picked", []),
+                ("approved", "picked", []),
+            ],
+        )
 
     def test_requested_ai_pass_keeps_proposals_separate_and_is_one_attempt_per_pass(self):
         root = create_fixture(self.root, "Root", fixture_id="root")

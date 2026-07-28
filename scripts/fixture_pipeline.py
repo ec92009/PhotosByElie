@@ -1448,26 +1448,31 @@ def fixture_culling_window(
 
 def _fixture_review_from_sql(
     fixture: sqlite3.Row,
+    *,
+    include_hidden: bool = False,
 ) -> tuple[str, list[Any]]:
+    placement_predicate = (
+        "IN ('picked', 'hidden')" if include_hidden else "= 'picked'"
+    )
     if fixture["parent_fixture_id"]:
         return (
-            """
+            f"""
             sidecar_assets AS a
             JOIN fixture_asset_decisions AS current_decision
               ON current_decision.asset_id = a.asset_id
              AND current_decision.fixture_id = ?
-             AND current_decision.placement_state = 'picked'
+             AND current_decision.placement_state {placement_predicate}
              AND current_decision.eligibility_state = 'active'
             """,
             [str(fixture["fixture_id"])],
         )
     return (
-        """
+        f"""
         sidecar_assets AS a
         JOIN fixture_asset_decisions AS current_decision
           ON current_decision.asset_id = a.asset_id
          AND current_decision.fixture_id = ?
-         AND current_decision.placement_state = 'picked'
+         AND current_decision.placement_state {placement_predicate}
          AND current_decision.eligibility_state = 'active'
         """,
         [str(fixture["fixture_id"])],
@@ -1538,6 +1543,7 @@ def _review_item(row: sqlite3.Row) -> dict[str, Any]:
         "capturedAt": str(row["captured_at"] or ""),
         "rating": int(row["rating"] or 0),
         "color": str(row["color"] or ""),
+        "placementState": str(row["placement_state"] or "picked"),
         "editorialState": str(row["editorial_state"] or "unreviewed"),
         "aiReasons": _read_json(row["ai_reasons_json"], []),
         "aiNote": str(row["ai_note"] or ""),
@@ -1575,7 +1581,10 @@ def fixture_review_window(
         ).fetchone()
         if not fixture:
             raise ValueError("fixture does not exist or is archived")
-        from_sql, base_params = _fixture_review_from_sql(fixture)
+        from_sql, base_params = _fixture_review_from_sql(
+            fixture,
+            include_hidden=clean_mode == "full",
+        )
         predicates, search_params = _fixture_review_predicates(
             search,
             include_approved=clean_mode == "full",
@@ -1606,6 +1615,7 @@ def fixture_review_window(
         rows = conn.execute(
             f"""
             SELECT a.asset_id, a.source_anchor, a.raw_json, a.filename, a.media_type, a.captured_at,
+                   current_decision.placement_state,
                    COALESCE(NULLIF(decision.title, ''), NULLIF(a.photos_title, ''), '') title,
                    COALESCE(decision.caption, '') caption,
                    CASE

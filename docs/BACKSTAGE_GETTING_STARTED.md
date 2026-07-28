@@ -8,7 +8,7 @@ Backstage is currently installed on Max at:
 
 `/Users/ecohen/Applications/PhotosByElie Backstage.app`
 
-The current native workflow is included in version **0.4.3 (build 14)**.
+The current native workflow is included in version **0.4.4 (build 15)**.
 
 Open it from Finder, Spotlight, or the Applications folder in your Home
 directory.
@@ -217,6 +217,26 @@ unchanged.
 **Export originals…** asks for a destination folder and exports verified
 original resources. It is separate from fixture upload and catalog
 publication.
+
+## Review
+
+**Review** is the editorial workspace for photos already picked into a
+fixture. **Backfill** shows unresolved picked photos; **Full queue** also keeps
+approved and fixture-hidden photos visible so their state can be inspected.
+
+1. Edit the title or keywords directly. Changes autosave after a short pause.
+   The down arrow beside either field propagates only that field through the
+   intended two-hour shoot window.
+2. **Approve**, **Hide**, and **Propagate** remain independent actions.
+   Approved thumbnails carry a 30-point green check. Fixture-hidden
+   thumbnails are black and white. An AI-review mark carries a 30-point
+   question mark.
+3. **Propagate** repeats the most recent Approve, Hide, or AI-review mark
+   through the same bounded shoot window. It does not run AI.
+4. AI reasons and the optional note are only a local form until **Update AI
+   review mark** is chosen. That audited action adds or updates the deferred
+   AI queue entry. AI work runs later on schedule, or explicitly when **Run AI
+   pass now** is chosen.
 
 ## Metadata
 

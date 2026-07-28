@@ -896,6 +896,49 @@ class FixturePipelineTest(unittest.TestCase):
             ).fetchone()[0]
         self.assertEqual(accepted, "accepted")
 
+    def test_requested_ai_pass_defers_missing_preview_capture_until_the_pass(self):
+        root = create_fixture(self.root, "Root", fixture_id="root")
+        set_fixture_asset_state(self.root, root["fixtureId"], ["asset-1"], "picked")
+        apply_fixture_review_action(
+            self.root,
+            root["fixtureId"],
+            ["asset-1"],
+            "request-ai",
+            ai_reasons=["too generic"],
+        )
+        prepared = []
+
+        def prepare(repo_root, asset_ids):
+            prepared.extend(asset_ids)
+            preview = repo_root / "prepared-during-pass.jpg"
+            preview.write_bytes(b"bounded-preview")
+            record_ai_preview(repo_root, asset_ids[0], preview)
+            return {
+                "requested": 1,
+                "captured": 1,
+                "failed": 0,
+            }
+
+        result = run_requested_ai_pass(
+            self.root,
+            trigger="test",
+            preview_preparer=prepare,
+            proposer=lambda item: {
+                "title": "Prepared proposal",
+                "keywords": ["Prepared"],
+                "confidence": "high",
+                "reason": "The deferred preview was available.",
+                "needs_owner_context": False,
+            },
+        )
+
+        self.assertEqual(prepared, ["asset-1"])
+        self.assertEqual(result["proposed"], 1)
+        self.assertEqual(
+            result["previewPreparation"],
+            {"requested": 1, "captured": 1, "failed": 0},
+        )
+
     def test_review_propagation_crosses_visible_page_with_two_hour_boundary(self):
         upsert_assets(self.root, [
             {

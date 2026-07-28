@@ -112,6 +112,18 @@ the browser or app never supplies an expanded target list as authority.
 - A missing anchor timestamp limits the operation to the anchor when the
   action includes it and otherwise yields no propagation targets.
 
+## Requested AI preparation
+
+Request AI is an editorial mark, not an AI execution step. Applying or
+propagating the mark updates the requested reasons and note atomically and
+returns without opening Photos Bridge or rendering pixels.
+
+The scheduled pass or the explicit **Run AI pass now** action prepares missing
+bounded JPEGs at the start of that separate pass. Missing previews are sent
+through one signed `preview-many` bridge request, recorded in Owner state, and
+then consumed by proposal generation. Proposal generation remains draft-only;
+it cannot approve, hide, publish, or change canonical metadata.
+
 ## Audit and undo
 
 Every changed asset records an `asset_editorial_events` row containing the

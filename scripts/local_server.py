@@ -117,7 +117,6 @@ APPLE_PHOTOS_IMPORT_PROGRESS_LOCK = threading.Lock()
 APPLE_PHOTOS_PROGRESS_PREFIX = "PBE_APPLE_PHOTOS_PROGRESS "
 APPLE_PHOTOS_PROGRESS_ITEM_LIMIT = 60
 SOURCE_PREVIEW_CACHE_ROOT = Path(".review-logs/source-previews")
-REQUESTED_AI_PREVIEW_ROOT = Path(".review-logs/requested-ai-previews")
 IMPORT_SOURCE_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tif", ".tiff", ".heic", ".heif", ".webp"}
 SOURCE_PREVIEW_BROWSER_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 SOURCE_PREVIEW_GENERATABLE_IMAGE_EXTENSIONS = {".heic", ".heif", ".tif", ".tiff", ".png", ".webp"}
@@ -369,7 +368,6 @@ from fixture_pipeline import (  # noqa: E402
     fixture_review_window,
     apply_fixture_review_action,
     undo_fixture_review_action,
-    ai_preview_targets,
     ai_run_status,
     effective_fixture_access_grants,
     get_pool,
@@ -387,7 +385,6 @@ from fixture_pipeline import (  # noqa: E402
     preview_pool_refresh,
     publication_plan,
     ready_ai_proposals,
-    record_ai_preview,
     remove_placement,
     rename_fixture,
     reopen_fixture,
@@ -1798,54 +1795,6 @@ def _new_owner_apple_photos_real_estate_result(repo_root: Path, action: dict, co
     raise ValueError(f"Unsupported Apple Photos Real Estate intake mode: {mode or 'missing'}")
 
 
-def _capture_requested_ai_previews(
-    repo_root: Path,
-    asset_ids: list[str],
-) -> dict:
-    """Materialize bounded JPEGs while the explicit request action is in hand."""
-    targets = ai_preview_targets(repo_root, asset_ids)
-    root = repo_root / REQUESTED_AI_PREVIEW_ROOT
-    root.mkdir(parents=True, exist_ok=True)
-    captured: list[dict] = []
-    failed: list[dict] = []
-    for target in targets:
-        asset_id = str(target["assetId"])
-        destination = root / f"{hashlib.sha256(asset_id.encode()).hexdigest()[:24]}.jpg"
-        try:
-            bridge = _run_apple_photos_bridge(
-                repo_root,
-                [
-                    "preview",
-                    "--asset-id",
-                    str(target["photoLibraryIdentifier"]),
-                    "--destination",
-                    str(destination),
-                    "--max-pixel",
-                    "1600",
-                ],
-            )
-        except Exception as error:
-            failed.append({
-                "assetId": asset_id,
-                "error": f"AI preview capture unavailable: {error}",
-            })
-            continue
-        if not bridge.get("ok") or not destination.is_file():
-            failed.append({
-                "assetId": asset_id,
-                "error": str(bridge.get("error") or "Photos Bridge did not create the AI preview."),
-            })
-            continue
-        captured.append(record_ai_preview(repo_root, asset_id, destination))
-    return {
-        "requested": len(targets),
-        "captured": len(captured),
-        "failed": len(failed),
-        "items": captured,
-        "failures": failed,
-    }
-
-
 def _incremental_photos_sync(
     repo_root: Path,
     *,
@@ -2186,14 +2135,6 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
             ai_note=str(manifest.get("aiNote") or ""),
             actor="owner-connector",
         )
-        if (
-            str(manifest.get("reviewAction") or "").strip().casefold() == "request-ai"
-            and manifest.get("aiReasons")
-        ):
-            review_action["previewCapture"] = _capture_requested_ai_previews(
-                repo_root,
-                [str(item["assetId"]) for item in review_action.get("items") or []],
-            )
         result.update({"readOnly": False, "reviewAction": review_action})
     elif mode == "fixture-review-undo":
         result.update({

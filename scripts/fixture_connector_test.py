@@ -136,6 +136,10 @@ class FixtureConnectorTest(unittest.TestCase):
                 requested["result"]["reviewAction"]["items"][0]["after"]["editorialState"],
                 "requesting-ai",
             )
+            self.assertNotIn(
+                "previewCapture",
+                requested["result"]["reviewAction"],
+            )
             undone = local_server.new_owner_connector_result(
                 root,
                 action(

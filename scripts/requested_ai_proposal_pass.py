@@ -17,6 +17,7 @@ import uuid
 from typing import Any
 
 from fixture_pipeline import OWNER_DB, ai_run_status, now_iso
+from requested_ai_previews import capture_requested_ai_previews
 
 
 DEFAULT_MODEL = os.environ.get("PBE_REQUESTED_AI_MODEL", "gpt-5.4-mini")
@@ -25,6 +26,7 @@ DEFAULT_TIMEOUT_SECONDS = max(
     int(os.environ.get("PBE_REQUESTED_AI_TIMEOUT_SECONDS", "300")),
 )
 ProposalFunction = Callable[[dict[str, Any]], dict[str, Any]]
+PreviewPreparer = Callable[[Path, list[str]], dict[str, Any]]
 
 
 @contextmanager
@@ -275,6 +277,7 @@ def run_requested_ai_pass(
     trigger: str = "manual",
     limit: int | None = None,
     proposer: ProposalFunction = codex_proposer,
+    preview_preparer: PreviewPreparer = capture_requested_ai_previews,
     progress: Callable[[dict[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
     """Run or attach to one durable pass; make at most one attempt per item."""
@@ -291,6 +294,21 @@ def run_requested_ai_pass(
                 "status": str(active["status"]),
             }
         candidates = _candidate_rows(conn, repo_root, limit)
+    preview_receipt = {
+        "requested": 0,
+        "captured": 0,
+        "failed": 0,
+    }
+    missing_preview_ids = [
+        item["assetId"]
+        for item in candidates
+        if not Path(item["previewPath"]).is_file()
+    ]
+    if missing_preview_ids:
+        preview_receipt = preview_preparer(repo_root, missing_preview_ids)
+        with _runtime_connection(repo_root) as conn:
+            candidates = _candidate_rows(conn, repo_root, limit)
+    with _runtime_connection(repo_root) as conn:
         run_id = f"airun-{uuid.uuid4().hex[:16]}"
         timestamp = now_iso()
         conn.execute(
@@ -485,6 +503,11 @@ def run_requested_ai_pass(
         "skipped": int(final["skipped_count"]),
         "failed": int(final["failed_count"]),
         "remaining": int(final["remaining_count"]),
+        "previewPreparation": {
+            "requested": int(preview_receipt.get("requested") or 0),
+            "captured": int(preview_receipt.get("captured") or 0),
+            "failed": int(preview_receipt.get("failed") or 0),
+        },
     }
 
 

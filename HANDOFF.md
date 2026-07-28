@@ -1,5 +1,60 @@
 # PhotosByElie Handoff
 
+## 2026-07-28 — Deleted R2 coverage requeues instead of blocking publication
+
+- Upload planning now accepts coverage only from `r2_objects` rows whose
+  lifecycle state is `current`. A historical successful Upload Bridge ledger
+  entry can no longer resurrect an object later marked `deleted_confirmed`.
+- This repairs the final-item stall seen after earlier R2 cleanup: missing
+  source, 900-pixel, or 1800-pixel objects are queued again instead of being
+  incorrectly skipped as already covered.
+- With explicit owner authorization, `San Gimignano Towers Across The Hills`
+  (`IMG_1175.jpg`) published through native run
+  `uplrun-bdd84ccf20fd4dca`: one requested, one live, zero failed. All three R2
+  objects and the Apple Photos give-back receipt were freshly verified.
+- The stable Uploads tray is now empty and exposes **Load next 200**. The next
+  tray remains deliberately unloaded; 843 eligible items remain.
+- Verification: the deleted-coverage regression plus the focused publication,
+  connector, fixture, and UI suites pass (83 Python tests), as do all 47 Swift
+  tests.
+
+## 2026-07-28 — Review propagation no longer renders AI previews inline
+
+- The slow Review propagation was not the two-hour shoot-window query. The
+  connector was launching the signed Photos Bridge once per newly requested
+  asset and synchronously rendering missing AI JPEGs before completing the
+  audited action. The observed 29-item propagation spent about 90 seconds in
+  that unrelated preparation.
+- `request-ai`, including propagated reasons, now performs only its intended
+  atomic Owner-state and audit mutation. Preview capture is deferred until the
+  manual or scheduled requested-AI pass actually begins.
+- The pass prepares all missing bounded JPEGs with one signed
+  `preview-many` bridge request, then generates proposal drafts. Approve, Hide,
+  publication, canonical metadata, and Apple Photos remain untouched.
+- Focused verification: 83 Python fixture/connector/publication/native-contract
+  tests and 47 Swift tests pass. The Max connector was restarted and reports
+  healthy as connector `max`, version `1.5`; the installed Backstage UI remains
+  `0.4.26` build `37`.
+
+## 2026-07-28 — Upload publication shows its real batch and yields space when idle
+
+- Backstage `0.4.26` build `37` shows the active sequential publication batch
+  explicitly, for example **Batch 2 of 4**, alongside the current 50-item
+  run's processed, live, failed, and remaining counts.
+- The batch number is driven by the actual outer publication loop, not inferred
+  from an estimate. A 182-item tray therefore reports four batches:
+  50, 50, 50, and 32.
+- The detailed run progress and per-asset run table now render only while a
+  native publication is active. A completed run no longer occupies the
+  Uploads workspace; the candidate tray and the separate legacy inspection
+  disclosure retain the space.
+- The owner-started 182-item publication was already complete before the signed
+  app was replaced: 50 + 50 + 50 + 32 live, zero failures. Installation and
+  verification did not start another publication or mutate Review/Culling
+  state.
+- Verification: 47 Swift tests, 17 native UI contract tests, stable named
+  signature, installed bundle version, and normal signed-app launch.
+
 ## 2026-07-28 — Native publication resumes verified coverage without duplicate uploads
 
 - The owner-started native publication run `uplrun-90721a8eb2e74359`

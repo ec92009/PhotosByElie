@@ -685,8 +685,11 @@ Clock state: running
 | 2026-07-28 | 20:23 CEST | 20:28 CEST | 0:03 | Reported Hidden cards escaping the deselected status filter and raw SQLite-lock job JSON in the Culling header; background diagnosis, repair, tests, build, and installation time excluded. |
 | 2026-07-28 | 20:54 CEST | 20:56 CEST | 0:02 | Clarified that Review propagation must copy the currently selected AI-review reasons through the standard propagation scope without implying approval; background diagnosis, implementation, tests, build, and installation time excluded. |
 | 2026-07-28 | 21:02 CEST | 21:08 CEST | 0:03 | Defined Uploads as a stable 200-item review tray: Return to Review and Hide shrink it without backfill, publishing targets exactly what remains, failures stay for retry, and the next 200 load explicitly; background diagnosis, implementation, tests, build, and installation time excluded. |
+| 2026-07-28 | 22:47 CEST | 22:55 CEST | 0:03 | Requested explicit publication batch numbering and removal of the completed-run detail panel when Uploads is idle; background diagnosis, implementation, tests, build, signing, installation, and verification time excluded. |
+| 2026-07-28 | 22:55 CEST | 23:06 CEST | 0:03 | Reported extremely slow Review propagation; isolated synchronous per-photo AI preview rendering and moved it to the later batched AI pass; background diagnosis, implementation, tests, and connector restart time excluded. |
+| 2026-07-28 | 23:09 CEST | 23:25 CEST | 0:05 | Authorized publication of the single stranded Uploads item and confirmed that the next stable tray should become available; background R2 diagnosis, regression repair, publication monitoring, receipt verification, tests, and checkpoint work excluded. |
 
 ## Totals
 
-Active collaboration time used: 33:31
+Active collaboration time used: 33:42
 Remaining budget: not set

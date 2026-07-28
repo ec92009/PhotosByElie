@@ -8,7 +8,7 @@ Backstage is currently installed on Max at:
 
 `/Users/ecohen/Applications/PhotosByElie Backstage.app`
 
-The current native workflow is included in version **0.4.17 (build 28)**.
+The current native workflow is included in version **0.4.20 (build 31)**.
 
 Open it from Finder, Spotlight, or the Applications folder in your Home
 directory.
@@ -90,6 +90,30 @@ Use **Overview** to check this Mac's authentication.
 
 Do not sign out merely to close the app. Backstage restores its session from
 Keychain on the next launch.
+
+### One-time Keychain authorization after the signing repair
+
+Backstage release builds are signed with a stable Apple code-signing identity.
+That identity lets macOS recognize later builds as updates of the same app
+instead of treating each rebuild as a new application.
+
+The existing `com.photosbyelie.backstage` credential is preserved. The first
+launch of the newly signed build may show one macOS dialog asking whether
+**PhotosByElie Backstage** may access that Keychain item. If it does:
+
+1. Confirm that the dialog names **PhotosByElie Backstage** and the
+   `com.photosbyelie.backstage` item.
+2. Enter the login-keychain password directly into the macOS dialog. Never
+   paste or send that password to Codex, a script, a terminal command, or
+   another person.
+3. Choose **Always Allow** once.
+4. Quit and reopen Backstage, then choose **Refresh session**. Later launches
+   and session refreshes should not ask again while builds keep the same
+   signing identity.
+
+Do not delete or recreate the Keychain item to suppress the prompt. If the
+dialog returns after the one-time authorization, stop and inspect the
+installed app's designated requirement before changing the credential.
 
 ## Fixtures
 

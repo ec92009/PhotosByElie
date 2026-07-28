@@ -1,5 +1,29 @@
 # PhotosByElie Handoff
 
+## 2026-07-28 — Stable Backstage signing for Keychain access
+
+- Backstage `0.4.20` build `31` no longer installs an ad-hoc-signed release by
+  default. The build selects a Developer ID Application identity when
+  available, otherwise an Apple Development identity, and preserves
+  `PBE_CODESIGN_IDENTITY` as the explicit override. Release builds fail closed
+  when no stable identity exists; `PBE_ALLOW_ADHOC_SIGNING=1` is restricted to
+  explicit disposable builds that must not be installed.
+- Root cause: the previous installed Backstage bundle was ad-hoc signed. Its
+  CDHash changed after every rebuild, so the login Keychain could not recognize
+  later builds as the same trusted application even though the bundle ID was
+  unchanged. The credential item remains intact.
+- The first launch of the stable build may require one manual **Always Allow**
+  authorization for the existing item. Elie must enter the login-keychain
+  password directly in the macOS dialog; no agent, script, log, or automation
+  may receive it. Later launches should remain quiet because the named
+  signature produces a stable designated requirement.
+- Verification on Max: the normally installed `0.4.20 (31)` build passed
+  deep/strict signature validation with hardened runtime, Team Identifier
+  `CB7FE399AL`, and the stable Backstage designated requirement. It was quit
+  and reopened twice without launching `SecurityAgent` or presenting another
+  Keychain prompt. The existing item was inspected without returning its
+  secret and was not deleted, replaced, or otherwise mutated.
+
 ## 2026-07-28 — Immediate visible Culling filters
 
 - Backstage `0.4.19` build `30` replaces the four Culling filter pull-downs

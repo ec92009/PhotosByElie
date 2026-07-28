@@ -679,8 +679,9 @@ Clock state: running
 | 2026-07-28 | 16:53 CEST | 16:58 CEST | 0:02 | Requested permanent shown-versus-not-shown Upload eligibility counts and an explicit action to publish the exact reviewed 200-item window; background implementation, tests, build, installation, and waits excluded. |
 | 2026-07-28 | 17:02 CEST | 19:12 CEST | 0:04 | Requested immediate visible Culling checkbox filters, black-and-white hidden cards, and vertical grid expansion; background diagnosis, implementation, tests, build, installation, and waits excluded. |
 | 2026-07-28 | 17:31 CEST | 17:39 CEST | 0:03 | Defined session-retained approved and hidden Review cards for propagation plus guarded Upload keyboard actions and a title/keyword preview; background implementation, tests, build, installation, and waits excluded. |
+| 2026-07-28 | 19:20 CEST | 19:31 CEST | 0:03 | Diagnosed recurring Backstage Keychain authorization as ad-hoc signing identity drift and requested a durable stable-signing repair that preserves the existing credential; background implementation, tests, build, installation, and waits excluded. |
 
 ## Totals
 
-Active collaboration time used: 33:15
+Active collaboration time used: 33:18
 Remaining budget: not set

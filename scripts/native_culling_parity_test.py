@@ -292,6 +292,30 @@ class NativeCullingParityTest(unittest.TestCase):
             model,
         )
 
+    def test_backstage_release_requires_a_stable_signing_identity(self):
+        build_script = (
+            NATIVE / "scripts" / "build-app.zsh"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn('identity="${PBE_CODESIGN_IDENTITY:-}"', build_script)
+        self.assertIn("Developer ID Application:", build_script)
+        self.assertIn("Apple Development:", build_script)
+        self.assertIn('PBE_ALLOW_ADHOC_SIGNING:-0', build_script)
+        self.assertIn(
+            "Release installation is blocked because ad-hoc rebuilds cause recurring Keychain prompts.",
+            build_script,
+        )
+        self.assertIn(
+            'if [[ "$identity" == "-" && "$configuration" == "release"',
+            build_script,
+        )
+        self.assertIn("--options runtime --sign", build_script)
+        self.assertIn('Signature=adhoc', build_script)
+        self.assertIn(
+            'identifier "com.photosbyelie.backstage"',
+            build_script,
+        )
+
     def test_culling_refresh_reconciles_recent_photos_before_owner_window(self):
         source = (
             NATIVE

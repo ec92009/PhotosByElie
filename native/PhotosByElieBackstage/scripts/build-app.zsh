@@ -64,9 +64,9 @@ cat > "${contents}/Info.plist" <<'PLIST'
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>
-  <string>0.4.19</string>
+  <string>0.4.20</string>
   <key>CFBundleVersion</key>
-  <string>30</string>
+  <string>31</string>
   <key>LSMinimumSystemVersion</key>
   <string>14.0</string>
   <key>NSPhotoLibraryUsageDescription</key>
@@ -77,9 +77,36 @@ cat > "${contents}/Info.plist" <<'PLIST'
 </plist>
 PLIST
 
-# Ad-hoc signing gives local builds a stable application identity. A named
-# Developer ID may be supplied by setting PBE_CODESIGN_IDENTITY.
-identity="${PBE_CODESIGN_IDENTITY:--}"
+# Keychain ACLs follow the app's designated code requirement. Ad-hoc signatures
+# change identity after every rebuild, so release builds must use a stable named
+# signing identity. PBE_CODESIGN_IDENTITY remains the explicit override.
+identity="${PBE_CODESIGN_IDENTITY:-}"
+if [[ -z "$identity" ]]; then
+  identity="$(
+    security find-identity -v -p codesigning 2>/dev/null \
+      | sed -n 's/.*"\(Developer ID Application: [^"]*\)".*/\1/p' \
+      | head -n 1
+  )"
+fi
+if [[ -z "$identity" ]]; then
+  identity="$(
+    security find-identity -v -p codesigning 2>/dev/null \
+      | sed -n 's/.*"\(Apple Development: [^"]*\)".*/\1/p' \
+      | head -n 1
+  )"
+fi
+if [[ -z "$identity" ]]; then
+  identity="-"
+fi
+
+if [[ "$identity" == "-" && "$configuration" == "release" && "${PBE_ALLOW_ADHOC_SIGNING:-0}" != "1" ]]; then
+  print -u2 "No stable code-signing identity is available."
+  print -u2 "Release installation is blocked because ad-hoc rebuilds cause recurring Keychain prompts."
+  print -u2 "Install an Apple Development or Developer ID Application identity, set PBE_CODESIGN_IDENTITY,"
+  print -u2 "or set PBE_ALLOW_ADHOC_SIGNING=1 only for a disposable build that will not be installed."
+  exit 1
+fi
+
 if [[ "$identity" == "-" ]]; then
   codesign \
     --force \
@@ -88,7 +115,14 @@ if [[ "$identity" == "-" ]]; then
     --requirements '=designated => identifier "com.photosbyelie.backstage"' \
     "$app"
 else
-  codesign --force --deep --sign "$identity" "$app"
+  codesign --force --deep --options runtime --sign "$identity" "$app"
 fi
 codesign --verify --deep --strict "$app"
+signature_details="$(codesign -dvv "$app" 2>&1)"
+if [[ "$identity" != "-" && "$signature_details" == *"Signature=adhoc"* ]]; then
+  print -u2 "Backstage unexpectedly received an ad-hoc signature."
+  exit 1
+fi
+codesign -d -r- "$app" 2>&1 | grep -q 'identifier "com.photosbyelie.backstage"'
+echo "Signed with: ${identity}"
 echo "$app"

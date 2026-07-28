@@ -1393,6 +1393,30 @@ def fixture_culling_window(
         rows = conn.execute(
             f"""
             SELECT a.asset_id, a.source_anchor, a.raw_json, a.filename, a.media_type, a.captured_at,
+                   COALESCE(a.pixel_width, 0) pixel_width,
+                   COALESCE(a.pixel_height, 0) pixel_height,
+                   COALESCE(
+                     json_extract(a.raw_json, '$.resourceFormat'),
+                     json_extract(a.raw_json, '$.preferredResourceFormat'),
+                     ''
+                   ) resource_format,
+                   COALESCE((
+                     SELECT CAST(COALESCE(
+                       json_extract(upload.value, '$.bytes'),
+                       json_extract(upload.value, '$.existing.bytes')
+                     ) AS INTEGER)
+                     FROM sidecar_upload_bridge_run_items AS run_item,
+                          json_each(COALESCE(run_item.upload_keys_json, '[]')) AS upload
+                     WHERE run_item.asset_id = a.asset_id
+                       AND json_extract(upload.value, '$.kind') = 'private-master'
+                       AND CAST(COALESCE(
+                         json_extract(upload.value, '$.bytes'),
+                         json_extract(upload.value, '$.existing.bytes'),
+                         0
+                       ) AS INTEGER) > 0
+                     ORDER BY run_item.updated_at DESC
+                     LIMIT 1
+                   ), 0) original_byte_count,
                    COALESCE(NULLIF(a.photos_title, ''), NULLIF(global_decision.title, ''), '') title,
                    COALESCE(current_decision.placement_state, 'undecided') placement_state,
                    COALESCE(current_decision.eligibility_state, 'active') eligibility_state,
@@ -1416,6 +1440,10 @@ def fixture_culling_window(
             "filename": str(row["filename"] or ""),
             "mediaType": str(row["media_type"] or "photo"),
             "capturedAt": str(row["captured_at"] or ""),
+            "pixelWidth": int(row["pixel_width"] or 0),
+            "pixelHeight": int(row["pixel_height"] or 0),
+            "resourceFormat": str(row["resource_format"] or ""),
+            "originalByteCount": int(row["original_byte_count"] or 0),
             "placementState": str(row["placement_state"]),
             "eligibilityState": str(row["eligibility_state"]),
             "rating": int(row["rating"] or 0),

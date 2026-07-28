@@ -956,15 +956,17 @@ private struct MediaLibraryView: View {
                     if model.isLoadingPreview {
                         ProgressView("Loading preview…")
                     } else if let preview = model.photoPreview,
-                              let image = NSImage(data: preview.jpegData) {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Image(nsImage: image)
-                                .resizable()
-                                .scaledToFit()
-                            Text("\(preview.pixelWidth) × \(preview.pixelHeight)")
-                                .foregroundStyle(.secondary)
+                              let image = NSImage(data: preview.jpegData),
+                              let asset = model.focusedCullingAsset {
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 12) {
+                                Image(nsImage: image)
+                                    .resizable()
+                                    .scaledToFit()
+                                cullingMetadataInspector(asset)
+                            }
+                            .padding()
                         }
-                        .padding()
                     } else {
                         ContentUnavailableView(
                             "No preview",
@@ -1019,11 +1021,84 @@ private struct MediaLibraryView: View {
             Button("Allow Photos") {
                 Task { await model.authorizeAndLoadPhotos() }
             }
-            Button("Refresh") {
+            Button("Refresh previews") {
                 Task { await model.refreshPhotos() }
             }
-            .disabled(model.isLoadingPhotos)
+            .disabled(model.isLoadingPhotos || model.isReconcilingPhotosIndex)
+            Button {
+                Task { await model.reconcilePhotosLibraryIndex() }
+            } label: {
+                if model.isReconcilingPhotosIndex {
+                    ProgressView()
+                        .controlSize(.small)
+                        .accessibilityLabel("Reconciling complete Photos library")
+                } else {
+                    Text("Reconcile library")
+                }
+            }
+            .disabled(model.isLoadingPhotos || model.isReconcilingPhotosIndex)
+            .help("Stream the complete Photos library through the signed helper and reconcile Owner without changing existing decisions.")
         }
+    }
+
+    @ViewBuilder
+    private func cullingMetadataInspector(_ asset: FixtureAsset) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(asset.title.isEmpty ? asset.filename : asset.title)
+                .font(.headline)
+                .textSelection(.enabled)
+            metadataRow("File", value: asset.filename)
+            metadataRow(
+                "Format",
+                value: asset.resourceFormat.isEmpty
+                    ? (asset.filename as NSString).pathExtension.uppercased()
+                    : asset.resourceFormat
+            )
+            metadataRow("Captured", value: formattedCaptureDate(asset.capturedAt))
+            metadataRow("Dimensions", value: formattedDimensions(asset))
+            metadataRow("Original size", value: formattedOriginalSize(asset.originalByteCount))
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Keywords")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Text(asset.keywords.isEmpty ? "No keywords" : asset.keywords.joined(separator: ", "))
+                    .textSelection(.enabled)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private func metadataRow(_ label: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(label)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+            Text(value.isEmpty ? "Unavailable" : value)
+                .textSelection(.enabled)
+        }
+    }
+
+    private func formattedCaptureDate(_ value: String) -> String {
+        guard !value.isEmpty,
+              let date = ISO8601DateFormatter().date(from: value)
+        else { return "Unavailable" }
+        return date.formatted(date: .abbreviated, time: .shortened)
+    }
+
+    private func formattedDimensions(_ asset: FixtureAsset) -> String {
+        guard asset.pixelWidth > 0, asset.pixelHeight > 0 else {
+            return "Unavailable"
+        }
+        let megapixels = Double(asset.pixelWidth * asset.pixelHeight) / 1_000_000
+        return "\(asset.pixelWidth) × \(asset.pixelHeight) • \(megapixels.formatted(.number.precision(.fractionLength(1)))) MP"
+    }
+
+    private func formattedOriginalSize(_ byteCount: Int64) -> String {
+        guard byteCount > 0 else {
+            return "Unavailable without requesting the original; it may be cloud-only."
+        }
+        return ByteCountFormatter.string(fromByteCount: byteCount, countStyle: .file)
     }
 
     private func increaseCullingThumbnailSize() {

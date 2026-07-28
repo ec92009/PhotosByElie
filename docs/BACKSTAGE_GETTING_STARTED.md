@@ -8,7 +8,7 @@ Backstage is currently installed on Max at:
 
 `/Users/ecohen/Applications/PhotosByElie Backstage.app`
 
-The current native workflow is included in version **0.4.5 (build 16)**.
+The current native workflow is included in version **0.4.6 (build 17)**.
 
 Open it from Finder, Spotlight, or the Applications folder in your Home
 directory.
@@ -20,7 +20,7 @@ directory.
    that no orange connection warning appears in the toolbar.
 3. Open **Culling** and choose **Allow Photos** if macOS asks for permission.
    Grant full Photos access. Backstage should report how many recent Photos
-   items it indexed.
+   previews it cached.
 4. Open **Fixtures** and choose **Reload tree**. Confirm that the current
    fixture hierarchy appears. Root fixtures such as Expo and RE expand to
    reveal their children; the breadcrumb below the tree confirms the active
@@ -181,8 +181,12 @@ for every child fixture.
 **Culling** reads the Photos library and records review decisions through the
 audited Owner action path.
 
-1. Choose **Allow Photos** on the first run, or **Refresh** to update the
-   index.
+1. Choose **Allow Photos** on the first run. **Refresh previews** updates the
+   responsive cache of the 2,000 most recent Photos items. **Reconcile
+   library** streams the complete Photos library through the signed helper,
+   registers newly seen items in Owner, and marks no-longer-present items as
+   unavailable only after the complete scan. Reconciliation preserves all
+   existing culling decisions, approvals, and tombstones.
 2. When working from a saved fixture pool, confirm the pool name and immutable
    asset count above the list. Search and the Media, Decision, Rating, and
    Color filters only narrow that pool; the total and matching counts remain
@@ -205,7 +209,11 @@ audited Owner action path.
    panoramas without leaving Backstage. Temporary preview files stay in the
    app cache and are replaced on the next preview. Long preparation and
    decision operations show progress and can stop after the current audited
-   batch.
+   batch. The Culling inspector shows the Owner title and keywords, capture
+   date, original dimensions and megapixels, resource format, and filename.
+   Original file size appears when a verified upload receipt already recorded
+   it; otherwise Backstage says it is unavailable rather than downloading the
+   original merely to calculate it.
 10. Choose **Undo** or press Command-Z to reverse the latest decision batch.
    Backstage keeps up to 100 session steps and restores the earlier cloud
    decision state and selection.
@@ -361,9 +369,11 @@ then return to the app and choose **Refresh**.
 
 ### Photos indexed, but an item is absent
 
-Choose **Refresh** and allow time for iCloud Photos to make the item available
-locally. Backstage indexes recent Photos items and does not silently export an
-original merely to display the list.
+Choose **Reconcile library** and wait for the signed helper to finish the
+complete library scan. The ordinary **Refresh previews** action only refreshes
+the 2,000 most recent preview candidates and is not the catalog boundary.
+Backstage does not silently export an original merely to display the list or
+calculate its disk size.
 
 ### An action stays queued
 

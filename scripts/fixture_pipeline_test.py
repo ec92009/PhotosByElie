@@ -58,7 +58,16 @@ class FixturePipelineTest(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
         upsert_assets(self.root, [
-            {"localIdentifier": "asset-1", "filename": "A.JPG", "mediaType": "photo", "creationDate": "2026-07-15T10:00:00Z", "keywords": ["La Concha"]},
+            {
+                "localIdentifier": "asset-1",
+                "filename": "A.JPG",
+                "mediaType": "photo",
+                "creationDate": "2026-07-15T10:00:00Z",
+                "keywords": ["La Concha"],
+                "pixelWidth": 6000,
+                "pixelHeight": 4000,
+                "resourceFormat": "JPEG",
+            },
             {"localIdentifier": "asset-2", "filename": "B.MOV", "mediaType": "video", "creationDate": "2026-07-15T10:01:00Z"},
             {"localIdentifier": "asset-3", "filename": "C.JPG", "mediaType": "photo", "creationDate": "2026-07-16T10:00:00Z"},
         ])
@@ -205,6 +214,49 @@ class FixturePipelineTest(unittest.TestCase):
         self.assertEqual(backfilled["summary"]["undecided"], 2)
         self.assertEqual(backfilled["summary"]["picked"], 1)
         self.assertFalse(backfilled["hasNext"])
+
+    def test_culling_window_includes_original_metadata_without_exporting(self):
+        fixture = create_fixture(self.root, "Root", fixture_id="root")
+        with connect(self.root) as conn:
+            conn.execute(
+                """
+                INSERT INTO sidecar_upload_bridge_runs (
+                  run_id, mode, status, execute_upload, limit_count,
+                  created_at, updated_at
+                ) VALUES ('run-1', 'execute-batch', 'completed', 1, 1, ?, ?)
+                """,
+                ("2026-07-15T10:05:00Z", "2026-07-15T10:05:00Z"),
+            )
+            conn.execute(
+                """
+                INSERT INTO sidecar_upload_bridge_run_items (
+                  run_item_id, run_id, asset_id, photo_id, status,
+                  upload_status, upload_keys_json, created_at, updated_at
+                ) VALUES ('run-item-1', 'run-1', 'asset-1', 'photo-1', 'completed',
+                          'uploaded', ?, ?, ?)
+                """,
+                (
+                    json.dumps([{
+                        "kind": "private-master",
+                        "status": "uploaded",
+                        "bytes": 12_345_678,
+                    }]),
+                    "2026-07-15T10:05:00Z",
+                    "2026-07-15T10:05:00Z",
+                ),
+            )
+            conn.commit()
+
+        item = fixture_culling_window(
+            self.root,
+            fixture["fixtureId"],
+            search="A.JPG",
+        )["items"][0]
+
+        self.assertEqual(item["pixelWidth"], 6000)
+        self.assertEqual(item["pixelHeight"], 4000)
+        self.assertEqual(item["resourceFormat"], "JPEG")
+        self.assertEqual(item["originalByteCount"], 12_345_678)
 
     def test_child_culling_window_uses_parent_picks_and_full_universe_search(self):
         parent = create_fixture(self.root, "Root", fixture_id="root")
@@ -372,6 +424,63 @@ class FixturePipelineTest(unittest.TestCase):
         review = fixture_review_window(self.root, fixture["fixtureId"])
         self.assertEqual(culling["items"][0]["photoLibraryIdentifier"], "asset-1")
         self.assertEqual(review["items"][0]["photoLibraryIdentifier"], "asset-1")
+
+    def test_photos_index_refresh_preserves_decisions_and_tombstones(self):
+        record_decision(self.root, {
+            "assetId": "asset-1",
+            "action": "approve",
+            "title": "Approved title",
+            "keywords": ["approved"],
+        })
+        record_decision(self.root, {
+            "assetId": "asset-2",
+            "action": "tombstone",
+            "reason": "Owner rejected",
+        })
+
+        upsert_assets(self.root, [
+            {
+                "localIdentifier": "asset-1",
+                "filename": "A refreshed.JPG",
+                "mediaType": "photo",
+                "creationDate": "2026-07-18T10:00:00Z",
+                "pixelWidth": 6000,
+                "pixelHeight": 4000,
+            },
+            {
+                "localIdentifier": "asset-2",
+                "filename": "B refreshed.JPG",
+                "mediaType": "photo",
+                "creationDate": "2026-07-18T11:00:00Z",
+                "pixelWidth": 4000,
+                "pixelHeight": 6000,
+            },
+        ])
+
+        with connect(self.root) as conn:
+            approved = conn.execute(
+                """
+                SELECT pick_state, metadata_state, title, keywords_json
+                FROM sidecar_decisions
+                WHERE asset_id = 'asset-1'
+                """
+            ).fetchone()
+            tombstone = conn.execute(
+                """
+                SELECT d.pick_state, d.metadata_state, t.tombstone_state
+                FROM sidecar_decisions AS d
+                JOIN sidecar_tombstones AS t ON t.asset_id = d.asset_id
+                WHERE d.asset_id = 'asset-2'
+                """
+            ).fetchone()
+
+        self.assertEqual(approved["pick_state"], "picked")
+        self.assertEqual(approved["metadata_state"], "approved")
+        self.assertEqual(approved["title"], "Approved title")
+        self.assertEqual(json.loads(approved["keywords_json"]), ["approved"])
+        self.assertEqual(tombstone["pick_state"], "rejected")
+        self.assertEqual(tombstone["metadata_state"], "blocked")
+        self.assertEqual(tombstone["tombstone_state"], "active")
 
     def test_review_large_queue_pages_are_stable_oldest_first(self):
         assets = [

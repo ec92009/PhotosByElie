@@ -37,6 +37,10 @@ public struct FixtureAsset: Identifiable, Sendable, Equatable {
     public var filename: String
     public var mediaType: String
     public var capturedAt: String
+    public var pixelWidth: Int
+    public var pixelHeight: Int
+    public var resourceFormat: String
+    public var originalByteCount: Int64
     public var placementState: FixturePlacementState
     public var eligibilityState: String
     public var rating: Int
@@ -51,6 +55,10 @@ public struct FixtureAsset: Identifiable, Sendable, Equatable {
         filename: String,
         mediaType: String,
         capturedAt: String = "",
+        pixelWidth: Int = 0,
+        pixelHeight: Int = 0,
+        resourceFormat: String = "",
+        originalByteCount: Int64 = 0,
         placementState: FixturePlacementState = .undecided,
         eligibilityState: String = "active",
         rating: Int = 0,
@@ -64,6 +72,10 @@ public struct FixtureAsset: Identifiable, Sendable, Equatable {
         self.filename = filename
         self.mediaType = mediaType
         self.capturedAt = capturedAt
+        self.pixelWidth = pixelWidth
+        self.pixelHeight = pixelHeight
+        self.resourceFormat = resourceFormat
+        self.originalByteCount = originalByteCount
         self.placementState = placementState
         self.eligibilityState = eligibilityState
         self.rating = rating
@@ -79,6 +91,10 @@ public struct FixtureAsset: Identifiable, Sendable, Equatable {
         filename = json["filename"]?.stringValue ?? ""
         mediaType = json["mediaType"]?.stringValue ?? json["kind"]?.stringValue ?? ""
         capturedAt = json["capturedAt"]?.stringValue ?? ""
+        pixelWidth = json["pixelWidth"]?.intValue ?? 0
+        pixelHeight = json["pixelHeight"]?.intValue ?? 0
+        resourceFormat = json["resourceFormat"]?.stringValue ?? ""
+        originalByteCount = Int64(json["originalByteCount"]?.intValue ?? 0)
         placementState = FixturePlacementState(
             rawValue: json["placementState"]?.stringValue ?? "undecided"
         ) ?? .undecided
@@ -654,6 +670,26 @@ public struct FixtureStateMigrationReport: Sendable, Equatable {
     }
 }
 
+public struct PhotosIndexReconciliationReport: Sendable, Equatable {
+    public var status: String
+    public var stage: String
+    public var indexedCount: Int
+    public var importedCount: Int
+    public var totalCount: Int
+    public var missingMarkedCount: Int
+    public var completedAt: String
+
+    init(json: [String: JSONValue]) {
+        status = json["status"]?.stringValue ?? ""
+        stage = json["stage"]?.stringValue ?? ""
+        indexedCount = json["indexedCount"]?.intValue ?? 0
+        importedCount = json["importedCount"]?.intValue ?? 0
+        totalCount = json["totalCount"]?.intValue ?? 0
+        missingMarkedCount = json["missingMarkedCount"]?.intValue ?? 0
+        completedAt = json["completedAt"]?.stringValue ?? ""
+    }
+}
+
 public struct FixtureAssetState: Identifiable, Sendable, Equatable {
     public var fixtureID: String
     public var assetID: String
@@ -772,6 +808,29 @@ public actor FixtureWorkflowService {
         return FixtureCullingWindow(
             json: result["cullingWindow"]?.objectValue ?? [:]
         )
+    }
+
+    public func reconcilePhotosIndex() async throws -> PhotosIndexReconciliationReport {
+        let connectorID = await connectorIdentity.connectorID()
+        let completed = try await runner.submit(
+            OwnerActionCreate(
+                actionKind: "sidecar-photos-index-sync",
+                target: connectorID,
+                payload: [
+                    "requestedConnector": .string(connectorID),
+                    "queuedAt": .string(ISO8601DateFormatter().string(from: Date())),
+                ]
+            ),
+            idempotencyKey: ["native-photos-index-sync", connectorID, UUID().uuidString]
+                .joined(separator: ":")
+        )
+        guard let job = completed.result?["job"]?.objectValue else {
+            throw APIErrorEnvelope(error: .init(
+                code: "photos_index_result_missing",
+                message: "The connector completed without a Photos index result."
+            ))
+        }
+        return PhotosIndexReconciliationReport(json: job)
     }
 
     public func applyState(

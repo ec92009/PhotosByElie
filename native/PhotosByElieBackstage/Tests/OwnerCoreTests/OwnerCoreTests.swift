@@ -905,6 +905,10 @@ struct OwnerCoreTests {
                         "filename": "NEWEST.HEIC",
                         "mediaType": "photo",
                         "capturedAt": "2026-07-26T12:00:00Z",
+                        "pixelWidth": 6000,
+                        "pixelHeight": 4000,
+                        "resourceFormat": "HEIC",
+                        "originalByteCount": 12_345_678,
                         "placementState": "undecided",
                         "eligibilityState": "active",
                         "rating": 4,
@@ -941,12 +945,61 @@ struct OwnerCoreTests {
         #expect(window.items.first?.photoLibraryIdentifier == "photos-newest")
         #expect(window.items.first?.placementState == .undecided)
         #expect(window.items.first?.rating == 4)
+        #expect(window.items.first?.pixelWidth == 6000)
+        #expect(window.items.first?.pixelHeight == 4000)
+        #expect(window.items.first?.resourceFormat == "HEIC")
+        #expect(window.items.first?.originalByteCount == 12_345_678)
         let request = try #require(await api.requests().first)
         let manifest = request.payload["manifest"]?.objectValue
         #expect(manifest?["mode"]?.stringValue == "fixture-culling-window")
         #expect(manifest?["fixtureId"]?.stringValue == "fixture-expo")
         #expect(manifest?["limit"]?.intValue == 200)
         #expect(manifest?["search"]?.stringValue == "Madrid")
+    }
+
+    @Test("Native Photos reconciliation uses the enrolled connector and signed full index action")
+    func nativePhotosIndexReconciliation() async throws {
+        let terminal = OwnerAction(
+            id: "owner-action-photos-index",
+            actionKind: "sidecar-photos-index-sync",
+            target: "david",
+            state: .completed,
+            result: [
+                "job": .object([
+                    "status": "done",
+                    "stage": "Complete",
+                    "indexedCount": 52_400,
+                    "importedCount": 52_400,
+                    "totalCount": 52_400,
+                    "missingMarkedCount": 17,
+                    "completedAt": "2026-07-28T12:00:00Z",
+                ]),
+            ]
+        )
+        let api = ScriptedOwnerActionAPI(completed: [terminal])
+        let service = FixtureWorkflowService(
+            runner: OwnerActionRunner(
+                api: api,
+                waker: UnavailableWaker(),
+                pollInterval: .milliseconds(1),
+                timeout: .seconds(1)
+            ),
+            connectorIdentity: StaticOwnerConnectorIdentity("David")
+        )
+
+        let report = try await service.reconcilePhotosIndex()
+
+        #expect(report.status == "done")
+        #expect(report.indexedCount == 52_400)
+        #expect(report.importedCount == 52_400)
+        #expect(report.totalCount == 52_400)
+        #expect(report.missingMarkedCount == 17)
+        let request = try #require(await api.requests().first)
+        #expect(request.actionKind == "sidecar-photos-index-sync")
+        #expect(request.target == "david")
+        #expect(request.payload["requestedConnector"]?.stringValue == "david")
+        #expect(request.payload["queuedAt"]?.stringValue?.isEmpty == false)
+        #expect(request.payload["manifest"] == nil)
     }
 
     @Test("Fixture culling keeps H fixture-local and X globally scoped")

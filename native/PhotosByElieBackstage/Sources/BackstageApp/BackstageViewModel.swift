@@ -75,6 +75,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var photoPreview: PhotoPreview?
     @Published var photoStatus = "Photo library not loaded."
     @Published var isLoadingPhotos = false
+    @Published var isReconcilingPhotosIndex = false
     @Published var fixtureID = ""
     @Published var metadataReport: MetadataGiveBackReport?
     @Published var metadataStatus = "Preview approved global metadata before writing it to Photos."
@@ -372,7 +373,32 @@ final class BackstageViewModel: ObservableObject {
         defer { isLoadingPhotos = false }
         libraryItems = await photoLibrary.fetch(limit: 2_000)
         replaceCullingItems()
-        photoStatus = "\(libraryItems.count.formatted()) recent Photos items indexed."
+        photoStatus = "\(libraryItems.count.formatted()) recent Photos previews cached."
+    }
+
+    func reconcilePhotosLibraryIndex() async {
+        guard !isReconcilingPhotosIndex else { return }
+        guard await prepareAuthenticatedOperation() else { return }
+        isReconcilingPhotosIndex = true
+        photoStatus = "Reconciling the complete Photos library with Owner…"
+        defer { isReconcilingPhotosIndex = false }
+        do {
+            let report = try await fixtureService.reconcilePhotosIndex()
+            await refreshPhotos()
+            if hasCurrentCullingFixture, cullingPool == nil {
+                await loadFixtureCullingWindow()
+            }
+            photoStatus = [
+                "Owner reconciled",
+                "\(report.importedCount.formatted()) indexed",
+                "\(report.missingMarkedCount.formatted()) unavailable marked",
+            ].joined(separator: " • ")
+        } catch {
+            await presentAuthenticationFailureIfNeeded(error)
+            if status != "Sign in again" {
+                photoStatus = userFacingMessage(for: error)
+            }
+        }
     }
 
     func loadPreview() async {
@@ -554,6 +580,11 @@ final class BackstageViewModel: ObservableObject {
 
     var focusedCullingAssetID: String? {
         cullingSelection.focusedID ?? selectedCullingAssetIDs.first
+    }
+
+    var focusedCullingAsset: FixtureAsset? {
+        guard let id = focusedCullingAssetID else { return nil }
+        return cullingAssets.first(where: { $0.id == id })
     }
 
     var reviewItems: [FixtureReviewItem] {

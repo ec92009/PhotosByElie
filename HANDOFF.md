@@ -1,5 +1,28 @@
 # PhotosByElie Handoff
 
+## 2026-07-28 — Lightroom-style Culling filters and exact immediate card state
+
+- Backstage `0.4.23` build `34` replaces the verbose Rating and Color filter
+  checkboxes with compact, independently selectable star and color-chip
+  controls. Media and Status remain explicit multi-select checkboxes.
+- Picked Culling cards now carry a visible flag badge in the upper-right corner
+  of the thumbnail.
+- Backstage applies the active status, media, rating, and color sets again to
+  the returned card window, so a stale or concurrent connector response cannot
+  leave Hidden cards visible while Hidden is deselected. Fixture `hidden`
+  states now normalize to the rejected Culling state used by the local filter.
+- Include, Exclude, and Clear actions now update the affected card state
+  optimistically while the existing audited Worker/connector action completes.
+  A failed action restores the exact prior card states, so Hidden cards
+  desaturate immediately without weakening the durable mutation gate.
+- Opening Culling and refreshing its previews no longer start a second Owner
+  catalog reconciliation. Full-library reconciliation remains an explicit
+  guarded action, and a concurrent SQLite lock is reported as a concise retry
+  message rather than leaked job JSON.
+- Acceptance remains read-only: verify the controls and existing picked flag
+  badges in the normally installed signed build without changing fixture,
+  Review, upload, publication, delivery, or client state.
+
 ## 2026-07-28 — Fixture reads stay responsive behind slow Owner work
 
 - Backstage `0.4.21` build `32` no longer leaves the fixture tree waiting

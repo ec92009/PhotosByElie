@@ -937,26 +937,22 @@ private struct MediaLibraryView: View {
                         Divider().frame(width: 1, height: 18)
                         Text("Rating").font(.caption.weight(.semibold))
                         ForEach(0...5, id: \.self) { value in
-                            Toggle(
-                                value == 0 ? "None" : "\(value)★",
-                                isOn: Binding(
-                                    get: { model.cullingRatingFilters.contains(value) },
-                                    set: { _ in model.toggleCullingRatingFilter(value) }
-                                )
-                            )
-                            .toggleStyle(.checkbox)
+                            LightroomRatingFilterButton(
+                                rating: value,
+                                isSelected: model.cullingRatingFilters.contains(value)
+                            ) {
+                                model.toggleCullingRatingFilter(value)
+                            }
                         }
                         Divider().frame(width: 1, height: 18)
                         Text("Color").font(.caption.weight(.semibold))
                         ForEach(CullingColorFilter.selectableCases, id: \.self) { color in
-                            Toggle(
-                                color.label,
-                                isOn: Binding(
-                                    get: { model.cullingColorFilters.contains(color) },
-                                    set: { _ in model.toggleCullingColorFilter(color) }
-                                )
-                            )
-                            .toggleStyle(.checkbox)
+                            LightroomColorFilterButton(
+                                color: color,
+                                isSelected: model.cullingColorFilters.contains(color)
+                            ) {
+                                model.toggleCullingColorFilter(color)
+                            }
                         }
                         Button("Clear filters") { model.clearCullingFilters() }
                     }
@@ -1298,9 +1294,7 @@ private struct MediaLibraryView: View {
                 await model.loadFixtures()
             }
             if model.libraryItems.isEmpty {
-                await model.refreshPhotosAndRecentIndex()
-            } else {
-                await model.reconcileRecentPhotosIndex()
+                await model.refreshPhotos()
             }
             if !model.cullingFixtureID.isEmpty {
                 await model.loadFixtureCullingWindow()
@@ -1347,7 +1341,7 @@ private struct MediaLibraryView: View {
             }
             Button("Refresh previews") {
                 Task {
-                    await model.refreshPhotosAndRecentIndex(force: true)
+                    await model.refreshPhotos()
                     if !model.cullingFixtureID.isEmpty {
                         await model.loadFixtureCullingWindow()
                     }
@@ -1481,6 +1475,17 @@ private struct CullingAssetCard: View {
             .clipShape(RoundedRectangle(cornerRadius: 7))
             .clipped()
             .saturation(isHidden ? 0 : 1)
+            .overlay(alignment: .topTrailing) {
+                if isPicked {
+                    Image(systemName: "flag.fill")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(6)
+                        .background(.blue, in: Circle())
+                        .padding(6)
+                        .accessibilityLabel("Picked")
+                }
+            }
             HStack(spacing: 5) {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(asset.title.isEmpty ? asset.filename : asset.title)
@@ -1530,6 +1535,11 @@ private struct CullingAssetCard: View {
             || state?.pickState == "rejected"
     }
 
+    private var isPicked: Bool {
+        asset.placementState == .picked
+            || state?.pickState == "picked"
+    }
+
     private func color(_ value: String) -> Color {
         switch value {
         case "red": .red
@@ -1541,6 +1551,82 @@ private struct CullingAssetCard: View {
         }
     }
 
+}
+
+private struct LightroomRatingFilterButton: View {
+    let rating: Int
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Group {
+                if rating == 0 {
+                    Image(systemName: "star.slash")
+                } else {
+                    Image(systemName: "star.fill")
+                }
+            }
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundStyle(isSelected ? Color.yellow : Color.secondary)
+            .frame(width: 22, height: 22)
+            .background(
+                RoundedRectangle(cornerRadius: 5)
+                    .fill(isSelected ? Color.accentColor.opacity(0.24) : .clear)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 5)
+                    .stroke(isSelected ? Color.accentColor.opacity(0.8) : .clear)
+            )
+        }
+        .buttonStyle(.plain)
+        .help(rating == 0 ? "Include unrated photos" : "Include \(rating)-star photos")
+        .accessibilityLabel(rating == 0 ? "Unrated" : "\(rating) stars")
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+}
+
+private struct LightroomColorFilterButton: View {
+    let color: CullingColorFilter
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(filterColor)
+                RoundedRectangle(cornerRadius: 3)
+                    .stroke(isSelected ? Color.white : Color.secondary, lineWidth: isSelected ? 2 : 1)
+                if color == .none {
+                    Image(systemName: "slash")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .frame(width: 20, height: 20)
+            .padding(2)
+            .background(
+                RoundedRectangle(cornerRadius: 5)
+                    .fill(isSelected ? Color.accentColor.opacity(0.35) : .clear)
+            )
+        }
+        .buttonStyle(.plain)
+        .help("Include \(color.label.lowercased())")
+        .accessibilityLabel(color.label)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private var filterColor: Color {
+        switch color {
+        case .red: .red
+        case .yellow: .yellow
+        case .green: .green
+        case .blue: .blue
+        case .purple: .purple
+        case .none, .all: .clear
+        }
+    }
 }
 
 private struct FixturePickerOption: Identifiable {

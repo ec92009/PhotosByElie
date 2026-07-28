@@ -155,6 +155,36 @@ struct OwnerCoreTests {
         #expect(result.summary.videos == 1)
     }
 
+    @Test("Fixture hidden states match the rejected culling filter")
+    func fixtureHiddenMatchesRejectedFilter() {
+        let candidates = [
+            CullingCandidate(
+                id: "hidden",
+                filename: "hidden.jpg",
+                mediaType: "photo",
+                decision: SidecarDecisionState(assetId: "hidden", pickState: "hidden")
+            ),
+            CullingCandidate(
+                id: "open",
+                filename: "open.jpg",
+                mediaType: "photo",
+                decision: SidecarDecisionState(assetId: "open", pickState: "undecided")
+            ),
+        ]
+
+        let rejected = CullingWorkspace.evaluate(
+            candidates,
+            query: CullingQuery(pick: [.rejected])
+        )
+        let undecided = CullingWorkspace.evaluate(
+            candidates,
+            query: CullingQuery(pick: [.undecided])
+        )
+
+        #expect(rejected.items.map(\.id) == ["hidden"])
+        #expect(undecided.items.map(\.id) == ["open"])
+    }
+
     @Test("Large culling rehearsal uses deterministic bounded windows")
     func largeCullingRehearsal() {
         let candidates = (0..<1_140).map { index in

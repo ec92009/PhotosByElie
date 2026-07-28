@@ -230,7 +230,7 @@ public enum CullingWorkspace {
         let media = normalizedMedia(candidate.mediaType)
         let mediaFilter: CullingMediaFilter = media == "video" ? .videos : .photos
         guard query.media.contains(mediaFilter) else { return false }
-        let pickFilter = CullingPickFilter(rawValue: candidate.decision.pickState) ?? .undecided
+        let pickFilter = normalizedPick(candidate.decision.pickState)
         guard query.pick.contains(pickFilter) else { return false }
         guard query.ratings.contains(candidate.decision.rating) else { return false }
         let colorFilter = CullingColorFilter(
@@ -242,6 +242,17 @@ public enum CullingWorkspace {
 
     private static func normalizedMedia(_ value: String) -> String {
         value.lowercased().contains("video") ? "video" : "photo"
+    }
+
+    private static func normalizedPick(_ value: String) -> CullingPickFilter {
+        switch value.lowercased() {
+        case "picked", "pick", "included":
+            .picked
+        case "hidden", "rejected", "reject", "excluded":
+            .rejected
+        default:
+            .undecided
+        }
     }
 
     public static func burst(

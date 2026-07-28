@@ -276,17 +276,24 @@ class NativeCullingParityTest(unittest.TestCase):
 
         self.assertNotIn('Button("Apply")', culling)
         self.assertNotIn("Menu {", culling)
-        self.assertGreaterEqual(culling.count(".toggleStyle(.checkbox)"), 4)
+        self.assertGreaterEqual(culling.count(".toggleStyle(.checkbox)"), 2)
         self.assertIn("Text(\"Media\")", culling)
         self.assertIn("Text(\"Status\")", culling)
         self.assertIn("Text(\"Rating\")", culling)
         self.assertIn("Text(\"Color\")", culling)
+        self.assertIn("LightroomRatingFilterButton(", culling)
+        self.assertIn("LightroomColorFilterButton(", culling)
         self.assertIn("onChange(of: model.cullingSearch)", culling)
         self.assertIn("model.scheduleCullingSearchRefresh()", culling)
         self.assertIn(".saturation(isHidden ? 0 : 1)", card)
         self.assertIn("asset.placementState == .hidden", card)
+        self.assertIn('Image(systemName: "flag.fill")', card)
+        self.assertIn("asset.placementState == .picked", card)
         self.assertIn("cullingFilterTask?.cancel()", model)
         self.assertIn("cullingWindowRequestSerial", model)
+        self.assertIn("let previousStates = ids.map", model)
+        self.assertIn("decision.pickState = state.rawValue", model)
+        self.assertIn("cullingStates.removeValue(forKey: id)", model)
         self.assertIn(
             "guard requestSerial == cullingWindowRequestSerial, !Task.isCancelled else { return }",
             model,
@@ -316,7 +323,7 @@ class NativeCullingParityTest(unittest.TestCase):
             build_script,
         )
 
-    def test_culling_refresh_reconciles_recent_photos_before_owner_window(self):
+    def test_culling_refreshes_previews_without_competing_owner_reconciliation(self):
         source = (
             NATIVE
             / "Sources"
@@ -333,15 +340,29 @@ class NativeCullingParityTest(unittest.TestCase):
             "private struct CullingAssetCard", 1
         )[0]
 
-        self.assertIn("await model.refreshPhotosAndRecentIndex()", culling)
-        self.assertIn("await model.refreshPhotosAndRecentIndex(force: true)", culling)
+        self.assertIn("await model.refreshPhotos()", culling)
+        self.assertNotIn("await model.refreshPhotosAndRecentIndex()", culling)
+        self.assertNotIn("await model.refreshPhotosAndRecentIndex(force: true)", culling)
+        self.assertIn("await model.reconcilePhotosLibraryIndex()", culling)
         self.assertIn("func reconcileRecentPhotosIndex(force: Bool = false)", model_source)
         self.assertIn("value: -45", model_source)
         self.assertIn('dateFormatter.dateFormat = "yyyy-MM-dd"', model_source)
         self.assertLess(
-            culling.index("await model.refreshPhotosAndRecentIndex()"),
+            culling.index("await model.refreshPhotos()"),
             culling.index("await model.loadFixtureCullingWindow()"),
         )
+
+    def test_fixture_window_is_filtered_again_before_cards_are_rendered(self):
+        model_source = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "BackstageViewModel.swift"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("let exactWindow = CullingWorkspace.evaluate(", model_source)
+        self.assertIn("query: cullingQuery", model_source)
+        self.assertIn("return exactWindow.items.compactMap", model_source)
 
     def test_density_controls_resize_only_the_grid_viewport(self):
         source = (

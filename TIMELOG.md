@@ -681,8 +681,10 @@ Clock state: running
 | 2026-07-28 | 17:31 CEST | 17:39 CEST | 0:03 | Defined session-retained approved and hidden Review cards for propagation plus guarded Upload keyboard actions and a title/keyword preview; background implementation, tests, build, installation, and waits excluded. |
 | 2026-07-28 | 19:20 CEST | 19:31 CEST | 0:03 | Diagnosed recurring Backstage Keychain authorization as ad-hoc signing identity drift and requested a durable stable-signing repair that preserves the existing credential; background implementation, tests, build, installation, and waits excluded. |
 | 2026-07-28 | 19:55 CEST | 20:00 CEST | 0:02 | Reported the stalled Backstage fixture tree and reviewed the repaired signed build path; background diagnosis, implementation, tests, connector restart, and installation time excluded. |
+| 2026-07-28 | 20:14 CEST | 20:19 CEST | 0:03 | Requested Lightroom-style Culling rating/color filters, picked-card flag badges, and immediate hidden-card desaturation; background diagnosis, implementation, tests, build, and installation time excluded. |
+| 2026-07-28 | 20:23 CEST | 20:28 CEST | 0:03 | Reported Hidden cards escaping the deselected status filter and raw SQLite-lock job JSON in the Culling header; background diagnosis, repair, tests, build, and installation time excluded. |
 
 ## Totals
 
-Active collaboration time used: 33:20
+Active collaboration time used: 33:26
 Remaining budget: not set

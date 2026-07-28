@@ -670,7 +670,22 @@ final class BackstageViewModel: ObservableObject {
 
     var visibleCullingAssets: [FixtureAsset] {
         if fixtureCullingWindow != nil, cullingPool == nil {
-            return cullingAssets
+            let assets = Dictionary(uniqueKeysWithValues: cullingAssets.map { ($0.id, $0) })
+            let exactWindow = CullingWorkspace.evaluate(
+                cullingAssets.map { asset in
+                    CullingCandidate(
+                        id: asset.id,
+                        title: asset.title,
+                        filename: asset.filename,
+                        mediaType: asset.mediaType,
+                        decision: cullingStates[asset.id]
+                    )
+                },
+                query: cullingQuery,
+                offset: 0,
+                limit: max(1, cullingAssets.count)
+            )
+            return exactWindow.items.compactMap { assets[$0.id] }
         }
         let assets = Dictionary(uniqueKeysWithValues: cullingAssets.map { ($0.id, $0) })
         return cullingWorkspace.items.compactMap { assets[$0.id] }
@@ -2248,6 +2263,12 @@ final class BackstageViewModel: ObservableObject {
             return
         }
         let selectedBefore = cullingSelection.selectedIDs
+        let previousStates = ids.map { ($0, cullingStates[$0]) }
+        for id in ids {
+            var decision = cullingStates[id] ?? SidecarDecisionState(assetId: id)
+            decision.pickState = state.rawValue
+            cullingStates[id] = decision
+        }
         isApplyingCullingDecision = true
         cullingStatus = "Applying \(label.lowercased()) to \(ids.count.formatted()) items…"
         defer { isApplyingCullingDecision = false }
@@ -2276,6 +2297,13 @@ final class BackstageViewModel: ObservableObject {
             }
             cullingStatus = "\(label) saved for \(changes.count) fixture item\(changes.count == 1 ? "" : "s")."
         } catch {
+            for (id, previousState) in previousStates {
+                if let previousState {
+                    cullingStates[id] = previousState
+                } else {
+                    cullingStates.removeValue(forKey: id)
+                }
+            }
             cullingStatus = userFacingMessage(for: error)
         }
     }
@@ -3033,9 +3061,17 @@ final class BackstageViewModel: ObservableObject {
             return envelope.error.message
         }
         if let ownerActionError = error as? OwnerActionRunError {
-            return ownerActionError.localizedDescription
+            let message = ownerActionError.localizedDescription
+            if message.localizedCaseInsensitiveContains("database is locked") {
+                return "The Owner index is busy with another sync. Backstage kept the current view; try again after the sync finishes."
+            }
+            return message
         }
-        return error.localizedDescription
+        let message = error.localizedDescription
+        if message.localizedCaseInsensitiveContains("database is locked") {
+            return "The Owner index is busy with another sync. Backstage kept the current view; try again after the sync finishes."
+        }
+        return message
     }
 
     private func runMetadata(commit: Bool) async {

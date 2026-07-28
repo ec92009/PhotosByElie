@@ -673,8 +673,9 @@ Clock state: running
 | 2026-07-28 | 09:09 CEST | 09:10 CEST | 0:01 | Reported that the Culling density plus control enlarged the Backstage window instead of changing only the thumbnail grid; diagnosis, implementation, tests, and installation runtime excluded. |
 | 2026-07-28 | 09:30 CEST | 09:38 CEST | 0:03 | Refined the native Culling animation and preview behavior, corrected Review AI/action state, and simplified title/keyword autosave and propagation controls; background implementation, tests, build, installation, and verification runtime excluded. |
 | 2026-07-28 | 11:39 CEST | 11:40 CEST | 0:01 | Approved full Photos-library reconciliation and a richer read-only Culling metadata inspector; background implementation, tests, build, installation, and verification runtime excluded. |
+| 2026-07-28 | 14:26 CEST | 15:10 CEST | 0:04 | Reviewed successive Culling containment builds, confirmed the final pinned header/grid/footer layout, and clarified the Picked → Review approval → Uploads workflow; background diagnosis, coding, builds, tests, reconciliation, and waits excluded. |
 
 ## Totals
 
-Active collaboration time used: 32:56
+Active collaboration time used: 33:00
 Remaining budget: not set

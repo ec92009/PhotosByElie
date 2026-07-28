@@ -159,6 +159,12 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn(".padding(.top, 12)", grid)
         self.assertIn(".frame(maxWidth: .infinity, alignment: .bottomLeading)", actions)
         self.assertIn(".layoutPriority(2)", actions)
+        self.assertNotIn("GeometryReader { paneGeometry in", culling)
+        self.assertIn(".frame(minWidth: 480)", culling)
+        self.assertIn(
+            ".frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)",
+            culling,
+        )
 
     def test_culling_refresh_reconciles_recent_photos_before_owner_window(self):
         source = (
@@ -198,7 +204,16 @@ class NativeCullingParityTest(unittest.TestCase):
             "private struct CullingAssetCard", 1
         )[0]
 
-        self.assertIn("GeometryReader { geometry in", culling)
+        self.assertIn("GeometryReader { gridGeometry in", culling)
+        self.assertIn(".background {", culling)
+        grid = culling.split("ScrollViewReader", 1)[1].split(
+            ".frame(minHeight: 120", 1
+        )[0]
+        self.assertNotIn(
+            """ScrollViewReader { proxy in
+                    GeometryReader""",
+            grid,
+        )
         self.assertIn("GridItem(.flexible(minimum: 0), spacing: 8)", culling)
         self.assertNotIn("GridItem(.flexible(minimum: 84)", culling)
         self.assertIn("model.updateCullingGridWidth", culling)

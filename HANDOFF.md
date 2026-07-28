@@ -1,5 +1,25 @@
 # PhotosByElie Handoff
 
+## 2026-07-28 — Culling pane containment candidate
+
+- Backstage `0.4.12` build `23` removes the layout-affecting `GeometryReader`
+  that wrapped the Culling thumbnail scroller. Grid-width measurement now runs
+  in a transparent background, so the thumbnail viewport participates as an
+  ordinary flexible child between the fixed header and fixed action footer.
+- The complete left pane is a conventional top-aligned flexible stack with no
+  exact-height geometry wrapper. This prevents the grid from painting over the
+  header or pushing its own content and action footer outside the visible pane
+  while preserving adaptive density measurement.
+- Automated verification passes: 12 focused native Culling tests, 46
+  OwnerCore tests, the complete 156 Node + 164 Python repository suite,
+  publication validation, release signing, and the installed version check.
+  Human screenshots of `0.4.12 (23)` confirm the complete header, first
+  thumbnail row, and complete action footer remain visible together.
+- During acceptance, Elie independently applied two real Expo Include batches.
+  The app moved from 1,941 to 2,062 picked photos and showed two reversible
+  steps. Codex did not perform or reverse those decisions. No upload,
+  publication, delivery, access, or client action occurred.
+
 ## 2026-07-28 — Current Culling window and pinned controls
 
 - Backstage `0.4.9` build `20` keeps the complete Culling header and complete

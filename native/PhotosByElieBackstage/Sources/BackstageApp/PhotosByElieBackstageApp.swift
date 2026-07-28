@@ -748,45 +748,50 @@ private struct MediaLibraryView: View {
                 .frame(maxWidth: .infinity, alignment: .topLeading)
                 .layoutPriority(3)
                 ScrollViewReader { proxy in
-                    GeometryReader { geometry in
-                        ScrollView {
-                            LazyVGrid(
-                                columns: Array(
-                                    repeating: GridItem(.flexible(minimum: 0), spacing: 8),
-                                    count: model.cullingGridDensity
-                                ),
-                                spacing: 8
-                            ) {
-                                ForEach(model.visibleCullingAssets) { asset in
-                                    CullingAssetCard(
-                                        asset: asset,
-                                        state: model.cullingStates[asset.id],
-                                        thumbnail: model.cullingThumbnails[asset.id],
-                                        isSelected: model.cullingSelection.selectedIDs.contains(asset.id),
-                                        isFocused: model.cullingSelection.focusedID == asset.id,
-                                        usesFill: model.cullingUsesFill
-                                    )
-                                    .id(asset.id)
-                                    .contentShape(Rectangle())
-                                    .onTapGesture {
-                                        model.clickCullingAsset(asset.id, modifiers: NSEvent.modifierFlags)
-                                        Task { await model.loadPreview() }
-                                    }
-                                    .task { await model.loadThumbnail(for: asset.id) }
+                    ScrollView {
+                        LazyVGrid(
+                            columns: Array(
+                                repeating: GridItem(.flexible(minimum: 0), spacing: 8),
+                                count: model.cullingGridDensity
+                            ),
+                            spacing: 8
+                        ) {
+                            ForEach(model.visibleCullingAssets) { asset in
+                                CullingAssetCard(
+                                    asset: asset,
+                                    state: model.cullingStates[asset.id],
+                                    thumbnail: model.cullingThumbnails[asset.id],
+                                    isSelected: model.cullingSelection.selectedIDs.contains(asset.id),
+                                    isFocused: model.cullingSelection.focusedID == asset.id,
+                                    usesFill: model.cullingUsesFill
+                                )
+                                .id(asset.id)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    model.clickCullingAsset(asset.id, modifiers: NSEvent.modifierFlags)
+                                    Task { await model.loadPreview() }
                                 }
+                                .task { await model.loadThumbnail(for: asset.id) }
                             }
-                            .padding(.horizontal, 6)
-                            .padding(.top, 12)
-                            .padding(.bottom, 6)
-                            .frame(maxWidth: .infinity, alignment: .topLeading)
-                            .animation(.snappy(duration: 0.24), value: model.cullingGridDensity)
                         }
-                        .id(cullingViewportIdentity)
-                        .onAppear {
-                            model.updateCullingGridWidth(Double(geometry.size.width - 12))
-                        }
-                        .onChange(of: geometry.size.width) { _, width in
-                            model.updateCullingGridWidth(Double(width - 12))
+                        .padding(.horizontal, 6)
+                        .padding(.top, 12)
+                        .padding(.bottom, 6)
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                        .animation(.snappy(duration: 0.24), value: model.cullingGridDensity)
+                    }
+                    .id(cullingViewportIdentity)
+                    .background {
+                        GeometryReader { gridGeometry in
+                            Color.clear
+                                .onAppear {
+                                    model.updateCullingGridWidth(
+                                        Double(gridGeometry.size.width - 12)
+                                    )
+                                }
+                                .onChange(of: gridGeometry.size.width) { _, width in
+                                    model.updateCullingGridWidth(Double(width - 12))
+                                }
                         }
                     }
                     .focusable()
@@ -987,6 +992,9 @@ private struct MediaLibraryView: View {
                 .layoutPriority(2)
             }
             .padding()
+            .frame(minWidth: 480)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .clipped()
 
             if model.isPreviewPanelVisible {
                 Group {

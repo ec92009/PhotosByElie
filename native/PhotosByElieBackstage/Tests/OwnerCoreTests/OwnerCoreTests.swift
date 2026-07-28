@@ -1913,6 +1913,7 @@ struct OwnerCoreTests {
                     "hasNext": false,
                     "items": [[
                         "assetId": "asset-1",
+                        "photoLibraryIdentifier": "photos-asset-1",
                         "title": "One",
                         "filename": "one.jpg",
                         "capturedAt": "2026-07-28T10:00:00Z",
@@ -1920,6 +1921,7 @@ struct OwnerCoreTests {
                         "errorText": "",
                     ], [
                         "assetId": "asset-2",
+                        "photoLibraryIdentifier": "photos-asset-2",
                         "title": "Two",
                         "filename": "two.jpg",
                         "capturedAt": "2026-07-28T09:00:00Z",
@@ -2027,6 +2029,8 @@ struct OwnerCoreTests {
         #expect(plan.fixtureName == "Expo")
         #expect(plan.needsUploadCount == 2)
         #expect(plan.needsReviewCount == 3)
+        #expect(plan.items[0].photoLibraryIdentifier == "photos-asset-1")
+        #expect(FixtureReviewAction.returnToReview.rawValue == "return-to-review")
         #expect(plan.items[1].deliveryState == "failed")
         #expect(plan.items[1].errorText == "network")
         let run = try await service.startNativeUpload(

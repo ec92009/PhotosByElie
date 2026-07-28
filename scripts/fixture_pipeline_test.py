@@ -400,6 +400,117 @@ class FixturePipelineTest(unittest.TestCase):
                 mode="everything",
             )
 
+    def test_approved_asset_can_return_to_review_without_losing_pick_or_metadata(self):
+        root = create_fixture(self.root, "Root", fixture_id="root")
+        set_fixture_asset_state(
+            self.root,
+            root["fixtureId"],
+            ["asset-1"],
+            "picked",
+        )
+        apply_fixture_review_action(
+            self.root,
+            root["fixtureId"],
+            ["asset-1"],
+            "approve",
+            title="Keep this title",
+            keywords=["Keep", "These"],
+        )
+
+        returned = apply_fixture_review_action(
+            self.root,
+            root["fixtureId"],
+            ["asset-1"],
+            "return-to-review",
+        )
+        self.assertEqual(
+            returned["items"][0]["after"]["editorialState"],
+            "unreviewed",
+        )
+        with connect(self.root) as conn:
+            editorial = conn.execute(
+                "SELECT editorial_state, approved_at FROM asset_editorial_state WHERE asset_id = 'asset-1'"
+            ).fetchone()
+            decision = conn.execute(
+                """
+                SELECT metadata_state, title, keywords_json
+                FROM sidecar_decisions
+                WHERE asset_id = 'asset-1'
+                """
+            ).fetchone()
+            fixture_decision = conn.execute(
+                """
+                SELECT placement_state
+                FROM fixture_asset_decisions
+                WHERE fixture_id = 'root' AND asset_id = 'asset-1'
+                """
+            ).fetchone()
+            delivery = conn.execute(
+                "SELECT delivery_state FROM asset_delivery_state WHERE asset_id = 'asset-1'"
+            ).fetchone()
+        self.assertEqual(dict(editorial), {
+            "editorial_state": "unreviewed",
+            "approved_at": None,
+        })
+        self.assertEqual(decision["metadata_state"], "unreviewed")
+        self.assertEqual(decision["title"], "Keep this title")
+        self.assertEqual(json.loads(decision["keywords_json"]), ["Keep", "These"])
+        self.assertEqual(fixture_decision["placement_state"], "picked")
+        self.assertEqual(delivery["delivery_state"], "not-ready")
+
+        undone = undo_fixture_review_action(
+            self.root,
+            returned["operationId"],
+        )
+        self.assertFalse(undone["alreadyUndone"])
+        with connect(self.root) as conn:
+            self.assertEqual(
+                conn.execute(
+                    "SELECT editorial_state FROM asset_editorial_state WHERE asset_id = 'asset-1'"
+                ).fetchone()[0],
+                "approved",
+            )
+            self.assertEqual(
+                conn.execute(
+                    "SELECT delivery_state FROM asset_delivery_state WHERE asset_id = 'asset-1'"
+                ).fetchone()[0],
+                "needs-upload",
+            )
+
+    def test_return_to_review_rejects_live_and_nonapproved_assets_atomically(self):
+        root = create_fixture(self.root, "Root", fixture_id="root")
+        set_fixture_asset_state(
+            self.root,
+            root["fixtureId"],
+            ["asset-1", "asset-2"],
+            "picked",
+        )
+        apply_fixture_review_action(
+            self.root,
+            root["fixtureId"],
+            ["asset-1"],
+            "approve",
+        )
+        with connect(self.root) as conn:
+            conn.execute(
+                "UPDATE asset_delivery_state SET delivery_state = 'live' WHERE asset_id = 'asset-1'"
+            )
+            conn.commit()
+        with self.assertRaisesRegex(ValueError, "live asset cannot return"):
+            apply_fixture_review_action(
+                self.root,
+                root["fixtureId"],
+                ["asset-1"],
+                "return-to-review",
+            )
+        with self.assertRaisesRegex(ValueError, "asset is not approved"):
+            apply_fixture_review_action(
+                self.root,
+                root["fixtureId"],
+                ["asset-2"],
+                "return-to-review",
+            )
+
     def test_cloud_backed_items_keep_their_local_photos_identifier_for_previews(self):
         upsert_assets(self.root, [{
             "cloudIdentifier": "cloud-asset-1",

@@ -236,9 +236,17 @@ private struct FixturePicker: View {
 
 private struct UploadWorkflowView: View {
     @ObservedObject var model: BackstageViewModel
+    @State private var uploadSortOrder = [
+        KeyPathComparator(\NativeUploadPlanItem.capturedAt, order: .forward),
+    ]
     @State private var confirmingAdoption = false
     @State private var confirmingSelectedPublication = false
     @State private var confirmingNextPublication = false
+    @State private var confirmingReturnToReview = false
+
+    private func sortedItems(_ plan: NativeUploadPlan) -> [NativeUploadPlanItem] {
+        plan.items.sorted(using: uploadSortOrder)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -279,14 +287,56 @@ private struct UploadWorkflowView: View {
                     )
                     .frame(maxWidth: .infinity, minHeight: 150)
                 } else {
-                    Table(plan.items, selection: $model.selectedDeliveryIDs) {
-                        TableColumn("Title", value: \.title)
+                    Table(
+                        sortedItems(plan),
+                        selection: $model.selectedDeliveryIDs,
+                        sortOrder: $uploadSortOrder
+                    ) {
+                        TableColumn("Title", value: \.title) { item in
+                            HStack(spacing: 8) {
+                                Group {
+                                    if let thumbnail = model.nativeUploadThumbnails[item.id] {
+                                        Image(nsImage: thumbnail)
+                                            .resizable()
+                                            .scaledToFill()
+                                    } else {
+                                        Image(systemName: "photo")
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                                .frame(width: 50, height: 50)
+                                .background(.quaternary)
+                                .clipShape(RoundedRectangle(cornerRadius: 5))
+                                .clipped()
+                                Text(item.title)
+                                    .lineLimit(2)
+                            }
+                            .task(id: item.id) {
+                                await model.loadNativeUploadThumbnail(for: item)
+                            }
+                        }
                         TableColumn("File", value: \.filename)
                         TableColumn("Captured", value: \.capturedAt)
                         TableColumn("State", value: \.deliveryState)
                         TableColumn("Error", value: \.errorText)
                     }
                     .frame(minHeight: 220)
+                    HStack {
+                        Text("\(model.selectedDeliveryIDs.count.formatted()) selected")
+                            .foregroundStyle(.secondary)
+                        Button("Return to Review…") {
+                            confirmingReturnToReview = true
+                        }
+                        .disabled(model.isRunningDelivery || model.selectedDeliveryIDs.isEmpty)
+                        Button("Clear selection") {
+                            model.selectedDeliveryIDs.removeAll()
+                        }
+                        .disabled(model.selectedDeliveryIDs.isEmpty)
+                        Spacer()
+                        Text("Use Command-click or Shift-click to select multiple rows.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
             if let run = model.nativeUploadRun, run.requested > 0 {
@@ -363,6 +413,17 @@ private struct UploadWorkflowView: View {
         .task(id: model.selectedFixtureID) {
             guard !model.selectedFixtureID.isEmpty else { return }
             await model.loadNativeUploadPlan()
+        }
+        .confirmationDialog(
+            "Return the selected approved assets to Review?",
+            isPresented: $confirmingReturnToReview
+        ) {
+            Button("Return \(model.selectedDeliveryIDs.count) to Review") {
+                Task { await model.returnSelectedUploadsToReview() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This reverses approval and upload readiness for the selected items. Fixture picks and metadata are preserved, and the audited action can be undone.")
         }
         .confirmationDialog(
             "Adopt this verified upload run into the selected fixture?",

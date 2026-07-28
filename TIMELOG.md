@@ -675,8 +675,9 @@ Clock state: running
 | 2026-07-28 | 11:39 CEST | 11:40 CEST | 0:01 | Approved full Photos-library reconciliation and a richer read-only Culling metadata inspector; background implementation, tests, build, installation, and verification runtime excluded. |
 | 2026-07-28 | 14:26 CEST | 15:10 CEST | 0:04 | Reviewed successive Culling containment builds, confirmed the final pinned header/grid/footer layout, and clarified the Picked → Review approval → Uploads workflow; background diagnosis, coding, builds, tests, reconciliation, and waits excluded. |
 | 2026-07-28 | 15:50 CEST | 15:58 CEST | 0:02 | Replaced mutually exclusive Culling filters with independent checkbox groups and clarified the native approved-needs-upload queue; background implementation, tests, build, installation, and bridge retries excluded. |
+| 2026-07-28 | 16:15 CEST | 16:42 CEST | 0:04 | Refined the native Upload queue with sortable columns, Command/Shift multi-selection, 50-point thumbnails, and an audited reversible return-to-Review action whose successful rows disappear immediately; background implementation, tests, build, installation, and waits excluded. |
 
 ## Totals
 
-Active collaboration time used: 33:02
+Active collaboration time used: 33:06
 Remaining budget: not set

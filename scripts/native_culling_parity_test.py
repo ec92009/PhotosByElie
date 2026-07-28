@@ -70,6 +70,41 @@ class NativeCullingParityTest(unittest.TestCase):
             source,
         )
 
+    def test_upload_queue_supports_sorting_multi_selection_previews_and_review_reversal(self):
+        app = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "PhotosByElieBackstageApp.swift"
+        ).read_text(encoding="utf-8")
+        model = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "BackstageViewModel.swift"
+        ).read_text(encoding="utf-8")
+        upload = app.split("private struct UploadWorkflowView", 1)[1].split(
+            "private struct DeliverablesView", 1
+        )[0]
+
+        for marker in (
+            "sortOrder: $uploadSortOrder",
+            "selection: $model.selectedDeliveryIDs",
+            "model.nativeUploadThumbnails[item.id]",
+            ".frame(width: 50, height: 50)",
+            "Use Command-click or Shift-click",
+            'Button("Return to Review…")',
+            "confirmingReturnToReview",
+        ):
+            self.assertIn(marker, upload)
+        for column in ("Title", "File", "Captured", "State", "Error"):
+            self.assertIn(f'TableColumn("{column}", value:', upload)
+        self.assertIn("func returnSelectedUploadsToReview()", model)
+        self.assertIn("items: current.items.filter { !returnedIDs.contains($0.id) }", model)
+        self.assertIn("selectedDeliveryIDs.subtract(returnedIDs)", model)
+        self.assertIn("The rows were removed locally; refreshing the queue can be retried.", model)
+        self.assertIn(".returnToReview", model)
+
     def test_fixture_policy_controls_adapt_to_the_available_width(self):
         source = (
             NATIVE

@@ -204,6 +204,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var uploadRecoveryStatus = "Existing verified upload runs can be adopted explicitly."
     @Published var nativeUploadPlan: NativeUploadPlan?
     @Published var nativeUploadRun: NativeUploadRun?
+    @Published var nativeUploadThumbnails: [String: NSImage] = [:]
     @Published var nativeUploadStatus = "Choose a fixture to load its approved publication queue."
     @Published var photosSyncReport: PhotosSyncReport?
     @Published var photosSyncStatus = "Apple Photos sync runs incrementally in the background."
@@ -1951,6 +1952,7 @@ final class BackstageViewModel: ObservableObject {
     private func reviewActionLabel(_ action: FixtureReviewAction) -> String {
         switch action {
         case .approve: "Approve"
+        case .returnToReview: "Return to Review"
         case .hide: "Hide"
         case .requestAI: reviewAIReasons.isEmpty ? "Clear AI request" : "Request AI"
         case .editMetadata: "Save title and keywords"
@@ -2429,6 +2431,80 @@ final class BackstageViewModel: ObservableObject {
         } catch {
             nativeUploadPlan = nil
             nativeUploadStatus = userFacingMessage(for: error)
+        }
+    }
+
+    func loadNativeUploadThumbnail(for item: NativeUploadPlanItem) async {
+        guard nativeUploadThumbnails[item.id] == nil else { return }
+        do {
+            let preview = try await photoLibrary.preview(
+                localIdentifier: item.photoLibraryIdentifier,
+                maxPixelSize: 100
+            )
+            guard let image = NSImage(data: preview.jpegData) else { return }
+            if nativeUploadThumbnails.count >= 300,
+               let oldest = nativeUploadThumbnails.keys.first {
+                nativeUploadThumbnails.removeValue(forKey: oldest)
+            }
+            nativeUploadThumbnails[item.id] = image
+        } catch {
+            // Publication eligibility must remain usable when a Photos preview
+            // is unavailable or still downloading from iCloud.
+        }
+    }
+
+    func returnSelectedUploadsToReview() async {
+        guard !isRunningDelivery else { return }
+        let ids = Array(selectedDeliveryIDs).sorted()
+        guard !selectedFixtureID.isEmpty, let anchor = ids.first else {
+            nativeUploadStatus = "Select one or more approved items first."
+            return
+        }
+        isRunningDelivery = true
+        nativeUploadStatus = "Returning \(ids.count.formatted()) approved item\(ids.count == 1 ? "" : "s") to Review…"
+        defer { isRunningDelivery = false }
+        do {
+            let result = try await fixtureService.applyReview(
+                .returnToReview,
+                fixtureID: selectedFixtureID,
+                assetIDs: ids,
+                anchorAssetID: anchor
+            )
+            let returnedIDs = Set(result.changes.map(\.assetID))
+            selectedDeliveryIDs.subtract(returnedIDs)
+            for id in returnedIDs {
+                nativeUploadThumbnails.removeValue(forKey: id)
+            }
+            if let current = nativeUploadPlan {
+                nativeUploadPlan = NativeUploadPlan(
+                    fixtureID: current.fixtureID,
+                    fixtureName: current.fixtureName,
+                    cloudAllowed: current.cloudAllowed,
+                    pickedCount: current.pickedCount,
+                    approvedCount: max(0, current.approvedCount - returnedIDs.count),
+                    needsReviewCount: current.needsReviewCount + returnedIDs.count,
+                    needsUploadCount: max(0, current.needsUploadCount - returnedIDs.count),
+                    liveCount: current.liveCount,
+                    offset: current.offset,
+                    limit: current.limit,
+                    hasNext: current.hasNext,
+                    items: current.items.filter { !returnedIDs.contains($0.id) }
+                )
+            }
+            nativeUploadStatus = "Returned \(returnedIDs.count.formatted()) item\(returnedIDs.count == 1 ? "" : "s") to Review. Their fixture picks and metadata were preserved."
+
+            do {
+                let plan = try await deliveryService.nativeUploadPlan(
+                    fixtureID: selectedFixtureID,
+                    limit: 200
+                )
+                nativeUploadPlan = plan
+                selectedDeliveryIDs.formIntersection(Set(plan.items.map(\.id)))
+            } catch {
+                nativeUploadStatus += " The rows were removed locally; refreshing the queue can be retried."
+            }
+        } catch {
+            nativeUploadStatus = "Return to Review failed: \(userFacingMessage(for: error))"
         }
     }
 

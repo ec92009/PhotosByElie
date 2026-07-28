@@ -8,7 +8,7 @@ Backstage is currently installed on Max at:
 
 `/Users/ecohen/Applications/PhotosByElie Backstage.app`
 
-The current native workflow is included in version **0.4.14 (build 25)**.
+The current native workflow is included in version **0.4.16 (build 27)**.
 
 Open it from Finder, Spotlight, or the Applications folder in your Home
 directory.
@@ -308,15 +308,25 @@ when recovery is no longer wanted.
 
 ## Uploads
 
-Uploads are fixture-scoped and require approved items.
+Uploads are fixture-scoped and require approved items. The main table shows
+the current native upload plan, including a small Photos thumbnail, title,
+file name, capture date, state, and any eligibility error.
 
-1. Choose a fixture and **Load plan**.
-2. Choose **Queue health** to inspect queued, uploadable, covered, and partial
-   counts.
-3. Select the intended table rows.
-4. Choose **Upload selected**.
+1. Choose a fixture and refresh the queue.
+2. Select any column heading to sort by that column; select it again to reverse
+   the order.
+3. Use Command-click to add or remove individual rows, or Shift-click to extend
+   the current selection.
+4. Choose **Publish selected…** only after reviewing the selected scope.
 5. Watch the progress and per-item R2 and Photos states.
-6. Use **Retry failed** for independently retryable failures.
+
+If an approved item needs more editorial work, select one or more rows and
+choose **Return to Review…**. After confirmation, Backstage reverses the
+approval through the audited Review workflow while preserving fixture picks,
+title, and keywords. Returned rows disappear from the Upload queue as soon as
+the audited transition succeeds, even if the subsequent queue refresh is slow.
+Live items cannot be returned this way. The action can be undone through the
+existing Review audit trail.
 
 The recovery area can adopt a previously verified Upload Bridge run by its
 exact run ID. Always use **Preview adoption** before **Adopt verified run…**.

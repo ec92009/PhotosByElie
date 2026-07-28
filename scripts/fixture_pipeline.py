@@ -34,6 +34,7 @@ DELIVERY_STATES = {"not-ready", "needs-upload", "uploading", "live", "failed"}
 REVIEW_MODES = {"backfill", "full"}
 REVIEW_ACTIONS = {
     "approve",
+    "return-to-review",
     "hide",
     "request-ai",
     "edit-metadata",
@@ -2135,6 +2136,33 @@ def apply_fixture_review_action(
                     ),
                 )
                 _set_delivery_state(conn, asset_id, "needs-upload", timestamp)
+            elif clean_action == "return-to-review":
+                delivery = conn.execute(
+                    """
+                    SELECT delivery_state
+                    FROM asset_delivery_state
+                    WHERE asset_id = ?
+                    """,
+                    (asset_id,),
+                ).fetchone()
+                if before["editorialState"] != "approved":
+                    raise ValueError(f"asset is not approved: {asset_id}")
+                if delivery and str(delivery["delivery_state"]) == "live":
+                    raise ValueError(f"live asset cannot return to Review: {asset_id}")
+                after_state = "unreviewed"
+                after_reasons = []
+                after_note = ""
+                conn.execute(
+                    """
+                    UPDATE sidecar_decisions
+                    SET metadata_state = 'unreviewed',
+                        last_action = 'return-to-review',
+                        updated_at = ?
+                    WHERE asset_id = ?
+                    """,
+                    (timestamp, asset_id),
+                )
+                _set_delivery_state(conn, asset_id, "not-ready", timestamp)
             elif clean_action == "request-ai":
                 after_state = "requesting-ai" if reasons else "unreviewed"
                 after_reasons = reasons
@@ -2194,7 +2222,13 @@ def apply_fixture_review_action(
                 if after_state == "approved":
                     _set_delivery_state(conn, asset_id, "needs-upload", timestamp)
 
-            approved_at = timestamp if after_state == "approved" else before_editorial["approved_at"]
+            approved_at = (
+                timestamp
+                if after_state == "approved"
+                else None
+                if clean_action == "return-to-review"
+                else before_editorial["approved_at"]
+            )
             requested_at = timestamp if after_state == "requesting-ai" else None
             if clean_action in {"approve", "hide"}:
                 conn.execute(

@@ -1,5 +1,21 @@
 # PhotosByElie Handoff
 
+## 2026-07-28 — Sortable Upload queue and audited return to Review
+
+- Backstage `0.4.16` build `27` gives the native Upload queue sortable Title,
+  File, Captured, State, and Error columns, standard Command/Shift
+  multi-selection, and 50-point PhotoKit thumbnails.
+- Selected approved rows can be returned to Review after an explicit
+  confirmation. The action uses the existing audited Review transaction,
+  preserves fixture placement plus canonical title and keywords, clears upload
+  readiness, removes successful rows from Upload immediately, and remains
+  undoable. Live or non-approved assets fail safely. A slow follow-up queue
+  refresh cannot make the successful transition look like a failure.
+- Automated verification passes: 46 OwnerCore tests, 54 focused Python tests,
+  and full publication validation. Signed-app acceptance must remain
+  read-only: sort columns, select/deselect rows, inspect thumbnails, and open
+  but do not confirm the Return to Review dialog.
+
 ## 2026-07-28 — Multi-select Culling filters and native Upload eligibility
 
 - Backstage `0.4.14` build `25` replaces the mutually exclusive Culling

@@ -138,6 +138,7 @@ class NativePublicationPipelineTest(unittest.TestCase):
         self.assertEqual(root_plan["approvedCount"], 2)
         self.assertEqual(root_plan["needsUploadCount"], 2)
         self.assertEqual([item["assetId"] for item in root_plan["items"]], ["asset-1", "asset-2"])
+        self.assertEqual(root_plan["items"][0]["photoLibraryIdentifier"], "asset-1")
         self.assertEqual(child_plan["pickedCount"], 1)
         self.assertEqual(child_plan["needsUploadCount"], 1)
         self.assertEqual([item["assetId"] for item in child_plan["items"]], ["asset-1"])

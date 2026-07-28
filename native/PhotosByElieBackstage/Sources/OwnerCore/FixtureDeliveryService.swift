@@ -116,6 +116,7 @@ public struct NativeUploadRunItem: Identifiable, Sendable, Equatable {
 public struct NativeUploadPlanItem: Identifiable, Sendable, Equatable {
     public var id: String { assetID }
     public var assetID: String
+    public var photoLibraryIdentifier: String
     public var title: String
     public var filename: String
     public var capturedAt: String
@@ -136,6 +137,34 @@ public struct NativeUploadPlan: Sendable, Equatable {
     public var limit: Int
     public var hasNext: Bool
     public var items: [NativeUploadPlanItem]
+
+    public init(
+        fixtureID: String,
+        fixtureName: String,
+        cloudAllowed: Bool,
+        pickedCount: Int,
+        approvedCount: Int,
+        needsReviewCount: Int,
+        needsUploadCount: Int,
+        liveCount: Int,
+        offset: Int,
+        limit: Int,
+        hasNext: Bool,
+        items: [NativeUploadPlanItem]
+    ) {
+        self.fixtureID = fixtureID
+        self.fixtureName = fixtureName
+        self.cloudAllowed = cloudAllowed
+        self.pickedCount = pickedCount
+        self.approvedCount = approvedCount
+        self.needsReviewCount = needsReviewCount
+        self.needsUploadCount = needsUploadCount
+        self.liveCount = liveCount
+        self.offset = offset
+        self.limit = limit
+        self.hasNext = hasNext
+        self.items = items
+    }
 }
 
 public struct NativeUploadRun: Sendable, Equatable {
@@ -284,6 +313,7 @@ public actor FixtureDeliveryService {
             guard !assetID.isEmpty else { return nil }
             return NativeUploadPlanItem(
                 assetID: assetID,
+                photoLibraryIdentifier: object["photoLibraryIdentifier"]?.stringValue ?? assetID,
                 title: object["title"]?.stringValue ?? "",
                 filename: object["filename"]?.stringValue ?? "",
                 capturedAt: object["capturedAt"]?.stringValue ?? "",

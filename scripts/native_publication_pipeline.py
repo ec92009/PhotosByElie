@@ -197,6 +197,8 @@ def upload_eligibility_plan(
             rows = conn.execute(
                 """
                 SELECT decision.asset_id,
+                       asset.source_anchor,
+                       asset.raw_json,
                        COALESCE(NULLIF(global_decision.title, ''),
                                 NULLIF(asset.photos_title, ''),
                                 asset.filename,
@@ -236,6 +238,11 @@ def upload_eligibility_plan(
             items = [
                 {
                     "assetId": str(row["asset_id"]),
+                    "photoLibraryIdentifier": (
+                        str(_read_json(row["raw_json"], {}).get("localIdentifier") or "")
+                        or str(row["source_anchor"] or "").removeprefix("apple-photos://")
+                        or str(row["asset_id"])
+                    ),
                     "title": str(row["title"] or ""),
                     "filename": str(row["filename"] or ""),
                     "capturedAt": str(row["captured_at"] or ""),

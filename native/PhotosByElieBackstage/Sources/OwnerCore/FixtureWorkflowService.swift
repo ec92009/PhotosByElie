@@ -397,6 +397,7 @@ public struct FixtureCullingWindow: Sendable, Equatable {
 
 public enum FixtureReviewAction: String, Codable, Sendable, CaseIterable {
     case approve
+    case returnToReview = "return-to-review"
     case hide
     case requestAI = "request-ai"
     case editMetadata = "edit-metadata"

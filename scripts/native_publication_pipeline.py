@@ -203,6 +203,7 @@ def upload_eligibility_plan(
                                 NULLIF(asset.photos_title, ''),
                                 asset.filename,
                                 decision.asset_id) AS title,
+                       COALESCE(global_decision.keywords_json, '[]') AS keywords_json,
                        COALESCE(asset.filename, '') AS filename,
                        COALESCE(asset.captured_at, '') AS captured_at,
                        delivery.delivery_state,
@@ -244,6 +245,7 @@ def upload_eligibility_plan(
                         or str(row["asset_id"])
                     ),
                     "title": str(row["title"] or ""),
+                    "keywords": _read_json(row["keywords_json"], []),
                     "filename": str(row["filename"] or ""),
                     "capturedAt": str(row["captured_at"] or ""),
                     "deliveryState": str(row["delivery_state"] or "needs-upload"),

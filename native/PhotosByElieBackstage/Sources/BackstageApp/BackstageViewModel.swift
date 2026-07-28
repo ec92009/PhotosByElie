@@ -205,6 +205,8 @@ final class BackstageViewModel: ObservableObject {
     @Published var nativeUploadPlan: NativeUploadPlan?
     @Published var nativeUploadRun: NativeUploadRun?
     @Published var nativeUploadThumbnails: [String: NSImage] = [:]
+    @Published var nativeUploadPreviewImage: NSImage?
+    @Published var nativeUploadPreviewItemID = ""
     @Published var nativeUploadStatus = "Choose a fixture to load its approved publication queue."
     @Published var photosSyncReport: PhotosSyncReport?
     @Published var photosSyncStatus = "Apple Photos sync runs incrementally in the background."
@@ -1592,34 +1594,86 @@ final class BackstageViewModel: ObservableObject {
                     )
                 )
             }
-            let window = try await fixtureService.reviewWindow(
-                fixtureID: reviewFixtureID,
-                mode: reviewMode,
-                offset: reviewWindowOffset,
-                limit: reviewWindowLimit,
-                search: reviewSearch
-            )
-            fixtureReviewWindow = window
-            let orderedIDs = window.items.map(\.id)
-            let keepsCurrent = orderedIDs.contains(anchor)
-            let replacementID = keepsCurrent
+            retainReviewResultInCurrentWindow(result, action: action)
+            let orderedIDs = reviewItems.map(\.id)
+            let replacementID = orderedIDs.contains(anchor)
                 ? anchor
                 : orderedIDs.indices.contains(oldIndex)
                     ? orderedIDs[oldIndex]
                     : orderedIDs.last
+            let retainedSelection = Set(ids).intersection(orderedIDs)
             reviewSelection = OwnerSelectionModel(
                 orderedIDs: orderedIDs,
-                selectedIDs: Set(replacementID.map { [$0] } ?? []),
-                anchorID: replacementID,
-                focusedID: replacementID
+                selectedIDs: retainedSelection.isEmpty
+                    ? Set(replacementID.map { [$0] } ?? [])
+                    : retainedSelection,
+                anchorID: orderedIDs.contains(anchor) ? anchor : replacementID,
+                focusedID: orderedIDs.contains(anchor) ? anchor : replacementID
             )
-            reviewScrollTargetID = replacementID
+            reviewScrollTargetID = orderedIDs.contains(anchor) ? anchor : replacementID
             syncReviewDraft()
             reviewStatus = "\(reviewActionLabel(action)) affected \(result.changes.count.formatted()) item\(result.changes.count == 1 ? "" : "s")."
             await refreshAIStatus()
         } catch {
             reviewStatus = "\(reviewActionLabel(action)) failed: \(error)"
         }
+    }
+
+    /// Keep decisions visible for the lifetime of the current Review surface.
+    ///
+    /// Backfill deliberately excludes approved and hidden items when it is
+    /// loaded from Owner. Refreshing immediately after an action therefore
+    /// removed the propagation anchor before the user could reuse it. The
+    /// action result is authoritative, so apply it to the already-loaded
+    /// window and let the next explicit load or panel transition rebuild the
+    /// queue from Owner.
+    private func retainReviewResultInCurrentWindow(
+        _ result: FixtureReviewResult,
+        action: FixtureReviewAction
+    ) {
+        guard var window = fixtureReviewWindow else { return }
+        let changesByID = Dictionary(
+            uniqueKeysWithValues: result.changes.map { ($0.assetID, $0.after) }
+        )
+        window.items = window.items.map { current in
+            guard let after = changesByID[current.id] else { return current }
+            var item = current
+            if let title = after["title"]?.stringValue {
+                item.title = title
+            }
+            if let keywords = after["keywords"]?.arrayValue {
+                item.keywords = keywords.compactMap(\.stringValue)
+            }
+            if let editorialState = after["editorialState"]?.stringValue {
+                item.editorialState = editorialState
+            }
+            if let reasons = after["aiReasons"]?.arrayValue {
+                item.aiReasons = reasons.compactMap(\.stringValue)
+            }
+            if let note = after["aiNote"]?.stringValue {
+                item.aiNote = note
+            }
+            switch action {
+            case .approve:
+                item.editorialState = "approved"
+                item.deliveryState = "needs-upload"
+                item.aiReasons = []
+                item.aiNote = ""
+            case .hide:
+                item.placementState = "hidden"
+                item.aiReasons = []
+                item.aiNote = ""
+            case .requestAI:
+                item.deliveryState = "not-ready"
+            case .returnToReview:
+                item.editorialState = "unreviewed"
+                item.deliveryState = "not-ready"
+            case .editMetadata, .propagateTitle, .propagateKeywords:
+                break
+            }
+            return item
+        }
+        fixtureReviewWindow = window
     }
 
     func undoLastReviewAction() async {
@@ -2453,6 +2507,28 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
+    func loadNativeUploadPreview(for item: NativeUploadPlanItem) async {
+        if nativeUploadPreviewItemID == item.id, nativeUploadPreviewImage != nil {
+            return
+        }
+        nativeUploadPreviewItemID = item.id
+        nativeUploadPreviewImage = nil
+        do {
+            let preview = try await photoLibrary.preview(
+                localIdentifier: item.photoLibraryIdentifier,
+                maxPixelSize: 1_600
+            )
+            nativeUploadPreviewImage = NSImage(data: preview.jpegData)
+        } catch {
+            nativeUploadStatus = "The preview could not be prepared. The approved upload item is unchanged."
+        }
+    }
+
+    func clearNativeUploadPreview() {
+        nativeUploadPreviewItemID = ""
+        nativeUploadPreviewImage = nil
+    }
+
     func returnSelectedUploadsToReview() async {
         guard !isRunningDelivery else { return }
         let ids = Array(selectedDeliveryIDs).sorted()
@@ -2505,6 +2581,64 @@ final class BackstageViewModel: ObservableObject {
             }
         } catch {
             nativeUploadStatus = "Return to Review failed: \(userFacingMessage(for: error))"
+        }
+    }
+
+    func hideSelectedUploads() async {
+        guard !isRunningDelivery else { return }
+        let ids = Array(selectedDeliveryIDs).sorted()
+        guard !selectedFixtureID.isEmpty, let anchor = ids.first else {
+            nativeUploadStatus = "Select one or more approved items first."
+            return
+        }
+        isRunningDelivery = true
+        nativeUploadStatus = "Hiding \(ids.count.formatted()) approved item\(ids.count == 1 ? "" : "s")…"
+        defer { isRunningDelivery = false }
+        do {
+            let result = try await fixtureService.applyReview(
+                .hide,
+                fixtureID: selectedFixtureID,
+                assetIDs: ids,
+                anchorAssetID: anchor
+            )
+            let hiddenIDs = Set(result.changes.map(\.assetID))
+            selectedDeliveryIDs.subtract(hiddenIDs)
+            for id in hiddenIDs {
+                nativeUploadThumbnails.removeValue(forKey: id)
+            }
+            if nativeUploadPreviewItemID.isEmpty == false,
+               hiddenIDs.contains(nativeUploadPreviewItemID) {
+                clearNativeUploadPreview()
+            }
+            if let current = nativeUploadPlan {
+                nativeUploadPlan = NativeUploadPlan(
+                    fixtureID: current.fixtureID,
+                    fixtureName: current.fixtureName,
+                    cloudAllowed: current.cloudAllowed,
+                    pickedCount: max(0, current.pickedCount - hiddenIDs.count),
+                    approvedCount: max(0, current.approvedCount - hiddenIDs.count),
+                    needsReviewCount: current.needsReviewCount,
+                    needsUploadCount: max(0, current.needsUploadCount - hiddenIDs.count),
+                    liveCount: current.liveCount,
+                    offset: current.offset,
+                    limit: current.limit,
+                    hasNext: current.hasNext,
+                    items: current.items.filter { !hiddenIDs.contains($0.id) }
+                )
+            }
+            nativeUploadStatus = "Hid \(hiddenIDs.count.formatted()) item\(hiddenIDs.count == 1 ? "" : "s"). Their rows were removed from this upload queue."
+            do {
+                let plan = try await deliveryService.nativeUploadPlan(
+                    fixtureID: selectedFixtureID,
+                    limit: 200
+                )
+                nativeUploadPlan = plan
+                selectedDeliveryIDs.formIntersection(Set(plan.items.map(\.id)))
+            } catch {
+                nativeUploadStatus += " Refreshing the queue can be retried."
+            }
+        } catch {
+            nativeUploadStatus = "Hide failed: \(userFacingMessage(for: error))"
         }
     }
 

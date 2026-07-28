@@ -243,6 +243,8 @@ private struct UploadWorkflowView: View {
     @State private var confirmingSelectedPublication = false
     @State private var confirmingVisiblePublication = false
     @State private var confirmingReturnToReview = false
+    @State private var confirmingUploadHide = false
+    @State private var uploadQuickViewItem: NativeUploadPlanItem?
 
     private func sortedItems(_ plan: NativeUploadPlan) -> [NativeUploadPlanItem] {
         plan.items.sorted(using: uploadSortOrder)
@@ -336,11 +338,29 @@ private struct UploadWorkflowView: View {
                         TableColumn("Error", value: \.errorText)
                     }
                     .frame(minHeight: 220)
+                    .onKeyPress("r") {
+                        guard !model.selectedDeliveryIDs.isEmpty else { return .ignored }
+                        confirmingReturnToReview = true
+                        return .handled
+                    }
+                    .onKeyPress("h") {
+                        guard !model.selectedDeliveryIDs.isEmpty else { return .ignored }
+                        confirmingUploadHide = true
+                        return .handled
+                    }
+                    .onKeyPress(.space) {
+                        toggleUploadQuickView(in: plan)
+                        return .handled
+                    }
                     HStack {
                         Text("\(model.selectedDeliveryIDs.count.formatted()) selected")
                             .foregroundStyle(.secondary)
                         Button("Return to Review…") {
                             confirmingReturnToReview = true
+                        }
+                        .disabled(model.isRunningDelivery || model.selectedDeliveryIDs.isEmpty)
+                        Button("Hide…") {
+                            confirmingUploadHide = true
                         }
                         .disabled(model.isRunningDelivery || model.selectedDeliveryIDs.isEmpty)
                         Button("Clear selection") {
@@ -417,6 +437,23 @@ private struct UploadWorkflowView: View {
             }
         }
         .padding()
+        .overlay {
+            if let item = uploadQuickViewItem {
+                UploadQuickView(
+                    item: item,
+                    image: model.nativeUploadPreviewItemID == item.id
+                        ? model.nativeUploadPreviewImage
+                        : nil
+                ) {
+                    closeUploadQuickView()
+                }
+                .focusable()
+                .onKeyPress(.space) {
+                    closeUploadQuickView()
+                    return .handled
+                }
+            }
+        }
         .task {
             if model.fixtures.isEmpty { await model.loadFixtures() }
             if model.selectedFixtureID.isEmpty {
@@ -439,6 +476,17 @@ private struct UploadWorkflowView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This reverses approval and upload readiness for the selected items. Fixture picks and metadata are preserved, and the audited action can be undone.")
+        }
+        .confirmationDialog(
+            "Hide the selected approved assets?",
+            isPresented: $confirmingUploadHide
+        ) {
+            Button("Hide \(model.selectedDeliveryIDs.count) assets", role: .destructive) {
+                Task { await model.hideSelectedUploads() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Hidden assets leave this fixture's upload queue. Their files are not deleted.")
         }
         .confirmationDialog(
             "Adopt this verified upload run into the selected fixture?",
@@ -473,6 +521,88 @@ private struct UploadWorkflowView: View {
         } message: {
             Text("Backstage will publish the exact loaded queue window in sequential batches of up to 50. Upload equals publication; each verified asset becomes live immediately.")
         }
+    }
+
+    private func toggleUploadQuickView(in plan: NativeUploadPlan) {
+        if uploadQuickViewItem != nil {
+            closeUploadQuickView()
+            return
+        }
+        guard let item = sortedItems(plan).first(where: {
+            model.selectedDeliveryIDs.contains($0.id)
+        }) else {
+            return
+        }
+        uploadQuickViewItem = item
+        Task { await model.loadNativeUploadPreview(for: item) }
+    }
+
+    private func closeUploadQuickView() {
+        uploadQuickViewItem = nil
+        model.clearNativeUploadPreview()
+    }
+}
+
+private struct UploadQuickView: View {
+    var item: NativeUploadPlanItem
+    var image: NSImage?
+    var onClose: () -> Void
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.78)
+                .ignoresSafeArea()
+                .onTapGesture(perform: onClose)
+            HStack(alignment: .top, spacing: 24) {
+                Group {
+                    if let image {
+                        Image(nsImage: image)
+                            .resizable()
+                            .scaledToFit()
+                    } else {
+                        ProgressView("Preparing preview…")
+                    }
+                }
+                .frame(maxWidth: 900, maxHeight: 720)
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack {
+                        Text("Upload preview")
+                            .font(.title2.bold())
+                        Spacer()
+                        Button(action: onClose) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.title2)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Close preview")
+                    }
+                    Divider()
+                    LabeledContent("Title", value: item.title.isEmpty ? "Untitled" : item.title)
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("Keywords")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        Text(item.keywords.isEmpty ? "No keywords" : item.keywords.joined(separator: ", "))
+                            .textSelection(.enabled)
+                    }
+                    LabeledContent("Captured", value: item.capturedAt.isEmpty ? "Unknown" : item.capturedAt)
+                    LabeledContent("File", value: item.filename)
+                    Spacer()
+                    Text("Press Space to close")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(width: 320)
+                .frame(maxHeight: 720, alignment: .top)
+            }
+            .padding(24)
+            .background(.regularMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .padding(36)
+        }
+        .transition(.opacity)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Upload preview for \(item.title)")
     }
 }
 

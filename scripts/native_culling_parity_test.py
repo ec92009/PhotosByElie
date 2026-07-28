@@ -100,11 +100,19 @@ class NativeCullingParityTest(unittest.TestCase):
             "oldest eligible by upload-readiness time",
             'Button("Publish these \\(plan.items.count.formatted())…")',
             "confirmingVisiblePublication",
+            'onKeyPress("r")',
+            'onKeyPress("h")',
+            "onKeyPress(.space)",
+            "UploadQuickView",
+            "item.keywords.joined",
+            'Button("Hide…")',
         ):
             self.assertIn(marker, upload)
         for column in ("Title", "File", "Captured", "State", "Error"):
             self.assertIn(f'TableColumn("{column}", value:', upload)
         self.assertIn("func returnSelectedUploadsToReview()", model)
+        self.assertIn("func hideSelectedUploads()", model)
+        self.assertIn("func loadNativeUploadPreview(", model)
         self.assertIn("items: current.items.filter { !returnedIDs.contains($0.id) }", model)
         self.assertIn("selectedDeliveryIDs.subtract(returnedIDs)", model)
         self.assertIn("The rows were removed locally; refreshing the queue can be retried.", model)
@@ -113,6 +121,35 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("stride(from: 0, to: ids.count, by: 50)", model)
         self.assertIn("limit: batch.count", model)
         self.assertNotIn("Publish next eligible 50", upload)
+
+    def test_review_keeps_approved_and_hidden_cards_as_propagation_anchors(self):
+        app = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "PhotosByElieBackstageApp.swift"
+        ).read_text(encoding="utf-8")
+        model = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "BackstageViewModel.swift"
+        ).read_text(encoding="utf-8")
+        apply_action = model.split("func applyReviewAction(", 1)[1].split(
+            "func undoLastReviewAction()", 1
+        )[0]
+        row = app.split("private struct ReviewAssetRow", 1)[1].split(
+            "private struct ReviewInspector", 1
+        )[0]
+
+        self.assertIn("retainReviewResultInCurrentWindow(result, action: action)", apply_action)
+        self.assertIn('item.editorialState = "approved"', apply_action)
+        self.assertIn('item.placementState = "hidden"', apply_action)
+        self.assertNotIn("fixtureService.reviewWindow(", apply_action)
+        self.assertIn('.saturation(item.placementState == "hidden" ? 0 : 1)', row)
+        self.assertIn('item.editorialState == "approved"', row)
+        self.assertIn('systemName: "checkmark.circle.fill"', row)
+        self.assertIn(".font(.system(size: 30", row)
 
     def test_fixture_policy_controls_adapt_to_the_available_width(self):
         source = (

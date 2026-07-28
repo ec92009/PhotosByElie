@@ -1,5 +1,22 @@
 # PhotosByElie Handoff
 
+## 2026-07-28 — Retained Review decisions and Upload keyboard inspection
+
+- Backstage `0.4.18` build `29` keeps cards approved or hidden during the
+  current Review session instead of immediately re-querying them out of the
+  Backfill window. Approved cards show the existing 30-point green check;
+  hidden cards remain in place in black and white. Either state remains a
+  valid anchor for the deliberate Propagate action until Review is left or
+  explicitly reloaded.
+- Upload supports `R` for the guarded Return to Review action, `H` for the
+  guarded fixture-hide action, and Space for a reversible local preview.
+  The preview includes the image, canonical title, canonical keywords,
+  capture time, and filename; Space closes it. Successful Return or Hide
+  actions remove their rows from Upload without deleting source files.
+- Verification is source/test/build only until the installed signed app is
+  inspected read-only. Codex must not approve, hide, propagate, return,
+  upload, publish, or otherwise alter real photo state during acceptance.
+
 ## 2026-07-28 — Explicit visible Upload window
 
 - Backstage `0.4.17` build `28` permanently states how many approved

@@ -118,6 +118,7 @@ public struct NativeUploadPlanItem: Identifiable, Sendable, Equatable {
     public var assetID: String
     public var photoLibraryIdentifier: String
     public var title: String
+    public var keywords: [String]
     public var filename: String
     public var capturedAt: String
     public var deliveryState: String
@@ -315,6 +316,7 @@ public actor FixtureDeliveryService {
                 assetID: assetID,
                 photoLibraryIdentifier: object["photoLibraryIdentifier"]?.stringValue ?? assetID,
                 title: object["title"]?.stringValue ?? "",
+                keywords: object["keywords"]?.arrayValue?.compactMap(\.stringValue) ?? [],
                 filename: object["filename"]?.stringValue ?? "",
                 capturedAt: object["capturedAt"]?.stringValue ?? "",
                 deliveryState: object["deliveryState"]?.stringValue ?? "needs-upload",

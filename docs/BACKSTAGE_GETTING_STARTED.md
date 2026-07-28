@@ -234,8 +234,11 @@ publication.
 ## Review
 
 **Review** is the editorial workspace for photos already picked into a
-fixture. **Backfill** shows unresolved picked photos; **Full queue** also keeps
-approved and fixture-hidden photos visible so their state can be inspected.
+fixture. **Backfill** starts with unresolved picked photos; **Full queue** also
+loads approved and fixture-hidden photos. During either Review session, a card
+you approve or hide remains in the current window until you leave or explicitly
+reload Review. That retained card is the propagation anchor: approval adds the
+green check, while Hide turns the thumbnail black and white.
 
 1. Edit the title or keywords directly. Changes autosave after a short pause.
    The down arrow beside either field propagates only that field through the
@@ -319,6 +322,9 @@ file name, capture date, state, and any eligibility error.
    the order.
 3. Use Command-click to add or remove individual rows, or Shift-click to extend
    the current selection.
+   Press **R** to open the guarded Return to Review action, **H** to open the
+   guarded fixture-hide action, or **Space** to open a larger preview with the
+   canonical title and keywords. Press Space again to close it.
 4. Read the persistent queue-window line. It says how many of the eligible
    items are shown and how many remain outside the loaded window. The server
    loads at most 200 of the oldest eligible items by upload-readiness time;

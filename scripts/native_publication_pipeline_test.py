@@ -123,6 +123,12 @@ class NativePublicationPipelineTest(unittest.TestCase):
     def test_upload_eligibility_plan_is_fixture_scoped_and_read_only(self):
         child = create_fixture(self.root, "Child", parent_fixture_id=self.fixture["fixtureId"])
         set_fixture_asset_state(self.root, child["fixtureId"], ["asset-1"], "picked")
+        with connect(self.root) as conn:
+            conn.execute(
+                "UPDATE sidecar_decisions SET keywords_json = ? WHERE asset_id = ?",
+                ('["Spain", "Sea"]', "asset-1"),
+            )
+            conn.commit()
 
         root_plan = upload_eligibility_plan(
             self.root,
@@ -139,6 +145,7 @@ class NativePublicationPipelineTest(unittest.TestCase):
         self.assertEqual(root_plan["needsUploadCount"], 2)
         self.assertEqual([item["assetId"] for item in root_plan["items"]], ["asset-1", "asset-2"])
         self.assertEqual(root_plan["items"][0]["photoLibraryIdentifier"], "asset-1")
+        self.assertEqual(root_plan["items"][0]["keywords"], ["Spain", "Sea"])
         self.assertEqual(child_plan["pickedCount"], 1)
         self.assertEqual(child_plan["needsUploadCount"], 1)
         self.assertEqual([item["assetId"] for item in child_plan["items"]], ["asset-1"])

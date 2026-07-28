@@ -101,6 +101,7 @@ APPLE_PHOTOS_BRIDGE = Path("scripts/apple_photos_bridge.swift")
 APPLE_PHOTOS_BRIDGE_APP_INSTALLER = Path("scripts/install_sidecar_photos_bridge_app.zsh")
 APPLE_PHOTOS_BRIDGE_APP = Path.home() / "Applications" / "PhotosByElie Photos Bridge.app"
 APPLE_PHOTOS_BRIDGE_APP_EXECUTABLE = APPLE_PHOTOS_BRIDGE_APP / "Contents" / "MacOS" / "PhotosByElie Photos Bridge"
+APPLE_PHOTOS_BRIDGE_APP_SOURCE_FINGERPRINT = APPLE_PHOTOS_BRIDGE_APP / "Contents" / "Resources" / "BridgeSource.sha256"
 APPLE_PHOTOS_IMPORT_ROOT = Path("tmp/apple-photos-import")
 REAL_ESTATE_APPLE_PHOTOS_INTAKE_ROOT = Path(
     os.environ.get(
@@ -9535,7 +9536,11 @@ def _ensure_apple_photos_bridge_app(repo_root: Path) -> None:
     needs_build = not APPLE_PHOTOS_BRIDGE_APP_EXECUTABLE.exists()
     if not needs_build:
         try:
-            needs_build = bridge_source.stat().st_mtime > APPLE_PHOTOS_BRIDGE_APP_EXECUTABLE.stat().st_mtime
+            installed_fingerprint = APPLE_PHOTOS_BRIDGE_APP_SOURCE_FINGERPRINT.read_text(
+                encoding="utf-8"
+            ).strip()
+            source_fingerprint = hashlib.sha256(bridge_source.read_bytes()).hexdigest()
+            needs_build = installed_fingerprint != source_fingerprint
         except OSError:
             needs_build = True
     if not needs_build:

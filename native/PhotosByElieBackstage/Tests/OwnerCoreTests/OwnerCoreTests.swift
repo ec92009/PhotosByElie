@@ -987,7 +987,10 @@ struct OwnerCoreTests {
             connectorIdentity: StaticOwnerConnectorIdentity("David")
         )
 
-        let report = try await service.reconcilePhotosIndex()
+        let report = try await service.reconcilePhotosIndex(
+            dateFrom: "2026-06-13T00:00:00Z",
+            dateTo: "2026-07-29T00:00:00Z"
+        )
 
         #expect(report.status == "done")
         #expect(report.indexedCount == 52_400)
@@ -999,6 +1002,8 @@ struct OwnerCoreTests {
         #expect(request.target == "david")
         #expect(request.payload["requestedConnector"]?.stringValue == "david")
         #expect(request.payload["queuedAt"]?.stringValue?.isEmpty == false)
+        #expect(request.payload["dateFrom"]?.stringValue == "2026-06-13T00:00:00Z")
+        #expect(request.payload["dateTo"]?.stringValue == "2026-07-29T00:00:00Z")
         #expect(request.payload["manifest"] == nil)
     }
 

@@ -1,3 +1,4 @@
+import hashlib
 import json
 import sqlite3
 import subprocess
@@ -194,6 +195,58 @@ class IndexedWindowTest(unittest.TestCase):
 
 
 class PhotosBridgeLaunchTest(unittest.TestCase):
+    def test_helper_rebuilds_when_source_fingerprint_is_missing_or_stale(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            source = repo_root / sidecar_server.APPLE_PHOTOS_BRIDGE
+            installer = repo_root / sidecar_server.APPLE_PHOTOS_BRIDGE_APP_INSTALLER
+            source.parent.mkdir(parents=True, exist_ok=True)
+            source.write_text("current bridge source", encoding="utf-8")
+            installer.write_text("#!/bin/zsh\n", encoding="utf-8")
+
+            with patch.object(
+                sidecar_server,
+                "APPLE_PHOTOS_BRIDGE_APP_EXECUTABLE",
+                repo_root / "installed-helper",
+            ), patch.object(
+                sidecar_server,
+                "APPLE_PHOTOS_BRIDGE_APP_SOURCE_FINGERPRINT",
+                repo_root / "BridgeSource.sha256",
+            ), patch.object(sidecar_server.subprocess, "run") as install:
+                (repo_root / "installed-helper").write_text("binary", encoding="utf-8")
+                (repo_root / "BridgeSource.sha256").write_text("stale", encoding="utf-8")
+                install.return_value = subprocess.CompletedProcess([], 0, "", "")
+
+                sidecar_server._ensure_apple_photos_bridge_app(repo_root)
+
+            install.assert_called_once()
+
+    def test_helper_is_reused_when_source_fingerprint_matches(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            source = repo_root / sidecar_server.APPLE_PHOTOS_BRIDGE
+            installer = repo_root / sidecar_server.APPLE_PHOTOS_BRIDGE_APP_INSTALLER
+            source.parent.mkdir(parents=True, exist_ok=True)
+            source.write_text("current bridge source", encoding="utf-8")
+            installer.write_text("#!/bin/zsh\n", encoding="utf-8")
+            fingerprint = hashlib.sha256(source.read_bytes()).hexdigest()
+
+            with patch.object(
+                sidecar_server,
+                "APPLE_PHOTOS_BRIDGE_APP_EXECUTABLE",
+                repo_root / "installed-helper",
+            ), patch.object(
+                sidecar_server,
+                "APPLE_PHOTOS_BRIDGE_APP_SOURCE_FINGERPRINT",
+                repo_root / "BridgeSource.sha256",
+            ), patch.object(sidecar_server.subprocess, "run") as install:
+                (repo_root / "installed-helper").write_text("binary", encoding="utf-8")
+                (repo_root / "BridgeSource.sha256").write_text(fingerprint, encoding="utf-8")
+
+                sidecar_server._ensure_apple_photos_bridge_app(repo_root)
+
+            install.assert_not_called()
+
     def test_app_task_waits_for_unique_result_file_without_open_wait_mode(self):
         commands = []
 
@@ -216,6 +269,33 @@ class PhotosBridgeLaunchTest(unittest.TestCase):
         self.assertTrue(payload["ok"])
         self.assertEqual(commands[0][:2], ["open", "-n"])
         self.assertNotIn("-W", commands[0])
+
+    def test_empty_bounded_index_is_a_valid_zero_item_result(self):
+        commands = []
+
+        def launch(command, **_kwargs):
+            commands.append(command)
+            destination = Path(command[command.index("--destination") + 1])
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.touch()
+            return subprocess.CompletedProcess(command, 0, "", "")
+
+        with tempfile.TemporaryDirectory() as temp_dir, \
+             patch.object(sidecar_server, "_ensure_apple_photos_bridge_app"), \
+             patch.object(sidecar_server, "_bridge_busy_response", return_value=None), \
+             patch.object(sidecar_server, "_write_bridge_busy"), \
+             patch.object(sidecar_server, "_clear_bridge_busy"), \
+             patch.object(sidecar_server.subprocess, "run", side_effect=launch):
+            destination = Path(temp_dir) / "empty-index.jsonl"
+            payload = sidecar_server._run_apple_photos_bridge_app_index(
+                Path(temp_dir),
+                ["library-index-file", "--destination", str(destination), "--date-from", "2030-01-01"],
+                destination,
+                timeout=1,
+            )
+
+        self.assertEqual(payload["count"], 0)
+        self.assertIn("--date-from", commands[0])
 
 
 class SummaryCacheTest(unittest.TestCase):

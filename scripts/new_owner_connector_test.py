@@ -158,10 +158,25 @@ class UploadRegistrationScopeTest(unittest.TestCase):
     def test_photos_index_sync_runs_the_non_ui_maintenance_command(self):
         payload = {"job": {"status": "done", "indexedCount": 57_500}, "sync": {"pendingCount": 3}}
         with patch("scripts.new_owner_connector._run_repo_json", return_value=payload) as run:
-            result = execute_action(self.config, {"type": "sidecar-photos-index-sync"})
+            result = execute_action(self.config, {
+                "type": "sidecar-photos-index-sync",
+                "payload": {
+                    "dateFrom": "2026-06-13T00:00:00Z",
+                    "dateTo": "2026-07-29T00:00:00Z",
+                },
+            })
 
         arguments = run.call_args.args[1]
         self.assertEqual(arguments[1:3], ["scripts/sidecar_maintenance.py", "photos-index-sync"])
+        self.assertEqual(
+            arguments[-4:],
+            [
+                "--date-from",
+                "2026-06-13T00:00:00Z",
+                "--date-to",
+                "2026-07-29T00:00:00Z",
+            ],
+        )
         self.assertEqual(result["job"]["status"], "done")
         self.assertEqual(result["job"]["indexedCount"], 57_500)
 

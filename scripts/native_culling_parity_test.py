@@ -134,7 +134,7 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("FlowLayout(spacing: 10)", review)
         self.assertNotIn(".frame(minWidth: 620)", review)
 
-    def test_culling_header_and_actions_resist_vertical_compression(self):
+    def test_culling_header_and_actions_are_structurally_pinned_around_grid(self):
         source = (
             NATIVE
             / "Sources"
@@ -151,16 +151,40 @@ class NativeCullingParityTest(unittest.TestCase):
         grid = culling[grid_start:grid_end]
         actions = culling[grid_end:]
 
-        self.assertGreaterEqual(
-            header.count(".fixedSize(horizontal: false, vertical: true)"),
-            5,
-        )
-        self.assertIn(".layoutPriority(2)", header)
+        self.assertIn("VStack(alignment: .leading, spacing: 12)", header)
+        self.assertIn(".layoutPriority(3)", header)
         self.assertIn(".frame(minHeight: 120, maxHeight: .infinity)", grid)
         self.assertIn(".clipped()", grid)
-        self.assertGreaterEqual(
-            actions.count(".fixedSize(horizontal: false, vertical: true)"),
-            5,
+        self.assertIn(".id(cullingViewportIdentity)", grid)
+        self.assertIn(".padding(.top, 12)", grid)
+        self.assertIn(".frame(maxWidth: .infinity, alignment: .bottomLeading)", actions)
+        self.assertIn(".layoutPriority(2)", actions)
+
+    def test_culling_refresh_reconciles_recent_photos_before_owner_window(self):
+        source = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "PhotosByElieBackstageApp.swift"
+        ).read_text(encoding="utf-8")
+        model_source = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "BackstageViewModel.swift"
+        ).read_text(encoding="utf-8")
+        culling = source.split("private struct MediaLibraryView", 1)[1].split(
+            "private struct CullingAssetCard", 1
+        )[0]
+
+        self.assertIn("await model.refreshPhotosAndRecentIndex()", culling)
+        self.assertIn("await model.refreshPhotosAndRecentIndex(force: true)", culling)
+        self.assertIn("func reconcileRecentPhotosIndex(force: Bool = false)", model_source)
+        self.assertIn("value: -45", model_source)
+        self.assertIn('dateFormatter.dateFormat = "yyyy-MM-dd"', model_source)
+        self.assertLess(
+            culling.index("await model.refreshPhotosAndRecentIndex()"),
+            culling.index("await model.loadFixtureCullingWindow()"),
         )
 
     def test_density_controls_resize_only_the_grid_viewport(self):

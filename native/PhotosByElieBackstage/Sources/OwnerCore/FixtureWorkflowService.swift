@@ -810,18 +810,36 @@ public actor FixtureWorkflowService {
         )
     }
 
-    public func reconcilePhotosIndex() async throws -> PhotosIndexReconciliationReport {
+    public func reconcilePhotosIndex(
+        dateFrom: String = "",
+        dateTo: String = ""
+    ) async throws -> PhotosIndexReconciliationReport {
         let connectorID = await connectorIdentity.connectorID()
+        var payload: [String: JSONValue] = [
+            "requestedConnector": .string(connectorID),
+            "queuedAt": .string(ISO8601DateFormatter().string(from: Date())),
+        ]
+        let cleanDateFrom = dateFrom.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanDateTo = dateTo.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !cleanDateFrom.isEmpty {
+            payload["dateFrom"] = .string(cleanDateFrom)
+        }
+        if !cleanDateTo.isEmpty {
+            payload["dateTo"] = .string(cleanDateTo)
+        }
         let completed = try await runner.submit(
             OwnerActionCreate(
                 actionKind: "sidecar-photos-index-sync",
                 target: connectorID,
-                payload: [
-                    "requestedConnector": .string(connectorID),
-                    "queuedAt": .string(ISO8601DateFormatter().string(from: Date())),
-                ]
+                payload: payload
             ),
-            idempotencyKey: ["native-photos-index-sync", connectorID, UUID().uuidString]
+            idempotencyKey: [
+                "native-photos-index-sync",
+                connectorID,
+                cleanDateFrom,
+                cleanDateTo,
+                UUID().uuidString,
+            ]
                 .joined(separator: ":")
         )
         guard let job = completed.result?["job"]?.objectValue else {

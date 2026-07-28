@@ -627,127 +627,126 @@ private struct MediaLibraryView: View {
     var body: some View {
         HSplitView {
             VStack(alignment: .leading, spacing: 12) {
-                ViewThatFits(in: .horizontal) {
-                    HStack {
-                        cullingHeading
-                        Spacer()
-                        cullingHeaderActions
+                let workspace = model.cullingWorkspace
+                VStack(alignment: .leading, spacing: 12) {
+                    ViewThatFits(in: .horizontal) {
+                        HStack {
+                            cullingHeading
+                            Spacer()
+                            cullingHeaderActions
+                        }
+                        VStack(alignment: .leading, spacing: 8) {
+                            cullingHeading
+                            cullingHeaderActions
+                        }
                     }
-                    VStack(alignment: .leading, spacing: 8) {
-                        cullingHeading
-                        cullingHeaderActions
+                    .fixedSize(horizontal: false, vertical: true)
+                    Text(model.photoStatus)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    FlowLayout(spacing: 8) {
+                        Picker(
+                            "Fixture",
+                            selection: Binding(
+                                get: { model.cullingFixtureID },
+                                set: { model.selectCullingFixture($0) }
+                            )
+                        ) {
+                            ForEach(model.flatFixtures.filter { !$0.isArchived }) { fixture in
+                                let depth = max(0, model.fixtures.path(to: fixture.id).count - 1)
+                                Text("\(String(repeating: "  ", count: depth))\(fixture.name)")
+                                    .tag(fixture.id)
+                            }
+                        }
+                        .frame(width: 180)
+                        TextField("Search title, file, or keyword", text: $model.cullingSearch)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 240)
+                            .onSubmit { model.applyCullingFilters() }
+                        Picker("Media", selection: $model.cullingMediaFilter) {
+                            ForEach(CullingMediaFilter.allCases, id: \.self) {
+                                Text($0.label).tag($0)
+                            }
+                        }
+                        .frame(width: 110)
+                        Picker("View", selection: $model.cullingView) {
+                            ForEach(FixtureCullingView.allCases, id: \.self) {
+                                Text($0.label).tag($0)
+                            }
+                        }
+                        .frame(width: 120)
+                        Picker("Rating", selection: $model.cullingRatingFilter) {
+                            Text("All ratings").tag(-1)
+                            ForEach(0...5, id: \.self) { value in
+                                Text(value == 0 ? "No rating" : "\(value) star\(value == 1 ? "" : "s")")
+                                    .tag(value)
+                            }
+                        }
+                        .frame(width: 120)
+                        Picker("Color", selection: $model.cullingColorFilter) {
+                            ForEach(CullingColorFilter.allCases, id: \.self) {
+                                Text($0.label).tag($0)
+                            }
+                        }
+                        .frame(width: 110)
+                        Button("Apply") { model.applyCullingFilters() }
+                        Button("Clear") { model.clearCullingFilters() }
+                        Button("Review picked") { model.showPickedReview() }
+                        Button("Select burst") { model.selectFocusedBurst() }
+                            .disabled(model.focusedCullingAssetID == nil)
                     }
-                }
-                .fixedSize(horizontal: false, vertical: true)
-                .layoutPriority(2)
-                Text(model.photoStatus)
+                    .labelsHidden()
+                    .onChange(of: model.cullingMediaFilter) { _, _ in model.applyCullingFilters() }
+                    .onChange(of: model.cullingView) { _, _ in model.applyCullingFilters() }
+                    .onChange(of: model.cullingRatingFilter) { _, _ in model.applyCullingFilters() }
+                    .onChange(of: model.cullingColorFilter) { _, _ in model.applyCullingFilters() }
+                    .fixedSize(horizontal: false, vertical: true)
+                    FlowLayout(spacing: 8) {
+                        Text("\(workspace.summary.filtered.formatted()) match • \(workspace.summary.total.formatted()) in scope")
+                        Text("• \(workspace.summary.undecided.formatted()) undecided")
+                        Text("• \(workspace.summary.picked.formatted()) picked")
+                        Text("• \(workspace.summary.rejected.formatted()) hidden")
+                    }
+                    .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
-                    .layoutPriority(2)
-                FlowLayout(spacing: 8) {
-                    Picker(
-                        "Fixture",
-                        selection: Binding(
-                            get: { model.cullingFixtureID },
-                            set: { model.selectCullingFixture($0) }
-                        )
-                    ) {
-                        ForEach(model.flatFixtures.filter { !$0.isArchived }) { fixture in
-                            let depth = max(0, model.fixtures.path(to: fixture.id).count - 1)
-                            Text("\(String(repeating: "  ", count: depth))\(fixture.name)")
-                                .tag(fixture.id)
+                    HStack {
+                        if let range = workspace.visibleRange {
+                            Text("\(range.lowerBound.formatted())–\(range.upperBound.formatted()) of \(workspace.summary.filtered.formatted())")
+                                .font(.callout.weight(.semibold))
+                                .monospacedDigit()
+                        } else {
+                            Text("0 of \(workspace.summary.filtered.formatted())")
+                                .font(.callout.weight(.semibold))
                         }
-                    }
-                    .frame(width: 180)
-                    TextField("Search title, file, or keyword", text: $model.cullingSearch)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(width: 240)
-                        .onSubmit { model.applyCullingFilters() }
-                    Picker("Media", selection: $model.cullingMediaFilter) {
-                        ForEach(CullingMediaFilter.allCases, id: \.self) {
-                            Text($0.label).tag($0)
+                        Button("Previous \(workspace.limit)") {
+                            model.moveCullingWindow(forward: false)
                         }
-                    }
-                    .frame(width: 110)
-                    Picker("View", selection: $model.cullingView) {
-                        ForEach(FixtureCullingView.allCases, id: \.self) {
-                            Text($0.label).tag($0)
+                        .disabled(!workspace.hasPrevious)
+                        Button("Next \(workspace.limit)") {
+                            model.moveCullingWindow(forward: true)
                         }
-                    }
-                    .frame(width: 120)
-                    Picker("Rating", selection: $model.cullingRatingFilter) {
-                        Text("All ratings").tag(-1)
-                        ForEach(0...5, id: \.self) { value in
-                            Text(value == 0 ? "No rating" : "\(value) star\(value == 1 ? "" : "s")")
-                                .tag(value)
+                        .disabled(!workspace.hasNext)
+                        Spacer()
+                        HStack(spacing: 0) {
+                            Button("−") { decreaseCullingThumbnailSize() }
+                                .help("Show more, smaller thumbnails")
+                                .disabled(!model.canDecreaseCullingThumbnailSize)
+                            Divider().frame(height: 18)
+                            Button("+") { increaseCullingThumbnailSize() }
+                                .help("Show fewer, larger thumbnails")
+                                .disabled(!model.canIncreaseCullingThumbnailSize)
                         }
-                    }
-                    .frame(width: 120)
-                    Picker("Color", selection: $model.cullingColorFilter) {
-                        ForEach(CullingColorFilter.allCases, id: \.self) {
-                            Text($0.label).tag($0)
+                        .buttonStyle(.bordered)
+                        Button(model.cullingUsesFill ? "Fill" : "Fit") {
+                            model.toggleCullingFitFill()
                         }
+                        .buttonStyle(.bordered)
                     }
-                    .frame(width: 110)
-                    Button("Apply") { model.applyCullingFilters() }
-                    Button("Clear") { model.clearCullingFilters() }
-                    Button("Review picked") { model.showPickedReview() }
-                    Button("Select burst") { model.selectFocusedBurst() }
-                        .disabled(model.focusedCullingAssetID == nil)
-                }
-                .labelsHidden()
-                .onChange(of: model.cullingMediaFilter) { _, _ in model.applyCullingFilters() }
-                .onChange(of: model.cullingView) { _, _ in model.applyCullingFilters() }
-                .onChange(of: model.cullingRatingFilter) { _, _ in model.applyCullingFilters() }
-                .onChange(of: model.cullingColorFilter) { _, _ in model.applyCullingFilters() }
-                .fixedSize(horizontal: false, vertical: true)
-                .layoutPriority(2)
-                let workspace = model.cullingWorkspace
-                FlowLayout(spacing: 8) {
-                    Text("\(workspace.summary.filtered.formatted()) match • \(workspace.summary.total.formatted()) in scope")
-                    Text("• \(workspace.summary.undecided.formatted()) undecided")
-                    Text("• \(workspace.summary.picked.formatted()) picked")
-                    Text("• \(workspace.summary.rejected.formatted()) hidden")
-                }
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .layoutPriority(2)
-                HStack {
-                    if let range = workspace.visibleRange {
-                        Text("\(range.lowerBound.formatted())–\(range.upperBound.formatted()) of \(workspace.summary.filtered.formatted())")
-                            .font(.callout.weight(.semibold))
-                            .monospacedDigit()
-                    } else {
-                        Text("0 of \(workspace.summary.filtered.formatted())")
-                            .font(.callout.weight(.semibold))
-                    }
-                    Button("Previous \(workspace.limit)") {
-                        model.moveCullingWindow(forward: false)
-                    }
-                    .disabled(!workspace.hasPrevious)
-                    Button("Next \(workspace.limit)") {
-                        model.moveCullingWindow(forward: true)
-                    }
-                    .disabled(!workspace.hasNext)
-                    Spacer()
-                    HStack(spacing: 0) {
-                        Button("−") { decreaseCullingThumbnailSize() }
-                            .help("Show more, smaller thumbnails")
-                            .disabled(!model.canDecreaseCullingThumbnailSize)
-                        Divider().frame(height: 18)
-                        Button("+") { increaseCullingThumbnailSize() }
-                            .help("Show fewer, larger thumbnails")
-                            .disabled(!model.canIncreaseCullingThumbnailSize)
-                    }
-                    .buttonStyle(.bordered)
-                    Button(model.cullingUsesFill ? "Fill" : "Fit") {
-                        model.toggleCullingFitFill()
-                    }
-                    .buttonStyle(.bordered)
                 }
                 .fixedSize(horizontal: false, vertical: true)
-                .layoutPriority(2)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+                .layoutPriority(3)
                 ScrollViewReader { proxy in
                     GeometryReader { geometry in
                         ScrollView {
@@ -776,10 +775,13 @@ private struct MediaLibraryView: View {
                                     .task { await model.loadThumbnail(for: asset.id) }
                                 }
                             }
-                            .padding(6)
+                            .padding(.horizontal, 6)
+                            .padding(.top, 12)
+                            .padding(.bottom, 6)
                             .frame(maxWidth: .infinity, alignment: .topLeading)
                             .animation(.snappy(duration: 0.24), value: model.cullingGridDensity)
                         }
+                        .id(cullingViewportIdentity)
                         .onAppear {
                             model.updateCullingGridWidth(Double(geometry.size.width - 12))
                         }
@@ -878,112 +880,111 @@ private struct MediaLibraryView: View {
                 .frame(minHeight: 120, maxHeight: .infinity)
                 .clipped()
                 .layoutPriority(1)
-                HStack {
-                    Button("Open in Review") { model.sendCullingSelection(to: .review) }
-                        .disabled(model.cullingSelection.selectedIDs.isEmpty)
-                    Button("Send to Metadata") { model.sendCullingSelection(to: .metadata) }
-                        .disabled(model.cullingSelection.selectedIDs.isEmpty)
-                    Button("Send to Uploads") { model.sendCullingSelection(to: .uploads) }
-                        .disabled(model.cullingSelection.selectedIDs.isEmpty)
-                    Spacer()
-                }
-                .fixedSize(horizontal: false, vertical: true)
-                FlowLayout(spacing: 8) {
-                    Text("\(model.cullingSelection.selectedIDs.count) selected")
-                    Picker("Fixture decision", selection: $model.cullingPickAction) {
-                        ForEach(SidecarPickAction.allCases, id: \.self) { action in
-                            let label: String = switch action {
-                            case .pick: "Include"
-                            case .reject: "Exclude"
-                            case .unpick: "Undecided"
-                            }
-                            Text(label).tag(action)
-                        }
-                    }
-                    .frame(width: 180)
-                    Button("Apply fixture decision") {
-                        Task { await model.applyPickShortcut(model.cullingPickAction) }
-                    }
-                    .disabled(
-                        model.cullingSelection.selectedIDs.isEmpty
-                            || model.isApplyingCullingDecision
-                            || !model.hasCurrentCullingFixture
-                    )
-                    Picker("Rating", selection: $model.cullingRating) {
-                        ForEach(0...5, id: \.self) { rating in
-                            Text(rating == 0 ? "No rating" : "\(rating) star\(rating == 1 ? "" : "s")")
-                                .tag(rating)
-                        }
-                    }
-                    .frame(width: 170)
-                    Button("Apply rating") {
-                        Task { await model.applyRating() }
-                    }
-                    .disabled(model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision)
-                    Picker("Color", selection: $model.cullingColor) {
-                        ForEach(SidecarColor.allCases, id: \.self) {
-                            Text($0.label).tag($0)
-                        }
-                    }
-                    .frame(width: 145)
-                    Button("Apply color") {
-                        Task { await model.applyColor() }
-                    }
-                    .disabled(model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision)
-                    Button("Quick Look") {
-                        Task {
-                            let urls = await model.prepareQuickLookURLs()
-                            if !urls.isEmpty { quickLook.present(urls: urls) }
-                        }
-                    }
-                    .keyboardShortcut(.space, modifiers: [])
-                    .disabled(model.cullingSelection.selectedIDs.isEmpty)
-                    Button("Export originals…") {
-                        guard let directory = chooseExportDirectory() else { return }
-                        Task { await model.exportSelected(to: directory) }
-                    }
-                    .disabled(model.cullingSelection.selectedIDs.isEmpty)
-                }
-                .labelsHidden()
-                .fixedSize(horizontal: false, vertical: true)
-                HStack {
-                    Button("Undo") { Task { await model.undoLastCullingDecision() } }
-                        .keyboardShortcut("z", modifiers: .command)
-                        .disabled(model.cullingHistory.isEmpty)
-                    if let last = model.cullingHistory.last {
-                        Text("Last: \(last.label) • \(model.cullingHistory.count) reversible step\(model.cullingHistory.count == 1 ? "" : "s")")
-                            .foregroundStyle(.secondary)
-                    } else {
-                        Text("No culling changes in this session.")
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    Button("Reload decisions") {
-                        Task { await model.refreshCullingDecisions() }
-                    }
-                    Button("Clear selection") { model.clearCullingSelection() }
-                        .disabled(model.cullingSelection.selectedIDs.isEmpty)
-                }
-                .fixedSize(horizontal: false, vertical: true)
-                Text(model.cullingStatus)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                if model.isLoadingCullingDecisions || model.isApplyingCullingDecision {
+                VStack(alignment: .leading, spacing: 8) {
                     HStack {
-                        ProgressView(
-                            value: Double(model.cullingDecisionProgress),
-                            total: Double(max(1, model.cullingDecisionTotal))
-                        )
-                        Button("Stop") { model.cancelCullingOperation() }
-                            .disabled(model.cullingCancellationRequested)
+                        Button("Open in Review") { model.sendCullingSelection(to: .review) }
+                            .disabled(model.cullingSelection.selectedIDs.isEmpty)
+                        Button("Send to Metadata") { model.sendCullingSelection(to: .metadata) }
+                            .disabled(model.cullingSelection.selectedIDs.isEmpty)
+                        Button("Send to Uploads") { model.sendCullingSelection(to: .uploads) }
+                            .disabled(model.cullingSelection.selectedIDs.isEmpty)
+                        Spacer()
                     }
-                    .fixedSize(horizontal: false, vertical: true)
+                    FlowLayout(spacing: 8) {
+                        Text("\(model.cullingSelection.selectedIDs.count) selected")
+                        Picker("Fixture decision", selection: $model.cullingPickAction) {
+                            ForEach(SidecarPickAction.allCases, id: \.self) { action in
+                                let label: String = switch action {
+                                case .pick: "Include"
+                                case .reject: "Exclude"
+                                case .unpick: "Undecided"
+                                }
+                                Text(label).tag(action)
+                            }
+                        }
+                        .frame(width: 180)
+                        Button("Apply fixture decision") {
+                            Task { await model.applyPickShortcut(model.cullingPickAction) }
+                        }
+                        .disabled(
+                            model.cullingSelection.selectedIDs.isEmpty
+                                || model.isApplyingCullingDecision
+                                || !model.hasCurrentCullingFixture
+                        )
+                        Picker("Rating", selection: $model.cullingRating) {
+                            ForEach(0...5, id: \.self) { rating in
+                                Text(rating == 0 ? "No rating" : "\(rating) star\(rating == 1 ? "" : "s")")
+                                    .tag(rating)
+                            }
+                        }
+                        .frame(width: 170)
+                        Button("Apply rating") {
+                            Task { await model.applyRating() }
+                        }
+                        .disabled(model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision)
+                        Picker("Color", selection: $model.cullingColor) {
+                            ForEach(SidecarColor.allCases, id: \.self) {
+                                Text($0.label).tag($0)
+                            }
+                        }
+                        .frame(width: 145)
+                        Button("Apply color") {
+                            Task { await model.applyColor() }
+                        }
+                        .disabled(model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision)
+                        Button("Quick Look") {
+                            Task {
+                                let urls = await model.prepareQuickLookURLs()
+                                if !urls.isEmpty { quickLook.present(urls: urls) }
+                            }
+                        }
+                        .keyboardShortcut(.space, modifiers: [])
+                        .disabled(model.cullingSelection.selectedIDs.isEmpty)
+                        Button("Export originals…") {
+                            guard let directory = chooseExportDirectory() else { return }
+                            Task { await model.exportSelected(to: directory) }
+                        }
+                        .disabled(model.cullingSelection.selectedIDs.isEmpty)
+                    }
+                    .labelsHidden()
+                    HStack {
+                        Button("Undo") { Task { await model.undoLastCullingDecision() } }
+                            .keyboardShortcut("z", modifiers: .command)
+                            .disabled(model.cullingHistory.isEmpty)
+                        if let last = model.cullingHistory.last {
+                            Text("Last: \(last.label) • \(model.cullingHistory.count) reversible step\(model.cullingHistory.count == 1 ? "" : "s")")
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Text("No culling changes in this session.")
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Button("Reload decisions") {
+                            Task { await model.refreshCullingDecisions() }
+                        }
+                        Button("Clear selection") { model.clearCullingSelection() }
+                            .disabled(model.cullingSelection.selectedIDs.isEmpty)
+                    }
+                    Text(model.cullingStatus)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    if model.isLoadingCullingDecisions || model.isApplyingCullingDecision {
+                        HStack {
+                            ProgressView(
+                                value: Double(model.cullingDecisionProgress),
+                                total: Double(max(1, model.cullingDecisionTotal))
+                            )
+                            Button("Stop") { model.cancelCullingOperation() }
+                                .disabled(model.cullingCancellationRequested)
+                        }
+                    }
+                    Text("Shortcuts: P include in fixture • H exclude from fixture • X globally reject • U clear fixture decision • 0–5 rating • 6–9 color • +/− density • Z fit/fill • Space Quick Look • ⌘Z undo")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
                 }
-                Text("Shortcuts: P include in fixture • H exclude from fixture • X globally reject • U clear fixture decision • 0–5 rating • 6–9 color • +/− density • Z fit/fill • Space Quick Look • ⌘Z undo")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-                    .fixedSize(horizontal: false, vertical: true)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .bottomLeading)
+                .layoutPriority(2)
             }
             .padding()
 
@@ -1021,7 +1022,9 @@ private struct MediaLibraryView: View {
                 await model.loadFixtures()
             }
             if model.libraryItems.isEmpty {
-                await model.refreshPhotos()
+                await model.refreshPhotosAndRecentIndex()
+            } else {
+                await model.reconcileRecentPhotosIndex()
             }
             if !model.cullingFixtureID.isEmpty {
                 await model.loadFixtureCullingWindow()
@@ -1047,6 +1050,15 @@ private struct MediaLibraryView: View {
         }
     }
 
+    private var cullingViewportIdentity: String {
+        [
+            model.cullingFixtureID,
+            model.cullingView.rawValue,
+            String(model.cullingWorkspace.offset),
+            model.visibleCullingAssets.first?.id ?? "empty",
+        ].joined(separator: ":")
+    }
+
     private var cullingHeaderActions: some View {
         HStack {
             if model.cullingPool != nil {
@@ -1058,7 +1070,12 @@ private struct MediaLibraryView: View {
                 Task { await model.authorizeAndLoadPhotos() }
             }
             Button("Refresh previews") {
-                Task { await model.refreshPhotos() }
+                Task {
+                    await model.refreshPhotosAndRecentIndex(force: true)
+                    if !model.cullingFixtureID.isEmpty {
+                        await model.loadFixtureCullingWindow()
+                    }
+                }
             }
             .disabled(model.isLoadingPhotos || model.isReconcilingPhotosIndex)
             Button {

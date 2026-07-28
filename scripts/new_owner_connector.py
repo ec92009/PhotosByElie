@@ -1107,12 +1107,29 @@ def execute_action(config: ConnectorConfig, action: dict) -> dict:
             "completedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         }
     if action_type == "sidecar-photos-index-sync":
-        indexed = _run_repo_json(config, [
+        payload = action.get("payload") if isinstance(action.get("payload"), dict) else {}
+        date_from = str(payload.get("dateFrom") or "").strip()
+        date_to = str(payload.get("dateTo") or "").strip()
+        for label, value in (("dateFrom", date_from), ("dateTo", date_to)):
+            if not value:
+                continue
+            try:
+                datetime.fromisoformat(value.replace("Z", "+00:00"))
+            except ValueError as error:
+                raise RuntimeError(f"{label} must be an ISO-8601 date") from error
+        arguments = [
             sys.executable,
             "scripts/sidecar_maintenance.py",
             "photos-index-sync",
             "--limit",
             "24",
+        ]
+        if date_from:
+            arguments.extend(["--date-from", date_from])
+        if date_to:
+            arguments.extend(["--date-to", date_to])
+        indexed = _run_repo_json(config, [
+            *arguments,
         ])
         return {
             "connectorId": config.connector_id,

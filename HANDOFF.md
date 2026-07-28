@@ -1,5 +1,23 @@
 # PhotosByElie Handoff
 
+## 2026-07-28 — Current Culling window and pinned controls
+
+- Backstage `0.4.9` build `20` keeps the complete Culling header and complete
+  decision/action footer outside the thumbnail scroller. The thumbnail viewport
+  has explicit top padding and resets to its top when the fixture, view, page,
+  or first visible asset changes.
+- Before loading a fixture-scoped Culling window, Backstage now reconciles the
+  recent 45-day PhotoKit slice through the signed Owner connector. This prevents
+  the current PhotoKit preview set from being replaced by an older Owner-index
+  window and keeps the displayed assets and culling decisions on one index.
+- The Photos Bridge installation records a source SHA-256 fingerprint, so a
+  stale signed helper is rebuilt even when filesystem mtimes are misleading.
+  Date-bounded reconciliations also accept a valid empty PhotoKit result.
+- Verification passes: 164 repository tests, publication validation, shell
+  syntax checks, the focused native Culling and connector suites, 46 OwnerCore
+  tests, release signing, and the installed app version check. Final native
+  visual acceptance remains read-only/no-save.
+
 ## 2026-07-28 — Shared Backstage preview-panel control
 
 - Backstage `0.4.5` build `16` removes the persistent green `Connected`

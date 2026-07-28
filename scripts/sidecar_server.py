@@ -52,6 +52,7 @@ APPLE_PHOTOS_BRIDGE = Path("scripts/apple_photos_bridge.swift")
 APPLE_PHOTOS_BRIDGE_APP_INSTALLER = Path("scripts/install_sidecar_photos_bridge_app.zsh")
 APPLE_PHOTOS_BRIDGE_APP = Path.home() / "Applications" / "PhotosByElie Photos Bridge.app"
 APPLE_PHOTOS_BRIDGE_APP_EXECUTABLE = APPLE_PHOTOS_BRIDGE_APP / "Contents" / "MacOS" / "PhotosByElie Photos Bridge"
+APPLE_PHOTOS_BRIDGE_APP_SOURCE_FINGERPRINT = APPLE_PHOTOS_BRIDGE_APP / "Contents" / "Resources" / "BridgeSource.sha256"
 DEFAULT_CONNECTOR_CONFIG_PATH = Path.home() / ".config" / "photosbyelie" / "connector.json"
 SIDECAR_VERSION_FILE = Path("SIDECAR_VERSION")
 SIDECAR_DEFAULT_VERSION = "125.2"
@@ -336,7 +337,7 @@ def _run_apple_photos_bridge_app_index(repo_root: Path, args: list[str], destina
     if result.returncode != 0:
         message = (result.stderr or result.stdout or f"Apple Photos bridge app exited {result.returncode}").strip()
         raise RuntimeError(message)
-    if not destination.exists() or destination.stat().st_size == 0:
+    if not destination.exists():
         raise RuntimeError(
             "Apple Photos bridge app did not write the index file. "
             "Confirm PhotosByElie Photos Bridge has Full Access in System Settings > Privacy & Security > Photos, then retry."
@@ -450,7 +451,11 @@ def _ensure_apple_photos_bridge_app(repo_root: Path) -> None:
     needs_build = not APPLE_PHOTOS_BRIDGE_APP_EXECUTABLE.exists()
     if not needs_build:
         try:
-            needs_build = bridge_source.stat().st_mtime > APPLE_PHOTOS_BRIDGE_APP_EXECUTABLE.stat().st_mtime
+            installed_fingerprint = APPLE_PHOTOS_BRIDGE_APP_SOURCE_FINGERPRINT.read_text(
+                encoding="utf-8"
+            ).strip()
+            source_fingerprint = hashlib.sha256(bridge_source.read_bytes()).hexdigest()
+            needs_build = installed_fingerprint != source_fingerprint
         except OSError:
             needs_build = True
     if not needs_build:

@@ -40,6 +40,7 @@ executable="$macos_dir/PhotosByElie Photos Bridge"
 icon_name="PhotosBridgeIcon"
 icon_path="$resources_dir/$icon_name.icns"
 source_icon="$repo_root/assets/branding/photosbyelie-camera-tripod-logo-1024.png"
+source_fingerprint_path="$resources_dir/BridgeSource.sha256"
 
 mkdir -p "$macos_dir" "$resources_dir"
 
@@ -84,6 +85,7 @@ PLIST
 
 xcrun swiftc "$bridge_source" -o "$executable"
 chmod +x "$executable"
+shasum -a 256 "$bridge_source" | awk '{print $1}' > "$source_fingerprint_path"
 
 if [[ -f "$source_icon" ]]; then
   tmp_root="$(mktemp -d "${TMPDIR:-/tmp}/pbe-photos-bridge-icon.XXXXXX")"

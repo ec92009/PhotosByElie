@@ -76,6 +76,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var photoStatus = "Photo library not loaded."
     @Published var isLoadingPhotos = false
     @Published var isReconcilingPhotosIndex = false
+    private var hasReconciledRecentPhotosIndex = false
     @Published var fixtureID = ""
     @Published var metadataReport: MetadataGiveBackReport?
     @Published var metadataStatus = "Preview approved global metadata before writing it to Photos."
@@ -392,6 +393,46 @@ final class BackstageViewModel: ObservableObject {
                 "Owner reconciled",
                 "\(report.importedCount.formatted()) indexed",
                 "\(report.missingMarkedCount.formatted()) unavailable marked",
+            ].joined(separator: " • ")
+        } catch {
+            await presentAuthenticationFailureIfNeeded(error)
+            if status != "Sign in again" {
+                photoStatus = userFacingMessage(for: error)
+            }
+        }
+    }
+
+    func refreshPhotosAndRecentIndex(force: Bool = false) async {
+        await refreshPhotos()
+        await reconcileRecentPhotosIndex(force: force)
+    }
+
+    func reconcileRecentPhotosIndex(force: Bool = false) async {
+        guard force || !hasReconciledRecentPhotosIndex else { return }
+        guard !isReconcilingPhotosIndex else { return }
+        guard [.authorized, .limited].contains(photoAccess) else { return }
+        guard await prepareAuthenticatedOperation() else { return }
+        isReconcilingPhotosIndex = true
+        photoStatus = "Synchronizing recent Photos with the Owner index…"
+        defer { isReconcilingPhotosIndex = false }
+        do {
+            let start = Calendar.current.date(
+                byAdding: .day,
+                value: -45,
+                to: Date()
+            ) ?? Date().addingTimeInterval(-45 * 24 * 60 * 60)
+            let dateFormatter = DateFormatter()
+            dateFormatter.calendar = Calendar(identifier: .gregorian)
+            dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+            dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+            dateFormatter.dateFormat = "yyyy-MM-dd"
+            let report = try await fixtureService.reconcilePhotosIndex(
+                dateFrom: dateFormatter.string(from: start)
+            )
+            hasReconciledRecentPhotosIndex = true
+            photoStatus = [
+                "Recent Photos synchronized",
+                "\(report.importedCount.formatted()) indexed",
             ].joined(separator: " • ")
         } catch {
             await presentAuthenticationFailureIfNeeded(error)

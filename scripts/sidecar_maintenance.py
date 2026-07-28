@@ -546,7 +546,12 @@ def _register_uploaded_catalog_rows(
 def photos_index_sync(args: argparse.Namespace) -> int:
     repo_root = args.repo_root.resolve()
     job_id = f"scheduled-{uuid.uuid4().hex[:12]}"
-    _run_index_job(repo_root, job_id)
+    _run_index_job(
+        repo_root,
+        job_id,
+        date_from=str(args.date_from or "").strip(),
+        date_to=str(args.date_to or "").strip(),
+    )
     payload = {
         "ok": True,
         "task": "sidecar-photos-index-sync",
@@ -797,6 +802,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     photos = subparsers.add_parser("photos-index-sync", help="Refresh the local Apple Photos metadata index.")
     photos.add_argument("--limit", type=int, default=80, help="Number of rows to include in the written sync status artifact.")
+    photos.add_argument("--date-from", default="", help="Optional inclusive PhotoKit capture-date lower bound.")
+    photos.add_argument("--date-to", default="", help="Optional exclusive PhotoKit capture-date upper bound.")
     photos.add_argument("--output", type=Path, default=DEFAULT_SYNC_STATUS_PATH, help="JSON artifact path for the scheduler result.")
     photos.set_defaults(func=photos_index_sync)
 

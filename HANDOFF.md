@@ -1,5 +1,27 @@
 # PhotosByElie Handoff
 
+## 2026-07-28 — Native publication resumes verified coverage without duplicate uploads
+
+- The owner-started native publication run `uplrun-90721a8eb2e74359`
+  initially stalled behind an Owner SQLite lock, then exposed 50 stale
+  `needs-upload` rows whose exact current R2 objects and verified fixture
+  receipts already existed.
+- The publisher now retries bounded SQLite lock contention, safely requeues
+  interrupted items in the exact explicit run, and accepts existing R2
+  coverage only when every currently planned object has both a current
+  `r2_objects` row and an exact verified delivery receipt. It never treats a
+  partial or mismatched receipt as success.
+- Fixture schema/backfill initialization now runs once per Owner database
+  inode in a process instead of rescanning the full catalog on every
+  connection.
+- The recovered run completed **50/50 live with zero failures**. All 50 assets
+  have verified R2 receipts and verified Apple Photos write-back receipts;
+  no duplicate R2 upload was required. Expo then reported 1,643 approved
+  items still needing upload and 50 live.
+- Focused publication, pipeline, and Culling regression tests pass. This is a
+  Python publication-pipeline correction, so the installed Backstage
+  `0.4.25 (36)` UI bundle did not require another version bump.
+
 ## 2026-07-28 — Upload review uses stable 200-item trays
 
 - Backstage `0.4.25` build `36` loads at most 200 approved, upload-ready

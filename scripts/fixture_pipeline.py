@@ -14,6 +14,7 @@ import json
 from pathlib import Path
 import re
 import sqlite3
+import threading
 from typing import Any, Iterable
 import uuid
 
@@ -41,6 +42,8 @@ REVIEW_ACTIONS = {
     "propagate-title",
     "propagate-keywords",
 }
+_SCHEMA_READY: set[tuple[str, int, int]] = set()
+_SCHEMA_LOCK = threading.Lock()
 
 
 def now_iso() -> str:
@@ -661,9 +664,20 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
 
 
 def connect(repo_root: Path, db_path: Path | None = None) -> sqlite3.Connection:
+    selected = db_path or OWNER_DB
+    path = selected if selected.is_absolute() else repo_root / selected
     conn = connect_owner(repo_root, db_path)
-    ensure_schema(conn)
-    conn.commit()
+    stat = path.stat()
+    schema_key = (str(path.resolve()), int(stat.st_dev), int(stat.st_ino))
+    with _SCHEMA_LOCK:
+        if schema_key not in _SCHEMA_READY:
+            try:
+                ensure_schema(conn)
+                conn.commit()
+            except Exception:
+                conn.close()
+                raise
+            _SCHEMA_READY.add(schema_key)
     return conn
 
 

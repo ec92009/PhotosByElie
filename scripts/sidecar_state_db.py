@@ -4181,34 +4181,6 @@ def _current_r2_objects_for_plan(conn: sqlite3.Connection, planned_keys: list[di
         }
         for row in rows
     }
-    try:
-        bridge_rows = conn.execute(
-            """
-            SELECT photo_id, upload_keys_json, updated_at
-            FROM sidecar_upload_bridge_run_items
-            WHERE upload_keys_json IS NOT NULL AND upload_keys_json <> '[]'
-            ORDER BY updated_at DESC
-            """
-        ).fetchall()
-    except sqlite3.OperationalError:
-        bridge_rows = []
-    for row in bridge_rows:
-        uploaded_keys = _read_json_text(str(row["upload_keys_json"] or ""), [])
-        if not isinstance(uploaded_keys, list):
-            continue
-        for uploaded in uploaded_keys:
-            if not isinstance(uploaded, dict) or uploaded.get("status") != "uploaded":
-                continue
-            pair = (str(uploaded.get("bucket") or ""), str(uploaded.get("key") or ""))
-            if pair not in planned_pairs or pair in current:
-                continue
-            current[pair] = {
-                "photoId": str(row["photo_id"] or ""),
-                "kind": str(uploaded.get("kind") or ""),
-                "bytes": int(uploaded["bytes"]) if uploaded.get("bytes") is not None else None,
-                "lastSeenAt": str(row["updated_at"] or ""),
-                "source": "sidecar-upload-bridge-ledger",
-            }
     return current
 
 

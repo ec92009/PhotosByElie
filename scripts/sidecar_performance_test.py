@@ -108,6 +108,69 @@ class IndexedWindowTest(unittest.TestCase):
 
             self.assertEqual(set(result), {("public", "preview-1777")})
 
+    def test_deleted_r2_object_is_not_resurrected_by_historical_upload_ledger(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            sidecar_state_db.upsert_assets(
+                repo_root,
+                [{
+                    "assetId": "asset-1",
+                    "sourceAnchor": "apple-photos://asset-1",
+                    "mediaType": "photo",
+                    "filename": "Photo.jpg",
+                }],
+            )
+            with sidecar_state_db.connect(repo_root) as conn:
+                conn.execute(
+                    """
+                    CREATE TABLE r2_objects (
+                      bucket TEXT NOT NULL,
+                      object_key TEXT NOT NULL,
+                      photo_id TEXT,
+                      object_kind TEXT,
+                      lifecycle_state TEXT NOT NULL,
+                      bytes INTEGER,
+                      last_seen_at TEXT,
+                      PRIMARY KEY (bucket, object_key)
+                    ) WITHOUT ROWID
+                    """
+                )
+                conn.execute(
+                    """
+                    INSERT INTO r2_objects
+                      (bucket, object_key, photo_id, object_kind, lifecycle_state, bytes, last_seen_at)
+                    VALUES ('public', 'preview-deleted', 'photo-1', 'public-preview',
+                            'deleted_confirmed', 10, '2026-07-28T00:00:00Z')
+                    """
+                )
+                conn.execute(
+                    """
+                    INSERT INTO sidecar_upload_bridge_runs
+                      (run_id, mode, status, execute_upload, limit_count, started_at,
+                       completed_at, spool_root, summary_json, created_at, updated_at)
+                    VALUES ('old-run', 'execute-batch', 'completed', 1, 1, '', '', '', '{}', '', '')
+                    """
+                )
+                conn.execute(
+                    """
+                    INSERT INTO sidecar_upload_bridge_run_items
+                      (run_item_id, run_id, asset_id, photo_id, filename, media_type,
+                       upload_keys_json, status, export_status, upload_status,
+                       created_at, updated_at)
+                    VALUES (
+                      'old-item', 'old-run', 'asset-1', 'photo-1', 'Photo.jpg', 'photo',
+                      '[{"bucket":"public","key":"preview-deleted","kind":"public-preview","status":"uploaded","bytes":10}]',
+                      'uploaded', 'exported', 'uploaded', '', ''
+                    )
+                    """
+                )
+                result = sidecar_state_db._current_r2_objects_for_plan(
+                    conn,
+                    [{"bucket": "public", "key": "preview-deleted"}],
+                )
+
+            self.assertEqual(result, {})
+
     def test_cloud_id_filters_and_order_do_not_require_legacy_positions(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             repo_root = Path(temp_dir)

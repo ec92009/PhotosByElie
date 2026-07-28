@@ -1,5 +1,21 @@
 # PhotosByElie Handoff
 
+## 2026-07-28 — Upload review uses stable 200-item trays
+
+- Backstage `0.4.25` build `36` loads at most 200 approved, upload-ready
+  assets into a stable Upload tray.
+- Return to Review and Hide remove successful rows from that tray without
+  backfilling from the larger queue. The shown count therefore shrinks as the
+  owner reviews it.
+- Publish these assets targets exactly the rows remaining in the tray.
+  Verified successes leave the tray; independently failed rows remain for
+  retry.
+- When the tray is empty, **Load next 200** explicitly starts the next review
+  batch. Backstage does not silently replace reviewed rows.
+- Acceptance remains read-only: verify the signed app copy, batch copy, and
+  button states without returning, hiding, uploading, or publishing a real
+  asset.
+
 ## 2026-07-28 — Review propagation follows the current AI-reason intent
 
 - Backstage `0.4.24` build `35` treats selected AI-review reasons as the

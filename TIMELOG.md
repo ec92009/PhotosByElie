@@ -684,8 +684,9 @@ Clock state: running
 | 2026-07-28 | 20:14 CEST | 20:19 CEST | 0:03 | Requested Lightroom-style Culling rating/color filters, picked-card flag badges, and immediate hidden-card desaturation; background diagnosis, implementation, tests, build, and installation time excluded. |
 | 2026-07-28 | 20:23 CEST | 20:28 CEST | 0:03 | Reported Hidden cards escaping the deselected status filter and raw SQLite-lock job JSON in the Culling header; background diagnosis, repair, tests, build, and installation time excluded. |
 | 2026-07-28 | 20:54 CEST | 20:56 CEST | 0:02 | Clarified that Review propagation must copy the currently selected AI-review reasons through the standard propagation scope without implying approval; background diagnosis, implementation, tests, build, and installation time excluded. |
+| 2026-07-28 | 21:02 CEST | 21:08 CEST | 0:03 | Defined Uploads as a stable 200-item review tray: Return to Review and Hide shrink it without backfill, publishing targets exactly what remains, failures stay for retry, and the next 200 load explicitly; background diagnosis, implementation, tests, build, and installation time excluded. |
 
 ## Totals
 
-Active collaboration time used: 33:28
+Active collaboration time used: 33:31
 Remaining budget: not set

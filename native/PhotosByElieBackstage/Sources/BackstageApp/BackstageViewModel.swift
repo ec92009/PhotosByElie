@@ -2628,17 +2628,6 @@ final class BackstageViewModel: ObservableObject {
                 )
             }
             nativeUploadStatus = "Returned \(returnedIDs.count.formatted()) item\(returnedIDs.count == 1 ? "" : "s") to Review. Their fixture picks and metadata were preserved."
-
-            do {
-                let plan = try await deliveryService.nativeUploadPlan(
-                    fixtureID: selectedFixtureID,
-                    limit: 200
-                )
-                nativeUploadPlan = plan
-                selectedDeliveryIDs.formIntersection(Set(plan.items.map(\.id)))
-            } catch {
-                nativeUploadStatus += " The rows were removed locally; refreshing the queue can be retried."
-            }
         } catch {
             nativeUploadStatus = "Return to Review failed: \(userFacingMessage(for: error))"
         }
@@ -2687,16 +2676,6 @@ final class BackstageViewModel: ObservableObject {
                 )
             }
             nativeUploadStatus = "Hid \(hiddenIDs.count.formatted()) item\(hiddenIDs.count == 1 ? "" : "s"). Their rows were removed from this upload queue."
-            do {
-                let plan = try await deliveryService.nativeUploadPlan(
-                    fixtureID: selectedFixtureID,
-                    limit: 200
-                )
-                nativeUploadPlan = plan
-                selectedDeliveryIDs.formIntersection(Set(plan.items.map(\.id)))
-            } catch {
-                nativeUploadStatus += " Refreshing the queue can be retried."
-            }
         } catch {
             nativeUploadStatus = "Hide failed: \(userFacingMessage(for: error))"
         }
@@ -2819,6 +2798,9 @@ final class BackstageViewModel: ObservableObject {
         var totalProcessed = 0
         var totalLive = 0
         var totalFailed = 0
+        var attemptedIDs = Set<String>()
+        var successfulIDs = Set<String>()
+        var failedIDs = Set<String>()
         do {
             for (batchIndex, batch) in batches.enumerated() {
                 var run = try await deliveryService.startNativeUpload(
@@ -2826,6 +2808,7 @@ final class BackstageViewModel: ObservableObject {
                     limit: batch.count,
                     concurrency: 4
                 )
+                attemptedIDs.formUnion(batch)
                 nativeUploadRun = run
                 totalRequested += run.requested
                 if run.requested == 0 { continue }
@@ -2839,20 +2822,97 @@ final class BackstageViewModel: ObservableObject {
                 totalProcessed += run.processed
                 totalLive += run.live
                 totalFailed += run.failed
+                successfulIDs.formUnion(
+                    run.items.lazy.filter { $0.status == "live" }.map(\.assetID)
+                )
+                failedIDs.formUnion(
+                    run.items.lazy.filter { $0.status == "failed" }.map(\.assetID)
+                )
             }
             let skipped = max(0, ids.count - totalRequested)
             let completion = totalFailed == 0
                 ? "Published \(totalLive) verified asset\(totalLive == 1 ? "" : "s")."
                 : "Published \(totalLive); \(totalFailed) failed and remain independently retryable."
-            await loadNativeUploadPlan()
+            await preserveNativeUploadTray(
+                afterAttempting: attemptedIDs,
+                successfulIDs: successfulIDs,
+                failedIDs: failedIDs
+            )
             nativeUploadStatus = completion
                 + (skipped > 0 ? " \(skipped) changed eligibility before publication and were skipped safely." : "")
+                + (failedIDs.isEmpty
+                    ? " This batch is complete; load the next 200 when ready."
+                    : " Failed items remain in this tray for retry.")
                 + " Give Back completed for approved metadata."
         } catch {
+            if !attemptedIDs.isEmpty {
+                await preserveNativeUploadTray(
+                    afterAttempting: attemptedIDs,
+                    successfulIDs: successfulIDs,
+                    failedIDs: failedIDs
+                )
+            }
             nativeUploadStatus = (totalProcessed > 0
                 ? "Published \(totalLive) before the run stopped; \(totalFailed) failed. "
                 : "")
                 + userFacingMessage(for: error)
+        }
+    }
+
+    private func preserveNativeUploadTray(
+        afterAttempting attemptedIDs: Set<String>,
+        successfulIDs: Set<String>,
+        failedIDs: Set<String>
+    ) async {
+        guard let current = nativeUploadPlan else { return }
+        let retainedItems = current.items.filter {
+            !attemptedIDs.contains($0.assetID) || failedIDs.contains($0.assetID)
+        }
+        let retainedIDs = Set(retainedItems.map(\.assetID))
+        selectedDeliveryIDs.formIntersection(retainedIDs)
+        for id in attemptedIDs.subtracting(failedIDs) {
+            nativeUploadThumbnails.removeValue(forKey: id)
+        }
+        if !nativeUploadPreviewItemID.isEmpty,
+           !retainedIDs.contains(nativeUploadPreviewItemID) {
+            clearNativeUploadPreview()
+        }
+
+        do {
+            let summary = try await deliveryService.nativeUploadPlan(
+                fixtureID: selectedFixtureID,
+                limit: 200
+            )
+            nativeUploadPlan = NativeUploadPlan(
+                fixtureID: summary.fixtureID,
+                fixtureName: summary.fixtureName,
+                cloudAllowed: summary.cloudAllowed,
+                pickedCount: summary.pickedCount,
+                approvedCount: summary.approvedCount,
+                needsReviewCount: summary.needsReviewCount,
+                needsUploadCount: summary.needsUploadCount,
+                liveCount: summary.liveCount,
+                offset: current.offset,
+                limit: current.limit,
+                hasNext: summary.hasNext,
+                items: retainedItems
+            )
+        } catch {
+            let removedCount = max(0, attemptedIDs.count - failedIDs.count)
+            nativeUploadPlan = NativeUploadPlan(
+                fixtureID: current.fixtureID,
+                fixtureName: current.fixtureName,
+                cloudAllowed: current.cloudAllowed,
+                pickedCount: current.pickedCount,
+                approvedCount: current.approvedCount,
+                needsReviewCount: current.needsReviewCount,
+                needsUploadCount: max(0, current.needsUploadCount - removedCount),
+                liveCount: current.liveCount + successfulIDs.count,
+                offset: current.offset,
+                limit: current.limit,
+                hasNext: current.hasNext,
+                items: retainedItems
+            )
         }
     }
 

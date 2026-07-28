@@ -105,6 +105,8 @@ class NativeCullingParityTest(unittest.TestCase):
             "UploadQuickView",
             "item.keywords.joined",
             'Button("Hide…")',
+            'Button("Load next 200")',
+            "Batch complete",
         ):
             self.assertIn(marker, upload)
         for column in ("Title", "File", "Captured", "State", "Error"):
@@ -114,11 +116,23 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("func loadNativeUploadPreview(", model)
         self.assertIn("items: current.items.filter { !returnedIDs.contains($0.id) }", model)
         self.assertIn("selectedDeliveryIDs.subtract(returnedIDs)", model)
-        self.assertIn("The rows were removed locally; refreshing the queue can be retried.", model)
         self.assertIn(".returnToReview", model)
         self.assertIn("func publishVisibleNativeWindow()", model)
+        self.assertIn("func preserveNativeUploadTray(", model)
+        self.assertIn("items: retainedItems", model)
+        self.assertIn("attemptedIDs.subtracting(failedIDs)", model)
+        self.assertIn("Failed items remain in this tray for retry.", model)
         self.assertIn("stride(from: 0, to: ids.count, by: 50)", model)
         self.assertIn("limit: batch.count", model)
+        self.assertNotIn(
+            'nativeUploadStatus += " The rows were removed locally; refreshing the queue can be retried."',
+            model,
+        )
+        self.assertNotIn(
+            'nativeUploadStatus += " Refreshing the queue can be retried."',
+            model,
+        )
+        self.assertNotIn('Button("Refresh queue")', upload)
         self.assertNotIn("Publish next eligible 50", upload)
 
     def test_review_keeps_approved_and_hidden_cards_as_propagation_anchors(self):

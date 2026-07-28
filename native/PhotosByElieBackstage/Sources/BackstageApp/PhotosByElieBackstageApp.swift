@@ -256,8 +256,10 @@ private struct UploadWorkflowView: View {
                 Text("Upload & publish").font(.largeTitle.bold())
                 Spacer()
                 FixturePicker(model: model)
-                Button("Refresh queue") { Task { await model.loadNativeUploadPlan() } }
-                    .disabled(model.isRunningDelivery || model.selectedFixtureID.isEmpty)
+                if model.nativeUploadPlan?.items.isEmpty == true {
+                    Button("Load next 200") { Task { await model.loadNativeUploadPlan() } }
+                        .disabled(model.isRunningDelivery || model.selectedFixtureID.isEmpty)
+                }
                 Button("Publish selected…") { confirmingSelectedPublication = true }
                     .disabled(model.isRunningDelivery || model.selectedDeliveryIDs.isEmpty)
             }
@@ -294,10 +296,12 @@ private struct UploadWorkflowView: View {
                 }
                 if plan.items.isEmpty {
                     ContentUnavailableView(
-                        "No approved assets need upload",
-                        systemImage: "checkmark.circle",
+                        plan.needsUploadCount > 0 ? "Batch complete" : "No approved assets need upload",
+                        systemImage: plan.needsUploadCount > 0 ? "tray" : "checkmark.circle",
                         description: Text(
-                            plan.needsReviewCount > 0
+                            plan.needsUploadCount > 0
+                                ? "\(plan.needsUploadCount) eligible item\(plan.needsUploadCount == 1 ? "" : "s") remain. Load the next batch of up to 200 when ready."
+                                : plan.needsReviewCount > 0
                                 ? "\(plan.needsReviewCount) picked item\(plan.needsReviewCount == 1 ? "" : "s") still need Review approval."
                                 : "This fixture has no approved publication work waiting."
                         )
@@ -519,7 +523,7 @@ private struct UploadWorkflowView: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Backstage will publish the exact loaded queue window in sequential batches of up to 50. Upload equals publication; each verified asset becomes live immediately.")
+            Text("Backstage will publish exactly the assets remaining in this tray, in sequential batches of up to 50. Successful rows leave the tray; failures remain for retry. Load the next 200 only after this batch is complete.")
         }
     }
 

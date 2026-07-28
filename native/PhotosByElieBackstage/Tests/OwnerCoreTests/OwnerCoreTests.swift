@@ -1167,13 +1167,19 @@ struct OwnerCoreTests {
         let reviewManifest = requests[0].payload["manifest"]?.objectValue
         #expect(reviewManifest?["mode"]?.stringValue == "fixture-review-window")
         #expect(reviewManifest?["reviewMode"]?.stringValue == "full")
+        #expect(reviewManifest?["includePreviews"]?.boolValue == false)
+        #expect(reviewManifest?["launchWorkspace"]?.boolValue == false)
         let applyManifest = requests[1].payload["manifest"]?.objectValue
         #expect(applyManifest?["mode"]?.stringValue == "fixture-review-apply")
         #expect(applyManifest?["reviewAction"]?.stringValue == "request-ai")
         #expect(applyManifest?["propagate"]?.boolValue == true)
+        #expect(applyManifest?["includePreviews"]?.boolValue == false)
+        #expect(applyManifest?["launchWorkspace"]?.boolValue == false)
         let undoManifest = requests[2].payload["manifest"]?.objectValue
         #expect(undoManifest?["mode"]?.stringValue == "fixture-review-undo")
         #expect(undoManifest?["operationId"]?.stringValue == "reviewop-test")
+        #expect(undoManifest?["includePreviews"]?.boolValue == false)
+        #expect(undoManifest?["launchWorkspace"]?.boolValue == false)
     }
 
     @Test("Native requested AI proposals remain draft-only and connector-audited")

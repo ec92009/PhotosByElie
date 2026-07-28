@@ -1127,6 +1127,12 @@ public actor FixtureWorkflowService {
     private func run(_ mode: String, extra: [String: JSONValue]) async throws -> [String: JSONValue] {
         var manifest = extra
         manifest["mode"] = .string(mode)
+        // Native Backstage resolves PhotoKit thumbnails itself. The connector
+        // must not launch the signed bridge to attach redundant data URLs to
+        // fixture reads or mutations; that made simple Review actions wait on
+        // unrelated Photos objects and obscured their successful completion.
+        manifest["includePreviews"] = .bool(false)
+        manifest["launchWorkspace"] = .bool(false)
         let connectorID = await connectorIdentity.connectorID()
         let action = OwnerActionCreate(
             actionKind: "sidecar-culling-review",

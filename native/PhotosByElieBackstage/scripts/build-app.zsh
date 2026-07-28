@@ -8,6 +8,10 @@ output_root="${package_root}/dist"
 app="${output_root}/PhotosByElie Backstage.app"
 contents="${app}/Contents"
 executable="${contents}/MacOS/PhotosByElieBackstage"
+repo_root="${package_root:h:h}"
+icon_source="${repo_root}/assets/branding/photosbyelie-camera-tripod-logo-1024.png"
+iconset="${output_root}/Backstage.iconset"
+icon_file="${contents}/Resources/Backstage.icns"
 
 cd "$package_root"
 swift build -c "$configuration"
@@ -16,6 +20,27 @@ binary_path="$(swift build -c "$configuration" --show-bin-path)/PhotosByElieBack
 rm -rf "$app"
 mkdir -p "${contents}/MacOS" "${contents}/Resources"
 cp "$binary_path" "$executable"
+
+rm -rf "$iconset"
+mkdir -p "$iconset"
+for spec in \
+  "16 icon_16x16.png" \
+  "32 icon_16x16@2x.png" \
+  "32 icon_32x32.png" \
+  "64 icon_32x32@2x.png" \
+  "128 icon_128x128.png" \
+  "256 icon_128x128@2x.png" \
+  "256 icon_256x256.png" \
+  "512 icon_256x256@2x.png" \
+  "512 icon_512x512.png" \
+  "1024 icon_512x512@2x.png"
+do
+  size="${spec%% *}"
+  name="${spec#* }"
+  sips -z "$size" "$size" "$icon_source" --out "${iconset}/${name}" >/dev/null
+done
+iconutil -c icns "$iconset" -o "$icon_file"
+rm -rf "$iconset"
 
 cat > "${contents}/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -28,6 +53,8 @@ cat > "${contents}/Info.plist" <<'PLIST'
   <string>PhotosByElie Backstage</string>
   <key>CFBundleExecutable</key>
   <string>PhotosByElieBackstage</string>
+  <key>CFBundleIconFile</key>
+  <string>Backstage</string>
   <key>CFBundleIdentifier</key>
   <string>com.photosbyelie.backstage</string>
   <key>CFBundleInfoDictionaryVersion</key>
@@ -37,9 +64,9 @@ cat > "${contents}/Info.plist" <<'PLIST'
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>
-  <string>0.4.6</string>
+  <string>0.4.7</string>
   <key>CFBundleVersion</key>
-  <string>17</string>
+  <string>18</string>
   <key>LSMinimumSystemVersion</key>
   <string>14.0</string>
   <key>NSPhotoLibraryUsageDescription</key>

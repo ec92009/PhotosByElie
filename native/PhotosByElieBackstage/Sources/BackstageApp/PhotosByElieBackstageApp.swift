@@ -27,27 +27,33 @@ struct PhotosByElieBackstageApp: App {
                     )
                     .toolbar {
                         ToolbarItem(placement: .primaryAction) {
-                            if model.status == "Connected" {
-                                if model.selection == .culling || model.selection == .review {
-                                    Button {
-                                        withAnimation(.snappy(duration: 0.24)) {
-                                            model.isPreviewPanelVisible.toggle()
+                            HStack(spacing: 10) {
+                                Text(backstageVersionLabel)
+                                    .font(.caption.monospacedDigit())
+                                    .foregroundStyle(.secondary)
+                                    .help("Installed PhotosByElie Backstage version")
+                                if model.status == "Connected" {
+                                    if model.selection == .culling || model.selection == .review {
+                                        Button {
+                                            withAnimation(.snappy(duration: 0.24)) {
+                                                model.isPreviewPanelVisible.toggle()
+                                            }
+                                        } label: {
+                                            Image(systemName: "sidebar.right")
                                         }
-                                    } label: {
-                                        Image(systemName: "sidebar.right")
+                                        .help(
+                                            model.isPreviewPanelVisible
+                                                ? "Collapse preview panel"
+                                                : "Expand preview panel"
+                                        )
                                     }
-                                    .help(
-                                        model.isPreviewPanelVisible
-                                            ? "Collapse preview panel"
-                                            : "Expand preview panel"
-                                    )
-                                }
-                            } else {
-                                HStack(spacing: 8) {
-                                    Circle()
-                                        .fill(.orange)
-                                        .frame(width: 9, height: 9)
-                                    Text(model.status).lineLimit(1)
+                                } else {
+                                    HStack(spacing: 8) {
+                                        Circle()
+                                            .fill(.orange)
+                                            .frame(width: 9, height: 9)
+                                        Text(model.status).lineLimit(1)
+                                    }
                                 }
                             }
                         }
@@ -69,6 +75,16 @@ struct PhotosByElieBackstageApp: App {
                 .keyboardShortcut("r")
             }
         }
+    }
+
+    private var backstageVersionLabel: String {
+        let short = Bundle.main.object(
+            forInfoDictionaryKey: "CFBundleShortVersionString"
+        ) as? String ?? "unknown"
+        let build = Bundle.main.object(
+            forInfoDictionaryKey: "CFBundleVersion"
+        ) as? String ?? "?"
+        return "v\(short) (\(build))"
     }
 
     @ViewBuilder
@@ -176,7 +192,10 @@ private struct OverviewView: View {
                     LabeledContent("Background-only", value: model.photosBridgeHealth.headless ? "Yes" : "No")
                     LabeledContent("Photos access", value: model.photosBridgeHealth.photoAccess)
                     if !model.photosBridgeHealth.version.isEmpty {
-                        LabeledContent("Helper protocol", value: model.photosBridgeHealth.version)
+                        LabeledContent(
+                            "Photos Bridge helper version",
+                            value: model.photosBridgeHealth.version
+                        )
                     }
                     Text(model.photosBridgeHealth.message)
                         .font(.callout)
@@ -2229,6 +2248,16 @@ private struct ReviewInspector: View {
                         }
                     }
                     .buttonStyle(.borderedProminent)
+                    HStack(spacing: 8) {
+                        if model.isRunningReview {
+                            ProgressView()
+                                .controlSize(.small)
+                        }
+                        Text(model.reviewStatus)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(3)
+                    }
                     Divider()
                     Text("Mark for AI review")
                         .font(.headline)

@@ -583,16 +583,17 @@ def start_local_status_server(
             except Exception as error:  # noqa: BLE001 - cloud ledger records the durable failure.
                 body = json.dumps({"ok": False, "error": str(error)}, separators=(",", ":")).encode("utf-8")
                 status = 502
-            self.send_response(status)
-            self._send_cors_headers()
-            self.send_header("Content-Type", "application/json")
-            self.send_header("Content-Length", str(len(body)))
-            self.end_headers()
             try:
+                self.send_response(status)
+                self._send_cors_headers()
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
                 self.wfile.write(body)
             except (BrokenPipeError, ConnectionResetError):
                 # The browser/native wake is only an acceleration hint and may
-                # stop waiting once the durable Worker action is complete.
+                # stop waiting once the durable Worker action is complete,
+                # including while the response headers are being flushed.
                 pass
 
         def do_GET(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API.

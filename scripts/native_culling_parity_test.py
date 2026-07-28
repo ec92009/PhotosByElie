@@ -50,6 +50,10 @@ class NativeCullingParityTest(unittest.TestCase):
             "Button(\"Stop\")",
             ".frame(minHeight: 140, idealHeight: 180, maxHeight: 220)",
             "ScrollView(.vertical)",
+            "CullingMediaFilter.selectableCases",
+            "FixtureCullingView.selectableCases",
+            "cullingRatingFilters.contains",
+            "CullingColorFilter.selectableCases",
         ):
             self.assertIn(marker, source)
         self.assertNotIn("127.0.0.1:8011", source)

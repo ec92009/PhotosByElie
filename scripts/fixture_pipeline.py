@@ -1262,6 +1262,7 @@ def fixture_culling_window(
     fixture_id: str,
     *,
     view: str = "undecided",
+    views: Iterable[Any] | None = None,
     offset: int = 0,
     limit: int = 200,
     search: str = "",
@@ -1273,6 +1274,17 @@ def fixture_culling_window(
     clean_view = str(view or "undecided").strip().casefold()
     if clean_view not in CULLING_VIEWS:
         raise ValueError("culling view must be undecided, picked, hidden, or all-active")
+    clean_views = {
+        str(value or "").strip().casefold()
+        for value in (views or [])
+        if str(value or "").strip().casefold() in {"undecided", "picked", "hidden"}
+    }
+    if not clean_views:
+        clean_views = (
+            {"undecided", "picked", "hidden"}
+            if clean_view == "all-active"
+            else {clean_view}
+        )
     safe_offset = max(0, int(offset or 0))
     safe_limit = max(1, min(500, int(limit or 200)))
     with connect(repo_root) as conn:
@@ -1382,9 +1394,12 @@ def fixture_culling_window(
         ).fetchone()
         view_predicates = list(predicates)
         view_params = list(params)
-        if clean_view != "all-active":
-            view_predicates.append("COALESCE(current_decision.placement_state, 'undecided') = ?")
-            view_params.append(clean_view)
+        if clean_views != {"undecided", "picked", "hidden"}:
+            placeholders = ",".join("?" for _ in clean_views)
+            view_predicates.append(
+                f"COALESCE(current_decision.placement_state, 'undecided') IN ({placeholders})"
+            )
+            view_params.extend(sorted(clean_views))
         view_where_sql = " AND ".join(view_predicates)
         filtered_total = conn.execute(
             f"SELECT count(*) FROM {from_sql} WHERE {view_where_sql}",
@@ -1457,7 +1472,7 @@ def fixture_culling_window(
         "readOnly": True,
         "fixtureId": fixture_id,
         "candidateMode": str(fixture["candidate_mode"] or ""),
-        "view": clean_view,
+        "view": next(iter(clean_views)) if len(clean_views) == 1 else "all-active",
         "offset": safe_offset,
         "limit": safe_limit,
         "count": len(items),

@@ -1177,6 +1177,20 @@ class FixturePipelineTest(unittest.TestCase):
         self.assertEqual(hidden["items"][0]["color"], "green")
         self.assertEqual(hidden["items"][0]["keywords"], ["museum"])
 
+        combined = fixture_culling_window(
+            self.root,
+            fixture["fixtureId"],
+            views=["undecided", "hidden"],
+            ratings=[0, 4],
+            colors=["none", "green"],
+        )
+        self.assertEqual(combined["view"], "all-active")
+        self.assertEqual(
+            [item["assetId"] for item in combined["items"]],
+            ["asset-3", "asset-2", "asset-1"],
+        )
+        self.assertEqual(combined["summary"]["filtered"], 3)
+
     def test_access_grants_inherit_downward_only_and_new_roots_are_owner_only(self):
         root = create_fixture(self.root, "Root", fixture_id="root")
         child = create_fixture(

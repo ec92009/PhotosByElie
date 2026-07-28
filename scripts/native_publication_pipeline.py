@@ -130,6 +130,140 @@ def _effective_fixture_ids(conn, asset_id: str) -> list[str]:
     return [str(row["fixture_id"]) for row in rows]
 
 
+def upload_eligibility_plan(
+    repo_root: Path,
+    *,
+    fixture_id: str,
+    offset: int = 0,
+    limit: int = 200,
+) -> dict[str, Any]:
+    """Return a read-only fixture-scoped view of approved assets awaiting publication."""
+    clean_fixture_id = str(fixture_id or "").strip()
+    if not clean_fixture_id:
+        raise ValueError("fixture ID is required")
+    safe_offset = max(0, int(offset or 0))
+    safe_limit = max(1, min(500, int(limit or 200)))
+    with connect(repo_root) as conn:
+        fixture = conn.execute(
+            """
+            SELECT fixture_id, name
+            FROM fixtures
+            WHERE fixture_id = ? AND archived_at IS NULL
+            """,
+            (clean_fixture_id,),
+        ).fetchone()
+        if not fixture:
+            raise ValueError("fixture does not exist or is archived")
+        policy = effective_fixture_policy(
+            repo_root,
+            clean_fixture_id,
+            conn=conn,
+        )["effective"]
+        cloud_allowed = policy_allows_cloud(policy)
+        summary = conn.execute(
+            """
+            SELECT
+              count(*) AS picked_count,
+              sum(CASE WHEN editorial.editorial_state = 'approved' THEN 1 ELSE 0 END)
+                AS approved_count,
+              sum(CASE WHEN editorial.editorial_state != 'approved' THEN 1 ELSE 0 END)
+                AS needs_review_count,
+              sum(CASE WHEN editorial.editorial_state = 'approved'
+                        AND delivery.delivery_state IN ('needs-upload', 'failed')
+                       THEN 1 ELSE 0 END)
+                AS needs_upload_count,
+              sum(CASE WHEN editorial.editorial_state = 'approved'
+                        AND delivery.delivery_state = 'live'
+                       THEN 1 ELSE 0 END)
+                AS live_count
+            FROM fixture_asset_decisions AS decision
+            JOIN sidecar_assets AS asset ON asset.asset_id = decision.asset_id
+            JOIN asset_editorial_state AS editorial ON editorial.asset_id = decision.asset_id
+            JOIN asset_delivery_state AS delivery ON delivery.asset_id = decision.asset_id
+            WHERE decision.fixture_id = ?
+              AND decision.eligibility_state = 'active'
+              AND decision.placement_state = 'picked'
+              AND (asset.missing_at IS NULL OR asset.missing_at = '')
+              AND NOT EXISTS (
+                SELECT 1 FROM sidecar_tombstones AS tombstone
+                WHERE tombstone.asset_id = decision.asset_id
+                  AND tombstone.tombstone_state = 'active'
+              )
+            """,
+            (clean_fixture_id,),
+        ).fetchone()
+        items: list[dict[str, Any]] = []
+        if cloud_allowed:
+            rows = conn.execute(
+                """
+                SELECT decision.asset_id,
+                       COALESCE(NULLIF(global_decision.title, ''),
+                                NULLIF(asset.photos_title, ''),
+                                asset.filename,
+                                decision.asset_id) AS title,
+                       COALESCE(asset.filename, '') AS filename,
+                       COALESCE(asset.captured_at, '') AS captured_at,
+                       delivery.delivery_state,
+                       delivery.last_error
+                FROM fixture_asset_decisions AS decision
+                JOIN sidecar_assets AS asset ON asset.asset_id = decision.asset_id
+                JOIN asset_editorial_state AS editorial ON editorial.asset_id = decision.asset_id
+                JOIN asset_delivery_state AS delivery ON delivery.asset_id = decision.asset_id
+                LEFT JOIN sidecar_decisions AS global_decision
+                  ON global_decision.asset_id = decision.asset_id
+                WHERE decision.fixture_id = ?
+                  AND decision.eligibility_state = 'active'
+                  AND decision.placement_state = 'picked'
+                  AND editorial.editorial_state = 'approved'
+                  AND delivery.delivery_state IN ('needs-upload', 'failed')
+                  AND (asset.missing_at IS NULL OR asset.missing_at = '')
+                  AND NOT EXISTS (
+                    SELECT 1 FROM sidecar_tombstones AS tombstone
+                    WHERE tombstone.asset_id = decision.asset_id
+                      AND tombstone.tombstone_state = 'active'
+                  )
+                  AND NOT EXISTS (
+                    SELECT 1 FROM asset_source_versions AS source
+                    WHERE source.asset_id = decision.asset_id
+                      AND source.state = 'source-missing'
+                      AND source.source_exists = 0
+                  )
+                ORDER BY delivery.updated_at, decision.asset_id
+                LIMIT ? OFFSET ?
+                """,
+                (clean_fixture_id, safe_limit, safe_offset),
+            ).fetchall()
+            items = [
+                {
+                    "assetId": str(row["asset_id"]),
+                    "title": str(row["title"] or ""),
+                    "filename": str(row["filename"] or ""),
+                    "capturedAt": str(row["captured_at"] or ""),
+                    "deliveryState": str(row["delivery_state"] or "needs-upload"),
+                    "errorText": str(row["last_error"] or ""),
+                }
+                for row in rows
+            ]
+    needs_upload_count = int(summary["needs_upload_count"] or 0) if cloud_allowed else 0
+    return {
+        "ok": True,
+        "readOnly": True,
+        "fixtureId": clean_fixture_id,
+        "fixtureName": str(fixture["name"] or clean_fixture_id),
+        "cloudAllowed": cloud_allowed,
+        "pickedCount": int(summary["picked_count"] or 0),
+        "approvedCount": int(summary["approved_count"] or 0),
+        "needsReviewCount": int(summary["needs_review_count"] or 0),
+        "needsUploadCount": needs_upload_count,
+        "liveCount": int(summary["live_count"] or 0),
+        "offset": safe_offset,
+        "limit": safe_limit,
+        "count": len(items),
+        "hasNext": safe_offset + len(items) < needs_upload_count,
+        "items": items,
+    }
+
+
 def _upsert_source_version(
     conn,
     asset_id: str,

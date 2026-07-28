@@ -18,6 +18,7 @@ from native_publication_pipeline import (
     record_photos_sync_snapshot,
     record_sale_reference,
     run_upload_batch,
+    upload_eligibility_plan,
 )
 from sidecar_state_db import upsert_assets
 
@@ -118,6 +119,33 @@ class NativePublicationPipelineTest(unittest.TestCase):
         self.assertEqual(result["live"], 1)
         self.assertEqual(result["failed"], 1)
         self.assertEqual(result["remaining"], 0)
+
+    def test_upload_eligibility_plan_is_fixture_scoped_and_read_only(self):
+        child = create_fixture(self.root, "Child", parent_fixture_id=self.fixture["fixtureId"])
+        set_fixture_asset_state(self.root, child["fixtureId"], ["asset-1"], "picked")
+
+        root_plan = upload_eligibility_plan(
+            self.root,
+            fixture_id=self.fixture["fixtureId"],
+        )
+        child_plan = upload_eligibility_plan(
+            self.root,
+            fixture_id=child["fixtureId"],
+        )
+
+        self.assertTrue(root_plan["readOnly"])
+        self.assertEqual(root_plan["pickedCount"], 2)
+        self.assertEqual(root_plan["approvedCount"], 2)
+        self.assertEqual(root_plan["needsUploadCount"], 2)
+        self.assertEqual([item["assetId"] for item in root_plan["items"]], ["asset-1", "asset-2"])
+        self.assertEqual(child_plan["pickedCount"], 1)
+        self.assertEqual(child_plan["needsUploadCount"], 1)
+        self.assertEqual([item["assetId"] for item in child_plan["items"]], ["asset-1"])
+        with connect(self.root) as conn:
+            self.assertEqual(
+                conn.execute("SELECT count(*) total FROM asset_upload_runs").fetchone()["total"],
+                0,
+            )
 
     def test_source_missing_withdraws_but_preserves_r2(self):
         record_photos_sync_snapshot(

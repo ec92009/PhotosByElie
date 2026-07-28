@@ -245,13 +245,50 @@ private struct UploadWorkflowView: View {
             HStack {
                 Text("Upload & publish").font(.largeTitle.bold())
                 Spacer()
+                FixturePicker(model: model)
+                Button("Refresh queue") { Task { await model.loadNativeUploadPlan() } }
+                    .disabled(model.isRunningDelivery || model.selectedFixtureID.isEmpty)
                 Button("Publish selected…") { confirmingSelectedPublication = true }
                     .disabled(model.isRunningDelivery || model.selectedDeliveryIDs.isEmpty)
                 Button("Publish next eligible 50…") { confirmingNextPublication = true }
-                    .disabled(model.isRunningDelivery)
+                    .disabled(model.isRunningDelivery || (model.nativeUploadPlan?.items.isEmpty ?? true))
             }
             Text("Upload equals publication. Each verified source version becomes live immediately in every effective picked fixture; ACS alone determines who can see it. A failed asset remains Needs Upload without blocking the rest.")
                 .foregroundStyle(.secondary)
+            if model.isRunningDelivery, model.nativeUploadPlan == nil {
+                ProgressView("Loading approved publication eligibility…")
+            }
+            Text(model.nativeUploadStatus).font(.callout).foregroundStyle(.secondary)
+            if let plan = model.nativeUploadPlan {
+                HStack {
+                    LabeledContent("Picked", value: "\(plan.pickedCount)")
+                    LabeledContent("Awaiting Review", value: "\(plan.needsReviewCount)")
+                    LabeledContent("Approved", value: "\(plan.approvedCount)")
+                    LabeledContent("Needs Upload", value: "\(plan.needsUploadCount)")
+                    LabeledContent("Live", value: "\(plan.liveCount)")
+                }
+                if plan.items.isEmpty {
+                    ContentUnavailableView(
+                        "No approved assets need upload",
+                        systemImage: "checkmark.circle",
+                        description: Text(
+                            plan.needsReviewCount > 0
+                                ? "\(plan.needsReviewCount) picked item\(plan.needsReviewCount == 1 ? "" : "s") still need Review approval."
+                                : "This fixture has no approved publication work waiting."
+                        )
+                    )
+                    .frame(maxWidth: .infinity, minHeight: 150)
+                } else {
+                    Table(plan.items, selection: $model.selectedDeliveryIDs) {
+                        TableColumn("Title", value: \.title)
+                        TableColumn("File", value: \.filename)
+                        TableColumn("Captured", value: \.capturedAt)
+                        TableColumn("State", value: \.deliveryState)
+                        TableColumn("Error", value: \.errorText)
+                    }
+                    .frame(minHeight: 220)
+                }
+            }
             if let run = model.nativeUploadRun, run.requested > 0 {
                 ProgressView(
                     value: Double(run.processed),
@@ -259,15 +296,6 @@ private struct UploadWorkflowView: View {
                 ) {
                     Text("\(run.processed) of \(run.requested) • \(run.live) live • \(run.failed) failed • \(run.remaining) remaining")
                 }
-            }
-            Text(model.nativeUploadStatus).font(.callout).foregroundStyle(.secondary)
-            if model.nativeUploadRun == nil {
-                ContentUnavailableView(
-                    "No upload run is active",
-                    systemImage: "arrow.up.circle",
-                    description: Text("Publishing is immediate. Review the eligibility scope before starting either guarded action.")
-                )
-                .frame(maxWidth: .infinity, minHeight: 180)
             }
             if let run = model.nativeUploadRun, !run.items.isEmpty {
                 Table(run.items) {
@@ -280,8 +308,7 @@ private struct UploadWorkflowView: View {
             DisclosureGroup("Legacy recovery and fixture receipt inspection") {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
-                        FixturePicker(model: model)
-                        Button("Load legacy plan") { Task { await model.loadDeliveryPlan() } }
+                        Button("Load receipt audit") { Task { await model.loadDeliveryPlan() } }
                         Button("Queue health") { Task { await model.loadUploadHealth() } }
                         Button("Retry legacy failures") { Task { await model.retryDeliveryFailures() } }
                             .disabled(model.isRunningDelivery || model.deliveryFailedIDs.isEmpty)
@@ -327,6 +354,15 @@ private struct UploadWorkflowView: View {
         .padding()
         .task {
             if model.fixtures.isEmpty { await model.loadFixtures() }
+            if model.selectedFixtureID.isEmpty {
+                model.selectedFixtureID = model.flatFixtures.first(where: { $0.id == "fixture-expo" })?.id
+                    ?? model.flatFixtures.first(where: { $0.parentID == nil && !$0.isArchived })?.id
+                    ?? ""
+            }
+        }
+        .task(id: model.selectedFixtureID) {
+            guard !model.selectedFixtureID.isEmpty else { return }
+            await model.loadNativeUploadPlan()
         }
         .confirmationDialog(
             "Adopt this verified upload run into the selected fixture?",
@@ -663,30 +699,64 @@ private struct MediaLibraryView: View {
                             .textFieldStyle(.roundedBorder)
                             .frame(width: 240)
                             .onSubmit { model.applyCullingFilters() }
-                        Picker("Media", selection: $model.cullingMediaFilter) {
-                            ForEach(CullingMediaFilter.allCases, id: \.self) {
-                                Text($0.label).tag($0)
+                        Menu {
+                            ForEach(CullingMediaFilter.selectableCases, id: \.self) { filter in
+                                Toggle(
+                                    filter.label,
+                                    isOn: Binding(
+                                        get: { model.cullingMediaFilters.contains(filter) },
+                                        set: { _ in model.toggleCullingMediaFilter(filter) }
+                                    )
+                                )
                             }
+                        } label: {
+                            Text(model.cullingMediaFilterLabel)
+                                .lineLimit(1)
                         }
                         .frame(width: 110)
-                        Picker("View", selection: $model.cullingView) {
-                            ForEach(FixtureCullingView.allCases, id: \.self) {
-                                Text($0.label).tag($0)
+                        Menu {
+                            ForEach(FixtureCullingView.selectableCases, id: \.self) { view in
+                                Toggle(
+                                    view.label,
+                                    isOn: Binding(
+                                        get: { model.cullingViews.contains(view) },
+                                        set: { _ in model.toggleCullingViewFilter(view) }
+                                    )
+                                )
                             }
+                        } label: {
+                            Text(model.cullingViewFilterLabel)
+                                .lineLimit(1)
                         }
                         .frame(width: 120)
-                        Picker("Rating", selection: $model.cullingRatingFilter) {
-                            Text("All ratings").tag(-1)
+                        Menu {
                             ForEach(0...5, id: \.self) { value in
-                                Text(value == 0 ? "No rating" : "\(value) star\(value == 1 ? "" : "s")")
-                                    .tag(value)
+                                Toggle(
+                                    value == 0 ? "No rating" : "\(value) star\(value == 1 ? "" : "s")",
+                                    isOn: Binding(
+                                        get: { model.cullingRatingFilters.contains(value) },
+                                        set: { _ in model.toggleCullingRatingFilter(value) }
+                                    )
+                                )
                             }
+                        } label: {
+                            Text(model.cullingRatingFilterLabel)
+                                .lineLimit(1)
                         }
                         .frame(width: 120)
-                        Picker("Color", selection: $model.cullingColorFilter) {
-                            ForEach(CullingColorFilter.allCases, id: \.self) {
-                                Text($0.label).tag($0)
+                        Menu {
+                            ForEach(CullingColorFilter.selectableCases, id: \.self) { color in
+                                Toggle(
+                                    color.label,
+                                    isOn: Binding(
+                                        get: { model.cullingColorFilters.contains(color) },
+                                        set: { _ in model.toggleCullingColorFilter(color) }
+                                    )
+                                )
                             }
+                        } label: {
+                            Text(model.cullingColorFilterLabel)
+                                .lineLimit(1)
                         }
                         .frame(width: 110)
                         Button("Apply") { model.applyCullingFilters() }
@@ -696,10 +766,10 @@ private struct MediaLibraryView: View {
                             .disabled(model.focusedCullingAssetID == nil)
                     }
                     .labelsHidden()
-                    .onChange(of: model.cullingMediaFilter) { _, _ in model.applyCullingFilters() }
-                    .onChange(of: model.cullingView) { _, _ in model.applyCullingFilters() }
-                    .onChange(of: model.cullingRatingFilter) { _, _ in model.applyCullingFilters() }
-                    .onChange(of: model.cullingColorFilter) { _, _ in model.applyCullingFilters() }
+                    .onChange(of: model.cullingMediaFilters) { _, _ in model.applyCullingFilters() }
+                    .onChange(of: model.cullingViews) { _, _ in model.applyCullingFilters() }
+                    .onChange(of: model.cullingRatingFilters) { _, _ in model.applyCullingFilters() }
+                    .onChange(of: model.cullingColorFilters) { _, _ in model.applyCullingFilters() }
                     .fixedSize(horizontal: false, vertical: true)
                     FlowLayout(spacing: 8) {
                         Text("\(workspace.summary.filtered.formatted()) match • \(workspace.summary.total.formatted()) in scope")
@@ -1061,7 +1131,7 @@ private struct MediaLibraryView: View {
     private var cullingViewportIdentity: String {
         [
             model.cullingFixtureID,
-            model.cullingView.rawValue,
+            model.cullingViews.map(\.rawValue).sorted().joined(separator: ","),
             String(model.cullingWorkspace.offset),
             model.visibleCullingAssets.first?.id ?? "empty",
         ].joined(separator: ":")

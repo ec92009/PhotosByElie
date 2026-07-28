@@ -1,5 +1,30 @@
 # PhotosByElie Handoff
 
+## 2026-07-28 — Multi-select Culling filters and native Upload eligibility
+
+- Backstage `0.4.14` build `25` replaces the mutually exclusive Culling
+  filter pickers with independent checkbox menus. Media, fixture decision,
+  rating, and color each accept multiple selected values; choices are ORed
+  within one menu and the four menus are ANDed together. The final checked
+  value in a menu cannot be removed accidentally.
+- The bounded fixture Culling query accepts multiple decision states in one
+  read-only request, including combinations such as Undecided + Picked or
+  Picked + Hidden. Clear restores all media, ratings, and colors while keeping
+  Undecided as the default decision view; Review picked selects only Picked.
+- Uploads now loads a read-only, fixture-scoped native eligibility plan instead
+  of presenting only the empty legacy receipt-recovery table. The plan
+  distinguishes picked items still awaiting Review, Review-approved items that
+  need upload, already-live items, and blocked items before either guarded
+  publish action is available. The live Expo plan at implementation time was
+  2,062 picked, 130 awaiting Review, 1,932 approved/needs upload, and 0 live;
+  these counts are expected to change with later owner decisions.
+- Verification passes: 46 OwnerCore tests, 156 Node tests, 164 Python tests,
+  publication validation, release signing, and the installed version check.
+  The native desktop-control pipe closed before returning the final
+  accessibility tree, so signed-app visual acceptance of the checkbox menus
+  and Upload summary remains the next read-only checkpoint. No Culling,
+  Review, upload, publication, delivery, access, or client state was changed.
+
 ## 2026-07-28 — Culling pane containment candidate
 
 - Backstage `0.4.12` build `23` removes the layout-affecting `GeometryReader`

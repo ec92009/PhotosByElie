@@ -408,6 +408,7 @@ from native_publication_pipeline import (  # noqa: E402
     record_photos_sync_snapshot,
     record_sale_reference,
     reconcile_r2_objects,
+    upload_eligibility_plan as native_upload_eligibility_plan,
     upload_run_status as native_upload_run_status,
 )
 
@@ -2138,6 +2139,7 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
                 repo_root,
                 str(manifest.get("fixtureId") or ""),
                 view=str(manifest.get("view") or "undecided"),
+                views=manifest.get("views") or [],
                 offset=int(manifest.get("offset") or 0),
                 limit=int(manifest.get("limit") or 200),
                 search=str(manifest.get("search") or ""),
@@ -2258,6 +2260,16 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
                 })
             finally:
                 PHOTOS_INCREMENTAL_SYNC_LOCK.release()
+    elif mode == "asset-upload-plan":
+        result.update({
+            "readOnly": True,
+            "uploadPlan": native_upload_eligibility_plan(
+                repo_root,
+                fixture_id=str(manifest.get("fixtureId") or ""),
+                offset=int(manifest.get("offset") or 0),
+                limit=int(manifest.get("limit") or 200),
+            ),
+        })
     elif mode == "asset-upload-run-start":
         upload_run = create_native_upload_run(
             repo_root,
@@ -2621,6 +2633,7 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
         "fixture-la-concha-migrate": "Created the La Concha target fixture tree without moving source assets.",
         "photos-sync-snapshot": "Imported the incremental Apple Photos snapshot into the version ledger.",
         "photos-sync-run": "Scanned a bounded Apple Photos slice and imported metadata and rendered-image fingerprints.",
+        "asset-upload-plan": "Loaded the fixture-scoped approved publication queue without changing any asset.",
         "asset-upload-run-start": "Started a bounded verified upload run. Each successful asset publishes immediately.",
         "asset-upload-run-status": "Loaded current upload and publication progress.",
         "asset-sale-reference-record": "Protected the exact sold source version and object keys.",
@@ -2648,6 +2661,7 @@ def new_owner_connector_result(repo_root: Path, payload: dict) -> dict:
     if mode.startswith("fixture-") or mode in {
         "photos-sync-snapshot",
         "photos-sync-run",
+        "asset-upload-plan",
         "asset-upload-run-start",
         "asset-upload-run-status",
         "asset-sale-reference-record",

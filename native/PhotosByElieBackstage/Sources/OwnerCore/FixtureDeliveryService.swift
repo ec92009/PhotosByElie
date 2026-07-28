@@ -113,6 +113,31 @@ public struct NativeUploadRunItem: Identifiable, Sendable, Equatable {
     public var errorText: String
 }
 
+public struct NativeUploadPlanItem: Identifiable, Sendable, Equatable {
+    public var id: String { assetID }
+    public var assetID: String
+    public var title: String
+    public var filename: String
+    public var capturedAt: String
+    public var deliveryState: String
+    public var errorText: String
+}
+
+public struct NativeUploadPlan: Sendable, Equatable {
+    public var fixtureID: String
+    public var fixtureName: String
+    public var cloudAllowed: Bool
+    public var pickedCount: Int
+    public var approvedCount: Int
+    public var needsReviewCount: Int
+    public var needsUploadCount: Int
+    public var liveCount: Int
+    public var offset: Int
+    public var limit: Int
+    public var hasNext: Bool
+    public var items: [NativeUploadPlanItem]
+}
+
 public struct NativeUploadRun: Sendable, Equatable {
     public var runID: String
     public var status: String
@@ -235,6 +260,51 @@ public actor FixtureDeliveryService {
             ]
         )
         return try decodeNativeUploadRun(action)
+    }
+
+    public func nativeUploadPlan(
+        fixtureID: String,
+        offset: Int = 0,
+        limit: Int = 200
+    ) async throws -> NativeUploadPlan {
+        let action = try await fixtureAction(
+            mode: "asset-upload-plan",
+            fixtureID: fixtureID,
+            extra: [
+                "offset": .number(Double(max(0, offset))),
+                "limit": .number(Double(max(1, min(500, limit)))),
+            ]
+        )
+        guard let plan = action.result?["uploadPlan"]?.objectValue else {
+            throw FixtureDeliveryError.missingResult("uploadPlan")
+        }
+        let items = (plan["items"]?.arrayValue ?? []).compactMap { value -> NativeUploadPlanItem? in
+            guard let object = value.objectValue else { return nil }
+            let assetID = object["assetId"]?.stringValue ?? ""
+            guard !assetID.isEmpty else { return nil }
+            return NativeUploadPlanItem(
+                assetID: assetID,
+                title: object["title"]?.stringValue ?? "",
+                filename: object["filename"]?.stringValue ?? "",
+                capturedAt: object["capturedAt"]?.stringValue ?? "",
+                deliveryState: object["deliveryState"]?.stringValue ?? "needs-upload",
+                errorText: object["errorText"]?.stringValue ?? ""
+            )
+        }
+        return NativeUploadPlan(
+            fixtureID: plan["fixtureId"]?.stringValue ?? fixtureID,
+            fixtureName: plan["fixtureName"]?.stringValue ?? fixtureID,
+            cloudAllowed: plan["cloudAllowed"]?.boolValue ?? false,
+            pickedCount: plan["pickedCount"]?.intValue ?? 0,
+            approvedCount: plan["approvedCount"]?.intValue ?? 0,
+            needsReviewCount: plan["needsReviewCount"]?.intValue ?? 0,
+            needsUploadCount: plan["needsUploadCount"]?.intValue ?? 0,
+            liveCount: plan["liveCount"]?.intValue ?? 0,
+            offset: plan["offset"]?.intValue ?? 0,
+            limit: plan["limit"]?.intValue ?? max(1, min(500, limit)),
+            hasNext: plan["hasNext"]?.boolValue ?? false,
+            items: items
+        )
     }
 
     public func nativeUploadStatus(runID: String) async throws -> NativeUploadRun {

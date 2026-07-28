@@ -674,8 +674,9 @@ Clock state: running
 | 2026-07-28 | 09:30 CEST | 09:38 CEST | 0:03 | Refined the native Culling animation and preview behavior, corrected Review AI/action state, and simplified title/keyword autosave and propagation controls; background implementation, tests, build, installation, and verification runtime excluded. |
 | 2026-07-28 | 11:39 CEST | 11:40 CEST | 0:01 | Approved full Photos-library reconciliation and a richer read-only Culling metadata inspector; background implementation, tests, build, installation, and verification runtime excluded. |
 | 2026-07-28 | 14:26 CEST | 15:10 CEST | 0:04 | Reviewed successive Culling containment builds, confirmed the final pinned header/grid/footer layout, and clarified the Picked → Review approval → Uploads workflow; background diagnosis, coding, builds, tests, reconciliation, and waits excluded. |
+| 2026-07-28 | 15:50 CEST | 15:58 CEST | 0:02 | Replaced mutually exclusive Culling filters with independent checkbox groups and clarified the native approved-needs-upload queue; background implementation, tests, build, installation, and bridge retries excluded. |
 
 ## Totals
 
-Active collaboration time used: 33:00
+Active collaboration time used: 33:02
 Remaining budget: not set

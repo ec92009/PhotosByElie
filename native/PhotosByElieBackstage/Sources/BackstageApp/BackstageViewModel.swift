@@ -119,7 +119,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var cullingPool: FixturePool?
     @Published var cullingFixtureID = ""
     @Published var fixtureCullingWindow: FixtureCullingWindow?
-    @Published var cullingView: FixtureCullingView = .undecided
+    @Published var cullingViews: Set<FixtureCullingView> = [.undecided]
     @Published var isLoadingFixtureCulling = false
     @Published var cullingGridDensity = 5
     @Published private(set) var cullingGridAvailableWidth = 0.0
@@ -144,10 +144,9 @@ final class BackstageViewModel: ObservableObject {
     @Published var cullingHistory: [CullingHistoryEntry] = []
     @Published var cullingStatus = "Select indexed Photos and apply a culling decision."
     @Published var cullingSearch = ""
-    @Published var cullingMediaFilter: CullingMediaFilter = .all
-    @Published var cullingPickFilter: CullingPickFilter = .all
-    @Published var cullingRatingFilter = -1
-    @Published var cullingColorFilter: CullingColorFilter = .all
+    @Published var cullingMediaFilters = Set(CullingMediaFilter.selectableCases)
+    @Published var cullingRatingFilters = Set(0...5)
+    @Published var cullingColorFilters = Set(CullingColorFilter.selectableCases)
     @Published var cullingWindowOffset = 0
     @Published var cullingWindowLimit = 200
     @Published var cullingThumbnails: [String: NSImage] = [:]
@@ -203,8 +202,9 @@ final class BackstageViewModel: ObservableObject {
     @Published var uploadRunID = ""
     @Published var uploadAdoptionPlan: FixtureUploadRunAdoptionPlan?
     @Published var uploadRecoveryStatus = "Existing verified upload runs can be adopted explicitly."
+    @Published var nativeUploadPlan: NativeUploadPlan?
     @Published var nativeUploadRun: NativeUploadRun?
-    @Published var nativeUploadStatus = "Approved items publish immediately after their R2 objects verify."
+    @Published var nativeUploadStatus = "Choose a fixture to load its approved publication queue."
     @Published var photosSyncReport: PhotosSyncReport?
     @Published var photosSyncStatus = "Apple Photos sync runs incrementally in the background."
     @Published var isSyncingPhotos = false
@@ -555,11 +555,69 @@ final class BackstageViewModel: ObservableObject {
     var cullingQuery: CullingQuery {
         CullingQuery(
             search: cullingSearch,
-            media: cullingMediaFilter,
-            pick: cullingPickFilter,
-            rating: cullingRatingFilter < 0 ? nil : cullingRatingFilter,
-            color: cullingColorFilter
+            media: cullingMediaFilters,
+            pick: Set(cullingViews.map {
+                switch $0 {
+                case .undecided: .undecided
+                case .picked: .picked
+                case .hidden: .rejected
+                case .allActive: .undecided
+                }
+            }),
+            ratings: cullingRatingFilters,
+            colors: cullingColorFilters
         )
+    }
+
+    var cullingMediaFilterLabel: String {
+        cullingMediaFilters.count == CullingMediaFilter.selectableCases.count
+            ? "All media"
+            : cullingMediaFilters.sorted(by: { $0.rawValue < $1.rawValue }).map(\.label).joined(separator: " + ")
+    }
+
+    var cullingViewFilterLabel: String {
+        cullingViews.count == FixtureCullingView.selectableCases.count
+            ? "All decisions"
+            : cullingViews.sorted(by: { $0.rawValue < $1.rawValue }).map(\.label).joined(separator: " + ")
+    }
+
+    var cullingRatingFilterLabel: String {
+        if cullingRatingFilters.count == 6 { return "All ratings" }
+        if cullingRatingFilters.count == 1, let rating = cullingRatingFilters.first {
+            return rating == 0 ? "No rating" : "\(rating) star\(rating == 1 ? "" : "s")"
+        }
+        return "\(cullingRatingFilters.count) ratings"
+    }
+
+    var cullingColorFilterLabel: String {
+        cullingColorFilters.count == CullingColorFilter.selectableCases.count
+            ? "All colors"
+            : cullingColorFilters.sorted(by: { $0.rawValue < $1.rawValue }).map(\.label).joined(separator: " + ")
+    }
+
+    func toggleCullingMediaFilter(_ filter: CullingMediaFilter) {
+        toggle(filter, in: &cullingMediaFilters)
+    }
+
+    func toggleCullingViewFilter(_ view: FixtureCullingView) {
+        toggle(view, in: &cullingViews)
+    }
+
+    func toggleCullingRatingFilter(_ rating: Int) {
+        toggle(rating, in: &cullingRatingFilters)
+    }
+
+    func toggleCullingColorFilter(_ color: CullingColorFilter) {
+        toggle(color, in: &cullingColorFilters)
+    }
+
+    private func toggle<Value: Hashable>(_ value: Value, in selection: inout Set<Value>) {
+        if selection.contains(value) {
+            guard selection.count > 1 else { return }
+            selection.remove(value)
+        } else {
+            selection.insert(value)
+        }
     }
 
     var cullingWorkspace: CullingWorkspaceResult {
@@ -679,27 +737,26 @@ final class BackstageViewModel: ObservableObject {
 
     func clearCullingFilters() {
         cullingSearch = ""
-        cullingMediaFilter = .all
-        cullingPickFilter = .all
-        cullingRatingFilter = -1
-        cullingColorFilter = .all
-        if cullingView == .undecided {
+        cullingMediaFilters = Set(CullingMediaFilter.selectableCases)
+        cullingRatingFilters = Set(0...5)
+        cullingColorFilters = Set(CullingColorFilter.selectableCases)
+        if cullingViews == [.undecided] {
             applyCullingFilters()
         } else {
-            cullingView = .undecided
+            cullingViews = [.undecided]
         }
     }
 
     func showPickedReview() {
         if !cullingFixtureID.isEmpty, cullingPool == nil {
-            if cullingView == .picked {
+            if cullingViews == [.picked] {
                 applyCullingFilters()
             } else {
-                cullingView = .picked
+                cullingViews = [.picked]
             }
             return
         }
-        cullingPickFilter = .picked
+        cullingViews = [.picked]
         applyCullingFilters()
         cullingStatus = "Reviewing \(cullingWorkspace.summary.filtered.formatted()) picked items in the current scope."
     }
@@ -844,7 +901,7 @@ final class BackstageViewModel: ObservableObject {
     func selectCullingFixture(_ fixtureID: String) {
         cullingFixtureID = fixtureID
         cullingPool = nil
-        cullingView = .undecided
+        cullingViews = [.undecided]
         cullingWindowOffset = 0
         cullingSearch = ""
         clearCullingSelection()
@@ -859,27 +916,23 @@ final class BackstageViewModel: ObservableObject {
             return
         }
         isLoadingFixtureCulling = true
-        cullingStatus = "Loading the \(cullingView.label.lowercased()) fixture window…"
+        cullingStatus = "Loading the \(cullingViewFilterLabel.lowercased()) fixture window…"
         defer { isLoadingFixtureCulling = false }
         do {
-            let mediaTypes: [String] = switch cullingMediaFilter {
-            case .all: []
-            case .photos: ["photo"]
-            case .videos: ["video"]
-            }
-            let colors: [String] = switch cullingColorFilter {
-            case .all: []
-            case .none: ["none"]
-            default: [cullingColorFilter.rawValue]
-            }
+            let mediaTypes = cullingMediaFilters.map {
+                $0 == .videos ? "video" : "photo"
+            }.sorted()
+            let colors = cullingColorFilters.map(\.rawValue).sorted()
+            let views = cullingViews.sorted(by: { $0.rawValue < $1.rawValue })
             let window = try await fixtureService.cullingWindow(
                 fixtureID: cullingFixtureID,
-                view: cullingView,
+                view: views.count == 1 ? views[0] : .allActive,
+                views: views,
                 offset: cullingWindowOffset,
                 limit: cullingWindowLimit,
                 search: cullingSearch,
                 mediaTypes: mediaTypes,
-                ratings: cullingRatingFilter < 0 ? [] : [cullingRatingFilter],
+                ratings: cullingRatingFilters.sorted(),
                 colors: colors
             )
             fixtureCullingWindow = window
@@ -2350,6 +2403,35 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
+    func loadNativeUploadPlan() async {
+        guard !selectedFixtureID.isEmpty else {
+            nativeUploadPlan = nil
+            nativeUploadStatus = "Choose a fixture to load its approved publication queue."
+            return
+        }
+        isRunningDelivery = true
+        nativeUploadStatus = "Loading approved publication eligibility…"
+        defer { isRunningDelivery = false }
+        do {
+            let plan = try await deliveryService.nativeUploadPlan(
+                fixtureID: selectedFixtureID,
+                limit: 200
+            )
+            nativeUploadPlan = plan
+            selectedDeliveryIDs.formIntersection(Set(plan.items.map(\.id)))
+            if !plan.cloudAllowed {
+                nativeUploadStatus = "\(plan.fixtureName) policy does not permit cloud publication."
+            } else if plan.needsUploadCount == 0 {
+                nativeUploadStatus = "\(plan.approvedCount) approved • \(plan.liveCount) live • \(plan.needsReviewCount) picked awaiting Review • nothing needs upload."
+            } else {
+                nativeUploadStatus = "\(plan.needsUploadCount) approved need upload • \(plan.liveCount) live • \(plan.needsReviewCount) picked awaiting Review. Showing \(plan.items.count) oldest eligible."
+            }
+        } catch {
+            nativeUploadPlan = nil
+            nativeUploadStatus = userFacingMessage(for: error)
+        }
+    }
+
     func loadUploadHealth() async {
         guard !selectedFixtureID.isEmpty else {
             uploadRecoveryStatus = "Choose a fixture first."
@@ -2413,7 +2495,12 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func publishNextNativeBatch() async {
-        await startNativePublication(assetIDs: [])
+        let ids = Array(nativeUploadPlan?.items.prefix(50).map(\.assetID) ?? [])
+        guard !ids.isEmpty else {
+            nativeUploadStatus = "No approved assets in this fixture currently need upload."
+            return
+        }
+        await startNativePublication(assetIDs: ids)
     }
 
     func syncPhotosIncrementally(limit: Int = 25) async {
@@ -2469,6 +2556,7 @@ final class BackstageViewModel: ObservableObject {
             nativeUploadStatus = run.failed == 0
                 ? "Published \(run.live) verified asset\(run.live == 1 ? "" : "s"). Give Back completed for approved metadata."
                 : "Published \(run.live); \(run.failed) failed and remain independently retryable."
+            await loadNativeUploadPlan()
         } catch {
             nativeUploadStatus = userFacingMessage(for: error)
         }

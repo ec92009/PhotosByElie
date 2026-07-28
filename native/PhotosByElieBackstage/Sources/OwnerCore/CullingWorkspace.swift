@@ -34,6 +34,8 @@ public enum CullingMediaFilter: String, CaseIterable, Sendable {
         case .videos: "Videos"
         }
     }
+
+    public static var selectableCases: [Self] { [.photos, .videos] }
 }
 
 public enum CullingPickFilter: String, CaseIterable, Sendable {
@@ -50,6 +52,8 @@ public enum CullingPickFilter: String, CaseIterable, Sendable {
         case .rejected: "Rejected"
         }
     }
+
+    public static var selectableCases: [Self] { [.undecided, .picked, .rejected] }
 }
 
 public enum CullingColorFilter: String, CaseIterable, Sendable {
@@ -68,27 +72,31 @@ public enum CullingColorFilter: String, CaseIterable, Sendable {
         default: rawValue.capitalized
         }
     }
+
+    public static var selectableCases: [Self] {
+        [.none, .red, .yellow, .green, .blue, .purple]
+    }
 }
 
 public struct CullingQuery: Sendable, Equatable {
     public var search: String
-    public var media: CullingMediaFilter
-    public var pick: CullingPickFilter
-    public var rating: Int?
-    public var color: CullingColorFilter
+    public var media: Set<CullingMediaFilter>
+    public var pick: Set<CullingPickFilter>
+    public var ratings: Set<Int>
+    public var colors: Set<CullingColorFilter>
 
     public init(
         search: String = "",
-        media: CullingMediaFilter = .all,
-        pick: CullingPickFilter = .all,
-        rating: Int? = nil,
-        color: CullingColorFilter = .all
+        media: Set<CullingMediaFilter> = Set(CullingMediaFilter.selectableCases),
+        pick: Set<CullingPickFilter> = Set(CullingPickFilter.selectableCases),
+        ratings: Set<Int> = Set(0...5),
+        colors: Set<CullingColorFilter> = Set(CullingColorFilter.selectableCases)
     ) {
         self.search = search
         self.media = media
         self.pick = pick
-        self.rating = rating
-        self.color = color
+        self.ratings = ratings
+        self.colors = colors
     }
 }
 
@@ -220,18 +228,15 @@ public enum CullingWorkspace {
         guard terms.allSatisfy({ haystack.contains($0) }) else { return false }
 
         let media = normalizedMedia(candidate.mediaType)
-        if query.media == .photos, media != "photo" { return false }
-        if query.media == .videos, media != "video" { return false }
-        if query.pick != .all, candidate.decision.pickState != query.pick.rawValue { return false }
-        if let rating = query.rating, candidate.decision.rating != rating { return false }
-        switch query.color {
-        case .all:
-            break
-        case .none:
-            if !candidate.decision.color.isEmpty { return false }
-        default:
-            if candidate.decision.color != query.color.rawValue { return false }
-        }
+        let mediaFilter: CullingMediaFilter = media == "video" ? .videos : .photos
+        guard query.media.contains(mediaFilter) else { return false }
+        let pickFilter = CullingPickFilter(rawValue: candidate.decision.pickState) ?? .undecided
+        guard query.pick.contains(pickFilter) else { return false }
+        guard query.ratings.contains(candidate.decision.rating) else { return false }
+        let colorFilter = CullingColorFilter(
+            rawValue: candidate.decision.color.isEmpty ? "none" : candidate.decision.color
+        ) ?? .none
+        guard query.colors.contains(colorFilter) else { return false }
         return true
     }
 

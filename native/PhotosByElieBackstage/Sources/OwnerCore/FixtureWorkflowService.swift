@@ -347,6 +347,8 @@ public enum FixtureCullingView: String, Codable, Sendable, CaseIterable {
         case .allActive: "All Active"
         }
     }
+
+    public static var selectableCases: [Self] { [.undecided, .picked, .hidden] }
 }
 
 public struct FixtureCullingSummary: Sendable, Equatable {
@@ -788,6 +790,7 @@ public actor FixtureWorkflowService {
     public func cullingWindow(
         fixtureID: String,
         view: FixtureCullingView = .undecided,
+        views: [FixtureCullingView] = [],
         offset: Int = 0,
         limit: Int = 200,
         search: String = "",
@@ -798,6 +801,7 @@ public actor FixtureWorkflowService {
         let result = try await run("fixture-culling-window", extra: [
             "fixtureId": .string(fixtureID),
             "view": .string(view.rawValue),
+            "views": .array(views.map { .string($0.rawValue) }),
             "offset": .number(Double(max(0, offset))),
             "limit": .number(Double(max(1, min(500, limit)))),
             "search": .string(search),

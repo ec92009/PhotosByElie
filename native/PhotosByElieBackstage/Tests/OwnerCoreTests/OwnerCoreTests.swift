@@ -140,10 +140,10 @@ struct OwnerCoreTests {
             candidates,
             query: CullingQuery(
                 search: "seville",
-                media: .photos,
-                pick: .picked,
-                rating: 4,
-                color: .green
+                media: [.photos],
+                pick: [.picked],
+                ratings: [4],
+                colors: [.green]
             )
         )
 
@@ -170,13 +170,13 @@ struct OwnerCoreTests {
         }
         let first = CullingWorkspace.evaluate(
             candidates,
-            query: CullingQuery(pick: .picked),
+            query: CullingQuery(pick: [.picked]),
             offset: 0,
             limit: 200
         )
         let second = CullingWorkspace.evaluate(
             candidates,
-            query: CullingQuery(pick: .picked),
+            query: CullingQuery(pick: [.picked]),
             offset: 200,
             limit: 200
         )
@@ -929,7 +929,8 @@ struct OwnerCoreTests {
 
         let window = try await service.cullingWindow(
             fixtureID: "fixture-expo",
-            view: .undecided,
+            view: .allActive,
+            views: [.undecided, .picked],
             offset: 0,
             limit: 200,
             search: "Madrid",
@@ -953,6 +954,10 @@ struct OwnerCoreTests {
         let manifest = request.payload["manifest"]?.objectValue
         #expect(manifest?["mode"]?.stringValue == "fixture-culling-window")
         #expect(manifest?["fixtureId"]?.stringValue == "fixture-expo")
+        #expect(
+            manifest?["views"]?.arrayValue?.compactMap(\.stringValue)
+                == ["undecided", "picked"]
+        )
         #expect(manifest?["limit"]?.intValue == 200)
         #expect(manifest?["search"]?.stringValue == "Madrid")
     }
@@ -1888,6 +1893,42 @@ struct OwnerCoreTests {
 
     @Test("Native upload publishes verified assets and exposes reconciliation progress")
     func nativeUploadAndR2Safety() async throws {
+        let eligibility = OwnerAction(
+            id: "owner-action-upload-plan",
+            actionKind: "sidecar-culling-review",
+            target: "max",
+            state: .completed,
+            result: [
+                "uploadPlan": [
+                    "fixtureId": "fixture-expo",
+                    "fixtureName": "Expo",
+                    "cloudAllowed": true,
+                    "pickedCount": 12,
+                    "approvedCount": 9,
+                    "needsReviewCount": 3,
+                    "needsUploadCount": 2,
+                    "liveCount": 7,
+                    "offset": 0,
+                    "limit": 200,
+                    "hasNext": false,
+                    "items": [[
+                        "assetId": "asset-1",
+                        "title": "One",
+                        "filename": "one.jpg",
+                        "capturedAt": "2026-07-28T10:00:00Z",
+                        "deliveryState": "needs-upload",
+                        "errorText": "",
+                    ], [
+                        "assetId": "asset-2",
+                        "title": "Two",
+                        "filename": "two.jpg",
+                        "capturedAt": "2026-07-28T09:00:00Z",
+                        "deliveryState": "failed",
+                        "errorText": "network",
+                    ]],
+                ],
+            ]
+        )
         let started = OwnerAction(
             id: "owner-action-upload-start",
             actionKind: "sidecar-culling-review",
@@ -1974,7 +2015,7 @@ struct OwnerCoreTests {
                 ],
             ]
         )
-        let api = ScriptedOwnerActionAPI(completed: [started, status, reconciliation, photosSync])
+        let api = ScriptedOwnerActionAPI(completed: [eligibility, started, status, reconciliation, photosSync])
         let service = FixtureDeliveryService(runner: OwnerActionRunner(
             api: api,
             waker: UnavailableWaker(),
@@ -1982,6 +2023,12 @@ struct OwnerCoreTests {
             timeout: .seconds(1)
         ))
 
+        let plan = try await service.nativeUploadPlan(fixtureID: "fixture-expo")
+        #expect(plan.fixtureName == "Expo")
+        #expect(plan.needsUploadCount == 2)
+        #expect(plan.needsReviewCount == 3)
+        #expect(plan.items[1].deliveryState == "failed")
+        #expect(plan.items[1].errorText == "network")
         let run = try await service.startNativeUpload(
             assetIDs: ["asset-1", "asset-2"],
             limit: 50,
@@ -2007,11 +2054,13 @@ struct OwnerCoreTests {
         #expect(sync.elapsedSeconds == 2.5)
 
         let requests = await api.requests()
-        #expect(requests[0].payload["manifest"]?.objectValue?["mode"]?.stringValue == "asset-upload-run-start")
-        #expect(requests[1].payload["manifest"]?.objectValue?["mode"]?.stringValue == "asset-upload-run-status")
-        #expect(requests[2].payload["manifest"]?.objectValue?["mode"]?.stringValue == "r2-reconciliation-plan")
-        #expect(requests[3].payload["manifest"]?.objectValue?["mode"]?.stringValue == "photos-sync-run")
-        #expect(requests[3].payload["manifest"]?.objectValue?["limit"]?.intValue == 25)
+        #expect(requests[0].payload["manifest"]?.objectValue?["mode"]?.stringValue == "asset-upload-plan")
+        #expect(requests[0].payload["manifest"]?.objectValue?["fixtureId"]?.stringValue == "fixture-expo")
+        #expect(requests[1].payload["manifest"]?.objectValue?["mode"]?.stringValue == "asset-upload-run-start")
+        #expect(requests[2].payload["manifest"]?.objectValue?["mode"]?.stringValue == "asset-upload-run-status")
+        #expect(requests[3].payload["manifest"]?.objectValue?["mode"]?.stringValue == "r2-reconciliation-plan")
+        #expect(requests[4].payload["manifest"]?.objectValue?["mode"]?.stringValue == "photos-sync-run")
+        #expect(requests[4].payload["manifest"]?.objectValue?["limit"]?.intValue == 25)
     }
 
     @Test("Backstage reports signed Photos helper identity and headless health")

@@ -134,6 +134,33 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("FlowLayout(spacing: 10)", review)
         self.assertNotIn(".frame(minWidth: 620)", review)
 
+    def test_density_controls_resize_only_the_grid_viewport(self):
+        source = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "PhotosByElieBackstageApp.swift"
+        ).read_text(encoding="utf-8")
+        culling = source.split("private struct MediaLibraryView", 1)[1].split(
+            "private struct CullingAssetCard", 1
+        )[0]
+
+        self.assertIn("GeometryReader { geometry in", culling)
+        self.assertIn("GridItem(.flexible(minimum: 0), spacing: 8)", culling)
+        self.assertNotIn("GridItem(.flexible(minimum: 84)", culling)
+        self.assertIn("model.updateCullingGridWidth", culling)
+        self.assertIn("Button(\"−\") { model.decreaseCullingThumbnailSize() }", culling)
+        self.assertIn("Button(\"+\") { model.increaseCullingThumbnailSize() }", culling)
+        self.assertIn(".disabled(!model.canDecreaseCullingThumbnailSize)", culling)
+        self.assertIn(".disabled(!model.canIncreaseCullingThumbnailSize)", culling)
+        model = (
+            NATIVE / "Sources" / "BackstageApp" / "BackstageViewModel.swift"
+        ).read_text(encoding="utf-8")
+        self.assertIn(
+            "guard width >= CullingGridLayout.minimumColumnWidth else { return }",
+            model,
+        )
+
     def test_getting_started_describes_the_native_large_pool_path(self):
         guide = (ROOT / "docs" / "BACKSTAGE_GETTING_STARTED.md").read_text(
             encoding="utf-8"

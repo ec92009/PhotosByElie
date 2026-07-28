@@ -119,6 +119,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var cullingView: FixtureCullingView = .undecided
     @Published var isLoadingFixtureCulling = false
     @Published var cullingGridDensity = 5
+    @Published private(set) var cullingGridAvailableWidth = 0.0
     @Published var cullingUsesFill = true
     @Published var fixturePlacements: [FixturePlacement] = []
     @Published var placementTargetFixtureIDs: Set<String> = []
@@ -662,8 +663,40 @@ final class BackstageViewModel: ObservableObject {
         selectedPhotoIDs = cullingSelection.selectedIDs
     }
 
-    func changeCullingGridDensity(by delta: Int) {
-        cullingGridDensity = min(10, max(2, cullingGridDensity + delta))
+    var canIncreaseCullingThumbnailSize: Bool {
+        cullingGridDensity > 1
+    }
+
+    var canDecreaseCullingThumbnailSize: Bool {
+        cullingGridDensity < CullingGridLayout.maximumColumnsThatFit(
+            width: cullingGridAvailableWidth
+        )
+    }
+
+    func increaseCullingThumbnailSize() {
+        cullingGridDensity = max(1, cullingGridDensity - 1)
+    }
+
+    func decreaseCullingThumbnailSize() {
+        guard canDecreaseCullingThumbnailSize else { return }
+        cullingGridDensity += 1
+    }
+
+    func updateCullingGridWidth(_ width: Double) {
+        // GeometryReader can briefly report a tiny pre-layout width while the
+        // split view is being assembled. It is not a usable viewport and must
+        // not collapse the user's column count.
+        guard width >= CullingGridLayout.minimumColumnWidth else { return }
+        if abs(cullingGridAvailableWidth - width) > 0.5 {
+            cullingGridAvailableWidth = width
+        }
+        let clamped = CullingGridLayout.clampedColumnCount(
+            cullingGridDensity,
+            width: width
+        )
+        if clamped != cullingGridDensity {
+            cullingGridDensity = clamped
+        }
     }
 
     func toggleCullingFitFill() {

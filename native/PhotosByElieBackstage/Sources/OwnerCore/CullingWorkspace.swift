@@ -1,5 +1,27 @@
 import Foundation
 
+public enum CullingGridLayout {
+    public static let minimumColumnWidth = 84.0
+    public static let spacing = 8.0
+    public static let maximumColumns = 10
+
+    public static func maximumColumnsThatFit(width: Double) -> Int {
+        guard width > 0 else { return 1 }
+        let count = Int((width + spacing) / (minimumColumnWidth + spacing))
+        return min(maximumColumns, max(1, count))
+    }
+
+    public static func clampedColumnCount(_ requested: Int, width: Double) -> Int {
+        min(max(1, requested), maximumColumnsThatFit(width: width))
+    }
+
+    public static func columnWidth(width: Double, columns: Int) -> Double {
+        let count = max(1, columns)
+        let available = width - (Double(count - 1) * spacing)
+        return max(minimumColumnWidth, available / Double(count))
+    }
+}
+
 public enum CullingMediaFilter: String, CaseIterable, Sendable {
     case all
     case photos

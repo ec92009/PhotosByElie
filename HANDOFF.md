@@ -1,5 +1,18 @@
 # PhotosByElie Handoff
 
+## 2026-07-28 — Backstage Culling density containment
+
+- Backstage `0.4.3` build `14` keeps Culling density changes inside the
+  thumbnail viewport. `+` enlarges thumbnails by removing a column, while `−`
+  adds a column only when every card can remain at least 84 points wide.
+- The viewport distributes its width across the current column count. A wider
+  window makes those columns wider; a narrower window shrinks them to 84
+  points and then reduces the column count without changing the window size.
+  A focused source-contract regression and all 45 OwnerCore tests pass.
+- Acceptance is limited to grid-density and Fit/Fill display state. No
+  Culling/Review decision, metadata, Waste Basket, upload, publication,
+  delivery, access, or client state may be changed.
+
 ## 2026-07-28 — Max native Backstage all-screen polish
 
 - PBB-65 covers a read-only tour of all eleven Backstage workspaces and a

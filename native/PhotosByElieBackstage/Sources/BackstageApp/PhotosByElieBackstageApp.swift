@@ -688,11 +688,13 @@ private struct MediaLibraryView: View {
                     .disabled(!workspace.hasNext)
                     Spacer()
                     HStack(spacing: 0) {
-                        Button("−") { model.changeCullingGridDensity(by: -1) }
-                            .help("Show fewer, larger thumbnails")
-                        Divider().frame(height: 18)
-                        Button("+") { model.changeCullingGridDensity(by: 1) }
+                        Button("−") { model.decreaseCullingThumbnailSize() }
                             .help("Show more, smaller thumbnails")
+                            .disabled(!model.canDecreaseCullingThumbnailSize)
+                        Divider().frame(height: 18)
+                        Button("+") { model.increaseCullingThumbnailSize() }
+                            .help("Show fewer, larger thumbnails")
+                            .disabled(!model.canIncreaseCullingThumbnailSize)
                     }
                     .buttonStyle(.bordered)
                     Button(model.cullingUsesFill ? "Fill" : "Fit") {
@@ -701,33 +703,42 @@ private struct MediaLibraryView: View {
                     .buttonStyle(.bordered)
                 }
                 ScrollViewReader { proxy in
-                    ScrollView {
-                        LazyVGrid(
-                            columns: Array(
-                                repeating: GridItem(.flexible(minimum: 84), spacing: 8),
-                                count: model.cullingGridDensity
-                            ),
-                            spacing: 8
-                        ) {
-                            ForEach(model.visibleCullingAssets) { asset in
-                                CullingAssetCard(
-                                    asset: asset,
-                                    state: model.cullingStates[asset.id],
-                                    thumbnail: model.cullingThumbnails[asset.id],
-                                    isSelected: model.cullingSelection.selectedIDs.contains(asset.id),
-                                    isFocused: model.cullingSelection.focusedID == asset.id,
-                                    usesFill: model.cullingUsesFill
-                                )
-                                .id(asset.id)
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    model.clickCullingAsset(asset.id, modifiers: NSEvent.modifierFlags)
-                                    Task { await model.loadPreview() }
+                    GeometryReader { geometry in
+                        ScrollView {
+                            LazyVGrid(
+                                columns: Array(
+                                    repeating: GridItem(.flexible(minimum: 0), spacing: 8),
+                                    count: model.cullingGridDensity
+                                ),
+                                spacing: 8
+                            ) {
+                                ForEach(model.visibleCullingAssets) { asset in
+                                    CullingAssetCard(
+                                        asset: asset,
+                                        state: model.cullingStates[asset.id],
+                                        thumbnail: model.cullingThumbnails[asset.id],
+                                        isSelected: model.cullingSelection.selectedIDs.contains(asset.id),
+                                        isFocused: model.cullingSelection.focusedID == asset.id,
+                                        usesFill: model.cullingUsesFill
+                                    )
+                                    .id(asset.id)
+                                    .contentShape(Rectangle())
+                                    .onTapGesture {
+                                        model.clickCullingAsset(asset.id, modifiers: NSEvent.modifierFlags)
+                                        Task { await model.loadPreview() }
+                                    }
+                                    .task { await model.loadThumbnail(for: asset.id) }
                                 }
-                                .task { await model.loadThumbnail(for: asset.id) }
                             }
+                            .padding(6)
+                            .frame(maxWidth: .infinity, alignment: .topLeading)
                         }
-                        .padding(6)
+                        .onAppear {
+                            model.updateCullingGridWidth(Double(geometry.size.width - 12))
+                        }
+                        .onChange(of: geometry.size.width) { _, width in
+                            model.updateCullingGridWidth(Double(width - 12))
+                        }
                     }
                     .focusable()
                     .onMoveCommand { direction in
@@ -781,11 +792,11 @@ private struct MediaLibraryView: View {
                         return .handled
                     }
                     .onKeyPress("+") {
-                        model.changeCullingGridDensity(by: 1)
+                        model.increaseCullingThumbnailSize()
                         return .handled
                     }
                     .onKeyPress("-") {
-                        model.changeCullingGridDensity(by: -1)
+                        model.decreaseCullingThumbnailSize()
                         return .handled
                     }
                     .onKeyPress("z") {

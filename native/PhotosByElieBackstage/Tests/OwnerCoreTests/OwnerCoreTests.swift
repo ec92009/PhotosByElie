@@ -107,6 +107,18 @@ struct OwnerCoreTests {
         #expect(selection.anchorID == "asset-6")
     }
 
+    @Test("Culling grid keeps 84-point cards and adapts column count")
+    func cullingGridLayout() {
+        #expect(CullingGridLayout.maximumColumnsThatFit(width: 83) == 1)
+        #expect(CullingGridLayout.maximumColumnsThatFit(width: 84) == 1)
+        #expect(CullingGridLayout.maximumColumnsThatFit(width: 176) == 2)
+        #expect(CullingGridLayout.maximumColumnsThatFit(width: 1_000) == 10)
+        #expect(CullingGridLayout.clampedColumnCount(5, width: 360) == 4)
+        #expect(CullingGridLayout.clampedColumnCount(3, width: 1_000) == 3)
+        #expect(CullingGridLayout.columnWidth(width: 360, columns: 4) == 84)
+        #expect(CullingGridLayout.columnWidth(width: 500, columns: 4) == 119)
+    }
+
     @Test("Ten-item culling rehearsal preserves scope and composes filters")
     func tenItemCullingRehearsal() {
         let candidates = (0..<10).map { index in

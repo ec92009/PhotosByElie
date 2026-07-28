@@ -8,7 +8,7 @@ Backstage is currently installed on Max at:
 
 `/Users/ecohen/Applications/PhotosByElie Backstage.app`
 
-The current native workflow is included in version **0.4.16 (build 27)**.
+The current native workflow is included in version **0.4.17 (build 28)**.
 
 Open it from Finder, Spotlight, or the Applications folder in your Home
 directory.
@@ -60,14 +60,16 @@ Backstage separates work into distinct stages:
 4. **Metadata** prepares titles, captions, keywords, and verified Photos
    give-back.
 5. **Waste Basket** handles recoverable removals and permanent discards.
-6. **Uploads** sends approved fixture media to R2 and verifies the result.
+6. **Uploads** sends approved fixture media to R2, verifies it, and makes each
+   verified source live in its effective picked fixtures.
 7. **Delivery** records ready PDF, video, or Originals links.
 8. **Publication** registers eligible public media in the static catalog.
 9. **Activity** shows the durable action history.
 
-These stages are deliberately separate. Uploading does not publish. Recording
-a delivery link does not message a client. Catalog registration does not
-deploy the website.
+These stages are deliberately separate. Uploading approved media makes it live
+in its effective fixture, but does not by itself register it in the static
+catalog or deploy the website. Recording a delivery link does not message a
+client. Catalog registration does not deploy the website.
 
 ## Overview
 
@@ -317,8 +319,15 @@ file name, capture date, state, and any eligibility error.
    the order.
 3. Use Command-click to add or remove individual rows, or Shift-click to extend
    the current selection.
-4. Choose **Publish selected…** only after reviewing the selected scope.
-5. Watch the progress and per-item R2 and Photos states.
+4. Read the persistent queue-window line. It says how many of the eligible
+   items are shown and how many remain outside the loaded window. The server
+   loads at most 200 of the oldest eligible items by upload-readiness time;
+   column sorting rearranges only those shown rows.
+5. Choose **Publish selected…** for a hand-selected subset, or **Publish these
+   N…** to accept the exact loaded window. The latter drains the visible
+   snapshot through sequential runs of at most 50 assets, preserving the
+   existing isolated-failure contract.
+6. Watch the aggregate progress and per-item R2 and Photos states.
 
 If an approved item needs more editorial work, select one or more rows and
 choose **Return to Review…**. After confirmation, Backstage reverses the

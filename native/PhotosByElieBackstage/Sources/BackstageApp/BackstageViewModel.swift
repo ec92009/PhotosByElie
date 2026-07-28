@@ -2570,8 +2570,8 @@ final class BackstageViewModel: ObservableObject {
         await startNativePublication(assetIDs: Array(selectedDeliveryIDs).sorted())
     }
 
-    func publishNextNativeBatch() async {
-        let ids = Array(nativeUploadPlan?.items.prefix(50).map(\.assetID) ?? [])
+    func publishVisibleNativeWindow() async {
+        let ids = nativeUploadPlan?.items.map(\.assetID) ?? []
         guard !ids.isEmpty else {
             nativeUploadStatus = "No approved assets in this fixture currently need upload."
             return
@@ -2609,32 +2609,56 @@ final class BackstageViewModel: ObservableObject {
     }
 
     private func startNativePublication(assetIDs: [String]) async {
+        guard !isRunningDelivery else { return }
+        var seen = Set<String>()
+        let ids = assetIDs.filter { !$0.isEmpty && seen.insert($0).inserted }
+        guard !ids.isEmpty else {
+            nativeUploadStatus = "No approved assets currently need upload."
+            return
+        }
+        let batches = stride(from: 0, to: ids.count, by: 50).map {
+            Array(ids[$0..<min($0 + 50, ids.count)])
+        }
         isRunningDelivery = true
         defer { isRunningDelivery = false }
+        var totalRequested = 0
+        var totalProcessed = 0
+        var totalLive = 0
+        var totalFailed = 0
         do {
-            var run = try await deliveryService.startNativeUpload(
-                assetIDs: assetIDs,
-                limit: 50,
-                concurrency: 4
-            )
-            nativeUploadRun = run
-            if run.requested == 0 {
-                nativeUploadStatus = "No approved assets currently need upload."
-                return
-            }
-            nativeUploadStatus = "Queued \(run.requested) approved asset\(run.requested == 1 ? "" : "s") with concurrency \(run.concurrency)."
-            while !run.isFinished {
-                try await Task.sleep(nanoseconds: 1_000_000_000)
-                run = try await deliveryService.nativeUploadStatus(runID: run.runID)
+            for (batchIndex, batch) in batches.enumerated() {
+                var run = try await deliveryService.startNativeUpload(
+                    assetIDs: batch,
+                    limit: batch.count,
+                    concurrency: 4
+                )
                 nativeUploadRun = run
-                nativeUploadStatus = "Processed \(run.processed) of \(run.requested): \(run.live) live, \(run.failed) failed, \(run.remaining) remaining."
+                totalRequested += run.requested
+                if run.requested == 0 { continue }
+                nativeUploadStatus = "Publishing shown queue • batch \(batchIndex + 1) of \(batches.count) • \(totalProcessed) of \(ids.count) processed."
+                while !run.isFinished {
+                    try await Task.sleep(nanoseconds: 1_000_000_000)
+                    run = try await deliveryService.nativeUploadStatus(runID: run.runID)
+                    nativeUploadRun = run
+                    nativeUploadStatus = "Publishing shown queue • batch \(batchIndex + 1) of \(batches.count) • \(totalProcessed + run.processed) of \(ids.count) processed • \(totalLive + run.live) live • \(totalFailed + run.failed) failed."
+                }
+                totalProcessed += run.processed
+                totalLive += run.live
+                totalFailed += run.failed
             }
-            nativeUploadStatus = run.failed == 0
-                ? "Published \(run.live) verified asset\(run.live == 1 ? "" : "s"). Give Back completed for approved metadata."
-                : "Published \(run.live); \(run.failed) failed and remain independently retryable."
+            let skipped = max(0, ids.count - totalRequested)
+            let completion = totalFailed == 0
+                ? "Published \(totalLive) verified asset\(totalLive == 1 ? "" : "s")."
+                : "Published \(totalLive); \(totalFailed) failed and remain independently retryable."
             await loadNativeUploadPlan()
+            nativeUploadStatus = completion
+                + (skipped > 0 ? " \(skipped) changed eligibility before publication and were skipped safely." : "")
+                + " Give Back completed for approved metadata."
         } catch {
-            nativeUploadStatus = userFacingMessage(for: error)
+            nativeUploadStatus = (totalProcessed > 0
+                ? "Published \(totalLive) before the run stopped; \(totalFailed) failed. "
+                : "")
+                + userFacingMessage(for: error)
         }
     }
 

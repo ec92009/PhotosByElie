@@ -95,6 +95,11 @@ class NativeCullingParityTest(unittest.TestCase):
             "Use Command-click or Shift-click",
             'Button("Return to Review…")',
             "confirmingReturnToReview",
+            "shown of",
+            "not shown",
+            "oldest eligible by upload-readiness time",
+            'Button("Publish these \\(plan.items.count.formatted())…")',
+            "confirmingVisiblePublication",
         ):
             self.assertIn(marker, upload)
         for column in ("Title", "File", "Captured", "State", "Error"):
@@ -104,6 +109,10 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("selectedDeliveryIDs.subtract(returnedIDs)", model)
         self.assertIn("The rows were removed locally; refreshing the queue can be retried.", model)
         self.assertIn(".returnToReview", model)
+        self.assertIn("func publishVisibleNativeWindow()", model)
+        self.assertIn("stride(from: 0, to: ids.count, by: 50)", model)
+        self.assertIn("limit: batch.count", model)
+        self.assertNotIn("Publish next eligible 50", upload)
 
     def test_fixture_policy_controls_adapt_to_the_available_width(self):
         source = (

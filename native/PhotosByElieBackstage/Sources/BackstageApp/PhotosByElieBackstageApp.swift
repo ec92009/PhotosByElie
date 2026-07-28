@@ -241,7 +241,7 @@ private struct UploadWorkflowView: View {
     ]
     @State private var confirmingAdoption = false
     @State private var confirmingSelectedPublication = false
-    @State private var confirmingNextPublication = false
+    @State private var confirmingVisiblePublication = false
     @State private var confirmingReturnToReview = false
 
     private func sortedItems(_ plan: NativeUploadPlan) -> [NativeUploadPlanItem] {
@@ -258,8 +258,6 @@ private struct UploadWorkflowView: View {
                     .disabled(model.isRunningDelivery || model.selectedFixtureID.isEmpty)
                 Button("Publish selected…") { confirmingSelectedPublication = true }
                     .disabled(model.isRunningDelivery || model.selectedDeliveryIDs.isEmpty)
-                Button("Publish next eligible 50…") { confirmingNextPublication = true }
-                    .disabled(model.isRunningDelivery || (model.nativeUploadPlan?.items.isEmpty ?? true))
             }
             Text("Upload equals publication. Each verified source version becomes live immediately in every effective picked fixture; ACS alone determines who can see it. A failed asset remains Needs Upload without blocking the rest.")
                 .foregroundStyle(.secondary)
@@ -274,6 +272,23 @@ private struct UploadWorkflowView: View {
                     LabeledContent("Approved", value: "\(plan.approvedCount)")
                     LabeledContent("Needs Upload", value: "\(plan.needsUploadCount)")
                     LabeledContent("Live", value: "\(plan.liveCount)")
+                }
+                if plan.needsUploadCount > 0 {
+                    HStack {
+                        let outsideWindow = max(0, plan.needsUploadCount - plan.items.count)
+                        Text(
+                            "\(plan.items.count.formatted()) shown of \(plan.needsUploadCount.formatted()) needing upload"
+                            + " • \(outsideWindow.formatted()) not shown"
+                            + " • oldest eligible by upload-readiness time"
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        Spacer()
+                        Button("Publish these \(plan.items.count.formatted())…") {
+                            confirmingVisiblePublication = true
+                        }
+                        .disabled(model.isRunningDelivery || plan.items.isEmpty)
+                    }
                 }
                 if plan.items.isEmpty {
                     ContentUnavailableView(
@@ -448,15 +463,15 @@ private struct UploadWorkflowView: View {
             Text("Upload equals publication. Verified assets become live immediately in their effective picked fixtures.")
         }
         .confirmationDialog(
-            "Publish the next eligible batch now?",
-            isPresented: $confirmingNextPublication
+            "Publish the \(model.nativeUploadPlan?.items.count ?? 0) shown assets now?",
+            isPresented: $confirmingVisiblePublication
         ) {
-            Button("Publish up to 50 eligible assets") {
-                Task { await model.publishNextNativeBatch() }
+            Button("Publish these \(model.nativeUploadPlan?.items.count ?? 0) assets") {
+                Task { await model.publishVisibleNativeWindow() }
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Backstage will select up to 50 approved assets that still need upload. Upload equals publication.")
+            Text("Backstage will publish the exact loaded queue window in sequential batches of up to 50. Upload equals publication; each verified asset becomes live immediately.")
         }
     }
 }

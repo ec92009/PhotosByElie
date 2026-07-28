@@ -1,5 +1,22 @@
 # PhotosByElie Handoff
 
+## 2026-07-28 — Explicit visible Upload window
+
+- Backstage `0.4.17` build `28` permanently states how many approved
+  needs-upload items are loaded in the native Upload table, how many eligible
+  items remain outside that window, and that the server window is the oldest
+  eligible work by upload-readiness time. Column sorting rearranges only the
+  loaded rows.
+- **Publish these N…** publishes the exact loaded window the owner reviewed.
+  The app preserves the proven maximum of 50 assets per upload run by draining
+  that snapshot through sequential batches, with aggregate progress and
+  independently retryable failures. The confirmation names the exact loaded
+  count and reiterates that upload makes each verified asset live.
+- Automated verification passes: 46 OwnerCore tests, 13 native UI source
+  contract tests, and 6 native publication pipeline tests. Signed-app
+  acceptance remains read-only until the owner deliberately confirms a
+  publication; Codex must not activate this control.
+
 ## 2026-07-28 — Sortable Upload queue and audited return to Review
 
 - Backstage `0.4.16` build `27` gives the native Upload queue sortable Title,

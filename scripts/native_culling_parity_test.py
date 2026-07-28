@@ -134,6 +134,35 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("FlowLayout(spacing: 10)", review)
         self.assertNotIn(".frame(minWidth: 620)", review)
 
+    def test_culling_header_and_actions_resist_vertical_compression(self):
+        source = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "PhotosByElieBackstageApp.swift"
+        ).read_text(encoding="utf-8")
+        culling = source.split("private struct MediaLibraryView", 1)[1].split(
+            "private struct CullingAssetCard", 1
+        )[0]
+
+        grid_start = culling.index("ScrollViewReader")
+        grid_end = culling.index('Button("Open in Review")')
+        header = culling[:grid_start]
+        grid = culling[grid_start:grid_end]
+        actions = culling[grid_end:]
+
+        self.assertGreaterEqual(
+            header.count(".fixedSize(horizontal: false, vertical: true)"),
+            5,
+        )
+        self.assertIn(".layoutPriority(2)", header)
+        self.assertIn(".frame(minHeight: 120, maxHeight: .infinity)", grid)
+        self.assertIn(".clipped()", grid)
+        self.assertGreaterEqual(
+            actions.count(".fixedSize(horizontal: false, vertical: true)"),
+            5,
+        )
+
     def test_density_controls_resize_only_the_grid_viewport(self):
         source = (
             NATIVE

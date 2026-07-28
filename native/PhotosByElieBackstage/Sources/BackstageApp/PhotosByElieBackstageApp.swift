@@ -638,8 +638,12 @@ private struct MediaLibraryView: View {
                         cullingHeaderActions
                     }
                 }
+                .fixedSize(horizontal: false, vertical: true)
+                .layoutPriority(2)
                 Text(model.photoStatus)
                     .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .layoutPriority(2)
                 FlowLayout(spacing: 8) {
                     Picker(
                         "Fixture",
@@ -696,6 +700,8 @@ private struct MediaLibraryView: View {
                 .onChange(of: model.cullingView) { _, _ in model.applyCullingFilters() }
                 .onChange(of: model.cullingRatingFilter) { _, _ in model.applyCullingFilters() }
                 .onChange(of: model.cullingColorFilter) { _, _ in model.applyCullingFilters() }
+                .fixedSize(horizontal: false, vertical: true)
+                .layoutPriority(2)
                 let workspace = model.cullingWorkspace
                 FlowLayout(spacing: 8) {
                     Text("\(workspace.summary.filtered.formatted()) match • \(workspace.summary.total.formatted()) in scope")
@@ -705,6 +711,8 @@ private struct MediaLibraryView: View {
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .layoutPriority(2)
                 HStack {
                     if let range = workspace.visibleRange {
                         Text("\(range.lowerBound.formatted())–\(range.upperBound.formatted()) of \(workspace.summary.filtered.formatted())")
@@ -738,6 +746,8 @@ private struct MediaLibraryView: View {
                     }
                     .buttonStyle(.bordered)
                 }
+                .fixedSize(horizontal: false, vertical: true)
+                .layoutPriority(2)
                 ScrollViewReader { proxy in
                     GeometryReader { geometry in
                         ScrollView {
@@ -865,7 +875,8 @@ private struct MediaLibraryView: View {
                         }
                     }
                 }
-                .frame(minHeight: 280, maxHeight: .infinity)
+                .frame(minHeight: 120, maxHeight: .infinity)
+                .clipped()
                 .layoutPriority(1)
                 HStack {
                     Button("Open in Review") { model.sendCullingSelection(to: .review) }
@@ -876,6 +887,7 @@ private struct MediaLibraryView: View {
                         .disabled(model.cullingSelection.selectedIDs.isEmpty)
                     Spacer()
                 }
+                .fixedSize(horizontal: false, vertical: true)
                 FlowLayout(spacing: 8) {
                     Text("\(model.cullingSelection.selectedIDs.count) selected")
                     Picker("Fixture decision", selection: $model.cullingPickAction) {
@@ -933,6 +945,7 @@ private struct MediaLibraryView: View {
                     .disabled(model.cullingSelection.selectedIDs.isEmpty)
                 }
                 .labelsHidden()
+                .fixedSize(horizontal: false, vertical: true)
                 HStack {
                     Button("Undo") { Task { await model.undoLastCullingDecision() } }
                         .keyboardShortcut("z", modifiers: .command)
@@ -951,9 +964,11 @@ private struct MediaLibraryView: View {
                     Button("Clear selection") { model.clearCullingSelection() }
                         .disabled(model.cullingSelection.selectedIDs.isEmpty)
                 }
+                .fixedSize(horizontal: false, vertical: true)
                 Text(model.cullingStatus)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
                 if model.isLoadingCullingDecisions || model.isApplyingCullingDecision {
                     HStack {
                         ProgressView(
@@ -963,10 +978,12 @@ private struct MediaLibraryView: View {
                         Button("Stop") { model.cancelCullingOperation() }
                             .disabled(model.cullingCancellationRequested)
                     }
+                    .fixedSize(horizontal: false, vertical: true)
                 }
                 Text("Shortcuts: P include in fixture • H exclude from fixture • X globally reject • U clear fixture decision • 0–5 rating • 6–9 color • +/− density • Z fit/fill • Space Quick Look • ⌘Z undo")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .padding()
 

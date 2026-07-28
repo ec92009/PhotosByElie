@@ -1786,11 +1786,15 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func propagateLastReviewAction() async {
-        guard [.approve, .hide, .requestAI].contains(reviewLastAction) else {
+        // Selected AI reasons are the current Review intent even if Approve
+        // or Hide was the last completed action. Propagation must copy that
+        // reason mark, not inherit a stale approval action.
+        let action = reviewAIReasons.isEmpty ? reviewLastAction : .requestAI
+        guard [.approve, .hide, .requestAI].contains(action) else {
             reviewStatus = "Choose Approve, Hide, or Request AI before using main Propagate."
             return
         }
-        await applyReviewAction(reviewLastAction, propagate: true)
+        await applyReviewAction(action, propagate: true)
     }
 
     func refreshAIStatus() async {

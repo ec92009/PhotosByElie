@@ -1,5 +1,19 @@
 # PhotosByElie Handoff
 
+## 2026-07-28 — Review propagation follows the current AI-reason intent
+
+- Backstage `0.4.24` build `35` treats selected AI-review reasons as the
+  current action when the main Propagate button is used, even if Approve or
+  Hide was the last completed action.
+- Propagating `Too generic`, `Add details`, or any other selected reason now
+  sends `request-ai` through the existing server-side shoot-window and fixture
+  targeting rules. It does not approve the anchor or any propagation target.
+- Approve and Hide propagation remain available when no AI-review reason is
+  selected. Title and keyword propagation remain separate per-field actions.
+- Acceptance remains read-only: verify the selected-reason precedence in the
+  normally installed signed build without approving, hiding, propagating, or
+  otherwise changing real Review state.
+
 ## 2026-07-28 — Lightroom-style Culling filters and exact immediate card state
 
 - Backstage `0.4.23` build `34` replaces the verbose Rating and Color filter

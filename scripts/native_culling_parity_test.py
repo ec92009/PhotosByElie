@@ -488,6 +488,18 @@ class NativeCullingParityTest(unittest.TestCase):
             "if [.approve, .hide, .requestAI].contains(action)",
             model,
         )
+        propagate = model.split("func propagateLastReviewAction", 1)[1].split(
+            "func refreshAIStatus", 1
+        )[0]
+        self.assertIn(
+            "let action = reviewAIReasons.isEmpty ? reviewLastAction : .requestAI",
+            propagate,
+        )
+        self.assertIn("await applyReviewAction(action, propagate: true)", propagate)
+        self.assertNotIn(
+            "await applyReviewAction(reviewLastAction, propagate: true)",
+            propagate,
+        )
 
     def test_getting_started_describes_the_native_large_pool_path(self):
         guide = (ROOT / "docs" / "BACKSTAGE_GETTING_STARTED.md").read_text(

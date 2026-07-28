@@ -172,12 +172,37 @@ class NativeCullingParityTest(unittest.TestCase):
         culling = source.split("private struct MediaLibraryView", 1)[1].split(
             "private struct CullingAssetCard", 1
         )[0]
+        review = source.split("private struct FixtureReviewView", 1)[1].split(
+            "private struct ReviewInspector", 1
+        )[0]
+        root = source.split("private struct OverviewView", 1)[0]
+        model = (
+            NATIVE / "Sources" / "BackstageApp" / "BackstageViewModel.swift"
+        ).read_text(encoding="utf-8")
 
-        self.assertIn("@State private var isCullingPreviewVisible = true", culling)
-        self.assertIn('Image(systemName: "sidebar.right")', culling)
-        self.assertIn('help(isCullingPreviewVisible ? "Hide preview" : "Show preview")', culling)
-        self.assertIn("if isCullingPreviewVisible", culling)
+        self.assertIn("@Published var isPreviewPanelVisible = true", model)
+        self.assertIn('Image(systemName: "sidebar.right")', root)
+        self.assertIn('model.selection == .culling || model.selection == .review', root)
+        self.assertIn('"Collapse preview panel"', root)
+        self.assertIn('"Expand preview panel"', root)
+        self.assertIn('if model.status == "Connected"', root)
+        self.assertNotIn("@State private var isCullingPreviewVisible", culling)
+        self.assertIn("if model.isPreviewPanelVisible", culling)
         self.assertIn(".frame(minWidth: 220, idealWidth: 300, maxWidth: 360)", culling)
+        preview_boundary = culling.index("if model.isPreviewPanelVisible")
+        for persistent_control in (
+            'Button("Apply")',
+            'Button("Clear")',
+            'Button("Review picked")',
+            'Button("Previous \\(workspace.limit)")',
+            'Button("Next \\(workspace.limit)")',
+            'Button("−")',
+            'Button("+")',
+            'Button(model.cullingUsesFill ? "Fill" : "Fit")',
+        ):
+            self.assertLess(culling.index(persistent_control), preview_boundary)
+        self.assertIn("if model.isPreviewPanelVisible", review)
+        self.assertIn(".frame(minWidth: 300, idealWidth: 380, maxWidth: 480)", review)
 
     def test_review_edits_autosave_and_propagation_controls_stay_compact(self):
         ui = (

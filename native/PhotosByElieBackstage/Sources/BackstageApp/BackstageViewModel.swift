@@ -63,6 +63,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var selection: Section? = .overview
     @Published var actions: [OwnerAction] = []
     @Published var status = "Not connected"
+    @Published var isPreviewPanelVisible = true
     @Published var isRefreshing = false
     @Published var authentication = OwnerAuthenticationSnapshot(phase: .needsEnrollment)
     @Published var enrollmentCode = ""

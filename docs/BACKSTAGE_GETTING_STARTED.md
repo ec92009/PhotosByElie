@@ -8,7 +8,7 @@ Backstage is currently installed on Max at:
 
 `/Users/ecohen/Applications/PhotosByElie Backstage.app`
 
-The current native workflow is included in version **0.4.4 (build 15)**.
+The current native workflow is included in version **0.4.5 (build 16)**.
 
 Open it from Finder, Spotlight, or the Applications folder in your Home
 directory.
@@ -16,8 +16,8 @@ directory.
 ## The five-minute safe start
 
 1. Open **PhotosByElie Backstage**.
-2. In **Overview**, confirm that the status dot is green and the toolbar says
-   **Connected**.
+2. In **Overview**, confirm that **Authentication** says **Authenticated** and
+   that no orange connection warning appears in the toolbar.
 3. Open **Culling** and choose **Allow Photos** if macOS asks for permission.
    Grant full Photos access. Backstage should report how many recent Photos
    items it indexed.
@@ -47,8 +47,8 @@ Enrollment is normally needed only once per Mac.
    this Mac's Keychain.
 
 The code is a one-time device credential. It does not grant Photos access and
-does not change catalog data. If Backstage already says **Connected**, do not
-create another code.
+does not change catalog data. If **Authentication** already says
+**Authenticated**, do not create another code.
 
 ## A useful mental model
 
@@ -73,7 +73,10 @@ deploy the website.
 
 Use **Overview** to check this Mac's authentication.
 
-- **Connected** with a green dot means the app has a working session.
+- **Authenticated** means the app has a working session. Once connected,
+  Backstage removes the redundant green toolbar indicator. In Culling and
+  Review, that top-right space becomes the collapse/expand control for the
+  preview or editorial panel.
 - **Refresh session** reloads the session from the credential stored in
   Keychain.
 - Backstage renews its short-lived access token automatically. If a workspace

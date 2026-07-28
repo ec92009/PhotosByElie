@@ -1,5 +1,19 @@
 # PhotosByElie Handoff
 
+## 2026-07-28 — Shared Backstage preview-panel control
+
+- Backstage `0.4.5` build `16` removes the persistent green `Connected`
+  indicator after authentication succeeds. Non-connected and error states
+  remain visible in the top-right toolbar.
+- Culling and Review now share a top-right preview-panel toggle modeled after
+  the Codex UI. The toggle remains present when the panel is collapsed, so the
+  owner always has an explicit way to restore it.
+- The former Culling-local toggle is removed. Both the bounded Culling preview
+  and the Review editorial inspector animate in and out without resizing the
+  app window.
+- Acceptance remains read-only/no-save: do not change Culling/Review state,
+  metadata, Waste Basket, uploads, publication, delivery, access, or clients.
+
 ## 2026-07-28 — Backstage Culling and Review interaction polish
 
 - Backstage `0.4.4` build `15` animates Culling density changes, bounds the

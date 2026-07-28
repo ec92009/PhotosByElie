@@ -26,12 +26,29 @@ struct PhotosByElieBackstageApp: App {
                         alignment: .topLeading
                     )
                     .toolbar {
-                        ToolbarItem {
-                            HStack(spacing: 8) {
-                                Circle()
-                                    .fill(model.status == "Connected" ? .green : .orange)
-                                    .frame(width: 9, height: 9)
-                                Text(model.status).lineLimit(1)
+                        ToolbarItem(placement: .primaryAction) {
+                            if model.status == "Connected" {
+                                if model.selection == .culling || model.selection == .review {
+                                    Button {
+                                        withAnimation(.snappy(duration: 0.24)) {
+                                            model.isPreviewPanelVisible.toggle()
+                                        }
+                                    } label: {
+                                        Image(systemName: "sidebar.right")
+                                    }
+                                    .help(
+                                        model.isPreviewPanelVisible
+                                            ? "Collapse preview panel"
+                                            : "Expand preview panel"
+                                    )
+                                }
+                            } else {
+                                HStack(spacing: 8) {
+                                    Circle()
+                                        .fill(.orange)
+                                        .frame(width: 9, height: 9)
+                                    Text(model.status).lineLimit(1)
+                                }
                             }
                         }
                     }
@@ -587,7 +604,6 @@ private struct ActivityView: View {
 private struct MediaLibraryView: View {
     @ObservedObject var model: BackstageViewModel
     @StateObject private var quickLook = BackstageQuickLookCoordinator()
-    @State private var isCullingPreviewVisible = true
 
     var body: some View {
         HSplitView {
@@ -702,15 +718,6 @@ private struct MediaLibraryView: View {
                         model.toggleCullingFitFill()
                     }
                     .buttonStyle(.bordered)
-                    Button {
-                        withAnimation(.snappy(duration: 0.24)) {
-                            isCullingPreviewVisible.toggle()
-                        }
-                    } label: {
-                        Image(systemName: "sidebar.right")
-                    }
-                    .buttonStyle(.bordered)
-                    .help(isCullingPreviewVisible ? "Hide preview" : "Show preview")
                 }
                 ScrollViewReader { proxy in
                     GeometryReader { geometry in
@@ -944,7 +951,7 @@ private struct MediaLibraryView: View {
             }
             .padding()
 
-            if isCullingPreviewVisible {
+            if model.isPreviewPanelVisible {
                 Group {
                     if model.isLoadingPreview {
                         ProgressView("Loading preview…")
@@ -970,7 +977,7 @@ private struct MediaLibraryView: View {
                 .transition(.move(edge: .trailing).combined(with: .opacity))
             }
         }
-        .animation(.snappy(duration: 0.24), value: isCullingPreviewVisible)
+        .animation(.snappy(duration: 0.24), value: model.isPreviewPanelVisible)
         .task {
             if model.fixtures.isEmpty {
                 await model.loadFixtures()
@@ -1863,9 +1870,13 @@ private struct FixtureReviewView: View {
             .padding()
             .frame(minWidth: 480)
 
-            ReviewInspector(model: model, quickLook: quickLook)
-                .frame(minWidth: 300, idealWidth: 380, maxWidth: 480)
+            if model.isPreviewPanelVisible {
+                ReviewInspector(model: model, quickLook: quickLook)
+                    .frame(minWidth: 300, idealWidth: 380, maxWidth: 480)
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
+            }
         }
+        .animation(.snappy(duration: 0.24), value: model.isPreviewPanelVisible)
         .task {
             if model.fixtures.isEmpty {
                 await model.loadFixtures()

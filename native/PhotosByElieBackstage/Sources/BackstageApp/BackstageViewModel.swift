@@ -206,6 +206,9 @@ final class BackstageViewModel: ObservableObject {
     @Published var uploadRecoveryStatus = "Existing verified upload runs can be adopted explicitly."
     @Published var nativeUploadPlan: NativeUploadPlan?
     @Published var nativeUploadRun: NativeUploadRun?
+    @Published var isRunningNativePublication = false
+    @Published var nativePublicationBatchNumber = 0
+    @Published var nativePublicationBatchCount = 0
     @Published var nativeUploadThumbnails: [String: NSImage] = [:]
     @Published var nativeUploadPreviewImage: NSImage?
     @Published var nativeUploadPreviewItemID = ""
@@ -2793,7 +2796,16 @@ final class BackstageViewModel: ObservableObject {
             Array(ids[$0..<min($0 + 50, ids.count)])
         }
         isRunningDelivery = true
-        defer { isRunningDelivery = false }
+        isRunningNativePublication = true
+        nativeUploadRun = nil
+        nativePublicationBatchNumber = 0
+        nativePublicationBatchCount = batches.count
+        defer {
+            isRunningNativePublication = false
+            nativePublicationBatchNumber = 0
+            nativePublicationBatchCount = 0
+            isRunningDelivery = false
+        }
         var totalRequested = 0
         var totalProcessed = 0
         var totalLive = 0
@@ -2803,6 +2815,7 @@ final class BackstageViewModel: ObservableObject {
         var failedIDs = Set<String>()
         do {
             for (batchIndex, batch) in batches.enumerated() {
+                nativePublicationBatchNumber = batchIndex + 1
                 var run = try await deliveryService.startNativeUpload(
                     assetIDs: batch,
                     limit: batch.count,

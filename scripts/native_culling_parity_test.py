@@ -124,6 +124,14 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("Failed items remain in this tray for retry.", model)
         self.assertIn("stride(from: 0, to: ids.count, by: 50)", model)
         self.assertIn("limit: batch.count", model)
+        self.assertIn("isRunningNativePublication = true", model)
+        self.assertIn("nativePublicationBatchNumber = batchIndex + 1", model)
+        self.assertIn("nativePublicationBatchCount = batches.count", model)
+        self.assertIn("if model.isRunningNativePublication,", upload)
+        self.assertIn(
+            '"Batch \\(model.nativePublicationBatchNumber) of \\(model.nativePublicationBatchCount)"',
+            upload,
+        )
         self.assertNotIn(
             'nativeUploadStatus += " The rows were removed locally; refreshing the queue can be retried."',
             model,

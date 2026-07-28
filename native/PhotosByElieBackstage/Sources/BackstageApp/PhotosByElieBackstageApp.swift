@@ -378,15 +378,25 @@ private struct UploadWorkflowView: View {
                     }
                 }
             }
-            if let run = model.nativeUploadRun, run.requested > 0 {
+            if model.isRunningNativePublication,
+               let run = model.nativeUploadRun,
+               run.requested > 0 {
                 ProgressView(
                     value: Double(run.processed),
                     total: Double(run.requested)
                 ) {
-                    Text("\(run.processed) of \(run.requested) • \(run.live) live • \(run.failed) failed • \(run.remaining) remaining")
+                    Text(
+                        "Batch \(model.nativePublicationBatchNumber) of \(model.nativePublicationBatchCount)"
+                        + " • \(run.processed) of \(run.requested)"
+                        + " • \(run.live) live"
+                        + " • \(run.failed) failed"
+                        + " • \(run.remaining) remaining"
+                    )
                 }
             }
-            if let run = model.nativeUploadRun, !run.items.isEmpty {
+            if model.isRunningNativePublication,
+               let run = model.nativeUploadRun,
+               !run.items.isEmpty {
                 Table(run.items) {
                     TableColumn("Asset", value: \.assetID)
                     TableColumn("State", value: \.status)

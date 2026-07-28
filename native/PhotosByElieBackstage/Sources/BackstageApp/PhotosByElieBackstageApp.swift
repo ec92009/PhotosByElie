@@ -901,77 +901,68 @@ private struct MediaLibraryView: View {
                             }
                         }
                         .frame(width: 180)
+                        .labelsHidden()
                         TextField("Search title, file, or keyword", text: $model.cullingSearch)
                             .textFieldStyle(.roundedBorder)
                             .frame(width: 240)
                             .onSubmit { model.applyCullingFilters() }
-                        Menu {
-                            ForEach(CullingMediaFilter.selectableCases, id: \.self) { filter in
-                                Toggle(
-                                    filter.label,
-                                    isOn: Binding(
-                                        get: { model.cullingMediaFilters.contains(filter) },
-                                        set: { _ in model.toggleCullingMediaFilter(filter) }
-                                    )
-                                )
-                            }
-                        } label: {
-                            Text(model.cullingMediaFilterLabel)
-                                .lineLimit(1)
-                        }
-                        .frame(width: 110)
-                        Menu {
-                            ForEach(FixtureCullingView.selectableCases, id: \.self) { view in
-                                Toggle(
-                                    view.label,
-                                    isOn: Binding(
-                                        get: { model.cullingViews.contains(view) },
-                                        set: { _ in model.toggleCullingViewFilter(view) }
-                                    )
-                                )
-                            }
-                        } label: {
-                            Text(model.cullingViewFilterLabel)
-                                .lineLimit(1)
-                        }
-                        .frame(width: 120)
-                        Menu {
-                            ForEach(0...5, id: \.self) { value in
-                                Toggle(
-                                    value == 0 ? "No rating" : "\(value) star\(value == 1 ? "" : "s")",
-                                    isOn: Binding(
-                                        get: { model.cullingRatingFilters.contains(value) },
-                                        set: { _ in model.toggleCullingRatingFilter(value) }
-                                    )
-                                )
-                            }
-                        } label: {
-                            Text(model.cullingRatingFilterLabel)
-                                .lineLimit(1)
-                        }
-                        .frame(width: 120)
-                        Menu {
-                            ForEach(CullingColorFilter.selectableCases, id: \.self) { color in
-                                Toggle(
-                                    color.label,
-                                    isOn: Binding(
-                                        get: { model.cullingColorFilters.contains(color) },
-                                        set: { _ in model.toggleCullingColorFilter(color) }
-                                    )
-                                )
-                            }
-                        } label: {
-                            Text(model.cullingColorFilterLabel)
-                                .lineLimit(1)
-                        }
-                        .frame(width: 110)
-                        Button("Apply") { model.applyCullingFilters() }
-                        Button("Clear") { model.clearCullingFilters() }
                         Button("Review picked") { model.showPickedReview() }
                         Button("Select burst") { model.selectFocusedBurst() }
                             .disabled(model.focusedCullingAssetID == nil)
                     }
-                    .labelsHidden()
+                    FlowLayout(spacing: 8) {
+                        Text("Media").font(.caption.weight(.semibold))
+                        ForEach(CullingMediaFilter.selectableCases, id: \.self) { filter in
+                            Toggle(
+                                filter.label,
+                                isOn: Binding(
+                                    get: { model.cullingMediaFilters.contains(filter) },
+                                    set: { _ in model.toggleCullingMediaFilter(filter) }
+                                )
+                            )
+                            .toggleStyle(.checkbox)
+                        }
+                        Divider().frame(width: 1, height: 18)
+                        Text("Status").font(.caption.weight(.semibold))
+                        ForEach(FixtureCullingView.selectableCases, id: \.self) { view in
+                            Toggle(
+                                view.label,
+                                isOn: Binding(
+                                    get: { model.cullingViews.contains(view) },
+                                    set: { _ in model.toggleCullingViewFilter(view) }
+                                )
+                            )
+                            .toggleStyle(.checkbox)
+                        }
+                        Divider().frame(width: 1, height: 18)
+                        Text("Rating").font(.caption.weight(.semibold))
+                        ForEach(0...5, id: \.self) { value in
+                            Toggle(
+                                value == 0 ? "None" : "\(value)★",
+                                isOn: Binding(
+                                    get: { model.cullingRatingFilters.contains(value) },
+                                    set: { _ in model.toggleCullingRatingFilter(value) }
+                                )
+                            )
+                            .toggleStyle(.checkbox)
+                        }
+                        Divider().frame(width: 1, height: 18)
+                        Text("Color").font(.caption.weight(.semibold))
+                        ForEach(CullingColorFilter.selectableCases, id: \.self) { color in
+                            Toggle(
+                                color.label,
+                                isOn: Binding(
+                                    get: { model.cullingColorFilters.contains(color) },
+                                    set: { _ in model.toggleCullingColorFilter(color) }
+                                )
+                            )
+                            .toggleStyle(.checkbox)
+                        }
+                        Button("Clear filters") { model.clearCullingFilters() }
+                    }
+                    .onChange(of: model.cullingSearch) { _, _ in
+                        model.scheduleCullingSearchRefresh()
+                    }
                     .onChange(of: model.cullingMediaFilters) { _, _ in model.applyCullingFilters() }
                     .onChange(of: model.cullingViews) { _, _ in model.applyCullingFilters() }
                     .onChange(of: model.cullingRatingFilters) { _, _ in model.applyCullingFilters() }
@@ -1158,7 +1149,7 @@ private struct MediaLibraryView: View {
                         }
                     }
                 }
-                .frame(minHeight: 120, maxHeight: .infinity)
+                .frame(maxWidth: .infinity, minHeight: 240, maxHeight: .infinity)
                 .clipped()
                 .layoutPriority(1)
                 VStack(alignment: .leading, spacing: 8) {
@@ -1301,6 +1292,7 @@ private struct MediaLibraryView: View {
             }
         }
         .animation(.snappy(duration: 0.24), value: model.isPreviewPanelVisible)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .task {
             if model.fixtures.isEmpty {
                 await model.loadFixtures()
@@ -1488,6 +1480,7 @@ private struct CullingAssetCard: View {
             .background(.quaternary.opacity(0.45))
             .clipShape(RoundedRectangle(cornerRadius: 7))
             .clipped()
+            .saturation(isHidden ? 0 : 1)
             HStack(spacing: 5) {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(asset.title.isEmpty ? asset.filename : asset.title)
@@ -1529,6 +1522,12 @@ private struct CullingAssetCard: View {
     private var starLabel: String {
         let rating = state?.rating ?? asset.rating
         return rating > 0 ? String(repeating: "★", count: rating) : "☆"
+    }
+
+    private var isHidden: Bool {
+        asset.placementState == .hidden
+            || state?.pickState == "hidden"
+            || state?.pickState == "rejected"
     }
 
     private func color(_ value: String) -> Color {

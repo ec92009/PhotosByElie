@@ -1,5 +1,22 @@
 # PhotosByElie Handoff
 
+## 2026-07-28 — Immediate visible Culling filters
+
+- Backstage `0.4.19` build `30` replaces the four Culling filter pull-downs
+  with visible, independently selectable checkbox groups for media, fixture
+  status, rating, and color. Checkbox changes apply immediately; search applies
+  after a short typing debounce. The obsolete Apply button is gone.
+- Rapid filter changes cancel the prior local request and use a monotonic
+  response guard, so a slow older Owner response cannot replace the newest
+  filter result. Hidden-only windows retain the exact server-side fixture
+  scope and now render their thumbnails in black and white.
+- The Culling split view and thumbnail scroller claim the available vertical
+  height while retaining the pinned header and action footer. This removes the
+  large dead area after a user-driven vertical window expansion.
+- Automated verification passes: 46 OwnerCore tests, 15 native Culling source
+  contract tests, the full 156 Node + 169 Python repository suite, and
+  publication validation. Signed-app acceptance must remain read-only.
+
 ## 2026-07-28 — Retained Review decisions and Upload keyboard inspection
 
 - Backstage `0.4.18` build `29` keeps cards approved or hidden during the

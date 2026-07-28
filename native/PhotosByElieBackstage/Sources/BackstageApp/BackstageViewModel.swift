@@ -240,6 +240,8 @@ final class BackstageViewModel: ObservableObject {
     let photosBridgeHealthService: PhotosBridgeHealthService
     private var authenticationTask: Task<OwnerAuthenticationSnapshot, Never>?
     private var reviewMetadataAutosaveTask: Task<Void, Never>?
+    private var cullingFilterTask: Task<Void, Never>?
+    private var cullingWindowRequestSerial = 0
 
     var selectedFixturePoolSummary: FixturePoolSummary? {
         fixturePools.first(where: { $0.id == selectedFixturePoolID })
@@ -727,15 +729,26 @@ final class BackstageViewModel: ObservableObject {
         selectedPhotoIDs = cullingSelection.selectedIDs
     }
 
-    func applyCullingFilters() {
+    func applyCullingFilters(debounceNanoseconds: UInt64 = 0) {
         cullingWindowOffset = 0
+        cullingFilterTask?.cancel()
         if !cullingFixtureID.isEmpty, cullingPool == nil {
-            Task { await loadFixtureCullingWindow() }
+            cullingFilterTask = Task { [weak self] in
+                if debounceNanoseconds > 0 {
+                    try? await Task.sleep(nanoseconds: debounceNanoseconds)
+                }
+                guard !Task.isCancelled else { return }
+                await self?.loadFixtureCullingWindow()
+            }
             return
         }
         replaceCullingItems()
         photoPreview = nil
         cullingStatus = "\(cullingWorkspace.summary.filtered.formatted()) of \(cullingWorkspace.summary.total.formatted()) items match."
+    }
+
+    func scheduleCullingSearchRefresh() {
+        applyCullingFilters(debounceNanoseconds: 250_000_000)
     }
 
     func clearCullingFilters() {
@@ -918,9 +931,15 @@ final class BackstageViewModel: ObservableObject {
             cullingStatus = "Choose a fixture to begin culling."
             return
         }
+        cullingWindowRequestSerial += 1
+        let requestSerial = cullingWindowRequestSerial
         isLoadingFixtureCulling = true
         cullingStatus = "Loading the \(cullingViewFilterLabel.lowercased()) fixture window…"
-        defer { isLoadingFixtureCulling = false }
+        defer {
+            if requestSerial == cullingWindowRequestSerial {
+                isLoadingFixtureCulling = false
+            }
+        }
         do {
             let mediaTypes = cullingMediaFilters.map {
                 $0 == .videos ? "video" : "photo"
@@ -938,6 +957,7 @@ final class BackstageViewModel: ObservableObject {
                 ratings: cullingRatingFilters.sorted(),
                 colors: colors
             )
+            guard requestSerial == cullingWindowRequestSerial, !Task.isCancelled else { return }
             fixtureCullingWindow = window
             cullingStates = Dictionary(uniqueKeysWithValues: window.items.map { asset in
                 (
@@ -957,6 +977,8 @@ final class BackstageViewModel: ObservableObject {
             photoPreview = nil
             cullingStatus = "\(window.summary.filtered.formatted()) \(window.view.label.lowercased()) of \(window.summary.universe.formatted()) eligible items."
         } catch {
+            guard requestSerial == cullingWindowRequestSerial else { return }
+            guard !(error is CancellationError), !Task.isCancelled else { return }
             cullingStatus = userFacingMessage(for: error)
         }
     }

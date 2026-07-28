@@ -48,7 +48,6 @@ class NativeCullingParityTest(unittest.TestCase):
             "H exclude from fixture",
             "X globally reject",
             "Button(\"Stop\")",
-            ".frame(minHeight: 140, idealHeight: 180, maxHeight: 220)",
             "ScrollView(.vertical)",
             "CullingMediaFilter.selectableCases",
             "FixtureCullingView.selectableCases",
@@ -238,7 +237,10 @@ class NativeCullingParityTest(unittest.TestCase):
 
         self.assertIn("VStack(alignment: .leading, spacing: 12)", header)
         self.assertIn(".layoutPriority(3)", header)
-        self.assertIn(".frame(minHeight: 120, maxHeight: .infinity)", grid)
+        self.assertIn(
+            ".frame(maxWidth: .infinity, minHeight: 240, maxHeight: .infinity)",
+            grid,
+        )
         self.assertIn(".clipped()", grid)
         self.assertIn(".id(cullingViewportIdentity)", grid)
         self.assertIn(".padding(.top, 12)", grid)
@@ -249,6 +251,45 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn(
             ".frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)",
             culling,
+        )
+        self.assertIn(".frame(maxWidth: .infinity, maxHeight: .infinity)", culling)
+
+    def test_culling_filters_are_visible_immediate_and_stale_safe(self):
+        app = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "PhotosByElieBackstageApp.swift"
+        ).read_text(encoding="utf-8")
+        model = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "BackstageViewModel.swift"
+        ).read_text(encoding="utf-8")
+        culling = app.split("private struct MediaLibraryView", 1)[1].split(
+            "private struct CullingAssetCard", 1
+        )[0]
+        card = app.split("private struct CullingAssetCard", 1)[1].split(
+            "private struct", 1
+        )[0]
+
+        self.assertNotIn('Button("Apply")', culling)
+        self.assertNotIn("Menu {", culling)
+        self.assertGreaterEqual(culling.count(".toggleStyle(.checkbox)"), 4)
+        self.assertIn("Text(\"Media\")", culling)
+        self.assertIn("Text(\"Status\")", culling)
+        self.assertIn("Text(\"Rating\")", culling)
+        self.assertIn("Text(\"Color\")", culling)
+        self.assertIn("onChange(of: model.cullingSearch)", culling)
+        self.assertIn("model.scheduleCullingSearchRefresh()", culling)
+        self.assertIn(".saturation(isHidden ? 0 : 1)", card)
+        self.assertIn("asset.placementState == .hidden", card)
+        self.assertIn("cullingFilterTask?.cancel()", model)
+        self.assertIn("cullingWindowRequestSerial", model)
+        self.assertIn(
+            "guard requestSerial == cullingWindowRequestSerial, !Task.isCancelled else { return }",
+            model,
         )
 
     def test_culling_refresh_reconciles_recent_photos_before_owner_window(self):
@@ -344,8 +385,7 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn(".frame(minWidth: 220, idealWidth: 300, maxWidth: 360)", culling)
         preview_boundary = culling.index("if model.isPreviewPanelVisible")
         for persistent_control in (
-            'Button("Apply")',
-            'Button("Clear")',
+            'Button("Clear filters")',
             'Button("Review picked")',
             'Button("Previous \\(workspace.limit)")',
             'Button("Next \\(workspace.limit)")',

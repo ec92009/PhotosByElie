@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 import sqlite3
 import socket
+import threading
 import time
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
@@ -17,6 +18,7 @@ from scripts.new_owner_connector import (
     _launch_sidecar_workspace,
     _local_status_payload,
     _local_sidecar_open_action,
+    _action_is_read_only,
     _owner_waste_basket_url,
     _sidecar_job_public_payload,
     _upload_and_register,
@@ -128,6 +130,80 @@ class UploadRegistrationScopeTest(unittest.TestCase):
         self.assertEqual([item[1] for item in client.transitions], ["claim", "complete"])
         self.assertTrue(client.transitions[0][2]["locallyAwakenedAt"])
         self.assertTrue(client.transitions[1][2]["timing"]["executedAt"])
+
+    def test_fixture_tree_is_a_read_only_connector_action(self):
+        self.assertTrue(_action_is_read_only({
+            "type": "sidecar-culling-review",
+            "payload": {"manifest": {"mode": "fixture-tree-list"}},
+        }))
+        self.assertFalse(_action_is_read_only({
+            "type": "sidecar-culling-review",
+            "payload": {"manifest": {"mode": "fixture-state-apply"}},
+        }))
+
+    def test_read_only_fixture_action_does_not_wait_for_unrelated_mutation(self):
+        config = ConnectorConfig("https://worker.test", "max", "x" * 32, Path("/tmp/repo"))
+        mutation_started = threading.Event()
+        release_mutation = threading.Event()
+
+        class FakeClient:
+            def __init__(self):
+                self.records = {
+                    "owner-action-write": {
+                        "id": "owner-action-write",
+                        "type": "sidecar-culling-review",
+                        "state": "queued",
+                        "payload": {"manifest": {"mode": "fixture-state-apply"}},
+                    },
+                    "owner-action-read": {
+                        "id": "owner-action-read",
+                        "type": "sidecar-culling-review",
+                        "state": "queued",
+                        "payload": {"manifest": {"mode": "fixture-tree-list"}},
+                    },
+                }
+                self.guard = threading.Lock()
+
+            def action(self, action_id):
+                with self.guard:
+                    return dict(self.records[action_id])
+
+            def transition(self, action_id, transition, payload=None):
+                with self.guard:
+                    if transition == "claim":
+                        self.records[action_id] = {
+                            **self.records[action_id],
+                            "state": "claimed",
+                            "claim": {"connectorId": "max"},
+                        }
+                    elif transition == "complete":
+                        self.records[action_id] = {
+                            **self.records[action_id],
+                            "state": "completed",
+                            "result": (payload or {}).get("result", {}),
+                        }
+                    return {"action": dict(self.records[action_id])}
+
+        def fake_execute(_config, action):
+            if action["id"] == "owner-action-write":
+                mutation_started.set()
+                self.assertTrue(release_mutation.wait(2))
+            return {"id": action["id"]}
+
+        client = FakeClient()
+        with patch("scripts.new_owner_connector.execute_action", side_effect=fake_execute):
+            write_thread = threading.Thread(
+                target=process_exact_action,
+                args=(config, client, "owner-action-write"),
+            )
+            write_thread.start()
+            self.assertTrue(mutation_started.wait(1))
+            read_action, processed = process_exact_action(config, client, "owner-action-read")
+            self.assertTrue(processed)
+            self.assertEqual(read_action["state"], "completed")
+            release_mutation.set()
+            write_thread.join(2)
+            self.assertFalse(write_thread.is_alive())
 
     def test_empty_upload_does_not_run_global_registration(self):
         with patch("scripts.new_owner_connector._run_repo_json", return_value={"status": "done", "items": []}) as run:

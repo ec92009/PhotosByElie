@@ -1,5 +1,21 @@
 # PhotosByElie Handoff
 
+## 2026-07-28 — Fixture reads stay responsive behind slow Owner work
+
+- Backstage `0.4.21` build `32` no longer leaves the fixture tree waiting
+  behind an unrelated long-running connector mutation. The connector
+  serializes duplicate attempts for the same opaque Worker action and all
+  mutations, while allowing a documented set of audited read-only fixture
+  actions to execute concurrently.
+- The Fixtures screen now distinguishes tree loading from candidate searching.
+  Reload tree is disabled only while the tree itself is loading, and the
+  candidate progress indicator appears only for an explicit candidate search.
+- The existing Worker action remains the authorization, audit, and durability
+  gate. No direct local fixture operation or photo-state mutation was added.
+- Verification on Max requires the normally installed signed build to load the
+  existing 20-node fixture hierarchy without changing photo, Review, upload,
+  publication, delivery, or client state.
+
 ## 2026-07-28 — Stable Backstage signing for Keychain access
 
 - Backstage `0.4.20` build `31` no longer installs an ad-hoc-signed release by

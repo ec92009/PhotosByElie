@@ -1653,9 +1653,16 @@ private struct FixtureWorkflowView: View {
                 Text("Fixtures").font(.largeTitle.bold())
                 Spacer()
                 Button("Reload tree") { Task { await model.loadFixtures() } }
-                    .disabled(model.isRunningFixture)
+                    .disabled(model.isLoadingFixtureTree)
             }
-            Text(model.fixtureStatus).foregroundStyle(.secondary)
+            HStack {
+                if model.isLoadingFixtureTree {
+                    ProgressView()
+                        .controlSize(.small)
+                }
+                Text(model.isLoadingFixtureTree ? "Loading fixture tree…" : model.fixtureStatus)
+                    .foregroundStyle(.secondary)
+            }
             HSplitView {
                 VStack(alignment: .leading, spacing: 10) {
                     List(selection: $model.selectedFixtureID) {
@@ -1708,7 +1715,7 @@ private struct FixtureWorkflowView: View {
                     }
                     .frame(minHeight: 140, idealHeight: 180, maxHeight: 220)
                     .overlay {
-                        if model.isRunningFixture && model.fixtureAssets.isEmpty {
+                        if model.isSearchingFixtureAssets && model.fixtureAssets.isEmpty {
                             ProgressView("Loading fixture candidates…")
                         } else if model.fixtureAssets.isEmpty {
                             ContentUnavailableView(

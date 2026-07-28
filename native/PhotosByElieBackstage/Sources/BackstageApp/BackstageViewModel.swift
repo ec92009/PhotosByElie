@@ -90,6 +90,8 @@ final class BackstageViewModel: ObservableObject {
     @Published var selectedFixtureAssetIDs: Set<String> = []
     @Published var fixtureStatus = "Load the fixture tree to begin."
     @Published var isRunningFixture = false
+    @Published var isLoadingFixtureTree = false
+    @Published var isSearchingFixtureAssets = false
     @Published var fixturePool: FixturePool?
     @Published var fixturePools: [FixturePoolSummary] = []
     @Published var selectedFixturePoolID = ""
@@ -984,6 +986,8 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func loadFixtures() async {
+        isLoadingFixtureTree = true
+        defer { isLoadingFixtureTree = false }
         await fixtureOperation {
             fixtures = try await fixtureService.tree()
             if cullingFixtureID.isEmpty {
@@ -1036,6 +1040,8 @@ final class BackstageViewModel: ObservableObject {
             fixtureStatus = "Choose a fixture before searching."
             return
         }
+        isSearchingFixtureAssets = true
+        defer { isSearchingFixtureAssets = false }
         await fixtureOperation {
             fixtureAssets = try await fixtureService.search(
                 fixtureID: selectedFixtureID,

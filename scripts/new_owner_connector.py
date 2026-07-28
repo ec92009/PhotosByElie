@@ -29,6 +29,7 @@ import threading
 import time
 from typing import Any
 import uuid
+from contextlib import contextmanager
 from urllib.parse import parse_qs, urlparse
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote
@@ -66,7 +67,33 @@ ALLOWED_LOCAL_STATUS_ORIGINS = {
     "https://www.photos-by-elie.com",
     "https://ec92009.github.io",
 }
-ACTION_EXECUTION_LOCK = threading.Lock()
+ACTION_MUTATION_LOCK = threading.Lock()
+ACTION_LOCKS_GUARD = threading.Lock()
+ACTION_LOCKS: dict[str, tuple[threading.Lock, int]] = {}
+READ_ONLY_FIXTURE_MODES = {
+    "asset-upload-plan",
+    "fixture-access-effective",
+    "fixture-ai-proposals-ready",
+    "fixture-ai-status",
+    "fixture-candidate-universe",
+    "fixture-configuration-get",
+    "fixture-culling-window",
+    "fixture-deliverable-list",
+    "fixture-delivery-plan",
+    "fixture-lifecycle-list",
+    "fixture-placement-list",
+    "fixture-policy-migration-plan",
+    "fixture-pool-list",
+    "fixture-pool-open",
+    "fixture-pool-refresh-preview",
+    "fixture-publication-plan",
+    "fixture-review-window",
+    "fixture-search",
+    "fixture-state-migration-plan",
+    "fixture-tree-list",
+    "fixture-upload-health",
+    "r2-reconciliation-plan",
+}
 LEGACY_SIDECAR_ENABLED = os.environ.get("PBE_ENABLE_LEGACY_SIDECAR", "").strip() == "1"
 
 
@@ -112,6 +139,36 @@ class InteractivePollingLease:
 def _clean_connector_id(value: object) -> str:
     cleaned = "".join(character if character.isalnum() or character in "._-" else "-" for character in str(value or "").strip().lower())
     return cleaned.strip("-")[:80]
+
+
+@contextmanager
+def _action_lock(action_id: str):
+    """Serialize duplicate wake/poll attempts without blocking unrelated reads."""
+    with ACTION_LOCKS_GUARD:
+        lock, users = ACTION_LOCKS.get(action_id, (threading.Lock(), 0))
+        ACTION_LOCKS[action_id] = (lock, users + 1)
+    lock.acquire()
+    try:
+        yield
+    finally:
+        lock.release()
+        with ACTION_LOCKS_GUARD:
+            current_lock, current_users = ACTION_LOCKS.get(action_id, (lock, 1))
+            if current_lock is lock and current_users <= 1:
+                ACTION_LOCKS.pop(action_id, None)
+            elif current_lock is lock:
+                ACTION_LOCKS[action_id] = (lock, current_users - 1)
+
+
+def _action_is_read_only(action: dict) -> bool:
+    action_type = str(action.get("type") or "").strip()
+    if action_type in {"owner-connector-check", "owner-hidden-metadata"}:
+        return True
+    if action_type != "sidecar-culling-review":
+        return False
+    payload = action.get("payload") if isinstance(action.get("payload"), dict) else {}
+    manifest = payload.get("manifest") if isinstance(payload.get("manifest"), dict) else {}
+    return str(manifest.get("mode") or "").strip() in READ_ONLY_FIXTURE_MODES
 
 
 def load_config(path: Path) -> ConnectorConfig:
@@ -1251,7 +1308,7 @@ def process_exact_action(
     local_wake: bool = False,
 ) -> tuple[dict, bool]:
     """Claim and execute one Worker-authorized action exactly once on this Mac."""
-    with ACTION_EXECUTION_LOCK:
+    with _action_lock(action_id):
         action = client.action(action_id)
         if action.get("state") in {"completed", "failed", "cancelled"}:
             return action, False
@@ -1264,7 +1321,11 @@ def process_exact_action(
                 return action, False
             if action.get("claim", {}).get("connectorId") != config.connector_id:
                 raise RuntimeError("Worker action is not claimed by this connector.")
-            result = execute_action(config, action)
+            if _action_is_read_only(action):
+                result = execute_action(config, action)
+            else:
+                with ACTION_MUTATION_LOCK:
+                    result = execute_action(config, action)
             executed_at = _utc_iso_now()
             completed = client.transition(
                 action_id,

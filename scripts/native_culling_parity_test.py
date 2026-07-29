@@ -191,6 +191,14 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("proposalDraft.keywords.joined(separator: \", \")", row)
         self.assertIn('"Proposal Available"', app)
         self.assertIn("reviewProposalAvailableOnly", model)
+        self.assertIn("hydrateReviewProposalDrafts(from: window.items)", model)
+        hydration = model.split(
+            "private func hydrateReviewProposalDrafts(",
+            1,
+        )[1].split("private func clearReviewDraft()", 1)[0]
+        self.assertIn("item.proposedTitle", hydration)
+        self.assertIn("item.proposedKeywords", hydration)
+        self.assertNotIn("markAIProposalsLoaded", hydration)
         self.assertIn("CullingMediaFilter.selectableCases", app)
         self.assertIn("reviewMediaFilters.contains", app)
         self.assertIn("toggleReviewMediaFilter", model)

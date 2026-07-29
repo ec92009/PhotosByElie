@@ -413,13 +413,34 @@ class FixturePipelineTest(unittest.TestCase):
                 """
                 INSERT INTO asset_ai_proposals (
                   proposal_id, asset_id, run_id, attempt, status,
-                  proposed_title, created_at
-                ) VALUES (?, ?, 'run-1', 1, ?, ?, '2026-07-29T10:00:00Z')
+                  proposed_title, proposed_keywords_json, reason, created_at
+                ) VALUES (?, ?, 'run-1', 1, ?, ?, ?, ?, '2026-07-29T10:00:00Z')
                 """,
                 [
-                    ("proposal-photo", "asset-1", "ready", "Photo proposal"),
-                    ("proposal-video", "asset-2", "loaded", "Video proposal"),
-                    ("proposal-old", "asset-3", "superseded", "Old proposal"),
+                    (
+                        "proposal-photo",
+                        "asset-1",
+                        "ready",
+                        "Photo proposal",
+                        '["Paris", "France"]',
+                        "Improve title",
+                    ),
+                    (
+                        "proposal-video",
+                        "asset-2",
+                        "loaded",
+                        "Video proposal",
+                        '["Video"]',
+                        "Add details",
+                    ),
+                    (
+                        "proposal-old",
+                        "asset-3",
+                        "superseded",
+                        "Old proposal",
+                        "[]",
+                        "Old",
+                    ),
                 ],
             )
             conn.commit()
@@ -434,6 +455,16 @@ class FixturePipelineTest(unittest.TestCase):
             [item["assetId"] for item in available["items"]],
             ["asset-1", "asset-2"],
         )
+        photo_proposal = available["items"][0]
+        self.assertTrue(photo_proposal["proposalReady"])
+        self.assertEqual(photo_proposal["proposalId"], "proposal-photo")
+        self.assertEqual(photo_proposal["proposedTitle"], "Photo proposal")
+        self.assertEqual(
+            photo_proposal["proposedKeywords"],
+            ["Paris", "France"],
+        )
+        self.assertEqual(photo_proposal["proposalReason"], "Improve title")
+        self.assertEqual(photo_proposal["proposalStatus"], "ready")
         photos = fixture_review_window(
             self.root,
             root["fixtureId"],

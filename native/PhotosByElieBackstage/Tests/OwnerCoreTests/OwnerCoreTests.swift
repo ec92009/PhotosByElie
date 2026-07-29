@@ -1122,6 +1122,11 @@ struct OwnerCoreTests {
                         "aiAttemptCount": 1,
                         "aiLastError": "",
                         "proposalReady": true,
+                        "proposalId": "proposal-oldest",
+                        "proposedTitle": "A better title",
+                        "proposedKeywords": ["Paris", "France"],
+                        "proposalReason": "Improve title",
+                        "proposalStatus": "ready",
                         "deliveryState": "not-ready",
                     ])]),
                 ]),
@@ -1189,6 +1194,10 @@ struct OwnerCoreTests {
         #expect(window.items.first?.placementState == "picked")
         #expect(window.items.first?.aiReasons == ["weak title"])
         #expect(window.items.first?.proposalReady == true)
+        #expect(window.items.first?.proposalID == "proposal-oldest")
+        #expect(window.items.first?.proposedTitle == "A better title")
+        #expect(window.items.first?.proposedKeywords == ["Paris", "France"])
+        #expect(window.items.first?.proposalStatus == "ready")
 
         let result = try await service.applyReview(
             .requestAI,

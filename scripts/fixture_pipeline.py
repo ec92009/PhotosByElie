@@ -1665,7 +1665,12 @@ def _review_item(row: sqlite3.Row) -> dict[str, Any]:
         "aiAttemptCount": int(row["ai_attempt_count"] or 0),
         "aiLastError": str(row["ai_last_error"] or ""),
         "aiPreviewReady": bool(str(row["ai_preview_path"] or "")),
-        "proposalReady": bool(int(row["proposal_ready"] or 0)),
+        "proposalReady": bool(str(row["proposal_id"] or "")),
+        "proposalId": str(row["proposal_id"] or ""),
+        "proposedTitle": str(row["proposal_title"] or ""),
+        "proposedKeywords": _read_json(row["proposal_keywords_json"], []),
+        "proposalReason": str(row["proposal_reason"] or ""),
+        "proposalStatus": str(row["proposal_status"] or ""),
         "deliveryState": str(row["delivery_state"] or "not-ready"),
     }
 
@@ -1728,6 +1733,19 @@ def fixture_review_window(
             JOIN asset_delivery_state AS delivery
               ON delivery.asset_id = a.asset_id
         """
+        proposal_join = """
+            LEFT JOIN asset_ai_proposals AS available_proposal
+              ON available_proposal.proposal_id = (
+                SELECT latest_proposal.proposal_id
+                FROM asset_ai_proposals AS latest_proposal
+                WHERE latest_proposal.asset_id = a.asset_id
+                  AND latest_proposal.status IN ('ready', 'loaded')
+                ORDER BY latest_proposal.attempt DESC,
+                         latest_proposal.created_at DESC,
+                         latest_proposal.proposal_id DESC
+                LIMIT 1
+              )
+        """
         params = [*base_params, *search_params]
         where_sql = " AND ".join(predicates)
         summary = conn.execute(
@@ -1759,14 +1777,15 @@ def fixture_review_window(
                    editorial.editorial_state, editorial.ai_reasons_json, editorial.ai_note,
                    editorial.ai_attempt_count, editorial.ai_last_error,
                    editorial.ai_preview_path,
-                   EXISTS (
-                     SELECT 1 FROM asset_ai_proposals AS proposal
-                     WHERE proposal.asset_id = a.asset_id
-                       AND proposal.status IN ('ready', 'loaded')
-                   ) proposal_ready,
+                   available_proposal.proposal_id,
+                   available_proposal.proposed_title proposal_title,
+                   available_proposal.proposed_keywords_json proposal_keywords_json,
+                   available_proposal.reason proposal_reason,
+                   available_proposal.status proposal_status,
                    delivery.delivery_state
             FROM {from_sql}
             {joins}
+            {proposal_join}
             WHERE {where_sql}
             ORDER BY COALESCE(a.captured_at, '') ASC, a.asset_id ASC
             LIMIT ? OFFSET ?

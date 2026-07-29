@@ -688,8 +688,9 @@ Clock state: running
 | 2026-07-28 | 22:47 CEST | 22:55 CEST | 0:03 | Requested explicit publication batch numbering and removal of the completed-run detail panel when Uploads is idle; background diagnosis, implementation, tests, build, signing, installation, and verification time excluded. |
 | 2026-07-28 | 22:55 CEST | 23:06 CEST | 0:03 | Reported extremely slow Review propagation; isolated synchronous per-photo AI preview rendering and moved it to the later batched AI pass; background diagnosis, implementation, tests, and connector restart time excluded. |
 | 2026-07-28 | 23:09 CEST | 23:25 CEST | 0:05 | Authorized publication of the single stranded Uploads item and confirmed that the next stable tray should become available; background R2 diagnosis, regression repair, publication monitoring, receipt verification, tests, and checkpoint work excluded. |
+| 2026-07-29 | 12:15 CEST | 12:24 CEST | 0:01 | Reported Proposal Available rows showing No proposal and confirmed the Review filter/card contradiction; background diagnosis, implementation, tests, build, and installation time excluded. |
 
 ## Totals
 
-Active collaboration time used: 33:42
+Active collaboration time used: 33:43
 Remaining budget: not set

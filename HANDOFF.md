@@ -1,5 +1,16 @@
 # PhotosByElie Handoff
 
+## 2026-07-29 — Proposal Available rows carry their proposal metadata
+
+- Backstage `0.4.34` build `45` returns the latest durable ready or loaded AI
+  proposal with each matching Review row.
+- **Proposal Available** can no longer show a contradictory **No proposal**
+  card merely because the owner has not pressed **Load proposals** in the
+  current app session.
+- Reading or filtering Review remains read-only. Proposal status changes from
+  ready to loaded only through the existing explicit **Load proposals**
+  workflow; manual metadata drafts remain protected from automatic replacement.
+
 ## 2026-07-29 — Retained Review actions obey the visible filters
 
 - Backstage `0.4.33` build `44` re-evaluates acted-on Review rows against the

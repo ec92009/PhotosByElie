@@ -1546,6 +1546,7 @@ final class BackstageViewModel: ObservableObject {
                 limit: reviewWindowLimit,
                 search: reviewSearch
             )
+            hydrateReviewProposalDrafts(from: window.items)
             fixtureReviewWindow = window
             let orderedIDs = window.items.map(\.id)
             let replacementID = currentID.flatMap { orderedIDs.contains($0) ? $0 : nil }
@@ -1849,6 +1850,7 @@ final class BackstageViewModel: ObservableObject {
                 limit: reviewWindowLimit,
                 search: entry.search
             )
+            hydrateReviewProposalDrafts(from: window.items)
             fixtureReviewWindow = window
             let orderedIDs = window.items.map(\.id)
             let restoredSelectedIDs = entry.selectedIDs.intersection(orderedIDs)
@@ -2095,6 +2097,25 @@ final class BackstageViewModel: ObservableObject {
             reviewLastAction = .hide
         } else if item.editorialState == "approved" {
             reviewLastAction = .approve
+        }
+    }
+
+    /// Make durable ready/loaded proposal metadata visible without changing
+    /// the proposal's audit status. Explicit "Load proposals" remains the
+    /// transition that marks a ready proposal as loaded.
+    private func hydrateReviewProposalDrafts(from items: [FixtureReviewItem]) {
+        for item in items where item.proposalReady && !item.proposalID.isEmpty {
+            if let existing = reviewProposalDrafts[item.id] {
+                if !existing.isProposal || existing.proposalID == item.proposalID {
+                    continue
+                }
+            }
+            reviewProposalDrafts[item.id] = ReviewMetadataDraft(
+                title: item.proposedTitle,
+                keywords: item.proposedKeywords,
+                proposalID: item.proposalID,
+                proposalReason: item.proposalReason
+            )
         }
     }
 

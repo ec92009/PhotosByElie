@@ -2821,7 +2821,7 @@ private struct ReviewInspector: View {
                     )
                         .textFieldStyle(.roundedBorder)
                         .lineLimit(2...5)
-                    Text("Reasons and notes are saved automatically for every selected item.")
+                    Text("Reasons save promptly. Notes save after two seconds without typing.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Divider()

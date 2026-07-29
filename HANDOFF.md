@@ -1,5 +1,15 @@
 # PhotosByElie Handoff
 
+## 2026-07-29 — AI note autosave no longer cancels its own request
+
+- Backstage `0.4.37` build `48` saves reason toggles after the short interaction
+  debounce and saves the optional AI note after two seconds without typing.
+- The debounce handle is released before the audited Worker request begins.
+  Further typing queues a later save instead of cancelling the in-flight
+  URLSession task and surfacing `NSURLErrorDomain -999`.
+- If the note changes while an earlier request is completing, the newer local
+  draft remains in the inspector and is submitted by the queued save.
+
 ## 2026-07-29 — AI review marks save as they are composed
 
 - Backstage `0.4.36` build `47` removes the redundant **Mark N for AI

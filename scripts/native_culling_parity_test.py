@@ -547,8 +547,9 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn('Text("Mark for AI review")', inspector)
         self.assertNotIn("reviewAIRequestButtonLabel", inspector)
         self.assertIn("model.updateReviewAINote($0)", inspector)
-        self.assertIn("scheduleReviewAIRequestAutosave()", model)
-        self.assertIn("Task.sleep(for: .milliseconds(400))", model)
+        self.assertIn("scheduleReviewAIRequestAutosave(after: .milliseconds(400))", model)
+        self.assertIn("scheduleReviewAIRequestAutosave(after: .seconds(2))", model)
+        self.assertIn("self.reviewAIRequestAutosaveTask = nil", model)
         self.assertIn("await self.applyReviewAction(.requestAI)", model)
         self.assertIn('Button(model.isRunningAIPass ? "AI pass running…" : "Run AI pass now")', ui)
         actions = inspector.split('Button("Approve")', 1)[1].split("Divider()", 1)[0]

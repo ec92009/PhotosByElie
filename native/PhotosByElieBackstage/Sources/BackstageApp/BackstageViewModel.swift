@@ -252,6 +252,7 @@ final class BackstageViewModel: ObservableObject {
     private var authenticationTask: Task<OwnerAuthenticationSnapshot, Never>?
     private var reviewMetadataAutosaveTask: Task<Void, Never>?
     private var reviewAIRequestAutosaveTask: Task<Void, Never>?
+    private var reviewAIInputRevision = 0
     private var cullingFilterTask: Task<Void, Never>?
     private var cullingWindowRequestSerial = 0
 
@@ -1619,12 +1620,14 @@ final class BackstageViewModel: ObservableObject {
         } else {
             reviewAIReasons.insert(reason)
         }
-        scheduleReviewAIRequestAutosave()
+        reviewAIInputRevision += 1
+        scheduleReviewAIRequestAutosave(after: .milliseconds(400))
     }
 
     func updateReviewAINote(_ value: String) {
         reviewAINote = value
-        scheduleReviewAIRequestAutosave()
+        reviewAIInputRevision += 1
+        scheduleReviewAIRequestAutosave(after: .seconds(2))
     }
 
     func updateReviewTitle(_ value: String) {
@@ -1675,6 +1678,7 @@ final class BackstageViewModel: ObservableObject {
         if [.approve, .hide, .requestAI].contains(action) {
             reviewLastAction = action
         }
+        let aiInputRevisionAtStart = reviewAIInputRevision
         isRunningReview = true
         reviewStatus = propagate
             ? "Propagating \(reviewActionLabel(action).lowercased()) through the two-hour shoot window…"
@@ -1738,7 +1742,15 @@ final class BackstageViewModel: ObservableObject {
                 anchorID: orderedIDs.contains(anchor) ? anchor : replacementID,
                 focusedID: orderedIDs.contains(anchor) ? anchor : replacementID
             )
+            let hasNewerAIInput = action == .requestAI
+                && reviewAIInputRevision != aiInputRevisionAtStart
+            let newerAIReasons = reviewAIReasons
+            let newerAINote = reviewAINote
             syncReviewDraft()
+            if hasNewerAIInput {
+                reviewAIReasons = newerAIReasons
+                reviewAINote = newerAINote
+            }
             reviewStatus = "\(reviewActionLabel(action)) affected \(result.changes.count.formatted()) item\(result.changes.count == 1 ? "" : "s")."
             await refreshAIStatus()
         } catch {
@@ -2177,7 +2189,7 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
-    private func scheduleReviewAIRequestAutosave() {
+    private func scheduleReviewAIRequestAutosave(after delay: Duration) {
         reviewAIRequestAutosaveTask?.cancel()
         let selectedIDs = Set(selectedReviewAssetIDs)
         guard !selectedIDs.isEmpty else {
@@ -2185,11 +2197,15 @@ final class BackstageViewModel: ObservableObject {
             return
         }
         reviewAIRequestAutosaveTask = Task { [weak self] in
-            try? await Task.sleep(for: .milliseconds(400))
+            try? await Task.sleep(for: delay)
             guard !Task.isCancelled, let self else { return }
             guard Set(self.selectedReviewAssetIDs) == selectedIDs else { return }
+            // From this point onward the task owns a live audited request.
+            // Clear the debounce handle before awaiting so later typing queues
+            // another save instead of cancelling URLSession in flight.
+            self.reviewAIRequestAutosaveTask = nil
             if self.isRunningReview {
-                self.scheduleReviewAIRequestAutosave()
+                self.scheduleReviewAIRequestAutosave(after: .milliseconds(400))
                 return
             }
             await self.applyReviewAction(.requestAI)

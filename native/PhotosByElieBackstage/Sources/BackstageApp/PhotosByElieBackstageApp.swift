@@ -2334,6 +2334,7 @@ private struct FixtureReviewView: View {
                             ForEach(model.reviewItems) { item in
                                 ReviewAssetRow(
                                     item: item,
+                                    proposalDraft: model.reviewProposalDrafts[item.id],
                                     thumbnail: model.reviewThumbnails[item.id],
                                     isSelected: model.reviewSelection.selectedIDs.contains(item.id),
                                     isFocused: model.reviewSelection.focusedID == item.id,
@@ -2486,6 +2487,7 @@ private struct FixtureReviewView: View {
 
 private struct ReviewAssetRow: View {
     var item: FixtureReviewItem
+    var proposalDraft: ReviewMetadataDraft?
     var thumbnail: NSImage?
     var isSelected: Bool
     var isFocused: Bool
@@ -2516,9 +2518,10 @@ private struct ReviewAssetRow: View {
             }
             VStack(alignment: .leading, spacing: 7) {
                 HStack {
-                    Text(item.title.isEmpty ? item.filename : item.title)
-                        .font(.headline)
-                        .lineLimit(2)
+                    Text(item.filename)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
                     Spacer()
                     Text(item.rating > 0 ? String(repeating: "★", count: item.rating) : "☆")
                     Circle()
@@ -2526,17 +2529,26 @@ private struct ReviewAssetRow: View {
                         .overlay(Circle().stroke(.secondary.opacity(0.5)))
                         .frame(width: 12, height: 12)
                 }
-                if !item.title.isEmpty {
-                    Text(item.filename)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
                 Text(item.capturedAt)
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Text(item.keywords.isEmpty ? "No keywords" : item.keywords.joined(separator: ", "))
-                    .font(.caption)
-                    .lineLimit(3)
+                HStack(alignment: .top, spacing: 12) {
+                    reviewMetadataColumn(
+                        label: "Current",
+                        title: item.title.isEmpty ? "Untitled" : item.title,
+                        keywords: item.keywords.isEmpty
+                            ? "No keywords"
+                            : item.keywords.joined(separator: ", "),
+                        isProposal: false
+                    )
+                    Divider()
+                    reviewMetadataColumn(
+                        label: "Proposed",
+                        title: proposalTitle,
+                        keywords: proposalKeywords,
+                        isProposal: proposalDraft?.isProposal == true
+                    )
+                }
                 HStack {
                     Text(item.editorialState.replacingOccurrences(of: "-", with: " ").capitalized)
                     if item.editorialState == "requesting-ai" {
@@ -2568,6 +2580,45 @@ private struct ReviewAssetRow: View {
         )
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private var proposalTitle: String {
+        guard let proposalDraft else { return "No proposal" }
+        return proposalDraft.title.isEmpty ? "Untitled" : proposalDraft.title
+    }
+
+    private var proposalKeywords: String {
+        guard let proposalDraft else { return "—" }
+        return proposalDraft.keywords.isEmpty
+            ? "No keywords"
+            : proposalDraft.keywords.joined(separator: ", ")
+    }
+
+    private func reviewMetadataColumn(
+        label: String,
+        title: String,
+        keywords: String,
+        isProposal: Bool
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 4) {
+                Text(label)
+                    .font(.caption2.weight(.bold))
+                    .textCase(.uppercase)
+                if isProposal {
+                    Image(systemName: "sparkles")
+                }
+            }
+            .foregroundStyle(isProposal ? .orange : .secondary)
+            Text(title)
+                .font(.callout.weight(.semibold))
+                .lineLimit(2)
+            Text(keywords)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(3)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder

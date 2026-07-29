@@ -1,5 +1,16 @@
 # PhotosByElie Handoff
 
+## 2026-07-29 — Review cards compare current and proposed metadata
+
+- Backstage `0.4.28` build `39` shows title and keywords in explicit
+  **Current** and **Proposed** columns on every Review card.
+- Current values come from the canonical Review item. Proposed values come
+  from the loaded AI proposal or unsaved manual draft; cards without either
+  show a truthful **No proposal** state instead of repeating current metadata.
+- Proposal comparison is presentation-only. Approval, propagation, AI
+  requesting, canonical metadata, and publication behavior are unchanged.
+- Verification: all 47 Swift tests and 17 native UI contract tests pass.
+
 ## 2026-07-29 — Upload selection and review navigation are explicit
 
 - Backstage `0.4.27` build `38` keeps the native Uploads table's Command-click

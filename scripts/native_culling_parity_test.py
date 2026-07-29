@@ -178,6 +178,11 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn('item.editorialState == "approved"', row)
         self.assertIn('systemName: "checkmark.circle.fill"', row)
         self.assertIn(".font(.system(size: 30", row)
+        self.assertIn("var proposalDraft: ReviewMetadataDraft?", row)
+        self.assertIn('label: "Current"', row)
+        self.assertIn('label: "Proposed"', row)
+        self.assertIn("proposalDraft?.isProposal == true", row)
+        self.assertIn("proposalDraft.keywords.joined(separator: \", \")", row)
 
     def test_fixture_policy_controls_adapt_to_the_available_width(self):
         source = (

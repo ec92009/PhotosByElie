@@ -251,6 +251,7 @@ final class BackstageViewModel: ObservableObject {
     let photosBridgeHealthService: PhotosBridgeHealthService
     private var authenticationTask: Task<OwnerAuthenticationSnapshot, Never>?
     private var reviewMetadataAutosaveTask: Task<Void, Never>?
+    private var reviewAIRequestAutosaveTask: Task<Void, Never>?
     private var cullingFilterTask: Task<Void, Never>?
     private var cullingWindowRequestSerial = 0
 
@@ -723,30 +724,6 @@ final class BackstageViewModel: ObservableObject {
 
     var selectedReviewAssetIDs: [String] {
         reviewItems.map(\.id).filter(reviewSelection.selectedIDs.contains)
-    }
-
-    var reviewAIRequestTargetCount: Int {
-        selectedReviewAssetIDs.count
-    }
-
-    var selectedReviewHasActiveAIRequest: Bool {
-        let selectedIDs = Set(selectedReviewAssetIDs)
-        return reviewItems.contains {
-            selectedIDs.contains($0.id) && $0.editorialState == "requesting-ai"
-        }
-    }
-
-    var canUpdateReviewAIRequest: Bool {
-        guard !isRunningReview, reviewAIRequestTargetCount > 0 else { return false }
-        return !reviewAIReasons.isEmpty || selectedReviewHasActiveAIRequest
-    }
-
-    var reviewAIRequestButtonLabel: String {
-        let count = reviewAIRequestTargetCount
-        if reviewAIReasons.isEmpty {
-            return count == 1 ? "Clear AI review mark" : "Clear AI review marks for \(count)"
-        }
-        return count == 1 ? "Mark for AI review" : "Mark \(count) for AI review"
     }
 
     var focusedReviewItem: FixtureReviewItem? {
@@ -1642,6 +1619,12 @@ final class BackstageViewModel: ObservableObject {
         } else {
             reviewAIReasons.insert(reason)
         }
+        scheduleReviewAIRequestAutosave()
+    }
+
+    func updateReviewAINote(_ value: String) {
+        reviewAINote = value
+        scheduleReviewAIRequestAutosave()
     }
 
     func updateReviewTitle(_ value: String) {
@@ -1658,6 +1641,10 @@ final class BackstageViewModel: ObservableObject {
         guard !isRunningReview else {
             reviewStatus = "Finish the current Review action first."
             return
+        }
+        if action != .requestAI {
+            reviewAIRequestAutosaveTask?.cancel()
+            reviewAIRequestAutosaveTask = nil
         }
         if action != .editMetadata {
             reviewMetadataAutosaveTask?.cancel()
@@ -2190,6 +2177,25 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
+    private func scheduleReviewAIRequestAutosave() {
+        reviewAIRequestAutosaveTask?.cancel()
+        let selectedIDs = Set(selectedReviewAssetIDs)
+        guard !selectedIDs.isEmpty else {
+            reviewStatus = "Select one or more Review items."
+            return
+        }
+        reviewAIRequestAutosaveTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(400))
+            guard !Task.isCancelled, let self else { return }
+            guard Set(self.selectedReviewAssetIDs) == selectedIDs else { return }
+            if self.isRunningReview {
+                self.scheduleReviewAIRequestAutosave()
+                return
+            }
+            await self.applyReviewAction(.requestAI)
+        }
+    }
+
     private func saveReviewMetadataIfNeeded() async {
         guard let item = focusedReviewItem else { return }
         let title = reviewTitle.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -2210,7 +2216,10 @@ final class BackstageViewModel: ObservableObject {
         case .approve: "Approve"
         case .returnToReview: "Return to Review"
         case .hide: "Hide"
-        case .requestAI: reviewAIReasons.isEmpty ? "Clear AI request" : "Request AI"
+        case .requestAI:
+            reviewAIReasons.isEmpty && reviewAINote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                ? "Clear AI request"
+                : "Request AI"
         case .editMetadata: "Save title and keywords"
         case .propagateTitle: "Propagate title"
         case .propagateKeywords: "Propagate keywords"

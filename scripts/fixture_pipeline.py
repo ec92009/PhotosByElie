@@ -2200,6 +2200,7 @@ def apply_fixture_review_action(
             else _read_json(source_decision["keywords_json"], [])
         )
         reasons = _unique(ai_reasons or [])
+        note = str(ai_note or "").strip()
         items: list[dict[str, Any]] = []
         before_snapshots = [
             _review_asset_snapshot(conn, asset_id)
@@ -2283,9 +2284,10 @@ def apply_fixture_review_action(
                 )
                 _set_delivery_state(conn, asset_id, "not-ready", timestamp)
             elif clean_action == "request-ai":
-                after_state = "requesting-ai" if reasons else "unreviewed"
+                has_ai_request = bool(reasons or note)
+                after_state = "requesting-ai" if has_ai_request else "unreviewed"
                 after_reasons = reasons
-                after_note = str(ai_note or "").strip() if reasons else ""
+                after_note = note if has_ai_request else ""
                 conn.execute(
                     """
                     UPDATE asset_ai_proposals

@@ -1,5 +1,18 @@
 # PhotosByElie Handoff
 
+## 2026-07-29 — AI review marks save as they are composed
+
+- Backstage `0.4.36` build `47` removes the redundant **Mark N for AI
+  review** submit button. Checking or clearing a reason, or editing the
+  optional note, saves the AI-review request for every selected Review item
+  after a short debounce.
+- Either one or more reasons or a non-empty note is a durable AI request. Only
+  an entirely empty reason set and empty note clears the request.
+- Saving the request refreshes the fixture AI status, so **Run AI pass now**
+  becomes available as soon as requested work is acknowledged. It does not
+  run inference automatically; inference still waits for that explicit action
+  or the scheduled batch.
+
 ## 2026-07-29 — Multi-item AI review requests are explicit and actionable
 
 - Backstage `0.4.35` build `46` gives the AI review submit action an explicit

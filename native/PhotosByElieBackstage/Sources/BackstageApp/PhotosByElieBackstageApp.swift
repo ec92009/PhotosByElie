@@ -2811,16 +2811,19 @@ private struct ReviewInspector: View {
                             .tint(model.reviewAIReasons.contains(reason) ? .orange : nil)
                         }
                     }
-                    TextField("Optional AI note", text: $model.reviewAINote, axis: .vertical)
+                    TextField(
+                        "Optional AI note",
+                        text: Binding(
+                            get: { model.reviewAINote },
+                            set: { model.updateReviewAINote($0) }
+                        ),
+                        axis: .vertical
+                    )
                         .textFieldStyle(.roundedBorder)
                         .lineLimit(2...5)
-                    Button(model.reviewAIRequestButtonLabel) {
-                        Task { await model.applyReviewAction(.requestAI) }
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.orange)
-                    .disabled(!model.canUpdateReviewAIRequest)
-                    .help("Apply these AI review reasons to every selected Review item.")
+                    Text("Reasons and notes are saved automatically for every selected item.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                     Divider()
                     Button("Quick Look") {
                         Task {

@@ -861,6 +861,24 @@ class FixturePipelineTest(unittest.TestCase):
         )
         self.assertEqual(cleared["items"][0]["after"]["editorialState"], "unreviewed")
 
+        note_only = apply_fixture_review_action(
+            self.root,
+            other["fixtureId"],
+            ["asset-1"],
+            "request-ai",
+            ai_reasons=[],
+            ai_note="Use the visible landmark.",
+        )
+        self.assertEqual(
+            note_only["items"][0]["after"]["editorialState"],
+            "requesting-ai",
+        )
+        self.assertEqual(note_only["items"][0]["after"]["aiReasons"], [])
+        self.assertEqual(
+            note_only["items"][0]["after"]["aiNote"],
+            "Use the visible landmark.",
+        )
+
     def test_review_propagates_hidden_ai_mark_and_approval_visual_states(self):
         root = create_fixture(self.root, "Root", fixture_id="root")
         set_fixture_asset_state(

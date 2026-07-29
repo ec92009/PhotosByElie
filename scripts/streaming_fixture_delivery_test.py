@@ -232,13 +232,18 @@ class FixtureAuthorizedUploadBridgeTest(unittest.TestCase):
                     "filename": "ai.jpg",
                     "mediaType": "photo",
                 },
+                {
+                    "localIdentifier": "stained-glass-photo",
+                    "filename": "museum-window.jpg",
+                    "mediaType": "photo",
+                },
             ],
         )
         self.fixture = create_fixture(self.root, "Expo")
         set_fixture_asset_state(
             self.root,
             self.fixture["fixtureId"],
-            ["native-asset", "generic-asset", "ai-asset"],
+            ["native-asset", "generic-asset", "ai-asset", "stained-glass-photo"],
             "picked",
         )
         apply_fixture_review_action(
@@ -264,6 +269,14 @@ class FixtureAuthorizedUploadBridgeTest(unittest.TestCase):
             "approve",
             title="Paris Glass Garden",
             keywords=["Paris", "AI generated illustration"],
+        )
+        apply_fixture_review_action(
+            self.root,
+            self.fixture["fixtureId"],
+            ["stained-glass-photo"],
+            "approve",
+            title="Stained Glass Apostles at Musée Carnavalet",
+            keywords=["Paris", "Musée Carnavalet", "stained glass", "apostles"],
         )
 
     def tearDown(self):
@@ -343,6 +356,16 @@ class FixtureAuthorizedUploadBridgeTest(unittest.TestCase):
             fixture_authorized_asset_ids=["ai-asset"],
         )
         self.assertEqual(queued["bridgeQueuedCount"], 0)
+
+    def test_fixture_authorization_allows_reviewed_stained_glass_photo(self):
+        queued = queue_upload_bridge(
+            self.root,
+            asset_ids=["stained-glass-photo"],
+            limit=1,
+            fixture_authorized_asset_ids=["stained-glass-photo"],
+        )
+        self.assertEqual(queued["bridgeQueuedCount"], 1)
+        self.assertEqual(queued["items"][0]["assetId"], "stained-glass-photo")
 
 
 if __name__ == "__main__":

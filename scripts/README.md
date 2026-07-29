@@ -623,6 +623,12 @@ Leonardo source archive but no longer imports it to public or private R2. Use
 or `--selection stained` for the audited, batch-delete-and-revoke lifecycle;
 it is dry-run unless `--commit` is provided.
 
+That legacy keyword retirement does not veto a current native publication
+request after the exact asset has independently passed fixture placement and
+human Review approval. Explicit AI-generation markers remain blocked in every
+path; a legitimate photographed subject such as stained glass is allowed only
+through that verified native authorization gate.
+
 Historical public Upload Bridge rows can be resumed through fixture adoption
 and verified Apple Photos give-back with
 `PYTHONPATH=scripts python3 scripts/fixture_r2_apple_giveback_drain.py --commit --checkpoint-every 100`.

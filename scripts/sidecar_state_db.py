@@ -1902,7 +1902,17 @@ def _upload_bridge_rows(
               SELECT 1 FROM json_each(d.keywords_json) AS keyword
               WHERE lower(trim(keyword.value)) LIKE 'ai generated%'
                  OR lower(trim(keyword.value)) IN ('generative ai', 'ai artwork')
-                 OR lower(trim(keyword.value)) LIKE 'stained%'
+            )
+            AND (
+              EXISTS (
+                SELECT 1
+                FROM sidecar_fixture_authorized_upload_assets AS authorized
+                WHERE authorized.asset_id = m.asset_id
+              )
+              OR NOT EXISTS (
+                SELECT 1 FROM json_each(d.keywords_json) AS keyword
+                WHERE lower(trim(keyword.value)) LIKE 'stained%'
+              )
             )
             AND NOT EXISTS (
               SELECT 1 FROM sidecar_tombstones AS t

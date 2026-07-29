@@ -452,6 +452,7 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
     public var aiNote: String
     public var aiAttemptCount: Int
     public var aiLastError: String
+    public var proposalReady: Bool
     public var deliveryState: String
 
     init(json: [String: JSONValue]) {
@@ -471,6 +472,7 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
         aiNote = json["aiNote"]?.stringValue ?? ""
         aiAttemptCount = json["aiAttemptCount"]?.intValue ?? 0
         aiLastError = json["aiLastError"]?.stringValue ?? ""
+        proposalReady = json["proposalReady"]?.boolValue ?? false
         deliveryState = json["deliveryState"]?.stringValue ?? "not-ready"
     }
 }

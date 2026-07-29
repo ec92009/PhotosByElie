@@ -1771,21 +1771,52 @@ final class BackstageViewModel: ObservableObject {
                 item.deliveryState = "needs-upload"
                 item.aiReasons = []
                 item.aiNote = ""
+                item.proposalReady = false
             case .hide:
                 item.placementState = "hidden"
                 item.aiReasons = []
                 item.aiNote = ""
+                item.proposalReady = false
             case .requestAI:
                 item.deliveryState = "not-ready"
+                item.proposalReady = false
             case .returnToReview:
                 item.editorialState = "unreviewed"
                 item.deliveryState = "not-ready"
-            case .editMetadata, .propagateTitle, .propagateKeywords:
+            case .editMetadata:
+                item.proposalReady = false
+            case .propagateTitle, .propagateKeywords:
                 break
             }
             return item
         }
+        .filter(reviewItemMatchesActiveFilters)
         fixtureReviewWindow = window
+    }
+
+    /// Local action retention must honor the same filters as a fresh Owner
+    /// Review query. This preserves an acted-on propagation anchor only when
+    /// its resulting state is still explicitly visible.
+    private func reviewItemMatchesActiveFilters(_ item: FixtureReviewItem) -> Bool {
+        let state: FixtureReviewStateFilter
+        if item.placementState == "hidden" {
+            state = .hidden
+        } else if item.editorialState == "approved" {
+            state = .approved
+        } else {
+            state = .picked
+        }
+        guard reviewStateFilters.contains(state) else { return false }
+        guard !reviewProposalAvailableOnly || item.proposalReady else { return false }
+
+        let mediaFilter: CullingMediaFilter = item.mediaType == "video" ? .videos : .photos
+        guard reviewMediaFilters.contains(mediaFilter) else { return false }
+
+        let query = reviewSearch.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return true }
+        let searchable = ([item.title, item.caption, item.filename] + item.keywords)
+            .joined(separator: "\n")
+        return searchable.localizedCaseInsensitiveContains(query)
     }
 
     func undoLastReviewAction() async {

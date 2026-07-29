@@ -1,5 +1,16 @@
 # PhotosByElie Handoff
 
+## 2026-07-29 — Retained Review actions obey the visible filters
+
+- Backstage `0.4.33` build `44` re-evaluates acted-on Review rows against the
+  active State, Proposal Available, Media, and Search filters before retaining
+  them as propagation anchors.
+- An approved row now disappears immediately when **Approved** is off. It
+  remains available for propagation only when **Approved** is explicitly on.
+  Consuming a proposal also removes the row from **Proposal Available**.
+- Hidden rows follow the same rule: they remain as black-and-white propagation
+  anchors only while **Hidden** is selected.
+
 ## 2026-07-29 — Review state filters, reusable AI reasons, and Upload navigation
 
 - Backstage `0.4.32` build `43` adds independent **Picked**, **Approved**, and

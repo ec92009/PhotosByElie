@@ -1121,6 +1121,7 @@ struct OwnerCoreTests {
                         "aiNote": "Name the landmark.",
                         "aiAttemptCount": 1,
                         "aiLastError": "",
+                        "proposalReady": true,
                         "deliveryState": "not-ready",
                     ])]),
                 ]),
@@ -1187,6 +1188,7 @@ struct OwnerCoreTests {
         #expect(window.items.first?.id == "asset-oldest")
         #expect(window.items.first?.placementState == "picked")
         #expect(window.items.first?.aiReasons == ["weak title"])
+        #expect(window.items.first?.proposalReady == true)
 
         let result = try await service.applyReview(
             .requestAI,

@@ -606,7 +606,25 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("await model.hideSelectedUploads()", upload)
         self.assertIn("uploadQuickViewItem = next", upload)
         self.assertIn("await model.loadNativeUploadPreview(for: next)", upload)
-        self.assertIn("H hides and advances", upload)
+        self.assertIn("H hides", upload)
+
+    def test_upload_preview_returns_current_item_to_review_and_advances(self):
+        ui = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "PhotosByElieBackstageApp.swift"
+        ).read_text(encoding="utf-8")
+        upload = ui.split("private struct UploadWorkflowView", 1)[1].split(
+            "private struct DeliverablesView",
+            1,
+        )[0]
+        self.assertIn('.onKeyPress("r")', upload)
+        self.assertIn("returnCurrentUploadQuickViewToReview(in: plan)", upload)
+        self.assertIn("await model.returnSelectedUploadsToReview()", upload)
+        self.assertIn("uploadQuickViewItem = next", upload)
+        self.assertIn("await model.loadNativeUploadPreview(for: next)", upload)
+        self.assertIn("R returns to Review", upload)
 
     def test_getting_started_describes_the_native_large_pool_path(self):
         guide = (ROOT / "docs" / "BACKSTAGE_GETTING_STARTED.md").read_text(

@@ -488,6 +488,11 @@ private struct UploadWorkflowView: View {
                     hideCurrentUploadQuickView(in: plan)
                     return .handled
                 }
+                .onKeyPress("r") {
+                    guard !model.isRunningDelivery else { return .handled }
+                    returnCurrentUploadQuickViewToReview(in: plan)
+                    return .handled
+                }
             }
         }
         .task {
@@ -626,6 +631,39 @@ private struct UploadWorkflowView: View {
             await model.loadNativeUploadPreview(for: next)
         }
     }
+
+    private func returnCurrentUploadQuickViewToReview(in plan: NativeUploadPlan) {
+        let items = sortedItems(plan)
+        guard let current = uploadQuickViewItem,
+              let currentIndex = items.firstIndex(where: { $0.id == current.id }) else {
+            return
+        }
+        let preferredNextID = items.indices.contains(currentIndex + 1)
+            ? items[currentIndex + 1].id
+            : items.indices.contains(currentIndex - 1)
+                ? items[currentIndex - 1].id
+                : nil
+        model.selectedDeliveryIDs = [current.id]
+        Task {
+            await model.returnSelectedUploadsToReview()
+            guard let updatedPlan = model.nativeUploadPlan else {
+                closeUploadQuickView()
+                return
+            }
+            let remaining = sortedItems(updatedPlan)
+            let next = preferredNextID.flatMap { preferredID in
+                remaining.first(where: { $0.id == preferredID })
+            } ?? remaining.first
+            guard let next else {
+                closeUploadQuickView()
+                return
+            }
+            uploadQuickViewItem = next
+            model.selectedDeliveryIDs = [next.id]
+            isUploadQuickViewFocused = true
+            await model.loadNativeUploadPreview(for: next)
+        }
+    }
 }
 
 private struct UploadQuickView: View {
@@ -673,7 +711,7 @@ private struct UploadQuickView: View {
                     LabeledContent("Captured", value: item.capturedAt.isEmpty ? "Unknown" : item.capturedAt)
                     LabeledContent("File", value: item.filename)
                     Spacer()
-                    Text("Use ↑/↓ to navigate • H hides and advances • Space closes")
+                    Text("Use ↑/↓ to navigate • H hides • R returns to Review • Space closes")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
